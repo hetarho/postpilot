@@ -132,7 +132,9 @@ func (s *Service) CoverageAt(ctx context.Context, userID string, at time.Time) (
 
 // RunDue advances every subscription that was due when the pass started. Each account is
 // caught up window by window; a failure is retained while the loop continues to later rows.
-// A failed order or refund reconciliation is logged and never stops the renewals.
+// A failed order reconciliation, unapplied-capture refund or refund reconciliation is logged
+// and never stops the renewals. Captures are refunded before the renewals, so an account whose
+// order left review renews on the same pass.
 func (s *Service) RunDue(ctx context.Context, now time.Time) error {
 	if !s.Enabled() {
 		return ErrUnavailable
@@ -140,6 +142,9 @@ func (s *Service) RunDue(ctx context.Context, now time.Time) error {
 	if s.fixedKRW {
 		if err := s.ReconcilePending(ctx); err != nil {
 			slog.Error("pending order reconciliation failed", "err", err)
+		}
+		if err := s.RefundUnappliedCaptures(ctx); err != nil {
+			slog.Error("unapplied capture refund failed", "err", err)
 		}
 		if err := s.ReconcilePendingRefunds(ctx); err != nil {
 			slog.Error("pending refund reconciliation failed", "err", err)

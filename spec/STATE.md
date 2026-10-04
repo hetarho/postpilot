@@ -81,7 +81,6 @@
 | T549 | Mix the same narration into browser MP4 exports | ARCH DUB CLIP CDS | T548 | todo |
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | todo |
 | T569 | Hold a voice analysis at the size of the prompt it will send | QUOTA VOICE ARCH | - | todo |
-| T570 | Refund a captured payment the product cannot apply, automatically | BILL ARCH | - | todo |
 | T572 | Delete the pre-FX pricing regime from the ledger | QUOTA ARCH | T569 | todo |
 | T573 | Delete the non-Portable renderer and the legacy plan paths | ARCH | - | todo |
 | T574 | One cut timeline for the render graph, the sampler and the browser drawing | CDS CLIP ARCH | T573 | todo |
@@ -96,6 +95,7 @@
 - ops: lower TEMPLATE_PHOTO_ROW_MAX / VITE_TEMPLATE_PHOTO_ROW_MAX to 3 wherever production sets them explicitly (VPS .env, Cloudflare build vars).
 
 ## log
+- 261005 T570 done: each billing pass refunds a review order in full (idempotent cancel, read-back), fails it, records and mails the refund, unlocks the account; a refunded renewal lapses the account (BILL-8); BE suite green
 - 261005 T571 done: a lint refuses whole-database or bare foreign-key checks in migrations after 0129; BE suite green
 - 261005 T575 done: one precondition chain for every generation start (each keeps its check order), one observe+write call plan, one refusal mapping, one comparison create-enqueue-link helper; BE suite green
 - 261005 T577 done: export panel and template editor state machines moved into widget model hooks and a new features/edit-template slice; FE suite 382/3186 green
@@ -115,4 +115,3 @@
 - 261004 T556 done: voice directory and profile read samples once, the check list skips projections, an unchanged answer is left alone; BE suite green
 - 261004 T555 done: comparison list in three reads without snapshots or outputs, voice comparison measured against one analysis, candidates two at a time, observe holds count every observe call; BE and FE suites green
 - 261004 T563 done: a second pack refund records like the first, definitive cancel refusals release frozen credits after a read-back, review-skipped renewals are logged, expired quotes purged; BE suite green
-- 261004 T562 done: billing pass survives an unapplicable order (to review), charges carry Idempotency-Key, fresh intents wait 2 min, only definitive refusals fail, annual step advances next_grant_at alone, Toss client 30 s timeout; BE suite green

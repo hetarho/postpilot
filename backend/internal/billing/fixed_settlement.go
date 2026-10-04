@@ -151,8 +151,8 @@ func (s *Service) reviewFixedIntent(ctx context.Context, intent Intent, payment 
 	return ErrPaymentPending
 }
 
-// logReview records why a captured order left the pass: from review only an operator can
-// apply, refund or void it.
+// logReview records why a captured order left the pass: from review the next billing pass
+// refunds it in full (BILL-22, RefundUnappliedCaptures).
 func logReview(intent Intent, cause error) {
 	slog.Error("captured order moved to review", "order_id", intent.OrderID, "user_id", intent.UserID,
 		"kind", intent.Kind, "err", cause)

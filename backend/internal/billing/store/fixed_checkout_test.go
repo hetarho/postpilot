@@ -54,7 +54,9 @@ func (p *fixedPayments) Charge(_ context.Context, request billing.ChargeRequest)
 	payment := billing.Payment{PaymentKey: "pay-" + request.OrderID, OrderID: request.OrderID,
 		Status: "DONE", AmountKRW: request.KRW, BalanceKRW: request.KRW, Currency: "KRW"}
 	if p.wrongAmount {
+		// Captured for one won more than the order; a fresh capture's balance is its total.
 		payment.AmountKRW++
+		payment.BalanceKRW++
 	}
 	p.orders[request.OrderID] = payment
 	if p.captureThenTimeout {

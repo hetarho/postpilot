@@ -89,8 +89,17 @@ func (s *Store) PendingIntent(ctx context.Context, userID string) (billing.Inten
 }
 
 func (s *Store) DueIntents(ctx context.Context, createdBefore time.Time) ([]billing.Intent, error) {
-	rows, err := s.db.QueryContext(ctx, `SELECT `+intentColumns+` FROM billing_intents
+	return s.listIntents(ctx, `SELECT `+intentColumns+` FROM billing_intents
       WHERE status='pending' AND created_at<=? ORDER BY created_at LIMIT 100`, formatTime(createdBefore))
+}
+
+func (s *Store) ReviewIntents(ctx context.Context, limit int) ([]billing.Intent, error) {
+	return s.listIntents(ctx, `SELECT `+intentColumns+` FROM billing_intents
+      WHERE status='review' ORDER BY created_at LIMIT ?`, limit)
+}
+
+func (s *Store) listIntents(ctx context.Context, query string, args ...any) ([]billing.Intent, error) {
+	rows, err := s.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -111,6 +120,16 @@ func (s *Store) MarkIntent(ctx context.Context, orderID, status, providerStatus,
       provider_payment_key=?,applied_at=?,updated_at=? WHERE order_id=? AND status='pending'`,
 		status, optionalString(providerStatus), optionalString(paymentKey),
 		optionalTime(at), formatTime(at), orderID)
+	if err != nil {
+		return false, err
+	}
+	n, err := result.RowsAffected()
+	return n == 1, err
+}
+
+func (s *Store) FailReviewIntent(ctx context.Context, orderID, providerStatus string, at time.Time) (bool, error) {
+	result, err := s.db.ExecContext(ctx, `UPDATE billing_intents SET status='failed',provider_status=?,updated_at=?
+      WHERE order_id=? AND status='review'`, optionalString(providerStatus), formatTime(at), orderID)
 	if err != nil {
 		return false, err
 	}

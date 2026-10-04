@@ -45,6 +45,11 @@ type IntentStore interface {
 	// DueIntents lists pending orders created at or before createdBefore.
 	DueIntents(ctx context.Context, createdBefore time.Time) ([]Intent, error)
 	MarkIntent(context.Context, string, string, string, string, time.Time) (bool, error)
+	// ReviewIntents lists up to limit orders in review, oldest first: payments the provider
+	// captured that the product could not apply.
+	ReviewIntents(ctx context.Context, limit int) ([]Intent, error)
+	// FailReviewIntent moves an order from review to failed; false means it had already left.
+	FailReviewIntent(ctx context.Context, orderID, providerStatus string, at time.Time) (bool, error)
 }
 
 type Provider interface {

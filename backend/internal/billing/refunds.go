@@ -330,22 +330,18 @@ func (s *Service) ReconcileRefund(ctx context.Context, requestID string) error {
 		if request.ReviewedAt != nil && s.now().Sub(*request.ReviewedAt) >= 7*24*time.Hour {
 			return ErrRefundProviderPending
 		}
-		canceled, cancelErr := provider.CancelPayment(ctx, payment.PaymentKey, request.ReviewedAmountKRW,
-			"Postpilot reviewed refund", request.IdempotencyKey)
-		if cancelErr != nil {
-			refusal, definitive := definitiveCancelRefusal(cancelErr)
-			if !definitive {
-				return errors.Join(ErrRefundProviderPending, cancelErr)
-			}
+		canceled, refusal, err := s.cancelOrReadBack(ctx, provider, payment.PaymentKey, payment.OrderID,
+			request.ReviewedAmountKRW, "Postpilot reviewed refund", request.IdempotencyKey)
+		if err != nil {
+			return err
+		}
+		var cancelErr error
+		if refusal != nil {
 			// A refusal is settled by what the payment shows: an untouched balance means
 			// no money moved and the frozen funding goes back; our amount already
 			// cancelled means an earlier attempt went through and completes below;
 			// anything else stays processing.
-			observed, seen, readErr := s.provider.PaymentByOrder(ctx, payment.OrderID)
-			if readErr != nil || !seen || observed.PaymentKey != payment.PaymentKey {
-				return errors.Join(ErrRefundProviderPending, cancelErr, readErr)
-			}
-			if observed.BalanceKRW == request.ProviderBalanceBeforeKRW {
+			if canceled.BalanceKRW == request.ProviderBalanceBeforeKRW {
 				failure := s.store.InWriteTx(ctx, func(tx Store, _ Credits, _ Plans) error {
 					ref := tx.(RefundStore)
 					if benefits := ref.RefundBenefits(); benefits != nil {
@@ -355,9 +351,9 @@ func (s *Service) ReconcileRefund(ctx context.Context, requestID string) error {
 					}
 					return ref.FailRefund(ctx, request.ID, refusal.Code, s.now())
 				})
-				return errors.Join(ErrRefundFailed, cancelErr, failure)
+				return errors.Join(ErrRefundFailed, refusal, failure)
 			}
-			canceled, cancelErr = observed, refusal
+			cancelErr = refusal
 		}
 		if canceled.PaymentKey != payment.PaymentKey || canceled.OrderID != payment.OrderID ||
 			canceled.AmountKRW != payment.KRW || canceled.Currency != "KRW" ||

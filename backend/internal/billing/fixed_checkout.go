@@ -298,7 +298,8 @@ func (s *Service) renewFixed(ctx context.Context, subscription Subscription, now
 	})
 	if err != nil {
 		if inReview.OrderID != "" {
-			// Until an operator resolves the order in review, the account renews on no pass.
+			// Until a billing pass refunds the order in review (BILL-22), the account renews on
+			// no pass.
 			slog.Error("renewal skipped: an order is in review", "user_id", subscription.UserID,
 				"order_id", inReview.OrderID, "term_end", subscription.TermEnd)
 		}

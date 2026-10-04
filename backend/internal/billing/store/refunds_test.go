@@ -87,6 +87,8 @@ type reviewPayments struct {
 	refusal *billing.ProviderError
 	// beforeCancel runs as a cancel arrives, before the fake decides its answer.
 	beforeCancel func()
+	// keys records the idempotency key of every cancel, in arrival order.
+	keys []string
 }
 
 func (p *reviewPayments) PaymentByOrder(ctx context.Context, orderID string) (billing.Payment, bool, error) {
@@ -100,6 +102,7 @@ func (p *reviewPayments) CancelPayment(_ context.Context, key string, amount int
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.calls++
+	p.keys = append(p.keys, idempotency)
 	if p.beforeCancel != nil {
 		p.beforeCancel()
 	}
