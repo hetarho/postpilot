@@ -4,6 +4,7 @@ package store
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -235,26 +236,6 @@ func sampleParams(sample voice.Sample) sqlc.InsertSampleParams {
 	return params
 }
 
-func (s *Store) ListSamples(ctx context.Context, userID, voiceID string) ([]voice.Sample, error) {
-	rows, err := s.read.ListSamples(ctx, sqlc.ListSamplesParams{VoiceID: voiceID, UserID: userID})
-	if err != nil {
-		return nil, fmt.Errorf("select samples: %w", err)
-	}
-	out := make([]voice.Sample, 0, len(rows))
-	for _, row := range rows {
-		created, err := parseTime(row.CreatedAt)
-		if err != nil {
-			return nil, fmt.Errorf("sample %s created_at: %w", row.ID, err)
-		}
-		sample := voice.Sample{
-			ID: row.ID, UserID: userID, VoiceID: voiceID, Kind: voice.SampleKind(row.Kind), PromptKey: row.PromptKey.String,
-			Label: row.Label, Chars: int(row.Chars.Int64), PhotoKey: row.PhotoKey.String, CreatedAt: created,
-		}
-		out = append(out, sample)
-	}
-	return out, nil
-}
-
 func (s *Store) ListSampleBodies(ctx context.Context, userID, voiceID string) ([]voice.Sample, error) {
 	rows, err := s.read.ListSampleBodies(ctx, sqlc.ListSampleBodiesParams{VoiceID: voiceID, UserID: userID})
 	if err != nil {
@@ -269,6 +250,50 @@ func (s *Store) ListSampleBodies(ctx context.Context, userID, voiceID string) ([
 		out = append(out, sample)
 	}
 	return out, nil
+}
+
+// ListSampleBodiesForVoices is every listed voice's 학습 글 with their bodies in one read, newest
+// first per voice; a voice with none is absent from the map.
+func (s *Store) ListSampleBodiesForVoices(ctx context.Context, userID string, voiceIDs []string) (map[string][]voice.Sample, error) {
+	out := make(map[string][]voice.Sample, len(voiceIDs))
+	if len(voiceIDs) == 0 {
+		return out, nil
+	}
+	encoded, err := json.Marshal(voiceIDs)
+	if err != nil {
+		return nil, fmt.Errorf("encode voice ids: %w", err)
+	}
+	rows, err := s.read.ListSampleBodiesForVoices(ctx, sqlc.ListSampleBodiesForVoicesParams{UserID: userID, VoiceIds: string(encoded)})
+	if err != nil {
+		return nil, fmt.Errorf("select sample bodies: %w", err)
+	}
+	for _, row := range rows {
+		sample, err := toSample(userID, row.VoiceID, sqlc.GetSampleBodyRow{
+			ID: row.ID, Kind: row.Kind, PromptKey: row.PromptKey, Label: row.Label, Body: row.Body,
+			PhotoKey: row.PhotoKey, PhotoWidth: row.PhotoWidth, PhotoHeight: row.PhotoHeight, CreatedAt: row.CreatedAt,
+		})
+		if err != nil {
+			return nil, err
+		}
+		out[row.VoiceID] = append(out[row.VoiceID], sample)
+	}
+	return out, nil
+}
+
+// GetPromptAnswer is the answer a prompt holds in the voice, with its body and photo, or nil.
+func (s *Store) GetPromptAnswer(ctx context.Context, userID, voiceID, promptKey string) (*voice.Sample, error) {
+	row, err := s.read.GetPromptAnswer(ctx, sqlc.GetPromptAnswerParams{VoiceID: voiceID, UserID: userID, PromptKey: sql.NullString{String: promptKey, Valid: true}})
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("select prompt answer: %w", err)
+	}
+	sample, err := toSample(userID, voiceID, sqlc.GetSampleBodyRow(row))
+	if err != nil {
+		return nil, err
+	}
+	return &sample, nil
 }
 
 func (s *Store) GetSampleBody(ctx context.Context, userID, voiceID, sampleID string) (*voice.Sample, error) {

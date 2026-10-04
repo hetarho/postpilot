@@ -166,7 +166,7 @@ func (q *Queries) InsertVoiceCheck(ctx context.Context, arg InsertVoiceCheckPara
 }
 
 const listVoiceChecks = `-- name: ListVoiceChecks :many
-SELECT id, voice_id, prompt_key, material_id, analysis_created_at, projection, write_model, status,
+SELECT id, voice_id, prompt_key, material_id, analysis_created_at, CAST('' AS TEXT) AS projection, write_model, status,
        piece, error_reason, error_params, technical_detail, created_at, updated_at
 FROM voice_checks
 WHERE voice_id = ? AND user_id = ?
@@ -195,6 +195,8 @@ type ListVoiceChecksRow struct {
 	UpdatedAt         string
 }
 
+// The list never shows the frozen projection, so it is not read; it comes back empty only so the
+// row keeps GetVoiceCheck's shape.
 func (q *Queries) ListVoiceChecks(ctx context.Context, arg ListVoiceChecksParams) ([]ListVoiceChecksRow, error) {
 	rows, err := q.db.QueryContext(ctx, listVoiceChecks, arg.VoiceID, arg.UserID)
 	if err != nil {

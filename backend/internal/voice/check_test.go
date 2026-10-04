@@ -326,6 +326,34 @@ func TestAnOlderCheckIsMarkedAndKeepsItsPiece(t *testing.T) {
 	}
 }
 
+// VOICE-43: the 검증 list never reads the projection each check froze — nothing it returns shows
+// one — while the check itself keeps it for its call; everything else the list maps is as stored.
+func TestTheCheckListReadsNoProjection(t *testing.T) {
+	h, alice := checkHarness(t)
+	ctx := context.Background()
+	started, _, err := h.svc.StartVoiceCheck(ctx, "alice", alice, "opening_greeting", writeOnlyRef)
+	if err != nil {
+		t.Fatal(err)
+	}
+	stored, err := h.store.GetCheck(ctx, "alice", started.ID)
+	if err != nil || stored.Projection == "" {
+		t.Fatalf("stored check = %+v err=%v", stored, err)
+	}
+	listed, err := h.store.ListChecks(ctx, "alice", alice)
+	if err != nil || len(listed) != 1 || listed[0].Projection != "" {
+		t.Fatalf("listed = %+v err=%v", listed, err)
+	}
+	listed[0].Projection = stored.Projection
+	if !reflect.DeepEqual(listed[0], stored) {
+		t.Fatalf("listed %+v, stored %+v", listed[0], stored)
+	}
+	h.jobs.activeChecks[alice] = &voice.ActiveJob{ID: "job-live"}
+	views, active, err := h.svc.ListVoiceChecks(ctx, "alice", alice)
+	if err != nil || active != "job-live" || len(views) != 1 || views[0].Answer != "안녕하세요, 오늘은 동네 빵집 이야기예요." || views[0].Prompt.Key != "opening_greeting" {
+		t.Fatalf("the 검증 tab = %+v active=%q err=%v", views, active, err)
+	}
+}
+
 // MODEL-67: 말투 반영 비교 freezes 검증's input — the projection with the answer withheld, the
 // prompt, the answer's text and a photo prompt's photo — refuses what 검증 refuses, and each
 // candidate makes 검증's one call over that snapshot, reporting its usage.

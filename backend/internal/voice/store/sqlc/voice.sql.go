@@ -158,6 +158,48 @@ func (q *Queries) GetPhotoUpload(ctx context.Context, arg GetPhotoUploadParams) 
 	return i, err
 }
 
+const getPromptAnswer = `-- name: GetPromptAnswer :one
+SELECT id, kind, prompt_key, label, body, photo_key, photo_width, photo_height, created_at
+FROM voice_samples
+WHERE voice_id = ? AND user_id = ? AND prompt_key = ? AND kind = 'answer'
+`
+
+type GetPromptAnswerParams struct {
+	VoiceID   string
+	UserID    string
+	PromptKey sql.NullString
+}
+
+type GetPromptAnswerRow struct {
+	ID          string
+	Kind        string
+	PromptKey   sql.NullString
+	Label       string
+	Body        string
+	PhotoKey    sql.NullString
+	PhotoWidth  sql.NullInt64
+	PhotoHeight sql.NullInt64
+	CreatedAt   string
+}
+
+// The one answer a prompt holds in a voice (voice_samples_voice_prompt).
+func (q *Queries) GetPromptAnswer(ctx context.Context, arg GetPromptAnswerParams) (GetPromptAnswerRow, error) {
+	row := q.db.QueryRowContext(ctx, getPromptAnswer, arg.VoiceID, arg.UserID, arg.PromptKey)
+	var i GetPromptAnswerRow
+	err := row.Scan(
+		&i.ID,
+		&i.Kind,
+		&i.PromptKey,
+		&i.Label,
+		&i.Body,
+		&i.PhotoKey,
+		&i.PhotoWidth,
+		&i.PhotoHeight,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const getSampleBody = `-- name: GetSampleBody :one
 SELECT id, kind, prompt_key, label, body, photo_key, photo_width, photo_height, created_at
 FROM voice_samples
@@ -495,6 +537,67 @@ func (q *Queries) ListSampleBodies(ctx context.Context, arg ListSampleBodiesPara
 	return items, nil
 }
 
+const listSampleBodiesForVoices = `-- name: ListSampleBodiesForVoices :many
+SELECT voice_id, id, kind, prompt_key, label, body, photo_key, photo_width, photo_height, created_at
+FROM voice_samples
+WHERE user_id = ?1 AND voice_id IN (SELECT value FROM json_each(?2))
+ORDER BY voice_id, created_at DESC, id DESC
+`
+
+type ListSampleBodiesForVoicesParams struct {
+	UserID   string
+	VoiceIds interface{}
+}
+
+type ListSampleBodiesForVoicesRow struct {
+	VoiceID     string
+	ID          string
+	Kind        string
+	PromptKey   sql.NullString
+	Label       string
+	Body        string
+	PhotoKey    sql.NullString
+	PhotoWidth  sql.NullInt64
+	PhotoHeight sql.NullInt64
+	CreatedAt   string
+}
+
+// Every listed voice's samples with their bodies in one read, for the directory's readiness.
+// voice_ids is a JSON array of voice ids.
+func (q *Queries) ListSampleBodiesForVoices(ctx context.Context, arg ListSampleBodiesForVoicesParams) ([]ListSampleBodiesForVoicesRow, error) {
+	rows, err := q.db.QueryContext(ctx, listSampleBodiesForVoices, arg.UserID, arg.VoiceIds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListSampleBodiesForVoicesRow
+	for rows.Next() {
+		var i ListSampleBodiesForVoicesRow
+		if err := rows.Scan(
+			&i.VoiceID,
+			&i.ID,
+			&i.Kind,
+			&i.PromptKey,
+			&i.Label,
+			&i.Body,
+			&i.PhotoKey,
+			&i.PhotoWidth,
+			&i.PhotoHeight,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listSamplePhotoKeys = `-- name: ListSamplePhotoKeys :many
 SELECT photo_key FROM voice_samples WHERE photo_key IS NOT NULL
 `
@@ -512,59 +615,6 @@ func (q *Queries) ListSamplePhotoKeys(ctx context.Context) ([]sql.NullString, er
 			return nil, err
 		}
 		items = append(items, photo_key)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listSamples = `-- name: ListSamples :many
-SELECT id, kind, prompt_key, label, length(body) AS chars, photo_key, created_at
-FROM voice_samples
-WHERE voice_id = ? AND user_id = ?
-ORDER BY created_at DESC, id DESC
-`
-
-type ListSamplesParams struct {
-	VoiceID string
-	UserID  string
-}
-
-type ListSamplesRow struct {
-	ID        string
-	Kind      string
-	PromptKey sql.NullString
-	Label     string
-	Chars     sql.NullInt64
-	PhotoKey  sql.NullString
-	CreatedAt string
-}
-
-func (q *Queries) ListSamples(ctx context.Context, arg ListSamplesParams) ([]ListSamplesRow, error) {
-	rows, err := q.db.QueryContext(ctx, listSamples, arg.VoiceID, arg.UserID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListSamplesRow
-	for rows.Next() {
-		var i ListSamplesRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.Kind,
-			&i.PromptKey,
-			&i.Label,
-			&i.Chars,
-			&i.PhotoKey,
-			&i.CreatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
 	}
 	if err := rows.Close(); err != nil {
 		return nil, err

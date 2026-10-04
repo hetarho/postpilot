@@ -250,18 +250,13 @@ func (s *Service) prepareCheck(ctx context.Context, userID, voiceID, promptKey s
 	return checkInput{analysis: analysis, prompt: prompt, answer: answer, projection: frozenProjection(projection)}, nil
 }
 
-// answerTo is the voice's answer to one prompt, or nil.
+// answerTo is the voice's answer to one prompt, read with its body and photo, or nil.
 func (s *Service) answerTo(ctx context.Context, userID, voiceID, promptKey string) (*Sample, error) {
-	samples, err := s.samples.ListSampleBodies(ctx, userID, voiceID)
+	answer, err := s.samples.GetPromptAnswer(ctx, userID, voiceID, promptKey)
 	if err != nil {
-		return nil, fmt.Errorf("list samples: %w", err)
+		return nil, fmt.Errorf("get prompt answer: %w", err)
 	}
-	for i := range samples {
-		if samples[i].Kind == SampleKindAnswer && samples[i].PromptKey == promptKey {
-			return &samples[i], nil
-		}
-	}
-	return nil, nil
+	return answer, nil
 }
 
 // frozenProjection is the projection as the check's call reads it: the [말투] section, then the

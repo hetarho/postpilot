@@ -45,9 +45,12 @@ type AnalysisStore interface {
 // SampleStore is the 학습 글 a voice is made from (VOICE-59).
 type SampleStore interface {
 	InsertSample(ctx context.Context, sample Sample) error
-	ListSamples(ctx context.Context, userID, voiceID string) ([]Sample, error)
 	ListSampleBodies(ctx context.Context, userID, voiceID string) ([]Sample, error)
+	// ListSampleBodiesForVoices is several voices' 학습 글 with their bodies in one read, by voice.
+	ListSampleBodiesForVoices(ctx context.Context, userID string, voiceIDs []string) (map[string][]Sample, error)
 	GetSampleBody(ctx context.Context, userID, voiceID, sampleID string) (*Sample, error)
+	// GetPromptAnswer is the one answer a prompt holds in the voice, or nil.
+	GetPromptAnswer(ctx context.Context, userID, voiceID, promptKey string) (*Sample, error)
 	// DeleteSample removes the row and reports the photo key it held, so the object can go
 	// after it (row first, then object →POST-39).
 	DeleteSample(ctx context.Context, userID, voiceID, sampleID string, now time.Time) (photoKey string, deleted bool, err error)

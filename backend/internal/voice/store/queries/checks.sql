@@ -14,7 +14,9 @@ FROM voice_checks
 WHERE id = ? AND user_id = ?;
 
 -- name: ListVoiceChecks :many
-SELECT id, voice_id, prompt_key, material_id, analysis_created_at, projection, write_model, status,
+-- The list never shows the frozen projection, so it is not read; it comes back empty only so the
+-- row keeps GetVoiceCheck's shape.
+SELECT id, voice_id, prompt_key, material_id, analysis_created_at, CAST('' AS TEXT) AS projection, write_model, status,
        piece, error_reason, error_params, technical_detail, created_at, updated_at
 FROM voice_checks
 WHERE voice_id = ? AND user_id = ?

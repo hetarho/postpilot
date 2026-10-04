@@ -45,21 +45,30 @@ func (s *Service) ConfigurePhotos(objects ObjectStore, limits PhotoLimits) {
 
 // --- directory ---
 
-// ListVoices is the directory, each voice not yet made carrying its readiness (VOICE-9).
+// ListVoices is the directory, each voice not yet made carrying its readiness (VOICE-9). The
+// bodies of every such voice are read at once, however many there are.
 func (s *Service) ListVoices(ctx context.Context, userID string) ([]Voice, error) {
 	voices, err := s.directory.ListVoices(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf("list voices: %w", err)
 	}
+	var unmade []string
+	for _, found := range voices {
+		if !found.Made {
+			unmade = append(unmade, found.ID)
+		}
+	}
+	if len(unmade) == 0 {
+		return voices, nil
+	}
+	bodies, err := s.samples.ListSampleBodiesForVoices(ctx, userID, unmade)
+	if err != nil {
+		return nil, fmt.Errorf("list sample bodies: %w", err)
+	}
 	for i := range voices {
-		if voices[i].Made {
-			continue
+		if !voices[i].Made {
+			voices[i].ReadinessPercent = ReadinessOf(bodies[voices[i].ID]).Percent
 		}
-		bodies, err := s.samples.ListSampleBodies(ctx, userID, voices[i].ID)
-		if err != nil {
-			return nil, fmt.Errorf("list sample bodies: %w", err)
-		}
-		voices[i].ReadinessPercent = ReadinessOf(bodies).Percent
 	}
 	return voices, nil
 }
@@ -238,15 +247,12 @@ func (s *Service) activeVoice(ctx context.Context, userID, voiceID string) (Voic
 // --- profile ---
 
 // Get is a voice as its tabs read it: the 학습 글, the readiness meter, the current analysis with
-// the examples whose 학습 글 still exist, whether a previous analysis exists, and the notice.
+// the examples whose 학습 글 still exist, whether a previous analysis exists, and the notice. One
+// read of the 학습 글 serves both the list and the meter.
 func (s *Service) Get(ctx context.Context, userID, voiceID string) (Profile, error) {
 	found, err := s.ownedVoice(ctx, userID, voiceID)
 	if err != nil {
 		return Profile{}, err
-	}
-	samples, err := s.samples.ListSamples(ctx, userID, voiceID)
-	if err != nil {
-		return Profile{}, fmt.Errorf("list samples: %w", err)
 	}
 	bodies, err := s.samples.ListSampleBodies(ctx, userID, voiceID)
 	if err != nil {
@@ -255,6 +261,12 @@ func (s *Service) Get(ctx context.Context, userID, voiceID string) (Profile, err
 	active, err := s.jobs.ActiveForVoiceKind(ctx, voiceID, AnalysisJobKind)
 	if err != nil {
 		return Profile{}, fmt.Errorf("get active analysis: %w", err)
+	}
+	samples := make([]Sample, len(bodies))
+	for i, sample := range bodies {
+		// The list carries no text: a 학습 글 is opened one at a time (GetSample).
+		sample.Body = ""
+		samples[i] = sample
 	}
 	profile := Profile{UserID: userID, VoiceID: voiceID, Voice: found, Samples: samples, Readiness: ReadinessOf(bodies)}
 	if active != nil {
@@ -435,7 +447,8 @@ type Answer struct {
 // AnswerPrompt stores an answer as a 학습 글 (VOICE-60): trimmed and non-empty, one per prompt,
 // and a photo prompt's photo confirmed by a HEAD against the post photo's size and dimension
 // limits (→POST-36). Answering a prompt that holds an answer rewrites it: the new answer
-// replaces the old one, keeping its photo unless a new one is uploaded. It enqueues nothing.
+// replaces the old one, keeping its photo unless a new one is uploaded; saving the answer the
+// prompt already holds, on the photo it already has, changes nothing. It enqueues nothing.
 func (s *Service) AnswerPrompt(ctx context.Context, userID, voiceID string, answer Answer) (Sample, error) {
 	if _, err := s.activeVoice(ctx, userID, voiceID); err != nil {
 		return Sample{}, err
@@ -448,9 +461,14 @@ func (s *Service) AnswerPrompt(ctx context.Context, userID, voiceID string, answ
 	if body == "" {
 		return Sample{}, ErrAnswerRequired
 	}
-	previous, err := s.previousAnswer(ctx, userID, voiceID, prompt.Key)
+	previous, err := s.answerTo(ctx, userID, voiceID, prompt.Key)
 	if err != nil {
 		return Sample{}, err
+	}
+	// The same text, and no new photo, is the answer the prompt already holds: it keeps its id,
+	// so the profile reports no change and nudges no paid 다시 분석 (VOICE-21).
+	if previous != nil && previous.Body == body && answer.UploadID == "" && (!prompt.Photo || previous.HasPhoto()) {
+		return *previous, nil
 	}
 	sample := Sample{
 		ID: s.newID(), UserID: userID, VoiceID: voiceID, Kind: SampleKindAnswer, PromptKey: prompt.Key,
@@ -508,25 +526,6 @@ func (s *Service) AnswerPrompt(ctx context.Context, userID, voiceID string, answ
 		}
 	}
 	return sample, nil
-}
-
-// previousAnswer is the answer the prompt holds now, read with its photo, or nil.
-func (s *Service) previousAnswer(ctx context.Context, userID, voiceID, promptKey string) (*Sample, error) {
-	samples, err := s.samples.ListSamples(ctx, userID, voiceID)
-	if err != nil {
-		return nil, fmt.Errorf("list samples: %w", err)
-	}
-	for _, sample := range samples {
-		if sample.Kind != SampleKindAnswer || sample.PromptKey != promptKey {
-			continue
-		}
-		previous, err := s.samples.GetSampleBody(ctx, userID, voiceID, sample.ID)
-		if err != nil {
-			return nil, fmt.Errorf("get previous answer: %w", err)
-		}
-		return previous, nil
-	}
-	return nil, nil
 }
 
 // GetSample opens one 학습 글 for its owner: the full text and, for a photo answer, a view URL

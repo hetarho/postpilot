@@ -9,6 +9,7 @@ import (
 	"sync"
 	"testing"
 	"time"
+	"unicode/utf8"
 
 	"github.com/postpilot/backend/internal/job"
 	jobstore "github.com/postpilot/backend/internal/job/store"
@@ -198,10 +199,28 @@ func (h *voiceHarness) makeVoice(t *testing.T, user, voiceID string) {
 	}
 }
 
-// countingStore is the voice store with a count of the reads a test pins.
+// countingStore is the voice store with a count of the reads and writes a test pins.
 type countingStore struct {
 	*voicestore.Store
 	voiceReads, analysisReads int
+	// bodyReads is per-voice 학습 글 reads, batchBodyReads several voices' at once.
+	bodyReads, batchBodyReads int
+	answerWrites              int
+}
+
+func (c *countingStore) ListSampleBodies(ctx context.Context, userID, voiceID string) ([]voice.Sample, error) {
+	c.bodyReads++
+	return c.Store.ListSampleBodies(ctx, userID, voiceID)
+}
+
+func (c *countingStore) ListSampleBodiesForVoices(ctx context.Context, userID string, voiceIDs []string) (map[string][]voice.Sample, error) {
+	c.batchBodyReads++
+	return c.Store.ListSampleBodiesForVoices(ctx, userID, voiceIDs)
+}
+
+func (c *countingStore) AnswerPrompt(ctx context.Context, sample voice.Sample, uploadID, replaceID string) error {
+	c.answerWrites++
+	return c.Store.AnswerPrompt(ctx, sample, uploadID, replaceID)
 }
 
 func (c *countingStore) GetVoice(ctx context.Context, userID, voiceID string) (voice.Voice, error) {
@@ -623,7 +642,7 @@ func TestAnswerPromptValidatesAndHoldsOneAnswerPerPrompt(t *testing.T) {
 	if err != nil || rewritten.ID == answer.ID {
 		t.Fatalf("rewrite = %+v err=%v", rewritten, err)
 	}
-	samples, err := h.store.ListSamples(ctx, "alice", alice)
+	samples, err := h.store.ListSampleBodies(ctx, "alice", alice)
 	if err != nil || len(samples) != 1 || samples[0].ID != rewritten.ID {
 		t.Fatalf("after the rewrite the prompt holds %+v err=%v", samples, err)
 	}
@@ -641,6 +660,157 @@ func TestAnswerPromptValidatesAndHoldsOneAnswerPerPrompt(t *testing.T) {
 	}
 	if len(h.jobs.calls()) != 0 || h.models.completeCalls != 0 {
 		t.Fatal("answering enqueued work or called a provider")
+	}
+}
+
+// VOICE-60, VOICE-21: saving the answer a prompt already holds — the same words, and no new photo
+// — writes nothing and keeps the 학습 글's id, so the profile's notice stays where it was and no
+// paid 다시 분석 is nudged; changed words, or a new photo, still replace the answer.
+func TestAnUnchangedAnswerIsLeftAlone(t *testing.T) {
+	h := newVoiceHarness(t)
+	objects := &fakeObjects{objects: map[string]int64{}}
+	counting := &countingStore{Store: h.store}
+	svc := voice.NewService(counting, h.models, h.jobs)
+	svc.ConfigurePhotos(objects, voice.PhotoLimits{PutTTL: time.Minute, GetTTL: time.Minute, MaxBytes: photoMaxBytes})
+	ctx := context.Background()
+	alice := h.voice("alice")
+	answer, err := svc.AnswerPrompt(ctx, "alice", alice, voice.Answer{PromptKey: "opening_greeting", Body: "안녕하세요! 오늘도 반가워요."})
+	if err != nil {
+		t.Fatal(err)
+	}
+	upload, _, err := svc.CreatePhotoUpload(ctx, "alice", alice, "photo_food")
+	if err != nil {
+		t.Fatal(err)
+	}
+	objects.objects[upload.Key] = 5000
+	photo, err := svc.AnswerPrompt(ctx, "alice", alice, voice.Answer{PromptKey: "photo_food", Body: "짜장면이에요.", UploadID: upload.ID, PhotoWidth: 1024, PhotoHeight: 768})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := h.store.PublishAnalysis(ctx, "alice", alice, voice.Analysis{AnalyzeModel: analyzeRef.String(), MaterialIDs: []string{answer.ID, photo.ID}, CreatedAt: time.Now()}); err != nil {
+		t.Fatal(err)
+	}
+	notice := func() voice.Notice {
+		t.Helper()
+		profile, err := svc.Get(ctx, "alice", alice)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return profile.Notice
+	}
+	if got := notice(); got != (voice.Notice{}) {
+		t.Fatalf("a fresh analysis = %+v", got)
+	}
+	counting.answerWrites = 0
+	again, err := svc.AnswerPrompt(ctx, "alice", alice, voice.Answer{PromptKey: "opening_greeting", Body: "  안녕하세요! 오늘도 반가워요.\n"})
+	if err != nil || again.ID != answer.ID || again.Body != answer.Body {
+		t.Fatalf("the same words = %+v err=%v, want %s", again, err, answer.ID)
+	}
+	// No upload is the photo the answer already has.
+	kept, err := svc.AnswerPrompt(ctx, "alice", alice, voice.Answer{PromptKey: "photo_food", Body: "짜장면이에요."})
+	if err != nil || kept.ID != photo.ID || kept.PhotoKey != upload.Key || kept.PhotoWidth != 1024 {
+		t.Fatalf("the same photo answer = %+v err=%v, want %s", kept, err, photo.ID)
+	}
+	if counting.answerWrites != 0 || len(objects.deleted) != 0 {
+		t.Fatalf("an unchanged answer wrote %d times and deleted %v", counting.answerWrites, objects.deleted)
+	}
+	if got := notice(); got != (voice.Notice{}) {
+		t.Fatalf("an unchanged answer moved the notice to %+v", got)
+	}
+	// Changed words are a new 학습 글: the analysis read one that is gone.
+	changed, err := svc.AnswerPrompt(ctx, "alice", alice, voice.Answer{PromptKey: "opening_greeting", Body: "안녕하세요! 오늘은 다르게 써요."})
+	if err != nil || changed.ID == answer.ID || counting.answerWrites != 1 {
+		t.Fatalf("changed words = %+v err=%v writes=%d", changed, err, counting.answerWrites)
+	}
+	if got := notice(); got.Kind != voice.NoticeChanged {
+		t.Fatalf("after changed words the notice = %+v", got)
+	}
+	// So is the same text on a new photo.
+	second, _, err := svc.CreatePhotoUpload(ctx, "alice", alice, "photo_food")
+	if err != nil {
+		t.Fatal(err)
+	}
+	objects.objects[second.Key] = 5000
+	rephotographed, err := svc.AnswerPrompt(ctx, "alice", alice, voice.Answer{PromptKey: "photo_food", Body: "짜장면이에요.", UploadID: second.ID, PhotoWidth: 800, PhotoHeight: 600})
+	if err != nil || rephotographed.ID == photo.ID || rephotographed.PhotoKey != second.Key || counting.answerWrites != 2 {
+		t.Fatalf("a new photo = %+v err=%v writes=%d", rephotographed, err, counting.answerWrites)
+	}
+}
+
+// VOICE-9, VOICE-32: the directory reads the 학습 글 of every voice not yet made in one read, each
+// voice's readiness from its own 학습 글; a directory of made voices reads none. The profile reads
+// its 학습 글 once for both the list and the meter.
+func TestTheDirectoryAndTheProfileReadTheirSamplesOnce(t *testing.T) {
+	h := newVoiceHarness(t)
+	counting := &countingStore{Store: h.store}
+	svc := voice.NewService(counting, h.models, h.jobs)
+	ctx := context.Background()
+	alice := h.voice("alice")
+	second, err := svc.CreateVoice(ctx, "alice", "리뷰 말투")
+	if err != nil {
+		t.Fatal(err)
+	}
+	third, err := svc.CreateVoice(ctx, "alice", "일기 말투")
+	if err != nil {
+		t.Fatal(err)
+	}
+	made, err := svc.CreateVoice(ctx, "alice", "다 된 말투")
+	if err != nil {
+		t.Fatal(err)
+	}
+	h.makeVoice(t, "alice", made.ID)
+	at := time.Now().Add(-time.Hour)
+	h.addSample(t, "alice", alice, "alice-1", "국숫집", strings.Repeat("국물이 정말 진했어요! ", 30), at)
+	h.addSample(t, "alice", alice, "alice-2", "빵집", strings.Repeat("빵이 바삭했어요. ", 12), at.Add(time.Minute))
+	h.addSample(t, "alice", second.ID, "second-1", "카페", strings.Repeat("커피가 고소했어요. ", 9), at)
+	// Another account's 학습 글 never reach this directory.
+	h.addSample(t, "bob", h.voice("bob"), "bob-1", "남의 글", strings.Repeat("남의 문장이에요. ", 40), at)
+
+	voices, err := svc.ListVoices(ctx, "alice")
+	if err != nil || len(voices) != 4 {
+		t.Fatalf("directory = %d voices err=%v", len(voices), err)
+	}
+	if counting.batchBodyReads != 1 || counting.bodyReads != 0 {
+		t.Fatalf("the directory read bodies %d times at once and %d times per voice", counting.batchBodyReads, counting.bodyReads)
+	}
+	readiness := map[string]int{}
+	for _, found := range voices {
+		readiness[found.ID] = found.ReadinessPercent
+	}
+	for _, voiceID := range []string{alice, second.ID, third.ID} {
+		bodies, err := h.store.ListSampleBodies(ctx, "alice", voiceID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if want := voice.ReadinessOf(bodies).Percent; readiness[voiceID] != want {
+			t.Fatalf("voice %s readiness = %d, want %d", voiceID, readiness[voiceID], want)
+		}
+	}
+	if readiness[alice] == readiness[second.ID] || readiness[second.ID] == 0 || readiness[third.ID] != 0 || readiness[made.ID] != 0 {
+		t.Fatalf("readiness = %v", readiness)
+	}
+	h.makeVoice(t, "bob", h.voice("bob"))
+	counting.batchBodyReads = 0
+	if _, err := svc.ListVoices(ctx, "bob"); err != nil || counting.batchBodyReads != 0 {
+		t.Fatalf("a made directory read bodies %d times err=%v", counting.batchBodyReads, err)
+	}
+
+	counting.bodyReads, counting.batchBodyReads = 0, 0
+	profile, err := svc.Get(ctx, "alice", alice)
+	if err != nil || counting.bodyReads != 1 || counting.batchBodyReads != 0 {
+		t.Fatalf("the profile read 학습 글 %d+%d times err=%v", counting.bodyReads, counting.batchBodyReads, err)
+	}
+	bodies, err := h.store.ListSampleBodies(ctx, "alice", alice)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if profile.Readiness.Percent != voice.ReadinessOf(bodies).Percent || len(profile.Samples) != 2 {
+		t.Fatalf("profile = %+v", profile)
+	}
+	for i, sample := range profile.Samples {
+		if sample.ID != bodies[i].ID || sample.Body != "" || sample.Chars != utf8.RuneCountInString(bodies[i].Body) || sample.Label != bodies[i].Label {
+			t.Fatalf("listed sample %d = %+v", i, sample)
+		}
 	}
 }
 
