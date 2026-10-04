@@ -26,6 +26,8 @@ because the clip design system's only permitted entrance and exit are a 180 ms
 and a 120 ms alpha fade, and the renderer animates the caption plate's alpha
 with it. `loop` reuses one decoded caption/card frame for a finite cut-length
 sequence, avoiding infinite PNG demuxer inputs and repeated image decoding.
+`select` takes only the few frames a cut's grounds are measured on, in one output,
+so the sampler scales and writes those frames and no others.
 No nonfree codec option is enabled. Input protocols are file and pipe only; network,
 external-device capture and unneeded containers are disabled. Common H.264/HEVC,
 VP8/VP9, MPEG-4, MJPEG and ProRes inputs are supported in the accepted containers;

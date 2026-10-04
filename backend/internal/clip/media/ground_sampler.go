@@ -7,18 +7,20 @@ import (
 	"path/filepath"
 	"sort"
 	"strconv"
+	"strings"
 
 	"github.com/postpilot/backend/internal/clip"
 )
 
 // The ground CDS-44 reads under an unplated text is the footage the viewer sees
 // there: the composed output, cut by cut, crossfaded where a transition joins two
-// cuts. Both render kinds measure it with this one sampler over the retained
-// originals, so a server render and the grounds handed to a browser render reach
-// the same scrim, accent and contrast decisions by construction (CLIP-157,
-// CLIP-192). Each output frame is rebuilt from the frames of the cut or cuts it
-// is made of, through the same chain the composition renders its bare footage
-// with, so no composed footage has to exist for a browser render to be sampled.
+// cuts. Both render kinds measure it with this one sampler, so a server render
+// and the grounds handed to a browser render reach the same scrim, accent and
+// contrast decisions by construction (CLIP-157, CLIP-192). Each output frame is
+// rebuilt from the frames of the cut or cuts it is made of: a server render
+// reads them from each cut's lossless bare footage, and a browser render from
+// the retained originals through the same chain that footage is rendered with,
+// so no composed footage has to exist for a browser render to be sampled.
 
 // footageTimeline is compositionGraph's frame arithmetic: each cut contributes
 // its frames, a transition overlaps the previous cut's tail, and a zero
@@ -168,10 +170,11 @@ func (s *groundSampler) take(cut, local int, frame image.Image) {
 	}
 }
 
-// sampleCut decodes the frames one cut contributes to the reads, through the
-// chain the composition renders that cut with, while the cut's original is at
-// hand. The frames share one decode of the source; the batch is bounded because
-// each output carries its own chain.
+// sampleCut decodes the frames one cut contributes to the reads from the cut's
+// original, through the chain the composition renders that cut with: the
+// frames are picked before the cover scale, so only they are scaled, and one
+// output carries them all. Cover is a per-frame filter, so a picked frame's
+// pixels are the ones the composition's footage has.
 func (r *Rendering) sampleCut(ctx context.Context, ws clip.MediaWorkspace, s *groundSampler, index int, cut clip.Cut, source clip.MediaSource) error {
 	locals := s.needs(index)
 	if len(locals) == 0 {
@@ -180,42 +183,65 @@ func (r *Rendering) sampleCut(ctx context.Context, ws clip.MediaWorkspace, s *gr
 	if err := r.media.sourcePath(ws, source.Path); err != nil {
 		return err
 	}
-	for start := 0; start < len(locals); start += r.cfg.SampleBatch {
-		batch := locals[start:min(len(locals), start+r.cfg.SampleBatch)]
-		if err := r.media.capacity(ws, int64(len(batch))*4*1024*1024); err != nil {
-			return err
-		}
-		args := append(r.baseArgs(), "-threads", strconv.Itoa(r.media.cfg.DecodeThreads), "-protocol_whitelist", "file,pipe", "-ss", seconds(cut.StartMS), "-i", source.Path)
-		paths := make([]string, len(batch))
-		for i, local := range batch {
-			paths[i] = filepath.Join(ws.Path, "ground-"+strconv.Itoa(index)+"-"+strconv.Itoa(local)+".png")
-			args = append(args, "-map", "0:V:0", "-vf", groundFrameChain(r.cfg, s.canvas, cut, local), "-frames:v", "1", "-c:v", "png", "-threads", strconv.Itoa(r.media.cfg.EncodeThreads), paths[i])
-		}
-		_, err := r.media.run(ctx, ws, r.media.cfg.FFmpegPath, args...)
-		for i, path := range paths {
-			if err != nil {
-				_ = os.Remove(path)
-				continue
-			}
-			frame, e := readFrame(path)
-			_ = os.Remove(path)
-			if e != nil {
-				err = e
-				continue
-			}
-			s.take(index, batch[i], frame)
-		}
-		if err != nil {
-			return err
-		}
-	}
-	return nil
+	return r.readGrounds(ctx, ws, s, index, locals, []string{"-ss", seconds(cut.StartMS), "-i", source.Path}, groundFrameChain(r.cfg, s.canvas, cut, locals))
 }
 
-// groundFrameChain is bareFootageGraph cut down to one of the cut's frames.
-func groundFrameChain(cfg clip.RenderConfig, canvas clip.Canvas, cut clip.Cut, local int) string {
-	return "trim=duration=" + seconds(cut.SourceSpanMS()) + "," + rateChain(cut.Rate(), cfg.FPS) + "," + coverChain(canvas, cut.Focal) +
-		",setsar=1,trim=start_frame=" + strconv.Itoa(local) + ":end_frame=" + strconv.Itoa(local+1) + ",setpts=PTS-STARTPTS,format=yuv444p"
+// sampleFootage takes the same frames from the cut's own bare footage, which a
+// server render has just encoded losslessly through that chain: what the
+// viewer sees under the text, with no second decode of the original.
+func (r *Rendering) sampleFootage(ctx context.Context, ws clip.MediaWorkspace, s *groundSampler, index int, footage string) error {
+	locals := s.needs(index)
+	if len(locals) == 0 {
+		return nil
+	}
+	if err := r.media.sourcePath(ws, footage); err != nil {
+		return err
+	}
+	return r.readGrounds(ctx, ws, s, index, locals, []string{"-i", footage}, selectFrames(locals))
+}
+
+// readGrounds runs one decode whose chain keeps exactly the cut's needed
+// frames, written as one numbered image sequence in frame order.
+func (r *Rendering) readGrounds(ctx context.Context, ws clip.MediaWorkspace, s *groundSampler, index int, locals []int, input []string, chain string) error {
+	if err := r.media.capacity(ws, int64(len(locals))*4*1024*1024); err != nil {
+		return err
+	}
+	name := "ground-" + strconv.Itoa(index) + "-"
+	args := append(r.baseArgs(), "-threads", strconv.Itoa(r.media.cfg.DecodeThreads), "-protocol_whitelist", "file,pipe")
+	args = append(append(args, input...), "-map", "0:V:0", "-vf", chain, "-frames:v", strconv.Itoa(len(locals)), "-fps_mode", "passthrough",
+		"-c:v", "png", "-threads", strconv.Itoa(r.media.cfg.EncodeThreads), filepath.Join(ws.Path, name+"%d.png"))
+	_, err := r.media.run(ctx, ws, r.media.cfg.FFmpegPath, args...)
+	for i, local := range locals {
+		path := filepath.Join(ws.Path, name+strconv.Itoa(i+1)+".png")
+		if err != nil {
+			_ = os.Remove(path)
+			continue
+		}
+		frame, e := readFrame(path)
+		_ = os.Remove(path)
+		if e != nil {
+			err = e
+			continue
+		}
+		s.take(index, local, frame)
+	}
+	return err
+}
+
+// groundFrameChain is bareFootageGraph keeping only the given frames, picked
+// before the cover scale.
+func groundFrameChain(cfg clip.RenderConfig, canvas clip.Canvas, cut clip.Cut, locals []int) string {
+	return "trim=duration=" + seconds(cut.SourceSpanMS()) + "," + rateChain(cut.Rate(), cfg.FPS) + "," + selectFrames(locals) + "," + coverChain(canvas, cut.Focal) + ",setsar=1,format=yuv444p"
+}
+
+// selectFrames keeps exactly the frames at these indexes of the chain it
+// joins, counted from its first frame.
+func selectFrames(locals []int) string {
+	terms := make([]string, len(locals))
+	for i, local := range locals {
+		terms[i] = "eq(n," + strconv.Itoa(local) + ")"
+	}
+	return "select='" + strings.Join(terms, "+") + "'"
 }
 
 // grounds is CDS-44's measurement of every sampled visual, in visual order. A

@@ -7,6 +7,9 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"reflect"
+	"slices"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -136,6 +139,131 @@ func TestRenderSmokeSamplesGroundsAsTheComposedFootage(t *testing.T) {
 		}
 		if spread < .05 {
 			t.Errorf("the fixture's frames barely differ (%.4f), so a frame taken early or late would pass", spread)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// legacyGroundRead is how the sampler read a cut's frames before T559: one
+// output per frame, each cover-scaling every frame of the cut's span before
+// trimming to its own one.
+func legacyGroundRead(t *testing.T, r *Rendering, ws clip.MediaWorkspace, s *groundSampler, index int, cut clip.Cut, source clip.MediaSource) {
+	t.Helper()
+	locals := s.needs(index)
+	if len(locals) == 0 {
+		return
+	}
+	args := append(r.baseArgs(), "-threads", strconv.Itoa(r.media.cfg.DecodeThreads), "-protocol_whitelist", "file,pipe", "-ss", seconds(cut.StartMS), "-i", source.Path)
+	paths := make([]string, len(locals))
+	for i, local := range locals {
+		paths[i] = filepath.Join(ws.Path, fmt.Sprintf("legacy-%d-%d.png", index, local))
+		chain := "trim=duration=" + seconds(cut.SourceSpanMS()) + "," + rateChain(cut.Rate(), r.cfg.FPS) + "," + coverChain(s.canvas, cut.Focal) +
+			",setsar=1,trim=start_frame=" + strconv.Itoa(local) + ":end_frame=" + strconv.Itoa(local+1) + ",setpts=PTS-STARTPTS,format=yuv444p"
+		args = append(args, "-map", "0:V:0", "-vf", chain, "-frames:v", "1", "-c:v", "png", "-threads", strconv.Itoa(r.media.cfg.EncodeThreads), paths[i])
+	}
+	if _, err := r.media.run(t.Context(), ws, r.media.cfg.FFmpegPath, args...); err != nil {
+		t.Fatal(err)
+	}
+	for i, path := range paths {
+		frame, err := readFrame(path)
+		_ = os.Remove(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		s.take(index, locals[i], frame)
+	}
+}
+
+// The grounds a server render now reads from each cut's bare footage, and the
+// ones a browser render's sampling reads through the frame-picking chain, are
+// the legacy read's to the bit: every read's mean colour over the whole canvas
+// and under a caption region, a fade through black's pixels, and so every
+// scrim, accent and contrast decision made from them — on a cut at a non-1x
+// rate, both sides of a dissolve, a fade through black and a hard cut.
+func TestRenderSmokeReadsTheGroundsTheLegacyChainRead(t *testing.T) {
+	if os.Getenv("CLIP_MEDIA_SMOKE") != "1" {
+		t.Skip("real renderer gate runs inside Docker")
+	}
+	t.Parallel()
+	cfg := mediaConfig(t)
+	cfg.OperationTimeout = 10 * time.Minute
+	a, err := New(cfg, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	r, err := NewRenderer(a, renderConfig(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	canvas, _ := clip.ClipCanvas("vertical")
+	if err := a.WithWorkspace(t.Context(), "ground-legacy", func(ws clip.MediaWorkspace) error {
+		sources := map[string]clip.MediaSource{
+			"one": {SourceID: "one", Path: movingBlock(t, a, ws, "one.mp4", "black", "white", "1280x720", "2")},
+			"two": {SourceID: "two", Path: movingBlock(t, a, ws, "two.mp4", "0xE0E0E0", "0x202020", "720x1280", "3")},
+		}
+		plan := clip.EditPlan{Ratio: "vertical", Cuts: []clip.Cut{
+			{ID: "a", SourceID: "one", StartMS: 0, EndMS: 2000, Focal: clip.Point{X: .3, Y: .5}},
+			{ID: "b", SourceID: "two", StartMS: 500, EndMS: 3500, PlaybackRatePermille: 1500, TransitionMS: design.Transition.FadeMS, Focal: clip.Point{X: .5, Y: .5}},
+			{ID: "c", SourceID: "one", StartMS: 1000, EndMS: 3000, TransitionMS: design.Transition.BlackMS, Focal: clip.Point{X: .7, Y: .4}},
+			{ID: "d", SourceID: "two", StartMS: 0, EndMS: 1000, Focal: clip.Point{X: .5, Y: .5}},
+		}}
+		timeline := newFootageTimeline(r.cfg, plan)
+		b, c, d := timeline.starts[1], timeline.starts[2], timeline.starts[3]
+		whole := clip.Region{Width: float64(canvas.Width), Height: float64(canvas.Height)}
+		caption := clip.Region{X: 90, Y: 600, Width: 900, Height: 700}
+		reads := []groundRead{}
+		for i, frame := range []int{0, 15, b + 3, b + 20, c + 1, c + 4, c + 7, d - 1, d, d + 5} {
+			footage, ok := timeline.at(frame)
+			if !ok {
+				return fmt.Errorf("frame %d is outside the clip", frame)
+			}
+			reads = append(reads, groundRead{visual: 2 * i, footage: footage, region: whole}, groundRead{visual: 2*i + 1, footage: footage, region: caption})
+		}
+		legacy, browser, server := groundSampler{canvas: canvas, reads: slices.Clone(reads)}, groundSampler{canvas: canvas, reads: slices.Clone(reads)}, groundSampler{canvas: canvas, reads: slices.Clone(reads)}
+		frames := cutFrames(plan, r.cfg.FPS)
+		for i, cut := range plan.Cuts {
+			legacyGroundRead(t, r, ws, &legacy, i, cut, sources[cut.SourceID])
+			if err := r.sampleCut(t.Context(), ws, &browser, i, cut, sources[cut.SourceID]); err != nil {
+				return err
+			}
+			bare := filepath.Join(ws.Path, fmt.Sprintf("bare-%04d.mp4", i))
+			if err := r.renderBareFootage(t.Context(), ws, canvas, cut, sources[cut.SourceID], frames[i], bare); err != nil {
+				return err
+			}
+			if err := r.sampleFootage(t.Context(), ws, &server, i, bare); err != nil {
+				return err
+			}
+			if err := os.Remove(bare); err != nil {
+				return err
+			}
+		}
+		want, err := legacy.grounds()
+		if err != nil {
+			return err
+		}
+		for _, got := range []struct {
+			name    string
+			sampler groundSampler
+		}{{"browser", browser}, {"server", server}} {
+			for i, read := range got.sampler.reads {
+				if read.means != legacy.reads[i].means || !reflect.DeepEqual(read.pixels, legacy.reads[i].pixels) || read.filled != legacy.reads[i].filled {
+					t.Errorf("%s read %d (%+v) took other pixels than the legacy read: %v, want %v", got.name, i, read.footage, read.means, legacy.reads[i].means)
+				}
+			}
+			grounds, err := got.sampler.grounds()
+			if err != nil {
+				return err
+			}
+			if !reflect.DeepEqual(grounds, want) {
+				t.Errorf("%s grounds %+v, legacy %+v", got.name, grounds, want)
+			}
+			for visual, ground := range grounds {
+				if ground.Scrim() != want[visual].Scrim() || ground.AccentWhite() != want[visual].AccentWhite() || ground.Hex() != want[visual].Hex() {
+					t.Errorf("%s visual %d decides a scrim, accent or contrast colour differently", got.name, visual)
+				}
+			}
 		}
 		return nil
 	}); err != nil {

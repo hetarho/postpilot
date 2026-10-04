@@ -8,8 +8,10 @@ import (
 	"image/png"
 	"math"
 	"os"
+	"path/filepath"
 	"reflect"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -110,9 +112,25 @@ func solidPNG(t *testing.T, path string, level uint8) {
 	}
 }
 
+// groundFiles is what one ground read writes: its single output's numbered
+// image sequence, one file per frame it keeps.
+func groundFiles(c Command) []string {
+	pattern := c.Args[len(c.Args)-1]
+	at := slices.Index(c.Args, "-frames:v")
+	if !strings.HasSuffix(pattern, "%d.png") || at < 0 {
+		return nil
+	}
+	n, _ := strconv.Atoi(c.Args[at+1])
+	out := make([]string, n)
+	for i := range out {
+		out[i] = strings.Replace(pattern, "%d", strconv.Itoa(i+1), 1)
+	}
+	return out
+}
+
 // Each cut is asked for exactly the frames the reads take from it, through its
-// own chain, and a read inside a dissolve is the dissolve of what its two cuts
-// gave.
+// own chain with the frames picked before the cover scale, in one output; a
+// read inside a dissolve is the dissolve of what its two cuts gave.
 func TestTheSamplerTakesEachCutsOwnFrames(t *testing.T) {
 	plan := timelinePlan()
 	var runner *fakeRunner
@@ -121,10 +139,8 @@ func TestTheSamplerTakesEachCutsOwnFrames(t *testing.T) {
 		if slices.Contains(c.Args, "white.mp4") || slices.ContainsFunc(c.Args, func(a string) bool { return strings.HasSuffix(a, "/white.mp4") }) {
 			level = 255
 		}
-		for _, arg := range c.Args {
-			if strings.HasSuffix(arg, ".png") {
-				solidPNG(t, arg, level)
-			}
+		for _, path := range groundFiles(c) {
+			solidPNG(t, path, level)
 		}
 		return nil, nil
 	}}
@@ -156,18 +172,24 @@ func TestTheSamplerTakesEachCutsOwnFrames(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	for _, call := range runner.calls {
+	if len(runner.calls) != 2 {
+		t.Fatalf("%d decodes for two cuts", len(runner.calls))
+	}
+	for i, call := range runner.calls {
 		chains := 0
-		for i, arg := range call.Args {
-			if arg == "-vf" {
-				chains++
-				if !strings.Contains(call.Args[i+1], "trim=start_frame=") || !strings.Contains(call.Args[i+1], coverChain(canvas, clip.Point{})) {
-					t.Fatalf("a frame was not cut through the cut's own chain: %s", call.Args[i+1])
-				}
+		for j, arg := range call.Args {
+			if arg != "-vf" {
+				continue
+			}
+			chains++
+			chain := call.Args[j+1]
+			picked, scaled := strings.Index(chain, selectFrames(s.needs(i))), strings.Index(chain, coverChain(canvas, clip.Point{}))
+			if chain != groundFrameChain(r.cfg, canvas, plan.Cuts[i], s.needs(i)) || picked < strings.Index(chain, "fps=") || scaled < picked {
+				t.Fatalf("cut %d's frames were not picked through its own chain before the scale: %s", i, chain)
 			}
 		}
-		if chains != 2 {
-			t.Fatalf("one decode of a cut served %d frames, want 2: %v", chains, call.Args)
+		if chains != 1 || len(groundFiles(call)) != 2 {
+			t.Fatalf("one decode of a cut served %d outputs and %d frames, want 1 and 2: %v", chains, len(groundFiles(call)), call.Args)
 		}
 	}
 	grounds, err := s.grounds()
@@ -180,6 +202,49 @@ func TestTheSamplerTakesEachCutsOwnFrames(t *testing.T) {
 		if math.Abs(v-want[i]) > 1e-6 {
 			t.Fatalf("frame %d measured %.6f, want %.6f", i, v, want[i])
 		}
+	}
+}
+
+// A server render reads a cut's grounds from the bare footage it has just
+// encoded: one decode of that file, keeping the needed frames by their index in
+// it, with no seek, no chain of its own and no original opened again.
+func TestAServerRenderReadsItsGroundsFromTheBareFootage(t *testing.T) {
+	plan := timelinePlan()
+	runner := &fakeRunner{run: func(_ context.Context, c Command) ([]byte, error) {
+		for _, path := range groundFiles(c) {
+			solidPNG(t, path, 255)
+		}
+		return nil, nil
+	}}
+	a := newAdapter(t, runner)
+	r := testRenderer(t, a)
+	canvas, _ := clip.ClipCanvas("vertical")
+	timeline := newFootageTimeline(r.cfg, plan)
+	s := groundSampler{canvas: canvas}
+	for _, frame := range []int{4, 9, 21} {
+		footage, _ := timeline.at(frame)
+		s.reads = append(s.reads, groundRead{visual: 0, footage: footage, region: clip.Region{X: 100, Y: 800, Width: 880, Height: 300}})
+	}
+	if err := a.WithWorkspace(t.Context(), "ground-footage", func(ws clip.MediaWorkspace) error {
+		bare := filepath.Join(ws.Path, "bare-0000.mp4")
+		if err := os.WriteFile(bare, []byte("footage"), 0600); err != nil {
+			return err
+		}
+		return r.sampleFootage(t.Context(), ws, &s, 0, bare)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if len(runner.calls) != 1 {
+		t.Fatalf("%d decodes of one cut's footage", len(runner.calls))
+	}
+	args := runner.calls[0].Args
+	at, input := slices.Index(args, "-vf"), slices.Index(args, "-i")
+	if at < 0 || args[at+1] != "select='eq(n,4)+eq(n,9)+eq(n,21)'" || input < 0 || filepath.Base(args[input+1]) != "bare-0000.mp4" || slices.Contains(args, "-ss") || len(groundFiles(runner.calls[0])) != 3 {
+		t.Fatalf("the bare footage was read with %v", args)
+	}
+	grounds, err := s.grounds()
+	if err != nil || len(grounds[0].Frames) != 3 || slices.ContainsFunc(grounds[0].Frames, func(v float64) bool { return math.Abs(v-1) > 1e-9 }) {
+		t.Fatalf("the footage's frames measured %+v %v", grounds, err)
 	}
 }
 

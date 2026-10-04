@@ -19,7 +19,7 @@ import "strings"
 var requiredFilters = []string{
 	"acrossfade", "afade", "aformat", "anull", "anullsrc", "apad", "aresample",
 	"asetpts", "atempo", "atrim", "concat", "crop", "fade", "format", "fps",
-	"loop", "loudnorm", "overlay", "scale", "setpts", "setsar", "settb", "trim",
+	"loop", "loudnorm", "overlay", "scale", "select", "setpts", "setsar", "settb", "trim",
 	"vfrdet", "volume", "xfade",
 }
 

@@ -89,11 +89,9 @@ func TestCutLoopsLoadEachOriginalOnce(t *testing.T) {
 			bare[filepath.Base(output)] = c.Args
 			return nil, os.WriteFile(output, []byte("footage"), 0600)
 		}
-		if strings.HasSuffix(output, ".png") {
-			for _, arg := range c.Args {
-				if strings.HasSuffix(arg, ".png") {
-					solidPNG(t, arg, 128)
-				}
+		if files := groundFiles(c); len(files) > 0 {
+			for _, path := range files {
+				solidPNG(t, path, 128)
 			}
 			return nil, nil
 		}

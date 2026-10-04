@@ -153,10 +153,10 @@ func (r *Rendering) renderComposition(ctx context.Context, ws clip.MediaWorkspac
 			if err := r.renderBareFootage(ctx, ws, canvas, cut, source, frames[i], video); err != nil {
 				return err
 			}
-			// The grounds CDS-44 reads are this cut's own frames, taken while its
-			// original is at hand, through the sampler a browser render's grounds
-			// come from too (CLIP-192).
-			if err := r.sampleCut(ctx, ws, &sampler, i, cut, source); err != nil {
+			// The grounds CDS-44 reads are this cut's own frames, taken from the
+			// lossless footage just made of it — the frames the sampler a browser
+			// render's grounds come from rebuilds from the original (CLIP-192).
+			if err := r.sampleFootage(ctx, ws, &sampler, i, video); err != nil {
 				return err
 			}
 			if audio {

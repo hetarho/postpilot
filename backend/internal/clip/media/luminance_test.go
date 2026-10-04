@@ -269,12 +269,9 @@ func TestDeclaredRolesSampleOnlyTheirTextBounds(t *testing.T) {
 			}
 			samples := 0
 			a := newAdapter(t, &fakeRunner{run: func(_ context.Context, c Command) ([]byte, error) {
-				for _, arg := range c.Args {
-					if !strings.HasSuffix(arg, ".png") {
-						continue
-					}
+				for _, path := range groundFiles(c) {
 					samples++
-					f, err := os.Create(arg)
+					f, err := os.Create(path)
 					if err != nil {
 						return nil, err
 					}
