@@ -474,10 +474,14 @@ func (s *Store) DeleteEligibleLotsForJob(ctx context.Context, jobID string) erro
 	return nil
 }
 
+// HoldForJob reads on the read pool outside a transaction: every metered provider call asks
+// for its job's admission, and must not queue behind the single writer for it. Inside a
+// write transaction both query sets are the transaction, so the re-check that refuses a
+// second hold still reads what that transaction is about to decide on.
 func (s *Store) HoldForJob(
 	ctx context.Context, jobID string,
 ) (usage.Admission, []usage.LotDebit, bool, error) {
-	row, err := s.write.OpenAdmissionForJob(ctx, jobID)
+	row, err := s.read.OpenAdmissionForJob(ctx, jobID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return usage.Admission{}, nil, false, nil
 	}
@@ -489,7 +493,7 @@ func (s *Store) HoldForJob(
 		return usage.Admission{}, nil, false, err
 	}
 
-	debitRows, err := s.write.HoldDebitsForJob(ctx, jobID)
+	debitRows, err := s.read.HoldDebitsForJob(ctx, jobID)
 	if err != nil {
 		return usage.Admission{}, nil, false, fmt.Errorf("read hold debits: %w", err)
 	}

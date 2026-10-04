@@ -67,8 +67,9 @@ type allowance struct {
 // boundary consumes them from.
 //
 // It is deliberately worker-only: a queued, foreign or different-kind job cannot acquire
-// an allowance. A failed hold returns no usable context, and the ledger's unique job key
-// prevents a second successful reservation, including after a crash.
+// an allowance. A failed hold returns no usable context, and the ledger's re-check inside
+// its writer transaction — serialized on the single writer — finds a job's existing hold and
+// refuses a second reservation, including after a crash; a matching retry keeps the first.
 func (a Jobs) Reserve(ctx context.Context, user, id string, calls []job.PlannedCall, approval Reservation) (context.Context, error) {
 	if approval.ApprovedMaxCredits < 0 || len(approval.Calls) != 2 || len(calls) == 0 || a.guard == nil {
 		return nil, clip.ErrCreditAllowance

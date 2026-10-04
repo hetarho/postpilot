@@ -80,7 +80,6 @@
 | T548 | Mix immutable narration into server MP4 exports | ARCH DUB CLIP CDS | T547 | todo |
 | T549 | Mix the same narration into browser MP4 exports | ARCH DUB CLIP CDS | T548 | todo |
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | todo |
-| T551 | Index the job and admission lookups every poll and provider call makes | ARCH | - | todo |
 | T555 | Make the comparison list light and bound a comparison's candidate fan-out | ARCH | - | todo |
 | T556 | Read voice samples once and leave an unchanged answer alone | ARCH | - | todo |
 | T558 | Sample browser renders without a full decode and load each original once | ARCH | - | todo |
@@ -101,6 +100,7 @@
 - ops: lower TEMPLATE_PHOTO_ROW_MAX / VITE_TEMPLATE_PHOTO_ROW_MAX to 3 wherever production sets them explicitly (VPS .env, Cloudflare build vars).
 
 ## log
+- 261004 T551 done: migration 0128 indexes generation_jobs project/post lookups and usage job_id; the checkpoint trigger skips sampling jobs; HoldForJob reads the read pool; BE suite green
 - 261004 T557 done: FX day selection served from memory with one shared fetch outside the lock; BalanceFor takes the writer only when renewing would write; Settle drops eligible lots; BE suite green
 - 261004 T552 done: a clip hold's live free-path check runs before the write transaction (Guard access checker), the in-transaction hold skips it; BE suite green
 - 261004 T554 done: a template-request correction carries only the request, the last answer and what it broke; BE suite green
@@ -120,4 +120,3 @@
 - 261004 ideation familiar-video-editing-and-dubbing ready: complete v1 product policy adopted; description-generated reusable voices first, responsive editor and speech-led clips next
 - 261004 ideation familiar-video-editing-and-dubbing start: owner adopted the complete editor, timing, voice-library and initial-scope recommendation
 - 261004 ideation familiar-video-editing-and-dubbing open: description-generated voice recommendation accepted; full editor/timing and reusable-voice packages proposed with a concrete creation flow
-- 261004 review-code perf-cost-261004 start: performance, provider cost and severe maintainability in code changed since conformance-all-260927 (87206229..3e6a14ea)
