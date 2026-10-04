@@ -15,6 +15,11 @@ func (s *GenerationService) EditingState(p clip.Project) (*clip.CorrectionState,
 	return clip.EditingState(p, s.cfg.Render)
 }
 
+// EditingStateFrom is EditingState over observations the caller decoded.
+func (s *GenerationService) EditingStateFrom(p clip.Project, analyses []clip.SourceAnalysis) (*clip.CorrectionState, error) {
+	return clip.EditingStateFrom(p, analyses, s.cfg.Render)
+}
+
 func (s *GenerationService) SaveCorrection(ctx context.Context, user, id string, revision int, input clip.CorrectionPlan) (clip.Project, error) {
 	p, err := s.projects.store.GetProject(ctx, user, id)
 	if err != nil {

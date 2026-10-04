@@ -37,6 +37,13 @@ func (s *observationStore) ListProjects(_ context.Context, user string) ([]clip.
 	}
 	return nil, nil
 }
+func (s *observationStore) ListProjectSummaries(ctx context.Context, user string) ([]clip.Project, error) {
+	projects, err := s.ListProjects(ctx, user)
+	for i := range projects {
+		projects[i].Analysis, projects[i].EditPlan = "", ""
+	}
+	return projects, err
+}
 
 func TestRetainedObservationDetailIsOwnerScopedAndStructured(t *testing.T) {
 	a := []clip.SourceAnalysis{{

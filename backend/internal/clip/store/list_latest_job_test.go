@@ -2,7 +2,9 @@ package store_test
 
 import (
 	"context"
+	"reflect"
 	"testing"
+	"time"
 
 	"connectrpc.com/connect"
 	"github.com/postpilot/backend/internal/auth"
@@ -81,6 +83,38 @@ func TestListClipProjectsCarriesEachProjectsLatestJob(t *testing.T) {
 	}
 	if detail.Msg.Project.LatestJob == nil || detail.Msg.Project.LatestJob.Id != jobID {
 		t.Fatalf("detail lost its latest job: %+v", detail.Msg.Project.LatestJob)
+	}
+}
+
+// The directory's read leaves out each project's plan and analysis and reads
+// every other field a project row carries exactly as the full read does.
+func TestProjectSummariesLeaveOutThePlanAndAnalysis(t *testing.T) {
+	h := generationSetup(t)
+	ctx := context.Background()
+	result := clip.Result{Key: clip.ResultPrefix + "alice/clip/result.mp4", ContentType: "video/mp4", Bytes: 5, DurationMS: 15000, CreatedAt: time.Now()}
+	if err := h.store.SaveGeneration(ctx, "alice", h.project.ID, "the analysis", "the plan", result); err != nil {
+		t.Fatal(err)
+	}
+	full, err := h.store.ListProjects(ctx, "alice")
+	if err != nil {
+		t.Fatal(err)
+	}
+	summaries, err := h.store.ListProjectSummaries(ctx, "alice")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(full) != 1 || len(summaries) != 1 || full[0].Analysis != "the analysis" || full[0].EditPlan != "the plan" {
+		t.Fatalf("listed %+v", full)
+	}
+	if summaries[0].Analysis != "" || summaries[0].EditPlan != "" {
+		t.Fatal("a directory row read the plan or the analysis")
+	}
+	// Regions with no stored row of their own are derived from the plan, which
+	// a summary does not carry; everything else is the full row's.
+	want, got := full[0], summaries[0]
+	want.Analysis, want.EditPlan, want.Regions, got.Regions = "", "", nil, nil
+	if !reflect.DeepEqual(want, got) {
+		t.Fatalf("the summary differs from the full row:\n%+v\n%+v", got, want)
 	}
 }
 

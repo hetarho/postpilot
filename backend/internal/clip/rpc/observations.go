@@ -5,10 +5,14 @@ import (
 	v1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 )
 
+// decodeObservations is how a project read decodes the retained analysis; a
+// read decodes it once and hands the result to everything that projects it.
+var decodeObservations = clip.RetainedObservations
+
 // This allowlisted projection never exposes the retained renderer's metadata,
-// storage keys or raw analysis JSON. Reading it does not invoke a model.
-func observationsProto(p clip.Project) *v1.ClipObservations {
-	analyses, err := clip.RetainedObservations(p)
+// storage keys or raw analysis JSON. Reading it does not invoke a model. It
+// takes the observations as the read decoded them, and what decoding failed.
+func observationsProto(analyses []clip.SourceAnalysis, err error) *v1.ClipObservations {
 	if err != nil {
 		return &v1.ClipObservations{Status: "unavailable"}
 	}

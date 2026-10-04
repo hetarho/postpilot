@@ -51,6 +51,9 @@ func (s *GenerationService) preparePreview(ctx context.Context, user, render, id
 	}
 	var out clip.PreparedPreview
 	if render != "" {
+		if ctx, err = renderLayout(ctx, render, revision, draft); err != nil {
+			return clip.PreparedPreview{}, err
+		}
 		out, err = grounded.PrepareGroundedPreview(ctx, next, refs, grounds, ids, offset, cfg)
 	} else {
 		out, err = renderer.PreparePreview(ctx, next, refs, ids, offset, cfg)
@@ -63,6 +66,16 @@ func (s *GenerationService) preparePreview(ctx context.Context, user, render, id
 	}
 	out.DraftHash = hash
 	return out, nil
+}
+
+// renderLayout names the layout a browser render's read draws, so its asset and
+// caption-frame requests at one revision and draft share one layout.
+func renderLayout(ctx context.Context, render string, revision int, draft clip.CorrectionPlan) (context.Context, error) {
+	digest, err := clip.DraftDigest(draft)
+	if err != nil {
+		return ctx, err
+	}
+	return clip.WithPreviewLayout(ctx, clip.PreviewLayoutKey{Render: render, Revision: revision, Draft: digest}), nil
 }
 
 // renderGrounds is what a browser render's assets are drawn on: the grounds its
@@ -182,6 +195,9 @@ func (s *GenerationService) prepareCaptionFrames(ctx context.Context, user, rend
 	}
 	var out clip.CaptionFrames
 	if render != "" {
+		if ctx, err = renderLayout(ctx, render, revision, draft); err != nil {
+			return clip.CaptionFrames{}, err
+		}
 		out, err = grounded.PrepareGroundedCaptionFrames(ctx, next, refs, grounds, instanceID, offset, cfg)
 	} else {
 		out, err = renderer.PrepareCaptionFrames(ctx, next, refs, instanceID, offset, cfg)

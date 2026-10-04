@@ -6,7 +6,9 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/postpilot/backend/internal/clip"
@@ -52,12 +54,9 @@ func (r *Rendering) prepareCaptionFrames(ctx context.Context, plan clip.EditPlan
 		return out, clip.ErrInvalid
 	}
 	err = r.media.WithWorkspace(ctx, "clip-caption-frames", func(ws clip.MediaWorkspace) error {
-		layout, err := r.layoutComposition(ctx, ws, plan)
+		layout, err := r.previewLayout(ctx, ws, canvas, plan, grounds)
 		if err != nil {
 			return err
-		}
-		if grounds != nil {
-			layout.applyGrounds(canvas, grounds)
 		}
 		visual, found := declaredVisual{}, false
 		for _, v := range layout.visuals {
@@ -82,6 +81,75 @@ func (r *Rendering) prepareCaptionFrames(ctx context.Context, plan clip.EditPlan
 		return clip.CaptionFrames{NextOffset: -1}, err
 	}
 	return out, nil
+}
+
+// previewLayout is the composition a draft read draws: laid out, and on the
+// grounds given when there are any. A read that names its layout (a browser
+// render's, at one revision and draft) is answered from the layout an earlier
+// read of the same name made, so an export's many asset and caption-frame
+// requests measure and lay the clip out once.
+func (r *Rendering) previewLayout(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, plan clip.EditPlan, grounds []clip.SampledGround) (declaredLayout, error) {
+	key, named := clip.PreviewLayoutFrom(ctx)
+	if named {
+		if layout, ok := r.layouts.get(key); ok {
+			return layout, nil
+		}
+	}
+	layout, err := r.layoutComposition(ctx, ws, plan)
+	if err != nil {
+		return layout, err
+	}
+	if grounds != nil {
+		layout.applyGrounds(canvas, grounds)
+	}
+	if named {
+		r.layouts.put(key, layout)
+	}
+	return layout, nil
+}
+
+// layoutCacheSize bounds the laid-out compositions one API process keeps: a
+// few browser exports in flight at once, each at one revision.
+const layoutCacheSize = 8
+
+// layoutCache keeps the last few named layouts, the least recently used
+// dropped first. It is process-local: a miss lays the composition out again,
+// so nothing depends on it for correctness (ARCH-48).
+type layoutCache struct {
+	mu      sync.Mutex
+	entries []layoutEntry // least recently used first
+}
+
+type layoutEntry struct {
+	key    clip.PreviewLayoutKey
+	layout declaredLayout
+}
+
+// get hands out a copy of the kept layout's visuals, so a read that writes a
+// visual's own fields cannot change what the next read is handed.
+func (c *layoutCache) get(key clip.PreviewLayoutKey) (declaredLayout, bool) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	for i, entry := range c.entries {
+		if entry.key == key {
+			c.entries = append(append(c.entries[:i:i], c.entries[i+1:]...), entry)
+			layout := entry.layout
+			layout.visuals = slices.Clone(layout.visuals)
+			return layout, true
+		}
+	}
+	return declaredLayout{}, false
+}
+
+func (c *layoutCache) put(key clip.PreviewLayoutKey, layout declaredLayout) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	layout.visuals = slices.Clone(layout.visuals)
+	c.entries = slices.DeleteFunc(c.entries, func(entry layoutEntry) bool { return entry.key == key })
+	if len(c.entries) >= layoutCacheSize {
+		c.entries = c.entries[1:]
+	}
+	c.entries = append(c.entries, layoutEntry{key, layout})
 }
 
 // captionSheet draws one run of a caption's frames onto a single document and

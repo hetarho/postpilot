@@ -378,6 +378,30 @@ func (s *Store) ListProjects(ctx context.Context, user string) ([]clip.Project, 
 	}
 	return out, nil
 }
+
+// ListProjectSummaries is ListProjects without each project's plan and
+// analysis, which a directory row never reads.
+func (s *Store) ListProjectSummaries(ctx context.Context, user string) ([]clip.Project, error) {
+	rows, err := s.read.ListClipProjectSummaries(ctx, user)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]clip.Project, 0, len(rows))
+	for _, r := range rows {
+		p, err := projectRow(sqlc.ClipProject{ID: r.ID, UserID: r.UserID, Title: r.Title, VideoTemplateID: r.VideoTemplateID, Ratio: r.Ratio, TargetDurationMs: r.TargetDurationMs,
+			ResultKey: r.ResultKey, ResultContentType: r.ResultContentType, ResultBytes: r.ResultBytes, ResultDurationMs: r.ResultDurationMs, ResultCreatedAt: r.ResultCreatedAt,
+			EditPlanRevision: r.EditPlanRevision, RenderedPlanRevision: r.RenderedPlanRevision, GeneratedPlanRevision: r.GeneratedPlanRevision, CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt,
+			Disclosure: r.Disclosure, HideDisclosure: r.HideDisclosure, CompositionInputsJson: r.CompositionInputsJson, CompositionSnapshotJson: r.CompositionSnapshotJson,
+			ResultID: r.ResultID, FinalizedAt: r.FinalizedAt, FinalizedPlanRevision: r.FinalizedPlanRevision, Language: r.Language, Instruction: r.Instruction,
+			CaptionPace: r.CaptionPace, Accent: r.Accent, IntroPreset: r.IntroPreset, OutroPreset: r.OutroPreset, AllowedCaptionStyles: r.AllowedCaptionStyles,
+			RenderKind: r.RenderKind, StorylineJson: r.StorylineJson, RegionsJson: r.RegionsJson})
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, p)
+	}
+	return out, nil
+}
 func (s *Store) InsertProject(ctx context.Context, p clip.Project) error {
 	_, err := transact(ctx, s, func(q *sqlc.Queries) (struct{}, error) {
 		err := q.InsertClipProject(ctx, sqlc.InsertClipProjectParams{ID: p.ID, UserID: p.UserID, Title: p.Title, VideoTemplateID: nullable(p.VideoTemplateID), Ratio: p.Ratio, Language: p.Language, TargetDurationMs: int64(p.TargetDurationMS), Disclosure: p.Disclosure, HideDisclosure: disclosureFlag(p.HideDisclosure), Instruction: p.Instruction, CaptionPace: p.CaptionPace, Accent: p.Accent, IntroPreset: p.IntroPreset, OutroPreset: p.OutroPreset, AllowedCaptionStyles: encodeCaptionStyles(p.CaptionStyles), CreatedAt: stamp(p.CreatedAt), UpdatedAt: stamp(p.UpdatedAt)})

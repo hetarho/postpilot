@@ -259,6 +259,109 @@ func (q *Queries) ListClipProjectRequests(ctx context.Context, arg ListClipProje
 	return items, nil
 }
 
+const listClipProjectSummaries = `-- name: ListClipProjectSummaries :many
+SELECT id, user_id, title, video_template_id, ratio, target_duration_ms, result_key, result_content_type, result_bytes, result_duration_ms, result_created_at,
+    edit_plan_revision, rendered_plan_revision, generated_plan_revision, created_at, updated_at, disclosure, hide_disclosure, composition_inputs_json, composition_snapshot_json,
+    result_id, finalized_at, finalized_plan_revision, language, instruction, caption_pace, accent, intro_preset, outro_preset, allowed_caption_styles, render_kind,
+    storyline_json, regions_json
+FROM clip_projects WHERE user_id = ? ORDER BY updated_at DESC, id
+`
+
+type ListClipProjectSummariesRow struct {
+	ID                      string
+	UserID                  string
+	Title                   string
+	VideoTemplateID         sql.NullString
+	Ratio                   string
+	TargetDurationMs        int64
+	ResultKey               sql.NullString
+	ResultContentType       sql.NullString
+	ResultBytes             sql.NullInt64
+	ResultDurationMs        sql.NullInt64
+	ResultCreatedAt         sql.NullString
+	EditPlanRevision        int64
+	RenderedPlanRevision    int64
+	GeneratedPlanRevision   int64
+	CreatedAt               string
+	UpdatedAt               string
+	Disclosure              string
+	HideDisclosure          int64
+	CompositionInputsJson   sql.NullString
+	CompositionSnapshotJson sql.NullString
+	ResultID                sql.NullString
+	FinalizedAt             sql.NullString
+	FinalizedPlanRevision   sql.NullInt64
+	Language                string
+	Instruction             string
+	CaptionPace             string
+	Accent                  string
+	IntroPreset             string
+	OutroPreset             string
+	AllowedCaptionStyles    string
+	RenderKind              string
+	StorylineJson           sql.NullString
+	RegionsJson             sql.NullString
+}
+
+// The directory's rows: every column a project row reads except the plan and the
+// analysis, which only the detail reads.
+func (q *Queries) ListClipProjectSummaries(ctx context.Context, userID string) ([]ListClipProjectSummariesRow, error) {
+	rows, err := q.db.QueryContext(ctx, listClipProjectSummaries, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListClipProjectSummariesRow
+	for rows.Next() {
+		var i ListClipProjectSummariesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.Title,
+			&i.VideoTemplateID,
+			&i.Ratio,
+			&i.TargetDurationMs,
+			&i.ResultKey,
+			&i.ResultContentType,
+			&i.ResultBytes,
+			&i.ResultDurationMs,
+			&i.ResultCreatedAt,
+			&i.EditPlanRevision,
+			&i.RenderedPlanRevision,
+			&i.GeneratedPlanRevision,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Disclosure,
+			&i.HideDisclosure,
+			&i.CompositionInputsJson,
+			&i.CompositionSnapshotJson,
+			&i.ResultID,
+			&i.FinalizedAt,
+			&i.FinalizedPlanRevision,
+			&i.Language,
+			&i.Instruction,
+			&i.CaptionPace,
+			&i.Accent,
+			&i.IntroPreset,
+			&i.OutroPreset,
+			&i.AllowedCaptionStyles,
+			&i.RenderKind,
+			&i.StorylineJson,
+			&i.RegionsJson,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listClipProjects = `-- name: ListClipProjects :many
 SELECT id, user_id, title, video_template_id, ratio, target_duration_ms, analysis_json, edit_plan_json, result_key, result_content_type, result_bytes, result_duration_ms, result_created_at, edit_plan_revision, rendered_plan_revision, created_at, updated_at, deleting, disclosure, hide_disclosure, composition_inputs_json, composition_snapshot_json, source_retention_expires_at, source_access_revoked_at, source_batch_id, result_id, finalized_at, finalized_plan_revision, finalized_result_key, language, instruction, caption_pace, accent, intro_preset, outro_preset, allowed_caption_styles, render_kind, storyline_json, generated_plan_revision, regions_json FROM clip_projects WHERE user_id = ? ORDER BY updated_at DESC, id
 `

@@ -118,6 +118,23 @@ func (r *Rendering) layoutDeclaredRegion(ctx context.Context, ws clip.MediaWorks
 		part(design.Element{Kind: "plate", Rule: s.Kind, Fill: colour, Opacity: alpha, Region: design.Bounds(box)}, s.Rotated)
 		return nil
 	}
+	// The block has laid out every line its slots draw, so each slot role's
+	// lines are measured together before any is placed.
+	var batches measureBatches
+	for i, row := range rows {
+		slot, ok := block.Slot(placement.Offset + i)
+		if !ok || slot.Over || strings.TrimSpace(row.Text) == "" {
+			continue
+		}
+		for _, line := range slot.Lines {
+			if line.Arc == nil && r.checkCopy(line.Text, slot.Type) == nil {
+				batches.add(slot.Type.Weight, slot.Type.Tracking, r.family(slot.Type), nil, line.Text)
+			}
+		}
+	}
+	if err := r.premeasure(ctx, ws, batches); err != nil {
+		return visual, err
+	}
 	lines := 0
 	for i, row := range rows {
 		index := placement.Offset + i

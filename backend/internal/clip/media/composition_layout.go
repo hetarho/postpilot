@@ -143,6 +143,13 @@ func (r *Rendering) layoutComposition(ctx context.Context, ws clip.MediaWorkspac
 	result.plan.Portable.Elements = nil
 	ordered, timingFallbacks := scheduleDeclaredCaptions(plan)
 	result.plan.Portable.Fallbacks = append(result.plan.Portable.Fallbacks, timingFallbacks...)
+	// One pass of measurements: every caption's own text is known before any is
+	// placed, so each style's values go to resvg together rather than once per
+	// caption and anchor.
+	ctx = withMeasurements(ctx)
+	if err := r.premeasure(ctx, ws, r.captionBatches(plan, ordered)); err != nil {
+		return declaredLayout{}, err
+	}
 	rank := func(role string) int {
 		switch role {
 		case "badge":
@@ -246,6 +253,37 @@ func (r *Rendering) layoutComposition(ctx context.Context, ws clip.MediaWorkspac
 		return declaredLayout{}, err
 	}
 	return result, nil
+}
+
+// captionBatches is what each caption's own text measures, gathered by style:
+// the first layoutCopy layoutDeclaredElement makes for it. A caption that would
+// not be laid out from its own text (rapid phrases, a text too short to read,
+// a style it cannot be drawn in) adds nothing.
+func (r *Rendering) captionBatches(plan clip.EditPlan, texts []clip.PortableText) measureBatches {
+	var batches measureBatches
+	allowed := plan.Design().AllowedCaptionStyles()
+	for _, text := range texts {
+		resolved := text.Resolved
+		if resolved.Element.Role != "caption" || text.Pace == "rapid" || strings.TrimSpace(resolved.Text) == "" || resolved.EndMS-resolved.StartMS < clip.MinExposureMS(resolved.Text) {
+			continue
+		}
+		style, _ := clip.CaptionStyleOf(text, allowed)
+		caption, ok := design.LookupCaptionStyle(style)
+		if !ok {
+			continue
+		}
+		if r.MissingCaptionGlyph(resolved.Text, caption.Role()) != 0 {
+			caption = design.DefaultCaption()
+		}
+		c := clip.Copy{Text: resolved.Text, Style: caption.ID, Keyword: text.Keyword}
+		if !strings.Contains(c.Text, c.Keyword) {
+			c.Keyword = ""
+		}
+		if role, _, values, substitute, err := r.copyValues(c); err == nil {
+			batches.add(role.Weight, role.Tracking, r.family(role), substitute, values...)
+		}
+	}
+	return batches
 }
 
 func declaredManifest(text clip.PortableText) clip.CompositionElement {

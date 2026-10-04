@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"reflect"
+	"slices"
 	"testing"
 	"time"
 
@@ -30,26 +31,71 @@ func (s *renderGroundsStore) SaveBrowserRenderVerdict(context.Context, string, s
 	return clip.ErrInvalid
 }
 
-// groundedRenderer records which drawing a preparation asked for.
+// groundedRenderer records which drawing a preparation asked for, and the
+// layout each grounded read named.
 type groundedRenderer struct {
 	previewRenderer
 	grounds       []clip.SampledGround
 	grounded      int
 	groundedCells int
+	layouts       []clip.PreviewLayoutKey
 }
 
-func (r *groundedRenderer) PrepareGroundedPreview(_ context.Context, _ clip.EditPlan, _ []clip.RenderSource, grounds []clip.SampledGround, _ []string, _ int, _ clip.PreviewConfig) (clip.PreparedPreview, error) {
+func (r *groundedRenderer) named(ctx context.Context) {
+	if key, ok := clip.PreviewLayoutFrom(ctx); ok {
+		r.layouts = append(r.layouts, key)
+	}
+}
+
+func (r *groundedRenderer) PrepareGroundedPreview(ctx context.Context, _ clip.EditPlan, _ []clip.RenderSource, grounds []clip.SampledGround, _ []string, _ int, _ clip.PreviewConfig) (clip.PreparedPreview, error) {
 	r.grounded++
 	r.grounds = grounds
+	r.named(ctx)
 	return clip.PreparedPreview{NextOffset: -1}, nil
 }
 func (r *groundedRenderer) PrepareCaptionFrames(context.Context, clip.EditPlan, []clip.RenderSource, string, int, clip.PreviewConfig) (clip.CaptionFrames, error) {
 	return clip.CaptionFrames{NextOffset: -1}, nil
 }
-func (r *groundedRenderer) PrepareGroundedCaptionFrames(_ context.Context, _ clip.EditPlan, _ []clip.RenderSource, grounds []clip.SampledGround, _ string, _ int, _ clip.PreviewConfig) (clip.CaptionFrames, error) {
+func (r *groundedRenderer) PrepareGroundedCaptionFrames(ctx context.Context, _ clip.EditPlan, _ []clip.RenderSource, grounds []clip.SampledGround, _ string, _ int, _ clip.PreviewConfig) (clip.CaptionFrames, error) {
 	r.groundedCells++
 	r.grounds = grounds
+	r.named(ctx)
 	return clip.CaptionFrames{NextOffset: -1}, nil
+}
+
+// A browser render's asset and caption-frame reads name the layout they draw:
+// the render, the revision and the digest of the draft they carry, so one
+// export is laid out once. Another draft names another layout.
+func TestARenderBoundReadNamesItsLayout(t *testing.T) {
+	_, store, _, draft := previewSetup(t)
+	at := time.Now()
+	revision := store.project.EditPlanRevision
+	renders := &renderGroundsStore{render: clip.BrowserRender{ID: "render", UserID: "alice", ProjectID: "owned", Revision: revision, SampleJobID: "sampling", Grounds: []clip.SampledGround{}, SampledAt: &at}}
+	renderer := &groundedRenderer{}
+	cfg := clip.DefaultGenerationConfig(clip.Environment{GetTTL: time.Minute, OrphanMinAge: time.Hour})
+	service := clipapp.NewGenerationService(renders, testProjects(store), nil, neutralProcessing{}, nil, nil, renderer, neutralJobs{}, cfg, neutralGenerationDeps())
+	edited := draft
+	edited.Cuts = slices.Clone(draft.Cuts)
+	edited.Cuts[0].Focal = &clip.Point{X: .3, Y: .5}
+	for _, d := range []clip.CorrectionPlan{draft, edited} {
+		if _, err := service.PrepareRenderPreview(t.Context(), "alice", "render", "owned", revision, "hash", d, nil, 0); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := service.PrepareRenderCaptionFrames(t.Context(), "alice", "render", "owned", revision, "hash", d, "caption", 0); err != nil {
+			t.Fatal(err)
+		}
+	}
+	digest, err := clip.DraftDigest(draft)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := clip.PreviewLayoutKey{Render: "render", Revision: revision, Draft: digest}
+	if len(renderer.layouts) != 4 || renderer.layouts[0] != want || renderer.layouts[1] != want {
+		t.Fatalf("the reads named %+v, want %+v", renderer.layouts, want)
+	}
+	if renderer.layouts[2] == want || renderer.layouts[2] != renderer.layouts[3] {
+		t.Fatalf("another draft named %+v", renderer.layouts[2:])
+	}
 }
 
 // CLIP-192: a browser render's assets and frames are drawn with the grounds its

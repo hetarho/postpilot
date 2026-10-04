@@ -8,6 +8,7 @@ import (
 	"encoding/xml"
 	"errors"
 	"fmt"
+	"maps"
 	"math"
 	"os"
 	"path/filepath"
@@ -56,6 +57,8 @@ type Rendering struct {
 	fontArgs []string
 	coverage map[string]map[rune]bool
 	overlays *overlay.Catalog
+	// The API process's last few browser-render layouts (previewLayout).
+	layouts *layoutCache
 }
 
 var _ clip.Renderer = (*Rendering)(nil)
@@ -90,7 +93,7 @@ func NewRenderer(media *Adapter, cfg clip.RenderConfig) (*Rendering, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Rendering{media: media, cfg: cfg, fonts: fonts, fontArgs: args, coverage: faceCoverage(fonts), overlays: catalog}, nil
+	return &Rendering{media: media, cfg: cfg, fonts: fonts, fontArgs: args, coverage: faceCoverage(fonts), overlays: catalog, layouts: &layoutCache{}}, nil
 }
 
 // bundledFace loads one pinned face: the size and the checksum both have to
@@ -253,7 +256,127 @@ func (r *Rendering) resvg(ctx context.Context, ws clip.MediaWorkspace, args ...s
 func (r *Rendering) measure(ctx context.Context, ws clip.MediaWorkspace, values []string, weight int, tracking float64, family string) (map[string]clip.Region, error) {
 	return r.measureWith(ctx, ws, values, weight, tracking, family, nil)
 }
+
+// measureWith answers from the layout pass's measurements where it has them,
+// so a value is handed to resvg once however many anchors, alternatives or
+// elements ask for it; a call outside a layout pass measures what it is given.
 func (r *Rendering) measureWith(ctx context.Context, ws clip.MediaWorkspace, values []string, weight int, tracking float64, family string, substitute map[rune]bool) (map[string]clip.Region, error) {
+	memo, ok := ctx.Value(measurementsKey{}).(measurements)
+	if !ok {
+		return r.measureValues(ctx, ws, values, weight, tracking, family, substitute)
+	}
+	key := measureKey{weight, tracking, family, substituteKey(substitute)}
+	known := memo[key]
+	missing := []string{}
+	for _, value := range values {
+		if _, ok := known[value]; !ok && !slices.Contains(missing, value) {
+			missing = append(missing, value)
+		}
+	}
+	if len(missing) > 0 {
+		measured, err := r.measureValues(ctx, ws, missing, weight, tracking, family, substitute)
+		if err != nil {
+			return nil, err
+		}
+		if known == nil {
+			known = map[string]clip.Region{}
+			memo[key] = known
+		}
+		maps.Copy(known, measured)
+	}
+	out := make(map[string]clip.Region, len(values))
+	for _, value := range values {
+		out[value] = known[value]
+	}
+	return out, nil
+}
+
+// measurements is what resvg reported during one layout pass, by face, weight,
+// tracking and substitution. Every text element of a measuring document is
+// shaped on its own, so a value's box does not depend on the values measured
+// beside it.
+type measurements map[measureKey]map[string]clip.Region
+
+type measureKey struct {
+	weight     int
+	tracking   float64
+	family     string
+	substitute string
+}
+
+type measurementsKey struct{}
+
+// withMeasurements opens a layout pass's measurements; a pass already open
+// keeps its own.
+func withMeasurements(ctx context.Context) context.Context {
+	if _, ok := ctx.Value(measurementsKey{}).(measurements); ok {
+		return ctx
+	}
+	return context.WithValue(ctx, measurementsKey{}, measurements{})
+}
+
+func substituteKey(substitute map[rune]bool) string {
+	runes := []rune{}
+	for c, on := range substitute {
+		if on {
+			runes = append(runes, c)
+		}
+	}
+	slices.Sort(runes)
+	return string(runes)
+}
+
+// measureBatch is the values a layout pass will ask for in one face, weight,
+// tracking and substitution, gathered before it asks for them one at a time.
+type measureBatch struct {
+	weight     int
+	tracking   float64
+	family     string
+	substitute map[rune]bool
+	values     []string
+}
+
+type measureBatches []measureBatch
+
+func (b *measureBatches) add(weight int, tracking float64, family string, substitute map[rune]bool, values ...string) {
+	key := measureKey{weight, tracking, family, substituteKey(substitute)}
+	at := slices.IndexFunc(*b, func(batch measureBatch) bool {
+		return measureKey{batch.weight, batch.tracking, batch.family, substituteKey(batch.substitute)} == key
+	})
+	if at < 0 {
+		at = len(*b)
+		*b = append(*b, measureBatch{weight: weight, tracking: tracking, family: family, substitute: substitute})
+	}
+	batch := &(*b)[at]
+	for _, value := range values {
+		if !slices.Contains(batch.values, value) {
+			batch.values = append(batch.values, value)
+		}
+	}
+}
+
+// premeasure measures each batch in one resvg call, so a role's values cost one
+// process however many texts carry them. It is a head start and decides
+// nothing: a batch fails as a whole, so one that cannot be measured is left to
+// the calls that ask for its values, which measure and refuse exactly as they
+// would have without it. Outside a layout pass it does nothing.
+func (r *Rendering) premeasure(ctx context.Context, ws clip.MediaWorkspace, batches measureBatches) error {
+	if _, ok := ctx.Value(measurementsKey{}).(measurements); !ok {
+		return nil
+	}
+	for _, batch := range batches {
+		if len(batch.values) == 0 {
+			continue
+		}
+		if _, err := r.measureWith(ctx, ws, batch.values, batch.weight, batch.tracking, batch.family, batch.substitute); err != nil && ctx.Err() != nil {
+			return ctx.Err()
+		}
+	}
+	return nil
+}
+
+// measureValues is one resvg call over every value given.
+func (r *Rendering) measureValues(ctx context.Context, ws clip.MediaWorkspace, values []string, weight int, tracking float64, family string, substitute map[rune]bool) (map[string]clip.Region, error) {
 	path := filepath.Join(ws.Path, "copy-measure.svg")
 	data := []byte(measureSVG(values, weight, tracking, family, substitute))
 	if err := r.media.capacity(ws, int64(len(data))); err != nil {
@@ -520,14 +643,31 @@ func (l copyLayout) Elements(cut, copy int, c clip.Copy, startMS, endMS int) cli
 // keyword, the prefix that precedes it on each line that holds it: its advance
 // is where the accent or highlight starts, never an estimated width.
 func (r *Rendering) layoutCopy(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, c clip.Copy) (copyLayout, error) {
+	role, candidates, values, substitute, err := r.copyValues(c)
+	if err != nil {
+		return copyLayout{}, err
+	}
+	bounds, err := r.measureWith(ctx, ws, values, role.Weight, role.Tracking, r.family(role), substitute)
+	if err != nil {
+		return copyLayout{}, err
+	}
+	layout, err := fitCopy(canvas, c, candidates, bounds)
+	layout.Substitute = substitute
+	return layout, err
+}
+
+// copyValues is what laying one copy out measures, in its style's role and
+// with its substitution: every candidate line and, for a keyword or a per-word
+// style, the prefixes their offsets are read from.
+func (r *Rendering) copyValues(c clip.Copy) (design.TypeRole, [][]string, []string, map[rune]bool, error) {
 	caption := captionStyle(c.Style)
 	style := caption.Rule()
 	if err := r.checkCaption(c.Text, caption.Role()); err != nil {
-		return copyLayout{}, err
+		return design.TypeRole{}, nil, nil, nil, err
 	}
 	candidates, values, err := copyCandidates(c.Text, style.Lines)
 	if err != nil {
-		return copyLayout{}, err
+		return design.TypeRole{}, nil, nil, nil, err
 	}
 	extras := []string(nil)
 	if c.Keyword != "" {
@@ -548,14 +688,7 @@ func (r *Rendering) layoutCopy(ctx context.Context, ws clip.MediaWorkspace, canv
 		}
 	}
 	role := caption.Role()
-	substitute := r.substitutes(c.Text, role)
-	bounds, err := r.measureWith(ctx, ws, values, role.Weight, role.Tracking, r.family(role), substitute)
-	if err != nil {
-		return copyLayout{}, err
-	}
-	layout, err := fitCopy(canvas, c, candidates, bounds)
-	layout.Substitute = substitute
-	return layout, err
+	return role, candidates, values, r.substitutes(c.Text, role), nil
 }
 
 // wordsOn measures each word of a line the way keywordOn measures the keyword:

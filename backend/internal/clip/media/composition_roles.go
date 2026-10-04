@@ -58,17 +58,25 @@ func rolePosition(canvas clip.Canvas, ratio string, element composition.Element,
 }
 
 func (r *Rendering) roleBounds(ctx context.Context, ws clip.MediaWorkspace, text string, role design.TypeRole) (clip.Region, error) {
-	if err := r.checkCopy(text, role); err != nil {
+	if err := r.roleText(text, role); err != nil {
 		return clip.Region{}, err
-	}
-	if strings.TrimSpace(text) == "" || strings.Contains(text, "\n") || role.Chars > 0 && design.Chars(text) > role.Chars {
-		return clip.Region{}, clip.ErrCopyTooLong
 	}
 	measured, err := r.measure(ctx, ws, []string{text}, role.Weight, role.Tracking, r.family(role))
 	if err != nil {
 		return clip.Region{}, err
 	}
 	return scaled(measured[text], role.Size/100), nil
+}
+
+// roleText refuses a text roleBounds would not measure.
+func (r *Rendering) roleText(text string, role design.TypeRole) error {
+	if err := r.checkCopy(text, role); err != nil {
+		return err
+	}
+	if strings.TrimSpace(text) == "" || strings.Contains(text, "\n") || role.Chars > 0 && design.Chars(text) > role.Chars {
+		return clip.ErrCopyTooLong
+	}
+	return nil
 }
 
 func (r *Rendering) layoutDeclaredBadge(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, ratio string, visual declaredVisual) (declaredVisual, error) {
@@ -114,6 +122,16 @@ func (r *Rendering) layoutDeclaredInfo(ctx context.Context, ws clip.MediaWorkspa
 			role.Tracking = design.Information.LabelTracking
 		}
 		return role, true
+	}
+	// Each role's rows are measured together before any is fitted.
+	var batches measureBatches
+	for _, row := range rows {
+		if role, known := roleFor(row.Role); known && r.roleText(row.Text, role) == nil {
+			batches.add(role.Weight, role.Tracking, r.family(role), nil, row.Text)
+		}
+	}
+	if err := r.premeasure(ctx, ws, batches); err != nil {
+		return visual, err
 	}
 	var wrapped []composition.ResolvedRow
 	for _, row := range rows {

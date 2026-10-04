@@ -27,6 +27,14 @@ UPDATE clip_projects SET
 DELETE FROM video_templates WHERE id = ? AND user_id = ?;
 -- name: ListClipProjects :many
 SELECT * FROM clip_projects WHERE user_id = ? ORDER BY updated_at DESC, id;
+-- The directory's rows: every column a project row reads except the plan and the
+-- analysis, which only the detail reads.
+-- name: ListClipProjectSummaries :many
+SELECT id, user_id, title, video_template_id, ratio, target_duration_ms, result_key, result_content_type, result_bytes, result_duration_ms, result_created_at,
+    edit_plan_revision, rendered_plan_revision, generated_plan_revision, created_at, updated_at, disclosure, hide_disclosure, composition_inputs_json, composition_snapshot_json,
+    result_id, finalized_at, finalized_plan_revision, language, instruction, caption_pace, accent, intro_preset, outro_preset, allowed_caption_styles, render_kind,
+    storyline_json, regions_json
+FROM clip_projects WHERE user_id = ? ORDER BY updated_at DESC, id;
 -- name: GetClipProject :one
 SELECT * FROM clip_projects WHERE id = ? AND user_id = ?;
 -- name: InsertClipProject :exec

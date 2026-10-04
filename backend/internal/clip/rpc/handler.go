@@ -249,7 +249,21 @@ func templateProto(t clip.VideoTemplate) *v1.VideoTemplate {
 	intro, outro := cmp.Or(t.Design.IntroPreset, defaults.Intro), cmp.Or(t.Design.OutroPreset, defaults.Outro)
 	return &v1.VideoTemplate{CompositionBody: t.CompositionBody, Id: t.ID, Name: t.Name, ProjectCount: int32(t.ProjectCount), IntroPreset: intro, OutroPreset: outro, AllowedCaptionStyles: styles, CreatedAt: t.CreatedAt.UTC().Format(time.RFC3339Nano), UpdatedAt: t.UpdatedAt.UTC().Format(time.RFC3339Nano)}
 }
+
+// projectProto is a project as a write answers it: its fields and its
+// storyline with what changed since against the analysed sources.
 func projectProto(p clip.Project) *v1.ClipProject {
+	out := projectFields(p)
+	if p.Storyline != nil {
+		analyses, _ := decodeObservations(p)
+		out.Storyline = storylineProto(p, analyses, nil)
+	}
+	return out
+}
+
+// projectFields is every field a project answer carries but its storyline,
+// which each read builds once from what it decoded.
+func projectFields(p clip.Project) *v1.ClipProject {
 	canEdit, canFinalize := p.Finalized == nil, false
 	// The presets it renders in, so an empty stored id never reaches ① as
 	// "unchosen" and shows another look than the renderer draws (CLIP-111).
@@ -266,7 +280,6 @@ func projectProto(p clip.Project) *v1.ClipProject {
 		out.FinalizedResultId = f.ResultID
 		out.FinalizationRefusal = "finalized"
 	}
-	out.Storyline = storylineProto(p, nil)
 	out.PlanEditedByHand = p.PlanEditedByHand()
 	// Verbatim, newest first, exactly as the store answered (CLIP-133).
 	for _, r := range p.Requests {
@@ -348,13 +361,17 @@ func (h *Handler) ListClipProjects(ctx context.Context, req *connect.Request[v1.
 	if err != nil {
 		return nil, err
 	}
-	values, err := h.service.ListProjects(ctx, user)
+	// A row is read without its plan and analysis: the directory shows whether a
+	// clip has a storyline, never what changed since it was written, and its
+	// notices and finalization readiness are the detail's (CLIP-41).
+	values, err := h.service.ListProjectSummaries(ctx, user)
 	if err != nil {
 		return nil, toConnectError(err)
 	}
 	out := make([]*v1.ClipProject, 0, len(values))
 	for _, v := range values {
-		p := projectProto(v)
+		p := projectFields(v)
+		p.Storyline = storylineProto(v, nil, []string{})
 		// The directory badges a running generation and a failed attempt (CLIP-41), so each row
 		// carries its latest job the way the detail does. One indexed read per project, as the
 		// post list does for its own active job; `editing`, `accounting` and `latest_attempt`
@@ -366,7 +383,7 @@ func (h *Handler) ListClipProjects(ctx context.Context, req *connect.Request[v1.
 			}
 			p.LatestJob = jobrpc.ToProto(j)
 		}
-		h.setFinalizationState(p, v)
+		listFinalizationState(p, v)
 		out = append(out, p)
 	}
 	return connect.NewResponse(&v1.ListClipProjectsResponse{Projects: out}), nil
@@ -409,33 +426,38 @@ func (h *Handler) GetClipProject(ctx context.Context, req *connect.Request[v1.Ge
 	if err != nil {
 		return nil, toConnectError(err)
 	}
-	out := projectProto(value)
+	out := projectFields(value)
+	// The retained analysis is decoded once, for the storyline, the
+	// observations and the editing state alike.
+	analyses, analysisErr := decodeObservations(value)
 	// The storyline reads what was added against the project's CURRENT sources, which only
 	// this read looks up (CLIP-178).
-	if value.Storyline != nil && h.sources != nil {
-		batches, err := h.sources.GetSources(ctx, user, value.ID)
-		// A finalized project, or one whose originals were revoked, has no
-		// current sources: its storyline reads against the sources it was
-		// analyzed from, as it does with no source reader, rather than taking
-		// the whole project down with it.
+	if value.Storyline != nil {
 		var current []string
-		switch {
-		case err == nil:
-			current = currentSourceIDs(batches)
-		case !errors.Is(err, clip.ErrSourceState):
-			return nil, toConnectError(err)
+		if h.sources != nil {
+			batches, err := h.sources.GetSources(ctx, user, value.ID)
+			// A finalized project, or one whose originals were revoked, has no
+			// current sources: its storyline reads against the sources it was
+			// analyzed from, as it does with no source reader, rather than taking
+			// the whole project down with it.
+			switch {
+			case err == nil:
+				current = currentSourceIDs(batches)
+			case !errors.Is(err, clip.ErrSourceState):
+				return nil, toConnectError(err)
+			}
 		}
-		out.Storyline = storylineProto(value, current)
+		out.Storyline = storylineProto(value, analyses, current)
 	}
 	// A finalized project is read in ① and ② as well as played in ③ (CLIP-160),
 	// and both readings are projections of the stored plan and evidence: no
 	// original is touched here, and every write stays refused where it is made.
-	out.Observations = observationsProto(value)
+	out.Observations = observationsProto(analyses, analysisErr)
 	if h.generation != nil {
 		// Unreadable evidence must not hide an otherwise downloadable result.
 		// Its dependent correction projection cannot be used in that case.
 		if out.Observations.Status != "unavailable" {
-			state, err := h.generation.EditingState(value)
+			state, err := h.generation.EditingStateFrom(value, analyses)
 			if err != nil {
 				return nil, toConnectError(err)
 			}
@@ -503,14 +525,14 @@ func (h *Handler) DeleteClipProject(ctx context.Context, req *connect.Request[v1
 
 // storylineProto is the clip's storyline with what changed since it was written (CLIP-178): the
 // sources not in the ones it was made with, and the observed scenes of those it was made with
-// that no paragraph holds. `current` are the project's current sources; nil reads the analysed
-// ones, which is all a projection without the source read has.
-func storylineProto(p clip.Project, current []string) *v1.ClipStoryline {
+// that no paragraph holds. `analyses` are the project's observations as the read decoded them.
+// `current` are the project's current sources; nil reads the analysed ones, which is all a
+// projection without the source read has.
+func storylineProto(p clip.Project, analyses []clip.SourceAnalysis, current []string) *v1.ClipStoryline {
 	s := p.Storyline
 	if s == nil {
 		return nil
 	}
-	analyses, _ := clip.RetainedObservations(p)
 	if current == nil {
 		for _, a := range analyses {
 			current = append(current, a.Source.ID)

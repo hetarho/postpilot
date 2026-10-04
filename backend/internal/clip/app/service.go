@@ -129,6 +129,12 @@ func (s *Service) ListProjects(ctx context.Context, user string) ([]clip.Project
 	return s.store.ListProjects(ctx, user)
 }
 
+// ListProjectSummaries is the directory's read: every project without its plan
+// or analysis.
+func (s *Service) ListProjectSummaries(ctx context.Context, user string) ([]clip.Project, error) {
+	return s.store.ListProjectSummaries(ctx, user)
+}
+
 func (s *Service) GetProject(ctx context.Context, user, id string) (clip.Project, error) {
 	p, err := s.store.GetProject(ctx, user, id)
 	if err != nil {

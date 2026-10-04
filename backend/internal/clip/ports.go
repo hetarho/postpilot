@@ -13,6 +13,9 @@ type Store interface {
 	UpdateTemplate(context.Context, string, string, TemplatePatch, time.Time) (VideoTemplate, error)
 	DeleteTemplate(context.Context, string, string) (int, error)
 	ListProjects(context.Context, string) ([]Project, error)
+	// The same projects without their plan or analysis: Analysis and EditPlan
+	// are empty on every one (a directory row reads neither).
+	ListProjectSummaries(context.Context, string) ([]Project, error)
 	GetProject(context.Context, string, string) (Project, error)
 	InsertProject(context.Context, Project) error
 	UpdateProject(context.Context, string, string, ProjectPatch, time.Time) (Project, error)

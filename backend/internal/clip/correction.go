@@ -279,11 +279,32 @@ func EditingState(p Project, cfg RenderConfig) (*CorrectionState, error) {
 	if err != nil {
 		return nil, err
 	}
-	sources, err := RetainedSources(p)
+	analyses, err := RetainedObservations(p)
 	if err != nil {
 		return nil, err
 	}
-	return &CorrectionState{CorrectionFromPlan(plan), sources, cfg.FadeMS, cfg.MaxCuts, cfg.MaxCopyRunes, cfg.MinDurationMS, cfg.MaxDurationMS}, nil
+	return editingState(plan, analyses, cfg), nil
+}
+
+// EditingStateFrom is EditingState over the project's observations as a read
+// that already decoded them holds them, so the analysis is decoded once.
+func EditingStateFrom(p Project, analyses []SourceAnalysis, cfg RenderConfig) (*CorrectionState, error) {
+	if p.EditPlan == "" {
+		return nil, nil
+	}
+	plan, err := DecodeEditPlan(p.EditPlan)
+	if err != nil {
+		return nil, err
+	}
+	return editingState(plan, analyses, cfg), nil
+}
+
+func editingState(plan EditPlan, analyses []SourceAnalysis, cfg RenderConfig) *CorrectionState {
+	sources := make([]AnalysisSource, 0, len(analyses))
+	for _, a := range analyses {
+		sources = append(sources, a.Source)
+	}
+	return &CorrectionState{CorrectionFromPlan(plan), sources, cfg.FadeMS, cfg.MaxCuts, cfg.MaxCopyRunes, cfg.MinDurationMS, cfg.MaxDurationMS}
 }
 func ApplyCorrection(cfg RenderConfig, p Project, input CorrectionPlan) (EditPlan, error) {
 	// Reject an unsupported explicit rate before interval resolution turns its

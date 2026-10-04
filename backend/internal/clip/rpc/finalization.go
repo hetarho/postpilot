@@ -23,6 +23,26 @@ func (h *Handler) setFinalizationState(out *v1.ClipProject, p clip.Project) {
 	out.CanFinalize, out.FinalizationRefusal = &canFinalize, reason
 }
 
+// listFinalizationState is setFinalizationState for a directory row, which is
+// read without its plan: what the row's own facts decide, and "unavailable"
+// where only validating the plan could say the clip is ready (the detail does).
+func listFinalizationState(out *v1.ClipProject, p clip.Project) {
+	busy := out.LatestJob != nil && (out.LatestJob.Status == "queued" || out.LatestJob.Status == "running")
+	canEdit, canFinalize := p.Finalized == nil && !busy, false
+	reason := "unavailable"
+	switch {
+	case p.Finalized != nil:
+		reason = "finalized"
+	case busy:
+		reason = "busy"
+	case p.Result == nil || p.Result.ID == "":
+		reason = "missing_render"
+	case p.EditPlanRevision != p.RenderedPlanRevision:
+		reason = "stale_render"
+	}
+	out.CanEdit, out.CanFinalize, out.FinalizationRefusal = &canEdit, &canFinalize, reason
+}
+
 func (h *Handler) FinalizeClipProject(ctx context.Context, req *connect.Request[v1.FinalizeClipProjectRequest]) (*connect.Response[v1.FinalizeClipProjectResponse], error) {
 	user, err := actingUser(ctx)
 	if err != nil {

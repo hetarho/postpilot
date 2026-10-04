@@ -38,7 +38,7 @@ func TestTheProjectCarriesItsStorylineAndWhatChangedSince(t *testing.T) {
 		{Current: false, Sources: []clip.SourceLease{{ID: "old"}}},
 		{Current: true, Sources: []clip.SourceLease{{ID: "a"}, {ID: "c"}}},
 	})
-	if got := storylineProto(p, current).AddedSourceIds; !reflect.DeepEqual(got, []string{"c"}) {
+	if got := storylineProto(p, analyses, current).AddedSourceIds; !reflect.DeepEqual(got, []string{"c"}) {
 		t.Fatal("added against the current batch", got)
 	}
 	p.Storyline = nil

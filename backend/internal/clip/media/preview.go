@@ -72,13 +72,9 @@ func (r *Rendering) preparePreview(ctx context.Context, plan clip.EditPlan, sour
 		}
 	}
 	err = r.media.WithWorkspace(ctx, "clip-preview", func(ws clip.MediaWorkspace) error {
-		layout, err := r.layoutComposition(ctx, ws, plan)
+		layout, err := r.previewLayout(ctx, ws, canvas, plan, grounds)
 		if err != nil {
 			return err
-		}
-		if grounds != nil {
-			canvas, _ := clip.ClipCanvas(plan.Ratio)
-			layout.applyGrounds(canvas, grounds)
 		}
 		visuals := []declaredVisual{}
 		for _, v := range layout.visuals {
