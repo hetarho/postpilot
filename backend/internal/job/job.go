@@ -102,8 +102,8 @@ type NewJob struct {
 	CallCounts map[string]int
 	// PricingCalls is the exact priced shape supplied by an enqueue adapter that knows its
 	// stages' completion budgets. Nil keeps the compatibility derivation above for work whose
-	// calls still use the registry default. Entries with the same ref and budget collapse;
-	// different budgets stay separate even when one model serves both stages.
+	// calls still use the registry default. Entries with the same ref, budget and prompt size
+	// collapse; different ones stay separate even when one model serves both stages.
 	PricingCalls []PlannedCall
 }
 
@@ -166,6 +166,7 @@ func normalizePlannedCalls(input []PlannedCall) []PlannedCall {
 		ref    string
 		stage  string
 		budget int
+		prompt int
 	}]int, len(input))
 	for _, call := range input {
 		if call.Ref == "" || call.Count <= 0 {
@@ -175,7 +176,8 @@ func normalizePlannedCalls(input []PlannedCall) []PlannedCall {
 			ref    string
 			stage  string
 			budget int
-		}{ref: call.Ref, stage: call.Stage, budget: call.CompletionTokens}
+			prompt int
+		}{ref: call.Ref, stage: call.Stage, budget: call.CompletionTokens, prompt: call.PromptTokens}
 		if index, ok := seen[key]; ok {
 			calls[index].Count += call.Count
 			continue

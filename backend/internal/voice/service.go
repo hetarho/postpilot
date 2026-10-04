@@ -553,7 +553,8 @@ func (s *Service) GetSample(ctx context.Context, userID, voiceID, sampleID strin
 // AnalyzeVoice is 말투 만들기 and 다시 분석 (VOICE-23): one durable `analyze_voice` job on the
 // model the request names, which must be enabled and registered to the analyze stage. It needs
 // the 학습 글 at 100% (VOICE_NOT_READY otherwise); a voice already analysing is refused by the
-// per-(voice, kind) guard.
+// per-(voice, kind) guard. The job freezes the 학습 글 it will read (VOICE-22) and declares the
+// prompt it will send over them, so its hold covers a large corpus (QUOTA-14).
 func (s *Service) AnalyzeVoice(ctx context.Context, userID, voiceID string, model llm.ModelRef) (string, error) {
 	if _, err := s.activeVoice(ctx, userID, voiceID); err != nil {
 		return "", err
@@ -569,7 +570,11 @@ func (s *Service) AnalyzeVoice(ctx context.Context, userID, voiceID string, mode
 	if !ReadinessOf(samples).Ready() {
 		return "", ErrVoiceNotReady
 	}
-	id, err := s.jobs.Enqueue(ctx, AnalysisJobRequest{UserID: userID, VoiceID: voiceID, WriteModel: model.String()})
+	counted, oldestFirst, ids := analysisSnapshot(samples)
+	id, err := s.jobs.Enqueue(ctx, AnalysisJobRequest{
+		UserID: userID, VoiceID: voiceID, WriteModel: model.String(),
+		MaterialIDs: ids, PromptTokens: promptTokens(analysisRequest(counted, oldestFirst)),
+	})
 	if err != nil {
 		var active *JobAlreadyInProgressError
 		if errors.As(err, &active) {

@@ -625,6 +625,36 @@ func TestHoldAndQuotePriceEachCallsOwnCompletionBudget(t *testing.T) {
 	}
 }
 
+// QUOTA-14: a call that declares its prompt is priced at the larger of that prompt and the
+// 30 000-token default, so a small declaration holds what an undeclared call holds and a large
+// one is refused when the balance covers only the default.
+func TestHoldPricesTheLargerOfTheDeclaredPromptAndTheDefault(t *testing.T) {
+	svc, store := newTestService(t, seoulNoon)
+	// cheap is 0.1 USD per million prompt tokens and 0.7 per million completion tokens.
+	for _, tc := range []struct {
+		prompt int64
+		want   int64
+	}{{0, 3_000 + 7_000}, {12_000, 3_000 + 7_000}, {holdInputTokens, 3_000 + 7_000}, {50_000, 5_000 + 7_000}} {
+		got, err := svc.worstCaseMicrousd([]PlannedCall{{Ref: cheapRef, Count: 1, PromptTokens: tc.prompt}})
+		if err != nil || got != tc.want {
+			t.Fatalf("prompt %d priced %d µUSD (err %v), want %d", tc.prompt, got, err, tc.want)
+		}
+	}
+
+	store.lots = []Lot{openMonthly("alice", 0), {ID: "bonus", UserID: "alice", Kind: LotBonus, Granted: oneCallHold, Remaining: oneCallHold}}
+	err := svc.Hold(context.Background(), holdStart("alice", plan.Free, "job-large", PlannedCall{Ref: cheapRef, Count: 1, PromptTokens: 50_000}))
+	var refusal *plan.InsufficientCreditsError
+	if !errors.As(err, &refusal) || refusal.Required <= oneCallHold || len(store.admissions) != 0 {
+		t.Fatalf("a large prompt over the balance = %v, admissions %+v", err, store.admissions)
+	}
+	if err := svc.Hold(context.Background(), holdStart("alice", plan.Free, "job-small", PlannedCall{Ref: cheapRef, Count: 1, PromptTokens: 12_000})); err != nil {
+		t.Fatal(err)
+	}
+	if got := store.admissions[0].HoldCredits; got != oneCallHold {
+		t.Errorf("a small declared prompt held %d, want the default %d", got, oneCallHold)
+	}
+}
+
 func TestHoldRefusesWhatTheBalanceCannotCoverAndWritesNothing(t *testing.T) {
 	svc, store := newTestService(t, seoulNoon)
 	store.lots = []Lot{openMonthly("alice", 0), {ID: "bonus", UserID: "alice", Kind: LotBonus, Granted: 3, Remaining: 3}}

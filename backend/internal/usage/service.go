@@ -21,7 +21,9 @@ import (
 // with a full profile, few-shot excerpts and an observation set, or an observation call
 // with a batch of photos): a hold that under-estimates lets work start on credits the
 // account turns out not to have, and settlement returns whatever was not used within the
-// minute. Erring high costs a user nothing; erring low costs us the difference.
+// minute. Erring high costs a user nothing; erring low costs us the difference. A call
+// whose prompt is known to be larger declares it (PlannedCall.PromptTokens) and is priced
+// at that size instead: a voice analysis reads every 학습 글 (QUOTA-14).
 const holdInputTokens = 30_000
 
 var ErrLotTouched = errors.New("credit lot has already been touched")
@@ -868,7 +870,7 @@ func (s *Service) worstCaseMicrousd(calls []PlannedCall) (int64, error) {
 			continue
 		}
 		cost := llm.ResolveCost(llm.CostInput{
-			PromptTokens:        holdInputTokens,
+			PromptTokens:        max(holdInputTokens, call.PromptTokens),
 			CompletionTokens:    completionTokens,
 			InputUSDPerMillion:  info.InputUSDPerMillion,
 			OutputUSDPerMillion: info.OutputUSDPerMillion,

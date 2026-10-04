@@ -187,6 +187,7 @@ func plannedCalls(planned []job.PlannedCall) []usage.PlannedCall {
 	for _, call := range planned {
 		calls = append(calls, usage.PlannedCall{
 			Ref: parseRegistryRef(call.Ref), Stage: call.Stage, Count: call.Count, CompletionTokens: int64(call.CompletionTokens),
+			PromptTokens: int64(call.PromptTokens),
 		})
 	}
 	return calls

@@ -80,7 +80,6 @@
 | T548 | Mix immutable narration into server MP4 exports | ARCH DUB CLIP CDS | T547 | todo |
 | T549 | Mix the same narration into browser MP4 exports | ARCH DUB CLIP CDS | T548 | todo |
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | todo |
-| T569 | Hold a voice analysis at the size of the prompt it will send | QUOTA VOICE ARCH | - | doing@261005.pc |
 | T572 | Delete the pre-FX pricing regime from the ledger | QUOTA ARCH | T569 | doing@261005.pc |
 | T573 | Delete the non-Portable renderer and the legacy plan paths | ARCH | - | doing@261005.pc |
 | T574 | One cut timeline for the render graph, the sampler and the browser drawing | CDS CLIP ARCH | T573 | doing@261005.pc |
@@ -94,6 +93,7 @@
 - ops: lower TEMPLATE_PHOTO_ROW_MAX / VITE_TEMPLATE_PHOTO_ROW_MAX to 3 wherever production sets them explicitly (VPS .env, Cloudflare build vars).
 
 ## log
+- 261005 T569 done: a voice analysis freezes its 학습 글 snapshot at start and holds max(30 000, prompt runes); the run reads only the frozen ids; BE suite green
 - 261005 T580 done: a refused renewal lapses a subscription still on the term it paid for, even if another write touched the row (found in T570); BE suite green
 - 261005 T578 done: what a refunded payment funded is one billing value the usage/clip predicates and the 0130 guard triggers all read; upgrades fund their window's lazy lots; BE suite green
 - 261005 T570 done: each billing pass refunds a review order in full (idempotent cancel, read-back), fails it, records and mails the refund, unlocks the account; a refunded renewal lapses the account (BILL-8); BE suite green
@@ -113,4 +113,3 @@
 - 261004 T567 done: photo turns patch the cache on every call, the fingerprint reads once per autosave pause, one abortable delay frees its listeners; FE suite green
 - 261004 T565 done: clip settings and region queues send per project, the clip storyline saves through its own keyed queue flushed before builds and requests and keeps text on failure; FE suite green
 - 261004 T564 done: clip detail waits for settlement only on generate_clip/revise_clip, a settings save keeps the cached plan unless its revision moved and refreshes only list and templates; FE suite green
-- 261004 out of scope, found while implementing T562: bug: fixed-KRW CancelSubscription (billing/change.go:190) sets UpdatedAt=now before comparing it with the stored row, so a customer cancel always fails ErrStaleQuote in production (BILL-7, since T479) — needs its own task

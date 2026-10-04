@@ -37,11 +37,16 @@ type Start struct {
 // PlannedCall is one model the job will run, how many times, and the completion budget each
 // call will actually be sent. A zero budget is the deliberate compatibility fallback for a
 // caller whose stage still uses the registry default.
+//
+// PromptTokens is the prompt size a caller that knows it declares (a voice analysis, whose
+// prompt is every 학습 글); zero leaves the ledger's default prompt allowance, and a size
+// below that allowance is priced at the allowance (QUOTA-14).
 type PlannedCall struct {
 	Ref              string
 	Stage            string
 	Count            int
 	CompletionTokens int
+	PromptTokens     int
 }
 
 // Store is the persistence behavior the queue needs. SQL rows stop in store/.

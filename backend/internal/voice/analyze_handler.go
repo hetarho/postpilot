@@ -9,10 +9,11 @@ import (
 	"github.com/postpilot/backend/internal/llm"
 )
 
-// Analyze is the `analyze_voice` job (VOICE-22, VOICE-23): it reads one snapshot of the voice's
-// 학습 글, counts the fingerprint, makes one call for the AI part and publishes the result as the
-// current analysis, the one it replaces becoming the previous. A failed call publishes nothing,
-// and nothing repeats the call without the owner's press.
+// Analyze is the `analyze_voice` job (VOICE-22, VOICE-23): it reads the snapshot of the voice's
+// 학습 글 its start froze — those that still exist, nothing added since — counts the fingerprint,
+// makes one call for the AI part and publishes the result as the current analysis, the one it
+// replaces becoming the previous. A failed call publishes nothing, and nothing repeats the call
+// without the owner's press.
 func (s *Service) Analyze(ctx context.Context, found AnalysisJob, progress Progress) error {
 	ref, err := parseModelRef(found.WriteModel)
 	if err != nil {
@@ -23,20 +24,15 @@ func (s *Service) Analyze(ctx context.Context, found AnalysisJob, progress Progr
 	if _, err := s.activeVoice(ctx, found.UserID, found.VoiceID); err != nil {
 		return voiceUnavailableError(err)
 	}
-	newestFirst, err := s.samples.ListSampleBodies(ctx, found.UserID, found.VoiceID)
+	listed, err := s.samples.ListSampleBodies(ctx, found.UserID, found.VoiceID)
 	if err != nil {
 		return fmt.Errorf("학습 글을 불러오지 못했어요: %w", err)
 	}
+	newestFirst := frozenSamples(listed, found.MaterialIDs)
 	if len(newestFirst) == 0 {
 		return fmt.Errorf("분석할 학습 글이 없어요")
 	}
-	counted := FingerprintOf(materialsOf(newestFirst))
-	oldestFirst := make([]Sample, len(newestFirst))
-	ids := make([]string, len(newestFirst))
-	for i, sample := range newestFirst {
-		oldestFirst[len(newestFirst)-1-i] = sample
-		ids[i] = sample.ID
-	}
+	counted, oldestFirst, ids := analysisSnapshot(newestFirst)
 	progress("analyze", 0, 1)
 	ai, err := s.completeAnalysis(ctx, ref, counted, oldestFirst)
 	if err != nil {
@@ -49,6 +45,21 @@ func (s *Service) Analyze(ctx context.Context, found AnalysisJob, progress Progr
 	}
 	progress("analyze", 1, 1)
 	return nil
+}
+
+// frozenSamples keeps, in listed order, the 학습 글 of the snapshot that still exist.
+func frozenSamples(listed []Sample, materialIDs []string) []Sample {
+	frozen := make(map[string]bool, len(materialIDs))
+	for _, id := range materialIDs {
+		frozen[id] = true
+	}
+	kept := make([]Sample, 0, len(materialIDs))
+	for _, sample := range listed {
+		if frozen[sample.ID] {
+			kept = append(kept, sample)
+		}
+	}
+	return kept
 }
 
 // materialsOf is the 학습 글 as the fingerprint reads them.
