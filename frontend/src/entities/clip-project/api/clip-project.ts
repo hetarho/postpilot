@@ -241,16 +241,7 @@ export function useClipProject(ownerId: string, id: string | undefined) {
     enabled: !!ownerId && !!id,
     staleTime: 0,
     refetchOnMount: 'always',
-    refetchInterval: (state) => {
-      const project = state.state.data
-      const job = project?.latestJob
-      if (!job) return false
-      if (job.status === 'queued' || job.status === 'running') return POLL_INTERVAL_MS
-      return CHARGED_CLIP_KINDS.has(job.kind) &&
-        (!project.accounting || project.accounting.jobId !== job.id || !project.accounting.settled)
-        ? POLL_INTERVAL_MS
-        : false
-    },
+    refetchInterval: (state) => clipDetailPollInterval(state.state.data),
     queryFn: async ({ signal }) => {
       const response = await createClient(ClipGenerationService, transport).getClipProject(
         { id },
@@ -261,8 +252,43 @@ export function useClipProject(ownerId: string, id: string | undefined) {
     },
   })
 }
-// The charged clip work whose settlement the detail keeps polling for after it ends.
-const CHARGED_CLIP_KINDS = new Set(['generate_clip', 'storyline_clip', 'revise_storyline_clip'])
+/** The clip work whose accounting the server projects, and so whose settlement the detail keeps
+ *  polling for after it ends: a hand-kept mirror of `chargedClipKind` in
+ *  `backend/internal/clip/app/accounting.go`, pinned by a test that reads that file. A storyline
+ *  call settles with its job's finish and is projected no accounting, so waiting on one would
+ *  poll the detail for as long as the tab stays open. */
+export const CHARGED_CLIP_KINDS: ReadonlySet<string> = new Set(['generate_clip', 'revise_clip'])
+
+/** The detail's poll: while its job runs, then — for charged work only — until the server
+ *  reports that job's settlement. */
+export function clipDetailPollInterval(project: ClipProject | undefined): number | false {
+  const job = project?.latestJob
+  if (!job) return false
+  if (job.status === 'queued' || job.status === 'running') return POLL_INTERVAL_MS
+  return CHARGED_CLIP_KINDS.has(job.kind) &&
+    (!project.accounting || project.accounting.jobId !== job.id || !project.accounting.settled)
+    ? POLL_INTERVAL_MS
+    : false
+}
+
+/** What only the detail read composes around the stored project, and an update's answer leaves
+ *  out: the plan, the evidence, the storyline read against the current footage, the job with its
+ *  accounting, and whether the clip can be finalized. A settings save that left the plan where it
+ *  was moves none of them, so the cached reading stands beside the saved fields. */
+function withDetailReadings(saved: ClipProject, cached: ClipProject): ClipProject {
+  return {
+    ...saved,
+    editing: cached.editing,
+    observations: cached.observations,
+    storyline: cached.storyline,
+    latestJob: cached.latestJob,
+    latestAttempt: cached.latestAttempt,
+    accounting: cached.accounting,
+    attemptInspection: cached.attemptInspection,
+    canFinalize: cached.canFinalize,
+    finalizationRefusal: cached.finalizationRefusal,
+  }
+}
 
 /** Saves the owner's storyline edit (CLIP-178): the same paragraphs with their texts and scenes
  *  replaced. The server marks it edited by hand; the answer replaces the cached project. */
@@ -288,10 +314,11 @@ export function useClipProjectMutations(ownerId: string) {
   const transport = useTransport()
   const client = createClient(ClipGenerationService, transport)
   const cache = useQueryClient()
+  const templatesKey = ['clip-templates', transport, ownerId]
   const invalidate = () =>
     Promise.all([
       cache.invalidateQueries({ queryKey: clipProjectsKey(transport, ownerId) }),
-      cache.invalidateQueries({ queryKey: ['clip-templates', transport, ownerId] }),
+      cache.invalidateQueries({ queryKey: templatesKey }),
     ])
   const save = useMutation({
     mutationFn: async ({ id, draft }: { id?: string; draft: ClipProjectDraft }) => {
@@ -325,12 +352,25 @@ export function useClipProjectMutations(ownerId: string) {
       if (!response.project) throw new Error('Missing saved clip')
       return toClipProject(response.project)
     },
-    // The answer is the project as saved — its plan and regions included, since a preset
-    // change projects into both — so the next write in the lane starts from it (CLIP-188).
+    // The answer is the project as saved, its regions and plan revision included, so the next
+    // write in the lane starts from it (CLIP-188). The list and the templates' project counts
+    // refresh without holding the save: it runs inside `serialClipWrite`, and awaiting them
+    // would queue every region and correction save behind those reads.
     onSuccess: async (project, { id }) => {
-      if (id)
-        cache.setQueryData([...clipProjectsKey(transport, ownerId), 'detail', project.id], project)
-      await invalidate()
+      void cache.invalidateQueries({ queryKey: [...clipProjectsKey(transport, ownerId), 'list'] })
+      void cache.invalidateQueries({ queryKey: templatesKey })
+      if (!id) return
+      const detail = [...clipProjectsKey(transport, ownerId), 'detail', project.id]
+      const cached = cache.getQueryData<ClipProject>(detail)
+      if (cached && cached.editPlanRevision === project.editPlanRevision) {
+        cache.setQueryData(detail, withDetailReadings(project, cached))
+        return
+      }
+      // A preset or template that moved the plan: the plan is only in the detail read, and the
+      // correction's next write in the lane has to rebase onto it, so it is read before the
+      // lane moves on.
+      cache.setQueryData(detail, project)
+      await cache.invalidateQueries({ queryKey: detail })
     },
   })
   const remove = useMutation({

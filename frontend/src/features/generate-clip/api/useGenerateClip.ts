@@ -178,6 +178,10 @@ export function useGenerateClip(ownerId: string, project: ClipProject, ownedJobI
   // Finish this page's accepted media owner even if another tab has already
   // started a newer job by the time the project projection arrives.
   const id = ownedJobId ?? latestId
+  // The end of the job stales the balance once. For a storyline call — 스토리라인 먼저, 다시
+  // 만들기 or a storyline request — it is the only transition: the call settles as its job
+  // finishes and the server projects no accounting for it, so the accounting effect below never
+  // fires for one and the detail does not wait on its settlement.
   const poll = useJob(id, [projectsKey, planKey])
   const job =
     poll.job?.id === id ? poll.job : project.latestJob?.id === id ? project.latestJob : undefined

@@ -1,10 +1,12 @@
 import { afterEach, expect, it, vi } from 'vitest'
-import { fireEvent, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { hashKey } from '@tanstack/react-query'
 import { initializeI18n } from '@/app/providers/i18n'
 import { Code } from '@connectrpc/connect'
 import { Stage } from '@/shared/api'
 import { clipRegionRows } from '@/entities/clip-plan'
+import { myPlanQueryKey } from '@/entities/plan'
 import { discardClipDraftQueues } from '@/features/edit-clip-project'
 import { discardClipRegionQueues } from '@/features/edit-clip-regions'
 import { readSourceManifest } from '@/features/upload-clip-sources'
@@ -307,6 +309,37 @@ it('names the storyline stage while the storyline call runs', async () => {
   await mount(storylined({ latestJob: job }), {}, { jobs: [job] }, 'none')
   expect(await screen.findAllByText('스토리라인 작성 중')).not.toHaveLength(0)
 })
+
+// CLIP-177, CLIP-181: a storyline call settles as its job ends and carries no accounting to wait
+// on, so its end is what moves the header's balance — once.
+it.each(['storyline_clip', 'revise_storyline_clip'])(
+  'stales the balance once when a %s job ends',
+  async (kind) => {
+    const job = {
+      id: 'storyline',
+      kind,
+      status: 'running',
+      stage: 'storyline',
+      clipProjectId: 'clip',
+    }
+    const view = await mount(storylined({ latestJob: job }), {}, { jobs: [job] }, 'none')
+    await waitFor(() =>
+      expect(view.queryClient.getQueryData(myPlanQueryKey(view.transport))).toBeTruthy(),
+    )
+    const invalidate = vi.spyOn(view.queryClient, 'invalidateQueries')
+    const plan = hashKey(myPlanQueryKey(view.transport))
+    const balanceStales = () =>
+      invalidate.mock.calls.filter(
+        (call) => call[0]?.queryKey && hashKey(call[0].queryKey) === plan,
+      ).length
+    job.status = 'done'
+    for (let read = 0; read < 3; read++)
+      await act(() => view.queryClient.refetchQueries({ type: 'active' }))
+    await waitFor(() => expect(balanceStales()).toBe(1))
+    await act(() => view.queryClient.refetchQueries({ type: 'active' }))
+    expect(balanceStales()).toBe(1)
+  },
+)
 
 // CLIP-179, CLIP-186: the slots stand in ② before any template, storyline or plan, and an edit
 // saves itself as a region edit naming the revision it was made over.

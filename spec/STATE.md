@@ -83,7 +83,6 @@
 | T558 | Sample browser renders without a full decode and load each original once | ARCH | - | todo |
 | T559 | Take a server render's ground frames from its own lossless cut, and trim before scaling | ARCH | T558 | todo |
 | T560 | Stop re-laying out a clip per caption-frames request and re-decoding JSON per poll | ARCH | - | todo |
-| T564 | Stop the clip detail polling forever and stop each settings save from refetching it | ARCH | - | todo |
 | T565 | Send each clip autosave through its own project's sender and queue the clip storyline | ARCH | - | todo |
 | T566 | Keep lazily routed pages out of the entry chunk | ARCH | - | todo |
 | T567 | Keep every photo turn in the cache, and stop per-autosave fingerprint reads and poll listener leaks | ARCH | - | todo |
@@ -95,6 +94,7 @@
 - ops: lower TEMPLATE_PHOTO_ROW_MAX / VITE_TEMPLATE_PHOTO_ROW_MAX to 3 wherever production sets them explicitly (VPS .env, Cloudflare build vars).
 
 ## log
+- 261004 T564 done: clip detail waits for settlement only on generate_clip/revise_clip, a settings save keeps the cached plan unless its revision moved and refreshes only list and templates; FE suite green
 - 261004 T556 done: voice directory and profile read samples once, the check list skips projections, an unchanged answer is left alone; BE suite green
 - 261004 T555 done: comparison list in three reads without snapshots or outputs, voice comparison measured against one analysis, candidates two at a time, observe holds count every observe call; BE and FE suites green
 - 261004 T563 done: a second pack refund records like the first, definitive cancel refusals release frozen credits after a read-back, review-skipped renewals are logged, expired quotes purged; BE suite green
@@ -114,4 +114,3 @@
 - 261004 create-task DUB MODEL QUOTA CLIP CDS THEME: T533–T550 (18 tasks), voice creation/qualification first; independent captions, responsive timeline and both narrated exports next
 - 261004 create-task DUB MODEL QUOTA CLIP CDS THEME start: voice qualification precedes narrated editing; explicit provider, accounting, compatibility and export acceptance
 - 261004 create-ssot/update-ssot complete: DUB r2 MODEL r29 QUOTA r33 CLIP r55 CDS r32 THEME r22; all adopted ideation domains converted
-- 261004 create-ssot/update-ssot DUB MODEL QUOTA CLIP CDS THEME start: convert the adopted voice-first editor scope before create-task; unrelated ARCH/VOICE/review pending excluded
