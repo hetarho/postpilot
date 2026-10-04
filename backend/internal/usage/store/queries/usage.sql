@@ -149,6 +149,22 @@ UPDATE credit_lots SET expires_at = ?
 WHERE user_id = ? AND kind = 'monthly' AND coverage_id IS NULL
   AND expires_at > ?;
 
+-- name: LegacyMonthlyLotOpen :one
+-- Whether ExpireLegacyMonthlyLots would move any lot, asked on the read pool with the same
+-- predicate, so a balance read can tell it has nothing to expire.
+SELECT EXISTS(
+    SELECT 1 FROM credit_lots
+    WHERE user_id = ? AND kind = 'monthly' AND coverage_id IS NULL
+      AND expires_at > ?
+);
+
+-- name: WindowLotExpiries :many
+-- Where each of these window grants already ends, on the read pool. A balance read compares
+-- them with the grants it would open: InsertLotIfAbsent writes only a missing grant or one
+-- that ends sooner.
+SELECT id, expires_at FROM credit_lots
+WHERE id IN (sqlc.slice('ids'));
+
 -- name: InsertHoldDebit :exec
 INSERT INTO credit_hold_lots (job_id, lot_id, credits, origin_coverage_id, origin_window_start)
 VALUES (?, ?, ?, ?, ?);

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -30,6 +31,7 @@ type fakeStore struct {
 	lotSeq         int
 	spendCalls     int
 	raiseCalls     int
+	writeTxs       int
 	failOnSpend    error
 }
 
@@ -38,8 +40,39 @@ func newFakeStore() *fakeStore {
 }
 
 // InWriteTx is a pass-through here: these tests assert the rules, and the real store's
-// BEGIN IMMEDIATE is what makes them hold under concurrency.
-func (f *fakeStore) InWriteTx(_ context.Context, fn func(Storage) error) error { return fn(f) }
+// BEGIN IMMEDIATE is what makes them hold under concurrency. It counts the transactions.
+func (f *fakeStore) InWriteTx(_ context.Context, fn func(Storage) error) error {
+	f.writeTxs++
+	return fn(f)
+}
+
+// The renewal reads apply the same predicates as the fake's writes below.
+func (f *fakeStore) WindowGrantsOpened(_ context.Context, grants []Lot) (bool, error) {
+	for _, grant := range grants {
+		opened := false
+		for _, lot := range f.lots {
+			if lot.ID == grant.ID && lot.ExpiresAt != nil && grant.ExpiresAt != nil && !lot.ExpiresAt.Before(*grant.ExpiresAt) {
+				opened = true
+			}
+		}
+		if !opened {
+			return false, nil
+		}
+	}
+	return true, nil
+}
+func (f *fakeStore) LegacyMonthlyLotOpen(_ context.Context, userID string, at time.Time) (bool, error) {
+	for _, lot := range f.lots {
+		if lot.UserID == userID && lot.Kind == LotMonthly && lot.CoverageID == "" && lot.ExpiresAt != nil && lot.ExpiresAt.After(at) {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+func (f *fakeStore) ExportWindowOpened(context.Context, ExportWindow) (bool, error) { return true, nil }
+func (f *fakeStore) ReadLotsInConsumptionOrder(ctx context.Context, userID string, now time.Time) ([]Lot, error) {
+	return f.LotsInConsumptionOrder(ctx, userID, now)
+}
 
 func (f *fakeStore) LotsInConsumptionOrder(_ context.Context, userID string, now time.Time) ([]Lot, error) {
 	var out []Lot
@@ -723,6 +756,62 @@ func TestBenefitWindowsKeepExactAnchorAndIdempotentGrants(t *testing.T) {
 	}
 	if !second.RenewsAt.Equal(first.RenewsAt.Add(24 * time.Hour)) {
 		t.Errorf("next daily reset = %s, want 24 hours later", second.RenewsAt)
+	}
+}
+
+func TestBalanceReadsTakeTheWriterOnlyWhenTheRenewalWouldWrite(t *testing.T) {
+	now := seoulNoon
+	store := newFakeStore()
+	svc := NewService(store, pricedModels, maxCompletion, fakeAnchors{anchor: testAnchor})
+	svc.now = func() time.Time { return now }
+	ctx := context.Background()
+
+	first, err := svc.BalanceFor(ctx, "alice", plan.Basic)
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, err := svc.BalanceFor(ctx, "alice", plan.Basic)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if store.writeTxs != 1 {
+		t.Fatalf("two reads in one daily window opened %d write transactions, want 1", store.writeTxs)
+	}
+	if !reflect.DeepEqual(first, second) {
+		t.Fatalf("the read-pool answer %+v differs from the writer's %+v", second, first)
+	}
+
+	// A legacy monthly lot still running is something the renewal expires: a write.
+	legacyEnd := now.Add(time.Hour)
+	store.lots = append(store.lots, Lot{ID: "legacy", UserID: "alice", Kind: LotMonthly, Granted: 5, Remaining: 5, ExpiresAt: &legacyEnd})
+	expired, err := svc.BalanceFor(ctx, "alice", plan.Basic)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if store.writeTxs != 2 || expired.Credits != first.Credits {
+		t.Fatalf("legacy lot: %d write transactions, credits %d, want 2 and %d", store.writeTxs, expired.Credits, first.Credits)
+	}
+
+	// The next daily window is a new grant; once it is open, reads are free again.
+	now = first.RenewsAt
+	for range 2 {
+		if _, err := svc.BalanceFor(ctx, "alice", plan.Basic); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if store.writeTxs != 3 {
+		t.Fatalf("next window: %d write transactions, want 3", store.writeTxs)
+	}
+
+	// Free and master renew nothing, so their reads never take the writer.
+	if _, err := svc.BalanceFor(ctx, "bob", plan.Free); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.BalanceFor(ctx, "root", plan.Master); err != nil {
+		t.Fatal(err)
+	}
+	if store.writeTxs != 3 {
+		t.Fatalf("free and master reads opened %d write transactions", store.writeTxs-3)
 	}
 }
 

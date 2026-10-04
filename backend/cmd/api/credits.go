@@ -340,6 +340,20 @@ func (a usageExports) OpenExportWindow(ctx context.Context, window usage.ExportW
 		CoverageID: window.CoverageID, Start: window.Start, End: window.End, Allowance: window.Allowance}, "lazy")
 }
 
+// ExportWindowOpened answers the ledger's renewal probe from clip's window read: opening
+// changes nothing only when the window of this coverage and start already ends no sooner.
+// A window the open would refuse, or any other current window, answers "it would write".
+func (a usageExports) ExportWindowOpened(ctx context.Context, window usage.ExportWindow) (bool, error) {
+	if window.UserID == "" || window.CoverageID == "" || !window.Start.Before(window.End) || window.Allowance < 0 {
+		return false, nil
+	}
+	current, found, err := a.ExportWindows.CurrentExportWindow(ctx, window.UserID, window.Start)
+	if err != nil || !found {
+		return false, err
+	}
+	return current.CoverageID == window.CoverageID && current.Start.Equal(window.Start) && !current.End.Before(window.End), nil
+}
+
 func (a supportAccounts) ListUsers(ctx context.Context) ([]auth.User, error) {
 	return a.auth.ListUsers(ctx)
 }

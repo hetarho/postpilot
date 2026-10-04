@@ -12,6 +12,34 @@ import (
 	"github.com/postpilot/backend/internal/usage"
 )
 
+func TestSettleDropsTheJobsEligibleLots(t *testing.T) {
+	svc, handle := newServiceWithDB(t)
+	ctx := context.Background()
+	eligible := func(job string) int {
+		t.Helper()
+		var rows int
+		if err := handle.Reader.QueryRowContext(ctx, "SELECT count(*) FROM usage_admission_eligible_lots WHERE job_id=?", job).Scan(&rows); err != nil {
+			t.Fatal(err)
+		}
+		return rows
+	}
+	for _, outcome := range []usage.TerminalOutcome{usage.OutcomeSucceeded, usage.OutcomeFailed} {
+		job := "eligible-" + string(outcome)
+		if err := svc.Hold(ctx, holdFor(job)); err != nil {
+			t.Fatal(err)
+		}
+		if eligible(job) == 0 {
+			t.Fatalf("%s: the hold recorded no eligible lots", outcome)
+		}
+		if err := svc.Settle(ctx, job, outcome); err != nil {
+			t.Fatal(err)
+		}
+		if rows := eligible(job); rows != 0 {
+			t.Fatalf("%s: a settled job left %d eligible-lot rows", outcome, rows)
+		}
+	}
+}
+
 func TestSQLiteClipFailureSettlementEvidenceAndConcurrency(t *testing.T) {
 	for _, tc := range []struct {
 		name       string

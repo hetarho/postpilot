@@ -107,6 +107,22 @@ type HoldLedger interface {
 	DeleteAdmissionForJob(ctx context.Context, jobID string) error
 }
 
+// RenewalReads is what a balance read asks the read pool before it renews, and the lots it
+// shows when nothing needed renewing. None of these answers decides a write: each one is
+// the same predicate the renewal's statement applies, and a read that fails says "write".
+type RenewalReads interface {
+	// WindowGrantsOpened reports whether every one of these window grants already exists
+	// and runs at least as long as given, so InsertLotIfAbsent would change none of them.
+	WindowGrantsOpened(ctx context.Context, grants []Lot) (bool, error)
+	// LegacyMonthlyLotOpen reports whether ExpireLegacyMonthlyLots at `at` would move a lot.
+	LegacyMonthlyLotOpen(ctx context.Context, userID string, at time.Time) (bool, error)
+	// ExportWindowOpened reports whether OpenExportWindow would leave this window as it is.
+	ExportWindowOpened(ctx context.Context, window ExportWindow) (bool, error)
+	// ReadLotsInConsumptionOrder is LotsInConsumptionOrder on the read pool, for a balance
+	// that is shown rather than spent.
+	ReadLotsInConsumptionOrder(ctx context.Context, userID string, now time.Time) ([]Lot, error)
+}
+
 // Storage is every behaviour the ledger's SQL store happens to implement: the composition
 // root's handle, not a port (ARCH-6).
 type Storage interface {
@@ -116,6 +132,7 @@ type Storage interface {
 	VoucherLotLedger
 	SpendLedger
 	HoldLedger
+	RenewalReads
 	ExportWindowLedger
 }
 
@@ -123,6 +140,12 @@ type Storage interface {
 // benefits. The composition root supplies clip's transaction-scoped adapter.
 type ExportWindowLedger interface {
 	OpenExportWindow(ctx context.Context, window ExportWindow) error
+}
+
+// ExportWindowReader answers, on the read pool, whether OpenExportWindow would leave a
+// window as it is. The composition root supplies clip's adapter beside the ledger's.
+type ExportWindowReader interface {
+	ExportWindowOpened(ctx context.Context, window ExportWindow) (bool, error)
 }
 
 // Models resolves a ref's registry metadata. The hold needs its prices to estimate a

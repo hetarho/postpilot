@@ -149,7 +149,7 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 	c.ledger = usage.NewService(
 		usagestore.NewWithExports(handle.Writer, handle.Reader, func(tx *sql.Tx) usage.ExportWindowLedger {
 			return usageExports{clipstore.NewTx(tx)}
-		}), registry,
+		}, usageExports{clipstore.New(handle.Writer, handle.Reader)}), registry,
 		int64(cfg.LLMMaxTokensDefault), anchors, approvedCeilingKinds()...,
 	).WithModelGrades().WithOwnerCancellation(ownerCancellableKinds()...).WithRateSelector(usage.NewRateSelector(
 		officialRate,

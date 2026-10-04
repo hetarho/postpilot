@@ -39,16 +39,34 @@ type RateCache interface {
 	LatestRateDay(ctx context.Context, noLaterThan string) (RateDay, bool, error)
 }
 
-// RateSelector serializes a day's official lookup across concurrent admissions.
-// Confirmed dates survive restarts in RateCache; failed transport never becomes a
-// holiday and can only use a recent previously confirmed publication.
+// RateSelector picks the official rate a Seoul day's admissions convert at. Once a day's
+// rate is selected from a confirmed publication it is served from memory under a read
+// lock; a date nobody has confirmed is looked up outside the lock, once, by every caller
+// that missed it together. Confirmed dates survive restarts in RateCache; failed transport
+// never becomes a holiday and can only use a recent previously confirmed publication.
 type RateSelector struct {
-	source     RateSource
-	cache      RateCache
-	mu         sync.Mutex
-	failureDay string
-	failureAt  time.Time
-	failureErr error
+	source RateSource
+	cache  RateCache
+
+	mu sync.RWMutex
+	// selectedDay is the latest Seoul day whose rate came from a confirmed publication. A
+	// temporary fallback is never kept here, so the next caller tries the source again.
+	selectedDay string
+	selected    plan.RateSnapshot
+	failureDay  string
+	failureAt   time.Time
+	failureErr  error
+	lookups     map[string]*rateLookup
+}
+
+// rateLookup is one official lookup for one date, shared by every caller waiting on it.
+type rateLookup struct {
+	done   chan struct{}
+	record RateDay
+	// err is a cache failure, returned as it is; unusable is a source failure or an answer
+	// that cannot be used, which falls back to the last confirmed publication.
+	err      error
+	unusable error
 }
 
 func NewRateSelector(source RateSource, cache RateCache) *RateSelector {
@@ -59,10 +77,16 @@ func NewRateSelector(source RateSource, cache RateCache) *RateSelector {
 }
 
 func (s *RateSelector) Select(ctx context.Context, now time.Time) (plan.RateSnapshot, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
 	local := now.In(kst)
 	today := time.Date(local.Year(), local.Month(), local.Day(), 0, 0, 0, 0, kst)
+	todayKey := today.Format(time.DateOnly)
+	s.mu.RLock()
+	if s.selectedDay == todayKey {
+		selected := s.selected
+		s.mu.RUnlock()
+		return selected, nil
+	}
+	s.mu.RUnlock()
 	first := today.AddDate(0, 0, -1)
 	for daysBack := 1; daysBack <= 7; daysBack++ {
 		day := today.AddDate(0, 0, -daysBack)
@@ -77,34 +101,109 @@ func (s *RateSelector) Select(ctx context.Context, now time.Time) (plan.RateSnap
 			return plan.RateSnapshot{}, err
 		}
 		if !found {
-			if s.failureDay == key && time.Since(s.failureAt) < time.Minute {
-				return s.fallback(ctx, first, s.failureErr)
+			if failed, cause := s.recentFailure(key); failed {
+				return s.fallback(ctx, first, cause)
 			}
-			reference, published, fetchErr := s.source.KRWPerUSD(ctx, day)
-			if fetchErr != nil {
-				if ctx.Err() == nil {
-					s.failureDay, s.failureAt, s.failureErr = key, time.Now(), fetchErr
-				}
-				return s.fallback(ctx, first, fetchErr)
+			lookup := s.lookup(ctx, day, key)
+			select {
+			case <-lookup.done:
+			case <-ctx.Done():
+				return s.fallback(ctx, first, ctx.Err())
 			}
-			if published && reference <= 0 {
-				return s.fallback(ctx, first, errors.New("nonpositive official reference"))
+			if lookup.err != nil {
+				return plan.RateSnapshot{}, lookup.err
 			}
-			if published {
-				if _, rateErr := plan.AppliedRateE4(reference); rateErr != nil {
-					return s.fallback(ctx, first, rateErr)
-				}
+			if lookup.unusable != nil {
+				return s.fallback(ctx, first, lookup.unusable)
 			}
-			record = RateDay{Date: key, ReferenceE4: reference, Published: published}
-			if err := s.cache.RecordRateDay(ctx, record); err != nil {
-				return plan.RateSnapshot{}, err
-			}
+			record = lookup.record
 		}
 		if record.Published {
-			return snapshot(record, false)
+			selected, err := snapshot(record, false)
+			if err == nil {
+				s.remember(todayKey, selected)
+			}
+			return selected, err
 		}
 	}
 	return plan.RateSnapshot{}, ErrRateUnavailable
+}
+
+// remember keeps a day's confirmed selection; a caller still asking about an earlier day
+// never displaces a later one.
+func (s *RateSelector) remember(day string, selected plan.RateSnapshot) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if day >= s.selectedDay {
+		s.selectedDay, s.selected = day, selected
+	}
+}
+
+// recentFailure is the one-minute memo of a failed lookup for a date: within it, callers
+// fall back instead of asking the source again.
+func (s *RateSelector) recentFailure(key string) (bool, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.failureDay == key && time.Since(s.failureAt) < time.Minute, s.failureErr
+}
+
+// lookup joins the date's official lookup in flight, or starts it. The lookup runs on a
+// context no single caller can cancel, so one caller giving up never fails the others; the
+// source's own client timeout bounds it.
+func (s *RateSelector) lookup(ctx context.Context, day time.Time, key string) *rateLookup {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if running, ok := s.lookups[key]; ok {
+		return running
+	}
+	if s.lookups == nil {
+		s.lookups = map[string]*rateLookup{}
+	}
+	lookup := &rateLookup{done: make(chan struct{})}
+	s.lookups[key] = lookup
+	go func() {
+		s.fetch(context.WithoutCancel(ctx), day, key, lookup)
+		s.mu.Lock()
+		delete(s.lookups, key)
+		s.mu.Unlock()
+		close(lookup.done)
+	}()
+	return lookup
+}
+
+// fetch asks the official source about one date and records a usable answer. It reads the
+// cache and the failure memo once more first: a lookup that finished between a caller's
+// miss and this one has already recorded the date, or failed on it a moment ago.
+func (s *RateSelector) fetch(ctx context.Context, day time.Time, key string, lookup *rateLookup) {
+	record, found, err := s.cache.RateDay(ctx, key)
+	if err != nil || found {
+		lookup.record, lookup.err = record, err
+		return
+	}
+	if failed, cause := s.recentFailure(key); failed {
+		lookup.unusable = cause
+		return
+	}
+	reference, published, fetchErr := s.source.KRWPerUSD(ctx, day)
+	if fetchErr != nil {
+		s.mu.Lock()
+		s.failureDay, s.failureAt, s.failureErr = key, time.Now(), fetchErr
+		s.mu.Unlock()
+		lookup.unusable = fetchErr
+		return
+	}
+	if published && reference <= 0 {
+		lookup.unusable = errors.New("nonpositive official reference")
+		return
+	}
+	if published {
+		if _, rateErr := plan.AppliedRateE4(reference); rateErr != nil {
+			lookup.unusable = rateErr
+			return
+		}
+	}
+	lookup.record = RateDay{Date: key, ReferenceE4: reference, Published: published}
+	lookup.err = s.cache.RecordRateDay(ctx, lookup.record)
 }
 
 func (s *RateSelector) fallback(ctx context.Context, first time.Time, cause error) (plan.RateSnapshot, error) {

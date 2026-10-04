@@ -539,6 +539,28 @@ func (q *Queries) InsertLotIfAbsent(ctx context.Context, arg InsertLotIfAbsentPa
 	return result.RowsAffected()
 }
 
+const legacyMonthlyLotOpen = `-- name: LegacyMonthlyLotOpen :one
+SELECT EXISTS(
+    SELECT 1 FROM credit_lots
+    WHERE user_id = ? AND kind = 'monthly' AND coverage_id IS NULL
+      AND expires_at > ?
+)
+`
+
+type LegacyMonthlyLotOpenParams struct {
+	UserID    string
+	ExpiresAt sql.NullString
+}
+
+// Whether ExpireLegacyMonthlyLots would move any lot, asked on the read pool with the same
+// predicate, so a balance read can tell it has nothing to expire.
+func (q *Queries) LegacyMonthlyLotOpen(ctx context.Context, arg LegacyMonthlyLotOpenParams) (bool, error) {
+	row := q.db.QueryRowContext(ctx, legacyMonthlyLotOpen, arg.UserID, arg.ExpiresAt)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
 const lotUntouched = `-- name: LotUntouched :one
 SELECT EXISTS(
     SELECT 1 FROM credit_lots
@@ -1108,6 +1130,52 @@ func (q *Queries) VoucherLots(ctx context.Context, ids []string) ([]VoucherLotsR
 			&i.IssuanceCause,
 			&i.CorrelationID,
 		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const windowLotExpiries = `-- name: WindowLotExpiries :many
+SELECT id, expires_at FROM credit_lots
+WHERE id IN (/*SLICE:ids*/?)
+`
+
+type WindowLotExpiriesRow struct {
+	ID        string
+	ExpiresAt sql.NullString
+}
+
+// Where each of these window grants already ends, on the read pool. A balance read compares
+// them with the grants it would open: InsertLotIfAbsent writes only a missing grant or one
+// that ends sooner.
+func (q *Queries) WindowLotExpiries(ctx context.Context, ids []string) ([]WindowLotExpiriesRow, error) {
+	query := windowLotExpiries
+	var queryParams []interface{}
+	if len(ids) > 0 {
+		for _, v := range ids {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(ids))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []WindowLotExpiriesRow
+	for rows.Next() {
+		var i WindowLotExpiriesRow
+		if err := rows.Scan(&i.ID, &i.ExpiresAt); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

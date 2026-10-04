@@ -38,6 +38,7 @@ type Service struct {
 	vouchers    VoucherLotLedger
 	charges     SpendLedger
 	holds       HoldLedger
+	renewals    RenewalReads
 	models      Models
 	anchors     Anchors
 	rates       *RateSelector
@@ -103,7 +104,7 @@ func NewService(store Storage, models Models, maxCompletionTokens int64, anchors
 		approved[kind] = true
 	}
 	return &Service{
-		tx: store, lots: store, purchases: store, vouchers: store, charges: store, holds: store,
+		tx: store, lots: store, purchases: store, vouchers: store, charges: store, holds: store, renewals: store,
 		models: models, anchors: anchors, approvedKinds: approved,
 		maxCompletionTokens: maxCompletionTokens,
 		now:                 time.Now, newID: newID,
@@ -128,7 +129,7 @@ func (s *Service) approvedKindList() []string {
 
 func (s *Service) WithStore(store Storage) *Service {
 	clone := *s
-	clone.tx, clone.lots, clone.purchases, clone.charges, clone.holds = store, store, store, store, store
+	clone.tx, clone.lots, clone.purchases, clone.charges, clone.holds, clone.renewals = store, store, store, store, store, store
 	return &clone
 }
 
@@ -676,27 +677,65 @@ func (s *Service) spend(
 	return debits, nil
 }
 
+// renewal is the coverage whose current windows renew opens at an instant, if any, and
+// when the balance it produces next renews.
+type renewal struct {
+	coverage Coverage
+	open     bool
+	renewsAt time.Time
+}
+
+func (s *Service) renewalAt(ctx context.Context, userID string, acting plan.Plan, now time.Time) (renewal, error) {
+	if plan.Unlimited(acting) || acting == plan.Free {
+		return renewal{}, nil
+	}
+	coverage, found, err := s.anchors.CoverageFor(ctx, userID, now)
+	if err != nil {
+		return renewal{}, err
+	}
+	if !found || coverage.ID == "" || now.Before(coverage.Anchor) ||
+		(!coverage.End.IsZero() && !now.Before(coverage.End)) {
+		return renewal{}, nil
+	}
+	_, dailyEnd := plan.DailyWindow(coverage.Anchor, now)
+	return renewal{coverage: coverage, open: true, renewsAt: earliest(dailyEnd, coverage.End)}, nil
+}
+
 // renew opens only the current eligible daily and monthly benefit windows. A missed
 // window is never replayed and an absent paid coverage never creates a free grant.
 func (s *Service) renew(
 	ctx context.Context, tx Storage, userID string, acting plan.Plan, now time.Time,
 ) (time.Time, error) {
-	if plan.Unlimited(acting) || acting == plan.Free {
-		return time.Time{}, nil
+	r, err := s.renewalAt(ctx, userID, acting, now)
+	if err != nil || !r.open {
+		return time.Time{}, err
 	}
-	coverage, found, err := s.anchors.CoverageFor(ctx, userID, now)
+	if err := s.openBenefits(ctx, tx, userID, r.coverage, now, "lazy", ""); err != nil {
+		return time.Time{}, err
+	}
+	return r.renewsAt, nil
+}
+
+// renewalWrites reports whether renew would write anything for r. It reads, on the read
+// pool, exactly the facts renew acts on — the current daily and monthly grant lots, an
+// open legacy monthly lot to expire, the coverage's export window — and answers true
+// whenever it cannot tell, so the write transaction stays the default.
+func (s *Service) renewalWrites(ctx context.Context, r renewal, userID string, now time.Time) bool {
+	if !r.open {
+		return false
+	}
+	grants, export, err := s.benefitWindows(userID, r.coverage, now, "lazy", "")
 	if err != nil {
-		return time.Time{}, err
+		return true
 	}
-	if !found || coverage.ID == "" || now.Before(coverage.Anchor) ||
-		(!coverage.End.IsZero() && !now.Before(coverage.End)) {
-		return time.Time{}, nil
+	if open, err := s.renewals.LegacyMonthlyLotOpen(ctx, userID, now); err != nil || open {
+		return true
 	}
-	if err := s.openBenefits(ctx, tx, userID, coverage, now, "lazy", ""); err != nil {
-		return time.Time{}, err
+	if opened, err := s.renewals.WindowGrantsOpened(ctx, grants); err != nil || !opened {
+		return true
 	}
-	_, dailyEnd := plan.DailyWindow(coverage.Anchor, now)
-	return earliest(dailyEnd, coverage.End), nil
+	opened, err := s.renewals.ExportWindowOpened(ctx, export)
+	return err != nil || !opened
 }
 
 func earliest(a, b time.Time) time.Time {
@@ -711,9 +750,28 @@ func grantWindowID(kind LotKind, userID, coverageID string, start time.Time) str
 }
 
 func (s *Service) openBenefits(ctx context.Context, tx Storage, userID string, coverage Coverage, at time.Time, cause, correlation string) error {
+	grants, export, err := s.benefitWindows(userID, coverage, at, cause, correlation)
+	if err != nil {
+		return err
+	}
+	if err := tx.ExpireLegacyMonthlyLots(ctx, userID, at); err != nil {
+		return err
+	}
+	for _, grant := range grants {
+		if _, err := tx.InsertLotIfAbsent(ctx, grant); err != nil {
+			return err
+		}
+	}
+	return tx.OpenExportWindow(ctx, export)
+}
+
+// benefitWindows is what openBenefits opens for a coverage at an instant: the current
+// daily and monthly grant lots (a zero grant opens nothing) and the export window beside
+// them. It writes nothing, so the renewal probe reads the very ids and ends it would open.
+func (s *Service) benefitWindows(userID string, coverage Coverage, at time.Time, cause, correlation string) ([]Lot, ExportWindow, error) {
 	if coverage.ID == "" || !coverage.Tier.Valid() || at.Before(coverage.Anchor) ||
 		(!coverage.End.IsZero() && !at.Before(coverage.End)) {
-		return errors.New("open benefits: invalid coverage")
+		return nil, ExportWindow{}, errors.New("open benefits: invalid coverage")
 	}
 	dailyTier := coverage.DailyTier
 	if !dailyTier.Valid() {
@@ -721,17 +779,15 @@ func (s *Service) openBenefits(ctx context.Context, tx Storage, userID string, c
 	}
 	dailyOffer, ok := plan.CommercialOffer(dailyTier)
 	if !ok {
-		return errors.New("open benefits: invalid daily tier")
+		return nil, ExportWindow{}, errors.New("open benefits: invalid daily tier")
 	}
 	bonusOffer, ok := plan.CommercialOffer(coverage.Tier)
 	if !ok {
-		return errors.New("open benefits: invalid benefit tier")
-	}
-	if err := tx.ExpireLegacyMonthlyLots(ctx, userID, at); err != nil {
-		return err
+		return nil, ExportWindow{}, errors.New("open benefits: invalid benefit tier")
 	}
 	dailyStart, dailyEnd := plan.DailyWindow(coverage.Anchor, at)
 	bonusStart, bonusEnd := plan.BenefitWindow(coverage.Anchor, at)
+	var grants []Lot
 	for _, grant := range []struct {
 		kind       LotKind
 		start, end time.Time
@@ -745,18 +801,15 @@ func (s *Service) openBenefits(ctx context.Context, tx Storage, userID string, c
 		}
 		end := earliest(grant.end, coverage.End)
 		start := grant.start
-		_, err := tx.InsertLotIfAbsent(ctx, Lot{
+		grants = append(grants, Lot{
 			ID:     grantWindowID(grant.kind, userID, coverage.ID, start),
 			UserID: userID, Kind: grant.kind, CoverageID: coverage.ID,
 			WindowStart: &start, IssuanceCause: cause, CorrelationID: correlation,
 			Granted: grant.amount, Remaining: grant.amount, ExpiresAt: &end, CreatedAt: s.now(),
 		})
-		if err != nil {
-			return err
-		}
 	}
-	return tx.OpenExportWindow(ctx, ExportWindow{UserID: userID, CoverageID: coverage.ID,
-		Start: bonusStart, End: earliest(bonusEnd, coverage.End), Allowance: bonusOffer.ServerExports})
+	return grants, ExportWindow{UserID: userID, CoverageID: coverage.ID,
+		Start: bonusStart, End: earliest(bonusEnd, coverage.End), Allowance: bonusOffer.ServerExports}, nil
 }
 
 // OpenCoverage grants the first current day and month after a confirmed payment or
@@ -948,6 +1001,10 @@ func (s *Service) SettleCause(ctx context.Context, jobID string, outcome Termina
 			settlement.CompensationCredits = compensation
 			settlement.CompensationLotID = lotID
 			settlement.CompensationExpiresAt = &expires
+		}
+		// The lots a settlement may still draw from are spent with it, as Release drops them.
+		if err := tx.DeleteEligibleLotsForJob(ctx, jobID); err != nil {
+			return err
 		}
 		return tx.MarkSettled(ctx, jobID, settlement, now)
 	})
@@ -1146,8 +1203,15 @@ func (s *Service) RecentPostFigures(ctx context.Context) (map[StageModel]RecentP
 
 // BalanceFor reports what the account may spend, renewing the monthly grant first so a
 // balance read at the boundary is never one grant behind.
+//
+// Most reads land inside windows already granted, so it first asks the read pool whether
+// renewing would write anything; only a read that would grant, extend or expire something
+// takes the writer. The answer is the same either way.
 func (s *Service) BalanceFor(ctx context.Context, userID string, acting plan.Plan) (Balance, error) {
 	now := s.now()
+	if r, err := s.renewalAt(ctx, userID, acting, now); err == nil && !s.renewalWrites(ctx, r, userID, now) {
+		return s.balanceAt(ctx, s.renewals.ReadLotsInConsumptionOrder, userID, acting, now, r.renewsAt)
+	}
 
 	var balance Balance
 	err := s.tx.InWriteTx(ctx, func(tx Storage) error {
@@ -1155,44 +1219,8 @@ func (s *Service) BalanceFor(ctx context.Context, userID string, acting plan.Pla
 		if err != nil {
 			return err
 		}
-		balance.RenewsAt = renewsAt
-		balance.Unlimited = plan.Unlimited(acting)
-		if balance.Unlimited {
-			return nil
-		}
-		if acting != plan.Free {
-			coverage, found, err := s.anchors.CoverageFor(ctx, userID, now)
-			if err != nil {
-				return err
-			}
-			if found && !now.Before(coverage.Anchor) && (coverage.End.IsZero() || now.Before(coverage.End)) {
-				balance.CoverageID, balance.CoverageEnd = coverage.ID, coverage.End
-				dailyTier := coverage.DailyTier
-				if !dailyTier.Valid() {
-					dailyTier = coverage.Tier
-				}
-				if offer, ok := plan.CommercialOffer(dailyTier); ok {
-					balance.DailyGrant = offer.DailyCredits
-				}
-				if offer, ok := plan.CommercialOffer(coverage.Tier); ok {
-					balance.MonthlyBonus = offer.MonthlyBonus
-				}
-				_, balance.DailyResetsAt = plan.DailyWindow(coverage.Anchor, now)
-				balance.BenefitStart, balance.BenefitEnd = plan.BenefitWindow(coverage.Anchor, now)
-				balance.BonusResetsAt = earliest(balance.BenefitEnd, coverage.End)
-				balance.DailyResetsAt = earliest(balance.DailyResetsAt, coverage.End)
-			}
-		}
-
-		lots, err := tx.LotsInConsumptionOrder(ctx, userID, now)
-		if err != nil {
-			return err
-		}
-		balance.Lots = lots
-		for _, lot := range lots {
-			balance.Credits += lot.Remaining
-		}
-		return nil
+		balance, err = s.balanceAt(ctx, tx.LotsInConsumptionOrder, userID, acting, now, renewsAt)
+		return err
 	})
 	if err != nil {
 		return Balance{}, err
@@ -1200,9 +1228,53 @@ func (s *Service) BalanceFor(ctx context.Context, userID string, acting plan.Pla
 	return balance, nil
 }
 
+// balanceAt is the balance once its windows are renewed, read through lots.
+func (s *Service) balanceAt(
+	ctx context.Context, lots func(context.Context, string, time.Time) ([]Lot, error),
+	userID string, acting plan.Plan, now, renewsAt time.Time,
+) (Balance, error) {
+	balance := Balance{RenewsAt: renewsAt, Unlimited: plan.Unlimited(acting)}
+	if balance.Unlimited {
+		return balance, nil
+	}
+	if acting != plan.Free {
+		coverage, found, err := s.anchors.CoverageFor(ctx, userID, now)
+		if err != nil {
+			return Balance{}, err
+		}
+		if found && !now.Before(coverage.Anchor) && (coverage.End.IsZero() || now.Before(coverage.End)) {
+			balance.CoverageID, balance.CoverageEnd = coverage.ID, coverage.End
+			dailyTier := coverage.DailyTier
+			if !dailyTier.Valid() {
+				dailyTier = coverage.Tier
+			}
+			if offer, ok := plan.CommercialOffer(dailyTier); ok {
+				balance.DailyGrant = offer.DailyCredits
+			}
+			if offer, ok := plan.CommercialOffer(coverage.Tier); ok {
+				balance.MonthlyBonus = offer.MonthlyBonus
+			}
+			_, balance.DailyResetsAt = plan.DailyWindow(coverage.Anchor, now)
+			balance.BenefitStart, balance.BenefitEnd = plan.BenefitWindow(coverage.Anchor, now)
+			balance.BonusResetsAt = earliest(balance.BenefitEnd, coverage.End)
+			balance.DailyResetsAt = earliest(balance.DailyResetsAt, coverage.End)
+		}
+	}
+
+	found, err := lots(ctx, userID, now)
+	if err != nil {
+		return Balance{}, err
+	}
+	balance.Lots = found
+	for _, lot := range found {
+		balance.Credits += lot.Remaining
+	}
+	return balance, nil
+}
+
 // SpendableCredits is the current spendable balance for a model picker. It uses the
-// same lazy grant transaction as GetMyPlan, so the first read after a daily boundary
-// does not show yesterday's expired balance.
+// same lazy grant as GetMyPlan, so the first read after a daily boundary does not show
+// yesterday's expired balance.
 func (s *Service) SpendableCredits(ctx context.Context, userID string, acting plan.Plan) (int, bool, error) {
 	balance, err := s.BalanceFor(ctx, userID, acting)
 	if err != nil {

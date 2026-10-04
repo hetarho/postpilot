@@ -43,6 +43,8 @@ type Store struct {
 	raw          sqlc.DBTX
 	exports      usage.ExportWindowLedger
 	exportsForTx func(*sql.Tx) usage.ExportWindowLedger
+	// exportsOpened answers the renewal probe about the window exportsForTx would open.
+	exportsOpened usage.ExportWindowReader
 }
 
 func New(writer, reader *sql.DB) *Store {
@@ -50,13 +52,15 @@ func New(writer, reader *sql.DB) *Store {
 }
 
 // NewWithExports makes lazy credit and export grants part of the same writer
-// transaction. The factory is required for production's paid-entitlement ledger.
-func NewWithExports(writer, reader *sql.DB, factory func(*sql.Tx) usage.ExportWindowLedger) *Store {
-	if factory == nil {
-		panic("usage: export window transaction factory is required")
+// transaction. The factory is required for production's paid-entitlement ledger, and so
+// is opened, the read-pool answer to whether that window is already open, which lets a
+// balance read skip the writer when nothing needs granting.
+func NewWithExports(writer, reader *sql.DB, factory func(*sql.Tx) usage.ExportWindowLedger, opened usage.ExportWindowReader) *Store {
+	if factory == nil || opened == nil {
+		panic("usage: export window transaction factory and reader are required")
 	}
 	store := New(writer, reader)
-	store.exportsForTx = factory
+	store.exportsForTx, store.exportsOpened = factory, opened
 	return store
 }
 
@@ -106,12 +110,74 @@ func (s *Store) OpenExportWindow(ctx context.Context, window usage.ExportWindow)
 	return s.exports.OpenExportWindow(ctx, window)
 }
 
+// ExportWindowOpened reports whether OpenExportWindow would leave window as it is. A store
+// that composes no export window never writes one; inside a transaction there is no read
+// pool to ask, so the answer there is "it would write".
+func (s *Store) ExportWindowOpened(ctx context.Context, window usage.ExportWindow) (bool, error) {
+	if s.exports == nil && s.exportsForTx == nil {
+		return true, nil
+	}
+	if s.exportsOpened == nil {
+		return false, nil
+	}
+	return s.exportsOpened.ExportWindowOpened(ctx, window)
+}
+
+// WindowGrantsOpened compares each grant's stored expiry text with the one it would be
+// opened with, exactly as InsertLotIfAbsent's conflict clause does.
+func (s *Store) WindowGrantsOpened(ctx context.Context, grants []usage.Lot) (bool, error) {
+	if len(grants) == 0 {
+		return true, nil
+	}
+	ids := make([]string, 0, len(grants))
+	for _, grant := range grants {
+		ids = append(ids, grant.ID)
+	}
+	rows, err := s.read.WindowLotExpiries(ctx, ids)
+	if err != nil {
+		return false, fmt.Errorf("read window grant expiries: %w", err)
+	}
+	stored := make(map[string]sql.NullString, len(rows))
+	for _, row := range rows {
+		stored[row.ID] = row.ExpiresAt
+	}
+	for _, grant := range grants {
+		expires, found := stored[grant.ID]
+		if !found || !expires.Valid || grant.ExpiresAt == nil || expires.String < formatTime(*grant.ExpiresAt) {
+			return false, nil
+		}
+	}
+	return true, nil
+}
+
+func (s *Store) LegacyMonthlyLotOpen(ctx context.Context, userID string, at time.Time) (bool, error) {
+	open, err := s.read.LegacyMonthlyLotOpen(ctx, sqlc.LegacyMonthlyLotOpenParams{
+		UserID: userID, ExpiresAt: sql.NullString{String: formatTime(at), Valid: true},
+	})
+	if err != nil {
+		return false, fmt.Errorf("read legacy monthly lots: %w", err)
+	}
+	return open, nil
+}
+
 func (s *Store) LotsInConsumptionOrder(
 	ctx context.Context, userID string, now time.Time,
 ) ([]usage.Lot, error) {
 	// Lot reads happen on the writer: the balance they produce is about to decide a write,
 	// and WAL's readers may still be a commit behind.
-	rows, err := s.write.LotsInConsumptionOrder(ctx, sqlc.LotsInConsumptionOrderParams{
+	return lotsInConsumptionOrder(ctx, s.write, userID, now)
+}
+
+// ReadLotsInConsumptionOrder is the same read on the read pool, for a balance that is
+// shown rather than spent.
+func (s *Store) ReadLotsInConsumptionOrder(
+	ctx context.Context, userID string, now time.Time,
+) ([]usage.Lot, error) {
+	return lotsInConsumptionOrder(ctx, s.read, userID, now)
+}
+
+func lotsInConsumptionOrder(ctx context.Context, q *sqlc.Queries, userID string, now time.Time) ([]usage.Lot, error) {
+	rows, err := q.LotsInConsumptionOrder(ctx, sqlc.LotsInConsumptionOrderParams{
 		UserID: userID, ExpiresAt: sql.NullString{String: formatTime(now), Valid: true},
 	})
 	if err != nil {

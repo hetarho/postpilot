@@ -11,6 +11,7 @@ import (
 	"github.com/postpilot/backend/internal/clip"
 	clipstore "github.com/postpilot/backend/internal/clip/store"
 	"github.com/postpilot/backend/internal/plan"
+	"github.com/postpilot/backend/internal/platform/db"
 	"github.com/postpilot/backend/internal/usage"
 	usagestore "github.com/postpilot/backend/internal/usage/store"
 )
@@ -22,15 +23,30 @@ func (a clipExportAdapter) OpenExportWindow(ctx context.Context, window usage.Ex
 		CoverageID: window.CoverageID, Start: window.Start, End: window.End, Allowance: window.Allowance}, "lazy")
 }
 
+// ExportWindowOpened mirrors the composition root's adapter over clip's window read.
+func (a clipExportAdapter) ExportWindowOpened(ctx context.Context, window usage.ExportWindow) (bool, error) {
+	current, found, err := a.ExportWindows.CurrentExportWindow(ctx, window.UserID, window.Start)
+	if err != nil || !found {
+		return false, err
+	}
+	return current.CoverageID == window.CoverageID && current.Start.Equal(window.Start) && !current.End.Before(window.End), nil
+}
+
+// newExportingStore is the production shape: lazy export grants join the ledger's writer
+// transaction, and the renewal probe reads them on the read pool.
+func newExportingStore(handle *db.DB) *usagestore.Store {
+	return usagestore.NewWithExports(handle.Writer, handle.Reader, func(tx *sql.Tx) usage.ExportWindowLedger {
+		return clipExportAdapter{clipstore.NewTx(tx)}
+	}, clipExportAdapter{clipstore.New(handle.Writer, handle.Reader)})
+}
+
 func TestLazyReadOpensCreditAndExportWindowsInOneTransaction(t *testing.T) {
 	_, handle := newServiceWithDB(t)
 	removeLegacyFunding(t, handle, "alice")
 	ctx := context.Background()
 	anchor := time.Now().UTC().AddDate(0, -2, 0)
 	end := plan.MonthBoundary(anchor, 12)
-	store := usagestore.NewWithExports(handle.Writer, handle.Reader, func(tx *sql.Tx) usage.ExportWindowLedger {
-		return clipExportAdapter{clipstore.NewTx(tx)}
-	})
+	store := newExportingStore(handle)
 	service := usage.NewService(store, pricedModels{}, maxCompletion,
 		benefitCoverage{id: "paid:alice:lazy", anchor: anchor, end: end, tier: plan.Basic})
 	if _, err := handle.Writer.ExecContext(ctx, `CREATE TRIGGER reject_lazy_export BEFORE INSERT ON server_export_windows
@@ -163,9 +179,7 @@ func TestRenewalExtendsExistingWindowsWithoutRefillingThem(t *testing.T) {
 	now := time.Now().UTC()
 	anchor := now.Add(-10 * time.Hour)
 	oldEnd := now.Add(time.Hour)
-	store := usagestore.NewWithExports(handle.Writer, handle.Reader, func(tx *sql.Tx) usage.ExportWindowLedger {
-		return clipExportAdapter{clipstore.NewTx(tx)}
-	})
+	store := newExportingStore(handle)
 	service := usage.NewService(store, pricedModels{}, maxCompletion,
 		benefitCoverage{id: "paid:alice:renew", anchor: anchor, end: oldEnd, tier: plan.Basic})
 	coverage := usage.Coverage{ID: "paid:alice:renew", Anchor: anchor, End: oldEnd, Tier: plan.Basic, DailyTier: plan.Basic}
@@ -195,6 +209,105 @@ func TestRenewalExtendsExistingWindowsWithoutRefillingThem(t *testing.T) {
 	}
 	if !timeStringAfter(t, exportEnd, oldEnd) {
 		t.Fatalf("export window still ends at old term: %s", exportEnd)
+	}
+}
+
+// The renewal probe reads each fact renew acts on; whenever one of them is behind, the
+// balance read must still take the writer and bring it current.
+func TestBalanceReadRenewsWhateverTheProbeFindsBehind(t *testing.T) {
+	_, handle := newServiceWithDB(t)
+	removeLegacyFunding(t, handle, "alice")
+	ctx := context.Background()
+	now := time.Now().UTC()
+	anchor := now.Add(-10 * time.Hour)
+	termEnd := now.Add(time.Hour)
+	store := newExportingStore(handle)
+	serviceUntil := func(end time.Time) *usage.Service {
+		return usage.NewService(store, pricedModels{}, maxCompletion,
+			benefitCoverage{id: "paid:alice:probe", anchor: anchor, end: end, tier: plan.Basic})
+	}
+	balance := func(ctx context.Context, end time.Time) (usage.Balance, error) {
+		return serviceUntil(end).BalanceFor(ctx, "alice", plan.Basic)
+	}
+	ends := func() (daily, monthly, export string) {
+		t.Helper()
+		for kind, into := range map[string]*string{"daily": &daily, "monthly": &monthly} {
+			if err := handle.Reader.QueryRowContext(ctx, "SELECT expires_at FROM credit_lots WHERE user_id='alice' AND kind=?", kind).Scan(into); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if err := handle.Reader.QueryRowContext(ctx, "SELECT window_end FROM server_export_windows WHERE user_id='alice'").Scan(&export); err != nil {
+			t.Fatal(err)
+		}
+		return daily, monthly, export
+	}
+	if _, err := balance(ctx, termEnd); err != nil {
+		t.Fatal(err)
+	}
+
+	// A renewed term: every grant and the export window the old term capped run on.
+	renewed := plan.MonthBoundary(anchor, 2)
+	if _, err := balance(ctx, renewed); err != nil {
+		t.Fatal(err)
+	}
+	daily, monthly, export := ends()
+	if !timeStringAfter(t, daily, termEnd) || !timeStringAfter(t, monthly, termEnd) || !timeStringAfter(t, export, termEnd) {
+		t.Fatalf("renewed term not extended: daily=%s monthly=%s export=%s", daily, monthly, export)
+	}
+
+	// The export window alone is behind while every grant is current.
+	if _, err := handle.Writer.ExecContext(ctx, "UPDATE server_export_windows SET window_end=? WHERE user_id='alice'",
+		termEnd.UTC().Format("2006-01-02T15:04:05.000000000Z07:00")); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := balance(ctx, renewed); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, again := ends(); again != export {
+		t.Fatalf("export window end=%s, want it extended back to %s", again, export)
+	}
+
+	// The daily grant alone ends sooner than its window.
+	if _, err := handle.Writer.ExecContext(ctx, "UPDATE credit_lots SET expires_at=? WHERE user_id='alice' AND kind='daily'",
+		termEnd.UTC().Format("2006-01-02T15:04:05.000000000Z07:00")); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := balance(ctx, renewed); err != nil {
+		t.Fatal(err)
+	}
+	if again, _, _ := ends(); again != daily {
+		t.Fatalf("daily grant ends %s, want it extended back to %s", again, daily)
+	}
+
+	// A legacy monthly lot is still running.
+	legacyEnd := now.Add(24 * time.Hour)
+	insertLot(t, handle, "legacy-probe", "alice", "monthly", 5, &legacyEnd, now)
+	current, err := balance(ctx, renewed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var legacyExpiry string
+	if err := handle.Reader.QueryRowContext(ctx, "SELECT expires_at FROM credit_lots WHERE id='legacy-probe'").Scan(&legacyExpiry); err != nil {
+		t.Fatal(err)
+	}
+	if timeStringAfter(t, legacyExpiry, time.Now()) {
+		t.Fatalf("legacy lot still runs until %s", legacyExpiry)
+	}
+
+	// Nothing is behind now: the read is answered while another transaction holds the writer.
+	tx, err := handle.Writer.BeginTx(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = tx.Rollback() }()
+	quick, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	held, err := balance(quick, renewed)
+	if err != nil {
+		t.Fatalf("a read with nothing to renew waited on the writer: %v", err)
+	}
+	if held.Credits != current.Credits || len(held.Lots) != len(current.Lots) || !held.RenewsAt.Equal(current.RenewsAt) {
+		t.Fatalf("read-pool balance %+v differs from the writer's %+v", held, current)
 	}
 }
 
