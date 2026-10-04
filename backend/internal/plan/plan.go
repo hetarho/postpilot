@@ -59,8 +59,9 @@ func Ladder() []Plan { return []Plan{Free, Light, Basic, Pro, Max, Master} }
 // in micro-USD underneath — which is why the two never need to reconcile.
 const microusdPerCredit = 10_000
 
-// The charge rule, owned by code rather than config: two deploys must never disagree
-// about what a request costs, and neither is an operator knob.
+// The USD-list estimate's rule, owned by code rather than config: two deploys must never
+// disagree about what a comparison shows, and neither is an operator knob. Holds and
+// settlements convert at the frozen KRW rate instead (QUOTA-59).
 //
 // ChargeBase recovers the per-request infrastructure a pure cost multiple cannot see
 // (storage, database, worker) and keeps a near-free model from being effectively
@@ -291,9 +292,8 @@ func estimatorTokenAllowance(tokens int64) int64 { return (tokens*3 + 1) / 2 }
 // chargeBaseMilli is ChargeBase expressed in the same milli-credits the rates use.
 const chargeBaseMilli = ChargeBase * 1_000
 
-// milliCredits converts a provider cost into thousandths of a credit, applying the same
-// multiplier Charge does and truncating rather than rounding up — the per-call rounding is
-// gone with the per-call accounting, and an estimate must not accumulate a ceiling per unit.
+// milliCredits converts a provider cost into thousandths of a credit at ChargeMultiplier,
+// truncating rather than rounding up: an estimate must not accumulate a ceiling per unit.
 func milliCredits(costMicrousd int64) int {
 	return int(costMicrousd * ChargeMultiplier * 1_000 / microusdPerCredit)
 }
@@ -305,20 +305,6 @@ func Recommended(p Plan) bool { return p == recommended }
 // held, recorded and settled — unlimited spend is exactly the account whose spend the
 // operator most wants to be able to read.
 func Unlimited(p Plan) bool { return p == Master }
-
-// Charge converts a provider cost into the credits it consumes.
-//
-// The arithmetic is integer-only: the ledger stores micro-USD and a credit is exactly
-// 10 000 of them, so no float ever enters the money path. The division rounds up, which
-// is why a call too cheap to reach one credit still costs ChargeBase + 1 rather than
-// disappearing.
-func Charge(costMicrousd int64) int {
-	if costMicrousd <= 0 {
-		return ChargeBase
-	}
-	scaled := costMicrousd*ChargeMultiplier + microusdPerCredit - 1
-	return ChargeBase + int(scaled/microusdPerCredit)
-}
 
 // seoul is the product's home timezone, fixed at UTC+9.
 //

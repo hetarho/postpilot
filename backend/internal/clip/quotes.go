@@ -35,7 +35,6 @@ type GenerationPricing struct {
 	CancellationPolicyVersion int
 	Version                   int
 	Rate                      plan.RateSnapshot `json:",omitempty"`
-	FXPolicy                  bool              `json:",omitempty"`
 	// The observation, then the two writing calls a generation makes: `Plan`
 	// prices the flow call and `Narration` the narration over it (CLIP-135).
 	// The flow keeps the field name it has always had, so the quote, the

@@ -19,6 +19,9 @@ import (
 	voucherstore "github.com/postpilot/backend/internal/voucher/store"
 )
 
+// testRates is the ledger's FX policy at a fixed reference; these tests price no work.
+var testRates = usage.NewFixedRateSelector(13_600_000)
+
 type fixedAnchors struct{}
 
 func (fixedAnchors) AnchorFor(context.Context, string) (time.Time, error) {
@@ -90,12 +93,12 @@ func newService(t *testing.T) (*voucher.Service, *voucherstore.Store, *db.DB) {
 	}
 	store := voucherstore.New(handle.Writer, handle.Reader)
 	store.SetCreditsForTx(func(tx *sql.Tx) voucher.Credits {
-		return ledgerCredits{usage.NewService(usagestore.NewTx(tx), nil, 0, fixedAnchors{})}
+		return ledgerCredits{usage.NewService(usagestore.NewTx(tx), nil, 0, fixedAnchors{}, testRates)}
 	})
 	store.SetPaidCoverageForTx(func(tx *sql.Tx) voucher.PaidCoverage {
 		return paidCoverage{billing.NewService(billingstore.NewTx(tx), nil, nil, nil, nil, nil, nil)}
 	})
-	ledger := usage.NewService(usagestore.New(handle.Writer, handle.Reader), nil, 0, fixedAnchors{})
+	ledger := usage.NewService(usagestore.New(handle.Writer, handle.Reader), nil, 0, fixedAnchors{}, testRates)
 	return voucher.NewService(store, ledgerCredits{ledger}), store, handle
 }
 

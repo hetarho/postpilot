@@ -26,8 +26,7 @@ func TestFrozenFXFaultCompensationIsSeparateAndOnceOnly(t *testing.T) {
 	}
 	store := usagestore.New(handle.Writer, handle.Reader)
 	service := usage.NewService(store, pricedModels{}, maxCompletion,
-		fixedAnchors{anchor: now.Add(-3 * time.Hour)}).
-		WithRateSelector(usage.NewRateSelector(rates, store))
+		fixedAnchors{anchor: now.Add(-3 * time.Hour)}, usage.NewRateSelector(rates, store))
 	start := func(job string, tier plan.Plan) {
 		t.Helper()
 		if err := service.Hold(ctx, usage.Start{UserID: "alice", Kind: "generate", JobID: job,
@@ -158,8 +157,7 @@ func TestMissingOfficialFXBlocksNewPaidWorkButNotFreeOnlyWork(t *testing.T) {
 	source := &datedRates{err: errors.New("official source unavailable")}
 	store := usagestore.New(handle.Writer, handle.Reader)
 	service := usage.NewService(store, pricedModels{}, maxCompletion,
-		fixedAnchors{anchor: time.Now().Add(-time.Hour)}).
-		WithRateSelector(usage.NewRateSelector(source, store))
+		fixedAnchors{anchor: time.Now().Add(-time.Hour)}, usage.NewRateSelector(source, store))
 	free := usage.Start{UserID: "alice", Kind: "generate", JobID: "free-only",
 		Plan: plan.Free, Calls: []usage.PlannedCall{{Ref: llm.ModelRef{ProviderID: "free", ModelID: "free"}, Count: 1}}}
 	if err := service.Hold(ctx, free); err != nil {
@@ -193,8 +191,7 @@ func TestFrozenFXCancellationDebitsConfirmedCostOnly(t *testing.T) {
 	}
 	store := usagestore.New(handle.Writer, handle.Reader)
 	service := usage.NewService(store, pricedModels{}, maxCompletion,
-		fixedAnchors{anchor: now.Add(-2 * time.Hour)}, "generate_clip").
-		WithRateSelector(usage.NewRateSelector(rates, store))
+		fixedAnchors{anchor: now.Add(-2 * time.Hour)}, usage.NewRateSelector(rates, store), "generate_clip")
 	rate, err := service.SelectRate(ctx)
 	if err != nil {
 		t.Fatal(err)

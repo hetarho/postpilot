@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"math"
-	"math/big"
 
 	"github.com/postpilot/backend/internal/llm"
 	"github.com/postpilot/backend/internal/plan"
@@ -17,24 +16,6 @@ func (e failureReason) Failure() llm.Failure { return llm.Failure{Reason: string
 
 const ErrPricingUnavailable = failureReason("CLIP_MODEL_PRICING_UNAVAILABLE")
 const ErrApprovalRequired = failureReason("CLIP_QUOTE_REQUIRED")
-
-// Bound before converting to machine integers: even an extreme reported supplier
-// overage cannot wrap into a negative charge or manufacture an oversized refund.
-func boundedCharge(microusd int64, ceiling int) int {
-	if ceiling <= 0 {
-		return 0
-	}
-	if microusd <= 0 {
-		return min(plan.ChargeBase, ceiling)
-	}
-	n := new(big.Int).SetInt64(microusd)
-	n.Mul(n, big.NewInt(int64(plan.ChargeMultiplier)))
-	n.Add(n, big.NewInt(9999)).Quo(n, big.NewInt(10000)).Add(n, big.NewInt(int64(plan.ChargeBase)))
-	if n.Cmp(big.NewInt(int64(ceiling))) >= 0 {
-		return ceiling
-	}
-	return int(n.Int64())
-}
 
 type CreditCeilingError struct{ Required, Approved int }
 
@@ -81,6 +62,9 @@ func ReservationCost(calls []PricedCall) (int64, error) {
 	return total, nil
 }
 
+// ReservationCreditsAt converts ReservationCost once at a frozen rate; it is shared by a quote
+// and its admission. An unknown price, an overflow or a paid reservation without a valid
+// rate refuses rather than quoting a paid model as free.
 func ReservationCreditsAt(calls []PricedCall, rate plan.RateSnapshot) (int, error) {
 	total, err := ReservationCost(calls)
 	if err != nil {
@@ -91,55 +75,6 @@ func ReservationCreditsAt(calls []PricedCall, rate plan.RateSnapshot) (int, erro
 	}
 	credits, err := plan.ChargeAt(total, rate)
 	if err != nil {
-		return 0, ErrPricingUnavailable
-	}
-	return credits, nil
-}
-
-// The fee uses the unused job hold, with upward integer rounding and no overflow.
-func cancelledCharge(confirmedMicrousd int64, reservation int) (confirmed, fee int) {
-	if confirmedMicrousd > 0 {
-		confirmed = boundedCharge(confirmedMicrousd, reservation)
-	}
-	unused := max(0, reservation-confirmed)
-	return confirmed, unused/2 + unused%2
-}
-
-// ReservationCredits is shared by quoting and admission. Unknown/overflowing rates cannot
-// silently turn a paid model into a base-only quote. The ordinary estimator is unchanged.
-func ReservationCredits(calls []PricedCall) (int, error) {
-	if len(calls) == 0 || len(calls) > 2 {
-		return 0, ErrPricingUnavailable
-	}
-	var total int64
-	for _, call := range calls {
-		if !call.Policy.Valid() || call.Count < 0 || call.Count > 49*(1+call.Policy.ResponseRetries) {
-			return 0, ErrPricingUnavailable
-		}
-		if call.Count == 0 {
-			continue
-		}
-		cost, ok := call.Policy.QuoteMicrousd()
-		if !ok || cost > (math.MaxInt64-total)/int64(call.Count) {
-			return 0, ErrPricingUnavailable
-		}
-		total += cost * int64(call.Count)
-	}
-	// Charge multiplies in integer space; reject before either int64 or int can wrap.
-	if total > (math.MaxInt64-9999)/int64(plan.ChargeMultiplier) {
-		return 0, ErrPricingUnavailable
-	}
-	if total == 0 {
-		anyCalls := false
-		for _, c := range calls {
-			anyCalls = anyCalls || c.Count > 0
-		}
-		if !anyCalls {
-			return 0, nil
-		}
-	}
-	credits := plan.Charge(total)
-	if credits < plan.ChargeBase || credits > math.MaxInt32 {
 		return 0, ErrPricingUnavailable
 	}
 	return credits, nil

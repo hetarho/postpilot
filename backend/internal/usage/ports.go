@@ -40,7 +40,6 @@ type LotLedger interface {
 	// one whose window is opening, by moving its expiry to `at`. The exception is what keeps
 	// opening a window idempotent.
 	ExpireMonthlyLotsExcept(ctx context.Context, userID, exceptLotID string, at time.Time) error
-	ExpireLegacyMonthlyLots(ctx context.Context, userID string, at time.Time) error
 	// RaiseLot grows a lot the account already holds, granted and remaining together. It
 	// is the upgrade top-up (QUOTA-35) and the only write that edits a grant already
 	// given; a renewal opens a new lot instead.
@@ -114,8 +113,6 @@ type RenewalReads interface {
 	// WindowGrantsOpened reports whether every one of these window grants already exists
 	// and runs at least as long as given, so InsertLotIfAbsent would change none of them.
 	WindowGrantsOpened(ctx context.Context, grants []Lot) (bool, error)
-	// LegacyMonthlyLotOpen reports whether ExpireLegacyMonthlyLots at `at` would move a lot.
-	LegacyMonthlyLotOpen(ctx context.Context, userID string, at time.Time) (bool, error)
 	// ExportWindowOpened reports whether OpenExportWindow would leave this window as it is.
 	ExportWindowOpened(ctx context.Context, window ExportWindow) (bool, error)
 	// ReadLotsInConsumptionOrder is LotsInConsumptionOrder on the read pool, for a balance

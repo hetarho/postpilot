@@ -150,16 +150,6 @@ func (s *Store) WindowGrantsOpened(ctx context.Context, grants []usage.Lot) (boo
 	return true, nil
 }
 
-func (s *Store) LegacyMonthlyLotOpen(ctx context.Context, userID string, at time.Time) (bool, error) {
-	open, err := s.read.LegacyMonthlyLotOpen(ctx, sqlc.LegacyMonthlyLotOpenParams{
-		UserID: userID, ExpiresAt: sql.NullString{String: formatTime(at), Valid: true},
-	})
-	if err != nil {
-		return false, fmt.Errorf("read legacy monthly lots: %w", err)
-	}
-	return open, nil
-}
-
 func (s *Store) LotsInConsumptionOrder(
 	ctx context.Context, userID string, now time.Time,
 ) ([]usage.Lot, error) {
@@ -292,16 +282,6 @@ func (s *Store) ExpireMonthlyLotsExcept(ctx context.Context, userID, exceptLotID
 	})
 	if err != nil {
 		return fmt.Errorf("expire monthly credit lots: %w", err)
-	}
-	return nil
-}
-
-func (s *Store) ExpireLegacyMonthlyLots(ctx context.Context, userID string, at time.Time) error {
-	stamp := sql.NullString{String: formatTime(at), Valid: true}
-	if err := s.write.ExpireLegacyMonthlyLots(ctx, sqlc.ExpireLegacyMonthlyLotsParams{
-		ExpiresAt: stamp, UserID: userID, ExpiresAt_2: stamp,
-	}); err != nil {
-		return fmt.Errorf("expire legacy monthly lots: %w", err)
 	}
 	return nil
 }

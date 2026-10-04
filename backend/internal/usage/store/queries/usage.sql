@@ -144,20 +144,6 @@ WHERE user_id = ?
   AND expires_at IS NOT NULL
   AND expires_at > ?;
 
--- name: ExpireLegacyMonthlyLots :exec
-UPDATE credit_lots SET expires_at = ?
-WHERE user_id = ? AND kind = 'monthly' AND coverage_id IS NULL
-  AND expires_at > ?;
-
--- name: LegacyMonthlyLotOpen :one
--- Whether ExpireLegacyMonthlyLots would move any lot, asked on the read pool with the same
--- predicate, so a balance read can tell it has nothing to expire.
-SELECT EXISTS(
-    SELECT 1 FROM credit_lots
-    WHERE user_id = ? AND kind = 'monthly' AND coverage_id IS NULL
-      AND expires_at > ?
-);
-
 -- name: WindowLotExpiries :many
 -- Where each of these window grants already ends, on the read pool. A balance read compares
 -- them with the grants it would open: InsertLotIfAbsent writes only a missing grant or one

@@ -3,7 +3,6 @@ package store_test
 import (
 	"context"
 	"errors"
-	"math"
 	"sync"
 	"testing"
 	"time"
@@ -15,20 +14,22 @@ import (
 )
 
 func TestSQLiteCancellationSettlementIsOnceBoundedAndSeparateFromUsage(t *testing.T) {
+	// A cancellation charges confirmed usage at the frozen rate, never past the reservation,
+	// and no fee (QUOTA-49).
 	for _, tc := range []struct {
 		name            string
 		reservation     int
 		cost            int64
-		confirmed, fee  int
+		confirmed       int
 		master, unknown bool
 	}{
-		{name: "confirmed", reservation: 100, cost: 60000, confirmed: 20, fee: 40},
-		{name: "no usage", reservation: 5, fee: 3},
-		{name: "unknown", reservation: 5, fee: 3, unknown: true},
+		{name: "confirmed", reservation: 100, cost: 60000, confirmed: 30},
+		{name: "no usage", reservation: 5},
+		{name: "unknown", reservation: 5, unknown: true},
 		{name: "full", reservation: 5, cost: 10000, confirmed: 5},
-		{name: "over ceiling", reservation: 5, cost: math.MaxInt64, confirmed: 5},
+		{name: "over ceiling", reservation: 5, cost: 10_000_000_000, confirmed: 5},
 		{name: "zero reservation"},
-		{name: "master", reservation: 100, cost: 60000, confirmed: 20, fee: 40, master: true},
+		{name: "master", reservation: 100, cost: 60000, confirmed: 30, master: true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			svc, handle := newServiceWithDB(t)
@@ -36,7 +37,7 @@ func TestSQLiteCancellationSettlementIsOnceBoundedAndSeparateFromUsage(t *testin
 			st := usagestore.New(handle.Writer, handle.Reader)
 			insertLot(t, handle, "original", "alice", "purchased", 200, nil, time.Now())
 			err := st.InWriteTx(ctx, func(tx usage.Storage) error {
-				if err := tx.InsertAdmission(ctx, usage.Admission{UserID: "alice", Kind: "generate_clip", JobID: "clip", HoldCredits: tc.reservation, ApprovedMaxCredits: &tc.reservation, CancellationPolicyVersion: 1, CreatedAt: time.Now()}); err != nil {
+				if err := tx.InsertAdmission(ctx, usage.Admission{UserID: "alice", Kind: "generate_clip", JobID: "clip", HoldCredits: tc.reservation, ApprovedMaxCredits: &tc.reservation, CancellationPolicyVersion: 1, Rate: storeRate, CreatedAt: time.Now()}); err != nil {
 					return err
 				}
 				if tc.master || tc.reservation == 0 {
@@ -77,16 +78,16 @@ func TestSQLiteCancellationSettlementIsOnceBoundedAndSeparateFromUsage(t *testin
 			if err != nil || a == nil {
 				t.Fatal(a, err)
 			}
-			want := tc.confirmed + tc.fee
+			want := tc.confirmed
 			if !a.Settled || a.SettlementReason != "cancelled" || a.NominalReservation == nil || *a.NominalReservation != tc.reservation {
 				t.Fatal(a)
 			}
 			if tc.master {
-				if *a.FinalCharge != 0 || *a.Refund != 0 || *a.ShadowCharge != want || *a.ShadowConfirmedCharge != tc.confirmed || *a.ShadowCancellationFee != tc.fee {
+				if *a.FinalCharge != 0 || *a.Refund != 0 || *a.ShadowCharge != want || *a.ShadowConfirmedCharge != tc.confirmed || *a.ShadowCancellationFee != 0 {
 					t.Fatal(a)
 				}
 				want = 0
-			} else if *a.FinalCharge != want || *a.Refund != tc.reservation-want || *a.ConfirmedCharge != tc.confirmed || *a.CancellationFee != tc.fee {
+			} else if *a.FinalCharge != want || *a.Refund != tc.reservation-want || *a.ConfirmedCharge != tc.confirmed || *a.CancellationFee != 0 {
 				t.Fatal(a)
 			}
 			_, remaining := lotRemaining(t, handle, "original")
@@ -179,12 +180,13 @@ func TestSQLiteCancellationRefundRollbackKeepsOriginalExpiredLots(t *testing.T) 
 	if err := handle.Reader.QueryRow("SELECT remaining,expires_at FROM credit_lots WHERE user_id='alice' AND kind='monthly'").Scan(&remaining, &actualExpiry); err != nil || remaining != 2 || actualExpiry != expiry {
 		t.Fatal("refund moved or renewed expired credits", remaining, actualExpiry, err)
 	}
+	// Nothing was confirmed, so the whole hold returns, each credit to the lot it came from.
 	_, purchased := lotRemaining(t, handle, "purchased")
-	if purchased != 18 {
-		t.Fatal("refund moved into purchased credits", purchased)
+	if purchased != 20 {
+		t.Fatal("refund missed the purchased lot", purchased)
 	}
 	a, err := svc.ReservationAccounting(ctx, "alice", "cancelled")
-	if err != nil || *a.Refund != 2 || *a.FinalCharge != 3 {
+	if err != nil || *a.Refund != 5 || *a.FinalCharge != 0 {
 		t.Fatal(a, err)
 	}
 }

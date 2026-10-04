@@ -79,9 +79,10 @@ func run(ctx context.Context) error {
 
 	authSvc := auth.NewService(authstore.New(handle.Writer, handle.Reader), cfg.SessionTTL, auth.Deps{Mailer: mail.NewLog()})
 	boundary := anchors{auth: authSvc}
+	rates := usage.NewRateSelector(noRates{}, usagestore.New(handle.Writer, handle.Reader))
 	benefitStore := billingstore.New(handle.Writer, handle.Reader)
 	benefitStore.SetCreditsForTx(func(tx *sql.Tx) billing.Credits {
-		return seedBenefitCredits{Service: usage.NewService(usagestore.NewTx(tx), noModels{}, 0, boundary), exports: clipstore.NewTx(tx)}
+		return seedBenefitCredits{Service: usage.NewService(usagestore.NewTx(tx), noModels{}, 0, boundary, rates), exports: clipstore.NewTx(tx)}
 	})
 	benefitStore.SetPlansForTx(func(tx *sql.Tx) billing.Plans {
 		return auth.NewService(authstore.NewTx(tx), cfg.SessionTTL, auth.Deps{Mailer: mail.NewLog()})
@@ -177,6 +178,14 @@ func (c seedBenefitCredits) AddUpgradeBonus(ctx context.Context, userID string, 
 type noModels struct{}
 
 func (noModels) Lookup(llm.ModelRef) (llm.ModelInfo, bool) { return llm.ModelInfo{}, false }
+
+// noRates stands in for the official exchange-rate source for the same reason: a seed prices
+// nothing, so any priced work would be refused as a rate outage rather than converted.
+type noRates struct{}
+
+func (noRates) KRWPerUSD(context.Context, time.Time) (int64, bool, error) {
+	return 0, false, usage.ErrRateUnavailable
+}
 
 // posts adapts the drafting context, mapping one fixture Article to the sequence of writes
 // that actually produces a post in that state. This is the anti-corruption mapping at the

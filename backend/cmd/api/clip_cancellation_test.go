@@ -18,6 +18,7 @@ import (
 	jobstore "github.com/postpilot/backend/internal/job/store"
 	"github.com/postpilot/backend/internal/llm"
 	"github.com/postpilot/backend/internal/mail"
+	"github.com/postpilot/backend/internal/plan"
 	"github.com/postpilot/backend/internal/platform/db"
 	"github.com/postpilot/backend/internal/usage"
 	usagestore "github.com/postpilot/backend/internal/usage/store"
@@ -55,7 +56,7 @@ func newCancellationHarness(t *testing.T, wrap func(*jobstore.Store) job.Store) 
 		t.Fatal(err)
 	}
 	authSvc := auth.NewService(authstore.New(d.Writer, d.Reader), time.Hour, auth.Deps{Mailer: mail.NewLog()})
-	ledger := usage.NewService(usagestore.New(d.Writer, d.Reader), emptyModels{}, 32768, usageAnchors{auth: authSvc}, approvedCeilingKinds()...)
+	ledger := usage.NewService(usagestore.New(d.Writer, d.Reader), emptyModels{}, 32768, usageAnchors{auth: authSvc}, testRates, approvedCeilingKinds()...)
 	// Clip concurrency tests require funded work; a free account now starts at zero.
 	if err := ledger.Grant(t.Context(), "alice", 50, nil); err != nil {
 		t.Fatal(err)
@@ -91,6 +92,12 @@ func (h *cancellationHarness) enqueue(t *testing.T, kind string) string {
 	}
 	return id
 }
+
+// clipTestRate is the rate a fixture approval froze: 500 KRW per USD, so the two bounded
+// calls below (9 000 micro-USD) reserve exactly their approved 5 credits.
+var clipTestRate = plan.RateSnapshot{Source: "korea-eximbank", PublicationDate: "2026-10-02",
+	ReferenceE4: 5_000_000, AppliedE4: 5_000_000}
+
 func cancellationReservation() clipapp.Reservation {
 	p := llm.CallPolicy{Ref: llm.ModelRef{ProviderID: "p", ModelID: "o"}, Stage: "observe", CompletionTokens: 8192, InputUSDPerMillion: "0.15", OutputUSDPerMillion: "0", Pricing: llm.CallPricing{Version: llm.CallPricingVersion, Fingerprint: strings.Repeat("a", 64), Delivery: llm.ExecutionInlineStatic, Endpoint: "leaf", RequiredParameters: "max_tokens", PromptUSDPerMillion: "0.15", CompletionUSDPerMillion: "0", RequestUSD: "0", ImageUSD: "0", AudioUSDPerToken: "0"}}
 	w := p
@@ -98,7 +105,7 @@ func cancellationReservation() clipapp.Reservation {
 	w.Stage = "write"
 	w.CompletionTokens = 32768
 	w.Pricing.Delivery = llm.ExecutionTextOnly
-	return clipapp.Reservation{CancellationPolicyVersion: 1, ApprovedMaxCredits: 5, Calls: []clipapp.Call{{Policy: p, Count: 1}, {Policy: w, Count: 1}}}
+	return clipapp.Reservation{CancellationPolicyVersion: 1, ApprovedMaxCredits: 5, Rate: clipTestRate, Calls: []clipapp.Call{{Policy: p, Count: 1}, {Policy: w, Count: 1}}}
 }
 func (h *cancellationHarness) reserve(ctx context.Context, id string) (context.Context, error) {
 	return clipapp.NewJobs(h.queue, h.guard).Reserve(ctx, "alice", id, []job.PlannedCall{{Ref: "p/o", Count: 1, CompletionTokens: 8192}, {Ref: "p/w", Count: 1, CompletionTokens: 32768}}, cancellationReservation())
@@ -241,11 +248,13 @@ func TestClipCancellationWhileProviderExitsWaitsForConfirmedUsage(t *testing.T) 
 			if err != nil || !a.Settled {
 				t.Fatal(a, err)
 			}
-			confirmed, fee := 0, 3
+			// A cancellation charges confirmed usage only, with no fee (QUOTA-49): 100 micro-USD
+			// is one credit at the approval's rate.
+			confirmed := 0
 			if known {
-				confirmed, fee = 3, 1
+				confirmed = 1
 			}
-			if *a.ConfirmedCharge != confirmed || *a.CancellationFee != fee || *a.FinalCharge != confirmed+fee || *a.Refund != 5-confirmed-fee {
+			if *a.ConfirmedCharge != confirmed || *a.CancellationFee != 0 || *a.FinalCharge != confirmed || *a.Refund != 5-confirmed {
 				t.Fatal(a)
 			}
 			h.assertPreviousResult(t)
@@ -328,13 +337,10 @@ func TestClipCancellationAndResultCommitHaveOneWinner(t *testing.T) {
 			if err != nil || a == nil || !a.Settled {
 				t.Fatal(a, err)
 			}
-			want := 0
-			if success {
-				want = 2
-			} else if mode == "cancel after upload" {
-				want = 3
-			}
-			if *a.FinalCharge != want {
+			// No usage was confirmed, so every outcome is free; the settlement names the winner.
+			want := map[string]string{"cancel after upload": "cancelled", "completion wins": "succeeded",
+				"save fails": "failed", "completion response lost": "succeeded"}[mode]
+			if a.SettlementReason != want || *a.FinalCharge != 0 || *a.Refund != 5 {
 				t.Fatal("wrong settlement winner", a)
 			}
 		})
@@ -441,7 +447,7 @@ func TestClipPendingCancellationRecoversBeforeFailureAndSettlesOnce(t *testing.T
 		t.Fatal(j, err)
 	}
 	a, err := h.ledger.ReservationAccounting(t.Context(), "alice", id)
-	if err != nil || !a.Settled || a.SettlementReason != "cancelled" || *a.FinalCharge != 3 || *a.Refund != 2 {
+	if err != nil || !a.Settled || a.SettlementReason != "cancelled" || *a.FinalCharge != 0 || *a.Refund != 5 {
 		t.Fatal(a, err)
 	}
 	h.assertPreviousResult(t)
@@ -534,7 +540,7 @@ func TestClipReservationRacingCancellationCannotAcquireALaterHold(t *testing.T) 
 			if err != nil {
 				t.Fatal(err)
 			}
-			if a != nil && (!a.Settled || *a.NominalReservation != 5 || *a.FinalCharge != 3 || *a.Refund != 2) {
+			if a != nil && (!a.Settled || a.SettlementReason != "cancelled" || *a.NominalReservation != 5 || *a.FinalCharge != 0 || *a.Refund != 5) {
 				t.Fatal("wrong reservation winner", a)
 			}
 			j, err := h.jobs.GetByID(t.Context(), id)
@@ -583,16 +589,16 @@ func TestClipNormalFailureRacingCancellationUsesTheDurableOutcome(t *testing.T) 
 			if err != nil || a == nil || !a.Settled {
 				t.Fatal(a, err)
 			}
-			want := 0
+			want := "failed"
 			if j.CancelRequestedAt != nil {
-				want = 3
+				want = "cancelled"
 				if j.Status != job.StatusCancelled {
 					t.Fatal(j)
 				}
 			} else if j.Status != job.StatusFailed {
 				t.Fatal(j)
 			}
-			if *a.FinalCharge != want {
+			if a.SettlementReason != want || *a.FinalCharge != 0 {
 				t.Fatal("settlement ignored durable winner", j, a)
 			}
 		})

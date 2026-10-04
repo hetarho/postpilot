@@ -41,10 +41,11 @@ func TestClipResultCommitRacingCancellationKeepsOneOutcome(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		wantCharge, wantFee := 2, 0
+		// No usage was confirmed, so either outcome is free; the settlement names the winner.
+		wantReason := "succeeded"
 		switch j.Status {
 		case job.StatusCancelled:
-			wantCharge, wantFee = 3, 3
+			wantReason = "cancelled"
 			h.assertPreviousResult(t)
 			if j.CancelRequestedAt == nil {
 				t.Fatal("cancellation lost its durable cause")
@@ -61,7 +62,7 @@ func TestClipResultCommitRacingCancellationKeepsOneOutcome(t *testing.T) {
 			t.Fatal(err)
 		}
 		a, err := h.ledger.ReservationAccounting(t.Context(), "alice", id)
-		if err != nil || a == nil || !a.Settled || a.FinalCharge == nil || *a.FinalCharge != wantCharge || a.CancellationFee == nil || *a.CancellationFee != wantFee || *a.Refund != 5-wantCharge {
+		if err != nil || a == nil || !a.Settled || a.SettlementReason != wantReason || a.FinalCharge == nil || *a.FinalCharge != 0 || a.CancellationFee == nil || *a.CancellationFee != 0 || *a.Refund != 5 {
 			t.Fatal("settlement disagrees with durable result", a, err)
 		}
 	}

@@ -96,8 +96,8 @@ func TestPricingLifecycleFromFreeThroughRefund(t *testing.T) {
 		valueRef: {Ref: valueRef, Stages: []string{"write"}, Levels: map[string]string{"write": "value"}, InputUSDPerMillion: "0.1", OutputUSDPerMillion: "0.3"},
 	}
 	creditStore := usagestore.New(h.handle.Writer, h.handle.Reader)
-	credits := usage.NewService(creditStore, models, 4_000, anchor).WithModelGrades().
-		WithRateSelector(usage.NewRateSelector(lifecycleRateSource{}, creditStore)).WithClock(func() time.Time { return *clock })
+	rates := usage.NewRateSelector(lifecycleRateSource{}, creditStore)
+	credits := usage.NewService(creditStore, models, 4_000, anchor, rates).WithModelGrades().WithClock(func() time.Time { return *clock })
 	if lifecycleCount(t, h, "SELECT count(*) FROM credit_lots") != 0 {
 		t.Fatal("signup granted credits")
 	}
@@ -192,7 +192,7 @@ func TestPricingLifecycleFromFreeThroughRefund(t *testing.T) {
 	}
 	voucherStore := voucherstore.New(h.handle.Writer, h.handle.Reader)
 	voucherStore.SetCreditsForTx(func(tx *sql.Tx) voucher.Credits {
-		return lifecycleVoucherCredits{usage.NewService(usagestore.NewTx(tx), models, 4_000, anchor).WithClock(func() time.Time { return *clock })}
+		return lifecycleVoucherCredits{usage.NewService(usagestore.NewTx(tx), models, 4_000, anchor, rates).WithClock(func() time.Time { return *clock })}
 	})
 	voucherStore.SetPaidCoverageForTx(func(tx *sql.Tx) voucher.PaidCoverage { return lifecyclePaidCoverage{tx} })
 	vouchers := voucher.NewService(voucherStore, lifecycleVoucherCredits{credits}).WithClock(func() time.Time { return *clock })

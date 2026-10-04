@@ -222,23 +222,6 @@ func (q *Queries) EligibleLotsForJob(ctx context.Context, jobID string) ([]Eligi
 	return items, nil
 }
 
-const expireLegacyMonthlyLots = `-- name: ExpireLegacyMonthlyLots :exec
-UPDATE credit_lots SET expires_at = ?
-WHERE user_id = ? AND kind = 'monthly' AND coverage_id IS NULL
-  AND expires_at > ?
-`
-
-type ExpireLegacyMonthlyLotsParams struct {
-	ExpiresAt   sql.NullString
-	UserID      string
-	ExpiresAt_2 sql.NullString
-}
-
-func (q *Queries) ExpireLegacyMonthlyLots(ctx context.Context, arg ExpireLegacyMonthlyLotsParams) error {
-	_, err := q.db.ExecContext(ctx, expireLegacyMonthlyLots, arg.ExpiresAt, arg.UserID, arg.ExpiresAt_2)
-	return err
-}
-
 const expireMonthlyLotsExcept = `-- name: ExpireMonthlyLotsExcept :exec
 UPDATE credit_lots SET expires_at = ?
 WHERE user_id = ?
@@ -537,28 +520,6 @@ func (q *Queries) InsertLotIfAbsent(ctx context.Context, arg InsertLotIfAbsentPa
 		return 0, err
 	}
 	return result.RowsAffected()
-}
-
-const legacyMonthlyLotOpen = `-- name: LegacyMonthlyLotOpen :one
-SELECT EXISTS(
-    SELECT 1 FROM credit_lots
-    WHERE user_id = ? AND kind = 'monthly' AND coverage_id IS NULL
-      AND expires_at > ?
-)
-`
-
-type LegacyMonthlyLotOpenParams struct {
-	UserID    string
-	ExpiresAt sql.NullString
-}
-
-// Whether ExpireLegacyMonthlyLots would move any lot, asked on the read pool with the same
-// predicate, so a balance read can tell it has nothing to expire.
-func (q *Queries) LegacyMonthlyLotOpen(ctx context.Context, arg LegacyMonthlyLotOpenParams) (bool, error) {
-	row := q.db.QueryRowContext(ctx, legacyMonthlyLotOpen, arg.UserID, arg.ExpiresAt)
-	var exists bool
-	err := row.Scan(&exists)
-	return exists, err
 }
 
 const lotUntouched = `-- name: LotUntouched :one

@@ -61,14 +61,6 @@ func (f *fakeStore) WindowGrantsOpened(_ context.Context, grants []Lot) (bool, e
 	}
 	return true, nil
 }
-func (f *fakeStore) LegacyMonthlyLotOpen(_ context.Context, userID string, at time.Time) (bool, error) {
-	for _, lot := range f.lots {
-		if lot.UserID == userID && lot.Kind == LotMonthly && lot.CoverageID == "" && lot.ExpiresAt != nil && lot.ExpiresAt.After(at) {
-			return true, nil
-		}
-	}
-	return false, nil
-}
 func (f *fakeStore) ExportWindowOpened(context.Context, ExportWindow) (bool, error) { return true, nil }
 func (f *fakeStore) ReadLotsInConsumptionOrder(ctx context.Context, userID string, now time.Time) ([]Lot, error) {
 	return f.LotsInConsumptionOrder(ctx, userID, now)
@@ -315,17 +307,6 @@ func (f *fakeStore) DeleteEligibleLotsForJob(_ context.Context, jobID string) er
 	return nil
 }
 func (f *fakeStore) OpenExportWindow(context.Context, ExportWindow) error { return nil }
-func (f *fakeStore) ExpireLegacyMonthlyLots(_ context.Context, userID string, at time.Time) error {
-	for i := range f.lots {
-		lot := &f.lots[i]
-		if lot.UserID == userID && lot.Kind == LotMonthly && lot.CoverageID == "" && lot.ExpiresAt != nil && lot.ExpiresAt.After(at) {
-			end := at
-			lot.ExpiresAt = &end
-		}
-	}
-	return nil
-}
-
 func (f *fakeStore) HoldForJob(_ context.Context, jobID string) (Admission, []LotDebit, bool, error) {
 	for _, admission := range f.admissions {
 		if admission.JobID != jobID {
@@ -452,23 +433,29 @@ func (a fakeAnchors) CoverageFor(_ context.Context, _ string, at time.Time) (Cov
 var seoulNoon = time.Date(2026, 9, 15, 3, 0, 0, 0, time.UTC) // 15 Sep, 12:00 KST
 var testAnchor = time.Date(2025, 1, 1, 0, 0, 0, 0, time.FixedZone("Asia/Seoul", 9*60*60))
 
-// cheap costs 2300 micro-USD at the hold's assumed shape, which charges 3 credits.
 var cheapRef = llm.ModelRef{ProviderID: "openrouter", ModelID: "cheap"}
 
 // The hold prices 30 000 prompt tokens plus the completion cap; these rates make that
-// exactly 10 000 micro-USD, i.e. one credit of cost and so 5 credits charged at 3x.
+// exactly 10 000 micro-USD, which converts to 5 credits at testReferenceE4.
 var pricedModels = fakeModels{
 	cheapRef: {Ref: cheapRef, InputUSDPerMillion: "0.1", OutputUSDPerMillion: "0.7"},
 }
 
 const maxCompletion = 10_000
 
+// testReferenceE4 is 500 KRW per USD, so the 10 000 micro-USD one cheap call holds converts to
+// exactly 5 credits.
+const testReferenceE4 = 5_000_000
+
+// testRates is the ledger's FX policy at testReferenceE4.
+func testRates() *RateSelector { return NewFixedRateSelector(testReferenceE4) }
+
 func newTestService(t *testing.T, now time.Time) (*Service, *fakeStore) {
 	t.Helper()
 	store := newFakeStore()
 	// The two kinds the product marks as needing an approved ceiling; the ledger only
 	// knows them because the root says so.
-	svc := NewService(store, pricedModels, maxCompletion, fakeAnchors{anchor: testAnchor}, "generate_clip", "revise_clip")
+	svc := NewService(store, pricedModels, maxCompletion, fakeAnchors{anchor: testAnchor}, testRates(), "generate_clip", "revise_clip")
 	svc.now = func() time.Time { return now }
 	seq := 0
 	svc.newID = func() string { seq++; return fmt.Sprintf("lot-new-%d", seq) }
@@ -555,8 +542,8 @@ func holdStart(userID string, tier plan.Plan, jobID string, calls ...PlannedCall
 	return Start{UserID: userID, Plan: tier, Kind: "generate", JobID: jobID, Calls: calls}
 }
 
-// The hold's assumed shape prices one cheap call at 10 000 micro-USD, so Charge gives
-// 2 + 3 = 5 credits.
+// The hold's assumed shape prices one cheap call at 10 000 micro-USD: 5 credits at 500 KRW
+// per USD.
 const oneCallHold = 5
 
 func TestHoldChargesTheWorstCaseAndRecordsIt(t *testing.T) {
@@ -590,8 +577,8 @@ func TestHoldPricesEveryPlannedCall(t *testing.T) {
 	if err := svc.Hold(context.Background(), holdStart("alice", plan.Max, "job-1", PlannedCall{Ref: cheapRef, Count: 4})); err != nil {
 		t.Fatal(err)
 	}
-	// Four calls of cost, one per-request base: 2 + 4*3.
-	if got, want := store.admissions[0].HoldCredits, 14; got != want {
+	// Four calls of 10 000 micro-USD, converted once at 500 KRW per USD.
+	if got, want := store.admissions[0].HoldCredits, 4*oneCallHold; got != want {
 		t.Errorf("hold = %d, want %d", got, want)
 	}
 }
@@ -755,7 +742,7 @@ func TestBenefitWindowsKeepExactAnchorAndIdempotentGrants(t *testing.T) {
 	anchor := time.Date(2025, 1, 20, 11, 0, 0, 0, seoul)
 	now := time.Date(2026, 9, 15, 12, 0, 0, 0, seoul)
 	store := newFakeStore()
-	svc := NewService(store, pricedModels, maxCompletion, fakeAnchors{anchor: anchor})
+	svc := NewService(store, pricedModels, maxCompletion, fakeAnchors{anchor: anchor}, testRates())
 	svc.now = func() time.Time { return now }
 
 	first, err := svc.BalanceFor(context.Background(), "alice", plan.Basic)
@@ -792,7 +779,7 @@ func TestBenefitWindowsKeepExactAnchorAndIdempotentGrants(t *testing.T) {
 func TestBalanceReadsTakeTheWriterOnlyWhenTheRenewalWouldWrite(t *testing.T) {
 	now := seoulNoon
 	store := newFakeStore()
-	svc := NewService(store, pricedModels, maxCompletion, fakeAnchors{anchor: testAnchor})
+	svc := NewService(store, pricedModels, maxCompletion, fakeAnchors{anchor: testAnchor}, testRates())
 	svc.now = func() time.Time { return now }
 	ctx := context.Background()
 
@@ -811,17 +798,6 @@ func TestBalanceReadsTakeTheWriterOnlyWhenTheRenewalWouldWrite(t *testing.T) {
 		t.Fatalf("the read-pool answer %+v differs from the writer's %+v", second, first)
 	}
 
-	// A legacy monthly lot still running is something the renewal expires: a write.
-	legacyEnd := now.Add(time.Hour)
-	store.lots = append(store.lots, Lot{ID: "legacy", UserID: "alice", Kind: LotMonthly, Granted: 5, Remaining: 5, ExpiresAt: &legacyEnd})
-	expired, err := svc.BalanceFor(ctx, "alice", plan.Basic)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if store.writeTxs != 2 || expired.Credits != first.Credits {
-		t.Fatalf("legacy lot: %d write transactions, credits %d, want 2 and %d", store.writeTxs, expired.Credits, first.Credits)
-	}
-
 	// The next daily window is a new grant; once it is open, reads are free again.
 	now = first.RenewsAt
 	for range 2 {
@@ -829,8 +805,8 @@ func TestBalanceReadsTakeTheWriterOnlyWhenTheRenewalWouldWrite(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if store.writeTxs != 3 {
-		t.Fatalf("next window: %d write transactions, want 3", store.writeTxs)
+	if store.writeTxs != 2 {
+		t.Fatalf("next window: %d write transactions, want 2", store.writeTxs)
 	}
 
 	// Free and master renew nothing, so their reads never take the writer.
@@ -840,8 +816,8 @@ func TestBalanceReadsTakeTheWriterOnlyWhenTheRenewalWouldWrite(t *testing.T) {
 	if _, err := svc.BalanceFor(ctx, "root", plan.Master); err != nil {
 		t.Fatal(err)
 	}
-	if store.writeTxs != 3 {
-		t.Fatalf("free and master reads opened %d write transactions", store.writeTxs-3)
+	if store.writeTxs != 2 {
+		t.Fatalf("free and master reads opened %d write transactions", store.writeTxs-2)
 	}
 }
 
@@ -855,7 +831,7 @@ func TestLegacyFreeLotExpiresWithoutOpeningAnotherFreeGrant(t *testing.T) {
 		ID: "legacy-calendar", UserID: "alice", Kind: LotMonthly,
 		Granted: 50, Remaining: 50, ExpiresAt: &calendarExpiry,
 	}}
-	svc := NewService(store, pricedModels, maxCompletion, fakeAnchors{anchor: anchor})
+	svc := NewService(store, pricedModels, maxCompletion, fakeAnchors{anchor: anchor}, testRates())
 	svc.now = func() time.Time { return now }
 
 	legacy, err := svc.BalanceFor(context.Background(), "alice", plan.Free)
@@ -963,8 +939,8 @@ func TestSettleRefundsTheUnusedRemainderToTheSameLots(t *testing.T) {
 	}
 	held := store.admissions[0].HoldCredits
 
-	// The work actually cost one credit of provider spend: 2 + 3 = 5 charged.
-	store.events = append(store.events, Event{UserID: "alice", JobID: "job-1", CostMicrousd: 10_000})
+	// The work actually cost 10 000 micro-USD: 5 credits at the frozen rate.
+	store.events = append(store.events, Event{UserID: "alice", JobID: "job-1", CostMicrousd: 10_000, CostSource: llm.CostReported})
 
 	if err := svc.Settle(ctx, "job-1", OutcomeSucceeded); err != nil {
 		t.Fatal(err)
@@ -985,7 +961,7 @@ func TestSettleIsIdempotent(t *testing.T) {
 	if err := svc.Hold(ctx, holdStart("alice", plan.Free, "job-1", PlannedCall{Ref: cheapRef, Count: 4})); err != nil {
 		t.Fatal(err)
 	}
-	store.events = append(store.events, Event{UserID: "alice", JobID: "job-1", CostMicrousd: 10_000})
+	store.events = append(store.events, Event{UserID: "alice", JobID: "job-1", CostMicrousd: 10_000, CostSource: llm.CostReported})
 
 	if err := svc.Settle(ctx, "job-1", OutcomeSucceeded); err != nil {
 		t.Fatal(err)
@@ -1010,7 +986,7 @@ func TestSettleAboveTheHoldNeverDrivesTheBalanceNegative(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Far more than the hold priced.
-	store.events = append(store.events, Event{UserID: "alice", JobID: "job-1", CostMicrousd: 5_000_000})
+	store.events = append(store.events, Event{UserID: "alice", JobID: "job-1", CostMicrousd: 5_000_000, CostSource: llm.CostReported})
 
 	if err := svc.Settle(ctx, "job-1", OutcomeSucceeded); err != nil {
 		t.Fatal(err)
@@ -1074,7 +1050,18 @@ func TestConstructionRefusesALedgerWithoutAnchors(t *testing.T) {
 			t.Fatalf("panic = %v, want a loud anchor-wiring refusal", r)
 		}
 	}()
-	NewService(newFakeStore(), pricedModels, maxCompletion, nil)
+	NewService(newFakeStore(), pricedModels, maxCompletion, nil, testRates())
+}
+
+// QUOTA-59: every paid hold converts through the FX policy, so the selector is a constructor
+// argument too (ARCH-40) and a ledger built without one refuses at construction.
+func TestConstructionRefusesALedgerWithoutRates(t *testing.T) {
+	defer func() {
+		if r := recover(); r == nil || !strings.Contains(fmt.Sprint(r), "rate selector") {
+			t.Fatalf("panic = %v, want a loud rate-wiring refusal", r)
+		}
+	}()
+	NewService(newFakeStore(), pricedModels, maxCompletion, fakeAnchors{anchor: testAnchor}, nil)
 }
 
 func TestRecordCallPricesAndAttributesFromContext(t *testing.T) {
@@ -1082,7 +1069,7 @@ func TestRecordCallPricesAndAttributesFromContext(t *testing.T) {
 	store := newFakeStore()
 	svc := NewService(store, fakeModels{ref: {
 		Ref: ref, InputUSDPerMillion: "0.075", OutputUSDPerMillion: "0.25",
-	}}, maxCompletion, fakeAnchors{anchor: testAnchor})
+	}}, maxCompletion, fakeAnchors{anchor: testAnchor}, testRates())
 	svc.now = func() time.Time { return seoulNoon }
 	ctx := WithWork(context.Background(), Work{
 		UserID: "alice", Kind: "generate", JobID: "job", ObserveModel: "openrouter/observer",

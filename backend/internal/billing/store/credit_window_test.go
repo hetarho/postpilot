@@ -50,11 +50,11 @@ func newLedgerHarness(t *testing.T, name string, createdAt time.Time, anchor tim
 		t.Fatal(err)
 	}
 
-	ledger := usage.NewService(usagestore.New(handle.Writer, handle.Reader), nil, 0, fixedAnchor{at: anchor})
+	ledger := usage.NewService(usagestore.New(handle.Writer, handle.Reader), nil, 0, fixedAnchor{at: anchor}, testRates)
 
 	store := billingstore.New(handle.Writer, handle.Reader)
 	store.SetCreditsForTx(func(tx *sql.Tx) billing.Credits {
-		return testCredits{Service: usage.NewService(usagestore.NewTx(tx), nil, 0, fixedAnchor{at: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)}), exports: clipstore.NewTx(tx)}
+		return testCredits{Service: usage.NewService(usagestore.NewTx(tx), nil, 0, fixedAnchor{at: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)}, testRates), exports: clipstore.NewTx(tx)}
 	})
 	store.SetPlansForTx(func(tx *sql.Tx) billing.Plans {
 		return auth.NewService(authstore.NewTx(tx), time.Hour, auth.Deps{Mailer: mail.NewLog()})
@@ -83,6 +83,9 @@ func (h *ledgerHarness) monthlyLots(t *testing.T, now time.Time) (count, granted
 	}
 	return count, granted, remaining
 }
+
+// testRates is the ledger's FX policy at a fixed reference; these tests price no work.
+var testRates = usage.NewFixedRateSelector(13_600_000)
 
 type fixedAnchor struct{ at time.Time }
 

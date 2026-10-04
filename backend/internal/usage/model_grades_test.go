@@ -21,7 +21,7 @@ func TestMissingFreeCapabilityRefusesBeforeAdmission(t *testing.T) {
 	store := newFakeStore()
 	models := unavailableFreePath{fakeModels{ref: {Ref: ref, Stages: []string{"observe"},
 		Levels: map[string]string{"observe": "free"}, InputUSDPerMillion: "0", OutputUSDPerMillion: "0"}}}
-	svc := NewService(store, models, maxCompletion, fakeAnchors{anchor: testAnchor}).WithModelGrades()
+	svc := NewService(store, models, maxCompletion, fakeAnchors{anchor: testAnchor}, testRates()).WithModelGrades()
 	svc.now = func() time.Time { return seoulNoon }
 	err := svc.Hold(context.Background(), Start{UserID: "alice", Plan: plan.Light, Kind: "generate", JobID: "unknown-free",
 		Calls: []PlannedCall{{Ref: ref, Stage: "observe", Count: 1}}})
@@ -51,7 +51,7 @@ func TestHoldSkipsTheLiveFreeCheckOnlyWhenTheCallerRanIt(t *testing.T) {
 		write:   {Ref: write, Stages: []string{"write"}, Levels: map[string]string{"write": "free"}, InputUSDPerMillion: "0", OutputUSDPerMillion: "0"},
 	}, &qualified}
 	store := newFakeStore()
-	svc := NewService(store, models, maxCompletion, fakeAnchors{anchor: testAnchor}).WithRateSelector(&RateSelector{}).WithModelGrades()
+	svc := NewService(store, models, maxCompletion, fakeAnchors{anchor: testAnchor}, testRates()).WithModelGrades()
 	svc.now = func() time.Time { return seoulNoon }
 	calls := []PlannedCall{{Ref: observe, Stage: "observe", Count: 2}, {Ref: write, Stage: "write", Count: 1}}
 	ctx := context.Background()
@@ -69,34 +69,12 @@ func TestHoldSkipsTheLiveFreeCheckOnlyWhenTheCallerRanIt(t *testing.T) {
 	}
 }
 
-type lightRateSource struct{}
-
-func (lightRateSource) KRWPerUSD(context.Context, time.Time) (int64, bool, error) {
-	return 14_000_000, true, nil
-}
-
-type lightRateCache struct{ days map[string]RateDay }
-
-func (c *lightRateCache) RateDay(_ context.Context, date string) (RateDay, bool, error) {
-	day, ok := c.days[date]
-	return day, ok, nil
-}
-func (c *lightRateCache) RecordRateDay(_ context.Context, day RateDay) error {
-	c.days[day.Date] = day
-	return nil
-}
-func (c *lightRateCache) LatestRateDay(_ context.Context, date string) (RateDay, bool, error) {
-	day, ok := c.days[date]
-	return day, ok, nil
-}
-
 func TestLightDailyGrantPaysOneBoundedCallButNotAnOversizedJob(t *testing.T) {
 	ref := llm.ModelRef{ProviderID: "openrouter", ModelID: "priced-value-fixture"}
 	models := fakeModels{ref: {Ref: ref, Stages: []string{"write"},
 		Levels: map[string]string{"write": "value"}, InputUSDPerMillion: "0.1", OutputUSDPerMillion: "0.3"}}
 	store := newFakeStore()
-	svc := NewService(store, models, 10_000, fakeAnchors{anchor: testAnchor}).WithModelGrades().WithRateSelector(
-		NewRateSelector(lightRateSource{}, &lightRateCache{days: map[string]RateDay{}}))
+	svc := NewService(store, models, 10_000, fakeAnchors{anchor: testAnchor}, NewFixedRateSelector(14_000_000)).WithModelGrades()
 	svc.now = func() time.Time { return seoulNoon }
 	ctx := context.Background()
 	call := PlannedCall{Ref: ref, Stage: "write", Count: 1, CompletionTokens: 4_000}
@@ -124,7 +102,7 @@ func TestModelGradesFreezeRightsAndKeepFreeAtZeroBalance(t *testing.T) {
 		paidRef: {Ref: paidRef, Stages: []string{"write"}, Levels: map[string]string{"write": "value"}, InputUSDPerMillion: "1", OutputUSDPerMillion: "1"},
 	}
 	store := newFakeStore()
-	svc := NewService(store, models, maxCompletion, fakeAnchors{anchor: testAnchor}).WithRateSelector(&RateSelector{}).WithModelGrades()
+	svc := NewService(store, models, maxCompletion, fakeAnchors{anchor: testAnchor}, testRates()).WithModelGrades()
 	svc.now = func() time.Time { return seoulNoon }
 	ctx := context.Background()
 	start := Start{UserID: "alice", Plan: plan.Free, Kind: "write", JobID: "free-job", Calls: []PlannedCall{{Ref: freeRef, Stage: "write", Count: 1}}}

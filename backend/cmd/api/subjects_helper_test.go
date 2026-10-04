@@ -4,7 +4,12 @@ import (
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/job"
 	jobstore "github.com/postpilot/backend/internal/job/store"
+	"github.com/postpilot/backend/internal/usage"
 )
+
+// testRates is a test ledger's FX policy: 1 360 KRW per USD on every day, with no official
+// lookup.
+var testRates = usage.NewFixedRateSelector(13_600_000)
 
 // attach and clipJob build a test job through the same subject mapping the adapters use,
 // so a test enqueues exactly what the product would.

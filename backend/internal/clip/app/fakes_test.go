@@ -11,6 +11,7 @@ import (
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/job"
 	"github.com/postpilot/backend/internal/llm"
+	"github.com/postpilot/backend/internal/plan"
 	_ "modernc.org/sqlite"
 )
 
@@ -159,8 +160,13 @@ func writePolicy() llm.CallPolicy {
 	w.Pricing.Delivery = llm.ExecutionTextOnly
 	return w
 }
+
+// testQuoteRate is the frozen rate a fixture quote converts at.
+var testQuoteRate = plan.RateSnapshot{Source: "korea-eximbank", PublicationDate: "2026-09-29",
+	ReferenceE4: 13_579_001, AppliedE4: 13_600_000}
+
 func approvedPricing(chunks int) clip.GenerationPricing {
-	p := clip.GenerationPricing{Version: clip.PricingPolicyVersion, Observe: observePolicy(), Plan: writePolicy(), Narration: writePolicy(), ObservationCalls: chunks}
+	p := clip.GenerationPricing{Version: clip.PricingPolicyVersion, Rate: testQuoteRate, Observe: observePolicy(), Plan: writePolicy(), Narration: writePolicy(), ObservationCalls: chunks}
 	credits, err := QuoteCredits(p, chunks, DefaultQuoteRetries)
 	if err != nil {
 		panic(err)

@@ -128,44 +128,6 @@ func TestUnknownPlanGetsTheStrictestGrantNotUnlimited(t *testing.T) {
 	}
 }
 
-func TestChargeIsBasePlusRoundedUpMultiple(t *testing.T) {
-	for _, tc := range []struct {
-		name         string
-		costMicrousd int64
-		want         int
-	}{
-		{"a free call still costs the per-request base", 0, 2},
-		// Anything that cost anything at all consumes a whole credit on top of the base:
-		// rounding down would make a cheap model effectively unmetered.
-		{"one micro-USD rounds up to a whole credit", 1, 3},
-		{"just under one credit of cost", 3_333, 3},
-		{"exactly one credit of cost at 3x", 3_334, 4},
-		{"the free stage pair", 2_300, 3},
-		{"the basic stage pair", 25_600, 10},
-		{"a sonnet pair", 69_000, 23},
-		{"opus on both stages", 255_500, 79},
-		// A negative can only come from a corrupted row; it must not credit the account.
-		{"a negative cost is floored, not refunded", -5_000, 2},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			if got := plan.Charge(tc.costMicrousd); got != tc.want {
-				t.Errorf("Charge(%d) = %d, want %d", tc.costMicrousd, got, tc.want)
-			}
-		})
-	}
-}
-
-func TestChargeNeverShrinksAsCostGrows(t *testing.T) {
-	previous := plan.Charge(0)
-	for cost := int64(0); cost <= 500_000; cost += 997 {
-		got := plan.Charge(cost)
-		if got < previous {
-			t.Fatalf("Charge(%d) = %d, below the previous %d", cost, got, previous)
-		}
-		previous = got
-	}
-}
-
 func TestAnchorWindowClampsShortMonthsAndReturnsToTheAnchorDay(t *testing.T) {
 	seoul := time.FixedZone("Asia/Seoul", 9*60*60)
 	anchor := time.Date(2025, 1, 31, 12, 0, 0, 0, seoul)

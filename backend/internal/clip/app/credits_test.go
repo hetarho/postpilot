@@ -24,14 +24,13 @@ func (s *changingRates) Select(context.Context, time.Time) (plan.RateSnapshot, e
 }
 
 func TestApprovedQuoteRetainsItsFrozenFXDuringRateOutage(t *testing.T) {
-	rates := &changingRates{rate: plan.RateSnapshot{Source: "korea-eximbank", PublicationDate: "2026-09-29",
-		ReferenceE4: 13_579_001, AppliedE4: 13_600_000}}
-	pricing := NewPricingWithRate(&fakeFreezer{}, Budgets{ObserveCompletionTokens: 8192,
+	rates := &changingRates{rate: testQuoteRate}
+	pricing := NewPricing(&fakeFreezer{}, Budgets{ObserveCompletionTokens: 8192,
 		FlowCompletionTokens: 4096, NarrationCompletionTokens: 2048}, rates)
 	observe := llm.ModelRef{ProviderID: "p", ModelID: "o"}
 	write := llm.ModelRef{ProviderID: "p", ModelID: "w"}
 	first, err := pricing.Freeze(context.Background(), observe, write, 2)
-	if err != nil || !first.FXPolicy || first.MaxCredits <= 0 || rates.calls != 1 {
+	if err != nil || first.Rate != testQuoteRate || first.MaxCredits <= 0 || rates.calls != 1 {
 		t.Fatalf("initial quote=%+v calls=%d err=%v", first, rates.calls, err)
 	}
 	rates.err = errors.New("official source unavailable")
@@ -46,7 +45,7 @@ func TestApprovedQuoteRetainsItsFrozenFXDuringRateOutage(t *testing.T) {
 }
 
 func TestQuoteCreditsPricesRetriesAndBothWritingCallsAsOneLine(t *testing.T) {
-	base := clip.GenerationPricing{Observe: observePolicy(), Plan: writePolicy(), Narration: writePolicy(), ObservationCalls: 2}
+	base := clip.GenerationPricing{Rate: testQuoteRate, Observe: observePolicy(), Plan: writePolicy(), Narration: writePolicy(), ObservationCalls: 2}
 	one, err := QuoteCredits(base, 2, 0)
 	if err != nil || one <= 0 {
 		t.Fatal(one, err)
@@ -188,7 +187,7 @@ func (f *fakeFreezer) Models() []llm.ModelInfo { return f.models }
 
 func TestPricingFreezesThreeCallsAndMapsRefusals(t *testing.T) {
 	freezer := &fakeFreezer{}
-	pricing := NewPricing(freezer, Budgets{ObserveCompletionTokens: 8192, FlowCompletionTokens: 4096, NarrationCompletionTokens: 2048})
+	pricing := NewPricing(freezer, Budgets{ObserveCompletionTokens: 8192, FlowCompletionTokens: 4096, NarrationCompletionTokens: 2048}, &changingRates{rate: testQuoteRate})
 	got, err := pricing.Freeze(context.Background(), llm.ModelRef{ProviderID: "p", ModelID: "o"}, llm.ModelRef{ProviderID: "p", ModelID: "w"}, 2)
 	if err != nil || len(freezer.calls) != 3 || got.MaxCredits <= 0 || got.Observe.ResponseRetries != DefaultQuoteRetries || got.Plan.CompletionTokens != 4096 || got.Narration.CompletionTokens != 2048 {
 		t.Fatal(got, freezer.calls, err)

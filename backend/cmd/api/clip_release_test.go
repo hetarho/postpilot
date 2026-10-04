@@ -398,7 +398,7 @@ func newReleaseHarness(t *testing.T, mode string, stress bool, clocks ...func() 
 	if err != nil {
 		t.Fatal(err)
 	}
-	ledger := usage.NewService(usagestore.New(d.Writer, d.Reader), registry, 8192, usageAnchors{auth: authSvc}, approvedCeilingKinds()...)
+	ledger := usage.NewService(usagestore.New(d.Writer, d.Reader), registry, 8192, usageAnchors{auth: authSvc}, testRates, approvedCeilingKinds()...)
 	if err = ledger.EnsureMonthlyLot(ctx, "release-user", tier); err != nil {
 		t.Fatal(err)
 	}
@@ -461,7 +461,7 @@ func newReleaseHarness(t *testing.T, mode string, stress bool, clocks ...func() 
 	q.AllowCancellation(clipCancellation{})
 	clipGuard := releaseClipGuard{guard, admission}
 	finisher := &releaseFinisher{Finisher: clipapp.NewFinisher(d.Writer, bind, js, st, nil), mode: mode}
-	g := clipapp.NewGenerationService(st, projects, sources, objects, media, planner, renderer, clipapp.NewJobs(q, clipGuard), clip.DefaultGenerationConfig(clipEnvironment(cfg)), generationDeps(finisher, clipapp.NewPricing(registry, clipBudgets(clipai.DefaultConfig(clipEnvironment(cfg)))), clipapp.NewAccounting(ledger)))
+	g := clipapp.NewGenerationService(st, projects, sources, objects, media, planner, renderer, clipapp.NewJobs(q, clipGuard), clip.DefaultGenerationConfig(clipEnvironment(cfg)), generationDeps(finisher, clipapp.NewPricing(registry, clipBudgets(clipai.DefaultConfig(clipEnvironment(cfg))), ledger), clipapp.NewAccounting(ledger)))
 	var h *releaseHarness
 	if !strings.HasPrefix(mode, "restart ") {
 		q.Register(clip.JobKindGenerate, metered(func(ctx context.Context, j job.Job, p job.Progress) error {
@@ -1056,11 +1056,18 @@ func (h *releaseHarness) renderSavedPlan(before *v1.ClipProject) *v1.ClipProject
 	}
 }
 
+// usageChargeForRelease is the measured charge for the fixture's 1 000 micro-USD calls at
+// testRates' 1 360 KRW per USD, converted once.
 func usageChargeForRelease(calls int, mode string) int {
 	if mode == "partial" {
 		calls = 1
 	}
-	return plan.Charge(int64(calls) * 1000)
+	charged, err := plan.ChargeAt(int64(calls)*1000, plan.RateSnapshot{Source: "korea-eximbank", PublicationDate: "fixed",
+		ReferenceE4: 13_600_000, AppliedE4: 13_600_000})
+	if err != nil {
+		panic(err)
+	}
+	return charged
 }
 
 // sourceAt maps an output instant to the source millisecond the persisted plan

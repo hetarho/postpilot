@@ -212,13 +212,6 @@ func (m *analyzeModels) Complete(context.Context, llm.ModelRef, llm.Request) (ll
 	return llm.Response{}, errors.New("no provider call is expected")
 }
 
-// fixedKRWPerUSD publishes the same reference every day.
-type fixedKRWPerUSD int64
-
-func (r fixedKRWPerUSD) KRWPerUSD(context.Context, time.Time) (int64, bool, error) {
-	return int64(r), true, nil
-}
-
 var analyzeTestRef = llm.ModelRef{ProviderID: "stub", ModelID: "analyze"}
 
 // analysisHarness is one free account whose voice service enqueues through voiceJobs onto a
@@ -299,7 +292,7 @@ func TestAVoiceAnalysisOverTheBalanceIsRefusedAtTheStart(t *testing.T) {
 	// One USD per million prompt tokens and nothing for completion, at 1 400 KRW per USD: the
 	// 30 000-token default holds 42 credits and 50 000 tokens hold 70.
 	ledger := usage.NewService(store, lookupModels{analyzeTestRef: {Ref: analyzeTestRef, InputUSDPerMillion: "1", OutputUSDPerMillion: "0"}},
-		8192, usageAnchors{auth: authSvc}).WithRateSelector(usage.NewRateSelector(fixedKRWPerUSD(14_000_000), store))
+		8192, usageAnchors{auth: authSvc}, usage.NewFixedRateSelector(14_000_000))
 	queue.Admit(jobAdmission{ledger: ledger, plans: authSvc})
 	if err := ledger.Grant(ctx, "alice", 60, nil); err != nil {
 		t.Fatal(err)
