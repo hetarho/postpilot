@@ -236,6 +236,8 @@ it('sends the active writer only for ordinary generation', async () => {
     { ...PICKED, selections: [{ stage: Stage.WRITE, ...writer }] },
   )
   await press(user, '바로 글 쓰기')
+  const dialog = await screen.findByRole('dialog', { name: '사진 없이 만들까요?' })
+  await user.click(within(dialog).getByRole('button', { name: '사진 없이 만들기' }))
 
   await waitFor(() => expect(starts).toHaveLength(1))
   expect(starts[0]).toMatchObject({ postSlug: 'post', writeModel: writer, targetLength: undefined })
@@ -338,3 +340,31 @@ it('starts directly when the post has photos but no stored observation', async (
   expect(screen.queryByRole('dialog', { name: '다시 관찰할 사진 선택' })).not.toBeInTheDocument()
   expect(starts[0].reobserveFiles).toBeUndefined()
 })
+
+// POST-108: a run with nothing attached asks once; cancelling saves and starts nothing, and
+// confirming starts the run the press asked for.
+it.each(['바로 글 쓰기', '스토리라인 먼저', 'A/B 비교'] as const)(
+  'asks before a %s run with no photo or video attached',
+  async (name) => {
+    const user = userEvent.setup()
+    const { starts, storylineStarts, comparisons, beforeStart } = renderActions()
+    const requests =
+      name === '바로 글 쓰기' ? starts : name === '스토리라인 먼저' ? storylineStarts : comparisons
+
+    await press(user, name)
+    let dialog = await screen.findByRole('dialog', { name: '사진 없이 만들까요?' })
+    expect(dialog).toHaveTextContent('첨부된 사진이 없어요.')
+    await user.click(within(dialog).getByRole('button', { name: '취소' }))
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog', { name: '사진 없이 만들까요?' })).toBeNull(),
+    )
+    expect(beforeStart).not.toHaveBeenCalled()
+    expect(requests).toHaveLength(0)
+
+    await press(user, name)
+    dialog = await screen.findByRole('dialog', { name: '사진 없이 만들까요?' })
+    await user.click(within(dialog).getByRole('button', { name: '사진 없이 만들기' }))
+    await waitFor(() => expect(requests).toHaveLength(1))
+    expect(beforeStart).toHaveBeenCalledTimes(1)
+  },
+)

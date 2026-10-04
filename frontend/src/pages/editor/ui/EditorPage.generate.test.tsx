@@ -24,6 +24,12 @@ import type { FakeGenerationStart } from '@/test/jobs'
 import type { FakeDraftSave, FakeOptionsSave } from '@/test/posts'
 import { clearCaret } from '@/features/edit-post-content/model/caret-handoff'
 
+/** A run over a post with no photo or video asks first (POST-108); go on without one. */
+async function confirmNoPhotos(user: ReturnType<typeof userEvent.setup>) {
+  const dialog = await screen.findByRole('dialog', { name: '사진 없이 만들까요?' })
+  await user.click(within(dialog).getByRole('button', { name: '사진 없이 만들기' }))
+}
+
 afterEach(() => {
   resetEditorTest()
   // Module state, so an unconsumed handoff would leak into the next test.
@@ -167,6 +173,7 @@ describe('opening a post', () => {
     const storyline = await screen.findByRole('button', { name: '스토리라인 먼저' })
     await waitFor(() => expect(storyline).toBeEnabled())
     await user.click(storyline)
+    await confirmNoPhotos(user)
     await waitFor(() => expect(calls).toContain('StartStoryline'))
     expect(storylineStarts[0]).toMatchObject({
       postSlug: slug,
@@ -253,6 +260,7 @@ describe('opening a post', () => {
 
     await user.type(answer, '퇴근길에 간판을 보고 처음 들어갔다.')
     await user.click(storyline)
+    await confirmNoPhotos(user)
     await waitFor(() => expect(calls).toContain('StartStoryline'))
   })
 
@@ -301,6 +309,7 @@ describe('opening a post', () => {
 
     await user.click(screen.getByRole('button', { name: '기존 답변 사용하기' }))
     await user.click(generate)
+    await confirmNoPhotos(user)
     await waitFor(() => expect(calls).toContain('StartGeneration'))
     expect(draftSaves.at(-1)?.templateAnswers).toContainEqual({
       label: '방문 계기',
@@ -337,6 +346,7 @@ describe('opening a post', () => {
     await waitFor(() => expect(generate).toBeEnabled())
     await user.type(screen.getByLabelText('메모'), ' + 최신 내용')
     await user.click(generate)
+    await confirmNoPhotos(user)
 
     await waitFor(() => expect(calls).toContain('StartGeneration'))
     expect(calls.filter((call) => call === 'SavePostDraft' || call === 'StartGeneration')).toEqual([
@@ -442,6 +452,7 @@ describe('opening a post', () => {
     await user.click(
       within(await screen.findByRole('menu')).getByRole('menuitem', { name: 'A/B 비교' }),
     )
+    await confirmNoPhotos(user)
     await waitFor(() => expect(calls).toContain('StartWriteExperiment'))
     expect(starts).toEqual([
       {

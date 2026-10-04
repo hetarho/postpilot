@@ -16,6 +16,11 @@ export const i18n = {
       rewriteBody: '직접 고친 글이 사라지고 이 스토리로 새로 쓰여요.',
       rewriteConfirm: '다시 쓰기',
     },
+    noPhotos: {
+      title: '사진 없이 만들까요?',
+      body: '첨부된 사진이 없어요.',
+      confirm: '사진 없이 만들기',
+    },
   },
   en: {
     storylineActions: {
@@ -29,6 +34,11 @@ export const i18n = {
       rewriteTitle: 'Rewrite from this storyline?',
       rewriteBody: 'The post you edited is replaced by one written from this storyline.',
       rewriteConfirm: 'Rewrite',
+    },
+    noPhotos: {
+      title: 'Continue without photos?',
+      body: 'No photos are attached.',
+      confirm: 'Continue without photos',
     },
   },
 } as const satisfies I18nFragment

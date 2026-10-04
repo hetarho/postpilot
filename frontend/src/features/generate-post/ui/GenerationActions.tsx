@@ -13,6 +13,7 @@ import {
   ActionMenu,
   AppFailureMessage,
   Button,
+  Dialog,
   FieldMessage,
   Notice,
   Typography,
@@ -87,6 +88,8 @@ export const GenerationActions = forwardRef<
   // The mode a confirmed picker will start. Non-empty IS the picker's open state: there is one
   // picker for both actions, and the answer only means something together with the action.
   const [picking, setPicking] = useState<ActionMode | ''>('')
+  // The mode waiting on the no-photo confirmation; non-empty is that dialog's open state.
+  const [confirmingEmpty, setConfirmingEmpty] = useState<ActionMode | ''>('')
 
   const { observe: observeSelection, write: writeSelection, writeA, writeB } = selections
   const published = isPublished(post)
@@ -213,6 +216,12 @@ export const GenerationActions = forwardRef<
       if (mode !== 'comparison' && !writeSelection) return
       if (mode === 'comparison' && (!writeA || !writeB)) return
       if (checkRequiredAnswers?.() === false) return
+      // A run with nothing attached writes from the text alone, and a forgotten upload is the
+      // likelier story, so it asks once before spending the run (POST-108).
+      if (!post.images.length && !post.videos.length) {
+        setConfirmingEmpty(mode)
+        return
+      }
       // A post with observations worth reusing decides what to re-observe first; one with
       // nothing to reuse would observe everything either way, so it starts directly.
       if (needsPicker(post.images, post.observations, post.videos)) {
@@ -334,6 +343,19 @@ export const GenerationActions = forwardRef<
         // Cancel enqueues nothing and saves nothing — the draft save lives on the confirm path.
         onCancel={() => setPicking('')}
       />
+      <Dialog
+        open={Boolean(confirmingEmpty)}
+        title={t('noPhotos.title')}
+        confirmLabel={t('noPhotos.confirm')}
+        onClose={() => setConfirmingEmpty('')}
+        onConfirm={() => {
+          const mode = confirmingEmpty
+          setConfirmingEmpty('')
+          if (mode) void enqueue(mode)
+        }}
+      >
+        {t('noPhotos.body')}
+      </Dialog>
     </div>
   )
 })
