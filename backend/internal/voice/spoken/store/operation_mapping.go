@@ -17,6 +17,7 @@ type timingRecord struct {
 	Start, End float64
 }
 type operationRecord struct {
+	QualificationLimitUSD, QualificationReservedUSD        string
 	Version                                                int
 	ProfileJSON                                            string
 	DraftID, VoiceID                                       string
@@ -48,7 +49,7 @@ func encodeOperation(o spoken.Operation) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	r := operationRecord{Version: 1, ProfileJSON: p, DraftID: o.DraftID, VoiceID: o.VoiceID, ExpectedRevision: o.ExpectedRevision, Name: o.Name, Description: o.Description, PreviewText: o.PreviewText, QualificationSessionID: o.QualificationSessionID, CandidateHandle: string(o.CandidateHandle), VoiceHandle: string(o.VoiceHandle), Texts: o.Texts, SpeechInputs: o.SpeechInputs, AssetIDs: o.AssetIDs, Calling: o.Calling, FailureReason: o.FailureReason, ResultID: o.ResultID}
+	r := operationRecord{QualificationLimitUSD: o.QualificationLimitUSD, QualificationReservedUSD: o.QualificationReservedUSD, Version: 1, ProfileJSON: p, DraftID: o.DraftID, VoiceID: o.VoiceID, ExpectedRevision: o.ExpectedRevision, Name: o.Name, Description: o.Description, PreviewText: o.PreviewText, QualificationSessionID: o.QualificationSessionID, CandidateHandle: string(o.CandidateHandle), VoiceHandle: string(o.VoiceHandle), Texts: o.Texts, SpeechInputs: o.SpeechInputs, AssetIDs: o.AssetIDs, Calling: o.Calling, FailureReason: o.FailureReason, ResultID: o.ResultID}
 	for _, e := range o.Evidence {
 		r.Evidence = append(r.Evidence, evidenceToRecord(e))
 	}
@@ -67,7 +68,7 @@ func operationFromRow(row sqlc.SpokenVoiceOperation) (spoken.Operation, error) {
 	if err != nil {
 		return spoken.Operation{}, err
 	}
-	o := spoken.Operation{SampleAssetID: row.SampleAssetID.String, ID: row.ID, OwnerID: row.OwnerID, Kind: row.Kind, State: row.State, JobID: row.JobID, IdempotencyKey: row.IdempotencyKey, RequestDigest: row.RequestDigest, ScopeDigest: row.ScopeDigest, CandidateID: row.CandidateID, ReceivedHandle: llm.VoiceHandle(row.ReceivedHandle), DraftID: r.DraftID, VoiceID: r.VoiceID, ExpectedRevision: r.ExpectedRevision, Profile: p, Name: r.Name, Description: r.Description, PreviewText: r.PreviewText, QualificationSessionID: r.QualificationSessionID, CandidateHandle: llm.CandidateHandle(r.CandidateHandle), VoiceHandle: llm.VoiceHandle(r.VoiceHandle), Texts: r.Texts, SpeechInputs: r.SpeechInputs, AssetIDs: r.AssetIDs, Calling: r.Calling, FailureReason: r.FailureReason, ResultID: r.ResultID, CreatedAt: parse(row.CreatedAt), UpdatedAt: parse(row.UpdatedAt)}
+	o := spoken.Operation{QualificationLimitUSD: r.QualificationLimitUSD, QualificationReservedUSD: r.QualificationReservedUSD, SampleAssetID: row.SampleAssetID.String, ID: row.ID, OwnerID: row.OwnerID, Kind: row.Kind, State: row.State, JobID: row.JobID, IdempotencyKey: row.IdempotencyKey, RequestDigest: row.RequestDigest, ScopeDigest: row.ScopeDigest, CandidateID: row.CandidateID, ReceivedHandle: llm.VoiceHandle(row.ReceivedHandle), DraftID: r.DraftID, VoiceID: r.VoiceID, ExpectedRevision: r.ExpectedRevision, Profile: p, Name: r.Name, Description: r.Description, PreviewText: r.PreviewText, QualificationSessionID: r.QualificationSessionID, CandidateHandle: llm.CandidateHandle(r.CandidateHandle), VoiceHandle: llm.VoiceHandle(r.VoiceHandle), Texts: r.Texts, SpeechInputs: r.SpeechInputs, AssetIDs: r.AssetIDs, Calling: r.Calling, FailureReason: r.FailureReason, ResultID: r.ResultID, CreatedAt: parse(row.CreatedAt), UpdatedAt: parse(row.UpdatedAt)}
 	for _, e := range r.Evidence {
 		o.Evidence = append(o.Evidence, evidenceFromRecord(e))
 	}

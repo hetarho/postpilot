@@ -31,11 +31,23 @@ import (
 )
 
 type spokenTestProfiles struct {
-	profile          spoken.Profile
-	unavailable      bool
-	paidConfirmation bool
+	qualificationMaximum string
+	profile              spoken.Profile
+	unavailable          bool
+	paidConfirmation     bool
+	zeroPriced           bool
 }
 
+func (p *spokenTestProfiles) Session(_ context.Context, owner, id string) (spokenapp.QualificationSession, error) {
+	if owner != "alice" || id != "qualification" {
+		return spokenapp.QualificationSession{}, spokenapp.ErrQualificationOnly
+	}
+	maximum := p.qualificationMaximum
+	if maximum == "" {
+		maximum = "100"
+	}
+	return spokenapp.QualificationSession{ID: id, OwnerID: owner, ProfileID: p.profile.ID, Revision: p.profile.Revision, MaximumUSD: maximum, ExpiresAt: time.Now().Add(time.Hour)}, nil
+}
 func (p *spokenTestProfiles) ResolveSpokenProfile(_ context.Context, owner string, tier plan.Plan, id string, rev int64, session string) (spoken.Profile, error) {
 	if p.unavailable || id != p.profile.ID || rev != p.profile.Revision {
 		return spoken.Profile{}, spoken.ErrConflict
@@ -61,6 +73,9 @@ func (p *spokenTestProfiles) Budget(ctx context.Context, owner string, tier plan
 		if p.paidConfirmation {
 			price = "0.001"
 		}
+	}
+	if p.zeroPriced {
+		price = "0"
 	}
 	return usage.UnitBudget{PolicyID: id, Revision: rev, AuthorizationID: session, ScopeDigest: scope, Ref: in.Ref, Operation: in.Operation, InputDigest: in.Digest, Count: n, InputCharacters: in.InputCharacters, AuxiliaryCharacters: in.AuxiliaryCharacters, ParametersDigest: in.ParametersDigest, Source: "https://example.com/prices", BoundsSource: "https://example.com/limits", CheckedAt: time.Date(2026, 10, 4, 0, 0, 0, 0, time.UTC), Complete: true, Tariffs: []usage.UnitTariff{{Unit: unit, USDPerUnit: price, Multiplier: "1", MaximumUnits: maxUnits, UnitsPerInputCharacter: factor}}}, nil
 }
@@ -129,6 +144,7 @@ func spokenTestAudio(text string) llm.EncodedAudio {
 }
 
 type spokenTestProvider struct {
+	fixtureAudio            *llm.EncodedAudio
 	design, confirm, speech int
 	lastCandidate           llm.CandidateHandle
 	lastVoice               llm.VoiceHandle
@@ -137,6 +153,12 @@ type spokenTestProvider struct {
 	hook                    func()
 }
 
+func (p *spokenTestProvider) audio(text string) llm.EncodedAudio {
+	if p.fixtureAudio != nil {
+		return *p.fixtureAudio
+	}
+	return spokenTestAudio(text)
+}
 func (p *spokenTestProvider) DesignVoice(_ context.Context, r llm.VoiceDesignRequest) (llm.VoiceDesignResponse, error) {
 	p.design++
 	if p.hook != nil {
@@ -146,7 +168,7 @@ func (p *spokenTestProvider) DesignVoice(_ context.Context, r llm.VoiceDesignReq
 	}
 	out := llm.VoiceDesignResponse{Evidence: llm.SpeechEvidence{RequestID: fmt.Sprintf("design-%d", p.design), Units: []llm.SpeechUnitEvidence{{Unit: llm.SpeechUnitCharacterCost, Quantity: fmt.Sprint(len([]rune(r.PreviewText)))}}}}
 	for i := 0; i < 3; i++ {
-		out.Candidates = append(out.Candidates, llm.VoiceCandidate{Handle: llm.CandidateHandle(fmt.Sprintf("private-candidate-%d-%d", p.design, i)), Audio: spokenTestAudio(fmt.Sprintf("%d-%d", p.design, i))})
+		out.Candidates = append(out.Candidates, llm.VoiceCandidate{Handle: llm.CandidateHandle(fmt.Sprintf("private-candidate-%d-%d", p.design, i)), Audio: p.audio(fmt.Sprintf("%d-%d", p.design, i))})
 	}
 	return out, nil
 }
@@ -167,7 +189,7 @@ func (p *spokenTestProvider) ConfirmVoice(_ context.Context, r llm.VoiceConfirma
 func (p *spokenTestProvider) SynthesizeSpeech(_ context.Context, r llm.SpeechRequest) (llm.SpeechResponse, error) {
 	p.speech++
 	p.lastVoice = r.Voice
-	return llm.SpeechResponse{Audio: spokenTestAudio(r.Text), Evidence: llm.SpeechEvidence{RequestID: fmt.Sprintf("speech-%d", p.speech), Units: []llm.SpeechUnitEvidence{{Unit: llm.SpeechUnitCharacterCost, Quantity: fmt.Sprint(len([]rune(r.Text)))}}}}, nil
+	return llm.SpeechResponse{Audio: p.audio(r.Text), Evidence: llm.SpeechEvidence{RequestID: fmt.Sprintf("speech-%d", p.speech), Units: []llm.SpeechUnitEvidence{{Unit: llm.SpeechUnitCharacterCost, Quantity: fmt.Sprint(len([]rune(r.Text)))}}}}, nil
 }
 
 type spokenTestPublisher struct {
@@ -233,7 +255,7 @@ func spokenGenerationFresh(t *testing.T) *spokenGenerationFixture {
 	objects := &spokenTestObjects{data: map[string][]byte{}}
 	library := spoken.NewService(store, p, objects)
 	provider := &spokenTestProvider{}
-	deps := spokenapp.GenerationDeps{Library: library, Operations: store, Profiles: p, Prices: p, Ledger: ledger, Models: usage.SpeechMeter{Provider: provider, Ledger: ledger}, Jobs: spokenapp.NewJobs(q), Transactions: spokenTransactions{h.Writer}, Objects: objects}
+	deps := spokenapp.GenerationDeps{Qualifications: p, Library: library, Operations: store, Profiles: p, Prices: p, Ledger: ledger, Models: usage.SpeechMeter{Provider: provider, Ledger: ledger}, Jobs: spokenapp.NewJobs(q), Transactions: spokenTransactions{h.Writer}, Objects: objects}
 	pub := &spokenTestPublisher{base: spokenPublishLibraries{deps}}
 	deps.Publisher = pub
 	f := &spokenGenerationFixture{t: t, path: path, handle: h, store: store, jobs: js, queue: q, library: library, generation: spokenapp.NewGenerationService(deps), profiles: p, provider: provider, objects: objects, publisher: pub, ledger: ledger, admission: admission}
@@ -735,7 +757,7 @@ func (f *spokenGenerationFixture) reopen() {
 	f.admission = jobAdmission{ledger: f.ledger, plans: plans, jobs: f.jobs}
 	f.queue.Admit(f.admission)
 	f.library = spoken.NewService(f.store, f.profiles, f.objects)
-	deps := spokenapp.GenerationDeps{Library: f.library, Operations: f.store, Profiles: f.profiles, Prices: f.profiles, Ledger: f.ledger, Models: usage.SpeechMeter{Provider: f.provider, Ledger: f.ledger}, Jobs: spokenapp.NewJobs(f.queue), Transactions: spokenTransactions{h.Writer}, Objects: f.objects}
+	deps := spokenapp.GenerationDeps{Qualifications: f.profiles, Library: f.library, Operations: f.store, Profiles: f.profiles, Prices: f.profiles, Ledger: f.ledger, Models: usage.SpeechMeter{Provider: f.provider, Ledger: f.ledger}, Jobs: spokenapp.NewJobs(f.queue), Transactions: spokenTransactions{h.Writer}, Objects: f.objects}
 	f.publisher.base = spokenPublishLibraries{deps}
 	deps.Publisher = f.publisher
 	f.generation = spokenapp.NewGenerationService(deps)

@@ -7,6 +7,7 @@ import (
 	"github.com/postpilot/backend/internal/llm"
 	"github.com/postpilot/backend/internal/voice/spoken"
 	"github.com/postpilot/backend/internal/voice/spoken/store/sqlc"
+	"math/big"
 	"time"
 )
 
@@ -69,6 +70,34 @@ func (s *Store) ReserveOperation(ctx context.Context, o spoken.Operation) (out s
 			}
 			if n > 0 {
 				return spoken.ErrOperationUnresolved
+			}
+		}
+		if o.QualificationSessionID != "" {
+			limit, ok := new(big.Rat).SetString(o.QualificationLimitUSD)
+			if !ok || limit.Sign() < 0 {
+				return spoken.ErrQualificationBudget
+			}
+			total, ok := new(big.Rat).SetString(o.QualificationReservedUSD)
+			if !ok || total.Sign() < 0 {
+				return spoken.ErrQualificationBudget
+			}
+			previous, err := tx.ListQualificationOperations(ctx, o.OwnerID, o.QualificationSessionID)
+			if err != nil {
+				return err
+			}
+			for _, operation := range previous {
+				priorLimit, ok := new(big.Rat).SetString(operation.QualificationLimitUSD)
+				if !ok || priorLimit.Cmp(limit) != 0 {
+					return spoken.ErrQualificationBudget
+				}
+				bound, ok := new(big.Rat).SetString(operation.QualificationReservedUSD)
+				if !ok || bound.Sign() < 0 {
+					return spoken.ErrQualificationBudget
+				}
+				total.Add(total, bound)
+			}
+			if total.Cmp(limit) > 0 {
+				return spoken.ErrQualificationBudget
 			}
 		}
 		o.State = spoken.OperationReserved
@@ -314,4 +343,20 @@ func (s *Store) SaveProbeAudio(ctx context.Context, o spoken.Operation, index in
 		current.Evidence[index] = p.Evidence
 		return tx.updateOperation(ctx, current, current.State)
 	})
+}
+
+func (s *Store) ListQualificationOperations(ctx context.Context, owner, session string) ([]spoken.Operation, error) {
+	rows, err := s.read.QualificationOperations(ctx, sqlc.QualificationOperationsParams{Owner: owner, Session: session})
+	if err != nil {
+		return nil, err
+	}
+	out := make([]spoken.Operation, 0, len(rows))
+	for _, row := range rows {
+		o, err := operationFromRow(row)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, o)
+	}
+	return out, nil
 }

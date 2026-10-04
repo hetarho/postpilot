@@ -32,6 +32,9 @@ func workFailure(err error) error {
 	if errors.Is(err, spokenapp.ErrQualificationOnly) {
 		return connect.NewError(connect.CodePermissionDenied, errors.New("owned qualification session required"))
 	}
+	if errors.Is(err, spoken.ErrQualificationBudget) {
+		return connect.NewError(connect.CodeFailedPrecondition, errors.New("qualification session budget exhausted; a new approved session is required"))
+	}
 	if errors.Is(err, usage.ErrUnitApproval) || errors.Is(err, usage.ErrUnitPricing) {
 		return connect.NewError(connect.CodeFailedPrecondition, errors.New("voice estimate changed or unavailable; request a new estimate"))
 	}

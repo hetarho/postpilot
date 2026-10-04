@@ -29,6 +29,7 @@ func IsJobKind(kind string) bool {
 }
 
 type Operation struct {
+	QualificationLimitUSD, QualificationReservedUSD                             string
 	SampleAssetID                                                               string
 	ID, OwnerID, Kind, State, JobID, IdempotencyKey, RequestDigest, ScopeDigest string
 	DraftID, VoiceID, CandidateID                                               string
@@ -66,6 +67,7 @@ type OperationLedger interface {
 	GetOperationRequest(context.Context, string, string, string) (Operation, error)
 	GetOperation(context.Context, string, string) (Operation, error)
 	ListRecoverableOperations(context.Context) ([]Operation, error)
+	ListQualificationOperations(context.Context, string, string) ([]Operation, error)
 	BindOperation(context.Context, string, string, string) error
 	ClaimOperation(context.Context, string, string, string) error
 	ClaimProbeCall(context.Context, string, string, int) error

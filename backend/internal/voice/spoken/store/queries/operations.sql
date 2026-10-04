@@ -19,3 +19,6 @@ OR (state='cancelled' AND (received_handle<>'' OR json_extract(snapshot_json,'$.
 SELECT * FROM spoken_probe_audio WHERE owner_id = ? AND voice_id = ? AND input_digest = ?;
 -- name: InsertProbeAudio :exec
 INSERT INTO spoken_probe_audio(owner_id,voice_id,input_digest,origin_operation_id,origin_job_id,asset_id,evidence_json,timing_json) VALUES (?,?,?,?,?,?,?,?);
+
+-- name: QualificationOperations :many
+SELECT * FROM spoken_voice_operations WHERE owner_id=sqlc.arg(owner) AND json_extract(snapshot_json,'$.QualificationSessionID')=sqlc.arg(session) ORDER BY created_at,id;

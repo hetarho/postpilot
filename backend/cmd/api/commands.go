@@ -82,6 +82,12 @@ func runCommand(args []string) bool {
 		return false
 	}
 	ctx := context.Background()
+	if args[0] == "spoken-qualification" {
+		if err := runSpokenQualification(ctx, args[1:], os.Stdout); err != nil {
+			fatal("spoken-qualification", err)
+		}
+		return true
+	}
 	if args[0] == "media-manifest" {
 		if len(args) != 1 {
 			fatal("media-manifest", fmt.Errorf("usage: api media-manifest"))

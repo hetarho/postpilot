@@ -178,6 +178,53 @@ func (q *Queries) InsertProbeAudio(ctx context.Context, arg InsertProbeAudioPara
 	return err
 }
 
+const qualificationOperations = `-- name: QualificationOperations :many
+SELECT id, owner_id, kind, state, job_id, idempotency_key, request_digest, scope_digest, candidate_id, received_handle, sample_asset_id, snapshot_json, created_at, updated_at FROM spoken_voice_operations WHERE owner_id=?1 AND json_extract(snapshot_json,'$.QualificationSessionID')=?2 ORDER BY created_at,id
+`
+
+type QualificationOperationsParams struct {
+	Owner   string
+	Session string
+}
+
+func (q *Queries) QualificationOperations(ctx context.Context, arg QualificationOperationsParams) ([]SpokenVoiceOperation, error) {
+	rows, err := q.db.QueryContext(ctx, qualificationOperations, arg.Owner, arg.Session)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []SpokenVoiceOperation
+	for rows.Next() {
+		var i SpokenVoiceOperation
+		if err := rows.Scan(
+			&i.ID,
+			&i.OwnerID,
+			&i.Kind,
+			&i.State,
+			&i.JobID,
+			&i.IdempotencyKey,
+			&i.RequestDigest,
+			&i.ScopeDigest,
+			&i.CandidateID,
+			&i.ReceivedHandle,
+			&i.SampleAssetID,
+			&i.SnapshotJson,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const recoverableOperations = `-- name: RecoverableOperations :many
 SELECT id, owner_id, kind, state, job_id, idempotency_key, request_digest, scope_digest, candidate_id, received_handle, sample_asset_id, snapshot_json, created_at, updated_at FROM spoken_voice_operations WHERE state IN ('reserved','queued','claimed','received') ORDER BY created_at,id
 `

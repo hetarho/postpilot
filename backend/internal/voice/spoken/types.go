@@ -18,12 +18,13 @@ const AudioPublicationTimeout = 2 * time.Minute
 const AudioPrefix = "private/spoken/"
 
 var (
-	ErrNotFound         = errors.New("spoken voice not found")
-	ErrInvalid          = errors.New("invalid spoken voice input")
-	ErrConflict         = errors.New("spoken voice revision changed")
-	ErrImmutable        = errors.New("confirmed sound identity is immutable")
-	ErrAuditionRequired = errors.New("selected candidate must be auditioned")
-	ErrMediaUnavailable = errors.New("spoken sample unavailable")
+	ErrQualificationBudget = errors.New("qualification exceeds approved cumulative supplier ceiling")
+	ErrNotFound            = errors.New("spoken voice not found")
+	ErrInvalid             = errors.New("invalid spoken voice input")
+	ErrConflict            = errors.New("spoken voice revision changed")
+	ErrImmutable           = errors.New("confirmed sound identity is immutable")
+	ErrAuditionRequired    = errors.New("selected candidate must be auditioned")
+	ErrMediaUnavailable    = errors.New("spoken sample unavailable")
 )
 
 // Profile is an immutable, price-free snapshot acquired through a catalog port.

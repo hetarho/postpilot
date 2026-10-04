@@ -33,16 +33,17 @@ type Jobs interface {
 }
 type Publisher interface{ LibraryForOperation(string) *spoken.Service }
 type GenerationDeps struct {
-	Library      *spoken.Service
-	Operations   spoken.OperationStorage
-	Profiles     spoken.ProfileResolver
-	Prices       BudgetPricer
-	Ledger       Ledger
-	Models       llm.SpeechProvider
-	Jobs         Jobs
-	Transactions Transactions
-	Publisher    Publisher
-	Objects      spoken.AudioObjects
+	Qualifications QualificationReader
+	Library        *spoken.Service
+	Operations     spoken.OperationStorage
+	Profiles       spoken.ProfileResolver
+	Prices         BudgetPricer
+	Ledger         Ledger
+	Models         llm.SpeechProvider
+	Jobs           Jobs
+	Transactions   Transactions
+	Publisher      Publisher
+	Objects        spoken.AudioObjects
 }
 type GenerationService struct {
 	GenerationDeps
@@ -51,7 +52,7 @@ type GenerationService struct {
 }
 
 func NewGenerationService(d GenerationDeps) *GenerationService {
-	if d.Library == nil || d.Operations == nil || d.Profiles == nil || d.Prices == nil || d.Ledger == nil || d.Models == nil || d.Jobs == nil || d.Transactions == nil || d.Publisher == nil || d.Objects == nil {
+	if d.Qualifications == nil || d.Library == nil || d.Operations == nil || d.Profiles == nil || d.Prices == nil || d.Ledger == nil || d.Models == nil || d.Jobs == nil || d.Transactions == nil || d.Publisher == nil || d.Objects == nil {
 		panic("spoken generation dependencies required")
 	}
 	return &GenerationService{GenerationDeps: d, coordinator: Coordinator{d.Transactions}, newID: operationID}
@@ -278,6 +279,24 @@ func (s *GenerationService) Start(ctx context.Context, owner string, tier plan.P
 	o.ID = s.newID()
 	o.IdempotencyKey = key
 	o.RequestDigest = requestDigest
+	if o.QualificationSessionID != "" {
+		session, e := s.Qualifications.Session(ctx, owner, o.QualificationSessionID)
+		if e != nil {
+			return spoken.Operation{}, e
+		}
+		if session.OwnerID != owner || session.ProfileID != o.Profile.ID || session.Revision != o.Profile.Revision || !session.ExpiresAt.After(time.Now()) {
+			return spoken.Operation{}, ErrQualificationOnly
+		}
+		maximum, e := qualificationUSD(session.MaximumUSD)
+		if e != nil {
+			return spoken.Operation{}, e
+		}
+		reserved, e := budgetsUSD(p.budgets)
+		if e != nil {
+			return spoken.Operation{}, e
+		}
+		o.QualificationLimitUSD, o.QualificationReservedUSD = maximum.RatString(), reserved.RatString()
+	}
 	// Check an already consumed idempotent start before reading its consumed quote.
 	prior, created, err := s.Operations.ReserveOperation(ctx, o)
 	if err != nil {

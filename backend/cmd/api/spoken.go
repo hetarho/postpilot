@@ -31,7 +31,7 @@ func (s spokenPublishLibraries) LibraryForOperation(id string) *spoken.Service {
 }
 func newSpokenGeneration(c *contexts) *spokenapp.GenerationService {
 	p := c.platform
-	d := spokenapp.GenerationDeps{Library: c.spoken, Operations: spokenstore.New(p.db.Writer, p.db.Reader), Profiles: spokenProfiles{p.speechCatalog}, Prices: modelcatalogapp.SpeechBudgets{Profiles: p.speechCatalog}, Ledger: c.ledger, Models: c.metered, Jobs: spokenapp.NewJobs(c.jobs), Transactions: spokenTransactions{p.db.Writer}, Objects: p.bucket}
+	d := spokenapp.GenerationDeps{Qualifications: spokenQualificationCatalog{p.speechCatalog}, Library: c.spoken, Operations: spokenstore.New(p.db.Writer, p.db.Reader), Profiles: spokenProfiles{p.speechCatalog}, Prices: modelcatalogapp.SpeechBudgets{Profiles: p.speechCatalog}, Ledger: c.ledger, Models: c.metered, Jobs: spokenapp.NewJobs(c.jobs), Transactions: spokenTransactions{p.db.Writer}, Objects: p.bucket}
 	d.Publisher = spokenPublishLibraries{d}
 	return spokenapp.NewGenerationService(d)
 }
