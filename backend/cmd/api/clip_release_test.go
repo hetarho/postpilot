@@ -446,7 +446,9 @@ func newReleaseHarness(t *testing.T, mode string, stress bool, clocks ...func() 
 	}
 	// A separate purchased lot proves overage cannot drain unrelated available
 	// credits. SQL constraints and same-lot refunds are inspected after recovery.
-	if _, err = d.Writer.Exec("INSERT INTO credit_lots(id,user_id,kind,granted,remaining,created_at) VALUES ('release-extra','release-user','purchased',5000,5000,?)", time.Now().UTC().Format(time.RFC3339Nano)); err != nil {
+	// The release user holds no paid coverage, so this lot is the whole balance: it
+	// must cover any mode's FX-priced hold (a 22-call generation holds ~6600).
+	if _, err = d.Writer.Exec("INSERT INTO credit_lots(id,user_id,kind,granted,remaining,created_at) VALUES ('release-extra','release-user','purchased',100000,100000,?)", time.Now().UTC().Format(time.RFC3339Nano)); err != nil {
 		t.Fatal(err)
 	}
 	cfg := &config.Config{ClipWorkRoot: filepath.Join(root, "work"), ClipFFmpegPath: "/usr/local/bin/ffmpeg", ClipFFprobePath: "/usr/local/bin/ffprobe", ClipResvgPath: "/usr/local/bin/resvg", ClipFontPaths: map[string]string{
@@ -908,7 +910,13 @@ func (h *releaseHarness) exercise(mode string) {
 	}
 	charged := int(*a.FinalChargeCredits)
 	held := int(a.GetReservedCredits())
-	if charged > held || charged > int(maxCredits) || charged < 0 || h.balance() != h.before-charged {
+	// A failed attempt the provider did not cause is compensated with half its charge, rounded
+	// up, as a separate lot (QUOTA-60), so the balance falls by the net debit.
+	compensation := int(a.GetCompensationCredits())
+	if compensation < 0 || compensation > (charged+1)/2 || (wantStatus == "done" && compensation != 0) {
+		t.Fatal("compensation outside QUOTA-60", a)
+	}
+	if charged > held || charged > int(maxCredits) || charged < 0 || h.balance() != h.before-charged+compensation {
 		t.Fatal("credit ceiling/debit violated", a)
 	}
 	if !h.master && int(a.GetRefundCredits()) != held-charged {
@@ -1019,7 +1027,7 @@ func (h *releaseHarness) exercise(mode string) {
 			t.Fatal(err)
 		}
 	}
-	if h.balance() != h.before-charged || int(h.provider.posts.Load()) != wantCalls {
+	if h.balance() != h.before-charged+compensation || int(h.provider.posts.Load()) != wantCalls {
 		t.Fatal("recovery charged/replayed work")
 	}
 	if next, e := h.jobs.PickNextQueued(ctx, time.Now()); !errors.Is(e, job.ErrNotFound) || next.ID != "" {
