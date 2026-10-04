@@ -23,65 +23,53 @@ type CandidateUsage struct {
 // in the frozen snapshot because preparation happens later, in the worker, from the snapshot
 // alone.
 func (s *Service) SnapshotWriteInput(ctx context.Context, userID, postSlug string, observeModel llm.ModelRef, targetLength *int, observeFiles *[]string, snapshotOnly bool) ([]byte, error) {
-	post, err := s.posts.AttachedImages(ctx, userID, postSlug)
+	var profile Profile
+	in, err := s.startPreconditions(ctx, userID, postSlug, startStage{
+		// The editor's comparison writes its result into the post, so a published one refuses
+		// it. A snapshot-only comparison writes nothing there and reads a published post freely
+		// (MODEL-31).
+		readsPublished: snapshotOnly,
+		// Frozen here, once, for the whole comparison, through the very freeze Start makes:
+		// brief, 지침, 기억 and ticked rules (GEN-18, MEM-19, MODEL-30). Both candidates then
+		// read one identical set out of this snapshot, so their prompts differ only by model ref
+		// — and a different set is a different frozen input, a different hash. It runs before
+		// the post's own observations are dropped below, because the memory key reads them
+		// (MEM-7).
+		beforeVoice: func(post *PostInput) error {
+			post.TargetLength = cloneOptionalInt(targetLength)
+			material, err := s.freezeWriteMaterial(ctx, *post)
+			if err != nil {
+				return err
+			}
+			*post = material.onto(*post)
+			return nil
+		},
+		withVoice: func(post PostInput, voiceID string) error {
+			loaded, err := s.profileForTopic(ctx, userID, voiceID, post.TargetLanguage, post.Title+" "+post.Memo, contentTags(post.Content))
+			if err != nil {
+				return fmt.Errorf("load voice profile: %w", err)
+			}
+			profile = loaded
+			return nil
+		},
+		comparison: true,
+		// The same per-run observe and video checks and the same selection freeze the ordinary
+		// enqueue makes: a comparison that cannot observe the post's clips would compare two
+		// writers working from half the material, it must not re-pay for eyesight it already
+		// has, and it must not write from a photo nothing has looked at.
+		observe: observePicked, observeModel: observeModel.String(), observeFiles: observeFiles,
+	})
 	if err != nil {
 		return nil, err
 	}
-	// The editor's comparison writes its result into the post, so a published one refuses it.
-	// A snapshot-only comparison writes nothing there and reads a published post freely
-	// (MODEL-31).
-	if post.Published && !snapshotOnly {
-		return nil, ErrPostPublished
-	}
-	if !post.TargetLanguage.Valid() {
-		return nil, ErrLanguageRequired
-	}
-	post.TargetLength = cloneOptionalInt(targetLength)
-	// Frozen here, once, for the whole comparison, through the very freeze Start makes: brief,
-	// 지침, 기억 and ticked rules (GEN-18, MEM-19, MODEL-30). Both candidates then
-	// read one identical set out of this snapshot, so their prompts differ only by model ref —
-	// and a different set is a different frozen input, a different hash. It runs before the
-	// post's own observations are dropped below, because the memory key reads them (MEM-7).
-	material, err := s.freezeWriteMaterial(ctx, post)
-	if err != nil {
-		return nil, err
-	}
-	post = material.onto(post)
-	voiceID, err := activeVoice(post)
-	if err != nil {
-		return nil, err
-	}
-	profile, err := s.profileForTopic(ctx, userID, voiceID, post.TargetLanguage, post.Title+" "+post.Memo, contentTags(post.Content))
-	if err != nil {
-		return nil, fmt.Errorf("load voice profile: %w", err)
-	}
-	if len(post.Images) > 0 {
-		if !modelEnabled(s.models, observeModel, llm.StageNameObserve) {
-			return nil, ErrObserveModelRequired
-		}
-		// The same per-run video check the ordinary enqueue makes: a comparison that cannot
-		// observe the post's clips would compare two writers working from half the material.
-		if err := s.refuseVideoBlindObserveModel(post.Images, observeModel); err != nil {
-			return nil, err
-		}
-	}
-	// The same freeze the ordinary enqueue performs, for the same reason and through the
-	// same helper: the comparison must not re-pay for eyesight it already has, and it must
-	// not write from a photo nothing has looked at.
-	var frozen *[]string
-	var known []Observation
-	if len(post.Images) > 0 {
-		files, snapshot := freezeObserveSelection(post.Images, post.Observations, observeFiles)
-		frozen = &files
-		known = snapshot
-	}
+	post := in.post
 	// The post's own copy is dropped: the snapshot's Observations field is the ONE the
 	// candidates read, and two copies of the same fact in one frozen input could disagree.
 	post.Observations = nil
 	return encodeWriteSnapshot(writeSnapshot{
-		TargetLanguage: post.TargetLanguage,
-		ObserveModel:   observeModel.String(), ObserveFiles: frozen,
-		Post: post, Profile: profile, Observations: known, SnapshotOnly: snapshotOnly,
+		TargetLanguage: in.language,
+		ObserveModel:   observeModel.String(), ObserveFiles: in.observe.files,
+		Post: post, Profile: profile, Observations: in.observe.observations, SnapshotOnly: snapshotOnly,
 	})
 }
 

@@ -86,7 +86,6 @@
 | T572 | Delete the pre-FX pricing regime from the ledger | QUOTA ARCH | T569 | todo |
 | T573 | Delete the non-Portable renderer and the legacy plan paths | ARCH | - | todo |
 | T574 | One cut timeline for the render graph, the sampler and the browser drawing | CDS CLIP ARCH | T573 | todo |
-| T575 | Check generation start preconditions and plan enqueue calls in one place each | ARCH | - | todo |
 | T576 | State the export window, upgrade proration and term end once | QUOTA BILL ARCH | T572 | todo |
 | T578 | Define what a refunded payment funded once | BILL ARCH | T570 | todo |
 | T579 | Make the clip release smoke green again | ARCH | T574 | todo |
@@ -98,6 +97,7 @@
 - ops: lower TEMPLATE_PHOTO_ROW_MAX / VITE_TEMPLATE_PHOTO_ROW_MAX to 3 wherever production sets them explicitly (VPS .env, Cloudflare build vars).
 
 ## log
+- 261005 T575 done: one precondition chain for every generation start (each keeps its check order), one observe+write call plan, one refusal mapping, one comparison create-enqueue-link helper; BE suite green
 - 261005 T577 done: export panel and template editor state machines moved into widget model hooks and a new features/edit-template slice; FE suite 382/3186 green
 - 261005 create-task QUOTA r34 BILL r9 review/perf-cost-261004: T569–T579 (11 tasks: F10 hold, BILL-22 refunds, the 8 held maintainability findings, release smoke); review converted again
 - 261005 update-ssot QUOTA r34 BILL r9: QUOTA-14✎ a voice analysis holds its real prompt size (perf-cost F10); BILL-22+ a captured payment that cannot be applied is refunded in full automatically (perf-cost F12)
@@ -117,4 +117,3 @@
 - 261004 T563 done: a second pack refund records like the first, definitive cancel refusals release frozen credits after a read-back, review-skipped renewals are logged, expired quotes purged; BE suite green
 - 261004 T562 done: billing pass survives an unapplicable order (to review), charges carry Idempotency-Key, fresh intents wait 2 min, only definitive refusals fail, annual step advances next_grant_at alone, Toss client 30 s timeout; BE suite green
 - 261004 T561 done: migration 0129 rebuilds generation_jobs without kind-naming CHECKs (scoped FK guard); PickNextQueued takes first stages from Go; BE suite green
-- 261004 T551 done: migration 0128 indexes generation_jobs project/post lookups and usage job_id; the checkpoint trigger skips sampling jobs; HoldForJob reads the read pool; BE suite green
