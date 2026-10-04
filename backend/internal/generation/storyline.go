@@ -10,14 +10,9 @@ import (
 	"github.com/postpilot/backend/internal/llm"
 )
 
-// StorylineCompletionBudget is a storyline call's completion cap (GEN-68, GEN-69). The answer is
-// short, but a reasoning model spends its thinking inside the same cap, so it stays at the
-// write floor rather than at what the paragraphs alone would need (GEN-22).
-const StorylineCompletionBudget int = 8192
-
 // StartStorylineRequest is 스토리라인 먼저 or 다시 만들기 on the way in (GEN-68). TargetLanguage,
-// VoiceID and ObserveCalls are resolved by StartStoryline; the enqueue adapter reads them for
-// the row and the hold.
+// VoiceID, ObserveCalls and WriteNativeEffort are resolved by StartStoryline; the enqueue adapter
+// reads them for the row and the hold.
 type StartStorylineRequest struct {
 	UserID       string
 	PostSlug     string
@@ -28,6 +23,9 @@ type StartStorylineRequest struct {
 	TargetLanguage Language
 	VoiceID        string
 	ObserveCalls   int
+	// WriteNativeEffort is frozen from the write model at enqueue, as Start freezes it, so the
+	// hold prices exactly the cap the call sends (GEN-22).
+	WriteNativeEffort bool
 }
 
 // StorylineJob is one queued storyline job as the worker hands it over.
@@ -40,13 +38,15 @@ type StorylineJob struct {
 }
 
 // StartStorylineRevisionRequest is the storyline space's AI request on the way in (GEN-69).
+// WriteNativeEffort is frozen at enqueue as StartStorylineRequest's is.
 type StartStorylineRevisionRequest struct {
-	UserID         string
-	PostSlug       string
-	Request        string
-	WriteModel     string
-	TargetLanguage Language
-	VoiceID        string
+	UserID            string
+	PostSlug          string
+	Request           string
+	WriteModel        string
+	TargetLanguage    Language
+	VoiceID           string
+	WriteNativeEffort bool
 }
 
 // StorylineRevisionJob is one queued storyline request as the worker hands it over.
@@ -81,9 +81,11 @@ func (s *Service) StartStoryline(ctx context.Context, request StartStorylineRequ
 	if err := s.refusePendingExperiment(ctx, request.UserID, request.PostSlug); err != nil {
 		return "", err
 	}
-	if err := s.requireWriteModel(request.WriteModel); err != nil {
+	writeInfo, err := s.requireWriteModel(request.WriteModel)
+	if err != nil {
 		return "", err
 	}
+	request.WriteNativeEffort = writeInfo.ReasoningNativeEffort
 	if len(post.Images) == 0 {
 		request.ObserveModel = ""
 	} else {
@@ -99,7 +101,7 @@ func (s *Service) StartStoryline(ctx context.Context, request StartStorylineRequ
 	if err != nil {
 		return "", err
 	}
-	options := storylineOptions{TargetLanguage: post.TargetLanguage, storylineMaterial: material}
+	options := storylineOptions{TargetLanguage: post.TargetLanguage, storylineMaterial: material, WriteNativeEffort: request.WriteNativeEffort}
 	if len(post.Images) > 0 {
 		files, carried := freezeObserveSelection(post.Images, post.Observations, request.ObserveFiles)
 		options.ObserveFiles = &files
@@ -150,9 +152,11 @@ func (s *Service) StartStorylineRevision(ctx context.Context, request StartStory
 	if err := s.refusePendingExperiment(ctx, request.UserID, request.PostSlug); err != nil {
 		return "", err
 	}
-	if err := s.requireWriteModel(request.WriteModel); err != nil {
+	writeInfo, err := s.requireWriteModel(request.WriteModel)
+	if err != nil {
 		return "", err
 	}
+	request.WriteNativeEffort = writeInfo.ReasoningNativeEffort
 	material, err := s.freezeStorylineMaterial(ctx, post)
 	if err != nil {
 		return "", err
@@ -160,7 +164,7 @@ func (s *Service) StartStorylineRevision(ctx context.Context, request StartStory
 	payload, err := encodeStorylineRevisionPayload(storylineRevisionOptions{
 		TargetLanguage: post.TargetLanguage, Request: request.Request,
 		Storyline: cloneParagraphs(post.Storyline.Paragraphs), storylineMaterial: material,
-		Observations: cloneObservations(post.Observations),
+		Observations: cloneObservations(post.Observations), WriteNativeEffort: request.WriteNativeEffort,
 	})
 	if err != nil {
 		return "", fmt.Errorf("encode storyline revision payload: %w", err)
@@ -173,14 +177,15 @@ func (s *Service) StartStorylineRevision(ctx context.Context, request StartStory
 }
 
 // requireWriteModel is Start's write-model precondition: an enabled model that serves the write
-// stage, which is the stage a storyline call runs on.
-func (s *Service) requireWriteModel(value string) error {
+// stage, which is the stage a storyline call runs on. It answers the model's catalog entry, whose
+// native-effort flag the start freezes.
+func (s *Service) requireWriteModel(value string) (llm.ModelInfo, error) {
 	write, ok := parseModelRef(value)
 	info, found := s.models.Resolve(write)
 	if !ok || !found || info.Disabled || !info.ServesStage(llm.StageNameWrite) {
-		return ErrWriteModelRequired
+		return llm.ModelInfo{}, ErrWriteModelRequired
 	}
-	return nil
+	return info, nil
 }
 
 // WriteStoryline handles one storyline job (GEN-68): the observe step a generation runs, then
@@ -213,7 +218,7 @@ func (s *Service) WriteStoryline(ctx context.Context, job StorylineJob, progress
 		Memories: post.Memories,
 	})
 	progress("storyline", 0, 1)
-	paragraphs, err := s.storylineCall(ctx, job.WriteModel, system, user, shown)
+	paragraphs, err := s.storylineCall(ctx, job.WriteModel, options.WriteNativeEffort, system, user, shown)
 	if err != nil {
 		return err
 	}
@@ -253,7 +258,7 @@ func (s *Service) ReviseStoryline(ctx context.Context, job StorylineRevisionJob,
 		Memories: options.Memories, Current: options.Storyline, Request: options.Request,
 	})
 	progress("storyline", 0, 1)
-	paragraphs, err := s.storylineCall(ctx, job.WriteModel, system, user, shown)
+	paragraphs, err := s.storylineCall(ctx, job.WriteModel, options.WriteNativeEffort, system, user, shown)
 	if err != nil {
 		return err
 	}
@@ -269,9 +274,10 @@ func (s *Service) ReviseStoryline(ctx context.Context, job StorylineRevisionJob,
 }
 
 // storylineCall is the one call both storyline jobs make: the write model at low reasoning with
-// the storyline's budget, answered in the storyline schema and parsed against what was shown.
-// A bad or cut-off answer fails as GEN-20 says (MODEL_OUTPUT_INVALID, MODEL_OUTPUT_TRUNCATED).
-func (s *Service) storylineCall(ctx context.Context, writeModel, system, user string, shown []string) ([]StorylineParagraph, error) {
+// the storyline's budget for the native-effort flag the start froze, answered in the storyline
+// schema and parsed against what was shown. A bad or cut-off answer fails as GEN-20 says
+// (MODEL_OUTPUT_INVALID, MODEL_OUTPUT_TRUNCATED).
+func (s *Service) storylineCall(ctx context.Context, writeModel string, nativeEffort bool, system, user string, shown []string) ([]StorylineParagraph, error) {
 	model, ok := parseModelRef(writeModel)
 	if !ok {
 		return nil, ErrWriteModelRequired
@@ -281,7 +287,7 @@ func (s *Service) storylineCall(ctx context.Context, writeModel, system, user st
 		Messages:  []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(user)}}},
 		Reasoning: llm.ReasoningLow,
 		Stage:     llm.StageNameWrite,
-		MaxTokens: StorylineCompletionBudget,
+		MaxTokens: s.budget.Storyline(nativeEffort),
 	}
 	if info, found := s.models.Resolve(model); found && info.StructuredOutput {
 		request.JSONSchema = StorylineAnswerSchema()
@@ -334,6 +340,9 @@ type storylineOptions struct {
 	// payload's presence rules.
 	ObserveFiles *[]string
 	Observations []Observation
+	// WriteNativeEffort sizes the call's budget as the hold priced it; a payload without it is
+	// an ordinary model's.
+	WriteNativeEffort bool
 }
 
 func (o storylineOptions) onto(post PostInput) PostInput {
@@ -351,7 +360,8 @@ type storylineRevisionOptions struct {
 	Request        string
 	Storyline      []StorylineParagraph
 	storylineMaterial
-	Observations []Observation
+	Observations      []Observation
+	WriteNativeEffort bool
 }
 
 type storylinePayload struct {
@@ -362,6 +372,7 @@ type storylinePayload struct {
 	Memories          []string             `json:"memories,omitempty"`
 	ObserveFiles      *[]string            `json:"observe_files"`
 	Observations      []observationPayload `json:"observations,omitempty"`
+	WriteNativeEffort bool                 `json:"write_native_effort,omitempty"`
 }
 
 type storylineRevisionPayload struct {
@@ -373,6 +384,7 @@ type storylineRevisionPayload struct {
 	DefaultGuidelines []string                 `json:"default_guidelines,omitempty"`
 	Memories          []string                 `json:"memories,omitempty"`
 	Observations      []observationPayload     `json:"observations,omitempty"`
+	WriteNativeEffort bool                     `json:"write_native_effort,omitempty"`
 }
 
 func encodeStorylinePayload(options storylineOptions) ([]byte, error) {
@@ -387,6 +399,7 @@ func encodeStorylinePayload(options storylineOptions) ([]byte, error) {
 		Memories:          cloneTexts(options.Memories),
 		ObserveFiles:      cloneOptionalTexts(options.ObserveFiles),
 		Observations:      encodeObservations(options.Observations),
+		WriteNativeEffort: options.WriteNativeEffort,
 	})
 }
 
@@ -407,8 +420,9 @@ func decodeStorylinePayload(raw []byte) (storylineOptions, error) {
 			DefaultGuidelines: cloneTexts(payload.DefaultGuidelines),
 			Memories:          cloneTexts(payload.Memories),
 		},
-		ObserveFiles: cloneOptionalTexts(payload.ObserveFiles),
-		Observations: decodeObservations(payload.Observations),
+		ObserveFiles:      cloneOptionalTexts(payload.ObserveFiles),
+		Observations:      decodeObservations(payload.Observations),
+		WriteNativeEffort: payload.WriteNativeEffort,
 	}, nil
 }
 
@@ -425,6 +439,7 @@ func encodeStorylineRevisionPayload(options storylineRevisionOptions) ([]byte, e
 		DefaultGuidelines: cloneTexts(options.DefaultGuidelines),
 		Memories:          cloneTexts(options.Memories),
 		Observations:      encodeObservations(options.Observations),
+		WriteNativeEffort: options.WriteNativeEffort,
 	})
 }
 
@@ -451,7 +466,8 @@ func decodeStorylineRevisionPayload(raw []byte) (storylineRevisionOptions, error
 			DefaultGuidelines: cloneTexts(payload.DefaultGuidelines),
 			Memories:          cloneTexts(payload.Memories),
 		},
-		Observations: decodeObservations(payload.Observations),
+		Observations:      decodeObservations(payload.Observations),
+		WriteNativeEffort: payload.WriteNativeEffort,
 	}, nil
 }
 

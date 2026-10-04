@@ -57,6 +57,9 @@ type CompletionBudget interface {
 	// Revise is a revision's cap. A revision re-emits the whole PostContent, so its budget
 	// has to fit what already exists and not only what was asked for.
 	Revise(contentChars int, targetLength *int, nativeEffort bool) int
+	// Storyline is a storyline call's cap. The answer is short and does not grow with a target
+	// length, but a native-effort model reasons inside the same cap (GEN-22).
+	Storyline(nativeEffort bool) int
 	// Observation is one observation batch's cap, independent of the writer's.
 	Observation() int
 }

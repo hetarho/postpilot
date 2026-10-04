@@ -225,6 +225,7 @@ func TestStorylinePayloadsRoundTrip(t *testing.T) {
 			Guidelines: []string{"g"}, DefaultGuidelines: []string{"d"}, Memories: []string{"m"},
 		},
 		ObserveFiles: &files, Observations: []Observation{{File: "IMG_1.jpg", Scene: "가게"}},
+		WriteNativeEffort: true,
 	}
 	raw, err := encodeStorylinePayload(options)
 	if err != nil {
@@ -239,6 +240,7 @@ func TestStorylinePayloadsRoundTrip(t *testing.T) {
 		Storyline:         []StorylineParagraph{{Text: "가게 앞", Files: []string{"IMG_1.jpg"}}},
 		storylineMaterial: storylineMaterial{Guidelines: []string{"g"}},
 		Observations:      []Observation{{File: "IMG_1.jpg", Scene: "가게"}},
+		WriteNativeEffort: true,
 	}
 	raw, err = encodeStorylineRevisionPayload(request)
 	if err != nil {
@@ -249,8 +251,63 @@ func TestStorylinePayloadsRoundTrip(t *testing.T) {
 		t.Fatalf("storyline request payload = %+v, %v\nwant %+v", backRequest, err, request)
 	}
 	legacy, err := decodeStorylinePayload([]byte(`{"observe_files":null}`))
-	if err != nil || legacy.TargetLanguage != LanguageKorean {
-		t.Fatalf("a payload without a language = %+v, %v", legacy, err)
+	if err != nil || legacy.TargetLanguage != LanguageKorean || legacy.WriteNativeEffort {
+		t.Fatalf("a payload without a language or a native-effort flag = %+v, %v", legacy, err)
+	}
+}
+
+// GEN-22: a storyline start freezes the write model's native-effort flag, as Start does, and
+// both storyline calls size their budget from the frozen flag: the 8,192 floor for an ordinary
+// model, doubled for one that reasons inside the cap — even after the catalog flag flips.
+func TestStorylineCallsSendTheBudgetTheStartFroze(t *testing.T) {
+	for _, nativeEffort := range []bool{false, true} {
+		want := 8192
+		if nativeEffort {
+			want = 16384
+		}
+		input := storylinePost()
+		input.Images = nil
+		input.Storyline = &Storyline{Paragraphs: []StorylineParagraph{{Text: "가게 앞"}}}
+		posts := &fakePosts{input: input}
+		jobs := &fakeJobs{id: "job"}
+		models := storylineModels(`{"storyline":[{"text":"메모만으로 짭니다.","files":[]}]}`)
+		info := models.infos[writeRef]
+		info.ReasoningNativeEffort = nativeEffort
+		models.infos[writeRef] = info
+		svc := storylineService(posts, jobs, models, testDeps())
+		if _, err := svc.StartStoryline(context.Background(), StartStorylineRequest{UserID: "alice", PostSlug: "post", WriteModel: writeRef.String()}); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := svc.StartStorylineRevision(context.Background(), StartStorylineRevisionRequest{
+			UserID: "alice", PostSlug: "post", Request: "짧게", WriteModel: writeRef.String(),
+		}); err != nil {
+			t.Fatal(err)
+		}
+		if jobs.storylineStarts[0].WriteNativeEffort != nativeEffort || jobs.storylineRequests[0].WriteNativeEffort != nativeEffort {
+			t.Fatalf("native effort %v: the starts froze %v and %v", nativeEffort, jobs.storylineStarts[0].WriteNativeEffort, jobs.storylineRequests[0].WriteNativeEffort)
+		}
+		// The operator flips the catalog flag between the enqueue and the run: the call still
+		// sends what the hold priced.
+		info.ReasoningNativeEffort = !nativeEffort
+		models.infos[writeRef] = info
+		if err := svc.WriteStoryline(context.Background(), StorylineJob{
+			UserID: "alice", PostSlug: "post", WriteModel: writeRef.String(), Payload: jobs.storylinePayloads[0],
+		}, func(string, int, int) {}); err != nil {
+			t.Fatal(err)
+		}
+		if err := svc.ReviseStoryline(context.Background(), StorylineRevisionJob{
+			UserID: "alice", PostSlug: "post", WriteModel: writeRef.String(), Payload: jobs.storylineRequestPayloads[0],
+		}, func(string, int, int) {}); err != nil {
+			t.Fatal(err)
+		}
+		if len(models.calls) != 2 {
+			t.Fatalf("native effort %v: %d calls, want one per storyline job", nativeEffort, len(models.calls))
+		}
+		for i, call := range models.calls {
+			if call.request.MaxTokens != want {
+				t.Errorf("native effort %v: call %d sent %d tokens, want %d", nativeEffort, i, call.request.MaxTokens, want)
+			}
+		}
 	}
 }
 
@@ -285,7 +342,7 @@ func TestWriteStorylineObservesThenMakesOneCall(t *testing.T) {
 			t.Fatalf("a call before the storyline call sent no photo: %+v", call.request)
 		}
 	}
-	if last.ref != writeRef || last.request.HasImages() || last.request.MaxTokens != StorylineCompletionBudget ||
+	if last.ref != writeRef || last.request.HasImages() || last.request.MaxTokens != 8192 ||
 		last.request.Reasoning != llm.ReasoningLow || !bytes.Equal(last.request.JSONSchema, StorylineAnswerSchema()) {
 		t.Fatalf("storyline call = %+v", last.request)
 	}

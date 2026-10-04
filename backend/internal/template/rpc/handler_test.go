@@ -296,9 +296,14 @@ func (j rpcJobs) RequestPayload(context.Context, string, string) ([]byte, error)
 	return j.payload, j.read
 }
 
+// rpcBudget is the completion cap policy at the platform's default floor.
+type rpcBudget struct{}
+
+func (rpcBudget) Short(bool) int { return 8192 }
+
 func requestHandler(models rpcModels, samples rpcSamples, jobs rpcJobs) *Handler {
 	h := handler(&fakeStore{})
-	h.service.ConfigureRequests(models, samples, jobs, template.RequestLimits{MaxChars: 100, CorrectionsMax: 3, WishesMax: 5, WishMaxChars: 200})
+	h.service.ConfigureRequests(models, samples, jobs, rpcBudget{}, template.RequestLimits{MaxChars: 100, CorrectionsMax: 3, WishesMax: 5, WishMaxChars: 200})
 	return h
 }
 

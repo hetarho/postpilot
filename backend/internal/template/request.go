@@ -11,11 +11,6 @@ import (
 	"github.com/postpilot/backend/internal/llm"
 )
 
-// RequestCompletionBudget is the completion cap of every template-request call, stated once so
-// the call and the credit hold that prices it (QUOTA-67) can never disagree. A full body is
-// 4000 characters of Korean and a JSON envelope around four fields.
-const RequestCompletionBudget = 8192
-
 // failureReasonRequestAnswerInvalid is the durable failure of a request whose answer still broke
 // the grammar or a field rule after every correction (TMPL-60).
 const failureReasonRequestAnswerInvalid = "TEMPLATE_REQUEST_ANSWER_INVALID"
@@ -93,7 +88,8 @@ type RequestRun struct {
 }
 
 // RequestJob is what the queue is asked to hold: the frozen input, and the calls the credit hold
-// prices — the first one and every correction allowed (QUOTA-67).
+// prices — the first one and every correction allowed (QUOTA-67), each at the cap the input
+// froze for every call.
 type RequestJob struct {
 	UserID           string
 	WriteModel       string
@@ -125,21 +121,34 @@ type RequestJobs interface {
 	RequestPayload(ctx context.Context, userID, jobID string) ([]byte, error)
 }
 
+// RequestBudget is the completion cap policy, received from its owner (cmd/api, from the
+// platform completion budget) rather than held here: this context asks for the cap its call
+// needs and holds no number of its own (ARCH-21).
+type RequestBudget interface {
+	// Short is a short structured answer's cap — four fields and the wishes do not grow with a
+	// target length — with the reasoning headroom a native-effort model needs (GEN-22).
+	Short(nativeEffort bool) int
+}
+
 type requests struct {
 	models  RequestModels
 	samples RequestSamples
 	jobs    RequestJobs
+	budget  RequestBudget
 	limits  RequestLimits
 }
 
 // ConfigureRequests wires the template request (TMPL-58). It is the one template surface that
 // calls a provider or enqueues a job (TMPL-16), so everything else in this context runs
 // without it.
-func (s *Service) ConfigureRequests(models RequestModels, samples RequestSamples, jobs RequestJobs, limits RequestLimits) {
+func (s *Service) ConfigureRequests(models RequestModels, samples RequestSamples, jobs RequestJobs, budget RequestBudget, limits RequestLimits) {
 	if !limits.valid() {
 		panic("template: request limits must be positive")
 	}
-	s.requests = &requests{models: models, samples: samples, jobs: jobs, limits: limits}
+	if budget == nil {
+		panic("template: a completion budget policy is required")
+	}
+	s.requests = &requests{models: models, samples: samples, jobs: jobs, budget: budget, limits: limits}
 }
 
 // RequestLimits are the configured request ceilings, or the zero value before wiring.
@@ -157,6 +166,9 @@ type requestInput struct {
 	Text     string   `json:"text"`
 	Draft    Draft    `json:"draft"`
 	Sample   *Sample  `json:"sample,omitempty"`
+	// CompletionTokens is every call's cap, sized at start from the model's native effort and
+	// priced by the hold, so a catalog flag flipped before the run cannot make the two differ.
+	CompletionTokens int `json:"completion_tokens,omitempty"`
 }
 
 // StartRequest refuses everything it can before any credit is held, then enqueues the request
@@ -196,7 +208,7 @@ func (s *Service) StartRequest(ctx context.Context, userID string, start StartRe
 	if !ok || !found || info.Disabled || !info.ServesStage(llm.StageNameWrite) {
 		return "", ErrWriteModelRequired
 	}
-	input := requestInput{Language: start.Language, Text: text, Draft: start.Draft}
+	input := requestInput{Language: start.Language, Text: text, Draft: start.Draft, CompletionTokens: r.budget.Short(info.ReasoningNativeEffort)}
 	if slug := strings.TrimSpace(start.SamplePostSlug); slug != "" {
 		sample, err := r.samples.RequestSample(ctx, userID, slug)
 		if err != nil {
@@ -213,7 +225,7 @@ func (s *Service) StartRequest(ctx context.Context, userID string, start StartRe
 	}
 	return r.jobs.EnqueueRequest(ctx, RequestJob{
 		UserID: userID, WriteModel: start.WriteModel, Payload: payload,
-		Calls: 1 + r.limits.CorrectionsMax, CompletionTokens: RequestCompletionBudget,
+		Calls: 1 + r.limits.CorrectionsMax, CompletionTokens: input.CompletionTokens,
 	})
 }
 
@@ -258,13 +270,18 @@ func (s *Service) RunRequest(ctx context.Context, run RequestRun, progress func(
 	if err != nil {
 		return err
 	}
+	// The cap the start froze and the hold priced; a payload without one is an ordinary model's.
+	maxTokens := input.CompletionTokens
+	if maxTokens <= 0 {
+		maxTokens = r.budget.Short(false)
+	}
 	messages := []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(requestMessage(input))}}}
 	calls := 1 + r.limits.CorrectionsMax
 	for attempt := 0; ; attempt++ {
 		progress("write", attempt, calls)
 		request := llm.Request{
 			System: system, Messages: messages,
-			Stage: llm.StageNameWrite, Reasoning: llm.ReasoningLow, MaxTokens: RequestCompletionBudget,
+			Stage: llm.StageNameWrite, Reasoning: llm.ReasoningLow, MaxTokens: maxTokens,
 		}
 		if info, found := r.models.Resolve(ref); found && info.StructuredOutput {
 			request.JSONSchema = RequestAnswerSchema()

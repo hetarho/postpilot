@@ -370,6 +370,12 @@ type generationJobs struct {
 	budget config.LLMCompletionBudget
 }
 
+// generationBudget is the platform budget policy under the names generation asks by: a storyline
+// is a short structured answer, so its call is sent exactly what storylinePricingCalls holds.
+type generationBudget struct{ config.LLMCompletionBudget }
+
+func (b generationBudget) Storyline(nativeEffort bool) int { return b.Short(nativeEffort) }
+
 // EnqueueGeneration stores the payload generation encoded, byte for byte: the frozen options are
 // generation's own, and this adapter only routes the row, guards it and prices its hold.
 func (a generationJobs) EnqueueGeneration(ctx context.Context, request generation.StartRequest, payload []byte) (string, error) {
@@ -451,7 +457,7 @@ func (a generationJobs) EnqueueStorylineRevision(ctx context.Context, request ge
 	id, err := a.queue.Enqueue(ctx, job.NewJob{
 		Kind: job.KindReviseStoryline, UserID: request.UserID, Subjects: subjects, Guards: guards,
 		WriteModel: request.WriteModel, TargetLanguage: request.TargetLanguage.String(), Payload: payload,
-		PricingCalls: storylineRevisionPricingCalls(request),
+		PricingCalls: storylineRevisionPricingCalls(request, a.budget),
 	})
 	return id, generationEnqueueError(err)
 }
@@ -468,7 +474,8 @@ func generationEnqueueError(err error) error {
 }
 
 // storylinePricingCalls prices a storyline job over its frozen set, as a generation is priced
-// (QUOTA-13): the observe calls it will make, then one storyline call at its own budget.
+// (QUOTA-13): the observe calls it will make, then one storyline call at the short budget for
+// the native-effort flag the start froze — the cap the call will send.
 func storylinePricingCalls(request generation.StartStorylineRequest, budget config.LLMCompletionBudget) []job.PlannedCall {
 	calls := make([]job.PlannedCall, 0, 2)
 	if request.ObserveModel != "" && request.ObserveCalls > 0 {
@@ -478,18 +485,19 @@ func storylinePricingCalls(request generation.StartStorylineRequest, budget conf
 	}
 	if request.WriteModel != "" {
 		calls = append(calls, job.PlannedCall{
-			Ref: request.WriteModel, Stage: "write", Count: 1, CompletionTokens: generation.StorylineCompletionBudget,
+			Ref: request.WriteModel, Stage: "write", Count: 1, CompletionTokens: budget.Short(request.WriteNativeEffort),
 		})
 	}
 	return calls
 }
 
-// storylineRevisionPricingCalls prices the storyline request: one storyline call.
-func storylineRevisionPricingCalls(request generation.StartStorylineRevisionRequest) []job.PlannedCall {
+// storylineRevisionPricingCalls prices the storyline request: one storyline call, sized as
+// storylinePricingCalls sizes it.
+func storylineRevisionPricingCalls(request generation.StartStorylineRevisionRequest, budget config.LLMCompletionBudget) []job.PlannedCall {
 	if request.WriteModel == "" {
 		return nil
 	}
-	return []job.PlannedCall{{Ref: request.WriteModel, Stage: "write", Count: 1, CompletionTokens: generation.StorylineCompletionBudget}}
+	return []job.PlannedCall{{Ref: request.WriteModel, Stage: "write", Count: 1, CompletionTokens: budget.Short(request.WriteNativeEffort)}}
 }
 
 func generationPricingCalls(request generation.StartRequest, budget config.LLMCompletionBudget) []job.PlannedCall {

@@ -344,6 +344,32 @@ func TestRevisionBudgetFitsTheContentItReEmits(t *testing.T) {
 	}
 }
 
+// A short structured answer (a storyline, a template request) gets the writer's floor with no
+// per-character scaling, and only a native-effort model gets the reasoning headroom (GEN-22) —
+// bounded by the ceiling either way.
+func TestShortBudgetDoublesOnlyForNativeEffort(t *testing.T) {
+	t.Setenv("LLM_MAX_TOKENS_DEFAULT", "")
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	budget := cfg.LLMCompletionBudget
+	if got := budget.Short(false); got != 8192 {
+		t.Errorf("an ordinary short answer = %d, want the floor 8192", got)
+	}
+	if got := budget.Short(true); got != 16384 {
+		t.Errorf("a native-effort short answer = %d, want twice the floor", got)
+	}
+	tight := LLMCompletionBudget{WriteFloor: 8192, Ceiling: 12000}
+	if got := tight.Short(true); got != tight.Ceiling {
+		t.Errorf("native-effort headroom escaped the ceiling: %d, want %d", got, tight.Ceiling)
+	}
+	below := LLMCompletionBudget{WriteFloor: 8192, Ceiling: 4096}
+	if got := below.Short(false); got != below.Ceiling {
+		t.Errorf("a floor above the ceiling = %d, want the ceiling %d", got, below.Ceiling)
+	}
+}
+
 // A6: the writing budget follows the post's requested length, floored so a post with no
 // target is never squeezed and capped so a mistyped target cannot ask for an unbounded
 // completion. A unit test over the derivation, not a provider call.

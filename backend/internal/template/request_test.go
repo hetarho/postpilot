@@ -81,6 +81,18 @@ func (f *fakeRequestJobs) RequestPayload(context.Context, string, string) ([]byt
 	return f.payload, f.payloadEr
 }
 
+// fakeBudget is the completion cap policy in the shape internal/platform/config serves it at the
+// default floor: 8,192, doubled for a native-effort model. It lives here rather than importing
+// config: the template context receives a policy and holds no number of its own.
+type fakeBudget struct{}
+
+func (fakeBudget) Short(nativeEffort bool) int {
+	if nativeEffort {
+		return 16384
+	}
+	return 8192
+}
+
 func requestLimits() RequestLimits {
 	return RequestLimits{MaxChars: 50, CorrectionsMax: 3, WishesMax: 2, WishMaxChars: 10}
 }
@@ -107,7 +119,7 @@ func newRequestHarness(t *testing.T) requestHarness {
 		samples: &fakeSamples{sample: Sample{Title: "성수 카페", Text: "들어가자마자 향이 좋았다\n\n[사진]"}},
 		jobs:    &fakeRequestJobs{},
 	}
-	service.ConfigureRequests(h.models, h.samples, h.jobs, requestLimits())
+	service.ConfigureRequests(h.models, h.samples, h.jobs, fakeBudget{}, requestLimits())
 	return h
 }
 
@@ -128,12 +140,15 @@ func TestStartRequestEnqueuesTheFrozenInputWithEveryCorrectionPriced(t *testing.
 		t.Fatalf("enqueued %d jobs", len(h.jobs.enqueued))
 	}
 	job := h.jobs.enqueued[0]
-	if job.UserID != "alice" || job.WriteModel != "openrouter/writer" || job.Calls != 4 || job.CompletionTokens != RequestCompletionBudget {
+	if job.UserID != "alice" || job.WriteModel != "openrouter/writer" || job.Calls != 4 || job.CompletionTokens != 8192 {
 		t.Fatalf("job = %+v", job)
 	}
 	var input requestInput
 	if err := json.Unmarshal(job.Payload, &input); err != nil {
 		t.Fatal(err)
+	}
+	if input.CompletionTokens != job.CompletionTokens {
+		t.Fatalf("the input froze %d tokens, the hold priced %d", input.CompletionTokens, job.CompletionTokens)
 	}
 	// An unparsable draft body is accepted: the request may be "fix this".
 	if input.Text != "맛집 리뷰 템플릿" || input.Draft.Body != "<write>인트로" || input.Sample == nil || input.Sample.Title != "성수 카페" {
@@ -281,8 +296,44 @@ func TestRunRequestSavesACheckedAnswer(t *testing.T) {
 		t.Fatalf("calls = %d", len(h.models.requests))
 	}
 	req := h.models.requests[0]
-	if req.Stage != llm.StageNameWrite || req.Reasoning != llm.ReasoningLow || req.MaxTokens != RequestCompletionBudget || req.JSONSchema == nil {
+	// A payload frozen without a cap is an ordinary model's: the floor.
+	if req.Stage != llm.StageNameWrite || req.Reasoning != llm.ReasoningLow || req.MaxTokens != 8192 || req.JSONSchema == nil {
 		t.Fatalf("request = %+v", req)
+	}
+}
+
+// GEN-22, QUOTA-67: a native-effort model's request freezes the doubled cap at start, the hold
+// prices it, and the first call and every correction send it — even after the catalog flag
+// flips between the enqueue and the run.
+func TestARequestSendsTheCapItsStartFrozeOnEveryCall(t *testing.T) {
+	h := newRequestHarness(t)
+	h.models.info.ReasoningNativeEffort = true
+	if _, err := h.service.StartRequest(context.Background(), "alice", validStart()); err != nil {
+		t.Fatal(err)
+	}
+	job := h.jobs.enqueued[0]
+	var input requestInput
+	if err := json.Unmarshal(job.Payload, &input); err != nil {
+		t.Fatal(err)
+	}
+	if job.CompletionTokens != 16384 || input.CompletionTokens != 16384 {
+		t.Fatalf("the hold priced %d and the input froze %d, want both 16384", job.CompletionTokens, input.CompletionTokens)
+	}
+	h.models.info.ReasoningNativeEffort = false
+	notJSON := llm.Response{Text: "템플릿을 만들었어요!", FinishReason: "stop"}
+	h.models.responses = []llm.Response{notJSON, notJSON, notJSON, goodAnswer(t)}
+	if err := h.service.RunRequest(context.Background(), RequestRun{
+		ID: "job-1", UserID: "alice", WriteModel: job.WriteModel, Payload: job.Payload,
+	}, func(string, int, int) {}); err != nil {
+		t.Fatal(err)
+	}
+	if len(h.models.requests) != 4 {
+		t.Fatalf("calls = %d, want the first and three corrections", len(h.models.requests))
+	}
+	for i, req := range h.models.requests {
+		if req.MaxTokens != 16384 {
+			t.Errorf("call %d sent %d tokens, want the frozen 16384", i, req.MaxTokens)
+		}
 	}
 }
 

@@ -184,8 +184,10 @@ type drainHarness struct {
 	posts      *post.Service
 	guidelines *guideline.Service
 	generation *generation.Service
-	voiceID    string
-	waitDone   func(id string)
+	// admitter is the credit gate every enqueue passed through, with the holds it priced.
+	admitter *stubAdmitter
+	voiceID  string
+	waitDone func(id string)
 }
 
 func newDrainHarness(t *testing.T, models *recordingModels) *drainHarness {
@@ -220,10 +222,11 @@ func newDrainHarness(t *testing.T, models *recordingModels) *drainHarness {
 	}
 	makeVoice(t, handle, "alice", defaultVoice.ID)
 	queue := job.New(jobstore.New(handle.Writer, handle.Reader, jobKindsForTest()), time.Millisecond, jobReportingForTest())
-	queue.Admit(&stubAdmitter{})
+	admitter := &stubAdmitter{}
+	queue.Admit(admitter)
 	generationSvc := generation.NewService(
 		generationPosts{service: postSvc}, freezeProfiles{}, models, freezeImages{},
-		generationJobs{queue: queue, budget: testCompletionBudget()}, 4, generation.DefaultReasoningPolicy(), testCompletionBudget(),
+		generationJobs{queue: queue, budget: testCompletionBudget()}, 4, generation.DefaultReasoningPolicy(), generationBudget{testCompletionBudget()},
 		generation.Deps{
 			Experiments: freezeExperiments{}, Templates: generationTemplates{service: templateSvc},
 			Guidelines: generationGuidelines{service: guidelineSvc}, Memories: freezeMemories{},
@@ -260,7 +263,7 @@ func newDrainHarness(t *testing.T, models *recordingModels) *drainHarness {
 	}
 	return &drainHarness{
 		ctx: ctx, handle: handle, posts: postSvc, guidelines: guidelineSvc, generation: generationSvc,
-		voiceID: defaultVoice.ID, waitDone: waitDone,
+		admitter: admitter, voiceID: defaultVoice.ID, waitDone: waitDone,
 	}
 }
 
@@ -383,7 +386,7 @@ func TestStorylineJobsDrainIntoThePostsStorylineAlone(t *testing.T) {
 		t.Fatal(err)
 	}
 	h.waitDone(id)
-	if got := models.last(); got.MaxTokens != generation.StorylineCompletionBudget || !bytes.Equal(got.JSONSchema, generation.StorylineAnswerSchema()) {
+	if got := models.last(); got.MaxTokens != testCompletionBudget().Short(false) || !bytes.Equal(got.JSONSchema, generation.StorylineAnswerSchema()) {
 		t.Fatalf("the storyline call asked for %d tokens with schema %s", got.MaxTokens, got.JSONSchema)
 	}
 	written, err := h.posts.Get(h.ctx, "alice", saved.Slug)
@@ -416,5 +419,51 @@ func TestStorylineJobsDrainIntoThePostsStorylineAlone(t *testing.T) {
 	}
 	if !strings.Contains(models.last().Messages[0].Parts[0].Text, "[수정 요청]\n골목부터 시작해 주세요") {
 		t.Fatalf("the request did not reach the prompt:\n%s", models.last().Messages[0].Parts[0].Text)
+	}
+}
+
+// GEN-22, QUOTA-14: both storyline kinds are held for exactly the cap their call sends — the
+// writer's 8,192 floor, doubled for a native-effort model that reasons inside it — through the
+// flag the start froze, not one re-read at run time.
+func TestStorylineJobsAreHeldForTheCapTheirCallSends(t *testing.T) {
+	for _, test := range []struct {
+		nativeEffort bool
+		want         int
+	}{{nativeEffort: false, want: 8192}, {nativeEffort: true, want: 16384}} {
+		models := &recordingModels{nativeEffort: test.nativeEffort, answer: `{"storyline":[{"text":"노포에 간 이유를 보여줍니다.","files":[]}]}`}
+		h := newDrainHarness(t, models)
+		saved := h.draft(t, "")
+		writer := llm.ModelRef{ProviderID: "p", ModelID: "writer"}.String()
+		id, err := h.generation.StartStoryline(h.ctx, generation.StartStorylineRequest{UserID: "alice", PostSlug: saved.Slug, WriteModel: writer})
+		if err != nil {
+			t.Fatal(err)
+		}
+		h.waitDone(id)
+		id, err = h.generation.StartStorylineRevision(h.ctx, generation.StartStorylineRevisionRequest{
+			UserID: "alice", PostSlug: saved.Slug, Request: "짧게 해 주세요", WriteModel: writer,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		h.waitDone(id)
+		if len(h.admitter.holds) != 2 {
+			t.Fatalf("native effort %v: %d holds, want one per storyline job", test.nativeEffort, len(h.admitter.holds))
+		}
+		for i, hold := range h.admitter.holds {
+			if len(hold.Calls) != 1 || hold.Calls[0].CompletionTokens != test.want {
+				t.Errorf("native effort %v: hold %d priced %+v, want one call at %d", test.nativeEffort, i, hold.Calls, test.want)
+			}
+		}
+		models.mu.Lock()
+		requests := append([]llm.Request(nil), models.requests...)
+		models.mu.Unlock()
+		if len(requests) != 2 {
+			t.Fatalf("native effort %v: %d calls, want one per storyline job", test.nativeEffort, len(requests))
+		}
+		for i, request := range requests {
+			if request.MaxTokens != test.want {
+				t.Errorf("native effort %v: call %d sent %d tokens, want the %d its hold priced", test.nativeEffort, i, request.MaxTokens, test.want)
+			}
+		}
 	}
 }

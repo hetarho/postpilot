@@ -753,6 +753,10 @@ func (b fakeBudget) Revise(contentChars int, targetLength *int, nativeEffort boo
 	return b.withHeadroom(b.forChars(chars), nativeEffort)
 }
 
+func (b fakeBudget) Storyline(nativeEffort bool) int {
+	return b.withHeadroom(min(b.floor, b.ceiling), nativeEffort)
+}
+
 func (b fakeBudget) Observation() int { return b.observe }
 
 func (b fakeBudget) forChars(chars int) int {

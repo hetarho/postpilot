@@ -53,21 +53,30 @@ func TestRevisionPricingUsesTheLargerFrozenLength(t *testing.T) {
 }
 
 // QUOTA-13: a storyline job is priced over its frozen set — the observe calls it will make and
-// one storyline call at its own budget — and the storyline request as that one call.
+// one storyline call at the short budget — and the storyline request as that one call. A frozen
+// native-effort flag doubles the storyline call's budget, as the call doubles it (GEN-22).
 func TestStorylinePricingCallsUseTheBudgetsTheCallsWillSend(t *testing.T) {
 	calls := storylinePricingCalls(generation.StartStorylineRequest{
 		ObserveModel: "openrouter/shared", WriteModel: "openrouter/writer", ObserveCalls: 2,
 	}, testCompletionBudget())
 	if len(calls) != 2 || calls[0].Count != 2 || calls[0].CompletionTokens != 1024 ||
-		calls[1].Ref != "openrouter/writer" || calls[1].Count != 1 || calls[1].CompletionTokens != generation.StorylineCompletionBudget {
+		calls[1].Ref != "openrouter/writer" || calls[1].Count != 1 || calls[1].CompletionTokens != 8192 {
 		t.Fatalf("storyline calls = %+v", calls)
 	}
 	reused := storylinePricingCalls(generation.StartStorylineRequest{ObserveModel: "openrouter/shared", WriteModel: "openrouter/writer"}, testCompletionBudget())
 	if len(reused) != 1 || reused[0].Ref != "openrouter/writer" {
 		t.Fatalf("a storyline reusing every observation = %+v, want the one call", reused)
 	}
-	request := storylineRevisionPricingCalls(generation.StartStorylineRevisionRequest{WriteModel: "openrouter/writer"})
-	if len(request) != 1 || request[0].Count != 1 || request[0].CompletionTokens != generation.StorylineCompletionBudget {
+	native := storylinePricingCalls(generation.StartStorylineRequest{WriteModel: "openrouter/reasoner", WriteNativeEffort: true}, testCompletionBudget())
+	if len(native) != 1 || native[0].CompletionTokens != 16384 {
+		t.Fatalf("a native-effort storyline = %+v, want the doubled floor", native)
+	}
+	request := storylineRevisionPricingCalls(generation.StartStorylineRevisionRequest{WriteModel: "openrouter/writer"}, testCompletionBudget())
+	if len(request) != 1 || request[0].Count != 1 || request[0].CompletionTokens != 8192 {
 		t.Fatalf("storyline request calls = %+v", request)
+	}
+	nativeRequest := storylineRevisionPricingCalls(generation.StartStorylineRevisionRequest{WriteModel: "openrouter/reasoner", WriteNativeEffort: true}, testCompletionBudget())
+	if len(nativeRequest) != 1 || nativeRequest[0].CompletionTokens != 16384 {
+		t.Fatalf("a native-effort storyline request = %+v, want the doubled floor", nativeRequest)
 	}
 }

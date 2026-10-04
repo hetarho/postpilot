@@ -32,13 +32,15 @@ type requestHarness struct {
 type stubRequestModels struct {
 	answers []string
 	calls   int
+	// nativeEffort is what the model resolves with as ReasoningNativeEffort.
+	nativeEffort bool
 	// entered and release hold the first call open, so a test can cancel while it runs.
 	entered chan struct{}
 	release chan struct{}
 }
 
 func (s *stubRequestModels) Resolve(llm.ModelRef) (llm.ModelInfo, bool) {
-	return llm.ModelInfo{Stages: []string{llm.StageNameWrite}, StructuredOutput: true}, true
+	return llm.ModelInfo{Stages: []string{llm.StageNameWrite}, StructuredOutput: true, ReasoningNativeEffort: s.nativeEffort}, true
 }
 
 func (s *stubRequestModels) Complete(context.Context, llm.ModelRef, llm.Request) (llm.Response, error) {
@@ -83,7 +85,7 @@ func newRequestHarness(t *testing.T) *requestHarness {
 		MaxPerAccount: 50, PhotoRowMax: 4, AskLabelMaxChars: 40, AskMaxPerBody: 10,
 	}, postNumberBounds()))
 	// The stub replaces the metered registry: this harness tests the queue and the context.
-	service.ConfigureRequests(models, stubRequestSamples{}, templateRequestJobs{queue: queue},
+	service.ConfigureRequests(models, stubRequestSamples{}, templateRequestJobs{queue: queue}, testCompletionBudget(),
 		template.RequestLimits{MaxChars: 12000, CorrectionsMax: 3, WishesMax: 5, WishMaxChars: 200})
 	return &requestHarness{d: d, queue: queue, service: service, models: models, admit: admit}
 }
@@ -96,19 +98,25 @@ func (h *requestHarness) start(t *testing.T, userID string) (string, error) {
 }
 
 // QUOTA-67: one admission plans the first call and every correction on the write stage, each at
-// the request's own completion cap.
+// the request's own completion cap — the short budget, doubled for a native-effort model (GEN-22).
 func TestTemplateRequestHoldsEveryCorrectionOnTheWriteStage(t *testing.T) {
-	h := newRequestHarness(t)
-	if _, err := h.start(t, "alice"); err != nil {
-		t.Fatal(err)
-	}
-	if len(h.admit.holds) != 1 {
-		t.Fatalf("holds = %+v", h.admit.holds)
-	}
-	hold := h.admit.holds[0]
-	want := job.PlannedCall{Ref: "p/m", Stage: llm.StageNameWrite, Count: 4, CompletionTokens: template.RequestCompletionBudget}
-	if hold.Kind != job.KindTemplateRequest || len(hold.Calls) != 1 || hold.Calls[0] != want {
-		t.Fatalf("hold = %+v", hold)
+	for _, test := range []struct {
+		nativeEffort bool
+		want         int
+	}{{nativeEffort: false, want: 8192}, {nativeEffort: true, want: 16384}} {
+		h := newRequestHarness(t)
+		h.models.nativeEffort = test.nativeEffort
+		if _, err := h.start(t, "alice"); err != nil {
+			t.Fatal(err)
+		}
+		if len(h.admit.holds) != 1 {
+			t.Fatalf("holds = %+v", h.admit.holds)
+		}
+		hold := h.admit.holds[0]
+		want := job.PlannedCall{Ref: "p/m", Stage: llm.StageNameWrite, Count: 4, CompletionTokens: test.want}
+		if hold.Kind != job.KindTemplateRequest || len(hold.Calls) != 1 || hold.Calls[0] != want {
+			t.Fatalf("native effort %v: hold = %+v", test.nativeEffort, hold)
+		}
 	}
 }
 

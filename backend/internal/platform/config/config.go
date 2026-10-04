@@ -149,6 +149,14 @@ func (b LLMCompletionBudget) Revise(contentChars int, targetLength *int, nativeE
 	return b.withReasoningHeadroom(b.forChars(max(contentChars, charsOf(targetLength))), nativeEffort)
 }
 
+// Short is the budget of a short structured answer whose visible output fits the floor — a
+// storyline's paragraphs, a template request's four fields. Neither grows with a target length,
+// so there is no per-character scaling; what a native-effort model reasons with still shares the
+// cap, so it gets the writer's headroom (GEN-22).
+func (b LLMCompletionBudget) Short(nativeEffort bool) int {
+	return b.withReasoningHeadroom(min(b.WriteFloor, b.Ceiling), nativeEffort)
+}
+
 // Observation is one observation batch's budget, independent of the writer's.
 func (b LLMCompletionBudget) Observation() int { return b.Observe }
 

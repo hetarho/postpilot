@@ -82,7 +82,6 @@
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | todo |
 | T551 | Index the job and admission lookups every poll and provider call makes | ARCH | - | todo |
 | T552 | Run a clip hold's live model-access check before its write transaction | ARCH | - | todo |
-| T553 | Size storyline and template-request completions through the stage budget policy | ARCH | - | todo |
 | T554 | Send a template-request correction with only the answer it corrects | ARCH | T553 | todo |
 | T555 | Make the comparison list light and bound a comparison's candidate fan-out | ARCH | - | todo |
 | T556 | Read voice samples once and leave an unchanged answer alone | ARCH | - | todo |
@@ -105,6 +104,7 @@
 - ops: lower TEMPLATE_PHOTO_ROW_MAX / VITE_TEMPLATE_PHOTO_ROW_MAX to 3 wherever production sets them explicitly (VPS .env, Cloudflare build vars).
 
 ## log
+- 261004 T553 done: storyline and template-request caps sized by LLMCompletionBudget.Short with native-effort headroom, frozen at start, hold = call; BE suite green
 - 261004 create-task review/perf-cost-261004: T551–T567 (17 tasks) from 29 adopted findings; F10 back to [?] (VOICE-23/QUOTA-14 planning change); review converted
 - 261004 create-task review/perf-cost-261004 start: 30 adopted findings (P1/P2 + cost/bug P3) → tasks from T551; implemented in order, one commit per task
 - 261004 review-code perf-cost-261004 ready: 38 findings (P1 3 · P2 16 · P3 19); 30 adopted, maintainability P3 F22 F24–F28 F36 F37 held [?]
@@ -124,4 +124,3 @@
 - 261004 ideation familiar-video-editing-and-dubbing start: continue from description-generated voice recommendation and resolve remaining editor/lifecycle choices
 - 261004 ideation familiar-video-editing-and-dubbing open: voice-creation milestone precedes dubbing; selective regeneration, independent captions and audio controls adopted; creation method/device/timing pending
 - 261004 ideation familiar-video-editing-and-dubbing start: voice creation precedes dubbing; record adopted regeneration, caption appearance and audio parity policies
-- 261004 ideation familiar-video-editing-and-dubbing open: first-round device/content/timing choices requested; remaining product proposals and engineering verification obligations separated

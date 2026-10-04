@@ -268,10 +268,11 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 
 	c.template = template.NewService(templatestore.New(handle.Writer, handle.Reader), templateLimits(cfg))
 	// The template request (TMPL-58) is the one template surface that calls a model: the
-	// metered registry, the post it may read as a sample, and the job it runs as.
+	// metered registry, the post it may read as a sample, the job it runs as, and the same
+	// budget policy generation asks its caps of.
 	c.template.ConfigureRequests(
 		templateModels{registry: c.metered}, templateSamples{service: c.post, photoRowMax: cfg.Template.PhotoRowMax},
-		templateRequestJobs{queue: c.jobs}, template.RequestLimits(cfg.TemplateRequest),
+		templateRequestJobs{queue: c.jobs}, cfg.LLMCompletionBudget, template.RequestLimits(cfg.TemplateRequest),
 	)
 	c.template.ConfigureEstimate(templateEstimates{rates: c.ledger})
 	c.post.SetTemplateDirectory(postTemplates{service: c.template})
@@ -325,7 +326,7 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 		generation.DefaultReasoningPolicy(),
 		// The budget policy is passed whole rather than as numbers: the stages ask their
 		// owner what their work needs, and this context holds no cap of its own.
-		cfg.LLMCompletionBudget,
+		generationBudget{cfg.LLMCompletionBudget},
 		generation.Deps{
 			// The experiment context is constructed after generation; the adapter resolves
 			// it at call time (see postExperiments).
