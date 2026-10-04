@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { createClient, type Transport } from '@connectrpc/connect'
-import { useTransport } from '@connectrpc/connect-query'
+import { useTransport, createConnectQueryKey } from '@connectrpc/connect-query'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { SpokenVoiceService } from '@/shared/api'
 import { API_URL } from '@/shared/config'
@@ -8,7 +8,15 @@ import type { SpokenDraftInput } from '../model/types'
 import { toSpokenDraft, toSpokenVoice } from './mappers'
 
 export const spokenScope = (transport: Transport, ownerId: string) =>
-  ['spoken-voice', transport, ownerId] as const
+  [
+    'spoken-voice',
+    createConnectQueryKey({
+      schema: SpokenVoiceService.method.listSpokenVoices,
+      transport,
+      cardinality: 'finite',
+    }),
+    ownerId,
+  ] as const
 export function useSpokenLibrary(ownerId: string, includeRemoved = false) {
   const transport = useTransport()
   const client = useMemo(() => createClient(SpokenVoiceService, transport), [transport])
@@ -67,15 +75,19 @@ export function useSpokenActions(ownerId: string) {
     if (!output) throw new Error('Missing spoken mutation result')
     return output
   }
+  function rememberDraft(draft: ReturnType<typeof toSpokenDraft>) {
+    cache.setQueryData([...spokenScope(transport, ownerId), 'draft', draft.id], draft)
+    return draft
+  }
   // Keys are caller-owned so a deliberate transport retry can repeat the same request.
   const create = (input: SpokenDraftInput, key: string) =>
     perform(() => client.createSpokenDraft({ input, idempotencyKey: key })).then((r) =>
-      toSpokenDraft(r.draft),
+      rememberDraft(toSpokenDraft(r.draft)),
     )
   const update = (id: string, revision: bigint, input: SpokenDraftInput, key: string) =>
     perform(() =>
       client.updateSpokenDraft({ id, expectedRevision: revision, input, idempotencyKey: key }),
-    ).then((r) => toSpokenDraft(r.draft))
+    ).then((r) => rememberDraft(toSpokenDraft(r.draft)))
   const removeDraft = (id: string, revision: bigint, key: string) =>
     perform(() => client.deleteSpokenDraft({ id, expectedRevision: revision, idempotencyKey: key }))
   const rename = (id: string, revision: bigint, name: string, key: string) =>
@@ -94,7 +106,7 @@ export function useSpokenActions(ownerId: string) {
         candidateId,
         idempotencyKey: key,
       }),
-    ).then((r) => toSpokenDraft(r.draft))
+    ).then((r) => rememberDraft(toSpokenDraft(r.draft)))
   const acknowledge = (
     draftId: string,
     revision: bigint,
@@ -110,7 +122,7 @@ export function useSpokenActions(ownerId: string) {
         playbackId,
         idempotencyKey: key,
       }),
-    ).then((r) => toSpokenDraft(r.draft))
+    ).then((r) => rememberDraft(toSpokenDraft(r.draft)))
   const sampleAccess = async (id: string) => {
     if (!ownerId) throw new Error('Authentication required')
     const result = await client.getSpokenSampleAccess({ id })

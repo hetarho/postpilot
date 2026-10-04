@@ -1,4 +1,5 @@
 export const nav = {
+  spokenVoices: 'Spoken voices',
   modelsGroup: 'AI model navigation',
   modelSettings: 'Change models',
   modelComparison: 'Compare models',

@@ -57,6 +57,7 @@ export const i18n = {
         '실제 생성과 청취·확정·재사용을 검증하는 본인 전용 세션을 준비합니다. 세션 준비만으로 생성하거나 비용을 사용하지 않습니다. 각 생성은 견적 승인 후 시작됩니다.',
       budget: '검증 전체 공급자 비용 상한 (USD)',
       prepareQualification: '검증 세션 준비',
+      openCreation: '이 세션으로 목소리 만들기',
       sessionPrepared:
         '검증 세션 {{session}}을 준비했습니다. 만료: {{at}}. 목소리 만들기에서 이 계정 전용 세션을 사용합니다.',
       operation: {
@@ -283,6 +284,7 @@ export const i18n = {
         'Prepare an owner-scoped session for live generation, audition, confirmation and reuse. Preparing a session generates no audio or charge. Each generation starts after quote approval.',
       budget: 'Total supplier qualification budget (USD)',
       prepareQualification: 'Prepare qualification session',
+      openCreation: 'Create voice with this session',
       sessionPrepared:
         'Session {{session}} is ready. Expires: {{at}}. The voice creation screen uses this owner-scoped session.',
       operation: {

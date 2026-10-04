@@ -52,6 +52,8 @@ it('addresses exactly the product’s URLs, whatever file assembles them', () =>
     '/publishing-agents',
     '/reset-password',
     '/signup',
+    '/spoken-voices',
+    '/spoken-voices/new',
     '/templates',
     '/templates/$templateId',
     '/templates/new',

@@ -170,7 +170,7 @@ describe('clip directory and setup', () => {
         .getAllByRole('link')
         .filter((link) => link.dataset.navLevel === 'group')
         .map((link) => link.getAttribute('href')),
-    ).toEqual(['/clips', '/video-templates', '/video-guidelines'])
+    ).toEqual(['/clips', '/spoken-voices', '/video-templates', '/video-guidelines'])
     directory.unmount()
     mount('/clips/project')
     await screen.findByLabelText('클립 제목')

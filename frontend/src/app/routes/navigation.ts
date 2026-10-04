@@ -75,6 +75,7 @@ export const CONTENT_GROUPS = {
   ],
   video: [
     { to: '/clips', labelKey: 'myVideos', icon: Scissors },
+    { to: '/spoken-voices', labelKey: 'spokenVoices', icon: Speech },
     { to: '/video-templates', labelKey: 'videoTemplates', icon: Clapperboard },
     { to: '/video-guidelines', labelKey: 'videoGuidelines', icon: ListVideo },
   ],

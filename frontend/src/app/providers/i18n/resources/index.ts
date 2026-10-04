@@ -1,3 +1,8 @@
+import { spokenVoiceResources } from '@/entities/spoken-voice/config/i18n'
+import { createSpokenVoiceResources } from '@/features/create-spoken-voice/config/i18n'
+import { manageSpokenVoiceResources } from '@/features/manage-spoken-voice/config/i18n'
+import { spokenCreationResources } from '@/widgets/spoken-voice-creation/config/i18n'
+import { spokenVoicesResources } from '@/pages/spoken-voices/config/i18n'
 import { i18n as logInI18n } from '@/features/log-in/config/i18n'
 import type { I18nFragment } from '@/shared/lib'
 import { common as enCommon } from './en/common'
@@ -120,6 +125,11 @@ import { postsI18n as editWithAiPostsI18n } from '@/features/edit-with-ai/config
 export const defaultNS = 'common' as const
 
 export const RESOURCE_NAMESPACES = [
+  'spokenVoice',
+  'createSpokenVoice',
+  'manageSpokenVoice',
+  'spokenCreation',
+  'spokenVoices',
   'common',
   'auth',
   'nav',
@@ -144,6 +154,11 @@ export const RESOURCE_NAMESPACES = [
  *  This list is the one file a new slice with its own strings touches — a one-line import
  *  instead of an edit inside a 1,100-line namespace file (ARCH-16). */
 export const FRAGMENTS: readonly I18nFragment[] = [
+  { namespace: 'spokenVoice', ...spokenVoiceResources },
+  { namespace: 'createSpokenVoice', ...createSpokenVoiceResources },
+  { namespace: 'manageSpokenVoice', ...manageSpokenVoiceResources },
+  { namespace: 'spokenCreation', ...spokenCreationResources },
+  { namespace: 'spokenVoices', ...spokenVoicesResources },
   logInI18n,
   extractMemoriesI18n,
   usePostMemoriesI18n,
@@ -248,6 +263,11 @@ export const FRAGMENTS: readonly I18nFragment[] = [
 
 export const resources = {
   ko: {
+    spokenVoice: spokenVoiceResources.ko,
+    createSpokenVoice: createSpokenVoiceResources.ko,
+    manageSpokenVoice: manageSpokenVoiceResources.ko,
+    spokenCreation: spokenCreationResources.ko,
+    spokenVoices: spokenVoicesResources.ko,
     common: koCommon,
     auth: { ...koAuth, ...logInI18n.ko },
     nav: koNav,
@@ -372,6 +392,11 @@ export const resources = {
     },
   },
   en: {
+    spokenVoice: spokenVoiceResources.en,
+    createSpokenVoice: createSpokenVoiceResources.en,
+    manageSpokenVoice: manageSpokenVoiceResources.en,
+    spokenCreation: spokenCreationResources.en,
+    spokenVoices: spokenVoicesResources.en,
     common: enCommon,
     auth: { ...enAuth, ...logInI18n.en },
     nav: enNav,

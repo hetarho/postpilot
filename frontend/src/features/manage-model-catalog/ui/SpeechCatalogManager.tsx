@@ -1,7 +1,16 @@
 import { useId, useState } from 'react'
+import { Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { useAdminSpeechProfiles, type AdminSpeechProfile } from '@/entities/model-catalog'
-import { AppFailureMessage, Button, FieldLabel, Notice, TextField, Typography } from '@/shared/ui'
+import {
+  AppFailureMessage,
+  Button,
+  FieldLabel,
+  Notice,
+  TextField,
+  Typography,
+  buttonStyles,
+} from '@/shared/ui'
 import { SpeechProfileForm } from './SpeechProfileForm'
 
 export function SpeechCatalogManager() {
@@ -124,12 +133,21 @@ export function SpeechCatalogManager() {
             {t('speechAdmin.prepareQualification')}
           </Button>
           {catalog.qualification?.profileId === testProfile.id && (
-            <Notice tone="success" role="status">
-              {t('speechAdmin.sessionPrepared', {
-                session: catalog.qualification.sessionId,
-                at: catalog.qualification.expiresAt,
-              })}
-            </Notice>
+            <div className="space-y-3">
+              <Notice tone="success" role="status">
+                {t('speechAdmin.sessionPrepared', {
+                  session: catalog.qualification.sessionId,
+                  at: catalog.qualification.expiresAt,
+                })}
+              </Notice>
+              <Link
+                to="/spoken-voices/new"
+                search={{ qualification: catalog.qualification.sessionId }}
+                className={buttonStyles({ variant: 'cta' })}
+              >
+                {t('speechAdmin.openCreation')}
+              </Link>
+            </div>
           )}
         </section>
       )}

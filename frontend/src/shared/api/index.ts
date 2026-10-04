@@ -480,6 +480,7 @@ export type {
 export {
   SpokenVoiceService,
   SpokenDraftSchema,
+  SpokenCandidateSchema,
   SpokenVoiceSchema,
   SpokenProfileSnapshotSchema,
   SpokenSampleAccessResponseSchema,
@@ -489,3 +490,10 @@ export type {
   SpokenVoice as ProtoSpokenVoice,
   SpokenProfileSnapshot as ProtoSpokenProfileSnapshot,
 } from './gen/postpilot/v1/spoken_voice_pb'
+export {
+  SpokenVoiceGenerationService,
+  SpokenOperationSchema,
+  SpokenOperationResponseSchema,
+  SpokenWorkQuoteSchema,
+} from './gen/postpilot/v1/spoken_voice_generation_pb'
+export type { SpokenOperation as ProtoSpokenOperation } from './gen/postpilot/v1/spoken_voice_generation_pb'

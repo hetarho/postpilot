@@ -3,6 +3,14 @@ import type { SpokenDraft, SpokenVoice, SpokenProfile, SpokenPhase } from '../mo
 
 function profile(p: ProtoSpokenProfileSnapshot | undefined): SpokenProfile {
   if (!p || !p.id || p.revision <= 0n) throw new Error('Missing spoken profile snapshot')
+  const grade =
+    p.grade === 'free' ||
+    p.grade === 'value' ||
+    p.grade === 'balanced' ||
+    p.grade === 'premium' ||
+    p.grade === 'top'
+      ? p.grade
+      : null
   return {
     id: p.id,
     revision: p.revision,
@@ -11,7 +19,7 @@ function profile(p: ProtoSpokenProfileSnapshot | undefined): SpokenProfile {
     speechModelId: p.speechModelId,
     designLabel: p.designLabel,
     speechLabel: p.speechLabel,
-    grade: p.grade,
+    grade,
     descriptionMax: p.descriptionMax,
     previewMax: p.previewMax,
     speechMax: p.speechMax,

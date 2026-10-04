@@ -1,5 +1,6 @@
 import { createRoute, lazyRouteComponent } from '@tanstack/react-router'
 import { clipsSearchSchema } from '@/pages/clips'
+import { spokenCreationSearchSchema } from '@/pages/spoken-voices'
 import { videoGroupRoute } from './tree'
 
 export const clipsRoute = createRoute({
@@ -47,10 +48,25 @@ export const videoGuidelinesRoute = createRoute({
   component: lazyRouteComponent(() => import('@/pages/video-guidelines'), 'VideoGuidelinesPage'),
 })
 
+export const spokenVoicesRoute = createRoute({
+  getParentRoute: () => videoGroupRoute,
+  path: '/spoken-voices',
+  component: lazyRouteComponent(() => import('@/pages/spoken-voices'), 'SpokenVoicesPage'),
+})
+export const newSpokenVoiceRoute = createRoute({
+  getParentRoute: () => videoGroupRoute,
+  path: '/spoken-voices/new',
+  validateSearch: spokenCreationSearchSchema,
+  staticData: { groupNav: 'hidden' },
+  component: lazyRouteComponent(() => import('@/pages/spoken-voices'), 'NewSpokenVoicePage'),
+})
+
 /** The group's routes, in the order the tree adds them: a static path always before the
  *  param that would otherwise swallow it. */
 export const clipRoutes = [
   clipsRoute,
+  spokenVoicesRoute,
+  newSpokenVoiceRoute,
   newClipRoute,
   clipRoute,
   videoTemplatesRoute,

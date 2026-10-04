@@ -7,7 +7,7 @@ export interface SpokenProfile {
   speechModelId: string
   designLabel: string
   speechLabel: string
-  grade: string
+  grade: 'free' | 'value' | 'balanced' | 'premium' | 'top' | null
   descriptionMax: number
   previewMax: number
   speechMax: number
@@ -55,3 +55,40 @@ export interface SpokenDraftInput {
   profileRevision: bigint
   qualificationSessionId: string
 }
+
+export type SpokenWorkKind = 'voice_design' | 'voice_confirm' | 'voice_reuse_probe'
+export type SpokenOperationState =
+  | 'reserved'
+  | 'queued'
+  | 'claimed'
+  | 'received'
+  | 'published'
+  | 'failed'
+  | 'unresolved'
+  | 'cancelled'
+export interface SpokenOperation {
+  id: string
+  kind: SpokenWorkKind
+  state: SpokenOperationState
+  jobId: string
+  draftId: string
+  voiceId: string
+  candidateId: string
+  resultId: string
+  failureReason: string
+}
+export interface SpokenWorkQuote {
+  id: string
+  maximumCredits: number
+  expiresAt: string
+  approvalRequired: boolean
+  existingVoiceId: string
+}
+export interface SpokenWorkInput {
+  kind: 'voice_design' | 'voice_confirm'
+  draftId: string
+  revision: bigint
+  candidateId?: string
+}
+export const spokenOperationActive = (s: SpokenOperationState) =>
+  s === 'reserved' || s === 'queued' || s === 'claimed'

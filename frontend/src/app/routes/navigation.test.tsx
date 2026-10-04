@@ -27,6 +27,7 @@ const writing = [
 ] as const
 const video = [
   ['/clips', '/clips'],
+  ['/spoken-voices', '/spoken-voices'],
   ['/video-templates', '/video-templates'],
   ['/video-templates/new', '/video-templates'],
   ['/video-templates/one', '/video-templates'],
@@ -123,7 +124,7 @@ it.each(cases)(
 // The clip workspace is a page inside the group that asks for the group level to be absent
 // (CLIP-37): the primary level still marks 영상, but no group row or rail is drawn and nothing
 // under it clears a group row that is not there.
-it.each(['/clips/new', '/clips/one'])(
+it.each(['/clips/new', '/clips/one', '/spoken-voices/new'])(
   'draws no group level on the clip workspace at %s',
   async (path) => {
     const { router } = renderAppAt(path, { user: { id: 'alice', plan: ProtoPlan.FREE } })
@@ -236,6 +237,7 @@ it('restores both active levels through browser history and keeps ko/en parity',
     'primary:/posts',
     'primary:/clips',
     'group:/clips',
+    'group:/spoken-voices',
     'group:/video-templates',
     'group:/video-guidelines',
     'primary:/ai-models',
@@ -243,6 +245,7 @@ it('restores both active levels through browser history and keeps ko/en parity',
   const menu = await openGroupMenu('Video navigation')
   expect(menu.getAllByRole('menuitemradio').map((item) => item.textContent)).toEqual([
     'My videos',
+    'Spoken voices',
     'Video templates',
     'Video guidelines',
   ])
@@ -257,7 +260,7 @@ it('restores both active levels through browser history and keeps ko/en parity',
 // place of a row of pill links that read as buttons rather than as a menu.
 it.each([
   ['/posts', '글 메뉴', ['내 글', '말투', '글 템플릿', '지침', '기억'], '/voices'],
-  ['/clips', '영상 메뉴', ['내 영상', '영상 템플릿', '영상 지침'], '/video-templates'],
+  ['/clips', '영상 메뉴', ['내 영상', '목소리', '영상 템플릿', '영상 지침'], '/spoken-voices'],
   [
     '/ai-models',
     'AI 모델 메뉴',
@@ -354,6 +357,7 @@ it('moves the open group in the sidebar when the primary destination changes', a
 
   expect(rows('group').map((l) => l.getAttribute('href'))).toEqual([
     '/clips',
+    '/spoken-voices',
     '/video-templates',
     '/video-guidelines',
   ])
