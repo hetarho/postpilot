@@ -9,9 +9,9 @@
 # by the strict parser rather than silently ignored, so a stack mounting an old override
 # hears about it.
 #
-# Exactly one provider may be declared. The curated catalog has no provider dimension —
-# every row is served by the registered endpoint — so a second vendor is a design change
-# (its own plan), not a yaml edit.
+# Exactly one completion provider may be declared. The optional speech_provider is a
+# separate connection for voice design and speech; its profiles/prices are curated rows,
+# never completion models or implicit defaults. Omit it to disable speech entirely.
 #
 # Keys are NEVER written here. `api_key_env` names the environment variable the key is
 # read from; when that variable is unset, every model is listed as disabled with the reason
@@ -28,3 +28,10 @@ providers:
     base_url: https://openrouter.ai/api/v1
     api_key_env: OPENROUTER_API_KEY
     reasoning_format: openrouter
+
+# Missing credentials disable speech without affecting the completion connection.
+speech_provider:
+  id: elevenlabs
+  adapter: elevenlabs
+  base_url: https://api.elevenlabs.io
+  api_key_env: ELEVENLABS_API_KEY

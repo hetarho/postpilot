@@ -87,7 +87,7 @@ func TestLoad_ShippedConnection(t *testing.T) {
 			provider.name = cfg.ProviderID
 			return provider, nil
 		},
-	}, fakeSource{}, opts)
+	}, fakeSource{}, speechOptions(&fakeSpeech{}))
 	if err != nil {
 		t.Fatal(err)
 	}

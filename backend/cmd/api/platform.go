@@ -75,6 +75,7 @@ func (p *platform) load(ctx context.Context) error {
 		return fmt.Errorf("model catalog load: %w", err)
 	}
 	registry, err := llm.Load(cfg.ProvidersConfig, os.Getenv, adapters, p.catalog, llm.Options{
+		SpeechAdapters:       speechAdapters,
 		Timeout:              cfg.LLMStageTimeout,
 		MaxTokens:            cfg.LLMMaxTokensDefault,
 		EndpointCacheTTL:     cfg.CatalogTTL,

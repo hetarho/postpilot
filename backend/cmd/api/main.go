@@ -14,6 +14,7 @@ import (
 	"syscall"
 
 	"github.com/postpilot/backend/internal/llm"
+	"github.com/postpilot/backend/internal/llm/elevenlabs"
 	"github.com/postpilot/backend/internal/llm/openaicompat"
 )
 
@@ -22,6 +23,10 @@ import (
 // root injects them into the port, and nothing above the port sees them.
 var adapters = map[string]llm.AdapterFactory{
 	"openai_compatible": openaicompat.Factory,
+}
+
+var speechAdapters = map[string]llm.SpeechAdapterFactory{
+	"elevenlabs": elevenlabs.Factory,
 }
 
 const version = "0.0.1"

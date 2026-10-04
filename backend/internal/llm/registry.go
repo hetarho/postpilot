@@ -128,6 +128,8 @@ type ModelSource interface {
 
 // Options tune every call the registry dispatches.
 type Options struct {
+	// SpeechAdapters are optional; the completion catalog remains unchanged.
+	SpeechAdapters map[string]SpeechAdapterFactory
 	// Timeout bounds one provider call (PRD §6.6: 단계당 5분).
 	Timeout time.Duration
 	// MaxTokens is the completion cap when a request sets none.
@@ -146,7 +148,15 @@ type Options struct {
 // the old `recommendation_sets:` list (those are rows now, MODEL-10): a stack still mounting
 // either is told at boot rather than quietly serving an empty catalog or losing its sets.
 type registryFile struct {
-	Providers []providerEntry `yaml:"providers"`
+	Providers      []providerEntry      `yaml:"providers"`
+	SpeechProvider *speechProviderEntry `yaml:"speech_provider"`
+}
+
+type speechProviderEntry struct {
+	ID        string `yaml:"id"`
+	Adapter   string `yaml:"adapter"`
+	BaseURL   string `yaml:"base_url"`
+	APIKeyEnv string `yaml:"api_key_env"`
 }
 
 type providerEntry struct {
@@ -161,9 +171,13 @@ type providerEntry struct {
 // configuration read once at boot, and the usable-model list, which is curated data read
 // live from the source.
 type Registry struct {
-	modelGrades bool
-	providerID  string
-	provider    Provider
+	speech               SpeechProvider
+	speechID             string
+	speechDisabled       bool
+	speechDisabledReason string
+	modelGrades          bool
+	providerID           string
+	provider             Provider
 	// disabled/disabledReason describe the provider, not one model: an unset key takes the
 	// whole endpoint out at once.
 	disabled       bool
@@ -303,6 +317,28 @@ func Parse(data []byte, getenv func(string) string, adapters map[string]AdapterF
 	if p.APIKeyEnv != "" && key == "" {
 		reg.disabled = true
 		reg.disabledReason = DisabledReasonNoKey
+	}
+	if p := file.SpeechProvider; p != nil {
+		if strings.TrimSpace(p.ID) == "" || p.ID == reg.providerID || strings.TrimSpace(p.APIKeyEnv) == "" {
+			return nil, fmt.Errorf("speech_provider: distinct id and api_key_env are required")
+		}
+		factory, ok := opts.SpeechAdapters[p.Adapter]
+		if !ok {
+			return nil, fmt.Errorf("speech_provider: unknown adapter %q", p.Adapter)
+		}
+		key := getenv(p.APIKeyEnv)
+		reg.speech, err = factory(SpeechAdapterConfig{ProviderID: p.ID, BaseURL: p.BaseURL, APIKey: key})
+		if err != nil {
+			return nil, fmt.Errorf("speech_provider: %w", err)
+		}
+		if reg.speech == nil {
+			return nil, fmt.Errorf("speech_provider: adapter returned no provider")
+		}
+		reg.speechID = p.ID
+		if key == "" {
+			reg.speechDisabled = true
+			reg.speechDisabledReason = DisabledReasonNoKey
+		}
 	}
 	return reg, nil
 }

@@ -62,7 +62,6 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T533 | Add a bounded voice-design and speech provider boundary | ARCH MODEL DUB | - | doing@261004.du |
 | T534 | Curate explicit speech profiles and their qualified pricing | ARCH MODEL DUB QUOTA THEME | T533 | todo |
 | T535 | Meter speech units under explicit bounded credit approvals | ARCH QUOTA DUB MODEL | T534 | todo |
 | T536 | Persist private reusable spoken voices and audition assets | ARCH DUB MODEL | T535 | todo |
@@ -84,11 +83,12 @@
 ## next
 - update-ssot VOICE/QUOTA for perf-cost F10 (analysis corpus vs the 30 000-token hold) and BILL for an exit from a `review` order (review perf-cost-261004 notes); the held maintainability findings F22 F24–F28 F36 F37 wait for a later review-code.
 - release smoke: 9/28 modes fail at HEAD with `the delivered caption was retimed 2500 6000`, identically on 228a4015 (seen in T558) — investigate; rebuild the dev media image for T559's `select` filter before rendering locally.
-- implement-task T533; complete T533–T539 and the real voice-creation qualification before T540–T550 narrated editing/export work.
+- implement-task T534; complete T534–T539 and the real voice-creation qualification before T540–T550 narrated editing/export work.
 - create-task ARCH (ARCH-52+ ARCH-53+ ARCH-56+ ARCH-57+ ARCH-34✎); create-task POST r32 (POST-108+ implemented by 12d2f428; verification-only); create-task VOICE r8 (VOICE-32✎ implemented by 68ae9a79; verification-only); update-ssot VOICE-31 remains open.
 - ops: lower TEMPLATE_PHOTO_ROW_MAX / VITE_TEMPLATE_PHOTO_ROW_MAX to 3 wherever production sets them explicitly (VPS .env, Cloudflare build vars).
 
 ## log
+- 261004 T533 done: typed speech ports, optional ElevenLabs connection, bounded MP3/timing validation and decimal reported billing evidence; full local CI gates passed
 - 261005 T568 done: a fixed-KRW cancel compares the row it read, so it succeeds after time has passed and still refuses a row changed in between; BE suite green
 - 261005 create-task T568 (owner: fix at once): fixed-KRW CancelSubscription compares a read UpdatedAt it already overwrote; T568 start
 - 261005 T566 done: lazily routed pages leave the entry chunk (sideEffects + build-only route-schema plugin, accepted by the owner); first visit 1.90 MB → 1.46 MB; checked in Playwright
@@ -108,4 +108,3 @@
 - 261004 T557 done: FX day selection served from memory with one shared fetch outside the lock; BalanceFor takes the writer only when renewing would write; Settle drops eligible lots; BE suite green
 - 261004 T552 done: a clip hold's live free-path check runs before the write transaction (Guard access checker), the in-transaction hold skips it; BE suite green
 - 261004 T554 done: a template-request correction carries only the request, the last answer and what it broke; BE suite green
-- 261004 T553 done: storyline and template-request caps sized by LLMCompletionBudget.Short with native-effort headroom, frozen at start, hold = call; BE suite green

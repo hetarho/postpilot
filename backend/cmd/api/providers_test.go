@@ -19,11 +19,14 @@ func (emptyCatalog) Lookup(string) (llm.SourceModel, bool) { return llm.SourceMo
 // a typo in config/providers.yaml would otherwise be found by the deploy's health gate.
 func TestShippedProvidersConfigLoads(t *testing.T) {
 	noKeys := func(string) string { return "" }
-	reg, err := llm.Load("../../config/providers.yaml", noKeys, adapters, emptyCatalog{}, llm.Options{Timeout: time.Minute, MaxTokens: 1})
+	reg, err := llm.Load("../../config/providers.yaml", noKeys, adapters, emptyCatalog{}, llm.Options{Timeout: time.Minute, MaxTokens: 1, SpeechAdapters: speechAdapters})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if reg.ProviderID() == "" || reg.BaseURL() == "" {
 		t.Fatalf("provider id %q / base url %q", reg.ProviderID(), reg.BaseURL())
+	}
+	if connection := reg.SpeechConnection(); connection.ProviderID != "elevenlabs" || !connection.Disabled || connection.DisabledReason != llm.DisabledReasonNoKey {
+		t.Fatalf("missing-key speech connection: %+v", connection)
 	}
 }
