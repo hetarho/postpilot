@@ -275,7 +275,8 @@ func (s *Service) RunRequest(ctx context.Context, run RequestRun, progress func(
 	if maxTokens <= 0 {
 		maxTokens = r.budget.Short(false)
 	}
-	messages := []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(requestMessage(input))}}}
+	ask := llm.Message{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(requestMessage(input))}}
+	messages := []llm.Message{ask}
 	calls := 1 + r.limits.CorrectionsMax
 	for attempt := 0; ; attempt++ {
 		progress("write", attempt, calls)
@@ -316,10 +317,13 @@ func (s *Service) RunRequest(ctx context.Context, run RequestRun, progress func(
 		if err := ctx.Err(); err != nil {
 			return err
 		}
-		messages = append(messages,
-			llm.Message{Role: llm.RoleAssistant, Parts: []llm.Part{llm.TextPart(response.Text)}},
-			llm.Message{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(correctionMessage(input.Language, checkErr))}},
-		)
+		// A correction carries the request, the last answer and what it broke — never the earlier
+		// wrong answers, which the model has no use for and every later call would pay for again.
+		messages = []llm.Message{
+			ask,
+			{Role: llm.RoleAssistant, Parts: []llm.Part{llm.TextPart(response.Text)}},
+			{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(correctionMessage(input.Language, checkErr))}},
+		}
 	}
 }
 

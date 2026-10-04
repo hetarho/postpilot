@@ -415,6 +415,43 @@ func TestRunRequestCorrectsAnAnswerThatDoesNotParse(t *testing.T) {
 	}
 }
 
+// Each correction is the request, the last answer and what it broke: an earlier wrong answer is
+// not sent again, so a run's prompt grows by one answer per call, not by every answer so far.
+func TestACorrectionCarriesOnlyTheAnswerItCorrects(t *testing.T) {
+	h := newRequestHarness(t)
+	unclosed := answer(t, map[string]any{"name": "리뷰", "description": "", "title_area": "", "body": "<write>닫히지 않음", "wishes": []string{}})
+	tooLong := answer(t, map[string]any{"name": strings.Repeat("가", 41), "description": "", "title_area": "", "body": "<write>인트로</write>", "wishes": []string{}})
+	h.models.responses = []llm.Response{unclosed, tooLong, goodAnswer(t)}
+	if err := runRequest(t, h, requestInput{Language: LanguageKorean, Text: "맛집"}); err != nil {
+		t.Fatal(err)
+	}
+	if len(h.models.requests) != 3 {
+		t.Fatalf("calls = %d, want the first and two corrections", len(h.models.requests))
+	}
+	ask := h.models.requests[0].Messages[0].Parts[0].Text
+	for i, corrected := range []llm.Response{unclosed, tooLong} {
+		messages := h.models.requests[i+1].Messages
+		if len(messages) != 3 {
+			t.Fatalf("call %d carried %d messages, want the request, the last answer and the correction", i+2, len(messages))
+		}
+		if messages[0].Role != llm.RoleUser || messages[0].Parts[0].Text != ask {
+			t.Errorf("call %d does not open with the request: %+v", i+2, messages[0])
+		}
+		if messages[1].Role != llm.RoleAssistant || messages[1].Parts[0].Text != corrected.Text {
+			t.Errorf("call %d carries answer %q, want the one it corrects", i+2, messages[1].Parts[0].Text)
+		}
+		if messages[2].Role != llm.RoleUser {
+			t.Errorf("call %d does not end with the correction: %+v", i+2, messages[2])
+		}
+	}
+	if correction := h.models.requests[2].Messages[2].Parts[0].Text; !strings.Contains(correction, "name가 41자로") || strings.Contains(correction, "unclosed_tag") {
+		t.Fatalf("the third call corrects %q, want only the second answer's broken rule", correction)
+	}
+	if savedResult(t, h).Name != "맛집 리뷰" {
+		t.Fatalf("the corrected answer was not saved")
+	}
+}
+
 func TestRunRequestFailsAfterTheLastCorrection(t *testing.T) {
 	h := newRequestHarness(t)
 	notJSON := llm.Response{Text: "템플릿을 만들었어요!", FinishReason: "stop"}
