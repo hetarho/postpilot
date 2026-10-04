@@ -3,11 +3,14 @@ import type { PreparedAsset } from './preview-assets'
 import { CLIP_DRAFT_PREVIEW, CLIP_TRANSITION } from '@/entities/clip-design/@x/clip-preview'
 import {
   cutOutputMs,
+  cutRate,
   outputToSourceMs,
   timelineCuts,
   type ClipEditPlan,
   type ClipTimelineCut,
 } from '@/entities/clip-plan/@x/clip-preview'
+
+type ClipEditCut = ClipEditPlan['cuts'][number]
 
 export type PreviewCut = ClipTimelineCut
 export function previewTimeline(plan: ClipEditPlan): PreviewCut[] {
@@ -29,6 +32,46 @@ export function previewTimeline(plan: ClipEditPlan): PreviewCut[] {
   return timelineCuts(plan)
 }
 
+/** The xfade a transition is drawn with (CDS-36): through black for the 300 ms one, a plain
+ *  dissolve otherwise, and none for a hard cut. */
+export type TransitionKind = '' | 'fade' | 'fadeblack'
+function transitionKind(transitionMs: number): TransitionKind {
+  if (!transitionMs) return ''
+  return transitionMs === CLIP_TRANSITION.black_ms ? 'fadeblack' : 'fade'
+}
+
+function smoothstep(edge0: number, edge1: number, x: number) {
+  const t = Math.min(1, Math.max(0, (x - edge0) / (edge1 - edge0)))
+  return t * t * (3 - 2 * t)
+}
+
+/** How much of the outgoing and the incoming frame the server's xfade mixes at its progress,
+ *  which runs from 1 on a transition's first frame down to 0: a dissolve is the plain mix, and
+ *  a fade through black mixes each side with black on its own smoothstep over xfade's phase,
+ *  the rest of the frame being that black. The browser follows the server's curve, not the
+ *  other way round, so a scrim the server samples on a ground is decided on the ground the
+ *  browser draws (CLIP-192). */
+export function transitionWeights(kind: TransitionKind, progress: number): [number, number] {
+  if (!kind) return [0, 1]
+  if (kind === 'fadeblack') {
+    const phase = 0.2
+    return [
+      smoothstep(1 - phase, 1, progress) * progress,
+      (1 - smoothstep(phase, 1, progress)) * (1 - progress),
+    ]
+  }
+  return [progress, 1 - progress]
+}
+
+/** The alpha each side is drawn with, outgoing first, so that drawing them in turn over the
+ *  black matte leaves each at its weight: the incoming side at its own, the outgoing one at
+ *  what still shows through it. A dissolve keeps the outgoing frame whole beneath it. */
+export function transitionAlphas(kind: TransitionKind, progress: number): [number, number] {
+  const [outgoing, incoming] = transitionWeights(kind, progress)
+  if (kind !== 'fadeblack') return [1, incoming]
+  return [incoming < 1 ? outgoing / (1 - incoming) : 0, incoming]
+}
+
 /** Half-open output intervals; an exact cut boundary belongs to the new cut.
  * At the final endpoint, show the last source frame without seeking past EOF. */
 export function previewFrame(timeline: readonly PreviewCut[], requestedMs: number) {
@@ -38,26 +81,104 @@ export function previewFrame(timeline: readonly PreviewCut[], requestedMs: numbe
     Math.min(requestedMs, Math.max(0, duration - CLIP_DRAFT_PREVIEW.frameToleranceMs)),
   )
   const active = timeline.filter((c) => time >= c.startMs && time < c.endMs)
-  return active.map((item, index) => {
-    const incoming = active.length === 2 ? active[1]! : undefined
-    const progress = incoming ? (time - incoming.startMs) / incoming.cut.transitionMs : 1
-    const black = incoming?.cut.transitionMs === CLIP_TRANSITION.black_ms
-    const opacity = incoming
-      ? black
-        ? index === 0
-          ? Math.max(0, 1 - progress * 2)
-          : Math.max(0, progress * 2 - 1)
-        : index === 0
-          ? 1
-          : progress
-      : 1
+  const incoming = active.length === 2 ? active[1]! : undefined
+  const into = incoming ? (time - incoming.startMs) / incoming.cut.transitionMs : 1
+  const alphas = incoming
+    ? transitionAlphas(transitionKind(incoming.cut.transitionMs), 1 - into)
+    : [1]
+  return active.map((item, index) => ({
+    ...item,
+    sourceMs: outputToSourceMs(item, time),
+    opacity: alphas[index] ?? 1,
+    audioGain: incoming ? (index === 0 ? 1 - into : into) : 1,
+  }))
+}
+
+/** One cut on the server's frame timeline: the frames it contributes at the output rate, the
+ *  output frame it starts on, and the frames and xfade its leading transition overlaps the cut
+ *  before it with. */
+export interface FrameCut {
+  cut: ClipEditCut
+  index: number
+  frames: number
+  startFrame: number
+  overlap: number
+  kind: TransitionKind
+}
+export interface FrameTimeline {
+  fps: number
+  cuts: FrameCut[]
+  total: number
+}
+
+/** The server render's frame arithmetic (Go's cutTimeline): each cut's frames are its
+ *  cumulative transformed output time rounded at the output rate (CDS-62), a transition
+ *  overlaps a whole number of the previous cut's frames (CDS-36), and the clip is the frames
+ *  left after the overlaps. A browser export walks these frames, so it shows the frames a
+ *  server export of the same plan shows (CLIP-157). */
+export function frameTimeline(plan: Pick<ClipEditPlan, 'cuts'>, fps: number): FrameTimeline {
+  let elapsedMs = 0
+  let previous = 0
+  let total = 0
+  const cuts = plan.cuts.map((cut, index): FrameCut => {
+    elapsedMs += cutOutputMs(cut)
+    const next = Math.round((elapsedMs * fps) / 1000)
+    const frames = next - previous
+    previous = next
+    const overlap = index ? Math.trunc((cut.transitionMs * fps) / 1000) : 0
+    const startFrame = index ? total - overlap : 0
+    total = index ? total + frames - overlap : frames
     return {
-      ...item,
-      sourceMs: outputToSourceMs(item, time),
-      opacity,
-      audioGain: incoming ? (index === 0 ? 1 - progress : progress) : 1,
+      cut,
+      index,
+      frames,
+      startFrame,
+      overlap,
+      kind: overlap ? transitionKind(cut.transitionMs) : '',
     }
   })
+  return { fps, cuts, total }
+}
+
+/** One cut's frame in an output frame: the instant of its source it shows, its weight in the
+ *  frame and the alpha that draws it at that weight. */
+export interface FrameLayer {
+  cut: ClipEditCut
+  index: number
+  sourceMs: number
+  weight: number
+  alpha: number
+}
+
+/** The cut or cuts one output frame is made of, outgoing first. A cut's own frame k shows k
+ *  output frames of source time at its rate after its start, the frame the server's footage
+ *  chain keeps there. */
+export function frameLayers(timeline: FrameTimeline, frame: number): FrameLayer[] {
+  if (frame < 0 || frame >= timeline.total) return []
+  const layer = (item: FrameCut, weight: number, alpha: number): FrameLayer => ({
+    cut: item.cut,
+    index: item.index,
+    sourceMs:
+      item.cut.startMs + Math.round(((frame - item.startFrame) * cutRate(item.cut)) / timeline.fps),
+    weight,
+    alpha,
+  })
+  for (let i = timeline.cuts.length - 1; i >= 0; i--) {
+    const item = timeline.cuts[i]!
+    if (frame < item.startFrame) continue
+    if (frame >= item.startFrame + item.frames) return []
+    if (i > 0 && frame < item.startFrame + item.overlap) {
+      const progress = 1 - (frame - item.startFrame) / item.overlap
+      const [outgoing, incoming] = transitionWeights(item.kind, progress)
+      const [outgoingAlpha, incomingAlpha] = transitionAlphas(item.kind, progress)
+      return [
+        layer(timeline.cuts[i - 1]!, outgoing, outgoingAlpha),
+        layer(item, incoming, incomingAlpha),
+      ]
+    }
+    return [layer(item, 1, 1)]
+  }
+  return []
 }
 
 /** The flow simulation's instant (CLIP-175): the playhead, with the scrubber's end drawn as the

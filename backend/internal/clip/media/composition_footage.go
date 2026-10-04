@@ -61,8 +61,8 @@ func (r *Rendering) renderBareAudio(ctx context.Context, ws clip.MediaWorkspace,
 	return r.runRender(ctx, ws, output, args)
 }
 
-func declaredAudioGraph(cfg clip.RenderConfig, frames, transitions []int, elements []clip.CompositionElement) string {
-	graph := compositionAudioGraph(cfg, frames, transitions, 0)
+func declaredAudioGraph(cfg clip.RenderConfig, t cutTimeline, elements []clip.CompositionElement) string {
+	graph := compositionAudioGraph(cfg, t, 0)
 	windows := []string{}
 	for _, element := range elements {
 		if element.Role == "hook" {
@@ -75,11 +75,11 @@ func declaredAudioGraph(cfg clip.RenderConfig, frames, transitions []int, elemen
 	return graph
 }
 
-func (r *Rendering) assembleDeclaredAudio(ctx context.Context, ws clip.MediaWorkspace, cuts []string, frames, transitions []int, elements []clip.CompositionElement, output string) error {
+func (r *Rendering) assembleDeclaredAudio(ctx context.Context, ws clip.MediaWorkspace, cuts []string, t cutTimeline, elements []clip.CompositionElement, output string) error {
 	args := r.baseArgs()
 	for _, cut := range cuts {
 		args = r.inputArgs(args, cut)
 	}
-	args = append(args, "-filter_complex", declaredAudioGraph(r.cfg, frames, transitions, elements), "-map", "[a]", "-vn", "-c:a", "pcm_s16le", "-ar", strconv.Itoa(r.cfg.AudioRate), "-ac", "2", "-f", "wav")
+	args = append(args, "-filter_complex", declaredAudioGraph(r.cfg, t, elements), "-map", "[a]", "-vn", "-c:a", "pcm_s16le", "-ar", strconv.Itoa(r.cfg.AudioRate), "-ac", "2", "-f", "wav")
 	return r.runRender(ctx, ws, output, args)
 }

@@ -1,6 +1,5 @@
 import { clipBrowserEncoderConfig } from './browser-render-capability'
-import { previewCrop, previewFrame, previewMotion } from './draft-preview'
-import { timelineCuts } from '@/entities/clip-plan/@x/clip-preview'
+import { frameLayers, frameTimeline, previewCrop, previewMotion } from './draft-preview'
 import type { PreparedAsset } from './preview-assets'
 import type { CaptionCell } from './caption-sheets'
 import { CLIP_BROWSER_RENDER } from '@/entities/clip-design/@x/clip-preview'
@@ -20,13 +19,14 @@ interface CompositePorts {
   progress: (value: BrowserVideoProgress) => void
 }
 
-/** Both the preview and export read the plan's resolved intervals and manifest motion. */
+/** Both the preview and export read the plan's resolved intervals and manifest motion. The
+ *  footage of each output frame is the server render's: the same cuts on the same frames,
+ *  joined by the same xfade curve (CLIP-192). */
 export async function compositeBrowserVideo(input: BrowserVideoInput, ports: CompositePorts) {
   const config = clipBrowserEncoderConfig(input.ratio).video
-  const timeline = timelineCuts(input.plan)
-  const durationMs = timeline.at(-1)?.endMs ?? 0
   const fps = CLIP_BROWSER_RENDER.frameRate
-  const totalFrames = Math.round((durationMs * fps) / 1000)
+  const timeline = frameTimeline(input.plan, fps)
+  const totalFrames = timeline.total
   if (!totalFrames) throw new Error('CLIP_RENDER_EMPTY')
   const assets = [...input.assets].sort((a, b) => a.layer - b.layer)
   const ctx = ports.context
@@ -35,7 +35,7 @@ export async function compositeBrowserVideo(input: BrowserVideoInput, ports: Com
     ctx.globalAlpha = 1
     ctx.fillStyle = CLIP_BROWSER_RENDER.matte
     ctx.fillRect(0, 0, config.width, config.height)
-    for (const current of previewFrame(timeline, timeMs)) {
+    for (const current of frameLayers(timeline, frame)) {
       const bitmap = await ports.source(current.cut.fingerprint, current.sourceMs)
       try {
         const crop = previewCrop(
@@ -45,7 +45,7 @@ export async function compositeBrowserVideo(input: BrowserVideoInput, ports: Com
           config.height,
           current.cut.focal,
         )
-        ctx.globalAlpha = current.opacity
+        ctx.globalAlpha = current.alpha
         ctx.drawImage(
           bitmap,
           (crop.left * config.width) / 100,

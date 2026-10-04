@@ -80,7 +80,6 @@
 | T548 | Mix immutable narration into server MP4 exports | ARCH DUB CLIP CDS | T547 | todo |
 | T549 | Mix the same narration into browser MP4 exports | ARCH DUB CLIP CDS | T548 | todo |
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | todo |
-| T574 | One cut timeline for the render graph, the sampler and the browser drawing | CDS CLIP ARCH | T573 | doing@261005.pc |
 | T579 | Make the clip release smoke green again | ARCH | T574 | doing@261005.pc |
 | T581 | Price the model-combo estimates through FX alone | QUOTA ARCH | - | doing@261005.pc |
 | T582 | Delete the billing regime production no longer runs | BILL ARCH | T581 | doing@261005.pc |
@@ -92,6 +91,7 @@
 - ops: lower TEMPLATE_PHOTO_ROW_MAX / VITE_TEMPLATE_PHOTO_ROW_MAX to 3 wherever production sets them explicitly (VPS .env, Cloudflare build vars).
 
 ## log
+- 261005 T574 done: one cut timeline drives the ffmpeg graph, merge tree, audio and sampler; the browser draws xfade's weights from a Go-written fixture; smokes, identity digest and FE suite green
 - 261005 T573 done: the non-Portable renderer, legacy plan resolution, cut-caption scheduler, answerAccent and LatestForVoiceKind are deleted; a plan without a composition is refused before media work; smokes and identity digest unchanged
 - 261005 create-task T581 T582 (follow-ups found in T572: USD-terms estimator, the unused non-fixed billing regime) and start
 - 261005 T576 done: one export-window rule (usage.ExportWindowAt) for ledger, root and seed; proration via plan.QuoteUpgrade; TermEnd via plan.CoverageEnd; refundWindow constant; BE suite green
@@ -111,4 +111,3 @@
 - 261005 create-task T568 (owner: fix at once): fixed-KRW CancelSubscription compares a read UpdatedAt it already overwrote; T568 start
 - 261005 T566 done: lazily routed pages leave the entry chunk (sideEffects + build-only route-schema plugin, accepted by the owner); first visit 1.90 MB → 1.46 MB; checked in Playwright
 - 261005 T560 done: a browser export lays out once per render revision and batches resvg per role, GetClipProject decodes analysis once, ListClipProjects reads a summary projection; smokes green
-- 261005 T559 done: server render reads ground frames from its own lossless bare cut, browser sampling selects before scaling in one output; select joins the ffmpeg allowlist; render_footage 15.1–16.1 s → 8.9–10.0 s on the identity fixture; smokes and identity digest unchanged

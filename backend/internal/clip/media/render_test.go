@@ -380,10 +380,11 @@ func TestRenderFilterGoldens(t *testing.T) {
 		{"mixed", []int{0, 0, 200}},
 		{"black", []int{0, 300, 0}},
 	} {
-		golden(t, "composition-"+plan.name+".filter", compositionGraph(r.cfg, []int{156, 150, 156}, plan.transitions, "yuv420p")+"\n")
-		golden(t, "composition-"+plan.name+".audio.filter", compositionAudioGraph(r.cfg, []int{156, 150, 156}, plan.transitions, 3)+"\n")
+		timeline := joinedTimeline(r.cfg.FPS, []int{156, 150, 156}, plan.transitions)
+		golden(t, "composition-"+plan.name+".filter", compositionGraph(timeline, "yuv420p")+"\n")
+		golden(t, "composition-"+plan.name+".audio.filter", compositionAudioGraph(r.cfg, timeline, 3)+"\n")
 	}
-	frames := cutFrames(clip.EditPlan{Cuts: []clip.EditCut{{EndMS: 5011}, {EndMS: 5022}, {EndMS: 5367}}}, 30)
+	frames := newCutTimeline(30, clip.EditPlan{Cuts: []clip.EditCut{{EndMS: 5011}, {EndMS: 5022}, {EndMS: 5367}}}).frames
 	if !reflect.DeepEqual(frames, []int{150, 151, 161}) {
 		t.Fatal(frames)
 	}

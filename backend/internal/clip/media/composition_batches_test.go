@@ -72,12 +72,12 @@ func TestWindowGraphUsesLocalTimeAndFiniteImageLoops(t *testing.T) {
 
 func TestDeclaredAudioDucksOnlyTheAuthoredHookInterval(t *testing.T) {
 	cfg := clip.DefaultRenderConfig(clip.Environment{})
-	plain := declaredAudioGraph(cfg, []int{450}, []int{0}, nil)
+	plain := declaredAudioGraph(cfg, joinedTimeline(cfg.FPS, []int{450}, []int{0}), nil)
 	if strings.Contains(plain, "-6") || strings.Contains(plain, "volume=") {
 		t.Fatal("implicit hook dip")
 	}
 	elements := []clip.CompositionElement{{Role: "hook", StartMS: 4100, EndMS: 5300}, {Role: "hook", StartMS: 5000, EndMS: 6200}, {Role: "ending", StartMS: 13000, EndMS: 15000}}
-	graph := declaredAudioGraph(cfg, []int{450}, []int{0}, elements)
+	graph := declaredAudioGraph(cfg, joinedTimeline(cfg.FPS, []int{450}, []int{0}), elements)
 	if strings.Count(graph, "volume=volume=") != 1 || !strings.Contains(graph, "gte(t,4.100)*lt(t,5.300)") || !strings.Contains(graph, "gte(t,5.000)*lt(t,6.200)") || strings.Contains(graph, "gte(t,13.000)") {
 		t.Fatalf("incorrect hook union: %s", graph)
 	}

@@ -35,10 +35,12 @@ func timelinePlan() clip.EditPlan {
 func TestTheFootageTimelineIsTheCompositionGraphs(t *testing.T) {
 	cfg := renderConfig(t)
 	plan := timelinePlan()
-	timeline := newFootageTimeline(cfg, plan)
-	frames, transitions := cutFrames(plan, cfg.FPS), planTransitions(plan)
-	graph := compositionGraph(cfg, frames, transitions, "yuv444p")
-	fade, black := transitionFrames(cfg, design.Transition.FadeMS), transitionFrames(cfg, design.Transition.BlackMS)
+	timeline := newCutTimeline(cfg.FPS, plan)
+	graph := compositionGraph(timeline, "yuv444p")
+	fade, black := timeline.overlaps[1], timeline.overlaps[2]
+	if fade != design.Transition.FadeMS*cfg.FPS/1000 || black != design.Transition.BlackMS*cfg.FPS/1000 {
+		t.Fatalf("the transitions overlap %d and %d frames", fade, black)
+	}
 	if !strings.Contains(graph, "xfade=transition=fade:duration="+seconds(design.Transition.FadeMS)+":offset="+frameSeconds(timeline.starts[1], cfg.FPS)) ||
 		!strings.Contains(graph, "xfade=transition=fadeblack:duration="+seconds(design.Transition.BlackMS)+":offset="+frameSeconds(timeline.starts[2], cfg.FPS)) ||
 		!strings.Contains(graph, "[vx2][v3]concat") || !strings.Contains(graph, fmt.Sprintf("trim=end_frame=%d,", timeline.total)) {
@@ -87,7 +89,7 @@ func TestTransitionsBlendAsTheCompositionsXfadeDoes(t *testing.T) {
 		}
 	}
 	for k, want := range []float64{200, 61, 0, 0, 5, 22, 40, 55, 67} {
-		if got := fadeBlackMean(grey(200, 4), grey(80, 4), 1-float64(k)/9)[0] * 255; math.Abs(got-want) > 3 {
+		if got := fadeBlackMean(grey(200, 4), grey(80, 4), outputFootage{kind: "fadeblack", progress: 1 - float64(k)/9})[0] * 255; math.Abs(got-want) > 3 {
 			t.Fatalf("fade through black frame %d: %.2f, xfade gave %.0f", k, got, want)
 		}
 	}
@@ -147,7 +149,7 @@ func TestTheSamplerTakesEachCutsOwnFrames(t *testing.T) {
 	a := newAdapter(t, runner)
 	r := testRenderer(t, a)
 	canvas, _ := clip.ClipCanvas("vertical")
-	timeline := newFootageTimeline(r.cfg, plan)
+	timeline := newCutTimeline(r.cfg.FPS, plan)
 	b := timeline.starts[1]
 	region := clip.Region{X: 100, Y: 800, Width: 880, Height: 300}
 	s := groundSampler{canvas: canvas}
@@ -196,7 +198,7 @@ func TestTheSamplerTakesEachCutsOwnFrames(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	p := 1 - 2/float64(transitionFrames(r.cfg, design.Transition.FadeMS))
+	p := 1 - 2/float64(design.Transition.FadeMS*r.cfg.FPS/1000)
 	want := []float64{1, relativeLuminance(p, p, p), 0}
 	for i, v := range grounds[0].Frames {
 		if math.Abs(v-want[i]) > 1e-6 {
@@ -219,7 +221,7 @@ func TestAServerRenderReadsItsGroundsFromTheBareFootage(t *testing.T) {
 	a := newAdapter(t, runner)
 	r := testRenderer(t, a)
 	canvas, _ := clip.ClipCanvas("vertical")
-	timeline := newFootageTimeline(r.cfg, plan)
+	timeline := newCutTimeline(r.cfg.FPS, plan)
 	s := groundSampler{canvas: canvas}
 	for _, frame := range []int{4, 9, 21} {
 		footage, _ := timeline.at(frame)

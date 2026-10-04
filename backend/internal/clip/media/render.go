@@ -10,25 +10,7 @@ import (
 	"strings"
 
 	"github.com/postpilot/backend/internal/clip"
-	"github.com/postpilot/backend/internal/clip/design"
 )
-
-// Rounding cumulative cut time (not every individual cut independently) keeps
-// the final CFR duration within half a frame of the millisecond plan. The clock
-// it rounds is the TRANSFORMED output timeline, so a cut's frame budget already
-// carries its fixed rate and no individually rounded clip can drift away from
-// the captions and transitions placed on that same timeline (CDS-62).
-func cutFrames(plan clip.EditPlan, fps int) []int {
-	frames := make([]int, len(plan.Cuts))
-	elapsed, previous := 0, 0
-	for i, c := range plan.Cuts {
-		elapsed += c.OutputDurationMS()
-		next := int(math.Round(float64(elapsed*fps) / 1000))
-		frames[i] = next - previous
-		previous = next
-	}
-	return frames
-}
 
 // rateChain is the ONE way a fixed rate becomes pixels: the decoded timestamps
 // are scaled and the result is converted to the output cadence by ordinary
@@ -65,38 +47,26 @@ func frameSeconds(frames, fps int) string {
 	return strconv.FormatFloat(float64(frames)/float64(fps), 'f', 9, 64)
 }
 
-// The frames one transition overlaps. Every admitted value is a whole number of
-// frames at 30 fps, so the output timeline stays exactly integral (CDS-36).
-func transitionFrames(cfg clip.RenderConfig, ms int) int { return ms * cfg.FPS / 1000 }
-
-// The xfade CDS-36 names for a transition: a plain dissolve for the 200 ms fade
-// a scene change earns, and through black for the 300 ms one a manual plan may
-// ask for around the cards.
-func transitionKind(ms int) string {
-	if ms == design.Transition.BlackMS {
-		return "fadeblack"
-	}
-	return "fade"
-}
-func compositionGraph(cfg clip.RenderConfig, frames, transitions []int, pixelFormat string) string {
+// compositionGraph joins a timeline's entries into one picture: each enters on
+// its own clock, a hard cut CONCATENATES and a transition is the xfade its kind
+// names, from the frame the incoming entry starts on (CDS-36).
+func compositionGraph(t cutTimeline, pixelFormat string) string {
 	var graph strings.Builder
-	for i := range frames {
+	for i := range t.frames {
 		fmt.Fprintf(&graph, "[%d:v:0]settb=AVTB,setpts=PTS-STARTPTS[v%d];", i, i)
 	}
-	v, elapsed := "v0", frames[0]
-	for i := 1; i < len(frames); i++ {
-		overlap := transitionFrames(cfg, transitions[i])
+	v := "v0"
+	for i := 1; i < len(t.frames); i++ {
 		// A hard cut is a JOIN, not a zero-length dissolve: concat keeps both
 		// cuts' own frames intact where xfade would resample the boundary.
-		if overlap == 0 {
+		if t.overlaps[i] == 0 {
 			fmt.Fprintf(&graph, "[%s][v%d]concat=n=2:v=1:a=0[vx%d];", v, i, i)
 		} else {
-			fmt.Fprintf(&graph, "[%s][v%d]xfade=transition=%s:duration=%s:offset=%s[vx%d];", v, i, transitionKind(transitions[i]), seconds(transitions[i]), frameSeconds(elapsed-overlap, cfg.FPS), i)
+			fmt.Fprintf(&graph, "[%s][v%d]xfade=transition=%s:duration=%s:offset=%s[vx%d];", v, i, t.kinds[i], seconds(t.transitions[i]), frameSeconds(t.starts[i], t.fps), i)
 		}
 		v = fmt.Sprintf("vx%d", i)
-		elapsed += frames[i] - overlap
 	}
-	fmt.Fprintf(&graph, "[%s]trim=end_frame=%d,setpts=PTS-STARTPTS,format=%s[v]", v, elapsed, pixelFormat)
+	fmt.Fprintf(&graph, "[%s]trim=end_frame=%d,setpts=PTS-STARTPTS,format=%s[v]", v, t.total, pixelFormat)
 	return graph.String()
 }
 func (r *Rendering) encodeArgs(audio bool) []string {
@@ -216,15 +186,6 @@ func (r *Rendering) validateRenderedOutput(ctx context.Context, ws clip.MediaWor
 		return result, err
 	}
 	return clip.RenderedVideo{Path: output, Info: info, Bytes: stat.Size(), Manifest: manifest}, nil
-}
-
-// planTransitions is each cut's own leading transition, in cut order.
-func planTransitions(plan clip.EditPlan) []int {
-	out := make([]int, len(plan.Cuts))
-	for i, c := range plan.Cuts {
-		out[i] = c.TransitionMS
-	}
-	return out
 }
 
 // Layout is the composition's layout pass, for a caller that wants the manifest

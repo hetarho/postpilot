@@ -75,7 +75,7 @@ func TestFrameBudgetIsCumulativeOverTheTransformedTimeline(t *testing.T) {
 		ratedCut("b", "s", 5000, 6667, 500), // 3334 ms of output
 		ratedCut("c", "s", 7000, 10000, 1000),
 	}}
-	frames := cutFrames(plan, 30)
+	frames := newCutTimeline(30, plan).frames
 	total, elapsed := 0, 0
 	for i, c := range plan.Cuts {
 		elapsed += c.OutputDurationMS()

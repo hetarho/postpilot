@@ -1,7 +1,9 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { PreparedAsset } from '@/entities/clip-preview'
 import { clipTimelineFixture } from '@/test/clip-editing'
+import type { ClipEditPlan } from '@/entities/clip-plan'
 import { compositeBrowserVideo } from './composite-video'
+import fixture from './cut-timeline.fixture.json'
 import { RenderRasterCache } from './render-raster-cache'
 
 function bitmap(name: string) {
@@ -164,4 +166,83 @@ describe('browser video composition', () => {
     expect(value.draws.filter((draw) => draw.frame === 60)).toHaveLength(1)
     expect(value.sources[60].timeMs).toBe(500)
   })
+})
+
+/** A case of the timeline Go records (backend/internal/clip/media/testdata/cut-timeline.json). */
+interface TimelineCase {
+  name: string
+  fps: number
+  cuts: {
+    id: string
+    startMs: number
+    endMs: number
+    transitionMs: number
+    playbackRatePermille: number
+  }[]
+  frames: { cut: number; sourceMs: number; weight: number }[][]
+}
+
+// CLIP-192: what the browser export draws on each frame is what the server's composition
+// shows there — the same cuts at the same source instants — and drawing them in turn over the
+// black matte leaves each at the weight the server's xfade gives it.
+describe('browser video composition against the server timeline', () => {
+  it.each((fixture as TimelineCase[]).map((c) => [c.name, c] as const))(
+    '%s draws the server frames',
+    async (_name, c) => {
+      const plan: ClipEditPlan = {
+        durationMs: 0,
+        cuts: c.cuts.map((cut) => ({
+          ...cut,
+          sourceId: cut.id,
+          fingerprint: cut.id.repeat(64),
+          copies: [],
+          volumePermille: 1000,
+        })),
+      }
+      const draws: { fingerprint: string; timeMs: number; alpha: number; frame: number }[] = []
+      let frame = 0
+      let pending: { fingerprint: string; timeMs: number } | undefined
+      const context = {
+        globalAlpha: 1,
+        fillStyle: '',
+        fillRect: vi.fn(),
+        drawImage() {
+          if (pending) draws.push({ ...pending, alpha: this.globalAlpha, frame })
+          pending = undefined
+        },
+      }
+      const result = await compositeBrowserVideo(
+        { plan, ratio: 'vertical', assets: [] },
+        {
+          context: context as unknown as OffscreenCanvasRenderingContext2D,
+          source: async (fingerprint, timeMs) => {
+            pending = { fingerprint, timeMs }
+            return bitmap('source')
+          },
+          asset: async () => bitmap('asset'),
+          captionFrame: async () => undefined,
+          releaseAssets: () => {},
+          encode: async () => {
+            frame++
+          },
+          progress: () => {},
+        },
+      )
+      expect(result.frameCount).toBe(c.frames.length)
+      c.frames.forEach((want, at) => {
+        const drawn = draws.filter((draw) => draw.frame === at)
+        expect(drawn.map((draw) => [draw.fingerprint, draw.timeMs])).toEqual(
+          want.map((layer) => [c.cuts[layer.cut]!.id.repeat(64), layer.sourceMs]),
+        )
+        // Each layer's weight in the frame: the last one drawn keeps its alpha, and one drawn
+        // before it keeps what still shows through.
+        const weights = drawn.map((draw, i) =>
+          drawn.slice(i + 1).reduce((kept, over) => kept * (1 - over.alpha), draw.alpha),
+        )
+        weights.forEach((weight, i) =>
+          expect(Math.abs(weight - want[i]!.weight)).toBeLessThanOrEqual(1 / 255),
+        )
+      })
+    },
+  )
 })
