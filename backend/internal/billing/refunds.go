@@ -333,33 +333,40 @@ func (s *Service) ReconcileRefund(ctx context.Context, requestID string) error {
 		canceled, cancelErr := provider.CancelPayment(ctx, payment.PaymentKey, request.ReviewedAmountKRW,
 			"Postpilot reviewed refund", request.IdempotencyKey)
 		if cancelErr != nil {
-			var typed *ProviderError
-			if errors.As(cancelErr, &typed) && typed.Code == "INVALID_REQUEST" {
-				observed, seen, readErr := s.provider.PaymentByOrder(ctx, payment.OrderID)
-				if readErr == nil && seen && observed.PaymentKey == payment.PaymentKey &&
-					observed.BalanceKRW == request.ProviderBalanceBeforeKRW {
-					failure := s.store.InWriteTx(ctx, func(tx Store, _ Credits, _ Plans) error {
-						ref := tx.(RefundStore)
-						if benefits := ref.RefundBenefits(); benefits != nil {
-							if err := benefits.Release(ctx, request, payment); err != nil {
-								return err
-							}
-						}
-						return ref.FailRefund(ctx, request.ID, typed.Code, s.now())
-					})
-					return errors.Join(ErrRefundFailed, cancelErr, failure)
-				}
+			refusal, definitive := definitiveCancelRefusal(cancelErr)
+			if !definitive {
+				return errors.Join(ErrRefundProviderPending, cancelErr)
 			}
-			return errors.Join(ErrRefundProviderPending, cancelErr)
+			// A refusal is settled by what the payment shows: an untouched balance means
+			// no money moved and the frozen funding goes back; our amount already
+			// cancelled means an earlier attempt went through and completes below;
+			// anything else stays processing.
+			observed, seen, readErr := s.provider.PaymentByOrder(ctx, payment.OrderID)
+			if readErr != nil || !seen || observed.PaymentKey != payment.PaymentKey {
+				return errors.Join(ErrRefundProviderPending, cancelErr, readErr)
+			}
+			if observed.BalanceKRW == request.ProviderBalanceBeforeKRW {
+				failure := s.store.InWriteTx(ctx, func(tx Store, _ Credits, _ Plans) error {
+					ref := tx.(RefundStore)
+					if benefits := ref.RefundBenefits(); benefits != nil {
+						if err := benefits.Release(ctx, request, payment); err != nil {
+							return err
+						}
+					}
+					return ref.FailRefund(ctx, request.ID, refusal.Code, s.now())
+				})
+				return errors.Join(ErrRefundFailed, cancelErr, failure)
+			}
+			canceled, cancelErr = observed, refusal
 		}
 		if canceled.PaymentKey != payment.PaymentKey || canceled.OrderID != payment.OrderID ||
 			canceled.AmountKRW != payment.KRW || canceled.Currency != "KRW" ||
 			canceled.BalanceKRW > request.ProviderBalanceBeforeKRW-request.ReviewedAmountKRW {
-			return ErrRefundProviderPending
+			return errors.Join(ErrRefundProviderPending, cancelErr)
 		}
 		transaction = matchingCancelTransaction(canceled, request.ReviewedAmountKRW)
 		if transaction == "" {
-			return ErrRefundProviderPending
+			return errors.Join(ErrRefundProviderPending, cancelErr)
 		}
 		if err := s.store.InWriteTx(ctx, func(tx Store, _ Credits, _ Plans) error {
 			return tx.(RefundStore).RecordRefundProviderAttempt(ctx, request.ID, transaction)
@@ -452,10 +459,17 @@ func (s *Service) reverseRefundedEntitlements(ctx context.Context, tx Store, pla
 	request RefundRequest, payment RefundPayment, at time.Time) error {
 	if payment.Kind == "pack" {
 		marked, err := tx.MarkPurchaseRefunded(ctx, payment.UserID, payment.OrderID, at)
+		if err != nil || marked {
+			return err
+		}
+		// A later partial refund of the same pack finds the purchase marked by the first,
+		// whose confirmation already voided the lot: nothing is left to reverse, and this
+		// refund is recorded like the first.
+		purchase, found, err := tx.Purchase(ctx, payment.UserID, payment.OrderID)
 		if err != nil {
 			return err
 		}
-		if !marked {
+		if !found || purchase.RefundedAt == nil {
 			return ErrRefundConflict
 		}
 		return nil

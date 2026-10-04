@@ -37,6 +37,8 @@ type Store interface {
 type IntentStore interface {
 	PutQuote(context.Context, QuoteRecord) error
 	Quote(context.Context, string) (QuoteRecord, bool, error)
+	// PurgeExpiredQuotes deletes the quotes that expired before expiredBefore.
+	PurgeExpiredQuotes(ctx context.Context, expiredBefore time.Time) (int, error)
 	InsertIntent(context.Context, Intent) error
 	Intent(context.Context, string) (Intent, bool, error)
 	PendingIntent(context.Context, string) (Intent, bool, error)

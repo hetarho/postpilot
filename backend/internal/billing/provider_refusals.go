@@ -23,6 +23,36 @@ var definitiveChargeRefusals = map[string]bool{
 	"EXCEED_MAX_AUTH_COUNT":       true,
 }
 
+// definitiveCancelRefusals are the codes in Toss Payments' 결제 취소 error table
+// (POST /v1/payments/{paymentKey}/cancel) that refuse this cancel for good, copied verbatim
+// from the docs. A refusal is not proof that no money moved — ALREADY_CANCELED_PAYMENT can
+// answer a retry of a cancel that went through — so the payment is read back before the
+// request is failed. Transient answers (PROVIDER_ERROR, FORBIDDEN_CONSECUTIVE_REQUEST,
+// NOT_AVAILABLE_BANK, a 5xx) and configuration errors keep the request processing.
+var definitiveCancelRefusals = map[string]bool{
+	"INVALID_REQUEST":                         true,
+	"ALREADY_CANCELED_PAYMENT":                true,
+	"ALREADY_REFUND_PAYMENT":                  true,
+	"EXCEED_CANCEL_AMOUNT_DISCOUNT_AMOUNT":    true,
+	"NOT_MATCHES_REFUNDABLE_AMOUNT":           true,
+	"REFUND_REJECTED":                         true,
+	"NOT_CANCELABLE_AMOUNT":                   true,
+	"NOT_CANCELABLE_PAYMENT":                  true,
+	"NOT_CANCELABLE_PAYMENT_FOR_DORMANT_USER": true,
+	"EXCEED_MAX_REFUND_DUE":                   true,
+	"NOT_ALLOWED_PARTIAL_REFUND":              true,
+}
+
+// definitiveCancelRefusal returns the typed 4xx answer whose code is in definitiveCancelRefusals.
+func definitiveCancelRefusal(err error) (*ProviderError, bool) {
+	var providerErr *ProviderError
+	if errors.As(err, &providerErr) && providerErr.HTTPStatus >= 400 && providerErr.HTTPStatus < 500 &&
+		definitiveCancelRefusals[providerErr.Code] {
+		return providerErr, true
+	}
+	return nil, false
+}
+
 // definitiveChargeRefusal reports a typed 4xx answer whose code is in definitiveChargeRefusals.
 func definitiveChargeRefusal(err error) bool {
 	var providerErr *ProviderError

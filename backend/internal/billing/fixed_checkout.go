@@ -5,12 +5,27 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/postpilot/backend/internal/plan"
 )
 
 const fixedQuoteLifetime = 10 * time.Minute
+
+// quoteRetention is how long an expired quote is kept before the billing worker deletes it.
+const quoteRetention = 24 * time.Hour
+
+// purgeExpiredQuotes deletes the quotes that expired more than quoteRetention before now; a
+// confirm naming a purged quote is refused as stale exactly as an expired one is.
+func (s *Service) purgeExpiredQuotes(ctx context.Context, now time.Time) error {
+	journals, err := s.intentStore()
+	if err != nil {
+		return err
+	}
+	_, err = journals.PurgeExpiredQuotes(ctx, now.Add(-quoteRetention))
+	return err
+}
 
 // pendingSettleGrace keeps the billing worker off an order the request path created moments
 // ago: that path charges and settles the order itself, and a worker that found no payment
@@ -230,6 +245,7 @@ func fixedRenewOrderID(userID string, end time.Time) string {
 
 func (s *Service) renewFixed(ctx context.Context, subscription Subscription, now time.Time) (Subscription, error) {
 	var intent Intent
+	var inReview Intent
 	var failedTier plan.Plan
 	var failedTerm Term
 	var failedQuote Quote
@@ -238,9 +254,12 @@ func (s *Service) renewFixed(ctx context.Context, subscription Subscription, now
 		if !ok {
 			return ErrUnavailable
 		}
-		if _, pending, err := journals.PendingIntent(ctx, subscription.UserID); err != nil {
+		if blocking, pending, err := journals.PendingIntent(ctx, subscription.UserID); err != nil {
 			return err
 		} else if pending {
+			if blocking.Status == "review" {
+				inReview = blocking
+			}
 			return ErrPaymentPending
 		}
 		current, found, err := tx.Subscription(ctx, subscription.UserID)
@@ -278,6 +297,11 @@ func (s *Service) renewFixed(ctx context.Context, subscription Subscription, now
 		return journals.InsertIntent(ctx, intent)
 	})
 	if err != nil {
+		if inReview.OrderID != "" {
+			// Until an operator resolves the order in review, the account renews on no pass.
+			slog.Error("renewal skipped: an order is in review", "user_id", subscription.UserID,
+				"order_id", inReview.OrderID, "term_end", subscription.TermEnd)
+		}
 		return subscription, err
 	}
 	if intent.OrderID == "" {

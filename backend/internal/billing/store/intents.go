@@ -53,6 +53,15 @@ func (s *Store) Quote(ctx context.Context, id string) (billing.QuoteRecord, bool
 	return q, true, nil
 }
 
+func (s *Store) PurgeExpiredQuotes(ctx context.Context, expiredBefore time.Time) (int, error) {
+	result, err := s.db.ExecContext(ctx, `DELETE FROM billing_quotes WHERE expires_at<?`, formatTime(expiredBefore))
+	if err != nil {
+		return 0, fmt.Errorf("purge expired billing quotes: %w", err)
+	}
+	n, err := result.RowsAffected()
+	return int(n), err
+}
+
 func (s *Store) InsertIntent(ctx context.Context, i billing.Intent) error {
 	_, err := s.db.ExecContext(ctx, `INSERT INTO billing_intents
       (order_id,user_id,kind,tier,term,pack_id,billing_key,customer_key,krw,quote_id,quoted_at,

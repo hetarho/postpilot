@@ -85,7 +85,6 @@
 | T558 | Sample browser renders without a full decode and load each original once | ARCH | - | todo |
 | T559 | Take a server render's ground frames from its own lossless cut, and trim before scaling | ARCH | T558 | todo |
 | T560 | Stop re-laying out a clip per caption-frames request and re-decoding JSON per poll | ARCH | - | todo |
-| T563 | Record every confirmed refund and release credits a refused refund froze | ARCH | T562 | todo |
 | T564 | Stop the clip detail polling forever and stop each settings save from refetching it | ARCH | - | todo |
 | T565 | Send each clip autosave through its own project's sender and queue the clip storyline | ARCH | - | todo |
 | T566 | Keep lazily routed pages out of the entry chunk | ARCH | - | todo |
@@ -98,6 +97,7 @@
 - ops: lower TEMPLATE_PHOTO_ROW_MAX / VITE_TEMPLATE_PHOTO_ROW_MAX to 3 wherever production sets them explicitly (VPS .env, Cloudflare build vars).
 
 ## log
+- 261004 T563 done: a second pack refund records like the first, definitive cancel refusals release frozen credits after a read-back, review-skipped renewals are logged, expired quotes purged; BE suite green
 - 261004 T562 done: billing pass survives an unapplicable order (to review), charges carry Idempotency-Key, fresh intents wait 2 min, only definitive refusals fail, annual step advances next_grant_at alone, Toss client 30 s timeout; BE suite green
 - 261004 T561 done: migration 0129 rebuilds generation_jobs without kind-naming CHECKs (scoped FK guard); PickNextQueued takes first stages from Go; BE suite green
 - 261004 T551 done: migration 0128 indexes generation_jobs project/post lookups and usage job_id; the checkpoint trigger skips sampling jobs; HoldForJob reads the read pool; BE suite green
@@ -117,4 +117,3 @@
 - 261004 create-ssot/update-ssot DUB MODEL QUOTA CLIP CDS THEME start: convert the adopted voice-first editor scope before create-task; unrelated ARCH/VOICE/review pending excluded
 - 261004 create-ssot DUB r1: description-generated private voices, audition/confirmation, account reuse and selective narration; related MODEL/QUOTA extensions precede implementation tasks
 - 261004 create-ssot DUB start: confirmed custom spoken voices, account reuse and selective narration generation from adopted ideation
-- 261004 ideation familiar-video-editing-and-dubbing ready: complete v1 product policy adopted; description-generated reusable voices first, responsive editor and speech-led clips next

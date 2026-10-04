@@ -1,8 +1,11 @@
 package store_test
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"log/slog"
+	"strings"
 	"testing"
 	"time"
 
@@ -249,5 +252,72 @@ func TestAnnualBenefitStepKeepsACancelWrittenDuringThePass(t *testing.T) {
 	ended, _, err := h.store.Subscription(ctx, "alice")
 	if err != nil || ended.Status != "lapsed" || len(provider.charges) != 1 {
 		t.Fatalf("cancelled annual at term end=%+v charges=%v err=%v", ended, provider.charges, err)
+	}
+}
+
+// F12: a renewal the pass skips because the account has an order in review is logged with the
+// account and the order, never skipped silently.
+func TestRenewalBlockedByAnOrderInReviewIsLogged(t *testing.T) {
+	ctx := context.Background()
+	at := time.Date(2026, 6, 10, 12, 0, 0, 0, time.FixedZone("KST", 9*3600))
+	h, provider, clock := fixedService(t, at)
+	sub, err := h.service.Subscribe(ctx, "alice", plan.Basic, billing.TermMonthly)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := h.store.InsertIntent(ctx, packIntent("alice", "pp-buy-review", 3000, at)); err != nil {
+		t.Fatal(err)
+	}
+	if marked, err := h.store.MarkIntent(ctx, "pp-buy-review", "review", "DONE", "pay-review", at); err != nil || !marked {
+		t.Fatalf("review mark=%t err=%v", marked, err)
+	}
+	var logs bytes.Buffer
+	previous := slog.Default()
+	slog.SetDefault(slog.New(slog.NewTextHandler(&logs, nil)))
+	t.Cleanup(func() { slog.SetDefault(previous) })
+
+	*clock = sub.TermEnd
+	if err := h.service.RunDue(ctx, *clock); err != nil {
+		t.Fatal(err)
+	}
+	line := ""
+	for _, candidate := range strings.Split(logs.String(), "\n") {
+		if strings.Contains(candidate, "renewal skipped") {
+			line = candidate
+		}
+	}
+	if !strings.Contains(line, "user_id=alice") || !strings.Contains(line, "order_id=pp-buy-review") {
+		t.Fatalf("skip log = %q\nall logs:\n%s", line, logs.String())
+	}
+	held, _, err := h.store.Subscription(ctx, "alice")
+	if err != nil || !held.TermEnd.Equal(sub.TermEnd) || len(provider.charges) != 1 {
+		t.Fatalf("blocked renewal ran: %+v charges=%v err=%v", held, provider.charges, err)
+	}
+}
+
+// F21: the billing pass deletes the quotes that expired more than a day ago and keeps the rest.
+func TestBillingPassPurgesOnlyLongExpiredQuotes(t *testing.T) {
+	ctx := context.Background()
+	at := time.Date(2026, 7, 10, 12, 0, 0, 0, time.FixedZone("KST", 9*3600))
+	h, _, clock := fixedService(t, at)
+	for id, expires := range map[string]time.Time{
+		"q-old":    at.Add(-48 * time.Hour),
+		"q-recent": at.Add(-time.Hour),
+		"q-live":   at.Add(5 * time.Minute),
+	} {
+		if err := h.store.PutQuote(ctx, billing.QuoteRecord{ID: id, UserID: "alice", Tier: plan.Basic,
+			Term: billing.TermMonthly, KRW: 4900, EffectiveAt: at, SubscriptionUpdatedAt: at,
+			QuotedAt: expires.Add(-10 * time.Minute), ExpiresAt: expires}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	*clock = at
+	if err := h.service.RunDue(ctx, at); err != nil {
+		t.Fatal(err)
+	}
+	for id, kept := range map[string]bool{"q-old": false, "q-recent": true, "q-live": true} {
+		if _, found, err := h.store.Quote(ctx, id); err != nil || found != kept {
+			t.Fatalf("quote %s found=%t, want %t (err=%v)", id, found, kept, err)
+		}
 	}
 }

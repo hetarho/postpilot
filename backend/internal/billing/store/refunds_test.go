@@ -83,6 +83,10 @@ type reviewPayments struct {
 	calls                       int
 	timeout                     bool
 	decline                     bool
+	// refusal answers every cancel with this provider error and cancels nothing.
+	refusal *billing.ProviderError
+	// beforeCancel runs as a cancel arrives, before the fake decides its answer.
+	beforeCancel func()
 }
 
 func (p *reviewPayments) PaymentByOrder(ctx context.Context, orderID string) (billing.Payment, bool, error) {
@@ -96,8 +100,14 @@ func (p *reviewPayments) CancelPayment(_ context.Context, key string, amount int
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.calls++
+	if p.beforeCancel != nil {
+		p.beforeCancel()
+	}
 	if p.decline {
 		return billing.Payment{}, &billing.ProviderError{Code: "INVALID_REQUEST", HTTPStatus: 400}
+	}
+	if p.refusal != nil {
+		return billing.Payment{}, p.refusal
 	}
 	if prior, ok := p.canceled[idempotency]; ok {
 		return prior, nil
@@ -476,4 +486,148 @@ func TestConfirmedRefundNeverDemotesAMaster(t *testing.T) {
 	if err := h.handle.Reader.QueryRow(`SELECT plan FROM users WHERE id='alice'`).Scan(&tier); err != nil || tier != "master" {
 		t.Fatalf("plan after refund = %s err=%v, want master", tier, err)
 	}
+}
+
+// F3: a later partial refund of a pack whose purchase the first refund already marked is
+// recorded once like the first — its event, its share of the confirmed total, completion.
+func TestSecondPartialRefundOfAPackIsRecordedLikeTheFirst(t *testing.T) {
+	ctx := context.Background()
+	at := time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC)
+	h, provider, clock := refundHarness(t, at)
+	if _, err := h.service.Subscribe(ctx, "alice", plan.Light, billing.TermMonthly); err != nil {
+		t.Fatal(err)
+	}
+	pack, err := h.service.PurchasePack(ctx, "alice", "pack-3000")
+	if err != nil {
+		t.Fatal(err)
+	}
+	*clock = at.Add(8 * 24 * time.Hour)
+	for index, amount := range []int{4000, 3000} {
+		request, err := h.service.RequestRefund(ctx, "alice", pack.OrderID, "partial refund")
+		if err != nil {
+			t.Fatalf("request %d: %v", index, err)
+		}
+		reviewed, err := h.service.ReviewRefund(ctx, "operator", request.ID, "approve", amount)
+		if err != nil || reviewed.Status != "completed" || reviewed.ConfirmedAmountKRW != amount {
+			t.Fatalf("refund %d=%+v err=%v", index, reviewed, err)
+		}
+		*clock = clock.Add(time.Hour)
+	}
+	if total, err := h.store.ConfirmedRefundTotal(ctx, pack.OrderID); err != nil || total != 7000 {
+		t.Fatalf("confirmed total=%d err=%v", total, err)
+	}
+	var events, refunded int
+	if err := h.handle.Reader.QueryRow(`SELECT count(*),coalesce(sum(krw),0) FROM billing_events
+		WHERE kind='refund' AND provider_payment_key=?`, pack.ProviderPaymentKey).Scan(&events, &refunded); err != nil ||
+		events != 2 || refunded != 7000 {
+		t.Fatalf("refund events=%d sum=%d err=%v", events, refunded, err)
+	}
+	if provider.calls != 2 {
+		t.Fatalf("cancel attempts=%d", provider.calls)
+	}
+	var remaining int
+	if err := h.handle.Reader.QueryRow(`SELECT remaining FROM credit_lots WHERE id=?`, pack.LotID).Scan(&remaining); err != nil || remaining != 0 {
+		t.Fatalf("refunded pack remaining=%d err=%v", remaining, err)
+	}
+}
+
+// F12: a cancel the provider definitively refuses is settled by reading the payment back:
+// an untouched balance fails the request and frees the frozen lot, our amount already
+// cancelled completes it, and anything else leaves it processing.
+func TestDefinitiveCancelRefusalIsSettledByThePaymentReadBack(t *testing.T) {
+	ctx := context.Background()
+	at := time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC)
+	packRequest := func(t *testing.T) (*ledgerHarness, *reviewPayments, billing.Purchase, billing.RefundRequest) {
+		t.Helper()
+		h, provider, _ := refundHarness(t, at)
+		if _, err := h.service.Subscribe(ctx, "alice", plan.Light, billing.TermMonthly); err != nil {
+			t.Fatal(err)
+		}
+		pack, err := h.service.PurchasePack(ctx, "alice", "pack-1000")
+		if err != nil {
+			t.Fatal(err)
+		}
+		request, err := h.service.RequestRefund(ctx, "alice", pack.OrderID, "unused credits")
+		if err != nil {
+			t.Fatal(err)
+		}
+		return h, provider, pack, request
+	}
+	guardOf := func(t *testing.T, h *ledgerHarness, lotID string) (guard sql.NullString, remaining int) {
+		t.Helper()
+		if err := h.handle.Reader.QueryRow(`SELECT refund_request_id,remaining FROM credit_lots WHERE id=?`, lotID).
+			Scan(&guard, &remaining); err != nil {
+			t.Fatal(err)
+		}
+		return guard, remaining
+	}
+
+	for _, refusal := range []*billing.ProviderError{
+		{Code: "NOT_CANCELABLE_AMOUNT", HTTPStatus: 403},
+		{Code: "ALREADY_CANCELED_PAYMENT", HTTPStatus: 400},
+	} {
+		t.Run(refusal.Code+" with an unchanged balance fails and frees the lot", func(t *testing.T) {
+			h, provider, pack, request := packRequest(t)
+			provider.refusal = refusal
+			if _, err := h.service.ReviewRefund(ctx, "operator", request.ID, "approve", pack.KRW); !errors.Is(err, billing.ErrRefundFailed) {
+				t.Fatalf("refusal=%v", err)
+			}
+			stored, err := h.service.RefundRequest(ctx, request.ID)
+			if err != nil || stored.Status != "failed" || stored.ProviderStatus != refusal.Code {
+				t.Fatalf("request=%+v err=%v", stored, err)
+			}
+			if guard, remaining := guardOf(t, h, pack.LotID); guard.Valid || remaining != pack.Credits {
+				t.Fatalf("lot still frozen: guard=%v remaining=%d", guard, remaining)
+			}
+			lots, err := usagestore.New(h.handle.Writer, h.handle.Reader).LotsInConsumptionOrder(ctx, "alice", at)
+			if err != nil {
+				t.Fatal(err)
+			}
+			spendable := false
+			for _, lot := range lots {
+				spendable = spendable || lot.ID == pack.LotID
+			}
+			if !spendable {
+				t.Fatalf("pack lot not spendable: %+v", lots)
+			}
+		})
+	}
+
+	t.Run("a refusal after our cancel went through completes", func(t *testing.T) {
+		h, provider, pack, request := packRequest(t)
+		provider.timeout = true
+		started, err := h.service.ReviewRefund(ctx, "operator", request.ID, "approve", pack.KRW)
+		if err != nil || started.Status != "processing" {
+			t.Fatalf("lost response=%+v err=%v", started, err)
+		}
+		provider.refusal = &billing.ProviderError{Code: "ALREADY_CANCELED_PAYMENT", HTTPStatus: 400}
+		if err := h.service.ReconcileRefund(ctx, request.ID); err != nil {
+			t.Fatal(err)
+		}
+		resolved, err := h.service.RefundRequest(ctx, request.ID)
+		if err != nil || resolved.Status != "completed" || resolved.ConfirmedAmountKRW != pack.KRW ||
+			resolved.ProviderTransactionKey != "cancel-refund:"+request.ID {
+			t.Fatalf("resolved=%+v err=%v", resolved, err)
+		}
+	})
+
+	t.Run("a refusal after someone else moved the balance stays processing", func(t *testing.T) {
+		h, provider, pack, request := packRequest(t)
+		provider.refusal = &billing.ProviderError{Code: "NOT_CANCELABLE_AMOUNT", HTTPStatus: 403}
+		provider.beforeCancel = func() {
+			provider.fixedPayments.mu.Lock()
+			defer provider.fixedPayments.mu.Unlock()
+			payment := provider.fixedPayments.orders[pack.OrderID]
+			payment.BalanceKRW -= 100
+			payment.Cancels = append(payment.Cancels, billing.PaymentCancel{TransactionKey: "dashboard", AmountKRW: 100, Status: "DONE"})
+			provider.fixedPayments.orders[pack.OrderID] = payment
+		}
+		reviewed, err := h.service.ReviewRefund(ctx, "operator", request.ID, "approve", pack.KRW)
+		if err != nil || reviewed.Status != "processing" {
+			t.Fatalf("review=%+v err=%v", reviewed, err)
+		}
+		if guard, _ := guardOf(t, h, pack.LotID); guard.String != request.ID {
+			t.Fatalf("lot guard=%v, want %s", guard, request.ID)
+		}
+	})
 }
