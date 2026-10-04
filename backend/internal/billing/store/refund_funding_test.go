@@ -218,7 +218,7 @@ func TestRefundEvidenceAndGuardAgreeOnWhatAPaymentFunded(t *testing.T) {
 			// The next day the ledger lazily issues that day's grant at the tier the upgrade raised.
 			*clock = clock.Add(24 * time.Hour)
 			ledger := usage.NewService(usagestore.New(h.handle.Writer, h.handle.Reader), nil, 0,
-				billingCoverage{h.service}).WithClock(func() time.Time { return *clock })
+				billingCoverage{h.service}, testRates).WithClock(func() time.Time { return *clock })
 			if _, err := ledger.BalanceFor(ctx, "alice", plan.Pro); err != nil {
 				t.Fatal(err)
 			}
