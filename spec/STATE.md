@@ -80,6 +80,7 @@
 | T548 | Mix immutable narration into server MP4 exports | ARCH DUB CLIP CDS | T547 | todo |
 | T549 | Mix the same narration into browser MP4 exports | ARCH DUB CLIP CDS | T548 | todo |
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | todo |
+| T583 | Remove what the fixed-KRW billing left behind | ARCH BILL | - | doing@261005.pc |
 
 ## next
 - implement-task T569–T579 (perf-cost follow-ups, QUOTA r34, BILL r9, release smoke), one commit per task, then push and watch CI.
@@ -88,6 +89,7 @@
 - ops: lower TEMPLATE_PHOTO_ROW_MAX / VITE_TEMPLATE_PHOTO_ROW_MAX to 3 wherever production sets them explicitly (VPS .env, Cloudflare build vars).
 
 ## log
+- 261005 create-task T583 (left open by T582: PURCHASE_TOO_SMALL, RefundPurchase, USD columns, IntentStore) and start
 - 261005 T582 done: billing has one regime (fixed KRW): the flag, non-fixed branches, USD rates port and legacy monthly-lot credit methods are deleted; seed opens benefits like production; BE suite green
 - 261005 T581 done: model-combo and clip estimates price through the FX snapshot alone; no rate means no figure; USD helpers deleted; BE suite green
 - 261005 T579 done: the release smoke's caption expectation follows CLIP-196's region fitting; 28/28 modes pass; host test pins it
