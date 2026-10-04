@@ -1,5 +1,5 @@
 # POST posts, drafts, photos
-> r31 | A post is a slug-identified, account-owned aggregate: autosaved title + memo + the answers its template's data fields ask for, browser-converted photos and as-picked short videos in private object storage, a storyline the owner can change, block-array canonical content with an immutable machine baseline, a draft → review → finalized → published lifecycle whose last step is an owner-pasted Naver URL, and the editor that presents it.
+> r32 | A post is a slug-identified, account-owned aggregate: autosaved title + memo + the answers its template's data fields ask for, browser-converted photos and as-picked short videos in private object storage, a storyline the owner can change, block-array canonical content with an immutable machine baseline, a draft → review → finalized → published lifecycle whose last step is an owner-pasted Naver URL, and the editor that presents it.
 
 ## decisions
 - POST-1 [o] a post is identified by a slug minted once on the first save and never changed ← it is the primary key and part of every photo object key, so renaming would orphan the photos
@@ -78,6 +78,7 @@
   - the brief is a bottom sheet on a phone, a right-aligned popover bounded by the measured room from `sm:`
 - POST-52 [o] when the only thing between ① and a run is that the models were never chosen, the bar drops ①'s actions and renders the per-action reason plus ONE route — the brief; any other blocker (a job running, a deleted voice, a selection loading) keeps ordinary disabled buttons ← waiting is the answer to those
 - POST-53 [o] ①'s two actions split the dock row 3 : 7 on a phone, `스토리라인 먼저` left and `바로 글 쓰기` right, the latter carrying a menu (▾) that holds `A/B 비교` (→GEN-72) ← the committing action takes the side a right-handed one-handed grip reaches first, and a third button across 360 px would leave none readable; from `sm:` the pair right-aligns at natural width
+- POST-108 [o] pressing one of ①'s actions — `스토리라인 먼저`, `바로 글 쓰기` or `A/B 비교` — on a post with no photo and no video attached opens one confirmation, `사진 없이 만들까요?` saying no photo is attached, after the setup and required-answer checks and before anything is saved or started: confirming starts that run, cancelling saves and starts nothing ← a run with nothing attached writes from the text alone, and a forgotten upload is the likelier story
 - POST-54 [o] each step renders only its own panel: ① the 가제, the selected template's data fields (→POST-62), the memo under them, photos and the contact sheet (one horizontal snap carousel with a 현재/전체 indicator on a phone); ② the storyline space (→POST-95) above the draft as prose; ③ 기억으로 저장, manual export and the 발행 URL field at its foot (→POST-73); the memo and the data fields belong to ① as the input 글 생성 works from; the memo follows the data fields ← it carries what the fields did not ask, so it is written once they are filled
 - POST-55 [o] ② opens as prose: `entities/post`'s `BlockList` renders title, summary, tags and every block read-only, each block and the header carrying one edit control on the shared `Editable`; opening a block does not close another; edits write through so autosave keeps running; 취소 restores the value the block held when its editor opened; moving or deleting a block closes it
 - POST-56 [o] ②'s dock is ONE surface (`widgets/refine-dock`): the AI revision instruction with an icon-only send button under a visible heading `수정 요청을 입력하세요` at the `fieldTitle` role that IS the field's `<label>`, and `확정하기` as the CTA filling the rest of that row, finalizing at once whenever the draft can be finalized
@@ -162,7 +163,7 @@
 - new post: `/posts/new` (voice picker seeded with the 기본, or 말투 없음) → type or pick photos → `mint()` → slug → `/posts/<slug>` (replace) → autosave 1 s after each pause
 - photo · video: select(gate) → (photo: decode → resize/encode | video: read metadata) → CreateUpload → PUT to storage → ConfirmUpload → cache patch → next GetPost supplies the presigned view URL
 - lifecycle: draft →(storyline job) draft holding a storyline, on ② →(machine result) review →(FinalizePost) finalized →(changed content save | machine result) review | →(paste Naver URL) published →(clear URL) finalized
-- storyline: ① 스토리라인 먼저 → storyline job → ② space open, no draft → edit text · move, take out or put back attachments · press a tile → large view(previous | next | close) · AI request · 다시 만들기(confirm over hand edits) → 이 스토리로 글 쓰기 → generation → review; ② 이 스토리로 다시 쓰기(confirm over a hand-edited draft) → review
+- storyline: ① 스토리라인 먼저 →(nothing attached → confirm) storyline job → ② space open, no draft → edit text · move, take out or put back attachments · press a tile → large view(previous | next | close) · AI request · 다시 만들기(confirm over hand edits) → 이 스토리로 글 쓰기 → generation → review; ② 이 스토리로 다시 쓰기(confirm over a hand-edited draft) → review
 - list: `/posts` → first `POSTS_PAGE_SIZE` rows of the narrowed answer → end nears the viewport → next rows (… | failed → 다시 시도) · `q` or `status` changes → first rows of the new narrowing
 - delete: 글 삭제하기 → dialog → DeletePost(generation active → refuse | purge experiment content → row + cascades + objects → detach guideline candidates → detach memory links, each detach logged on failure) → end queues → `/posts`
 
@@ -176,4 +177,4 @@
 - ops: the production bucket needs a CORS rule allowing PUT/GET/HEAD from the FE origin (DEPLOY.md); MinIO in `docker-compose.yml` serves local development
 
 ## chg
--
+- r32 261004 POST-108+ ①'s actions on a post with nothing attached confirm once before the run
