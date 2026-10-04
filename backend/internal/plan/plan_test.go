@@ -52,24 +52,24 @@ func TestEstimatorRatesPriceEachUnitWithTheModelThatServesIt(t *testing.T) {
 		return prompt + completion*10, true
 	}
 
-	rates, ok := plan.EstimatorRates(observe, write)
+	rates, ok := plan.EstimatorRatesAt(observe, write, estimatorRate)
 	if !ok {
-		t.Fatal("EstimatorRates refused two priced models")
+		t.Fatal("EstimatorRatesAt refused two priced models")
 	}
 	for _, tc := range []struct {
 		name string
 		got  int
 		want int
 	}{
-		// Photo and observation tokens include the 1.5x revision allowance;
-		// the fixed 500 milli-credit batch share is unchanged.
-		{"per photo", rates.PerPhoto, 835},
+		// Photo and observation tokens include the 1.5x revision allowance: $0.000894 for
+		// the photo plus a quarter of the batch prompt ($0.000225), at KRW 1,360 per USD.
+		{"per photo", rates.PerPhoto, 1521},
 		// 15 s x 300 tokens + the same observation entry and batch share.
-		{"per video", rates.PerVideo, 1399},
+		{"per video", rates.PerVideo, 4080},
 		// 1 000 characters at 120 output tokens per 100, priced by the write model.
-		{"per 1000 chars", rates.Per1000Chars, 5400},
-		// The write call: its ChargeBase in full plus its prompt.
-		{"per post base", rates.PerPostBase, 4700},
+		{"per 1000 chars", rates.Per1000Chars, 24480},
+		// The write call's prompt, with no base charge on top.
+		{"per post base", rates.PerPostBase, 12240},
 	} {
 		if tc.got != tc.want {
 			t.Errorf("%s = %d milli-credits, want %d", tc.name, tc.got, tc.want)
@@ -78,24 +78,32 @@ func TestEstimatorRatesPriceEachUnitWithTheModelThatServesIt(t *testing.T) {
 
 	// The shape a client multiplies: one 1 000-character post with five photos.
 	post := rates.PerPostBase + 5*rates.PerPhoto + rates.Per1000Chars
-	if posts := plan.MonthlyCredits(plan.Basic) * 1000 / post; posts != 23 {
-		t.Errorf("basic covers %d posts of that shape, want 23", posts)
+	if posts := plan.MonthlyCredits(plan.Basic) * 1000 / post; posts != 7 {
+		t.Errorf("basic covers %d posts of that shape, want 7", posts)
 	}
 }
 
-// A model with no published price cannot be quoted, and a combo that cannot be priced is
-// not published at all.
+// A model with no published price, or a rate no job could freeze, cannot be quoted, and a
+// combo that cannot be priced is not published at all.
 func TestEstimatorRatesRefusesAnUnpricedModel(t *testing.T) {
 	priced := func(prompt, completion int64) (int64, bool) { return prompt + completion, true }
 	unpriced := func(int64, int64) (int64, bool) { return 0, false }
 
-	if _, ok := plan.EstimatorRates(unpriced, priced); ok {
+	if _, ok := plan.EstimatorRatesAt(unpriced, priced, estimatorRate); ok {
 		t.Error("an unpriced observe model was accepted")
 	}
-	if _, ok := plan.EstimatorRates(priced, unpriced); ok {
+	if _, ok := plan.EstimatorRatesAt(priced, unpriced, estimatorRate); ok {
 		t.Error("an unpriced write model was accepted")
 	}
+	if _, ok := plan.EstimatorRatesAt(priced, priced, plan.RateSnapshot{}); ok {
+		t.Error("a combo was priced without a selectable rate")
+	}
 }
+
+// estimatorRate is a fixed KRW 1,360 per USD snapshot, so the estimator figures below are
+// pinned with their own arithmetic.
+var estimatorRate = plan.RateSnapshot{Source: "korea-eximbank", PublicationDate: "2026-09-29",
+	ReferenceE4: 13_600_000, AppliedE4: 13_600_000}
 
 // Exactly one rung is marked: two of them would make the mark meaningless, and none would
 // leave the comparison screen with nothing to lead with.
@@ -244,16 +252,6 @@ func TestPaymentMethodBonusCredits(t *testing.T) {
 	}
 }
 
-// The allowance is tokens for later edits, not a surcharge on fixed infrastructure
-// overhead and never a second multiplier applied by the browser.
-func TestEstimatorRevisionAllowanceLeavesFixedOverheadUnchanged(t *testing.T) {
-	free := func(int64, int64) (int64, bool) { return 0, true }
-	rates, ok := plan.EstimatorRates(free, free)
-	if !ok || rates.PerPostBase != 2000 || rates.PerPhoto != 500 || rates.PerVideo != 500 || rates.Per1000Chars != 0 {
-		t.Fatalf("free-model estimate = %+v, priced=%v", rates, ok)
-	}
-}
-
 func TestClipEstimateIncludesSourceContextAndBothWritingStages(t *testing.T) {
 	observe := func(prompt, completion int64) (int64, bool) {
 		return prompt*30/100 + completion*250/100, true
@@ -261,33 +259,31 @@ func TestClipEstimateIncludesSourceContextAndBothWritingStages(t *testing.T) {
 	write := func(prompt, completion int64) (int64, bool) {
 		return prompt + completion*10, true
 	}
-	rates, ok := plan.ClipEstimatorRates(observe, write)
-	// Per original: 30k input + 3k observed output tokens cost $0.0165;
-	// both writers consume 6k source-context tokens ($0.006). At 3x plus a
-	// 2-credit observation base that is 8.75 credits per original.
-	// Writer prompts cost $0.024 (7.2 credits) + two fixed bases (4 credits).
-	// A finished second carries 120 combined output tokens ($0.0012 / 0.36 credits).
-	want := plan.ClipRates{PerSource: 8750, PerOutputSecond: 360, PerClipBase: 11200}
+	rates, ok := plan.ClipEstimatorRatesAt(observe, write, estimatorRate)
+	// Per original: 30k input + 3k observed output tokens cost $0.0165, 22.44 credits at
+	// KRW 1,360 per USD. Both writers consume 6k source-context tokens ($0.006) and 24k
+	// prompt tokens ($0.024), 40.8 credits per clip. A finished second carries 120 combined
+	// output tokens ($0.0012 / 1.632 credits).
+	want := plan.ClipRates{PerSource: 22440, PerOutputSecond: 1632, PerClipBase: 40800}
 	if !ok || rates != want || plan.EstimatorClipSourceSeconds != 60 {
 		t.Fatalf("clip rates = %+v, priced=%v; want %+v with 60s sources", rates, ok, want)
 	}
 	cost := rates.PerClipBase + 3*rates.PerSource + 30*rates.PerOutputSecond
-	if cost != 48250 || plan.MonthlyCredits(plan.Basic)*1000/cost != 6 {
-		t.Fatalf("default clip cost = %d; basic should cover six clips", cost)
+	if cost != 157080 || plan.MonthlyCredits(plan.Basic)*1000/cost != 2 {
+		t.Fatalf("default clip cost = %d; basic should cover two clips", cost)
 	}
 }
 
-func TestClipEstimateUnavailablePricesAndFixedOverhead(t *testing.T) {
+func TestClipEstimateRefusesUnpricedModelsAndAnUnselectableRate(t *testing.T) {
 	free := func(int64, int64) (int64, bool) { return 0, true }
 	unpriced := func(int64, int64) (int64, bool) { return 0, false }
-	if _, ok := plan.ClipEstimatorRates(unpriced, free); ok {
+	if _, ok := plan.ClipEstimatorRatesAt(unpriced, free, estimatorRate); ok {
 		t.Fatal("accepted unpriced observer")
 	}
-	if _, ok := plan.ClipEstimatorRates(free, unpriced); ok {
+	if _, ok := plan.ClipEstimatorRatesAt(free, unpriced, estimatorRate); ok {
 		t.Fatal("accepted unpriced writer")
 	}
-	rates, ok := plan.ClipEstimatorRates(free, free)
-	if !ok || rates != (plan.ClipRates{PerSource: 2000, PerClipBase: 4000}) {
-		t.Fatalf("fixed overhead must not receive token allowance: %+v", rates)
+	if _, ok := plan.ClipEstimatorRatesAt(free, free, plan.RateSnapshot{}); ok {
+		t.Fatal("priced a clip without a selectable rate")
 	}
 }

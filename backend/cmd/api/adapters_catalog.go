@@ -141,37 +141,10 @@ func (e estimatorCombos) postCredits(ctx context.Context, combo modelcatalog.Com
 	return observeFigure.Plus(writeFigure)
 }
 
+// CurrentRate is the rate a new job would select; the ledger it reads is always wired, so a
+// comparison without a rate is the official source being down, never a missing selector.
 func (e estimatorCombos) CurrentRate(ctx context.Context) (plan.RateSnapshot, error) {
-	if e.ledger == nil {
-		return plan.RateSnapshot{}, usage.ErrRateUnavailable
-	}
 	return e.ledger.SelectRate(ctx)
-}
-
-func (e estimatorCombos) ComboRates(ctx context.Context) ([]planrpc.EstimatorCombo, error) {
-	var priced []modelcatalog.ComboRates
-	var err error
-	if e.ledger != nil {
-		rate, rateErr := e.ledger.SelectRate(ctx)
-		if rateErr != nil {
-			return nil, nil // Plan viewing remains available while paid AI has no usable rate.
-		}
-		priced, err = e.catalog.ComboRatesAt(ctx, rate)
-	} else {
-		priced, err = e.catalog.ComboRates(ctx)
-	}
-	if err != nil {
-		return nil, err
-	}
-	out := make([]planrpc.EstimatorCombo, 0, len(priced))
-	for _, combo := range priced {
-		out = append(out, planrpc.EstimatorCombo{
-			Combo:       string(combo.Combo),
-			ClipRates:   combo.ClipRates,
-			PostCredits: e.postCredits(ctx, combo),
-		})
-	}
-	return out, nil
 }
 
 // ComboRatesAt uses the exact rate already disclosed on GetMyPlan.

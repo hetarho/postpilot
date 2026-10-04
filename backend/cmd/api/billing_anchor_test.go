@@ -82,6 +82,10 @@ func TestUsageAnchorPrefersAnActiveSubscriptionAndFallsBackAfterLapse(t *testing
 
 type emptyBillingEstimator struct{}
 
-func (emptyBillingEstimator) ComboRates(context.Context) ([]planrpc.EstimatorCombo, error) {
+func (emptyBillingEstimator) CurrentRate(context.Context) (plan.RateSnapshot, error) {
+	return plan.RateSnapshot{}, usage.ErrRateUnavailable
+}
+
+func (emptyBillingEstimator) ComboRatesAt(context.Context, plan.RateSnapshot) ([]planrpc.EstimatorCombo, error) {
 	return nil, nil
 }

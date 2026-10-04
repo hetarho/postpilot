@@ -106,10 +106,13 @@ type EstimatorCombo struct {
 	PostCredits plan.PostFigure
 }
 
-// Estimator publishes the operator's priced combos (QUOTA-40). Declared here by its
-// consumer; the model catalog implements it, because the assignment is a curation decision.
+// Estimator publishes the operator's priced combos (QUOTA-40) at the rate a new job would
+// freeze (QUOTA-59). Declared here by its consumer; the model catalog implements it, because
+// the assignment is a curation decision. CurrentRate fails when no rate can be selected, and
+// the comparison then carries no figure rather than one in other terms.
 type Estimator interface {
-	ComboRates(ctx context.Context) ([]EstimatorCombo, error)
+	CurrentRate(ctx context.Context) (plan.RateSnapshot, error)
+	ComboRatesAt(ctx context.Context, rate plan.RateSnapshot) ([]EstimatorCombo, error)
 }
 
 // Handler implements postpilotv1connect.PlanServiceHandler.
@@ -203,34 +206,17 @@ func (h *Handler) GetMyPlan(ctx context.Context, _ *connect.Request[postpilotv1.
 	// A comparison with no priced combo shows grants and prices and no post estimate. That
 	// is a state the operator can fix, not a failure of this read, so a combo lookup that
 	// fails is logged and answered as "none assigned" rather than failing GetMyPlan.
-	fxUnavailable := false
-	var selectedRate plan.RateSnapshot
-	if source, ok := h.estimator.(interface {
-		CurrentRate(context.Context) (plan.RateSnapshot, error)
-	}); ok {
-		rate, err := source.CurrentRate(ctx)
-		if err != nil || !rate.Valid() {
-			fxUnavailable = true
-		} else {
-			// Estimates are priced at the rate a new job would select, which no caller of this
-			// customer read is shown, master included (QUOTA-65, QUOTA-68).
-			selectedRate = rate
-		}
-	}
+	// Estimates are priced at the rate a new job would select, which no caller of this
+	// customer read is shown, master included (QUOTA-65, QUOTA-68).
 	var combos []*postpilotv1.EstimatorCombo
 	var priced []EstimatorCombo
-	var comboErr error
-	if source, ok := h.estimator.(interface {
-		ComboRatesAt(context.Context, plan.RateSnapshot) ([]EstimatorCombo, error)
-	}); ok {
-		if selectedRate.Valid() {
-			priced, comboErr = source.ComboRatesAt(ctx, selectedRate)
+	rate, rateErr := h.estimator.CurrentRate(ctx)
+	fxUnavailable := rateErr != nil || !rate.Valid()
+	if !fxUnavailable {
+		var comboErr error
+		if priced, comboErr = h.estimator.ComboRatesAt(ctx, rate); comboErr != nil {
+			slog.Error("estimator combo read failed", "user_id", userID, "err", comboErr)
 		}
-	} else if !fxUnavailable {
-		priced, comboErr = h.estimator.ComboRates(ctx)
-	}
-	if comboErr != nil {
-		slog.Error("estimator combo read failed", "user_id", userID, "err", comboErr)
 	}
 	for _, combo := range priced {
 		var clipRates *postpilotv1.ClipEstimatorRates

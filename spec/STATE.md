@@ -80,7 +80,6 @@
 | T548 | Mix immutable narration into server MP4 exports | ARCH DUB CLIP CDS | T547 | todo |
 | T549 | Mix the same narration into browser MP4 exports | ARCH DUB CLIP CDS | T548 | todo |
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | todo |
-| T581 | Price the model-combo estimates through FX alone | QUOTA ARCH | - | doing@261005.pc |
 | T582 | Delete the billing regime production no longer runs | BILL ARCH | T581 | doing@261005.pc |
 
 ## next
@@ -90,6 +89,7 @@
 - ops: lower TEMPLATE_PHOTO_ROW_MAX / VITE_TEMPLATE_PHOTO_ROW_MAX to 3 wherever production sets them explicitly (VPS .env, Cloudflare build vars).
 
 ## log
+- 261005 T581 done: model-combo and clip estimates price through the FX snapshot alone; no rate means no figure; USD helpers deleted; BE suite green
 - 261005 T579 done: the release smoke's caption expectation follows CLIP-196's region fitting; 28/28 modes pass; host test pins it
 - 261005 T574 done: one cut timeline drives the ffmpeg graph, merge tree, audio and sampler; the browser draws xfade's weights from a Go-written fixture; smokes, identity digest and FE suite green
 - 261005 T573 done: the non-Portable renderer, legacy plan resolution, cut-caption scheduler, answerAccent and LatestForVoiceKind are deleted; a plan without a composition is refused before media work; smokes and identity digest unchanged
@@ -109,4 +109,3 @@
 - 261005 update-ssot QUOTA BILL start: owner chose the recommended F10 and review-exit options
 - 261005 T568 done: a fixed-KRW cancel compares the row it read, so it succeeds after time has passed and still refuses a row changed in between; BE suite green
 - 261005 create-task T568 (owner: fix at once): fixed-KRW CancelSubscription compares a read UpdatedAt it already overwrote; T568 start
-- 261005 T566 done: lazily routed pages leave the entry chunk (sideEffects + build-only route-schema plugin, accepted by the owner); first visit 1.90 MB → 1.46 MB; checked in Playwright
