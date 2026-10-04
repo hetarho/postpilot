@@ -5,7 +5,7 @@ export { mp4HasAudio } from './media'
 export type { AudioNormalization, EncodedAudioTrack, PcmChannels } from './media'
 export { applyDocumentMetadata } from './document-metadata'
 export type { DocumentMetadata } from './document-metadata'
-export { formatRelativeTime } from './datetime'
+export { delay, formatRelativeTime } from './time'
 export { presignExpired } from './presign'
 export {
   formatDate,

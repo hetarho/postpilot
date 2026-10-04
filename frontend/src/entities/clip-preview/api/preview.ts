@@ -10,6 +10,7 @@ import {
   PrepareClipCaptionFramesRequestSchema,
   PrepareClipPreviewRequestSchema,
 } from '@/shared/api'
+import { delay } from '@/shared/lib'
 import { CLIP_DRAFT_PREVIEW } from '@/entities/clip-design/@x/clip-preview'
 import type { ClipEditPlan } from '@/entities/clip-plan/@x/clip-preview'
 import type { PreviewPage } from '../model/draft-preview'
@@ -26,17 +27,7 @@ async function askAgainWhenBusy<T>(call: () => Promise<T>, signal: AbortSignal):
       return await call()
     } catch (error) {
       if (attempt >= 8 || appFailureFromConnect(error).reason !== 'CLIP_PREVIEW_BUSY') throw error
-      await new Promise<void>((resolve, reject) => {
-        const timer = setTimeout(resolve, Math.min(2000, 250 * 2 ** attempt))
-        signal.addEventListener(
-          'abort',
-          () => {
-            clearTimeout(timer)
-            reject(signal.reason)
-          },
-          { once: true },
-        )
-      })
+      await delay(Math.min(2000, 250 * 2 ** attempt), signal)
     }
   }
 }

@@ -224,6 +224,8 @@ export interface FakePostsOptions {
   saveReturnsNoPost?: boolean
   /** Make DeleteImage fail. */
   deleteFails?: boolean
+  /** Holds a RotateImage until the returned promise settles, so a turn can be kept in flight. */
+  rotateGate?: (imageId: string) => Promise<unknown>
   /** The date the fake mints slugs from. */
   today?: string
   /** Records every procedure the transport was asked for. */
@@ -946,8 +948,9 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
 
   // Like the server (POST-107): a quarter turn of a confirmed photo, refused on a published post
   // or for a value that is not a quarter turn, answered with the photo and a fresh view URL.
-  rpc(PostService.method.rotateImage, (req) => {
+  rpc(PostService.method.rotateImage, async (req) => {
     calls?.push('RotateImage')
+    await options.rotateGate?.(req.imageId)
     if (![0, 90, 180, 270].includes(req.rotation))
       throw connectAppError('POST_IMAGE_ROTATION_INVALID', Code.InvalidArgument)
     for (const row of rows.values()) {

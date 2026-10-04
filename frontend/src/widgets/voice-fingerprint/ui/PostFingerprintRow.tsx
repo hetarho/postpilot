@@ -14,7 +14,8 @@ export function PostFingerprintRow({
 }: {
   ownerId: string
   slug: string
-  /** The content revision the row describes; a new one counts anew. */
+  /** The content revision the row describes; a new one counts anew once autosaves stop moving
+   *  it. */
   revision: bigint
   className?: string
 }) {

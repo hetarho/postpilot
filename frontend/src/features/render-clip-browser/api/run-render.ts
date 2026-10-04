@@ -9,6 +9,7 @@ import { CLIP_BROWSER_RENDER } from '@/entities/clip-design'
 import { isTerminal, type GenerationJobCalls } from '@/entities/generation-job'
 import type { AppFailure } from '@/shared/api'
 import { POLL_INTERVAL_MS } from '@/shared/config'
+import { delay } from '@/shared/lib'
 import { BrowserOriginals } from '../lib/originals'
 import { prepareBrowserRenderAssets, type PreviewRequestCall } from './prepare-assets'
 import { renderBrowserVideo } from './render-video'
@@ -86,17 +87,7 @@ export function browserRenderOperations(calls: {
           if (job.status !== 'done') throw new BrowserRenderSamplingError(job.failure)
           return
         }
-        await new Promise<void>((resolve, reject) => {
-          const timer = setTimeout(resolve, POLL_INTERVAL_MS)
-          signal.addEventListener(
-            'abort',
-            () => {
-              clearTimeout(timer)
-              reject(signal.reason)
-            },
-            { once: true },
-          )
-        })
+        await delay(POLL_INTERVAL_MS, signal)
       }
     },
     cancel: (renderId) => calls.render.cancelBrowserRender(renderId),

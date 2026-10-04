@@ -84,7 +84,6 @@
 | T559 | Take a server render's ground frames from its own lossless cut, and trim before scaling | ARCH | T558 | todo |
 | T560 | Stop re-laying out a clip per caption-frames request and re-decoding JSON per poll | ARCH | - | todo |
 | T566 | Keep lazily routed pages out of the entry chunk | ARCH | - | todo |
-| T567 | Keep every photo turn in the cache, and stop per-autosave fingerprint reads and poll listener leaks | ARCH | - | todo |
 
 ## next
 - implement-task T551–T567 (review perf-cost-261004), in order, one commit per task; update-ssot VOICE/QUOTA for perf-cost F10 (analysis corpus vs the 30 000-token hold) and BILL for the `review` order exit (review notes).
@@ -93,6 +92,7 @@
 - ops: lower TEMPLATE_PHOTO_ROW_MAX / VITE_TEMPLATE_PHOTO_ROW_MAX to 3 wherever production sets them explicitly (VPS .env, Cloudflare build vars).
 
 ## log
+- 261004 T567 done: photo turns patch the cache on every call, the fingerprint reads once per autosave pause, one abortable delay frees its listeners; FE suite green
 - 261004 T565 done: clip settings and region queues send per project, the clip storyline saves through its own keyed queue flushed before builds and requests and keeps text on failure; FE suite green
 - 261004 T564 done: clip detail waits for settlement only on generate_clip/revise_clip, a settings save keeps the cached plan unless its revision moved and refreshes only list and templates; FE suite green
 - 261004 T556 done: voice directory and profile read samples once, the check list skips projections, an unchanged answer is left alone; BE suite green
@@ -112,4 +112,3 @@
 - 261004 update-ssot POST r32: POST-108+ ①'s actions ask once (사진 없이 만들까요?) before a run with no photo or video attached (already live in 12d2f428)
 - 261004 spec validation passed: 18 tasks, full changed-decision coverage, current bases, acyclic dependencies and voice-first qualification; lint 0 errors (41 format/history warnings), git diff --check clean; no implementation
 - 261004 create-task DUB MODEL QUOTA CLIP CDS THEME: T533–T550 (18 tasks), voice creation/qualification first; independent captions, responsive timeline and both narrated exports next
-- 261004 create-task DUB MODEL QUOTA CLIP CDS THEME start: voice qualification precedes narrated editing; explicit provider, accounting, compatibility and export acceptance

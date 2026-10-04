@@ -58,3 +58,34 @@ it('turns a photo a quarter clockwise through RotateImage', async () => {
   await waitFor(() => expect(result.current.read.post?.images[0]?.rotation).toBe(90))
   expect(result.current.strip.failure).toBeUndefined()
 })
+
+// Only the photo being turned is held, so another can be turned while it is in flight: each
+// turn's answer reaches the cached post, not only the latest one's.
+it('keeps both turns when a second photo is turned while the first is in flight', async () => {
+  const slug = '20260820-jeju'
+  let releaseFirst!: () => void
+  const firstHeld = new Promise<void>((resolve) => (releaseFirst = resolve))
+  const transport = createFakePostsTransport({
+    posts: [
+      {
+        slug,
+        images: [
+          { id: 'img-1', filename: 'IMG_1.jpg', rotation: 0 },
+          { id: 'img-2', filename: 'IMG_2.jpg', rotation: 0 },
+        ],
+      },
+    ],
+    rotateGate: (imageId) => (imageId === 'img-1' ? firstHeld : Promise.resolve()),
+  })
+  const { result } = renderHook(() => ({ read: usePost(slug), strip: useRotatePhoto(slug) }), {
+    wrapper: withProviders(transport, createTestQueryClient()),
+  })
+  await waitFor(() => expect(result.current.read.post?.images).toHaveLength(2))
+  const [first, second] = result.current.read.post!.images
+  act(() => result.current.strip.rotatePhoto(first!))
+  act(() => result.current.strip.rotatePhoto(second!))
+  await waitFor(() => expect(result.current.read.post?.images[1]?.rotation).toBe(90))
+  releaseFirst()
+  await waitFor(() => expect(result.current.read.post?.images[0]?.rotation).toBe(90))
+  expect(result.current.read.post?.images.map((image) => image.rotation)).toEqual([90, 90])
+})
