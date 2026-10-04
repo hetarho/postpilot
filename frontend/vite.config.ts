@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { loadEnv } from 'vite'
@@ -24,6 +25,56 @@ function preserveRenderBlockingEntry(): Plugin {
   }
 }
 
+/** The names a page's index re-exports, each with the module and binding it comes from. */
+function pageIndexExports(page: string): Map<string, { local: string; from: string }> {
+  const index = readFileSync(path.resolve(__dirname, `src/pages/${page}/index.ts`), 'utf8')
+  const names = new Map<string, { local: string; from: string }>()
+  for (const [, list, from] of index.matchAll(/export \{([^}]+)\} from '([^']+)'/g))
+    for (const spec of list!.split(',')) {
+      const [local, exported = local] = spec.trim().split(/\s+as\s+/)
+      if (local) names.set(exported!, { local, from: from! })
+    }
+  return names
+}
+
+/** `app/routes` reads a page's search schema through the page's index (ARCH-13, ARCH-16) and
+ *  lazily imports the same index for the page itself. Rolldown keeps a module imported both ways
+ *  in the importer's chunk, so the schema import alone put each such page — TemplatePage,
+ *  GuidelinesPage, the model pages, signup, billing — in the entry. The page indexes are side
+ *  effect free (`sideEffects` in package.json), so in the build a route's import of names an
+ *  index re-exports from its `model` segment is taken from that module, which is what
+ *  tree-shaking the index means, and the index is left to the lazy import. An import naming
+ *  anything else — a page routed eagerly — stays as written. Source, lint and tests never see
+ *  this. */
+function routeSchemasPastPageIndex(): Plugin {
+  return {
+    name: 'route-schemas-past-page-index',
+    apply: 'build',
+    enforce: 'pre',
+    transform(code, id) {
+      if (!/\/src\/app\/routes\/[^/]+\.ts$/.test(id.split('?')[0]!)) return null
+      return code.replace(
+        /import \{([^}]+)\} from '@\/pages\/([a-z-]+)'/g,
+        (statement, list: string, page: string) => {
+          const exported = pageIndexExports(page)
+          const wanted = list
+            .split(',')
+            .map((name) => name.trim())
+            .filter(Boolean)
+            .map((name) => ({ name, source: exported.get(name) }))
+          if (wanted.some(({ source }) => !source?.from.startsWith('./model/'))) return statement
+          return wanted
+            .map(
+              ({ name, source }) =>
+                `import { ${source!.local} as ${name} } from '@/pages/${page}/${source!.from.slice(2)}'`,
+            )
+            .join('\n')
+        },
+      )
+    },
+  }
+}
+
 export default defineConfig(({ mode }) => {
   // A single repo-root .env is shared by FE and BE (`cp .env.example .env`). Vite's
   // default envDir is the project root (= frontend/), so raise it explicitly —
@@ -34,7 +85,7 @@ export default defineConfig(({ mode }) => {
 
   return {
     envDir,
-    plugins: [react(), tailwindcss(), preserveRenderBlockingEntry()],
+    plugins: [react(), tailwindcss(), preserveRenderBlockingEntry(), routeSchemasPastPageIndex()],
     resolve: {
       alias: {
         '@': path.resolve(__dirname, './src'),
@@ -52,11 +103,14 @@ export default defineConfig(({ mode }) => {
       },
     },
     build: {
-      // Kept at the 500 kB default deliberately rather than raised. Route-level splitting
-      // brought the entry chunk to 352 kB, so nothing trips it and the build carries no
-      // standing warning; raising the number would only hide the next regression. (The
-      // HEIC worker is far larger but is built in its own environment and is fetched only
-      // when the first HEIC is selected, so it is not what this limit is about.)
+      // Kept at the 500 kB default deliberately rather than raised: raising the number would
+      // only hide the next regression. Measured 2026-10-04 the entry chunk is 959 kB (295 kB
+      // gzip) and it alone trips the warning — React DOM (≈450 kB before minifying), the router,
+      // the providers with every i18n namespace, and the eagerly routed posts, editor and login
+      // pages with the features they use. With what it preloads a first visit loads 1.46 MB
+      // (460 kB gzip), every lazily routed page outside it. (The HEIC worker is far larger but
+      // is built in its own environment and is fetched only when the first HEIC is selected, so
+      // it is not what this limit is about.)
       chunkSizeWarningLimit: 500,
     },
     test: {
