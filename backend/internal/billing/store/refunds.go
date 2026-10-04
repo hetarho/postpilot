@@ -80,20 +80,18 @@ func (s *Store) RefundPayment(ctx context.Context, userID, orderID string) (bill
 			}
 		}
 		if fundingEnd.Valid {
-			payment.FundingEnd, err = parseTime(fundingEnd.String)
+			payment.FundedTermEnd, err = parseTime(fundingEnd.String)
 			if err != nil {
 				return billing.RefundPayment{}, false, err
 			}
-		} else {
-			payment.FundingEnd = billing.TermEnd(payment.EffectiveAt, payment.EffectiveAt, payment.Term)
 		}
 		var next string
 		err = s.db.QueryRowContext(ctx, `SELECT effective_at FROM billing_intents
 			WHERE user_id=? AND kind IN ('renew','subscribe') AND status='applied'
-			AND effective_at>? AND effective_at<? ORDER BY effective_at LIMIT 1`,
-			userID, formatTime(payment.EffectiveAt), formatTime(payment.FundingEnd)).Scan(&next)
+			AND effective_at>? ORDER BY effective_at LIMIT 1`,
+			userID, formatTime(payment.EffectiveAt)).Scan(&next)
 		if err == nil {
-			payment.FundingEnd, err = parseTime(next)
+			payment.NextBaseStart, err = parseTime(next)
 		}
 		if err != nil && !errors.Is(err, sql.ErrNoRows) {
 			return billing.RefundPayment{}, false, err
@@ -298,13 +296,14 @@ func (s *Store) HasUnresolvedDependentUpgrade(ctx context.Context, payment billi
 	if payment.Kind == "pack" || payment.Kind == "upgrade" {
 		return false, nil
 	}
+	funding := payment.Funding()
 	var unresolved int
 	err := s.db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM billing_intents u
 		WHERE u.user_id=? AND u.kind='upgrade' AND u.status='applied'
 		AND u.coverage_id=? AND u.effective_at>=? AND u.effective_at<?
 		AND NOT EXISTS(SELECT 1 FROM billing_refund_requests r
 			WHERE r.order_id=u.order_id AND r.status='completed'))`,
-		payment.UserID, payment.CoverageID, formatTime(payment.EffectiveAt), formatTime(payment.FundingEnd)).Scan(&unresolved)
+		payment.UserID, funding.CoverageID, formatTime(funding.Start), formatTime(funding.End)).Scan(&unresolved)
 	return unresolved != 0, err
 }
 

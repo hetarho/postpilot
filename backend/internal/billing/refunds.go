@@ -474,7 +474,7 @@ func (s *Service) reverseRefundedEntitlements(ctx context.Context, tx Store, pla
 	if err != nil {
 		return err
 	}
-	if !found || sub.CoverageID != payment.CoverageID || !at.Before(payment.FundingEnd) || sub.Status != "active" {
+	if !found || sub.CoverageID != payment.CoverageID || !at.Before(payment.Funding().End) || sub.Status != "active" {
 		return nil
 	}
 	if payment.Kind == "upgrade" {

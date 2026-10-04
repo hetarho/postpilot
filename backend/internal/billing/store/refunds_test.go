@@ -21,57 +21,47 @@ type refundTestBenefits struct {
 	exports *clipstore.Store
 }
 
+// credit and export mirror cmd/api's refund adapter: billing's one funding value, field for field.
 func (b refundTestBenefits) credit(p billing.RefundPayment) usage.RefundFunding {
-	return usage.RefundFunding{UserID: p.UserID, OrderID: p.OrderID, Kind: p.Kind, LotID: p.PackLotID,
-		CoverageID: p.CoverageID, Start: p.EffectiveAt, End: p.FundingEnd}
+	f := p.Funding()
+	return usage.RefundFunding{UserID: f.UserID, OrderID: f.OrderID, Kind: f.Kind, LotID: f.LotID,
+		Correlation: f.Correlation, CoverageID: f.CoverageID, WindowCause: f.WindowCause, Start: f.Start, End: f.End}
 }
 func (b refundTestBenefits) export(p billing.RefundPayment) clip.RefundFunding {
-	return clip.RefundFunding{UserID: p.UserID, OrderID: p.OrderID, Kind: p.Kind,
-		CoverageID: p.CoverageID, Start: p.EffectiveAt, End: p.FundingEnd}
+	f := p.Funding()
+	return clip.RefundFunding{UserID: f.UserID, OrderID: f.OrderID, Kind: f.Kind,
+		Correlation: f.Correlation, CoverageID: f.CoverageID, Start: f.Start, End: f.End}
 }
 func (b refundTestBenefits) Inspect(ctx context.Context, p billing.RefundPayment, at time.Time) (billing.RefundEvidence, error) {
 	c, err := b.credits.RefundFundingEvidence(ctx, b.credit(p), at)
 	if err != nil {
 		return billing.RefundEvidence{}, err
 	}
-	e := billing.RefundEvidence{PaidModelJobs: c.PaidJobs, CreditsUsed: c.CreditsUsed, CreditsReserved: c.CreditsReserved, FundedCreditsRemaining: c.CreditsRemaining}
-	if p.Kind != "pack" {
-		x, err := b.exports.RefundFundingEvidence(ctx, b.export(p))
-		if err != nil {
-			return e, err
-		}
-		e.ServerExportsUsed = x.ExportsUsed
-		e.ServerExportsReserved = x.ExportsReserved
-		e.FundedExportsRemaining = x.ExportsRemaining
+	x, err := b.exports.RefundFundingEvidence(ctx, b.export(p))
+	if err != nil {
+		return billing.RefundEvidence{}, err
 	}
-	return e, nil
+	return billing.RefundEvidence{PaidModelJobs: c.PaidJobs, CreditsUsed: c.CreditsUsed, CreditsReserved: c.CreditsReserved,
+		FundedCreditsRemaining: c.CreditsRemaining, ServerExportsUsed: x.ExportsUsed,
+		ServerExportsReserved: x.ExportsReserved, FundedExportsRemaining: x.ExportsRemaining}, nil
 }
 func (b refundTestBenefits) Guard(ctx context.Context, r billing.RefundRequest, p billing.RefundPayment, _ time.Time) error {
 	if err := b.credits.GuardRefundFunding(ctx, b.credit(p), r.ID); err != nil {
 		return err
 	}
-	if p.Kind != "pack" {
-		return b.exports.GuardRefundFunding(ctx, b.export(p), r.ID)
-	}
-	return nil
+	return b.exports.GuardRefundFunding(ctx, b.export(p), r.ID)
 }
-func (b refundTestBenefits) Release(ctx context.Context, r billing.RefundRequest, p billing.RefundPayment) error {
+func (b refundTestBenefits) Release(ctx context.Context, r billing.RefundRequest, _ billing.RefundPayment) error {
 	if err := b.credits.ReleaseRefundFunding(ctx, r.ID); err != nil {
 		return err
 	}
-	if p.Kind != "pack" {
-		return b.exports.ReleaseRefundFunding(ctx, r.ID)
-	}
-	return nil
+	return b.exports.ReleaseRefundFunding(ctx, r.ID)
 }
 func (b refundTestBenefits) Confirm(ctx context.Context, r billing.RefundRequest, p billing.RefundPayment, at time.Time) error {
 	if err := b.credits.ConfirmRefundFunding(ctx, r.ID, at); err != nil {
 		return err
 	}
-	if p.Kind != "pack" {
-		return b.exports.ConfirmRefundFunding(ctx, b.export(p), r.ID, at)
-	}
-	return nil
+	return b.exports.ConfirmRefundFunding(ctx, b.export(p), r.ID, at)
 }
 
 type reviewPayments struct {
@@ -438,7 +428,7 @@ func TestRefundOfUpgradeRevertsOnlyUpgradeFunding(t *testing.T) {
 		t.Fatalf("base refund skipped active upgrade: %v", err)
 	}
 	request, err := h.service.RequestRefund(ctx, "alice", upgradeOrder, "unused upgrade")
-	if err != nil || request.Payment.PriorTier != plan.Basic || !request.Payment.FundingEnd.Equal(sub.TermEnd) || !request.Evidence.Unused() {
+	if err != nil || request.Payment.PriorTier != plan.Basic || !request.Payment.Funding().End.Equal(sub.TermEnd) || !request.Evidence.Unused() {
 		t.Fatalf("request=%+v err=%v", request, err)
 	}
 	approved, err := h.service.ReviewRefund(ctx, "operator", request.ID, "approve", request.Payment.KRW)

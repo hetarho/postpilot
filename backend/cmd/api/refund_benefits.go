@@ -16,14 +16,18 @@ type refundBenefits struct {
 	exports *clipstore.Store
 }
 
+// creditFunding and exportFunding hand billing's one funding value to the credit and export
+// owners field for field; neither derives anything of its own.
 func creditFunding(p billing.RefundPayment) usage.RefundFunding {
-	return usage.RefundFunding{UserID: p.UserID, OrderID: p.OrderID, Kind: p.Kind,
-		CoverageID: p.CoverageID, LotID: p.PackLotID, Start: p.EffectiveAt, End: p.FundingEnd}
+	f := p.Funding()
+	return usage.RefundFunding{UserID: f.UserID, OrderID: f.OrderID, Kind: f.Kind, LotID: f.LotID,
+		Correlation: f.Correlation, CoverageID: f.CoverageID, WindowCause: f.WindowCause, Start: f.Start, End: f.End}
 }
 
 func exportFunding(p billing.RefundPayment) clip.RefundFunding {
-	return clip.RefundFunding{UserID: p.UserID, OrderID: p.OrderID, Kind: p.Kind,
-		CoverageID: p.CoverageID, Start: p.EffectiveAt, End: p.FundingEnd}
+	f := p.Funding()
+	return clip.RefundFunding{UserID: f.UserID, OrderID: f.OrderID, Kind: f.Kind,
+		Correlation: f.Correlation, CoverageID: f.CoverageID, Start: f.Start, End: f.End}
 }
 
 func (r refundBenefits) Inspect(ctx context.Context, p billing.RefundPayment, at time.Time) (billing.RefundEvidence, error) {
@@ -31,46 +35,33 @@ func (r refundBenefits) Inspect(ctx context.Context, p billing.RefundPayment, at
 	if err != nil {
 		return billing.RefundEvidence{}, err
 	}
-	result := billing.RefundEvidence{PaidModelJobs: credits.PaidJobs, CreditsUsed: credits.CreditsUsed,
-		CreditsReserved: credits.CreditsReserved, FundedCreditsRemaining: credits.CreditsRemaining}
-	if p.Kind == "pack" {
-		return result, nil
-	}
 	exports, err := r.exports.RefundFundingEvidence(ctx, exportFunding(p))
 	if err != nil {
 		return billing.RefundEvidence{}, err
 	}
-	result.ServerExportsUsed, result.ServerExportsReserved = exports.ExportsUsed, exports.ExportsReserved
-	result.FundedExportsRemaining = exports.ExportsRemaining
-	return result, nil
+	return billing.RefundEvidence{PaidModelJobs: credits.PaidJobs, CreditsUsed: credits.CreditsUsed,
+		CreditsReserved: credits.CreditsReserved, FundedCreditsRemaining: credits.CreditsRemaining,
+		ServerExportsUsed: exports.ExportsUsed, ServerExportsReserved: exports.ExportsReserved,
+		FundedExportsRemaining: exports.ExportsRemaining}, nil
 }
 
 func (r refundBenefits) Guard(ctx context.Context, request billing.RefundRequest, p billing.RefundPayment, _ time.Time) error {
 	if err := r.credits.GuardRefundFunding(ctx, creditFunding(p), request.ID); err != nil {
 		return err
 	}
-	if p.Kind != "pack" {
-		return r.exports.GuardRefundFunding(ctx, exportFunding(p), request.ID)
-	}
-	return nil
+	return r.exports.GuardRefundFunding(ctx, exportFunding(p), request.ID)
 }
 
-func (r refundBenefits) Release(ctx context.Context, request billing.RefundRequest, p billing.RefundPayment) error {
+func (r refundBenefits) Release(ctx context.Context, request billing.RefundRequest, _ billing.RefundPayment) error {
 	if err := r.credits.ReleaseRefundFunding(ctx, request.ID); err != nil {
 		return err
 	}
-	if p.Kind != "pack" {
-		return r.exports.ReleaseRefundFunding(ctx, request.ID)
-	}
-	return nil
+	return r.exports.ReleaseRefundFunding(ctx, request.ID)
 }
 
 func (r refundBenefits) Confirm(ctx context.Context, request billing.RefundRequest, p billing.RefundPayment, at time.Time) error {
 	if err := r.credits.ConfirmRefundFunding(ctx, request.ID, at); err != nil {
 		return err
 	}
-	if p.Kind != "pack" {
-		return r.exports.ConfirmRefundFunding(ctx, exportFunding(p), request.ID, at)
-	}
-	return nil
+	return r.exports.ConfirmRefundFunding(ctx, exportFunding(p), request.ID, at)
 }
