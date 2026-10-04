@@ -1,54 +1,17 @@
-import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { twMerge } from 'tailwind-merge'
 import { type PostImage } from '@/entities/image'
 import { type PostVideo } from '@/entities/video'
-import { BlockList, imageByFile, PhotoGroup, type PhotoFit } from '@/entities/post'
-import { toMarkdown } from '@/features/export-markdown'
-import { toNaver } from '@/features/export-naver'
-import { toSite } from '@/features/export-site'
-import { toTistory } from '@/features/export-tistory'
+import { BlockList, PhotoGroup, type PhotoFit } from '@/entities/post'
 import { BlockType, type ContentLanguage, type PostContent } from '@/shared/api'
-import { COPY_FEEDBACK_MS } from '@/shared/config'
-import {
-  blockPhotos,
-  copyImage,
-  copyText,
-  presignExpired,
-  type CopyFallbackElement,
-  type CopyImageResult,
-} from '@/shared/lib'
-import {
-  Button,
-  FieldLabel,
-  RotatedImage,
-  SegmentedControl,
-  Textarea,
-  TextField,
-  Typography,
-} from '@/shared/ui'
-import { EXPORT_FORMATS, type ExportFormat } from '../config/guidance'
-import { toHashtags } from '../lib/hashtags'
-
-/** `output`, `title` and `tags` are the fixed text copies; a photo and a caption target name the
- *  marker they belong to, so one file carrying two markers is still two independent copies — and
- *  a caption travels on its own control now that the marker carries none (EXPORT-24). It is a
- *  template literal rather than a bare `string`, which would collapse the union and take the
- *  checking with it. */
-type CopyTarget = TextCopyTarget | `photo:${number}:${string}`
-
-/** The copies that have a field to select as their manual fallback. A caption's field, like the
- *  Naver body's, is mounted only once its copy has fallen back. */
-type TextCopyTarget = 'output' | 'outputWithTags' | 'title' | 'tags' | `caption:${number}`
-
-/** The marker number inside a caption target. The prefix is fixed, so this is a slice, not a
- *  parse that could disagree with the type above. */
-function captionMarker(target: `caption:${number}`): number {
-  return Number(target.slice('caption:'.length))
-}
-
-/** Every way a photo copy can fail, from `copyImage`. `copied` is not one of them. */
-type FailedCopyKind = Exclude<CopyImageResult['kind'], 'copied'>
+import { type CopyFallbackElement } from '@/shared/lib'
+import { Button, FieldLabel, SegmentedControl, Textarea, TextField, Typography } from '@/shared/ui'
+import { EXPORT_FORMATS } from '../config/guidance'
+import { type CopyStatus } from '../model/copy-status'
+import { type CopyTarget } from '../model/copy-target'
+import { useExportPanel } from '../model/useExportPanel'
+import { CaptionCopy } from './CaptionCopy'
+import { PhotoCopy } from './PhotoCopy'
+import { PreviewPhoto } from './PreviewPhoto'
 
 interface ExportPanelProps {
   content: PostContent
@@ -74,270 +37,48 @@ export function ExportPanel({
   onPhotoUrlsStale,
 }: ExportPanelProps) {
   const { t } = useTranslation('posts')
-  const [format, setFormat] = useState<ExportFormat>('naver')
-  // A photo target names the marker it belongs to, so two markers for one file still report
-  // separately and the confirmation lands on the entry that was pressed. A TEXT copy stores the
-  // value that reached the clipboard beside it: the Naver tab's copy carries no fallback element
-  // whose value `isCurrent` could compare, so without this a copy racing a content change could
-  // announce 복사됨 for a body the post no longer contains — the value comparison in the status
-  // derivations below is what drops that stale confirmation.
-  const [copied, setCopied] = useState<{ target: CopyTarget; value?: string }>()
-  // Which control's copy fell back to manual selection, so its hint renders beside that control
-  // rather than somewhere the user is not looking (THEME-24). On the Naver tab this also REVEALS the
-  // raw marker text: its default view is the rendered post, and a selection needs a text field.
-  // The VALUE that fell back is stored with it, so the fallback dissolves by derivation the moment
-  // the content no longer matches what was selected — no effect resetting state over a prop. The
-  // CONTENT IDENTITY rides along because the value alone would resurrect a dismissed fallback when
-  // an edit is undone (the output string comes back; the failed copy does not).
-  const [manualCopy, setManualCopy] = useState<{
-    target: TextCopyTarget
-    value: string
-    source: PostContent
-  }>()
-  // Per-photo failure kind, keyed the same way. It is separate from `manualCopy` because a
-  // photo has no manual fallback at all — there is nothing to select and hold (see `copyImage`).
-  const [photoFailure, setPhotoFailure] = useState<{ target: CopyTarget; kind: FailedCopyKind }>()
-  const outputRef = useRef<HTMLTextAreaElement>(null)
-  const titleRef = useRef<HTMLInputElement>(null)
-  const tagsRef = useRef<HTMLInputElement>(null)
-  // Each revealed caption field, by marker number. A map rather than a ref per caption because
-  // the number of photos is the post's business, and it is read LIVE for the same reason the
-  // three refs above are: a field that unmounted mid-copy must stop matching.
-  const captionFields = useRef(new Map<number, CopyFallbackElement>())
-  const copyButtonRef = useRef<HTMLButtonElement>(null)
-  const copyWithTagsButtonRef = useRef<HTMLButtonElement>(null)
-  const feedbackTimer = useRef<number | undefined>(undefined)
-  const copyGeneration = useRef(0)
-  const copyQueue = useRef<Promise<void>>(Promise.resolve())
-  const mounted = useRef(false)
-  const outputs = useMemo(
-    () => ({
-      naver: toNaver(content, images, contentLanguage),
-      tistory: toTistory(content, images, contentLanguage),
-      site: toSite(content, images, createdAt, contentLanguage),
-      markdown: toMarkdown(content, images, createdAt, contentLanguage),
-    }),
-    [content, contentLanguage, createdAt, images],
-  )
-  const output = outputs[format]
-  // Empty for a post with no usable tags, which is what keeps the field off the screen entirely
-  // rather than mounting an empty control (THEME-29).
-  const hashtags = toHashtags(content.tags)
-  const outputWithTags = hashtags ? `${outputs.naver}\n\n${hashtags}` : ''
-  // Photo numbers per block index, from the SAME canonical block array `toNaver` walks, so a photo
-  // in the preview and its number in the copied text cannot drift apart: they match by position.
-  // A single photo holds one number and a group one per photo (EXPORT-5, EXPORT-26). The number —
-  // not the block index — is the copy target's identity; the number a person reads is it plus
-  // one, because the text counts photos from 1.
-  const photoNumbersByBlock = useMemo(() => {
-    const map = new Map<number, number[]>()
-    let next = 0
-    content.blocks.forEach((block, index) => {
-      const photos = blockPhotos(block)
-      if (photos.length > 0)
-        map.set(
-          index,
-          photos.map(() => next++),
-        )
-    })
-    return map
-  }, [content])
-  const hasPhotos = photoNumbersByBlock.size > 0
-  const imagesByFilename = useMemo(() => imageByFile(images), [images])
+  const {
+    format,
+    selectFormat,
+    hashtags,
+    fallbackOutput,
+    rawFieldVisible,
+    status,
+    hasPhotos,
+    photoNumbersByBlock,
+    imagesByFilename,
+    outputRef,
+    titleRef,
+    tagsRef,
+    copyButtonRef,
+    copyWithTagsButtonRef,
+    copyTitle,
+    copyTags,
+    copyOutput,
+    copyOutputWithTags,
+    captionCopy,
+    copyCaption,
+    registerCaptionField,
+    photoCopied,
+    photoFailure,
+    copyPhoto,
+  } = useExportPanel({ content, images, createdAt, contentLanguage })
   const formatOptions = EXPORT_FORMATS.map((value) => ({
     value,
     label: t(`export.formatLabel.${value}`),
   }))
-  // The Naver tab shows the rendered post; the raw marker text exists only on the clipboard —
-  // except while a refused copy needs a visible selection to fall back to. The other three
-  // formats are markup meant to be read as source, so they keep the raw field always. The value
-  // comparison is what dismisses the fallback when the content changes under it.
-  const outputFellBack =
-    manualCopy?.source === content &&
-    ((manualCopy.target === 'output' && manualCopy.value === output) ||
-      (format === 'naver' &&
-        manualCopy.target === 'outputWithTags' &&
-        manualCopy.value === outputWithTags))
-  const fallbackOutput =
-    outputFellBack && manualCopy?.target === 'outputWithTags' ? outputWithTags : output
-  const rawFieldVisible = format !== 'naver' || outputFellBack
 
-  useEffect(() => {
-    mounted.current = true
-    return () => {
-      mounted.current = false
-      copyGeneration.current += 1
-      if (feedbackTimer.current !== undefined) window.clearTimeout(feedbackTimer.current)
-    }
-  }, [])
-
-  function invalidateCopyFeedback() {
-    copyGeneration.current += 1
-    setCopied(undefined)
-    setManualCopy(undefined)
-    setPhotoFailure(undefined)
-    if (feedbackTimer.current !== undefined) window.clearTimeout(feedbackTimer.current)
-  }
-
-  // The manual fallback must be SEEN to be used: on the Naver tab the raw field mounts only after
-  // the copy has fallen back, so `copyText` was handed no element and the selection happens here,
-  // once the field exists. The dismissal side is the same effect's business: a content change
-  // dissolves the fallback by derivation and UNMOUNTS the focused field, which would drop the
-  // keyboard onto <body> — the focus is handed back to the copy button instead. A dismissal by
-  // tab switch or by pressing another control leaves focus where the user put it.
-  const fallbackWasRevealed = useRef<TextCopyTarget | undefined>(undefined)
-  useEffect(() => {
-    if (format === 'naver' && outputFellBack) {
-      fallbackWasRevealed.current = manualCopy?.target
-      outputRef.current?.focus()
-      outputRef.current?.select()
-      return
-    }
-    if (fallbackWasRevealed.current) {
-      const target = fallbackWasRevealed.current
-      fallbackWasRevealed.current = undefined
-      if (document.activeElement === document.body) {
-        if (target === 'outputWithTags') copyWithTagsButtonRef.current?.focus()
-        else copyButtonRef.current?.focus()
-      }
-    }
-  }, [format, manualCopy?.target, manualCopy?.value, outputFellBack])
-
-  /** The image copy, on the SAME discipline as the text copy above: one generation counter so a
-   *  stale async result cannot land, one queue so two presses do not race for the clipboard, the
-   *  same `COPY_FEEDBACK_MS` dwell, and the same always-mounted live region. It reports the
-   *  failure KIND instead of a manual-selection hint, because an image has no manual fallback. */
-  async function copyPhoto(target: CopyTarget, image: HTMLImageElement, rotation: number) {
-    const generation = ++copyGeneration.current
-    const isCurrent = () => mounted.current && copyGeneration.current === generation
-    setCopied(undefined)
-    setManualCopy(undefined)
-    setPhotoFailure(undefined)
-    if (feedbackTimer.current !== undefined) window.clearTimeout(feedbackTimer.current)
-
-    // The result is READ OUT of the chained promise rather than written into a mutable outer
-    // variable the way the text copy does: an image copy answers with a kind, and a `let` holding
-    // one narrows to the literal it was initialized with.
-    const operation = copyQueue.current
-      .then(() => copyImage(image, rotation))
-      .catch((): CopyImageResult => ({ kind: 'unreadable' }))
-    copyQueue.current = operation.then(() => undefined)
-    const result = await operation
-    if (!isCurrent()) return
-    if (result.kind === 'copied') {
-      setCopied({ target })
-      feedbackTimer.current = window.setTimeout(() => setCopied(undefined), COPY_FEEDBACK_MS)
-      return
-    }
-    setPhotoFailure({ target, kind: result.kind })
-  }
-
-  /** `fallback` is null when the manual field is not mounted yet (the Naver preview): the copy is
-   *  still attempted, and a refusal reveals the field — the effect above then selects it. */
-  async function copy(target: TextCopyTarget, value: string, fallback: CopyFallbackElement | null) {
-    const generation = ++copyGeneration.current
-    // Looked up per target, not chosen by a two-way ternary: with three text copies a ternary
-    // would compare a tags copy against the TITLE field's element and report a stale copy as
-    // current. Read through the REF, not snapshotted from it here: the tags field is
-    // conditionally mounted, so a result settling after it unmounted has to compare against the
-    // ref as it stands now — a snapshot would keep matching a detached input.
-    const fieldOf = (of: TextCopyTarget): CopyFallbackElement | null => {
-      switch (of) {
-        case 'output':
-        case 'outputWithTags':
-          return outputRef.current
-        case 'title':
-          return titleRef.current
-        case 'tags':
-          return tagsRef.current
-        default:
-          return captionFields.current.get(captionMarker(of)) ?? null
-      }
-    }
-    const isCurrent = () =>
-      mounted.current &&
-      copyGeneration.current === generation &&
-      (fallback === null || (fallback.value === value && fieldOf(target) === fallback))
-    setCopied(undefined)
-    // `manualCopy` is NOT cleared up front the way the other feedback is: on the Naver tab it is
-    // what keeps the revealed fallback field mounted, and clearing it here would unmount the field
-    // the user is retrying from for the whole in-flight wait. The outcome below overwrites it.
-    setPhotoFailure(undefined)
-    if (feedbackTimer.current !== undefined) window.clearTimeout(feedbackTimer.current)
-
-    let result = { copied: false }
-    const operation = copyQueue.current
-      .then(async () => {
-        result = await copyText(value, fallback, isCurrent)
-      })
-      .catch(() => {
-        result = { copied: false }
-      })
-    copyQueue.current = operation
-    await operation
-    if (!isCurrent()) return
-    setManualCopy(result.copied ? undefined : { target, value, source: content })
-    setCopied(result.copied ? { target, value } : undefined)
-    if (feedbackTimer.current !== undefined) window.clearTimeout(feedbackTimer.current)
-    if (result.copied) {
-      feedbackTimer.current = window.setTimeout(() => {
-        setCopied(undefined)
-      }, COPY_FEEDBACK_MS)
-    }
-  }
+  /** One status line's words: the copy's own confirmation, or the manual-selection hint. */
+  const statusText = (kind: CopyStatus, copiedText: string) =>
+    kind === 'copied' ? copiedText : kind === 'manual' ? t('export.manualCopy') : ''
 
   // One line per copy target, mounted whether or not it has anything to say: a live region has to
   // exist BEFORE its text changes or a screen reader announces nothing, and the sole confirmation
   // used to be a 1.5s label swap on the button under the thumb that hid it.
-  const titleStatus =
-    copied?.target === 'title' && copied.value === content.title
-      ? t('export.titleCopied')
-      : manualCopy?.target === 'title' &&
-          manualCopy.value === content.title &&
-          manualCopy.source === content
-        ? t('export.manualCopy')
-        : ''
-  const outputStatus =
-    copied?.target === 'output' && copied.value === output
-      ? t('action.copied', { ns: 'common' })
-      : outputFellBack && manualCopy?.target === 'output'
-        ? t('export.manualCopy')
-        : ''
-  const outputWithTagsStatus =
-    format === 'naver' && copied?.target === 'outputWithTags' && copied.value === outputWithTags
-      ? t('export.withTagsCopied')
-      : format === 'naver' && outputFellBack && manualCopy?.target === 'outputWithTags'
-        ? t('export.manualCopy')
-        : ''
-  // Both comparisons are what make the staleness rule hold by DERIVATION: a confirmation shown
-  // for one tag list cannot survive a content change to a different one, and the content-identity
-  // check stops a dismissed fallback resurrecting when an edit is undone.
-  const tagsStatus =
-    copied?.target === 'tags' && copied.value === hashtags
-      ? t('export.tagsCopied')
-      : manualCopy?.target === 'tags' &&
-          manualCopy.value === hashtags &&
-          manualCopy.source === content
-        ? t('export.manualCopy')
-        : ''
-
-  /** One caption's line, on the same two derivations every other copy status uses: a confirmation
-   *  cannot outlive the value it confirmed, and a dismissed fallback cannot resurrect when an edit
-   *  is undone. */
-  function captionStatusOf(marker: number, caption: string) {
-    const target: TextCopyTarget = `caption:${marker}`
-    if (copied?.target === target && copied.value === caption) return t('export.captionCopied')
-    if (captionFellBack(marker, caption)) return t('export.manualCopy')
-    return ''
-  }
-
-  function captionFellBack(marker: number, caption: string) {
-    return (
-      manualCopy?.target === `caption:${marker}` &&
-      manualCopy.value === caption &&
-      manualCopy.source === content
-    )
-  }
+  const titleStatus = statusText(status.title, t('export.titleCopied'))
+  const outputStatus = statusText(status.output, t('action.copied', { ns: 'common' }))
+  const outputWithTagsStatus = statusText(status.outputWithTags, t('export.withTagsCopied'))
+  const tagsStatus = statusText(status.tags, t('export.tagsCopied'))
 
   /** What one preview photo needs to carry its CAPTION's copy. Built here rather than inline at
    *  both call sites because the missing-photo branch has to agree with the ordinary one — a
@@ -345,17 +86,14 @@ export function ExportPanel({
   function captionCopyProps(block: PostContent['blocks'][number], index: number) {
     // A group's caption is keyed by its first photo's number: unique per caption all the same.
     const marker = photoNumbersByBlock.get(index)?.[0] ?? 0
-    const captionTarget: TextCopyTarget = `caption:${marker}`
+    const caption = captionCopy(marker, block.caption)
     return {
       marker,
-      captionStatus: captionStatusOf(marker, block.caption),
-      captionFellBack: captionFellBack(marker, block.caption),
-      onCopyCaption: () =>
-        void copy(captionTarget, block.caption, captionFields.current.get(marker) ?? null),
-      registerCaptionField: (element: CopyFallbackElement | null) => {
-        if (element) captionFields.current.set(marker, element)
-        else captionFields.current.delete(marker)
-      },
+      captionStatus: statusText(caption.status, t('export.captionCopied')),
+      captionFellBack: caption.fellBack,
+      onCopyCaption: () => void copyCaption(marker, block.caption),
+      registerCaptionField: (element: CopyFallbackElement | null) =>
+        registerCaptionField(marker, element),
     }
   }
 
@@ -372,10 +110,7 @@ export function ExportPanel({
         options={formatOptions}
         ariaLabel={t('export.format')}
         controls="export-output-panel"
-        onChange={(next) => {
-          invalidateCopyFeedback()
-          setFormat(next)
-        }}
+        onChange={selectFormat}
         className="mt-4 grid grid-cols-2 sm:flex"
       />
 
@@ -401,11 +136,7 @@ export function ExportPanel({
                 readOnly
                 className="min-w-0 flex-1"
               />
-              <Button
-                variant="secondary"
-                className="shrink-0"
-                onClick={() => void copy('title', content.title, titleRef.current)}
-              >
+              <Button variant="secondary" className="shrink-0" onClick={() => void copyTitle()}>
                 {t('export.copyTitle')}
               </Button>
             </div>
@@ -442,7 +173,7 @@ export function ExportPanel({
                 className="shrink-0"
                 // The field is always mounted when this renders, so `copyText` gets a real
                 // fallback element and selects it itself — no reveal effect, unlike the Naver body.
-                onClick={() => void copy('tags', hashtags, tagsRef.current)}
+                onClick={() => void copyTags()}
               >
                 {t('export.copyTags')}
               </Button>
@@ -467,20 +198,12 @@ export function ExportPanel({
         <div className="mt-4 flex flex-col gap-2 sm:flex-row-reverse sm:items-center sm:justify-end sm:gap-3">
           {/* The label stays 복사: a swap to 복사됨 resizes the target under the thumb that just
               pressed it, and it was also the only signal that anything had happened (THEME-28). */}
-          {/* `outputRef.current` is naturally null while the Naver tab shows the preview and the
-              live field on every other state — including a Naver retry from the revealed field. */}
           <div className="flex w-full gap-2 sm:w-auto">
             <Button
               ref={copyButtonRef}
               variant="cta"
               className="min-w-0 flex-1 sm:flex-none"
-              onClick={() =>
-                void copy(
-                  'output',
-                  output,
-                  outputRef.current?.value === output ? outputRef.current : null,
-                )
-              }
+              onClick={() => void copyOutput()}
             >
               {t('action.copy', { ns: 'common' })}
             </Button>
@@ -489,13 +212,7 @@ export function ExportPanel({
                 ref={copyWithTagsButtonRef}
                 variant="secondary"
                 className="min-w-0 flex-1 sm:flex-none"
-                onClick={() =>
-                  void copy(
-                    'outputWithTags',
-                    outputWithTags,
-                    outputRef.current?.value === outputWithTags ? outputRef.current : null,
-                  )
-                }
+                onClick={() => void copyOutputWithTags()}
               >
                 {t('export.copyWithTags')}
               </Button>
@@ -569,10 +286,8 @@ export function ExportPanel({
                       alt={block.alt}
                       image={image}
                       marker={number}
-                      copied={image ? copied?.target === target : false}
-                      failure={
-                        image && photoFailure?.target === target ? photoFailure.kind : undefined
-                      }
+                      copied={image ? photoCopied(target) : false}
+                      failure={image ? photoFailure(target) : undefined}
                       onCopy={(element, rotation) => void copyPhoto(target, element, rotation)}
                       onStale={onPhotoUrlsStale}
                       fit={fit}
@@ -609,8 +324,8 @@ export function ExportPanel({
                   alt={block.alt}
                   caption={block.caption}
                   image={imagesByFilename.get(block.file)}
-                  copied={copied?.target === target}
-                  failure={photoFailure?.target === target ? photoFailure.kind : undefined}
+                  copied={photoCopied(target)}
+                  failure={photoFailure(target)}
                   onCopy={(element, rotation) => void copyPhoto(target, element, rotation)}
                   onStale={onPhotoUrlsStale}
                   {...copyProps}
@@ -639,310 +354,5 @@ export function ExportPanel({
         )}
       </div>
     </section>
-  )
-}
-
-/** One inline photo of the Naver preview: the pixels at their natural width, the photo ITSELF as
- *  the copy control, that photo's own status line, and — under it — the caption as a second
- *  control of its own (EXPORT-24), because the marker in the pasted text carries neither.
- *
- *  It reports its own state under its own photo rather than in one shared line, because "which
- *  photo failed" is the only useful part of the message (THEME-24). */
-function PreviewPhoto({
-  file,
-  alt,
-  caption,
-  image,
-  marker,
-  copied,
-  failure,
-  captionStatus,
-  captionFellBack,
-  onCopy,
-  onCopyCaption,
-  registerCaptionField,
-  onStale,
-}: PhotoCopyProps & CaptionCopyProps) {
-  const { t } = useTranslation('posts')
-  return (
-    <div className="py-2">
-      <PhotoCopy
-        file={file}
-        alt={alt}
-        image={image}
-        marker={marker}
-        copied={copied}
-        failure={failure}
-        onCopy={onCopy}
-        onStale={onStale}
-      />
-      <CaptionCopy
-        caption={caption}
-        ariaLabel={t('export.captionCopyAria', { number: marker + 1 })}
-        captionStatus={captionStatus}
-        captionFellBack={captionFellBack}
-        onCopyCaption={onCopyCaption}
-        registerCaptionField={registerCaptionField}
-      />
-    </div>
-  )
-}
-
-interface PhotoCopyProps {
-  file: string
-  alt: string
-  image: PostImage | undefined
-  /** This photo's number, from 0. The number shown is `marker + 1`, matching the numbers in the
-   *  copied text, which count every photo from 1, alone or in a group (EXPORT-5). */
-  marker: number
-  copied: boolean
-  failure: FailedCopyKind | undefined
-  /** The photo's turn rides along so the copy is turned as the screen shows it (EXPORT-15). */
-  onCopy: (element: HTMLImageElement, rotation: number) => void
-  onStale: (() => void) | undefined
-  /** Set inside a photo group: the cell shape the group's layout gives the photo (POST-105). */
-  fit?: PhotoFit
-}
-
-/** One photo as its own copy control (EXPORT-12), with its own status line under it — alone, or
- *  as one cell of a photo group. */
-function PhotoCopy({
-  file,
-  alt,
-  image,
-  marker,
-  copied,
-  failure,
-  onCopy,
-  onStale,
-  fit,
-}: PhotoCopyProps) {
-  const { t } = useTranslation('posts')
-  const statusId = useId()
-  // A just-confirmed upload can still be carrying its local blob preview in the post cache. Those
-  // bytes are not the stored photo, so the copy is not offered for them — the same rule the
-  // contact sheet applies to a server-read surface. The pixels still render: they are the photo
-  // the reader will see.
-  const url = image && !image.viewUrl.startsWith('blob:') ? image.viewUrl : ''
-  const imageRef = useRef<HTMLImageElement>(null)
-  // A presigned view URL expires. Keyed BY URL rather than as a bare boolean, so a refresh that
-  // remints it clears the failure without any reset plumbing. The KIND rides along because a
-  // photo that never painted and a photo this origin may not read are the same event here and
-  // opposite advice — see `classifyLoadFailure`.
-  const [loadFailure, setLoadFailure] = useState<{ url: string; kind: FailedCopyKind }>()
-  // One refresh per photo per mount, counted rather than keyed by url: every refresh mints a NEW
-  // url, so a per-url guard would let a bucket that refuses this origin drive an unbounded
-  // refetch loop — fail, remint, fail, remint. A ref, not state; nothing renders from it.
-  const refreshesAsked = useRef(0)
-  const unreachable = url === '' || loadFailure?.url === url
-  // Keyed by kind rather than chained, so a kind added to `CopyImageResult` is a type error here
-  // instead of a photo that fails silently — which is how `blocked` and `unreadable` came to share
-  // one message and send users to reload a post over a rule that reloading cannot change.
-  const failureMessage: Record<FailedCopyKind, string> = {
-    unsupported: t('export.photoUnsupported'),
-    refused: t('export.photoRefused'),
-    blocked: t('export.photoBlocked'),
-    unreadable: t('export.photoUnreadable'),
-  }
-  const reason = !image
-    ? t('export.photoMissing')
-    : url === ''
-      ? // A `blob:` preview: recovered by the reload that replaces it with the stored photo, and
-        // it offers no copy to fail in the first place.
-        t('export.photoUnreadable')
-      : loadFailure?.url === url
-        ? failureMessage[loadFailure.kind]
-        : failure
-          ? failureMessage[failure]
-          : ''
-
-  /** A photo that did not paint, split into the two things it can mean.
-   *
-   *  The element is CORS-loaded, so this fires for a URL whose lifetime ran out AND for a bucket
-   *  that allows this origin no `GET` — R2 answers both without CORS headers and the browser
-   *  reports neither. The URL's own lifetime is what separates them (`presignExpired`), and they
-   *  lead to opposite advice: the first is refreshed away below, the second cannot be, so it says
-   *  to place the photo by hand instead of starting a reload loop with no exit. */
-  function classifyLoadFailure(failed: string) {
-    setLoadFailure({
-      url: failed,
-      kind: presignExpired(failed, Date.now()) ? 'unreadable' : 'blocked',
-    })
-    // Asked for even on the `blocked` reading: a transient network fault looks exactly like it
-    // from here, and one refetch is what tells them apart — a fresh URL that paints was never a
-    // bucket rule. Concurrent asks from the other photos collapse into one refetch, and the
-    // message above clears by itself the moment a url that paints replaces this one.
-    if (refreshesAsked.current === 0) {
-      refreshesAsked.current = 1
-      onStale?.()
-    }
-  }
-
-  return (
-    <div>
-      {image ? (
-        image.viewUrl ? (
-          /* The PHOTO is the control (no overlaid button): a 44px target in the corner of a photo
-             that fills the column was a quarter of the reach it needed, and the corner was also
-             where the thumb rests while scrolling. The `<img>` stays a real `<img>` INSIDE the
-             button rather than under an invisible overlay, so the browser's own 이미지 복사 stays
-             on the right-click menu — the workaround that carried this before the copy read
-             pixels. Focus takes the app-wide `:focus-visible` outline; the press treatment is on
-             the photo itself because a fill behind it would never be seen. */
-          <button
-            type="button"
-            disabled={unreachable}
-            aria-label={t('export.photoCopyAria', { number: marker + 1, file })}
-            aria-describedby={reason ? statusId : undefined}
-            onClick={() => imageRef.current && onCopy(imageRef.current, image.rotation ?? 0)}
-            className="block w-full cursor-pointer rounded-lg active:brightness-90 disabled:cursor-default disabled:active:brightness-100"
-          >
-            <RotatedImage
-              fit={fit ? 'fill' : 'natural'}
-              rotation={image.rotation}
-              frameClassName="rounded-lg"
-              imgRef={imageRef}
-              src={image.viewUrl}
-              alt={alt || file}
-              width={image.width}
-              height={image.height}
-              // NOT lazy, and CORS-loaded. The copy reads the pixels this element already holds,
-              // so a photo has to have PAINTED to be copyable — deferring the load until it is
-              // scrolled to would defer it past the URL's lifetime on exactly the panel that is
-              // left open. `crossOrigin` is what keeps the canvas origin-clean; without it the
-              // encode is refused for a photo that is plainly on screen (DEPLOY.md §5).
-              crossOrigin="anonymous"
-              decoding="async"
-              onError={() => classifyLoadFailure(url || image.viewUrl)}
-              className={
-                fit === 'cover'
-                  ? 'bg-surface-recessed aspect-square w-full rounded-lg object-cover'
-                  : fit === 'contain'
-                    ? 'bg-surface-recessed aspect-square w-full rounded-lg object-contain'
-                    : 'bg-surface-recessed h-auto w-full rounded-lg'
-              }
-            />
-          </button>
-        ) : (
-          // The view URL is minted per GetPost; until one arrives the box is still held open so
-          // the text below it does not jump when the photo paints.
-          <div className="bg-surface-recessed aspect-square w-full rounded-lg" />
-        )
-      ) : (
-        // No photo behind this marker: the copied text still spends its number on it, so the
-        // preview says which file the reader is expected to place there — the marker itself
-        // carries no filename any more (EXPORT-5).
-        <Typography
-          variant="meta"
-          as="p"
-          className={twMerge(
-            'bg-surface-recessed rounded-lg px-4 py-3 break-words',
-            fit && 'flex aspect-square items-center break-all',
-          )}
-        >
-          {file}
-        </Typography>
-      )}
-      {/* Always mounted: a live region inserted with its text already inside announces nothing.
-          It is also the disabled control's reason, which is why the control points at it — a
-          disabled button is skipped by the keyboard and would otherwise carry no explanation. */}
-      <Typography
-        variant="meta"
-        as="p"
-        id={statusId}
-        role="status"
-        className="mt-1 min-h-4 break-words"
-      >
-        {copied ? t('export.photoCopied', { file }) : reason}
-      </Typography>
-    </div>
-  )
-}
-
-interface CaptionCopyProps {
-  caption: string
-  captionStatus: string
-  captionFellBack: boolean
-  onCopyCaption: () => void
-  registerCaptionField: (element: CopyFallbackElement | null) => void
-}
-
-/** A caption as its own copy control (EXPORT-24): a single photo's, or the one caption of a photo
- *  group (EXPORT-26). A block with no caption renders nothing at all. */
-function CaptionCopy({
-  caption,
-  ariaLabel,
-  captionStatus,
-  captionFellBack,
-  onCopyCaption,
-  registerCaptionField,
-}: CaptionCopyProps & { ariaLabel: string }) {
-  const { t } = useTranslation('posts')
-  const captionFieldId = useId()
-  const captionButtonRef = useRef<HTMLButtonElement>(null)
-  const captionFieldRef = useRef<HTMLInputElement>(null)
-  // The same reveal the Naver body does, one caption down: the field does not exist until the
-  // copy is refused, so the selection has to happen once it is mounted. And when the fallback
-  // dissolves under the user — a content change — the focused field unmounts, which would drop
-  // the keyboard onto <body>; it is handed back to the control that was pressed.
-  const captionWasRevealed = useRef(false)
-  useEffect(() => {
-    if (captionFellBack) {
-      captionWasRevealed.current = true
-      captionFieldRef.current?.focus()
-      captionFieldRef.current?.select()
-      return
-    }
-    if (captionWasRevealed.current) {
-      captionWasRevealed.current = false
-      if (document.activeElement === document.body) captionButtonRef.current?.focus()
-    }
-  }, [captionFellBack])
-  // The caption IS the control, the way the photo above is: it is the full width of the column,
-  // it is the text the user is looking at, and a 44px button beside it would be a fraction of
-  // that reach. A block with no caption renders nothing here at all — no control, no status line
-  // (EXPORT-24).
-  if (!caption) return null
-  return (
-    <div className="mt-2">
-      <button
-        type="button"
-        ref={captionButtonRef}
-        aria-label={ariaLabel}
-        onClick={onCopyCaption}
-        className="block w-full cursor-pointer rounded-lg text-left active:brightness-90"
-      >
-        <Typography variant="label" as="span" className="block break-words">
-          {caption}
-        </Typography>
-      </button>
-      {/* Revealed only by a refused copy, exactly like the Naver body's raw field: there is
-              nothing to select until there is something to select. */}
-      {captionFellBack && (
-        <>
-          <FieldLabel htmlFor={captionFieldId} className="sr-only">
-            {t('export.captionField')}
-          </FieldLabel>
-          <TextField
-            id={captionFieldId}
-            ref={(element) => {
-              captionFieldRef.current = element
-              registerCaptionField(element)
-            }}
-            value={caption}
-            readOnly
-            className="mt-2 w-full"
-          />
-        </>
-      )}
-      <Typography
-        variant="meta"
-        as="p"
-        role="status"
-        className="text-content-tertiary mt-1 min-h-4 break-words"
-      >
-        {captionStatus}
-      </Typography>
-    </div>
   )
 }

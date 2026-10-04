@@ -1,36 +1,28 @@
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link, useBlocker, useNavigate, useParams, useSearch } from '@tanstack/react-router'
+import { Link, useParams, useSearch } from '@tanstack/react-router'
 import { twMerge } from 'tailwind-merge'
 import { useSession } from '@/entities/session'
 import {
   TEMPLATE_LIMITS,
   TEMPLATE_MAX_PER_ACCOUNT,
-  TEMPLATE_PARSE_OPTIONS,
   TemplateComposition,
   TemplatePreview,
   TemplateSource,
-  askFields,
-  canSaveTemplate,
-  parseTemplate,
   remainingChars,
-  useCreateTemplate,
   useTemplates,
-  useUpdateTemplate,
   type Template,
   type TemplateArea,
-  type TemplateDraftTexts,
 } from '@/entities/template'
+import { useTemplateDraft, useTemplateSave, type NumberDraft } from '@/features/edit-template'
 import {
   TemplateRequestBox,
   useTemplateRequest,
   type TemplateRequestSample,
 } from '@/features/request-template'
 import {
-  POST_TAG_COUNT_DEFAULT,
   POST_TAG_COUNT_MAX,
   POST_TAG_COUNT_MIN,
-  POST_TARGET_LENGTH_DEFAULT,
   POST_TARGET_LENGTH_MAX,
   POST_TARGET_LENGTH_MIN,
   usePost,
@@ -60,7 +52,8 @@ import {
  *  takes without half of it reaching the server (TMPL-25).
  *
  *  Composition only, like every other page: the fields come from `shared/ui`, the composition
- *  editor from `entities/template`, and the two writes from the features that own them. */
+ *  editor from `entities/template`, the draft and its one save from `features/edit-template`, and
+ *  the AI request from `features/request-template`. */
 export function TemplatePage() {
   // `strict: false` because ONE component serves both routes: `/templates/new` has no param, and
   // asking for it strictly there would throw rather than mean "a template that does not exist
@@ -150,54 +143,6 @@ const COMPOSITION_PANEL_ID = 'template-composition-panel'
 const EDIT_PANEL_ID = 'template-edit-panel'
 const PREVIEW_PANEL_ID = 'template-preview-panel'
 
-interface Draft {
-  name: string
-  description: string
-  body: string
-  /** The 제목 형식 (TMPL-50): '' is none, and the AI writes the title. */
-  titleArea: string
-  /** `undefined` is 의견 없음 — this template says nothing about that number, and assigning it
-   *  leaves the post's own option alone (TMPL-47). */
-  targetLength?: number
-  tagCount?: number
-}
-
-function draftOf(stored: Template | undefined): Draft {
-  return {
-    name: stored?.name ?? '',
-    description: stored?.description ?? '',
-    body: stored?.body ?? '',
-    titleArea: stored?.titleArea ?? '',
-    targetLength: stored?.targetLength,
-    tagCount: stored?.tagCount,
-  }
-}
-
-/** One number as it is being EDITED: whether its 사용 tick is on, and the text in the field.
- *  The text outlives an unticked box on purpose — unticking and reticking must not lose what
- *  was typed (the 목표 글자 수 rule of POST-20). */
-interface NumberDraft {
-  enabled: boolean
-  text: string
-}
-
-function numberDraftOf(value: number | undefined): NumberDraft {
-  return { enabled: value !== undefined, text: value?.toString() ?? '' }
-}
-
-/** The value this field contributes to the draft: `undefined` while unticked, and NaN while
- *  ticked with something unusable in it — which is dirty, refused by the save gate, and never
- *  confused with 의견 없음. */
-function numberValue(field: NumberDraft): number | undefined {
-  return field.enabled ? Number(field.text) : undefined
-}
-
-function numberValid(field: NumberDraft, min: number, max: number): boolean {
-  if (!field.enabled) return true
-  const parsed = Number(field.text)
-  return field.text.trim() !== '' && Number.isInteger(parsed) && parsed >= min && parsed <= max
-}
-
 function Editor({
   ownerId,
   stored,
@@ -210,22 +155,13 @@ function Editor({
   templateCount: number
 }) {
   const { t } = useTranslation(['templates', 'common'])
-  const navigate = useNavigate()
-  const [draft, setDraft] = useState<Draft>(() => draftOf(stored))
-  // The two generation numbers are part of the same one draft (TMPL-49), kept as their own
-  // editing state because a ticked field can hold text that is not yet a number.
-  const [lengthField, setLengthField] = useState<NumberDraft>(() =>
-    numberDraftOf(stored?.targetLength),
-  )
-  const [tagsField, setTagsField] = useState<NumberDraft>(() => numberDraftOf(stored?.tagCount))
-  const lengthValid = numberValid(lengthField, POST_TARGET_LENGTH_MIN, POST_TARGET_LENGTH_MAX)
-  const tagsValid = numberValid(tagsField, POST_TAG_COUNT_MIN, POST_TAG_COUNT_MAX)
-  // What the last successful save wrote, taken from the mutation's OWN response. The directory
-  // query lags a save by a refetch, so comparing against it alone would leave the screen dirty
-  // for that whole window — which re-enables 저장 and makes the leave guard warn about a
-  // template that was just saved.
-  const [savedBaseline, setSavedBaseline] = useState<Draft | null>(null)
-  const [saved, setSaved] = useState(false)
+  // The one draft, the request that may rewrite its texts, and the one save over both: the draft
+  // comes first because the request's answer lands in it, and the save reads the two together.
+  const draftState = useTemplateDraft(stored)
+  const { draft, failureIn } = draftState
+  const request = useTemplateRequest(draftState.applyRequest)
+  const saving = useTemplateSave({ ownerId, stored, draft: draftState, request })
+  const { locked } = saving
   // Which way the composition is being edited. Two renderings of ONE field, never both at once:
   // the builder reseeds its rows from the body on mount, which is the same "value from outside"
   // path a refetch takes (TMPL-29), so switching needs no synchronisation of its own.
@@ -237,21 +173,6 @@ function Editor({
   // Below lg the composition and the preview take turns; at lg both stand side by side and this
   // switch is hidden (TMPL-67). Page-local: it never touches the draft or the leave guard.
   const [view, setView] = useState<'compose' | 'preview'>('compose')
-  const create = useCreateTemplate(ownerId)
-  const update = useUpdateTemplate(ownerId, stored?.id ?? '')
-  // The template request (TMPL-58): its answer and its undo replace the draft's four texts, never
-  // the two numbers (TMPL-60), and make the draft dirty like any edit (TMPL-63).
-  const applyRequest = useCallback((next: TemplateDraftTexts) => {
-    setDraft((current) => ({
-      ...current,
-      name: next.name,
-      description: next.description,
-      titleArea: next.titleArea,
-      body: next.body,
-    }))
-    setSaved(false)
-  }, [])
-  const request = useTemplateRequest(applyRequest)
   // The post a new template follows (TMPL-64), until its chip is removed.
   const [sampleSlug, setSampleSlug] = useState(initialSample ?? '')
   const samplePost = usePost(sampleSlug, { enabled: sampleSlug !== '' })
@@ -268,158 +189,9 @@ function Editor({
             }
           : undefined
 
-  // The name and the description are user prose and are trimmed. The BODY is not: it is the
-  // canonical serialization of the composition, and trimming it would make a stored body with
-  // significant outer bytes read as dirty on open and be rewritten on save — which is exactly
-  // what TMPL-8 forbids.
-  const trimmed: Draft = {
-    name: draft.name.trim(),
-    description: draft.description.trim(),
-    body: draft.body,
-    // Untrimmed, for the body's reason.
-    titleArea: draft.titleArea,
-    targetLength: numberValue(lengthField),
-    tagCount: numberValue(tagsField),
-  }
-  const baseline = savedBaseline ?? draftOf(stored)
-  const dirty =
-    trimmed.name !== baseline.name ||
-    trimmed.description !== baseline.description ||
-    trimmed.body !== baseline.body ||
-    trimmed.titleArea !== baseline.titleArea ||
-    trimmed.targetLength !== baseline.targetLength ||
-    trimmed.tagCount !== baseline.tagCount
-  const pending = create.isPending || update.isPending
-  // A running request locks the draft (TMPL-63): its answer lands in it.
-  const locked = pending || request.running
-  const errorMessage = create.errorMessage || update.errorMessage
-  const failed = create.isError || update.isError
-  // Parsed ONCE, here, as the one document the two areas are (TMPL-50): the save gate and the
-  // error each area shows are the same answer, so they cannot disagree. The builder emits only
-  // text that parses, so this changes nothing for a builder-only flow — it is what makes "a
-  // template that does not parse cannot be saved from EITHER mode" true (TMPL-30,
-  // TMPL-7), and what catches a failure only the two areas together have.
-  const parsed = parseTemplate(trimmed.titleArea, trimmed.body, TEMPLATE_PARSE_OPTIONS)
-  const failureIn = (area: TemplateArea) =>
-    !parsed.ok && parsed.failure.area === area ? parsed.failure : null
-  // Two rows asking under one title, in either area. A composition leaves such a row OUT of its
-  // text, so the draft parses and nothing here would otherwise notice — and saving would
-  // silently drop the row the author is looking at (TMPL-44). One flag per area, each setter
-  // handed over as is: a stable reference, so neither composition re-reports on every render.
-  const [titleAskConflict, setTitleAskConflict] = useState(false)
-  const [bodyAskConflict, setBodyAskConflict] = useState(false)
-  // The title's data fields come first in the one namespace (TMPL-55), so a body row asking
-  // under one of them is the row that yields.
-  const titleAskLabels = useMemo(
-    () =>
-      new Set(
-        askFields(draft.titleArea, { ...TEMPLATE_PARSE_OPTIONS, titleArea: true }).map(
-          (field) => field.label,
-        ),
-      ),
-    [draft.titleArea],
-  )
-  const blocked =
-    !dirty ||
-    !canSaveTemplate(trimmed) ||
-    !lengthValid ||
-    !tagsValid ||
-    !parsed.ok ||
-    titleAskConflict ||
-    bodyAskConflict ||
-    locked
-
-  // A REF, not state: the post-save redirect below runs in the same tick as the state update
-  // that would clear `dirty`, and the blocker reads its render-time closure — so without this the
-  // screen would intercept its own navigation and ask whether to discard a template it had just
-  // created. It needs no reset: the route change remounts this component.
-  const leavingAfterSave = useRef(false)
-  // A running request is something to lose as much as an unsaved draft: leaving cancels it.
-  const guard = () => request.running || (!leavingAfterSave.current && dirty && !pending)
-
-  // `enableBeforeUnload` is a FUNCTION, not the default `true`: the beforeunload path does not
-  // consult `shouldBlockFn`, so leaving it alone would make the browser prompt on every reload of
-  // a clean screen. A tab close still warns when there is something to lose — the browser's own
-  // untranslatable prompt is a poor message, but losing an unsaved composition silently is worse.
-  const blocker = useBlocker({
-    shouldBlockFn: guard,
-    enableBeforeUnload: guard,
-    withResolver: true,
-  })
-
-  // The clean baseline is what the server stored, from the mutation's own response (TMPL-25),
-  // and the draft's text takes it too: the server trims the body at its edges (TMPL-6), so a
-  // saved screen is clean and shows exactly what was written. The fields are disabled while the
-  // save runs, so nothing typed meanwhile is overwritten. A response without a template leaves
-  // the sent draft as the baseline.
-  const adoptSaved = (template: Template | undefined) => {
-    if (!template) {
-      setSavedBaseline(trimmed)
-      return
-    }
-    const written = draftOf(template)
-    setSavedBaseline(written)
-    setDraft((current) => ({
-      ...current,
-      name: written.name,
-      description: written.description,
-      body: written.body,
-      titleArea: written.titleArea,
-    }))
-  }
-
-  const save = async () => {
-    if (blocked) return
-    try {
-      if (stored) {
-        // All three fields in one call. They are one decision now, and the server applies a
-        // present field and leaves an absent one alone — so sending three is one transaction,
-        // not a read-modify-write of anything the user did not touch on this screen.
-        const updated = await update.saveAll(trimmed)
-        adoptSaved(updated.template)
-        setSaved(true)
-        return
-      }
-      const created = await create.create(trimmed)
-      const id = created.template?.id
-      // The baseline moves BEFORE the navigation, or the blocker below would intercept the
-      // screen's own redirect and ask whether to discard a template that was just created.
-      adoptSaved(created.template)
-      if (!id) {
-        // A create that answered without an id has nothing to navigate to. Staying put with the
-        // draft intact is the honest outcome; navigating to an empty param would 404.
-        setSaved(true)
-        return
-      }
-      leavingAfterSave.current = true
-      // `replace`, so Back from the saved template goes to the list rather than to a `new`
-      // screen that no longer describes anything.
-      await navigate({ to: '/templates/$templateId', params: { templateId: id }, replace: true })
-    } catch {
-      // The mutation's message renders above the dock.
-    }
-  }
-
-  const field = (key: 'name' | 'description' | 'body' | 'titleArea') => (value: string) => {
-    setDraft((current) => ({ ...current, [key]: value }))
-    setSaved(false)
-  }
-
-  // Ticking reveals a field with a usable number ALREADY in it, and a value typed earlier in
-  // this session outranks the default — the same rule the post's own 목표 글자 수 follows, so
-  // the field behaves identically in the two places it is met (POST-20).
-  const numberField =
-    (set: typeof setLengthField, fallback: number) => (next: Partial<NumberDraft>) => {
-      set((current) => {
-        const merged = { ...current, ...next }
-        if (next.enabled && !current.text) merged.text = String(fallback)
-        return merged
-      })
-      setSaved(false)
-    }
-
   // `stored` is still read for the heading and for the create-vs-update decision, so a refetch
-  // that lands after a save changes neither: `savedBaseline` already describes the saved state.
+  // that lands after a save changes neither: the draft's baseline already describes the saved
+  // state.
 
   return (
     <main className={pageStyles({ width: 'wide', className: 'flex flex-1 flex-col lg:max-w-7xl' })}>
@@ -455,10 +227,10 @@ function Editor({
 
       <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-start lg:gap-12">
         <div className="min-w-0">
-          <NameField value={draft.name} onChange={field('name')} disabled={locked} />
+          <NameField value={draft.name} onChange={draftState.setText('name')} disabled={locked} />
           <DescriptionField
             value={draft.description}
-            onChange={field('description')}
+            onChange={draftState.setText('description')}
             disabled={locked}
           />
           <NumberField
@@ -466,24 +238,24 @@ function Editor({
             tick={t('numbers.targetLengthTick', { ns: 'templates' })}
             label={t('numbers.targetLength', { ns: 'templates' })}
             help={t('numbers.targetLengthHelp', { ns: 'templates' })}
-            field={lengthField}
+            field={draftState.lengthField}
             min={POST_TARGET_LENGTH_MIN}
             max={POST_TARGET_LENGTH_MAX}
-            valid={lengthValid}
+            valid={draftState.lengthValid}
             disabled={locked}
-            onChange={numberField(setLengthField, POST_TARGET_LENGTH_DEFAULT)}
+            onChange={draftState.setTargetLength}
           />
           <NumberField
             id="template-tag-count"
             tick={t('numbers.tagCountTick', { ns: 'templates' })}
             label={t('numbers.tagCount', { ns: 'templates' })}
             help={t('numbers.tagCountHelp', { ns: 'templates' })}
-            field={tagsField}
+            field={draftState.tagsField}
             min={POST_TAG_COUNT_MIN}
             max={POST_TAG_COUNT_MAX}
-            valid={tagsValid}
+            valid={draftState.tagsValid}
             disabled={locked}
-            onChange={numberField(setTagsField, POST_TAG_COUNT_DEFAULT)}
+            onChange={draftState.setTagCount}
           />
 
           {/* The phone's one-at-a-time switch. It stands above the composition area and below the
@@ -540,7 +312,7 @@ function Editor({
                   <TemplateSource
                     area="title_area"
                     value={draft.titleArea}
-                    onChange={field('titleArea')}
+                    onChange={draftState.setText('titleArea')}
                     disabled={locked}
                     failure={failureIn('title_area')}
                     autoFocus={focusSource === 'title_area'}
@@ -549,9 +321,9 @@ function Editor({
                 ) : (
                   <TemplateComposition
                     area="title_area"
-                    onAskConflict={setTitleAskConflict}
+                    onAskConflict={draftState.onTitleAskConflict}
                     value={draft.titleArea}
-                    onChange={field('titleArea')}
+                    onChange={draftState.setText('titleArea')}
                     disabled={locked}
                     failure={failureIn('title_area')}
                     onFixInSource={() => {
@@ -579,7 +351,7 @@ function Editor({
                 {mode === 'source' ? (
                   <TemplateSource
                     value={draft.body}
-                    onChange={field('body')}
+                    onChange={draftState.setText('body')}
                     disabled={locked}
                     failure={failureIn('body')}
                     autoFocus={focusSource === 'body'}
@@ -587,11 +359,11 @@ function Editor({
                   />
                 ) : (
                   <TemplateComposition
-                    onAskConflict={setBodyAskConflict}
+                    onAskConflict={draftState.onBodyAskConflict}
                     value={draft.body}
-                    onChange={field('body')}
+                    onChange={draftState.setText('body')}
                     disabled={locked}
-                    takenAskTitles={titleAskLabels}
+                    takenAskTitles={draftState.titleAskLabels}
                     failure={failureIn('body')}
                     onFixInSource={() => {
                       setFocusSource('body')
@@ -619,8 +391,8 @@ function Editor({
 
       {/* The state this screen has to report goes in one place, above the control that produced
           it, so a refusal is read where the thumb already is (THEME-24). */}
-      {failed && <FieldMessage className="mt-auto pt-6">{errorMessage}</FieldMessage>}
-      {saved && !failed && (
+      {saving.failed && <FieldMessage className="mt-auto pt-6">{saving.errorMessage}</FieldMessage>}
+      {draftState.saved && !saving.failed && (
         <Typography variant="meta" as="p" role="status" className="mt-auto pt-6">
           {t('screen.saved', { ns: 'templates' })}
         </Typography>
@@ -630,13 +402,13 @@ function Editor({
           the control that commits it is there on a desk too (THEME-24). */}
       <ActionBar
         ariaLabel={t('screen.saveDockAria', { ns: 'templates' })}
-        className={failed || saved ? undefined : 'mt-auto'}
+        className={saving.failed || draftState.saved ? undefined : 'mt-auto'}
       >
         <Button
           variant="cta"
-          disabled={blocked}
-          pending={pending}
-          onClick={() => void save()}
+          disabled={saving.blocked}
+          pending={saving.pending}
+          onClick={() => void saving.save()}
           className="w-full"
         >
           {t('action.save', { ns: 'common' })}
@@ -644,17 +416,13 @@ function Editor({
       </ActionBar>
 
       <Dialog
-        open={blocker.status === 'blocked'}
+        open={saving.leave.asking}
         title={t(request.running ? 'request.leaveTitle' : 'screen.leaveTitle', { ns: 'templates' })}
         confirmLabel={t(request.running ? 'request.leaveConfirm' : 'screen.leaveConfirm', {
           ns: 'templates',
         })}
-        onClose={() => blocker.reset?.()}
-        onConfirm={() => {
-          // Leaving cancels the running request; it is not awaited (TMPL-63).
-          if (request.running) request.cancel()
-          blocker.proceed?.()
-        }}
+        onClose={saving.leave.stay}
+        onConfirm={saving.leave.go}
       >
         {t(request.running ? 'request.leaveDescription' : 'screen.leaveDescription', {
           ns: 'templates',
