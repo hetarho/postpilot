@@ -26,20 +26,25 @@ type Service struct {
 	voices     VoiceDirectory
 	reflection VoiceReflection
 	retention  time.Duration
-	applyMu    sync.Mutex
-	adoptMu    sync.Mutex
-	now        func() time.Time
-	newID      func() string
+	// concurrency is how many candidates of one comparison may call providers at once.
+	concurrency int
+	applyMu     sync.Mutex
+	adoptMu     sync.Mutex
+	now         func() time.Time
+	newID       func() string
 }
 
-func NewService(store Storage, catalog Catalog, jobs Jobs, runner Runner, posts PostDirectory, retention time.Duration) *Service {
+func NewService(store Storage, catalog Catalog, jobs Jobs, runner Runner, posts PostDirectory, retention time.Duration, candidateConcurrency int) *Service {
 	if retention <= 0 {
 		panic("experiment: retention must be positive")
+	}
+	if candidateConcurrency <= 0 {
+		panic("experiment: candidate concurrency must be positive")
 	}
 	if posts == nil {
 		panic("experiment: post directory is required")
 	}
-	return &Service{runs: store, candidates: store, outcome: store, purge: store, catalog: catalog, jobs: jobs, runner: runner, posts: posts, retention: retention, now: time.Now, newID: newID}
+	return &Service{runs: store, candidates: store, outcome: store, purge: store, catalog: catalog, jobs: jobs, runner: runner, posts: posts, retention: retention, concurrency: candidateConcurrency, now: time.Now, newID: newID}
 }
 
 // SetVoiceDirectory wires the voice context's published check once both services exist.
@@ -89,6 +94,10 @@ func (s *Service) Start(ctx context.Context, request StartRequest) (StartResult,
 	if err != nil {
 		return StartResult{}, err
 	}
+	observeCalls, err := s.runner.ObserveCalls(request.Stage, frozen.Content)
+	if err != nil {
+		return StartResult{}, fmt.Errorf("count observe calls: %w", err)
+	}
 	sides, err := shuffledSides(len(refs))
 	if err != nil {
 		return StartResult{}, fmt.Errorf("assign candidate sides: %w", err)
@@ -114,7 +123,7 @@ func (s *Service) Start(ctx context.Context, request StartRequest) (StartResult,
 	jobID, err := s.jobs.EnqueueExperiment(ctx, JobRequest{
 		UserID: request.UserID, PostSlug: request.PostSlug, VoiceID: found.VoiceID, ExperimentID: found.ID, Stage: request.Stage,
 		TargetLanguage: cloneLanguage(found.TargetLanguage),
-		Models:         refsToStrings(refs), ObserveModel: writeObserveModel(request),
+		Models:         refsToStrings(refs), ObserveModel: writeObserveModel(request), ObserveCalls: observeCalls,
 	})
 	if err != nil {
 		_ = s.runs.Delete(ctx, found.ID)
@@ -225,7 +234,9 @@ func (s *Service) ReflectionPromptText(found Experiment) string {
 
 // ReflectionDetail is what a 말투 반영 비교's review reads beside its pieces (MODEL-67): the prompt,
 // the owner's answer while the snapshot keeps it, and each delivered piece measured against the
-// voice's current analysis. Nothing about it reveals a candidate's identity (MODEL-32).
+// voice's current analysis. Nothing about it reveals a candidate's identity (MODEL-32). Every
+// piece is measured in one comparison call, so a poll reads the voice and its analysis once
+// however many candidates delivered.
 func (s *Service) ReflectionDetail(ctx context.Context, found Experiment) (ReflectionDetail, error) {
 	if found.Source != SourceVoice || s.reflection == nil {
 		return ReflectionDetail{}, nil
@@ -238,15 +249,27 @@ func (s *Service) ReflectionDetail(ctx context.Context, found Experiment) (Refle
 		}
 		detail.Answer = answer
 	}
+	var delivered []string
+	var pieces []string
 	for _, candidate := range found.Candidates {
 		if candidate.Status != CandidateSucceeded || len(candidate.Output) == 0 {
 			continue
 		}
-		comparison, err := s.reflection.Compare(ctx, found.UserID, found.VoiceID, string(candidate.Output))
-		if err != nil {
-			return ReflectionDetail{}, err
-		}
-		detail.Comparisons[candidate.ID] = comparison
+		delivered = append(delivered, candidate.ID)
+		pieces = append(pieces, string(candidate.Output))
+	}
+	if len(pieces) == 0 {
+		return detail, nil
+	}
+	comparisons, err := s.reflection.Compare(ctx, found.UserID, found.VoiceID, pieces)
+	if err != nil {
+		return ReflectionDetail{}, err
+	}
+	if len(comparisons) != len(pieces) {
+		return ReflectionDetail{}, fmt.Errorf("voice comparison answered %d of %d pieces", len(comparisons), len(pieces))
+	}
+	for i, candidateID := range delivered {
+		detail.Comparisons[candidateID] = comparisons[i]
 	}
 	return detail, nil
 }
@@ -330,6 +353,14 @@ func (s *Service) Retry(ctx context.Context, userID, id string) (StartResult, er
 			return StartResult{}, err
 		}
 	}
+	// A retried observe candidate makes every call its first run made, so the hold counts them
+	// again over the same snapshot.
+	observeCalls := 0
+	if found.Stage == StageObserve {
+		if observeCalls, err = s.runner.ObserveCalls(found.Stage, found.InputSnapshot); err != nil {
+			return StartResult{}, fmt.Errorf("count observe calls: %w", err)
+		}
+	}
 	count, err := s.candidates.ResetFailedCandidates(ctx, found.ID)
 	if err != nil {
 		return StartResult{}, err
@@ -345,7 +376,7 @@ func (s *Service) Retry(ctx context.Context, userID, id string) (StartResult, er
 	// again: a downgrade after the first run must refuse a model that is now above the tier.
 	jobID, err := s.jobs.EnqueueExperiment(ctx, JobRequest{
 		UserID: userID, PostSlug: found.PostSlug, VoiceID: found.VoiceID, ExperimentID: found.ID, Stage: found.Stage,
-		TargetLanguage: cloneLanguage(found.TargetLanguage), Models: candidateModels(found),
+		TargetLanguage: cloneLanguage(found.TargetLanguage), Models: candidateModels(found), ObserveCalls: observeCalls,
 	})
 	if err != nil {
 		_ = s.candidates.RestoreFailedCandidates(ctx, found.ID, found.Candidates)
@@ -1116,9 +1147,13 @@ func newID() string {
 	return hex.EncodeToString(value)
 }
 
+// runCandidates runs the pending candidates, at most s.concurrency at once: a ranked comparison
+// has up to five, and five parallel calls to one provider invite the rate limit a retry would
+// pay for again.
 func (s *Service) runCandidates(ctx context.Context, found Experiment, progress Progress) error {
 	var wg sync.WaitGroup
 	var progressMu sync.Mutex
+	slots := make(chan struct{}, s.concurrency)
 	errorsByCandidate := make(chan error, len(found.Candidates))
 	completed := 0
 	pending := 0
@@ -1134,9 +1169,11 @@ func (s *Service) runCandidates(ctx context.Context, found Experiment, progress 
 			continue
 		}
 		candidate := candidate
+		slots <- struct{}{}
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
+			defer func() { <-slots }()
 			if err := s.runCandidate(ctx, found, candidate, progress); err != nil {
 				errorsByCandidate <- err
 			}

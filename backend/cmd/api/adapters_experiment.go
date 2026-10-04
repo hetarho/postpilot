@@ -88,11 +88,20 @@ func (a experimentReflection) Answer(content []byte) (string, error) {
 	return answer, err
 }
 
-func (a experimentReflection) Compare(ctx context.Context, userID, voiceID, text string) ([]experiment.ItemComparison, error) {
-	items, err := a.service.CompareText(ctx, userID, voiceID, text)
+func (a experimentReflection) Compare(ctx context.Context, userID, voiceID string, texts []string) ([][]experiment.ItemComparison, error) {
+	measured, err := a.service.CompareTexts(ctx, userID, voiceID, texts)
 	if err != nil {
 		return nil, reflectionError(err)
 	}
+	out := make([][]experiment.ItemComparison, 0, len(measured))
+	for _, items := range measured {
+		out = append(out, experimentComparison(items))
+	}
+	return out, nil
+}
+
+// experimentComparison is one piece's comparison in the experiment context's words.
+func experimentComparison(items []voice.ItemComparison) []experiment.ItemComparison {
 	out := make([]experiment.ItemComparison, 0, len(items))
 	for _, item := range items {
 		facets := make([]experiment.ComparisonFacet, 0, len(item.Facets))
@@ -106,7 +115,7 @@ func (a experimentReflection) Compare(ctx context.Context, userID, voiceID, text
 			Item: string(item.Item), Unknown: item.Unknown, Distance: item.Distance, Headline: item.Headline, Facets: facets,
 		})
 	}
-	return out, nil
+	return out
 }
 
 // reflectionError is MODEL-31's refusal set in the experiment context's words.
@@ -136,13 +145,19 @@ func (a experimentJobs) EnqueueExperiment(ctx context.Context, request experimen
 		targetLanguage = request.TargetLanguage.String()
 	}
 	subjects, guards := postVoiceWork(job.KindModelExperiment, request.UserID, request.PostSlug, request.VoiceID)
+	// A write candidate makes one call; an observe candidate and the shared preparation make every
+	// photo batch and video call the frozen input takes. A count of zero prices nothing.
+	candidateCalls := 1
+	if request.Stage == experiment.StageObserve {
+		candidateCalls = request.ObserveCalls
+	}
 	pricingCalls := make([]job.PlannedCall, 0, len(request.Models)+1)
 	for _, ref := range request.Models {
-		pricingCalls = append(pricingCalls, job.PlannedCall{Ref: ref, Stage: string(request.Stage), Count: 1})
+		pricingCalls = append(pricingCalls, job.PlannedCall{Ref: ref, Stage: string(request.Stage), Count: candidateCalls})
 	}
 	extraModels := append([]string(nil), request.Models...)
 	if request.ObserveModel != "" {
-		pricingCalls = append(pricingCalls, job.PlannedCall{Ref: request.ObserveModel, Stage: string(experiment.StageObserve), Count: 1})
+		pricingCalls = append(pricingCalls, job.PlannedCall{Ref: request.ObserveModel, Stage: string(experiment.StageObserve), Count: request.ObserveCalls})
 		extraModels = append(extraModels, request.ObserveModel)
 	}
 	id, err := a.queue.Enqueue(ctx, job.NewJob{
@@ -268,6 +283,19 @@ func (a experimentRunner) Snapshot(ctx context.Context, request experiment.Start
 		return experiment.Snapshot{Content: content, PromptVersion: generation.ObserveExperimentPromptVersion}, mapSnapshotError(err)
 	default:
 		return experiment.Snapshot{}, experiment.ErrInvalidStage
+	}
+}
+
+// ObserveCalls counts with generation's own batch arithmetic, the one the observe pipeline runs,
+// so the hold and the work agree on how many calls there will be.
+func (a experimentRunner) ObserveCalls(stage experiment.Stage, content []byte) (int, error) {
+	switch stage {
+	case experiment.StageWrite:
+		return a.generation.WriteSnapshotObserveCalls(content)
+	case experiment.StageObserve:
+		return a.generation.ObserveSnapshotCalls(content)
+	default:
+		return 0, experiment.ErrInvalidStage
 	}
 }
 

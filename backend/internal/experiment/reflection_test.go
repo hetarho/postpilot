@@ -13,6 +13,8 @@ type fakeReflection struct {
 	runs        []ModelRef
 	runContent  [][]byte
 	fail        map[string]error
+	// compares is the texts of each comparison call.
+	compares [][]string
 }
 
 func (f *fakeReflection) Snapshot(_ context.Context, _, _, promptKey string) (ReflectionSnapshot, error) {
@@ -36,8 +38,16 @@ func (f *fakeReflection) Run(_ context.Context, content []byte, model ModelRef) 
 
 func (f *fakeReflection) PromptText(key string) string  { return "문항:" + key }
 func (f *fakeReflection) Answer([]byte) (string, error) { return "내 답", nil }
-func (f *fakeReflection) Compare(_ context.Context, _, _, text string) ([]ItemComparison, error) {
-	return []ItemComparison{{Item: "endings", Headline: "해요", Facets: []ComparisonFacet{{Key: "해요", Unit: "share", Voice: 0.9, Text: float64(len(text)) / 100}}}}, nil
+
+// Compare answers each text with a comparison headed by the text itself, so a test can see which
+// piece's comparison landed on which candidate.
+func (f *fakeReflection) Compare(_ context.Context, _, _ string, texts []string) ([][]ItemComparison, error) {
+	f.compares = append(f.compares, texts)
+	out := make([][]ItemComparison, 0, len(texts))
+	for _, text := range texts {
+		out = append(out, []ItemComparison{{Item: "endings", Headline: text, Facets: []ComparisonFacet{{Key: "해요", Unit: "share", Voice: 0.9, Text: float64(len(text)) / 100}}}})
+	}
+	return out, nil
 }
 
 func reflectionService(t *testing.T) (*Service, *memoryStore, *fakeCatalog, *fakeJobs, *fakeRunner, *fakeReflection) {
@@ -82,6 +92,47 @@ func TestRankedReflectionChecksAllFivePhotoCandidates(t *testing.T) {
 	}
 	if found.ReviewMode != ReviewCandidateRanking || len(found.Candidates) != 5 || len(jobs.requests[0].Models) != 5 {
 		t.Fatalf("reflection = %+v, job=%+v", found, jobs.requests[0])
+	}
+}
+
+// MODEL-67: the review measures every delivered piece in one comparison call, so a poll reads the
+// voice and its analysis once however many candidates there are; a failed candidate is not
+// measured and a run with nothing delivered asks nothing.
+func TestAReflectionReviewComparesEveryPieceInOneCall(t *testing.T) {
+	svc, store, catalog, _, _, reflection := reflectionService(t)
+	refs := []ModelRef{refA, refB, {ProviderID: "p", ModelID: "c"}, {ProviderID: "p", ModelID: "d"}, {ProviderID: "p", ModelID: "e"}}
+	for _, ref := range refs[2:] {
+		catalog.models[ref] = Model{Ref: ref, Label: ref.ModelID, Enabled: true, Vision: true, Stages: []string{"write"}}
+	}
+	ctx := context.Background()
+	started, err := svc.StartVoiceReflection(ctx, ReflectionStartRequest{UserID: "alice", VoiceID: "voice-a", PromptKey: "opening_greeting", Candidates: refs})
+	if err != nil {
+		t.Fatal(err)
+	}
+	found, _ := store.Get(ctx, started.ExperimentID)
+	if detail, err := svc.ReflectionDetail(ctx, found); err != nil || len(detail.Comparisons) != 0 || len(reflection.compares) != 0 {
+		t.Fatalf("an undelivered review = %+v compares=%v err=%v", detail, reflection.compares, err)
+	}
+	reflection.fail["c"] = errors.New("provider down")
+	if err := svc.Handle(ctx, found.ID, func(string, int, int) {}); err != nil {
+		t.Fatal(err)
+	}
+	found, _ = store.Get(ctx, found.ID)
+	detail, err := svc.ReflectionDetail(ctx, found)
+	if err != nil || len(reflection.compares) != 1 || len(reflection.compares[0]) != 4 || len(detail.Comparisons) != 4 {
+		t.Fatalf("detail = %+v compares=%v err=%v", detail, reflection.compares, err)
+	}
+	for _, candidate := range found.Candidates {
+		comparison, measured := detail.Comparisons[candidate.ID]
+		if candidate.Model.ModelID == "c" {
+			if measured {
+				t.Fatalf("a failed candidate was measured: %+v", comparison)
+			}
+			continue
+		}
+		if !measured || comparison[0].Headline != string(candidate.Output) {
+			t.Fatalf("candidate %s got %+v", candidate.Model.ModelID, comparison)
+		}
 	}
 }
 

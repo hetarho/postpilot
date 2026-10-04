@@ -96,6 +96,31 @@ func (s *Service) SnapshotObserveInput(ctx context.Context, userID, postSlug str
 	return encodeObserveSnapshot(post.Slug, post.UserID, post.Images)
 }
 
+// ObserveSnapshotCalls is how many observation calls one observe candidate makes over a frozen
+// observe snapshot: every attachment, batched exactly as RunObserveCandidate batches them.
+func (s *Service) ObserveSnapshotCalls(raw []byte) (int, error) {
+	post, err := decodeObserveSnapshot(raw)
+	if err != nil {
+		return 0, err
+	}
+	return s.observeCalls(post.Images), nil
+}
+
+// WriteSnapshotObserveCalls is how many observation calls a write comparison's shared
+// preparation makes over its frozen snapshot: the frozen selection PrepareWriteInput observes,
+// and none once the snapshot is prepared.
+func (s *Service) WriteSnapshotObserveCalls(raw []byte) (int, error) {
+	snapshot, err := decodeWriteSnapshot(raw)
+	if err != nil {
+		return 0, err
+	}
+	if snapshot.Prepared {
+		return 0, nil
+	}
+	targets, _ := frozenObserveSelection(snapshot.Post.Images, snapshot.ObserveFiles, snapshot.Observations)
+	return s.observeCalls(targets), nil
+}
+
 func (s *Service) PrepareWriteInput(ctx context.Context, raw []byte, progress Progress) ([]byte, error) {
 	snapshot, err := decodeWriteSnapshot(raw)
 	if err != nil {

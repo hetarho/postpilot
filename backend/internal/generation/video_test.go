@@ -288,6 +288,53 @@ func TestStartPlansOneObserveCallPerFrozenVideo(t *testing.T) {
 	}
 }
 
+// MODEL-30, VIDEO-13: a comparison's frozen input counts its observe calls with the arithmetic
+// a run makes them by: an observe candidate observes every attachment, a write comparison's
+// shared preparation its frozen selection, and a prepared snapshot nothing.
+func TestExperimentSnapshotsCountTheirObserveCalls(t *testing.T) {
+	svc := NewService(&fakePosts{}, fakeProfiles{}, videoModels(), fakeImages{}, &fakeJobs{}, 4, testReasoningPolicy, testBudget, testDeps())
+	images := make([]Image, 0, 10)
+	for i := range 9 {
+		images = append(images, photo(fmt.Sprintf("IMG_%d.jpg", i+1)))
+	}
+	images = append(images, clip("a.mp4"))
+	observe, err := encodeObserveSnapshot("p", "alice", images)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if calls, err := svc.ObserveSnapshotCalls(observe); err != nil || calls != 3+1 {
+		t.Fatalf("an observe candidate = %d calls err=%v, want 3 photo batches + 1 video", calls, err)
+	}
+	picked := []string{"IMG_1.jpg", "IMG_2.jpg", "a.mp4"}
+	snapshot := writeSnapshot{TargetLanguage: LanguageKorean, ObserveModel: videoObserveRef.String(), ObserveFiles: &picked, Post: PostInput{Slug: "p", UserID: "alice", Images: images}}
+	for name, tc := range map[string]struct {
+		files    *[]string
+		prepared bool
+		want     int
+	}{
+		"the picked ones":       {&picked, false, 1 + 1},
+		"no picker answer":      {nil, false, 3 + 1},
+		"already prepared":      {nil, true, 0},
+		"everything is reused":  {&[]string{}, false, 0},
+		"only the video picked": {&[]string{"a.mp4"}, false, 1},
+	} {
+		snapshot.ObserveFiles, snapshot.Prepared = tc.files, tc.prepared
+		raw, err := encodeWriteSnapshot(snapshot)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if calls, err := svc.WriteSnapshotObserveCalls(raw); err != nil || calls != tc.want {
+			t.Fatalf("%s: the preparation = %d calls err=%v, want %d", name, calls, err, tc.want)
+		}
+	}
+	if _, err := svc.ObserveSnapshotCalls([]byte(`{"kind":"write"}`)); err == nil {
+		t.Fatal("a write snapshot counted as an observe one")
+	}
+	if _, err := svc.WriteSnapshotObserveCalls(observe); err == nil {
+		t.Fatal("an observe snapshot counted as a write one")
+	}
+}
+
 // The picker's contract treats a clip like a photo, by filename — including the reusable rule,
 // which for a video may rest on the two fields only a clip has.
 func TestObserveSelectionTreatsAVideoLikeAPhoto(t *testing.T) {

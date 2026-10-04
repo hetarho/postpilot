@@ -410,6 +410,10 @@ type JobRequest struct {
 	TargetLanguage *Language
 	// ObserveModel is the shared preparation call for a post write comparison.
 	ObserveModel string
+	// ObserveCalls is how many observe calls one pass over the frozen input makes — every observe
+	// candidate's, or a write comparison's shared preparation — as the runner counts them. Zero is
+	// a real answer: a preparation that reuses every observation observes nothing.
+	ObserveCalls int
 	// Models are every candidate ref this comparison will run. The enqueue seam gates
 	// them against the caller's plan; one comparison still consumes exactly one admission.
 	Models []string

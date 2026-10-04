@@ -3,6 +3,7 @@ package voice_test
 import (
 	"context"
 	"errors"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -362,13 +363,44 @@ func TestAReflectionFreezesAndRunsTheCheckPrompt(t *testing.T) {
 	if _, err := h.svc.RunReflectionCandidate(ctx, input.Content, visionRef); err != nil {
 		t.Fatalf("a frozen snapshot on a deleted voice = %v", err)
 	}
-	if comparison, err := h.svc.CompareText(ctx, "alice", alice, result.Piece); err != nil || len(comparison) != len(voice.Items()) {
-		t.Fatalf("compare = %d err=%v", len(comparison), err)
+	if comparisons, err := h.svc.CompareTexts(ctx, "alice", alice, []string{result.Piece}); err != nil || len(comparisons) != 1 || len(comparisons[0]) != len(voice.Items()) {
+		t.Fatalf("compare = %v err=%v", comparisons, err)
 	}
 	if _, err := h.svc.SnapshotReflectionInput(ctx, "alice", alice, "opening_greeting"); !errors.Is(err, voice.ErrVoiceDeleted) {
 		t.Fatalf("a tombstone's snapshot = %v", err)
 	}
-	if _, err := h.svc.CompareText(ctx, "bob", alice, "글"); !errors.Is(err, voice.ErrVoiceNotFound) {
+	if _, err := h.svc.CompareTexts(ctx, "bob", alice, []string{"글"}); !errors.Is(err, voice.ErrVoiceNotFound) {
 		t.Fatalf("another account's compare = %v", err)
+	}
+}
+
+// MODEL-67, VOICE-62: a review measures every delivered piece against one read of the voice and
+// one of its analysis, each piece's comparison at its own index; a voice not made answers nothing.
+func TestComparingManyPiecesReadsTheVoiceOnce(t *testing.T) {
+	h, alice := checkHarness(t)
+	ctx := context.Background()
+	counting := &countingStore{Store: h.store}
+	svc := voice.NewService(counting, h.models, h.jobs)
+	pieces := []string{"국물이 정말 진했어요!", "오늘은 빵집이에요.", "크루아상이 바삭했어요~", "또 갈게요.", "정말 맛있었어요!!"}
+	comparisons, err := svc.CompareTexts(ctx, "alice", alice, pieces)
+	if err != nil || len(comparisons) != len(pieces) || counting.voiceReads != 1 || counting.analysisReads != 1 {
+		t.Fatalf("compare = %d comparisons, %d voice reads, %d analysis reads, err=%v", len(comparisons), counting.voiceReads, counting.analysisReads, err)
+	}
+	analysis, err := h.store.CurrentAnalysis(ctx, "alice", alice)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i, piece := range pieces {
+		want := voice.Compare(analysis.Counted, voice.MeasureText(piece))
+		if !reflect.DeepEqual(comparisons[i], want) {
+			t.Fatalf("piece %d = %+v, want %+v", i, comparisons[i], want)
+		}
+	}
+	unmade, err := svc.CreateVoice(ctx, "alice", "아직")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if comparisons, err := svc.CompareTexts(ctx, "alice", unmade.ID, pieces); err != nil || len(comparisons) != len(pieces) || comparisons[0] != nil {
+		t.Fatalf("a voice not made = %v err=%v", comparisons, err)
 	}
 }

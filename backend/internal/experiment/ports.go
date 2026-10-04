@@ -94,14 +94,16 @@ type VoiceDirectory interface {
 
 // VoiceReflection is the voice context's published 말투 반영 비교 behaviour (MODEL-67): it freezes
 // one voice's input, runs one candidate over that snapshot, reads the prompt and the answer back
-// for the review, and measures a piece against the voice. The composition root adapts it; this
+// for the review, and measures pieces against the voice. The composition root adapts it; this
 // context never reads voice tables.
 type VoiceReflection interface {
 	Snapshot(ctx context.Context, userID, voiceID, promptKey string) (ReflectionSnapshot, error)
 	Run(ctx context.Context, content []byte, model ModelRef) (CandidateResult, error)
 	PromptText(promptKey string) string
 	Answer(content []byte) (string, error)
-	Compare(ctx context.Context, userID, voiceID, text string) ([]ItemComparison, error)
+	// Compare measures every text against one read of the voice, each text's comparison at its
+	// own index.
+	Compare(ctx context.Context, userID, voiceID string, texts []string) ([][]ItemComparison, error)
 }
 
 type Catalog interface {
@@ -119,6 +121,10 @@ type Jobs interface {
 
 type Runner interface {
 	Snapshot(ctx context.Context, request StartRequest) (Snapshot, error)
+	// ObserveCalls is how many observe calls one pass over a frozen post input makes: an observe
+	// candidate's, or a write comparison's shared preparation (none once it is prepared). The
+	// hold prices each call, so it is counted by the code that makes them.
+	ObserveCalls(stage Stage, content []byte) (int, error)
 	PrepareWrite(ctx context.Context, found Experiment, progress Progress) (Snapshot, error)
 	RunCandidate(ctx context.Context, found Experiment, candidate Candidate, progress Progress) (CandidateResult, error)
 	ApplyWinner(ctx context.Context, found Experiment, candidate Candidate) error

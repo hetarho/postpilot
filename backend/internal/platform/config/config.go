@@ -112,8 +112,8 @@ const StorylineCompletionAllowance = 1024
 // parallel provider calls would only make rate limits and ordering less predictable.
 const WorkerConcurrency = 1
 
-// ExperimentCandidateConcurrency is the fixed pair width: one comparison has exactly
-// two candidates and both may call providers concurrently.
+// ExperimentCandidateConcurrency is the concurrency bound, not the pair width: one comparison
+// runs two to five candidates, and at most this many call providers at once.
 const ExperimentCandidateConcurrency = 2
 
 // LLMCompletionBudget is what each stage asks the provider for, so the stages stop sharing

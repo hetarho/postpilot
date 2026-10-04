@@ -80,7 +80,6 @@
 | T548 | Mix immutable narration into server MP4 exports | ARCH DUB CLIP CDS | T547 | todo |
 | T549 | Mix the same narration into browser MP4 exports | ARCH DUB CLIP CDS | T548 | todo |
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | todo |
-| T555 | Make the comparison list light and bound a comparison's candidate fan-out | ARCH | - | todo |
 | T556 | Read voice samples once and leave an unchanged answer alone | ARCH | - | todo |
 | T558 | Sample browser renders without a full decode and load each original once | ARCH | - | todo |
 | T559 | Take a server render's ground frames from its own lossless cut, and trim before scaling | ARCH | T558 | todo |
@@ -97,6 +96,7 @@
 - ops: lower TEMPLATE_PHOTO_ROW_MAX / VITE_TEMPLATE_PHOTO_ROW_MAX to 3 wherever production sets them explicitly (VPS .env, Cloudflare build vars).
 
 ## log
+- 261004 T555 done: comparison list in three reads without snapshots or outputs, voice comparison measured against one analysis, candidates two at a time, observe holds count every observe call; BE and FE suites green
 - 261004 T563 done: a second pack refund records like the first, definitive cancel refusals release frozen credits after a read-back, review-skipped renewals are logged, expired quotes purged; BE suite green
 - 261004 T562 done: billing pass survives an unapplicable order (to review), charges carry Idempotency-Key, fresh intents wait 2 min, only definitive refusals fail, annual step advances next_grant_at alone, Toss client 30 s timeout; BE suite green
 - 261004 T561 done: migration 0129 rebuilds generation_jobs without kind-naming CHECKs (scoped FK guard); PickNextQueued takes first stages from Go; BE suite green
@@ -116,4 +116,3 @@
 - 261004 create-ssot/update-ssot complete: DUB r2 MODEL r29 QUOTA r33 CLIP r55 CDS r32 THEME r22; all adopted ideation domains converted
 - 261004 create-ssot/update-ssot DUB MODEL QUOTA CLIP CDS THEME start: convert the adopted voice-first editor scope before create-task; unrelated ARCH/VOICE/review pending excluded
 - 261004 create-ssot DUB r1: description-generated private voices, audition/confirmation, account reuse and selective narration; related MODEL/QUOTA extensions precede implementation tasks
-- 261004 create-ssot DUB start: confirmed custom spoken voices, account reuse and selective narration generation from adopted ideation

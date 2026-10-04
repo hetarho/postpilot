@@ -34,14 +34,44 @@ SELECT * FROM model_experiment_candidates WHERE experiment_id = ?
 ORDER BY CASE display_side WHEN 'left' THEN 1 WHEN 'right' THEN 2
   WHEN 'c' THEN 3 WHEN 'd' THEN 4 WHEN 'e' THEN 5 ELSE 6 END;
 
--- name: ListExperimentsForUser :many
+-- name: ListExperimentSummariesForUser :many
 -- An empty stage or source matches every one: the write history reads post-sourced comparisons
--- and the voice history voice-sourced ones (MODEL-67).
-SELECT * FROM model_experiments
+-- and the voice history voice-sourced ones (MODEL-67). A list row is a summary: the frozen
+-- input is never read here, and it comes back as NULL only so the row keeps the table's shape.
+-- No LIMIT: the posts page maps any pending comparison id to its status, however old.
+SELECT
+  id, user_id, post_slug, voice_id, stage, status, job_id,
+  CAST(NULL AS TEXT) AS input_snapshot,
+  input_hash, prompt_version, winner_candidate_id, outcome, apply_error, applied_at, created_at,
+  finished_at, decided_at, content_expires_at, adoption_error, adopted_at, adoption_requested,
+  template_name, target_language, apply_error_reason, apply_error_params, apply_technical_detail,
+  adoption_error_reason, adoption_error_params, adoption_technical_detail, origin, apply_requested,
+  source, voice_prompt_key, voice_material_id, review_mode, completed_at, applied_candidate_id,
+  adopted_candidate_id
+FROM model_experiments
 WHERE user_id = sqlc.arg(user_id)
   AND (CAST(sqlc.arg(stage) AS TEXT) = '' OR stage = CAST(sqlc.arg(stage) AS TEXT))
   AND (CAST(sqlc.arg(source) AS TEXT) = '' OR source = CAST(sqlc.arg(source) AS TEXT))
 ORDER BY created_at DESC, id DESC;
+
+-- name: ListCandidateSummariesForExperiments :many
+-- Every listed comparison's candidates in one read, without their output: a list row never
+-- shows a candidate's work. ids is a JSON array of experiment ids.
+SELECT
+  id, experiment_id, model_provider_id, model_id, model_label, display_side, status,
+  CAST(NULL AS TEXT) AS output,
+  error, prompt_tokens, completion_tokens, cost_microusd, cost_source, latency_ms, started_at,
+  finished_at, error_reason, error_params, technical_detail, rank
+FROM model_experiment_candidates
+WHERE experiment_id IN (SELECT value FROM json_each(sqlc.arg(ids)))
+ORDER BY experiment_id, CASE display_side WHEN 'left' THEN 1 WHEN 'right' THEN 2
+  WHEN 'c' THEN 3 WHEN 'd' THEN 4 WHEN 'e' THEN 5 ELSE 6 END;
+
+-- name: ListVerdictBadgesForExperiments :many
+-- Every listed comparison's badges in one read. ids is a JSON array of experiment ids.
+SELECT * FROM model_experiment_badges
+WHERE experiment_id IN (SELECT value FROM json_each(sqlc.arg(ids)))
+ORDER BY experiment_id, candidate_id, badge;
 
 -- name: PendingWriteForPost :one
 SELECT * FROM model_experiments

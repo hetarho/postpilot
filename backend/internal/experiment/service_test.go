@@ -610,6 +610,9 @@ func (j *fakeJobs) HasRunnableExperiment(_ context.Context, id string) (bool, er
 type fakeRunner struct {
 	runMu                               sync.Mutex
 	snapshotCalls, runCalls, applyCalls int
+	// inFlight and maxInFlight count candidate calls running at once; each call lasts hold.
+	inFlight, maxInFlight int
+	hold                  time.Duration
 	// snapshotRequests is what the domain handed the runner to freeze. The origin rides in
 	// it, and the freezing side is what decides whether the post is written to (MODEL-66).
 	snapshotRequests   []StartRequest
@@ -620,6 +623,14 @@ type fakeRunner struct {
 	snapshotVoice      string
 	snapshotTarget     Language
 	omitSnapshotTarget bool
+	// observeCalls is what ObserveCalls answers; observeCounted is each stage it was asked for.
+	observeCalls   int
+	observeCounted []Stage
+}
+
+func (r *fakeRunner) ObserveCalls(stage Stage, _ []byte) (int, error) {
+	r.observeCounted = append(r.observeCounted, stage)
+	return r.observeCalls, nil
 }
 
 // Snapshot freezes the post's voice for a write comparison, as the real runner does.
@@ -700,6 +711,12 @@ func TestHistoryAndLeaderboardRefuseAnalyze(t *testing.T) {
 func (r *fakeRunner) RunCandidate(_ context.Context, _ Experiment, candidate Candidate, _ Progress) (CandidateResult, error) {
 	r.runMu.Lock()
 	r.runCalls++
+	r.inFlight++
+	r.maxInFlight = max(r.maxInFlight, r.inFlight)
+	r.runMu.Unlock()
+	time.Sleep(r.hold)
+	r.runMu.Lock()
+	r.inFlight--
 	r.runMu.Unlock()
 	if result, ok := r.results[candidate.Model.ModelID]; ok {
 		return result, r.fail[candidate.Model.ModelID]
@@ -738,7 +755,7 @@ func newTestService() (*Service, *memoryStore, *fakeCatalog, *fakeJobs, *fakeRun
 	jobs := &fakeJobs{runnable: map[string]bool{}}
 	runner := &fakeRunner{fail: map[string]error{}, results: map[string]CandidateResult{}}
 	posts := &fakePosts{statuses: map[string]string{}}
-	svc := NewService(store, catalog, jobs, runner, posts, 30*24*time.Hour)
+	svc := NewService(store, catalog, jobs, runner, posts, 30*24*time.Hour, 2)
 	n := 0
 	svc.newID = func() string { n++; return fmt.Sprintf("id-%d", n) }
 	svc.now = func() time.Time { return time.Date(2026, 8, 29, 0, 0, 0, 0, time.UTC) }
@@ -746,6 +763,66 @@ func newTestService() (*Service, *memoryStore, *fakeCatalog, *fakeJobs, *fakeRun
 }
 
 var allStages = []string{"observe", "write", "analyze"}
+
+// The hold is told how many observe calls the frozen input takes, as the runner counts them: at
+// start for an observe comparison's candidates and a write comparison's preparation, and again
+// for a retried observe candidate; a write retry's candidates make one call each.
+func TestTheJobCarriesTheRunnersObserveCalls(t *testing.T) {
+	svc, store, _, jobs, runner := newTestService()
+	runner.observeCalls = 4
+	ctx := context.Background()
+	observed, err := svc.Start(ctx, StartRequest{UserID: "alice", PostSlug: "post", Stage: StageObserve, ModelA: ModelRef{"p", "a"}, ModelB: ModelRef{"p", "b"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.Start(ctx, StartRequest{UserID: "alice", PostSlug: "other", Stage: StageWrite, ModelA: ModelRef{"p", "a"}, ModelB: ModelRef{"p", "b"}, ObserveModel: ModelRef{"p", "a"}}); err != nil {
+		t.Fatal(err)
+	}
+	if len(jobs.requests) != 2 || jobs.requests[0].ObserveCalls != 4 || jobs.requests[1].ObserveCalls != 4 || jobs.requests[1].ObserveModel != "p/a" {
+		t.Fatalf("job requests = %+v", jobs.requests)
+	}
+	if len(runner.observeCounted) != 2 || runner.observeCounted[0] != StageObserve || runner.observeCounted[1] != StageWrite {
+		t.Fatalf("counted for %v", runner.observeCounted)
+	}
+	runner.fail["b"] = errors.New("provider failed")
+	if err := svc.Handle(ctx, observed.ExperimentID, func(string, int, int) {}); err != nil {
+		t.Fatal(err)
+	}
+	found, _ := store.Get(ctx, observed.ExperimentID)
+	if found.Status != StatusPartial {
+		t.Fatalf("after a failed candidate = %s", found.Status)
+	}
+	runner.observeCalls = 3
+	if _, err := svc.Retry(ctx, "alice", found.ID); err != nil {
+		t.Fatal(err)
+	}
+	retried := jobs.requests[len(jobs.requests)-1]
+	if retried.ObserveCalls != 3 || len(retried.Models) != 1 || retried.Models[0] != "p/b" {
+		t.Fatalf("the retry's job = %+v", retried)
+	}
+}
+
+// A ranked comparison's five candidates call providers at most two at a time, and all five run.
+func TestFiveCandidatesRunAtMostTwoAtOnce(t *testing.T) {
+	svc, store, catalog, _, runner := newTestService()
+	refs := []ModelRef{{"p", "a"}, {"p", "b"}, {"p", "c"}, {"p", "d"}, {"p", "e"}}
+	for _, ref := range refs {
+		catalog.models[ref] = Model{Ref: ref, Label: ref.ModelID, Enabled: true, Stages: allStages, Vision: true}
+	}
+	ctx := context.Background()
+	started, err := svc.Start(ctx, StartRequest{UserID: "alice", PostSlug: "post", Stage: StageObserve, Candidates: refs})
+	if err != nil {
+		t.Fatal(err)
+	}
+	runner.hold = 20 * time.Millisecond
+	if err := svc.Handle(ctx, started.ExperimentID, func(string, int, int) {}); err != nil {
+		t.Fatal(err)
+	}
+	found, _ := store.Get(ctx, started.ExperimentID)
+	if runner.runCalls != 5 || runner.maxInFlight != 2 || found.Status != StatusReview {
+		t.Fatalf("ran %d, at most %d at once, status %s", runner.runCalls, runner.maxInFlight, found.Status)
+	}
+}
 
 func TestRankedStartRunsFiveAndRetriesOnlyFailedCandidate(t *testing.T) {
 	svc, store, catalog, jobs, runner := newTestService()
@@ -1111,7 +1188,9 @@ func (r *concurrentFiveRunner) RunCandidate(ctx context.Context, found Experimen
 	return r.fakeRunner.RunCandidate(ctx, found, candidate, progress)
 }
 
-func TestFiveCandidatesStartConcurrentlyOnOneFrozenInput(t *testing.T) {
+// Five candidates read one frozen input, two at a time: while two are at the provider the third
+// waits for a slot, and once they finish every candidate runs.
+func TestFiveCandidatesRunTwoAtATimeOnOneFrozenInput(t *testing.T) {
 	svc, _, catalog, _, runner := newTestService()
 	refs := []ModelRef{{"p", "a"}, {"p", "b"}, {"p", "c"}, {"p", "d"}, {"p", "e"}}
 	for _, ref := range refs {
@@ -1133,7 +1212,8 @@ func TestFiveCandidatesStartConcurrentlyOnOneFrozenInput(t *testing.T) {
 	done := make(chan error, 1)
 	go func() { done <- svc.Handle(context.Background(), started.ExperimentID, func(string, int, int) {}) }()
 	first := ""
-	for i := 0; i < 5; i++ {
+	arrive := func(i int) {
+		t.Helper()
 		select {
 		case input := <-parallel.arrived:
 			if first == "" {
@@ -1143,10 +1223,20 @@ func TestFiveCandidatesStartConcurrentlyOnOneFrozenInput(t *testing.T) {
 				t.Fatalf("candidate %d saw a different frozen input", i)
 			}
 		case <-time.After(5 * time.Second):
-			t.Fatalf("only %d candidates reached the provider before release", i)
+			t.Fatalf("only %d candidates reached the provider", i)
 		}
 	}
+	arrive(0)
+	arrive(1)
+	select {
+	case <-parallel.arrived:
+		t.Fatal("a third candidate reached the provider while two were running")
+	case <-time.After(50 * time.Millisecond):
+	}
 	close(parallel.release)
+	for i := 2; i < 5; i++ {
+		arrive(i)
+	}
 	if err := <-done; err != nil {
 		t.Fatal(err)
 	}

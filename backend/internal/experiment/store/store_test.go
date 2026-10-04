@@ -2,6 +2,7 @@ package store_test
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"path/filepath"
@@ -1377,5 +1378,87 @@ func TestStoreKeepsAVoiceSourcedComparison(t *testing.T) {
 	purged, _ := store.Get(ctx, voiced.ID)
 	if len(purged.InputSnapshot) != 0 || len(purged.Candidates[0].Output) != 0 || len(purged.Candidates[1].Output) != 0 || purged.VoicePromptKey != "opening_greeting" {
 		t.Fatalf("the purge kept private content or lost the prompt: %+v", purged)
+	}
+}
+
+// countingReader is the read pool with a count of the statements sent through it.
+type countingReader struct {
+	*sql.DB
+	queries int
+}
+
+func (r *countingReader) QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error) {
+	r.queries++
+	return r.DB.QueryContext(ctx, query, args...)
+}
+
+func (r *countingReader) QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row {
+	r.queries++
+	return r.DB.QueryRowContext(ctx, query, args...)
+}
+
+// The history and the posts page read summaries: three reads whatever the number of comparisons,
+// with neither the frozen input nor any candidate's output, while each comparison keeps its
+// candidates in display order and its verdict badges.
+func TestListReadsSummariesInThreeQueries(t *testing.T) {
+	writerStore, handle := testStore(t)
+	reader := &countingReader{DB: handle.Reader}
+	store := experimentstore.NewWithReader(handle.Writer, reader)
+	ctx := context.Background()
+	if found, err := store.List(ctx, "alice", "", ""); err != nil || len(found) != 0 || reader.queries != 1 {
+		t.Fatalf("an empty history = %d rows, %d reads, err=%v", len(found), reader.queries, err)
+	}
+	now := time.Date(2026, 8, 29, 0, 0, 0, 0, time.UTC)
+	finished := now.Add(time.Minute)
+	for i := range 4 {
+		found := sample(fmt.Sprintf("exp-%d", i), "alice", "post-a", now.Add(time.Duration(i)*time.Second))
+		// Observe comparisons, so four of them may be unresolved on one post at once.
+		found.Origin, found.Stage, found.TargetLanguage = experiment.OriginLab, experiment.StageObserve, nil
+		if err := writerStore.Create(ctx, found); err != nil {
+			t.Fatal(err)
+		}
+		for _, candidate := range found.Candidates {
+			candidate.Status, candidate.Output, candidate.FinishedAt = experiment.CandidateSucceeded, []byte(`{"title":"private"}`), &finished
+			if err := writerStore.CompleteCandidate(ctx, candidate); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if err := writerStore.SetStatus(ctx, found.ID, experiment.StatusReview, &finished); err != nil {
+			t.Fatal(err)
+		}
+	}
+	badges := []experiment.CandidateBadges{{CandidateID: "exp-1-left", Badges: []experiment.Badge{experiment.BadgeOther}, OtherNote: "note"}}
+	if changed, err := writerStore.Decide(ctx, "exp-1", "alice", "exp-1-left", experiment.StatusDecided, experiment.OutcomeWinner, false, false, badges, finished, finished.Add(time.Hour)); err != nil || !changed {
+		t.Fatalf("decide = %v %v", changed, err)
+	}
+	reader.queries = 0
+	found, err := store.List(ctx, "alice", "", "")
+	if err != nil || len(found) != 4 || reader.queries != 3 {
+		t.Fatalf("list = %d rows, %d reads, err=%v", len(found), reader.queries, err)
+	}
+	for i, item := range found {
+		if want := fmt.Sprintf("exp-%d", 3-i); item.ID != want {
+			t.Fatalf("row %d = %s, want %s newest first", i, item.ID, want)
+		}
+		if len(item.InputSnapshot) != 0 || len(item.Candidates) != 2 {
+			t.Fatalf("%s carried its snapshot or lost a candidate: %+v", item.ID, item)
+		}
+		if item.Candidates[0].DisplaySide != experiment.SideLeft || item.Candidates[1].DisplaySide != experiment.SideRight {
+			t.Fatalf("%s candidates out of display order: %+v", item.ID, item.Candidates)
+		}
+		for _, candidate := range item.Candidates {
+			if len(candidate.Output) != 0 || candidate.Status != experiment.CandidateSucceeded || candidate.ExperimentID != item.ID {
+				t.Fatalf("%s candidate = %+v", item.ID, candidate)
+			}
+		}
+	}
+	decided := found[2]
+	if decided.Status != experiment.StatusDecided || len(decided.Candidates[0].Badges) != 1 || decided.Candidates[0].OtherNote != "note" || len(decided.Candidates[1].Badges) != 0 {
+		t.Fatalf("the decided comparison = %+v", decided)
+	}
+	// The review still reads the whole comparison.
+	full, err := store.Get(ctx, "exp-1")
+	if err != nil || len(full.InputSnapshot) == 0 || len(full.Candidates[0].Output) == 0 {
+		t.Fatalf("get = %+v err=%v", full, err)
 	}
 }

@@ -198,6 +198,22 @@ func (h *voiceHarness) makeVoice(t *testing.T, user, voiceID string) {
 	}
 }
 
+// countingStore is the voice store with a count of the reads a test pins.
+type countingStore struct {
+	*voicestore.Store
+	voiceReads, analysisReads int
+}
+
+func (c *countingStore) GetVoice(ctx context.Context, userID, voiceID string) (voice.Voice, error) {
+	c.voiceReads++
+	return c.Store.GetVoice(ctx, userID, voiceID)
+}
+
+func (c *countingStore) CurrentAnalysis(ctx context.Context, userID, voiceID string) (*voice.Analysis, error) {
+	c.analysisReads++
+	return c.Store.CurrentAnalysis(ctx, userID, voiceID)
+}
+
 // voice returns the account's first voice id; the older single-voice tests run inside it.
 func (h *voiceHarness) voice(user string) string { return h.voices[user] }
 

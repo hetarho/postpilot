@@ -550,6 +550,87 @@ func (q *Queries) ListBadgeTalliesForLeaderboardAll(ctx context.Context, arg Lis
 	return items, nil
 }
 
+const listCandidateSummariesForExperiments = `-- name: ListCandidateSummariesForExperiments :many
+SELECT
+  id, experiment_id, model_provider_id, model_id, model_label, display_side, status,
+  CAST(NULL AS TEXT) AS output,
+  error, prompt_tokens, completion_tokens, cost_microusd, cost_source, latency_ms, started_at,
+  finished_at, error_reason, error_params, technical_detail, rank
+FROM model_experiment_candidates
+WHERE experiment_id IN (SELECT value FROM json_each(?1))
+ORDER BY experiment_id, CASE display_side WHEN 'left' THEN 1 WHEN 'right' THEN 2
+  WHEN 'c' THEN 3 WHEN 'd' THEN 4 WHEN 'e' THEN 5 ELSE 6 END
+`
+
+type ListCandidateSummariesForExperimentsRow struct {
+	ID               string
+	ExperimentID     string
+	ModelProviderID  string
+	ModelID          string
+	ModelLabel       string
+	DisplaySide      string
+	Status           string
+	Output           sql.NullString
+	Error            sql.NullString
+	PromptTokens     sql.NullInt64
+	CompletionTokens sql.NullInt64
+	CostMicrousd     sql.NullInt64
+	CostSource       sql.NullString
+	LatencyMs        sql.NullInt64
+	StartedAt        sql.NullString
+	FinishedAt       sql.NullString
+	ErrorReason      sql.NullString
+	ErrorParams      sql.NullString
+	TechnicalDetail  sql.NullString
+	Rank             sql.NullInt64
+}
+
+// Every listed comparison's candidates in one read, without their output: a list row never
+// shows a candidate's work. ids is a JSON array of experiment ids.
+func (q *Queries) ListCandidateSummariesForExperiments(ctx context.Context, ids interface{}) ([]ListCandidateSummariesForExperimentsRow, error) {
+	rows, err := q.db.QueryContext(ctx, listCandidateSummariesForExperiments, ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListCandidateSummariesForExperimentsRow
+	for rows.Next() {
+		var i ListCandidateSummariesForExperimentsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.ExperimentID,
+			&i.ModelProviderID,
+			&i.ModelID,
+			&i.ModelLabel,
+			&i.DisplaySide,
+			&i.Status,
+			&i.Output,
+			&i.Error,
+			&i.PromptTokens,
+			&i.CompletionTokens,
+			&i.CostMicrousd,
+			&i.CostSource,
+			&i.LatencyMs,
+			&i.StartedAt,
+			&i.FinishedAt,
+			&i.ErrorReason,
+			&i.ErrorParams,
+			&i.TechnicalDetail,
+			&i.Rank,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listCandidates = `-- name: ListCandidates :many
 SELECT id, experiment_id, model_provider_id, model_id, model_label, display_side, status, output, error, prompt_tokens, completion_tokens, cost_microusd, cost_source, latency_ms, started_at, finished_at, error_reason, error_params, technical_detail, rank FROM model_experiment_candidates WHERE experiment_id = ?
 ORDER BY CASE display_side WHEN 'left' THEN 1 WHEN 'right' THEN 2
@@ -886,31 +967,83 @@ func (q *Queries) ListDecidedForLeaderboardAll(ctx context.Context, arg ListDeci
 	return items, nil
 }
 
-const listExperimentsForUser = `-- name: ListExperimentsForUser :many
-SELECT id, user_id, post_slug, voice_id, stage, status, job_id, input_snapshot, input_hash, prompt_version, winner_candidate_id, outcome, apply_error, applied_at, created_at, finished_at, decided_at, content_expires_at, adoption_error, adopted_at, adoption_requested, template_name, target_language, apply_error_reason, apply_error_params, apply_technical_detail, adoption_error_reason, adoption_error_params, adoption_technical_detail, origin, apply_requested, source, voice_prompt_key, voice_material_id, review_mode, completed_at, applied_candidate_id, adopted_candidate_id FROM model_experiments
+const listExperimentSummariesForUser = `-- name: ListExperimentSummariesForUser :many
+SELECT
+  id, user_id, post_slug, voice_id, stage, status, job_id,
+  CAST(NULL AS TEXT) AS input_snapshot,
+  input_hash, prompt_version, winner_candidate_id, outcome, apply_error, applied_at, created_at,
+  finished_at, decided_at, content_expires_at, adoption_error, adopted_at, adoption_requested,
+  template_name, target_language, apply_error_reason, apply_error_params, apply_technical_detail,
+  adoption_error_reason, adoption_error_params, adoption_technical_detail, origin, apply_requested,
+  source, voice_prompt_key, voice_material_id, review_mode, completed_at, applied_candidate_id,
+  adopted_candidate_id
+FROM model_experiments
 WHERE user_id = ?1
   AND (CAST(?2 AS TEXT) = '' OR stage = CAST(?2 AS TEXT))
   AND (CAST(?3 AS TEXT) = '' OR source = CAST(?3 AS TEXT))
 ORDER BY created_at DESC, id DESC
 `
 
-type ListExperimentsForUserParams struct {
+type ListExperimentSummariesForUserParams struct {
 	UserID string
 	Stage  string
 	Source string
 }
 
+type ListExperimentSummariesForUserRow struct {
+	ID                      string
+	UserID                  string
+	PostSlug                sql.NullString
+	VoiceID                 sql.NullString
+	Stage                   string
+	Status                  string
+	JobID                   sql.NullString
+	InputSnapshot           sql.NullString
+	InputHash               string
+	PromptVersion           string
+	WinnerCandidateID       sql.NullString
+	Outcome                 sql.NullString
+	ApplyError              sql.NullString
+	AppliedAt               sql.NullString
+	CreatedAt               string
+	FinishedAt              sql.NullString
+	DecidedAt               sql.NullString
+	ContentExpiresAt        sql.NullString
+	AdoptionError           sql.NullString
+	AdoptedAt               sql.NullString
+	AdoptionRequested       int64
+	TemplateName            string
+	TargetLanguage          sql.NullString
+	ApplyErrorReason        sql.NullString
+	ApplyErrorParams        sql.NullString
+	ApplyTechnicalDetail    sql.NullString
+	AdoptionErrorReason     sql.NullString
+	AdoptionErrorParams     sql.NullString
+	AdoptionTechnicalDetail sql.NullString
+	Origin                  string
+	ApplyRequested          int64
+	Source                  string
+	VoicePromptKey          sql.NullString
+	VoiceMaterialID         sql.NullString
+	ReviewMode              string
+	CompletedAt             sql.NullString
+	AppliedCandidateID      sql.NullString
+	AdoptedCandidateID      sql.NullString
+}
+
 // An empty stage or source matches every one: the write history reads post-sourced comparisons
-// and the voice history voice-sourced ones (MODEL-67).
-func (q *Queries) ListExperimentsForUser(ctx context.Context, arg ListExperimentsForUserParams) ([]ModelExperiment, error) {
-	rows, err := q.db.QueryContext(ctx, listExperimentsForUser, arg.UserID, arg.Stage, arg.Source)
+// and the voice history voice-sourced ones (MODEL-67). A list row is a summary: the frozen
+// input is never read here, and it comes back as NULL only so the row keeps the table's shape.
+// No LIMIT: the posts page maps any pending comparison id to its status, however old.
+func (q *Queries) ListExperimentSummariesForUser(ctx context.Context, arg ListExperimentSummariesForUserParams) ([]ListExperimentSummariesForUserRow, error) {
+	rows, err := q.db.QueryContext(ctx, listExperimentSummariesForUser, arg.UserID, arg.Stage, arg.Source)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ModelExperiment
+	var items []ListExperimentSummariesForUserRow
 	for rows.Next() {
-		var i ModelExperiment
+		var i ListExperimentSummariesForUserRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.UserID,
@@ -1026,6 +1159,41 @@ ORDER BY candidate_id, badge
 
 func (q *Queries) ListVerdictBadges(ctx context.Context, experimentID string) ([]ModelExperimentBadge, error) {
 	rows, err := q.db.QueryContext(ctx, listVerdictBadges, experimentID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ModelExperimentBadge
+	for rows.Next() {
+		var i ModelExperimentBadge
+		if err := rows.Scan(
+			&i.ExperimentID,
+			&i.CandidateID,
+			&i.Badge,
+			&i.Note,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listVerdictBadgesForExperiments = `-- name: ListVerdictBadgesForExperiments :many
+SELECT experiment_id, candidate_id, badge, note FROM model_experiment_badges
+WHERE experiment_id IN (SELECT value FROM json_each(?1))
+ORDER BY experiment_id, candidate_id, badge
+`
+
+// Every listed comparison's badges in one read. ids is a JSON array of experiment ids.
+func (q *Queries) ListVerdictBadgesForExperiments(ctx context.Context, ids interface{}) ([]ModelExperimentBadge, error) {
+	rows, err := q.db.QueryContext(ctx, listVerdictBadgesForExperiments, ids)
 	if err != nil {
 		return nil, err
 	}

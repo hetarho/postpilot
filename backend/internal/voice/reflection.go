@@ -84,9 +84,10 @@ func ReflectionView(content []byte) (prompt Prompt, answer string, err error) {
 	return prompt, snapshot.Answer, nil
 }
 
-// CompareText measures a text against the voice's current analysis (VOICE-62), readable on a
-// deleted voice too; a voice with no analysis answers nothing.
-func (s *Service) CompareText(ctx context.Context, userID, voiceID, text string) ([]ItemComparison, error) {
+// CompareTexts measures texts against the voice's current analysis (VOICE-62), readable on a
+// deleted voice too: one voice read and one analysis read however many texts, each text's
+// comparison at its own index. A voice with no analysis answers nothing for any of them.
+func (s *Service) CompareTexts(ctx context.Context, userID, voiceID string, texts []string) ([][]ItemComparison, error) {
 	if _, err := s.ownedVoice(ctx, userID, voiceID); err != nil {
 		return nil, err
 	}
@@ -94,10 +95,14 @@ func (s *Service) CompareText(ctx context.Context, userID, voiceID, text string)
 	if err != nil {
 		return nil, fmt.Errorf("current analysis: %w", err)
 	}
+	out := make([][]ItemComparison, len(texts))
 	if analysis == nil {
-		return nil, nil
+		return out, nil
 	}
-	return Compare(analysis.Counted, MeasureText(text)), nil
+	for i, text := range texts {
+		out[i] = Compare(analysis.Counted, MeasureText(text))
+	}
+	return out, nil
 }
 
 func decodeReflection(content []byte) (reflectionSnapshot, error) {

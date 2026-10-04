@@ -86,18 +86,50 @@ func (s *Store) Get(ctx context.Context, id string) (experiment.Experiment, erro
 	return s.withCandidates(ctx, row)
 }
 
+// List is the account's comparisons as summaries, in three reads whatever their number: the
+// comparisons, then every listed one's candidates, then every listed one's badges. A summary
+// carries neither the frozen input nor any candidate's output; Get is how a review reads them.
 func (s *Store) List(ctx context.Context, userID string, stage experiment.Stage, source experiment.Source) ([]experiment.Experiment, error) {
-	rows, err := s.read.ListExperimentsForUser(ctx, sqlc.ListExperimentsForUserParams{UserID: userID, Stage: string(stage), Source: string(source)})
+	rows, err := s.read.ListExperimentSummariesForUser(ctx, sqlc.ListExperimentSummariesForUserParams{UserID: userID, Stage: string(stage), Source: string(source)})
 	if err != nil {
 		return nil, fmt.Errorf("list experiments: %w", err)
 	}
+	if len(rows) == 0 {
+		return []experiment.Experiment{}, nil
+	}
 	out := make([]experiment.Experiment, 0, len(rows))
+	ids := make([]string, 0, len(rows))
 	for _, row := range rows {
-		found, err := s.withCandidates(ctx, row)
+		found, err := toExperiment(sqlc.ModelExperiment(row))
 		if err != nil {
 			return nil, err
 		}
 		out = append(out, found)
+		ids = append(ids, row.ID)
+	}
+	encodedIDs, err := json.Marshal(ids)
+	if err != nil {
+		return nil, fmt.Errorf("encode experiment ids: %w", err)
+	}
+	candidateRows, err := s.read.ListCandidateSummariesForExperiments(ctx, string(encodedIDs))
+	if err != nil {
+		return nil, fmt.Errorf("list candidates: %w", err)
+	}
+	badgeRows, err := s.read.ListVerdictBadgesForExperiments(ctx, string(encodedIDs))
+	if err != nil {
+		return nil, fmt.Errorf("list verdict badges: %w", err)
+	}
+	badges := indexBadges(badgeRows)
+	candidates := make(map[string][]experiment.Candidate, len(rows))
+	for _, row := range candidateRows {
+		candidate, err := toCandidate(sqlc.ModelExperimentCandidate(row))
+		if err != nil {
+			return nil, err
+		}
+		candidates[row.ExperimentID] = append(candidates[row.ExperimentID], badges.onto(candidate))
+	}
+	for i := range out {
+		out[i].Candidates = candidates[out[i].ID]
 	}
 	return out, nil
 }
@@ -566,24 +598,39 @@ func (s *Store) withCandidates(ctx context.Context, row sqlc.ModelExperiment) (e
 	if err != nil {
 		return experiment.Experiment{}, fmt.Errorf("list verdict badges: %w", err)
 	}
-	badges := map[string][]experiment.Badge{}
-	notes := map[string]string{}
-	for _, badgeRow := range badgeRows {
-		badges[badgeRow.CandidateID] = append(badges[badgeRow.CandidateID], experiment.Badge(badgeRow.Badge))
-		if badgeRow.Note.Valid && badgeRow.Note.String != "" {
-			notes[badgeRow.CandidateID] = badgeRow.Note.String
-		}
-	}
+	badges := indexBadges(badgeRows)
 	for _, row := range rows {
 		candidate, err := toCandidate(row)
 		if err != nil {
 			return experiment.Experiment{}, err
 		}
-		candidate.Badges = badges[candidate.ID]
-		candidate.OtherNote = notes[candidate.ID]
-		found.Candidates = append(found.Candidates, candidate)
+		found.Candidates = append(found.Candidates, badges.onto(candidate))
 	}
 	return found, nil
+}
+
+// badgeIndex is verdict badges by the candidate that earned them, with the free note. A
+// candidate id is unique across comparisons, so one index serves a whole list.
+type badgeIndex struct {
+	badges map[string][]experiment.Badge
+	notes  map[string]string
+}
+
+func indexBadges(rows []sqlc.ModelExperimentBadge) badgeIndex {
+	index := badgeIndex{badges: map[string][]experiment.Badge{}, notes: map[string]string{}}
+	for _, row := range rows {
+		index.badges[row.CandidateID] = append(index.badges[row.CandidateID], experiment.Badge(row.Badge))
+		if row.Note.Valid && row.Note.String != "" {
+			index.notes[row.CandidateID] = row.Note.String
+		}
+	}
+	return index
+}
+
+func (index badgeIndex) onto(candidate experiment.Candidate) experiment.Candidate {
+	candidate.Badges = index.badges[candidate.ID]
+	candidate.OtherNote = index.notes[candidate.ID]
+	return candidate
 }
 
 // sourceOf is the stored source; an experiment built without one is post-sourced.

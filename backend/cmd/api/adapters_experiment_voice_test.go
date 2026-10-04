@@ -125,21 +125,22 @@ func TestAReflectionJobNeverHoldsItsVoice(t *testing.T) {
 	}
 	_, err = experimentJobs{queue: queue}.EnqueueExperiment(ctx, experiment.JobRequest{
 		UserID: "alice", ExperimentID: "exp-five", Stage: experiment.StageWrite, TargetLanguage: &korean,
-		Models: []string{"p/a", "p/b", "p/c", "p/d", "p/e"}, ObserveModel: "p/observe",
+		Models: []string{"p/a", "p/b", "p/c", "p/d", "p/e"}, ObserveModel: "p/observe", ObserveCalls: 3,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(admission.starts) != 2 || len(admission.starts[1].Calls) != 6 {
-		t.Fatalf("five writers and one shared observe call admitted %+v", admission.starts)
+		t.Fatalf("five writers and the shared preparation admitted %+v", admission.starts)
 	}
 	for index, call := range admission.starts[1].Calls {
-		want := "write"
+		want, count := "write", 1
 		if index == 5 {
-			want = "observe"
+			// The preparation observes the frozen selection: every call it takes is held.
+			want, count = "observe", 3
 		}
-		if call.Stage != want || call.Count != 1 {
-			t.Fatalf("planned call %d = %+v, want %s once", index, call, want)
+		if call.Stage != want || call.Count != count {
+			t.Fatalf("planned call %d = %+v, want %s %d times", index, call, want, count)
 		}
 	}
 	for from, want := range map[error]error{

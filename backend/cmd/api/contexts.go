@@ -365,6 +365,7 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 		experimentRunner{generation: c.generation},
 		experimentPosts{service: c.post},
 		cfg.ExperimentContentRetention,
+		config.ExperimentCandidateConcurrency,
 	)
 	if n, err := c.experiment.RecoverInterrupted(ctx); err != nil {
 		return nil, fmt.Errorf("interrupted experiment recovery: %w", err)
