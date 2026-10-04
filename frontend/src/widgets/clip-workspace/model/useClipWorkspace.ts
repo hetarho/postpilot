@@ -16,6 +16,7 @@ import { useMyPlan } from '@/entities/plan'
 import { useClipCorrection } from '@/features/correct-clip'
 import { useCancelClip } from '@/features/cancel-clip'
 import { discardClipDraftQueue, useClipDraftSave } from '@/features/edit-clip-project'
+import { discardClipStorylineQueue, flushClipStoryline } from '@/features/edit-clip-storyline'
 import {
   discardClipRegionQueue,
   useClipRegionsEditor,
@@ -123,13 +124,19 @@ export function useClipWorkspace(ownerId: string, project: ClipProject) {
     readOnly: !!project.finalized || generation.busy,
     before: () => save.flush(true),
   })
+  /** The storyline's own autosave, which a build or a request from it must not outrun. */
+  const storyline = {
+    flush: (failFast = false) => flushClipStoryline(project.id, failFast),
+  }
   /** Every queue the owner types into, in the order their writes depend on each other: the
    *  settings (a preset reshapes the regions), the region slots (they project into the plan),
-   *  then the correction, whose revision is what a committing action runs against (CLIP-39,
-   *  CLIP-188). An invalid slot or plan refuses the action and keeps its error. */
+   *  the storyline (이 스토리로 만들기 builds from the saved one), then the correction, whose
+   *  revision is what a committing action runs against (CLIP-39, CLIP-188). An invalid slot or
+   *  plan refuses the action and keeps its error. */
   const flushAll = async (failFast = false) => {
     await save.flush(failFast)
     await regions.flush(failFast)
+    await storyline.flush(failFast)
     return correction.flush()
   }
   const finalization = useFinalizeClip(ownerId, project, () => flushAll(true))
@@ -144,6 +151,7 @@ export function useClipWorkspace(ownerId: string, project: ClipProject) {
   const pending = generation.busy || uploading || finalization.busy || browser.busy
   useDiscardQueueWhenFinalized(project.id, project.finalized, discardClipDraftQueue)
   useDiscardQueueWhenFinalized(project.id, project.finalized, discardClipRegionQueue)
+  useDiscardQueueWhenFinalized(project.id, project.finalized, discardClipStorylineQueue)
   const reorderSources = useReorderClipSources()
   const localSources = upload.entries.map((entry) => ({
     fingerprint: entry.metadata.fingerprint,
@@ -282,6 +290,7 @@ export function useClipWorkspace(ownerId: string, project: ClipProject) {
     saveStatus,
     flushAll,
     regions,
+    storyline,
     correction,
     generation: { ...generation, ownership },
     sources,

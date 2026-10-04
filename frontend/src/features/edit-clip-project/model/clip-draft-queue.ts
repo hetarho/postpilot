@@ -14,10 +14,12 @@ import type { ClipProjectDraft } from '@/entities/clip-project'
  *  ② or ③. A debounce living in the component would take the last keystrokes with it. */
 export type SendClipDraft = (draft: ClipProjectDraft) => Promise<void>
 
-let latest: SendClipDraft | undefined
+/** One sender per project, replaced on every queue call so it closes over the newest render's
+ *  mutation and transport. Per project, because a save still debouncing or backing off for one
+ *  clip must never go out through a form that has since been editing another. */
+const senders = new Map<string, SendClipDraft>()
 const queue = createAutosaveQueue<ClipProjectDraft, void>({
-  // The newest render's mutation closes over the live transport, so always take the newest.
-  send: (draft) => latest!(draft),
+  send: (draft, { key }) => senders.get(key)!(draft),
   retry: retriableTransportFailure,
 })
 
@@ -29,7 +31,7 @@ export function queueClipDraft(
   draft: ClipProjectDraft,
   send: SendClipDraft,
 ): void {
-  latest = send
+  senders.set(projectId, send)
   queue.queue(projectId, draft)
 }
 
@@ -75,8 +77,10 @@ export function subscribeClipDraft(projectId: string, listener: () => void): () 
  *  deleted: a retry left running would keep saving an id the server no longer has. */
 export function discardClipDraftQueue(projectId: string): void {
   queue.discard(projectId)
+  senders.delete(projectId)
 }
 
 export function discardClipDraftQueues(): void {
   queue.discardAll()
+  senders.clear()
 }

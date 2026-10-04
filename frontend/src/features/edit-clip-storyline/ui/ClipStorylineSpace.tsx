@@ -5,14 +5,12 @@ import {
   type ClipProject,
   type ClipStorylineParagraph,
 } from '@/entities/clip-project'
-import { appFailureFromConnect } from '@/shared/api'
 import { ActionMenu, AppFailureMessage, Disclosure, Notice, Typography } from '@/shared/ui'
 import { clipScenes, takenOutScenes, withSceneIn } from '../model/storyline-edits'
+import { queueClipStoryline } from '../model/storyline-queue'
+import { useClipStorylineQueue } from '../model/useClipStorylineQueue'
 import { ClipSceneFrame } from './ClipSceneFrame'
 import { ClipStorylineParagraphEditor } from './ClipStorylineParagraphEditor'
-
-// A beat after the last edit, so one save carries a word, not every keystroke.
-const SAVE_DELAY_MS = 600
 
 /** ②'s storyline space (CLIP-178, CLIP-179): the intro, the clip's storyline as paragraphs with
  *  their scenes as frames, edited and rearranged by hand, and the outro. Open while the project has
@@ -54,36 +52,28 @@ export function ClipStorylineSpace({
   }, [hasPlan])
 
   const save = useSaveClipStoryline(ownerId)
-  const [draft, setDraft] = useState<ClipStorylineParagraph[]>(storyline?.paragraphs ?? [])
-  const timer = useRef<number | undefined>(undefined)
-  const pending = useRef<ClipStorylineParagraph[] | undefined>(undefined)
+  const projectId = project.id
+  const { owed, failure } = useClipStorylineQueue(projectId)
+  // What a previous mount still owed the server outranks the server's: it is newer by exactly the
+  // words typed since.
+  const [draft, setDraft] = useState<ClipStorylineParagraph[]>(
+    () => owed ?? storyline?.paragraphs ?? [],
+  )
   const server = JSON.stringify(storyline?.paragraphs ?? [])
-  // The server's storyline replaces the draft whenever nothing of the owner's is waiting to be
-  // saved: a storyline job, a request or another tab wrote a new one.
-  useEffect(() => {
-    if (!pending.current && !save.isPending)
-      setDraft(JSON.parse(server) as ClipStorylineParagraph[])
-  }, [server, save.isPending])
-  const flush = () => {
-    window.clearTimeout(timer.current)
-    timer.current = undefined
-    const next = pending.current
-    if (!next) return
-    pending.current = undefined
-    save.mutate({ projectId: project.id, paragraphs: next })
+  // The server's storyline replaces the draft only while nothing of the owner's is queued, in
+  // flight or failed for this project: a storyline job, a request or another tab wrote a new one.
+  // A failed save keeps the typed text. Adjusted during render, not from an effect, so a frame of
+  // the older words is never painted.
+  const [adopted, setAdopted] = useState(server)
+  if (adopted !== server && !owed) {
+    setAdopted(server)
+    setDraft(JSON.parse(server) as ClipStorylineParagraph[])
   }
-  // The latest flush, for the timer and the unmount — kept current after each render, never
-  // during one.
-  const flushRef = useRef(flush)
-  useEffect(() => {
-    flushRef.current = flush
-  })
-  useEffect(() => () => flushRef.current(), [])
   const change = (next: ClipStorylineParagraph[]) => {
     setDraft(next)
-    pending.current = next
-    window.clearTimeout(timer.current)
-    timer.current = window.setTimeout(() => flushRef.current(), SAVE_DELAY_MS)
+    queueClipStoryline(projectId, next, async (paragraphs) => {
+      await save.mutateAsync({ projectId, paragraphs })
+    })
   }
 
   const scenes = useMemo(() => clipScenes(project.observations), [project.observations])
@@ -154,9 +144,9 @@ export function ClipStorylineSpace({
         </section>
       )}
       {outro}
-      {save.isError && (
+      {failure && (
         <div role="alert" className="mt-3">
-          <AppFailureMessage failure={appFailureFromConnect(save.error)} />
+          <AppFailureMessage failure={failure} />
         </div>
       )}
     </Disclosure>

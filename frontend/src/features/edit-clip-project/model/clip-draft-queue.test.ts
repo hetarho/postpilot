@@ -176,6 +176,38 @@ describe('clip settings autosave queue', () => {
     expect(clipDraftState('clip')).toBe('saved')
   })
 
+  it('saves a debounced draft through its own project’s sender after another project queued', async () => {
+    const a = controllable()
+    const b = controllable()
+    queueClipDraft('a', draft('A의 제목'), a.send)
+    await vi.advanceTimersByTimeAsync(500)
+    // B's form registers its sender while A's save is still waiting out the beat.
+    queueClipDraft('b', draft('B의 제목'), b.send)
+    await vi.advanceTimersByTimeAsync(1000)
+    expect(a.sent).toEqual(['A의 제목'])
+    expect(b.sent).toEqual(['B의 제목'])
+    a.settle[0].resolve()
+    b.settle[0].resolve()
+    await vi.advanceTimersByTimeAsync(0)
+    expect(clipDraftState('a')).toBe('saved')
+    expect(clipDraftState('b')).toBe('saved')
+  })
+
+  it('retries a project’s save through that project’s sender after another project queued', async () => {
+    const a = controllable()
+    const b = controllable()
+    queueClipDraft('a', draft('A의 제목'), a.send)
+    await vi.advanceTimersByTimeAsync(1000)
+    a.settle[0].reject(new ConnectError('offline', Code.Unavailable))
+    await vi.advanceTimersByTimeAsync(0)
+    expect(clipDraftState('a')).toBe('error')
+    queueClipDraft('b', draft('B의 제목'), b.send)
+    // A's backoff fires after B registered: it still goes out as A's, to A.
+    await vi.advanceTimersByTimeAsync(1000)
+    expect(a.sent).toEqual(['A의 제목', 'A의 제목'])
+    expect(b.sent).toEqual(['B의 제목'])
+  })
+
   it('hands a pending draft to the next mount of the form', async () => {
     const { send } = controllable()
     queueClipDraft('clip', draft('제주'), send)

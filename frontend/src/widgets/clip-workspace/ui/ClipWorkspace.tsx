@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ClipFailureNotice, ClipRequestRecord, type ClipProject } from '@/entities/clip-project'
 import { ClipCorrectionWorkspace } from '@/features/correct-clip'
-import { ClipStorylineSpace } from '@/features/edit-clip-storyline'
+import { ClipStorylineSpace, discardClipStorylineQueue } from '@/features/edit-clip-storyline'
 import { ClipStorylineRequest } from '@/features/request-clip-storyline'
 import { ClipDraftPreviewPanel } from '@/features/preview-clip-draft'
 import { FinalizeClipAction } from '@/features/finalize-clip'
@@ -40,7 +40,7 @@ export function ClipWorkspace({ ownerId, project }: { ownerId: string; project: 
   const runRoot = useRunFocus(workspace.run.focused)
   const { correction, generation, finalization, render, sources, revision, observations, run } =
     workspace
-  const { pending, uploading, plan, save, regions, flushAll } = workspace
+  const { pending, uploading, plan, save, regions, storyline, flushAll } = workspace
   const upload = sources.upload
   const step = workspace.step.value
   const setStep = workspace.step.set
@@ -327,8 +327,14 @@ export function ClipWorkspace({ ownerId, project }: { ownerId: string; project: 
               job={job}
               disabled={generation.busy && job?.kind !== 'revise_storyline_clip'}
               // A storyline request writes the slots too, from their instructions and exact words
-              // (CLIP-178): both land before it is priced.
-              flush={() => save.flush().then(() => regions.flush())}
+              // (CLIP-178), over the storyline the owner is looking at: all three land before it
+              // starts.
+              flush={() =>
+                save
+                  .flush()
+                  .then(() => regions.flush())
+                  .then(() => storyline.flush())
+              }
             />
           )
         }
@@ -535,6 +541,7 @@ export function ClipWorkspace({ ownerId, project }: { ownerId: string; project: 
               onDeleted={() => {
                 discardClipDraftQueue(project.id)
                 discardClipRegionQueue(project.id)
+                discardClipStorylineQueue(project.id)
               }}
             />
           )

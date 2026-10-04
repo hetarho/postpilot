@@ -14,11 +14,14 @@ export type SendClipRegions = () => Promise<void>
 export const regionConflict = (error: unknown) =>
   appFailureFromConnect(error).reason === 'CLIP_PLAN_CONFLICT'
 
-let latest: SendClipRegions | undefined
+/** One sender per project, replaced on every queue call so it reads the newest editor's edits.
+ *  Per project, because a project's owed slots must never go out through, and be marked saved
+ *  by, the editor of another. */
+const senders = new Map<string, SendClipRegions>()
 const queue = createAutosaveQueue<ClipRegionsEdits, void>({
   // The same beat as the correction's, so a slot and a correction row typed in turn save alike.
   debounceMs: CLIP_TIMELINE.autosaveMs,
-  send: () => latest!(),
+  send: (_, { key }) => senders.get(key)!(),
   // A stale revision is answered with CLIP_PLAN_CONFLICT on `Aborted`, which a transport retry
   // would send forever: the send takes the winning revision once itself, and past that the
   // conflict waits for the owner's next edit.
@@ -30,7 +33,7 @@ export function queueClipRegions(
   edits: ClipRegionsEdits,
   send: SendClipRegions,
 ) {
-  latest = send
+  senders.set(projectId, send)
   queue.queue(projectId, edits)
 }
 
@@ -68,8 +71,10 @@ export function subscribeClipRegions(projectId: string, listener: () => void): (
 
 export function discardClipRegionQueue(projectId: string): void {
   queue.discard(projectId)
+  senders.delete(projectId)
 }
 
 export function discardClipRegionQueues(): void {
   queue.discardAll()
+  senders.clear()
 }

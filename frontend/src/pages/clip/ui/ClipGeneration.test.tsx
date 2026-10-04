@@ -5,6 +5,7 @@ import { create } from '@bufbuild/protobuf'
 import { createConnectQueryKey } from '@connectrpc/connect-query'
 import { initializeI18n } from '@/app/providers/i18n'
 import { endSession } from '@/app/model/end-session'
+import { discardClipStorylineQueues } from '@/features/edit-clip-storyline'
 import { readSourceManifest } from '@/features/upload-clip-sources'
 import { putBlobWithProgress } from '@/shared/lib/upload'
 import { ClipSourceBatchSchema, GenerationService, Stage, ProtoPlan } from '@/shared/api'
@@ -39,6 +40,7 @@ vi.mock('@/shared/lib/upload', async (original) => ({
 }))
 afterEach(() => {
   vi.restoreAllMocks()
+  discardClipStorylineQueues()
   initializeI18n('ko')
 })
 
@@ -1070,6 +1072,42 @@ it('builds from the storyline and makes it again, each from its own approval', a
   expect(generationStarts[0]!.fromStoryline).toBe(true)
   expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
   expect(storylineStarts).toHaveLength(0)
+})
+
+// CLIP-39: the build runs on the storyline the owner is looking at — an edit still saving lands
+// before 이 스토리로 만들기 starts.
+it('lands a pending storyline edit before the build from it starts', async () => {
+  const generationStarts: Array<{ fromStoryline?: boolean }> = []
+  const storylineEdits: NonNullable<FakeClipsOptions['storylineEdits']> = []
+  const calls: string[] = []
+  let release!: () => void
+  const held = new Promise<void>((resolve) => (release = resolve))
+  let holding = false
+  const user = await storylineSpace(
+    {},
+    {
+      calls,
+      generationStarts,
+      storylineEdits,
+      projectSaveGate: async () => {
+        if (holding) await held
+      },
+    },
+  )
+  await user.click(screen.getByRole('button', { name: '1번째 문단 고치기' }))
+  const field = screen.getByRole('textbox', { name: '1번째 문단' })
+  holding = true
+  await user.type(field, ' 천천히')
+  await approveFrom(user, '이 스토리로 만들기', /승인하고 생성/)
+  // The storyline save is out and held; the build waits for it rather than starting beside it.
+  await waitFor(() => expect(calls).toContain('UpdateClipProject'), { timeout: 3000 })
+  await new Promise((resolve) => setTimeout(resolve, 200))
+  expect(generationStarts).toHaveLength(0)
+  release()
+  await waitFor(() => expect(generationStarts).toHaveLength(1))
+  expect(calls.indexOf('UpdateClipProject')).toBeLessThan(calls.indexOf('StartClipGeneration'))
+  expect(generationStarts[0]!.fromStoryline).toBe(true)
+  expect(storylineEdits.at(-1)?.[0]?.text).toBe('음식을 가까이 보여줘요. 천천히')
 })
 
 it('makes the storyline again from 다시 만들기', async () => {

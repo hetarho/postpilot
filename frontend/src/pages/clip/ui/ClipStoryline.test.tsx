@@ -9,6 +9,7 @@ import { clipRegionRows } from '@/entities/clip-plan'
 import { myPlanQueryKey } from '@/entities/plan'
 import { discardClipDraftQueues } from '@/features/edit-clip-project'
 import { discardClipRegionQueues } from '@/features/edit-clip-regions'
+import { discardClipStorylineQueues } from '@/features/edit-clip-storyline'
 import { readSourceManifest } from '@/features/upload-clip-sources'
 import { putBlobWithProgress } from '@/shared/lib/upload'
 import { renderAppAt } from '@/test/app'
@@ -32,6 +33,7 @@ afterEach(() => {
   vi.restoreAllMocks()
   discardClipDraftQueues()
   discardClipRegionQueues()
+  discardClipStorylineQueues()
   initializeI18n('ko')
 })
 
@@ -219,6 +221,49 @@ it('saves the owner’s edits by themselves', async () => {
   await waitFor(() =>
     expect(storylineEdits.at(-1)?.map((p) => p.observationIds)).toEqual([['a/1'], []]),
   )
+})
+
+// CLIP-39: the storyline saves through the clip's autosave machine — a transient failure is sent
+// again, and no failure hands the owner's words back to the server's.
+it('retries a storyline save the network dropped, keeping the typed words', async () => {
+  const storylineEdits: NonNullable<FakeClipsOptions['storylineEdits']> = []
+  let offline = true
+  await mount(storylined(), {
+    storylineEdits,
+    projectSaveGate: async () => {
+      if (offline) throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
+    },
+  })
+  const user = userEvent.setup()
+  await user.click(paragraph(2).getByRole('button', { name: '2번째 문단 고치기' }))
+  const field = paragraph(2).getByRole('textbox', { name: '2번째 문단' })
+  await user.clear(field)
+  await user.type(field, '테이블을 비추며 끝내요.')
+  expect(await screen.findByRole('alert', {}, AUTOSAVE)).toBeVisible()
+  expect(field).toHaveValue('테이블을 비추며 끝내요.')
+  expect(storylineEdits).toHaveLength(0)
+  offline = false
+  await waitFor(() => expect(storylineEdits.at(-1)?.[1]?.text).toBe('테이블을 비추며 끝내요.'), {
+    timeout: 5000,
+  })
+  await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument())
+  expect(field).toHaveValue('테이블을 비추며 끝내요.')
+})
+
+it('keeps the typed words and says why when the server refuses the storyline', async () => {
+  const storylineEdits: NonNullable<FakeClipsOptions['storylineEdits']> = []
+  await mount(storylined(), { storylineEdits, storylineEditFails: true })
+  const user = userEvent.setup()
+  await user.click(paragraph(2).getByRole('button', { name: '2번째 문단 고치기' }))
+  const field = paragraph(2).getByRole('textbox', { name: '2번째 문단' })
+  await user.clear(field)
+  await user.type(field, '테이블을 비추며 끝내요.')
+  expect(await screen.findByRole('alert', {}, AUTOSAVE)).toBeVisible()
+  expect(storylineEdits.at(-1)?.[1]?.text).toBe('테이블을 비추며 끝내요.')
+  // Refused, not retried, and the words stay the owner's rather than the server's.
+  await new Promise((resolve) => setTimeout(resolve, 1500))
+  expect(storylineEdits).toHaveLength(1)
+  expect(field).toHaveValue('테이블을 비추며 끝내요.')
 })
 
 // CLIP-178: footage added after the storyline was made is said, with what to do about it.
