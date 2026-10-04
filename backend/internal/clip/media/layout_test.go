@@ -21,33 +21,36 @@ var markupTag = regexp.MustCompile(`<[^>]*>`)
 // layout's arithmetic can be checked without resvg.
 func measured(t *testing.T) (*Adapter, *Rendering) {
 	t.Helper()
-	a := newAdapter(t, &fakeRunner{run: func(_ context.Context, c Command) ([]byte, error) {
-		// A rasterisation, rather than a measurement: stand in for resvg by
-		// writing the SVG it was given to the PNG it was asked for, so the
-		// frames a sequence style produces exist and differ exactly where its
-		// drawing does.
-		if !slices.Contains(c.Args, "--query-all") {
-			svg, err := os.ReadFile(c.Args[len(c.Args)-2])
-			if err != nil {
-				return nil, err
-			}
-			return nil, os.WriteFile(c.Args[len(c.Args)-1], svg, 0600)
-		}
-		data, err := os.ReadFile(c.Args[len(c.Args)-1])
+	a := newAdapter(t, &fakeRunner{run: func(_ context.Context, c Command) ([]byte, error) { return fakeResvg(c) }})
+	return a, testRenderer(t, a)
+}
+
+// fakeResvg is measured's stand-in for resvg.
+func fakeResvg(c Command) ([]byte, error) {
+	// A rasterisation, rather than a measurement: stand in for resvg by
+	// writing the SVG it was given to the PNG it was asked for, so the
+	// frames a sequence style produces exist and differ exactly where its
+	// drawing does.
+	if !slices.Contains(c.Args, "--query-all") {
+		svg, err := os.ReadFile(c.Args[len(c.Args)-2])
 		if err != nil {
 			return nil, err
 		}
-		out := ""
-		for i, part := range strings.Split(string(data), `id="m`)[1:] {
-			text := part[strings.Index(part, ">")+1 : strings.Index(part, "</text>")]
-			// A substituted run is a tspan inside the text (CDS-84): count its
-			// characters, not its markup.
-			text = markupTag.ReplaceAllString(text, "")
-			out += fmt.Sprintf("m%d,1,320,%d,100\n", i, 40*len([]rune(text)))
-		}
-		return []byte(out), nil
-	}})
-	return a, testRenderer(t, a)
+		return nil, os.WriteFile(c.Args[len(c.Args)-1], svg, 0600)
+	}
+	data, err := os.ReadFile(c.Args[len(c.Args)-1])
+	if err != nil {
+		return nil, err
+	}
+	out := ""
+	for i, part := range strings.Split(string(data), `id="m`)[1:] {
+		text := part[strings.Index(part, ">")+1 : strings.Index(part, "</text>")]
+		// A substituted run is a tspan inside the text (CDS-84): count its
+		// characters, not its markup.
+		text = markupTag.ReplaceAllString(text, "")
+		out += fmt.Sprintf("m%d,1,320,%d,100\n", i, 40*len([]rune(text)))
+	}
+	return []byte(out), nil
 }
 
 // The plan the Docker smoke renders, laid out and verified on every ratio. The

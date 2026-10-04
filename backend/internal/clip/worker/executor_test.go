@@ -60,13 +60,25 @@ func (m *taskMedia) PrepareAnalysisChunksExcept(ctx context.Context, ws clip.Med
 }
 
 type taskTransfer struct {
-	data     []byte
-	uploaded []clip.MediaOutput
-	fail     bool
+	data []byte
+	// originals serves a slot its own bytes instead of data; downloads counts
+	// every download of a slot.
+	originals map[string][]byte
+	downloads map[string]int
+	uploaded  []clip.MediaOutput
+	fail      bool
 }
 
-func (a *taskTransfer) Download(_ context.Context, _ clip.MediaLeaseCredentials, _ string, w io.Writer, _ int64) (int64, error) {
-	return io.Copy(w, bytes.NewReader(a.data))
+func (a *taskTransfer) Download(_ context.Context, _ clip.MediaLeaseCredentials, slot string, w io.Writer, _ int64) (int64, error) {
+	if a.downloads == nil {
+		a.downloads = map[string]int{}
+	}
+	a.downloads[slot]++
+	data := a.data
+	if original, ok := a.originals[slot]; ok {
+		data = original
+	}
+	return io.Copy(w, bytes.NewReader(data))
 }
 func (a *taskTransfer) Upload(_ context.Context, _ clip.MediaLeaseCredentials, out clip.MediaOutput, _ string) error {
 	if a.fail {

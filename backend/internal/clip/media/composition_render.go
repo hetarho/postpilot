@@ -125,18 +125,24 @@ func (r *Rendering) renderComposition(ctx context.Context, ws clip.MediaWorkspac
 	for _, cut := range plan.Cuts {
 		audio = audio || plan.RetainsOriginalAudio(cut) && byID[cut.SourceID].Info.HasAudio
 	}
-	cuts, wavs := []string{}, []string{}
+	cuts, wavs := make([]string, len(plan.Cuts)), []string{}
+	if audio {
+		wavs = make([]string, len(plan.Cuts))
+	}
 	sampler := r.newGroundSampler(canvas, plan, layout.visuals)
 	step("render_footage")
-	for i, cut := range plan.Cuts {
+	// The cuts are visited an original at a time, and each keeps its own index,
+	// so the footage is the plan's whatever order they were made in.
+	for _, i := range cutsBySource(plan.Cuts) {
+		cut := plan.Cuts[i]
 		step("render_footage")
 		video := filepath.Join(ws.Path, fmt.Sprintf("bare-%04d.mp4", i))
 		cleanup = append(cleanup, video)
-		cuts = append(cuts, video)
+		cuts[i] = video
 		wav := filepath.Join(ws.Path, fmt.Sprintf("audio-%04d.wav", i))
 		if audio {
 			cleanup = append(cleanup, wav)
-			wavs = append(wavs, wav)
+			wavs[i] = wav
 		}
 		calls := 0
 		err = load(ctx, cut.SourceID, func(source clip.MediaSource) error {

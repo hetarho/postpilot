@@ -148,13 +148,45 @@ func (e *Executor) prepare(ctx context.Context, ws clip.MediaWorkspace, w clip.M
 	return nil
 }
 func (e *Executor) renderTask(ctx context.Context, ws clip.MediaWorkspace, w clip.MediaWork, task clip.MediaTask, result *clip.MediaResult) error {
-	sources, plan, loader, release, err := e.planInputs(ctx, ws, w, task, result)
+	sources, plan, err := frozenInputs(task)
 	if err != nil {
 		return err
 	}
+	// The delivered file is made from these originals, so each is decoded in
+	// full and must be the original the task froze. That happens the first time
+	// the render loads it: one download serves the check and the cuts.
+	verified := make([]bool, len(task.Sources))
+	result.Sources = make([]clip.MediaVerifiedSource, len(task.Sources))
+	loader, release := e.loader(ws, w, task, func(ctx context.Context, i int, original clip.MediaSource) (clip.MediaSource, error) {
+		s := task.Sources[i]
+		if !verified[i] {
+			actual, err := e.media.Probe(ctx, ws, original.Path)
+			if err != nil {
+				return original, err
+			}
+			if !clip.SameMediaOriginal(s.Info, actual) {
+				return original, clip.ErrInvalidMedia
+			}
+			result.Sources[i], verified[i] = clip.MediaVerifiedSource{ID: s.ID, Fingerprint: s.Fingerprint, Info: actual}, true
+		}
+		original.Info = result.Sources[i].Info
+		return original, nil
+	})
 	defer release()
 	video, err := e.render.Render(ctx, ws, plan, sources, loader)
 	if err = errors.Join(err, release()); err != nil {
+		return err
+	}
+	// Every source the task names is reported verified, one no cut drew too.
+	for i, s := range task.Sources {
+		if verified[i] {
+			continue
+		}
+		if err = loader(ctx, s.ID, func(clip.MediaSource) error { return nil }); err != nil {
+			return err
+		}
+	}
+	if err = release(); err != nil {
 		return err
 	}
 	out := clip.MediaOutput{Slot: "result", DurationMS: video.Info.DurationMS, Bytes: video.Bytes, ContentType: "video/mp4", Info: video.Info}
@@ -179,61 +211,67 @@ func (e *Executor) renderTask(ctx context.Context, ws clip.MediaWorkspace, w cli
 }
 
 // sampleTask measures a browser render's grounds over the render's own frozen
-// task: the same verified originals and plan, the server's own sampler, and no
-// file written (CLIP-192).
+// task: the same originals and plan, the server's own sampler, and no file
+// written (CLIP-192). A sample writes nothing a viewer receives, so the facts
+// the task froze stand for its originals instead of a full decode, and an
+// original is downloaded only when a read needs its frames — the download
+// still checks its fingerprint.
 func (e *Executor) sampleTask(ctx context.Context, ws clip.MediaWorkspace, w clip.MediaWork, task clip.MediaTask, result *clip.MediaResult) error {
 	sampler, ok := e.render.(clip.GroundSampler)
 	if !ok {
 		return clip.ErrMediaIncompatible
 	}
-	sources, plan, loader, release, err := e.planInputs(ctx, ws, w, task, result)
+	sources, plan, err := frozenInputs(task)
 	if err != nil {
 		return err
 	}
+	loader, release := e.loader(ws, w, task, nil)
 	defer release()
 	grounds, err := sampler.SampleGrounds(ctx, ws, plan, sources, loader)
 	if err = errors.Join(err, release()); err != nil {
 		return err
 	}
+	for _, s := range task.Sources {
+		result.Sources = append(result.Sources, clip.MediaVerifiedSource{ID: s.ID, Fingerprint: s.Fingerprint, Info: s.Info})
+	}
 	result.Grounds = grounds
 	return nil
 }
 
-// planInputs verifies every original a frozen plan draws from, then hands back
-// that plan and a loader holding one original at a time.
-func (e *Executor) planInputs(ctx context.Context, ws clip.MediaWorkspace, w clip.MediaWork, task clip.MediaTask, result *clip.MediaResult) ([]clip.RenderSource, clip.EditPlan, clip.RenderSourceLoader, func() error, error) {
-	var sources []clip.RenderSource
-	for _, s := range task.Sources {
-		original, drop, err := e.fetch(ctx, ws, w, s)
-		if err != nil {
-			return nil, clip.EditPlan{}, nil, nil, err
-		}
-		actual, err := e.media.Probe(ctx, ws, original.Path)
-		if err = errors.Join(err, drop()); err != nil {
-			return nil, clip.EditPlan{}, nil, nil, err
-		}
-		if !clip.SameMediaOriginal(s.Info, actual) {
-			return nil, clip.EditPlan{}, nil, nil, clip.ErrInvalidMedia
-		}
-		sources = append(sources, clip.RenderSource{ID: s.ID, Fingerprint: s.Fingerprint, Info: actual})
-		result.Sources = append(result.Sources, clip.MediaVerifiedSource{ID: s.ID, Fingerprint: s.Fingerprint, Info: actual})
-	}
-	loader, release := localmedia.Loader(func(ctx context.Context, id string) (clip.MediaSource, func() error, error) {
-		for i, s := range task.Sources {
-			if s.ID == id {
-				s.Info = sources[i].Info
-				return e.fetch(ctx, ws, w, s)
-			}
-		}
-		return clip.MediaSource{}, nil, clip.ErrInvalidMedia
-	})
+// frozenInputs is the plan a render task froze and the originals it names, as
+// the task describes them; nothing is downloaded.
+func frozenInputs(task clip.MediaTask) ([]clip.RenderSource, clip.EditPlan, error) {
 	plan, err := clip.DecodeEditPlan(task.Plan)
 	if err != nil {
-		return nil, clip.EditPlan{}, nil, nil, errors.Join(err, release())
+		return nil, clip.EditPlan{}, err
 	}
 	plan = task.Render.Apply(plan)
 	plan.HideDisclosure = task.HideDisclosure
-	return sources, plan, loader, release, nil
+	sources := make([]clip.RenderSource, len(task.Sources))
+	for i, s := range task.Sources {
+		sources[i] = clip.RenderSource{ID: s.ID, Fingerprint: s.Fingerprint, Info: s.Info}
+	}
+	return sources, plan, nil
+}
+
+// loader holds one of the task's originals at a time, downloading each only
+// when it is asked for. A check, when given, sees every download before a cut
+// reads it.
+func (e *Executor) loader(ws clip.MediaWorkspace, w clip.MediaWork, task clip.MediaTask, check func(context.Context, int, clip.MediaSource) (clip.MediaSource, error)) (clip.RenderSourceLoader, func() error) {
+	return localmedia.Loader(func(ctx context.Context, id string) (clip.MediaSource, func() error, error) {
+		i := slices.IndexFunc(task.Sources, func(s clip.MediaTaskSource) bool { return s.ID == id })
+		if i < 0 {
+			return clip.MediaSource{}, nil, clip.ErrInvalidMedia
+		}
+		original, drop, err := e.fetch(ctx, ws, w, task.Sources[i])
+		if err != nil || check == nil {
+			return original, drop, err
+		}
+		if original, err = check(ctx, i, original); err != nil {
+			return clip.MediaSource{}, nil, errors.Join(err, drop())
+		}
+		return original, drop, nil
+	})
 }
 
 // FileDigest never buffers the media file and refuses a non-regular/mis-sized file.

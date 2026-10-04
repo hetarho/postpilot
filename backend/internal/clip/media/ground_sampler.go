@@ -301,7 +301,8 @@ func (r *Rendering) SampleGrounds(ctx context.Context, ws clip.MediaWorkspace, p
 		byID[source.ID] = source
 	}
 	sampler := r.newGroundSampler(canvas, plan, layout.visuals)
-	for i, cut := range plan.Cuts {
+	for _, i := range cutsBySource(plan.Cuts) {
+		cut := plan.Cuts[i]
 		if len(sampler.needs(i)) == 0 {
 			continue
 		}
@@ -325,6 +326,27 @@ func (r *Rendering) SampleGrounds(ctx context.Context, ws clip.MediaWorkspace, p
 		return nil, err
 	}
 	return layout.sampledGrounds(grounds), nil
+}
+
+// cutsBySource is the order both cut loops visit a plan in: every cut of one
+// original together, the originals in the order the plan first draws them and
+// each one's cuts in plan order. A loader holds one original at a time, so a
+// plan that alternates its sources would otherwise download each of them again
+// for every run of cuts (ARCH-48); a fixed order keeps the grounds and the
+// render's progress reproducible.
+func cutsBySource(cuts []clip.Cut) []int {
+	groups, order := map[string][]int{}, []string{}
+	for i, cut := range cuts {
+		if _, seen := groups[cut.SourceID]; !seen {
+			order = append(order, cut.SourceID)
+		}
+		groups[cut.SourceID] = append(groups[cut.SourceID], i)
+	}
+	out := make([]int, 0, len(cuts))
+	for _, id := range order {
+		out = append(out, groups[id]...)
+	}
+	return out
 }
 
 // loadedAsRendered is the check a render makes of the original a loader hands

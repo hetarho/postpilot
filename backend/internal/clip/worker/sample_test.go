@@ -7,6 +7,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"os"
 	"reflect"
 	"testing"
@@ -17,33 +18,44 @@ import (
 	"github.com/postpilot/backend/internal/clip/worker"
 )
 
-// groundSampler stands in for the renderer's sampler: it reads the original the
-// loader hands it and reports what it was told to.
+// groundSampler stands in for the renderer's sampler: it reads the originals
+// the loader hands it — the ones named in reads, or else the first — and
+// reports what it was told to.
 type groundSampler struct {
 	clip.Renderer
 	grounds []clip.SampledGround
+	reads   []string
 	loaded  []string
 }
 
 func (s *groundSampler) SampleGrounds(ctx context.Context, _ clip.MediaWorkspace, plan clip.EditPlan, sources []clip.RenderSource, load clip.RenderSourceLoader) ([]clip.SampledGround, error) {
-	if plan.Portable == nil || len(sources) != 1 {
+	if plan.Portable == nil || len(sources) == 0 {
 		return nil, clip.ErrInvalid
 	}
-	err := load(ctx, sources[0].ID, func(m clip.MediaSource) error {
-		data, err := os.ReadFile(m.Path)
+	reads := s.reads
+	if len(reads) == 0 {
+		reads = []string{sources[0].ID}
+	}
+	for _, id := range reads {
+		err := load(ctx, id, func(m clip.MediaSource) error {
+			data, err := os.ReadFile(m.Path)
+			if err != nil {
+				return err
+			}
+			s.loaded = append(s.loaded, string(data))
+			return nil
+		})
 		if err != nil {
-			return err
+			return nil, err
 		}
-		s.loaded = append(s.loaded, string(data))
-		return nil
-	})
-	return s.grounds, err
+	}
+	return s.grounds, nil
 }
 
-func sampleWork(t *testing.T, data []byte) clip.MediaWork {
-	t.Helper()
-	info := clip.MediaInfo{Width: 1280, Height: 720, DurationMS: 15000}
-	m := clip.SourceMetadata{Filename: "take.mp4", ContentType: "video/mp4", Bytes: int64(len(data)), DurationMS: info.DurationMS, Width: info.Width, Height: info.Height}
+// taskOriginal is one synthetic original: its bytes' v1 fingerprint over the
+// metadata, with the facts its preparation verified.
+func taskOriginal(id string, data []byte, info clip.MediaInfo) clip.MediaTaskSource {
+	m := clip.SourceMetadata{Filename: id + ".mp4", ContentType: "video/mp4", Bytes: int64(len(data)), DurationMS: info.DurationMS, Width: info.Width, Height: info.Height}
 	header := []byte{1}
 	header = binary.BigEndian.AppendUint64(header, uint64(m.Bytes))
 	header = binary.BigEndian.AppendUint32(header, uint32(len(m.ContentType)))
@@ -52,20 +64,38 @@ func sampleWork(t *testing.T, data []byte) clip.MediaWork {
 	header = append(append(header, data...), data...)
 	sum := sha256.Sum256(header)
 	m.Fingerprint = hex.EncodeToString(sum[:])
+	return clip.MediaTaskSource{ID: id, SourceMetadata: m, Info: info}
+}
+
+// planWork is a render or sample stage over a 15-second portable plan whose
+// cut i draws sources[draws[i]].
+func planWork(t *testing.T, op clip.MediaOperation, sources []clip.MediaTaskSource, draws []int) clip.MediaWork {
+	t.Helper()
 	composed := clip.NoTemplateComposition()
-	plan := clip.EditPlan{Ratio: "vertical", DurationMS: 15000,
-		Cuts:     []clip.Cut{{ID: "cut", SourceID: "source", Fingerprint: m.Fingerprint, EndMS: 15000, Focal: clip.Point{X: .5, Y: .5}, PlaybackRatePermille: clip.RateUnitPermille}},
-		Portable: &clip.PortablePlan{Snapshot: composed.Snapshot, Inputs: composed.Inputs, Cuts: []composition.Cut{{ID: "cut", SourceID: "source", EndMS: 15000, PlaybackRatePermille: clip.RateUnitPermille}}}}
+	plan := clip.EditPlan{Ratio: "vertical", Portable: &clip.PortablePlan{Snapshot: composed.Snapshot, Inputs: composed.Inputs}}
+	length := 15000 / len(draws)
+	for i, draw := range draws {
+		s := sources[draw]
+		id := fmt.Sprintf("cut-%02d", i)
+		plan.Cuts = append(plan.Cuts, clip.Cut{ID: id, SourceID: s.ID, Fingerprint: s.Fingerprint, EndMS: length, Focal: clip.Point{X: .5, Y: .5}, PlaybackRatePermille: clip.RateUnitPermille})
+		plan.Portable.Cuts = append(plan.Portable.Cuts, composition.Cut{ID: id, SourceID: s.ID, EndMS: length, PlaybackRatePermille: clip.RateUnitPermille})
+		plan.DurationMS += length
+	}
 	raw, err := clip.EncodeEditPlan(plan)
 	if err != nil {
 		t.Fatal(err)
 	}
-	task := clip.MediaTask{Version: clip.MediaContractVersion, Plan: raw, Render: clip.FreezeMediaRenderInputs(plan), Sources: []clip.MediaTaskSource{{ID: "source", SourceMetadata: m, Info: info}}}
+	task := clip.MediaTask{Version: clip.MediaContractVersion, Plan: raw, Render: clip.FreezeMediaRenderInputs(plan), Sources: sources}
 	payload, err := mediacodec.EncodeTask(task)
 	if err != nil {
 		t.Fatal(err)
 	}
-	return clip.MediaWork{Operation: clip.MediaSample, ContractVersion: clip.MediaContractVersion, RendererVersion: clip.MediaRendererVersion, AssetVersion: clip.MediaAssetVersion, Payload: payload, InputDigest: clip.MediaPayloadDigest(payload), Credentials: clip.MediaLeaseCredentials{AttemptID: "attempt"}}
+	return clip.MediaWork{Operation: op, ContractVersion: clip.MediaContractVersion, RendererVersion: clip.MediaRendererVersion, AssetVersion: clip.MediaAssetVersion, Payload: payload, InputDigest: clip.MediaPayloadDigest(payload), Credentials: clip.MediaLeaseCredentials{AttemptID: "attempt"}}
+}
+
+func sampleWork(t *testing.T, data []byte) clip.MediaWork {
+	t.Helper()
+	return planWork(t, clip.MediaSample, []clip.MediaTaskSource{taskOriginal("source", data, clip.MediaInfo{Width: 1280, Height: 720, DurationMS: 15000})}, []int{0})
 }
 
 // CLIP-192: a sample stage runs the render's frozen task over the verified
