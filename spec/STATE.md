@@ -25,7 +25,7 @@
 |---|---|---|---|---|
 | ARCH | 15 | 9 | ARCH-52+ ARCH-53+ ARCH-56+ ARCH-57+ ARCH-34✎ | 0 |
 | AUTH | 11 | 11 | - | 0 |
-| QUOTA | 33 | 33 | - | 0 |
+| QUOTA | 34 | 34 | - | 0 |
 | POST | 32 | 31 | POST-108+ | 0 |
 | VOICE | 8 | 7 | VOICE-32✎ | 0 |
 | GEN | 23 | 23 | - | 0 |
@@ -39,7 +39,7 @@
 | VIDEO | 6 | 6 | - | 0 |
 | CLIP | 55 | 55 | - | 2 |
 | CDS | 32 | 32 | - | 1 |
-| BILL | 8 | 8 | - | 0 |
+| BILL | 9 | 9 | - | 0 |
 | MEM | 5 | 5 | - | 2 |
 | QUAL | 7 | 7 | - | 0 |
 | GIFT | 3 | 3 | - | 0 |
@@ -57,7 +57,7 @@
 | published-quality-260924 | converted@260925 |
 | clip-narrate-failure-260926 | converted@260926 |
 | conformance-all-260927 | converted@260927 |
-| perf-cost-261004 | converted@261004 |
+| perf-cost-261004 | converted@261005 |
 
 ## tasks
 | id | title | ssot | dep | st |
@@ -80,15 +80,28 @@
 | T548 | Mix immutable narration into server MP4 exports | ARCH DUB CLIP CDS | T547 | todo |
 | T549 | Mix the same narration into browser MP4 exports | ARCH DUB CLIP CDS | T548 | todo |
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | todo |
+| T569 | Hold a voice analysis at the size of the prompt it will send | QUOTA VOICE ARCH | - | todo |
+| T570 | Refund a captured payment the product cannot apply, automatically | BILL ARCH | - | todo |
+| T571 | Refuse whole-database or no-op foreign-key guards in new migrations | ARCH | - | todo |
+| T572 | Delete the pre-FX pricing regime from the ledger | QUOTA ARCH | T569 | todo |
+| T573 | Delete the non-Portable renderer and the legacy plan paths | ARCH | - | todo |
+| T574 | One cut timeline for the render graph, the sampler and the browser drawing | CDS CLIP ARCH | T573 | todo |
+| T575 | Check generation start preconditions and plan enqueue calls in one place each | ARCH | - | todo |
+| T576 | State the export window, upgrade proration and term end once | QUOTA BILL ARCH | T572 | todo |
+| T577 | Move the export panel's and the template editor's state machines out of their components | ARCH | - | todo |
+| T578 | Define what a refunded payment funded once | BILL ARCH | T570 | todo |
+| T579 | Make the clip release smoke green again | ARCH | T574 | todo |
 
 ## next
-- update-ssot VOICE/QUOTA for perf-cost F10 (analysis corpus vs the 30 000-token hold) and BILL for an exit from a `review` order (review perf-cost-261004 notes); the held maintainability findings F22 F24–F28 F36 F37 wait for a later review-code.
-- release smoke: 9/28 modes fail at HEAD with `the delivered caption was retimed 2500 6000`, identically on 228a4015 (seen in T558) — investigate; rebuild the dev media image for T559's `select` filter before rendering locally.
+- implement-task T569–T579 (perf-cost follow-ups, QUOTA r34, BILL r9, release smoke), one commit per task, then push and watch CI.
 - implement-task T533; complete T533–T539 and the real voice-creation qualification before T540–T550 narrated editing/export work.
 - create-task ARCH (ARCH-52+ ARCH-53+ ARCH-56+ ARCH-57+ ARCH-34✎); create-task POST r32 (POST-108+ implemented by 12d2f428; verification-only); create-task VOICE r8 (VOICE-32✎ implemented by 68ae9a79; verification-only); update-ssot VOICE-31 remains open.
 - ops: lower TEMPLATE_PHOTO_ROW_MAX / VITE_TEMPLATE_PHOTO_ROW_MAX to 3 wherever production sets them explicitly (VPS .env, Cloudflare build vars).
 
 ## log
+- 261005 create-task QUOTA r34 BILL r9 review/perf-cost-261004: T569–T579 (11 tasks: F10 hold, BILL-22 refunds, the 8 held maintainability findings, release smoke); review converted again
+- 261005 update-ssot QUOTA r34 BILL r9: QUOTA-14✎ a voice analysis holds its real prompt size (perf-cost F10); BILL-22+ a captured payment that cannot be applied is refunded in full automatically (perf-cost F12)
+- 261005 update-ssot QUOTA BILL start: owner chose the recommended F10 and review-exit options
 - 261005 T568 done: a fixed-KRW cancel compares the row it read, so it succeeds after time has passed and still refuses a row changed in between; BE suite green
 - 261005 create-task T568 (owner: fix at once): fixed-KRW CancelSubscription compares a read UpdatedAt it already overwrote; T568 start
 - 261005 T566 done: lazily routed pages leave the entry chunk (sideEffects + build-only route-schema plugin, accepted by the owner); first visit 1.90 MB → 1.46 MB; checked in Playwright
@@ -106,6 +119,3 @@
 - 261004 T561 done: migration 0129 rebuilds generation_jobs without kind-naming CHECKs (scoped FK guard); PickNextQueued takes first stages from Go; BE suite green
 - 261004 T551 done: migration 0128 indexes generation_jobs project/post lookups and usage job_id; the checkpoint trigger skips sampling jobs; HoldForJob reads the read pool; BE suite green
 - 261004 T557 done: FX day selection served from memory with one shared fetch outside the lock; BalanceFor takes the writer only when renewing would write; Settle drops eligible lots; BE suite green
-- 261004 T552 done: a clip hold's live free-path check runs before the write transaction (Guard access checker), the in-transaction hold skips it; BE suite green
-- 261004 T554 done: a template-request correction carries only the request, the last answer and what it broke; BE suite green
-- 261004 T553 done: storyline and template-request caps sized by LLMCompletionBudget.Short with native-effort headroom, frozen at start, hold = call; BE suite green

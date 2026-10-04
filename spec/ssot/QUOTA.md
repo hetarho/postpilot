@@ -1,5 +1,5 @@
 # QUOTA plans, credits, metering
-> r33 | Paid plans grant daily AI credits and monthly bonuses with model and server-export entitlements; free models cost no credits, while paid AI work reserves and settles confirmed usage at a job-frozen KRW conversion. Billing and cash refunds belong to BILL.
+> r34 | Paid plans grant daily AI credits and monthly bonuses with model and server-export entitlements; free models cost no credits, while paid AI work reserves and settles confirmed usage at a job-frozen KRW conversion. Billing and cash refunds belong to BILL.
 
 ## decisions
 - QUOTA-1 [o] every account carries exactly one plan `free | light | basic | pro | max | master`; free is the provisioning default, light/basic/pro/max are paid offers and master is operator-only. Stored plans and wire mappings reject unknown values without renumbering existing enum identities.
@@ -33,7 +33,7 @@
 - QUOTA-13 [o] every model-consuming job start (`generate` `revise` `extract_memory` `analyze_voice` `check_voice` `model_experiment`, post storyline jobs →GEN-68 →GEN-69, template requests →TMPL-58, and voice-design, billable voice-confirmation and speech-generation jobs →DUB) passes one shared enqueue admission gate (`job.Queue.Enqueue`, consumer-declared Admitter wired in `cmd/api`)
   - one comparison is one admission covering its two to five candidates and shared preparation (→GEN-29); clip preparation retains QUOTA-43's bounded exception
   - speech work uses QUOTA-69's enforceable unit budgets rather than the text hold assumptions
-- QUOTA-14 [o] hold every planned completion call at its worst case: 30 000 prompt tokens (`holdInputTokens`), except clips freeze QUOTA-53's input allowance, plus the actual completion budget at the applicable prices; speech uses QUOTA-69's separate unit budgets
+- QUOTA-14 [o] hold every planned completion call at its worst case: 30 000 prompt tokens (`holdInputTokens`), except clips freeze QUOTA-53's input allowance and a voice analysis (→VOICE-23) holds the larger of 30 000 and one token per Unicode character of the prompt it will send, plus the actual completion budget at the applicable prices; speech uses QUOTA-69's separate unit budgets ← an analysis reads every 학습 글, so a fixed prompt allowance would leave a large corpus's overrun unpaid
   - convert the total once and deduct lots in consumption order in one `BEGIN IMMEDIATE` transaction with admission before the job row, except QUOTA-43's clip preparation
   - the owning context declares every planned call; neither a token fallback nor an implicit retry may price speech
 - QUOTA-15 [o] terminal settlement is once-only against the persisted usage ledger; return unused reservation to its original lots and preserve their original expiries (→QUOTA-61)
@@ -219,4 +219,4 @@
 - frontend reads contracts through `entities/plan`; `/plans`, admin plan management, the account menu and header share the published offer and balance semantics
 
 ## chg
--
+- r34 261005 QUOTA-14✎ every call held at 30 000 prompt tokens except clips→also except a voice analysis, held at the larger of 30 000 and one token per character of its prompt
