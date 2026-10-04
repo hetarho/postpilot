@@ -200,6 +200,48 @@ func TestContinuationVerdictExpectsAPlanAndNoNewResult(t *testing.T) {
 	}
 }
 
+// releaseCaptionWindow is where the delivered plan holds the release caption.
+// The narration writes it across the intro block; an unedited caption is
+// fitted into the span the intro and outro leave between them (CLIP-196), so it
+// starts no earlier than the intro ends and ends no later than the outro starts.
+func releaseCaptionWindow(plan *v1.ClipEditPlan) (start, end int32) {
+	start, end = releaseCaptionStartMS, releaseCaptionEndMS
+	for _, text := range plan.GetElements() {
+		switch text.GetRole() {
+		case "hook":
+			start = max(start, text.GetResolvedEndMs())
+		case "ending":
+			end = min(end, text.GetResolvedStartMs())
+		}
+	}
+	return start, end
+}
+
+// Runs on the host, unlike the smoke it guards: the delivered caption's window
+// is the expectation that went stale when CLIP-196 kept captions out of the
+// regions, so it is pinned where ARCH-26 reads it.
+func TestReleaseCaptionIsFittedBetweenTheRegions(t *testing.T) {
+	region := func(role string, start, end int32) *v1.ClipEditableText {
+		return &v1.ClipEditableText{Role: role, ResolvedStartMs: start, ResolvedEndMs: end}
+	}
+	for _, c := range []struct {
+		name       string
+		elements   []*v1.ClipEditableText
+		start, end int32
+	}{
+		{"no region", nil, 1000, 6000},
+		{"the intro's first 2.5 s", []*v1.ClipEditableText{region("hook", 0, 2500), region("ending", 12000, 15000)}, 2500, 6000},
+		{"an intro shorter than the caption's lead", []*v1.ClipEditableText{region("hook", 0, 800)}, 1000, 6000},
+		{"an outro moved over the caption", []*v1.ClipEditableText{region("hook", 0, 2500), region("ending", 5000, 15000)}, 2500, 5000},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			if start, end := releaseCaptionWindow(&v1.ClipEditPlan{Elements: c.elements}); start != c.start || end != c.end {
+				t.Fatalf("window %d..%d, want %d..%d", start, end, c.start, c.end)
+			}
+		})
+	}
+}
+
 // The environment opt-in deliberately isolates real binaries and databases from
 // ordinary unit runs. Docker's release-smoke target has the production runtime,
 // zero credentials and no external network, but loopback HTTP remains available.
@@ -929,13 +971,15 @@ func (h *releaseHarness) exercise(mode string) {
 		// The caption the narration call wrote is IN the delivered plan, on the
 		// output timeline and with the owner's text intact (CLIP-134). A caption
 		// the layout cannot place is dropped with a notice, so the gate asserts
-		// the one it asked for survived rather than assuming it did.
+		// the one it asked for survived rather than assuming it did — fitted
+		// between the regions, the one move CLIP-196 makes on an unedited caption.
 		narrated := 0
+		start, end := releaseCaptionWindow(h.plan)
 		for _, text := range h.plan.GetElements() {
 			if text.GetBasis() == "output-start" && text.GetText() == releaseCaption {
 				narrated++
-				if text.GetStartMs() != 1000 || text.GetEndMs() != 6000 {
-					t.Fatal("the delivered caption was retimed", text.GetStartMs(), text.GetEndMs())
+				if text.GetStartMs() != start || text.GetEndMs() != end {
+					t.Fatal("the delivered caption was not fitted between the regions", text.GetStartMs(), text.GetEndMs(), "want", start, end)
 				}
 			}
 		}
