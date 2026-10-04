@@ -184,6 +184,8 @@ func (s *Service) CancelSubscription(ctx context.Context, userID string) (Subscr
 	if !subscription.AutoRenew {
 		return Subscription{}, ErrNoChange
 	}
+	// The row this cancel read, before the copy below is stamped with the cancel's own time.
+	read := subscription.UpdatedAt
 	subscription.AutoRenew = false
 	subscription.ScheduledTier = nil
 	subscription.ScheduledTerm = nil
@@ -197,7 +199,7 @@ func (s *Service) CancelSubscription(ctx context.Context, userID string) (Subscr
 			if err != nil {
 				return err
 			}
-			if !found || !current.UpdatedAt.Equal(subscription.UpdatedAt) {
+			if !found || !current.UpdatedAt.Equal(read) {
 				return ErrStaleQuote
 			}
 		}

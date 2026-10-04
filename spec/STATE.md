@@ -82,12 +82,15 @@
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | todo |
 
 ## next
-- implement-task T551–T567 (review perf-cost-261004), in order, one commit per task; update-ssot VOICE/QUOTA for perf-cost F10 (analysis corpus vs the 30 000-token hold) and BILL for the `review` order exit (review notes).
+- update-ssot VOICE/QUOTA for perf-cost F10 (analysis corpus vs the 30 000-token hold) and BILL for an exit from a `review` order (review perf-cost-261004 notes); the held maintainability findings F22 F24–F28 F36 F37 wait for a later review-code.
+- release smoke: 9/28 modes fail at HEAD with `the delivered caption was retimed 2500 6000`, identically on 228a4015 (seen in T558) — investigate; rebuild the dev media image for T559's `select` filter before rendering locally.
 - implement-task T533; complete T533–T539 and the real voice-creation qualification before T540–T550 narrated editing/export work.
 - create-task ARCH (ARCH-52+ ARCH-53+ ARCH-56+ ARCH-57+ ARCH-34✎); create-task POST r32 (POST-108+ implemented by 12d2f428; verification-only); create-task VOICE r8 (VOICE-32✎ implemented by 68ae9a79; verification-only); update-ssot VOICE-31 remains open.
 - ops: lower TEMPLATE_PHOTO_ROW_MAX / VITE_TEMPLATE_PHOTO_ROW_MAX to 3 wherever production sets them explicitly (VPS .env, Cloudflare build vars).
 
 ## log
+- 261005 T568 done: a fixed-KRW cancel compares the row it read, so it succeeds after time has passed and still refuses a row changed in between; BE suite green
+- 261005 create-task T568 (owner: fix at once): fixed-KRW CancelSubscription compares a read UpdatedAt it already overwrote; T568 start
 - 261005 T566 done: lazily routed pages leave the entry chunk (sideEffects + build-only route-schema plugin, accepted by the owner); first visit 1.90 MB → 1.46 MB; checked in Playwright
 - 261005 T560 done: a browser export lays out once per render revision and batches resvg per role, GetClipProject decodes analysis once, ListClipProjects reads a summary projection; smokes green
 - 261005 T559 done: server render reads ground frames from its own lossless bare cut, browser sampling selects before scaling in one output; select joins the ffmpeg allowlist; render_footage 15.1–16.1 s → 8.9–10.0 s on the identity fixture; smokes and identity digest unchanged
@@ -95,6 +98,7 @@
 - 261004 T567 done: photo turns patch the cache on every call, the fingerprint reads once per autosave pause, one abortable delay frees its listeners; FE suite green
 - 261004 T565 done: clip settings and region queues send per project, the clip storyline saves through its own keyed queue flushed before builds and requests and keeps text on failure; FE suite green
 - 261004 T564 done: clip detail waits for settlement only on generate_clip/revise_clip, a settings save keeps the cached plan unless its revision moved and refreshes only list and templates; FE suite green
+- 261004 out of scope, found while implementing T562: bug: fixed-KRW CancelSubscription (billing/change.go:190) sets UpdatedAt=now before comparing it with the stored row, so a customer cancel always fails ErrStaleQuote in production (BILL-7, since T479) — needs its own task
 - 261004 T556 done: voice directory and profile read samples once, the check list skips projections, an unchanged answer is left alone; BE suite green
 - 261004 T555 done: comparison list in three reads without snapshots or outputs, voice comparison measured against one analysis, candidates two at a time, observe holds count every observe call; BE and FE suites green
 - 261004 T563 done: a second pack refund records like the first, definitive cancel refusals release frozen credits after a read-back, review-skipped renewals are logged, expired quotes purged; BE suite green
@@ -105,6 +109,3 @@
 - 261004 T552 done: a clip hold's live free-path check runs before the write transaction (Guard access checker), the in-transaction hold skips it; BE suite green
 - 261004 T554 done: a template-request correction carries only the request, the last answer and what it broke; BE suite green
 - 261004 T553 done: storyline and template-request caps sized by LLMCompletionBudget.Short with native-effort headroom, frozen at start, hold = call; BE suite green
-- 261004 create-task review/perf-cost-261004: T551–T567 (17 tasks) from 29 adopted findings; F10 back to [?] (VOICE-23/QUOTA-14 planning change); review converted
-- 261004 create-task review/perf-cost-261004 start: 30 adopted findings (P1/P2 + cost/bug P3) → tasks from T551; implemented in order, one commit per task
-- 261004 review-code perf-cost-261004 ready: 38 findings (P1 3 · P2 16 · P3 19); 30 adopted, maintainability P3 F22 F24–F28 F36 F37 held [?]
