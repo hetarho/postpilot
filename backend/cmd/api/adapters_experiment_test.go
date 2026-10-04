@@ -55,7 +55,7 @@ func TestAnObserveComparisonHoldsEveryObserveCall(t *testing.T) {
 	images = append(images, generation.Image{Filename: "clip.mp4", Key: "key-clip", Kind: generation.AttachmentVideo, ContentType: "video/mp4", DurationMs: 4000})
 	generations := generation.NewService(
 		attachedPost{input: generation.PostInput{Slug: "post", UserID: "alice", Images: images}}, freezeProfiles{}, &recordingModels{}, freezeImages{}, nil,
-		batch, generation.DefaultReasoningPolicy(), testCompletionBudget(),
+		batch, generation.DefaultReasoningPolicy(), generationBudget{testCompletionBudget()},
 		generation.Deps{
 			Experiments: freezeExperiments{}, Templates: unreadTemplates{}, Guidelines: unreadGuidelines{}, Memories: freezeMemories{},
 			Candidates: freezeCandidates{}, Videos: freezeLinker{}, VideoURLTTL: time.Minute, QualityRules: unreadQualityRules{},
