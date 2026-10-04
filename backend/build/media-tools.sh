@@ -5,6 +5,7 @@ FFMPEG_VERSION=9.0.1
 FFMPEG_SHA256=cf38e0e28c7e5605942c4a77755349b0145804a397af37eb1fb4c77cb237f635
 X264_REV=b35605ace3ddf7c1a5d67a2eb553f034aef41d55
 X264_SHA256=6eeb82934e69fd51e043bd8c5b0d152839638d1ce7aa4eea65a3fedcf83ff224
+X264_MIRROR_SHA256=cd71a7515b0e9a012e1ac9b1f8415bebcaf6fc97d4db32286642ac4c0fbe24f9
 apk add --no-cache build-base bash nasm pkgconf curl xz bzip2 gnupg zlib-dev=1.3.2-r0 zlib-static=1.3.2-r0
 mkdir -p /media-build /opt/media/share/licenses /opt/media/share/sources
 cd /media-build
@@ -20,9 +21,20 @@ printf '%s  ffmpeg.tar.xz\n' "$FFMPEG_SHA256" | sha256sum -c -
 gpg --batch --import ffmpeg-signing-key.asc
 gpg --batch --status-fd 1 --verify ffmpeg.tar.xz.asc ffmpeg.tar.xz > signature-status
 grep -q 'VALIDSIG FCF986EA15E6E293A5644F10B4322F04D67658D8 ' signature-status
-curl -fL --retry 3 -o x264.tar.bz2 "https://code.videolan.org/videolan/x264/-/archive/${X264_REV}/x264-${X264_REV}.tar.bz2"
-printf '%s  x264.tar.bz2\n' "$X264_SHA256" | sha256sum -c -
-tar -xf x264.tar.bz2
+# code.videolan.org answers some datacenter clients (GitHub's runners among them) with a small
+# challenge page instead of the archive; the GitHub mirror serves the identical tree at the same
+# revision, pinned by its own checksum. Whichever archive verified is the one shipped as source.
+if curl -fL --retry 3 -o x264.tar.bz2 "https://code.videolan.org/videolan/x264/-/archive/${X264_REV}/x264-${X264_REV}.tar.bz2" &&
+  printf '%s  x264.tar.bz2\n' "$X264_SHA256" | sha256sum -c -; then
+  X264_ARCHIVE=x264.tar.bz2
+  tar -xf x264.tar.bz2
+else
+  rm -f x264.tar.bz2
+  curl -fL --retry 3 -o x264.tar.gz "https://github.com/mirror/x264/archive/${X264_REV}.tar.gz"
+  printf '%s  x264.tar.gz\n' "$X264_MIRROR_SHA256" | sha256sum -c -
+  X264_ARCHIVE=x264.tar.gz
+  tar -xzf x264.tar.gz
+fi
 cd "x264-${X264_REV}"
 ./configure --prefix=/opt/media --enable-static --enable-pic --disable-cli --disable-opencl --disable-avs --disable-lavf --disable-swscale --disable-ffms --disable-gpac --disable-lsmash
 make -j2
@@ -47,7 +59,7 @@ PKG_CONFIG_PATH=/opt/media/lib/pkgconfig ./configure \
 make -j2
 make install
 cp COPYING.GPLv2 COPYING.LGPLv2.1 /opt/media/share/licenses/
-cp /media-build/ffmpeg.tar.xz /media-build/ffmpeg.tar.xz.asc /media-build/x264.tar.bz2 /opt/media/share/sources/
+cp /media-build/ffmpeg.tar.xz /media-build/ffmpeg.tar.xz.asc "/media-build/${X264_ARCHIVE}" /opt/media/share/sources/
 apk info -v | grep -E '^(musl|zlib)' > /opt/media/share/licenses/alpine-components.txt
 /opt/media/bin/ffmpeg -version
 /opt/media/bin/ffprobe -version

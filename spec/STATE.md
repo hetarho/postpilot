@@ -87,6 +87,7 @@
 - ops: lower TEMPLATE_PHOTO_ROW_MAX / VITE_TEMPLATE_PHOTO_ROW_MAX to 3 wherever production sets them explicitly (VPS .env, Cloudflare build vars).
 
 ## log
+- 261005 deploy of d645c1ca failed at the media-tools build: code.videolan.org served GitHub runners a challenge page for the x264 archive (T559 changed media-tools.sh, so the cache missed); media-tools.sh now falls back to the GitHub mirror of the same revision under its own checksum
 - 261005 perf-cost wave complete: T551–T584 done (review perf-cost-261004 fully converted, QUOTA r34, BILL r9, release smoke 28/28); pushing main
 - 261005 T584 done: refund store and provider behaviour are required billing ports (no type assertions); a provider-failed reviewed refund answers REFUND_FAILED with operator copy; BE and FE suites green
 - 261005 create-task T584 (left open by T583: optional refund ports, untyped failed refund) and start
@@ -106,4 +107,3 @@
 - 261005 T570 done: each billing pass refunds a review order in full (idempotent cancel, read-back), fails it, records and mails the refund, unlocks the account; a refunded renewal lapses the account (BILL-8); BE suite green
 - 261005 T571 done: a lint refuses whole-database or bare foreign-key checks in migrations after 0129; BE suite green
 - 261005 T575 done: one precondition chain for every generation start (each keeps its check order), one observe+write call plan, one refusal mapping, one comparison create-enqueue-link helper; BE suite green
-- 261005 T577 done: export panel and template editor state machines moved into widget model hooks and a new features/edit-template slice; FE suite 382/3186 green
