@@ -24,12 +24,13 @@ import (
 // configuration, the database, the model registry and catalog, object storage and the
 // mail edge (ARCH-6).
 type platform struct {
-	cfg      *config.Config
-	db       *db.DB
-	catalog  *modelcatalog.Service
-	registry *llm.Registry
-	bucket   *storage.Bucket
-	mailer   auth.Mailer
+	cfg           *config.Config
+	db            *db.DB
+	catalog       *modelcatalog.Service
+	speechCatalog *modelcatalog.SpeechService
+	registry      *llm.Registry
+	bucket        *storage.Bucket
+	mailer        auth.Mailer
 }
 
 func loadPlatform(ctx context.Context) (*platform, error) {
@@ -95,6 +96,7 @@ func (p *platform) load(ctx context.Context) error {
 	// boot itself never calls it.
 	p.catalog.SetUpstream(openrouter.New(registry.BaseURL(), cfg.CatalogFetchTimeout, cfg.CatalogTTL))
 	p.catalog.SetFreeQualifier(registry)
+	p.speechCatalog = modelcatalog.NewSpeechService(catalogStore, registry)
 	for _, m := range registry.Models() {
 		if m.Disabled {
 			slog.Warn("model disabled", "model", m.Ref.String(), "reason", m.DisabledReason)

@@ -57,7 +57,7 @@ func TestBuildContextsWiresEveryRequiredCollaborator(t *testing.T) {
 	}
 	registerJobs(app)
 	got := handlers(app)
-	if len(got) != 21 {
+	if len(got) != 22 {
 		t.Fatalf("handlers = %d, want every Connect service", len(got))
 	}
 	for _, register := range got {
@@ -73,6 +73,7 @@ func TestBuildContextsWiresEveryRequiredCollaborator(t *testing.T) {
 	for path, want := range map[string]int{
 		"/postpilot.v1.ClipMediaWorkerService/GetMediaRuntimeStatus": http.StatusNotFound,
 		"/postpilot.v1.PostService/ListPosts":                        http.StatusUnauthorized,
+		"/postpilot.v1.SpeechProfileService/ListSpeechProfiles":      http.StatusUnauthorized,
 	} {
 		r := httptest.NewRequest(http.MethodPost, path, strings.NewReader("{}"))
 		r.Header.Set("X-Media-Worker-ID", "prod-worker")
@@ -121,7 +122,8 @@ func wiringPlatform(t *testing.T, cfg *config.Config) *platform {
 	if err := catalog.Reload(ctx); err != nil {
 		t.Fatal(err)
 	}
-	return &platform{cfg: cfg, db: handle, catalog: catalog, registry: &llm.Registry{}, mailer: mail.NewLog()}
+	registry := &llm.Registry{}
+	return &platform{cfg: cfg, db: handle, catalog: catalog, speechCatalog: modelcatalog.NewSpeechService(modelcatalogstore.New(handle.Writer, handle.Reader), registry), registry: registry, mailer: mail.NewLog()}
 }
 
 // VOICE-4: the account bootstraps the server boots with create no voice — a verified signup

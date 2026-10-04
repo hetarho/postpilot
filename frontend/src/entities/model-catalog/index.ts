@@ -1,4 +1,15 @@
 export * from './config'
+export type {
+  SpeechProfileChoice,
+  SpeechCandidate,
+  SpeechProfileBinding,
+  SpeechOperationPrice,
+  SpeechPriceComponent,
+  AdminSpeechProfile,
+  SpeechAdminBrowse,
+} from './model/speech'
+export { useSpeechProfiles, useAdminSpeechProfiles } from './api/useSpeechProfiles'
+export { SpeechProfilePicker } from './ui/SpeechProfilePicker'
 export { useAssignEstimatorCombo } from './api/useAssignEstimatorCombo'
 export type {
   AdminCatalogEntry,

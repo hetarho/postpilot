@@ -265,6 +265,18 @@ export {
   ModelPurpose as ProtoModelPurpose,
 } from './gen/postpilot/v1/model_catalog_pb'
 export {
+  SpeechProfileService,
+  SpeechProfileChoiceSchema,
+  AdminSpeechProfileSchema,
+  AdminListSpeechProfilesResponseSchema,
+  ListSpeechProfilesResponseSchema,
+} from './gen/postpilot/v1/speech_profile_pb'
+export type {
+  SpeechProfileChoice as ProtoSpeechProfileChoice,
+  AdminSpeechProfile as ProtoAdminSpeechProfile,
+  AdminListSpeechProfilesResponse as ProtoSpeechAdminBrowse,
+} from './gen/postpilot/v1/speech_profile_pb'
+export {
   ApplyCatalogDocumentResponseSchema,
   CatalogEntrySchema,
   ExportCatalogDocumentResponseSchema,

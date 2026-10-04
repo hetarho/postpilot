@@ -83,12 +83,15 @@ var masterProcedures = map[string]bool{
 	// Curating the model catalog decides what every account may spend money on, so it sits
 	// with the tier assignment rather than with the per-account model choice ProviderService
 	// serves.
-	postpilotv1connect.ModelCatalogServiceListCatalogProcedure:            true,
-	postpilotv1connect.ModelCatalogServiceSetModelPurposeProcedure:        true,
-	postpilotv1connect.ModelCatalogServiceUpdateModelProcedure:            true,
-	postpilotv1connect.ModelCatalogServicePreviewCatalogDocumentProcedure: true,
-	postpilotv1connect.ModelCatalogServiceApplyCatalogDocumentProcedure:   true,
-	postpilotv1connect.ModelCatalogServiceExportCatalogDocumentProcedure:  true,
+	postpilotv1connect.ModelCatalogServiceListCatalogProcedure:               true,
+	postpilotv1connect.ModelCatalogServiceSetModelPurposeProcedure:           true,
+	postpilotv1connect.ModelCatalogServiceUpdateModelProcedure:               true,
+	postpilotv1connect.ModelCatalogServicePreviewCatalogDocumentProcedure:    true,
+	postpilotv1connect.ModelCatalogServiceApplyCatalogDocumentProcedure:      true,
+	postpilotv1connect.ModelCatalogServiceExportCatalogDocumentProcedure:     true,
+	postpilotv1connect.SpeechProfileServiceAdminListSpeechProfilesProcedure:  true,
+	postpilotv1connect.SpeechProfileServiceSaveSpeechProfileProcedure:        true,
+	postpilotv1connect.SpeechProfileServiceStartSpeechQualificationProcedure: true,
 
 	// Recommendation sets are advice every account is shown, so writing them is curation too
 	// (MODEL-69). Listing and applying one stay any account's.

@@ -3,3 +3,28 @@
 //   sqlc v1.31.1
 
 package sqlc
+
+type SpeechProfileRevision struct {
+	ProfileID      string
+	Revision       int64
+	ProviderID     string
+	DesignModelID  string
+	SpeechModelID  string
+	Label          string
+	Level          string
+	Enabled        int64
+	BindingJson    string
+	PricesJson     string
+	VoiceEvidence  string
+	ExportEvidence string
+	CreatedAt      string
+}
+
+type SpeechQualificationSession struct {
+	ID         string
+	OwnerID    string
+	ProfileID  string
+	Revision   int64
+	MaximumUsd string
+	ExpiresAt  string
+}

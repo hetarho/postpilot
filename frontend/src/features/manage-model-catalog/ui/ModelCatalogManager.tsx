@@ -27,6 +27,7 @@ import {
 } from '../model/catalog-view'
 import { CatalogModelList } from './CatalogModelList'
 import { CatalogDocumentPanel } from './CatalogDocumentPanel'
+import { SpeechCatalogManager } from './SpeechCatalogManager'
 
 /** The operator's model curation surface: browse what the provider offers, narrow it, and check
  *  the models this installation will let its accounts use — PER PURPOSE (MODEL-13). Each tab
@@ -45,7 +46,7 @@ function emptyMessageKey(catalogCount: number, tabCount: number) {
 }
 
 /** The five purposes, then 추천 조합 (MODEL-28). */
-type CatalogTab = ModelPurpose | 'recommendations'
+type CatalogTab = ModelPurpose | 'recommendations' | 'speech'
 
 export function ModelCatalogManager({
   recommendations,
@@ -63,7 +64,7 @@ export function ModelCatalogManager({
   const onRecommendations = tab === 'recommendations'
   const chooseTab = (next: CatalogTab) => {
     setTab(next)
-    if (next !== 'recommendations') setPurpose(next)
+    if (next !== 'recommendations' && next !== 'speech') setPurpose(next)
   }
   const { catalog, isPending, isError } = useAdminCatalog(purpose)
   const refresh = useRefreshCatalog(purpose)
@@ -137,6 +138,7 @@ export function ModelCatalogManager({
                 },
               ]
             : []),
+          { value: 'speech', label: t('speechAdmin.tab') },
         ]}
         onChange={chooseTab}
         ariaLabel={t('catalog.purposeAria')}
@@ -144,7 +146,11 @@ export function ModelCatalogManager({
         className="mt-6"
       />
 
-      {onRecommendations ? (
+      {tab === 'speech' ? (
+        <div id={panelId} role="tabpanel">
+          <SpeechCatalogManager />
+        </div>
+      ) : onRecommendations ? (
         // The sets are not a purpose: no capability gate, no search or filters, no provider
         // refresh. What they share with the purposes is the one 일괄 편집 document.
         <div id={panelId} role="tabpanel">

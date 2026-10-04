@@ -1,0 +1,122 @@
+syntax = "proto3";
+package postpilot.v1;
+option go_package = "github.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1";
+
+import "postpilot/v1/provider.proto";
+
+// This family never extends the five-purpose bulk document or model selections.
+service SpeechProfileService {
+  rpc ListSpeechProfiles(ListSpeechProfilesRequest) returns (ListSpeechProfilesResponse) {}
+  // These three procedures are in the closed master set.
+  rpc AdminListSpeechProfiles(AdminListSpeechProfilesRequest) returns (AdminListSpeechProfilesResponse) {}
+  rpc SaveSpeechProfile(SaveSpeechProfileRequest) returns (SaveSpeechProfileResponse) {}
+  rpc StartSpeechQualification(StartSpeechQualificationRequest) returns (StartSpeechQualificationResponse) {}
+}
+
+message SpeechProfileChoice {
+  string id = 1;
+  int64 revision = 2;
+  string label = 3;
+  ModelRef design_model = 4;
+  string design_label = 5;
+  ModelRef speech_model = 6;
+  string speech_label = 7;
+  string grade = 8;
+  string required_plan = 9;
+  bool entitled = 10;
+  bool available = 11;
+  string unavailable_reason = 12;
+  int32 description_max = 13;
+  int32 preview_min = 14;
+  int32 preview_max = 15;
+  int32 speech_max = 16;
+  bool voice_ready = 17;
+  bool export_ready = 18;
+}
+message ListSpeechProfilesRequest {
+  // A server-issued owner-scoped session from the explicit admin test action.
+  // Arbitrary flags and ordinary accounts receive no provisional access.
+  string qualification_session_id = 1;
+}
+message ListSpeechProfilesResponse { repeated SpeechProfileChoice profiles = 1; }
+
+message SpeechModelCandidate {
+  ModelRef ref = 1;
+  string label = 2;
+  bool design = 3;
+  bool synthesis = 4;
+  bool korean = 5;
+  bool style = 6;
+  bool speaker_boost = 7;
+  bool requires_alpha = 8;
+  int32 max_text = 9;
+  string token_cost_factor = 10;
+  string character_cost_multiplier = 11;
+  string cost_discount_multiplier = 12;
+}
+message SpeechProfileSettings {
+  double stability = 1;
+  double similarity_boost = 2;
+  double style = 3;
+  bool speaker_boost = 4;
+  double speed = 5;
+}
+message SpeechProfileBinding {
+  ModelRef design_model = 1;
+  ModelRef speech_model = 2;
+  SpeechProfileSettings settings = 3;
+  string output_format = 4;
+  int32 description_max = 5;
+  int32 preview_max = 6;
+  int32 speech_max = 7;
+}
+message SpeechPriceComponent {
+  string unit = 1;
+  string usd_per_unit = 2;
+  string multiplier = 3;
+  string maximum_units = 4;
+}
+message SpeechOperationPrice {
+  string operation = 1;
+  repeated SpeechPriceComponent charges = 2;
+  string source = 3;
+  string bounds_source = 4;
+  string checked_at = 5;
+  bool complete = 6;
+}
+// Master-only: no customer message embeds this type.
+message AdminSpeechProfile {
+  string id = 1;
+  int64 revision = 2;
+  string label = 3;
+  string grade = 4;
+  bool enabled = 5;
+  SpeechProfileBinding binding = 6;
+  repeated SpeechOperationPrice prices = 7;
+  bool voice_ready = 8;
+  bool export_ready = 9;
+}
+message AdminListSpeechProfilesRequest { bool refresh = 1; }
+message AdminListSpeechProfilesResponse {
+  repeated AdminSpeechProfile profiles = 1;
+  repeated SpeechModelCandidate candidates = 2;
+  repeated SpeechProfileChoice choices = 3;
+  string fetch_error = 4;
+}
+message SaveSpeechProfileRequest {
+  AdminSpeechProfile profile = 1;
+  int64 expected_revision = 2;
+}
+message SaveSpeechProfileResponse { AdminSpeechProfile profile = 1; }
+message StartSpeechQualificationRequest {
+  string profile_id = 1;
+  int64 revision = 2;
+  // An explicit operator budget; it is never in a customer projection.
+  string maximum_usd = 3;
+}
+message StartSpeechQualificationResponse {
+  string session_id = 1;
+  string profile_id = 2;
+  int64 revision = 3;
+  string expires_at = 4;
+}

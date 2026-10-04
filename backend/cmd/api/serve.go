@@ -169,6 +169,9 @@ func handlers(c *contexts) []rpcserver.Registrar {
 			return postpilotv1connect.NewModelCatalogServiceHandler(modelcatalogrpc.NewHandler(catalog), opts...)
 		},
 		func(opts ...connect.HandlerOption) (string, http.Handler) {
+			return postpilotv1connect.NewSpeechProfileServiceHandler(modelcatalogrpc.NewSpeechHandler(c.platform.speechCatalog), opts...)
+		},
+		func(opts ...connect.HandlerOption) (string, http.Handler) {
 			return postpilotv1connect.NewTemplateServiceHandler(templaterpc.NewHandler(c.template), opts...)
 		},
 		// One clip handler, five services (ARCH-41): the rpcs are grouped by family so a task

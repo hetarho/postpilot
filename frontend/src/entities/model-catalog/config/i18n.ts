@@ -4,6 +4,25 @@ import type { I18nFragment } from '@/shared/lib'
 export const i18n = {
   namespace: 'models',
   ko: {
+    speech: {
+      modelLabel: '목소리 생성 모델',
+      choose: '모델을 선택하세요',
+      unavailable: '지금은 사용할 수 없어요',
+      empty: '사용할 목소리 생성 모델이 아직 없어요.',
+      planRequired: '{{plan}} 요금제부터 사용할 수 있어요',
+      limits: '목소리 설명 {{description}}자 · 미리듣기 {{preview}}자 · 더빙 대본 {{speech}}자까지',
+      reason: {
+        SPEECH_CONNECTION_UNAVAILABLE: '목소리 생성 서비스를 지금 사용할 수 없어요',
+        SPEECH_PROFILE_UNAVAILABLE: '이 목소리 모델은 현재 제공되지 않아요',
+        SPEECH_BINDING_INCOMPATIBLE: '저장한 목소리와 모델의 조합을 사용할 수 없어요',
+        SPEECH_CATALOG_UNAVAILABLE: '모델 상태를 확인할 수 없어요. 잠시 뒤 다시 시도하세요',
+        SPEECH_PATH_UNSUPPORTED: '한국어 목소리 생성과 재사용 경로를 확인해야 해요',
+        SPEECH_PROFILE_CHANGED: '모델 정보가 바뀌어 다시 확인해야 해요',
+        SPEECH_PRICE_UNAVAILABLE: '생성 비용의 상한을 확인할 수 없어 지금은 사용할 수 없어요',
+        SPEECH_NOT_QUALIFIED: '실제 목소리 생성 검증을 기다리고 있어요',
+        MODEL_PLAN_REQUIRED: '{{plan}} 요금제부터 사용할 수 있어요',
+      },
+    },
     title: 'AI 모델',
     active: '활성 모델',
     vanished: '등록된 모델 목록에서 사라졌어요',
@@ -24,6 +43,26 @@ export const i18n = {
     },
   },
   en: {
+    speech: {
+      modelLabel: 'Voice creation model',
+      choose: 'Choose a model',
+      unavailable: 'Currently unavailable',
+      empty: 'No voice creation models are available yet.',
+      planRequired: 'Requires the {{plan}} plan',
+      limits:
+        'Description: {{description}} characters · audition: {{preview}} · spoken script: {{speech}}',
+      reason: {
+        SPEECH_CONNECTION_UNAVAILABLE: 'Voice creation is currently unavailable',
+        SPEECH_PROFILE_UNAVAILABLE: 'This voice model is currently unavailable',
+        SPEECH_BINDING_INCOMPATIBLE: 'The saved voice and model combination is incompatible',
+        SPEECH_CATALOG_UNAVAILABLE: 'Model status could not be checked. Try again shortly',
+        SPEECH_PATH_UNSUPPORTED: 'Korean voice creation and reuse need verification',
+        SPEECH_PROFILE_CHANGED: 'Model information changed and needs verification',
+        SPEECH_PRICE_UNAVAILABLE: 'A bounded generation cost could not be verified',
+        SPEECH_NOT_QUALIFIED: 'Waiting for live voice creation qualification',
+        MODEL_PLAN_REQUIRED: 'Requires the {{plan}} plan',
+      },
+    },
     title: 'AI models',
     active: 'Active model',
     vanished: 'No longer appears in the registered model list',

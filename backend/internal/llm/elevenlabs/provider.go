@@ -13,6 +13,7 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+	"sync"
 
 	"github.com/postpilot/backend/internal/llm"
 )
@@ -24,6 +25,8 @@ var reportedQuantity = regexp.MustCompile(`^[0-9]{1,18}(\.[0-9]{1,9})?$`)
 type Provider struct {
 	id, baseURL, key string
 	client           *http.Client
+	catalogMu        sync.Mutex
+	catalog          llm.SpeechCatalog
 }
 
 func Factory(cfg llm.SpeechAdapterConfig) (llm.SpeechProvider, error) {

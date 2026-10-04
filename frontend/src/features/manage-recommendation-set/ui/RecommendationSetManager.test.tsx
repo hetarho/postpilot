@@ -128,6 +128,7 @@ describe('the 추천 조합 tab', () => {
       '이미지 생성',
       '비디오 생성',
       '추천 조합',
+      '목소리',
     ])
     expect(tabs[5]).toHaveAttribute('aria-selected', 'true')
     expect(screen.getByRole('button', { name: '일괄 편집' })).toBeInTheDocument()
