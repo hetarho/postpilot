@@ -10,6 +10,27 @@ import (
 	"database/sql"
 )
 
+const advanceSubscriptionNextGrant = `-- name: AdvanceSubscriptionNextGrant :execrows
+UPDATE subscriptions SET next_grant_at = ?1
+WHERE user_id = ?2 AND next_grant_at = ?3
+`
+
+type AdvanceSubscriptionNextGrantParams struct {
+	NextGrantAt     string
+	UserID          string
+	ReadNextGrantAt string
+}
+
+// Moves the benefit boundary alone, and only from the value the caller read: a cancel,
+// refund lapse or upgrade written since then keeps every column it wrote, updated_at too.
+func (q *Queries) AdvanceSubscriptionNextGrant(ctx context.Context, arg AdvanceSubscriptionNextGrantParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, advanceSubscriptionNextGrant, arg.NextGrantAt, arg.UserID, arg.ReadNextGrantAt)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const deletePaymentMethod = `-- name: DeletePaymentMethod :exec
 DELETE FROM payment_methods WHERE user_id = ?
 `

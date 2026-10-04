@@ -247,6 +247,54 @@ func TestRunDueContinuesAfterOneSubscriptionFails(t *testing.T) {
 	}
 }
 
+// F38: the annual benefit step never writes the snapshot the pass read. A write landing between
+// DueSubscriptions and the step keeps every column it wrote; when that writer also moved the
+// boundary, the step matches nothing and the loop continues from a fresh read.
+func TestAnnualBenefitStepNeverRevertsAWriteLandingDuringThePass(t *testing.T) {
+	ctx := context.Background()
+	anchor := time.Date(2026, 1, 15, 0, 0, 0, 0, seoul)
+	due := time.Date(2026, 2, 15, 0, 0, 0, 0, seoul)
+	termEnd := time.Date(2027, 1, 15, 0, 0, 0, 0, seoul)
+	later := due.Add(time.Minute)
+
+	t.Run("cancel keeps auto-renew off and its updated_at", func(t *testing.T) {
+		store := newSubscriptionStore()
+		store.subscriptions["alice"] = activeSubscription("alice", plan.Pro, TermAnnual, anchor, termEnd, due, true)
+		store.afterDue = func() {
+			cancelled := store.subscriptions["alice"]
+			cancelled.AutoRenew, cancelled.UpdatedAt = false, later
+			store.subscriptions["alice"] = cancelled
+		}
+		service := newSubscriptionService(store, newSubscriptionProvider(), due)
+		if err := service.RunDue(ctx, due); err != nil {
+			t.Fatal(err)
+		}
+		after := store.subscriptions["alice"]
+		if after.AutoRenew || !after.UpdatedAt.Equal(later) || after.NextGrantAt.Month() != time.March {
+			t.Fatalf("subscription = %+v", after)
+		}
+	})
+
+	t.Run("refund lapse that moved the boundary stays lapsed", func(t *testing.T) {
+		store := newSubscriptionStore()
+		store.subscriptions["alice"] = activeSubscription("alice", plan.Pro, TermAnnual, anchor, termEnd, due, true)
+		store.afterDue = func() {
+			lapsed := store.subscriptions["alice"]
+			lapsed.Status, lapsed.AutoRenew = "lapsed", false
+			lapsed.TermEnd, lapsed.NextGrantAt, lapsed.UpdatedAt = later, later, later
+			store.subscriptions["alice"] = lapsed
+		}
+		service := newSubscriptionService(store, newSubscriptionProvider(), due)
+		if err := service.RunDue(ctx, due); err != nil {
+			t.Fatal(err)
+		}
+		after := store.subscriptions["alice"]
+		if after.Status != "lapsed" || !after.NextGrantAt.Equal(later) || !after.TermEnd.Equal(later) {
+			t.Fatalf("subscription = %+v", after)
+		}
+	})
+}
+
 type subscriptionStore struct {
 	subscriptions     map[string]Subscription
 	subscriptionReads int
@@ -257,6 +305,9 @@ type subscriptionStore struct {
 	plans             *subscriptionPlans
 	mailer            *subscriptionMailer
 	upsertFailureUser string
+	// afterDue runs once DueSubscriptions has handed out its snapshot: a write it makes is one
+	// landing between the pass's read and its steps.
+	afterDue func()
 	// markRefundedErr fails the step that marks a purchase refunded, which is the crash a
 	// resumable refund has to survive.
 	markRefundedErr error
@@ -350,7 +401,22 @@ func (s *subscriptionStore) DueSubscriptions(_ context.Context, at time.Time) ([
 		}
 	}
 	sort.Slice(due, func(i, j int) bool { return due[i].UserID < due[j].UserID })
+	if s.afterDue != nil {
+		s.afterDue()
+	}
 	return due, nil
+}
+func (s *subscriptionStore) AdvanceNextGrant(_ context.Context, userID string, from, to time.Time) (bool, error) {
+	if userID == s.upsertFailureUser {
+		return false, errors.New("subscription write failed")
+	}
+	current, found := s.subscriptions[userID]
+	if !found || !current.NextGrantAt.Equal(from) {
+		return false, nil
+	}
+	current.NextGrantAt = to
+	s.subscriptions[userID] = current
+	return true, nil
 }
 
 type monthlyWindow struct {

@@ -18,6 +18,8 @@ type fixedPayments struct {
 	captureThenTimeout bool
 	decline            bool
 	wrongAmount        bool
+	// chargeErr answers every charge with this error and captures nothing.
+	chargeErr error
 }
 
 func (p *fixedPayments) IssueBillingKey(context.Context, string, string) (billing.BillingKey, error) {
@@ -43,8 +45,11 @@ func (p *fixedPayments) Charge(_ context.Context, request billing.ChargeRequest)
 		p.charges = map[string]int{}
 	}
 	p.charges[request.OrderID]++
+	if p.chargeErr != nil {
+		return billing.Payment{}, p.chargeErr
+	}
 	if p.decline {
-		return billing.Payment{}, &billing.ProviderError{Code: "REJECT_CARD", HTTPStatus: 402}
+		return billing.Payment{}, &billing.ProviderError{Code: "REJECT_CARD_PAYMENT", HTTPStatus: 403}
 	}
 	payment := billing.Payment{PaymentKey: "pay-" + request.OrderID, OrderID: request.OrderID,
 		Status: "DONE", AmountKRW: request.KRW, BalanceKRW: request.KRW, Currency: "KRW"}
@@ -58,6 +63,10 @@ func (p *fixedPayments) Charge(_ context.Context, request billing.ChargeRequest)
 	}
 	return payment, nil
 }
+
+// settledByWorker is past the billing worker's settle grace: an order this old is the
+// worker's to reconcile, no longer the request path's that created it.
+const settledByWorker = 3 * time.Minute
 
 func fixedService(t *testing.T, at time.Time) (*ledgerHarness, *fixedPayments, *time.Time) {
 	t.Helper()
@@ -129,7 +138,7 @@ func TestFixedKRWCheckoutUpgradeAndPackFromRealStore(t *testing.T) {
 func TestFixedKRWCapturedChargeRecoversAfterLocalCommitFailure(t *testing.T) {
 	ctx := context.Background()
 	at := time.Date(2026, 3, 31, 12, 0, 0, 0, time.FixedZone("KST", 9*3600))
-	h, provider, _ := fixedService(t, at)
+	h, provider, clock := fixedService(t, at)
 	if _, err := h.handle.Writer.ExecContext(ctx, `CREATE TRIGGER block_charge BEFORE INSERT ON billing_events
       WHEN NEW.kind='charge' BEGIN SELECT RAISE(ABORT, 'simulated disk failure'); END`); err != nil {
 		t.Fatal(err)
@@ -147,6 +156,7 @@ func TestFixedKRWCapturedChargeRecoversAfterLocalCommitFailure(t *testing.T) {
 	if _, err := h.handle.Writer.ExecContext(ctx, "DROP TRIGGER block_charge"); err != nil {
 		t.Fatal(err)
 	}
+	*clock = at.Add(settledByWorker)
 	if err := h.service.ReconcilePending(ctx); err != nil {
 		t.Fatal(err)
 	}
@@ -178,6 +188,7 @@ func TestFixedKRWUnknownOutcomeAndFinalRenewalFailure(t *testing.T) {
 	if _, found, err := h.store.Subscription(ctx, "alice"); err != nil || found {
 		t.Fatalf("unknown outcome granted subscription: found=%t err=%v", found, err)
 	}
+	*clock = at.Add(settledByWorker)
 	if err := h.service.ReconcilePending(ctx); err != nil {
 		t.Fatal(err)
 	}
@@ -310,7 +321,7 @@ func TestFixedKRWSimultaneousUpgradeChargesOnce(t *testing.T) {
 func TestFixedKRWPackReplayAndProviderAmountMismatch(t *testing.T) {
 	ctx := context.Background()
 	at := time.Date(2026, 7, 10, 12, 0, 0, 0, time.FixedZone("KST", 9*3600))
-	h, provider, _ := fixedService(t, at)
+	h, provider, clock := fixedService(t, at)
 	if _, err := h.service.Subscribe(ctx, "alice", plan.Basic, billing.TermMonthly); err != nil {
 		t.Fatal(err)
 	}
@@ -322,6 +333,7 @@ func TestFixedKRWPackReplayAndProviderAmountMismatch(t *testing.T) {
 	if err := h.handle.Reader.QueryRowContext(ctx, "SELECT count(*) FROM credit_purchases").Scan(&purchased); err != nil || purchased != 0 {
 		t.Fatalf("unconfirmed pack count=%d err=%v", purchased, err)
 	}
+	*clock = at.Add(settledByWorker)
 	if err := h.service.ReconcilePending(ctx); err != nil {
 		t.Fatal(err)
 	}

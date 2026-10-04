@@ -12,6 +12,11 @@ import (
 
 const fixedQuoteLifetime = 10 * time.Minute
 
+// pendingSettleGrace keeps the billing worker off an order the request path created moments
+// ago: that path charges and settles the order itself, and a worker that found no payment
+// yet would race it to the provider.
+const pendingSettleGrace = 2 * time.Minute
+
 func (s *Service) intentStore() (IntentStore, error) {
 	store, ok := s.store.(IntentStore)
 	if !ok {

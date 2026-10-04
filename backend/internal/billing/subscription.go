@@ -132,13 +132,14 @@ func (s *Service) CoverageAt(ctx context.Context, userID string, at time.Time) (
 
 // RunDue advances every subscription that was due when the pass started. Each account is
 // caught up window by window; a failure is retained while the loop continues to later rows.
+// A failed order or refund reconciliation is logged and never stops the renewals.
 func (s *Service) RunDue(ctx context.Context, now time.Time) error {
 	if !s.Enabled() {
 		return ErrUnavailable
 	}
 	if s.fixedKRW {
 		if err := s.ReconcilePending(ctx); err != nil {
-			return err
+			slog.Error("pending order reconciliation failed", "err", err)
 		}
 		if err := s.ReconcilePendingRefunds(ctx); err != nil {
 			slog.Error("pending refund reconciliation failed", "err", err)
@@ -167,7 +168,7 @@ func (s *Service) RunDue(ctx context.Context, now time.Time) error {
 
 func (s *Service) runDueStep(ctx context.Context, subscription Subscription, now time.Time) (Subscription, error) {
 	if subscription.TermEnd.After(now) {
-		return s.grantAnnualWindow(ctx, subscription, now)
+		return s.grantAnnualWindow(ctx, subscription)
 	}
 	// A master account is never charged (BILL-20): a subscription it still holds from before
 	// its promotion ends here as a cancellation would, whatever its auto-renew flag says.
@@ -184,19 +185,34 @@ func (s *Service) runDueStep(ctx context.Context, subscription Subscription, now
 	return s.renew(ctx, subscription, now)
 }
 
-func (s *Service) grantAnnualWindow(ctx context.Context, subscription Subscription, now time.Time) (Subscription, error) {
-	start := subscription.NextGrantAt
-	_, end := plan.BenefitWindow(subscription.AnchorAt, start)
-	updated := subscription
-	updated.NextGrantAt = end
-	updated.UpdatedAt = now
+// grantAnnualWindow moves a mid-term row's benefit boundary and nothing else. The row this
+// pass read may be stale by now — a cancel, refund lapse or upgrade can land between
+// DueSubscriptions and this step — so the write is conditional on the boundary it read and
+// the loop continues from a fresh read rather than from the snapshot.
+func (s *Service) grantAnnualWindow(ctx context.Context, subscription Subscription) (Subscription, error) {
+	_, end := plan.BenefitWindow(subscription.AnchorAt, subscription.NextGrantAt)
+	var advanced bool
 	err := s.store.InWriteTx(ctx, func(tx Store, _ Credits, _ Plans) error {
-		if err := tx.UpsertSubscription(ctx, updated); err != nil {
-			return err
-		}
-		return nil
+		var err error
+		advanced, err = tx.AdvanceNextGrant(ctx, subscription.UserID, subscription.NextGrantAt, end)
+		return err
 	})
-	return updated, err
+	if err != nil {
+		return subscription, err
+	}
+	current, found, err := s.store.Subscription(ctx, subscription.UserID)
+	if err != nil {
+		return subscription, err
+	}
+	if !found {
+		return Subscription{UserID: subscription.UserID}, nil
+	}
+	if !advanced && current.NextGrantAt.Equal(subscription.NextGrantAt) {
+		// No writer moved the boundary yet the update matched nothing: stop here rather
+		// than retry the same step forever.
+		return current, fmt.Errorf("next grant of %s did not advance from %s", subscription.UserID, subscription.NextGrantAt)
+	}
+	return current, nil
 }
 
 func (s *Service) renew(ctx context.Context, subscription Subscription, now time.Time) (Subscription, error) {

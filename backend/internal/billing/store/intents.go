@@ -79,9 +79,9 @@ func (s *Store) PendingIntent(ctx context.Context, userID string) (billing.Inten
       WHERE user_id=? AND status IN ('pending','review') LIMIT 1`, userID))
 }
 
-func (s *Store) DueIntents(ctx context.Context) ([]billing.Intent, error) {
+func (s *Store) DueIntents(ctx context.Context, createdBefore time.Time) ([]billing.Intent, error) {
 	rows, err := s.db.QueryContext(ctx, `SELECT `+intentColumns+` FROM billing_intents
-      WHERE status='pending' ORDER BY created_at LIMIT 100`)
+      WHERE status='pending' AND created_at<=? ORDER BY created_at LIMIT 100`, formatTime(createdBefore))
 	if err != nil {
 		return nil, err
 	}

@@ -220,6 +220,9 @@ func (handlerStore) UpsertSubscription(context.Context, billing.Subscription) er
 func (handlerStore) DueSubscriptions(context.Context, time.Time) ([]billing.Subscription, error) {
 	return nil, nil
 }
+func (handlerStore) AdvanceNextGrant(context.Context, string, time.Time, time.Time) (bool, error) {
+	return false, nil
+}
 
 type handlerProvider struct{}
 

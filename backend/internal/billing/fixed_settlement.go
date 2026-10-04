@@ -13,6 +13,10 @@ import (
 // ReconcilePending resumes recorded orders after a timeout, process restart or
 // a provider success followed by a failed local commit. It never invents an
 // order or grants a benefit from a browser redirect.
+//
+// Each order is settled on its own: a captured payment that cannot be applied goes to
+// review, and any other failure is logged and collected while the pass moves on. Orders
+// younger than pendingSettleGrace are left to the request path that created them.
 func (s *Service) ReconcilePending(ctx context.Context) error {
 	if !s.fixedKRW {
 		return nil
@@ -21,16 +25,18 @@ func (s *Service) ReconcilePending(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	intents, err := journals.DueIntents(ctx)
+	intents, err := journals.DueIntents(ctx, s.now().Add(-pendingSettleGrace))
 	if err != nil {
 		return err
 	}
 	var failures []error
 	for _, intent := range intents {
-		if err := s.processFixedIntent(ctx, intent); err != nil &&
-			!errors.Is(err, ErrPaymentPending) && !errors.Is(err, ErrChargeFailed) {
-			failures = append(failures, fmt.Errorf("order %s: %w", intent.OrderID, err))
+		err := s.processFixedIntent(ctx, intent)
+		if err == nil || errors.Is(err, ErrPaymentPending) || errors.Is(err, ErrChargeFailed) {
+			continue
 		}
+		slog.Error("pending order reconciliation failed", "order_id", intent.OrderID, "user_id", intent.UserID, "err", err)
+		failures = append(failures, fmt.Errorf("order %s: %w", intent.OrderID, err))
 	}
 	return errors.Join(failures...)
 }
@@ -77,15 +83,18 @@ func (s *Service) processFixedIntent(ctx context.Context, intent Intent) error {
 			OrderID: intent.OrderID, KRW: intent.KRW, Name: fixedOrderName(intent),
 		})
 		if err != nil {
-			// A typed provider rejection is final. A timeout or network error has
-			// an unknown outcome and keeps the order pending for reconciliation.
-			var providerErr *ProviderError
-			if errors.As(err, &providerErr) && providerErr.HTTPStatus >= 400 && providerErr.HTTPStatus < 500 &&
-				providerErr.HTTPStatus != 409 && providerErr.Code != "ALREADY_PROCESSED_PAYMENT" {
+			// Only the card's own refusal is final (definitiveChargeRefusals). Anything
+			// else has an unknown outcome and keeps the order pending for reconciliation.
+			if definitiveChargeRefusal(err) {
 				if markErr := s.failFixedIntent(ctx, intent, "ABORTED"); markErr != nil {
 					return errors.Join(ErrChargeFailed, err, markErr)
 				}
 				return errors.Join(ErrChargeFailed, err)
+			}
+			var providerErr *ProviderError
+			if errors.As(err, &providerErr) {
+				slog.Warn("charge outcome unresolved; order stays pending", "order_id", intent.OrderID,
+					"status", providerErr.HTTPStatus, "code", providerErr.Code)
 			}
 			return errors.Join(ErrPaymentPending, err)
 		}
@@ -126,21 +135,45 @@ func (s *Service) reconcileFixedPayment(ctx context.Context, intent Intent, paym
 }
 
 func (s *Service) reviewFixedIntent(ctx context.Context, intent Intent, payment Payment) error {
+	var marked bool
 	err := s.store.InWriteTx(ctx, func(tx Store, _ Credits, _ Plans) error {
 		journals := tx.(IntentStore)
-		_, err := journals.MarkIntent(ctx, intent.OrderID, "review", payment.Status, payment.PaymentKey, s.now())
+		var err error
+		marked, err = journals.MarkIntent(ctx, intent.OrderID, "review", payment.Status, payment.PaymentKey, s.now())
 		return err
 	})
 	if err != nil {
 		return err
 	}
+	if marked {
+		logReview(intent, errors.New("provider payment does not match the order"))
+	}
 	return ErrPaymentPending
+}
+
+// logReview records why a captured order left the pass: from review only an operator can
+// apply, refund or void it.
+func logReview(intent Intent, cause error) {
+	slog.Error("captured order moved to review", "order_id", intent.OrderID, "user_id", intent.UserID,
+		"kind", intent.Kind, "err", cause)
+}
+
+// errUnknownIntentKind refuses a journal row no apply path knows.
+var errUnknownIntentKind = errors.New("unknown billing intent kind")
+
+// unapplicable reports an apply refusal no retry can change: the captured payment no
+// longer fits the order it was charged for (a stale quote, an edited pack price, a
+// proration that no longer computes). Any other error — a storage or commit failure —
+// is transient and keeps the order pending.
+func unapplicable(err error) bool {
+	return errors.Is(err, ErrStaleQuote) || errors.Is(err, ErrInvalidPack) ||
+		errors.Is(err, plan.ErrInvalidProration) || errors.Is(err, errUnknownIntentKind)
 }
 
 func (s *Service) applyFixedPayment(ctx context.Context, intent Intent, payment Payment) error {
 	now := s.now()
 	var firstApply bool
-	var review bool
+	var review error
 	err := s.store.InWriteTx(ctx, func(tx Store, credits Credits, plans Plans) error {
 		journals := tx.(IntentStore)
 		current, found, err := journals.Intent(ctx, intent.OrderID)
@@ -157,10 +190,14 @@ func (s *Service) applyFixedPayment(ctx context.Context, intent Intent, payment 
 			return ErrPaymentPending
 		}
 		if err := s.applyFixedEntitlement(ctx, tx, credits, plans, current, payment, now); err != nil {
-			if errors.Is(err, ErrStaleQuote) {
-				_, markErr := journals.MarkIntent(ctx, current.OrderID, "review", payment.Status, payment.PaymentKey, now)
-				review = markErr == nil
-				return markErr
+			// Every refusal returns before the apply path writes, so this transaction
+			// commits the review mark alone.
+			if unapplicable(err) {
+				if _, markErr := journals.MarkIntent(ctx, current.OrderID, "review", payment.Status, payment.PaymentKey, now); markErr != nil {
+					return markErr
+				}
+				review = err
+				return nil
 			}
 			return err
 		}
@@ -193,7 +230,8 @@ func (s *Service) applyFixedPayment(ctx context.Context, intent Intent, payment 
 	if err != nil {
 		return err
 	}
-	if review {
+	if review != nil {
+		logReview(intent, review)
 		return ErrPaymentPending
 	}
 	if !firstApply {
@@ -248,7 +286,7 @@ func (s *Service) applyFixedEntitlement(ctx context.Context, tx Store, credits C
 	case "pack":
 		return s.applyFixedPack(ctx, tx, credits, intent, payment, now)
 	default:
-		return fmt.Errorf("unknown billing intent kind %q", intent.Kind)
+		return fmt.Errorf("%w %q", errUnknownIntentKind, intent.Kind)
 	}
 }
 

@@ -11,12 +11,17 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 	"unicode"
 
 	"github.com/postpilot/backend/internal/billing"
 )
 
 const apiEndpoint = "https://api.tosspayments.com"
+
+// RequestTimeout bounds one Toss Payments call. A billing pass makes its calls one account
+// after another, so a hung connection must not hold every later renewal behind it.
+const RequestTimeout = 30 * time.Second
 
 type Client struct {
 	secretKey string
@@ -56,13 +61,16 @@ func (c *Client) IssueBillingKey(ctx context.Context, authKey, customerKey strin
 	return billing.BillingKey{Value: response.BillingKey, CustomerKey: response.CustomerKey, CardLabel: label}, nil
 }
 
+// Charge approves a billing-key payment. The order id doubles as the Idempotency-Key, so a
+// retry of the same order inside Toss's 15-day key window answers with the first response
+// instead of capturing again.
 func (c *Client) Charge(ctx context.Context, request billing.ChargeRequest) (billing.Payment, error) {
 	var response paymentResponse
 	path := "/v1/billing/" + url.PathEscape(request.BillingKey)
-	err := c.do(ctx, http.MethodPost, path, map[string]any{
+	_, err := c.doStatusWithKey(ctx, http.MethodPost, path, map[string]any{
 		"customerKey": request.CustomerKey, "amount": request.KRW,
 		"orderId": request.OrderID, "orderName": request.Name,
-	}, &response)
+	}, &response, request.OrderID)
 	return response.domain(), err
 }
 

@@ -141,6 +141,16 @@ func (s *Store) UpsertSubscription(ctx context.Context, subscription billing.Sub
 	return nil
 }
 
+func (s *Store) AdvanceNextGrant(ctx context.Context, userID string, from, to time.Time) (bool, error) {
+	rows, err := s.write.AdvanceSubscriptionNextGrant(ctx, sqlc.AdvanceSubscriptionNextGrantParams{
+		NextGrantAt: formatTime(to), UserID: userID, ReadNextGrantAt: formatTime(from),
+	})
+	if err != nil {
+		return false, fmt.Errorf("advance subscription next grant: %w", err)
+	}
+	return rows == 1, nil
+}
+
 func (s *Store) DueSubscriptions(ctx context.Context, at time.Time) ([]billing.Subscription, error) {
 	rows, err := s.read.ListDueSubscriptions(ctx, formatTime(at))
 	if err != nil {

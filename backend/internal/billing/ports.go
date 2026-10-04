@@ -21,6 +21,9 @@ type Store interface {
 	InsertPurchase(ctx context.Context, purchase Purchase) error
 	MarkPurchaseRefunded(ctx context.Context, userID, purchaseID string, at time.Time) (bool, error)
 	UpsertSubscription(ctx context.Context, subscription Subscription) error
+	// AdvanceNextGrant moves next_grant_at alone, and only while it still holds `from`; false
+	// means another writer moved the row since the caller read it.
+	AdvanceNextGrant(ctx context.Context, userID string, from, to time.Time) (bool, error)
 	DueSubscriptions(ctx context.Context, at time.Time) ([]Subscription, error)
 	TierAt(ctx context.Context, userID, coverageID string, at time.Time) (plan.Plan, error)
 	InsertTierTransition(ctx context.Context, userID, coverageID string, at time.Time, tier plan.Plan, correlationID string) error
@@ -37,7 +40,8 @@ type IntentStore interface {
 	InsertIntent(context.Context, Intent) error
 	Intent(context.Context, string) (Intent, bool, error)
 	PendingIntent(context.Context, string) (Intent, bool, error)
-	DueIntents(context.Context) ([]Intent, error)
+	// DueIntents lists pending orders created at or before createdBefore.
+	DueIntents(ctx context.Context, createdBefore time.Time) ([]Intent, error)
 	MarkIntent(context.Context, string, string, string, string, time.Time) (bool, error)
 }
 

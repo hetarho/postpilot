@@ -162,6 +162,9 @@ func (s *registrationStore) UpsertSubscription(_ context.Context, subscription S
 func (*registrationStore) DueSubscriptions(context.Context, time.Time) ([]Subscription, error) {
 	return nil, nil
 }
+func (*registrationStore) AdvanceNextGrant(context.Context, string, time.Time, time.Time) (bool, error) {
+	return false, nil
+}
 
 type registrationCredits struct{ grants map[string]bool }
 
@@ -302,6 +305,9 @@ func (emptyStore) MarkPurchaseRefunded(context.Context, string, string, time.Tim
 func (emptyStore) UpsertSubscription(context.Context, Subscription) error { return nil }
 func (emptyStore) DueSubscriptions(context.Context, time.Time) ([]Subscription, error) {
 	return nil, nil
+}
+func (emptyStore) AdvanceNextGrant(context.Context, string, time.Time, time.Time) (bool, error) {
+	return false, nil
 }
 
 type stubProvider struct{}

@@ -171,7 +171,7 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 		exports: clipstore.New(handle.Writer, handle.Reader),
 	})
 	if cfg.BillingEnabled {
-		c.payments = tosspay.New(cfg.TossSecretKey, http.DefaultClient)
+		c.payments = tosspay.New(cfg.TossSecretKey, &http.Client{Timeout: tosspay.RequestTimeout})
 	}
 	c.billing = billing.NewService(
 		c.billingStore, c.payments, nil, billingCredits{Service: c.ledger, exports: clipstore.New(handle.Writer, handle.Reader)}, c.auth, c.auth,

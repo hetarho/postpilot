@@ -113,6 +113,12 @@ ON CONFLICT(user_id) DO UPDATE SET
     updated_at = excluded.updated_at,
     coverage_id = excluded.coverage_id;
 
+-- name: AdvanceSubscriptionNextGrant :execrows
+-- Moves the benefit boundary alone, and only from the value the caller read: a cancel,
+-- refund lapse or upgrade written since then keeps every column it wrote, updated_at too.
+UPDATE subscriptions SET next_grant_at = sqlc.arg(next_grant_at)
+WHERE user_id = sqlc.arg(user_id) AND next_grant_at = sqlc.arg(read_next_grant_at);
+
 -- name: ListDueSubscriptions :many
 SELECT user_id, tier, term, anchor_at, term_start, term_end, next_grant_at, auto_renew,
        scheduled_tier, scheduled_term, status, created_at, updated_at, coverage_id

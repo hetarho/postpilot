@@ -78,6 +78,32 @@ func TestTossProviderEndpointsBodiesAndErrorMapping(t *testing.T) {
 	}
 }
 
+// F11: the billing-key charge carries its order id as Toss's Idempotency-Key, so a retried
+// order answers with the first response instead of capturing twice; a read carries none.
+func TestChargeSendsTheOrderIDAsIdempotencyKey(t *testing.T) {
+	keys := map[string]string{}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		keys[r.Method+" "+r.URL.Path] = r.Header.Get("Idempotency-Key")
+		_, _ = io.WriteString(w, `{"paymentKey":"pay-1","orderId":"pp-ren-1","status":"DONE","totalAmount":9900,"currency":"KRW"}`)
+	}))
+	defer server.Close()
+	client := New("test_sk", server.Client())
+	client.endpoint = server.URL
+	if _, err := client.Charge(context.Background(), billing.ChargeRequest{BillingKey: "billing-1",
+		CustomerKey: "customer-1", OrderID: "pp-ren-1", KRW: 9900, Name: "Basic monthly"}); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := client.PaymentByOrder(context.Background(), "pp-ren-1"); err != nil {
+		t.Fatal(err)
+	}
+	if got := keys["POST /v1/billing/billing-1"]; got != "pp-ren-1" {
+		t.Fatalf("charge Idempotency-Key = %q", got)
+	}
+	if got, seen := keys["GET /v1/payments/orders/pp-ren-1"]; !seen || got != "" {
+		t.Fatalf("order read Idempotency-Key = %q seen=%t", got, seen)
+	}
+}
+
 func TestParseNotificationSupportsCurrentDataEnvelope(t *testing.T) {
 	client := New("test", nil)
 	body := []byte(`{"eventType":"PAYMENT_STATUS_CHANGED","data":{"paymentKey":"pay-1","orderId":"order-1","status":"DONE"}}`)

@@ -109,6 +109,9 @@ func (s *webhookStore) UpsertSubscription(context.Context, billing.Subscription)
 func (s *webhookStore) DueSubscriptions(context.Context, time.Time) ([]billing.Subscription, error) {
 	return nil, nil
 }
+func (s *webhookStore) AdvanceNextGrant(context.Context, string, time.Time, time.Time) (bool, error) {
+	return false, nil
+}
 func (s *webhookStore) TierAt(context.Context, string, string, time.Time) (plan.Plan, error) {
 	return plan.Basic, nil
 }
