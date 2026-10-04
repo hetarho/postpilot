@@ -102,19 +102,6 @@ func (r *Rendering) compositionInputsFormat(ctx context.Context, ws clip.MediaWo
 	return append(args, "-filter_complex", graph), nil
 }
 
-// assembleAudio joins every cut's audio on the SAME timeline the video takes and
-// writes it uncompressed, so the measurement pass and the final encode read one
-// identical track rather than measuring one thing and encoding another.
-func (r *Rendering) assembleAudio(ctx context.Context, ws clip.MediaWorkspace, cuts []string, frames, transitions []int, path string) error {
-	args := r.baseArgs()
-	for _, cut := range cuts {
-		args = r.inputArgs(args, cut)
-	}
-	args = append(args, "-filter_complex", compositionAudioGraph(r.cfg, frames, transitions, 0))
-	args = append(args, "-map", "[a]", "-vn", "-c:a", "pcm_s16le", "-ar", strconv.Itoa(r.cfg.AudioRate), "-ac", "2", "-f", "wav")
-	return r.runRender(ctx, ws, path, args)
-}
-
 // compositionAudioGraph cross-fades every boundary CDS-35 names, and takes
 // exactly as much of the timeline as the video does at each one.
 //

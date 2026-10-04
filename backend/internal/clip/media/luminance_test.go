@@ -2,14 +2,11 @@ package media
 
 import (
 	"context"
-	"fmt"
 	"image"
 	"image/color"
 	"image/png"
 	"math"
 	"os"
-	"slices"
-	"strings"
 	"testing"
 
 	"github.com/postpilot/backend/internal/clip"
@@ -155,96 +152,6 @@ func TestScrimGeometryAndEffectiveBackground(t *testing.T) {
 	dark := Luminance{Mean: 0.05, R: 0.05, G: 0.05, B: 0.05, Frames: []float64{0.05}}
 	if got := dark.Background(canvas, bare, "bottom", copyAt(1270)); got != dark.Hex() {
 		t.Fatalf("an unwashed ground is the footage itself: %s", got)
-	}
-}
-
-// The sampler itself: three frames from the cut's own source, taken through the
-// same cover-crop chain the render uses, read in Go (CDS-44).
-func TestSamplerTakesThreeFramesThroughTheRenderChain(t *testing.T) {
-	frames := []image.Image{fill(0xff), fill(0x80), fill(0x00)}
-	var seeks, filters []string
-	reads := 0
-	a := newAdapter(t, &fakeRunner{run: func(_ context.Context, c Command) ([]byte, error) {
-		reads++
-		input := slices.Index(c.Args, "-i")
-		before := " " + strings.Join(c.Args[:input], " ") + " "
-		// The decoder may use the cores the encode cannot; filter threads are
-		// untouched by that split and the PNG is still written single-threaded.
-		after := " " + strings.Join(c.Args[input:], " ") + " "
-		if !strings.Contains(before, " -threads 2 ") || !strings.Contains(before, " -filter_threads 1 ") || !strings.Contains(after, " -threads 1 ") {
-			t.Fatal("sampler uses the wrong decoder/filter/encoder threads", c.Args)
-		}
-		for i, arg := range c.Args {
-			switch arg {
-			case "-ss":
-				seeks = append(seeks, c.Args[i+1])
-			case "-vf":
-				filters = append(filters, c.Args[i+1])
-			}
-		}
-		written := 0
-		for _, arg := range c.Args {
-			if !strings.HasSuffix(arg, ".png") {
-				continue
-			}
-			f, err := os.Create(arg)
-			if err != nil {
-				return nil, err
-			}
-			err = png.Encode(f, frames[min(written, len(frames)-1)])
-			_ = f.Close()
-			if err != nil {
-				return nil, err
-			}
-			written++
-		}
-		return nil, nil
-	}})
-	r := testRenderer(t, a)
-	canvas, _ := clip.ClipCanvas("vertical")
-	cut := clip.EditCut{StartMS: 2000, EndMS: 9000, Focal: clip.Point{X: 0.25, Y: 0.75}}
-	if err := a.WithWorkspace(t.Context(), "sample", func(ws clip.MediaWorkspace) error {
-		ground, err := r.sample(t.Context(), ws, canvas, clip.MediaSource{Path: sourceFile(t, ws)}, cut,
-			[2]int{120, 6880}, clip.Region{X: 300, Y: 1200, Width: 400, Height: 110}, 0)
-		if err != nil {
-			return err
-		}
-		// The first, middle and last frame of the copy window, on the SOURCE's
-		// own clock: the cut's start plus the window's own offset — and all three
-		// from ONE read of the footage rather than a seek and decode each.
-		if strings.Join(seeks, " ") != "2.120 5.500 8.879" {
-			return fmt.Errorf("seeks %q", seeks)
-		}
-		if reads != 1 {
-			return fmt.Errorf("%d reads of the footage for three frames", reads)
-		}
-		// Each through the render's scale-and-crop, so the luminance measured is
-		// the luminance the viewer sees.
-		for _, f := range filters {
-			if f != coverChain(canvas, cut.Focal) {
-				return fmt.Errorf("sampled raw source pixels: %q", f)
-			}
-		}
-		// White, mid grey and black: the mean is their mean and σ their spread.
-		if len(ground.Frames) != 3 || ground.Mean <= 0.2 || ground.Mean >= 0.5 || ground.Sigma < 0.3 {
-			return fmt.Errorf("%+v", ground)
-		}
-		if !ground.Scrim() {
-			return fmt.Errorf("footage swinging white to black is busy: %+v", ground)
-		}
-		// Nothing is left behind in the workspace.
-		entries, err := os.ReadDir(ws.Path)
-		if err != nil {
-			return err
-		}
-		for _, e := range entries {
-			if strings.HasPrefix(e.Name(), "sample-") {
-				return fmt.Errorf("left %s behind", e.Name())
-			}
-		}
-		return nil
-	}); err != nil {
-		t.Fatal(err)
 	}
 }
 

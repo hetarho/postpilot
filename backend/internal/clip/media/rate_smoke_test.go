@@ -113,7 +113,7 @@ func TestRenderSmokeRatesAndSourceAudio(t *testing.T) {
 					settings.Values = append(settings.Values, clip.SourceAudioSetting{SourceID: key, Fingerprint: key, RetainOriginal: retain})
 				}
 				plan.SourceAudio = settings
-				result, err := r.Render(t.Context(), ws, plan, sources, load)
+				result, err := r.Render(t.Context(), ws, footagePlan(t, plan, `<clip version="1"/>`), sources, load)
 				if err != nil {
 					t.Fatalf("%s: %v", audio, err)
 				}

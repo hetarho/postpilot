@@ -3,6 +3,7 @@ package media
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -32,6 +33,16 @@ func copySVG(canvas clip.Canvas, c clip.Copy, l copyLayout, ground Luminance) st
 }
 func furnitureSVG(canvas clip.Canvas, f furniture) string {
 	return builtinSVG("furniture", furnitureView(canvas, f))
+}
+
+// copyPlate draws one caption plate the way a composition draws a static
+// caption: the template its style is bound to, rasterized onto the canvas.
+func copyPlate(ctx context.Context, r *Rendering, ws clip.MediaWorkspace, canvas clip.Canvas, c clip.Copy, l copyLayout, index int) (string, error) {
+	svg, err := r.overlays.Render("copy."+c.Style, copyView(canvas, c, l, Luminance{}))
+	if err != nil {
+		return "", err
+	}
+	return r.rasterize(ctx, ws, canvas, svg, fmt.Sprintf("copy-%04d", index))
 }
 
 func overlayDirectory(t *testing.T) string {
@@ -112,7 +123,7 @@ func TestRendererUsesNewPresetFromFilesWithoutAnotherStyleSwitch(t *testing.T) {
 		t.Fatal(err)
 	}
 	err = a.WithWorkspace(t.Context(), "asset-preset", func(ws clip.MediaWorkspace) error {
-		_, err := r.copyPlate(t.Context(), ws, canvas, copy, l, 0, Luminance{})
+		_, err := copyPlate(t.Context(), r, ws, canvas, copy, l, 0)
 		return err
 	})
 	if err != nil {

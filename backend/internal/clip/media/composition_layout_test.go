@@ -95,26 +95,6 @@ func TestManualRapidWindowsSurviveLayoutAndRepeatedPreviewExactly(t *testing.T) 
 	}
 }
 
-func TestDeclaredSentencesAreSequentialAndExplicitOutputIsIndependent(t *testing.T) {
-	plan := declaredPlan(t, `<clip version="1" intro="b" caption="bold" outro="e"><scene id="scene"><text id="first" kind="ai" role="caption" basis="cut">First scene sentence.</text><text id="second" kind="ai" role="caption" basis="cut">Second scene sentence.</text><text id="third" kind="ai" role="caption" basis="cut">Third scene sentence.</text></scene><text id="fixed" kind="fixed" role="badge" basis="whole">직접 쓴 문구</text><text id="empty-hook" kind="fixed" role="hook" basis="output-start"/><text id="empty-ending" kind="fixed" role="ending" basis="output-end"/></clip>`, "vertical")
-	for i := range plan.Portable.Elements {
-		if plan.Portable.Elements[i].Resolved.Element.Kind == "ai" {
-			plan.Portable.Elements[i].Resolved.Text = "현재 장면"
-		}
-	}
-	layout := measuredDeclared(t, plan)
-	byID := map[string]clip.CompositionElement{}
-	for _, element := range layout.elements() {
-		byID[element.ElementID] = element
-	}
-	if len(byID) != 3 || byID["first"].EndMS != byID["second"].StartMS || byID["fixed"].StartMS != 0 || byID["fixed"].EndMS != 15000 {
-		t.Fatalf("bad sequence: %+v", byID)
-	}
-	if len(layout.plan.Portable.Fallbacks) != 1 || layout.plan.Portable.Fallbacks[0].Reason != "sentence_count" {
-		t.Fatal("missing omission reason")
-	}
-}
-
 func TestDeclaredHeaderSharesOpticalHeightOnlyWhileVisible(t *testing.T) {
 	for _, ratio := range []string{"vertical", "horizontal", "square"} {
 		plan := declaredPlan(t, `<clip version="1" intro="b" caption="bold" outro="e"><text id="badge" kind="fixed" role="badge" basis="output-start" start="1" end="5">유료 제작 지원</text><text id="info" kind="fixed" role="info" basis="output-start" start="1" end="5"><row role="label">금액</row><row role="caption">9,900원</row></text><text id="later" kind="fixed" role="info" basis="output-start" start="6" end="10">별도 조건</text><text id="empty-hook" kind="fixed" role="hook" basis="output-start"/><text id="empty-ending" kind="fixed" role="ending" basis="output-end"/></clip>`, ratio)

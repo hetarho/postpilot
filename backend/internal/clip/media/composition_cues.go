@@ -47,7 +47,6 @@ func scheduleDeclaredCaptions(plan clip.EditPlan) ([]clip.PortableText, []clip.C
 		}
 	}
 	scheduleNarration(plan, result, dropped, &fallbacks)
-	scheduleCutCaptions(result, dropped, &fallbacks)
 	kept := result[:0]
 	for i, text := range result {
 		if !dropped[i] {
@@ -154,54 +153,6 @@ func setNarrationWindow(text *clip.PortableText, start, end int) {
 	}
 	// An automatic rapid caption's phrase windows are rebuilt in the new span.
 	text.Phrases = nil
-}
-
-// scheduleCutCaptions is the sequencing a FROZEN legacy plan was written under:
-// its captions belong to a cut, at most two of them, sharing that cut's window.
-// Nothing written today takes this path — the narration owns its own interval.
-func scheduleCutCaptions(result []clip.PortableText, dropped map[int]bool, fallbacks *[]clip.CopyFallback) {
-	groups := map[string][]int{}
-	order := []string{}
-	for i, text := range result {
-		if !dropped[i] && text.Scope != clip.NarrationScope && text.Resolved.Element.Role == "caption" && clip.AutomaticCompositionRepair(text) {
-			if _, seen := groups[text.Resolved.CutID]; !seen {
-				order = append(order, text.Resolved.CutID)
-			}
-			groups[text.Resolved.CutID] = append(groups[text.Resolved.CutID], i)
-		}
-	}
-	for _, id := range order {
-		indices := groups[id]
-		for _, i := range indices[min(2, len(indices)):] {
-			dropped[i] = true
-			*fallbacks = append(*fallbacks, clip.CopyFallback{ElementID: result[i].Resolved.Element.ID, CutID: result[i].Resolved.CutID, Reason: "sentence_count"})
-		}
-		if len(indices) < 2 {
-			continue
-		}
-		a, b := &result[indices[0]], &result[indices[1]]
-		start, end := max(a.Resolved.StartMS, b.Resolved.StartMS), min(a.Resolved.EndMS, b.Resolved.EndMS)
-		minimum := func(t clip.PortableText) int {
-			n := readingFloor(t, t.Resolved.Text)
-			for _, alternative := range t.Alternatives {
-				if alternative.Text != "" {
-					n = min(n, readingFloor(t, alternative.Text))
-				}
-			}
-			return n
-		}
-		first, second := minimum(*a), minimum(*b)
-		if first+second > end-start {
-			dropped[indices[1]] = true
-			*fallbacks = append(*fallbacks, clip.CopyFallback{ElementID: b.Resolved.Element.ID, CutID: b.Resolved.CutID, Reason: "readability"})
-			continue
-		}
-		// Allocate excess in proportion to the full sentence's reading need.
-		weightA, weightB := clip.MinExposureMS(a.Resolved.Text), clip.MinExposureMS(b.Resolved.Text)
-		boundary := start + first + (end-start-first-second)*weightA/(weightA+weightB)
-		a.Resolved.StartMS, a.Resolved.EndMS = start, boundary
-		b.Resolved.StartMS, b.Resolved.EndMS = boundary, end
-	}
 }
 
 func (r *Rendering) layoutDeclaredRapid(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, plan clip.EditPlan, text clip.PortableText, placed clip.Manifest, previous string) (declaredVisual, error) {

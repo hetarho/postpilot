@@ -318,54 +318,6 @@ var layoutReasons = map[string]string{
 
 func (e planViolation) LayoutReason() string { return layoutReasons[string(e)] }
 
-// FurnitureSlot marks a layout failure the design system's own furniture caused.
-const FurnitureSlot = design.FurnitureSlot
-
-// LayoutError is one verifier failure and the caption it names: the (cut, copy)
-// whose style, anchor or presence the repair ladder may change (CDS-55), or the
-// furniture slot when the badge or a card failed — a renderer defect no
-// caption repair can reach. It keeps the invalid-plan identity and the
-// content-free reason every caller already understands.
-type LayoutError struct {
-	planViolation
-	Cut, Copy int
-}
-
-func (e *LayoutError) Unwrap() error   { return ErrInvalid }
-func (e *LayoutError) Furniture() bool { return e.Cut < 0 }
-
-// LayoutViolation restates one design-system violation the renderer found on its
-// own — V3's contrast, which only exists once the footage under a copy has been
-// sampled (CDS-44) — naming the caption it was measured on.
-func LayoutViolation(v design.Violation, cut, copy int) error {
-	return &LayoutError{planViolation(v), cut, copy}
-}
-
-// VerifyLayout enforces delivery checks (CDS-52), excluding advisory overlaps
-// (CDS-56), and names the caption a blocking failure belongs to (CDS-55).
-func VerifyLayout(ratio string, m Manifest, hideDisclosure ...bool) error {
-	err := design.VerifyRenderable(m, ratio, hideDisclosure...)
-	var f *design.Failure
-	if errors.As(err, &f) {
-		return &LayoutError{planViolation(f.Check), f.Cut, f.Copy}
-	}
-	var v design.Violation
-	if errors.As(err, &v) {
-		return &LayoutError{planViolation(v), FurnitureSlot, FurnitureSlot}
-	}
-	return err
-}
-
-// Compiled reports whether this plan came straight from the compiler, which is
-// the one thing that decides who owns a style choice. The per-cut decisions are
-// the compiler's own output and are never stored with a plan (they are not part
-// of the approved composition), so a plan that still carries one per cut has not
-// been through a person. It is what lets a contrast fallback stay silent on a
-// machine's choice and be reported on a person's (CDS-44, CDS-52).
-func (p EditPlan) Compiled() bool {
-	return len(p.Cuts) > 0 && len(p.Decisions) == len(p.Cuts)
-}
-
 // WithDesign is how the PROJECT's design selection reaches a render (CLIP-139):
 // the pace and the accent, the two region presets and the caption styles this
 // clip may use. The project's values are the only ones: an empty pace or accent
@@ -388,14 +340,6 @@ func (p EditPlan) CaptionPaceOrDefault() string {
 		return "steady"
 	}
 	return p.CaptionPace
-}
-
-// WithDisclosure fills the badge's render inputs from the project. It is called
-// at render time rather than at approval time so a stored plan never carries a
-// stale disclosure.
-func (p EditPlan) WithDisclosure(disclosure string, hideDisclosure bool) EditPlan {
-	p.Disclosure, p.HideDisclosure = disclosure, hideDisclosure
-	return p
 }
 
 func ValidateEditPlan(cfg RenderConfig, plan EditPlan, sources []RenderSource) error {

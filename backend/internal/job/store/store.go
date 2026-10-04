@@ -289,20 +289,6 @@ func (s *Store) ActiveFor(ctx context.Context, subject job.Subject, filter job.F
 
 // LatestFor is the most recent job of a subject, terminal or not.
 func (s *Store) LatestFor(ctx context.Context, subject job.Subject, filter job.Filter) (*job.Job, error) {
-	if subject.Dimension == dimensionVoice {
-		if filter.Kind == "" || filter.UserID != "" {
-			return nil, fmt.Errorf("latest for voice: one kind and no user filter")
-		}
-		row, err := s.read.LatestForVoiceKind(ctx, sqlc.LatestForVoiceKindParams{VoiceID: nullString(subject.ID), Kind: filter.Kind})
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil
-		}
-		if err != nil {
-			return nil, fmt.Errorf("select latest job for voice: %w", err)
-		}
-		found, err := toJob(row)
-		return &found, err
-	}
 	if subject.Dimension != dimensionProject {
 		return nil, fmt.Errorf("latest job lookup: unsupported subject dimension %q", subject.Dimension)
 	}

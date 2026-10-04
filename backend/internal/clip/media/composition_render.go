@@ -197,14 +197,13 @@ func (r *Rendering) renderComposition(ctx context.Context, ws clip.MediaWorkspac
 			return result, err
 		}
 	}
-	composedSource := clip.MediaSource{Path: raw, Info: clip.MediaInfo{Width: canvas.Width, Height: canvas.Height, DurationMS: totalFrames * 1000 / r.cfg.FPS}}
 	step("render_overlay")
 	if err = sampler.apply(canvas, layout.visuals); err != nil {
 		return result, err
 	}
 	layers := make([]captionLayer, len(layout.visuals))
 	for i := range layout.visuals {
-		layers[i], err = r.declaredLayer(ctx, ws, canvas, &layout.visuals[i], composedSource, i)
+		layers[i], err = r.declaredLayer(ctx, ws, canvas, &layout.visuals[i], i)
 		if err != nil {
 			return result, err
 		}

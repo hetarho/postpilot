@@ -186,12 +186,7 @@ unboxed opening/ending titles over the footage. The demonstration selects the ex
 accent; the fonts and measured text positions remain those supplied by the
 renderer. Default embedded bindings do not select this sample theme.
 
-Mount that directory as the API's overlay directory to preview it. The local
-`TestShortsSVGExample` accepts `CLIP_EXAMPLE_ORIGINALS`, `CLIP_EXAMPLE_OUTPUT` and
-`CLIP_EXAMPLE_ASSETS` inside the production media runtime. It uses all eight
-owner originals, checks a collision-free manifest before and after rendering,
-and exports the 20 s video and edit plan. Its title is editorial sample copy,
-not a verified merchant name. No AI provider is involved.
+Mount that directory as the API's overlay directory to preview it.
 
 ## Vertical top placement
 
@@ -227,11 +222,6 @@ Rapid PNGs are cropped to their measured drawing region plus stroke/shadow
 padding and overlaid at the original coordinates; a scrim retains its full
 extent. Presets must keep drawing inside the measured bounds. Every cue has a
 unique raster path, so multiple captions cannot overwrite one another.
-
-`TestRenderSmokeRapidCaptions` checks 24 phrases and the 300 ms boundary using
-real video frames. `TestCaptionPaceExample`, enabled with `CLIP_EXAMPLE_PACE=1`
-and the three example directory variables above, exports a 20 s comparison from
-the eight local originals. This is editorial timing, not forced speech alignment.
 
 Disclosure visibility is a saved project setting, independent of campaign type.
 Keep the header's badge markup inside `{{with .Badge}}` and its text inside

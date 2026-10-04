@@ -315,7 +315,7 @@ func TestOriginalPlaybackOwnershipExpiryMissingAndStaleSelection(t *testing.T) {
 }
 
 func TestOriginalRerenderReusesFullManifestWithoutUnusedMissingPixels(t *testing.T) {
-	h, p, _ := completedClip(t)
+	h, p, _ := completedNativeClip(t)
 	ctx := context.Background()
 	unused := h.batch.Sources[1].Key
 	delete(h.objects.info, unused)

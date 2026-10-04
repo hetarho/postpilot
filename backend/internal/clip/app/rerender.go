@@ -197,9 +197,6 @@ func (s *GenerationService) startRender(ctx context.Context, user, id, batch str
 	}
 	// Resolve the same bundled-font layout and checks before either executor
 	// starts. Pixel-dependent contrast and output checks stay with the producer.
-	if plan.Portable == nil {
-		plan = plan.WithDisclosure(p.Disclosure, p.HideDisclosure)
-	}
 	plan = plan.WithDesign(p.DesignSelection())
 	plan.HideDisclosure = p.HideDisclosure
 	refs := make([]clip.RenderSource, 0, len(sources))
@@ -211,18 +208,12 @@ func (s *GenerationService) startRender(ctx context.Context, user, id, batch str
 	}
 	if validator, ok := s.renderer.(clip.RenderPlanValidator); ok {
 		plan, err = validator.ValidateRenderPlan(ctx, plan, refs)
-	} else if plan.Portable != nil {
+	} else {
 		layout, ok := s.renderer.(clip.CompositionLayouter)
 		if !ok {
 			return none, clip.ErrCompositionUnavailable
 		}
 		plan, _, err = layout.LayoutComposition(ctx, plan, refs)
-	} else {
-		layout, ok := s.renderer.(clip.PlanLayouter)
-		if !ok {
-			return none, clip.ErrCompositionUnavailable
-		}
-		plan, _, err = layout.Layout(ctx, plan, refs)
 	}
 	if err != nil {
 		return none, err
@@ -344,13 +335,10 @@ func (s *GenerationService) RunRender(ctx context.Context, user, job, project st
 	if err := s.checkComposition(p.Composition); err != nil {
 		return err
 	}
-	if plan.Portable != nil && s.CompositionCapability() < clip.CompositionPlanVersion {
+	// Every plan renders through its composition: one written before it has no
+	// renderer and is refused here, before any media work.
+	if plan.Portable == nil || s.CompositionCapability() < clip.CompositionPlanVersion {
 		return clip.ErrCompositionUnavailable
-	}
-	// Project-local disclosure changes retain their meaning on a plan whose
-	// badge is not a composition entry.
-	if s.remoteMedia == nil && plan.Portable == nil {
-		plan = plan.WithDisclosure(p.Disclosure, frozen.HideDisclosure)
 	}
 	if err = clip.MatchRenderBatch(plan, b); err != nil {
 		return err

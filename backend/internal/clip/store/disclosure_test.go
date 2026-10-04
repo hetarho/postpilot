@@ -2,6 +2,7 @@ package store_test
 
 import (
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/postpilot/backend/internal/clip"
@@ -52,7 +53,7 @@ func TestDisclosureVisibilityPersistenceAndRenderRevision(t *testing.T) {
 }
 
 func TestDisclosureChoiceReachesRerenderAndCannotChangeWhileRunning(t *testing.T) {
-	h, old, _ := completedClip(t)
+	h, old, _ := completedNativeClip(t)
 	hidden := true
 	changed, err := h.projects.UpdateProject(t.Context(), "alice", old.ID, clip.ProjectPatch{HideDisclosure: &hidden})
 	if err != nil || changed.EditPlanRevision != old.EditPlanRevision+1 {
@@ -62,8 +63,13 @@ func TestDisclosureChoiceReachesRerenderAndCannotChangeWhileRunning(t *testing.T
 		t.Fatal("previous result lost")
 	}
 	batch := rerenderBatch(t, h, true)
-	if _, err = h.service.StartRender(t.Context(), "alice", old.ID, batch.ID, changed.EditPlanRevision, clip.RenderServer); err != nil {
+	id, err := h.service.StartRender(t.Context(), "alice", old.ID, batch.ID, changed.EditPlanRevision, clip.RenderServer)
+	if err != nil {
 		t.Fatal(err)
+	}
+	// The render freezes the choice it was started under.
+	if j, err := h.jobs.GetByID(t.Context(), id); err != nil || !strings.Contains(string(j.Payload), `"HideDisclosure":true`) {
+		t.Fatal("the hidden badge did not reach the render", err)
 	}
 	hidden = false
 	if _, err := h.store.UpdateProject(t.Context(), "alice", old.ID, clip.ProjectPatch{HideDisclosure: &hidden}, changed.UpdatedAt); !errors.Is(err, clip.ErrBusy) {
@@ -71,9 +77,6 @@ func TestDisclosureChoiceReachesRerenderAndCannotChangeWhileRunning(t *testing.T
 	}
 	if err := runRender(t, h); err != nil {
 		t.Fatal(err)
-	}
-	if !h.renderer.plan.HideDisclosure || h.renderer.plan.Disclosure != "sponsored" {
-		t.Fatal(h.renderer.plan)
 	}
 	latest, err := h.projects.GetProject(t.Context(), "alice", old.ID)
 	if err != nil || latest.EditPlanRevision != latest.RenderedPlanRevision {

@@ -51,7 +51,7 @@ func TestRenderRejectsRevisionRaceBeforeLinkWithoutConsumingSources(t *testing.T
 func TestRenderCancellationMalformedPanicAndBootAlwaysClean(t *testing.T) {
 	for _, mode := range []string{"cancel", "malformed", "panic", "boot"} {
 		t.Run(mode, func(t *testing.T) {
-			h, p, _ := completedClip(t)
+			h, p, _ := completedNativeClip(t)
 			ctx := context.Background()
 			b := rerenderBatch(t, h, true)
 			if _, err := h.service.StartRender(ctx, "alice", p.ID, b.ID, 1, clip.RenderServer); err != nil {
@@ -111,7 +111,7 @@ func TestRenderCancellationMalformedPanicAndBootAlwaysClean(t *testing.T) {
 	}
 }
 func TestRenderExpiryCleanupRetryAndAtomicRevisionSwap(t *testing.T) {
-	h, p, _ := completedClip(t)
+	h, p, _ := completedNativeClip(t)
 	ctx := context.Background()
 	b := rerenderBatch(t, h, true)
 	if _, err := h.db.Writer.Exec("UPDATE clip_source_leases SET retention_expires_at=? WHERE batch_id=?", time.Now().Add(-time.Hour).Format(time.RFC3339Nano), b.ID); err != nil {
