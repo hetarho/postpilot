@@ -178,8 +178,9 @@ type speechPriceRecord struct {
 	Complete     bool                 `json:"complete"`
 }
 type speechChargeRecord struct {
-	Unit       string `json:"unit"`
-	USD        string `json:"usd"`
-	Multiplier string `json:"multiplier"`
-	Maximum    string `json:"maximum"`
+	Unit         string `json:"unit"`
+	USD          string `json:"usd"`
+	Multiplier   string `json:"multiplier"`
+	Maximum      string `json:"maximum"`
+	PerCharacter string `json:"per_character,omitempty"`
 }

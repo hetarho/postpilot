@@ -576,6 +576,9 @@ func (s *Store) CostForJob(ctx context.Context, jobID string) (usage.JobCost, er
 }
 
 func (s *Store) InsertEvent(ctx context.Context, event usage.Event) error {
+	if event.Units != nil {
+		return s.InsertUnitEvent(ctx, event, *event.Units)
+	}
 	err := s.write.InsertEvent(ctx, sqlc.InsertEventParams{
 		UserID:             event.UserID,
 		Kind:               event.Kind,

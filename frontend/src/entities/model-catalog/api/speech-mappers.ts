@@ -78,6 +78,7 @@ export function toAdminSpeechProfile(p: ProtoAdminSpeechProfile): AdminSpeechPro
         usdPerUnit: c.usdPerUnit,
         multiplier: c.multiplier,
         maximumUnits: c.maximumUnits,
+        unitsPerInputCharacter: c.unitsPerInputCharacter,
       })),
     })),
   }

@@ -44,6 +44,9 @@ type SpeechCharge struct {
 	USDPerUnit   string
 	Multiplier   string
 	MaximumUnits string
+	// Verified upper conversion at BoundsSource. Missing conversion may be
+	// curated as a draft, but cannot authorize a variable-unit paid call.
+	UnitsPerInputCharacter string
 }
 type SpeechPrice struct {
 	Operation    SpeechOperation
@@ -193,6 +196,12 @@ func (p SpeechPrice) Valid(now time.Time) bool {
 			return false
 		}
 		seen[c.Unit] = true
+		if c.UnitsPerInputCharacter != "" {
+			conversion, ok := SpeechDecimal(c.UnitsPerInputCharacter)
+			if !ok || conversion.Sign() <= 0 {
+				return false
+			}
+		}
 	}
 	return true
 }

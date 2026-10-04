@@ -18,7 +18,8 @@ SELECT a.approved_max_credits, a.hold_credits, a.settled_credits, a.settled_at, 
        CAST(COALESCE((SELECT SUM(h.credits) FROM credit_hold_lots h WHERE h.job_id = a.job_id), 0) AS INTEGER) AS debited_credits
 FROM usage_admissions a
 WHERE a.user_id = ?1 AND a.job_id = ?2
-  AND a.kind IN (SELECT value FROM json_each(?3))
+  AND (a.kind IN (SELECT value FROM json_each(?3))
+       OR EXISTS (SELECT 1 FROM usage_unit_admissions u WHERE u.admission_id = a.id))
 `
 
 type AccountingForJobParams struct {
@@ -130,6 +131,7 @@ SELECT CAST(COALESCE(SUM(cost_microusd), 0) AS INTEGER) AS total_microusd,
            WHEN cost_source IN ('reported', 'estimated') AND cost_microusd > 0
            THEN cost_microusd ELSE 0 END), 0) AS INTEGER) AS confirmed_microusd
 FROM usage_events WHERE job_id = ?
+AND NOT EXISTS (SELECT 1 FROM usage_unit_events WHERE event_id = usage_events.id)
 `
 
 type CostForJobRow struct {

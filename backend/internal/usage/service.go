@@ -43,6 +43,7 @@ type Service struct {
 	anchors     Anchors
 	rates       *RateSelector
 	modelGrades bool
+	unitCheck   UnitBudgetChecker
 
 	// approvedKinds is the work that may not start without an approved credit ceiling.
 	// The composition root names it: the ledger enforces the rule and never learns which
@@ -432,6 +433,11 @@ func (s *Service) matchExistingHold(start Start, prior Admission) error {
 // CheckModelAccess applies the same classification and live free-path gate to
 // quotes and new holds. It has no balance or FX side effects.
 func (s *Service) CheckModelAccess(ctx context.Context, acting plan.Plan, kind string, calls []PlannedCall) error {
+	for _, c := range calls {
+		if c.Units != nil {
+			return ErrUnitApproval
+		}
+	}
 	if !s.modelGrades {
 		return nil
 	}
@@ -483,6 +489,14 @@ func (s *Service) Hold(ctx context.Context, start Start) error {
 	}
 	if !start.Plan.Valid() {
 		return fmt.Errorf("hold: acting plan is unknown")
+	}
+	for _, call := range start.Calls {
+		if call.Units != nil {
+			return s.holdUnits(ctx, start)
+		}
+	}
+	if start.Approval != nil && len(start.Approval.Units) > 0 {
+		return ErrUnitApproval
 	}
 	// A committed admission can be retried while the official source is down.
 	// Its own snapshot is sufficient; no external FX fetch belongs on that path.
@@ -560,6 +574,10 @@ func (s *Service) Hold(ctx context.Context, start Start) error {
 		}
 	}
 
+	return s.commitHold(ctx, start, required, frozenRate, approved, policyVersion, now)
+}
+
+func (s *Service) commitHold(ctx context.Context, start Start, required int, frozenRate plan.RateSnapshot, approved *int, policyVersion int, now time.Time) error {
 	return s.tx.InWriteTx(ctx, func(tx Storage) error {
 		if approved != nil && required > *approved {
 			return &CreditCeilingError{Required: required, Approved: *approved}
@@ -571,6 +589,17 @@ func (s *Service) Hold(ctx context.Context, start Start) error {
 			return err
 		}
 		if found {
+			if start.Approval != nil && len(start.Approval.Units) > 0 {
+				u, err := unitStore(tx)
+				if err != nil {
+					return err
+				}
+				id, calls, err := u.UnitAdmission(ctx, start.JobID)
+				if err != nil || id != start.Approval.UnitQuoteID || unitCallsDigest(calls) != unitCallsDigest(start.Approval.Units) || prior.UserID != start.UserID || prior.Kind != start.Kind || prior.HoldCredits != required {
+					return ErrUnitApproval
+				}
+				return nil
+			}
 			return s.matchExistingHold(start, prior)
 		}
 		renewsAt, err := s.renew(ctx, tx, start.UserID, start.Plan, now)
@@ -602,11 +631,14 @@ func (s *Service) Hold(ctx context.Context, start Start) error {
 		if s.modelGrades {
 			admission.AdmittedPlan = start.Plan
 			for _, call := range start.Calls {
-				if call.Count > 0 {
+				if call.Count > 0 && call.Units == nil {
 					info, _ := s.models.Lookup(call.Ref)
 					admission.AdmittedModels = append(admission.AdmittedModels, AdmittedModel{Ref: call.Ref, Stage: call.Stage, Grade: info.Levels[call.Stage]})
 				}
 			}
+		}
+		if start.Approval != nil && len(start.Approval.Units) > 0 {
+			admission.AdmittedPlan = start.Plan
 		}
 		if start.Plan != plan.Free && !plan.Unlimited(start.Plan) {
 			coverage, found, err := s.anchors.CoverageFor(ctx, start.UserID, now)
@@ -622,6 +654,26 @@ func (s *Service) Hold(ctx context.Context, start Start) error {
 		}
 		if err := tx.InsertAdmission(ctx, admission); err != nil {
 			return err
+		}
+		if start.Approval != nil && len(start.Approval.Units) > 0 {
+			u, err := unitStore(tx)
+			if err != nil {
+				return err
+			}
+			q, err := u.GetUnitQuote(ctx, start.UserID, start.Approval.UnitQuoteID)
+			if err != nil || !s.now().Before(q.ExpiresAt) || q.Kind != start.Kind || q.Digest != unitCallsDigest(start.Approval.Units) || q.MaxCredits != required {
+				return ErrUnitApproval
+			}
+			ok, err := u.ConsumeUnitQuote(ctx, q.ID, start.JobID)
+			if err != nil {
+				return err
+			}
+			if !ok {
+				return ErrUnitApproval
+			}
+			if err := u.SaveUnitAdmission(ctx, start.JobID, q.ID, start.Approval.Units); err != nil {
+				return err
+			}
 		}
 		if err := tx.InsertHoldDebits(ctx, start.JobID, debits); err != nil {
 			return err
@@ -921,9 +973,13 @@ func (s *Service) SettleCause(ctx context.Context, jobID string, outcome Termina
 		if err != nil {
 			return err
 		}
+		unitActual, unitWork, err := unitCharge(ctx, tx, admission, cost.ConfirmedMicrousd)
+		if err != nil {
+			return err
+		}
 		// An admission frozen before the FX migration retains its original
 		// reservation policy. New all-free admissions have a zero hold instead.
-		legacy := s.rates == nil || !admission.Rate.Valid() && admission.HoldCredits > 0
+		legacy := !unitWork && (s.rates == nil || !admission.Rate.Valid() && admission.HoldCredits > 0)
 		actual := 0
 		if legacy {
 			actual = plan.Charge(cost.TotalMicrousd)
@@ -931,7 +987,9 @@ func (s *Service) SettleCause(ctx context.Context, jobID string, outcome Termina
 		settlement := Settlement{Cause: cause}
 		if !legacy {
 			actual = 0
-			if admission.Rate.Valid() {
+			if unitWork {
+				actual = unitActual
+			} else if admission.Rate.Valid() {
 				actual, err = plan.ChargeAt(cost.ConfirmedMicrousd, admission.Rate)
 				if err != nil {
 					return err

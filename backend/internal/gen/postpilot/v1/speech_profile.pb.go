@@ -592,13 +592,14 @@ func (x *SpeechProfileBinding) GetSpeechMax() int32 {
 }
 
 type SpeechPriceComponent struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Unit          string                 `protobuf:"bytes,1,opt,name=unit,proto3" json:"unit,omitempty"`
-	UsdPerUnit    string                 `protobuf:"bytes,2,opt,name=usd_per_unit,json=usdPerUnit,proto3" json:"usd_per_unit,omitempty"`
-	Multiplier    string                 `protobuf:"bytes,3,opt,name=multiplier,proto3" json:"multiplier,omitempty"`
-	MaximumUnits  string                 `protobuf:"bytes,4,opt,name=maximum_units,json=maximumUnits,proto3" json:"maximum_units,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state                  protoimpl.MessageState `protogen:"open.v1"`
+	Unit                   string                 `protobuf:"bytes,1,opt,name=unit,proto3" json:"unit,omitempty"`
+	UsdPerUnit             string                 `protobuf:"bytes,2,opt,name=usd_per_unit,json=usdPerUnit,proto3" json:"usd_per_unit,omitempty"`
+	Multiplier             string                 `protobuf:"bytes,3,opt,name=multiplier,proto3" json:"multiplier,omitempty"`
+	MaximumUnits           string                 `protobuf:"bytes,4,opt,name=maximum_units,json=maximumUnits,proto3" json:"maximum_units,omitempty"`
+	UnitsPerInputCharacter string                 `protobuf:"bytes,5,opt,name=units_per_input_character,json=unitsPerInputCharacter,proto3" json:"units_per_input_character,omitempty"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
 }
 
 func (x *SpeechPriceComponent) Reset() {
@@ -655,6 +656,13 @@ func (x *SpeechPriceComponent) GetMultiplier() string {
 func (x *SpeechPriceComponent) GetMaximumUnits() string {
 	if x != nil {
 		return x.MaximumUnits
+	}
+	return ""
+}
+
+func (x *SpeechPriceComponent) GetUnitsPerInputCharacter() string {
+	if x != nil {
+		return x.UnitsPerInputCharacter
 	}
 	return ""
 }
@@ -1251,7 +1259,7 @@ const file_postpilot_v1_speech_profile_proto_rawDesc = "" +
 	"\vpreview_max\x18\x06 \x01(\x05R\n" +
 	"previewMax\x12\x1d\n" +
 	"\n" +
-	"speech_max\x18\a \x01(\x05R\tspeechMax\"\x91\x01\n" +
+	"speech_max\x18\a \x01(\x05R\tspeechMax\"\xcc\x01\n" +
 	"\x14SpeechPriceComponent\x12\x12\n" +
 	"\x04unit\x18\x01 \x01(\tR\x04unit\x12 \n" +
 	"\fusd_per_unit\x18\x02 \x01(\tR\n" +
@@ -1259,7 +1267,8 @@ const file_postpilot_v1_speech_profile_proto_rawDesc = "" +
 	"\n" +
 	"multiplier\x18\x03 \x01(\tR\n" +
 	"multiplier\x12#\n" +
-	"\rmaximum_units\x18\x04 \x01(\tR\fmaximumUnits\"\xea\x01\n" +
+	"\rmaximum_units\x18\x04 \x01(\tR\fmaximumUnits\x129\n" +
+	"\x19units_per_input_character\x18\x05 \x01(\tR\x16unitsPerInputCharacter\"\xea\x01\n" +
 	"\x14SpeechOperationPrice\x12\x1c\n" +
 	"\toperation\x18\x01 \x01(\tR\toperation\x12<\n" +
 	"\acharges\x18\x02 \x03(\v2\".postpilot.v1.SpeechPriceComponentR\acharges\x12\x16\n" +

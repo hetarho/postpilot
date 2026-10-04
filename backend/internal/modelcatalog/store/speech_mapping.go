@@ -19,7 +19,7 @@ func encodeSpeech(p modelcatalog.SpeechProfile) (string, string, error) {
 	for _, price := range p.Prices {
 		r := speechPriceRecord{Operation: string(price.Operation), Source: price.Source, BoundsSource: price.BoundsSource, CheckedAt: formatTime(price.CheckedAt), Complete: price.Complete}
 		for _, c := range price.Charges {
-			r.Charges = append(r.Charges, speechChargeRecord{string(c.Unit), c.USDPerUnit, c.Multiplier, c.MaximumUnits})
+			r.Charges = append(r.Charges, speechChargeRecord{string(c.Unit), c.USDPerUnit, c.Multiplier, c.MaximumUnits, c.UnitsPerInputCharacter})
 		}
 		prices.Prices = append(prices.Prices, r)
 	}
@@ -57,7 +57,7 @@ func decodeSpeech(bindingJSON, pricesJSON string) (modelcatalog.SpeechBinding, [
 		}
 		p := modelcatalog.SpeechPrice{Operation: modelcatalog.SpeechOperation(price.Operation), Source: price.Source, BoundsSource: price.BoundsSource, CheckedAt: at, Complete: price.Complete}
 		for _, c := range price.Charges {
-			p.Charges = append(p.Charges, modelcatalog.SpeechCharge{Unit: llm.SpeechUnit(c.Unit), USDPerUnit: c.USD, Multiplier: c.Multiplier, MaximumUnits: c.Maximum})
+			p.Charges = append(p.Charges, modelcatalog.SpeechCharge{Unit: llm.SpeechUnit(c.Unit), USDPerUnit: c.USD, Multiplier: c.Multiplier, MaximumUnits: c.Maximum, UnitsPerInputCharacter: c.PerCharacter})
 		}
 		out = append(out, p)
 	}

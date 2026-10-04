@@ -207,7 +207,8 @@ SELECT a.approved_max_credits, a.hold_credits, a.settled_credits, a.settled_at, 
        CAST(COALESCE((SELECT SUM(h.credits) FROM credit_hold_lots h WHERE h.job_id = a.job_id), 0) AS INTEGER) AS debited_credits
 FROM usage_admissions a
 WHERE a.user_id = sqlc.arg(user_id) AND a.job_id = sqlc.arg(job_id)
-  AND a.kind IN (SELECT value FROM json_each(sqlc.arg(kinds)));
+  AND (a.kind IN (SELECT value FROM json_each(sqlc.arg(kinds)))
+       OR EXISTS (SELECT 1 FROM usage_unit_admissions u WHERE u.admission_id = a.id));
 
 -- name: MarkAdmissionSettled :exec
 UPDATE usage_admissions SET settled_credits = ?, settled_at = ?, settlement_reason = ?, confirmed_charge_credits = ?, cancellation_fee_credits = ?,
@@ -249,7 +250,8 @@ SELECT CAST(COALESCE(SUM(cost_microusd), 0) AS INTEGER) AS total_microusd,
        CAST(COALESCE(SUM(CASE
            WHEN cost_source IN ('reported', 'estimated') AND cost_microusd > 0
            THEN cost_microusd ELSE 0 END), 0) AS INTEGER) AS confirmed_microusd
-FROM usage_events WHERE job_id = ?;
+FROM usage_events WHERE job_id = ?
+AND NOT EXISTS (SELECT 1 FROM usage_unit_events WHERE event_id = usage_events.id);
 
 -- One row per successfully settled post generation and stage: the provider cost that stage's
 -- calls recorded and the rate the job was admitted at, which is what the per-post credit

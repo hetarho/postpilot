@@ -23,6 +23,9 @@ type Work struct {
 	// every other call is labelled with the job kind.
 	ObserveModel string
 	WriteModel   string
+	// UnitScopeDigest selects the exact caller-owned operation scope within a
+	// multi-call admission, including segments that happen to share identical text.
+	UnitScopeDigest string
 }
 
 // StageFor labels one call within this work.

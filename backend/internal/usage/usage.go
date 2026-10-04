@@ -28,6 +28,8 @@ type PlannedCall struct {
 	Stage            string
 	Count            int
 	CompletionTokens int64
+	// Units discriminates a non-token call; it must match the approved quote.
+	Units *UnitBudget
 }
 
 // Start is one request to begin LLM work.
@@ -185,6 +187,7 @@ type Event struct {
 	CostMicrousd       int64
 	CostSource         llm.CostSource
 	CreatedAt          time.Time
+	Units              *UnitEvent
 }
 
 // ReasoningSpendWindow is how far back the reasoning-spend signal looks. Long enough that a

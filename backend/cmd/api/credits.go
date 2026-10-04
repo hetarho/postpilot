@@ -154,6 +154,24 @@ func (a clipAdmission) CheckAccess(ctx context.Context, hold clipapp.Hold) error
 }
 
 func (a jobAdmission) Hold(ctx context.Context, start job.Start) error {
+	if reservation, ok := usage.UnitReservationFromContext(ctx); ok {
+		acting, err := a.actingPlan(ctx, start.UserID, start.Kind)
+		if err != nil {
+			return err
+		}
+		calls := plannedCalls(start.Calls)
+		if len(calls) != len(reservation.Units) {
+			return usage.ErrUnitApproval
+		}
+		for i := range calls {
+			budget := reservation.Units[i]
+			if calls[i].Ref != budget.Ref || calls[i].Stage != budget.Operation || calls[i].Count != budget.Count || calls[i].CompletionTokens != 0 {
+				return usage.ErrUnitApproval
+			}
+			calls[i].Units = &budget
+		}
+		return a.ledger.Hold(ctx, usage.Start{UserID: start.UserID, Plan: acting, Kind: start.Kind, JobID: start.JobID, Calls: calls, Approval: reservation})
+	}
 	return a.hold(ctx, start, nil, false)
 }
 

@@ -29,7 +29,8 @@ type accountingReader interface {
 
 // ReservationAccounting is the owner's view of what one piece of approved work reserved,
 // spent and returned. The kinds it covers are the ones the root marked as needing an
-// approval; the ledger passes them down rather than naming a product in SQL.
+// approval, as well as explicitly bounded unit admissions; the ledger passes
+// the kind list down rather than naming a product in SQL.
 func (s *Service) ReservationAccounting(ctx context.Context, user, job string) (*ReservationAccounting, error) {
 	r, ok := s.holds.(accountingReader)
 	if !ok {

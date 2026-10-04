@@ -49,17 +49,19 @@ export function SpeechPriceEditor({
               })),
             ]}
           />
-          {(['usdPerUnit', 'multiplier', 'maximumUnits'] as const).map((key) => (
-            <div key={key}>
-              <FieldLabel htmlFor={`${id}-${index}-${key}`}>{t(`speechAdmin.${key}`)}</FieldLabel>
-              <TextField
-                id={`${id}-${index}-${key}`}
-                value={c[key]}
-                inputMode="decimal"
-                onChange={(e) => patchCharge(index, { [key]: e.target.value })}
-              />
-            </div>
-          ))}
+          {(['usdPerUnit', 'multiplier', 'maximumUnits', 'unitsPerInputCharacter'] as const).map(
+            (key) => (
+              <div key={key}>
+                <FieldLabel htmlFor={`${id}-${index}-${key}`}>{t(`speechAdmin.${key}`)}</FieldLabel>
+                <TextField
+                  id={`${id}-${index}-${key}`}
+                  value={c[key]}
+                  inputMode="decimal"
+                  onChange={(e) => patchCharge(index, { [key]: e.target.value })}
+                />
+              </div>
+            ),
+          )}
           <Button
             variant="ghost"
             onClick={() =>
@@ -78,7 +80,13 @@ export function SpeechPriceEditor({
             ...price,
             charges: [
               ...price.charges,
-              { unit: '', usdPerUnit: '', multiplier: '', maximumUnits: '' },
+              {
+                unit: '',
+                usdPerUnit: '',
+                multiplier: '',
+                maximumUnits: '',
+                unitsPerInputCharacter: '',
+              },
             ],
           })
         }

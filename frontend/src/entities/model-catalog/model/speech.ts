@@ -42,6 +42,7 @@ export interface SpeechPriceComponent {
   usdPerUnit: string
   multiplier: string
   maximumUnits: string
+  unitsPerInputCharacter: string
 }
 export interface SpeechOperationPrice {
   operation: string

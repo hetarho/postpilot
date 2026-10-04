@@ -56,6 +56,8 @@ type Reservation struct {
 	ApprovedMaxCredits        int
 	Calls                     []PricedCall
 	Rate                      plan.RateSnapshot
+	UnitQuoteID               string
+	Units                     []UnitBudget
 }
 
 // ReservationCost sums the bounded per-call worst cases before any currency

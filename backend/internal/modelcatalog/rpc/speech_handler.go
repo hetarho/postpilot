@@ -132,7 +132,7 @@ func speechAdmin(p modelcatalog.SpeechProfile) *v1.AdminSpeechProfile {
 	for _, price := range p.Prices {
 		v := &v1.SpeechOperationPrice{Operation: string(price.Operation), Source: price.Source, BoundsSource: price.BoundsSource, CheckedAt: price.CheckedAt.Format(time.RFC3339Nano), Complete: price.Complete}
 		for _, c := range price.Charges {
-			v.Charges = append(v.Charges, &v1.SpeechPriceComponent{Unit: string(c.Unit), UsdPerUnit: c.USDPerUnit, Multiplier: c.Multiplier, MaximumUnits: c.MaximumUnits})
+			v.Charges = append(v.Charges, &v1.SpeechPriceComponent{Unit: string(c.Unit), UsdPerUnit: c.USDPerUnit, Multiplier: c.Multiplier, MaximumUnits: c.MaximumUnits, UnitsPerInputCharacter: c.UnitsPerInputCharacter})
 		}
 		out.Prices = append(out.Prices, v)
 	}
@@ -154,7 +154,7 @@ func speechDraft(p *v1.AdminSpeechProfile) (modelcatalog.SpeechProfile, error) {
 		}
 		v := modelcatalog.SpeechPrice{Operation: modelcatalog.SpeechOperation(price.GetOperation()), Source: price.GetSource(), BoundsSource: price.GetBoundsSource(), CheckedAt: at, Complete: price.GetComplete()}
 		for _, c := range price.GetCharges() {
-			v.Charges = append(v.Charges, modelcatalog.SpeechCharge{Unit: llm.SpeechUnit(c.GetUnit()), USDPerUnit: c.GetUsdPerUnit(), Multiplier: c.GetMultiplier(), MaximumUnits: c.GetMaximumUnits()})
+			v.Charges = append(v.Charges, modelcatalog.SpeechCharge{Unit: llm.SpeechUnit(c.GetUnit()), USDPerUnit: c.GetUsdPerUnit(), Multiplier: c.GetMultiplier(), MaximumUnits: c.GetMaximumUnits(), UnitsPerInputCharacter: c.GetUnitsPerInputCharacter()})
 		}
 		out.Prices = append(out.Prices, v)
 	}

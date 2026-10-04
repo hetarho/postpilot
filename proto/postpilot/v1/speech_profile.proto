@@ -75,6 +75,7 @@ message SpeechPriceComponent {
   string usd_per_unit = 2;
   string multiplier = 3;
   string maximum_units = 4;
+  string units_per_input_character = 5;
 }
 message SpeechOperationPrice {
   string operation = 1;

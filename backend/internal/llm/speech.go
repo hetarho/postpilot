@@ -45,6 +45,9 @@ const (
 type SpeechEvidence struct {
 	RequestID string
 	Units     []SpeechUnitEvidence
+	// Only a documented supplier-reported USD amount may populate this field.
+	// The ElevenLabs adapter does not infer it from character-cost or text.
+	ReportedUSD string
 }
 
 type SpeechUnitEvidence struct {

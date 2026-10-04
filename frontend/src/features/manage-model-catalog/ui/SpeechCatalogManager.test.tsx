@@ -117,6 +117,7 @@ describe('the separate spoken voice admin tab', () => {
     await user.type(screen.getByLabelText('단위당 USD (소수 문자열)'), '0.000000001')
     await user.type(screen.getByLabelText('적용 배수'), '1.25')
     await user.type(screen.getByLabelText('요청 1회 최대 청구량'), '1000.5')
+    await user.type(screen.getByLabelText('입력 글자당 최대 청구 단위 (상한 근거로 확인)'), '1')
     await user.click(screen.getByRole('button', { name: '조합 저장' }))
     await waitFor(() => expect(save).toHaveBeenCalledOnce())
     expect(save.mock.calls[0][0]).toMatchObject({
@@ -132,6 +133,7 @@ describe('the separate spoken voice admin tab', () => {
               usdPerUnit: '0.000000001',
               multiplier: '1.25',
               maximumUnits: '1000.5',
+              unitsPerInputCharacter: '1',
             },
           ],
         },

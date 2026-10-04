@@ -27,6 +27,7 @@ import (
 	jobstore "github.com/postpilot/backend/internal/job/store"
 	"github.com/postpilot/backend/internal/memory"
 	memorystore "github.com/postpilot/backend/internal/memory/store"
+	modelcatalogapp "github.com/postpilot/backend/internal/modelcatalog/app"
 	"github.com/postpilot/backend/internal/platform/config"
 	"github.com/postpilot/backend/internal/post"
 	poststore "github.com/postpilot/backend/internal/post/store"
@@ -155,6 +156,7 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 		officialRate,
 		usagestore.New(handle.Writer, handle.Reader),
 	))
+	c.ledger.WithUnitAccounting(modelcatalogapp.SpeechBudgets{Profiles: p.speechCatalog})
 	c.postFigures = newPostFigures(c.ledger)
 	c.billingStore = billingstore.New(handle.Writer, handle.Reader)
 	c.billingStore.SetCreditsForTx(func(tx *sql.Tx) billing.Credits {
