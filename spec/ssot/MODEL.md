@@ -1,8 +1,9 @@
 # MODEL providers, model catalog, experiments
-> r28 | An operator-curated OpenRouter catalog with separately managed free models and purpose-specific paid grades, operator-curated recommendation sets, explicit eligible model selections and blind observe/write comparisons.
+> r29 | An operator-curated OpenRouter catalog with separately managed free models and purpose-specific paid grades, operator-curated recommendation sets, explicit eligible model selections and blind observe/write comparisons.
 
 ## decisions
-- MODEL-1 [o] `backend/internal/llm` is the only way a model is called: no adapter package or provider SDK is imported anywhere except under `internal/llm/…` and in `cmd/api`, enforced by `internal/llm/boundary_test.go` over `go list -deps`; the model is an input to every call (`Registry.Complete(ctx, ref, req)`), the port reads no default, and the observe, write and analyze stages each carry their own ModelRef (I3, →ARCH-9)
+- MODEL-1 [o] `backend/internal/llm` is the only way a model is called: no adapter package or provider SDK is imported anywhere except under `internal/llm/…` and in `cmd/api`, enforced by `internal/llm/boundary_test.go` over `go list -deps`; every completion, voice-design, voice-confirmation and speech operation carries an explicit admitted model/profile reference through a provider-neutral port with no default (→ARCH-9 →MODEL-77)
+  - observe, write and analyze retain their explicit stage ModelRefs; speech operations never masquerade as text completions
 - MODEL-2 [o] errors normalize to `ErrModelUnavailable` `ErrProviderDisabled` `ErrRateLimited` `ErrUnsupported` `ErrBadOutput` `ErrOutputTruncated`, plus a `ProviderError` that keeps provider prose as diagnostic detail while supporting `errors.Is`; `llm.Failure` is the one stable mapper to `MODEL_UNAVAILABLE` `MODEL_RATE_LIMITED` `MODEL_UNSUPPORTED` `MODEL_OUTPUT_INVALID` `MODEL_OUTPUT_TRUNCATED` `UNKNOWN_FAILURE`; provider text is never primary UI copy or an interpolated param
 - MODEL-3 [o] output ending `finish_reason: length` with no usable content, including partial JSON a caller parser rejects, maps to the truncated reason; when the provider reported a reasoning token count, `TruncatedError`'s technical detail names the reasoning/visible split ← the remedies are opposite: a body that filled its budget wants a larger one, a body the model never wrote because it reasoned through the budget wants a lower effort for that purpose or another model; the user-facing string is the same for both
 - MODEL-4 [o] `ErrRateLimited` means the provider refused for rate reasons — the caller's quota, the account's, or the gateway's upstream pool — attributes nothing to a tier, and may arrive as an HTTP 429 or as an upstream `code: 429` inside an HTTP 200
@@ -11,10 +12,11 @@
 - MODEL-7 [o] `ReasoningEffort` accepts `none minimal low medium high xhigh max`; empty means no decision; `unset` is an internal/yaml sentinel that omits the whole wire key; resolution is the operator's `reasoning_effort` override for the purpose the call is made for → the request/stage value → nothing sent ← the override is a property of a registration, not of a model: one model may observe at one strength and write at another in a single run, whereas one blanket value silently changes photo observation whenever writing is tuned
 - MODEL-8 [o] the nested `reasoning: {effort}` wire object is an OpenRouter dialect enabled only when the provider declares `reasoning_format: openrouter`; other OpenAI-compatible endpoints omit it even when an effort was supplied; an unknown format stops boot; `none` is sent explicitly; `reasoning.exclude` is forbidden ← excluding the returned trace stops neither generation nor billing of reasoning tokens; reasoning and visible output share the completion budget
 - MODEL-9 [o] stage reasoning policy: observe `low` · write/revise `low` · a template request `low` (→TMPL-58) · analyze has no field and sends nothing (the model's own adaptive behaviour, the most permissive setting); per-user effort selection is rejected ← the right effort is a measurement of a model against a task
-- MODEL-10 [o] the connection is a file, the models and recommendation sets are rows: `backend/config/providers.yaml` declares exactly one provider (`id` `adapter` `base_url` `api_key_env` `reasoning_format`) and nothing else
-  - it ships inside the image at `/config/providers.yaml` (`PROVIDERS_CONFIG`) and a stack may mount its own
-  - validated at boot with unknown fields rejected, and any problem — unknown adapter, bad id, an adapter's own check, more or fewer than one provider, a `models:` or `recommendation_sets:` list — stops the process like a failed migration ← the curated catalog carries no provider dimension, so a second entry would attribute models to a vendor nobody chose
-  - a genuinely different vendor is a design change, not a yaml edit
+- MODEL-10 [o] connections are files; models, speech profiles and recommendation sets are curated rows
+  - `backend/config/providers.yaml` declares exactly one completion/catalog provider (`id` `adapter` `base_url` `api_key_env` `reasoning_format`) and may declare one separate speech connection (`id` `adapter` `base_url` `api_key_env`)
+  - completion catalog ids remain scoped to the single completion provider; the speech connection never serves those ids or changes saved text-model selections
+  - the file ships at `/config/providers.yaml` (`PROVIDERS_CONFIG`), accepts a mounted replacement, and contains no models, profiles, prices or recommendations
+  - unknown fields/adapters, malformed connections, completion-provider count other than one or speech-provider count above one stop boot; omitted/unconfigured speech leaves speech work unavailable without stopping ordinary generation
 - MODEL-11 [o] `api_key_env` names an environment variable read at boot and never written to the file; an unset key is not a boot failure — every model is listed `disabled` with reason `API key not configured` and cannot be selected — and the entry is still validated so a bad `base_url` cannot hide behind a missing key; `api_key_env` is optional, and a keyless endpoint (a local Ollama, vLLM, LM Studio) is enabled as is with no Authorization header
 - MODEL-12 [o] the registry reads its models through an injected `llm.ModelSource` on every request, so curating a model takes effect for the next call rather than the next deploy; an empty catalog is a valid state (a fresh install curated nothing — the answer is an empty picker and a trip to `/admin/models`, not a refused boot); boot never contacts the provider's catalog
 - MODEL-13 [o] `catalog_models` is the curated-model list and `catalog_model_purposes` holds its registrations across five purposes, curated on the five tabs of 모델 관리:
@@ -23,7 +25,9 @@
 - MODEL-14 [o] registered purposes map to user stages: photo-analysis → observe, style-analysis → analyze, writing → write, whose active selection also answers a template request (→TMPL-58); generation purposes remain admin-only until a stage consumes them. Ordinary selectors show classified registrations, including locked paid grades with their required plan (→QUOTA-19 →QUOTA-20). Unregistered or unclassified refs are unavailable to ordinary new selections; operator curation retains the rows.
 - MODEL-15 [o] each purpose enforces a capability gate at registration, server-side: `photo-analysis` requires `vision`, `image-generation` / `video-generation` the matching `image_output` / `video_output`, the text purposes take any model (`MODEL_PURPOSE_INELIGIBLE`); the admin tab force-filters its candidates to the same gate; capability drift after a refresh stops the stage at once (`stagesOf` re-checks the gate) while the registration row is kept and stays visible on its tab for the operator to uncheck — never auto-retired
 - MODEL-16 [o] every new selection, pair/preset application, comparison-result model adoption and AI admission checks stage membership, provider availability, capability and account model entitlement. An already-admitted job retains its admission-period rights under QUOTA-61 while every actual call still enforces live compatibility and price safety. No client-supplied ref bypasses these gates.
-- MODEL-17 [o] candidates come live from `GET {base_url}/models?output_modalities=text,image,video` — unauthenticated plain `net/http` under `OPENROUTER_CATALOG_FETCH_TIMEOUT` (15 s), one unpaginated document cached in memory for `OPENROUTER_CATALOG_TTL` (5 min), bypassed and replaced by the admin's 새로고침 (`ListCatalog(refresh: true)`); the modality query is mandatory ← the endpoint defaults to text-output models only, and `all` is not requested because embeddings, rerank, speech and transcription serve no curated purpose; only the operator path ever triggers the read, so a provider outage cannot change what users see; a missing API key disables calls but never blocks browsing
+- MODEL-17 [o] completion catalog candidates come live from `GET {base_url}/models?output_modalities=text,image,video` — unauthenticated plain `net/http` under `OPENROUTER_CATALOG_FETCH_TIMEOUT` (15 s), one unpaginated document cached in memory for `OPENROUTER_CATALOG_TTL` (5 min), bypassed and replaced by the admin's 새로고침 (`ListCatalog(refresh: true)`)
+  - the modality query is mandatory; this catalog excludes speech, transcription, embeddings and rerank; speech profiles follow MODEL-77
+  - only the operator path triggers the read; failure writes nothing and missing credentials never block completion-catalog browsing
 - MODEL-18 [o] field mapping:
   | source | row |
   |---|---|
@@ -236,6 +240,22 @@
   - an older client that sends only the legacy A/B start fields retains the pairwise record and actions; a current client sends the full candidate list, including for the editor's two-candidate action, and uses ranking
   - each experiment records which review contract it uses; no old record is silently rewritten, and new ranked records keep the order independent of the candidate chosen for an output action
 
+- MODEL-77 [o] speech profiles are curated separately from the five completion/generation purposes and their models-v1 bulk document; each profile identifies one description-based voice-design model and one compatible reusable-voice speech model under the same configured speech connection
+  - profile identity and revision are stable; the confirmed voice freezes both explicit refs and the settings needed to preserve its sound
+  - the creation picker shows the design model and the associated speech model; the clip picker selects the confirmed voice instead of selecting models again (→DUB-11)
+  - saving or changing a profile never rebinds a confirmed voice; incompatible or withdrawn bindings refuse new speech without fallback (→DUB-12)
+- MODEL-78 [o] only master curates speech profiles and their documented price evidence in 모델 관리's 목소리 tab; every profile has MODEL-57's free or paid classification, and design and later speech each enforce MODEL-16/68 and QUOTA-19 at admission
+  - the creation picker exposes grade, required plan, availability and input limits with no implicit initial selection; a free classification requires a verified zero-cost path for every applicable operation
+  - completion recommendation sets, comparisons and the five-purpose bulk document neither select nor mutate speech profiles
+- MODEL-79 [o] an eligible speech profile verifies Korean description-generated candidates, exact candidate confirmation, supplier-account-scoped voice reuse, supported speech input/output formats and finite request limits
+  - advertised speech output alone establishes none of voice-design, custom-voice reuse or timing support
+  - missing, changed or unverified capabilities disable the affected operation before a provider call while leaving stored voices and samples readable
+- MODEL-80 [o] a speech profile carries versioned applicable price units and their provenance rather than text-token prices; QUOTA-69/70 govern ceilings and settlement
+  - supplier credits, input characters, requests, generated seconds and confirmation fees are distinct units; only applicable qualified units are priced and overlapping components are not double-counted
+  - absent price or unit evidence makes the paid operation unavailable; an operator cannot classify an unknown price as free
+- MODEL-81 [o] speech model readiness distinguishes missing credentials, unavailable profile, unsupported Korean/custom-voice path, missing bounded pricing and incompatible saved voice; customer responses contain product reasons and credits only under QUOTA-65/66
+- MODEL-82 [o] production speech availability requires recorded voice-creation qualification under DUB-27 and, for narrated clips, preview and both-export qualification under DUB-25; an offline fixture or provider capability flag cannot establish live pronunciation or continuity
+
 ## flow
 - call: caller(stage, ref, request) → Registry.Complete(admitted entitlement + stage membership + capability/price checks → effort resolution(override → stage → none) → budget → adapter stream → normalized usage / error)
 - curate: 모델 관리 tab → ListCatalog(live read ∪ DB rows | DB rows + fetch_error) → SetModelPurpose | SetModelReasoning | SetModelLevel → the next Complete sees it
@@ -253,5 +273,4 @@
 - known gap: `MODEL_PURPOSE_NOT_REGISTERED` and `MODEL_PURPOSE_INELIGIBLE` have no entry in the frontend's normalized reason catalog and render as the generic failure (LANG owns that catalog)
 
 ## chg
-- r28 261001 MODEL-39✎ cost on master's experiment and leaderboard reads→on /admin's 비용·환율 tab only
-- r27 261001 MODEL-9✎ + template request `low` · MODEL-14✎ writing → write→writing → write, also answering a template request
+-

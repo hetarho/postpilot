@@ -18,30 +18,32 @@
 | voice-tidy | converted@260929 |
 | daily-credit-plans | converted@260929 |
 | template-from-request | converted@261001 |
+| familiar-video-editing-and-dubbing | converted@261004 |
 
 ## ssot
 | id | rev | tasked | pending | [?] |
 |---|---|---|---|---|
 | ARCH | 15 | 9 | ARCH-52+ ARCH-53+ ARCH-56+ ARCH-57+ ARCH-34✎ | 0 |
 | AUTH | 11 | 11 | - | 0 |
-| QUOTA | 32 | 32 | - | 0 |
+| QUOTA | 33 | 33 | - | 0 |
 | POST | 32 | 31 | POST-108+ | 0 |
 | VOICE | 8 | 7 | VOICE-32✎ | 0 |
 | GEN | 23 | 23 | - | 0 |
-| MODEL | 28 | 28 | - | 0 |
+| MODEL | 29 | 29 | - | 0 |
 | TMPL | 21 | 21 | - | 0 |
 | GUIDE | 13 | 13 | - | 0 |
 | EXPORT | 10 | 10 | - | 0 |
 | LANG | 7 | 7 | - | 0 |
-| THEME | 21 | 21 | - | 0 |
+| THEME | 22 | 22 | - | 0 |
 | MKT | 9 | 9 | - | 0 |
 | VIDEO | 6 | 6 | - | 0 |
-| CLIP | 54 | 54 | - | 2 |
-| CDS | 31 | 31 | - | 1 |
+| CLIP | 55 | 55 | - | 2 |
+| CDS | 32 | 32 | - | 1 |
 | BILL | 8 | 8 | - | 0 |
 | MEM | 5 | 5 | - | 2 |
 | QUAL | 7 | 7 | - | 0 |
 | GIFT | 3 | 3 | - | 0 |
+| DUB | 2 | 2 | - | 0 |
 
 ## review
 | id | st |
@@ -55,35 +57,53 @@
 | published-quality-260924 | converted@260925 |
 | clip-narrate-failure-260926 | converted@260926 |
 | conformance-all-260927 | converted@260927 |
+| perf-cost-261004 | open@261004 |
 
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
+| T533 | Add a bounded voice-design and speech provider boundary | ARCH MODEL DUB | - | doing@261004.du |
+| T534 | Curate explicit speech profiles and their qualified pricing | ARCH MODEL DUB QUOTA THEME | T533 | todo |
+| T535 | Meter speech units under explicit bounded credit approvals | ARCH QUOTA DUB MODEL | T534 | todo |
+| T536 | Persist private reusable spoken voices and audition assets | ARCH DUB MODEL | T535 | todo |
+| T537 | Generate voice candidates and confirm the auditioned identity | ARCH DUB MODEL QUOTA | T536 | todo |
+| T538 | Build voice creation, audition, confirmation and account reuse screens | ARCH DUB THEME | T537 | todo |
+| T539 | Qualify the complete Korean voice-creation milestone | ARCH DUB MODEL CDS THEME | T538 | todo |
+| T540 | Add independent spoken-script and speech provenance to clip plans | ARCH DUB CLIP | T539 | todo |
+| T541 | Make preview and contextual editing the clip workspace entry | ARCH CLIP THEME | T540 | todo |
+| T542 | Implement direct trim, reorder, seek and playhead split | ARCH CLIP CDS THEME | T541 | todo |
+| T543 | Edit captions directly and refresh script-derived wording safely | ARCH DUB CLIP CDS THEME | T541 | todo |
+| T544 | Generate only stale clip speech with immutable revision guards | ARCH DUB CLIP QUOTA | T540 | todo |
+| T545 | Assemble narrated first drafts from measured speech timing | ARCH DUB CLIP QUOTA CDS | T544 | todo |
+| T546 | Expose voice selection, script edits and explicit timing conflict choices | ARCH DUB CLIP QUOTA THEME | T541 T543 T545 | todo |
+| T547 | Play synchronized narration in the editable draft preview | ARCH DUB CLIP CDS | T546 | todo |
+| T548 | Mix immutable narration into server MP4 exports | ARCH DUB CLIP CDS | T547 | todo |
+| T549 | Mix the same narration into browser MP4 exports | ARCH DUB CLIP CDS | T548 | todo |
+| T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | todo |
 
 ## next
-- next: ARCH-52+ ARCH-53+ ARCH-56+ ARCH-57+ ARCH-34✎ remain pending for create-task ARCH.
-- create-task POST r32 (POST-108+ implemented by 12d2f428; verification-only); create-task VOICE r8 (VOICE-32✎ is already implemented by 68ae9a79: a verification-only task); update-ssot VOICE-31 remains open.
+- implement-task T533; complete T533–T539 and the real voice-creation qualification before T540–T550 narrated editing/export work.
+- create-task ARCH (ARCH-52+ ARCH-53+ ARCH-56+ ARCH-57+ ARCH-34✎); create-task POST r32 (POST-108+ implemented by 12d2f428; verification-only); create-task VOICE r8 (VOICE-32✎ implemented by 68ae9a79; verification-only); update-ssot VOICE-31 remains open.
 - ops: lower TEMPLATE_PHOTO_ROW_MAX / VITE_TEMPLATE_PHOTO_ROW_MAX to 3 wherever production sets them explicitly (VPS .env, Cloudflare build vars).
 
 ## log
+- 261004 T533 start: sequential implementation with one validated commit per task; spoken provider boundary first
 - 261004 update-ssot POST r32: POST-108+ ①'s actions ask once (사진 없이 만들까요?) before a run with no photo or video attached (already live in 12d2f428)
-- 261004 photo-group fixes and rotation (T530–T532) pushed; CI backend and frontend green, backend deployed
-- 261004 T532 done: photos shown and copied turned, 회전 control on ①'s tiles; FE suite green
-- 261004 T532 start
-- 261004 T531 done: observed and owner photo rotation stored and served; BE and FE suites green
-- 261004 T531 start
-- 261004 T530 done: groups of at most three, one orientation, always captioned; BE and FE suites green
-- 261004 T530 start
-- 261004 create-task GEN r23 POST r31 TMPL r21 EXPORT r10 → T530 (groups of three), T531 (rotation on the server), T532 (rotation on screen)
-- 261004 create-task GEN POST TMPL EXPORT start: GEN-77✎ GEN-78✎ GEN-79+ POST-107+ TMPL-38✎ EXPORT-15✎
-- 261004 update-ssot GEN r23 POST r31 TMPL r21 EXPORT r10: groups of at most 3 of one orientation, every part captioned; photo rotation from the observation until the owner turns it
-- 261004 update-ssot GEN POST TMPL EXPORT start: photo groups of at most 3, one orientation, always captioned; observe suggests photo rotation
-- 261004 T529 done: template builder and 형식 안내 read count as a suggested group; photo-group wave complete
-- 261004 T529 start
-- 261004 T528 done: four exports and the Naver tab carry photo groups; FE suite green except the pre-existing ClipGeneration failure
-- 261004 T528 start
-- 261004 T527 done: block editor makes, edits and undoes photo groups; FE suite green except the pre-existing ClipGeneration failure
-- 261004 T527 start
-- 261004 T525 done: writer schemas, rules, normalization, template legend and the photo_groups 기본 지침; BE suite green
-- 261004 T525 start
-- 261004 out of scope: ClipGeneration.test.tsx 'reuses retained originals after done…' fails on a clean HEAD (no 바로 만들기 button), unrelated to photo groups
+- 261004 spec validation passed: 18 tasks, full changed-decision coverage, current bases, acyclic dependencies and voice-first qualification; lint 0 errors (41 format/history warnings), git diff --check clean; no implementation
+- 261004 create-task DUB MODEL QUOTA CLIP CDS THEME: T533–T550 (18 tasks), voice creation/qualification first; independent captions, responsive timeline and both narrated exports next
+- 261004 create-task DUB MODEL QUOTA CLIP CDS THEME start: voice qualification precedes narrated editing; explicit provider, accounting, compatibility and export acceptance
+- 261004 create-ssot/update-ssot complete: DUB r2 MODEL r29 QUOTA r33 CLIP r55 CDS r32 THEME r22; all adopted ideation domains converted
+- 261004 create-ssot/update-ssot DUB MODEL QUOTA CLIP CDS THEME start: convert the adopted voice-first editor scope before create-task; unrelated ARCH/VOICE/review pending excluded
+- 261004 create-ssot DUB r1: description-generated private voices, audition/confirmation, account reuse and selective narration; related MODEL/QUOTA extensions precede implementation tasks
+- 261004 create-ssot DUB start: confirmed custom spoken voices, account reuse and selective narration generation from adopted ideation
+- 261004 ideation familiar-video-editing-and-dubbing ready: complete v1 product policy adopted; description-generated reusable voices first, responsive editor and speech-led clips next
+- 261004 ideation familiar-video-editing-and-dubbing start: owner adopted the complete editor, timing, voice-library and initial-scope recommendation
+- 261004 ideation familiar-video-editing-and-dubbing open: description-generated voice recommendation accepted; full editor/timing and reusable-voice packages proposed with a concrete creation flow
+- 261004 review-code perf-cost-261004 start: performance, provider cost and severe maintainability in code changed since conformance-all-260927 (87206229..3e6a14ea)
+- 261004 ideation familiar-video-editing-and-dubbing start: continue from description-generated voice recommendation and resolve remaining editor/lifecycle choices
+- 261004 ideation familiar-video-editing-and-dubbing open: voice-creation milestone precedes dubbing; selective regeneration, independent captions and audio controls adopted; creation method/device/timing pending
+- 261004 ideation familiar-video-editing-and-dubbing start: voice creation precedes dubbing; record adopted regeneration, caption appearance and audio parity policies
+- 261004 ideation familiar-video-editing-and-dubbing open: first-round device/content/timing choices requested; remaining product proposals and engineering verification obligations separated
+- 261004 ideation familiar-video-editing-and-dubbing start: resolve editor, dubbing, synchronization and regeneration choices with the owner
+- 261004 ideation familiar-video-editing-and-dubbing open: editing-discoverability findings and TTS feasibility recorded; speech absent from current preview/export; device, dubbing and timing choices pending
+- 261004 ideation familiar-video-editing-and-dubbing start

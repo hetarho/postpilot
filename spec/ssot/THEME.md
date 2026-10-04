@@ -1,5 +1,5 @@
 # THEME theme preference and design language
-> r21 | The browser-owned System / Light / Dark preference that maps onto the `day` and `night` semantic token maps, and the binding design language every frontend surface is held to — phone-first, planes not lines, colour as role, one design system, with the promotional surfaces (→THEME-37) as the one named exemption from its restraint.
+> r22 | The browser-owned System / Light / Dark preference that maps onto the `day` and `night` semantic token maps, and the binding design language every frontend surface is held to — phone-first, planes not lines, colour as role, one design system, with the promotional surfaces (→THEME-37) as the one named exemption from its restraint.
 
 ## decisions
 - THEME-1 [o] three browser-owned preferences: `system` (the default, follows `prefers-color-scheme`), `light` → the `day` semantic map, `dark` → the `night` map; the effective theme is always exactly `day|night`; components consume semantic or functional tokens and never branch on a preference, an effective theme or a palette step
@@ -217,6 +217,15 @@
 - THEME-40 [o] clip generation and rerender use one focused running view in place of the step bar, editing panels, dock and page-top progress/status: one real stage/progress region, labelled read-only original playback, cancellation with its cost rule and one confirmation, and navigation back to the list; the preview stays bounded so progress and cancellation remain reachable in one document scroller, queues/uploads/polling keep their mounted lifetime, and other lifecycle surfaces retain THEME-39 unless their domain explicitly adopts this pattern
 - THEME-42 [o] keyboard in an anchored panel: Tab and Shift+Tab move through the panel's own controls in order, a composite control moved through by arrow keys (a `Listbox`) counting as one; Tab from the last or Shift+Tab from the first closes the panel and continues from its trigger in page order ← handing focus back on any Tab leaves every control after the first unreachable (→THEME-33)
 - THEME-43 [o] a read-only document the operator copies from inside a sheet — 일괄 편집's current document (→MODEL-55) — is capped at `max-h-field` with `overflow-y-auto`, is a keyboard-focusable named region, and carries an icon copy control pinned to its top-right corner over the text, which leaves room for it ← an export runs to hundreds of lines and would push the paste field a sheet's height below it, and the control stays in reach however far the text is scrolled
+
+- THEME-44 [o] clip editing uses familiar responsive composition under CLIP-53/54: a preview, shared time ruler/playhead and visibly named tracks, with selected-item properties alongside them from `md:` and contextual tools plus explicitly opened detail sheets on phones
+  - desktop properties use the document's scroller rather than an independently scrolling panel; the timeline's horizontal navigation remains THEME-25's strip exception
+  - selection and pointer tools never require a modal before showing the change; drag handles, active selection and output/source units are visible and keyboard/touch alternatives remain under THEME-32/33
+  - an empty track exposes its first add action; the selected object's state is attached to that object, while global save/job state remains THEME-39's one region
+- THEME-45 [o] a clip draft's manual editing tools precede long storyline, spoken-script and AI request forms; those forms open through named entries without hiding preview/timeline context
+  - retain one step ActionBar and one committing primary action; a compact contextual toolbar is not a second committing dock
+- THEME-46 [o] spoken-voice surfaces visibly distinguish 목소리 from writing 말투; candidate playback, selection and confirmation are separate labelled actions, with names and playable samples for reuse
+  - show generation estimate/approval only on a generating action, explicit readiness or failure by text and no automatic generation during navigation, metadata edits or replay
 
 ## flow
 - bootstrap: read `postpilot.theme` → resolve(`system` → matchMedia | `light` → `day` | `dark` → `night`) → set `data-theme`, `color-scheme`, `theme-color` before React → provider from the snapshot → menu selection → apply + persist | remove key

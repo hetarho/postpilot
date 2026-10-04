@@ -1,5 +1,5 @@
 # QUOTA plans, credits, metering
-> r32 | Paid plans grant daily AI credits and monthly bonuses with model and server-export entitlements; free models cost no credits, while paid AI work reserves and settles confirmed usage at a job-frozen KRW conversion. Billing and cash refunds belong to BILL.
+> r33 | Paid plans grant daily AI credits and monthly bonuses with model and server-export entitlements; free models cost no credits, while paid AI work reserves and settles confirmed usage at a job-frozen KRW conversion. Billing and cash refunds belong to BILL.
 
 ## decisions
 - QUOTA-1 [o] every account carries exactly one plan `free | light | basic | pro | max | master`; free is the provisioning default, light/basic/pro/max are paid offers and master is operator-only. Stored plans and wire mappings reject unknown values without renumbering existing enum identities.
@@ -30,12 +30,16 @@
   - daily, monthly bonus, voucher and compensation credits participate by their actual expiry, so a sooner-expiring voucher may precede a daily grant
   - expired remainders stay in history and never roll over; unused daily allowance does not accumulate and requires no login claim
   - paid grants renew once per eligible window under QUOTA-37, atomically with balance/admission operations
-- QUOTA-13 [o] every LLM-consuming job start (`generate` `revise` `extract_memory` `analyze_voice` `check_voice` `model_experiment`, a post's storyline jobs →GEN-68 →GEN-69, and a template request →TMPL-58) passes one gate at the shared enqueue seam (`job.Queue.Enqueue`, a consumer-declared Admitter port wired in `cmd/api`); one comparison is one admission even when it fans out to two to five candidates, and its reservation includes every planned candidate call plus any shared preparation calls (→GEN-29); clip preparation is the explicitly bounded exception in QUOTA-43
-- QUOTA-14 [o] hold: price every planned call at its worst case — an assumed 30 000-token prompt (`holdInputTokens`), except clips freeze each stage's enforceable input allowance under QUOTA-53, at the model's input price plus that call's own completion budget at its output price — run the total through the charge formula, and deduct it from the lots in consumption order, inside one `BEGIN IMMEDIATE` transaction with the admission row, before the job row exists except for QUOTA-43's clip preparation; the owning service states the call count ← only it knows that observation batches photos per call
-- QUOTA-15 [o] terminal settlement is once-only against the persisted usage ledger; return unused reservation to its original lots and preserve their original expiries (→QUOTA-61).
-  - a non-clip overrun may spend remaining eligible admission-period funds down to zero without debt, never a new period's grant
-  - clips retain QUOTA-44 ceilings; unconfirmed cost is absorbed, with no retroactive debit
-  - compensation is a separate, once-only credit under QUOTA-60, never a second unused-reservation return
+- QUOTA-13 [o] every model-consuming job start (`generate` `revise` `extract_memory` `analyze_voice` `check_voice` `model_experiment`, post storyline jobs →GEN-68 →GEN-69, template requests →TMPL-58, and voice-design, billable voice-confirmation and speech-generation jobs →DUB) passes one shared enqueue admission gate (`job.Queue.Enqueue`, consumer-declared Admitter wired in `cmd/api`)
+  - one comparison is one admission covering its two to five candidates and shared preparation (→GEN-29); clip preparation retains QUOTA-43's bounded exception
+  - speech work uses QUOTA-69's enforceable unit budgets rather than the text hold assumptions
+- QUOTA-14 [o] hold every planned completion call at its worst case: 30 000 prompt tokens (`holdInputTokens`), except clips freeze QUOTA-53's input allowance, plus the actual completion budget at the applicable prices; speech uses QUOTA-69's separate unit budgets
+  - convert the total once and deduct lots in consumption order in one `BEGIN IMMEDIATE` transaction with admission before the job row, except QUOTA-43's clip preparation
+  - the owning context declares every planned call; neither a token fallback nor an implicit retry may price speech
+- QUOTA-15 [o] terminal settlement is once-only against the persisted usage ledger; return unused reservation to its original lots and preserve their original expiries (→QUOTA-61)
+  - ordinary non-clip, non-speech overruns may spend remaining eligible admission-period funds down to zero without debt, never a new period's grant
+  - clips retain QUOTA-44 ceilings and speech retains QUOTA-69 ceilings; unconfirmed cost is absorbed without retroactive debit
+  - compensation remains QUOTA-60's separate once-only credit, never a second reservation return
 - QUOTA-16 [o] master records admissions and reference AI usage but spends no credit lot and is not refused for model-grade access or insufficient credits. Operator exemption changes neither provider limits nor compatibility, bounded execution, price safety or the 60-second output limit.
 - QUOTA-17 [o] a hold whose job row then failed to insert is released in full on a context that outlives the caller's cancellation; a boot sweep settles any hold left open behind an already-terminal job
 - QUOTA-18 [o] a refusal is `resource_exhausted` with reason `INSUFFICIENT_CREDITS` carrying `required`, `balance`, `renews_at` (RFC3339); it writes no admission or debit and creates no job row except that QUOTA-43 preserves the existing clip preparation job as failed; the client renders copy from the reason and formats machine values (credits, instants, tier names) with i18next, never from the message string
@@ -45,9 +49,13 @@
   - no credit purchase or voucher unlocks a grade or server exports; each enabled paid feature retains a compatible entry-tier model
   - no fixed model count or access to the complete provider catalog is promised
 - QUOTA-20 [o] model responses distinguish plan entitlement, required plan, compatibility and credit affordability. Higher grades remain visible and locked; insufficient balance or a downgrade never deletes a saved selection or history. New work requires an explicit eligible selection; no silent substitution (→MODEL-24 →MODEL-25).
-- QUOTA-21 [o] ledger: every server-side LLM call writes one `usage_events` row — prompt/completion tokens, provider-reported reasoning tokens (0 = not reported; kept for diagnosis, never re-priced), `cost_microusd`, `cost_source` resolved reported → estimated → unavailable; a failed call is recorded when the provider reported usage; rows are append-only and kept indefinitely
+- QUOTA-21 [o] every server-side model call writes one append-only `usage_events` row retained indefinitely: prompt/completion and reported reasoning tokens for completion calls, explicit reported unit evidence for speech calls, and provider cost resolved reported → estimated from sufficiently specified reported usage → unavailable
+  - reported reasoning tokens are diagnostic, not priced again; zero reasoning tokens means not reported
+  - failed calls preserve reported billable usage; absent usage is unknown rather than a measured zero or the reserved maximum
+  - audio characters, supplier credits and seconds never populate token columns (→QUOTA-70)
 - QUOTA-22 [o] recording happens at the llm boundary: `cmd/api` wraps the registry every context receives and the worker stamps `usage.Work{user, kind, job}` on the handler context ← every present and future call site is metered by construction
-- QUOTA-23 [o] the ledger `stage` is the stage the call named for itself (`observe` · `write` · `analyze`), falling back to ref inference; every comparison candidate call appears in both the experiment tables and the ledger; credit math never joins experiment internals
+- QUOTA-23 [o] the ledger stage is the call's named operation (`observe`, `write`, `analyze`, `voice_design`, `voice_confirm`, `speech`), with completion-ref inference only for a completion lacking a stage
+  - every comparison call remains in both its experiment and the ledger; credit math never joins experiment internals
 - QUOTA-24 [o] a post holds at most 30 photos (`UPLOAD_MAX_PHOTOS_PER_POST`, in both config owners); the server refuses the upload that would cross it and the browser reports the excess as skipped before decoding ← it bounds the worst case a hold must price, not storage
 - QUOTA-25 [o] master-only surfaces are the AdminService procedures, including account administration and estimator-combo assignment (→QUOTA-39), in the closed masterProcedures set (→AUTH-18); /admin's 비용·환율 tab is where the exchange rate in effect (→QUOTA-65) and comparison supplier cost (→MODEL-39) are read; the frontend hides /admin and redirects non-master visitors away from it while the server remains authoritative; no tier exposes a publishing entry, panel or pairing screen
 - QUOTA-26 [o] GetMyPlan publishes the acting tier, owned credit lots and expiries, spendable credit, separate daily/bonus entitlements and next reset instants, monthly export used/reserved/remaining counts and renewal, the five offers with monthly/annual KRW prices and recommendation, and estimator rates.
@@ -127,7 +135,9 @@
 
 - QUOTA-55 [o] sales copy explains credits by what they produce (→QUOTA-64), never by a KRW-per-credit or AI-cost denomination, and distinguishes daily allowance from monthly bonus. Annual pricing states ten monthly payments for twelve months (about 16.7% off twelve monthly payments), not a 20% discount. No misleading at-par purchase or immediate monthly lump-sum claim is shown.
 - QUOTA-56 [o] estimator levels remain value/balanced/premium/top in order. The `/plans` comparison uses only a tier's highest eligible level; a missing/unpriced/incompatible assigned pair has an unavailable explanation, never a fabricated count or a lower-level fallback. Free models are described with provider-limited availability, never an infinite job estimate from dividing by zero.
-- QUOTA-57 [o] clip estimates cover source analysis plus flow/narration writing from the assigned photo-analysis/writing pair, requiring video input and structured output for the observer and structured output for the writer. Originals assume 60 seconds each, visibly stated; count is 1..20 and finished duration 15..60 seconds. An estimate is neither provider qualification nor an approved reservation and changes no production quote or settlement policy.
+- QUOTA-57 [o] plan-comparison clip estimates cover source analysis plus flow/narration writing from the assigned photo-analysis/writing pair, requiring video input and structured output for the observer and structured output for the writer
+  - state that reusable-voice creation and generated dubbing are separate quoted AI work, excluded from these ordinary-clip estimates
+  - originals assume 60 seconds each; count is 1..20 and finished duration 15..60 seconds; an estimate changes no qualification, approved reservation or settlement
 - QUOTA-58 [o] an eligible voucher redemption opens one voucher lot expiring its stated validity after redemption (→GIFT-9); revocation voids only its unspent remainder (→GIFT-10). Subscription lapse does not pause that expiry or grant paid-model access.
 - QUOTA-59 [o] select the previous business day's published KRW/USD reference in Asia/Seoul; `applied_rate = ceil(reference_rate / 10) × 10` KRW per USD.
   - snapshot the source, publication date, reference and applied rate before paid AI work starts; keep it through the admitted job’s internal retries and settlement, and record reference versus applied rate for master's audit; a new admitted job selects its own snapshot
@@ -173,6 +183,19 @@
   - a failure's technical-detail disclosure stays available to master (→QUOTA-66) ← it is where a failed job's provider cause can be read
   - the account's plan name and its /admin entry remain
 
+- QUOTA-69 [o] voice-design, applicable voice-confirmation and speech work require an explicit server-issued bounded quote and approval; final debit never exceeds reservation or approval, including failure and cancellation
+  - freeze profile revision, explicit model refs, account-owned voice/candidate identity, exact input digest, billable operation count, documented unit prices and enforceable input/output bounds
+  - pricing changes, changed inputs or extra requested work require a new quote; reuse covers no new call and incurs no new synthesis charge
+  - reserve all planned billable operations before any such call; no unquoted correction, automatic retry, model/supplier fallback or silent bound relaxation
+  - failed/cancelled work settles confirmed usage under QUOTA-46/49/52/60; unknown usage never becomes a later debit
+- QUOTA-70 [o] speech accounting preserves explicit unit quantities, supplier request identity and frozen pricing evidence; actual cost follows reported cost or adequately reported applicable usage, never requested text length alone where the supplier has not confirmed consumption
+  - supplier credits are separate from product credits; decimal USD conversion uses the job's QUOTA-59 snapshot and rounds product debit once per job
+  - request/candidate counts follow the supplier's documented billable operation, not the number of playable samples returned
+  - stored playback, compatible speech reuse and metadata edits cause neither admission nor new usage; private speech storage has no AI-credit fee under QUOTA-30
+- QUOTA-71 [o] a narrated initial-generation approval includes its bounded script writing, speech generation and footage-flow writing as well as any missing analysis; later speech regeneration quotes only stale required segments (→DUB-20)
+  - AI script/flow revision remains separately approved writing work and never silently synthesizes changed speech; expose pending speech and its separate quote
+  - caption refresh, visible text/style/position and timeline-only edits remain credit-free
+
 ## flow
 - paid subscribe → BILL confirms payment → first daily grant + monthly bonus/export window; daily access → materialize the current eligible daily grant once; monthly boundary → expire old bonus/counts and open new entitlements while paid
 - AI start → entitlement/compatibility check → free-only work(zero-credit admission) | paid work(freeze FX → estimate → reserve eligible lots) → admitted job → metered calls
@@ -196,6 +219,4 @@
 - frontend reads contracts through `entities/plan`; `/plans`, admin plan management, the account menu and header share the published offer and balance semantics
 
 ## chg
-- r32 261001 QUOTA-68+ master sees customer screens as a customer · QUOTA-25✎ +비용·환율 tab · QUOTA-27✎ operator-exempt→unlimited · QUOTA-28✎ master card naming operator→customer button disabled · QUOTA-50✎ QUOTA-59✎ QUOTA-65✎ QUOTA-66✎ master's surfaces→/admin only
-- r31 261001 QUOTA-28✎ saving per card→once on the annual option · card→tier/state, price, button, four benefits · action on eligible cards→a button on every card · QUOTA-65✎ rate on master's surfaces→operator surfaces only
-- r30 261001 QUOTA-13✎ gated starts …storyline jobs→…storyline jobs, a template request · QUOTA-67+ template request reservation with bounded corrections and a one-call catalog estimate
+-
