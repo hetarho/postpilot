@@ -46,7 +46,7 @@ func unitFixture(t *testing.T) (*usage.Service, *db.DB, *unitChecker) {
 		rates.data[now.AddDate(0, 0, -i).Format(time.DateOnly)] = 14_800_000
 	}
 	checker := &unitChecker{}
-	return usage.NewService(store, pricedModels{}, maxCompletion, noUnitCoverage{}).WithRateSelector(usage.NewRateSelector(rates, store)).WithUnitAccounting(checker), handle, checker
+	return usage.NewService(store, pricedModels{}, maxCompletion, noUnitCoverage{}, usage.NewRateSelector(rates, store)).WithUnitAccounting(checker), handle, checker
 }
 
 func unitRequest() llm.VoiceDesignRequest {

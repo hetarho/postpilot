@@ -232,3 +232,50 @@ func snapshot(day RateDay, temporary bool) (plan.RateSnapshot, error) {
 	return plan.RateSnapshot{Source: "korea-eximbank", PublicationDate: day.Date,
 		ReferenceE4: day.ReferenceE4, AppliedE4: applied, Temporary: temporary}, nil
 }
+
+// NewFixedRateSelector selects one reference, published every day, from memory: the FX path
+// with the official source and its persistent cache left out. It is the selector a ledger is
+// built with where the rate is not what is being exercised — a test, or local tooling — never
+// production wiring, which selects the official publication (QUOTA-59).
+func NewFixedRateSelector(referenceE4 int64) *RateSelector {
+	return NewRateSelector(fixedRateSource(referenceE4), &memoryRateCache{days: map[string]RateDay{}})
+}
+
+type fixedRateSource int64
+
+func (r fixedRateSource) KRWPerUSD(context.Context, time.Time) (int64, bool, error) {
+	return int64(r), true, nil
+}
+
+// memoryRateCache is RateCache in process memory, with the store's predicates.
+type memoryRateCache struct {
+	mu   sync.Mutex
+	days map[string]RateDay
+}
+
+func (c *memoryRateCache) RateDay(_ context.Context, date string) (RateDay, bool, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	day, ok := c.days[date]
+	return day, ok, nil
+}
+
+func (c *memoryRateCache) RecordRateDay(_ context.Context, day RateDay) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.days[day.Date] = day
+	return nil
+}
+
+func (c *memoryRateCache) LatestRateDay(_ context.Context, noLaterThan string) (RateDay, bool, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	var latest RateDay
+	found := false
+	for date, day := range c.days {
+		if day.Published && date <= noLaterThan && (!found || date > latest.Date) {
+			latest, found = day, true
+		}
+	}
+	return latest, found, nil
+}

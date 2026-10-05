@@ -10,8 +10,13 @@ import (
 	"time"
 
 	"github.com/postpilot/backend/internal/plan"
-	"github.com/postpilot/backend/internal/usage"
 )
+
+// seoul is the product's home zone, the clock these cases are written in.
+var seoul = time.FixedZone("Asia/Seoul", 9*60*60)
+
+// declined is the card's own refusal, the one charge answer that fails an order for good.
+var declined = &ProviderError{Code: "REJECT_CARD_PAYMENT", HTTPStatus: 403}
 
 func TestSubscribeRefusalsAndProviderFailure(t *testing.T) {
 	ctx := context.Background()
@@ -35,8 +40,11 @@ func TestSubscribeRefusalsAndProviderFailure(t *testing.T) {
 	if _, err := service.Subscribe(ctx, "alice", plan.Pro, TermMonthly); !errors.Is(err, ErrPaymentMethodRequired) {
 		t.Fatalf("method refusal = %v", err)
 	}
+	if len(store.intents) != 0 {
+		t.Fatalf("a refusal recorded orders: %+v", store.intents)
+	}
 	store.methods["alice"] = testMethod("alice")
-	provider.chargeErr = errors.New("declined")
+	provider.chargeErr = declined
 	if _, err := service.Subscribe(ctx, "alice", plan.Pro, TermMonthly); !errors.Is(err, ErrChargeFailed) {
 		t.Fatalf("charge refusal = %v", err)
 	}
@@ -46,30 +54,9 @@ func TestSubscribeRefusalsAndProviderFailure(t *testing.T) {
 	if len(store.events) != 1 || store.events[0].Kind != "charge_failed" {
 		t.Fatalf("failure events = %+v", store.events)
 	}
-}
-
-// BILL-20 on the non-fixed paths: a master account starts no subscription or change, and the
-// refusal names the account rather than the tier it asked for.
-func TestMasterAccountStartsNoLegacySubscriptionOrChange(t *testing.T) {
-	ctx := context.Background()
-	now := time.Date(2026, 9, 8, 12, 0, 0, 0, seoul)
-	store := newSubscriptionStore()
-	store.plans.tiers["alice"] = plan.Master
-	provider := newSubscriptionProvider()
-	service := newSubscriptionService(store, provider, now)
-
-	if _, err := service.Subscribe(ctx, "alice", plan.Pro, TermMonthly); !errors.Is(err, ErrMasterAccount) {
-		t.Fatalf("subscribe = %v, want ErrMasterAccount", err)
-	}
-	store.subscriptions["alice"] = activeSubscription("alice", plan.Basic, TermMonthly, now, now.AddDate(0, 1, 0), now.AddDate(0, 1, 0), true)
-	if _, err := service.QuoteChange(ctx, "alice", plan.Pro, TermMonthly); !errors.Is(err, ErrMasterAccount) {
-		t.Fatalf("quote change = %v, want ErrMasterAccount", err)
-	}
-	if _, _, err := service.ChangeSubscription(ctx, "alice", plan.Pro, TermMonthly); !errors.Is(err, ErrMasterAccount) {
-		t.Fatalf("change = %v, want ErrMasterAccount", err)
-	}
-	if len(provider.requests) != 0 || store.plans.tiers["alice"] != plan.Master || len(store.events) != 0 {
-		t.Fatalf("requests=%+v tier=%s events=%+v", provider.requests, store.plans.tiers["alice"], store.events)
+	// The refused order is closed, so it blocks no later purchase.
+	if _, pending, err := store.PendingIntent(ctx, "alice"); err != nil || pending {
+		t.Fatalf("refused order still open: pending=%v err=%v", pending, err)
 	}
 }
 
@@ -97,15 +84,21 @@ func TestSubscribeWritesAnchorChargeTierAndMonthlyLot(t *testing.T) {
 	if !window.start.Equal(now) || !window.end.Equal(subscription.NextGrantAt) || window.tier != plan.Pro {
 		t.Fatalf("window = %+v", window)
 	}
-	if len(provider.requests) != 1 || provider.requests[0].KRW != 139_250 || provider.requests[0].OrderID != subscriptionOrderID("alice", now) {
+	offer, _ := plan.CommercialOffer(plan.Pro)
+	if len(provider.requests) != 1 || provider.requests[0].KRW != offer.AnnualKRW || !strings.HasPrefix(provider.requests[0].OrderID, "pp-sub-") {
 		t.Fatalf("charge requests = %+v", provider.requests)
 	}
-	if kinds(store.events) != "charge,tier_change" || store.events[0].USDCents == nil || *store.events[0].USDCents != 10_000 {
+	// BILL-15: the charge records the fixed KRW amount.
+	charge := store.events[0]
+	if kinds(store.events) != "charge,tier_change" || charge.KRW == nil || *charge.KRW != offer.AnnualKRW {
 		t.Fatalf("events = %+v", store.events)
 	}
 }
 
-func TestSubscribeRecoversAProcessedOrderWithoutChargingTwice(t *testing.T) {
+// A charge the provider captured but whose answer was lost keeps its order open: the request
+// path reports it pending, a retry starts no second order, and the next billing pass applies
+// it once.
+func TestSubscribeAppliesACapturedChargeWhoseAnswerWasLostOnce(t *testing.T) {
 	ctx := context.Background()
 	now := time.Date(2026, 9, 8, 12, 0, 0, 0, seoul)
 	store := newSubscriptionStore()
@@ -113,14 +106,23 @@ func TestSubscribeRecoversAProcessedOrderWithoutChargingTwice(t *testing.T) {
 	provider.failAfterCharge = true
 	service := newSubscriptionService(store, provider, now)
 
-	if _, err := service.Subscribe(ctx, "alice", plan.Basic, TermMonthly); !errors.Is(err, ErrChargeFailed) {
+	if _, err := service.Subscribe(ctx, "alice", plan.Basic, TermMonthly); !errors.Is(err, ErrPaymentPending) {
 		t.Fatalf("first = %v", err)
 	}
-	if _, err := service.Subscribe(ctx, "alice", plan.Basic, TermMonthly); err != nil {
-		t.Fatalf("retry = %v", err)
+	if _, err := service.Subscribe(ctx, "alice", plan.Basic, TermMonthly); !errors.Is(err, ErrPaymentPending) {
+		t.Fatalf("retry while the order is open = %v", err)
 	}
-	if len(provider.requests) != 1 || len(store.subscriptions) != 1 || len(store.credits.windows) != 1 {
-		t.Fatalf("requests=%d subscriptions=%d windows=%d", len(provider.requests), len(store.subscriptions), len(store.credits.windows))
+	if len(store.subscriptions) != 0 {
+		t.Fatalf("an unconfirmed charge granted %+v", store.subscriptions)
+	}
+	service.now = func() time.Time { return now.Add(pendingSettleGrace) }
+	for pass := 0; pass < 2; pass++ {
+		if err := service.ReconcilePending(ctx); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if len(provider.requests) != 1 || len(store.subscriptions) != 1 || len(store.credits.windows) != 1 || kinds(store.events) != "charge,tier_change" {
+		t.Fatalf("requests=%d subscriptions=%d windows=%d events=%s", len(provider.requests), len(store.subscriptions), len(store.credits.windows), kinds(store.events))
 	}
 }
 
@@ -150,19 +152,24 @@ func TestRunDueCoversAnnualGrantRenewalFailureAndCancellation(t *testing.T) {
 			t.Fatal(err)
 		}
 		updated := store.subscriptions["alice"]
+		offer, _ := plan.CommercialOffer(plan.Pro)
 		if !updated.TermStart.Equal(due) || updated.TermEnd.Month() != time.March || len(store.credits.windows) != 1 || kinds(store.events) != "charge" || len(store.mailer.messages) != 1 {
 			t.Fatalf("subscription=%+v lots=%+v events=%+v mail=%+v", updated, store.credits.windows, store.events, store.mailer.messages)
 		}
+		if len(provider.requests) != 1 || provider.requests[0].KRW != offer.MonthlyKRW {
+			t.Fatalf("charge requests = %+v", provider.requests)
+		}
 	})
 
+	// BILL-8: a finally refused renewal ends paid coverage at once, without a retry.
 	t.Run("failed renewal lapses once", func(t *testing.T) {
 		store := newSubscriptionStore()
 		store.subscriptions["alice"] = activeSubscription("alice", plan.Pro, TermMonthly, anchor, due, due, true)
 		provider := newSubscriptionProvider()
-		provider.chargeErr = errors.New("declined")
+		provider.chargeErr = declined
 		service := newSubscriptionService(store, provider, due)
-		if err := service.RunDue(ctx, due); err != nil {
-			t.Fatal(err)
+		if err := service.RunDue(ctx, due); err == nil || !strings.Contains(err.Error(), "alice") {
+			t.Fatalf("a refused renewal must be observable: %v", err)
 		}
 		if store.subscriptions["alice"].Status != "lapsed" || store.plans.tiers["alice"] != plan.Free || kinds(store.events) != "renewal_failed" || len(store.mailer.messages) != 1 {
 			t.Fatalf("subscription=%+v tier=%s events=%+v mail=%+v", store.subscriptions["alice"], store.plans.tiers["alice"], store.events, store.mailer.messages)
@@ -296,8 +303,8 @@ func TestAnnualBenefitStepNeverRevertsAWriteLandingDuringThePass(t *testing.T) {
 }
 
 type subscriptionStore struct {
+	noRefunds
 	subscriptions     map[string]Subscription
-	subscriptionReads int
 	methods           map[string]PaymentMethod
 	events            []Event
 	purchases         map[string]Purchase
@@ -305,12 +312,12 @@ type subscriptionStore struct {
 	plans             *subscriptionPlans
 	mailer            *subscriptionMailer
 	upsertFailureUser string
+	// quotes and intents are the checkout journal every payment runs through.
+	quotes  map[string]QuoteRecord
+	intents []Intent
 	// afterDue runs once DueSubscriptions has handed out its snapshot: a write it makes is one
 	// landing between the pass's read and its steps.
 	afterDue func()
-	// markRefundedErr fails the step that marks a purchase refunded, which is the crash a
-	// resumable refund has to survive.
-	markRefundedErr error
 }
 
 func newSubscriptionStore() *subscriptionStore {
@@ -321,6 +328,7 @@ func newSubscriptionStore() *subscriptionStore {
 		credits:       &subscriptionCredits{},
 		plans:         &subscriptionPlans{tiers: map[string]plan.Plan{"alice": plan.Free}},
 		mailer:        &subscriptionMailer{},
+		quotes:        map[string]QuoteRecord{},
 	}
 }
 
@@ -328,7 +336,6 @@ func (s *subscriptionStore) InWriteTx(ctx context.Context, fn func(Store, Credit
 	return fn(s, s.credits, s.plans)
 }
 func (s *subscriptionStore) Subscription(_ context.Context, userID string) (Subscription, bool, error) {
-	s.subscriptionReads++
 	value, ok := s.subscriptions[userID]
 	return value, ok, nil
 }
@@ -375,9 +382,6 @@ func (s *subscriptionStore) InsertPurchase(_ context.Context, purchase Purchase)
 	return nil
 }
 func (s *subscriptionStore) MarkPurchaseRefunded(_ context.Context, userID, purchaseID string, at time.Time) (bool, error) {
-	if s.markRefundedErr != nil {
-		return false, s.markRefundedErr
-	}
 	purchase, found := s.purchases[purchaseID]
 	if !found || purchase.UserID != userID || purchase.RefundedAt != nil {
 		return false, nil
@@ -419,16 +423,97 @@ func (s *subscriptionStore) AdvanceNextGrant(_ context.Context, userID string, f
 	return true, nil
 }
 
-type monthlyWindow struct {
+// The journal keeps the real store's transitions: an order leaves pending (or review) once,
+// and a pending or in-review order blocks the account's next payment.
+func (s *subscriptionStore) PutQuote(_ context.Context, quote QuoteRecord) error {
+	s.quotes[quote.ID] = quote
+	return nil
+}
+func (s *subscriptionStore) Quote(_ context.Context, id string) (QuoteRecord, bool, error) {
+	quote, found := s.quotes[id]
+	return quote, found, nil
+}
+func (s *subscriptionStore) PurgeExpiredQuotes(_ context.Context, expiredBefore time.Time) (int, error) {
+	purged := 0
+	for id, quote := range s.quotes {
+		if quote.ExpiresAt.Before(expiredBefore) {
+			delete(s.quotes, id)
+			purged++
+		}
+	}
+	return purged, nil
+}
+func (s *subscriptionStore) InsertIntent(_ context.Context, intent Intent) error {
+	for _, existing := range s.intents {
+		if existing.OrderID == intent.OrderID {
+			return fmt.Errorf("order %s already recorded", intent.OrderID)
+		}
+	}
+	s.intents = append(s.intents, intent)
+	return nil
+}
+func (s *subscriptionStore) Intent(_ context.Context, orderID string) (Intent, bool, error) {
+	for _, intent := range s.intents {
+		if intent.OrderID == orderID {
+			return intent, true, nil
+		}
+	}
+	return Intent{}, false, nil
+}
+func (s *subscriptionStore) PendingIntent(_ context.Context, userID string) (Intent, bool, error) {
+	for _, intent := range s.intents {
+		if intent.UserID == userID && (intent.Status == "pending" || intent.Status == "review") {
+			return intent, true, nil
+		}
+	}
+	return Intent{}, false, nil
+}
+func (s *subscriptionStore) DueIntents(_ context.Context, createdBefore time.Time) ([]Intent, error) {
+	var due []Intent
+	for _, intent := range s.intents {
+		if intent.Status == "pending" && !intent.CreatedAt.After(createdBefore) {
+			due = append(due, intent)
+		}
+	}
+	return due, nil
+}
+func (s *subscriptionStore) MarkIntent(_ context.Context, orderID, status, providerStatus, paymentKey string, at time.Time) (bool, error) {
+	for index := range s.intents {
+		intent := &s.intents[index]
+		if intent.OrderID == orderID && intent.Status == "pending" {
+			intent.Status, intent.ProviderStatus, intent.PaymentKey, intent.UpdatedAt = status, providerStatus, paymentKey, at
+			return true, nil
+		}
+	}
+	return false, nil
+}
+func (s *subscriptionStore) ReviewIntents(_ context.Context, limit int) ([]Intent, error) {
+	var review []Intent
+	for _, intent := range s.intents {
+		if intent.Status == "review" && len(review) < limit {
+			review = append(review, intent)
+		}
+	}
+	return review, nil
+}
+func (s *subscriptionStore) FailReviewIntent(_ context.Context, orderID, providerStatus string, at time.Time) (bool, error) {
+	for index := range s.intents {
+		intent := &s.intents[index]
+		if intent.OrderID == orderID && intent.Status == "review" {
+			intent.Status, intent.ProviderStatus, intent.UpdatedAt = "failed", providerStatus, at
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+type coverageWindow struct {
 	userID     string
 	tier       plan.Plan
 	start, end time.Time
-	// started marks the window a first subscription charge opened (QUOTA-42) rather than a
-	// renewal's absent-only one; both land in `windows` so a count still reads as windows.
-	started bool
 }
 type subscriptionCredits struct {
-	windows []monthlyWindow
+	windows []coverageWindow
 	raises  []int
 	lots    map[string]*purchaseLot
 	lotSeq  int
@@ -439,18 +524,6 @@ type subscriptionCredits struct {
 
 type purchaseLot struct{ granted, remaining int }
 
-func (c *subscriptionCredits) OpenMonthlyLot(_ context.Context, userID string, tier plan.Plan, start, end time.Time) error {
-	c.windows = append(c.windows, monthlyWindow{userID: userID, tier: tier, start: start, end: end})
-	return nil
-}
-func (c *subscriptionCredits) StartMonthlyWindow(_ context.Context, userID string, tier plan.Plan, start, end time.Time) error {
-	c.windows = append(c.windows, monthlyWindow{userID: userID, tier: tier, start: start, end: end, started: true})
-	return nil
-}
-func (c *subscriptionCredits) RaiseMonthlyLot(_ context.Context, _ string, credits int) error {
-	c.raises = append(c.raises, credits)
-	return nil
-}
 func (c *subscriptionCredits) OpenPurchasedLot(_ context.Context, _ string, credits int) (string, error) {
 	if c.lots == nil {
 		c.lots = map[string]*purchaseLot{}
@@ -460,14 +533,6 @@ func (c *subscriptionCredits) OpenPurchasedLot(_ context.Context, _ string, cred
 	c.lots[id] = &purchaseLot{granted: credits, remaining: credits}
 	return id, nil
 }
-func (c *subscriptionCredits) VoidUntouchedLot(_ context.Context, lotID string) error {
-	lot, found := c.lots[lotID]
-	if !found || lot.remaining != lot.granted {
-		return ErrLotTouched
-	}
-	lot.remaining = 0
-	return nil
-}
 func (c *subscriptionCredits) UntouchedLots(_ context.Context, lotIDs []string) (map[string]bool, error) {
 	c.untouchedReads++
 	untouched := map[string]bool{}
@@ -476,14 +541,6 @@ func (c *subscriptionCredits) UntouchedLots(_ context.Context, lotIDs []string) 
 		untouched[id] = found && lot.granted > 0 && lot.remaining == lot.granted
 	}
 	return untouched, nil
-}
-func (c *subscriptionCredits) RestoreLot(_ context.Context, lotID string, credits int) error {
-	lot, found := c.lots[lotID]
-	if !found || lot.remaining+credits > lot.granted {
-		return usage.ErrLotNotFound
-	}
-	lot.remaining += credits
-	return nil
 }
 func (*subscriptionCredits) GrantBonusOnce(context.Context, string, string, int) (bool, error) {
 	return false, nil
@@ -509,12 +566,11 @@ func (p *subscriptionPlans) TierOf(_ context.Context, userID string) (plan.Plan,
 }
 
 type subscriptionProvider struct {
+	noCancel
 	requests        []ChargeRequest
 	payments        map[string]Payment
 	chargeErr       error
 	failAfterCharge bool
-	refunds         []string
-	refundErr       error
 }
 
 func newSubscriptionProvider() *subscriptionProvider {
@@ -523,47 +579,29 @@ func newSubscriptionProvider() *subscriptionProvider {
 func (*subscriptionProvider) IssueBillingKey(context.Context, string, string) (BillingKey, error) {
 	return BillingKey{}, nil
 }
+
+// Charge captures the order's amount in KRW, the provider answer settlement checks against
+// the order (BILL-16).
 func (p *subscriptionProvider) Charge(_ context.Context, request ChargeRequest) (Payment, error) {
 	p.requests = append(p.requests, request)
-	if p.failAfterCharge {
-		p.failAfterCharge = false
-		p.payments[request.OrderID] = Payment{PaymentKey: "paid-after-timeout", OrderID: request.OrderID, Status: "DONE"}
-		return Payment{}, errors.New("response lost")
-	}
 	if p.chargeErr != nil {
 		return Payment{}, p.chargeErr
 	}
-	payment := Payment{PaymentKey: "payment-" + request.OrderID, OrderID: request.OrderID, Status: "DONE"}
+	payment := Payment{PaymentKey: "payment-" + request.OrderID, OrderID: request.OrderID, Status: "DONE",
+		AmountKRW: request.KRW, BalanceKRW: request.KRW, Currency: "KRW"}
 	p.payments[request.OrderID] = payment
+	if p.failAfterCharge {
+		p.failAfterCharge = false
+		return Payment{}, errors.New("response lost")
+	}
 	return payment, nil
 }
 func (p *subscriptionProvider) PaymentByOrder(_ context.Context, orderID string) (Payment, bool, error) {
 	payment, ok := p.payments[orderID]
 	return payment, ok, nil
 }
-func (p *subscriptionProvider) Refund(_ context.Context, paymentKey, reason string) error {
-	if p.refundErr != nil {
-		return p.refundErr
-	}
-	p.refunds = append(p.refunds, paymentKey+":"+reason)
-	// A refunded payment stops being a live charge. It is the only evidence a resumed refund
-	// has that the money already left, so the fake has to report it the way the provider does.
-	for orderID, payment := range p.payments {
-		if payment.PaymentKey == paymentKey {
-			payment.Status = "CANCELED"
-			p.payments[orderID] = payment
-		}
-	}
-	return nil
-}
 func (*subscriptionProvider) ParseNotification([]byte) (Notification, error) {
 	return Notification{}, nil
-}
-
-type subscriptionRates struct{}
-
-func (subscriptionRates) KRWPerUSD(context.Context, time.Time) (int64, bool, error) {
-	return 13_925_000, true, nil
 }
 
 type subscriptionAccounts struct{ verified bool }
@@ -581,7 +619,7 @@ func (m *subscriptionMailer) Send(_ context.Context, to, subject, text string) e
 }
 
 func newSubscriptionService(store *subscriptionStore, provider *subscriptionProvider, now time.Time) *Service {
-	service := NewService(store, provider, subscriptionRates{}, store.credits, store.plans, subscriptionAccounts{verified: true}, store.mailer)
+	service := NewService(store, provider, store.credits, store.plans, subscriptionAccounts{verified: true}, store.mailer)
 	service.now = func() time.Time { return now }
 	return service
 }
@@ -591,7 +629,7 @@ func testMethod(userID string) PaymentMethod {
 }
 
 func activeSubscription(userID string, tier plan.Plan, term Term, anchor, termEnd, next time.Time, autoRenew bool) Subscription {
-	return Subscription{UserID: userID, Tier: tier, Term: term, AnchorAt: anchor, TermStart: anchor, TermEnd: termEnd, NextGrantAt: next, AutoRenew: autoRenew, Status: "active", CreatedAt: anchor, UpdatedAt: anchor}
+	return Subscription{UserID: userID, CoverageID: "paid:" + userID, Tier: tier, Term: term, AnchorAt: anchor, TermStart: anchor, TermEnd: termEnd, NextGrantAt: next, AutoRenew: autoRenew, Status: "active", CreatedAt: anchor, UpdatedAt: anchor}
 }
 
 func kinds(events []Event) string {
@@ -618,7 +656,7 @@ func (*subscriptionStore) UpsertSupportCoverage(context.Context, SupportCoverage
 func (*subscriptionStore) DeleteSupportCoverage(context.Context, string) error          { return nil }
 func (c *subscriptionCredits) OpenCoverage(_ context.Context, userID string, coverage Coverage, at time.Time, _ string) error {
 	_, end := plan.BenefitWindow(coverage.Anchor, at)
-	c.windows = append(c.windows, monthlyWindow{userID: userID, tier: coverage.Tier, start: at, end: end, started: true})
+	c.windows = append(c.windows, coverageWindow{userID: userID, tier: coverage.Tier, start: at, end: end})
 	return nil
 }
 func (c *subscriptionCredits) AddUpgradeBonus(_ context.Context, _ string, _ Coverage, _ time.Time, credits, _ int, _ string) error {

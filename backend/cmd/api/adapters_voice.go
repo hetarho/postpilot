@@ -28,10 +28,22 @@ type voiceJobs struct {
 	budget config.LLMCompletionBudget
 }
 
+// Enqueue starts one analysis (VOICE-23) through the shared admission (QUOTA-13): the payload
+// freezes the 학습 글 it reads (VOICE-22), and its one analyze call is priced at the prompt the
+// voice context sized over them, at the completion budget the call is sent (QUOTA-14).
 func (a voiceJobs) Enqueue(ctx context.Context, request voice.AnalysisJobRequest) (string, error) {
+	payload, err := voice.EncodeAnalysisSnapshot(request.MaterialIDs)
+	if err != nil {
+		return "", err
+	}
 	subjects, guards := postVoiceWork(job.KindAnalyzeVoice, request.UserID, "", request.VoiceID)
 	id, err := a.queue.Enqueue(ctx, job.NewJob{
 		Kind: job.KindAnalyzeVoice, UserID: request.UserID, Subjects: subjects, Guards: guards, WriteModel: request.WriteModel,
+		Payload: payload,
+		PricingCalls: []job.PlannedCall{{
+			Ref: request.WriteModel, Stage: llm.StageNameAnalyze, Count: 1,
+			CompletionTokens: a.budget.WriteFloor, PromptTokens: request.PromptTokens,
+		}},
 	})
 	var active *job.ErrAlreadyInProgress
 	if errors.As(err, &active) {

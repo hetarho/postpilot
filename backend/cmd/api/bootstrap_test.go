@@ -149,7 +149,7 @@ func TestVerificationRepairsFailedSignupBootstrapsExactlyOnce(t *testing.T) {
 
 	// The repaired process is a new service over the same rows: bootstraps are
 	// constructor state, so healing means constructing again, not mutating.
-	ledger := usage.NewService(usagestore.New(handle.Writer, handle.Reader), emptyModels{}, 0, usageAnchors{auth: authSvc}, approvedCeilingKinds()...)
+	ledger := usage.NewService(usagestore.New(handle.Writer, handle.Reader), emptyModels{}, 0, usageAnchors{auth: authSvc}, testRates, approvedCeilingKinds()...)
 	authSvc = auth.NewService(authStore, time.Hour, auth.Deps{
 		Mailer: mailer, WebOrigin: "https://postpilot.example.com",
 		Bootstraps: []auth.AccountBootstrap{

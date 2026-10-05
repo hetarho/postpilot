@@ -57,8 +57,8 @@ func TestNarrationIsScheduledAcrossTheWholeTimeline(t *testing.T) {
 	if kept[0].Resolved.StartMS != 1000 || kept[0].Resolved.EndMS != 5000 || kept[1].Resolved.StartMS != 6000 {
 		t.Fatal("a surviving caption was retimed", kept[0].Resolved, kept[1].Resolved)
 	}
-	// The per-cut sentence limit is the legacy plan's rule: a narration may hold
-	// as many captions over one cut as its own windows allow.
+	// No per-cut sentence limit applies: a narration may hold as many captions
+	// over one cut as its own windows allow.
 	crowded := narrationPlan(t,
 		narrationText("narration-1", "첫 자막", 0, 2000),
 		narrationText("narration-2", "둘째 자막", 2000, 4000),

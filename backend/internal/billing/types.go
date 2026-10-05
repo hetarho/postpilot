@@ -24,19 +24,9 @@ var (
 	ErrChangeUnsupported         = errors.New("changing tier and term together is unsupported")
 	ErrPaymentMethodRequired     = errors.New("payment method required")
 	ErrChargeFailed              = errors.New("charge failed")
-	ErrPurchaseTooSmall          = errors.New("purchase must be at least one dollar")
-	ErrPurchaseNotFound          = errors.New("purchase not found")
-	ErrRefundWindowClosed        = errors.New("refund window closed")
-	ErrPurchaseSpent             = errors.New("purchased credits were spent")
-	ErrRefundFailed              = errors.New("refund failed")
-	// ErrLotTouched is what the credits port reports when a purchased lot is no longer
-	// whole. It is billing's own sentinel, translated from whatever the ledger says by the
-	// adapter that wires the two (ARCH-7): billing knows a lot can be spent, not how the
-	// ledger names that.
-	ErrLotTouched     = errors.New("purchased credit lot has already been touched")
-	ErrPaymentPending = errors.New("payment outcome is pending")
-	ErrStaleQuote     = errors.New("billing quote no longer matches subscription")
-	ErrInvalidPack    = errors.New("unknown fixed credit pack")
+	ErrPaymentPending            = errors.New("payment outcome is pending")
+	ErrStaleQuote                = errors.New("billing quote no longer matches subscription")
+	ErrInvalidPack               = errors.New("unknown fixed credit pack")
 	// ErrMasterAccount refuses every payment a master account would start (BILL-20): the
 	// operator tier is not sold, and a paid tier it bought would demote it.
 	ErrMasterAccount = errors.New("a master account starts no payment")
@@ -100,9 +90,6 @@ type Event struct {
 	Tier               *plan.Plan
 	Term               *Term
 	Credits            *int
-	USDCents           *int
-	KRWPerUSDE4        *int64
-	RateDate           *string
 	KRW                *int
 	ProviderPaymentKey *string
 	OrderID            *string
@@ -116,10 +103,7 @@ type Purchase struct {
 	UserID             string
 	LotID              string
 	Credits            int
-	USDCents           int
 	KRW                int
-	RatePerUSDE4       int64
-	RateDate           string
 	ProviderPaymentKey string
 	OrderID            string
 	ChargedAt          time.Time
@@ -127,12 +111,10 @@ type Purchase struct {
 	Refundable         bool
 }
 
+// Quote is a fixed KRW amount payable (BILL-2), with the id a change confirms it by.
 type Quote struct {
-	ID           string
-	USDCents     int
-	KRW          int
-	RatePerUSDE4 int64
-	RateDate     string
+	ID  string
+	KRW int
 }
 
 type ChangeQuote struct {
@@ -245,33 +227,8 @@ func CustomerKey(userID string) string {
 	return "pp_" + base64.RawURLEncoding.EncodeToString(sum[:])
 }
 
-// KRWFor converts an all-in USD-cent price through a KRW/USD rate stored at four decimal
-// places, rounding half up to one won without introducing floating point.
-func KRWFor(usdCents int, rateE4 int64) int {
-	if usdCents <= 0 || rateE4 <= 0 {
-		return 0
-	}
-	return int((int64(usdCents)*rateE4 + 500_000) / 1_000_000)
-}
-
-func AnnualPriceCents(monthlyCents int) int { return monthlyCents * 10 }
-
-func PriceCents(tier plan.Plan, term Term) int {
-	monthly := plan.MonthlyPriceCents(tier)
-	if term == TermAnnual {
-		return AnnualPriceCents(monthly)
-	}
-	return monthly
-}
-
-// TermEnd advances by one or twelve anchor windows. Asking AnchorWindow at an exclusive
-// boundary advances to the next clamped month and naturally returns to the original day.
+// TermEnd is where a paid term that starts at start ends: plan.CoverageEnd, one or twelve
+// anchored months on.
 func TermEnd(anchor, start time.Time, term Term) time.Time {
-	windows := 1
-	if term == TermAnnual {
-		windows = 12
-	}
-	a, s := anchor.In(time.FixedZone("Asia/Seoul", 9*60*60)), start.In(time.FixedZone("Asia/Seoul", 9*60*60))
-	index := (s.Year()-a.Year())*12 + int(s.Month()-a.Month())
-	return plan.MonthBoundary(anchor, index+windows)
+	return plan.CoverageEnd(anchor, start, term == TermAnnual)
 }

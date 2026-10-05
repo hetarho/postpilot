@@ -94,14 +94,6 @@ WHERE voice_id = ? AND status IN ('queued', 'running')
 ORDER BY created_at DESC, id DESC
 LIMIT 1;
 
--- name: LatestForVoiceKind :one
--- The most recent job of one kind frozen to this voice, terminal or not: how a voice that was
--- seeded and failed keeps saying so after the job ended.
-SELECT * FROM generation_jobs
-WHERE voice_id = ? AND kind = ?
-ORDER BY created_at DESC, id DESC
-LIMIT 1;
-
 -- name: ActiveForExperiment :one
 -- The experiment is the one subject with no column of its own: `experiment_id` is the
 -- generated column over the payload, indexed, so this is a lookup rather than a scan.

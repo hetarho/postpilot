@@ -98,38 +98,53 @@ func (s *Service) Start(ctx context.Context, request StartRequest) (StartResult,
 	if err != nil {
 		return StartResult{}, fmt.Errorf("count observe calls: %w", err)
 	}
-	sides, err := shuffledSides(len(refs))
-	if err != nil {
-		return StartResult{}, fmt.Errorf("assign candidate sides: %w", err)
-	}
 	found := Experiment{
 		ID: s.newID(), UserID: request.UserID, PostSlug: request.PostSlug, VoiceID: frozen.VoiceID,
 		TemplateName: frozen.TemplateName, TargetLanguage: cloneLanguage(frozen.TargetLanguage), Stage: request.Stage,
 		Origin: startOrigin(request), ReviewMode: reviewMode, Status: StatusQueued, InputSnapshot: frozen.Content, InputHash: hash,
 		PromptVersion: frozen.PromptVersion, CreatedAt: s.now(),
 	}
-	found.Candidates = make([]Candidate, 0, len(refs))
-	for i, ref := range refs {
-		found.Candidates = append(found.Candidates, Candidate{ID: s.newID(), ExperimentID: found.ID, Model: ref, ModelLabel: models[i].Label, DisplaySide: sides[i], Status: CandidatePending})
+	job := JobRequest{
+		UserID: request.UserID, PostSlug: request.PostSlug, VoiceID: found.VoiceID, ExperimentID: found.ID, Stage: request.Stage,
+		TargetLanguage: cloneLanguage(found.TargetLanguage),
+		Models:         refsToStrings(refs), ObserveModel: writeObserveModel(request), ObserveCalls: observeCalls,
 	}
-	if err := s.runs.Create(ctx, found); err != nil {
+	return s.createQueued(ctx, found, refs, models, job, func(err error) (StartResult, error) {
 		if errors.Is(err, ErrInvalidState) && request.Stage == StageWrite {
 			if pending, findErr := s.runs.PendingForPost(ctx, request.UserID, request.PostSlug); findErr == nil && pending != nil {
 				return StartResult{ExperimentID: pending.ID, JobID: pending.JobID}, &JobAlreadyInProgressError{ActiveID: pending.JobID}
 			}
 		}
 		return StartResult{}, err
-	}
-	jobID, err := s.jobs.EnqueueExperiment(ctx, JobRequest{
-		UserID: request.UserID, PostSlug: request.PostSlug, VoiceID: found.VoiceID, ExperimentID: found.ID, Stage: request.Stage,
-		TargetLanguage: cloneLanguage(found.TargetLanguage),
-		Models:         refsToStrings(refs), ObserveModel: writeObserveModel(request), ObserveCalls: observeCalls,
 	})
+}
+
+// createQueued is every comparison start's tail: the comparison is created with its candidates
+// on shuffled display sides, its one job is queued, and the two are linked. A comparison whose
+// job cannot be queued is deleted again, so no row waits on a job that never existed. refused
+// answers a create the store refuses, for a start that has its own answer to give; nil passes the
+// refusal through.
+func (s *Service) createQueued(ctx context.Context, found Experiment, refs []ModelRef, models []Model, job JobRequest, refused func(error) (StartResult, error)) (StartResult, error) {
+	sides, err := shuffledSides(len(refs))
+	if err != nil {
+		return StartResult{}, fmt.Errorf("assign candidate sides: %w", err)
+	}
+	found.Candidates = make([]Candidate, 0, len(refs))
+	for i, ref := range refs {
+		found.Candidates = append(found.Candidates, Candidate{ID: s.newID(), ExperimentID: found.ID, Model: ref, ModelLabel: models[i].Label, DisplaySide: sides[i], Status: CandidatePending})
+	}
+	if err := s.runs.Create(ctx, found); err != nil {
+		if refused != nil {
+			return refused(err)
+		}
+		return StartResult{}, err
+	}
+	jobID, err := s.jobs.EnqueueExperiment(ctx, job)
 	if err != nil {
 		_ = s.runs.Delete(ctx, found.ID)
 		return StartResult{}, err
 	}
-	if err := s.runs.SetJob(ctx, found.ID, request.UserID, jobID); err != nil {
+	if err := s.runs.SetJob(ctx, found.ID, found.UserID, jobID); err != nil {
 		return StartResult{}, fmt.Errorf("link experiment job: %w", err)
 	}
 	return StartResult{ExperimentID: found.ID, JobID: jobID}, nil
@@ -192,35 +207,16 @@ func (s *Service) StartVoiceReflection(ctx context.Context, request ReflectionSt
 	if err != nil {
 		return StartResult{}, err
 	}
-	sides, err := shuffledSides(len(refs))
-	if err != nil {
-		return StartResult{}, fmt.Errorf("assign candidate sides: %w", err)
-	}
 	found := Experiment{
 		ID: s.newID(), UserID: request.UserID, VoiceID: request.VoiceID, Source: SourceVoice,
 		VoicePromptKey: input.PromptKey, VoiceMaterialID: input.MaterialID, TargetLanguage: cloneLanguage(frozen.TargetLanguage),
 		Stage: StageWrite, Origin: OriginLab, ReviewMode: reviewMode, Status: StatusQueued, InputSnapshot: frozen.Content, InputHash: hash,
 		PromptVersion: frozen.PromptVersion, CreatedAt: s.now(),
 	}
-	found.Candidates = make([]Candidate, 0, len(refs))
-	for i, ref := range refs {
-		found.Candidates = append(found.Candidates, Candidate{ID: s.newID(), ExperimentID: found.ID, Model: ref, ModelLabel: models[i].Label, DisplaySide: sides[i], Status: CandidatePending})
-	}
-	if err := s.runs.Create(ctx, found); err != nil {
-		return StartResult{}, err
-	}
-	jobID, err := s.jobs.EnqueueExperiment(ctx, JobRequest{
+	return s.createQueued(ctx, found, refs, models, JobRequest{
 		UserID: request.UserID, ExperimentID: found.ID, Stage: StageWrite,
 		TargetLanguage: cloneLanguage(found.TargetLanguage), Models: refsToStrings(refs),
-	})
-	if err != nil {
-		_ = s.runs.Delete(ctx, found.ID)
-		return StartResult{}, err
-	}
-	if err := s.runs.SetJob(ctx, found.ID, request.UserID, jobID); err != nil {
-		return StartResult{}, fmt.Errorf("link experiment job: %w", err)
-	}
-	return StartResult{ExperimentID: found.ID, JobID: jobID}, nil
+	}, nil)
 }
 
 // ReflectionPromptText is a voice-sourced comparison's prompt, as its history row names it; it

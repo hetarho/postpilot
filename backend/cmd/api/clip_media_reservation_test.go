@@ -35,7 +35,7 @@ func TestMediaContinuationApprovedReservationIsIdempotent(t *testing.T) {
 		t.Fatal(err)
 	}
 	r := cancellationReservation()
-	p := clip.GenerationPricing{Version: clip.PricingPolicyVersion, CancellationPolicyVersion: 1, Observe: r.Calls[0].Policy, Plan: r.Calls[1].Policy, Narration: r.Calls[1].Policy, ObservationCalls: 2, MaxCredits: 20}
+	p := clip.GenerationPricing{Version: clip.PricingPolicyVersion, CancellationPolicyVersion: 1, Rate: r.Rate, Observe: r.Calls[0].Policy, Plan: r.Calls[1].Policy, Narration: r.Calls[1].Policy, ObservationCalls: 2, MaxCredits: 20}
 	approval := clip.GenerationApproval{QuoteID: "approved", MaxCredits: 20, Pricing: p}
 	jobs := clipapp.NewJobs(h.queue, h.guard)
 	if _, err := jobs.ReserveApproved(ctx, "alice", id, approval, 2); err != nil {

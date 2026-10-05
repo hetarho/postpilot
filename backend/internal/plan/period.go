@@ -39,13 +39,18 @@ func DailyWindow(anchor, at time.Time) (start, end time.Time) {
 	return start, start.Add(24 * time.Hour)
 }
 
-// CoverageEnd separates paid coverage from monthly benefit renewal. Annual means
-// twelve calendar months and never a fixed 365-day duration.
-func CoverageEnd(anchor time.Time, annual bool) time.Time {
+// CoverageEnd separates paid coverage from monthly benefit renewal: a paid term that starts
+// at start ends one, or for annual twelve, anchored calendar months after the calendar month
+// start falls in, counted from the anchor so a clamped month returns to the original day.
+// Annual means twelve calendar months and never a fixed 365-day duration.
+func CoverageEnd(anchor, start time.Time, annual bool) time.Time {
+	months := 1
 	if annual {
-		return MonthBoundary(anchor, 12)
+		months = 12
 	}
-	return MonthBoundary(anchor, 1)
+	a, s := anchor.In(seoul), start.In(seoul)
+	index := (s.Year()-a.Year())*12 + int(s.Month()-a.Month())
+	return MonthBoundary(anchor, index+months)
 }
 
 var ErrInvalidProration = errors.New("invalid proration interval or amount")

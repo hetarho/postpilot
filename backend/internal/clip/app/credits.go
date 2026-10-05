@@ -23,13 +23,14 @@ const DefaultQuoteRetries = 3
 
 // QuoteCredits is the quote formula: the observation call priced for every
 // retry it may need, and both writing calls priced as one line on the same
-// model at the same budget (usage.ReservationCredits takes at most two).
+// model at the same budget (usage.ReservationCost takes at most two), converted
+// once at the quote's frozen rate.
 func QuoteCredits(pricing clip.GenerationPricing, count, retries int) (int, error) {
-	calls := []usage.PricedCall{{Policy: pricing.Observe, Count: count * (1 + retries)}, {Policy: pricing.Plan, Count: pricing.PlanCalls()}}
-	if pricing.FXPolicy {
-		return usage.ReservationCreditsAt(calls, pricing.Rate)
-	}
-	return usage.ReservationCredits(calls)
+	return usage.ReservationCreditsAt(quotedCalls(pricing, count, retries), pricing.Rate)
+}
+
+func quotedCalls(pricing clip.GenerationPricing, count, retries int) []usage.PricedCall {
+	return []usage.PricedCall{{Policy: pricing.Observe, Count: count * (1 + retries)}, {Policy: pricing.Plan, Count: pricing.PlanCalls()}}
 }
 
 type FXSelector interface {
@@ -62,20 +63,16 @@ func (p Pricing) CheckQuoteAccess(ctx context.Context, user string, calls []usag
 	return p.access(ctx, user, calls)
 }
 
-func NewPricingWithRate(freezer Freezer, budgets Budgets, rates FXSelector) Pricing {
-	p := NewPricing(freezer, budgets)
-	if rates == nil {
-		panic("clip app: production pricing needs FX selector")
-	}
-	p.rates = rates
-	return p
-}
-
-func NewPricing(freezer Freezer, budgets Budgets) Pricing {
+// NewPricing prices a quote through the FX policy alone, so it needs the rate selector as
+// much as the freezer.
+func NewPricing(freezer Freezer, budgets Budgets, rates FXSelector) Pricing {
 	if freezer == nil {
 		panic("clip app: pricing needs a freezer")
 	}
-	return Pricing{freezer: freezer, budgets: budgets}
+	if rates == nil {
+		panic("clip app: pricing needs an FX selector")
+	}
+	return Pricing{freezer: freezer, budgets: budgets, rates: rates}
 }
 
 func (p Pricing) Freeze(ctx context.Context, observe, write llm.ModelRef, count int) (clip.GenerationPricing, error) {
@@ -107,21 +104,18 @@ func (p Pricing) FreezeWork(ctx context.Context, observe, write llm.ModelRef, co
 	}
 	a.ResponseRetries, b.ResponseRetries, c.ResponseRetries = retries, retries, retries
 	pricing := clip.GenerationPricing{Version: clip.PricingPolicyVersion, SkipFlow: skipFlow, SkipNarration: skipNarration, Observe: a, Plan: b, Narration: c, ObservationCalls: count}
-	if p.rates != nil {
-		pricing.FXPolicy = true
-		cost, err := usage.ReservationCost([]usage.PricedCall{{Policy: pricing.Observe, Count: count * (1 + retries)}, {Policy: pricing.Plan, Count: pricing.PlanCalls()}})
-		if err != nil {
-			return clip.GenerationPricing{}, clip.ErrPricingUnavailable
+	cost, err := usage.ReservationCost(quotedCalls(pricing, count, retries))
+	if err != nil {
+		return clip.GenerationPricing{}, clip.ErrPricingUnavailable
+	}
+	if cost > 0 {
+		if prior, ok := ctx.Value(frozenQuoteRateKey{}).(clip.GenerationPricing); ok && prior.Rate.Valid() {
+			pricing.Rate = prior.Rate
+		} else {
+			pricing.Rate, err = p.rates.Select(ctx, time.Now())
 		}
-		if cost > 0 {
-			if prior, ok := ctx.Value(frozenQuoteRateKey{}).(clip.GenerationPricing); ok && prior.FXPolicy && prior.Rate.Valid() {
-				pricing.Rate = prior.Rate
-			} else {
-				pricing.Rate, err = p.rates.Select(ctx, time.Now())
-			}
-			if err != nil {
-				return clip.GenerationPricing{}, clip.ErrRateUnavailable
-			}
+		if err != nil {
+			return clip.GenerationPricing{}, clip.ErrRateUnavailable
 		}
 	}
 	credits, err := QuoteCredits(pricing, count, retries)

@@ -42,13 +42,20 @@ func assignSupportPlan(ctx context.Context, handle *db.DB, userID string, target
 	anchors := usageAnchors{auth: authSvc}
 	store := billingstore.New(handle.Writer, handle.Reader)
 	store.SetCreditsForTx(func(tx *sql.Tx) billing.Credits {
-		return billingCredits{Service: usage.NewService(usagestore.NewTx(tx), emptyModels{}, 0, anchors), exports: clipstore.NewTx(tx)}
+		return billingCredits{Service: usage.NewService(usagestore.NewTx(tx), emptyModels{}, 0, anchors, shellRates(handle)), exports: clipstore.NewTx(tx)}
 	})
 	store.SetPlansForTx(func(tx *sql.Tx) billing.Plans {
 		return auth.NewService(authstore.NewTx(tx), time.Hour, auth.Deps{Mailer: mail.NewLog()})
 	})
-	service := billing.NewService(store, nil, nil, nil, nil, nil, nil)
+	service := billing.NewService(store, nil, nil, nil, nil, nil)
 	return service.AssignSupportTier(ctx, userID, target)
+}
+
+// shellRates is the rate selector of an operator command's ledger. Those commands grant and
+// renew but price nothing, so it never consults the official source: any priced work would be
+// refused as a rate outage rather than converted.
+func shellRates(handle *db.DB) *usage.RateSelector {
+	return usage.NewRateSelector(unavailableRateSource{}, usagestore.New(handle.Writer, handle.Reader))
 }
 
 // topUpMonthlyLot raises an account's current monthly grant, for the upgrade half of
@@ -56,14 +63,14 @@ func assignSupportPlan(ctx context.Context, handle *db.DB, userID string, target
 // auth context must not learn about credit_lots.
 func topUpMonthlyLot(ctx context.Context, handle *db.DB, userID string, credits int) error {
 	authSvc := auth.NewService(authstore.New(handle.Writer, handle.Reader), time.Hour, auth.Deps{Mailer: mail.NewLog()})
-	ledger := usage.NewService(usagestore.New(handle.Writer, handle.Reader), emptyModels{}, 0, usageAnchors{auth: authSvc})
+	ledger := usage.NewService(usagestore.New(handle.Writer, handle.Reader), emptyModels{}, 0, usageAnchors{auth: authSvc}, shellRates(handle))
 	return ledger.TopUpMonthlyLot(ctx, userID, credits)
 }
 
 // grantCreditsTo opens a bonus lot from the operator's shell.
 func grantCreditsTo(ctx context.Context, handle *db.DB, userID string, credits int, expiresAt *time.Time) error {
 	authSvc := auth.NewService(authstore.New(handle.Writer, handle.Reader), time.Hour, auth.Deps{Mailer: mail.NewLog()})
-	ledger := usage.NewService(usagestore.New(handle.Writer, handle.Reader), emptyModels{}, 0, usageAnchors{auth: authSvc})
+	ledger := usage.NewService(usagestore.New(handle.Writer, handle.Reader), emptyModels{}, 0, usageAnchors{auth: authSvc}, shellRates(handle))
 	return ledger.Grant(ctx, userID, credits, expiresAt)
 }
 

@@ -2,7 +2,6 @@ package media
 
 import (
 	"fmt"
-	"math"
 	"os"
 	"strings"
 
@@ -209,18 +208,4 @@ func overlayProbe(view string) any {
 		v.Turn = &overlay.Turn{Deg: -4, Rules: v.Rules, Shapes: shapes, Lines: v.Lines, Arcs: []overlay.ArcText{{Text: text, ID: "arc1", Path: arcs[0].Path}}}
 		return v
 	}
-}
-
-// Rapid cues retain only their painted region, avoiding a full canvas per input.
-// Scrims occupy the canvas and must keep that extent for custom unplated styles.
-func copyCrop(canvas clip.Canvas, c clip.Copy, l copyLayout, ground Luminance) clip.Region {
-	if c.Pace != "rapid" || ground.Scrim() {
-		return clip.Region{Width: float64(canvas.Width), Height: float64(canvas.Height)}
-	}
-	s := l.Caption.Paint.Shadow
-	pad := math.Ceil(2*s.Blur + math.Max(math.Abs(s.DX), math.Abs(s.DY)) + l.Style.StrokeWidth() + 2)
-	p := l.Region
-	x, y := math.Max(0, math.Floor(p.X-pad)), math.Max(0, math.Floor(p.Y-pad))
-	right, bottom := math.Min(float64(canvas.Width), math.Ceil(p.X+p.Width+pad)), math.Min(float64(canvas.Height), math.Ceil(p.Y+p.Height+pad))
-	return clip.Region{X: x, Y: y, Width: right - x, Height: bottom - y}
 }

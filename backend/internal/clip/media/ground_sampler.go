@@ -22,69 +22,6 @@ import (
 // the retained originals through the same chain that footage is rendered with,
 // so no composed footage has to exist for a browser render to be sampled.
 
-// footageTimeline is compositionGraph's frame arithmetic: each cut contributes
-// its frames, a transition overlaps the previous cut's tail, and a zero
-// transition is a join.
-type footageTimeline struct {
-	starts, frames, overlaps []int
-	kinds                    []string
-	total                    int
-}
-
-func newFootageTimeline(cfg clip.RenderConfig, plan clip.EditPlan) footageTimeline {
-	frames, transitions := cutFrames(plan, cfg.FPS), planTransitions(plan)
-	t := footageTimeline{starts: make([]int, len(frames)), frames: frames, overlaps: make([]int, len(frames)), kinds: make([]string, len(frames))}
-	if len(frames) == 0 {
-		return t
-	}
-	elapsed := frames[0]
-	for i := 1; i < len(frames); i++ {
-		t.overlaps[i] = transitionFrames(cfg, transitions[i])
-		t.kinds[i] = transitionKind(transitions[i])
-		t.starts[i] = elapsed - t.overlaps[i]
-		elapsed += frames[i] - t.overlaps[i]
-	}
-	t.total = elapsed
-	return t
-}
-
-// footageTake is one cut's own frame, counted from the first frame the cut
-// contributes.
-type footageTake struct{ cut, local int }
-
-// outputFootage is how the composition makes one output frame: one cut's own
-// frame, or inside an overlap the xfade of the outgoing and incoming cuts at
-// xfade's own progress, which is 1 on the overlap's first frame.
-type outputFootage struct {
-	outgoing, incoming footageTake
-	kind               string
-	progress           float64
-}
-
-func (o outputFootage) blended() bool { return o.kind != "" }
-
-func (t footageTimeline) at(frame int) (outputFootage, bool) {
-	if frame < 0 || frame >= t.total {
-		return outputFootage{}, false
-	}
-	for i := len(t.frames) - 1; i >= 0; i-- {
-		if frame < t.starts[i] {
-			continue
-		}
-		if frame >= t.starts[i]+t.frames[i] {
-			return outputFootage{}, false
-		}
-		own := footageTake{cut: i, local: frame - t.starts[i]}
-		if i > 0 && frame < t.starts[i]+t.overlaps[i] {
-			k := frame - t.starts[i]
-			return outputFootage{outgoing: footageTake{cut: i - 1, local: frame - t.starts[i-1]}, incoming: own,
-				kind: t.kinds[i], progress: 1 - float64(k)/float64(t.overlaps[i])}, true
-		}
-		return outputFootage{outgoing: footageTake{cut: -1}, incoming: own}, true
-	}
-	return outputFootage{}, false
-}
-
 // groundRead is one of the three frames CDS-44 reads for one visual, and what
 // the cuts under it gave: each take's mean colour over the region, and for a
 // fade through black each take's region pixels, which that blend needs one by
@@ -107,8 +44,7 @@ type groundSampler struct {
 // info, hook and ending visual: the first, middle and last frame of its window,
 // over its own sampled bounds. An output-side seek keeps the first frame at or
 // after the instant asked for, which is the frame this names.
-func (r *Rendering) newGroundSampler(canvas clip.Canvas, plan clip.EditPlan, visuals []declaredVisual) groundSampler {
-	timeline := newFootageTimeline(r.cfg, plan)
+func (r *Rendering) newGroundSampler(canvas clip.Canvas, timeline cutTimeline, visuals []declaredVisual) groundSampler {
 	duration := timeline.total * 1000 / r.cfg.FPS
 	s := groundSampler{canvas: canvas}
 	for i := range visuals {
@@ -276,12 +212,12 @@ func (read groundRead) mean() [3]float64 {
 	case "":
 		return read.means[1]
 	case "fadeblack":
-		return fadeBlackMean(read.pixels[0], read.pixels[1], read.footage.progress)
+		return fadeBlackMean(read.pixels[0], read.pixels[1], read.footage)
 	}
-	p := read.footage.progress
+	w0, w1 := read.footage.weights()
 	var out [3]float64
 	for c := range out {
-		out[c] = read.means[0][c]*p + read.means[1][c]*(1-p)
+		out[c] = read.means[0][c]*w0 + read.means[1][c]*w1
 	}
 	return out
 }
@@ -326,7 +262,7 @@ func (r *Rendering) SampleGrounds(ctx context.Context, ws clip.MediaWorkspace, p
 	for _, source := range sources {
 		byID[source.ID] = source
 	}
-	sampler := r.newGroundSampler(canvas, plan, layout.visuals)
+	sampler := r.newGroundSampler(canvas, newCutTimeline(r.cfg.FPS, plan), layout.visuals)
 	for _, i := range cutsBySource(plan.Cuts) {
 		cut := plan.Cuts[i]
 		if len(sampler.needs(i)) == 0 {
@@ -465,13 +401,11 @@ func forRegionSamples(frame image.Image, region clip.Region, visit func(r, g, b 
 }
 
 // fadeBlackMean is xfade's fadeblack over the composition's yuv444p footage,
-// read back as RGB. Its black is Y=0 with neutral chroma, below video black, so
-// the darkest frames of the fade clip to black, which no blend of RGB means
-// reproduces.
-func fadeBlackMean(outgoing, incoming []uint8, progress float64) [3]float64 {
-	const phase = 0.2
-	w0 := smoothstep(1-phase, 1, progress) * progress
-	w1 := (1 - smoothstep(phase, 1, progress)) * (1 - progress)
+// read back as RGB, at the weights the timeline gives this frame of the fade.
+// Its black is Y=0 with neutral chroma, below video black, so the darkest
+// frames of the fade clip to black, which no blend of RGB means reproduces.
+func fadeBlackMean(outgoing, incoming []uint8, footage outputFootage) [3]float64 {
+	w0, w1 := footage.weights()
 	var sum [3]float64
 	n := min(len(outgoing), len(incoming)) / 3
 	for i := 0; i < n; i++ {
@@ -485,11 +419,6 @@ func fadeBlackMean(outgoing, incoming []uint8, progress float64) [3]float64 {
 		return sum
 	}
 	return [3]float64{sum[0] / float64(n), sum[1] / float64(n), sum[2] / float64(n)}
-}
-
-func smoothstep(edge0, edge1, x float64) float64 {
-	t := min(1, max(0, (x-edge0)/(edge1-edge0)))
-	return t * t * (3 - 2*t)
 }
 
 // BT.601 limited range, which the footage's untagged yuv444p is read back with.

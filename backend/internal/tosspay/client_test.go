@@ -28,8 +28,6 @@ func TestTossProviderEndpointsBodiesAndErrorMapping(t *testing.T) {
 			_, _ = io.WriteString(w, `{"paymentKey":"pay-1","orderId":"order-1","status":"DONE","totalAmount":2785,"currency":"KRW"}`)
 		case "/v1/payments/orders/order-1":
 			_, _ = io.WriteString(w, `{"paymentKey":"pay-1","orderId":"order-1","status":"DONE","totalAmount":2785,"currency":"KRW"}`)
-		case "/v1/payments/pay-1/cancel":
-			_, _ = io.WriteString(w, `{}`)
 		case "/v1/payments/orders/missing":
 			w.WriteHeader(http.StatusNotFound)
 			_, _ = io.WriteString(w, `{"code":"NOT_FOUND_PAYMENT","message":"missing"}`)
@@ -54,9 +52,6 @@ func TestTossProviderEndpointsBodiesAndErrorMapping(t *testing.T) {
 	if _, found, err := client.PaymentByOrder(context.Background(), "order-1"); err != nil || !found {
 		t.Fatalf("found=%v err=%v", found, err)
 	}
-	if err := client.Refund(context.Background(), "pay-1", "unused purchase"); err != nil {
-		t.Fatal(err)
-	}
 	if _, found, err := client.PaymentByOrder(context.Background(), "missing"); err != nil || found {
 		t.Fatalf("found=%v err=%v", found, err)
 	}
@@ -70,7 +65,6 @@ func TestTossProviderEndpointsBodiesAndErrorMapping(t *testing.T) {
 	for _, want := range []string{
 		`POST /v1/billing/authorizations/issue {"authKey":"auth-1","customerKey":"customer-1"}`,
 		`POST /v1/billing/billing-1 {"amount":2785,"customerKey":"customer-1","orderId":"order-1","orderName":"Basic monthly"}`,
-		`POST /v1/payments/pay-1/cancel {"cancelReason":"unused purchase"}`,
 	} {
 		if !strings.Contains(joined, want) {
 			t.Errorf("missing request %s\n%s", want, joined)

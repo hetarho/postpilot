@@ -46,9 +46,9 @@ func TestUsageAnchorPrefersAnActiveSubscriptionAndFallsBackAfterLapse(t *testing
 		t.Fatal(err)
 	}
 	authService := auth.NewService(authstore.New(handle.Writer, handle.Reader), time.Hour, auth.Deps{Mailer: mail.NewLog()})
-	billingService := billing.NewService(billingStore, nil, nil, nil, nil, nil, nil)
+	billingService := billing.NewService(billingStore, nil, nil, nil, nil, nil)
 	anchors := usageAnchors{auth: authService, billing: billingService}
-	ledger := usage.NewService(usagestore.New(handle.Writer, handle.Reader), emptyModels{}, 0, anchors, approvedCeilingKinds()...)
+	ledger := usage.NewService(usagestore.New(handle.Writer, handle.Reader), emptyModels{}, 0, anchors, testRates, approvedCeilingKinds()...)
 
 	response, err := planrpc.NewHandler(planBalance{ledger: ledger}, emptyBillingEstimator{}).GetMyPlan(
 		auth.WithActor(ctx, auth.Actor{UserID: "alice", Plan: plan.Pro}),
@@ -82,6 +82,10 @@ func TestUsageAnchorPrefersAnActiveSubscriptionAndFallsBackAfterLapse(t *testing
 
 type emptyBillingEstimator struct{}
 
-func (emptyBillingEstimator) ComboRates(context.Context) ([]planrpc.EstimatorCombo, error) {
+func (emptyBillingEstimator) CurrentRate(context.Context) (plan.RateSnapshot, error) {
+	return plan.RateSnapshot{}, usage.ErrRateUnavailable
+}
+
+func (emptyBillingEstimator) ComboRatesAt(context.Context, plan.RateSnapshot) ([]planrpc.EstimatorCombo, error) {
 	return nil, nil
 }

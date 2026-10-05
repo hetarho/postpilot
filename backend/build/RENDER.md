@@ -252,24 +252,10 @@ stopping layout or rendering. In particular, chips on adjacent cuts overlap duri
 a crossfade; that previously caused a furniture-slot failure no caption repair
 could fix. An overlap alone now preserves the words, position and timing so the
 owner can preview/download the clip and revise it in step ②. `design.Verify` and
-`VerifyApproved` retain the strict diagnostic; `clip.VerifyLayout` uses
-`design.VerifyRenderable`, which skips only V7 and still runs every other check,
-including the sequence checks AFTER the overlap check. Swallowing the first
-overlap error would incorrectly hide those later failures.
-
-`TestRenderOriginalsOverlap` is the offline regression for the eight short MP4s
-reported with this failure. It uses all eight originals in a 30-second vertical
-plan with chips across fades and captions under cards, then renders it as both a
-generated and a manual plan. `CLIP_ORIGINALS_DURATION_MS=20000` exercises the
-20-second target of the production failure. Set `CLIP_ORIGINALS_DIR` to a read-only source mount
-and `CLIP_ORIGINALS_OUTPUT` to a separate writable artifact mount when running
-`/media.test -test.run=^TestRenderOriginalsOverlap$ -test.v -test.timeout=15m`
-in the `media-smoke` image, using production's 15-minute operation timeout.
-T117's 2 GiB success did not qualify the shared 909 MiB production host; T118
-requires the originals to complete at 512 MiB / 2 CPU with swap disabled. The separate synthetic
-release gate still runs at 1 GiB / 2 CPU. It makes no model calls and writes `generated.mp4`
-and `manual.mp4` only to the artifact mount. Ordinary test and image-build runs
-skip it; no user footage is included in the repository or image.
+`VerifyApproved` retain the strict diagnostic; `design.VerifyRenderable` skips
+only V7 and still runs every other check, including the sequence checks AFTER the
+overlap check. Swallowing the first overlap error would incorrectly hide those
+later failures.
 
 PNG layers are decoded exactly once, with decoder threads explicitly limited on
 every input. The fixed overlay repeats that frame; animated copies and cards use

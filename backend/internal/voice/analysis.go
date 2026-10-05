@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/postpilot/backend/internal/llm"
 )
@@ -36,17 +37,79 @@ func analysisInput(counted Fingerprint, samples []Sample) string {
 	return b.String()
 }
 
-// completeAnalysis makes the one analysis call and reads its AI part. It attaches the embedded
-// schema when the resolved model declares structured output (VOICE-27) and fails a result
-// missing any field (VOICE-24). Examples not found verbatim in a 학습 글 are dropped.
-func (s *Service) completeAnalysis(ctx context.Context, ref llm.ModelRef, counted Fingerprint, samples []Sample) (AIPart, error) {
-	request := llm.Request{
+// analysisRequest is the one analysis call over a snapshot, as the run sends it and as its
+// start sizes the hold from it (QUOTA-14).
+func analysisRequest(counted Fingerprint, samples []Sample) llm.Request {
+	return llm.Request{
 		System:   analysisPrompt,
 		Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(analysisInput(counted, samples))}}},
 		// Named so the registry can resolve the operator's analysis override. No Reasoning is
 		// set: analysis sends no `reasoning` key by default.
 		Stage: llm.StageNameAnalyze,
 	}
+}
+
+// promptTokens is a request's prompt at one token per Unicode character — the system prompt
+// plus every text part — which is how QUOTA-14 sizes an analysis hold (Korean prose is roughly
+// one token per character in these tokenizers).
+func promptTokens(request llm.Request) int {
+	tokens := utf8.RuneCountInString(request.System)
+	for _, message := range request.Messages {
+		for _, part := range message.Parts {
+			tokens += utf8.RuneCountInString(part.Text)
+		}
+	}
+	return tokens
+}
+
+// analysisSnapshot is what one analysis reads from its 학습 글, given newest first as they are
+// listed: the counted fingerprint, the 학습 글 oldest first as the call presents them, and their
+// ids newest first as the published analysis records them.
+func analysisSnapshot(newestFirst []Sample) (Fingerprint, []Sample, []string) {
+	counted := FingerprintOf(materialsOf(newestFirst))
+	oldestFirst := make([]Sample, len(newestFirst))
+	ids := make([]string, len(newestFirst))
+	for i, sample := range newestFirst {
+		oldestFirst[len(newestFirst)-1-i] = sample
+		ids[i] = sample.ID
+	}
+	return counted, oldestFirst, ids
+}
+
+// EncodeAnalysisSnapshot freezes the 학습 글 an analysis reads onto its job row at the start,
+// and DecodeAnalysisSnapshot is what the run reads back (VOICE-22): a 학습 글 added while the
+// job waits is not read, and one deleted meanwhile is skipped.
+func EncodeAnalysisSnapshot(materialIDs []string) ([]byte, error) {
+	if len(materialIDs) == 0 {
+		return nil, errors.New("encode analysis snapshot: no 학습 글")
+	}
+	raw, err := json.Marshal(snapshotJSON{MaterialIDs: materialIDs})
+	if err != nil {
+		return nil, fmt.Errorf("encode analysis snapshot: %w", err)
+	}
+	return raw, nil
+}
+
+func DecodeAnalysisSnapshot(raw []byte) ([]string, error) {
+	var wire snapshotJSON
+	if err := json.Unmarshal(raw, &wire); err != nil {
+		return nil, fmt.Errorf("decode analysis snapshot: %w", err)
+	}
+	if len(wire.MaterialIDs) == 0 {
+		return nil, errors.New("decode analysis snapshot: no 학습 글")
+	}
+	return wire.MaterialIDs, nil
+}
+
+type snapshotJSON struct {
+	MaterialIDs []string `json:"material_ids"`
+}
+
+// completeAnalysis makes the one analysis call and reads its AI part. It attaches the embedded
+// schema when the resolved model declares structured output (VOICE-27) and fails a result
+// missing any field (VOICE-24). Examples not found verbatim in a 학습 글 are dropped.
+func (s *Service) completeAnalysis(ctx context.Context, ref llm.ModelRef, counted Fingerprint, samples []Sample) (AIPart, error) {
+	request := analysisRequest(counted, samples)
 	if info, ok := s.models.Resolve(ref); ok && info.StructuredOutput {
 		request.JSONSchema = VoiceAnalysisSchema()
 	}

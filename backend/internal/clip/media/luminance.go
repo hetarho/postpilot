@@ -170,17 +170,6 @@ func sampleOffsets(cut clip.EditCut, window [2]int) []int {
 	return offsets
 }
 
-// sample measures one element's plate region on its own three frames. It runs
-// inside the source callback that renders the cut, so no second download
-// happens (CLIP-33).
-func (r *Rendering) sample(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, source clip.MediaSource, cut clip.EditCut, window [2]int, region clip.Region, index int) (Luminance, error) {
-	frames, err := r.sampleFrames(ctx, ws, canvas, source, cut.Focal, sampleOffsets(cut, window), index)
-	if err != nil {
-		return Luminance{}, err
-	}
-	return measureFrames(frames, []clip.Region{region, region, region}), nil
-}
-
 // sampleFrames extracts every requested timestamp in ONE read of the footage.
 // A per-frame command seeks and decodes the whole intermediate again each time;
 // output-side seeks share a single decode and select the very same frames

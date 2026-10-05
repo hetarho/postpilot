@@ -269,3 +269,41 @@ func TestAReflectionRetriesTheFailedCandidateAlone(t *testing.T) {
 		t.Fatalf("retry ran %v on %q, status %s", reflection.runs, reflection.runContent, found.Status)
 	}
 }
+
+// Both comparison starts share one tail: a comparison whose job cannot be queued is deleted
+// again, one that is queued is linked to its job, and a post-sourced write comparison refused by
+// a pending one answers with that comparison and its job.
+func TestEveryComparisonStartQueuesAndLinksOrRollsBack(t *testing.T) {
+	ctx := context.Background()
+	for name, start := range map[string]func(*Service) (StartResult, error){
+		"post": func(svc *Service) (StartResult, error) {
+			return svc.Start(ctx, StartRequest{UserID: "alice", PostSlug: "post", Stage: StageWrite, ModelA: refA, ModelB: refB})
+		},
+		"voice": func(svc *Service) (StartResult, error) {
+			return svc.StartVoiceReflection(ctx, ReflectionStartRequest{UserID: "alice", VoiceID: "voice-a", PromptKey: "opening_greeting", ModelA: refA, ModelB: refB})
+		},
+	} {
+		svc, store, _, jobs, _, _ := reflectionService(t)
+		jobs.err = errors.New("queue down")
+		if _, err := start(svc); !errors.Is(err, jobs.err) || len(store.rows) != 0 {
+			t.Fatalf("%s: an unqueued start = %v, rows %d", name, err, len(store.rows))
+		}
+		jobs.err = nil
+		started, err := start(svc)
+		if err != nil {
+			t.Fatalf("%s: %v", name, err)
+		}
+		found, _ := store.Get(ctx, started.ExperimentID)
+		if found.JobID != started.JobID || started.JobID == "" || len(found.Candidates) != 2 || found.Candidates[0].DisplaySide == found.Candidates[1].DisplaySide {
+			t.Fatalf("%s: started %+v, stored %+v", name, started, found)
+		}
+		if name != "post" {
+			continue
+		}
+		again, err := start(svc)
+		var active *JobAlreadyInProgressError
+		if !errors.As(err, &active) || active.ActiveID != started.JobID || again != started {
+			t.Fatalf("a second write comparison of the post = %+v, %v", again, err)
+		}
+	}
+}

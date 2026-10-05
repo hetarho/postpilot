@@ -50,12 +50,10 @@ func (q *Queries) DeleteSupportCoverage(ctx context.Context, userID string) erro
 }
 
 const getCreditPurchase = `-- name: GetCreditPurchase :one
-SELECT p.id, p.user_id, p.lot_id, p.pack_id, p.credits, p.usd_cents, p.krw,
-       e.krw_per_usd_e4, e.rate_date, p.provider_payment_key, p.order_id,
-       p.charged_at, p.refunded_at
-FROM credit_purchases p
-JOIN billing_events e ON e.order_id = p.order_id AND e.kind = 'charge'
-WHERE p.user_id = ? AND p.id = ?
+SELECT id, user_id, lot_id, pack_id, credits, krw, provider_payment_key, order_id,
+       charged_at, refunded_at
+FROM credit_purchases
+WHERE user_id = ? AND id = ?
 `
 
 type GetCreditPurchaseParams struct {
@@ -63,35 +61,16 @@ type GetCreditPurchaseParams struct {
 	ID     string
 }
 
-type GetCreditPurchaseRow struct {
-	ID                 string
-	UserID             string
-	LotID              string
-	PackID             sql.NullString
-	Credits            int64
-	UsdCents           int64
-	Krw                int64
-	KrwPerUsdE4        sql.NullInt64
-	RateDate           sql.NullString
-	ProviderPaymentKey string
-	OrderID            string
-	ChargedAt          string
-	RefundedAt         sql.NullString
-}
-
-func (q *Queries) GetCreditPurchase(ctx context.Context, arg GetCreditPurchaseParams) (GetCreditPurchaseRow, error) {
+func (q *Queries) GetCreditPurchase(ctx context.Context, arg GetCreditPurchaseParams) (CreditPurchase, error) {
 	row := q.db.QueryRowContext(ctx, getCreditPurchase, arg.UserID, arg.ID)
-	var i GetCreditPurchaseRow
+	var i CreditPurchase
 	err := row.Scan(
 		&i.ID,
 		&i.UserID,
 		&i.LotID,
 		&i.PackID,
 		&i.Credits,
-		&i.UsdCents,
 		&i.Krw,
-		&i.KrwPerUsdE4,
-		&i.RateDate,
 		&i.ProviderPaymentKey,
 		&i.OrderID,
 		&i.ChargedAt,
@@ -187,9 +166,8 @@ func (q *Queries) GetSupportCoverage(ctx context.Context, userID string) (Suppor
 
 const insertBillingEvent = `-- name: InsertBillingEvent :exec
 INSERT INTO billing_events (
-    user_id, kind, tier, term, credits, usd_cents, krw_per_usd_e4, rate_date,
-    krw, provider_payment_key, order_id, note, created_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    user_id, kind, tier, term, credits, krw, provider_payment_key, order_id, note, created_at
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `
 
 type InsertBillingEventParams struct {
@@ -198,9 +176,6 @@ type InsertBillingEventParams struct {
 	Tier               sql.NullString
 	Term               sql.NullString
 	Credits            sql.NullInt64
-	UsdCents           sql.NullInt64
-	KrwPerUsdE4        sql.NullInt64
-	RateDate           sql.NullString
 	Krw                sql.NullInt64
 	ProviderPaymentKey sql.NullString
 	OrderID            sql.NullString
@@ -215,9 +190,6 @@ func (q *Queries) InsertBillingEvent(ctx context.Context, arg InsertBillingEvent
 		arg.Tier,
 		arg.Term,
 		arg.Credits,
-		arg.UsdCents,
-		arg.KrwPerUsdE4,
-		arg.RateDate,
 		arg.Krw,
 		arg.ProviderPaymentKey,
 		arg.OrderID,
@@ -229,9 +201,9 @@ func (q *Queries) InsertBillingEvent(ctx context.Context, arg InsertBillingEvent
 
 const insertCreditPurchase = `-- name: InsertCreditPurchase :exec
 INSERT INTO credit_purchases (
-    id, user_id, lot_id, pack_id, credits, usd_cents, krw, provider_payment_key, order_id,
-    charged_at, refunded_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)
+    id, user_id, lot_id, pack_id, credits, krw, provider_payment_key, order_id, charged_at,
+    refunded_at
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)
 `
 
 type InsertCreditPurchaseParams struct {
@@ -240,7 +212,6 @@ type InsertCreditPurchaseParams struct {
 	LotID              string
 	PackID             sql.NullString
 	Credits            int64
-	UsdCents           int64
 	Krw                int64
 	ProviderPaymentKey string
 	OrderID            string
@@ -254,7 +225,6 @@ func (q *Queries) InsertCreditPurchase(ctx context.Context, arg InsertCreditPurc
 		arg.LotID,
 		arg.PackID,
 		arg.Credits,
-		arg.UsdCents,
 		arg.Krw,
 		arg.ProviderPaymentKey,
 		arg.OrderID,
@@ -326,8 +296,8 @@ func (q *Queries) InsertTierTransition(ctx context.Context, arg InsertTierTransi
 }
 
 const listBillingEvents = `-- name: ListBillingEvents :many
-SELECT id, user_id, kind, tier, term, credits, usd_cents, krw_per_usd_e4, rate_date,
-       krw, provider_payment_key, order_id, note, created_at
+SELECT id, user_id, kind, tier, term, credits, krw, provider_payment_key, order_id, note,
+       created_at
 FROM billing_events WHERE user_id = ? ORDER BY created_at DESC, id DESC LIMIT ?
 `
 
@@ -343,9 +313,6 @@ type ListBillingEventsRow struct {
 	Tier               sql.NullString
 	Term               sql.NullString
 	Credits            sql.NullInt64
-	UsdCents           sql.NullInt64
-	KrwPerUsdE4        sql.NullInt64
-	RateDate           sql.NullString
 	Krw                sql.NullInt64
 	ProviderPaymentKey sql.NullString
 	OrderID            sql.NullString
@@ -369,9 +336,6 @@ func (q *Queries) ListBillingEvents(ctx context.Context, arg ListBillingEventsPa
 			&i.Tier,
 			&i.Term,
 			&i.Credits,
-			&i.UsdCents,
-			&i.KrwPerUsdE4,
-			&i.RateDate,
 			&i.Krw,
 			&i.ProviderPaymentKey,
 			&i.OrderID,
@@ -392,49 +356,28 @@ func (q *Queries) ListBillingEvents(ctx context.Context, arg ListBillingEventsPa
 }
 
 const listCreditPurchases = `-- name: ListCreditPurchases :many
-SELECT p.id, p.user_id, p.lot_id, p.pack_id, p.credits, p.usd_cents, p.krw,
-       e.krw_per_usd_e4, e.rate_date, p.provider_payment_key, p.order_id,
-       p.charged_at, p.refunded_at
-FROM credit_purchases p
-JOIN billing_events e ON e.order_id = p.order_id AND e.kind = 'charge'
-WHERE p.user_id = ? ORDER BY p.charged_at DESC, p.id DESC
+SELECT id, user_id, lot_id, pack_id, credits, krw, provider_payment_key, order_id,
+       charged_at, refunded_at
+FROM credit_purchases
+WHERE user_id = ? ORDER BY charged_at DESC, id DESC
 `
 
-type ListCreditPurchasesRow struct {
-	ID                 string
-	UserID             string
-	LotID              string
-	PackID             sql.NullString
-	Credits            int64
-	UsdCents           int64
-	Krw                int64
-	KrwPerUsdE4        sql.NullInt64
-	RateDate           sql.NullString
-	ProviderPaymentKey string
-	OrderID            string
-	ChargedAt          string
-	RefundedAt         sql.NullString
-}
-
-func (q *Queries) ListCreditPurchases(ctx context.Context, userID string) ([]ListCreditPurchasesRow, error) {
+func (q *Queries) ListCreditPurchases(ctx context.Context, userID string) ([]CreditPurchase, error) {
 	rows, err := q.db.QueryContext(ctx, listCreditPurchases, userID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ListCreditPurchasesRow
+	var items []CreditPurchase
 	for rows.Next() {
-		var i ListCreditPurchasesRow
+		var i CreditPurchase
 		if err := rows.Scan(
 			&i.ID,
 			&i.UserID,
 			&i.LotID,
 			&i.PackID,
 			&i.Credits,
-			&i.UsdCents,
 			&i.Krw,
-			&i.KrwPerUsdE4,
-			&i.RateDate,
 			&i.ProviderPaymentKey,
 			&i.OrderID,
 			&i.ChargedAt,

@@ -46,42 +46,6 @@ func freezeRenderTask(plan clip.EditPlan, retained []clip.AnalysisSource, batch 
 	return task, clip.ValidateMediaTask(clip.MediaRender, task, cfg)
 }
 
-func (s *GenerationService) resolveLegacyRenderTask(ctx context.Context, p clip.Project, b clip.SourceBatch, frozen renderPayload) (clip.MediaTask, error) {
-	plan, err := clip.DecodeEditPlan(frozen.PlanJSON)
-	if err != nil {
-		return clip.MediaTask{}, err
-	}
-	if plan.Portable == nil {
-		plan = plan.WithDisclosure(p.Disclosure, frozen.HideDisclosure)
-	}
-	plan = plan.WithDesign(p.DesignSelection())
-	plan.HideDisclosure = frozen.HideDisclosure
-	plan.SourceAudio = freezeRenderSourceAudio(frozen.Batch, plan)
-	refs := make([]clip.RenderSource, len(frozen.Sources))
-	for i, source := range frozen.Sources {
-		refs[i] = source.RenderSource
-	}
-	if validator, ok := s.renderer.(clip.RenderPlanValidator); ok {
-		plan, err = validator.ValidateRenderPlan(ctx, plan, refs)
-	} else if plan.Portable != nil {
-		layout, ok := s.renderer.(clip.CompositionLayouter)
-		if !ok {
-			return clip.MediaTask{}, clip.ErrCompositionUnavailable
-		}
-		plan, _, err = layout.LayoutComposition(ctx, plan, refs)
-	} else {
-		layout, ok := s.renderer.(clip.PlanLayouter)
-		if !ok {
-			return clip.MediaTask{}, clip.ErrCompositionUnavailable
-		}
-		plan, _, err = layout.Layout(ctx, plan, refs)
-	}
-	if err != nil {
-		return clip.MediaTask{}, err
-	}
-	return freezeRenderTask(plan, frozen.Sources, b, s.cfg.Media)
-}
-
 type mediaResultObjects interface {
 	HeadMediaArtifact(context.Context, string) (clip.SourceObjectInfo, error)
 }
@@ -96,12 +60,10 @@ func (s *GenerationService) runRemoteRender(ctx context.Context, user, parent st
 			return err
 		}
 	}
+	// A render is dispatched with the task it froze at start. A payload queued
+	// without one belongs to the renderer that no longer exists.
 	if task == nil {
-		resolved, err := s.resolveLegacyRenderTask(ctx, p, b, frozen)
-		if err != nil {
-			return err
-		}
-		task = &resolved
+		return clip.ErrCompositionUnavailable
 	}
 	stage, artifacts, err := s.remoteMedia.Request(ctx, MediaDispatchRequest{UserID: user, JobID: parent, ProjectID: p.ID, Revision: frozen.Revision, Operation: clip.MediaRender, Task: *task})
 	if err != nil {

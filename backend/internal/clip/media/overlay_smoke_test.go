@@ -55,7 +55,7 @@ func TestRenderSmokeFilePreset(t *testing.T) {
 		if err != nil {
 			return err
 		}
-		plate, err := r.copyPlate(t.Context(), ws, canvas, copy, layout, 0, Luminance{})
+		plate, err := copyPlate(t.Context(), r, ws, canvas, copy, layout, 0)
 		if err != nil {
 			return err
 		}

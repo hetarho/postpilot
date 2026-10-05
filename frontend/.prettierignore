@@ -8,3 +8,7 @@ src/shared/api/gen/
 # backend/internal/clip/design/testdata, so it keeps the encoder's own formatting.
 src/entities/clip-design/model/region-layouts.fixture.json
 src/entities/clip-design/model/region-slots.fixture.json
+
+# Written by the Go media tests (UPDATE_CUT_TIMELINE=1) and compared byte for byte with
+# backend/internal/clip/media/testdata, so it keeps the encoder's own formatting.
+src/entities/clip-preview/model/cut-timeline.fixture.json

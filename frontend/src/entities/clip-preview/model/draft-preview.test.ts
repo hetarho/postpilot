@@ -3,12 +3,16 @@ import {
   flowAssets,
   flowCut,
   flowInstant,
+  frameLayers,
+  frameTimeline,
   previewCrop,
   previewElementIDs,
   previewFrame,
   previewMotion,
   previewTimeline,
+  transitionWeights,
 } from './draft-preview'
+import fixture from './cut-timeline.fixture.json'
 import type { ClipEditPlan } from '@/entities/clip-plan'
 
 const plan: ClipEditPlan = {
@@ -66,12 +70,18 @@ describe('output preview geometry and timing', () => {
     expect(previewFrame(timeline, -100)[0]?.sourceMs).toBe(2000)
     expect(previewFrame(timeline, 19800)[0]?.sourceMs).toBeLessThan(13000)
   })
-  it('shows black at the midpoint of a fade through black', () => {
+  it('fades through black on the curve the server draws, not two straight halves', () => {
     const changed = {
       ...plan,
       cuts: plan.cuts.map((c, i) => ({ ...c, transitionMs: i ? 300 : 0 })),
     }
-    expect(previewFrame(previewTimeline(changed), 9850).map((f) => f.opacity)).toEqual([0, 0])
+    // Half-way through, xfade has taken the outgoing cut all the way to black while the
+    // incoming one is already a third of the way back.
+    const [outgoing, incoming] = previewFrame(previewTimeline(changed), 9850).map((f) => f.opacity)
+    const [, weight] = transitionWeights('fadeblack', 0.5)
+    expect(outgoing).toBe(0)
+    expect(incoming).toBeCloseTo(weight, 12)
+    expect(weight).toBeCloseTo(0.341796875, 9)
   })
   it('has no exposure leak across a 300 ms rapid cue boundary', () => {
     const cue = { startMs: 120, endMs: 420, inMs: 0, outMs: 0, dy: 0 }
@@ -180,5 +190,60 @@ describe('the flow simulation', () => {
     expect(at(2500)).toEqual(['caption', 'badge'])
     expect(at(10000)).toEqual(['badge'])
     expect(at(19800)).toEqual(['outro', 'badge'])
+  })
+})
+
+/** A case of the timeline Go records (backend/internal/clip/media/testdata/cut-timeline.json). */
+interface TimelineCase {
+  name: string
+  fps: number
+  cuts: {
+    id: string
+    startMs: number
+    endMs: number
+    transitionMs: number
+    playbackRatePermille: number
+  }[]
+  frames: { cut: number; sourceMs: number; weight: number }[][]
+}
+function fixturePlan(c: TimelineCase): ClipEditPlan {
+  return {
+    durationMs: 0,
+    cuts: c.cuts.map((cut) => ({
+      ...cut,
+      sourceId: cut.id,
+      fingerprint: cut.id.repeat(64),
+      copies: [],
+      volumePermille: 1000,
+    })),
+  }
+}
+
+// CLIP-192: the browser walks the server's frames. Every output frame of the plans Go records
+// — a hard cut, a dissolve, a fade through black and cuts at other rates — is made of the
+// same cuts, at the same source instants and the same xfade weights.
+describe('the server frame timeline', () => {
+  const cases = fixture as TimelineCase[]
+  it('covers every join the fixture claims', () => {
+    expect(cases.map((c) => c.name)).toEqual([
+      'hard-cut',
+      'fade-200',
+      'fade-through-black-300',
+      'rate-changed',
+    ])
+  })
+  it.each(cases.map((c) => [c.name, c] as const))('%s matches frame for frame', (_name, c) => {
+    const timeline = frameTimeline(fixturePlan(c), c.fps)
+    expect(timeline.total).toBe(c.frames.length)
+    c.frames.forEach((want, frame) => {
+      const got = frameLayers(timeline, frame)
+      expect(got.map((layer) => [layer.index, layer.sourceMs])).toEqual(
+        want.map((layer) => [layer.cut, layer.sourceMs]),
+      )
+      got.forEach((layer, i) =>
+        expect(Math.abs(layer.weight - want[i]!.weight)).toBeLessThanOrEqual(1 / 255),
+      )
+    })
+    expect(frameLayers(timeline, timeline.total)).toEqual([])
   })
 })

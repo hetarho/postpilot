@@ -39,11 +39,12 @@ type Accounts interface {
 	Create(ctx context.Context, loginID, password string, tier plan.Plan) error
 }
 
-// Credits is the ledger's half: the monthly grant the account's plan entitles it to. It is
-// the same call `adduser` makes, so a seeded account's balance screen shows what a really
-// provisioned account of that tier would show.
+// Credits is the benefits half: the daily and monthly grants and the server-export window
+// the account's paid plan entitles it to. It opens them through the coverage path `adduser`
+// and `setplan` take (OpenCoverage under an operator-assigned coverage), so a seeded
+// account's balance screen shows what a really provisioned account of that tier would show.
 type Credits interface {
-	OpenMonthlyLot(ctx context.Context, userID string, tier plan.Plan) error
+	OpenBenefits(ctx context.Context, userID string, tier plan.Plan) error
 }
 
 // Posts is the drafting context's half. It takes a whole Article rather than a draft to
@@ -150,8 +151,8 @@ func seedAccount(ctx context.Context, deps Deps, fixture Account, now time.Time)
 		return AccountReport{}, fmt.Errorf("create: %w", err)
 	}
 	if fixture.Plan != plan.Free {
-		if err := deps.Credits.OpenMonthlyLot(ctx, fixture.LoginID, fixture.Plan); err != nil {
-			return AccountReport{}, fmt.Errorf("open monthly grant: %w", err)
+		if err := deps.Credits.OpenBenefits(ctx, fixture.LoginID, fixture.Plan); err != nil {
+			return AccountReport{}, fmt.Errorf("open plan benefits: %w", err)
 		}
 	}
 	templateID := ""

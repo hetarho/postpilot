@@ -752,45 +752,6 @@ type furniture struct {
 	BadgeBounds clip.Region
 }
 
-// badge measures the disclosure phrase, then places it. The measurement is the
-// only impure half, exactly as it is for copy.
-func (r *Rendering) badge(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, ratio, phrase string) (furniture, error) {
-	bounds := clip.Region{}
-	if phrase != "" {
-		role := design.Type["badge"]
-		if err := r.checkCopy(phrase, role); err != nil {
-			return furniture{}, err
-		}
-		measured, err := r.measure(ctx, ws, []string{phrase}, role.Weight, role.Tracking, r.family(role))
-		if err != nil {
-			return furniture{}, err
-		}
-		bounds = measured[phrase]
-	}
-	return placeFurniture(canvas, ratio, phrase, bounds)
-}
-
-// placeFurniture puts the disclosure badge at its ratio's fixed corner (CDS-31).
-func placeFurniture(canvas clip.Canvas, ratio, phrase string, bounds clip.Region) (furniture, error) {
-	out := furniture{BadgeText: phrase}
-	l, ok := design.Layout(ratio)
-	if !ok {
-		return out, clip.ErrInvalid
-	}
-	badgeRole := design.Type["badge"]
-	b := scaled(bounds, badgeRole.Size/100)
-	out.BadgeBounds = b
-	pad := design.Spacing.PadChip
-	width := math.Ceil(b.Width + 2*pad.H)
-	if phrase != "" {
-		out.Badge = clip.Region{X: l.Badge.Right - width, Y: l.Badge.Top, Width: width, Height: badgeRole.Size + 2*pad.V}
-	}
-	if phrase != "" && !inside(out.Badge, clip.Region{X: l.Anchor.Left, Y: canvas.Safe.Y, Width: l.Badge.Right - l.Anchor.Left, Height: canvas.Safe.Height}) {
-		return out, clip.ErrInvalid
-	}
-	return out, nil
-}
-
 func scaled(r clip.Region, factor float64) clip.Region {
 	return clip.Region{X: r.X * factor, Y: r.Y * factor, Width: r.Width * factor, Height: r.Height * factor}
 }
@@ -806,35 +767,6 @@ func (f furniture) Elements(duration int) clip.Manifest {
 		})
 	}
 	return m
-}
-
-func (r *Rendering) copyPlate(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, c clip.Copy, layout copyLayout, index int, ground Luminance) (string, error) {
-	if strings.TrimSpace(c.Text) == "" {
-		return "", nil
-	}
-	svg, err := r.overlays.Render("copy.bold", copyView(canvas, c, layout, ground))
-	if err != nil {
-		return "", err
-	}
-	region := copyCrop(canvas, c, layout, ground)
-	if c.Pace == "rapid" {
-		svg = fmt.Sprintf(`<svg xmlns="http://www.w3.org/2000/svg" width="%.0f" height="%.0f" viewBox="%.0f %.0f %.0f %.0f">%s</svg>`, region.Width, region.Height, region.X, region.Y, region.Width, region.Height, svg)
-		canvas.Width, canvas.Height = int(region.Width), int(region.Height)
-	}
-	return r.rasterize(ctx, ws, canvas, svg, fmt.Sprintf("copy-%04d", index))
-}
-
-// furniturePlate is the fixed layer: the disclosure badge, drawn in CDS-45's
-// order under the copy and never animated.
-func (r *Rendering) furniturePlate(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, f furniture, index int) (string, error) {
-	if f.BadgeText == "" {
-		return "", nil
-	}
-	svg, err := r.overlays.Render("furniture", furnitureView(canvas, f))
-	if err != nil {
-		return "", err
-	}
-	return r.rasterize(ctx, ws, canvas, svg, fmt.Sprintf("fixed-%04d", index))
 }
 
 func (r *Rendering) rasterize(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, body, name string) (string, error) {

@@ -65,9 +65,9 @@ func TestRunWritesEveryFixtureAccount(t *testing.T) {
 			t.Errorf("account %q password %q, want the shared fixture password", fixture.LoginID, created.password)
 		}
 		if fixture.Plan == plan.Free && h.credits.opened[fixture.LoginID] != "" {
-			t.Errorf("free fixture received a credit grant")
+			t.Errorf("free fixture had paid benefits opened")
 		} else if fixture.Plan != plan.Free && h.credits.opened[fixture.LoginID] != fixture.Plan {
-			t.Errorf("account %q got no monthly grant for its plan", fixture.LoginID)
+			t.Errorf("account %q had no benefits opened for its plan", fixture.LoginID)
 		}
 		if report.Accounts[i].LoginID != fixture.LoginID {
 			t.Errorf("report row %d is %q, want %q in fixture order", i, report.Accounts[i].LoginID, fixture.LoginID)
@@ -597,7 +597,7 @@ type fakeCredits struct {
 	opened map[string]plan.Plan
 }
 
-func (f *fakeCredits) OpenMonthlyLot(_ context.Context, userID string, tier plan.Plan) error {
+func (f *fakeCredits) OpenBenefits(_ context.Context, userID string, tier plan.Plan) error {
 	f.record("credits:" + userID)
 	f.opened[userID] = tier
 	return nil

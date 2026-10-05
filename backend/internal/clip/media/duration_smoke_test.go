@@ -41,7 +41,7 @@ func TestRenderSmokeSixtySecondBound(t *testing.T) {
 		if err := clip.ValidateEditPlan(renderConfig(t), plan, refs); err != nil {
 			return err
 		}
-		result, err := r.Render(t.Context(), ws, plan, refs, func(_ context.Context, _ string, consume func(clip.MediaSource) error) error {
+		result, err := r.Render(t.Context(), ws, footagePlan(t, plan, `<clip version="1"/>`), refs, func(_ context.Context, _ string, consume func(clip.MediaSource) error) error {
 			return consume(clip.MediaSource{SourceID: "source", Fingerprint: "fp", Info: info, Path: path})
 		})
 		if err != nil {

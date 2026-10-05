@@ -248,7 +248,7 @@ func spokenGenerationFresh(t *testing.T) *spokenGenerationFixture {
 	q := job.New(js, time.Millisecond, jobReporting{})
 	q.AllowCancellation(jobCancellation{})
 	us := usagestore.New(h.Writer, h.Reader)
-	ledger := usage.NewService(us, nil, 0, spokenTestAnchors{}).WithRateSelector(usage.NewRateSelector(spokenTestRates{}, us)).WithUnitAccounting(p)
+	ledger := usage.NewService(us, nil, 0, spokenTestAnchors{}, usage.NewRateSelector(spokenTestRates{}, us)).WithUnitAccounting(p)
 	plans := auth.NewService(authstore.New(h.Writer, h.Reader), time.Hour, auth.Deps{Mailer: mail.NewLog()})
 	admission := jobAdmission{ledger: ledger, plans: plans, jobs: js}
 	q.Admit(admission)

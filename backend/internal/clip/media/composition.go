@@ -64,13 +64,9 @@ func (r *Rendering) compositionInputsFormat(ctx context.Context, ws clip.MediaWo
 			// The group's own leading transition joins it to what comes BEFORE
 			// it, so it is carried up unapplied exactly as the pairwise merge
 			// carried it; only the seams inside the group are joined here.
-			merged := frames[0]
-			for j := 1; j < len(group); j++ {
-				merged += frames[j] - transitionFrames(r.cfg, transitions[j])
-			}
-			leading := transitions[0]
-			transitions[0] = 0
-			args = append(args, "-filter_complex", compositionGraph(r.cfg, frames, transitions, "yuv444p"))
+			joined := joinedTimeline(r.cfg.FPS, frames, transitions)
+			merged, leading := joined.total, transitions[0]
+			args = append(args, "-filter_complex", compositionGraph(joined, "yuv444p"))
 			args = append(args, r.encodeProfile(false, 0, "yuv444p")...)
 			if err := r.runRender(ctx, ws, path, args); err != nil {
 				return nil, err
@@ -92,7 +88,7 @@ func (r *Rendering) compositionInputsFormat(ctx context.Context, ws clip.MediaWo
 		args = r.inputArgs(args, branch.path)
 		videoFrames[i], videoTransitions[i] = branch.frames, branch.transition
 	}
-	graph := compositionGraph(r.cfg, videoFrames, videoTransitions, pixelFormat)
+	graph := compositionGraph(joinedTimeline(r.cfg.FPS, videoFrames, videoTransitions), pixelFormat)
 	// The audio is already one assembled, measured track by now: the final pass
 	// only normalises it, so the clip is still produced by ONE encode (CDS-35).
 	if audio != "" {
@@ -100,19 +96,6 @@ func (r *Rendering) compositionInputsFormat(ctx context.Context, ws clip.MediaWo
 		graph += fmt.Sprintf(";[%d:a:0]%s,aresample=%d,aformat=sample_fmts=fltp:channel_layouts=stereo[a]", len(branches), loudnormFilter(measured), r.cfg.AudioRate)
 	}
 	return append(args, "-filter_complex", graph), nil
-}
-
-// assembleAudio joins every cut's audio on the SAME timeline the video takes and
-// writes it uncompressed, so the measurement pass and the final encode read one
-// identical track rather than measuring one thing and encoding another.
-func (r *Rendering) assembleAudio(ctx context.Context, ws clip.MediaWorkspace, cuts []string, frames, transitions []int, path string) error {
-	args := r.baseArgs()
-	for _, cut := range cuts {
-		args = r.inputArgs(args, cut)
-	}
-	args = append(args, "-filter_complex", compositionAudioGraph(r.cfg, frames, transitions, 0))
-	args = append(args, "-map", "[a]", "-vn", "-c:a", "pcm_s16le", "-ar", strconv.Itoa(r.cfg.AudioRate), "-ac", "2", "-f", "wav")
-	return r.runRender(ctx, ws, path, args)
 }
 
 // compositionAudioGraph cross-fades every boundary CDS-35 names, and takes
@@ -124,29 +107,28 @@ func (r *Rendering) assembleAudio(ctx context.Context, ws clip.MediaWorkspace, c
 // removes the click without moving a single later cut. An `acrossfade` there
 // would consume 60 ms of the track that the picture does not, and every cut
 // after the first boundary would run early by more than a frame.
-func compositionAudioGraph(cfg clip.RenderConfig, frames, transitions []int, inputOffset int) string {
+func compositionAudioGraph(cfg clip.RenderConfig, t cutTimeline, inputOffset int) string {
 	var graph strings.Builder
 	seam := seconds(design.Audio.CrossfadeMS)
-	for i, n := range frames {
-		fmt.Fprintf(&graph, "[%d:a:0]atrim=end_sample=%d,asetpts=PTS-STARTPTS", i+inputOffset, n*cfg.AudioRate/cfg.FPS)
-		if i > 0 && transitions[i] == 0 {
+	for i, n := range t.frames {
+		fmt.Fprintf(&graph, "[%d:a:0]atrim=end_sample=%d,asetpts=PTS-STARTPTS", i+inputOffset, n*cfg.AudioRate/t.fps)
+		if i > 0 && t.transitions[i] == 0 {
 			fmt.Fprintf(&graph, ",afade=t=in:st=0:d=%s", seam)
 		}
-		if i+1 < len(frames) && transitions[i+1] == 0 {
-			fmt.Fprintf(&graph, ",afade=t=out:st=%s:d=%s", seconds(max(0, n*1000/cfg.FPS-design.Audio.CrossfadeMS)), seam)
+		if i+1 < len(t.frames) && t.transitions[i+1] == 0 {
+			fmt.Fprintf(&graph, ",afade=t=out:st=%s:d=%s", seconds(max(0, n*1000/t.fps-design.Audio.CrossfadeMS)), seam)
 		}
 		fmt.Fprintf(&graph, "[a%d];", i)
 	}
-	a, elapsed := "a0", frames[0]
-	for i := 1; i < len(frames); i++ {
-		if transitions[i] == 0 {
+	a := "a0"
+	for i := 1; i < len(t.frames); i++ {
+		if t.transitions[i] == 0 {
 			fmt.Fprintf(&graph, "[%s][a%d]concat=n=2:v=0:a=1[ax%d];", a, i, i)
 		} else {
-			fmt.Fprintf(&graph, "[%s][a%d]acrossfade=ns=%d:c1=tri:c2=tri[ax%d];", a, i, transitions[i]*cfg.AudioRate/1000, i)
+			fmt.Fprintf(&graph, "[%s][a%d]acrossfade=ns=%d:c1=tri:c2=tri[ax%d];", a, i, t.transitions[i]*cfg.AudioRate/1000, i)
 		}
 		a = fmt.Sprintf("ax%d", i)
-		elapsed += frames[i] - transitionFrames(cfg, transitions[i])
 	}
-	fmt.Fprintf(&graph, "[%s]atrim=end_sample=%d,asetpts=PTS-STARTPTS[a]", a, elapsed*cfg.AudioRate/cfg.FPS)
+	fmt.Fprintf(&graph, "[%s]atrim=end_sample=%d,asetpts=PTS-STARTPTS[a]", a, t.total*cfg.AudioRate/t.fps)
 	return graph.String()
 }

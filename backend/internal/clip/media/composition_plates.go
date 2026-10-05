@@ -39,7 +39,7 @@ func sequenceDrawn(visual declaredVisual) bool {
 	return visual.manifest.Role == "caption" && !visual.caption.Caption.Static() && visual.copy.Pace != "rapid"
 }
 
-func (r *Rendering) declaredLayer(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, visual *declaredVisual, source clip.MediaSource, index int) (captionLayer, error) {
+func (r *Rendering) declaredLayer(ctx context.Context, ws clip.MediaWorkspace, canvas clip.Canvas, visual *declaredVisual, index int) (captionLayer, error) {
 	if visual.manifest.Role == "caption" && !visual.caption.Caption.Static() {
 		visual.manifest.RecordDrawing(design.SequenceCaption)
 		// A rapid phrase takes its style's one frame and never the bundled

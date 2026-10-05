@@ -50,9 +50,9 @@ func TestSQLiteClipFailureSettlementEvidenceAndConcurrency(t *testing.T) {
 		{name: "absent"},
 		{name: "unknown", calls: []llm.Usage{{}}, wantSource: "unavailable"},
 		{name: "reported zero", calls: []llm.Usage{{PromptTokens: 30000, CostReported: true}}, wantSource: "reported"},
-		{name: "reported positive", calls: []llm.Usage{{CostMicrousd: 100, CostReported: true}}, want: 3, wantSource: "reported"},
-		{name: "estimated from usage", calls: []llm.Usage{{PromptTokens: 100}}, want: 3, wantSource: "estimated"},
-		{name: "partial and unknown", calls: []llm.Usage{{CostMicrousd: 100, CostReported: true}, {}}, want: 3, wantSource: "reported"},
+		{name: "reported positive", calls: []llm.Usage{{CostMicrousd: 100, CostReported: true}}, want: 1, wantSource: "reported"},
+		{name: "estimated from usage", calls: []llm.Usage{{PromptTokens: 100}}, want: 1, wantSource: "estimated"},
+		{name: "partial and unknown", calls: []llm.Usage{{CostMicrousd: 100, CostReported: true}, {}}, want: 1, wantSource: "reported"},
 		{name: "over reservation", calls: []llm.Usage{{CostMicrousd: 5_000_000, CostReported: true}}, want: 5, wantSource: "reported"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -83,8 +83,9 @@ func TestSQLiteClipFailureSettlementEvidenceAndConcurrency(t *testing.T) {
 			}
 			var workers sync.WaitGroup
 			errorsCh := make(chan error, 12)
+			// A provider fault, so no compensation lot joins the balance this test reads.
 			for range 12 {
-				workers.Go(func() { errorsCh <- svc.Settle(ctx, "clip", usage.OutcomeFailed) })
+				workers.Go(func() { errorsCh <- svc.SettleCause(ctx, "clip", usage.OutcomeFailed, "provider") })
 			}
 			workers.Wait()
 			close(errorsCh)
@@ -113,7 +114,7 @@ func TestSQLiteClipFailureSettlementEvidenceAndConcurrency(t *testing.T) {
 			if err := svc.RecordCall(work, pricedRef, "observe", llm.Usage{CostReported: true, CostMicrousd: 9_000_000}, nil); err != nil {
 				t.Fatal(err)
 			}
-			if err := svc.Settle(ctx, "clip", usage.OutcomeFailed); err != nil {
+			if err := svc.SettleCause(ctx, "clip", usage.OutcomeFailed, "provider"); err != nil {
 				t.Fatal(err)
 			}
 			late, err := svc.BalanceFor(ctx, "alice", plan.Free)
@@ -193,13 +194,16 @@ func TestSQLiteClipRefundRollbackRestoresOriginalLotsAndExpiry(t *testing.T) {
 func TestSQLiteSettledClipIsNotRetroactivelyWaived(t *testing.T) {
 	svc, handle := newServiceWithDB(t)
 	ctx := context.Background()
-	request := holdFor("legacy-clip")
+	request := holdFor("settled-clip")
 	request.Kind = "generate_clip"
 	request.Approval = approvedStoreClip()
 	if err := svc.Hold(ctx, request); err != nil {
 		t.Fatal(err)
 	}
-	// This is the same durable state as a historical base-only settlement.
+	work := usage.WithWork(ctx, usage.Work{UserID: "alice", Kind: "generate_clip", JobID: request.JobID})
+	if err := svc.RecordCall(work, pricedRef, "observe", llm.Usage{CostMicrousd: 10_000, CostReported: true}, nil); err != nil {
+		t.Fatal(err)
+	}
 	if err := svc.Settle(ctx, request.JobID, usage.OutcomeSucceeded); err != nil {
 		t.Fatal(err)
 	}
@@ -215,7 +219,7 @@ func TestSQLiteSettledClipIsNotRetroactivelyWaived(t *testing.T) {
 		t.Fatal(before, after, err)
 	}
 	var settled int
-	if err := handle.Reader.QueryRow("SELECT settled_credits FROM usage_admissions WHERE job_id=?", request.JobID).Scan(&settled); err != nil || settled != 2 {
+	if err := handle.Reader.QueryRow("SELECT settled_credits FROM usage_admissions WHERE job_id=?", request.JobID).Scan(&settled); err != nil || settled != 5 {
 		t.Fatal(settled, err)
 	}
 }
@@ -244,7 +248,7 @@ func TestSQLiteMasterClipRecordsCostWithoutDebitingLots(t *testing.T) {
 		t.Fatal("master lot was debited", remaining)
 	}
 	var settled, debitRows int
-	if err := handle.Reader.QueryRow("SELECT settled_credits FROM usage_admissions WHERE job_id=?", request.JobID).Scan(&settled); err != nil || settled != 3 {
+	if err := handle.Reader.QueryRow("SELECT settled_credits FROM usage_admissions WHERE job_id=?", request.JobID).Scan(&settled); err != nil || settled != 1 {
 		t.Fatal(settled, err)
 	}
 	if err := handle.Reader.QueryRow("SELECT COUNT(*) FROM credit_hold_lots WHERE job_id=?", request.JobID).Scan(&debitRows); err != nil || debitRows != 0 {
@@ -252,10 +256,14 @@ func TestSQLiteMasterClipRecordsCostWithoutDebitingLots(t *testing.T) {
 	}
 }
 
-// Two bounded calls at known frozen rates cost 5 credits, preserving the lot
-// split used by the existing failure-settlement regression fixtures.
+// storeRate is the snapshot testRates selects, frozen into an approval.
+var storeRate = plan.RateSnapshot{Source: "korea-eximbank", PublicationDate: "2026-10-02",
+	ReferenceE4: 5_000_000, AppliedE4: 5_000_000}
+
+// Two bounded calls at known frozen prices cost 9 000 micro-USD, 5 credits at storeRate,
+// preserving the lot split used by the failure-settlement regression fixtures.
 func approvedStoreClip() *usage.Reservation {
-	return &usage.Reservation{ApprovedMaxCredits: 5, Calls: []usage.PricedCall{
+	return &usage.Reservation{ApprovedMaxCredits: 5, Rate: storeRate, Calls: []usage.PricedCall{
 		{Policy: llm.CallPolicy{Ref: pricedRef, Stage: "observe", CompletionTokens: 8192, InputUSDPerMillion: "0.15", OutputUSDPerMillion: "0"}, Count: 1},
 		{Policy: llm.CallPolicy{Ref: pricedRef, Stage: "write", CompletionTokens: 32768, InputUSDPerMillion: "0.15", OutputUSDPerMillion: "0"}, Count: 1},
 	}}

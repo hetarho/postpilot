@@ -3,29 +3,11 @@ package usage
 import (
 	"context"
 	"errors"
-	"math"
 	"testing"
 
 	"github.com/postpilot/backend/internal/llm"
 	"github.com/postpilot/backend/internal/plan"
 )
-
-func TestCancelledClipChargeUsesTheUnusedReservationAndCannotOverflow(t *testing.T) {
-	for _, tc := range []struct {
-		reservation    int
-		cost           int64
-		confirmed, fee int
-	}{
-		{100, 60000, 20, 40}, {5, 0, 0, 3}, {5, 100, 3, 1},
-		{0, 100, 0, 0}, {5, math.MaxInt64, 5, 0},
-		{math.MaxInt, 0, 0, math.MaxInt/2 + 1},
-	} {
-		confirmed, fee := cancelledCharge(tc.cost, tc.reservation)
-		if confirmed != tc.confirmed || fee != tc.fee || confirmed+fee > tc.reservation {
-			t.Fatalf("reservation %d cost %d: confirmed=%d fee=%d", tc.reservation, tc.cost, confirmed, fee)
-		}
-	}
-}
 
 // TMPL-63, QUOTA-49: work admitted without an approved ceiling settles as cancelled only for a
 // kind the root names, and then it is charged exactly what its confirmed usage costs — the same
@@ -38,7 +20,7 @@ func TestOwnerCancellableWorkSettlesToConfirmedUsageWithoutAFee(t *testing.T) {
 			svc.WithOwnerCancellation("template_request")
 		}
 		st.lots = []Lot{openMonthly("alice", 1000)}
-		start := holdStart("alice", plan.Free, "job")
+		start := holdStart("alice", plan.Free, "job", PlannedCall{Ref: cheapRef, Count: 1})
 		start.Kind = "template_request"
 		if err := svc.Hold(context.Background(), start); err != nil {
 			t.Fatal(err)
@@ -63,7 +45,7 @@ func TestOwnerCancellableWorkSettlesToConfirmedUsageWithoutAFee(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cancelled.Credits != finished.Credits {
+	if cancelled.Credits != finished.Credits || cancelled.Credits != oneCallHold {
 		t.Fatalf("cancelled charge = %d, finished = %d (hold %d)", cancelled.Credits, finished.Credits, hold)
 	}
 	if cancelled.CancellationFee != nil && *cancelled.CancellationFee != 0 {

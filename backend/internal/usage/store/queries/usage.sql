@@ -44,15 +44,6 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 -- write that edits a lot the account was already given.
 UPDATE credit_lots SET granted = granted + ?, remaining = remaining + ? WHERE id = ?;
 
--- name: VoidUntouchedLot :execrows
-UPDATE credit_lots SET remaining = 0 WHERE id = ? AND remaining = granted;
-
--- name: LotUntouched :one
-SELECT EXISTS(
-    SELECT 1 FROM credit_lots
-    WHERE id = ? AND kind = 'purchased' AND granted > 0 AND remaining = granted
-);
-
 -- name: UntouchedPurchasedLots :many
 -- Which of these purchased lots are still whole, in one statement. A billing screen asks
 -- about every purchase it is about to render, and the answer only decides whether a button
@@ -84,9 +75,6 @@ FROM credit_lots
 WHERE id IN (sqlc.slice('ids'))
   AND kind = 'voucher';
 
--- name: RestoreLot :execrows
-UPDATE credit_lots SET remaining = remaining + ? WHERE id = ? AND remaining + ? <= granted;
-
 -- name: SpendFromLot :exec
 -- The `remaining >= ?` guard is in the statement rather than in a read before it: two
 -- writers that each read the same lot must not both pass their own arithmetic.
@@ -117,46 +105,6 @@ ON CONFLICT(id) DO UPDATE SET expires_at = excluded.expires_at
 WHERE credit_lots.kind IN ('daily', 'monthly')
   AND credit_lots.coverage_id = excluded.coverage_id
   AND credit_lots.expires_at < excluded.expires_at;
-
--- name: UpsertLot :exec
--- The window write behind a subscription's first charge (QUOTA-42). Unlike
--- InsertLotIfAbsent it overwrites whatever the window's id already held, because the
--- values come from the tier and the window rather than from the row: an account that signs
--- up and subscribes on the same anchor date derives the SAME id for its free window and for
--- the one it just paid for, and keeping the free grant there would silently discard the
--- tier's. Overwriting is also what makes the operation idempotent under a provider retry.
-INSERT INTO credit_lots (id, user_id, kind, granted, remaining, expires_at, created_at)
-VALUES (?, ?, ?, ?, ?, ?, ?)
-ON CONFLICT(id) DO UPDATE SET
-    granted = excluded.granted,
-    remaining = excluded.remaining,
-    expires_at = excluded.expires_at;
-
--- name: ExpireMonthlyLotsExcept :exec
--- Closes the monthly window an account is running at the instant a new one opens, keeping
--- the row for history the way a lapsed window is kept (QUOTA-12). The excepted id is the
--- window being opened: without it a re-run would expire the lot the upsert had just
--- written, and the pair would stop being idempotent.
-UPDATE credit_lots SET expires_at = ?
-WHERE user_id = ?
-  AND kind = 'monthly'
-  AND id <> ?
-  AND expires_at IS NOT NULL
-  AND expires_at > ?;
-
--- name: ExpireLegacyMonthlyLots :exec
-UPDATE credit_lots SET expires_at = ?
-WHERE user_id = ? AND kind = 'monthly' AND coverage_id IS NULL
-  AND expires_at > ?;
-
--- name: LegacyMonthlyLotOpen :one
--- Whether ExpireLegacyMonthlyLots would move any lot, asked on the read pool with the same
--- predicate, so a balance read can tell it has nothing to expire.
-SELECT EXISTS(
-    SELECT 1 FROM credit_lots
-    WHERE user_id = ? AND kind = 'monthly' AND coverage_id IS NULL
-      AND expires_at > ?
-);
 
 -- name: WindowLotExpiries :many
 -- Where each of these window grants already ends, on the read pool. A balance read compares

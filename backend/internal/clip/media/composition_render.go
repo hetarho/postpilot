@@ -109,11 +109,8 @@ func (r *Rendering) renderComposition(ctx context.Context, ws clip.MediaWorkspac
 		return result, err
 	}
 	canvas, _ := clip.ClipCanvas(plan.Ratio)
-	frames, transitions := cutFrames(plan, r.cfg.FPS), planTransitions(plan)
-	totalFrames := 0
-	for i, n := range frames {
-		totalFrames += n - transitionFrames(r.cfg, transitions[i])
-	}
+	timeline := newCutTimeline(r.cfg.FPS, plan)
+	frames, totalFrames := timeline.frames, timeline.total
 	byID := map[string]clip.RenderSource{}
 	for _, source := range sources {
 		byID[source.ID] = source
@@ -129,7 +126,7 @@ func (r *Rendering) renderComposition(ctx context.Context, ws clip.MediaWorkspac
 	if audio {
 		wavs = make([]string, len(plan.Cuts))
 	}
-	sampler := r.newGroundSampler(canvas, plan, layout.visuals)
+	sampler := r.newGroundSampler(canvas, timeline, layout.visuals)
 	step("render_footage")
 	// The cuts are visited an original at a time, and each keeps its own index,
 	// so the footage is the plan's whatever order they were made in.
@@ -176,7 +173,7 @@ func (r *Rendering) renderComposition(ctx context.Context, ws clip.MediaWorkspac
 	raw := filepath.Join(ws.Path, "composition-footage.mp4")
 	cleanup = append(cleanup, raw)
 	mergeStart := len(cleanup)
-	args, err := r.compositionInputsFormat(ctx, ws, cuts, frames, transitions, "", nil, &cleanup, "yuv444p")
+	args, err := r.compositionInputsFormat(ctx, ws, cuts, frames, timeline.transitions, "", nil, &cleanup, "yuv444p")
 	if err != nil {
 		return result, err
 	}
@@ -197,14 +194,13 @@ func (r *Rendering) renderComposition(ctx context.Context, ws clip.MediaWorkspac
 			return result, err
 		}
 	}
-	composedSource := clip.MediaSource{Path: raw, Info: clip.MediaInfo{Width: canvas.Width, Height: canvas.Height, DurationMS: totalFrames * 1000 / r.cfg.FPS}}
 	step("render_overlay")
 	if err = sampler.apply(canvas, layout.visuals); err != nil {
 		return result, err
 	}
 	layers := make([]captionLayer, len(layout.visuals))
 	for i := range layout.visuals {
-		layers[i], err = r.declaredLayer(ctx, ws, canvas, &layout.visuals[i], composedSource, i)
+		layers[i], err = r.declaredLayer(ctx, ws, canvas, &layout.visuals[i], i)
 		if err != nil {
 			return result, err
 		}
@@ -221,7 +217,7 @@ func (r *Rendering) renderComposition(ctx context.Context, ws clip.MediaWorkspac
 		step("render_audio")
 		assembled = filepath.Join(ws.Path, "composition-audio.wav")
 		cleanup = append(cleanup, assembled)
-		if err = r.assembleDeclaredAudio(ctx, ws, wavs, frames, transitions, elements, assembled); err != nil {
+		if err = r.assembleDeclaredAudio(ctx, ws, wavs, timeline, elements, assembled); err != nil {
 			return result, err
 		}
 		for _, path := range wavs {

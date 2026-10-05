@@ -1,8 +1,16 @@
 package plan
 
-// EstimatorRatesAt prices the same visible post assumptions as EstimatorRates
-// in KRW milli-credits at the published job-rate denomination. Components
-// truncate at milli precision; the actual job is rounded once at settlement.
+// EstimatorRatesAt derives one combo's unit rates from what its two models charge, in KRW
+// milli-credits at the rate a new job would freeze (QUOTA-59). Components truncate at milli
+// precision; the actual job is rounded once at settlement.
+//
+// An observation call is shared by the batch it carries, so a photo or a clip carries one
+// batch-share of that call's prompt — amortized rather than counted with a ceiling, because
+// the client is only allowed to multiply; the figure is labelled an estimate and the refusal
+// stays authoritative (QUOTA-36).
+//
+// False means a model published no usable price or the rate is not one a job could freeze,
+// and a combo that cannot be priced is not published at all.
 func EstimatorRatesAt(observe, write Pricer, rate RateSnapshot) (Rates, bool) {
 	if !rate.Valid() {
 		return Rates{}, false
@@ -32,6 +40,8 @@ func EstimatorRatesAt(observe, write Pricer, rate RateSnapshot) (Rates, bool) {
 		Per1000Chars: chars, PerPostBase: prompt}, true
 }
 
+// ClipEstimatorRatesAt prices one combo's clip comparison the same way: KRW milli-credits at
+// the given rate, false when a model has no usable price or the rate is not valid.
 func ClipEstimatorRatesAt(observe, write Pricer, rate RateSnapshot) (ClipRates, bool) {
 	if !rate.Valid() {
 		return ClipRates{}, false

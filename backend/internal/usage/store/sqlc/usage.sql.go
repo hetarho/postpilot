@@ -224,53 +224,6 @@ func (q *Queries) EligibleLotsForJob(ctx context.Context, jobID string) ([]Eligi
 	return items, nil
 }
 
-const expireLegacyMonthlyLots = `-- name: ExpireLegacyMonthlyLots :exec
-UPDATE credit_lots SET expires_at = ?
-WHERE user_id = ? AND kind = 'monthly' AND coverage_id IS NULL
-  AND expires_at > ?
-`
-
-type ExpireLegacyMonthlyLotsParams struct {
-	ExpiresAt   sql.NullString
-	UserID      string
-	ExpiresAt_2 sql.NullString
-}
-
-func (q *Queries) ExpireLegacyMonthlyLots(ctx context.Context, arg ExpireLegacyMonthlyLotsParams) error {
-	_, err := q.db.ExecContext(ctx, expireLegacyMonthlyLots, arg.ExpiresAt, arg.UserID, arg.ExpiresAt_2)
-	return err
-}
-
-const expireMonthlyLotsExcept = `-- name: ExpireMonthlyLotsExcept :exec
-UPDATE credit_lots SET expires_at = ?
-WHERE user_id = ?
-  AND kind = 'monthly'
-  AND id <> ?
-  AND expires_at IS NOT NULL
-  AND expires_at > ?
-`
-
-type ExpireMonthlyLotsExceptParams struct {
-	ExpiresAt   sql.NullString
-	UserID      string
-	ID          string
-	ExpiresAt_2 sql.NullString
-}
-
-// Closes the monthly window an account is running at the instant a new one opens, keeping
-// the row for history the way a lapsed window is kept (QUOTA-12). The excepted id is the
-// window being opened: without it a re-run would expire the lot the upsert had just
-// written, and the pair would stop being idempotent.
-func (q *Queries) ExpireMonthlyLotsExcept(ctx context.Context, arg ExpireMonthlyLotsExceptParams) error {
-	_, err := q.db.ExecContext(ctx, expireMonthlyLotsExcept,
-		arg.ExpiresAt,
-		arg.UserID,
-		arg.ID,
-		arg.ExpiresAt_2,
-	)
-	return err
-}
-
 const expireVoucherLot = `-- name: ExpireVoucherLot :execrows
 UPDATE credit_lots SET expires_at = ?
 WHERE id = ? AND kind = 'voucher' AND expires_at > ?
@@ -539,42 +492,6 @@ func (q *Queries) InsertLotIfAbsent(ctx context.Context, arg InsertLotIfAbsentPa
 		return 0, err
 	}
 	return result.RowsAffected()
-}
-
-const legacyMonthlyLotOpen = `-- name: LegacyMonthlyLotOpen :one
-SELECT EXISTS(
-    SELECT 1 FROM credit_lots
-    WHERE user_id = ? AND kind = 'monthly' AND coverage_id IS NULL
-      AND expires_at > ?
-)
-`
-
-type LegacyMonthlyLotOpenParams struct {
-	UserID    string
-	ExpiresAt sql.NullString
-}
-
-// Whether ExpireLegacyMonthlyLots would move any lot, asked on the read pool with the same
-// predicate, so a balance read can tell it has nothing to expire.
-func (q *Queries) LegacyMonthlyLotOpen(ctx context.Context, arg LegacyMonthlyLotOpenParams) (bool, error) {
-	row := q.db.QueryRowContext(ctx, legacyMonthlyLotOpen, arg.UserID, arg.ExpiresAt)
-	var exists bool
-	err := row.Scan(&exists)
-	return exists, err
-}
-
-const lotUntouched = `-- name: LotUntouched :one
-SELECT EXISTS(
-    SELECT 1 FROM credit_lots
-    WHERE id = ? AND kind = 'purchased' AND granted > 0 AND remaining = granted
-)
-`
-
-func (q *Queries) LotUntouched(ctx context.Context, id string) (bool, error) {
-	row := q.db.QueryRowContext(ctx, lotUntouched, id)
-	var exists bool
-	err := row.Scan(&exists)
-	return exists, err
 }
 
 const lotsInConsumptionOrder = `-- name: LotsInConsumptionOrder :many
@@ -917,24 +834,6 @@ func (q *Queries) RefundToLot(ctx context.Context, arg RefundToLotParams) error 
 	return err
 }
 
-const restoreLot = `-- name: RestoreLot :execrows
-UPDATE credit_lots SET remaining = remaining + ? WHERE id = ? AND remaining + ? <= granted
-`
-
-type RestoreLotParams struct {
-	Remaining   int64
-	ID          string
-	Remaining_2 int64
-}
-
-func (q *Queries) RestoreLot(ctx context.Context, arg RestoreLotParams) (int64, error) {
-	result, err := q.db.ExecContext(ctx, restoreLot, arg.Remaining, arg.ID, arg.Remaining_2)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected()
-}
-
 const spendFromLot = `-- name: SpendFromLot :exec
 UPDATE credit_lots SET remaining = remaining - ? WHERE id = ? AND remaining >= ? AND refund_request_id IS NULL
 `
@@ -1024,56 +923,6 @@ func (q *Queries) UntouchedPurchasedLots(ctx context.Context, ids []string) ([]s
 		return nil, err
 	}
 	return items, nil
-}
-
-const upsertLot = `-- name: UpsertLot :exec
-INSERT INTO credit_lots (id, user_id, kind, granted, remaining, expires_at, created_at)
-VALUES (?, ?, ?, ?, ?, ?, ?)
-ON CONFLICT(id) DO UPDATE SET
-    granted = excluded.granted,
-    remaining = excluded.remaining,
-    expires_at = excluded.expires_at
-`
-
-type UpsertLotParams struct {
-	ID        string
-	UserID    string
-	Kind      string
-	Granted   int64
-	Remaining int64
-	ExpiresAt sql.NullString
-	CreatedAt string
-}
-
-// The window write behind a subscription's first charge (QUOTA-42). Unlike
-// InsertLotIfAbsent it overwrites whatever the window's id already held, because the
-// values come from the tier and the window rather than from the row: an account that signs
-// up and subscribes on the same anchor date derives the SAME id for its free window and for
-// the one it just paid for, and keeping the free grant there would silently discard the
-// tier's. Overwriting is also what makes the operation idempotent under a provider retry.
-func (q *Queries) UpsertLot(ctx context.Context, arg UpsertLotParams) error {
-	_, err := q.db.ExecContext(ctx, upsertLot,
-		arg.ID,
-		arg.UserID,
-		arg.Kind,
-		arg.Granted,
-		arg.Remaining,
-		arg.ExpiresAt,
-		arg.CreatedAt,
-	)
-	return err
-}
-
-const voidUntouchedLot = `-- name: VoidUntouchedLot :execrows
-UPDATE credit_lots SET remaining = 0 WHERE id = ? AND remaining = granted
-`
-
-func (q *Queries) VoidUntouchedLot(ctx context.Context, id string) (int64, error) {
-	result, err := q.db.ExecContext(ctx, voidUntouchedLot, id)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected()
 }
 
 const voucherLots = `-- name: VoucherLots :many

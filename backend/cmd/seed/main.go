@@ -79,14 +79,15 @@ func run(ctx context.Context) error {
 
 	authSvc := auth.NewService(authstore.New(handle.Writer, handle.Reader), cfg.SessionTTL, auth.Deps{Mailer: mail.NewLog()})
 	boundary := anchors{auth: authSvc}
+	rates := usage.NewRateSelector(noRates{}, usagestore.New(handle.Writer, handle.Reader))
 	benefitStore := billingstore.New(handle.Writer, handle.Reader)
 	benefitStore.SetCreditsForTx(func(tx *sql.Tx) billing.Credits {
-		return seedBenefitCredits{Service: usage.NewService(usagestore.NewTx(tx), noModels{}, 0, boundary), exports: clipstore.NewTx(tx)}
+		return seedBenefitCredits{Service: usage.NewService(usagestore.NewTx(tx), noModels{}, 0, boundary, rates), exports: clipstore.NewTx(tx)}
 	})
 	benefitStore.SetPlansForTx(func(tx *sql.Tx) billing.Plans {
 		return auth.NewService(authstore.NewTx(tx), cfg.SessionTTL, auth.Deps{Mailer: mail.NewLog()})
 	})
-	support := billing.NewService(benefitStore, nil, nil, nil, nil, nil, nil)
+	support := billing.NewService(benefitStore, nil, nil, nil, nil, nil)
 	report, err := devseed.Run(ctx, devseed.Deps{
 		Accounts: accounts{svc: authSvc, store: authstore.New(handle.Writer, handle.Reader)},
 		Credits:  credits{support: support},
@@ -125,11 +126,12 @@ func (a accounts) Create(ctx context.Context, loginID, password string, tier pla
 	return a.svc.CreateUser(ctx, loginID, password, tier)
 }
 
-// credits adapts the ledger, making the same call `adduser` makes so a seeded account's
+// credits adapts billing's support assignment, the call `adduser` and `setplan` make: it opens
+// the tier's coverage (daily and monthly grants, server-export window) so a seeded account's
 // balance is the one its plan entitles it to rather than a number invented here.
 type credits struct{ support *billing.Service }
 
-func (c credits) OpenMonthlyLot(ctx context.Context, userID string, tier plan.Plan) error {
+func (c credits) OpenBenefits(ctx context.Context, userID string, tier plan.Plan) error {
 	if tier == plan.Free || tier == plan.Master {
 		return nil
 	}
@@ -153,23 +155,27 @@ type seedBenefitCredits struct {
 }
 
 func (c seedBenefitCredits) OpenCoverage(ctx context.Context, userID string, coverage billing.Coverage, at time.Time, correlation string) error {
-	if err := c.Service.OpenCoverage(ctx, userID, usage.Coverage{ID: coverage.ID, Anchor: coverage.Anchor, End: coverage.End, Tier: coverage.Tier, DailyTier: coverage.DailyTier}, at, correlation); err != nil {
+	if err := c.Service.OpenCoverage(ctx, userID, seedCoverage(coverage), at, correlation); err != nil {
 		return err
 	}
-	start, end := plan.BenefitWindow(coverage.Anchor, at)
-	if !coverage.End.IsZero() && coverage.End.Before(end) {
-		end = coverage.End
-	}
-	offer, _ := plan.CommercialOffer(coverage.Tier)
-	return c.exports.OpenExportWindow(ctx, clip.ExportWindow{UserID: userID, CoverageID: coverage.ID, Start: start, End: end, Allowance: offer.ServerExports}, correlation)
+	window, _ := usage.ExportWindowAt(userID, seedCoverage(coverage), at)
+	return c.exports.OpenExportWindow(ctx, seedExportWindow(window), correlation)
 }
 func (c seedBenefitCredits) AddUpgradeBonus(ctx context.Context, userID string, coverage billing.Coverage, at time.Time, credits, exportDelta int, correlation string) error {
-	if err := c.Service.AddUpgradeBonus(ctx, userID, usage.Coverage{ID: coverage.ID, Anchor: coverage.Anchor, End: coverage.End, Tier: coverage.Tier, DailyTier: coverage.DailyTier}, at, credits, correlation); err != nil {
+	if err := c.Service.AddUpgradeBonus(ctx, userID, seedCoverage(coverage), at, credits, correlation); err != nil {
 		return err
 	}
-	start, end := plan.BenefitWindow(coverage.Anchor, at)
-	offer, _ := plan.CommercialOffer(coverage.Tier)
-	return c.exports.RaiseExportWindow(ctx, clip.ExportWindow{UserID: userID, CoverageID: coverage.ID, Start: start, End: end, Allowance: offer.ServerExports}, exportDelta, correlation)
+	window, _ := usage.ExportWindowAt(userID, seedCoverage(coverage), at)
+	return c.exports.RaiseExportWindow(ctx, seedExportWindow(window), exportDelta, correlation)
+}
+
+// seedCoverage and seedExportWindow translate between the contexts the way the API's
+// billing adapter does; the window itself is the ledger's rule (usage.ExportWindowAt).
+func seedCoverage(coverage billing.Coverage) usage.Coverage {
+	return usage.Coverage{ID: coverage.ID, Anchor: coverage.Anchor, End: coverage.End, Tier: coverage.Tier, DailyTier: coverage.DailyTier}
+}
+func seedExportWindow(window usage.ExportWindow) clip.ExportWindow {
+	return clip.ExportWindow{UserID: window.UserID, CoverageID: window.CoverageID, Start: window.Start, End: window.End, Allowance: window.Allowance}
 }
 
 // noModels stands in for the model registry. The ledger only consults it to price a call,
@@ -177,6 +183,14 @@ func (c seedBenefitCredits) AddUpgradeBonus(ctx context.Context, userID string, 
 type noModels struct{}
 
 func (noModels) Lookup(llm.ModelRef) (llm.ModelInfo, bool) { return llm.ModelInfo{}, false }
+
+// noRates stands in for the official exchange-rate source for the same reason: a seed prices
+// nothing, so any priced work would be refused as a rate outage rather than converted.
+type noRates struct{}
+
+func (noRates) KRWPerUSD(context.Context, time.Time) (int64, bool, error) {
+	return 0, false, usage.ErrRateUnavailable
+}
 
 // posts adapts the drafting context, mapping one fixture Article to the sequence of writes
 // that actually produces a post in that state. This is the anti-corruption mapping at the

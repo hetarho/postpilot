@@ -76,8 +76,7 @@ func TestEveryTypedReasonIsEmitted(t *testing.T) {
 // TestRetiredPublishingFailureReasonsStayReserved prevents a later feature from silently
 // reusing the public names or wire numbers removed with the publishing contract.
 func TestRetiredPublishingFailureReasonsStayReserved(t *testing.T) {
-	descriptor := postpilotv1.FailureReason(0).Type().Descriptor()
-	retired := map[protoreflect.Name]protoreflect.EnumNumber{
+	assertRetiredReasons(t, map[protoreflect.Name]protoreflect.EnumNumber{
 		"POST_PUBLISHING":            135,
 		"PUBLISH_AGENT_NOT_READY":    143,
 		"PUBLISH_AGENT_REVOKED":      144,
@@ -98,7 +97,25 @@ func TestRetiredPublishingFailureReasonsStayReserved(t *testing.T) {
 		"PUBLISH_TRANSITION_INVALID": 159,
 		"PUBLISH_URL_INVALID":        160,
 		"VIDEO_NOT_PUBLISHABLE":      192,
-	}
+	})
+}
+
+// ARCH-43: the self-serve purchase refund and the dollar purchase minimum left with T583; their
+// reasons keep their names and numbers out of reach.
+func TestRetiredPurchaseRefundFailureReasonsStayReserved(t *testing.T) {
+	assertRetiredReasons(t, map[protoreflect.Name]protoreflect.EnumNumber{
+		"PURCHASE_NOT_FOUND":   161,
+		"PURCHASE_SPENT":       162,
+		"PURCHASE_TOO_SMALL":   163,
+		"REFUND_WINDOW_CLOSED": 166,
+	})
+}
+
+// assertRetiredReasons checks that each retired reason is gone from the enum and that both its
+// name and its number are reserved, so neither can come back meaning something else.
+func assertRetiredReasons(t *testing.T, retired map[protoreflect.Name]protoreflect.EnumNumber) {
+	t.Helper()
+	descriptor := postpilotv1.FailureReason(0).Type().Descriptor()
 	for name, number := range retired {
 		if _, present := postpilotv1.FailureReason_value[string(name)]; present {
 			t.Errorf("retired failure name %s is active", name)

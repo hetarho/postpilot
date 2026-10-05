@@ -21,7 +21,7 @@ func TestClipFailedSettlementUsesOnlyConfirmedBillableEvidence(t *testing.T) {
 		{name: "unavailable is not billable even with stale amount", events: []Event{{CostSource: llm.CostUnavailable, CostMicrousd: 10000}}},
 		{name: "reported zero overrides token estimate", events: []Event{{CostSource: llm.CostReported, PromptTokens: 30000, CompletionTokens: 8192}}},
 		{name: "known free estimate", events: []Event{{CostSource: llm.CostEstimated, PromptTokens: 30}}},
-		{name: "positive reported", events: []Event{{CostSource: llm.CostReported, CostMicrousd: 1}}, want: 3},
+		{name: "positive reported", events: []Event{{CostSource: llm.CostReported, CostMicrousd: 1}}, want: 1},
 		{name: "positive estimated", events: []Event{{CostSource: llm.CostEstimated, PromptTokens: 100, CostMicrousd: 10000}}, want: 5},
 		{name: "partial positive with unknown", events: []Event{{CostSource: llm.CostReported, CostMicrousd: 10000}, {CostSource: llm.CostUnavailable}}, want: 5},
 	} {
@@ -42,8 +42,9 @@ func TestClipFailedSettlementUsesOnlyConfirmedBillableEvidence(t *testing.T) {
 				store.events = append(store.events, event)
 			}
 			before := append([]Event(nil), store.events...)
+			// A provider fault, so no compensation lot joins the balance this test reads.
 			for range 2 {
-				if err := svc.Settle(context.Background(), "clip", OutcomeFailed); err != nil {
+				if err := svc.SettleCause(context.Background(), "clip", OutcomeFailed, "provider"); err != nil {
 					t.Fatal(err)
 				}
 			}
@@ -54,7 +55,7 @@ func TestClipFailedSettlementUsesOnlyConfirmedBillableEvidence(t *testing.T) {
 				t.Fatal("settlement rewrote raw provider evidence")
 			}
 			store.events = append(store.events, Event{JobID: "clip", CostSource: llm.CostReported, CostMicrousd: 100000})
-			if err := svc.Settle(context.Background(), "clip", OutcomeFailed); err != nil {
+			if err := svc.SettleCause(context.Background(), "clip", OutcomeFailed, "provider"); err != nil {
 				t.Fatal(err)
 			}
 			if store.settled["clip"] != tc.want || store.balance("alice", seoulNoon) != 100-tc.want {
@@ -64,18 +65,19 @@ func TestClipFailedSettlementUsesOnlyConfirmedBillableEvidence(t *testing.T) {
 	}
 }
 
-func TestFailureWaiverIsClipAndOutcomeSpecific(t *testing.T) {
+// Work that confirmed no priced usage is charged nothing, whatever its kind, outcome or tier,
+// and a settlement without a persisted outcome changes nothing.
+func TestUnconfirmedWorkIsChargedNothingWhateverItsOutcome(t *testing.T) {
 	for _, tc := range []struct {
 		kind    string
 		outcome TerminalOutcome
 		tier    plan.Plan
-		want    int
 	}{
-		{"generate_clip", OutcomeSucceeded, plan.Free, 2},
-		{"generate", OutcomeFailed, plan.Free, 2},
-		{"model_experiment", OutcomeFailed, plan.Free, 2},
-		{"generate_clip", OutcomeFailed, plan.Master, 0},
-		{"generate_clip", OutcomeSucceeded, plan.Master, 2},
+		{"generate_clip", OutcomeSucceeded, plan.Free},
+		{"generate", OutcomeFailed, plan.Free},
+		{"model_experiment", OutcomeFailed, plan.Free},
+		{"generate_clip", OutcomeFailed, plan.Master},
+		{"generate_clip", OutcomeSucceeded, plan.Master},
 	} {
 		t.Run(tc.kind+string(tc.outcome)+string(tc.tier), func(t *testing.T) {
 			svc, store := newTestService(t, seoulNoon)
@@ -98,8 +100,8 @@ func TestFailureWaiverIsClipAndOutcomeSpecific(t *testing.T) {
 			if err := svc.Settle(context.Background(), "job", tc.outcome); err != nil {
 				t.Fatal(err)
 			}
-			if store.settled["job"] != tc.want {
-				t.Fatal(store.settled)
+			if store.settled["job"] != 0 || store.balance("alice", seoulNoon) != 100 {
+				t.Fatal(store.settled, store.lots)
 			}
 			if tc.tier == plan.Master && store.lots[0].Remaining != 100 {
 				t.Fatal("master debited")

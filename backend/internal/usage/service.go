@@ -21,10 +21,11 @@ import (
 // with a full profile, few-shot excerpts and an observation set, or an observation call
 // with a batch of photos): a hold that under-estimates lets work start on credits the
 // account turns out not to have, and settlement returns whatever was not used within the
-// minute. Erring high costs a user nothing; erring low costs us the difference.
+// minute. Erring high costs a user nothing; erring low costs us the difference. A call
+// whose prompt is known to be larger declares it (PlannedCall.PromptTokens) and is priced
+// at that size instead: a voice analysis reads every 학습 글 (QUOTA-14).
 const holdInputTokens = 30_000
 
-var ErrLotTouched = errors.New("credit lot has already been touched")
 var ErrLotNotFound = errors.New("credit lot was not found")
 var ErrSettlementOutcome = errors.New("settlement requires a persisted terminal outcome")
 
@@ -93,12 +94,17 @@ func (s *Service) WithModelGrades() *Service {
 
 // NewService wires the ledger. anchors is the account-specific monthly-window resolver
 // and is required: every path that renews a balance reads it, and a ledger without one
-// would silently revert to a calendar month (ARCH-40). approvedKinds is the work that
-// must carry an approved ceiling; an empty list is a ledger where every start is priced
-// from its planned calls alone, which is a real mode and must be stated.
-func NewService(store Storage, models Models, maxCompletionTokens int64, anchors Anchors, approvedKinds ...string) *Service {
+// would silently revert to a calendar month (ARCH-40). rates is the FX policy every paid
+// hold, settlement and estimate converts through (QUOTA-59) and is required for the same
+// reason: there is no other pricing. approvedKinds is the work that must carry an
+// approved ceiling; an empty list is a ledger where every start is priced from its
+// planned calls alone, which is a real mode and must be stated.
+func NewService(store Storage, models Models, maxCompletionTokens int64, anchors Anchors, rates *RateSelector, approvedKinds ...string) *Service {
 	if anchors == nil {
 		panic("usage: monthly anchors are required")
+	}
+	if rates == nil {
+		panic("usage: an FX rate selector is required")
 	}
 	approved := make(map[string]bool, len(approvedKinds))
 	for _, kind := range approvedKinds {
@@ -106,7 +112,7 @@ func NewService(store Storage, models Models, maxCompletionTokens int64, anchors
 	}
 	return &Service{
 		tx: store, lots: store, purchases: store, vouchers: store, charges: store, holds: store, renewals: store,
-		models: models, anchors: anchors, approvedKinds: approved,
+		models: models, anchors: anchors, rates: rates, approvedKinds: approved,
 		maxCompletionTokens: maxCompletionTokens,
 		now:                 time.Now, newID: newID,
 	}
@@ -134,15 +140,6 @@ func (s *Service) WithStore(store Storage) *Service {
 	return &clone
 }
 
-// WithRateSelector attaches the official FX policy to a production ledger.
-// Tests that construct the historical ledger directly keep their old fixture
-// denomination until they opt into a frozen rate.
-func (s *Service) WithRateSelector(selector *RateSelector) *Service {
-	clone := *s
-	clone.rates = selector
-	return &clone
-}
-
 // WithClock keeps entitlement-window tests on the same instant as billing.
 func (s *Service) WithClock(now func() time.Time) *Service {
 	clone := *s
@@ -153,16 +150,10 @@ func (s *Service) WithClock(now func() time.Time) *Service {
 }
 
 func (s *Service) SelectRate(ctx context.Context) (plan.RateSnapshot, error) {
-	if s.rates == nil {
-		return plan.RateSnapshot{}, ErrRateUnavailable
-	}
 	return s.rates.Select(ctx, s.now())
 }
 
 func (s *Service) Select(ctx context.Context, at time.Time) (plan.RateSnapshot, error) {
-	if s.rates == nil {
-		return plan.RateSnapshot{}, ErrRateUnavailable
-	}
 	return s.rates.Select(ctx, at)
 }
 
@@ -172,71 +163,6 @@ func newID() string {
 		panic("usage: cannot read random bytes for an id: " + err.Error())
 	}
 	return hex.EncodeToString(buf)
-}
-
-// OpenMonthlyLot installs one explicit subscription window. Its deterministic id makes a
-// provider retry harmless while retaining every lapsed window for history.
-func (s *Service) OpenMonthlyLot(ctx context.Context, userID string, tier plan.Plan, start, end time.Time) error {
-	if userID == "" || !tier.Valid() || plan.Unlimited(tier) || !start.Before(end) {
-		return errors.New("open monthly lot: invalid user, tier, or window")
-	}
-	credits := plan.MonthlyCredits(tier)
-	_, err := s.lots.InsertLotIfAbsent(ctx, Lot{
-		ID: monthlyLotID(userID, start), UserID: userID, Kind: LotMonthly,
-		Granted: credits, Remaining: credits, ExpiresAt: &end, CreatedAt: s.now(),
-	})
-	return err
-}
-
-// StartMonthlyWindow opens the window a subscription's first charge paid for (QUOTA-42).
-//
-// It is not OpenMonthlyLot with a different name. Starting a subscription is not a tier
-// change: the window the account was running closes at that instant with no carry-over,
-// and a whole month's grant opens on the subscription day. The two writes are one
-// transaction because a closed window with no replacement is an account with no credits.
-//
-// The overwrite is the point. A window's id is its start date, so an account that signed up
-// and subscribes on the same Seoul date derives the id it already holds its free window
-// under; an absent-only insert would keep the free 50 and drop the tier's grant. Deriving
-// granted, remaining and the expiry from the tier and the window rather than from the row
-// is also what makes a provider retry harmless.
-func (s *Service) StartMonthlyWindow(ctx context.Context, userID string, tier plan.Plan, start, end time.Time) error {
-	if userID == "" || !tier.Valid() || plan.Unlimited(tier) || !start.Before(end) {
-		return errors.New("start monthly window: invalid user, tier, or window")
-	}
-	credits := plan.MonthlyCredits(tier)
-	id := monthlyLotID(userID, start)
-	now := s.now()
-	return s.tx.InWriteTx(ctx, func(tx Storage) error {
-		if err := tx.ExpireMonthlyLotsExcept(ctx, userID, id, start); err != nil {
-			return err
-		}
-		return tx.UpsertLot(ctx, Lot{
-			ID: id, UserID: userID, Kind: LotMonthly,
-			Granted: credits, Remaining: credits, ExpiresAt: &end, CreatedAt: now,
-		})
-	})
-}
-
-// RaiseMonthlyLot is the credit half of an upgrade reached from the RPC path, the same
-// operation TopUpMonthlyLot performs (QUOTA-35).
-//
-// An account with no current monthly lot is a no-op, not an error, for the reason stated
-// there: its next request opens one at the new tier's size anyway. Refusing would be worse
-// than doing nothing — the card has already been charged outside the transaction (ARCH-10),
-// so an error here discards a captured payment along with the subscription row.
-func (s *Service) RaiseMonthlyLot(ctx context.Context, userID string, credits int) error {
-	if credits <= 0 {
-		return errors.New("raise monthly lot: credits must be positive")
-	}
-	lot, found, err := s.lots.ActiveMonthlyLot(ctx, userID, s.now())
-	if err != nil {
-		return err
-	}
-	if !found {
-		return nil
-	}
-	return s.lots.RaiseLot(ctx, lot.ID, credits)
 }
 
 func (s *Service) OpenPurchasedLot(ctx context.Context, userID string, credits int) (string, error) {
@@ -319,24 +245,6 @@ func (s *Service) VoucherLotStandings(ctx context.Context, lotIDs []string, at t
 	return standings, nil
 }
 
-func (s *Service) VoidUntouchedLot(ctx context.Context, lotID string) error {
-	ok, err := s.purchases.VoidUntouchedLot(ctx, lotID)
-	if err != nil {
-		return err
-	}
-	if !ok {
-		return ErrLotTouched
-	}
-	return nil
-}
-
-func (s *Service) LotUntouched(ctx context.Context, lotID string) (bool, error) {
-	if lotID == "" {
-		return false, nil
-	}
-	return s.purchases.LotUntouched(ctx, lotID)
-}
-
 // UntouchedLots answers, for each of the given purchased lots, whether it is still whole.
 //
 // It is the plural read behind a screen that renders a refund button per purchase: one
@@ -356,20 +264,6 @@ func (s *Service) UntouchedLots(ctx context.Context, lotIDs []string) (map[strin
 		untouched[id] = true
 	}
 	return untouched, nil
-}
-
-func (s *Service) RestoreLot(ctx context.Context, lotID string, credits int) error {
-	if credits <= 0 {
-		return errors.New("restore lot: credits must be positive")
-	}
-	ok, err := s.purchases.RestoreLot(ctx, lotID, credits)
-	if err != nil {
-		return err
-	}
-	if !ok {
-		return ErrLotNotFound
-	}
-	return nil
 }
 
 func (s *Service) GrantBonusOnce(ctx context.Context, id, userID string, credits int) (bool, error) {
@@ -397,11 +291,7 @@ func (s *Service) matchExistingHold(start Start, prior Admission) error {
 			return conflict
 		}
 		var err error
-		if prior.Rate.Valid() || s.rates != nil && prior.HoldCredits == 0 {
-			required, err = ReservationCreditsAt(start.Approval.Calls, prior.Rate)
-		} else {
-			required, err = ReservationCredits(start.Approval.Calls)
-		}
+		required, err = ReservationCreditsAt(start.Approval.Calls, prior.Rate)
 		if err != nil {
 			return err
 		}
@@ -413,15 +303,12 @@ func (s *Service) matchExistingHold(start Start, prior Admission) error {
 		if err != nil {
 			return err
 		}
+		// An admission without a frozen rate held nothing: all of its calls were free.
 		if prior.Rate.Valid() {
 			required, err = plan.ChargeAt(cost, prior.Rate)
 			if err != nil {
 				return err
 			}
-		} else if s.rates != nil && prior.HoldCredits == 0 {
-			required = 0
-		} else {
-			required = plan.Charge(cost)
 		}
 	}
 	if prior.HoldCredits != required {
@@ -516,23 +403,19 @@ func (s *Service) Hold(ctx context.Context, start Start) error {
 	if err != nil {
 		return err
 	}
+	// Work whose every call is free holds nothing and freezes no rate; paid work freezes the
+	// rate it is converted at for its whole life (QUOTA-59).
 	required := 0
 	var frozenRate plan.RateSnapshot
-	if s.rates == nil {
-		required = plan.Charge(costMicrousd)
-	} else if start.Approval == nil {
-		if costMicrousd == 0 {
-			required = 0
-		} else {
-			var err error
-			frozenRate, err = s.SelectRate(ctx)
-			if err != nil {
-				return err
-			}
-			required, err = plan.ChargeAt(costMicrousd, frozenRate)
-			if err != nil {
-				return ErrPricingUnavailable
-			}
+	if start.Approval == nil && costMicrousd > 0 {
+		var err error
+		frozenRate, err = s.SelectRate(ctx)
+		if err != nil {
+			return err
+		}
+		required, err = plan.ChargeAt(costMicrousd, frozenRate)
+		if err != nil {
+			return ErrPricingUnavailable
 		}
 	}
 	var approved *int
@@ -551,15 +434,10 @@ func (s *Service) Hold(ctx context.Context, start Start) error {
 		if err != nil {
 			return err
 		}
-		if approvedCost == 0 && s.rates != nil {
-			required = 0
-		} else if frozenRate.Valid() {
-			required, err = ReservationCreditsAt(start.Approval.Calls, frozenRate)
-		} else if s.rates != nil {
+		if approvedCost > 0 && !frozenRate.Valid() {
 			return ErrRateUnavailable
-		} else {
-			required, err = ReservationCredits(start.Approval.Calls)
 		}
+		required, err = ReservationCreditsAt(start.Approval.Calls, frozenRate)
 		if err != nil {
 			return err
 		}
@@ -769,18 +647,15 @@ func (s *Service) renew(
 }
 
 // renewalWrites reports whether renew would write anything for r. It reads, on the read
-// pool, exactly the facts renew acts on — the current daily and monthly grant lots, an
-// open legacy monthly lot to expire, the coverage's export window — and answers true
-// whenever it cannot tell, so the write transaction stays the default.
+// pool, exactly the facts renew acts on — the current daily and monthly grant lots and the
+// coverage's export window — and answers true whenever it cannot tell, so the write
+// transaction stays the default.
 func (s *Service) renewalWrites(ctx context.Context, r renewal, userID string, now time.Time) bool {
 	if !r.open {
 		return false
 	}
 	grants, export, err := s.benefitWindows(userID, r.coverage, now, "lazy", "")
 	if err != nil {
-		return true
-	}
-	if open, err := s.renewals.LegacyMonthlyLotOpen(ctx, userID, now); err != nil || open {
 		return true
 	}
 	if opened, err := s.renewals.WindowGrantsOpened(ctx, grants); err != nil || !opened {
@@ -804,9 +679,6 @@ func grantWindowID(kind LotKind, userID, coverageID string, start time.Time) str
 func (s *Service) openBenefits(ctx context.Context, tx Storage, userID string, coverage Coverage, at time.Time, cause, correlation string) error {
 	grants, export, err := s.benefitWindows(userID, coverage, at, cause, correlation)
 	if err != nil {
-		return err
-	}
-	if err := tx.ExpireLegacyMonthlyLots(ctx, userID, at); err != nil {
 		return err
 	}
 	for _, grant := range grants {
@@ -860,8 +732,20 @@ func (s *Service) benefitWindows(userID string, coverage Coverage, at time.Time,
 			Granted: grant.amount, Remaining: grant.amount, ExpiresAt: &end, CreatedAt: s.now(),
 		})
 	}
-	return grants, ExportWindow{UserID: userID, CoverageID: coverage.ID,
-		Start: bonusStart, End: earliest(bonusEnd, coverage.End), Allowance: bonusOffer.ServerExports}, nil
+	export, _ := ExportWindowAt(userID, coverage, at)
+	return grants, export, nil
+}
+
+// ExportWindowAt is the server-export window a coverage holds at an instant (QUOTA-62): the
+// anchored benefit month holding at, ended early by the coverage end, with the coverage tier's
+// monthly allowance. It is the one statement of that rule: the ledger's renewal, billing's
+// coverage and upgrade writes and the seed all take their window from it, never re-derive it.
+// False means the tier has no commercial offer.
+func ExportWindowAt(userID string, coverage Coverage, at time.Time) (ExportWindow, bool) {
+	offer, ok := plan.CommercialOffer(coverage.Tier)
+	start, end := plan.BenefitWindow(coverage.Anchor, at)
+	return ExportWindow{UserID: userID, CoverageID: coverage.ID, Start: start, End: earliest(end, coverage.End),
+		Allowance: offer.ServerExports}, ok
 }
 
 // OpenCoverage grants the first current day and month after a confirmed payment or
@@ -897,10 +781,6 @@ func (s *Service) AddUpgradeBonus(ctx context.Context, userID string, old Covera
 	})
 }
 
-func monthlyLotID(userID string, start time.Time) string {
-	return "monthly:" + userID + ":" + start.In(time.FixedZone("Asia/Seoul", 9*60*60)).Format(time.DateOnly)
-}
-
 // worstCaseMicrousd prices every call the work will make at its largest possible shape.
 //
 // It reuses the ledger's own cost resolution, so an estimate and the row it will later be
@@ -920,7 +800,7 @@ func (s *Service) worstCaseMicrousd(calls []PlannedCall) (int64, error) {
 			continue
 		}
 		cost := llm.ResolveCost(llm.CostInput{
-			PromptTokens:        holdInputTokens,
+			PromptTokens:        max(holdInputTokens, call.PromptTokens),
 			CompletionTokens:    completionTokens,
 			InputUSDPerMillion:  info.InputUSDPerMillion,
 			OutputUSDPerMillion: info.OutputUSDPerMillion,
@@ -977,49 +857,20 @@ func (s *Service) SettleCause(ctx context.Context, jobID string, outcome Termina
 		if err != nil {
 			return err
 		}
-		// An admission frozen before the FX migration retains its original
-		// reservation policy. New all-free admissions have a zero hold instead.
-		legacy := !unitWork && (s.rates == nil || !admission.Rate.Valid() && admission.HoldCredits > 0)
 		actual := 0
-		if legacy {
-			actual = plan.Charge(cost.TotalMicrousd)
-		}
-		settlement := Settlement{Cause: cause}
-		if !legacy {
-			actual = 0
-			if unitWork {
-				actual = unitActual
-			} else if admission.Rate.Valid() {
-				actual, err = plan.ChargeAt(cost.ConfirmedMicrousd, admission.Rate)
-				if err != nil {
-					return err
-				}
-			} // An all-free admission cannot gain a retrospective paid charge.
-			if admission.ApprovedMaxCredits != nil {
-				actual = min(actual, admission.HoldCredits, *admission.ApprovedMaxCredits)
+		if unitWork {
+			actual = unitActual
+		} else if admission.Rate.Valid() {
+			actual, err = plan.ChargeAt(cost.ConfirmedMicrousd, admission.Rate)
+			if err != nil {
+				return err
 			}
-			zero := 0
-			confirmed := actual
-			settlement.Reason, settlement.ConfirmedCharge, settlement.CancellationFee = outcome, &confirmed, &zero
 		}
-		// Approved work reserved its complete run up front. Never debit another lot for
-		// provider overage: raw cost remains in the ledger, user credit is capped.
-		if legacy && admission.ApprovedMaxCredits != nil {
-			ceiling := min(admission.HoldCredits, *admission.ApprovedMaxCredits)
-			actual = boundedCharge(cost.ConfirmedMicrousd, ceiling)
-			if outcome == OutcomeFailed && cost.ConfirmedMicrousd == 0 {
-				// No confirmed billable work: waive even the infrastructure base. Missing
-				// usage stays unknown in the ledger; it is not a reported zero supplier bill.
-				actual = 0
-			}
-			confirmed, fee := cancelledCharge(cost.ConfirmedMicrousd, ceiling)
-			if outcome == OutcomeCancelled {
-				actual = confirmed + fee
-			} else {
-				fee = 0
-			}
-			settlement.Reason, settlement.ConfirmedCharge, settlement.CancellationFee = outcome, &confirmed, &fee
+		if admission.ApprovedMaxCredits != nil {
+			actual = min(actual, admission.HoldCredits, *admission.ApprovedMaxCredits)
 		}
+		zero, confirmed := 0, actual
+		settlement := Settlement{Cause: cause, Reason: outcome, ConfirmedCharge: &confirmed, CancellationFee: &zero}
 
 		switch {
 		case actual < admission.HoldCredits:
@@ -1031,22 +882,19 @@ func (s *Service) SettleCause(ctx context.Context, jobID string, outcome Termina
 			// the balance floor is absolute, so the difference is ours, not a debt the
 			// account carries into next month.
 			//
-			// The `len(debits) > 0` guard is what keeps an exempt tier exempt. A hold is
-			// never zero (Charge has a per-request base), so a recorded hold that spent no
-			// lot can only be master's — and charging its overrun here would drain a bonus
-			// lot Hold deliberately left alone.
+			// The `len(debits) > 0` guard is what keeps an exempt tier exempt. A paid hold
+			// that spent no lot can only be master's — and charging its overrun here would
+			// drain a bonus lot Hold deliberately left alone.
 			spent, err := s.spendUpTo(ctx, tx, jobID, actual-admission.HoldCredits)
 			if err != nil {
 				return err
 			}
-			if !legacy {
-				actual = admission.HoldCredits + spent
-				settlement.ConfirmedCharge = &actual
-			}
+			actual = admission.HoldCredits + spent
+			settlement.ConfirmedCharge = &actual
 		}
 
 		settlement.Credits = actual
-		if !legacy && outcome == OutcomeFailed && cause != "provider" && actual > 0 && len(debits) > 0 {
+		if outcome == OutcomeFailed && cause != "provider" && actual > 0 && len(debits) > 0 {
 			compensation := actual/2 + actual%2
 			expires := now.AddDate(0, 0, 7)
 			lotID := "compensation:" + jobID
@@ -1347,9 +1195,6 @@ func (s *Service) CreditsFor(calls []PlannedCall) int {
 	cost, err := s.worstCaseMicrousd(calls)
 	if err != nil {
 		return -1
-	}
-	if s.rates == nil {
-		return plan.Charge(cost)
 	}
 	if cost == 0 {
 		return 0

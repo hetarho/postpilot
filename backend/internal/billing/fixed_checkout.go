@@ -19,11 +19,7 @@ const quoteRetention = 24 * time.Hour
 // purgeExpiredQuotes deletes the quotes that expired more than quoteRetention before now; a
 // confirm naming a purged quote is refused as stale exactly as an expired one is.
 func (s *Service) purgeExpiredQuotes(ctx context.Context, now time.Time) error {
-	journals, err := s.intentStore()
-	if err != nil {
-		return err
-	}
-	_, err = journals.PurgeExpiredQuotes(ctx, now.Add(-quoteRetention))
+	_, err := s.store.PurgeExpiredQuotes(ctx, now.Add(-quoteRetention))
 	return err
 }
 
@@ -32,22 +28,10 @@ func (s *Service) purgeExpiredQuotes(ctx context.Context, now time.Time) error {
 // yet would race it to the provider.
 const pendingSettleGrace = 2 * time.Minute
 
-func (s *Service) intentStore() (IntentStore, error) {
-	store, ok := s.store.(IntentStore)
-	if !ok {
-		return nil, ErrUnavailable
-	}
-	return store, nil
-}
-
 func (s *Service) persistFixedChangeQuote(ctx context.Context, userID string, subscription Subscription,
 	tier plan.Plan, term Term, quote ChangeQuote, now time.Time) (ChangeQuote, error) {
-	store, err := s.intentStore()
-	if err != nil {
-		return ChangeQuote{}, err
-	}
 	quote.ID = "q-" + s.newID()
-	err = store.PutQuote(ctx, QuoteRecord{ID: quote.ID, UserID: userID, Tier: tier, Term: term,
+	err := s.store.PutQuote(ctx, QuoteRecord{ID: quote.ID, UserID: userID, Tier: tier, Term: term,
 		KRW: quote.KRW, AppliedNow: quote.AppliedNow, EffectiveAt: quote.EffectiveAt,
 		SubscriptionUpdatedAt: subscription.UpdatedAt, QuotedAt: now,
 		ExpiresAt: now.Add(fixedQuoteLifetime)})
@@ -56,11 +40,10 @@ func (s *Service) persistFixedChangeQuote(ctx context.Context, userID string, su
 
 func (s *Service) fixedQuoteInTx(ctx context.Context, tx Store, userID string,
 	tier plan.Plan, term Term, id string, now time.Time) (Subscription, QuoteRecord, error) {
-	store, ok := tx.(IntentStore)
-	if !ok || id == "" {
+	if id == "" {
 		return Subscription{}, QuoteRecord{}, ErrStaleQuote
 	}
-	quote, found, err := store.Quote(ctx, id)
+	quote, found, err := tx.Quote(ctx, id)
 	if err != nil {
 		return Subscription{}, QuoteRecord{}, err
 	}
@@ -86,7 +69,9 @@ func (s *Service) fixedQuoteInTx(ctx context.Context, tx Store, userID string,
 	return subscription, quote, nil
 }
 
-func (s *Service) changeFixed(ctx context.Context, userID string, tier plan.Plan, term Term,
+// ChangeSubscriptionQuoted applies the change a QuoteChange quote priced: an upgrade is
+// charged now through a recorded order, anything else is scheduled for the term end.
+func (s *Service) ChangeSubscriptionQuoted(ctx context.Context, userID string, tier plan.Plan, term Term,
 	quoteID string) (Subscription, bool, error) {
 	if !s.Enabled() {
 		return Subscription{}, false, ErrUnavailable
@@ -102,8 +87,7 @@ func (s *Service) changeFixed(ctx context.Context, userID string, tier plan.Plan
 		if err != nil {
 			return err
 		}
-		journals := tx.(IntentStore)
-		if _, pending, err := journals.PendingIntent(ctx, userID); err != nil {
+		if _, pending, err := tx.PendingIntent(ctx, userID); err != nil {
 			return err
 		} else if pending {
 			return ErrPaymentPending
@@ -140,7 +124,7 @@ func (s *Service) changeFixed(ctx context.Context, userID string, tier plan.Plan
 		if intent.KRW <= 0 {
 			return ErrStaleQuote
 		}
-		return journals.InsertIntent(ctx, intent)
+		return tx.InsertIntent(ctx, intent)
 	})
 	if err != nil {
 		return Subscription{}, false, err
@@ -174,7 +158,9 @@ func (s *Service) classifyFixedSnapshot(subscription Subscription, tier plan.Pla
 	return subscription, changeScheduled, nil
 }
 
-func (s *Service) subscribeFixed(ctx context.Context, userID string, tier plan.Plan, term Term) (Subscription, error) {
+// Subscribe records an order for the tier and term's fixed price and settles it; the
+// subscription exists only once the provider confirms the charge (BILL-16).
+func (s *Service) Subscribe(ctx context.Context, userID string, tier plan.Plan, term Term) (Subscription, error) {
 	if !s.Enabled() {
 		return Subscription{}, ErrUnavailable
 	}
@@ -185,7 +171,7 @@ func (s *Service) subscribeFixed(ctx context.Context, userID string, tier plan.P
 		return Subscription{}, ErrChangeUnsupported
 	}
 	now := s.now()
-	quote, err := s.quoteAt(ctx, tier, term, now)
+	quote, err := offerQuote(tier, term)
 	if err != nil {
 		return Subscription{}, err
 	}
@@ -196,11 +182,7 @@ func (s *Service) subscribeFixed(ctx context.Context, userID string, tier plan.P
 		if err := refuseMaster(ctx, plans, userID); err != nil {
 			return err
 		}
-		journals, ok := tx.(IntentStore)
-		if !ok {
-			return ErrUnavailable
-		}
-		if _, pending, err := journals.PendingIntent(ctx, userID); err != nil {
+		if _, pending, err := tx.PendingIntent(ctx, userID); err != nil {
 			return err
 		} else if pending {
 			return ErrPaymentPending
@@ -223,7 +205,7 @@ func (s *Service) subscribeFixed(ctx context.Context, userID string, tier plan.P
 			return ErrPaymentMethodRequired
 		}
 		intent.BillingKey, intent.CustomerKey = method.BillingKey, method.CustomerKey
-		return journals.InsertIntent(ctx, intent)
+		return tx.InsertIntent(ctx, intent)
 	})
 	if err != nil {
 		return Subscription{}, err
@@ -243,18 +225,14 @@ func fixedRenewOrderID(userID string, end time.Time) string {
 	return "pp-ren-" + hex.EncodeToString(sum[:16])
 }
 
-func (s *Service) renewFixed(ctx context.Context, subscription Subscription, now time.Time) (Subscription, error) {
+func (s *Service) renew(ctx context.Context, subscription Subscription, now time.Time) (Subscription, error) {
 	var intent Intent
 	var inReview Intent
 	var failedTier plan.Plan
 	var failedTerm Term
 	var failedQuote Quote
 	err := s.store.InWriteTx(ctx, func(tx Store, _ Credits, plans Plans) error {
-		journals, ok := tx.(IntentStore)
-		if !ok {
-			return ErrUnavailable
-		}
-		if blocking, pending, err := journals.PendingIntent(ctx, subscription.UserID); err != nil {
+		if blocking, pending, err := tx.PendingIntent(ctx, subscription.UserID); err != nil {
 			return err
 		} else if pending {
 			if blocking.Status == "review" {
@@ -277,7 +255,7 @@ func (s *Service) renewFixed(ctx context.Context, subscription Subscription, now
 		if current.ScheduledTerm != nil {
 			term = *current.ScheduledTerm
 		}
-		quote, err := s.quoteAt(ctx, tier, term, now)
+		quote, err := offerQuote(tier, term)
 		if err != nil {
 			return err
 		}
@@ -294,11 +272,12 @@ func (s *Service) renewFixed(ctx context.Context, subscription Subscription, now
 			KRW: quote.KRW, BillingKey: method.BillingKey, CustomerKey: method.CustomerKey,
 			QuotedAt: now, SubscriptionUpdatedAt: current.UpdatedAt, EffectiveAt: current.TermEnd,
 			Status: "pending", CreatedAt: now, UpdatedAt: now}
-		return journals.InsertIntent(ctx, intent)
+		return tx.InsertIntent(ctx, intent)
 	})
 	if err != nil {
 		if inReview.OrderID != "" {
-			// Until an operator resolves the order in review, the account renews on no pass.
+			// Until a billing pass refunds the order in review (BILL-22), the account renews on
+			// no pass.
 			slog.Error("renewal skipped: an order is in review", "user_id", subscription.UserID,
 				"order_id", inReview.OrderID, "term_end", subscription.TermEnd)
 		}
@@ -321,7 +300,7 @@ func (s *Service) renewFixed(ctx context.Context, subscription Subscription, now
 }
 
 func (s *Service) QuotePack(ctx context.Context, packID string) (PurchaseQuote, error) {
-	if !s.fixedKRW || !s.Enabled() {
+	if !s.Enabled() {
 		return PurchaseQuote{}, ErrUnavailable
 	}
 	pack, found := plan.PackByID(packID)
@@ -344,11 +323,7 @@ func (s *Service) PurchasePack(ctx context.Context, userID, packID string) (Purc
 		if err := refuseMaster(ctx, plans, userID); err != nil {
 			return err
 		}
-		journals, ok := tx.(IntentStore)
-		if !ok {
-			return ErrUnavailable
-		}
-		if _, pending, err := journals.PendingIntent(ctx, userID); err != nil {
+		if _, pending, err := tx.PendingIntent(ctx, userID); err != nil {
 			return err
 		} else if pending {
 			return ErrPaymentPending
@@ -369,7 +344,7 @@ func (s *Service) PurchasePack(ctx context.Context, userID, packID string) (Purc
 			return ErrPaymentMethodRequired
 		}
 		intent.BillingKey, intent.CustomerKey = method.BillingKey, method.CustomerKey
-		return journals.InsertIntent(ctx, intent)
+		return tx.InsertIntent(ctx, intent)
 	})
 	if err != nil {
 		return Purchase{}, err
@@ -385,14 +360,7 @@ func (s *Service) PurchasePack(ctx context.Context, userID, packID string) (Purc
 }
 
 func (s *Service) requireNoPending(ctx context.Context, tx Store, userID string) error {
-	if !s.fixedKRW {
-		return nil
-	}
-	journals, ok := tx.(IntentStore)
-	if !ok {
-		return ErrUnavailable
-	}
-	_, found, err := journals.PendingIntent(ctx, userID)
+	_, found, err := tx.PendingIntent(ctx, userID)
 	if err != nil {
 		return err
 	}

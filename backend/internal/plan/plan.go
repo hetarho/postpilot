@@ -54,28 +54,10 @@ func (p Plan) Rank() int { return rank[p] }
 // Ladder is every rung in order, for a surface that lists the tiers.
 func Ladder() []Plan { return []Plan{Free, Light, Basic, Pro, Max, Master} }
 
-// A credit is the product's billing unit: a fixed $0.01 of list value, stored as an
-// integer. It is not a cost measurement — the ledger keeps recording true provider cost
-// in micro-USD underneath — which is why the two never need to reconcile.
-const microusdPerCredit = 10_000
-
-// The charge rule, owned by code rather than config: two deploys must never disagree
-// about what a request costs, and neither is an operator knob.
-//
-// ChargeBase recovers the per-request infrastructure a pure cost multiple cannot see
-// (storage, database, worker) and keeps a near-free model from being effectively
-// unmetered. ChargeMultiplier covers the provider top-up fee, card fees, VAT and margin.
-const (
-	ChargeBase       = 2
-	ChargeMultiplier = 3
-
-	// PaymentMethodBonusCredits is the one non-expiring grant earned by registering a
-	// payment method (BILL-10, QUOTA-9). The usage context persists it; billing decides
-	// when the account qualifies.
-	PaymentMethodBonusCredits = 100
-	// CreditsPerUSDCent is the at-par top-up rule: one dollar buys 100 credits.
-	CreditsPerUSDCent = 1
-)
+// PaymentMethodBonusCredits is the one non-expiring grant earned by registering a
+// payment method (BILL-10, QUOTA-9). The usage context persists it; billing decides
+// when the account qualifies.
+const PaymentMethodBonusCredits = 100
 
 // monthlyCredits is the product rule for what a tier is granted each month. Zero means
 // unlimited, not a zero allowance: only master carries it, and master is never refused.
@@ -86,23 +68,6 @@ var monthlyCredits = map[Plan]int{
 	Pro:    1150,
 	Max:    2400,
 	Master: 0,
-}
-
-// monthlyPriceUSDCents is what each tier is intended to cost. It lives beside the grant it
-// sizes: the two are one product decision, and a price that drifted from its grant would be
-// a promise the ladder cannot keep.
-//
-// A paid rung grants MORE than its price buys at the par purchase rate of one credit per
-// US cent: basic +10 %, pro +15 %, max +20 %. Subscribing must beat topping up, and more so
-// the higher the rung.
-//
-// Charging these figures is BILLING's, not this package's.
-var monthlyPriceUSDCents = map[Plan]int{
-	Free:  0,
-	Light: 0,
-	Basic: 300,
-	Pro:   1000,
-	Max:   2000,
 }
 
 // What one unit of a post costs in TOKENS. A comparison screen's post count is proportional
@@ -181,11 +146,6 @@ func MonthlyCredits(p Plan) int {
 	return found
 }
 
-// MonthlyPriceCents returns the USD-cent list price beside a rung's monthly grant.
-// Billing consumes this value so the amount charged and the ladder shown to the account
-// cannot drift into separate product rules.
-func MonthlyPriceCents(p Plan) int { return monthlyPriceUSDCents[p] }
-
 // Pricer prices one call's tokens in micro-USD. The llm package's cost resolver satisfies
 // it, which is how this stdlib-only package prices work without learning what a model is.
 type Pricer func(promptTokens, completionTokens int64) (int64, bool)
@@ -215,88 +175,9 @@ type ClipRates struct {
 	PerClipBase     int
 }
 
-func ClipEstimatorRates(observe, write Pricer) (ClipRates, bool) {
-	const observedTokens = 2_000
-	source, ok := observe(estimatorTokenAllowance(estimatorObservePromptTokens+EstimatorClipSourceSeconds*estimatorTokensPerVideoSec), estimatorTokenAllowance(observedTokens))
-	if !ok {
-		return ClipRates{}, false
-	}
-	// Both flow and narration consume the source observations.
-	context, ok := write(estimatorTokenAllowance(2*observedTokens), 0)
-	if !ok {
-		return ClipRates{}, false
-	}
-	prompts, ok := write(estimatorTokenAllowance(10_000+6_000), 0)
-	if !ok {
-		return ClipRates{}, false
-	}
-	output, ok := write(0, estimatorTokenAllowance(80))
-	if !ok {
-		return ClipRates{}, false
-	}
-	return ClipRates{
-		PerSource:       milliCredits(source) + milliCredits(context) + chargeBaseMilli,
-		PerOutputSecond: milliCredits(output),
-		PerClipBase:     milliCredits(prompts) + 2*chargeBaseMilli,
-	}, true
-}
-
-// EstimatorRates derives one combo's unit rates from what its two models charge.
-//
-// Each rate carries the call overhead it is responsible for. The write call belongs to every
-// post, so its ChargeBase and prompt sit in PerPostBase. An observation call is shared by the
-// batch it carries, so a photo or a clip carries one batch-share of that call's base and
-// prompt — amortized rather than counted with a ceiling, because the client is only allowed
-// to multiply. A partial batch therefore reads up to three quarters of one ChargeBase cheaper
-// than the gate will hold; the figure is labelled an estimate and the refusal stays
-// authoritative (QUOTA-36).
-//
-// False means a model published no usable price, and a combo that cannot be priced is not
-// published at all.
-func EstimatorRates(observe, write Pricer) (Rates, bool) {
-	observeShare, ok := observe(estimatorTokenAllowance(estimatorObservePromptTokens/estimatorObserveBatch), 0)
-	if !ok {
-		return Rates{}, false
-	}
-	photoCost, ok := observe(estimatorTokenAllowance(estimatorTokensPerPhoto), estimatorTokenAllowance(estimatorObserveOutputPerItem))
-	if !ok {
-		return Rates{}, false
-	}
-	videoCost, ok := observe(estimatorTokenAllowance(estimatorAssumedVideoSeconds*estimatorTokensPerVideoSec), estimatorTokenAllowance(estimatorObserveOutputPerItem))
-	if !ok {
-		return Rates{}, false
-	}
-	writePrompt, ok := write(estimatorTokenAllowance(estimatorWritePromptTokens), 0)
-	if !ok {
-		return Rates{}, false
-	}
-	charsCost, ok := write(0, estimatorTokenAllowance(10*estimatorOutputTokensPer100Chars))
-	if !ok {
-		return Rates{}, false
-	}
-
-	itemShare := milliCredits(observeShare) + chargeBaseMilli/estimatorObserveBatch
-	return Rates{
-		PerPhoto:     milliCredits(photoCost) + itemShare,
-		PerVideo:     milliCredits(videoCost) + itemShare,
-		Per1000Chars: milliCredits(charsCost),
-		PerPostBase:  milliCredits(writePrompt) + chargeBaseMilli,
-	}, true
-}
-
 // estimatorTokenAllowance budgets 50% more input/output tokens for AI revisions after
 // generation. It changes comparison estimates only, never reservations or ledger charges.
 func estimatorTokenAllowance(tokens int64) int64 { return (tokens*3 + 1) / 2 }
-
-// chargeBaseMilli is ChargeBase expressed in the same milli-credits the rates use.
-const chargeBaseMilli = ChargeBase * 1_000
-
-// milliCredits converts a provider cost into thousandths of a credit, applying the same
-// multiplier Charge does and truncating rather than rounding up — the per-call rounding is
-// gone with the per-call accounting, and an estimate must not accumulate a ceiling per unit.
-func milliCredits(costMicrousd int64) int {
-	return int(costMicrousd * ChargeMultiplier * 1_000 / microusdPerCredit)
-}
 
 // Recommended reports whether this rung is the one a comparison screen marks.
 func Recommended(p Plan) bool { return p == recommended }
@@ -305,20 +186,6 @@ func Recommended(p Plan) bool { return p == recommended }
 // held, recorded and settled — unlimited spend is exactly the account whose spend the
 // operator most wants to be able to read.
 func Unlimited(p Plan) bool { return p == Master }
-
-// Charge converts a provider cost into the credits it consumes.
-//
-// The arithmetic is integer-only: the ledger stores micro-USD and a credit is exactly
-// 10 000 of them, so no float ever enters the money path. The division rounds up, which
-// is why a call too cheap to reach one credit still costs ChargeBase + 1 rather than
-// disappearing.
-func Charge(costMicrousd int64) int {
-	if costMicrousd <= 0 {
-		return ChargeBase
-	}
-	scaled := costMicrousd*ChargeMultiplier + microusdPerCredit - 1
-	return ChargeBase + int(scaled/microusdPerCredit)
-}
 
 // seoul is the product's home timezone, fixed at UTC+9.
 //

@@ -87,7 +87,7 @@ func newSpokenQualificationProducer(p *platform) *contexts {
 	if p.cfg.EximAPIKey != "" {
 		rates = fxrate.NewEximbank(p.cfg.EximAPIKey, &http.Client{Timeout: 5 * time.Second})
 	}
-	c.ledger = usage.NewService(us, p.registry, int64(p.cfg.LLMMaxTokensDefault), usageAnchors{auth: c.auth, late: c}, approvedCeilingKinds()...).WithModelGrades().WithOwnerCancellation(ownerCancellableKinds()...).WithRateSelector(usage.NewRateSelector(rates, us)).WithUnitAccounting(catalogapp.SpeechBudgets{Profiles: p.speechCatalog})
+	c.ledger = usage.NewService(us, p.registry, int64(p.cfg.LLMMaxTokensDefault), usageAnchors{auth: c.auth, late: c}, usage.NewRateSelector(rates, us), approvedCeilingKinds()...).WithModelGrades().WithOwnerCancellation(ownerCancellableKinds()...).WithUnitAccounting(catalogapp.SpeechBudgets{Profiles: p.speechCatalog})
 	js := jobstore.New(p.db.Writer, p.db.Reader, jobKinds())
 	c.jobs = job.New(js, config.WorkerPollInterval, jobReporting{})
 	c.jobs.AllowCancellation(jobCancellation{})

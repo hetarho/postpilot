@@ -1,9 +1,6 @@
 package media
 
 import (
-	"bytes"
-	"context"
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"image"
@@ -14,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/postpilot/backend/internal/clip"
+	"github.com/postpilot/backend/internal/clip/composition"
 	"github.com/postpilot/backend/internal/clip/design"
 )
 
@@ -67,6 +65,31 @@ func renderFailure(err error) error {
 	}
 	return fmt.Errorf("%w%s", err, detail)
 }
+
+// footagePlan hands a smoke's cuts to the one renderer there is, the
+// composition, declaring the given body's text and nothing else: a smoke about
+// the footage itself draws nothing over it.
+func footagePlan(t *testing.T, plan clip.EditPlan, body string) clip.EditPlan {
+	t.Helper()
+	limits := clip.DefaultCompositionLimits()
+	doc, problem := composition.ReadStored(body, limits)
+	if problem != nil {
+		t.Fatal(problem)
+	}
+	plan.Portable = &clip.PortablePlan{Snapshot: clip.CompositionSnapshot{Version: 1, Body: body}}
+	for _, cut := range plan.Cuts {
+		plan.Portable.Cuts = append(plan.Portable.Cuts, composition.Cut{ID: cut.ID, SourceID: cut.SourceID, StartMS: cut.StartMS, EndMS: cut.EndMS, TransitionMS: cut.TransitionMS, PlaybackRatePermille: cut.Rate()})
+	}
+	resolved, problem := composition.Resolve(doc, composition.Inputs{Cuts: plan.Portable.Cuts}, limits, 30000)
+	if problem != nil {
+		t.Fatal(problem)
+	}
+	for _, element := range resolved.Elements {
+		plan.Portable.Elements = append(plan.Portable.Elements, clip.PortableText{Resolved: element})
+	}
+	return plan
+}
+
 func path(key, fallback string) string {
 	if value := os.Getenv(key); value != "" {
 		return value
@@ -104,7 +127,7 @@ func TestRenderSmoke(t *testing.T) {
 		if err != nil {
 			return err
 		}
-		plate, err := r.copyPlate(t.Context(), ws, canvas, copy, layout, 0, Luminance{})
+		plate, err := copyPlate(t.Context(), r, ws, canvas, copy, layout, 0)
 		if err != nil {
 			return err
 		}
@@ -130,7 +153,7 @@ func TestRenderSmoke(t *testing.T) {
 		}
 		painted := func(index int, l copyLayout) int {
 			t.Helper()
-			plate, err := r.copyPlate(t.Context(), ws, canvas, gap, l, index, Luminance{})
+			plate, err := copyPlate(t.Context(), r, ws, canvas, gap, l, index)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -166,7 +189,7 @@ func TestRenderSmoke(t *testing.T) {
 			if err != nil {
 				return fmt.Errorf("%s: %w", style, err)
 			}
-			path, err := r.copyPlate(t.Context(), ws, canvas, c, l, 1, Luminance{})
+			path, err := copyPlate(t.Context(), r, ws, canvas, c, l, 1)
 			if err != nil {
 				return fmt.Errorf("%s: %w", style, err)
 			}
@@ -233,309 +256,6 @@ func TestRenderSmoke(t *testing.T) {
 		return nil
 	}); err != nil {
 		t.Fatal(err)
-	}
-	for _, variant := range []string{"vertical", "horizontal", "square", "silent-rounded", "audio-rounded", "caption-timed", "bright-scrim"} {
-		t.Run(variant, func(t *testing.T) {
-			ratio := variant
-			if variant == "silent-rounded" || variant == "audio-rounded" || variant == "caption-timed" {
-				ratio = "square"
-			}
-			if variant == "bright-scrim" {
-				ratio = "vertical"
-			}
-			err := a.WithWorkspace(t.Context(), ratio, func(ws clip.MediaWorkspace) error {
-				infos := map[string]clip.MediaInfo{}
-				// No source is retained between callbacks; the fixture loader creates
-				// exactly one file at a time, like the streaming T076 object adapter.
-				load := func(ctx context.Context, id string, consume func(clip.MediaSource) error) error {
-					path := filepath.Join(ws.Path, "fixture.mp4")
-					defer os.Remove(path)
-					// CDS-44 only has something to measure on bright footage, so
-					// that one variant is shot on white.
-					colour := "blue"
-					if variant == "bright-scrim" {
-						colour = "white"
-					}
-					args := []string{"-hide_banner", "-nostdin", "-v", "error", "-f", "lavfi", "-i", "color=c=" + colour + ":s=1280x720:r=30"}
-					if id != "silent" {
-						args = append(args, "-f", "lavfi", "-i", "sine=frequency=440:sample_rate=48000")
-					}
-					length := "6"
-					if variant == "silent-rounded" || variant == "audio-rounded" || variant == "caption-timed" || variant == "bright-scrim" {
-						length = "16"
-					}
-					args = append(args, "-t", length, "-c:v", "libx264", "-preset", "ultrafast", "-threads", "2", "-pix_fmt", "yuv420p")
-					if id != "silent" {
-						args = append(args, "-c:a", "aac")
-					}
-					args = append(args, path)
-					if _, err := a.run(ctx, ws, a.cfg.FFmpegPath, args...); err != nil {
-						return err
-					}
-					if id == "rotated" {
-						rotated := filepath.Join(ws.Path, "fixture-rotated.mov")
-						defer os.Remove(rotated)
-						if _, err := a.run(ctx, ws, a.cfg.FFmpegPath, "-v", "error", "-display_rotation:v:0", "90", "-i", path, "-c", "copy", rotated); err != nil {
-							return err
-						}
-						if err := os.Remove(path); err != nil {
-							return err
-						}
-						path = rotated
-					}
-					info, err := a.Probe(ctx, ws, path)
-					if err != nil {
-						return err
-					}
-					return consume(clip.MediaSource{Path: path, SourceID: id, Fingerprint: id, Info: info})
-				}
-				var sources []clip.RenderSource
-				for _, id := range []string{"audio", "rotated", "silent"} {
-					if err := load(t.Context(), id, func(s clip.MediaSource) error { infos[id] = s.Info; return nil }); err != nil {
-						return err
-					}
-					sources = append(sources, clip.RenderSource{ID: id, Fingerprint: id, Info: infos[id]})
-				}
-				// Every clip carries its disclosure badge, and the first cut
-				// carries the chips its facts earn (CDS-5).
-				// Fixed region presets have their own real-font smoke matrix.
-				// The second cut joins with a hard cut and the third fades, so
-				// one render exercises both boundaries CDS-36 admits and the
-				// audio has to stay locked to the picture across each of them.
-				plan := clip.EditPlan{Ratio: ratio, DurationMS: 15200, Disclosure: "ad", Accent: "coral", Cuts: []clip.EditCut{
-					{ID: "one", SourceID: "audio", Fingerprint: "audio", EndMS: 5200, Focal: clip.Point{X: .5, Y: .5}, Copies: []clip.Copy{{Text: "정확한 한글 & 여행", Style: "bold", Anchor: "bottom", Align: "center", Accent: "coral"}}},
-					{ID: "two", SourceID: "rotated", Fingerprint: "rotated", EndMS: 5000, Focal: clip.Point{X: .5, Y: .5}, Volume: volume(.5), Copies: []clip.Copy{{Text: "기록처럼 <오늘>", Style: "bold", Anchor: "lower_mid", Align: "left", Accent: "teal"}}},
-					{ID: "three", SourceID: "silent", Fingerprint: "silent", EndMS: 5200, TransitionMS: 200, Focal: clip.Point{X: .5, Y: .5}, Volume: volume(0), Copies: []clip.Copy{{Text: "다시 오고 싶은 곳", Style: "bold", Anchor: "upper_mid", Align: "center", Accent: "amber", StartMS: 120, EndMS: 2400}}},
-				}}
-				if variant == "silent-rounded" || variant == "audio-rounded" {
-					plan.DurationMS = 15017
-					if variant == "silent-rounded" {
-						plan.Cuts = plan.Cuts[2:]
-					} else {
-						plan.Cuts = plan.Cuts[:1]
-					}
-					plan.Cuts[0].EndMS = 15017
-					plan.Cuts[0].Copies[0].Text = ""
-				}
-				if variant == "bright-scrim" {
-					// One 형광펜 cut on white footage: the sampler has to find a
-					// bright ground and the scrim has to reach the pixels.
-					plan.Cuts = plan.Cuts[:1]
-					plan.Cuts[0].EndMS = 15000
-					plan.Cuts[0].Copies = []clip.Copy{{Text: "가격 9900원", Keyword: "9900원", Style: "bold", Anchor: "bottom", Align: "center", Accent: "amber"}}
-				}
-				if variant == "caption-timed" {
-					plan.Cuts = plan.Cuts[:1]
-					plan.Cuts[0].EndMS = 15000
-					plan.Cuts[0].Copies[0].StartMS = 4000
-					plan.Cuts[0].Copies[0].EndMS = 10000
-					width, height, err := r.CaptionSize(t.Context(), ratio, plan.Cuts[0].FirstCopy())
-					if err != nil || width <= 0 || height <= 0 {
-						return fmt.Errorf("measure timed caption: %v", err)
-					}
-				}
-				// Whatever the variant kept, the first cut leads in from nothing
-				// and the declared duration is the footage less its overlaps.
-				plan.Cuts[0].TransitionMS = 0
-				selected := 0
-				for _, c := range plan.Cuts {
-					selected += c.EndMS - c.StartMS
-				}
-				plan.DurationMS = selected - plan.TransitionTotal()
-				result, err := r.Render(t.Context(), ws, plan, sources, load)
-				if err != nil {
-					return renderFailure(err)
-				}
-				if math.Abs(float64(result.Info.DurationMS-plan.DurationMS)) > 1000.0/30 || result.Info.HasAudio != (variant != "silent-rounded") {
-					t.Fatalf("result=%+v", result)
-				}
-				// V12 on the delivered file: 30 fps, H.264 High and 48 kHz AAC,
-				// and the track measured again at CDS-35's −16 LUFS ±1. Render
-				// already refuses a miss; this says what the miss would be.
-				for _, stream := range result.Info.Streams {
-					if stream.Kind == "video" && (stream.Codec != "h264" || stream.Profile != "High") {
-						t.Fatalf("V12 video: %+v", stream)
-					}
-				}
-				if result.Info.FrameRateNumerator != 30*result.Info.FrameRateDenominator {
-					t.Fatalf("V12 frame rate: %d/%d", result.Info.FrameRateNumerator, result.Info.FrameRateDenominator)
-				}
-				if result.Info.HasAudio {
-					if result.Info.AudioRate != 48000 {
-						t.Fatalf("V12 sample rate: %d", result.Info.AudioRate)
-					}
-					measured, err := r.measureLoudness(t.Context(), ws, result.Path)
-					if err != nil {
-						return err
-					}
-					if !measured.Silent && math.Abs(measured.I-design.Audio.Loudnorm.I) > 1 {
-						t.Fatalf("%s delivered %.2f LUFS, not %.1f ±1", variant, measured.I, design.Audio.Loudnorm.I)
-					}
-				}
-				fileBytes, err := os.ReadFile(result.Path)
-				if err != nil {
-					return err
-				}
-				moov, mdat := bytes.Index(fileBytes, []byte("moov")), bytes.Index(fileBytes, []byte("mdat"))
-				if moov < 0 || mdat < 0 || moov > mdat {
-					t.Fatal("MP4 is not fast-start")
-				}
-				if variant == "silent-rounded" || variant == "audio-rounded" {
-					return nil
-				}
-				if variant == "bright-scrim" {
-					canvas, _ := clip.ClipCanvas(ratio)
-					l, _ := design.Layout(ratio)
-					// The manifest records what the sampler decided, so the
-					// scrim is there to be found before any pixel is read.
-					scrim := clip.Region{}
-					for _, e := range result.Manifest {
-						if e.Kind == "scrim" {
-							scrim = clip.Region(e.Region)
-						}
-					}
-					if scrim != clip.Region(l.ScrimBottom) {
-						return fmt.Errorf("white footage did not earn CDS-32's bottom scrim: %+v", result.Manifest)
-					}
-					path := filepath.Join(ws.Path, "scrim.png")
-					if _, err := a.run(t.Context(), ws, a.cfg.FFmpegPath, "-v", "error", "-ss", "7", "-i", result.Path, "-frames:v", "1", "-c:v", "png", "-threads", "1", path); err != nil {
-						return err
-					}
-					frame, err := readPNG(path)
-					if err != nil {
-						return err
-					}
-					// The gradient is 0 at the band's top edge and 0.55 at the
-					// bottom, so the frame darkens down the band and the white
-					// above it is untouched.
-					above := blueAt(frame, canvas.Width/2, int(scrim.Y)-40)
-					low := blueAt(frame, 20, int(scrim.Y+scrim.Height)-4)
-					if above < 0xf000 || low > above*3/4 {
-						return fmt.Errorf("scrim did not reach the pixels: %d above, %d inside", above, low)
-					}
-					if err := exportRenderSmoke("vertical-scrim.png", path); err != nil {
-						return err
-					}
-					return os.Remove(path)
-				}
-				if variant == "caption-timed" {
-					for i, at := range []string{"2", "7", "12"} {
-						path := filepath.Join(ws.Path, fmt.Sprintf("timed-%d.png", i))
-						if _, err := a.run(t.Context(), ws, a.cfg.FFmpegPath, "-v", "error", "-ss", at, "-i", result.Path, "-frames:v", "1", "-c:v", "png", "-threads", "1", path); err != nil {
-							return err
-						}
-						frame, err := readPNG(path)
-						if err != nil {
-							return err
-						}
-						// Only the lower half: the disclosure badge and the chips
-						// are on screen for the WHOLE clip by design (CDS-5)
-						// and both sit at the top, so counting them
-						// would say nothing about the caption's own window.
-						bright := 0
-						for y := frame.Bounds().Dy() / 2; y < frame.Bounds().Dy(); y += 2 {
-							for x := 0; x < frame.Bounds().Dx(); x += 2 {
-								red, green, _, _ := frame.At(x, y).RGBA()
-								if red > 50000 && green > 50000 {
-									bright++
-								}
-							}
-						}
-						if (i == 1 && bright < 100) || (i != 1 && bright != 0) {
-							t.Fatalf("caption exposure at %ss: %d bright pixels", at, bright)
-						}
-					}
-					return nil
-				}
-				canvas, _ := clip.ClipCanvas(ratio)
-				// The badge alone uses the symmetric header bounds (CDS-57).
-				// Exempt only its verified box, not the whole header row.
-				badge := clip.Region{}
-				for _, e := range result.Manifest {
-					if e.Kind == "badge" {
-						badge = clip.Region(e.Region)
-					}
-				}
-				for i, at := range []string{"2", "7", "12"} {
-					path := filepath.Join(ws.Path, fmt.Sprintf("frame-%d.png", i))
-					if _, err := a.run(t.Context(), ws, a.cfg.FFmpegPath, "-v", "error", "-ss", at, "-i", result.Path, "-frames:v", "1", "-c:v", "png", "-threads", "1", path); err != nil {
-						return err
-					}
-					frame, err := readPNG(path)
-					if err != nil {
-						return err
-					}
-					if frame.Bounds().Dx() != canvas.Width || frame.Bounds().Dy() != canvas.Height {
-						t.Fatal("wrong extracted dimensions")
-					}
-					bright := 0
-					for y := int(canvas.Safe.Y); y < int(canvas.Safe.Y+canvas.Safe.Height); y += 2 {
-						for x := int(canvas.Safe.X); x < int(canvas.Safe.X+canvas.Safe.Width); x += 2 {
-							red, green, _, _ := frame.At(x, y).RGBA()
-							if red > 50000 && green > 50000 {
-								bright++
-							}
-						}
-					}
-					if bright < 100 {
-						t.Fatalf("copy pixels missing for style %s: %d", plan.Cuts[i].Copies[0].Style, bright)
-					}
-					for y := 0; y < canvas.Height; y += 4 {
-						for x := 0; x < canvas.Width; x += 4 {
-							if float64(x) >= canvas.Safe.X && float64(x) < canvas.Safe.X+canvas.Safe.Width && float64(y) >= canvas.Safe.Y && float64(y) < canvas.Safe.Y+canvas.Safe.Height {
-								continue
-							}
-							if float64(x) >= badge.X && float64(x) < badge.X+badge.Width && float64(y) >= badge.Y && float64(y) < badge.Y+badge.Height {
-								continue
-							}
-							red, green, _, _ := frame.At(x, y).RGBA()
-							if red > 50000 && green > 50000 {
-								t.Fatal("copy escaped the safe region")
-							}
-						}
-					}
-					if err := exportRenderSmoke(ratio+"-"+plan.Cuts[i].Copies[0].Style+".png", path); err != nil {
-						return err
-					}
-					if err := os.Remove(path); err != nil {
-						return err
-					}
-				}
-				var levels []float64
-				for _, at := range []string{"2", "7", "12"} {
-					data, err := a.run(t.Context(), ws, a.cfg.FFmpegPath, "-v", "error", "-ss", at, "-i", result.Path, "-t", "0.1", "-vn", "-ac", "1", "-ar", "48000", "-c:a", "pcm_s16le", "-f", "s16le", "pipe:1")
-					if err != nil {
-						return err
-					}
-					sum := 0.0
-					for i := 0; i+1 < len(data); i += 2 {
-						v := float64(int16(binary.LittleEndian.Uint16(data[i:])))
-						sum += v * v
-					}
-					if len(data) == 0 {
-						return fmt.Errorf("empty PCM")
-					}
-					levels = append(levels, math.Sqrt(sum/float64(len(data)/2)))
-				}
-				if levels[0] < 500 || levels[1]/levels[0] < .4 || levels[1]/levels[0] > .6 || levels[2] > 2 {
-					t.Fatalf("volume levels=%v", levels)
-				}
-				if err := exportRenderSmoke(ratio+".mp4", result.Path); err != nil {
-					return err
-				}
-				files, err := os.ReadDir(ws.Path)
-				if err != nil {
-					return err
-				}
-				if len(files) != 1 || files[0].Name() != "clip-result.mp4" {
-					t.Fatalf("render intermediates leaked: %v", files)
-				}
-				return nil
-			})
-			if err != nil {
-				t.Fatal(err)
-			}
-		})
 	}
 }
 

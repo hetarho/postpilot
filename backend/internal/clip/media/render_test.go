@@ -366,9 +366,6 @@ func TestScrimAndAccentOnASampledGround(t *testing.T) {
 
 func TestRenderFilterGoldens(t *testing.T) {
 	r := testRenderer(t, newAdapter(t, &fakeRunner{}))
-	canvas, _ := clip.ClipCanvas("horizontal")
-	c := clip.EditCut{StartMS: 100, EndMS: 7700, Focal: clip.Point{X: .25, Y: .75}, Volume: volume(.5)}
-	golden(t, "cut.filter", cutGraph(r.cfg, canvas, c, clip.MediaInfo{HasAudio: true}, 228, layers{Copies: []string{"copy.png"}}, true, true)+"\n")
 	// CDS-36 on one timeline: a hard cut CONCATENATES and a scene change
 	// dissolves, so the same three cuts join three different ways. The audio
 	// graph is golden beside each one because its boundaries are CDS-35's, not
@@ -383,65 +380,16 @@ func TestRenderFilterGoldens(t *testing.T) {
 		{"mixed", []int{0, 0, 200}},
 		{"black", []int{0, 300, 0}},
 	} {
-		golden(t, "composition-"+plan.name+".filter", compositionGraph(r.cfg, []int{156, 150, 156}, plan.transitions, "yuv420p")+"\n")
-		golden(t, "composition-"+plan.name+".audio.filter", compositionAudioGraph(r.cfg, []int{156, 150, 156}, plan.transitions, 3)+"\n")
+		timeline := joinedTimeline(r.cfg.FPS, []int{156, 150, 156}, plan.transitions)
+		golden(t, "composition-"+plan.name+".filter", compositionGraph(timeline, "yuv420p")+"\n")
+		golden(t, "composition-"+plan.name+".audio.filter", compositionAudioGraph(r.cfg, timeline, 3)+"\n")
 	}
-	if strings.Contains(cutGraph(r.cfg, canvas, c, clip.MediaInfo{}, 228, layers{}, false, false), "[a]") {
-		t.Fatal("invented audio")
-	}
-	if !strings.Contains(cutGraph(r.cfg, canvas, c, clip.MediaInfo{}, 228, layers{}, true, true), "anullsrc=r=48000:cl=stereo") {
-		t.Fatal("missing synthesized silence")
-	}
-	// CDS-4 and CDS-27: exactly one 180 ms fade-in settling 12 px, one 120 ms
-	// fade-out that does not move, and a window inset 120 ms at both ends.
-	graph := cutGraph(r.cfg, canvas, c, clip.MediaInfo{HasAudio: true}, 228, layers{Copies: []string{"copy.png"}}, true, true)
-	for _, want := range []string{
-		"fade=t=in:st=0.120:d=0.180:alpha=1",
-		"fade=t=out:st=7.360:d=0.120:alpha=1",
-		"overlay=x=0:y='12*pow(1-min(1,max(0,(t-0.120)/0.180)),3)'",
-		"enable='gte(t,0.120)*lt(t,7.480)'",
-	} {
-		if !strings.Contains(graph, want) {
-			t.Fatalf("lost motion %s in %s", want, graph)
-		}
-	}
-	// The fixed layer is its own overlay with no fade and no y expression: the
-	// disclosure badge may not move (CDS-31) while the copy must (CDS-4).
-	both := cutGraph(r.cfg, canvas, c, clip.MediaInfo{}, 228, layers{Fixed: "fixed.png", Copies: []string{"copy.png"}}, false, false)
-	if !strings.Contains(both, "[base][1:v:0]overlay=0:0:format=auto:shortest=0[fixed];") || !strings.Contains(both, "[2:v:0]format=rgba,loop=loop=227:size=1:start=0,fade=") || !strings.Contains(both, "[fixed][plate0]overlay=x=0:y=") {
-		t.Fatalf("fixed and animated layers are not separate: %s", both)
-	}
-	fixedOnly := cutGraph(r.cfg, canvas, clip.EditCut{StartMS: 100, EndMS: 7700}, clip.MediaInfo{}, 228, layers{Fixed: "fixed.png"}, false, false)
-	if strings.Contains(fixedOnly, "fade=") || !strings.Contains(fixedOnly, "[fixed]trim=") {
-		t.Fatalf("a cut with no copy animated its badge: %s", fixedOnly)
-	}
-	// Nothing else moves or eases: no zoom, wipe, slide, rotation or blur.
-	for _, forbidden := range []string{"zoompan", "rotate", "boxblur", "gblur", "wipe", "slide", "scroll"} {
-		if strings.Contains(graph, forbidden) {
-			t.Fatalf("forbidden motion %s", forbidden)
-		}
-	}
-	// An explicit window is exactly what the plan asked for, not re-inset.
-	explicit := c
-	explicit.Copies = []clip.Copy{{Text: "x", StartMS: 1000, EndMS: 4000}}
-	if !strings.Contains(cutGraph(r.cfg, canvas, explicit, clip.MediaInfo{}, 228, layers{Copies: []string{"copy.png"}}, false, false), "enable='gte(t,1.000)*lt(t,4.000)'") {
-		t.Fatal("an explicit caption window was moved")
-	}
-	frames := cutFrames(clip.EditPlan{Cuts: []clip.EditCut{{EndMS: 5011}, {EndMS: 5022}, {EndMS: 5367}}}, 30)
+	frames := newCutTimeline(30, clip.EditPlan{Cuts: []clip.EditCut{{EndMS: 5011}, {EndMS: 5022}, {EndMS: 5367}}}).frames
 	if !reflect.DeepEqual(frames, []int{150, 151, 161}) {
 		t.Fatal(frames)
 	}
 }
 
-func TestCaptionExposureUsesOnlyValidatedCutRelativeTimes(t *testing.T) {
-	r := testRenderer(t, newAdapter(t, &fakeRunner{}))
-	canvas, _ := clip.ClipCanvas("vertical")
-	c := clip.Cut{EndMS: 15000, Focal: clip.Point{X: .5, Y: .5}, Copies: []clip.Caption{{StartMS: 1000, EndMS: 12000}}}
-	graph := cutGraph(r.cfg, canvas, c, clip.MediaInfo{}, 450, layers{Copies: []string{"copy.png"}}, false, false)
-	if !strings.Contains(graph, ":enable='gte(t,1.000)*lt(t,12.000)'") {
-		t.Fatal(graph)
-	}
-}
 func TestCopyMeasurementAndExplicitFontArguments(t *testing.T) {
 	fake := &fakeRunner{run: func(_ context.Context, c Command) ([]byte, error) { return []byte("m0,1,120,500,100\n"), nil }}
 	a := newAdapter(t, fake)
@@ -465,15 +413,21 @@ func TestCopyMeasurementAndExplicitFontArguments(t *testing.T) {
 }
 
 func TestRenderDoesNotLoadInvalidPlansOrLeakOnFailure(t *testing.T) {
-	for _, mode := range []string{"invalid", "loader", "runner", "panic", "cancel"} {
+	for _, mode := range []string{"invalid", "legacy", "loader", "runner", "panic", "cancel"} {
 		t.Run(mode, func(t *testing.T) {
 			fake := &fakeRunner{run: func(context.Context, Command) ([]byte, error) { return nil, fmt.Errorf("ffmpeg failed") }}
 			a := newAdapter(t, fake)
 			r := testRenderer(t, a)
-			s := clip.RenderSource{ID: "source", Fingerprint: "hash", Info: clip.MediaInfo{DurationMS: 20000, Width: 1920, Height: 1080}}
-			plan := clip.EditPlan{Ratio: "vertical", DurationMS: 15000, Cuts: []clip.EditCut{{ID: "one", SourceID: s.ID, Fingerprint: s.Fingerprint, EndMS: 15000, Focal: clip.Point{X: .5, Y: .5}, Copies: []clip.Copy{{Style: "bold", Anchor: "bottom", Align: "center"}}}}}
+			s := clip.RenderSource{ID: "source", Fingerprint: "fp", Info: clip.MediaInfo{DurationMS: 20000, Width: 1920, Height: 1080}}
+			plan := declaredPlan(t, `<clip version="1"/>`, "vertical")
 			if mode == "invalid" {
-				plan.DurationMS = 14000
+				// The cut asks for more footage than its original holds.
+				s.Info.DurationMS = 14000
+			}
+			// A plan written before the composition has no renderer left: it is
+			// refused before a source is loaded or a command runs.
+			if mode == "legacy" {
+				plan.Portable = nil
 			}
 			var workspace string
 			loaded := false
@@ -505,8 +459,11 @@ func TestRenderDoesNotLoadInvalidPlansOrLeakOnFailure(t *testing.T) {
 				if err == nil {
 					t.Fatal("failure accepted")
 				}
+				if mode == "legacy" && (!errors.Is(err, clip.ErrCompositionUnavailable) || len(fake.calls) != 0) {
+					t.Fatalf("a legacy plan reached media work: %v, %d commands", err, len(fake.calls))
+				}
 			}()
-			if (mode == "invalid" || mode == "cancel") && loaded {
+			if (mode == "invalid" || mode == "legacy" || mode == "cancel") && loaded {
 				t.Fatal("loaded invalid plan")
 			}
 			if _, err := os.Stat(workspace); !os.IsNotExist(err) {

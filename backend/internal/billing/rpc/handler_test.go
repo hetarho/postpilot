@@ -80,13 +80,8 @@ func TestPurchaseFailuresHaveStableCodesAndReasons(t *testing.T) {
 		code   connect.Code
 		reason string
 	}{
-		{billing.ErrPurchaseTooSmall, connect.CodeInvalidArgument, "PURCHASE_TOO_SMALL"},
 		{billing.ErrPaymentMethodRequired, connect.CodeFailedPrecondition, "PAYMENT_METHOD_REQUIRED"},
 		{billing.ErrChargeFailed, connect.CodeFailedPrecondition, "CHARGE_FAILED"},
-		{billing.ErrPurchaseNotFound, connect.CodeNotFound, "PURCHASE_NOT_FOUND"},
-		{billing.ErrRefundWindowClosed, connect.CodeFailedPrecondition, "REFUND_WINDOW_CLOSED"},
-		{billing.ErrPurchaseSpent, connect.CodeFailedPrecondition, "PURCHASE_SPENT"},
-		{billing.ErrRefundFailed, connect.CodeFailedPrecondition, "REFUND_FAILED"},
 	}
 	for _, test := range tests {
 		err := purchaseError("alice", test.err)
@@ -98,14 +93,14 @@ func TestPurchaseFailuresHaveStableCodesAndReasons(t *testing.T) {
 
 func TestBillingHandlerUsesActorAndMapsTheReadContract(t *testing.T) {
 	now := time.Date(2026, 9, 8, 1, 2, 3, 0, time.UTC)
-	tier, term, amount := plan.Pro, billing.TermMonthly, 500
+	tier, term, amount := plan.Pro, billing.TermMonthly, 9_900
 	store := handlerStore{
 		subscription: &billing.Subscription{UserID: "alice", Tier: tier, Term: term, AnchorAt: now, TermStart: now, TermEnd: now.AddDate(0, 1, 0), NextGrantAt: now.AddDate(0, 1, 0), AutoRenew: true, Status: "active"},
 		method:       &billing.PaymentMethod{UserID: "alice", BillingKey: "must-not-cross-rpc", CustomerKey: "server-only", CardLabel: "11 1234", RegisteredAt: now},
-		events:       []billing.Event{{ID: 7, UserID: "alice", Kind: "charge", USDCents: &amount, CreatedAt: now}},
-		purchases:    []billing.Purchase{{ID: "purchase-1", Credits: 500, USDCents: 500, KRW: 7000, ChargedAt: now, Refundable: true}},
+		events:       []billing.Event{{ID: 7, UserID: "alice", Kind: "charge", KRW: &amount, CreatedAt: now}},
+		purchases:    []billing.Purchase{{ID: "purchase-1", Credits: 500, KRW: 7000, ChargedAt: now, Refundable: true}},
 	}
-	handler := NewHandler(billing.NewService(store, nil, nil, nil, nil, nil, nil))
+	handler := NewHandler(billing.NewService(store, nil, nil, nil, nil, nil))
 	response, err := handler.GetMyBilling(auth.WithUser(context.Background(), "alice"), connect.NewRequest(&postpilotv1.GetMyBillingRequest{}))
 	if err != nil {
 		t.Fatal(err)
@@ -116,10 +111,17 @@ func TestBillingHandlerUsesActorAndMapsTheReadContract(t *testing.T) {
 	if response.Msg.GetPaymentMethod().GetRegisteredAt() != now.Format(time.RFC3339) {
 		t.Fatalf("registered_at = %q", response.Msg.GetPaymentMethod().GetRegisteredAt())
 	}
+	// BILL-15: history and purchases carry the whole KRW the store holds, and nothing else.
+	if krw := response.Msg.GetHistory()[0].GetKrw(); krw != 9_900 {
+		t.Fatalf("history krw = %d", krw)
+	}
+	if purchase := response.Msg.GetPurchases()[0]; purchase.GetKrw() != 7000 || purchase.GetCredits() != 500 {
+		t.Fatalf("purchase = %+v", purchase)
+	}
 }
 
 func TestBillingHandlerAuthenticatesAndMapsQuoteFailures(t *testing.T) {
-	disabled := NewHandler(billing.NewService(handlerStore{}, nil, nil, nil, nil, nil, nil))
+	disabled := NewHandler(billing.NewService(handlerStore{}, nil, nil, nil, nil, nil))
 	request := connect.NewRequest(&postpilotv1.QuotePriceRequest{Plan: postpilotv1.Plan_PLAN_BASIC, Term: postpilotv1.Term_TERM_MONTHLY})
 	if _, err := disabled.QuotePrice(context.Background(), request); connect.CodeOf(err) != connect.CodeUnauthenticated {
 		t.Fatalf("anonymous quote = %v", err)
@@ -135,14 +137,15 @@ func TestBillingHandlerAuthenticatesAndMapsQuoteFailures(t *testing.T) {
 }
 
 func TestBillingHandlerReturnsTheContractQuoteWithoutDerivingItInTheTransport(t *testing.T) {
-	service := billing.NewService(handlerStore{}, handlerProvider{}, handlerRates{}, nil, nil, nil, nil)
+	service := billing.NewService(handlerStore{}, handlerProvider{}, nil, nil, nil, nil)
 	handler := NewHandler(service)
 	response, err := handler.QuotePrice(auth.WithUser(context.Background(), "alice"), connect.NewRequest(&postpilotv1.QuotePriceRequest{Plan: postpilotv1.Plan_PLAN_BASIC, Term: postpilotv1.Term_TERM_ANNUAL}))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if response.Msg.GetKrw() != 41775 {
-		t.Fatalf("quote = %+v", response.Msg)
+	offer, _ := plan.CommercialOffer(plan.Basic)
+	if response.Msg.GetKrw() != int64(offer.AnnualKRW) {
+		t.Fatalf("quote = %+v, want the %d KRW annual offer", response.Msg, offer.AnnualKRW)
 	}
 }
 
@@ -152,7 +155,7 @@ func TestBillingHandlerMapsAnUpgradeQuote(t *testing.T) {
 		UserID: "alice", Tier: plan.Basic, Term: billing.TermMonthly, AnchorAt: anchor,
 		TermStart: anchor, TermEnd: time.Date(2100, 1, 8, 0, 0, 0, 0, time.UTC),
 		NextGrantAt: time.Date(2100, 1, 8, 0, 0, 0, 0, time.UTC), AutoRenew: true, Status: "active",
-	}}, handlerProvider{}, handlerRates{}, nil, nil, nil, nil)
+	}}, handlerProvider{}, nil, nil, nil, nil)
 	handler := NewHandler(service)
 	response, err := handler.QuoteChange(auth.WithUser(context.Background(), "alice"), connect.NewRequest(&postpilotv1.QuoteChangeRequest{
 		Plan: postpilotv1.Plan_PLAN_MAX, Term: postpilotv1.Term_TERM_MONTHLY,
@@ -160,12 +163,18 @@ func TestBillingHandlerMapsAnUpgradeQuote(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if response.Msg.GetKrw() != 23_673 || !response.Msg.GetAppliedNow() || response.Msg.GetEffectiveAt() == "" {
+	// The prorated amount moves with the clock; the transport carries it with the quote's id.
+	basic, _ := plan.CommercialOffer(plan.Basic)
+	maxOffer, _ := plan.CommercialOffer(plan.Max)
+	if krw := response.Msg.GetKrw(); krw <= 0 || krw > int64(maxOffer.MonthlyKRW-basic.MonthlyKRW) ||
+		!response.Msg.GetAppliedNow() || response.Msg.GetEffectiveAt() == "" || response.Msg.GetQuoteId() == "" {
 		t.Fatalf("quote = %+v", response.Msg)
 	}
 }
 
 type handlerStore struct {
+	noJournal
+	noRefunds
 	subscription *billing.Subscription
 	method       *billing.PaymentMethod
 	events       []billing.Event
@@ -224,7 +233,75 @@ func (handlerStore) AdvanceNextGrant(context.Context, string, time.Time, time.Ti
 	return false, nil
 }
 
-type handlerProvider struct{}
+// noJournal is a checkout journal holding no order: these cases quote, read and record
+// notifications, they never settle.
+type noJournal struct{}
+
+func (noJournal) PutQuote(context.Context, billing.QuoteRecord) error { return nil }
+func (noJournal) Quote(context.Context, string) (billing.QuoteRecord, bool, error) {
+	return billing.QuoteRecord{}, false, nil
+}
+func (noJournal) PurgeExpiredQuotes(context.Context, time.Time) (int, error) { return 0, nil }
+func (noJournal) InsertIntent(context.Context, billing.Intent) error         { return nil }
+func (noJournal) Intent(context.Context, string) (billing.Intent, bool, error) {
+	return billing.Intent{}, false, nil
+}
+func (noJournal) PendingIntent(context.Context, string) (billing.Intent, bool, error) {
+	return billing.Intent{}, false, nil
+}
+func (noJournal) DueIntents(context.Context, time.Time) ([]billing.Intent, error) { return nil, nil }
+func (noJournal) MarkIntent(context.Context, string, string, string, string, time.Time) (bool, error) {
+	return false, nil
+}
+func (noJournal) ReviewIntents(context.Context, int) ([]billing.Intent, error) { return nil, nil }
+func (noJournal) FailReviewIntent(context.Context, string, string, time.Time) (bool, error) {
+	return false, nil
+}
+
+// noRefunds is a refund ledger holding no request: these cases never refund, and the store
+// carries no refund benefits.
+type noRefunds struct{}
+
+func (noRefunds) SetIntentFunding(context.Context, string, string, time.Time) error { return nil }
+func (noRefunds) RefundPayment(context.Context, string, string) (billing.RefundPayment, bool, error) {
+	return billing.RefundPayment{}, false, nil
+}
+func (noRefunds) RefundRequest(context.Context, string) (billing.RefundRequest, bool, error) {
+	return billing.RefundRequest{}, false, nil
+}
+func (noRefunds) OpenRefundForOrder(context.Context, string) (bool, error) { return false, nil }
+func (noRefunds) Refunds(context.Context, string) ([]billing.RefundRequest, error) {
+	return nil, nil
+}
+func (noRefunds) ProcessingRefundIDs(context.Context, time.Time, int) ([]string, error) {
+	return nil, nil
+}
+func (noRefunds) ReviewedEvidence(context.Context, string) (billing.RefundEvidence, bool, error) {
+	return billing.RefundEvidence{}, false, nil
+}
+func (noRefunds) InsertRefundRequest(context.Context, billing.RefundRequest) error { return nil }
+func (noRefunds) RecordRefundDecision(context.Context, billing.RefundRequest, billing.RefundDecision) error {
+	return nil
+}
+func (noRefunds) RecordRefundProviderAttempt(context.Context, string, string) error { return nil }
+func (noRefunds) RecordRefundOutcome(context.Context, billing.RefundRequest, billing.Payment, time.Time) error {
+	return nil
+}
+func (noRefunds) FailRefund(context.Context, string, string, time.Time) error { return nil }
+func (noRefunds) ConfirmedRefundTotal(context.Context, string) (int, error)   { return 0, nil }
+func (noRefunds) HasUnresolvedDependentUpgrade(context.Context, billing.RefundPayment) (bool, error) {
+	return false, nil
+}
+func (noRefunds) RefundBenefits() billing.RefundBenefits { return nil }
+
+// noCancel is a provider that never answers a cancel: these cases return no money.
+type noCancel struct{}
+
+func (noCancel) CancelPayment(context.Context, string, int, string, string) (billing.Payment, error) {
+	return billing.Payment{}, errors.New("no cancel answered")
+}
+
+type handlerProvider struct{ noCancel }
 
 func (handlerProvider) IssueBillingKey(context.Context, string, string) (billing.BillingKey, error) {
 	return billing.BillingKey{}, nil
@@ -235,15 +312,8 @@ func (handlerProvider) Charge(context.Context, billing.ChargeRequest) (billing.P
 func (handlerProvider) PaymentByOrder(context.Context, string) (billing.Payment, bool, error) {
 	return billing.Payment{}, false, nil
 }
-func (handlerProvider) Refund(context.Context, string, string) error { return nil }
 func (handlerProvider) ParseNotification([]byte) (billing.Notification, error) {
 	return billing.Notification{}, nil
-}
-
-type handlerRates struct{}
-
-func (handlerRates) KRWPerUSD(context.Context, time.Time) (int64, bool, error) {
-	return 13_925_000, true, nil
 }
 
 func billingErrorDetail(t *testing.T, err error) *postpilotv1.AppErrorDetail {

@@ -85,8 +85,8 @@ func TestAFixedKRWCancelRefusesARowChangedSinceItsRead(t *testing.T) {
 			t.Error(err)
 		}
 	}}
-	service := billing.NewService(racing, provider, nil, testCredits{Service: h.ledger}, nil, nil, nil).
-		WithFixedKRW().WithClock(func() time.Time { return *clock })
+	service := billing.NewService(racing, provider, testCredits{Service: h.ledger}, nil, nil, nil).
+		WithClock(func() time.Time { return *clock })
 	if _, err := service.CancelSubscription(ctx, "alice"); !errors.Is(err, billing.ErrStaleQuote) {
 		t.Fatalf("cancel over a changed row = %v, want ErrStaleQuote", err)
 	}

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"testing"
@@ -93,10 +94,6 @@ func localFailure(err error) error {
 	var p *composition.Problem
 	if errors.As(err, &p) {
 		return fmt.Errorf("%w (element=%q line=%d reason=%s)", renderFailure(err), p.ElementID, p.Line, p.Reason)
-	}
-	var l *clip.LayoutError
-	if errors.As(err, &l) {
-		return fmt.Errorf("%w (cut=%d copy=%d)", renderFailure(err), l.Cut, l.Copy)
 	}
 	// renderFailure already spells out the cause chain.
 	return renderFailure(err)
@@ -298,4 +295,33 @@ func localPortable(lp localPlan, plan clip.EditPlan, limits composition.Limits) 
 		offset += cut.OutputDurationMS()
 	}
 	return portable, nil
+}
+
+type originalsRunner struct {
+	t      *testing.T
+	runner Runner
+}
+
+func (r originalsRunner) Run(ctx context.Context, command Command) ([]byte, error) {
+	start := time.Now()
+	output := filepath.Base(command.Args[len(command.Args)-1])
+	r.t.Logf("command start: %s %s", filepath.Base(command.Binary), output)
+	data, err := r.runner.Run(ctx, command)
+	peak, _ := os.ReadFile("/sys/fs/cgroup/memory.peak")
+	r.t.Logf("command end: %s %s elapsed=%s memory_peak=%s error=%v", filepath.Base(command.Binary), output, time.Since(start).Round(time.Millisecond), peak, err)
+	return data, err
+}
+
+func copyOriginal(from, to string) error {
+	src, err := os.Open(from)
+	if err != nil {
+		return err
+	}
+	defer src.Close()
+	dst, err := os.OpenFile(to, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
+	if err != nil {
+		return err
+	}
+	_, err = io.Copy(dst, src)
+	return errors.Join(err, dst.Close())
 }

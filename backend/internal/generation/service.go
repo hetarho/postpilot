@@ -127,20 +127,6 @@ func (s *Service) recordGuidelineCandidate(ctx context.Context, userID, postSlug
 	}
 }
 
-func (s *Service) refusePendingExperiment(ctx context.Context, userID, postSlug string) error {
-	if s.experiments == nil {
-		return nil
-	}
-	id, err := s.experiments.BlockingWriteForPost(ctx, userID, postSlug)
-	if err != nil {
-		return err
-	}
-	if id != "" {
-		return &ExperimentPendingError{ExperimentID: id}
-	}
-	return nil
-}
-
 func (s *Service) StartRevision(ctx context.Context, request StartRevisionRequest) (string, error) {
 	request.Instruction = strings.TrimSpace(request.Instruction)
 	if request.Instruction == "" {
@@ -149,38 +135,17 @@ func (s *Service) StartRevision(ctx context.Context, request StartRevisionReques
 	if utf8.RuneCountInString(request.Instruction) > RevisionInstructionMaxChars {
 		return "", ErrRevisionInstructionTooLong
 	}
-	post, err := s.posts.AttachedImages(ctx, request.UserID, request.PostSlug)
+	in, err := s.startPreconditions(ctx, request.UserID, request.PostSlug, startStage{revision: true, writeModel: request.WriteModel})
 	if err != nil {
 		return "", err
 	}
-	// Ahead of everything else: a revision that cannot land starts nothing (GEN-56).
-	if post.Published {
-		return "", ErrPostPublished
-	}
-	if post.Content == nil {
-		return "", ErrRevisionContentRequired
-	}
-	if post.ContentLanguage == nil || !post.ContentLanguage.Valid() {
-		return "", ErrContentLanguageRequired
-	}
-	request.ContentLanguage = *post.ContentLanguage
+	post := in.post
+	request.ContentLanguage = in.language
 	request.TargetLength = cloneOptionalInt(post.TargetLength)
 	request.TagCount = resolveTagCount(post.TagCount)
 	request.ContentChars = contentChars(post.Content)
-	voiceID, err := activeVoice(post)
-	if err != nil {
-		return "", err
-	}
-	request.VoiceID = voiceID
-	if err := s.refusePendingExperiment(ctx, request.UserID, request.PostSlug); err != nil {
-		return "", err
-	}
-	write, ok := parseModelRef(request.WriteModel)
-	writeInfo, found := s.models.Resolve(write)
-	if !ok || !found || writeInfo.Disabled || !writeInfo.ServesStage(llm.StageNameWrite) {
-		return "", ErrWriteModelRequired
-	}
-	request.WriteNativeEffort = writeInfo.ReasoningNativeEffort
+	request.VoiceID = in.voiceID
+	request.WriteNativeEffort = in.write.ReasoningNativeEffort
 	brief, err := s.freezeTemplate(ctx, post, false)
 	if err != nil {
 		return "", err
@@ -209,82 +174,41 @@ func (s *Service) Start(ctx context.Context, request StartRequest) (string, erro
 	if request.FromStoryline && request.ObserveFiles != nil {
 		return "", ErrStorylineReobserve
 	}
-	post, err := s.posts.AttachedImages(ctx, request.UserID, request.PostSlug)
-	if err != nil {
-		return "", err
-	}
-	// Before anything is frozen, held or queued (GEN-56).
-	if post.Published {
-		return "", ErrPostPublished
-	}
-	var followed []StorylineParagraph
+	observe := observePicked
 	if request.FromStoryline {
-		if post.Storyline == nil || len(post.Storyline.Paragraphs) == 0 {
-			return "", ErrStorylineMissing
-		}
-		followed = cloneParagraphs(post.Storyline.Paragraphs)
+		observe = observeHeld
 	}
-	if !post.TargetLanguage.Valid() {
-		return "", ErrLanguageRequired
-	}
-	request.TargetLanguage = post.TargetLanguage
-	voiceID, err := activeVoice(post)
+	in, err := s.startPreconditions(ctx, request.UserID, request.PostSlug, startStage{
+		storyline: request.FromStoryline, writeModel: request.WriteModel,
+		observe: observe, observeModel: request.ObserveModel, observeFiles: request.ObserveFiles,
+	})
 	if err != nil {
 		return "", err
-	}
-	request.VoiceID = voiceID
-	if err := s.refusePendingExperiment(ctx, request.UserID, request.PostSlug); err != nil {
-		return "", err
-	}
-	write, ok := parseModelRef(request.WriteModel)
-	writeInfo, found := s.models.Resolve(write)
-	if !ok || !found || writeInfo.Disabled || !writeInfo.ServesStage(llm.StageNameWrite) {
-		return "", ErrWriteModelRequired
-	}
-	request.WriteNativeEffort = writeInfo.ReasoningNativeEffort
-	if len(post.Images) == 0 {
-		// A zero-photo post has no reuse decision to make, so nothing about the picker is
-		// frozen for it: the run observes nothing and clears the snapshot, as it always has.
-		request.ObserveModel = ""
-	} else {
-		observe, valid := parseModelRef(request.ObserveModel)
-		if !valid || !modelEnabled(s.models, observe, llm.StageNameObserve) {
-			return "", ErrObserveModelRequired
-		}
-		if err := s.refuseVideoBlindObserveModel(post.Images, observe); err != nil {
-			return "", err
-		}
 	}
 	if request.TargetLength != nil && *request.TargetLength <= 0 {
 		return "", ErrInvalidTargetLength
 	}
+	post := in.post
 	material, err := s.freezeWriteMaterial(ctx, post)
 	if err != nil {
 		return "", err
 	}
+	request.TargetLanguage = in.language
+	request.VoiceID = in.voiceID
+	request.WriteNativeEffort = in.write.ReasoningNativeEffort
+	request.ObserveModel = in.observe.model
+	request.ObserveCalls = in.observe.calls
 	options := generationOptions{
-		TargetLanguage: post.TargetLanguage,
+		TargetLanguage: in.language,
 		TargetLength:   cloneOptionalInt(request.TargetLength),
 		// From the post, never from the request: there is no per-run override to carry (GEN-46).
 		TagCount:          resolveTagCount(post.TagCount),
 		writeMaterial:     material,
-		WriteNativeEffort: writeInfo.ReasoningNativeEffort,
+		WriteNativeEffort: in.write.ReasoningNativeEffort,
+		ObserveFiles:      in.observe.files,
+		Observations:      in.observe.observations,
+		FollowStoryline:   in.storyline,
 	}
-	if len(post.Images) > 0 {
-		// Both halves of the reuse decision are resolved HERE, from one read of the post,
-		// and frozen into the payload. Attaching a photo, deleting one or switching the
-		// observation model afterwards cannot reach the queued run.
-		files, carried := freezeObserveSelection(post.Images, post.Observations, request.ObserveFiles)
-		if followed != nil {
-			files, carried = freezeStorylineObserveSelection(post.Images, post.Observations, followed)
-		}
-		options.ObserveFiles = &files
-		options.Observations = carried
-	}
-	options.FollowStoryline = followed
-	// Priced over the FROZEN set, never over the attached count: a run that reuses every
-	// observation makes no observation call and must not be held for fifteen of them.
-	request.ObserveCalls = s.observeCalls(observeTargets(post.Images, options.ObserveFiles))
 	payload, err := encodeGenerationPayload(options)
 	if err != nil {
 		return "", fmt.Errorf("encode generation payload: %w", err)

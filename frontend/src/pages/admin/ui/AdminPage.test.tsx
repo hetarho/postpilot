@@ -136,6 +136,42 @@ describe('the admin screen', () => {
     expect(await screen.findByRole('button', { name: '결제사 결과 재확인' })).toBeInTheDocument()
   })
 
+  // BILL-11: an approval whose cancel the provider refuses says so to the operator, and the row
+  // shows where the request ended instead of offering the decision again.
+  it('names a refund the payment provider refused', async () => {
+    const user = userEvent.setup()
+    renderAppAt('/admin', {
+      user: MASTER,
+      plans: { plan: ProtoPlan.MASTER, accounts: [{ id: 'root', plan: ProtoPlan.MASTER }] },
+      billing: {
+        refundReviewFailure: 'REFUND_FAILED',
+        initialRefunds: [
+          {
+            id: 'r1',
+            userId: 'alice',
+            reason: '검토 부탁합니다',
+            status: 'requested',
+            requestedAt: '2026-09-08T00:00:00Z',
+            payment: {
+              orderId: 'order-1',
+              kind: 'subscribe',
+              chargedKrw: 4900n,
+              chargedAt: '2026-09-08T00:00:00Z',
+            },
+          },
+        ],
+      },
+    })
+    await user.click(await screen.findByRole('button', { name: '승인하고 결제사 확인' }))
+    expect(
+      await screen.findByText(
+        '결제사가 이 환불을 거절해 돈이 돌아가지 않았어요. 요청은 처리 실패로 닫히고, 묶어 둔 혜택은 다시 쓸 수 있어요.',
+      ),
+    ).toBeInTheDocument()
+    expect(await screen.findByText(/alice · .* · 처리 실패/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '승인하고 결제사 확인' })).not.toBeInTheDocument()
+  })
+
   // MODEL-28: the model catalog is the second tab of the same frame, reached from the row
   // rather than from a second entry point in the header.
   it('moves to the model tab from the tab row', async () => {

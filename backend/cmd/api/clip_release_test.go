@@ -200,6 +200,48 @@ func TestContinuationVerdictExpectsAPlanAndNoNewResult(t *testing.T) {
 	}
 }
 
+// releaseCaptionWindow is where the delivered plan holds the release caption.
+// The narration writes it across the intro block; an unedited caption is
+// fitted into the span the intro and outro leave between them (CLIP-196), so it
+// starts no earlier than the intro ends and ends no later than the outro starts.
+func releaseCaptionWindow(plan *v1.ClipEditPlan) (start, end int32) {
+	start, end = releaseCaptionStartMS, releaseCaptionEndMS
+	for _, text := range plan.GetElements() {
+		switch text.GetRole() {
+		case "hook":
+			start = max(start, text.GetResolvedEndMs())
+		case "ending":
+			end = min(end, text.GetResolvedStartMs())
+		}
+	}
+	return start, end
+}
+
+// Runs on the host, unlike the smoke it guards: the delivered caption's window
+// is the expectation that went stale when CLIP-196 kept captions out of the
+// regions, so it is pinned where ARCH-26 reads it.
+func TestReleaseCaptionIsFittedBetweenTheRegions(t *testing.T) {
+	region := func(role string, start, end int32) *v1.ClipEditableText {
+		return &v1.ClipEditableText{Role: role, ResolvedStartMs: start, ResolvedEndMs: end}
+	}
+	for _, c := range []struct {
+		name       string
+		elements   []*v1.ClipEditableText
+		start, end int32
+	}{
+		{"no region", nil, 1000, 6000},
+		{"the intro's first 2.5 s", []*v1.ClipEditableText{region("hook", 0, 2500), region("ending", 12000, 15000)}, 2500, 6000},
+		{"an intro shorter than the caption's lead", []*v1.ClipEditableText{region("hook", 0, 800)}, 1000, 6000},
+		{"an outro moved over the caption", []*v1.ClipEditableText{region("hook", 0, 2500), region("ending", 5000, 15000)}, 2500, 5000},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			if start, end := releaseCaptionWindow(&v1.ClipEditPlan{Elements: c.elements}); start != c.start || end != c.end {
+				t.Fatalf("window %d..%d, want %d..%d", start, end, c.start, c.end)
+			}
+		})
+	}
+}
+
 // The environment opt-in deliberately isolates real binaries and databases from
 // ordinary unit runs. Docker's release-smoke target has the production runtime,
 // zero credentials and no external network, but loopback HTTP remains available.
@@ -398,13 +440,15 @@ func newReleaseHarness(t *testing.T, mode string, stress bool, clocks ...func() 
 	if err != nil {
 		t.Fatal(err)
 	}
-	ledger := usage.NewService(usagestore.New(d.Writer, d.Reader), registry, 8192, usageAnchors{auth: authSvc}, approvedCeilingKinds()...)
+	ledger := usage.NewService(usagestore.New(d.Writer, d.Reader), registry, 8192, usageAnchors{auth: authSvc}, testRates, approvedCeilingKinds()...)
 	if err = ledger.EnsureMonthlyLot(ctx, "release-user", tier); err != nil {
 		t.Fatal(err)
 	}
 	// A separate purchased lot proves overage cannot drain unrelated available
 	// credits. SQL constraints and same-lot refunds are inspected after recovery.
-	if _, err = d.Writer.Exec("INSERT INTO credit_lots(id,user_id,kind,granted,remaining,created_at) VALUES ('release-extra','release-user','purchased',5000,5000,?)", time.Now().UTC().Format(time.RFC3339Nano)); err != nil {
+	// The release user holds no paid coverage, so this lot is the whole balance: it
+	// must cover any mode's FX-priced hold (a 22-call generation holds ~6600).
+	if _, err = d.Writer.Exec("INSERT INTO credit_lots(id,user_id,kind,granted,remaining,created_at) VALUES ('release-extra','release-user','purchased',100000,100000,?)", time.Now().UTC().Format(time.RFC3339Nano)); err != nil {
 		t.Fatal(err)
 	}
 	cfg := &config.Config{ClipWorkRoot: filepath.Join(root, "work"), ClipFFmpegPath: "/usr/local/bin/ffmpeg", ClipFFprobePath: "/usr/local/bin/ffprobe", ClipResvgPath: "/usr/local/bin/resvg", ClipFontPaths: map[string]string{
@@ -461,7 +505,7 @@ func newReleaseHarness(t *testing.T, mode string, stress bool, clocks ...func() 
 	q.AllowCancellation(clipCancellation{})
 	clipGuard := releaseClipGuard{guard, admission}
 	finisher := &releaseFinisher{Finisher: clipapp.NewFinisher(d.Writer, bind, js, st, nil), mode: mode}
-	g := clipapp.NewGenerationService(st, projects, sources, objects, media, planner, renderer, clipapp.NewJobs(q, clipGuard), clip.DefaultGenerationConfig(clipEnvironment(cfg)), generationDeps(finisher, clipapp.NewPricing(registry, clipBudgets(clipai.DefaultConfig(clipEnvironment(cfg)))), clipapp.NewAccounting(ledger)))
+	g := clipapp.NewGenerationService(st, projects, sources, objects, media, planner, renderer, clipapp.NewJobs(q, clipGuard), clip.DefaultGenerationConfig(clipEnvironment(cfg)), generationDeps(finisher, clipapp.NewPricing(registry, clipBudgets(clipai.DefaultConfig(clipEnvironment(cfg))), ledger), clipapp.NewAccounting(ledger)))
 	var h *releaseHarness
 	if !strings.HasPrefix(mode, "restart ") {
 		q.Register(clip.JobKindGenerate, metered(func(ctx context.Context, j job.Job, p job.Progress) error {
@@ -866,7 +910,13 @@ func (h *releaseHarness) exercise(mode string) {
 	}
 	charged := int(*a.FinalChargeCredits)
 	held := int(a.GetReservedCredits())
-	if charged > held || charged > int(maxCredits) || charged < 0 || h.balance() != h.before-charged {
+	// A failed attempt the provider did not cause is compensated with half its charge, rounded
+	// up, as a separate lot (QUOTA-60), so the balance falls by the net debit.
+	compensation := int(a.GetCompensationCredits())
+	if compensation < 0 || compensation > (charged+1)/2 || (wantStatus == "done" && compensation != 0) {
+		t.Fatal("compensation outside QUOTA-60", a)
+	}
+	if charged > held || charged > int(maxCredits) || charged < 0 || h.balance() != h.before-charged+compensation {
 		t.Fatal("credit ceiling/debit violated", a)
 	}
 	if !h.master && int(a.GetRefundCredits()) != held-charged {
@@ -929,13 +979,15 @@ func (h *releaseHarness) exercise(mode string) {
 		// The caption the narration call wrote is IN the delivered plan, on the
 		// output timeline and with the owner's text intact (CLIP-134). A caption
 		// the layout cannot place is dropped with a notice, so the gate asserts
-		// the one it asked for survived rather than assuming it did.
+		// the one it asked for survived rather than assuming it did — fitted
+		// between the regions, the one move CLIP-196 makes on an unedited caption.
 		narrated := 0
+		start, end := releaseCaptionWindow(h.plan)
 		for _, text := range h.plan.GetElements() {
 			if text.GetBasis() == "output-start" && text.GetText() == releaseCaption {
 				narrated++
-				if text.GetStartMs() != 1000 || text.GetEndMs() != 6000 {
-					t.Fatal("the delivered caption was retimed", text.GetStartMs(), text.GetEndMs())
+				if text.GetStartMs() != start || text.GetEndMs() != end {
+					t.Fatal("the delivered caption was not fitted between the regions", text.GetStartMs(), text.GetEndMs(), "want", start, end)
 				}
 			}
 		}
@@ -975,7 +1027,7 @@ func (h *releaseHarness) exercise(mode string) {
 			t.Fatal(err)
 		}
 	}
-	if h.balance() != h.before-charged || int(h.provider.posts.Load()) != wantCalls {
+	if h.balance() != h.before-charged+compensation || int(h.provider.posts.Load()) != wantCalls {
 		t.Fatal("recovery charged/replayed work")
 	}
 	if next, e := h.jobs.PickNextQueued(ctx, time.Now()); !errors.Is(e, job.ErrNotFound) || next.ID != "" {
@@ -1056,11 +1108,18 @@ func (h *releaseHarness) renderSavedPlan(before *v1.ClipProject) *v1.ClipProject
 	}
 }
 
+// usageChargeForRelease is the measured charge for the fixture's 1 000 micro-USD calls at
+// testRates' 1 360 KRW per USD, converted once.
 func usageChargeForRelease(calls int, mode string) int {
 	if mode == "partial" {
 		calls = 1
 	}
-	return plan.Charge(int64(calls) * 1000)
+	charged, err := plan.ChargeAt(int64(calls)*1000, plan.RateSnapshot{Source: "korea-eximbank", PublicationDate: "fixed",
+		ReferenceE4: 13_600_000, AppliedE4: 13_600_000})
+	if err != nil {
+		panic(err)
+	}
+	return charged
 }
 
 // sourceAt maps an output instant to the source millisecond the persisted plan

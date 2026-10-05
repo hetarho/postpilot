@@ -48,7 +48,7 @@ func TestLazyReadOpensCreditAndExportWindowsInOneTransaction(t *testing.T) {
 	end := plan.MonthBoundary(anchor, 12)
 	store := newExportingStore(handle)
 	service := usage.NewService(store, pricedModels{}, maxCompletion,
-		benefitCoverage{id: "paid:alice:lazy", anchor: anchor, end: end, tier: plan.Basic})
+		benefitCoverage{id: "paid:alice:lazy", anchor: anchor, end: end, tier: plan.Basic}, testRates)
 	if _, err := handle.Writer.ExecContext(ctx, `CREATE TRIGGER reject_lazy_export BEFORE INSERT ON server_export_windows
 BEGIN SELECT RAISE(ABORT, 'export unavailable'); END`); err != nil {
 		t.Fatal(err)
@@ -113,7 +113,7 @@ func TestConcurrentCurrentWindowGrantsDoNotReplayMissedBenefits(t *testing.T) {
 	anchor := time.Now().UTC().AddDate(0, -3, 0)
 	coverage := usage.Coverage{ID: "paid:alice:race", Anchor: anchor, End: plan.MonthBoundary(anchor, 12), Tier: plan.Basic, DailyTier: plan.Basic}
 	service := usage.NewService(usagestore.New(handle.Writer, handle.Reader), pricedModels{}, maxCompletion,
-		benefitCoverage{id: coverage.ID, anchor: anchor, end: coverage.End, tier: plan.Basic})
+		benefitCoverage{id: coverage.ID, anchor: anchor, end: coverage.End, tier: plan.Basic}, testRates)
 	const workers = 16
 	var group sync.WaitGroup
 	errors := make(chan error, workers)
@@ -181,7 +181,7 @@ func TestRenewalExtendsExistingWindowsWithoutRefillingThem(t *testing.T) {
 	oldEnd := now.Add(time.Hour)
 	store := newExportingStore(handle)
 	service := usage.NewService(store, pricedModels{}, maxCompletion,
-		benefitCoverage{id: "paid:alice:renew", anchor: anchor, end: oldEnd, tier: plan.Basic})
+		benefitCoverage{id: "paid:alice:renew", anchor: anchor, end: oldEnd, tier: plan.Basic}, testRates)
 	coverage := usage.Coverage{ID: "paid:alice:renew", Anchor: anchor, End: oldEnd, Tier: plan.Basic, DailyTier: plan.Basic}
 	if err := service.OpenCoverage(ctx, "alice", coverage, now, "first-charge"); err != nil {
 		t.Fatal(err)
@@ -224,7 +224,7 @@ func TestBalanceReadRenewsWhateverTheProbeFindsBehind(t *testing.T) {
 	store := newExportingStore(handle)
 	serviceUntil := func(end time.Time) *usage.Service {
 		return usage.NewService(store, pricedModels{}, maxCompletion,
-			benefitCoverage{id: "paid:alice:probe", anchor: anchor, end: end, tier: plan.Basic})
+			benefitCoverage{id: "paid:alice:probe", anchor: anchor, end: end, tier: plan.Basic}, testRates)
 	}
 	balance := func(ctx context.Context, end time.Time) (usage.Balance, error) {
 		return serviceUntil(end).BalanceFor(ctx, "alice", plan.Basic)
@@ -279,19 +279,9 @@ func TestBalanceReadRenewsWhateverTheProbeFindsBehind(t *testing.T) {
 		t.Fatalf("daily grant ends %s, want it extended back to %s", again, daily)
 	}
 
-	// A legacy monthly lot is still running.
-	legacyEnd := now.Add(24 * time.Hour)
-	insertLot(t, handle, "legacy-probe", "alice", "monthly", 5, &legacyEnd, now)
 	current, err := balance(ctx, renewed)
 	if err != nil {
 		t.Fatal(err)
-	}
-	var legacyExpiry string
-	if err := handle.Reader.QueryRowContext(ctx, "SELECT expires_at FROM credit_lots WHERE id='legacy-probe'").Scan(&legacyExpiry); err != nil {
-		t.Fatal(err)
-	}
-	if timeStringAfter(t, legacyExpiry, time.Now()) {
-		t.Fatalf("legacy lot still runs until %s", legacyExpiry)
 	}
 
 	// Nothing is behind now: the read is answered while another transaction holds the writer.
@@ -325,10 +315,10 @@ func TestSettlementAfterDailyResetCannotDrawTheNewGrant(t *testing.T) {
 	removeLegacyFunding(t, handle, "alice")
 	ctx := context.Background()
 	anchor := time.Now().UTC().Add(-24*time.Hour + 2*time.Second)
-	end := plan.CoverageEnd(anchor, true)
+	end := plan.CoverageEnd(anchor, anchor, true)
 	coverage := usage.Coverage{ID: "paid:alice:reset", Anchor: anchor, End: end, Tier: plan.Basic, DailyTier: plan.Basic}
 	service := usage.NewService(usagestore.New(handle.Writer, handle.Reader), pricedModels{}, maxCompletion,
-		benefitCoverage{id: coverage.ID, anchor: anchor, end: end, tier: plan.Basic})
+		benefitCoverage{id: coverage.ID, anchor: anchor, end: end, tier: plan.Basic}, testRates)
 	if err := service.OpenCoverage(ctx, "alice", coverage, time.Now(), "charge-1"); err != nil {
 		t.Fatal(err)
 	}
@@ -339,7 +329,7 @@ func TestSettlementAfterDailyResetCannotDrawTheNewGrant(t *testing.T) {
 	}
 	if _, err := handle.Writer.ExecContext(ctx, `INSERT INTO usage_events
         (user_id,kind,job_id,stage,model,prompt_tokens,completion_tokens,cost_microusd,cost_source,created_at)
-        VALUES ('alice','generate','cross-reset','write','test/model',1,1,100000,'reported',?)`,
+        VALUES ('alice','generate','cross-reset','write','test/model',1,1,64000,'reported',?)`,
 		time.Now().UTC().Format(time.RFC3339Nano)); err != nil {
 		t.Fatal(err)
 	}

@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"path/filepath"
 	"reflect"
 	"regexp"
 	"strings"
@@ -76,7 +75,7 @@ func TestFrameBudgetIsCumulativeOverTheTransformedTimeline(t *testing.T) {
 		ratedCut("b", "s", 5000, 6667, 500), // 3334 ms of output
 		ratedCut("c", "s", 7000, 10000, 1000),
 	}}
-	frames := cutFrames(plan, 30)
+	frames := newCutTimeline(30, plan).frames
 	total, elapsed := 0, 0
 	for i, c := range plan.Cuts {
 		elapsed += c.OutputDurationMS()
@@ -84,60 +83,6 @@ func TestFrameBudgetIsCumulativeOverTheTransformedTimeline(t *testing.T) {
 		if want := elapsed * 30 / 1000; total < want-1 || total > want+1 {
 			t.Fatalf("cut %d ends at %d frames, want about %d", i, total, want)
 		}
-	}
-	offsets := cutOffsets(plan)
-	if offsets[1] != plan.Cuts[0].OutputDurationMS() || offsets[2] != offsets[1]+plan.Cuts[1].OutputDurationMS() {
-		t.Fatalf("cut offsets are not the transformed timeline: %v", offsets)
-	}
-}
-
-// Sound is a per-source PERMISSION. A disabled source is never decoded, a
-// disabled or silent cut contributes explicit silence of its transformed
-// length, and a clip with nothing enabled gets no audio stream at all
-// (CDS-6, CDS-35, CLIP-18).
-func TestOnlyEnabledSourcesReachTheMix(t *testing.T) {
-	r := testRenderer(t, newAdapter(t, &fakeRunner{}))
-	canvas, _ := clip.ClipCanvas("vertical")
-	cut := ratedCut("cut", "source", 0, 3000, 1000)
-	loud, silent := clip.MediaInfo{HasAudio: true}, clip.MediaInfo{}
-	for _, tc := range []struct {
-		name              string
-		enabled, hasAudio bool
-		real              bool
-	}{
-		{"enabled and audible", true, true, true},
-		{"enabled but silent", true, false, false},
-		{"disabled", false, true, false},
-		{"disabled and silent", false, false, false},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			info := silent
-			if tc.hasAudio {
-				info = loud
-			}
-			graph := cutGraph(r.cfg, canvas, clip.EditCut(cut), info, 90, layers{}, true, tc.enabled)
-			if strings.Contains(graph, "[0:a:0]") != tc.real {
-				t.Fatalf("source audio decoded=%v, want %v: %s", !tc.real, tc.real, graph)
-			}
-			if strings.Contains(graph, "anullsrc") == tc.real {
-				t.Fatalf("silence and real audio disagree: %s", graph)
-			}
-			// Either way the cut occupies exactly its transformed samples.
-			if !strings.Contains(graph, fmt.Sprintf("atrim=end_sample=%d", 90*r.cfg.AudioRate/r.cfg.FPS)) {
-				t.Fatalf("the cut does not fill its own audio window: %s", graph)
-			}
-		})
-	}
-	// Per-cut volume is a gain, never a permission: a muted cut of an enabled
-	// source still opens the source, and a full-volume cut of a disabled one
-	// never does.
-	muted := cut
-	muted.Volume = volume(0)
-	if !strings.Contains(cutGraph(r.cfg, canvas, clip.EditCut(muted), loud, 90, layers{}, true, true), "[0:a:0]") {
-		t.Fatal("a muted cut of an enabled source lost its permission")
-	}
-	if strings.Contains(cutGraph(r.cfg, canvas, clip.EditCut(cut), loud, 90, layers{}, true, false), "[0:a:0]") {
-		t.Fatal("per-cut volume authorized a disabled source")
 	}
 }
 
@@ -211,46 +156,6 @@ func TestRateFilterGoldens(t *testing.T) {
 	golden(t, "rate-silent.audio.filter", bareAudioGraph(r.cfg, ratedCut("cut", "source", 0, 6000, 2000), false, 90)+"\n")
 }
 
-// The luminance sampler reads the SOURCE, but its window is stated in output
-// time, so a sped-up cut must be sampled at the source instant the viewer
-// actually sees — not at the same number of milliseconds into the original.
-func TestLuminanceIsSampledAtTheSourceInstantTheViewerSees(t *testing.T) {
-	for _, rate := range clip.PlaybackRates() {
-		seeks := []string{}
-		runner := &fakeRunner{run: func(_ context.Context, c Command) ([]byte, error) {
-			for i, arg := range c.Args {
-				if arg == "-ss" && i+1 < len(c.Args) {
-					seeks = append(seeks, c.Args[i+1])
-				}
-			}
-			return nil, fmt.Errorf("sampled")
-		}}
-		a := newAdapter(t, runner)
-		r := testRenderer(t, a)
-		canvas, _ := clip.ClipCanvas("vertical")
-		cut := clip.EditCut(ratedCut("cut", "s", 2000, 2000+3000*rate/clip.RateUnitPermille, rate))
-		_ = a.WithWorkspace(t.Context(), "sample", func(ws clip.MediaWorkspace) error {
-			_, err := r.sample(t.Context(), ws, canvas, clip.MediaSource{Path: filepath.Join(ws.Path, "s.mp4")}, cut, [2]int{0, 3000}, clip.Region{Width: 100, Height: 100}, 0)
-			return err
-		})
-		if len(seeks) == 0 {
-			t.Fatalf("rate %d: the sampler never seeked", rate)
-		}
-		// The window opens at the cut's start whatever the rate, and its middle
-		// is 1500 output ms in — which is 1500 × rate of SOURCE footage.
-		want := seconds(cut.StartMS)
-		if seeks[0] != want {
-			t.Fatalf("rate %d: first sample at %s, want %s", rate, seeks[0], want)
-		}
-		if len(seeks) > 1 {
-			want = seconds(cut.StartMS + 1500*rate/clip.RateUnitPermille)
-			if seeks[1] != want {
-				t.Fatalf("rate %d: middle sample at %s, want %s", rate, seeks[1], want)
-			}
-		}
-	}
-}
-
 // An unrenderable rate stops the whole render before a single FFmpeg process
 // starts, so an unsuitable transform costs no media work and leaves the
 // validated assembly exactly as it was (CLIP-97, CLIP-99).
@@ -296,7 +201,6 @@ func TestDeliveredGraphsContainNoProhibitedFilter(t *testing.T) {
 		graphs := []string{
 			bareFootageGraph(r.cfg, canvas, cut, 90),
 			bareAudioGraph(r.cfg, cut, true, 90),
-			cutGraph(r.cfg, canvas, clip.EditCut(cut), clip.MediaInfo{HasAudio: true}, 90, layers{Copies: []string{"copy.png"}}, true, true),
 		}
 		for _, graph := range graphs {
 			if prohibited.MatchString(graph) {

@@ -518,7 +518,7 @@ func (p *releaseProvider) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			// CDS-41's reading floor for nine characters.
 			content = map[string]any{"captions": []any{map[string]any{
 				"id": "", "text": releaseCaption, "short_text": "흐르는 장면", "keyword": "",
-				"start_ms": 1000, "end_ms": 6000,
+				"start_ms": releaseCaptionStartMS, "end_ms": releaseCaptionEndMS,
 			}}}
 		} else {
 			// The template's stages reach the writer as `template_outline` rather
@@ -729,8 +729,13 @@ func releaseCorrelation(a, b []byte) float64 {
 // design selection, eight long composition stages, the badge and the two slots, with no
 // footage section, caption or information element of its own (CLIP-4, CLIP-59).
 // No customer XML, facts or footage are committed.
-// The one caption every release fixture writes over its footage.
-const releaseCaption = "천천히 흐르는 장면"
+// The one caption every release fixture writes over its footage, and the output
+// window the narration writes it over.
+const (
+	releaseCaption        = "천천히 흐르는 장면"
+	releaseCaptionStartMS = 1000
+	releaseCaptionEndMS   = 6000
+)
 
 // releaseBody is the outline the ordinary release modes write against: three
 // required values, an intro and an outro that read them, and — for the

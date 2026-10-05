@@ -1,6 +1,9 @@
 package billing
 
-import "errors"
+import (
+	"context"
+	"errors"
+)
 
 // definitiveChargeRefusals are the codes in Toss Payments' 자동결제 승인 error table
 // (POST /v1/billing/{billingKey}) that say the card, its issuer or its billing key refused
@@ -58,4 +61,25 @@ func definitiveChargeRefusal(err error) bool {
 	var providerErr *ProviderError
 	return errors.As(err, &providerErr) && providerErr.HTTPStatus >= 400 && providerErr.HTTPStatus < 500 &&
 		definitiveChargeRefusals[providerErr.Code]
+}
+
+// cancelOrReadBack sends one cancel under its idempotency key and returns what settles it: the
+// provider's answer on success, or on a definitive refusal the payment read back by its order —
+// a refusal is not proof that no money moved, so the caller decides by what the payment shows.
+// Any other answer leaves the outcome unknown (ErrRefundProviderPending).
+func (s *Service) cancelOrReadBack(ctx context.Context, paymentKey, orderID string,
+	amountKRW int, reason, idempotencyKey string) (Payment, *ProviderError, error) {
+	canceled, err := s.provider.CancelPayment(ctx, paymentKey, amountKRW, reason, idempotencyKey)
+	if err == nil {
+		return canceled, nil, nil
+	}
+	refusal, definitive := definitiveCancelRefusal(err)
+	if !definitive {
+		return Payment{}, nil, errors.Join(ErrRefundProviderPending, err)
+	}
+	observed, seen, readErr := s.provider.PaymentByOrder(ctx, orderID)
+	if readErr != nil || !seen || observed.PaymentKey != paymentKey {
+		return Payment{}, nil, errors.Join(ErrRefundProviderPending, err, readErr)
+	}
+	return observed, refusal, nil
 }

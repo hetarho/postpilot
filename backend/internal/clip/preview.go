@@ -87,10 +87,6 @@ type CompositionLayouter interface {
 	LayoutComposition(context.Context, EditPlan, []RenderSource) (EditPlan, []CompositionElement, error)
 }
 
-type PlanLayouter interface {
-	Layout(context.Context, EditPlan, []RenderSource) (EditPlan, Manifest, error)
-}
-
 type RenderPlanValidator interface {
 	ValidateRenderPlan(context.Context, EditPlan, []RenderSource) (EditPlan, error)
 }

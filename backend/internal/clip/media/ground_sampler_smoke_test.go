@@ -65,7 +65,8 @@ func TestRenderSmokeSamplesGroundsAsTheComposedFootage(t *testing.T) {
 			{ID: "d", SourceID: "two", StartMS: 0, EndMS: 1000, Focal: clip.Point{X: .5, Y: .5}},
 		}}
 		// The composition's footage, built exactly as a server render builds it.
-		frames, transitions := cutFrames(plan, r.cfg.FPS), planTransitions(plan)
+		timeline := newCutTimeline(r.cfg.FPS, plan)
+		frames, transitions := timeline.frames, timeline.transitions
 		cuts, cleanup := []string{}, []string{}
 		for i, cut := range plan.Cuts {
 			video := filepath.Join(ws.Path, fmt.Sprintf("bare-%04d.mp4", i))
@@ -82,7 +83,6 @@ func TestRenderSmokeSamplesGroundsAsTheComposedFootage(t *testing.T) {
 		if err := r.runRender(t.Context(), ws, raw, append(args, r.encodeProfile(false, 0, "yuv444p")...)); err != nil {
 			return err
 		}
-		timeline := newFootageTimeline(r.cfg, plan)
 		b, c, d := timeline.starts[1], timeline.starts[2], timeline.starts[3]
 		picks := []int{15, b + 3, b + 20, c + 1, c + 4, c + 7, d - 1, d, d + 5}
 		region := clip.Region{X: 90, Y: 600, Width: 900, Height: 700}
@@ -209,7 +209,7 @@ func TestRenderSmokeReadsTheGroundsTheLegacyChainRead(t *testing.T) {
 			{ID: "c", SourceID: "one", StartMS: 1000, EndMS: 3000, TransitionMS: design.Transition.BlackMS, Focal: clip.Point{X: .7, Y: .4}},
 			{ID: "d", SourceID: "two", StartMS: 0, EndMS: 1000, Focal: clip.Point{X: .5, Y: .5}},
 		}}
-		timeline := newFootageTimeline(r.cfg, plan)
+		timeline := newCutTimeline(r.cfg.FPS, plan)
 		b, c, d := timeline.starts[1], timeline.starts[2], timeline.starts[3]
 		whole := clip.Region{Width: float64(canvas.Width), Height: float64(canvas.Height)}
 		caption := clip.Region{X: 90, Y: 600, Width: 900, Height: 700}
@@ -222,7 +222,7 @@ func TestRenderSmokeReadsTheGroundsTheLegacyChainRead(t *testing.T) {
 			reads = append(reads, groundRead{visual: 2 * i, footage: footage, region: whole}, groundRead{visual: 2*i + 1, footage: footage, region: caption})
 		}
 		legacy, browser, server := groundSampler{canvas: canvas, reads: slices.Clone(reads)}, groundSampler{canvas: canvas, reads: slices.Clone(reads)}, groundSampler{canvas: canvas, reads: slices.Clone(reads)}
-		frames := cutFrames(plan, r.cfg.FPS)
+		frames := timeline.frames
 		for i, cut := range plan.Cuts {
 			legacyGroundRead(t, r, ws, &legacy, i, cut, sources[cut.SourceID])
 			if err := r.sampleCut(t.Context(), ws, &browser, i, cut, sources[cut.SourceID]); err != nil {

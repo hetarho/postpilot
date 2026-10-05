@@ -10,26 +10,28 @@ import (
 )
 
 func TestMoneyAndTermRules(t *testing.T) {
-	if got := KRWFor(200, 13_925_000); got != 2_785 {
-		t.Fatalf("KRWFor=%d", got)
-	}
-	if got := KRWFor(1, 13_955_000); got != 14 {
-		t.Fatalf("half-up KRWFor=%d", got)
-	}
+	// BILL-2, BILL-4: the fixed VAT-inclusive KRW offer, an annual term at ten monthly prices.
 	for _, tc := range []struct {
 		tier                     plan.Plan
 		monthly, annual, credits int
 	}{
-		{plan.Basic, 300, 3_000, 330}, {plan.Pro, 1_000, 10_000, 1_150}, {plan.Max, 2_000, 20_000, 2_400},
+		{plan.Light, 1_900, 19_000, 0}, {plan.Basic, 4_900, 49_000, 330}, {plan.Pro, 9_900, 99_000, 1_150}, {plan.Max, 29_900, 299_000, 2_400},
 	} {
-		if got := PriceCents(tc.tier, TermMonthly); got != tc.monthly {
-			t.Errorf("%s monthly=%d", tc.tier, got)
+		monthly, err := offerQuote(tc.tier, TermMonthly)
+		if err != nil || monthly.KRW != tc.monthly {
+			t.Errorf("%s monthly=%+v err=%v", tc.tier, monthly, err)
 		}
-		if got := PriceCents(tc.tier, TermAnnual); got != tc.annual {
-			t.Errorf("%s annual=%d", tc.tier, got)
+		annual, err := offerQuote(tc.tier, TermAnnual)
+		if err != nil || annual.KRW != tc.annual || annual.KRW != 10*monthly.KRW {
+			t.Errorf("%s annual=%+v err=%v", tc.tier, annual, err)
 		}
 		if got := plan.MonthlyCredits(tc.tier); got != tc.credits {
 			t.Errorf("%s credits=%d", tc.tier, got)
+		}
+	}
+	for _, tier := range []plan.Plan{plan.Free, plan.Master} {
+		if _, err := offerQuote(tier, TermMonthly); !errors.Is(err, ErrTierNotSubscribable) {
+			t.Errorf("%s quote err=%v, want ErrTierNotSubscribable", tier, err)
 		}
 	}
 	anchor := time.Date(2026, 1, 31, 0, 0, 0, 0, seoul)
@@ -48,7 +50,7 @@ func TestRegisterPaymentMethodGatesBeforeProviderAndWritesNothingOnProviderFailu
 	ctx := context.Background()
 	store := newRegistrationStore()
 	provider := &registrationProvider{}
-	svc := NewService(store, provider, &fakeRates{}, store.credits, nil, registrationAccounts{}, nil)
+	svc := NewService(store, provider, store.credits, nil, registrationAccounts{}, nil)
 
 	_, err := svc.RegisterPaymentMethod(ctx, "unverified", "auth", CustomerKey("unverified"))
 	if !errors.Is(err, ErrEmailVerificationRequired) || provider.calls != 0 {
@@ -69,7 +71,7 @@ func TestRegisterPaymentMethodReplacesCardWithoutGrantingCredits(t *testing.T) {
 	ctx := context.Background()
 	store := newRegistrationStore()
 	provider := &registrationProvider{}
-	svc := NewService(store, provider, &fakeRates{}, store.credits, nil, registrationAccounts{}, nil)
+	svc := NewService(store, provider, store.credits, nil, registrationAccounts{}, nil)
 	now := time.Date(2026, 9, 8, 12, 0, 0, 0, time.UTC)
 	svc.now = func() time.Time { return now }
 
@@ -92,7 +94,7 @@ func TestRemovePaymentMethodRefusesOnlyAnActiveRenewingSubscription(t *testing.T
 	store := newRegistrationStore()
 	store.method = &PaymentMethod{UserID: "alice"}
 	store.subscription = &Subscription{UserID: "alice", Status: "active", AutoRenew: true}
-	svc := NewService(store, &registrationProvider{}, &fakeRates{}, store.credits, nil, registrationAccounts{}, nil)
+	svc := NewService(store, &registrationProvider{}, store.credits, nil, registrationAccounts{}, nil)
 	if err := svc.RemovePaymentMethod(ctx, "alice"); !errors.Is(err, ErrSubscriptionNeedsMethod) || store.method == nil {
 		t.Fatalf("renewing removal err=%v method=%+v", err, store.method)
 	}
@@ -103,12 +105,71 @@ func TestRemovePaymentMethodRefusesOnlyAnActiveRenewingSubscription(t *testing.T
 }
 
 type registrationStore struct {
+	noIntents
+	noRefunds
 	method       *PaymentMethod
 	subscription *Subscription
 	events       []Event
 	txCalls      int
 	credits      *registrationCredits
 }
+
+// noIntents is a checkout journal holding no order, for the cases that only need the account
+// to have no payment in flight.
+type noIntents struct{}
+
+func (noIntents) PutQuote(context.Context, QuoteRecord) error { return nil }
+func (noIntents) Quote(context.Context, string) (QuoteRecord, bool, error) {
+	return QuoteRecord{}, false, nil
+}
+func (noIntents) PurgeExpiredQuotes(context.Context, time.Time) (int, error) { return 0, nil }
+func (noIntents) InsertIntent(context.Context, Intent) error                 { return nil }
+func (noIntents) Intent(context.Context, string) (Intent, bool, error)       { return Intent{}, false, nil }
+func (noIntents) PendingIntent(context.Context, string) (Intent, bool, error) {
+	return Intent{}, false, nil
+}
+func (noIntents) DueIntents(context.Context, time.Time) ([]Intent, error) { return nil, nil }
+func (noIntents) MarkIntent(context.Context, string, string, string, string, time.Time) (bool, error) {
+	return false, nil
+}
+func (noIntents) ReviewIntents(context.Context, int) ([]Intent, error) { return nil, nil }
+func (noIntents) FailReviewIntent(context.Context, string, string, time.Time) (bool, error) {
+	return false, nil
+}
+
+// noRefunds is a refund ledger holding no request, for the cases that never refund: an applied
+// payment's funding goes nowhere and the store carries no refund benefits.
+type noRefunds struct{}
+
+func (noRefunds) SetIntentFunding(context.Context, string, string, time.Time) error { return nil }
+func (noRefunds) RefundPayment(context.Context, string, string) (RefundPayment, bool, error) {
+	return RefundPayment{}, false, nil
+}
+func (noRefunds) RefundRequest(context.Context, string) (RefundRequest, bool, error) {
+	return RefundRequest{}, false, nil
+}
+func (noRefunds) OpenRefundForOrder(context.Context, string) (bool, error) { return false, nil }
+func (noRefunds) Refunds(context.Context, string) ([]RefundRequest, error) { return nil, nil }
+func (noRefunds) ProcessingRefundIDs(context.Context, time.Time, int) ([]string, error) {
+	return nil, nil
+}
+func (noRefunds) ReviewedEvidence(context.Context, string) (RefundEvidence, bool, error) {
+	return RefundEvidence{}, false, nil
+}
+func (noRefunds) InsertRefundRequest(context.Context, RefundRequest) error { return nil }
+func (noRefunds) RecordRefundDecision(context.Context, RefundRequest, RefundDecision) error {
+	return nil
+}
+func (noRefunds) RecordRefundProviderAttempt(context.Context, string, string) error { return nil }
+func (noRefunds) RecordRefundOutcome(context.Context, RefundRequest, Payment, time.Time) error {
+	return nil
+}
+func (noRefunds) FailRefund(context.Context, string, string, time.Time) error { return nil }
+func (noRefunds) ConfirmedRefundTotal(context.Context, string) (int, error)   { return 0, nil }
+func (noRefunds) HasUnresolvedDependentUpgrade(context.Context, RefundPayment) (bool, error) {
+	return false, nil
+}
+func (noRefunds) RefundBenefits() RefundBenefits { return nil }
 
 func newRegistrationStore() *registrationStore {
 	return &registrationStore{credits: &registrationCredits{grants: map[string]bool{}}}
@@ -174,23 +235,12 @@ func (registrationPlans) AssignTier(context.Context, string, plan.Plan) error   
 func (registrationPlans) ReassignTier(context.Context, string, plan.Plan) error { return nil }
 func (registrationPlans) TierOf(context.Context, string) (plan.Plan, error)     { return plan.Free, nil }
 
-func (*registrationCredits) StartMonthlyWindow(context.Context, string, plan.Plan, time.Time, time.Time) error {
-	return nil
-}
-
-func (*registrationCredits) OpenMonthlyLot(context.Context, string, plan.Plan, time.Time, time.Time) error {
-	return nil
-}
-func (*registrationCredits) RaiseMonthlyLot(context.Context, string, int) error { return nil }
 func (*registrationCredits) OpenPurchasedLot(context.Context, string, int) (string, error) {
 	return "", nil
 }
-func (*registrationCredits) VoidUntouchedLot(context.Context, string) error { return nil }
 func (*registrationCredits) UntouchedLots(context.Context, []string) (map[string]bool, error) {
 	return nil, nil
 }
-
-func (*registrationCredits) RestoreLot(context.Context, string, int) error { return nil }
 func (c *registrationCredits) GrantBonusOnce(_ context.Context, id, _ string, _ int) (bool, error) {
 	if c.grants[id] {
 		return false, nil
@@ -227,48 +277,8 @@ func (p *registrationProvider) IssueBillingKey(_ context.Context, _, customerKey
 	return BillingKey{Value: "billing-key", CustomerKey: customerKey, CardLabel: label}, nil
 }
 
-type fakeRates struct {
-	calls  []string
-	values map[string]int64
-}
-
-func (f *fakeRates) KRWPerUSD(_ context.Context, date time.Time) (int64, bool, error) {
-	key := date.Format(time.DateOnly)
-	f.calls = append(f.calls, key)
-	value, ok := f.values[key]
-	return value, ok, nil
-}
-
-func TestRateForWalksBackFromMondayToFridayAndCaches(t *testing.T) {
-	rates := &fakeRates{values: map[string]int64{"2026-09-04": 13_925_000}}
-	svc := NewService(emptyStore{}, stubProvider{}, rates, nil, nil, nil, nil)
-	now := time.Date(2026, 9, 7, 12, 0, 0, 0, seoul)
-	rate, day, err := svc.rateFor(context.Background(), now)
-	if err != nil || rate != 13_925_000 || day != "2026-09-04" {
-		t.Fatalf("rate=%d day=%s err=%v", rate, day, err)
-	}
-	if len(rates.calls) != 3 {
-		t.Fatalf("calls=%v", rates.calls)
-	}
-	if _, _, err := svc.rateFor(context.Background(), now); err != nil {
-		t.Fatal(err)
-	}
-	if len(rates.calls) != 5 {
-		t.Fatalf("Friday cache should avoid third provider call: %v", rates.calls)
-	}
-}
-
-func TestRateForRefusesElevenUnpublishedDays(t *testing.T) {
-	rates := &fakeRates{values: map[string]int64{}}
-	svc := NewService(emptyStore{}, stubProvider{}, rates, nil, nil, nil, nil)
-	_, _, err := svc.rateFor(context.Background(), time.Date(2026, 9, 7, 12, 0, 0, 0, seoul))
-	if err == nil || len(rates.calls) != 11 {
-		t.Fatalf("calls=%d err=%v", len(rates.calls), err)
-	}
-}
-
 func TestDisabledServiceStillReadsButWillNotQuote(t *testing.T) {
-	svc := NewService(emptyStore{}, nil, nil, nil, nil, nil, nil)
+	svc := NewService(emptyStore{}, nil, nil, nil, nil, nil)
 	view, err := svc.GetMyBilling(context.Background(), "alice")
 	if err != nil || view.CustomerKey != CustomerKey("alice") {
 		t.Fatalf("view=%+v err=%v", view, err)
@@ -278,7 +288,11 @@ func TestDisabledServiceStillReadsButWillNotQuote(t *testing.T) {
 	}
 }
 
-type emptyStore struct{}
+// emptyStore holds nothing, its checkout journal and refund ledger included.
+type emptyStore struct {
+	noIntents
+	noRefunds
+}
 
 func (emptyStore) InWriteTx(ctx context.Context, fn func(Store, Credits, Plans) error) error {
 	return fn(emptyStore{}, nil, nil)
@@ -310,7 +324,15 @@ func (emptyStore) AdvanceNextGrant(context.Context, string, time.Time, time.Time
 	return false, nil
 }
 
-type stubProvider struct{}
+type stubProvider struct{ noCancel }
+
+// noCancel is a provider that never answers a cancel, for the cases that refund nothing: an
+// unapplied capture stays in review as it would after a lost answer.
+type noCancel struct{}
+
+func (noCancel) CancelPayment(context.Context, string, int, string, string) (Payment, error) {
+	return Payment{}, errors.New("no cancel answered")
+}
 
 func (stubProvider) IssueBillingKey(context.Context, string, string) (BillingKey, error) {
 	return BillingKey{}, nil
@@ -319,7 +341,6 @@ func (stubProvider) Charge(context.Context, ChargeRequest) (Payment, error) { re
 func (stubProvider) PaymentByOrder(context.Context, string) (Payment, bool, error) {
 	return Payment{}, false, nil
 }
-func (stubProvider) Refund(context.Context, string, string) error { return nil }
 func (stubProvider) ParseNotification([]byte) (Notification, error) {
 	return Notification{}, nil
 }

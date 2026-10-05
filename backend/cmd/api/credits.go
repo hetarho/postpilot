@@ -198,6 +198,7 @@ func plannedCalls(planned []job.PlannedCall) []usage.PlannedCall {
 	for _, call := range planned {
 		calls = append(calls, usage.PlannedCall{
 			Ref: parseRegistryRef(call.Ref), Stage: call.Stage, Count: call.Count, CompletionTokens: int64(call.CompletionTokens),
+			PromptTokens: int64(call.PromptTokens),
 		})
 	}
 	return calls
@@ -330,10 +331,10 @@ func (c voucherCredits) VoucherLotStandings(ctx context.Context, lotIDs []string
 	return out, nil
 }
 
-// billingCredits is the ledger as the billing context asks for it. The only thing it adds is
-// the translation ARCH-7 wants at the boundary: the ledger's sentinel for "this lot is no
-// longer whole" becomes billing's own, so the refund path matches an error it owns and the
-// billing package imports no ledger at all.
+// billingCredits is the ledger as the billing context asks for it. What it adds is the
+// translation ARCH-7 wants at the boundary: billing's coverage becomes the ledger's, and
+// opening or raising a paid coverage opens its clip export window too, so the billing
+// package imports neither the ledger nor clip.
 type billingCredits struct {
 	*usage.Service
 	exports clip.ExportWindows
@@ -347,8 +348,19 @@ type supportAccounts struct {
 type usageExports struct{ clip.ExportWindows }
 
 func (a usageExports) OpenExportWindow(ctx context.Context, window usage.ExportWindow) error {
-	return a.ExportWindows.OpenExportWindow(ctx, clip.ExportWindow{UserID: window.UserID,
-		CoverageID: window.CoverageID, Start: window.Start, End: window.End, Allowance: window.Allowance}, "lazy")
+	return a.ExportWindows.OpenExportWindow(ctx, clipExportWindow(window), "lazy")
+}
+
+// clipExportWindow is the ledger's export window in the clip context's words.
+func clipExportWindow(window usage.ExportWindow) clip.ExportWindow {
+	return clip.ExportWindow{UserID: window.UserID, CoverageID: window.CoverageID,
+		Start: window.Start, End: window.End, Allowance: window.Allowance}
+}
+
+// ledgerCoverage is billing's coverage in the ledger's words.
+func ledgerCoverage(coverage billing.Coverage) usage.Coverage {
+	return usage.Coverage{ID: coverage.ID, Anchor: coverage.Anchor, End: coverage.End,
+		Tier: coverage.Tier, DailyTier: coverage.DailyTier}
 }
 
 // ExportWindowOpened answers the ledger's renewal probe from clip's window read: opening
@@ -373,57 +385,30 @@ func (a supportAccounts) SetUserPlan(ctx context.Context, userID string, target 
 }
 
 func (c billingCredits) OpenCoverage(ctx context.Context, userID string, coverage billing.Coverage, at time.Time, correlationID string) error {
-	if err := c.Service.OpenCoverage(ctx, userID, usage.Coverage{
-		ID: coverage.ID, Anchor: coverage.Anchor, End: coverage.End,
-		Tier: coverage.Tier, DailyTier: coverage.DailyTier,
-	}, at, correlationID); err != nil {
+	if err := c.Service.OpenCoverage(ctx, userID, ledgerCoverage(coverage), at, correlationID); err != nil {
 		return err
 	}
 	return c.openExport(ctx, userID, coverage, at, correlationID)
 }
 
 func (c billingCredits) AddUpgradeBonus(ctx context.Context, userID string, coverage billing.Coverage, at time.Time, credits, exportDelta int, correlationID string) error {
-	if err := c.Service.AddUpgradeBonus(ctx, userID, usage.Coverage{
-		ID: coverage.ID, Anchor: coverage.Anchor, End: coverage.End,
-		Tier: coverage.Tier, DailyTier: coverage.DailyTier,
-	}, at, credits, correlationID); err != nil {
+	if err := c.Service.AddUpgradeBonus(ctx, userID, ledgerCoverage(coverage), at, credits, correlationID); err != nil {
 		return err
 	}
 	if err := c.openExport(ctx, userID, coverage, at, ""); err != nil {
 		return err
 	}
-	if c.exports == nil {
-		return errors.New("billing export windows are not wired")
-	}
-	start, end := plan.BenefitWindow(coverage.Anchor, at)
-	if !coverage.End.IsZero() && coverage.End.Before(end) {
-		end = coverage.End
-	}
-	offer, _ := plan.CommercialOffer(coverage.Tier)
-	return c.exports.RaiseExportWindow(ctx, clip.ExportWindow{UserID: userID, CoverageID: coverage.ID,
-		Start: start, End: end, Allowance: offer.ServerExports}, exportDelta, correlationID)
+	window, _ := usage.ExportWindowAt(userID, ledgerCoverage(coverage), at)
+	return c.exports.RaiseExportWindow(ctx, clipExportWindow(window), exportDelta, correlationID)
 }
 
 func (c billingCredits) openExport(ctx context.Context, userID string, coverage billing.Coverage, at time.Time, correlationID string) error {
 	if c.exports == nil {
 		return errors.New("billing export windows are not wired")
 	}
-	start, end := plan.BenefitWindow(coverage.Anchor, at)
-	if !coverage.End.IsZero() && coverage.End.Before(end) {
-		end = coverage.End
-	}
-	offer, ok := plan.CommercialOffer(coverage.Tier)
+	window, ok := usage.ExportWindowAt(userID, ledgerCoverage(coverage), at)
 	if !ok {
 		return errors.New("billing export window: invalid tier")
 	}
-	return c.exports.OpenExportWindow(ctx, clip.ExportWindow{UserID: userID, CoverageID: coverage.ID,
-		Start: start, End: end, Allowance: offer.ServerExports}, correlationID)
-}
-
-func (c billingCredits) VoidUntouchedLot(ctx context.Context, lotID string) error {
-	err := c.Service.VoidUntouchedLot(ctx, lotID)
-	if errors.Is(err, usage.ErrLotTouched) {
-		return billing.ErrLotTouched
-	}
-	return err
+	return c.exports.OpenExportWindow(ctx, clipExportWindow(window), correlationID)
 }

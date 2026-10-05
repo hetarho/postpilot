@@ -21,57 +21,47 @@ type refundTestBenefits struct {
 	exports *clipstore.Store
 }
 
+// credit and export mirror cmd/api's refund adapter: billing's one funding value, field for field.
 func (b refundTestBenefits) credit(p billing.RefundPayment) usage.RefundFunding {
-	return usage.RefundFunding{UserID: p.UserID, OrderID: p.OrderID, Kind: p.Kind, LotID: p.PackLotID,
-		CoverageID: p.CoverageID, Start: p.EffectiveAt, End: p.FundingEnd}
+	f := p.Funding()
+	return usage.RefundFunding{UserID: f.UserID, OrderID: f.OrderID, Kind: f.Kind, LotID: f.LotID,
+		Correlation: f.Correlation, CoverageID: f.CoverageID, WindowCause: f.WindowCause, Start: f.Start, End: f.End}
 }
 func (b refundTestBenefits) export(p billing.RefundPayment) clip.RefundFunding {
-	return clip.RefundFunding{UserID: p.UserID, OrderID: p.OrderID, Kind: p.Kind,
-		CoverageID: p.CoverageID, Start: p.EffectiveAt, End: p.FundingEnd}
+	f := p.Funding()
+	return clip.RefundFunding{UserID: f.UserID, OrderID: f.OrderID, Kind: f.Kind,
+		Correlation: f.Correlation, CoverageID: f.CoverageID, Start: f.Start, End: f.End}
 }
 func (b refundTestBenefits) Inspect(ctx context.Context, p billing.RefundPayment, at time.Time) (billing.RefundEvidence, error) {
 	c, err := b.credits.RefundFundingEvidence(ctx, b.credit(p), at)
 	if err != nil {
 		return billing.RefundEvidence{}, err
 	}
-	e := billing.RefundEvidence{PaidModelJobs: c.PaidJobs, CreditsUsed: c.CreditsUsed, CreditsReserved: c.CreditsReserved, FundedCreditsRemaining: c.CreditsRemaining}
-	if p.Kind != "pack" {
-		x, err := b.exports.RefundFundingEvidence(ctx, b.export(p))
-		if err != nil {
-			return e, err
-		}
-		e.ServerExportsUsed = x.ExportsUsed
-		e.ServerExportsReserved = x.ExportsReserved
-		e.FundedExportsRemaining = x.ExportsRemaining
+	x, err := b.exports.RefundFundingEvidence(ctx, b.export(p))
+	if err != nil {
+		return billing.RefundEvidence{}, err
 	}
-	return e, nil
+	return billing.RefundEvidence{PaidModelJobs: c.PaidJobs, CreditsUsed: c.CreditsUsed, CreditsReserved: c.CreditsReserved,
+		FundedCreditsRemaining: c.CreditsRemaining, ServerExportsUsed: x.ExportsUsed,
+		ServerExportsReserved: x.ExportsReserved, FundedExportsRemaining: x.ExportsRemaining}, nil
 }
 func (b refundTestBenefits) Guard(ctx context.Context, r billing.RefundRequest, p billing.RefundPayment, _ time.Time) error {
 	if err := b.credits.GuardRefundFunding(ctx, b.credit(p), r.ID); err != nil {
 		return err
 	}
-	if p.Kind != "pack" {
-		return b.exports.GuardRefundFunding(ctx, b.export(p), r.ID)
-	}
-	return nil
+	return b.exports.GuardRefundFunding(ctx, b.export(p), r.ID)
 }
-func (b refundTestBenefits) Release(ctx context.Context, r billing.RefundRequest, p billing.RefundPayment) error {
+func (b refundTestBenefits) Release(ctx context.Context, r billing.RefundRequest, _ billing.RefundPayment) error {
 	if err := b.credits.ReleaseRefundFunding(ctx, r.ID); err != nil {
 		return err
 	}
-	if p.Kind != "pack" {
-		return b.exports.ReleaseRefundFunding(ctx, r.ID)
-	}
-	return nil
+	return b.exports.ReleaseRefundFunding(ctx, r.ID)
 }
 func (b refundTestBenefits) Confirm(ctx context.Context, r billing.RefundRequest, p billing.RefundPayment, at time.Time) error {
 	if err := b.credits.ConfirmRefundFunding(ctx, r.ID, at); err != nil {
 		return err
 	}
-	if p.Kind != "pack" {
-		return b.exports.ConfirmRefundFunding(ctx, b.export(p), r.ID, at)
-	}
-	return nil
+	return b.exports.ConfirmRefundFunding(ctx, b.export(p), r.ID, at)
 }
 
 type reviewPayments struct {
@@ -87,6 +77,8 @@ type reviewPayments struct {
 	refusal *billing.ProviderError
 	// beforeCancel runs as a cancel arrives, before the fake decides its answer.
 	beforeCancel func()
+	// keys records the idempotency key of every cancel, in arrival order.
+	keys []string
 }
 
 func (p *reviewPayments) PaymentByOrder(ctx context.Context, orderID string) (billing.Payment, bool, error) {
@@ -100,6 +92,7 @@ func (p *reviewPayments) CancelPayment(_ context.Context, key string, amount int
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.calls++
+	p.keys = append(p.keys, idempotency)
 	if p.beforeCancel != nil {
 		p.beforeCancel()
 	}
@@ -155,7 +148,7 @@ func refundHarness(t *testing.T, at time.Time) (*ledgerHarness, *reviewPayments,
 	h.store.SetRefundBenefitsForTx(func(tx *sql.Tx) billing.RefundBenefits {
 		return refundTestBenefits{usagestore.NewTx(tx), clipstore.NewTx(tx)}
 	})
-	h.service = billing.NewService(h.store, p, nil, testCredits{Service: h.ledger, exports: clipstore.New(h.handle.Writer, h.handle.Reader)}, nil, nil, nil).WithFixedKRW().WithClock(func() time.Time { return *clock })
+	h.service = billing.NewService(h.store, p, testCredits{Service: h.ledger, exports: clipstore.New(h.handle.Writer, h.handle.Reader)}, nil, nil, nil).WithClock(func() time.Time { return *clock })
 	return h, p, clock
 }
 
@@ -435,7 +428,7 @@ func TestRefundOfUpgradeRevertsOnlyUpgradeFunding(t *testing.T) {
 		t.Fatalf("base refund skipped active upgrade: %v", err)
 	}
 	request, err := h.service.RequestRefund(ctx, "alice", upgradeOrder, "unused upgrade")
-	if err != nil || request.Payment.PriorTier != plan.Basic || !request.Payment.FundingEnd.Equal(sub.TermEnd) || !request.Evidence.Unused() {
+	if err != nil || request.Payment.PriorTier != plan.Basic || !request.Payment.Funding().End.Equal(sub.TermEnd) || !request.Evidence.Unused() {
 		t.Fatalf("request=%+v err=%v", request, err)
 	}
 	approved, err := h.service.ReviewRefund(ctx, "operator", request.ID, "approve", request.Payment.KRW)
@@ -628,6 +621,69 @@ func TestDefinitiveCancelRefusalIsSettledByThePaymentReadBack(t *testing.T) {
 		}
 		if guard, _ := guardOf(t, h, pack.LotID); guard.String != request.ID {
 			t.Fatalf("lot guard=%v, want %s", guard, request.ID)
+		}
+	})
+}
+
+// ARCH-40: a reviewed refund answers ErrUnavailable only where its surface is unwired in a legal
+// mode — billing disabled, so no provider, or a store built without refund benefits — and
+// changes nothing there.
+func TestReviewedRefundIsUnavailableOnlyWhereItsSurfaceIsUnwired(t *testing.T) {
+	ctx := context.Background()
+	at := time.Date(2026, 7, 1, 0, 0, 0, 0, time.UTC)
+
+	t.Run("billing disabled moves no money", func(t *testing.T) {
+		h, provider, clock := refundHarness(t, at)
+		if _, err := h.service.Subscribe(ctx, "alice", plan.Light, billing.TermMonthly); err != nil {
+			t.Fatal(err)
+		}
+		request, err := h.service.RequestRefund(ctx, "alice", chargeOrder(t, h, "subscribe"), "billing switched off")
+		if err != nil {
+			t.Fatal(err)
+		}
+		disabled := billing.NewService(h.store, nil, testCredits{Service: h.ledger}, nil, nil, nil).
+			WithClock(func() time.Time { return *clock })
+		if _, err := disabled.ReviewRefund(ctx, "operator", request.ID, "approve", request.Payment.KRW); !errors.Is(err, billing.ErrUnavailable) {
+			t.Fatalf("disabled review = %v, want ErrUnavailable", err)
+		}
+		if stored, err := h.service.RefundRequest(ctx, request.ID); err != nil || stored.Status != "requested" {
+			t.Fatalf("after the disabled review: %+v err=%v", stored, err)
+		}
+		provider.timeout = true
+		if started, err := h.service.ReviewRefund(ctx, "operator", request.ID, "approve", request.Payment.KRW); err != nil || started.Status != "processing" {
+			t.Fatalf("lost cancel answer = %+v err=%v", started, err)
+		}
+		if err := disabled.ReconcileRefund(ctx, request.ID); !errors.Is(err, billing.ErrUnavailable) {
+			t.Fatalf("disabled reconcile = %v, want ErrUnavailable", err)
+		}
+		if stored, err := h.service.RefundRequest(ctx, request.ID); err != nil || stored.Status != "processing" {
+			t.Fatalf("after the disabled reconcile: %+v err=%v", stored, err)
+		}
+		if err := h.store.InsertIntent(ctx, packIntent("alice", "pp-buy-review", 3000, at)); err != nil {
+			t.Fatal(err)
+		}
+		if marked, err := h.store.MarkIntent(ctx, "pp-buy-review", "review", "DONE", "pay-review", at); err != nil || !marked {
+			t.Fatalf("review mark=%t err=%v", marked, err)
+		}
+		if err := disabled.RefundUnappliedCaptures(ctx); !errors.Is(err, billing.ErrUnavailable) {
+			t.Fatalf("disabled unapplied refund = %v, want ErrUnavailable", err)
+		}
+		if got := intentStatus(t, h, "pp-buy-review"); got != "review" {
+			t.Fatalf("order in review after the disabled pass = %s", got)
+		}
+	})
+
+	t.Run("a store without refund benefits records no request", func(t *testing.T) {
+		h, _, _ := fixedService(t, at)
+		if _, err := h.service.Subscribe(ctx, "alice", plan.Light, billing.TermMonthly); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := h.service.RequestRefund(ctx, "alice", chargeOrder(t, h, "subscribe"), "no benefits wired"); !errors.Is(err, billing.ErrUnavailable) {
+			t.Fatalf("request = %v, want ErrUnavailable", err)
+		}
+		var requests int
+		if err := h.handle.Reader.QueryRow(`SELECT count(*) FROM billing_refund_requests`).Scan(&requests); err != nil || requests != 0 {
+			t.Fatalf("refund requests = %d err=%v", requests, err)
 		}
 	})
 }

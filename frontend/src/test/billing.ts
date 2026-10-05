@@ -73,8 +73,10 @@ export interface FakeBillingOptions {
     requestedAt: string
     payment: { orderId: string; kind: string; chargedKrw: bigint; chargedAt: string }
   }>
-  purchaseFailure?: 'CHARGE_FAILED' | 'PAYMENT_METHOD_REQUIRED' | 'PURCHASE_TOO_SMALL'
+  purchaseFailure?: 'CHARGE_FAILED' | 'PAYMENT_METHOD_REQUIRED'
   refundFailure?: 'REFUND_FAILED'
+  /** An approval the provider refuses: the request ends failed and the review answers this. */
+  refundReviewFailure?: 'REFUND_FAILED'
   /** Rows listed above the populated history, newest first, e.g. a refund. */
   extraHistory?: NonNullable<MessageInitShape<typeof GetMyBillingResponseSchema>['history']>
 }
@@ -100,6 +102,7 @@ export function registerBillingService(router: ConnectRouter, options: FakeBilli
     initialRefunds = [],
     purchaseFailure,
     refundFailure,
+    refundReviewFailure,
     extraHistory = [],
   } = options
   let subscribed = Boolean(populated || subscription)
@@ -273,6 +276,12 @@ export function registerBillingService(router: ConnectRouter, options: FakeBilli
       outcome: request.outcome,
       amount: request.reviewedAmountKrw,
     })
+    if (refundReviewFailure && request.outcome === 'approve') {
+      refunds = refunds.map((refund) =>
+        refund.id === request.requestId ? { ...refund, status: 'failed' } : refund,
+      )
+      throw connectAppError(refundReviewFailure, Code.FailedPrecondition)
+    }
     refunds = refunds.map((refund) =>
       refund.id === request.requestId
         ? { ...refund, status: request.outcome === 'reject' ? 'rejected' : 'processing' }

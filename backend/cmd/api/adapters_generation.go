@@ -379,73 +379,38 @@ func (b generationBudget) Storyline(nativeEffort bool) int { return b.Short(nati
 // EnqueueGeneration stores the payload generation encoded, byte for byte: the frozen options are
 // generation's own, and this adapter only routes the row, guards it and prices its hold.
 func (a generationJobs) EnqueueGeneration(ctx context.Context, request generation.StartRequest, payload []byte) (string, error) {
-	slug := request.PostSlug
-	calls := map[string]int{}
-	if request.ObserveModel != "" {
-		// Stated even when it is ZERO: a run that reuses every stored observation makes no
-		// observation call, and a hold for one can refuse a user who can afford the write-only
-		// retry the picker exists to make cheap. The count is per MODEL across the whole job
-		// (internal/job), so a model serving both stages states the write call too.
-		total := request.ObserveCalls
-		if request.ObserveModel == request.WriteModel {
-			total++
-		}
-		calls[request.ObserveModel] = total
-	}
-	subjects, guards := postVoiceWork(job.KindGenerate, request.UserID, slug, request.VoiceID)
+	counts, pricing := generationCalls(request, a.budget)
+	subjects, guards := postVoiceWork(job.KindGenerate, request.UserID, request.PostSlug, request.VoiceID)
 	id, err := a.queue.Enqueue(ctx, job.NewJob{
 		Kind: job.KindGenerate, UserID: request.UserID, Subjects: subjects, Guards: guards,
 		ObserveModel: request.ObserveModel, WriteModel: request.WriteModel,
 		TargetLanguage: request.TargetLanguage.String(), Payload: payload,
-		CallCounts: calls, PricingCalls: generationPricingCalls(request, a.budget),
+		CallCounts: counts, PricingCalls: pricing,
 	})
-	var active *job.ErrAlreadyInProgress
-	if errors.As(err, &active) {
-		return "", &generation.JobAlreadyInProgressError{ActiveID: active.ActiveID}
-	}
-	if errors.Is(err, job.ErrVoiceUnavailable) {
-		return "", generation.ErrVoiceDeleted
-	}
-	return id, err
+	return id, generationEnqueueError(err)
 }
 
 func (a generationJobs) EnqueueRevision(ctx context.Context, request generation.StartRevisionRequest, payload []byte) (string, error) {
-	slug := request.PostSlug
-	subjects, guards := postVoiceWork(job.KindRevise, request.UserID, slug, request.VoiceID)
+	subjects, guards := postVoiceWork(job.KindRevise, request.UserID, request.PostSlug, request.VoiceID)
 	id, err := a.queue.Enqueue(ctx, job.NewJob{
 		Kind: job.KindRevise, UserID: request.UserID, Subjects: subjects, Guards: guards,
 		WriteModel: request.WriteModel, TargetLanguage: request.ContentLanguage.String(), Payload: payload,
 		PricingCalls: revisionPricingCalls(request, a.budget),
 	})
-	var active *job.ErrAlreadyInProgress
-	if errors.As(err, &active) {
-		return "", &generation.JobAlreadyInProgressError{ActiveID: active.ActiveID}
-	}
-	if errors.Is(err, job.ErrVoiceUnavailable) {
-		return "", generation.ErrVoiceDeleted
-	}
-	return id, err
+	return id, generationEnqueueError(err)
 }
 
 // EnqueueStoryline routes a storyline job (GEN-68). It is post-targeted — the one active job per
 // post applies — and carries no voice: the prompt has none, so a voice change cannot make its
 // answer land in the wrong profile.
 func (a generationJobs) EnqueueStoryline(ctx context.Context, request generation.StartStorylineRequest, payload []byte) (string, error) {
-	calls := map[string]int{}
-	if request.ObserveModel != "" {
-		// Stated even when ZERO, as for a generation: the count is per model across the job.
-		total := request.ObserveCalls
-		if request.ObserveModel == request.WriteModel {
-			total++
-		}
-		calls[request.ObserveModel] = total
-	}
+	counts, pricing := storylineCalls(request, a.budget)
 	subjects, guards := postVoiceWork(job.KindStoryline, request.UserID, request.PostSlug, "")
 	id, err := a.queue.Enqueue(ctx, job.NewJob{
 		Kind: job.KindStoryline, UserID: request.UserID, Subjects: subjects, Guards: guards,
 		ObserveModel: request.ObserveModel, WriteModel: request.WriteModel,
 		TargetLanguage: request.TargetLanguage.String(), Payload: payload,
-		CallCounts: calls, PricingCalls: storylinePricingCalls(request, a.budget),
+		CallCounts: counts, PricingCalls: pricing,
 	})
 	return id, generationEnqueueError(err)
 }
@@ -473,46 +438,56 @@ func generationEnqueueError(err error) error {
 	return err
 }
 
-// storylinePricingCalls prices a storyline job over its frozen set, as a generation is priced
-// (QUOTA-13): the observe calls it will make, then one storyline call at the short budget for
-// the native-effort flag the start froze — the cap the call will send.
-func storylinePricingCalls(request generation.StartStorylineRequest, budget config.LLMCompletionBudget) []job.PlannedCall {
-	calls := make([]job.PlannedCall, 0, 2)
-	if request.ObserveModel != "" && request.ObserveCalls > 0 {
-		calls = append(calls, job.PlannedCall{
-			Ref: request.ObserveModel, Stage: "observe", Count: request.ObserveCalls, CompletionTokens: budget.Observation(),
+// observeWriteCalls is what a job that observes its frozen set and then makes one write-stage
+// call states to the queue — a generation and a storyline job alike, which differ only by that
+// call's cap (QUOTA-13):
+//   - counts is per MODEL across the whole job (internal/job), so a model serving both stages
+//     states the write call too. It is stated even when the observe count is ZERO: a run that
+//     reuses every stored observation makes no observation call, and a hold for one can refuse a
+//     user who can afford the write-only retry the picker exists to make cheap.
+//   - pricing is the observe calls the frozen set will make, then the write-stage call at the cap
+//     it will send.
+func observeWriteCalls(observeModel, writeModel string, observeCalls, writeCap int, budget config.LLMCompletionBudget) (map[string]int, []job.PlannedCall) {
+	counts := map[string]int{}
+	if observeModel != "" {
+		total := observeCalls
+		if observeModel == writeModel {
+			total++
+		}
+		counts[observeModel] = total
+	}
+	pricing := make([]job.PlannedCall, 0, 2)
+	if observeModel != "" && observeCalls > 0 {
+		pricing = append(pricing, job.PlannedCall{
+			Ref: observeModel, Stage: "observe", Count: observeCalls, CompletionTokens: budget.Observation(),
 		})
 	}
-	if request.WriteModel != "" {
-		calls = append(calls, job.PlannedCall{
-			Ref: request.WriteModel, Stage: "write", Count: 1, CompletionTokens: budget.Short(request.WriteNativeEffort),
-		})
+	if writeModel != "" {
+		pricing = append(pricing, job.PlannedCall{Ref: writeModel, Stage: "write", Count: 1, CompletionTokens: writeCap})
 	}
-	return calls
+	return counts, pricing
+}
+
+// generationCalls is a generation's counts and priced calls: its write at the budget for the
+// frozen target length and native-effort flag.
+func generationCalls(request generation.StartRequest, budget config.LLMCompletionBudget) (map[string]int, []job.PlannedCall) {
+	return observeWriteCalls(request.ObserveModel, request.WriteModel, request.ObserveCalls, budget.Write(request.TargetLength, request.WriteNativeEffort), budget)
+}
+
+// storylineCalls is a storyline job's counts and priced calls, as a generation's: its one
+// storyline call at the short budget for the native-effort flag the start froze — the cap the
+// call will send.
+func storylineCalls(request generation.StartStorylineRequest, budget config.LLMCompletionBudget) (map[string]int, []job.PlannedCall) {
+	return observeWriteCalls(request.ObserveModel, request.WriteModel, request.ObserveCalls, budget.Short(request.WriteNativeEffort), budget)
 }
 
 // storylineRevisionPricingCalls prices the storyline request: one storyline call, sized as
-// storylinePricingCalls sizes it.
+// storylineCalls sizes it.
 func storylineRevisionPricingCalls(request generation.StartStorylineRevisionRequest, budget config.LLMCompletionBudget) []job.PlannedCall {
 	if request.WriteModel == "" {
 		return nil
 	}
 	return []job.PlannedCall{{Ref: request.WriteModel, Stage: "write", Count: 1, CompletionTokens: budget.Short(request.WriteNativeEffort)}}
-}
-
-func generationPricingCalls(request generation.StartRequest, budget config.LLMCompletionBudget) []job.PlannedCall {
-	calls := make([]job.PlannedCall, 0, 2)
-	if request.ObserveModel != "" && request.ObserveCalls > 0 {
-		calls = append(calls, job.PlannedCall{
-			Ref: request.ObserveModel, Stage: "observe", Count: request.ObserveCalls, CompletionTokens: budget.Observation(),
-		})
-	}
-	if request.WriteModel != "" {
-		calls = append(calls, job.PlannedCall{
-			Ref: request.WriteModel, Stage: "write", Count: 1, CompletionTokens: budget.Write(request.TargetLength, request.WriteNativeEffort),
-		})
-	}
-	return calls
 }
 
 func revisionPricingCalls(request generation.StartRevisionRequest, budget config.LLMCompletionBudget) []job.PlannedCall {

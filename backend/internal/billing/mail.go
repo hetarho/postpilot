@@ -70,19 +70,8 @@ func PurchaseMail(purchase Purchase) MailMessage {
 	}
 }
 
-func RefundMail(purchase Purchase) MailMessage {
-	detail := purchaseDetail(purchase)
-	return MailMessage{
-		Subject: "Postpilot 크레딧 구매가 환불되었습니다 / Credit purchase refunded",
-		Text: fmt.Sprintf(
-			"Postpilot 크레딧 %d개 구매를 환불했습니다.\n환불: %s\n\nYour purchase of %d Postpilot credits was refunded.\nRefund: %s",
-			purchase.Credits, detail, purchase.Credits, detail,
-		),
-	}
-}
-
 // purchaseDetail and chargeDetail say what the owner paid in KRW and nothing about a dollar
-// amount or an exchange rate, even for a row priced before fixed KRW (QUOTA-65).
+// amount or an exchange rate (QUOTA-65).
 func purchaseDetail(purchase Purchase) string {
 	return fmt.Sprintf("%d credits · %s원", purchase.Credits, comma(int64(purchase.KRW)))
 }

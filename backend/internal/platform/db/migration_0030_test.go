@@ -31,9 +31,8 @@ func TestMigration0030CreatesCheckedBillingLedger(t *testing.T) {
 		{"event kind", `INSERT INTO billing_events(user_id,kind,created_at) VALUES('alice','changed',?)`},
 		{"event tier", `INSERT INTO billing_events(user_id,kind,tier,created_at) VALUES('alice','charge','free',?)`},
 		{"event term", `INSERT INTO billing_events(user_id,kind,term,created_at) VALUES('alice','charge','weekly',?)`},
-		{"purchase credits", `INSERT INTO credit_purchases(id,user_id,lot_id,credits,usd_cents,krw,provider_payment_key,order_id,charged_at) VALUES('invalid-credits','alice','lot',0,100,1300,'pay','invalid-credits',?)`},
-		{"purchase negative USD", `INSERT INTO credit_purchases(id,user_id,lot_id,credits,usd_cents,krw,provider_payment_key,order_id,charged_at) VALUES('invalid-usd','alice','lot',100,-1,1300,'pay','invalid-usd',?)`},
-		{"purchase KRW", `INSERT INTO credit_purchases(id,user_id,lot_id,credits,usd_cents,krw,provider_payment_key,order_id,charged_at) VALUES('invalid-krw','alice','lot',100,100,0,'pay','invalid-krw',?)`},
+		{"purchase credits", `INSERT INTO credit_purchases(id,user_id,lot_id,credits,krw,provider_payment_key,order_id,charged_at) VALUES('invalid-credits','alice','lot',0,1300,'pay','invalid-credits',?)`},
+		{"purchase KRW", `INSERT INTO credit_purchases(id,user_id,lot_id,credits,krw,provider_payment_key,order_id,charged_at) VALUES('invalid-krw','alice','lot',100,0,'pay','invalid-krw',?)`},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			args := []any{at}
@@ -55,11 +54,11 @@ func TestMigration0030CreatesCheckedBillingLedger(t *testing.T) {
 		t.Fatal("duplicate billing event order_id was accepted")
 	}
 	if _, err := handle.Writer.ExecContext(ctx,
-		`INSERT INTO credit_purchases(id,user_id,lot_id,credits,usd_cents,krw,provider_payment_key,order_id,charged_at) VALUES('p1','alice','lot-1',100,100,1300,'pay-1','purchase-1',?)`, at); err != nil {
+		`INSERT INTO credit_purchases(id,user_id,lot_id,credits,krw,provider_payment_key,order_id,charged_at) VALUES('p1','alice','lot-1',100,1300,'pay-1','purchase-1',?)`, at); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := handle.Writer.ExecContext(ctx,
-		`INSERT INTO credit_purchases(id,user_id,lot_id,credits,usd_cents,krw,provider_payment_key,order_id,charged_at) VALUES('p2','alice','lot-2',100,100,1300,'pay-2','purchase-1',?)`, at); err == nil {
+		`INSERT INTO credit_purchases(id,user_id,lot_id,credits,krw,provider_payment_key,order_id,charged_at) VALUES('p2','alice','lot-2',100,1300,'pay-2','purchase-1',?)`, at); err == nil {
 		t.Fatal("duplicate purchase order_id was accepted")
 	}
 }

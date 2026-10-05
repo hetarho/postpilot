@@ -23,11 +23,15 @@ import (
 // profile validation repeats its stages per sampled post. A caller that undercounts does
 // not break the balance floor — the lots refuse to go negative — but it does let work
 // start on credits the account turns out not to have, which the account never pays back.
+//
+// PromptTokens is a prompt size the caller knows; the hold prices the larger of it and
+// holdInputTokens, so zero (and anything smaller) is the default allowance (QUOTA-14).
 type PlannedCall struct {
 	Ref              llm.ModelRef
 	Stage            string
 	Count            int
 	CompletionTokens int64
+	PromptTokens     int64
 	// Units discriminates a non-token call; it must match the approved quote.
 	Units *UnitBudget
 }

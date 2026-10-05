@@ -153,20 +153,19 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 	if cfg.EximAPIKey != "" {
 		officialRate = fxrate.NewEximbank(cfg.EximAPIKey, &http.Client{Timeout: 5 * time.Second})
 	}
+	// One selector serves every ledger this process builds, the transaction-scoped ones too:
+	// a day's official rate is looked up once (QUOTA-59).
+	rates := usage.NewRateSelector(officialRate, usagestore.New(handle.Writer, handle.Reader))
 	c.ledger = usage.NewService(
 		usagestore.NewWithExports(handle.Writer, handle.Reader, func(tx *sql.Tx) usage.ExportWindowLedger {
 			return usageExports{clipstore.NewTx(tx)}
 		}, usageExports{clipstore.New(handle.Writer, handle.Reader)}), registry,
-		int64(cfg.LLMMaxTokensDefault), anchors, approvedCeilingKinds()...,
-	).WithModelGrades().WithOwnerCancellation(ownerCancellableKinds()...).WithRateSelector(usage.NewRateSelector(
-		officialRate,
-		usagestore.New(handle.Writer, handle.Reader),
-	))
-	c.ledger.WithUnitAccounting(modelcatalogapp.SpeechBudgets{Profiles: p.speechCatalog})
+		int64(cfg.LLMMaxTokensDefault), anchors, rates, approvedCeilingKinds()...,
+	).WithModelGrades().WithOwnerCancellation(ownerCancellableKinds()...).WithUnitAccounting(modelcatalogapp.SpeechBudgets{Profiles: p.speechCatalog})
 	c.postFigures = newPostFigures(c.ledger)
 	c.billingStore = billingstore.New(handle.Writer, handle.Reader)
 	c.billingStore.SetCreditsForTx(func(tx *sql.Tx) billing.Credits {
-		return billingCredits{Service: usage.NewService(usagestore.NewTx(tx), nil, 0, anchors, approvedCeilingKinds()...), exports: clipstore.NewTx(tx)}
+		return billingCredits{Service: usage.NewService(usagestore.NewTx(tx), nil, 0, anchors, rates, approvedCeilingKinds()...), exports: clipstore.NewTx(tx)}
 	})
 	c.billingStore.SetPlansForTx(func(tx *sql.Tx) billing.Plans {
 		return auth.NewService(authstore.NewTx(tx), cfg.SessionTTL, auth.Deps{Mailer: p.mailer})
@@ -182,15 +181,15 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 		c.payments = tosspay.New(cfg.TossSecretKey, &http.Client{Timeout: tosspay.RequestTimeout})
 	}
 	c.billing = billing.NewService(
-		c.billingStore, c.payments, nil, billingCredits{Service: c.ledger, exports: clipstore.New(handle.Writer, handle.Reader)}, c.auth, c.auth,
+		c.billingStore, c.payments, billingCredits{Service: c.ledger, exports: clipstore.New(handle.Writer, handle.Reader)}, c.auth, c.auth,
 		billingMailer{mailer: p.mailer},
-	).WithFixedKRW()
+	)
 	voucherStore := voucherstore.New(handle.Writer, handle.Reader)
 	voucherStore.SetCreditsForTx(func(tx *sql.Tx) voucher.Credits {
-		return voucherCredits{usage.NewService(usagestore.NewTx(tx), nil, 0, anchors, approvedCeilingKinds()...)}
+		return voucherCredits{usage.NewService(usagestore.NewTx(tx), nil, 0, anchors, rates, approvedCeilingKinds()...)}
 	})
 	voucherStore.SetPaidCoverageForTx(func(tx *sql.Tx) voucher.PaidCoverage {
-		return voucherPaidCoverage{billing: billing.NewService(billingstore.NewTx(tx), nil, nil, nil, nil, nil, nil)}
+		return voucherPaidCoverage{billing: billing.NewService(billingstore.NewTx(tx), nil, nil, nil, nil, nil)}
 	})
 	c.voucher = voucher.NewService(voucherStore, voucherCredits{c.ledger})
 	c.metered = meteredRegistry{Registry: registry, ledger: c.ledger}

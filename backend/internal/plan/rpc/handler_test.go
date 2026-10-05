@@ -51,6 +51,11 @@ type stubEstimator struct {
 	clipRates *plan.ClipRates
 }
 
+// fixedRate is a selectable KRW 1,360 per USD snapshot for estimators whose figures do not
+// depend on the rate.
+var fixedRate = plan.RateSnapshot{Source: "korea-eximbank", PublicationDate: "2026-09-29",
+	ReferenceE4: 13_600_000, AppliedE4: 13_600_000}
+
 type snapshotEstimator struct {
 	rate plan.RateSnapshot
 	err  error
@@ -59,9 +64,6 @@ type snapshotEstimator struct {
 
 func (s snapshotEstimator) CurrentRate(context.Context) (plan.RateSnapshot, error) {
 	return s.rate, s.err
-}
-func (s snapshotEstimator) ComboRates(context.Context) ([]planrpc.EstimatorCombo, error) {
-	panic("unrounded fallback must not be used")
 }
 func (s snapshotEstimator) ComboRatesAt(_ context.Context, rate plan.RateSnapshot) ([]planrpc.EstimatorCombo, error) {
 	*s.seen = rate
@@ -89,7 +91,9 @@ func TestGetMyPlanPricesAtTheRateItShowsNoCaller(t *testing.T) {
 	}
 }
 
-func (s stubEstimator) ComboRates(context.Context) ([]planrpc.EstimatorCombo, error) {
+func (stubEstimator) CurrentRate(context.Context) (plan.RateSnapshot, error) { return fixedRate, nil }
+
+func (s stubEstimator) ComboRatesAt(context.Context, plan.RateSnapshot) ([]planrpc.EstimatorCombo, error) {
 	if s.err != nil {
 		return nil, s.err
 	}
@@ -222,7 +226,9 @@ func TestEstimatorComboCarriesItsPerPostFigure(t *testing.T) {
 
 type figureEstimator struct{}
 
-func (figureEstimator) ComboRates(context.Context) ([]planrpc.EstimatorCombo, error) {
+func (figureEstimator) CurrentRate(context.Context) (plan.RateSnapshot, error) { return fixedRate, nil }
+
+func (figureEstimator) ComboRatesAt(context.Context, plan.RateSnapshot) ([]planrpc.EstimatorCombo, error) {
 	return []planrpc.EstimatorCombo{
 		{Combo: "value", PostCredits: plan.PostFigure{Credits: 48, Basis: plan.PostCreditsRecentUsage}},
 		{Combo: "top"},

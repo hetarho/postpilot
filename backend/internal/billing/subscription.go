@@ -10,86 +10,6 @@ import (
 	"github.com/postpilot/backend/internal/plan"
 )
 
-func (s *Service) Subscribe(ctx context.Context, userID string, tier plan.Plan, term Term) (Subscription, error) {
-	if s.fixedKRW {
-		return s.subscribeFixed(ctx, userID, tier, term)
-	}
-	if !s.Enabled() {
-		return Subscription{}, ErrUnavailable
-	}
-	if master, err := s.masterAccount(ctx, userID); err != nil {
-		return Subscription{}, err
-	} else if master {
-		return Subscription{}, ErrMasterAccount
-	}
-	if !billableTier(tier) {
-		return Subscription{}, ErrTierNotSubscribable
-	}
-	if !term.Valid() {
-		return Subscription{}, fmt.Errorf("invalid subscription term %q", term)
-	}
-	if current, found, err := s.store.Subscription(ctx, userID); err != nil {
-		return Subscription{}, err
-	} else if found && current.Status == "active" {
-		return Subscription{}, ErrSubscriptionExists
-	}
-	method, found, err := s.store.PaymentMethod(ctx, userID)
-	if err != nil {
-		return Subscription{}, err
-	}
-	if !found {
-		return Subscription{}, ErrPaymentMethodRequired
-	}
-
-	now := s.now()
-	quote, err := s.quoteAt(ctx, tier, term, now)
-	if err != nil {
-		return Subscription{}, err
-	}
-	orderID := subscriptionOrderID(userID, now)
-	payment, err := s.chargeSubscription(ctx, method, tier, term, quote, orderID)
-	if err != nil {
-		if eventErr := s.recordChargeFailure(ctx, userID, tier, term, quote, orderID, now); eventErr != nil {
-			return Subscription{}, errors.Join(ErrChargeFailed, err, eventErr)
-		}
-		return Subscription{}, errors.Join(ErrChargeFailed, err)
-	}
-
-	_, next := plan.BenefitWindow(now, now)
-	coverageID := "paid:" + userID + ":" + now.UTC().Format(time.RFC3339Nano)
-	subscription := Subscription{
-		UserID: userID, CoverageID: coverageID, Tier: tier, Term: term, AnchorAt: now, TermStart: now,
-		TermEnd: TermEnd(now, now, term), NextGrantAt: next, AutoRenew: true,
-		Status: "active", CreatedAt: now, UpdatedAt: now,
-	}
-	err = s.store.InWriteTx(ctx, func(tx Store, credits Credits, plans Plans) error {
-		if err := tx.UpsertSubscription(ctx, subscription); err != nil {
-			return err
-		}
-		if err := tx.InsertEvent(ctx, chargeEvent(userID, tier, term, quote, payment, orderID, now)); err != nil {
-			return err
-		}
-		if err := tx.InsertEvent(ctx, Event{UserID: userID, Kind: "tier_change", Tier: &tier, Term: &term, CreatedAt: now}); err != nil {
-			return err
-		}
-		if err := plans.AssignTier(ctx, userID, tier); err != nil {
-			return err
-		}
-		if err := tx.DeleteSupportCoverage(ctx, userID); err != nil {
-			return err
-		}
-		if err := tx.InsertTierTransition(ctx, userID, coverageID, now, tier, orderID); err != nil {
-			return err
-		}
-		return credits.OpenCoverage(ctx, userID, Coverage{ID: coverageID, Anchor: now,
-			End: subscription.TermEnd, Tier: tier, DailyTier: tier}, now, orderID)
-	})
-	if err != nil {
-		return Subscription{}, err
-	}
-	return subscription, nil
-}
-
 func (s *Service) AnchorFor(ctx context.Context, userID string) (time.Time, bool, error) {
 	subscription, found, err := s.store.Subscription(ctx, userID)
 	if err != nil || !found || subscription.Status != "active" {
@@ -132,21 +52,24 @@ func (s *Service) CoverageAt(ctx context.Context, userID string, at time.Time) (
 
 // RunDue advances every subscription that was due when the pass started. Each account is
 // caught up window by window; a failure is retained while the loop continues to later rows.
-// A failed order or refund reconciliation is logged and never stops the renewals.
+// A failed order reconciliation, unapplied-capture refund or refund reconciliation is logged
+// and never stops the renewals. Captures are refunded before the renewals, so an account whose
+// order left review renews on the same pass.
 func (s *Service) RunDue(ctx context.Context, now time.Time) error {
 	if !s.Enabled() {
 		return ErrUnavailable
 	}
-	if s.fixedKRW {
-		if err := s.ReconcilePending(ctx); err != nil {
-			slog.Error("pending order reconciliation failed", "err", err)
-		}
-		if err := s.ReconcilePendingRefunds(ctx); err != nil {
-			slog.Error("pending refund reconciliation failed", "err", err)
-		}
-		if err := s.purgeExpiredQuotes(ctx, now); err != nil {
-			slog.Error("expired quote purge failed", "err", err)
-		}
+	if err := s.ReconcilePending(ctx); err != nil {
+		slog.Error("pending order reconciliation failed", "err", err)
+	}
+	if err := s.RefundUnappliedCaptures(ctx); err != nil {
+		slog.Error("unapplied capture refund failed", "err", err)
+	}
+	if err := s.ReconcilePendingRefunds(ctx); err != nil {
+		slog.Error("pending refund reconciliation failed", "err", err)
+	}
+	if err := s.purgeExpiredQuotes(ctx, now); err != nil {
+		slog.Error("expired quote purge failed", "err", err)
 	}
 	due, err := s.store.DueSubscriptions(ctx, now)
 	if err != nil {
@@ -218,121 +141,6 @@ func (s *Service) grantAnnualWindow(ctx context.Context, subscription Subscripti
 	return current, nil
 }
 
-func (s *Service) renew(ctx context.Context, subscription Subscription, now time.Time) (Subscription, error) {
-	if s.fixedKRW {
-		return s.renewFixed(ctx, subscription, now)
-	}
-	tier, term := subscription.Tier, subscription.Term
-	if subscription.ScheduledTier != nil {
-		tier = *subscription.ScheduledTier
-	}
-	if subscription.ScheduledTerm != nil {
-		term = *subscription.ScheduledTerm
-	}
-	quote, err := s.quoteAt(ctx, tier, term, now)
-	if err != nil {
-		return subscription, err
-	}
-	method, found, err := s.store.PaymentMethod(ctx, subscription.UserID)
-	if err != nil {
-		return subscription, err
-	}
-	start := subscription.TermEnd
-	orderID := subscriptionOrderID(subscription.UserID, start)
-	var payment Payment
-	if found {
-		payment, err = s.chargeSubscription(ctx, method, tier, term, quote, orderID)
-	} else {
-		err = ErrPaymentMethodRequired
-	}
-	if err != nil {
-		return s.lapseFailedRenewal(ctx, subscription, tier, term, quote, orderID, now)
-	}
-
-	updated := subscription
-	updated.Tier = tier
-	updated.Term = term
-	updated.TermStart = start
-	updated.TermEnd = TermEnd(subscription.AnchorAt, start, term)
-	_, updated.NextGrantAt = plan.BenefitWindow(subscription.AnchorAt, start)
-	updated.ScheduledTier = nil
-	updated.ScheduledTerm = nil
-	updated.UpdatedAt = now
-	err = s.store.InWriteTx(ctx, func(tx Store, credits Credits, plans Plans) error {
-		_, supportAssigned, err := tx.SupportCoverage(ctx, subscription.UserID)
-		if err != nil {
-			return err
-		}
-		if err := tx.UpsertSubscription(ctx, updated); err != nil {
-			return err
-		}
-		if err := tx.InsertEvent(ctx, chargeEvent(subscription.UserID, tier, term, quote, payment, orderID, now)); err != nil {
-			return err
-		}
-		if tier != subscription.Tier {
-			if err := tx.InsertEvent(ctx, Event{UserID: subscription.UserID, Kind: "tier_change", Tier: &tier, Term: &term, CreatedAt: now}); err != nil {
-				return err
-			}
-			if !supportAssigned {
-				if err := plans.AssignTier(ctx, subscription.UserID, tier); err != nil {
-					return err
-				}
-			}
-		}
-		if supportAssigned {
-			return nil
-		}
-		if tier != subscription.Tier {
-			if err := tx.InsertTierTransition(ctx, subscription.UserID, subscription.CoverageID, start, tier, orderID); err != nil {
-				return err
-			}
-		}
-		dailyStart, _ := plan.DailyWindow(subscription.AnchorAt, start)
-		dailyTier := subscription.Tier
-		if !dailyStart.Before(start) {
-			dailyTier = tier
-		}
-		return credits.OpenCoverage(ctx, subscription.UserID, Coverage{ID: subscription.CoverageID,
-			Anchor: subscription.AnchorAt, End: updated.TermEnd, Tier: tier, DailyTier: dailyTier}, start, orderID)
-	})
-	if err != nil {
-		return subscription, err
-	}
-	if err := s.sendMail(ctx, subscription.UserID, RenewalMail(tier, term, quote)); err != nil {
-		return updated, err
-	}
-	return updated, nil
-}
-
-func (s *Service) lapseFailedRenewal(ctx context.Context, subscription Subscription, tier plan.Plan, term Term, quote Quote, orderID string, now time.Time) (Subscription, error) {
-	updated := subscription
-	updated.Status = "lapsed"
-	updated.UpdatedAt = now
-	err := s.store.InWriteTx(ctx, func(tx Store, _ Credits, plans Plans) error {
-		if err := tx.UpsertSubscription(ctx, updated); err != nil {
-			return err
-		}
-		if support, assigned, err := tx.SupportCoverage(ctx, subscription.UserID); err != nil {
-			return err
-		} else if assigned {
-			if err := plans.AssignTier(ctx, subscription.UserID, support.Tier); err != nil {
-				return err
-			}
-		} else if err := plans.AssignTier(ctx, subscription.UserID, plan.Free); err != nil {
-			return err
-		}
-		note := orderID
-		return tx.InsertEvent(ctx, Event{UserID: subscription.UserID, Kind: "renewal_failed", Tier: &tier, Term: &term, USDCents: &quote.USDCents, KRWPerUSDE4: &quote.RatePerUSDE4, RateDate: &quote.RateDate, KRW: &quote.KRW, Note: &note, CreatedAt: now})
-	})
-	if err != nil {
-		return subscription, err
-	}
-	if err := s.sendMail(ctx, subscription.UserID, RenewalFailedMail(tier, term, quote)); err != nil {
-		return updated, err
-	}
-	return updated, nil
-}
-
 // lapseCancelled ends a subscription at its term end without a charge. Its tier write goes
 // through AssignTier, which leaves a master account on master (QUOTA-63).
 func (s *Service) lapseCancelled(ctx context.Context, subscription Subscription, now time.Time, notice MailMessage) (Subscription, error) {
@@ -363,51 +171,17 @@ func (s *Service) lapseCancelled(ctx context.Context, subscription Subscription,
 	return updated, nil
 }
 
-func (s *Service) quoteAt(ctx context.Context, tier plan.Plan, term Term, now time.Time) (Quote, error) {
-	if s.fixedKRW {
-		offer, ok := plan.CommercialOffer(tier)
-		if !ok || !billableTier(tier) || !term.Valid() {
-			return Quote{}, ErrTierNotSubscribable
-		}
-		krw := offer.MonthlyKRW
-		if term == TermAnnual {
-			krw = offer.AnnualKRW
-		}
-		return Quote{KRW: krw}, nil
+// offerQuote is the fixed VAT-inclusive KRW price of a tier and term (BILL-2, BILL-4).
+func offerQuote(tier plan.Plan, term Term) (Quote, error) {
+	offer, ok := plan.CommercialOffer(tier)
+	if !ok || !billableTier(tier) || !term.Valid() {
+		return Quote{}, ErrTierNotSubscribable
 	}
-	rate, date, err := s.rateFor(ctx, now)
-	if err != nil {
-		return Quote{}, err
+	krw := offer.MonthlyKRW
+	if term == TermAnnual {
+		krw = offer.AnnualKRW
 	}
-	usd := PriceCents(tier, term)
-	return Quote{USDCents: usd, KRW: KRWFor(usd, rate), RatePerUSDE4: rate, RateDate: date}, nil
-}
-
-func (s *Service) chargeSubscription(ctx context.Context, method PaymentMethod, tier plan.Plan, term Term, quote Quote, orderID string) (Payment, error) {
-	if payment, found, err := s.provider.PaymentByOrder(ctx, orderID); err != nil {
-		return Payment{}, err
-	} else if found {
-		if payment.Status == "DONE" {
-			return payment, nil
-		}
-		return Payment{}, fmt.Errorf("order %s has provider status %s", orderID, payment.Status)
-	}
-	payment, err := s.provider.Charge(ctx, ChargeRequest{
-		BillingKey: method.BillingKey, CustomerKey: method.CustomerKey, OrderID: orderID,
-		KRW: quote.KRW, Name: fmt.Sprintf("Postpilot %s %s subscription", tier, term),
-	})
-	if err != nil {
-		return Payment{}, err
-	}
-	if payment.Status != "DONE" {
-		return Payment{}, fmt.Errorf("order %s has provider status %s", orderID, payment.Status)
-	}
-	return payment, nil
-}
-
-func (s *Service) recordChargeFailure(ctx context.Context, userID string, tier plan.Plan, term Term, quote Quote, orderID string, now time.Time) error {
-	note := orderID
-	return s.store.InsertEvent(ctx, Event{UserID: userID, Kind: "charge_failed", Tier: &tier, Term: &term, USDCents: &quote.USDCents, KRWPerUSDE4: &quote.RatePerUSDE4, RateDate: &quote.RateDate, KRW: &quote.KRW, Note: &note, CreatedAt: now})
+	return Quote{KRW: krw}, nil
 }
 
 func (s *Service) sendMail(ctx context.Context, userID string, message MailMessage) error {
@@ -423,14 +197,6 @@ func (s *Service) sendMail(ctx context.Context, userID string, message MailMessa
 		return nil
 	}
 	return s.mailer.Send(ctx, email, message.Subject, message.Text)
-}
-
-func chargeEvent(userID string, tier plan.Plan, term Term, quote Quote, payment Payment, orderID string, now time.Time) Event {
-	return Event{UserID: userID, Kind: "charge", Tier: &tier, Term: &term, USDCents: &quote.USDCents, KRWPerUSDE4: &quote.RatePerUSDE4, RateDate: &quote.RateDate, KRW: &quote.KRW, ProviderPaymentKey: &payment.PaymentKey, OrderID: &orderID, CreatedAt: now}
-}
-
-func subscriptionOrderID(userID string, start time.Time) string {
-	return "sub:" + userID + ":" + start.UTC().Format(time.RFC3339Nano)
 }
 
 func billableTier(tier plan.Plan) bool {

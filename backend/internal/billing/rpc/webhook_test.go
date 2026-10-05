@@ -51,6 +51,7 @@ func TestWebhookRejectsUnparseableBody(t *testing.T) {
 }
 
 type webhookProvider struct {
+	noCancel
 	parseErr       error
 	unknownPayment bool
 }
@@ -67,12 +68,13 @@ func (p webhookProvider) PaymentByOrder(context.Context, string) (billing.Paymen
 	}
 	return billing.Payment{PaymentKey: "verified-payment", OrderID: "verified-order", Status: "DONE"}, true, nil
 }
-func (p webhookProvider) Refund(context.Context, string, string) error { return nil }
 func (p webhookProvider) ParseNotification([]byte) (billing.Notification, error) {
 	return billing.Notification{EventType: "PAYMENT_STATUS_CHANGED", OrderID: "untrusted", Raw: []byte(`raw`)}, p.parseErr
 }
 
 type webhookStore struct {
+	noJournal
+	noRefunds
 	notifications []billing.ProviderNotification
 }
 

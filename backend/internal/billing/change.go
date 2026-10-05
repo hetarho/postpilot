@@ -2,7 +2,6 @@ package billing
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -31,115 +30,11 @@ func (s *Service) QuoteChange(ctx context.Context, userID string, tier plan.Plan
 	if err != nil {
 		return ChangeQuote{}, err
 	}
-	quote, err := s.quoteChangeAt(ctx, subscription, tier, term, kind, now)
-	if err != nil || !s.fixedKRW {
+	quote, err := s.quoteChangeAt(subscription, tier, term, kind, now)
+	if err != nil {
 		return quote, err
 	}
 	return s.persistFixedChangeQuote(ctx, userID, subscription, tier, term, quote, now)
-}
-
-func (s *Service) ChangeSubscription(ctx context.Context, userID string, tier plan.Plan, term Term) (Subscription, bool, error) {
-	if s.fixedKRW {
-		return Subscription{}, false, ErrStaleQuote
-	}
-	if !s.Enabled() {
-		return Subscription{}, false, ErrUnavailable
-	}
-	if master, err := s.masterAccount(ctx, userID); err != nil {
-		return Subscription{}, false, err
-	} else if master {
-		return Subscription{}, false, ErrMasterAccount
-	}
-	now := s.now()
-	subscription, kind, err := s.classifyChange(ctx, userID, tier, term, now)
-	if err != nil {
-		return Subscription{}, false, err
-	}
-	if kind == changeScheduled {
-		updated := subscription
-		updated.ScheduledTier = &tier
-		updated.ScheduledTerm = &term
-		updated.AutoRenew = true
-		updated.UpdatedAt = now
-		err := s.store.InWriteTx(ctx, func(tx Store, _ Credits, _ Plans) error {
-			if err := tx.UpsertSubscription(ctx, updated); err != nil {
-				return err
-			}
-			return tx.InsertEvent(ctx, Event{UserID: userID, Kind: "change_scheduled", Tier: &tier, Term: &term, CreatedAt: now})
-		})
-		return updated, false, err
-	}
-
-	quote, err := s.quoteChangeAt(ctx, subscription, tier, term, kind, now)
-	if err != nil {
-		return Subscription{}, false, err
-	}
-	orderID := upgradeOrderID(userID, now)
-	var payment Payment
-	if quote.KRW > 0 {
-		method, found, err := s.store.PaymentMethod(ctx, userID)
-		if err != nil {
-			return Subscription{}, false, err
-		}
-		if !found {
-			return Subscription{}, false, ErrPaymentMethodRequired
-		}
-		payment, err = s.chargeSubscription(ctx, method, tier, term, quote.Quote, orderID)
-		if err != nil {
-			if eventErr := s.recordChargeFailure(ctx, userID, tier, term, quote.Quote, orderID, now); eventErr != nil {
-				return Subscription{}, false, errors.Join(ErrChargeFailed, err, eventErr)
-			}
-			return Subscription{}, false, errors.Join(ErrChargeFailed, err)
-		}
-	}
-
-	updated := subscription
-	updated.Tier = tier
-	updated.ScheduledTier = nil
-	updated.ScheduledTerm = nil
-	updated.UpdatedAt = now
-	benefitStart, benefitEnd := plan.BenefitWindow(subscription.AnchorAt, now)
-	amounts, err := plan.QuoteUpgrade(subscription.Tier, tier, term == TermAnnual,
-		subscription.TermStart, subscription.TermEnd, benefitStart, benefitEnd, now)
-	if err != nil {
-		return Subscription{}, false, err
-	}
-	dailyStart, _ := plan.DailyWindow(subscription.AnchorAt, now)
-	dailyTier, err := s.store.TierAt(ctx, userID, subscription.CoverageID, dailyStart)
-	if err != nil {
-		return Subscription{}, false, err
-	}
-	oldCoverage := Coverage{ID: subscription.CoverageID, Anchor: subscription.AnchorAt,
-		End: subscription.TermEnd, Tier: subscription.Tier, DailyTier: dailyTier}
-	err = s.store.InWriteTx(ctx, func(tx Store, credits Credits, plans Plans) error {
-		if err := tx.UpsertSubscription(ctx, updated); err != nil {
-			return err
-		}
-		if quote.KRW > 0 {
-			if err := tx.InsertEvent(ctx, chargeEvent(userID, tier, term, quote.Quote, payment, orderID, now)); err != nil {
-				return err
-			}
-		}
-		if err := tx.InsertEvent(ctx, Event{UserID: userID, Kind: "tier_change", Tier: &tier, Term: &term, CreatedAt: now}); err != nil {
-			return err
-		}
-		if err := plans.AssignTier(ctx, userID, tier); err != nil {
-			return err
-		}
-		if err := credits.AddUpgradeBonus(ctx, userID, oldCoverage, now,
-			int(amounts.BonusCredits), int(amounts.ServerExports), orderID); err != nil {
-			return err
-		}
-		return tx.InsertTierTransition(ctx, userID, subscription.CoverageID, now, tier, orderID)
-	})
-	return updated, true, err
-}
-
-func (s *Service) ChangeSubscriptionQuoted(ctx context.Context, userID string, tier plan.Plan, term Term, quoteID string) (Subscription, bool, error) {
-	if !s.fixedKRW {
-		return s.ChangeSubscription(ctx, userID, tier, term)
-	}
-	return s.changeFixed(ctx, userID, tier, term, quoteID)
 }
 
 func (s *Service) CancelScheduledChange(ctx context.Context, userID string) (Subscription, error) {
@@ -151,28 +46,22 @@ func (s *Service) CancelScheduledChange(ctx context.Context, userID string) (Sub
 	if subscription.ScheduledTier == nil && subscription.ScheduledTerm == nil {
 		return Subscription{}, ErrNoScheduledChange
 	}
-	if s.fixedKRW {
-		err := s.store.InWriteTx(ctx, func(tx Store, _ Credits, _ Plans) error {
-			if err := s.requireNoPending(ctx, tx, userID); err != nil {
-				return err
-			}
-			current, found, err := tx.Subscription(ctx, userID)
-			if err != nil {
-				return err
-			}
-			if !found || !current.UpdatedAt.Equal(subscription.UpdatedAt) {
-				return ErrStaleQuote
-			}
-			current.ScheduledTier, current.ScheduledTerm, current.UpdatedAt = nil, nil, now
-			subscription = current
-			return tx.UpsertSubscription(ctx, current)
-		})
-		return subscription, err
-	}
-	subscription.ScheduledTier = nil
-	subscription.ScheduledTerm = nil
-	subscription.UpdatedAt = now
-	return subscription, s.store.UpsertSubscription(ctx, subscription)
+	err = s.store.InWriteTx(ctx, func(tx Store, _ Credits, _ Plans) error {
+		if err := s.requireNoPending(ctx, tx, userID); err != nil {
+			return err
+		}
+		current, found, err := tx.Subscription(ctx, userID)
+		if err != nil {
+			return err
+		}
+		if !found || !current.UpdatedAt.Equal(subscription.UpdatedAt) {
+			return ErrStaleQuote
+		}
+		current.ScheduledTier, current.ScheduledTerm, current.UpdatedAt = nil, nil, now
+		subscription = current
+		return tx.UpsertSubscription(ctx, current)
+	})
+	return subscription, err
 }
 
 func (s *Service) CancelSubscription(ctx context.Context, userID string) (Subscription, error) {
@@ -194,14 +83,12 @@ func (s *Service) CancelSubscription(ctx context.Context, userID string) (Subscr
 		if err := s.requireNoPending(ctx, tx, userID); err != nil {
 			return err
 		}
-		if s.fixedKRW {
-			current, found, err := tx.Subscription(ctx, userID)
-			if err != nil {
-				return err
-			}
-			if !found || !current.UpdatedAt.Equal(read) {
-				return ErrStaleQuote
-			}
+		current, found, err := tx.Subscription(ctx, userID)
+		if err != nil {
+			return err
+		}
+		if !found || !current.UpdatedAt.Equal(read) {
+			return ErrStaleQuote
 		}
 		if err := tx.UpsertSubscription(ctx, subscription); err != nil {
 			return err
@@ -220,27 +107,22 @@ func (s *Service) ResumeSubscription(ctx context.Context, userID string) (Subscr
 	if subscription.AutoRenew {
 		return Subscription{}, ErrNoChange
 	}
-	if s.fixedKRW {
-		err := s.store.InWriteTx(ctx, func(tx Store, _ Credits, _ Plans) error {
-			if err := s.requireNoPending(ctx, tx, userID); err != nil {
-				return err
-			}
-			current, found, err := tx.Subscription(ctx, userID)
-			if err != nil {
-				return err
-			}
-			if !found || !current.UpdatedAt.Equal(subscription.UpdatedAt) {
-				return ErrStaleQuote
-			}
-			current.AutoRenew, current.UpdatedAt = true, now
-			subscription = current
-			return tx.UpsertSubscription(ctx, current)
-		})
-		return subscription, err
-	}
-	subscription.AutoRenew = true
-	subscription.UpdatedAt = now
-	return subscription, s.store.UpsertSubscription(ctx, subscription)
+	err = s.store.InWriteTx(ctx, func(tx Store, _ Credits, _ Plans) error {
+		if err := s.requireNoPending(ctx, tx, userID); err != nil {
+			return err
+		}
+		current, found, err := tx.Subscription(ctx, userID)
+		if err != nil {
+			return err
+		}
+		if !found || !current.UpdatedAt.Equal(subscription.UpdatedAt) {
+			return ErrStaleQuote
+		}
+		current.AutoRenew, current.UpdatedAt = true, now
+		subscription = current
+		return tx.UpsertSubscription(ctx, current)
+	})
+	return subscription, err
 }
 
 func (s *Service) classifyChange(ctx context.Context, userID string, tier plan.Plan, term Term, now time.Time) (Subscription, changeKind, error) {
@@ -260,10 +142,7 @@ func (s *Service) classifyChange(ctx context.Context, userID string, tier plan.P
 	case !tierChanged && !termChanged:
 		return Subscription{}, changeNone, ErrNoChange
 	case tierChanged && termChanged:
-		if s.fixedKRW {
-			return subscription, changeScheduled, nil
-		}
-		return Subscription{}, changeNone, ErrChangeUnsupported
+		return subscription, changeScheduled, nil
 	case tierChanged && tier.Rank() > subscription.Tier.Rank():
 		return subscription, changeUpgrade, nil
 	default:
@@ -282,8 +161,10 @@ func (s *Service) requireActiveSubscription(ctx context.Context, userID string, 
 	return subscription, nil
 }
 
-func (s *Service) quoteChangeAt(ctx context.Context, subscription Subscription, tier plan.Plan, term Term, kind changeKind, now time.Time) (ChangeQuote, error) {
-	quote, err := s.quoteAt(ctx, tier, term, now)
+// quoteChangeAt prices a change at now: a scheduled change quotes the full price it will
+// charge at the term end, an upgrade its prorated difference (BILL-5, BILL-18).
+func (s *Service) quoteChangeAt(subscription Subscription, tier plan.Plan, term Term, kind changeKind, now time.Time) (ChangeQuote, error) {
+	quote, err := offerQuote(tier, term)
 	if err != nil {
 		return ChangeQuote{}, err
 	}
@@ -291,48 +172,13 @@ func (s *Service) quoteChangeAt(ctx context.Context, subscription Subscription, 
 	if kind != changeUpgrade {
 		return result, nil
 	}
-	if s.fixedKRW {
-		benefitStart, benefitEnd := plan.BenefitWindow(subscription.AnchorAt, now)
-		amounts, err := plan.QuoteUpgrade(subscription.Tier, tier, term == TermAnnual,
-			subscription.TermStart, subscription.TermEnd, benefitStart, benefitEnd, now)
-		if err != nil {
-			return ChangeQuote{}, err
-		}
-		result.KRW = int(amounts.ChargeKRW)
-		result.EffectiveAt = now
-		return result, nil
+	benefitStart, benefitEnd := plan.BenefitWindow(subscription.AnchorAt, now)
+	amounts, err := plan.QuoteUpgrade(subscription.Tier, tier, term == TermAnnual,
+		subscription.TermStart, subscription.TermEnd, benefitStart, benefitEnd, now)
+	if err != nil {
+		return ChangeQuote{}, err
 	}
-	difference := plan.MonthlyPriceCents(tier) - plan.MonthlyPriceCents(subscription.Tier)
-	if term == TermAnnual {
-		// An annual term's two-month discount belongs to the term, not to the tier, so the
-		// unit is a twelfth of the annual price rather than the monthly list price
-		// (BILL-18). The span's total comes from the annual difference instead of a
-		// rounded per-month figure: that keeps an upgrade on the term's first day exactly
-		// the difference between the two annual prices, and accumulates no drift.
-		annualDifference := PriceCents(tier, TermAnnual) - PriceCents(subscription.Tier, TermAnnual)
-		difference = annualDifference * monthsStillToRun(subscription.AnchorAt, subscription.TermEnd, now) / 12
-	}
-	result.USDCents = difference
-	result.KRW = KRWFor(difference, result.RatePerUSDE4)
+	result.KRW = int(amounts.ChargeKRW)
 	result.EffectiveAt = now
 	return result, nil
-}
-
-// monthsStillToRun is how many of the term's monthly windows an upgrade is charged for: the
-// one already running, counted whole, plus every window that starts before the term ends.
-//
-// The running month counts because the account is spending that window's credits at the new
-// tier's size the moment the upgrade lands (QUOTA-35). Counting only completed windows made
-// an upgrade inside the last month free and charged a fresh annual term for eleven of the
-// twelve windows it grants (BILL-18).
-func monthsStillToRun(anchor, termEnd, now time.Time) int {
-	months := 1
-	for boundary := plan.NextRenewal(anchor, now); boundary.Before(termEnd); boundary = plan.NextRenewal(anchor, boundary) {
-		months++
-	}
-	return months
-}
-
-func upgradeOrderID(userID string, now time.Time) string {
-	return "upg:" + userID + ":" + now.UTC().Format(time.RFC3339)
 }

@@ -1002,7 +1002,7 @@ func TestAnalyzeCountsCallsOnceAndPublishes(t *testing.T) {
 	alice := h.voice("alice")
 	body := strings.Repeat("진짜 맛있었어요!\n", 12) + "국물이 정말   진했어요."
 	h.addSample(t, "alice", alice, "sample", "국숫집", body, time.Now())
-	job := voice.AnalysisJob{UserID: "alice", VoiceID: alice, WriteModel: analyzeRef.String()}
+	job := voice.AnalysisJob{UserID: "alice", VoiceID: alice, WriteModel: analyzeRef.String(), MaterialIDs: []string{"sample"}}
 	for _, broken := range []string{"## 평균 문장 길이\n짧음", `{"impression": "짧아요"}`} {
 		h.models.response = broken
 		if err := h.svc.Analyze(context.Background(), job, func(string, int, int) {}); err == nil {
@@ -1117,7 +1117,7 @@ func TestAnalyzeRequestsNoReasoningEffort(t *testing.T) {
 	alice := h.voice("alice")
 	h.addSample(t, "alice", alice, "sample", "post", longSample("글"), time.Now())
 	h.models.response = analysisAnswer("담담해요.")
-	if err := h.svc.Analyze(context.Background(), voice.AnalysisJob{UserID: "alice", VoiceID: alice, WriteModel: analyzeRef.String()}, func(string, int, int) {}); err != nil {
+	if err := h.svc.Analyze(context.Background(), voice.AnalysisJob{UserID: "alice", VoiceID: alice, WriteModel: analyzeRef.String(), MaterialIDs: []string{"sample"}}, func(string, int, int) {}); err != nil {
 		t.Fatal(err)
 	}
 	// Unspecified is "no stage decision", which registry.go forwards as nothing. Unset would
@@ -1138,7 +1138,7 @@ func TestAnAnalysisPublishesWhatItReadAndNeverRepeats(t *testing.T) {
 	done := make(chan error, 1)
 	go func() {
 		done <- svc.Analyze(context.Background(), voice.AnalysisJob{
-			UserID: "alice", VoiceID: alice, WriteModel: analyzeRef.String(),
+			UserID: "alice", VoiceID: alice, WriteModel: analyzeRef.String(), MaterialIDs: []string{"first"},
 		}, func(string, int, int) {})
 	}()
 	select {
@@ -1162,6 +1162,80 @@ func TestAnAnalysisPublishesWhatItReadAndNeverRepeats(t *testing.T) {
 	}
 }
 
+// sentPromptTokens is the request the provider received, at one token per Unicode character.
+func sentPromptTokens(request llm.Request) int {
+	tokens := utf8.RuneCountInString(request.System)
+	for _, message := range request.Messages {
+		for _, part := range message.Parts {
+			tokens += utf8.RuneCountInString(part.Text)
+		}
+	}
+	return tokens
+}
+
+// QUOTA-14, VOICE-22: the start freezes the 학습 글 it read, newest first, and declares the prompt
+// the run then sends over them, character for character; a large corpus declares all of it.
+func TestAnAnalysisStartFreezesItsSnapshotAndDeclaresItsPrompt(t *testing.T) {
+	h := newVoiceHarness(t)
+	ctx := context.Background()
+	alice := h.voice("alice")
+	h.addSample(t, "alice", alice, "older", "예전", longSample("예"), time.Now().Add(-time.Hour))
+	h.addSample(t, "alice", alice, "ready", "충분", readyPost(), time.Now())
+	if _, err := h.svc.AnalyzeVoice(ctx, "alice", alice, analyzeRef); err != nil {
+		t.Fatal(err)
+	}
+	calls := h.jobs.calls()
+	if len(calls) != 1 || strings.Join(calls[0].MaterialIDs, ",") != "ready,older" {
+		t.Fatalf("enqueued %+v", calls)
+	}
+	h.models.response = analysisAnswer("담담해요.")
+	if err := h.svc.Analyze(ctx, voice.AnalysisJob{UserID: "alice", VoiceID: alice, WriteModel: analyzeRef.String(), MaterialIDs: calls[0].MaterialIDs}, func(string, int, int) {}); err != nil {
+		t.Fatal(err)
+	}
+	if sent := sentPromptTokens(h.models.request); calls[0].PromptTokens != sent || sent >= 30_000 {
+		t.Fatalf("declared %d prompt tokens, the run sent %d", calls[0].PromptTokens, sent)
+	}
+
+	large, _ := h.svc.CreateVoice(ctx, "alice", "긴 말투")
+	h.addSample(t, "alice", large.ID, "long", "긴 글", strings.Repeat("오늘도 정말 맛있게 먹었어요.\n", 3_000), time.Now())
+	if _, err := h.svc.AnalyzeVoice(ctx, "alice", large.ID, analyzeRef); err != nil {
+		t.Fatal(err)
+	}
+	if calls := h.jobs.calls(); len(calls) != 2 || calls[1].PromptTokens < 50_000 || strings.Join(calls[1].MaterialIDs, ",") != "long" {
+		t.Fatalf("a 50 000-character corpus declared %+v", calls[1:])
+	}
+}
+
+// VOICE-22: the run reads the snapshot its start froze: a 학습 글 added after the start is not
+// read, and one deleted after it is skipped.
+func TestAnAnalysisReadsOnlyItsFrozenSnapshot(t *testing.T) {
+	h := newVoiceHarness(t)
+	ctx := context.Background()
+	alice := h.voice("alice")
+	h.addSample(t, "alice", alice, "s1", "하나", readyPost(), time.Now().Add(-time.Hour))
+	h.addSample(t, "alice", alice, "s2", "둘", longSample("둘"), time.Now().Add(-time.Minute))
+	if _, err := h.svc.AnalyzeVoice(ctx, "alice", alice, analyzeRef); err != nil {
+		t.Fatal(err)
+	}
+	frozen := h.jobs.calls()[0].MaterialIDs
+	h.addSample(t, "alice", alice, "s3", "셋", longSample("셋"), time.Now())
+	if err := h.svc.DeleteSample(ctx, "alice", alice, "s1"); err != nil {
+		t.Fatal(err)
+	}
+	h.models.response = analysisAnswer("담담해요.")
+	if err := h.svc.Analyze(ctx, voice.AnalysisJob{UserID: "alice", VoiceID: alice, WriteModel: analyzeRef.String(), MaterialIDs: frozen}, func(string, int, int) {}); err != nil {
+		t.Fatal(err)
+	}
+	current, err := h.store.CurrentAnalysis(ctx, "alice", alice)
+	if err != nil || current == nil || strings.Join(current.MaterialIDs, ",") != "s2" {
+		t.Fatalf("published analysis = %+v err=%v", current, err)
+	}
+	request := h.models.request.Messages[0].Parts[0].Text
+	if strings.Contains(request, longSample("셋")) || strings.Contains(request, "오늘도 정말") || !strings.Contains(request, longSample("둘")) {
+		t.Fatalf("analysis read outside its snapshot: %s", request)
+	}
+}
+
 // Two voices analyzing at the same time do not see each other's corpus or overwrite each
 // other's published profile: the profile head is per voice.
 func TestSimultaneousVoiceAnalysesDoNotOverwriteEachOther(t *testing.T) {
@@ -1174,7 +1248,7 @@ func TestSimultaneousVoiceAnalysesDoNotOverwriteEachOther(t *testing.T) {
 	svc := voice.NewService(h.store, models, h.jobs)
 	casualDone := make(chan error, 1)
 	go func() {
-		casualDone <- svc.Analyze(context.Background(), voice.AnalysisJob{UserID: "alice", VoiceID: casual, WriteModel: analyzeRef.String()}, func(string, int, int) {})
+		casualDone <- svc.Analyze(context.Background(), voice.AnalysisJob{UserID: "alice", VoiceID: casual, WriteModel: analyzeRef.String(), MaterialIDs: []string{"c"}}, func(string, int, int) {})
 	}()
 	select {
 	case <-models.started:
@@ -1182,7 +1256,7 @@ func TestSimultaneousVoiceAnalysesDoNotOverwriteEachOther(t *testing.T) {
 		t.Fatal("casual analysis did not start")
 	}
 	// The formal analysis completes entirely while the casual provider call is still open.
-	if err := svc.Analyze(context.Background(), voice.AnalysisJob{UserID: "alice", VoiceID: formal.ID, WriteModel: analyzeRef.String()}, func(string, int, int) {}); err != nil {
+	if err := svc.Analyze(context.Background(), voice.AnalysisJob{UserID: "alice", VoiceID: formal.ID, WriteModel: analyzeRef.String(), MaterialIDs: []string{"f"}}, func(string, int, int) {}); err != nil {
 		t.Fatal(err)
 	}
 	close(models.release)
@@ -1206,7 +1280,11 @@ func TestSimultaneousVoiceAnalysesDoNotOverwriteEachOther(t *testing.T) {
 type queueJobs struct{ queue *job.Queue }
 
 func (a queueJobs) Enqueue(ctx context.Context, request voice.AnalysisJobRequest) (string, error) {
-	id, err := a.queue.Enqueue(ctx, attach(job.NewJob{Kind: job.KindAnalyzeVoice, UserID: request.UserID, WriteModel: request.WriteModel}, "", request.VoiceID))
+	payload, err := voice.EncodeAnalysisSnapshot(request.MaterialIDs)
+	if err != nil {
+		return "", err
+	}
+	id, err := a.queue.Enqueue(ctx, attach(job.NewJob{Kind: job.KindAnalyzeVoice, UserID: request.UserID, WriteModel: request.WriteModel, Payload: payload}, "", request.VoiceID))
 	var active *job.ErrAlreadyInProgress
 	if errors.As(err, &active) {
 		return "", &voice.JobAlreadyInProgressError{ActiveID: active.ActiveID}
@@ -1245,11 +1323,19 @@ func TestAnalyzeHandlerFailureBecomesFailedJob(t *testing.T) {
 	queue := job.New(jobstore.New(h.db.Writer, h.db.Reader, jobKindsForTest()), 5*time.Millisecond, jobReportingForTest())
 	svc := voice.NewService(h.store, models, queueJobs{queue: queue})
 	queue.Register(job.KindAnalyzeVoice, func(ctx context.Context, found job.Job, progress job.Progress) error {
-		return svc.Analyze(ctx, voice.AnalysisJob{UserID: found.UserID, VoiceID: found.Subject(voice.JobSubject), WriteModel: found.WriteModel}, voice.Progress(progress))
+		materialIDs, err := voice.DecodeAnalysisSnapshot(found.Payload)
+		if err != nil {
+			return err
+		}
+		return svc.Analyze(ctx, voice.AnalysisJob{UserID: found.UserID, VoiceID: found.Subject(voice.JobSubject), WriteModel: found.WriteModel, MaterialIDs: materialIDs}, voice.Progress(progress))
 	})
 	h.addSample(t, "alice", alice, "sample", "post", longSample("문"), time.Now())
+	payload, err := voice.EncodeAnalysisSnapshot([]string{"sample"})
+	if err != nil {
+		t.Fatal(err)
+	}
 	id, err := queue.Enqueue(context.Background(), attach(job.NewJob{
-		Kind: job.KindAnalyzeVoice, UserID: "alice", WriteModel: analyzeRef.String()}, "", alice))
+		Kind: job.KindAnalyzeVoice, UserID: "alice", WriteModel: analyzeRef.String(), Payload: payload}, "", alice))
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -626,23 +626,16 @@ func (s *Service) Combos(ctx context.Context) ([]ComboAssignment, error) {
 	return out, nil
 }
 
-// ComboRates prices every ASSIGNED combo for a comparison screen.
+// ComboRatesAt prices every ASSIGNED combo for a comparison screen at the rate a new job
+// would freeze (QUOTA-59). A rate no job could freeze prices nothing.
 //
 // A combo whose model has since lost its registration, left the catalog or published no
 // price is left out rather than priced anyway (QUOTA-39): a comparison that quoted a tier
 // nobody can run would be worse than one that shows fewer tiers.
-func (s *Service) ComboRates(ctx context.Context) ([]ComboRates, error) {
-	return s.comboRates(ctx, nil)
-}
-
 func (s *Service) ComboRatesAt(ctx context.Context, rate plan.RateSnapshot) ([]ComboRates, error) {
 	if !rate.Valid() {
 		return nil, nil
 	}
-	return s.comboRates(ctx, &rate)
-}
-
-func (s *Service) comboRates(ctx context.Context, rate *plan.RateSnapshot) ([]ComboRates, error) {
 	assignments, err := s.store.ListCombos(ctx)
 	if err != nil {
 		return nil, err
@@ -672,24 +665,13 @@ func (s *Service) comboRates(ctx context.Context, rate *plan.RateSnapshot) ([]Co
 		if !writeOK || !priceable(write) {
 			continue
 		}
-		var rates plan.Rates
-		if rate != nil {
-			rates, ok = plan.EstimatorRatesAt(pricerFor(observe), pricerFor(write), *rate)
-		} else {
-			rates, ok = plan.EstimatorRates(pricerFor(observe), pricerFor(write))
-		}
+		rates, ok := plan.EstimatorRatesAt(pricerFor(observe), pricerFor(write), rate)
 		if !ok {
 			continue
 		}
 		var clipRates *plan.ClipRates
 		if observe.VideoInput && observe.StructuredOutput && write.StructuredOutput {
-			var quoted plan.ClipRates
-			if rate != nil {
-				quoted, ok = plan.ClipEstimatorRatesAt(pricerFor(observe), pricerFor(write), *rate)
-			} else {
-				quoted, ok = plan.ClipEstimatorRates(pricerFor(observe), pricerFor(write))
-			}
-			if ok {
+			if quoted, ok := plan.ClipEstimatorRatesAt(pricerFor(observe), pricerFor(write), rate); ok {
 				clipRates = &quoted
 			}
 		}

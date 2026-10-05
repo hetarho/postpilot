@@ -19,8 +19,11 @@ import (
 )
 
 // pricedModels gives one ref a real price, so a hold has something to compute. The rates
-// make the hold's assumed shape cost exactly one credit before the multiplier.
+// make the hold's assumed shape cost exactly 10 000 micro-USD.
 type pricedModels struct{}
+
+// testRates converts at 500 KRW per USD, so the hold's assumed shape is exactly 5 credits.
+var testRates = usage.NewFixedRateSelector(5_000_000)
 
 var pricedRef = llm.ModelRef{ProviderID: "openrouter", ModelID: "priced"}
 
@@ -33,7 +36,7 @@ func (pricedModels) Lookup(ref llm.ModelRef) (llm.ModelInfo, bool) {
 
 const maxCompletion = 10_000
 
-// oneCallHold is what one priced call holds: the per-request base plus three credits.
+// oneCallHold is what one priced call holds at testRates.
 const oneCallHold = 5
 
 type fixedAnchors struct{ anchor time.Time }
@@ -78,7 +81,7 @@ func newServiceWithDB(t *testing.T) (*usage.Service, *db.DB) {
 	for _, id := range []string{"alice", "bob"} {
 		insertLot(t, handle, "legacy-monthly-"+id, id, "monthly", 50, &expires, time.Now().UTC())
 	}
-	svc := usage.NewService(usagestore.New(handle.Writer, handle.Reader), pricedModels{}, maxCompletion, fixedAnchors{anchor: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)}, clip.JobKindGenerate, clip.JobKindRevise)
+	svc := usage.NewService(usagestore.New(handle.Writer, handle.Reader), pricedModels{}, maxCompletion, fixedAnchors{anchor: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)}, testRates, clip.JobKindGenerate, clip.JobKindRevise)
 	return svc, handle
 }
 
@@ -249,9 +252,9 @@ func TestSettleRefundsAgainstTheRecordedLedger(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// 3 000 in at $0.1/M plus 1 000 out at $0.7/M is 1 000 micro-USD: under one credit, so
-	// the base plus one.
-	if want := before.Credits - 3; after.Credits != want {
+	// 3 000 in at $0.1/M plus 1 000 out at $0.7/M is 1 000 micro-USD: half a credit at 500 KRW
+	// per USD, rounded up once to one.
+	if want := before.Credits - 1; after.Credits != want {
 		t.Fatalf("balance = %d, want %d", after.Credits, want)
 	}
 
@@ -564,7 +567,7 @@ func TestUntouchedLotsAnswersManyLotsOffTheReadPool(t *testing.T) {
 
 	// A store with NO writer proves which pool the query used: reaching for the writer here
 	// would panic on the nil pool rather than answer.
-	readOnly := usage.NewService(usagestore.New(nil, handle.Reader), pricedModels{}, maxCompletion, fixedAnchors{anchor: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)}, clip.JobKindGenerate, clip.JobKindRevise)
+	readOnly := usage.NewService(usagestore.New(nil, handle.Reader), pricedModels{}, maxCompletion, fixedAnchors{anchor: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)}, testRates, clip.JobKindGenerate, clip.JobKindRevise)
 	answer, err := readOnly.UntouchedLots(ctx, []string{"purchased:whole", "purchased:spent"})
 	if err != nil || !answer["purchased:whole"] || answer["purchased:spent"] {
 		t.Fatalf("read-pool answer = %+v, %v", answer, err)

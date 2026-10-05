@@ -75,7 +75,7 @@ func newClipGeneration(ctx context.Context, cfg *config.Config, store *clipstore
 	service := clipapp.NewGenerationService(store, projects, sources, bucket, media, planner, renderer, clipapp.NewJobs(queue, guard), clip.DefaultGenerationConfig(clipEnvironment(cfg)), clipapp.GenerationDeps{
 		RemoteMedia: remote,
 		Finisher:    finisher,
-		Pricing: clipapp.NewPricingWithRate(models.Registry, clipBudgets(aiConfig), models.ledger).WithQuoteAccess(
+		Pricing: clipapp.NewPricing(models.Registry, clipBudgets(aiConfig), models.ledger).WithQuoteAccess(
 			func(ctx context.Context, user string, calls []usage.PlannedCall) error {
 				tier, err := plans.PlanOf(ctx, user)
 				if err != nil {

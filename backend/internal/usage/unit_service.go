@@ -105,7 +105,7 @@ func plannedUnits(start Start) ([]UnitBudget, error) {
 	}
 	calls := make([]UnitBudget, 0, len(start.Calls))
 	for _, c := range start.Calls {
-		if c.Units == nil || c.Ref != c.Units.Ref || c.Stage != c.Units.Operation || c.Count != c.Units.Count || c.CompletionTokens != 0 {
+		if c.Units == nil || c.Ref != c.Units.Ref || c.Stage != c.Units.Operation || c.Count != c.Units.Count || c.CompletionTokens != 0 || c.PromptTokens != 0 {
 			return nil, ErrUnitApproval
 		}
 		calls = append(calls, *c.Units)

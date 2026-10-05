@@ -298,11 +298,8 @@ export const errors = {
   CHANGE_UNSUPPORTED: 'Change the plan and billing term one at a time.',
   PAYMENT_METHOD_REQUIRED: 'Register a payment method first.',
   CHARGE_FAILED: 'The charge could not be completed. Check your payment method and try again.',
-  PURCHASE_TOO_SMALL: 'Credit purchases start at $1.',
-  PURCHASE_NOT_FOUND: 'The credit purchase could not be found.',
-  REFUND_WINDOW_CLOSED: 'This purchase is more than seven days old and cannot be refunded.',
-  PURCHASE_SPENT: 'Some of these purchased credits were used, so the purchase cannot be refunded.',
-  REFUND_FAILED: 'The refund could not be completed. Try again shortly.',
+  REFUND_FAILED:
+    'The payment provider refused this refund, so no money was returned. The request closes as failed and the benefits it held are released.',
   INSUFFICIENT_CREDITS:
     'This needs {{required}} credits and you have {{balance}}. Tops up {{renews_at, instant}}.',
   PLAN_REQUIRED: 'Choose a plan.',

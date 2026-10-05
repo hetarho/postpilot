@@ -62,53 +62,26 @@ type StorylineRevisionJob struct {
 // the same frozen material, without the length, the tags, the rules and the voice, which a
 // plan does not use.
 func (s *Service) StartStoryline(ctx context.Context, request StartStorylineRequest) (string, error) {
-	post, err := s.posts.AttachedImages(ctx, request.UserID, request.PostSlug)
+	in, err := s.startPreconditions(ctx, request.UserID, request.PostSlug, startStage{
+		writeModel: request.WriteModel,
+		observe:    observePicked, observeModel: request.ObserveModel, observeFiles: request.ObserveFiles,
+	})
 	if err != nil {
 		return "", err
 	}
-	if post.Published {
-		return "", ErrPostPublished
-	}
-	if !post.TargetLanguage.Valid() {
-		return "", ErrLanguageRequired
-	}
-	request.TargetLanguage = post.TargetLanguage
-	voiceID, err := activeVoice(post)
+	request.TargetLanguage = in.language
+	request.VoiceID = in.voiceID
+	request.WriteNativeEffort = in.write.ReasoningNativeEffort
+	request.ObserveModel = in.observe.model
+	request.ObserveCalls = in.observe.calls
+	material, err := s.freezeStorylineMaterial(ctx, in.post)
 	if err != nil {
 		return "", err
 	}
-	request.VoiceID = voiceID
-	if err := s.refusePendingExperiment(ctx, request.UserID, request.PostSlug); err != nil {
-		return "", err
-	}
-	writeInfo, err := s.requireWriteModel(request.WriteModel)
-	if err != nil {
-		return "", err
-	}
-	request.WriteNativeEffort = writeInfo.ReasoningNativeEffort
-	if len(post.Images) == 0 {
-		request.ObserveModel = ""
-	} else {
-		observe, valid := parseModelRef(request.ObserveModel)
-		if !valid || !modelEnabled(s.models, observe, llm.StageNameObserve) {
-			return "", ErrObserveModelRequired
-		}
-		if err := s.refuseVideoBlindObserveModel(post.Images, observe); err != nil {
-			return "", err
-		}
-	}
-	material, err := s.freezeStorylineMaterial(ctx, post)
-	if err != nil {
-		return "", err
-	}
-	options := storylineOptions{TargetLanguage: post.TargetLanguage, storylineMaterial: material, WriteNativeEffort: request.WriteNativeEffort}
-	if len(post.Images) > 0 {
-		files, carried := freezeObserveSelection(post.Images, post.Observations, request.ObserveFiles)
-		options.ObserveFiles = &files
-		options.Observations = carried
-	}
-	request.ObserveCalls = s.observeCalls(observeTargets(post.Images, options.ObserveFiles))
-	payload, err := encodeStorylinePayload(options)
+	payload, err := encodeStorylinePayload(storylineOptions{
+		TargetLanguage: in.language, storylineMaterial: material, WriteNativeEffort: request.WriteNativeEffort,
+		ObserveFiles: in.observe.files, Observations: in.observe.observations,
+	})
 	if err != nil {
 		return "", fmt.Errorf("encode storyline payload: %w", err)
 	}
@@ -130,41 +103,23 @@ func (s *Service) StartStorylineRevision(ctx context.Context, request StartStory
 	if utf8.RuneCountInString(request.Request) > RevisionInstructionMaxChars {
 		return "", ErrRevisionInstructionTooLong
 	}
-	post, err := s.posts.AttachedImages(ctx, request.UserID, request.PostSlug)
+	in, err := s.startPreconditions(ctx, request.UserID, request.PostSlug, startStage{
+		storyline: true, writeModel: request.WriteModel, observe: observeReused,
+	})
 	if err != nil {
 		return "", err
 	}
-	if post.Published {
-		return "", ErrPostPublished
-	}
-	if post.Storyline == nil || len(post.Storyline.Paragraphs) == 0 {
-		return "", ErrStorylineMissing
-	}
-	if !post.TargetLanguage.Valid() {
-		return "", ErrLanguageRequired
-	}
-	request.TargetLanguage = post.TargetLanguage
-	voiceID, err := activeVoice(post)
-	if err != nil {
-		return "", err
-	}
-	request.VoiceID = voiceID
-	if err := s.refusePendingExperiment(ctx, request.UserID, request.PostSlug); err != nil {
-		return "", err
-	}
-	writeInfo, err := s.requireWriteModel(request.WriteModel)
-	if err != nil {
-		return "", err
-	}
-	request.WriteNativeEffort = writeInfo.ReasoningNativeEffort
-	material, err := s.freezeStorylineMaterial(ctx, post)
+	request.TargetLanguage = in.language
+	request.VoiceID = in.voiceID
+	request.WriteNativeEffort = in.write.ReasoningNativeEffort
+	material, err := s.freezeStorylineMaterial(ctx, in.post)
 	if err != nil {
 		return "", err
 	}
 	payload, err := encodeStorylineRevisionPayload(storylineRevisionOptions{
-		TargetLanguage: post.TargetLanguage, Request: request.Request,
-		Storyline: cloneParagraphs(post.Storyline.Paragraphs), storylineMaterial: material,
-		Observations: cloneObservations(post.Observations), WriteNativeEffort: request.WriteNativeEffort,
+		TargetLanguage: in.language, Request: request.Request,
+		Storyline: in.storyline, storylineMaterial: material,
+		Observations: in.observe.observations, WriteNativeEffort: request.WriteNativeEffort,
 	})
 	if err != nil {
 		return "", fmt.Errorf("encode storyline revision payload: %w", err)
@@ -174,18 +129,6 @@ func (s *Service) StartStorylineRevision(ctx context.Context, request StartStory
 		return "", fmt.Errorf("enqueue storyline revision: %w", err)
 	}
 	return id, nil
-}
-
-// requireWriteModel is Start's write-model precondition: an enabled model that serves the write
-// stage, which is the stage a storyline call runs on. It answers the model's catalog entry, whose
-// native-effort flag the start freezes.
-func (s *Service) requireWriteModel(value string) (llm.ModelInfo, error) {
-	write, ok := parseModelRef(value)
-	info, found := s.models.Resolve(write)
-	if !ok || !found || info.Disabled || !info.ServesStage(llm.StageNameWrite) {
-		return llm.ModelInfo{}, ErrWriteModelRequired
-	}
-	return info, nil
 }
 
 // WriteStoryline handles one storyline job (GEN-68): the observe step a generation runs, then

@@ -45,7 +45,7 @@ func TestEveryCaptionIsDrawnByItsOwnStyleAtEveryPace(t *testing.T) {
 				}
 				var drawn, own string
 				if err := a.WithWorkspace(t.Context(), "caption-drawing", func(ws clip.MediaWorkspace) error {
-					layer, err := r.declaredLayer(t.Context(), ws, canvas, &visual, clip.MediaSource{}, 0)
+					layer, err := r.declaredLayer(t.Context(), ws, canvas, &visual, 0)
 					if err != nil {
 						return err
 					}

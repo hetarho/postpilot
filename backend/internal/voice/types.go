@@ -217,16 +217,24 @@ type Analysis struct {
 	CreatedAt    time.Time
 }
 
+// AnalysisJob is one queued analysis. MaterialIDs is the snapshot frozen at its start
+// (VOICE-22): the run reads those 학습 글 that still exist and nothing added since.
 type AnalysisJob struct {
-	UserID     string
-	VoiceID    string
-	WriteModel string
+	UserID      string
+	VoiceID     string
+	WriteModel  string
+	MaterialIDs []string
 }
 
+// AnalysisJobRequest starts one analysis over the snapshot its start read. PromptTokens is the
+// size of the prompt the run will send over that snapshot, at one token per Unicode character,
+// which the hold prices (QUOTA-14).
 type AnalysisJobRequest struct {
-	UserID     string
-	VoiceID    string
-	WriteModel string
+	UserID       string
+	VoiceID      string
+	WriteModel   string
+	MaterialIDs  []string
+	PromptTokens int
 }
 
 type ActiveJob struct{ ID string }

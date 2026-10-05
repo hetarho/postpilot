@@ -12,9 +12,15 @@ import (
 
 	"github.com/postpilot/backend/internal/llm"
 	"github.com/postpilot/backend/internal/modelcatalog"
+	"github.com/postpilot/backend/internal/plan"
 )
 
 var testNow = time.Date(2026, 9, 3, 9, 0, 0, 0, time.UTC)
+
+// estimatorRate is a fixed KRW 1,360 per USD snapshot, the rate plan_test pins its estimator
+// figures at.
+var estimatorRate = plan.RateSnapshot{Source: "korea-eximbank", PublicationDate: "2026-09-29",
+	ReferenceE4: 13_600_000, AppliedE4: 13_600_000}
 
 // fakeStore is an in-memory catalog_models + catalog_model_purposes. It records refreshes
 // so a test can prove that a failed fetch wrote nothing.
@@ -1142,7 +1148,7 @@ func TestAssignCombo_RequiresBothModelsAtTheComboLevel(t *testing.T) {
 	if all[0].ObserveModelID != "" || all[0].WriteModelID != "" {
 		t.Fatalf("relevelled assignment = %+v, want empty", all[0])
 	}
-	if rates, err := svc.ComboRates(ctx); err != nil || len(rates) != 0 {
+	if rates, err := svc.ComboRatesAt(ctx, estimatorRate); err != nil || len(rates) != 0 {
 		t.Fatalf("rates after relevel = %+v err=%v, want none", rates, err)
 	}
 }
@@ -1174,7 +1180,7 @@ func TestComboRates_OmitsWhatCannotBeQuoted(t *testing.T) {
 		}
 	}
 
-	priced, err := svc.ComboRates(ctx)
+	priced, err := svc.ComboRatesAt(ctx, estimatorRate)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1183,7 +1189,7 @@ func TestComboRates_OmitsWhatCannotBeQuoted(t *testing.T) {
 	}
 	// The same figures plan_test pins, arriving through a real assignment.
 	rates := priced[0].Rates
-	if rates.PerPhoto != 835 || rates.PerVideo != 1399 || rates.Per1000Chars != 5400 || rates.PerPostBase != 4700 {
+	if rates.PerPhoto != 1521 || rates.PerVideo != 4080 || rates.Per1000Chars != 24480 || rates.PerPostBase != 12240 {
 		t.Errorf("rates = %+v", rates)
 	}
 	if priced[0].ObserveLabel != "vendor/eyes" || priced[0].WriteLabel != "vendor/pen" {
@@ -1192,6 +1198,10 @@ func TestComboRates_OmitsWhatCannotBeQuoted(t *testing.T) {
 	// The pair's ids let the composition root price one post on it from recent usage (QUOTA-64).
 	if priced[0].ObserveModelID != "vendor/eyes" || priced[0].WriteModelID != "vendor/pen" {
 		t.Errorf("model ids = %q / %q", priced[0].ObserveModelID, priced[0].WriteModelID)
+	}
+	// Without a rate a job could freeze, nothing is priced in any other terms.
+	if unrated, err := svc.ComboRatesAt(ctx, plan.RateSnapshot{}); err != nil || len(unrated) != 0 {
+		t.Errorf("combos without a rate = %+v err=%v, want none", unrated, err)
 	}
 }
 
@@ -1334,7 +1344,7 @@ func TestComboClipRatesRequireVideoAndStructuredModels(t *testing.T) {
 			if err := svc.AssignCombo(ctx, modelcatalog.ComboValue, eyes.ModelID, pen.ModelID); err != nil {
 				t.Fatal(err)
 			}
-			rates, err := svc.ComboRates(ctx)
+			rates, err := svc.ComboRatesAt(ctx, estimatorRate)
 			if err != nil || len(rates) != 1 {
 				t.Fatalf("blog estimate lost: %+v %v", rates, err)
 			}
@@ -1342,7 +1352,7 @@ func TestComboClipRatesRequireVideoAndStructuredModels(t *testing.T) {
 			if (clip != nil) != tc.wantClip {
 				t.Fatalf("clip rates = %+v, want present=%v", clip, tc.wantClip)
 			}
-			if clip != nil && (clip.PerSource != 8750 || clip.PerOutputSecond != 360 || clip.PerClipBase != 11200) {
+			if clip != nil && (clip.PerSource != 22440 || clip.PerOutputSecond != 1632 || clip.PerClipBase != 40800) {
 				t.Fatalf("wrong assigned-model prices: %+v", clip)
 			}
 		})

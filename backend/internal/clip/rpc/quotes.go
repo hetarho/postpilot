@@ -78,14 +78,14 @@ func (h *Handler) QuoteClipRevision(ctx context.Context, req *connect.Request[v1
 	}), nil
 }
 
+// cancellationPolicyProto states the one cancellation policy: no fee on the unused
+// reservation, and half the confirmed charge back as compensation for a service fault
+// (QUOTA-49, QUOTA-60).
 func cancellationPolicyProto(pricing clip.GenerationPricing) *v1.ClipCancellationPolicy {
-	if pricing.FXPolicy {
-		return &v1.ClipCancellationPolicy{Version: int32(pricing.CancellationPolicyVersion),
-			UnusedReservationDenominator: 1, Rounding: "none",
-			ServiceFaultCompensationNumerator: 1, ServiceFaultCompensationDenominator: 2,
-			ServiceFaultCompensationValidDays: 7}
-	}
-	return &v1.ClipCancellationPolicy{Version: int32(pricing.CancellationPolicyVersion), UnusedReservationNumerator: 1, UnusedReservationDenominator: 2, Rounding: "ceil"}
+	return &v1.ClipCancellationPolicy{Version: int32(pricing.CancellationPolicyVersion),
+		UnusedReservationDenominator: 1, Rounding: "none",
+		ServiceFaultCompensationNumerator: 1, ServiceFaultCompensationDenominator: 2,
+		ServiceFaultCompensationValidDays: 7}
 }
 
 // sequenceCostProto states what the sequence-rendered captions add to the render

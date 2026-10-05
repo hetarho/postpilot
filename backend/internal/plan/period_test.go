@@ -61,12 +61,35 @@ func TestAnchoredPeriodsPreserveTimeAndOriginalDay(t *testing.T) {
 		if !start.Equal(feb) || !end.Equal(march) {
 			t.Errorf("at boundary = [%s,%s)", start, end)
 		}
-		if got := plan.CoverageEnd(anchor, true); !got.Equal(time.Date(year+1, 1, 31, 11, 12, 13, 987654321, kst)) {
+		if got := plan.CoverageEnd(anchor, anchor, true); !got.Equal(time.Date(year+1, 1, 31, 11, 12, 13, 987654321, kst)) {
 			t.Errorf("annual end = %s", got)
 		}
 		dailyStart, dailyEnd := plan.DailyWindow(anchor, anchor.Add(24*time.Hour-time.Nanosecond))
 		if !dailyStart.Equal(anchor) || !dailyEnd.Equal(anchor.Add(24*time.Hour)) {
 			t.Errorf("daily window = [%s,%s)", dailyStart, dailyEnd)
+		}
+	}
+}
+
+// BILL-4, QUOTA-37: a term ends one or twelve anchored months after the month it starts in,
+// counted from the anchor, so a renewal from a clamped month returns to the original day.
+func TestCoverageEndCountsFromTheMonthTheTermStarts(t *testing.T) {
+	kst := time.FixedZone("Asia/Seoul", 9*3600)
+	anchor := time.Date(2027, 1, 31, 10, 0, 0, 0, kst)
+	feb := time.Date(2027, 2, 28, 10, 0, 0, 0, kst)
+	for _, tc := range []struct {
+		start  time.Time
+		annual bool
+		want   time.Time
+	}{
+		{anchor, false, feb},
+		{anchor, true, time.Date(2028, 1, 31, 10, 0, 0, 0, kst)},
+		{feb, false, time.Date(2027, 3, 31, 10, 0, 0, 0, kst)},
+		{time.Date(2027, 3, 31, 10, 0, 0, 0, kst), false, time.Date(2027, 4, 30, 10, 0, 0, 0, kst)},
+		{feb, true, time.Date(2028, 2, 29, 10, 0, 0, 0, kst)},
+	} {
+		if got := plan.CoverageEnd(anchor, tc.start, tc.annual); !got.Equal(tc.want) {
+			t.Errorf("CoverageEnd(%s, annual=%v) = %s, want %s", tc.start, tc.annual, got, tc.want)
 		}
 	}
 }
@@ -101,7 +124,7 @@ func TestProrationBoundariesAndRepeatedUpgrades(t *testing.T) {
 
 	kst := time.FixedZone("Asia/Seoul", 9*3600)
 	anchor := time.Date(2028, 1, 31, 12, 0, 0, 0, kst)
-	paidEnd := plan.CoverageEnd(anchor, true)
+	paidEnd := plan.CoverageEnd(anchor, anchor, true)
 	benefitEnd := plan.MonthBoundary(anchor, 1)
 	first, err := plan.QuoteUpgrade(plan.Light, plan.Basic, true, anchor, paidEnd, anchor, benefitEnd, anchor)
 	if err != nil || first.ChargeKRW != 30000 || first.BonusCredits != 220 || first.ServerExports != 4 {

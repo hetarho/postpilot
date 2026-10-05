@@ -85,7 +85,7 @@ type remoteRender struct {
 
 func remoteRenderSetup(t *testing.T, legacy bool) *remoteRender {
 	t.Helper()
-	h, p, _ := completedClip(t)
+	h, p, _ := completedNativeClip(t)
 	b := rerenderBatch(t, h, true)
 	// Current reselection preserves canonical IDs. Exercise the older queued
 	// shape too: a fresh lease whose ID differs from the retained plan identity.
@@ -98,7 +98,7 @@ func remoteRenderSetup(t *testing.T, legacy bool) *remoteRender {
 		t.Fatal(err)
 	}
 	g := &remoteRender{h: h, before: p, batch: b, objects: renderObjects{&remoteObjects{processingObjects: h.objects, data: map[string][]byte{}, reads: map[string]int{}}}}
-	// Existing version-1 jobs must remain executable after the API upgrade.
+	// A version-1 job, queued before remote media, froze no execution task.
 	if legacy {
 		id, err := h.service.StartRender(t.Context(), "alice", p.ID, b.ID, p.EditPlanRevision, clip.RenderServer)
 		if err != nil {
@@ -224,99 +224,107 @@ func (g *remoteRender) preserved(t *testing.T) {
 		t.Fatal("previous clip replaced", p, err)
 	}
 }
-func TestRemoteRenderDurablePublicationAndLegacyPayload(t *testing.T) {
-	for _, legacy := range []bool{false, true} {
-		t.Run(map[bool]string{false: "frozen-v2", true: "queued-v1"}[legacy], func(t *testing.T) {
-			g := remoteRenderSetup(t, legacy)
-			if err := g.run(t, g.pick(t)); err != job.ErrYield {
-				t.Fatal(err)
-			}
-			// A resume uses the already validated execution snapshot, including
-			// version-1 jobs resolved at their first dispatch.
-			g.h.renderer.captionErr = errPreparationCrash
-			wait, err := g.h.jobs.Continuation(t.Context(), g.jobID)
-			if err != nil || wait.Policy != job.ReplaySafe {
-				t.Fatal(wait, err)
-			}
-			c, w := g.claim(t)
-			task, err := mediacodec.DecodeTask(w.Payload)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if task.Sources[0].ID == g.batch.Sources[0].ID {
-				t.Fatal("fixture did not replace source lease identity")
-			}
-			plan, err := clip.DecodeEditPlan(task.Plan)
-			if err != nil || !plan.RetainsOriginalAudio(plan.Cuts[0]) {
-				t.Fatal("source rebind lost the owner's audio setting", err)
-			}
-			access, err := c.Read(t.Context(), w.Credentials, "source/"+task.Sources[0].ID)
-			if err != nil || !strings.HasSuffix(access.URL, g.batch.Sources[0].Key) {
-				t.Fatal("retained identity did not resolve to current original", err)
-			}
-			_, raw := g.upload(t, c, w)
-			if n, err := g.h.queue.SweepRunning(t.Context()); err != nil || n != 0 {
-				t.Fatal("restart lost live uploaded attempt", n, err)
-			}
-			if err = c.Complete(t.Context(), w.Credentials, raw); err != nil {
-				t.Fatal(err)
-			}
-			if n, err := g.h.queue.SweepRunning(t.Context()); err != nil || n != 0 {
-				t.Fatal("restart lost accepted result", n, err)
-			}
-			// A crash after each publication write must roll back the whole outcome.
-			for _, point := range []string{"consume", "apply", "terminal"} {
-				g.fault = point
-				if err = g.run(t, g.pick(t)); !errors.Is(err, errPreparationCrash) {
-					t.Fatal(point, err)
-				}
-				g.preserved(t)
-				var canonical int
-				if err = g.h.db.Reader.QueryRow(`SELECT canonical FROM clip_media_artifacts WHERE attempt_id=?`, w.Credentials.AttemptID).Scan(&canonical); err != nil || canonical != 0 {
-					t.Fatal("partial publication", canonical, err)
-				}
-				if n, err := g.h.queue.SweepRunning(t.Context()); err != nil || n != 0 {
-					t.Fatal("safe continuation not recovered", n, err)
-				}
-			}
-			g.fault = ""
-			if err = g.run(t, g.pick(t)); err != nil {
-				t.Fatal(err)
-			}
-			if err = c.Complete(t.Context(), w.Credentials, raw); err != nil {
-				t.Fatal("lost reply receipt replay", err)
-			}
-			j, err := g.h.jobs.GetByID(t.Context(), g.jobID)
-			if err != nil || j.Status != job.StatusDone {
-				t.Fatal(j, err)
-			}
-			rows, err := g.h.store.MediaArtifacts(t.Context(), w.Credentials.AttemptID)
-			if err != nil {
-				t.Fatal(err)
-			}
-			p, err := g.h.store.GetProject(t.Context(), "alice", g.before.ID)
-			if err != nil || p.Result.Key != rows[0].ObjectKey || p.Result.Kind != clip.RenderServer || p.EditPlan != g.before.EditPlan {
-				t.Fatal(p, err)
-			}
-			candidate := clip.AttemptResult{JobID: g.jobID, UserID: "alice", ProjectID: p.ID, ExpectedRevision: p.EditPlanRevision, Result: *p.Result}
-			if err = g.finisher.Complete(t.Context(), candidate); err != nil {
-				t.Fatal("canonical response loss", err)
-			}
-			if g.h.media.probes != 0 || g.h.renderer.calls != 0 || g.h.planner.observe != 0 || g.h.planner.plans != 0 || len(g.h.admitter.calls) != 0 {
-				t.Fatal("API performed media or paid work")
-			}
-			for _, client := range g.clients {
-				profile := mediaProfile()
-				profile.Operation = clip.MediaRender
-				if next, err := client.Claim(t.Context(), profile); err != nil || next != nil {
-					t.Fatal("accepted render dispatched again", err)
-				}
-			}
-			var n int
-			if err = g.h.db.Reader.QueryRow(`SELECT COUNT(*) FROM clip_media_artifacts WHERE canonical=1`).Scan(&n); err != nil || n != 1 {
-				t.Fatal("canonical count", n, err)
-			}
-		})
+func TestRemoteRenderDurablePublication(t *testing.T) {
+	g := remoteRenderSetup(t, false)
+	if err := g.run(t, g.pick(t)); err != job.ErrYield {
+		t.Fatal(err)
+	}
+	// A resume uses the already validated execution snapshot.
+	g.h.renderer.captionErr = errPreparationCrash
+	wait, err := g.h.jobs.Continuation(t.Context(), g.jobID)
+	if err != nil || wait.Policy != job.ReplaySafe {
+		t.Fatal(wait, err)
+	}
+	c, w := g.claim(t)
+	task, err := mediacodec.DecodeTask(w.Payload)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if task.Sources[0].ID == g.batch.Sources[0].ID {
+		t.Fatal("fixture did not replace source lease identity")
+	}
+	plan, err := clip.DecodeEditPlan(task.Plan)
+	if err != nil || !plan.RetainsOriginalAudio(plan.Cuts[0]) {
+		t.Fatal("source rebind lost the owner's audio setting", err)
+	}
+	access, err := c.Read(t.Context(), w.Credentials, "source/"+task.Sources[0].ID)
+	if err != nil || !strings.HasSuffix(access.URL, g.batch.Sources[0].Key) {
+		t.Fatal("retained identity did not resolve to current original", err)
+	}
+	_, raw := g.upload(t, c, w)
+	if n, err := g.h.queue.SweepRunning(t.Context()); err != nil || n != 0 {
+		t.Fatal("restart lost live uploaded attempt", n, err)
+	}
+	if err = c.Complete(t.Context(), w.Credentials, raw); err != nil {
+		t.Fatal(err)
+	}
+	if n, err := g.h.queue.SweepRunning(t.Context()); err != nil || n != 0 {
+		t.Fatal("restart lost accepted result", n, err)
+	}
+	// A crash after each publication write must roll back the whole outcome.
+	for _, point := range []string{"consume", "apply", "terminal"} {
+		g.fault = point
+		if err = g.run(t, g.pick(t)); !errors.Is(err, errPreparationCrash) {
+			t.Fatal(point, err)
+		}
+		g.preserved(t)
+		var canonical int
+		if err = g.h.db.Reader.QueryRow(`SELECT canonical FROM clip_media_artifacts WHERE attempt_id=?`, w.Credentials.AttemptID).Scan(&canonical); err != nil || canonical != 0 {
+			t.Fatal("partial publication", canonical, err)
+		}
+		if n, err := g.h.queue.SweepRunning(t.Context()); err != nil || n != 0 {
+			t.Fatal("safe continuation not recovered", n, err)
+		}
+	}
+	g.fault = ""
+	if err = g.run(t, g.pick(t)); err != nil {
+		t.Fatal(err)
+	}
+	if err = c.Complete(t.Context(), w.Credentials, raw); err != nil {
+		t.Fatal("lost reply receipt replay", err)
+	}
+	j, err := g.h.jobs.GetByID(t.Context(), g.jobID)
+	if err != nil || j.Status != job.StatusDone {
+		t.Fatal(j, err)
+	}
+	rows, err := g.h.store.MediaArtifacts(t.Context(), w.Credentials.AttemptID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	p, err := g.h.store.GetProject(t.Context(), "alice", g.before.ID)
+	if err != nil || p.Result.Key != rows[0].ObjectKey || p.Result.Kind != clip.RenderServer || p.EditPlan != g.before.EditPlan {
+		t.Fatal(p, err)
+	}
+	candidate := clip.AttemptResult{JobID: g.jobID, UserID: "alice", ProjectID: p.ID, ExpectedRevision: p.EditPlanRevision, Result: *p.Result}
+	if err = g.finisher.Complete(t.Context(), candidate); err != nil {
+		t.Fatal("canonical response loss", err)
+	}
+	if g.h.media.probes != 0 || g.h.renderer.calls != 0 || g.h.planner.observe != 0 || g.h.planner.plans != 0 || len(g.h.admitter.calls) != 0 {
+		t.Fatal("API performed media or paid work")
+	}
+	for _, client := range g.clients {
+		profile := mediaProfile()
+		profile.Operation = clip.MediaRender
+		if next, err := client.Claim(t.Context(), profile); err != nil || next != nil {
+			t.Fatal("accepted render dispatched again", err)
+		}
+	}
+	var n int
+	if err = g.h.db.Reader.QueryRow(`SELECT COUNT(*) FROM clip_media_artifacts WHERE canonical=1`).Scan(&n); err != nil || n != 1 {
+		t.Fatal("canonical count", n, err)
+	}
+}
+
+// A version-1 payload froze no execution task, and the renderer that resolved
+// one at its first dispatch is gone: the job is refused before any media stage
+// exists rather than rendered another way.
+func TestRemoteRenderRefusesAQueuedPayloadWithoutItsTask(t *testing.T) {
+	g := remoteRenderSetup(t, true)
+	if err := g.run(t, g.pick(t)); !errors.Is(err, clip.ErrCompositionUnavailable) {
+		t.Fatal(err)
+	}
+	if _, err := g.h.store.MediaStageForJob(t.Context(), g.jobID, clip.MediaRender); !errors.Is(err, clip.ErrNotFound) {
+		t.Fatal("a media stage was dispatched", err)
 	}
 }
 

@@ -25,7 +25,7 @@
 |---|---|---|---|---|
 | ARCH | 15 | 9 | ARCH-52+ ARCH-53+ ARCH-56+ ARCH-57+ ARCH-34✎ | 0 |
 | AUTH | 11 | 11 | - | 0 |
-| QUOTA | 33 | 33 | - | 0 |
+| QUOTA | 34 | 34 | - | 0 |
 | POST | 32 | 31 | POST-108+ | 0 |
 | VOICE | 8 | 7 | VOICE-32✎ | 0 |
 | GEN | 23 | 23 | - | 0 |
@@ -39,11 +39,11 @@
 | VIDEO | 6 | 6 | - | 0 |
 | CLIP | 55 | 55 | - | 2 |
 | CDS | 32 | 32 | - | 1 |
-| BILL | 8 | 8 | - | 0 |
+| BILL | 9 | 9 | - | 0 |
 | MEM | 5 | 5 | - | 2 |
 | QUAL | 7 | 7 | - | 0 |
 | GIFT | 3 | 3 | - | 0 |
-| DUB | 2 | 2 | - | 0 |
+| DUB | 3 | 2 | DUB-27✎ | 0 |
 
 ## review
 | id | st |
@@ -57,7 +57,7 @@
 | published-quality-260924 | converted@260925 |
 | clip-narrate-failure-260926 | converted@260926 |
 | conformance-all-260927 | converted@260927 |
-| perf-cost-261004 | converted@261004 |
+| perf-cost-261004 | converted@261005 |
 
 ## tasks
 | id | title | ssot | dep | st |
@@ -76,13 +76,13 @@
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | todo |
 
 ## next
-- update-ssot VOICE/QUOTA for perf-cost F10 (analysis corpus vs the 30 000-token hold) and BILL for an exit from a `review` order (review perf-cost-261004 notes); the held maintainability findings F22 F24–F28 F36 F37 wait for a later review-code.
-- release smoke: 9/28 modes fail at HEAD with `the delivered caption was retimed 2500 6000`, identically on 228a4015 (seen in T558) — investigate; rebuild the dev media image for T559's `select` filter before rendering locally.
-- resume implement-task T539 after the supplier environment, account tariff/capacity evidence and approved whole-session USD ceiling are supplied; complete real Korean listening/continuity qualification before T540–T550. Procedure: docs/qa/spoken-voice-v1.md.
+- update-ssot DUB and create-task DUB: defer live qualification, preserve launch gates, implement remaining tasks sequentially, integrate and push main.
 - create-task ARCH (ARCH-52+ ARCH-53+ ARCH-56+ ARCH-57+ ARCH-34✎); create-task POST r32 (POST-108+ implemented by 12d2f428; verification-only); create-task VOICE r8 (VOICE-32✎ implemented by 68ae9a79; verification-only); update-ssot VOICE-31 remains open.
 - ops: lower TEMPLATE_PHOTO_ROW_MAX / VITE_TEMPLATE_PHOTO_ROW_MAX to 3 wherever production sets them explicitly (VPS .env, Cloudflare build vars).
 
 ## log
+- 261005 update-ssot DUB start: defer live supplier qualification until complete implementation; keep production readiness evidence mandatory
+- 261005 dubbing integration start: preserve completed T533–T538, defer live qualification per owner, reconcile main FX/refund work and unused speech migration numbers
 - 261005 T539 blocked: production-job harness, atomic session ceilings and private evidence audit delivered; full BE CI, qualification race and 61 deploy tests passed; live key/account tariffs/approval/listening prerequisites absent, no supplier call or readiness promotion
 - 261005 T539 start: bounded production-port qualification harness and private evidence audit; live prerequisites absent locally, no supplier call or readiness promotion
 - 261005 T538 done: explicit model/quote/listen/select/confirm UI, private reuse and same-request recovery; 3148 FE tests, full local CI and 30 responsive/theme browser views passed
@@ -92,14 +92,12 @@
 - 261004 T535 done: exact-input bounded speech quotes, durable call claims and typed decimal usage; ceiling/unknown/failure/cancellation/refund/master SQLite and race checks plus full local CI passed
 - 261004 T534 done: immutable speech-profile revisions, separate admin tab, price-free owner choices and owner-scoped provisional qualification; full local CI passed
 - 261004 T533 done: typed speech ports, optional ElevenLabs connection, bounded MP3/timing validation and decimal reported billing evidence; full local CI gates passed
-- 261005 T568 done: a fixed-KRW cancel compares the row it read, so it succeeds after time has passed and still refuses a row changed in between; BE suite green
-- 261005 create-task T568 (owner: fix at once): fixed-KRW CancelSubscription compares a read UpdatedAt it already overwrote; T568 start
-- 261005 T566 done: lazily routed pages leave the entry chunk (sideEffects + build-only route-schema plugin, accepted by the owner); first visit 1.90 MB → 1.46 MB; checked in Playwright
-- 261005 T560 done: a browser export lays out once per render revision and batches resvg per role, GetClipProject decodes analysis once, ListClipProjects reads a summary projection; smokes green
-- 261005 T559 done: server render reads ground frames from its own lossless bare cut, browser sampling selects before scaling in one output; select joins the ffmpeg allowlist; render_footage 15.1–16.1 s → 8.9–10.0 s on the identity fixture; smokes and identity digest unchanged
-- 261005 T558 done: sampling jobs fetch only the originals their reads need with no full decode, a server render downloads and verifies each original once, cuts visited grouped by source; production smokes and identity digest unchanged; release smoke 9/28 red identically at base
-- 261004 T567 done: photo turns patch the cache on every call, the fingerprint reads once per autosave pause, one abortable delay frees its listeners; FE suite green
-- 261004 T565 done: clip settings and region queues send per project, the clip storyline saves through its own keyed queue flushed before builds and requests and keeps text on failure; FE suite green
-- 261004 T564 done: clip detail waits for settlement only on generate_clip/revise_clip, a settings save keeps the cached plan unless its revision moved and refreshes only list and templates; FE suite green
-- 261004 out of scope, found while implementing T562: bug: fixed-KRW CancelSubscription (billing/change.go:190) sets UpdatedAt=now before comparing it with the stored row, so a customer cancel always fails ErrStaleQuote in production (BILL-7, since T479) — needs its own task
-- 261004 T556 done: voice directory and profile read samples once, the check list skips projections, an unchanged answer is left alone; BE suite green
+- 261005 post-deploy media verify of 426e1331 failed TestClipWriterInputRelease: since T572 the release harness prices through FX, so its 5000-credit lot no longer covered a 6595 hold and failed attempts now earn QUOTA-60 compensation; the harness lot and balance checks follow FX; production smokes and release smoke 28/28 pass locally
+- 261005 deploy of d645c1ca failed at the media-tools build: code.videolan.org served GitHub runners a challenge page for the x264 archive (T559 changed media-tools.sh, so the cache missed); media-tools.sh now falls back to the GitHub mirror of the same revision under its own checksum
+- 261005 perf-cost wave complete: T551–T584 done (review perf-cost-261004 fully converted, QUOTA r34, BILL r9, release smoke 28/28); pushing main
+- 261005 T584 done: refund store and provider behaviour are required billing ports (no type assertions); a provider-failed reviewed refund answers REFUND_FAILED with operator copy; BE and FE suites green
+- 261005 create-task T584 (left open by T583: optional refund ports, untyped failed refund) and start
+- 261005 T583 done: retired purchase-refund reasons reserved in proto, RefundPurchase and its ports deleted, billing USD columns dropped (0132), IntentStore folded into Store; BE and FE suites green
+- 261005 create-task T583 (left open by T582: PURCHASE_TOO_SMALL, RefundPurchase, USD columns, IntentStore) and start
+- 261005 T582 done: billing has one regime (fixed KRW): the flag, non-fixed branches, USD rates port and legacy monthly-lot credit methods are deleted; seed opens benefits like production; BE suite green
+- 261005 T581 done: model-combo and clip estimates price through the FX snapshot alone; no rate means no figure; USD helpers deleted; BE suite green

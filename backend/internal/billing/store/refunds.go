@@ -80,20 +80,18 @@ func (s *Store) RefundPayment(ctx context.Context, userID, orderID string) (bill
 			}
 		}
 		if fundingEnd.Valid {
-			payment.FundingEnd, err = parseTime(fundingEnd.String)
+			payment.FundedTermEnd, err = parseTime(fundingEnd.String)
 			if err != nil {
 				return billing.RefundPayment{}, false, err
 			}
-		} else {
-			payment.FundingEnd = billing.TermEnd(payment.EffectiveAt, payment.EffectiveAt, payment.Term)
 		}
 		var next string
 		err = s.db.QueryRowContext(ctx, `SELECT effective_at FROM billing_intents
 			WHERE user_id=? AND kind IN ('renew','subscribe') AND status='applied'
-			AND effective_at>? AND effective_at<? ORDER BY effective_at LIMIT 1`,
-			userID, formatTime(payment.EffectiveAt), formatTime(payment.FundingEnd)).Scan(&next)
+			AND effective_at>? ORDER BY effective_at LIMIT 1`,
+			userID, formatTime(payment.EffectiveAt)).Scan(&next)
 		if err == nil {
-			payment.FundingEnd, err = parseTime(next)
+			payment.NextBaseStart, err = parseTime(next)
 		}
 		if err != nil && !errors.Is(err, sql.ErrNoRows) {
 			return billing.RefundPayment{}, false, err
@@ -266,12 +264,6 @@ func (s *Store) RecordRefundOutcome(ctx context.Context, request billing.RefundR
 	return err
 }
 
-func (s *Store) RejectRefund(ctx context.Context, requestID string, at time.Time) error {
-	_, err := s.db.ExecContext(ctx, `UPDATE billing_refund_requests SET status='rejected',reviewed_at=?
-		WHERE id=? AND status='requested'`, formatTime(at), requestID)
-	return err
-}
-
 func (s *Store) FailRefund(ctx context.Context, requestID, providerStatus string, at time.Time) error {
 	result, err := s.db.ExecContext(ctx, `UPDATE billing_refund_requests SET status='failed',provider_status=?
 		WHERE id=? AND status='processing'`, providerStatus, requestID)
@@ -298,13 +290,14 @@ func (s *Store) HasUnresolvedDependentUpgrade(ctx context.Context, payment billi
 	if payment.Kind == "pack" || payment.Kind == "upgrade" {
 		return false, nil
 	}
+	funding := payment.Funding()
 	var unresolved int
 	err := s.db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM billing_intents u
 		WHERE u.user_id=? AND u.kind='upgrade' AND u.status='applied'
 		AND u.coverage_id=? AND u.effective_at>=? AND u.effective_at<?
 		AND NOT EXISTS(SELECT 1 FROM billing_refund_requests r
 			WHERE r.order_id=u.order_id AND r.status='completed'))`,
-		payment.UserID, payment.CoverageID, formatTime(payment.EffectiveAt), formatTime(payment.FundingEnd)).Scan(&unresolved)
+		payment.UserID, funding.CoverageID, formatTime(funding.Start), formatTime(funding.End)).Scan(&unresolved)
 	return unresolved != 0, err
 }
 
@@ -354,5 +347,3 @@ func mapRefundRequest(request *billing.RefundRequest, requestedAt string,
 	}
 	return nil
 }
-
-var _ billing.RefundStore = (*Store)(nil)

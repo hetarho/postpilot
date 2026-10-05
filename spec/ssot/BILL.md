@@ -1,5 +1,5 @@
 # BILL subscriptions, charges, credit purchase
-> r8 | Fixed KRW monthly/annual subscriptions, prorated tier upgrades, paid-subscriber credit packs and operator-reviewed refund requests, with payment history on one billing screen.
+> r9 | Fixed KRW monthly/annual subscriptions, prorated tier upgrades, paid-subscriber credit packs and operator-reviewed refund requests, with payment history on one billing screen.
 
 ## decisions
 - BILL-1 [o] a subscription belongs to the account that pays for it: a signed-in non-master account registers its own payment method, picks its own tier and term, and cancels on its own; `free` needs no payment method; a master account buys nothing (→BILL-20); the operator path (`api setplan`) survives for support and never touches a payment method (→QUOTA-3)
@@ -33,6 +33,7 @@
   - a subscription the account still holds from before promotion ends at its paid term end without a renewal charge, as a cancellation does (→BILL-7), and the tier stays master
   - refund requests for its past payments remain available (→BILL-11); a confirmed refund voids the refunded entitlements, never the master tier
 - BILL-21 [o] `/plans`' selected billing term accompanies a new paid-tier subscription entry into checkout; checkout keeps the tier and term selected, then shows the server-confirmed amount and requires the owner's final payment action (→BILL-2 →BILL-16). For an active subscription, a tier upgrade keeps the current term and its applicable prorated quote; a term change follows BILL-19's scheduled timing. A period preview never silently changes an existing subscription.
+- BILL-22 [o] a payment the provider captured that the product cannot apply — its order went stale or its pack or price no longer matches — is refunded in full by the next billing pass without operator review: the order fails, the refund is recorded once in history (→BILL-15) and mailed (→BILL-12), and the account's billing actions unlock ← money is never kept without the entitlement it paid for, and a captured-but-unapplied order would otherwise lock the account's billing
 
 ## flow
 - subscribe: `/plans` tier/term selection → master(the same controls, disabled) | checkout with selected tier/term → hosted card setup if required → fixed-KRW payment confirmed → paid coverage + QUOTA-42 entitlements
@@ -42,6 +43,7 @@
 - cancel: auto-renew off → keep paid benefits until term end → free; resume before expiry → no regrant
 - buy: active paid subscription → fixed pack → confirmed charge → purchased lot
 - refund: owner request → operator review → provider refund → confirmed history + void the refunded entitlement, without a duplicate refund
+- unappliable capture: captured payment the order can no longer receive → next billing pass → full provider refund → failed order + refund history + mail, billing actions unlocked
 
 ## constraints
 - signup, verified email and operator accounts without email follow AUTH; a payment method requires the account's verified email
@@ -52,4 +54,4 @@
 - placement: `backend/internal/billing`, its store/RPC adapters, `proto/postpilot/v1/billing.proto`, `frontend/src/entities/subscription` and billing/refund features; the payment adapter stays behind consumer-declared ports
 
 ## chg
-- r8 261001 BILL-20✎ /plans and billing show operator coverage with no action→the customer's screens with those controls disabled, no operator notice
+- r9 261005 BILL-22+ a captured payment the product cannot apply is refunded in full automatically by the next billing pass
