@@ -43,7 +43,7 @@
 | MEM | 5 | 5 | - | 2 |
 | QUAL | 7 | 7 | - | 0 |
 | GIFT | 3 | 3 | - | 0 |
-| DUB | 3 | 2 | DUB-27✎ | 0 |
+| DUB | 3 | 3 | - | 0 |
 
 ## review
 | id | st |
@@ -63,7 +63,7 @@
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
 | T539 | Qualify the complete Korean voice-creation milestone | ARCH DUB MODEL CDS THEME | T538 | blocked@261005 |
-| T540 | Add independent spoken-script and speech provenance to clip plans | ARCH DUB CLIP | T539 | todo |
+| T540 | Add independent spoken-script and speech provenance to clip plans | ARCH DUB CLIP | T538 | todo |
 | T541 | Make preview and contextual editing the clip workspace entry | ARCH CLIP THEME | T540 | todo |
 | T542 | Implement direct trim, reorder, seek and playhead split | ARCH CLIP CDS THEME | T541 | todo |
 | T543 | Edit captions directly and refresh script-derived wording safely | ARCH DUB CLIP CDS THEME | T541 | todo |
@@ -76,11 +76,12 @@
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | todo |
 
 ## next
-- update-ssot DUB and create-task DUB: defer live qualification, preserve launch gates, implement remaining tasks sequentially, integrate and push main.
+- implement-task T540–T550 sequentially with automated checks and task commits, then merge/push main; T539 real supplier evidence is deferred and ordinary production readiness stays closed.
 - create-task ARCH (ARCH-52+ ARCH-53+ ARCH-56+ ARCH-57+ ARCH-34✎); create-task POST r32 (POST-108+ implemented by 12d2f428; verification-only); create-task VOICE r8 (VOICE-32✎ implemented by 68ae9a79; verification-only); update-ssot VOICE-31 remains open.
 - ops: lower TEMPLATE_PHOTO_ROW_MAX / VITE_TEMPLATE_PHOTO_ROW_MAX to 3 wherever production sets them explicitly (VPS .env, Cloudflare build vars).
 
 ## log
+- 261005 create-task DUB start: move real qualification after implementation, retain unfulfilled live evidence tasks and normal automated gates
 - 261005 update-ssot DUB start: defer live supplier qualification until complete implementation; keep production readiness evidence mandatory
 - 261005 dubbing integration start: preserve completed T533–T538, defer live qualification per owner, reconcile main FX/refund work and unused speech migration numbers
 - 261005 T539 blocked: production-job harness, atomic session ceilings and private evidence audit delivered; full BE CI, qualification race and 61 deploy tests passed; live key/account tariffs/approval/listening prerequisites absent, no supplier call or readiness promotion
@@ -100,4 +101,3 @@
 - 261005 T583 done: retired purchase-refund reasons reserved in proto, RefundPurchase and its ports deleted, billing USD columns dropped (0132), IntentStore folded into Store; BE and FE suites green
 - 261005 create-task T583 (left open by T582: PURCHASE_TOO_SMALL, RefundPurchase, USD columns, IntentStore) and start
 - 261005 T582 done: billing has one regime (fixed KRW): the flag, non-fixed branches, USD rates port and legacy monthly-lot credit methods are deleted; seed opens benefits like production; BE suite green
-- 261005 T581 done: model-combo and clip estimates price through the FX snapshot alone; no rate means no figure; USD helpers deleted; BE suite green
