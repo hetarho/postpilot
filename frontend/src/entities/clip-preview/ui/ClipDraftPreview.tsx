@@ -31,6 +31,14 @@ import {
   type PreviewSourceAccess,
 } from '../model/draft-preview'
 import { ClipFlowFrame } from './ClipFlowFrame'
+import { browserAudioPlan, previewSourceEnvelope } from '../model/browser-audio-plan'
+import {
+  SpeechDecodeCache,
+  SpeechPlaybackError,
+  SpeechPreviewTransport,
+  type SpeechAudioLoader,
+  type ScheduledSpeech,
+} from '../model/speech-playback'
 
 export interface ClipDisplayedFrame {
   cutId: string
@@ -50,6 +58,7 @@ function PreviewVideo({
   opacity,
   audioGain,
   master,
+  clockFollower = false,
   canvas,
   onFrame,
   onDisplayedFrame,
@@ -66,6 +75,7 @@ function PreviewVideo({
   opacity: number
   audioGain: number
   master: boolean
+  clockFollower?: boolean
   canvas: { width: number; height: number }
   onFrame: (ms: number) => void
   onDisplayedFrame?: (frame: ClipDisplayedFrame) => void
@@ -174,7 +184,7 @@ function PreviewVideo({
       }
       if (!playing) {
         if (requested.current?.url !== url || requested.current.sourceMs !== sourceMs) seek()
-      } else if (!master) {
+      } else if (!master || clockFollower) {
         if (!el.seeking && drift > CLIP_DRAFT_PREVIEW.frameToleranceMs * 4) seek()
       } else if (started && drift > CLIP_DRAFT_PREVIEW.frameToleranceMs) seek()
     }
@@ -183,7 +193,7 @@ function PreviewVideo({
     return () => {
       el.removeEventListener('loadedmetadata', sync)
     }
-  }, [url, sourceMs, playing, master, item.cut.volumePermille, audioGain, rate])
+  }, [url, sourceMs, playing, master, clockFollower, item.cut.volumePermille, audioGain, rate])
 
   useEffect(() => {
     const el = video.current
@@ -259,7 +269,7 @@ function PreviewVideo({
         outputMs: sourceToOutputMs(item, mediaMs),
         precise,
       })
-      if (!playing) return
+      if (!playing || clockFollower) return
       // Past the cut's end the frame belongs to the NEXT cut, whatever this source still holds.
       onFrame(
         mediaMs >= item.cut.endMs
@@ -287,7 +297,7 @@ function PreviewVideo({
     // the element stops at EOF with the clock a frame short, and nothing hands over to the next
     // cut. The end of the footage IS the end of the cut.
     const ended = () => {
-      if (active && playing) onFrame(itemRef.current.endMs)
+      if (active && playing && !clockFollower) onFrame(itemRef.current.endMs)
     }
     el.addEventListener('seeked', seeked)
     el.addEventListener('ended', ended)
@@ -299,7 +309,7 @@ function PreviewVideo({
       el.removeEventListener('seeked', seeked)
       el.removeEventListener('ended', ended)
     }
-  }, [url, master, playing, onFrame, onDisplayedFrame])
+  }, [url, master, playing, clockFollower, onFrame, onDisplayedFrame])
 
   const failed = async () => {
     const epoch = playbackEpoch.current
@@ -396,6 +406,7 @@ export function ClipDraftPreview({
   corner,
   editingOverlay,
   captionPosition,
+  loadSpeech,
 }: {
   /** The prepared caption/graphic overlay for this plan, fetched by
    *  `features/preview-clip-draft` — this component renders it and owns no transport. */
@@ -418,10 +429,12 @@ export function ClipDraftPreview({
   corner?: ReactNode
   editingOverlay?: ReactNode
   captionPosition?: { instanceId: string; x: number; y: number }
+  loadSpeech?: SpeechAudioLoader
 }) {
   const { t } = useTranslation('clips')
   const [localTime, setLocalTime] = useState(0)
   const [playing, setPlaying] = useState(false)
+  const [seekVersion, setSeekVersion] = useState(0)
   const [lastSuspended, setLastSuspended] = useState(suspended)
   if (lastSuspended !== suspended) {
     setLastSuspended(suspended)
@@ -432,8 +445,12 @@ export function ClipDraftPreview({
   if (controlledTime !== undefined && !Object.is(controlledTime, localTime)) {
     setLocalTime(controlledTime)
     setPlaying(false)
+    setSeekVersion((version) => version + 1)
   }
-  const [muted, setMuted] = useState(true)
+  const [muted, setMuted] = useState(!plan.narration?.enabled)
+  const [preparingSpeech, setPreparingSpeech] = useState(false)
+  const [speechFailure, setSpeechFailure] = useState<{ reason: string; segmentId: string }>()
+  const [speechCache] = useState(() => new SpeechDecodeCache())
   const [reload, setReload] = useState(0)
   // The flow simulation takes the video's place on the same frame and the same playhead, so a
   // switch keeps the output second (CLIP-174).
@@ -442,6 +459,43 @@ export function ClipDraftPreview({
   const stopPlayback = useCallback(() => setPlaying(false), [])
   const timeline = useMemo(() => previewTimeline(plan), [plan])
   const duration = Math.max(0, timeline.at(-1)?.endMs ?? 0)
+  const audioSchedule = browserAudioPlan(plan)
+  const narrated = !!plan.narration?.enabled
+  const speechKey = JSON.stringify([
+    audioSchedule.speech,
+    audioSchedule.narrationVolume,
+    duration,
+    narrated,
+  ])
+  const speechTransport = useRef<SpeechPreviewTransport | undefined>(undefined)
+  useLayoutEffect(() => {
+    const [segments, volume, durationMs, enabled] = JSON.parse(speechKey) as [
+      ScheduledSpeech[],
+      number,
+      number,
+      boolean,
+    ]
+    const transport = enabled
+      ? new SpeechPreviewTransport(
+          segments,
+          durationMs / 1000,
+          volume,
+          loadSpeech ??
+            (async () => {
+              throw new SpeechPlaybackError('unavailable')
+            }),
+          speechCache,
+        )
+      : undefined
+    speechTransport.current = transport
+    return () => {
+      transport?.dispose()
+      speechTransport.current = undefined
+    }
+  }, [speechKey, loadSpeech, speechCache])
+  useEffect(() => () => speechCache.clear(), [speechCache])
+  useEffect(() => speechTransport.current?.setMuted(muted), [muted, speechKey])
+  useEffect(() => speechTransport.current?.pause(), [seekVersion, speechKey])
   const requestedTime = controlledTime ?? localTime
   const timeMs = Number.isFinite(requestedTime) ? Math.min(duration, Math.max(0, requestedTime)) : 0
   const changeTime = useCallback(
@@ -454,6 +508,43 @@ export function ClipDraftPreview({
     [duration, onTimeChange],
   )
 
+  useEffect(() => {
+    const transport = speechTransport.current
+    if (!playing) {
+      transport?.pause()
+      return
+    }
+    if (!transport) return
+    let frame = 0
+    const tick = () => {
+      if (!transport.running) {
+        setPlaying(false)
+        return
+      }
+      changeTime(transport.timeMs)
+      frame = requestAnimationFrame(tick)
+    }
+    frame = requestAnimationFrame(tick)
+    const visibility = () => {
+      if (document.hidden) {
+        changeTime(transport.timeMs)
+        transport.pause()
+        setPlaying(false)
+      }
+    }
+    document.addEventListener('visibilitychange', visibility)
+    return () => {
+      cancelAnimationFrame(frame)
+      document.removeEventListener('visibilitychange', visibility)
+      transport.pause()
+    }
+  }, [playing, speechKey, loadSpeech, changeTime])
+  useEffect(() => {
+    // A seek or explicitly opened detail also cancels asynchronous decode/start work.
+    if (suspended || flow || (controlledTime !== undefined && controlledTime !== localTime))
+      speechTransport.current?.pause()
+  }, [suspended, flow, controlledTime, localTime, speechKey, seekVersion])
+
   const canvas =
     CLIP_DESIGN.ratios[ratio as ClipRatioId]?.canvas ?? CLIP_DESIGN.ratios.vertical.canvas
   const frames = previewFrame(timeline, timeMs)
@@ -464,19 +555,43 @@ export function ClipDraftPreview({
   const atEnd = timeMs >= duration - CLIP_DRAFT_PREVIEW.frameToleranceMs
   // The frame is the player's own control, as a video player's is: one press plays, one pauses,
   // and at the end one press starts over.
-  const toggle = () => {
+  const toggle = async () => {
+    const transport = speechTransport.current
     if (!timeline.length) return
     if (playing) {
+      if (transport) changeTime(transport.timeMs)
+      transport?.pause()
       setPlaying(false)
       return
     }
     if (atEnd) changeTime(0)
-    setPlaying(true)
+    if (transport) {
+      if (!audioSchedule.speech.length) {
+        setSpeechFailure({
+          reason: 'pending',
+          segmentId: audioSchedule.speechIssues[0]?.segmentId ?? '',
+        })
+        return
+      }
+      setPreparingSpeech(true)
+      setSpeechFailure(undefined)
+      transport.setMuted(muted)
+      try {
+        if (await transport.play(atEnd ? 0 : timeMs)) setPlaying(true)
+      } catch (error) {
+        setSpeechFailure(
+          error instanceof SpeechPlaybackError ? error : { reason: 'unavailable', segmentId: '' },
+        )
+      } finally {
+        setPreparingSpeech(false)
+      }
+    } else setPlaying(true)
   }
   // Fetch the footage and the caption glyphs again, keeping the position: the way out of a
   // player that stopped answering, without leaving the step.
   const refresh = () => {
     setPlaying(false)
+    speechTransport.current?.pause()
     preview.onRetry()
     setReload((value) => value + 1)
   }
@@ -526,8 +641,9 @@ export function ClipDraftPreview({
                   playing={playing && timeMs >= slot.startMs && timeMs < slot.endMs}
                   muted={muted || !sourceAudioEnabled(plan, slot.cut)}
                   opacity={slot.opacity}
-                  audioGain={slot.audioGain}
+                  audioGain={previewSourceEnvelope(audioSchedule, slot.cut.id, timeMs / 1000)}
                   master={slot.master}
+                  clockFollower={narrated}
                   canvas={canvas}
                   onFrame={changeTime}
                   onDisplayedFrame={onDisplayedFrame}
@@ -564,8 +680,10 @@ export function ClipDraftPreview({
                 aria-label={t(
                   playing ? 'preview.pause' : atEnd ? 'preview.replay' : 'preview.play',
                 )}
-                disabled={!timeline.length}
-                onClick={toggle}
+                disabled={!timeline.length || preparingSpeech}
+                onClick={() => {
+                  void toggle()
+                }}
                 className="absolute inset-0 z-20 flex items-center justify-center"
               >
                 {!playing && timeline.length > 0 && (
@@ -637,6 +755,32 @@ export function ClipDraftPreview({
       {!timeline.length && (
         <Typography variant="body" role="status" className="text-content-secondary">
           {t('preview.invalidTimeline')}
+        </Typography>
+      )}
+      {audioSchedule.speechIssues.map((issue) => (
+        <Typography key={issue.segmentId} variant="meta" role="status">
+          {t(
+            `preview.speech${issue.state === 'stale' ? 'Stale' : issue.state === 'conflict' ? 'Conflict' : 'Missing'}`,
+            { segment: plan.narration!.segments.findIndex((s) => s.id === issue.segmentId) + 1 },
+          )}
+          {issue.previous && ` ${t('preview.previousSpeech')}`}
+        </Typography>
+      ))}
+      {preparingSpeech && (
+        <Typography variant="meta" role="status">
+          {t('preview.speechLoading')}
+        </Typography>
+      )}
+      {speechFailure && (
+        <Typography variant="meta" role="alert">
+          {t(
+            `preview.speechError${speechFailure.reason === 'memory' ? 'Memory' : speechFailure.reason === 'decode' ? 'Decode' : speechFailure.reason === 'gesture' ? 'Gesture' : speechFailure.reason === 'pending' ? 'Pending' : 'Unavailable'}`,
+            {
+              segment:
+                (plan.narration?.segments.findIndex((s) => s.id === speechFailure.segmentId) ??
+                  -1) + 1 || 1,
+            },
+          )}
         </Typography>
       )}
       <Typography

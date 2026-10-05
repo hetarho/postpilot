@@ -10,3 +10,5 @@ export {
 } from '../model/edit-plan'
 export type { ClipEditPlan, ClipTimelineCut, RetainedClipSource } from '../model/edit-plan'
 export { clipSourceSound, textInterval } from '../model/timeline'
+export { speechDurationMs, spokenState } from '../model/spoken'
+export type { ClipSpeechRef } from '../model/spoken'

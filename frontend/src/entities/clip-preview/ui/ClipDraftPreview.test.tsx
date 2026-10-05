@@ -176,7 +176,7 @@ it.each([500, 750, 1000, 1250, 1500, 2000])(
     expect(sound).toHaveAttribute('aria-pressed', 'true')
     expect(off.muted).toBe(true)
     expect(on.muted).toBe(false)
-    expect(off.volume).toBe(1)
+    expect(off.volume).toBe(0) // disabled retention contributes no source sound
     expect(on.volume).toBe(0) // preloaded neighbour has no transition gain yet
     expect(enabled.sourceAudio[0].retainOriginalAudio).toBe(false)
   },
@@ -216,8 +216,8 @@ it('corrects transition-player drift on the transformed clock and reports invers
   }
   expect(left.currentTime).toBe(11.95)
   expect(right.currentTime).toBe(3.2)
-  expect(left.volume).toBe(0.5)
-  expect(right.volume).toBe(0.25)
+  expect(left.volume).toBeCloseTo(0.5)
+  expect(right.volume).toBeCloseTo(0.25)
   act(() => frames.get(right)!(0, { mediaTime: 3.2 } as VideoFrameCallbackMetadata))
   expect(onDisplayedFrame).toHaveBeenCalledWith({
     cutId: 'b',

@@ -4,6 +4,7 @@ export type { ClipPreviewRequest } from './api/preview'
 export { useClipBrowserRenderCapability } from './api/useClipBrowserRenderCapability'
 export { createClipVideoWorker } from './lib/create-video-worker'
 export { browserAudioPlan } from './model/browser-audio-plan'
+export type { SpeechAudioLoader } from './model/speech-playback'
 export { clipBrowserEncoderConfig, clipRenderNeedsAudio } from './model/browser-render-capability'
 export type { ClipBrowserRenderCapability } from './model/browser-render-capability'
 export type {

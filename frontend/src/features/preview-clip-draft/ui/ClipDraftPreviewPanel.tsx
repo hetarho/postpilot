@@ -1,6 +1,8 @@
 import { useCallback, useState, type ComponentProps } from 'react'
 import { ClipDraftPreview } from '@/entities/clip-preview'
 import type { ClipEditPlan } from '@/entities/clip-plan'
+import { useClipSpeechCalls } from '@/entities/clip-plan'
+import type { ClipSpeechRef } from '@/entities/clip-plan'
 import { useClipDraftPreview } from '../model/useClipDraftPreview'
 
 type PreviewProps = Omit<ComponentProps<typeof ClipDraftPreview>, 'preview' | 'plan' | 'timeMs'>
@@ -22,6 +24,11 @@ export function ClipDraftPreviewPanel({
   onTimeChange?: (ms: number) => void
 }) {
   const [localTime, setLocalTime] = useState(0)
+  const speech = useClipSpeechCalls()
+  const loadSpeech = useCallback(
+    (asset: ClipSpeechRef, signal: AbortSignal) => speech.load(projectId, asset, signal),
+    [speech, projectId],
+  )
   const timeMs = controlledTime ?? localTime
   const preview = useClipDraftPreview({ projectId, revision, plan, timeMs })
   // The player uses this callback to register its frame clock. Keep its identity through
@@ -38,6 +45,7 @@ export function ClipDraftPreviewPanel({
       {...rest}
       plan={plan}
       preview={preview}
+      loadSpeech={loadSpeech}
       timeMs={timeMs}
       onTimeChange={changeTime}
     />

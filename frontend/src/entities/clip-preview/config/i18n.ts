@@ -5,6 +5,18 @@ export const i18n = {
   namespace: 'clips',
   ko: {
     preview: {
+      speechMissing: '더빙 {{segment}}: 음성이 아직 없어요.',
+      speechStale: '더빙 {{segment}}: 바뀐 대본이나 목소리의 음성이 필요해요.',
+      speechConflict: '더빙 {{segment}}: 음성을 자르지 않고 들으려면 시간 배치를 수정해 주세요.',
+      previousSpeech: '이전 음성은 더빙 항목에서 따로 들을 수 있어요.',
+      speechLoading: '더빙 소리를 준비하고 있어요.',
+      speechErrorMemory: '더빙 재생에 필요한 메모리가 부족해요.',
+      speechErrorDecode: '더빙 {{segment}}을 이 브라우저에서 해독하지 못했어요.',
+      speechErrorGesture: '재생 버튼을 다시 눌러 더빙 소리를 시작해 주세요.',
+      speechErrorPending: '현재 더빙 음성을 먼저 준비해 주세요.',
+      speechErrorUnavailable:
+        '더빙 {{segment}}의 음성을 불러오지 못했어요. 새로고침 후 다시 재생해 주세요.',
+
       aboutLabel: '이 미리보기에 대해',
       invalidTimeline: '재생 가능한 컷 구간을 입력해 주세요. 글과 시간은 계속 수정할 수 있어요.',
       title: '편집 중인 영상',
@@ -37,6 +49,17 @@ export const i18n = {
   },
   en: {
     preview: {
+      speechMissing: 'Speech {{segment}}: audio has not been generated.',
+      speechStale: 'Speech {{segment}} needs audio for the changed script or voice.',
+      speechConflict: 'Speech {{segment}} needs timing correction to play without truncation.',
+      previousSpeech: 'Previous audio is available separately in the speech item.',
+      speechLoading: 'Preparing narration audio.',
+      speechErrorMemory: 'Not enough memory to play the narration.',
+      speechErrorDecode: 'This browser could not decode speech {{segment}}.',
+      speechErrorGesture: 'Press play again to start narration audio.',
+      speechErrorPending: 'Prepare current narration audio first.',
+      speechErrorUnavailable: 'Could not load speech {{segment}}. Refresh and try playback again.',
+
       aboutLabel: 'About this preview',
       invalidTimeline:
         'Enter valid cut ranges to preview footage. Text and timing remain editable.',

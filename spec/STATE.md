@@ -63,17 +63,18 @@
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
 | T539 | Qualify the complete Korean voice-creation milestone | ARCH DUB MODEL CDS THEME | T538 | blocked@261005 |
-| T547 | Play synchronized narration in the editable draft preview | ARCH DUB CLIP CDS | T546 | todo |
 | T548 | Mix immutable narration into server MP4 exports | ARCH DUB CLIP CDS | T547 | todo |
 | T549 | Mix the same narration into browser MP4 exports | ARCH DUB CLIP CDS | T548 | todo |
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | todo |
 
 ## next
-- implement-task T547–T550 sequentially with automated checks and task commits, then merge/push main; T539 real supplier evidence is deferred and ordinary production readiness stays closed.
+- implement-task T548–T550 sequentially with automated checks and task commits, then merge/push main; T539 real supplier evidence is deferred and ordinary production readiness stays closed.
 - create-task ARCH (ARCH-52+ ARCH-53+ ARCH-56+ ARCH-57+ ARCH-34✎); create-task POST r32 (POST-108+ implemented by 12d2f428; verification-only); create-task VOICE r8 (VOICE-32✎ implemented by 68ae9a79; verification-only); update-ssot VOICE-31 remains open.
 - ops: lower TEMPLATE_PHOTO_ROW_MAX / VITE_TEMPLATE_PHOTO_ROW_MAX to 3 wherever production sets them explicitly (VPS .env, Cloudflare build vars).
 
 ## log
+- 261005 T547 done: bounded private narration preview, monotonic clock, seek/reuse/cleanup and independent gain; full local CI and eight browser fixture reviews passed
+- 261005 T547 start: bounded private PCM and one monotonic output clock for narrated draft playback
 - 261005 T546 done: explicit confirmed-voice/script editing, selective approval, protected retiming, recovery and private playback; full local CI and four browser reviews passed
 - 261005 T546 start: confirmed voice selection, explicit script/speech editing and reviewed natural-speed retiming
 - 261005 T545 done: bounded measured narrated generation, one mixed approval and retained partial speech; 3249 FE tests and full local CI passed
@@ -92,5 +93,3 @@
 - 261005 update-ssot DUB start: defer live supplier qualification until complete implementation; keep production readiness evidence mandatory
 - 261005 dubbing integration start: preserve completed T533–T538, defer live qualification per owner, reconcile main FX/refund work and unused speech migration numbers
 - 261005 T539 blocked: production-job harness, atomic session ceilings and private evidence audit delivered; full BE CI, qualification race and 61 deploy tests passed; live key/account tariffs/approval/listening prerequisites absent, no supplier call or readiness promotion
-- 261005 T539 start: bounded production-port qualification harness and private evidence audit; live prerequisites absent locally, no supplier call or readiness promotion
-- 261005 T538 done: explicit model/quote/listen/select/confirm UI, private reuse and same-request recovery; 3148 FE tests, full local CI and 30 responsive/theme browser views passed

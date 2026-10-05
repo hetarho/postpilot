@@ -5,6 +5,7 @@ import { ClipSpeechService } from '@/shared/api'
 import { API_URL } from '@/shared/config'
 import { narrationFromProto, narrationToProto } from './spoken'
 import type { ClipNarration } from '../model/spoken'
+import type { ClipSpeechRef } from '../model/spoken'
 export interface ClipSpeechQuote {
   id: string
   maximumCredits: number
@@ -17,7 +18,7 @@ export function useClipSpeechCalls() {
   const transport = useTransport()
   return useMemo(() => {
     const client = createClient(ClipSpeechService, transport)
-    return {
+    const calls = {
       async recovery(projectId: string) {
         const r = await client.getClipSpokenDraft({ projectId })
         return { digest: r.digest, narration: narrationFromProto(r.narration) }
@@ -66,6 +67,50 @@ export function useClipSpeechCalls() {
           bytes: Number(a.bytes),
           expiresAt: a.expiresAt,
         }
+      },
+    }
+    return {
+      ...calls,
+      async load(projectId: string, speech: ClipSpeechRef, signal: AbortSignal) {
+        const access = await calls.access(projectId, speech.assetId, signal)
+        if (access.audioHash !== speech.audioHash) throw new Error('Speech provenance changed')
+        let response = await fetch(access.url, {
+          credentials: 'include',
+          cache: 'no-store',
+          signal,
+        })
+        // A ticket may expire during tab suspension. Retry authorization once, never synthesis.
+        if (response.status === 404) {
+          const fresh = await calls.access(projectId, speech.assetId, signal)
+          if (fresh.audioHash !== speech.audioHash || fresh.bytes !== access.bytes)
+            throw new Error('Speech provenance changed')
+          response = await fetch(fresh.url, { credentials: 'include', cache: 'no-store', signal })
+        }
+        if (!response.ok || !response.headers.get('content-type')?.startsWith('audio/mpeg'))
+          throw new Error('Speech unavailable')
+        const reader = response.body?.getReader()
+        if (!reader) throw new Error('Speech unavailable')
+        const bytes = new Uint8Array(access.bytes)
+        let offset = 0
+        try {
+          while (true) {
+            signal.throwIfAborted()
+            const chunk = await reader.read()
+            if (chunk.done) break
+            if (offset + chunk.value.length > bytes.length) throw new Error('Invalid speech size')
+            bytes.set(chunk.value, offset)
+            offset += chunk.value.length
+          }
+        } finally {
+          await reader.cancel()
+        }
+        if (offset !== bytes.length) throw new Error('Invalid speech size')
+        const hash = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)), (n) =>
+          n.toString(16).padStart(2, '0'),
+        ).join('')
+        if (hash !== speech.audioHash) throw new Error('Speech provenance changed')
+        signal.throwIfAborted()
+        return bytes.buffer
       },
     }
   }, [transport])

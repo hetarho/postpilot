@@ -55,3 +55,56 @@ it('dips only visible intro text on its declared output interval', () => {
   hook.text = 'visible intro'
   expect(browserAudioPlan(plan).dip).toEqual([{ start: 3, end: 4.5 }])
 })
+
+it('keeps speech on the output clock independently of captions, cut rates and disabled sources', () => {
+  const plan = clipTimelineFixture().plan
+  plan.sourceAudio = plan.cuts.map((cut) => ({
+    sourceId: cut.sourceId,
+    fingerprint: cut.fingerprint,
+    retainOriginalAudio: false,
+  }))
+  plan.sourceVolumePermille = 250
+  plan.narration = {
+    enabled: true,
+    confirmedVoiceId: 'voice',
+    bindingDigest: 'binding',
+    volumePermille: 700,
+    segments: [
+      {
+        id: 'spoken',
+        text: 'independent speech',
+        textRevision: 1,
+        inputHash: 'input',
+        startMs: 9000,
+        endMs: 14000,
+        speech: {
+          assetId: 'asset',
+          voiceId: 'voice',
+          bindingDigest: 'binding',
+          inputHash: 'input',
+          settingsHash: 'settings',
+          audioHash: 'audio',
+          profileId: 'profile',
+          profileRevision: 1,
+          samples: 176400,
+          sampleRate: 44100,
+          channels: 2,
+          timing: [],
+        },
+      },
+    ],
+  }
+  const before = browserAudioPlan(plan)
+  expect(before.cuts).toEqual([])
+  expect(before.speech[0]).toMatchObject({ start: 9, duration: 4 })
+  expect(before.narrationVolume).toBe(0.7)
+  plan.elements![0]!.text = 'changed caption'
+  expect(browserAudioPlan(plan).speech).toEqual(before.speech)
+  plan.narration.segments[0]!.inputHash = 'changed'
+  expect(browserAudioPlan(plan).speech).toEqual([])
+  expect(browserAudioPlan(plan).speechIssues).toEqual([
+    { segmentId: 'spoken', state: 'stale', previous: true },
+  ])
+  plan.narration.enabled = false
+  expect(browserAudioPlan(plan).speechIssues).toEqual([])
+})

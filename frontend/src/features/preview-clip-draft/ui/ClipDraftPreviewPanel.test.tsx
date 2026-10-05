@@ -3,6 +3,8 @@ import { afterEach, expect, it, vi } from 'vitest'
 import type { ClipEditPlan } from '@/entities/clip-plan'
 import { ClipDraftPreviewPanel } from './ClipDraftPreviewPanel'
 
+vi.mock('@/entities/clip-plan', () => ({ useClipSpeechCalls: () => ({ load: vi.fn() }) }))
+
 const received: Array<{ timeMs: number; onTimeChange: (ms: number) => void }> = []
 vi.mock('@/entities/clip-preview', () => ({
   ClipDraftPreview: (props: { timeMs: number; onTimeChange: (ms: number) => void }) => {
