@@ -1,6 +1,7 @@
 import { type ClipEditPlan } from '@/entities/clip-plan'
 import {
   clipRenderNeedsAudio,
+  type SpeechAudioLoader,
   type BrowserVideoTrack,
   type ClipRenderCalls,
 } from '@/entities/clip-preview'
@@ -14,10 +15,12 @@ import { BrowserOriginals } from '../lib/originals'
 import { prepareBrowserRenderAssets, type PreviewRequestCall } from './prepare-assets'
 import { renderBrowserVideo } from './render-video'
 import { renderBrowserAudio, type BrowserAudioTrack } from './render-audio'
+import { browserAudioPreflight } from '../model/audio-preflight'
 import { createBrowserResultStore, storeBrowserResult } from './store-result'
 
 export interface BrowserRenderInput {
   projectId: string
+  loadSpeech?: SpeechAudioLoader
   revision: number
   batchId: string
   plan: ClipEditPlan
@@ -168,7 +171,29 @@ export async function runBrowserRender(
   }
   try {
     signal.throwIfAborted()
+    browserAudioPreflight(input.plan)
     encoded()
+    // Required speech is completely decoded, checked and encoded before video
+    // work, so an unsupported audio path cannot deliver a silent narrated file.
+    const renderAudio = () =>
+      operations.audio(
+        input.plan,
+        input.ratio,
+        originals,
+        controller.signal,
+        (done, total) => {
+          sound = done / total
+          encoded()
+        },
+        input.loadSpeech,
+      )
+    if (input.plan.narration?.enabled) {
+      audio = await renderAudio()
+      if (!audio) throw new Error('CLIP_SPEECH_UNAVAILABLE')
+      sound = 1
+      encoded()
+      controller.signal.throwIfAborted()
+    }
     const admitted = await operations.admit(input)
     id = admitted.renderId
     if (signal.aborted) abort()
@@ -199,18 +224,14 @@ export async function runBrowserRender(
         encoded()
       }, stopSibling),
     )
-    jobs.push(
-      operations
-        .audio(input.plan, input.ratio, originals, controller.signal, (done, total) => {
-          sound = done / total
-          encoded()
-        })
-        .then((track) => {
+    if (!input.plan.narration?.enabled)
+      jobs.push(
+        renderAudio().then((track) => {
           audio = track
           sound = 1
           encoded()
         }, stopSibling),
-    )
+      )
     jobs.push(
       (async () => {
         for await (const value of handle!.progress) {

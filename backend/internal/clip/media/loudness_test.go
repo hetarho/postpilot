@@ -18,11 +18,13 @@ func TestLoudnessDriftCorrectsOnlyAudioFromOriginalPCM(t *testing.T) {
 		readings []string
 		wantRuns int
 		wantErr  bool
+		peakOnly bool
 	}{
-		{"already valid", []string{"-16.02"}, 0, false},
-		{"silent", []string{"-inf"}, 0, false},
-		{"twenty second originals", []string{"-14.97", "-16.01"}, 1, false},
-		{"bounded correction", []string{"-14.9", "-14.9", "-14.9"}, 2, true},
+		{"already valid", []string{"-16.02"}, 0, false, false},
+		{"silent", []string{"-inf"}, 0, false, false},
+		{"twenty second originals", []string{"-14.97", "-16.01"}, 1, false, false},
+		{"bounded correction", []string{"-14.9", "-14.9", "-14.9"}, 2, true, false},
+		{"peak-only AAC overshoot", []string{"-16.0", "-16.4"}, 1, false, true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			measurements, corrections := 0, 0
@@ -30,7 +32,15 @@ func TestLoudnessDriftCorrectsOnlyAudioFromOriginalPCM(t *testing.T) {
 				if c.CaptureStderr {
 					i := tc.readings[min(measurements, len(tc.readings)-1)]
 					measurements++
-					return []byte(strings.Replace(loudnormLog, `"input_i" : "-23.45"`, `"input_i" : "`+i+`"`, 1)), nil
+					log := loudnormLog
+					if tc.peakOnly {
+						peak := "-1.1"
+						if measurements > 1 {
+							peak = "-1.6"
+						}
+						log = strings.Replace(log, `"input_tp" : "-4.12"`, `"input_tp" : "`+peak+`"`, 1)
+					}
+					return []byte(strings.Replace(log, `"input_i" : "-23.45"`, `"input_i" : "`+i+`"`, 1)), nil
 				}
 				corrections++
 				joined := strings.Join(c.Args, " ")

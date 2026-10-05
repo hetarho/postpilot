@@ -5,6 +5,8 @@ import {
   type ClipNotice,
 } from '@/entities/clip-project'
 import { useClipPreviewRequest, useClipRenderCalls } from '@/entities/clip-preview'
+import { useClipSpeechCalls } from '@/entities/clip-plan'
+import { BrowserAudioRenderError } from '../model/audio-preflight'
 import { useGenerationJobCalls } from '@/entities/generation-job'
 import { appFailureFromConnect, type AppFailure } from '@/shared/api'
 import {
@@ -21,7 +23,7 @@ export interface BrowserRenderState {
   progress: BrowserRenderProgress
   failure?: AppFailure
   /** Why the browser kind was refused, beside the reason itself (CLIP-155). */
-  refusal?: 'sampling'
+  refusal?: 'sampling' | 'speech' | 'audio' | 'memory' | 'capability'
   notices?: ClipNotice[]
 }
 type StartInput = Pick<BrowserRenderInput, 'batchId' | 'localSources' | 'resolvePlayback'> & {
@@ -31,6 +33,7 @@ type StartInput = Pick<BrowserRenderInput, 'batchId' | 'localSources' | 'resolve
 export function useBrowserRender(ownerId: string, projectId: string) {
   const calls = useClipProjectCalls()
   const renders = useClipRenderCalls()
+  const speech = useClipSpeechCalls()
   const requestPreview = useClipPreviewRequest()
   const job = useGenerationJobCalls()
   const refresh = useRefreshClipProjects(ownerId)
@@ -69,7 +72,14 @@ export function useBrowserRender(ownerId: string, projectId: string) {
         return
       }
       await runBrowserRender(
-        { ...input, projectId, revision, plan: project.editing.plan, ratio: project.ratio },
+        {
+          ...input,
+          loadSpeech: (ref, signal) => speech.load(projectId, ref, signal),
+          projectId,
+          revision,
+          plan: project.editing.plan,
+          ratio: project.ratio,
+        },
         browserRenderOperations({
           render: renders,
           fetchProject: calls.fetch,
@@ -82,6 +92,12 @@ export function useBrowserRender(ownerId: string, projectId: string) {
       update({ phase: 'done', progress: { stage: 'storing', percent: 100 } })
     } catch (error) {
       if (controller.signal.aborted) update({ phase: 'cancelled' })
+      else if (error instanceof BrowserAudioRenderError)
+        update({
+          phase: 'failed',
+          refusal: error.reason,
+          failure: { reason: 'CLIP_PROCESSING_FAILED', params: {} },
+        })
       else if (error instanceof BrowserRenderSamplingError)
         // The footage this render is drawn over could not be sampled, so the browser kind is
         // refused with the sampling job's own reason and the server render stays the choice.

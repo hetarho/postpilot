@@ -122,7 +122,7 @@ func (r *Rendering) finishLoudness(ctx context.Context, ws clip.MediaWorkspace, 
 		if err != nil {
 			return err
 		}
-		if measured.Silent || math.Abs(measured.I-design.Audio.Loudnorm.I) <= loudnessToleranceLU {
+		if measured.Silent || math.Abs(measured.I-design.Audio.Loudnorm.I) <= loudnessToleranceLU && measured.TP <= design.Audio.Loudnorm.TP {
 			return nil
 		}
 		if attempt == 2 {
@@ -130,7 +130,7 @@ func (r *Rendering) finishLoudness(ctx context.Context, ws clip.MediaWorkspace, 
 		}
 		// Do not raise a measured true peak above the design ceiling. A downward
 		// correction (the 20 s originals regression) always leaves more headroom.
-		gain := min(design.Audio.Loudnorm.I-measured.I, design.Audio.Loudnorm.TP-measured.TP)
+		gain := min(design.Audio.Loudnorm.I-measured.I, design.Audio.Loudnorm.TP-0.05-measured.TP)
 		if math.Abs(gain) < 0.01 {
 			return fmt.Errorf("clip loudness correction has no peak headroom")
 		}

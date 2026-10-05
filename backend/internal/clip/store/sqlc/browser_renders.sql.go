@@ -11,7 +11,7 @@ import (
 )
 
 const beginBrowserRender = `-- name: BeginBrowserRender :exec
-INSERT INTO clip_browser_renders(id,user_id,project_id,plan_revision,ratio,duration_ms,has_audio,created_at) VALUES(?,?,?,?,?,?,?,?)
+INSERT INTO clip_browser_renders(id,user_id,project_id,plan_revision,ratio,duration_ms,has_audio,created_at,speech_json) VALUES(?,?,?,?,?,?,?,?,?)
 `
 
 type BeginBrowserRenderParams struct {
@@ -23,6 +23,7 @@ type BeginBrowserRenderParams struct {
 	DurationMs   int64
 	HasAudio     int64
 	CreatedAt    string
+	SpeechJson   string
 }
 
 func (q *Queries) BeginBrowserRender(ctx context.Context, arg BeginBrowserRenderParams) error {
@@ -35,6 +36,7 @@ func (q *Queries) BeginBrowserRender(ctx context.Context, arg BeginBrowserRender
 		arg.DurationMs,
 		arg.HasAudio,
 		arg.CreatedAt,
+		arg.SpeechJson,
 	)
 	return err
 }
@@ -94,7 +96,7 @@ func (q *Queries) CompleteBrowserRender(ctx context.Context, arg CompleteBrowser
 }
 
 const getBrowserRender = `-- name: GetBrowserRender :one
-SELECT id, user_id, project_id, plan_revision, ratio, duration_ms, has_audio, created_at, verdict_json, reported_at, upload_bytes, stored_at, cancelled_at, sample_job_id, grounds_json, sampled_at FROM clip_browser_renders WHERE id=? AND user_id=?
+SELECT id, user_id, project_id, plan_revision, ratio, duration_ms, has_audio, created_at, verdict_json, reported_at, upload_bytes, stored_at, cancelled_at, sample_job_id, grounds_json, sampled_at, speech_json FROM clip_browser_renders WHERE id=? AND user_id=?
 `
 
 type GetBrowserRenderParams struct {
@@ -122,6 +124,7 @@ func (q *Queries) GetBrowserRender(ctx context.Context, arg GetBrowserRenderPara
 		&i.SampleJobID,
 		&i.GroundsJson,
 		&i.SampledAt,
+		&i.SpeechJson,
 	)
 	return i, err
 }

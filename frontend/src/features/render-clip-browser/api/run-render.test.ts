@@ -53,7 +53,7 @@ function fixture() {
   const controller = new AbortController()
   const progress = vi.fn()
   const run = () => runBrowserRender(input, operations, controller.signal, progress)
-  return { operations, controller, run, project, dispose, cancelVideo, progress }
+  return { input, operations, controller, run, project, dispose, cancelVideo, progress }
 }
 describe('browser run cleanup and cancellation races', () => {
   it('cancels a late admission after navigation, before touching originals or workers', async () => {
@@ -172,4 +172,57 @@ describe('browser run waits on its sampling job', () => {
     expect(f.operations.cancel).toHaveBeenCalledExactlyOnceWith('render')
     expect(f.operations.prepare).not.toHaveBeenCalled()
   })
+})
+
+it('refuses unresolved requested speech before browser admission and video work', async () => {
+  const f = fixture()
+  f.input.plan.narration = {
+    enabled: true,
+    confirmedVoiceId: 'voice',
+    bindingDigest: 'binding',
+    volumePermille: 1000,
+    segments: [],
+  }
+  await expect(f.run()).rejects.toThrow('CLIP_BROWSER_AUDIO_SPEECH')
+  expect(f.operations.admit).not.toHaveBeenCalled()
+  expect(f.operations.video).not.toHaveBeenCalled()
+  expect(f.operations.audio).not.toHaveBeenCalled()
+})
+it('does not start video or store a narrated result when its audio path refuses', async () => {
+  const f = fixture()
+  f.input.plan.narration = {
+    enabled: true,
+    confirmedVoiceId: 'voice',
+    bindingDigest: 'binding',
+    volumePermille: 1000,
+    segments: [
+      {
+        id: 'spoken-1',
+        text: 'sentence',
+        textRevision: 1,
+        inputHash: 'input',
+        startMs: 1000,
+        endMs: 2000,
+        speech: {
+          assetId: 'asset',
+          voiceId: 'voice',
+          bindingDigest: 'binding',
+          inputHash: 'input',
+          settingsHash: 'settings',
+          audioHash: 'audio',
+          profileId: 'profile',
+          profileRevision: 1,
+          samples: 44100,
+          sampleRate: 44100,
+          channels: 2,
+          timing: [],
+        },
+      },
+    ],
+  }
+  vi.mocked(f.operations.audio).mockRejectedValue(new Error('native decoder unsupported'))
+  await expect(f.run()).rejects.toThrow('native decoder unsupported')
+  expect(f.operations.video).not.toHaveBeenCalled()
+  expect(f.operations.store).not.toHaveBeenCalled()
+  expect(f.operations.cancel).not.toHaveBeenCalled()
 })

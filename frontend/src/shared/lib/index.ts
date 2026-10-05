@@ -1,7 +1,7 @@
 export { isInAppPath, SIGNED_IN_HOME } from './redirect'
 export { createAudioProcessor } from './media'
 export { integratedLoudness48k, normalizeLoudness48k, truePeak48k } from './media'
-export { mp4HasAudio } from './media'
+export { mp4HasAudio, mp4AudioDecodedBytes } from './media'
 export type { AudioNormalization, EncodedAudioTrack, PcmChannels } from './media'
 export { applyDocumentMetadata } from './document-metadata'
 export type { DocumentMetadata } from './document-metadata'

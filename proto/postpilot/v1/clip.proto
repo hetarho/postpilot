@@ -534,6 +534,9 @@ message ClipRenderMeasurements {
   int32 audio_rate = 10;
   optional double loudness_lufs = 11;
   bool silent = 12;
+  // Fingerprint of the immutable speech actually decoded and mixed by this producer.
+  string speech_fingerprint = 13;
+  optional double true_peak_dbtp = 14;
 }
 
 message ClipCompositionItem {

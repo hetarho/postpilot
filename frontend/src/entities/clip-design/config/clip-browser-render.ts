@@ -10,6 +10,8 @@ export const CLIP_BROWSER_RENDER = {
   audioSampleRate: 48_000,
   audioChannels: 2,
   audioBitrate: 192_000,
+  audioDecodedBytes: 256 * 1024 * 1024,
+  speechEncodedBytes: 8 * 1024 * 1024,
   audioBatchFrames: 2048,
   encodeQueueFrames: 4,
   keyFrameIntervalFrames: 60,

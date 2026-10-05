@@ -11,7 +11,7 @@ func (s *GenerationService) beginBrowserRender(ctx context.Context, p clip.Proje
 	if !ok {
 		return "", clip.ErrRenderUnavailable
 	}
-	r := clip.BrowserRender{ID: newID(), UserID: p.UserID, ProjectID: p.ID, Revision: p.EditPlanRevision, Ratio: plan.Ratio, DurationMS: plan.DurationMS, CreatedAt: s.now()}
+	r := clip.BrowserRender{Speech: clip.RequestedSpeech(plan), Audio: plan.Narration != nil && plan.Narration.Enabled, ID: newID(), UserID: p.UserID, ProjectID: p.ID, Revision: p.EditPlanRevision, Ratio: plan.Ratio, DurationMS: plan.DurationMS, CreatedAt: s.now()}
 	for _, cut := range plan.Cuts {
 		for _, source := range sources {
 			if source.ID == cut.SourceID && source.Info.HasAudio && plan.RetainsOriginalAudio(cut) {

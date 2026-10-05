@@ -5,7 +5,7 @@ import type { EncodedAudioTrack } from '@/shared/lib/media'
 
 export function browserRenderVerdict(
   video: BrowserVideoTrack,
-  audio: EncodedAudioTrack | undefined,
+  audio: (EncodedAudioTrack & { speechFingerprint?: string }) | undefined,
   ratio: ClipRatio,
   durationMS: number,
 ) {
@@ -25,6 +25,8 @@ export function browserRenderVerdict(
     audioRate: audio?.decoderConfig.sampleRate ?? 0,
     loudnessLufs: audio?.loudnessLUFS,
     silent: audio?.silent ?? false,
+    truePeakDbtp: audio && Number.isFinite(audio.truePeakDBTP) ? audio.truePeakDBTP : undefined,
+    speechFingerprint: audio?.speechFingerprint ?? '',
   }
   const fps = measurements.frameRateNumerator
   const duration = measurements.videoFrames / fps
@@ -51,7 +53,9 @@ export function browserRenderVerdict(
         (audio.silent ||
           (audio.loudnessLUFS !== undefined &&
             Number.isFinite(audio.loudnessLUFS) &&
-            Math.abs(audio.loudnessLUFS - CLIP_DESIGN.audio.loudnorm.i) <= 1))))
+            Math.abs(audio.loudnessLUFS - CLIP_DESIGN.audio.loudnorm.i) <= 1 &&
+            Number.isFinite(audio.truePeakDBTP) &&
+            audio.truePeakDBTP <= CLIP_DESIGN.audio.loudnorm.tp))))
   return { measurements, passed }
 }
 export type BrowserRenderVerdict = ReturnType<typeof browserRenderVerdict>

@@ -264,7 +264,7 @@ func (h *Handler) ReportClipRenderVerdict(ctx context.Context, req *connect.Requ
 		return nil, toConnectError(clip.ErrRenderUnavailable)
 	}
 	m := req.Msg.Measurements
-	v, err := h.generation.ReportRenderVerdict(ctx, user, req.Msg.RenderId, clip.RenderMeasurements{Width: int(m.Width), Height: int(m.Height), FrameRateNumerator: int(m.FrameRateNumerator), FrameRateDenominator: int(m.FrameRateDenominator), VideoFrames: int(m.VideoFrames), VideoCodec: m.VideoCodec, VideoProfile: m.VideoProfile, HasAudio: m.HasAudio, AudioCodec: m.AudioCodec, AudioRate: int(m.AudioRate), LoudnessLUFS: m.LoudnessLufs, Silent: m.Silent}, req.Msg.Passed)
+	v, err := h.generation.ReportRenderVerdict(ctx, user, req.Msg.RenderId, clip.RenderMeasurements{SpeechFingerprint: m.SpeechFingerprint, TruePeakDBTP: m.TruePeakDbtp, Width: int(m.Width), Height: int(m.Height), FrameRateNumerator: int(m.FrameRateNumerator), FrameRateDenominator: int(m.FrameRateDenominator), VideoFrames: int(m.VideoFrames), VideoCodec: m.VideoCodec, VideoProfile: m.VideoProfile, HasAudio: m.HasAudio, AudioCodec: m.AudioCodec, AudioRate: int(m.AudioRate), LoudnessLUFS: m.LoudnessLufs, Silent: m.Silent}, req.Msg.Passed)
 	if err != nil {
 		return nil, toConnectError(err)
 	}

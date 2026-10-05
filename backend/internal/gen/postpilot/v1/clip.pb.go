@@ -4024,8 +4024,11 @@ type ClipRenderMeasurements struct {
 	AudioRate            int32                  `protobuf:"varint,10,opt,name=audio_rate,json=audioRate,proto3" json:"audio_rate,omitempty"`
 	LoudnessLufs         *float64               `protobuf:"fixed64,11,opt,name=loudness_lufs,json=loudnessLufs,proto3,oneof" json:"loudness_lufs,omitempty"`
 	Silent               bool                   `protobuf:"varint,12,opt,name=silent,proto3" json:"silent,omitempty"`
-	unknownFields        protoimpl.UnknownFields
-	sizeCache            protoimpl.SizeCache
+	// Fingerprint of the immutable speech actually decoded and mixed by this producer.
+	SpeechFingerprint string   `protobuf:"bytes,13,opt,name=speech_fingerprint,json=speechFingerprint,proto3" json:"speech_fingerprint,omitempty"`
+	TruePeakDbtp      *float64 `protobuf:"fixed64,14,opt,name=true_peak_dbtp,json=truePeakDbtp,proto3,oneof" json:"true_peak_dbtp,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *ClipRenderMeasurements) Reset() {
@@ -4140,6 +4143,20 @@ func (x *ClipRenderMeasurements) GetSilent() bool {
 		return x.Silent
 	}
 	return false
+}
+
+func (x *ClipRenderMeasurements) GetSpeechFingerprint() string {
+	if x != nil {
+		return x.SpeechFingerprint
+	}
+	return ""
+}
+
+func (x *ClipRenderMeasurements) GetTruePeakDbtp() float64 {
+	if x != nil && x.TruePeakDbtp != nil {
+		return *x.TruePeakDbtp
+	}
+	return 0
 }
 
 type ClipCompositionItem struct {
@@ -5846,7 +5863,7 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	"\bmax_cuts\x18\x05 \x01(\x05R\amaxCuts\x12$\n" +
 	"\x0emax_copy_runes\x18\x06 \x01(\x05R\fmaxCopyRunes\x12&\n" +
 	"\x0fmin_duration_ms\x18\a \x01(\x05R\rminDurationMs\x12&\n" +
-	"\x0fmax_duration_ms\x18\b \x01(\x05R\rmaxDurationMsJ\x04\b\x03\x10\x04R\vcopy_styles\"\xc8\x03\n" +
+	"\x0fmax_duration_ms\x18\b \x01(\x05R\rmaxDurationMsJ\x04\b\x03\x10\x04R\vcopy_styles\"\xb5\x04\n" +
 	"\x16ClipRenderMeasurements\x12\x14\n" +
 	"\x05width\x18\x01 \x01(\x05R\x05width\x12\x16\n" +
 	"\x06height\x18\x02 \x01(\x05R\x06height\x120\n" +
@@ -5863,8 +5880,11 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	"audio_rate\x18\n" +
 	" \x01(\x05R\taudioRate\x12(\n" +
 	"\rloudness_lufs\x18\v \x01(\x01H\x00R\floudnessLufs\x88\x01\x01\x12\x16\n" +
-	"\x06silent\x18\f \x01(\bR\x06silentB\x10\n" +
-	"\x0e_loudness_lufs\"\xa7\x01\n" +
+	"\x06silent\x18\f \x01(\bR\x06silent\x12-\n" +
+	"\x12speech_fingerprint\x18\r \x01(\tR\x11speechFingerprint\x12)\n" +
+	"\x0etrue_peak_dbtp\x18\x0e \x01(\x01H\x01R\ftruePeakDbtp\x88\x01\x01B\x10\n" +
+	"\x0e_loudness_lufsB\x11\n" +
+	"\x0f_true_peak_dbtp\"\xa7\x01\n" +
 	"\x13ClipCompositionItem\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12E\n" +
 	"\x06values\x18\x02 \x03(\v2-.postpilot.v1.ClipCompositionItem.ValuesEntryR\x06values\x1a9\n" +

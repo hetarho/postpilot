@@ -13,6 +13,7 @@ import (
 // is retained independently of the latest stored result; reporting measurements
 // alone must never replace the file the owner can already download (CLIP-158).
 type BrowserRender struct {
+	Speech                []SpeechPlacement
 	ID, UserID, ProjectID string
 	Revision              int
 	Ratio                 string
@@ -37,6 +38,8 @@ func (r BrowserRender) ResultKey() string {
 }
 
 type RenderMeasurements struct {
+	TruePeakDBTP                                                         *float64
+	SpeechFingerprint                                                    string
 	Width, Height, FrameRateNumerator, FrameRateDenominator, VideoFrames int
 	VideoCodec, VideoProfile                                             string
 	HasAudio, Silent                                                     bool
@@ -67,7 +70,7 @@ type BrowserSamplingStore interface {
 }
 
 func CheckRenderMeasurements(cfg RenderConfig, r BrowserRender, m RenderMeasurements) (RenderVerdict, error) {
-	if m.Width <= 0 || m.Height <= 0 || m.FrameRateNumerator <= 0 || m.FrameRateDenominator <= 0 || m.VideoFrames <= 0 ||
+	if m.TruePeakDBTP != nil && (math.IsNaN(*m.TruePeakDBTP) || math.IsInf(*m.TruePeakDBTP, 0)) || len(m.SpeechFingerprint) > 64 || m.Width <= 0 || m.Height <= 0 || m.FrameRateNumerator <= 0 || m.FrameRateDenominator <= 0 || m.VideoFrames <= 0 ||
 		m.Width > 16384 || m.Height > 16384 || m.FrameRateNumerator > 1000000 || m.FrameRateDenominator > 1000000 || m.VideoFrames > 1000000 ||
 		len(m.VideoCodec) > 64 || len(m.VideoProfile) > 64 || len(m.AudioCodec) > 64 || m.AudioRate < 0 || m.AudioRate > 1000000 ||
 		m.LoudnessLUFS != nil && (math.IsNaN(*m.LoudnessLUFS) || math.IsInf(*m.LoudnessLUFS, 0)) {
@@ -91,11 +94,17 @@ func CheckRenderMeasurements(cfg RenderConfig, r BrowserRender, m RenderMeasurem
 	if m.VideoCodec != "h264" || m.VideoProfile != "High" || m.HasAudio && m.AudioCodec != "aac" {
 		notice("render_output_codec")
 	}
+	if m.SpeechFingerprint != SpeechFingerprint(r.Speech) {
+		notice("render_output_speech")
+	}
 	if m.HasAudio != r.Audio {
 		notice("render_output_audio")
 	}
 	if m.HasAudio && m.AudioRate != cfg.AudioRate {
 		notice("render_output_audio_rate")
+	}
+	if m.HasAudio && !m.Silent && (len(r.Speech) > 0 || m.TruePeakDBTP != nil) && (m.TruePeakDBTP == nil || *m.TruePeakDBTP > design.Audio.Loudnorm.TP) {
+		notice("render_output_true_peak")
 	}
 	if m.HasAudio && !m.Silent && (m.LoudnessLUFS == nil || math.Abs(*m.LoudnessLUFS-design.Audio.Loudnorm.I) > 1) {
 		notice("render_output_loudness")

@@ -17,6 +17,8 @@ export const i18n = {
         cancel: '브라우저 렌더 취소',
       },
       refusal: {
+        speech: '대본과 맞는 음성을 먼저 만들어 주세요. 더빙의 시간 배치도 확인해 주세요.',
+        audio: '이 브라우저에서 더빙 음성을 읽거나 해독하지 못했어요. 서버 렌더를 선택해 주세요.',
         capability: '이 브라우저는 필요한 영상·음성 인코딩을 지원하지 않아요.',
         memory: '이 기기의 메모리가 브라우저 렌더에 부족해요.',
         sampling:
@@ -51,6 +53,8 @@ export const i18n = {
         cancel: 'Cancel browser render',
       },
       refusal: {
+        speech: 'Create the speech that matches the script and check its timing first.',
+        audio: 'This browser could not read or decode the narration. Choose server rendering.',
         capability: 'This browser does not support the required video or audio encoding.',
         memory: 'This device reports too little memory for browser rendering.',
         sampling:

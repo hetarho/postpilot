@@ -149,3 +149,64 @@ func TestNarratedResultProvenancePersistsAndRejectsOmission(t *testing.T) {
 		t.Fatal("generation bypass", err)
 	}
 }
+
+func TestBrowserNarrationFreezesChecksAndStoresExactSpeech(t *testing.T) {
+	h, p, _ := completedNativeClip(t)
+	plan, err := clip.DecodeEditPlan(p.EditPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := "browser sentence"
+	hash := clip.SpokenInputHash(text)
+	binding := strings.Repeat("a", 64)
+	a := clip.SpeechAsset{ID: "browser-speech", OwnerID: "alice", ProjectID: p.ID, ObjectKey: "clip/speech/browser.mp3", Text: text, Bytes: 100, CreatedAt: time.Now(), Speech: clip.SpeechRef{AssetID: "browser-speech", VoiceID: "voice", BindingDigest: binding, InputHash: hash, SettingsHash: strings.Repeat("b", 64), AudioHash: strings.Repeat("c", 64), ProfileID: "profile", ProfileRevision: 1, Samples: 44100, SampleRate: 44100, Channels: 2}}
+	if err = h.store.InsertSpeechAsset(t.Context(), a); err != nil {
+		t.Fatal(err)
+	}
+	plan.Narration = &clip.NarrationPlan{Enabled: true, VoiceID: "voice", BindingDigest: binding, VolumePermille: 800, Segments: []clip.SpokenSegment{{ID: "spoken-1", Text: text, InputHash: hash, TextRevision: 1, EndMS: 2000, Speech: &a.Speech}}}
+	raw, err := clip.EncodeEditPlan(plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	p, err = h.store.SaveCorrection(t.Context(), "alice", p.ID, p.EditPlanRevision, raw, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	r := clip.BrowserRender{ID: "narrated-browser", UserID: "alice", ProjectID: p.ID, Revision: p.EditPlanRevision, Ratio: plan.Ratio, DurationMS: plan.DurationMS, Audio: true, Speech: clip.RequestedSpeech(plan), CreatedAt: time.Now()}
+	if err = h.store.BeginBrowserRender(t.Context(), r); err != nil {
+		t.Fatal(err)
+	}
+	frozen, err := h.store.GetBrowserRender(t.Context(), "alice", r.ID)
+	if err != nil || clip.SpeechFingerprint(frozen.Speech) != clip.SpeechFingerprint(r.Speech) {
+		t.Fatal("speech lost after admission", frozen, err)
+	}
+	level := -16.0
+	peak := -10.0
+	canvas, _ := clip.ClipCanvas(r.Ratio)
+	m := clip.RenderMeasurements{Width: canvas.Width, Height: canvas.Height, FrameRateNumerator: 30, FrameRateDenominator: 1, VideoFrames: r.DurationMS * 30 / 1000, VideoCodec: "h264", VideoProfile: "High", HasAudio: true, AudioCodec: "aac", AudioRate: 48000, LoudnessLUFS: &level, TruePeakDBTP: &peak}
+	verdict, err := clip.CheckRenderMeasurements(clip.DefaultRenderConfig(clip.Environment{}), frozen, m)
+	if err != nil || verdict.Passed {
+		t.Fatal("missing narration proof passed", verdict, err)
+	}
+	m.SpeechFingerprint = clip.SpeechFingerprint(r.Speech)
+	verdict, err = clip.CheckRenderMeasurements(clip.DefaultRenderConfig(clip.Environment{}), frozen, m)
+	if err != nil || !verdict.Passed {
+		t.Fatal(verdict, err)
+	}
+	if err = h.store.ReserveBrowserRenderUpload(t.Context(), "alice", r.ID, 1000, time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	if err = h.store.SaveBrowserRenderVerdict(t.Context(), "alice", r.ID, verdict, time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = h.store.CompleteBrowserRender(t.Context(), "alice", r.ID, time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	got, err := h.store.GetProject(t.Context(), "alice", p.ID)
+	if err != nil || got.Result == nil || got.Result.RenderKind() != clip.RenderBrowser || clip.SpeechFingerprint(got.Result.Speech) != m.SpeechFingerprint {
+		t.Fatal("stored narration differs", got, err)
+	}
+	if _, err = h.store.CompleteBrowserRender(t.Context(), "alice", r.ID, time.Now()); err != nil {
+		t.Fatal("once-only completion", err)
+	}
+}

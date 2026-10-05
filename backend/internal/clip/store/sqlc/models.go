@@ -41,6 +41,7 @@ type ClipBrowserRender struct {
 	SampleJobID  sql.NullString
 	GroundsJson  sql.NullString
 	SampledAt    sql.NullString
+	SpeechJson   string
 }
 
 type ClipGenerationQuote struct {

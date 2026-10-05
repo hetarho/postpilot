@@ -63,15 +63,16 @@
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
 | T539 | Qualify the complete Korean voice-creation milestone | ARCH DUB MODEL CDS THEME | T538 | blocked@261005 |
-| T549 | Mix the same narration into browser MP4 exports | ARCH DUB CLIP CDS | T548 | todo |
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | todo |
 
 ## next
-- implement-task T549–T550 sequentially with automated checks and task commits, then merge/push main; T539 real supplier evidence is deferred and ordinary production readiness stays closed.
+- implement-task T550 sequentially with automated checks and task commits, then merge/push main; T539 real supplier evidence is deferred and ordinary production readiness stays closed.
 - create-task ARCH (ARCH-52+ ARCH-53+ ARCH-56+ ARCH-57+ ARCH-34✎); create-task POST r32 (POST-108+ implemented by 12d2f428; verification-only); create-task VOICE r8 (VOICE-32✎ implemented by 68ae9a79; verification-only); update-ssot VOICE-31 remains open.
 - ops: lower TEMPLATE_PHOTO_ROW_MAX / VITE_TEMPLATE_PHOTO_ROW_MAX to 3 wherever production sets them explicitly (VPS .env, Cloudflare build vars).
 
 ## log
+- 261005 T549 done: independent bounded browser narration, exact durable speech fingerprints, 3282 FE tests, full local CI, CPU smokes and browser/server decoded parity passed
+- 261005 T549 start: bounded natural-speed browser audio and frozen speech fingerprints for output verification
 - 261005 T548 done: owned natural-speed worker narration, immutable output provenance, 3269 FE tests, full local CI and CPU-image audio/ordinary parity passed
 - 261005 T548 start: owned immutable speech admission, versioned worker retrieval and independent natural-speed final mixing
 - 261005 T547 done: bounded private narration preview, monotonic clock, seek/reuse/cleanup and independent gain; full local CI and eight browser fixture reviews passed
@@ -90,5 +91,3 @@
 - 261005 T541 start: persistent desktop properties, explicit phone details, named tracks and preview-first saved drafts
 - 261005 T540 done: independent spoken scripts, v7/legacy mapping, private project speech assets, selective staleness/reuse, protected caption links and publication CAS; full local CI passed
 - 261005 T540 start: independent spoken-script contract, private speech provenance, revision guards and old-plan compatibility
-- 261005 create-task DUB start: move real qualification after implementation, retain unfulfilled live evidence tasks and normal automated gates
-- 261005 update-ssot DUB start: defer live supplier qualification until complete implementation; keep production readiness evidence mandatory

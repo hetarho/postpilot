@@ -1,16 +1,25 @@
 import { type ClipEditPlan } from '@/entities/clip-plan'
-import { browserAudioPlan, clipBrowserEncoderConfig } from '@/entities/clip-preview'
+import {
+  canonicalSpeechBuffer,
+  clipBrowserEncoderConfig,
+  speechDecodeKey,
+  SpeechDecodeCache,
+  speechRenderFingerprint,
+  type SpeechAudioLoader,
+} from '@/entities/clip-preview'
 import { type ClipRatio } from '@/entities/clip-project'
 import { CLIP_BROWSER_RENDER, CLIP_DESIGN } from '@/entities/clip-design'
 import {
   createAudioProcessor,
-  mp4HasAudio,
+  mp4AudioDecodedBytes,
   type EncodedAudioTrack,
   type PcmChannels,
 } from '@/shared/lib'
 import type { BrowserOriginals } from '../lib/originals'
+import { BrowserAudioRenderError, browserAudioPreflight } from '../model/audio-preflight'
 
 export interface BrowserAudioTrack extends EncodedAudioTrack {
+  speechFingerprint?: string
   loudnessLUFS?: number
   truePeakDBTP: number
   silent: boolean
@@ -21,15 +30,37 @@ export async function renderBrowserAudio(
   originals: Pick<BrowserOriginals, 'get'>,
   signal: AbortSignal,
   progress?: (completed: number, total: number) => void,
+  loadSpeech?: SpeechAudioLoader,
 ): Promise<BrowserAudioTrack | undefined> {
   signal.throwIfAborted()
-  const schedule = browserAudioPlan(plan)
-  if (!schedule.cuts.length) return undefined
-  const decoder = new AudioContext({ sampleRate: schedule.sampleRate })
+  const { schedule, reservedBytes } = browserAudioPreflight(plan)
+  if (!schedule.cuts.length && !schedule.speech.length) return undefined
+  if (schedule.speech.length && !loadSpeech) throw new BrowserAudioRenderError('speech')
+  if (
+    typeof AudioContext === 'undefined' ||
+    typeof OfflineAudioContext === 'undefined' ||
+    typeof AudioEncoder === 'undefined'
+  )
+    throw new BrowserAudioRenderError('capability')
+  const support = await AudioEncoder.isConfigSupported(clipBrowserEncoderConfig(ratio).audio)
+  signal.throwIfAborted()
+  if (!support.supported) throw new BrowserAudioRenderError('capability')
+  let decoder: AudioContext
+  try {
+    decoder = new AudioContext({ sampleRate: schedule.sampleRate })
+    if (decoder.sampleRate !== schedule.sampleRate) {
+      await decoder.close()
+      throw new BrowserAudioRenderError('capability')
+    }
+  } catch {
+    throw new BrowserAudioRenderError('capability')
+  }
   const decoded = new Map<string, AudioBuffer | undefined>()
   const nodes: AudioNode[] = []
   let processor: ReturnType<typeof createAudioProcessor> | undefined
   let hasAudio = false
+  let sourceBytes = 0
+  const speechCache = new SpeechDecodeCache()
   try {
     processor = createAudioProcessor(signal)
     const context = new OfflineAudioContext(2, schedule.sampleFrames, schedule.sampleRate)
@@ -47,7 +78,10 @@ export async function renderBrowserAudio(
         const blob = await originals.get(cut.fingerprint)
         signal.throwIfAborted()
         let buffer: AudioBuffer | undefined
-        if (await mp4HasAudio(blob, signal)) {
+        const estimate = await mp4AudioDecodedBytes(blob, schedule.sampleRate, signal)
+        if (estimate) {
+          if (sourceBytes + reservedBytes + estimate > CLIP_BROWSER_RENDER.audioDecodedBytes)
+            throw new BrowserAudioRenderError('memory')
           buffer = await decoder.decodeAudioData(await blob.arrayBuffer())
           signal.throwIfAborted()
           if (buffer.numberOfChannels !== 2) {
@@ -63,6 +97,11 @@ export async function renderBrowserAudio(
             source.disconnect()
             gain.disconnect()
           }
+        }
+        if (buffer) {
+          sourceBytes += buffer.length * buffer.numberOfChannels * 4
+          if (sourceBytes + reservedBytes > CLIP_BROWSER_RENDER.audioDecodedBytes)
+            throw new BrowserAudioRenderError('memory')
         }
         decoded.set(cut.fingerprint, buffer)
       }
@@ -101,6 +140,44 @@ export async function renderBrowserAudio(
       source.start(cut.start)
       nodes.push(source, gain)
     }
+    for (const spoken of schedule.speech) {
+      signal.throwIfAborted()
+      const key = speechDecodeKey(spoken.speech)
+      let buffer = speechCache.get(key)
+      if (!buffer) {
+        try {
+          const encoded = await loadSpeech!(spoken.speech, signal)
+          signal.throwIfAborted()
+          if (!encoded.byteLength || encoded.byteLength > CLIP_BROWSER_RENDER.speechEncodedBytes)
+            throw new BrowserAudioRenderError('audio', spoken.segmentId)
+          const digest = await crypto.subtle.digest('SHA-256', encoded)
+          const hash = Array.from(new Uint8Array(digest), (v) =>
+            v.toString(16).padStart(2, '0'),
+          ).join('')
+          if (hash !== spoken.speech.audioHash)
+            throw new BrowserAudioRenderError('audio', spoken.segmentId)
+          buffer = canonicalSpeechBuffer(
+            context,
+            spoken.speech,
+            await decoder.decodeAudioData(encoded),
+          )
+          signal.throwIfAborted()
+          speechCache.put(key, buffer)
+        } catch (error) {
+          signal.throwIfAborted()
+          if (error instanceof BrowserAudioRenderError) throw error
+          throw new BrowserAudioRenderError('audio', spoken.segmentId)
+        }
+      }
+      const source = context.createBufferSource(),
+        gain = context.createGain()
+      source.buffer = buffer
+      gain.gain.value = schedule.narrationVolume
+      source.connect(gain).connect(context.destination)
+      source.start(spoken.start)
+      nodes.push(source, gain)
+      hasAudio = true
+    }
     if (!hasAudio) return undefined
     signal.throwIfAborted()
     const mixed = await context.startRendering()
@@ -118,11 +195,22 @@ export async function renderBrowserAudio(
       CLIP_BROWSER_RENDER.encodeQueueFrames,
       progress,
     )
-    return track
+    if (
+      !track.silent &&
+      (!Number.isFinite(track.loudnessLUFS) ||
+        Math.abs(track.loudnessLUFS! - CLIP_DESIGN.audio.loudnorm.i) > 1 ||
+        !Number.isFinite(track.truePeakDBTP) ||
+        track.truePeakDBTP > CLIP_DESIGN.audio.loudnorm.tp)
+    ) {
+      track.chunks.length = 0
+      throw new BrowserAudioRenderError('audio')
+    }
+    return { ...track, speechFingerprint: await speechRenderFingerprint(plan) }
   } finally {
     processor?.close()
     for (const node of nodes) node.disconnect()
     decoded.clear()
+    speechCache.clear()
     await decoder.close()
   }
 }

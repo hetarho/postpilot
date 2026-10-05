@@ -83,7 +83,10 @@ func (s *Store) CompleteBrowserRender(ctx context.Context, user, id string, now 
 			return "", err
 		}
 		m := r.Verdict.Measurements
-		result := clip.Result{Kind: clip.RenderBrowser, Key: r.ResultKey(), ContentType: "video/mp4", Bytes: r.UploadBytes, DurationMS: int((int64(m.VideoFrames)*1000*int64(m.FrameRateDenominator) + int64(m.FrameRateNumerator)/2) / int64(m.FrameRateNumerator)), CreatedAt: now}
+		if r.Verdict.Measurements.SpeechFingerprint != clip.SpeechFingerprint(r.Speech) {
+			return "", clip.ErrInvalidMedia
+		}
+		result := clip.Result{Speech: r.Speech, Kind: clip.RenderBrowser, Key: r.ResultKey(), ContentType: "video/mp4", Bytes: r.UploadBytes, DurationMS: int((int64(m.VideoFrames)*1000*int64(m.FrameRateDenominator) + int64(m.FrameRateNumerator)/2) / int64(m.FrameRateNumerator)), CreatedAt: now}
 		bound := &Store{read: q, write: q}
 		if err := bound.SaveRender(ctx, user, r.ProjectID, r.Revision, result); err != nil {
 			return "", err

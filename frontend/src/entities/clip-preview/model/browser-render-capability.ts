@@ -24,7 +24,7 @@ export function clipBrowserRenderCapability(
 }
 
 export function clipRenderNeedsAudio(plan: ClipEditPlan) {
-  return plan.cuts.some((cut) => clipSourceSound(plan, cut))
+  return !!plan.narration?.enabled || plan.cuts.some((cut) => clipSourceSound(plan, cut))
 }
 
 export function clipBrowserEncoderConfig(ratio: ClipRatio) {

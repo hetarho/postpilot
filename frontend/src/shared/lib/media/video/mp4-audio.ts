@@ -1,3 +1,33 @@
+import { ALL_FORMATS, BlobSource, Input } from 'mediabunny'
+
+/** Inspect packet metadata before native decoding can allocate a whole original's PCM. */
+export async function mp4AudioDecodedBytes(blob: Blob, sampleRate: number, signal: AbortSignal) {
+  signal.throwIfAborted()
+  const input = new Input({ formats: ALL_FORMATS, source: new BlobSource(blob) })
+  try {
+    const tracks = await input.getAudioTracks()
+    let bytes = 0
+    for (const track of tracks) {
+      const duration = await track.computeDuration()
+      signal.throwIfAborted()
+      if (
+        !Number.isFinite(duration) ||
+        duration <= 0 ||
+        !Number.isSafeInteger(track.numberOfChannels) ||
+        track.numberOfChannels <= 0
+      )
+        throw new Error('Invalid original audio metadata')
+      // Include codec padding and the stereo rematrix buffer when needed.
+      const channels = track.numberOfChannels === 2 ? 2 : track.numberOfChannels + 2
+      bytes += Math.ceil((duration + 0.1) * sampleRate) * channels * 4
+    }
+    if (!Number.isSafeInteger(bytes)) throw new Error('Invalid original audio metadata')
+    return bytes
+  } finally {
+    input.dispose()
+  }
+}
+
 /** Read only ISO BMFF/QuickTime box headers; never mistake decoder failure for a silent file. */
 export async function mp4HasAudio(blob: Blob, signal: AbortSignal) {
   let boxes = 0

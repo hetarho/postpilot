@@ -5,6 +5,8 @@ export { useClipBrowserRenderCapability } from './api/useClipBrowserRenderCapabi
 export { createClipVideoWorker } from './lib/create-video-worker'
 export { browserAudioPlan } from './model/browser-audio-plan'
 export type { SpeechAudioLoader } from './model/speech-playback'
+export { canonicalSpeechBuffer, speechDecodeKey, SpeechDecodeCache } from './model/speech-playback'
+export { speechRenderFingerprint } from './model/speech-fingerprint'
 export { clipBrowserEncoderConfig, clipRenderNeedsAudio } from './model/browser-render-capability'
 export type { ClipBrowserRenderCapability } from './model/browser-render-capability'
 export type {

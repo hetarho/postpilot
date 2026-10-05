@@ -23,7 +23,9 @@ export interface ClipRenderVerdict {
     audioCodec: string
     audioRate: number
     loudnessLufs?: number
+    truePeakDbtp?: number
     silent: boolean
+    speechFingerprint?: string
   }
 }
 

@@ -13,6 +13,10 @@ import (
 func browserRender(row sqlc.ClipBrowserRender) (clip.BrowserRender, error) {
 	r := clip.BrowserRender{ID: row.ID, UserID: row.UserID, ProjectID: row.ProjectID, Revision: int(row.PlanRevision), Ratio: row.Ratio, DurationMS: int(row.DurationMs), Audio: row.HasAudio != 0, UploadBytes: row.UploadBytes}
 	var err error
+	r.Speech, err = decodeResultSpeech(row.SpeechJson)
+	if err != nil {
+		return r, err
+	}
 	r.CreatedAt, err = time.Parse(time.RFC3339Nano, row.CreatedAt)
 	if err == nil && row.StoredAt.Valid {
 		var at time.Time
@@ -141,14 +145,35 @@ func (s *Store) SaveBrowserRenderGrounds(ctx context.Context, user, render, job 
 }
 
 func (s *Store) BeginBrowserRender(ctx context.Context, r clip.BrowserRender) error {
-	_, err := transact(ctx, s, func(q *sqlc.Queries) (struct{}, error) {
+	speech, err := encodeResultSpeech(r.Speech)
+	if err != nil {
+		return err
+	}
+	_, err = transact(ctx, s, func(q *sqlc.Queries) (struct{}, error) {
 		if err := checkBrowserProject(ctx, q, r); err != nil {
 			return struct{}{}, err
+		}
+		p, err := getProject(ctx, q, r.UserID, r.ProjectID)
+		if err != nil {
+			return struct{}{}, err
+		}
+		if plan, e := clip.DecodeEditPlan(p.EditPlan); e == nil {
+			if err = clip.NarrationReadiness(plan); err != nil {
+				return struct{}{}, err
+			}
+			if !reflect.DeepEqual(clip.RequestedSpeech(plan), r.Speech) {
+				return struct{}{}, clip.ErrInvalidMedia
+			}
+			if err = validateSpeechAssets(ctx, q, r.UserID, r.ProjectID, plan); err != nil {
+				return struct{}{}, err
+			}
+		} else if len(r.Speech) > 0 {
+			return struct{}{}, clip.ErrInvalidMedia
 		}
 		if err := renewProjectSources(ctx, q, r.UserID, r.ProjectID, r.CreatedAt); err != nil {
 			return struct{}{}, err
 		}
-		return struct{}{}, q.BeginBrowserRender(ctx, sqlc.BeginBrowserRenderParams{ID: r.ID, UserID: r.UserID, ProjectID: r.ProjectID, PlanRevision: int64(r.Revision), Ratio: r.Ratio, DurationMs: int64(r.DurationMS), HasAudio: flag(r.Audio), CreatedAt: stamp(r.CreatedAt)})
+		return struct{}{}, q.BeginBrowserRender(ctx, sqlc.BeginBrowserRenderParams{SpeechJson: speech, ID: r.ID, UserID: r.UserID, ProjectID: r.ProjectID, PlanRevision: int64(r.Revision), Ratio: r.Ratio, DurationMs: int64(r.DurationMS), HasAudio: flag(r.Audio), CreatedAt: stamp(r.CreatedAt)})
 	})
 	return err
 }

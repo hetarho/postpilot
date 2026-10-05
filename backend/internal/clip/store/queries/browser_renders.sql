@@ -1,5 +1,5 @@
 -- name: BeginBrowserRender :exec
-INSERT INTO clip_browser_renders(id,user_id,project_id,plan_revision,ratio,duration_ms,has_audio,created_at) VALUES(?,?,?,?,?,?,?,?);
+INSERT INTO clip_browser_renders(id,user_id,project_id,plan_revision,ratio,duration_ms,has_audio,created_at,speech_json) VALUES(?,?,?,?,?,?,?,?,?);
 -- name: GetBrowserRender :one
 SELECT * FROM clip_browser_renders WHERE id=? AND user_id=?;
 -- name: SaveBrowserRenderVerdict :execrows
