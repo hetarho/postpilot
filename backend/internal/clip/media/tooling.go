@@ -17,7 +17,7 @@ import "strings"
 // Every filter the render path emits. `TestGoldenFiltersAreDeclared` holds this honest
 // against the graph fixtures, so a filter that reaches a golden cannot be missing here.
 var requiredFilters = []string{
-	"acrossfade", "afade", "aformat", "anull", "anullsrc", "apad", "aresample",
+	"acrossfade", "afade", "amix", "adelay", "aformat", "anull", "anullsrc", "apad", "aresample",
 	"asetpts", "atempo", "atrim", "concat", "crop", "fade", "format", "fps",
 	"loop", "loudnorm", "overlay", "scale", "select", "setpts", "setsar", "settb", "trim",
 	"vfrdet", "volume", "xfade",
@@ -27,13 +27,13 @@ var requiredFilters = []string{
 var requiredEncoders = []string{"aac", "libx264", "pcm_s16le", "png"}
 
 // Muxers named by `-f`.
-var requiredMuxers = []string{"mp4", "null", "wav"}
+var requiredMuxers = []string{"mp4", "null", "wav", "s16le"}
 
 // Decoders for what this package writes and reads back: the h264/aac chunks and analysis
 // copies it produces, the PNG plates resvg renders for overlay, and the PCM it measures
 // loudness on. A source's own codec is not here — the render code never names it, ffmpeg
 // selects it from the container.
-var requiredDecoders = []string{"aac", "h264", "pcm_s16le", "png"}
+var requiredDecoders = []string{"mp3", "aac", "h264", "pcm_s16le", "png"}
 
 func parseListing(out string) map[string]bool {
 	names := map[string]bool{}
@@ -58,3 +58,5 @@ func parseListing(out string) map[string]bool {
 	}
 	return names
 }
+
+var requiredDemuxers = []string{"mp3", "s16le"}

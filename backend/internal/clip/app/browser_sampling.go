@@ -34,7 +34,7 @@ func (s *GenerationService) StartBrowserRender(ctx context.Context, user, id, ba
 	return started.renderID, started.jobID, err
 }
 
-func (s *GenerationService) startBrowserSampling(ctx context.Context, p clip.Project, plan clip.EditPlan, sources []clip.AnalysisSource, b clip.SourceBatch, render string) (string, error) {
+func (s *GenerationService) startBrowserSampling(ctx context.Context, p clip.Project, plan clip.EditPlan, sources []clip.AnalysisSource, b clip.SourceBatch, render string, speech ...clip.SpeechAsset) (string, error) {
 	store, ok := s.store.(clip.BrowserSamplingStore)
 	if !ok {
 		return "", clip.ErrRenderUnavailable
@@ -46,7 +46,7 @@ func (s *GenerationService) startBrowserSampling(ctx context.Context, p clip.Pro
 		}
 		return "", store.SaveBrowserRenderGrounds(ctx, p.UserID, render, render, p.EditPlanRevision, nil, s.now())
 	}
-	task, err := freezeRenderTask(plan, sources, b, s.cfg.Media)
+	task, err := freezeRenderTask(plan, sources, b, s.cfg.Media, speech...)
 	if err != nil {
 		return "", err
 	}

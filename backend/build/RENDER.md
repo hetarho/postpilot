@@ -4,7 +4,7 @@
 
 Preparation and final rendering use an execution-only `cmd/media-worker` process.
 The API keeps SQLite, authorization, planning, providers, credits and publication.
-Workers pull authenticated protocol 1 leases (`cpu-v1`, `assets-v3`), use short-lived
+Workers pull authenticated protocol 3 leases (`cpu-v2`, `assets-v3`), use short-lived
 private object grants and return measured immutable receipts. No shared DB or work
 directory is required. API restart preserves valid leases and accepted handoffs;
 retries cannot replay an uncertain paid provider call. Cancellation and revision
@@ -532,3 +532,5 @@ end-to-end timings, reviewed caption/motion/transition/audio output, resource bo
 and failure policy remain unverified activation gates. Follow the [isolated
 hardware procedure](../../DEPLOY.md#media-gpu-diagnostics) later; never interpret a
 passing packaging test or an encoder name as GPU production approval.
+
+Narrated renders freeze owned immutable MP3 hashes and bounded byte counts, fetch only lease-authorized speech slots, decode without footage-rate transforms and mix independent source/narration gains before final loudness normalization. MP3 gapless decoders may omit up to three codec frames of measured padding; only trailing silence is restored. The result retains the exact speech placement/provenance manifest.

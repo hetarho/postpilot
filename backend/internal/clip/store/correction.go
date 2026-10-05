@@ -115,7 +115,11 @@ func (s *Store) saveCorrection(ctx context.Context, user, id, job string, revisi
 	})
 }
 func (s *Store) SaveRender(ctx context.Context, user, id string, revision int, r clip.Result) error {
-	_, err := transact(ctx, s, func(q *sqlc.Queries) (struct{}, error) {
+	speech, err := encodeResultSpeech(r.Speech)
+	if err != nil {
+		return err
+	}
+	_, err = transact(ctx, s, func(q *sqlc.Queries) (struct{}, error) {
 		p, err := getProject(ctx, q, user, id)
 		if err != nil {
 			return struct{}{}, err
@@ -130,13 +134,26 @@ func (s *Store) SaveRender(ctx context.Context, user, id string, revision int, r
 		}
 		raw := p.EditPlan
 		if plan, decodeErr := clip.DecodeEditPlan(raw); decodeErr == nil {
+			if plan.Narration != nil && plan.Narration.Enabled {
+				if err := clip.NarrationReadiness(plan); err != nil {
+					return struct{}{}, err
+				}
+				if !reflect.DeepEqual(clip.RequestedSpeech(plan), r.Speech) {
+					return struct{}{}, clip.ErrInvalidMedia
+				}
+				if err := validateSpeechAssets(ctx, q, user, id, plan); err != nil {
+					return struct{}{}, err
+				}
+			} else if len(r.Speech) > 0 {
+				return struct{}{}, clip.ErrInvalidMedia
+			}
 			clip.RecomputePlanNotices(&plan, p.TargetDurationMS, 0)
 			raw, err = clip.EncodeEditPlan(plan)
 			if err != nil {
 				return struct{}{}, err
 			}
 		}
-		n, err := q.SaveRender(ctx, sqlc.SaveRenderParams{RenderKind: string(r.RenderKind()), EditPlanJson: nullable(raw), ResultKey: nullable(r.Key), ResultContentType: nullable(r.ContentType), ResultBytes: sql.NullInt64{Int64: r.Bytes, Valid: true}, ResultDurationMs: sql.NullInt64{Int64: int64(r.DurationMS), Valid: true}, ResultCreatedAt: nullable(stamp(r.CreatedAt)), UpdatedAt: stamp(r.CreatedAt), ID: id, UserID: user, EditPlanRevision: int64(revision)})
+		n, err := q.SaveRender(ctx, sqlc.SaveRenderParams{ResultSpeechJson: speech, RenderKind: string(r.RenderKind()), EditPlanJson: nullable(raw), ResultKey: nullable(r.Key), ResultContentType: nullable(r.ContentType), ResultBytes: sql.NullInt64{Int64: r.Bytes, Valid: true}, ResultDurationMs: sql.NullInt64{Int64: int64(r.DurationMS), Valid: true}, ResultCreatedAt: nullable(stamp(r.CreatedAt)), UpdatedAt: stamp(r.CreatedAt), ID: id, UserID: user, EditPlanRevision: int64(revision)})
 		if err != nil {
 			return struct{}{}, err
 		}

@@ -109,3 +109,43 @@ func TestClipForeignVoiceRefusedBeforeSave(t *testing.T) {
 		t.Fatal("refusal changed plan", err)
 	}
 }
+
+func TestNarratedResultProvenancePersistsAndRejectsOmission(t *testing.T) {
+	h, p, _ := completedNativeClip(t)
+	plan, err := clip.DecodeEditPlan(p.EditPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := "immutable sentence"
+	hash := clip.SpokenInputHash(text)
+	binding := strings.Repeat("a", 64)
+	a := clip.SpeechAsset{ID: "speech-result", OwnerID: "alice", ProjectID: p.ID, ObjectKey: "clip/speech/result.mp3", Text: text, Bytes: 100, CreatedAt: time.Now(), Speech: clip.SpeechRef{AssetID: "speech-result", VoiceID: "voice", BindingDigest: binding, InputHash: hash, SettingsHash: strings.Repeat("b", 64), AudioHash: strings.Repeat("c", 64), ProfileID: "profile", ProfileRevision: 1, Samples: 44100, SampleRate: 44100, Channels: 2}}
+	if err = h.store.InsertSpeechAsset(t.Context(), a); err != nil {
+		t.Fatal(err)
+	}
+	plan.Narration = &clip.NarrationPlan{Enabled: true, VoiceID: "voice", BindingDigest: binding, VolumePermille: 800, Segments: []clip.SpokenSegment{{ID: "spoken-1", Text: text, InputHash: hash, TextRevision: 1, EndMS: 2000, Speech: &a.Speech}}}
+	raw, err := clip.EncodeEditPlan(plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	p, err = h.store.SaveCorrection(t.Context(), "alice", p.ID, p.EditPlanRevision, raw, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	result := clip.Result{Key: "clip/results/narrated.mp4", ContentType: "video/mp4", Bytes: 1000, DurationMS: p.TargetDurationMS, CreatedAt: time.Now(), Speech: clip.RequestedSpeech(plan)}
+	omitted := result
+	omitted.Speech = nil
+	if err = h.store.SaveRender(t.Context(), "alice", p.ID, p.EditPlanRevision, omitted); !errors.Is(err, clip.ErrInvalidMedia) {
+		t.Fatal("omitted audio published", err)
+	}
+	if err = h.store.SaveRender(t.Context(), "alice", p.ID, p.EditPlanRevision, result); err != nil {
+		t.Fatal(err)
+	}
+	got, err := h.store.GetProject(t.Context(), "alice", p.ID)
+	if err != nil || got.Result == nil || len(got.Result.Speech) != 1 || got.Result.Speech[0].Speech.AssetID != a.ID {
+		t.Fatal("provenance lost", got, err)
+	}
+	if err = h.store.SaveGeneration(t.Context(), "alice", p.ID, "analysis", raw, omitted); !errors.Is(err, clip.ErrInvalidMedia) {
+		t.Fatal("generation bypass", err)
+	}
+}

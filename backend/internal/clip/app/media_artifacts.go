@@ -129,6 +129,36 @@ func (a *MediaArtifacts) Read(ctx context.Context, auth clip.MediaLeaseCredentia
 			}
 			return clip.ErrInvalid
 		}
+
+		if id, speech := strings.CutPrefix(slot, "speech/"); speech {
+			if stage.Operation != clip.MediaRender {
+				return clip.ErrInvalid
+			}
+			var frozen *clip.MediaTaskSpeech
+			for i := range task.Speech {
+				if task.Speech[i].AssetID == id {
+					frozen = &task.Speech[i]
+					break
+				}
+			}
+			if frozen == nil {
+				return clip.ErrInvalid
+			}
+			reader, ok := p.Clips.(speechAssetReader)
+			if !ok {
+				return clip.ErrCompositionUnavailable
+			}
+			asset, err := reader.GetSpeechAsset(ctx, stage.UserID, stage.ProjectID, id)
+			if err != nil {
+				return err
+			}
+			if asset.OwnerID != stage.UserID || asset.ProjectID != stage.ProjectID || asset.Speech.AudioHash != frozen.AudioHash || asset.Bytes != frozen.Bytes || !strings.HasPrefix(asset.ObjectKey, clip.SpeechAudioPrefix) {
+				return clip.ErrInvalidMedia
+			}
+			source.Key, source.ActualBytes, source.ContentType = asset.ObjectKey, asset.Bytes, "audio/mpeg"
+			deadline = stage.DeadlineAt
+			return nil
+		}
 		if !strings.HasPrefix(slot, "source/") {
 			return clip.ErrInvalid
 		}

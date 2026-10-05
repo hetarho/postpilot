@@ -58,7 +58,7 @@ func TestMediaStageCreationAndCompatibility(t *testing.T) {
 		func(x *clip.MediaStageInput) { x.ProjectID = "other" },
 		func(x *clip.MediaStageInput) { x.ExpectedRevision++ },
 		func(x *clip.MediaStageInput) { x.Operation = clip.MediaPrepare },
-		func(x *clip.MediaStageInput) { x.RendererVersion = "cpu-v2" },
+		func(x *clip.MediaStageInput) { x.RendererVersion = "cpu-v1" },
 	} {
 		other := in
 		mutate(&other)

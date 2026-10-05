@@ -167,6 +167,7 @@ func TestBundledToolingCoverage(t *testing.T) {
 		{"decoder", "-decoders", requiredDecoders},
 		{"encoder", "-encoders", requiredEncoders},
 		{"muxer", "-muxers", requiredMuxers},
+		{"demuxer", "-demuxers", requiredDemuxers},
 	} {
 		t.Run(group.kind, func(t *testing.T) {
 			missing := missingFrom(reportedNames(t, cfg.FFmpegPath, group.flag), group.required)

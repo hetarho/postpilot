@@ -168,7 +168,8 @@ func (s *GenerationService) startRender(ctx context.Context, user, id, batch str
 	if err != nil {
 		return none, err
 	}
-	if err := clip.NarrationReadiness(plan); err != nil {
+	speechAssets, err := s.renderSpeechAssets(ctx, user, id, plan, revision)
+	if err != nil {
 		return none, err
 	}
 	plan, err = clip.ApplyCorrection(s.cfg.Render, p, clip.CorrectionFromPlan(plan))
@@ -229,7 +230,7 @@ func (s *GenerationService) startRender(ctx context.Context, user, id, batch str
 		if err != nil {
 			return none, err
 		}
-		sampling, err := s.startBrowserSampling(ctx, p, plan, sources, b, render)
+		sampling, err := s.startBrowserSampling(ctx, p, plan, sources, b, render, speechAssets...)
 		if err != nil {
 			// A render its grounds can never reach is withdrawn rather than left
 			// for a page to wait on.
@@ -242,7 +243,7 @@ func (s *GenerationService) startRender(ctx context.Context, user, id, batch str
 	}
 	frozen := renderPayload{HideDisclosure: p.HideDisclosure, Version: 1, ProjectID: id, Revision: revision, PlanJSON: p.EditPlan, Sources: sources, Batch: b}
 	if s.remoteMedia != nil {
-		task, err := freezeRenderTask(plan, sources, b, s.cfg.Media)
+		task, err := freezeRenderTask(plan, sources, b, s.cfg.Media, speechAssets...)
 		if err != nil {
 			return none, err
 		}

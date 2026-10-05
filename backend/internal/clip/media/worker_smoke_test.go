@@ -38,6 +38,9 @@ type parityArtifacts struct {
 func (p *parityArtifacts) Download(_ context.Context, _ clip.MediaLeaseCredentials, slot string, dst io.Writer, _ int64) (int64, error) {
 	source, ok := strings.CutPrefix(slot, "source/")
 	if !ok {
+		source, ok = strings.CutPrefix(slot, "speech/")
+	}
+	if !ok {
 		return 0, clip.ErrInvalid
 	}
 	f, err := os.Open(p.originals[source])
@@ -190,7 +193,7 @@ func TestWorkerExecutionParity(t *testing.T) {
 		Fixtures []fixture
 	}{Version: 1}
 	if exportRoot != "" {
-		if err := os.Mkdir(exportRoot, 0700); err != nil {
+		if err := os.MkdirAll(exportRoot, 0700); err != nil {
 			t.Fatal(renderFailure(err))
 		}
 	}

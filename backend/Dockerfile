@@ -38,8 +38,8 @@ ARG TARGETARCH
 ARG MEDIA_ASSET_DIGEST
 LABEL org.opencontainers.image.revision=$SOURCE_REVISION \
       org.opencontainers.image.architecture=$TARGETARCH \
-      org.postpilot.media.protocol="2" \
-      org.postpilot.media.renderer="cpu-v1" \
+      org.postpilot.media.protocol="3" \
+      org.postpilot.media.renderer="cpu-v2" \
       org.postpilot.media.assets="assets-v3" \
       org.postpilot.media.asset-input-sha256=$MEDIA_ASSET_DIGEST
 WORKDIR /
@@ -138,7 +138,7 @@ COPY --from=media-worker-tooling /media-worker /media-worker
 FROM media-worker-deployable AS media-worker-smoke
 COPY --from=builder /media.test /media.test
 ENV CLIP_MEDIA_SMOKE=1
-ENTRYPOINT ["/media.test", "-test.run=^Test(WorkerExecutionParity|WorkerCommandHealth|WorkerImageIsolation|ExecRunnerReapsDescendants)$", "-test.v", "-test.timeout=45m"]
+ENTRYPOINT ["/media.test", "-test.run=^Test(WorkerExecutionParity|WorkerCommandHealth|WorkerImageIsolation|ExecRunnerReapsDescendants|NarratedExportSmoke)$", "-test.v", "-test.timeout=45m"]
 
 # Disposable multi-process gate; fixture endpoints exist only in this test binary.
 FROM release-smoke AS media-release-api
@@ -161,7 +161,7 @@ ARG MEDIA_ASSET_DIGEST
 LABEL org.opencontainers.image.revision=$SOURCE_REVISION \
       org.opencontainers.image.architecture=$TARGETARCH \
       org.opencontainers.image.title="Postpilot NVIDIA candidate worker" \
-      org.postpilot.media.protocol="2" org.postpilot.media.renderer="cpu-v1" \
+      org.postpilot.media.protocol="3" org.postpilot.media.renderer="cpu-v2" \
       org.postpilot.media.assets="assets-v3" org.postpilot.media.asset-input-sha256=$MEDIA_ASSET_DIGEST \
       org.postpilot.media.gpu-candidate="nvenc-candidate-v1" \
       org.postpilot.media.gpu-production-approved="false"

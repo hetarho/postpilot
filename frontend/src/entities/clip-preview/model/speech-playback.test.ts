@@ -1,6 +1,11 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { ClipSpeechRef } from '@/entities/clip-plan/@x/clip-preview'
-import { SpeechDecodeCache, SpeechPreviewTransport, type ScheduledSpeech } from './speech-playback'
+import {
+  SpeechDecodeCache,
+  SpeechPreviewTransport,
+  canonicalSpeechBuffer,
+  type ScheduledSpeech,
+} from './speech-playback'
 
 function speech(hash: string, start: number, duration: number): ScheduledSpeech {
   return {
@@ -143,4 +148,35 @@ describe('monotonic narration transport', () => {
     expect(normal.gain.gain.setValueAtTime).toHaveBeenCalledWith(0, 100)
     muted.dispose()
   })
+})
+
+it('pads gapless codec silence to measured samples without stretching or trimming speech', () => {
+  const decoded = {
+    duration: 2,
+    length: 96000,
+    numberOfChannels: 2,
+    getChannelData: () => new Float32Array(96000).fill(0.1),
+  } as unknown as AudioBuffer
+  const channels: Float32Array[] = []
+  const context = {
+    sampleRate: 48000,
+    createBuffer: (_channels: number, length: number) => {
+      channels.push(new Float32Array(length), new Float32Array(length))
+      return {
+        length,
+        copyToChannel: (data: Float32Array, channel: number) => channels[channel]!.set(data),
+      } as AudioBuffer
+    },
+  }
+  const ref = { samples: 91008, sampleRate: 44100, channels: 2 } as ClipSpeechRef
+  const result = canonicalSpeechBuffer(context, ref, decoded)
+  expect(result.length).toBe(Math.ceil((91008 * 48000) / 44100))
+  expect(channels[0]![95999]).toBeCloseTo(0.1)
+  expect(channels[0]![96000]).toBe(0)
+  expect(() => canonicalSpeechBuffer(context, { ...ref, samples: 96000 }, decoded)).toThrow(
+    'decode',
+  )
+  expect(() => canonicalSpeechBuffer(context, { ...ref, samples: 44100 }, decoded)).toThrow(
+    'decode',
+  )
 })

@@ -503,9 +503,10 @@ export function ClipDraftPreview({
       const value = Math.max(0, Math.min(duration, ms))
       setLocalTime(value)
       onTimeChange?.(value)
-      if (value >= duration - CLIP_DRAFT_PREVIEW.frameToleranceMs) setPlaying(false)
+      if (value >= (narrated ? duration : duration - CLIP_DRAFT_PREVIEW.frameToleranceMs))
+        setPlaying(false)
     },
-    [duration, onTimeChange],
+    [duration, onTimeChange, narrated],
   )
 
   useEffect(() => {

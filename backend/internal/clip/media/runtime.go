@@ -68,7 +68,7 @@ func (r *Rendering) RuntimeProfile(ctx context.Context, accel string) (clip.Medi
 	for _, listing := range []struct {
 		flag     string
 		required []string
-	}{{"-filters", requiredFilters}, {"-encoders", requiredEncoders}, {"-decoders", requiredDecoders}, {"-muxers", requiredMuxers}} {
+	}{{"-filters", requiredFilters}, {"-encoders", requiredEncoders}, {"-decoders", requiredDecoders}, {"-muxers", requiredMuxers}, {"-demuxers", requiredDemuxers}} {
 		out, err := runner.Run(ctx, Command{Binary: cfg.FFmpegPath, Args: []string{"-hide_banner", listing.flag}})
 		if err != nil {
 			return clip.MediaWorkerProfile{}, errors.New("media capabilities unavailable")

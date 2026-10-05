@@ -321,7 +321,11 @@ func projectRow(r sqlc.ClipProject) (clip.Project, error) {
 		if err != nil {
 			return clip.Project{}, err
 		}
-		p.Result = &clip.Result{Kind: clip.RenderKind(r.RenderKind), ID: r.ResultID.String, Key: r.ResultKey.String, ContentType: r.ResultContentType.String, Bytes: r.ResultBytes.Int64, DurationMS: int(r.ResultDurationMs.Int64), CreatedAt: at}
+		speech, err := decodeResultSpeech(r.ResultSpeechJson)
+		if err != nil {
+			return p, err
+		}
+		p.Result = &clip.Result{Speech: speech, Kind: clip.RenderKind(r.RenderKind), ID: r.ResultID.String, Key: r.ResultKey.String, ContentType: r.ResultContentType.String, Bytes: r.ResultBytes.Int64, DurationMS: int(r.ResultDurationMs.Int64), CreatedAt: at}
 	}
 	if r.FinalizedAt.Valid {
 		at, err := time.Parse(time.RFC3339Nano, r.FinalizedAt.String)
@@ -389,7 +393,7 @@ func (s *Store) ListProjectSummaries(ctx context.Context, user string) ([]clip.P
 	out := make([]clip.Project, 0, len(rows))
 	for _, r := range rows {
 		p, err := projectRow(sqlc.ClipProject{ID: r.ID, UserID: r.UserID, Title: r.Title, VideoTemplateID: r.VideoTemplateID, Ratio: r.Ratio, TargetDurationMs: r.TargetDurationMs,
-			ResultKey: r.ResultKey, ResultContentType: r.ResultContentType, ResultBytes: r.ResultBytes, ResultDurationMs: r.ResultDurationMs, ResultCreatedAt: r.ResultCreatedAt,
+			ResultSpeechJson: r.ResultSpeechJson, ResultKey: r.ResultKey, ResultContentType: r.ResultContentType, ResultBytes: r.ResultBytes, ResultDurationMs: r.ResultDurationMs, ResultCreatedAt: r.ResultCreatedAt,
 			EditPlanRevision: r.EditPlanRevision, RenderedPlanRevision: r.RenderedPlanRevision, GeneratedPlanRevision: r.GeneratedPlanRevision, CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt,
 			Disclosure: r.Disclosure, HideDisclosure: r.HideDisclosure, CompositionInputsJson: r.CompositionInputsJson, CompositionSnapshotJson: r.CompositionSnapshotJson,
 			ResultID: r.ResultID, FinalizedAt: r.FinalizedAt, FinalizedPlanRevision: r.FinalizedPlanRevision, Language: r.Language, Instruction: r.Instruction,

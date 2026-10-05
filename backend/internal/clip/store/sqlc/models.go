@@ -21,6 +21,7 @@ type ClipAttemptResult struct {
 	ResultDurationMs  int64
 	ResultCreatedAt   string
 	RenderKind        string
+	ResultSpeechJson  string
 }
 
 type ClipBrowserRender struct {
@@ -164,6 +165,7 @@ type ClipProject struct {
 	DubbingEnabled           int64
 	DubbingVoiceID           string
 	DubbingBindingDigest     string
+	ResultSpeechJson         string
 }
 
 type ClipSourceAttempt struct {

@@ -64,7 +64,7 @@ func removeConsumed(candidates, args []string) error {
 	return nil
 }
 
-func (r *Rendering) renderComposition(ctx context.Context, ws clip.MediaWorkspace, plan clip.EditPlan, sources []clip.RenderSource, load clip.RenderSourceLoader) (result clip.RenderedVideo, err error) {
+func (r *Rendering) renderComposition(ctx context.Context, ws clip.MediaWorkspace, plan clip.EditPlan, sources []clip.RenderSource, load clip.RenderSourceLoader, speechLoad ...clip.RenderSpeechLoader) (result clip.RenderedVideo, err error) {
 	substage, started := "render_layout", time.Now()
 	step := func(next string) {
 		clip.ReportMediaStage(ctx, substage, time.Since(started))
@@ -100,6 +100,19 @@ func (r *Rendering) renderComposition(ctx context.Context, ws clip.MediaWorkspac
 			err = errors.Join(err, removeIntermediate(output))
 		}
 	}()
+
+	if err = clip.OutputNarrationReadiness(plan, r.cfg.FPS, r.cfg.AudioRate); err != nil {
+		return result, err
+	}
+	var narrationLoader clip.RenderSpeechLoader
+	if len(speechLoad) > 0 {
+		narrationLoader = speechLoad[0]
+	}
+	speechFiles, speechCleanup, speechErr := r.prepareSpeechAudio(ctx, ws, plan, narrationLoader)
+	cleanup = append(cleanup, speechCleanup...)
+	if speechErr != nil {
+		return result, speechErr
+	}
 	layout, err := r.layoutComposition(ctx, ws, plan)
 	if err != nil {
 		return result, err
@@ -122,8 +135,11 @@ func (r *Rendering) renderComposition(ctx context.Context, ws clip.MediaWorkspac
 	for _, cut := range plan.Cuts {
 		audio = audio || plan.RetainsOriginalAudio(cut) && byID[cut.SourceID].Info.HasAudio
 	}
+	sourceAudio := audio
+	narrated := plan.Narration != nil && plan.Narration.Enabled
+	audio = sourceAudio || narrated
 	cuts, wavs := make([]string, len(plan.Cuts)), []string{}
-	if audio {
+	if sourceAudio {
 		wavs = make([]string, len(plan.Cuts))
 	}
 	sampler := r.newGroundSampler(canvas, timeline, layout.visuals)
@@ -137,7 +153,7 @@ func (r *Rendering) renderComposition(ctx context.Context, ws clip.MediaWorkspac
 		cleanup = append(cleanup, video)
 		cuts[i] = video
 		wav := filepath.Join(ws.Path, fmt.Sprintf("audio-%04d.wav", i))
-		if audio {
+		if sourceAudio {
 			cleanup = append(cleanup, wav)
 			wavs[i] = wav
 		}
@@ -156,7 +172,7 @@ func (r *Rendering) renderComposition(ctx context.Context, ws clip.MediaWorkspac
 			if err := r.sampleFootage(ctx, ws, &sampler, i, video); err != nil {
 				return err
 			}
-			if audio {
+			if sourceAudio {
 				step("render_audio")
 				return r.renderBareAudio(ctx, ws, cut, source, frames[i], wav, plan.RetainsOriginalAudio(cut))
 			}
@@ -213,7 +229,7 @@ func (r *Rendering) renderComposition(ctx context.Context, ws clip.MediaWorkspac
 		return result, err
 	}
 	assembled, measured := "", loudness{}
-	if audio {
+	if sourceAudio {
 		step("render_audio")
 		assembled = filepath.Join(ws.Path, "composition-audio.wav")
 		cleanup = append(cleanup, assembled)
@@ -225,6 +241,26 @@ func (r *Rendering) renderComposition(ctx context.Context, ws clip.MediaWorkspac
 				return result, err
 			}
 		}
+	}
+
+	if narrated {
+		mixed := filepath.Join(ws.Path, "narrated-audio.wav")
+		cleanup = append(cleanup, mixed)
+		if err = r.mixNarrationAudio(ctx, ws, plan, assembled, speechFiles, totalFrames, mixed); err != nil {
+			return result, err
+		}
+		assembled = mixed
+	} else if sourceAudio && plan.SourceVolumePermille != nil && *plan.SourceVolumePermille != 1000 {
+		scaled := filepath.Join(ws.Path, "source-master.wav")
+		cleanup = append(cleanup, scaled)
+		args := r.inputArgs(r.baseArgs(), assembled)
+		args = append(args, "-af", fmt.Sprintf("volume=%.6f", float64(*plan.SourceVolumePermille)/1000), "-vn", "-c:a", "pcm_s16le", "-ar", fmt.Sprint(r.cfg.AudioRate), "-ac", "2", "-f", "wav")
+		if err = r.runRender(ctx, ws, scaled, args); err != nil {
+			return result, err
+		}
+		assembled = scaled
+	}
+	if audio {
 		measured, err = r.measureLoudness(ctx, ws, assembled)
 		if err != nil {
 			return result, err
@@ -276,6 +312,6 @@ func (r *Rendering) renderComposition(ctx context.Context, ws clip.MediaWorkspac
 	if err != nil {
 		return result, err
 	}
-	result.Elements, result.Plan = elements, &plan
+	result.Elements, result.Plan, result.Speech = elements, &plan, clip.RequestedSpeech(plan)
 	return result, nil
 }

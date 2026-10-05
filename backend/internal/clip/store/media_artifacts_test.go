@@ -11,6 +11,7 @@ import (
 
 	"github.com/postpilot/backend/internal/clip"
 	clipapp "github.com/postpilot/backend/internal/clip/app"
+	"github.com/postpilot/backend/internal/clip/composition"
 	"github.com/postpilot/backend/internal/clip/mediacodec"
 	cliprpc "github.com/postpilot/backend/internal/clip/rpc"
 	"github.com/postpilot/backend/internal/clip/store"
@@ -59,13 +60,18 @@ type artifactFixture struct {
 	objects *artifactObjects
 }
 
-func mediaArtifactsFixture(t *testing.T) *artifactFixture {
+func mediaArtifactsFixture(t *testing.T, narrated ...bool) *artifactFixture {
+	render := len(narrated) > 0 && narrated[0]
 	t.Helper()
 	service, st, d := setup(t)
 	_, project := create(t, service)
 	originals := fakeSources()
 	sources := clipapp.NewSourceService(st, originals, clip.DefaultSourceLimits(clip.Environment{SourceBatchTTL: time.Hour, PutTTL: 10 * time.Minute}))
-	created, err := sources.Create(t.Context(), "alice", project.ID, manifest(1))
+	metadata := manifest(1)
+	if render {
+		metadata[0].DurationMS = 15000
+	}
+	created, err := sources.Create(t.Context(), "alice", project.ID, metadata)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -84,6 +90,26 @@ func mediaArtifactsFixture(t *testing.T) *artifactFixture {
 	}
 	source := batch.Sources[0]
 	f.task = clip.MediaTask{Version: clip.MediaContractVersion, Sources: []clip.MediaTaskSource{{ID: source.ID, SourceMetadata: source.SourceMetadata}}}
+	operation := clip.MediaPrepare
+	if render {
+		operation = clip.MediaRender
+		composed := clip.NoTemplateComposition()
+		plan := clip.EditPlan{Ratio: "vertical", DurationMS: 15000, Cuts: []clip.Cut{{ID: "cut-1", SourceID: source.ID, Fingerprint: source.Fingerprint, EndMS: 15000, Focal: clip.Point{X: .5, Y: .5}}}, Portable: &clip.PortablePlan{Snapshot: composed.Snapshot, Inputs: composed.Inputs, Cuts: []composition.Cut{{ID: "cut-1", SourceID: source.ID, EndMS: 15000, PlaybackRatePermille: 1000}}}}
+		hash := strings.Repeat("a", 64)
+		text := "private speech"
+		ref := clip.SpeechRef{AssetID: "owned-speech", VoiceID: "voice", BindingDigest: hash, InputHash: clip.SpokenInputHash(text), SettingsHash: hash, AudioHash: hash, ProfileID: "profile", ProfileRevision: 1, Samples: 44100, SampleRate: 44100, Channels: 2}
+		plan.Narration = &clip.NarrationPlan{Enabled: true, VoiceID: "voice", BindingDigest: hash, VolumePermille: 1000, Segments: []clip.SpokenSegment{{ID: "spoken-1", Text: text, TextRevision: 1, InputHash: ref.InputHash, EndMS: 1000, Speech: &ref}}}
+		if err := st.InsertSpeechAsset(t.Context(), clip.SpeechAsset{ID: ref.AssetID, OwnerID: "alice", ProjectID: project.ID, Text: text, Speech: ref, Bytes: 100, ObjectKey: clip.SpeechAudioPrefix + "owned.mp3", CreatedAt: f.now}); err != nil {
+			t.Fatal(err)
+		}
+		f.task.Plan, err = clip.EncodeEditPlan(plan)
+		if err != nil {
+			t.Fatal(err)
+		}
+		f.task.Render = clip.FreezeMediaRenderInputs(plan)
+		f.task.Sources[0].Info = clip.MediaInfo{Width: source.Width, Height: source.Height, DurationMS: source.DurationMS}
+		f.task.Speech = []clip.MediaTaskSpeech{{AssetID: ref.AssetID, AudioHash: hash, Bytes: 100}}
+	}
 	payload, err := mediacodec.EncodeTask(f.task)
 	if err != nil {
 		t.Fatal(err)
@@ -92,12 +118,12 @@ func mediaArtifactsFixture(t *testing.T) *artifactFixture {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = q.Create(t.Context(), clip.MediaStageInput{ID: "artifact-stage", ParentJobID: "artifact-job", UserID: "alice", ProjectID: project.ID, ExpectedRevision: project.EditPlanRevision, Operation: clip.MediaPrepare, ContractVersion: clip.MediaContractVersion, RendererVersion: clip.MediaRendererVersion, AssetVersion: clip.MediaAssetVersion, Payload: payload, InputDigest: clip.MediaPayloadDigest(payload)})
+	_, err = q.Create(t.Context(), clip.MediaStageInput{ID: "artifact-stage", ParentJobID: "artifact-job", UserID: "alice", ProjectID: project.ID, ExpectedRevision: project.EditPlanRevision, Operation: operation, ContractVersion: clip.MediaContractVersion, RendererVersion: clip.MediaRendererVersion, AssetVersion: clip.MediaAssetVersion, Payload: payload, InputDigest: clip.MediaPayloadDigest(payload)})
 	if err != nil {
 		t.Fatal(err)
 	}
 	p := mediaProfile()
-	p.Operation = clip.MediaPrepare
+	p.Operation = operation
 	lease, err := q.Claim(t.Context(), p)
 	if err != nil || lease == nil {
 		t.Fatal(err)
@@ -302,5 +328,34 @@ func TestMediaArtifactsHTTPMapsAccessAndVerifiedCompletion(t *testing.T) {
 	f.objects.objects[rows[0].ObjectKey] = clip.SourceObjectInfo{Bytes: 50, ContentType: "video/mp4"}
 	if err := c.Complete(t.Context(), f.lease, f.encoded(t)); err != nil {
 		t.Fatal("mapped complete", err)
+	}
+}
+
+func TestPrivateMediaSpeechReadRequiresFrozenOwnedLiveLease(t *testing.T) {
+	f := mediaArtifactsFixture(t, true)
+	slot := "speech/owned-speech"
+	access, err := f.a.Read(t.Context(), f.lease, slot)
+	if err != nil || access.Bytes != 100 || access.ContentType != "audio/mpeg" || !strings.Contains(access.URL, clip.SpeechAudioPrefix) {
+		t.Fatal(access, err)
+	}
+	for _, unknown := range []string{"speech/foreign", "speech/../owned-speech", clip.SpeechAudioPrefix + "owned.mp3"} {
+		if _, err = f.a.Read(t.Context(), f.lease, unknown); err == nil {
+			t.Fatal("unfrozen private audio signed")
+		}
+	}
+	stolen := f.lease
+	stolen.WorkerID = "other"
+	if _, err = f.a.Read(t.Context(), stolen, slot); !errors.Is(err, clip.ErrMediaLeaseLost) {
+		t.Fatal("stolen lease", err)
+	}
+	if _, err = f.d.Writer.Exec(`UPDATE generation_jobs SET cancel_requested_at=? WHERE id='artifact-job'`, f.now.Format(time.RFC3339Nano)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = f.a.Read(t.Context(), f.lease, slot); !errors.Is(err, clip.ErrMediaCancelled) {
+		t.Fatal("cancelled parent signed speech", err)
+	}
+	f.now = f.now.Add(time.Hour)
+	if _, err = f.a.Read(t.Context(), f.lease, slot); !errors.Is(err, clip.ErrMediaLeaseLost) {
+		t.Fatal("expired access", err)
 	}
 }

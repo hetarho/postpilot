@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"reflect"
 	"time"
 
 	"github.com/postpilot/backend/internal/clip"
@@ -109,17 +110,32 @@ func (s *Store) RemoveProxy(ctx context.Context, key string) error {
 	return s.write.RemoveProxy(ctx, key)
 }
 func (s *Store) SaveGeneration(ctx context.Context, user, id, analysis, plan string, r clip.Result) error {
-	_, err := transact(ctx, s, func(q *sqlc.Queries) (struct{}, error) {
+	speech, err := encodeResultSpeech(r.Speech)
+	if err != nil {
+		return err
+	}
+	_, err = transact(ctx, s, func(q *sqlc.Queries) (struct{}, error) {
 		old, err := getProject(ctx, q, user, id)
 		if err != nil {
 			return struct{}{}, err
+		}
+		if decoded, e := clip.DecodeEditPlan(plan); e == nil {
+			if err := clip.NarrationReadiness(decoded); err != nil {
+				return struct{}{}, err
+			}
+			if !reflect.DeepEqual(clip.RequestedSpeech(decoded), r.Speech) {
+				return struct{}{}, clip.ErrInvalidMedia
+			}
+			if err := validateSpeechAssets(ctx, q, user, id, decoded); err != nil {
+				return struct{}{}, err
+			}
 		}
 		if old.Result != nil {
 			if err = q.EnqueueObjectDeletion(ctx, sqlc.EnqueueObjectDeletionParams{ObjectKey: old.Result.Key, CreatedAt: stamp(r.CreatedAt)}); err != nil {
 				return struct{}{}, err
 			}
 		}
-		n, err := q.SaveGeneration(ctx, sqlc.SaveGenerationParams{RenderKind: string(r.RenderKind()), AnalysisJson: nullable(analysis), EditPlanJson: nullable(plan), ResultKey: nullable(r.Key), ResultContentType: nullable(r.ContentType), ResultBytes: sql.NullInt64{Int64: r.Bytes, Valid: true}, ResultDurationMs: sql.NullInt64{Int64: int64(r.DurationMS), Valid: true}, ResultCreatedAt: nullable(stamp(r.CreatedAt)), UpdatedAt: stamp(r.CreatedAt), UserID: user, ID: id})
+		n, err := q.SaveGeneration(ctx, sqlc.SaveGenerationParams{ResultSpeechJson: speech, RenderKind: string(r.RenderKind()), AnalysisJson: nullable(analysis), EditPlanJson: nullable(plan), ResultKey: nullable(r.Key), ResultContentType: nullable(r.ContentType), ResultBytes: sql.NullInt64{Int64: r.Bytes, Valid: true}, ResultDurationMs: sql.NullInt64{Int64: int64(r.DurationMS), Valid: true}, ResultCreatedAt: nullable(stamp(r.CreatedAt)), UpdatedAt: stamp(r.CreatedAt), UserID: user, ID: id})
 		if e := affected(n, err); e != nil {
 			return struct{}{}, e
 		}

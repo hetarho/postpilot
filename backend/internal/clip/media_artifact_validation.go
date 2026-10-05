@@ -46,12 +46,15 @@ func ValidateMediaTask(op MediaOperation, task MediaTask, cfg MediaConfig) error
 	}
 	switch op {
 	case MediaPrepare:
-		if task.Plan != "" {
+		if task.Plan != "" || len(task.Speech) > 0 {
 			return ErrInvalid
 		}
 	case MediaRender, MediaSample:
 		plan, err := DecodeEditPlan(task.Plan)
 		if err != nil {
+			return err
+		}
+		if err := ValidateMediaSpeech(task, plan); err != nil {
 			return err
 		}
 		plan = task.Render.Apply(plan)
@@ -104,7 +107,7 @@ func ValidateMediaOutput(op MediaOperation, task MediaTask, out MediaOutput, cfg
 		if out.Info.Rotation != 0 || out.Info.PixelFormat != "yuv420p" || out.Info.SampleAspectRatio != "1:1" || out.Info.DecodedFrames <= 0 || out.Info.DecodedFrames > 1000000 || math.Abs(float64(out.Info.DecodedFrames)*1000/float64(render.FPS)-float64(plan.DurationMS)) > 1000/float64(render.FPS) {
 			return ErrInvalidMedia
 		}
-		audio := false
+		audio := plan.Narration != nil && plan.Narration.Enabled
 		for _, cut := range plan.Cuts {
 			for _, s := range task.Sources {
 				if s.ID == cut.SourceID {
@@ -155,6 +158,13 @@ func ValidateMediaOutput(op MediaOperation, task MediaTask, out MediaOutput, cfg
 // ValidateMediaResult checks ordering and complete coverage before a receipt can
 // release the parent to its first paid call. Reservations alone prove no coverage.
 func ValidateMediaResult(op MediaOperation, task MediaTask, result MediaResult, cfg MediaConfig) error {
+	if op == MediaRender {
+		if err := VerifyMediaSpeech(task, result); err != nil {
+			return err
+		}
+	} else if len(result.Speech) > 0 {
+		return ErrInvalidMedia
+	}
 	if result.Version != MediaContractVersion || len(result.Sources) != len(task.Sources) {
 		return ErrInvalid
 	}

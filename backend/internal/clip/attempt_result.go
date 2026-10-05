@@ -1,5 +1,7 @@
 package clip
 
+import "reflect"
+
 // SameAttemptResult ignores temporary read URLs and the time value's location
 // and monotonic clock, while requiring every durable candidate value to match.
 func SameAttemptResult(a, b AttemptResult) bool {
@@ -7,5 +9,5 @@ func SameAttemptResult(a, b AttemptResult) bool {
 		a.ExpectedRevision == b.ExpectedRevision && a.Analysis == b.Analysis && a.EditPlan == b.EditPlan &&
 		a.Result.RenderKind() == b.Result.RenderKind() && a.Result.Key == b.Result.Key && a.Result.ContentType == b.Result.ContentType &&
 		a.Result.Bytes == b.Result.Bytes && a.Result.DurationMS == b.Result.DurationMS &&
-		a.Result.CreatedAt.Equal(b.Result.CreatedAt)
+		a.Result.CreatedAt.Equal(b.Result.CreatedAt) && reflect.DeepEqual(a.Result.Speech, b.Result.Speech)
 }

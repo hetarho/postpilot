@@ -76,6 +76,7 @@ const (
 var ErrRenderUnavailable = errors.New("browser rendering is not implemented")
 
 type Result struct {
+	Speech               []SpeechPlacement
 	Kind                 RenderKind
 	ID                   string
 	Key, ContentType     string

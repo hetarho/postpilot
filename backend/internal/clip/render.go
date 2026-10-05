@@ -175,6 +175,7 @@ type RenderSource struct {
 // The consumer downloads only the requested source, then removes it after fn.
 type RenderSourceLoader func(context.Context, string, func(MediaSource) error) error
 type RenderedVideo struct {
+	Speech   []SpeechPlacement
 	Plan     *EditPlan
 	Path     string
 	Info     MediaInfo

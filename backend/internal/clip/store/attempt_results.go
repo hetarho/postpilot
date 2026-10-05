@@ -12,18 +12,26 @@ import (
 
 func attemptResult(r sqlc.ClipAttemptResult) (clip.AttemptResult, error) {
 	at, err := time.Parse(time.RFC3339Nano, r.ResultCreatedAt)
-	return clip.AttemptResult{JobID: r.JobID, UserID: r.UserID, ProjectID: r.ProjectID, ExpectedRevision: int(r.ExpectedRevision), Analysis: r.AnalysisJson, EditPlan: r.EditPlanJson, Result: clip.Result{Kind: clip.RenderKind(r.RenderKind), Key: r.ResultKey, ContentType: r.ResultContentType, Bytes: r.ResultBytes, DurationMS: int(r.ResultDurationMs), CreatedAt: at}}, err
+	if err != nil {
+		return clip.AttemptResult{}, err
+	}
+	speech, err := decodeResultSpeech(r.ResultSpeechJson)
+	return clip.AttemptResult{JobID: r.JobID, UserID: r.UserID, ProjectID: r.ProjectID, ExpectedRevision: int(r.ExpectedRevision), Analysis: r.AnalysisJson, EditPlan: r.EditPlanJson, Result: clip.Result{Speech: speech, Kind: clip.RenderKind(r.RenderKind), Key: r.ResultKey, ContentType: r.ResultContentType, Bytes: r.ResultBytes, DurationMS: int(r.ResultDurationMs), CreatedAt: at}}, err
 }
 
 func (s *Store) StageAttemptResult(ctx context.Context, c clip.AttemptResult) error {
 	if c.JobID == "" || c.UserID == "" || c.ProjectID == "" || c.ExpectedRevision < 0 || !strings.HasPrefix(c.Result.Key, clip.ResultPrefix) || c.Result.CreatedAt.IsZero() {
 		return clip.ErrInvalid
 	}
-	_, err := transact(ctx, s, func(q *sqlc.Queries) (struct{}, error) {
+	speech, err := encodeResultSpeech(c.Result.Speech)
+	if err != nil {
+		return err
+	}
+	_, err = transact(ctx, s, func(q *sqlc.Queries) (struct{}, error) {
 		if _, err := getProject(ctx, q, c.UserID, c.ProjectID); err != nil {
 			return struct{}{}, err
 		}
-		err := q.StageAttemptResult(ctx, sqlc.StageAttemptResultParams{RenderKind: string(c.Result.RenderKind()), JobID: c.JobID, UserID: c.UserID, ProjectID: c.ProjectID, ExpectedRevision: int64(c.ExpectedRevision), AnalysisJson: c.Analysis, EditPlanJson: c.EditPlan, ResultKey: c.Result.Key, ResultContentType: c.Result.ContentType, ResultBytes: c.Result.Bytes, ResultDurationMs: int64(c.Result.DurationMS), ResultCreatedAt: stamp(c.Result.CreatedAt)})
+		err := q.StageAttemptResult(ctx, sqlc.StageAttemptResultParams{ResultSpeechJson: speech, RenderKind: string(c.Result.RenderKind()), JobID: c.JobID, UserID: c.UserID, ProjectID: c.ProjectID, ExpectedRevision: int64(c.ExpectedRevision), AnalysisJson: c.Analysis, EditPlanJson: c.EditPlan, ResultKey: c.Result.Key, ResultContentType: c.Result.ContentType, ResultBytes: c.Result.Bytes, ResultDurationMs: int64(c.Result.DurationMS), ResultCreatedAt: stamp(c.Result.CreatedAt)})
 		if err != nil {
 			return struct{}{}, err
 		}

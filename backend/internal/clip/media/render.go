@@ -123,7 +123,24 @@ func (r *Rendering) Render(ctx context.Context, ws clip.MediaWorkspace, plan cli
 	if plan.Portable == nil {
 		return result, clip.ErrCompositionUnavailable
 	}
+	if plan.Narration != nil && plan.Narration.Enabled {
+		return result, clip.ErrCompositionUnavailable
+	}
 	return r.renderComposition(ctx, ws, plan, sources, load)
+}
+
+func (r *Rendering) RenderNarrated(ctx context.Context, ws clip.MediaWorkspace, plan clip.EditPlan, sources []clip.RenderSource, load clip.RenderSourceLoader, speech clip.RenderSpeechLoader) (clip.RenderedVideo, error) {
+	if err := clip.NarrationReadiness(plan); err != nil {
+		return clip.RenderedVideo{}, err
+	}
+	plan, err := r.preparePlan(plan, sources)
+	if err != nil {
+		return clip.RenderedVideo{}, err
+	}
+	if plan.Portable == nil || speech == nil {
+		return clip.RenderedVideo{}, clip.ErrCompositionUnavailable
+	}
+	return r.renderComposition(ctx, ws, plan, sources, load, speech)
 }
 
 var errOutputValidation = errors.New("rendered clip failed output validation")

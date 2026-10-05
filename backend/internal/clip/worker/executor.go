@@ -173,7 +173,21 @@ func (e *Executor) renderTask(ctx context.Context, ws clip.MediaWorkspace, w cli
 		return original, nil
 	})
 	defer release()
-	video, err := e.render.Render(ctx, ws, plan, sources, loader)
+
+	var video clip.RenderedVideo
+	if plan.Narration != nil && plan.Narration.Enabled {
+		renderer, ok := e.render.(clip.NarrationRenderer)
+		if !ok {
+			return clip.ErrMediaIncompatible
+		}
+		speech, dropSpeech := e.speechLoader(ws, w, task)
+		defer dropSpeech()
+		video, err = renderer.RenderNarrated(ctx, ws, plan, sources, loader, speech)
+		err = errors.Join(err, dropSpeech())
+	} else {
+		video, err = e.render.Render(ctx, ws, plan, sources, loader)
+	}
+	result.Speech = video.Speech
 	if err = errors.Join(err, release()); err != nil {
 		return err
 	}

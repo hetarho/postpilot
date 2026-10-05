@@ -12,9 +12,15 @@ const (
 type MediaTask struct {
 	Version        int
 	Sources        []MediaTaskSource
+	Speech         []MediaTaskSpeech
 	Plan           string
 	HideDisclosure bool
 	Render         MediaRenderInputs
+}
+
+type MediaTaskSpeech struct {
+	AssetID, AudioHash string
+	Bytes              int64
 }
 
 type MediaTaskSource struct {
@@ -41,6 +47,7 @@ type MediaOutput struct {
 }
 
 type MediaResult struct {
+	Speech  []SpeechPlacement
 	Version int
 	Sources []MediaVerifiedSource
 	Outputs []MediaOutput

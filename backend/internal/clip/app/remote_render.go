@@ -24,12 +24,15 @@ func freezeRenderSourceAudio(batch clip.SourceBatch, plan clip.EditPlan) *clip.S
 	return clip.FreezeSourceAudio(batch, plan.Cuts)
 }
 
-func freezeRenderTask(plan clip.EditPlan, retained []clip.AnalysisSource, batch clip.SourceBatch, cfg clip.MediaConfig) (clip.MediaTask, error) {
+func freezeRenderTask(plan clip.EditPlan, retained []clip.AnalysisSource, batch clip.SourceBatch, cfg clip.MediaConfig, speech ...clip.SpeechAsset) (clip.MediaTask, error) {
 	raw, err := clip.EncodeEditPlan(plan)
 	if err != nil {
 		return clip.MediaTask{}, err
 	}
 	task := clip.MediaTask{Version: clip.MediaContractVersion, Plan: raw, HideDisclosure: plan.HideDisclosure, Render: clip.FreezeMediaRenderInputs(plan)}
+	for _, asset := range speech {
+		task.Speech = append(task.Speech, clip.MediaTaskSpeech{AssetID: asset.ID, AudioHash: asset.Speech.AudioHash, Bytes: asset.Bytes})
+	}
 	for _, lease := range renderBatchSources(plan, batch).Sources {
 		matched := false
 		for _, old := range retained {
@@ -92,7 +95,7 @@ func (s *GenerationService) runRemoteRender(ctx context.Context, user, parent st
 		return clip.ErrInvalidMedia
 	}
 	set("save", 0, 1)
-	err = s.finisher.Complete(ctx, clip.AttemptResult{JobID: parent, UserID: user, ProjectID: p.ID, ExpectedRevision: frozen.Revision, Result: clip.Result{Kind: clip.RenderServer, Key: a.ObjectKey, ContentType: a.ContentType, Bytes: a.Bytes, DurationMS: a.DurationMS, CreatedAt: a.CreatedAt}})
+	err = s.finisher.Complete(ctx, clip.AttemptResult{JobID: parent, UserID: user, ProjectID: p.ID, ExpectedRevision: frozen.Revision, Result: clip.Result{Speech: result.Speech, Kind: clip.RenderServer, Key: a.ObjectKey, ContentType: a.ContentType, Bytes: a.Bytes, DurationMS: a.DurationMS, CreatedAt: a.CreatedAt}})
 	if err == nil {
 		set("cleanup", 0, 1)
 	}

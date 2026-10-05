@@ -41,6 +41,28 @@ export class SpeechDecodeCache {
 export const speechDecodeKey = (s: ClipSpeechRef) =>
   `${s.audioHash}:${s.samples}:${s.sampleRate}:${s.channels}`
 
+/** Native gapless decoders omit MP3 info/priming/tail silence counted by the fixed frame measurement. */
+export function canonicalSpeechBuffer(
+  context: Pick<BaseAudioContext, 'createBuffer' | 'sampleRate'>,
+  speech: ClipSpeechRef,
+  decoded: AudioBuffer,
+): AudioBuffer {
+  const expected = speech.samples / speech.sampleRate
+  if (
+    decoded.numberOfChannels !== speech.channels ||
+    !Number.isFinite(decoded.duration) ||
+    decoded.duration > expected + 1 / context.sampleRate ||
+    expected - decoded.duration > CLIP_SPEECH_PLAYBACK.codecPaddingSamples / speech.sampleRate
+  )
+    throw new SpeechPlaybackError('decode')
+  const samples = Math.ceil(expected * context.sampleRate)
+  if (decoded.length >= samples) return decoded
+  const padded = context.createBuffer(speech.channels, samples, context.sampleRate)
+  for (let channel = 0; channel < speech.channels; channel++)
+    padded.copyToChannel(decoded.getChannelData(channel), channel)
+  return padded
+}
+
 /** One output clock across cuts; a seek cancels every old node before new scheduling. */
 export class SpeechPreviewTransport {
   private context?: AudioContext
@@ -142,13 +164,11 @@ export class SpeechPreviewTransport {
           throw new SpeechPlaybackError('decode', segment.segmentId)
         }
         abort.signal.throwIfAborted()
-        if (
-          buffer.numberOfChannels !== segment.speech.channels ||
-          !Number.isFinite(buffer.duration) ||
-          Math.abs(buffer.duration - segment.duration) >
-            CLIP_SPEECH_PLAYBACK.durationToleranceSeconds
-        )
+        try {
+          buffer = canonicalSpeechBuffer(context, segment.speech, buffer)
+        } catch {
           throw new SpeechPlaybackError('decode', segment.segmentId)
+        }
         this.cache.put(key, buffer)
       }
       if (epoch !== this.epoch || abort.signal.aborted) return false
