@@ -1164,6 +1164,7 @@ it('confirms before rebuilding over a plan edited by hand, and cancels cleanly',
   })
   const user = userEvent.setup()
   await screen.findByRole('button', { name: '스토리라인' })
+  await user.click(screen.getByRole('button', { name: '스토리라인' }))
   await approveFrom(user, '이 스토리로 다시 만들기', /승인하고 생성/)
   const confirm = within(await screen.findByRole('dialog', { name: '이 스토리로 다시 만들까요?' }))
   expect(
@@ -1208,6 +1209,7 @@ it('keeps the revision composer on the flow and the narration', async () => {
     renderedPlanRevision: 1,
     editing: clipTimelineFixture(),
   })
+  await user.click(screen.getByRole('button', { name: 'AI로 수정' }))
   await user.type(screen.getByLabelText('요청 내용'), '자막을 짧게')
   await user.click(screen.getByRole('button', { name: 'AI에 수정 요청' }))
   const sheet = within(await screen.findByRole('dialog', { name: 'AI에 수정 요청' }))

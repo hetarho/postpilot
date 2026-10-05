@@ -47,3 +47,5 @@ export { TechnicalDetail } from './technical-detail/TechnicalDetail'
 export { AppFailureMessage } from './app-failure/AppFailureMessage'
 export { RotatedImage, type RotatedImageProps } from './rotated-image/RotatedImage'
 export { RadioGroup, type RadioOption } from './radio-group/RadioGroup'
+
+export { useMediaQuery, MD_MEDIA_QUERY } from './media-query/useMediaQuery'

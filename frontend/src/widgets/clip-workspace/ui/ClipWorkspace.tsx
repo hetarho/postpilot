@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { Link } from '@tanstack/react-router'
+import { isTerminal } from '@/entities/generation-job'
 import { useTranslation } from 'react-i18next'
 import { ClipFailureNotice, ClipRequestRecord, type ClipProject } from '@/entities/clip-project'
 import { ClipCorrectionWorkspace } from '@/features/correct-clip'
@@ -23,7 +25,15 @@ import { ClipRevisionRequest } from '@/features/revise-clip'
 import { StageModelSelect } from '@/features/select-model'
 import { ClipSourcePicker } from '@/features/upload-clip-sources'
 import { ClipObservationViewer, ClipAttemptInspection } from '@/features/inspect-clip-observations'
-import { ActionBar, Button, Sheet, SegmentedControl, ProgressBar, Typography } from '@/shared/ui'
+import {
+  ActionBar,
+  Button,
+  Sheet,
+  SegmentedControl,
+  ProgressBar,
+  Typography,
+  buttonStyles,
+} from '@/shared/ui'
 import { useRunFocus } from '../model/lifecycle'
 import { useClipWorkspace } from '../model/useClipWorkspace'
 import { clipStepLabel, clipSteps } from '../model/steps'
@@ -57,6 +67,10 @@ export function ClipWorkspace({ ownerId, project }: { ownerId: string; project: 
       ? 'unrendered'
       : 'clean'
   // Shared reference content: ① keeps it in flow; ② mounts only the chosen tab.
+  const [editorPanel, setEditorPanel] = useState<'storyline' | 'script'>()
+  const [aiOpen, setAiOpen] = useState(false)
+  const aiRunning = job?.kind === 'revise_clip' && !isTerminal(job)
+  const showAI = aiOpen || aiRunning
   const [referenceOpen, setReferenceOpen] = useState(false)
   const [referenceTab, setReferenceTab] = useState<'observations' | 'sources' | 'requests'>(
     'observations',
@@ -286,7 +300,7 @@ export function ClipWorkspace({ ownerId, project }: { ownerId: string; project: 
       <ClipStorylineSpace
         ownerId={ownerId}
         project={project}
-        hasPlan={!!plan}
+        hasPlan={!!plan && editorPanel !== 'storyline'}
         readOnly={reading || generation.busy}
         localSources={reading ? [] : sources.localSources}
         resolvePlayback={reading ? undefined : sources.resolvePlayback}
@@ -343,7 +357,6 @@ export function ClipWorkspace({ ownerId, project }: { ownerId: string; project: 
 
   const refinePanel = plan ? (
     <>
-      {storylineSpace}
       <ClipCorrectionWorkspace
         project={{
           id: project.id,
@@ -398,23 +411,38 @@ export function ClipWorkspace({ ownerId, project }: { ownerId: string; project: 
           revision: reading
             ? undefined
             : (actions) => (
-                <ClipRevisionRequest
-                  ownerId={ownerId}
-                  project={project}
-                  observe={generation.observeRef}
-                  write={generation.writeRef}
-                  job={job}
-                  disabled={revision.disabled}
-                  flush={revision.flush}
-                  cancelAction={
-                    <CancelClipAction
-                      action={revision.cancellation}
+                <div className="min-w-0 space-y-2">
+                  <div className="flex flex-wrap items-center justify-end gap-2">
+                    <Button
+                      variant="ghost"
+                      disabled={aiRunning}
+                      aria-expanded={showAI}
+                      aria-controls="clip-ai-edit-entry"
+                      onClick={() => setAiOpen((open) => !open)}
+                    >
+                      {t('editorEntries.ai')}
+                    </Button>
+                    {actions}
+                  </div>
+                  <div id="clip-ai-edit-entry" hidden={!showAI}>
+                    <ClipRevisionRequest
+                      ownerId={ownerId}
+                      project={project}
+                      observe={generation.observeRef}
+                      write={generation.writeRef}
                       job={job}
-                      accounting={generation.accounting}
+                      disabled={revision.disabled}
+                      flush={revision.flush}
+                      cancelAction={
+                        <CancelClipAction
+                          action={revision.cancellation}
+                          job={job}
+                          accounting={generation.accounting}
+                        />
+                      }
                     />
-                  }
-                  action={actions}
-                />
+                  </div>
+                </div>
               ),
           downloadAction:
             !reading && project.result?.downloadUrl ? (
@@ -444,9 +472,55 @@ export function ClipWorkspace({ ownerId, project }: { ownerId: string; project: 
                 }
               />
             ) : undefined,
+          tools: (
+            <>
+              {storylineSpace && (
+                <Button variant="ghost" onClick={() => setEditorPanel('storyline')}>
+                  {t('editorEntries.storyline')}
+                </Button>
+              )}
+              <Button variant="ghost" onClick={() => setEditorPanel('script')}>
+                {t('editorEntries.script')}
+              </Button>
+            </>
+          ),
+          addDubbing: () => setEditorPanel('script'),
           referenceAction,
         }}
       />
+      <Sheet
+        open={editorPanel !== undefined}
+        labelledBy="clip-workspace-tool-title"
+        onClose={() => setEditorPanel(undefined)}
+        header={
+          <Typography id="clip-workspace-tool-title" variant="fieldTitle">
+            {t(editorPanel === 'storyline' ? 'editorEntries.storyline' : 'editorEntries.script')}
+          </Typography>
+        }
+      >
+        {editorPanel === 'storyline' ? (
+          storylineSpace
+        ) : (
+          <div className="min-w-0 space-y-3">
+            <Typography variant="body" className="text-content-secondary">
+              {t('editorEntries.scriptHelp')}
+            </Typography>
+            {(correction.draft.narration?.segments ?? []).map((segment) => (
+              <Typography key={segment.id} variant="body">
+                {segment.text}
+              </Typography>
+            ))}
+            {!correction.draft.narration?.segments.length && (
+              <Typography variant="body">{t('editorEntries.noScript')}</Typography>
+            )}
+            {!reading && (
+              <Link to="/spoken-voices" className={buttonStyles({ variant: 'secondary' })}>
+                {t('editorEntries.voices')}
+              </Link>
+            )}
+          </div>
+        )}
+      </Sheet>
     </>
   ) : (
     <>

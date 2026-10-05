@@ -27,7 +27,9 @@ import { withClipRegionsOf } from './region-rebase'
 export { clipDraftKey }
 
 export type ClipSelection =
-  { kind: 'cut'; id: string } | { kind: 'text'; id: string; phrase?: number }
+  | { kind: 'cut'; id: string }
+  | { kind: 'text'; id: string; phrase?: number }
+  | { kind: 'spoken'; id: string }
 export type TimelineEdit =
   | ClipEdit
   | { type: 'sourceSound'; setting: ClipSourceAudioSetting }
@@ -452,6 +454,8 @@ export function captionStartCut(plan: ClipEditPlan, text: ClipEditableText) {
 export function selectedTime(plan: ClipEditPlan, selection: ClipSelection) {
   if (selection.kind === 'cut')
     return timelineCuts(plan).find((c) => c.cut.id === selection.id)?.startMs ?? 0
+  if (selection.kind === 'spoken')
+    return plan.narration?.segments.find((s) => s.id === selection.id)?.startMs ?? 0
   const text = plan.elements?.find((t) => t.instanceId === selection.id)
   if (!text) return 0
   const interval = textInterval(plan, text)
@@ -632,6 +636,8 @@ function survivingSelection(
   // nothing selected, the fallback below would have selected a cut on every
   // autosave the server acknowledged.
   if (!selection) return undefined
+  if (selection.kind === 'spoken')
+    return next.narration?.segments.some((s) => s.id === selection.id) ? selection : undefined
   if (selection?.kind === 'text' && next.elements?.some((t) => t.instanceId === selection.id))
     return selection
   if (selection?.kind === 'cut' && next.cuts.some((c) => c.id === selection.id)) return selection

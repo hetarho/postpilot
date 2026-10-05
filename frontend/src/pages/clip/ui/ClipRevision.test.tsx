@@ -69,6 +69,10 @@ async function mount(clips: FakeClipsOptions = {}, jobs: FakeJobsOptions = {}) {
     },
   })
   await screen.findByRole('region', { name: '컷·자막 수정' })
+  {
+    const entry = screen.queryByRole('button', { name: 'AI로 수정' })
+    if (entry?.getAttribute('aria-expanded') === 'false') await userEvent.click(entry)
+  }
   return view
 }
 const panel = () => within(screen.getByLabelText('클립 수정 작업'))
@@ -87,12 +91,12 @@ it('keeps one composer in the dock and opens the target and the approval from se
   expect(dockElement.children).toHaveLength(1)
   const composer = dockElement.children[0] as HTMLElement
   const heading = composer.children[0] as HTMLElement
-  expect(heading).toHaveTextContent('요청 내용')
+  expect(heading).toHaveTextContent('AI로 수정')
   expect(
     within(heading)
       .getAllByRole('button')
       .map((b) => b.textContent),
-  ).toEqual(['다시 렌더', '확정하기'])
+  ).toEqual(['AI로 수정', '다시 렌더', '확정하기'])
   expect(composer.children[1]).toContainElement(dock.getByLabelText('요청 내용'))
   expect(dock.queryByRole('tablist', { name: '고칠 대상' })).not.toBeInTheDocument()
   expect(dock.queryByRole('button', { name: /브라우저|서버/ })).not.toBeInTheDocument()
@@ -102,6 +106,10 @@ it('keeps one composer in the dock and opens the target and the approval from se
   expect(screen.getByRole('link', { name: '렌더 1 다운로드' })).toBeInTheDocument()
   // The counter appears with the first character, not before.
   expect(dock.queryByText(/1000자/)).not.toBeInTheDocument()
+  {
+    const entry = screen.queryByRole('button', { name: 'AI로 수정' })
+    if (entry?.getAttribute('aria-expanded') === 'false') await userEvent.click(entry)
+  }
   await write('자막을 더 짧게')
   // Counted in every character, spaces included, as the server bounds it (CLIP-121).
   expect(panel().getByText('8 / 1000자')).toBeInTheDocument()
@@ -181,7 +189,13 @@ it('keeps ② mounted and read-only while the request runs, with progress and �
       name: /컷 1/,
     }),
   )
+  await userEvent.click(screen.getByRole('button', { name: '상세 편집' }))
   expect(screen.getByRole('button', { name: '컷 삭제' })).toBeEnabled()
+  await userEvent.keyboard('{Escape}')
+  {
+    const entry = screen.queryByRole('button', { name: 'AI로 수정' })
+    if (entry?.getAttribute('aria-expanded') === 'false') await userEvent.click(entry)
+  }
   await write('자막을 더 짧게')
   await userEvent.click(panel().getByRole('button', { name: 'AI에 수정 요청' }))
   await userEvent.click(
@@ -199,6 +213,7 @@ it('keeps ② mounted and read-only while the request runs, with progress and �
   // no focused job view took over.
   expect(screen.getByRole('tab', { name: '수정' })).toBeInTheDocument()
   expect(screen.getByLabelText('편집 타임라인')).toBeInTheDocument()
+  await userEvent.click(screen.getByRole('button', { name: '상세 편집' }))
   await waitFor(() => expect(screen.getByRole('button', { name: '컷 삭제' })).toBeDisabled())
 })
 
@@ -231,6 +246,10 @@ it('offers 영상 지침으로 저장 after a completed revision started here, s
   // Nothing was asked in this session yet, so there is nothing to save.
   expect(screen.queryByRole('button', { name: '영상 지침으로 저장' })).not.toBeInTheDocument()
 
+  {
+    const entry = screen.queryByRole('button', { name: 'AI로 수정' })
+    if (entry?.getAttribute('aria-expanded') === 'false') await userEvent.click(entry)
+  }
   await write('자막을 더 짧게')
   await userEvent.click(panel().getByRole('button', { name: 'AI에 수정 요청' }))
   await userEvent.click(

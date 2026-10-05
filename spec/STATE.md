@@ -63,7 +63,6 @@
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
 | T539 | Qualify the complete Korean voice-creation milestone | ARCH DUB MODEL CDS THEME | T538 | blocked@261005 |
-| T541 | Make preview and contextual editing the clip workspace entry | ARCH CLIP THEME | T540 | todo |
 | T542 | Implement direct trim, reorder, seek and playhead split | ARCH CLIP CDS THEME | T541 | todo |
 | T543 | Edit captions directly and refresh script-derived wording safely | ARCH DUB CLIP CDS THEME | T541 | todo |
 | T544 | Generate only stale clip speech with immutable revision guards | ARCH DUB CLIP QUOTA | T540 | todo |
@@ -75,11 +74,13 @@
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | todo |
 
 ## next
-- implement-task T541–T550 sequentially with automated checks and task commits, then merge/push main; T539 real supplier evidence is deferred and ordinary production readiness stays closed.
+- implement-task T542–T550 sequentially with automated checks and task commits, then merge/push main; T539 real supplier evidence is deferred and ordinary production readiness stays closed.
 - create-task ARCH (ARCH-52+ ARCH-53+ ARCH-56+ ARCH-57+ ARCH-34✎); create-task POST r32 (POST-108+ implemented by 12d2f428; verification-only); create-task VOICE r8 (VOICE-32✎ implemented by 68ae9a79; verification-only); update-ssot VOICE-31 remains open.
 - ops: lower TEMPLATE_PHOTO_ROW_MAX / VITE_TEMPLATE_PHOTO_ROW_MAX to 3 wherever production sets them explicitly (VPS .env, Cloudflare build vars).
 
 ## log
+- 261005 T541 done: preview-first contextual editor, three named tracks and explicit mobile details; 3231 FE tests, full local CI and 12 responsive/theme browser reviews passed
+- 261005 T541 start: persistent desktop properties, explicit phone details, named tracks and preview-first saved drafts
 - 261005 T540 done: independent spoken scripts, v7/legacy mapping, private project speech assets, selective staleness/reuse, protected caption links and publication CAS; full local CI passed
 - 261005 T540 start: independent spoken-script contract, private speech provenance, revision guards and old-plan compatibility
 - 261005 create-task DUB start: move real qualification after implementation, retain unfulfilled live evidence tasks and normal automated gates
@@ -98,5 +99,3 @@
 - 261005 deploy of d645c1ca failed at the media-tools build: code.videolan.org served GitHub runners a challenge page for the x264 archive (T559 changed media-tools.sh, so the cache missed); media-tools.sh now falls back to the GitHub mirror of the same revision under its own checksum
 - 261005 perf-cost wave complete: T551–T584 done (review perf-cost-261004 fully converted, QUOTA r34, BILL r9, release smoke 28/28); pushing main
 - 261005 T584 done: refund store and provider behaviour are required billing ports (no type assertions); a provider-failed reviewed refund answers REFUND_FAILED with operator copy; BE and FE suites green
-- 261005 create-task T584 (left open by T583: optional refund ports, untyped failed refund) and start
-- 261005 T583 done: retired purchase-refund reasons reserved in proto, RefundPurchase and its ports deleted, billing USD columns dropped (0132), IntentStore folded into Store; BE and FE suites green

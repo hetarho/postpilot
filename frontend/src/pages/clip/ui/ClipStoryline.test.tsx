@@ -184,7 +184,7 @@ it('closes the space when ② shows a plan', async () => {
   await mount(
     storylined({ editPlanRevision: 1, renderedPlanRevision: 0, editing: clipTimelineFixture() }),
   )
-  expect(heading()).toHaveAttribute('aria-expanded', 'false')
+  expect(screen.queryByRole('listitem', { name: '1번째 문단' })).not.toBeInTheDocument()
   await userEvent.click(heading())
   expect(paragraph(1).getByText('음식을 가까이 보여줘요.')).toBeVisible()
 })
@@ -669,6 +669,7 @@ it('lands a delayed slot save before the correction and the render it precedes',
   await userEvent.click(
     within(screen.getByLabelText('편집 타임라인')).getByRole('button', { name: 'caption a' }),
   )
+  await userEvent.click(screen.getByRole('button', { name: '상세 편집' }))
   fireEvent.change(screen.getByLabelText('자막 원문'), { target: { value: '렌더 직전 수정' } })
   await userEvent.click(screen.getByRole('button', { name: RENDER }))
   await userEvent.click(await screen.findByRole('button', { name: '서버에서 렌더' }))
@@ -736,6 +737,7 @@ it('shares one set of region words between the storyline block and the correctio
   await userEvent.click(
     within(screen.getByLabelText('편집 타임라인')).getByRole('button', { name: /성수 로컬/ }),
   )
+  await userEvent.click(screen.getByRole('button', { name: '상세 편집' }))
   expect(screen.getByLabelText('문구 2행')).toHaveValue('저녁 영업')
   fireEvent.change(screen.getByLabelText('문구 1행'), { target: { value: '성수 로컬 가이드' } })
   expect(line('인트로', 1).getByLabelText('1번째 줄 문구')).toHaveValue('성수 로컬 가이드')
@@ -781,6 +783,7 @@ async function editCaption(text: string) {
   await userEvent.click(
     within(screen.getByLabelText('편집 타임라인')).getByRole('button', { name: 'caption a' }),
   )
+  await userEvent.click(screen.getByRole('button', { name: '상세 편집' }))
   fireEvent.change(screen.getByLabelText('자막 원문'), { target: { value: text } })
 }
 async function renderOnServer() {

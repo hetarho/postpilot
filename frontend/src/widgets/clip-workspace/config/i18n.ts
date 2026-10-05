@@ -4,6 +4,14 @@ import type { I18nFragment } from '@/shared/lib'
 export const i18n = {
   namespace: 'clips',
   ko: {
+    editorEntries: {
+      storyline: '스토리라인',
+      script: '더빙 대본',
+      ai: 'AI로 수정',
+      scriptHelp: '영상에서 읽을 대본과 화면에 표시할 자막은 따로 편집할 수 있어요.',
+      noScript: '더빙할 목소리와 대본을 준비해 주세요.',
+      voices: '내 목소리 보기',
+    },
     reference: {
       label: '원본 소스',
       tabs: { observations: '관찰 기록', sources: '원본 영상', requests: '요청 기록' },
@@ -22,6 +30,14 @@ export const i18n = {
     },
   },
   en: {
+    editorEntries: {
+      storyline: 'Storyline',
+      script: 'Spoken script',
+      ai: 'Edit with AI',
+      scriptHelp: 'Edit the spoken script separately from displayed captions.',
+      noScript: 'Prepare a confirmed voice and spoken script for this video.',
+      voices: 'My spoken voices',
+    },
     reference: {
       label: 'Source material',
       tabs: { observations: 'Observations', sources: 'Sources', requests: 'Requests' },

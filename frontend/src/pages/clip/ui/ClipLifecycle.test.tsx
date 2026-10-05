@@ -38,11 +38,13 @@ const mount = (options: FakeClipsOptions = {}, jobs: FakeGenerationJobRow[] = []
     jobs: { jobs },
   })
 const confirm = () => screen.findByRole('button', { name: '확정하기' })
-// The cut's own controls live in its sheet, which a selection opens (CLIP-53).
-const selectCut = async () =>
-  userEvent.click(
+// Item selection retains the preview; the phone opens details explicitly.
+const selectCut = async () => {
+  await userEvent.click(
     within(screen.getByLabelText('편집 타임라인')).getByRole('button', { name: '컷 1' }),
   )
+  await userEvent.click(screen.getByRole('button', { name: '상세 편집' }))
+}
 
 it('downloads without confirming, guards the result tab and confirms only once on double click', async () => {
   const calls: string[] = []

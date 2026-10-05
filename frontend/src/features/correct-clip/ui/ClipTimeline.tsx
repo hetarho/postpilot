@@ -8,6 +8,7 @@ import {
   narrationSlot,
   timelineCuts,
   timelineLabelFits,
+  spokenState,
   type ClipEditPlan,
   type ClipSelection,
 } from '@/entities/clip-plan'
@@ -20,6 +21,9 @@ export function ClipTimeline({
   timeMs,
   onSelect,
   onAddCaption,
+  onAddDubbing,
+  readOnly = false,
+  disabled = false,
   localSources,
   history,
   notices = [],
@@ -29,9 +33,11 @@ export function ClipTimeline({
   selection?: ClipSelection
   timeMs: number
   onSelect: (selection: ClipSelection) => void
-  /** Adds a caption to the narration at the playhead. Absent where the plan
-   *  carries no narration to edit. */
+  /** Adds an independent caption at the playhead. */
   onAddCaption?: (slot: { startMs: number; endMs: number }) => void
+  onAddDubbing?: () => void
+  readOnly?: boolean
+  disabled?: boolean
   localSources: ReadonlyArray<{ fingerprint: string; url: string }>
   /** Undo/redo for every edit the timeline commits (CLIP-55). They head the
    *  timeline because that is the track they act on, and they are icons because
@@ -65,8 +71,7 @@ export function ClipTimeline({
     }
   }, [selection?.id, selection?.kind, phrase, order])
   const tracks = clipTextTracks(plan)
-  const captions = (plan.elements ?? []).some((text) => text.narration)
-  const slot = onAddCaption && captions ? narrationSlot(plan, timeMs) : undefined
+  const slot = onAddCaption && plan.nativeComposition ? narrationSlot(plan, timeMs) : undefined
   // Every label is bounded by the bar it belongs to, so the only question left
   // is whether the bar is wide enough to hold one at all (CLIP-54).
   const fits = (spanMs: number) => timelineLabelFits(spanMs, duration, width)
@@ -118,6 +123,9 @@ export function ClipTimeline({
               ) : null,
             )}
           </div>
+          <Typography variant="label" as="p">
+            {t('timeline.trackVideo')}
+          </Typography>
           <ul className="relative h-24" aria-label={t('timeline.cuts')}>
             {cuts.map(({ cut, index, startMs, endMs }) => {
               const active = startMs <= timeMs && timeMs < endMs
@@ -177,16 +185,33 @@ export function ClipTimeline({
               )
             })}
           </ul>
-          {onAddCaption && captions && (
-            <Button variant="secondary" disabled={!slot} onClick={() => slot && onAddCaption(slot)}>
+          <Typography variant="label" as="p">
+            {t('timeline.trackCaptions')}
+          </Typography>
+          {!readOnly && (
+            <Button
+              variant="secondary"
+              disabled={disabled || !slot}
+              onClick={() => slot && onAddCaption?.(slot)}
+            >
               {t('timeline.addCaption')}
             </Button>
+          )}
+          {!readOnly && !slot && (
+            <Typography variant="meta">{t('timeline.captionUnavailable')}</Typography>
+          )}
+          {tracks.length === 0 && (
+            <ul className="relative h-11" aria-label={t('timeline.captionTrack')}>
+              <li>
+                <Typography variant="meta">{t('timeline.emptyCaptions')}</Typography>
+              </li>
+            </ul>
           )}
           {tracks.map((track, lane) => (
             <ul
               key={lane}
               className="relative h-11"
-              aria-label={lane === 0 && captions ? t('timeline.captionTrack') : undefined}
+              aria-label={lane === 0 ? t('timeline.captionTrack') : undefined}
             >
               {track.map((bar) => (
                 <li
@@ -224,6 +249,52 @@ export function ClipTimeline({
               ))}
             </ul>
           ))}
+          <Typography variant="label" as="p">
+            {t('timeline.trackDubbing')}
+          </Typography>
+          {!readOnly && (
+            <Button variant="secondary" disabled={disabled || !onAddDubbing} onClick={onAddDubbing}>
+              {t('timeline.addDubbing')}
+            </Button>
+          )}
+          {!readOnly && !onAddDubbing && (
+            <Typography variant="meta">{t('timeline.dubbingUnavailable')}</Typography>
+          )}
+          <ul className="relative h-11" aria-label={t('timeline.dubbingTrack')}>
+            {(plan.narration?.segments ?? []).map((segment, index) => {
+              const state = spokenState(plan.narration!, segment, plan.durationMs)
+              const selected = selection?.kind === 'spoken' && selection.id === segment.id
+              return (
+                <li
+                  key={segment.id}
+                  className="absolute h-11"
+                  style={{
+                    left: `${left(segment.startMs)}%`,
+                    width: `${Math.max(0, left(segment.endMs - segment.startMs))}%`,
+                  }}
+                >
+                  <Button
+                    variant={selected ? 'secondary' : 'ghost'}
+                    className="h-11 w-full overflow-hidden"
+                    aria-pressed={selected}
+                    aria-label={`${t('timeline.spokenSegment', { number: index + 1 })} · ${t(`timeline.speechState.${state}`)}`}
+                    onClick={() => onSelect({ kind: 'spoken', id: segment.id })}
+                  >
+                    {fits(segment.endMs - segment.startMs) && (
+                      <Typography as="span" variant="meta" className="w-full truncate">
+                        {segment.text} · {t(`timeline.speechState.${state}`)}
+                      </Typography>
+                    )}
+                  </Button>
+                </li>
+              )
+            })}
+            {!plan.narration?.segments.length && (
+              <li>
+                <Typography variant="meta">{t('timeline.emptyDubbing')}</Typography>
+              </li>
+            )}
+          </ul>
           <div
             aria-hidden="true"
             className="bg-content-primary pointer-events-none absolute inset-y-0 w-px"

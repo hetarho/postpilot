@@ -12,6 +12,8 @@ import { useCallback, useSyncExternalStore } from 'react'
  *  needed it — note that a dialog-or-sheet surface is NOT one: `Sheet` already is a bottom sheet
  *  on a phone and a centred dialog from `md:` up, in CSS, on one mount. */
 export const SM_MEDIA_QUERY = '(min-width: 40rem)'
+/** Tailwind's md breakpoint, for mutually exclusive inline/sheet controls. */
+export const MD_MEDIA_QUERY = '(min-width: 48rem)'
 
 /** A pointer that can hover and aim finely: a mouse or a trackpad. Only under it does hovering
  *  open an anchored panel — on touch an emulated enter would open one a tap never asked for, and

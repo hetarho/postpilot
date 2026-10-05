@@ -5,13 +5,13 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   clipSeconds,
-  cutOutputMs,
   outputToSourceMs,
   snapClipTime,
   sourceToOutputMs,
   timelineCuts,
   type ClipEditingState,
   captionStartCut,
+  type ClipSpokenSegment,
   useClipCaptionPreview,
   useClipCaptionStyleSamples,
 } from '@/entities/clip-plan'
@@ -24,26 +24,19 @@ import {
   AppFailureMessage,
   Button,
   Dialog,
-  FieldLabel,
   FieldMessage,
-  Listbox,
   Popover,
-  RangeSlider,
   Sheet,
   Slider,
-  Textarea,
   Typography,
   useVisualViewport,
+  useMediaQuery,
+  MD_MEDIA_QUERY,
 } from '@/shared/ui'
 import type { useClipCorrection } from '../model/useClipCorrection'
 import { ClipRenderAction } from './ClipRenderAction'
 import { ClipTimeline } from './ClipTimeline'
-import { ClipTimeField } from './ClipTimeField'
-import { ClipTextControls } from './ClipTextControls'
-import { ClipCaptionStage } from './ClipCaptionStage'
-import { ClipCutSourceFrame } from './ClipCutSourceFrame'
-import { ClipCutAssemblyControls } from './ClipCutAssemblyControls'
-import { ClipCutReading, ClipTextReading } from './ClipItemReading'
+import { ClipItemProperties } from './ClipItemProperties'
 
 type Correction = ReturnType<typeof useClipCorrection>
 export interface ClipEditorPreviewProps {
@@ -119,6 +112,9 @@ export function ClipCorrectionWorkspace({
      *  and a disabled 확정하기 beside it only said so in smaller type (CLIP-40). */
     finalizeAction?: ReactNode
     referenceAction?: ReactNode
+    tools?: ReactNode
+    addDubbing?: () => void
+    spokenProperties?: (segment: ClipSpokenSegment) => ReactNode
   }
   disabled: boolean
   /** A finalized project reads its plan here instead of editing it (CLIP-160): the sheets state
@@ -126,7 +122,7 @@ export function ClipCorrectionWorkspace({
   readOnly?: boolean
 }) {
   const { id: projectId, state, captionStyles, notices = [], language } = project
-  const { localSources, resolvePlayback } = footage
+  const { localSources } = footage
   const { preview, comparison, revision, downloadAction, finalizeAction, referenceAction } = slots
   const {
     ready: renderReady,
@@ -184,8 +180,11 @@ export function ClipCorrectionWorkspace({
     const top =
       Math.max(
         window.visualViewport?.offsetTop ?? 0,
-        previewRoot.current?.querySelector('[data-clip-preview-canvas]')?.getBoundingClientRect()
-          .bottom ?? 0,
+        (field.closest('[data-clip-item-properties]')
+          ? 0
+          : previewRoot.current
+              ?.querySelector('[data-clip-preview-canvas]')
+              ?.getBoundingClientRect().bottom) ?? 0,
       ) + gap
     const bottom =
       Math.min(
@@ -240,7 +239,14 @@ export function ClipCorrectionWorkspace({
     timeline.selection?.kind === 'text'
       ? draft.elements?.find((text) => text.instanceId === timeline.selection?.id)
       : undefined
-  const sheetOpen = !!cut || !!text
+  const desktop = useMediaQuery(MD_MEDIA_QUERY)
+  const [detailsOpen, setDetailsOpen] = useState(false)
+  const spoken =
+    timeline.selection?.kind === 'spoken'
+      ? draft.narration?.segments.find((s) => s.id === timeline.selection?.id)
+      : undefined
+  const selected = !!cut || !!text || !!spoken
+  const sheetOpen = !desktop && detailsOpen && selected
   const index = cut ? draft.cuts.indexOf(cut) : -1
   const source = state.sources.find((s) => s.id === cut?.sourceId)
   const errors = correction.validation?.cuts[index]
@@ -273,6 +279,63 @@ export function ClipCorrectionWorkspace({
   // it is placed once, against the frame it opens over (CLIP-143).
   const captionCut = text ? captionStartCut(draft, text) : undefined
   const failure = correction.failure ?? renderFailure
+  const itemTitle = cut
+    ? `${t('correction.cut', { number: index + 1 })} · ${source?.filename ?? cut.sourceId}`
+    : spoken
+      ? t('timeline.spokenSegment', {
+          number: (draft.narration?.segments.indexOf(spoken) ?? 0) + 1,
+        })
+      : t('timeline.textControls')
+  const itemProperties = spoken ? (
+    (slots.spokenProperties?.(spoken) ?? (
+      <div className="min-w-0 space-y-2">
+        <Typography variant="body">{spoken.text}</Typography>
+        <Typography variant="meta">
+          {clipSeconds(spoken.startMs)}–{clipSeconds(spoken.endMs)} s
+        </Typography>
+      </div>
+    ))
+  ) : (
+    <ClipItemProperties
+      project={{ state, captionStyles, notices, language }}
+      correction={correction}
+      footage={footage}
+      selection={{ cut, text, index, source, errors, cutTime, currentFrame, captionCut }}
+      captions={{ captionPreview, fragment, styleSamples }}
+      status={{ readOnly, disabled }}
+    />
+  )
+  const itemActions = readOnly ? undefined : (
+    <div className="mt-3 flex flex-wrap items-center justify-end gap-2">
+      {/* Deleting the selected item is also closing its sheet: leaving the
+                selection behind would have reopened it on the neighbour the
+                reducer falls back to. */}
+      {cut && (
+        <Button
+          variant="danger"
+          disabled={disabled}
+          onClick={() => {
+            change({ type: 'remove', id: cut.id })
+            dispatch({ type: 'select' })
+          }}
+        >
+          {t('correction.deleteCut')}
+        </Button>
+      )}
+      {text && (
+        <Button
+          variant="danger"
+          disabled={disabled}
+          onClick={() => {
+            change({ type: 'removeText', id: text.instanceId })
+            dispatch({ type: 'select' })
+          }}
+        >
+          {t('timeline.deleteText')}
+        </Button>
+      )}
+    </div>
+  )
   return (
     <section
       ref={container}
@@ -295,147 +358,201 @@ export function ClipCorrectionWorkspace({
     >
       {/* No heading of its own: the step bar above already names this step, and the preview is
           what the screen is for (owner decision 2026-09-19). The section keeps the name. */}
-      <div ref={previewRoot} className="contents">
-        {preview({
-          timeMs: timeline.timeMs,
-          onTimeChange: seek,
-          onDisplayedFrame: setFrame,
-          suspended: sheetOpen,
-          maxHeight: Math.min(
-            previewBudget ?? Infinity,
-            viewport.height *
-              (viewport.height < CLIP_TIMELINE.compactViewportHeight
-                ? CLIP_TIMELINE.compactPreviewFraction
-                : CLIP_TIMELINE.previewViewportFraction),
-          ),
-          compact: true,
-          stickyTop: pinPreview ? viewport.offsetTop : undefined,
-          // ONE info control holding what the draft preview cannot promise about the delivered
-          // file plus every notice that names no cut and no caption (CLIP-148), on the frame it
-          // is about — a video player's corner, not a row of the page.
-          corner: (
-            <Popover
-              label={t('preview.aboutLabel')}
-              triggerSize="icon"
-              triggerVariant="scrim"
-              triggerLabel={<Info aria-hidden="true" className="size-5" />}
-              placement="below"
-              align="end"
-              phone="sheet"
-            >
-              {() => (
-                <div className="space-y-2">
-                  <Typography variant="body" className="text-content-secondary">
-                    {t('preview.parity')}
-                  </Typography>
-                  {/* The flow view is still frames, never the delivered render (CLIP-176). */}
-                  <Typography variant="body" className="text-content-secondary">
-                    {t('preview.flowParity')}
-                  </Typography>
-                  {/* The preview reports the precision of the frame it is showing, so
+      <div className="grid min-w-0 gap-4 md:grid-cols-3">
+        <div className="min-w-0 space-y-4 md:col-span-2">
+          <div ref={previewRoot} className="contents">
+            {preview({
+              timeMs: timeline.timeMs,
+              onTimeChange: seek,
+              onDisplayedFrame: setFrame,
+              suspended: false,
+              maxHeight: Math.min(
+                previewBudget ?? Infinity,
+                viewport.height *
+                  (viewport.height < CLIP_TIMELINE.compactViewportHeight
+                    ? CLIP_TIMELINE.compactPreviewFraction
+                    : CLIP_TIMELINE.previewViewportFraction),
+              ),
+              compact: true,
+              stickyTop: pinPreview ? viewport.offsetTop : undefined,
+              // ONE info control holding what the draft preview cannot promise about the delivered
+              // file plus every notice that names no cut and no caption (CLIP-148), on the frame it
+              // is about — a video player's corner, not a row of the page.
+              corner: (
+                <Popover
+                  label={t('preview.aboutLabel')}
+                  triggerSize="icon"
+                  triggerVariant="scrim"
+                  triggerLabel={<Info aria-hidden="true" className="size-5" />}
+                  placement="below"
+                  align="end"
+                  phone="sheet"
+                >
+                  {() => (
+                    <div className="space-y-2">
+                      <Typography variant="body" className="text-content-secondary">
+                        {t('preview.parity')}
+                      </Typography>
+                      {/* The flow view is still frames, never the delivered render (CLIP-176). */}
+                      <Typography variant="body" className="text-content-secondary">
+                        {t('preview.flowParity')}
+                      </Typography>
+                      {/* The preview reports the precision of the frame it is showing, so
                       this says the position is approximate only while it is. */}
-                  {frame && !frame.precise && (
-                    <Typography variant="body" className="text-content-secondary">
-                      {t('preview.frameApproximate')}
-                    </Typography>
+                      {frame && !frame.precise && (
+                        <Typography variant="body" className="text-content-secondary">
+                          {t('preview.frameApproximate')}
+                        </Typography>
+                      )}
+                      <ClipNoticeList
+                        notices={notices.filter((n) => !n.cutId && !n.elementId)}
+                        language={language}
+                      />
+                    </div>
                   )}
-                  <ClipNoticeList
-                    notices={notices.filter((n) => !n.cutId && !n.elementId)}
-                    language={language}
-                  />
-                </div>
-              )}
-            </Popover>
-          ),
-        })}
-      </div>
-      {/* Directly under the preview, and nothing else about the clip stands in the
+                </Popover>
+              ),
+            })}
+          </div>
+          {/* Directly under the preview, and nothing else about the clip stands in the
           flow ② edits in (CLIP-148): the download of the render this plan already
           has (CLIP-149) and the source sheet. With a plan and no render there is simply no
           download — a plan awaiting one is ②'s FIRST state (CLIP-56), not a
           missing result. */}
-      {/* `mt-4` by hand: the preview above renders through `display: contents` wrappers so its
+          {/* `mt-4` by hand: the preview above renders through `display: contents` wrappers so its
           frame can be pinned, and a box-less child takes no share of the section's `space-y`. */}
-      <div className="mt-4 flex flex-wrap items-center gap-2">
-        {downloadAction}
-        {referenceAction}
-      </div>
-      {/* The save state is NOT reported here: CLIP-38 gives it to the page's one
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            {downloadAction}
+            {referenceAction}
+            {slots.tools}
+          </div>
+          {/* The save state is NOT reported here: CLIP-38 gives it to the page's one
           status region, and a second copy beside the timeline said it twice with
           two different delays. Undo/redo moved to the timeline's own head. */}
-      <ClipTimeline
-        plan={draft}
-        selection={timeline.selection}
-        timeMs={timeline.timeMs}
-        history={{
-          undo: () => dispatch({ type: 'undo' }),
-          redo: () => dispatch({ type: 'redo' }),
-          canUndo: !readOnly && !!timeline.past.length,
-          canRedo: !readOnly && !!timeline.future.length,
-          disabled: disabled || readOnly,
-        }}
-        onSelect={(selection) => dispatch({ type: 'select', selection })}
-        onAddCaption={(slot) => {
-          // A local identity until the save returns the server-minted one.
-          const id = `new-caption-${Date.now()}`
-          change({ type: 'addNarration', id, ...slot })
-          dispatch({ type: 'select', selection: { kind: 'text', id } })
-        }}
-        localSources={localSources}
-        notices={notices}
-      />
-      <ClipNoticeList
-        notices={notices.filter(
-          (n) =>
-            (n.cutId && !draft.cuts.some((c) => c.id === n.cutId)) ||
-            (n.elementId &&
-              !draft.elements?.some((e) => e.elementId === n.elementId && e.cutId === n.cutId)),
-        )}
-        language={language}
-        cuts={draft.cuts}
-        withTargets
-      />
-      {!readOnly && (
-        <Slider
-          ariaLabel={t('preview.outputTime')}
-          min={0}
-          max={Math.max(1, Number.isFinite(draft.durationMs) ? draft.durationMs : 1)}
-          step={CLIP_DRAFT_PREVIEW.frameToleranceMs}
-          value={timeline.timeMs}
-          valueText={`${clipSeconds(timeline.timeMs)} / ${clipSeconds(draft.durationMs)} s`}
-          onChange={(ms) => seek(snapClipTime(ms))}
-        />
-      )}
-      {!correction.validation?.valid && <FieldMessage>{t('timeline.invalid')}</FieldMessage>}
-      {correction.validation?.cuts.map((error, number) => {
-        const reason = error.rate
-          ? 'assembly.cadenceRefused'
-          : error.overlap
-            ? 'assembly.overlap'
-            : error.start || error.end || error.duration || error.identity
-              ? 'assembly.invalidRange'
-              : ('evidence' in error && error.evidence) ||
-                  failure?.params.cut_id === draft.cuts[number].id
-                ? 'assembly.invalidCreation'
-                : undefined
-        return reason ? (
-          <Button
-            key={draft.cuts[number].id}
-            variant="ghost"
-            onClick={() =>
-              dispatch({ type: 'select', selection: { kind: 'cut', id: draft.cuts[number].id } })
+          <ClipTimeline
+            plan={draft}
+            selection={timeline.selection}
+            timeMs={timeline.timeMs}
+            history={{
+              undo: () => dispatch({ type: 'undo' }),
+              redo: () => dispatch({ type: 'redo' }),
+              canUndo: !readOnly && !!timeline.past.length,
+              canRedo: !readOnly && !!timeline.future.length,
+              disabled: disabled || readOnly,
+            }}
+            onSelect={(selection) => {
+              setDetailsOpen(false)
+              dispatch({ type: 'select', selection })
+            }}
+            onAddDubbing={slots.addDubbing}
+            readOnly={readOnly}
+            disabled={disabled}
+            onAddCaption={
+              readOnly
+                ? undefined
+                : (slot) => {
+                    // A local identity until the save returns the server-minted one.
+                    const id = `new-caption-${Date.now()}`
+                    setDetailsOpen(true)
+                    change({ type: 'addNarration', id, ...slot })
+                    dispatch({ type: 'select', selection: { kind: 'text', id } })
+                  }
             }
+            localSources={localSources}
+            notices={notices}
+          />
+          <ClipNoticeList
+            notices={notices.filter(
+              (n) =>
+                (n.cutId && !draft.cuts.some((c) => c.id === n.cutId)) ||
+                (n.elementId &&
+                  !draft.elements?.some((e) => e.elementId === n.elementId && e.cutId === n.cutId)),
+            )}
+            language={language}
+            cuts={draft.cuts}
+            withTargets
+          />
+          {!readOnly && (
+            <Slider
+              ariaLabel={t('preview.outputTime')}
+              min={0}
+              max={Math.max(1, Number.isFinite(draft.durationMs) ? draft.durationMs : 1)}
+              step={CLIP_DRAFT_PREVIEW.frameToleranceMs}
+              value={timeline.timeMs}
+              valueText={`${clipSeconds(timeline.timeMs)} / ${clipSeconds(draft.durationMs)} s`}
+              onChange={(ms) => seek(snapClipTime(ms))}
+            />
+          )}
+          {!correction.validation?.valid && <FieldMessage>{t('timeline.invalid')}</FieldMessage>}
+          {correction.validation?.cuts.map((error, number) => {
+            const reason = error.rate
+              ? 'assembly.cadenceRefused'
+              : error.overlap
+                ? 'assembly.overlap'
+                : error.start || error.end || error.duration || error.identity
+                  ? 'assembly.invalidRange'
+                  : ('evidence' in error && error.evidence) ||
+                      failure?.params.cut_id === draft.cuts[number].id
+                    ? 'assembly.invalidCreation'
+                    : undefined
+            return reason ? (
+              <Button
+                key={draft.cuts[number].id}
+                variant="ghost"
+                onClick={() =>
+                  dispatch({
+                    type: 'select',
+                    selection: { kind: 'cut', id: draft.cuts[number].id },
+                  })
+                }
+              >
+                {t('assembly.cutIssue', { number: number + 1, reason: t(reason) })}
+              </Button>
+            ) : null
+          })}
+          {correction.validation?.timeline && (
+            <FieldMessage>
+              {t('correction.timelineError', {
+                min: state.minDurationMs,
+                max: state.maxDurationMs,
+              })}
+            </FieldMessage>
+          )}
+          {comparison}
+          {!desktop && selected && (
+            <div
+              className="flex min-w-0 flex-wrap items-center gap-2"
+              aria-label={t('timeline.contextTools')}
+            >
+              <Typography variant="meta" className="min-w-0 flex-1 truncate">
+                {itemTitle}
+              </Typography>
+              <Button variant="secondary" onClick={() => setDetailsOpen(true)}>
+                {t('timeline.details')}
+              </Button>
+            </div>
+          )}
+        </div>
+        {desktop && (
+          <aside
+            className="min-w-0 space-y-4"
+            aria-label={t('timeline.properties')}
+            data-clip-item-properties
           >
-            {t('assembly.cutIssue', { number: number + 1, reason: t(reason) })}
-          </Button>
-        ) : null
-      })}
-      {correction.validation?.timeline && (
-        <FieldMessage>
-          {t('correction.timelineError', { min: state.minDurationMs, max: state.maxDurationMs })}
-        </FieldMessage>
-      )}
-      {comparison}
+            <Typography variant="fieldTitle">
+              {selected ? itemTitle : t('timeline.properties')}
+            </Typography>
+            {selected ? (
+              itemProperties
+            ) : (
+              <Typography variant="body" className="text-content-secondary">
+                {t('timeline.selectItem')}
+              </Typography>
+            )}
+            {itemActions}
+          </aside>
+        )}
+      </div>
       <div ref={actions} className="contents">
         {!readOnly && (
           <ActionBar ariaLabel={t('correction.actions')} className="space-y-3">
@@ -520,364 +637,25 @@ export function ClipCorrectionWorkspace({
       <Sheet
         open={sheetOpen}
         labelledBy="clip-item-sheet-title"
-        onClose={() => dispatch({ type: 'select' })}
+        onClose={() => setDetailsOpen(false)}
         header={
           <div className="mb-3 flex items-start justify-between gap-3">
             <Typography variant="fieldTitle" id="clip-item-sheet-title" className="min-w-0">
-              {cut
-                ? `${t('correction.cut', { number: index + 1 })} · ${source?.filename ?? cut.sourceId}`
-                : t('timeline.textControls')}
+              {itemTitle}
             </Typography>
             <Button
               variant="ghost"
               size="icon"
               aria-label={tCommon('action.close')}
-              onClick={() => dispatch({ type: 'select' })}
+              onClick={() => setDetailsOpen(false)}
             >
               <X aria-hidden="true" className="size-5" />
             </Button>
           </div>
         }
-        footer={
-          readOnly ? undefined : (
-            <div className="mt-3 flex flex-wrap items-center justify-end gap-2">
-              {/* Deleting the selected item is also closing its sheet: leaving the
-                selection behind would have reopened it on the neighbour the
-                reducer falls back to. */}
-              {cut && (
-                <Button
-                  variant="danger"
-                  disabled={disabled}
-                  onClick={() => {
-                    change({ type: 'remove', id: cut.id })
-                    dispatch({ type: 'select' })
-                  }}
-                >
-                  {t('correction.deleteCut')}
-                </Button>
-              )}
-              {text && (
-                <Button
-                  variant="danger"
-                  disabled={disabled}
-                  onClick={() => {
-                    change({ type: 'removeText', id: text.instanceId })
-                    dispatch({ type: 'select' })
-                  }}
-                >
-                  {t('timeline.deleteText')}
-                </Button>
-              )}
-            </div>
-          )
-        }
+        footer={itemActions}
       >
-        {readOnly ? (
-          <div className="min-w-0 space-y-4">
-            {cut && (
-              <ClipCutReading
-                plan={draft}
-                cut={cut}
-                filename={source?.filename}
-                notices={notices}
-                language={language}
-              />
-            )}
-            {text && (
-              <ClipTextReading plan={draft} text={text} notices={notices} language={language} />
-            )}
-          </div>
-        ) : (
-          <fieldset disabled={disabled} className="min-w-0 space-y-4">
-            {cut && (
-              <div className="space-y-4">
-                {/* The frame this range is trimmed against: the owner's own SOURCE at
-                the cut's start, not the composed output, because trimming is
-                source-time work (CLIP-53, CLIP-67). */}
-                <ClipCutSourceFrame
-                  cut={cut}
-                  localSources={localSources}
-                  resolvePlayback={resolvePlayback}
-                />
-                <Typography variant="meta">
-                  {t('timeline.outputRange', {
-                    start: clipSeconds(cutTime!.startMs),
-                    end: clipSeconds(cutTime!.endMs),
-                  })}
-                </Typography>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    variant="secondary"
-                    disabled={index <= 0}
-                    onClick={() => change({ type: 'move', from: index, to: index - 1 })}
-                  >
-                    {t('editor.up')}
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    disabled={index === draft.cuts.length - 1}
-                    onClick={() => change({ type: 'move', from: index, to: index + 1 })}
-                  >
-                    {t('editor.down')}
-                  </Button>
-                </div>
-                <ClipCutAssemblyControls
-                  key={cut.id}
-                  cut={cut}
-                  allowedRates={source?.allowedRatePermille ?? []}
-                  playheadMs={outputToSourceMs(cutTime!, snapClipTime(timeline.timeMs))}
-                  native={!!draft.nativeComposition}
-                  onChange={change}
-                  onSplit={(sourceMs) => correction.splitCut(cut.id, sourceMs)}
-                />
-                <RangeSlider
-                  disabled={!!cut.creation}
-                  startLabel={t('timeline.trimStart')}
-                  endLabel={t('timeline.trimEnd')}
-                  value={[cut.startMs, cut.endMs]}
-                  min={0}
-                  max={source?.durationMs ?? cut.endMs}
-                  step={CLIP_DRAFT_PREVIEW.frameToleranceMs}
-                  format={(ms) => `${clipSeconds(ms)} s`}
-                  onCommit={() => dispatch({ type: 'endTransaction' })}
-                  onChange={([start, end]) => {
-                    const startMs = start === cut.startMs ? start : snapClipTime(start)
-                    const endMs = end === cut.endMs ? end : snapClipTime(end)
-                    change({ type: 'cut', id: cut.id, patch: { startMs, endMs } }, `trim-${cut.id}`)
-                    seek(
-                      cutTime!.startMs +
-                        (start !== cut.startMs
-                          ? 0
-                          : Math.max(
-                              0,
-                              cutOutputMs({ ...cut, startMs, endMs }) -
-                                CLIP_DRAFT_PREVIEW.frameToleranceMs,
-                            )),
-                    )
-                  }}
-                />
-                <div className="grid grid-cols-2 gap-3">
-                  <ClipTimeField
-                    id={`clip-cut-${cut.id}-start`}
-                    disabled={!!cut.creation}
-                    label={t('timeline.sourceStart')}
-                    value={cut.startMs}
-                    error={errors?.start ? t('timeline.rangeInvalid') : undefined}
-                    onChange={(startMs) =>
-                      change({ type: 'cut', id: cut.id, patch: { startMs } }, `start-${cut.id}`)
-                    }
-                  />
-                  <ClipTimeField
-                    id={`clip-cut-${cut.id}-end`}
-                    disabled={!!cut.creation}
-                    label={t('timeline.sourceEnd')}
-                    value={cut.endMs}
-                    error={errors?.end ? t('timeline.rangeInvalid') : undefined}
-                    onChange={(endMs) =>
-                      change({ type: 'cut', id: cut.id, patch: { endMs } }, `end-${cut.id}`)
-                    }
-                  />
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    variant="secondary"
-                    disabled={currentFrame === undefined || !!cut.creation}
-                    onClick={() => {
-                      change({ type: 'cut', id: cut.id, patch: { startMs: currentFrame! } })
-                      seek(cutTime!.startMs)
-                    }}
-                  >
-                    {t('timeline.frameStart')}
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    disabled={currentFrame === undefined || !!cut.creation}
-                    onClick={() => {
-                      change({ type: 'cut', id: cut.id, patch: { endMs: currentFrame! } })
-                      seek(
-                        cutTime!.startMs +
-                          Math.max(
-                            0,
-                            cutOutputMs({ ...cut, endMs: currentFrame! }) -
-                              CLIP_DRAFT_PREVIEW.frameToleranceMs,
-                          ),
-                      )
-                    }}
-                  >
-                    {t('timeline.frameEnd')}
-                  </Button>
-                </div>
-                {currentFrame === undefined && (
-                  <Typography variant="meta">{t('timeline.frameWaiting')}</Typography>
-                )}
-                <div>
-                  <FieldLabel id="clip-cut-transition-label">
-                    {t('correction.transition')}
-                  </FieldLabel>
-                  <Listbox
-                    aria-labelledby="clip-cut-transition-label"
-                    value={String(cut.transitionMs)}
-                    disabled={index === 0 || !!cut.creation}
-                    options={[
-                      { value: '0', label: t('correction.transitions.cut') },
-                      { value: '200', label: t('correction.transitions.fade', { ms: 200 }) },
-                      { value: '300', label: t('timeline.fadeBlack') },
-                    ]}
-                    onChange={(value) =>
-                      change({ type: 'cut', id: cut.id, patch: { transitionMs: Number(value) } })
-                    }
-                  />
-                </div>
-                <fieldset disabled={!!cut.creation}>
-                  <Slider
-                    label={t('correction.volume')}
-                    min={0}
-                    max={1000}
-                    step={1}
-                    value={cut.volumePermille}
-                    valueText={`${cut.volumePermille / 10}%`}
-                    onChange={(volumePermille) =>
-                      change(
-                        { type: 'cut', id: cut.id, patch: { volumePermille } },
-                        `volume-${cut.id}`,
-                      )
-                    }
-                  />
-                </fieldset>
-                {!draft.nativeComposition &&
-                  cut.copies.map((copy, i) => (
-                    <div key={i} className="space-y-2">
-                      <FieldLabel htmlFor={`clip-copy-${i}`}>{t('correction.copy')}</FieldLabel>
-                      <Textarea
-                        id={`clip-copy-${i}`}
-                        autoGrow
-                        value={copy.text}
-                        onChange={(e) =>
-                          change(
-                            { type: 'copy', id: cut.id, index: i, patch: { text: e.target.value } },
-                            `copy-${cut.id}-${i}`,
-                          )
-                        }
-                      />
-                      <div className="grid grid-cols-2 gap-3">
-                        <ClipTimeField
-                          id={`clip-copy-${i}-start`}
-                          label={t('timeline.phraseStart')}
-                          value={copy.startMs}
-                          onChange={(startMs) =>
-                            change({ type: 'copy', id: cut.id, index: i, patch: { startMs } })
-                          }
-                        />
-                        <ClipTimeField
-                          id={`clip-copy-${i}-end`}
-                          label={t('timeline.phraseEnd')}
-                          value={copy.endMs}
-                          onChange={(endMs) =>
-                            change({ type: 'copy', id: cut.id, index: i, patch: { endMs } })
-                          }
-                        />
-                      </div>
-                    </div>
-                  ))}
-                {draft.nativeComposition && (
-                  <div className="flex flex-wrap gap-2">
-                    {draft.elements
-                      ?.filter((text) => text.cutId === cut.id)
-                      .map((text) => (
-                        <Button
-                          key={text.instanceId}
-                          variant="secondary"
-                          onClick={() =>
-                            dispatch({
-                              type: 'select',
-                              selection: { kind: 'text', id: text.instanceId },
-                            })
-                          }
-                        >
-                          {text.text || text.elementId}
-                        </Button>
-                      ))}
-                  </div>
-                )}
-              </div>
-            )}
-            {cut && (
-              <ClipNoticeList
-                notices={notices.filter((n) => n.cutId === cut.id && !n.elementId)}
-                language={language}
-              />
-            )}
-            {text?.cutId && (
-              <div className="flex flex-wrap items-center gap-2">
-                <Button
-                  variant="secondary"
-                  disabled={disabled || draft.cuts.findIndex((c) => c.id === text.cutId) <= 0}
-                  onClick={() => {
-                    const from = draft.cuts.findIndex((c) => c.id === text.cutId)
-                    change({ type: 'move', from, to: from - 1 })
-                  }}
-                >
-                  {t('editor.up')}
-                </Button>
-                <Button
-                  variant="secondary"
-                  disabled={
-                    disabled ||
-                    draft.cuts.findIndex((c) => c.id === text.cutId) < 0 ||
-                    draft.cuts.findIndex((c) => c.id === text.cutId) === draft.cuts.length - 1
-                  }
-                  onClick={() => {
-                    const from = draft.cuts.findIndex((c) => c.id === text.cutId)
-                    change({ type: 'move', from, to: from + 1 })
-                  }}
-                >
-                  {t('editor.down')}
-                </Button>
-              </div>
-            )}
-            {text?.role === 'caption' && captionPreview.data && (
-              <ClipCaptionStage
-                text={text}
-                fragment={fragment}
-                canvas={captionPreview.data.canvas}
-                safeArea={captionPreview.data.safeArea}
-                frameUrl={
-                  localSources.find((s) => s.fingerprint === captionCut?.cut.fingerprint)?.url
-                }
-                frameFingerprint={captionCut?.cut.fingerprint}
-                frameStartMs={captionCut?.cut.startMs ?? 0}
-                resolvePlayback={resolvePlayback}
-                notices={notices}
-                language={language}
-                change={change}
-                disabled={disabled}
-              />
-            )}
-            {text && (
-              <ClipTextControls
-                plan={draft}
-                text={text}
-                captionStyles={captionStyles}
-                styleSamples={styleSamples.data?.captions}
-                samplesUnavailable={styleSamples.isError}
-                failure={correction.failure}
-                notices={notices}
-                language={language}
-                change={change}
-                regionOverlap={correction.validation?.elements.some(
-                  (e) => e.id === text.instanceId && e.regionOverlap,
-                )}
-                invalid={
-                  !!correction.validation?.elements.some(
-                    (e) =>
-                      e.id === text.instanceId &&
-                      Object.entries(e).some(([key, value]) => key !== 'id' && value),
-                  )
-                }
-              />
-            )}
-          </fieldset>
-        )}
+        {itemProperties}
       </Sheet>
       <Dialog
         open={confirm}
