@@ -11,6 +11,7 @@ import {
   validateClipPlan,
   timelineCuts,
   outputToSourceMs,
+  minExposureMs,
   sourceToOutputMs,
   type ClipSourceAudioSetting,
   type ClipEdit,
@@ -19,6 +20,7 @@ import {
   type ClipEditingState,
 } from './edit-plan'
 import type { ClipSourceAssociation } from '@/entities/clip-design/@x/clip-plan'
+import { refreshCaptionWording } from './caption-refresh'
 import { splitRapid } from './caption-pace'
 import { clipOwnerSizeFits } from './caption-style'
 import { clipDraftKey } from './draft-key'
@@ -31,6 +33,8 @@ export type ClipSelection =
   | { kind: 'text'; id: string; phrase?: number }
   | { kind: 'spoken'; id: string }
 export type TimelineEdit =
+  | { type: 'refreshCaptions' }
+  | { type: 'addScriptCaption'; id: string; segmentId: string; startMs: number; endMs: number }
   | ClipEdit
   | { type: 'sourceSound'; setting: ClipSourceAudioSetting }
   | {
@@ -141,6 +145,11 @@ export function nativeTextErrors(plan: ClipEditPlan, aiSet: readonly string[] = 
       identity:
         !text.instanceId ||
         (plan.elements ?? []).filter((t) => t.instanceId === text.instanceId).length !== 1,
+      exposure:
+        !!text.derivedCaption &&
+        text.pace !== 'rapid' &&
+        interval.valid &&
+        interval.endMs - interval.startMs < minExposureMs(text.text),
       text:
         length(text.text) > CLIP_COMPOSITION_LIMITS.copyChars ||
         text.rows.some((r) => length(r.text) > CLIP_COMPOSITION_LIMITS.copyChars),
@@ -309,6 +318,29 @@ export function associationAffectsText(text: ClipEditableText, changed: ClipSour
 
 export function applyTimelineEdit(plan: ClipEditPlan, edit: TimelineEdit): ClipEditPlan {
   const next = copyClipPlan(plan)
+  if (edit.type === 'refreshCaptions') return refreshCaptionWording(next)
+  if (edit.type === 'addScriptCaption') {
+    const segment = next.narration?.segments.find((s) => s.id === edit.segmentId)
+    if (!segment || segment.creation) return plan
+    const added = applyTimelineEdit(next, {
+      type: 'addNarration',
+      id: edit.id,
+      startMs: edit.startMs,
+      endMs: edit.endMs,
+    })
+    const caption = added.elements?.find((t) => t.instanceId === edit.id)
+    if (caption) {
+      caption.text = segment.text
+      caption.derivedCaption = {
+        segmentId: segment.id,
+        textRevision: segment.textRevision,
+        textEdited: false,
+        timingEdited: false,
+      }
+      added.refreshDerivedCaptions = true
+    }
+    return added
+  }
   if (edit.type === 'sourceSound') {
     next.sourceAudio = withSourceSound(plan, edit.setting).sourceAudio
   } else if (edit.type === 'text') {
@@ -321,6 +353,36 @@ export function applyTimelineEdit(plan: ClipEditPlan, edit: TimelineEdit): ClipE
       return {
         ...text,
         ...edit.patch,
+        ...(text.derivedCaption
+          ? {
+              derivedCaption: {
+                ...text.derivedCaption,
+                textEdited:
+                  text.derivedCaption.textEdited ||
+                  (edit.patch.text !== undefined && edit.patch.text !== text.text) ||
+                  (edit.patch.rows !== undefined &&
+                    JSON.stringify(edit.patch.rows) !== JSON.stringify(text.rows)) ||
+                  (edit.patch.phrases !== undefined &&
+                    JSON.stringify(edit.patch.phrases.map((p) => p.text)) !==
+                      JSON.stringify((text.phrases ?? []).map((p) => p.text))),
+                timingEdited:
+                  text.derivedCaption.timingEdited ||
+                  ['basis', 'startMs', 'endMs'].some(
+                    (key) =>
+                      key in edit.patch &&
+                      JSON.stringify(edit.patch[key as keyof typeof edit.patch]) !==
+                        JSON.stringify(text[key as keyof typeof text]),
+                  ) ||
+                  (edit.patch.phrases !== undefined &&
+                    JSON.stringify(
+                      edit.patch.phrases.map(({ startMs, endMs }) => [startMs, endMs]),
+                    ) !==
+                      JSON.stringify(
+                        (text.phrases ?? []).map(({ startMs, endMs }) => [startMs, endMs]),
+                      )),
+              },
+            }
+          : {}),
         ...(Object.keys(edit.patch).some((key) => key !== 'evidenceReviewed')
           ? { ownerEdited: true }
           : {}),
@@ -499,10 +561,19 @@ export interface ClipTextBar {
   startMs: number
   endMs: number
   invalid: boolean
+  invalidContent: boolean
 }
 /** Reuse lanes across disjoint intervals, so 100 sequential cuts need one
  * caption row rather than 100 vertically stacked rows. */
-export function clipTextTracks(plan: ClipEditPlan): ClipTextBar[][] {
+export function clipTextTracks(plan: ClipEditPlan, aiSet: readonly string[] = []): ClipTextBar[][] {
+  const errors = new Map(
+    nativeTextErrors(plan, aiSet).map((e) => [
+      e.id,
+      Object.entries(e).some(
+        ([key, value]) => !['id', 'stale', 'interval'].includes(key) && !!value,
+      ),
+    ]),
+  )
   const bars = (plan.elements ?? [])
     .flatMap((text): ClipTextBar[] => {
       const interval = textInterval(plan, text)
@@ -520,6 +591,7 @@ export function clipTextTracks(plan: ClipEditPlan): ClipTextBar[][] {
           startMs: interval.cutOffsetMs + p.startMs,
           endMs: interval.cutOffsetMs + p.endMs,
           invalid: !interval.valid,
+          invalidContent: errors.get(text.instanceId) ?? false,
         }))
       return [
         {
@@ -528,6 +600,7 @@ export function clipTextTracks(plan: ClipEditPlan): ClipTextBar[][] {
           startMs: interval.startMs,
           endMs: interval.endMs,
           invalid: !interval.valid,
+          invalidContent: errors.get(text.instanceId) ?? false,
         },
       ]
     })
@@ -582,7 +655,7 @@ export function createClipTimeline(plan: ClipEditPlan): ClipTimelineState {
 }
 export type ClipTimelineAction =
   | { type: 'edit'; edit: TimelineEdit; at: number; group?: string }
-  | { type: 'select'; selection?: ClipSelection }
+  | { type: 'select'; selection?: ClipSelection; seek?: boolean }
   | { type: 'seek'; timeMs: number }
   | { type: 'undo' }
   | { type: 'redo' }
@@ -659,7 +732,8 @@ export function clipTimelineReducer(
   if (action.type === 'select') {
     // Clearing it is closing the sheet: the playhead stays where the owner left
     // it, since nothing was selected to seek to.
-    const time = action.selection ? selectedTime(state.plan, action.selection) : NaN
+    const time =
+      action.selection && action.seek !== false ? selectedTime(state.plan, action.selection) : NaN
     return {
       ...state,
       selection: action.selection,

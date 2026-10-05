@@ -65,6 +65,119 @@ async function mount(clips: FakeClipsOptions = {}, jobs: FakeJobsOptions = {}) {
   await screen.findByRole('region', { name: '컷·자막 수정' })
   return view
 }
+
+it('selects a caption in the primary preview, preserves its clock, edits placement and undoes without speech calls', async () => {
+  const calls: string[] = [],
+    planWrites: NonNullable<FakeClipsOptions['planWrites']> = []
+  const project = fixture()
+  project.editing!.plan.narration = {
+    enabled: true,
+    confirmedVoiceId: 'voice',
+    bindingDigest: 'a'.repeat(64),
+    volumePermille: 700,
+    segments: [
+      {
+        id: 'spoken-1',
+        text: '읽는 대본',
+        inputHash: 'b'.repeat(64),
+        textRevision: 1,
+        startMs: 0,
+        endMs: 5000,
+        speech: {
+          assetId: 'asset',
+          voiceId: 'voice',
+          bindingDigest: 'a'.repeat(64),
+          inputHash: 'b'.repeat(64),
+          settingsHash: 'c'.repeat(64),
+          audioHash: 'd'.repeat(64),
+          profileId: 'profile',
+          profileRevision: 1,
+          samples: 44100,
+          sampleRate: 44100,
+          channels: 2,
+          timing: [],
+        },
+      },
+    ],
+  }
+  const speech = structuredClone(project.editing!.plan.narration)
+  await mount({ projects: [project], calls, planWrites })
+  fireEvent.change(screen.getByRole('slider', { name: '완성 영상 기준 시간' }), {
+    target: { value: '2000' },
+  })
+  const caption = await screen.findByRole('button', { name: '미리보기 자막 선택: caption a' })
+  await userEvent.click(caption)
+  expect(screen.getByRole('slider', { name: '완성 영상 기준 시간' })).toHaveValue('2000')
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  const handle = screen.getByRole('button', { name: /자막을 끌어서 옮기기/ })
+  handle.focus()
+  await userEvent.keyboard('{ArrowRight}')
+  await waitFor(() => expect(planWrites).toHaveLength(1), { timeout: 3000 })
+  expect(planWrites[0].plan.elements?.[0].ownerPosition).toEqual({ x: 248, y: 1500 })
+  expect(planWrites[0].plan.narration).toEqual(speech)
+  await userEvent.click(screen.getByRole('button', { name: '실행 취소' }))
+  await waitFor(() => expect(planWrites).toHaveLength(2), { timeout: 3000 })
+  expect(planWrites[1].plan.elements?.[0].ownerPosition).toBeUndefined()
+  expect(planWrites[1].plan.narration).toEqual(speech)
+  expect(calls.some((call) => /Start|Quote|Synthesize/.test(call))).toBe(false)
+})
+
+it('explicitly refreshes derived wording while preserving owner words, timing and speech', async () => {
+  const calls: string[] = [],
+    planWrites: NonNullable<FakeClipsOptions['planWrites']> = []
+  const project = fixture()
+  project.editing = clipNarrationFixture()
+  const plan = project.editing.plan
+  plan.narration = {
+    enabled: true,
+    confirmedVoiceId: 'voice',
+    bindingDigest: 'a'.repeat(64),
+    volumePermille: 1000,
+    segments: [
+      {
+        id: 's1',
+        text: '새 대본 문구',
+        inputHash: 'b'.repeat(64),
+        textRevision: 2,
+        startMs: 0,
+        endMs: 11000,
+      },
+      {
+        id: 's2',
+        text: '고칠 다른 대본',
+        inputHash: 'c'.repeat(64),
+        textRevision: 2,
+        startMs: 11000,
+        endMs: 19000,
+      },
+    ],
+  }
+  plan.elements![0].derivedCaption = {
+    segmentId: 's1',
+    textRevision: 1,
+    textEdited: false,
+    timingEdited: true,
+  }
+  plan.elements![1].derivedCaption = {
+    segmentId: 's2',
+    textRevision: 1,
+    textEdited: true,
+    timingEdited: false,
+  }
+  const protectedCaption = structuredClone(plan.elements![1])
+  await mount({ projects: [project], calls, planWrites })
+  await userEvent.click(screen.getByRole('button', { name: '대본에서 자막 업데이트' }))
+  await waitFor(() => expect(planWrites).toHaveLength(1), { timeout: 3000 })
+  expect(planWrites[0].plan.elements![0]).toMatchObject({
+    text: '새 대본 문구',
+    startMs: plan.elements![0].startMs,
+    endMs: plan.elements![0].endMs,
+    derivedCaption: { textRevision: 2, textEdited: false, timingEdited: true },
+  })
+  expect(planWrites[0].plan.elements![1]).toMatchObject(protectedCaption)
+  expect(planWrites[0].plan.narration).toEqual(plan.narration)
+  expect(calls.some((call) => /Start|Quote|Synthesize/.test(call))).toBe(false)
+})
 async function goToStep(name: '생성' | '수정' | '완성') {
   await userEvent.click(await screen.findByRole('tab', { name }))
 }
@@ -323,17 +436,15 @@ it('opens the selected cut or caption in its own sheet, with its notice, and clo
   await selectText()
   const textSheet = screen.getByRole('dialog', { name: '선택한 문구' })
   expect(within(textSheet).getByLabelText('자막 원문')).toBeInTheDocument()
-  // The placement stage, over the output frame of the cut its interval starts in.
-  expect(await within(textSheet).findByText('자막 배치')).toBeInTheDocument()
+  // Placement happens on the composed preview; phone details never draw a second editor.
+  expect(within(textSheet).queryByText('자막 배치')).not.toBeInTheDocument()
   expect(
-    within(textSheet).getByRole('button', { name: /자막을 끌어서 옮기기/ }),
-  ).toBeInTheDocument()
+    within(textSheet).getByText('미리보기에서 자막을 끌거나 방향키로 위치를 조절하세요.'),
+  ).toBeVisible()
   expect(within(textSheet).getByText(captionNotice)).toBeInTheDocument()
-  expect(page().queryByText(captionNotice)).not.toBeInTheDocument()
   expect(within(textSheet).getByRole('button', { name: '문구 삭제' })).toBeInTheDocument()
-
   await userEvent.keyboard('{Escape}')
-  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  expect(await screen.findByRole('button', { name: /자막을 끌어서 옮기기/ })).toBeVisible()
   expect(timeline().getByRole('button', { name: 'caption a' })).toHaveAttribute(
     'aria-pressed',
     'true',

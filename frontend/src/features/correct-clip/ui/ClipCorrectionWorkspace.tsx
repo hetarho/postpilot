@@ -11,6 +11,10 @@ import {
   timelineCuts,
   type ClipEditingState,
   captionStartCut,
+  captionRefresh,
+  narrationSlot,
+  minExposureMs,
+  textInterval,
   type ClipSpokenSegment,
   useClipCaptionPreview,
   useClipCaptionStyleSamples,
@@ -37,6 +41,7 @@ import { splitAtOutput } from '../model/timeline-gesture'
 import type { useClipCorrection } from '../model/useClipCorrection'
 import { ClipRenderAction } from './ClipRenderAction'
 import { ClipTimeline } from './ClipTimeline'
+import { ClipCaptionStage } from './ClipCaptionStage'
 import { ClipItemProperties } from './ClipItemProperties'
 
 type Correction = ReturnType<typeof useClipCorrection>
@@ -50,6 +55,8 @@ export interface ClipEditorPreviewProps {
   stickyTop?: number
   /** ②'s info control, overlaid at the frame's top-right beside the player's own (CLIP-148). */
   corner?: ReactNode
+  editingOverlay?: ReactNode
+  captionPosition?: { instanceId: string; x: number; y: number }
 }
 /** ②'s screen. It takes six handles rather than the twenty-two scalars the page used to spread
  *  here (ARCH-14): one for the saved project, one for the draft being corrected, one for the
@@ -136,6 +143,11 @@ export function ClipCorrectionWorkspace({
     start: onRender,
   } = render
   const { t } = useTranslation('clips')
+  const [captionPosition, setCaptionPosition] = useState<{
+    instanceId: string
+    x: number
+    y: number
+  }>()
   const { t: tCommon } = useTranslation('common')
   const viewport = useVisualViewport()
   const container = useRef<HTMLElement>(null)
@@ -270,7 +282,7 @@ export function ClipCorrectionWorkspace({
     projectId,
     correction.revision,
     draft,
-    text?.role === 'caption' && !readOnly,
+    !!draft.nativeComposition && !!draft.elements?.some((t) => t.role === 'caption') && !readOnly,
   )
   const fragment = captionPreview.data?.captions.find((c) => c.instanceId === text?.instanceId)
   // Every approved style, drawn once by the renderer for the caption sheet's picker (CDS-83);
@@ -337,6 +349,7 @@ export function ClipCorrectionWorkspace({
       )}
     </div>
   )
+  const refresh = captionRefresh(draft)
   return (
     <section
       ref={container}
@@ -363,6 +376,45 @@ export function ClipCorrectionWorkspace({
         <div className="min-w-0 space-y-4 md:col-span-2">
           <div ref={previewRoot} className="contents">
             {preview({
+              captionPosition,
+              editingOverlay: !readOnly && captionPreview.data && (
+                <>
+                  {(draft.elements ?? [])
+                    .filter(
+                      (text) =>
+                        text.role === 'caption' &&
+                        textInterval(draft, text).startMs <= timeline.timeMs &&
+                        timeline.timeMs < textInterval(draft, text).endMs,
+                    )
+                    .map((text) => (
+                      <ClipCaptionStage
+                        key={text.instanceId}
+                        overlayOnly
+                        text={text}
+                        fragment={captionPreview.data?.captions.find(
+                          (c) => c.instanceId === text.instanceId,
+                        )}
+                        canvas={captionPreview.data!.canvas}
+                        safeArea={captionPreview.data!.safeArea}
+                        frameStartMs={0}
+                        selected={
+                          timeline.selection?.kind === 'text' &&
+                          timeline.selection.id === text.instanceId
+                        }
+                        onSelect={() =>
+                          dispatch({
+                            type: 'select',
+                            seek: false,
+                            selection: { kind: 'text', id: text.instanceId },
+                          })
+                        }
+                        onPositionPreview={setCaptionPosition}
+                        change={change}
+                        disabled={disabled}
+                      />
+                    ))}
+                </>
+              ),
               timeMs: timeline.timeMs,
               onTimeChange: seek,
               onDisplayedFrame: setFrame,
@@ -430,12 +482,65 @@ export function ClipCorrectionWorkspace({
           {/* The save state is NOT reported here: CLIP-38 gives it to the page's one
           status region, and a second copy beside the timeline said it twice with
           two different delays. Undo/redo moved to the timeline's own head. */}
+          {!readOnly && draft.narration && (
+            <div className="space-y-2">
+              <Button
+                variant="secondary"
+                disabled={disabled || correction.pending}
+                onClick={() => {
+                  void correction.refreshCaptions().catch(() => undefined)
+                }}
+              >
+                {t('placement.refresh')}
+              </Button>
+              {refresh.pending.map((segment, index) => {
+                const candidate = narrationSlot(
+                  draft,
+                  segment.startMs,
+                  Math.max(0, segment.endMs - segment.startMs),
+                )
+                const slot =
+                  candidate &&
+                  Math.min(candidate.endMs, segment.endMs) - candidate.startMs >= minExposureMs('')
+                    ? {
+                        startMs: candidate.startMs,
+                        endMs: Math.min(candidate.endMs, segment.endMs),
+                      }
+                    : undefined
+                return (
+                  <div key={segment.id} className="flex flex-wrap items-center gap-2">
+                    <Button
+                      variant="secondary"
+                      disabled={disabled || !slot || segment.creation}
+                      onClick={() => {
+                        if (!slot) return
+                        const id = `new-script-caption-${Date.now()}`
+                        change({ type: 'addScriptCaption', id, segmentId: segment.id, ...slot })
+                        dispatch({ type: 'select', selection: { kind: 'text', id } })
+                        setDetailsOpen(true)
+                      }}
+                    >
+                      {t('placement.addFromScript', { number: index + 1 })}
+                    </Button>
+                    {!slot && <Typography variant="meta">{t('placement.noRoom')}</Typography>}
+                  </div>
+                )
+              })}
+              {refresh.unplaceable.length > 0 && (
+                <Typography variant="meta">{t('placement.unplaceableWords')}</Typography>
+              )}
+              {refresh.orphaned.length > 0 && (
+                <Typography variant="meta">{t('placement.orphans')}</Typography>
+              )}
+            </div>
+          )}
           <ClipTimeline
             plan={correction.transientPlan ?? draft}
             onSeek={seek}
             onCommit={change}
             onPreview={correction.setTransientPlan}
             bounds={correction.timelineBounds}
+            captionStyles={captionStyles}
             canSplit={
               timeline.selection?.kind === 'cut' &&
               !!splitAtOutput(draft, timeline.selection.id, timeline.timeMs, 'probe')

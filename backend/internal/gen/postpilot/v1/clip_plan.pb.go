@@ -22,12 +22,13 @@ const (
 )
 
 type SaveClipEditPlanRequest struct {
-	state            protoimpl.MessageState `protogen:"open.v1"`
-	ProjectId        string                 `protobuf:"bytes,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
-	ExpectedRevision int32                  `protobuf:"varint,2,opt,name=expected_revision,json=expectedRevision,proto3" json:"expected_revision,omitempty"`
-	Plan             *ClipEditPlan          `protobuf:"bytes,3,opt,name=plan,proto3" json:"plan,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	state                  protoimpl.MessageState `protogen:"open.v1"`
+	ProjectId              string                 `protobuf:"bytes,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	ExpectedRevision       int32                  `protobuf:"varint,2,opt,name=expected_revision,json=expectedRevision,proto3" json:"expected_revision,omitempty"`
+	Plan                   *ClipEditPlan          `protobuf:"bytes,3,opt,name=plan,proto3" json:"plan,omitempty"`
+	RefreshDerivedCaptions bool                   `protobuf:"varint,4,opt,name=refresh_derived_captions,json=refreshDerivedCaptions,proto3" json:"refresh_derived_captions,omitempty"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
 }
 
 func (x *SaveClipEditPlanRequest) Reset() {
@@ -79,6 +80,13 @@ func (x *SaveClipEditPlanRequest) GetPlan() *ClipEditPlan {
 		return x.Plan
 	}
 	return nil
+}
+
+func (x *SaveClipEditPlanRequest) GetRefreshDerivedCaptions() bool {
+	if x != nil {
+		return x.RefreshDerivedCaptions
+	}
+	return false
 }
 
 type SaveClipEditPlanResponse struct {
@@ -892,12 +900,13 @@ var File_postpilot_v1_clip_plan_proto protoreflect.FileDescriptor
 
 const file_postpilot_v1_clip_plan_proto_rawDesc = "" +
 	"\n" +
-	"\x1cpostpilot/v1/clip_plan.proto\x12\fpostpilot.v1\x1a\x17postpilot/v1/clip.proto\x1a\x1bpostpilot/v1/provider.proto\"\x95\x01\n" +
+	"\x1cpostpilot/v1/clip_plan.proto\x12\fpostpilot.v1\x1a\x17postpilot/v1/clip.proto\x1a\x1bpostpilot/v1/provider.proto\"\xcf\x01\n" +
 	"\x17SaveClipEditPlanRequest\x12\x1d\n" +
 	"\n" +
 	"project_id\x18\x01 \x01(\tR\tprojectId\x12+\n" +
 	"\x11expected_revision\x18\x02 \x01(\x05R\x10expectedRevision\x12.\n" +
-	"\x04plan\x18\x03 \x01(\v2\x1a.postpilot.v1.ClipEditPlanR\x04plan\"O\n" +
+	"\x04plan\x18\x03 \x01(\v2\x1a.postpilot.v1.ClipEditPlanR\x04plan\x128\n" +
+	"\x18refresh_derived_captions\x18\x04 \x01(\bR\x16refreshDerivedCaptions\"O\n" +
 	"\x18SaveClipEditPlanResponse\x123\n" +
 	"\aproject\x18\x01 \x01(\v2\x19.postpilot.v1.ClipProjectR\aproject\"\x9a\x01\n" +
 	"\x1cGetClipCaptionPreviewRequest\x12\x1d\n" +

@@ -394,6 +394,8 @@ export function ClipDraftPreview({
   suspended = false,
   stickyTop,
   corner,
+  editingOverlay,
+  captionPosition,
 }: {
   /** The prepared caption/graphic overlay for this plan, fetched by
    *  `features/preview-clip-draft` — this component renders it and owns no transport. */
@@ -414,6 +416,8 @@ export function ClipDraftPreview({
   /** Controls the caller overlays at the frame's top-right beside the player's own — ②'s info
    *  control (CLIP-148). Rendered outside the clipped frame so a panel it opens is not cut off. */
   corner?: ReactNode
+  editingOverlay?: ReactNode
+  captionPosition?: { instanceId: string; x: number; y: number }
 }) {
   const { t } = useTranslation('clips')
   const [localTime, setLocalTime] = useState(0)
@@ -504,6 +508,7 @@ export function ClipDraftPreview({
                 sources={sources}
                 resolvePlayback={resolvePlayback}
                 canvas={canvas}
+                captionPosition={captionPosition}
               />
             )}
             {!flow &&
@@ -545,8 +550,8 @@ export function ClipDraftPreview({
                     style={{
                       width: `${(asset.width / preview.canvasWidth) * 100}%`,
                       height: `${(asset.height / preview.canvasHeight) * 100}%`,
-                      left: `${(asset.x / preview.canvasWidth) * 100}%`,
-                      top: `${((asset.y + motion.dy) / preview.canvasHeight) * 100}%`,
+                      left: `${((captionPosition?.instanceId === asset.instanceId ? captionPosition.x : asset.x) / preview.canvasWidth) * 100}%`,
+                      top: `${(((captionPosition?.instanceId === asset.instanceId ? captionPosition.y : asset.y) + motion.dy) / preview.canvasHeight) * 100}%`,
                       opacity: motion.opacity,
                       zIndex: timeline.length + asset.layer,
                     }}
@@ -573,6 +578,7 @@ export function ClipDraftPreview({
                 )}
               </button>
             )}
+            {editingOverlay}
           </div>
           <div className="absolute top-2 right-2 z-30 flex items-center gap-1">
             {/* The simulation has no sound, so the audio control stands only over the video. */}

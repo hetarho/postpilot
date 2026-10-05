@@ -19,7 +19,6 @@ import { Button, FieldLabel, Listbox, RangeSlider, Slider, Textarea, Typography 
 import type { useClipCorrection } from '../model/useClipCorrection'
 import { ClipTimeField } from './ClipTimeField'
 import { ClipTextControls } from './ClipTextControls'
-import { ClipCaptionStage } from './ClipCaptionStage'
 import { ClipCutSourceFrame } from './ClipCutSourceFrame'
 import { ClipCutAssemblyControls } from './ClipCutAssemblyControls'
 import { ClipCutReading, ClipTextReading } from './ClipItemReading'
@@ -69,8 +68,8 @@ export function ClipItemProperties({
   const { t } = useTranslation('clips')
   const { captionStyles, notices, language } = project
   const { localSources, resolvePlayback } = footage
-  const { cut, text, index, source, errors, cutTime, currentFrame, captionCut } = selection
-  const { captionPreview, fragment, styleSamples } = captions
+  const { cut, text, index, source, errors, cutTime, currentFrame } = selection
+  const { styleSamples } = captions
   const { readOnly, disabled } = status
   const { draft, timeline, dispatch, change } = correction
   const seek = (timeMs: number) => dispatch({ type: 'seek', timeMs })
@@ -343,23 +342,8 @@ export function ClipItemProperties({
               </Button>
             </div>
           )}
-          {text?.role === 'caption' && captionPreview.data && (
-            <ClipCaptionStage
-              text={text}
-              fragment={fragment}
-              canvas={captionPreview.data.canvas}
-              safeArea={captionPreview.data.safeArea}
-              frameUrl={
-                localSources.find((s) => s.fingerprint === captionCut?.cut.fingerprint)?.url
-              }
-              frameFingerprint={captionCut?.cut.fingerprint}
-              frameStartMs={captionCut?.cut.startMs ?? 0}
-              resolvePlayback={resolvePlayback}
-              notices={notices}
-              language={language}
-              change={change}
-              disabled={disabled}
-            />
+          {text?.role === 'caption' && (
+            <Typography variant="meta">{t('placement.mainHelp')}</Typography>
           )}
           {text && (
             <ClipTextControls

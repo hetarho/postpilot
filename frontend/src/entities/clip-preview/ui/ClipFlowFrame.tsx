@@ -100,7 +100,9 @@ export function ClipFlowFrame({
   sources,
   resolvePlayback,
   canvas,
+  captionPosition,
 }: {
+  captionPosition?: { instanceId: string; x: number; y: number }
   timeline: readonly PreviewCut[]
   timeMs: number
   preview: ClipPreviewOverlay
@@ -134,8 +136,8 @@ export function ClipFlowFrame({
             style={{
               width: `${(asset.width / preview.canvasWidth) * 100}%`,
               height: `${(asset.height / preview.canvasHeight) * 100}%`,
-              left: `${(asset.x / preview.canvasWidth) * 100}%`,
-              top: `${(asset.y / preview.canvasHeight) * 100}%`,
+              left: `${((captionPosition?.instanceId === asset.instanceId ? captionPosition.x : asset.x) / preview.canvasWidth) * 100}%`,
+              top: `${((captionPosition?.instanceId === asset.instanceId ? captionPosition.y : asset.y) / preview.canvasHeight) * 100}%`,
               zIndex: 1 + asset.layer,
             }}
           />

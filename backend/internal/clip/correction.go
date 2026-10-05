@@ -36,8 +36,9 @@ type CorrectionCut struct {
 	Creation *CutCreation
 }
 type CorrectionPlan struct {
-	Narration            *NarrationPlan
-	SourceVolumePermille *int
+	RefreshDerivedCaptions bool
+	Narration              *NarrationPlan
+	SourceVolumePermille   *int
 	// The owner's per-source original-sound snapshot, as a read projection. It
 	// is changed through its own owner-scoped action, never by saving a plan, so
 	// a draft that carries it back must carry it back unchanged (CLIP-100).
@@ -327,12 +328,7 @@ func ApplyCorrection(cfg RenderConfig, p Project, input CorrectionPlan) (EditPla
 		return EditPlan{}, err
 	}
 	if old.Portable != nil {
-		next, err := applyNativeCorrection(cfg, p, old, sources, input)
-		if err != nil {
-			return next, err
-		}
-		err = CorrectNarration(old, input, &next)
-		return next, err
+		return applyNativeCorrection(cfg, p, old, sources, input)
 	}
 	if input.NativeComposition || len(input.Elements) != 0 {
 		return EditPlan{}, ErrInvalid

@@ -97,6 +97,9 @@ func applyNativeCorrection(cfg RenderConfig, p Project, old EditPlan, sources []
 	if err := c.applyCuts(); err != nil {
 		return EditPlan{}, err
 	}
+	if err := CorrectNarration(old, in, &c.next); err != nil {
+		return EditPlan{}, err
+	}
 	if err := c.applyElements(); err != nil {
 		return EditPlan{}, err
 	}
@@ -212,9 +215,21 @@ func (c *nativeCorrection) applyCuts() error {
 // minting the narration captions the owner created (CLIP-134).
 func (c *nativeCorrection) applyElements() error {
 	seen := map[string]bool{}
+	refreshPlan := c.old
+	refreshPlan.Narration = c.next.Narration
+	refreshedWords := RefreshCaptionWords(refreshPlan)
 	for _, edit := range c.in.Elements {
 		if edit.Creation != nil {
 			caption, minted, e := mintNarrationCaption(edit, c.knownText)
+			if e == nil && c.in.RefreshDerivedCaptions && edit.Derived != nil && c.next.Narration != nil {
+				for _, segment := range c.next.Narration.Segments {
+					if segment.ID == edit.Derived.SegmentID && segment.Text == edit.Text {
+						caption.Derived = &DerivedCaption{SegmentID: segment.ID, TextRevision: segment.TextRevision}
+						refreshedWords[minted.InstanceID] = segment.Text
+						break
+					}
+				}
+			}
 			if e != nil {
 				return e
 			}
@@ -240,7 +255,18 @@ func (c *nativeCorrection) applyElements() error {
 			return err
 		}
 		edit.Owner = owner
-		c.portable.Elements = append(c.portable.Elements, applyTextEdit(t, edit, c.changed))
+		applied := applyTextEdit(t, edit, c.changed)
+		if expected, ok := refreshedWords[edit.InstanceID]; c.in.RefreshDerivedCaptions && ok && edit.Text == expected && refreshPhrasesEqual(expected, t.Phrases, edit.Phrases) && applied.Derived != nil {
+			derived := *applied.Derived
+			derived.TextEdited = false
+			for _, segment := range c.next.Narration.Segments {
+				if segment.ID == derived.SegmentID {
+					derived.TextRevision = segment.TextRevision
+				}
+			}
+			applied.Derived = &derived
+		}
+		c.portable.Elements = append(c.portable.Elements, applied)
 	}
 	return nil
 }
@@ -292,8 +318,8 @@ func applyTextEdit(t PortableText, edit CorrectionText, changed []SourceAssociat
 	t.StaleEvidence = (t.StaleEvidence || associationAffectsText(t, changed)) && !reviewed && !contentChanged
 	if t.Derived != nil {
 		derived := *t.Derived
-		derived.TextEdited = derived.TextEdited || before.Text != edit.Text || !reflect.DeepEqual(before.Rows, edit.Rows)
-		derived.TimingEdited = derived.TimingEdited || before.Basis != edit.Basis || !reflect.DeepEqual(before.StartMS, edit.StartMS) || !reflect.DeepEqual(before.EndMS, edit.EndMS) || !slices.Equal(before.Phrases, edit.Phrases)
+		derived.TextEdited = derived.TextEdited || before.Text != edit.Text || !reflect.DeepEqual(before.Rows, edit.Rows) || !phraseWordsEqual(before.Phrases, edit.Phrases)
+		derived.TimingEdited = derived.TimingEdited || before.Basis != edit.Basis || !reflect.DeepEqual(before.StartMS, edit.StartMS) || !reflect.DeepEqual(before.EndMS, edit.EndMS) || !phraseTimesEqual(before.Phrases, edit.Phrases)
 		t.Derived = &derived
 	}
 	if !reflect.DeepEqual(before, edit) {

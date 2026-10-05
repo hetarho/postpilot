@@ -178,6 +178,8 @@ export interface ClipEditableText {
   ownerStyle?: string
 }
 export interface ClipEditPlan {
+  /** Request-only wording refresh intent; the server rechecks protected origins. */
+  refreshDerivedCaptions?: boolean
   narration?: ClipNarration
   sourceVolumePermille?: number
   /** The server's complete per-source original-sound snapshot. Absent is a plan

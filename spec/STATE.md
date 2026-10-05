@@ -63,7 +63,6 @@
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
 | T539 | Qualify the complete Korean voice-creation milestone | ARCH DUB MODEL CDS THEME | T538 | blocked@261005 |
-| T543 | Edit captions directly and refresh script-derived wording safely | ARCH DUB CLIP CDS THEME | T541 | todo |
 | T544 | Generate only stale clip speech with immutable revision guards | ARCH DUB CLIP QUOTA | T540 | todo |
 | T545 | Assemble narrated first drafts from measured speech timing | ARCH DUB CLIP QUOTA CDS | T544 | todo |
 | T546 | Expose voice selection, script edits and explicit timing conflict choices | ARCH DUB CLIP QUOTA THEME | T541 T543 T545 | todo |
@@ -73,11 +72,13 @@
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | todo |
 
 ## next
-- implement-task T543–T550 sequentially with automated checks and task commits, then merge/push main; T539 real supplier evidence is deferred and ordinary production readiness stays closed.
+- implement-task T544–T550 sequentially with automated checks and task commits, then merge/push main; T539 real supplier evidence is deferred and ordinary production readiness stays closed.
 - create-task ARCH (ARCH-52+ ARCH-53+ ARCH-56+ ARCH-57+ ARCH-34✎); create-task POST r32 (POST-108+ implemented by 12d2f428; verification-only); create-task VOICE r8 (VOICE-32✎ implemented by 68ae9a79; verification-only); update-ssot VOICE-31 remains open.
 - ops: lower TEMPLATE_PHOTO_ROW_MAX / VITE_TEMPLATE_PHOTO_ROW_MAX to 3 wherever production sets them explicitly (VPS .env, Cloudflare build vars).
 
 ## log
+- 261005 T543 done: main-preview placement, protected wording-only refresh and overflow/pending notices; 3249 FE tests and full local CI passed
+- 261005 T543 start: main-preview caption selection/placement and explicit owner-safe script wording refresh
 - 261005 T542 done: direct trim/reorder/seek, overlap-safe split and cancel/keyboard/undo semantics; 3240 FE tests and full local CI passed
 - 261005 T542 start: source-bound direct trim/reorder, shared output seek, cancellation and one history entry per gesture
 - 261005 T541 done: preview-first contextual editor, three named tracks and explicit mobile details; 3231 FE tests, full local CI and 12 responsive/theme browser reviews passed
@@ -96,5 +97,3 @@
 - 261004 T535 done: exact-input bounded speech quotes, durable call claims and typed decimal usage; ceiling/unknown/failure/cancellation/refund/master SQLite and race checks plus full local CI passed
 - 261004 T534 done: immutable speech-profile revisions, separate admin tab, price-free owner choices and owner-scoped provisional qualification; full local CI passed
 - 261004 T533 done: typed speech ports, optional ElevenLabs connection, bounded MP3/timing validation and decimal reported billing evidence; full local CI gates passed
-- 261005 post-deploy media verify of 426e1331 failed TestClipWriterInputRelease: since T572 the release harness prices through FX, so its 5000-credit lot no longer covered a 6595 hold and failed attempts now earn QUOTA-60 compensation; the harness lot and balance checks follow FX; production smokes and release smoke 28/28 pass locally
-- 261005 deploy of d645c1ca failed at the media-tools build: code.videolan.org served GitHub runners a challenge page for the x264 archive (T559 changed media-tools.sh, so the cache missed); media-tools.sh now falls back to the GitHub mirror of the same revision under its own checksum

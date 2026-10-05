@@ -8,7 +8,7 @@ import {
 } from '@/entities/clip-plan'
 import { ClipNoticeList, type ClipNotice } from '@/entities/clip-project'
 import { CLIP_CAPTION_PLACEMENT } from '@/entities/clip-design'
-import { Typography } from '@/shared/ui'
+import { Button, Typography } from '@/shared/ui'
 
 /** Where the caption may sit: its measured bounds, moved — never resized — until
  *  they lie inside the safe area, which is the same rule the server applies when
@@ -40,6 +40,10 @@ export function ClipCaptionStage({
   language,
   change,
   disabled,
+  overlayOnly = false,
+  selected = true,
+  onSelect,
+  onPositionPreview,
 }: {
   text: ClipEditableText
   /** Absent while the server is still drawing it, or when it could not. */
@@ -58,6 +62,10 @@ export function ClipCaptionStage({
   language?: 'ko' | 'en'
   change: (edit: TimelineEdit, group?: string) => void
   disabled?: boolean
+  overlayOnly?: boolean
+  selected?: boolean
+  onSelect?: () => void
+  onPositionPreview?: (value?: { instanceId: string; x: number; y: number }) => void
 }) {
   const { t } = useTranslation('clips')
   const stage = useRef<HTMLDivElement>(null)
@@ -88,42 +96,65 @@ export function ClipCaptionStage({
   // then on (CLIP-15, CDS-38).
   const placed = live ?? text.ownerPosition ?? (box ? { x: box.x, y: box.y } : undefined)
   const percent = (value: number, total: number) => `${(value / Math.max(1, total)) * 100}%`
+  const cancel = () => {
+    grab.current = null
+    setDragging(false)
+    setLive(undefined)
+    onPositionPreview?.()
+  }
+  useEffect(() => {
+    const escape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && grab.current) {
+        event.preventDefault()
+        event.stopPropagation()
+        cancel()
+      }
+    }
+    document.addEventListener('keydown', escape, true)
+    return () => document.removeEventListener('keydown', escape, true)
+  })
   const commit = (next: { x: number; y: number }) => {
     if (!box) return
     const at = clampToSafeArea(next.x, next.y, box, safeArea)
     change({ type: 'text', id: text.instanceId, patch: { ownerPosition: at } }, undefined)
     setLive(undefined)
+    onPositionPreview?.()
   }
   const move = (dx: number, dy: number) => {
     if (!box || !placed) return
     commit({ x: placed.x + dx, y: placed.y + dy })
   }
   return (
-    <div className="space-y-2">
-      <Typography variant="fieldTitle">{t('placement.title')}</Typography>
+    <div className={overlayOnly ? 'contents' : 'space-y-2'}>
+      {!overlayOnly && <Typography variant="fieldTitle">{t('placement.title')}</Typography>}
       <div
         ref={stage}
-        className="bg-surface-recessed relative w-full overflow-hidden rounded-md"
-        style={{ aspectRatio: `${canvas.width} / ${canvas.height}` }}
+        className={
+          overlayOnly
+            ? 'pointer-events-none absolute inset-0 z-30'
+            : 'bg-surface-recessed relative w-full overflow-hidden rounded-md'
+        }
+        style={overlayOnly ? undefined : { aspectRatio: `${canvas.width} / ${canvas.height}` }}
       >
-        {ground ? (
-          <video
-            muted
-            playsInline
-            preload="metadata"
-            aria-hidden="true"
-            tabIndex={-1}
-            src={`${ground}#t=${frameStartMs / 1000}`}
-            className="absolute inset-0 h-full w-full object-cover"
-          />
-        ) : (
-          <Typography
-            variant="meta"
-            className="absolute inset-0 flex items-center justify-center p-4 text-center"
-          >
-            {t('placement.noFrame')}
-          </Typography>
-        )}
+        {!overlayOnly &&
+          (ground ? (
+            <video
+              muted
+              playsInline
+              preload="metadata"
+              aria-hidden="true"
+              tabIndex={-1}
+              src={`${ground}#t=${frameStartMs / 1000}`}
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+          ) : (
+            <Typography
+              variant="meta"
+              className="absolute inset-0 flex items-center justify-center p-4 text-center"
+            >
+              {t('placement.noFrame')}
+            </Typography>
+          ))}
         <svg
           viewBox={`0 0 ${canvas.width} ${canvas.height}`}
           className="pointer-events-none absolute inset-0 h-full w-full"
@@ -142,7 +173,7 @@ export function ClipCaptionStage({
               data-testid="clip-caption-safe-area"
             />
           )}
-          {fragment && placed && (
+          {!overlayOnly && fragment && placed && (
             <g
               transform={`translate(${placed.x},${placed.y})`}
               /* The server's own drawing of this caption, escaped and validated
@@ -153,11 +184,18 @@ export function ClipCaptionStage({
           )}
         </svg>
         {fragment && box && placed && (
-          <button
-            type="button"
+          <Button
+            variant="ghost"
             disabled={disabled}
-            aria-label={t('placement.handle')}
-            className="absolute cursor-move rounded-sm"
+            aria-label={
+              selected ? t('placement.handle') : t('placement.select', { text: text.text })
+            }
+            aria-pressed={overlayOnly ? selected : undefined}
+            onClick={(event) => {
+              event.stopPropagation()
+              onSelect?.()
+            }}
+            className="pointer-events-auto absolute min-h-11 min-w-11 cursor-move touch-none rounded-sm"
             style={{
               left: percent(placed.x, canvas.width),
               top: percent(placed.y, canvas.height),
@@ -165,7 +203,10 @@ export function ClipCaptionStage({
               height: percent(box.height, canvas.height),
             }}
             onPointerDown={(event) => {
-              if (disabled) return
+              if (disabled || event.button !== 0) return
+              event.preventDefault()
+              event.stopPropagation()
+              onSelect?.()
               // Keeps the drag with this element when the pointer outruns it.
               event.currentTarget.setPointerCapture?.(event.pointerId)
               grab.current = {
@@ -183,25 +224,21 @@ export function ClipCaptionStage({
               // A drag is not a save path: the position rides local state and
               // the draft queue hears about it once, on release.
               const scale = canvas.width / rect.width
-              setLive(
-                clampToSafeArea(
-                  from.originX + (event.clientX - from.x) * scale,
-                  from.originY + (event.clientY - from.y) * scale,
-                  box,
-                  safeArea,
-                ),
+              const position = clampToSafeArea(
+                from.originX + (event.clientX - from.x) * scale,
+                from.originY + (event.clientY - from.y) * scale,
+                box,
+                safeArea,
               )
+              setLive(position)
+              onPositionPreview?.({ instanceId: text.instanceId, ...position })
             }}
             onPointerUp={() => {
               grab.current = null
               setDragging(false)
               if (live) commit(live)
             }}
-            onPointerCancel={() => {
-              grab.current = null
-              setDragging(false)
-              setLive(undefined)
-            }}
+            onPointerCancel={cancel}
             onKeyDown={(event) => {
               const step = event.shiftKey
                 ? CLIP_CAPTION_PLACEMENT.coarseNudgePx
@@ -215,22 +252,29 @@ export function ClipCaptionStage({
               const delta = by[event.key]
               if (!delta || disabled) return
               event.preventDefault()
+              if (!selected) onSelect?.()
               move(delta[0], delta[1])
             }}
           />
         )}
       </div>
-      {fragment?.representativeFrame && (
+      {!overlayOnly && fragment?.representativeFrame && (
         <Typography variant="meta">{t('placement.representative')}</Typography>
       )}
-      {!fragment && ground && <Typography variant="meta">{t('placement.drawing')}</Typography>}
-      <ClipNoticeList
-        notices={notices.filter(
-          (n) =>
-            n.elementId === text.elementId && n.cutId === text.cutId && n.code.includes('contrast'),
-        )}
-        language={language}
-      />
+      {!overlayOnly && !fragment && ground && (
+        <Typography variant="meta">{t('placement.drawing')}</Typography>
+      )}
+      {!overlayOnly && (
+        <ClipNoticeList
+          notices={notices.filter(
+            (n) =>
+              n.elementId === text.elementId &&
+              n.cutId === text.cutId &&
+              n.code.includes('contrast'),
+          )}
+          language={language}
+        />
+      )}
     </div>
   )
 }

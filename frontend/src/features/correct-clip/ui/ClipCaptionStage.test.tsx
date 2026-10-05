@@ -81,6 +81,43 @@ it('nudges a caption with the arrow keys', async () => {
   )
 })
 
+it('selects and edits the main preview overlay without drawing a second caption or source frame', async () => {
+  const onSelect = vi.fn(),
+    onPositionPreview = vi.fn()
+  const change = stage({ overlayOnly: true, selected: false, onSelect, onPositionPreview })
+  const handle = screen.getByRole('button', { name: '미리보기 자막 선택: caption a' })
+  expect(document.querySelector('video')).not.toBeInTheDocument()
+  expect(document.querySelector('[data-caption]')).not.toBeInTheDocument()
+  expect(screen.queryByText('자막 배치')).not.toBeInTheDocument()
+  await userEvent.click(handle)
+  expect(onSelect).toHaveBeenCalled()
+  expect(change).not.toHaveBeenCalled()
+  handle.focus()
+  await userEvent.keyboard('{ArrowRight}')
+  expect(change).toHaveBeenCalledExactlyOnceWith(
+    { type: 'text', id: 'caption-a', patch: { ownerPosition: { x: 308, y: 1200 } } },
+    undefined,
+  )
+  expect(onPositionPreview).toHaveBeenLastCalledWith()
+})
+
+it('cancels main-preview placement on Escape without saving its temporary position', () => {
+  const onPositionPreview = vi.fn()
+  const change = stage({ overlayOnly: true, onPositionPreview })
+  const handle = screen.getByRole('button', { name: /자막을 끌어서 옮기기/ })
+  vi.spyOn(handle.closest('div')!, 'getBoundingClientRect').mockReturnValue({
+    width: 1080,
+    height: 1920,
+  } as DOMRect)
+  fireEvent.pointerDown(handle, { clientX: 500, clientY: 1250, pointerId: 1 })
+  fireEvent.pointerMove(handle, { clientX: 600, clientY: 1250, pointerId: 1 })
+  expect(onPositionPreview).toHaveBeenLastCalledWith({ instanceId: 'caption-a', x: 400, y: 1200 })
+  fireEvent.keyDown(document, { key: 'Escape' })
+  fireEvent.pointerUp(handle, { pointerId: 1 })
+  expect(change).not.toHaveBeenCalled()
+  expect(onPositionPreview).toHaveBeenLastCalledWith()
+})
+
 it('still edits over a neutral ground when the source media is not here, and says why', () => {
   stage({ frameUrl: undefined })
   expect(

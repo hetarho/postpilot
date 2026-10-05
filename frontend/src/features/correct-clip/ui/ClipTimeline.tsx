@@ -35,6 +35,7 @@ export function ClipTimeline({
   bounds,
   onSplit,
   canSplit = true,
+  captionStyles,
   history,
   notices = [],
 }: {
@@ -52,6 +53,7 @@ export function ClipTimeline({
   onCommit?: (edit: TimelineEdit) => void
   onPreview?: (plan?: ClipEditPlan) => void
   bounds?: (id: string) => SourceBounds
+  captionStyles?: readonly string[]
   canSplit?: boolean
   onSplit?: () => void
   localSources: ReadonlyArray<{ fingerprint: string; url: string }>
@@ -96,7 +98,7 @@ export function ClipTimeline({
         parent.scrollLeft += bounds.left - viewport.left
     }
   }, [selection?.id, selection?.kind, phrase, order])
-  const tracks = clipTextTracks(plan)
+  const tracks = clipTextTracks(plan, captionStyles)
   const slot = onAddCaption && plan.nativeComposition ? narrationSlot(plan, timeMs) : undefined
   // Every label is bounded by the bar it belongs to, so the only question left
   // is whether the bar is wide enough to hold one at all (CLIP-54).
@@ -350,7 +352,10 @@ export function ClipTimeline({
                     }
                     className="h-11 w-full overflow-hidden"
                     aria-label={bar.text}
-                    aria-invalid={bar.invalid || undefined}
+                    aria-invalid={bar.invalid || bar.invalidContent || undefined}
+                    aria-description={
+                      bar.invalid || bar.invalidContent ? t('timeline.captionAttention') : undefined
+                    }
                     aria-pressed={
                       selection?.kind === 'text' &&
                       selection.id === bar.id &&
@@ -361,7 +366,8 @@ export function ClipTimeline({
                     {fits(bar.endMs - bar.startMs) && (
                       <Typography as="span" variant="meta" className="w-full truncate">
                         {bar.text}
-                        {bar.invalid && ` · ${t('assembly.invalidRange')}`}
+                        {(bar.invalid || bar.invalidContent) &&
+                          ` · ${t('timeline.captionAttention')}`}
                       </Typography>
                     )}
                   </Button>

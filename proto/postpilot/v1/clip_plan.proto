@@ -24,7 +24,7 @@ service ClipPlanService {
   rpc StartClipRevision(StartClipRevisionRequest) returns (StartClipRevisionResponse) {}
 }
 
-message SaveClipEditPlanRequest { string project_id = 1; int32 expected_revision = 2; ClipEditPlan plan = 3; }
+message SaveClipEditPlanRequest { string project_id = 1; int32 expected_revision = 2; ClipEditPlan plan = 3; bool refresh_derived_captions = 4; }
 
 message SaveClipEditPlanResponse { ClipProject project = 1; }
 

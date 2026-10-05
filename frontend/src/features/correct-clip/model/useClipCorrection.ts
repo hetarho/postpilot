@@ -471,6 +471,10 @@ export function useClipCorrection(ownerId: string, project: ClipProject, createC
         retainedSound,
       })
     },
+    refreshCaptions: async () => {
+      await flush()
+      change({ type: 'refreshCaptions' })
+    },
     splitCut: async (id: string, sourceMs: number) => {
       await flush()
       const plan = current.current.draft

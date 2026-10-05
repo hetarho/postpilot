@@ -208,7 +208,9 @@ func (h *Handler) SaveClipEditPlan(ctx context.Context, req *connect.Request[v1.
 	if h.generation == nil {
 		return nil, toConnectError(errors.New("clip correction unavailable"))
 	}
-	if _, err = h.generation.SaveCorrection(ctx, user, req.Msg.ProjectId, int(req.Msg.ExpectedRevision), correctionPlan(req.Msg.Plan)); err != nil {
+	input := correctionPlan(req.Msg.Plan)
+	input.RefreshDerivedCaptions = req.Msg.RefreshDerivedCaptions
+	if _, err = h.generation.SaveCorrection(ctx, user, req.Msg.ProjectId, int(req.Msg.ExpectedRevision), input); err != nil {
 		return nil, toConnectError(err)
 	}
 	response, err := h.GetClipProject(ctx, connect.NewRequest(&v1.GetClipProjectRequest{Id: req.Msg.ProjectId}))

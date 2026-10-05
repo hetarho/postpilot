@@ -41,6 +41,7 @@ export function clipPlanCalls(transport: Transport): ClipPlanCalls {
         projectId,
         expectedRevision,
         plan: clipPlanToProto(plan),
+        refreshDerivedCaptions: plan.refreshDerivedCaptions === true,
       })
       if (!result.project?.editing) throw new Error('Missing saved correction')
       return toClipProject(result.project)

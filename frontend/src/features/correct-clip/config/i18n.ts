@@ -83,6 +83,7 @@ export const i18n = {
       sourceRange: '원본 {{start}}–{{end}}초',
       sourceStart: '원본 시작 (초)',
       sourceEnd: '원본 끝 (초)',
+      captionAttention: '확인 필요',
       textInvalid: '이 문구의 내용·위치·시간을 확인해 주세요. 입력한 값은 그대로 남아 있어요.',
       stale: '항목 연결이 바뀌었어요. 이 문구가 화면의 대상과 가격에 맞는지 확인해 주세요.',
       reviewed: '문구와 항목이 맞아요',
@@ -200,6 +201,14 @@ export const i18n = {
       leaveBody: '작성 중인 수정만 사라져요. 저장한 수정본과 이전 영상은 유지돼요.',
     },
     placement: {
+      select: '미리보기 자막 선택: {{text}}',
+      mainHelp: '미리보기에서 자막을 끌거나 방향키로 위치를 조절하세요.',
+      refresh: '대본에서 자막 업데이트',
+      addFromScript: '{{number}}번 문장에서 자막 추가',
+      unplaceableWords:
+        '이 문장으로 기존 자막 수를 채울 수 없어요. 필요 없는 자막을 직접 삭제해 주세요.',
+      noRoom: '기존 자막이나 인트로·아웃트로와 겹쳐요. 표시 시간을 먼저 조절해 주세요.',
+      orphans: '원래 대본이 삭제된 자막을 유지했어요. 필요한 문구만 직접 수정하거나 삭제해 주세요.',
       title: '자막 배치',
       handle: '자막을 끌어서 옮기기 (방향키로 미세 조정)',
       noFrame:
@@ -297,6 +306,7 @@ export const i18n = {
       sourceRange: 'Source {{start}}–{{end}} s',
       sourceStart: 'Source start (seconds)',
       sourceEnd: 'Source end (seconds)',
+      captionAttention: 'Needs attention',
       textInvalid: 'Check this element’s text, placement and timing. Your values are preserved.',
       stale:
         'The item association changed. Check that this sentence and price match the visible subject.',
@@ -424,6 +434,16 @@ export const i18n = {
       leaveBody: 'Only your unsaved edits are discarded. The saved plan and previous video remain.',
     },
     placement: {
+      select: 'Select preview caption: {{text}}',
+      mainHelp: 'Drag the caption in the preview or use arrow keys to adjust its position.',
+      refresh: 'Update captions from script',
+      addFromScript: 'Add caption from sentence {{number}}',
+      unplaceableWords:
+        'The new sentence cannot fill every existing caption. Delete unnecessary captions explicitly.',
+      noRoom:
+        'This overlaps an existing caption or a region. Adjust the displayed intervals first.',
+      orphans:
+        'Captions with deleted script origins were retained. Edit or delete them explicitly.',
       title: 'Caption placement',
       handle: 'Drag the caption (arrow keys nudge it)',
       noFrame:

@@ -16,6 +16,7 @@ export {
   copyClipPlan,
   cutOutputMs,
   cutRate,
+  minExposureMs,
   outputToSourceMs,
   ownerCutId,
   requiredClipSources,
@@ -74,3 +75,5 @@ export type {
   ClipDerivedCaption,
 } from './model/spoken'
 export { SPOKEN_LIMITS, spokenState, speechDurationMs } from './model/spoken'
+
+export { captionRefresh, captionWords, refreshCaptionWording } from './model/caption-refresh'
