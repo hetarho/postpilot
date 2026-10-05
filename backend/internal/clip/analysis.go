@@ -93,13 +93,14 @@ type AnalysisLimits struct {
 	ChunkMS, MaxSources, MaxSourceDurationMS, MaxSegments, MaxTextRunes, MaxSubjects int
 }
 type PlanningInput struct {
-	Language         string
-	Composition      *ProjectComposition
-	Template         Recipe
-	Ratio            string
-	TargetDurationMS int
-	Analyses         []SourceAnalysis
-	Policy           llm.CallPolicy
+	MeasuredNarration *NarrationPlan `json:",omitempty"`
+	Language          string
+	Composition       *ProjectComposition
+	Template          Recipe
+	Ratio             string
+	TargetDurationMS  int
+	Analyses          []SourceAnalysis
+	Policy            llm.CallPolicy
 	// The campaign type the badge shows (CDS-31).
 	Disclosure     string
 	HideDisclosure bool

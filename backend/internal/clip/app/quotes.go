@@ -70,7 +70,15 @@ func (s *GenerationService) refreeze(ctx context.Context, pricing clip.Generatio
 		current.SkipNarration, current.Storyline = false, true
 		return current, err
 	}
-	return s.freezeWork(ctx, pricing.Observe.Ref, pricing.Plan.Ref, count, pricing.SkipFlow, pricing.SkipNarration, pricing.Plan.ResponseRetries)
+	current, e := s.freezeWork(withFrozenQuoteRate(ctx, pricing), pricing.Observe.Ref, pricing.Plan.Ref, count, pricing.SkipFlow, pricing.SkipNarration, pricing.Plan.ResponseRetries)
+	if e == nil && pricing.Dubbing != nil {
+		current.Dubbing = pricing.Dubbing
+		current.Rate = pricing.Rate
+		if len(pricing.Dubbing.Units) > 0 {
+			current.MaxCredits, e = usage.MixedReservationCredits(quotedCalls(current, count, current.Plan.ResponseRetries), pricing.Dubbing.Units, current.Rate)
+		}
+	}
+	return current, e
 }
 
 func (s *GenerationService) quoteInputs(ctx context.Context, user, id, batch, observe, write string, mode quoteMode) (clip.Project, clip.VideoTemplate, clip.SourceBatch, clip.GenerationPricing, clip.VideoGuidelines, error) {
@@ -155,7 +163,7 @@ func (s *GenerationService) quoteInputs(ctx context.Context, user, id, batch, ob
 		return p, t, b, pricing, guidelines, err
 	}
 	regions := clip.EffectiveProjectRegions(p)
-	seed := clip.GenerationPayload{Language: p.Language, Batch: b, Composition: c, Template: t.Recipe, Ratio: p.Ratio, Write: write, TargetDurationMS: p.TargetDurationMS, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, Instruction: p.Instruction, Guidelines: guidelines, Regions: &regions, IntroPreset: p.IntroPreset, OutroPreset: p.OutroPreset}
+	seed := clip.GenerationPayload{Dubbing: p.Dubbing, Language: p.Language, Batch: b, Composition: c, Template: t.Recipe, Ratio: p.Ratio, Write: write, TargetDurationMS: p.TargetDurationMS, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, Instruction: p.Instruction, Guidelines: guidelines, Regions: &regions, IntroPreset: p.IntroPreset, OutroPreset: p.OutroPreset}
 	if mode == quoteFromStoryline {
 		seed.FollowStoryline = p.Storyline
 	}
@@ -165,7 +173,7 @@ func (s *GenerationService) quoteInputs(ctx context.Context, user, id, batch, ob
 	// still resumes at rendering.
 	// The storyline call writes no plan, so no kept plan answers it; the analysis it
 	// still needs is counted below either way (CLIP-93).
-	written := mode != quoteStoryline && recovered.Plan != "" && recovered.PlanDigest == planRecoveryDigest(seed)
+	written := mode != quoteStoryline && (recovered.Plan != "" || p.Dubbing.Enabled && recovered.Spoken != nil) && recovered.PlanDigest == planRecoveryDigest(seed)
 	skipFlow := written && (recovered.FlowReady || recovered.PlanReady)
 	skipNarration := skipFlow && recovered.PlanReady
 	upperCount := count
@@ -222,6 +230,45 @@ func (s *GenerationService) quoteInputs(ctx context.Context, user, id, batch, ob
 		return p, t, b, pricing, guidelines, admissionRefusal(modelRef(observe), err)
 	}
 	pricing.CancellationPolicyVersion = clip.CancellationPolicyVersion
+	if p.Dubbing.Enabled && mode != quoteStoryline {
+		if s.speech == nil {
+			return p, t, b, pricing, guidelines, clip.ErrCompositionUnavailable
+		}
+		var prior *clip.NarratedPricing
+		if skipFlow {
+			ready := skipNarration
+			if recovered.Spoken != nil {
+				ready = len(recovered.Spoken.Narration.Segments) > 0
+				for _, seg := range recovered.Spoken.Narration.Segments {
+					ready = ready && clip.CompatibleSpeech(&recovered.Spoken.Narration, seg)
+				}
+			}
+			if ready {
+				prior = recovered.Pricing.Dubbing
+			}
+		}
+		if frozen, ok := ctx.Value(frozenQuoteRateKey{}).(clip.GenerationPricing); ok {
+			prior = frozen.Dubbing
+		}
+		pricing.Dubbing, err = s.speech.QuoteInitial(ctx, user, p, b.ID, prior, skipNarration, func() *clip.SpokenDraft {
+			if skipFlow {
+				return recovered.Spoken
+			}
+			return nil
+		}())
+		if err != nil {
+			return p, t, b, pricing, guidelines, err
+		}
+		if len(pricing.Dubbing.Units) > 0 {
+			if pricing.DubbingRate().Valid() {
+				pricing.Rate = pricing.DubbingRate()
+			}
+			pricing.MaxCredits, err = usage.MixedReservationCredits(quotedCalls(pricing, count, pricing.Plan.ResponseRetries), pricing.Dubbing.Units, pricing.Rate)
+			if err != nil {
+				return p, t, b, pricing, guidelines, err
+			}
+		}
+	}
 	// The quote binds them through the pricing, and a change before the start invalidates the
 	// approval (QUOTA-45).
 	pricing.GuidelinesDigest = guidelines.Digest()
@@ -271,6 +318,9 @@ func (s *GenerationService) quote(ctx context.Context, user, id, batch, observe,
 	expires := now.Add(s.cfg.QuoteTTL)
 	if b.ExpiresAt.Before(expires) {
 		expires = b.ExpiresAt
+	}
+	if pricing.Dubbing != nil && len(pricing.Dubbing.Units) > 0 && pricing.Dubbing.ExpiresAt.Before(expires) {
+		expires = pricing.Dubbing.ExpiresAt
 	}
 	q := clip.GenerationQuote{ID: newID(), UserID: user, ProjectID: id, BatchID: batch, InputDigest: clip.QuoteInputDigest(p, t, b, pricing), Pricing: pricing, ExpiresAt: expires}
 	if err = store.SaveQuote(ctx, q, now); err != nil {
@@ -356,7 +406,7 @@ func (s *GenerationService) startMode(ctx context.Context, user, id, batch, obse
 	}
 	recovery := s.selectRecovery(upgraded, b, modelRef(observe), p.Language)
 	regions := clip.EffectiveProjectRegions(p)
-	payload, err := json.Marshal(clip.GenerationPayload{Language: p.Language, Recovery: &recovery, Composition: c, Version: clip.GenerationPayloadVersion, ProjectID: id, Ratio: p.Ratio, Observe: observe, Write: write, TargetDurationMS: p.TargetDurationMS, Template: t.Recipe, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, Instruction: p.Instruction, Guidelines: guidelines, FollowStoryline: followed(mode, p), Regions: &regions, CaptionPace: p.CaptionPace, Accent: p.Accent, IntroPreset: p.IntroPreset, OutroPreset: p.OutroPreset, CaptionStyles: p.CaptionStyles, Batch: b, Approval: &clip.GenerationApproval{QuoteID: q.ID, MaxCredits: q.Pricing.MaxCredits, Pricing: q.Pricing}})
+	payload, err := json.Marshal(clip.GenerationPayload{Dubbing: p.Dubbing, Language: p.Language, Recovery: &recovery, Composition: c, Version: clip.GenerationPayloadVersion, ProjectID: id, Ratio: p.Ratio, Observe: observe, Write: write, TargetDurationMS: p.TargetDurationMS, Template: t.Recipe, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, Instruction: p.Instruction, Guidelines: guidelines, FollowStoryline: followed(mode, p), Regions: &regions, CaptionPace: p.CaptionPace, Accent: p.Accent, IntroPreset: p.IntroPreset, OutroPreset: p.OutroPreset, CaptionStyles: p.CaptionStyles, Batch: b, Approval: &clip.GenerationApproval{QuoteID: q.ID, MaxCredits: q.Pricing.MaxCredits, Pricing: q.Pricing}})
 	if err != nil {
 		return "", err
 	}

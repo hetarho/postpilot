@@ -33,6 +33,7 @@ func planRecoveryDigest(p clip.GenerationPayload) string {
 		regions = p.Regions.WritingDigest(p.Design().RegionPresets())
 	}
 	raw, _ := json.Marshal(struct {
+		Dubbing                            clip.DubbingOptions `json:",omitzero"`
 		Composition                        *clip.ProjectComposition
 		Template                           clip.Recipe
 		Ratio, Write, Disclosure, Language string
@@ -45,7 +46,7 @@ func planRecoveryDigest(p clip.GenerationPayload) string {
 		Version                            int
 		Analysis                           string
 		Sources                            [][2]string
-	}{p.Composition, p.Template, p.Ratio, p.Write, p.Disclosure, p.Language, p.Instruction, p.Guidelines.Digest(), p.FollowStoryline.Digest(), regions, p.TargetDurationMS, p.HideDisclosure, clip.CompositionPlanVersion, clip.AnalysisContractVersion, sources})
+	}{p.Dubbing, p.Composition, p.Template, p.Ratio, p.Write, p.Disclosure, p.Language, p.Instruction, p.Guidelines.Digest(), p.FollowStoryline.Digest(), regions, p.TargetDurationMS, p.HideDisclosure, clip.CompositionPlanVersion, clip.AnalysisContractVersion, sources})
 	sum := sha256.Sum256(raw)
 	return hex.EncodeToString(sum[:])
 }
@@ -119,6 +120,7 @@ func (s *GenerationService) selectRecovery(r *clip.RecoveryState, b clip.SourceB
 		return cmp.Compare(a.SourceID, b.SourceID)
 	})
 	if len(out.Chunks) == len(r.Chunks) && len(out.Sources) == len(r.Sources) {
+		out.Spoken = r.Spoken
 		out.PlanDigest, out.Plan, out.PlanReady, out.FlowReady, out.Storyline, out.RegionDrafts = r.PlanDigest, r.Plan, r.PlanReady, r.FlowReady, r.Storyline, r.RegionDrafts
 	}
 	return out

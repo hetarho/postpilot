@@ -10,6 +10,7 @@ import (
 	"github.com/postpilot/backend/internal/job"
 	"github.com/postpilot/backend/internal/llm"
 	"github.com/postpilot/backend/internal/plan"
+	"github.com/postpilot/backend/internal/usage"
 )
 
 // Call is one priced model call the reservation approved, and how many times it may run.
@@ -25,6 +26,8 @@ type Reservation struct {
 	ApprovedMaxCredits        int
 	Calls                     []Call
 	Rate                      plan.RateSnapshot
+	Units                     []usage.UnitBudget
+	UnitQuoteID               string
 }
 
 // Hold is the credit hold a charged clip job takes before its first model call. The
@@ -84,6 +87,12 @@ func (a Jobs) Reserve(ctx context.Context, user, id string, calls []job.PlannedC
 	}
 	remaining := map[callKey]int{}
 	for _, c := range calls {
+		if c.CompletionTokens == 0 {
+			if c.Count <= 0 || c.Stage != "speech" || len(approval.Units) == 0 {
+				return nil, clip.ErrCreditAllowance
+			}
+			continue
+		}
 		if c.Ref == "" || (c.Ref != j.ObserveModel && c.Ref != j.WriteModel) || c.Count <= 0 || c.CompletionTokens <= 0 {
 			return nil, clip.ErrCreditAllowance
 		}

@@ -42,6 +42,13 @@ func (h *Handler) QuoteClipGeneration(ctx context.Context, req *connect.Request[
 // call under its own label and no narration (CLIP-177).
 func generationQuoteProto(ctx context.Context, h *Handler, user, project string, q clip.GenerationQuote) *v1.QuoteClipGenerationResponse {
 	calls := []*v1.ClipPricedCall{pricedCallProto(q.Pricing.Observe, "observe", q.Pricing.ObserveCalls(q.Pricing.ObservationCalls)), pricedCallProto(q.Pricing.Plan, "flow", q.Pricing.FlowCalls()), pricedCallProto(q.Pricing.Narration, "narration", q.Pricing.NarrationCalls())}
+	if q.Pricing.Dubbing != nil {
+		calls[1].Label = "script"
+		calls[2].Label = "flow"
+		for _, b := range q.Pricing.Dubbing.Units {
+			calls = append(calls, &v1.ClipPricedCall{Label: "speech", Stage: "speech", Model: &v1.ModelRef{ProviderId: b.Ref.ProviderID, ModelId: b.Ref.ModelID}, Calls: int32(b.Count)})
+		}
+	}
 	if q.Pricing.Storyline {
 		calls = []*v1.ClipPricedCall{pricedCallProto(q.Pricing.Observe, "observe", q.Pricing.ObserveCalls(q.Pricing.ObservationCalls)), pricedCallProto(q.Pricing.Plan, "storyline", q.Pricing.FlowCalls())}
 	}

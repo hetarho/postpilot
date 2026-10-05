@@ -72,7 +72,7 @@ func (s *Store) BindSpeechRun(ctx context.Context, owner, id, job string) error 
 				return struct{}{}, e
 			}
 			now := stamp(time.Now())
-			if e = q.ReserveClipSpeechCall(ctx, sqlc.ReserveClipSpeechCallParams{ID: id + ":" + c.SegmentID, OwnerID: owner, ProjectID: r.ProjectID, JobID: job, PlanRevision: int64(r.Revision), SegmentID: c.SegmentID, InputHash: c.InputHash, BindingDigest: r.Voice.Binding.Digest, OperationJson: raw, CreatedAt: now, UpdatedAt: now}); e != nil {
+			if e = q.ReserveClipSpeechCall(ctx, sqlc.ReserveClipSpeechCallParams{ID: id + ":" + c.SegmentID, OwnerID: owner, ProjectID: r.ProjectID, JobID: job, PlanRevision: int64(max(1, r.Revision)), SegmentID: c.SegmentID, InputHash: c.InputHash, BindingDigest: r.Voice.Binding.Digest, OperationJson: raw, CreatedAt: now, UpdatedAt: now}); e != nil {
 				return struct{}{}, e
 			}
 		}

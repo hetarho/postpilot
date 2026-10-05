@@ -1,0 +1,72 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "storyline",
+    "region_slots",
+    "spoken_lines"
+  ],
+  "properties": {
+    "storyline": {
+      "type": "array",
+      "maxItems": 30,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "text",
+          "observation_ids"
+        ],
+        "properties": {
+          "text": {
+            "type": "string",
+            "maxLength": 1000
+          },
+          "observation_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "region_slots": {
+      "type": "array",
+      "maxItems": 30,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "slot_id",
+          "text",
+          "short_text"
+        ],
+        "properties": {
+          "slot_id": {
+            "type": "string",
+            "maxLength": 64
+          },
+          "text": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "short_text": {
+            "type": "string",
+            "maxLength": 500
+          }
+        }
+      }
+    },
+    "spoken_lines": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 32,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 500
+      }
+    }
+  }
+}

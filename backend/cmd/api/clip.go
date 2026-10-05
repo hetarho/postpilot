@@ -55,7 +55,7 @@ func clipBudgets(cfg clipai.Config) clipapp.Budgets {
 	return clipapp.Budgets{ObserveCompletionTokens: cfg.ObserveCompletionTokens, FlowCompletionTokens: cfg.FlowCompletionTokens, NarrationCompletionTokens: cfg.NarrationCompletionTokens, ObserveReasoning: cfg.ObserveReasoning, PlanReasoning: cfg.PlanReasoning}
 }
 
-func newClipGeneration(ctx context.Context, cfg *config.Config, store *clipstore.Store, projects *clipapp.Service, sources *clipapp.SourceService, bucket *storage.Bucket, media *clipmedia.Adapter, models meteredRegistry, plans *auth.Service, queue *job.Queue, guard clipapp.Reserver, writer *sql.DB, bind clipapp.Binder, candidates clipGuidelineCandidates, voices clip.SpokenVoiceResolver) (*clipapp.GenerationService, error) {
+func newClipGeneration(ctx context.Context, cfg *config.Config, store *clipstore.Store, projects *clipapp.Service, sources *clipapp.SourceService, bucket *storage.Bucket, media *clipmedia.Adapter, models meteredRegistry, plans *auth.Service, queue *job.Queue, guard clipapp.Reserver, writer *sql.DB, bind clipapp.Binder, candidates clipGuidelineCandidates, voices clip.SpokenVoiceResolver, speech ...*clipapp.SpeechService) (*clipapp.GenerationService, error) {
 	renderer, err := clipmedia.NewRenderer(media, clip.DefaultRenderConfig(clipEnvironment(cfg)))
 	if err != nil {
 		return nil, err
@@ -72,8 +72,12 @@ func newClipGeneration(ctx context.Context, cfg *config.Config, store *clipstore
 	if err != nil {
 		return nil, err
 	}
+	var narration *clipapp.SpeechService
+	if len(speech) > 0 {
+		narration = speech[0]
+	}
 	service := clipapp.NewGenerationService(store, projects, sources, bucket, media, planner, renderer, clipapp.NewJobs(queue, guard), clip.DefaultGenerationConfig(clipEnvironment(cfg)), clipapp.GenerationDeps{
-		Voices:      voices,
+		Voices: voices, Speech: narration,
 		RemoteMedia: remote,
 		Finisher:    finisher,
 		Pricing: clipapp.NewPricing(models.Registry, clipBudgets(aiConfig), models.ledger).WithQuoteAccess(

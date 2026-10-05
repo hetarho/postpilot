@@ -109,3 +109,8 @@ func (s *Store) UnitCostForJob(ctx context.Context, job string) (string, error) 
 	}
 	return total.RatString(), nil
 }
+
+func (s *Store) ClaimBoundedUnitCall(ctx context.Context, id, job, fingerprint string, count, total, characters int, digest string, at time.Time) (bool, error) {
+	n, e := s.write.ClaimBoundedUnitCall(ctx, sqlc.ClaimBoundedUnitCallParams{ID: id, Job: job, Fingerprint: fingerprint, Now: formatTime(at), Characters: int64(characters), InputDigest: digest, MaxCalls: int64(count), MaxCharacters: int64(total)})
+	return n == 1, e
+}

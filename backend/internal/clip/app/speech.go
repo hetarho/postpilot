@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"strconv"
 	"time"
@@ -49,6 +50,7 @@ type SpeechStorage interface {
 	ClaimSpeechCall(context.Context, SpeechRun, SpeechCall) error
 	FinishSpeechCall(context.Context, SpeechRun, SpeechCall, string, string) error
 	InsertSpeechAsset(context.Context, clip.SpeechAsset) error
+	FindSpeechAsset(context.Context, string, string, string, string) (clip.SpeechAsset, error)
 	PublishSpeechAsset(context.Context, string, string, string, int, string, string, string, string) (clip.Project, error)
 }
 type SpeechJobMetadata interface {
@@ -263,7 +265,7 @@ func matchingSpeechJob(ctx context.Context, p SpeechTxPorts, r SpeechRun) error 
 	if e != nil {
 		return e
 	}
-	if j.UserID != r.OwnerID || j.Kind != clip.JobKindSpeech || j.Subject(clip.JobSubject) != r.ProjectID || string(j.Payload) != r.ID || j.Status != job.StatusRunning || j.CancelRequestedAt != nil {
+	if !speechJobIdentity(j, r) || j.Status != job.StatusRunning || j.CancelRequestedAt != nil {
 		return job.ErrDispatchRefused
 	}
 	return nil
@@ -328,50 +330,13 @@ func (s *SpeechService) Run(ctx context.Context, j job.Job, progress job.Progres
 		if e != nil {
 			return e
 		}
-		response, e := s.Models.SynthesizeSpeech(ctx, c.Request)
+		asset, e := s.synthesizeAsset(ctx, r, c)
 		if e != nil {
 			s.finishCall(ctx, r, c, "failed", "")
 			return e
 		}
-		// Decode original bytes again at the application seam; supplied metadata cannot bless corrupt media.
-		audio, e := llm.InspectSpeechAudio(ctx, response.Audio.Bytes)
-		if e != nil {
-			s.finishCall(ctx, r, c, "failed", "")
-			return e
-		}
-		id := speechID()
-		ref := clip.SpeechRef{AssetID: id, VoiceID: r.Voice.Binding.ID, BindingDigest: r.Voice.Binding.Digest, InputHash: c.InputHash, SettingsHash: r.Voice.Settings.Digest(), AudioHash: audio.SHA256, ProfileID: r.Voice.ProfileID, ProfileRevision: r.Voice.ProfileRevision, Samples: audio.Samples, SampleRate: audio.SampleRate, Channels: audio.Channels}
-		timing := response.Alignment
-		if len(timing) == 0 {
-			timing = response.NormalizedAlignment
-		}
-		if llm.ValidateSpeechAlignment(timing, audio) == nil {
-			last := 0
-			for _, t := range timing {
-				start, end := int(t.StartSeconds*1000), int(t.EndSeconds*1000)
-				if start < last || end <= start || end > ref.DurationMS() {
-					ref.Timing = nil
-					break
-				}
-				ref.Timing = append(ref.Timing, clip.SpeechTiming{Text: t.Character, StartMS: start, EndMS: end})
-				last = end
-			}
-		}
-		asset := clip.SpeechAsset{ID: id, OwnerID: r.OwnerID, ProjectID: r.ProjectID, ObjectKey: clip.SpeechAudioPrefix + id + ".mp3", Bytes: int64(len(audio.Bytes)), Text: c.Text, Speech: ref, CreatedAt: time.Now().UTC()}
-		if e = s.Objects.PutClipSpeechAudio(ctx, asset.ObjectKey, audio.Bytes); e != nil {
-			s.finishCall(ctx, r, c, "failed", "")
-			return e
-		}
-		audit, cancel := context.WithTimeout(context.WithoutCancel(ctx), SpeechJournalTimeout)
-		e = s.Store.InsertSpeechAsset(audit, asset)
-		cancel()
-		if e != nil {
-			cleanup, stop := context.WithTimeout(context.WithoutCancel(ctx), SpeechJournalTimeout)
-			_ = s.Objects.DeleteClipSpeechAudio(cleanup, asset.ObjectKey)
-			stop()
-			s.finishCall(ctx, r, c, "failed", "")
-			return e
-		}
+		id := asset.ID
+
 		s.finishCall(ctx, r, c, "received", id)
 		e = s.Transactions.WriteSpeech(ctx, func(p SpeechTxPorts) error {
 			if e := matchingSpeechJob(ctx, p, r); e != nil {
@@ -401,7 +366,17 @@ func (s *SpeechService) finishCall(ctx context.Context, r SpeechRun, c SpeechCal
 	_ = s.Store.FinishSpeechCall(audit, r, c, state, asset)
 }
 func (s *SpeechService) OnTerminal(ctx context.Context, j job.Job) error {
-	r, e := s.Store.GetSpeechRun(ctx, j.UserID, string(j.Payload))
+	var r SpeechRun
+	var e error
+	if j.Kind == clip.JobKindGenerate {
+		var p clip.GenerationPayload
+		if json.Unmarshal(j.Payload, &p) != nil || p.Approval == nil || p.Approval.Pricing.Dubbing == nil {
+			return nil
+		}
+		r, e = s.Store.FindSpeechRun(ctx, j.UserID, j.Subject(clip.JobSubject), p.Approval.QuoteID)
+	} else {
+		r, e = s.Store.GetSpeechRun(ctx, j.UserID, string(j.Payload))
+	}
 	if errors.Is(e, clip.ErrNotFound) {
 		return nil
 	}
@@ -442,7 +417,7 @@ func (s *SpeechService) Recover(ctx context.Context) error {
 			if e != nil {
 				return e
 			}
-			if j.Kind != clip.JobKindSpeech || string(j.Payload) != r.ID {
+			if !speechJobIdentity(*j, r) {
 				continue
 			}
 			r.JobID = j.ID
@@ -455,7 +430,7 @@ func (s *SpeechService) Recover(ctx context.Context) error {
 			if e != nil {
 				return e
 			}
-			if j.UserID != r.OwnerID || j.Kind != clip.JobKindSpeech || string(j.Payload) != r.ID {
+			if !speechJobIdentity(j, r) {
 				return clip.ErrNotFound
 			}
 			if j.Status == job.StatusQueued && j.DispatchReady {
@@ -481,4 +456,52 @@ func (s *SpeechService) Recover(ctx context.Context) error {
 		}
 	}
 	return nil
+}
+
+func (s *SpeechService) synthesizeAsset(ctx context.Context, r SpeechRun, c SpeechCall) (clip.SpeechAsset, error) {
+	response, e := s.Models.SynthesizeSpeech(ctx, c.Request)
+	if e != nil {
+
+		return clip.SpeechAsset{}, e
+	}
+	// Decode original bytes again at the application seam; supplied metadata cannot bless corrupt media.
+	audio, e := llm.InspectSpeechAudio(ctx, response.Audio.Bytes)
+	if e != nil {
+
+		return clip.SpeechAsset{}, e
+	}
+	id := speechID()
+	ref := clip.SpeechRef{AssetID: id, VoiceID: r.Voice.Binding.ID, BindingDigest: r.Voice.Binding.Digest, InputHash: c.InputHash, SettingsHash: r.Voice.Settings.Digest(), AudioHash: audio.SHA256, ProfileID: r.Voice.ProfileID, ProfileRevision: r.Voice.ProfileRevision, Samples: audio.Samples, SampleRate: audio.SampleRate, Channels: audio.Channels}
+	timing := response.Alignment
+	if len(timing) == 0 {
+		timing = response.NormalizedAlignment
+	}
+	if llm.ValidateSpeechAlignment(timing, audio) == nil {
+		last := 0
+		for _, t := range timing {
+			start, end := int(t.StartSeconds*1000), int(t.EndSeconds*1000)
+			if start < last || end <= start || end > ref.DurationMS() {
+				ref.Timing = nil
+				break
+			}
+			ref.Timing = append(ref.Timing, clip.SpeechTiming{Text: t.Character, StartMS: start, EndMS: end})
+			last = end
+		}
+	}
+	asset := clip.SpeechAsset{ID: id, OwnerID: r.OwnerID, ProjectID: r.ProjectID, ObjectKey: clip.SpeechAudioPrefix + id + ".mp3", Bytes: int64(len(audio.Bytes)), Text: c.Text, Speech: ref, CreatedAt: time.Now().UTC()}
+	if e = s.Objects.PutClipSpeechAudio(ctx, asset.ObjectKey, audio.Bytes); e != nil {
+
+		return clip.SpeechAsset{}, e
+	}
+	audit, cancel := context.WithTimeout(context.WithoutCancel(ctx), SpeechJournalTimeout)
+	e = s.Store.InsertSpeechAsset(audit, asset)
+	cancel()
+	if e != nil {
+		cleanup, stop := context.WithTimeout(context.WithoutCancel(ctx), SpeechJournalTimeout)
+		_ = s.Objects.DeleteClipSpeechAudio(cleanup, asset.ObjectKey)
+		stop()
+
+		return clip.SpeechAsset{}, e
+	}
+	return asset, nil
 }

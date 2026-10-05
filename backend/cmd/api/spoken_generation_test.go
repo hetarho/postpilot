@@ -84,6 +84,11 @@ func (p *spokenTestProfiles) ValidateUnitBudget(ctx context.Context, owner strin
 	if err != nil {
 		return err
 	}
+	if b.BoundedInput {
+		current.BoundedInput = true
+		current.TotalInputCharacters = b.TotalInputCharacters
+		current.InputIdentityDigest = b.InputIdentityDigest
+	}
 	if current.Fingerprint() != b.Fingerprint() {
 		return usage.ErrUnitPricing
 	}

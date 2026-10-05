@@ -26,6 +26,8 @@ export const i18n = {
       sequenceNone: '프레임마다 그리는 자막 없음 · 추가 렌더링 시간 0초',
       call: {
         flow: '컷 구성 {{calls}}회',
+        script: '대본 작성 {{calls}}회',
+        speech: '더빙 최대 {{calls}}문장',
         narration: '자막 작성 {{calls}}회',
         storyline: '스토리라인 작성 {{calls}}회',
       },
@@ -156,6 +158,8 @@ export const i18n = {
       sequenceNone: 'No frame-by-frame captions · 0s added rendering time',
       call: {
         flow: 'Footage flow ×{{calls}}',
+        script: 'Spoken script ×{{calls}}',
+        speech: 'Dubbing up to {{calls}} segments',
         narration: 'Narration ×{{calls}}',
         storyline: 'Storyline ×{{calls}}',
       },

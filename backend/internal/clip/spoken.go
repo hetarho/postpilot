@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"github.com/postpilot/backend/internal/llm"
 	"reflect"
 	"slices"
 	"strconv"
@@ -144,7 +145,10 @@ func validSpokenID(s string) bool {
 
 type SpokenError struct{ SegmentID, Reason string }
 
-func (e *SpokenError) Error() string        { return fmt.Sprintf("%s: %s", e.Reason, e.SegmentID) }
+func (e *SpokenError) Error() string { return fmt.Sprintf("%s: %s", e.Reason, e.SegmentID) }
+func (e *SpokenError) Failure() llm.Failure {
+	return llm.Failure{Reason: "CLIP_SPOKEN_CONFLICT", Params: map[string]string{"reason": e.Reason}}
+}
 func (e *SpokenError) Unwrap() error        { return ErrInvalid }
 func spokenRefusal(id, reason string) error { return &SpokenError{id, reason} }
 func CompatibleSpeech(n *NarrationPlan, s SpokenSegment) bool {

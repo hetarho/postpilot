@@ -257,6 +257,13 @@ func (s *Service) CreateProject(ctx context.Context, user string, input clip.Pro
 		return clip.Project{}, err
 	}
 	p.Regions = &regions
+	if input.Dubbing != nil {
+		chosen, e := s.resolveDubbing(ctx, user, *input.Dubbing)
+		if e != nil {
+			return clip.Project{}, e
+		}
+		p.Dubbing = chosen
+	}
 	if err := s.store.InsertProject(ctx, p); err != nil {
 		return clip.Project{}, err
 	}
@@ -276,6 +283,13 @@ func (s *Service) UpdateProject(ctx context.Context, user, id string, p clip.Pro
 	old, err := s.store.GetProject(ctx, user, id)
 	if err != nil {
 		return clip.Project{}, err
+	}
+	if p.Dubbing != nil {
+		chosen, e := s.resolveDubbing(ctx, user, *p.Dubbing)
+		if e != nil {
+			return clip.Project{}, e
+		}
+		p.Dubbing = &chosen
 	}
 	if old.Finalized != nil {
 		return clip.Project{}, clip.ErrFinalized
@@ -458,4 +472,20 @@ func (s *Service) DeleteProject(ctx context.Context, user, id string) error {
 		}
 	}
 	return nil
+}
+
+func (s *Service) resolveDubbing(ctx context.Context, user string, in clip.DubbingOptions) (clip.DubbingOptions, error) {
+	in.BindingDigest = ""
+	if !in.Enabled && in.VoiceID == "" {
+		return in, nil
+	}
+	if in.VoiceID == "" || s.generation == nil {
+		return in, clip.ErrInvalid
+	}
+	b, e := s.generation.voices.ResolveClipVoice(ctx, user, in.VoiceID)
+	if e != nil {
+		return in, e
+	}
+	in.BindingDigest = b.Digest
+	return in, nil
 }

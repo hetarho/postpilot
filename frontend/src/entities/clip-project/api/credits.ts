@@ -130,7 +130,7 @@ export function toClipQuote(value: ProtoClipQuote, binding: string): ClipQuote {
       : {}),
     calls: value.pricedCalls
       .filter((call): call is typeof call & { label: ClipPricedCall['label'] } =>
-        ['observe', 'flow', 'narration', 'storyline'].includes(call.label),
+        ['observe', 'flow', 'narration', 'storyline', 'script', 'speech'].includes(call.label),
       )
       .map((call) => ({ label: call.label, calls: call.calls })),
     ...sequenceCaptions(value),
@@ -189,7 +189,7 @@ export function toClipRevisionQuote(value: ProtoClipRevisionQuote, binding: stri
       : {}),
     calls: value.pricedCalls
       .filter((call): call is typeof call & { label: ClipPricedCall['label'] } =>
-        ['observe', 'flow', 'narration', 'storyline'].includes(call.label),
+        ['observe', 'flow', 'narration', 'storyline', 'script', 'speech'].includes(call.label),
       )
       .map((call) => ({ label: call.label, calls: call.calls })),
     ...sequenceCaptions(value),

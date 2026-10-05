@@ -16,10 +16,12 @@ import (
 	"github.com/postpilot/backend/internal/clip"
 	jobctx "github.com/postpilot/backend/internal/job"
 	"github.com/postpilot/backend/internal/llm"
+	"reflect"
 )
 
 type GenerationService struct {
 	voices        clip.SpokenVoiceResolver
+	speech        *SpeechService
 	previewOwners sync.Map
 	remoteMedia   *MediaDispatch
 	store         clip.GenerationStore
@@ -57,6 +59,7 @@ func (s *GenerationService) videoGuidelines(ctx context.Context, p clip.Project)
 // eligibility — a service missing any of them refuses or misreports rather than runs.
 type GenerationDeps struct {
 	Voices clip.SpokenVoiceResolver
+	Speech *SpeechService
 	// Nil is the temporary embedded rollout path; removed by T387.
 	RemoteMedia *MediaDispatch
 	Finisher    clip.ClipFinisher
@@ -81,7 +84,7 @@ func NewGenerationService(store clip.GenerationStore, projects *Service, sources
 	if deps.Finisher == nil || deps.Pricing == nil || deps.Accounting == nil || deps.Admission == nil || deps.Voices == nil {
 		panic("clip: finisher, pricing, accounting, admission and spoken voice resolver are required")
 	}
-	s := &GenerationService{voices: deps.Voices, remoteMedia: deps.RemoteMedia, store: store, projects: projects, sources: sources, objects: objects, media: media, planner: planner, renderer: renderer, jobs: jobs, cfg: cfg, now: time.Now,
+	s := &GenerationService{speech: deps.Speech, voices: deps.Voices, remoteMedia: deps.RemoteMedia, store: store, projects: projects, sources: sources, objects: objects, media: media, planner: planner, renderer: renderer, jobs: jobs, cfg: cfg, now: time.Now,
 		finisher: deps.Finisher, pricing: deps.Pricing, accounting: deps.Accounting, admission: deps.Admission,
 		candidates: deps.Candidates, guidelines: deps.Guidelines, exports: deps.Exports, prepareExport: deps.PrepareExport}
 	// The project service and its generation side need each other; the pair is closed
@@ -443,7 +446,7 @@ func (r *generationRun) accept(payload []byte) error {
 	}
 	// Expiry is enforced when the quote is consumed, not after a long, already
 	// accepted preparation. Reconfirm the durable ownership and exact approval.
-	if q.ConsumedJobID != r.job || q.ProjectID != r.project || q.BatchID != b.ID || q.Pricing != pricing {
+	if q.ConsumedJobID != r.job || q.ProjectID != r.project || q.BatchID != b.ID || !reflect.DeepEqual(q.Pricing, pricing) {
 		return clip.ErrQuoteChanged
 	}
 	recovery := s.selectRecovery(p.Recovery, b, pricing.Observe.Ref, p.Language)
@@ -455,10 +458,11 @@ func (r *generationRun) accept(payload []byte) error {
 		return clip.ErrQuoteChanged
 	}
 	// A narration-only resume still needs the flow it will write over.
-	if pricing.SkipFlow && (recovery.Plan == "" || recovery.PlanDigest != planRecoveryDigest(p) || !recovery.FlowReady && !recovery.PlanReady) {
+	if pricing.SkipFlow && (recovery.Plan == "" && (pricing.Dubbing == nil || recovery.Spoken == nil) || recovery.PlanDigest != planRecoveryDigest(p) || !recovery.FlowReady && !recovery.PlanReady) {
 		return clip.ErrQuoteChanged
 	}
 	if !pricing.SkipFlow {
+		recovery.Spoken = nil
 		recovery.Plan, recovery.PlanDigest, recovery.PlanReady, recovery.FlowReady, recovery.Storyline, recovery.RegionDrafts = "", "", false, false, nil, nil
 	}
 	r.p, r.b, r.pricing, r.recovery = p, b, pricing, recovery
@@ -531,6 +535,14 @@ func (r *generationRun) admitPrepared() error {
 		return clip.ErrQuoteChanged
 	}
 	if !pricing.RenderOnly() {
+		if pricing.Dubbing != nil {
+			if s.speech == nil {
+				return clip.ErrCompositionUnavailable
+			}
+			if e := s.speech.ValidateInitialVoice(ctx, r.user, pricing.Dubbing); e != nil {
+				return e
+			}
+		}
 		if err := r.validatePreparation(sources); err != nil {
 			return err
 		}
@@ -662,6 +674,9 @@ func (r *generationRun) drawRegions() error {
 // write asks the writer for the flow (or resumes the kept one), then the narration over
 // it (CLIP-135), and lays the composition out; the plan is kept after every call.
 func (r *generationRun) write() error {
+	if r.pricing.Dubbing != nil {
+		return r.writeSpoken()
+	}
 	s, ctx, p, pricing := r.s, r.ctx, r.p, r.pricing
 	in := r.planningInput()
 	in.Analyses, in.SourceAudio = r.analyses, batchSourceAudio(r.b)

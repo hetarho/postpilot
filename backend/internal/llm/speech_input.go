@@ -19,6 +19,7 @@ type SpeechInput struct {
 	InputCharacters     int
 	AuxiliaryCharacters int
 	ParametersDigest    string
+	IdentityDigest      string
 }
 
 func speechDigest(parts ...string) string {
@@ -55,7 +56,7 @@ func (r SpeechRequest) Input() (SpeechInput, error) {
 		return SpeechInput{}, err
 	}
 	s := r.Settings
-	return SpeechInput{Ref: r.Model, Operation: "speech", Digest: speechDigest("speech-input-v1", "speech", r.Model.String(), string(r.Voice), r.Text, s.Digest()), InputCharacters: utf8.RuneCountInString(r.Text), ParametersDigest: s.Digest()}, nil
+	return SpeechInput{Ref: r.Model, Operation: "speech", Digest: speechDigest("speech-input-v1", "speech", r.Model.String(), string(r.Voice), r.Text, s.Digest()), InputCharacters: utf8.RuneCountInString(r.Text), ParametersDigest: s.Digest(), IdentityDigest: speechDigest("speech-identity-v1", r.Model.String(), string(r.Voice), s.Digest())}, nil
 }
 
 func (s SpeechSettings) Digest() string {

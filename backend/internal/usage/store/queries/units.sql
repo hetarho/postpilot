@@ -42,3 +42,9 @@ VALUES (sqlc.arg(event_id), sqlc.arg(claim_id), sqlc.arg(provider_id), sqlc.arg(
 -- name: UnitCostsForJob :many
 SELECT u.exact_usd FROM usage_unit_events u JOIN usage_events e ON e.id = u.event_id
 WHERE e.job_id = ? AND u.chargeable = 1 AND u.cost_source IN ('reported', 'estimated');
+
+-- name: ClaimBoundedUnitCall :execrows
+INSERT INTO usage_unit_calls(id,job_id,budget_fingerprint,created_at,input_characters,input_digest)
+SELECT sqlc.arg(id),sqlc.arg(job),sqlc.arg(fingerprint),sqlc.arg(now),sqlc.arg(characters),sqlc.arg(input_digest)
+WHERE (SELECT COUNT(*) FROM usage_unit_calls prior WHERE prior.job_id=sqlc.arg(job) AND prior.budget_fingerprint=sqlc.arg(fingerprint)) < CAST(sqlc.arg(max_calls) AS INTEGER)
+AND (SELECT COALESCE(SUM(input_characters),0) FROM usage_unit_calls prior WHERE prior.job_id=sqlc.arg(job) AND prior.budget_fingerprint=sqlc.arg(fingerprint)) + CAST(sqlc.arg(characters) AS INTEGER) <= CAST(sqlc.arg(max_characters) AS INTEGER);

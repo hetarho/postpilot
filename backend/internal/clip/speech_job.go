@@ -20,6 +20,7 @@ type SpeechCall struct {
 	Budget                     usage.UnitBudget
 }
 type SpeechRun struct {
+	ParentGeneration                                                      bool `json:",omitempty"`
 	ID, OwnerID, ProjectID, RequestKey, RequestDigest, JobID, ScopeDigest string
 	Revision                                                              int
 	Voice                                                                 SpeechVoice

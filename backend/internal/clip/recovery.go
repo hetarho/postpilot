@@ -18,6 +18,7 @@ const AnalysisContractVersion = "clip-observation-v2"
 const LegacyAnalysisContractVersion = "clip-observation-v1"
 
 type RecoveryState struct {
+	Spoken                            *SpokenDraft `json:",omitempty"`
 	Language                          string
 	Version                           int
 	JobID, Contract, PlanDigest, Plan string

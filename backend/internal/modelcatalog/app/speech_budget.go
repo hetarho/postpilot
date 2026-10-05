@@ -69,9 +69,14 @@ func speechBudget(p modelcatalog.SpeechProfile, authorization, scope string, inp
 }
 
 func (s SpeechBudgets) ValidateUnitBudget(ctx context.Context, owner string, tier plan.Plan, b usage.UnitBudget) error {
-	current, err := s.Budget(ctx, owner, tier, b.PolicyID, b.Revision, b.AuthorizationID, b.ScopeDigest, llm.SpeechInput{Ref: b.Ref, Operation: b.Operation, Digest: b.InputDigest, InputCharacters: b.InputCharacters, AuxiliaryCharacters: b.AuxiliaryCharacters, ParametersDigest: b.ParametersDigest}, b.Count)
+	current, err := s.Budget(ctx, owner, tier, b.PolicyID, b.Revision, b.AuthorizationID, b.ScopeDigest, llm.SpeechInput{Ref: b.Ref, Operation: b.Operation, Digest: b.InputDigest, InputCharacters: b.InputCharacters, AuxiliaryCharacters: b.AuxiliaryCharacters, ParametersDigest: b.ParametersDigest, IdentityDigest: b.InputIdentityDigest}, b.Count)
 	if err != nil {
 		return err
+	}
+	if b.BoundedInput {
+		current.BoundedInput = true
+		current.TotalInputCharacters = b.TotalInputCharacters
+		current.InputIdentityDigest = b.InputIdentityDigest
 	}
 	if current.Fingerprint() != b.Fingerprint() {
 		return usage.ErrUnitPricing

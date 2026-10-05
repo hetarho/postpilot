@@ -133,6 +133,13 @@ func PlanReservation(approval clip.GenerationApproval, chunks int) ([]job.Planne
 		calls = append(calls, job.PlannedCall{Ref: p.Plan.Ref.String(), Stage: "write", Count: p.PlanCalls(), CompletionTokens: p.Plan.CompletionTokens})
 	}
 	reservation := Reservation{CancellationPolicyVersion: p.CancellationPolicyVersion, ApprovedMaxCredits: approval.MaxCredits, Rate: p.Rate, Calls: []Call{{Policy: p.Observe, Count: p.ObserveCalls(chunks)}, {Policy: p.Plan, Count: p.PlanCalls()}}}
+	if p.Dubbing != nil && len(p.Dubbing.Units) > 0 {
+		reservation.Units = p.Dubbing.Units
+		reservation.UnitQuoteID = p.Dubbing.QuoteID
+		for _, b := range p.Dubbing.Units {
+			calls = append(calls, job.PlannedCall{Ref: b.Ref.String(), Stage: b.Operation, Count: b.Count})
+		}
+	}
 	return calls, reservation, nil
 }
 

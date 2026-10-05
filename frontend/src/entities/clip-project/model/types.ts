@@ -28,6 +28,7 @@ export const CLIP_PROJECT_LIMITS = {
   maxSeconds: 60,
 } as const
 export interface ClipProjectDraft {
+  dubbing?: { enabled: boolean; voiceId: string }
   compositionInputs?: ClipCompositionInputs
   title: string
   videoTemplateId: string
@@ -141,7 +142,7 @@ export interface ClipAccounting {
  *  same model, so the label — not the stage — says which line is which; the storyline
  *  call is one writing call of its own (CLIP-177). */
 export interface ClipPricedCall {
-  label: 'observe' | 'flow' | 'narration' | 'storyline'
+  label: 'observe' | 'flow' | 'narration' | 'storyline' | 'script' | 'speech'
   calls: number
 }
 

@@ -60,6 +60,7 @@ message CreateClipProjectRequest {
   ClipCaptionStyles allowed_caption_styles = 16;
   ClipRegionEdit intro_region = 17;
   ClipRegionEdit outro_region = 18;
+  ClipDubbingOptions dubbing = 20;
 }
 
 message CreateClipProjectResponse { ClipProject project = 1; }
@@ -93,6 +94,7 @@ message UpdateClipProjectRequest {
   ClipStorylineEdit storyline = 16;
   ClipRegionEdit intro_region = 17;
   ClipRegionEdit outro_region = 18;
+  ClipDubbingOptions dubbing = 20;
   optional int32 expected_region_revision = 19;
 }
 

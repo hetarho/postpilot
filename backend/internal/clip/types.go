@@ -93,7 +93,13 @@ func (r Result) RenderKind() RenderKind {
 	return r.Kind
 }
 
+type DubbingOptions struct {
+	Enabled                bool
+	VoiceID, BindingDigest string
+}
+
 type Project struct {
+	Dubbing                                   DubbingOptions
 	Regions                                   *ProjectRegions
 	Language                                  string
 	Finalized                                 *Finalization
@@ -164,6 +170,7 @@ func ValidRequestKind(kind string) bool {
 }
 
 type ProjectInput struct {
+	Dubbing                       *DubbingOptions
 	IntroRegion, OutroRegion      *RegionPatch
 	Language                      string
 	CompositionInputs             *CompositionInputs
@@ -182,6 +189,7 @@ type ProjectInput struct {
 
 // Ratio deliberately has no update representation.
 type ProjectPatch struct {
+	Dubbing                     *DubbingOptions
 	IntroRegion, OutroRegion    *RegionPatch
 	Regions                     *ProjectRegions // Service-computed canonical state, never accepted from the wire.
 	ExpectedRegionRevision      *int

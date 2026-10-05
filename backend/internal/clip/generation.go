@@ -24,9 +24,10 @@ var ErrBusy = errors.New("clip busy")
 // 영상 지침; an accepted version-3..5 job ran with none and keeps running with none. Version 7
 // freezes the storyline 이 스토리로 만들기 builds along. Version 8 freezes the project's
 // intro/outro slots; an accepted version-3..7 job drafts no slot and saves the slots as they are.
-const GenerationPayloadVersion = 8
+const GenerationPayloadVersion = 9
 
 type GenerationPayload struct {
+	Dubbing                          DubbingOptions `json:",omitzero"`
 	Language                         string
 	Recovery                         *RecoveryState
 	Composition                      *ProjectComposition
@@ -89,6 +90,7 @@ func (e *StageFailure) Failure() llm.Failure {
 	var admission *ModelAdmissionError
 	var element *composition.Problem
 	var media *MediaStageFailure
+	var spoken *SpokenError
 	switch {
 	case errors.As(e.Cause, &media):
 		reason := "CLIP_PROCESSING_FAILED"
@@ -153,6 +155,8 @@ func (e *StageFailure) Failure() llm.Failure {
 	// failed instead of saying the plan is invalid (CDS-52, LANG-21).
 	case errors.As(e.Cause, &layout) && layout.LayoutReason() != "":
 		f = llm.Failure{Reason: layout.LayoutReason()}
+	case errors.As(e.Cause, &spoken):
+		f = spoken.Failure()
 	case errors.Is(e.Cause, ErrInvalid):
 		f = llm.Failure{Reason: "CLIP_INVALID_INPUT"}
 	case errors.Is(e.Cause, ErrPlanConflict):

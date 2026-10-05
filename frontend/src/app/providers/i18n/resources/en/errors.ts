@@ -138,6 +138,8 @@ export const errors = {
   CLIP_COMPOSITION_INVALID: 'Check line {{line}} ({{element_id}}) in the video composition.',
   CLIP_COMPOSITION_UNAVAILABLE:
     'Generation for this video composition is being prepared. Your saved composition is preserved.',
+  CLIP_SPOKEN_CONFLICT:
+    'Dubbing needs regeneration or does not fit the video. Check the retained script and audio.',
   CLIP_PLAN_CONFLICT:
     'The saved edit plan changed. Keep your edits and reload the latest revision before saving again.',
   CLIP_INVALID_MEDIA:

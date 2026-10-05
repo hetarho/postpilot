@@ -76,6 +76,9 @@ export function toClipProject(value: ProtoClipProject): ClipProject {
     disclosure: value.disclosure as ClipProject['disclosure'],
     hideDisclosure: value.hideDisclosure,
     instruction: value.instruction,
+    ...(value.dubbing
+      ? { dubbing: { enabled: value.dubbing.enabled, voiceId: value.dubbing.voiceId } }
+      : {}),
     // Empty is "not chosen": the clip renders with what its template said.
     captionPace: value.captionPace as ClipProject['captionPace'],
     accent: value.accent as ClipProject['accent'],

@@ -29,7 +29,7 @@ export const i18n = {
       fxUnavailable: '지금은 예상 편수를 계산할 수 없어요.',
       freeUnavailable: '무료 모델은 크레딧 비용이 없어 편수로 환산하지 않아요.',
       clipCaveat:
-        '원본 분석·구성·내레이션에 드는 토큰의 1.5배로 수정 여유분을 포함했어요. 실제 작업 비용은 원본 길이와 내용, 사용 모델에 따라 달라져요. AI 클립 예상 편수는 월 서버 내보내기 횟수와 별개예요. 클립 계산은 영상 입력·구조화 출력을 지원하고 가격이 확인된 모델 조합에서 제공해요.',
+        '목소리 만들기·더빙 비용은 이 예상에서 제외하며 별도로 견적을 확인해요. 원본 분석·구성·자막 작성에 드는 토큰의 1.5배로 수정 여유분을 포함했어요. 실제 작업 비용은 원본 길이와 내용, 사용 모델에 따라 달라져요. AI 클립 예상 편수는 월 서버 내보내기 횟수와 별개예요. 클립 계산은 영상 입력·구조화 출력을 지원하고 가격이 확인된 모델 조합에서 제공해요.',
       combo: '모델 조합',
       combos: {
         value: '가성비',
@@ -160,7 +160,7 @@ export const i18n = {
       fxUnavailable: 'Estimates are unavailable right now.',
       freeUnavailable: 'Free models have no credit cost, so no finite count can be estimated.',
       clipCaveat:
-        'Includes 1.5× tokens for source analysis, flow and narration to allow for edits. Actual costs depend on original length, content and models. AI clip estimates are separate from included server exports. Clip estimates require priced models supporting video input and structured output.',
+        'Voice creation and dubbing are excluded and quoted separately. Includes 1.5× tokens for source analysis, flow and visible captions to allow for edits. Actual costs depend on original length, content and models. AI clip estimates are separate from included server exports. Clip estimates require priced models supporting video input and structured output.',
       combo: 'Model combo',
       combos: {
         value: 'Value',

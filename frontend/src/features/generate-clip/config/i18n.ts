@@ -13,6 +13,9 @@ export const i18n = {
 
       running: '클립을 만드는 중이에요',
       stage: {
+        script: '대본 작성',
+        script_retry: '대본 응답 형식 다시 확인 중',
+        speech: '더빙 음성 생성',
         flow_retry: '컷 구성 응답 형식 다시 확인 중',
         narrate_retry: '자막 응답 형식 다시 확인 중',
         flow: '컷 구성',
@@ -79,6 +82,9 @@ export const i18n = {
 
       running: 'Creating your clip',
       stage: {
+        script: 'Writing the spoken script',
+        script_retry: 'Correcting the spoken script response',
+        speech: 'Generating dubbed audio',
         flow_retry: 'Correcting the flow response format',
         narrate_retry: 'Correcting the narration response format',
         flow: 'Footage flow',

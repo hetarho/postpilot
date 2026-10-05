@@ -40,7 +40,7 @@ func SafeJobStage(stage string) string {
 	switch stage {
 	// `plan` and `plan_retry` are the single writing call this build no longer makes; a
 	// job queued before it split keeps a readable stage.
-	case "speech", "script", "queued", "prepare_wait", "prepare_retry", "render_wait", "render_retry", "sample_wait", "sample_retry", "sample", "prepare", "analyze", "analyze_retry", "flow", "flow_retry", "narrate", "narrate_retry", "storyline", "storyline_retry", "plan", "plan_retry", "render", "save", "cleanup":
+	case "speech", "script", "script_retry", "queued", "prepare_wait", "prepare_retry", "render_wait", "render_retry", "sample_wait", "sample_retry", "sample", "prepare", "analyze", "analyze_retry", "flow", "flow_retry", "narrate", "narrate_retry", "storyline", "storyline_retry", "plan", "plan_retry", "render", "save", "cleanup":
 		return stage
 	}
 	return "unknown"

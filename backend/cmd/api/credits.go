@@ -135,6 +135,7 @@ func (a clipAdmission) Hold(ctx context.Context, hold clipapp.Hold) error {
 		ApprovedMaxCredits:        hold.Reservation.ApprovedMaxCredits,
 		CancellationPolicyVersion: hold.Reservation.CancellationPolicyVersion,
 		Rate:                      hold.Reservation.Rate,
+		Units:                     hold.Reservation.Units, UnitQuoteID: hold.Reservation.UnitQuoteID,
 	}
 	for _, c := range hold.Reservation.Calls {
 		reservation.Calls = append(reservation.Calls, usage.PricedCall{Policy: c.Policy, Count: c.Count})
@@ -150,7 +151,18 @@ func (a clipAdmission) CheckAccess(ctx context.Context, hold clipapp.Hold) error
 	if err != nil {
 		return err
 	}
-	return a.ledger.CheckModelAccess(ctx, acting, hold.Kind, plannedCalls(hold.Calls))
+	if len(hold.Reservation.Units) > 0 {
+		if e := a.ledger.CheckUnitBudgets(ctx, hold.UserID, acting, hold.Reservation.Units); e != nil {
+			return e
+		}
+	}
+	calls := []job.PlannedCall{}
+	for _, c := range hold.Calls {
+		if c.Stage != "speech" {
+			calls = append(calls, c)
+		}
+	}
+	return a.ledger.CheckModelAccess(ctx, acting, hold.Kind, plannedCalls(calls))
 }
 
 func (a jobAdmission) Hold(ctx context.Context, start job.Start) error {
@@ -175,8 +187,25 @@ func (a jobAdmission) hold(ctx context.Context, start job.Start, clipReservation
 	if err != nil {
 		return err
 	}
+	calls := plannedCalls(start.Calls)
+	if clipReservation != nil && len(clipReservation.Units) > 0 {
+		index := 0
+		for i := range calls {
+			if calls[i].Stage == "speech" {
+				if index >= len(clipReservation.Units) {
+					return usage.ErrUnitApproval
+				}
+				b := clipReservation.Units[index]
+				calls[i].Units = &b
+				index++
+			}
+		}
+		if index != len(clipReservation.Units) {
+			return usage.ErrUnitApproval
+		}
+	}
 	return a.ledger.Hold(ctx, usage.Start{
-		UserID: start.UserID, Plan: acting, Kind: start.Kind, JobID: start.JobID, Calls: plannedCalls(start.Calls),
+		UserID: start.UserID, Plan: acting, Kind: start.Kind, JobID: start.JobID, Calls: calls,
 		Approval: clipReservation, AccessChecked: accessChecked,
 	})
 }

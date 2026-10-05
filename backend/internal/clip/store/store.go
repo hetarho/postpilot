@@ -315,7 +315,7 @@ func projectRow(r sqlc.ClipProject) (clip.Project, error) {
 	if err != nil {
 		return clip.Project{}, err
 	}
-	p := clip.Project{ID: r.ID, UserID: r.UserID, Title: r.Title, VideoTemplateID: r.VideoTemplateID.String, Ratio: r.Ratio, Language: r.Language, Disclosure: r.Disclosure, HideDisclosure: r.HideDisclosure != 0, Instruction: r.Instruction, CaptionPace: r.CaptionPace, Accent: r.Accent, IntroPreset: r.IntroPreset, OutroPreset: r.OutroPreset, CaptionStyles: styles, TargetDurationMS: int(r.TargetDurationMs), Analysis: r.AnalysisJson.String, EditPlan: r.EditPlanJson.String, EditPlanRevision: int(r.EditPlanRevision), RenderedPlanRevision: int(r.RenderedPlanRevision), GeneratedPlanRevision: int(r.GeneratedPlanRevision), CreatedAt: created, UpdatedAt: updated}
+	p := clip.Project{Dubbing: clip.DubbingOptions{Enabled: r.DubbingEnabled != 0, VoiceID: r.DubbingVoiceID, BindingDigest: r.DubbingBindingDigest}, ID: r.ID, UserID: r.UserID, Title: r.Title, VideoTemplateID: r.VideoTemplateID.String, Ratio: r.Ratio, Language: r.Language, Disclosure: r.Disclosure, HideDisclosure: r.HideDisclosure != 0, Instruction: r.Instruction, CaptionPace: r.CaptionPace, Accent: r.Accent, IntroPreset: r.IntroPreset, OutroPreset: r.OutroPreset, CaptionStyles: styles, TargetDurationMS: int(r.TargetDurationMs), Analysis: r.AnalysisJson.String, EditPlan: r.EditPlanJson.String, EditPlanRevision: int(r.EditPlanRevision), RenderedPlanRevision: int(r.RenderedPlanRevision), GeneratedPlanRevision: int(r.GeneratedPlanRevision), CreatedAt: created, UpdatedAt: updated}
 	if r.ResultKey.Valid {
 		at, err := time.Parse(time.RFC3339Nano, r.ResultCreatedAt.String)
 		if err != nil {
@@ -394,7 +394,7 @@ func (s *Store) ListProjectSummaries(ctx context.Context, user string) ([]clip.P
 			Disclosure: r.Disclosure, HideDisclosure: r.HideDisclosure, CompositionInputsJson: r.CompositionInputsJson, CompositionSnapshotJson: r.CompositionSnapshotJson,
 			ResultID: r.ResultID, FinalizedAt: r.FinalizedAt, FinalizedPlanRevision: r.FinalizedPlanRevision, Language: r.Language, Instruction: r.Instruction,
 			CaptionPace: r.CaptionPace, Accent: r.Accent, IntroPreset: r.IntroPreset, OutroPreset: r.OutroPreset, AllowedCaptionStyles: r.AllowedCaptionStyles,
-			RenderKind: r.RenderKind, StorylineJson: r.StorylineJson, RegionsJson: r.RegionsJson})
+			DubbingEnabled: r.DubbingEnabled, DubbingVoiceID: r.DubbingVoiceID, DubbingBindingDigest: r.DubbingBindingDigest, RenderKind: r.RenderKind, StorylineJson: r.StorylineJson, RegionsJson: r.RegionsJson})
 		if err != nil {
 			return nil, err
 		}
@@ -411,6 +411,9 @@ func (s *Store) InsertProject(ctx context.Context, p clip.Project) error {
 		if err == nil {
 			err = saveRegions(ctx, q, p)
 		}
+		if err == nil {
+			err = affected(q.UpdateClipDubbing(ctx, sqlc.UpdateClipDubbingParams{ID: p.ID, UserID: p.UserID, DubbingEnabled: disclosureFlag(p.Dubbing.Enabled), DubbingVoiceID: p.Dubbing.VoiceID, DubbingBindingDigest: p.Dubbing.BindingDigest, UpdatedAt: stamp(p.UpdatedAt)}))
+		}
 		return struct{}{}, err
 	})
 	return err
@@ -424,7 +427,7 @@ func (s *Store) UpdateProject(ctx context.Context, user, id string, p clip.Proje
 		if before.Finalized != nil {
 			return clip.Project{}, clip.ErrFinalized
 		}
-		if p.Composition != nil || p.Regions != nil {
+		if p.Composition != nil || p.Regions != nil || p.Dubbing != nil {
 			active, e := q.HasActiveClipJob(ctx, nullable(id))
 			if e != nil {
 				return clip.Project{}, e
@@ -470,6 +473,11 @@ func (s *Store) UpdateProject(ctx context.Context, user, id string, p clip.Proje
 			next := p.Regions.Clone()
 			next.Revision = *p.ExpectedRegionRevision
 			if err := saveRegionState(ctx, q, before, next, now, false); err != nil {
+				return clip.Project{}, err
+			}
+		}
+		if p.Dubbing != nil {
+			if err := affected(q.UpdateClipDubbing(ctx, sqlc.UpdateClipDubbingParams{ID: id, UserID: user, DubbingEnabled: disclosureFlag(p.Dubbing.Enabled), DubbingVoiceID: p.Dubbing.VoiceID, DubbingBindingDigest: p.Dubbing.BindingDigest, UpdatedAt: stamp(now)})); err != nil {
 				return clip.Project{}, err
 			}
 		}

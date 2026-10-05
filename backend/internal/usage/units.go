@@ -52,10 +52,14 @@ type UnitBudget struct {
 	Count, InputCharacters int
 	AuxiliaryCharacters    int
 	ParametersDigest       string
-	Tariffs                []UnitTariff
-	Source, BoundsSource   string
-	CheckedAt              time.Time
-	Complete               bool
+	// BoundedInput permits a not-yet-written corpus within one frozen identity and total bound.
+	BoundedInput         bool
+	TotalInputCharacters int
+	InputIdentityDigest  string
+	Tariffs              []UnitTariff
+	Source, BoundsSource string
+	CheckedAt            time.Time
+	Complete             bool
 }
 
 type UnitQuote struct {
@@ -141,6 +145,12 @@ func (b UnitBudget) MaximumUSD() (*big.Rat, error) {
 	default:
 		return nil, ErrUnitPricing
 	}
+	if b.BoundedInput && (b.Operation != "speech" || !unitDigest.MatchString(b.InputIdentityDigest) || b.TotalInputCharacters < 1 || b.TotalInputCharacters > b.Count*b.InputCharacters) {
+		return nil, ErrUnitPricing
+	}
+	if !b.BoundedInput && (b.TotalInputCharacters != 0 || b.InputIdentityDigest != "") {
+		return nil, ErrUnitPricing
+	}
 	total := new(big.Rat)
 	seen := map[llm.SpeechUnit]bool{}
 	variable := 0
@@ -181,14 +191,23 @@ func (b UnitBudget) MaximumUSD() (*big.Rat, error) {
 		if units.Cmp(maximum) > 0 || variable > 1 {
 			return nil, ErrUnitPricing
 		}
-		total.Add(total, new(big.Rat).Mul(new(big.Rat).Mul(price, multiplier), units))
+		cost := new(big.Rat).Mul(new(big.Rat).Mul(price, multiplier), units)
+		if b.BoundedInput && t.UnitsPerInputCharacter != "" && t.Unit != llm.SpeechUnitRequests {
+			cost.Mul(cost, new(big.Rat).SetFrac64(int64(b.TotalInputCharacters), int64(b.InputCharacters)))
+		} else {
+			cost.Mul(cost, new(big.Rat).SetInt64(int64(b.Count)))
+		}
+		total.Add(total, cost)
 	}
-	return total.Mul(total, new(big.Rat).SetInt64(int64(b.Count))), nil
+	return total, nil
 }
 
 func (b UnitBudget) Fingerprint() string {
 	parts := []string{"unit-budget-v1", b.PolicyID, strconv.FormatInt(b.Revision, 10), b.AuthorizationID, b.ScopeDigest, b.Ref.String(), b.Operation, b.InputDigest,
 		strconv.Itoa(b.Count), strconv.Itoa(b.InputCharacters), strconv.Itoa(b.AuxiliaryCharacters), b.ParametersDigest, b.Source, b.BoundsSource, b.CheckedAt.UTC().Format(time.RFC3339Nano), strconv.FormatBool(b.Complete)}
+	if b.BoundedInput {
+		parts = append(parts, "bounded-corpus-v1", strconv.Itoa(b.TotalInputCharacters), b.InputIdentityDigest)
+	}
 	for _, t := range b.Tariffs {
 		parts = append(parts, string(t.Unit), t.USDPerUnit, t.Multiplier, t.MaximumUnits, t.UnitsPerInputCharacter)
 	}

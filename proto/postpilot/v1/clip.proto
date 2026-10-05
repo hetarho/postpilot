@@ -125,7 +125,10 @@ message ClipProject {
   // 이 스토리로 만들기 confirms before replacing it.
   bool plan_edited_by_hand = 39;
   ClipProjectRegions regions = 40;
+  ClipDubbingOptions dubbing = 41;
 }
+
+message ClipDubbingOptions { bool enabled = 1; string voice_id = 2; }
 
 // One paragraph of a clip's storyline: what that part of the clip shows and says, and the
 // observed scenes it uses, each an observation id of the project's analysis.

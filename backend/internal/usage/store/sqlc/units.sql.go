@@ -9,6 +9,41 @@ import (
 	"context"
 )
 
+const claimBoundedUnitCall = `-- name: ClaimBoundedUnitCall :execrows
+INSERT INTO usage_unit_calls(id,job_id,budget_fingerprint,created_at,input_characters,input_digest)
+SELECT ?1,?2,?3,?4,?5,?6
+WHERE (SELECT COUNT(*) FROM usage_unit_calls prior WHERE prior.job_id=?2 AND prior.budget_fingerprint=?3) < CAST(?7 AS INTEGER)
+AND (SELECT COALESCE(SUM(input_characters),0) FROM usage_unit_calls prior WHERE prior.job_id=?2 AND prior.budget_fingerprint=?3) + CAST(?5 AS INTEGER) <= CAST(?8 AS INTEGER)
+`
+
+type ClaimBoundedUnitCallParams struct {
+	ID            string
+	Job           string
+	Fingerprint   string
+	Now           string
+	Characters    int64
+	InputDigest   string
+	MaxCalls      int64
+	MaxCharacters int64
+}
+
+func (q *Queries) ClaimBoundedUnitCall(ctx context.Context, arg ClaimBoundedUnitCallParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, claimBoundedUnitCall,
+		arg.ID,
+		arg.Job,
+		arg.Fingerprint,
+		arg.Now,
+		arg.Characters,
+		arg.InputDigest,
+		arg.MaxCalls,
+		arg.MaxCharacters,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const claimUnitCall = `-- name: ClaimUnitCall :execrows
 INSERT INTO usage_unit_calls (id, job_id, budget_fingerprint, created_at)
 SELECT ?1, ?2, ?3, ?4

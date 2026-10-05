@@ -379,6 +379,9 @@ func (s *Service) Hold(ctx context.Context, start Start) error {
 	}
 	for _, call := range start.Calls {
 		if call.Units != nil {
+			if start.Approval != nil && len(start.Approval.Calls) > 0 {
+				return s.holdMixed(ctx, start)
+			}
 			return s.holdUnits(ctx, start)
 		}
 	}
@@ -539,7 +542,7 @@ func (s *Service) commitHold(ctx context.Context, start Start, required int, fro
 				return err
 			}
 			q, err := u.GetUnitQuote(ctx, start.UserID, start.Approval.UnitQuoteID)
-			if err != nil || !s.now().Before(q.ExpiresAt) || q.Kind != start.Kind || q.Digest != unitCallsDigest(start.Approval.Units) || q.MaxCredits != required {
+			if err != nil || !s.now().Before(q.ExpiresAt) || q.Kind != start.Kind || q.Digest != unitCallsDigest(start.Approval.Units) || (len(start.Approval.Calls) == 0 && q.MaxCredits != required || len(start.Approval.Calls) > 0 && q.MaxCredits > required) {
 				return ErrUnitApproval
 			}
 			ok, err := u.ConsumeUnitQuote(ctx, q.ID, start.JobID)

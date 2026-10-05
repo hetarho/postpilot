@@ -136,6 +136,8 @@ export const errors = {
   CLIP_COMPOSITION_INVALID: '영상 구성의 {{line}}번째 줄({{element_id}})을 확인해 주세요.',
   CLIP_COMPOSITION_UNAVAILABLE:
     '이 영상 구성의 생성 기능을 준비 중이에요. 저장한 구성은 유지됩니다.',
+  CLIP_SPOKEN_CONFLICT:
+    '더빙이 영상 길이에 맞지 않거나 다시 생성해야 합니다. 저장된 대본과 음성을 확인해 주세요.',
   CLIP_PLAN_CONFLICT:
     '저장된 수정본이 변경되었어요. 작성 중인 내용은 유지한 채 최신 버전을 확인한 뒤 다시 저장해 주세요.',
   CLIP_INVALID_MEDIA:

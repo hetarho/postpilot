@@ -104,6 +104,14 @@ func flowPromptParts(in clip.PlanningInput, fadeMS int, limits composition.Limit
 	// No template, or one with no stage, adds no bytes at all: the section is
 	// omitted WHOLE rather than sent empty, so the request a revision appends to
 	// stays byte-identical (CLIP-5, TMPL-12).
+	if in.MeasuredNarration != nil {
+		spans := []map[string]any{}
+		for _, seg := range in.MeasuredNarration.Segments {
+			spans = append(spans, map[string]any{"id": seg.ID, "text": seg.Text, "start_ms": seg.StartMS, "end_ms": seg.EndMS})
+		}
+		payload["measured_narration"] = spans
+		prompt += "Measured speech spans are immutable output time. Fill the requested duration from eligible observations at their justified fixed rates. Never rewrite, stretch or repeat audio/footage to fit. Leave explicit silent padding outside those spans; reject insufficient footage.\n"
+	}
 	if outline := templateOutline(in, limits); outline != "" {
 		payload["template_outline"] = outline
 	}

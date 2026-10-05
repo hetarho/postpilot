@@ -161,6 +161,9 @@ type ClipProject struct {
 	StorylineJson            sql.NullString
 	GeneratedPlanRevision    int64
 	RegionsJson              sql.NullString
+	DubbingEnabled           int64
+	DubbingVoiceID           string
+	DubbingBindingDigest     string
 }
 
 type ClipSourceAttempt struct {

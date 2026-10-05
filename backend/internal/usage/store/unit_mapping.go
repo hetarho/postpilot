@@ -13,6 +13,9 @@ import (
 // between an old completion-only admission and an explicitly priced unit job.
 type unitTariffRecord struct{ Unit, USDPerUnit, Multiplier, MaximumUnits, UnitsPerInputCharacter string }
 type unitBudgetRecord struct {
+	BoundedInput                                                              bool   `json:",omitempty"`
+	TotalInputCharacters                                                      int    `json:",omitempty"`
+	InputIdentityDigest                                                       string `json:",omitempty"`
 	PolicyID                                                                  string
 	Revision                                                                  int64
 	AuthorizationID, ScopeDigest, ProviderID, ModelID, Operation, InputDigest string
@@ -42,7 +45,7 @@ type unitEvidenceRecord struct{ Unit, Quantity string }
 func budgetsToRecord(calls []usage.UnitBudget) []unitBudgetRecord {
 	out := make([]unitBudgetRecord, 0, len(calls))
 	for _, c := range calls {
-		r := unitBudgetRecord{PolicyID: c.PolicyID, Revision: c.Revision, AuthorizationID: c.AuthorizationID, ScopeDigest: c.ScopeDigest, ProviderID: c.Ref.ProviderID, ModelID: c.Ref.ModelID,
+		r := unitBudgetRecord{BoundedInput: c.BoundedInput, TotalInputCharacters: c.TotalInputCharacters, InputIdentityDigest: c.InputIdentityDigest, PolicyID: c.PolicyID, Revision: c.Revision, AuthorizationID: c.AuthorizationID, ScopeDigest: c.ScopeDigest, ProviderID: c.Ref.ProviderID, ModelID: c.Ref.ModelID,
 			Operation: c.Operation, InputDigest: c.InputDigest, Count: c.Count, InputCharacters: c.InputCharacters, AuxiliaryCharacters: c.AuxiliaryCharacters, ParametersDigest: c.ParametersDigest, Source: c.Source, BoundsSource: c.BoundsSource, CheckedAt: formatTime(c.CheckedAt), Complete: c.Complete}
 		for _, t := range c.Tariffs {
 			r.Tariffs = append(r.Tariffs, unitTariffRecord{string(t.Unit), t.USDPerUnit, t.Multiplier, t.MaximumUnits, t.UnitsPerInputCharacter})
@@ -59,7 +62,7 @@ func budgetsFromRecord(records []unitBudgetRecord) ([]usage.UnitBudget, error) {
 		if err != nil {
 			return nil, err
 		}
-		c := usage.UnitBudget{PolicyID: r.PolicyID, Revision: r.Revision, AuthorizationID: r.AuthorizationID, ScopeDigest: r.ScopeDigest, Ref: llm.ModelRef{ProviderID: r.ProviderID, ModelID: r.ModelID}, Operation: r.Operation,
+		c := usage.UnitBudget{BoundedInput: r.BoundedInput, TotalInputCharacters: r.TotalInputCharacters, InputIdentityDigest: r.InputIdentityDigest, PolicyID: r.PolicyID, Revision: r.Revision, AuthorizationID: r.AuthorizationID, ScopeDigest: r.ScopeDigest, Ref: llm.ModelRef{ProviderID: r.ProviderID, ModelID: r.ModelID}, Operation: r.Operation,
 			InputDigest: r.InputDigest, Count: r.Count, InputCharacters: r.InputCharacters, AuxiliaryCharacters: r.AuxiliaryCharacters, ParametersDigest: r.ParametersDigest, Source: r.Source, BoundsSource: r.BoundsSource, CheckedAt: stamp, Complete: r.Complete}
 		for _, t := range r.Tariffs {
 			c.Tariffs = append(c.Tariffs, usage.UnitTariff{Unit: llm.SpeechUnit(t.Unit), USDPerUnit: t.USDPerUnit, Multiplier: t.Multiplier, MaximumUnits: t.MaximumUnits, UnitsPerInputCharacter: t.UnitsPerInputCharacter})

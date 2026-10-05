@@ -40,6 +40,7 @@ const RATIO_STAGES = new Set(['observe', 'compare_observe', 'compare_write', 'co
  *  generation does, just over a plan that already exists (CLIP-131). */
 const CLIP_KINDS = new Set([
   'generate_clip',
+  'speech_clip',
   'render_clip',
   'revise_clip',
   'storyline_clip',
@@ -63,6 +64,9 @@ const GENERATION_CLIP_STAGES = [
   'analyze_retry',
   'flow',
   'flow_retry',
+  'script',
+  'script_retry',
+  'speech',
   'narrate',
   'narrate_retry',
   // The storyline call (CLIP-177).

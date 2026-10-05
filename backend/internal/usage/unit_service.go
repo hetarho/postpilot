@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/big"
 	"reflect"
+	"time"
 
 	"github.com/postpilot/backend/internal/llm"
 	"github.com/postpilot/backend/internal/plan"
@@ -169,7 +170,7 @@ func (s *Service) AdmitUnitCall(ctx context.Context, input llm.SpeechInput) (Uni
 	var selected *UnitBudget
 	for i := range calls {
 		b := &calls[i]
-		if b.ScopeDigest == w.UnitScopeDigest && b.Ref == input.Ref && b.Operation == input.Operation && b.InputDigest == input.Digest && b.InputCharacters == input.InputCharacters && b.AuxiliaryCharacters == input.AuxiliaryCharacters && b.ParametersDigest == input.ParametersDigest {
+		if b.ScopeDigest == w.UnitScopeDigest && b.Ref == input.Ref && b.Operation == input.Operation && (b.InputDigest == input.Digest && b.InputCharacters == input.InputCharacters || b.BoundedInput && b.InputIdentityDigest == input.IdentityDigest && input.InputCharacters <= b.InputCharacters) && b.AuxiliaryCharacters == input.AuxiliaryCharacters && b.ParametersDigest == input.ParametersDigest {
 			if selected != nil {
 				return UnitClaim{}, ErrUnitCall
 			}
@@ -195,7 +196,18 @@ func (s *Service) AdmitUnitCall(ctx context.Context, input llm.SpeechInput) (Uni
 		if err != nil {
 			return err
 		}
-		accepted, err := u.ClaimUnitCall(ctx, claim.ID, w.JobID, selected.Fingerprint(), selected.Count, s.now())
+		var accepted bool
+		if selected.BoundedInput {
+			bounded, ok := u.(interface {
+				ClaimBoundedUnitCall(context.Context, string, string, string, int, int, int, string, time.Time) (bool, error)
+			})
+			if !ok {
+				return ErrUnitCall
+			}
+			accepted, err = bounded.ClaimBoundedUnitCall(ctx, claim.ID, w.JobID, selected.Fingerprint(), selected.Count, selected.TotalInputCharacters, input.InputCharacters, input.Digest, s.now())
+		} else {
+			accepted, err = u.ClaimUnitCall(ctx, claim.ID, w.JobID, selected.Fingerprint(), selected.Count, s.now())
+		}
 		if err != nil {
 			return err
 		}
@@ -272,4 +284,106 @@ func unitCharge(ctx context.Context, tx Storage, admission Admission, completion
 	}
 	credits, err := exactCredits(total, admission.Rate)
 	return credits, true, err
+}
+
+// MixedReservationCredits converts the combined enforced token and speech maxima once.
+func MixedReservationCredits(calls []PricedCall, units []UnitBudget, rate plan.RateSnapshot) (int, error) {
+	micro, err := ReservationCost(calls)
+	if err != nil {
+		return 0, err
+	}
+	usd, err := unitBudgetTotal(units)
+	if err != nil {
+		return 0, err
+	}
+	usd.Add(usd, new(big.Rat).SetFrac64(micro, 1_000_000))
+	return exactCredits(usd, rate)
+}
+
+func (s *Service) holdMixed(ctx context.Context, start Start) error {
+	if start.Approval == nil || start.Approval.UnitQuoteID == "" || start.Approval.CancellationPolicyVersion != UnitCancellationPolicyVersion {
+		return ErrUnitApproval
+	}
+	tokenStart := start
+	tokenStart.Calls = nil
+	unitStart := start
+	unitStart.Calls = nil
+	unitApproval := *start.Approval
+	unitApproval.Calls = nil
+	unitStart.Approval = &unitApproval
+	for _, c := range start.Calls {
+		if c.Units == nil {
+			tokenStart.Calls = append(tokenStart.Calls, c)
+		} else {
+			unitStart.Calls = append(unitStart.Calls, c)
+		}
+	}
+	units, err := plannedUnits(unitStart)
+	if err != nil {
+		return err
+	}
+	required, err := MixedReservationCredits(start.Approval.Calls, units, start.Approval.Rate)
+	if err != nil {
+		return err
+	}
+	if required > start.Approval.ApprovedMaxCredits {
+		return ErrUnitApproval
+	}
+	// Every planned token slot must match a frozen policy, including its count.
+	counts := map[string]int{}
+	policies := map[string]llm.CallPolicy{}
+	for _, c := range start.Approval.Calls {
+		key := c.Policy.Ref.String() + "/" + c.Policy.Stage
+		if prior, ok := policies[key]; ok && prior != c.Policy {
+			return ErrApprovalRequired
+		}
+		policies[key] = c.Policy
+		counts[key] += c.Count
+	}
+	for _, c := range tokenStart.Calls {
+		key := c.Ref.String() + "/" + c.Stage
+		p, ok := policies[key]
+		if !ok || c.Count < 1 || c.CompletionTokens != int64(p.CompletionTokens) || c.PromptTokens < 0 || c.PromptTokens > int64(p.InputTokenLimit()) || counts[key] < c.Count {
+			return ErrApprovalRequired
+		}
+		counts[key] -= c.Count
+	}
+	for _, n := range counts {
+		if n != 0 {
+			return ErrApprovalRequired
+		}
+	}
+	u, err := unitStoreFromService(s)
+	if err != nil {
+		return err
+	}
+	if prior, _, found, err := s.holds.HoldForJob(ctx, start.JobID); err != nil {
+		return err
+	} else if found {
+		id, frozen, e := u.UnitAdmission(ctx, start.JobID)
+		if e != nil || id != start.Approval.UnitQuoteID || unitCallsDigest(frozen) != unitCallsDigest(units) || prior.UserID != start.UserID || prior.Kind != start.Kind || prior.HoldCredits != required || prior.Rate != start.Approval.Rate || prior.ApprovedMaxCredits == nil || *prior.ApprovedMaxCredits != start.Approval.ApprovedMaxCredits || prior.CancellationPolicyVersion != UnitCancellationPolicyVersion {
+			return ErrUnitApproval
+		}
+		return nil
+	}
+	q, err := u.GetUnitQuote(ctx, start.UserID, start.Approval.UnitQuoteID)
+	if err != nil || q.Kind != start.Kind || q.ConsumedJobID != "" || !s.now().Before(q.ExpiresAt) || q.Digest != unitCallsDigest(units) || q.MaxCredits > required || q.Rate.Valid() && q.Rate != start.Approval.Rate {
+		return ErrUnitApproval
+	}
+	if !start.AccessChecked {
+		if err := s.CheckModelAccess(ctx, start.Plan, start.Kind, tokenStart.Calls); err != nil {
+			return err
+		}
+	}
+	if !start.AccessChecked {
+		if err := s.checkUnits(ctx, start.UserID, start.Plan, units); err != nil {
+			return err
+		}
+	}
+	cap := start.Approval.ApprovedMaxCredits
+	return s.commitHold(ctx, start, required, start.Approval.Rate, &cap, UnitCancellationPolicyVersion, s.now())
+}
+
+func (s *Service) CheckUnitBudgets(ctx context.Context, user string, tier plan.Plan, calls []UnitBudget) error {
+	return s.checkUnits(ctx, user, tier, calls)
 }

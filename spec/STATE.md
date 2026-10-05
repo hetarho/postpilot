@@ -63,7 +63,6 @@
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
 | T539 | Qualify the complete Korean voice-creation milestone | ARCH DUB MODEL CDS THEME | T538 | blocked@261005 |
-| T545 | Assemble narrated first drafts from measured speech timing | ARCH DUB CLIP QUOTA CDS | T544 | todo |
 | T546 | Expose voice selection, script edits and explicit timing conflict choices | ARCH DUB CLIP QUOTA THEME | T541 T543 T545 | todo |
 | T547 | Play synchronized narration in the editable draft preview | ARCH DUB CLIP CDS | T546 | todo |
 | T548 | Mix immutable narration into server MP4 exports | ARCH DUB CLIP CDS | T547 | todo |
@@ -71,11 +70,13 @@
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | todo |
 
 ## next
-- implement-task T545–T550 sequentially with automated checks and task commits, then merge/push main; T539 real supplier evidence is deferred and ordinary production readiness stays closed.
+- implement-task T546–T550 sequentially with automated checks and task commits, then merge/push main; T539 real supplier evidence is deferred and ordinary production readiness stays closed.
 - create-task ARCH (ARCH-52+ ARCH-53+ ARCH-56+ ARCH-57+ ARCH-34✎); create-task POST r32 (POST-108+ implemented by 12d2f428; verification-only); create-task VOICE r8 (VOICE-32✎ implemented by 68ae9a79; verification-only); update-ssot VOICE-31 remains open.
 - ops: lower TEMPLATE_PHOTO_ROW_MAX / VITE_TEMPLATE_PHOTO_ROW_MAX to 3 wherever production sets them explicitly (VPS .env, Cloudflare build vars).
 
 ## log
+- 261005 T545 done: bounded measured narrated generation, one mixed approval and retained partial speech; 3249 FE tests and full local CI passed
+- 261005 T545 start: bounded script/speech/flow initial variant, one mixed approval and reusable measured checkpoints
 - 261005 T544 done: bounded selective speech, private MP3 validation, durable no-retry recovery and publication races; full local CI passed; connect speech accounting projection in T546
 - 261005 T544 start: bounded stale-segment speech quotes, durable publication guards and no paid retry
 - 261005 T543 done: main-preview placement, protected wording-only refresh and overflow/pending notices; 3249 FE tests and full local CI passed
@@ -94,5 +95,3 @@
 - 261005 T538 done: explicit model/quote/listen/select/confirm UI, private reuse and same-request recovery; 3148 FE tests, full local CI and 30 responsive/theme browser views passed
 - 261005 T538 start: explicit model/quote/audition/confirmation flow, reusable spoken library and authenticated gesture playback
 - 261005 T537 done: exact-input voice quotes, once-only durable jobs, atomic cancellation/publication, private reuse probes and known-identity restart recovery; full local CI passed
-- 261005 T536 done: private immutable spoken library, authenticated audition access, tombstones and race-safe recoverable media cleanup
-- 261004 T535 done: exact-input bounded speech quotes, durable call claims and typed decimal usage; ceiling/unknown/failure/cancellation/refund/master SQLite and race checks plus full local CI passed

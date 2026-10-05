@@ -11,6 +11,7 @@ import (
 
 	"github.com/postpilot/backend/internal/llm"
 	"github.com/postpilot/backend/internal/plan"
+	"github.com/postpilot/backend/internal/usage"
 )
 
 var (
@@ -31,7 +32,17 @@ var (
 const PricingPolicyVersion = 3
 const CancellationPolicyVersion = 1
 
+type NarratedPricing struct {
+	Version   int
+	Voice     SpeechVoice
+	QuoteID   string
+	Units     []usage.UnitBudget
+	ExpiresAt time.Time
+	Rate      plan.RateSnapshot
+}
+
 type GenerationPricing struct {
+	Dubbing                   *NarratedPricing `json:",omitempty"`
 	CancellationPolicyVersion int
 	Version                   int
 	Rate                      plan.RateSnapshot `json:",omitempty"`
@@ -66,7 +77,7 @@ func (p GenerationPricing) Valid() bool {
 	writing := func(c llm.CallPolicy) bool {
 		return c.Valid() && c.Pricing.Valid() && c.Pricing.Delivery == llm.ExecutionTextOnly && c.Stage == llm.StageNameWrite && c.CompletionTokens == 32768
 	}
-	return p.Version == PricingPolicyVersion && p.CancellationPolicyVersion >= 0 && p.CancellationPolicyVersion <= CancellationPolicyVersion && p.ObservationCalls >= 0 && p.ObservationCalls <= 49 && p.MaxCredits >= 0 && p.ReusedChunks >= 0 && p.ReusedChunks <= 49 && (!p.SkipFlow || p.ObservationCalls == 0) && (!p.SkipNarration || p.SkipFlow) && (!p.Storyline || !p.SkipFlow && !p.SkipNarration) &&
+	return (p.Dubbing == nil || p.Dubbing.Version == 1 && p.Dubbing.Voice.Binding.ID != "" && len(p.Dubbing.Units) <= 1 && !p.Storyline) && p.Version == PricingPolicyVersion && p.CancellationPolicyVersion >= 0 && p.CancellationPolicyVersion <= CancellationPolicyVersion && p.ObservationCalls >= 0 && p.ObservationCalls <= 49 && p.MaxCredits >= 0 && p.ReusedChunks >= 0 && p.ReusedChunks <= 49 && (!p.SkipFlow || p.ObservationCalls == 0) && (!p.SkipNarration || p.SkipFlow) && (!p.Storyline || !p.SkipFlow && !p.SkipNarration) &&
 		p.Observe.Valid() && p.Observe.Pricing.Valid() && p.Observe.Pricing.Delivery == llm.ExecutionInlineStatic && p.Observe.Stage == llm.StageNameObserve && p.Observe.CompletionTokens == 8192 &&
 		writing(p.Plan) && writing(p.Narration) && p.Plan.Ref == p.Narration.Ref
 }
@@ -164,6 +175,7 @@ func QuoteInputDigest(p Project, t VideoTemplate, b SourceBatch, pricing Generat
 	// The intro/outro slots the writing calls read and draft (CLIP-187): editing one after
 	// the quote invalidates it; a project with both off keeps the digest it had.
 	input := struct {
+		Dubbing                                        DubbingOptions `json:",omitzero"`
 		User, Project, Batch, Title, TemplateID, Ratio string
 		Disclosure, Language                           string
 		Instruction                                    string
@@ -174,7 +186,7 @@ func QuoteInputDigest(p Project, t VideoTemplate, b SourceBatch, pricing Generat
 		Pricing                                        GenerationPricing
 		Composition                                    *ProjectComposition
 		Regions                                        string `json:",omitempty"`
-	}{p.UserID, p.ID, b.ID, p.Title, p.VideoTemplateID, p.Ratio, p.Disclosure, p.Language, p.Instruction, p.HideDisclosure, p.TargetDurationMS, t.Recipe, sources, pricing, p.Composition, EffectiveProjectRegions(p).WritingDigest(p.DesignSelection().RegionPresets())}
+	}{p.Dubbing, p.UserID, p.ID, b.ID, p.Title, p.VideoTemplateID, p.Ratio, p.Disclosure, p.Language, p.Instruction, p.HideDisclosure, p.TargetDurationMS, t.Recipe, sources, pricing, p.Composition, EffectiveProjectRegions(p).WritingDigest(p.DesignSelection().RegionPresets())}
 	data, _ := json.Marshal(input) // All fields are concrete JSON-safe values.
 	sum := sha256.Sum256(data)
 	return hex.EncodeToString(sum[:])
@@ -190,4 +202,11 @@ func ValidQuoteBatch(b SourceBatch, user, project string, now time.Time) bool {
 		}
 	}
 	return true
+}
+
+func (p GenerationPricing) DubbingRate() plan.RateSnapshot {
+	if p.Dubbing != nil {
+		return p.Dubbing.Rate
+	}
+	return plan.RateSnapshot{}
 }

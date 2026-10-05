@@ -362,6 +362,7 @@ enum FailureReason {
   TEMPLATE_REQUIRED_ANSWER_MISSING = 290;
   // A photo turn that is not 0, 90, 180 or 270 degrees (POST-107).
   POST_IMAGE_ROTATION_INVALID = 291;
+  CLIP_SPOKEN_CONFLICT = 292;
 }
 
 // AppErrorDetail accompanies a synchronous Connect status. reason is a stable product
