@@ -33,6 +33,7 @@ import {
   useMediaQuery,
   MD_MEDIA_QUERY,
 } from '@/shared/ui'
+import { splitAtOutput } from '../model/timeline-gesture'
 import type { useClipCorrection } from '../model/useClipCorrection'
 import { ClipRenderAction } from './ClipRenderAction'
 import { ClipTimeline } from './ClipTimeline'
@@ -430,7 +431,28 @@ export function ClipCorrectionWorkspace({
           status region, and a second copy beside the timeline said it twice with
           two different delays. Undo/redo moved to the timeline's own head. */}
           <ClipTimeline
-            plan={draft}
+            plan={correction.transientPlan ?? draft}
+            onSeek={seek}
+            onCommit={change}
+            onPreview={correction.setTransientPlan}
+            bounds={correction.timelineBounds}
+            canSplit={
+              timeline.selection?.kind === 'cut' &&
+              !!splitAtOutput(draft, timeline.selection.id, timeline.timeMs, 'probe')
+            }
+            onSplit={
+              timeline.selection?.kind === 'cut'
+                ? () => {
+                    const selected = timelineCuts(draft).find(
+                      (c) => c.cut.id === timeline.selection!.id,
+                    )
+                    if (selected)
+                      void correction
+                        .splitCut(selected.cut.id, outputToSourceMs(selected, timeline.timeMs))
+                        .catch(() => undefined)
+                  }
+                : undefined
+            }
             selection={timeline.selection}
             timeMs={timeline.timeMs}
             history={{

@@ -48,6 +48,16 @@ export function spokenState(
   segment: ClipSpokenSegment,
   durationMs = Infinity,
 ): 'ready' | 'stale' | 'missing' | 'conflict' {
+  const index = narration.segments.findIndex((s) => s.id === segment.id)
+  const previousEnd = narration.segments[index - 1]?.endMs ?? 0
+  if (
+    !Number.isSafeInteger(segment.startMs) ||
+    !Number.isSafeInteger(segment.endMs) ||
+    segment.startMs < previousEnd ||
+    segment.endMs <= segment.startMs ||
+    segment.endMs > durationMs
+  )
+    return 'conflict'
   const speech = segment.speech
   if (!speech) return 'missing'
   if (
@@ -56,14 +66,7 @@ export function spokenState(
     speech.inputHash !== segment.inputHash
   )
     return 'stale'
-  const index = narration.segments.findIndex((s) => s.id === segment.id)
-  const previousEnd = narration.segments[index - 1]?.endMs ?? 0
-  if (
-    segment.startMs < previousEnd ||
-    segment.endMs > durationMs ||
-    segment.startMs + speechDurationMs(speech) > segment.endMs
-  )
-    return 'conflict'
+  if (segment.startMs + speechDurationMs(speech) > segment.endMs) return 'conflict'
   return 'ready'
 }
 export function cloneNarration(narration: ClipNarration): ClipNarration {

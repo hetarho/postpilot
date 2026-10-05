@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { Film, Redo2, Undo2 } from 'lucide-react'
+import { Film, Redo2, Undo2, GripVertical, ArrowLeft, ArrowRight, Scissors } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import {
   clipSeconds,
@@ -9,11 +9,15 @@ import {
   timelineCuts,
   timelineLabelFits,
   spokenState,
+  timelineBarPx,
+  type TimelineEdit,
   type ClipEditPlan,
   type ClipSelection,
 } from '@/entities/clip-plan'
 import { type ClipNotice } from '@/entities/clip-project'
 import { Button, Typography } from '@/shared/ui'
+import { useTimelineGesture } from '../model/useTimelineGesture'
+import { cutGestureEdit, type SourceBounds, type CutGesture } from '../model/timeline-gesture'
 import { CLIP_TIMELINE } from '@/entities/clip-design'
 export function ClipTimeline({
   plan,
@@ -25,6 +29,12 @@ export function ClipTimeline({
   readOnly = false,
   disabled = false,
   localSources,
+  onSeek,
+  onCommit,
+  onPreview,
+  bounds,
+  onSplit,
+  canSplit = true,
   history,
   notices = [],
 }: {
@@ -38,6 +48,12 @@ export function ClipTimeline({
   onAddDubbing?: () => void
   readOnly?: boolean
   disabled?: boolean
+  onSeek?: (ms: number) => void
+  onCommit?: (edit: TimelineEdit) => void
+  onPreview?: (plan?: ClipEditPlan) => void
+  bounds?: (id: string) => SourceBounds
+  canSplit?: boolean
+  onSplit?: () => void
   localSources: ReadonlyArray<{ fingerprint: string; url: string }>
   /** Undo/redo for every edit the timeline commits (CLIP-55). They head the
    *  timeline because that is the track they act on, and they are icons because
@@ -52,6 +68,16 @@ export function ClipTimeline({
 }) {
   const { t } = useTranslation('clips')
   const strip = useRef<HTMLDivElement>(null)
+  const canvas = useRef<HTMLDivElement>(null)
+  const { begin, move, end, cancel, seekAt } = useTimelineGesture({
+    canvas,
+    plan,
+    timeMs,
+    onSeek,
+    onCommit: readOnly || disabled ? undefined : onCommit,
+    onPreview,
+    bounds,
+  })
   const cuts = timelineCuts(plan)
   const order = plan.cuts.map((cut) => cut.id).join(',')
   const phrase = selection?.kind === 'text' ? selection.phrase : undefined
@@ -75,6 +101,52 @@ export function ClipTimeline({
   // Every label is bounded by the bar it belongs to, so the only question left
   // is whether the bar is wide enough to hold one at all (CLIP-54).
   const fits = (spanMs: number) => timelineLabelFits(spanMs, duration, width)
+  const handles = (id: string, index: number) =>
+    (['start', 'move', 'end'] as const).map((intent: CutGesture) => {
+      const Icon = intent === 'start' ? ArrowLeft : intent === 'end' ? ArrowRight : GripVertical
+      return (
+        <Button
+          key={intent}
+          variant="secondary"
+          size="icon"
+          className="touch-none"
+          disabled={disabled}
+          aria-label={t(`timeline.handles.${intent}`, { number: index + 1 })}
+          onPointerDown={(event) => begin(event, id, intent)}
+          onPointerMove={move}
+          onPointerUp={end}
+          onPointerCancel={cancel}
+          onKeyDown={(event) => {
+            if (
+              !['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key) ||
+              !onCommit
+            )
+              return
+            event.preventDefault()
+            const direction = event.key === 'ArrowLeft' || event.key === 'ArrowUp' ? -1 : 1
+            const edit =
+              intent === 'move'
+                ? {
+                    type: 'move' as const,
+                    from: index,
+                    to: Math.max(0, Math.min(cuts.length - 1, index + direction)),
+                  }
+                : cutGestureEdit(
+                    plan,
+                    id,
+                    intent,
+                    direction * (event.shiftKey ? 1000 : 1000 / CLIP_TIMELINE.framesPerSecond),
+                    0,
+                    bounds?.(id) ?? { startMs: 0, endMs: 0 },
+                  )
+            if (edit) onCommit(edit)
+          }}
+        >
+          <Icon className="size-5" aria-hidden="true" />
+        </Button>
+      )
+    })
+  const selectedCut = cuts.find((c) => selection?.kind === 'cut' && c.cut.id === selection.id)
   return (
     <div className="min-w-0 space-y-2">
       {history && (
@@ -99,13 +171,51 @@ export function ClipTimeline({
           </Button>
         </div>
       )}
+      {!readOnly && selectedCut && onCommit && (
+        <div className="flex flex-wrap items-center gap-2">
+          {timelineBarPx(selectedCut.endMs - selectedCut.startMs, duration, width) < 148 &&
+            handles(selectedCut.cut.id, selectedCut.index)}
+          {onSplit && (
+            <Button variant="secondary" onClick={onSplit} disabled={disabled || !canSplit}>
+              <Scissors className="size-5" aria-hidden="true" />
+              {t('assembly.splitPlayhead')}
+            </Button>
+          )}
+          <Typography variant="meta">{t('timeline.gestureHelp')}</Typography>
+          {onSplit && !canSplit && (
+            <Typography variant="meta">{t('assembly.splitInvalid')}</Typography>
+          )}
+        </div>
+      )}
       <div
         ref={strip}
         className="min-w-0 overflow-x-auto overscroll-x-contain py-2"
         aria-label={t('timeline.label')}
       >
-        <div className="relative space-y-2" style={{ width }}>
-          <div className="relative h-6" aria-hidden="true">
+        <div
+          ref={canvas}
+          className="relative space-y-2"
+          style={{ width }}
+          onClick={(event) => {
+            if (!(event.target as HTMLElement).closest('button,input,a')) seekAt(event.clientX)
+          }}
+        >
+          {onSeek && (
+            <Button
+              size="icon"
+              variant="secondary"
+              className="absolute top-0 touch-none"
+              style={{ left: Math.min(width - 44, Math.max(0, (width * left(timeMs)) / 100 - 22)) }}
+              aria-label={t('timeline.playheadHandle')}
+              onPointerDown={(event) => begin(event)}
+              onPointerMove={move}
+              onPointerUp={end}
+              onPointerCancel={cancel}
+            >
+              <ArrowRight className="size-5" aria-hidden="true" />
+            </Button>
+          )}
+          <div className="relative h-11" aria-hidden="true">
             {cuts.map(({ cut, startMs, endMs }) =>
               fits(endMs - startMs) ? (
                 <Typography
@@ -181,6 +291,14 @@ export function ClipTimeline({
                       )}
                     </span>
                   </Button>
+                  {!readOnly &&
+                    selected &&
+                    onCommit &&
+                    timelineBarPx(endMs - startMs, duration, width) >= 148 && (
+                      <div className="absolute inset-x-0 bottom-0 flex justify-between gap-2">
+                        {handles(cut.id, index)}
+                      </div>
+                    )}
                 </li>
               )
             })}
@@ -232,6 +350,7 @@ export function ClipTimeline({
                     }
                     className="h-11 w-full overflow-hidden"
                     aria-label={bar.text}
+                    aria-invalid={bar.invalid || undefined}
                     aria-pressed={
                       selection?.kind === 'text' &&
                       selection.id === bar.id &&
@@ -242,6 +361,7 @@ export function ClipTimeline({
                     {fits(bar.endMs - bar.startMs) && (
                       <Typography as="span" variant="meta" className="w-full truncate">
                         {bar.text}
+                        {bar.invalid && ` · ${t('assembly.invalidRange')}`}
                       </Typography>
                     )}
                   </Button>

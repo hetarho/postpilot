@@ -1,11 +1,15 @@
 import userEvent from '@testing-library/user-event'
-import { cleanup, render, screen, within } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, expect, it, vi } from 'vitest'
 import { clipTimelineFixture } from '@/test/clip-editing'
 import { type ClipEditPlan } from '@/entities/clip-plan'
 import { ClipTimeline } from './ClipTimeline'
 
-afterEach(cleanup)
+afterEach(() => {
+  cleanup()
+  vi.restoreAllMocks()
+  vi.unstubAllGlobals()
+})
 
 /** A plan of `count` adjacent cuts of the same length, with no captions, so the
  *  only thing on the strip is the cut track and its ruler. */
@@ -115,4 +119,95 @@ it('heads the timeline with undo and redo as icon controls named for what they d
   expect(undo).toHaveBeenCalled()
   expect(screen.getByRole('button', { name: '다시 실행' })).toBeDisabled()
   expect(redo).not.toHaveBeenCalled()
+})
+
+function interactive() {
+  class TestPointer extends MouseEvent {
+    pointerId: number
+    constructor(type: string, init: PointerEventInit) {
+      super(type, init)
+      this.pointerId = init.pointerId ?? 1
+    }
+  }
+  vi.stubGlobal('PointerEvent', TestPointer)
+  vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
+    x: 0,
+    y: 0,
+    left: 0,
+    right: 792,
+    top: 0,
+    bottom: 200,
+    width: 792,
+    height: 200,
+    toJSON: () => ({}),
+  })
+  const onCommit = vi.fn(),
+    onPreview = vi.fn(),
+    onSeek = vi.fn(),
+    onSelect = vi.fn()
+  render(
+    <ClipTimeline
+      plan={clipTimelineFixture().plan}
+      timeMs={1000}
+      selection={{ kind: 'cut', id: 'cut-a' }}
+      localSources={[]}
+      onSelect={onSelect}
+      onCommit={onCommit}
+      onPreview={onPreview}
+      onSeek={onSeek}
+      bounds={() => ({ startMs: 0, endMs: 10000 })}
+    />,
+  )
+  return { onCommit, onPreview, onSeek, onSelect }
+}
+it('previews a touch trim, commits once on release and never commits on pointer down', () => {
+  const { onCommit, onPreview } = interactive()
+  const handle = screen.getByRole('button', { name: '컷 1 끝 손잡이' })
+  fireEvent.pointerDown(handle, { clientX: 400, pointerId: 2, button: 0, pointerType: 'touch' })
+  expect(onCommit).not.toHaveBeenCalled()
+  fireEvent.pointerMove(handle, { clientX: 360, pointerId: 2 })
+  expect(onPreview.mock.calls.at(-1)?.[0].cuts[0].endMs).toBe(9000)
+  expect(onCommit).not.toHaveBeenCalled()
+  fireEvent.pointerUp(handle, { clientX: 360, pointerId: 2 })
+  expect(onCommit).toHaveBeenCalledExactlyOnceWith({
+    type: 'cut',
+    id: 'cut-a',
+    patch: { endMs: 9000 },
+  })
+  expect(onPreview).toHaveBeenLastCalledWith()
+})
+it.each(['pointer', 'escape'] as const)(
+  'discards an incomplete reorder on %s cancellation',
+  (cancel) => {
+    const { onCommit, onPreview } = interactive()
+    const handle = screen.getByRole('button', { name: '컷 1 순서 손잡이' })
+    fireEvent.pointerDown(handle, { clientX: 100, pointerId: 1, button: 0 })
+    fireEvent.pointerMove(handle, { clientX: 750, pointerId: 1 })
+    expect(onPreview.mock.calls.at(-1)?.[0].cuts[0].id).toBe('cut-b')
+    if (cancel === 'pointer') fireEvent.pointerCancel(handle, { pointerId: 1 })
+    else fireEvent.keyDown(document, { key: 'Escape' })
+    fireEvent.pointerUp(handle, { pointerId: 1 })
+    expect(onCommit).not.toHaveBeenCalled()
+    expect(onPreview).toHaveBeenLastCalledWith()
+  },
+)
+it('seeks the same output clock from track background and playhead drag without changing selection', () => {
+  const { onSeek, onSelect } = interactive()
+  fireEvent.click(screen.getByRole('list', { name: '영상 컷' }), { clientX: 200 })
+  expect(onSeek).toHaveBeenLastCalledWith(5000)
+  const handle = screen.getByRole('button', { name: '재생 위치 손잡이' })
+  fireEvent.pointerDown(handle, { clientX: 40, pointerId: 1, button: 0 })
+  fireEvent.pointerMove(handle, { clientX: 300, pointerId: 1 })
+  expect(onSeek).toHaveBeenLastCalledWith(7500)
+  fireEvent.pointerCancel(handle, { pointerId: 1 })
+  expect(onSeek).toHaveBeenLastCalledWith(1000)
+  expect(onSelect).not.toHaveBeenCalled()
+})
+it('offers keyboard edits while retaining the focused handle', () => {
+  const { onCommit } = interactive()
+  const handle = screen.getByRole('button', { name: '컷 1 순서 손잡이' })
+  handle.focus()
+  fireEvent.keyDown(handle, { key: 'ArrowRight' })
+  expect(onCommit).toHaveBeenCalledExactlyOnceWith({ type: 'move', from: 0, to: 1 })
+  expect(handle).toHaveFocus()
 })

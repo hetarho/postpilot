@@ -38,6 +38,13 @@ export const i18n = {
     },
     timeline: {
       trackVideo: '영상',
+      playheadHandle: '재생 위치 손잡이',
+      gestureHelp: '손잡이를 끌거나 방향키로 조절 · 시간은 상세 편집에서 입력',
+      handles: {
+        start: '컷 {{number}} 시작 손잡이',
+        move: '컷 {{number}} 순서 손잡이',
+        end: '컷 {{number}} 끝 손잡이',
+      },
       trackCaptions: '자막',
       trackDubbing: '더빙',
       dubbingTrack: '더빙 트랙',
@@ -245,6 +252,13 @@ export const i18n = {
     },
     timeline: {
       trackVideo: 'Video',
+      playheadHandle: 'Playhead handle',
+      gestureHelp: 'Drag handles or use arrow keys · enter exact times in properties',
+      handles: {
+        start: 'Cut {{number}} start handle',
+        move: 'Cut {{number}} reorder handle',
+        end: 'Cut {{number}} end handle',
+      },
       trackCaptions: 'Captions',
       trackDubbing: 'Dubbing',
       dubbingTrack: 'Dubbing track',

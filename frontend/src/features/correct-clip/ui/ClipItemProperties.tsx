@@ -129,7 +129,13 @@ export function ClipItemProperties({
                 key={cut.id}
                 cut={cut}
                 allowedRates={source?.allowedRatePermille ?? []}
-                playheadMs={outputToSourceMs(cutTime!, snapClipTime(timeline.timeMs))}
+                playheadMs={
+                  timelineCuts(draft).filter(
+                    (c) => c.startMs <= timeline.timeMs && timeline.timeMs < c.endMs,
+                  ).length === 1
+                    ? outputToSourceMs(cutTime!, snapClipTime(timeline.timeMs))
+                    : NaN
+                }
                 native={!!draft.nativeComposition}
                 onChange={change}
                 onSplit={(sourceMs) => correction.splitCut(cut.id, sourceMs)}

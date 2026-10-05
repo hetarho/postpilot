@@ -1,3 +1,4 @@
+import { splitAtOutput, type SourceBounds } from './timeline-gesture'
 import { useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import {
@@ -8,6 +9,8 @@ import {
   copyClipPlan,
   createClipTimeline,
   ownerCutId,
+  timelineCuts,
+  sourceToOutputMs,
   rebaseClipRegions,
   type ClipEditPlan,
   type TimelineEdit,
@@ -54,6 +57,7 @@ export function useClipCorrection(ownerId: string, project: ClipProject, createC
       mounted.current = false
     }
   }, [])
+  const [transientPlan, setTransientPlan] = useState<ClipEditPlan>()
   const draft = timeline.plan
   const dirty = clipDraftKey(draft) !== baseline
   const validation = project.editing
@@ -379,8 +383,23 @@ export function useClipCorrection(ownerId: string, project: ClipProject, createC
       : draft
   return {
     soundBatch,
+    transientPlan,
+    setTransientPlan,
+    timelineBounds: (id: string): SourceBounds => {
+      const cut = current.current.draft.cuts.find((c) => c.id === id)
+      if (!cut) return { startMs: 0, endMs: 0 }
+      const segment = project.observations?.sources
+        .find((s) => s.source.id === cut.sourceId && s.source.fingerprint === cut.fingerprint)
+        ?.segments.find(
+          (s) => s.usability !== 'unusable' && s.startMs <= cut.startMs && cut.endMs <= s.endMs,
+        )
+      const accepted = project.editing?.plan.cuts.find((c) => c.id === id)
+      return segment
+        ? { startMs: segment.startMs, endMs: segment.endMs }
+        : { startMs: accepted?.startMs ?? cut.startMs, endMs: accepted?.endMs ?? cut.endMs }
+    },
     previewPlan: {
-      ...audioPlan,
+      ...(transientPlan ?? audioPlan),
       sourceAudio: audioPlan.sourceAudio?.filter((setting) =>
         audioPlan.cuts.some(
           (cut) => cut.sourceId === setting.sourceId && cut.fingerprint === setting.fingerprint,
@@ -454,7 +473,11 @@ export function useClipCorrection(ownerId: string, project: ClipProject, createC
     },
     splitCut: async (id: string, sourceMs: number) => {
       await flush()
-      change({ type: 'splitCut', id, newId: createCutId(), sourceMs })
+      const plan = current.current.draft
+      const item = timelineCuts(plan).find((c) => c.cut.id === id)
+      const edit = item && splitAtOutput(plan, id, sourceToOutputMs(item, sourceMs), createCutId())
+      if (!edit) throw new Error('Invalid split position')
+      change(edit)
     },
     draft,
     /** The plan as the server last accepted it: what an unsaved edit is measured against. */

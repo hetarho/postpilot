@@ -45,6 +45,8 @@ export {
 export type { ClipRevisionTarget } from './model/revision'
 export {
   acknowledgeClipCuts,
+  applyTimelineEdit,
+  timelineBarPx,
   captionStartCut,
   clipDraftKey,
   clipSeconds,
