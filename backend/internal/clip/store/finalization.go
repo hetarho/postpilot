@@ -18,6 +18,11 @@ func (s *Store) RecordFinalization(ctx context.Context, req clip.FinalizationReq
 	if err != nil {
 		return p, err
 	}
+	if plan, err := clip.DecodeEditPlan(p.EditPlan); err == nil {
+		if err = validateSpeechAssets(ctx, s.write, req.UserID, req.ProjectID, plan); err != nil {
+			return clip.Project{}, err
+		}
+	}
 	// Freeze any legacy hydration before template deletion may clear its reference.
 	if p.Composition != nil {
 		if err := saveComposition(ctx, s.write, p); err != nil {
@@ -30,6 +35,9 @@ func (s *Store) RecordFinalization(ctx context.Context, req clip.FinalizationReq
 	}
 	if n != 1 {
 		return clip.Project{}, clip.ErrFinalizationConflict
+	}
+	if err := collectFinalizedSpeech(ctx, s.write, p); err != nil {
+		return clip.Project{}, err
 	}
 	if _, err := s.RevokeProjectSources(ctx, req.UserID, req.ProjectID, now); err != nil {
 		return clip.Project{}, err

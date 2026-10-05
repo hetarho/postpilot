@@ -1,6 +1,6 @@
 -- name: InsertClipSpeechAsset :execrows
 INSERT INTO clip_speech_assets(id,owner_id,project_id,object_key,input_text,input_hash,binding_digest,speech_json,created_at,bytes_count)
-SELECT ?,?,?,?,?,?,?,?,?,? WHERE EXISTS(SELECT 1 FROM clip_projects WHERE clip_projects.id = sqlc.arg(project_check) AND clip_projects.user_id = sqlc.arg(owner_check));
+SELECT ?,?,?,?,?,?,?,?,?,? WHERE EXISTS(SELECT 1 FROM clip_projects WHERE clip_projects.id = sqlc.arg(project_check) AND clip_projects.user_id = sqlc.arg(owner_check) AND deleting=0 AND finalized_at IS NULL);
 
 -- name: GetClipSpeechAsset :one
 SELECT * FROM clip_speech_assets WHERE id = ? AND owner_id = ? AND project_id = ?;
@@ -10,6 +10,25 @@ SELECT * FROM clip_speech_assets WHERE owner_id = ? AND project_id = ? AND input
 
 -- name: ListClipSpeechAssets :many
 SELECT * FROM clip_speech_assets WHERE owner_id = ? AND project_id = ? ORDER BY created_at;
+
+-- name: PrepareClipSpeechCleanup :execrows
+INSERT INTO clip_speech_cleanup(id,object_key,created_at)
+SELECT ?,?,? WHERE EXISTS(SELECT 1 FROM clip_projects WHERE clip_projects.id=sqlc.arg(project) AND clip_projects.user_id=sqlc.arg(owner) AND deleting=0 AND finalized_at IS NULL)
+ON CONFLICT(id) DO NOTHING;
+
+-- name: PendingClipSpeechCleanup :many
+SELECT * FROM clip_speech_cleanup WHERE created_at < ? ORDER BY created_at,id;
+-- name: ClipSpeechAssetRetained :one
+SELECT COUNT(*) FROM clip_speech_assets WHERE id=?;
+-- name: DiscardRetainedClipSpeechCleanup :exec
+DELETE FROM clip_speech_cleanup WHERE clip_speech_cleanup.id=sqlc.arg(id)
+AND EXISTS(SELECT 1 FROM clip_speech_assets WHERE clip_speech_assets.id=sqlc.arg(id));
+-- name: CompleteClipSpeechCleanup :exec
+DELETE FROM clip_speech_cleanup WHERE id=?;
+-- name: DeleteUnusedClipSpeechAsset :execrows
+DELETE FROM clip_speech_assets WHERE clip_speech_assets.id=? AND clip_speech_assets.owner_id=? AND clip_speech_assets.project_id=?
+AND EXISTS(SELECT 1 FROM clip_projects WHERE clip_projects.id=clip_speech_assets.project_id AND finalized_at IS NOT NULL)
+AND NOT EXISTS(SELECT 1 FROM generation_jobs WHERE clip_project_id=clip_speech_assets.project_id AND status IN ('queued','running'));
 
 -- name: ReserveClipSpeechRun :execrows
 INSERT INTO clip_speech_jobs(id,owner_id,project_id,request_key,request_digest,operation_json,created_at)

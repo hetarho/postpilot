@@ -340,3 +340,21 @@ func TestSpeechPriceRejectsUnknownAndOverlappingEvidence(t *testing.T) {
 		t.Fatal("fixture clone changed price spelling")
 	}
 }
+
+func TestVoiceQualificationAloneCannotEnableNarratedSpeech(t *testing.T) {
+	s, m, _, p := speechFixture(t)
+	ctx := t.Context()
+	saved, err := s.SaveSpeechProfile(ctx, p, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = m.RecordSpeechReadiness(ctx, saved.ID, saved.Revision, "private-voice-proof", false); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = s.ResolveSpeechProfile(ctx, "owner", plan.Master, saved.ID, saved.Revision, "", false); err != nil {
+		t.Fatal("voice qualification unavailable", err)
+	}
+	if _, err = s.ResolveSpeechProfile(ctx, "owner", plan.Master, saved.ID, saved.Revision, "", true); !errors.Is(err, ErrSpeechProfileUnavailable) {
+		t.Fatal("missing both-export evidence admitted narration", err)
+	}
+}

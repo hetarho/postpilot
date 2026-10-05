@@ -482,58 +482,6 @@ export function ClipCorrectionWorkspace({
           {/* The save state is NOT reported here: CLIP-38 gives it to the page's one
           status region, and a second copy beside the timeline said it twice with
           two different delays. Undo/redo moved to the timeline's own head. */}
-          {!readOnly && draft.narration && (
-            <div className="space-y-2">
-              <Button
-                variant="secondary"
-                disabled={disabled || correction.pending}
-                onClick={() => {
-                  void correction.refreshCaptions().catch(() => undefined)
-                }}
-              >
-                {t('placement.refresh')}
-              </Button>
-              {refresh.pending.map((segment, index) => {
-                const candidate = narrationSlot(
-                  draft,
-                  segment.startMs,
-                  Math.max(0, segment.endMs - segment.startMs),
-                )
-                const slot =
-                  candidate &&
-                  Math.min(candidate.endMs, segment.endMs) - candidate.startMs >= minExposureMs('')
-                    ? {
-                        startMs: candidate.startMs,
-                        endMs: Math.min(candidate.endMs, segment.endMs),
-                      }
-                    : undefined
-                return (
-                  <div key={segment.id} className="flex flex-wrap items-center gap-2">
-                    <Button
-                      variant="secondary"
-                      disabled={disabled || !slot || segment.creation}
-                      onClick={() => {
-                        if (!slot) return
-                        const id = `new-script-caption-${Date.now()}`
-                        change({ type: 'addScriptCaption', id, segmentId: segment.id, ...slot })
-                        dispatch({ type: 'select', selection: { kind: 'text', id } })
-                        setDetailsOpen(true)
-                      }}
-                    >
-                      {t('placement.addFromScript', { number: index + 1 })}
-                    </Button>
-                    {!slot && <Typography variant="meta">{t('placement.noRoom')}</Typography>}
-                  </div>
-                )
-              })}
-              {refresh.unplaceable.length > 0 && (
-                <Typography variant="meta">{t('placement.unplaceableWords')}</Typography>
-              )}
-              {refresh.orphaned.length > 0 && (
-                <Typography variant="meta">{t('placement.orphans')}</Typography>
-              )}
-            </div>
-          )}
           <ClipTimeline
             plan={correction.transientPlan ?? draft}
             onSeek={seek}
@@ -588,6 +536,58 @@ export function ClipCorrectionWorkspace({
             localSources={localSources}
             notices={notices}
           />
+          {!readOnly && draft.narration && (
+            <div className="space-y-2">
+              <Button
+                variant="secondary"
+                disabled={disabled || correction.pending}
+                onClick={() => {
+                  void correction.refreshCaptions().catch(() => undefined)
+                }}
+              >
+                {t('placement.refresh')}
+              </Button>
+              {refresh.pending.map((segment, index) => {
+                const candidate = narrationSlot(
+                  draft,
+                  segment.startMs,
+                  Math.max(0, segment.endMs - segment.startMs),
+                )
+                const slot =
+                  candidate &&
+                  Math.min(candidate.endMs, segment.endMs) - candidate.startMs >= minExposureMs('')
+                    ? {
+                        startMs: candidate.startMs,
+                        endMs: Math.min(candidate.endMs, segment.endMs),
+                      }
+                    : undefined
+                return (
+                  <div key={segment.id} className="flex flex-wrap items-center gap-2">
+                    <Button
+                      variant="secondary"
+                      disabled={disabled || !slot || segment.creation}
+                      onClick={() => {
+                        if (!slot) return
+                        const id = `new-script-caption-${Date.now()}`
+                        change({ type: 'addScriptCaption', id, segmentId: segment.id, ...slot })
+                        dispatch({ type: 'select', selection: { kind: 'text', id } })
+                        setDetailsOpen(true)
+                      }}
+                    >
+                      {t('placement.addFromScript', { number: index + 1 })}
+                    </Button>
+                    {!slot && <Typography variant="meta">{t('placement.noRoom')}</Typography>}
+                  </div>
+                )
+              })}
+              {refresh.unplaceable.length > 0 && (
+                <Typography variant="meta">{t('placement.unplaceableWords')}</Typography>
+              )}
+              {refresh.orphaned.length > 0 && (
+                <Typography variant="meta">{t('placement.orphans')}</Typography>
+              )}
+            </div>
+          )}
           <ClipNoticeList
             notices={notices.filter(
               (n) =>

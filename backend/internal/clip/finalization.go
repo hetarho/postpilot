@@ -57,6 +57,9 @@ func ValidateFinalization(p Project, req FinalizationRequest, cfg RenderConfig) 
 	if err := NarrationReadiness(plan); err != nil {
 		return err
 	}
+	if SpeechFingerprint(RequestedSpeech(plan)) != SpeechFingerprint(p.Result.Speech) {
+		return ErrFinalizationInvalid
+	}
 	validated, err := ApplyCorrection(cfg, p, CorrectionFromPlan(plan))
 	if err != nil || ValidateCompositionEvidence(validated) != nil {
 		return ErrFinalizationInvalid

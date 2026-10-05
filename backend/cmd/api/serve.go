@@ -75,6 +75,7 @@ func serve(ctx context.Context, c *contexts) error {
 	)
 	go sweeper.Run(ctx, cfg.OrphanSweepInterval)
 	go c.spoken.RunCleanup(ctx, cfg.OrphanSweepInterval, cfg.OrphanMinAge)
+	go c.clipSpeech.RunCleanup(ctx, cfg.OrphanSweepInterval, cfg.OrphanMinAge)
 	// A photo prompt's photos, on the post sweep's interval and rules (VOICE-60).
 	go voice.NewPhotoSweeper(voicestore.New(handle.Writer, handle.Reader), voiceObjects{bucket: p.bucket}, cfg.OrphanMinAge).Run(ctx, cfg.OrphanSweepInterval)
 	go c.clipMediaRecovery.Run(ctx)

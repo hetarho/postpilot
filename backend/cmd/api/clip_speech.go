@@ -9,11 +9,15 @@ import (
 	jobstore "github.com/postpilot/backend/internal/job/store"
 	modelcatalogapp "github.com/postpilot/backend/internal/modelcatalog/app"
 	"github.com/postpilot/backend/internal/plan"
+	"github.com/postpilot/backend/internal/voice/spoken"
 )
 
+type narratedSpokenProfiles interface {
+	ResolveNarratedSpokenProfile(context.Context, string, plan.Plan, string, int64) (spoken.Profile, error)
+}
 type clipSpeechVoices struct {
 	voices   clipSpokenVoices
-	profiles spokenProfiles
+	profiles narratedSpokenProfiles
 }
 
 func (a clipSpeechVoices) ResolveSpeechVoice(ctx context.Context, owner string, tier plan.Plan, id string) (clipapp.SpeechVoice, error) {
@@ -25,7 +29,7 @@ func (a clipSpeechVoices) ResolveSpeechVoice(ctx context.Context, owner string, 
 	if e != nil {
 		return clipapp.SpeechVoice{}, e
 	}
-	current, e := a.profiles.ResolveSpokenProfile(ctx, owner, tier, v.Profile.ID, v.Profile.Revision, "")
+	current, e := a.profiles.ResolveNarratedSpokenProfile(ctx, owner, tier, v.Profile.ID, v.Profile.Revision)
 	if e != nil {
 		return clipapp.SpeechVoice{}, e
 	}

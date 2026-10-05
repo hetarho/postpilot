@@ -10,7 +10,10 @@ MODEL-79–82 and QUOTA-69/70.
 entry. A supplier account plan, installation-specific price evidence, approved
 whole-session USD ceiling and human listening assessment have not been supplied.
 No live design, confirmation or speech request was made for this qualification.
-No voice or narrated-export readiness was published. T540–T550 remain unstarted.
+No voice or narrated-export readiness was published. T540–T549 are implemented
+and automatically verified; T550 implements lifecycle qualification while its
+real listening/export gates remain deferred. See
+[narrated-clip-v1.md](narrated-clip-v1.md) for the separate offline evidence.
 
 The operator harness uses production voice preparation, quotes, admission,
 durable jobs, private storage and usage settlement. Its offline tests use a fake

@@ -19,6 +19,10 @@ import (
 
 const SpeechJournalTimeout = 10 * time.Second
 
+// The complete publication is shorter than the cleanup age, including a bounded PUT.
+const SpeechPublicationTimeout = 45 * time.Second
+const SpeechCleanupMinAge = 5 * time.Minute
+
 // These ports expose owned behavior, never the reusable voice context's tables.
 type SpeechVoice = clip.SpeechVoice
 type SpeechVoices interface {
@@ -42,6 +46,11 @@ type SpeechObjects interface {
 type SpeechCall = clip.SpeechCall
 type SpeechRun = clip.SpeechRun
 type SpeechStorage interface {
+	PrepareSpeechCleanup(context.Context, string, string, clip.SpeechCleanup) error
+	PendingSpeechCleanup(context.Context, time.Time) ([]clip.SpeechCleanup, error)
+	SpeechAssetRetained(context.Context, string) (bool, error)
+	DiscardRetainedSpeechCleanup(context.Context, string) error
+	CompleteSpeechCleanup(context.Context, string) error
 	ListIncompleteSpeechRuns(context.Context) ([]SpeechRun, error)
 	GetProject(context.Context, string, string) (clip.Project, error)
 	ReserveSpeechRun(context.Context, SpeechRun) (SpeechRun, error)
@@ -494,18 +503,20 @@ func (s *SpeechService) synthesizeAsset(ctx context.Context, r SpeechRun, c Spee
 		}
 	}
 	asset := clip.SpeechAsset{ID: id, OwnerID: r.OwnerID, ProjectID: r.ProjectID, ObjectKey: clip.SpeechAudioPrefix + id + ".mp3", Bytes: int64(len(audio.Bytes)), Text: c.Text, Speech: ref, CreatedAt: time.Now().UTC()}
-	if e = s.Objects.PutClipSpeechAudio(ctx, asset.ObjectKey, audio.Bytes); e != nil {
-
+	publication, stopPublication := context.WithTimeout(context.WithoutCancel(ctx), SpeechPublicationTimeout)
+	defer stopPublication()
+	if e = s.Store.PrepareSpeechCleanup(publication, r.OwnerID, r.ProjectID, clip.SpeechCleanup{ID: id, ObjectKey: asset.ObjectKey, CreatedAt: asset.CreatedAt}); e != nil {
 		return clip.SpeechAsset{}, e
 	}
-	audit, cancel := context.WithTimeout(context.WithoutCancel(ctx), SpeechJournalTimeout)
-	e = s.Store.InsertSpeechAsset(audit, asset)
-	cancel()
+	upload, stopUpload := context.WithTimeout(publication, 30*time.Second)
+	e = s.Objects.PutClipSpeechAudio(upload, asset.ObjectKey, audio.Bytes)
+	stopUpload()
 	if e != nil {
-		cleanup, stop := context.WithTimeout(context.WithoutCancel(ctx), SpeechJournalTimeout)
-		_ = s.Objects.DeleteClipSpeechAudio(cleanup, asset.ObjectKey)
-		stop()
-
+		return clip.SpeechAsset{}, e
+	}
+	e = s.Store.InsertSpeechAsset(publication, asset)
+	if e != nil {
+		// The durable pre-PUT intent owns recovery, including a failed delete or crash.
 		return clip.SpeechAsset{}, e
 	}
 	return asset, nil

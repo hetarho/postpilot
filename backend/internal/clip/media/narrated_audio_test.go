@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/postpilot/backend/internal/clip"
+	"github.com/postpilot/backend/internal/clip/composition"
 	"github.com/postpilot/backend/internal/clip/mediacodec"
 	"github.com/postpilot/backend/internal/clip/worker"
 	"github.com/postpilot/backend/internal/llm"
@@ -97,7 +98,7 @@ func TestNarratedExportSmoke(t *testing.T) {
 		if err != nil {
 			return err
 		}
-		for _, s := range built[:2] {
+		for _, s := range built {
 			dest := filepath.Join(transfer.dir, s.ID+".mp4")
 			if err := copyIdentityFile(paths[s.ID], dest); err != nil {
 				return err
@@ -117,13 +118,46 @@ func TestNarratedExportSmoke(t *testing.T) {
 	for _, tc := range []struct {
 		name, ratio string
 		mixed       bool
-	}{{"voice-only-vertical", "vertical", false}, {"voice-only-square", "square", false}, {"mixed-horizontal", "horizontal", true}} {
+		duration    int
+	}{{"voice-only-vertical", "vertical", false, 0}, {"voice-only-square", "square", false, 0}, {"mixed-horizontal", "horizontal", true, 0}, {"boundary-15-vertical", "vertical", false, 15000}, {"boundary-60-horizontal", "horizontal", false, 60000}} {
 		t.Run(tc.name, func(t *testing.T) {
 			plan, err := qaPlan(qaClipCases()[1], sources)
 			if err != nil {
 				t.Fatal(err)
 			}
 			plan.Ratio = tc.ratio
+			if tc.duration > 0 {
+				body := plan.Portable.Snapshot.Body
+				section := plan.Portable.Cuts[0].SectionID
+				var bindings []composition.Cut
+				plan.Cuts = nil
+				plan.DurationMS = tc.duration
+				plan.SourceAudio = &clip.SourceAudioSettings{}
+				remaining := tc.duration
+				for i, s := range sources {
+					if remaining == 0 {
+						break
+					}
+					span := min(remaining, 20000)
+					plan.Cuts = append(plan.Cuts, clip.Cut{ID: []string{"boundary-one", "boundary-two", "boundary-three"}[i], SourceID: s.ID, Fingerprint: s.Fingerprint, EndMS: span, Focal: clip.Point{X: .5, Y: .5}, PlaybackRatePermille: 1000})
+					bindings = append(bindings, composition.Cut{ID: plan.Cuts[len(plan.Cuts)-1].ID, SectionID: section, SourceID: s.ID, EndMS: span, PlaybackRatePermille: 1000})
+					plan.SourceAudio.Values = append(plan.SourceAudio.Values, clip.SourceAudioSetting{SourceID: s.ID, Fingerprint: s.Fingerprint})
+					remaining -= span
+				}
+				limits := clip.DefaultCompositionLimits()
+				doc, problem := composition.Parse(body, limits)
+				if problem != nil {
+					t.Fatal(problem)
+				}
+				resolved, problem := composition.Resolve(doc, composition.Inputs{Cuts: bindings}, limits, tc.duration)
+				if problem != nil {
+					t.Fatal(problem)
+				}
+				plan.Portable = &clip.PortablePlan{Snapshot: clip.CompositionSnapshot{Version: 1, Body: body}, Cuts: bindings, TargetDurationMS: tc.duration}
+				for _, element := range resolved.Elements {
+					plan.Portable.Elements = append(plan.Portable.Elements, clip.PortableText{Resolved: element, Pace: doc.Pace, Accent: doc.Accent})
+				}
+			}
 			for i := range plan.Cuts {
 				for _, s := range sources {
 					if s.ID == plan.Cuts[i].SourceID {
@@ -131,12 +165,17 @@ func TestNarratedExportSmoke(t *testing.T) {
 					}
 				}
 			}
-			if !tc.mixed {
+			if !tc.mixed && tc.duration == 0 {
 				plan.SourceAudio = nil
 			}
 			gain := 250
 			plan.SourceVolumePermille = &gain
 			files := fixtureNarration(t, &plan)
+			if tc.duration > 0 {
+				last := &plan.Narration.Segments[1]
+				last.StartMS = tc.duration - last.Speech.DurationMS()
+				last.EndMS = tc.duration
+			}
 			plan, _, err = r.Layout(t.Context(), plan, sources)
 			if err != nil {
 				t.Fatal(renderFailure(err))
@@ -174,7 +213,8 @@ func TestNarratedExportSmoke(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			for _, sample := range []struct{ at, hz, other float64 }{{1.1, 660, 990}, {2.7, 660, 990}, {4.9, 990, 660}, {6.5, 990, 660}} {
+			last := plan.Narration.Segments[1]
+			for _, sample := range []struct{ at, hz, other float64 }{{1.1, 660, 990}, {2.7, 660, 990}, {float64(last.StartMS)/1000 + .1, 990, 660}, {float64(last.StartMS)/1000 + 1.7, 990, 660}} {
 				level := toneLevel(pcm, sample.at, .1, sample.hz)
 				other := toneLevel(pcm, sample.at, .1, sample.other)
 				if level < .025 || other > level*.15 {
@@ -196,7 +236,7 @@ func TestNarratedExportSmoke(t *testing.T) {
 					return err
 				}
 				l, err := r.measureLoudness(t.Context(), ws, path)
-				if err == nil && (l.Silent || math.Abs(l.I+16) > 1 || l.TP > -1.45) {
+				if err == nil && (l.Silent || math.Abs(l.I+16) > 1 || l.TP > -1.5) {
 					t.Fatalf("loudness %+v", l)
 				}
 				return err

@@ -225,6 +225,12 @@ type ClipSpeechAsset struct {
 	BytesCount    int64
 }
 
+type ClipSpeechCleanup struct {
+	ID        string
+	ObjectKey string
+	CreatedAt string
+}
+
 type VideoTemplate struct {
 	ID                   string
 	UserID               string

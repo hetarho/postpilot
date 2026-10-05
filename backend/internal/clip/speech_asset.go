@@ -12,3 +12,8 @@ type SpeechAsset struct {
 	Speech                                  SpeechRef
 	CreatedAt                               time.Time
 }
+
+type SpeechCleanup struct {
+	ID, ObjectKey string
+	CreatedAt     time.Time
+}

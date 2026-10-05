@@ -64,6 +64,56 @@ func (q *Queries) ClaimClipSpeechCall(ctx context.Context, arg ClaimClipSpeechCa
 	return result.RowsAffected()
 }
 
+const clipSpeechAssetRetained = `-- name: ClipSpeechAssetRetained :one
+SELECT COUNT(*) FROM clip_speech_assets WHERE id=?
+`
+
+func (q *Queries) ClipSpeechAssetRetained(ctx context.Context, id string) (int64, error) {
+	row := q.db.QueryRowContext(ctx, clipSpeechAssetRetained, id)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const completeClipSpeechCleanup = `-- name: CompleteClipSpeechCleanup :exec
+DELETE FROM clip_speech_cleanup WHERE id=?
+`
+
+func (q *Queries) CompleteClipSpeechCleanup(ctx context.Context, id string) error {
+	_, err := q.db.ExecContext(ctx, completeClipSpeechCleanup, id)
+	return err
+}
+
+const deleteUnusedClipSpeechAsset = `-- name: DeleteUnusedClipSpeechAsset :execrows
+DELETE FROM clip_speech_assets WHERE clip_speech_assets.id=? AND clip_speech_assets.owner_id=? AND clip_speech_assets.project_id=?
+AND EXISTS(SELECT 1 FROM clip_projects WHERE clip_projects.id=clip_speech_assets.project_id AND finalized_at IS NOT NULL)
+AND NOT EXISTS(SELECT 1 FROM generation_jobs WHERE clip_project_id=clip_speech_assets.project_id AND status IN ('queued','running'))
+`
+
+type DeleteUnusedClipSpeechAssetParams struct {
+	ID        string
+	OwnerID   string
+	ProjectID string
+}
+
+func (q *Queries) DeleteUnusedClipSpeechAsset(ctx context.Context, arg DeleteUnusedClipSpeechAssetParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteUnusedClipSpeechAsset, arg.ID, arg.OwnerID, arg.ProjectID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const discardRetainedClipSpeechCleanup = `-- name: DiscardRetainedClipSpeechCleanup :exec
+DELETE FROM clip_speech_cleanup WHERE clip_speech_cleanup.id=?1
+AND EXISTS(SELECT 1 FROM clip_speech_assets WHERE clip_speech_assets.id=?1)
+`
+
+func (q *Queries) DiscardRetainedClipSpeechCleanup(ctx context.Context, id string) error {
+	_, err := q.db.ExecContext(ctx, discardRetainedClipSpeechCleanup, id)
+	return err
+}
+
 const findClipSpeechAsset = `-- name: FindClipSpeechAsset :one
 SELECT id, owner_id, project_id, object_key, input_text, input_hash, binding_digest, speech_json, created_at, bytes_count FROM clip_speech_assets WHERE owner_id = ? AND project_id = ? AND input_hash = ? AND binding_digest = ? ORDER BY created_at DESC LIMIT 1
 `
@@ -227,7 +277,7 @@ func (q *Queries) GetClipSpeechRun(ctx context.Context, arg GetClipSpeechRunPara
 
 const insertClipSpeechAsset = `-- name: InsertClipSpeechAsset :execrows
 INSERT INTO clip_speech_assets(id,owner_id,project_id,object_key,input_text,input_hash,binding_digest,speech_json,created_at,bytes_count)
-SELECT ?,?,?,?,?,?,?,?,?,? WHERE EXISTS(SELECT 1 FROM clip_projects WHERE clip_projects.id = ?11 AND clip_projects.user_id = ?12)
+SELECT ?,?,?,?,?,?,?,?,?,? WHERE EXISTS(SELECT 1 FROM clip_projects WHERE clip_projects.id = ?11 AND clip_projects.user_id = ?12 AND deleting=0 AND finalized_at IS NULL)
 `
 
 type InsertClipSpeechAssetParams struct {
@@ -339,6 +389,61 @@ func (q *Queries) ListIncompleteClipSpeechRuns(ctx context.Context) ([]ListIncom
 		return nil, err
 	}
 	return items, nil
+}
+
+const pendingClipSpeechCleanup = `-- name: PendingClipSpeechCleanup :many
+SELECT id, object_key, created_at FROM clip_speech_cleanup WHERE created_at < ? ORDER BY created_at,id
+`
+
+func (q *Queries) PendingClipSpeechCleanup(ctx context.Context, createdAt string) ([]ClipSpeechCleanup, error) {
+	rows, err := q.db.QueryContext(ctx, pendingClipSpeechCleanup, createdAt)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ClipSpeechCleanup
+	for rows.Next() {
+		var i ClipSpeechCleanup
+		if err := rows.Scan(&i.ID, &i.ObjectKey, &i.CreatedAt); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const prepareClipSpeechCleanup = `-- name: PrepareClipSpeechCleanup :execrows
+INSERT INTO clip_speech_cleanup(id,object_key,created_at)
+SELECT ?,?,? WHERE EXISTS(SELECT 1 FROM clip_projects WHERE clip_projects.id=?4 AND clip_projects.user_id=?5 AND deleting=0 AND finalized_at IS NULL)
+ON CONFLICT(id) DO NOTHING
+`
+
+type PrepareClipSpeechCleanupParams struct {
+	ID        string
+	ObjectKey string
+	CreatedAt string
+	Project   string
+	Owner     string
+}
+
+func (q *Queries) PrepareClipSpeechCleanup(ctx context.Context, arg PrepareClipSpeechCleanupParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, prepareClipSpeechCleanup,
+		arg.ID,
+		arg.ObjectKey,
+		arg.CreatedAt,
+		arg.Project,
+		arg.Owner,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const reserveClipSpeechCall = `-- name: ReserveClipSpeechCall :exec

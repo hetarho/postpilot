@@ -10,7 +10,15 @@ import (
 type spokenProfiles struct{ catalog *modelcatalog.SpeechService }
 
 func (a spokenProfiles) ResolveSpokenProfile(ctx context.Context, owner string, tier plan.Plan, id string, revision int64, session string) (spoken.Profile, error) {
-	p, err := a.catalog.ResolveSpeechProfile(ctx, owner, tier, id, revision, session, false)
+	return a.resolveProfile(ctx, owner, tier, id, revision, session, false)
+}
+
+func (a spokenProfiles) ResolveNarratedSpokenProfile(ctx context.Context, owner string, tier plan.Plan, id string, revision int64) (spoken.Profile, error) {
+	return a.resolveProfile(ctx, owner, tier, id, revision, "", true)
+}
+
+func (a spokenProfiles) resolveProfile(ctx context.Context, owner string, tier plan.Plan, id string, revision int64, session string, requireExport bool) (spoken.Profile, error) {
+	p, err := a.catalog.ResolveSpeechProfile(ctx, owner, tier, id, revision, session, requireExport)
 	if err != nil {
 		return spoken.Profile{}, err
 	}
