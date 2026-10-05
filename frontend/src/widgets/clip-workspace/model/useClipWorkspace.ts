@@ -146,7 +146,10 @@ export function useClipWorkspace(ownerId: string, project: ClipProject) {
   // clip job still takes the whole screen (CLIP-78).
   // ② owns a revision and a storyline request: both run with ② on screen (CLIP-131, CLIP-181).
   const revising =
-    (job?.kind === 'revise_clip' || job?.kind === 'revise_storyline_clip') && !isTerminal(job)
+    (job?.kind === 'revise_clip' ||
+      job?.kind === 'revise_storyline_clip' ||
+      job?.kind === 'speech_clip') &&
+    !isTerminal(job)
   const focused = !project.finalized && generation.busy && !revising
   const pending = generation.busy || uploading || finalization.busy || browser.busy
   useDiscardQueueWhenFinalized(project.id, project.finalized, discardClipDraftQueue)

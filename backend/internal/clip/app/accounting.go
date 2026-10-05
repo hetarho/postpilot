@@ -45,7 +45,7 @@ func (s *GenerationService) AccountingForAttempt(ctx context.Context, user, proj
 // ceiling: the generation and the owner's revision request (CLIP-19, CLIP-132).
 // A render spends none and has nothing to disclose.
 func chargedClipKind(kind string) bool {
-	return kind == "generate_clip" || kind == "revise_clip"
+	return kind == "generate_clip" || kind == "revise_clip" || kind == "speech_clip"
 }
 
 // chargedApproval reads the approval a charged job froze into its own payload.
@@ -75,6 +75,35 @@ func (s *GenerationService) accountingForJob(ctx context.Context, user, id strin
 		return nil, nil
 	}
 	out := &clip.Accounting{JobID: j.ID, Status: "unavailable"}
+	if j.Kind == clip.JobKindSpeech {
+		if s.speech == nil || s.accounting == nil {
+			return out, nil
+		}
+		run, e := s.speech.Store.GetSpeechRun(ctx, user, string(j.Payload))
+		if e != nil {
+			return nil, e
+		}
+		if run.OwnerID != user || run.ProjectID != id || run.JobID != j.ID || run.ParentGeneration {
+			return out, nil
+		}
+		ledger, e := s.accounting.ForJob(ctx, user, j.ID)
+		if e != nil {
+			return nil, e
+		}
+		if ledger == nil {
+			zero := 0
+			out.Status = "not_reserved"
+			out.Reserved = &zero
+			out.Settled = j.Status == "failed" || j.Status == "cancelled"
+			return out, nil
+		}
+		if ledger.ApprovedMax == nil {
+			return out, nil
+		}
+		ledger.JobID = j.ID
+		accountingStatus(ledger, j.Status)
+		return ledger, nil
+	}
 	approval, ok := chargedApproval(j.Kind, j.Payload, user, id)
 	if !ok {
 		return out, nil
@@ -109,6 +138,11 @@ func (s *GenerationService) accountingForJob(ctx context.Context, user, id strin
 		return out, nil
 	}
 	ledger.JobID = j.ID
+	accountingStatus(ledger, j.Status)
+	return ledger, nil
+}
+func accountingStatus(ledger *clip.Accounting, status string) {
+	terminal := status == "done" || status == "failed" || status == "cancelled"
 	switch {
 	case ledger.Exempt:
 		ledger.Status = "exempt"
@@ -119,5 +153,4 @@ func (s *GenerationService) accountingForJob(ctx context.Context, user, id strin
 	default:
 		ledger.Status = "reserved"
 	}
-	return ledger, nil
 }

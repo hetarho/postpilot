@@ -498,3 +498,5 @@ export {
   SpokenWorkQuoteSchema,
 } from './gen/postpilot/v1/spoken_voice_generation_pb'
 export type { SpokenOperation as ProtoSpokenOperation } from './gen/postpilot/v1/spoken_voice_generation_pb'
+
+export { ClipSpeechService } from './gen/postpilot/v1/clip_speech_pb'

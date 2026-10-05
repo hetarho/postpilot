@@ -77,3 +77,11 @@ export type {
 export { SPOKEN_LIMITS, spokenState, speechDurationMs } from './model/spoken'
 
 export { captionRefresh, captionWords, refreshCaptionWording } from './model/caption-refresh'
+
+export { spokenScriptValid } from './model/spoken'
+export { proposeSpokenRetiming } from './model/spoken-retiming'
+export type { SpokenRetiming } from './model/spoken-retiming'
+
+export { useClipSpeechCalls } from './api/speech'
+export type { ClipSpeechQuote } from './api/speech'
+export { ClipSpeechPlayer } from './ui/ClipSpeechPlayer'

@@ -48,6 +48,7 @@ export function narrationToProto(value: ClipNarration | undefined) {
     ...value,
     segments: value.segments.map((s) => ({
       ...s,
+      id: s.creation ? '' : s.id,
       speech: s.speech
         ? {
             ...s.speech,

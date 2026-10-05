@@ -52,7 +52,8 @@ func serve(ctx context.Context, c *contexts) error {
 		Interceptors: []connect.Interceptor{authrpc.NewInterceptor(c.auth, c.throttle, cfg.ClientIPHeader), authrpc.NewSupplierRedaction()},
 		Handlers:     handlers(c),
 		Routes: map[string]http.Handler{
-			spokenrpc.SamplePath: spokenrpc.NewAudioHandler(c.spoken, c.auth),
+			spokenrpc.SamplePath:    spokenrpc.NewAudioHandler(c.spoken, c.auth),
+			cliprpc.SpeechAudioPath: cliprpc.NewSpeechAudioHandler(c.clipSpeech, c.auth),
 			// These plain routes bypass the Connect interceptors, so the throttle the
 			// authenticated public writes get has to be put on this one here. Composition is
 			// also the only place it can go: billing/rpc importing auth is the wrong

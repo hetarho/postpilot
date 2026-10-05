@@ -4,13 +4,15 @@
 
 import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
+import type { ClipNarration } from "./clip_pb";
+import { file_postpilot_v1_clip } from "./clip_pb";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file postpilot/v1/clip_speech.proto.
  */
 export const file_postpilot_v1_clip_speech: GenFile = /*@__PURE__*/
-  fileDesc("Ch5wb3N0cGlsb3QvdjEvY2xpcF9zcGVlY2gucHJvdG8SDHBvc3RwaWxvdC52MSJHChZRdW90ZUNsaXBTcGVlY2hSZXF1ZXN0EhIKCnByb2plY3RfaWQYASABKAkSGQoRZXhwZWN0ZWRfcmV2aXNpb24YAiABKAUifAoPQ2xpcFNwZWVjaFF1b3RlEhAKCHF1b3RlX2lkGAEgASgJEhcKD21heGltdW1fY3JlZGl0cxgCIAEoBRISCgpleHBpcmVzX2F0GAMgASgJEhMKC3NlZ21lbnRfaWRzGAQgAygJEhUKDXBsYW5fcmV2aXNpb24YBSABKAUi0wEKFlN0YXJ0Q2xpcFNwZWVjaFJlcXVlc3QSEgoKcHJvamVjdF9pZBgBIAEoCRIZChFleHBlY3RlZF9yZXZpc2lvbhgCIAEoBRIXCg9pZGVtcG90ZW5jeV9rZXkYAyABKAkSEAoIcXVvdGVfaWQYBCABKAkSIQoUYXBwcm92ZWRfbWF4X2NyZWRpdHMYBSABKAVIAIgBARIjChtjYW5jZWxsYXRpb25fcG9saWN5X3ZlcnNpb24YBiABKAVCFwoVX2FwcHJvdmVkX21heF9jcmVkaXRzIikKF1N0YXJ0Q2xpcFNwZWVjaFJlc3BvbnNlEg4KBmpvYl9pZBgBIAEoCSIzCh1HZXRDbGlwU3BlZWNoUmVhZGluZXNzUmVxdWVzdBISCgpwcm9qZWN0X2lkGAEgASgJIoQBChpDbGlwU3BlZWNoU2VnbWVudFJlYWRpbmVzcxISCgpzZWdtZW50X2lkGAEgASgJEg0KBXN0YXRlGAIgASgJEhAKCGFzc2V0X2lkGAMgASgJEhMKC2R1cmF0aW9uX21zGAQgASgFEhwKFGhhc19jaGFyYWN0ZXJfdGltaW5nGAUgASgIIn4KE0NsaXBTcGVlY2hSZWFkaW5lc3MSFQoNcGxhbl9yZXZpc2lvbhgBIAEoBRI6CghzZWdtZW50cxgCIAMoCzIoLnBvc3RwaWxvdC52MS5DbGlwU3BlZWNoU2VnbWVudFJlYWRpbmVzcxIUCgxyZW5kZXJfcmVhZHkYAyABKAgytQIKEUNsaXBTcGVlY2hTZXJ2aWNlElYKD1F1b3RlQ2xpcFNwZWVjaBIkLnBvc3RwaWxvdC52MS5RdW90ZUNsaXBTcGVlY2hSZXF1ZXN0Gh0ucG9zdHBpbG90LnYxLkNsaXBTcGVlY2hRdW90ZRJeCg9TdGFydENsaXBTcGVlY2gSJC5wb3N0cGlsb3QudjEuU3RhcnRDbGlwU3BlZWNoUmVxdWVzdBolLnBvc3RwaWxvdC52MS5TdGFydENsaXBTcGVlY2hSZXNwb25zZRJoChZHZXRDbGlwU3BlZWNoUmVhZGluZXNzEisucG9zdHBpbG90LnYxLkdldENsaXBTcGVlY2hSZWFkaW5lc3NSZXF1ZXN0GiEucG9zdHBpbG90LnYxLkNsaXBTcGVlY2hSZWFkaW5lc3NCRFpCZ2l0aHViLmNvbS9wb3N0cGlsb3QvYmFja2VuZC9pbnRlcm5hbC9nZW4vcG9zdHBpbG90L3YxO3Bvc3RwaWxvdHYxYgZwcm90bzM");
+  fileDesc("Ch5wb3N0cGlsb3QvdjEvY2xpcF9zcGVlY2gucHJvdG8SDHBvc3RwaWxvdC52MSJHChZRdW90ZUNsaXBTcGVlY2hSZXF1ZXN0EhIKCnByb2plY3RfaWQYASABKAkSGQoRZXhwZWN0ZWRfcmV2aXNpb24YAiABKAUioQEKD0NsaXBTcGVlY2hRdW90ZRIQCghxdW90ZV9pZBgBIAEoCRIXCg9tYXhpbXVtX2NyZWRpdHMYAiABKAUSEgoKZXhwaXJlc19hdBgDIAEoCRITCgtzZWdtZW50X2lkcxgEIAMoCRIVCg1wbGFuX3JldmlzaW9uGAUgASgFEiMKG2NhbmNlbGxhdGlvbl9wb2xpY3lfdmVyc2lvbhgGIAEoBSLTAQoWU3RhcnRDbGlwU3BlZWNoUmVxdWVzdBISCgpwcm9qZWN0X2lkGAEgASgJEhkKEWV4cGVjdGVkX3JldmlzaW9uGAIgASgFEhcKD2lkZW1wb3RlbmN5X2tleRgDIAEoCRIQCghxdW90ZV9pZBgEIAEoCRIhChRhcHByb3ZlZF9tYXhfY3JlZGl0cxgFIAEoBUgAiAEBEiMKG2NhbmNlbGxhdGlvbl9wb2xpY3lfdmVyc2lvbhgGIAEoBUIXChVfYXBwcm92ZWRfbWF4X2NyZWRpdHMiKQoXU3RhcnRDbGlwU3BlZWNoUmVzcG9uc2USDgoGam9iX2lkGAEgASgJIjMKHUdldENsaXBTcGVlY2hSZWFkaW5lc3NSZXF1ZXN0EhIKCnByb2plY3RfaWQYASABKAkihAEKGkNsaXBTcGVlY2hTZWdtZW50UmVhZGluZXNzEhIKCnNlZ21lbnRfaWQYASABKAkSDQoFc3RhdGUYAiABKAkSEAoIYXNzZXRfaWQYAyABKAkSEwoLZHVyYXRpb25fbXMYBCABKAUSHAoUaGFzX2NoYXJhY3Rlcl90aW1pbmcYBSABKAgifgoTQ2xpcFNwZWVjaFJlYWRpbmVzcxIVCg1wbGFuX3JldmlzaW9uGAEgASgFEjoKCHNlZ21lbnRzGAIgAygLMigucG9zdHBpbG90LnYxLkNsaXBTcGVlY2hTZWdtZW50UmVhZGluZXNzEhQKDHJlbmRlcl9yZWFkeRgDIAEoCCJCChpHZXRDbGlwU3BlZWNoQWNjZXNzUmVxdWVzdBISCgpwcm9qZWN0X2lkGAEgASgJEhAKCGFzc2V0X2lkGAIgASgJIlYKEENsaXBTcGVlY2hBY2Nlc3MSCwoDdXJsGAEgASgJEhIKCmV4cGlyZXNfYXQYAiABKAkSEgoKYXVkaW9faGFzaBgDIAEoCRINCgVieXRlcxgEIAEoAyJRCg9DbGlwU3Bva2VuRHJhZnQSDgoGZGlnZXN0GAEgASgJEi4KCW5hcnJhdGlvbhgCIAEoCzIbLnBvc3RwaWxvdC52MS5DbGlwTmFycmF0aW9uIi8KGUdldENsaXBTcG9rZW5EcmFmdFJlcXVlc3QSEgoKcHJvamVjdF9pZBgBIAEoCSJ5ChpTYXZlQ2xpcFNwb2tlbkRyYWZ0UmVxdWVzdBISCgpwcm9qZWN0X2lkGAEgASgJEhcKD2V4cGVjdGVkX2RpZ2VzdBgCIAEoCRIuCgluYXJyYXRpb24YAyABKAsyGy5wb3N0cGlsb3QudjEuQ2xpcE5hcnJhdGlvbjLUBAoRQ2xpcFNwZWVjaFNlcnZpY2USXAoSR2V0Q2xpcFNwb2tlbkRyYWZ0EicucG9zdHBpbG90LnYxLkdldENsaXBTcG9rZW5EcmFmdFJlcXVlc3QaHS5wb3N0cGlsb3QudjEuQ2xpcFNwb2tlbkRyYWZ0El4KE1NhdmVDbGlwU3Bva2VuRHJhZnQSKC5wb3N0cGlsb3QudjEuU2F2ZUNsaXBTcG9rZW5EcmFmdFJlcXVlc3QaHS5wb3N0cGlsb3QudjEuQ2xpcFNwb2tlbkRyYWZ0El8KE0dldENsaXBTcGVlY2hBY2Nlc3MSKC5wb3N0cGlsb3QudjEuR2V0Q2xpcFNwZWVjaEFjY2Vzc1JlcXVlc3QaHi5wb3N0cGlsb3QudjEuQ2xpcFNwZWVjaEFjY2VzcxJWCg9RdW90ZUNsaXBTcGVlY2gSJC5wb3N0cGlsb3QudjEuUXVvdGVDbGlwU3BlZWNoUmVxdWVzdBodLnBvc3RwaWxvdC52MS5DbGlwU3BlZWNoUXVvdGUSXgoPU3RhcnRDbGlwU3BlZWNoEiQucG9zdHBpbG90LnYxLlN0YXJ0Q2xpcFNwZWVjaFJlcXVlc3QaJS5wb3N0cGlsb3QudjEuU3RhcnRDbGlwU3BlZWNoUmVzcG9uc2USaAoWR2V0Q2xpcFNwZWVjaFJlYWRpbmVzcxIrLnBvc3RwaWxvdC52MS5HZXRDbGlwU3BlZWNoUmVhZGluZXNzUmVxdWVzdBohLnBvc3RwaWxvdC52MS5DbGlwU3BlZWNoUmVhZGluZXNzQkRaQmdpdGh1Yi5jb20vcG9zdHBpbG90L2JhY2tlbmQvaW50ZXJuYWwvZ2VuL3Bvc3RwaWxvdC92MTtwb3N0cGlsb3R2MWIGcHJvdG8z", [file_postpilot_v1_clip]);
 
 /**
  * @generated from message postpilot.v1.QuoteClipSpeechRequest
@@ -62,6 +64,11 @@ export type ClipSpeechQuote = Message<"postpilot.v1.ClipSpeechQuote"> & {
    * @generated from field: int32 plan_revision = 5;
    */
   planRevision: number;
+
+  /**
+   * @generated from field: int32 cancellation_policy_version = 6;
+   */
+  cancellationPolicyVersion: number;
 };
 
 /**
@@ -212,9 +219,153 @@ export const ClipSpeechReadinessSchema: GenMessage<ClipSpeechReadiness> = /*@__P
   messageDesc(file_postpilot_v1_clip_speech, 6);
 
 /**
+ * @generated from message postpilot.v1.GetClipSpeechAccessRequest
+ */
+export type GetClipSpeechAccessRequest = Message<"postpilot.v1.GetClipSpeechAccessRequest"> & {
+  /**
+   * @generated from field: string project_id = 1;
+   */
+  projectId: string;
+
+  /**
+   * @generated from field: string asset_id = 2;
+   */
+  assetId: string;
+};
+
+/**
+ * Describes the message postpilot.v1.GetClipSpeechAccessRequest.
+ * Use `create(GetClipSpeechAccessRequestSchema)` to create a new message.
+ */
+export const GetClipSpeechAccessRequestSchema: GenMessage<GetClipSpeechAccessRequest> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_clip_speech, 7);
+
+/**
+ * @generated from message postpilot.v1.ClipSpeechAccess
+ */
+export type ClipSpeechAccess = Message<"postpilot.v1.ClipSpeechAccess"> & {
+  /**
+   * @generated from field: string url = 1;
+   */
+  url: string;
+
+  /**
+   * @generated from field: string expires_at = 2;
+   */
+  expiresAt: string;
+
+  /**
+   * @generated from field: string audio_hash = 3;
+   */
+  audioHash: string;
+
+  /**
+   * @generated from field: int64 bytes = 4;
+   */
+  bytes: bigint;
+};
+
+/**
+ * Describes the message postpilot.v1.ClipSpeechAccess.
+ * Use `create(ClipSpeechAccessSchema)` to create a new message.
+ */
+export const ClipSpeechAccessSchema: GenMessage<ClipSpeechAccess> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_clip_speech, 8);
+
+/**
+ * @generated from message postpilot.v1.ClipSpokenDraft
+ */
+export type ClipSpokenDraft = Message<"postpilot.v1.ClipSpokenDraft"> & {
+  /**
+   * @generated from field: string digest = 1;
+   */
+  digest: string;
+
+  /**
+   * @generated from field: postpilot.v1.ClipNarration narration = 2;
+   */
+  narration?: ClipNarration | undefined;
+};
+
+/**
+ * Describes the message postpilot.v1.ClipSpokenDraft.
+ * Use `create(ClipSpokenDraftSchema)` to create a new message.
+ */
+export const ClipSpokenDraftSchema: GenMessage<ClipSpokenDraft> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_clip_speech, 9);
+
+/**
+ * @generated from message postpilot.v1.GetClipSpokenDraftRequest
+ */
+export type GetClipSpokenDraftRequest = Message<"postpilot.v1.GetClipSpokenDraftRequest"> & {
+  /**
+   * @generated from field: string project_id = 1;
+   */
+  projectId: string;
+};
+
+/**
+ * Describes the message postpilot.v1.GetClipSpokenDraftRequest.
+ * Use `create(GetClipSpokenDraftRequestSchema)` to create a new message.
+ */
+export const GetClipSpokenDraftRequestSchema: GenMessage<GetClipSpokenDraftRequest> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_clip_speech, 10);
+
+/**
+ * @generated from message postpilot.v1.SaveClipSpokenDraftRequest
+ */
+export type SaveClipSpokenDraftRequest = Message<"postpilot.v1.SaveClipSpokenDraftRequest"> & {
+  /**
+   * @generated from field: string project_id = 1;
+   */
+  projectId: string;
+
+  /**
+   * @generated from field: string expected_digest = 2;
+   */
+  expectedDigest: string;
+
+  /**
+   * @generated from field: postpilot.v1.ClipNarration narration = 3;
+   */
+  narration?: ClipNarration | undefined;
+};
+
+/**
+ * Describes the message postpilot.v1.SaveClipSpokenDraftRequest.
+ * Use `create(SaveClipSpokenDraftRequestSchema)` to create a new message.
+ */
+export const SaveClipSpokenDraftRequestSchema: GenMessage<SaveClipSpokenDraftRequest> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_clip_speech, 11);
+
+/**
  * @generated from service postpilot.v1.ClipSpeechService
  */
 export const ClipSpeechService: GenService<{
+  /**
+   * @generated from rpc postpilot.v1.ClipSpeechService.GetClipSpokenDraft
+   */
+  getClipSpokenDraft: {
+    methodKind: "unary";
+    input: typeof GetClipSpokenDraftRequestSchema;
+    output: typeof ClipSpokenDraftSchema;
+  },
+  /**
+   * @generated from rpc postpilot.v1.ClipSpeechService.SaveClipSpokenDraft
+   */
+  saveClipSpokenDraft: {
+    methodKind: "unary";
+    input: typeof SaveClipSpokenDraftRequestSchema;
+    output: typeof ClipSpokenDraftSchema;
+  },
+  /**
+   * @generated from rpc postpilot.v1.ClipSpeechService.GetClipSpeechAccess
+   */
+  getClipSpeechAccess: {
+    methodKind: "unary";
+    input: typeof GetClipSpeechAccessRequestSchema;
+    output: typeof ClipSpeechAccessSchema;
+  },
   /**
    * @generated from rpc postpilot.v1.ClipSpeechService.QuoteClipSpeech
    */

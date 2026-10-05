@@ -25,6 +25,7 @@ import { splitRapid } from './caption-pace'
 import { clipOwnerSizeFits } from './caption-style'
 import { clipDraftKey } from './draft-key'
 import { withClipRegionsOf } from './region-rebase'
+import { spokenRenderReady, spokenScriptValid, type ClipSpokenSegment } from './spoken'
 
 export { clipDraftKey }
 
@@ -33,6 +34,22 @@ export type ClipSelection =
   | { kind: 'text'; id: string; phrase?: number }
   | { kind: 'spoken'; id: string }
 export type TimelineEdit =
+  | {
+      type: 'narrationOptions'
+      enabled?: boolean
+      confirmedVoiceId?: string
+      volumePermille?: number
+    }
+  | { type: 'sourceGain'; volumePermille: number }
+  | {
+      type: 'spokenPatch'
+      id: string
+      patch: Partial<Pick<ClipSpokenSegment, 'text' | 'startMs' | 'endMs'>>
+    }
+  | { type: 'addSpoken'; id: string; startMs: number; endMs: number }
+  | { type: 'removeSpoken'; id: string }
+  | { type: 'splitSpoken'; id: string; newId: string; character: number }
+  | { type: 'replacePlan'; plan: ClipEditPlan; expectedKey: string }
   | { type: 'refreshCaptions' }
   | { type: 'addScriptCaption'; id: string; segmentId: string; startMs: number; endMs: number }
   | ClipEdit
@@ -242,10 +259,13 @@ export function validateTimelinePlan(
   aiSet: readonly string[] = [],
 ) {
   const legacy = validateClipPlan(plan, state)
+  const speechReady = spokenRenderReady(plan.narration, plan.durationMs)
   if (!plan.nativeComposition)
     return {
       ...legacy,
-      saveable: legacy.valid,
+      saveable: legacy.valid && spokenScriptValid(plan.narration),
+      speechReady,
+      valid: legacy.valid && speechReady,
       elements: [] as ReturnType<typeof nativeTextErrors>,
     }
   const cuts = legacy.cuts.map((cut, index) => ({
@@ -282,6 +302,11 @@ export function validateTimelinePlan(
       endMs - startMs <= Math.max(400, cut.transitionMs + (geometry[i + 1]?.cut.transitionMs ?? 0)),
   )
   const saveable =
+    spokenScriptValid(plan.narration) &&
+    (plan.sourceVolumePermille === undefined ||
+      (Number.isSafeInteger(plan.sourceVolumePermille) &&
+        plan.sourceVolumePermille >= 0 &&
+        plan.sourceVolumePermille <= 1000)) &&
     !legacy.count &&
     !legacy.timeline &&
     !invalidSeam &&
@@ -295,7 +320,8 @@ export function validateTimelinePlan(
     elements,
     frequency: false,
     saveable,
-    valid: saveable && elements.every((e) => !e.stale),
+    speechReady,
+    valid: saveable && speechReady && elements.every((e) => !e.stale),
   }
 }
 
@@ -318,6 +344,93 @@ export function associationAffectsText(text: ClipEditableText, changed: ClipSour
 
 export function applyTimelineEdit(plan: ClipEditPlan, edit: TimelineEdit): ClipEditPlan {
   const next = copyClipPlan(plan)
+  if (edit.type === 'replacePlan')
+    return clipDraftKey(plan) === edit.expectedKey ? copyClipPlan(edit.plan) : plan
+  if (edit.type === 'sourceGain') {
+    next.sourceVolumePermille = edit.volumePermille
+    return next
+  }
+  if (edit.type === 'narrationOptions') {
+    next.narration ??= {
+      enabled: false,
+      confirmedVoiceId: '',
+      bindingDigest: '',
+      volumePermille: 1000,
+      segments: [],
+    }
+    const n = next.narration
+    if (edit.confirmedVoiceId !== undefined && edit.confirmedVoiceId !== n.confirmedVoiceId)
+      n.bindingDigest = ''
+    Object.assign(
+      n,
+      edit.enabled === undefined ? {} : { enabled: edit.enabled },
+      edit.confirmedVoiceId === undefined ? {} : { confirmedVoiceId: edit.confirmedVoiceId },
+      edit.volumePermille === undefined ? {} : { volumePermille: edit.volumePermille },
+    )
+    return next
+  }
+  if (edit.type === 'addSpoken') {
+    if (!next.narration || next.narration.segments.length >= 32) return plan
+    next.narration.segments.push({
+      id: edit.id,
+      text: '',
+      textRevision: 1,
+      inputHash: '',
+      startMs: edit.startMs,
+      endMs: edit.endMs,
+      creation: true,
+    })
+    return next
+  }
+  if (edit.type === 'removeSpoken') {
+    if (next.narration)
+      next.narration.segments = next.narration.segments.filter((s) => s.id !== edit.id)
+    return next
+  }
+  if (edit.type === 'spokenPatch' || edit.type === 'splitSpoken') {
+    const n = next.narration,
+      s = n?.segments.find((s) => s.id === edit.id)
+    if (!n || !s) return plan
+    if (edit.type === 'spokenPatch') {
+      if (edit.patch.text !== undefined && edit.patch.text !== s.text) {
+        s.textRevision++
+        s.inputHash = ''
+      }
+      Object.assign(s, edit.patch)
+    } else {
+      const chars = Array.from(s.text),
+        at = edit.character
+      if (
+        !Number.isInteger(at) ||
+        at <= 0 ||
+        at >= chars.length ||
+        n.segments.length >= 32 ||
+        s.endMs - s.startMs < 2
+      )
+        return plan
+      const end = s.endMs,
+        middle =
+          s.startMs +
+          Math.max(
+            1,
+            Math.min(end - s.startMs - 1, Math.round(((end - s.startMs) * at) / chars.length)),
+          )
+      s.text = chars.slice(0, at).join('')
+      s.inputHash = ''
+      s.textRevision++
+      s.endMs = middle
+      n.segments.splice(n.segments.indexOf(s) + 1, 0, {
+        id: edit.newId,
+        text: chars.slice(at).join(''),
+        inputHash: '',
+        textRevision: 1,
+        startMs: middle,
+        endMs: end,
+        creation: true,
+      })
+    }
+    return next
+  }
   if (edit.type === 'refreshCaptions') return refreshCaptionWording(next)
   if (edit.type === 'addScriptCaption') {
     const segment = next.narration?.segments.find((s) => s.id === edit.segmentId)
@@ -667,15 +780,44 @@ export type ClipTimelineAction =
       /** A server plan whose region elements the history takes as well: set when the server
        *  moved the regions under the draft, so no undo brings their older words back. */
       regionsFrom?: ClipEditPlan
+      identitiesFrom?: ClipEditPlan
     }
   | { type: 'acknowledge'; plan: ClipEditPlan }
 
 /** Once accepted, an identity stays known even after delete/save/undo. */
-export function acknowledgeClipCuts(plan: ClipEditPlan, accepted: ClipEditPlan): ClipEditPlan {
+export function acknowledgeClipCuts(
+  plan: ClipEditPlan,
+  accepted: ClipEditPlan,
+  submitted?: ClipEditPlan,
+): ClipEditPlan {
   const ids = new Set(accepted.cuts.map((c) => c.id))
+  const mappings = new Map<string, ClipSpokenSegment>()
+  for (const [i, source] of (submitted?.narration?.segments ?? []).entries()) {
+    const known = accepted.narration?.segments[i]
+    if (source.creation && known && !known.creation) mappings.set(source.id, known)
+  }
   return {
     ...plan,
     cuts: plan.cuts.map((c) => (c.creation && ids.has(c.id) ? { ...c, creation: undefined } : c)),
+    ...(plan.narration
+      ? {
+          narration: {
+            ...plan.narration,
+            segments: plan.narration.segments.map((s) => {
+              const known = mappings.get(s.id)
+              if (!known) return s
+              return {
+                ...s,
+                id: known.id,
+                creation: undefined,
+                ...(known.text === s.text
+                  ? { inputHash: known.inputHash, textRevision: known.textRevision }
+                  : {}),
+              }
+            }),
+          },
+        }
+      : {}),
   }
 }
 
@@ -745,7 +887,11 @@ export function clipTimelineReducer(
   if (action.type === 'adopt' || action.type === 'acknowledge') {
     const regions = action.type === 'adopt' ? action.regionsFrom : undefined
     const followed = (plan: ClipEditPlan) => {
-      const known = acknowledgeClipCuts(plan, action.plan)
+      const known = acknowledgeClipCuts(
+        plan,
+        action.plan,
+        action.type === 'adopt' ? action.identitiesFrom : undefined,
+      )
       return regions ? withClipRegionsOf(known, regions) : known
     }
     return {

@@ -74,14 +74,15 @@ func (x *QuoteClipSpeechRequest) GetExpectedRevision() int32 {
 }
 
 type ClipSpeechQuote struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	QuoteId        string                 `protobuf:"bytes,1,opt,name=quote_id,json=quoteId,proto3" json:"quote_id,omitempty"`
-	MaximumCredits int32                  `protobuf:"varint,2,opt,name=maximum_credits,json=maximumCredits,proto3" json:"maximum_credits,omitempty"`
-	ExpiresAt      string                 `protobuf:"bytes,3,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`
-	SegmentIds     []string               `protobuf:"bytes,4,rep,name=segment_ids,json=segmentIds,proto3" json:"segment_ids,omitempty"`
-	PlanRevision   int32                  `protobuf:"varint,5,opt,name=plan_revision,json=planRevision,proto3" json:"plan_revision,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	state                     protoimpl.MessageState `protogen:"open.v1"`
+	QuoteId                   string                 `protobuf:"bytes,1,opt,name=quote_id,json=quoteId,proto3" json:"quote_id,omitempty"`
+	MaximumCredits            int32                  `protobuf:"varint,2,opt,name=maximum_credits,json=maximumCredits,proto3" json:"maximum_credits,omitempty"`
+	ExpiresAt                 string                 `protobuf:"bytes,3,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`
+	SegmentIds                []string               `protobuf:"bytes,4,rep,name=segment_ids,json=segmentIds,proto3" json:"segment_ids,omitempty"`
+	PlanRevision              int32                  `protobuf:"varint,5,opt,name=plan_revision,json=planRevision,proto3" json:"plan_revision,omitempty"`
+	CancellationPolicyVersion int32                  `protobuf:"varint,6,opt,name=cancellation_policy_version,json=cancellationPolicyVersion,proto3" json:"cancellation_policy_version,omitempty"`
+	unknownFields             protoimpl.UnknownFields
+	sizeCache                 protoimpl.SizeCache
 }
 
 func (x *ClipSpeechQuote) Reset() {
@@ -145,6 +146,13 @@ func (x *ClipSpeechQuote) GetSegmentIds() []string {
 func (x *ClipSpeechQuote) GetPlanRevision() int32 {
 	if x != nil {
 		return x.PlanRevision
+	}
+	return 0
+}
+
+func (x *ClipSpeechQuote) GetCancellationPolicyVersion() int32 {
+	if x != nil {
+		return x.CancellationPolicyVersion
 	}
 	return 0
 }
@@ -457,15 +465,291 @@ func (x *ClipSpeechReadiness) GetRenderReady() bool {
 	return false
 }
 
+type GetClipSpeechAccessRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ProjectId     string                 `protobuf:"bytes,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	AssetId       string                 `protobuf:"bytes,2,opt,name=asset_id,json=assetId,proto3" json:"asset_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetClipSpeechAccessRequest) Reset() {
+	*x = GetClipSpeechAccessRequest{}
+	mi := &file_postpilot_v1_clip_speech_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetClipSpeechAccessRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetClipSpeechAccessRequest) ProtoMessage() {}
+
+func (x *GetClipSpeechAccessRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_clip_speech_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetClipSpeechAccessRequest.ProtoReflect.Descriptor instead.
+func (*GetClipSpeechAccessRequest) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_clip_speech_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *GetClipSpeechAccessRequest) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
+func (x *GetClipSpeechAccessRequest) GetAssetId() string {
+	if x != nil {
+		return x.AssetId
+	}
+	return ""
+}
+
+type ClipSpeechAccess struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Url           string                 `protobuf:"bytes,1,opt,name=url,proto3" json:"url,omitempty"`
+	ExpiresAt     string                 `protobuf:"bytes,2,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`
+	AudioHash     string                 `protobuf:"bytes,3,opt,name=audio_hash,json=audioHash,proto3" json:"audio_hash,omitempty"`
+	Bytes         int64                  `protobuf:"varint,4,opt,name=bytes,proto3" json:"bytes,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ClipSpeechAccess) Reset() {
+	*x = ClipSpeechAccess{}
+	mi := &file_postpilot_v1_clip_speech_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ClipSpeechAccess) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ClipSpeechAccess) ProtoMessage() {}
+
+func (x *ClipSpeechAccess) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_clip_speech_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ClipSpeechAccess.ProtoReflect.Descriptor instead.
+func (*ClipSpeechAccess) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_clip_speech_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *ClipSpeechAccess) GetUrl() string {
+	if x != nil {
+		return x.Url
+	}
+	return ""
+}
+
+func (x *ClipSpeechAccess) GetExpiresAt() string {
+	if x != nil {
+		return x.ExpiresAt
+	}
+	return ""
+}
+
+func (x *ClipSpeechAccess) GetAudioHash() string {
+	if x != nil {
+		return x.AudioHash
+	}
+	return ""
+}
+
+func (x *ClipSpeechAccess) GetBytes() int64 {
+	if x != nil {
+		return x.Bytes
+	}
+	return 0
+}
+
+type ClipSpokenDraft struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Digest        string                 `protobuf:"bytes,1,opt,name=digest,proto3" json:"digest,omitempty"`
+	Narration     *ClipNarration         `protobuf:"bytes,2,opt,name=narration,proto3" json:"narration,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ClipSpokenDraft) Reset() {
+	*x = ClipSpokenDraft{}
+	mi := &file_postpilot_v1_clip_speech_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ClipSpokenDraft) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ClipSpokenDraft) ProtoMessage() {}
+
+func (x *ClipSpokenDraft) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_clip_speech_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ClipSpokenDraft.ProtoReflect.Descriptor instead.
+func (*ClipSpokenDraft) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_clip_speech_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *ClipSpokenDraft) GetDigest() string {
+	if x != nil {
+		return x.Digest
+	}
+	return ""
+}
+
+func (x *ClipSpokenDraft) GetNarration() *ClipNarration {
+	if x != nil {
+		return x.Narration
+	}
+	return nil
+}
+
+type GetClipSpokenDraftRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ProjectId     string                 `protobuf:"bytes,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetClipSpokenDraftRequest) Reset() {
+	*x = GetClipSpokenDraftRequest{}
+	mi := &file_postpilot_v1_clip_speech_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetClipSpokenDraftRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetClipSpokenDraftRequest) ProtoMessage() {}
+
+func (x *GetClipSpokenDraftRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_clip_speech_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetClipSpokenDraftRequest.ProtoReflect.Descriptor instead.
+func (*GetClipSpokenDraftRequest) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_clip_speech_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *GetClipSpokenDraftRequest) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
+type SaveClipSpokenDraftRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	ProjectId      string                 `protobuf:"bytes,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	ExpectedDigest string                 `protobuf:"bytes,2,opt,name=expected_digest,json=expectedDigest,proto3" json:"expected_digest,omitempty"`
+	Narration      *ClipNarration         `protobuf:"bytes,3,opt,name=narration,proto3" json:"narration,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *SaveClipSpokenDraftRequest) Reset() {
+	*x = SaveClipSpokenDraftRequest{}
+	mi := &file_postpilot_v1_clip_speech_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SaveClipSpokenDraftRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SaveClipSpokenDraftRequest) ProtoMessage() {}
+
+func (x *SaveClipSpokenDraftRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_clip_speech_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SaveClipSpokenDraftRequest.ProtoReflect.Descriptor instead.
+func (*SaveClipSpokenDraftRequest) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_clip_speech_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *SaveClipSpokenDraftRequest) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
+func (x *SaveClipSpokenDraftRequest) GetExpectedDigest() string {
+	if x != nil {
+		return x.ExpectedDigest
+	}
+	return ""
+}
+
+func (x *SaveClipSpokenDraftRequest) GetNarration() *ClipNarration {
+	if x != nil {
+		return x.Narration
+	}
+	return nil
+}
+
 var File_postpilot_v1_clip_speech_proto protoreflect.FileDescriptor
 
 const file_postpilot_v1_clip_speech_proto_rawDesc = "" +
 	"\n" +
-	"\x1epostpilot/v1/clip_speech.proto\x12\fpostpilot.v1\"d\n" +
+	"\x1epostpilot/v1/clip_speech.proto\x12\fpostpilot.v1\x1a\x17postpilot/v1/clip.proto\"d\n" +
 	"\x16QuoteClipSpeechRequest\x12\x1d\n" +
 	"\n" +
 	"project_id\x18\x01 \x01(\tR\tprojectId\x12+\n" +
-	"\x11expected_revision\x18\x02 \x01(\x05R\x10expectedRevision\"\xba\x01\n" +
+	"\x11expected_revision\x18\x02 \x01(\x05R\x10expectedRevision\"\xfa\x01\n" +
 	"\x0fClipSpeechQuote\x12\x19\n" +
 	"\bquote_id\x18\x01 \x01(\tR\aquoteId\x12'\n" +
 	"\x0fmaximum_credits\x18\x02 \x01(\x05R\x0emaximumCredits\x12\x1d\n" +
@@ -473,7 +757,8 @@ const file_postpilot_v1_clip_speech_proto_rawDesc = "" +
 	"expires_at\x18\x03 \x01(\tR\texpiresAt\x12\x1f\n" +
 	"\vsegment_ids\x18\x04 \x03(\tR\n" +
 	"segmentIds\x12#\n" +
-	"\rplan_revision\x18\x05 \x01(\x05R\fplanRevision\"\xb8\x02\n" +
+	"\rplan_revision\x18\x05 \x01(\x05R\fplanRevision\x12>\n" +
+	"\x1bcancellation_policy_version\x18\x06 \x01(\x05R\x19cancellationPolicyVersion\"\xb8\x02\n" +
 	"\x16StartClipSpeechRequest\x12\x1d\n" +
 	"\n" +
 	"project_id\x18\x01 \x01(\tR\tprojectId\x12+\n" +
@@ -499,8 +784,33 @@ const file_postpilot_v1_clip_speech_proto_rawDesc = "" +
 	"\x13ClipSpeechReadiness\x12#\n" +
 	"\rplan_revision\x18\x01 \x01(\x05R\fplanRevision\x12D\n" +
 	"\bsegments\x18\x02 \x03(\v2(.postpilot.v1.ClipSpeechSegmentReadinessR\bsegments\x12!\n" +
-	"\frender_ready\x18\x03 \x01(\bR\vrenderReady2\xb5\x02\n" +
-	"\x11ClipSpeechService\x12V\n" +
+	"\frender_ready\x18\x03 \x01(\bR\vrenderReady\"V\n" +
+	"\x1aGetClipSpeechAccessRequest\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\x01 \x01(\tR\tprojectId\x12\x19\n" +
+	"\basset_id\x18\x02 \x01(\tR\aassetId\"x\n" +
+	"\x10ClipSpeechAccess\x12\x10\n" +
+	"\x03url\x18\x01 \x01(\tR\x03url\x12\x1d\n" +
+	"\n" +
+	"expires_at\x18\x02 \x01(\tR\texpiresAt\x12\x1d\n" +
+	"\n" +
+	"audio_hash\x18\x03 \x01(\tR\taudioHash\x12\x14\n" +
+	"\x05bytes\x18\x04 \x01(\x03R\x05bytes\"d\n" +
+	"\x0fClipSpokenDraft\x12\x16\n" +
+	"\x06digest\x18\x01 \x01(\tR\x06digest\x129\n" +
+	"\tnarration\x18\x02 \x01(\v2\x1b.postpilot.v1.ClipNarrationR\tnarration\":\n" +
+	"\x19GetClipSpokenDraftRequest\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\x01 \x01(\tR\tprojectId\"\x9f\x01\n" +
+	"\x1aSaveClipSpokenDraftRequest\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\x01 \x01(\tR\tprojectId\x12'\n" +
+	"\x0fexpected_digest\x18\x02 \x01(\tR\x0eexpectedDigest\x129\n" +
+	"\tnarration\x18\x03 \x01(\v2\x1b.postpilot.v1.ClipNarrationR\tnarration2\xd4\x04\n" +
+	"\x11ClipSpeechService\x12\\\n" +
+	"\x12GetClipSpokenDraft\x12'.postpilot.v1.GetClipSpokenDraftRequest\x1a\x1d.postpilot.v1.ClipSpokenDraft\x12^\n" +
+	"\x13SaveClipSpokenDraft\x12(.postpilot.v1.SaveClipSpokenDraftRequest\x1a\x1d.postpilot.v1.ClipSpokenDraft\x12_\n" +
+	"\x13GetClipSpeechAccess\x12(.postpilot.v1.GetClipSpeechAccessRequest\x1a\x1e.postpilot.v1.ClipSpeechAccess\x12V\n" +
 	"\x0fQuoteClipSpeech\x12$.postpilot.v1.QuoteClipSpeechRequest\x1a\x1d.postpilot.v1.ClipSpeechQuote\x12^\n" +
 	"\x0fStartClipSpeech\x12$.postpilot.v1.StartClipSpeechRequest\x1a%.postpilot.v1.StartClipSpeechResponse\x12h\n" +
 	"\x16GetClipSpeechReadiness\x12+.postpilot.v1.GetClipSpeechReadinessRequest\x1a!.postpilot.v1.ClipSpeechReadinessBDZBgithub.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1b\x06proto3"
@@ -517,7 +827,7 @@ func file_postpilot_v1_clip_speech_proto_rawDescGZIP() []byte {
 	return file_postpilot_v1_clip_speech_proto_rawDescData
 }
 
-var file_postpilot_v1_clip_speech_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
+var file_postpilot_v1_clip_speech_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
 var file_postpilot_v1_clip_speech_proto_goTypes = []any{
 	(*QuoteClipSpeechRequest)(nil),        // 0: postpilot.v1.QuoteClipSpeechRequest
 	(*ClipSpeechQuote)(nil),               // 1: postpilot.v1.ClipSpeechQuote
@@ -526,20 +836,34 @@ var file_postpilot_v1_clip_speech_proto_goTypes = []any{
 	(*GetClipSpeechReadinessRequest)(nil), // 4: postpilot.v1.GetClipSpeechReadinessRequest
 	(*ClipSpeechSegmentReadiness)(nil),    // 5: postpilot.v1.ClipSpeechSegmentReadiness
 	(*ClipSpeechReadiness)(nil),           // 6: postpilot.v1.ClipSpeechReadiness
+	(*GetClipSpeechAccessRequest)(nil),    // 7: postpilot.v1.GetClipSpeechAccessRequest
+	(*ClipSpeechAccess)(nil),              // 8: postpilot.v1.ClipSpeechAccess
+	(*ClipSpokenDraft)(nil),               // 9: postpilot.v1.ClipSpokenDraft
+	(*GetClipSpokenDraftRequest)(nil),     // 10: postpilot.v1.GetClipSpokenDraftRequest
+	(*SaveClipSpokenDraftRequest)(nil),    // 11: postpilot.v1.SaveClipSpokenDraftRequest
+	(*ClipNarration)(nil),                 // 12: postpilot.v1.ClipNarration
 }
 var file_postpilot_v1_clip_speech_proto_depIdxs = []int32{
-	5, // 0: postpilot.v1.ClipSpeechReadiness.segments:type_name -> postpilot.v1.ClipSpeechSegmentReadiness
-	0, // 1: postpilot.v1.ClipSpeechService.QuoteClipSpeech:input_type -> postpilot.v1.QuoteClipSpeechRequest
-	2, // 2: postpilot.v1.ClipSpeechService.StartClipSpeech:input_type -> postpilot.v1.StartClipSpeechRequest
-	4, // 3: postpilot.v1.ClipSpeechService.GetClipSpeechReadiness:input_type -> postpilot.v1.GetClipSpeechReadinessRequest
-	1, // 4: postpilot.v1.ClipSpeechService.QuoteClipSpeech:output_type -> postpilot.v1.ClipSpeechQuote
-	3, // 5: postpilot.v1.ClipSpeechService.StartClipSpeech:output_type -> postpilot.v1.StartClipSpeechResponse
-	6, // 6: postpilot.v1.ClipSpeechService.GetClipSpeechReadiness:output_type -> postpilot.v1.ClipSpeechReadiness
-	4, // [4:7] is the sub-list for method output_type
-	1, // [1:4] is the sub-list for method input_type
-	1, // [1:1] is the sub-list for extension type_name
-	1, // [1:1] is the sub-list for extension extendee
-	0, // [0:1] is the sub-list for field type_name
+	5,  // 0: postpilot.v1.ClipSpeechReadiness.segments:type_name -> postpilot.v1.ClipSpeechSegmentReadiness
+	12, // 1: postpilot.v1.ClipSpokenDraft.narration:type_name -> postpilot.v1.ClipNarration
+	12, // 2: postpilot.v1.SaveClipSpokenDraftRequest.narration:type_name -> postpilot.v1.ClipNarration
+	10, // 3: postpilot.v1.ClipSpeechService.GetClipSpokenDraft:input_type -> postpilot.v1.GetClipSpokenDraftRequest
+	11, // 4: postpilot.v1.ClipSpeechService.SaveClipSpokenDraft:input_type -> postpilot.v1.SaveClipSpokenDraftRequest
+	7,  // 5: postpilot.v1.ClipSpeechService.GetClipSpeechAccess:input_type -> postpilot.v1.GetClipSpeechAccessRequest
+	0,  // 6: postpilot.v1.ClipSpeechService.QuoteClipSpeech:input_type -> postpilot.v1.QuoteClipSpeechRequest
+	2,  // 7: postpilot.v1.ClipSpeechService.StartClipSpeech:input_type -> postpilot.v1.StartClipSpeechRequest
+	4,  // 8: postpilot.v1.ClipSpeechService.GetClipSpeechReadiness:input_type -> postpilot.v1.GetClipSpeechReadinessRequest
+	9,  // 9: postpilot.v1.ClipSpeechService.GetClipSpokenDraft:output_type -> postpilot.v1.ClipSpokenDraft
+	9,  // 10: postpilot.v1.ClipSpeechService.SaveClipSpokenDraft:output_type -> postpilot.v1.ClipSpokenDraft
+	8,  // 11: postpilot.v1.ClipSpeechService.GetClipSpeechAccess:output_type -> postpilot.v1.ClipSpeechAccess
+	1,  // 12: postpilot.v1.ClipSpeechService.QuoteClipSpeech:output_type -> postpilot.v1.ClipSpeechQuote
+	3,  // 13: postpilot.v1.ClipSpeechService.StartClipSpeech:output_type -> postpilot.v1.StartClipSpeechResponse
+	6,  // 14: postpilot.v1.ClipSpeechService.GetClipSpeechReadiness:output_type -> postpilot.v1.ClipSpeechReadiness
+	9,  // [9:15] is the sub-list for method output_type
+	3,  // [3:9] is the sub-list for method input_type
+	3,  // [3:3] is the sub-list for extension type_name
+	3,  // [3:3] is the sub-list for extension extendee
+	0,  // [0:3] is the sub-list for field type_name
 }
 
 func init() { file_postpilot_v1_clip_speech_proto_init() }
@@ -547,6 +871,7 @@ func file_postpilot_v1_clip_speech_proto_init() {
 	if File_postpilot_v1_clip_speech_proto != nil {
 		return
 	}
+	file_postpilot_v1_clip_proto_init()
 	file_postpilot_v1_clip_speech_proto_msgTypes[2].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -554,7 +879,7 @@ func file_postpilot_v1_clip_speech_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_postpilot_v1_clip_speech_proto_rawDesc), len(file_postpilot_v1_clip_speech_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   7,
+			NumMessages:   12,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -198,6 +198,9 @@ func (s *Service) Revise(ctx context.Context, model llm.ModelRef, input clip.Rev
 		!within(input.Request, 1, s.cfg.Template.InstructionChars) {
 		return clip.EditPlan{}, llm.Usage{}, stageError("flow", clip.ErrInvalid)
 	}
+	if input.Current.Narration != nil {
+		return s.reviseSpoken(ctx, model, input)
+	}
 	usage := llm.Usage{}
 	flow := input.Current
 	if input.Target != clip.RevisionNarration {

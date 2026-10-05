@@ -59,8 +59,13 @@ export function ClipProjectForm({
   actions,
   refusal,
   regions,
+  dubbing,
 }: {
   ownerId: string
+  dubbing?: (
+    value: NonNullable<ClipProjectDraft['dubbing']>,
+    change: (value: NonNullable<ClipProjectDraft['dubbing']>) => void,
+  ) => ReactNode
   stored?: ClipProject
   /** Whether each region is used, and its switch — held by the workspace, which saves region
    *  edits for ① and ② alike (CLIP-111). */
@@ -463,6 +468,10 @@ export function ClipProjectForm({
           )}
         </fieldset>
       </form>
+      {!creating &&
+        dubbing?.(draft.dubbing ?? { enabled: false, voiceId: '' }, (value) =>
+          change('dubbing', value),
+        )}
       {children}
       {/* A reading commits nothing, so it docks nothing (CLIP-160, CLIP-40). */}
       {!readOnly && (

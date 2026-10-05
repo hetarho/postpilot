@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { Link } from '@tanstack/react-router'
 import { isTerminal } from '@/entities/generation-job'
 import { useTranslation } from 'react-i18next'
 import { ClipFailureNotice, ClipRequestRecord, type ClipProject } from '@/entities/clip-project'
@@ -10,6 +9,12 @@ import { ClipDraftPreviewPanel } from '@/features/preview-clip-draft'
 import { FinalizeClipAction } from '@/features/finalize-clip'
 import { CancelClipAction } from '@/features/cancel-clip'
 import { ClipProjectForm } from '@/features/edit-clip-project'
+import {
+  ClipVoiceChoice,
+  ClipDubbingEditor,
+  ClipSpokenProperties,
+  ClipSpokenRecoveryEditor,
+} from '@/features/regenerate-clip-speech'
 import { DeleteClipProjectButton } from '@/features/delete-clip-project'
 import { discardClipDraftQueue } from '@/features/edit-clip-project'
 import { ClipRegionEditor, discardClipRegionQueue } from '@/features/edit-clip-regions'
@@ -25,15 +30,7 @@ import { ClipRevisionRequest } from '@/features/revise-clip'
 import { StageModelSelect } from '@/features/select-model'
 import { ClipSourcePicker } from '@/features/upload-clip-sources'
 import { ClipObservationViewer, ClipAttemptInspection } from '@/features/inspect-clip-observations'
-import {
-  ActionBar,
-  Button,
-  Sheet,
-  SegmentedControl,
-  ProgressBar,
-  Typography,
-  buttonStyles,
-} from '@/shared/ui'
+import { ActionBar, Button, Sheet, SegmentedControl, ProgressBar, Typography } from '@/shared/ui'
 import { useRunFocus } from '../model/lifecycle'
 import { useClipWorkspace } from '../model/useClipWorkspace'
 import { clipStepLabel, clipSteps } from '../model/steps'
@@ -110,6 +107,15 @@ export function ClipWorkspace({ ownerId, project }: { ownerId: string; project: 
       disabled={pending || reading}
       readOnly={reading}
       onUploadAllowed={sources.allow}
+      dubbing={(value, change) => (
+        <ClipVoiceChoice
+          ownerId={ownerId}
+          enabled={value.enabled}
+          voiceId={value.voiceId}
+          disabled={pending || reading}
+          onChange={change}
+        />
+      )}
       regions={
         regions.regions && {
           enabled: { intro: regions.regions.intro.enabled, outro: regions.regions.outro.enabled },
@@ -460,13 +466,13 @@ export function ClipWorkspace({ ownerId, project }: { ownerId: string; project: 
                   uploading ||
                   generation.busy ||
                   render.browser.busy ||
-                  !correction.validation?.saveable ||
+                  !correction.validation?.valid ||
                   regions.invalid
                 }
                 localRefusal={
                   uploading || generation.busy || render.browser.busy
                     ? 'busy'
-                    : !correction.validation?.saveable || regions.invalid
+                    : !correction.validation?.valid || regions.invalid
                       ? 'invalid_plan'
                       : undefined
                 }
@@ -485,6 +491,18 @@ export function ClipWorkspace({ ownerId, project }: { ownerId: string; project: 
             </>
           ),
           addDubbing: () => setEditorPanel('script'),
+          spokenProperties: (segment) =>
+            correction.draft.narration && (
+              <ClipSpokenProperties
+                ownerId={ownerId}
+                projectId={project.id}
+                narration={correction.draft.narration}
+                segment={segment}
+                durationMs={correction.draft.durationMs}
+                disabled={pending || reading}
+                change={correction.change}
+              />
+            ),
           referenceAction,
         }}
       />
@@ -501,30 +519,34 @@ export function ClipWorkspace({ ownerId, project }: { ownerId: string; project: 
         {editorPanel === 'storyline' ? (
           storylineSpace
         ) : (
-          <div className="min-w-0 space-y-3">
-            <Typography variant="body" className="text-content-secondary">
-              {t('editorEntries.scriptHelp')}
-            </Typography>
-            {(correction.draft.narration?.segments ?? []).map((segment) => (
-              <Typography key={segment.id} variant="body">
-                {segment.text}
-              </Typography>
-            ))}
-            {!correction.draft.narration?.segments.length && (
-              <Typography variant="body">{t('editorEntries.noScript')}</Typography>
-            )}
-            {!reading && (
-              <Link to="/spoken-voices" className={buttonStyles({ variant: 'secondary' })}>
-                {t('editorEntries.voices')}
-              </Link>
-            )}
-          </div>
+          <ClipDubbingEditor
+            ownerId={ownerId}
+            project={project}
+            plan={correction.draft}
+            state={plan}
+            revision={correction.revision}
+            disabled={pending || reading}
+            change={correction.change}
+            flush={() => flushAll(true)}
+            onSelect={(segment) => {
+              correction.dispatch({ type: 'select', selection: { kind: 'spoken', id: segment.id } })
+              setEditorPanel(undefined)
+            }}
+          />
         )}
       </Sheet>
     </>
   ) : (
     <>
       <ClipFailureNotice failure={generation.failure} />
+      {!reading && (
+        <ClipSpokenRecoveryEditor
+          ownerId={ownerId}
+          projectId={project.id}
+          durationMs={project.targetDurationMs}
+          disabled={pending}
+        />
+      )}
       {storylineSpace}
       {!project.storyline && (
         <ClipStepWaiting message={t('steps.refineWaiting')} onGo={() => setStep('generate')} />
@@ -575,7 +597,9 @@ export function ClipWorkspace({ ownerId, project }: { ownerId: string; project: 
     <>
       {/* First child of the flow on purpose: a sticky box can only be pinned by the box it sits
           in, and this one has to hold the page's top edge while the panel scrolls past it. */}
-      {!run.focused && !project.finalized && <ClipProgressBar job={undefined} upload={upload} />}
+      {!run.focused && !project.finalized && (
+        <ClipProgressBar job={job?.kind === 'speech_clip' ? job : undefined} upload={upload} />
+      )}
       <ClipTopRow
         status={
           !run.focused && (
@@ -666,6 +690,13 @@ export function ClipWorkspace({ ownerId, project }: { ownerId: string; project: 
       {!run.focused && !project.finalized && (
         <>
           <ClipCreditSettlement job={job} accounting={generation.accounting} />
+          {job?.kind === 'speech_clip' && !isTerminal(job) && (
+            <CancelClipAction
+              action={revision.cancellation}
+              job={job}
+              accounting={generation.accounting}
+            />
+          )}
           {job?.status === 'cancelled' && (
             <Typography variant="body" className="mt-4">
               {t('cancellation.stopped')}

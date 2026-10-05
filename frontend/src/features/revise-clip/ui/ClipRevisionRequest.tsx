@@ -131,7 +131,10 @@ export function ClipRevisionRequest({
                       value={target}
                       options={CLIP_REVISION_TARGETS.map((value) => ({
                         value,
-                        label: t(`revision.targets.${value}`),
+                        label:
+                          value === 'narration' && project.editing?.plan.narration
+                            ? t('dubbing.words')
+                            : t(`revision.targets.${value}`),
                       }))}
                       onChange={setTarget}
                     />

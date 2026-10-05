@@ -153,6 +153,8 @@ export const RESOURCE_NAMESPACES = [
  *
  *  This list is the one file a new slice with its own strings touches — a one-line import
  *  instead of an edit inside a 1,100-line namespace file (ARCH-16). */
+import { i18n as clipDubbingI18n } from '@/features/regenerate-clip-speech/config/i18n'
+
 export const FRAGMENTS: readonly I18nFragment[] = [
   { namespace: 'spokenVoice', ...spokenVoiceResources },
   { namespace: 'createSpokenVoice', ...createSpokenVoiceResources },
@@ -174,6 +176,7 @@ export const FRAGMENTS: readonly I18nFragment[] = [
   clipTemplateClipsI18n,
   clipWorkspaceClipsI18n,
   correctClipClipsI18n,
+  clipDubbingI18n,
   deleteClipTemplateClipsI18n,
   editClipProjectClipsI18n,
   editClipTemplateClipsI18n,
@@ -376,6 +379,7 @@ export const resources = {
       ...clipTemplateClipsI18n.ko,
       ...clipWorkspaceClipsI18n.ko,
       ...correctClipClipsI18n.ko,
+      ...clipDubbingI18n.ko,
       ...deleteClipTemplateClipsI18n.ko,
       ...editClipProjectClipsI18n.ko,
       ...editClipTemplateClipsI18n.ko,
@@ -505,6 +509,7 @@ export const resources = {
       ...clipTemplateClipsI18n.en,
       ...clipWorkspaceClipsI18n.en,
       ...correctClipClipsI18n.en,
+      ...clipDubbingI18n.en,
       ...deleteClipTemplateClipsI18n.en,
       ...editClipProjectClipsI18n.en,
       ...editClipTemplateClipsI18n.en,

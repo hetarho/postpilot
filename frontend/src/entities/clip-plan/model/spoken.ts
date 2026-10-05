@@ -48,6 +48,14 @@ export function spokenState(
   segment: ClipSpokenSegment,
   durationMs = Infinity,
 ): 'ready' | 'stale' | 'missing' | 'conflict' {
+  const speech = segment.speech
+  if (!speech) return 'missing'
+  if (
+    speech.voiceId !== narration.confirmedVoiceId ||
+    speech.bindingDigest !== narration.bindingDigest ||
+    speech.inputHash !== segment.inputHash
+  )
+    return 'stale'
   const index = narration.segments.findIndex((s) => s.id === segment.id)
   const previousEnd = narration.segments[index - 1]?.endMs ?? 0
   if (
@@ -58,14 +66,6 @@ export function spokenState(
     segment.endMs > durationMs
   )
     return 'conflict'
-  const speech = segment.speech
-  if (!speech) return 'missing'
-  if (
-    speech.voiceId !== narration.confirmedVoiceId ||
-    speech.bindingDigest !== narration.bindingDigest ||
-    speech.inputHash !== segment.inputHash
-  )
-    return 'stale'
   if (segment.startMs + speechDurationMs(speech) > segment.endMs) return 'conflict'
   return 'ready'
 }
@@ -79,4 +79,39 @@ export function cloneNarration(narration: ClipNarration): ClipNarration {
         : undefined,
     })),
   }
+}
+
+export function spokenScriptValid(narration?: ClipNarration): boolean {
+  if (!narration) return true
+  const n = narration
+  return (
+    n.segments.length <= SPOKEN_LIMITS.segments &&
+    Number.isSafeInteger(n.volumePermille) &&
+    n.volumePermille >= 0 &&
+    n.volumePermille <= 1000 &&
+    n.segments.every(
+      (s) =>
+        s.text.trim().length > 0 &&
+        Array.from(s.text).length <= SPOKEN_LIMITS.segmentCharacters &&
+        Number.isSafeInteger(s.startMs) &&
+        Number.isSafeInteger(s.endMs) &&
+        s.startMs >= 0 &&
+        s.endMs > s.startMs,
+    ) &&
+    n.segments.reduce((sum, s) => sum + Array.from(s.text).length, 0) <=
+      SPOKEN_LIMITS.scriptCharacters
+  )
+}
+
+export function spokenRenderReady(
+  narration: ClipNarration | undefined,
+  durationMs: number,
+): boolean {
+  return (
+    !narration?.enabled ||
+    (!!narration.confirmedVoiceId &&
+      !!narration.bindingDigest &&
+      narration.segments.length > 0 &&
+      narration.segments.every((s) => spokenState(narration, s, durationMs) === 'ready'))
+  )
 }

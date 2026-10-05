@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/postpilot/backend/internal/clip"
@@ -76,13 +77,17 @@ type SpeechDeps struct {
 	Queue        Queue
 	Transactions SpeechTransactions
 }
-type SpeechService struct{ SpeechDeps }
+type SpeechService struct {
+	SpeechDeps
+	playbackMu sync.Mutex
+	playback   map[string]speechPlayback
+}
 
 func NewSpeechService(d SpeechDeps) *SpeechService {
 	if d.Store == nil || d.Voices == nil || d.Plans == nil || d.Prices == nil || d.Ledger == nil || d.Models == nil || d.Objects == nil || d.Queue == nil || d.Transactions == nil {
 		panic("clip speech dependencies required")
 	}
-	return &SpeechService{d}
+	return &SpeechService{SpeechDeps: d, playback: make(map[string]speechPlayback)}
 }
 func speechID() string {
 	var b [16]byte

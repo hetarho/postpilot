@@ -259,9 +259,11 @@ export function useClipCorrection(ownerId: string, project: ClipProject, createC
         for (const setting of intended) queued = withSourceSound(queued, setting)
       } else {
         queued =
-          clipDraftKey(queued) === key ? acceptedPlan : acknowledgeClipCuts(queued, acceptedPlan)
+          clipDraftKey(queued) === key
+            ? acceptedPlan
+            : acknowledgeClipCuts(queued, acceptedPlan, snapshot)
       }
-      dispatch({ type: 'adopt', plan: queued })
+      dispatch({ type: 'adopt', plan: queued, identitiesFrom: snapshot })
       const acceptedKey = clipDraftKey(acceptedPlan)
       current.current = {
         ...current.current,

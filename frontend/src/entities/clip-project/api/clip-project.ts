@@ -260,7 +260,11 @@ export function useClipProject(ownerId: string, id: string | undefined) {
  *  `backend/internal/clip/app/accounting.go`, pinned by a test that reads that file. A storyline
  *  call settles with its job's finish and is projected no accounting, so waiting on one would
  *  poll the detail for as long as the tab stays open. */
-export const CHARGED_CLIP_KINDS: ReadonlySet<string> = new Set(['generate_clip', 'revise_clip'])
+export const CHARGED_CLIP_KINDS: ReadonlySet<string> = new Set([
+  'generate_clip',
+  'revise_clip',
+  'speech_clip',
+])
 
 /** The detail's poll: while its job runs, then — for charged work only — until the server
  *  reports that job's settlement. */

@@ -9,6 +9,33 @@ import (
 	"context"
 )
 
+const correctClipSpokenRecovery = `-- name: CorrectClipSpokenRecovery :execrows
+UPDATE clip_recovery_states SET state_json=?1
+WHERE clip_recovery_states.project_id=?2 AND clip_recovery_states.user_id=?3 AND clip_recovery_states.state_json=?4
+AND EXISTS(SELECT 1 FROM clip_projects p WHERE p.id=clip_recovery_states.project_id AND p.user_id=clip_recovery_states.user_id AND p.deleting=0 AND p.finalized_at IS NULL AND p.edit_plan_json IS NULL)
+AND NOT EXISTS(SELECT 1 FROM generation_jobs j WHERE j.clip_project_id=clip_recovery_states.project_id AND j.user_id=clip_recovery_states.user_id AND j.status IN ('queued','running'))
+`
+
+type CorrectClipSpokenRecoveryParams struct {
+	StateJson    string
+	ProjectID    string
+	UserID       string
+	ExpectedJson string
+}
+
+func (q *Queries) CorrectClipSpokenRecovery(ctx context.Context, arg CorrectClipSpokenRecoveryParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, correctClipSpokenRecovery,
+		arg.StateJson,
+		arg.ProjectID,
+		arg.UserID,
+		arg.ExpectedJson,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const getClipRecovery = `-- name: GetClipRecovery :one
 SELECT r.job_id,r.state_json FROM clip_recovery_states r JOIN clip_projects p ON p.id=r.project_id AND p.user_id=r.user_id
 WHERE r.project_id=?1 AND r.user_id=?2 AND p.deleting=0 AND p.finalized_at IS NULL

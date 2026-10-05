@@ -17,7 +17,7 @@ export const spokenScope = (transport: Transport, ownerId: string) =>
     }),
     ownerId,
   ] as const
-export function useSpokenLibrary(ownerId: string, includeRemoved = false) {
+export function useSpokenLibrary(ownerId: string, includeRemoved = false, loadDrafts = true) {
   const transport = useTransport()
   const client = useMemo(() => createClient(SpokenVoiceService, transport), [transport])
   const voices = useQuery({
@@ -29,7 +29,7 @@ export function useSpokenLibrary(ownerId: string, includeRemoved = false) {
   const drafts = useQuery({
     queryKey: [...spokenScope(transport, ownerId), 'drafts'],
     queryFn: async () => (await client.listSpokenDrafts({})).drafts.map(toSpokenDraft),
-    enabled: ownerId !== '',
+    enabled: ownerId !== '' && loadDrafts,
   })
   return {
     voices: voices.data ?? [],

@@ -33,6 +33,15 @@ const (
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
+	// ClipSpeechServiceGetClipSpokenDraftProcedure is the fully-qualified name of the
+	// ClipSpeechService's GetClipSpokenDraft RPC.
+	ClipSpeechServiceGetClipSpokenDraftProcedure = "/postpilot.v1.ClipSpeechService/GetClipSpokenDraft"
+	// ClipSpeechServiceSaveClipSpokenDraftProcedure is the fully-qualified name of the
+	// ClipSpeechService's SaveClipSpokenDraft RPC.
+	ClipSpeechServiceSaveClipSpokenDraftProcedure = "/postpilot.v1.ClipSpeechService/SaveClipSpokenDraft"
+	// ClipSpeechServiceGetClipSpeechAccessProcedure is the fully-qualified name of the
+	// ClipSpeechService's GetClipSpeechAccess RPC.
+	ClipSpeechServiceGetClipSpeechAccessProcedure = "/postpilot.v1.ClipSpeechService/GetClipSpeechAccess"
 	// ClipSpeechServiceQuoteClipSpeechProcedure is the fully-qualified name of the ClipSpeechService's
 	// QuoteClipSpeech RPC.
 	ClipSpeechServiceQuoteClipSpeechProcedure = "/postpilot.v1.ClipSpeechService/QuoteClipSpeech"
@@ -46,6 +55,9 @@ const (
 
 // ClipSpeechServiceClient is a client for the postpilot.v1.ClipSpeechService service.
 type ClipSpeechServiceClient interface {
+	GetClipSpokenDraft(context.Context, *connect.Request[v1.GetClipSpokenDraftRequest]) (*connect.Response[v1.ClipSpokenDraft], error)
+	SaveClipSpokenDraft(context.Context, *connect.Request[v1.SaveClipSpokenDraftRequest]) (*connect.Response[v1.ClipSpokenDraft], error)
+	GetClipSpeechAccess(context.Context, *connect.Request[v1.GetClipSpeechAccessRequest]) (*connect.Response[v1.ClipSpeechAccess], error)
 	QuoteClipSpeech(context.Context, *connect.Request[v1.QuoteClipSpeechRequest]) (*connect.Response[v1.ClipSpeechQuote], error)
 	StartClipSpeech(context.Context, *connect.Request[v1.StartClipSpeechRequest]) (*connect.Response[v1.StartClipSpeechResponse], error)
 	GetClipSpeechReadiness(context.Context, *connect.Request[v1.GetClipSpeechReadinessRequest]) (*connect.Response[v1.ClipSpeechReadiness], error)
@@ -62,6 +74,24 @@ func NewClipSpeechServiceClient(httpClient connect.HTTPClient, baseURL string, o
 	baseURL = strings.TrimRight(baseURL, "/")
 	clipSpeechServiceMethods := v1.File_postpilot_v1_clip_speech_proto.Services().ByName("ClipSpeechService").Methods()
 	return &clipSpeechServiceClient{
+		getClipSpokenDraft: connect.NewClient[v1.GetClipSpokenDraftRequest, v1.ClipSpokenDraft](
+			httpClient,
+			baseURL+ClipSpeechServiceGetClipSpokenDraftProcedure,
+			connect.WithSchema(clipSpeechServiceMethods.ByName("GetClipSpokenDraft")),
+			connect.WithClientOptions(opts...),
+		),
+		saveClipSpokenDraft: connect.NewClient[v1.SaveClipSpokenDraftRequest, v1.ClipSpokenDraft](
+			httpClient,
+			baseURL+ClipSpeechServiceSaveClipSpokenDraftProcedure,
+			connect.WithSchema(clipSpeechServiceMethods.ByName("SaveClipSpokenDraft")),
+			connect.WithClientOptions(opts...),
+		),
+		getClipSpeechAccess: connect.NewClient[v1.GetClipSpeechAccessRequest, v1.ClipSpeechAccess](
+			httpClient,
+			baseURL+ClipSpeechServiceGetClipSpeechAccessProcedure,
+			connect.WithSchema(clipSpeechServiceMethods.ByName("GetClipSpeechAccess")),
+			connect.WithClientOptions(opts...),
+		),
 		quoteClipSpeech: connect.NewClient[v1.QuoteClipSpeechRequest, v1.ClipSpeechQuote](
 			httpClient,
 			baseURL+ClipSpeechServiceQuoteClipSpeechProcedure,
@@ -85,9 +115,27 @@ func NewClipSpeechServiceClient(httpClient connect.HTTPClient, baseURL string, o
 
 // clipSpeechServiceClient implements ClipSpeechServiceClient.
 type clipSpeechServiceClient struct {
+	getClipSpokenDraft     *connect.Client[v1.GetClipSpokenDraftRequest, v1.ClipSpokenDraft]
+	saveClipSpokenDraft    *connect.Client[v1.SaveClipSpokenDraftRequest, v1.ClipSpokenDraft]
+	getClipSpeechAccess    *connect.Client[v1.GetClipSpeechAccessRequest, v1.ClipSpeechAccess]
 	quoteClipSpeech        *connect.Client[v1.QuoteClipSpeechRequest, v1.ClipSpeechQuote]
 	startClipSpeech        *connect.Client[v1.StartClipSpeechRequest, v1.StartClipSpeechResponse]
 	getClipSpeechReadiness *connect.Client[v1.GetClipSpeechReadinessRequest, v1.ClipSpeechReadiness]
+}
+
+// GetClipSpokenDraft calls postpilot.v1.ClipSpeechService.GetClipSpokenDraft.
+func (c *clipSpeechServiceClient) GetClipSpokenDraft(ctx context.Context, req *connect.Request[v1.GetClipSpokenDraftRequest]) (*connect.Response[v1.ClipSpokenDraft], error) {
+	return c.getClipSpokenDraft.CallUnary(ctx, req)
+}
+
+// SaveClipSpokenDraft calls postpilot.v1.ClipSpeechService.SaveClipSpokenDraft.
+func (c *clipSpeechServiceClient) SaveClipSpokenDraft(ctx context.Context, req *connect.Request[v1.SaveClipSpokenDraftRequest]) (*connect.Response[v1.ClipSpokenDraft], error) {
+	return c.saveClipSpokenDraft.CallUnary(ctx, req)
+}
+
+// GetClipSpeechAccess calls postpilot.v1.ClipSpeechService.GetClipSpeechAccess.
+func (c *clipSpeechServiceClient) GetClipSpeechAccess(ctx context.Context, req *connect.Request[v1.GetClipSpeechAccessRequest]) (*connect.Response[v1.ClipSpeechAccess], error) {
+	return c.getClipSpeechAccess.CallUnary(ctx, req)
 }
 
 // QuoteClipSpeech calls postpilot.v1.ClipSpeechService.QuoteClipSpeech.
@@ -107,6 +155,9 @@ func (c *clipSpeechServiceClient) GetClipSpeechReadiness(ctx context.Context, re
 
 // ClipSpeechServiceHandler is an implementation of the postpilot.v1.ClipSpeechService service.
 type ClipSpeechServiceHandler interface {
+	GetClipSpokenDraft(context.Context, *connect.Request[v1.GetClipSpokenDraftRequest]) (*connect.Response[v1.ClipSpokenDraft], error)
+	SaveClipSpokenDraft(context.Context, *connect.Request[v1.SaveClipSpokenDraftRequest]) (*connect.Response[v1.ClipSpokenDraft], error)
+	GetClipSpeechAccess(context.Context, *connect.Request[v1.GetClipSpeechAccessRequest]) (*connect.Response[v1.ClipSpeechAccess], error)
 	QuoteClipSpeech(context.Context, *connect.Request[v1.QuoteClipSpeechRequest]) (*connect.Response[v1.ClipSpeechQuote], error)
 	StartClipSpeech(context.Context, *connect.Request[v1.StartClipSpeechRequest]) (*connect.Response[v1.StartClipSpeechResponse], error)
 	GetClipSpeechReadiness(context.Context, *connect.Request[v1.GetClipSpeechReadinessRequest]) (*connect.Response[v1.ClipSpeechReadiness], error)
@@ -119,6 +170,24 @@ type ClipSpeechServiceHandler interface {
 // and JSON codecs. They also support gzip compression.
 func NewClipSpeechServiceHandler(svc ClipSpeechServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
 	clipSpeechServiceMethods := v1.File_postpilot_v1_clip_speech_proto.Services().ByName("ClipSpeechService").Methods()
+	clipSpeechServiceGetClipSpokenDraftHandler := connect.NewUnaryHandler(
+		ClipSpeechServiceGetClipSpokenDraftProcedure,
+		svc.GetClipSpokenDraft,
+		connect.WithSchema(clipSpeechServiceMethods.ByName("GetClipSpokenDraft")),
+		connect.WithHandlerOptions(opts...),
+	)
+	clipSpeechServiceSaveClipSpokenDraftHandler := connect.NewUnaryHandler(
+		ClipSpeechServiceSaveClipSpokenDraftProcedure,
+		svc.SaveClipSpokenDraft,
+		connect.WithSchema(clipSpeechServiceMethods.ByName("SaveClipSpokenDraft")),
+		connect.WithHandlerOptions(opts...),
+	)
+	clipSpeechServiceGetClipSpeechAccessHandler := connect.NewUnaryHandler(
+		ClipSpeechServiceGetClipSpeechAccessProcedure,
+		svc.GetClipSpeechAccess,
+		connect.WithSchema(clipSpeechServiceMethods.ByName("GetClipSpeechAccess")),
+		connect.WithHandlerOptions(opts...),
+	)
 	clipSpeechServiceQuoteClipSpeechHandler := connect.NewUnaryHandler(
 		ClipSpeechServiceQuoteClipSpeechProcedure,
 		svc.QuoteClipSpeech,
@@ -139,6 +208,12 @@ func NewClipSpeechServiceHandler(svc ClipSpeechServiceHandler, opts ...connect.H
 	)
 	return "/postpilot.v1.ClipSpeechService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
+		case ClipSpeechServiceGetClipSpokenDraftProcedure:
+			clipSpeechServiceGetClipSpokenDraftHandler.ServeHTTP(w, r)
+		case ClipSpeechServiceSaveClipSpokenDraftProcedure:
+			clipSpeechServiceSaveClipSpokenDraftHandler.ServeHTTP(w, r)
+		case ClipSpeechServiceGetClipSpeechAccessProcedure:
+			clipSpeechServiceGetClipSpeechAccessHandler.ServeHTTP(w, r)
 		case ClipSpeechServiceQuoteClipSpeechProcedure:
 			clipSpeechServiceQuoteClipSpeechHandler.ServeHTTP(w, r)
 		case ClipSpeechServiceStartClipSpeechProcedure:
@@ -153,6 +228,18 @@ func NewClipSpeechServiceHandler(svc ClipSpeechServiceHandler, opts ...connect.H
 
 // UnimplementedClipSpeechServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedClipSpeechServiceHandler struct{}
+
+func (UnimplementedClipSpeechServiceHandler) GetClipSpokenDraft(context.Context, *connect.Request[v1.GetClipSpokenDraftRequest]) (*connect.Response[v1.ClipSpokenDraft], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ClipSpeechService.GetClipSpokenDraft is not implemented"))
+}
+
+func (UnimplementedClipSpeechServiceHandler) SaveClipSpokenDraft(context.Context, *connect.Request[v1.SaveClipSpokenDraftRequest]) (*connect.Response[v1.ClipSpokenDraft], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ClipSpeechService.SaveClipSpokenDraft is not implemented"))
+}
+
+func (UnimplementedClipSpeechServiceHandler) GetClipSpeechAccess(context.Context, *connect.Request[v1.GetClipSpeechAccessRequest]) (*connect.Response[v1.ClipSpeechAccess], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ClipSpeechService.GetClipSpeechAccess is not implemented"))
+}
 
 func (UnimplementedClipSpeechServiceHandler) QuoteClipSpeech(context.Context, *connect.Request[v1.QuoteClipSpeechRequest]) (*connect.Response[v1.ClipSpeechQuote], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ClipSpeechService.QuoteClipSpeech is not implemented"))

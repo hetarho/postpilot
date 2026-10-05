@@ -610,7 +610,15 @@ export function ClipCorrectionWorkspace({
               onChange={(ms) => seek(snapClipTime(ms))}
             />
           )}
-          {!correction.validation?.valid && <FieldMessage>{t('timeline.invalid')}</FieldMessage>}
+          {!correction.validation?.valid && (
+            <FieldMessage>
+              {t(
+                correction.validation?.speechReady === false
+                  ? 'dubbing.deliveryPending'
+                  : 'timeline.invalid',
+              )}
+            </FieldMessage>
+          )}
           {correction.validation?.cuts.map((error, number) => {
             const reason = error.rate
               ? 'assembly.cadenceRefused'

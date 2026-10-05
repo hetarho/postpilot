@@ -27,7 +27,7 @@ func (h *Handler) QuoteClipSpeech(ctx context.Context, r *connect.Request[v1.Quo
 	if !q.ExpiresAt.IsZero() {
 		expires = q.ExpiresAt.UTC().Format(time.RFC3339Nano)
 	}
-	return connect.NewResponse(&v1.ClipSpeechQuote{QuoteId: q.ID, MaximumCredits: int32(q.MaximumCredits), ExpiresAt: expires, SegmentIds: q.SegmentIDs, PlanRevision: int32(q.Revision)}), nil
+	return connect.NewResponse(&v1.ClipSpeechQuote{QuoteId: q.ID, MaximumCredits: int32(q.MaximumCredits), ExpiresAt: expires, SegmentIds: q.SegmentIDs, PlanRevision: int32(q.Revision), CancellationPolicyVersion: usage.UnitCancellationPolicyVersion}), nil
 }
 func (h *Handler) StartClipSpeech(ctx context.Context, r *connect.Request[v1.StartClipSpeechRequest]) (*connect.Response[v1.StartClipSpeechResponse], error) {
 	owner, e := actingUser(ctx)

@@ -73,7 +73,7 @@ describe('the detail poll', () => {
     },
   )
 
-  it.each(['generate_clip', 'revise_clip'])(
+  it.each(['generate_clip', 'revise_clip', 'speech_clip'])(
     'keeps reading a finished %s until its settlement arrives',
     (kind) => {
       expect(POLL_INTERVAL_MS).toBe(2_000)
@@ -107,6 +107,46 @@ describe('a settings save', () => {
     disclosure: 'ad' as const,
     hideDisclosure: false,
   }
+  it('persists the selected confirmed voice and disabled state through saves and reloads', async () => {
+    let stored = {
+      ...draft,
+      id: 'clip',
+      editPlanRevision: 0,
+      dubbing: { enabled: true, voiceId: 'voice' },
+    }
+    const received: unknown[] = []
+    const transport = createRouterTransport(({ rpc }) => {
+      rpc(ClipGenerationService.method.updateClipProject, (request) => {
+        received.push(request.dubbing)
+        stored = {
+          ...stored,
+          dubbing: { enabled: request.dubbing!.enabled, voiceId: request.dubbing!.voiceId },
+        }
+        return { project: stored }
+      })
+      rpc(ClipGenerationService.method.getClipProject, () => ({ project: stored }))
+    })
+    const client = createTestQueryClient()
+    const view = renderHook(
+      () => ({
+        detail: useClipProject('alice', 'clip'),
+        mutations: useClipProjectMutations('alice'),
+      }),
+      { wrapper: withProviders(transport, client) },
+    )
+    await waitFor(() => expect(view.result.current.detail.data?.dubbing?.voiceId).toBe('voice'))
+    for (const enabled of [true, false, true]) {
+      await act(() =>
+        view.result.current.mutations.save.mutateAsync({
+          id: 'clip',
+          draft: { ...draft, dubbing: { enabled, voiceId: 'voice' } },
+        }),
+      )
+      await act(() => view.result.current.detail.refetch())
+      expect(view.result.current.detail.data?.dubbing).toEqual({ enabled, voiceId: 'voice' })
+    }
+    expect(received).toHaveLength(3)
+  })
   function backend(answer: { editPlanRevision: number }) {
     const calls: string[] = []
     let listReads = 0

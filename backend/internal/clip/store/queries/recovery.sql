@@ -10,3 +10,9 @@ SELECT p.id,p.user_id,j.id,sqlc.arg(state_json) FROM clip_projects p JOIN genera
 WHERE p.id=sqlc.arg(project_id) AND p.user_id=sqlc.arg(user_id) AND j.id=sqlc.arg(job_id)
 AND p.deleting=0 AND p.finalized_at IS NULL AND j.status IN ('queued','running')
 ON CONFLICT(project_id) DO UPDATE SET user_id=excluded.user_id,job_id=excluded.job_id,state_json=excluded.state_json;
+
+-- name: CorrectClipSpokenRecovery :execrows
+UPDATE clip_recovery_states SET state_json=sqlc.arg(state_json)
+WHERE clip_recovery_states.project_id=sqlc.arg(project_id) AND clip_recovery_states.user_id=sqlc.arg(user_id) AND clip_recovery_states.state_json=sqlc.arg(expected_json)
+AND EXISTS(SELECT 1 FROM clip_projects p WHERE p.id=clip_recovery_states.project_id AND p.user_id=clip_recovery_states.user_id AND p.deleting=0 AND p.finalized_at IS NULL AND p.edit_plan_json IS NULL)
+AND NOT EXISTS(SELECT 1 FROM generation_jobs j WHERE j.clip_project_id=clip_recovery_states.project_id AND j.user_id=clip_recovery_states.user_id AND j.status IN ('queued','running'));

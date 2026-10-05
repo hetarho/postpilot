@@ -34,3 +34,38 @@ func (s *Store) SaveRecovery(ctx context.Context, user, project string, state cl
 	n, err := s.write.SaveClipRecovery(ctx, sqlc.SaveClipRecoveryParams{ProjectID: project, UserID: user, JobID: state.JobID, StateJson: string(raw)})
 	return affected(n, err)
 }
+
+// CorrectSpokenRecovery changes only a retained initial script after its run stopped.
+// The writer transaction compares the whole checkpoint and excludes every active project job.
+func (s *Store) CorrectSpokenRecovery(ctx context.Context, owner, project, digest string, n *clip.NarrationPlan) (*clip.RecoveryState, error) {
+	return transact(ctx, s, func(q *sqlc.Queries) (*clip.RecoveryState, error) {
+		row, e := q.GetClipRecovery(ctx, sqlc.GetClipRecoveryParams{ProjectID: project, UserID: owner})
+		if e != nil {
+			return nil, dbError(e)
+		}
+		var r clip.RecoveryState
+		if json.Unmarshal([]byte(row.StateJson), &r) != nil || r.Spoken == nil || clip.RecoveryDigest(&r) != digest {
+			return nil, clip.ErrPlanConflict
+		}
+		if n == nil || n.VoiceID != r.Spoken.Narration.VoiceID {
+			return nil, clip.ErrInvalid
+		}
+		old := clip.EditPlan{Narration: &r.Spoken.Narration}
+		next := old
+		if e = clip.CorrectNarration(old, clip.CorrectionPlan{Narration: n}, &next); e != nil {
+			return nil, e
+		}
+		r.Spoken.Narration = *next.Narration
+		r.PlanReady = false
+		r.Plan = ""
+		r.FlowReady = true
+		raw, e := json.Marshal(r)
+		if e != nil || len(raw) > clip.AttemptCheckpointMaxBytes {
+			return nil, clip.ErrInvalid
+		}
+		if e = affected(q.CorrectClipSpokenRecovery(ctx, sqlc.CorrectClipSpokenRecoveryParams{ProjectID: project, UserID: owner, StateJson: string(raw), ExpectedJson: row.StateJson})); e != nil {
+			return nil, e
+		}
+		return &r, nil
+	})
+}

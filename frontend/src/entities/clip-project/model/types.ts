@@ -244,6 +244,9 @@ export function emptyClipProject(): ClipProjectDraft {
 }
 export function projectDraft(value: ClipProjectDraft): ClipProjectDraft {
   return {
+    ...(value.dubbing
+      ? { dubbing: { enabled: value.dubbing.enabled, voiceId: value.dubbing.voiceId } }
+      : {}),
     ...(value.compositionInputs
       ? { compositionInputs: structuredClone(value.compositionInputs) }
       : {}),
@@ -301,6 +304,7 @@ export function normalizeClipProject(value: ClipProjectDraft): ClipProjectDraft 
 export function validNewClipProject(value: ClipProjectDraft): boolean {
   const title = value.title.trim()
   return (
+    (!value.dubbing?.enabled || !!value.dubbing.voiceId) &&
     !!title &&
     Array.from(title).length <= CLIP_PROJECT_LIMITS.title &&
     CLIP_RATIOS.includes(value.ratio)
@@ -314,6 +318,7 @@ export function savableClipProject(value: ClipProjectDraft): boolean {
   const length = (s: string) => Array.from(s).length
   const title = value.title.trim()
   return (
+    (!value.dubbing?.enabled || !!value.dubbing.voiceId) &&
     !!title &&
     length(title) <= CLIP_PROJECT_LIMITS.title &&
     CLIP_RATIOS.includes(value.ratio) &&
@@ -327,6 +332,7 @@ export function savableClipProject(value: ClipProjectDraft): boolean {
 export function validClipProject(value: ClipProjectDraft, composition?: ClipComposition): boolean {
   const length = (s: string) => Array.from(s).length
   return (
+    (!value.dubbing?.enabled || !!value.dubbing.voiceId) &&
     !!composition &&
     !!value.title.trim() &&
     length(value.title.trim()) <= CLIP_PROJECT_LIMITS.title &&
