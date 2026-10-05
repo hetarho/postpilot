@@ -206,6 +206,18 @@ type ClipSourceLease struct {
 	Position            int64
 }
 
+type ClipSpeechAsset struct {
+	ID            string
+	OwnerID       string
+	ProjectID     string
+	ObjectKey     string
+	InputText     string
+	InputHash     string
+	BindingDigest string
+	SpeechJson    string
+	CreatedAt     string
+}
+
 type VideoTemplate struct {
 	ID                   string
 	UserID               string

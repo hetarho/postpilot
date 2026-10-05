@@ -123,7 +123,10 @@ func toConnectError(err error) error {
 	var problem *composition.Problem
 	var admission *clip.ModelAdmissionError
 	var cut *clip.CutError
+	var spoken *clip.SpokenError
 	switch {
+	case errors.As(err, &spoken):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip narration needs attention", postpilotv1.FailureReason_CLIP_INVALID_INPUT, map[string]string{"segment_id": spoken.SegmentID, "check": spoken.Reason})
 	case errors.As(err, &cut):
 		return rpcserver.NewAppError(connect.CodeInvalidArgument, "invalid clip cut", postpilotv1.FailureReason_CLIP_INVALID_INPUT, map[string]string{"cut_id": cut.CutID, "check": cut.OutputValidationCode()})
 	case errors.Is(err, clip.ErrFinalized):

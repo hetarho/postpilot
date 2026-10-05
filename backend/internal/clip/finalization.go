@@ -54,6 +54,9 @@ func ValidateFinalization(p Project, req FinalizationRequest, cfg RenderConfig) 
 	if err != nil || ValidateCompositionEvidence(plan) != nil {
 		return ErrFinalizationInvalid
 	}
+	if err := NarrationReadiness(plan); err != nil {
+		return err
+	}
 	validated, err := ApplyCorrection(cfg, p, CorrectionFromPlan(plan))
 	if err != nil || ValidateCompositionEvidence(validated) != nil {
 		return ErrFinalizationInvalid

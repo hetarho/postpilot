@@ -64,3 +64,11 @@ export type { ClipSelection, TimelineEdit } from './model/timeline'
 export { useClipPlanCalls, useClipRevisionQuote } from './api/calls'
 export { ClipCaptionStyleSample } from './ui/ClipCaptionStyleSample'
 export type { ClipPlanCalls } from './api/calls'
+
+export type {
+  ClipNarration,
+  ClipSpokenSegment,
+  ClipSpeechRef,
+  ClipDerivedCaption,
+} from './model/spoken'
+export { SPOKEN_LIMITS, spokenState, speechDurationMs } from './model/spoken'

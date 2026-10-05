@@ -275,7 +275,7 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 		guideline.Limits{TextMaxChars: cfg.GuidelineTextMaxChars, TitleMaxChars: cfg.GuidelineTitleMaxChars, MaxPerAccount: cfg.GuidelineMaxPerAccount},
 		cfg.GuidelineCandidateMaxPending,
 	)
-	c.clipGeneration, err = newClipGeneration(ctx, cfg, c.clipStore, c.clip, c.clipSources, p.bucket, clipMedia, c.metered, c.auth, c.jobs, c.clipGuard, handle.Writer, c.clipPorts, clipGuidelineCandidates{service: c.guideline})
+	c.clipGeneration, err = newClipGeneration(ctx, cfg, c.clipStore, c.clip, c.clipSources, p.bucket, clipMedia, c.metered, c.auth, c.jobs, c.clipGuard, handle.Writer, c.clipPorts, clipGuidelineCandidates{service: c.guideline}, clipSpokenVoices{library: c.spoken})
 	if err != nil {
 		return nil, fmt.Errorf("clip generation initialization: %w", err)
 	}

@@ -13,6 +13,7 @@ import (
 // Editable values reference a saved identity. Evidence, binding ownership and
 // the template source remain server-owned even when text is corrected.
 type CorrectionText struct {
+	Derived                                  *DerivedCaption
 	EffectiveStartMS, EffectiveEndMS         *int
 	Phrases                                  []EditablePhrase
 	StaleEvidence, EvidenceReviewed          bool
@@ -50,7 +51,7 @@ type TextCreation struct{ Kind string }
 
 func correctionText(t PortableText) CorrectionText {
 	r, e := t.Resolved, t.Resolved.Element
-	result := CorrectionText{InstanceID: r.InstanceID, ElementID: e.ID, CutID: r.CutID, Kind: e.Kind, Role: e.Role,
+	result := CorrectionText{Derived: t.Derived, InstanceID: r.InstanceID, ElementID: e.ID, CutID: r.CutID, Kind: e.Kind, Role: e.Role,
 		Text: r.Text, Rows: slices.Clone(r.Rows), Style: e.Style, Position: e.Position, Align: e.Align, Basis: e.Basis,
 		StartMS: e.StartMS, EndMS: e.EndMS, Pace: t.Pace, Accent: t.Accent, Keyword: t.Keyword,
 		ResolvedStartMS: r.StartMS, ResolvedEndMS: r.EndMS, GroupID: r.GroupID, ItemID: r.ItemID,
@@ -270,6 +271,7 @@ func (c *nativeCorrection) validateElementEdit(edit CorrectionText) error {
 func applyTextEdit(t PortableText, edit CorrectionText, changed []SourceAssociation) PortableText {
 	before := correctionText(t)
 	edit.OwnerEdited = before.OwnerEdited
+	edit.Derived = before.Derived
 	edit.Evidence, edit.FallbackReason, edit.StaleEvidence = before.Evidence, before.FallbackReason, before.StaleEvidence
 	edit.EffectiveStartMS, edit.EffectiveEndMS = before.EffectiveStartMS, before.EffectiveEndMS
 	reviewed := edit.EvidenceReviewed
@@ -288,6 +290,12 @@ func applyTextEdit(t PortableText, edit CorrectionText, changed []SourceAssociat
 	t.Phrases = slices.Clone(edit.Phrases)
 	contentChanged := before.Text != edit.Text || !reflect.DeepEqual(before.Rows, edit.Rows) || !slices.Equal(before.Phrases, edit.Phrases)
 	t.StaleEvidence = (t.StaleEvidence || associationAffectsText(t, changed)) && !reviewed && !contentChanged
+	if t.Derived != nil {
+		derived := *t.Derived
+		derived.TextEdited = derived.TextEdited || before.Text != edit.Text || !reflect.DeepEqual(before.Rows, edit.Rows)
+		derived.TimingEdited = derived.TimingEdited || before.Basis != edit.Basis || !reflect.DeepEqual(before.StartMS, edit.StartMS) || !reflect.DeepEqual(before.EndMS, edit.EndMS) || !slices.Equal(before.Phrases, edit.Phrases)
+		t.Derived = &derived
+	}
 	if !reflect.DeepEqual(before, edit) {
 		t.OwnerEdited = true
 	}

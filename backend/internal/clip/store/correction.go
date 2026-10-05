@@ -66,6 +66,22 @@ func (s *Store) saveCorrection(ctx context.Context, user, id, job string, revisi
 		// Compare the semantic plan so a formatting-only save does not renew retention.
 		oldPlan, oldErr := clip.DecodeEditPlan(p.EditPlan)
 		newPlan, newErr := clip.DecodeEditPlan(raw)
+		if newErr != nil {
+			return clip.Project{}, newErr
+		}
+		reused, err := reuseSpeechAssets(ctx, q, user, id, &newPlan)
+		if err != nil {
+			return clip.Project{}, err
+		}
+		if reused {
+			raw, err = clip.EncodeEditPlan(newPlan)
+			if err != nil {
+				return clip.Project{}, err
+			}
+		}
+		if err := validateSpeechAssets(ctx, q, user, id, newPlan); err != nil {
+			return clip.Project{}, err
+		}
 		var oldJSON, newJSON any
 		if oldErr == nil && newErr == nil && reflect.DeepEqual(oldPlan, newPlan) || p.EditPlan == raw || strictJSON(p.EditPlan, &oldJSON) == nil && strictJSON(raw, &newJSON) == nil && reflect.DeepEqual(oldJSON, newJSON) {
 			if regions == nil {

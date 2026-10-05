@@ -223,7 +223,7 @@ func TestStoredPlanBeforeTwoCopiesUpgradesToAList(t *testing.T) {
 	// Saved again, it is a version-6 assembly plan: the same result, now stating
 	// its 1x rate and the original audio meaning its per-cut volume carried.
 	next, err := clip.EncodeEditPlan(plan)
-	if err != nil || !strings.Contains(next, `"Version":6`) || !strings.Contains(next, `"Copies":[`) ||
+	if err != nil || !strings.Contains(next, `"Version":7`) || !strings.Contains(next, `"Copies":[`) ||
 		!strings.Contains(next, `"Rates":{"one":1000,"two":1000}`) ||
 		!strings.Contains(next, `"SourceAudio":[{"SourceID":"s","Fingerprint":"f","RetainOriginal":true}]`) {
 		t.Fatalf("%s %v", next, err)

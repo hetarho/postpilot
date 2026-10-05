@@ -73,7 +73,7 @@ func generationDeps(f clip.ClipFinisher, p clip.QuotePricing, a clip.AccountingR
 	if a == nil {
 		a = neutralAccounting{}
 	}
-	return clipapp.GenerationDeps{Finisher: f, Pricing: p, Accounting: a, Admission: neutralAdmission{}}
+	return clipapp.GenerationDeps{Voices: clip.UnavailableSpokenVoices{}, Finisher: f, Pricing: p, Accounting: a, Admission: neutralAdmission{}}
 }
 
 // projectStore is what a project service and its source side both read.

@@ -39,7 +39,7 @@ func ratePlan(t *testing.T, rate int) (clip.Project, clip.EditPlan) {
 func TestEverySupportedRateRoundTripsThroughVersionSix(t *testing.T) {
 	for _, rate := range clip.PlaybackRates() {
 		p, plan := ratePlan(t, rate)
-		if !strings.Contains(p.EditPlan, `"Version":6`) {
+		if !strings.Contains(p.EditPlan, `"Version":7`) {
 			t.Fatal("new plan was not written as an assembly envelope", p.EditPlan)
 		}
 		again, err := clip.DecodeEditPlan(p.EditPlan)
@@ -225,7 +225,7 @@ func TestLegacyPlansReadAtOneTimesWithTheirOriginalAudioMeaning(t *testing.T) {
 	}
 	// Encoding it again is version 6, and reading that back is identical.
 	rewritten, err := clip.EncodeEditPlan(base)
-	if err != nil || !strings.Contains(rewritten, `"Version":6`) {
+	if err != nil || !strings.Contains(rewritten, `"Version":7`) {
 		t.Fatal(rewritten, err)
 	}
 	again, err := clip.DecodeEditPlan(rewritten)

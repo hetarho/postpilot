@@ -1,6 +1,7 @@
 package clip_test
 
 import (
+	"encoding/json"
 	"reflect"
 	"strings"
 	"testing"
@@ -29,7 +30,7 @@ func TestPortablePlanRoundTripsAndRefusesInconsistency(t *testing.T) {
 	}
 	plan.Portable = portable
 	raw, err := clip.EncodeEditPlan(plan)
-	if err != nil || !strings.Contains(raw, `"Version":6`) {
+	if err != nil || !strings.Contains(raw, `"Version":7`) {
 		t.Fatal(raw, err)
 	}
 	again, err := clip.DecodeEditPlan(raw)
@@ -65,7 +66,16 @@ func TestVersionSixIgnoresRetiredStylePermissions(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	legacy := strings.Replace(raw, `{`, `{"Styles":["simple"],"CopyStyles":["clean"],`, 1)
+	var fields map[string]any
+	if json.Unmarshal([]byte(raw), &fields) != nil {
+		t.Fatal("invalid fixture")
+	}
+	fields["Version"] = 6
+	delete(fields, "Narration")
+	delete(fields, "SourceVolumePermille")
+	fields["Styles"], fields["CopyStyles"] = []string{"simple"}, []string{"clean"}
+	legacyBytes, _ := json.Marshal(fields)
+	legacy := string(legacyBytes)
 	restored, err := clip.DecodeEditPlan(legacy)
 	if err != nil || !reflect.DeepEqual(plan, restored) {
 		t.Fatal("retired permissions changed saved content", err)

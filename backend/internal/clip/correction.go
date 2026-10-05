@@ -36,6 +36,8 @@ type CorrectionCut struct {
 	Creation *CutCreation
 }
 type CorrectionPlan struct {
+	Narration            *NarrationPlan
+	SourceVolumePermille *int
 	// The owner's per-source original-sound snapshot, as a read projection. It
 	// is changed through its own owner-scoped action, never by saving a plan, so
 	// a draft that carries it back must carry it back unchanged (CLIP-100).
@@ -123,7 +125,7 @@ type storedEditPlan struct {
 }
 
 func CorrectionFromPlan(p EditPlan) CorrectionPlan {
-	out := CorrectionPlan{DurationMS: p.DurationMS, Cuts: make([]CorrectionCut, 0, len(p.Cuts))}
+	out := CorrectionPlan{Narration: cloneNarration(p.Narration), SourceVolumePermille: p.SourceVolumePermille, DurationMS: p.DurationMS, Cuts: make([]CorrectionCut, 0, len(p.Cuts))}
 	for _, c := range p.Cuts {
 		out.Cuts = append(out.Cuts, CorrectionCut{ID: c.ID, SourceID: c.SourceID, Fingerprint: c.Fingerprint, StartMS: c.StartMS, EndMS: c.EndMS, TransitionMS: c.TransitionMS, Copies: slices.Clone(c.Copies), VolumePermille: int(math.Round(c.OriginalVolume() * 1000)), PlaybackRatePermille: c.Rate()})
 	}
@@ -204,6 +206,8 @@ func DecodeEditPlan(raw string) (EditPlan, error) {
 	// against CompositionPlanVersion would read one of them with the wrong reader.
 	switch marker.Version {
 	case CompositionPlanVersion:
+		return decodeSpokenPlan(raw)
+	case assemblyPlanVersion:
 		return decodeAssemblyPlan(raw)
 	case portablePlanVersion:
 		return decodePortablePlan(raw)
@@ -323,7 +327,12 @@ func ApplyCorrection(cfg RenderConfig, p Project, input CorrectionPlan) (EditPla
 		return EditPlan{}, err
 	}
 	if old.Portable != nil {
-		return applyNativeCorrection(cfg, p, old, sources, input)
+		next, err := applyNativeCorrection(cfg, p, old, sources, input)
+		if err != nil {
+			return next, err
+		}
+		err = CorrectNarration(old, input, &next)
+		return next, err
 	}
 	if input.NativeComposition || len(input.Elements) != 0 {
 		return EditPlan{}, ErrInvalid
@@ -374,6 +383,9 @@ func ApplyCorrection(cfg RenderConfig, p Project, input CorrectionPlan) (EditPla
 		return EditPlan{}, err
 	}
 	trackNoticeCutEdits(old, &next)
+	if err := CorrectNarration(old, input, &next); err != nil {
+		return EditPlan{}, err
+	}
 	return next, nil
 }
 

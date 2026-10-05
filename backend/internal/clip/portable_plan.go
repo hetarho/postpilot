@@ -44,7 +44,8 @@ type storedSourceAudio struct {
 	RetainOriginal        bool
 }
 
-func encodeAssemblyPlan(p EditPlan) (string, error) {
+func encodeAssemblyPlan(p EditPlan) (string, error) { return encodeSpokenPlan(p) }
+func encodeVersionSixPlan(p EditPlan) (string, error) {
 	if p.Portable != nil {
 		if err := validatePortablePlan(p); err != nil {
 			return "", err
@@ -69,7 +70,7 @@ func encodeAssemblyPlan(p EditPlan) (string, error) {
 	for _, v := range settings.Values {
 		audio = append(audio, storedSourceAudio{v.SourceID, v.Fingerprint, v.RetainOriginal})
 	}
-	envelope := storedAssemblyPlan{Version: CompositionPlanVersion, Ratio: p.Ratio, Plan: storedCorrection(CorrectionFromPlan(plain)), Focals: focals, Composition: p.Portable, Rates: rates, SourceAudio: audio, Notices: p.Notices, NoticeCutRevisions: p.NoticeCutRevisions}
+	envelope := storedAssemblyPlan{Version: assemblyPlanVersion, Ratio: p.Ratio, Plan: storedCorrection(CorrectionFromPlan(plain)), Focals: focals, Composition: p.Portable, Rates: rates, SourceAudio: audio, Notices: p.Notices, NoticeCutRevisions: p.NoticeCutRevisions}
 	b, err := json.Marshal(envelope)
 	return string(b), err
 }
@@ -90,7 +91,7 @@ func decodeAssemblyPlan(raw string) (EditPlan, error) {
 	}
 	raw = string(clean)
 	var s storedAssemblyPlan
-	if StrictJSON(raw, &s) != nil || s.Version != CompositionPlanVersion {
+	if StrictJSON(raw, &s) != nil || s.Version != assemblyPlanVersion {
 		return EditPlan{}, ErrInvalid
 	}
 	p, err := portableFromStored(storedPortablePlan{s.Version, s.Ratio, s.Plan, s.Focals, nil, PortablePlan{}})

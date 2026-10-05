@@ -122,6 +122,8 @@ var ErrAttemptCheckpointUnavailable = errors.New("clip checkpoint unavailable")
 
 func SafeAttemptCheck(check string) string {
 	switch check {
+	case "plan_source_gain", "plan_spoken_limits", "plan_spoken_segment", "plan_speech_provenance", "plan_speech_timing", "spoken_voice_required", "spoken_script_required", "spoken_regeneration_required", "spoken_timing_conflict", "spoken_identity", "spoken_asset_identity":
+		return check
 	case "intro_slot_shortened", "outro_slot_shortened", "intro_slot_omitted", "outro_slot_omitted", "composition_caption_overlap", "composition_text_shortened", "composition_text_omitted":
 		return check
 	case "composition_invalid_design", "composition_invalid_skeleton", "composition_unknown_attribute", "composition_invalid_style", "composition_invalid_position", "composition_invalid_interval", "composition_invalid_rows", "composition_invalid_role", "composition_copy_limit", "composition_readability", "composition_safe_area", "composition_invalid_manifest", "render_layout", "render_footage", "render_audio", "render_overlay", "render_encode", "render_validate":

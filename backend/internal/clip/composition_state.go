@@ -20,7 +20,8 @@ const portablePlanVersion = 5
 
 // Version 6 adds each cut's fixed playback rate and the complete owner-owned
 // source-audio snapshot (CLIP-98, CLIP-18). New plans are written in it.
-const CompositionPlanVersion = 6
+const assemblyPlanVersion = 6
+const CompositionPlanVersion = 7
 
 var ErrCompositionUnavailable = errors.New("clip composition execution unavailable")
 
@@ -47,6 +48,7 @@ type SourceEvidence struct {
 	StartMS, EndMS        int
 }
 type PortableText struct {
+	Derived       *DerivedCaption
 	Phrases       []EditablePhrase
 	StaleEvidence bool
 	OwnerEdited   bool

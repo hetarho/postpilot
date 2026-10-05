@@ -45,6 +45,9 @@ func (s *GenerationService) SaveCorrection(ctx context.Context, user, id string,
 	if err != nil {
 		return clip.Project{}, err
 	}
+	if err := s.bindNarrationVoice(ctx, user, p, &next); err != nil {
+		return clip.Project{}, err
+	}
 	next = next.WithDesign(p.DesignSelection())
 	if next.Portable != nil {
 		// Region lines the owner corrected are the project's slots in the same
@@ -163,6 +166,9 @@ func (s *GenerationService) startRender(ctx context.Context, user, id, batch str
 	}
 	plan, err := clip.DecodeEditPlan(p.EditPlan)
 	if err != nil {
+		return none, err
+	}
+	if err := clip.NarrationReadiness(plan); err != nil {
 		return none, err
 	}
 	plan, err = clip.ApplyCorrection(s.cfg.Render, p, clip.CorrectionFromPlan(plan))

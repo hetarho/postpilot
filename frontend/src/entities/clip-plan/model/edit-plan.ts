@@ -1,3 +1,4 @@
+import { cloneNarration, type ClipNarration, type ClipDerivedCaption } from './spoken'
 import {
   CLIP_COPY,
   CLIP_RAPID,
@@ -130,6 +131,7 @@ export function ownerCutId(): string {
   return `owner-${crypto.randomUUID()}`
 }
 export interface ClipEditableText {
+  derivedCaption?: ClipDerivedCaption
   /** A caption of the narration: it belongs to no cut, its start and end are
    *  absolute times on the output timeline, and the template declares none of
    *  them. A read projection carried back unchanged (CLIP-134). */
@@ -176,6 +178,8 @@ export interface ClipEditableText {
   ownerStyle?: string
 }
 export interface ClipEditPlan {
+  narration?: ClipNarration
+  sourceVolumePermille?: number
   /** The server's complete per-source original-sound snapshot. Absent is a plan
    *  written before the setting existed. */
   sourceAudio?: ClipSourceAudioSetting[]
@@ -210,11 +214,13 @@ export interface ClipEditingState {
 export function copyClipPlan(plan: ClipEditPlan): ClipEditPlan {
   return {
     ...plan,
+    ...(plan.narration ? { narration: cloneNarration(plan.narration) } : {}),
     ...(plan.associations ? { associations: plan.associations.map((a) => ({ ...a })) } : {}),
     ...(plan.elements
       ? {
           elements: plan.elements.map((t) => ({
             ...t,
+            ...(t.derivedCaption ? { derivedCaption: { ...t.derivedCaption } } : {}),
             rows: t.rows.map((row) => ({ ...row })),
             ...(t.phrases ? { phrases: t.phrases.map((p) => ({ ...p })) } : {}),
             ...(t.evidence ? { evidence: t.evidence.map((e) => ({ ...e })) } : {}),

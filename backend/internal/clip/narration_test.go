@@ -64,7 +64,7 @@ func TestNarrationRidesThePlanWithoutADeclaration(t *testing.T) {
 	if strings.Contains(plan.Portable.Snapshot.Body, "narration-1") {
 		t.Fatal("the caption was written into the template snapshot")
 	}
-	if strings.Contains(p.EditPlan, `"Version":6`) == false {
+	if strings.Contains(p.EditPlan, `"Version":7`) == false {
 		t.Fatal("the caption did not ride the version-6 envelope")
 	}
 	// Every earlier envelope still decodes: none of its readers moved.

@@ -1,3 +1,4 @@
+import { narrationFromProto, narrationToProto } from './spoken'
 import { CLIP_ACCENTS, type ClipAccent } from '@/entities/clip-template/@x/clip-plan'
 import { CLIP_PLAYBACK, CLIP_RATES } from '@/entities/clip-design/@x/clip-plan'
 import type { ProtoClipEditingState } from '@/shared/api'
@@ -13,6 +14,10 @@ export function toClipEditingState(value: ProtoClipEditingState): ClipEditingSta
   if (!value.plan) throw new Error('Missing clip edit plan')
   return {
     plan: {
+      ...(value.plan.narration ? { narration: narrationFromProto(value.plan.narration) } : {}),
+      ...(value.plan.sourceVolumePermille !== undefined
+        ? { sourceVolumePermille: value.plan.sourceVolumePermille }
+        : {}),
       ...(value.plan.nativeComposition
         ? {
             nativeComposition: true,
@@ -26,10 +31,20 @@ export function toClipEditingState(value: ProtoClipEditingState): ClipEditingSta
                 endMs: a.endMs,
               })) ?? [],
             elements: value.plan.elements.map(
-              ({ $typeName, rows, phrases, evidence, ownerPosition, ...text }) => {
+              ({ $typeName, rows, phrases, evidence, ownerPosition, derivedCaption, ...text }) => {
                 void $typeName
                 return {
                   ...text,
+                  ...(derivedCaption
+                    ? {
+                        derivedCaption: {
+                          segmentId: derivedCaption.segmentId,
+                          textRevision: derivedCaption.textRevision,
+                          textEdited: derivedCaption.textEdited,
+                          timingEdited: derivedCaption.timingEdited,
+                        },
+                      }
+                    : {}),
                   // The wire message carries a type name the draft must not:
                   // the draft is compared field by field to decide what changed.
                   ownerPosition: ownerPosition
@@ -148,6 +163,8 @@ export function toClipEditingState(value: ProtoClipEditingState): ClipEditingSta
 }
 export function clipPlanToProto(plan: ClipEditPlan) {
   return {
+    narration: narrationToProto(plan.narration),
+    sourceVolumePermille: plan.sourceVolumePermille,
     nativeComposition: plan.nativeComposition ?? false,
     // Returned unchanged: the owner changes source sound through its own action,
     // and the server refuses a plan save that disagrees with the saved setting.

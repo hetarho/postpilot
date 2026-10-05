@@ -139,11 +139,13 @@ type EditPlan struct {
 	// plan draws on (CLIP-18). Nil is a plan written before the setting existed,
 	// whose audio meaning still lives in per-cut volume — a different thing from
 	// a snapshot that says every source is off.
-	SourceAudio    *SourceAudioSettings
-	HideDisclosure bool
-	Ratio          string
-	DurationMS     int
-	Cuts           []EditCut
+	Narration            *NarrationPlan
+	SourceVolumePermille *int
+	SourceAudio          *SourceAudioSettings
+	HideDisclosure       bool
+	Ratio                string
+	DurationMS           int
+	Cuts                 []EditCut
 	// Render inputs, not part of the approved composition and never stored with
 	// it: the disclosure the badge shows, filled from the PROJECT at render time
 	// so the badge is always the owner's current campaign type (CDS-31).

@@ -28,7 +28,11 @@ func captionProto(c clip.Caption) *v1.ClipCaption {
 const explicitZeroRate = -1
 
 func correctionPlan(p *v1.ClipEditPlan) clip.CorrectionPlan {
-	out := clip.CorrectionPlan{DurationMS: int(p.GetDurationMs()), NativeComposition: p.GetNativeComposition()}
+	out := clip.CorrectionPlan{Narration: narration(p.GetNarration()), DurationMS: int(p.GetDurationMs()), NativeComposition: p.GetNativeComposition()}
+	if p != nil && p.SourceVolumePermille != nil {
+		gain := int(*p.SourceVolumePermille)
+		out.SourceVolumePermille = &gain
+	}
 	if p.GetSourceAudio() != nil {
 		out.SourceAudio = []clip.SourceAudioSetting{}
 		for _, v := range p.GetSourceAudio().GetValues() {
@@ -74,7 +78,7 @@ func correctionPlan(p *v1.ClipEditPlan) clip.CorrectionPlan {
 	return out
 }
 func correctionText(t *v1.ClipEditableText) clip.CorrectionText {
-	out := clip.CorrectionText{InstanceID: t.InstanceId, ElementID: t.ElementId, CutID: t.CutId, Kind: t.Kind, Role: t.Role, Text: t.Text, Style: t.Style, Position: t.Position, Align: t.Align, Basis: t.Basis, Pace: t.Pace, Accent: t.Accent, Keyword: t.Keyword, ResolvedStartMS: int(t.ResolvedStartMs), ResolvedEndMS: int(t.ResolvedEndMs), GroupID: t.GroupId, ItemID: t.ItemId}
+	out := clip.CorrectionText{Derived: derived(t.DerivedCaption), InstanceID: t.InstanceId, ElementID: t.ElementId, CutID: t.CutId, Kind: t.Kind, Role: t.Role, Text: t.Text, Style: t.Style, Position: t.Position, Align: t.Align, Basis: t.Basis, Pace: t.Pace, Accent: t.Accent, Keyword: t.Keyword, ResolvedStartMS: int(t.ResolvedStartMs), ResolvedEndMS: int(t.ResolvedEndMs), GroupID: t.GroupId, ItemID: t.ItemId}
 	out.StaleEvidence, out.EvidenceReviewed, out.FallbackReason, out.Narration = t.StaleEvidence, t.EvidenceReviewed, t.FallbackReason, t.Narration
 	if t.GetCreation() != nil {
 		out.Creation = &clip.TextCreation{Kind: t.GetCreation().GetKind()}
@@ -115,6 +119,7 @@ func correctionTextProto(t clip.CorrectionText) *v1.ClipEditableText {
 	// Creation is request-only: the projection hands a caption back as an
 	// ordinary one, so a resave corrects it rather than creating it again.
 	out.StaleEvidence, out.EvidenceReviewed, out.FallbackReason, out.Narration, out.OwnerEdited = t.StaleEvidence, t.EvidenceReviewed, t.FallbackReason, t.Narration, t.OwnerEdited
+	out.DerivedCaption = derivedProto(t.Derived)
 	out.OwnerSizePx, out.OwnerStyle = int32(t.Owner.Size), t.Owner.Style
 	if at := t.Owner.Position; at != nil {
 		out.OwnerPosition = &v1.ClipCaptionPlacement{X: int32(at.X), Y: int32(at.Y)}
@@ -151,6 +156,11 @@ func editingProto(s *clip.CorrectionState) *v1.ClipEditingState {
 		return nil
 	}
 	out := &v1.ClipEditingState{Plan: &v1.ClipEditPlan{DurationMs: int32(s.Plan.DurationMS), NativeComposition: s.Plan.NativeComposition}, FadeMs: int32(s.FadeMS), MaxCuts: int32(s.MaxCuts), MaxCopyRunes: int32(s.MaxCopyRunes), MinDurationMs: int32(s.MinDurationMS), MaxDurationMs: int32(s.MaxDurationMS)}
+	out.Plan.Narration = narrationProto(s.Plan.Narration)
+	if s.Plan.SourceVolumePermille != nil {
+		gain := int32(*s.Plan.SourceVolumePermille)
+		out.Plan.SourceVolumePermille = &gain
+	}
 	if s.Plan.SourceAudio != nil {
 		settings := &v1.ClipSourceAudioSettings{}
 		for _, v := range s.Plan.SourceAudio {
