@@ -17,6 +17,11 @@ export function SpeechCatalogManager() {
   const { t } = useTranslation('models')
   const id = useId()
   const catalog = useAdminSpeechProfiles()
+  const metadataUnavailable =
+    catalog.isPending ||
+    catalog.isError ||
+    Boolean(catalog.browse.fetchError) ||
+    catalog.browse.candidates.length === 0
   const [editing, setEditing] = useState<AdminSpeechProfile | null | undefined>()
   const [session, setSession] = useState(0)
   const [budget, setBudget] = useState('')
@@ -37,7 +42,7 @@ export function SpeechCatalogManager() {
     <div className="mt-6 space-y-5">
       <Typography variant="body">{t('speechAdmin.description')}</Typography>
       <div className="flex flex-wrap gap-3">
-        <Button variant="secondary" onClick={() => open(null)}>
+        <Button variant="secondary" disabled={metadataUnavailable} onClick={() => open(null)}>
           {t('speechAdmin.new')}
         </Button>
         <Button variant="ghost" pending={catalog.refreshing} onClick={catalog.refresh}>
@@ -46,7 +51,11 @@ export function SpeechCatalogManager() {
       </div>
       {(catalog.isError || catalog.browse.fetchError) && (
         <Notice tone="warning" role="status">
-          {t('speechAdmin.fetchFailed')}
+          {catalog.isError
+            ? t('speechAdmin.loadFailed')
+            : t(`speechAdmin.connectionReason.${catalog.browse.fetchError}`, {
+                defaultValue: t('speechAdmin.fetchFailed'),
+              })}
         </Notice>
       )}
       {catalog.failure && <AppFailureMessage failure={catalog.failure} />}
@@ -55,9 +64,12 @@ export function SpeechCatalogManager() {
           {t('catalog.loading')}
         </Typography>
       )}
-      {!catalog.isPending && catalog.browse.profiles.length === 0 && (
-        <Typography variant="body">{t('speechAdmin.empty')}</Typography>
-      )}
+      {catalog.hasData &&
+        !catalog.isPending &&
+        !catalog.isError &&
+        catalog.browse.profiles.length === 0 && (
+          <Typography variant="body">{t('speechAdmin.empty')}</Typography>
+        )}
       {catalog.browse.profiles.map((p) => {
         const choice = catalog.browse.choices.find((c) => c.id === p.id)
         return (

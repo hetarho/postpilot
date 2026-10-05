@@ -66,11 +66,14 @@
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
 
 ## next
-- T533-T550 implementation and offline checks are complete with task commits; T539/T550 retain deferred real voice/listening/export/device qualification. Ordinary production voice/narration readiness stays closed until that evidence passes.
+- T585 speech setup/error feedback is complete. T533-T550 offline implementation is complete; T539/T550 retain deferred real voice/listening/export/device qualification, and ordinary production voice/narration readiness stays closed.
 - create-task ARCH (ARCH-52+ ARCH-53+ ARCH-56+ ARCH-57+ ARCH-34✎); create-task POST r32 (POST-108+ implemented by 12d2f428; verification-only); create-task VOICE r8 (VOICE-32✎ implemented by 68ae9a79; verification-only); update-ssot VOICE-31 remains open.
 - ops: lower TEMPLATE_PHOTO_ROW_MAX / VITE_TEMPLATE_PHOTO_ROW_MAX to 3 wherever production sets them explicitly (VPS .env, Cloudflare build vars).
 
 ## log
+- 261005 T585 done: actionable speech setup reasons, truthful saved-list failure/recovery, 3289 FE tests and all local CI checks passed
+- 261005 T585 start: distinguish missing speech setup from supplier failure and unknown saved-list state; development credential is absent
+- 261005 speech catalog diagnosis start: inspect provider connection, catalog failures and saved-list state before correcting administration feedback
 - 261005 T550 blocked: lifecycle/readiness implementation, full local CI, five CPU narration/boundary cases, ordinary parity and Chromium editing/export checks passed; real supplier/human qualification is deferred
 - 261005 T550 start: durable private speech cleanup, finalization provenance and complete offline workflow/boundary qualification
 - 261005 T549 done: independent bounded browser narration, exact durable speech fingerprints, 3282 FE tests, full local CI, CPU smokes and browser/server decoded parity passed
@@ -88,6 +91,3 @@
 - 261005 T543 done: main-preview placement, protected wording-only refresh and overflow/pending notices; 3249 FE tests and full local CI passed
 - 261005 T543 start: main-preview caption selection/placement and explicit owner-safe script wording refresh
 - 261005 T542 done: direct trim/reorder/seek, overlap-safe split and cancel/keyboard/undo semantics; 3240 FE tests and full local CI passed
-- 261005 T542 start: source-bound direct trim/reorder, shared output seek, cancellation and one history entry per gesture
-- 261005 T541 done: preview-first contextual editor, three named tracks and explicit mobile details; 3231 FE tests, full local CI and 12 responsive/theme browser reviews passed
-- 261005 T541 start: persistent desktop properties, explicit phone details, named tracks and preview-first saved drafts

@@ -54,7 +54,8 @@ export function useAdminSpeechProfiles() {
       ? toSpeechAdminBrowse(query.data)
       : { profiles: [], choices: [], candidates: [], fetchError: '' },
     isPending: query.isPending,
-    isError: query.isError,
+    hasData: query.data !== undefined,
+    isError: query.isError || refresh.isError,
     refresh: () => refresh.mutate({ refresh: true }),
     refreshing: refresh.isPending,
     save: (profile: AdminSpeechProfile) =>
@@ -72,8 +73,8 @@ export function useAdminSpeechProfiles() {
       : undefined,
     qualifying: qualification.isPending,
     failure:
-      save.error || refresh.error || qualification.error
-        ? appFailureFromConnect(save.error ?? refresh.error ?? qualification.error)
+      save.error || refresh.error || qualification.error || query.error
+        ? appFailureFromConnect(save.error ?? refresh.error ?? qualification.error ?? query.error)
         : undefined,
   }
 }

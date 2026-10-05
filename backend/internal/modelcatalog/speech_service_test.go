@@ -80,14 +80,62 @@ type speechSource struct {
 	catalog    llm.SpeechCatalog
 	connection llm.SpeechConnection
 	err        error
+	reads      int
 }
 
 func (s *speechSource) ReadSpeechCatalog(context.Context, bool) (llm.SpeechCatalog, error) {
+	s.reads++
 	c := s.catalog
 	c.Models = slices.Clone(c.Models)
 	return c, s.err
 }
 func (s *speechSource) SpeechConnection() llm.SpeechConnection { return s.connection }
+
+func TestAdminSpeechBrowseExplainsSetupWithoutFetchingDisabledConnections(t *testing.T) {
+	for _, tc := range []struct {
+		name       string
+		connection llm.SpeechConnection
+		reason     string
+	}{
+		{"no provider", llm.SpeechConnection{Disabled: true, DisabledReason: llm.DisabledReasonNoKey}, "SPEECH_PROVIDER_NOT_CONFIGURED"},
+		{"no key", llm.SpeechConnection{ProviderID: "speech-test", Disabled: true, DisabledReason: llm.DisabledReasonNoKey}, "SPEECH_API_KEY_NOT_CONFIGURED"},
+		{"disabled", llm.SpeechConnection{ProviderID: "speech-test", Disabled: true}, "SPEECH_CONNECTION_UNAVAILABLE"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			s, _, source, draft := speechFixture(t)
+			p, err := s.SaveSpeechProfile(t.Context(), draft, 0)
+			if err != nil {
+				t.Fatal(err)
+			}
+			source.connection, source.reads = tc.connection, 0
+			browse, err := s.BrowseSpeech(t.Context(), true)
+			if err != nil || browse.FetchError != tc.reason || source.reads != 0 || len(browse.Candidates) != 0 {
+				t.Fatalf("setup status: %+v, reads=%d, err=%v", browse, source.reads, err)
+			}
+			if len(browse.Profiles) != 1 || browse.Profiles[0].ID != p.ID || len(browse.Choices) != 1 || browse.Choices[0].UnavailableReason != "SPEECH_CONNECTION_UNAVAILABLE" || browse.Choices[0].Available {
+				t.Fatalf("saved profile/readiness lost: %+v", browse)
+			}
+		})
+	}
+}
+
+func TestAdminSpeechBrowsePreservesProfilesAndSanitizesUpstreamFailure(t *testing.T) {
+	s, _, source, draft := speechFixture(t)
+	p, err := s.SaveSpeechProfile(t.Context(), draft, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	source.catalog = llm.SpeechCatalog{}
+	source.err = errors.New("private supplier response and credential")
+	source.reads = 0
+	browse, err := s.BrowseSpeech(t.Context(), true)
+	if err != nil || browse.FetchError != "SPEECH_CATALOG_UNAVAILABLE" || source.reads != 1 || len(browse.Candidates) != 0 {
+		t.Fatalf("upstream status: %+v, reads=%d, err=%v", browse, source.reads, err)
+	}
+	if len(browse.Profiles) != 1 || browse.Profiles[0].ID != p.ID || len(browse.Choices) != 1 || browse.Choices[0].UnavailableReason != "SPEECH_CATALOG_UNAVAILABLE" || browse.Choices[0].Available {
+		t.Fatalf("saved profile/readiness lost: %+v", browse)
+	}
+}
 
 func speechFixture(t *testing.T) (*SpeechService, *speechMemory, *speechSource, SpeechProfile) {
 	t.Helper()

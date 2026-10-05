@@ -28,11 +28,26 @@ func (s *SpeechService) BrowseSpeech(ctx context.Context, refresh bool) (SpeechA
 	if err != nil {
 		return SpeechAdminBrowse{}, err
 	}
-	catalog, err := s.source.ReadSpeechCatalog(ctx, refresh)
-	browse := SpeechAdminBrowse{Profiles: profiles, Candidates: catalog.Models}
-	if err != nil {
-		browse.FetchError = "SPEECH_CATALOG_UNAVAILABLE"
+	browse := SpeechAdminBrowse{Profiles: profiles}
+	var catalog llm.SpeechCatalog
+	connection := s.source.SpeechConnection()
+	switch {
+	case connection.ProviderID == "":
+		browse.FetchError = "SPEECH_PROVIDER_NOT_CONFIGURED"
+		err = llm.ErrProviderDisabled
+	case connection.Disabled:
+		browse.FetchError = "SPEECH_CONNECTION_UNAVAILABLE"
+		if connection.DisabledReason == llm.DisabledReasonNoKey {
+			browse.FetchError = "SPEECH_API_KEY_NOT_CONFIGURED"
+		}
+		err = llm.ErrProviderDisabled
+	default:
+		catalog, err = s.source.ReadSpeechCatalog(ctx, refresh)
+		if err != nil {
+			browse.FetchError = "SPEECH_CATALOG_UNAVAILABLE"
+		}
 	}
+	browse.Candidates = catalog.Models
 	for _, p := range profiles {
 		browse.Choices = append(browse.Choices, s.choice(p, plan.Master, catalog, err))
 	}

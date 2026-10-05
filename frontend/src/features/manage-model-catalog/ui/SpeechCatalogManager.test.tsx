@@ -6,7 +6,18 @@ import { ModelCatalogManager } from './ModelCatalogManager'
 import { SpeechProfileForm } from './SpeechProfileForm'
 import { i18n } from '../config/i18n'
 
-const mocks = vi.hoisted(() => ({ save: vi.fn(), refresh: vi.fn(), startQualification: vi.fn() }))
+const mocks = vi.hoisted(() => ({
+  save: vi.fn(),
+  refresh: vi.fn(),
+  startQualification: vi.fn(),
+  speech: {
+    hasData: true,
+    isPending: false,
+    isError: false,
+    fetchError: '',
+    profiles: [] as AdminSpeechProfile[],
+  },
+}))
 const models: SpeechCandidate[] = [
   {
     ref: { providerId: 'speech', modelId: 'design' },
@@ -47,9 +58,15 @@ vi.mock('@/entities/model-catalog', async (importOriginal) => ({
   }),
   useRefreshCatalog: () => ({ refresh: vi.fn(), isPending: false }),
   useAdminSpeechProfiles: () => ({
-    browse: { profiles: [], choices: [], candidates: models, fetchError: '' },
-    isPending: false,
-    isError: false,
+    browse: {
+      profiles: mocks.speech.profiles,
+      choices: [],
+      candidates: models,
+      fetchError: mocks.speech.fetchError,
+    },
+    hasData: mocks.speech.hasData,
+    isPending: mocks.speech.isPending,
+    isError: mocks.speech.isError,
     refresh: mocks.refresh,
     refreshing: false,
     save: mocks.save,
@@ -65,6 +82,79 @@ describe('the separate spoken voice admin tab', () => {
     mocks.save.mockReset().mockResolvedValue(undefined)
     mocks.refresh.mockClear()
     mocks.startQualification.mockClear()
+    Object.assign(mocks.speech, {
+      hasData: true,
+      isPending: false,
+      isError: false,
+      fetchError: '',
+      profiles: [],
+    })
+  })
+
+  it('does not claim no registrations when the saved list could not be read', async () => {
+    mocks.speech.hasData = false
+    mocks.speech.isError = true
+    const user = userEvent.setup()
+    render(<ModelCatalogManager />)
+    await user.click(screen.getByRole('tab', { name: '목소리' }))
+    expect(screen.getByText(/조합 목록을 불러오지 못했습니다/)).toBeInTheDocument()
+    expect(screen.queryByText(/등록한 목소리 모델 조합이 없습니다/)).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '목소리 모델 추가' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '목록 새로고침' })).toBeEnabled()
+  })
+
+  it.each([
+    ['SPEECH_PROVIDER_NOT_CONFIGURED', /TTS 공급사 연결이 설정되지 않았습니다/],
+    ['SPEECH_API_KEY_NOT_CONFIGURED', /TTS 공급사 API 키가 서버에 설정되지 않았습니다/],
+    ['SPEECH_CATALOG_UNAVAILABLE', /TTS 공급사의 모델 목록을 읽지 못했습니다/],
+  ])('explains %s and preserves access to saved profiles', async (reason, message) => {
+    mocks.speech.fetchError = reason
+    mocks.speech.profiles = [
+      {
+        id: 'saved',
+        revision: 1n,
+        label: 'Saved voice',
+        grade: 'value',
+        enabled: false,
+        voiceReady: false,
+        exportReady: false,
+        prices: [],
+        binding: {
+          designModel: models[0].ref,
+          speechModel: models[1].ref,
+          settings: {
+            stability: 0.5,
+            similarityBoost: 0.75,
+            style: 0,
+            speakerBoost: false,
+            speed: 1,
+          },
+          outputFormat: 'mp3_44100_128',
+          descriptionMax: 1000,
+          previewMax: 1000,
+          speechMax: 1000,
+        },
+      },
+    ]
+    const user = userEvent.setup()
+    render(<ModelCatalogManager />)
+    await user.click(screen.getByRole('tab', { name: '목소리' }))
+    expect(screen.getByText(message)).toBeInTheDocument()
+    expect(screen.getByText(/Saved voice/)).toBeInTheDocument()
+    expect(screen.queryByText(/등록한 목소리 모델 조합이 없습니다/)).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '목소리 모델 추가' })).toBeDisabled()
+    await user.click(screen.getByRole('button', { name: '조합 수정' }))
+    expect(screen.getByLabelText('조합 이름')).toHaveValue('Saved voice')
+    expect(mocks.save).not.toHaveBeenCalled()
+    expect(mocks.startQualification).not.toHaveBeenCalled()
+  })
+
+  it('explains how to register a profile after a successful empty-list read', async () => {
+    const user = userEvent.setup()
+    render(<ModelCatalogManager />)
+    await user.click(screen.getByRole('tab', { name: '목소리' }))
+    expect(screen.getByText(/생성·합성 모델과 요금 근거를 등록하세요/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '목소리 모델 추가' })).toBeEnabled()
   })
   it('opens without synthesis, selections or bulk-document writes and refreshes only speech metadata', async () => {
     const user = userEvent.setup()
@@ -144,6 +234,9 @@ describe('the separate spoken voice admin tab', () => {
     expect(Object.keys(i18n.ko.speechAdmin)).toEqual(Object.keys(i18n.en.speechAdmin))
     expect(Object.keys(i18n.ko.speechAdmin.operation)).toEqual(
       Object.keys(i18n.en.speechAdmin.operation),
+    )
+    expect(Object.keys(i18n.ko.speechAdmin.connectionReason)).toEqual(
+      Object.keys(i18n.en.speechAdmin.connectionReason),
     )
     expect(Object.keys(i18n.ko.speechAdmin.units)).toEqual(Object.keys(i18n.en.speechAdmin.units))
   })

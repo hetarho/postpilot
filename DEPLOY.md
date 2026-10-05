@@ -118,6 +118,7 @@ GitHub 실행기 대기, 비어 있는 캐시에서의 최초 도구 컴파일, 
 | `MAIL_DRIVER` | 스택 `.env` | 트랜잭션 메일 전송기. 로컬은 `log`, 배포는 `resend` |
 | `RESEND_API_KEY` / `MAIL_FROM` | 스택 `.env` | Resend API 키와 인증된 발신 주소. `MAIL_DRIVER=resend`이면 둘 다 필수 |
 | `OPENROUTER_API_KEY` (외 `backend/config/providers.yaml`의 `api_key_env`가 가리키는 이름들) | 스택 `.env` | 모델 프로바이더 키. **없어도 API는 뜬다** — 그 프로바이더의 모델만 드롭다운에서 "API key not configured"로 비활성. 이미지는 `/config/providers.yaml`을 내장하며(`PROVIDERS_CONFIG`), 스택이 자기 파일을 그 자리에 마운트해 덮어쓸 수 있다 |
+| `ELEVENLABS_API_KEY` | 스택 `.env` | 목소리 생성·더빙용 TTS 연결 키. OpenRouter 키와 별도이며, 없으면 목소리 탭에 키 미설정 안내가 나온다. 설정 후 API 컨테이너를 재생성하고 목소리 탭에서 목록 새로고침 → 모델 조합·계정 요금 근거 등록 → 실제 검증 순서로 진행한다. 키나 모델 등록만으로 생성·더빙 검증이 완료되지는 않는다 |
 
 ## 4. VPS 내부 구조
 

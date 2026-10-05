@@ -44,8 +44,19 @@ export const i18n = {
       save: '조합 저장',
       cancel: '닫기',
       fetchFailed:
-        '목소리 모델 상태를 읽지 못했습니다. 저장한 조합은 보관되며, 새 생성 전 상태 확인이 필요합니다.',
-      empty: '등록한 목소리 모델 조합이 없습니다.',
+        'TTS 공급사의 모델 목록을 읽지 못했습니다. 저장한 조합은 보관됩니다. 공급사 연결 상태를 확인한 뒤 새로고침하세요.',
+      loadFailed:
+        '저장된 목소리 모델 조합 목록을 불러오지 못했습니다. 연결 상태를 확인한 뒤 새로고침하세요.',
+      connectionReason: {
+        SPEECH_PROVIDER_NOT_CONFIGURED:
+          '서버에 TTS 공급사 연결이 설정되지 않았습니다. 공급사 연결을 설정하고 API 서버를 재시작한 뒤 새로고침하세요.',
+        SPEECH_API_KEY_NOT_CONFIGURED:
+          'TTS 공급사 API 키가 서버에 설정되지 않았습니다. 키를 설정하고 API 서버를 재시작한 뒤 새로고침하세요.',
+        SPEECH_CONNECTION_UNAVAILABLE:
+          'TTS 공급사 연결을 사용할 수 없습니다. 서버의 공급사 연결 설정을 확인한 뒤 새로고침하세요.',
+      },
+      empty:
+        '등록한 목소리 모델 조합이 없습니다. 공급사 연결 후 목소리 모델 추가에서 생성·합성 모델과 요금 근거를 등록하세요.',
       revision: '버전 {{revision}}',
       voiceReady: '목소리 생성 검증 완료',
       voicePending: '목소리 생성 미검증',
@@ -271,8 +282,19 @@ export const i18n = {
       save: 'Save profile',
       cancel: 'Close',
       fetchFailed:
-        'Speech model status could not be read. Saved profiles remain; new generation requires a successful status check.',
-      empty: 'No voice model profiles have been registered.',
+        'The TTS provider model list could not be read. Saved profiles remain. Check the provider connection and refresh.',
+      loadFailed:
+        'Saved voice model profiles could not be loaded. Check the connection and refresh.',
+      connectionReason: {
+        SPEECH_PROVIDER_NOT_CONFIGURED:
+          'No TTS provider connection is configured on the server. Configure it, restart the API server and refresh.',
+        SPEECH_API_KEY_NOT_CONFIGURED:
+          'The TTS provider API key is not configured on the server. Configure it, restart the API server and refresh.',
+        SPEECH_CONNECTION_UNAVAILABLE:
+          'The TTS provider connection is unavailable. Check the server provider configuration and refresh.',
+      },
+      empty:
+        'No voice model profiles have been registered. Connect the provider, then use Add voice model profile to register design and synthesis models with pricing evidence.',
       revision: 'Revision {{revision}}',
       voiceReady: 'Voice creation qualified',
       voicePending: 'Voice creation not qualified',
