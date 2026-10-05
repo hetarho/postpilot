@@ -1,6 +1,6 @@
 -- name: InsertClipSpeechAsset :execrows
-INSERT INTO clip_speech_assets(id,owner_id,project_id,object_key,input_text,input_hash,binding_digest,speech_json,created_at)
-SELECT ?,?,?,?,?,?,?,?,? WHERE EXISTS(SELECT 1 FROM clip_projects WHERE clip_projects.id = sqlc.arg(project_check) AND clip_projects.user_id = sqlc.arg(owner_check));
+INSERT INTO clip_speech_assets(id,owner_id,project_id,object_key,input_text,input_hash,binding_digest,speech_json,created_at,bytes_count)
+SELECT ?,?,?,?,?,?,?,?,?,? WHERE EXISTS(SELECT 1 FROM clip_projects WHERE clip_projects.id = sqlc.arg(project_check) AND clip_projects.user_id = sqlc.arg(owner_check));
 
 -- name: GetClipSpeechAsset :one
 SELECT * FROM clip_speech_assets WHERE id = ? AND owner_id = ? AND project_id = ?;
@@ -10,3 +10,34 @@ SELECT * FROM clip_speech_assets WHERE owner_id = ? AND project_id = ? AND input
 
 -- name: ListClipSpeechAssets :many
 SELECT * FROM clip_speech_assets WHERE owner_id = ? AND project_id = ? ORDER BY created_at;
+
+-- name: ReserveClipSpeechRun :execrows
+INSERT INTO clip_speech_jobs(id,owner_id,project_id,request_key,request_digest,operation_json,created_at)
+SELECT ?,?,?,?,?,?,? WHERE EXISTS(SELECT 1 FROM clip_projects WHERE clip_projects.id=sqlc.arg(project_check) AND clip_projects.user_id=sqlc.arg(owner_check) AND clip_projects.edit_plan_revision=sqlc.arg(revision_check) AND clip_projects.finalized_at IS NULL)
+ON CONFLICT(owner_id,project_id,request_key) DO NOTHING;
+
+-- name: FindClipSpeechRun :one
+SELECT operation_json,job_id FROM clip_speech_jobs WHERE owner_id=? AND project_id=? AND request_key=?;
+
+-- name: GetClipSpeechRun :one
+SELECT operation_json,job_id FROM clip_speech_jobs WHERE owner_id=? AND id=?;
+
+-- name: BindClipSpeechRun :execrows
+UPDATE clip_speech_jobs SET job_id=? WHERE owner_id=? AND id=? AND (job_id='' OR job_id=sqlc.arg(same_job));
+
+-- name: ReserveClipSpeechCall :exec
+INSERT INTO clip_speech_segments(id,owner_id,project_id,job_id,plan_revision,segment_id,input_hash,binding_digest,state,operation_json,created_at,updated_at)
+VALUES(?,?,?,?,?,?,?,?,'reserved',?,?,?) ON CONFLICT(job_id,segment_id) DO NOTHING;
+
+-- name: ClaimClipSpeechCall :execrows
+UPDATE clip_speech_segments SET state='claimed',updated_at=? WHERE owner_id=? AND project_id=? AND job_id=? AND segment_id=? AND input_hash=? AND binding_digest=? AND state='reserved';
+
+-- name: GetClipSpeechCallState :one
+SELECT state FROM clip_speech_segments WHERE owner_id=? AND project_id=? AND job_id=? AND segment_id=?;
+
+-- name: FinishClipSpeechCall :execrows
+UPDATE clip_speech_segments SET state=sqlc.arg(next_state),asset_id=COALESCE(sqlc.narg(asset),asset_id),updated_at=sqlc.arg(now)
+WHERE owner_id=sqlc.arg(owner) AND project_id=sqlc.arg(project) AND job_id=sqlc.arg(job) AND segment_id=sqlc.arg(segment) AND state=sqlc.arg(expected_state);
+
+-- name: ListIncompleteClipSpeechRuns :many
+SELECT operation_json,job_id FROM clip_speech_jobs WHERE job_id='' OR EXISTS(SELECT 1 FROM clip_speech_segments WHERE clip_speech_segments.job_id=clip_speech_jobs.job_id AND state IN ('reserved','claimed','received')) ORDER BY created_at;

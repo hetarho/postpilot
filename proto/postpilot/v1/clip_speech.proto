@@ -1,0 +1,16 @@
+syntax = "proto3";
+package postpilot.v1;
+option go_package = "github.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1";
+
+message QuoteClipSpeechRequest { string project_id = 1; int32 expected_revision = 2; }
+message ClipSpeechQuote { string quote_id = 1; int32 maximum_credits = 2; string expires_at = 3; repeated string segment_ids = 4; int32 plan_revision = 5; }
+message StartClipSpeechRequest { string project_id = 1; int32 expected_revision = 2; string idempotency_key = 3; string quote_id = 4; optional int32 approved_max_credits = 5; int32 cancellation_policy_version = 6; }
+message StartClipSpeechResponse { string job_id = 1; }
+message GetClipSpeechReadinessRequest { string project_id = 1; }
+message ClipSpeechSegmentReadiness { string segment_id = 1; string state = 2; string asset_id = 3; int32 duration_ms = 4; bool has_character_timing = 5; }
+message ClipSpeechReadiness { int32 plan_revision = 1; repeated ClipSpeechSegmentReadiness segments = 2; bool render_ready = 3; }
+service ClipSpeechService {
+ rpc QuoteClipSpeech(QuoteClipSpeechRequest) returns (ClipSpeechQuote);
+ rpc StartClipSpeech(StartClipSpeechRequest) returns (StartClipSpeechResponse);
+ rpc GetClipSpeechReadiness(GetClipSpeechReadinessRequest) returns (ClipSpeechReadiness);
+}

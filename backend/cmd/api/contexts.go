@@ -77,6 +77,7 @@ type contexts struct {
 	clipGuard         clipapp.Guard
 	clip              *clipapp.Service
 	clipSources       *clipapp.SourceService
+	clipSpeech        *clipapp.SpeechService
 	clipGeneration    *clipapp.GenerationService
 	clipMediaRecovery *clipapp.MediaReconciler
 
@@ -238,6 +239,10 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 	c.clipSources = clipapp.NewSourceService(c.clipStore, p.bucket, clip.DefaultSourceLimits(clipEnvironment(cfg)))
 	c.clip = clipapp.NewService(c.clipStore, clip.DefaultLimits(), c.clipSources, clipapp.NewFinalizer(handle.Writer, c.clipPorts, c.clipStore, clip.DefaultRenderConfig(clipEnvironment(cfg)), nil))
 	c.clipMediaRecovery = clipapp.NewMediaReconciler(handle.Writer, c.clipPorts, c.clipStore, jobstore.New(handle.Writer, handle.Reader, jobKinds()), c.jobs, p.bucket, cfg.OrphanMinAge, nil)
+	c.clipSpeech = newClipSpeech(c)
+	if err := c.clipSpeech.Recover(ctx); err != nil {
+		return nil, fmt.Errorf("clip speech recovery: %w", err)
+	}
 	c.spokenGeneration = newSpokenGeneration(c)
 	if err := c.spokenGeneration.Recover(ctx); err != nil {
 		return nil, fmt.Errorf("spoken operation recovery: %w", err)

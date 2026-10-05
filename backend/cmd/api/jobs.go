@@ -113,6 +113,8 @@ func registerJobs(c *contexts) {
 		}, progress)
 	}))
 	registerClipJobs(q, c.clipGeneration, c.clipSources)
+	q.Register(clip.JobKindSpeech, metered(c.clipSpeech.Run))
+	q.OnTerminal(clip.JobKindSpeech, func(ctx context.Context, j job.Job, _ time.Time) error { return c.clipSpeech.OnTerminal(ctx, j) })
 	for _, kind := range []string{spoken.JobKindDesign, spoken.JobKindConfirm, spoken.JobKindProbe} {
 		q.Register(kind, metered(c.spokenGeneration.Run))
 		q.OnTerminal(kind, func(ctx context.Context, j job.Job, _ time.Time) error { return c.spokenGeneration.OnTerminal(ctx, j) })

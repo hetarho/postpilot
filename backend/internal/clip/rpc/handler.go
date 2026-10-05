@@ -25,6 +25,7 @@ import (
 )
 
 type Handler struct {
+	speech     *clipapp.SpeechService
 	service    *clipapp.Service
 	sources    *clipapp.SourceService
 	generation *clipapp.GenerationService
@@ -161,6 +162,10 @@ func toConnectError(err error) error {
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip cancellation approval required", postpilotv1.FailureReason_CLIP_CANCELLATION_POLICY_REQUIRED, nil)
 	case errors.Is(err, clip.ErrQuoteExpired):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip credit quote expired", postpilotv1.FailureReason_CLIP_QUOTE_EXPIRED, nil)
+	case errors.Is(err, usage.ErrUnitApproval):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "speech quote changed", postpilotv1.FailureReason_CLIP_QUOTE_CHANGED, nil)
+	case errors.Is(err, usage.ErrUnitPricing):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "speech pricing unavailable", postpilotv1.FailureReason_CLIP_MODEL_PRICING_UNAVAILABLE, nil)
 	case errors.Is(err, clip.ErrQuoteChanged):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip credit quote changed", postpilotv1.FailureReason_CLIP_QUOTE_CHANGED, nil)
 	case errors.Is(err, clip.ErrRateUnavailable):

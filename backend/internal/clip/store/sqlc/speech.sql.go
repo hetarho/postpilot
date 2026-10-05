@@ -7,10 +7,65 @@ package sqlc
 
 import (
 	"context"
+	"database/sql"
 )
 
+const bindClipSpeechRun = `-- name: BindClipSpeechRun :execrows
+UPDATE clip_speech_jobs SET job_id=? WHERE owner_id=? AND id=? AND (job_id='' OR job_id=?4)
+`
+
+type BindClipSpeechRunParams struct {
+	JobID   string
+	OwnerID string
+	ID      string
+	SameJob string
+}
+
+func (q *Queries) BindClipSpeechRun(ctx context.Context, arg BindClipSpeechRunParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, bindClipSpeechRun,
+		arg.JobID,
+		arg.OwnerID,
+		arg.ID,
+		arg.SameJob,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const claimClipSpeechCall = `-- name: ClaimClipSpeechCall :execrows
+UPDATE clip_speech_segments SET state='claimed',updated_at=? WHERE owner_id=? AND project_id=? AND job_id=? AND segment_id=? AND input_hash=? AND binding_digest=? AND state='reserved'
+`
+
+type ClaimClipSpeechCallParams struct {
+	UpdatedAt     string
+	OwnerID       string
+	ProjectID     string
+	JobID         string
+	SegmentID     string
+	InputHash     string
+	BindingDigest string
+}
+
+func (q *Queries) ClaimClipSpeechCall(ctx context.Context, arg ClaimClipSpeechCallParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, claimClipSpeechCall,
+		arg.UpdatedAt,
+		arg.OwnerID,
+		arg.ProjectID,
+		arg.JobID,
+		arg.SegmentID,
+		arg.InputHash,
+		arg.BindingDigest,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const findClipSpeechAsset = `-- name: FindClipSpeechAsset :one
-SELECT id, owner_id, project_id, object_key, input_text, input_hash, binding_digest, speech_json, created_at FROM clip_speech_assets WHERE owner_id = ? AND project_id = ? AND input_hash = ? AND binding_digest = ? ORDER BY created_at DESC LIMIT 1
+SELECT id, owner_id, project_id, object_key, input_text, input_hash, binding_digest, speech_json, created_at, bytes_count FROM clip_speech_assets WHERE owner_id = ? AND project_id = ? AND input_hash = ? AND binding_digest = ? ORDER BY created_at DESC LIMIT 1
 `
 
 type FindClipSpeechAssetParams struct {
@@ -38,12 +93,68 @@ func (q *Queries) FindClipSpeechAsset(ctx context.Context, arg FindClipSpeechAss
 		&i.BindingDigest,
 		&i.SpeechJson,
 		&i.CreatedAt,
+		&i.BytesCount,
 	)
 	return i, err
 }
 
+const findClipSpeechRun = `-- name: FindClipSpeechRun :one
+SELECT operation_json,job_id FROM clip_speech_jobs WHERE owner_id=? AND project_id=? AND request_key=?
+`
+
+type FindClipSpeechRunParams struct {
+	OwnerID    string
+	ProjectID  string
+	RequestKey string
+}
+
+type FindClipSpeechRunRow struct {
+	OperationJson string
+	JobID         string
+}
+
+func (q *Queries) FindClipSpeechRun(ctx context.Context, arg FindClipSpeechRunParams) (FindClipSpeechRunRow, error) {
+	row := q.db.QueryRowContext(ctx, findClipSpeechRun, arg.OwnerID, arg.ProjectID, arg.RequestKey)
+	var i FindClipSpeechRunRow
+	err := row.Scan(&i.OperationJson, &i.JobID)
+	return i, err
+}
+
+const finishClipSpeechCall = `-- name: FinishClipSpeechCall :execrows
+UPDATE clip_speech_segments SET state=?1,asset_id=COALESCE(?2,asset_id),updated_at=?3
+WHERE owner_id=?4 AND project_id=?5 AND job_id=?6 AND segment_id=?7 AND state=?8
+`
+
+type FinishClipSpeechCallParams struct {
+	NextState     string
+	Asset         sql.NullString
+	Now           string
+	Owner         string
+	Project       string
+	Job           string
+	Segment       string
+	ExpectedState string
+}
+
+func (q *Queries) FinishClipSpeechCall(ctx context.Context, arg FinishClipSpeechCallParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, finishClipSpeechCall,
+		arg.NextState,
+		arg.Asset,
+		arg.Now,
+		arg.Owner,
+		arg.Project,
+		arg.Job,
+		arg.Segment,
+		arg.ExpectedState,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const getClipSpeechAsset = `-- name: GetClipSpeechAsset :one
-SELECT id, owner_id, project_id, object_key, input_text, input_hash, binding_digest, speech_json, created_at FROM clip_speech_assets WHERE id = ? AND owner_id = ? AND project_id = ?
+SELECT id, owner_id, project_id, object_key, input_text, input_hash, binding_digest, speech_json, created_at, bytes_count FROM clip_speech_assets WHERE id = ? AND owner_id = ? AND project_id = ?
 `
 
 type GetClipSpeechAssetParams struct {
@@ -65,13 +176,58 @@ func (q *Queries) GetClipSpeechAsset(ctx context.Context, arg GetClipSpeechAsset
 		&i.BindingDigest,
 		&i.SpeechJson,
 		&i.CreatedAt,
+		&i.BytesCount,
 	)
 	return i, err
 }
 
+const getClipSpeechCallState = `-- name: GetClipSpeechCallState :one
+SELECT state FROM clip_speech_segments WHERE owner_id=? AND project_id=? AND job_id=? AND segment_id=?
+`
+
+type GetClipSpeechCallStateParams struct {
+	OwnerID   string
+	ProjectID string
+	JobID     string
+	SegmentID string
+}
+
+func (q *Queries) GetClipSpeechCallState(ctx context.Context, arg GetClipSpeechCallStateParams) (string, error) {
+	row := q.db.QueryRowContext(ctx, getClipSpeechCallState,
+		arg.OwnerID,
+		arg.ProjectID,
+		arg.JobID,
+		arg.SegmentID,
+	)
+	var state string
+	err := row.Scan(&state)
+	return state, err
+}
+
+const getClipSpeechRun = `-- name: GetClipSpeechRun :one
+SELECT operation_json,job_id FROM clip_speech_jobs WHERE owner_id=? AND id=?
+`
+
+type GetClipSpeechRunParams struct {
+	OwnerID string
+	ID      string
+}
+
+type GetClipSpeechRunRow struct {
+	OperationJson string
+	JobID         string
+}
+
+func (q *Queries) GetClipSpeechRun(ctx context.Context, arg GetClipSpeechRunParams) (GetClipSpeechRunRow, error) {
+	row := q.db.QueryRowContext(ctx, getClipSpeechRun, arg.OwnerID, arg.ID)
+	var i GetClipSpeechRunRow
+	err := row.Scan(&i.OperationJson, &i.JobID)
+	return i, err
+}
+
 const insertClipSpeechAsset = `-- name: InsertClipSpeechAsset :execrows
-INSERT INTO clip_speech_assets(id,owner_id,project_id,object_key,input_text,input_hash,binding_digest,speech_json,created_at)
-SELECT ?,?,?,?,?,?,?,?,? WHERE EXISTS(SELECT 1 FROM clip_projects WHERE clip_projects.id = ?10 AND clip_projects.user_id = ?11)
+INSERT INTO clip_speech_assets(id,owner_id,project_id,object_key,input_text,input_hash,binding_digest,speech_json,created_at,bytes_count)
+SELECT ?,?,?,?,?,?,?,?,?,? WHERE EXISTS(SELECT 1 FROM clip_projects WHERE clip_projects.id = ?11 AND clip_projects.user_id = ?12)
 `
 
 type InsertClipSpeechAssetParams struct {
@@ -84,6 +240,7 @@ type InsertClipSpeechAssetParams struct {
 	BindingDigest string
 	SpeechJson    string
 	CreatedAt     string
+	BytesCount    int64
 	ProjectCheck  string
 	OwnerCheck    string
 }
@@ -99,6 +256,7 @@ func (q *Queries) InsertClipSpeechAsset(ctx context.Context, arg InsertClipSpeec
 		arg.BindingDigest,
 		arg.SpeechJson,
 		arg.CreatedAt,
+		arg.BytesCount,
 		arg.ProjectCheck,
 		arg.OwnerCheck,
 	)
@@ -109,7 +267,7 @@ func (q *Queries) InsertClipSpeechAsset(ctx context.Context, arg InsertClipSpeec
 }
 
 const listClipSpeechAssets = `-- name: ListClipSpeechAssets :many
-SELECT id, owner_id, project_id, object_key, input_text, input_hash, binding_digest, speech_json, created_at FROM clip_speech_assets WHERE owner_id = ? AND project_id = ? ORDER BY created_at
+SELECT id, owner_id, project_id, object_key, input_text, input_hash, binding_digest, speech_json, created_at, bytes_count FROM clip_speech_assets WHERE owner_id = ? AND project_id = ? ORDER BY created_at
 `
 
 type ListClipSpeechAssetsParams struct {
@@ -136,6 +294,7 @@ func (q *Queries) ListClipSpeechAssets(ctx context.Context, arg ListClipSpeechAs
 			&i.BindingDigest,
 			&i.SpeechJson,
 			&i.CreatedAt,
+			&i.BytesCount,
 		); err != nil {
 			return nil, err
 		}
@@ -148,4 +307,110 @@ func (q *Queries) ListClipSpeechAssets(ctx context.Context, arg ListClipSpeechAs
 		return nil, err
 	}
 	return items, nil
+}
+
+const listIncompleteClipSpeechRuns = `-- name: ListIncompleteClipSpeechRuns :many
+SELECT operation_json,job_id FROM clip_speech_jobs WHERE job_id='' OR EXISTS(SELECT 1 FROM clip_speech_segments WHERE clip_speech_segments.job_id=clip_speech_jobs.job_id AND state IN ('reserved','claimed','received')) ORDER BY created_at
+`
+
+type ListIncompleteClipSpeechRunsRow struct {
+	OperationJson string
+	JobID         string
+}
+
+func (q *Queries) ListIncompleteClipSpeechRuns(ctx context.Context) ([]ListIncompleteClipSpeechRunsRow, error) {
+	rows, err := q.db.QueryContext(ctx, listIncompleteClipSpeechRuns)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListIncompleteClipSpeechRunsRow
+	for rows.Next() {
+		var i ListIncompleteClipSpeechRunsRow
+		if err := rows.Scan(&i.OperationJson, &i.JobID); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const reserveClipSpeechCall = `-- name: ReserveClipSpeechCall :exec
+INSERT INTO clip_speech_segments(id,owner_id,project_id,job_id,plan_revision,segment_id,input_hash,binding_digest,state,operation_json,created_at,updated_at)
+VALUES(?,?,?,?,?,?,?,?,'reserved',?,?,?) ON CONFLICT(job_id,segment_id) DO NOTHING
+`
+
+type ReserveClipSpeechCallParams struct {
+	ID            string
+	OwnerID       string
+	ProjectID     string
+	JobID         string
+	PlanRevision  int64
+	SegmentID     string
+	InputHash     string
+	BindingDigest string
+	OperationJson string
+	CreatedAt     string
+	UpdatedAt     string
+}
+
+func (q *Queries) ReserveClipSpeechCall(ctx context.Context, arg ReserveClipSpeechCallParams) error {
+	_, err := q.db.ExecContext(ctx, reserveClipSpeechCall,
+		arg.ID,
+		arg.OwnerID,
+		arg.ProjectID,
+		arg.JobID,
+		arg.PlanRevision,
+		arg.SegmentID,
+		arg.InputHash,
+		arg.BindingDigest,
+		arg.OperationJson,
+		arg.CreatedAt,
+		arg.UpdatedAt,
+	)
+	return err
+}
+
+const reserveClipSpeechRun = `-- name: ReserveClipSpeechRun :execrows
+INSERT INTO clip_speech_jobs(id,owner_id,project_id,request_key,request_digest,operation_json,created_at)
+SELECT ?,?,?,?,?,?,? WHERE EXISTS(SELECT 1 FROM clip_projects WHERE clip_projects.id=?8 AND clip_projects.user_id=?9 AND clip_projects.edit_plan_revision=?10 AND clip_projects.finalized_at IS NULL)
+ON CONFLICT(owner_id,project_id,request_key) DO NOTHING
+`
+
+type ReserveClipSpeechRunParams struct {
+	ID            string
+	OwnerID       string
+	ProjectID     string
+	RequestKey    string
+	RequestDigest string
+	OperationJson string
+	CreatedAt     string
+	ProjectCheck  string
+	OwnerCheck    string
+	RevisionCheck int64
+}
+
+func (q *Queries) ReserveClipSpeechRun(ctx context.Context, arg ReserveClipSpeechRunParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, reserveClipSpeechRun,
+		arg.ID,
+		arg.OwnerID,
+		arg.ProjectID,
+		arg.RequestKey,
+		arg.RequestDigest,
+		arg.OperationJson,
+		arg.CreatedAt,
+		arg.ProjectCheck,
+		arg.OwnerCheck,
+		arg.RevisionCheck,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }

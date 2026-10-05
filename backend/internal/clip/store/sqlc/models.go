@@ -216,6 +216,7 @@ type ClipSpeechAsset struct {
 	BindingDigest string
 	SpeechJson    string
 	CreatedAt     string
+	BytesCount    int64
 }
 
 type VideoTemplate struct {

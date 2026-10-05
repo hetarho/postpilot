@@ -199,6 +199,9 @@ func handlers(c *contexts) []rpcserver.Registrar {
 			return postpilotv1connect.NewClipPlanServiceHandler(clipHandler(c), opts...)
 		},
 		func(opts ...connect.HandlerOption) (string, http.Handler) {
+			return postpilotv1connect.NewClipSpeechServiceHandler(clipHandler(c), opts...)
+		},
+		func(opts ...connect.HandlerOption) (string, http.Handler) {
 			return postpilotv1connect.NewClipRenderServiceHandler(clipHandler(c), opts...)
 		},
 		func(opts ...connect.HandlerOption) (string, http.Handler) {
@@ -270,5 +273,5 @@ func runBillingPasses(ctx context.Context, interval time.Duration, pass func(tim
 
 // clipHandler builds the clip context's Connect edge. It answers for all five clip services.
 func clipHandler(c *contexts) *cliprpc.Handler {
-	return cliprpc.NewHandler(c.clip).WithSources(c.clipSources).WithGeneration(c.clipGeneration, c.jobs)
+	return cliprpc.NewHandler(c.clip).WithSources(c.clipSources).WithGeneration(c.clipGeneration, c.jobs).WithSpeech(c.clipSpeech)
 }

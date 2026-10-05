@@ -20,10 +20,11 @@ import (
 // other kind starts in `observe`. The store is given the lists, so its SQL names no product.
 func jobKinds() jobstore.Kinds {
 	return jobstore.Kinds{
-		Deferred:    []string{clip.JobKindGenerate, clip.JobKindRender, clip.JobKindSampleBrowserRender, clip.JobKindRevise, clip.JobKindStoryline, clip.JobKindReviseStoryline},
-		Cancellable: []string{clip.JobKindGenerate, clip.JobKindRender, clip.JobKindSampleBrowserRender, clip.JobKindRevise, clip.JobKindStoryline, clip.JobKindReviseStoryline, job.KindTemplateRequest, spoken.JobKindDesign, spoken.JobKindConfirm, spoken.JobKindProbe},
-		Authorized:  []string{clip.JobKindGenerate, clip.JobKindRevise, clip.JobKindStoryline, clip.JobKindReviseStoryline, spoken.JobKindDesign, spoken.JobKindConfirm, spoken.JobKindProbe},
+		Deferred:    []string{clip.JobKindSpeech, clip.JobKindGenerate, clip.JobKindRender, clip.JobKindSampleBrowserRender, clip.JobKindRevise, clip.JobKindStoryline, clip.JobKindReviseStoryline},
+		Cancellable: []string{clip.JobKindSpeech, clip.JobKindGenerate, clip.JobKindRender, clip.JobKindSampleBrowserRender, clip.JobKindRevise, clip.JobKindStoryline, clip.JobKindReviseStoryline, job.KindTemplateRequest, spoken.JobKindDesign, spoken.JobKindConfirm, spoken.JobKindProbe},
+		Authorized:  []string{clip.JobKindSpeech, clip.JobKindGenerate, clip.JobKindRevise, clip.JobKindStoryline, clip.JobKindReviseStoryline, spoken.JobKindDesign, spoken.JobKindConfirm, spoken.JobKindProbe},
 		FirstStages: map[string]string{
+			clip.JobKindSpeech:   "speech",
 			spoken.JobKindDesign: spoken.JobKindDesign, spoken.JobKindConfirm: spoken.JobKindConfirm, spoken.JobKindProbe: spoken.JobKindProbe,
 			clip.JobKindGenerate: "prepare", clip.JobKindRevise: "prepare", clip.JobKindStoryline: "prepare", clip.JobKindReviseStoryline: "prepare",
 			job.KindAnalyzeVoice: "analyze", job.KindCheckVoice: "write", job.KindRevise: "write",

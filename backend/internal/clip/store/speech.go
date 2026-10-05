@@ -52,7 +52,7 @@ func (s *Store) InsertSpeechAsset(ctx context.Context, a clip.SpeechAsset) error
 		return err
 	}
 	_, err = transact(ctx, s, func(q *sqlc.Queries) (struct{}, error) {
-		return struct{}{}, affected(q.InsertClipSpeechAsset(ctx, sqlc.InsertClipSpeechAssetParams{ID: a.ID, OwnerID: a.OwnerID, ProjectID: a.ProjectID, ObjectKey: a.ObjectKey, InputText: a.Text, InputHash: a.Speech.InputHash, BindingDigest: a.Speech.BindingDigest, SpeechJson: raw, CreatedAt: stamp(a.CreatedAt), ProjectCheck: a.ProjectID, OwnerCheck: a.OwnerID}))
+		return struct{}{}, affected(q.InsertClipSpeechAsset(ctx, sqlc.InsertClipSpeechAssetParams{ID: a.ID, OwnerID: a.OwnerID, ProjectID: a.ProjectID, ObjectKey: a.ObjectKey, InputText: a.Text, InputHash: a.Speech.InputHash, BindingDigest: a.Speech.BindingDigest, SpeechJson: raw, CreatedAt: stamp(a.CreatedAt), BytesCount: a.Bytes, ProjectCheck: a.ProjectID, OwnerCheck: a.OwnerID}))
 	})
 	return err
 }
@@ -65,7 +65,7 @@ func speechAsset(row sqlc.ClipSpeechAsset) (clip.SpeechAsset, error) {
 	if err != nil {
 		return clip.SpeechAsset{}, err
 	}
-	return clip.SpeechAsset{ID: row.ID, OwnerID: row.OwnerID, ProjectID: row.ProjectID, ObjectKey: row.ObjectKey, Text: row.InputText, Speech: audio, CreatedAt: created}, nil
+	return clip.SpeechAsset{ID: row.ID, OwnerID: row.OwnerID, ProjectID: row.ProjectID, ObjectKey: row.ObjectKey, Text: row.InputText, Speech: audio, Bytes: row.BytesCount, CreatedAt: created}, nil
 }
 func getSpeechAsset(ctx context.Context, q *sqlc.Queries, owner, project, id string) (clip.SpeechAsset, error) {
 	row, err := q.GetClipSpeechAsset(ctx, sqlc.GetClipSpeechAssetParams{ID: id, OwnerID: owner, ProjectID: project})
