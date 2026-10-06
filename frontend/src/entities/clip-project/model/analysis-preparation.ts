@@ -1,6 +1,7 @@
 export const CLIP_BROWSER_ANALYSIS_PROFILE = 'clip-browser-analysis-v1'
 
 export interface ClipAnalysisOriginalMeasurement {
+  provenance: 'browser_client'
   sourceId: string
   fingerprint: string
   durationMs: number

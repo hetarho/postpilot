@@ -33,7 +33,7 @@ export const i18n = {
       previewMissing: '지금 표시할 원본 미리보기가 없어요.',
       previewUnavailable: '원본 미리보기를 불러올 수 없어요.',
       disclosure:
-        '선택한 영상과 들리는 말이 담긴 압축 사본을 OpenRouter를 통해 외부 영상 분석 제공자에게 보내요. 원본은 확인·수정·작업 시작 또는 종료 후 24시간 보관되며, 확정하면 삭제돼요. 분석 사본은 작업 후 삭제해요. 이 안내는 외부 제공자의 보관 정책을 보장하지 않아요. 보관 기한 안에는 다시 접속해도 원본을 재생하고 재사용할 수 있어요.',
+        '영상 준비는 이 기기의 브라우저에서 처리하고, 원본과 분석용 사본은 비공개 저장소에 올려요. 선택한 영상과 들리는 말이 담긴 압축 사본을 OpenRouter를 통해 외부 영상 분석 제공자에게 보내요. 원본은 확인·수정·작업 시작 또는 종료 후 24시간 보관되며, 확정하면 삭제돼요. 분석 사본은 작업 후 삭제해요. 이 안내는 외부 제공자의 보관 정책을 보장하지 않아요. 보관 기한 안에는 다시 접속해도 원본을 재생하고 재사용할 수 있어요.',
       retainedUntil: '원본 보관 기한: {{time}}',
       access: {
         expired:
@@ -107,7 +107,7 @@ export const i18n = {
       previewMissing: 'No original preview is available right now.',
       previewUnavailable: 'The original preview could not be loaded.',
       disclosure:
-        'Compressed footage and audible speech are sent through OpenRouter to an external video-analysis provider. Originals remain for 24 hours after confirmation, changes, or an attempt starting or ending, and are deleted when you finalize. Analysis copies are removed after the attempt. This does not guarantee the external provider’s retention policy. Retained originals can be played and reused after reopening the project.',
+        'Video preparation runs in this device’s browser. Originals and analysis copies upload to private storage. Compressed footage and audible speech are sent through OpenRouter to an external video-analysis provider. Originals remain for 24 hours after confirmation, changes, or an attempt starting or ending, and are deleted when you finalize. Analysis copies are removed after the attempt. This does not guarantee the external provider’s retention policy. Retained originals can be played and reused after reopening the project.',
       retainedUntil: 'Originals retained until {{time}}',
       access: {
         expired: 'Original retention expired. Reselect matching originals for preview or rerender.',

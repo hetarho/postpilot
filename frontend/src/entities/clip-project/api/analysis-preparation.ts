@@ -1,3 +1,5 @@
+import { useMemo } from 'react'
+import { useTransport } from '@connectrpc/connect-query'
 import { createClient, type Transport } from '@connectrpc/connect'
 import { ClipSourceService, type ClipAnalysisPreparationResponse } from '@/shared/api'
 import {
@@ -120,10 +122,33 @@ export async function beginClipAnalysisPreparation(
   input: ClipAnalysisPreparationInput,
   signal?: AbortSignal,
 ) {
+  if (input.originals.some((original) => original.provenance !== 'browser_client'))
+    throw new Error('Invalid original measurement provenance')
   return toClipAnalysisPreparation(
-    await createClient(ClipSourceService, transport).beginClipAnalysisPreparation(input, {
-      signal,
-    }),
+    await createClient(ClipSourceService, transport).beginClipAnalysisPreparation(
+      {
+        projectId: input.projectId,
+        batchId: input.batchId,
+        expectedRevision: input.expectedRevision,
+        quoteId: input.quoteId,
+        profileVersion: input.profileVersion,
+        originals: input.originals.map((original) => ({
+          sourceId: original.sourceId,
+          fingerprint: original.fingerprint,
+          durationMs: original.durationMs,
+          width: original.width,
+          height: original.height,
+          frameRateNumerator: original.frameRateNumerator,
+          frameRateDenominator: original.frameRateDenominator,
+          cadenceVerified: original.cadenceVerified,
+          decodedFrames: original.decodedFrames,
+          hasAudio: original.hasAudio,
+          audioRate: original.audioRate,
+          audioChannels: original.audioChannels,
+        })),
+      },
+      { signal },
+    ),
   )
 }
 export async function reserveClipAnalysisCopy(
@@ -179,4 +204,24 @@ export async function cancelClipAnalysisPreparation(
       { signal },
     ),
   )
+}
+
+export function clipAnalysisPreparationCalls(transport: Transport) {
+  return {
+    begin: (input: ClipAnalysisPreparationInput, signal: AbortSignal) =>
+      beginClipAnalysisPreparation(transport, input, signal),
+    reserve: (
+      input: { preparationId: string; slot: string; bytes: number; sha256: string },
+      signal: AbortSignal,
+    ) => reserveClipAnalysisCopy(transport, input, signal),
+    complete: (id: string, signal: AbortSignal) =>
+      completeClipAnalysisPreparation(transport, id, signal),
+    cancel: (id: string, signal?: AbortSignal) =>
+      cancelClipAnalysisPreparation(transport, id, signal),
+  }
+}
+
+export function useClipAnalysisPreparationCalls() {
+  const transport = useTransport()
+  return useMemo(() => clipAnalysisPreparationCalls(transport), [transport])
 }

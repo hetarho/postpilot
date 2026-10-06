@@ -1,0 +1,1093 @@
+{
+  "version": 1,
+  "qualification": false,
+  "browser": "154.0.8037.98",
+  "executablePath": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+  "hardwareUsage": "unmeasured; default installed Chrome",
+  "node": "v24.18.0",
+  "mediabunny": "1.58.0",
+  "lockfileSHA256": "d07c4a1bd3aeab4df41155c2d63d85e6a487959534ed7b27b4710315d7a07319",
+  "fixtures": {
+    "long": {
+      "bytes": 1075076,
+      "sha256": "3f68bdfe9cd88ac3e47ccbba1f628c55fa7484dd54875a0b904b84de57765bc9"
+    },
+    "rotated": {
+      "bytes": 3430,
+      "sha256": "17147728243d9d5b6c2d34ac87dff3e5882df739d5678d3f0898d6d648d851bc"
+    },
+    "silent": {
+      "bytes": 3311,
+      "sha256": "cab2ec45c87c98601874146e692ac4d2474ee29b3116cf37d86bed8d3726699b"
+    },
+    "large": {
+      "bytes": 4826,
+      "sha256": "aedc09508965f961d0953c4b40ca160168efe9b9e11d16c59982414e5092d685"
+    },
+    "stereo": {
+      "bytes": 37723,
+      "sha256": "19a25ddbc17dc4930864fe6376ebd7211e364b6a49131fb820ed7e9bded1e6c8"
+    },
+    "vfr": {
+      "bytes": 386453,
+      "sha256": "491b630c7cb211a8ef71b99c05a493fc3440a07b4ab44fbc3daccecf5d57aaa4"
+    },
+    "first-track": {
+      "bytes": 6501,
+      "sha256": "22dd47008232ce2ab597dfff50d9e85fe00b4d3c7f014daa33245390032b5bf7"
+    },
+    "delayed-audio": {
+      "bytes": 75080,
+      "sha256": "aeeffdeb534b69553c49d2dbfede42e344da42b2517042ce95ed2bbd81d7a5bc"
+    },
+    "color": {
+      "bytes": 4720,
+      "sha256": "bfe9165aaad1bac12bdf02504678cfb2f59c99e7ca2f77239631f4f977e7d32b"
+    }
+  },
+  "results": [
+    {
+      "id": "long",
+      "original": {
+        "sourceId": "synthetic",
+        "fingerprint": "3f68bdfe9cd88ac3e47ccbba1f628c55fa7484dd54875a0b904b84de57765bc9",
+        "provenance": "browser_client",
+        "durationMs": 61000,
+        "width": 160,
+        "height": 90,
+        "frameRateNumerator": 30,
+        "frameRateDenominator": 1,
+        "cadenceVerified": true,
+        "decodedFrames": 1830,
+        "hasAudio": true,
+        "audioRate": 44100,
+        "audioChannels": 1,
+        "resources": {
+          "peakDecodedFrames": 1,
+          "liveDecodedFrames": 0,
+          "peakAudioData": 0,
+          "liveAudioData": 0
+        }
+      },
+      "measuredMs": 1625.0500001907349,
+      "copies": [
+        {
+          "slot": {
+            "slot": "synthetic-0",
+            "sourceId": "synthetic",
+            "fingerprint": "3f68bdfe9cd88ac3e47ccbba1f628c55fa7484dd54875a0b904b84de57765bc9",
+            "ordinal": 0,
+            "offsetMs": 0,
+            "durationMs": 60000,
+            "width": 160,
+            "height": 90,
+            "hasAudio": true,
+            "state": "expected",
+            "bytes": 0,
+            "sha256": ""
+          },
+          "sha256": "b2381f1245cd6d5fcb4fa6221ab5058e0749bfbec91c44472b8021ee235b56bf",
+          "inspection": {
+            "bytes": 462233,
+            "videoFrames": 900,
+            "videoStartMs": 0,
+            "videoEndMs": 60000,
+            "containerEndMs": 60000,
+            "audioSamples": 2880000,
+            "audioStartMs": 0,
+            "audioEndMs": 60000,
+            "width": 160,
+            "height": 90,
+            "rotation": 0,
+            "hasAudio": true,
+            "targetVideoBitrate": 900000,
+            "actualVideoBitrate": 2885.066666666667,
+            "actualAudioBitrate": 56425.55459329825
+          },
+          "encodedMs": 4609.679999828339,
+          "resources": {
+            "peakDecodedFrames": 11,
+            "liveDecodedFrames": 0,
+            "peakAudioData": 1,
+            "liveAudioData": 0
+          }
+        },
+        {
+          "slot": {
+            "slot": "synthetic-1",
+            "sourceId": "synthetic",
+            "fingerprint": "3f68bdfe9cd88ac3e47ccbba1f628c55fa7484dd54875a0b904b84de57765bc9",
+            "ordinal": 1,
+            "offsetMs": 60000,
+            "durationMs": 1000,
+            "width": 160,
+            "height": 90,
+            "hasAudio": true,
+            "state": "expected",
+            "bytes": 0,
+            "sha256": ""
+          },
+          "sha256": "facb48b73c141f37edf2d3c4d85a23b6630fb81cc77797a82b1395ba98ad4362",
+          "inspection": {
+            "bytes": 8291,
+            "videoFrames": 15,
+            "videoStartMs": 0,
+            "videoEndMs": 1000,
+            "containerEndMs": 1000,
+            "audioSamples": 48000,
+            "audioStartMs": 0,
+            "audioEndMs": 1000,
+            "width": 160,
+            "height": 90,
+            "rotation": 0,
+            "hasAudio": true,
+            "targetVideoBitrate": 900000,
+            "actualVideoBitrate": 4448,
+            "actualAudioBitrate": 47463.60153256705
+          },
+          "encodedMs": 335.8650002479553,
+          "resources": {
+            "peakDecodedFrames": 13,
+            "liveDecodedFrames": 0,
+            "peakAudioData": 1,
+            "liveAudioData": 0
+          }
+        }
+      ],
+      "originalResources": {
+        "peakDecodedFrames": 1,
+        "liveDecodedFrames": 0,
+        "peakAudioData": 0,
+        "liveAudioData": 0
+      },
+      "resourceEvents": [
+        {
+          "module": "http://127.0.0.1:58510/src/features/prepare-clip-browser/lib/analysis.worker.ts?worker_file&type=module",
+          "resources": {
+            "peakDecodedFrames": 1,
+            "liveDecodedFrames": 0,
+            "peakAudioData": 0,
+            "liveAudioData": 0
+          }
+        },
+        {
+          "module": "http://127.0.0.1:58510/src/shared/lib/media/audio/range-audio.worker.ts?worker_file&type=module",
+          "resources": {
+            "peakDecodedFrames": 0,
+            "liveDecodedFrames": 0,
+            "peakAudioData": 1,
+            "liveAudioData": 0
+          }
+        },
+        {
+          "module": "http://127.0.0.1:58510/src/shared/lib/media/audio/processing.worker.ts?worker_file&type=module",
+          "resources": {
+            "peakDecodedFrames": 0,
+            "liveDecodedFrames": 0,
+            "peakAudioData": 1,
+            "liveAudioData": 0
+          }
+        },
+        {
+          "module": "http://127.0.0.1:58510/src/features/prepare-clip-browser/lib/analysis.worker.ts?worker_file&type=module",
+          "resources": {
+            "peakDecodedFrames": 11,
+            "liveDecodedFrames": 0,
+            "peakAudioData": 1,
+            "liveAudioData": 0
+          }
+        },
+        {
+          "module": "http://127.0.0.1:58510/src/shared/lib/media/audio/range-audio.worker.ts?worker_file&type=module",
+          "resources": {
+            "peakDecodedFrames": 0,
+            "liveDecodedFrames": 0,
+            "peakAudioData": 2,
+            "liveAudioData": 0
+          }
+        },
+        {
+          "module": "http://127.0.0.1:58510/src/shared/lib/media/audio/processing.worker.ts?worker_file&type=module",
+          "resources": {
+            "peakDecodedFrames": 0,
+            "liveDecodedFrames": 0,
+            "peakAudioData": 1,
+            "liveAudioData": 0
+          }
+        },
+        {
+          "module": "http://127.0.0.1:58510/src/features/prepare-clip-browser/lib/analysis.worker.ts?worker_file&type=module",
+          "resources": {
+            "peakDecodedFrames": 13,
+            "liveDecodedFrames": 0,
+            "peakAudioData": 1,
+            "liveAudioData": 0
+          }
+        }
+      ],
+      "qualification": false
+    },
+    {
+      "id": "rotated",
+      "original": {
+        "sourceId": "synthetic",
+        "fingerprint": "17147728243d9d5b6c2d34ac87dff3e5882df739d5678d3f0898d6d648d851bc",
+        "provenance": "browser_client",
+        "durationMs": 2000,
+        "width": 180,
+        "height": 320,
+        "frameRateNumerator": 30,
+        "frameRateDenominator": 1,
+        "cadenceVerified": true,
+        "decodedFrames": 60,
+        "hasAudio": false,
+        "audioRate": 0,
+        "audioChannels": 0,
+        "resources": {
+          "peakDecodedFrames": 1,
+          "liveDecodedFrames": 0,
+          "peakAudioData": 0,
+          "liveAudioData": 0
+        }
+      },
+      "measuredMs": 108.71000003814697,
+      "copies": [
+        {
+          "slot": {
+            "slot": "synthetic-0",
+            "sourceId": "synthetic",
+            "fingerprint": "17147728243d9d5b6c2d34ac87dff3e5882df739d5678d3f0898d6d648d851bc",
+            "ordinal": 0,
+            "offsetMs": 0,
+            "durationMs": 2000,
+            "width": 180,
+            "height": 320,
+            "hasAudio": false,
+            "state": "expected",
+            "bytes": 0,
+            "sha256": ""
+          },
+          "sha256": "0f678a05237eb2452d0b636fc6d9f221ae40331d0ee8bee970bc0ca891823d30",
+          "inspection": {
+            "bytes": 2541,
+            "videoFrames": 30,
+            "videoStartMs": 0,
+            "videoEndMs": 2000,
+            "containerEndMs": 2000,
+            "audioSamples": 0,
+            "audioStartMs": 0,
+            "audioEndMs": 0,
+            "width": 180,
+            "height": 320,
+            "rotation": 0,
+            "hasAudio": false,
+            "targetVideoBitrate": 900000,
+            "actualVideoBitrate": 6632,
+            "actualAudioBitrate": 0
+          },
+          "encodedMs": 197.17500019073486,
+          "resources": {
+            "peakDecodedFrames": 42,
+            "liveDecodedFrames": 0,
+            "peakAudioData": 0,
+            "liveAudioData": 0
+          }
+        }
+      ],
+      "originalResources": {
+        "peakDecodedFrames": 1,
+        "liveDecodedFrames": 0,
+        "peakAudioData": 0,
+        "liveAudioData": 0
+      },
+      "resourceEvents": [
+        {
+          "module": "http://127.0.0.1:58510/src/features/prepare-clip-browser/lib/analysis.worker.ts?worker_file&type=module",
+          "resources": {
+            "peakDecodedFrames": 1,
+            "liveDecodedFrames": 0,
+            "peakAudioData": 0,
+            "liveAudioData": 0
+          }
+        },
+        {
+          "module": "http://127.0.0.1:58510/src/features/prepare-clip-browser/lib/analysis.worker.ts?worker_file&type=module",
+          "resources": {
+            "peakDecodedFrames": 42,
+            "liveDecodedFrames": 0,
+            "peakAudioData": 0,
+            "liveAudioData": 0
+          }
+        }
+      ],
+      "qualification": false
+    },
+    {
+      "id": "silent",
+      "original": {
+        "sourceId": "synthetic",
+        "fingerprint": "cab2ec45c87c98601874146e692ac4d2474ee29b3116cf37d86bed8d3726699b",
+        "provenance": "browser_client",
+        "durationMs": 2167,
+        "width": 160,
+        "height": 90,
+        "frameRateNumerator": 372,
+        "frameRateDenominator": 13,
+        "cadenceVerified": false,
+        "decodedFrames": 62,
+        "hasAudio": false,
+        "audioRate": 0,
+        "audioChannels": 0,
+        "resources": {
+          "peakDecodedFrames": 1,
+          "liveDecodedFrames": 0,
+          "peakAudioData": 0,
+          "liveAudioData": 0
+        }
+      },
+      "measuredMs": 109.45500040054321,
+      "copies": [
+        {
+          "slot": {
+            "slot": "synthetic-0",
+            "sourceId": "synthetic",
+            "fingerprint": "cab2ec45c87c98601874146e692ac4d2474ee29b3116cf37d86bed8d3726699b",
+            "ordinal": 0,
+            "offsetMs": 0,
+            "durationMs": 2167,
+            "width": 160,
+            "height": 90,
+            "hasAudio": false,
+            "state": "expected",
+            "bytes": 0,
+            "sha256": ""
+          },
+          "sha256": "5dbd4cfa16d33c8439947660f0a60078069cf6faa9fda91abdc1659ba5a9566f",
+          "inspection": {
+            "bytes": 1851,
+            "videoFrames": 33,
+            "videoStartMs": 0,
+            "videoEndMs": 2200,
+            "containerEndMs": 2200,
+            "audioSamples": 0,
+            "audioStartMs": 0,
+            "audioEndMs": 0,
+            "width": 160,
+            "height": 90,
+            "rotation": 0,
+            "hasAudio": false,
+            "targetVideoBitrate": 900000,
+            "actualVideoBitrate": 3461.818181818182,
+            "actualAudioBitrate": 0
+          },
+          "encodedMs": 173.38499975204468,
+          "resources": {
+            "peakDecodedFrames": 42,
+            "liveDecodedFrames": 0,
+            "peakAudioData": 0,
+            "liveAudioData": 0
+          }
+        }
+      ],
+      "originalResources": {
+        "peakDecodedFrames": 1,
+        "liveDecodedFrames": 0,
+        "peakAudioData": 0,
+        "liveAudioData": 0
+      },
+      "resourceEvents": [
+        {
+          "module": "http://127.0.0.1:58510/src/features/prepare-clip-browser/lib/analysis.worker.ts?worker_file&type=module",
+          "resources": {
+            "peakDecodedFrames": 1,
+            "liveDecodedFrames": 0,
+            "peakAudioData": 0,
+            "liveAudioData": 0
+          }
+        },
+        {
+          "module": "http://127.0.0.1:58510/src/features/prepare-clip-browser/lib/analysis.worker.ts?worker_file&type=module",
+          "resources": {
+            "peakDecodedFrames": 42,
+            "liveDecodedFrames": 0,
+            "peakAudioData": 0,
+            "liveAudioData": 0
+          }
+        }
+      ],
+      "qualification": false
+    },
+    {
+      "id": "large",
+      "original": {
+        "sourceId": "synthetic",
+        "fingerprint": "aedc09508965f961d0953c4b40ca160168efe9b9e11d16c59982414e5092d685",
+        "provenance": "browser_client",
+        "durationMs": 2000,
+        "width": 1280,
+        "height": 720,
+        "frameRateNumerator": 30,
+        "frameRateDenominator": 1,
+        "cadenceVerified": true,
+        "decodedFrames": 60,
+        "hasAudio": false,
+        "audioRate": 0,
+        "audioChannels": 0,
+        "resources": {
+          "peakDecodedFrames": 1,
+          "liveDecodedFrames": 0,
+          "peakAudioData": 0,
+          "liveAudioData": 0
+        }
+      },
+      "measuredMs": 180.9850001335144,
+      "copies": [
+        {
+          "slot": {
+            "slot": "synthetic-0",
+            "sourceId": "synthetic",
+            "fingerprint": "aedc09508965f961d0953c4b40ca160168efe9b9e11d16c59982414e5092d685",
+            "ordinal": 0,
+            "offsetMs": 0,
+            "durationMs": 2000,
+            "width": 720,
+            "height": 404,
+            "hasAudio": false,
+            "state": "expected",
+            "bytes": 0,
+            "sha256": ""
+          },
+          "sha256": "66b1bab5846595011c9b74406f3a657067de85670a1bba4ca3cb0fb97a8b87d3",
+          "inspection": {
+            "bytes": 2648,
+            "videoFrames": 30,
+            "videoStartMs": 0,
+            "videoEndMs": 2000,
+            "containerEndMs": 2000,
+            "audioSamples": 0,
+            "audioStartMs": 0,
+            "audioEndMs": 0,
+            "width": 720,
+            "height": 404,
+            "rotation": 0,
+            "hasAudio": false,
+            "targetVideoBitrate": 900000,
+            "actualVideoBitrate": 7060,
+            "actualAudioBitrate": 0
+          },
+          "encodedMs": 160.29500007629395,
+          "resources": {
+            "peakDecodedFrames": 14,
+            "liveDecodedFrames": 0,
+            "peakAudioData": 0,
+            "liveAudioData": 0
+          }
+        }
+      ],
+      "originalResources": {
+        "peakDecodedFrames": 1,
+        "liveDecodedFrames": 0,
+        "peakAudioData": 0,
+        "liveAudioData": 0
+      },
+      "resourceEvents": [
+        {
+          "module": "http://127.0.0.1:58510/src/features/prepare-clip-browser/lib/analysis.worker.ts?worker_file&type=module",
+          "resources": {
+            "peakDecodedFrames": 1,
+            "liveDecodedFrames": 0,
+            "peakAudioData": 0,
+            "liveAudioData": 0
+          }
+        },
+        {
+          "module": "http://127.0.0.1:58510/src/features/prepare-clip-browser/lib/analysis.worker.ts?worker_file&type=module",
+          "resources": {
+            "peakDecodedFrames": 14,
+            "liveDecodedFrames": 0,
+            "peakAudioData": 0,
+            "liveAudioData": 0
+          }
+        }
+      ],
+      "qualification": false
+    },
+    {
+      "id": "stereo",
+      "original": {
+        "sourceId": "synthetic",
+        "fingerprint": "19a25ddbc17dc4930864fe6376ebd7211e364b6a49131fb820ed7e9bded1e6c8",
+        "provenance": "browser_client",
+        "durationMs": 2000,
+        "width": 320,
+        "height": 180,
+        "frameRateNumerator": 30,
+        "frameRateDenominator": 1,
+        "cadenceVerified": true,
+        "decodedFrames": 60,
+        "hasAudio": true,
+        "audioRate": 48000,
+        "audioChannels": 2,
+        "resources": {
+          "peakDecodedFrames": 1,
+          "liveDecodedFrames": 0,
+          "peakAudioData": 0,
+          "liveAudioData": 0
+        }
+      },
+      "measuredMs": 155.5,
+      "copies": [
+        {
+          "slot": {
+            "slot": "synthetic-0",
+            "sourceId": "synthetic",
+            "fingerprint": "19a25ddbc17dc4930864fe6376ebd7211e364b6a49131fb820ed7e9bded1e6c8",
+            "ordinal": 0,
+            "offsetMs": 0,
+            "durationMs": 2000,
+            "width": 320,
+            "height": 180,
+            "hasAudio": true,
+            "state": "expected",
+            "bytes": 0,
+            "sha256": ""
+          },
+          "sha256": "df331a88d429aece21480dc2c60646664f03ff64b6f0c5af0d58f90ead3db738",
+          "inspection": {
+            "bytes": 9206,
+            "videoFrames": 30,
+            "videoStartMs": 0,
+            "videoEndMs": 2000,
+            "containerEndMs": 2000,
+            "audioSamples": 96000,
+            "audioStartMs": 0,
+            "audioEndMs": 2000,
+            "width": 320,
+            "height": 180,
+            "rotation": 0,
+            "hasAudio": true,
+            "targetVideoBitrate": 900000,
+            "actualVideoBitrate": 4068,
+            "actualAudioBitrate": 25048.92367906067
+          },
+          "encodedMs": 446.21999979019165,
+          "resources": {
+            "peakDecodedFrames": 14,
+            "liveDecodedFrames": 0,
+            "peakAudioData": 1,
+            "liveAudioData": 0
+          }
+        }
+      ],
+      "originalResources": {
+        "peakDecodedFrames": 1,
+        "liveDecodedFrames": 0,
+        "peakAudioData": 0,
+        "liveAudioData": 0
+      },
+      "resourceEvents": [
+        {
+          "module": "http://127.0.0.1:58510/src/features/prepare-clip-browser/lib/analysis.worker.ts?worker_file&type=module",
+          "resources": {
+            "peakDecodedFrames": 1,
+            "liveDecodedFrames": 0,
+            "peakAudioData": 0,
+            "liveAudioData": 0
+          }
+        },
+        {
+          "module": "http://127.0.0.1:58510/src/shared/lib/media/audio/range-audio.worker.ts?worker_file&type=module",
+          "resources": {
+            "peakDecodedFrames": 0,
+            "liveDecodedFrames": 0,
+            "peakAudioData": 1,
+            "liveAudioData": 0
+          }
+        },
+        {
+          "module": "http://127.0.0.1:58510/src/shared/lib/media/audio/processing.worker.ts?worker_file&type=module",
+          "resources": {
+            "peakDecodedFrames": 0,
+            "liveDecodedFrames": 0,
+            "peakAudioData": 1,
+            "liveAudioData": 0
+          }
+        },
+        {
+          "module": "http://127.0.0.1:58510/src/features/prepare-clip-browser/lib/analysis.worker.ts?worker_file&type=module",
+          "resources": {
+            "peakDecodedFrames": 14,
+            "liveDecodedFrames": 0,
+            "peakAudioData": 1,
+            "liveAudioData": 0
+          }
+        }
+      ],
+      "qualification": false
+    },
+    {
+      "id": "vfr",
+      "original": {
+        "sourceId": "synthetic",
+        "fingerprint": "491b630c7cb211a8ef71b99c05a493fc3440a07b4ab44fbc3daccecf5d57aaa4",
+        "provenance": "browser_client",
+        "durationMs": 8000,
+        "width": 320,
+        "height": 180,
+        "frameRateNumerator": 19200,
+        "frameRateDenominator": 481,
+        "cadenceVerified": false,
+        "decodedFrames": 320,
+        "hasAudio": false,
+        "audioRate": 0,
+        "audioChannels": 0,
+        "resources": {
+          "peakDecodedFrames": 1,
+          "liveDecodedFrames": 0,
+          "peakAudioData": 0,
+          "liveAudioData": 0
+        }
+      },
+      "measuredMs": 372.460000038147,
+      "copies": [
+        {
+          "slot": {
+            "slot": "synthetic-0",
+            "sourceId": "synthetic",
+            "fingerprint": "491b630c7cb211a8ef71b99c05a493fc3440a07b4ab44fbc3daccecf5d57aaa4",
+            "ordinal": 0,
+            "offsetMs": 0,
+            "durationMs": 8000,
+            "width": 320,
+            "height": 180,
+            "hasAudio": false,
+            "state": "expected",
+            "bytes": 0,
+            "sha256": ""
+          },
+          "sha256": "09f7f2df8520231cbfe917fc3b9a2997bd92ef64407fb05bd61d8e7f15904e34",
+          "inspection": {
+            "bytes": 830026,
+            "videoFrames": 120,
+            "videoStartMs": 0,
+            "videoEndMs": 8000,
+            "containerEndMs": 8000,
+            "audioSamples": 0,
+            "audioStartMs": 0,
+            "audioEndMs": 0,
+            "width": 320,
+            "height": 180,
+            "rotation": 0,
+            "hasAudio": false,
+            "targetVideoBitrate": 900000,
+            "actualVideoBitrate": 828747,
+            "actualAudioBitrate": 0
+          },
+          "encodedMs": 506.414999961853,
+          "resources": {
+            "peakDecodedFrames": 11,
+            "liveDecodedFrames": 0,
+            "peakAudioData": 0,
+            "liveAudioData": 0
+          }
+        }
+      ],
+      "originalResources": {
+        "peakDecodedFrames": 1,
+        "liveDecodedFrames": 0,
+        "peakAudioData": 0,
+        "liveAudioData": 0
+      },
+      "resourceEvents": [
+        {
+          "module": "http://127.0.0.1:58510/src/features/prepare-clip-browser/lib/analysis.worker.ts?worker_file&type=module",
+          "resources": {
+            "peakDecodedFrames": 1,
+            "liveDecodedFrames": 0,
+            "peakAudioData": 0,
+            "liveAudioData": 0
+          }
+        },
+        {
+          "module": "http://127.0.0.1:58510/src/features/prepare-clip-browser/lib/analysis.worker.ts?worker_file&type=module",
+          "resources": {
+            "peakDecodedFrames": 11,
+            "liveDecodedFrames": 0,
+            "peakAudioData": 0,
+            "liveAudioData": 0
+          }
+        }
+      ],
+      "qualification": false
+    },
+    {
+      "id": "first-track",
+      "original": {
+        "sourceId": "synthetic",
+        "fingerprint": "22dd47008232ce2ab597dfff50d9e85fe00b4d3c7f014daa33245390032b5bf7",
+        "provenance": "browser_client",
+        "durationMs": 2000,
+        "width": 64,
+        "height": 32,
+        "frameRateNumerator": 30,
+        "frameRateDenominator": 1,
+        "cadenceVerified": true,
+        "decodedFrames": 60,
+        "hasAudio": false,
+        "audioRate": 0,
+        "audioChannels": 0,
+        "resources": {
+          "peakDecodedFrames": 1,
+          "liveDecodedFrames": 0,
+          "peakAudioData": 0,
+          "liveAudioData": 0
+        }
+      },
+      "measuredMs": 150.41499996185303,
+      "copies": [
+        {
+          "slot": {
+            "slot": "synthetic-0",
+            "sourceId": "synthetic",
+            "fingerprint": "22dd47008232ce2ab597dfff50d9e85fe00b4d3c7f014daa33245390032b5bf7",
+            "ordinal": 0,
+            "offsetMs": 0,
+            "durationMs": 2000,
+            "width": 64,
+            "height": 32,
+            "hasAudio": false,
+            "state": "expected",
+            "bytes": 0,
+            "sha256": ""
+          },
+          "sha256": "1e523ab15eb035a5ac7e877d9395c1a3ef25b00685c37c41b546dd5ceb7c0886",
+          "inspection": {
+            "bytes": 1755,
+            "videoFrames": 30,
+            "videoStartMs": 0,
+            "videoEndMs": 2000,
+            "containerEndMs": 2000,
+            "audioSamples": 0,
+            "audioStartMs": 0,
+            "audioEndMs": 0,
+            "width": 64,
+            "height": 32,
+            "rotation": 0,
+            "hasAudio": false,
+            "targetVideoBitrate": 900000,
+            "actualVideoBitrate": 3484,
+            "actualAudioBitrate": 0
+          },
+          "encodedMs": 201.7699999809265,
+          "resources": {
+            "peakDecodedFrames": 14,
+            "liveDecodedFrames": 0,
+            "peakAudioData": 0,
+            "liveAudioData": 0
+          }
+        }
+      ],
+      "originalResources": {
+        "peakDecodedFrames": 1,
+        "liveDecodedFrames": 0,
+        "peakAudioData": 0,
+        "liveAudioData": 0
+      },
+      "resourceEvents": [
+        {
+          "module": "http://127.0.0.1:58510/src/features/prepare-clip-browser/lib/analysis.worker.ts?worker_file&type=module",
+          "resources": {
+            "peakDecodedFrames": 1,
+            "liveDecodedFrames": 0,
+            "peakAudioData": 0,
+            "liveAudioData": 0
+          }
+        },
+        {
+          "module": "http://127.0.0.1:58510/src/features/prepare-clip-browser/lib/analysis.worker.ts?worker_file&type=module",
+          "resources": {
+            "peakDecodedFrames": 14,
+            "liveDecodedFrames": 0,
+            "peakAudioData": 0,
+            "liveAudioData": 0
+          }
+        }
+      ],
+      "qualification": false
+    },
+    {
+      "id": "delayed-audio",
+      "original": {
+        "sourceId": "synthetic",
+        "fingerprint": "aeeffdeb534b69553c49d2dbfede42e344da42b2517042ce95ed2bbd81d7a5bc",
+        "provenance": "browser_client",
+        "durationMs": 7000,
+        "width": 64,
+        "height": 32,
+        "frameRateNumerator": 30,
+        "frameRateDenominator": 1,
+        "cadenceVerified": true,
+        "decodedFrames": 210,
+        "hasAudio": true,
+        "audioRate": 48000,
+        "audioChannels": 2,
+        "resources": {
+          "peakDecodedFrames": 1,
+          "liveDecodedFrames": 0,
+          "peakAudioData": 0,
+          "liveAudioData": 0
+        }
+      },
+      "measuredMs": 265.4449996948242,
+      "copies": [
+        {
+          "slot": {
+            "slot": "synthetic-0",
+            "sourceId": "synthetic",
+            "fingerprint": "aeeffdeb534b69553c49d2dbfede42e344da42b2517042ce95ed2bbd81d7a5bc",
+            "ordinal": 0,
+            "offsetMs": 0,
+            "durationMs": 7000,
+            "width": 64,
+            "height": 32,
+            "hasAudio": true,
+            "state": "expected",
+            "bytes": 0,
+            "sha256": ""
+          },
+          "sha256": "c5dee0bb04c8c090849788069057e220c92f0aa807dc1404fb8438d0bc7b322a",
+          "inspection": {
+            "bytes": 29264,
+            "videoFrames": 105,
+            "videoStartMs": 0,
+            "videoEndMs": 7000,
+            "containerEndMs": 7000,
+            "audioSamples": 336000,
+            "audioStartMs": 0,
+            "audioEndMs": 7000,
+            "width": 64,
+            "height": 32,
+            "rotation": 0,
+            "hasAudio": true,
+            "targetVideoBitrate": 900000,
+            "actualVideoBitrate": 3152,
+            "actualAudioBitrate": 26553.09483248155
+          },
+          "encodedMs": 707.3099999427795,
+          "resources": {
+            "peakDecodedFrames": 11,
+            "liveDecodedFrames": 0,
+            "peakAudioData": 1,
+            "liveAudioData": 0
+          }
+        }
+      ],
+      "originalResources": {
+        "peakDecodedFrames": 1,
+        "liveDecodedFrames": 0,
+        "peakAudioData": 0,
+        "liveAudioData": 0
+      },
+      "resourceEvents": [
+        {
+          "module": "http://127.0.0.1:58510/src/features/prepare-clip-browser/lib/analysis.worker.ts?worker_file&type=module",
+          "resources": {
+            "peakDecodedFrames": 1,
+            "liveDecodedFrames": 0,
+            "peakAudioData": 0,
+            "liveAudioData": 0
+          }
+        },
+        {
+          "module": "http://127.0.0.1:58510/src/shared/lib/media/audio/range-audio.worker.ts?worker_file&type=module",
+          "resources": {
+            "peakDecodedFrames": 0,
+            "liveDecodedFrames": 0,
+            "peakAudioData": 1,
+            "liveAudioData": 0
+          }
+        },
+        {
+          "module": "http://127.0.0.1:58510/src/shared/lib/media/audio/processing.worker.ts?worker_file&type=module",
+          "resources": {
+            "peakDecodedFrames": 0,
+            "liveDecodedFrames": 0,
+            "peakAudioData": 1,
+            "liveAudioData": 0
+          }
+        },
+        {
+          "module": "http://127.0.0.1:58510/src/features/prepare-clip-browser/lib/analysis.worker.ts?worker_file&type=module",
+          "resources": {
+            "peakDecodedFrames": 11,
+            "liveDecodedFrames": 0,
+            "peakAudioData": 1,
+            "liveAudioData": 0
+          }
+        }
+      ],
+      "qualification": false
+    },
+    {
+      "id": "color",
+      "original": {
+        "sourceId": "synthetic",
+        "fingerprint": "bfe9165aaad1bac12bdf02504678cfb2f59c99e7ca2f77239631f4f977e7d32b",
+        "provenance": "browser_client",
+        "durationMs": 2000,
+        "width": 64,
+        "height": 32,
+        "frameRateNumerator": 60,
+        "frameRateDenominator": 1,
+        "cadenceVerified": true,
+        "decodedFrames": 120,
+        "hasAudio": false,
+        "audioRate": 0,
+        "audioChannels": 0,
+        "resources": {
+          "peakDecodedFrames": 1,
+          "liveDecodedFrames": 0,
+          "peakAudioData": 0,
+          "liveAudioData": 0
+        }
+      },
+      "measuredMs": 189.7300000190735,
+      "copies": [
+        {
+          "slot": {
+            "slot": "synthetic-0",
+            "sourceId": "synthetic",
+            "fingerprint": "bfe9165aaad1bac12bdf02504678cfb2f59c99e7ca2f77239631f4f977e7d32b",
+            "ordinal": 0,
+            "offsetMs": 0,
+            "durationMs": 2000,
+            "width": 64,
+            "height": 32,
+            "hasAudio": false,
+            "state": "expected",
+            "bytes": 0,
+            "sha256": ""
+          },
+          "sha256": "c4dcb703e5fa7af81205ef15f21800dcde7acab11b1f032fd48d969f134bc3f6",
+          "inspection": {
+            "bytes": 1760,
+            "videoFrames": 30,
+            "videoStartMs": 0,
+            "videoEndMs": 2000,
+            "containerEndMs": 2000,
+            "audioSamples": 0,
+            "audioStartMs": 0,
+            "audioEndMs": 0,
+            "width": 64,
+            "height": 32,
+            "rotation": 0,
+            "hasAudio": false,
+            "targetVideoBitrate": 900000,
+            "actualVideoBitrate": 3504,
+            "actualAudioBitrate": 0
+          },
+          "encodedMs": 231.53000020980835,
+          "resources": {
+            "peakDecodedFrames": 11,
+            "liveDecodedFrames": 0,
+            "peakAudioData": 0,
+            "liveAudioData": 0
+          }
+        }
+      ],
+      "originalResources": {
+        "peakDecodedFrames": 1,
+        "liveDecodedFrames": 0,
+        "peakAudioData": 0,
+        "liveAudioData": 0
+      },
+      "resourceEvents": [
+        {
+          "module": "http://127.0.0.1:58510/src/features/prepare-clip-browser/lib/analysis.worker.ts?worker_file&type=module",
+          "resources": {
+            "peakDecodedFrames": 1,
+            "liveDecodedFrames": 0,
+            "peakAudioData": 0,
+            "liveAudioData": 0
+          }
+        },
+        {
+          "module": "http://127.0.0.1:58510/src/features/prepare-clip-browser/lib/analysis.worker.ts?worker_file&type=module",
+          "resources": {
+            "peakDecodedFrames": 11,
+            "liveDecodedFrames": 0,
+            "peakAudioData": 0,
+            "liveAudioData": 0
+          }
+        }
+      ],
+      "qualification": false
+    },
+    {
+      "id": "expired",
+      "error": "CLIP_SOURCE_EXPIRED",
+      "name": "Error",
+      "qualification": false
+    },
+    {
+      "id": "whole",
+      "error": "CLIP_SOURCE_RANGE_UNSUPPORTED",
+      "name": "Error",
+      "qualification": false
+    },
+    {
+      "id": "cancel",
+      "error": "signal is aborted without reason",
+      "name": "AbortError",
+      "qualification": false
+    }
+  ],
+  "sourceEvidence": {
+    "verifiedCodeHead": "b3ec132cb4c8053cdb9e6c20b6ad2230a7331ccc",
+    "pipelineSHA256": {
+      "frontend/src/shared/lib/media/mux-mp4.ts": "b5912d580a20af48ba1035b1eb33cadf0d53b018bb4b9455896aba1f11b89524",
+      "frontend/src/shared/lib/media/square-pixel-mp4.ts": "9ee0643267361f228d5f1270d1d958f4af1c5d01759bd910396f47e2616cbf41",
+      "frontend/src/shared/lib/media/index.ts": "fedb1c93d9e1c3d5f78fe82cd9afc696802edc0765bb772b159ae934ed9c5746",
+      "frontend/src/shared/lib/media/analysis-copy.ts": "a702f8503a341e764223e30cfc25a4695ce5cda0d4d2ea5ed6a08de08bed765a",
+      "frontend/src/shared/lib/media/phase-metrics.ts": "e17d0077d906ed8e0d7364f0a53d80ab49182aa1c202bb1aee80249dd6711a4f",
+      "frontend/src/shared/lib/media/video/frame-budget.ts": "e72dc5f7f6f4ccedcaf546dbc974ca3d8930af63b5f61a59f93ec77f1409be6f",
+      "frontend/src/shared/lib/media/video/range-source.ts": "be02047486c9f79ca115dd76fc3e297bb47cdcdeee7791b29cd47c8af763b1cd",
+      "frontend/src/shared/lib/media/video/range-video.ts": "fd370a8ae189812dc21967cd5fd9b382bc15b807cca57a470dd1a240b8b9db51",
+      "frontend/src/shared/lib/media/video/index.ts": "f99b2da5f535366f4b3e2de8f1ff27eeb7dd9a237230a9672c26aa5da0bd957c",
+      "frontend/src/shared/lib/media/video/mp4-audio.ts": "77e1f567170dc345669e7c9ed1a054951ce83a402f3dc76cc1288d56dfeb6c0d",
+      "frontend/src/shared/lib/media/video/metadata.ts": "d35c7d754514135d4bf52c113e7afb825d1d0f00ced9a36cda2c5a888c99ab4c",
+      "frontend/src/shared/lib/media/video/encoder-support.ts": "da4b25de3f5e345c74f820ecfeafc02c9020da5fa0e2b60960d40faf42b4ee5d",
+      "frontend/src/shared/lib/media/video/source-color.ts": "aa12d392caebc6afb3d095ed409a2a1e6f646fb8c5a6b089c3c4412f55eff4e9",
+      "frontend/src/shared/lib/media/audio/range-reader.ts": "c88c96476ccf6fd4f0eb076cb45a1479ccfb9f8310e1fff8a12ee74cf19d2614",
+      "frontend/src/shared/lib/media/audio/range-audio.worker.ts": "a5d4ab59d9061078ae840abdd5db2ef08d2b755838c264aa3014dcaf03c6e61f",
+      "frontend/src/shared/lib/media/audio/encoder-delay.ts": "8a10463edadd1eb0902e6a1f87a9a583d2e2057c5e073bac5c42fb89d8c5a525",
+      "frontend/src/shared/lib/media/audio/selected-pcm.ts": "d8014b4b153ea6db540ca60bd3148a0fe4fc01c9f493ef8b5519d9d90941c037",
+      "frontend/src/shared/lib/media/audio/processing.ts": "2d92fd8a5661d806bcea5373dca1500dabdfe3156709ef32424bbceb361d4fe8",
+      "frontend/src/shared/lib/media/audio/processing.worker.ts": "f4f0d6b5a7b0551abf73cbdae8465a6a770511c8878185bd0149e9fd04b2ea92",
+      "frontend/src/shared/lib/media/audio/loudness.ts": "0ac465fa58437c02dddd5fd0377c566ff41bfe7f118fd5dfef6e15fe8ffd49c6",
+      "frontend/src/shared/lib/media/audio/codec-queue.ts": "f97eeeb2acad7865c8abb8944deeb6cfa9164b3d6b68743bac6f0f954d509253",
+      "frontend/src/shared/lib/media/audio/range-audio.ts": "92352ced8dd3c71761645b0a9007535c6fa2869fe9b0a6786948fcd16eb3112b",
+      "frontend/src/shared/lib/media/audio/stretch.ts": "d8e4a07cd4c2dd5ca3a8bc7d5536c3ed38172d8fe9dcc22fc8977a2964345c33",
+      "frontend/src/shared/lib/media/audio/processing-types.ts": "d65f803557f6860492596a26b344d8e3abb639a4efc7503b73bc7e7884cd246f",
+      "frontend/src/shared/lib/media/audio/verify-encoded.ts": "bc3991eef8688c3d8b653f75195ec7b9ed719fabed6df1a7ce84f992f681e627",
+      "frontend/src/features/prepare-clip-browser/index.ts": "c898fe5872803e4f0db29bb7a510946ab196625e2d7aa46841b04898c16d386d",
+      "frontend/src/features/prepare-clip-browser/ui/usePrepareClipBrowser.ts": "1f7887a27b126524f35af805d6949d1beed25acacadf797565c767b8fe1ab1d4",
+      "frontend/src/features/prepare-clip-browser/ui/ClipBrowserPreparationStatus.tsx": "a2a940b801b35c306c4d3941bd7f5a3dca2bbe4c995bb2f00fd39ae3f6951df4",
+      "frontend/src/features/prepare-clip-browser/config/i18n.ts": "55bf5a808885d0f7eddd5c4ed8ca2ec168eeb791b237c17d822a20d9cbac9a3a",
+      "frontend/src/features/prepare-clip-browser/config/limits.ts": "5cacc89eed0ee5ae22296780625d52658cfd17a888b8758ac9d84c24c65cae55",
+      "frontend/src/features/prepare-clip-browser/model/prepare.ts": "bff14cc510ddc32fd0fd53c028455d987e3f97aee4e5a148b5cccf277683bb7a",
+      "frontend/src/features/prepare-clip-browser/model/types.ts": "ca61e56b960e7779f4a84086110a3a1ff792b643a8501330bd8656f5a7f4d4b9",
+      "frontend/src/features/prepare-clip-browser/model/coverage.ts": "cd5849df92deac29c4127117eb2e49a10059f7827a902ba329694a5647569918",
+      "frontend/src/features/prepare-clip-browser/model/mono.ts": "01a852742d14f1d3cc8b4d5d3a7010b8d3b189f95142483672856c7971a7f5e7",
+      "frontend/src/features/prepare-clip-browser/lib/analysis-media.ts": "9ad57ffb5faa04337c2130e75f544e2bc971420eabe95b0889bf147a73dd5e47",
+      "frontend/src/features/prepare-clip-browser/lib/encoder.ts": "555085d2cc15d82cd800ac4b7894f762a759c21152f5f900b8af9334f956aa44",
+      "frontend/src/features/prepare-clip-browser/lib/analysis.worker.ts": "3d5337109a4d79a91b717f27c1836d18c24d252606ec2c8a1601b112eb006659"
+    },
+    "unchangedSinceActualChromeRun": "Review correction changes original measurement EOF only; exact all9 valid-original fields, encoding/mux/inspection/retry suffix and artifact hashes match. Historical native47/ten-copy proofs are source-equivalent reuse, not re-execution."
+  },
+  "rangeSummary": {
+    "requests": 10318,
+    "largestRequestedBytes": 67571,
+    "wholeResponseRefused": true
+  }
+}

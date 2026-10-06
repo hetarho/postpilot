@@ -118,3 +118,5 @@ export type {
   DecodedVideoResource,
   VideoDrawRect,
 } from './media'
+
+export { measureOriginalMedia, transcodeMediaInterval } from './media'
