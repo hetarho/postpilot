@@ -14,6 +14,14 @@ produce (CDS-83).
 The SVG preview loads these same bundled faces and measures their glyph bounds
 before placing information, captions and preset slots. Export disables system-font discovery.
 
+Local WASM ink uses fixed same-face Wanted 400/600/700/800 instances with
+CSS-valid internal families `Postpilot Wanted Ink W400/W600/W700/W800`.
+`INK-NOTICE.txt` records the exact modifications, source and OFL obligations;
+`scripts/build-clip-ink-fonts.py` reproduces them with fontTools 4.60.2.
+The source/derived manifest and frozen asset digest are kept in clip-design.
+The original variable face above remains unchanged for the interface/native
+renderer. No 1000-weight instance is packaged or exposed as a component.
+
 Wanted Sans is also the INTERFACE's face — `--font-sans` in `app/styles/index.css`
 names it first — so the app declares it once, from this directory, and the UI and
 the preview share that one file. That is why this directory is no longer only the

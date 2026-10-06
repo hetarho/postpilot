@@ -3,6 +3,7 @@ import {
   CLIP_BROWSER_FONTS,
   CLIP_BROWSER_STATIC_CAPTIONS,
   CLIP_BROWSER_RENDER,
+  CLIP_INK_IDENTITY,
   CLIP_COMPOSITION_LIMITS,
   CLIP_DESIGN,
   type ClipRatioId,
@@ -90,6 +91,7 @@ export type BrowserCompositionSnapshot = BrowserFrozen<{
   versions: BrowserCompositionVersions
   design: BrowserCompositionDesign
   fonts: readonly { id: string; sha256: string }[]
+  ink: typeof CLIP_INK_IDENTITY
   sources: readonly BrowserSourceIdentity[]
   components: readonly BrowserCompositionComponent[]
   speechFingerprint: string
@@ -119,12 +121,12 @@ const versions = (): BrowserCompositionVersions => ({
 })
 const domainKeys = new Set(
   `ownerId projectId projectRevision planRevision plan ratio sources design versions schemaVersion
-  fonts components speechFingerprint snapshotFingerprint authoritativeFingerprint frameCount renderer assets captionStyles captionPace introPreset outroPreset disclosure hideDisclosure
+  fonts ink manifestVersion inkVersion fontsManifestSHA256 catalogSHA256 wasmSHA256 fontAssets assetVersion components speechFingerprint snapshotFingerprint authoritativeFingerprint frameCount renderer assets captionStyles captionPace introPreset outroPreset disclosure hideDisclosure
   sourceId fingerprint durationMs width height hasAudio allowedRatePermille id sha256 componentId componentVersion element
   instanceId firstFrame visibleFirstFrame endFrame phraseIndex sequence nativeComposition sourceAudio sourceVolumePermille associations elements cuts narration
   focal x y startMs endMs transitionMs copies volumePermille playbackRatePermille pace text anchor align keyword style accent
   retainOriginalAudio groupId itemId derivedCaption segmentId textRevision textEdited timingEdited ownerEdited
-  effectiveStartMs effectiveEndMs phrases staleEvidence evidenceReviewed evidence fallbackReason elementId cutId kind role rows
+  effectiveStartMs effectiveEndMs effectivePosition phrases staleEvidence evidenceReviewed evidence fallbackReason elementId cutId kind role rows
   position basis resolvedStartMs resolvedEndMs ownerPosition ownerSizePx ownerStyle enabled confirmedVoiceId bindingDigest segments
   inputHash speech assetId voiceId settingsHash audioHash profileId profileRevision samples sampleRate channels timing`.split(
     /\s+/u,
@@ -553,6 +555,7 @@ export async function freezeBrowserComposition(
     versions: selectedVersions,
     design,
     fonts: CLIP_BROWSER_FONTS.map((f) => ({ ...f })),
+    ink: JSON.parse(JSON.stringify(CLIP_INK_IDENTITY)) as typeof CLIP_INK_IDENTITY,
     sources,
     components,
     speechFingerprint,
@@ -587,6 +590,8 @@ export function evaluateBrowserFrame(snapshot: BrowserCompositionSnapshot, frame
   if (!Number.isSafeInteger(frame) || frame < 0 || frame >= snapshot.frameCount)
     refuse('CLIP_SNAPSHOT_INVALID', 'frame')
   compatible(snapshot.versions)
+  if (canonical(snapshot.ink) !== canonical(CLIP_INK_IDENTITY))
+    refuse('CLIP_SNAPSHOT_INCOMPATIBLE_VERSION', 'ink')
   const fps = CLIP_BROWSER_RENDER.frameRate
   const plan = snapshot.plan as ClipEditPlan // Readers only; deeply frozen by the constructor.
   const timeline = frameTimeline(plan, fps)

@@ -75,6 +75,17 @@ func TestCaptionOwnerEditStatusIsReadOnlyOnTheWire(t *testing.T) {
 	}
 }
 
+func TestEffectiveCaptionAnchorIsReadOnlyOnTheWire(t *testing.T) {
+	wire := correctionTextProto(clip.CorrectionText{InstanceID: "caption", Position: "auto", EffectivePosition: "lower_mid"})
+	if wire.EffectivePosition != "lower_mid" || wire.Position != "auto" {
+		t.Fatal("automatic geometry projection was lost", wire)
+	}
+	wire.EffectivePosition = "top"
+	if correctionText(wire).EffectivePosition != "" {
+		t.Fatal("a correction request could supply automatic placement")
+	}
+}
+
 func TestRapidCorrectionWireKeepsEveryCue(t *testing.T) {
 	copies, _ := clip.SplitRapid(clip.Caption{Text: "오늘은 구로디지털단지에 와보았는데요", Style: "simple", Anchor: "bottom", Align: "center"}, 120, 1420)
 	s := &clip.CorrectionState{Plan: clip.CorrectionPlan{Cuts: []clip.CorrectionCut{{ID: "one", PlaybackRatePermille: 1000, Copies: copies}}}}

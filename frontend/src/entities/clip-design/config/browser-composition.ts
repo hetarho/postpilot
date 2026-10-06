@@ -4,7 +4,8 @@ export const CLIP_BROWSER_COMPOSITION = {
   renderer: 'clip-browser-composition-v1',
   components: 'native-cds-r33-v1',
   fonts: 'bundled-clip-fonts-v1',
-  assets: 'clip-design-assets-v1',
+  assets:
+    'clip-design-assets-v1-ink-9475eb4e66026e871002e2ea1107621f831a00b81d226506e448abd7b159c20f',
   qualified: false,
 } as const
 
