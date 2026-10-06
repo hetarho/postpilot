@@ -1,5 +1,5 @@
 # QUOTA plans, credits, metering
-> r36 | Paid plans grant daily AI credits and monthly bonuses with model access; Max alone includes commercial server exports, while browser exports spend no export count. AI work reserves and settles confirmed usage at a job-frozen KRW conversion; BILL owns payments and refunds.
+> r37 | Paid plans grant daily AI credits and monthly bonuses with model access; Max alone includes commercial server exports, while browser exports spend no export count. AI work reserves and settles confirmed usage at a job-frozen KRW conversion; BILL owns payments and refunds.
 
 ## decisions
 - QUOTA-1 [o] every account carries exactly one plan `free | light | basic | pro | max | master`; free is the provisioning default, light/basic/pro/max are paid offers and master is operator-only. Stored plans and wire mappings reject unknown values without renumbering existing enum identities.
@@ -206,6 +206,7 @@
   - display the conservative bounded estimate before explicit generation; freeze model/input/completion budget at admission, apply the shared reservation gate and record every actual issued call
   - invalid provider output fails without an unreserved automatic retry; regeneration is a new explicit operation
   - result reads, preview, adoption, questionnaire browsing/answers and default model initialization consume no AI credits; cancellation/failure settles confirmed usage once under QUOTA-46/49/52
+- QUOTA-73 [o] EDIT recommendation and each chat refinement are distinct explicit admissions with one planned bounded write completion each; eight suggestions still count as one call. Estimate, selection, reading, local preview and publication issue no completion or credit hold. Invalid output and cancellation settle only confirmed issued usage under the existing shared rules.
 ## flow
 - paid subscribe → BILL confirms payment → first daily grant + monthly bonus/export window; daily access → materialize the current eligible daily grant once; monthly boundary → expire old bonus/counts and open new entitlements while paid
 - AI start → entitlement/compatibility check → free-only work(zero-credit admission) | paid work(freeze FX → estimate → reserve eligible lots) → admitted job → metered calls

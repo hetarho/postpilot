@@ -1,5 +1,5 @@
 # AUTH accounts, passwords, sessions
-> r13 | Self-signed-up and operator-provisioned accounts, email/password or Google login, HttpOnly sessions, and an acting plan that grants free-model access without signup credits.
+> r14 | Self-signed-up and operator-provisioned accounts, email/password or Google login, HttpOnly sessions, and an acting plan that grants free-model access without signup credits.
 
 ## decisions
 - AUTH-1 [o] anyone may sign themselves up: AuthService carries Login · Logout · GetMe plus Signup, ResendVerification, VerifyEmail, RequestPasswordReset, ResetPassword and the Google sign-in exchange, and every one of the added procedures is public (→AUTH-17) ← paid subscriptions need an account a stranger can open without the operator
@@ -68,6 +68,7 @@
   - events for obsolete steps or another owner cannot advance or publish the current flow; duplicate submits are refused while pending
   - Back preserves confirmed work; Skip never cancels a running paid job, copies another voice or performs a provider call; leaving/reloading preserves durable job recovery under VOICE-31/45
   - ready/completion acknowledges this browser and follows only `/`, `/posts/new` or `/clips/new`; an unsafe stored target falls back to `/`
+- AUTH-54 [o] writing-style and template setup may use EDIT recommendation, selection and chat; a step completes only after its setting publication is confirmed. Personal ten-question learning and explicit skip remain available, and merely entering setup starts no authoring generation.
 ## flow
 - first use: default login → `/` → successful directory check → already configured/completed (launch) | missing setup (`/setup` → guarded optional steps → explicit finish/defer → launch or chosen creation)
 - signup: email + password → account written unverified → verification mail → VerifyEmail → login is possible

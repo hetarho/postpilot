@@ -24,26 +24,27 @@
 | id | rev | tasked | pending | [?] |
 |---|---|---|---|---|
 | ARCH | 16 | 9 | ARCH-52+ ARCH-53+ ARCH-56+ ARCH-57+ ARCH-34✎ ARCH-11✎ ARCH-45✎ ARCH-60+ ARCH-61+ ARCH-62+ ARCH-63+ ARCH-64+ ARCH-65+ ARCH-66+ ARCH-67+ ARCH-68+ | 0 |
-| AUTH | 13 | 13 | - | 0 |
-| QUOTA | 36 | 36 | - | 0 |
+| AUTH | 14 | 14 | - | 0 |
+| QUOTA | 37 | 37 | - | 0 |
 | POST | 34 | 34 | - | 0 |
-| VOICE | 11 | 11 | - | 0 |
+| VOICE | 12 | 12 | - | 0 |
 | GEN | 24 | 24 | - | 0 |
 | MODEL | 33 | 33 | - | 0 |
-| TMPL | 22 | 22 | - | 0 |
-| GUIDE | 14 | 14 | - | 0 |
+| TMPL | 23 | 23 | - | 0 |
+| GUIDE | 15 | 15 | - | 0 |
 | EXPORT | 10 | 10 | - | 0 |
 | LANG | 7 | 7 | - | 0 |
-| THEME | 24 | 24 | - | 0 |
+| THEME | 25 | 25 | - | 0 |
 | MKT | 9 | 9 | - | 0 |
 | VIDEO | 6 | 6 | - | 0 |
-| CLIP | 57 | 57 | - | 2 |
+| CLIP | 58 | 58 | - | 2 |
 | CDS | 33 | 33 | - | 1 |
 | BILL | 9 | 9 | - | 0 |
 | MEM | 6 | 6 | - | 2 |
 | QUAL | 7 | 7 | - | 0 |
 | GIFT | 3 | 3 | - | 0 |
 | DUB | 3 | 3 | - | 0 |
+| EDIT | 1 | 1 | - | 0 |
 | INFRA | 2 | 0 | all | 1 |
 
 ## review
@@ -81,12 +82,20 @@
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | todo |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | todo |
 
+| T613 | Create durable eight-suggestion and conversational configuration drafts | EDIT QUOTA | - | doing@261007.ai |
+| T614 | Publish conversational drafts through idempotent domain-owned settings writes | EDIT TMPL GUIDE VOICE CLIP | T613 | doing@261007.ai |
+| T615 | Build one guarded eight-suggestion preview and chat studio | EDIT THEME | T613 | doing@261007.ai |
+| T616 | Make conversational AI the default reusable-settings creation experience | EDIT AUTH TMPL GUIDE VOICE CLIP THEME | T614 T615 | todo |
+
 ## next
-- Commit each subsequent authorized task separately after verification, following the user's requested workflow.
-- Creation-first novice UX follow-up is complete (T608–T611); use the existing browser-media work group/assigned workspaces for its remaining implementation and qualification gates.
-- doc-review ARCH QUOTA POST VOICE GEN MODEL when documentation cleanup is requested; current lint hints are informational.
+- implement-task T613, then T614/T615 and T616; commit each verified task independently.
+- Existing browser-media assignments and qualification gates remain separate.
 
 ## log
+- 261007 T613-T615 start: root owns main/codegen/commits; isolated core, publication and Studio proposals execute in parallel
+- 261007 create-task EDIT and related deltas done: T613 durable drafts, T614 domain publication, T615 shared Studio, T616 entrypoints/qualification
+- 261007 create-ssot EDIT r1 and update-ssot complete: durable eight-suggestion chat drafts, explicit guarded domain publication and responsive shared settings/setup UX
+- 261007 update-ssot TMPL GUIDE VOICE CLIP THEME AUTH QUOTA start: eight AI suggestions, conversational draft editing and explicit settings adoption
 - 261007 task commits: T606 be489e55, T607 9074f741, T608 fb856773, T609 a6c4a953, T610 a3003583, T611 a39ae36d; isolated staged-tree checks preserve existing workspace edits
 - 261007 T611 done: 3383 FE tests, BE/build/tooling and 62 deploy tests pass; 80 live-browser layout checks and personal/AI/settings recovery flows pass
 - 261007 T612 done: grounded targeted tags in both languages; generation/guideline tests, vet and production build pass; whole-tree build fails on existing tmp main/run duplicates
@@ -103,7 +112,3 @@
 - 261007 notation correction: default-selection decision is MODEL-87; existing MODEL-85 speech tariff remains unchanged
 - 261007 create-task novice UX done: T608 model defaults, T609 personal question contract, T610 generated style backend, T611 responsive novice UI
 - 261007 T608-T611 start: root owns execution/state and applies isolated reviewed patch proposals; code dependencies integrate before final verification
-- 261007 create-task novice UX start: model defaults, question contract, synthetic batches and responsive integration
-- 261007 update-ssot novice UX done: THEME r24 AUTH r13 MODEL r33 VOICE r10 QUOTA r36; no browser-media contract change
-- 261007 update-ssot THEME AUTH MODEL VOICE start: responsive creation, automatic recommended models, ten-question voice bootstrap and eight synthetic candidates
-- 261007 T607 done: 3330 frontend tests, all FE/tooling gates and real-browser setup/reload/touch/zoom checks pass; guarded optional setup preserves durable account work

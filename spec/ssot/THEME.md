@@ -1,5 +1,5 @@
 # THEME theme preference and design language
-> r24 | The browser-owned System / Light / Dark preference that maps onto the `day` and `night` semantic token maps, and the binding design language every frontend surface is held to — phone-first, planes not lines, colour as role, one design system, with the promotional surfaces (→THEME-37) as the one named exemption from its restraint.
+> r25 | The browser-owned System / Light / Dark preference that maps onto the `day` and `night` semantic token maps, and the binding design language every frontend surface is held to — phone-first, planes not lines, colour as role, one design system, with the promotional surfaces (→THEME-37) as the one named exemption from its restraint.
 
 ## decisions
 - THEME-1 [o] three browser-owned preferences: `system` (the default, follows `prefers-color-scheme`), `light` → the `day` semantic map, `dark` → the `night` map; the effective theme is always exactly `day|night`; components consume semantic or functional tokens and never branch on a preference, an effective theme or a palette step
@@ -229,6 +229,8 @@
   - model defaults are background settings under MODEL-87, not the first question; writing questions and labelled generated styles follow VOICE-65 through VOICE-69
   - errors preserve input/current step, busy operations cannot advance and confirmation/explicit skip controls progression; state and form lifetime remain intact when viewport shape changes
 - THEME-49 [o] menu and setup navigation are explicit finite-state transitions with guarded events; repeated events are idempotent, completed/missing domain facts determine eligibility, and route changes never masquerade as saves or generation.
+- THEME-50 [o] EDIT authoring is a readable creation workspace: explain the purpose, compare eight understandable suggestions, then show the selected preview with conversational refinement and an explicit Save. Desktop gives preview and conversation separate usable regions in the board frame; mobile keeps one reading flow with the composer action after its field. Default views expose no XML, JSON, model selector or specialist prerequisite; advanced manual editing stays reachable.
+- THEME-51 [o] the authoring UI uses guarded finite-state transitions for loading, recommending, choosing, refining, cancelling and publishing; each response is fenced by owner, kind, session, revision and operation, and failures retain valid previews and unsent text.
 ## flow
 - bootstrap: read `postpilot.theme` → resolve(`system` → matchMedia | `light` → `day` | `dark` → `night`) → set `data-theme`, `color-scheme`, `theme-color` before React → provider from the snapshot → menu selection → apply + persist | remove key
 - shipping a screen: author unprefixed for 360 → tokens and `shared/ui` primitives only → `pnpm lint:style` → the THEME-34 checklist → both themes

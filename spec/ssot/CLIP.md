@@ -1,5 +1,5 @@
 # CLIP generated video projects and templates
-> r57 | Browser-first source-based short-form creation with local animated components and analysis preparation, qualified 15–60 second output, and explicitly bounded Max server exports.
+> r58 | Browser-first source-based short-form creation with local animated components and analysis preparation, qualified 15–60 second output, and explicitly bounded Max server exports.
 
 ## decisions
 - CLIP-1 [o] a clip project is independent of a post and owns its title, chosen video template, template answers, owner instruction, intro/outro enablement, presets and slot instructions/text, target duration, aspect ratio, caption pace, accent, analysis, edit plan, the record of what it was asked for and latest successful result
@@ -97,7 +97,7 @@
   - playback advances on source end without seeking back to its last reported position
   - the latest completed render is separately revision-labelled; missing/stale speech is identified rather than represented as the current narrated result (→DUB-26)
 - CLIP-57 [o] an unfinalized project without matching source media still permits text/timing editing and playback/download of its revision-labelled last render; current draft footage preview requests missing originals and never represents old burned-in text as updated composition (→CLIP-23 →CLIP-50)
-- CLIP-58 [o] video templates offer 원문, 원문 복사 and 형식 안내 복사 like post templates (→TMPL-41 →TMPL-42), so an outside AI can author a supported composition for paste import; authoring, parsing and previewing a template make no model call
+- CLIP-58 [o] video templates offer 원문, 원문 복사 and 형식 안내 복사 like post templates (→TMPL-41 →TMPL-42), so an outside AI can author a supported composition for paste import; manual authoring, parsing and previewing make no model call; explicit video-template recommendation and conversational refinement follow EDIT
 - CLIP-59 [o] the video composition vocabulary covers the outline's named stages, generated/exact/answer-bound text and optional disclosure beside its fields and repeated item groups; footage sections, repetition over scenes/items and scene-bound copy are excluded
   - visible content is the project's enabled intro/outro slots, explicitly declared other entries and narration; a template need not declare the project-selected regions (→CLIP-68 →CLIP-112 →CLIP-134 →CLIP-186)
 - CLIP-60 [o] information fields have template-authored labels, prompts, required or optional presence and an optional authored maximum character count (→CLIP-116); blank optional fields omit their dependent optional element without a placeholder, and neither price nor any business category field is universally required
@@ -376,6 +376,7 @@
   - support claims require actual input decoding, component drawing, H.264 output and required AAC execution, not API presence or a hardware hint alone
   - no fixed completion-time or zero-infrastructure-cost promise is introduced; existing voice/provider qualification gates remain independent
 
+- CLIP-208 [o] video template settings and first-use setup offer eight understandable structures, one selected preview and conversational refinement under EDIT, using supported composition parsing and explicit version-checked publication. No render, media processing or extra preview model call is started by authoring.
 ## flow
 - create: choose title/ratio and optional template → arrange sources and explicitly retain any original sound → choose regions, caption styles/pace, facts, target duration and instruction → optionally enable dubbing and choose a confirmed voice → choose 스토리라인 먼저 or 바로 만들기 → approve its remaining work
 - template: 형식 안내 복사 → outside AI writes the outline, or 원문 복사 hands it the template already saved → paste 원문, or build the same entries in the block builder → choose the design selection in the preview → validate with entry/line errors → save → offer for a project

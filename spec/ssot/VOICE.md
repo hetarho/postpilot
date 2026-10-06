@@ -1,5 +1,5 @@
 # VOICE voices
-> r11 | Mutually isolated personal writing voices learned from ten-question sessions or owner writing, and explicitly generated eight-style batches with labelled synthetic provenance.
+> r12 | Mutually isolated personal writing voices learned from ten-question sessions or owner writing, and explicitly generated eight-style batches with labelled synthetic provenance.
 
 ## decisions
 - VOICE-1 [o] account-owned writing voices are mutually isolated and have explicit personal or synthetic provenance; each owns its materials, current/previous analysis and verification results under (user_id, voice_id). Personal voices learn only owner-authored writing; synthetic styles follow VOICE-68/69 and never become evidence of the owner's personal habits.
@@ -126,6 +126,7 @@
   - synthetic samples are absent from personal readiness, sample CRUD and personal excerpt retrieval; style projection may use the bounded labelled synthetic example while explicitly forbidding copied facts or phrases
   - personal material can accumulate on an adopted style; successful explicit personal reanalysis changes the current origin to personal and retains the prior synthetic snapshot under the existing restore contract
   - snapshots without an origin decode as personal, preserving existing analyses and posts
+- VOICE-70 [o] generated writing styles may be selected and refined conversationally under EDIT before explicit publication. Synthetic provenance and personal-material isolation remain mandatory; personal voice refinement publishes a new synthetic style, and existing synthetic refinement also publishes a new labelled style without replacing the source analysis.
 ## flow
 - personal start: choose ten questions | paste own writing → explicitly create/resume one personal voice → save owner answers in a ten-question session → ten valid answers with every part or sixty owner sentences → explicit analysis → made personal voice → optional default → creation
 - further learning: choose another ten unanswered situations | paste → save private materials → keep existing analysis → explicit reanalysis → current personal snapshot with previous retained
