@@ -31,8 +31,20 @@ export function toClipEditingState(value: ProtoClipEditingState): ClipEditingSta
                 endMs: a.endMs,
               })) ?? [],
             elements: value.plan.elements.map(
-              ({ $typeName, rows, phrases, evidence, ownerPosition, derivedCaption, ...text }) => {
+              ({
+                $typeName,
+                rows,
+                phrases,
+                evidence,
+                ownerPosition,
+                ownerSizePx,
+                ownerStyle,
+                derivedCaption,
+                creation,
+                ...text
+              }) => {
                 void $typeName
+                void creation // Request-only data is never a saved-domain read field.
                 return {
                   ...text,
                   ...(derivedCaption
@@ -50,7 +62,10 @@ export function toClipEditingState(value: ProtoClipEditingState): ClipEditingSta
                   ownerPosition: ownerPosition
                     ? { x: ownerPosition.x, y: ownerPosition.y }
                     : undefined,
+                  ownerSizePx: ownerSizePx > 0 ? ownerSizePx : undefined,
+                  ownerStyle: ownerStyle || undefined,
                   narration: text.narration,
+                  effectivePosition: text.effectivePosition || undefined,
                   phrases: phrases.map((p) => ({
                     text: p.text,
                     startMs: p.startMs,

@@ -2981,8 +2981,11 @@ type ClipEditableText struct {
 	// from the saved plan and ignores this value when accepting a correction.
 	OwnerEdited    bool                `protobuf:"varint,33,opt,name=owner_edited,json=ownerEdited,proto3" json:"owner_edited,omitempty"`
 	DerivedCaption *ClipDerivedCaption `protobuf:"bytes,34,opt,name=derived_caption,json=derivedCaption,proto3" json:"derived_caption,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// Chosen anchor from the stored automatic placement. Read-only: correction
+	// requests cannot change it; owner_position/position retain their contracts.
+	EffectivePosition string `protobuf:"bytes,35,opt,name=effective_position,json=effectivePosition,proto3" json:"effective_position,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *ClipEditableText) Reset() {
@@ -3251,6 +3254,13 @@ func (x *ClipEditableText) GetDerivedCaption() *ClipDerivedCaption {
 		return x.DerivedCaption
 	}
 	return nil
+}
+
+func (x *ClipEditableText) GetEffectivePosition() string {
+	if x != nil {
+		return x.EffectivePosition
+	}
+	return ""
 }
 
 // An absolute caption position in whole canvas pixels, never a fraction: the
@@ -5753,7 +5763,7 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	"\tsource_id\x18\x01 \x01(\tR\bsourceId\x12 \n" +
 	"\vfingerprint\x18\x02 \x01(\tR\vfingerprint\x12\x19\n" +
 	"\bstart_ms\x18\x03 \x01(\x05R\astartMs\x12\x15\n" +
-	"\x06end_ms\x18\x04 \x01(\x05R\x05endMs\"\xaf\n" +
+	"\x06end_ms\x18\x04 \x01(\x05R\x05endMs\"\xde\n" +
 	"\n" +
 	"\x10ClipEditableText\x12\x1f\n" +
 	"\vinstance_id\x18\x01 \x01(\tR\n" +
@@ -5793,7 +5803,8 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	"\vowner_style\x18  \x01(\tR\n" +
 	"ownerStyle\x12!\n" +
 	"\fowner_edited\x18! \x01(\bR\vownerEdited\x12I\n" +
-	"\x0fderived_caption\x18\" \x01(\v2 .postpilot.v1.ClipDerivedCaptionR\x0ederivedCaptionB\v\n" +
+	"\x0fderived_caption\x18\" \x01(\v2 .postpilot.v1.ClipDerivedCaptionR\x0ederivedCaption\x12-\n" +
+	"\x12effective_position\x18# \x01(\tR\x11effectivePositionB\v\n" +
 	"\t_start_msB\t\n" +
 	"\a_end_msB\x15\n" +
 	"\x13_effective_start_msB\x13\n" +

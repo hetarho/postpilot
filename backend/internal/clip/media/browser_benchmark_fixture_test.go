@@ -153,7 +153,8 @@ func TestBrowserBenchmarkFixtureExport(t *testing.T) {
 				"frameRateNumerator": info.FrameRateNumerator, "frameRateDenominator": info.FrameRateDenominator,
 			}
 			fixture["plan"] = map[string]any{
-				"durationMs": plan.DurationMS,
+				"durationMs":        plan.DurationMS,
+				"nativeComposition": true, "elements": browserInkFixtureElements(plan),
 				"cuts": []map[string]any{{
 					"id": "cut", "sourceId": "source", "fingerprint": fingerprint,
 					"startMs": 0, "endMs": plan.DurationMS, "transitionMs": 0,
@@ -186,4 +187,50 @@ func TestBrowserBenchmarkFixtureExport(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(root, "manifest.json"), raw, 0644); err != nil {
 		t.Fatal(err)
 	}
+}
+
+// Exact immutable drawing inputs, beside native references. No SVG/server asset
+// is needed by a browser implementation to recover text or chosen placement.
+func browserInkFixtureElements(plan clip.EditPlan) []map[string]any {
+	var result []map[string]any
+	for _, text := range clip.CorrectionFromPlan(plan).Elements {
+		rows := []map[string]any{}
+		for _, row := range text.Rows {
+			rows = append(rows, map[string]any{"role": row.Role, "text": row.Text})
+		}
+		phrases := []map[string]any{}
+		for _, phrase := range text.Phrases {
+			phrases = append(phrases, map[string]any{"text": phrase.Text, "startMs": phrase.StartMS, "endMs": phrase.EndMS})
+		}
+		value := map[string]any{"instanceId": text.InstanceID, "elementId": text.ElementID, "cutId": text.CutID, "kind": text.Kind, "role": text.Role,
+			"text": text.Text, "rows": rows, "style": text.Style, "position": text.Position, "align": text.Align, "basis": text.Basis,
+			"pace": text.Pace, "accent": text.Accent, "keyword": text.Keyword, "resolvedStartMs": text.ResolvedStartMS, "resolvedEndMs": text.ResolvedEndMS,
+			"groupId": text.GroupID, "itemId": text.ItemID, "phrases": phrases, "fallbackReason": text.FallbackReason}
+		if text.StartMS != nil {
+			value["startMs"] = *text.StartMS
+		}
+		if text.EndMS != nil {
+			value["endMs"] = *text.EndMS
+		}
+		if text.EffectiveStartMS != nil {
+			value["effectiveStartMs"] = *text.EffectiveStartMS
+		}
+		if text.EffectiveEndMS != nil {
+			value["effectiveEndMs"] = *text.EffectiveEndMS
+		}
+		if text.EffectivePosition != "" {
+			value["effectivePosition"] = text.EffectivePosition
+		}
+		if text.Owner.Position != nil {
+			value["ownerPosition"] = map[string]any{"x": text.Owner.Position.X, "y": text.Owner.Position.Y}
+		}
+		if text.Owner.Size > 0 {
+			value["ownerSizePx"] = text.Owner.Size
+		}
+		if text.Owner.Style != "" {
+			value["ownerStyle"] = text.Owner.Style
+		}
+		result = append(result, value)
+	}
+	return result
 }

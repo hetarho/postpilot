@@ -144,6 +144,8 @@ export interface ClipEditableText {
   creation?: { kind: string }
   effectiveStartMs?: number
   effectiveEndMs?: number
+  /** Existing server-chosen automatic anchor; a read projection, never an owner edit. */
+  effectivePosition?: string
   phrases?: { text: string; startMs: number; endMs: number }[]
   staleEvidence?: boolean
   evidenceReviewed?: boolean
