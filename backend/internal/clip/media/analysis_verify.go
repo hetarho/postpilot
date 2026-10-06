@@ -24,6 +24,12 @@ type analysisPackets struct {
 	Packets []analysisPacket `json:"packets"`
 }
 
+// The tested analysis AAC encoders include 2112 priming samples plus less than
+// one 1024-sample tail unit (Apple TN2258). This is a raw codec allowance only:
+// presented duration and every decoded sample still satisfy the strict copy
+// contract. It does not permit extra audible source coverage or hidden tails.
+const analysisAACRawPaddingSamples = 2112 + 1024 - 1
+
 // VerifyAnalysisCopy scans through packet EOF before decoding. A clipped -t
 // decode is not EOF evidence: short headers/edit lists can hide a longer tail.
 // Only the submitted bounded MP4 is read, never its source original.
@@ -130,7 +136,7 @@ func validateAnalysisPackets(data []byte, info clip.MediaInfo, c clip.AnalysisCo
 		guard := 4.0 / float64(cfg.FPS)
 		maxDuration := 1.0/float64(cfg.FPS) + 0.000002
 		if kind == "audio" {
-			guard = 2 * 1024.0 / float64(cfg.AudioRate)
+			guard = float64(analysisAACRawPaddingSamples) / float64(cfg.AudioRate)
 			maxDuration = 1024.0/float64(cfg.AudioRate) + 0.000002
 		}
 		if kind != "audio" && kind != "video" || pts < -guard || dts < -guard || pts+duration > 60+guard || dts > 60+guard || duration > maxDuration {
@@ -152,7 +158,7 @@ func validateAnalysisPackets(data []byte, info clip.MediaInfo, c clip.AnalysisCo
 		guard := step
 		if kind == "audio" {
 			step = 1024.0 / float64(cfg.AudioRate)
-			guard = 2 * step
+			guard = float64(analysisAACRawPaddingSamples) / float64(cfg.AudioRate)
 		}
 		for i := 1; i < len(pts); i++ {
 			if math.Abs(pts[i]-pts[i-1]-step) > 0.000002 {
