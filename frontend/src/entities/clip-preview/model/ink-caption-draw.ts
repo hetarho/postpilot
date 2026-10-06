@@ -10,8 +10,10 @@ export interface BrowserCaptionSceneNode {
   readonly document?: InkDocument
   readonly ink?: BrowserInkLease
   readonly rect?: InkCaptionSceneNode['rect']
+  readonly light?: InkCaptionSceneNode['light']
 }
 export interface BrowserCaptionPreparedScene {
+  readonly style?: string
   readonly opacity: number
   readonly bounds: InkCaptionScene['bounds']
   readonly nodes: readonly BrowserCaptionSceneNode[]
@@ -22,6 +24,9 @@ export interface BrowserCaptionPreparedScene {
 export class BrowserCaptionSceneCanvas {
   private group?: OffscreenCanvas
   private tint?: OffscreenCanvas
+  private source?: OffscreenCanvas
+  private effect?: OffscreenCanvas
+  private blur?: OffscreenCanvas
   private destroyed = false
   private color = new Color()
   draw(
@@ -53,7 +58,100 @@ export class BrowserCaptionSceneCanvas {
         group.rect(clip.x, clip.y, clip.width, clip.height)
         group.clip()
       }
-      if (node.ink && node.document) {
+      if (node.light || node.pose.effect) {
+        if (!('filter' in group)) throw new ClipInkError('CLIP_INK_FILTER_UNSUPPORTED', scene.style)
+        this.source ??= new OffscreenCanvas(width, height)
+        this.effect ??= new OffscreenCanvas(width, height)
+        this.blur ??= new OffscreenCanvas(width, height)
+        const surfaces = [this.source, this.effect, this.blur]
+        const contexts = surfaces.map((surface) => {
+          if (surface.width !== width || surface.height !== height) {
+            surface.width = width
+            surface.height = height
+          }
+          const value = surface.getContext('2d')!
+          value.setTransform(1, 0, 0, 1, 0, 0)
+          value.globalAlpha = 1
+          value.globalCompositeOperation = 'source-over'
+          value.filter = 'none'
+          value.clearRect(0, 0, width, height)
+          value.translate(-bounds.x, -bounds.y)
+          return value
+        })
+        const [source, effect, blur] = contexts as [
+          OffscreenCanvasRenderingContext2D,
+          OffscreenCanvasRenderingContext2D,
+          OffscreenCanvasRenderingContext2D,
+        ]
+        if (node.ink && node.document)
+          source.drawImage(
+            node.ink.bitmap,
+            node.document.bounds.x + node.ink.offset.x,
+            node.document.bounds.y + node.ink.offset.y,
+            node.document.bounds.width,
+            node.document.bounds.height,
+          )
+        if (node.light && node.pose.light) {
+          for (const [index, ellipse] of node.pose.light.ellipses.entries()) {
+            source.save()
+            source.translate(ellipse.cx, ellipse.cy)
+            source.scale(ellipse.rx, ellipse.ry)
+            const gradient = source.createRadialGradient(0, 0, 0, 0, 0, 1)
+            for (const stop of node.light.palettes[index]!)
+              gradient.addColorStop(
+                stop.at,
+                this.color.setValue(stop.hex).setAlpha(stop.alpha).toRgbaString(),
+              )
+            source.fillStyle = gradient
+            source.beginPath()
+            source.arc(0, 0, 1, 0, Math.PI * 2)
+            source.fill()
+            source.restore()
+          }
+          effect.filter = `blur(${node.light.sigma}px)`
+          effect.drawImage(this.source, bounds.x, bounds.y)
+        } else if (node.pose.effect?.kind === 'blur') {
+          effect.filter = `blur(${node.pose.effect.sigma}px)`
+          effect.drawImage(this.source, bounds.x, bounds.y)
+        } else if (node.pose.effect?.kind === 'neon') {
+          const e = node.pose.effect
+          for (const [sigma, alpha, hex, repeats] of [
+            [e.wideSigma, e.wideAlpha, e.wide, 2],
+            [e.tightSigma, e.tightAlpha, e.tight, 1],
+          ] as const) {
+            blur.filter = 'none'
+            blur.clearRect(bounds.x, bounds.y, width, height)
+            blur.globalCompositeOperation = 'source-over'
+            blur.drawImage(this.source, bounds.x, bounds.y)
+            blur.globalCompositeOperation = 'source-in'
+            blur.fillStyle = hex
+            blur.fillRect(bounds.x, bounds.y, width, height)
+            effect.filter = `blur(${sigma}px)`
+            effect.globalAlpha = alpha
+            for (let repeat = 0; repeat < repeats; repeat++)
+              effect.drawImage(this.blur, bounds.x, bounds.y)
+          }
+          effect.filter = 'none'
+          effect.globalAlpha = 1
+          source.globalCompositeOperation = 'source-in'
+          source.fillStyle = node.pose.tint!
+          source.fillRect(bounds.x, bounds.y, width, height)
+          effect.drawImage(this.source, bounds.x, bounds.y)
+        } else if (node.pose.effect?.kind === 'gradient') {
+          const e = node.pose.effect
+          source.globalCompositeOperation = 'source-in'
+          source.save()
+          source.translate(e.box.x, e.box.y)
+          source.scale(e.box.width, e.box.height)
+          const gradient = source.createLinearGradient(0, 0.15, 1, 0.85)
+          for (const stop of e.stops) gradient.addColorStop(stop.at, stop.hex)
+          source.fillStyle = gradient
+          source.fillRect(-1, -1, 3, 3)
+          source.restore()
+          effect.drawImage(this.source, bounds.x, bounds.y)
+        }
+        group.drawImage(this.effect, bounds.x, bounds.y)
+      } else if (node.ink && node.document) {
         const { bitmap, offset } = node.ink,
           document = node.document
         let source: CanvasImageSource = bitmap
@@ -101,6 +199,10 @@ export class BrowserCaptionSceneCanvas {
   measurements() {
     return {
       groupBytes: (this.group?.width ?? 0) * (this.group?.height ?? 0) * 4,
+      effectBytes: [this.source, this.effect, this.blur].reduce(
+        (bytes, value) => bytes + (value?.width ?? 0) * (value?.height ?? 0) * 4,
+        0,
+      ),
       tintBytes: (this.tint?.width ?? 0) * (this.tint?.height ?? 0) * 4,
     }
   }
@@ -114,6 +216,12 @@ export class BrowserCaptionSceneCanvas {
       this.tint.width = 0
       this.tint.height = 0
     }
+    for (const surface of [this.source, this.effect, this.blur])
+      if (surface) {
+        surface.width = 0
+        surface.height = 0
+      }
+    this.source = this.effect = this.blur = undefined
     this.group = undefined
     this.tint = undefined
   }

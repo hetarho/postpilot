@@ -27,14 +27,23 @@ func TestBrowserInkCatalogMatchesNative(t *testing.T) {
 		}
 	}
 	implementation := map[string]string{}
-	for _, file := range []string{"caption_draw.go", "caption_frame.go", "caption_transform.go"} {
+	for _, file := range []string{"caption_draw.go", "caption_frame.go", "caption_transform.go", "caption_effect.go"} {
 		body, err := os.ReadFile(file)
 		if err != nil {
 			t.Fatal(err)
 		}
 		implementation[file] = fmt.Sprintf("%x", sha256.Sum256(body))
 	}
-	expected, err := json.MarshalIndent(map[string]any{"version": 2, "styles": styles, "transformPaint": CaptionTransformPaint(), "nativePainterSources": implementation}, "", "  ")
+	effectSources := map[string]string{}
+	for _, file := range []string{"frontend/src/entities/clip-preview/model/ink-caption-effects.ts", "frontend/src/entities/clip-preview/model/ink-caption-filter-pixi.ts", "frontend/src/entities/clip-preview/model/ink-caption-pixi.ts", "frontend/src/entities/clip-preview/model/ink-caption-draw.ts", "pnpm-lock.yaml"} {
+		body, err := os.ReadFile("../../../../" + file)
+		if err != nil {
+			t.Fatal(err)
+		}
+		effectSources[file] = fmt.Sprintf("%x", sha256.Sum256(body))
+	}
+	effectImplementation := map[string]any{"version": "caption-filters-v1", "pixi": "8.22.0", "colorSpace": "sRGB", "alpha": "premultiplied-alpha", "kernel": 15, "quality": 4, "sources": effectSources}
+	expected, err := json.MarshalIndent(map[string]any{"version": 3, "styles": styles, "transformPaint": CaptionTransformPaint(), "effectPaint": CaptionEffectPaint(), "effectImplementation": effectImplementation, "nativePainterSources": implementation}, "", "  ")
 	if err != nil {
 		t.Fatal(err)
 	}
