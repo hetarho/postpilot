@@ -22,8 +22,9 @@ export function useSelections(): {
   selections: SelectionsByStage
   isPending: boolean
   isError: boolean
+  refetch: () => void
 } {
-  const { data, isPending, isError } = useQuery(ProviderService.method.getSelections, {})
+  const { data, isPending, isError, refetch } = useQuery(ProviderService.method.getSelections, {})
   const selections = useMemo(() => {
     const byStage: SelectionsByStage = {}
     for (const selection of data?.selections ?? []) {
@@ -36,6 +37,9 @@ export function useSelections(): {
     selections,
     isPending,
     isError,
+    refetch: () => {
+      void refetch()
+    },
   }
 }
 

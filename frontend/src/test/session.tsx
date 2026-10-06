@@ -1,3 +1,4 @@
+import { seedCompletedSetup } from './setup-progress'
 // Shared harness for tests that need a fake AuthService.
 //
 // Everything is built per test: the app's own transport and QueryClient are module
@@ -40,6 +41,11 @@ import { type FakeVoucherOptions, registerVoucherService } from './vouchers'
 import { connectAppError } from './app-error'
 
 export interface FakeAuthOptions {
+  /** Existing-account fixtures have acknowledged setup; opt in to a truly first-use browser. */
+  firstUseSetup?: boolean
+  /** Only the real-route harness seeds historical browser metadata. */
+  existingSetup?: boolean
+
   /** The account GetMe reports. `undefined` makes GetMe answer 401, like a real server
    *  with no session.
    *
@@ -128,6 +134,10 @@ export function createFakeAuthBackend(options: FakeAuthOptions = {}): FakeAuthBa
     calls,
   } = options
   let session = user
+  const seedSetup = (ownerId: string) => {
+    if (options.existingSetup && !options.firstUseSetup) seedCompletedSetup(ownerId)
+  }
+  if (session) seedSetup(session.id)
 
   const transport = createRouterTransport((router) => {
     const { rpc } = router
@@ -160,6 +170,7 @@ export function createFakeAuthBackend(options: FakeAuthOptions = {}): FakeAuthBa
         emailVerified: user?.emailVerified,
         hasPassword: user?.hasPassword,
       }
+      seedSetup(session.id)
       return create(LoginResponseSchema, {
         user: {
           id: session.id,
@@ -186,6 +197,7 @@ export function createFakeAuthBackend(options: FakeAuthOptions = {}): FakeAuthBa
         emailVerified: true,
         hasPassword: user?.hasPassword ?? false,
       }
+      seedSetup(session.id)
       return create(SignInWithGoogleResponseSchema, {
         user: {
           id: session.id,

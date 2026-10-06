@@ -1,3 +1,4 @@
+import { i18n as setupI18n } from '@/widgets/creation-setup/config/i18n'
 import { i18n as homeI18n } from '@/pages/home/config/i18n'
 import { i18n as libraryI18n } from '@/pages/library/config/i18n'
 import { i18n as settingsI18n } from '@/pages/settings/config/i18n'
@@ -160,6 +161,7 @@ export const RESOURCE_NAMESPACES = [
 import { i18n as clipDubbingI18n } from '@/features/regenerate-clip-speech/config/i18n'
 
 export const FRAGMENTS: readonly I18nFragment[] = [
+  setupI18n,
   homeI18n,
   libraryI18n,
   settingsI18n,
@@ -273,7 +275,7 @@ export const FRAGMENTS: readonly I18nFragment[] = [
 
 export const resources = {
   ko: {
-    creation: { ...homeI18n.ko, ...libraryI18n.ko, ...settingsI18n.ko },
+    creation: { ...homeI18n.ko, ...libraryI18n.ko, ...settingsI18n.ko, ...setupI18n.ko },
     spokenVoice: spokenVoiceResources.ko,
     createSpokenVoice: createSpokenVoiceResources.ko,
     manageSpokenVoice: manageSpokenVoiceResources.ko,
@@ -404,7 +406,7 @@ export const resources = {
     },
   },
   en: {
-    creation: { ...homeI18n.en, ...libraryI18n.en, ...settingsI18n.en },
+    creation: { ...homeI18n.en, ...libraryI18n.en, ...settingsI18n.en, ...setupI18n.en },
     spokenVoice: spokenVoiceResources.en,
     createSpokenVoice: createSpokenVoiceResources.en,
     manageSpokenVoice: manageSpokenVoiceResources.en,

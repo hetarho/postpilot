@@ -15,13 +15,11 @@ import { currentDestination, DESTINATIONS } from './navigation'
 export function AuthenticatedLayout() {
   const { t } = useTranslation('nav')
   const navigate = useNavigate()
-  const pathname = useRouterState({
-    select: (state) => state.location.pathname,
-  })
+  const pathname = useRouterState({ select: (state) => state.location.pathname })
   const [menu, send] = useReducer(navigationMenuTransition, 'closed')
   const current = currentDestination(pathname)
   const immersive = pathname === '/plans'
-  const quiet = pathname === '/'
+  const quiet = pathname === '/' || pathname === '/setup'
 
   useEffect(() => {
     const token = takePendingGift()

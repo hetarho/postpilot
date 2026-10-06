@@ -15,6 +15,7 @@ export function useModels(): {
   models: readonly CatalogModel[]
   isPending: boolean
   isError: boolean
+  refetch: () => void
 } {
   const transport = useTransport()
   const cache = useQueryClient()
@@ -29,7 +30,7 @@ export function useModels(): {
     [cache, planKey],
   )
   const planUpdatedAt = useSyncExternalStore(subscribe, planSnapshot, planSnapshot)
-  const { data, dataUpdatedAt, isPending, isError } = useQuery(
+  const { data, dataUpdatedAt, isPending, isError, refetch } = useQuery(
     ProviderService.method.listModels,
     {},
     { staleTime: MODEL_CATALOG_STALE_MS },
@@ -41,5 +42,12 @@ export function useModels(): {
       void cache.invalidateQueries({ queryKey: modelKey })
   }, [cache, dataUpdatedAt, modelKey, planUpdatedAt])
   const models = useMemo(() => data?.models.map(toCatalogModel) ?? NONE, [data])
-  return { models, isPending, isError }
+  return {
+    models,
+    isPending,
+    isError,
+    refetch: () => {
+      void refetch()
+    },
+  }
 }

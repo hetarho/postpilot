@@ -1,4 +1,5 @@
 import { createRoute, lazyRouteComponent } from '@tanstack/react-router'
+import { setupSearchSchema } from '@/pages/setup'
 import { authenticatedRoute } from './tree'
 export const libraryRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
@@ -10,4 +11,10 @@ export const settingsRoute = createRoute({
   path: '/settings',
   component: lazyRouteComponent(() => import('@/pages/settings'), 'SettingsPage'),
 })
-export const creationRoutes = [libraryRoute, settingsRoute]
+export const setupRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/setup',
+  validateSearch: setupSearchSchema,
+  component: lazyRouteComponent(() => import('@/pages/setup'), 'SetupPage'),
+})
+export const creationRoutes = [libraryRoute, settingsRoute, setupRoute]

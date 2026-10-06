@@ -68,6 +68,17 @@ export function SettingsPage() {
           </section>
         ))}
       </div>
+      <Link
+        to="/setup"
+        search={{ restart: true }}
+        className={typographyStyles({
+          variant: 'body',
+          className:
+            'text-link-fg hover:text-link-fg-hover mt-10 inline-flex min-h-11 items-center px-4',
+        })}
+      >
+        {t('setup.restart')}
+      </Link>
       {user?.plan === 'master' && (
         <Link
           to="/admin"

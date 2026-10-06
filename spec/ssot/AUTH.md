@@ -1,5 +1,5 @@
 # AUTH accounts, passwords, sessions
-> r11 | Self-signed-up and operator-provisioned accounts, email/password or Google login, HttpOnly sessions, and an acting plan that grants free-model access without signup credits.
+> r13 | Self-signed-up and operator-provisioned accounts, email/password or Google login, HttpOnly sessions, and an acting plan that grants free-model access without signup credits.
 
 ## decisions
 - AUTH-1 [o] anyone may sign themselves up: AuthService carries Login · Logout · GetMe plus Signup, ResendVerification, VerifyEmail, RequestPasswordReset, ResetPassword and the Google sign-in exchange, and every one of the added procedures is public (→AUTH-17) ← paid subscriptions need an account a stranger can open without the operator
@@ -51,7 +51,25 @@
 - AUTH-47 [o] automatic login is unchecked on a fresh login screen and applies to both password and Google login; the choice travels with the single Google authorization attempt, defaults to false when absent, and is never a stored password or token in JavaScript storage; Google entry from signup defaults to ordinary login
 - AUTH-48 [o] save login id is independent of automatic login and off until an id has been saved: only a successful password login stores the submitted id on that browser, later visits prefill it, unchecking immediately removes it, and logout retains it; failed login never overwrites it, and unavailable storage never prevents login
 - AUTH-49 [o] local seed accounts cover free/light/basic/pro/max/master, retaining the `base` login for basic and adding `light`; they have no email and use the local-only `seed-only` password. Fixtures retain their post-count coverage and use the current plan denominations and entitlement windows, with free accounts receiving no credit grants.
+- AUTH-50 [o] the default signed-in destination is `/`; on home, a successful read of account-owned voices and post/video templates offers first-use setup only when no active made writing voice or a template directory is empty and setup has not been completed or explicitly deferred on this browser for this account.
+  - existing usable values omit their steps; a read failure is unknown, never an empty directory, and offers retry or an explicit way to continue creating
+  - protected deep links, gifts, billing callbacks and existing projects keep their requested destination; setup does not intercept them
+- AUTH-51 [o] setup steps are welcome → writing voice → post template → clip template → ready, omitting satisfied or explicitly skipped steps; eligible recommended models initialize under MODEL-87 without asking novices to choose them.
+  - voice setup offers a first ten-question personal questionnaire, pasted owner writing or explicitly generated styles under VOICE-66 through VOICE-69; no voice is created merely by opening setup
+  - an active unfinished personal voice resumes; a personal voice is complete only after successful published analysis, and a generated style only after explicit adoption
+  - templates require an explicit valid save; guidelines, memories and spoken voices remain optional settings
+  - every setup step can be deferred; saved custom models remain unchanged and missing model readiness exposes simple retry/settings help instead of a prerequisite selection funnel
+- AUTH-52 [o] setup progress is a versioned account-scoped browser preference containing only step acknowledgements, a resume step and safe creation intent; credentials, answers, template bodies, generated samples and provider data are never stored there.
+  - account records are the cross-device completion authority; browser acknowledgements survive reload/login without crossing accounts
+  - incompatible or malformed storage resolves safely with in-memory progress; obsolete model-step metadata migrates to the next valid setup step without discarding voice/template acknowledgements
+  - incomplete work resumes from account records and a validated step; completed/deferred setup reopens only through an explicit settings entry
+  - deleting saved configuration does not force a completed browser back into setup
+- AUTH-53 [o] setup states distinguish checking, welcome, editing, saving/running, failure and ready/completed; only confirmed saves, published voice analysis or explicit skip may advance.
+  - events for obsolete steps or another owner cannot advance or publish the current flow; duplicate submits are refused while pending
+  - Back preserves confirmed work; Skip never cancels a running paid job, copies another voice or performs a provider call; leaving/reloading preserves durable job recovery under VOICE-31/45
+  - ready/completion acknowledges this browser and follows only `/`, `/posts/new` or `/clips/new`; an unsafe stored target falls back to `/`
 ## flow
+- first use: default login → `/` → successful directory check → already configured/completed (launch) | missing setup (`/setup` → guarded optional steps → explicit finish/defer → launch or chosen creation)
 - signup: email + password → account written unverified → verification mail → VerifyEmail → login is possible
 - login: id or email + password + automatic-login/save-id choices → IP throttle → lookup(present → verify | absent → dummy verify) → ok(verified and unlocked → set session or persistent cookie → save id when selected → seed session cache → follow safe redirect) | reject(identical error, counter++, mail on lock) | infra failure(CodeInternal)
 - google: provider exchange → verified address(existing account → joined | none → account created verified) → set session or persistent cookie from the authorization attempt

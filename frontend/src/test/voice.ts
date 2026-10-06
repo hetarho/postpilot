@@ -105,6 +105,9 @@ export const DEFAULT_FAKE_VOICE: FakeVoiceRow = {
 }
 
 export interface FakeVoiceOptions {
+  createFails?: boolean
+  createGate?: Promise<void>
+
   activeJobId?: string
   /** The impression of an analysis the profile publishes on the read AFTER the first one — the
    *  shape a resumed analysis has when its job is already done. */
@@ -376,8 +379,10 @@ export function registerVoiceService(router: ConnectRouter, options: FakeVoiceOp
     return create(ListVoicesResponseSchema, { voices: directory().map(toProtoVoice) })
   })
 
-  rpc(VoiceService.method.createVoice, (request) => {
+  rpc(VoiceService.method.createVoice, async (request) => {
     options.calls?.push('CreateVoice')
+    if (options.createGate) await options.createGate
+    if (options.createFails) throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
     const name = validName(request.name)
     if (nameTaken(name, '')) throw connectAppError('VOICE_NAME_TAKEN', Code.AlreadyExists)
     options.creates?.push({ name })

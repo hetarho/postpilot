@@ -42,6 +42,9 @@ export const FAKE_FORMAT_GUIDE = {
 } as const
 
 export interface FakeTemplatesOptions {
+  createFails?: boolean
+  createGate?: Promise<void>
+
   templates?: FakeTemplateRow[]
   /** Make ListTemplates fail. */
   listFails?: boolean
@@ -209,8 +212,10 @@ export function registerTemplateService(router: ConnectRouter, options: FakeTemp
     })
   })
 
-  rpc(TemplateService.method.createTemplate, (req) => {
+  rpc(TemplateService.method.createTemplate, async (req) => {
     calls?.push('CreateTemplate')
+    if (options.createGate) await options.createGate
+    if (options.createFails) throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
     options.creates?.push({
       name: req.name,
       description: req.description,

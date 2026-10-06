@@ -53,6 +53,7 @@ it('addresses exactly the product’s URLs, whatever file assembles them', () =>
     '/publishing-agents',
     '/reset-password',
     '/settings',
+    '/setup',
     '/signup',
     '/spoken-voices',
     '/spoken-voices/new',

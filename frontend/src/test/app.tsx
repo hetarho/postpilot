@@ -19,7 +19,8 @@ export type RenderAppOptions = FakeAuthOptions & {
  *  things actually under test. Pass `transport` to supply a backend the fake cannot
  *  model (an API that is down, say). */
 export function renderAppAt(at: string, options: RenderAppOptions = {}) {
-  const transport = options.transport ?? createFakeAuthTransport(options)
+  const transport =
+    options.transport ?? createFakeAuthTransport({ ...options, existingSetup: true })
   const queryClient: QueryClient = createTestQueryClient()
   const fallbackTheme = createThemeTestEnvironment()
   const storage =
