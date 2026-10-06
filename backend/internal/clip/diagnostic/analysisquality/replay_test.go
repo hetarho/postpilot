@@ -136,6 +136,27 @@ func TestProductionReplaySeparateMetricsUnknownsAndCriticalFailures(t *testing.T
 	if e = writePrivate(filepath.Join(root, "report.json"), r); e != nil {
 		t.Fatal(e)
 	}
+	// Optional explicit artifact destination contains only the synthetic test's
+	// arithmetic/provenance. No private corpus, raw response or human identity.
+	if path := os.Getenv("POSTPILOT_ANALYSIS_TEST_EVIDENCE"); path != "" {
+		proof := struct {
+			Version          int               `json:"version"`
+			Origin           string            `json:"origin"`
+			VerifierOrigin   string            `json:"verifierOrigin"`
+			Summary          Summary           `json:"summary"`
+			AnalysisContract string            `json:"analysisContract"`
+			Profile          string            `json:"profile"`
+			Prompts          map[string]Prompt `json:"prompts"`
+			Metrics          []Metric          `json:"metrics"`
+			Pairs            []Pair            `json:"pairs"`
+			Variance         []Variance        `json:"variance"`
+			Qualification    Qualification     `json:"qualification"`
+			Limits           []string          `json:"limits"`
+		}{Version, c.Origin, "synthetic_stub", r.Summary(), r.AnalysisContract, clip.BrowserAnalysisProfileVersion, r.Prompts, r.Metrics, r.Pairs, r.Variance, r.Qualification, r.Limits}
+		if e = writePrivate(path, proof); e != nil {
+			t.Fatal(e)
+		}
+	}
 }
 
 func TestReplayRefusesIncompatibleFilesAndKeysBeforeVerifier(t *testing.T) {
@@ -315,5 +336,55 @@ func TestPrivateCLIOutputAndFailureEvidence(t *testing.T) {
 	}
 	if _, e := os.Stat(filepath.Join(failure, "report.json")); e != nil || factories != before {
 		t.Fatal("failure evidence absent or dependency constructed", e)
+	}
+}
+
+func TestMissingArmsUnrunResponsesAndSpeechDenominatorsStayExplicit(t *testing.T) {
+	c, root, now := fixture(t)
+	c.Cases[0].Labels = append(c.Cases[0].Labels, Label{ID: "utterance", Kind: "speech", StartMS: 61000, EndMS: 65000, Required: true, Known: true, Expected: "오늘은 만 원", Normalization: "exact", Evidence: "synthetic speech label"})
+	for _, id := range []string{"reference", "native"} {
+		addReplay(t, &c, root, now, id, 0, rawObservation("8,900원", ""))
+	}
+	annotate(&c, "native", 0, "utterance", "omitted", -1, "", 0, 0, now)
+	r, e := Run(t.Context(), c, root, "replay", now, fakeVerification)
+	if e != nil {
+		t.Fatal(e)
+	}
+	for _, p := range r.Pairs {
+		if p.Index == 1 && p.To == "browser" && !p.Missing {
+			t.Fatal("unrun browser implied completed paired comparison", p)
+		}
+	}
+	if r.Variance[2].Unrun != 1 || r.Variance[2].Failures != 0 {
+		t.Fatal("unrun response counted as actual failure")
+	}
+	if m := r.Metrics[1].Families["speech"]; m.Omitted != 1 || m.SpeechEdits != len([]rune("오늘은 만 원")) || m.SpeechReferenceRunes != len([]rune("오늘은 만 원")) {
+		t.Fatal("omitted speech disappeared from CER", m)
+	}
+	if m := r.Metrics[2].Families["speech"]; m.Unreviewed != 2 || m.SpeechUnscoredReferenceRunes != len([]rune("오늘은 만 원")) {
+		t.Fatal("unreviewed speech masqueraded as zero error", m)
+	}
+}
+
+func TestStrictPrivateManifestAndStaleTruthAssessment(t *testing.T) {
+	c, root, now := fixture(t)
+	addReplay(t, &c, root, now, "native", 0, rawObservation("8,900원", ""))
+	data, _ := json.Marshal(c)
+	for _, invalid := range [][]byte{append([]byte(`{"version":1,`), data[1:]...), append([]byte(`{"Version":1,`), data[1:]...), append([]byte(`{"unknown":true,`), data[1:]...), append(append([]byte(nil), data...), []byte(` {}`)...)} {
+		f := save(t, root, "invalid.json", invalid)
+		if _, _, e := Load(filepath.Join(root, f.Path), now); !errors.Is(e, ErrInput) {
+			t.Fatal("ambiguous/unknown/trailing JSON accepted", e)
+		}
+	}
+	annotate(&c, "native", 0, "price", "correct", 0, "event", 6, 12, now)
+	c.Cases[0].Labels[1].Expected = "9,800원"
+	if _, e := Run(t.Context(), c, root, "replay", now, fakeVerification); !errors.Is(e, ErrInput) {
+		t.Fatal("stale truth mapping reused", e)
+	}
+	if e := os.Chmod(root, 0755); e != nil {
+		t.Fatal(e)
+	}
+	if _, e := Run(t.Context(), c, root, "inspect", now, fakeVerification); !errors.Is(e, ErrInput) {
+		t.Fatal("public corpus root accepted", e)
 	}
 }

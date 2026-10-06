@@ -228,6 +228,7 @@ type Variance struct {
 	Planned            int                       `json:"planned"`
 	Completed          int                       `json:"completed"`
 	Failures           int                       `json:"failures"`
+	Unrun              int                       `json:"unrun"`
 	Status             string                    `json:"status"`
 	LabelDistributions map[string]map[string]int `json:"labelDistributions"`
 	Disagreements      []string                  `json:"disagreements"`
@@ -264,6 +265,7 @@ type Report struct {
 	ProviderCallsSent int                                      `json:"providerCallsSent"`
 	MeasuredLiveSpend *int64                                   `json:"measuredLiveSpend"`
 	Qualification     Qualification                            `json:"qualification"`
+	Limits            []string                                 `json:"limits"`
 }
 
 // Summary contains no arbitrary text from input/provider/reviewer records.

@@ -63,6 +63,10 @@ func execute(ctx context.Context, args []string, out io.Writer, now time.Time, f
 	}
 	r, runErr := Run(ctx, c, root, *mode, now, lazy)
 	if e = writePrivate(filepath.Join(dir, "report.json"), r); e != nil {
+		summary := r.Summary()
+		summary.Status = "report_failed"
+		_ = writePrivate(filepath.Join(dir, "summary.json"), summary)
+		_ = json.NewEncoder(out).Encode(summary)
 		return ErrOutput
 	}
 	if e = writePrivate(filepath.Join(dir, "summary.json"), r.Summary()); e != nil {

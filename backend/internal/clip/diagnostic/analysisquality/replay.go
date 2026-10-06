@@ -57,8 +57,9 @@ func Run(ctx context.Context, c Corpus, root, mode string, now time.Time, verify
 			"temperatureSeedTopP":              "not sent; provider defaults unknown",
 			"customSamplingFpsMediaResolution": "unsupported; not sent",
 			"servedModelRevision":              "unknown; not exposed by normalized response"},
-		Qualification: Qualification{MissingGates: []string{"current_live_semantic_comparison", "explicit_cumulative_live_approval", "trusted_live_admission_accounting", "actual_provider_internal_controls", "human_review_of_actual_comparison"}}}
-	if !slices.Contains([]string{"inspect", "replay", "audit"}, mode) || Validate(c, now) != nil || verify == nil {
+		Qualification: Qualification{MissingGates: []string{"current_live_semantic_comparison", "explicit_cumulative_live_approval", "trusted_live_admission_accounting", "actual_provider_internal_controls", "human_review_of_actual_comparison"}},
+		Limits:        []string{"Offline replay proves contract/scoring structure only, not current semantic accuracy.", "Original metadata and encoder telemetry have manifest-declared provenance; originals are hashed, not independently decoded by this runner.", "All current arms use production copy bounds; a higher-resolution reference needs a separately reviewed bounded validator and admission.", "Semantic matching and quality classification require human span-grounded annotations; no automatic judge is supplied.", "Budget primitive tests use stubs; live model registration, account admission and accounting are not wired.", "Small corpus/repetition counts establish no population-level statistical guarantee."}}
+	if !slices.Contains([]string{"inspect", "replay", "audit"}, mode) || Validate(c, now) != nil || !privateRoot(root) || verify == nil {
 		return r, ErrInput
 	}
 	if ctx.Err() != nil {
@@ -82,7 +83,7 @@ func Run(ctx context.Context, c Corpus, root, mode string, now time.Time, verify
 			At        time.Time
 		}{cs.ID, cs.Labels, cs.Original.SHA256, cs.Annotator, cs.AnnotatedAt})
 		cases[cs.ID] = cs
-		if _, e := readPrivate(root, cs.Original, MaxOriginalBytes); e != nil {
+		if e := checkPrivate(root, cs.Original, MaxOriginalBytes); e != nil {
 			return r, ErrInput
 		}
 	}
@@ -202,7 +203,10 @@ func loadRecord(root string, rp Replay, origin string, prompt Prompt) (Record, e
 // private workspace copy. No media subprocess sees a corpus path or URL.
 func LocalVerifier(workRoot, ffmpeg, ffprobe string) (Verifier, error) {
 	env := clip.Environment{WorkRoot: workRoot, FFmpegPath: ffmpeg, FFprobePath: ffprobe, WorkStaleAge: time.Hour, MediaTimeout: clip.AnalysisVerificationTimeout}
-	adapter, e := media.New(clip.DefaultMediaConfig(env), nil)
+	cfg := clip.DefaultMediaConfig(env)
+	cfg.PreparedMaxBytes = cfg.AnalysisMaxBytes
+	cfg.WorkspaceMaxBytes = clip.AnalysisVerificationWorkspaceBytes
+	adapter, e := media.New(cfg, nil)
 	if e != nil {
 		return nil, ErrInput
 	}

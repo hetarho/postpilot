@@ -114,6 +114,9 @@ func RequestDigest(req llm.Request) string {
 // lock before trusted local admission and before factory construction. Missing
 // admission, stale/in-flight state or persistence failure constructs nothing.
 func OpenBudgetedModels(ctx context.Context, statePath string, a Approval, p llm.CallPolicy, now time.Time, localAdmission func(context.Context, Approval) error, factory func() (ai.Models, error)) (*BudgetedModels, error) {
+	// Neither caller-owned slices/pointers nor a callback may mutate the frozen
+	// request matrix/cap after admission or its durable digest was recorded.
+	a = copyApproval(a)
 	upper, ok := p.QuoteMicrousd()
 	if ctx.Err() != nil || !ok || !p.Pricing.Valid() || !labelID.MatchString(a.SessionID) || !text(a.ApprovedBy, 1, 128) || !clip.ValidSHA256(a.EvidenceDigest) || !clip.ValidSHA256(a.PlanDigest) || a.PolicyDigest != digest(p) || a.MaximumMicrousd == nil || *a.MaximumMicrousd < 0 || !a.ExpiresAt.After(now) || len(a.Calls) < 1 || len(a.Calls) > MaxInputs*MaxReplicates || localAdmission == nil || factory == nil {
 		return nil, ErrBudget
@@ -180,8 +183,11 @@ func OpenBudgetedModels(ctx context.Context, statePath string, a Approval, p llm
 	if b.persist(b.state) != nil {
 		return nil, ErrOutput
 	}
-	if e = localAdmission(ctx, a); e != nil {
+	if e = localAdmission(ctx, copyApproval(a)); e != nil {
 		return nil, safeError(e)
+	}
+	if ctx.Err() != nil {
+		return nil, ErrBudget
 	}
 	b.models, e = factory()
 	if e != nil || b.models == nil {
@@ -189,6 +195,15 @@ func OpenBudgetedModels(ctx context.Context, statePath string, a Approval, p llm
 	}
 	okay = true
 	return b, nil
+}
+
+func copyApproval(a Approval) Approval {
+	a.Calls = append([]ApprovedCall(nil), a.Calls...)
+	if a.MaximumMicrousd != nil {
+		maximum := *a.MaximumMicrousd
+		a.MaximumMicrousd = &maximum
+	}
+	return a
 }
 
 func (b *BudgetedModels) Resolve(ref llm.ModelRef) (llm.ModelInfo, bool) {

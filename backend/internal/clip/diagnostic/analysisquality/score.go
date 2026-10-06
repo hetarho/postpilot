@@ -202,6 +202,10 @@ func score(r *Report) error {
 		r.Metrics = append(r.Metrics, m)
 	}
 	metrics := map[string]Metric{}
+	parsed := map[string]bool{}
+	for _, at := range r.Attempts {
+		parsed[key(at.InputID, at.Replicate)] = at.Status == "parsed"
+	}
 	for _, m := range r.Metrics {
 		metrics[key(m.InputID, m.Replicate)] = m
 	}
@@ -214,7 +218,7 @@ func score(r *Report) error {
 					for _, in := range r.Corpus.Inputs {
 						if in.CaseID == c.ID && in.Copy.Index == index {
 							m, ok := metrics[key(in.ID, rep)]
-							if ok {
+							if ok && parsed[key(in.ID, rep)] {
 								if in.Arm == p.From {
 									from = &m
 								}
@@ -257,6 +261,8 @@ func score(r *Report) error {
 			}
 			if at.Status == "parsed" {
 				v.Completed++
+			} else if at.Status == "unrun" {
+				v.Unrun++
 			} else {
 				v.Failures++
 			}
