@@ -265,7 +265,14 @@ func (h *Handler) ReportClipRenderVerdict(ctx context.Context, req *connect.Requ
 		return nil, toConnectError(clip.ErrRenderUnavailable)
 	}
 	m := req.Msg.Measurements
-	v, err := h.generation.ReportRenderVerdict(ctx, user, req.Msg.RenderId, clip.RenderMeasurements{SpeechFingerprint: m.SpeechFingerprint, TruePeakDBTP: m.TruePeakDbtp, Width: int(m.Width), Height: int(m.Height), FrameRateNumerator: int(m.FrameRateNumerator), FrameRateDenominator: int(m.FrameRateDenominator), VideoFrames: int(m.VideoFrames), VideoCodec: m.VideoCodec, VideoProfile: m.VideoProfile, HasAudio: m.HasAudio, AudioCodec: m.AudioCodec, AudioRate: int(m.AudioRate), LoudnessLUFS: m.LoudnessLufs, Silent: m.Silent}, req.Msg.Passed)
+	measured := clip.RenderMeasurements{CompositionVersion: m.CompositionVersion, SnapshotFingerprint: m.SnapshotFingerprint, BackgroundVersion: m.BackgroundVersion, BackgroundSnapshotFingerprint: m.BackgroundSnapshotFingerprint, BackgroundDigest: m.BackgroundDigest, BackgroundComplete: m.BackgroundComplete, BackgroundSampleCount: int(m.BackgroundSampleCount), SpeechFingerprint: m.SpeechFingerprint, TruePeakDBTP: m.TruePeakDbtp, Width: int(m.Width), Height: int(m.Height), FrameRateNumerator: int(m.FrameRateNumerator), FrameRateDenominator: int(m.FrameRateDenominator), VideoFrames: int(m.VideoFrames), VideoCodec: m.VideoCodec, VideoProfile: m.VideoProfile, HasAudio: m.HasAudio, AudioCodec: m.AudioCodec, AudioRate: int(m.AudioRate), LoudnessLUFS: m.LoudnessLufs, Silent: m.Silent}
+	for _, n := range m.BackgroundNotices {
+		if n == nil {
+			return nil, toConnectError(clip.ErrInvalid)
+		}
+		measured.BackgroundNotices = append(measured.BackgroundNotices, clip.PlanNotice{CopyFallback: clip.CopyFallback{ElementID: n.ElementId, CutID: n.CutId, Reason: n.Code}, Action: n.Action})
+	}
+	v, err := h.generation.ReportRenderVerdict(ctx, user, req.Msg.RenderId, measured, req.Msg.Passed)
 	if err != nil {
 		return nil, toConnectError(err)
 	}

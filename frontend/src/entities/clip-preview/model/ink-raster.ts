@@ -23,6 +23,9 @@ export interface InkDocument {
   bounds: InkBox
   phase?: { x: number; y: number }
   placement?: InkBox
+  /** Authoritative native sampling box; distinct from padded raster bounds. */
+  sampledBounds?: InkBox
+  contrastParts?: { box: InkBox; fill: string; alpha: number; stroke: boolean }[]
   rasterScale?: number
 }
 export interface BrowserInkRasterizer {
