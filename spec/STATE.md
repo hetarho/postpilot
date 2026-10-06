@@ -81,16 +81,17 @@
 | T602 | Authorize and verify browser-prepared analysis artifacts | ARCH CLIP QUOTA | T591 | todo |
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | todo |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | todo |
-| T617 | Make XState actors the authority for guided creation workflows | ARCH THEME AUTH VOICE EDIT | - | doing@261007.ux |
-| T618 | Guide writing voice learning through one purposeful step at a time | VOICE AUTH THEME | T617 | doing@261007.ux |
-| T619 | Separate AI authoring into purpose choice review and optional refinement | EDIT THEME | T617 | doing@261007.ux |
-| T620 | Integrate and qualify the research-backed guided design language | ARCH THEME AUTH VOICE EDIT | T617 T618 T619 | doing@261007.ux |
 
 ## next
-- Implement T617 actors, T618 personal learning and T619 staged authoring; integrate and qualify T620.
-- Commit each task independently; preserve existing browser-media assignments and dirty work.
+- Check the existing browser-media work-group board before claiming another remaining task.
+- Existing blocked qualification and render-capacity work remain separate.
 
 ## log
+- 261007 T620 done: FE3468/430 files, clean258, backend80/deploy62/tooling/generator gates, twenty AI and four personal browser sessions pass;58 existing dirty files preserved
+- 261007 T619 done: focused five-kind purpose/choice/review/optional-chat/publication actors;37 tests and112 day/night/mobile/desktop layout checks pass
+- 261007 T618 done: method-specific personal learning, explicit analysis/use and readonly uncertain-job recovery; actor/API9 and host regressions77 pass
+- 261007 T617 done: four real XState workflow authorities with invoked async fencing and frozen retries;60 actor/live-consumer tests pass
+- 261007 task commits: T61799c13926, T618122ad5ac, T6191dd7a065, T620c3fd6d58; independent source commits plus final linked verification records
 - 261007 T617-T620 start: root owns documentation/dependencies/commits; actor, personal-learning and authoring proposals have isolated file ownership
 - 261007 create-task focused UX done: T617 XState authority, T618 personal funnel, T619 staged AI workspace, T620 shared design/integration
 - 261007 ARCH r10..r16 allocation reconciled to existing T380/T386/T388 and T591-T604; scoped ARCH-69 allocated to T617/T620 without existing task rewrites
@@ -106,8 +107,3 @@
 - 261007 create-task EDIT and related deltas done: T613 durable drafts, T614 domain publication, T615 shared Studio, T616 entrypoints/qualification
 - 261007 create-ssot EDIT r1 and update-ssot complete: durable eight-suggestion chat drafts, explicit guarded domain publication and responsive shared settings/setup UX
 - 261007 update-ssot TMPL GUIDE VOICE CLIP THEME AUTH QUOTA start: eight AI suggestions, conversational draft editing and explicit settings adoption
-- 261007 task commits: T606 be489e55, T607 9074f741, T608 fb856773, T609 a6c4a953, T610 a3003583, T611 a39ae36d; isolated staged-tree checks preserve existing workspace edits
-- 261007 T611 done: 3383 FE tests, BE/build/tooling and 62 deploy tests pass; 80 live-browser layout checks and personal/AI/settings recovery flows pass
-- 261007 T612 done: grounded targeted tags in both languages; generation/guideline tests, vet and production build pass; whole-tree build fails on existing tmp main/run duplicates
-- 261007 T612 start: implement grounded entity and area/topic priority in both tag-rule languages
-- 261007 create-task GEN r24 done: T612 updates the existing switchable tag rule and prompt goldens
