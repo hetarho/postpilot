@@ -64,6 +64,7 @@ export {
   stageLabel,
 } from './model/types'
 export { useModels } from './api/useModels'
+export { useInitializeDefaultSelections } from './api/useInitializeDefaultSelections'
 export {
   useApplyCatalogDocument,
   useCatalogDocument,

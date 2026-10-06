@@ -84,6 +84,22 @@ func (h *Handler) SaveSelection(ctx context.Context, req *connect.Request[postpi
 	return connect.NewResponse(&postpilotv1.SaveSelectionResponse{Selection: toProtoSelection(saved)}), nil
 }
 
+func (h *Handler) InitializeDefaultSelections(ctx context.Context, _ *connect.Request[postpilotv1.InitializeDefaultSelectionsRequest]) (*connect.Response[postpilotv1.GetSelectionsResponse], error) {
+	userID, err := actingUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	selections, err := h.svc.InitializeDefaultSelections(ctx, userID)
+	if err != nil {
+		return nil, toConnectError("initialize default selections", err)
+	}
+	out := make([]*postpilotv1.Selection, 0, len(selections))
+	for _, selection := range selections {
+		out = append(out, toProtoSelection(selection))
+	}
+	return connect.NewResponse(&postpilotv1.GetSelectionsResponse{Selections: out}), nil
+}
+
 func (h *Handler) GetComparisonPairs(ctx context.Context, _ *connect.Request[postpilotv1.GetComparisonPairsRequest]) (*connect.Response[postpilotv1.GetComparisonPairsResponse], error) {
 	userID, err := actingUser(ctx)
 	if err != nil {

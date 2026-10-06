@@ -50,6 +50,33 @@ func (q *Queries) DeleteSelectionIfRef(ctx context.Context, arg DeleteSelectionI
 	return err
 }
 
+const insertDefaultSelection = `-- name: InsertDefaultSelection :exec
+INSERT INTO model_selections (user_id, stage, slot, provider_id, model_id, updated_at)
+VALUES (?, ?, 'active', ?, ?, ?)
+ON CONFLICT(user_id, stage, slot) DO NOTHING
+`
+
+type InsertDefaultSelectionParams struct {
+	UserID     string
+	Stage      string
+	ProviderID string
+	ModelID    string
+	UpdatedAt  string
+}
+
+// Defaults fill only absent active choices. A simultaneous manual save always wins,
+// regardless of whether it happens before or after this insert.
+func (q *Queries) InsertDefaultSelection(ctx context.Context, arg InsertDefaultSelectionParams) error {
+	_, err := q.db.ExecContext(ctx, insertDefaultSelection,
+		arg.UserID,
+		arg.Stage,
+		arg.ProviderID,
+		arg.ModelID,
+		arg.UpdatedAt,
+	)
+	return err
+}
+
 const listPairSlotsForExtraSave = `-- name: ListPairSlotsForExtraSave :many
 SELECT slot, provider_id, model_id FROM model_selections
 WHERE user_id = ? AND stage = ? AND slot IN ('candidate_a', 'candidate_b')

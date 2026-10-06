@@ -16,9 +16,12 @@ service ProviderService {
   // The registry snapshot: every model of every provider, with its flags. A model whose
   // provider has no API key is `disabled` with the reason, so the client can grey it.
   rpc ListModels(ListModelsRequest) returns (ListModelsResponse) {}
-  // The acting user's per-stage choices. A saved model that is no longer registered comes
-  // back `missing` — and the server has already cleared it, so the user must choose again.
+  // The acting user's active per-stage choices. A missing/unavailable choice retains its
+  // saved identity until its owner explicitly changes it.
   rpc GetSelections(GetSelectionsRequest) returns (GetSelectionsResponse) {}
+  // Prepares eligible recommended models only for absent active slots. Existing active
+  // choices and every comparison slot are preserved; this performs no model work.
+  rpc InitializeDefaultSelections(InitializeDefaultSelectionsRequest) returns (GetSelectionsResponse) {}
   rpc SaveSelection(SaveSelectionRequest) returns (SaveSelectionResponse) {}
   rpc GetComparisonPairs(GetComparisonPairsRequest) returns (GetComparisonPairsResponse) {}
   rpc SaveComparisonPair(SaveComparisonPairRequest) returns (SaveComparisonPairResponse) {}
@@ -36,8 +39,7 @@ service ProviderService {
   rpc MoveRecommendationSet(MoveRecommendationSetRequest) returns (MoveRecommendationSetResponse) {}
 }
 
-// The two generation stages and the voice-analysis stage each choose their own model
-// ([I3]); the app never fills one in.
+// Generation and voice analysis each pass their saved concrete eligible model explicitly.
 enum Stage {
   STAGE_UNSPECIFIED = 0;
   STAGE_OBSERVE = 1;
@@ -143,8 +145,8 @@ message StageLevel {
 message Selection {
   Stage stage = 1;
   ModelRef ref = 2;
-  // The saved ref is no longer in the registry. The row is already gone; this tells the
-  // client what to grey out and why.
+  // The saved ref is no longer registered for this stage. Active choices are preserved;
+  // vanished comparison choices are conditionally cleared.
   bool missing = 3;
   SelectionSlot slot = 4;
   string required_plan = 5;
@@ -179,6 +181,7 @@ message ListModelsResponse {
 }
 
 message GetSelectionsRequest {}
+message InitializeDefaultSelectionsRequest {}
 
 message GetSelectionsResponse {
   repeated Selection selections = 1;

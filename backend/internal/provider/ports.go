@@ -13,6 +13,9 @@ type Store interface {
 	ListSelections(ctx context.Context, userID string) ([]Selection, error)
 	ListSelectionSlots(ctx context.Context, userID string) ([]Selection, error)
 	SaveSelections(ctx context.Context, userID string, selections []Selection) error
+	// InsertDefaultSelections atomically inserts absent active slots only. It must never
+	// overwrite a concurrent manual save or write any comparison slot.
+	InsertDefaultSelections(ctx context.Context, userID string, selections []Selection) error
 	// ReplaceLabExtraCandidates validates the current pair and atomically replaces C/D/E.
 	ReplaceLabExtraCandidates(ctx context.Context, userID string, stage Stage, extras []Selection) error
 	// DeleteSelection removes the stage's row only while it still holds `s.Ref`. The

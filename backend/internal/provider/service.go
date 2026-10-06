@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 	"time"
 
 	"github.com/postpilot/backend/internal/llm"
@@ -177,9 +178,9 @@ func (s *Service) postCredits(ctx context.Context, info llm.ModelInfo) []StagePo
 	return out
 }
 
-// GetSelections returns the user's per-stage choices. A choice whose model is no longer
-// registered is reported `Missing` and cleared here (PRD §7: 마지막 선택 초기화), so the
-// user sees the greyed entry once and then must choose again.
+// GetSelections preserves each active choice's identity, including an unavailable or
+// missing ref. Only an explicit owner save may replace it; default initialization must
+// never interpret a vanished custom choice as a fresh account's empty slot.
 //
 // A choice the caller cannot currently AFFORD is not reported here at all: a balance is
 // temporary state that the next renewal clears, so it invalidates nothing. Only a model
@@ -199,9 +200,8 @@ func (s *Service) GetSelections(ctx context.Context, userID string) ([]Selection
 		}
 		info, ok := s.catalog.Lookup(selections[i].Ref)
 		// A model deregistered from this stage's purpose is as gone as one deleted: the
-		// dropdown no longer lists it, so the choice is cleared the same way. This is also
-		// the machinery (MODEL-24) that absorbed the empty per-purpose cutover — every
-		// pre-cutover selection lands here on its next read, with no bespoke migration clearing.
+		// dropdown no longer lists it. Its identity remains saved, so later initialization
+		// cannot silently substitute a different ref for the owner's established choice.
 		if ok && Suitable(selections[i].Stage, info) {
 			if s.modelGrades {
 				access := s.access(ctx, tier, selections[i].Stage, info, false)
@@ -210,12 +210,103 @@ func (s *Service) GetSelections(ctx context.Context, userID string) ([]Selection
 			continue
 		}
 		selections[i].Missing = true
-		// Best effort: a failed clear only means the user is told again next time.
-		if err := s.store.DeleteSelection(ctx, userID, selections[i]); err != nil {
-			slog.Warn("clear vanished selection failed", "user", userID, "stage", selections[i].Stage, "err", err)
-		}
 	}
 	return selections, nil
+}
+
+// InitializeDefaultSelections prepares absent active models without model work. Ordered
+// recommendations take precedence over the least-grade compatible catalog entry; all
+// refs pass the manual-selection gate. Comparison slots never participate in this flow.
+func (s *Service) InitializeDefaultSelections(ctx context.Context, userID string) ([]Selection, error) {
+	existing, err := s.store.ListSelections(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("read default selections: %w", err)
+	}
+	present := make(map[Stage]bool, len(existing))
+	for _, selection := range existing {
+		present[selection.Stage] = true
+	}
+	if len(present) == len(Stages) {
+		return s.GetSelections(ctx, userID)
+	}
+	sets, err := s.RecommendationSets(ctx)
+	if err != nil {
+		return nil, err
+	}
+	models := s.catalog.Models()
+	defaults := make([]Selection, 0, len(Stages))
+	for _, stage := range Stages {
+		if present[stage] {
+			continue
+		}
+		candidates := make([]llm.ModelRef, 0, len(sets)+len(models))
+		for _, set := range sets {
+			for _, selection := range set.Selections {
+				if selection.Stage == stage {
+					candidates = append(candidates, selection.Active)
+				}
+			}
+		}
+		// Sorting a copy preserves the registry's stable source order within each grade.
+		ordered := slices.Clone(models)
+		slices.SortStableFunc(ordered, func(a, b llm.ModelInfo) int {
+			return defaultGradeRank(a.Levels[string(stage)]) - defaultGradeRank(b.Levels[string(stage)])
+		})
+		for _, info := range ordered {
+			candidates = append(candidates, info.Ref)
+		}
+		seen := make(map[llm.ModelRef]bool, len(candidates))
+		for _, ref := range candidates {
+			if err := ctx.Err(); err != nil {
+				return nil, err
+			}
+			if seen[ref] {
+				continue
+			}
+			seen[ref] = true
+			info, ok := s.catalog.Lookup(ref)
+			if !ok || defaultGradeRank(info.Levels[string(stage)]) == 5 {
+				continue
+			}
+			if err := s.validateRef(ctx, userID, stage, ref); err != nil {
+				if defaultUnavailable(err) {
+					continue
+				}
+				return nil, fmt.Errorf("validate default selection: %w", err)
+			}
+			defaults = append(defaults, Selection{Stage: stage, Slot: SlotActive, Ref: ref, UpdatedAt: s.now()})
+			break
+		}
+	}
+	if err := s.store.InsertDefaultSelections(ctx, userID, defaults); err != nil {
+		return nil, fmt.Errorf("prepare default selections: %w", err)
+	}
+	// A manual save may have won a race with our proposed default. Read actual stored
+	// choices rather than reporting the proposals as if they had been persisted.
+	return s.GetSelections(ctx, userID)
+}
+
+func defaultGradeRank(grade string) int {
+	switch grade {
+	case "free":
+		return 0
+	case "value":
+		return 1
+	case "balanced":
+		return 2
+	case "premium":
+		return 3
+	case "top":
+		return 4
+	default:
+		return 5
+	}
+}
+
+func defaultUnavailable(err error) bool {
+	return errors.Is(err, ErrModelNotRegistered) || errors.Is(err, ErrModelDisabled) ||
+		errors.Is(err, ErrModelUnsuitable) || errors.Is(err, ErrModelPlanRequired) ||
+		errors.Is(err, ErrModelUnclassified) || errors.Is(err, ErrFreePathUnavailable)
 }
 
 func (s *Service) GetComparisonPairs(ctx context.Context, userID string) ([]ComparisonPair, error) {

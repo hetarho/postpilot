@@ -132,6 +132,37 @@ func (s *Store) SaveSelections(ctx context.Context, userID string, selections []
 	return nil
 }
 
+func (s *Store) InsertDefaultSelections(ctx context.Context, userID string, selections []provider.Selection) error {
+	if len(selections) == 0 {
+		return nil
+	}
+	tx, err := s.writer.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin default selections: %w", err)
+	}
+	defer tx.Rollback()
+	queries := sqlc.New(tx)
+	for _, selection := range selections {
+		if selection.Slot != "" && selection.Slot != provider.SlotActive {
+			return fmt.Errorf("default selection must be active: %w", provider.ErrModelUnsuitable)
+		}
+		if _, err := provider.ParseStage(string(selection.Stage)); err != nil {
+			return err
+		}
+		if err := queries.InsertDefaultSelection(ctx, sqlc.InsertDefaultSelectionParams{
+			UserID: userID, Stage: string(selection.Stage),
+			ProviderID: selection.Ref.ProviderID, ModelID: selection.Ref.ModelID,
+			UpdatedAt: selection.UpdatedAt.UTC().Format(writeLayout),
+		}); err != nil {
+			return fmt.Errorf("insert default selection: %w", err)
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit default selections: %w", err)
+	}
+	return nil
+}
+
 func (s *Store) ReplaceLabExtraCandidates(ctx context.Context, userID string, stage provider.Stage, extras []provider.Selection) error {
 	tx, err := s.writer.BeginTx(ctx, nil)
 	if err != nil {

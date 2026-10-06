@@ -118,6 +118,19 @@ func (f *fakeStore) SaveSelections(ctx context.Context, userID string, selection
 	return nil
 }
 
+func (f *fakeStore) InsertDefaultSelections(_ context.Context, _ string, selections []provider.Selection) error {
+	if f.batchErr != nil {
+		return f.batchErr
+	}
+	for _, selection := range selections {
+		key := string(selection.Stage)
+		if _, exists := f.rows[key]; !exists {
+			f.rows[key] = selection
+		}
+	}
+	return nil
+}
+
 func (f *fakeStore) ReplaceLabExtraCandidates(_ context.Context, _ string, stage provider.Stage, extras []provider.Selection) error {
 	a, aok := f.rows[string(stage)+"/candidate_a"]
 	b, bok := f.rows[string(stage)+"/candidate_b"]
@@ -333,7 +346,7 @@ func TestCatalogAndPostEstimateNameTheStageTheyQuote(t *testing.T) {
 }
 
 // A model not registered to observe's purpose (photo-analysis) is as gone for observe as a
-// deleted one: reported missing, cleared, and refused on save.
+// deleted one: reported missing, preserved, and refused on save.
 func TestObserveNeedsARegisteredModel(t *testing.T) {
 	ctx := context.Background()
 	store := &fakeStore{rows: map[string]provider.Selection{
@@ -342,7 +355,7 @@ func TestObserveNeedsARegisteredModel(t *testing.T) {
 	svc := newService(store)
 
 	got, _ := svc.GetSelections(ctx, "alice")
-	if len(got) != 1 || !got[0].Missing || len(store.deleted) != 1 {
+	if len(got) != 1 || !got[0].Missing || len(store.deleted) != 0 {
 		t.Fatalf("selections = %+v deleted = %v", got, store.deleted)
 	}
 	if _, err := svc.SaveSelection(ctx, "alice", provider.StageObserve, live); !errors.Is(err, provider.ErrModelUnsuitable) {
@@ -356,8 +369,8 @@ func TestObserveNeedsARegisteredModel(t *testing.T) {
 	}
 }
 
-// MODEL-24: a saved model that left the registry is reported missing once and cleared.
-func TestGetSelections_MarksAndClearsVanishedModels(t *testing.T) {
+// MODEL-24: missing active refs keep their identity until the owner's next manual save.
+func TestGetSelections_MarksAndPreservesVanishedModels(t *testing.T) {
 	store := &fakeStore{rows: map[string]provider.Selection{
 		"observe": {Stage: provider.StageObserve, Ref: seeing},
 		"write":   {Stage: provider.StageWrite, Ref: gone},
@@ -371,13 +384,13 @@ func TestGetSelections_MarksAndClearsVanishedModels(t *testing.T) {
 	if len(got) != 2 || got[0].Missing || !got[1].Missing {
 		t.Fatalf("selections = %+v", got)
 	}
-	if len(store.deleted) != 1 || store.deleted[0] != provider.StageWrite {
-		t.Errorf("deleted = %v, want just the vanished stage cleared", store.deleted)
+	if len(store.deleted) != 0 {
+		t.Errorf("deleted = %v, want no active choice cleared", store.deleted)
 	}
 
 	again, _ := svc.GetSelections(context.Background(), "alice")
-	if len(again) != 1 {
-		t.Errorf("second read = %+v, the vanished choice should be gone", again)
+	if len(again) != 2 || !again[1].Missing {
+		t.Errorf("second read = %+v, the vanished choice should be retained", again)
 	}
 }
 

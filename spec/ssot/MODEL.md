@@ -1,5 +1,5 @@
 # MODEL providers, model catalog, experiments
-> r31 | Operator-managed OpenRouter models and understandable single-supplier speech combinations with sourced cost references, explicit eligible selections and blind comparisons.
+> r33 | Operator-managed OpenRouter models and understandable single-supplier speech combinations with sourced cost references, explicit eligible selections and blind comparisons.
 
 ## decisions
 - MODEL-1 [o] `backend/internal/llm` is the only way a model is called: no adapter package or provider SDK is imported anywhere except under `internal/llm/…` and in `cmd/api`, enforced by `internal/llm/boundary_test.go` over `go list -deps`; every completion, voice-design, voice-confirmation and speech operation carries an explicit admitted model/profile reference through a provider-neutral port with no default (→ARCH-9 →MODEL-77)
@@ -57,14 +57,14 @@
   - the browse response carries an unstored seventh field `reasoning_known` ← `reasons = 0` with no list is both "publishes no reasoning object" and "nothing has asked yet", which is what a row no successful live read has refreshed says and what every row says while the fetch is failing
   - a live candidate is known by construction, a stored row only if it says something
   - an unknown capability offers the full vocabulary and accepts any effort, a known non-reasoning model offers no control and accepts none
-- MODEL-23 [o] selection memory: `model_selections (user_id, stage, slot, provider_id, model_id, updated_at)` with an `active` slot per account and stage, `candidate_a` `candidate_b` for observe and write, and optional lab-only `candidate_c` `candidate_d` `candidate_e` for observe and write; pair and preset writes are atomic; start RPCs still receive refs explicitly and never infer them from this table; the app writes no default — a fresh account has no rows, every stage renders 모델을 선택하세요 and reports `selected = null`, which is what the generation and analysis actions block on (I3)
+- MODEL-23 [o] selection memory holds account/stage active refs and explicit comparison slots; pair and manual recommendation writes remain atomic. Protected first-use initialization fills only absent active observe/analyze/write slots under MODEL-87, while every generation start still freezes and passes its chosen eligible refs explicitly.
 - MODEL-24 [o] GetSelections distinguishes absent registration, disabled provider and temporary plan/balance restrictions.
-  - a ref no longer registered to its purpose is missing and conditionally cleared; show its former entry once so the owner can choose again
-  - disabled providers remain visibly unavailable; failed/loading catalogs never imply removal
-  - a downgrade or insufficient credit preserves the stored ref and history, shows the required plan or affordability reason, and requires an explicit eligible choice for new work; never silently substitute a model
-- MODEL-25 [o] SaveSelection accepts only a known stage and a compatible, registered, enabled model entitled to the account's plan (→QUOTA-19); insufficient balance alone does not invalidate a saved choice.
-  - pairs require two distinct entitled refs; saving the lab-only optional list requires its refs to be distinct from one another and from the saved pair; recommendation application validates all seven slots before one transaction and reports every offending ref by cause, including a required plan
-  - apply a recommendation only on the owner's explicit action, never at mount, login or signup; refuse the whole set if any slot fails
+  - an unavailable active ref remains stored and visibly unavailable until the owner explicitly changes it; automatic initialization never replaces it
+  - removed comparison refs retain their existing once-visible missing/conditional-clear behavior
+  - loading or failed catalog reads never imply removal; downgrade/insufficient credit preserve selections and history and never silently substitute a model
+- MODEL-25 [o] manual selection, comparison and full recommendation application accept only compatible, registered, enabled and account-entitled refs; insufficient balance alone does not invalidate a saved choice.
+  - pairs and optional candidates stay distinct under their existing contracts; explicit full recommendation application validates all seven slots before an atomic write
+  - MODEL-87 automatic active defaults are separate from full recommendation application and never create or alter comparison choices
 - MODEL-26 [o] recommendation refs are validated against current registration, compatibility and plan entitlement at apply time; the operator's save checks registration and classification only (→MODEL-70). No tier may apply a set containing a ref outside its rights. Removed models remain readable in snapshots, and newly adopted active refs must pass the same gate as manual selection.
   - a fresh installation starts with one seeded set `balanced-2026-08` (Gemini/Qwen observe, GPT analyze, Claude/Grok write) that the operator edits or deletes like any other, without promising that every tier can apply it
 - MODEL-27 [o] browser model projections include ids, labels, capabilities, the purpose-specific classification, plan eligibility/required plan, affordability/unavailability reasons and QUOTA-64's per-post credit figure, and carry no price, cost or pricing date (→QUOTA-66). Operator views additionally expose public descriptions/prices; keys, SDK payloads and base URLs never cross the wire.
@@ -129,7 +129,7 @@
   - historical pairwise records retain the same clock from their stored decision time (→MODEL-76)
   - DeletePost calls the experiment purge transactionally before deleting the post so the FK may detach retained metadata only after private payload is gone (→POST-28); account deletion cascades every experiment row
   - logs may contain ids, stage and accounting but never snapshots, photos, samples or output
-- MODEL-44 [o] AI models is a navigation group drawn like writing/video under THEME-38 (the brand-row menu below `lg`, the one rail on the desk), ordered:
+- MODEL-44 [o] AI models is a settings category under THEME-38 with its existing direct routes and named links, ordered:
   | destination | address | holds |
   |---|---|---|
   | 모델 변경 | `/ai-models` | active per-stage selections, explicit recommendation application and the per-post credit estimate (→QUOTA-64) |
@@ -168,7 +168,7 @@
 - MODEL-58 [o] classification gates ordinary selections, preset application, comparisons and execution through QUOTA-19, as well as paid estimator-combo assignment. Unclassified registrations remain visible only for operator curation and cannot bypass entitlement. Locked higher grades stay visible to users with the required plan; being price-zero alone does not classify a registration as free.
 - MODEL-59 [o] a models-v1 paste line is an id optionally followed by `free`, `value`, `balanced`, `premium` or `top`. An omitted classification explicitly unsets it; export/preview/apply round-trip the complete membership and classification. Unknown tokens reject the whole document; ordinary access follows MODEL-58.
 - MODEL-60 [o] comparison review keeps the navigation context of the entry point: model comparison returns to its stage's comparison form, recent comparisons returns to its stage's history, writing returns to its source post, and a post-list result returns to the list with its search/status filters
-  - model-lab and writing reviews use distinct routed pages with shared candidate/decision UI, and each keeps its own primary/group navigation
+  - model-lab and writing reviews use distinct routed pages with shared candidate/decision UI, and each keeps its entry-point return destination under the common header menu
   - the entry context survives reload, browser history and opening a link in a new tab
   - a model-review address with no entry annotation defaults to model history, and missing/deleted source posts fall back to the post list
   - the existence of a source post never identifies where the owner entered
@@ -286,6 +286,12 @@
   - temporary public discounts carry their expiry and stop applying afterward; persistent common defaults use the undiscounted reference rate
   - these admin references never replace MODEL-80's bounded pricing or MODEL-82's live qualification
 
+- MODEL-87 [o] an authenticated idempotent default-initialization operation prepares each absent active observe/analyze/write slot without model calls, jobs, credit holds or debits.
+  - for each stage prefer the first currently eligible active ref in the operator's ordered recommendation sets; comparison refs do not affect this choice
+  - if no curated active ref is eligible, choose an eligible registered/classified catalog ref in free/value/balanced/premium/top order and stable catalog order; free access passes the full zero-price/endpoint gate under MODEL-68
+  - preserve every existing active ref, including locked, missing and unavailable choices, and every comparison slot; concurrent initialization/manual saves use insert-if-absent semantics and return the actual saved selections
+  - a stage with no eligible ref stays unavailable with readable retry/settings help, without an onboarding model-choice requirement or a fabricated fallback
+  - repeated login/navigation/catalog changes do not replace an established choice; the owner may change it in settings
 ## flow
 - call: caller(stage, ref, request) → Registry.Complete(admitted entitlement + stage membership + capability/price checks → effort resolution(override → stage → none) → budget → adapter stream → normalized usage / error)
 - curate: 모델 관리 tab → ListCatalog(live read ∪ DB rows | DB rows + fetch_error) → SetModelPurpose | SetModelReasoning | SetModelLevel → the next Complete sees it

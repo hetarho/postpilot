@@ -15,6 +15,13 @@ FROM model_selections
 WHERE user_id = ? AND slot = 'active'
 ORDER BY stage;
 
+-- Defaults fill only absent active choices. A simultaneous manual save always wins,
+-- regardless of whether it happens before or after this insert.
+-- name: InsertDefaultSelection :exec
+INSERT INTO model_selections (user_id, stage, slot, provider_id, model_id, updated_at)
+VALUES (?, ?, 'active', ?, ?, ?)
+ON CONFLICT(user_id, stage, slot) DO NOTHING;
+
 -- Conditional on the ref: the clear of a vanished choice must not take a choice the
 -- user made in the meantime.
 -- name: DeleteSelectionIfRef :exec

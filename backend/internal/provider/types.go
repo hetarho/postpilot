@@ -105,8 +105,8 @@ type Selection struct {
 	Stage Stage
 	Slot  SelectionSlot
 	Ref   llm.ModelRef
-	// Missing: the ref is no longer registered. GetSelections sets this and clears the
-	// row in the same call, so the client sees it exactly once.
+	// Missing: the ref is no longer registered for this stage. Active rows preserve
+	// their identity; vanished comparison rows are conditionally cleared.
 	Missing           bool
 	RequiredPlan      plan.Plan
 	UnavailableReason string

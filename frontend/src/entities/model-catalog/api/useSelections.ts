@@ -59,9 +59,8 @@ export interface StageSelectionState {
 
 /** What a stage has chosen, resolved against the catalog.
  *
- *  `selected` is null until the user picks a usable model — the callers of the
- *  generation and analysis actions block on exactly that (MODEL-23: no default
- *  pairing, [I3]). A saved choice that has vanished from the registry, whose provider
+ *  `selected` is null until an eligible saved choice exists, including a prepared
+ *  recommended default. A saved choice that has vanished from the registry, whose provider
  *  lost its key, or that was deregistered from the stage's purpose is not usable: it
  *  comes back as `unavailable` with the reason, for the dropdown to grey out.
  *
@@ -80,9 +79,8 @@ export function useStageSelection(stage: StageName): StageSelectionState {
     if (!saved) return { ...base, selected: null, unavailable: undefined }
     if (saved.missing) {
       // `missing` now means one thing only: the model is gone or unusable for the stage, and
-      // the server has already cleared the row. A model the balance cannot cover is never
-      // reported here — that is temporary state the next top-up clears, so it invalidates
-      // nothing.
+      // the server preserves its identity until the owner explicitly replaces it.
+      // Temporary credit restrictions likewise preserve the saved choice.
       return {
         ...base,
         selected: null,

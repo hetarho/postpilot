@@ -39,6 +39,9 @@ const (
 	// ProviderServiceGetSelectionsProcedure is the fully-qualified name of the ProviderService's
 	// GetSelections RPC.
 	ProviderServiceGetSelectionsProcedure = "/postpilot.v1.ProviderService/GetSelections"
+	// ProviderServiceInitializeDefaultSelectionsProcedure is the fully-qualified name of the
+	// ProviderService's InitializeDefaultSelections RPC.
+	ProviderServiceInitializeDefaultSelectionsProcedure = "/postpilot.v1.ProviderService/InitializeDefaultSelections"
 	// ProviderServiceSaveSelectionProcedure is the fully-qualified name of the ProviderService's
 	// SaveSelection RPC.
 	ProviderServiceSaveSelectionProcedure = "/postpilot.v1.ProviderService/SaveSelection"
@@ -73,9 +76,12 @@ type ProviderServiceClient interface {
 	// The registry snapshot: every model of every provider, with its flags. A model whose
 	// provider has no API key is `disabled` with the reason, so the client can grey it.
 	ListModels(context.Context, *connect.Request[v1.ListModelsRequest]) (*connect.Response[v1.ListModelsResponse], error)
-	// The acting user's per-stage choices. A saved model that is no longer registered comes
-	// back `missing` — and the server has already cleared it, so the user must choose again.
+	// The acting user's active per-stage choices. A missing/unavailable choice retains its
+	// saved identity until its owner explicitly changes it.
 	GetSelections(context.Context, *connect.Request[v1.GetSelectionsRequest]) (*connect.Response[v1.GetSelectionsResponse], error)
+	// Prepares eligible recommended models only for absent active slots. Existing active
+	// choices and every comparison slot are preserved; this performs no model work.
+	InitializeDefaultSelections(context.Context, *connect.Request[v1.InitializeDefaultSelectionsRequest]) (*connect.Response[v1.GetSelectionsResponse], error)
 	SaveSelection(context.Context, *connect.Request[v1.SaveSelectionRequest]) (*connect.Response[v1.SaveSelectionResponse], error)
 	GetComparisonPairs(context.Context, *connect.Request[v1.GetComparisonPairsRequest]) (*connect.Response[v1.GetComparisonPairsResponse], error)
 	SaveComparisonPair(context.Context, *connect.Request[v1.SaveComparisonPairRequest]) (*connect.Response[v1.SaveComparisonPairResponse], error)
@@ -114,6 +120,12 @@ func NewProviderServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			httpClient,
 			baseURL+ProviderServiceGetSelectionsProcedure,
 			connect.WithSchema(providerServiceMethods.ByName("GetSelections")),
+			connect.WithClientOptions(opts...),
+		),
+		initializeDefaultSelections: connect.NewClient[v1.InitializeDefaultSelectionsRequest, v1.GetSelectionsResponse](
+			httpClient,
+			baseURL+ProviderServiceInitializeDefaultSelectionsProcedure,
+			connect.WithSchema(providerServiceMethods.ByName("InitializeDefaultSelections")),
 			connect.WithClientOptions(opts...),
 		),
 		saveSelection: connect.NewClient[v1.SaveSelectionRequest, v1.SaveSelectionResponse](
@@ -175,17 +187,18 @@ func NewProviderServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 
 // providerServiceClient implements ProviderServiceClient.
 type providerServiceClient struct {
-	listModels              *connect.Client[v1.ListModelsRequest, v1.ListModelsResponse]
-	getSelections           *connect.Client[v1.GetSelectionsRequest, v1.GetSelectionsResponse]
-	saveSelection           *connect.Client[v1.SaveSelectionRequest, v1.SaveSelectionResponse]
-	getComparisonPairs      *connect.Client[v1.GetComparisonPairsRequest, v1.GetComparisonPairsResponse]
-	saveComparisonPair      *connect.Client[v1.SaveComparisonPairRequest, v1.SaveComparisonPairResponse]
-	saveLabExtraCandidates  *connect.Client[v1.SaveLabExtraCandidatesRequest, v1.SaveLabExtraCandidatesResponse]
-	listRecommendationSets  *connect.Client[v1.ListRecommendationSetsRequest, v1.ListRecommendationSetsResponse]
-	applyRecommendationSet  *connect.Client[v1.ApplyRecommendationSetRequest, v1.ApplyRecommendationSetResponse]
-	saveRecommendationSet   *connect.Client[v1.SaveRecommendationSetRequest, v1.SaveRecommendationSetResponse]
-	deleteRecommendationSet *connect.Client[v1.DeleteRecommendationSetRequest, v1.DeleteRecommendationSetResponse]
-	moveRecommendationSet   *connect.Client[v1.MoveRecommendationSetRequest, v1.MoveRecommendationSetResponse]
+	listModels                  *connect.Client[v1.ListModelsRequest, v1.ListModelsResponse]
+	getSelections               *connect.Client[v1.GetSelectionsRequest, v1.GetSelectionsResponse]
+	initializeDefaultSelections *connect.Client[v1.InitializeDefaultSelectionsRequest, v1.GetSelectionsResponse]
+	saveSelection               *connect.Client[v1.SaveSelectionRequest, v1.SaveSelectionResponse]
+	getComparisonPairs          *connect.Client[v1.GetComparisonPairsRequest, v1.GetComparisonPairsResponse]
+	saveComparisonPair          *connect.Client[v1.SaveComparisonPairRequest, v1.SaveComparisonPairResponse]
+	saveLabExtraCandidates      *connect.Client[v1.SaveLabExtraCandidatesRequest, v1.SaveLabExtraCandidatesResponse]
+	listRecommendationSets      *connect.Client[v1.ListRecommendationSetsRequest, v1.ListRecommendationSetsResponse]
+	applyRecommendationSet      *connect.Client[v1.ApplyRecommendationSetRequest, v1.ApplyRecommendationSetResponse]
+	saveRecommendationSet       *connect.Client[v1.SaveRecommendationSetRequest, v1.SaveRecommendationSetResponse]
+	deleteRecommendationSet     *connect.Client[v1.DeleteRecommendationSetRequest, v1.DeleteRecommendationSetResponse]
+	moveRecommendationSet       *connect.Client[v1.MoveRecommendationSetRequest, v1.MoveRecommendationSetResponse]
 }
 
 // ListModels calls postpilot.v1.ProviderService.ListModels.
@@ -196,6 +209,11 @@ func (c *providerServiceClient) ListModels(ctx context.Context, req *connect.Req
 // GetSelections calls postpilot.v1.ProviderService.GetSelections.
 func (c *providerServiceClient) GetSelections(ctx context.Context, req *connect.Request[v1.GetSelectionsRequest]) (*connect.Response[v1.GetSelectionsResponse], error) {
 	return c.getSelections.CallUnary(ctx, req)
+}
+
+// InitializeDefaultSelections calls postpilot.v1.ProviderService.InitializeDefaultSelections.
+func (c *providerServiceClient) InitializeDefaultSelections(ctx context.Context, req *connect.Request[v1.InitializeDefaultSelectionsRequest]) (*connect.Response[v1.GetSelectionsResponse], error) {
+	return c.initializeDefaultSelections.CallUnary(ctx, req)
 }
 
 // SaveSelection calls postpilot.v1.ProviderService.SaveSelection.
@@ -248,9 +266,12 @@ type ProviderServiceHandler interface {
 	// The registry snapshot: every model of every provider, with its flags. A model whose
 	// provider has no API key is `disabled` with the reason, so the client can grey it.
 	ListModels(context.Context, *connect.Request[v1.ListModelsRequest]) (*connect.Response[v1.ListModelsResponse], error)
-	// The acting user's per-stage choices. A saved model that is no longer registered comes
-	// back `missing` — and the server has already cleared it, so the user must choose again.
+	// The acting user's active per-stage choices. A missing/unavailable choice retains its
+	// saved identity until its owner explicitly changes it.
 	GetSelections(context.Context, *connect.Request[v1.GetSelectionsRequest]) (*connect.Response[v1.GetSelectionsResponse], error)
+	// Prepares eligible recommended models only for absent active slots. Existing active
+	// choices and every comparison slot are preserved; this performs no model work.
+	InitializeDefaultSelections(context.Context, *connect.Request[v1.InitializeDefaultSelectionsRequest]) (*connect.Response[v1.GetSelectionsResponse], error)
 	SaveSelection(context.Context, *connect.Request[v1.SaveSelectionRequest]) (*connect.Response[v1.SaveSelectionResponse], error)
 	GetComparisonPairs(context.Context, *connect.Request[v1.GetComparisonPairsRequest]) (*connect.Response[v1.GetComparisonPairsResponse], error)
 	SaveComparisonPair(context.Context, *connect.Request[v1.SaveComparisonPairRequest]) (*connect.Response[v1.SaveComparisonPairResponse], error)
@@ -285,6 +306,12 @@ func NewProviderServiceHandler(svc ProviderServiceHandler, opts ...connect.Handl
 		ProviderServiceGetSelectionsProcedure,
 		svc.GetSelections,
 		connect.WithSchema(providerServiceMethods.ByName("GetSelections")),
+		connect.WithHandlerOptions(opts...),
+	)
+	providerServiceInitializeDefaultSelectionsHandler := connect.NewUnaryHandler(
+		ProviderServiceInitializeDefaultSelectionsProcedure,
+		svc.InitializeDefaultSelections,
+		connect.WithSchema(providerServiceMethods.ByName("InitializeDefaultSelections")),
 		connect.WithHandlerOptions(opts...),
 	)
 	providerServiceSaveSelectionHandler := connect.NewUnaryHandler(
@@ -347,6 +374,8 @@ func NewProviderServiceHandler(svc ProviderServiceHandler, opts ...connect.Handl
 			providerServiceListModelsHandler.ServeHTTP(w, r)
 		case ProviderServiceGetSelectionsProcedure:
 			providerServiceGetSelectionsHandler.ServeHTTP(w, r)
+		case ProviderServiceInitializeDefaultSelectionsProcedure:
+			providerServiceInitializeDefaultSelectionsHandler.ServeHTTP(w, r)
 		case ProviderServiceSaveSelectionProcedure:
 			providerServiceSaveSelectionHandler.ServeHTTP(w, r)
 		case ProviderServiceGetComparisonPairsProcedure:
@@ -380,6 +409,10 @@ func (UnimplementedProviderServiceHandler) ListModels(context.Context, *connect.
 
 func (UnimplementedProviderServiceHandler) GetSelections(context.Context, *connect.Request[v1.GetSelectionsRequest]) (*connect.Response[v1.GetSelectionsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ProviderService.GetSelections is not implemented"))
+}
+
+func (UnimplementedProviderServiceHandler) InitializeDefaultSelections(context.Context, *connect.Request[v1.InitializeDefaultSelectionsRequest]) (*connect.Response[v1.GetSelectionsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ProviderService.InitializeDefaultSelections is not implemented"))
 }
 
 func (UnimplementedProviderServiceHandler) SaveSelection(context.Context, *connect.Request[v1.SaveSelectionRequest]) (*connect.Response[v1.SaveSelectionResponse], error) {
