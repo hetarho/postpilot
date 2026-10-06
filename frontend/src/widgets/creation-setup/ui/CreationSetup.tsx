@@ -20,13 +20,14 @@ function AccountSetup({ ownerId, restart }: { ownerId: string; restart: boolean 
   const navigate = useNavigate()
   const controller = useSetup(ownerId, restart)
   const { state } = controller
+  const introStep = state.step === 'welcome' || state.step === 'ready'
+  const visible = state.phase !== 'checking'
   const busy = state.phase === 'saving' || state.phase === 'running'
   const voiceNavigation = useRef<VoiceLearningNavigation | null>(null)
   const heading = useRef<HTMLDivElement>(null)
   useEffect(() => {
-    if (state.phase !== 'checking')
-      heading.current?.querySelector('h1')?.focus({ preventScroll: true })
-  }, [state.step])
+    if (visible) heading.current?.querySelector('h1')?.focus({ preventScroll: true })
+  }, [state.step, visible])
   useEffect(() => {
     if (state.phase === 'completed') void navigate({ to: state.target, replace: true })
   }, [state.phase, state.target, navigate])
@@ -102,6 +103,37 @@ function AccountSetup({ ownerId, restart }: { ownerId: string; restart: boolean 
           <Typography variant="body" className="text-content-secondary max-w-measure mt-4">
             {t(`setup.${state.step}.description`)}
           </Typography>
+          {introStep && (
+            <>
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+                {state.step === 'welcome' ? (
+                  <>
+                    <Button variant="cta" onClick={() => controller.next()}>
+                      {t('setup.welcome.action')}
+                    </Button>
+                    <Button variant="ghost" onClick={() => controller.defer('/')}>
+                      {t('setup.later')}
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button variant="cta" onClick={() => controller.finish('/')}>
+                      {t('setup.ready.home')}
+                    </Button>
+                    <Button variant="ghost" onClick={() => controller.finish('/posts/new')}>
+                      {t('setup.ready.post')}
+                    </Button>
+                    <Button variant="ghost" onClick={() => controller.finish('/clips/new')}>
+                      {t('setup.ready.clip')}
+                    </Button>
+                  </>
+                )}
+              </div>
+              <Typography variant="meta" className="mt-6 block">
+                {t('setup.optional')}
+              </Typography>
+            </>
+          )}
         </section>
         <div
           className={clsx(
@@ -110,15 +142,25 @@ function AccountSetup({ ownerId, restart }: { ownerId: string; restart: boolean 
           )}
         >
           <div>
-            {state.step === 'welcome' && (
-              <div className="flex flex-col gap-3">
-                <Button variant="cta" onClick={() => controller.next()}>
-                  {t('setup.welcome.action')}
-                </Button>
-                <Button variant="ghost" onClick={() => controller.defer('/')}>
-                  {t('setup.later')}
-                </Button>
-              </div>
+            {introStep && state.plan.length > 0 && (
+              <ol
+                aria-label={t('setup.overview.label')}
+                className="grid gap-8 sm:grid-cols-2 xl:grid-cols-3"
+              >
+                {state.plan.map((form, position) => (
+                  <li key={form} className="min-w-0 space-y-3">
+                    <Typography variant="meta" className="text-content-tertiary block">
+                      {String(position + 1).padStart(2, '0')}
+                    </Typography>
+                    <Typography variant="fieldTitle" as="h2">
+                      {t(`setup.overview.${form}.title`)}
+                    </Typography>
+                    <Typography variant="body" className="text-content-secondary">
+                      {t(`setup.overview.${form}.description`)}
+                    </Typography>
+                  </li>
+                ))}
+              </ol>
             )}
             {state.step === 'voice' && (
               <VoiceSetup
@@ -136,19 +178,6 @@ function AccountSetup({ ownerId, restart }: { ownerId: string; restart: boolean 
                 kind={state.step}
                 controller={controller}
               />
-            )}
-            {state.step === 'ready' && (
-              <div className="flex flex-col gap-3">
-                <Button variant="cta" onClick={() => controller.finish('/')}>
-                  {t('setup.ready.home')}
-                </Button>
-                <Button variant="secondary" onClick={() => controller.finish('/posts/new')}>
-                  {t('setup.ready.post')}
-                </Button>
-                <Button variant="secondary" onClick={() => controller.finish('/clips/new')}>
-                  {t('setup.ready.clip')}
-                </Button>
-              </div>
             )}
           </div>
           {state.step !== 'welcome' && state.step !== 'ready' && (
@@ -168,9 +197,11 @@ function AccountSetup({ ownerId, restart }: { ownerId: string; restart: boolean 
               </Button>
             </div>
           )}
-          <Typography variant="meta" className="mt-8 block">
-            {t('setup.optional')}
-          </Typography>
+          {!introStep && (
+            <Typography variant="meta" className="mt-8 block">
+              {t('setup.optional')}
+            </Typography>
+          )}
         </div>
       </div>
     </main>

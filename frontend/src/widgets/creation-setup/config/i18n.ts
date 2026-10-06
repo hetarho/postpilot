@@ -22,6 +22,21 @@ export const i18n = {
       saved: '저장했어요',
       preview: '미리보기',
       modelFailed: 'AI 모델을 불러오지 못했어요.',
+      overview: {
+        label: '이번에 준비할 내용',
+        voice: {
+          title: '나에게 맞는 말투',
+          description: '직접 쓴 글이나 답변으로 배우고, AI가 만든 말투를 고를 수도 있어요.',
+        },
+        'post-template': {
+          title: '자주 쓰는 글 구성',
+          description: '마음에 드는 시작, 사진 배치, 마무리를 골라요.',
+        },
+        'clip-template': {
+          title: '영상이 이어지는 흐름',
+          description: '첫 장면부터 마지막 자막까지 어울리는 구성을 골라요.',
+        },
+      },
       welcome: {
         title: '처음 한 번, 나답게 준비해요.',
         description:
@@ -99,6 +114,21 @@ export const i18n = {
       saved: 'Saved',
       preview: 'Preview',
       modelFailed: 'Could not load AI models.',
+      overview: {
+        label: 'What you will prepare',
+        voice: {
+          title: 'A voice that fits you',
+          description: 'Learn from your own writing or answers, or choose an AI-created style.',
+        },
+        'post-template': {
+          title: 'Your familiar post structure',
+          description: 'Choose an opening, photo arrangement, and ending you like.',
+        },
+        'clip-template': {
+          title: 'The flow of your videos',
+          description: 'Choose a structure from the first scene to the final caption.',
+        },
+      },
       welcome: {
         title: 'Make it yours, once.',
         description:
@@ -122,8 +152,7 @@ export const i18n = {
         otherMethod: 'Choose another way',
         moreWays: 'Already have your own writing?',
         title: 'Let your writing sound like you.',
-        description:
-          'Share your own writing or answer a few questions. You can also skip this and start writing.',
+        description: 'Choose a comfortable way to share the words and sentence style you like.',
         name: 'Writing voice name',
         placeholder: 'For example: Everyday me',
         create: 'Prepare this writing voice',

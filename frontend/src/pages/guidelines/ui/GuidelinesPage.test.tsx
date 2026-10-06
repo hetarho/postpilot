@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { ProtoBlogField, ProtoGuidelineKind, ProtoGuidelineScope } from '@/shared/api'
+import { ProtoBlogField, ProtoGuidelineKind, ProtoGuidelineScope, Stage } from '@/shared/api'
 import { renderAppAt } from '@/test/app'
 import type {
   FakeDefaultGuidelineRow,
@@ -1163,12 +1163,21 @@ describe('/guidelines?new=1', () => {
   it('opens the AI guideline draft without generating work and drops the parameter on close', async () => {
     const user = userEvent.setup()
     const calls: string[] = []
-    const { router } = renderAppAt('/guidelines?new=1', { user: USER, calls })
+    const { router } = renderAppAt('/guidelines?new=1', {
+      user: USER,
+      calls,
+      providers: {
+        models: [
+          { providerId: 'stub', modelId: 'recommended', label: '추천 AI', stages: [Stage.WRITE] },
+        ],
+        selections: [{ stage: Stage.WRITE, providerId: 'stub', modelId: 'recommended' }],
+      },
+    })
     const sheet = await screen.findByRole('dialog', {
       name: '마음에 드는 작문 지침, 함께 만들어요',
     })
     expect(within(sheet).queryByLabelText('지침')).not.toBeInTheDocument()
-    expect(await within(sheet).findByRole('button', { name: '8가지 추천받기' })).toBeInTheDocument()
+    expect(await within(sheet).findByRole('button', { name: '8가지 추천받기' })).toBeEnabled()
     await waitFor(() => expect(calls).toContain('GetLatestAuthoringSession'))
     expect(calls.filter((call) => /^(Start|Analyze|Create|SaveAuthoring)/.test(call))).toEqual([])
 

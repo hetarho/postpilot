@@ -38,5 +38,13 @@ export function Typography<E extends ElementType = 'p'>({
   ...props
 }: TypographyProps<E>) {
   const Element = (as ?? DEFAULT_ELEMENT[variant]) as ElementType
-  return <Element className={typographyStyles({ variant, mono, className })} {...props} />
+  // Stage navigation focuses a heading for announcement, rather than making it a control.
+  // Interactive controls retain the global focus ring.
+  const stageHeading =
+    typeof Element === 'string' &&
+    /^h[1-6]$/.test(Element) &&
+    'tabIndex' in props &&
+    props.tabIndex === -1
+  const classes = stageHeading ? `focus:outline-none! ${className ?? ''}` : className
+  return <Element className={typographyStyles({ variant, mono, className: classes })} {...props} />
 }
