@@ -18,7 +18,7 @@ import (
 const BrowserCompositionVersion = "clip-browser-composition-v1"
 const BrowserComponentVersion = "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v1"
 const BrowserFontVersion = "bundled-clip-fonts-v1"
-const BrowserAssetVersion = "clip-design-assets-v1-ink-df1889ddf7e57b5ee01acc51eb3128458319955a0c476c588d6e11ac28e9e5b0"
+const BrowserAssetVersion = "clip-design-assets-v1-ink-19d6c3e87f064598110a6655657e16c5e3922ef251cc720696279cbc2580c798"
 const BrowserBackgroundVersion = "clip-browser-background-v1"
 
 func validBrowserSHA256(value string) bool {

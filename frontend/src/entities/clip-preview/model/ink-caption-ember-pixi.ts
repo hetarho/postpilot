@@ -12,7 +12,7 @@ import { captionGaussian } from './ink-caption-filter-pixi'
 import { inkEmberFilterBounds } from './ink-caption-ember'
 import type { InkCaptionPose, InkCaptionSceneNode } from './ink-caption-scene'
 
-const color = (hex: string) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
+const colorVector = (hex: string) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
 const vertex = `#version 300 es
 in vec2 aPosition;
 uniform mat3 uProjectionMatrix;
@@ -82,7 +82,7 @@ export class BrowserCaptionEmberPixi {
           uGradientBox: { value: new Float32Array(4), type: 'vec4<f32>' },
           uStops: {
             value: new Float32Array(
-              this.node.flames.stops.flatMap((s) => [...color(s.hex), s.alpha]),
+              this.node.flames.stops.flatMap((s) => [...colorVector(s.hex), s.alpha]),
             ),
             type: 'vec4<f32>',
             size: 4,
@@ -91,7 +91,10 @@ export class BrowserCaptionEmberPixi {
       : new UniformGroup({
           uBox: { value: new Float32Array(4), type: 'vec4<f32>' },
           uCircle: { value: new Float32Array(4), type: 'vec4<f32>' },
-          uFill: { value: new Float32Array(color(this.node.sparks!.fill)), type: 'vec3<f32>' },
+          uFill: {
+            value: new Float32Array(colorVector(this.node.sparks!.fill)),
+            type: 'vec3<f32>',
+          },
         })
     const mesh = new Mesh({
       geometry: this.geometry,
