@@ -1,0 +1,767 @@
+{
+  "task": "T597",
+  "version": 1,
+  "codeCommit": "ff048f4c388e11b659bba5fee999159ca74f49d9",
+  "productionQualified": false,
+  "humanReleaseReviewComplete": false,
+  "deviceMatrixQualified": false,
+  "timingQualified": false,
+  "physicalMemoryQualified": false,
+  "nativeProfile": "cpu-v4",
+  "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v1",
+  "corpus": {
+    "ratios": [
+      "vertical",
+      "horizontal",
+      "square"
+    ],
+    "paces": [
+      "steady",
+      "rapid"
+    ],
+    "text": [
+      "rare Hangul,Latin kerning and12,500\uc6d0 punctuation",
+      "explicit two-line copy",
+      "long source text wrapping into two lines"
+    ],
+    "framesPerEngine": 408,
+    "intrinsicFrames": 300,
+    "controlledGroundFrames": 108,
+    "cutOverlapMS": 300,
+    "transitionWindowFrames": 45,
+    "geometryAuthority": "Independent curve/spark arrays parsed from actual native drawEmber SVG at each reference frame; compared exactly in actual browser."
+  },
+  "engines": {
+    "pixi": {
+      "report": "/private/tmp/postpilot-browser-media-prep-ink/T597-pixi-final/report.json",
+      "reportSHA256": "b33119695b962864cebcac060718ed21dca1757ca271ea421f2cbbfc77c3cdb9",
+      "environment": {
+        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/154.0.0.0 Safari/537.36",
+        "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Max, Unspecified Version)",
+        "crossOriginIsolated": true,
+        "hardwareConcurrency": 10
+      },
+      "frames": 408,
+      "intrinsicMaxPremultipliedError": 0.0027907148607538724,
+      "intrinsicWorstCase": "vertical-ember-rapid-cue0-32",
+      "controlledGroundMaxCaptionRGBError": 0.0008478946805935403,
+      "controlledGroundWorstCase": "square-ember-two-steady-bright-32",
+      "layoutTolerancePx": 0.001,
+      "exactNativeCurveAndSparkChecks": 408,
+      "warmTextRasterReuse": true,
+      "cleanupAll": true
+    },
+    "canvas": {
+      "report": "/private/tmp/postpilot-browser-media-prep-ink/T597-canvas-final/report.json",
+      "reportSHA256": "a903fe31d89e29b12c8c21ccd5d056693c2618fc6d6aab421b72d249805db47c",
+      "environment": {
+        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/154.0.0.0 Safari/537.36",
+        "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Max, Unspecified Version)",
+        "crossOriginIsolated": true,
+        "hardwareConcurrency": 10
+      },
+      "frames": 408,
+      "intrinsicMaxPremultipliedError": 0.0021296974940136185,
+      "intrinsicWorstCase": "vertical-ember-long-steady-32",
+      "controlledGroundMaxCaptionRGBError": 0.0008484000705614529,
+      "controlledGroundWorstCase": "square-ember-two-steady-bright-32",
+      "layoutTolerancePx": 0.001,
+      "exactNativeCurveAndSparkChecks": 408,
+      "warmTextRasterReuse": true,
+      "cleanupAll": true
+    }
+  },
+  "stress": {
+    "pixi": {
+      "report": "/private/tmp/postpilot-browser-media-prep-ink/T597-pixi-stress-final/report.json",
+      "reportSHA256": "3b43f8b8c12573a3aa56124c268819b8c829b9f6a74922cd6dc14a4d0e7aa009",
+      "results": [
+        {
+          "id": "vertical-ember-steady-99",
+          "engine": "pixi",
+          "frames": 268,
+          "coldMs": 374.13500022888184,
+          "warmP50Ms": 0.9549999237060547,
+          "warmP95Ms": 1.1800003051757812,
+          "warmRasters": 1,
+          "peakCPUBytes": 47166240,
+          "peakManagedGPUBytes": 72143236,
+          "peakSharedFilterScratchBytes": 12582912,
+          "peakGeometryBytes": 168,
+          "peakDynamicShapes": 39,
+          "peakShapeUniformBytes": 4200,
+          "deterministicFrames": 10,
+          "cancellation": true,
+          "eviction": true,
+          "contextLoss": true,
+          "unsupported": true,
+          "cleanup": true,
+          "rendererOwnedSharedPool": true,
+          "productionQualified": false
+        },
+        {
+          "id": "horizontal-ember-long-steady-99",
+          "engine": "pixi",
+          "frames": 268,
+          "coldMs": 443.9800000190735,
+          "warmP50Ms": 0.9200000762939453,
+          "warmP95Ms": 1.2100000381469727,
+          "warmRasters": 1,
+          "peakCPUBytes": 47340324,
+          "peakManagedGPUBytes": 71243160,
+          "peakSharedFilterScratchBytes": 12582912,
+          "peakGeometryBytes": 168,
+          "peakDynamicShapes": 39,
+          "peakShapeUniformBytes": 4200,
+          "deterministicFrames": 10,
+          "cancellation": true,
+          "eviction": true,
+          "contextLoss": true,
+          "unsupported": true,
+          "cleanup": true,
+          "rendererOwnedSharedPool": true,
+          "productionQualified": false
+        },
+        {
+          "id": "square-ember-two-steady-99",
+          "engine": "pixi",
+          "frames": 268,
+          "coldMs": 283.6799998283386,
+          "warmP50Ms": 0.8350000381469727,
+          "warmP95Ms": 1.0550003051757812,
+          "warmRasters": 1,
+          "peakCPUBytes": 47166240,
+          "peakManagedGPUBytes": 67183876,
+          "peakSharedFilterScratchBytes": 12582912,
+          "peakGeometryBytes": 168,
+          "peakDynamicShapes": 39,
+          "peakShapeUniformBytes": 4200,
+          "deterministicFrames": 10,
+          "cancellation": true,
+          "eviction": true,
+          "contextLoss": true,
+          "unsupported": true,
+          "cleanup": true,
+          "rendererOwnedSharedPool": true,
+          "productionQualified": false
+        }
+      ],
+      "maskEvictionCasesPerRatio": 72,
+      "scope": "268 forward/reverse output-time frames for each ratio; repeated-frame hashes are deterministic; Canvas context loss is not applicable."
+    },
+    "canvas": {
+      "report": "/private/tmp/postpilot-browser-media-prep-ink/T597-canvas-stress-corrected/report.json",
+      "reportSHA256": "9722663c2992eb8dbdce17b279ad6bc7cb8beb7c273398f08ed80aaccb0d51ec",
+      "results": [
+        {
+          "id": "vertical-ember-steady-99",
+          "engine": "canvas",
+          "frames": 268,
+          "coldMs": 272.19000005722046,
+          "warmP50Ms": 0.35500001907348633,
+          "warmP95Ms": 0.7649998664855957,
+          "warmRasters": 1,
+          "peakCPUBytes": 63564960,
+          "peakManagedGPUBytes": 0,
+          "peakSharedFilterScratchBytes": 0,
+          "peakGeometryBytes": 0,
+          "peakDynamicShapes": 0,
+          "peakShapeUniformBytes": 0,
+          "deterministicFrames": 10,
+          "cancellation": true,
+          "eviction": true,
+          "contextLoss": false,
+          "unsupported": false,
+          "cleanup": true,
+          "rendererOwnedSharedPool": true,
+          "productionQualified": false
+        },
+        {
+          "id": "horizontal-ember-long-steady-99",
+          "engine": "canvas",
+          "frames": 268,
+          "coldMs": 405.7350001335144,
+          "warmP50Ms": 0.33500003814697266,
+          "warmP95Ms": 0.7199997901916504,
+          "warmRasters": 1,
+          "peakCPUBytes": 59442404,
+          "peakManagedGPUBytes": 0,
+          "peakSharedFilterScratchBytes": 0,
+          "peakGeometryBytes": 0,
+          "peakDynamicShapes": 0,
+          "peakShapeUniformBytes": 0,
+          "deterministicFrames": 10,
+          "cancellation": true,
+          "eviction": true,
+          "contextLoss": false,
+          "unsupported": false,
+          "cleanup": true,
+          "rendererOwnedSharedPool": true,
+          "productionQualified": false
+        },
+        {
+          "id": "square-ember-two-steady-99",
+          "engine": "canvas",
+          "frames": 268,
+          "coldMs": 258.59999990463257,
+          "warmP50Ms": 0.31999969482421875,
+          "warmP95Ms": 0.559999942779541,
+          "warmRasters": 1,
+          "peakCPUBytes": 58242720,
+          "peakManagedGPUBytes": 0,
+          "peakSharedFilterScratchBytes": 0,
+          "peakGeometryBytes": 0,
+          "peakDynamicShapes": 0,
+          "peakShapeUniformBytes": 0,
+          "deterministicFrames": 10,
+          "cancellation": true,
+          "eviction": true,
+          "contextLoss": false,
+          "unsupported": false,
+          "cleanup": true,
+          "rendererOwnedSharedPool": true,
+          "productionQualified": false
+        }
+      ],
+      "maskEvictionCasesPerRatio": 72,
+      "scope": "268 forward/reverse output-time frames for each ratio; repeated-frame hashes are deterministic; Canvas context loss is not applicable."
+    }
+  },
+  "limits": [
+    "Synthetic component diagnostics on one identified Chrome154/Apple M1 Max Metal device; complete MP4/preview/export, human appearance, device matrix and static release activation remain T604.",
+    "Native resvg0.48.1 and browser resvg-wasm2.6.2 have antialiasing/filter residuals; no declared text/layout/time/layer rule was changed.",
+    "Managed GPU texture bytes exclude MSAA/driver overhead, JS/font/WASM heaps and process memory; geometry buffer/uniform bytes are explicit owned allocations, not physical device memory.",
+    "Cold/warm caption timings have competing work and shared browser asset context. Canvas draw may be asynchronous; the separate phase probe forces whole-canvas CPU readback while Pixi uses gl.finish. Completion costs differ and neither synchronization/readback enters production.",
+    "Controlled ground tests are syntheticOnly and sampledOriginals:false; original-only sampling authority remains independently evidenced by T598.",
+    "No new dependency/font/WASM version or owner-facing particle feature was added. Existing locked Pixi8.22 core BlurFilter/AlphaFilter and authored product shaders reproduce native ember."
+  ],
+  "phaseProbe": {
+    "report": "docs/qa/browser-caption-ember-phase-proof.json",
+    "reportSHA256": "8aaa5eaac19bb2470d24accef360e3586922bd3d112eb6cbdec6189ce0d5716f",
+    "script": "/private/tmp/postpilot-browser-media-prep-ink/T597-phase-benchmark.mjs",
+    "scriptSHA256": "94e9a687b83a6ff0cf6231a7fc8d9ba1358932c752357eb226da376321d9c338",
+    "results": [
+      {
+        "id": "vertical-ember-steady-99",
+        "engine": "pixi",
+        "frames": 135,
+        "snapshotFreezeMs": 1.9000000953674316,
+        "graphicsInitMs": 37.799999713897705,
+        "cold": {
+          "prepareMs": 335.30000019073486,
+          "drawSubmitMs": 767.4000000953674,
+          "diagnosticCompletionMs": 0,
+          "totalMs": 1102.7000002861023
+        },
+        "warm": {
+          "prepareMs": {
+            "p50Ms": 0.20000028610229492,
+            "p95Ms": 0.5
+          },
+          "drawSubmitMs": {
+            "p50Ms": 0.6000003814697266,
+            "p95Ms": 1
+          },
+          "diagnosticCompletionMs": {
+            "p50Ms": 0,
+            "p95Ms": 0
+          },
+          "totalMs": {
+            "p50Ms": 0.9000000953674316,
+            "p95Ms": 1.4000000953674316
+          }
+        },
+        "warmRasters": 1,
+        "effectBounds": {
+          "x": 0,
+          "y": 851,
+          "width": 1080,
+          "height": 949
+        },
+        "peakCPUBytes": 1079760,
+        "peakManagedGPUBytes": 21862452,
+        "peakShapes": 39,
+        "cleanup": true,
+        "qualification": false
+      },
+      {
+        "id": "horizontal-ember-long-steady-99",
+        "engine": "pixi",
+        "frames": 135,
+        "snapshotFreezeMs": 0.5,
+        "graphicsInitMs": 8.5,
+        "cold": {
+          "prepareMs": 406.30000019073486,
+          "drawSubmitMs": 18.299999713897705,
+          "diagnosticCompletionMs": 0,
+          "totalMs": 424.59999990463257
+        },
+        "warm": {
+          "prepareMs": {
+            "p50Ms": 0.20000028610229492,
+            "p95Ms": 0.40000009536743164
+          },
+          "drawSubmitMs": {
+            "p50Ms": 0.5999999046325684,
+            "p95Ms": 0.9000000953674316
+          },
+          "diagnosticCompletionMs": {
+            "p50Ms": 0,
+            "p95Ms": 0.09999990463256836
+          },
+          "totalMs": {
+            "p50Ms": 0.8000001907348633,
+            "p95Ms": 1.200000286102295
+          }
+        },
+        "warmRasters": 1,
+        "effectBounds": {
+          "x": 230,
+          "y": 328,
+          "width": 1460,
+          "height": 752
+        },
+        "peakCPUBytes": 1483524,
+        "peakManagedGPUBytes": 22558216,
+        "peakShapes": 39,
+        "cleanup": true,
+        "qualification": false
+      },
+      {
+        "id": "square-ember-two-steady-99",
+        "engine": "pixi",
+        "frames": 135,
+        "snapshotFreezeMs": 0.40000009536743164,
+        "graphicsInitMs": 7.599999904632568,
+        "cold": {
+          "prepareMs": 254.30000019073486,
+          "drawSubmitMs": 17.40000009536743,
+          "diagnosticCompletionMs": 0,
+          "totalMs": 271.7000002861023
+        },
+        "warm": {
+          "prepareMs": {
+            "p50Ms": 0.20000028610229492,
+            "p95Ms": 0.3000001907348633
+          },
+          "drawSubmitMs": {
+            "p50Ms": 0.5,
+            "p95Ms": 0.7999997138977051
+          },
+          "diagnosticCompletionMs": {
+            "p50Ms": 0,
+            "p95Ms": 0.09999990463256836
+          },
+          "totalMs": {
+            "p50Ms": 0.7999997138977051,
+            "p95Ms": 1.0999999046325684
+          }
+        },
+        "warmRasters": 1,
+        "effectBounds": {
+          "x": 0,
+          "y": 328,
+          "width": 1080,
+          "height": 752
+        },
+        "peakCPUBytes": 1100736,
+        "peakManagedGPUBytes": 17403588,
+        "peakShapes": 39,
+        "cleanup": true,
+        "qualification": false
+      },
+      {
+        "id": "vertical-ember-steady-99",
+        "engine": "canvas",
+        "frames": 135,
+        "snapshotFreezeMs": 0.39999961853027344,
+        "graphicsInitMs": 0,
+        "cold": {
+          "prepareMs": 195.90000009536743,
+          "drawSubmitMs": 2.299999713897705,
+          "diagnosticCompletionMs": 32.200000286102295,
+          "totalMs": 230.40000009536743
+        },
+        "warm": {
+          "prepareMs": {
+            "p50Ms": 0.2999997138977051,
+            "p95Ms": 0.40000009536743164
+          },
+          "drawSubmitMs": {
+            "p50Ms": 0.3000001907348633,
+            "p95Ms": 0.5999999046325684
+          },
+          "diagnosticCompletionMs": {
+            "p50Ms": 6.5,
+            "p95Ms": 7.099999904632568
+          },
+          "totalMs": {
+            "p50Ms": 7.099999904632568,
+            "p95Ms": 8.599999904632568
+          }
+        },
+        "warmRasters": 1,
+        "effectBounds": {
+          "x": 0,
+          "y": 851,
+          "width": 1080,
+          "height": 949
+        },
+        "peakCPUBytes": 17478480,
+        "peakManagedGPUBytes": 0,
+        "peakShapes": 0,
+        "cleanup": true,
+        "qualification": false
+      },
+      {
+        "id": "horizontal-ember-long-steady-99",
+        "engine": "canvas",
+        "frames": 135,
+        "snapshotFreezeMs": 0.3000001907348633,
+        "graphicsInitMs": 0,
+        "cold": {
+          "prepareMs": 404.19999980926514,
+          "drawSubmitMs": 1.5,
+          "diagnosticCompletionMs": 9.800000190734863,
+          "totalMs": 415.5
+        },
+        "warm": {
+          "prepareMs": {
+            "p50Ms": 0.2999997138977051,
+            "p95Ms": 0.40000009536743164
+          },
+          "drawSubmitMs": {
+            "p50Ms": 0.3000001907348633,
+            "p95Ms": 0.40000009536743164
+          },
+          "diagnosticCompletionMs": {
+            "p50Ms": 6.599999904632568,
+            "p95Ms": 7
+          },
+          "totalMs": {
+            "p50Ms": 7.100000381469727,
+            "p95Ms": 7.900000095367432
+          }
+        },
+        "warmRasters": 1,
+        "effectBounds": {
+          "x": 230,
+          "y": 328,
+          "width": 1460,
+          "height": 752
+        },
+        "peakCPUBytes": 19050244,
+        "peakManagedGPUBytes": 0,
+        "peakShapes": 0,
+        "cleanup": true,
+        "qualification": false
+      },
+      {
+        "id": "square-ember-two-steady-99",
+        "engine": "canvas",
+        "frames": 135,
+        "snapshotFreezeMs": 0.3000001907348633,
+        "graphicsInitMs": 0,
+        "cold": {
+          "prepareMs": 253.59999990463257,
+          "drawSubmitMs": 0.9000000953674316,
+          "diagnosticCompletionMs": 6.5,
+          "totalMs": 261
+        },
+        "warm": {
+          "prepareMs": {
+            "p50Ms": 0.20000028610229492,
+            "p95Ms": 0.3000001907348633
+          },
+          "drawSubmitMs": {
+            "p50Ms": 0.20000028610229492,
+            "p95Ms": 0.40000009536743164
+          },
+          "diagnosticCompletionMs": {
+            "p50Ms": 4.699999809265137,
+            "p95Ms": 5
+          },
+          "totalMs": {
+            "p50Ms": 5.199999809265137,
+            "p95Ms": 6.199999809265137
+          }
+        },
+        "warmRasters": 1,
+        "effectBounds": {
+          "x": 0,
+          "y": 328,
+          "width": 1080,
+          "height": 752
+        },
+        "peakCPUBytes": 14095296,
+        "peakManagedGPUBytes": 0,
+        "peakShapes": 0,
+        "cleanup": true,
+        "qualification": false
+      }
+    ],
+    "qualification": false,
+    "sourceChanged": false,
+    "executedProbeSource": "import { createRequire } from 'node:module';\nimport { readFileSync, writeFileSync } from 'node:fs';\nimport { pathToFileURL } from 'node:url';\nimport { createHash } from 'node:crypto';\nconst root='/Users/ihaelam/project/.haeram-worktrees/postpilot-f6c0250f/browser-media-604-T597-bb89294d';\nconst req=createRequire(root+'/package.json'), front=createRequire(root+'/frontend/package.json');\nconst {chromium}=req('playwright'),{createServer}=await import(pathToFileURL(front.resolve('vite')).href);\nconst probe=`import {BrowserLocalComponents,BrowserCaptionScenePixi,evaluateBrowserFrame} from '@/entities/clip-preview';\nimport {freezeFixture} from '/src/test/browser-media/ink-entry.ts';\nimport {WebGLRenderer,RenderTexture} from 'pixi.js';\nimport {CLIP_DESIGN} from '@/entities/clip-design/@x/clip-preview';\nwindow.emberPhaseProbe=async(fixture,engine)=>{\n const start=performance.now(),snapshot=await freezeFixture(fixture),snapshotFreezeMs=performance.now()-start;\n const dimensions=CLIP_DESIGN.ratios[fixture.ratio].canvas,canvas=new OffscreenCanvas(dimensions.width,dimensions.height),context=canvas.getContext('2d',{willReadFrequently:true});\n const components=new BrowserLocalComponents(snapshot);let renderer,scene,target;const init=performance.now();\n if(engine==='pixi'){renderer=new WebGLRenderer();await renderer.init({canvas:new OffscreenCanvas(dimensions.width,dimensions.height),...dimensions,resolution:1,backgroundAlpha:0});scene=new BrowserCaptionScenePixi(renderer,owner=>components.dropGPU(owner));target=RenderTexture.create(dimensions);}\n const graphicsInitMs=performance.now()-init,phases=[];let warmRasters,effectBounds,peakCPUBytes=0,peakManagedGPUBytes=0,peakShapes=0;\n try{\n  for(let i=0;i<135;i++){\n   const frame=i===0?fixture.frame:32+i-1,t0=performance.now(),resources=await components.prepare(evaluateBrowserFrame(snapshot,frame)),t1=performance.now();\n   try{context.clearRect(0,0,canvas.width,canvas.height);resources.forEach((r,index)=>{if(scene&&r.kind==='scene')scene.render(r.scene,target,index===0);else r.draw(context);});const t2=performance.now();\n    if(renderer)renderer.gl.finish();else context.getImageData(0,0,canvas.width,canvas.height);const t3=performance.now();\n    phases.push({prepareMs:t1-t0,drawSubmitMs:t2-t1,diagnosticCompletionMs:t3-t2,totalMs:t3-t0});\n    effectBounds=resources.find(r=>r.kind==='scene')?.scene.bounds;\n    const c=components.measurements(),g=scene?.measurements();peakCPUBytes=Math.max(peakCPUBytes,c.bytes+c.canvas.groupBytes+c.canvas.effectBytes+c.canvas.tintBytes);peakManagedGPUBytes=Math.max(peakManagedGPUBytes,g?.managedTextureBytes??0);peakShapes=Math.max(peakShapes,g?.dynamicShapes??0);\n    if(i===0)warmRasters=c.rasters;else if(c.rasters!==warmRasters)throw new Error('Ember movement rerasterized text');\n   }finally{resources.forEach(r=>r.close());}\n  }\n  const metric=key=>{const v=phases.slice(1).map(p=>p[key]).sort((a,b)=>a-b);return{p50Ms:v[Math.floor(v.length*.5)],p95Ms:v[Math.floor(v.length*.95)]};};\n  scene?.destroy();components.destroy();if(components.measurements().leases||components.measurements().bytes)throw new Error('Ember phase resources leaked');\n  return{id:fixture.id,engine,frames:phases.length,snapshotFreezeMs,graphicsInitMs,cold:phases[0],warm:Object.fromEntries(Object.keys(phases[0]).map(k=>[k,metric(k)])),warmRasters,effectBounds,peakCPUBytes,peakManagedGPUBytes,peakShapes,cleanup:true,qualification:false};\n }finally{scene?.destroy();target?.destroy(true);renderer?.destroy();components.destroy();canvas.width=canvas.height=0;}\n};`;\nconst server=await createServer({configFile:false,root:root+'/frontend',resolve:{alias:{'@':root+'/frontend/src'}},server:{host:'127.0.0.1',port:0,watch:null,headers:{'Cross-Origin-Opener-Policy':'same-origin','Cross-Origin-Embedder-Policy':'require-corp'}},plugins:[{name:'external-ember-phase-probe',resolveId(id){if(id==='/__ember_phase__.ts')return '\\0ember-phase-probe';},load(id){if(id==='\\0ember-phase-probe')return probe;},configureServer(vite){vite.middlewares.use((req,res,next)=>{if(req.url==='/ember-phase.html'){res.setHeader('Content-Type','text/html');res.end('<html><script type=\"module\" src=\"/__ember_phase__.ts\"></script></html>');}else next();});}}]});\nawait server.listen();const browser=await chromium.launch({headless:true,executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'});\ntry{const page=await browser.newPage();await page.goto('http://127.0.0.1:'+server.httpServer.address().port+'/ember-phase.html');await page.waitForFunction(()=>!!window.emberPhaseProbe);\n const manifest=JSON.parse(readFileSync('/private/tmp/postpilot-browser-media-prep-ink/T597-native-final/manifest.json'));\n const cases=['vertical-ember-steady-99','horizontal-ember-long-steady-99','square-ember-two-steady-99'].map(id=>manifest.cases.find(c=>c.id===id));\n const results=[];for(const engine of ['pixi','canvas'])for(const fixture of cases)results.push(await page.evaluate(({fixture,engine})=>window.emberPhaseProbe(fixture,engine),{fixture,engine}));\n const report={sourceCommit:'47320560ebdfb356a65fb988d174f152d2c5c68a',scriptSHA256:createHash('sha256').update(readFileSync(import.meta.filename)).digest('hex'),browser:await browser.version(),qualification:false,competingWork:true,scope:'Temporary read-only phase probe calling production components and renderer; whole-canvas CPU readback is diagnostic Canvas completion and gl.finish is diagnostic Pixi completion. Neither enters production; completion costs differ and throughput is unqualified.',results};\n writeFileSync('/private/tmp/postpilot-browser-media-prep-ink/T597-phase-report.json',JSON.stringify(report,null,2)+'\\n');console.log('Measured actual prepare/draw-submit/diagnostic-completion/cold/warm phases for6cases; all resource reuse/cleanup assertions passed.');\n}finally{await browser.close();await server.close();}\n"
+  },
+  "dependencies": {
+    "newDependencies": false,
+    "pixi": {
+      "name": "pixi.js",
+      "version": "8.22.0",
+      "declaredLicense": "MIT",
+      "repository": "https://github.com/pixijs/pixijs",
+      "packageMetadataSHA256": "2bb6b7570ca5f4a062609b34fd16fecfa2a76e8c3599c67a5b996a276eabaa32",
+      "packagedNotices": [
+        {
+          "file": "LICENSE",
+          "sha256": "5ce7447bc57f7349ffc48338782fbcabe613696e00712b20d66bc58e780f9473"
+        }
+      ],
+      "obligation": "Preserve applicable copyright, license and disclaimer notices.",
+      "topLevel": true,
+      "coveredSourceEvidence": null
+    },
+    "wasmVersionUnchanged": "2.6.2",
+    "fontAssetsUnchanged": true,
+    "officialMeshAPI": "https://pixijs.com/8.x/guides/components/scene-objects/mesh",
+    "exactShaderAPI": "https://pixijs.download/v8.22.0/docs/rendering.Shader.html",
+    "exactUniformAPI": "https://pixijs.download/v8.22.0/docs/rendering.UniformGroup.html"
+  },
+  "imageGroundEquivalence": {
+    "receipt": "docs/qa/browser-caption-ember-image-equivalence.json",
+    "sha256": "0cf1597cc21d28ecd4290cf9cd0f3ba4d29eaba4bc6096ff74c9e2542fe14469"
+  },
+  "nativeRuntimeReuse": {
+    "receipt": "docs/qa/browser-caption-ember-native-reuse.json",
+    "sha256": "046e8b7dda45f4e73825982f49a3202a79ed095f7191dc0e3fd0543d1ca2cbd7",
+    "unchangedProductionFiles": 1146,
+    "wholeGoClosureUnchanged": false,
+    "priorActualFullCPUImageReceipt": "docs/qa/browser-local-background-image-proof.json",
+    "priorActualFullCPUImageReceiptSHA256": "492f9924c4a4ac248ce5d5f935679540334412f29a61c36c3a0a404f63a4a26b"
+  },
+  "deployUnitReuse": {
+    "receipt": "docs/qa/browser-caption-ember-deploy-reuse.json",
+    "sha256": "0f769887ab67712d5ac64b3488ec5dd540016486b023e3ad0e5a9bbbc2d070c1",
+    "actualExit": 0,
+    "actualTests": 62,
+    "currentInputsExactlyEqual": 27,
+    "executedHere": false
+  },
+  "fullBrowserComparisonAt": "47320560ebdfb356a65fb988d174f152d2c5c68a",
+  "ink": {
+    "manifestVersion": 1,
+    "inkVersion": "clip-ink-v2-resvg-2.6.2",
+    "transformInkScale": 2,
+    "transformInkStyles": [
+      "word-pop",
+      "pop",
+      "stack",
+      "sticker",
+      "bubble"
+    ],
+    "fontsManifestSHA256": "51ad5c795ede98d22e4dfea750946889af3717c04dee3642b87e3419c835970c",
+    "catalogSHA256": "4d8da69f7d70e3fa1d7fc385bb955d5e33859e4c5ccaff05f8eb43c179eac536",
+    "wasmSHA256": "22bf6e9f9a100d972da0411a69c5ba504367fc1fa87b3b64e3f35e53926d2d70",
+    "fontAssets": [
+      {
+        "id": "wantedsans:400",
+        "sha256": "7a38e0fdf56a7a2cad934393751e3f12dcaf81067bddec4e87f4dd787037aae6"
+      },
+      {
+        "id": "wantedsans:600",
+        "sha256": "567d4c7d67baa092e74f6c982dcc76b340f10c9d1f78eff6d60897d083e703a0"
+      },
+      {
+        "id": "wantedsans:700",
+        "sha256": "0ca0e18d8409fc34520d6fb872d381bc563049ca9d75272ee6b9fab8ef4e63b0"
+      },
+      {
+        "id": "wantedsans:800",
+        "sha256": "9b3b38d8892521e4da5b24290cecf4be35da946f1905364f69fe4695ffabddd8"
+      },
+      {
+        "id": "paperlogy:800",
+        "sha256": "fb0324f8ac057e50f4f4632331617e347bfe5a04184f7b0db514be682fb6b25c"
+      },
+      {
+        "id": "jua:400",
+        "sha256": "769677aef240bfc3b9965f2b50748075bff885e6c6992fc591a3fb268279f898"
+      },
+      {
+        "id": "nanummyeongjo:400",
+        "sha256": "7ed9e8653a8ed04285d51dc343ffea6eb3d9c73afc27383ea8929ee4ffd03205"
+      },
+      {
+        "id": "nanummyeongjo:800",
+        "sha256": "60c0077fce069ba90ae97c0a3679f6eb3712e0ca637bdd0c15b72d335ec46db7"
+      }
+    ],
+    "assetVersion": "clip-design-assets-v1-ink-19d6c3e87f064598110a6655657e16c5e3922ef251cc720696279cbc2580c798"
+  },
+  "effectImplementation": {
+    "alpha": "premultiplied-alpha",
+    "colorSpace": "sRGB",
+    "kernel": 15,
+    "pixi": "8.22.0",
+    "quality": 4,
+    "sources": {
+      "frontend/src/entities/clip-preview/model/ink-caption-draw.ts": "138f4b37659dfbca8bd16321f8dcbb9fd2a67791536ff66a563e3ee72178794f",
+      "frontend/src/entities/clip-preview/model/ink-caption-effects.ts": "a2633b1e51c23f8e9882b527a33ccec9c188acaeb2683ea948adcba7ba5a310b",
+      "frontend/src/entities/clip-preview/model/ink-caption-ember-pixi.ts": "22109b4f60d5d74654ae6899d21b70b872e43170c669949f8164470aef010b0b",
+      "frontend/src/entities/clip-preview/model/ink-caption-ember.ts": "e4bb41e6db3c278230539a5482e6fde35f26587cf5f6ad29b9a7fff291fc0479",
+      "frontend/src/entities/clip-preview/model/ink-caption-filter-pixi.ts": "0b13ee759196c59ea7c084e7f4c1bbdea8b27e32196f2cc4124250f4fb045f32",
+      "frontend/src/entities/clip-preview/model/ink-caption-pixi.ts": "81d5532c350b54acf6a026139bb4b5edeadc14f583a3e2d2774bee70adb45d6e",
+      "frontend/src/entities/clip-preview/model/ink-caption-scene.ts": "00b6f5684f084fd1affeef52e5500dff404dfc7a7ef73663c0949c1829e0f10c",
+      "frontend/src/entities/clip-preview/model/local-components.ts": "b7182116a7f63cac835ac806e63c3d17e0bccb9b741ab1b46b9ec10c3a91bc33",
+      "pnpm-lock.yaml": "d07c4a1bd3aeab4df41155c2d63d85e6a487959534ed7b27b4710315d7a07319"
+    },
+    "version": "caption-filters-v1-ember-v1"
+  },
+  "neutralCorrection": {
+    "sourceProof": "docs/qa/browser-caption-ember-neutral-source-equivalence.json",
+    "sourceProofSHA256": "9831206afbeff6f433524f87002fe5ad425ba90904a716f0f9e33e23bed0bf2e",
+    "browserProof": "docs/qa/browser-caption-ember-neutral-browser-equivalence.json",
+    "browserProofSHA256": "2af2b184836adf00e21b61205a0f7469d68e92eb26ac458e1f9fa1b8aca3c673",
+    "scope": "Explicit scoped color\u2192colorVector helper rename/formatter whitespace and source-catalog/negotiation identity changes; emittedJS AST equal after identifier normalization, exactGLSL and8actualPNG perengine equality."
+  },
+  "actualImages": {
+    "current": {
+      "receipt": "docs/qa/browser-caption-ember-current-image-proof.json",
+      "receiptSHA256": "76280952c63297cd003a93a780675acf327dc68529c02a5ed2445b51e668ceaf"
+    },
+    "render": {
+      "receipt": "docs/qa/browser-caption-ember-render-image-proof.json",
+      "receiptSHA256": "6e473cd737ff5a0bdc0f80e108b3b258c9f73f7d21d9db0824a0e090c065ffc3"
+    },
+    "export": {
+      "receipt": "docs/qa/browser-caption-ember-native-export-proof.json",
+      "receiptSHA256": "f47fd427c7bd0c3f00758b23350141470bc01d0e5a1f6cedf97e8687ff5d0ebd"
+    }
+  },
+  "checks": [
+    {
+      "name": "fullFrontend",
+      "at": "47320560ebdfb356a65fb988d174f152d2c5c68a",
+      "command": "PATH=/Users/ihaelam/.npm/_npx/4aa47c519def57bc/node_modules/node/bin:$PATH TMPDIR=/private/tmp pnpm --filter ./frontend test",
+      "exit": 0,
+      "log": "/private/tmp/postpilot-browser-media-prep-ink/T597-full-fe-final.log",
+      "logSHA256": "73fe40274e9673f47e516d6a688a57601990c3854b0b6a81234b305c77ef2c0d"
+    },
+    {
+      "name": "requiredCurrentCI",
+      "at": "ff048f4c388e11b659bba5fee999159ca74f49d9",
+      "command": "PATH=/Users/ihaelam/.npm/_npx/4aa47c519def57bc/node_modules/node/bin:$PATH TMPDIR=/private/tmp sh -c 'pnpm lint && pnpm lint:fsd && pnpm lint:style:probe && pnpm lint:style && pnpm lint:retirement && pnpm test:dev && pnpm exec haeram-spec-creator check && pnpm build:web'",
+      "exit": 0,
+      "log": "/private/tmp/postpilot-browser-media-prep-ink/T597-ci-corrected.log",
+      "logSHA256": "67d100defa1483b18b4716137e305742edbc7a413b14763df5f274fd07bc92f5"
+    },
+    {
+      "name": "fullCurrentGo",
+      "at": "ff048f4c388e11b659bba5fee999159ca74f49d9",
+      "command": "cd backend && TMPDIR=/private/tmp GOCACHE=/private/tmp/postpilot-go-cache GOMAXPROCS=2 sh -c 'test -z \"$(gofmt -l .)\" && go vet ./... && go build ./... && go test -p 2 -timeout 30m ./...'",
+      "exit": 0,
+      "log": "/private/tmp/postpilot-browser-media-prep-ink/T597-full-go-corrected.log",
+      "logSHA256": "fe67465f6d005e27bc0c1e0f95dd861c7171aa52707dc27e2167233d05a0828c"
+    },
+    {
+      "name": "focusedCurrentFrontend",
+      "at": "ff048f4c388e11b659bba5fee999159ca74f49d9",
+      "command": "PATH=/Users/ihaelam/.npm/_npx/4aa47c519def57bc/node_modules/node/bin:$PATH pnpm --filter ./frontend exec vitest run src/entities/clip-preview/model/ink-caption-ember.test.ts src/entities/clip-preview/model/ink-caption-effects.test.ts src/entities/clip-preview/model/ink-caption-scene.test.ts src/entities/clip-preview/model/local-components.test.ts src/entities/clip-preview/model/background-paint.test.ts src/entities/clip-preview/model/background-math.test.ts src/entities/clip-preview/model/background-sampling.test.ts src/entities/clip-preview/model/browser-composition.test.ts src/entities/clip-design/config/clip-ink.test.ts",
+      "exit": 0,
+      "log": "/private/tmp/postpilot-browser-media-prep-ink/T597-tests-corrected.log",
+      "logSHA256": "a8742e9048725ce0a8f39e2daa2ad976df2a35a72daea7f5879984d4d85e4bef"
+    },
+    {
+      "name": "currentContractAndCatalog",
+      "at": "ff048f4c388e11b659bba5fee999159ca74f49d9",
+      "command": "cd backend && TMPDIR=/private/tmp GOCACHE=/private/tmp/postpilot-go-cache GOMAXPROCS=2 go test -p 2 -timeout 5m ./internal/clip ./internal/clip/design ./internal/clip/media ./internal/clip/worker ./internal/clip/workerclient -run 'Test(Browser|CaptionEffect|RuntimeHealth|AnalysisVerifier|MediaWorkerProfile|GroundedSequence|PlatedCaptions)' -count=1",
+      "exit": 0,
+      "log": "/private/tmp/postpilot-browser-media-prep-ink/T597-current-contract-tests.log",
+      "logSHA256": "3398e17e9bcb1afd81136ecbe0034740f52e861ed92973195d5bf2ed5e1a1c8e"
+    },
+    {
+      "name": "recoveredMediaPackage",
+      "at": "47320560ebdfb356a65fb988d174f152d2c5c68a",
+      "command": "cd backend && TMPDIR=/private/tmp GOCACHE=/private/tmp/postpilot-go-cache GOMAXPROCS=2 go test -p 2 -timeout 5m ./internal/clip/media -count=1",
+      "exit": 0,
+      "log": "/private/tmp/postpilot-browser-media-prep-ink/T597-media-space-corrected.log",
+      "logSHA256": "ba80e46a137783a4c1109b01abd078cb18b8dc8c8469dd283010e1beaefacbfc"
+    }
+  ],
+  "preservedNonPassingChecks": [
+    {
+      "name": "Initial wholeGo lowdisk failure",
+      "receipt": "docs/qa/browser-caption-ember-failed-go-ledger.json",
+      "sha256": "44430191b2a5b67d57c30e4938ced4d1a1150de33a14d8138c7a19077983d6b2",
+      "exit": 1,
+      "correctedBy": "Actual disk recovery then fullCurrentGo exit0; no native product limits weakened."
+    },
+    {
+      "name": "initialCanvasGradient",
+      "log": "/private/tmp/postpilot-browser-media-prep-ink/T597-canvas-debug/report.json",
+      "logSHA256": "5ddd7fe7bd7f49b7e4415f586798deca9d7b4479597c2eb3742bcac63d256fdd",
+      "acceptedAsPassingEvidence": false
+    },
+    {
+      "name": "initialStyleScanner",
+      "log": "/private/tmp/postpilot-browser-media-prep-ink/T597-ci-final.log",
+      "logSHA256": "6ccdf5c3688b8d29b0b92d4952ce3b7b4ecb7c4cc63a100944d6d977e5e3674a",
+      "acceptedAsPassingEvidence": false
+    },
+    {
+      "name": "initialCanvasStressStartup",
+      "log": "/private/tmp/postpilot-browser-media-prep-ink/T597-canvas-stress-final.log",
+      "logSHA256": "b4962269810daf33a548f80d93e5394d14826ee592f8597a150cdbc5cf9c0fde",
+      "acceptedAsPassingEvidence": false
+    },
+    {
+      "name": "initialNativeFixtureIdentity",
+      "log": "/private/tmp/postpilot-browser-media-prep-ink/T597-native-initial.log",
+      "logSHA256": "7bce0995de23a3c472937215c3cb999d1400ff62db68621319980b0795fd49fe",
+      "acceptedAsPassingEvidence": false
+    },
+    {
+      "name": "initialTypeInference",
+      "log": "/private/tmp/postpilot-browser-media-prep-ink/T597-first-type.log",
+      "logSHA256": "9016e201e394ad8eb24ef4d47d5bef1fe0413ec5d67180888308b6a4295fb6c1",
+      "acceptedAsPassingEvidence": false
+    }
+  ],
+  "testedSourceHashes": {
+    "backend/internal/clip/browser_render.go": "e5a9947827796b92b80699c7fad809af03a11d1da2a33d5066c34da8fdd1cbbf",
+    "backend/internal/clip/design/browser_ink_catalog_test.go": "b374a6475a27fcf756cc8aa20f8747988962534100fc6f86e1969944a922d919",
+    "backend/internal/clip/design/caption_effect.go": "860b65521b8e2ce9434d7d7462136b754fc21bc5b69f503b78ee47e07a34d68c",
+    "backend/internal/clip/design/caption_effect_test.go": "d0681254c5486ca4c1e696fcfe4dd3b4925bcfee764ff91b35c6cb526dfa69a6",
+    "backend/internal/clip/media/browser_caption_ember_fixture_test.go": "8544162c80b21aaa74a9c8e2a5639afceee7224c9aeff94dc63d465a0b8ddd9d",
+    "frontend/src/entities/clip-design/config/browser-composition.ts": "3bdfa805e68ab905e47e53b53856c4ef4286041b9a434d8da9f698c154bfbd2a",
+    "frontend/src/entities/clip-design/config/clip-caption-ink.json": "01216568002fc75d77f23850e21c89a0afd03ed69840137f5d0c2356af00a01e",
+    "frontend/src/entities/clip-design/config/clip-ink-identity.json": "fd2112c8b61116daf067ffe67bdc922c7184f58ac0e38660ab47d69ff64d53af",
+    "frontend/src/entities/clip-design/config/clip-ink.ts": "4bda6f28505f0409ae7286c90cf5ba06db15b0b09d5f89f5613c078461ab4ef7",
+    "frontend/src/entities/clip-preview/model/ink-caption-draw.ts": "138f4b37659dfbca8bd16321f8dcbb9fd2a67791536ff66a563e3ee72178794f",
+    "frontend/src/entities/clip-preview/model/ink-caption-effects.ts": "a2633b1e51c23f8e9882b527a33ccec9c188acaeb2683ea948adcba7ba5a310b",
+    "frontend/src/entities/clip-preview/model/ink-caption-ember-pixi.ts": "22109b4f60d5d74654ae6899d21b70b872e43170c669949f8164470aef010b0b",
+    "frontend/src/entities/clip-preview/model/ink-caption-ember.test.ts": "f0f7c29ce233c9dafb262082c659bc1c0a8b50966c57bea041bb403e59f6ee09",
+    "frontend/src/entities/clip-preview/model/ink-caption-ember.ts": "e4bb41e6db3c278230539a5482e6fde35f26587cf5f6ad29b9a7fff291fc0479",
+    "frontend/src/entities/clip-preview/model/ink-caption-pixi.ts": "81d5532c350b54acf6a026139bb4b5edeadc14f583a3e2d2774bee70adb45d6e",
+    "frontend/src/entities/clip-preview/model/ink-caption-scene.ts": "00b6f5684f084fd1affeef52e5500dff404dfc7a7ef73663c0949c1829e0f10c",
+    "frontend/src/entities/clip-preview/model/local-components.ts": "b7182116a7f63cac835ac806e63c3d17e0bccb9b741ab1b46b9ec10c3a91bc33",
+    "frontend/src/test/browser-media/ink-entry.ts": "2c51bcadd29d5e880606d8dcdc32c3c2bf0472a990aef18c60184fe435d95f67",
+    "frontend/src/test/browser-media/ink-stress.ts": "2eb84a3df6d5d312862f10bd6183aaaddeb276cec7b73ab4f4573f44a29ab863",
+    "pnpm-lock.yaml": "d07c4a1bd3aeab4df41155c2d63d85e6a487959534ed7b27b4710315d7a07319",
+    ".node-version": "55075b5ec4e8b31936cbbc282b8829116d1fd48f2f2f1856dee592a6650700ce",
+    ".github/workflows/ci.yml": "e7aba46a17aaf81171063f75d79affc06764e8c6fbf60df2b0e766bdbf10f906",
+    "backend/Dockerfile": "a937e3451c9456b0216589a5a4f42a60c0b670dc04fce6f49174e2f2cf81fda4",
+    "backend/go.mod": "b3b8890ade060863f6790b8bb5f8c43202a0ad0721c388df8f16f80156b7fe99",
+    "backend/go.sum": "9b9a9269db3199dc26847f382f3c8335c96e5ca3a59e47f9d89f5e4ba191210a"
+  },
+  "backendTree": "5c662e20f67c4a2b676fe9419b5a2be7b5589e45",
+  "specConformance": {
+    "exit": 0,
+    "log": "/private/tmp/postpilot-browser-media-prep-ink/T597-final-spec-lint.log",
+    "logSHA256": "d86f2a0b89d5b33059b8be8d067abb0700ca795e23a12d1a556723edd38ee174",
+    "inheritedWarnings": 46,
+    "newWarnings": 0,
+    "editorialHintsRequirePlanningReview": true
+  }
+}
