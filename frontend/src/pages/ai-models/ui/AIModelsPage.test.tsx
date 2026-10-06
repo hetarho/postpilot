@@ -68,19 +68,32 @@ it('saves an active model only after a model change, separately from comparison 
     user: { id: 'alice' },
     providers: {
       calls,
-      models: [{ providerId: 'openrouter', modelId: 'vision', label: 'Vision', vision: true }],
+      models: [
+        {
+          providerId: 'openrouter',
+          modelId: 'vision-default',
+          label: 'Recommended Vision',
+          vision: true,
+        },
+        { providerId: 'openrouter', modelId: 'vision', label: 'Vision', vision: true },
+      ],
     },
   })
   const main = within(await screen.findByRole('main'))
+  await waitFor(() =>
+    expect(main.getByRole('combobox', { name: /관찰/ })).toHaveTextContent('Recommended Vision'),
+  )
+  expect(calls).not.toContain('SaveSelection')
   await chooseOption(user, main.getByRole('combobox', { name: /관찰/ }), 'Vision')
   await waitFor(() => expect(calls).toContain('SaveSelection'))
+  expect(calls.filter((call) => call === 'SaveSelection')).toHaveLength(1)
+  expect(main.getByRole('combobox', { name: /관찰/ })).toHaveTextContent('Vision')
   expect(calls).not.toContain('SaveComparisonPair')
   expect(main.queryByRole('button', { name: '비교 시작' })).not.toBeInTheDocument()
 })
 
 // QUOTA-66, MODEL-27: the selected model's line says what it can hold, never a supplier price.
 it('describes a chosen model without any price', async () => {
-  const user = userEvent.setup()
   renderAppAt('/ai-models', {
     user: { id: 'alice' },
     providers: {
@@ -88,8 +101,13 @@ it('describes a chosen model without any price', async () => {
     },
   })
   const main = within(await screen.findByRole('main'))
-  await chooseOption(user, main.getByRole('combobox', { name: /관찰/ }), 'Vision')
-  expect(await main.findByText('컨텍스트 0')).toBeInTheDocument()
+  await waitFor(() =>
+    expect(main.getByRole('combobox', { name: /관찰/ })).toHaveTextContent('Vision'),
+  )
+  const selectedField = within(
+    main.getByRole('combobox', { name: /관찰/ }).parentElement!.parentElement!,
+  )
+  expect(await selectedField.findByText('컨텍스트 0')).toBeInTheDocument()
   expect(main.queryByText(/\$|1M 토큰|가격 미확인/)).not.toBeInTheDocument()
 })
 

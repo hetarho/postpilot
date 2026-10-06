@@ -1,3 +1,4 @@
+import { VOICE_INITIAL_QUESTION_COUNT } from '../config'
 import { useMemo } from 'react'
 import type { Transport } from '@connectrpc/connect'
 import { useTransport } from '@connectrpc/connect-query'
@@ -25,6 +26,7 @@ import {
   type VoiceSample,
 } from '../model/types'
 import {
+  requireVoiceOrigin,
   requireAiField,
   requireNoticeKind,
   requirePromptPart,
@@ -34,6 +36,7 @@ import {
 export function toVoice(voice: ProtoVoice | undefined): Voice {
   if (!voice) return emptyVoice()
   return {
+    origin: requireVoiceOrigin(voice.origin),
     id: voice.id,
     name: voice.name,
     isDefault: voice.isDefault,
@@ -71,6 +74,8 @@ export function toVoiceSample(sample: ProtoVoiceSample): VoiceSample {
 }
 export function toReadiness(readiness: ProtoVoiceReadiness | undefined): VoiceReadiness {
   return {
+    answeredQuestions: readiness?.answeredQuestions ?? 0,
+    requiredQuestions: readiness?.requiredQuestions || VOICE_INITIAL_QUESTION_COUNT,
     percent: readiness?.percent ?? 0,
     sentences: readiness?.sentences ?? 0,
     needed: readiness?.needed ?? 0,
@@ -160,6 +165,8 @@ export function toFingerprint(p: ProtoVoiceFingerprint | undefined): VoiceFinger
 
 export function toVoiceAnalysis(analysis: ProtoVoiceAnalysis): VoiceAnalysis {
   return {
+    origin: requireVoiceOrigin(analysis.origin),
+    syntheticSample: analysis.syntheticSample,
     counted: toFingerprint(analysis.counted),
     ai: {
       impression: analysis.ai?.impression ?? '',

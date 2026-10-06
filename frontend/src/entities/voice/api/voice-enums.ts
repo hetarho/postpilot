@@ -1,3 +1,5 @@
+import { ProtoVoiceOrigin } from '@/shared/api'
+import type { WritingVoiceOrigin } from '../model/types'
 import {
   ProtoFingerprintFacetUnit,
   ProtoFingerprintItem,
@@ -107,4 +109,15 @@ export function requireCheckStatus(value: ProtoVoiceCheckStatus): VoiceCheckStat
   const status = CHECK_STATUS_FROM_PROTO.get(value)
   if (!status) throw new Error(`unsupported voice check status enum: ${String(value)}`)
   return status
+}
+
+const ORIGIN_FROM_PROTO = new Map<ProtoVoiceOrigin, WritingVoiceOrigin>([
+  [ProtoVoiceOrigin.UNSPECIFIED, 'personal'],
+  [ProtoVoiceOrigin.PERSONAL, 'personal'],
+  [ProtoVoiceOrigin.SYNTHETIC, 'synthetic'],
+])
+export function requireVoiceOrigin(value: ProtoVoiceOrigin | undefined): WritingVoiceOrigin {
+  const origin = ORIGIN_FROM_PROTO.get(value ?? ProtoVoiceOrigin.UNSPECIFIED)
+  if (!origin) throw new Error(`unsupported writing voice origin enum: ${String(value)}`)
+  return origin
 }

@@ -63,6 +63,11 @@ function AnalysisPanel({ ownerId, voiceId, voice, profile }: VoiceScreenContext)
         : ''
   return (
     <>
+      {profile.analysis.origin === 'synthetic' && (
+        <Notice tone="info" role="status">
+          {t('origin.syntheticHelp')}
+        </Notice>
+      )}
       {!voice.deleted && (notice || profile.hasPrevious) && (
         <div className="flex flex-col gap-3">
           {notice && (

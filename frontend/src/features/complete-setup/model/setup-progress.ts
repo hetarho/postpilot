@@ -46,21 +46,21 @@ export function readSetupProgress(
     }
     if (!parsed || typeof parsed !== 'object') return emptySetupProgress()
     const p = parsed as Record<string, unknown>
-    const steps: readonly string[] = ['welcome', ...SETUP_FORMS, 'ready']
+    const steps: readonly string[] = ['welcome', 'models', ...SETUP_FORMS, 'ready']
     if (
       p.version !== SETUP_PROGRESS_VERSION ||
       p.ownerId !== ownerId ||
       typeof p.completed !== 'boolean' ||
       !Array.isArray(p.skipped) ||
-      !p.skipped.every((s) => SETUP_FORMS.includes(s)) ||
+      !p.skipped.every((s) => s === 'models' || SETUP_FORMS.includes(s)) ||
       typeof p.resume !== 'string' ||
       !steps.includes(p.resume)
     )
       return emptySetupProgress()
     return {
       completed: p.completed,
-      skipped: [...new Set(p.skipped)],
-      resume: p.resume as SetupStep,
+      skipped: [...new Set(p.skipped.filter((step) => step !== 'models'))],
+      resume: (p.resume === 'models' ? 'voice' : p.resume) as SetupStep,
       target: safeSetupTarget(p.target),
     }
   } catch {

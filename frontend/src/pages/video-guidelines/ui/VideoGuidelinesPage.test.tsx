@@ -71,7 +71,13 @@ describe('/video-guidelines', () => {
     expect(within(items[2]).getByText('가게 소개')).toBeInTheDocument()
     expect(screen.queryByText('없는 사실을 쓰지 않기')).not.toBeInTheDocument()
 
-    const allowed = ['GetMe', 'GetMyPlan', 'ListGuidelines', 'ListGuidelineCandidates']
+    const allowed = [
+      'InitializeDefaultSelections',
+      'GetMe',
+      'GetMyPlan',
+      'ListGuidelines',
+      'ListGuidelineCandidates',
+    ]
     expect(calls.filter((call) => !allowed.includes(call))).toEqual([])
   })
 

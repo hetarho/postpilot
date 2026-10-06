@@ -1,3 +1,5 @@
+import { useInitializeDefaultSelections } from '@/entities/model-catalog'
+import { useSession } from '@/entities/session'
 import { useEffect, useReducer } from 'react'
 import { Link, Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
@@ -14,6 +16,8 @@ import { currentDestination, DESTINATIONS } from './navigation'
 
 export function AuthenticatedLayout() {
   const { t } = useTranslation('nav')
+  const { user } = useSession()
+  const defaults = useInitializeDefaultSelections(user?.id ?? '')
   const navigate = useNavigate()
   const pathname = useRouterState({ select: (state) => state.location.pathname })
   const [menu, send] = useReducer(navigationMenuTransition, 'closed')
@@ -45,9 +49,9 @@ export function AuthenticatedLayout() {
           <Link
             to="/"
             aria-label={t('home')}
-            className="inline-flex min-h-11 min-w-11 shrink-0 items-center"
+            className="inline-flex min-h-11 min-w-0 flex-1 items-center"
           >
-            <Logo className="h-6" />
+            <Logo className="h-6 max-w-full" />
           </Link>
           <div className="ml-auto flex min-w-0 items-center gap-2">
             {!quiet && <CreditBadge />}
@@ -75,6 +79,16 @@ export function AuthenticatedLayout() {
         </div>
       </header>
       <div className="flex min-w-0 flex-1 flex-col">
+        {defaults.isError && (
+          <div className="mx-auto w-full max-w-7xl px-4 py-3 sm:px-6 lg:px-8">
+            <Typography variant="body" role="status">
+              {t('aiPreparingFailed')}{' '}
+              <Button variant="ghost" onClick={defaults.retry}>
+                {t('retryAI')}
+              </Button>
+            </Typography>
+          </div>
+        )}
         <Outlet />
       </div>
       <Sheet

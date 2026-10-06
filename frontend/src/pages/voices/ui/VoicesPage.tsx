@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useSession } from '@/entities/session'
 import { useVoices, voiceAnalysisDate, type Voice } from '@/entities/voice'
 import { CreateVoiceSheet } from '@/features/create-voice'
+import { GeneratedWritingVoicesSheet } from '@/features/generate-writing-voices'
 import { RestoreVoiceButton } from '@/features/restore-voice'
 import {
   ActionBar,
@@ -19,8 +20,8 @@ import {
 const rowClass =
   'hover:bg-row-bg-hover active:bg-row-bg-active flex min-h-11 flex-col items-start justify-center gap-1 px-4 py-3 sm:px-6 lg:flex-row lg:items-center lg:gap-4 lg:px-8'
 
-/** The account's voices (VOICE-52): one list in 내 글's row shape and the one action that adds
- *  to it. Every lifecycle action lives on the voice's own title row, so a row here is nothing
+/** The account's voices (VOICE-52): one list in 내 글's row shape and explicit creation paths.
+ *  Every lifecycle action lives on the voice's own title row, so a row here is nothing
  *  but a way into one voice. */
 export function VoicesPage() {
   const { t } = useTranslation(['voices', 'common'])
@@ -111,6 +112,7 @@ export function VoicesPage() {
             className="mt-auto"
           >
             <CreateVoiceSheet ownerId={ownerId} />
+            <GeneratedWritingVoicesSheet ownerId={ownerId} />
           </ActionBar>
         </>
       )}
@@ -129,6 +131,7 @@ function VoiceRowContent({ voice }: { voice: Voice }) {
         className="text-content-primary w-full truncate lg:w-auto lg:min-w-0 lg:flex-1"
       >
         {voice.name}
+        {voice.origin === 'synthetic' && <Badge tone="neutral">{t('origin.synthetic')}</Badge>}
       </Typography>
       <span className="flex w-full min-w-0 items-center gap-2 lg:w-auto lg:shrink-0 lg:justify-end">
         {voice.isDefault && <Badge tone="accent">{t('state.default', { ns: 'common' })}</Badge>}

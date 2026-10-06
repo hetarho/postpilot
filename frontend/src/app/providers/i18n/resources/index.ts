@@ -1,3 +1,5 @@
+import { i18n as writingCandidatesI18n } from '@/entities/voice-candidate/config/i18n'
+import { i18n as candidateFlowI18n } from '@/features/generate-writing-voices/config/i18n'
 import { i18n as setupI18n } from '@/widgets/creation-setup/config/i18n'
 import { i18n as homeI18n } from '@/pages/home/config/i18n'
 import { i18n as libraryI18n } from '@/pages/library/config/i18n'
@@ -161,6 +163,8 @@ export const RESOURCE_NAMESPACES = [
 import { i18n as clipDubbingI18n } from '@/features/regenerate-clip-speech/config/i18n'
 
 export const FRAGMENTS: readonly I18nFragment[] = [
+  writingCandidatesI18n,
+  candidateFlowI18n,
   setupI18n,
   homeI18n,
   libraryI18n,
@@ -305,6 +309,8 @@ export const resources = {
       ...uploadPhotosI18n.ko,
     },
     voices: {
+      ...writingCandidatesI18n.ko,
+      ...candidateFlowI18n.ko,
       ...createVoiceI18n.ko,
       ...deleteVoiceI18n.ko,
       ...restoreVoiceAnalysisI18n.ko,
@@ -436,6 +442,8 @@ export const resources = {
       ...uploadPhotosI18n.en,
     },
     voices: {
+      ...writingCandidatesI18n.en,
+      ...candidateFlowI18n.en,
       ...createVoiceI18n.en,
       ...deleteVoiceI18n.en,
       ...restoreVoiceAnalysisI18n.en,

@@ -35,6 +35,11 @@ func newAdapter(t *testing.T, r Runner) *Adapter {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if _, synthetic := r.(*fakeRunner); synthetic {
+		// Synthetic commands write tiny fixtures; reserve graph budgets without depending
+		// on the contributor's physical free space. Disk refusal has dedicated tests.
+		a.diskCheck = func(string, int64) error { return nil }
+	}
 	return a
 }
 

@@ -1,4 +1,7 @@
 export const nav = {
+  aiPreparingFailed: 'AI를 준비하지 못했어요. 다른 설정은 계속 진행할 수 있어요.',
+  retryAI: '다시 준비하기',
+
   launch: '새로 만들기',
   library: '보관함',
   settings: '설정',

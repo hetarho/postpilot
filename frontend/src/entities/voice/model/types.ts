@@ -3,6 +3,7 @@ import i18next from 'i18next'
 /** What a 학습 글 is: a post the owner wrote by hand and pasted, or an answer to one of the shared
  *  prompts (VOICE-59). */
 export type VoiceSampleKind = 'post' | 'answer'
+export type WritingVoiceOrigin = 'personal' | 'synthetic'
 
 /** One 학습 글 as the list shows it: a post by its label, an answer by its prompt. */
 export interface VoiceSample {
@@ -31,6 +32,9 @@ export type VoicePromptPart = 'opening' | 'description' | 'closing'
 /** One of the shared prompts every voice answers. The text is product copy, Korean in both
  *  locales (LANG-14). */
 export interface VoicePrompt {
+  scene?: string
+  hint?: string
+  starter?: boolean
   key: string
   part: VoicePromptPart
   photo: boolean
@@ -40,6 +44,8 @@ export interface VoicePrompt {
 /** How far the 학습 글 are from 말투 만들기 (VOICE-32): the sentence share, held below 100 while a
  *  part is missing, which `missingParts` names. */
 export interface VoiceReadiness {
+  answeredQuestions?: number
+  requiredQuestions?: number
   percent: number
   sentences: number
   needed: number
@@ -135,6 +141,8 @@ export interface VoiceAiPart {
 
 /** One analysis (VOICE-26). */
 export interface VoiceAnalysis {
+  origin?: WritingVoiceOrigin
+  syntheticSample?: string
   counted: VoiceFingerprint
   ai: VoiceAiPart
   materialCount: number
@@ -152,6 +160,7 @@ export interface VoiceNotice {
  *  every row that can change it. Deleting one leaves a tombstone rather than a hole: the posts
  *  written in it still name it, so `deleted` travels with the voice everywhere it is shown. */
 export interface Voice {
+  origin?: WritingVoiceOrigin
   id: string
   name: string
   isDefault: boolean

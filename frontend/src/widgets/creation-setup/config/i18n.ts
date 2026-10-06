@@ -35,6 +35,15 @@ export const i18n = {
         waiting: '필요한 모델을 골라 주세요. 나중에 설정해도 괜찮아요.',
       },
       voice: {
+        autoName: '나의 말투',
+        questionPath: '질문 10개로 나의 말투 찾기',
+        questionPathHelp:
+          '일상적인 상황에 짧게 답해 주세요. 이름이나 어려운 설정은 나중에 바꿔도 돼요.',
+        aiPath: 'AI가 만든 8가지 스타일에서 고르기',
+        aiPathHelp:
+          '서로 다른 말투의 예문을 보고 마음에 드는 스타일을 골라요. 생성은 직접 누를 때만 시작돼요.',
+        otherMethod: '다른 방법으로 준비하기',
+        moreWays: '직접 쓴 글이 이미 있나요?',
         title: '글에 나의 말투를 담아볼까요?',
         description:
           '직접 쓴 글이나 짧은 답변으로 당신의 표현을 배워요. 지금은 건너뛰어도 글을 쓸 수 있어요.',
@@ -104,6 +113,15 @@ export const i18n = {
         waiting: 'Choose the models you need, or set them up later.',
       },
       voice: {
+        autoName: 'My writing voice',
+        questionPath: 'Find my voice with 10 questions',
+        questionPathHelp:
+          'Answer ordinary situations briefly. You can change names and details later.',
+        aiPath: 'Choose from 8 AI-created styles',
+        aiPathHelp:
+          'Compare different writing samples and choose a style. Generation starts only when you explicitly ask.',
+        otherMethod: 'Choose another way',
+        moreWays: 'Already have your own writing?',
         title: 'Let your writing sound like you.',
         description:
           'Share your own writing or answer a few questions. You can also skip this and start writing.',

@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, expect, it } from 'vitest'
 import { act, cleanup, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { Code, ConnectError, type Transport } from '@connectrpc/connect'
 import { initializeI18n } from '@/app/providers/i18n'
 import {
   emptySetupProgress,
@@ -9,6 +10,7 @@ import {
 } from '@/features/complete-setup'
 import { renderAppAt, type RenderAppOptions } from '@/test/app'
 import type { FakeTemplatesOptions } from '@/test/templates'
+import { createFakeAuthTransport } from '@/test/session'
 
 const OWNER = 'setup-alice'
 const READY: RenderAppOptions = {
@@ -31,8 +33,8 @@ afterEach(() => {
   localStorage.clear()
   initializeI18n('ko')
 })
-function noModels(resume: 'welcome' | 'voice' | 'post-template' | 'clip-template' = 'welcome') {
-  writeSetupProgress(OWNER, { ...emptySetupProgress(), skipped: ['models'], resume })
+function resumeSetup(resume: 'welcome' | 'voice' | 'post-template' | 'clip-template' = 'welcome') {
+  writeSetupProgress(OWNER, { ...emptySetupProgress(), skipped: [], resume })
 }
 function mountFresh(extra: RenderAppOptions = {}) {
   return renderAppAt('/', {
@@ -48,7 +50,7 @@ async function start() {
   return user
 }
 
-it('offers first-use setup only after missing account settings were read and never writes on entry', async () => {
+it('offers setup after missing settings were read without creating content or paid work', async () => {
   const calls: string[] = []
   const { router } = mountFresh({
     voice: { voices: [], calls },
@@ -90,19 +92,59 @@ it('distinguishes failed directory reads from missing settings and offers explic
   expect(await screen.findByRole('link', { name: /새 글 작성하기/ })).toBeInTheDocument()
   expect(readSetupProgress(OWNER).completed).toBe(true)
 })
-it('allows an unknown model read to retry or explicitly defer without changing a saved choice', async () => {
-  const user = userEvent.setup()
-  renderAppAt('/setup', {
-    user: { id: OWNER },
-    firstUseSetup: true,
-    providers: { listFails: true },
+function gateProcedure(
+  base: Transport,
+  procedure: string,
+  barrier: Promise<void>,
+  fail = false,
+): Transport {
+  return new Proxy(base, {
+    get(target, property) {
+      if (property !== 'unary') return Reflect.get(target, property)
+      return (...args: unknown[]) => {
+        const call = () => Reflect.apply(target.unary, target, args)
+        if ((args[0] as { name: string }).name !== procedure) return call()
+        return (async () => {
+          await barrier
+          if (fail) throw new ConnectError('temporarily unavailable', Code.Unavailable)
+          return call()
+        })()
+      }
+    },
   })
-  expect(await screen.findByRole('alert')).toHaveTextContent('설정을 확인하지 못했어요')
-  await user.click(screen.getByRole('button', { name: '먼저 시작하기' }))
-  expect(await screen.findByRole('link', { name: /새 글 작성하기/ })).toBeInTheDocument()
-})
+}
+it.each(['pending', 'failed'] as const)(
+  'keeps questions available while recommended model preparation is %s',
+  async (phase) => {
+    let release!: () => void
+    const gate = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    const options: RenderAppOptions = {
+      user: { id: OWNER },
+      firstUseSetup: true,
+      voice: { voices: [] },
+    }
+    const base = createFakeAuthTransport({ ...options, existingSetup: true })
+    renderAppAt('/setup', {
+      ...options,
+      transport: gateProcedure(
+        base,
+        'InitializeDefaultSelections',
+        phase === 'pending' ? gate : Promise.resolve(),
+        phase === 'failed',
+      ),
+    })
+    const user = await start()
+    expect(await screen.findByRole('button', { name: '질문 10개로 나의 말투 찾기' })).toBeEnabled()
+    expect(screen.queryByRole('heading', { name: '함께 만들 AI를 골라볼까요?' })).toBeNull()
+    await user.click(screen.getByRole('button', { name: '질문 10개로 나의 말투 찾기' }))
+    expect(await screen.findByLabelText('답')).toBeEnabled()
+    await act(async () => release())
+  },
+)
 it('omits made voices and existing templates, showing only the missing clip template after welcome', async () => {
-  noModels()
+  resumeSetup()
   renderAppAt('/', { ...READY, clips: { templates: [] } })
   const user = await start()
   expect(
@@ -133,8 +175,8 @@ it('skips optional setup without entity writes and finishes at the explicitly ch
   const calls: string[] = []
   mountFresh({ voice: { voices: [], calls }, templates: { calls }, clips: { calls } })
   const user = await start()
-  await screen.findByRole('heading', { name: '함께 만들 AI를 골라볼까요?' })
-  for (let i = 0; i < 4; i++)
+  await screen.findByRole('heading', { name: '글에 나의 말투를 담아볼까요?' })
+  for (let i = 0; i < 3; i++)
     await user.click(await screen.findByRole('button', { name: '지금은 건너뛰기' }))
   await user.click(await screen.findByRole('button', { name: '첫 클립 만들기' }))
   await screen.findByLabelText('클립 제목')
@@ -142,7 +184,7 @@ it('skips optional setup without entity writes and finishes at the explicitly ch
   expect(readSetupProgress(OWNER)).toMatchObject({ completed: true, target: '/clips/new' })
 })
 it('resumes an unfinished voice rather than creating another one', async () => {
-  noModels('voice')
+  resumeSetup('voice')
   const creates: Array<{ name: string }> = []
   mountFresh({
     voice: { voices: [{ id: 'voice-default', name: '진행 중', made: false }], creates },
@@ -150,41 +192,44 @@ it('resumes an unfinished voice rather than creating another one', async () => {
   expect(
     await screen.findByRole('heading', { name: '글에 나의 말투를 담아볼까요?' }),
   ).toBeInTheDocument()
-  expect(await screen.findByRole('button', { name: '글 붙여넣기' })).toBeInTheDocument()
+  expect(await screen.findByLabelText('답')).toBeInTheDocument()
+  expect(screen.queryByRole('dialog')).toBeNull()
   expect(screen.queryByLabelText('말투 이름')).toBeNull()
   expect(creates).toEqual([])
 })
-it('submits a voice exactly once, holds the pending step, and never interprets its name as a finished voice', async () => {
-  noModels('voice')
+it('creates a personal voice once with an automatic name and holds the funnel while the request is pending', async () => {
+  resumeSetup('voice')
   let release!: () => void
   const gate = new Promise<void>((resolve) => {
     release = resolve
   })
-  const calls: string[] = []
-  mountFresh({ voice: { voices: [], calls, createGate: gate } })
+  const calls: string[] = [],
+    creates: Array<{ name: string }> = []
+  mountFresh({ voice: { voices: [], calls, creates, createGate: gate } })
   const user = userEvent.setup()
-  await user.type(await screen.findByLabelText('말투 이름'), '평소의 나')
-  await user.dblClick(screen.getByRole('button', { name: '이 말투로 준비하기' }))
+  expect(screen.queryByLabelText('말투 이름')).toBeNull()
+  await user.dblClick(await screen.findByRole('button', { name: '질문 10개로 나의 말투 찾기' }))
   expect(calls.filter((call) => call === 'CreateVoice')).toHaveLength(1)
   expect(screen.getByRole('button', { name: '지금은 건너뛰기' })).toBeDisabled()
   await act(async () => release())
-  expect(await screen.findByRole('button', { name: '글 붙여넣기' })).toBeInTheDocument()
+  expect(await screen.findByLabelText('답')).toBeInTheDocument()
+  expect(creates).toEqual([{ name: '나의 말투' }])
   expect(screen.getByRole('heading', { name: '글에 나의 말투를 담아볼까요?' })).toBeInTheDocument()
   expect(calls).not.toContain('AnalyzeVoice')
 })
-it('retains the voice name and current step after a failed create', async () => {
-  noModels('voice')
+it('keeps both learning choices and the current step after a failed automatic create', async () => {
+  resumeSetup('voice')
   mountFresh({ voice: { voices: [], createFails: true } })
   const user = userEvent.setup()
-  await user.type(await screen.findByLabelText('말투 이름'), '내 일상')
-  await user.click(screen.getByRole('button', { name: '이 말투로 준비하기' }))
+  await user.click(await screen.findByRole('button', { name: '질문 10개로 나의 말투 찾기' }))
   await screen.findByText(/연결|네트워크|요청을 마치지/)
-  expect(screen.getByLabelText('말투 이름')).toHaveValue('내 일상')
+  expect(screen.queryByLabelText('말투 이름')).toBeNull()
   expect(screen.getByRole('heading', { name: '글에 나의 말투를 담아볼까요?' })).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: '이 말투로 준비하기' })).toBeEnabled()
+  expect(screen.getByRole('button', { name: '질문 10개로 나의 말투 찾기' })).toBeEnabled()
+  expect(screen.getByRole('button', { name: 'AI가 만든 8가지 스타일에서 고르기' })).toBeEnabled()
 })
 it('authors and saves a post template once before advancing, retaining content on a server refusal', async () => {
-  noModels('post-template')
+  resumeSetup('post-template')
   const creates: FakeTemplatesOptions['creates'] = []
   const calls: string[] = []
   mountFresh({ voice: READY.voice, templates: { creates, calls, createFails: true } })
@@ -205,7 +250,7 @@ it('authors and saves a post template once before advancing, retaining content o
   expect(creates).toEqual([])
 })
 it('recovers a running voice analysis after reload without starting another paid job', async () => {
-  noModels('voice')
+  resumeSetup('voice')
   const calls: string[] = []
   mountFresh({
     voice: {
@@ -229,7 +274,7 @@ it('recovers a running voice analysis after reload without starting another paid
   expect(calls).toContain('SetDefaultVoice')
 })
 it('never advances while a recovered analysis remains active', async () => {
-  noModels('voice')
+  resumeSetup('voice')
   mountFresh({
     voice: {
       voices: [{ id: 'voice-default', name: '학습 중', made: false }],
@@ -258,7 +303,7 @@ it('offers setup again only on an explicit settings entry after completion', asy
 })
 
 it('creates a valid post template exactly once and advances from its confirmed saved identity', async () => {
-  noModels('post-template')
+  resumeSetup('post-template')
   const creates: FakeTemplatesOptions['creates'] = []
   const first = mountFresh({ voice: READY.voice, templates: { creates } })
   const user = userEvent.setup()
@@ -276,7 +321,7 @@ it('creates a valid post template exactly once and advances from its confirmed s
   expect(creates).toHaveLength(1)
   expect(creates![0]).toMatchObject({ name: '내 글 구성', body: '<write>오늘 경험을 쓴다</write>' })
   first.unmount()
-  noModels()
+  resumeSetup()
   renderAppAt('/', {
     ...READY,
     templates: {
@@ -291,7 +336,7 @@ it('creates a valid post template exactly once and advances from its confirmed s
   ).toBeInTheDocument()
 })
 it('saves a clip template once before offering completion', async () => {
-  noModels('clip-template')
+  resumeSetup('clip-template')
   const calls: string[] = []
   const { router } = renderAppAt('/', { ...READY, clips: { templates: [], calls } })
   const user = userEvent.setup()
@@ -306,7 +351,7 @@ it('saves a clip template once before offering completion', async () => {
   expect(router.state.location.pathname).toBe('/')
 })
 it('retains a clip template after a failed save', async () => {
-  noModels('clip-template')
+  resumeSetup('clip-template')
   const calls: string[] = []
   renderAppAt('/', { ...READY, clips: { templates: [], calls, saveFails: true } })
   const user = userEvent.setup()
@@ -320,7 +365,7 @@ it('retains a clip template after a failed save', async () => {
   ).toBeInTheDocument()
 })
 
-it('keeps model choices explicit and advances only after all three saved roles are usable', async () => {
+it('starts with writing identity while available recommended models are prepared automatically', async () => {
   const calls: string[] = []
   mountFresh({
     providers: {
@@ -328,20 +373,83 @@ it('keeps model choices explicit and advances only after all three saved roles a
       models: [{ providerId: 'openrouter', modelId: 'creative', label: 'Creative', vision: true }],
     },
   })
-  const user = await start()
-  await screen.findByRole('heading', { name: '함께 만들 AI를 골라볼까요?' })
-  const next = screen.getByRole('button', { name: '계속' })
-  expect(next).toBeDisabled()
-  expect(calls).not.toContain('SaveSelection')
-  for (const combobox of screen.getAllByRole('combobox')) {
-    await user.click(combobox)
-    await user.click(await screen.findByRole('option', { name: /Creative/ }))
-  }
-  await waitFor(() => expect(next).toBeEnabled())
-  expect(calls.filter((call) => call === 'SaveSelection')).toHaveLength(3)
-  await user.click(next)
+  await start()
   expect(
-    await screen.findByRole('heading', { name: '글에 나의 말투를 담아볼까요?' }),
+    await screen.findByRole('button', { name: '질문 10개로 나의 말투 찾기' }),
   ).toBeInTheDocument()
-  expect(calls.filter((call) => /Start|AnalyzeVoice/.test(call))).toEqual([])
+  expect(
+    screen.getByRole('button', { name: 'AI가 만든 8가지 스타일에서 고르기' }),
+  ).toBeInTheDocument()
+  expect(screen.queryByRole('combobox')).toBeNull()
+  expect(screen.queryByLabelText('말투 이름')).toBeNull()
+  await waitFor(() => expect(calls).toContain('InitializeDefaultSelections'))
+  expect(calls).not.toContain('SaveSelection')
+  expect(calls.filter((call) => /^(Create|Start|Analyze)/.test(call))).toEqual([])
+})
+it('saves ten short answers through setup and waits for an explicit analysis action on the recommended model', async () => {
+  resumeSetup('voice')
+  const calls: string[] = [],
+    answers: Array<{ promptKey: string; body: string; uploadId: string }> = [],
+    analyses: Array<{ voiceId: string; model: string }> = []
+  mountFresh({
+    calls,
+    voice: { voices: [{ id: 'voice-default', name: '진행 중', made: false }], answers, analyses },
+    providers: {
+      models: [{ providerId: 'stub', modelId: 'recommended', label: '추천 AI', vision: true }],
+    },
+    jobs: {
+      jobs: [{ id: 'voice-job', kind: 'analyze_voice', status: 'running', stage: 'analyze' }],
+    },
+  })
+  const user = userEvent.setup()
+  await screen.findByLabelText('답')
+  for (let index = 0; index < 10; index++) {
+    await user.type(screen.getByLabelText('답'), '친구에게 평소처럼 편하게 이야기했어요.')
+    await user.click(screen.getByRole('button', { name: '답하기' }))
+    if (index < 9)
+      await waitFor(() =>
+        expect(
+          screen.getByRole('progressbar', { name: '이번 질문의 저장한 답변 수' }),
+        ).toHaveAttribute('aria-valuenow', String(index + 1)),
+      )
+  }
+  expect(await screen.findByText('열 개의 답변이 모였어요.')).toBeInTheDocument()
+  expect(answers).toHaveLength(10)
+  expect(new Set(answers.map((answer) => answer.promptKey)).size).toBe(10)
+  expect(analyses).toEqual([])
+  expect(calls).not.toContain('AnalyzeVoice')
+  await waitFor(() => expect(screen.getByRole('button', { name: '말투 만들기' })).toBeEnabled())
+  await user.click(screen.getByRole('button', { name: '말투 만들기' }))
+  await waitFor(() =>
+    expect(analyses).toEqual([{ voiceId: 'voice-default', model: 'stub/recommended' }]),
+  )
+  expect(screen.getByRole('button', { name: '지금은 건너뛰기' })).toBeDisabled()
+  expect(screen.getByRole('heading', { name: '글에 나의 말투를 담아볼까요?' })).toBeInTheDocument()
+})
+it('guards parent navigation while an inline answer save is pending', async () => {
+  resumeSetup('voice')
+  let release!: () => void
+  const gate = new Promise<void>((resolve) => {
+    release = resolve
+  })
+  const options: RenderAppOptions = {
+    user: { id: OWNER },
+    firstUseSetup: true,
+    voice: { voices: [{ id: 'voice-default', name: '진행 중', made: false }] },
+  }
+  const base = createFakeAuthTransport({ ...options, existingSetup: true })
+  renderAppAt('/setup', { ...options, transport: gateProcedure(base, 'AnswerVoicePrompt', gate) })
+  const user = userEvent.setup()
+  await user.type(await screen.findByLabelText('답'), '저장 중에도 입력한 내용은 그대로예요.')
+  await user.click(screen.getByRole('button', { name: '답하기' }))
+  expect(screen.getByRole('button', { name: '지금은 건너뛰기' })).toBeDisabled()
+  expect(screen.getByRole('button', { name: '이전' })).toBeDisabled()
+  expect(screen.getByLabelText('답')).toHaveValue('저장 중에도 입력한 내용은 그대로예요.')
+  await act(async () => release())
+  await waitFor(() =>
+    expect(screen.getByRole('progressbar', { name: '이번 질문의 저장한 답변 수' })).toHaveAttribute(
+      'aria-valuenow',
+      '1',
+    ),
+  )
 })

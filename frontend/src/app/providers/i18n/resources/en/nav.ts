@@ -1,4 +1,7 @@
 export const nav = {
+  aiPreparingFailed: 'Could not prepare AI. You can continue setting up your workspace.',
+  retryAI: 'Try again',
+
   launch: 'Create',
   library: 'Saved work',
   settings: 'Settings',

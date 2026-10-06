@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useStageSelection, useSelections, useModels } from '@/entities/model-catalog'
 import { useSetupAvailability } from './useSetupAvailability'
 import {
   initialSetupState,
@@ -13,15 +12,6 @@ import { writeSetupProgress } from './setup-progress'
 
 export function useSetup(ownerId: string, restart: boolean) {
   const availability = useSetupAvailability(ownerId, restart, true)
-  const observe = useStageSelection('observe')
-  const analyze = useStageSelection('analyze')
-  const write = useStageSelection('write')
-  const selections = useSelections()
-  const models = useModels()
-  const modelPending = observe.isPending || analyze.isPending || write.isPending
-  const modelError = selections.isError || models.isError
-  const modelsReady =
-    !modelPending && !modelError && !!observe.selected && !!analyze.selected && !!write.selected
   const [state, setState] = useState(() => initialSetupState(ownerId))
   const current = useRef(state)
   const send = useCallback((event: SetupEvent) => {
@@ -31,9 +21,8 @@ export function useSetup(ownerId: string, restart: boolean) {
     return next
   }, [])
   useEffect(() => {
-    if (availability.status !== 'ready' || modelPending || modelError) return
+    if (availability.status !== 'ready') return
     const missing: SetupForm[] = []
-    if (!modelsReady) missing.push('models')
     if (availability.missingVoice) missing.push('voice')
     if (availability.missingPostTemplate) missing.push('post-template')
     if (availability.missingClipTemplate) missing.push('clip-template')
@@ -44,9 +33,6 @@ export function useSetup(ownerId: string, restart: boolean) {
     availability.missingPostTemplate,
     availability.missingClipTemplate,
     availability.progress,
-    modelPending,
-    modelError,
-    modelsReady,
     ownerId,
     send,
   ])
@@ -61,12 +47,6 @@ export function useSetup(ownerId: string, restart: boolean) {
   return {
     state,
     availability,
-    modelError,
-    modelsReady,
-    retryModels: () => {
-      selections.refetch()
-      models.refetch()
-    },
     begin,
     next: (confirmed = true) =>
       send({ type: 'next', ownerId, step: current.current.step, confirmed }),

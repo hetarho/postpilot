@@ -22,7 +22,7 @@ it('scopes validated progress to an owner and never copies another account ackno
   const { data, storage } = memory()
   const progress = {
     ...emptySetupProgress(),
-    skipped: ['models' as const],
+    skipped: ['post-template' as const],
     resume: 'voice' as const,
   }
   writeSetupProgress('alice', progress, storage)
@@ -93,4 +93,46 @@ it('retains an in-memory completion across navigation when writes are refused', 
   writeSetupProgress('alice', { ...emptySetupProgress(), completed: true }, storage)
   expect(readSetupProgress('alice', storage).completed).toBe(true)
   expect(readSetupProgress('bob', storage).completed).toBe(false)
+})
+
+it('migrates old model-step progress to voice and drops only obsolete model skips', () => {
+  const { data, storage } = memory()
+  data.set(
+    setupProgressKey('alice'),
+    JSON.stringify({
+      version: 1,
+      ownerId: 'alice',
+      completed: false,
+      skipped: ['models', 'post-template', 'models'],
+      resume: 'models',
+      target: '/clips/new',
+    }),
+  )
+  expect(readSetupProgress('alice', storage)).toEqual({
+    completed: false,
+    skipped: ['post-template'],
+    resume: 'voice',
+    target: '/clips/new',
+  })
+  expect(readSetupProgress('bob', storage)).toEqual(emptySetupProgress())
+})
+it('preserves old voice/template progress and completed acknowledgement during migration', () => {
+  const { data, storage } = memory()
+  data.set(
+    setupProgressKey('alice'),
+    JSON.stringify({
+      version: 1,
+      ownerId: 'alice',
+      completed: true,
+      skipped: ['models', 'voice'],
+      resume: 'clip-template',
+      target: '/posts/new',
+    }),
+  )
+  expect(readSetupProgress('alice', storage)).toEqual({
+    completed: true,
+    skipped: ['voice'],
+    resume: 'clip-template',
+    target: '/posts/new',
+  })
 })

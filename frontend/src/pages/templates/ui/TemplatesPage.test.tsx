@@ -61,8 +61,8 @@ describe('the template directory', () => {
       '/templates/new',
     )
 
-    // A12: mounting the list calls no provider and enqueues nothing ([I5]).
-    const allowed = ['GetMe', 'GetMyPlan', 'ListTemplates']
+    // A12: the shell prepares model defaults; the list calls no AI and enqueues nothing ([I5]).
+    const allowed = ['InitializeDefaultSelections', 'GetMe', 'GetMyPlan', 'ListTemplates']
     expect(calls.filter((call) => !allowed.includes(call))).toEqual([])
   })
 

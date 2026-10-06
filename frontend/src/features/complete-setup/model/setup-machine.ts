@@ -1,4 +1,4 @@
-export const SETUP_FORMS = ['models', 'voice', 'post-template', 'clip-template'] as const
+export const SETUP_FORMS = ['voice', 'post-template', 'clip-template'] as const
 export type SetupForm = (typeof SETUP_FORMS)[number]
 export type SetupStep = 'welcome' | SetupForm | 'ready'
 export type SetupTarget = '/' | '/posts/new' | '/clips/new'

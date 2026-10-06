@@ -10,9 +10,40 @@ import {
   Stage,
   VoicePromptPart,
 } from '@/shared/api'
-import { renderAppAt } from '@/test/app'
+import { renderAppAt as renderRealAppAt, type RenderAppOptions } from '@/test/app'
+import type { VoicePrompt } from '@/entities/voice'
 
 const CHECKS = '/voices/voice-default/checks'
+
+const LEGACY_PROMPTS: VoicePrompt[] = [
+  {
+    key: 'opening_greeting',
+    part: 'opening',
+    photo: false,
+    text: '블로그 글을 시작할 때 쓰는 첫인사를 평소처럼 2~5문장으로 써 보세요.',
+  },
+  {
+    key: 'photo_food',
+    part: 'description',
+    photo: true,
+    text: '음식이나 음료 사진 한 장을 골라, 블로그에 쓰듯 2~5문장으로 써 보세요.',
+  },
+  {
+    key: 'situation_value',
+    part: 'description',
+    photo: false,
+    text: '가격이나 양, 가성비에 대한 생각을 2~5문장으로 써 보세요.',
+  },
+  {
+    key: 'closing_greeting',
+    part: 'closing',
+    photo: false,
+    text: '글을 마무리할 때 쓰는 끝인사를 평소처럼 2~5문장으로 써 보세요.',
+  },
+]
+function renderAppAt(at: string, options: RenderAppOptions) {
+  return renderRealAppAt(at, { ...options, voice: { prompts: LEGACY_PROMPTS, ...options.voice } })
+}
 
 /** A writer that does not read images, selected for the write stage. */
 const WRITER = {
@@ -144,7 +175,12 @@ describe('the 검증 tab', () => {
 
   // VOICE-55: without a usable write selection, 검증하기 says why in place.
   it('says why without a write model', async () => {
-    renderAppAt(CHECKS, { user: { id: 'alice' }, providers: { models: WRITER.models } })
+    renderAppAt(CHECKS, {
+      user: { id: 'alice' },
+      providers: {
+        models: WRITER.models.map((model) => ({ ...model, disabledReason: 'unavailable' })),
+      },
+    })
 
     expect(await screen.findByRole('button', { name: '검증하기' })).toBeDisabled()
     expect(await screen.findByText(/검증에 쓸 작성 모델을 먼저 골라 주세요\./)).toBeInTheDocument()

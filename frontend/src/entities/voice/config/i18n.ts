@@ -4,6 +4,12 @@ import type { I18nFragment } from '@/shared/lib'
 export const i18n = {
   namespace: 'voices',
   ko: {
+    origin: {
+      synthetic: 'AI가 만든 스타일',
+      personal: '내 글에서 배운 말투',
+      syntheticHelp:
+        '아래 습관은 AI가 만든 가상 예문에서 센 값이에요. 내 답변을 추가하고 다시 분석하면 더 나답게 바꿀 수 있어요.',
+    },
     title: '말투',
     noVoice: '말투 없음',
     voiceLoadFailed: '말투를 불러오지 못했어요.',
@@ -47,7 +53,11 @@ export const i18n = {
       },
     },
     readiness: {
-      label: '말투 학습에 필요한 정보',
+      questionProgress: '질문 {{answered}} / {{required}}개',
+      questionsMore: '질문 {{count}}개만 더 답하면 돼요.',
+      coverage: '{{parts}} 답변도 하나 알려 주세요.',
+
+      label: '나의 말투 찾기',
       value: '{{percent}}% 확보',
       ready: '이제 말투를 만들 수 있어요',
       more: '{{sentences}}문장이 더 필요해요.',
@@ -63,6 +73,12 @@ export const i18n = {
     },
   },
   en: {
+    origin: {
+      synthetic: 'AI-created style',
+      personal: 'Learned from my writing',
+      syntheticHelp:
+        'These habits were measured from an AI-created fictional sample. Add your own answers and explicitly analyze again to make it personal.',
+    },
     title: 'Voices',
     noVoice: 'No voice',
     voiceLoadFailed: 'Could not load the voice.',
@@ -106,6 +122,10 @@ export const i18n = {
       },
     },
     readiness: {
+      questionProgress: '{{answered}} / {{required}} questions',
+      questionsMore: 'Answer {{count}} more questions.',
+      coverage: 'Add an answer for {{parts}} too.',
+
       label: 'What the voice needs',
       value: '{{percent}}% there',
       ready: 'You can make the voice now',

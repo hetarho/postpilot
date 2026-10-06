@@ -1,3 +1,4 @@
+import { WritingVoiceCandidateService } from '@/shared/api'
 import { seedCompletedSetup } from './setup-progress'
 // Shared harness for tests that need a fake AuthService.
 //
@@ -141,6 +142,9 @@ export function createFakeAuthBackend(options: FakeAuthOptions = {}): FakeAuthBa
 
   const transport = createRouterTransport((router) => {
     const { rpc } = router
+    rpc(WritingVoiceCandidateService.method.getLatestWritingVoiceCandidates, () =>
+      create(WritingVoiceCandidateService.method.getLatestWritingVoiceCandidates.output, {}),
+    )
     rpc(AuthService.method.getMe, () => {
       calls?.push('GetMe')
       if (!session) throw connectAppError('AUTH_REQUIRED', Code.Unauthenticated)

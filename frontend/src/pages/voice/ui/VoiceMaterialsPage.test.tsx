@@ -3,6 +3,7 @@ import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { initializeI18n } from '@/app/providers/i18n'
 import { Stage } from '@/shared/api'
+import type { VoicePrompt } from '@/entities/voice'
 import { renderAppAt, type RenderAppOptions } from '@/test/app'
 import type { FakeVoiceOptions } from '@/test/voice'
 import { putPhoto } from '@/features/answer-voice-prompt/api/photo'
@@ -24,6 +25,33 @@ const WITH_ANALYZE: RenderAppOptions['providers'] = {
 }
 const sentences = (n: number) => '정말 맛있었어요.\n'.repeat(n)
 const UNMADE = [{ id: 'voice-default', name: '기본 말투', made: false }]
+const MADE = [{ id: 'voice-default', name: '기본 말투', made: true }]
+const LEGACY_PROMPTS: VoicePrompt[] = [
+  {
+    key: 'opening_greeting',
+    part: 'opening',
+    photo: false,
+    text: '블로그 글을 시작할 때 쓰는 첫인사를 평소처럼 2~5문장으로 써 보세요.',
+  },
+  {
+    key: 'photo_food',
+    part: 'description',
+    photo: true,
+    text: '음식이나 음료 사진 한 장을 골라, 블로그에 쓰듯 2~5문장으로 써 보세요.',
+  },
+  {
+    key: 'situation_value',
+    part: 'description',
+    photo: false,
+    text: '가격이나 양, 가성비에 대한 생각을 2~5문장으로 써 보세요.',
+  },
+  {
+    key: 'closing_greeting',
+    part: 'closing',
+    photo: false,
+    text: '글을 마무리할 때 쓰는 끝인사를 평소처럼 2~5문장으로 써 보세요.',
+  },
+]
 
 function renderMaterials(
   voice: FakeVoiceOptions = {},
@@ -34,45 +62,45 @@ function renderMaterials(
     user: { id: 'alice' },
     calls,
     providers,
-    voice: { voices: UNMADE, ...voice },
+    voice: { voices: UNMADE, prompts: LEGACY_PROMPTS, ...voice },
   })
 }
 
 describe('the 학습 데이터 screen', () => {
-  // VOICE-32: the meter counts sentences, says how many are still needed and names a missing
-  // part; 100% says so.
-  it('shows the readiness meter with its missing parts', async () => {
+  // The novice-facing meter names saved questions while retaining the server readiness value.
+  it('shows saved-question progress without asking the owner to count sentences', async () => {
     renderMaterials({
       samples: [
         { id: 'a', label: '', kind: 'answer', promptKey: 'opening_greeting', body: sentences(30) },
       ],
     })
-    expect(await screen.findByText('말투 학습에 필요한 정보')).toBeInTheDocument()
-    expect(screen.getByText('50% 확보')).toBeInTheDocument()
-    expect(
-      screen.getByText('30문장이 더 필요해요. 아직 없는 부분: 본문 · 마무리'),
-    ).toBeInTheDocument()
+    expect(await screen.findByRole('meter', { name: '나의 말투 찾기' })).toHaveAttribute(
+      'aria-valuenow',
+      '50',
+    )
+    expect(screen.getByText('질문 1 / 10개')).toBeInTheDocument()
+    expect(screen.getByText('질문 9개만 더 답하면 돼요.')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '말투 만들기' })).toBeDisabled()
     expect(
       screen.getByText('말투 학습에 필요한 정보가 100%가 되면 누를 수 있어요.'),
     ).toBeInTheDocument()
   })
 
-  it('shows live quiz progress and offers 말투 만들기 at 100%', async () => {
+  it('shows live progress without offering analysis before the question session completes', async () => {
     const user = userEvent.setup()
     renderMaterials({ samples: [{ id: 'p', label: '글', body: sentences(48) }] })
 
     await user.click(await screen.findByRole('button', { name: '문항 풀기' }))
     const sheet = within(await screen.findByRole('dialog'))
-    expect(await sheet.findByRole('meter')).toHaveAttribute('aria-valuenow', '80')
-    expect(sheet.getByText('거의 다 왔어요')).toBeInTheDocument()
+    expect(sheet.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '0')
     await user.click(sheet.getByLabelText('답'))
     await user.paste(sentences(12))
     await user.click(sheet.getByRole('button', { name: '답하기' }))
 
-    await waitFor(() => expect(sheet.getByRole('meter')).toHaveAttribute('aria-valuenow', '100'))
-    expect(sheet.queryByText('거의 다 왔어요')).not.toBeInTheDocument()
-    expect(sheet.getByRole('button', { name: '말투 만들기' })).toBeEnabled()
+    await waitFor(() =>
+      expect(sheet.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '1'),
+    )
+    expect(sheet.queryByRole('button', { name: '말투 만들기' })).toBeNull()
   })
 
   // VOICE-23, VOICE-55: at 100% 말투 만들기 starts one analysis on the active analyze selection.
@@ -196,8 +224,8 @@ describe('the 학습 데이터 screen', () => {
     await user.click(await screen.findByRole('button', { name: '문항 풀기' }))
     const sheet = within(await screen.findByRole('dialog'))
     expect(await sheet.findByText(/블로그 글을 시작할 때 쓰는 첫인사/)).toBeInTheDocument()
-    expect(sheet.getByRole('meter')).toHaveAttribute('aria-valuenow', '0')
-    expect(sheet.queryByRole('button', { name: '건너뛰기' })).not.toBeInTheDocument()
+    expect(sheet.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '0')
+    expect(sheet.getByRole('button', { name: '다른 질문으로 바꾸기' })).toBeEnabled()
     expect(sheet.queryByRole('button', { name: '문항 목록' })).not.toBeInTheDocument()
     await user.type(sheet.getByLabelText('답'), '안녕하세요!')
     await user.click(sheet.getByRole('button', { name: '답하기' }))
@@ -207,14 +235,14 @@ describe('the 학습 데이터 screen', () => {
         { promptKey: 'opening_greeting', body: '안녕하세요!', uploadId: '' },
       ]),
     )
-    expect(await sheet.findByText(/음식이나 음료 사진/)).toBeInTheDocument()
+    expect(await sheet.findByText(/가격이나 양, 가성비/)).toBeInTheDocument()
     expect(sheet.getByRole('status')).toHaveTextContent('답을 저장했어요')
     expect(sheet.getByLabelText('답')).toHaveValue('')
-    expect(sheet.getByLabelText('답')).toHaveFocus()
+    expect(sheet.getByLabelText('답')).not.toHaveFocus()
     await user.click(sheet.getByRole('button', { name: '닫기' }))
     await user.click(await screen.findByRole('button', { name: '문항 풀기' }))
     expect(
-      await within(screen.getByRole('dialog')).findByText(/음식이나 음료 사진/),
+      await within(screen.getByRole('dialog')).findByText(/가격이나 양, 가성비/),
     ).toBeInTheDocument()
   })
 
@@ -256,8 +284,8 @@ describe('the 학습 데이터 screen', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
-  // VOICE-65: after the last answer below 100%, continue with a prefilled answer to extend.
-  it('continues into answered prompts when readiness is short', async () => {
+  // Catalog exhaustion never silently reopens or rewrites a saved answer.
+  it('offers completion and explicit review when the catalog is exhausted', async () => {
     const user = userEvent.setup()
     const answers: NonNullable<FakeVoiceOptions['answers']> = []
     renderMaterials({
@@ -279,7 +307,7 @@ describe('the 학습 데이터 screen', () => {
     await user.click(await screen.findByRole('button', { name: '문항 풀기' }))
     const sheet = within(await screen.findByRole('dialog'))
     expect(await sheet.findByText(/글을 마무리할 때 쓰는 끝인사/)).toBeInTheDocument()
-    expect(sheet.queryByRole('button', { name: '건너뛰기' })).not.toBeInTheDocument()
+    expect(sheet.getByRole('button', { name: '다른 질문으로 바꾸기' })).toBeEnabled()
     expect(sheet.queryByRole('button', { name: '문항 목록' })).not.toBeInTheDocument()
     await user.type(sheet.getByLabelText('답'), '다음에 만나요.')
     await user.click(sheet.getByRole('button', { name: '답하기' }))
@@ -289,13 +317,10 @@ describe('the 학습 데이터 screen', () => {
         { promptKey: 'closing_greeting', body: '다음에 만나요.', uploadId: '' },
       ]),
     )
-    expect(
-      await sheet.findByText('모든 문항에 답했어요. 지금부터 답에 문장을 더 보태 볼게요.'),
-    ).toBeInTheDocument()
-    expect(sheet.getByText(/블로그 글을 시작할 때 쓰는 첫인사/)).toBeInTheDocument()
-    expect(await sheet.findByLabelText('답')).toHaveValue('안녕하세요.')
-    expect(sheet.getByRole('button', { name: '답 고치기' })).toBeInTheDocument()
-    expect(sheet.getByText(/문장이 더 필요해요\./)).toBeInTheDocument()
+    expect(await sheet.findByText('모든 문항에 답했어요.')).toBeInTheDocument()
+    expect(sheet.queryByLabelText('답')).toBeNull()
+    expect(sheet.getByRole('combobox', { name: /저장한 답변 다시 보기/ })).toBeInTheDocument()
+    expect(sheet.queryByRole('button', { name: '답 고치기' })).toBeNull()
   })
 
   // VOICE-60, VOICE-32: an answered prompt reopens on its answer; the rewrite replaces it — a
@@ -340,10 +365,13 @@ describe('the 학습 데이터 screen', () => {
 
     await user.click(await screen.findByRole('button', { name: '문항 풀기' }))
     const sheet = within(await screen.findByRole('dialog'))
-    expect(await sheet.findByText('13% 확보')).toBeInTheDocument()
+    await user.click(await sheet.findByRole('combobox', { name: /저장한 답변 다시 보기/ }))
+    await user.click(
+      await screen.findByRole('option', { name: /블로그 글을 시작할 때 쓰는 첫인사/ }),
+    )
     const field = await sheet.findByLabelText('답')
     expect(field).toHaveValue('안녕하세요. 반가워요.')
-    expect(field).toHaveFocus()
+    expect(field).not.toHaveFocus()
     await user.type(field, ' 오늘도 와 주셔서 고마워요.')
     await user.click(sheet.getByRole('button', { name: '답 고치기' }))
 
@@ -356,8 +384,10 @@ describe('the 학습 데이터 screen', () => {
         },
       ]),
     )
-    expect(await sheet.findByText('15% 확보')).toBeInTheDocument()
-    expect(await sheet.findByText(/음식이나 음료 사진/)).toBeInTheDocument()
+    expect(await sheet.findByText('모든 문항에 답했어요.')).toBeInTheDocument()
+    expect(sheet.queryByLabelText('답')).toBeNull()
+    await user.click(sheet.getByRole('combobox', { name: /저장한 답변 다시 보기/ }))
+    await user.click(await screen.findByRole('option', { name: /음식이나 음료 사진/ }))
     expect(await sheet.findByRole('img', { name: '고른 사진' })).toHaveAttribute(
       'src',
       'https://storage.test/voices/a2.jpg',
@@ -371,7 +401,8 @@ describe('the 학습 데이터 screen', () => {
         uploadId: '',
       }),
     )
-    expect(await sheet.findByText(/가격이나 양, 가성비/)).toBeInTheDocument()
+    expect(await sheet.findByText('모든 문항에 답했어요.')).toBeInTheDocument()
+    expect(sheet.queryByLabelText('답')).toBeNull()
   })
 
   // VOICE-60: a photo prompt is answered on the owner's own photo, converted and PUT first.
@@ -382,6 +413,7 @@ describe('the 학습 데이터 screen', () => {
     renderMaterials(
       {
         answers,
+        voices: MADE,
         samples: [{ id: 'a0', label: '', kind: 'answer', promptKey: 'opening_greeting' }],
       },
       calls,
@@ -418,6 +450,7 @@ describe('the 학습 데이터 screen', () => {
     vi.mocked(putPhoto).mockRejectedValueOnce(new Error('offline'))
     renderMaterials({
       answers,
+      voices: MADE,
       samples: [{ id: 'a0', label: '', kind: 'answer', promptKey: 'opening_greeting' }],
     })
 

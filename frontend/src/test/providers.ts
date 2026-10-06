@@ -212,13 +212,45 @@ export function registerProviderService(router: ConnectRouter, options: FakeProv
         unavailableReason: selection.unavailableReason ?? '',
       }),
     )
-    // Like the server: a vanished choice is told once, then it is gone — but a plan-locked one
-    // is kept, because an upgrade must restore it with no re-selection.
-    selections = selections.filter(
-      (selection) =>
-        registered(selection.providerId, selection.modelId) || unaffordableFor(selection),
-    )
     return create(GetSelectionsResponseSchema, { selections: answer })
+  })
+
+  rpc(ProviderService.method.initializeDefaultSelections, () => {
+    calls?.push('InitializeDefaultSelections')
+    const eligible = (model: FakeModel | undefined, stage: Stage) => {
+      if (!model || model.disabledReason !== undefined || model.aiPriceUnavailable) return false
+      const stages = model.stages ?? [
+        Stage.WRITE,
+        Stage.ANALYZE,
+        ...(model.vision ? [Stage.OBSERVE] : []),
+      ]
+      return stages.includes(stage) && (model.access?.[stage]?.entitled ?? true)
+    }
+    for (const stage of [Stage.OBSERVE, Stage.ANALYZE, Stage.WRITE]) {
+      if (selections.some((selection) => selection.stage === stage)) continue
+      const recommended = recommendationSets
+        .flatMap((set) => set.selections)
+        .find(
+          (item) =>
+            item.stage === stage &&
+            eligible(registered(item.active?.providerId ?? '', item.active?.modelId ?? ''), stage),
+        )?.active
+      const model = recommended
+        ? registered(recommended.providerId, recommended.modelId)
+        : models.find((model) => eligible(model, stage))
+      if (model) selections.push({ stage, providerId: model.providerId, modelId: model.modelId })
+    }
+    return create(GetSelectionsResponseSchema, {
+      selections: selections.map((selection) =>
+        create(SelectionSchema, {
+          stage: selection.stage,
+          ref: { providerId: selection.providerId, modelId: selection.modelId },
+          missing: !registered(selection.providerId, selection.modelId),
+          requiredPlan: selection.requiredPlan ?? '',
+          unavailableReason: selection.unavailableReason ?? '',
+        }),
+      ),
+    })
   })
 
   rpc(ProviderService.method.saveSelection, async (req) => {

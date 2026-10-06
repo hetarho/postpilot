@@ -20,6 +20,7 @@ export function useVoicePrompts(): {
   prompts: VoicePrompt[]
   isPending: boolean
   isError: boolean
+  refetch: () => void
 } {
   const transport = useTransport()
   const query = useQuery({
@@ -30,6 +31,9 @@ export function useVoicePrompts(): {
   const prompts = useMemo(
     () =>
       query.data?.prompts.map((prompt) => ({
+        scene: prompt.scene,
+        hint: prompt.hint,
+        starter: prompt.starter,
         key: prompt.key,
         part: requirePromptPart(prompt.part),
         photo: prompt.photo,
@@ -37,7 +41,14 @@ export function useVoicePrompts(): {
       })) ?? [],
     [query.data],
   )
-  return { prompts, isPending: query.isPending, isError: query.isError }
+  return {
+    prompts,
+    isPending: query.isPending,
+    isError: query.isError,
+    refetch: () => {
+      void query.refetch()
+    },
+  }
 }
 
 /** One 학습 글 opened for its owner: the full text and a photo answer's fresh view URL. */

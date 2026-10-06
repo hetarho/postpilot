@@ -442,9 +442,9 @@ describe('theme preferences in the real route tree', () => {
       readyRole: 'heading' as const,
       readyName: '내 글',
       // The shell reads the balance for its credit control (QUOTA-27), so the authenticated
-      // surface's baseline is three calls; what this case pins is that the preferences add
+      // surface also prepares active model defaults; this case pins that the preferences add
       // none of their own.
-      expectedCalls: ['GetMe', 'GetMyPlan', 'ListPosts'],
+      expectedCalls: ['GetMe', 'GetMyPlan', 'ListPosts', 'InitializeDefaultSelections'],
     },
   ])(
     'reaches and applies all three preferences on the $surface surface without an RPC',
@@ -455,7 +455,10 @@ describe('theme preferences in the real route tree', () => {
       const { router } = renderAppAt(at, { user: account, calls, theme: theme.ports })
 
       expect(await screen.findByRole(readyRole, { name: readyName })).toBeInTheDocument()
-      await waitFor(() => expect(calls).toEqual(expectedCalls))
+      await waitFor(() => {
+        expect(calls).toHaveLength(expectedCalls.length)
+        expect(calls).toEqual(expect.arrayContaining(expectedCalls))
+      })
       const callsBeforePreferences = [...calls]
       const locationBeforePreferences = router.state.location.href
       const localeBeforePreferences = document.documentElement.lang

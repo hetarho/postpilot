@@ -28,23 +28,27 @@ describe('guarded setup lifecycle', () => {
   })
   it('rejects unknown owners, obsolete steps, premature finish and unconfirmed completion', () => {
     const state = first()
-    expect(move(state, { ownerId: 'bob', type: 'skip', step: 'models' })).toBe(state)
-    expect(move(state, { ownerId, type: 'next', step: 'voice', confirmed: true })).toBe(state)
-    expect(move(state, { ownerId, type: 'next', step: 'models', confirmed: false })).toBe(state)
+    expect(state.step).toBe('voice')
+    expect(state.plan).toEqual(['voice', 'post-template', 'clip-template'])
+    expect(move(state, { ownerId: 'bob', type: 'skip', step: 'voice' })).toBe(state)
+    expect(move(state, { ownerId, type: 'next', step: 'clip-template', confirmed: true })).toBe(
+      state,
+    )
+    expect(move(state, { ownerId, type: 'next', step: 'voice', confirmed: false })).toBe(state)
     expect(move(state, { ownerId, type: 'finish', target: '/' })).toBe(state)
   })
   it('allows exactly one operation and rejects duplicate submissions, stale responses and navigation while pending', () => {
-    const state = move(first(), { ownerId, type: 'begin', step: 'models' })
+    const state = move(first(), { ownerId, type: 'begin', step: 'voice' })
     expect(state.phase).toBe('saving')
-    expect(move(state, { ownerId, type: 'begin', step: 'models' })).toBe(state)
-    expect(move(state, { ownerId, type: 'skip', step: 'models' })).toBe(state)
+    expect(move(state, { ownerId, type: 'begin', step: 'voice' })).toBe(state)
+    expect(move(state, { ownerId, type: 'skip', step: 'voice' })).toBe(state)
     expect(move(state, { ownerId, type: 'back' })).toBe(state)
     expect(move(state, { ownerId, type: 'defer', target: '/' })).toBe(state)
     expect(
       move(state, {
         ownerId,
         type: 'success',
-        step: 'voice',
+        step: 'post-template',
         operation: state.operation,
         complete: true,
       }),
@@ -53,7 +57,7 @@ describe('guarded setup lifecycle', () => {
       move(state, {
         ownerId,
         type: 'success',
-        step: 'models',
+        step: 'voice',
         operation: state.operation - 1,
         complete: true,
       }),
@@ -62,37 +66,37 @@ describe('guarded setup lifecycle', () => {
       move(state, {
         ownerId,
         type: 'success',
-        step: 'models',
+        step: 'voice',
         operation: state.operation,
         complete: false,
       }).step,
-    ).toBe('models')
+    ).toBe('voice')
     expect(
       move(state, {
         ownerId,
         type: 'success',
-        step: 'models',
+        step: 'voice',
         operation: state.operation,
         complete: true,
       }).step,
-    ).toBe('voice')
+    ).toBe('post-template')
   })
   it('retains a failed step and issues a fresh operation identity when retrying', () => {
-    const pending = move(first(), { ownerId, type: 'begin', step: 'models' })
+    const pending = move(first(), { ownerId, type: 'begin', step: 'voice' })
     const failed = move(pending, {
       ownerId,
       type: 'failure',
-      step: 'models',
+      step: 'voice',
       operation: pending.operation,
     })
-    expect(failed).toMatchObject({ phase: 'failed', step: 'models' })
-    const retry = move(failed, { ownerId, type: 'begin', step: 'models' })
+    expect(failed).toMatchObject({ phase: 'failed', step: 'voice' })
+    const retry = move(failed, { ownerId, type: 'begin', step: 'voice' })
     expect(retry.operation).toBe(pending.operation + 1)
     expect(
       move(retry, {
         ownerId,
         type: 'success',
-        step: 'models',
+        step: 'voice',
         operation: pending.operation,
         complete: true,
       }),
@@ -128,7 +132,7 @@ describe('guarded setup lifecycle', () => {
   it('resumes only an eligible missing step, respects explicit skips and preserves saved work on Back', () => {
     const progress = {
       ...emptySetupProgress(),
-      skipped: ['models' as const],
+      skipped: ['clip-template' as const],
       resume: 'voice' as const,
     }
     const resumed = move(initialSetupState(ownerId), {
@@ -146,7 +150,7 @@ describe('guarded setup lifecycle', () => {
       move(initialSetupState(ownerId), {
         ownerId,
         type: 'hydrate',
-        missing: ['clip-template'],
+        missing: ['post-template'],
         progress,
       }).step,
     ).toBe('welcome')

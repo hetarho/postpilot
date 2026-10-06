@@ -10,44 +10,79 @@ export function HomePage() {
     <FirstUseSetupGate>
       <main
         className={pageStyles({
-          width: 'wide',
-          className: 'flex flex-1 flex-col justify-center py-12 sm:py-20',
+          width: 'board',
+          className: 'flex flex-1 flex-col justify-center py-12 sm:py-16 lg:py-20',
         })}
       >
-        <div className="mx-auto w-full max-w-3xl">
-          <Typography variant="launch" className="break-words">
-            {t('home.heading')}
-            <br />
-            <span className="text-link-fg-current">{t('home.emphasis')}</span>
-          </Typography>
-          <Typography variant="body" className="text-content-secondary mt-6">
-            {t('home.intro')}
-          </Typography>
-          <nav aria-label={t('home.choices')} className="mt-12 grid gap-4 sm:grid-cols-2 sm:gap-6">
-            <Link to="/posts/new" className={choiceStyles()}>
-              <div className="flex items-center justify-between">
-                <PenLine aria-hidden="true" className="text-link-fg-current size-7" />
-                <ArrowUpRight aria-hidden="true" className="text-content-tertiary size-5" />
+        <div className="grid w-full gap-10 sm:gap-12 lg:grid-cols-2 lg:items-center lg:gap-16">
+          <div className="min-w-0">
+            <Typography variant="launch" className="break-words">
+              {t('home.heading')}
+              <br />
+              <span className="text-link-fg-current">{t('home.emphasis')}</span>
+            </Typography>
+            <Typography variant="body" className="text-content-secondary max-w-measure mt-6">
+              {t('home.intro')}
+            </Typography>
+          </div>
+          <nav
+            aria-label={t('home.choices')}
+            className="grid min-w-0 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-1"
+          >
+            <Link
+              to="/posts/new"
+              aria-labelledby="home-post-label"
+              aria-describedby="home-post-description"
+              className={choiceStyles(
+                'min-h-40 justify-between lg:min-h-44 lg:flex-row lg:items-center',
+              )}
+            >
+              <div className="flex items-center justify-between lg:contents">
+                <PenLine aria-hidden="true" className="text-link-fg-current size-8 shrink-0" />
+                <ArrowUpRight
+                  aria-hidden="true"
+                  className="text-content-tertiary size-5 shrink-0 lg:order-last"
+                />
               </div>
-              <div className="min-w-0">
-                <Typography variant="title" as="span" className="block">
+              <div className="min-w-0 lg:flex-1">
+                <Typography variant="title" as="span" id="home-post-label" className="block">
                   {t('home.post')}
                 </Typography>
-                <Typography variant="body" as="span" className="text-content-secondary mt-2 block">
+                <Typography
+                  variant="body"
+                  as="span"
+                  id="home-post-description"
+                  className="text-content-secondary mt-2 block"
+                >
                   {t('home.postDescription')}
                 </Typography>
               </div>
             </Link>
-            <Link to="/clips/new" className={choiceStyles()}>
-              <div className="flex items-center justify-between">
-                <Clapperboard aria-hidden="true" className="text-link-fg-current size-7" />
-                <ArrowUpRight aria-hidden="true" className="text-content-tertiary size-5" />
+            <Link
+              to="/clips/new"
+              aria-labelledby="home-clip-label"
+              aria-describedby="home-clip-description"
+              className={choiceStyles(
+                'min-h-40 justify-between lg:min-h-44 lg:flex-row lg:items-center',
+              )}
+            >
+              <div className="flex items-center justify-between lg:contents">
+                <Clapperboard aria-hidden="true" className="text-link-fg-current size-8 shrink-0" />
+                <ArrowUpRight
+                  aria-hidden="true"
+                  className="text-content-tertiary size-5 shrink-0 lg:order-last"
+                />
               </div>
-              <div className="min-w-0">
-                <Typography variant="title" as="span" className="block">
+              <div className="min-w-0 lg:flex-1">
+                <Typography variant="title" as="span" id="home-clip-label" className="block">
                   {t('home.clip')}
                 </Typography>
-                <Typography variant="body" as="span" className="text-content-secondary mt-2 block">
+                <Typography
+                  variant="body"
+                  as="span"
+                  id="home-clip-description"
+                  className="text-content-secondary mt-2 block"
+                >
                   {t('home.clipDescription')}
                 </Typography>
               </div>

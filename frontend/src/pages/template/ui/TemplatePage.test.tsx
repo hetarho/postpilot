@@ -287,6 +287,7 @@ describe('the template screen', () => {
     // The request box reads the 글 작성 모델 and one request's estimate; nothing here starts a
     // request or any other job (TMPL-16: the request is the one surface that does, on a press).
     const allowed = [
+      'InitializeDefaultSelections',
       'GetMe',
       'GetMyPlan',
       'ListTemplates',

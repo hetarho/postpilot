@@ -9,6 +9,7 @@ export type {
 } from './model/fingerprint'
 export { FINGERPRINT_ITEMS, fingerprintRows, fingerprintSentence } from './model/fingerprint'
 export type {
+  WritingVoiceOrigin,
   Voice,
   VoiceAiField,
   VoiceAiPart,

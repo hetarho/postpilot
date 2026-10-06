@@ -4,3 +4,5 @@
  *  Hangul syllable is one character here too. */
 
 export const VOICE_NAME_MAX_CHARS = 50
+
+export const VOICE_INITIAL_QUESTION_COUNT = 10

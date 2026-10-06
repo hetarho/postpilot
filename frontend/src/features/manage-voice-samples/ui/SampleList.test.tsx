@@ -30,6 +30,9 @@ function renderList(calls: string[]) {
   const transport = createFakeAuthTransport({
     calls,
     voice: {
+      prompts: [
+        { key: 'photo_food', part: 'description', photo: true, text: '간식 사진을 소개해 주세요.' },
+      ],
       samples: SAMPLES.map((sample) => ({
         ...sample,
         body: sample.kind === 'answer' ? '짜장면이 맛있었어요.' : '제주에 다녀왔어요.',
@@ -49,7 +52,7 @@ describe('the 학습 글 list', () => {
     const rows = screen.getAllByRole('listitem')
     expect(rows[1]).toHaveTextContent('제주')
     expect(rows[1]).toHaveTextContent('붙여 넣은 글')
-    expect(await within(rows[0]!).findByText(/음식이나 음료 사진 한 장을 골라/)).toBeInTheDocument()
+    expect(await within(rows[0]!).findByText('간식 사진을 소개해 주세요.')).toBeInTheDocument()
     expect(rows[0]).toHaveTextContent('문항 답')
     expect(rows[0]).toHaveTextContent('사진')
   })

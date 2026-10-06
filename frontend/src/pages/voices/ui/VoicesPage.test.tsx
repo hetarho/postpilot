@@ -3,6 +3,7 @@ import { cleanup, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { initializeI18n } from '@/app/providers/i18n'
 import { renderAppAt } from '@/test/app'
+import { createFakeAuthTransport } from '@/test/session'
 import type { FakeVoiceOptions, FakeVoiceRow } from '@/test/voice'
 
 const USER = { id: 'alice' }
@@ -59,9 +60,10 @@ describe('the voice directory', () => {
     expect(screen.queryByRole('button', { name: /삭제$/ })).not.toBeInTheDocument()
     expect(screen.queryByText('한국어')).not.toBeInTheDocument()
 
-    // No creation form on the page — one docked action opens it instead.
+    // Both creation methods live in the dock, outside the saved voices.
     expect(screen.queryByLabelText('말투 이름')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: '새 말투 만들기' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'AI 말투 추천받기' })).toBeInTheDocument()
 
     const deleted = await deletedGroup()
     expect(deleted.getByRole('link', { name: '옛 말투' })).toBeInTheDocument()
@@ -71,7 +73,14 @@ describe('the voice directory', () => {
     expect(
       calls.filter(
         (call) =>
-          !['GetMe', 'GetMyPlan', 'ListVoices', 'ListModels', 'GetSelections'].includes(call),
+          ![
+            'GetMe',
+            'GetMyPlan',
+            'ListVoices',
+            'ListModels',
+            'GetSelections',
+            'InitializeDefaultSelections',
+          ].includes(call),
       ),
     ).toEqual([])
   })
@@ -82,6 +91,57 @@ describe('the voice directory', () => {
     await screen.findByRole('heading', { level: 1, name: '말투' })
     expect(screen.queryByText(/삭제된 말투/)).not.toBeInTheDocument()
   })
+
+  it.each(['close button', 'Escape'] as const)(
+    'lets an established account browse AI styles and returns focus on %s without generating work',
+    async (dismissal) => {
+      const user = userEvent.setup()
+      const procedures: string[] = []
+      const base = createFakeAuthTransport({
+        user: USER,
+        existingSetup: true,
+        voice: { voices: VOICES },
+      })
+      const transport = new Proxy(base, {
+        get(target, property) {
+          if (property !== 'unary') return Reflect.get(target, property)
+          return (...args: unknown[]) => {
+            procedures.push((args[0] as { name: string }).name)
+            return Reflect.apply(target.unary, target, args)
+          }
+        },
+      })
+      const { router } = renderAppAt('/voices', { user: USER, transport })
+      const trigger = await screen.findByRole('button', { name: 'AI 말투 추천받기' })
+      expect(procedures.filter((name) => /WritingVoiceCandidate/.test(name))).toEqual([])
+      expect(screen.queryByRole('dialog')).toBeNull()
+
+      await user.click(trigger)
+      const dialog = await screen.findByRole('dialog')
+      expect(
+        await within(dialog).findByText(
+          'AI가 서로 다른 느낌의 말투 8개를 만들어요. 예시를 읽고 마음에 드는 스타일 하나를 골라 주세요.',
+        ),
+      ).toBeVisible()
+      await waitFor(() => expect(procedures).toContain('GetLatestWritingVoiceCandidates'))
+      expect(procedures.filter((name) => /WritingVoiceCandidate/.test(name))).toEqual([
+        'GetLatestWritingVoiceCandidates',
+      ])
+      expect(procedures.filter((name) => /^(Start|Analyze|CreateVoice|Adopt)/.test(name))).toEqual(
+        [],
+      )
+      expect(router.state.location.pathname).toBe('/voices')
+
+      if (dismissal === 'Escape') await user.keyboard('{Escape}')
+      else await user.click(within(dialog).getByRole('button', { name: /^(닫기|돌아가기)$/ }))
+      await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+      expect(trigger).toHaveFocus()
+      expect(router.state.location.pathname).toBe('/voices')
+      expect(procedures.filter((name) => /^(Start|Analyze|CreateVoice|Adopt)/.test(name))).toEqual(
+        [],
+      )
+    },
+  )
 
   // VOICE-4, VOICE-52: an account starts with no voice, and the list says what one is.
   it('says in plain words what a voice is when there is none', async () => {

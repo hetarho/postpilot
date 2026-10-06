@@ -88,8 +88,9 @@ describe('the guideline list', () => {
     await user.click(within(items[1]).getByRole('button', { expanded: false }))
     expect(within(items[1]).getByText('무인가게 리뷰')).toBeInTheDocument()
 
-    // A15: mounting the screen starts no job and calls no provider ([I5]).
+    // A15: the shell may prepare defaults; the screen starts no job and calls no AI ([I5]).
     const allowed = [
+      'InitializeDefaultSelections',
       'GetMe',
       'GetMyPlan',
       'ListGuidelines',
@@ -906,6 +907,7 @@ describe('the guideline candidate section', () => {
 
     // A12: reading the section calls no provider and enqueues nothing ([I5]).
     const allowed = [
+      'InitializeDefaultSelections',
       'GetMe',
       'GetMyPlan',
       'ListGuidelines',

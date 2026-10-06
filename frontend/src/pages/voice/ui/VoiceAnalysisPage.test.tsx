@@ -86,7 +86,10 @@ describe('the 말투 분석 tab', () => {
     })
 
     expect(await screen.findByRole('heading', { level: 2, name: '말투 학습' })).toBeInTheDocument()
-    expect(screen.getByText('말투 학습에 필요한 정보')).toBeInTheDocument()
+    expect(screen.getByRole('meter', { name: '나의 말투 찾기' })).toHaveAttribute(
+      'aria-valuenow',
+      '0',
+    )
     expect(router.state.location.pathname).toBe(`${DEFAULT}/materials`)
     expect(screen.queryByRole('navigation', { name: '말투 설정' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: '말투 만들기' })).toBeDisabled()

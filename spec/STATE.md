@@ -24,23 +24,23 @@
 | id | rev | tasked | pending | [?] |
 |---|---|---|---|---|
 | ARCH | 16 | 9 | ARCH-52+ ARCH-53+ ARCH-56+ ARCH-57+ ARCH-34✎ ARCH-11✎ ARCH-45✎ ARCH-60+ ARCH-61+ ARCH-62+ ARCH-63+ ARCH-64+ ARCH-65+ ARCH-66+ ARCH-67+ ARCH-68+ | 0 |
-| AUTH | 11 | 11 | - | 0 |
-| QUOTA | 35 | 35 | - | 0 |
-| POST | 32 | 31 | POST-108+ | 0 |
-| VOICE | 8 | 7 | VOICE-32✎ | 0 |
+| AUTH | 13 | 13 | - | 0 |
+| QUOTA | 36 | 36 | - | 0 |
+| POST | 34 | 34 | - | 0 |
+| VOICE | 11 | 11 | - | 0 |
 | GEN | 24 | 24 | - | 0 |
-| MODEL | 31 | 31 | - | 0 |
-| TMPL | 21 | 21 | - | 0 |
-| GUIDE | 13 | 13 | - | 0 |
+| MODEL | 33 | 33 | - | 0 |
+| TMPL | 22 | 22 | - | 0 |
+| GUIDE | 14 | 14 | - | 0 |
 | EXPORT | 10 | 10 | - | 0 |
 | LANG | 7 | 7 | - | 0 |
-| THEME | 22 | 22 | - | 0 |
+| THEME | 24 | 24 | - | 0 |
 | MKT | 9 | 9 | - | 0 |
 | VIDEO | 6 | 6 | - | 0 |
-| CLIP | 56 | 56 | - | 2 |
+| CLIP | 57 | 57 | - | 2 |
 | CDS | 33 | 33 | - | 1 |
 | BILL | 9 | 9 | - | 0 |
-| MEM | 5 | 5 | - | 2 |
+| MEM | 6 | 6 | - | 2 |
 | QUAL | 7 | 7 | - | 0 |
 | GIFT | 3 | 3 | - | 0 |
 | DUB | 3 | 3 | - | 0 |
@@ -65,7 +65,7 @@
 |---|---|---|---|---|
 | T539 | Qualify the complete Korean voice-creation milestone | ARCH DUB MODEL CDS THEME | T538 | blocked@261005 |
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
-| T590 | Bound Max server-render admission and waiting | ARCH CLIP INFRA | T589 | todo |
+| T590 | Bound Max server-render admission and waiting | ARCH CLIP INFRA | T589 | blocked@261006 |
 | T591 | Freeze one browser composition and time contract | ARCH CLIP CDS | T588 | todo |
 | T592 | Decode selected video ranges in a bounded browser pipeline | ARCH CLIP CDS | T591 | todo |
 | T593 | Bound selected audio and immutable narration processing | ARCH CLIP CDS DUB | T591 | todo |
@@ -82,28 +82,27 @@
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | todo |
 
 ## next
-- T588/T589 are complete. The user requested stopping after T589; T590 is the next browser-media task, followed by T591-T604 dependencies, and none has started. T539/T550 retain real voice/listening qualification and current browser-contract revalidation.
-- ARCH r16 and INFRA r2 browser changes are mapped to T588-T604; earlier ARCH revisions and unrelated INFRA database/backups remain unconsumed, so ARCH tasked=9 and INFRA tasked=0 stay. ARCH-10/INFRA-6 database alignment, POST r32 and VOICE r8 verification-only deltas and VOICE-31 remain outside this scope.
-- ops: lower TEMPLATE_PHOTO_ROW_MAX / VITE_TEMPLATE_PHOTO_ROW_MAX to 3 in explicit production overrides. Ideation searchable-details continues; ordinary voice/narration readiness remains closed until its existing qualification passes.
+- Creation-first novice UX follow-up is complete (T608–T611); use the existing browser-media work group/assigned workspaces for its remaining implementation and qualification gates.
+- doc-review ARCH QUOTA POST VOICE GEN MODEL when documentation cleanup is requested; current lint hints are informational.
 
 ## log
+- 261007 T611 done: 3383 FE tests, BE/build/tooling and 62 deploy tests pass; 80 live-browser layout checks and personal/AI/settings recovery flows pass
 - 261007 T612 done: grounded targeted tags in both languages; generation/guideline tests, vet and production build pass; whole-tree build fails on existing tmp main/run duplicates
 - 261007 T612 start: implement grounded entity and area/topic priority in both tag-rule languages
 - 261007 create-task GEN r24 done: T612 updates the existing switchable tag rule and prompt goldens
 - 261007 update-ssot GEN r24 done: grounded entity and area/topic tags take priority; create-task GEN start
 - 261007 update-ssot GEN start: prioritize grounded entity and local topic tags over broad hashtags
-- 261006 T589 done: current Max-only native access, preserved legacy jobs/history and browser-first ko/en surfaces; 3321 FE tests and full local CI passed
-- 261006 user stop boundary: finish T589 and commit current browser-media work; T590-T604 remain todo
-- 261006 T589 start: Max-only commercial server admission and browser-first controls, preserving previously accepted work and usage history
-- 261006 T588 done: measured browser baseline, common output verification and version/license evidence; 3307 FE tests and local CI passed, SDK timeline and real-device gates remain unqualified
-- 261006 T605 done: friendly voice roles, sourced expiring cost references and precise public-rate draft defaults; 3306 FE tests and all local checks passed
-- 261006 T605 start: labelled creation/reading models, sourced public cost references and exact prefilled pricing drafts; MODEL r31 consumed
-- 261006 update-ssot MODEL start: explain voice design versus script reading, show public cost references and prefill common account-price drafts
-- 261006 T588 start: reproducible browser media phase/resource baselines and qualified dependency/license inventory
-- 261006 create-task browser media done: T588-T604; CLIP r56 CDS r33 QUOTA r35 consumed, scoped ARCH/INFRA mappings preserve earlier pending work
-- 261006 T586/T587 freshness: ARCH r16 browser execution and QUOTA r35 commercial-export changes do not affect speech catalog administration; task bases synchronized
-- 261006 T587 done: list administration and common pricing UI; 3292 FE tests, complete local CI and deterministic generation passed
-- 261006 T586 done: unique server-owned registrations, common tariff snapshots and retained legacy bindings; all BE tests passed after sequential clip-store recheck
-- 261006 create-task browser media start: consume CLIP r56 CDS r33 QUOTA r35; map scoped ARCH r16 and INFRA r2 changes without consuming older infrastructure work
-- 261006 update-ssot ARCH r16 CLIP r56 CDS r33 QUOTA r35 INFRA r2: browser media contracts, qualified motion/proxies and bounded Max-only exports
-- 261006 planning impact: T539/T550 require browser-contract revalidation; T586/T587 retain unchanged speech decisions but must check advanced ARCH/QUOTA bases; active task files are not edited
+- 261007 T610 done: durable one-call eight-style generation, owner recovery, atomic synthetic adoption and provenance pass backend/concurrency/usage checks
+- 261007 T609 done: 222 friendly stable Korean scenes, ten-answer readiness and legacy compatibility pass personal voice checks
+- 261007 T608 done: recommended active defaults preserve manual/comparison selections; SQLite races and owner-scoped frontend regressions pass
+- 261007 create-task consumes VOICE r11 into owned T611 settings entry; T609/T610 unchanged personal/backend contracts rebased
+- 261007 update-ssot VOICE r11: generated styles remain directly accessible from writing settings after onboarding; fix MODEL-87 cross-reference
+- 261007 verification fix: synthetic media graph fixtures use the existing disk-probe seam; real capacity/refusal tests and production limits remain unchanged
+- 261007 notation correction: default-selection decision is MODEL-87; existing MODEL-85 speech tariff remains unchanged
+- 261007 create-task novice UX done: T608 model defaults, T609 personal question contract, T610 generated style backend, T611 responsive novice UI
+- 261007 T608-T611 start: root owns execution/state and applies isolated reviewed patch proposals; code dependencies integrate before final verification
+- 261007 create-task novice UX start: model defaults, question contract, synthetic batches and responsive integration
+- 261007 update-ssot novice UX done: THEME r24 AUTH r13 MODEL r33 VOICE r10 QUOTA r36; no browser-media contract change
+- 261007 update-ssot THEME AUTH MODEL VOICE start: responsive creation, automatic recommended models, ten-question voice bootstrap and eight synthetic candidates
+- 261007 T607 done: 3330 frontend tests, all FE/tooling gates and real-browser setup/reload/touch/zoom checks pass; guarded optional setup preserves durable account work
+- 261007 create-task POST r34 no-op (no code impact): existing replace preserves creation-home/prior history

@@ -76,31 +76,33 @@ export function TemplateSetup({
           autoComplete="off"
           className="mt-2"
         />
-        <div className="mt-6">
-          {kind === 'post-template' ? (
-            <TemplateComposition value={body} onChange={setBody} />
-          ) : (
-            <CompositionBuilder source={body} onChange={setBody} />
-          )}
+        <div className="mt-6 grid gap-8 md:grid-cols-2">
+          <div className="min-w-0">
+            {kind === 'post-template' ? (
+              <TemplateComposition value={body} onChange={setBody} />
+            ) : (
+              <CompositionBuilder source={body} onChange={setBody} />
+            )}
+          </div>
+          <details open className="min-w-0">
+            <summary className="text-link-fg hover:text-link-fg-hover min-h-11 py-3">
+              <Typography variant="body" as="span">
+                {t('setup.preview')}
+              </Typography>
+            </summary>
+            {kind === 'post-template' ? (
+              <TemplatePreview titleArea="" body={body} />
+            ) : (
+              document && (
+                <CompositionPreview
+                  document={document}
+                  presets={{ intro: recipe.introPreset, outro: recipe.outroPreset }}
+                  captionStyles={recipe.allowedCaptionStyles}
+                />
+              )
+            )}
+          </details>
         </div>
-        <details className="mt-6">
-          <summary className="text-link-fg hover:text-link-fg-hover min-h-11 py-3">
-            <Typography variant="body" as="span">
-              {t('setup.preview')}
-            </Typography>
-          </summary>
-          {kind === 'post-template' ? (
-            <TemplatePreview titleArea="" body={body} />
-          ) : (
-            document && (
-              <CompositionPreview
-                document={document}
-                presets={{ intro: recipe.introPreset, outro: recipe.outroPreset }}
-                captionStyles={recipe.allowedCaptionStyles}
-              />
-            )
-          )}
-        </details>
       </fieldset>
       <div role="status" className="mt-4">
         {error && <FieldMessage>{error}</FieldMessage>}
@@ -108,7 +110,7 @@ export function TemplateSetup({
       <Button
         type="submit"
         variant="cta"
-        className="mt-4 w-full"
+        className="mt-4 w-full sm:w-auto"
         disabled={!valid || busy}
         pending={busy}
       >

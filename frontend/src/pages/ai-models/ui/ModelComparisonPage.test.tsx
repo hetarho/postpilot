@@ -607,7 +607,24 @@ describe('the 말투 반영 tab', () => {
           { ...writePair, extraCandidates: [{ providerId: 'openrouter', modelId: 'writer-c' }] },
         ],
       },
-      voice: { voices, samples: answers },
+      voice: {
+        voices,
+        samples: answers,
+        prompts: [
+          {
+            key: 'opening_greeting',
+            part: 'opening',
+            photo: false,
+            text: '블로그 글을 시작할 때 쓰는 첫인사를 평소처럼 2~5문장으로 써 보세요.',
+          },
+          {
+            key: 'photo_food',
+            part: 'description',
+            photo: true,
+            text: '음식이나 음료 사진 한 장을 골라, 블로그에 쓰듯 2~5문장으로 써 보세요.',
+          },
+        ],
+      },
       experiments: { reflectionStarts, candidateStarts, experimentId: 'reflection-1' },
     })
 
@@ -668,7 +685,24 @@ describe('the 말투 반영 tab', () => {
         models: writeModels.map((model) => ({ ...model, vision: true })),
         comparisonPairs: [writePair],
       },
-      voice: { voices, samples: answers },
+      voice: {
+        voices,
+        samples: answers,
+        prompts: [
+          {
+            key: 'opening_greeting',
+            part: 'opening',
+            photo: false,
+            text: '블로그 글을 시작할 때 쓰는 첫인사를 평소처럼 2~5문장으로 써 보세요.',
+          },
+          {
+            key: 'photo_food',
+            part: 'description',
+            photo: true,
+            text: '음식이나 음료 사진 한 장을 골라, 블로그에 쓰듯 2~5문장으로 써 보세요.',
+          },
+        ],
+      },
     })
 
     const prompt = await screen.findByRole('combobox', { name: /^비교할 문항/ })
