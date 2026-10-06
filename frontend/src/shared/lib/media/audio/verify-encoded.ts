@@ -1,5 +1,5 @@
 import { audioEncoderDelay } from './encoder-delay'
-import { integratedLoudness48k, truePeak48k } from './loudness'
+import { integratedLoudness48k, truePeak48k, loudnessRange48k } from './loudness'
 import type { EncodedAudioTrack, PcmChannels, AudioProcessorLimits } from './processing-types'
 import { waitAudioCodecCapacity, drainAudioCodec } from './codec-queue'
 
@@ -75,6 +75,7 @@ export async function verifyEncodedAudio(
     return {
       primingFrames,
       loudnessLUFS: Number.isFinite(loudness) ? loudness : undefined,
+      loudnessRangeLU: loudnessRange48k(aligned),
       truePeakDBTP: truePeak48k(aligned),
       silent: !Number.isFinite(loudness),
     }

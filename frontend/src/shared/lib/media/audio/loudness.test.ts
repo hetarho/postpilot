@@ -1,5 +1,10 @@
 import { expect, it } from 'vitest'
-import { integratedLoudness48k, normalizeLoudness48k, truePeak48k } from './loudness'
+import {
+  integratedLoudness48k,
+  normalizeLoudness48k,
+  truePeak48k,
+  loudnessRange48k,
+} from './loudness'
 
 const tone = (seconds = 3) =>
   Float32Array.from(
@@ -32,4 +37,34 @@ it('preserves the peak ceiling instead of compressing a high-crest signal', () =
   expect(result.truePeakDBTP).toBeCloseTo(-1.5, 6)
   expect(result.loudnessLUFS!).toBeLessThan(-17)
   expect(truePeak48k([input])).toBeLessThanOrEqual(-1.499)
+})
+
+it.each([
+  [[-20, -30], 10],
+  [[-20, -15], 5],
+  [[-40, -20], 20],
+  [[-50, -35, -20, -35, -50], 15],
+] as const)(
+  'matches EBU Tech3342 standard tone sequence %s within its1LU tolerance',
+  (levels, expected) => {
+    const input = Float32Array.from(
+      { length: levels.length * 20 * 48000 },
+      (_, index) =>
+        10 ** (levels[Math.floor(index / (20 * 48000))] / 20) *
+        Math.sin((2 * Math.PI * 1000 * index) / 48000),
+    )
+    expect(Math.abs(loudnessRange48k([input, input]) - expected)).toBeLessThan(1)
+  },
+)
+it('does not mistake a global gain for dynamic-range normalization', () => {
+  const input = Float32Array.from(
+    { length: 40 * 48000 },
+    (_, index) =>
+      (index < 20 * 48000 ? 0.01 : 0.1) * Math.sin((2 * Math.PI * 1000 * index) / 48000),
+  )
+  const before = loudnessRange48k([input, input])
+  normalizeLoudness48k([input], -16, -1.5)
+  expect(before).toBeGreaterThan(19)
+  expect(loudnessRange48k([input, input])).toBeCloseTo(before, 2)
+  expect(loudnessRange48k([new Float32Array(48000)])).toBe(0)
 })

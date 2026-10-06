@@ -34,9 +34,63 @@
     "delayed": {
       "bytes": 75080,
       "sha256": "aeeffdeb534b69553c49d2dbfede42e344da42b2517042ce95ed2bbd81d7a5bc"
+    },
+    "dynamic": {
+      "bytes": 898057,
+      "sha256": "99b0ac4c72401c14385ec0b5d7faab4771b7fda13de3f6b1317e835505b1c47e"
     }
   },
   "results": [
+    {
+      "id": "high-dynamic-selected",
+      "metadata": {
+        "provenance": "browser_client",
+        "codec": "aac",
+        "streamNumber": 1,
+        "sampleRate": 48000,
+        "channels": 2,
+        "firstTimestamp": -0.021333333333333333
+      },
+      "measurements": {
+        "sourceReads": 1895,
+        "sourceBytes": 794173,
+        "sourceReadMs": 1765.5049901008606,
+        "openMs": 12.085000038146973,
+        "decodeMs": 1787.3600044250488,
+        "decodedSamples": 1933312,
+        "logicalPcmBytes": 15456000,
+        "decoderReservedBytes": 786432,
+        "physicalPeakBytes": null
+      },
+      "decodeStart": 9.875,
+      "startSample": 474000,
+      "frames": 1920000,
+      "loudnessRangeLU": 19.99470335289615,
+      "afterGlobalGainLRA": 19.994703358572533,
+      "resources": {
+        "peakFrames": 2,
+        "peakBytes": 16384,
+        "liveFrames": 0,
+        "liveBytes": 0
+      },
+      "nativeReference": {
+        "frames": 1920000,
+        "rmse": 1.7882129082079789e-09,
+        "maxDifference": 1.4901161193847656e-08
+      },
+      "nativeLoudnorm": {
+        "input_i": "-21.23",
+        "input_tp": "-20.70",
+        "input_lra": "19.90",
+        "input_thresh": "-34.38",
+        "output_i": "-15.66",
+        "output_tp": "-5.48",
+        "output_lra": "16.90",
+        "output_thresh": "-26.84",
+        "normalization_type": "dynamic",
+        "target_offset": "-0.34"
+      }
+    },
     {
       "id": "long-selected",
       "metadata": {
@@ -50,9 +104,9 @@
       "measurements": {
         "sourceReads": 113,
         "sourceBytes": 81225,
-        "sourceReadMs": 100.84000253677368,
-        "openMs": 10.769999980926514,
-        "decodeMs": 100.20999765396118,
+        "sourceReadMs": 103.4850001335144,
+        "openMs": 9.865000247955322,
+        "decodeMs": 102.65500211715698,
         "decodedSamples": 108544,
         "logicalPcmBytes": 864000,
         "decoderReservedBytes": 786432,
@@ -61,6 +115,7 @@
       "decodeStart": 123.331,
       "startSample": 5919888,
       "frames": 96000,
+      "loudnessRangeLU": 0.9694946795690953,
       "resources": {
         "peakFrames": 2,
         "peakBytes": 16384,
@@ -86,9 +141,9 @@
       "measurements": {
         "sourceReads": 108,
         "sourceBytes": 78172,
-        "sourceReadMs": 83.78999853134155,
-        "openMs": 9.585000038146973,
-        "decodeMs": 82.59000301361084,
+        "sourceReadMs": 92.90000104904175,
+        "openMs": 9.954999923706055,
+        "decodeMs": 91.40999794006348,
         "decodedSamples": 103424,
         "logicalPcmBytes": 816000,
         "decoderReservedBytes": 786432,
@@ -97,6 +152,7 @@
       "decodeStart": -0.021333333333333333,
       "startSample": 0,
       "frames": 96000,
+      "loudnessRangeLU": 0.9763832282763829,
       "resources": {
         "peakFrames": 1,
         "peakBytes": 8192,
@@ -122,9 +178,9 @@
       "measurements": {
         "sourceReads": 105,
         "sourceBytes": 66808,
-        "sourceReadMs": 76.11000394821167,
-        "openMs": 8.424999713897705,
-        "decodeMs": 74.92500162124634,
+        "sourceReadMs": 79.33499956130981,
+        "openMs": 9.144999980926514,
+        "decodeMs": 78.11500072479248,
         "decodedSamples": 100352,
         "logicalPcmBytes": 397256,
         "decoderReservedBytes": 393216,
@@ -133,6 +189,7 @@
       "decodeStart": 2.99,
       "startSample": 131859,
       "frames": 96000,
+      "loudnessRangeLU": 0.9690404726098869,
       "currentReference": {
         "rmse": 0.00012096614717527343,
         "maxDifference": 0.00027809356932187446
@@ -162,8 +219,8 @@
       "measurements": {
         "sourceReads": 4,
         "sourceBytes": 6906,
-        "sourceReadMs": 3.864999771118164,
-        "openMs": 9.360000133514404,
+        "sourceReadMs": 3.2699999809265137,
+        "openMs": 8.914999961853027,
         "decodeMs": 0,
         "decodedSamples": 0,
         "logicalPcmBytes": 816000,
@@ -173,6 +230,7 @@
       "decodeStart": 2.978666666666667,
       "startSample": 0,
       "frames": 96000,
+      "loudnessRangeLU": 0,
       "resources": {
         "peakFrames": 0,
         "peakBytes": 0,
@@ -198,9 +256,9 @@
       "measurements": {
         "sourceReads": 108,
         "sourceBytes": 74970,
-        "sourceReadMs": 76.0399980545044,
-        "openMs": 9.404999732971191,
-        "decodeMs": 74.2249984741211,
+        "sourceReadMs": 88.1750020980835,
+        "openMs": 9.375,
+        "decodeMs": 86.82499980926514,
         "decodedSamples": 103424,
         "logicalPcmBytes": 816000,
         "decoderReservedBytes": 786432,
@@ -209,6 +267,7 @@
       "decodeStart": -0.021333333333333333,
       "startSample": 0,
       "frames": 96000,
+      "loudnessRangeLU": 0.9714169738911878,
       "resources": {
         "peakFrames": 1,
         "peakBytes": 8192,
@@ -288,13 +347,14 @@
       "durationUs": 4000000,
       "primingFrames": 2112,
       "loudnessLUFS": -16.001519353242017,
+      "loudnessRangeLU": 2.4495543648317177,
       "truePeakDBTP": -14.970696797164022,
       "sourceResources": {
         "sourceReads": 108,
         "sourceBytes": 74970,
-        "sourceReadMs": 85.24000072479248,
-        "openMs": 9.099999904632568,
-        "decodeMs": 83.68500232696533,
+        "sourceReadMs": 99.96500062942505,
+        "openMs": 9.414999961853027,
+        "decodeMs": 98.54500150680542,
         "peakRangePcmBytes": 1602432,
         "originals": [
           {
@@ -332,13 +392,14 @@
       "durationUs": 2666667,
       "primingFrames": 2112,
       "loudnessLUFS": -15.998148735273016,
+      "loudnessRangeLU": 2.208696628220615,
       "truePeakDBTP": -15.009439441642387,
       "sourceResources": {
         "sourceReads": 108,
         "sourceBytes": 74970,
-        "sourceReadMs": 74.37500047683716,
-        "openMs": 8.065000057220459,
-        "decodeMs": 73.20000123977661,
+        "sourceReadMs": 106.62500095367432,
+        "openMs": 9.485000133514404,
+        "decodeMs": 105.26000118255615,
         "peakRangePcmBytes": 1602432,
         "originals": [
           {
@@ -376,13 +437,14 @@
       "durationUs": 2000000,
       "primingFrames": 2112,
       "loudnessLUFS": -16.00030349869052,
+      "loudnessRangeLU": 0.9729180857312407,
       "truePeakDBTP": -14.925180930055749,
       "sourceResources": {
         "sourceReads": 108,
         "sourceBytes": 74970,
-        "sourceReadMs": 88.82499980926514,
-        "openMs": 9.050000190734863,
-        "decodeMs": 87.2900013923645,
+        "sourceReadMs": 112.26000118255615,
+        "openMs": 9.84499979019165,
+        "decodeMs": 110.91999912261963,
         "peakRangePcmBytes": 1602432,
         "originals": [
           {
@@ -420,13 +482,14 @@
       "durationUs": 1600000,
       "primingFrames": 2112,
       "loudnessLUFS": -16.001432046015946,
+      "loudnessRangeLU": 0.2852361313433036,
       "truePeakDBTP": -14.992806906494735,
       "sourceResources": {
         "sourceReads": 108,
         "sourceBytes": 74970,
-        "sourceReadMs": 76.74500036239624,
-        "openMs": 9.164999961853027,
-        "decodeMs": 75.13999843597412,
+        "sourceReadMs": 105.99499988555908,
+        "openMs": 9.59000015258789,
+        "decodeMs": 104.30499839782715,
         "peakRangePcmBytes": 1602432,
         "originals": [
           {
@@ -464,13 +527,14 @@
       "durationUs": 1333333,
       "primingFrames": 2112,
       "loudnessLUFS": -16.000452088027473,
+      "loudnessRangeLU": 0,
       "truePeakDBTP": -14.99122809730624,
       "sourceResources": {
         "sourceReads": 108,
         "sourceBytes": 74970,
-        "sourceReadMs": 69.03000020980835,
-        "openMs": 8.585000038146973,
-        "decodeMs": 67.38999891281128,
+        "sourceReadMs": 86.50500345230103,
+        "openMs": 10,
+        "decodeMs": 84.44000053405762,
         "peakRangePcmBytes": 1602432,
         "originals": [
           {
@@ -508,13 +572,14 @@
       "durationUs": 1000000,
       "primingFrames": 2112,
       "loudnessLUFS": -16.00355832461847,
+      "loudnessRangeLU": 0,
       "truePeakDBTP": -15.031483696249364,
       "sourceResources": {
         "sourceReads": 108,
         "sourceBytes": 74970,
-        "sourceReadMs": 91.1799988746643,
-        "openMs": 9.00499963760376,
-        "decodeMs": 89.41499900817871,
+        "sourceReadMs": 109.63000297546387,
+        "openMs": 9.400000095367432,
+        "decodeMs": 107.9850001335144,
         "peakRangePcmBytes": 1602432,
         "originals": [
           {
@@ -552,13 +617,14 @@
       "durationUs": 2866667,
       "primingFrames": 2112,
       "loudnessLUFS": -15.99968348973625,
+      "loudnessRangeLU": 2.382360090729776,
       "truePeakDBTP": -14.804845127106125,
       "sourceResources": {
         "sourceReads": 150,
         "sourceBytes": 164935,
-        "sourceReadMs": 121.48000144958496,
-        "openMs": 13.059999942779541,
-        "decodeMs": 118.66499662399292,
+        "sourceReadMs": 155.88000106811523,
+        "openMs": 15.875,
+        "decodeMs": 150.96000337600708,
         "peakRangePcmBytes": 1356288,
         "originals": [
           {
@@ -612,6 +678,7 @@
       "durationUs": 2000000,
       "primingFrames": 2112,
       "loudnessLUFS": -16.000033013980026,
+      "loudnessRangeLU": 0,
       "truePeakDBTP": -14.313746274943549,
       "sourceResources": {
         "sourceReads": 0,
@@ -639,13 +706,14 @@
       "durationUs": 2000000,
       "primingFrames": 2112,
       "loudnessLUFS": -16.000433682795553,
+      "loudnessRangeLU": 0.7518778284598007,
       "truePeakDBTP": -11.789200195226934,
       "sourceResources": {
         "sourceReads": 108,
         "sourceBytes": 74970,
-        "sourceReadMs": 73.90000104904175,
-        "openMs": 8.65999984741211,
-        "decodeMs": 72.35500001907349,
+        "sourceReadMs": 103.34000158309937,
+        "openMs": 9.105000019073486,
+        "decodeMs": 102.0699987411499,
         "peakRangePcmBytes": 1602432,
         "originals": [
           {
@@ -681,13 +749,14 @@
       "durationUs": 2000000,
       "primingFrames": 2112,
       "loudnessLUFS": -16.002275245108773,
+      "loudnessRangeLU": 0.17109824001489216,
       "truePeakDBTP": -11.386237136288585,
       "sourceResources": {
         "sourceReads": 108,
         "sourceBytes": 74970,
-        "sourceReadMs": 75.28000068664551,
-        "openMs": 8.335000038146973,
-        "decodeMs": 74.1049976348877,
+        "sourceReadMs": 95.27000188827515,
+        "openMs": 10.144999980926514,
+        "decodeMs": 93.06999826431274,
         "peakRangePcmBytes": 1602432,
         "originals": [
           {
@@ -723,13 +792,14 @@
       "durationUs": 2000000,
       "primingFrames": 2112,
       "loudnessLUFS": -16.001465087999247,
+      "loudnessRangeLU": 0.936831518579222,
       "truePeakDBTP": -13.396423468410543,
       "sourceResources": {
         "sourceReads": 108,
         "sourceBytes": 74970,
-        "sourceReadMs": 77.83499765396118,
-        "openMs": 8.974999904632568,
-        "decodeMs": 76.19500207901001,
+        "sourceReadMs": 97.42999839782715,
+        "openMs": 10.735000133514404,
+        "decodeMs": 95.19000339508057,
         "peakRangePcmBytes": 1602432,
         "originals": [
           {
@@ -765,13 +835,14 @@
       "durationUs": 2000000,
       "primingFrames": 2112,
       "loudnessLUFS": -16.001448901375657,
+      "loudnessRangeLU": 0.25402278708725134,
       "truePeakDBTP": -10.315814241551298,
       "sourceResources": {
         "sourceReads": 108,
         "sourceBytes": 74970,
-        "sourceReadMs": 75.67000198364258,
-        "openMs": 8.860000133514404,
-        "decodeMs": 74.03500509262085,
+        "sourceReadMs": 103.8149995803833,
+        "openMs": 9.239999771118164,
+        "decodeMs": 102.07499933242798,
         "peakRangePcmBytes": 1602432,
         "originals": [
           {
@@ -815,6 +886,13 @@
       "speechCalls": 0
     },
     {
+      "id": "high-dynamic-refusal",
+      "error": "AUDIO_LOUDNESS_RANGE_UNSUPPORTED",
+      "name": "Error",
+      "sourceCalls": 5,
+      "speechCalls": 0
+    },
+    {
       "id": "packet-refusal",
       "error": "AUDIO_PACKET_MEMORY_LIMIT"
     },
@@ -824,7 +902,7 @@
     }
   ],
   "limits": [
-    "Existing local normalizer measures integrated LUFS/true peak; LRA11 and dynamic-gain qualification remain T604.",
+    "Measured EBU Tech3342 LRA above11 is refused before AAC publication; no new dynamic compressor is introduced. Encoded PCM is measured again.",
     "Synthetic signals do not establish real-voice/listening, identified-device throughput or final T604 release qualification.",
     "Logical PCM/decoder reservations do not measure private codec/GPU/browser heap allocations.",
     "PCM/ALAC/FLAC block layouts and multichannel rematrix remain refused before decoder allocation; actual PCM evidence is AAC mono/stereo.",
@@ -832,10 +910,17 @@
     "AudioData lifecycle counters instrument source decoding; codec-private memory and whole-process allocation remain unmeasured."
   ],
   "sources": [
+    "https://tech.ebu.ch/docs/tech/tech3342.pdf",
+    "https://www.ffmpeg.org/ffmpeg-filters.html#loudnorm",
     "https://mediabunny.dev/guide/media-sinks",
     "https://mediabunny.dev/guide/reading-media-files"
   ],
   "requestSummary": {
+    "file/dynamic": {
+      "requests": 3876,
+      "maxRangeBytes": 104343,
+      "wholeResponses": 0
+    },
     "file/long": {
       "requests": 234,
       "maxRangeBytes": 34538,
@@ -889,6 +974,7 @@
     "speech": "Synthetic 1-second 770Hz stereo44.1 PCM WAV; exact immutable SHA256 used in fixture speech ref. No voice provider call.",
     "multichannel": "Synthetic 2-second 5.1 AAC silence, explicitly refused before decoder.",
     "block": "Synthetic 2-second stereo ALAC, explicitly refused before decoder because this bounded profile does not qualify its variable block layout.",
-    "delayed": "Synthetic 7-second 64x32 H264 video starting at0 with a4-second AAC stream beginning around3 seconds; before-audio cut matches native first_pts=0 silence without decoding later sound."
+    "delayed": "Synthetic 7-second 64x32 H264 video starting at0 with a4-second AAC stream beginning around3 seconds; before-audio cut matches native first_pts=0 silence without decoding later sound.",
+    "dynamic": "Synthetic60-second stereo AAC with20dB quiet/loud variation; only source10s..50s selected. EBU range is measured before/after global gain; five selected8s cuts refuse before AAC."
   }
 }

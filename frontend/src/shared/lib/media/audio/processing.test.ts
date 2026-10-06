@@ -37,7 +37,7 @@ it('refuses overlapping or excessive DSP inputs before transferring their owned 
   expect(() => processor.stretch(channels, 48000, 0.5, 512)).toThrow('AUDIO_PCM_MEMORY_LIMIT')
   expect(worker.postMessage).not.toHaveBeenCalled()
   const pending = processor.stretch(channels, 48000, 1, 64)
-  expect(() => processor.normalize(channels, -16, -1.5)).toThrow('AUDIO_WORKER_QUEUE_LIMIT')
+  expect(() => processor.normalize(channels, -16, -1.5, 11)).toThrow('AUDIO_WORKER_QUEUE_LIMIT')
   worker.respond({ kind: 'result', id: 1, result: channels })
   expect(await pending).toBe(channels)
   processor.close()
@@ -50,7 +50,7 @@ it('fences late results and gives active codecs a finite cleanup window on abort
   const controller = new AbortController(),
     processor = createAudioProcessor(controller.signal, limits),
     worker = FakeWorker.current
-  const pending = processor.normalize([new Float32Array(64), new Float32Array(64)], -16, -1.5)
+  const pending = processor.normalize([new Float32Array(64), new Float32Array(64)], -16, -1.5, 11)
   const stopped = expect(pending).rejects.toThrow('cancelled')
   controller.abort(new Error('cancelled'))
   await stopped

@@ -110,8 +110,8 @@ export function createAudioProcessor(signal: AbortSignal, limits: AudioProcessor
     close,
     stretch: (channels: PcmChannels, sampleRate: number, rate: number, frames: number, gain = 1) =>
       request<PcmChannels>({ kind: 'stretch', channels, sampleRate, rate, frames, gain }),
-    normalize: (channels: PcmChannels, target: number, ceiling: number) =>
-      request<AudioNormalization>({ kind: 'normalize', channels, target, ceiling }),
+    normalize: (channels: PcmChannels, target: number, ceiling: number, rangeCeiling: number) =>
+      request<AudioNormalization>({ kind: 'normalize', channels, target, ceiling, rangeCeiling }),
     encode: (
       channels: PcmChannels,
       config: AudioEncoderConfig,

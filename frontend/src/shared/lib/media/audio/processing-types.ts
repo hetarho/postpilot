@@ -21,12 +21,14 @@ export interface EncodedAudioTrack {
   durationUs: number
   primingFrames: number
   loudnessLUFS?: number
+  loudnessRangeLU?: number
   truePeakDBTP: number
   silent: boolean
 }
 export interface AudioNormalization {
   channels: PcmChannels
   loudnessLUFS?: number
+  loudnessRangeLU?: number
   truePeakDBTP: number
   silent: boolean
   gain: number
@@ -40,7 +42,13 @@ export type AudioOperation =
       frames: number
       gain: number
     }
-  | { kind: 'normalize'; channels: PcmChannels; target: number; ceiling: number }
+  | {
+      kind: 'normalize'
+      channels: PcmChannels
+      target: number
+      ceiling: number
+      rangeCeiling: number
+    }
   | {
       kind: 'encode'
       channels: PcmChannels

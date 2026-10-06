@@ -48,20 +48,29 @@ function biquad(coefficients: readonly number[]) {
   }
 }
 
-/** 400 ms blocks / 75% overlap, absolute −70 LUFS and relative −10 LU gates. */
-export function integratedLoudness48k(channels: readonly Float32Array[]) {
+function weightedPowerBins48k(channels: readonly Float32Array[], tailBins = 0) {
   checkedStereo(channels)
   const step = 4800
-  const bins = new Float64Array(Math.floor(channels[0].length / step))
+  const bins = new Float64Array(
+    (tailBins ? Math.ceil(channels[0].length / step) : Math.floor(channels[0].length / step)) +
+      tailBins,
+  )
   for (const channel of channels) {
     const shelf = biquad(SHELF),
       highPass = biquad(HIGH_PASS)
     for (let index = 0; index < bins.length * step; index++) {
-      if (!Number.isFinite(channel[index])) throw new Error('Non-finite audio sample')
-      const sample = highPass(shelf(channel[index]))
+      const value = index < channel.length ? channel[index] : 0
+      if (!Number.isFinite(value)) throw new Error('Non-finite audio sample')
+      const sample = highPass(shelf(value))
       bins[Math.floor(index / step)] += sample * sample
     }
   }
+  return bins
+}
+/** 400 ms blocks / 75% overlap, absolute −70 LUFS and relative −10 LU gates. */
+export function integratedLoudness48k(channels: readonly Float32Array[]) {
+  const step = 4800
+  const bins = weightedPowerBins48k(channels)
   const absolute: number[] = []
   for (let index = 0; index + 3 < bins.length; index++) {
     const power = (bins[index] + bins[index + 1] + bins[index + 2] + bins[index + 3]) / (step * 4)
@@ -70,6 +79,34 @@ export function integratedLoudness48k(channels: readonly Float32Array[]) {
   if (!absolute.length) return -Infinity
   const gate = db(average(absolute)) - 10
   return db(average(absolute.filter((power) => db(power) > gate)))
+}
+
+/** EBU Tech3342: 3s short-term windows at10Hz, absolute -70LUFS and
+ * relative -20LU gates, then the10th/95th percentile spread. The file measure
+ * includes the prescribed1.5s silent analysis tail; no PCM tail is exported.
+ * https://tech.ebu.ch/docs/tech/tech3342.pdf */
+export function loudnessRange48k(channels: readonly Float32Array[]) {
+  const bins = weightedPowerBins48k(channels, 15)
+  const powers: number[] = []
+  let power = 0
+  for (let index = 0; index < bins.length; index++) {
+    power += bins[index]
+    if (index >= 30) power -= bins[index - 30]
+    if (index >= 29) {
+      const value = Math.max(0, power / (30 * 4800))
+      if (db(value) >= -70) powers.push(value)
+    }
+  }
+  if (!powers.length) return 0
+  const relativeGate = average(powers) / 100
+  const levels = powers
+    .filter((value) => value >= relativeGate)
+    .map(db)
+    .sort((a, b) => a - b)
+  if (!levels.length) return 0
+  return (
+    levels[Math.round((levels.length - 1) * 0.95)] - levels[Math.round((levels.length - 1) * 0.1)]
+  )
 }
 
 /** Four-times oversampling, including the filter tail. Floating point needs no attenuation. */

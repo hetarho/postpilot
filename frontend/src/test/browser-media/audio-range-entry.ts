@@ -5,7 +5,13 @@ import {
   CLIP_AUDIO_PROCESSING,
   clipBrowserEncoderConfig,
 } from '@/entities/clip-preview'
-import { createAudioProcessor, canonicalSelectedAudio, type SelectedAudioRange } from '@/shared/lib'
+import {
+  createAudioProcessor,
+  canonicalSelectedAudio,
+  loudnessRange48k,
+  normalizeLoudness48k,
+  type SelectedAudioRange,
+} from '@/shared/lib'
 
 declare global {
   interface Window {
@@ -31,6 +37,7 @@ declare global {
         wrongSpeechHash?: boolean
         sourceVolume?: number
         narrationVolume?: number
+        highDynamic?: boolean
       }): Promise<unknown>
     }
   }
@@ -100,6 +107,12 @@ window.audioRangeFixture = {
         new AbortController().signal,
       )
       await save(request.id, channels)
+      const loudnessRangeLU = loudnessRange48k(channels)
+      let afterGlobalGainLRA: number | undefined
+      if (request.id === 'high-dynamic-selected') {
+        normalizeLoudness48k(channels, -16, -1.5)
+        afterGlobalGainLRA = loudnessRange48k(channels)
+      }
       let currentReference: { rmse: number; maxDifference: number } | undefined
       if (metadata.sampleRate !== 48000) {
         const decoder = new AudioContext({ sampleRate: 48000 })
@@ -127,6 +140,8 @@ window.audioRangeFixture = {
         decodeStart,
         startSample,
         frames: channels[0].length,
+        loudnessRangeLU,
+        afterGlobalGainLRA,
         currentReference,
         resources: message.resources,
       }
@@ -152,6 +167,13 @@ window.audioRangeFixture = {
         { ...plan.cuts[0], id: 'first', endMs: 1234 },
         { ...plan.cuts[0], id: 'second', startMs: 2000, endMs: 3234, playbackRatePermille: 750 },
       ]
+    if (request.highDynamic)
+      plan.cuts = Array.from({ length: 5 }, (_, index) => ({
+        ...plan.cuts[0],
+        id: `range-${index}`,
+        startMs: 10000 + index * 8000,
+        endMs: 18000 + index * 8000,
+      }))
     plan.durationMs = 2000
     plan.elements = request.hook
       ? [
@@ -284,6 +306,7 @@ window.audioRangeFixture = {
         durationUs: result.durationUs,
         primingFrames: result.primingFrames,
         loudnessLUFS: result.loudnessLUFS,
+        loudnessRangeLU: result.loudnessRangeLU,
         truePeakDBTP: result.truePeakDBTP,
         sourceResources: result.sourceResources,
         speechFingerprint: result.speechFingerprint,

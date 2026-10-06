@@ -205,6 +205,7 @@ export async function renderBrowserAudio(
       channels,
       CLIP_DESIGN.audio.loudnorm.i,
       CLIP_DESIGN.audio.loudnorm.tp,
+      CLIP_DESIGN.audio.loudnorm.lra,
     )
     const track = await processor.encode(
       normalized.channels,
@@ -213,6 +214,13 @@ export async function renderBrowserAudio(
       CLIP_BROWSER_RENDER.encodeQueueFrames,
       progress,
     )
+    if (
+      !Number.isFinite(track.loudnessRangeLU) ||
+      track.loudnessRangeLU! > CLIP_DESIGN.audio.loudnorm.lra
+    ) {
+      track.chunks.length = 0
+      throw new Error('AUDIO_LOUDNESS_RANGE_UNSUPPORTED')
+    }
     if (
       !track.silent &&
       (!Number.isFinite(track.loudnessLUFS) ||
