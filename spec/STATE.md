@@ -65,7 +65,6 @@
 |---|---|---|---|---|
 | T539 | Qualify the complete Korean voice-creation milestone | ARCH DUB MODEL CDS THEME | T538 | blocked@261005 |
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
-| T589 | Restrict new commercial server exports to Max | ARCH QUOTA CLIP | - | doing@261006.br |
 | T590 | Bound Max server-render admission and waiting | ARCH CLIP INFRA | T589 | todo |
 | T591 | Freeze one browser composition and time contract | ARCH CLIP CDS | T588 | todo |
 | T592 | Decode selected video ranges in a bounded browser pipeline | ARCH CLIP CDS | T591 | todo |
@@ -83,11 +82,13 @@
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | todo |
 
 ## next
-- implement-task T589, then follow T590-T604 dependencies: browser media baseline/licenses, Max admission, local composition/codecs/motion, verified analysis copies and independent release gates. T539/T550 retain real voice/listening qualification and require current browser-contract revalidation.
+- T588/T589 are complete. The user requested stopping after T589; T590 is the next browser-media task, followed by T591-T604 dependencies, and none has started. T539/T550 retain real voice/listening qualification and current browser-contract revalidation.
 - ARCH r16 and INFRA r2 browser changes are mapped to T588-T604; earlier ARCH revisions and unrelated INFRA database/backups remain unconsumed, so ARCH tasked=9 and INFRA tasked=0 stay. ARCH-10/INFRA-6 database alignment, POST r32 and VOICE r8 verification-only deltas and VOICE-31 remain outside this scope.
 - ops: lower TEMPLATE_PHOTO_ROW_MAX / VITE_TEMPLATE_PHOTO_ROW_MAX to 3 in explicit production overrides. Ideation searchable-details continues; ordinary voice/narration readiness remains closed until its existing qualification passes.
 
 ## log
+- 261006 T589 done: current Max-only native access, preserved legacy jobs/history and browser-first ko/en surfaces; 3321 FE tests and full local CI passed
+- 261006 user stop boundary: finish T589 and commit current browser-media work; T590-T604 remain todo
 - 261006 T589 start: Max-only commercial server admission and browser-first controls, preserving previously accepted work and usage history
 - 261006 T588 done: measured browser baseline, common output verification and version/license evidence; 3307 FE tests and local CI passed, SDK timeline and real-device gates remain unqualified
 - 261006 T605 done: friendly voice roles, sourced expiring cost references and precise public-rate draft defaults; 3306 FE tests and all local checks passed
@@ -106,5 +107,3 @@
 - 261006 T586 start: server-owned speech bindings, unique catalog registrations and atomic common tariff snapshots
 - 261006 create-task MODEL r30 done: T586 server registration/pricing then T587 list administration
 - 261006 create-task MODEL start: implement r30 speech catalog registration and common verified pricing
-- 261006 update-ssot MODEL r30: single ElevenLabs catalog registration, optional synthesis controls and common pricing; T539/T550 remain blocked on real qualification
-- 261006 update-ssot MODEL start: simplify the single-supplier speech catalog to list registration and product-managed defaults/pricing
