@@ -21,6 +21,7 @@ import {
   captionGaussianSigma,
 } from './ink-caption-filter-pixi'
 import { ClipInkError, inkRasterDimensions } from './ink-typography'
+import { BrowserCaptionEmberPixi } from './ink-caption-ember-pixi'
 
 const colorVector = (hex: string) =>
   new Float32Array([1, 3, 5].map((index) => parseInt(hex.slice(index, index + 2), 16) / 255))
@@ -82,6 +83,7 @@ interface Node {
   uniforms?: UniformGroup
   blur?: BlurFilter
   neon?: BrowserCaptionNeonPixi
+  ember?: BrowserCaptionEmberPixi
 }
 interface ShapeUniforms {
   uBox: Float32Array
@@ -135,7 +137,10 @@ export class BrowserCaptionScenePixi {
     const container = new Container(),
       result: Node = { container, matrix: new Matrix() }
     this.group.addChild(container)
-    if (node.ink && node.pose.effect?.kind === 'neon' && node.document) {
+    if (node.flames || node.sparks) {
+      result.ember = new BrowserCaptionEmberPixi(node)
+      container.addChild(result.ember.group)
+    } else if (node.ink && node.pose.effect?.kind === 'neon' && node.document) {
       result.neon = new BrowserCaptionNeonPixi(this.renderer, node.document.bounds)
       container.addChild(result.neon.group)
     } else if (node.ink && node.pose.effect?.kind === 'gradient') {
@@ -233,12 +238,19 @@ export class BrowserCaptionScenePixi {
     const { bounds } = scene,
       { width, height } = inkRasterDimensions(bounds)
     if (!this.surface) {
-      this.surface = RenderTexture.create({ width, height, resolution: 1, antialias: true })
+      this.surface = RenderTexture.create({
+        width,
+        height,
+        resolution: 1,
+        antialias: true,
+        dynamic: true,
+      })
       this.quad = new Sprite(this.surface)
       this.presentation.addChild(this.quad)
     } else if (this.surface.width !== width || this.surface.height !== height)
       this.surface.resize(width, height)
-    const active = new Set<string>()
+    const active = new Set<string>(),
+      ordered: Container[] = []
     for (const current of scene.nodes) {
       const key = current.id + '/' + (current.document?.key ?? (current.light ? 'light' : 'rect'))
       active.add(key)
@@ -247,12 +259,14 @@ export class BrowserCaptionScenePixi {
         node = this.create(current)
         this.nodes.set(key, node)
       }
+      ordered.push(node.container)
       const m = current.pose.matrix
       node.matrix.set(...m)
       node.container.setFromMatrix(node.matrix)
       node.container.visible =
         current.pose.opacity > 0 && (!current.pose.clip || current.pose.clip.width > 0)
-      if (current.ink && current.document) {
+      if (node.ember) node.ember.update(current.pose)
+      else if (current.ink && current.document) {
         const texture = current.ink.gpu(this.owner, () => {
           const value = new Texture({
             source: new ImageSource({
@@ -348,12 +362,18 @@ export class BrowserCaptionScenePixi {
     }
     for (const [key, node] of this.nodes)
       if (!active.has(key)) {
+        node.ember?.destroy()
         node.neon?.destroy()
         node.blur?.destroy()
         node.mesh?.shader?.destroy()
         node.container.destroy({ children: true })
         this.nodes.delete(key)
       }
+    // Retained geometry survives text/phrase replacement; restore declared
+    // paint order after removing old ink without rebuilding owned resources.
+    ordered.forEach((container, index) => {
+      if (this.group.children[index] !== container) this.group.setChildIndex(container, index)
+    })
     this.view.set(1, 0, 0, 1, -bounds.x, -bounds.y)
     this.renderer.render({
       container: this.group,
@@ -372,6 +392,18 @@ export class BrowserCaptionScenePixi {
     )
     return {
       nodes: this.nodes.size,
+      dynamicShapes: [...this.nodes.values()].reduce(
+        (sum, node) => sum + (node.ember?.measurements().shapes ?? 0),
+        0,
+      ),
+      geometryBytes: [...this.nodes.values()].reduce(
+        (sum, node) => sum + (node.ember?.measurements().geometryBytes ?? 0),
+        0,
+      ),
+      shapeUniformBytes: [...this.nodes.values()].reduce(
+        (sum, node) => sum + (node.ember?.measurements().uniformBytes ?? 0),
+        0,
+      ),
       managedTextureBytes: this.renderer.texture.managedTextures.reduce(
         (bytes, source) => bytes + (source?.pixelWidth ?? 0) * (source?.pixelHeight ?? 0) * 4,
         0,
@@ -387,7 +419,11 @@ export class BrowserCaptionScenePixi {
         0,
       ),
       filters: [...this.nodes.values()].reduce(
-        (count, node) => count + Number(Boolean(node.blur)) + Number(Boolean(node.neon)),
+        (count, node) =>
+          count +
+          Number(Boolean(node.blur)) +
+          Number(Boolean(node.neon)) +
+          (node.ember?.measurements().filters ?? 0),
         0,
       ),
       groupBytes: (this.surface?.width ?? 0) * (this.surface?.height ?? 0) * 4,
@@ -397,6 +433,7 @@ export class BrowserCaptionScenePixi {
     if (this.destroyed) return
     this.destroyed = true
     for (const node of this.nodes.values()) {
+      node.ember?.destroy()
       node.neon?.destroy()
       node.blur?.destroy()
       node.mesh?.shader?.destroy()

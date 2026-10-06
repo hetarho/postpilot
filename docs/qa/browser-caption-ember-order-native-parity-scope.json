@@ -1,0 +1,19 @@
+{
+  "sourceHead": "076f93a182f77e5a129afdc01177b4b7a8fe1f01",
+  "sourceBackendTree": "dc8faa4f6ae66a943d1156b7a85b45311cab1269",
+  "actualImage": "sha256:353473988c1afd3ca597690d7fc79bdd3a50989ae6858453f898699c38aa287f",
+  "receiptSHA256": "e292fe46871cb2862c86b46e803ceb36e40b01737bb9c2f2000bd9afefc0c0f0",
+  "actualFocusedExit": 0,
+  "actualExecutedTests": [
+    "TestExecRunnerBoundsOutputAndCancels",
+    "TestExecRunnerReapsDescendants",
+    "TestWorkerExecutionParity",
+    "TestWorkerExecutionParity/preparation",
+    "TestWorkerExecutionParity/footage-audio-fade",
+    "TestWorkerExecutionParity/sequence-caption",
+    "TestWorkerExecutionParity/horizontal-footage-audio-fade",
+    "TestWorkerExecutionParity/square-sequence-caption"
+  ],
+  "scope": "Completed CPU native parity and ExecRunner tests from actual broad pattern. WorkerCommandHealth/WorkerImageIsolation not selected here. This source is earlier than the pending browser RenderTexture dynamic-resize correction, so it is not final browser renderer proof.",
+  "ownedStopAttempt": "Container already exited before stop; no active container was stopped and no interruption was recorded."
+}

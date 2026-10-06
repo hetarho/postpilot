@@ -1,0 +1,268 @@
+{
+  "sourceCommit": "47320560ebdfb356a65fb988d174f152d2c5c68a",
+  "scriptSHA256": "94e9a687b83a6ff0cf6231a7fc8d9ba1358932c752357eb226da376321d9c338",
+  "browser": "154.0.8037.98",
+  "qualification": false,
+  "competingWork": true,
+  "scope": "Temporary read-only phase probe calling production components and renderer; whole-canvas CPU readback is diagnostic Canvas completion and gl.finish is diagnostic Pixi completion. Neither enters production; completion costs differ and throughput is unqualified.",
+  "results": [
+    {
+      "id": "vertical-ember-steady-99",
+      "engine": "pixi",
+      "frames": 135,
+      "snapshotFreezeMs": 1.9000000953674316,
+      "graphicsInitMs": 37.799999713897705,
+      "cold": {
+        "prepareMs": 335.30000019073486,
+        "drawSubmitMs": 767.4000000953674,
+        "diagnosticCompletionMs": 0,
+        "totalMs": 1102.7000002861023
+      },
+      "warm": {
+        "prepareMs": {
+          "p50Ms": 0.20000028610229492,
+          "p95Ms": 0.5
+        },
+        "drawSubmitMs": {
+          "p50Ms": 0.6000003814697266,
+          "p95Ms": 1
+        },
+        "diagnosticCompletionMs": {
+          "p50Ms": 0,
+          "p95Ms": 0
+        },
+        "totalMs": {
+          "p50Ms": 0.9000000953674316,
+          "p95Ms": 1.4000000953674316
+        }
+      },
+      "warmRasters": 1,
+      "effectBounds": {
+        "x": 0,
+        "y": 851,
+        "width": 1080,
+        "height": 949
+      },
+      "peakCPUBytes": 1079760,
+      "peakManagedGPUBytes": 21862452,
+      "peakShapes": 39,
+      "cleanup": true,
+      "qualification": false
+    },
+    {
+      "id": "horizontal-ember-long-steady-99",
+      "engine": "pixi",
+      "frames": 135,
+      "snapshotFreezeMs": 0.5,
+      "graphicsInitMs": 8.5,
+      "cold": {
+        "prepareMs": 406.30000019073486,
+        "drawSubmitMs": 18.299999713897705,
+        "diagnosticCompletionMs": 0,
+        "totalMs": 424.59999990463257
+      },
+      "warm": {
+        "prepareMs": {
+          "p50Ms": 0.20000028610229492,
+          "p95Ms": 0.40000009536743164
+        },
+        "drawSubmitMs": {
+          "p50Ms": 0.5999999046325684,
+          "p95Ms": 0.9000000953674316
+        },
+        "diagnosticCompletionMs": {
+          "p50Ms": 0,
+          "p95Ms": 0.09999990463256836
+        },
+        "totalMs": {
+          "p50Ms": 0.8000001907348633,
+          "p95Ms": 1.200000286102295
+        }
+      },
+      "warmRasters": 1,
+      "effectBounds": {
+        "x": 230,
+        "y": 328,
+        "width": 1460,
+        "height": 752
+      },
+      "peakCPUBytes": 1483524,
+      "peakManagedGPUBytes": 22558216,
+      "peakShapes": 39,
+      "cleanup": true,
+      "qualification": false
+    },
+    {
+      "id": "square-ember-two-steady-99",
+      "engine": "pixi",
+      "frames": 135,
+      "snapshotFreezeMs": 0.40000009536743164,
+      "graphicsInitMs": 7.599999904632568,
+      "cold": {
+        "prepareMs": 254.30000019073486,
+        "drawSubmitMs": 17.40000009536743,
+        "diagnosticCompletionMs": 0,
+        "totalMs": 271.7000002861023
+      },
+      "warm": {
+        "prepareMs": {
+          "p50Ms": 0.20000028610229492,
+          "p95Ms": 0.3000001907348633
+        },
+        "drawSubmitMs": {
+          "p50Ms": 0.5,
+          "p95Ms": 0.7999997138977051
+        },
+        "diagnosticCompletionMs": {
+          "p50Ms": 0,
+          "p95Ms": 0.09999990463256836
+        },
+        "totalMs": {
+          "p50Ms": 0.7999997138977051,
+          "p95Ms": 1.0999999046325684
+        }
+      },
+      "warmRasters": 1,
+      "effectBounds": {
+        "x": 0,
+        "y": 328,
+        "width": 1080,
+        "height": 752
+      },
+      "peakCPUBytes": 1100736,
+      "peakManagedGPUBytes": 17403588,
+      "peakShapes": 39,
+      "cleanup": true,
+      "qualification": false
+    },
+    {
+      "id": "vertical-ember-steady-99",
+      "engine": "canvas",
+      "frames": 135,
+      "snapshotFreezeMs": 0.39999961853027344,
+      "graphicsInitMs": 0,
+      "cold": {
+        "prepareMs": 195.90000009536743,
+        "drawSubmitMs": 2.299999713897705,
+        "diagnosticCompletionMs": 32.200000286102295,
+        "totalMs": 230.40000009536743
+      },
+      "warm": {
+        "prepareMs": {
+          "p50Ms": 0.2999997138977051,
+          "p95Ms": 0.40000009536743164
+        },
+        "drawSubmitMs": {
+          "p50Ms": 0.3000001907348633,
+          "p95Ms": 0.5999999046325684
+        },
+        "diagnosticCompletionMs": {
+          "p50Ms": 6.5,
+          "p95Ms": 7.099999904632568
+        },
+        "totalMs": {
+          "p50Ms": 7.099999904632568,
+          "p95Ms": 8.599999904632568
+        }
+      },
+      "warmRasters": 1,
+      "effectBounds": {
+        "x": 0,
+        "y": 851,
+        "width": 1080,
+        "height": 949
+      },
+      "peakCPUBytes": 17478480,
+      "peakManagedGPUBytes": 0,
+      "peakShapes": 0,
+      "cleanup": true,
+      "qualification": false
+    },
+    {
+      "id": "horizontal-ember-long-steady-99",
+      "engine": "canvas",
+      "frames": 135,
+      "snapshotFreezeMs": 0.3000001907348633,
+      "graphicsInitMs": 0,
+      "cold": {
+        "prepareMs": 404.19999980926514,
+        "drawSubmitMs": 1.5,
+        "diagnosticCompletionMs": 9.800000190734863,
+        "totalMs": 415.5
+      },
+      "warm": {
+        "prepareMs": {
+          "p50Ms": 0.2999997138977051,
+          "p95Ms": 0.40000009536743164
+        },
+        "drawSubmitMs": {
+          "p50Ms": 0.3000001907348633,
+          "p95Ms": 0.40000009536743164
+        },
+        "diagnosticCompletionMs": {
+          "p50Ms": 6.599999904632568,
+          "p95Ms": 7
+        },
+        "totalMs": {
+          "p50Ms": 7.100000381469727,
+          "p95Ms": 7.900000095367432
+        }
+      },
+      "warmRasters": 1,
+      "effectBounds": {
+        "x": 230,
+        "y": 328,
+        "width": 1460,
+        "height": 752
+      },
+      "peakCPUBytes": 19050244,
+      "peakManagedGPUBytes": 0,
+      "peakShapes": 0,
+      "cleanup": true,
+      "qualification": false
+    },
+    {
+      "id": "square-ember-two-steady-99",
+      "engine": "canvas",
+      "frames": 135,
+      "snapshotFreezeMs": 0.3000001907348633,
+      "graphicsInitMs": 0,
+      "cold": {
+        "prepareMs": 253.59999990463257,
+        "drawSubmitMs": 0.9000000953674316,
+        "diagnosticCompletionMs": 6.5,
+        "totalMs": 261
+      },
+      "warm": {
+        "prepareMs": {
+          "p50Ms": 0.20000028610229492,
+          "p95Ms": 0.3000001907348633
+        },
+        "drawSubmitMs": {
+          "p50Ms": 0.20000028610229492,
+          "p95Ms": 0.40000009536743164
+        },
+        "diagnosticCompletionMs": {
+          "p50Ms": 4.699999809265137,
+          "p95Ms": 5
+        },
+        "totalMs": {
+          "p50Ms": 5.199999809265137,
+          "p95Ms": 6.199999809265137
+        }
+      },
+      "warmRasters": 1,
+      "effectBounds": {
+        "x": 0,
+        "y": 328,
+        "width": 1080,
+        "height": 752
+      },
+      "peakCPUBytes": 14095296,
+      "peakManagedGPUBytes": 0,
+      "peakShapes": 0,
+      "cleanup": true,
+      "qualification": false
+    }
+  ]
+}

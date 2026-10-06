@@ -44,6 +44,9 @@ export async function stressInk(
   let peakCPU = 0,
     peakGPU = 0,
     peakScratch = 0,
+    peakGeometry = 0,
+    peakShapes = 0,
+    peakShapeUniforms = 0,
     coldMs: number,
     warmRasters: number
   const render = async (frame: number, check = false) => {
@@ -65,6 +68,9 @@ export async function stressInk(
       )
       peakGPU = Math.max(peakGPU, gpu?.managedTextureBytes ?? 0)
       peakScratch = Math.max(peakScratch, gpu?.filterScratchBytes ?? 0)
+      peakGeometry = Math.max(peakGeometry, gpu?.geometryBytes ?? 0)
+      peakShapes = Math.max(peakShapes, gpu?.dynamicShapes ?? 0)
+      peakShapeUniforms = Math.max(peakShapeUniforms, gpu?.shapeUniformBytes ?? 0)
       if (check) {
         const pixels =
           renderer && target
@@ -139,6 +145,9 @@ export async function stressInk(
       )
       peakGPU = Math.max(peakGPU, gpu?.managedTextureBytes ?? 0)
       peakScratch = Math.max(peakScratch, gpu?.filterScratchBytes ?? 0)
+      peakGeometry = Math.max(peakGeometry, gpu?.geometryBytes ?? 0)
+      peakShapes = Math.max(peakShapes, gpu?.dynamicShapes ?? 0)
+      peakShapeUniforms = Math.max(peakShapeUniforms, gpu?.shapeUniformBytes ?? 0)
     }
     let contextLoss = false,
       unsupported = false
@@ -179,7 +188,16 @@ export async function stressInk(
     }
     scene?.destroy()
     const after = scene?.measurements()
-    if (after && (after.nodes || after.groupBytes || after.effectBytes || after.filters))
+    if (
+      after &&
+      (after.nodes ||
+        after.groupBytes ||
+        after.effectBytes ||
+        after.filters ||
+        after.geometryBytes ||
+        after.dynamicShapes ||
+        after.shapeUniformBytes)
+    )
       throw new Error('CLIP_FILTER_STRESS_OWNED_LEAK')
     components.destroy()
     if (
@@ -200,6 +218,9 @@ export async function stressInk(
       peakCPUBytes: peakCPU,
       peakManagedGPUBytes: peakGPU,
       peakSharedFilterScratchBytes: peakScratch,
+      peakGeometryBytes: peakGeometry,
+      peakDynamicShapes: peakShapes,
+      peakShapeUniformBytes: peakShapeUniforms,
       deterministicFrames: hashes.size,
       cancellation,
       eviction: true,
