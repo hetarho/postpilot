@@ -15,9 +15,7 @@ export function ModelPageHeader({
   const { t } = useTranslation('models')
   return (
     <header>
-      <Typography variant="display" className="sr-only lg:not-sr-only">
-        {t(`page.${title}`)}
-      </Typography>
+      <Typography variant="display">{t(`page.${title}`)}</Typography>
       <Typography variant="body" className="text-content-secondary max-w-measure mt-2">
         {t(`page.${description}`)}
       </Typography>

@@ -1,5 +1,5 @@
 # MEM memories
-> r5 | An account owns short atomic facts about its author's world, approved by hand from what a finished post yielded, retrieved by tag and injected as the write prompt's fourth grounding source only when the draft opts in
+> r6 | An account owns short atomic facts about its author's world, approved by hand from what a finished post yielded, retrieved by tag and injected as the write prompt's fourth grounding source only when the draft opts in
 
 ## decisions
 - MEM-1 [o] a memory (the user-facing noun 기억) is ONE atomic fact about the author's world, authored by the user approving an extracted candidate or by writing it by hand; an account owns zero or more, and an account with none produces prompts byte-identical to the ones it would produce without this domain
@@ -32,7 +32,7 @@
 - MEM-21 [o] the section closes with its own line naming the memories as legitimate material for this post, appended only when the section exists (→GEN-16 →GUIDE-16), so a post with the option off carries no memory bytes and no mention of a source it has none of (→TMPL-46's conditional legend)
 - MEM-22 [o] memories reach the write pass only; the revise pass receives none ← revise holds neither memo nor observations, and material it cannot check against would license rewriting sentences the request never touched
 - MEM-23 [o] nothing is learned without the user: no model creates, approves, edits, ranks, retires or deletes a memory, no threshold promotes a candidate, and no memory reaches any prompt except through `use_memory` ← recording what the user checked is not learning about them
-- MEM-24 [o] `기억` is the fifth destination of the 글 group (→THEME-38, after 지침 →GUIDE-26), listing the account's memories (→MEM-30); the page carries no standing form — one docked `새 기억` opens the shared `Sheet` (→THEME-24)
+- MEM-24 [o] `기억` is a writing settings destination (→THEME-38, following 지침 →GUIDE-26), listing the account's memories (→MEM-30); the page carries no standing form — one docked `새 기억` opens the shared `Sheet` (→THEME-24)
 - MEM-25 [o] a memory may be written by hand on that screen with the same field rules ← a fact the author knows on day one should not require generating a post first
 - MEM-30 [o] a memory's row is its text over one line of its kind and tag badges, with `수정` and `삭제` as its only controls, two icon controls at the end of the text line ← the list is read to see what the account knows, so one fact keeps to one short row and its editing waits behind one control
   - `수정` turns the row into one form holding the text with its live remaining count, the kind and the tags, saved together by one 저장 or left by 취소

@@ -48,7 +48,7 @@ describe('GoogleSignInCallbackPage', () => {
       calls,
     })
 
-    await waitFor(() => expect(router.state.location.pathname).toBe('/posts'))
+    await waitFor(() => expect(router.state.location.pathname).toBe('/'))
     expect(calls.filter((call) => call === 'SignInWithGoogle')).toHaveLength(1)
     expect(calls.filter((call) => call === 'GetMe')).toHaveLength(0)
     expect(sessionStorage.getItem(GOOGLE_SIGN_IN_STORAGE_KEY)).toBeNull()

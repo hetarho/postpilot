@@ -655,7 +655,7 @@ describe('the model catalog tab', () => {
       plans: { plan: ProtoPlan.MAX },
     })
 
-    expect(await screen.findByRole('heading', { name: '내 글' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: /당신의 이야기를/ })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: '모델 관리' })).not.toBeInTheDocument()
   })
 })

@@ -44,10 +44,10 @@ describe('session guard', () => {
     expect(await screen.findByText('alice')).toBeInTheDocument()
   })
 
-  it('bounces an already-signed-in visitor away from /login', async () => {
+  it('bounces an already-signed-in visitor to creation home from /login', async () => {
     const { router } = renderAppAt('/login', { user: { id: 'alice' } })
 
-    await waitFor(() => expect(router.state.location.pathname).toBe('/posts'))
+    await waitFor(() => expect(router.state.location.pathname).toBe(SIGNED_IN_HOME))
   })
 
   it('asks the server once per unauthenticated load, not once per route', async () => {
@@ -60,13 +60,18 @@ describe('session guard', () => {
   })
 })
 
-// POST-43: the post list is the app's home now that the scaffold ping page is gone.
 describe('the app home', () => {
-  it('sends / to the post list', async () => {
+  it('renders creation choices at the root', async () => {
     const { router } = renderAppAt('/', { user: { id: 'alice' } })
-
-    await waitFor(() => expect(router.state.location.pathname).toBe('/posts'))
-    expect(await screen.findByRole('heading', { name: '내 글' })).toBeInTheDocument()
+    expect(await screen.findByRole('link', { name: /새 글 작성하기/ })).toHaveAttribute(
+      'href',
+      '/posts/new',
+    )
+    expect(screen.getByRole('link', { name: /새 클립 만들기/ })).toHaveAttribute(
+      'href',
+      '/clips/new',
+    )
+    expect(router.state.location.pathname).toBe('/')
   })
 })
 
@@ -139,7 +144,7 @@ describe('login screen', () => {
     await user.type(screen.getByLabelText('비밀번호'), 'pw')
     await user.click(screen.getByRole('button', { name: '로그인' }))
 
-    await waitFor(() => expect(router.state.location.pathname).toBe('/posts'))
+    await waitFor(() => expect(router.state.location.pathname).toBe(SIGNED_IN_HOME))
   })
 
   // The login form is what a user reaches for when the app is misbehaving, so it has to
@@ -238,9 +243,9 @@ describe('logout', () => {
 // TMPL-24: 용도 is a top-level destination beside 말투, reachable from the nav.
 describe('the template management route', () => {
   it('mounts /templates and offers it in the navigation after 말투', async () => {
-    renderAppAt('/templates', { user: { id: 'alice' } })
+    renderAppAt('/settings', { user: { id: 'alice' } })
 
-    expect(await screen.findByRole('heading', { level: 1, name: '템플릿' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: '설정' })).toBeInTheDocument()
     // One list, so the phone tab bar and the desktop header cannot disagree; the entry sits
     // after 말투 in it.
     const labels = screen
@@ -383,9 +388,9 @@ describe('About consumes the shared locale and theme runtimes', () => {
 // GUIDE-20: 지침 is a top-level destination after 용도, reachable from the nav.
 describe('the guideline management route', () => {
   it('mounts /guidelines and offers it in the navigation after 용도', async () => {
-    renderAppAt('/guidelines', { user: { id: 'alice' } })
+    renderAppAt('/settings', { user: { id: 'alice' } })
 
-    expect(await screen.findByRole('heading', { level: 1, name: '지침' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: '설정' })).toBeInTheDocument()
     const labels = hrefs()
     expect(labels.indexOf('/guidelines')).toBeGreaterThan(labels.indexOf('/templates'))
   })
@@ -519,7 +524,7 @@ describe('theme preferences in the real route tree', () => {
     await user.type(screen.getByLabelText('이메일 또는 아이디'), 'alice')
     await user.type(screen.getByLabelText('비밀번호'), 'pw')
     await user.click(screen.getByRole('button', { name: '로그인' }))
-    await waitFor(() => expect(first.router.state.location.pathname).toBe('/posts'))
+    await waitFor(() => expect(first.router.state.location.pathname).toBe(SIGNED_IN_HOME))
     expect(document.documentElement).toHaveAttribute('data-theme', 'night')
     expect(theme.storage.getItem(THEME_PREFERENCE_STORAGE_KEY)).toBe('dark')
 
@@ -616,11 +621,11 @@ describe('theme preferences in the real route tree', () => {
     // nothing else: the destinations are the phone's bottom bar at this width, so the
     // header's own nav is not painted here.
     expect(credits).toHaveClass('min-h-11', 'px-2')
-    expect(within(header).getByRole('navigation', { name: '주요' })).toHaveClass('hidden')
+    expect(within(header).queryByRole('navigation', { name: '주요' })).toBeNull()
     // The cluster is exactly these four: one link to the ladder and three icon triggers.
     const cluster = credits.parentElement as HTMLElement
     expect(within(cluster).getAllByRole('link')).toHaveLength(1)
-    expect(within(cluster).getAllByRole('button')).toHaveLength(3)
+    expect(within(cluster).getAllByRole('button')).toHaveLength(4)
 
     await user.click(account)
     expect(screen.getByRole('dialog', { name: '내 계정' })).toHaveClass('right-0', 'w-72')
@@ -700,14 +705,19 @@ describe('localized registered-route smoke', () => {
       const cases: Array<{
         path: string
         role: 'button' | 'heading' | 'textbox'
-        name: string
+        name: string | RegExp
         signedIn?: boolean
         expectedPath?: string
       }> = [
         { path: '/login', role: 'button', name: text.login },
         // Public: the only entry in this table with no session.
         { path: '/about', role: 'heading', name: text.about },
-        { path: '/', role: 'heading', name: text.posts, signedIn: true, expectedPath: '/posts' },
+        {
+          path: '/',
+          role: 'heading',
+          name: locale === 'ko' ? /당신의 이야기를/ : /Your story/,
+          signedIn: true,
+        },
         { path: '/posts', role: 'heading', name: text.posts, signedIn: true },
         {
           path: '/publishing-agents',
@@ -816,17 +826,15 @@ describe('localized registered-route smoke', () => {
       renderAppAt('/posts', { user: { id: 'alice' } })
 
       const main = await screen.findByRole('main')
-      const shell = main.closest('.pb-nav')
-      expect(shell).toHaveClass('flex', 'flex-1', 'flex-col', 'sm:pb-0')
+      const shell = main.parentElement
+      expect(shell).toHaveClass('flex', 'flex-1', 'flex-col')
       expect(shell?.querySelectorAll('[class~="overflow-y-auto"]')).toHaveLength(0)
-      // Three shapes of the SAME destination list, one per pointer: the phone tab bar, the laptop
-      // header row, and the desk sidebar. Only one is ever displayed, so only one is ever in the
-      // a11y tree — but all three are in the DOM, and this is what catches a fourth copy, or a
-      // breakpoint that leaves two of them visible at once.
-      expect(screen.getAllByRole('navigation', { name: '주요' })).toHaveLength(3)
-      expect(document.querySelector('nav.sm\\:hidden')).toBeInTheDocument()
-      expect(document.querySelector('nav.hidden.sm\\:flex.lg\\:hidden')).toBeInTheDocument()
-      expect(document.querySelector('aside.lg\\:sticky nav')).toBeInTheDocument()
+      expect(screen.queryByRole('navigation', { name: '주요' })).toBeNull()
+      expect(document.querySelector('aside')).toBeNull()
+      expect(screen.getByRole('button', { name: '주요 메뉴 열기' })).toHaveAttribute(
+        'aria-expanded',
+        'false',
+      )
     },
   )
 })
@@ -856,9 +864,9 @@ describe('retired publishing route', () => {
   })
 
   it('keeps the writing and model destinations for every tier', async () => {
-    renderAppAt('/posts', { user: { id: 'alice', plan: ProtoPlan.FREE } })
-    await screen.findByRole('heading', { level: 1, name: '내 글' })
-    for (const destination of ['/posts', '/voices', '/templates', '/guidelines', '/ai-models']) {
+    renderAppAt('/settings', { user: { id: 'alice', plan: ProtoPlan.FREE } })
+    await screen.findByRole('heading', { level: 1, name: '설정' })
+    for (const destination of ['/voices', '/templates', '/guidelines', '/ai-models']) {
       expect(hrefs()).toContain(destination)
     }
   })

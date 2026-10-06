@@ -26,8 +26,8 @@ export type ActionBarDock =
  *  back to the left edge. */
 const DOCK_STYLES: Record<ActionBarDock, string> = {
   always:
-    'bg-surface-highest bottom-dock-nav sm:pb-dock-b sticky z-20 mt-6 rounded-xl p-3 shadow-md sm:bottom-4 sm:p-4',
-  list: 'bottom-dock-nav sticky z-20 mt-6 ml-auto w-fit sm:bottom-4 *:shadow-lg',
+    'bg-surface-highest bottom-dock-nav pb-dock-b sticky z-20 mt-6 rounded-xl p-3 shadow-md sm:p-4',
+  list: 'bottom-dock-nav sticky z-20 mt-6 ml-auto w-fit *:shadow-lg',
 }
 
 /** Docks a view's committing actions in the thumb's band instead of leaving them wherever the

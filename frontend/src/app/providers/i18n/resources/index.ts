@@ -1,3 +1,6 @@
+import { i18n as homeI18n } from '@/pages/home/config/i18n'
+import { i18n as libraryI18n } from '@/pages/library/config/i18n'
+import { i18n as settingsI18n } from '@/pages/settings/config/i18n'
 import { spokenVoiceResources } from '@/entities/spoken-voice/config/i18n'
 import { createSpokenVoiceResources } from '@/features/create-spoken-voice/config/i18n'
 import { manageSpokenVoiceResources } from '@/features/manage-spoken-voice/config/i18n'
@@ -125,6 +128,7 @@ import { postsI18n as editWithAiPostsI18n } from '@/features/edit-with-ai/config
 export const defaultNS = 'common' as const
 
 export const RESOURCE_NAMESPACES = [
+  'creation',
   'spokenVoice',
   'createSpokenVoice',
   'manageSpokenVoice',
@@ -156,6 +160,9 @@ export const RESOURCE_NAMESPACES = [
 import { i18n as clipDubbingI18n } from '@/features/regenerate-clip-speech/config/i18n'
 
 export const FRAGMENTS: readonly I18nFragment[] = [
+  homeI18n,
+  libraryI18n,
+  settingsI18n,
   { namespace: 'spokenVoice', ...spokenVoiceResources },
   { namespace: 'createSpokenVoice', ...createSpokenVoiceResources },
   { namespace: 'manageSpokenVoice', ...manageSpokenVoiceResources },
@@ -266,6 +273,7 @@ export const FRAGMENTS: readonly I18nFragment[] = [
 
 export const resources = {
   ko: {
+    creation: { ...homeI18n.ko, ...libraryI18n.ko, ...settingsI18n.ko },
     spokenVoice: spokenVoiceResources.ko,
     createSpokenVoice: createSpokenVoiceResources.ko,
     manageSpokenVoice: manageSpokenVoiceResources.ko,
@@ -396,6 +404,7 @@ export const resources = {
     },
   },
   en: {
+    creation: { ...homeI18n.en, ...libraryI18n.en, ...settingsI18n.en },
     spokenVoice: spokenVoiceResources.en,
     createSpokenVoice: createSpokenVoiceResources.en,
     manageSpokenVoice: manageSpokenVoiceResources.en,

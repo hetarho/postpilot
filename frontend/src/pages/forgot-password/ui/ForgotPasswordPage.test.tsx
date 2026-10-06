@@ -21,7 +21,7 @@ describe('ForgotPasswordPage', () => {
 
   it('reverse-guards a signed-in visitor', async () => {
     const { router } = renderAppAt('/forgot-password', { user: { id: 'alice' } })
-    await waitFor(() => expect(router.state.location.pathname).toBe('/posts'))
+    await waitFor(() => expect(router.state.location.pathname).toBe('/'))
   })
 
   it('shows a localized retry instant when reset requests are throttled', async () => {

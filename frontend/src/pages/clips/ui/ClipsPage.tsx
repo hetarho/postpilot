@@ -99,12 +99,8 @@ export function ClipsPage() {
         className: 'flex flex-1 flex-col pt-4 sm:pt-6 lg:pt-8',
       })}
     >
-      {/* Below the desk the group band above already names this place (내 영상), so the heading
-          stays for the document outline and the desk alone (THEME-38, owner decision 2026-09-19). */}
       <div className="px-4 sm:px-6 lg:px-8">
-        <Typography variant="display" className="sr-only lg:not-sr-only">
-          {t('title', { ns: 'clips' })}
-        </Typography>
+        <Typography variant="display">{t('title', { ns: 'clips' })}</Typography>
       </div>
 
       {/* On the screen at every project count: a search that appears at some number of projects

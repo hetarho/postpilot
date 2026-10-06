@@ -1,4 +1,9 @@
 export const nav = {
+  launch: 'Create',
+  library: 'Saved work',
+  settings: 'Settings',
+  menu: 'Menu',
+
   spokenVoices: 'Spoken voices',
   modelsGroup: 'AI model navigation',
   modelSettings: 'Change models',

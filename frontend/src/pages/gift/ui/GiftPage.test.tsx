@@ -85,7 +85,7 @@ describe('GiftPage', () => {
 
     expect(await screen.findByText(/^330 크레딧을 받았어요\./)).toBeInTheDocument()
     expect(redeemRequests).toEqual(['tok-1'])
-    expect(screen.getByRole('link', { name: '시작하기' })).toHaveAttribute('href', '/posts')
+    expect(screen.getByRole('link', { name: '시작하기' })).toHaveAttribute('href', '/')
     await waitFor(() =>
       expect(planCalls.filter((call) => call === 'GetMyPlan').length).toBeGreaterThan(1),
     )

@@ -8,6 +8,7 @@ import { typographyStyles, type TypographyVariant } from './typographyStyles'
 const DEFAULT_ELEMENT: Record<TypographyVariant, ElementType> = {
   // A hero figure is a number on a card, never the outline's top level: `p` unless the caller
   // says otherwise.
+  launch: 'h1',
   promoDisplay: 'h1',
   hero: 'p',
   display: 'h1',

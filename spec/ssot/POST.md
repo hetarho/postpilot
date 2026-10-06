@@ -1,5 +1,5 @@
 # POST posts, drafts, photos
-> r32 | A post is a slug-identified, account-owned aggregate: autosaved title + memo + the answers its template's data fields ask for, browser-converted photos and as-picked short videos in private object storage, a storyline the owner can change, block-array canonical content with an immutable machine baseline, a draft → review → finalized → published lifecycle whose last step is an owner-pasted Naver URL, and the editor that presents it.
+> r34 | A post is a slug-identified, account-owned aggregate: autosaved title + memo + the answers its template's data fields ask for, browser-converted photos and as-picked short videos in private object storage, a storyline the owner can change, block-array canonical content with an immutable machine baseline, a draft → review → finalized → published lifecycle whose last step is an owner-pasted Naver URL, and the editor that presents it.
 
 ## decisions
 - POST-1 [o] a post is identified by a slug minted once on the first save and never changed ← it is the primary key and part of every photo object key, so renaming would orphan the photos
@@ -12,7 +12,7 @@
 - POST-8 [o] a voice reassignment rides in the queue as an action, not a keystroke: sent at once without debounce, reported on its own promise, text typed meanwhile waits and goes afterwards without the voice; a refused reassignment is taken back so later saves carry text only; a create sends the picked voice, or no field for 말투 없음, and an ordinary edit sends none
 - POST-9 [o] `saved` settles in presentation only: `useSaveStatus` shows 저장됨 for `SAVE_STATUS_SETTLED_MS` (2000) and then goes quiet, re-arming on every state change; the queue's state machine is untouched ← autosave correctness is tested against the queue, not against how long a word stays on screen
 - POST-10 [o] a save's answer supplies the text; the cached photo list is kept and only confirm and delete patch it ← a save that left before a confirm would otherwise land after it and undo the patch, and the fresh presigned URLs in every answer would re-render each thumbnail once a second
-- POST-11 [o] the first save of a new draft mints the slug and the editor navigates to `/posts/<slug>` with `replace` (back goes to the list); the text rides the queue and the caret rides a one-shot handoff (`EDITOR_HANDOFF_TTL_MS` 5000) so the next keystroke lands where the user was typing
+- POST-11 [o] the first save of a new draft mints the slug and the editor navigates to `/posts/<slug>` with `replace` (Back returns to the prior destination, including the creation home); the text rides the queue and the caret rides a one-shot handoff (`EDITOR_HANDOFF_TTL_MS` 5000) so the next keystroke lands where the user was typing
 - POST-12 [o] a successful DeletePost ends that slug's draft and content queues (their waiters reject `post deleted`) before navigating to `/posts`; every other slug's queue is untouched
 - POST-13 [o] status `draft → review → finalized → published` (→POST-73):
   - a successful ordinary generation, AI revision, or applied write-experiment result replaces canonical content and moves the post to `review`
@@ -60,7 +60,7 @@
   - SDK request/response checksums are turned off ← R2 lacks the full-object CRC32 form
   - local development runs MinIO with the same four variables and path-style addressing
   - the server refuses to boot without `R2_ENDPOINT` `R2_ACCESS_KEY_ID` `R2_SECRET_ACCESS_KEY` `R2_BUCKET`, naming the missing one, checked before the listener but outside `config.Load` ← `api adduser` must work on a fresh box before a bucket exists
-- POST-43 [o] routes: `/` redirects to `/posts`; `/posts` lists title (or 제목 없음), status badge, relative `updated_at` up to a week then a date, carries a search field and a status filter above the rows (→POST-65 →POST-66) and docks its one CTA 새 글 at every width (→POST-64); `/posts/new` is a draft with no slug; `/posts/$slug` renders 다른 사람의 글이에요 (403), 없는 글이에요 (404) or an unavailable view, offering a retry only for a failure that is not an answer; all under the authenticated layout; login's default destination is `/posts`; list rows are whole-row links with no row menu, swipe, or per-row button
+- POST-43 [o] `/` is the creation launch under THEME-47 and login defaults there; `/library` exposes saved work and links to `/posts`, the existing directory of whole-row post links with title, lifecycle badge, relative updated time, URL-backed search/status filters and one docked 새 글. `/posts/new` is an unminted draft and `/posts/$slug` retains owner/not-found/unavailable handling and retry; all stay under the authenticated layout.
 - POST-44 [o] the editor presents the lifecycle as three steps 글 생성 · 글 다듬기 · 글 완성, the current step derived from `post.status` and whether the post holds a storyline (a draft with none ①, a draft holding one or review ②, finalized and published ③) so a reload and the list badge cannot disagree; the step bar (`SegmentedControl`) is the first thing on the screen; any step is selectable — a step with no work says what it waits for and offers the way to the step that produces it; selecting a step changes no status and starts nothing; `/posts/new` has no step bar; the steps are panels of ONE mounted editor: title, memo, the autosave queue, the slug mint and the caret handoff live outside them
 - POST-45 [o] the editor reports its own state in exactly one region at the page top (`pages/editor/ui/EditorStatus.tsx`):
   - a 2px `shared/ui/progress-bar` pinned along the top edge while a job runs — determinate where the stage reports a ratio, indeterminate otherwise, zero layout height, `sticky` below every sticky chrome row through the `top-chrome` token (→THEME-38)
@@ -177,4 +177,4 @@
 - ops: the production bucket needs a CORS rule allowing PUT/GET/HEAD from the FE origin (DEPLOY.md); MinIO in `docker-compose.yml` serves local development
 
 ## chg
-- r32 261004 POST-108+ ①'s actions on a post with nothing attached confirm once before the run
+-

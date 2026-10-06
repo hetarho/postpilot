@@ -1,4 +1,9 @@
 export const nav = {
+  launch: '새로 만들기',
+  library: '보관함',
+  settings: '설정',
+  menu: '메뉴',
+
   spokenVoices: '목소리',
   modelsGroup: 'AI 모델 메뉴',
   modelSettings: '모델 변경',

@@ -49,30 +49,23 @@ const entries = [
 
 it.each(
   entries.flatMap((entry) => (['ko', 'en'] as const).map((locale) => ({ ...entry, locale }))),
-)(
-  'returns to the actual entry for $path in $locale',
-  async ({ path, back, ko, en, locale, primary, group }) => {
-    initializeI18n(locale)
-    const user = userEvent.setup()
-    const { router, container } = renderAppAt(path, {
-      user: { id: 'alice' },
-      posts: { posts },
-      experiments: { history },
-    })
-    await screen.findByRole('heading', {
-      name: locale === 'ko' ? '블라인드 비교' : 'Blind comparison',
-    })
-    const link = screen.getByRole('link', { name: locale === 'ko' ? ko : en })
-    expect(link).toHaveAttribute('href', back)
-    expect(
-      [...container.querySelectorAll('aside a[aria-current="page"]')].map(
-        (a) => a.getAttribute('href')?.split('?')[0],
-      ),
-    ).toEqual([primary, group])
-    await user.click(link)
-    await waitFor(() => expect(router.state.location.href).toBe(back))
-  },
-)
+)('returns to the actual entry for $path in $locale', async ({ path, back, ko, en, locale }) => {
+  initializeI18n(locale)
+  const user = userEvent.setup()
+  const { router } = renderAppAt(path, {
+    user: { id: 'alice' },
+    posts: { posts },
+    experiments: { history },
+  })
+  await screen.findByRole('heading', {
+    name: locale === 'ko' ? '블라인드 비교' : 'Blind comparison',
+  })
+  const link = screen.getByRole('link', { name: locale === 'ko' ? ko : en })
+  expect(link).toHaveAttribute('href', back)
+  expect(document.querySelector('aside')).toBeNull()
+  await user.click(link)
+  await waitFor(() => expect(router.state.location.href).toBe(back))
+})
 
 it.each(['', '?from=https://example.com', '?from=posts&stage=invalid'])(
   'keeps legacy and invalid model origins in model history: %s',

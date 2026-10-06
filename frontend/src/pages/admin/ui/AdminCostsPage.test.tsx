@@ -105,7 +105,7 @@ describe('AdminCostsPage', () => {
       user: { id: 'alice', plan: ProtoPlan.MAX },
       plans: { plan: ProtoPlan.MAX },
     })
-    expect(await screen.findByRole('heading', { name: '내 글' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: /당신의 이야기를/ })).toBeInTheDocument()
     expect(screen.queryByRole('region', { name: '적용 환율' })).not.toBeInTheDocument()
   })
 

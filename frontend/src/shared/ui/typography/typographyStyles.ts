@@ -4,6 +4,7 @@ import { twMerge } from 'tailwind-merge'
 /** The THEME-19 type roles. `input` is deliberately absent: the 16px phone floor
  *  belongs to the field primitives, and exposing it here would invite callers to size fields. */
 export type TypographyVariant =
+  | 'launch'
   | 'promoDisplay'
   | 'hero'
   | 'display'
@@ -22,6 +23,7 @@ const VARIANT_STYLES: Record<TypographyVariant, string> = {
      compared outranks the page's own name. It is not a heading and never carries prose; a slice
      outside the plan ladder reaching for it is the promotional exception spreading. */
   // The named promotional exception: a campaign headline, never an ordinary page title.
+  launch: 'text-4xl font-semibold tracking-tight leading-tight sm:text-6xl',
   promoDisplay: 'text-4xl font-bold tracking-tight leading-tight sm:text-6xl',
   // Five-digit KRW prices still fit a narrow card with text enlarged to 200%.
   hero: 'text-xl font-bold tracking-tight sm:text-4xl',

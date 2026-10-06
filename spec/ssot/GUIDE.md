@@ -1,5 +1,5 @@
 # GUIDE writing guidelines (작문 지침)
-> r13 | Account-owned writing direction — what kind of writing is wanted — for posts (지침) and for clips (영상 지침): the product's recommended 기본 지침, on until the owner switches one off, beside the owner's own rules applied to every run or scoped to templates or 분야, frozen at enqueue, capturable from the revision flow, accrued verbatim as candidates from completed revisions, and never learned.
+> r14 | Account-owned writing direction — what kind of writing is wanted — for posts (지침) and for clips (영상 지침): the product's recommended 기본 지침, on until the owner switches one off, beside the owner's own rules applied to every run or scoped to templates or 분야, frozen at enqueue, capturable from the revision flow, accrued verbatim as candidates from completed revisions, and never learned.
 
 ## decisions
 - GUIDE-1 [o] a guideline is the direction layer: it says what kind of writing is wanted — what a post or a clip states and leaves out, the order it tells things in and how its sentences are written beyond their register — beside the voice (how sentences sound, VOICE), the template (the form, TMPL) and the system prompt, which holds the input and output format alone (→GEN-14); a guideline outranks the template on content while leaving register to the voice ← a rule about what may be written, fixed in the system prompt, would forbid every kind of writing that needs its opposite
@@ -74,8 +74,7 @@
   - a create invalidates both lists, a dismissal only the candidate list
 - GUIDE-24 [o] server refusal messages are rendered through the shared failure catalogue; the client predicts none of them and mirrors neither the per-account cap nor the pending-candidate bound
 - GUIDE-25 [o] the scope control lives in `entities/guideline/ui` ← the create form and the whole-scope edit need the identical control and a feature may not import a sibling feature; it reads the template directory through `entities/template/@x/guideline.ts`; the write callers live in `entities/guideline/api` because the revision capture needs the create one
-- GUIDE-26 [o] 지침 is the fourth destination of the 글 group (→CLIP-3 →THEME-38) and 영상 지침 the third of the 영상 group (→GUIDE-44), each still clearing the 44 px pointer floor at 320 px
-  - `guidelines.sql` stays ASCII-only ← sqlc mis-slices a query file containing any multi-byte character
+- GUIDE-26 [o] 지침 and 영상 지침 are writing and video settings destinations under THEME-38, each retaining the 44 px pointer floor at 320 px.
 - GUIDE-27 [o] 전부 수락 runs the standard create once per listed pending candidate with 전역 scope and `from_candidate_id`, keeping every one that passes and leaving each refusal (over 300 characters, a duplicate, the account cap) in the queue with its catalogue reason for a single 승인 to fix ← one over-long candidate must not hold back the rest, and a rule that needs a scope other than 전역 is exactly the one worth opening
   - 전부 거절 dismisses every listed candidate behind one `Dialog` naming the count ← there is no undo and a single 무시 stays dialog-free (→GUIDE-12)
   - neither action is offered while the list is empty and both re-read the candidate list, a create additionally invalidating the saved list
@@ -112,7 +111,7 @@
 - GUIDE-43 [o] whether a 기본 지침 is in use belongs to the account and its kind: `추가` in the 기본 지침 sheet (→GUIDE-48) puts one in use and `적용 안함` on its open row takes it out of use, each saving on press with no confirmation ← putting one back is one press in the sheet
   - out of use it leaves the list and stays offered in the sheet, and it leaves every run started afterwards, while work already enqueued keeps the texts it froze (→GUIDE-17)
   - a new account starts with every 기본 지침 in use, and no other surface changes one
-- GUIDE-44 [o] `/video-guidelines` (nav 영상 지침, the third destination of the 영상 group after 영상 템플릿 →CLIP-3, lazily split) is `/guidelines` for the 영상 지침 kind:
+- GUIDE-44 [o] `/video-guidelines` (nav 영상 지침, a video settings destination under THEME-38, lazily split) is `/guidelines` for the 영상 지침 kind:
   - the same one list of closed rows (→GUIDE-20), open rows (→GUIDE-47) and 기본 지침 sheet (→GUIDE-48), an owner row's scope badge reading `전역`, `영상 템플릿` or `적용 대상 없음` and its open row carrying the video-template-name chips
   - its dock holds `기본 지침` and `새 영상 지침`, whose Sheet's scope control offers 전역 / 특정 영상 템플릿
   - below the list the `영상 지침 후보` disclosure behaving as GUIDE-22, GUIDE-23 and GUIDE-27 describe, each candidate linking the clip it came from (plain text once that clip is gone)

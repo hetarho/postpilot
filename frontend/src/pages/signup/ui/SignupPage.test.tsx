@@ -73,7 +73,7 @@ describe('SignupPage', () => {
 
   it('reverse-guards an already signed-in visitor', async () => {
     const { router } = renderAppAt('/signup', { user: { id: 'alice' } })
-    await waitFor(() => expect(router.state.location.pathname).toBe('/posts'))
+    await waitFor(() => expect(router.state.location.pathname).toBe('/'))
   })
 
   it('shows a localized retry instant when signup is throttled', async () => {

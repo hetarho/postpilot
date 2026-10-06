@@ -20,7 +20,6 @@ it.each(['ko', 'en'] as const)(
   'separates four destinations without starting work in %s',
   async (locale) => {
     initializeI18n(locale)
-    const user = userEvent.setup()
     const calls: string[] = []
     const starts: string[] = []
     const reads: NonNullable<FakeExperimentsOptions['reads']> = []
@@ -29,17 +28,8 @@ it.each(['ko', 'en'] as const)(
       providers: { calls },
       experiments: { calls: starts, reads },
     })
-    const group = locale === 'ko' ? 'AI 모델 메뉴' : 'AI model navigation'
-    await screen.findByRole('navigation', { name: group })
-    // The group's destinations live inside the one sidebar, under the primary row that opens
-    // them, and say which level they are because a group's home repeats a primary address.
-    const nav = within(document.querySelector('aside')!)
-    expect(
-      nav
-        .getAllByRole('link')
-        .filter((link) => link.dataset.navLevel === 'group')
-        .map((link) => link.textContent),
-    ).toEqual(destinations.map((d) => d[locale === 'ko' ? 1 : 2]))
+    await screen.findByRole('main')
+    expect(document.querySelector('aside')).toBeNull()
     // 모델 변경 keeps all three active selections: analyze is never compared, but 말투 만들기
     // and memory extraction still read its one active model (MODEL-23).
     expect(within(screen.getByRole('main')).getAllByRole('combobox')).toHaveLength(3)
@@ -50,21 +40,12 @@ it.each(['ko', 'en'] as const)(
     ).toBeInTheDocument()
     expect(reads).toEqual([])
     for (const [path, ko, en] of destinations) {
-      await user.click(nav.getByRole('link', { name: locale === 'ko' ? ko : en }))
+      await act(async () => router.navigate({ to: path }))
       await waitFor(() => expect(router.state.location.pathname).toBe(path))
       const main = within(screen.getByRole('main'))
       expect(
         main.getByRole('heading', { level: 1, name: locale === 'ko' ? ko : en }),
       ).toBeInTheDocument()
-      // The group level alone: the primary row above it is current for the whole group, and on
-      // /ai-models it carries the same address as the group's home.
-      const active = nav
-        .getAllByRole('link')
-        .filter(
-          (link) =>
-            link.dataset.navLevel === 'group' && link.getAttribute('aria-current') === 'page',
-        )
-      expect(active.map((link) => link.getAttribute('href'))).toEqual([path])
       expect(
         main.queryByRole('button', { name: locale === 'ko' ? '비교 시작' : 'Start comparison' }) !==
           null,
@@ -175,7 +156,7 @@ it('shows the operator the per-post figure without a posts count', async () => {
   expect(main.queryByText(/남은 크레딧으로/)).not.toBeInTheDocument()
 })
 
-it('preserves the stage through the group menu, browser history, and saved experiment links', async () => {
+it('preserves the explicit stage through navigation, browser history, and saved experiment links', async () => {
   const user = userEvent.setup()
   const { router } = renderAppAt('/ai-models/experiments?stage=write', {
     user: { id: 'alice' },
@@ -185,9 +166,9 @@ it('preserves the stage through the group menu, browser history, and saved exper
   })
   const record = await screen.findByRole('link', { name: /first-post/ })
   expect(record).toHaveAttribute('href', '/ai-models/experiments/writing-1?stage=write')
-  const [band] = screen.getAllByRole('navigation', { name: 'AI 모델 메뉴' })
-  await user.click(within(band!).getByRole('button'))
-  await user.click(screen.getByRole('menuitemradio', { name: '리더보드' }))
+  await act(async () =>
+    router.navigate({ to: '/ai-models/leaderboard', search: { stage: 'write' } }),
+  )
   await waitFor(() => expect(router.state.location.pathname).toBe('/ai-models/leaderboard'))
   expect(screen.getByRole('tab', { name: '글 작성' })).toHaveAttribute('aria-selected', 'true')
   await user.click(screen.getByRole('tab', { name: '관찰' }))

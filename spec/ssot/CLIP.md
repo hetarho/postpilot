@@ -1,15 +1,10 @@
 # CLIP generated video projects and templates
-> r56 | Browser-first source-based short-form creation with local animated components and analysis preparation, qualified 15–60 second output, and explicitly bounded Max server exports.
+> r57 | Browser-first source-based short-form creation with local animated components and analysis preparation, qualified 15–60 second output, and explicitly bounded Max server exports.
 
 ## decisions
 - CLIP-1 [o] a clip project is independent of a post and owns its title, chosen video template, template answers, owner instruction, intro/outro enablement, presets and slot instructions/text, target duration, aspect ratio, caption pace, accent, analysis, edit plan, the record of what it was asked for and latest successful result
 - CLIP-2 [o] only the authenticated owner may list, view, change, generate, cancel, finalize, download or delete a clip project or video template; an unknown or foreign id is presented as not found
-- CLIP-3 [o] navigation groups, each group's home named for what it lists (→THEME-38 →MEM-24):
-  | group | destinations |
-  |---|---|
-  | 글 | 내 글 · 말투 · 글 템플릿 · 지침 · 기억 |
-  | 영상 | 내 영상 · 영상 템플릿 · 영상 지침 (→GUIDE-44) |
-  - account, plan, billing and administration remain common destinations
+- CLIP-3 [o] new clip creation is a home action under THEME-47; saved clips are reached through `/library` → `/clips`. Reusable video templates, video guidelines and spoken voices are settings destinations under THEME-38; account, plan, billing and authorized administration remain common settings.
 - CLIP-4 [o] a video template is a reusable account-owned preset, not a precondition: it carries an ordered outline of what the clip shows from start to end — named composition stages (→CLIP-141), visible text entries and an optional disclosure badge — beside the information fields and repeated item groups its answers come from; it carries a starting design selection (→CLIP-166) and no timing, every value it carries is the project's to change afterwards and none of it admits or forbids footage ← a template that scripts the footage refuses every clip whose footage does not fit the script
 - CLIP-5 [o] a generation takes at most one video template and collects only the information that template explicitly marks required before it can start; a project with none is generated from its own settings, including enabled intro/outro slots, and no template outline reaches any prompt (→TMPL-1 →TMPL-12 →CLIP-186)
 - CLIP-6 [o] a project accepts up to 20 source videos whose combined duration is at most 30 minutes

@@ -475,30 +475,12 @@
      Name that content breakpoint so TabLinks never guesses with an arbitrary query value. */
   --container-tabs: 38rem;
 
-  /* Safe area and shell metrics as SPACING tokens, so edge-anchored chrome can be padded with
-     ordinary utilities (`pb-safe-b`, `bottom-nav`) instead of the arbitrary values THEME-11 forbids.
-     env() resolves at use time and is 0 until index.html sets viewport-fit=cover (THEME-31).
-     --spacing-nav is the phone tab bar's full height so content and docked bars can clear it. */
-  /* The sticky top bar's desk height, and the sidebar that hangs from
-     its bottom edge. Three files offset past that bar — the sidebar, the editor's status bar, the
-     models page's stage switch — and a `16` repeated in three places is a number that drifts.
-     `dvh`, not `vh`, for the same reason the sheet uses it (THEME-31). */
+  /* One compact sticky header and viewport-edge docks at every width. */
   --spacing-header: 4rem;
-  --spacing-sidebar: calc(100dvh - var(--spacing-header));
-  /* The two chrome rows, each stated once so the offset tokens below can be composed from them
-     instead of from a literal that drifts when a row's padding changes (THEME-38). --spacing-bar
-     is the brand row from `sm:` up and --spacing-primaryrow the laptop's own primary navigation
-     row. The group level has no row of its own any more: it is one control inside the brand row
-     below the desk, and part of the one sidebar at the desk (owner decision 2026-09-22). */
-  --spacing-bar: 3.25rem;
-  --spacing-primaryrow: 2.75rem;
-  /* The bottom edge of everything STICKY at the current width, which is what a page-level sticky
-     element must clear. It is 0 on a phone, where the header scrolls away, and the header itself
-     from `sm:` up. */
-  --spacing-chrome: 0px;
+  --spacing-chrome: var(--spacing-header);
   --spacing-safe-t: env(safe-area-inset-top, 0px);
   --spacing-safe-b: env(safe-area-inset-bottom, 0px);
-  --spacing-nav: calc(3.5rem + env(safe-area-inset-bottom, 0px));
+  --spacing-nav: env(safe-area-inset-bottom, 0px);
   /* A below-header popover must keep its final action reachable in phone landscape. */
   --spacing-popover-below-max: calc(100dvh - 5rem - env(safe-area-inset-top, 0px));
   /* An above-DOCK popover opens into the space between the bar and the top of the screen. A tall
@@ -951,21 +933,6 @@ summary,
 ::selection {
   background-color: var(--color-selection-bg);
   color: var(--color-selection-fg);
-}
-
-/* The laptop header has a dedicated navigation row; all sticky offsets consume
-   this same token. At the desk breakpoint navigation moves into the rail. */
-@media (40rem <= width < 64rem) {
-  :root {
-    --spacing-header: calc(var(--spacing-bar) + var(--spacing-primaryrow));
-  }
-}
-
-/* From `sm:` the header itself is sticky, so it is what a page-level sticky element clears. */
-@media (width >= 40rem) {
-  :root {
-    --spacing-chrome: var(--spacing-header);
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
