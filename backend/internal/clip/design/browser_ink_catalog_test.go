@@ -42,7 +42,7 @@ func TestBrowserInkCatalogMatchesNative(t *testing.T) {
 		}
 		effectSources[file] = fmt.Sprintf("%x", sha256.Sum256(body))
 	}
-	effectImplementation := map[string]any{"version": "caption-filters-v1-ember-v2-order", "pixi": "8.22.0", "colorSpace": "sRGB", "alpha": "premultiplied-alpha", "kernel": 15, "quality": 4, "sources": effectSources}
+	effectImplementation := map[string]any{"version": "caption-filters-v1-ember-v2-retained", "pixi": "8.22.0", "colorSpace": "sRGB", "alpha": "premultiplied-alpha", "kernel": 15, "quality": 4, "sources": effectSources}
 	expected, err := json.MarshalIndent(map[string]any{"version": 3, "styles": styles, "transformPaint": CaptionTransformPaint(), "effectPaint": CaptionEffectPaint(), "effectImplementation": effectImplementation, "nativePainterSources": implementation}, "", "  ")
 	if err != nil {
 		t.Fatal(err)

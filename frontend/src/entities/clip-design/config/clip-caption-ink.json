@@ -11,12 +11,12 @@
       "frontend/src/entities/clip-preview/model/ink-caption-ember-pixi.ts": "22109b4f60d5d74654ae6899d21b70b872e43170c669949f8164470aef010b0b",
       "frontend/src/entities/clip-preview/model/ink-caption-ember.ts": "e4bb41e6db3c278230539a5482e6fde35f26587cf5f6ad29b9a7fff291fc0479",
       "frontend/src/entities/clip-preview/model/ink-caption-filter-pixi.ts": "0b13ee759196c59ea7c084e7f4c1bbdea8b27e32196f2cc4124250f4fb045f32",
-      "frontend/src/entities/clip-preview/model/ink-caption-pixi.ts": "a25c7e83973dc410818ffc5efb1922735be1c8c3e6b1f7e0e5e74801ac5378db",
+      "frontend/src/entities/clip-preview/model/ink-caption-pixi.ts": "099765cae9854564ec694adc740e8d7f2d63896086f6bfae4f187269b8559c89",
       "frontend/src/entities/clip-preview/model/ink-caption-scene.ts": "00b6f5684f084fd1affeef52e5500dff404dfc7a7ef73663c0949c1829e0f10c",
       "frontend/src/entities/clip-preview/model/local-components.ts": "b7182116a7f63cac835ac806e63c3d17e0bccb9b741ab1b46b9ec10c3a91bc33",
       "pnpm-lock.yaml": "d07c4a1bd3aeab4df41155c2d63d85e6a487959534ed7b27b4710315d7a07319"
     },
-    "version": "caption-filters-v1-ember-v2-order"
+    "version": "caption-filters-v1-ember-v2-retained"
   },
   "effectPaint": {
     "ambient": {

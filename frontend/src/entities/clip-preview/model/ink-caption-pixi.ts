@@ -238,7 +238,13 @@ export class BrowserCaptionScenePixi {
     const { bounds } = scene,
       { width, height } = inkRasterDimensions(bounds)
     if (!this.surface) {
-      this.surface = RenderTexture.create({ width, height, resolution: 1, antialias: true })
+      this.surface = RenderTexture.create({
+        width,
+        height,
+        resolution: 1,
+        antialias: true,
+        dynamic: true,
+      })
       this.quad = new Sprite(this.surface)
       this.presentation.addChild(this.quad)
     } else if (this.surface.width !== width || this.surface.height !== height)

@@ -1,14 +1,10 @@
 import { it, expect, vi } from 'vitest'
-import { Texture, type Container, type WebGLRenderer } from 'pixi.js'
+import { Texture, Sprite, type Container, type WebGLRenderer } from 'pixi.js'
 import type { BrowserCaptionPreparedScene } from './ink-caption-draw'
 import { BrowserCaptionScenePixi } from './ink-caption-pixi'
 import { inkEmberTongue } from './ink-caption-ember'
-const palette = [
-  { at: 0, hex: '#FFF6DC', alpha: 1 },
-  { at: 0.28, hex: '#FFB443', alpha: 1 },
-  { at: 0.62, hex: '#FF6A2B', alpha: 0.85 },
-  { at: 1, hex: '#E0431B', alpha: 0 },
-]
+import { CLIP_CAPTION_EFFECT_PAINT as PAINT } from '@/entities/clip-design/@x/clip-preview'
+const palette = PAINT.ember.stops
 const pose = { opacity: 1, matrix: [1, 0, 0, 1, 0, 0] },
   bounds = { x: 0, y: 0, width: 160, height: 180 }
 const scene = (key: string) => ({
@@ -34,7 +30,7 @@ const scene = (key: string) => ({
     },
     {
       id: 'sparks',
-      sparks: { fill: '#FFC978' },
+      sparks: { fill: PAINT.ember.spark },
       pose: { ...pose, sparks: [{ index: 0, cx: 70, cy: 40, radius: 2, alpha: 0.5 }] },
     },
   ],
@@ -46,10 +42,13 @@ const renderer = {
   render: vi.fn(),
 }
 it('retains native back/text/front/spark paint order when a cached scene changes text', () => {
+  const resized = vi.spyOn(Sprite.prototype, 'onViewUpdate')
   const s = new BrowserCaptionScenePixi(renderer as unknown as WebGLRenderer, vi.fn())
   const internals = s as unknown as {
     nodes: Map<string, { container: Container; ember?: object }>
     group: Container
+    surface: Texture
+    quad: { onViewUpdate: () => void }
   }
   const order = () => {
     const nodes = [...internals.nodes.entries()]
@@ -58,6 +57,7 @@ it('retains native back/text/front/spark paint order when a cached scene changes
   try {
     s.render(scene('first-text') as unknown as BrowserCaptionPreparedScene)
     expect(order()).toEqual(['back/rect', 'text/first-text', 'front/rect', 'sparks/rect'])
+    expect(internals.surface.dynamic).toBe(true)
     const stable = [...internals.nodes.values()].filter((n) => n.ember).map((n) => n.container)
     for (const key of [
       'second-text',
@@ -72,11 +72,22 @@ it('retains native back/text/front/spark paint order when a cached scene changes
         stable,
       )
     }
+    resized.mockClear()
+    const bigger = scene('first-text')
+    bigger.bounds = { ...bounds, width: 200, height: 210 }
+    s.render(bigger as unknown as BrowserCaptionPreparedScene)
+    expect(internals.surface.width).toBe(200)
+    expect(internals.surface.height).toBe(210)
+    expect(resized).toHaveBeenCalled()
+    s.render(scene('first-text') as unknown as BrowserCaptionPreparedScene)
+    expect(internals.surface.width).toBe(160)
+    expect(internals.surface.height).toBe(180)
     const reversed = scene('first-text')
     reversed.nodes.reverse()
     s.render(reversed as unknown as BrowserCaptionPreparedScene)
     expect(order()).toEqual(['sparks/rect', 'front/rect', 'text/first-text', 'back/rect'])
   } finally {
     s.destroy()
+    resized.mockRestore()
   }
 })
