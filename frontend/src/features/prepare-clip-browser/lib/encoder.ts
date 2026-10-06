@@ -10,6 +10,7 @@ import {
   ANALYSIS_AUDIO_LIMITS,
   ANALYSIS_PREPARATION_LIMITS as limits,
 } from '../config/limits'
+import { analysisMono } from '../model/mono'
 import type {
   AnalysisCopyArtifact,
   AnalysisCopySlot,
@@ -126,7 +127,6 @@ export function createAnalysisEncoder(
             targetSampleRate: limits.audioRate,
           })
           if (!range) throw new Error('CLIP_SOURCE_AUDIO_MISSING')
-          const channels = range.metadata.channels
           const frames = (slot.durationMs * limits.audioRate) / 1000
           const pcm = await canonicalSelectedAudio(
             range,
@@ -135,13 +135,7 @@ export function createAnalysisEncoder(
             limits.audioRate,
             signal,
           )
-          const mono = new Float32Array(frames)
-          const gain = channels === 1 ? 1 / Math.SQRT1_2 : 1
-          for (let n = 0; n < frames; n++) {
-            const value = (pcm[0][n] + pcm[1][n]) * 0.5 * gain
-            if (!Number.isFinite(value)) throw new Error('CLIP_SOURCE_AUDIO_INVALID')
-            mono[n] = value
-          }
+          const mono = analysisMono(pcm)
           pcm.length = 0
           signal.throwIfAborted()
           audioProcessor ??= createAudioProcessor(signal, ANALYSIS_AUDIO_ENCODER_LIMITS)
