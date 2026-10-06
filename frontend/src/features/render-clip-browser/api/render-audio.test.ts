@@ -9,9 +9,9 @@ it('returns no audio track, decoder or source access when every source is off', 
     fingerprint: cut.fingerprint,
     retainOriginalAudio: false,
   }))
-  const originals = { get: vi.fn() }
+  const originals = { source: vi.fn() }
   expect(
     await renderBrowserAudio(plan, 'vertical', originals, new AbortController().signal),
   ).toBeUndefined()
-  expect(originals.get).not.toHaveBeenCalled()
+  expect(originals.source).not.toHaveBeenCalled()
 })
