@@ -861,6 +861,10 @@
     "historicalFullGoScope": "pre-AAC-fix complete102-package suite; current changed scope is verified separately",
     "correctedAACCommit": "96af4ff348f1599e08e39b662b9c23981c740e96",
     "planningMerge": "29e06742918699282fe6211b7fe98903608265b6",
-    "postMergeFocusedTests": "design/catalog/version, analysis/media/diagnostic, clip/app/API guards passed; no new semantic or provider evidence"
+    "postMergeFocusedTests": "design/catalog/version, analysis/media/diagnostic, clip/app/API guards passed; no new semantic or provider evidence",
+    "pinnedCurrentCodeCommit": "e5ba9590a4d2098b7de1623a479b6b7eead74e7e",
+    "pinnedCurrentExecutionRecord": "browser-analysis-quality-pinned-verifier.json",
+    "pinnedCurrentExecutionScope": "Actual existing-copy LocalVerifier structural smoke; UID501 nonroot, not production role or semantic qualification",
+    "allRealAcceptanceChecksRemainOpen": true
   }
 }

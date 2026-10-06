@@ -9,7 +9,7 @@ import (
 )
 
 // Real T601 WebCodecs synthetic copy, SHA256 facb48b73c141f37edf2d3c4d85a23b6630fb81cc77797a82b1395ba98ad4362.
-// Pinned CPU ffprobe 7.1 packet EOF equals host 9.0.1; full presentation decode is
+// Pinned CPU ffprobe 9.0.1 packet EOF equals host 9.0.1; full presentation decode is
 // 15 video frames and 48000 samples. No content/semantic assertion is made.
 func TestAnalysisPacketEOFAllowsBoundedAACPrimingAndTail(t *testing.T) {
 	packets, e := os.ReadFile("testdata/analysis-aac-browser-packets.json")
