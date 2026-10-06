@@ -7,9 +7,10 @@ import {
 import type { ClipEditPlan } from '@/entities/clip-plan'
 import type { ClipRatioId } from '@/entities/clip-design/@x/clip-preview'
 import { CLIP_DESIGN } from '@/entities/clip-design/@x/clip-preview'
-import { WebGLRenderer, RenderTexture } from 'pixi.js'
+import { stressInk } from './ink-stress'
+import { WebGLRenderer, RenderTexture, TexturePool } from 'pixi.js'
 
-interface Fixture {
+export interface Fixture {
   id: string
   ratio: ClipRatioId
   plan: ClipEditPlan
@@ -19,33 +20,48 @@ interface Fixture {
   renderer?: 'canvas' | 'pixi'
   nativeLayout?: { Text: string; X: number; Y: number; Width: number; Height: number }[]
 }
+// One isolated diagnostic realm. Tag actual core-pool sources without changing allocation or execution.
+TexturePool.createTexture = new Proxy(TexturePool.createTexture, {
+  apply(target, thisArg, args) {
+    const texture = Reflect.apply(target, thisArg, args)
+    texture.source.label = texture.label ?? 'texturePool_diagnostic'
+    return texture
+  },
+})
 declare global {
   interface Window {
-    browserInkFixtures: { run: (fixture: Fixture) => Promise<unknown> }
+    browserInkFixtures: {
+      run: (fixture: Fixture) => Promise<unknown>
+      stress: (fixture: Fixture, engine: 'canvas' | 'pixi') => Promise<unknown>
+    }
   }
 }
+export async function freezeFixture(fixture: Fixture) {
+  return freezeBrowserComposition({
+    ownerId: 'synthetic',
+    projectId: fixture.id,
+    projectRevision: 1,
+    planRevision: 1,
+    plan: fixture.plan,
+    ratio: fixture.ratio,
+    design: fixture.design,
+    sources: [
+      {
+        sourceId: 'source',
+        fingerprint: 'a'.repeat(64),
+        durationMs: 15000,
+        width: 1920,
+        height: 1080,
+        hasAudio: false,
+        allowedRatePermille: [1000],
+      },
+    ],
+  })
+}
 window.browserInkFixtures = {
+  stress: (fixture, engine) => stressInk(fixture, engine, freezeFixture),
   async run(fixture) {
-    const snapshot = await freezeBrowserComposition({
-      ownerId: 'synthetic',
-      projectId: fixture.id,
-      projectRevision: 1,
-      planRevision: 1,
-      plan: fixture.plan,
-      ratio: fixture.ratio,
-      design: fixture.design,
-      sources: [
-        {
-          sourceId: 'source',
-          fingerprint: 'a'.repeat(64),
-          durationMs: 15000,
-          width: 1920,
-          height: 1080,
-          hasAudio: false,
-          allowedRatePermille: [1000],
-        },
-      ],
-    })
+    const snapshot = await freezeFixture(fixture)
     const dimensions = CLIP_DESIGN.ratios[fixture.ratio].canvas
     const canvas = new OffscreenCanvas(dimensions.width, dimensions.height),
       context = canvas.getContext('2d', { willReadFrequently: true })!

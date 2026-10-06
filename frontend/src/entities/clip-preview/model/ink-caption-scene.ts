@@ -21,6 +21,19 @@ export interface InkCaptionPose {
   clip?: InkBox
   tint?: string
   rect?: InkBox
+  effect?:
+    | { kind: 'blur'; sigma: number }
+    | {
+        kind: 'neon'
+        wideSigma: number
+        tightSigma: number
+        wideAlpha: number
+        tightAlpha: number
+        wide: string
+        tight: string
+      }
+    | { kind: 'gradient'; box: InkBox; stops: readonly { at: number; hex: string }[] }
+  light?: { ellipses: readonly { cx: number; cy: number; rx: number; ry: number }[] }
 }
 export interface InkCaptionSceneNode {
   id: string
@@ -30,6 +43,10 @@ export interface InkCaptionSceneNode {
     fill: string
     alpha: number
     shadow?: InkCaptionLayout['style']['paint']['shadow']
+  }
+  light?: {
+    palettes: readonly (readonly { at: number; hex: string; alpha: number }[])[]
+    sigma: number
   }
   pose: (progress: number, durationMs: number) => InkCaptionPose
 }
@@ -46,8 +63,15 @@ export const inkRound = (n: number) => Number(num(n))
 const identity: InkMatrix = [1, 0, 0, 1, 0, 0]
 const shadow = (id: string, s: InkCaptionLayout['style']['paint']['shadow']) =>
   `<filter id="${id}" x="-30%" y="-30%" width="160%" height="180%" color-interpolation-filters="sRGB"><feOffset in="SourceAlpha" dx="${num(s.dx)}" dy="${num(s.dy)}" result="o"/><feGaussianBlur in="o" stdDeviation="${num(s.blur / 2)}" result="b"/><feFlood flood-color="${s.hex}" flood-opacity="${num(s.alpha)}"/><feComposite in2="b" operator="in" result="s"/><feMerge><feMergeNode in="s"/><feMergeNode in="SourceGraphic"/></feMerge></filter>`
-const translation = (x: number, y: number): InkMatrix => [1, 0, 0, 1, inkRound(x), inkRound(y)]
-const pivot = (cx: number, cy: number, scale: number, degrees = 0): InkMatrix => {
+export const inkTranslation = (x: number, y: number): InkMatrix => [
+  1,
+  0,
+  0,
+  1,
+  inkRound(x),
+  inkRound(y),
+]
+export const inkPivot = (cx: number, cy: number, scale: number, degrees = 0): InkMatrix => {
   cx = inkRound(cx)
   cy = inkRound(cy)
   scale = inkRound(scale)
@@ -126,7 +150,7 @@ export function inkCaptionScene(
           alpha,
           matrix:
             index === active
-              ? pivot(word.x + word.width / 2, line.y - role.size * 0.3, 1.07)
+              ? inkPivot(word.x + word.width / 2, line.y - role.size * 0.3, 1.07)
               : identity,
           tint: index === active ? chosen(style.paint.fill) : style.paint.fill,
         }
@@ -173,7 +197,7 @@ export function inkCaptionScene(
             rotation = (1 - p) * 7 * (index % 2 ? -1 : 1)
           return pose(
             Math.min(1, p * 2.2),
-            pivot(word.x + word.width / 2, line.y - role.size * 0.32, scale, rotation),
+            inkPivot(word.x + word.width / 2, line.y - role.size * 0.32, scale, rotation),
           )
         },
       })
@@ -200,7 +224,7 @@ export function inkCaptionScene(
         ),
         pose: (progress) => {
           const p = inkCubic(inkClamp((progress - 0.06 - index * 0.12) / 0.34))
-          return pose(p, translation((1 - p) * -70, 0))
+          return pose(p, inkTranslation((1 - p) * -70, 0))
         },
       })
     }
@@ -208,7 +232,7 @@ export function inkCaptionScene(
     for (const [index, line] of lines.entries()) {
       const box = { x: line.x, y: line.top, width: line.width, height: line.height }
       const matrix = (progress: number, duration: number) =>
-        translation(0, inkEntrance(layout, progress, duration).dy)
+        inkTranslation(0, inkEntrance(layout, progress, duration).dy)
       nodes.push({
         id: `${index}/stroke`,
         document: doc(`${index}/stroke`, box, style.bleed, (o) =>
@@ -255,7 +279,7 @@ export function inkCaptionScene(
         const p = settling(progress, duration)
         return pose(
           1,
-          pivot(
+          inkPivot(
             region.x + region.width / 2,
             region.y + region.height / 2,
             Math.max(inkBack(p), 0.001),
@@ -279,7 +303,7 @@ export function inkCaptionScene(
     nodes.push({
       id: 'bubble',
       document,
-      pose: (p, d) => pose(1, translation(0, inkEntrance(layout, p, d).dy)),
+      pose: (p, d) => pose(1, inkTranslation(0, inkEntrance(layout, p, d).dy)),
     })
   } else if (style.id === 'serif') {
     const document = doc(
@@ -292,7 +316,7 @@ export function inkCaptionScene(
     nodes.push({
       id: 'text',
       document,
-      pose: (p, d) => pose(1, translation(0, inkEntrance(layout, p, d).dy)),
+      pose: (p, d) => pose(1, inkTranslation(0, inkEntrance(layout, p, d).dy)),
     })
     for (const [index, y] of [region.y - 26, region.y + region.height + 24].entries()) {
       const box = { x: region.x - 20, y, width: region.width + 40, height: 1.4 }
@@ -302,7 +326,7 @@ export function inkCaptionScene(
         pose: (p, d) => {
           const width = inkRound((region.width + 40) * inkCubic(inkClamp((p - 0.2) / 0.42)))
           return {
-            ...pose(0.72, translation(0, inkEntrance(layout, p, d).dy)),
+            ...pose(0.72, inkTranslation(0, inkEntrance(layout, p, d).dy)),
             rect: {
               x: inkRound(region.x + region.width / 2 - width / 2),
               y: inkRound(y),

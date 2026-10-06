@@ -27,14 +27,14 @@ func TestBrowserInkCatalogMatchesNative(t *testing.T) {
 		}
 	}
 	implementation := map[string]string{}
-	for _, file := range []string{"caption_draw.go", "caption_frame.go", "caption_transform.go"} {
+	for _, file := range []string{"caption_draw.go", "caption_frame.go", "caption_transform.go", "caption_effect.go"} {
 		body, err := os.ReadFile(file)
 		if err != nil {
 			t.Fatal(err)
 		}
 		implementation[file] = fmt.Sprintf("%x", sha256.Sum256(body))
 	}
-	expected, err := json.MarshalIndent(map[string]any{"version": 2, "styles": styles, "transformPaint": CaptionTransformPaint(), "nativePainterSources": implementation}, "", "  ")
+	expected, err := json.MarshalIndent(map[string]any{"version": 3, "styles": styles, "transformPaint": CaptionTransformPaint(), "effectPaint": CaptionEffectPaint(), "nativePainterSources": implementation}, "", "  ")
 	if err != nil {
 		t.Fatal(err)
 	}

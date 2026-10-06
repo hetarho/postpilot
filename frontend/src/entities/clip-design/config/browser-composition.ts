@@ -2,10 +2,9 @@
 export const CLIP_BROWSER_COMPOSITION = {
   schemaVersion: 1,
   renderer: 'clip-browser-composition-v1',
-  components: 'native-cds-r33-pop-exposure-v2',
+  components: 'native-cds-r33-pop-exposure-v2-filters-v1',
   fonts: 'bundled-clip-fonts-v1',
-  assets:
-    'clip-design-assets-v1-ink-658bc158aacde853089103085afc23d3923c18e2e605072e51e0dcf08c2dc196',
+  assets: 'clip-design-assets-v1-ink-62736cf130a334decc16453f6946d7331f0e14057e4270967dd62fa32313753b',
   qualified: false,
 } as const
 

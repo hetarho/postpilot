@@ -3,6 +3,7 @@ import {
   CLIP_INK_FONT_DATA,
   CLIP_TRANSITION,
   CLIP_CAPTION_TRANSFORM_STYLES,
+  CLIP_CAPTION_EFFECT_STYLES,
 } from '@/entities/clip-design/@x/clip-preview'
 import {
   evaluateBrowserFrame,
@@ -23,6 +24,7 @@ import {
 } from './ink-static'
 import { previewMotion } from './draft-preview'
 import { inkCaptionScene, type InkCaptionScene } from './ink-caption-scene'
+import { inkCaptionEffectsScene } from './ink-caption-effects'
 import { BrowserCaptionSceneCanvas, type BrowserCaptionPreparedScene } from './ink-caption-draw'
 
 type Component = BrowserCompositionSnapshot['components'][number]
@@ -74,7 +76,9 @@ export class BrowserLocalComponents {
         const style = inkCaptionStyle(component.componentId.slice('caption/'.length))
         if (
           style.rendering !== 'static' &&
-          !CLIP_CAPTION_TRANSFORM_STYLES.some((id) => id === style.id)
+          ![...CLIP_CAPTION_TRANSFORM_STYLES, ...CLIP_CAPTION_EFFECT_STYLES].some(
+            (id) => id === style.id,
+          )
         )
           throw new ClipInkError('CLIP_INK_STYLE_NOT_IMPLEMENTED', style.id)
       }
@@ -251,7 +255,11 @@ export class BrowserLocalComponents {
         caption,
         ...(caption.style.rendering === 'static'
           ? { document: inkStaticCaption(ratio, caption, paint) }
-          : { scene: inkCaptionScene(ratio, caption, paint) }),
+          : {
+              scene: CLIP_CAPTION_EFFECT_STYLES.some((id) => id === caption.style.id)
+                ? inkCaptionEffectsScene(ratio, caption)
+                : inkCaptionScene(ratio, caption, paint),
+            }),
         layer: 1,
         motion: e.pace === 'rapid' ? { inMs: 0, outMs: 0, dy: 0 } : caption.style.motion,
       }
@@ -342,6 +350,7 @@ export class BrowserLocalComponents {
                 document: node.document,
                 ink,
                 rect: node.rect,
+                light: node.light,
                 pose: node.pose(progress, state.durationMs),
               })
             }
@@ -351,6 +360,7 @@ export class BrowserLocalComponents {
             throw error
           }
           const prepared = {
+            style: scene.layout.style.id,
             bounds: scene.bounds,
             nodes,
             opacity: scene.opacity(progress, state.durationMs),
@@ -421,7 +431,7 @@ export class BrowserLocalComponents {
     }
   }
   measurements() {
-    return this.cache.measurements()
+    return { ...this.cache.measurements(), canvas: this.sceneCanvas.measurements() }
   }
   dropGPU(owner: object) {
     this.cache.dropGPU(owner)

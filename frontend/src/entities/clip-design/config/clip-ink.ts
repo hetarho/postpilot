@@ -22,6 +22,14 @@ export const CLIP_INK_FONT_DATA = fonts
 export const CLIP_INK_IDENTITY = identity
 export const CLIP_CAPTION_INK = catalog.styles
 export const CLIP_CAPTION_TRANSFORM_PAINT = catalog.transformPaint
+export const CLIP_CAPTION_EFFECT_PAINT = catalog.effectPaint
+export const CLIP_CAPTION_EFFECT_STYLES = [
+  'blur-in',
+  'ambient',
+  'neon',
+  'iridescent',
+  'glitch',
+] as const
 export const CLIP_CAPTION_TRANSFORM_STYLES = [
   'word-pop',
   'pop',

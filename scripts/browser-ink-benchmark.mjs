@@ -94,11 +94,11 @@ try {
   const results = [];
   for (const fixture of cases) {
     const result = await page.evaluate(
-      (f) => window.browserInkFixtures.run(f),
-      { ...fixture, renderer: option("--renderer", "canvas") },
+      (f) => f.stress ? window.browserInkFixtures.stress(f,f.renderer) : window.browserInkFixtures.run(f),
+      { ...fixture, renderer: option("--renderer", "canvas"), stress: args.includes("--stress") },
     );
     const { png, ...summary } = result;
-    writeFileSync(
+    if (png) writeFileSync(
       resolve(output, fixture.id + ".png"),
       Buffer.from(png, "base64"),
     );
