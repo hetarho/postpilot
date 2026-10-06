@@ -1,3 +1,4 @@
+import { toClipObservations } from '@/entities/clip-observation/@x/clip-plan'
 import { narrationFromProto, narrationToProto } from './spoken'
 import { CLIP_ACCENTS, type ClipAccent } from '@/entities/clip-template/@x/clip-plan'
 import { CLIP_PLAYBACK, CLIP_RATES } from '@/entities/clip-design/@x/clip-plan'
@@ -154,6 +155,9 @@ export function toClipEditingState(value: ProtoClipEditingState): ClipEditingSta
         }
       }),
     },
+    ...(value.layoutObservations
+      ? { layoutObservations: toClipObservations(value.layoutObservations) }
+      : {}),
     sources: value.sources.map((s) => ({
       id: s.id,
       fingerprint: s.fingerprint,
@@ -161,6 +165,10 @@ export function toClipEditingState(value: ProtoClipEditingState): ClipEditingSta
       durationMs: s.durationMs,
       width: s.width,
       height: s.height,
+      ...(s.hasAudio !== undefined ? { hasAudio: s.hasAudio } : {}),
+      ...(s.originalMeasurementProvenance
+        ? { originalMeasurementProvenance: s.originalMeasurementProvenance }
+        : {}),
       // A server that predates the rate set offers 1x and faster only, which is
       // exactly what an unverified cadence earns.
       allowedRatePermille:

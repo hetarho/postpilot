@@ -13,7 +13,7 @@ import {
 } from './browser-composition'
 import { BrowserInkCache, type BrowserInkLease } from './ink-cache'
 import { ResvgBrowserInk, type BrowserInkRasterizer, type InkDocument } from './ink-raster'
-import { ClipInkError, inkCaptionStyle } from './ink-typography'
+import { ClipInkError, inkCaptionStyle, inkResolveCaption } from './ink-typography'
 import { inkLayoutCaption, type InkCaptionLayout } from './ink-layout'
 import {
   inkRegionCapacity,
@@ -26,6 +26,7 @@ import {
 import { previewMotion } from './draft-preview'
 import { backgroundBoxUnion } from './background-math'
 import type { InkBox } from './ink-typography'
+import { coveredBrowserFootage, selectBrowserAnchor } from './composition-placement'
 import { inkCaptionScene, type InkCaptionScene } from './ink-caption-scene'
 import { inkCaptionEffectsScene } from './ink-caption-effects'
 import { BrowserCaptionSceneCanvas, type BrowserCaptionPreparedScene } from './ink-caption-draw'
@@ -65,6 +66,9 @@ export type BrowserLocalComponent = BrowserLocalComponentBase &
 /** Local owned drawing; its only inputs are a frozen component/time contract and fixed assets. */
 export class BrowserLocalComponents {
   private descriptions = new Map<string, Promise<Description>>()
+  private layout?: Promise<void>
+  private placements = new Map<string, { anchor: string; style: string; advisories: string[] }>()
+  private headerBounds = new Map<string, InkBox>()
   private cache: BrowserInkCache
   private headers?: Promise<Map<string, InkDocument | undefined>>
   private components: Set<Component>
@@ -108,6 +112,9 @@ export class BrowserLocalComponents {
     this.components = new Set(snapshot.components)
     this.descriptions.clear()
     this.headers = undefined
+    this.layout = undefined
+    this.placements.clear()
+    this.headerBounds.clear()
   }
   private region(component: Component) {
     const kind = component.element.role === 'hook' ? 'intro' : 'outro'
@@ -240,7 +247,182 @@ export class BrowserLocalComponents {
       }
       start = end
     }
+    this.headerBounds = new Map(items.map((item) => [item.component.instanceId, { ...item.box }]))
     return new Map(items.map((item) => [item.component.instanceId, item.document]))
+  }
+  private representative(component: Component): State {
+    return {
+      component,
+      localFrame: 0,
+      localTimeMs: 0,
+      durationMs: component.endMs - component.startMs,
+      progress: 0.5,
+      animationProgress: 0.5,
+      phraseIndex: component.phraseIndex,
+      text:
+        component.phraseIndex === undefined
+          ? component.element.text
+          : component.element.phrases![component.phraseIndex]!.text,
+    }
+  }
+  /** Whole native layout order is fixed before random seeking or background sampling. */
+  async resolveLayout(signal?: AbortSignal): Promise<void> {
+    const snapshot = this.snapshot
+    if (!this.layout) {
+      const pending = (async () => {
+        const placements = new Map<
+          string,
+          { anchor: string; style: string; advisories: string[] }
+        >()
+        const first = [
+          ...new Map(
+            snapshot.components.map((component) => [
+              component.instanceId,
+              snapshot.components.find((c) => c.instanceId === component.instanceId)!,
+            ]),
+          ).values(),
+        ]
+        const priority = (role: string) =>
+          ['badge', 'disclosure'].includes(role)
+            ? 0
+            : ['hook', 'ending'].includes(role)
+              ? 1
+              : role === 'info'
+                ? 2
+                : 3
+        first.sort((a, b) => priority(a.element.role) - priority(b.element.role))
+        const obstacles: { component: Component; parts: InkBox[] }[] = []
+        let previous = ''
+        for (const component of first) {
+          signal?.throwIfAborted()
+          if (snapshot !== this.snapshot) throw new ClipInkError('CLIP_INK_SUPERSEDED')
+          const e = component.element
+          const state = this.representative(component)
+          if (e.role !== 'caption') {
+            const described = await this.describe(state, {}, signal)
+            const document = described.document
+            if (document)
+              obstacles.push({
+                component,
+                parts: document.contrastParts?.map((part) => part.box) ?? [
+                  document.placement ?? document.sampledBounds ?? document.bounds,
+                ],
+              })
+            continue
+          }
+          // First rapid phrase chooses the common style/anchor against its own interval.
+          const { style: selected } = inkResolveCaption(
+            component.componentId.slice('caption/'.length),
+            state.text,
+          )
+          const pinned = e.position !== 'auto' || !!e.effectivePosition || !!e.ownerPosition
+          const anchors = pinned
+            ? [e.position === 'auto' ? e.effectivePosition || selected.rule.anchor : e.position]
+            : [selected.rule.anchor, selected.rule.anchor_alt].filter(
+                (anchor, index, all) => !!anchor && all.indexOf(anchor) === index,
+              )
+          const fits: { anchor: string; layout: InkCaptionLayout }[] = []
+          for (const anchor of anchors) {
+            try {
+              const layout = await inkLayoutCaption(
+                {
+                  text: state.text,
+                  style: selected.id,
+                  ratio: snapshot.ratio,
+                  position: anchor,
+                  align: e.align,
+                  keyword: e.keyword,
+                  pace: e.pace,
+                  ownerPosition: e.ownerPosition,
+                  ownerSizePx: e.ownerSizePx,
+                },
+                this.rasterizer,
+                signal,
+              )
+              fits.push({ anchor, layout })
+              if (pinned) break
+            } catch (error) {
+              if (
+                !(error instanceof ClipInkError) ||
+                !['CLIP_INK_COPY_LIMIT', 'CLIP_INK_SAFE_AREA'].includes(error.code)
+              )
+                throw error
+            }
+          }
+          if (!fits.length) throw new ClipInkError('CLIP_INK_COPY_LIMIT', e.instanceId)
+          const geometry = coveredBrowserFootage(snapshot, component)
+          const placed = obstacles
+            .filter(
+              ({ component: other }) =>
+                other.startMs < component.endMs && component.startMs < other.endMs,
+            )
+            .flatMap(({ parts }) => parts)
+          const index = pinned
+            ? 0
+            : selectBrowserAnchor(
+                fits.map(({ anchor, layout }) => ({
+                  anchor,
+                  align: e.align,
+                  authoredAlign: e.align !== 'center',
+                  plate: layout.region,
+                  fits: true,
+                })),
+                geometry.subject,
+                placed,
+                geometry.readableText,
+                previous,
+                geometry.captionSafe,
+              )
+          const repairable =
+            e.kind === 'ai' &&
+            !e.ownerEdited &&
+            !e.effectivePosition &&
+            !e.ownerPosition &&
+            !e.ownerSizePx &&
+            !e.ownerStyle &&
+            e.style === 'auto' &&
+            e.position === 'auto' &&
+            e.basis === 'cut' &&
+            e.startMs === undefined &&
+            e.endMs === undefined
+          if (index < 0 && repairable)
+            throw new ClipInkError('CLIP_INK_AUTOMATIC_PLACEMENT', e.instanceId)
+          const chosen = fits[Math.max(0, index)]!
+          placements.set(component.instanceId, {
+            anchor: chosen.anchor,
+            style: chosen.layout.style.id,
+            advisories: index < 0 ? ['overlap'] : [],
+          })
+          previous = chosen.anchor
+        }
+        if (snapshot !== this.snapshot || signal?.aborted)
+          throw new ClipInkError('CLIP_INK_SUPERSEDED')
+        this.placements = placements
+      })()
+      this.layout = pending.catch((error) => {
+        if (snapshot === this.snapshot) this.layout = undefined
+        throw error
+      })
+    }
+    await this.layout
+    if (snapshot !== this.snapshot || signal?.aborted) throw new ClipInkError('CLIP_INK_SUPERSEDED')
+  }
+  async captionGeometry(instanceId: string, signal?: AbortSignal) {
+    await this.resolveLayout(signal)
+    const component = this.snapshot.components.find(
+      (c) => c.instanceId === instanceId && c.element.role === 'caption',
+    )
+    if (!component) return undefined
+    const description = await this.describe(this.representative(component), {}, signal)
+    if (!description.caption) return undefined
+    return {
+      instanceId,
+      box: description.caption.region,
+      fontSize: description.caption.role.size,
+      style: description.caption.style.id,
+      representativeFrame: description.caption.style.rendering !== 'static',
+      advisories: [...(this.placements.get(instanceId)?.advisories ?? [])],
+    }
   }
   private async describe(
     state: State,
@@ -251,15 +433,17 @@ export class BrowserLocalComponents {
       e = component.element,
       ratio = this.snapshot.ratio
     if (e.role === 'caption') {
-      const style = component.componentId.slice('caption/'.length)
+      const placed = this.placements.get(component.instanceId)
+      const style = placed?.style ?? component.componentId.slice('caption/'.length)
       const position =
-        e.position === 'auto'
+        placed?.anchor ??
+        (e.position === 'auto'
           ? e.effectivePosition ||
             (e.ownerPosition
               ? CLIP_DESIGN.regions.caption[style as keyof typeof CLIP_DESIGN.regions.caption]
                   .anchor
               : '')
-          : e.position
+          : e.position)
       const caption = await inkLayoutCaption(
         {
           text: state.text,
@@ -345,6 +529,7 @@ export class BrowserLocalComponents {
     signal?: AbortSignal,
     paintFor?: (instanceId: string) => InkPaint,
   ): Promise<BrowserLocalComponent[]> {
+    await this.resolveLayout(signal)
     const resources: BrowserLocalComponent[] = []
     try {
       for (const state of frame.components) {
@@ -467,6 +652,7 @@ export class BrowserLocalComponents {
     state: State,
     signal?: AbortSignal,
   ): Promise<BrowserBackgroundGeometry | undefined> {
+    await this.resolveLayout(signal)
     if (!this.components.has(state.component)) throw new ClipInkError('CLIP_INK_SUPERSEDED')
     const role = state.component.element.role
     if (!['caption', 'hook', 'ending', 'info'].includes(role)) return undefined
@@ -479,7 +665,9 @@ export class BrowserLocalComponents {
       return {
         region: backgroundBoxUnion(lines.map((line) => line.glyphBounds!)),
         caption: description.caption,
-        anchor: state.component.element.effectivePosition || state.component.element.position,
+        anchor:
+          this.placements.get(state.component.instanceId)?.anchor ??
+          (state.component.element.effectivePosition || state.component.element.position),
         plate: !!(description.caption.style.rule.plate || description.caption.style.paint.plate),
         motion: description.motion,
         contrastParts: lines.map((line) => ({

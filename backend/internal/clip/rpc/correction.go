@@ -157,6 +157,7 @@ func editingProto(s *clip.CorrectionState) *v1.ClipEditingState {
 		return nil
 	}
 	out := &v1.ClipEditingState{Plan: &v1.ClipEditPlan{DurationMs: int32(s.Plan.DurationMS), NativeComposition: s.Plan.NativeComposition}, FadeMs: int32(s.FadeMS), MaxCuts: int32(s.MaxCuts), MaxCopyRunes: int32(s.MaxCopyRunes), MinDurationMs: int32(s.MinDurationMS), MaxDurationMs: int32(s.MaxDurationMS)}
+	out.LayoutObservations = analysisObservationsProto(s.LayoutObservations)
 	out.Plan.Narration = narrationProto(s.Plan.Narration)
 	if s.Plan.SourceVolumePermille != nil {
 		gain := int32(*s.Plan.SourceVolumePermille)

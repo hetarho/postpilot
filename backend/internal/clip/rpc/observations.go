@@ -34,6 +34,7 @@ func analysisObservationsProto(analyses []clip.SourceAnalysis) *v1.ClipObservati
 				Subjects: s.Subjects, Speech: s.Speech, Quality: s.Quality,
 				Action: s.Action, Motion: s.Motion, Certainty: s.Certainty, Usability: s.Usability,
 				Focal: &v1.ClipFocal{X: focal.X, Y: focal.Y},
+				Scene: s.Scene, ReadableText: s.ReadableText, Subject: sourceBoxProto(s.Subject), CaptionSafe: sourceBoxesProto(s.CaptionSafe),
 			})
 		}
 		out.Sources = append(out.Sources, item)
@@ -53,5 +54,16 @@ func retainedSourceProto(s clip.AnalysisSource) *v1.ClipRetainedSource {
 	}
 	return &v1.ClipRetainedSource{Id: s.ID, Fingerprint: s.Fingerprint, Filename: s.Filename,
 		DurationMs: int32(s.Info.DurationMS), Width: int32(s.Info.Width), Height: int32(s.Info.Height),
-		AllowedRatePermille: allowed}
+		AllowedRatePermille: allowed, HasAudio: &s.Info.HasAudio, OriginalMeasurementProvenance: s.OriginalMeasurementProvenance}
+}
+
+func sourceBoxProto(box clip.Region) *v1.ClipNormalizedSourceBox {
+	return &v1.ClipNormalizedSourceBox{X: box.X, Y: box.Y, Width: box.Width, Height: box.Height}
+}
+func sourceBoxesProto(boxes []clip.Region) []*v1.ClipNormalizedSourceBox {
+	out := make([]*v1.ClipNormalizedSourceBox, 0, len(boxes))
+	for _, box := range boxes {
+		out = append(out, sourceBoxProto(box))
+	}
+	return out
 }
