@@ -89,7 +89,11 @@ export function VoiceLayout() {
               target that leads here, and this is the screen that shows what they act on. */}
           <div className="mt-4 flex flex-wrap items-start gap-x-3 gap-y-2">
             <RenameVoiceField ownerId={ownerId} voice={voice} className="min-w-0 flex-1">
-              <Typography variant="display" className="min-w-0 break-words">
+              <Typography
+                variant={pathname === learningPath ? 'title' : 'display'}
+                as="h1"
+                className="min-w-0 break-words"
+              >
                 {voice.name}
               </Typography>
             </RenameVoiceField>
