@@ -42,7 +42,10 @@ const renderer = {
   render: vi.fn(),
 }
 it('retains native back/text/front/spark paint order when a cached scene changes text', () => {
-  const resized = vi.spyOn(Sprite.prototype, 'onViewUpdate')
+  const resized = vi.spyOn(
+    Sprite.prototype as unknown as { onViewUpdate: () => void },
+    'onViewUpdate',
+  )
   const s = new BrowserCaptionScenePixi(renderer as unknown as WebGLRenderer, vi.fn())
   const internals = s as unknown as {
     nodes: Map<string, { container: Container; ember?: object }>

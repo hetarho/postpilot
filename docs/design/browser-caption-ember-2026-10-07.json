@@ -1,14 +1,14 @@
 {
   "task": "T597",
   "version": 1,
-  "codeCommit": "ff048f4c388e11b659bba5fee999159ca74f49d9",
+  "codeCommit": "31674c3cd386fce8317968dad29cdcb4d11f2b0a",
   "productionQualified": false,
   "humanReleaseReviewComplete": false,
   "deviceMatrixQualified": false,
   "timingQualified": false,
   "physicalMemoryQualified": false,
   "nativeProfile": "cpu-v4",
-  "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v1",
+  "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained",
   "corpus": {
     "ratios": [
       "vertical",
@@ -561,7 +561,7 @@
       "bubble"
     ],
     "fontsManifestSHA256": "51ad5c795ede98d22e4dfea750946889af3717c04dee3642b87e3419c835970c",
-    "catalogSHA256": "4d8da69f7d70e3fa1d7fc385bb955d5e33859e4c5ccaff05f8eb43c179eac536",
+    "catalogSHA256": "fc2fef39bdb245cc1e816a0f64530fc1916c3c03870cbd042792dd1b0ba2dbc7",
     "wasmSHA256": "22bf6e9f9a100d972da0411a69c5ba504367fc1fa87b3b64e3f35e53926d2d70",
     "fontAssets": [
       {
@@ -597,7 +597,7 @@
         "sha256": "60c0077fce069ba90ae97c0a3679f6eb3712e0ca637bdd0c15b72d335ec46db7"
       }
     ],
-    "assetVersion": "clip-design-assets-v1-ink-19d6c3e87f064598110a6655657e16c5e3922ef251cc720696279cbc2580c798"
+    "assetVersion": "clip-design-assets-v1-ink-0653d8957a58f313de8d74c813b2a587dc64e9b5cc155754bf169304aa37152f"
   },
   "effectImplementation": {
     "alpha": "premultiplied-alpha",
@@ -611,12 +611,12 @@
       "frontend/src/entities/clip-preview/model/ink-caption-ember-pixi.ts": "22109b4f60d5d74654ae6899d21b70b872e43170c669949f8164470aef010b0b",
       "frontend/src/entities/clip-preview/model/ink-caption-ember.ts": "e4bb41e6db3c278230539a5482e6fde35f26587cf5f6ad29b9a7fff291fc0479",
       "frontend/src/entities/clip-preview/model/ink-caption-filter-pixi.ts": "0b13ee759196c59ea7c084e7f4c1bbdea8b27e32196f2cc4124250f4fb045f32",
-      "frontend/src/entities/clip-preview/model/ink-caption-pixi.ts": "81d5532c350b54acf6a026139bb4b5edeadc14f583a3e2d2774bee70adb45d6e",
+      "frontend/src/entities/clip-preview/model/ink-caption-pixi.ts": "099765cae9854564ec694adc740e8d7f2d63896086f6bfae4f187269b8559c89",
       "frontend/src/entities/clip-preview/model/ink-caption-scene.ts": "00b6f5684f084fd1affeef52e5500dff404dfc7a7ef73663c0949c1829e0f10c",
       "frontend/src/entities/clip-preview/model/local-components.ts": "b7182116a7f63cac835ac806e63c3d17e0bccb9b741ab1b46b9ec10c3a91bc33",
       "pnpm-lock.yaml": "d07c4a1bd3aeab4df41155c2d63d85e6a487959534ed7b27b4710315d7a07319"
     },
-    "version": "caption-filters-v1-ember-v1"
+    "version": "caption-filters-v1-ember-v2-retained"
   },
   "neutralCorrection": {
     "sourceProof": "docs/qa/browser-caption-ember-neutral-source-equivalence.json",
@@ -627,8 +627,8 @@
   },
   "actualImages": {
     "current": {
-      "receipt": "docs/qa/browser-caption-ember-current-image-proof.json",
-      "receiptSHA256": "76280952c63297cd003a93a780675acf327dc68529c02a5ed2445b51e668ceaf"
+      "receipt": "docs/qa/browser-caption-ember-retained-image-proof.json",
+      "receiptSHA256": "9d7f1ec936ec588445c3a1b2c8fd74126d633690cd8183ce3fa4e98e08ac49b7"
     },
     "render": {
       "receipt": "docs/qa/browser-caption-ember-render-image-proof.json",
@@ -637,6 +637,10 @@
     "export": {
       "receipt": "docs/qa/browser-caption-ember-native-export-proof.json",
       "receiptSHA256": "f47fd427c7bd0c3f00758b23350141470bc01d0e5a1f6cedf97e8687ff5d0ebd"
+    },
+    "previousCurrent": {
+      "receipt": "docs/qa/browser-caption-ember-current-image-proof.json",
+      "receiptSHA256": "76280952c63297cd003a93a780675acf327dc68529c02a5ed2445b51e668ceaf"
     }
   },
   "checks": [
@@ -646,7 +650,8 @@
       "command": "PATH=/Users/ihaelam/.npm/_npx/4aa47c519def57bc/node_modules/node/bin:$PATH TMPDIR=/private/tmp pnpm --filter ./frontend test",
       "exit": 0,
       "log": "/private/tmp/postpilot-browser-media-prep-ink/T597-full-fe-final.log",
-      "logSHA256": "73fe40274e9673f47e516d6a688a57601990c3854b0b6a81234b305c77ef2c0d"
+      "logSHA256": "73fe40274e9673f47e516d6a688a57601990c3854b0b6a81234b305c77ef2c0d",
+      "retainedHistoricalScope": true
     },
     {
       "name": "requiredCurrentCI",
@@ -654,15 +659,17 @@
       "command": "PATH=/Users/ihaelam/.npm/_npx/4aa47c519def57bc/node_modules/node/bin:$PATH TMPDIR=/private/tmp sh -c 'pnpm lint && pnpm lint:fsd && pnpm lint:style:probe && pnpm lint:style && pnpm lint:retirement && pnpm test:dev && pnpm exec haeram-spec-creator check && pnpm build:web'",
       "exit": 0,
       "log": "/private/tmp/postpilot-browser-media-prep-ink/T597-ci-corrected.log",
-      "logSHA256": "67d100defa1483b18b4716137e305742edbc7a413b14763df5f274fd07bc92f5"
+      "logSHA256": "67d100defa1483b18b4716137e305742edbc7a413b14763df5f274fd07bc92f5",
+      "retainedHistoricalScope": true
     },
     {
-      "name": "fullCurrentGo",
+      "name": "retainedFullGo",
       "at": "ff048f4c388e11b659bba5fee999159ca74f49d9",
       "command": "cd backend && TMPDIR=/private/tmp GOCACHE=/private/tmp/postpilot-go-cache GOMAXPROCS=2 sh -c 'test -z \"$(gofmt -l .)\" && go vet ./... && go build ./... && go test -p 2 -timeout 30m ./...'",
       "exit": 0,
       "log": "/private/tmp/postpilot-browser-media-prep-ink/T597-full-go-corrected.log",
-      "logSHA256": "fe67465f6d005e27bc0c1e0f95dd861c7171aa52707dc27e2167233d05a0828c"
+      "logSHA256": "fe67465f6d005e27bc0c1e0f95dd861c7171aa52707dc27e2167233d05a0828c",
+      "retainedHistoricalScope": true
     },
     {
       "name": "focusedCurrentFrontend",
@@ -670,7 +677,8 @@
       "command": "PATH=/Users/ihaelam/.npm/_npx/4aa47c519def57bc/node_modules/node/bin:$PATH pnpm --filter ./frontend exec vitest run src/entities/clip-preview/model/ink-caption-ember.test.ts src/entities/clip-preview/model/ink-caption-effects.test.ts src/entities/clip-preview/model/ink-caption-scene.test.ts src/entities/clip-preview/model/local-components.test.ts src/entities/clip-preview/model/background-paint.test.ts src/entities/clip-preview/model/background-math.test.ts src/entities/clip-preview/model/background-sampling.test.ts src/entities/clip-preview/model/browser-composition.test.ts src/entities/clip-design/config/clip-ink.test.ts",
       "exit": 0,
       "log": "/private/tmp/postpilot-browser-media-prep-ink/T597-tests-corrected.log",
-      "logSHA256": "a8742e9048725ce0a8f39e2daa2ad976df2a35a72daea7f5879984d4d85e4bef"
+      "logSHA256": "a8742e9048725ce0a8f39e2daa2ad976df2a35a72daea7f5879984d4d85e4bef",
+      "retainedHistoricalScope": true
     },
     {
       "name": "currentContractAndCatalog",
@@ -678,7 +686,8 @@
       "command": "cd backend && TMPDIR=/private/tmp GOCACHE=/private/tmp/postpilot-go-cache GOMAXPROCS=2 go test -p 2 -timeout 5m ./internal/clip ./internal/clip/design ./internal/clip/media ./internal/clip/worker ./internal/clip/workerclient -run 'Test(Browser|CaptionEffect|RuntimeHealth|AnalysisVerifier|MediaWorkerProfile|GroundedSequence|PlatedCaptions)' -count=1",
       "exit": 0,
       "log": "/private/tmp/postpilot-browser-media-prep-ink/T597-current-contract-tests.log",
-      "logSHA256": "3398e17e9bcb1afd81136ecbe0034740f52e861ed92973195d5bf2ed5e1a1c8e"
+      "logSHA256": "3398e17e9bcb1afd81136ecbe0034740f52e861ed92973195d5bf2ed5e1a1c8e",
+      "retainedHistoricalScope": true
     },
     {
       "name": "recoveredMediaPackage",
@@ -686,7 +695,44 @@
       "command": "cd backend && TMPDIR=/private/tmp GOCACHE=/private/tmp/postpilot-go-cache GOMAXPROCS=2 go test -p 2 -timeout 5m ./internal/clip/media -count=1",
       "exit": 0,
       "log": "/private/tmp/postpilot-browser-media-prep-ink/T597-media-space-corrected.log",
-      "logSHA256": "ba80e46a137783a4c1109b01abd078cb18b8dc8c8469dd283010e1beaefacbfc"
+      "logSHA256": "ba80e46a137783a4c1109b01abd078cb18b8dc8c8469dd283010e1beaefacbfc",
+      "retainedHistoricalScope": true
+    },
+    {
+      "name": "currentRetainedCI",
+      "at": "31674c3cd386fce8317968dad29cdcb4d11f2b0a",
+      "command": "PATH=/Users/ihaelam/.npm/_npx/4aa47c519def57bc/node_modules/node/bin:$PATH TMPDIR=/private/tmp sh -c 'pnpm lint && pnpm lint:fsd && pnpm lint:style:probe && pnpm lint:style && pnpm lint:retirement && pnpm test:dev && pnpm exec haeram-spec-creator check && pnpm build:web'",
+      "exit": 0,
+      "log": "/private/tmp/postpilot-browser-media-prep-ink/T597-retained-ci-corrected.log",
+      "logSHA256": "d2722e19d7e1a8cf1e28e88fc6b582c63f529de29dcb8142cd2fa7a283c3b9c6",
+      "scope": "Actual current correction and merged T601 checks; no historical failure reclassified as pass."
+    },
+    {
+      "name": "currentRetainedMergedFrontend",
+      "at": "31674c3cd386fce8317968dad29cdcb4d11f2b0a",
+      "command": "vitest run sixteen affected caption/analysis/ownership files",
+      "exit": 0,
+      "log": "/private/tmp/postpilot-browser-media-prep-ink/T597-retained-merged-tests.log",
+      "logSHA256": "f4ac3bbdb06b4ae78f753025b5e815531b5d3fdfc6bcf4abb0098a17d0486279",
+      "scope": "Actual current correction and merged T601 checks; no historical failure reclassified as pass."
+    },
+    {
+      "name": "currentRetainedGo",
+      "at": "31674c3cd386fce8317968dad29cdcb4d11f2b0a",
+      "command": "cd backend && TMPDIR=/private/tmp GOCACHE=/private/tmp/postpilot-go-cache GOMAXPROCS=2 sh -c 'test -z \"$(gofmt -l .)\" && go vet ./... && go build ./... && go test -p 2 -timeout 5m ./internal/clip ./internal/clip/design ./internal/clip/media ./internal/clip/worker ./internal/clip/workerclient -run \"Test(Browser|CaptionEffect|RuntimeHealth|AnalysisVerifier|MediaWorkerProfile|GroundedSequence|PlatedCaptions)\" -count=1'",
+      "exit": 0,
+      "log": "/private/tmp/postpilot-browser-media-prep-ink/T597-retained-go-final.log",
+      "logSHA256": "a58fcf2d86d2f7b7ef737e2aeea0a13f54359b0c60337baf6226201d01c2f368",
+      "scope": "Actual current correction and merged T601 checks; no historical failure reclassified as pass."
+    },
+    {
+      "name": "currentProtectedTestType",
+      "at": "31674c3cd386fce8317968dad29cdcb4d11f2b0a",
+      "command": "PATH=/Users/ihaelam/.npm/_npx/4aa47c519def57bc/node_modules/node/bin:$PATH pnpm --filter ./frontend exec tsc -b",
+      "exit": 0,
+      "log": "/private/tmp/postpilot-browser-media-prep-ink/T597-retained-type-corrected.log",
+      "logSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "scope": "Actual current correction and merged T601 checks; no historical failure reclassified as pass."
     }
   ],
   "preservedNonPassingChecks": [
@@ -726,24 +772,54 @@
       "log": "/private/tmp/postpilot-browser-media-prep-ink/T597-first-type.log",
       "logSHA256": "9016e201e394ad8eb24ef4d47d5bef1fe0413ec5d67180888308b6a4295fb6c1",
       "acceptedAsPassingEvidence": false
+    },
+    {
+      "name": "retained-state initial owner diagnostic",
+      "log": "/private/tmp/postpilot-browser-media-prep-ink/T597-order-browser-check.log",
+      "logSHA256": "74f3191baaacca9245703f35dab95ed88246c5f217c1f9997699808d1099a4b6",
+      "acceptedAsPassingEvidence": false
+    },
+    {
+      "name": "retained-state initial rapid resize mismatch",
+      "log": "/private/tmp/postpilot-browser-media-prep-ink/T597-order-browser-frame-diagnostic.log",
+      "logSHA256": "31cee90fcc16258922cff0bc10f7b99428f77a42dfcc8483fd0f860a9c659138",
+      "acceptedAsPassingEvidence": false
+    },
+    {
+      "name": "retained-state test palette scanner",
+      "log": "/private/tmp/postpilot-browser-media-prep-ink/T597-order-ci-final.log",
+      "logSHA256": "9c67a771480d0e113205fec2c0e88a8d20cffb62ab03caa082498999b8cc625d",
+      "acceptedAsPassingEvidence": false
+    },
+    {
+      "name": "retained-state protected method type",
+      "log": "/private/tmp/postpilot-browser-media-prep-ink/T597-retained-ci-final.log",
+      "logSHA256": "e8868ab991834f0343fd14b55f39c41af394f5b3b6ec27f5a8cc4949ca399be9",
+      "acceptedAsPassingEvidence": false
+    },
+    {
+      "name": "retained-state initial HMR navigation",
+      "log": "/private/tmp/postpilot-browser-media-prep-ink/T597-retained-production-browser.log",
+      "logSHA256": "1180bb72b7efc683683982d8501f99df1b16087429b6c377695b8fc98b23110d",
+      "acceptedAsPassingEvidence": false
     }
   ],
   "testedSourceHashes": {
-    "backend/internal/clip/browser_render.go": "e5a9947827796b92b80699c7fad809af03a11d1da2a33d5066c34da8fdd1cbbf",
-    "backend/internal/clip/design/browser_ink_catalog_test.go": "b374a6475a27fcf756cc8aa20f8747988962534100fc6f86e1969944a922d919",
+    "backend/internal/clip/browser_render.go": "3f5eaceccee9bab428d6d3d0e22d4070cc8b0f02010ef9ffc2e529d0d45c7e4e",
+    "backend/internal/clip/design/browser_ink_catalog_test.go": "b47072d0bfd4801516b985a9fa2672ec1fb40fa11c06707e86319cb893abc040",
     "backend/internal/clip/design/caption_effect.go": "860b65521b8e2ce9434d7d7462136b754fc21bc5b69f503b78ee47e07a34d68c",
     "backend/internal/clip/design/caption_effect_test.go": "d0681254c5486ca4c1e696fcfe4dd3b4925bcfee764ff91b35c6cb526dfa69a6",
     "backend/internal/clip/media/browser_caption_ember_fixture_test.go": "8544162c80b21aaa74a9c8e2a5639afceee7224c9aeff94dc63d465a0b8ddd9d",
-    "frontend/src/entities/clip-design/config/browser-composition.ts": "3bdfa805e68ab905e47e53b53856c4ef4286041b9a434d8da9f698c154bfbd2a",
-    "frontend/src/entities/clip-design/config/clip-caption-ink.json": "01216568002fc75d77f23850e21c89a0afd03ed69840137f5d0c2356af00a01e",
-    "frontend/src/entities/clip-design/config/clip-ink-identity.json": "fd2112c8b61116daf067ffe67bdc922c7184f58ac0e38660ab47d69ff64d53af",
+    "frontend/src/entities/clip-design/config/browser-composition.ts": "21f4760cb2af5dce689fd20def8b13c5c90d487138734ae5ee2b357e794d35bf",
+    "frontend/src/entities/clip-design/config/clip-caption-ink.json": "5741272da96a660e84d994a04c4a8161af88f6d223e840ead162a0ee881bdeff",
+    "frontend/src/entities/clip-design/config/clip-ink-identity.json": "200253495a5dd5f70d2f9b0300d598349117ce93f68d9c0375b1cf3c5e4e78ae",
     "frontend/src/entities/clip-design/config/clip-ink.ts": "4bda6f28505f0409ae7286c90cf5ba06db15b0b09d5f89f5613c078461ab4ef7",
     "frontend/src/entities/clip-preview/model/ink-caption-draw.ts": "138f4b37659dfbca8bd16321f8dcbb9fd2a67791536ff66a563e3ee72178794f",
     "frontend/src/entities/clip-preview/model/ink-caption-effects.ts": "a2633b1e51c23f8e9882b527a33ccec9c188acaeb2683ea948adcba7ba5a310b",
     "frontend/src/entities/clip-preview/model/ink-caption-ember-pixi.ts": "22109b4f60d5d74654ae6899d21b70b872e43170c669949f8164470aef010b0b",
     "frontend/src/entities/clip-preview/model/ink-caption-ember.test.ts": "f0f7c29ce233c9dafb262082c659bc1c0a8b50966c57bea041bb403e59f6ee09",
     "frontend/src/entities/clip-preview/model/ink-caption-ember.ts": "e4bb41e6db3c278230539a5482e6fde35f26587cf5f6ad29b9a7fff291fc0479",
-    "frontend/src/entities/clip-preview/model/ink-caption-pixi.ts": "81d5532c350b54acf6a026139bb4b5edeadc14f583a3e2d2774bee70adb45d6e",
+    "frontend/src/entities/clip-preview/model/ink-caption-pixi.ts": "099765cae9854564ec694adc740e8d7f2d63896086f6bfae4f187269b8559c89",
     "frontend/src/entities/clip-preview/model/ink-caption-scene.ts": "00b6f5684f084fd1affeef52e5500dff404dfc7a7ef73663c0949c1829e0f10c",
     "frontend/src/entities/clip-preview/model/local-components.ts": "b7182116a7f63cac835ac806e63c3d17e0bccb9b741ab1b46b9ec10c3a91bc33",
     "frontend/src/test/browser-media/ink-entry.ts": "2c51bcadd29d5e880606d8dcdc32c3c2bf0472a990aef18c60184fe435d95f67",
@@ -753,15 +829,47 @@
     ".github/workflows/ci.yml": "e7aba46a17aaf81171063f75d79affc06764e8c6fbf60df2b0e766bdbf10f906",
     "backend/Dockerfile": "a937e3451c9456b0216589a5a4f42a60c0b670dc04fce6f49174e2f2cf81fda4",
     "backend/go.mod": "b3b8890ade060863f6790b8bb5f8c43202a0ad0721c388df8f16f80156b7fe99",
-    "backend/go.sum": "9b9a9269db3199dc26847f382f3c8335c96e5ca3a59e47f9d89f5e4ba191210a"
+    "backend/go.sum": "9b9a9269db3199dc26847f382f3c8335c96e5ca3a59e47f9d89f5e4ba191210a",
+    "frontend/src/entities/clip-preview/model/ink-caption-pixi.test.ts": "f50069351e26330e91dc4bfdf49a7c559eb5835a62c3c2793d4ab1dd958b2d76"
   },
-  "backendTree": "5c662e20f67c4a2b676fe9419b5a2be7b5589e45",
+  "backendTree": "9dc992aab672c2a62235e5962dbab5456c730d06",
   "specConformance": {
     "exit": 0,
-    "log": "/private/tmp/postpilot-browser-media-prep-ink/T597-final-spec-lint.log",
-    "logSHA256": "d86f2a0b89d5b33059b8be8d067abb0700ca795e23a12d1a556723edd38ee174",
+    "log": "/private/tmp/postpilot-browser-media-prep-ink/T597-retained-spec-final.log",
+    "logSHA256": "bcaef27a775137653c06e718991c7cfc539b82db93d715a48a2b97013abb709d",
     "inheritedWarnings": 46,
     "newWarnings": 0,
     "editorialHintsRequirePlanningReview": true
-  }
+  },
+  "previousVerifiedCodeCommit": "ff048f4c388e11b659bba5fee999159ca74f49d9",
+  "retainedStateCorrection": {
+    "productionProof": "docs/qa/browser-caption-ember-retained-state-proof.json",
+    "productionProofSHA256": "e9def6d3dfacc08514a3a5f7fc39418d02af0dc6141727009a11a588b08ed466",
+    "sourceScope": "docs/qa/browser-caption-ember-retained-source-scope.json",
+    "sourceScopeSHA256": "687d1149136a8b8c8e4044d57b748d383090d2d057a2e32209d53747a65364ba",
+    "changes": [
+      "Minimal reorder of active containers after creation/removal preserves scene.nodes order",
+      "dynamic:true propagates resized scene texture to presentation sprite"
+    ],
+    "comparisons": 69,
+    "evictions": 216,
+    "allChangedChannelsZero": true,
+    "qualifiersRemainFalse": true,
+    "controlOwnership": "Comparison releases only retained ink GPU-owner associations before a fresh control to honor single-owner cache bounds; retained containers/geometry and cached bitmap remain alive. The control uses the same immutable prepared ink. This is diagnostic synchronization, not production work.",
+    "executedEntrySource": "import { freezeFixture } from '@/test/browser-media/ink-entry'\nimport { BrowserLocalComponents, BrowserCaptionScenePixi, evaluateBrowserFrame } from '@/entities/clip-preview'\nimport { CLIP_DESIGN } from '@/entities/clip-design/@x/clip-preview'\nimport { WebGLRenderer, RenderTexture } from 'pixi.js'\nwindow.retainedOrderCheck = async (f, frames, evict) => {\n const initial=await freezeFixture(f), variant=structuredClone(f), change=s=>s.replace('AV','AX').replace('\uc815\ud655\ud55c','\uc120\uba85\ud55c').replace('12,500','13,500');\n variant.plan.elements=variant.plan.elements.map(e=>e.role==='caption'?{...e,text:change(e.text),phrases:e.phrases?.map(p=>({...p,text:change(p.text)}))}:e);\n const changed=await freezeFixture(variant),components=new BrowserLocalComponents(initial),dims=CLIP_DESIGN.ratios[f.ratio].canvas,renderer=new WebGLRenderer();\n await renderer.init({canvas:new OffscreenCanvas(dims.width,dims.height),...dims,resolution:1,backgroundAlpha:0});\n const target=RenderTexture.create(dims), retained=new BrowserCaptionScenePixi(renderer,owner=>components.dropGPU(owner));let resources=[],checks=[];\n const paint=(s,rs)=>{rs.forEach((r,i)=>{s.render(r.scene,target,i===0)});renderer.gl.finish();return Uint8Array.from(renderer.extract.pixels({target}).pixels)};\n const compare=async(snapshot,frame,reason)=>{components.updateSnapshot(snapshot);resources=await components.prepare(evaluateBrowserFrame(snapshot,frame));if(!resources.length)throw new Error('No active caption');const actual=paint(retained,resources);components.dropGPU(retained.owner);const fresh=new BrowserCaptionScenePixi(renderer,owner=>components.dropGPU(owner));try{const expected=paint(fresh,resources);let differences=0;for(let i=0;i<actual.length;i++)if(actual[i]!==expected[i])differences++;if(differences)throw new Error('Retained paint differs:'+f.ratio+':'+f.design.captionPace+':'+frame+':'+reason+':'+differences);checks.push({frame,reason,changedChannels:differences,activeNodes:retained.measurements().nodes,geometryBytes:retained.measurements().geometryBytes});}finally{fresh.destroy();resources.forEach(r=>r.close());resources=[];}};\n try{\n  for(const frame of frames)await compare(initial,frame,'initial/rapid/seek');\n  for(const frame of [...frames].reverse())await compare(changed,frame,'text-replacement/reverse');\n  if(evict){for(let i=0;i<72;i++){const v=structuredClone(f);v.design.captionPace='steady';v.plan.elements=v.plan.elements.map(e=>e.role==='caption'?{...e,text:'\uac02 AV '+i,phrases:[]}:e);const s=await freezeFixture(v);components.updateSnapshot(s);resources=await components.prepare(evaluateBrowserFrame(s,99));paint(retained,resources);resources.forEach(r=>r.close());resources=[];if(components.measurements().entries>64||components.measurements().bytes>64*1024*1024)throw new Error('Eviction escaped bounds');}for(const frame of frames)await compare(initial,frame,'post-eviction/reverse');}\n  retained.destroy();components.destroy();if(retained.measurements().nodes||components.measurements().bytes||components.measurements().leases)throw new Error('Owned resources leaked');\n  return{ratio:f.ratio,pace:f.design.captionPace,checks,evictionCases:evict?72:0,cleanup:true,qualification:false};\n }finally{resources.forEach(r=>r.close());retained.destroy();target.destroy(true);renderer.destroy();components.destroy();}\n}\n",
+    "executedDriverSource": "import { createRequire } from 'node:module';import { readFileSync,writeFileSync } from 'node:fs';import { pathToFileURL } from 'node:url';\nconst root=\"/Users/ihaelam/project/.haeram-worktrees/postpilot-f6c0250f/browser-media-604-T597-bb89294d\",require=createRequire(root+'/package.json'),frontendRequire=createRequire(root+'/frontend/package.json');\nconst {chromium}=require('playwright'),{createServer}=await import(pathToFileURL(frontendRequire.resolve('vite')).href);\nconst server=await createServer({configFile:false,root:root+'/frontend',cacheDir:root+'/node_modules/.cache/ember-order-correction',resolve:{alias:{'@':root+'/frontend/src'}},server:{host:'127.0.0.1',port:0,watch:null,hmr:false,fs:{allow:[root,'/private/tmp']},headers:{'Cross-Origin-Opener-Policy':'same-origin','Cross-Origin-Embedder-Policy':'require-corp'}}});\nawait server.listen();const browser=await chromium.launch({headless:true,executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'});\ntry {const page=await browser.newPage();page.on('pageerror',e=>process.stderr.write(e.message+'\\n'));await page.goto('http://127.0.0.1:'+server.httpServer.address().port+'/browser-ink-fixtures.html');\nawait page.evaluate(async()=>await import('/@fs/private/tmp/postpilot-browser-media-prep-ink/T597-order-browser-entry.ts'));\nconst m=JSON.parse(readFileSync('/private/tmp/postpilot-browser-media-prep-ink/T597-native-final/manifest.json','utf8'));const results=[];for(const ratio of ['vertical','horizontal','square'])for(const pace of ['steady','rapid']){const cases=m.cases.filter(c=>c.ratio===ratio&&c.pace===pace&&!c.ground&&c.id.startsWith(ratio+'-ember-two-'+pace));const f=cases[0];if(!f)throw Error('Fixture missing');const unique=[...new Set(cases.map(c=>c.frame))].sort((a,b)=>a-b);const frames=pace==='steady'?[unique[0],99,unique.at(-1),99,unique[0]]:[unique[0],unique.at(-1),unique[0],unique[Math.floor(unique.length/2)]];results.push(await page.evaluate(({f,frames,evict})=>window.retainedOrderCheck(f,frames,evict),{f,frames,evict:pace==='steady'}));}\nconst report={browser:await browser.version(),qualification:false,results};writeFileSync('/private/tmp/postpilot-browser-media-prep-ink/T597-retained-production-proof.json',JSON.stringify(report,null,2)+'\\n');console.log(JSON.stringify(report));\n}finally{await browser.close();await server.close();}\n",
+    "originalReviewFailure": "docs/qa/browser-caption-ember-retained-review-failure.json",
+    "originalReviewFailureSHA256": "8568ac56936256193dc2c2918af40f369f47b14eaa1df1d536ac155537333ff9",
+    "initialRapidResizeFailure": {
+      "log": "/private/tmp/postpilot-browser-media-prep-ink/T597-order-browser-frame-diagnostic.log",
+      "logSHA256": "31cee90fcc16258922cff0bc10f7b99428f77a42dfcc8483fd0f860a9c659138",
+      "ratio": "vertical",
+      "pace": "rapid",
+      "frame": 55,
+      "changedChannels": 844666
+    },
+    "neutralProofScope": "Historical colorVector rename proof remains valid only for its adapter file; it does not cover these semantic renderer lifecycle fixes. First-creation native/408-frame corpus retained only for unchanged painter/math/shader/Canvas/fixtures, with current retained-vs-fresh comparisons."
+  },
+  "mergedPlanningHead": "5b75c18be4cba768f5c9034d8a914047640a9b14",
+  "T601MergeScope": "Frontend analysis preparation/ownership only; no backend/native/proto/deploy/caption source delta."
 }
