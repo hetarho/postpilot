@@ -87,6 +87,7 @@
 - Earlier ARCH/INFRA database/backups, POST/VOICE deltas and T539/T550 remain outside this group; doc-review ARCH QUOTA VOICE addresses existing hints. Main checkout's T590 changes are preserved while group commits are isolated.
 
 ## log
+- 261007 create-task browser-media parallel hint refinement start: unassigned todo scope hints allow isolated overlapping worktrees with serial review/integration; task goals, acceptance, SSOT bases and dependencies stay unchanged
 - 261006 parallel browser-media start: isolated task workers through T604 with dependency-aware dispatch and independent reviews; preserve T590 implementation and its Docker gate
 - 261006 T590 blocked: durable 1/2/1 native limits, atomic reservations and queue expiry verified; full BE tests, race tests, 3323 FE tests and 62 deploy tests passed; Docker generators/image smokes await daemon recovery
 - 261006 T590 verification scope: installed locked dependencies restored; ignored backend/tmp diagnostic programs excluded from an identical-source CI copy; no production deployment or database changes
@@ -106,4 +107,3 @@
 - 261006 create-task browser media start: consume CLIP r56 CDS r33 QUOTA r35; map scoped ARCH r16 and INFRA r2 changes without consuming older infrastructure work
 - 261006 update-ssot ARCH r16 CLIP r56 CDS r33 QUOTA r35 INFRA r2: browser media contracts, qualified motion/proxies and bounded Max-only exports
 - 261006 planning impact: T539/T550 require browser-contract revalidation; T586/T587 retain unchanged speech decisions but must check advanced ARCH/QUOTA bases; active task files are not edited
-- 261006 update-ssot CLIP CDS QUOTA and create-architecture start: browser-first media execution, motion parity and analysis-quality qualification
