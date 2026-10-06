@@ -84,6 +84,9 @@
 - inspect work board for remaining tasks
 
 ## log
+- 261007 create-task native parity hints done: T593 source clock/preroll and T600 automatic geometry notes refined from existing native contracts; goals, acceptance, dependencies and SSOT remain unchanged
+- 261007 create-task native parity hints start: unassigned T593/T600 require cumulative frame-aligned source audio and automatic caption geometry after edits; current worker contracts remain unchanged
+- 261007 external checkout isolation: separate novice-UX work owns main changes and migration0145; analysis worker owns new migration0146, preserving both scopes without copying dirty main
 - 261006 T591 integrated
 - 261007 manage-work integration compatibility: temporary CLI preserves only46 inherited FORMAT/history warnings; structural errors and new warnings still reject; actual baseline/candidate conformance passed, installed package/skills/runtime JSON unchanged
 - 261007 T591 independent native comparison correction: global pace/accent, declared disclosure only and exact-ms visibility require correction before integration; parent remains unchanged and prior approval invalidated
