@@ -2,7 +2,7 @@ import { clipBrowserEncoderConfig } from './browser-render-capability'
 import { frameLayers, frameTimeline, previewCrop, previewMotion } from './draft-preview'
 import type { PreparedAsset } from './preview-assets'
 import type { CaptionCell } from './caption-sheets'
-import { CLIP_BROWSER_RENDER } from '@/entities/clip-design/@x/clip-preview'
+import { CLIP_BROWSER_RENDER, CLIP_TRANSITION } from '@/entities/clip-design/@x/clip-preview'
 import type { BrowserVideoInput, BrowserVideoProgress } from './browser-video'
 import type { MediaPhaseRecorder } from '@/shared/lib'
 import type { CLIP_VIDEO_MEASUREMENT_PHASES } from '../config/render-measurements'
@@ -16,6 +16,8 @@ interface CompositePorts {
   >
   source?: (fingerprint: string, timeMs: number) => Promise<ImageBitmap>
   footage?: BrowserFootageResources
+  nativeFadeBlack?: (rest: number) => void
+  local?: (frame: ReturnType<typeof evaluateBrowserFrame>) => Promise<void>
   asset: (asset: PreparedAsset) => Promise<ImageBitmap>
   /** One frame of a sequence-rendered caption, drawn by the server (CLIP-159). */
   captionFrame: (asset: PreparedAsset, frame: number) => Promise<CaptionCell | undefined>
@@ -107,6 +109,17 @@ export async function compositeBrowserVideo(input: BrowserVideoInput, ports: Com
         }
       }
     }
+    if (evaluated && evaluated.footageLayers.length === 2) {
+      const incoming = input.plan.cuts.find(
+        (c) => c.id === evaluated.footageLayers[1]!.cutInstanceId,
+      )
+      if (incoming?.transitionMs === CLIP_TRANSITION.black_ms) {
+        if (!ports.nativeFadeBlack) throw new Error('CLIP_FADEBLACK_COMPOSITOR_UNSUPPORTED')
+        ports.nativeFadeBlack(
+          Math.max(0, 1 - evaluated.footageLayers.reduce((n, l) => n + l.weight, 0)),
+        )
+      }
+    }
     const active = assets.filter((asset) => timeMs >= asset.startMs && timeMs < asset.endMs)
     ports.releaseAssets(new Set(active.map((asset) => asset.key)))
     for (const asset of active) {
@@ -142,6 +155,7 @@ export async function compositeBrowserVideo(input: BrowserVideoInput, ports: Com
       ctx.drawImage(bitmap, asset.x, asset.y + motion.dy, asset.width, asset.height)
       assetEnd?.()
     }
+    if (evaluated && ports.local) await ports.local(evaluated)
     const timestamp = evaluated?.timestampUs ?? Math.round((frame * 1_000_000) / fps)
     const duration =
       evaluated?.durationUs ?? Math.round(((frame + 1) * 1_000_000) / fps) - timestamp

@@ -31,6 +31,8 @@ export interface InkCaptionLine {
   top: number
   width: number
   height: number
+  /** Native manifest copy box, excluding plate/stroke padding and effect bleed. */
+  glyphBounds?: InkBox
   words: InkCaptionWord[]
   keyword: string
   keywordX: number
@@ -195,6 +197,7 @@ export async function inkLayoutCaption(
         top,
         width: box.width,
         height: box.height,
+        glyphBounds: { x, y: top, width: box.width, height: box.height },
         words: [],
         keyword: '',
         keywordX: 0,

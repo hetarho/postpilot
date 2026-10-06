@@ -26,7 +26,24 @@ func DrawCaptionFrame(f CaptionFrame) (defs, body string, ok bool) {
 		return "", "", false
 	}
 	defs, body = draw(f)
+	if s := f.GroundScrim; s != nil {
+		op, dy := CaptionGroundMotion(f)
+		p, b := s.Paint, s.Region
+		defs += fmt.Sprintf(`<linearGradient id="groundScrim" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="%s" stop-opacity="%s"/><stop offset="1" stop-color="%s" stop-opacity="%s"/></linearGradient>`, p.Hex, num(p.From), p.Hex, num(p.To))
+		backdrop := fmt.Sprintf(`<rect x="%s" y="%s" width="%s" height="%s" fill="url(#groundScrim)"/>`, num(b.X), num(b.Y), num(b.Width), num(b.Height))
+		body = group(op, dy, backdrop) + body
+	}
 	return defs, body, true
+}
+
+// Exactly the outer group's motion, independent of each word/mask pose.
+func CaptionGroundMotion(f CaptionFrame) (opacity, dy float64) {
+	opacity, dy = f.entrance()
+	switch f.Style.ID {
+	case "word-pop", "blur-in", "glitch", "stack", "pop", "sticker":
+		dy = 0
+	}
+	return opacity, dy
 }
 
 type captionPainter func(CaptionFrame) (string, string)

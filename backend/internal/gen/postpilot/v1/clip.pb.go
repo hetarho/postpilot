@@ -4035,10 +4035,18 @@ type ClipRenderMeasurements struct {
 	LoudnessLufs         *float64               `protobuf:"fixed64,11,opt,name=loudness_lufs,json=loudnessLufs,proto3,oneof" json:"loudness_lufs,omitempty"`
 	Silent               bool                   `protobuf:"varint,12,opt,name=silent,proto3" json:"silent,omitempty"`
 	// Fingerprint of the immutable speech actually decoded and mixed by this producer.
-	SpeechFingerprint string   `protobuf:"bytes,13,opt,name=speech_fingerprint,json=speechFingerprint,proto3" json:"speech_fingerprint,omitempty"`
-	TruePeakDbtp      *float64 `protobuf:"fixed64,14,opt,name=true_peak_dbtp,json=truePeakDbtp,proto3,oneof" json:"true_peak_dbtp,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	SpeechFingerprint             string        `protobuf:"bytes,13,opt,name=speech_fingerprint,json=speechFingerprint,proto3" json:"speech_fingerprint,omitempty"`
+	TruePeakDbtp                  *float64      `protobuf:"fixed64,14,opt,name=true_peak_dbtp,json=truePeakDbtp,proto3,oneof" json:"true_peak_dbtp,omitempty"`
+	CompositionVersion            string        `protobuf:"bytes,15,opt,name=composition_version,json=compositionVersion,proto3" json:"composition_version,omitempty"`
+	SnapshotFingerprint           string        `protobuf:"bytes,16,opt,name=snapshot_fingerprint,json=snapshotFingerprint,proto3" json:"snapshot_fingerprint,omitempty"`
+	BackgroundVersion             string        `protobuf:"bytes,17,opt,name=background_version,json=backgroundVersion,proto3" json:"background_version,omitempty"`
+	BackgroundSnapshotFingerprint string        `protobuf:"bytes,18,opt,name=background_snapshot_fingerprint,json=backgroundSnapshotFingerprint,proto3" json:"background_snapshot_fingerprint,omitempty"`
+	BackgroundDigest              string        `protobuf:"bytes,19,opt,name=background_digest,json=backgroundDigest,proto3" json:"background_digest,omitempty"`
+	BackgroundComplete            bool          `protobuf:"varint,20,opt,name=background_complete,json=backgroundComplete,proto3" json:"background_complete,omitempty"`
+	BackgroundSampleCount         int32         `protobuf:"varint,21,opt,name=background_sample_count,json=backgroundSampleCount,proto3" json:"background_sample_count,omitempty"`
+	BackgroundNotices             []*ClipNotice `protobuf:"bytes,22,rep,name=background_notices,json=backgroundNotices,proto3" json:"background_notices,omitempty"`
+	unknownFields                 protoimpl.UnknownFields
+	sizeCache                     protoimpl.SizeCache
 }
 
 func (x *ClipRenderMeasurements) Reset() {
@@ -4167,6 +4175,62 @@ func (x *ClipRenderMeasurements) GetTruePeakDbtp() float64 {
 		return *x.TruePeakDbtp
 	}
 	return 0
+}
+
+func (x *ClipRenderMeasurements) GetCompositionVersion() string {
+	if x != nil {
+		return x.CompositionVersion
+	}
+	return ""
+}
+
+func (x *ClipRenderMeasurements) GetSnapshotFingerprint() string {
+	if x != nil {
+		return x.SnapshotFingerprint
+	}
+	return ""
+}
+
+func (x *ClipRenderMeasurements) GetBackgroundVersion() string {
+	if x != nil {
+		return x.BackgroundVersion
+	}
+	return ""
+}
+
+func (x *ClipRenderMeasurements) GetBackgroundSnapshotFingerprint() string {
+	if x != nil {
+		return x.BackgroundSnapshotFingerprint
+	}
+	return ""
+}
+
+func (x *ClipRenderMeasurements) GetBackgroundDigest() string {
+	if x != nil {
+		return x.BackgroundDigest
+	}
+	return ""
+}
+
+func (x *ClipRenderMeasurements) GetBackgroundComplete() bool {
+	if x != nil {
+		return x.BackgroundComplete
+	}
+	return false
+}
+
+func (x *ClipRenderMeasurements) GetBackgroundSampleCount() int32 {
+	if x != nil {
+		return x.BackgroundSampleCount
+	}
+	return 0
+}
+
+func (x *ClipRenderMeasurements) GetBackgroundNotices() []*ClipNotice {
+	if x != nil {
+		return x.BackgroundNotices
+	}
+	return nil
 }
 
 type ClipCompositionItem struct {
@@ -5874,7 +5938,7 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	"\bmax_cuts\x18\x05 \x01(\x05R\amaxCuts\x12$\n" +
 	"\x0emax_copy_runes\x18\x06 \x01(\x05R\fmaxCopyRunes\x12&\n" +
 	"\x0fmin_duration_ms\x18\a \x01(\x05R\rminDurationMs\x12&\n" +
-	"\x0fmax_duration_ms\x18\b \x01(\x05R\rmaxDurationMsJ\x04\b\x03\x10\x04R\vcopy_styles\"\xb5\x04\n" +
+	"\x0fmax_duration_ms\x18\b \x01(\x05R\rmaxDurationMsJ\x04\b\x03\x10\x04R\vcopy_styles\"\xef\a\n" +
 	"\x16ClipRenderMeasurements\x12\x14\n" +
 	"\x05width\x18\x01 \x01(\x05R\x05width\x12\x16\n" +
 	"\x06height\x18\x02 \x01(\x05R\x06height\x120\n" +
@@ -5893,7 +5957,15 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	"\rloudness_lufs\x18\v \x01(\x01H\x00R\floudnessLufs\x88\x01\x01\x12\x16\n" +
 	"\x06silent\x18\f \x01(\bR\x06silent\x12-\n" +
 	"\x12speech_fingerprint\x18\r \x01(\tR\x11speechFingerprint\x12)\n" +
-	"\x0etrue_peak_dbtp\x18\x0e \x01(\x01H\x01R\ftruePeakDbtp\x88\x01\x01B\x10\n" +
+	"\x0etrue_peak_dbtp\x18\x0e \x01(\x01H\x01R\ftruePeakDbtp\x88\x01\x01\x12/\n" +
+	"\x13composition_version\x18\x0f \x01(\tR\x12compositionVersion\x121\n" +
+	"\x14snapshot_fingerprint\x18\x10 \x01(\tR\x13snapshotFingerprint\x12-\n" +
+	"\x12background_version\x18\x11 \x01(\tR\x11backgroundVersion\x12F\n" +
+	"\x1fbackground_snapshot_fingerprint\x18\x12 \x01(\tR\x1dbackgroundSnapshotFingerprint\x12+\n" +
+	"\x11background_digest\x18\x13 \x01(\tR\x10backgroundDigest\x12/\n" +
+	"\x13background_complete\x18\x14 \x01(\bR\x12backgroundComplete\x126\n" +
+	"\x17background_sample_count\x18\x15 \x01(\x05R\x15backgroundSampleCount\x12G\n" +
+	"\x12background_notices\x18\x16 \x03(\v2\x18.postpilot.v1.ClipNoticeR\x11backgroundNoticesB\x10\n" +
 	"\x0e_loudness_lufsB\x11\n" +
 	"\x0f_true_peak_dbtp\"\xa7\x01\n" +
 	"\x13ClipCompositionItem\x12\x0e\n" +
@@ -6178,29 +6250,30 @@ var file_postpilot_v1_clip_proto_depIdxs = []int32{
 	39, // 44: postpilot.v1.ClipCaptionFragment.box:type_name -> postpilot.v1.ClipCanvasBox
 	37, // 45: postpilot.v1.ClipEditingState.plan:type_name -> postpilot.v1.ClipEditPlan
 	42, // 46: postpilot.v1.ClipEditingState.sources:type_name -> postpilot.v1.ClipRetainedSource
-	64, // 47: postpilot.v1.ClipCompositionItem.values:type_name -> postpilot.v1.ClipCompositionItem.ValuesEntry
-	45, // 48: postpilot.v1.ClipCompositionItems.items:type_name -> postpilot.v1.ClipCompositionItem
-	65, // 49: postpilot.v1.ClipCompositionInputs.values:type_name -> postpilot.v1.ClipCompositionInputs.ValuesEntry
-	66, // 50: postpilot.v1.ClipCompositionInputs.items:type_name -> postpilot.v1.ClipCompositionInputs.ItemsEntry
-	47, // 51: postpilot.v1.ClipCompositionInputs.associations:type_name -> postpilot.v1.ClipSourceAssociation
-	49, // 52: postpilot.v1.ClipProjectComposition.snapshot:type_name -> postpilot.v1.ClipCompositionSnapshot
-	48, // 53: postpilot.v1.ClipProjectComposition.inputs:type_name -> postpilot.v1.ClipCompositionInputs
-	13, // 54: postpilot.v1.ClipAttemptInspection.observations:type_name -> postpilot.v1.ClipObservations
-	52, // 55: postpilot.v1.ClipAttemptInspection.ranges:type_name -> postpilot.v1.ClipAttemptRange
-	67, // 56: postpilot.v1.ClipAttemptInspection.measurements:type_name -> postpilot.v1.ClipAttemptInspection.MeasurementsEntry
-	53, // 57: postpilot.v1.ClipProjectRegion.slots:type_name -> postpilot.v1.ClipRegionSlot
-	54, // 58: postpilot.v1.ClipProjectRegions.intro:type_name -> postpilot.v1.ClipProjectRegion
-	54, // 59: postpilot.v1.ClipProjectRegions.outro:type_name -> postpilot.v1.ClipProjectRegion
-	56, // 60: postpilot.v1.ClipRegionEdit.slots:type_name -> postpilot.v1.ClipRegionSlotEdit
-	59, // 61: postpilot.v1.ClipNarration.segments:type_name -> postpilot.v1.ClipSpokenSegment
-	60, // 62: postpilot.v1.ClipSpokenSegment.speech:type_name -> postpilot.v1.ClipSpeechRef
-	61, // 63: postpilot.v1.ClipSpeechRef.timing:type_name -> postpilot.v1.ClipSpeechTiming
-	46, // 64: postpilot.v1.ClipCompositionInputs.ItemsEntry.value:type_name -> postpilot.v1.ClipCompositionItems
-	65, // [65:65] is the sub-list for method output_type
-	65, // [65:65] is the sub-list for method input_type
-	65, // [65:65] is the sub-list for extension type_name
-	65, // [65:65] is the sub-list for extension extendee
-	0,  // [0:65] is the sub-list for field type_name
+	12, // 47: postpilot.v1.ClipRenderMeasurements.background_notices:type_name -> postpilot.v1.ClipNotice
+	64, // 48: postpilot.v1.ClipCompositionItem.values:type_name -> postpilot.v1.ClipCompositionItem.ValuesEntry
+	45, // 49: postpilot.v1.ClipCompositionItems.items:type_name -> postpilot.v1.ClipCompositionItem
+	65, // 50: postpilot.v1.ClipCompositionInputs.values:type_name -> postpilot.v1.ClipCompositionInputs.ValuesEntry
+	66, // 51: postpilot.v1.ClipCompositionInputs.items:type_name -> postpilot.v1.ClipCompositionInputs.ItemsEntry
+	47, // 52: postpilot.v1.ClipCompositionInputs.associations:type_name -> postpilot.v1.ClipSourceAssociation
+	49, // 53: postpilot.v1.ClipProjectComposition.snapshot:type_name -> postpilot.v1.ClipCompositionSnapshot
+	48, // 54: postpilot.v1.ClipProjectComposition.inputs:type_name -> postpilot.v1.ClipCompositionInputs
+	13, // 55: postpilot.v1.ClipAttemptInspection.observations:type_name -> postpilot.v1.ClipObservations
+	52, // 56: postpilot.v1.ClipAttemptInspection.ranges:type_name -> postpilot.v1.ClipAttemptRange
+	67, // 57: postpilot.v1.ClipAttemptInspection.measurements:type_name -> postpilot.v1.ClipAttemptInspection.MeasurementsEntry
+	53, // 58: postpilot.v1.ClipProjectRegion.slots:type_name -> postpilot.v1.ClipRegionSlot
+	54, // 59: postpilot.v1.ClipProjectRegions.intro:type_name -> postpilot.v1.ClipProjectRegion
+	54, // 60: postpilot.v1.ClipProjectRegions.outro:type_name -> postpilot.v1.ClipProjectRegion
+	56, // 61: postpilot.v1.ClipRegionEdit.slots:type_name -> postpilot.v1.ClipRegionSlotEdit
+	59, // 62: postpilot.v1.ClipNarration.segments:type_name -> postpilot.v1.ClipSpokenSegment
+	60, // 63: postpilot.v1.ClipSpokenSegment.speech:type_name -> postpilot.v1.ClipSpeechRef
+	61, // 64: postpilot.v1.ClipSpeechRef.timing:type_name -> postpilot.v1.ClipSpeechTiming
+	46, // 65: postpilot.v1.ClipCompositionInputs.ItemsEntry.value:type_name -> postpilot.v1.ClipCompositionItems
+	66, // [66:66] is the sub-list for method output_type
+	66, // [66:66] is the sub-list for method input_type
+	66, // [66:66] is the sub-list for extension type_name
+	66, // [66:66] is the sub-list for extension extendee
+	0,  // [0:66] is the sub-list for field type_name
 }
 
 func init() { file_postpilot_v1_clip_proto_init() }

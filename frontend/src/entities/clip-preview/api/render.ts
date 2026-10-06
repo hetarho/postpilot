@@ -12,6 +12,14 @@ export type ClipRenderMachine = 'server' | 'browser'
 export interface ClipRenderVerdict {
   passed: boolean
   measurements: {
+    compositionVersion?: string
+    snapshotFingerprint?: string
+    backgroundVersion?: string
+    backgroundSnapshotFingerprint?: string
+    backgroundDigest?: string
+    backgroundComplete?: boolean
+    backgroundSampleCount?: number
+    backgroundNotices?: { code: string; action: string; elementId?: string; cutId?: string }[]
     width: number
     height: number
     frameRateNumerator: number
@@ -32,6 +40,19 @@ export interface ClipRenderVerdict {
 /** The render family's rpcs (ARCH-17): admitting a render, cancelling one the browser owns, and
  *  the three steps that store what the browser encoded. */
 export interface ClipRenderCalls {
+  admitComposition?(input: {
+    projectId: string
+    expectedRevision: number
+    batchId: string
+    compositionVersion: string
+  }): Promise<{
+    renderId: string
+    compositionVersion: string
+    snapshotFingerprint: string
+    componentVersion: string
+    fontVersion: string
+    assetVersion: string
+  }>
   admit(input: {
     projectId: string
     expectedRevision: number
@@ -56,6 +77,7 @@ export interface ClipRenderCalls {
 export function clipRenderCalls(transport: Transport): ClipRenderCalls {
   const client = createClient(ClipRenderService, transport)
   return {
+    admitComposition: (input) => client.startClipBrowserCompositionRender(input),
     async admit({ machine, ...input }) {
       // Settle admission even if the page leaves, so a late identity can be cancelled.
       const response = await client.startClipRender({
