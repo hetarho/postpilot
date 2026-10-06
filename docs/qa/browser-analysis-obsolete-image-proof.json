@@ -1,0 +1,76 @@
+{
+  "source": "/Users/ihaelam/project/.haeram-worktrees/postpilot-f6c0250f/browser-media-604-T602-742257ea",
+  "sourceHead": "776388cbe5b32aadcf488557b5325433e087d769",
+  "backendTree": "8f641f6a1e43eb4d66afff5348deabc312969358",
+  "dockerfileSHA256": "c87022c69a36057491d2805a90ad282e74fdef43e18c06474854d013e858b373",
+  "cleanAtStart": true,
+  "startedAt": 1791312821.040247,
+  "checks": [
+    {
+      "name": "build",
+      "command": [
+        "docker",
+        "build",
+        "--progress=plain",
+        "--build-arg",
+        "SOURCE_REVISION=776388cbe5b32aadcf488557b5325433e087d769",
+        "--target",
+        "media-worker-smoke",
+        "-t",
+        "postpilot:t602-startup-776388cb",
+        "-f",
+        "backend/Dockerfile",
+        "."
+      ],
+      "startedAt": 1791312821.042094,
+      "log": "/private/tmp/postpilot-t602-startup-image-build.log",
+      "exit": 0,
+      "finishedAt": 1791312886.687947,
+      "logSHA256": "5e975c24559b05d803ed15db59bd3a789c32e27fb26d043ac3521d9876a57f69"
+    },
+    {
+      "name": "full",
+      "command": [
+        "docker",
+        "run",
+        "--rm",
+        "--network",
+        "none",
+        "--memory",
+        "1g",
+        "--memory-swap",
+        "1g",
+        "--cpus",
+        "2",
+        "sha256:f9ddcff1c134e3e06538ef940ab46052ad298d57facfb43f538f5856c2288741"
+      ],
+      "startedAt": 1791312886.726083,
+      "log": "/private/tmp/postpilot-t602-startup-image-full.log",
+      "exit": 2,
+      "finishedAt": 1791313055.193488,
+      "logSHA256": "f224e9b33a7737080ee51f507b34f9349ab988b9eef8e5421ae90fc72ea5ade8"
+    }
+  ],
+  "passed": false,
+  "imageId": "sha256:f9ddcff1c134e3e06538ef940ab46052ad298d57facfb43f538f5856c2288741",
+  "architecture": "arm64",
+  "user": "nonroot:nonroot",
+  "labels": {
+    "org.opencontainers.image.architecture": "arm64",
+    "org.opencontainers.image.revision": "776388cbe5b32aadcf488557b5325433e087d769",
+    "org.opencontainers.image.title": "Postpilot CPU media worker",
+    "org.postpilot.media.asset-input-sha256": "3496ae816cd2b3b9c10af0e78ec78dc39235f9740b16c6a8803d1c9f94786b5a",
+    "org.postpilot.media.assets": "assets-v3",
+    "org.postpilot.media.manifest-command": "/media-worker manifest",
+    "org.postpilot.media.protocol": "3",
+    "org.postpilot.media.renderer": "cpu-v2"
+  },
+  "entrypoint": [
+    "/media.test",
+    "-test.run=^Test(WorkerExecutionParity|WorkerCommandHealth|WorkerImageIsolation|ExecRunnerReapsDescendants|NarratedExportSmoke|AnalysisCopyVerificationSmoke)$",
+    "-test.v",
+    "-test.timeout=45m"
+  ],
+  "error": "Failed full; see /private/tmp/postpilot-t602-startup-image-full.log",
+  "finishedAt": 1791313055.194726
+}

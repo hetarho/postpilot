@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -59,5 +60,51 @@ func TestWorkerTransportDoesNotForwardSecretsThroughRedirects(t *testing.T) {
 	_, err := New(redirect.URL, "worker", "secret").Status(t.Context())
 	if reached || !errors.Is(err, clip.ErrMediaUnavailable) {
 		t.Fatal("redirect leaked authority", err)
+	}
+}
+
+type runtimeStatusPeer struct {
+	postpilotv1connect.UnimplementedClipMediaWorkerServiceHandler
+	status *pb.GetMediaRuntimeStatusResponse
+}
+
+func (s runtimeStatusPeer) GetMediaRuntimeStatus(context.Context, *connect.Request[pb.GetMediaRuntimeStatusRequest]) (*connect.Response[pb.GetMediaRuntimeStatusResponse], error) {
+	return connect.NewResponse(s.status), nil
+}
+
+func TestRuntimeHealthPreservesNativeV3AndRequiresExplicitVerificationProfile(t *testing.T) {
+	for _, name := range []string{"legacy native", "native", "native wrong profile", "verification", "verification omitted", "verification native profile", "verification native versions", "invalid occupancy"} {
+		t.Run(name, func(t *testing.T) {
+			profile := clip.MediaWorkerProfile{Operation: clip.MediaRender, ContractVersion: clip.MediaContractVersion, RendererVersion: clip.MediaRendererVersion, AssetVersion: clip.MediaAssetVersion, Profile: clip.MediaCPUProfile}
+			if strings.HasPrefix(name, "verification") {
+				profile.Operation, profile.RendererVersion, profile.AssetVersion, profile.Profile = clip.MediaVerifyAnalysis, clip.AnalysisVerificationRenderer, clip.AnalysisVerificationAssets, clip.AnalysisVerificationProfile
+			}
+			response := &pb.GetMediaRuntimeStatusResponse{Ready: true, ContractVersion: int32(profile.ContractVersion), RendererVersion: profile.RendererVersion, AssetVersion: profile.AssetVersion, Profiles: []string{profile.Profile}, Waiting: 2, Active: 1}
+			allowed := name == "legacy native" || name == "native" || name == "verification"
+			switch name {
+			case "legacy native", "verification omitted":
+				response.Profiles = nil
+			case "native wrong profile":
+				response.Profiles = []string{clip.AnalysisVerificationProfile}
+			case "verification native profile":
+				response.Profiles = []string{clip.MediaCPUProfile}
+			case "verification native versions":
+				response.RendererVersion, response.AssetVersion = clip.MediaRendererVersion, clip.MediaAssetVersion
+			case "invalid occupancy":
+				response.OwnActive = 2
+			}
+			mux := http.NewServeMux()
+			mux.Handle(postpilotv1connect.NewClipMediaWorkerServiceHandler(runtimeStatusPeer{status: response}))
+			peer := httptest.NewServer(mux)
+			defer peer.Close()
+			status, e := New(peer.URL, "worker", "token").StatusForProfile(t.Context(), profile)
+			if allowed {
+				if e != nil || status != (clip.MediaRuntimeStatus{Waiting: 2, Active: 1}) {
+					t.Fatal("compatible health peer rejected", status, e)
+				}
+			} else if !errors.Is(e, clip.ErrMediaIncompatible) {
+				t.Fatal("incompatible health peer accepted", e)
+			}
+		})
 	}
 }

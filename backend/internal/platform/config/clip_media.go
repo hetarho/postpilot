@@ -71,6 +71,8 @@ func loadMediaStageOverrides(cfg *Config) error {
 		target *int
 	}{
 		{"CLIP_SERVER_RENDER_ACTIVE", &cfg.ClipServerRenderActive},
+		{"CLIP_ANALYSIS_VERIFY_ACTIVE", &cfg.ClipAnalysisVerificationActive},
+		{"CLIP_ANALYSIS_VERIFY_PER_ACCOUNT", &cfg.ClipAnalysisVerificationPerAccount},
 		{"CLIP_SERVER_RENDER_PER_ACCOUNT", &cfg.ClipServerRenderPerAccount},
 	} {
 		if value := getenv(field.name, ""); value != "" {
@@ -80,6 +82,13 @@ func loadMediaStageOverrides(cfg *Config) error {
 			}
 			*field.target = n
 		}
+	}
+	if value := getenv("CLIP_ANALYSIS_VERIFY_WAITING", ""); value != "" {
+		n, err := strconv.Atoi(value)
+		if err != nil || n < 0 {
+			return fmt.Errorf("CLIP_ANALYSIS_VERIFY_WAITING must be nonnegative")
+		}
+		cfg.ClipAnalysisVerificationWaiting = &n
 	}
 	if value := getenv("CLIP_SERVER_RENDER_WAITING", ""); value != "" {
 		n, err := strconv.Atoi(value)

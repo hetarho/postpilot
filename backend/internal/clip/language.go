@@ -9,7 +9,7 @@ import (
 func ValidLanguage(language string) bool { return language == "ko" || language == "en" }
 
 func SupportedGenerationPayload(version int) bool {
-	return version >= 3 && version <= GenerationPayloadVersion
+	return version >= 3 && version <= GenerationPayloadVersion || version == BrowserAnalysisGenerationPayloadVersion
 }
 
 func (p *GenerationPayload) UnmarshalJSON(raw []byte) error {

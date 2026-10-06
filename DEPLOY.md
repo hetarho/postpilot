@@ -714,3 +714,5 @@ CPU는 x264 `veryfast/CRF 20`, GPU 후보는 NVENC `p4/hq/vbr/CQ 20/b:v 0`이다
 2026-09-25 Linux/arm64 CPU 컨테이너에서 후보 이미지 빌드, CPU 실제 encode/decode와 오프라인 실행, 장치 누락 실패 보고, 세 배치의 Compose 렌더링/롤백 계약을 검증했다. 세 비율 합성 fixture 네 개를 후보 이미지의 CPU 경로로 내보내고 기존 워커/직접 렌더의 파일 해시와 각 16개 프레임이 일치하는 것을 확인했다(636.98초, 테스트 컨테이너 CPU 2개/1GiB, 관찰 메모리 peak 약 690.9MiB, OOM 0). 같은 복잡한 fixture의 512MiB/1CPU 시도에서는 최종 인코더가 process_signal로 종료되어 그 조건을 통과한 것으로 기록하지 않았다. 이는 8.6의 작은 분리 프로세스 fixture와 다른 부하이며, 512MiB를 모든 입력에 충분한 운영 용량으로 해석하지 않는다. **실제 NVIDIA 장치의 encode/decode, GPU 시간/화질/VRAM, Linux/amd64 GPU 하드웨어 동작은 미검증이다.** CI의 수동 후보 게시도 하드웨어 검증으로 간주하지 않는다.
 
 현재 VPS 재배포, 친구 PC 접근, 드라이버/Tailscale 설치, 실물 GPU benchmark와 실제 워커 이동은 이번 저장소 작업에서 실행하지 않았다. 나중에 운영자가 이 문서의 해당 환경 절차를 실행한다. 최초 설치가 완료된 호스트 사이의 배치 변경은 env·게시 이미지·Compose 선택으로 처리하며, 다른 OS/장치의 설치 요구를 env만으로 해결하지 않는다.
+
+브라우저 분석 복사본의 별도 CPU 검증 역할·권한·용량과 이미지 검증은 [browser-analysis-verification.md](docs/design/browser-analysis-verification.md)에 정리돼 있다. 프로필의 의미 보존 활성화는 T603 검증 전까지 닫혀 있다.

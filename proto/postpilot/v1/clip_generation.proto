@@ -143,6 +143,7 @@ message StartClipGenerationRequest {
   optional int32 approved_max_credits = 6;
   int32 cancellation_policy_version = 7;
   bool from_storyline = 8;
+  string analysis_preparation_id = 9;
 }
 
 message StartClipGenerationResponse { string job_id = 1; }
@@ -162,6 +163,7 @@ message StartClipStorylineRequest {
   string quote_id = 5;
   optional int32 approved_max_credits = 6;
   int32 cancellation_policy_version = 7;
+  string analysis_preparation_id = 8;
 }
 
 message QuoteClipStorylineRevisionRequest {

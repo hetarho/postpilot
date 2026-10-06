@@ -20,11 +20,12 @@ const (
 	MediaRender  MediaOperation = "render"
 	// MediaSample measures a browser render's grounds from the retained
 	// originals under the render's own frozen task, and writes no file (CLIP-192).
-	MediaSample MediaOperation = "sample"
+	MediaSample         MediaOperation = "sample"
+	MediaVerifyAnalysis MediaOperation = "verify_analysis"
 )
 
 func (op MediaOperation) known() bool {
-	return op == MediaPrepare || op == MediaRender || op == MediaSample
+	return op == MediaPrepare || op == MediaRender || op == MediaSample || op == MediaVerifyAnalysis
 }
 
 // DrawsPlan reports whether an operation executes a frozen edit plan over the

@@ -1,0 +1,47 @@
+{
+  "sourceHead": "7db220c746e2a608e19846bc888d6b295eba7ed4",
+  "checks": {
+    "combinedGoInterfaces": {
+      "exit": 0,
+      "log": "/private/tmp/postpilot-t602-combined-interfaces.log",
+      "logSHA256": "0eed337a37290eb01f9631e7ce5927db417972819e1bdcdb397f34200559f7bc"
+    },
+    "combinedTypeScriptAndInterfaces": {
+      "exit": 0,
+      "log": "/private/tmp/postpilot-t602-combined-fe-interfaces.log",
+      "logSHA256": "4bd0658450a0219b892ada3d7d03b0d788545306a276a0a6c1c47f8a6e89deb5"
+    },
+    "focusedRecoveryRace": {
+      "exit": 0,
+      "log": "/private/tmp/postpilot-t602-startup-only-race.log",
+      "logSHA256": "ea39c2d04063c67ebe41a8688c38e5ecd58544ca63f4df00c921325f6ef34b6e"
+    },
+    "fullFrontend": {
+      "exit": 0,
+      "log": "/private/tmp/postpilot-t602-correction-full-fe.log",
+      "logSHA256": "3c06cc13203fdddc2866295aab99311b6a66c5cbe8f71e7d1fb48c2e05409b7e"
+    },
+    "frontendLint": {
+      "exit": 0,
+      "log": "/private/tmp/postpilot-t602-correction-fe-lint.log",
+      "logSHA256": "4d75fdbcc43c4214388fc42afb461c6cdc0635e092cbd49571c2f6d8dbb07d28"
+    },
+    "frontendBuild": {
+      "exit": 0,
+      "log": "/private/tmp/postpilot-t602-correction-fe-build.log",
+      "logSHA256": "5d459b593a58c0b16b972358dc12dd0045d2ceaed2764fb66fb8e8f9e9d780e8"
+    },
+    "tooling": {
+      "exit": 0,
+      "log": "/private/tmp/postpilot-t602-correction-tooling.log",
+      "logSHA256": "09db7425ab5aac7901b7294d3d9b9bb33806512915f9aad109bf673eeecb59d5"
+    },
+    "deployment": {
+      "exit": 0,
+      "log": "/private/tmp/postpilot-t602-correction-deploy.log",
+      "logSHA256": "0c3b1d129dddd67e0a986f2498f2ddf7a94df6f00a66df31f9f05f173184fad1"
+    }
+  },
+  "combinedVetBuildGofmtExit": 0,
+  "scope": "Completed actual checks; original full Go aggregate exit is unavailable and coverage is separately recorded."
+}
