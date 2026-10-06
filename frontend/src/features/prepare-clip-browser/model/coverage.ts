@@ -20,6 +20,7 @@ export function validateOriginalMeasurements(
     throw new Error('CLIP_INPUT_TOO_LARGE')
   for (const original of originals) {
     if (
+      original.provenance !== 'browser_client' ||
       ![
         original.width,
         original.height,
@@ -101,6 +102,8 @@ export function validateAnalysisArtifact(slot: AnalysisCopySlot, artifact: Analy
     p.videoFrames > limits.fps * 60 ||
     Math.abs((p.videoFrames * 1000) / limits.fps - slot.durationMs) > videoTolerance ||
     Math.abs(p.videoStartMs) > 0.01 ||
+    p.containerEndMs > limits.intervalMs + 0.01 ||
+    Math.abs(p.containerEndMs - slot.durationMs) > videoTolerance ||
     p.videoEndMs > limits.intervalMs + 0.01 ||
     Math.abs(p.videoEndMs - slot.durationMs) > videoTolerance ||
     (slot.hasAudio &&

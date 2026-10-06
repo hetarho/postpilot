@@ -11,6 +11,7 @@ export interface AnalysisSource {
   sourceId: string
   fingerprint: string
   access: BrowserMediaSourceAccess
+  durationBudgetMs?: number
 }
 export interface AnalysisCopyArtifact {
   buffer: ArrayBuffer
@@ -20,6 +21,7 @@ export interface AnalysisCopyArtifact {
     videoFrames: number
     videoStartMs: number
     videoEndMs: number
+    containerEndMs: number
     audioSamples: number
     audioStartMs: number
     audioEndMs: number
@@ -27,7 +29,9 @@ export interface AnalysisCopyArtifact {
     height: number
     rotation: number
     hasAudio: boolean
-    bitrate: number
+    targetVideoBitrate: number
+    actualVideoBitrate: number
+    actualAudioBitrate: number
   }
 }
 export interface AnalysisPreparationRequest {

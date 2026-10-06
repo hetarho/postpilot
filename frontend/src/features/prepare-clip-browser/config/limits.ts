@@ -22,3 +22,25 @@ export const ANALYSIS_PREPARATION_LIMITS = {
   decoderReserveBytes: 1024 * 1024 * 1024,
   maxDimension: 8192,
 } as const
+
+export const ANALYSIS_AUDIO_LIMITS = {
+  ...ANALYSIS_PREPARATION_LIMITS,
+  maxPcmBytes: 128 * 1024 * 1024,
+  maxChannels: 2,
+  maxSampleRate: 192000,
+  maxSampleFrames: 8192,
+  decoderPrerollMs: 125,
+  decoderTailMs: 125,
+  decoderReserveSamples: 48,
+  operationTimeoutMs: 60000,
+} as const
+
+export const ANALYSIS_AUDIO_ENCODER_LIMITS = {
+  maxPcmBytes: 128 * 1024 * 1024,
+  maxEncodedBytes: 1024 * 1024,
+  maxEncodedPackets: 4096,
+  maxPacketBytes: 64 * 1024,
+  maxPrimingFrames: 4096,
+  operationTimeoutMs: 60000,
+  cleanupTimeoutMs: 1000,
+} as const

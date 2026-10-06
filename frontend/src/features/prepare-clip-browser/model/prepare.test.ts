@@ -7,6 +7,7 @@ import type { AnalysisCopyArtifact, AnalysisPreparationRequest } from './types'
 const fingerprint = 'a'.repeat(64),
   hash = 'b'.repeat(64)
 const original = {
+  provenance: 'browser_client' as const,
   sourceId: 's',
   fingerprint,
   durationMs: 61_000,
@@ -98,6 +99,7 @@ function artifact(durationMs = 60000, hasAudio = true): AnalysisCopyArtifact {
       videoFrames: (durationMs * 15) / 1000,
       videoStartMs: 0,
       videoEndMs: durationMs,
+      containerEndMs: durationMs,
       audioSamples: hasAudio ? durationMs * 48 : 0,
       audioStartMs: 0,
       audioEndMs: hasAudio ? durationMs : 0,
@@ -105,7 +107,9 @@ function artifact(durationMs = 60000, hasAudio = true): AnalysisCopyArtifact {
       height: 404,
       rotation: 0,
       hasAudio,
-      bitrate: 900000,
+      targetVideoBitrate: 900000,
+      actualVideoBitrate: 800000,
+      actualAudioBitrate: hasAudio ? 64000 : 0,
     },
   }
 }
@@ -182,7 +186,7 @@ describe('page-owned browser analysis preparation', () => {
       }),
       expect.any(AbortSignal),
     )
-    expect(h.parent).toHaveBeenCalledExactlyOnceWith('prep')
+    expect(h.parent).toHaveBeenCalledExactlyOnceWith('prep', expect.any(AbortSignal))
     expect(h.peak()).toBe(1)
     expect(h.encoder.close).toHaveBeenCalled()
   })
@@ -242,7 +246,7 @@ describe('page-owned browser analysis preparation', () => {
       prepareBrowserAnalysis(request, h.ports, new AbortController().signal, h.parent),
     ).rejects.toThrow('lost response')
     expect(h.encoder.encode).not.toHaveBeenCalled()
-    expect(h.ports.cancel).toHaveBeenCalledExactlyOnceWith('prep')
+    expect(h.ports.cancel).toHaveBeenCalledExactlyOnceWith('prep', expect.any(AbortSignal))
   })
   it('rejects source measurement ownership and long selection before a parent exists', async () => {
     const h = harness()

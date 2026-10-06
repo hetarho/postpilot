@@ -1,5 +1,15 @@
 import type { ClipAnalysisOriginalMeasurement } from '@/entities/clip-project'
-import { ANALYSIS_PREPARATION_LIMITS as limits } from '../config/limits'
+import {
+  canonicalSelectedAudio,
+  createAudioRangeReader,
+  createAudioProcessor,
+  type EncodedAudioTrack,
+} from '@/shared/lib'
+import {
+  ANALYSIS_AUDIO_ENCODER_LIMITS,
+  ANALYSIS_AUDIO_LIMITS,
+  ANALYSIS_PREPARATION_LIMITS as limits,
+} from '../config/limits'
 import type {
   AnalysisCopyArtifact,
   AnalysisCopySlot,
@@ -14,6 +24,7 @@ export function createAnalysisEncoder(
   signal.throwIfAborted()
   if (typeof Worker === 'undefined') throw new Error('CLIP_ANALYSIS_ENCODER_UNSUPPORTED')
   const worker = new Worker(new URL('./analysis.worker.ts', import.meta.url), { type: 'module' })
+  let preparingAudio = false
   let id = 0,
     closed = false
   let pending:
@@ -24,6 +35,8 @@ export function createAnalysisEncoder(
         timer: ReturnType<typeof setTimeout>
       }
     | undefined
+  let audioReader: ReturnType<typeof createAudioRangeReader> | undefined
+  let audioProcessor: ReturnType<typeof createAudioProcessor> | undefined
   let cleanup: ReturnType<typeof setTimeout> | undefined
   const terminate = () => {
     if (cleanup) clearTimeout(cleanup)
@@ -33,6 +46,8 @@ export function createAnalysisEncoder(
     if (closed) return
     closed = true
     signal.removeEventListener('abort', abort)
+    audioReader?.close()
+    audioProcessor?.close()
     if (pending) {
       clearTimeout(pending.timer)
       pending.reject(reason)
@@ -73,9 +88,11 @@ export function createAnalysisEncoder(
     kind: 'measure' | 'encode',
     source: AnalysisSource,
     slot?: AnalysisCopySlot,
+    audio?: EncodedAudioTrack,
   ) {
     signal.throwIfAborted()
-    if (closed || pending) throw new Error('CLIP_ANALYSIS_QUEUE_LIMIT')
+    if (closed || pending || (kind === 'measure' && preparingAudio))
+      throw new Error('CLIP_ANALYSIS_QUEUE_LIMIT')
     return new Promise<unknown>((resolve, reject) => {
       const requestId = ++id
       const timer = setTimeout(
@@ -84,7 +101,10 @@ export function createAnalysisEncoder(
       )
       pending = { id: requestId, resolve, reject, timer }
       try {
-        worker.postMessage({ kind, id: requestId, source, slot })
+        worker.postMessage(
+          { kind, id: requestId, source, slot, audio },
+          audio ? { transfer: audio.chunks.map((chunk) => chunk.data.buffer) } : undefined,
+        )
       } catch (error) {
         close(error)
       }
@@ -92,7 +112,57 @@ export function createAnalysisEncoder(
   }
   return {
     measure: (source) => request('measure', source) as Promise<ClipAnalysisOriginalMeasurement>,
-    encode: (source, slot) => request('encode', source, slot) as Promise<AnalysisCopyArtifact>,
+    encode: async (source, slot) => {
+      signal.throwIfAborted()
+      if (closed || pending || preparingAudio) throw new Error('CLIP_ANALYSIS_QUEUE_LIMIT')
+      preparingAudio = true
+      try {
+        let audio: EncodedAudioTrack | undefined
+        if (slot.hasAudio) {
+          audioReader ??= createAudioRangeReader(signal, ANALYSIS_AUDIO_LIMITS)
+          const range = await audioReader.decode(source.access, {
+            startUs: slot.offsetMs * 1000,
+            endUs: (slot.offsetMs + slot.durationMs) * 1000,
+            targetSampleRate: limits.audioRate,
+          })
+          if (!range) throw new Error('CLIP_SOURCE_AUDIO_MISSING')
+          const channels = range.metadata.channels
+          const frames = (slot.durationMs * limits.audioRate) / 1000
+          const pcm = await canonicalSelectedAudio(
+            range,
+            (slot.offsetMs * limits.audioRate) / 1000,
+            frames,
+            limits.audioRate,
+            signal,
+          )
+          const mono = new Float32Array(frames)
+          const gain = channels === 1 ? 1 / Math.SQRT1_2 : 1
+          for (let n = 0; n < frames; n++) {
+            const value = (pcm[0][n] + pcm[1][n]) * 0.5 * gain
+            if (!Number.isFinite(value)) throw new Error('CLIP_SOURCE_AUDIO_INVALID')
+            mono[n] = value
+          }
+          pcm.length = 0
+          signal.throwIfAborted()
+          audioProcessor ??= createAudioProcessor(signal, ANALYSIS_AUDIO_ENCODER_LIMITS)
+          audio = await audioProcessor.encode(
+            [mono],
+            {
+              codec: 'mp4a.40.2',
+              sampleRate: limits.audioRate,
+              numberOfChannels: 1,
+              bitrate: limits.audioBitrate,
+            },
+            4096,
+            4,
+          )
+          signal.throwIfAborted()
+        }
+        return (await request('encode', source, slot, audio)) as AnalysisCopyArtifact
+      } finally {
+        preparingAudio = false
+      }
+    },
     close,
   }
 }

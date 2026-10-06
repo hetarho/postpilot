@@ -29,8 +29,8 @@ export interface AnalysisPreparationPorts {
     signal: AbortSignal,
   ): Promise<{ url: string; headers: Record<string, string>; expiresAt: string; slot: string }>
   complete(id: string, signal: AbortSignal): Promise<ClipAnalysisPreparation>
-  cancel(id: string): Promise<unknown>
-  cancelParent(id: string): Promise<unknown>
+  cancel(id: string, signal?: AbortSignal): Promise<unknown>
+  cancelParent(id: string, signal?: AbortSignal): Promise<unknown>
   upload?: typeof fetch
   now?: () => number
 }
@@ -54,10 +54,13 @@ export async function prepareBrowserAnalysis(
     current = value
     progress(value)
   }
+  if (!input.batch.sources.length || input.batch.sources.length > limits.sources)
+    throw new Error('CLIP_INPUT_TOO_LARGE')
   const encoder = ports.encoder(signal, (fraction) => {
     if (!signal.aborted) progress({ ...current, fraction })
   })
   const now = ports.now ?? Date.now
+  const requestSignal = () => AbortSignal.any([signal, AbortSignal.timeout(limits.timeoutMs)])
   try {
     signal.throwIfAborted()
     const originals = []
@@ -68,17 +71,20 @@ export async function prepareBrowserAnalysis(
         total: input.batch.sources.length,
         sourceId: source.id,
       })
-      const access = await ports.access(source.id, source.metadata.fingerprint, signal)
+      const access = await ports.access(source.id, source.metadata.fingerprint, requestSignal())
       const measured = await encoder.measure({
         sourceId: source.id,
         fingerprint: source.metadata.fingerprint,
         access,
+        durationBudgetMs:
+          limits.durationMs - originals.reduce((sum, source) => sum + source.durationMs, 0),
       })
       if (measured.sourceId !== source.id || measured.fingerprint !== source.metadata.fingerprint)
         throw new Error('CLIP_ANALYSIS_COPY_OWNERSHIP')
       originals.push(measured)
       validateOriginalMeasurements(originals)
     }
+    validateOriginalMeasurements(originals)
     preparation = await ports.begin(
       {
         projectId: input.projectId,
@@ -88,7 +94,7 @@ export async function prepareBrowserAnalysis(
         profileVersion: CLIP_BROWSER_ANALYSIS_PROFILE,
         originals,
       },
-      signal,
+      requestSignal(),
     )
     if (
       preparation.projectId !== input.projectId ||
@@ -106,7 +112,7 @@ export async function prepareBrowserAnalysis(
     for (const [index, copy] of preparation.copies.entries()) {
       if (Date.parse(preparation.expiresAt) <= now())
         throw new Error('CLIP_ANALYSIS_PREPARATION_EXPIRED')
-      const access = await ports.access(copy.sourceId, copy.fingerprint, signal)
+      const access = await ports.access(copy.sourceId, copy.fingerprint, requestSignal())
       update({
         stage: 'encoding',
         done: index,
@@ -127,7 +133,7 @@ export async function prepareBrowserAnalysis(
           bytes: artifact.buffer.byteLength,
           sha256: artifact.sha256,
         },
-        signal,
+        requestSignal(),
       )
       if (
         upload.slot !== copy.slot ||
@@ -152,7 +158,7 @@ export async function prepareBrowserAnalysis(
       done: preparation.copies.length,
       total: preparation.copies.length,
     })
-    const completed = await ports.complete(preparation.id, signal)
+    const completed = await ports.complete(preparation.id, requestSignal())
     if (
       completed.id !== preparation.id ||
       completed.projectId !== input.projectId ||
@@ -166,8 +172,14 @@ export async function prepareBrowserAnalysis(
     // Abort local resources immediately. Durable parent cancellation precedes
     // fencing the session, and neither cleanup request uses the aborted signal.
     encoder.close()
-    if (parent) await ports.cancelParent(parent.jobId).catch(() => undefined)
-    if (preparation) await ports.cancel(preparation.id).catch(() => undefined)
+    if (parent)
+      await ports
+        .cancelParent(parent.jobId, AbortSignal.timeout(limits.timeoutMs))
+        .catch(() => undefined)
+    if (preparation)
+      await ports
+        .cancel(preparation.id, AbortSignal.timeout(limits.timeoutMs))
+        .catch(() => undefined)
     throw error
   } finally {
     encoder.close()

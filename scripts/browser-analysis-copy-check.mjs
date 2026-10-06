@@ -62,6 +62,7 @@ try {
     if (id === 'expired' && result.error !== 'CLIP_SOURCE_EXPIRED') throw new Error(JSON.stringify(result))
     if (id === 'whole' && result.error !== 'CLIP_SOURCE_RANGE_UNSUPPORTED') throw new Error(JSON.stringify(result))
     if (id === 'cancel' && result.name !== 'AbortError') throw new Error(JSON.stringify(result))
+    if (result.resourceEvents?.some((event) => event.resources.liveDecodedFrames !== 0 || event.resources.liveAudioData !== 0 || event.resources.peakDecodedFrames > 48)) throw new Error('Original decoder resource leak or reserve overflow')
     if (result.copies?.some((copy) => copy.resources.liveDecodedFrames !== 0 || copy.resources.liveAudioData !== 0 || copy.resources.peakDecodedFrames > 48)) throw new Error('Decoder resource leak or reserve overflow')
     if (files.has(id) && result.error) throw new Error(`${id}: ${JSON.stringify(result)}`)
     if (id === 'long' && (result.copies.length !== 2 || result.original.durationMs !== 61000 || result.original.audioRate !== 44100)) throw new Error('Original/seam measurement drift')

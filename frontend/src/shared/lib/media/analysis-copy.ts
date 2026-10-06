@@ -1,6 +1,8 @@
 import {
-  AudioSample,
-  AudioSampleSource,
+  canEncodeAudio,
+  canEncodeVideo,
+  EncodedAudioPacketSource,
+  EncodedPacket,
   AudioSampleSink,
   BlobSource,
   Conversion,
@@ -14,7 +16,6 @@ import {
   Quality,
   StreamTarget,
   VideoSampleSink,
-  type InputAudioTrack,
 } from 'mediabunny'
 import { bindNativeSourceColor, nativeSourceColorSpace } from './video/source-color'
 import {
@@ -22,6 +23,7 @@ import {
   type BrowserMediaSourceAccess,
   type MediaRangeLimits,
 } from './video/range-source'
+import type { EncodedAudioTrack } from './audio/processing-types'
 import { openOriginalVideo } from './video/range-video'
 
 export interface FiniteMediaCopyProfile extends MediaRangeLimits {
@@ -30,6 +32,7 @@ export interface FiniteMediaCopyProfile extends MediaRangeLimits {
   decoderReserveBytes: number
   maxCopyBytes: number
   fps: number
+  longEdge: number
   videoBitrates: readonly number[]
   audioBitrate: number
   audioRate: number
@@ -49,6 +52,7 @@ export interface CompletedMediaCopy {
     videoFrames: number
     videoStartMs: number
     videoEndMs: number
+    containerEndMs: number
     audioSamples: number
     audioStartMs: number
     audioEndMs: number
@@ -56,7 +60,9 @@ export interface CompletedMediaCopy {
     height: number
     rotation: number
     hasAudio: boolean
-    bitrate: number
+    targetVideoBitrate: number
+    actualVideoBitrate: number
+    actualAudioBitrate: number
   }
 }
 
@@ -77,6 +83,19 @@ export async function measureOriginalMedia(
       limits.decoderReserveBytes
     )
       throw new Error('CLIP_SOURCE_MEMORY_LIMIT')
+    const scale = Math.min(
+      1,
+      limits.longEdge / Math.max(metadata.displayWidth, metadata.displayHeight),
+    )
+    if (
+      !(await canEncodeVideo('avc', {
+        width: Math.max(2, Math.floor((metadata.displayWidth * scale) / 2) * 2),
+        height: Math.max(2, Math.floor((metadata.displayHeight * scale) / 2) * 2),
+        frameRate: limits.fps,
+        quality: new Quality({ bitrate: limits.videoBitrates[0], bitrateMode: 'constant' }),
+      }))
+    )
+      throw new Error('CLIP_ANALYSIS_ENCODER_UNSUPPORTED')
     let frames = 0,
       end = 0,
       previous: number | undefined,
@@ -111,6 +130,15 @@ export async function measureOriginalMedia(
     audioReader = createFiniteMediaSource(access, limits, signal)
     audioInput = new Input({ source: audioReader.source, formats: [MP4, QTFF, WEBM, MATROSKA] })
     const audio = (await audioInput.getAudioTracks())[0]
+    if (
+      audio &&
+      !(await canEncodeAudio('aac', {
+        numberOfChannels: 1,
+        sampleRate: limits.audioRate,
+        quality: new Quality({ bitrate: limits.audioBitrate }),
+      }))
+    )
+      throw new Error('CLIP_ANALYSIS_ENCODER_UNSUPPORTED')
     if (audio && !(await audio.canDecode())) throw new Error('CLIP_SOURCE_AUDIO_CODEC_UNSUPPORTED')
     const audioRate = audio ? await audio.getSampleRate() : 0
     const audioChannels = audio ? await audio.getNumberOfChannels() : 0
@@ -120,14 +148,17 @@ export async function measureOriginalMedia(
     )
       throw new Error('CLIP_SOURCE_AUDIO_FORMAT_UNSUPPORTED')
     const gcd = (a: number, b: number): number => (b ? gcd(b, a % b) : a)
-    const step = cadence ?? Math.max(1, Math.round((metadata.timeResolution * end) / frames))
-    const divisor = gcd(metadata.timeResolution, step)
+    const numerator =
+      constant && cadence ? metadata.timeResolution : frames * metadata.timeResolution
+    const denominator = constant && cadence ? cadence : Math.round(end * metadata.timeResolution)
+    const divisor = gcd(numerator, denominator)
     return {
+      provenance: metadata.provenance,
       durationMs,
       width: metadata.displayWidth,
       height: metadata.displayHeight,
-      frameRateNumerator: metadata.timeResolution / divisor,
-      frameRateDenominator: step / divisor,
+      frameRateNumerator: numerator / divisor,
+      frameRateDenominator: denominator / divisor,
       cadenceVerified: frames > 1 && constant,
       decodedFrames: frames,
       hasAudio: !!audio,
@@ -177,6 +208,7 @@ async function inspectCompletedCopy(
     const video = videos[0],
       audio = audios[0]
     if (
+      (await input.getTracks()).length !== 1 + Number(slot.hasAudio) ||
       videos.length !== 1 ||
       audios.length !== Number(slot.hasAudio) ||
       !video ||
@@ -241,6 +273,7 @@ async function inspectCompletedCopy(
         videoFrames,
         videoStartMs,
         videoEndMs,
+        containerEndMs: ((await input.getDurationFromMetadata()) ?? NaN) * 1000,
         audioSamples,
         audioStartMs: audio ? audioStartMs : 0,
         audioEndMs,
@@ -248,7 +281,9 @@ async function inspectCompletedCopy(
         height: await video.getDisplayHeight(),
         rotation: await video.getRotation(),
         hasAudio: !!audio,
-        bitrate,
+        targetVideoBitrate: bitrate,
+        actualVideoBitrate: (await video.computePacketStats()).averageBitrate,
+        actualAudioBitrate: audio ? (await audio.computePacketStats()).averageBitrate : 0,
       },
     }
     const p = artifact.inspection,
@@ -266,6 +301,8 @@ async function inspectCompletedCopy(
       p.videoFrames > limits.fps * 60 ||
       Math.abs((p.videoFrames * 1000) / limits.fps - slot.durationMs) > tolerance ||
       Math.abs(p.videoStartMs) > 0.01 ||
+      p.containerEndMs > 60000 + 0.01 ||
+      Math.abs(p.containerEndMs - slot.durationMs) > tolerance ||
       p.videoEndMs > 60000 + 0.01 ||
       Math.abs(p.videoEndMs - slot.durationMs) > tolerance ||
       (slot.hasAudio &&
@@ -281,69 +318,53 @@ async function inspectCompletedCopy(
   }
 }
 
-/** Preserve the original common source clock, including silence before delayed
- * audio and at the tail. Trim on its integer sample lattice before resampling;
- * MP4 timestamp metadata alone cannot prove complete audible coverage. */
-async function feedAnalysisAudio(
-  track: InputAudioTrack,
-  source: AudioSampleSource,
-  slot: MediaCopyInterval,
+/** Retain decoder warmup packets, then expose exactly the measured source-time
+ * samples through a standard MP4 edit window. No real audible tail is removed. */
+async function feedCopyAudio(
+  audio: EncodedAudioTrack,
+  source: EncodedAudioPacketSource,
   signal: AbortSignal,
 ) {
-  const sampleRate = await track.getSampleRate(),
-    channels = await track.getNumberOfChannels()
-  const total = Math.round((slot.durationMs * sampleRate) / 1000)
-  let cursor = 0
-  async function silence(end: number) {
-    while (cursor < end) {
-      signal.throwIfAborted()
-      const frames = Math.min(4096, end - cursor)
-      const sample = new AudioSample({
-        data: new Float32Array(frames * channels),
-        format: 'f32-planar',
-        numberOfChannels: channels,
-        sampleRate,
-        timestamp: cursor / sampleRate,
-      })
-      try {
-        await source.add(sample)
-      } finally {
-        sample.close()
-      }
-      cursor += frames
-    }
+  const rate = audio.config.sampleRate,
+    end = audio.sampleFrames / rate
+  const origin = audio.chunks[0]?.timestamp ?? 0
+  for (const [index, chunk] of audio.chunks.entries()) {
+    signal.throwIfAborted()
+    const start =
+      Math.round(((chunk.timestamp - origin) * rate) / 1e6) / rate - audio.primingFrames / rate
+    if (start >= end) break
+    const duration = Math.min(Math.round((chunk.duration * rate) / 1e6) / rate, end - start)
+    await source.add(
+      new EncodedPacket(chunk.data, chunk.type, start, duration),
+      index === 0 ? { decoderConfig: audio.decoderConfig } : undefined,
+    )
   }
-  for await (const sample of new AudioSampleSink(track).samples(
-    slot.offsetMs / 1000,
-    (slot.offsetMs + slot.durationMs) / 1000,
-  )) {
+  source.close()
+}
+
+/** Retry only a failed byte-bound attempt. Every operation must finish its
+ * cleanup before a lower bitrate may start; all other failures are terminal. */
+export async function runMediaSizeAttempts<T>(
+  bitrates: readonly number[],
+  signal: AbortSignal,
+  attempt: (bitrate: number) => Promise<T>,
+): Promise<T> {
+  if (!bitrates.length || bitrates.length > 2) throw new Error('CLIP_ANALYSIS_QUEUE_LIMIT')
+  for (const bitrate of bitrates) {
+    signal.throwIfAborted()
     try {
+      return await attempt(bitrate)
+    } catch (error) {
       signal.throwIfAborted()
       if (
-        sample.sampleRate !== sampleRate ||
-        sample.numberOfChannels !== channels ||
-        sample.numberOfFrames * channels * 4 > 1024 * 1024
+        !(error instanceof Error) ||
+        error.message !== 'CLIP_ANALYSIS_COPY_TOO_LARGE' ||
+        bitrate === bitrates.at(-1)
       )
-        throw new Error('CLIP_SOURCE_AUDIO_MEMORY_LIMIT')
-      const offset = Math.round((sample.timestamp - slot.offsetMs / 1000) * sampleRate)
-      const begin = Math.max(0, cursor - offset),
-        end = Math.min(sample.numberOfFrames, total - offset)
-      if (end <= begin) continue
-      await silence(Math.max(cursor, Math.min(total, offset)))
-      const selected = sample.trim(begin, end)
-      try {
-        selected.setTimestamp(cursor / sampleRate)
-        await source.add(selected)
-        cursor += selected.numberOfFrames
-      } finally {
-        selected.close()
-      }
-    } finally {
-      sample.close()
+        throw error
     }
   }
-  await silence(total)
-  source.close()
+  throw new Error('CLIP_ANALYSIS_COPY_TOO_LARGE')
 }
 
 export async function transcodeMediaInterval(
@@ -352,8 +373,17 @@ export async function transcodeMediaInterval(
   limits: FiniteMediaCopyProfile,
   signal: AbortSignal,
   progress: (fraction: number) => void = () => {},
+  encodedAudio?: EncodedAudioTrack,
 ) {
-  for (const bitrate of limits.videoBitrates) {
+  if (
+    slot.hasAudio &&
+    (!encodedAudio ||
+      encodedAudio.sampleFrames !== (slot.durationMs * limits.audioRate) / 1000 ||
+      encodedAudio.config.numberOfChannels !== 1 ||
+      encodedAudio.config.sampleRate !== limits.audioRate)
+  )
+    throw new Error('CLIP_SOURCE_AUDIO_TIMESTAMP_INVALID')
+  return runMediaSizeAttempts(limits.videoBitrates, signal, async (bitrate) => {
     signal.throwIfAborted()
     const reader = createFiniteMediaSource(access, limits, signal)
     const input = new Input({ source: reader.source, formats: [MP4, QTFF, WEBM, MATROSKA] })
@@ -379,6 +409,10 @@ export async function transcodeMediaInterval(
       )
         throw new Error('CLIP_SOURCE_MEMORY_LIMIT')
       bindNativeSourceColor(video, nativeSourceColorSpace(await video.getColorSpace()))
+      // The native copy strips descriptive source metadata. Keep no original
+      // stream name or language tag beyond the footage/audio itself.
+      video.getName = async () => null
+      video.getLanguageCode = async () => null
       const target = boundedMediaCopyTarget(limits.maxCopyBytes)
       output = new Output({
         format: new Mp4OutputFormat({ fastStart: false }),
@@ -417,34 +451,22 @@ export async function transcodeMediaInterval(
         throw new Error('CLIP_ANALYSIS_ENCODER_UNSUPPORTED')
       signal.throwIfAborted()
       conversion.onProgress = progress
-      let audioSource: AudioSampleSource | undefined
+      let audioSource: EncodedAudioPacketSource | undefined
       if (slot.hasAudio && audio) {
-        audioSource = new AudioSampleSource({
-          codec: 'aac',
-          quality: new Quality({ bitrate: limits.audioBitrate }),
-          transform: { sampleRate: limits.audioRate, numberOfChannels: 1 },
-        })
+        audioSource = new EncodedAudioPacketSource('aac')
         output.addAudioTrack(audioSource)
       }
       output.setMetadataTags({})
       await output.start()
       await Promise.all([
         conversion.execute(),
-        audioSource && audio
-          ? feedAnalysisAudio(audio, audioSource, slot, signal)
+        audioSource && encodedAudio
+          ? feedCopyAudio(encodedAudio, audioSource, signal)
           : Promise.resolve(),
       ])
       await output.finalize()
       signal.throwIfAborted()
       return await inspectCompletedCopy(target.result(), slot, bitrate, limits, signal)
-    } catch (error) {
-      signal.throwIfAborted()
-      if (
-        !(error instanceof Error) ||
-        error.message !== 'CLIP_ANALYSIS_COPY_TOO_LARGE' ||
-        bitrate === limits.videoBitrates.at(-1)
-      )
-        throw error
     } finally {
       signal.removeEventListener('abort', abort)
       await conversion?.cancel().catch(() => undefined)
@@ -452,6 +474,5 @@ export async function transcodeMediaInterval(
       input.dispose()
       reader.dispose()
     }
-  }
-  throw new Error('CLIP_ANALYSIS_COPY_TOO_LARGE')
+  })
 }

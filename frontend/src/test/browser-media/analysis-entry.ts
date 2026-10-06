@@ -8,6 +8,7 @@ declare global {
     }
   }
 }
+const resourceEvents: { module: string; resources: unknown }[] = []
 const NativeWorker = Worker
 /** Diagnostic-only decoder accounting around the unchanged production worker. */
 window.Worker = class extends NativeWorker {
@@ -32,7 +33,12 @@ window.Worker = class extends NativeWorker {
     )
     const objectURL = URL.createObjectURL(bootstrap)
     super(objectURL, options)
-    URL.revokeObjectURL(objectURL)
+    this.addEventListener('message', (event) => {
+      if (event.data.kind === 'result')
+        resourceEvents.push({ module: String(url), resources: event.data.result.resources })
+      URL.revokeObjectURL(objectURL)
+    })
+    this.addEventListener('error', () => URL.revokeObjectURL(objectURL), { once: true })
   }
 }
 window.analysisFixture = {
@@ -44,7 +50,8 @@ window.analysisFixture = {
       fingerprint,
       access: { kind: 'url', url },
     }
-    const began = performance.now()
+    const began = performance.now(),
+      eventStart = resourceEvents.length
     try {
       const original = await encoder.measure(source)
       const measuredMs = performance.now() - began
@@ -88,6 +95,7 @@ window.analysisFixture = {
         measuredMs,
         copies,
         originalResources: (original as typeof original & { resources: unknown }).resources,
+        resourceEvents: resourceEvents.slice(eventStart),
         qualification: false,
       }
     } catch (error) {

@@ -1,3 +1,4 @@
+import type { EncodedAudioTrack } from '@/shared/lib'
 import { encodeAnalysisCopy, measureAnalysisOriginal } from './analysis-media'
 import type { AnalysisCopySlot, AnalysisSource } from '../model/types'
 
@@ -7,7 +8,13 @@ self.onmessage = async (
   event: MessageEvent<
     | { kind: 'cancel' }
     | { kind: 'measure'; id: number; source: AnalysisSource }
-    | { kind: 'encode'; id: number; source: AnalysisSource; slot: AnalysisCopySlot }
+    | {
+        kind: 'encode'
+        id: number
+        source: AnalysisSource
+        slot: AnalysisCopySlot
+        audio?: EncodedAudioTrack
+      }
   >,
 ) => {
   const message = event.data
@@ -28,8 +35,12 @@ self.onmessage = async (
     const result =
       message.kind === 'measure'
         ? await measureAnalysisOriginal(message.source, controller.signal)
-        : await encodeAnalysisCopy(message.source, message.slot, controller.signal, (fraction) =>
-            self.postMessage({ kind: 'progress', id: message.id, fraction }),
+        : await encodeAnalysisCopy(
+            message.source,
+            message.slot,
+            controller.signal,
+            (fraction) => self.postMessage({ kind: 'progress', id: message.id, fraction }),
+            message.audio,
           )
     controller.signal.throwIfAborted()
     self.postMessage(

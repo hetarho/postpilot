@@ -7,6 +7,7 @@ import {
 } from '@/entities/clip-preview'
 import {
   useReorderClipSources,
+  useClipSourceCalls,
   type ClipProject,
   type ClipRenderKind,
 } from '@/entities/clip-project'
@@ -72,6 +73,7 @@ export function useClipWorkspace(ownerId: string, project: ClipProject) {
     })),
   )
   useSoundBatchHandoff(correction.soundBatch, upload.acceptSoundBatch)
+  const sourceCalls = useClipSourceCalls()
   const analysis = usePrepareClipBrowser({
     ownerId,
     projectId: project.id,
@@ -88,9 +90,10 @@ export function useClipWorkspace(ownerId: string, project: ClipProject) {
       )
       if (!entry) throw new Error('CLIP_SOURCE_UNAVAILABLE')
       if (entry.file) return { kind: 'blob', blob: entry.file }
-      const url = await upload.ensurePlayback(fingerprint)
+      const capability = await sourceCalls.playback(project.id, sourceId, fingerprint, signal)
       signal.throwIfAborted()
-      return { kind: 'url', url }
+      if (Date.parse(capability.expiresAt) <= Date.now()) throw new Error('CLIP_SOURCE_EXPIRED')
+      return { kind: 'url', url: capability.url }
     },
   })
   const generation = useGenerateClip(ownerId, project, upload.attempt?.jobId, analysis.preparation)
