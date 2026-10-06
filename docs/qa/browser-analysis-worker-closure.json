@@ -1,0 +1,14 @@
+{
+  "beforeHead": "5ac03f89b353def6f6305364b475f4f0da31fea6",
+  "afterHead": "75c77fe145e98ad078e78177f77f0d4a382d52c2",
+  "inputCount": 2001,
+  "packageCount": 303,
+  "closureDigest": "6ec27b0679587c9e06a0bdd80d72a35ae1ce5ac960585c39df4bcaa962b45a28",
+  "inputsEqual": true,
+  "packageGraphEqual": true,
+  "changedInputs": {},
+  "beforeManifest": "/private/tmp/postpilot-t602-worker-closure-before.json",
+  "afterManifest": "/private/tmp/postpilot-t602-worker-closure-after.json",
+  "imageExecuted": false,
+  "scope": "Source dependency/build/assets comparison only; not image execution or a binary checksum proof. API builder output is not copied into media-worker-smoke; SOURCE_REVISION label changes separately."
+}

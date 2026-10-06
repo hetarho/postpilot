@@ -19,6 +19,7 @@ import (
 const MediaWorkerIdentityHeader = "X-Media-Worker-ID"
 
 type mediaPrincipalKey struct{}
+type mediaRoleKey struct{}
 
 type MediaWorkerService interface {
 	Claim(context.Context, clip.MediaWorkerProfile) (*clip.MediaWork, error)
@@ -30,11 +31,20 @@ type MediaWorkerService interface {
 	Reserve(context.Context, clip.MediaLeaseCredentials, []clip.MediaOutput) ([]clip.MediaArtifactAccess, error)
 }
 
+// The transport supplies the authenticated role; request bodies cannot choose
+// another queue. The native-only service retains its original status port.
+type MediaWorkerRoleStatus interface {
+	StatusForRole(context.Context, string, string) (clip.MediaRuntimeStatus, error)
+}
+
 type MediaWorkerHandler struct{ service MediaWorkerService }
 
 // NewMediaWorkerServer has its own mux, no session auth, CORS or public routes.
 // Authentication runs outside Connect, before reading/decompressing the body.
 func NewMediaWorkerServer(addr string, credentials map[string]string, service MediaWorkerService) *http.Server {
+	return NewMediaWorkerServerWithRoles(addr, credentials, nil, service)
+}
+func NewMediaWorkerServerWithRoles(addr string, credentials map[string]string, roles map[string]string, service MediaWorkerService) *http.Server {
 	mux := http.NewServeMux()
 	mux.Handle(postpilotv1connect.NewClipMediaWorkerServiceHandler(&MediaWorkerHandler{service: service}, connect.WithReadMaxBytes(clip.MediaRequestMaxBytes)))
 	hashes := make(map[string][sha256.Size]byte, len(credentials))
@@ -53,7 +63,11 @@ func NewMediaWorkerServer(addr string, credentials map[string]string, service Me
 			http.Error(w, "unauthenticated", http.StatusUnauthorized)
 			return
 		}
-		ctx, cancel := context.WithTimeout(context.WithValue(r.Context(), mediaPrincipalKey{}, ids[0]), clip.MediaUnaryTimeout)
+		role := roles[ids[0]]
+		if role == "" {
+			role = clip.NativeWorkerRole
+		}
+		ctx, cancel := context.WithTimeout(context.WithValue(context.WithValue(r.Context(), mediaPrincipalKey{}, ids[0]), mediaRoleKey{}, role), clip.MediaUnaryTimeout)
 		defer cancel()
 		r.Body = http.MaxBytesReader(w, r.Body, clip.MediaRequestMaxBytes)
 		mux.ServeHTTP(w, r.WithContext(ctx))
@@ -72,6 +86,13 @@ func workerLease(ctx context.Context, in *pb.MediaLeaseCredentials) (clip.MediaL
 	id, err := workerIdentity(ctx)
 	if err != nil {
 		return clip.MediaLeaseCredentials{}, err
+	}
+	if in != nil {
+		role, _ := ctx.Value(mediaRoleKey{}).(string)
+		_, analysis := clip.AnalysisPreparationStage(in.StageId)
+		if (role == clip.AnalysisVerificationRole) != analysis {
+			return clip.MediaLeaseCredentials{}, mediaWorkerError(clip.ErrMediaUnsupported)
+		}
 	}
 	if in == nil || !clip.ValidMediaLabel(in.StageId) || !clip.ValidMediaLabel(in.AttemptId) || !clip.ValidMediaLabel(in.Token) {
 		return clip.MediaLeaseCredentials{}, mediaWorkerError(clip.ErrInvalid)
@@ -117,6 +138,10 @@ func (h *MediaWorkerHandler) ClaimMediaStage(ctx context.Context, r *connect.Req
 	p := r.Msg.Profile
 	if p == nil {
 		return nil, mediaWorkerError(clip.ErrInvalid)
+	}
+	role, _ := ctx.Value(mediaRoleKey{}).(string)
+	if (role == clip.AnalysisVerificationRole) != (p.Operation == string(clip.MediaVerifyAnalysis)) {
+		return nil, mediaWorkerError(clip.ErrMediaUnsupported)
 	}
 	work, err := h.service.Claim(ctx, clip.MediaWorkerProfile{WorkerID: id, Operation: clip.MediaOperation(p.Operation), ContractVersion: int(p.ContractVersion), RendererVersion: p.RendererVersion, AssetVersion: p.AssetVersion, Profile: p.Profile, RuntimeManifest: p.RuntimeManifest})
 	if err != nil {
@@ -171,11 +196,23 @@ func (h *MediaWorkerHandler) GetMediaRuntimeStatus(ctx context.Context, _ *conne
 	if err != nil {
 		return nil, err
 	}
-	status, err := h.service.Status(ctx, id)
+	role, _ := ctx.Value(mediaRoleKey{}).(string)
+	var status clip.MediaRuntimeStatus
+	if service, ok := h.service.(MediaWorkerRoleStatus); ok {
+		status, err = service.StatusForRole(ctx, id, role)
+	} else if role == clip.NativeWorkerRole {
+		status, err = h.service.Status(ctx, id)
+	} else {
+		err = clip.ErrMediaUnsupported
+	}
 	if err != nil {
 		return nil, mediaWorkerError(err)
 	}
-	return connect.NewResponse(&pb.GetMediaRuntimeStatusResponse{ContractVersion: clip.MediaContractVersion, RendererVersion: clip.MediaRendererVersion, AssetVersion: clip.MediaAssetVersion, Profiles: []string{clip.MediaCPUProfile}, Waiting: status.Waiting, Active: status.Active, OwnActive: status.OwnActive, Ready: true}), nil
+	renderer, assets, profile := clip.MediaRendererVersion, clip.MediaAssetVersion, clip.MediaCPUProfile
+	if role == clip.AnalysisVerificationRole {
+		renderer, assets, profile = clip.AnalysisVerificationRenderer, clip.AnalysisVerificationAssets, clip.AnalysisVerificationProfile
+	}
+	return connect.NewResponse(&pb.GetMediaRuntimeStatusResponse{ContractVersion: clip.MediaContractVersion, RendererVersion: renderer, AssetVersion: assets, Profiles: []string{profile}, Waiting: status.Waiting, Active: status.Active, OwnActive: status.OwnActive, Ready: true}), nil
 }
 func (h *MediaWorkerHandler) GetMediaArtifactAccess(ctx context.Context, r *connect.Request[pb.GetMediaArtifactAccessRequest]) (*connect.Response[pb.GetMediaArtifactAccessResponse], error) {
 	lease, err := workerLease(ctx, r.Msg.Lease)

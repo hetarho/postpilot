@@ -86,6 +86,7 @@ type MediaPublicationTx interface {
 
 // Ports is what one writer transaction exposes to a saga.
 type Ports struct {
+	Analysis      AnalysisPreparationTx
 	Starts        RenderJobTx
 	RenderSources RenderSourceTx
 	Jobs          JobTx

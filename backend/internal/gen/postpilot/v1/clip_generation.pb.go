@@ -969,6 +969,7 @@ type StartClipGenerationRequest struct {
 	ApprovedMaxCredits        *int32                 `protobuf:"varint,6,opt,name=approved_max_credits,json=approvedMaxCredits,proto3,oneof" json:"approved_max_credits,omitempty"`
 	CancellationPolicyVersion int32                  `protobuf:"varint,7,opt,name=cancellation_policy_version,json=cancellationPolicyVersion,proto3" json:"cancellation_policy_version,omitempty"`
 	FromStoryline             bool                   `protobuf:"varint,8,opt,name=from_storyline,json=fromStoryline,proto3" json:"from_storyline,omitempty"`
+	AnalysisPreparationId     string                 `protobuf:"bytes,9,opt,name=analysis_preparation_id,json=analysisPreparationId,proto3" json:"analysis_preparation_id,omitempty"`
 	unknownFields             protoimpl.UnknownFields
 	sizeCache                 protoimpl.SizeCache
 }
@@ -1057,6 +1058,13 @@ func (x *StartClipGenerationRequest) GetFromStoryline() bool {
 		return x.FromStoryline
 	}
 	return false
+}
+
+func (x *StartClipGenerationRequest) GetAnalysisPreparationId() string {
+	if x != nil {
+		return x.AnalysisPreparationId
+	}
+	return ""
 }
 
 type StartClipGenerationResponse struct {
@@ -1180,6 +1188,7 @@ type StartClipStorylineRequest struct {
 	QuoteId                   string                 `protobuf:"bytes,5,opt,name=quote_id,json=quoteId,proto3" json:"quote_id,omitempty"`
 	ApprovedMaxCredits        *int32                 `protobuf:"varint,6,opt,name=approved_max_credits,json=approvedMaxCredits,proto3,oneof" json:"approved_max_credits,omitempty"`
 	CancellationPolicyVersion int32                  `protobuf:"varint,7,opt,name=cancellation_policy_version,json=cancellationPolicyVersion,proto3" json:"cancellation_policy_version,omitempty"`
+	AnalysisPreparationId     string                 `protobuf:"bytes,8,opt,name=analysis_preparation_id,json=analysisPreparationId,proto3" json:"analysis_preparation_id,omitempty"`
 	unknownFields             protoimpl.UnknownFields
 	sizeCache                 protoimpl.SizeCache
 }
@@ -1261,6 +1270,13 @@ func (x *StartClipStorylineRequest) GetCancellationPolicyVersion() int32 {
 		return x.CancellationPolicyVersion
 	}
 	return 0
+}
+
+func (x *StartClipStorylineRequest) GetAnalysisPreparationId() string {
+	if x != nil {
+		return x.AnalysisPreparationId
+	}
+	return ""
 }
 
 type QuoteClipStorylineRevisionRequest struct {
@@ -1825,7 +1841,7 @@ const file_postpilot_v1_clip_generation_proto_rawDesc = "" +
 	"renderOnly\x12)\n" +
 	"\x10response_retries\x18\t \x01(\x05R\x0fresponseRetries\x12R\n" +
 	"\x11sequence_captions\x18\n" +
-	" \x01(\v2%.postpilot.v1.ClipSequenceCaptionCostR\x10sequenceCaptionsJ\x04\b\v\x10\fR\x04rate\"\x9e\x03\n" +
+	" \x01(\v2%.postpilot.v1.ClipSequenceCaptionCostR\x10sequenceCaptionsJ\x04\b\v\x10\fR\x04rate\"\xd6\x03\n" +
 	"\x1aStartClipGenerationRequest\x12\x1d\n" +
 	"\n" +
 	"project_id\x18\x01 \x01(\tR\tprojectId\x12\x19\n" +
@@ -1836,7 +1852,8 @@ const file_postpilot_v1_clip_generation_proto_rawDesc = "" +
 	"\bquote_id\x18\x05 \x01(\tR\aquoteId\x125\n" +
 	"\x14approved_max_credits\x18\x06 \x01(\x05H\x00R\x12approvedMaxCredits\x88\x01\x01\x12>\n" +
 	"\x1bcancellation_policy_version\x18\a \x01(\x05R\x19cancellationPolicyVersion\x12%\n" +
-	"\x0efrom_storyline\x18\b \x01(\bR\rfromStorylineB\x17\n" +
+	"\x0efrom_storyline\x18\b \x01(\bR\rfromStoryline\x126\n" +
+	"\x17analysis_preparation_id\x18\t \x01(\tR\x15analysisPreparationIdB\x17\n" +
 	"\x15_approved_max_credits\"4\n" +
 	"\x1bStartClipGenerationResponse\x12\x15\n" +
 	"\x06job_id\x18\x01 \x01(\tR\x05jobId\"\xcb\x01\n" +
@@ -1846,7 +1863,7 @@ const file_postpilot_v1_clip_generation_proto_rawDesc = "" +
 	"\bbatch_id\x18\x02 \x01(\tR\abatchId\x12;\n" +
 	"\robserve_model\x18\x03 \x01(\v2\x16.postpilot.v1.ModelRefR\fobserveModel\x127\n" +
 	"\vwrite_model\x18\x04 \x01(\v2\x16.postpilot.v1.ModelRefR\n" +
-	"writeModel\"\xf6\x02\n" +
+	"writeModel\"\xae\x03\n" +
 	"\x19StartClipStorylineRequest\x12\x1d\n" +
 	"\n" +
 	"project_id\x18\x01 \x01(\tR\tprojectId\x12\x19\n" +
@@ -1856,7 +1873,8 @@ const file_postpilot_v1_clip_generation_proto_rawDesc = "" +
 	"writeModel\x12\x19\n" +
 	"\bquote_id\x18\x05 \x01(\tR\aquoteId\x125\n" +
 	"\x14approved_max_credits\x18\x06 \x01(\x05H\x00R\x12approvedMaxCredits\x88\x01\x01\x12>\n" +
-	"\x1bcancellation_policy_version\x18\a \x01(\x05R\x19cancellationPolicyVersionB\x17\n" +
+	"\x1bcancellation_policy_version\x18\a \x01(\x05R\x19cancellationPolicyVersion\x126\n" +
+	"\x17analysis_preparation_id\x18\b \x01(\tR\x15analysisPreparationIdB\x17\n" +
 	"\x15_approved_max_credits\"\xd2\x01\n" +
 	"!QuoteClipStorylineRevisionRequest\x12\x1d\n" +
 	"\n" +

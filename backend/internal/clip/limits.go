@@ -108,16 +108,18 @@ func DefaultMediaStageLimits(env Environment) MediaStageLimits {
 // platform owns. cmd/api fills it from the parsed env and the Default*
 // constructors below merge it into the product limits.
 type Environment struct {
-	ServerRenderActive, ServerRenderPerAccount         int
-	ServerRenderWaiting                                *int
-	MediaLeaseTTL, MediaWaitTimeout, MediaStageTimeout time.Duration
-	MediaMaxAttempts                                   int
-	WorkRoot                                           string
-	FFmpegPath                                         string
-	FFprobePath                                        string
-	ResvgPath                                          string
-	OverlayDir                                         string
-	FontPaths                                          map[string]string
+	AnalysisVerificationActive, AnalysisVerificationPerAccount int
+	AnalysisVerificationWaiting                                *int
+	ServerRenderActive, ServerRenderPerAccount                 int
+	ServerRenderWaiting                                        *int
+	MediaLeaseTTL, MediaWaitTimeout, MediaStageTimeout         time.Duration
+	MediaMaxAttempts                                           int
+	WorkRoot                                                   string
+	FFmpegPath                                                 string
+	FFprobePath                                                string
+	ResvgPath                                                  string
+	OverlayDir                                                 string
+	FontPaths                                                  map[string]string
 
 	WorkStaleAge  time.Duration
 	MediaTimeout  time.Duration

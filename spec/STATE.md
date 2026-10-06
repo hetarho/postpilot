@@ -71,7 +71,6 @@
 | T599 | Stream browser output and promote the verified private result | ARCH CLIP CDS | T592 T593 T595 T596 T597 T598 | todo |
 | T600 | Use the browser composition engine throughout editing previews | ARCH CLIP CDS | T592 T593 T594 T595 T596 T597 T598 | todo |
 | T601 | Prepare bounded AI analysis copies in the browser | ARCH CLIP CDS | T592 T602 | todo |
-| T602 | Authorize and verify browser-prepared analysis artifacts | ARCH CLIP QUOTA | T591 | todo |
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | todo |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | todo |
 
@@ -79,6 +78,7 @@
 - inspect work board for remaining tasks
 
 ## log
+- 261006 T602 integrated
 - 261006 T595 integrated
 - 261006 T590 integrated
 - 261007 T590 resumed: isolated Colima CPU images and actual Docker generators recovered without interrupting Desktop/dev; independent audit reproduced pre-park accepted-output race for owned correction
@@ -98,4 +98,3 @@
 - 261006 T590 start: durable finite Max render capacity, cancellable bounded waiting and same-host resource reservations
 - 261006 T589 done: current Max-only native access, preserved legacy jobs/history and browser-first ko/en surfaces; 3321 FE tests and full local CI passed
 - 261006 user stop boundary: finish T589 and commit current browser-media work; T590-T604 remain todo
-- 261006 T589 start: Max-only commercial server admission and browser-first controls, preserving previously accepted work and usage history

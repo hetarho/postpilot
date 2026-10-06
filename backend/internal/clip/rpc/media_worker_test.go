@@ -48,6 +48,34 @@ type mediaDeadlineProbe struct {
 	checked bool
 }
 
+type roleClaimProbe struct {
+	MediaWorkerService
+	claims int
+}
+
+func (p *roleClaimProbe) Claim(context.Context, clip.MediaWorkerProfile) (*clip.MediaWork, error) {
+	p.claims++
+	return nil, nil
+}
+func TestMediaVerificationRoleCannotClaimNativeWorkOrChangeItsRole(t *testing.T) {
+	for _, test := range []struct {
+		id, role, operation string
+		allowed             bool
+	}{{"native", clip.NativeWorkerRole, "verify_analysis", false}, {"verify", clip.AnalysisVerificationRole, "render", false}, {"verify", clip.AnalysisVerificationRole, "prepare", false}, {"verify", clip.AnalysisVerificationRole, "verify_analysis", true}, {"native", clip.NativeWorkerRole, "render", true}} {
+		p := &roleClaimProbe{}
+		body := `{"profile":{"operation":"` + test.operation + `"}}`
+		r := httptest.NewRequest(http.MethodPost, "/postpilot.v1.ClipMediaWorkerService/ClaimMediaStage", strings.NewReader(body))
+		r.Header.Set(MediaWorkerIdentityHeader, test.id)
+		r.Header.Set("Authorization", "Bearer secret")
+		r.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		NewMediaWorkerServerWithRoles("", map[string]string{test.id: "secret"}, map[string]string{test.id: test.role}, p).Handler.ServeHTTP(w, r)
+		if (p.claims == 1) != test.allowed {
+			t.Fatalf("%s/%s delegated claims=%d status=%d", test.role, test.operation, p.claims, w.Code)
+		}
+	}
+}
+
 func (p *mediaDeadlineProbe) Claim(ctx context.Context, profile clip.MediaWorkerProfile) (*clip.MediaWork, error) {
 	deadline, ok := ctx.Deadline()
 	p.checked = ok && time.Until(deadline) > 0 && time.Until(deadline) <= clip.MediaUnaryTimeout && profile.WorkerID == "prod-1"

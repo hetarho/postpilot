@@ -1,0 +1,27 @@
+{
+  "sourceHead": "75c77fe145e98ad078e78177f77f0d4a382d52c2",
+  "previousSourceHead": "5ac03f89b353def6f6305364b475f4f0da31fea6",
+  "expectedPackages": 101,
+  "initialCompletedPackages": 82,
+  "remainingCompletedPackages": 19,
+  "completePackageCoverage": true,
+  "originalAggregateExit": null,
+  "originalExitExplanation": "64327 unavailable after context refresh; original log stopped after 82 package outcomes. No aggregate success inferred.",
+  "remainingActualExit": 0,
+  "mergedRelevantActualExit": 0,
+  "completedLogs": {
+    "initial": "/private/tmp/postpilot-t602-startup-only-full-go.log",
+    "remaining": "/private/tmp/postpilot-t602-final-missing-go.log",
+    "merged": "/private/tmp/postpilot-t602-final-merge-checks.log"
+  },
+  "logSha256": {
+    "/private/tmp/postpilot-t602-startup-only-full-go.log": "537cbd5df3103c1e0235b7980a14a6f1389c7895c5bc444436503b20e82fb060",
+    "/private/tmp/postpilot-t602-final-missing-go.log": "af88991cbc6b9da36e5679408e22bdcbb469ec84415fb6abc75eaa19a3891273",
+    "/private/tmp/postpilot-t602-final-merge-checks.log": "e72b9b10b2c91fa374ce67da319842d22d2544c269b5fd560d53279ff862db1f"
+  },
+  "receipts": [
+    "/private/tmp/postpilot-t602-final-missing-go-receipt.json",
+    "/private/tmp/postpilot-t602-final-merge-checks-receipt.json"
+  ],
+  "scope": "Successful package outcomes cover all101 modules; merged API/app/store boundaries separately executed with durable exit0. Not a claimed whole-command exit0."
+}

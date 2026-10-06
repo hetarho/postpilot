@@ -15,7 +15,10 @@ func (r *generationRun) prepareRemote(revision int) error {
 	task := clip.MediaTask{Version: clip.MediaContractVersion}
 	for _, source := range r.b.Sources {
 		frozen := clip.MediaTaskSource{ID: source.ID, SourceMetadata: source.SourceMetadata}
-		if cached, ok := recoverySource(r.recovery, source.ID); ok {
+		// A browser source measurement never enters native v3 as original
+		// proof. The worker re-probes/re-prepares it; accepted observations
+		// below remain reusable and are never sent to a model again.
+		if cached, ok := recoverySource(r.recovery, source.ID); ok && cached.OriginalMeasurementProvenance == "" {
 			frozen.Info = cached.Info
 			for i := 0; i < chunkCount(s.cfg.Media, cached.Info.DurationMS); i++ {
 				if recoveryChunk(r.recovery, source.ID, i) != nil {

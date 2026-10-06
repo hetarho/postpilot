@@ -33,6 +33,9 @@ func (l Loop) Run(ctx context.Context) error {
 		return clip.ErrInvalid
 	}
 	op := clip.MediaPrepare
+	if l.Profile.Operation == clip.MediaVerifyAnalysis {
+		op = clip.MediaVerifyAnalysis
+	}
 	for ctx.Err() == nil {
 		profile := l.Profile
 		profile.Operation = op
@@ -82,6 +85,8 @@ func (l Loop) Run(ctx context.Context) error {
 // which a page is waiting on, then a server render.
 func nextOperation(op clip.MediaOperation) clip.MediaOperation {
 	switch op {
+	case clip.MediaVerifyAnalysis:
+		return clip.MediaVerifyAnalysis
 	case clip.MediaPrepare:
 		return clip.MediaSample
 	case clip.MediaSample:
@@ -136,7 +141,14 @@ func (l Loop) RunLease(parent context.Context, w clip.MediaWork) error {
 			case <-heartbeat.C:
 				if !pending {
 					pending = true
-					go func() { at, err := l.Control.Renew(ctx, w.Credentials, 0); replies <- renewal{at, err} }()
+					go func() {
+						progress := 0
+						if p, ok := l.Executor.(interface{ Progress() int }); ok {
+							progress = p.Progress()
+						}
+						at, err := l.Control.Renew(ctx, w.Credentials, progress)
+						replies <- renewal{at, err}
+					}()
 				}
 			case r := <-replies:
 				if !cutoff.After(time.Now()) {

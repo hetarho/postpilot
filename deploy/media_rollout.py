@@ -38,7 +38,7 @@ CONTROL_ENV = {'IMAGE_TAG', 'MEDIA_WORKER_IMAGE_TAG', 'MEDIA_TOPOLOGY', 'MEDIA_W
 INIT_SNAPSHOT = Path('.deploy/worker-init-before')
 
 WORKER_KEYS = TOOLS | {'MEDIA_WORKER_VARIANT', 'MEDIA_WORKER_IMAGE_TAG', 'MEDIA_API_URL', 'MEDIA_WORKER_ID',
-    'MEDIA_WORKER_TOKEN', 'MEDIA_ACCEL', 'MEDIA_WORKER_CONCURRENCY', 'MEDIA_WORKER_CPUS',
+    'MEDIA_WORKER_TOKEN', 'MEDIA_WORKER_ROLE', 'MEDIA_ACCEL', 'MEDIA_WORKER_CONCURRENCY', 'MEDIA_WORKER_CPUS',
     'MEDIA_WORKER_MEMORY', 'MEDIA_DRAIN_TIMEOUT', 'MEDIA_STOP_TIMEOUT'}
 
 
@@ -141,6 +141,8 @@ class Stack:
         v = self.worker_values
         if v.get('MEDIA_ACCEL', 'cpu') not in ('cpu', 'auto'):
             raise RolloutError('production NVIDIA activation is pending; MEDIA_ACCEL must be cpu or auto')
+        if v.get('MEDIA_WORKER_ROLE', 'native') != 'native':
+            raise RolloutError('native worker.env must use MEDIA_WORKER_ROLE=native; configure verification separately')
         if v.get('MEDIA_WORKER_CONCURRENCY', '1') != '1':
             raise RolloutError('MEDIA_WORKER_CONCURRENCY must be 1')
         if not re.fullmatch(r'[A-Za-z0-9_.-]{1,128}', v.get('MEDIA_WORKER_ID', '')):

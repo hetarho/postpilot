@@ -29,6 +29,7 @@ export interface ClipProjectCalls {
 }
 
 export interface ClipStartInput {
+  analysisPreparationId?: string
   projectId: string
   batchId: string
   observeModel: { providerId: string; modelId: string }
