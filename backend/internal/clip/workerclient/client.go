@@ -134,7 +134,11 @@ func (c *Client) StatusForProfile(ctx context.Context, profile clip.MediaWorkerP
 		return clip.MediaRuntimeStatus{}, failure(err)
 	}
 	s := r.Msg
-	if s.ContractVersion != int32(profile.ContractVersion) || s.RendererVersion != profile.RendererVersion || s.AssetVersion != profile.AssetVersion || !slices.Contains(s.Profiles, profile.Profile) || s.Waiting < 0 || s.Active < 0 || s.OwnActive < 0 || s.OwnActive > s.Active {
+	// Native v3 status already identified its single CPU profile through the
+	// version tuple, and older peers may omit the optional profile list. New
+	// verification readiness requires its explicit advertised profile.
+	profileRequired := profile.Operation == clip.MediaVerifyAnalysis || len(s.Profiles) > 0
+	if s.ContractVersion != int32(profile.ContractVersion) || s.RendererVersion != profile.RendererVersion || s.AssetVersion != profile.AssetVersion || profileRequired && !slices.Contains(s.Profiles, profile.Profile) || s.Waiting < 0 || s.Active < 0 || s.OwnActive < 0 || s.OwnActive > s.Active {
 		return clip.MediaRuntimeStatus{}, clip.ErrMediaIncompatible
 	}
 	if !s.Ready {
