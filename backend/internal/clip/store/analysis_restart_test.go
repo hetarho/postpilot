@@ -241,3 +241,26 @@ func TestBrowserPreparationRestartRequiresCurrentParentAndInputs(t *testing.T) {
 		})
 	}
 }
+
+func TestBrowserPreparationPeriodicRecoveryDoesNotRequeueLiveAcceptedHandler(t *testing.T) {
+	f := newAnalysisFixture(t)
+	f.begin(t)
+	id := f.start(t)
+	initial, e := f.h.jobs.PickNextQueued(t.Context(), f.now)
+	if e != nil || initial.ID != id {
+		t.Fatal(initial, e)
+	}
+	acceptPreparationBeforePark(t, f)
+	// The first handler is still live and may be validating accepted artifact
+	// bytes before Consume; a periodic reconciler is concurrently running.
+	if e = f.a.Reconcile(t.Context()); e != nil {
+		t.Fatal(e)
+	}
+	if e = f.h.store.ConsumeAnalysisPreparation(t.Context(), f.p.ID, id, f.now); e != nil {
+		t.Fatal(e)
+	}
+	duplicate, e := f.h.jobs.PickNextQueued(t.Context(), f.now)
+	if !errors.Is(e, job.ErrNotFound) {
+		t.Fatalf("periodic recovery made still-running consumed parent concurrently claimable: id=%s resume=%+v err=%v", duplicate.ID, duplicate.Resume, e)
+	}
+}

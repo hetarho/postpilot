@@ -127,7 +127,7 @@ func (a *AnalysisPreparations) reconcile(ctx context.Context, startup bool) erro
 					}
 					return nil
 				}
-				return a.restorePreparationWait(ctx, p, s, now)
+				return a.restorePreparationWait(ctx, p, s, now, startup)
 			})
 			if e != nil {
 				return e
@@ -158,9 +158,10 @@ func (a *AnalysisPreparations) reconcile(ctx context.Context, startup bool) erro
 	}
 }
 
-// Only unconsumed, authorized page-owned work can acquire a missing wait.
+// Only startup may restore a missing wait for authorized unconsumed work.
+// Periodic recovery must not requeue an initial handler still reading copies.
 // A claimed continuation may already have started paid work: never reset it.
-func (a *AnalysisPreparations) restorePreparationWait(ctx context.Context, p Ports, s clip.AnalysisPreparation, now time.Time) error {
+func (a *AnalysisPreparations) restorePreparationWait(ctx context.Context, p Ports, s clip.AnalysisPreparation, now time.Time, startup bool) error {
 	if s.ParentJobID == "" || s.State != "preparing" && s.State != "verifying" && s.State != "accepted" {
 		return nil
 	}
@@ -174,6 +175,9 @@ func (a *AnalysisPreparations) restorePreparationWait(ctx context.Context, p Por
 	key := AnalysisPreparationWaitKey(s.ID)
 	wait, e := p.Waits.Continuation(ctx, parent.ID)
 	if errors.Is(e, job.ErrInvalidWait) {
+		if !startup {
+			return nil
+		}
 		if e = p.Waits.Park(ctx, parent.ID, key, job.FailOnInterrupt, now); e != nil {
 			return e
 		}
