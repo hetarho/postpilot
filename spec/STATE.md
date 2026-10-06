@@ -65,7 +65,7 @@
 |---|---|---|---|---|
 | T539 | Qualify the complete Korean voice-creation milestone | ARCH DUB MODEL CDS THEME | T538 | blocked@261005 |
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
-| T590 | Bound Max server-render admission and waiting | ARCH CLIP INFRA | T589 | blocked@261006 |
+| T590 | Bound Max server-render admission and waiting | ARCH CLIP INFRA | T589 | todo |
 | T595 | Animate caption transforms and masks from output time | ARCH CLIP CDS | T594 | todo |
 | T596 | Port caption blur, light, colour and glitch effects | ARCH CLIP CDS | T595 | todo |
 | T597 | Render ember caption geometry and particles locally | ARCH CLIP CDS | T596 | todo |
@@ -81,6 +81,8 @@
 - inspect work board for remaining tasks
 
 ## log
+
+- 261007 T590 resumed: isolated Colima CPU images and actual Docker generators recovered without interrupting Desktop/dev; independent audit reproduced pre-park accepted-output race for owned correction
 - 261006 T593 integrated
 - 261006 T594 integrated
 - 261006 T592 integrated
@@ -100,4 +102,3 @@
 - 261006 T589 start: Max-only commercial server admission and browser-first controls, preserving previously accepted work and usage history
 - 261006 T588 done: measured browser baseline, common output verification and version/license evidence; 3307 FE tests and local CI passed, SDK timeline and real-device gates remain unqualified
 - 261006 T605 done: friendly voice roles, sourced expiring cost references and precise public-rate draft defaults; 3306 FE tests and all local checks passed
-- 261006 T605 start: labelled creation/reading models, sourced public cost references and exact prefilled pricing drafts; MODEL r31 consumed
