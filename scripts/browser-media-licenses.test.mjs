@@ -24,6 +24,13 @@ test("inventory follows installed runtime dependencies and retains unresolved di
     ),
   );
   assert.equal(inventory.fonts.length, 4);
+  assert.equal(inventory.inkFonts.resources.length, 8);
+  assert.equal(
+    inventory.inkFonts.resources.filter((font) => font.face === "wantedsans")
+      .length,
+    4,
+  );
+  assert.match(inventory.inkFonts.manifestSHA256, /^[a-f0-9]{64}$/);
   assert.match(inventory.lockfileSHA256, /^[a-f0-9]{64}$/);
   assert.equal(inventory.distributionApproved, false);
   assert.equal(inventory.sourceAccessVerified, false);

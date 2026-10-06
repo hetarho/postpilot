@@ -417,6 +417,9 @@ message ClipEditableText {
   // from the saved plan and ignores this value when accepting a correction.
   bool owner_edited = 33;
   ClipDerivedCaption derived_caption = 34;
+  // Chosen anchor from the stored automatic placement. Read-only: correction
+  // requests cannot change it; owner_position/position retain their contracts.
+  string effective_position = 35;
 }
 // An absolute caption position in whole canvas pixels, never a fraction: the
 // layout resolves everything to canvas pixels and the preview places the served

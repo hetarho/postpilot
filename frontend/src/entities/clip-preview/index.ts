@@ -54,3 +54,24 @@ export { ClipDraftPreview } from './ui/ClipDraftPreview'
 export type { ClipDisplayedFrame } from './ui/ClipDraftPreview'
 export { useClipRenderCalls } from './api/render'
 export type { ClipRenderCalls, ClipRenderMachine, ClipRenderVerdict } from './api/render'
+export { BrowserLocalComponents } from './model/local-components'
+export type { BrowserLocalComponent } from './model/local-components'
+export { BrowserInkCache } from './model/ink-cache'
+export type { BrowserInkLease } from './model/ink-cache'
+export { ResvgBrowserInk } from './model/ink-raster'
+export type { BrowserInkRasterizer, InkDocument } from './model/ink-raster'
+export { inkLayoutCaption } from './model/ink-layout'
+export type {
+  InkCaptionInput,
+  InkCaptionLayout,
+  InkCaptionLine,
+  InkCaptionWord,
+} from './model/ink-layout'
+export {
+  inkStaticCaption,
+  inkStaticRegion,
+  inkStaticBadge,
+  inkStaticInfo,
+} from './model/ink-static'
+export type { InkPaint, InkRegionPart } from './model/ink-static'
+export { ClipInkError } from './model/ink-typography'

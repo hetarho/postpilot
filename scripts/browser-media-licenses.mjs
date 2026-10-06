@@ -66,6 +66,53 @@ function packageDirectory(name, from) {
   throw new Error(`Cannot find installed media package: ${name}`);
 }
 
+export function inkFontInventory() {
+  const directory = resolve(root, "frontend/public/fonts/clip");
+  const metadata = JSON.parse(
+    readFileSync(
+      resolve(
+        root,
+        "frontend/src/entities/clip-design/config/clip-ink-fonts.json",
+      ),
+      "utf8",
+    ),
+  );
+  const identity = JSON.parse(
+    readFileSync(
+      resolve(
+        root,
+        "frontend/src/entities/clip-design/config/clip-ink-identity.json",
+      ),
+      "utf8",
+    ),
+  );
+  const resources = metadata.resources.map((resource) => {
+    const bytes = readFileSync(resolve(directory, resource.file));
+    if (bytes.byteLength !== resource.bytes || sha(bytes) !== resource.sha256)
+      throw new Error(`Changed ink font: ${resource.file}`);
+    return {
+      ...resource,
+      license: "OFL-1.1",
+      notice: `frontend/public/fonts/clip/${resource.license}`,
+    };
+  });
+  return {
+    generator: metadata.generator,
+    sourceVersion: metadata.wantedSourceVersion,
+    manifestSHA256: identity.fontsManifestSHA256,
+    assetVersion: identity.assetVersion,
+    sources: Object.fromEntries(
+      Object.entries(metadata.sources).map(([id, value]) => [
+        id,
+        { file: value.file, sha256: value.sha256 },
+      ]),
+    ),
+    resources,
+    modificationNotice: "frontend/public/fonts/clip/INK-NOTICE.txt",
+    generatorSource: "scripts/build-clip-ink-fonts.py",
+  };
+}
+
 export function installedMediaInventory() {
   const queue = topLevel.map((name) => ({
     name,
@@ -133,6 +180,7 @@ export function installedMediaInventory() {
     ),
     unresolved: [...new Set(unresolved)].sort(),
     fonts,
+    inkFonts: inkFontInventory(),
     sourceAccessVerified: false,
     distributionApproved: false,
     limits: [

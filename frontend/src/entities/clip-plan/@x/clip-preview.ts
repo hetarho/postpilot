@@ -1,5 +1,5 @@
 /** What `clip-plan` exposes to `clip-preview` (ARCH-13 @x). */
-export { clipPlanToProto } from '../api/edit-plan'
+export { clipPlanToProto, toClipEditingState } from '../api/edit-plan'
 export {
   cutOutputMs,
   cutRate,
@@ -18,4 +18,4 @@ export type {
 export { clipSourceSound, textInterval } from '../model/timeline'
 export { speechDurationMs, spokenState } from '../model/spoken'
 export type { ClipSpeechRef } from '../model/spoken'
-export { splitRapid } from '../model/caption-pace'
+export { splitRapid, copyChars } from '../model/caption-pace'
