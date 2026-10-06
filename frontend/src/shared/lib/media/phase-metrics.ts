@@ -65,6 +65,20 @@ export class MediaPhaseRecorder<Phase extends string> {
     }
   }
 
+  /** A lower-level resource adapter may already have observed its wall span. */
+  record(phase: Phase, duration: number) {
+    if (!this.allowed.has(phase)) throw new Error('Unknown media measurement phase')
+    if (!Number.isFinite(duration) || duration < 0)
+      throw new Error('Invalid media measurement clock')
+    const previous = this.values.get(phase)
+    this.values.set(phase, {
+      samples: (previous?.samples ?? 0) + 1,
+      totalMs: (previous?.totalMs ?? 0) + duration,
+      minMs: Math.min(previous?.minMs ?? duration, duration),
+      maxMs: Math.max(previous?.maxMs ?? duration, duration),
+    })
+  }
+
   snapshot(): MediaPhaseSnapshot<Phase> {
     return {
       elapsedMs: this.clock() - this.started,

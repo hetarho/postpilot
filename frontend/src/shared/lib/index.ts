@@ -86,3 +86,23 @@ export {
 export type { I18nFragment } from './localization'
 export { createAutosaveQueue } from './autosave'
 export type { AutosaveOptions, AutosaveQueue, AutosaveSend } from './autosave'
+export {
+  createFiniteMediaSource,
+  MediaRangeError,
+  VideoFrameBudget,
+  openOriginalVideo,
+  OriginalVideoCursor,
+  nativeOutputFrame,
+} from './media'
+export type {
+  BrowserMediaSourceAccess,
+  MediaRangeLimits,
+  MediaRangeMeasurements,
+  MediaRangePorts,
+  OriginalVideoInput,
+  OriginalVideoMetadata,
+  OriginalVideoPorts,
+  VideoRangeSample,
+  DecodedVideoResource,
+  VideoDrawRect,
+} from './media'

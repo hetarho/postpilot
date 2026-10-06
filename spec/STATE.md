@@ -66,7 +66,6 @@
 | T539 | Qualify the complete Korean voice-creation milestone | ARCH DUB MODEL CDS THEME | T538 | blocked@261005 |
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
 | T590 | Bound Max server-render admission and waiting | ARCH CLIP INFRA | T589 | blocked@261006 |
-| T592 | Decode selected video ranges in a bounded browser pipeline | ARCH CLIP CDS | T591 | todo |
 | T593 | Bound selected audio and immutable narration processing | ARCH CLIP CDS DUB | T591 | todo |
 | T594 | Draw bundled typography and static components locally | ARCH CLIP CDS | T591 | todo |
 | T595 | Animate caption transforms and masks from output time | ARCH CLIP CDS | T594 | todo |
@@ -84,6 +83,7 @@
 - inspect work board for remaining tasks
 
 ## log
+- 261006 T592 integrated
 - 261007 create-task native parity hints done: T593 source clock/preroll and T600 automatic geometry notes refined from existing native contracts; goals, acceptance, dependencies and SSOT remain unchanged
 - 261007 create-task native parity hints start: unassigned T593/T600 require cumulative frame-aligned source audio and automatic caption geometry after edits; current worker contracts remain unchanged
 - 261007 external checkout isolation: separate novice-UX work owns main changes and migration0145; analysis worker owns new migration0146, preserving both scopes without copying dirty main
@@ -103,4 +103,3 @@
 - 261006 T605 start: labelled creation/reading models, sourced public cost references and exact prefilled pricing drafts; MODEL r31 consumed
 - 261006 update-ssot MODEL start: explain voice design versus script reading, show public cost references and prefill common account-price drafts
 - 261006 T588 start: reproducible browser media phase/resource baselines and qualified dependency/license inventory
-- 261006 create-task browser media done: T588-T604; CLIP r56 CDS r33 QUOTA r35 consumed, scoped ARCH/INFRA mappings preserve earlier pending work

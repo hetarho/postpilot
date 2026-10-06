@@ -25,7 +25,7 @@ export interface BrowserRenderInput {
   batchId: string
   plan: ClipEditPlan
   ratio: ClipRatio
-  localSources: readonly { fingerprint: string; url: string }[]
+  localSources: readonly { fingerprint: string; url: string; file?: File }[]
   resolvePlayback: (fingerprint: string) => Promise<string>
 }
 export interface BrowserRenderProgress {

@@ -13,3 +13,20 @@ export type { AudioNormalization, EncodedAudioTrack, PcmChannels } from './audio
 export { muxMp4 } from './mux-mp4'
 export { MediaPhaseRecorder } from './phase-metrics'
 export type { MediaPhaseMeasurement, MediaPhaseSnapshot } from './phase-metrics'
+export { createFiniteMediaSource, MediaRangeError } from './video/range-source'
+export type {
+  BrowserMediaSourceAccess,
+  MediaRangeLimits,
+  MediaRangeMeasurements,
+  MediaRangePorts,
+} from './video/range-source'
+export { VideoFrameBudget } from './video/frame-budget'
+export { openOriginalVideo, OriginalVideoCursor, nativeOutputFrame } from './video/range-video'
+export type {
+  OriginalVideoInput,
+  OriginalVideoMetadata,
+  OriginalVideoPorts,
+  VideoRangeSample,
+  DecodedVideoResource,
+  VideoDrawRect,
+} from './video/range-video'

@@ -7,13 +7,15 @@ import type { BrowserVideoInput, BrowserVideoProgress } from './browser-video'
 import type { MediaPhaseRecorder } from '@/shared/lib'
 import type { CLIP_VIDEO_MEASUREMENT_PHASES } from '../config/render-measurements'
 import { evaluateBrowserFrame } from './browser-composition'
+import type { BrowserFootageResources } from './browser-footage'
 
 interface CompositePorts {
   context: Pick<
     OffscreenCanvasRenderingContext2D,
     'globalAlpha' | 'fillStyle' | 'fillRect' | 'drawImage'
   >
-  source: (fingerprint: string, timeMs: number) => Promise<ImageBitmap>
+  source?: (fingerprint: string, timeMs: number) => Promise<ImageBitmap>
+  footage?: BrowserFootageResources
   asset: (asset: PreparedAsset) => Promise<ImageBitmap>
   /** One frame of a sequence-rendered caption, drawn by the server (CLIP-159). */
   captionFrame: (asset: PreparedAsset, frame: number) => Promise<CaptionCell | undefined>
@@ -49,38 +51,60 @@ export async function compositeBrowserVideo(input: BrowserVideoInput, ports: Com
     ctx.fillRect(0, 0, config.width, config.height)
     matteEnd?.()
     const evaluated = input.snapshot ? evaluateBrowserFrame(input.snapshot, frame) : undefined
-    const layers =
-      evaluated?.footageLayers.map((layer) => ({
-        cut: input.plan.cuts.find((cut) => cut.id === layer.cutInstanceId)!,
-        sourceMs: layer.sourceTimestampUs / 1000,
-        alpha: layer.alpha,
-      })) ?? frameLayers(timeline, frame)
-    for (const current of layers) {
-      const bitmap = measurements
-        ? await measurements.measureAsync('sourceWait', () =>
-            ports.source(current.cut.fingerprint, current.sourceMs),
-          )
-        : await ports.source(current.cut.fingerprint, current.sourceMs)
+    if (evaluated && ports.footage) {
+      const prepared = measurements
+        ? await measurements.measureAsync('sourceWait', () => ports.footage!.prepare(evaluated))
+        : await ports.footage.prepare(evaluated)
       const drawEnd = measurements?.begin('composeSubmit')
       try {
-        const crop = previewCrop(
-          bitmap.width,
-          bitmap.height,
-          config.width,
-          config.height,
-          current.cut.focal,
-        )
-        ctx.globalAlpha = current.alpha
-        ctx.drawImage(
-          bitmap,
-          (crop.left * config.width) / 100,
-          (crop.top * config.height) / 100,
-          (crop.width * config.width) / 100,
-          (crop.height * config.height) / 100,
-        )
+        for (const { layer, resource } of prepared) {
+          ctx.globalAlpha = layer.alpha
+          resource.draw(ctx as OffscreenCanvasRenderingContext2D, {
+            x: (layer.crop.left * config.width) / 100,
+            y: (layer.crop.top * config.height) / 100,
+            width: (layer.crop.width * config.width) / 100,
+            height: (layer.crop.height * config.height) / 100,
+          })
+        }
       } finally {
+        for (const { resource } of prepared) resource.close()
         drawEnd?.()
-        bitmap.close()
+      }
+    } else {
+      const layers =
+        evaluated?.footageLayers.map((layer) => ({
+          cut: input.plan.cuts.find((cut) => cut.id === layer.cutInstanceId)!,
+          sourceMs: layer.sourceTimestampUs / 1000,
+          alpha: layer.alpha,
+        })) ?? frameLayers(timeline, frame)
+      for (const current of layers) {
+        if (!ports.source) throw new Error('CLIP_SOURCE_UNAVAILABLE')
+        const bitmap = measurements
+          ? await measurements.measureAsync('sourceWait', () =>
+              ports.source!(current.cut.fingerprint, current.sourceMs),
+            )
+          : await ports.source(current.cut.fingerprint, current.sourceMs)
+        const drawEnd = measurements?.begin('composeSubmit')
+        try {
+          const crop = previewCrop(
+            bitmap.width,
+            bitmap.height,
+            config.width,
+            config.height,
+            current.cut.focal,
+          )
+          ctx.globalAlpha = current.alpha
+          ctx.drawImage(
+            bitmap,
+            (crop.left * config.width) / 100,
+            (crop.top * config.height) / 100,
+            (crop.width * config.width) / 100,
+            (crop.height * config.height) / 100,
+          )
+        } finally {
+          drawEnd?.()
+          bitmap.close()
+        }
       }
     }
     const active = assets.filter((asset) => timeMs >= asset.startMs && timeMs < asset.endMs)
