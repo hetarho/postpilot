@@ -8,3 +8,25 @@ export {
   CLIP_BROWSER_STATIC_CAPTIONS,
 } from '../config/browser-composition'
 export type { ClipRatioId } from '../config/clip-design'
+export {
+  CLIP_INK,
+  CLIP_INK_FONT_DATA,
+  CLIP_INK_IDENTITY,
+  CLIP_CAPTION_INK,
+  clipInkFont,
+  clipInkCoverage,
+  clipInkMetrics,
+} from '../config/clip-ink'
+export type { ClipInkFont, ClipInkFace, ClipCaptionInkStyle } from '../config/clip-ink'
+export {
+  clipLayoutRegion,
+  clipRegionPreset,
+  clipRegionSlots,
+  clipTextWidth,
+} from '../model/region-layout'
+export type {
+  ClipRegionLayout,
+  ClipRegionShape,
+  ClipRegionSlotSpec,
+  ClipPlacedRegionSlot,
+} from '../model/region-layout'

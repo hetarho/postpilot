@@ -119,6 +119,7 @@ func correctionTextProto(t clip.CorrectionText) *v1.ClipEditableText {
 	// Creation is request-only: the projection hands a caption back as an
 	// ordinary one, so a resave corrects it rather than creating it again.
 	out.StaleEvidence, out.EvidenceReviewed, out.FallbackReason, out.Narration, out.OwnerEdited = t.StaleEvidence, t.EvidenceReviewed, t.FallbackReason, t.Narration, t.OwnerEdited
+	out.EffectivePosition = t.EffectivePosition
 	out.DerivedCaption = derivedProto(t.Derived)
 	out.OwnerSizePx, out.OwnerStyle = int32(t.Owner.Size), t.Owner.Style
 	if at := t.Owner.Position; at != nil {
