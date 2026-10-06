@@ -12,6 +12,7 @@ import {
   cutOutputMs,
   cutRate,
   sourceAudioEnabled,
+  splitRapid,
   spokenState,
   textInterval,
   type ClipEditPlan,
@@ -60,6 +61,7 @@ export interface BrowserCompositionComponent {
   startMs: number
   endMs: number
   firstFrame: number
+  visibleFirstFrame: number
   endFrame: number
   phraseIndex?: number
   sequence: boolean
@@ -119,7 +121,7 @@ const domainKeys = new Set(
   `ownerId projectId projectRevision planRevision plan ratio sources design versions schemaVersion
   fonts components speechFingerprint snapshotFingerprint authoritativeFingerprint frameCount renderer assets captionStyles captionPace introPreset outroPreset disclosure hideDisclosure
   sourceId fingerprint durationMs width height hasAudio allowedRatePermille id sha256 componentId componentVersion element
-  instanceId firstFrame endFrame phraseIndex sequence nativeComposition sourceAudio sourceVolumePermille associations elements cuts narration
+  instanceId firstFrame visibleFirstFrame endFrame phraseIndex sequence nativeComposition sourceAudio sourceVolumePermille associations elements cuts narration
   focal x y startMs endMs transitionMs copies volumePermille playbackRatePermille pace text anchor align keyword style accent
   retainOriginalAudio groupId itemId derivedCaption segmentId textRevision textEdited timingEdited ownerEdited
   effectiveStartMs effectiveEndMs phrases staleEvidence evidenceReviewed evidence fallbackReason elementId cutId kind role rows
@@ -188,10 +190,9 @@ function designOf(input?: Partial<BrowserCompositionDesign>): BrowserComposition
     // Native UnchosenDesign: absent legacy selections retain intro B/outro E.
     introPreset: input?.introPreset || 'b',
     outroPreset: input?.outroPreset || 'e',
-    disclosure: input?.disclosure ?? 'self',
+    disclosure: input?.disclosure ?? '',
     hideDisclosure: input?.hideDisclosure ?? false,
   }
-  if (!design.hideDisclosure && !input?.disclosure) refuse('CLIP_SNAPSHOT_INVALID', 'disclosure')
   if (
     !['steady', 'rapid'].includes(design.captionPace) ||
     (design.accent !== '' && !Object.hasOwn(CLIP_DESIGN.accent, design.accent))
@@ -206,7 +207,7 @@ function designOf(input?: Partial<BrowserCompositionDesign>): BrowserComposition
     refuse('CLIP_SNAPSHOT_UNKNOWN_COMPONENT', 'intro')
   if (!Object.hasOwn(CLIP_DESIGN.regions.outro, design.outroPreset))
     refuse('CLIP_SNAPSHOT_UNKNOWN_COMPONENT', 'outro')
-  if (!Object.hasOwn(CLIP_DESIGN.disclosure, design.disclosure))
+  if (design.disclosure !== '' && !Object.hasOwn(CLIP_DESIGN.disclosure, design.disclosure))
     refuse('CLIP_SNAPSHOT_UNKNOWN_COMPONENT', 'disclosure')
   return design
 }
@@ -271,7 +272,10 @@ function componentsOf(
         })
       })
   }
-  if (!design.hideDisclosure)
+  // Native composition draws only its declared elements. Only the legacy
+  // furniture adapter owns the badge rendered by old ordinary plans.
+  if (!plan.nativeComposition && !design.hideDisclosure) {
+    if (!design.disclosure) refuse('CLIP_SNAPSHOT_INVALID', 'disclosure')
     elements.push({
       instanceId: 'product/disclosure',
       elementId: 'disclosure',
@@ -292,8 +296,21 @@ function componentsOf(
       groupId: '',
       itemId: '',
     })
+  }
   const ids = new Set<string>()
-  return elements.flatMap((element) => {
+  return elements.flatMap((authoredElement) => {
+    // Native portable layout applies the project's design before scheduling.
+    // Keep the saved plan verbatim and freeze effective drawing inputs here.
+    const element = plan.nativeComposition
+      ? {
+          ...authoredElement,
+          accent: design.accent,
+          pace:
+            design.captionPace === 'rapid' && authoredElement.fallbackReason === 'steady_copy'
+              ? 'steady'
+              : design.captionPace,
+        }
+      : { ...authoredElement }
     if (!identity(element.instanceId) || ids.has(element.instanceId))
       refuse('CLIP_SNAPSHOT_INVALID', 'component identity')
     ids.add(element.instanceId)
@@ -307,7 +324,31 @@ function componentsOf(
       refuse('CLIP_SNAPSHOT_INVALID', element.instanceId)
     if (element.ownerSizePx !== undefined && !(element.ownerSizePx > 0))
       refuse('CLIP_SNAPSHOT_INVALID', element.instanceId)
-    const phrases = element.pace === 'rapid' ? element.phrases : undefined
+    if (element.role === 'caption' && element.pace === 'rapid' && !element.phrases?.length) {
+      const split = splitRapid(
+        {
+          text: element.text,
+          keyword: element.keyword,
+          pace: 'rapid',
+          anchor: 'bottom',
+          align: 'center',
+          style: 'bold',
+          accent: '',
+          startMs: 0,
+          endMs: 0,
+        },
+        window.startMs,
+        window.endMs,
+      )
+      if (!split) refuse('CLIP_SNAPSHOT_RAPID_READABILITY', element.instanceId)
+      element.phrases = split.map((p) => ({
+        text: p.text,
+        startMs: p.startMs - window.cutOffsetMs,
+        endMs: p.endMs - window.cutOffsetMs,
+      }))
+    }
+    const phrases =
+      element.role === 'caption' && element.pace === 'rapid' ? element.phrases : undefined
     const windows = phrases?.length
       ? phrases.map((p, phraseIndex) => ({
           startMs: window.cutOffsetMs + p.startMs,
@@ -339,6 +380,7 @@ function componentsOf(
         element,
         ...interval,
         firstFrame: Math.floor((interval.startMs * fps) / 1000),
+        visibleFirstFrame: Math.ceil((interval.startMs * fps) / 1000),
         endFrame: Math.ceil((interval.endMs * fps) / 1000),
       }
     })
@@ -585,11 +627,9 @@ export function evaluateBrowserFrame(snapshot: BrowserCompositionSnapshot, frame
   if (footageLayers.length < 1 || footageLayers.length > 2)
     refuse('CLIP_SNAPSHOT_INVALID', 'active layers')
   const components = snapshot.components
-    .filter((c) =>
-      c.sequence
-        ? frame >= c.firstFrame && frame < c.endFrame
-        : (frame * 1000) / fps >= c.startMs && (frame * 1000) / fps < c.endMs,
-    )
+    // The floor frame is only the ink/progress origin. Visibility begins at
+    // the first timestamp at or after the exact authored start, for every style.
+    .filter((c) => frame >= c.visibleFirstFrame && frame < c.endFrame)
     .map((component) => {
       const localFrame = frame - component.firstFrame
       const frames = component.endFrame - component.firstFrame
@@ -600,7 +640,10 @@ export function evaluateBrowserFrame(snapshot: BrowserCompositionSnapshot, frame
         localTimeMs: (frame * 1000) / fps - component.startMs,
         durationMs: component.endMs - component.startMs,
         progress,
-        animationProgress: component.element.pace === 'rapid' ? 0.5 : progress,
+        animationProgress:
+          component.element.role === 'caption' && component.element.pace === 'rapid'
+            ? 0.5
+            : progress,
         phraseIndex: component.phraseIndex,
         text:
           component.phraseIndex !== undefined

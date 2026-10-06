@@ -71,7 +71,7 @@ function narration(plan: ClipEditPlan) {
   }
 }
 describe('frozen browser composition', () => {
-  it('preserves native legacy design defaults and exact product-owned disclosure', async () => {
+  it('preserves legacy design defaults and only the exact declared native badge', async () => {
     const request = input()
     request.design = {
       introPreset: '',
@@ -90,10 +90,88 @@ describe('frozen browser composition', () => {
       captionPace: 'rapid',
       accent: 'coral',
     })
-    expect(snapshot.components.at(-1)!.element.text).toBe('광고')
+    expect(
+      snapshot.components.filter((c) => c.element.role === 'badge').map((c) => c.element.text),
+    ).toEqual(['정확한 고정 문구'])
+    expect(snapshot.components.some((c) => c.instanceId === 'product/disclosure')).toBe(false)
     request.design.disclosure = undefined
+    expect(
+      (await freezeBrowserComposition(request)).components.some(
+        (c) => c.instanceId === 'product/disclosure',
+      ),
+    ).toBe(false)
+    request.plan.elements = request.plan.elements!.filter((e) => e.role !== 'badge')
+    expect(
+      (await freezeBrowserComposition(request)).components.some(
+        (c) => c.element.role === 'badge' || c.element.role === 'disclosure',
+      ),
+    ).toBe(false)
+    request.plan.nativeComposition = false
+    request.plan.elements = undefined
     await expect(freezeBrowserComposition(request)).rejects.toThrow(
       'CLIP_SNAPSHOT_INVALID:disclosure',
+    )
+    request.design.disclosure = 'ad'
+    expect((await freezeBrowserComposition(request)).components.at(-1)!.element.text).toBe('광고')
+  })
+  it('freezes native project pace/accent while retaining verbatim stored plan data and projected phrases', async () => {
+    const request = input()
+    request.plan.elements = [request.plan.elements![0]!]
+    const caption = request.plan.elements[0]!
+    caption.pace = 'rapid'
+    caption.accent = 'blue'
+    caption.phrases = [
+      { text: 'first exact phrase', startMs: 123, endMs: 456 },
+      { text: 'second exact phrase', startMs: 500, endMs: 900 },
+    ]
+    request.design = { hideDisclosure: true, captionPace: 'steady', accent: 'coral' }
+    const steady = await freezeBrowserComposition(request)
+    expect(steady.components).toHaveLength(1)
+    expect(steady.components[0]!.element).toMatchObject({
+      pace: 'steady',
+      accent: 'coral',
+      text: caption.text,
+    })
+    expect(steady.plan.elements![0]!).toMatchObject({ pace: 'rapid', accent: 'blue' })
+    request.design.captionPace = 'rapid'
+    caption.pace = 'steady'
+    const rapid = await freezeBrowserComposition(request)
+    expect(rapid.components.map((c) => [c.startMs, c.endMs])).toEqual([
+      [123, 456],
+      [500, 900],
+    ])
+    expect(
+      evaluateBrowserFrame(rapid, 4).components.map((c) => [c.text, c.animationProgress]),
+    ).toEqual([['first exact phrase', 0.5]])
+    expect(rapid.components[0]!.element.accent).toBe('coral')
+  })
+  it('retains recorded native steady repair and deterministically derives only missing rapid windows', async () => {
+    const request = input()
+    request.plan.elements = [request.plan.elements![0]!]
+    const caption = request.plan.elements[0]!
+    caption.fallbackReason = 'steady_copy'
+    caption.ownerStyle = 'word-pop'
+    request.design = { hideDisclosure: true, captionPace: 'rapid', accent: 'lime' }
+    const repaired = await freezeBrowserComposition(request)
+    expect(repaired.components).toHaveLength(1)
+    expect(repaired.components[0]!.element).toMatchObject({
+      pace: 'steady',
+      accent: 'lime',
+      fallbackReason: 'steady_copy',
+    })
+    caption.fallbackReason = undefined
+    caption.text = '짧은 첫 문구 그리고 다음 문구'
+    const derived = await freezeBrowserComposition(request)
+    expect(derived.components.length).toBeGreaterThan(1)
+    expect(derived.components.every((c) => c.element.pace === 'rapid')).toBe(true)
+    expect(derived.plan.elements![0]!.phrases).toBeUndefined()
+    expect(await readBrowserCompositionSnapshot(JSON.parse(JSON.stringify(derived)))).toEqual(
+      derived,
+    )
+    caption.startMs = 120
+    caption.endMs = 300
+    await expect(freezeBrowserComposition(request)).rejects.toThrow(
+      'CLIP_SNAPSHOT_RAPID_READABILITY',
     )
   })
   it('refuses malformed plan/source resource shapes with a named domain error', async () => {
@@ -248,6 +326,49 @@ describe('frozen browser composition', () => {
 })
 
 describe('one output frame evaluator', () => {
+  it.each(['bold', 'keynote', 'film', 'word-pop', 'neon', 'ember'])(
+    'keeps exact 123–456ms visibility for %s while retaining native ink origin',
+    async (style) => {
+      const request = input()
+      const caption = request.plan.elements![0]!
+      request.plan.elements = [caption]
+      caption.ownerStyle = style
+      caption.startMs = 123
+      caption.endMs = 456
+      const snapshot = await freezeBrowserComposition(request)
+      expect(snapshot.components[0]!).toMatchObject({
+        firstFrame: 3,
+        visibleFirstFrame: 4,
+        endFrame: 14,
+      })
+      expect(evaluateBrowserFrame(snapshot, 3).components).toEqual([])
+      expect(evaluateBrowserFrame(snapshot, 4).components[0]!.progress).toBeCloseTo(0.1)
+      expect(evaluateBrowserFrame(snapshot, 13).components[0]!.progress).toBe(1)
+      expect(evaluateBrowserFrame(snapshot, 14).components).toEqual([])
+    },
+  )
+  it('keeps one declared badge with its authored copy, position and exact interval', async () => {
+    const request = input()
+    const badge = request.plan.elements!.find((e) => e.role === 'badge')!
+    request.plan.elements = [badge]
+    badge.text = 'authored badge'
+    badge.position = 'top'
+    badge.align = 'left'
+    badge.basis = 'output-start'
+    badge.startMs = 123
+    badge.endMs = 456
+    request.design = { hideDisclosure: false, disclosure: 'ad' }
+    const snapshot = await freezeBrowserComposition(request)
+    expect(snapshot.components).toHaveLength(1)
+    expect(snapshot.components[0]!.element).toMatchObject({
+      text: 'authored badge',
+      position: 'top',
+      align: 'left',
+    })
+    expect(evaluateBrowserFrame(snapshot, 3).components).toEqual([])
+    expect(evaluateBrowserFrame(snapshot, 4).components[0]!.text).toBe('authored badge')
+    expect(evaluateBrowserFrame(snapshot, 14).components).toEqual([])
+  })
   it.each(fixture)(
     'matches native timeline fixture $name across every first/transition/last frame',
     async (sample) => {
@@ -320,10 +441,13 @@ describe('one output frame evaluator', () => {
     const snapshot = await freezeBrowserComposition(request)
     const component = snapshot.components[0]!
     expect(component.firstFrame).toBe(3)
-    expect(evaluateBrowserFrame(snapshot, 3).components[0]!.progress).toBe(0)
+    expect(component.visibleFirstFrame).toBe(4)
+    expect(evaluateBrowserFrame(snapshot, 3).components).toEqual([])
+    expect(evaluateBrowserFrame(snapshot, 4).components[0]!.progress).toBeCloseTo(1 / 56)
     expect(evaluateBrowserFrame(snapshot, 59).components[0]!.progress).toBe(1)
     expect(evaluateBrowserFrame(snapshot, 60).components).toEqual([])
     element.pace = 'rapid'
+    request.design!.captionPace = 'rapid'
     element.phrases = [
       { text: 'exact first', startMs: 120, endMs: 567 },
       { text: 'exact second', startMs: 567, endMs: 1000 },

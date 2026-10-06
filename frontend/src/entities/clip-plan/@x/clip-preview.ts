@@ -18,3 +18,4 @@ export type {
 export { clipSourceSound, textInterval } from '../model/timeline'
 export { speechDurationMs, spokenState } from '../model/spoken'
 export type { ClipSpeechRef } from '../model/spoken'
+export { splitRapid } from '../model/caption-pace'
