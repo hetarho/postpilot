@@ -143,7 +143,7 @@ export function AnswerForm({
 
   return (
     <form onSubmit={(event) => void submit(event)} className="mt-4 space-y-4">
-      <Typography variant="body" as="p" className="break-words">
+      <Typography variant="title" as="h3" className="break-words">
         {prompt.text}
       </Typography>
       {prompt.scene && (

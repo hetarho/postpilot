@@ -244,7 +244,7 @@
 
 - THEME-57 [o] guided text hierarchy makes the current action readable before context and detail.
   - an authoring route's record/new-record name is a smaller contextual h1; its active task uses stepTitle as h2, preserving semantic order and visible emphasis
-  - setup keeps one display goal with a stepTitle for the current method/task; a questionnaire's actual question uses title, while hints and examples use body
+  - setup intro/completion uses display, while focused steps keep their contextual h1 quieter than the stepTitle current task; a questionnaire's actual question uses title, while hints and examples use body
   - peer-choice labels and selected-preview names use fieldTitle; weight is semibold rather than heavier than the main heading
   - action guidance, provenance and recovery explanations never use metadata size; meta is reserved for brief progress/count/time information
   - sizes, line height, readable measure and group spacing are defined by shared roles, not per-screen raw font utilities; zoom/reflow preserves content and actor lifetime

@@ -155,7 +155,7 @@ function TemplateAuthoringPage({
   return (
     <main className={pageStyles({ width: 'board', className: 'flex flex-1 flex-col py-8' })}>
       <BackLink />
-      <Typography variant="display" className="mt-6">
+      <Typography variant="title" as="h1" className="text-content-secondary mt-6">
         {stored?.name ?? templateText('page.new')}
       </Typography>
       <AIAuthoringStudio

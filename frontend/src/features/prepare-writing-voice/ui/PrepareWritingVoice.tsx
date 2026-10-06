@@ -343,7 +343,7 @@ function ScopedPreparation(props: PrepareWritingVoiceProps) {
   return (
     <section aria-labelledby={titleId} className="min-w-0" ref={heading}>
       {!['ai', 'legacy'].includes(view) && (
-        <Typography variant="title" as="h2" id={titleId} tabIndex={-1}>
+        <Typography variant="stepTitle" as="h2" id={titleId} tabIndex={-1}>
           {title}
         </Typography>
       )}

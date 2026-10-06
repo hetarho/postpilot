@@ -12,6 +12,7 @@ const DEFAULT_ELEMENT: Record<TypographyVariant, ElementType> = {
   promoDisplay: 'h1',
   hero: 'p',
   display: 'h1',
+  stepTitle: 'h2',
   title: 'h2',
   fieldTitle: 'h3',
   body: 'p',

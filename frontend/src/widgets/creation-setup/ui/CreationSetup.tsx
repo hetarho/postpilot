@@ -97,7 +97,12 @@ function AccountSetup({ ownerId, restart }: { ownerId: string; restart: boolean 
             total={Math.max(1, state.plan.length)}
             className="mt-3"
           />
-          <Typography variant="display" tabIndex={-1} className="mt-10 focus:outline-none">
+          <Typography
+            variant={introStep ? 'display' : 'title'}
+            as="h1"
+            tabIndex={-1}
+            className="mt-10 focus:outline-none"
+          >
             {t(`setup.${state.step}.title`)}
           </Typography>
           <Typography variant="body" className="text-content-secondary max-w-measure mt-4">

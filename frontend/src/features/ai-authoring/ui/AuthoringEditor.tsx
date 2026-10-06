@@ -221,7 +221,7 @@ function ScopedEditor({
           {t(`kinds.${kind}`)}
         </Typography>
         <Typography
-          variant="title"
+          variant="stepTitle"
           as="h2"
           tabIndex={-1}
           id={id + '-title'}

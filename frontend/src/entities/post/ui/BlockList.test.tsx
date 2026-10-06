@@ -22,7 +22,7 @@ it('renders the title metadata and all five canonical block types', () => {
     />,
   )
 
-  expect(screen.getByRole('heading', { name: '비 온 뒤의 제주', level: 3 })).toHaveClass('text-lg')
+  expect(screen.getByRole('heading', { name: '비 온 뒤의 제주', level: 3 })).toHaveClass('text-xl')
   expect(screen.getByText('비가 그치기를 기다렸다.')).toBeInTheDocument()
   expect(screen.getByRole('heading', { name: '바닷가로', level: 4 })).toBeInTheDocument()
   expect(screen.getByRole('img', { name: '잔잔한 제주 바다' })).toHaveAttribute(

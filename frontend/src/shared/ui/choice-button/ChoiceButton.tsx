@@ -46,19 +46,29 @@ export const ChoiceButton = forwardRef<HTMLButtonElement, ChoiceButtonProps>(fun
       className={buttonStyles({
         variant: 'secondary',
         className: clsx(
-          'group w-full min-w-0 justify-start rounded-lg p-5 text-left sm:p-6',
+          'group @container w-full min-w-0 justify-start rounded-lg p-0 text-left',
           className,
         ),
       })}
       {...props}
     >
-      <span className={clsx('flex w-full min-w-0 items-center gap-4', pending && 'opacity-0')}>
+      <span
+        className={clsx(
+          'flex w-full min-w-0 items-center gap-4 p-4 @md:p-6',
+          pending && 'opacity-0',
+        )}
+      >
         {icon && (
-          <span aria-hidden="true" className="text-content-secondary shrink-0">
+          <span aria-hidden="true" className="text-content-secondary hidden shrink-0 @md:block">
             {icon}
           </span>
         )}
         <span className="min-w-0 flex-1">
+          {selected && (
+            <span aria-hidden="true" className="text-content-secondary mb-2 block @md:hidden">
+              <Check className="size-5" />
+            </span>
+          )}
           <Typography
             as="span"
             variant="fieldTitle"
@@ -76,7 +86,7 @@ export const ChoiceButton = forwardRef<HTMLButtonElement, ChoiceButtonProps>(fun
             {description}
           </Typography>
         </span>
-        <span aria-hidden="true" className="text-content-secondary shrink-0">
+        <span aria-hidden="true" className="text-content-secondary hidden shrink-0 @md:block">
           {trailing ??
             (selected ? <Check className="size-5" /> : <ChevronRight className="size-5" />)}
         </span>

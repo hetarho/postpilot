@@ -35,7 +35,7 @@ describe('Disclosure', () => {
       </Disclosure>,
     )
     const button = screen.getByRole('button', { name: '재료에 있는 사실만' })
-    expect(button).toHaveClass('text-sm', 'font-medium', 'min-h-11')
+    expect(button).toHaveClass('text-base', 'font-medium', 'min-h-11')
     expect(button).not.toHaveClass('text-lg')
     expect(screen.getByRole('heading', { level: 3 })).toContainElement(button)
   })

@@ -8,6 +8,7 @@ export type TypographyVariant =
   | 'promoDisplay'
   | 'hero'
   | 'display'
+  | 'stepTitle'
   | 'title'
   | 'fieldTitle'
   | 'body'
@@ -27,15 +28,16 @@ const VARIANT_STYLES: Record<TypographyVariant, string> = {
   promoDisplay: 'text-4xl font-bold tracking-tight leading-tight sm:text-6xl',
   // Five-digit KRW prices still fit a narrow card with text enlarged to 200%.
   hero: 'text-xl font-bold tracking-tight sm:text-4xl',
-  display: 'text-2xl font-semibold tracking-tight',
-  title: 'text-lg font-semibold tracking-tight',
+  display: 'text-3xl font-semibold tracking-tight leading-tight sm:text-4xl',
+  stepTitle: 'text-2xl font-semibold tracking-tight leading-tight sm:text-3xl',
+  title: 'text-xl font-semibold tracking-tight leading-snug sm:text-2xl',
   /* A field's own heading, where it stands beside the step title rather than under it: SMALLER
      than `title` so the step keeps the outline, HEAVIER so the field still reads as named and not
      as a caption. `label` cannot do this — it is `content-secondary` at a normal weight, which is
      a hint about a control, not the name of one. */
-  fieldTitle: 'text-base font-bold tracking-tight',
-  body: 'text-sm leading-relaxed',
-  label: 'text-sm text-content-secondary',
+  fieldTitle: 'text-lg font-semibold tracking-tight leading-snug',
+  body: 'text-base leading-relaxed',
+  label: 'text-sm font-medium text-content-secondary',
   meta: 'text-xs text-content-tertiary',
   eyebrow: 'text-[10px] font-medium tracking-wide text-content-tertiary uppercase',
 }

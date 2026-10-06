@@ -71,7 +71,7 @@ export function VideoTemplatePage() {
       <BackLink />
       {/* The record's own name, not a fixed 영상 템플릿 편집: a directory-item form's heading IS
           its identity, and a fixed label makes two templates' screens indistinguishable. */}
-      <Typography variant="display" className="mt-2 block">
+      <Typography variant={manual ? 'display' : 'title'} as="h1" className="mt-2 block">
         {stored ? stored.name : t('editor.create', { ns: 'clips' })}
       </Typography>
       {manual ? (

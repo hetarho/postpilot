@@ -86,10 +86,10 @@ describe('RefineDock', () => {
     const field = screen.getByLabelText('수정 요청을 입력하세요')
     const send = screen.getByRole('button', { name: '수정' })
 
-    // The label is the field's own name at the `fieldTitle` role — smaller and heavier than the
-    // step title it used to borrow — and 확정하기 fills what is left of the row (A9).
+    // The field's name remains below the task heading in the shared type hierarchy;
+    // 확정하기 fills what is left of the row.
     expect(heading.tagName).toBe('LABEL')
-    expect(heading).toHaveClass('text-base', 'font-bold')
+    expect(heading).toHaveClass('text-lg', 'font-semibold')
     expect(open).toHaveClass('flex-1')
     expect(open).toBeEnabled()
 

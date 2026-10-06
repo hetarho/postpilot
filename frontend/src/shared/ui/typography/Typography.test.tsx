@@ -10,6 +10,7 @@ describe('Typography', () => {
     render(
       <>
         <Typography variant="display">Page title</Typography>
+        <Typography variant="stepTitle">Current task</Typography>
         <Typography variant="title">Section</Typography>
         <Typography variant="fieldTitle">Field</Typography>
         <Typography variant="body">Prose</Typography>
@@ -19,16 +20,28 @@ describe('Typography', () => {
       </>,
     )
     const display = screen.getByRole('heading', { level: 1, name: 'Page title' })
-    expect(display).toHaveClass('text-2xl', 'font-semibold', 'tracking-tight')
+    expect(display).toHaveClass(
+      'text-3xl',
+      'sm:text-4xl',
+      'font-semibold',
+      'tracking-tight',
+      'leading-tight',
+    )
+    const step = screen.getByRole('heading', { level: 2, name: 'Current task' })
+    expect(step).toHaveClass('text-2xl', 'sm:text-3xl', 'font-semibold', 'leading-tight')
     const title = screen.getByRole('heading', { level: 2, name: 'Section' })
-    expect(title).toHaveClass('text-lg', 'font-semibold', 'tracking-tight')
-    // Smaller than the step title it stands beside, heavier than a caption (A9).
+    expect(title).toHaveClass('text-xl', 'sm:text-2xl', 'font-semibold', 'tracking-tight')
+    // Peer titles are smaller than the current task and use the same semibold emphasis.
     const fieldTitle = screen.getByRole('heading', { level: 3, name: 'Field' })
-    expect(fieldTitle).toHaveClass('text-base', 'font-bold', 'tracking-tight')
+    expect(fieldTitle).toHaveClass('text-lg', 'font-semibold', 'tracking-tight')
     const body = screen.getByText('Prose')
     expect(body.tagName).toBe('P')
-    expect(body).toHaveClass('text-sm', 'leading-relaxed')
-    expect(screen.getByText('Label')).toHaveClass('text-sm', 'text-content-secondary')
+    expect(body).toHaveClass('text-base', 'leading-relaxed')
+    expect(screen.getByText('Label')).toHaveClass(
+      'text-sm',
+      'font-medium',
+      'text-content-secondary',
+    )
     expect(screen.getByText('Meta')).toHaveClass('text-xs', 'text-content-tertiary')
     expect(screen.getByText('Eyebrow')).toHaveClass('uppercase', 'tracking-wide')
   })
@@ -39,7 +52,7 @@ describe('Typography', () => {
         Deep heading
       </Typography>,
     )
-    expect(screen.getByRole('heading', { level: 3, name: 'Deep heading' })).toHaveClass('text-lg')
+    expect(screen.getByRole('heading', { level: 3, name: 'Deep heading' })).toHaveClass('text-xl')
   })
 
   it('passes through ARIA and merges caller layout classes after the recipe', () => {

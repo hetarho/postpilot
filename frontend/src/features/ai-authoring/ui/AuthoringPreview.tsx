@@ -65,7 +65,7 @@ export function AuthoringPreview({
               : prose(element.parts)
             return (
               <li key={index} className="bg-surface-recessed rounded-lg p-4 break-words">
-                <Typography variant="meta">{t(`videoRoles.${element.role}`)}</Typography>
+                <Typography variant="label">{t(`videoRoles.${element.role}`)}</Typography>
                 <Typography variant="body" className="mt-2">
                   {text || t('videoAI')}
                 </Typography>
@@ -80,7 +80,7 @@ export function AuthoringPreview({
     return <Typography variant="body">{t('previewUnavailable')}</Typography>
   return (
     <div className="space-y-4">
-      {kind === 'writing-voice' && <Typography variant="meta">{t('fictional')}</Typography>}
+      {kind === 'writing-voice' && <Typography variant="label">{t('fictional')}</Typography>}
       <Typography variant="body" className="max-w-measure break-words whitespace-pre-wrap">
         {artifact.body}
       </Typography>
