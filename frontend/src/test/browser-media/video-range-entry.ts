@@ -6,7 +6,12 @@ declare global {
   interface Window {
     videoRangeFixture: {
       cursor(access: BrowserMediaSourceAccess, id: string, rate: number): Promise<unknown>
-      render(url: string, fingerprint: string, cancelAt?: number): Promise<unknown>
+      render(
+        url: string,
+        fingerprint: string,
+        cancelAt?: number,
+        multipleTracks?: boolean,
+      ): Promise<unknown>
     }
   }
 }
@@ -32,34 +37,52 @@ window.videoRangeFixture = {
       worker.terminate()
     }
   },
-  async render(url, fingerprint, cancelAt) {
-    const cuts = [
-      {
-        id: 'late',
-        startMs: 5000,
-        endMs: 6500,
-        transitionMs: 0,
-        playbackRatePermille: 1000,
-        focal: { x: 1, y: 0 },
-      },
-      {
-        id: 'early',
-        startMs: 200,
-        endMs: 1200,
-        transitionMs: 200,
-        playbackRatePermille: 750,
-        focal: { x: 0, y: 1 },
-      },
-      {
-        id: 'middle',
-        startMs: 2100,
-        endMs: 3100,
-        transitionMs: 300,
-        playbackRatePermille: 1250,
-        focal: { x: 0.5, y: 0.5 },
-      },
-    ].map((cut) => ({ ...cut, sourceId: 'original', fingerprint, copies: [], volumePermille: 0 }))
-    const plan = { durationMs: 3133, cuts, nativeComposition: true, elements: [] }
+  async render(url, fingerprint, cancelAt, multipleTracks = false) {
+    const cuts = (
+      multipleTracks
+        ? [
+            {
+              id: 'first-native',
+              startMs: 0,
+              endMs: 1000,
+              transitionMs: 0,
+              playbackRatePermille: 1000,
+              focal: { x: 0.5, y: 0.5 },
+            },
+          ]
+        : [
+            {
+              id: 'late',
+              startMs: 5000,
+              endMs: 6500,
+              transitionMs: 0,
+              playbackRatePermille: 1000,
+              focal: { x: 1, y: 0 },
+            },
+            {
+              id: 'early',
+              startMs: 200,
+              endMs: 1200,
+              transitionMs: 200,
+              playbackRatePermille: 750,
+              focal: { x: 0, y: 1 },
+            },
+            {
+              id: 'middle',
+              startMs: 2100,
+              endMs: 3100,
+              transitionMs: 300,
+              playbackRatePermille: 1250,
+              focal: { x: 0.5, y: 0.5 },
+            },
+          ]
+    ).map((cut) => ({ ...cut, sourceId: 'original', fingerprint, copies: [], volumePermille: 0 }))
+    const plan = {
+      durationMs: multipleTracks ? 1000 : 3133,
+      cuts,
+      nativeComposition: true,
+      elements: [],
+    }
     const snapshot = await freezeBrowserComposition({
       ownerId: 'fixture',
       projectId: 'fixture',
@@ -72,9 +95,9 @@ window.videoRangeFixture = {
         {
           sourceId: 'original',
           fingerprint,
-          durationMs: 30000,
-          width: 320,
-          height: 180,
+          durationMs: multipleTracks ? 2000 : 30000,
+          width: multipleTracks ? 64 : 320,
+          height: multipleTracks ? 32 : 180,
           hasAudio: false,
           allowedRatePermille: [500, 750, 1000, 1250, 1500, 2000],
         },
@@ -99,9 +122,16 @@ window.videoRangeFixture = {
       await progress
       let decoded = 0,
         decodeFailure: unknown
+      let firstPixel: number[] | undefined
       const decoder = new VideoDecoder({
         output: (frame) => {
           decoded++
+          if (!firstPixel) {
+            const canvas = new OffscreenCanvas(1080, 1920),
+              context = canvas.getContext('2d')!
+            context.drawImage(frame, 0, 0)
+            firstPixel = Array.from(context.getImageData(540, 960, 1, 1).data)
+          }
           frame.close()
         },
         error: (error) => {
@@ -119,6 +149,7 @@ window.videoRangeFixture = {
       return {
         frameCount: video.frameCount,
         decodedFrames: decoded,
+        firstPixel,
         completed,
         config: video.config,
         durationUs: video.durationUs,

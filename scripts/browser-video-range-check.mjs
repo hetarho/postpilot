@@ -14,7 +14,7 @@ const output = resolve(option('--output', 'tmp/browser-video-ranges'))
 const executablePath = option('--browser', '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome')
 const require = createRequire(resolve(root, 'frontend/package.json'))
 const { createServer } = await import(pathToFileURL(require.resolve('vite')).href)
-const files = new Map([['cfr', resolve(fixtures, 'original-cfr60.mp4')], ['vfr', resolve(fixtures, 'original-vfr.mp4')]])
+const files = new Map([['cfr', resolve(fixtures, 'original-cfr60.mp4')], ['vfr', resolve(fixtures, 'original-vfr.mp4')], ['multiple', resolve(fixtures, 'multiple-video-default-second.mp4')], ['single', resolve(fixtures, 'single-key-picture.mp4')], ['all-intra', resolve(fixtures, 'all-intra-movie.mp4')]])
 const requests = []
 const server = await createServer({ configFile: false, root: resolve(root, 'frontend'), cacheDir: resolve(root, 'node_modules/.cache/video-range-check'),
   resolve: { alias: { '@': resolve(root, 'frontend/src') } }, server: { host: '127.0.0.1', port: 0, hmr: false, watch: null },
@@ -69,6 +69,19 @@ try {
   const cancelled = await page.evaluate(({ origin, fingerprint }) => window.videoRangeFixture.render(`${origin}/__video-range__/file/cfr`, fingerprint, 1), { origin, fingerprint })
   if (cancelled.name !== 'AbortError') throw new Error('Cancellation did not stop production worker')
   results.push({ id: 'production-cancel', ...cancelled })
+  const multiple = await page.evaluate(({ origin }) => window.videoRangeFixture.cursor({ kind: 'url', url: `${origin}/__video-range__/file/multiple` }, 'multiple', 1000), { origin })
+  if (multiple.error || multiple.metadata.streamNumber !== 1 || multiple.centerPixel[0] < 220 || multiple.centerPixel[2] > 30 || multiple.decodedResources.liveDecodedFrames !== 0) throw new Error(`Native first-video pixel drift: ${JSON.stringify(multiple)}`)
+  results.push(multiple)
+  const multipleFingerprint = createHash('sha256').update(readFileSync(files.get('multiple'))).digest('hex')
+  const multipleVideo = await page.evaluate(({ origin, fingerprint }) => window.videoRangeFixture.render(`${origin}/__video-range__/file/multiple`, fingerprint, undefined, true), { origin, fingerprint: multipleFingerprint })
+  if (multipleVideo.error || multipleVideo.frameCount !== 30 || multipleVideo.decodedFrames !== 30 || multipleVideo.firstPixel[0] < 220 || multipleVideo.firstPixel[2] > 30) throw new Error(`Encoded native first-video pixel drift: ${JSON.stringify(multipleVideo)}`)
+  results.push({ id: 'multiple-production-worker', ...multipleVideo })
+  const single = await page.evaluate(({ origin }) => window.videoRangeFixture.cursor({ kind: 'url', url: `${origin}/__video-range__/file/single` }, 'single', 1000), { origin })
+  if (single.error !== 'CLIP_SOURCE_STREAM_AMBIGUOUS' || single.decodedResources.liveDecodedFrames !== 0) throw new Error(`Ambiguous picture not refused/cleaned: ${JSON.stringify(single)}`)
+  results.push(single)
+  const allIntra = await page.evaluate(({ origin }) => window.videoRangeFixture.cursor({ kind: 'url', url: `${origin}/__video-range__/file/all-intra` }, 'all-intra', 1000), { origin })
+  if (allIntra.error || allIntra.selected.length !== 8 || allIntra.decodedResources.liveDecodedFrames !== 0) throw new Error(`Ordinary all-intra movie refused/leaked: ${JSON.stringify(allIntra)}`)
+  results.push(allIntra)
   const report = { version: 1, qualification: false, browser: await browser.version(), executablePath,
     hardwareUsage: 'unmeasured; default installed browser launch', node: process.version, mediabunny: JSON.parse(readFileSync(resolve(root,'frontend/node_modules/mediabunny/package.json'))).version,
     lockfileSHA256: createHash('sha256').update(readFileSync(resolve(root,'pnpm-lock.yaml'))).digest('hex'),

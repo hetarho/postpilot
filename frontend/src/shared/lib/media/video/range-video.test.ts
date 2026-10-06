@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import {
   nativeOutputFrame,
   OriginalVideoCursor,
+  selectNativeVideoTrack,
   type OriginalVideoInput,
   type VideoRangeSample,
 } from './range-video'
@@ -64,6 +65,31 @@ function original(
   return { input, samples, frames, returned: () => returned }
 }
 describe('native original timestamp selection', () => {
+  it('keeps first stream order regardless of player defaults and permits ordinary all-intra movies', async () => {
+    const first = {
+      hasOnlyKeyPackets: vi.fn(async () => false),
+      computePacketStats: vi.fn(async () => ({ packetCount: 2 })),
+      default: false,
+    }
+    const second = {
+      hasOnlyKeyPackets: vi.fn(async () => false),
+      computePacketStats: vi.fn(async () => ({ packetCount: 2 })),
+      default: true,
+    }
+    expect(await selectNativeVideoTrack([first, second])).toBe(first)
+    first.hasOnlyKeyPackets.mockResolvedValue(true)
+    first.computePacketStats.mockResolvedValue({ packetCount: 2 })
+    expect(await selectNativeVideoTrack([first, second])).toBe(first)
+    expect(first.computePacketStats).toHaveBeenCalledWith(2)
+  })
+  it('explicitly refuses an ambiguous single key-picture track instead of guessing attached-picture semantics', async () => {
+    const track = {
+      hasOnlyKeyPackets: vi.fn(async () => true),
+      computePacketStats: vi.fn(async () => ({ packetCount: 1 })),
+    }
+    await expect(selectNativeVideoTrack([track])).rejects.toThrow('CLIP_SOURCE_STREAM_AMBIGUOUS')
+    expect(await selectNativeVideoTrack([])).toBeNull()
+  })
   it.each([
     [500, [0, 1, 2, 3]],
     [750, [0, 2, 3, 5]],

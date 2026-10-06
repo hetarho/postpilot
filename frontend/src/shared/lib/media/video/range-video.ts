@@ -20,6 +20,24 @@ export interface OriginalVideoMetadata {
   durationFromMetadata: number | null
   rotation: number
   flip: boolean
+  streamNumber?: number
+}
+
+export interface NativeVideoTrackCandidate {
+  computePacketStats(packetCount: number): Promise<{ packetCount: number }>
+}
+/** Match native first nonattached0:V:0, never player default/bitrate preference.
+ * Locked Mediabunny exposes finite timed video tracks in stream order, but no
+ * attached_pic flag. A single-packet picture candidate is therefore refused by
+ * name rather than silently classified as movie footage or skipped. */
+export async function selectNativeVideoTrack<T extends NativeVideoTrackCandidate>(
+  tracks: readonly T[],
+): Promise<T | null> {
+  const first = tracks[0]
+  if (!first) return null
+  const stats = await first.computePacketStats(2)
+  if (stats.packetCount <= 1) throw new MediaRangeError('CLIP_SOURCE_STREAM_AMBIGUOUS')
+  return first
 }
 export interface VideoRangeSample {
   timestamp: number
@@ -58,7 +76,7 @@ export async function openOriginalVideo(
   }
   try {
     signal.throwIfAborted()
-    const track = await input.getPrimaryVideoTrack()
+    const track = await selectNativeVideoTrack(await input.getVideoTracks())
     if (!track || !(await track.canDecode()))
       throw new MediaRangeError('CLIP_SOURCE_CODEC_UNSUPPORTED')
     if (await track.isLive()) throw new MediaRangeError('CLIP_SOURCE_RANGE_UNSUPPORTED')
@@ -99,6 +117,7 @@ export async function openOriginalVideo(
       rotation,
       flip,
       codec: codec ?? 'unknown',
+      streamNumber: track.number,
     }
     // Time resolution is a PTS lattice, not proof of original minimum cadence.
     // Caller-authorized allowedRatePermille remains the slow-motion authority.

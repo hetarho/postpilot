@@ -14,6 +14,18 @@
     "vfr": {
       "bytes": 386453,
       "sha256": "491b630c7cb211a8ef71b99c05a493fc3440a07b4ab44fbc3daccecf5d57aaa4"
+    },
+    "multiple": {
+      "bytes": 6501,
+      "sha256": "22dd47008232ce2ab597dfff50d9e85fe00b4d3c7f014daa33245390032b5bf7"
+    },
+    "single": {
+      "bytes": 1561,
+      "sha256": "4b258a71d60d0cd09b0507599e50d1678ea70ecd8aa6541b27a9a8b3ddc94832"
+    },
+    "all-intra": {
+      "bytes": 3783,
+      "sha256": "332e6f6f82db2c54e719546235499490050f5c73cc6fa95e5fcf6480bd593113"
     }
   },
   "sources": [
@@ -33,6 +45,12 @@
         2200000,
         2216666
       ],
+      "centerPixel": [
+        94,
+        96,
+        133,
+        255
+      ],
       "metadata": {
         "provenance": "browser_client",
         "codedWidth": 320,
@@ -44,7 +62,8 @@
         "durationFromMetadata": 30,
         "rotation": 0,
         "flip": false,
-        "codec": "avc"
+        "codec": "avc",
+        "streamNumber": 1
       },
       "readBytes": 154971,
       "readCalls": 22,
@@ -73,6 +92,12 @@
         2250000,
         2283333
       ],
+      "centerPixel": [
+        94,
+        96,
+        133,
+        255
+      ],
       "metadata": {
         "provenance": "browser_client",
         "codedWidth": 320,
@@ -84,7 +109,8 @@
         "durationFromMetadata": 30,
         "rotation": 0,
         "flip": false,
-        "codec": "avc"
+        "codec": "avc",
+        "streamNumber": 1
       },
       "readBytes": 158580,
       "readCalls": 26,
@@ -113,6 +139,12 @@
         2300000,
         2333333
       ],
+      "centerPixel": [
+        94,
+        96,
+        133,
+        255
+      ],
       "metadata": {
         "provenance": "browser_client",
         "codedWidth": 320,
@@ -124,7 +156,8 @@
         "durationFromMetadata": 30,
         "rotation": 0,
         "flip": false,
-        "codec": "avc"
+        "codec": "avc",
+        "streamNumber": 1
       },
       "readBytes": 161935,
       "readCalls": 29,
@@ -153,6 +186,12 @@
         2366666,
         2400000
       ],
+      "centerPixel": [
+        94,
+        96,
+        133,
+        255
+      ],
       "metadata": {
         "provenance": "browser_client",
         "codedWidth": 320,
@@ -164,7 +203,8 @@
         "durationFromMetadata": 30,
         "rotation": 0,
         "flip": false,
-        "codec": "avc"
+        "codec": "avc",
+        "streamNumber": 1
       },
       "readBytes": 165394,
       "readCalls": 33,
@@ -193,6 +233,12 @@
         2416666,
         2466666
       ],
+      "centerPixel": [
+        94,
+        96,
+        133,
+        255
+      ],
       "metadata": {
         "provenance": "browser_client",
         "codedWidth": 320,
@@ -204,7 +250,8 @@
         "durationFromMetadata": 30,
         "rotation": 0,
         "flip": false,
-        "codec": "avc"
+        "codec": "avc",
+        "streamNumber": 1
       },
       "readBytes": 169115,
       "readCalls": 37,
@@ -233,6 +280,12 @@
         2516666,
         2583333
       ],
+      "centerPixel": [
+        94,
+        96,
+        133,
+        255
+      ],
       "metadata": {
         "provenance": "browser_client",
         "codedWidth": 320,
@@ -244,7 +297,8 @@
         "durationFromMetadata": 30,
         "rotation": 0,
         "flip": false,
-        "codec": "avc"
+        "codec": "avc",
+        "streamNumber": 1
       },
       "readBytes": 175777,
       "readCalls": 44,
@@ -273,6 +327,12 @@
         2300000,
         2333333
       ],
+      "centerPixel": [
+        94,
+        96,
+        133,
+        255
+      ],
       "metadata": {
         "provenance": "browser_client",
         "codedWidth": 320,
@@ -284,7 +344,8 @@
         "durationFromMetadata": 30,
         "rotation": 0,
         "flip": false,
-        "codec": "avc"
+        "codec": "avc",
+        "streamNumber": 1
       },
       "readBytes": 161935,
       "readCalls": 29,
@@ -313,6 +374,12 @@
         2300000,
         2333333
       ],
+      "centerPixel": [
+        94,
+        96,
+        133,
+        255
+      ],
       "metadata": {
         "provenance": "browser_client",
         "codedWidth": 320,
@@ -324,7 +391,8 @@
         "durationFromMetadata": 8,
         "rotation": 0,
         "flip": false,
-        "codec": "avc"
+        "codec": "avc",
+        "streamNumber": 1
       },
       "readBytes": 118176,
       "readCalls": 102,
@@ -381,6 +449,12 @@
       "id": "production-worker",
       "frameCount": 94,
       "decodedFrames": 94,
+      "firstPixel": [
+        9,
+        229,
+        255,
+        255
+      ],
       "completed": 94,
       "config": {
         "codec": "avc1.640028",
@@ -394,11 +468,11 @@
       },
       "durationUs": 3133333,
       "sourceResources": {
-        "sourceReads": 461,
-        "sourceBytes": 629916,
-        "sourceReadMs": 449.56500005722046,
-        "decodeMs": 166.22500276565552,
-        "openMs": 26.62999963760376,
+        "sourceReads": 416,
+        "sourceBytes": 580033,
+        "sourceReadMs": 480.79499769210815,
+        "decodeMs": 199.98499965667725,
+        "openMs": 27.079999446868896,
         "peakActiveCuts": 2,
         "activeCuts": 0,
         "peakDecoderReservedBytes": 22118400,
@@ -425,7 +499,8 @@
             "durationFromMetadata": 30,
             "rotation": 0,
             "flip": false,
-            "codec": "avc"
+            "codec": "avc",
+            "streamNumber": 1
           }
         ]
       },
@@ -437,11 +512,184 @@
       "name": "AbortError",
       "completed": 1,
       "qualified": false
+    },
+    {
+      "id": "multiple",
+      "selected": [
+        0,
+        33333,
+        66666,
+        100000,
+        133333,
+        166666,
+        200000,
+        233333
+      ],
+      "centerPixel": [
+        255,
+        24,
+        0,
+        255
+      ],
+      "metadata": {
+        "provenance": "browser_client",
+        "codedWidth": 64,
+        "codedHeight": 32,
+        "displayWidth": 64,
+        "displayHeight": 32,
+        "timeResolution": 15360,
+        "firstTimestamp": 0,
+        "durationFromMetadata": 2,
+        "rotation": 0,
+        "flip": false,
+        "codec": "avc",
+        "streamNumber": 1
+      },
+      "readBytes": 5121,
+      "readCalls": 16,
+      "budget": {
+        "liveFrames": 0,
+        "liveBytes": 0,
+        "peakFrames": 1,
+        "peakBytes": 8192,
+        "queued": 0
+      },
+      "decodedResources": {
+        "peakDecodedFrames": 2,
+        "liveDecodedFrames": 0
+      },
+      "qualified": false
+    },
+    {
+      "id": "multiple-production-worker",
+      "frameCount": 30,
+      "decodedFrames": 30,
+      "firstPixel": [
+        254,
+        24,
+        1,
+        255
+      ],
+      "completed": 30,
+      "config": {
+        "codec": "avc1.640028",
+        "width": 1080,
+        "height": 1920,
+        "framerate": 30,
+        "bitrate": 8000000,
+        "avc": {
+          "format": "avc"
+        }
+      },
+      "durationUs": 1000000,
+      "sourceResources": {
+        "sourceReads": 64,
+        "sourceBytes": 6489,
+        "sourceReadMs": 67.11000108718872,
+        "decodeMs": 14.115000247955322,
+        "openMs": 13.78499984741211,
+        "peakActiveCuts": 1,
+        "activeCuts": 0,
+        "peakDecoderReservedBytes": 393216,
+        "decoderReservedBytes": 0,
+        "presentation": {
+          "liveFrames": 0,
+          "liveBytes": 0,
+          "peakFrames": 1,
+          "peakBytes": 8192,
+          "queued": 0
+        },
+        "frameExports": 30,
+        "bitmapCopies": 0,
+        "physicalPeakBytes": null,
+        "originals": [
+          {
+            "provenance": "browser_client",
+            "codedWidth": 64,
+            "codedHeight": 32,
+            "displayWidth": 64,
+            "displayHeight": 32,
+            "timeResolution": 15360,
+            "firstTimestamp": 0,
+            "durationFromMetadata": 2,
+            "rotation": 0,
+            "flip": false,
+            "codec": "avc",
+            "streamNumber": 1
+          }
+        ]
+      },
+      "qualified": false
+    },
+    {
+      "id": "single",
+      "error": "CLIP_SOURCE_STREAM_AMBIGUOUS",
+      "readBytes": 821,
+      "readCalls": 4,
+      "budget": {
+        "liveFrames": 0,
+        "liveBytes": 0,
+        "peakFrames": 0,
+        "peakBytes": 0,
+        "queued": 0
+      },
+      "decodedResources": {
+        "peakDecodedFrames": 0,
+        "liveDecodedFrames": 0
+      },
+      "qualified": false
+    },
+    {
+      "id": "all-intra",
+      "selected": [
+        0,
+        33333,
+        66666,
+        100000,
+        133333,
+        166666,
+        200000,
+        233333
+      ],
+      "centerPixel": [
+        255,
+        24,
+        0,
+        255
+      ],
+      "metadata": {
+        "provenance": "browser_client",
+        "codedWidth": 64,
+        "codedHeight": 32,
+        "displayWidth": 64,
+        "displayHeight": 32,
+        "timeResolution": 15360,
+        "firstTimestamp": 0,
+        "durationFromMetadata": 2,
+        "rotation": 0,
+        "flip": false,
+        "codec": "avc",
+        "streamNumber": 1
+      },
+      "readBytes": 2033,
+      "readCalls": 14,
+      "budget": {
+        "liveFrames": 0,
+        "liveBytes": 0,
+        "peakFrames": 1,
+        "peakBytes": 8192,
+        "queued": 0
+      },
+      "decodedResources": {
+        "peakDecodedFrames": 2,
+        "liveDecodedFrames": 0
+      },
+      "qualified": false
     }
   ],
   "requestSummary": {
     "cfr": {
-      "requests": 738,
+      "requests": 693,
       "maxRequestedBytes": 119757,
       "wholeResponseRequests": 0
     },
@@ -454,12 +702,45 @@
       "requests": 1,
       "maxRequestedBytes": 0,
       "wholeResponseRequests": 1
+    },
+    "multiple": {
+      "requests": 83,
+      "maxRequestedBytes": 3317,
+      "wholeResponseRequests": 0
+    },
+    "single": {
+      "requests": 5,
+      "maxRequestedBytes": 773,
+      "wholeResponseRequests": 0
+    },
+    "all-intra": {
+      "requests": 16,
+      "maxRequestedBytes": 1008,
+      "wholeResponseRequests": 0
     }
+  },
+  "streamSelection": {
+    "native": "first nonattached video 0:V:0",
+    "browser": "first finite timed video track in container order; bounded first-two-packet ambiguity probe",
+    "defaultSecondFixture": {
+      "nativeFirstTrackIndex": 0,
+      "mediabunnyPrimaryTrackIndex": 1,
+      "browserStreamNumber": 1,
+      "decodedPixel": "red",
+      "encodedPixel": "red"
+    },
+    "ambiguity": "Locked 1.58.0 has no attached_pic disposition; a single-packet first track is explicitly refused rather than classified/skipped. Multi-packet all-intra movie remains admitted."
   },
   "limits": [
     "Headless codec/cleanup correctness, not final component/output or identified-device throughput qualification.",
     "No physical GPU/decoder allocation or zero-copy claim; decoder reservation and presentation bytes are explicit logical bounds.",
     "VFR timestamp handling does not confer original slow-motion eligibility; authoritative allowedRatePermille is retained.",
-    "Native source-generation proof is equivalent validation, not a passing Docker image/runtime gate."
-  ]
+    "Native source-generation proof is equivalent validation, not a passing Docker image/runtime gate.",
+    "No attached-picture flag is claimed; the bounded single-packet ambiguity refusal also excludes genuine single-frame originals."
+  ],
+  "fixtureProvenance": {
+    "multiple": "Synthetic 2-second 64x32 H264 container: first red/default false, second blue/default true; native selector metadata recorded in /private/tmp/postpilot-browser-media-prep-video/multiple-track-selector.json.",
+    "single": "ffmpeg lavfi color=c=red:s=64x32:r=30; -frames:v 1 -c:v libx264 -pix_fmt yuv420p -movflags +faststart.",
+    "all-intra": "ffmpeg lavfi color=c=red:s=64x32:r=30:d=2; -c:v libx264 -g 1 -pix_fmt yuv420p -movflags +faststart."
+  }
 }

@@ -50,7 +50,7 @@ self.onmessage = async (
         readCalls++
       },
     })
-    const startUs = event.data.startUs ?? 2_100_000
+    const startUs = event.data.startUs ?? (['multiple', 'all-intra'].includes(id) ? 0 : 2_100_000)
     cursor = new OriginalVideoCursor(
       input,
       {
@@ -63,6 +63,7 @@ self.onmessage = async (
       controller.signal,
     )
     const selected: number[] = []
+    let centerPixel: number[] | undefined
     const canvas = new OffscreenCanvas(1080, 1920),
       context = canvas.getContext('2d')!
     for (let n = 0; n < 8; n++) {
@@ -70,6 +71,7 @@ self.onmessage = async (
       try {
         selected.push(resource.timestampUs)
         resource.draw(context, { x: 0, y: 0, width: 1080, height: 1920 })
+        if (n === 0) centerPixel = Array.from(context.getImageData(540, 960, 1, 1).data)
       } finally {
         resource.close()
       }
@@ -80,6 +82,7 @@ self.onmessage = async (
     self.postMessage({
       id,
       selected,
+      centerPixel,
       metadata: input.metadata,
       readBytes,
       readCalls,
