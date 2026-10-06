@@ -819,7 +819,7 @@
     "Small corpus/repetition counts establish no population-level statistical guarantee."
   ],
   "verification": {
-    "codeCommit": "96af4ff348f1599e08e39b662b9c23981c740e96",
+    "codeCommit": "3ab2a2f26e570b9eeefcab417199111f8a86388b",
     "command": "POSTPILOT_ANALYSIS_TEST_EVIDENCE=<new-private-file> GOCACHE=<existing-task-cache> GOMAXPROCS=2 go test -p 2 -timeout 5m ./internal/clip/diagnostic/analysisquality -run ^TestProductionReplaySeparateMetricsUnknownsAndCriticalFailures$ -count=1",
     "sourceSha256": {
       "backend/cmd/api/analysis_quality.go": "c76f6338b601c8aaac2cbf107565b027a46065114836426938ebd30de4c457ef",
@@ -858,6 +858,9 @@
     "actualHumanReview": false,
     "actualProviderCalls": 0,
     "historicalFullGoCommit": "a49d82ba41d05cc8d2e79d43e61d49e4291b3234",
-    "historicalFullGoScope": "pre-AAC-fix complete102-package suite; current changed scope is verified separately"
+    "historicalFullGoScope": "pre-AAC-fix complete102-package suite; current changed scope is verified separately",
+    "correctedAACCommit": "96af4ff348f1599e08e39b662b9c23981c740e96",
+    "planningMerge": "29e06742918699282fe6211b7fe98903608265b6",
+    "postMergeFocusedTests": "design/catalog/version, analysis/media/diagnostic, clip/app/API guards passed; no new semantic or provider evidence"
   }
 }
