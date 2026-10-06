@@ -1,9 +1,11 @@
+import { useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { useSession } from '@/entities/session'
 import { useVoices, voiceAnalysisDate, type Voice } from '@/entities/voice'
 import { CreateVoiceSheet } from '@/features/create-voice'
 import { GeneratedWritingVoicesSheet } from '@/features/generate-writing-voices'
+import { AIAuthoringSheet } from '@/widgets/ai-authoring-studio'
 import { RestoreVoiceButton } from '@/features/restore-voice'
 import {
   ActionBar,
@@ -28,6 +30,8 @@ export function VoicesPage() {
   const { user } = useSession()
   const ownerId = user?.id ?? ''
   const { active, deleted, isPending, isError, isFetching, refetch } = useVoices(ownerId)
+  const [authoringOpen, setAuthoringOpen] = useState(false)
+  const { t: authoringText } = useTranslation('authoring')
 
   return (
     // The page gutter lives on each block rather than on `main`, so the rows run edge to edge
@@ -112,7 +116,25 @@ export function VoicesPage() {
             className="mt-auto"
           >
             <CreateVoiceSheet ownerId={ownerId} />
-            <GeneratedWritingVoicesSheet ownerId={ownerId} />
+            <Button variant="cta" onClick={() => setAuthoringOpen(true)}>
+              {authoringText('host.createVoice')}
+            </Button>
+            <AIAuthoringSheet
+              open={authoringOpen}
+              onOpenChange={setAuthoringOpen}
+              ownerId={ownerId}
+              kind="writing-voice"
+              onSaved={() => {
+                refetch()
+                setAuthoringOpen(false)
+              }}
+            />
+            <details>
+              <summary className="text-content-secondary min-h-11 cursor-pointer py-3">
+                {authoringText('host.legacyVoice')}
+              </summary>
+              <GeneratedWritingVoicesSheet ownerId={ownerId} />
+            </details>
           </ActionBar>
         </>
       )}

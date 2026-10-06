@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link } from '@tanstack/react-router'
+import { Link, useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import {
   VoiceReadinessMeter,
@@ -9,7 +9,8 @@ import {
 } from '@/entities/voice'
 import { MakeVoiceButton } from '@/features/make-voice'
 import { RestorePreviousAnalysisButton } from '@/features/restore-voice-analysis'
-import { Notice, Typography, typographyStyles } from '@/shared/ui'
+import { AIAuthoringSheet } from '@/widgets/ai-authoring-studio'
+import { Button, Notice, Typography, typographyStyles } from '@/shared/ui'
 import { VoiceRunStatus } from './VoiceRunStatus'
 import { VoiceScreen, type VoiceScreenContext } from './VoiceScreen'
 
@@ -27,6 +28,9 @@ export function VoiceAnalysisPage() {
 function AnalysisPanel({ ownerId, voiceId, voice, profile }: VoiceScreenContext) {
   const { t } = useTranslation('voices')
   const [startedJobId, setStartedJobId] = useState('')
+  const [authoringOpen, setAuthoringOpen] = useState(false)
+  const { t: authoringText } = useTranslation('authoring')
+  const navigate = useNavigate()
   const jobId = startedJobId || profile.activeJobId
   if (!profile.analysis) {
     return (
@@ -63,6 +67,24 @@ function AnalysisPanel({ ownerId, voiceId, voice, profile }: VoiceScreenContext)
         : ''
   return (
     <>
+      {!voice.deleted && (
+        <>
+          <Button variant="secondary" onClick={() => setAuthoringOpen(true)}>
+            {authoringText('host.refine')}
+          </Button>
+          <AIAuthoringSheet
+            open={authoringOpen}
+            onOpenChange={setAuthoringOpen}
+            ownerId={ownerId}
+            kind="writing-voice"
+            targetId={voiceId}
+            onSaved={(saved) => {
+              setAuthoringOpen(false)
+              void navigate({ to: '/voices/$voiceId', params: { voiceId: saved.id } })
+            }}
+          />
+        </>
+      )}
       {profile.analysis.origin === 'synthetic' && (
         <Notice tone="info" role="status">
           {t('origin.syntheticHelp')}

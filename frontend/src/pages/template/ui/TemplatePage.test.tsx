@@ -26,12 +26,18 @@ const REVIEW: FakeTemplateRow = {
   postCount: 2,
 }
 
-function renderTemplate(path: string, templates: FakeTemplatesOptions = {}, calls: string[] = []) {
-  return renderAppAt(path, {
+async function renderTemplate(
+  path: string,
+  templates: FakeTemplatesOptions = {},
+  calls: string[] = [],
+) {
+  const rendered = renderAppAt(path, {
     user: USER,
     calls,
     templates: { templates: [REVIEW], ...templates },
   })
+  await userEvent.setup().click(await screen.findByRole('button', { name: '직접 편집' }))
+  return rendered
 }
 
 describe('the template screen', () => {
@@ -41,7 +47,7 @@ describe('the template screen', () => {
   // migration to literal text rides the next real save.
   it('opens a legacy position as fixed text without making the draft dirty', async () => {
     const user = userEvent.setup()
-    renderTemplate('/templates/template-review')
+    await renderTemplate('/templates/template-review')
 
     expect(await screen.findByLabelText('이름')).toHaveValue('정보성 식당 리뷰')
     // The retired position reads as fixed text carrying its label.
@@ -56,7 +62,7 @@ describe('the template screen', () => {
 
   // A3: a row's target loads the stored template into one draft.
   it('opens a stored template with its name, description and composition', async () => {
-    renderTemplate('/templates/template-review')
+    await renderTemplate('/templates/template-review')
 
     expect(await screen.findByLabelText('이름')).toHaveValue('정보성 식당 리뷰')
     expect(screen.getByLabelText(/어떤 글인가요/)).toHaveValue('협찬 방문 리뷰')
@@ -73,7 +79,7 @@ describe('the template screen', () => {
   it('disables the save until the draft differs, then writes all three fields in one call', async () => {
     const user = userEvent.setup()
     const updates: FakeTemplatesOptions['updates'] = []
-    renderTemplate('/templates/template-review', { updates })
+    await renderTemplate('/templates/template-review', { updates })
 
     const save = await screen.findByRole('button', { name: '저장' })
     expect(save).toBeDisabled()
@@ -102,7 +108,7 @@ describe('the template screen', () => {
   it('saves the stored body unchanged when only the name was edited', async () => {
     const user = userEvent.setup()
     const updates: FakeTemplatesOptions['updates'] = []
-    renderTemplate('/templates/template-review', { updates })
+    await renderTemplate('/templates/template-review', { updates })
 
     await user.type(await screen.findByLabelText('이름'), '!')
     await user.click(screen.getByRole('button', { name: '저장' }))
@@ -116,7 +122,7 @@ describe('the template screen', () => {
     const user = userEvent.setup()
     const calls: string[] = []
     const creates: FakeTemplatesOptions['creates'] = []
-    renderTemplate('/templates/new', { creates }, calls)
+    await renderTemplate('/templates/new', { creates }, calls)
 
     expect(await screen.findByRole('heading', { name: '새 템플릿' })).toBeInTheDocument()
     expect(screen.getByLabelText('이름')).toHaveValue('')
@@ -133,7 +139,7 @@ describe('the template screen', () => {
   it('creates from the empty screen and lands on the saved template', async () => {
     const user = userEvent.setup()
     const creates: FakeTemplatesOptions['creates'] = []
-    renderTemplate('/templates/new', { creates })
+    await renderTemplate('/templates/new', { creates })
 
     await user.type(await screen.findByLabelText('이름'), '카페 방문기')
     await user.type(screen.getByLabelText(/어떤 글인가요/), '동네 카페')
@@ -158,7 +164,10 @@ describe('the template screen', () => {
     const user = userEvent.setup()
     const updates: FakeTemplatesOptions['updates'] = []
     const titleArea = '  [맛집] <write>가게 이름과 대표 메뉴</write>\n'
-    renderTemplate('/templates/template-review', { templates: [{ ...REVIEW, titleArea }], updates })
+    await renderTemplate('/templates/template-review', {
+      templates: [{ ...REVIEW, titleArea }],
+      updates,
+    })
 
     await user.type(await screen.findByLabelText('이름'), '!')
     await user.click(screen.getByRole('button', { name: '저장' }))
@@ -170,7 +179,7 @@ describe('the template screen', () => {
   it('creates with an empty title area', async () => {
     const user = userEvent.setup()
     const creates: FakeTemplatesOptions['creates'] = []
-    renderTemplate('/templates/new', { creates })
+    await renderTemplate('/templates/new', { creates })
 
     await user.type(await screen.findByLabelText('이름'), '카페 방문기')
     await user.click(paletteButton('AI가 쓰는 글'))
@@ -186,7 +195,7 @@ describe('the template screen', () => {
   // 저장 and makes the guard warn about a template that was just written.
   it('goes clean the moment a save lands, without waiting for the directory to catch up', async () => {
     const user = userEvent.setup()
-    renderTemplate('/templates/template-review')
+    await renderTemplate('/templates/template-review')
 
     await user.type(await screen.findByLabelText('이름'), '!')
     const save = screen.getByRole('button', { name: '저장' })
@@ -206,7 +215,7 @@ describe('the template screen', () => {
   it('lands on the created template without a guard or a not-found flash', async () => {
     const user = userEvent.setup()
     const creates: FakeTemplatesOptions['creates'] = []
-    renderTemplate('/templates/new', { creates })
+    await renderTemplate('/templates/new', { creates })
 
     await user.type(await screen.findByLabelText('이름'), '카페 방문기')
     await user.click(paletteButton('AI가 쓰는 글'))
@@ -225,7 +234,7 @@ describe('the template screen', () => {
   it('never trims the stored body', async () => {
     const user = userEvent.setup()
     const updates: FakeTemplatesOptions['updates'] = []
-    renderTemplate('/templates/template-padded', {
+    await renderTemplate('/templates/template-padded', {
       templates: [{ id: 'template-padded', name: '여백', body: '\n인트로\n' }],
       updates,
     })
@@ -242,7 +251,7 @@ describe('the template screen', () => {
   // A4: leaving with unsaved changes warns first.
   it('warns before leaving with unsaved changes', async () => {
     const user = userEvent.setup()
-    renderTemplate('/templates/template-review')
+    await renderTemplate('/templates/template-review')
 
     await user.type(await screen.findByLabelText('이름'), '!')
     await user.click(screen.getByRole('link', { name: '← 템플릿 목록' }))
@@ -257,7 +266,7 @@ describe('the template screen', () => {
   it('says an unreadable composition cannot be read and offers only to start it over', async () => {
     const user = userEvent.setup()
     const updates: FakeTemplatesOptions['updates'] = []
-    renderTemplate('/templates/template-broken', {
+    await renderTemplate('/templates/template-broken', {
       templates: [{ id: 'template-broken', name: '옛 템플릿', body: '<write>닫히지 않음' }],
       updates,
     })
@@ -278,7 +287,7 @@ describe('the template screen', () => {
   it('calls no provider and enqueues nothing', async () => {
     const user = userEvent.setup()
     const calls: string[] = []
-    renderTemplate('/templates/template-review', {}, calls)
+    await renderTemplate('/templates/template-review', {}, calls)
 
     await user.type(await screen.findByLabelText('이름'), '!')
     await user.click(screen.getByRole('button', { name: '저장' }))
@@ -295,6 +304,7 @@ describe('the template screen', () => {
       'ListModels',
       'GetSelections',
       'EstimateTemplateRequest',
+      'GetLatestAuthoringSession',
     ]
     expect(calls.filter((call) => !allowed.includes(call))).toEqual([])
     expect(calls).not.toContain('StartTemplateRequest')
@@ -305,7 +315,7 @@ describe('the template screen', () => {
   it('saves a pasted body byte for byte', async () => {
     const user = userEvent.setup()
     const updates: FakeTemplatesOptions['updates'] = []
-    renderTemplate('/templates/template-review', { updates })
+    await renderTemplate('/templates/template-review', { updates })
 
     expect(await screen.findByLabelText('이름')).toHaveValue('정보성 식당 리뷰')
     await user.click(screen.getByRole('tab', { name: '원문' }))
@@ -324,7 +334,7 @@ describe('the template screen', () => {
   // edges (TMPL-6), so a padded paste is clean once saved and shows what was stored.
   it('goes clean on what the server stored, not on the draft it sent', async () => {
     const user = userEvent.setup()
-    renderTemplate('/templates/template-review')
+    await renderTemplate('/templates/template-review')
 
     expect(await screen.findByLabelText('이름')).toHaveValue('정보성 식당 리뷰')
     await user.click(screen.getByRole('tab', { name: '원문' }))
@@ -344,7 +354,7 @@ describe('the template screen', () => {
   // editing the name does not buy a way past it.
   it('refuses to save an unparsable body even after the name is edited', async () => {
     const user = userEvent.setup()
-    renderTemplate('/templates/template-broken', {
+    await renderTemplate('/templates/template-broken', {
       templates: [{ id: 'template-broken', name: '옛 템플릿', body: '<write>닫히지 않음' }],
     })
 
@@ -366,7 +376,7 @@ describe('the template screen', () => {
   // TMPL-30: the unreadable state now has a way to FIX rather than only a way to discard.
   it('sends 원문에서 고치기 to the source with the caret in the text and the error shown', async () => {
     const user = userEvent.setup()
-    renderTemplate('/templates/template-broken', {
+    await renderTemplate('/templates/template-broken', {
       templates: [{ id: 'template-broken', name: '옛 템플릿', body: '<write>닫히지 않음' }],
     })
 
@@ -384,7 +394,7 @@ describe('the template screen', () => {
   // The two modes are two renderings of ONE field: what one writes is what the other shows.
   it('round-trips builder → source → builder without changing the composition', async () => {
     const user = userEvent.setup()
-    renderTemplate('/templates/template-review')
+    await renderTemplate('/templates/template-review')
 
     await screen.findByLabelText('이름')
     await user.click(screen.getByRole('tab', { name: '원문' }))
@@ -402,7 +412,7 @@ describe('a template whose rows ask the post for data', () => {
   // nothing else about the row has to change for the template to have become a different one.
   it('opens 저장 on the flip alone', async () => {
     const user = userEvent.setup()
-    renderTemplate('/templates/new')
+    await renderTemplate('/templates/new')
 
     await user.type(await screen.findByLabelText('이름'), '리뷰')
     await user.click(paletteButton('고정 문구'))
@@ -420,7 +430,7 @@ describe('a template whose rows ask the post for data', () => {
   // save from silently dropping the row the author is looking at.
   it('refuses 저장 while two rows ask under one title, and says so on the row', async () => {
     const user = userEvent.setup()
-    renderTemplate('/templates/new')
+    await renderTemplate('/templates/new')
 
     await user.type(await screen.findByLabelText('이름'), '리뷰')
     await user.click(paletteButton('고정 문구'))
@@ -452,7 +462,7 @@ describe('the title area', () => {
   }
 
   it('comes first, above 템플릿 구성, under the one 블록 · 원문 switch', async () => {
-    renderTemplate('/templates/template-titled', { templates: [TITLED] })
+    await renderTemplate('/templates/template-titled', { templates: [TITLED] })
     await screen.findByLabelText('이름')
 
     // One 블록 · 원문 switch for both texts; the other tablist is the phone's 구성 / 미리보기.
@@ -467,7 +477,7 @@ describe('the title area', () => {
   it('makes the draft dirty on a title edit alone, and saves the title area', async () => {
     const user = userEvent.setup()
     const updates: FakeTemplatesOptions['updates'] = []
-    renderTemplate('/templates/template-review', { updates })
+    await renderTemplate('/templates/template-review', { updates })
 
     const save = await screen.findByRole('button', { name: '저장' })
     expect(save).toBeDisabled()
@@ -487,7 +497,7 @@ describe('the title area', () => {
 
   it('round-trips the title builder → 원문 → builder byte for byte', async () => {
     const user = userEvent.setup()
-    renderTemplate('/templates/template-titled', { templates: [TITLED] })
+    await renderTemplate('/templates/template-titled', { templates: [TITLED] })
     await screen.findByLabelText('이름')
 
     await user.click(screen.getByRole('tab', { name: '원문' }))
@@ -508,7 +518,7 @@ describe('the title area', () => {
   it('refuses 저장 while a body row asks under a title label, and says so on the body row', async () => {
     const user = userEvent.setup()
     const updates: FakeTemplatesOptions['updates'] = []
-    renderTemplate('/templates/template-titled', { templates: [TITLED], updates })
+    await renderTemplate('/templates/template-titled', { templates: [TITLED], updates })
     // Dirty first, so the conflict is the only thing that can hold 저장.
     await user.type(await screen.findByLabelText('이름'), ' 2편')
 
@@ -535,7 +545,7 @@ describe('the title area', () => {
 
   it('refuses 저장 while two title rows ask under one label', async () => {
     const user = userEvent.setup()
-    renderTemplate('/templates/template-titled', { templates: [TITLED] })
+    await renderTemplate('/templates/template-titled', { templates: [TITLED] })
     await screen.findByLabelText('이름')
 
     await user.click(within(titleSection()).getByRole('button', { name: /방문 후기/ }))
@@ -553,7 +563,7 @@ describe('the title area', () => {
   it('lets 저장 through in 원문 once the body row that asked under a title label is gone', async () => {
     const user = userEvent.setup()
     const updates: FakeTemplatesOptions['updates'] = []
-    renderTemplate('/templates/template-titled', { templates: [TITLED], updates })
+    await renderTemplate('/templates/template-titled', { templates: [TITLED], updates })
     await user.type(await screen.findByLabelText('이름'), ' 2편')
 
     const body = bodySection()
@@ -572,7 +582,7 @@ describe('the title area', () => {
 
   it('lets 저장 through in 원문 once the title rows that asked under one label are gone', async () => {
     const user = userEvent.setup()
-    renderTemplate('/templates/template-titled', { templates: [TITLED] })
+    await renderTemplate('/templates/template-titled', { templates: [TITLED] })
     await screen.findByLabelText('이름')
 
     await user.click(within(titleSection()).getByRole('button', { name: /방문 후기/ }))
@@ -592,7 +602,7 @@ describe('the title area', () => {
     const user = userEvent.setup()
     const updates: FakeTemplatesOptions['updates'] = []
     const SPACED: FakeTemplateRow = { ...TITLED, titleArea: ' 방문 후기 ' }
-    renderTemplate('/templates/template-titled', { templates: [SPACED], updates })
+    await renderTemplate('/templates/template-titled', { templates: [SPACED], updates })
 
     const save = await screen.findByRole('button', { name: '저장' })
     expect(save).toBeDisabled()
@@ -612,7 +622,7 @@ describe('the title area', () => {
 
     it('shows the title unreadable, leaves the body alone, and fixes it in 제목 원문', async () => {
       const user = userEvent.setup()
-      renderTemplate('/templates/template-broken-title', { templates: [BROKEN] })
+      await renderTemplate('/templates/template-broken-title', { templates: [BROKEN] })
 
       const title = await screen.findByText(
         '제목 형식을 읽을 수 없어요. 원문에서 직접 고치거나, 비우고 다시 만들 수 있어요.',
@@ -635,7 +645,7 @@ describe('the title area', () => {
     it('empties only the title on 제목 비우고 다시 만들기, and writes nothing until 저장', async () => {
       const user = userEvent.setup()
       const updates: FakeTemplatesOptions['updates'] = []
-      renderTemplate('/templates/template-broken-title', { templates: [BROKEN], updates })
+      await renderTemplate('/templates/template-broken-title', { templates: [BROKEN], updates })
 
       await user.click(await screen.findByRole('button', { name: '제목 비우고 다시 만들기' }))
       expect(
@@ -662,7 +672,7 @@ describe('the title area', () => {
       titleArea: asks(titleAsks, '제목').join(' '),
       body: asks(TEMPLATE_ASK_MAX_PER_BODY - titleAsks + 1, '본문').join('\n'),
     }
-    renderTemplate('/templates/template-over', { templates: [OVER] })
+    await renderTemplate('/templates/template-over', { templates: [OVER] })
     await screen.findByLabelText('이름')
 
     expect(within(bodySection()).getByRole('alert')).toHaveTextContent(

@@ -50,6 +50,7 @@ describe('video template workflow', () => {
     const { router } = mount('/video-templates')
     const region = within(await screen.findByRole('region', { name: '저장된 영상 템플릿' }))
     await user.click(await region.findByRole('link', { name: /여행/ }))
+    await user.click(await screen.findByRole('button', { name: '직접 편집' }))
     expect(await screen.findByLabelText('템플릿 이름')).toHaveValue('여행')
     expect(router.state.location.pathname).toBe('/video-templates/owned')
     expect(
@@ -61,6 +62,7 @@ describe('video template workflow', () => {
   it('keeps edits after a localized server refusal', async () => {
     const user = userEvent.setup()
     mount('/video-templates/owned', { saveFails: true })
+    await user.click(await screen.findByRole('button', { name: '직접 편집' }))
     const name = await screen.findByLabelText('템플릿 이름')
     await user.clear(name)
     await user.type(name, '실패해도 보존')

@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link, useParams, useSearch } from '@tanstack/react-router'
+import { Link, useNavigate, useParams, useSearch } from '@tanstack/react-router'
 import { twMerge } from 'tailwind-merge'
 import { useSession } from '@/entities/session'
+import { AIAuthoringStudio } from '@/widgets/ai-authoring-studio'
 import {
   TEMPLATE_LIMITS,
   TEMPLATE_MAX_PER_ACCOUNT,
@@ -113,13 +114,74 @@ export function TemplatePage() {
   // being typed. `stored` is the baseline the dirty check compares against, and it only moves
   // when the user's own save lands.
   return (
-    <Editor
+    <TemplateAuthoringPage
       key={stored?.id ?? 'new'}
       ownerId={ownerId}
       stored={stored}
       sampleSlug={stored ? undefined : from}
       templateCount={templates.length}
+      onPublished={refetch}
     />
+  )
+}
+
+function TemplateAuthoringPage({
+  ownerId,
+  stored,
+  sampleSlug,
+  templateCount,
+  onPublished,
+}: {
+  ownerId: string
+  stored: Template | undefined
+  sampleSlug?: string
+  templateCount: number
+  onPublished: () => void
+}) {
+  const { t } = useTranslation('authoring')
+  const { t: templateText } = useTranslation('templates')
+  const navigate = useNavigate()
+  const [manual, setManual] = useState(Boolean(sampleSlug))
+  const [busy, setBusy] = useState(false)
+  if (manual)
+    return (
+      <Editor
+        ownerId={ownerId}
+        stored={stored}
+        sampleSlug={sampleSlug}
+        templateCount={templateCount}
+      />
+    )
+  return (
+    <main className={pageStyles({ width: 'board', className: 'flex flex-1 flex-col py-8' })}>
+      <BackLink />
+      <Typography variant="display" className="mt-6">
+        {stored?.name ?? templateText('page.new')}
+      </Typography>
+      <AIAuthoringStudio
+        ownerId={ownerId}
+        kind="post-template"
+        targetId={stored?.id}
+        onBusyChange={setBusy}
+        onSaved={(saved) => {
+          onPublished()
+          void navigate({
+            to: '/templates/$templateId',
+            params: { templateId: saved.id },
+            replace: true,
+          })
+        }}
+        className="mt-8"
+      />
+      <Button
+        variant="ghost"
+        className="mt-8 self-start"
+        disabled={busy}
+        onClick={() => setManual(true)}
+      >
+        {t('host.manual')}
+      </Button>
+    </main>
   )
 }
 

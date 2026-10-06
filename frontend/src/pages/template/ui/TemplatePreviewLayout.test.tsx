@@ -14,6 +14,7 @@ describe('the template preview on the template screen', () => {
   it('redraws on every edit of the draft', async () => {
     const user = userEvent.setup()
     renderAppAt('/templates/new', { user: USER, templates: { templates: [] } })
+    await userEvent.setup().click(await screen.findByRole('button', { name: '직접 편집' }))
     await screen.findByLabelText('이름')
     expect(
       preview().getByText('구성에 블록을 추가하면 여기에 미리보기가 보여요.'),
@@ -36,6 +37,7 @@ describe('the template preview on the template screen', () => {
   it('switches between the composition and the preview below lg', async () => {
     const user = userEvent.setup()
     renderAppAt('/templates/new', { user: USER, templates: { templates: [] } })
+    await userEvent.setup().click(await screen.findByRole('button', { name: '직접 편집' }))
     await screen.findByLabelText('이름')
 
     const views = screen.getByRole('tablist', { name: '구성과 미리보기' })

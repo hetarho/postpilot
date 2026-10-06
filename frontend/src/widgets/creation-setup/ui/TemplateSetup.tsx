@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useRef, useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   canSaveTemplate,
@@ -17,11 +17,68 @@ import {
   validateClipRecipe,
 } from '@/entities/clip-template'
 import type { SetupController } from '@/features/complete-setup'
+import { AuthoringEditor, AuthoringPreview } from '@/features/ai-authoring'
 import { appFailureFromConnect } from '@/shared/api'
 import { formatAppFailure } from '@/shared/lib'
 import { Button, FieldLabel, FieldMessage, TextField, Typography } from '@/shared/ui'
 const EMPTY_CLIP_BODY = '<clip version="1"/>'
 export function TemplateSetup({
+  ownerId,
+  kind,
+  controller,
+}: {
+  ownerId: string
+  kind: 'post-template' | 'clip-template'
+  controller: SetupController
+}) {
+  const { t } = useTranslation('authoring')
+  const [manual, setManual] = useState(false)
+  const [studioBusy, setStudioBusy] = useState(false)
+  const operation = useRef<number | null>(null)
+  const studioKind = kind === 'post-template' ? 'post-template' : 'video-template'
+  const onBusy = (busy: boolean) => {
+    setStudioBusy(busy)
+    if (busy && operation.current === null) {
+      const started = controller.begin(kind)
+      if (started !== null) {
+        operation.current = started
+        controller.running(kind, started)
+      }
+    } else if (!busy && operation.current !== null) {
+      controller.success(kind, operation.current, false)
+      operation.current = null
+    }
+  }
+  if (manual) return <ManualTemplateSetup ownerId={ownerId} kind={kind} controller={controller} />
+  return (
+    <div className="space-y-6">
+      <AuthoringEditor
+        ownerId={ownerId}
+        kind={studioKind}
+        onBusyChange={onBusy}
+        renderPreview={(artifact) => <AuthoringPreview kind={studioKind} artifact={artifact} />}
+        onSaved={(saved) => {
+          if (!saved.id) return
+          const pending = operation.current
+          operation.current = null
+          if (pending !== null) controller.success(kind, pending, true)
+          else controller.next(true)
+        }}
+      />
+      <Button
+        variant="ghost"
+        disabled={studioBusy}
+        onClick={() => {
+          if (operation.current === null) setManual(true)
+        }}
+      >
+        {t('host.manual')}
+      </Button>
+    </div>
+  )
+}
+
+function ManualTemplateSetup({
   ownerId,
   kind,
   controller,

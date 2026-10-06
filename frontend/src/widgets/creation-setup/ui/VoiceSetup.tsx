@@ -1,4 +1,5 @@
 import { useLatestWritingVoiceCandidates } from '@/entities/voice-candidate'
+import { useLatestAuthoringSession } from '@/entities/ai-authoring'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Sparkles, MessageCircle, ArrowLeft } from 'lucide-react'
@@ -16,9 +17,10 @@ import { MakeVoiceButton } from '@/features/make-voice'
 import { PasteMaterialSheet } from '@/features/paste-voice-material'
 import { VoiceQuestionnaire } from '@/features/answer-voice-prompt'
 import { GeneratedWritingVoices } from '@/features/generate-writing-voices'
+import { AuthoringEditor, AuthoringPreview } from '@/features/ai-authoring'
 import { Button, FieldMessage, Notice, Typography } from '@/shared/ui'
 
-type LearningMethod = 'auto' | 'choose' | 'questions' | 'ai'
+type LearningMethod = 'auto' | 'choose' | 'questions' | 'ai' | 'legacy'
 export function VoiceSetup({
   ownerId,
   controller,
@@ -31,7 +33,18 @@ export function VoiceSetup({
   const [voiceId, setVoiceId] = useState(unfinished?.id ?? '')
   const [method, setMethod] = useState<LearningMethod>(unfinished ? 'questions' : 'auto')
   const priorCandidates = useLatestWritingVoiceCandidates(method === 'auto' ? ownerId : '')
-  const activeMethod = method === 'auto' ? (priorCandidates.batch?.jobId ? 'ai' : 'choose') : method
+  const priorAuthoring = useLatestAuthoringSession({
+    ownerId: method === 'auto' ? ownerId : '',
+    kind: 'writing-voice',
+  })
+  const activeMethod =
+    method === 'auto'
+      ? priorAuthoring.data?.id
+        ? 'ai'
+        : priorCandidates.batch?.jobId
+          ? 'legacy'
+          : 'choose'
+      : method
   const [startedJobId, setStartedJobId] = useState('')
   const [confirmationFailed, setConfirmationFailed] = useState(false)
   const [createFailed, setCreateFailed] = useState(false)
@@ -174,6 +187,31 @@ export function VoiceSetup({
       </div>
     )
   if (activeMethod === 'ai')
+    return (
+      <div className="space-y-6">
+        <AuthoringEditor
+          ownerId={ownerId}
+          kind="writing-voice"
+          initialMakeDefault
+          onBusyChange={onChildBusy}
+          renderPreview={(artifact) => (
+            <AuthoringPreview kind="writing-voice" artifact={artifact} />
+          )}
+          onSaved={(saved) => {
+            if (!saved.id) return
+            const operation = childOperation.current
+            childOperation.current = null
+            if (operation !== null) success('voice', operation, true)
+            else controller.next(true)
+          }}
+        />
+        <Button variant="ghost" disabled={busy} onClick={() => setMethod('choose')}>
+          <ArrowLeft aria-hidden="true" className="size-4" />
+          {t('setup.voice.otherMethod')}
+        </Button>
+      </div>
+    )
+  if (activeMethod === 'legacy')
     return (
       <div className="space-y-6">
         <GeneratedWritingVoices ownerId={ownerId} onAdopted={adopted} onBusyChange={onChildBusy} />

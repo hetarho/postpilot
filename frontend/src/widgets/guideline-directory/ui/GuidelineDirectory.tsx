@@ -18,6 +18,7 @@ import {
 } from '@/entities/guideline'
 import { useSession } from '@/entities/session'
 import { CreateGuidelineSheet } from '@/features/create-guideline'
+import { AuthoringSheet } from '@/features/ai-authoring'
 import { DeleteGuidelineButton } from '@/features/delete-guideline'
 import { GuidelineEditForm } from '@/features/edit-guideline'
 import {
@@ -74,6 +75,8 @@ export function GuidelineDirectory({
   // A refused 적용 안함 is said here, not on its row: the write is optimistic, so the row it was
   // pressed on has already left the list when the refusal arrives (GUIDE-43).
   const [stopRefusal, setStopRefusal] = useState('')
+  const [authoringOpen, setAuthoringOpen] = useState(createOpen)
+  const { t: authoringText } = useTranslation('authoring')
 
   return (
     <main className={pageStyles({ width: 'wide', className: 'flex flex-1 flex-col' })}>
@@ -124,7 +127,12 @@ export function GuidelineDirectory({
                   />
                 ))}
                 {guidelines.map((guideline) => (
-                  <GuidelineRow key={guideline.id} ownerId={ownerId} guideline={guideline} />
+                  <GuidelineRow
+                    key={guideline.id}
+                    ownerId={ownerId}
+                    guideline={guideline}
+                    onPublished={refetch}
+                  />
                 ))}
               </ul>
             </section>
@@ -141,10 +149,27 @@ export function GuidelineDirectory({
             className="mt-auto flex gap-2"
           >
             <DefaultGuidelineSheet ownerId={ownerId} kind={kind} />
+            <Button variant="cta" onClick={() => setAuthoringOpen(true)}>
+              {authoringText(kind === 'clip' ? 'host.createVideoGuide' : 'host.createGuide')}
+            </Button>
+            <AuthoringSheet
+              open={authoringOpen}
+              onOpenChange={(open) => {
+                setAuthoringOpen(open)
+                if (!open) onCreateClosed?.()
+              }}
+              ownerId={ownerId}
+              kind={kind === 'clip' ? 'video-guideline' : 'post-guideline'}
+              onSaved={() => {
+                refetch()
+                setAuthoringOpen(false)
+                onCreateClosed?.()
+              }}
+            />
             <CreateGuidelineSheet
               ownerId={ownerId}
               kind={kind}
-              initialOpen={createOpen}
+              initialOpen={false}
               onClosed={onCreateClosed}
             />
           </ActionBar>
@@ -212,10 +237,20 @@ function DefaultGuidelineItem({
 /** One of the owner's guidelines (GUIDE-47): closed, its title — or its text when it has none —
  *  and its scope's kind; open, the text, the scope in full, and 수정 · 삭제. 수정 turns the open
  *  row into one form for the title, the text and the scope. */
-function GuidelineRow({ ownerId, guideline }: { ownerId: string; guideline: Guideline }) {
+function GuidelineRow({
+  ownerId,
+  guideline,
+  onPublished,
+}: {
+  ownerId: string
+  guideline: Guideline
+  onPublished: () => void
+}) {
   const { t } = useTranslation(['guidelines', 'common'])
   const update = useUpdateGuidelineCall(ownerId, guideline.id, guideline.kind)
   const [editing, setEditing] = useState(false)
+  const [authoringOpen, setAuthoringOpen] = useState(false)
+  const { t: authoringText } = useTranslation('authoring')
   return (
     <li>
       <Disclosure
@@ -276,6 +311,20 @@ function GuidelineRow({ ownerId, guideline }: { ownerId: string; guideline: Guid
                   <GuidelineScopeBadges guideline={guideline} />
                 </div>
               )}
+              <Button variant="secondary" className="mt-3" onClick={() => setAuthoringOpen(true)}>
+                {authoringText('host.refine')}
+              </Button>
+              <AuthoringSheet
+                open={authoringOpen}
+                onOpenChange={setAuthoringOpen}
+                ownerId={ownerId}
+                kind={guideline.kind === 'clip' ? 'video-guideline' : 'post-guideline'}
+                targetId={guideline.id}
+                onSaved={() => {
+                  onPublished()
+                  setAuthoringOpen(false)
+                }}
+              />
             </>
           )}
         </div>

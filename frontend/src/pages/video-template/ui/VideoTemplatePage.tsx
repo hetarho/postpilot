@@ -1,8 +1,10 @@
-import { Link, useParams } from '@tanstack/react-router'
+import { useState } from 'react'
+import { Link, useNavigate, useParams } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { useClipTemplates } from '@/entities/clip-template'
 import { useSession } from '@/entities/session'
 import { ClipTemplateEditor } from '@/features/edit-clip-template'
+import { AIAuthoringStudio } from '@/widgets/ai-authoring-studio'
 import { Button, Notice, Typography, pageStyles, typographyStyles } from '@/shared/ui'
 
 /** One video template, created or edited — the same screen for both, in the shape
@@ -18,6 +20,10 @@ export function VideoTemplatePage() {
   const ownerId = user?.id ?? ''
   const { templates, isPending, isError, isFetching, refetch } = useClipTemplates(ownerId)
   const stored = templateId ? templates.find((template) => template.id === templateId) : undefined
+  const [manual, setManual] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const navigate = useNavigate()
+  const { t: authoringText } = useTranslation('authoring')
 
   if (isError) {
     return (
@@ -61,14 +67,43 @@ export function VideoTemplatePage() {
   }
 
   return (
-    <main className={pageStyles({ width: 'wide', className: 'flex flex-1 flex-col' })}>
+    <main className={pageStyles({ width: 'board', className: 'flex flex-1 flex-col' })}>
       <BackLink />
       {/* The record's own name, not a fixed 영상 템플릿 편집: a directory-item form's heading IS
           its identity, and a fixed label makes two templates' screens indistinguishable. */}
       <Typography variant="display" className="mt-2 block">
         {stored ? stored.name : t('editor.create', { ns: 'clips' })}
       </Typography>
-      <ClipTemplateEditor key={stored?.id ?? 'new'} ownerId={ownerId} stored={stored} />
+      {manual ? (
+        <ClipTemplateEditor key={stored?.id ?? 'new'} ownerId={ownerId} stored={stored} />
+      ) : (
+        <>
+          <AIAuthoringStudio
+            key={stored?.id ?? 'new'}
+            ownerId={ownerId}
+            kind="video-template"
+            targetId={stored?.id}
+            onBusyChange={setBusy}
+            onSaved={(saved) => {
+              void refetch()
+              void navigate({
+                to: '/video-templates/$templateId',
+                params: { templateId: saved.id },
+                replace: true,
+              })
+            }}
+            className="mt-8"
+          />
+          <Button
+            variant="ghost"
+            className="mt-8 self-start"
+            disabled={busy}
+            onClick={() => setManual(true)}
+          >
+            {authoringText('host.manual')}
+          </Button>
+        </>
+      )}
     </main>
   )
 }

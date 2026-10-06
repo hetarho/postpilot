@@ -1160,15 +1160,23 @@ describe('the guideline candidate section', () => {
 // TMPL-61: the template request's 지침 만들기 lands here with `?new=1`, which opens an empty new
 // guideline at once; closing it drops the parameter so a reload does not open it again.
 describe('/guidelines?new=1', () => {
-  it('opens an empty new guideline and drops the parameter on close', async () => {
+  it('opens the AI guideline draft without generating work and drops the parameter on close', async () => {
     const user = userEvent.setup()
-    const { router } = renderAppAt('/guidelines?new=1', { user: USER })
-    const sheet = await screen.findByRole('dialog', { name: '새 지침' })
-    expect(within(sheet).getByLabelText('지침')).toHaveValue('')
+    const calls: string[] = []
+    const { router } = renderAppAt('/guidelines?new=1', { user: USER, calls })
+    const sheet = await screen.findByRole('dialog', {
+      name: '마음에 드는 작문 지침, 함께 만들어요',
+    })
+    expect(within(sheet).queryByLabelText('지침')).not.toBeInTheDocument()
+    expect(await within(sheet).findByRole('button', { name: '8가지 추천받기' })).toBeInTheDocument()
+    await waitFor(() => expect(calls).toContain('GetLatestAuthoringSession'))
+    expect(calls.filter((call) => /^(Start|Analyze|Create|SaveAuthoring)/.test(call))).toEqual([])
 
     await user.keyboard('{Escape}')
     await waitFor(() =>
-      expect(screen.queryByRole('dialog', { name: '새 지침' })).not.toBeInTheDocument(),
+      expect(
+        screen.queryByRole('dialog', { name: '마음에 드는 작문 지침, 함께 만들어요' }),
+      ).not.toBeInTheDocument(),
     )
     await waitFor(() => expect(router.state.location.search).toEqual({}))
   })

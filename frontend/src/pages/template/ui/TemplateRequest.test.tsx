@@ -38,7 +38,7 @@ function job(status: string, extra: Partial<FakeGenerationJobRow> = {}): FakeGen
   return { id: JOB, kind: 'template_request', status, stage: 'write', ...extra }
 }
 
-function renderEditor(
+async function renderEditor(
   at: string,
   {
     templates = {},
@@ -52,13 +52,16 @@ function renderEditor(
     extra?: RenderAppOptions
   } = {},
 ) {
-  return renderAppAt(at, {
+  const rendered = renderAppAt(at, {
     user: USER,
     providers,
     jobs: { jobs },
     templates: { templates: [STORED], ...templates },
     ...extra,
   })
+  if (!at.includes('?from='))
+    await userEvent.setup().click(await screen.findByRole('button', { name: '직접 편집' }))
+  return rendered
 }
 
 const box = () => screen.getByRole('region', { name: 'AI에게 템플릿 요청' })
@@ -69,13 +72,13 @@ const send = () => within(box()).getByRole('button', { name: '요청 보내기' 
 // draft holds anything.
 describe('where the request box stands', () => {
   it('is open on an empty new template', async () => {
-    renderEditor('/templates/new')
+    await renderEditor('/templates/new')
     expect(await screen.findByRole('region', { name: 'AI에게 템플릿 요청' })).toBeInTheDocument()
   })
 
   it('is a collapsed button on a stored template, and collapsing keeps the text', async () => {
     const user = userEvent.setup()
-    renderEditor('/templates/template-review')
+    await renderEditor('/templates/template-review')
     await user.click(await screen.findByRole('button', { name: 'AI에게 요청' }))
     await user.type(field(), '사진 줄을 2장으로')
     await user.click(within(box()).getByRole('button', { name: '접기' }))
@@ -86,7 +89,7 @@ describe('where the request box stands', () => {
 
 describe('what the box says before it is pressed', () => {
   it('names the 글 작성 모델 and what one request costs', async () => {
-    renderEditor('/templates/new', { templates: { requestEstimate: { credits: 3 } } })
+    await renderEditor('/templates/new', { templates: { requestEstimate: { credits: 3 } } })
     expect(
       await within(await screen.findByRole('region', { name: 'AI에게 템플릿 요청' })).findByText(
         '라이터로 만들어요 · 약 3 크레딧',
@@ -95,17 +98,19 @@ describe('what the box says before it is pressed', () => {
   })
 
   it('says 무료 for a free model', async () => {
-    renderEditor('/templates/new', { templates: { requestEstimate: { free: true } } })
+    await renderEditor('/templates/new', { templates: { requestEstimate: { free: true } } })
     expect(await screen.findByText('라이터로 만들어요 · 무료')).toBeInTheDocument()
   })
 
   it('names no figure when none can be stated', async () => {
-    renderEditor('/templates/new')
+    await renderEditor('/templates/new')
     expect(await screen.findByText('라이터로 만들어요')).toBeInTheDocument()
   })
 
-  it('is refused with a route to model selection when no writer is chosen', async () => {
-    renderEditor('/templates/new', { providers: { models: WRITER.models } })
+  it('is refused with a route to model selection when no enabled writer can be prepared', async () => {
+    await renderEditor('/templates/new', {
+      providers: { models: [{ ...WRITER.models[0]!, disabledReason: 'no_key' }] },
+    })
     const reason = await screen.findByText(/글 작성 모델을 먼저 선택하세요/)
     expect(within(reason).getByRole('link', { name: '모델 선택하기' })).toHaveAttribute(
       'href',
@@ -120,12 +125,12 @@ describe('what the box says before it is pressed', () => {
       name: `템플릿 ${i}`,
     }))
     const user = userEvent.setup()
-    const first = renderEditor('/templates/new', { templates: { templates: many } })
+    const first = await renderEditor('/templates/new', { templates: { templates: many } })
     expect(await screen.findByText(/템플릿을 더 만들 수 없어요/)).toBeInTheDocument()
     expect(send()).toBeDisabled()
     first.unmount()
 
-    renderEditor('/templates/template-0', { templates: { templates: many } })
+    await renderEditor('/templates/template-0', { templates: { templates: many } })
     await user.click(await screen.findByRole('button', { name: 'AI에게 요청' }))
     await user.type(field(), '고쳐 줘')
     expect(send()).toBeEnabled()
@@ -136,7 +141,7 @@ describe('a request', () => {
   it('sends the explicit writer, the UI language, the text and the whole draft', async () => {
     const user = userEvent.setup()
     const requestStarts: FakeTemplateRequestStart[] = []
-    renderEditor('/templates/template-review', { templates: { requestStarts } })
+    await renderEditor('/templates/template-review', { templates: { requestStarts } })
     await user.click(await screen.findByRole('button', { name: 'AI에게 요청' }))
     await user.type(field(), '  사진 줄을 2장으로  ')
     await user.click(send())
@@ -158,7 +163,7 @@ describe('a request', () => {
 
   it('puts the answer in the draft, lists the wishes, and undoes back to the draft before it', async () => {
     const user = userEvent.setup()
-    renderEditor('/templates/template-review', { templates: { requestResult: ANSWER } })
+    await renderEditor('/templates/template-review', { templates: { requestResult: ANSWER } })
     await user.click(await screen.findByRole('button', { name: 'AI에게 요청' }))
     await user.type(field(), '맛집 리뷰로')
     await user.click(send())
@@ -186,7 +191,7 @@ describe('a request', () => {
   it('locks the draft while it runs, and 취소 stops it', async () => {
     const user = userEvent.setup()
     const requestCancels: string[] = []
-    renderEditor('/templates/new', { jobs: [job('running')], templates: { requestCancels } })
+    await renderEditor('/templates/new', { jobs: [job('running')], templates: { requestCancels } })
     await user.type(await screen.findByRole('textbox', { name: 'AI에게 템플릿 요청' }), '맛집 리뷰')
     await user.click(send())
 
@@ -200,7 +205,7 @@ describe('a request', () => {
   it('cancels the request when the owner leaves while it runs', async () => {
     const user = userEvent.setup()
     const requestCancels: string[] = []
-    renderEditor('/templates/new', { jobs: [job('running')], templates: { requestCancels } })
+    await renderEditor('/templates/new', { jobs: [job('running')], templates: { requestCancels } })
     await user.type(await screen.findByRole('textbox', { name: 'AI에게 템플릿 요청' }), '맛집 리뷰')
     await user.click(send())
     await within(box()).findByText(/템플릿을 만드는 중이에요/)
@@ -213,7 +218,7 @@ describe('a request', () => {
 
   it('keeps the text and the draft when the request fails', async () => {
     const user = userEvent.setup()
-    renderEditor('/templates/template-review', {
+    await renderEditor('/templates/template-review', {
       jobs: [job('failed', { failureReason: 'TEMPLATE_REQUEST_ANSWER_INVALID' })],
     })
     await user.click(await screen.findByRole('button', { name: 'AI에게 요청' }))
@@ -229,7 +234,7 @@ describe('a request', () => {
 
   it('renders a refused start in place and keeps the text', async () => {
     const user = userEvent.setup()
-    renderEditor('/templates/new', {
+    await renderEditor('/templates/new', {
       templates: { requestRefusal: { reason: 'TEMPLATE_REQUEST_RUNNING' } },
     })
     await user.type(await screen.findByRole('textbox', { name: 'AI에게 템플릿 요청' }), '맛집 리뷰')
@@ -246,7 +251,7 @@ describe('a template started from a post', () => {
   it('attaches the post as a chip, sends it as the sample, and lets the text stay blank', async () => {
     const user = userEvent.setup()
     const requestStarts: FakeTemplateRequestStart[] = []
-    renderEditor('/templates/new?from=20260820-final', {
+    await renderEditor('/templates/new?from=20260820-final', {
       templates: { requestStarts },
       extra: {
         posts: { posts: [finalizedPostRow({ slug: '20260820-final', title: '성수 카페' })] },
@@ -260,7 +265,7 @@ describe('a template started from a post', () => {
 
   it('makes an ordinary request once the chip is removed', async () => {
     const user = userEvent.setup()
-    renderEditor('/templates/new?from=20260820-final', {
+    await renderEditor('/templates/new?from=20260820-final', {
       extra: {
         posts: { posts: [finalizedPostRow({ slug: '20260820-final', title: '성수 카페' })] },
       },

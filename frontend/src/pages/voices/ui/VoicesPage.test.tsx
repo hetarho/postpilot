@@ -63,7 +63,11 @@ describe('the voice directory', () => {
     // Both creation methods live in the dock, outside the saved voices.
     expect(screen.queryByLabelText('말투 이름')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: '새 말투 만들기' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'AI 말투 추천받기' })).toBeInTheDocument()
+    expect(
+      screen
+        .getAllByRole('button', { name: 'AI 말투 추천받기' })
+        .find((button) => !button.closest('details')),
+    ).toBeInTheDocument()
 
     const deleted = await deletedGroup()
     expect(deleted.getByRole('link', { name: '옛 말투' })).toBeInTheDocument()
@@ -112,7 +116,10 @@ describe('the voice directory', () => {
         },
       })
       const { router } = renderAppAt('/voices', { user: USER, transport })
-      const trigger = await screen.findByRole('button', { name: 'AI 말투 추천받기' })
+      const disclosure = (await screen.findByText('이전에 만든 말투 이어보기')).closest('details')!
+      expect(disclosure).not.toHaveAttribute('open')
+      await user.click(within(disclosure).getByText('이전에 만든 말투 이어보기'))
+      const trigger = within(disclosure).getByRole('button', { name: 'AI 말투 추천받기' })
       expect(procedures.filter((name) => /WritingVoiceCandidate/.test(name))).toEqual([])
       expect(screen.queryByRole('dialog')).toBeNull()
 

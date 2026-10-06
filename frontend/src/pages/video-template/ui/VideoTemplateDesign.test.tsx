@@ -17,8 +17,14 @@ const template = {
   outroPreset: 'e' as const,
   allowedCaptionStyles: ['neon'],
 }
-const mount = (clips: FakeClipsOptions = {}, path = '/video-templates/owned') =>
-  renderAppAt(path, { user: { id: 'alice' }, clips: { templates: [template], ...clips } })
+const mount = async (clips: FakeClipsOptions = {}, path = '/video-templates/owned') => {
+  const rendered = renderAppAt(path, {
+    user: { id: 'alice' },
+    clips: { templates: [template], ...clips },
+  })
+  await userEvent.setup().click(await screen.findByRole('button', { name: '직접 편집' }))
+  return rendered
+}
 const preview = () => within(screen.getByRole('region', { name: '구성 미리보기' }))
 const save = () => screen.getByRole('button', { name: '저장' })
 
@@ -28,7 +34,7 @@ describe('a video template’s design selection', () => {
   it('opens in the stored selection, edits the draft from the preview and saves it all', async () => {
     const user = userEvent.setup()
     const writes: ClipRecipe[] = []
-    mount({ writes })
+    await mount({ writes })
     await screen.findByRole('region', { name: '구성 미리보기' })
     const intro = preview().getByRole('combobox', { name: /^인트로 디자인/ })
     expect(intro).toHaveAccessibleName('인트로 디자인 매거진 커버')
@@ -70,7 +76,7 @@ describe('a video template’s design selection', () => {
   it('saves a selection of no styles as one', async () => {
     const user = userEvent.setup()
     const writes: ClipRecipe[] = []
-    mount({ writes })
+    await mount({ writes })
     await screen.findByRole('region', { name: '구성 미리보기' })
     const styles = preview().getByRole('group', { name: '자막 스타일' })
     await user.click(within(styles).getByRole('checkbox', { name: '네온 사인' }))
@@ -83,7 +89,7 @@ describe('a video template’s design selection', () => {
   it('leaves the selection out of the source and a pasted source leaves it alone', async () => {
     const user = userEvent.setup()
     const writes: ClipRecipe[] = []
-    mount({ writes })
+    await mount({ writes })
     await user.click(await screen.findByRole('tab', { name: '원문' }))
     const source = screen.getByRole('textbox', { name: '원문' })
     expect((source as HTMLTextAreaElement).value).not.toMatch(/cover|neon/)
@@ -102,7 +108,7 @@ describe('a video template’s design selection', () => {
   it('starts a new template at a new project’s design and creates it with the choice', async () => {
     const user = userEvent.setup()
     const writes: ClipRecipe[] = []
-    mount({ templates: [], writes }, '/video-templates/new')
+    await mount({ templates: [], writes }, '/video-templates/new')
     await user.type(await screen.findByLabelText('템플릿 이름'), '새 템플릿')
     const intro = preview().getByRole('combobox', { name: /^인트로 디자인/ })
     expect(intro).toHaveAccessibleName('인트로 디자인 A 크기만')

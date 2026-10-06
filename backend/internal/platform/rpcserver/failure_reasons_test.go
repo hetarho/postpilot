@@ -226,6 +226,12 @@ func collectReason(into map[string]bool, name string, value ast.Expr) {
 	if !strings.Contains(strings.ToLower(name), "reason") {
 		return
 	}
+	if selector, ok := value.(*ast.SelectorExpr); ok {
+		if reason, typed := strings.CutPrefix(selector.Sel.Name, "FailureReason_"); typed && reasonShape.MatchString(reason) {
+			into[reason] = true
+		}
+		return
+	}
 	literal, ok := value.(*ast.BasicLit)
 	if !ok || literal.Kind != token.STRING {
 		return

@@ -20,18 +20,20 @@ const SHAPED: FakeTemplateRow = {
   tagCount: 7,
 }
 
-function renderTemplate(path: string, options: FakeTemplatesOptions = {}) {
-  return renderAppAt(path, {
+async function renderTemplate(path: string, options: FakeTemplatesOptions = {}) {
+  const rendered = renderAppAt(path, {
     user: USER,
     templates: { templates: [QUIET, SHAPED], ...options },
   })
+  await userEvent.setup().click(await screen.findByRole('button', { name: '직접 편집' }))
+  return rendered
 }
 
 /** TMPL-49: the two numbers are authored on the template screen, behind their own 사용 tick,
  *  as part of the one draft behind the one 저장. */
 describe("a template's generation numbers", () => {
   it('opens a stored template with both numbers ticked and shown', async () => {
-    renderTemplate('/templates/template-review')
+    await renderTemplate('/templates/template-review')
 
     expect(await screen.findByLabelText('목표 글자 수 사용')).toBeChecked()
     expect(screen.getByLabelText('태그 수 사용')).toBeChecked()
@@ -40,7 +42,7 @@ describe("a template's generation numbers", () => {
   })
 
   it('shows a template with no opinion as unticked, with no field at all', async () => {
-    renderTemplate('/templates/template-quiet')
+    await renderTemplate('/templates/template-quiet')
 
     expect(await screen.findByLabelText('목표 글자 수 사용')).not.toBeChecked()
     expect(screen.getByLabelText('태그 수 사용')).not.toBeChecked()
@@ -52,7 +54,7 @@ describe("a template's generation numbers", () => {
   // session outranks the default when the tick returns.
   it('fills the default on ticking and keeps what was typed across an untick', async () => {
     const user = userEvent.setup()
-    renderTemplate('/templates/template-quiet')
+    await renderTemplate('/templates/template-quiet')
 
     await user.click(await screen.findByLabelText('목표 글자 수 사용'))
     expect(screen.getByLabelText('목표 글자 수')).toHaveValue(1000)
@@ -72,7 +74,7 @@ describe("a template's generation numbers", () => {
   it('makes the draft dirty and sends both numbers in the one save', async () => {
     const user = userEvent.setup()
     const updates: FakeTemplatesOptions['updates'] = []
-    renderTemplate('/templates/template-quiet', { updates })
+    await renderTemplate('/templates/template-quiet', { updates })
 
     const save = await screen.findByRole('button', { name: '저장' })
     expect(save).toBeDisabled()
@@ -92,7 +94,7 @@ describe("a template's generation numbers", () => {
   it('clears a stored number by unticking it', async () => {
     const user = userEvent.setup()
     const updates: FakeTemplatesOptions['updates'] = []
-    renderTemplate('/templates/template-review', { updates })
+    await renderTemplate('/templates/template-review', { updates })
 
     await user.click(await screen.findByLabelText('태그 수 사용'))
     await user.click(screen.getByRole('button', { name: '저장' }))
@@ -105,7 +107,7 @@ describe("a template's generation numbers", () => {
   it('blocks the save on a number outside the range and says so under the field', async () => {
     const user = userEvent.setup()
     const updates: FakeTemplatesOptions['updates'] = []
-    renderTemplate('/templates/template-review', { updates })
+    await renderTemplate('/templates/template-review', { updates })
 
     const tags = await screen.findByLabelText('태그 수')
     await user.clear(tags)
@@ -123,7 +125,7 @@ describe("a template's generation numbers", () => {
   // TMPL-49: the numbers are not part of the body, so the composition never shows them.
   it('keeps the numbers out of the composition and the source view', async () => {
     const user = userEvent.setup()
-    renderTemplate('/templates/template-review')
+    await renderTemplate('/templates/template-review')
 
     await user.click(await screen.findByRole('tab', { name: '원문' }))
     expect(screen.getByLabelText('원문')).toHaveValue(SHAPED.body)

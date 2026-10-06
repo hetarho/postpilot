@@ -18,8 +18,14 @@ const template = {
   name: '장면 템플릿',
   compositionBody: body,
 }
-const mount = (clips: FakeClipsOptions = {}, path = '/video-templates/owned') =>
-  renderAppAt(path, { user: { id: 'alice' }, clips: { templates: [template], ...clips } })
+const mount = async (clips: FakeClipsOptions = {}, path = '/video-templates/owned') => {
+  const rendered = renderAppAt(path, {
+    user: { id: 'alice' },
+    clips: { templates: [template], ...clips },
+  })
+  await userEvent.setup().click(await screen.findByRole('button', { name: '직접 편집' }))
+  return rendered
+}
 const source = async () => {
   await userEvent.click(await screen.findByRole('tab', { name: '원문' }))
   return screen.getByRole('textbox', { name: '원문' })
@@ -31,7 +37,7 @@ describe('composition template authoring', () => {
       writes: ClipRecipe[] = []
     const original =
       '<clip version=\'1\'>\n<group id="menu" max="3"><field id="name" label="메뉴 이름"/></group>\n<stage name="외관">  keep &amp; spacing  </stage>\n<text id="intro" kind="fixed" role="hook"/><text id="outro" kind="fixed" role="ending"/></clip>'
-    mount({ templates: [{ ...template, compositionBody: original }], writes })
+    await mount({ templates: [{ ...template, compositionBody: original }], writes })
     await user.click(await screen.findByRole('button', { name: '항목 묶음 1' }))
     expect(screen.getByLabelText('항목 묶음 이름')).toHaveValue('')
     expect(screen.getByLabelText('최소 항목 개수')).toHaveValue('0')
@@ -55,7 +61,7 @@ describe('composition template authoring', () => {
 
   it('keeps untouched source byte-exact across keyboard mode switches and never saves on open', async () => {
     const calls: string[] = []
-    mount({ calls })
+    await mount({ calls })
     expect(await source()).toHaveValue(body)
     const sourceTab = screen.getByRole('tab', { name: '원문' })
     sourceTab.focus()
@@ -70,7 +76,7 @@ describe('composition template authoring', () => {
   it('renames a field without changing identity or unrelated literal bytes', async () => {
     const user = userEvent.setup(),
       writes: ClipRecipe[] = []
-    mount({ writes })
+    await mount({ writes })
     await user.click(await screen.findByRole('button', { name: '장소' }))
     const label = screen.getByRole('textbox', { name: '정보 이름' })
     await user.clear(label)
@@ -89,7 +95,7 @@ describe('composition template authoring', () => {
   })
   it('preserves malformed pasted source, rejects save and recovers after correction', async () => {
     const writes: ClipRecipe[] = []
-    mount({ writes })
+    await mount({ writes })
     const input = await source()
     // A template declares no timing at all (CLIP-66), and the refusal names the
     // entry that declared one.
@@ -117,7 +123,7 @@ describe('composition template authoring', () => {
   it('copies exact source and a parseable external-AI guide without paid calls', async () => {
     const user = userEvent.setup(),
       calls: string[] = []
-    mount({ calls })
+    await mount({ calls })
     await user.click(await screen.findByRole('button', { name: '원문 복사' }))
     expect(await navigator.clipboard.readText()).toBe(body)
     await user.click(screen.getByRole('button', { name: '형식 안내 복사' }))
@@ -152,7 +158,7 @@ describe('composition template authoring', () => {
   it('creates a template with one save and its design only beside the preview', async () => {
     const user = userEvent.setup(),
       writes: ClipRecipe[] = []
-    const { router } = mount({ writes }, '/video-templates/new')
+    const { router } = await mount({ writes }, '/video-templates/new')
     await user.type(await screen.findByLabelText('템플릿 이름'), '새 구성')
     // The design selection stands beside the preview, never in front of the body (CLIP-42).
     const preview = screen.getByRole('region', { name: '구성 미리보기' })
@@ -187,14 +193,14 @@ describe('composition template authoring', () => {
   })
   it('opens a template without writing and reports unavailable generation capability', async () => {
     const calls: string[] = []
-    mount({ compositionPlanVersion: 4, calls })
+    await mount({ compositionPlanVersion: 4, calls })
     expect(await screen.findByText(/서버에서 아직/)).toBeInTheDocument()
     expect(await source()).toHaveValue(body)
     expect(calls).not.toContain('UpdateVideoTemplate')
   })
   it('offers only the information, stages and visible entries a template may declare', async () => {
     const user = userEvent.setup()
-    mount()
+    await mount()
     await screen.findByRole('button', { name: '장소' })
     for (const name of [
       '정보 추가',
@@ -227,7 +233,7 @@ describe('composition template authoring', () => {
   })
   it('reorders and deletes every kind of entry, regions included', async () => {
     const user = userEvent.setup()
-    mount()
+    await mount()
     // The intro entry is an outline row like any other now (CLIP-112): it can be
     // moved and removed, and the body's order is what the list shows.
     const before = parseClipTemplate(((await source()) as HTMLTextAreaElement).value)
@@ -254,7 +260,7 @@ describe('composition template authoring', () => {
 
   it('a text carries no role of its own and no timing at all', async () => {
     const user = userEvent.setup()
-    mount()
+    await mount()
     await user.click(await screen.findByRole('button', { name: '공개 문구' }))
     expect(screen.queryByRole('combobox', { name: /^문구 용도/ })).not.toBeInTheDocument()
     // Where an entry stands in the outline is the only position it declares
@@ -268,7 +274,7 @@ describe('composition template authoring', () => {
   })
   it('offers a caption neither a position nor an alignment', async () => {
     const user = userEvent.setup()
-    mount()
+    await mount()
     await screen.findByRole('button', { name: '장소' })
     await user.click(screen.getByRole('button', { name: '자막 추가' }))
     await user.click(await screen.findByRole('tab', { name: '구성 편집' }))
@@ -285,7 +291,7 @@ describe('composition template authoring', () => {
 
 it('refuses a paste only for what the grammar cannot read, naming its entry', async () => {
   const writes: ClipRecipe[] = []
-  mount({ writes })
+  await mount({ writes })
   expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   const input = await source()
   // Readable and complete: a caption, three intro lines and a stage are all
@@ -315,7 +321,7 @@ it('refuses a paste only for what the grammar cannot read, naming its entry', as
 it('accepts an outro entry holding more lines than a preset draws', async () => {
   // How many of them are drawn is the project's preset to decide, and the
   // surplus is a CLIP-108 notice at render rather than a refusal here.
-  mount({
+  await mount({
     templates: [
       {
         ...template,
@@ -338,7 +344,7 @@ describe('builder rows open in place', () => {
 
   it('opens an entry inside its own row with its delete there, one row at a time', async () => {
     const user = userEvent.setup()
-    mount()
+    await mount()
     const place = await screen.findByRole('button', { name: '장소' })
     await user.click(place)
     const editor = screen.getByRole('region', { name: '장소' })
@@ -356,7 +362,7 @@ describe('builder rows open in place', () => {
 
   it('opens a new entry for typing', async () => {
     const user = userEvent.setup()
-    mount()
+    await mount()
     await screen.findByRole('button', { name: '장소' })
     await user.click(screen.getByRole('button', { name: '정보 추가' }))
     const field = await screen.findByLabelText('정보 이름')
@@ -365,7 +371,7 @@ describe('builder rows open in place', () => {
 
   it('keeps the open row on its entry while it is moved', async () => {
     const user = userEvent.setup()
-    mount()
+    await mount()
     const outro = await screen.findByRole('button', { name: '아웃트로' })
     await user.click(outro)
     const moveUp = within(rowOf(outro)).getByRole('button', { name: '위로 이동' })

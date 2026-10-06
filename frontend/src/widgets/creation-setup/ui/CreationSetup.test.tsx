@@ -234,6 +234,7 @@ it('authors and saves a post template once before advancing, retaining content o
   const calls: string[] = []
   mountFresh({ voice: READY.voice, templates: { creates, calls, createFails: true } })
   const user = userEvent.setup()
+  await user.click(await screen.findByRole('button', { name: '직접 편집' }))
   await user.type(await screen.findByLabelText('템플릿 이름'), '일상 글')
   await user.click(
     within(screen.getByRole('group', { name: '블록 추가' })).getByRole('button', {
@@ -307,6 +308,7 @@ it('creates a valid post template exactly once and advances from its confirmed s
   const creates: FakeTemplatesOptions['creates'] = []
   const first = mountFresh({ voice: READY.voice, templates: { creates } })
   const user = userEvent.setup()
+  await user.click(await screen.findByRole('button', { name: '직접 편집' }))
   await user.type(await screen.findByLabelText('템플릿 이름'), '내 글 구성')
   await user.click(
     within(screen.getByRole('group', { name: '블록 추가' })).getByRole('button', {
@@ -340,6 +342,7 @@ it('saves a clip template once before offering completion', async () => {
   const calls: string[] = []
   const { router } = renderAppAt('/', { ...READY, clips: { templates: [], calls } })
   const user = userEvent.setup()
+  await user.click(await screen.findByRole('button', { name: '직접 편집' }))
   await user.type(await screen.findByLabelText('템플릿 이름'), '내 영상 구성')
   await user.dblClick(screen.getByRole('button', { name: '저장하고 계속' }))
   expect(
@@ -355,6 +358,7 @@ it('retains a clip template after a failed save', async () => {
   const calls: string[] = []
   renderAppAt('/', { ...READY, clips: { templates: [], calls, saveFails: true } })
   const user = userEvent.setup()
+  await user.click(await screen.findByRole('button', { name: '직접 편집' }))
   await user.type(await screen.findByLabelText('템플릿 이름'), '내 영상 구성')
   await user.click(screen.getByRole('button', { name: '저장하고 계속' }))
   await waitFor(() => expect(calls).toContain('CreateVideoTemplate'))
