@@ -1,5 +1,5 @@
 # QUOTA plans, credits, metering
-> r35 | Paid plans grant daily AI credits and monthly bonuses with model access; Max alone includes commercial server exports, while browser exports spend no export count. AI work reserves and settles confirmed usage at a job-frozen KRW conversion; BILL owns payments and refunds.
+> r36 | Paid plans grant daily AI credits and monthly bonuses with model access; Max alone includes commercial server exports, while browser exports spend no export count. AI work reserves and settles confirmed usage at a job-frozen KRW conversion; BILL owns payments and refunds.
 
 ## decisions
 - QUOTA-1 [o] every account carries exactly one plan `free | light | basic | pro | max | master`; free is the provisioning default, light/basic/pro/max are paid offers and master is operator-only. Stored plans and wire mappings reject unknown values without renumbering existing enum identities.
@@ -32,9 +32,9 @@
   - daily, monthly bonus, voucher and compensation credits participate by their actual expiry, so a sooner-expiring voucher may precede a daily grant
   - expired remainders stay in history and never roll over; unused daily allowance does not accumulate and requires no login claim
   - paid grants renew once per eligible window under QUOTA-37, atomically with balance/admission operations
-- QUOTA-13 [o] every model-consuming job start (`generate` `revise` `extract_memory` `analyze_voice` `check_voice` `model_experiment`, post storyline jobs →GEN-68 →GEN-69, template requests →TMPL-58, and voice-design, billable voice-confirmation and speech-generation jobs →DUB) passes one shared enqueue admission gate (`job.Queue.Enqueue`, consumer-declared Admitter wired in `cmd/api`)
-  - one comparison is one admission covering its two to five candidates and shared preparation (→GEN-29); clip preparation retains QUOTA-43's bounded exception
-  - speech work uses QUOTA-69's enforceable unit budgets rather than the text hold assumptions
+- QUOTA-13 [o] every model-consuming job start, including generation/revision, personal voice analysis/verification, writing-style candidate batches under VOICE-68, memories, comparisons, storylines, template requests and DUB work, passes the shared job.Queue.Enqueue admission gate.
+  - each job reserves its exact planned bounded calls before issuing them; comparisons share their preparation, and clips retain QUOTA-43
+  - default model initialization under MODEL-87 creates no job, reservation or debit
 - QUOTA-14 [o] hold every planned completion call at its worst case: 30 000 prompt tokens (`holdInputTokens`), except clips freeze QUOTA-53's input allowance and a voice analysis (→VOICE-23) holds the larger of 30 000 and one token per Unicode character of the prompt it will send, plus the actual completion budget at the applicable prices; speech uses QUOTA-69's separate unit budgets ← an analysis reads every 학습 글, so a fixed prompt allowance would leave a large corpus's overrun unpaid
   - convert the total once and deduct lots in consumption order in one `BEGIN IMMEDIATE` transaction with admission before the job row, except QUOTA-43's clip preparation
   - the owning context declares every planned call; neither a token fallback nor an implicit retry may price speech
@@ -50,7 +50,7 @@
   - free models are available to all tiers at zero credit cost and zero balance; provider restrictions still apply (→MODEL-68)
   - no credit purchase or voucher unlocks a grade or server exports; each enabled paid feature retains a compatible entry-tier model
   - no fixed model count or access to the complete provider catalog is promised
-- QUOTA-20 [o] model responses distinguish plan entitlement, required plan, compatibility and credit affordability. Higher grades remain visible and locked; insufficient balance or a downgrade never deletes a saved selection or history. New work requires an explicit eligible selection; no silent substitution (→MODEL-24 →MODEL-25).
+- QUOTA-20 [o] model responses distinguish entitlement, compatibility and affordability; higher grades remain visible/locked and insufficient balance or downgrade never deletes saved selections/history. New work uses an eligible concrete ref, including a prepared recommended default under MODEL-87; existing choices are never silently substituted.
 - QUOTA-21 [o] every server-side model call writes one append-only `usage_events` row retained indefinitely: prompt/completion and reported reasoning tokens for completion calls, explicit reported unit evidence for speech calls, and provider cost resolved reported → estimated from sufficiently specified reported usage → unavailable
   - reported reasoning tokens are diagnostic, not priced again; zero reasoning tokens means not reported
   - failed calls preserve reported billable usage; absent usage is unknown rather than a measured zero or the reserved maximum
@@ -202,6 +202,10 @@
   - AI script/flow revision remains separately approved writing work and never silently synthesizes changed speech; expose pending speech and its separate quote
   - caption refresh, visible text/style/position and timeline-only edits remain credit-free
 
+- QUOTA-72 [o] a writing-style candidate batch returns eight choices from one planned bounded write call; candidate count is not billable call count.
+  - display the conservative bounded estimate before explicit generation; freeze model/input/completion budget at admission, apply the shared reservation gate and record every actual issued call
+  - invalid provider output fails without an unreserved automatic retry; regeneration is a new explicit operation
+  - result reads, preview, adoption, questionnaire browsing/answers and default model initialization consume no AI credits; cancellation/failure settles confirmed usage once under QUOTA-46/49/52
 ## flow
 - paid subscribe → BILL confirms payment → first daily grant + monthly bonus/export window; daily access → materialize the current eligible daily grant once; monthly boundary → expire old bonus/counts and open new entitlements while paid
 - AI start → entitlement/compatibility check → free-only work(zero-credit admission) | paid work(freeze FX → estimate → reserve eligible lots) → admitted job → metered calls

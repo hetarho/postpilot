@@ -37,7 +37,14 @@ func (s *Service) PromptProfileForTopic(ctx context.Context, userID, voiceID, re
 		return PromptProfile{}, ErrVoiceNotMade
 	}
 	if target != LanguageKorean {
-		return PromptProfile{Text: portableSection(analysis.Counted), Portable: true}, nil
+		text := portableSection(analysis.Counted)
+		if voiceOrigin := NormalizedOrigin(analysis.Origin); voiceOrigin == OriginSynthetic {
+			text = strings.Replace(text, "These habits were counted from the writer's own Korean posts; apply them to this English post.", "These habits were counted from an AI-created fictional illustration, not this writer's personal writing; apply the style to this English post without copying any facts or phrases.", 1)
+		}
+		return PromptProfile{Text: text, Portable: true}, nil
+	}
+	if NormalizedOrigin(analysis.Origin) == OriginSynthetic {
+		return PromptProfile{Text: koreanSection(*analysis) + "\n[AI가 만든 가상의 말투 예시]\n" + analysis.SyntheticSample, Excerpts: []string{}}, nil
 	}
 	samples, err := s.samples.ListSampleBodies(ctx, userID, voiceID)
 	if err != nil {
@@ -50,7 +57,11 @@ func (s *Service) PromptProfileForTopic(ctx context.Context, userID, voiceID, re
 // AI part. An unknown item has no line; a real "none" says so.
 func koreanSection(analysis Analysis) string {
 	var b strings.Builder
-	b.WriteString("[말투]\n아래는 이 글쓴이가 직접 쓴 글에서 센 습관입니다. 이 습관대로 쓰고, 발췌한 문장의 표현이나 사실은 베끼지 마세요.")
+	if NormalizedOrigin(analysis.Origin) == OriginSynthetic {
+		b.WriteString("[말투]\n아래는 사용자가 고른 AI 생성 스타일의 가상 예시에서 센 습관입니다. 사용자가 직접 쓴 글이나 실제 경험이 아닙니다. 말투만 따르고 예시의 표현이나 사실은 베끼지 마세요.")
+	} else {
+		b.WriteString("[말투]\n아래는 이 글쓴이가 직접 쓴 글에서 센 습관입니다. 이 습관대로 쓰고, 발췌한 문장의 표현이나 사실은 베끼지 마세요.")
+	}
 	for _, line := range countedLines(analysis.Counted) {
 		b.WriteString("\n" + line)
 	}

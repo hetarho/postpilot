@@ -1,6 +1,15 @@
 import type { AppFailureReason } from '@/shared/api'
 
 export const errors = {
+  WRITING_VOICE_CANDIDATE_NOT_FOUND:
+    'This writing style is unavailable. Create a new set of styles.',
+  WRITING_VOICE_CANDIDATES_NOT_READY: 'Your writing styles are still being prepared. Please wait.',
+  WRITING_VOICE_CANDIDATES_RUNNING:
+    'A set of writing styles is already being created. Check its progress.',
+  WRITING_VOICE_CANDIDATE_OUTPUT_INVALID:
+    'Could not finish these writing styles. Please create another set.',
+  WRITING_VOICE_CANDIDATE_MODEL_REQUIRED: 'AI needs to be prepared. Try again or check settings.',
+
   UNKNOWN_FAILURE: 'Could not complete the request. Please try again.',
   AUTH_REQUIRED: 'Log in to continue.',
   INVALID_CREDENTIALS: 'The login ID or password is incorrect.',
@@ -62,7 +71,7 @@ export const errors = {
   VOICE_NOT_READY: 'Not enough writing yet. Fill what the voice needs to 100%.',
   VOICE_PROMPT_NOT_FOUND: 'That prompt does not exist.',
   VOICE_PROMPT_ANSWERED: 'You already answered this prompt. Delete the answer to write it again.',
-  VOICE_ANSWER_REQUIRED: 'Write an answer.',
+  VOICE_ANSWER_REQUIRED: 'Write at least one sentence in Korean, in your usual voice.',
   VOICE_PHOTO_REQUIRED: 'Choose a photo first.',
   VOICE_NO_PREVIOUS_ANALYSIS: 'There is no previous analysis to return to.',
   VOICE_CHECK_PROMPT_UNANSWERED: 'Answer this prompt first.',

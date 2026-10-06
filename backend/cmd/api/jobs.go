@@ -112,6 +112,9 @@ func registerJobs(c *contexts) {
 			ID: found.ID, UserID: found.UserID, WriteModel: found.WriteModel, Payload: found.Payload,
 		}, progress)
 	}))
+	q.Register(job.KindWritingVoiceCandidates, metered(func(ctx context.Context, found job.Job, progress job.Progress) error {
+		return c.voiceCandidates.Run(ctx, voice.CandidateRun{ID: found.ID, UserID: found.UserID, WriteModel: found.WriteModel, Payload: found.Payload}, voice.Progress(progress))
+	}))
 	registerClipJobs(q, c.clipGeneration, c.clipSources)
 	q.Register(clip.JobKindSpeech, metered(c.clipSpeech.Run))
 	q.OnTerminal(clip.JobKindSpeech, func(ctx context.Context, j job.Job, _ time.Time) error { return c.clipSpeech.OnTerminal(ctx, j) })

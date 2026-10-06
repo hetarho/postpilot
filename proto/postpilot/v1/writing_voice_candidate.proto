@@ -1,0 +1,50 @@
+syntax = "proto3";
+package postpilot.v1;
+import "postpilot/v1/provider.proto";
+import "postpilot/v1/voice.proto";
+option go_package = "github.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1";
+
+// Account-owned, explicit, one-call writing-style batches. Reads and adoption call no AI.
+service WritingVoiceCandidateService {
+  rpc EstimateWritingVoiceCandidates(EstimateWritingVoiceCandidatesRequest) returns (EstimateWritingVoiceCandidatesResponse) {}
+  rpc StartWritingVoiceCandidates(StartWritingVoiceCandidatesRequest) returns (StartWritingVoiceCandidatesResponse) {}
+  rpc GetWritingVoiceCandidates(GetWritingVoiceCandidatesRequest) returns (GetWritingVoiceCandidatesResponse) {}
+  rpc GetLatestWritingVoiceCandidates(GetLatestWritingVoiceCandidatesRequest) returns (GetLatestWritingVoiceCandidatesResponse) {}
+  rpc CancelWritingVoiceCandidates(CancelWritingVoiceCandidatesRequest) returns (CancelWritingVoiceCandidatesResponse) {}
+  rpc AdoptWritingVoiceCandidate(AdoptWritingVoiceCandidateRequest) returns (AdoptWritingVoiceCandidateResponse) {}
+}
+message WritingVoiceCandidate {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  string sample = 4;
+}
+message EstimateWritingVoiceCandidatesRequest { ModelRef write_model = 1; }
+message EstimateWritingVoiceCandidatesResponse {
+  optional int32 credits = 1;
+  bool free = 2;
+}
+message StartWritingVoiceCandidatesRequest { ModelRef write_model = 1; }
+message StartWritingVoiceCandidatesResponse { string job_id = 1; }
+message GetWritingVoiceCandidatesRequest { string job_id = 1; }
+message GetWritingVoiceCandidatesResponse {
+  string job_id = 1;
+  repeated WritingVoiceCandidate candidates = 2;
+}
+message GetLatestWritingVoiceCandidatesRequest {}
+message GetLatestWritingVoiceCandidatesResponse {
+  // Latest attempt, including failed/cancelled/running work, for durable status recovery.
+  string job_id = 1;
+  // Latest successful batch remains visible while a replacement runs or fails.
+  string result_job_id = 2;
+  repeated WritingVoiceCandidate candidates = 3;
+}
+message CancelWritingVoiceCandidatesRequest { string job_id = 1; }
+message CancelWritingVoiceCandidatesResponse {}
+message AdoptWritingVoiceCandidateRequest {
+  string job_id = 1;
+  string candidate_id = 2;
+  // Applied only on first adoption; duplicates preserve later explicit changes.
+  bool make_default = 3;
+}
+message AdoptWritingVoiceCandidateResponse { Voice voice = 1; }

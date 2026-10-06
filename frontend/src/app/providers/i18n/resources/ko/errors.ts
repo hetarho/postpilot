@@ -1,6 +1,15 @@
 import type { AppFailureReason } from '@/shared/api'
 
 export const errors = {
+  WRITING_VOICE_CANDIDATE_NOT_FOUND: '이 말투 후보를 찾을 수 없어요. 새 스타일을 만들어 주세요.',
+  WRITING_VOICE_CANDIDATES_NOT_READY: '아직 말투 후보를 준비하고 있어요. 잠시만 기다려 주세요.',
+  WRITING_VOICE_CANDIDATES_RUNNING:
+    '이미 말투 후보를 만들고 있어요. 진행 중인 작업을 확인해 주세요.',
+  WRITING_VOICE_CANDIDATE_OUTPUT_INVALID:
+    '말투 후보를 완성하지 못했어요. 다시 만들기를 눌러 주세요.',
+  WRITING_VOICE_CANDIDATE_MODEL_REQUIRED:
+    'AI 준비가 필요해요. 다시 시도하거나 설정을 확인해 주세요.',
+
   UNKNOWN_FAILURE: '요청을 마치지 못했어요. 다시 시도해 주세요.',
   AUTH_REQUIRED: '로그인이 필요해요.',
   INVALID_CREDENTIALS: '아이디 또는 비밀번호가 맞지 않아요.',
@@ -62,7 +71,7 @@ export const errors = {
   VOICE_NOT_READY: '학습 글이 아직 부족해요. 말투 학습에 필요한 정보를 100% 채워 주세요.',
   VOICE_PROMPT_NOT_FOUND: '없는 문항이에요.',
   VOICE_PROMPT_ANSWERED: '이미 답한 문항이에요. 답을 지우면 다시 쓸 수 있어요.',
-  VOICE_ANSWER_REQUIRED: '답을 써 주세요.',
+  VOICE_ANSWER_REQUIRED: '평소 말투로 한글 문장을 하나 적어 주세요.',
   VOICE_PHOTO_REQUIRED: '사진을 먼저 골라 주세요.',
   VOICE_NO_PREVIOUS_ANALYSIS: '되돌릴 이전 분석이 없어요.',
   VOICE_CHECK_PROMPT_UNANSWERED: '먼저 이 문항에 답해 주세요.',

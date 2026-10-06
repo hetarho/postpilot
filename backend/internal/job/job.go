@@ -25,7 +25,8 @@ const (
 	// KindTemplateRequest is the template request (TMPL-58): one draft's name, description,
 	// title area and body written by the 글 작성 모델. It belongs to the account alone — the
 	// draft it writes into is the browser's, not a row.
-	KindTemplateRequest = "template_request"
+	KindTemplateRequest        = "template_request"
+	KindWritingVoiceCandidates = "writing_voice_candidates"
 
 	StatusQueued    = "queued"
 	StatusRunning   = "running"

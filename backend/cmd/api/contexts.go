@@ -86,6 +86,7 @@ type contexts struct {
 	memory           *memory.Service
 	provider         *provider.Service
 	voice            *voice.Service
+	voiceCandidates  *voice.CandidateService
 	spoken           *spoken.Service
 	spokenGeneration *spokenapp.GenerationService
 	generation       *generation.Service
@@ -329,6 +330,11 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 		voicestore.New(handle.Writer, handle.Reader),
 		voiceModels{registry: c.metered},
 		voiceJobs{queue: c.jobs, budget: cfg.LLMCompletionBudget},
+	)
+	c.voiceCandidates = voice.NewCandidateService(
+		voiceCandidateModels{registry: c.metered, dispatch: jobstore.New(handle.Writer, handle.Reader, jobKinds())},
+		voiceCandidateJobs{queue: c.jobs}, voicestore.New(handle.Writer, handle.Reader),
+		cfg.LLMCompletionBudget, voiceCandidateEstimates{rates: c.ledger},
 	)
 	c.voice.ConfigurePhotos(voiceObjects{bucket: p.bucket}, voice.PhotoLimits{
 		PutTTL: cfg.PresignPutTTL, GetTTL: cfg.PresignGetTTL, MaxBytes: cfg.MaxImageBytes,

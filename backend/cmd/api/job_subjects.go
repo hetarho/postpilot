@@ -21,13 +21,13 @@ import (
 func jobKinds() jobstore.Kinds {
 	return jobstore.Kinds{
 		Deferred:    []string{clip.JobKindSpeech, clip.JobKindGenerate, clip.JobKindRender, clip.JobKindSampleBrowserRender, clip.JobKindRevise, clip.JobKindStoryline, clip.JobKindReviseStoryline},
-		Cancellable: []string{clip.JobKindSpeech, clip.JobKindGenerate, clip.JobKindRender, clip.JobKindSampleBrowserRender, clip.JobKindRevise, clip.JobKindStoryline, clip.JobKindReviseStoryline, job.KindTemplateRequest, spoken.JobKindDesign, spoken.JobKindConfirm, spoken.JobKindProbe},
-		Authorized:  []string{clip.JobKindSpeech, clip.JobKindGenerate, clip.JobKindRevise, clip.JobKindStoryline, clip.JobKindReviseStoryline, spoken.JobKindDesign, spoken.JobKindConfirm, spoken.JobKindProbe},
+		Cancellable: []string{clip.JobKindSpeech, clip.JobKindGenerate, clip.JobKindRender, clip.JobKindSampleBrowserRender, clip.JobKindRevise, clip.JobKindStoryline, clip.JobKindReviseStoryline, job.KindTemplateRequest, job.KindWritingVoiceCandidates, spoken.JobKindDesign, spoken.JobKindConfirm, spoken.JobKindProbe},
+		Authorized:  []string{clip.JobKindSpeech, clip.JobKindGenerate, clip.JobKindRevise, clip.JobKindStoryline, clip.JobKindReviseStoryline, spoken.JobKindDesign, spoken.JobKindConfirm, spoken.JobKindProbe, job.KindWritingVoiceCandidates},
 		FirstStages: map[string]string{
 			clip.JobKindSpeech:   "speech",
 			spoken.JobKindDesign: spoken.JobKindDesign, spoken.JobKindConfirm: spoken.JobKindConfirm, spoken.JobKindProbe: spoken.JobKindProbe,
 			clip.JobKindGenerate: "prepare", clip.JobKindRevise: "prepare", clip.JobKindStoryline: "prepare", clip.JobKindReviseStoryline: "prepare",
-			job.KindAnalyzeVoice: "analyze", job.KindCheckVoice: "write", job.KindRevise: "write",
+			job.KindAnalyzeVoice: "analyze", job.KindCheckVoice: "write", job.KindRevise: "write", job.KindWritingVoiceCandidates: "write",
 		},
 	}
 }
@@ -41,7 +41,9 @@ func approvedCeilingKinds() []string {
 
 // ownerCancellableKinds is work admitted without an approved ceiling that its owner may still
 // stop: the template request (TMPL-63). Its settlement charges confirmed usage only (QUOTA-49).
-func ownerCancellableKinds() []string { return []string{job.KindTemplateRequest} }
+func ownerCancellableKinds() []string {
+	return []string{job.KindTemplateRequest, job.KindWritingVoiceCandidates}
+}
 
 // jobCancellation is the one rule the queue asks before it accepts a stop: the clip work below,
 // and a template request under the cancellation policy it was enqueued with. A template request
@@ -49,14 +51,14 @@ func ownerCancellableKinds() []string { return []string{job.KindTemplateRequest}
 type jobCancellation struct{ clip clipCancellation }
 
 func (c jobCancellation) Kind(kind string) bool {
-	return kind == job.KindTemplateRequest || spoken.IsJobKind(kind) || c.clip.Kind(kind)
+	return kind == job.KindTemplateRequest || kind == job.KindWritingVoiceCandidates || spoken.IsJobKind(kind) || c.clip.Kind(kind)
 }
 
 func (c jobCancellation) Allowed(kind string, cancellationPolicyVersion int) bool {
 	if spoken.IsJobKind(kind) {
 		return cancellationPolicyVersion == 1
 	}
-	if kind == job.KindTemplateRequest {
+	if kind == job.KindTemplateRequest || kind == job.KindWritingVoiceCandidates {
 		return cancellationPolicyVersion == templateRequestCancellationPolicy
 	}
 	return c.clip.Allowed(kind, cancellationPolicyVersion)

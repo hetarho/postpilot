@@ -55,4 +55,6 @@ func (jobReporting) SafeStage(kind, stage string) (string, bool) {
 }
 
 // Clip failures may wrap subprocess stderr, media paths or provider bodies.
-func (jobReporting) Redacted(kind string) bool { return clip.IsJobKind(kind) || spoken.IsJobKind(kind) }
+func (jobReporting) Redacted(kind string) bool {
+	return clip.IsJobKind(kind) || spoken.IsJobKind(kind) || kind == job.KindWritingVoiceCandidates
+}

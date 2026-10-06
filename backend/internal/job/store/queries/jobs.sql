@@ -165,3 +165,10 @@ WHERE status IN ('queued','running') AND cancel_requested_at IS NOT NULL
 UPDATE generation_jobs SET updated_at=updated_at
 WHERE id=sqlc.arg(id) AND user_id=sqlc.arg(user_id) AND kind IN (SELECT value FROM json_each(sqlc.arg(kinds)))
  AND status='running' AND cancel_requested_at IS NULL;
+
+-- name: LatestOwnedKind :one
+SELECT * FROM generation_jobs
+WHERE user_id=sqlc.arg(user_id) AND kind=sqlc.arg(kind)
+ AND post_slug IS NULL AND voice_id IS NULL AND clip_project_id IS NULL
+ AND (sqlc.arg(status_filter)='' OR status=sqlc.arg(status_filter))
+ORDER BY created_at DESC,id DESC LIMIT 1;
