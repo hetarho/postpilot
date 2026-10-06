@@ -81,14 +81,13 @@
 | T602 | Authorize and verify browser-prepared analysis artifacts | ARCH CLIP QUOTA | T591 | todo |
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | todo |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | todo |
-| T621 | Establish readable responsive typography and guided hierarchy | THEME | - | doing@261007.ty |
 
 ## next
-- Implement and commit T621 typography hierarchy.
 - Check the existing browser-media work-group board before claiming another remaining task.
 - Existing blocked qualification and render-capacity work remain separate.
 
 ## log
+- 261007 T621 done: typography b152f586 and final voice-context 4d634b14;3468 FE tests,145 browser measurements and all available unchanged-source/tooling gates pass
 - 261007 create-task THEME r27 done; T621 start: shared type scale, focused role assignment and browser hierarchy verification
 - 261007 update-ssot THEME r27 done: coherent responsive title/body scale and active-stage hierarchy
 - 261007 update-ssot THEME start: responsive typography scale, active-step hierarchy and readable supporting copy
@@ -108,4 +107,3 @@
 - 261007 T613 done: durable five-kind sessions, request replay, frozen bounded calls, revision/account fences and interrupted-save recovery pass24 core/RPC/SQLite tests
 - 261007 task commits: T613 e8335bb1, T614 199dd222, T615 d98cca13, T616 4b9e6f5a; existing render-capacity source bytes preserved
 - 261007 T616 start: root integrates default AI template/guideline/voice entrypoints while isolated backend and Studio proposals proceed
-- 261007 T613-T615 start: root owns main/codegen/commits; isolated core, publication and Studio proposals execute in parallel
