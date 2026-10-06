@@ -89,6 +89,12 @@ func runCommand(args []string) bool {
 		return false
 	}
 	ctx := context.Background()
+	if args[0] == "analysis-quality" {
+		if err := runAnalysisQuality(ctx, args[1:], os.Stdout); err != nil {
+			fatal("analysis-quality", err)
+		}
+		return true
+	}
 	if args[0] == "spoken-qualification" {
 		if err := runSpokenQualification(ctx, args[1:], os.Stdout); err != nil {
 			fatal("spoken-qualification", err)
