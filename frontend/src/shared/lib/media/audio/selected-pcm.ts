@@ -1,4 +1,5 @@
-import type { SelectedAudioRange, PcmChannels } from '@/shared/lib'
+import type { SelectedAudioRange } from './range-audio'
+import type { PcmChannels } from './processing-types'
 
 /** Only the bounded guard window is resampled. Its absolute common-lattice
  * origin keeps 44.1k/48k windows in the same phase as a whole-source decode. */

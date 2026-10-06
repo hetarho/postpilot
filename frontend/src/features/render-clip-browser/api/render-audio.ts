@@ -13,13 +13,13 @@ import { CLIP_BROWSER_RENDER, CLIP_DESIGN } from '@/entities/clip-design'
 import {
   createAudioProcessor,
   createAudioRangeReader,
+  canonicalSelectedAudio,
   type EncodedAudioTrack,
   type PcmChannels,
   type OriginalAudioMetadata,
 } from '@/shared/lib'
 import type { BrowserOriginals } from '../lib/originals'
 import { BrowserAudioRenderError, browserAudioPreflight } from '../model/audio-preflight'
-import { canonicalSelectedAudio } from '../lib/selected-audio'
 
 export interface BrowserAudioTrack extends EncodedAudioTrack {
   speechFingerprint?: string

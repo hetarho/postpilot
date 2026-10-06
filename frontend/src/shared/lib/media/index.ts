@@ -8,6 +8,7 @@ export {
 } from './video'
 export { createAudioProcessor } from './audio/processing'
 export { createAudioRangeReader } from './audio/range-reader'
+export { canonicalSelectedAudio } from './audio/selected-pcm'
 export { audioGuardWindow, decodeOriginalAudioRange } from './audio/range-audio'
 export type {
   AudioRangeLimits,

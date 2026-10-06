@@ -157,11 +157,16 @@ export async function decodeOriginalAudioRange(
       throw new MediaRangeError('CLIP_SOURCE_AUDIO_MEMORY_LIMIT')
     signal.throwIfAborted()
     const planes = Array.from({ length: channels }, () => new Float32Array(frames))
-    iterator = new AudioSampleSink(track).samples(window.decodeStart, window.decodeEnd)
+    // A declared audio stream may begin after this source-time selection.
+    // Native first_pts=0 contributes leading silence; it does not seek forward
+    // and move that later sound into an earlier cut.
+    if (window.decodeStart < window.decodeEnd)
+      iterator = new AudioSampleSink(track).samples(window.decodeStart, window.decodeEnd)
     let decodeMs = 0,
       decodedSamples = 0
     for (;;) {
       signal.throwIfAborted()
+      if (!iterator) break
       const began = performance.now()
       const result = await iterator.next()
       decodeMs += performance.now() - began
@@ -198,7 +203,7 @@ export async function decodeOriginalAudioRange(
       }
     }
     signal.throwIfAborted()
-    if (!decodedSamples) throw new MediaRangeError('CLIP_SOURCE_AUDIO_RANGE_EMPTY')
+    if (!decodedSamples && iterator) throw new MediaRangeError('CLIP_SOURCE_AUDIO_RANGE_EMPTY')
     const measurements = reader.measurements()
     return {
       metadata: {

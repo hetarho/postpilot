@@ -1,4 +1,3 @@
-import { canonicalSelectedAudio } from '@/features/render-clip-browser/lib/selected-audio'
 import { renderBrowserAudio } from '@/features/render-clip-browser/api/render-audio'
 import { clipTimelineFixture } from '@/test/clip-editing'
 import {
@@ -6,7 +5,7 @@ import {
   CLIP_AUDIO_PROCESSING,
   clipBrowserEncoderConfig,
 } from '@/entities/clip-preview'
-import { createAudioProcessor, type SelectedAudioRange } from '@/shared/lib'
+import { createAudioProcessor, canonicalSelectedAudio, type SelectedAudioRange } from '@/shared/lib'
 
 declare global {
   interface Window {
