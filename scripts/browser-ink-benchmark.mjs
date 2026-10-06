@@ -95,7 +95,7 @@ try {
   for (const fixture of cases) {
     const result = await page.evaluate(
       (f) => window.browserInkFixtures.run(f),
-      fixture,
+      { ...fixture, renderer: option("--renderer", "canvas") },
     );
     const { png, ...summary } = result;
     writeFileSync(

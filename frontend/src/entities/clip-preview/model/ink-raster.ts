@@ -9,6 +9,7 @@ import {
 import {
   ClipInkError,
   inkNumber,
+  inkRasterDimensions,
   inkRuns,
   inkTextMarkup,
   type InkBox,
@@ -22,6 +23,7 @@ export interface InkDocument {
   bounds: InkBox
   phase?: { x: number; y: number }
   placement?: InkBox
+  rasterScale?: number
 }
 export interface BrowserInkRasterizer {
   measure(text: string, role: InkRole, caption: boolean, signal?: AbortSignal): Promise<InkBox>
@@ -166,13 +168,13 @@ export class ResvgBrowserInk implements BrowserInkRasterizer {
   async render(document: InkDocument, signal?: AbortSignal): Promise<ImageBitmap> {
     const generation = this.generation
     this.check(generation, signal)
-    if (document.bounds.width * document.bounds.height > CLIP_INK.maxSurfacePixels)
-      throw new ClipInkError('CLIP_INK_RESOURCE_LIMIT', document.key)
+    const dimensions = inkRasterDimensions(document.bounds, document.rasterScale)
     await initialize()
     const fontBuffers = await Promise.all(document.fonts.map((f) => this.font(f)))
     this.check(generation, signal)
     const r = new Resvg(document.svg, {
       font: { fontBuffers, defaultFontFamily: document.fonts[0]?.family },
+      fitTo: { mode: 'zoom', value: document.rasterScale ?? 1 },
     })
     try {
       if (
@@ -192,6 +194,8 @@ export class ResvgBrowserInk implements BrowserInkRasterizer {
       }
       try {
         this.check(generation, signal)
+        if (bitmap.width !== dimensions.width || bitmap.height !== dimensions.height)
+          throw new ClipInkError('CLIP_INK_INVALID_GEOMETRY', 'raster dimensions')
       } catch (error) {
         bitmap.close()
         throw error

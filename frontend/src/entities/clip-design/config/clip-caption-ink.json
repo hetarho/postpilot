@@ -1,4 +1,9 @@
 {
+  "nativePainterSources": {
+    "caption_draw.go": "26061d8ffa903cb380a4191d5cdbcf3cce71d92db9a9fffbb87cec8e9e1fac4e",
+    "caption_frame.go": "d851bbb16dc2b5d551336cbc384992ffc735cc48a809b5339370568563ed7ba5",
+    "caption_transform.go": "ad99b6d63b6f35e8de553791ea60145e9e9c44369e5bacee572ed52e32da232a"
+  },
   "styles": {
     "ambient": {
       "bleed": 180,
@@ -833,5 +838,19 @@
       "weight": 800
     }
   },
-  "version": 1
+  "transformPaint": {
+    "black": "#000000",
+    "pop": {
+      "envelopeWords": 4,
+      "onset": 0.05,
+      "rise": 0.3,
+      "stagger": 0.13
+    },
+    "serifRule": "#E9E3D6",
+    "stackInk": "#10130A",
+    "stickerEdge": "#FF3B6B",
+    "version": "pop-exposure-v2",
+    "white": "#FFFFFF"
+  },
+  "version": 2
 }

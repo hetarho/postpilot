@@ -11,7 +11,7 @@ const (
 	NativeWorkerRole         = "native"
 	AnalysisVerificationRole = "analysis-verification"
 	MediaContractVersion     = 3
-	MediaRendererVersion     = "cpu-v2"
+	MediaRendererVersion     = "cpu-v3"
 	MediaAssetVersion        = "assets-v3"
 	MediaCPUProfile          = "cpu"
 	MediaRequestMaxBytes     = 4 << 20

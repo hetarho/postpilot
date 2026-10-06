@@ -1,5 +1,5 @@
 import { CLIP_INK } from '@/entities/clip-design/@x/clip-preview'
-import { ClipInkError } from './ink-typography'
+import { ClipInkError, inkRasterDimensions } from './ink-typography'
 import type { InkDocument } from './ink-raster'
 
 interface GPUResource {
@@ -62,15 +62,10 @@ export class BrowserInkCache {
   async acquire(document: InkDocument, signal?: AbortSignal): Promise<BrowserInkLease> {
     if (signal?.aborted || this.controller.signal.aborted)
       throw new ClipInkError('CLIP_INK_CANCELLED')
+    const dimensions = inkRasterDimensions(document.bounds, document.rasterScale)
     let entry = this.entries.get(document.key)
     if (!entry) {
-      if (
-        ![document.bounds.width, document.bounds.height].every(
-          (value) => Number.isFinite(value) && value > 0,
-        )
-      )
-        throw new ClipInkError('CLIP_INK_INVALID_GEOMETRY')
-      const bytes = Math.ceil(document.bounds.width) * Math.ceil(document.bounds.height) * 4
+      const bytes = dimensions.width * dimensions.height * 4
       this.capacity(bytes)
       const created: Entry = {
         key: document.key,
@@ -91,6 +86,10 @@ export class BrowserInkCache {
           if (this.controller.signal.aborted || this.entries.get(document.key) !== created) {
             bitmap.close()
             throw new ClipInkError('CLIP_INK_CANCELLED')
+          }
+          if (bitmap.width !== dimensions.width || bitmap.height !== dimensions.height) {
+            bitmap.close()
+            throw new ClipInkError('CLIP_INK_INVALID_GEOMETRY', 'raster dimensions')
           }
           created.bitmap = bitmap
           created.pending = false
