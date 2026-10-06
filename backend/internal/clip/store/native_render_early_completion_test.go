@@ -2,6 +2,7 @@ package store_test
 
 import (
 	"errors"
+	"fmt"
 	"net/http/httptest"
 	"testing"
 	"time"
@@ -119,7 +120,7 @@ func TestNativeRenderRestartBeforeFirstParkPreservesAdmittedWork(t *testing.T) {
 			}
 			objects := &recoveryObjects{renderObjects: g.objects, writer: g.h.db.Writer}
 			recovery := clipapp.NewMediaReconciler(g.h.db.Writer, capacityPorts(g.h), g.h.store, g.h.jobs, g.h.queue, objects, time.Minute, nil)
-			if err := recovery.Reconcile(t.Context()); err != nil {
+			if err := recovery.ReconcileStartup(t.Context()); err != nil {
 				t.Fatal(err)
 			}
 			if swept, err := g.h.queue.SweepRunning(t.Context()); err != nil || swept != 0 {
@@ -161,5 +162,68 @@ func TestNativeRenderRestartBeforeFirstParkPreservesAdmittedWork(t *testing.T) {
 				t.Fatal("boot replayed media or paid work in the API")
 			}
 		})
+	}
+}
+
+func TestNativeStartupRecoveryDrainsPagesAndPeriodicRecoveryStaysBounded(t *testing.T) {
+	g := remoteRenderSetup(t, false)
+	parent := g.pick(t)
+	stage, err := g.h.store.MediaStageForJob(t.Context(), parent.ID, clip.MediaRender)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for index := range 200 {
+		id := fmt.Sprintf("000-native-terminal-%03d", index)
+		if _, err := g.h.db.Writer.Exec(`INSERT INTO generation_jobs(id,user_id,clip_project_id,kind,status,created_at,updated_at,payload)
+SELECT ?,user_id,clip_project_id,kind,'failed',created_at,updated_at,payload FROM generation_jobs WHERE id=?`, id, parent.ID); err != nil {
+			t.Fatal(err)
+		}
+		input := stage.MediaStageInput
+		input.ID, input.ParentJobID = id, id
+		if _, err := g.h.store.CreateMediaStage(t.Context(), input, time.Now().Add(-time.Hour)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	objects := &recoveryObjects{renderObjects: g.objects, writer: g.h.db.Writer}
+	recovery := clipapp.NewMediaReconciler(g.h.db.Writer, capacityPorts(g.h), g.h.store, g.h.jobs, g.h.queue, objects, time.Minute, nil)
+	if err := recovery.Reconcile(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	var reconciled int
+	if err := g.h.db.Reader.QueryRow(`SELECT COUNT(*) FROM clip_media_stages WHERE id LIKE '000-native-terminal-%' AND reconciled_at IS NOT NULL`).Scan(&reconciled); err != nil || reconciled != 100 {
+		t.Fatal("periodic recovery exceeded its bounded page", reconciled, err)
+	}
+	if _, err := g.h.jobs.Continuation(t.Context(), parent.ID); !errors.Is(err, job.ErrInvalidWait) {
+		t.Fatal("periodic recovery parked a live handler", err)
+	}
+	if err := recovery.ReconcileStartup(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	if swept, err := g.h.queue.SweepRunning(t.Context()); err != nil || swept != 0 {
+		t.Fatal("later native page was interrupted during boot", swept, err)
+	}
+	wait, err := g.h.jobs.Continuation(t.Context(), parent.ID)
+	if err != nil || wait.State != job.ContinuationWaiting || wait.WaitKey != clipapp.MediaWaitKey(stage.ID) {
+		t.Fatal("later page did not restore its native owner", wait, err)
+	}
+	if err := g.h.db.Reader.QueryRow(`SELECT COUNT(*) FROM clip_media_stages WHERE id LIKE '000-native-terminal-%' AND reconciled_at IS NOT NULL`).Scan(&reconciled); err != nil || reconciled != 200 {
+		t.Fatal("startup did not finish all bounded pages", reconciled, err)
+	}
+	g.preserved(t)
+}
+
+func TestNativePeriodicRecoveryDoesNotParkAnExecutingParent(t *testing.T) {
+	g := remoteRenderSetup(t, false)
+	parent := g.pick(t)
+	objects := &recoveryObjects{renderObjects: g.objects, writer: g.h.db.Writer}
+	recovery := clipapp.NewMediaReconciler(g.h.db.Writer, capacityPorts(g.h), g.h.store, g.h.jobs, g.h.queue, objects, time.Minute, nil)
+	if err := recovery.Reconcile(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := g.h.jobs.Continuation(t.Context(), parent.ID); !errors.Is(err, job.ErrInvalidWait) {
+		t.Fatal("periodic pass created a competing live continuation", err)
+	}
+	if err := g.run(t, parent); !errors.Is(err, job.ErrYield) {
+		t.Fatal("owning handler could not park its native work", err)
 	}
 }
