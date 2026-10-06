@@ -1,10 +1,10 @@
 {
-  "sourceHead": "96dd4ce96d79e0d79f53c95ae125161fcf8abec2",
+  "sourceHead": "b3ec132cb4c8053cdb9e6c20b6ad2230a7331ccc",
   "pipelineSHA256": {
     "frontend/src/shared/lib/media/mux-mp4.ts": "b5912d580a20af48ba1035b1eb33cadf0d53b018bb4b9455896aba1f11b89524",
     "frontend/src/shared/lib/media/square-pixel-mp4.ts": "9ee0643267361f228d5f1270d1d958f4af1c5d01759bd910396f47e2616cbf41",
     "frontend/src/shared/lib/media/index.ts": "fedb1c93d9e1c3d5f78fe82cd9afc696802edc0765bb772b159ae934ed9c5746",
-    "frontend/src/shared/lib/media/analysis-copy.ts": "7e96bf311c7e6e0652871c4895d89fe4690d6f65c4b86cee7dd68fa6c848d101",
+    "frontend/src/shared/lib/media/analysis-copy.ts": "a702f8503a341e764223e30cfc25a4695ce5cda0d4d2ea5ed6a08de08bed765a",
     "frontend/src/shared/lib/media/phase-metrics.ts": "e17d0077d906ed8e0d7364f0a53d80ab49182aa1c202bb1aee80249dd6711a4f",
     "frontend/src/shared/lib/media/video/frame-budget.ts": "e72dc5f7f6f4ccedcaf546dbc974ca3d8930af63b5f61a59f93ec77f1409be6f",
     "frontend/src/shared/lib/media/video/range-source.ts": "be02047486c9f79ca115dd76fc3e297bb47cdcdeee7791b29cd47c8af763b1cd",
@@ -639,5 +639,118 @@
     },
     "generatorActualExecuted": true,
     "scope": "Exact parent backend/proto and complete generator inputs/outputs match. Historical aggregate failures remain failures; successful corrected package runs are not a fabricated aggregate exit0."
+  },
+  "reviewCorrections": {
+    "at": "b3ec132cb4c8053cdb9e6c20b6ad2230a7331ccc",
+    "reviewedHead": "bff9894ee618b9fc5b6b012204f844daaa89471b",
+    "findings": [
+      "P1 authoritative attempt batch identity survives real session ownership transitions",
+      "P2 unbounded EOF sample iteration validates actual source PTS/end and elapsed budget"
+    ],
+    "beforeLogs": {
+      "review-regressions-before.log": {
+        "sha256": "ede52955e6bd6439e1f4c4d4f1d738571cead81593c8563ee3c0e40aadbea07b",
+        "bytes": 5226
+      },
+      "eof-before.log": {
+        "sha256": "1a8a16a4fc51e94d83d25a65606de313ff39ba863ef90d7cb8bee20bcc490c75",
+        "bytes": 1535
+      }
+    },
+    "afterLogs": {
+      "review-regressions-final.log": {
+        "sha256": "ab1f4272b141ea28e0dd7e60157e5335c58284a47c81da35e07d0c421220ee1f",
+        "bytes": 290
+      },
+      "review-correction-focused.log": {
+        "sha256": "6d09590b40e37748cc866e130c3142ec18d8cac025f0db17d988e32bc467d7e8",
+        "bytes": 702
+      },
+      "eof-correction-final.log": {
+        "sha256": "18608391cb2dde931bc3c40a892c42cc7a84858d0dc49ee274129da481d57a18",
+        "bytes": 1730
+      },
+      "normal-eof-correction-final.log": {
+        "sha256": "0e17b183e7589d5d54b5a2cd5f593c733ec9a44f10e37ad42cd33cca0b61b82f",
+        "bytes": 7336
+      }
+    },
+    "normalOriginalMeasurementEquality": {
+      "cases": 9,
+      "fields": [
+        "sourceId",
+        "fingerprint",
+        "provenance",
+        "durationMs",
+        "width",
+        "height",
+        "frameRateNumerator",
+        "frameRateDenominator",
+        "cadenceVerified",
+        "decodedFrames",
+        "hasAudio",
+        "audioRate",
+        "audioChannels"
+      ],
+      "allEqual": true
+    },
+    "nativeCodecReuse": {
+      "marker": "/** A finite random-access mux target.",
+      "unchangedEncodingMuxInspectionAndRetrySuffixSHA256": "066edee51e42744919abff017f18546240e849b1a8be3fea68f2d970da4d24b3",
+      "previousSuffixExactlyEqual": true,
+      "actualNativeCommands": 47,
+      "actualNativeArtifacts": 10,
+      "scope": "Only original EOF measurement and UI selection identity changed. Exact valid-original measurements and encoding/mux/inspection/retry bytes unchanged; original artifact SHA and all native safety/PCM proofs retained."
+    },
+    "sourceSHA256": {
+      "frontend/src/shared/lib/media/analysis-copy.ts": "a702f8503a341e764223e30cfc25a4695ce5cda0d4d2ea5ed6a08de08bed765a",
+      "frontend/src/shared/lib/media/analysis-original.test.ts": "b196350501a3f58b3b2ec3c6436826e5c22702fefda24166c116178ba0f27bb1",
+      "frontend/src/test/browser-media/analysis-entry.ts": "b99d486e77871862c3b62bf05c80741af7e566cccd0b40f96d4842a5c6069b05",
+      "frontend/src/widgets/clip-workspace/model/analysis-ownership.test.tsx": "1bf0fa6799f7547de44d527c1b0dfc6666239b466f1ce1f0818da94105c697e2",
+      "frontend/src/widgets/clip-workspace/model/useClipWorkspace.ts": "7fe1fe51be2f14a7d8176cd33d04ecee8b21ff1f337cc2ca26aa592d0831e986",
+      "scripts/browser-analysis-copy-check.mjs": "c399eb9f776b058b34b5261b87d28f0c24f656f23e2c0eb759020328ddec0b32",
+      "scripts/browser-analysis-span-fixtures.mjs": "5a3556b2d5df3bc1cf2e6f557ef155863033382b8db5ec4b4e10886bd3eec773"
+    },
+    "currentChecks": {
+      "at": "b3ec132cb4c8053cdb9e6c20b6ad2230a7331ccc",
+      "passed": [
+        "focused 10 files/95 tests including real session/widget ownership and original EOF",
+        "frontend lint/format",
+        "TypeScript and Vite production build",
+        "FSD",
+        "style 61 scanner cases and token check",
+        "dev 11 tests with canonical TMPDIR",
+        "retirement 2 tests and absence check",
+        "skills 11 synchronized",
+        "spec 0 errors/46 inherited warnings"
+      ],
+      "logs": {
+        "correction-final-focused.log": {
+          "sha256": "e20b77af8061d3e628561c396243b225c1cb44060568be8345130b7499768f53",
+          "bytes": 703,
+          "exit": 0
+        },
+        "correction-final-lint.log": {
+          "sha256": "990eb979f9154071d71727b8179cad70ce282b72421f8a8e101536b90fb4f52d",
+          "bytes": 695,
+          "exit": 0
+        },
+        "correction-final-build.log": {
+          "sha256": "61c832ffc4cb3d1c4ddfbb3706c3f7f508aa0f80bfeedfd71ede03584664aabb",
+          "bytes": 10421,
+          "exit": 0
+        },
+        "correction-final-dev.log": {
+          "sha256": "8bdb2e4caef194dd77f924fc47e0684cf7ff23887e97d6ccffbb1a763c93e2b1",
+          "bytes": 1380,
+          "exit": 0
+        },
+        "correction-final-spec.log": {
+          "sha256": "d86f2a0b89d5b33059b8be8d067abb0700ca795e23a12d1a556723edd38ee174",
+          "bytes": 6350,
+          "exit": 0
+        }
+      }
+    }
   }
 }

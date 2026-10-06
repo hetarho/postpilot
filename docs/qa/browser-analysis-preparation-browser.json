@@ -1043,12 +1043,12 @@
     }
   ],
   "sourceEvidence": {
-    "verifiedCodeHead": "96dd4ce96d79e0d79f53c95ae125161fcf8abec2",
+    "verifiedCodeHead": "b3ec132cb4c8053cdb9e6c20b6ad2230a7331ccc",
     "pipelineSHA256": {
       "frontend/src/shared/lib/media/mux-mp4.ts": "b5912d580a20af48ba1035b1eb33cadf0d53b018bb4b9455896aba1f11b89524",
       "frontend/src/shared/lib/media/square-pixel-mp4.ts": "9ee0643267361f228d5f1270d1d958f4af1c5d01759bd910396f47e2616cbf41",
       "frontend/src/shared/lib/media/index.ts": "fedb1c93d9e1c3d5f78fe82cd9afc696802edc0765bb772b159ae934ed9c5746",
-      "frontend/src/shared/lib/media/analysis-copy.ts": "7e96bf311c7e6e0652871c4895d89fe4690d6f65c4b86cee7dd68fa6c848d101",
+      "frontend/src/shared/lib/media/analysis-copy.ts": "a702f8503a341e764223e30cfc25a4695ce5cda0d4d2ea5ed6a08de08bed765a",
       "frontend/src/shared/lib/media/phase-metrics.ts": "e17d0077d906ed8e0d7364f0a53d80ab49182aa1c202bb1aee80249dd6711a4f",
       "frontend/src/shared/lib/media/video/frame-budget.ts": "e72dc5f7f6f4ccedcaf546dbc974ca3d8930af63b5f61a59f93ec77f1409be6f",
       "frontend/src/shared/lib/media/video/range-source.ts": "be02047486c9f79ca115dd76fc3e297bb47cdcdeee7791b29cd47c8af763b1cd",
@@ -1083,7 +1083,7 @@
       "frontend/src/features/prepare-clip-browser/lib/encoder.ts": "555085d2cc15d82cd800ac4b7894f762a759c21152f5f900b8af9334f956aa44",
       "frontend/src/features/prepare-clip-browser/lib/analysis.worker.ts": "3d5337109a4d79a91b717f27c1836d18c24d252606ec2c8a1601b112eb006659"
     },
-    "unchangedSinceActualChromeRun": "Only commit metadata and unrelated approved596 source changed; exact pipeline bytes preserved."
+    "unchangedSinceActualChromeRun": "Review correction changes original measurement EOF only; exact all9 valid-original fields, encoding/mux/inspection/retry suffix and artifact hashes match. Historical native47/ten-copy proofs are source-equivalent reuse, not re-execution."
   },
   "rangeSummary": {
     "requests": 10318,

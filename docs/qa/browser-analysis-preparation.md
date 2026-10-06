@@ -82,3 +82,25 @@ Parent vet/build/native/roles and corrected-package evidence is retained with it
 original scope. A historical aggregate Go exit 1 remains nonpassing and is never
 rewritten as a successful whole-command exit 0. Source-equivalent reuse performs
 no Docker generation or backend execution that did not occur.
+
+The ownership integration regression exercises the real `ClipSourceSession`,
+workspace and preparation hooks. Ready, accepting and owned keep the authoritative
+batch identity; actual account, project, revision or source selection changes
+abort pending work and reject late publication. Original measurement iterates to
+actual EOF and refuses an observed PTS or frame end outside the admitted duration,
+while retaining read, frame, elapsed-time and decoder-resource bounds.
+
+At corrected source `b3ec132c`, 12 new regressions and the 95-test focused suite
+pass. Before-correction runs remain failed evidence. Actual Chrome workers refuse
+both short-header and missing-header originals containing frames at 0s and 62s
+under a 60s budget, and measure valid gapped VFR through its 6s EOF. Nine existing
+normal originals were measured again using the corrected worker; all 13 original
+measurement fields and input hashes match the historical copy run. These new
+source measurements are separate from copy/native safety and semantic quality.
+
+The encoding, muxing, completed-copy inspection and size-retry portion of the
+media helper is byte-identical to the reviewed source, as are the other codec
+pipeline files and the 10 finalized MP4 hashes. The 47 native commands are reused
+for those exact artifacts; they were not rerun after the ownership/EOF correction.
+The correction receipt and checker pin the changed source, compare every normal
+measurement field, and verify the retained codec suffix and artifact hashes.
