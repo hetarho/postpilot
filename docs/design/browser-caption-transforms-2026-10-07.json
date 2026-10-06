@@ -1,0 +1,404 @@
+{
+  "task": "T595",
+  "version": 1,
+  "codeCommit": "116b7d8ad4145972f327ea729106661b1744ee7a",
+  "productionQualified": false,
+  "timingQualified": false,
+  "humanReleaseReviewComplete": false,
+  "ink": {
+    "manifestVersion": 1,
+    "inkVersion": "clip-ink-v2-resvg-2.6.2",
+    "transformInkScale": 2,
+    "transformInkStyles": ["word-pop", "pop", "stack", "sticker", "bubble"],
+    "fontsManifestSHA256": "51ad5c795ede98d22e4dfea750946889af3717c04dee3642b87e3419c835970c",
+    "catalogSHA256": "87d587cc46b02b3485e09c55974859b6e2c5558c6386a77b4d1b4c4a3ce39aa5",
+    "wasmSHA256": "22bf6e9f9a100d972da0411a69c5ba504367fc1fa87b3b64e3f35e53926d2d70",
+    "fontAssets": [
+      {
+        "id": "wantedsans:400",
+        "sha256": "7a38e0fdf56a7a2cad934393751e3f12dcaf81067bddec4e87f4dd787037aae6"
+      },
+      {
+        "id": "wantedsans:600",
+        "sha256": "567d4c7d67baa092e74f6c982dcc76b340f10c9d1f78eff6d60897d083e703a0"
+      },
+      {
+        "id": "wantedsans:700",
+        "sha256": "0ca0e18d8409fc34520d6fb872d381bc563049ca9d75272ee6b9fab8ef4e63b0"
+      },
+      {
+        "id": "wantedsans:800",
+        "sha256": "9b3b38d8892521e4da5b24290cecf4be35da946f1905364f69fe4695ffabddd8"
+      },
+      {
+        "id": "paperlogy:800",
+        "sha256": "fb0324f8ac057e50f4f4632331617e347bfe5a04184f7b0db514be682fb6b25c"
+      },
+      {
+        "id": "jua:400",
+        "sha256": "769677aef240bfc3b9965f2b50748075bff885e6c6992fc591a3fb268279f898"
+      },
+      {
+        "id": "nanummyeongjo:400",
+        "sha256": "7ed9e8653a8ed04285d51dc343ffea6eb3d9c73afc27383ea8929ee4ffd03205"
+      },
+      {
+        "id": "nanummyeongjo:800",
+        "sha256": "60c0077fce069ba90ae97c0a3679f6eb3712e0ca637bdd0c15b72d335ec46db7"
+      }
+    ],
+    "assetVersion": "clip-design-assets-v1-ink-658bc158aacde853089103085afc23d3923c18e2e605072e51e0dcf08c2dc196"
+  },
+  "native": {
+    "frames": 630,
+    "profile": "cpu-v3",
+    "components": "native-cds-r33-pop-exposure-v2",
+    "manifestSHA256": "9756418c26505f7e93e9e6952b30814b16127c571909d1278706d0710eba4157"
+  },
+  "engines": {
+    "canvas": {
+      "frames": 630,
+      "environment": {
+        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/154.0.0.0 Safari/537.36",
+        "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Max, Unspecified Version)",
+        "crossOriginIsolated": true,
+        "hardwareConcurrency": 10
+      },
+      "reportSHA256": "3a3ad0e6dfaa5e003356f43524ec4b6d5ffaf1f073a1aa4405ad621a156f12d4",
+      "layoutAndWordTolerancePx": 0.001,
+      "warmRasterReuse": true,
+      "warmGPUNodeReuse": false,
+      "cleanupAll": true,
+      "peakBitmapReservationBytes": 4845008,
+      "peakLogicalGroupAttachmentBytes": 0,
+      "longWordPixelChecks": 399,
+      "missingLongWords": 0,
+      "styleResiduals": [
+        {
+          "style": "word-pop",
+          "frames": 60,
+          "maxPremultipliedError": 0.011008625841774497,
+          "at": "vertical-word-pop-rapid-cue0-32",
+          "rawRGBAErrorAtSameFrame": 0.011203122025509233,
+          "maxComparedLines": 1
+        },
+        {
+          "style": "pop",
+          "frames": 270,
+          "maxPremultipliedError": 0.011013445189509,
+          "at": "vertical-pop-rapid-cue0-32",
+          "rawRGBAErrorAtSameFrame": 0.010921918304970602,
+          "maxComparedLines": 2
+        },
+        {
+          "style": "stack",
+          "frames": 60,
+          "maxPremultipliedError": 0.004907136512401575,
+          "at": "vertical-stack-steady-72",
+          "rawRGBAErrorAtSameFrame": 0.005081087600871169,
+          "maxComparedLines": 1
+        },
+        {
+          "style": "sticker",
+          "frames": 60,
+          "maxPremultipliedError": 0.0062615926671872,
+          "at": "vertical-sticker-steady-45",
+          "rawRGBAErrorAtSameFrame": 0.006536934802687706,
+          "maxComparedLines": 1
+        },
+        {
+          "style": "bubble",
+          "frames": 60,
+          "maxPremultipliedError": 0.0038556327896281987,
+          "at": "vertical-bubble-rapid-cue0-32",
+          "rawRGBAErrorAtSameFrame": 0.004650441728955143,
+          "maxComparedLines": 1
+        },
+        {
+          "style": "serif",
+          "frames": 60,
+          "maxPremultipliedError": 0.0023762190962192116,
+          "at": "vertical-serif-rapid-cue1-41",
+          "rawRGBAErrorAtSameFrame": 0.0024045503299015727,
+          "maxComparedLines": 1
+        },
+        {
+          "style": "outline",
+          "frames": 60,
+          "maxPremultipliedError": 0.01814556331006979,
+          "at": "square-outline-rapid-cue0-32",
+          "rawRGBAErrorAtSameFrame": 0.05700663965550158,
+          "maxComparedLines": 1
+        }
+      ],
+      "nonemptyNativeWordPixelChecks": 303
+    },
+    "pixi": {
+      "frames": 630,
+      "environment": {
+        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/154.0.0.0 Safari/537.36",
+        "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Max, Unspecified Version)",
+        "crossOriginIsolated": true,
+        "hardwareConcurrency": 10
+      },
+      "reportSHA256": "737900345ceaf0e319486f02352b0810a0333d1656f1aadab419d5519e9fcb20",
+      "layoutAndWordTolerancePx": 0.001,
+      "warmRasterReuse": true,
+      "warmGPUNodeReuse": true,
+      "cleanupAll": true,
+      "peakBitmapReservationBytes": 4845008,
+      "peakLogicalGroupAttachmentBytes": 763232,
+      "longWordPixelChecks": 399,
+      "missingLongWords": 0,
+      "styleResiduals": [
+        {
+          "style": "word-pop",
+          "frames": 60,
+          "maxPremultipliedError": 0.01128194719730683,
+          "at": "vertical-word-pop-rapid-cue0-32",
+          "rawRGBAErrorAtSameFrame": 0.011432091714787318,
+          "maxComparedLines": 1
+        },
+        {
+          "style": "pop",
+          "frames": 270,
+          "maxPremultipliedError": 0.011682564956544886,
+          "at": "vertical-pop-steady-45",
+          "rawRGBAErrorAtSameFrame": 0.031801059962331915,
+          "maxComparedLines": 2
+        },
+        {
+          "style": "stack",
+          "frames": 60,
+          "maxPremultipliedError": 0.0028624786243309796,
+          "at": "vertical-stack-steady-165",
+          "rawRGBAErrorAtSameFrame": 0.0059238823897902046,
+          "maxComparedLines": 1
+        },
+        {
+          "style": "sticker",
+          "frames": 60,
+          "maxPremultipliedError": 0.006595888560085096,
+          "at": "vertical-sticker-steady-32",
+          "rawRGBAErrorAtSameFrame": 0.013514144715125107,
+          "maxComparedLines": 1
+        },
+        {
+          "style": "bubble",
+          "frames": 60,
+          "maxPremultipliedError": 0.0037476452002180704,
+          "at": "vertical-bubble-steady-32",
+          "rawRGBAErrorAtSameFrame": 0.004561650743473111,
+          "maxComparedLines": 1
+        },
+        {
+          "style": "serif",
+          "frames": 60,
+          "maxPremultipliedError": 0.0026159564191125355,
+          "at": "vertical-serif-rapid-cue1-41",
+          "rawRGBAErrorAtSameFrame": 0.0024989349244036725,
+          "maxComparedLines": 1
+        },
+        {
+          "style": "outline",
+          "frames": 60,
+          "maxPremultipliedError": 0.02063030765858453,
+          "at": "square-outline-rapid-cue0-32",
+          "rawRGBAErrorAtSameFrame": 0.05762782574263026,
+          "maxComparedLines": 1
+        }
+      ],
+      "nonemptyNativeWordPixelChecks": 303
+    }
+  },
+  "limits": [
+    "Synthetic caption diagnostics on one identified physical WebGL device; no final MP4/device throughput, listening or human release qualification.",
+    "Physical bitmap reservations and logical group attachment bytes exclude browser/driver overhead; T604 measures complete pipeline resources.",
+    "Native resvg 0.48.1 and published resvg-wasm 2.6.2 differ in antialiasing; raw and premultiplied residuals are reported without changing text, geometry, timing or styles.",
+    "Competing frontend/backend checks were active; elapsed per-case timings are not a throughput result."
+  ],
+  "fullFrameComparisonCommit": "a96c51c065637bf6d96cb179988bce8126be701f",
+  "backendTree": "d383570d5f037e0e6c41adc7560a0a5f2243634b",
+  "visualPatchProof": {
+    "at": "69dfe97e7b54cdfcd54109937fd64f47c896aa1b",
+    "nativeCatalogColoursUnchanged": true,
+    "representatives": [
+      {
+        "engine": "canvas",
+        "case": "vertical-serif-rapid-cue1-41",
+        "PNGByteIdentical": true,
+        "PNG_SHA256": "13195e6b01004981fa1e272a7245c1507ce332196c7777ed27cd460b9fe3b8a9"
+      },
+      {
+        "engine": "canvas",
+        "case": "vertical-sticker-steady-32",
+        "PNGByteIdentical": true,
+        "PNG_SHA256": "dafd8f2ae58905b1185def7c3001c686a5d9365abd4599a2ee029a1a14df3192"
+      },
+      {
+        "engine": "canvas",
+        "case": "square-outline-rapid-cue0-32",
+        "PNGByteIdentical": true,
+        "PNG_SHA256": "9e471c9c49d82caab577f4be272b4ec345f1ebf6245d1365767c32b4caff96f0"
+      },
+      {
+        "engine": "pixi",
+        "case": "vertical-serif-rapid-cue1-41",
+        "PNGByteIdentical": true,
+        "PNG_SHA256": "558c5b3b2cd3533b514cb7a8ec0418b43634279d0fe977f6868e7b19e2652ee9"
+      },
+      {
+        "engine": "pixi",
+        "case": "vertical-sticker-steady-32",
+        "PNGByteIdentical": true,
+        "PNG_SHA256": "926a5a14df9389119a9db01924b70ab7e7284df5beda341136cba6c7ee188d5f"
+      },
+      {
+        "engine": "pixi",
+        "case": "square-outline-rapid-cue0-32",
+        "PNGByteIdentical": true,
+        "PNG_SHA256": "c5809b4f35eb89cf4f3d0d68a1f697aa90f6011f0abf9caa43e0bc0740b52d9e"
+      }
+    ]
+  },
+  "verification": {
+    "backendCI": {
+      "command": "cd backend && test -z \"$(gofmt -l .)\" && go vet ./... && go build ./... && go test -timeout 30m ./...",
+      "passed": true,
+      "outputSHA256": "8679451f6e5afa499c0ad5033f2b4526f689b5457e0cab1dfcd53f072de0e1f3"
+    },
+    "frontendRequiredChecks": {
+      "command": "pnpm lint && pnpm lint:fsd && pnpm lint:style:probe && pnpm lint:style && pnpm lint:retirement && pnpm test:dev && pnpm exec haeram-spec-creator check && pnpm build:web",
+      "passed": true,
+      "outputSHA256": "e9de0295e97bc4074d6ef5ed4348bbd778e725cf8609a04dc692ac1b48b09728"
+    },
+    "deployTests": {
+      "tests": 62,
+      "passed": true
+    },
+    "frontendTestSuite": {
+      "passed": true,
+      "files": 418,
+      "tests": 3447,
+      "command": "pnpm --filter ./frontend test --maxWorkers=4",
+      "at": "b3dbffefe6af76234219bced14f34f8651e48fce",
+      "outputSHA256": "b31c97453b87ac5306025822f0d792c176e29526fdd75e752cc016efeec802ca",
+      "priorFailureRetained": "The earlier full suite exposed a synchronous test assertion before the preview paint effect attached. Its failed receipt is preserved; the existing test now awaits that effect, and the whole suite passed."
+    },
+    "nativeImage": {
+      "passed": true,
+      "sourceCommit": "b3dbffefe6af76234219bced14f34f8651e48fce",
+      "backendTreeAtExecution": "8456990e3b586cdff18e524051e8d954af65d24f",
+      "imageId": "sha256:eb0fe142006e3e1dfbefb8960d5095d4b9b874cf6e73498479ae9c8b8d158285",
+      "architecture": "arm64",
+      "user": "nonroot:nonroot",
+      "renderer": "cpu-v3",
+      "network": "none",
+      "memoryBytes": 1073741824,
+      "cpus": 2,
+      "entrypoint": [
+        "/media.test",
+        "-test.run=^Test(WorkerExecutionParity|WorkerCommandHealth|WorkerImageIsolation|ExecRunnerReapsDescendants|NarratedExportSmoke)$",
+        "-test.v",
+        "-test.timeout=45m"
+      ],
+      "checks": [
+        {
+          "name": "build",
+          "exit": 0,
+          "logSHA256": "5f4e74f31943d46cdd3e824d97e354b1b242d9bdb95bacb3183e2d4281503014"
+        },
+        {
+          "name": "full",
+          "exit": 0,
+          "logSHA256": "72312936055b864196cbc7fd6533b3c4b31f862fb9f2834b6b4d096bdbd3c4f8"
+        }
+      ],
+      "receiptSHA256": "8eba3e97b3f233bab8a126e00fbe1ef3a7ba9ac4f56757173c62cf9315dcaa1f",
+      "combinedExecutionClosure": {
+        "at": "116b7d8ad4145972f327ea729106661b1744ee7a",
+        "testedCommit": "b3dbffefe6af76234219bced14f34f8651e48fce",
+        "testedImageId": "sha256:eb0fe142006e3e1dfbefb8960d5095d4b9b874cf6e73498479ae9c8b8d158285",
+        "sourceClosureByteIdentical": true,
+        "executionAndTestPackages": [
+          "github.com/postpilot/backend/cmd/media-worker",
+          "github.com/postpilot/backend/internal/clip",
+          "github.com/postpilot/backend/internal/clip/composition",
+          "github.com/postpilot/backend/internal/clip/design",
+          "github.com/postpilot/backend/internal/clip/diagnostic",
+          "github.com/postpilot/backend/internal/clip/localmedia",
+          "github.com/postpilot/backend/internal/clip/media",
+          "github.com/postpilot/backend/internal/clip/media [github.com/postpilot/backend/internal/clip/media.test]",
+          "github.com/postpilot/backend/internal/clip/media.test",
+          "github.com/postpilot/backend/internal/clip/mediacodec",
+          "github.com/postpilot/backend/internal/clip/overlay",
+          "github.com/postpilot/backend/internal/clip/worker",
+          "github.com/postpilot/backend/internal/clip/workerclient",
+          "github.com/postpilot/backend/internal/gen/postpilot/v1",
+          "github.com/postpilot/backend/internal/gen/postpilot/v1/postpilotv1connect",
+          "github.com/postpilot/backend/internal/llm",
+          "github.com/postpilot/backend/internal/plan",
+          "github.com/postpilot/backend/internal/platform/config",
+          "github.com/postpilot/backend/internal/usage"
+        ],
+        "trackedExecutionBuildAssetInputs": 338,
+        "closureManifestSHA256": "7d7e51f1cc4edca71d686cdf43fb492d22f83b2eabe85dd3030d270722a18c24",
+        "frontendTreeByteIdenticalTo3447PassedTests": true,
+        "changedBackendFilesOutsideClosure": [
+          "backend/cmd/api/contexts.go",
+          "backend/internal/clip/app/media_dispatch.go",
+          "backend/internal/clip/app/media_recovery.go",
+          "backend/internal/clip/store/native_render_early_completion_test.go"
+        ],
+        "limits": "Worker/media execution and test closure, build tools, dependencies and asset bytes are identical; API dispatch/recovery changes require fresh Go CI and retain their independent T590 release-image receipt."
+      }
+    },
+    "combinedBackendCI": {
+      "passed": true,
+      "at": "116b7d8ad4145972f327ea729106661b1744ee7a",
+      "command": "cd backend && test -z \"$(gofmt -l .)\" && go vet ./... && go build ./... && go test -timeout 30m ./...",
+      "outputSHA256": "6f46f6894ed62fa5c8283b03f844ee548b4c428c0df04f6a5e660e5181143667"
+    },
+    "generatedSource": {
+      "dockerExecuted": true,
+      "commandsAllPassed": true,
+      "executedAt": "a96c51c065637bf6d96cb179988bce8126be701f",
+      "originalFinalHeadFencePassed": false,
+      "compatibleAt": "116b7d8ad4145972f327ea729106661b1744ee7a",
+      "currentInputsAndOutputsByteIdentical": true,
+      "inputs": 216,
+      "outputs": 151,
+      "originalReceiptSHA256": "8fb75c47eb325e9acb4ec4a8c50d5e13d3b7a7e77cf0a397cb4ada4757244331",
+      "compatibilityReason": "The authorized frontend colour adapter correction moved HEAD during isolated Docker generation. All four generator commands and archive drift checks passed; unchanged 216 inputs and 151 outputs were independently verified against the executed archive and final source. Original failed head fence remains recorded."
+    }
+  },
+  "corpus": {
+    "ratios": ["vertical", "horizontal", "square"],
+    "paces": ["steady", "rapid"],
+    "styles": [
+      "word-pop",
+      "pop",
+      "stack",
+      "sticker",
+      "bubble",
+      "serif",
+      "outline"
+    ],
+    "textCases": [
+      "Rare Hangul fallback plus AV kerning and 12,500\uc6d0 punctuation",
+      "1\u20134-word pop matrix preserving old curves",
+      "Explicit nine-word 800ms rapid pop cue",
+      "Ten-word steady pop caption wrapping into two lines"
+    ],
+    "progress": [
+      "first admitted frame",
+      "0.1",
+      "0.3",
+      "0.5",
+      "0.74",
+      "penultimate",
+      "last admitted frame"
+    ],
+    "qualificationScope": "Component math/layout/cache and selected synthetic raster diagnostics; further per-style wrap/background/device and full-output release review belongs to T604."
+  }
+}
