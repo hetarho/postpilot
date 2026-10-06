@@ -71,9 +71,12 @@
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | todo |
 
 ## next
-- inspect work board for remaining tasks
+- finish T599/T600 verification, independent review and serial integration
+- T603 technical source is retained with all real qualification gates blocked
+- implement T604 after T599/T600 integration; preserve independent release gates
 
 ## log
+- 261007 T603 source-only integration start: reviewed technical harness/AAC guard and actual pinned verifier proof; all six real qualification checks remain open and runtime blocked
 - 261006 T597 integrated
 - 261006 T601 integrated
 - 261006 T596 integrated
@@ -93,4 +96,3 @@
 - 261007 T591 independent native comparison correction: global pace/accent, declared disclosure only and exact-ms visibility require correction before integration; parent remains unchanged and prior approval invalidated
 - 261007 create-task browser-media parallel hint refinement start: unassigned todo scope hints allow isolated overlapping worktrees with serial review/integration; task goals, acceptance, SSOT bases and dependencies stay unchanged
 - 261006 parallel browser-media start: isolated task workers through T604 with dependency-aware dispatch and independent reviews; preserve T590 implementation and its Docker gate
-- 261006 T590 blocked: durable 1/2/1 native limits, atomic reservations and queue expiry verified; full BE tests, race tests, 3323 FE tests and 62 deploy tests passed; Docker generators/image smokes await daemon recovery
