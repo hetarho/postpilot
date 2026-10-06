@@ -11,6 +11,7 @@ export type {
   BrowserFootagePorts,
 } from './model/browser-footage'
 export { CLIP_VIDEO_DECODING } from './config/video-decoding'
+export { CLIP_AUDIO_PROCESSING } from './config/audio-processing'
 export {
   BrowserCompositionError,
   BrowserSnapshotEpoch,
