@@ -540,6 +540,14 @@ message ClipRenderMeasurements {
   // Fingerprint of the immutable speech actually decoded and mixed by this producer.
   string speech_fingerprint = 13;
   optional double true_peak_dbtp = 14;
+  string composition_version = 15;
+  string snapshot_fingerprint = 16;
+  string background_version = 17;
+  string background_snapshot_fingerprint = 18;
+  string background_digest = 19;
+  bool background_complete = 20;
+  int32 background_sample_count = 21;
+  repeated ClipNotice background_notices = 22;
 }
 
 message ClipCompositionItem {
