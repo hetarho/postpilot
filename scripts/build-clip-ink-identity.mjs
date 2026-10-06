@@ -22,7 +22,9 @@ const catalog = JSON.parse(
 );
 const material = {
   manifestVersion: 1,
-  inkVersion: "clip-ink-v1-resvg-2.6.2",
+  inkVersion: "clip-ink-v2-resvg-2.6.2",
+  transformInkScale: 2,
+  transformInkStyles: ["word-pop", "pop", "stack", "sticker", "bubble"],
   fontsManifestSHA256: hash(fonts),
   catalogSHA256: hash(catalog),
   wasmSHA256:

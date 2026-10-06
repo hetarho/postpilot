@@ -21,9 +21,10 @@ export const i18n = {
     credits: {
       writingCalls: '작성 호출',
       sequenceCaptions:
-        '프레임마다 그리는 자막 {{captions}}개 · 렌더링에 약 {{seconds}}초 더 걸려요',
-      sequenceWorstCase: '모든 자막을 프레임마다 그리면 렌더링에 최대 약 {{seconds}}초 더 걸려요',
-      sequenceNone: '프레임마다 그리는 자막 없음 · 추가 렌더링 시간 0초',
+        '효과 자막 {{captions}}개 · 브라우저는 글자 그림을 재사용하고 단어 움직임·가림·색·빛 효과를 프레임마다 처리해요. 서버 예상 추가 시간 약 {{seconds}}초; 브라우저 시간은 기기와 효과에 따라 달라요.',
+      sequenceWorstCase:
+        '선택한 스타일의 가장 복잡한 효과 기준 · 브라우저는 글자 그림을 재사용하고 단어 움직임·가림·색·빛 효과를 프레임마다 처리해요. 서버 예상 추가 시간 약 {{seconds}}초; 브라우저 시간은 기기와 효과에 따라 달라요.',
+      sequenceNone: '자막 그림 재사용 · 복잡한 프레임 효과 없음',
       call: {
         flow: '컷 구성 {{calls}}회',
         script: '대본 작성 {{calls}}회',
@@ -152,10 +153,10 @@ export const i18n = {
     credits: {
       writingCalls: 'Writing calls',
       sequenceCaptions:
-        '{{captions}} captions drawn frame by frame · about {{seconds}}s longer to render',
+        '{{captions}} effect captions · Browser drawing reuses text ink while updating word motion, reveals, colour and light each frame. Estimated extra server time: about {{seconds}}s; browser time depends on the device and effects.',
       sequenceWorstCase:
-        'If every caption is drawn frame by frame, rendering may take up to about {{seconds}}s longer',
-      sequenceNone: 'No frame-by-frame captions · 0s added rendering time',
+        'Most demanding selected effects · Browser drawing reuses text ink while updating word motion, reveals, colour and light each frame. Estimated extra server time: about {{seconds}}s; browser time depends on the device and effects.',
+      sequenceNone: 'Reusable caption drawing · No complex frame effects',
       call: {
         flow: 'Footage flow ×{{calls}}',
         script: 'Spoken script ×{{calls}}',

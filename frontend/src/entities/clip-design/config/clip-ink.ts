@@ -4,7 +4,9 @@ import identity from './clip-ink-identity.json'
 
 /** Qualified same-face ink resources; this is independent of final-render activation. */
 export const CLIP_INK = {
-  version: 'clip-ink-v1-resvg-2.6.2',
+  version: 'clip-ink-v2-resvg-2.6.2',
+  transformInkScale: 2,
+  transformInkStyles: ['word-pop', 'pop', 'stack', 'sticker', 'bubble'] as readonly string[],
   wasmVersion: '2.6.2',
   wasmSHA256: '22bf6e9f9a100d972da0411a69c5ba504367fc1fa87b3b64e3f35e53926d2d70',
   cacheBytes: 64 * 1024 * 1024,
@@ -19,6 +21,16 @@ export const CLIP_INK = {
 export const CLIP_INK_FONT_DATA = fonts
 export const CLIP_INK_IDENTITY = identity
 export const CLIP_CAPTION_INK = catalog.styles
+export const CLIP_CAPTION_TRANSFORM_PAINT = catalog.transformPaint
+export const CLIP_CAPTION_TRANSFORM_STYLES = [
+  'word-pop',
+  'pop',
+  'stack',
+  'sticker',
+  'bubble',
+  'serif',
+  'outline',
+] as const
 export type ClipInkFont = (typeof fonts.resources)[number]
 export type ClipInkFace = 'wantedsans' | 'paperlogy' | 'jua' | 'nanummyeongjo'
 export type ClipCaptionInkStyle = (typeof catalog.styles)[keyof typeof catalog.styles]
