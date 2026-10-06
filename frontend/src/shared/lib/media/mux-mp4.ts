@@ -21,10 +21,9 @@ export async function muxMp4(
   signal.throwIfAborted()
   const { createBoundedMediaOutput } = await import('./bounded-output')
   const { createMp4PacketMux } = await import('./stream-mp4')
-  const packetBytes = [...video.chunks, ...(audio?.chunks ?? [])].reduce(
-    (n, packet) => n + packet.data.byteLength,
-    0,
-  )
+  const packetBytes =
+    video.chunks.reduce((n, packet) => n + packet.data.byteLength, 0) +
+    (audio?.chunks.reduce((n, packet) => n + packet.data.byteLength, 0) ?? 0)
   const metadataBytes = (video.chunks.length + (audio?.chunks.length ?? 0)) * 64 + 8192
   const maxBytes = packetBytes + metadataBytes
   const target = await createBoundedMediaOutput(

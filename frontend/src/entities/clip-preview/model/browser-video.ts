@@ -43,6 +43,7 @@ export interface BrowserVideoTrack {
   decoderConfig: VideoDecoderConfig
   chunks: EncodedClipChunk[]
   packetCount?: number
+  speechFingerprint?: string
   presentationValid?: boolean
   packetResources?: { peakPackets: number; peakBytes: number }
   outputMeasurements?: Mp4TrackMeasurements

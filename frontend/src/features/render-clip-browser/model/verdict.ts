@@ -62,6 +62,8 @@ export function browserRenderVerdict(
     video.frameCount === measurements.videoFrames &&
     (video.packetCount === undefined ||
       (!!measured && video.presentationValid === true && measured.presentationValid)) &&
+    (video.packetCount === undefined ||
+      video.speechFingerprint === (audio?.speechFingerprint ?? '')) &&
     measurements.hasAudio === !!audio &&
     presentation.every(
       (c, i) =>

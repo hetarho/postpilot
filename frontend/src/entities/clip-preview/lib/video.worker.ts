@@ -31,6 +31,8 @@ let activeController: AbortController | undefined
 let packetWindow: MediaPacketWindow | undefined
 
 async function render(input: BrowserVideoInput, controller: AbortController) {
+  if (input.snapshot && (!('purpose' in input.snapshot) || input.snapshot.purpose !== 'export'))
+    throw new Error('CLIP_SNAPSHOT_PURPOSE_UNSUPPORTED')
   if (input.snapshot)
     input = { ...input, snapshot: await readBrowserCompositionSnapshot(input.snapshot) }
   const measurements = input.collectMeasurements
@@ -318,6 +320,7 @@ async function render(input: BrowserVideoInput, controller: AbortController) {
           decoderConfig,
           chunks,
           packetCount,
+          speechFingerprint: input.snapshot?.speechFingerprint ?? '',
           presentationValid,
           packetResources: packets.measurements(),
           ...timing,

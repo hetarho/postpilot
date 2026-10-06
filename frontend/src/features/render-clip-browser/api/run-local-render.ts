@@ -4,6 +4,7 @@ import {
   type BrowserVideoTrack,
 } from '@/entities/clip-preview'
 import { CLIP_BROWSER_RENDER } from '@/entities/clip-design'
+import { clipSourceSound } from '@/entities/clip-plan'
 import {
   createBoundedMediaOutput,
   createMp4PacketMux,
@@ -61,22 +62,38 @@ export async function runLocalBrowserRender(
   let output: Awaited<ReturnType<typeof createBoundedMediaOutput>> | undefined
   let mux: Awaited<ReturnType<typeof createMp4PacketMux>> | undefined
   let video: ReturnType<BrowserRenderOperations['video']> | undefined
+  let progressJob: Promise<void> | undefined
   let artifact: VerifiedBrowserResult | undefined
   let retained = false
   let audio: Awaited<ReturnType<BrowserRenderOperations['audio']>> = undefined
   try {
     signal.throwIfAborted()
-    browserAudioPreflight(input.plan)
-    // Exact requested audio is checked before any video output can be delivered.
-    audio = await operations.audio(
-      input.plan,
-      input.ratio,
-      originals,
-      controller.signal,
-      (done, total) => progress({ stage: 'encoding', percent: (20 * done) / total }),
-      input.loadSpeech,
+    const sourceAudioCuts = input.plan.cuts.filter(
+      (cut) =>
+        clipSourceSound(input.plan, cut) &&
+        input.snapshot.sources.some(
+          (source) => source.sourceId === cut.sourceId && source.hasAudio,
+        ),
     )
+    const wantsAudio = !!input.plan.narration?.enabled || sourceAudioCuts.length > 0
+    if (wantsAudio) browserAudioPreflight(input.plan)
+    // Exact requested audio is checked before any video output can be delivered.
+    audio = wantsAudio
+      ? await operations.audio(
+          input.plan,
+          input.ratio,
+          originals,
+          controller.signal,
+          (done, total) => progress({ stage: 'encoding', percent: (20 * done) / total }),
+          input.loadSpeech,
+        )
+      : undefined
     if (input.plan.narration?.enabled && !audio) throw new Error('CLIP_SPEECH_UNAVAILABLE')
+    if (
+      sourceAudioCuts.length &&
+      (!audio || (audio.sourceResources?.originals.length ?? 0) < sourceAudioCuts.length)
+    )
+      throw new Error('CLIP_SOURCE_AUDIO_UNAVAILABLE')
     const admitted = await operations.admit(input)
     id = admitted.renderId
     if (signal.aborted) {
@@ -108,7 +125,7 @@ export async function runLocalBrowserRender(
       undefined,
       mux.video,
     )
-    const progressJob = (async () => {
+    progressJob = (async () => {
       for await (const frame of video!.progress) {
         if (!controller.signal.aborted)
           progress({
@@ -117,6 +134,7 @@ export async function runLocalBrowserRender(
           })
       }
     })()
+    void progressJob.catch((error) => controller.abort(error))
     const track: BrowserVideoTrack = await video.result
     await progressJob
     controller.signal.throwIfAborted()
@@ -172,6 +190,10 @@ export async function runLocalBrowserRender(
   } finally {
     controller.abort()
     video?.cancel()
+    await Promise.allSettled([
+      ...(video ? [video.result] : []),
+      ...(progressJob ? [progressJob] : []),
+    ])
     originals.dispose()
     if (audio) audio.chunks.length = 0
     if (!retained) {
