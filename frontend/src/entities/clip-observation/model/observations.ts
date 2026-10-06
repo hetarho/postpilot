@@ -10,7 +10,17 @@ import {
 export type ClipObservationCertainty = 'certain' | 'uncertain' | 'unknown' | 'unspecified'
 export type ClipObservationUsability = 'usable' | 'unusable' | 'unspecified'
 
+export interface ClipNormalizedSourceBox {
+  x: number
+  y: number
+  width: number
+  height: number
+}
 export interface ClipObservedSegment {
+  scene?: string
+  readableText?: boolean
+  subject?: ClipNormalizedSourceBox
+  captionSafe?: ClipNormalizedSourceBox[]
   focal?: { x: number; y: number }
   startMs: number
   endMs: number
@@ -27,6 +37,9 @@ export interface ClipSourceObservation {
   source: RetainedClipSource
   segments: ClipObservedSegment[]
 }
+/** Stored native-layout authority, kept separate from attempt inspection. */
+export type ClipLayoutObservations = ClipObservations
+
 export interface ClipAddCutSelection {
   source: RetainedClipSource
   segment: ClipObservedSegment
