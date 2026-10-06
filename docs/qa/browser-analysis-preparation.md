@@ -51,3 +51,34 @@ speech or focus/shake semantic preservation. T603's provider/version, human and
 approved-budget gates remain closed. Device throughput, codec-private memory
 peaks and cold/warm release performance remain T604 gates. No paid provider call,
 live deployment, push or hardware purchase occurred.
+
+
+Technical results: installed Chrome 154.0.8037.98 and Mediabunny 1.58.0 passed 12
+real-worker cases and 10 finalized copies, including 60s+1s, 720px downscale,
+asymmetric rotation, VFR, first-stream selection, silent footage, delayed 44.1kHz
+speech-clock audio, stereo, private-range refusal and cancellation. All reported
+owned decoded resources return to zero. The final immutable CPU-v4 image
+`sha256:76e2da809164bb4e7ab0c3c453d136da18acd6a78151deffe24d4ea296051202`
+passed 47 bounded commands over the exact files. Decoded stereo RMS ratio against
+native mono is 1.000588, correlation 0.999667; the 60s/1s mono ratios are 0.999059/
+1.000223 with exact 2880000/48000 samples. The earlier average stereo rematrix
+measured 0.707751 and was corrected before handoff. These are synthetic technical
+comparisons, and confer no semantic release qualification.
+
+The full frontend suite passed 427 files/3498 tests before the isolated mono
+correction; its focused regressions and real-browser/native outputs were then
+rechecked. TypeScript, build, lint/format, FSD/style, retirement, dev and skills
+checks passed. Dev checks use canonical `TMPDIR=/private/tmp` on macOS. The 62
+executed deploy tests are reused only after all 27 task 596 receipt input hashes
+match exactly; earlier global Docker startup delays were interrupted diagnostics.
+Spec lint retains 0 errors and 46 inherited warnings. Generated/backend code is
+inherited from the independently approved parent; T601 changes no backend or
+Protobuf contract.
+
+
+The exact backend/proto trees match approved parent `d2b015c4`; all 218 generator
+inputs and 152 generated outputs match the actual Docker execution receipt.
+Parent vet/build/native/roles and corrected-package evidence is retained with its
+original scope. A historical aggregate Go exit 1 remains nonpassing and is never
+rewritten as a successful whole-command exit 0. Source-equivalent reuse performs
+no Docker generation or backend execution that did not occur.
