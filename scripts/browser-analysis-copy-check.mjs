@@ -11,10 +11,12 @@ const args = process.argv.slice(2)
 const option = (name, fallback) => args.includes(name) ? args[args.indexOf(name) + 1] : fallback
 const fixtures = resolve(option('--fixtures', '/private/tmp/postpilot-browser-media-prep-t601'))
 const output = resolve(option('--output', 'tmp/browser-analysis-copies'))
+const measurementOnly = args.includes('--measure-only')
 const executablePath = option('--browser', '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome')
 const require = createRequire(resolve(root, 'frontend/package.json'))
 const { createServer } = await import(pathToFileURL(require.resolve('vite')).href)
 const files = new Map([
+  ['span-short', resolve(fixtures, 'source-span/sparse-short.mkv')], ['span-missing', resolve(fixtures, 'source-span/sparse-missing.mkv')], ['span-valid', resolve(fixtures, 'source-span/gapped-vfr.mkv')],
   ['long', resolve(fixtures, 'long-original.mp4')], ['rotated', resolve(fixtures, 'source-extra/rotated-original-v2.mp4')], ['silent', resolve(fixtures, 'silent-original.mp4')],
   ['large', resolve(fixtures, 'source-extra/large-original.mp4')], ['stereo', resolve(fixtures, 'source-extra/stereo-original.mp4')],
   ['vfr', '/private/tmp/postpilot-browser-media-prep-video/original-vfr.mp4'], ['first-track', '/private/tmp/postpilot-browser-media-prep-video/multiple-video-default-second.mp4'],
@@ -58,15 +60,17 @@ try {
   const results = []
   for (const id of option('--cases', [...files.keys(), 'expired', 'whole', 'cancel'].join(',')).split(',')) {
     const path = files.get(id) ?? files.get('long'), fingerprint = createHash('sha256').update(readFileSync(path)).digest('hex')
-    const result = await page.evaluate(({ origin, id, fingerprint }) => window.analysisFixture.run(`${origin}/__analysis__/file/${id === 'cancel' ? 'long' : id}`, fingerprint, id), { origin, id, fingerprint })
+    const result = await page.evaluate(({ origin, id, fingerprint, measurementOnly }) => window.analysisFixture.run(`${origin}/__analysis__/file/${id === 'cancel' ? 'long' : id}`, fingerprint, measurementOnly && !id.startsWith('span-') ? `span-${id}` : id, id.startsWith('span-') ? 60000 : undefined), { origin, id, fingerprint, measurementOnly })
     results.push({ id, ...result })
     if (id === 'expired' && result.error !== 'CLIP_SOURCE_EXPIRED') throw new Error(JSON.stringify(result))
     if (id === 'whole' && result.error !== 'CLIP_SOURCE_RANGE_UNSUPPORTED') throw new Error(JSON.stringify(result))
     if (id === 'cancel' && result.name !== 'AbortError') throw new Error(JSON.stringify(result))
     if (result.resourceEvents?.some((event) => event.resources.liveDecodedFrames !== 0 || event.resources.liveAudioData !== 0 || event.resources.peakDecodedFrames > 48)) throw new Error('Original decoder resource leak or reserve overflow')
     if (result.copies?.some((copy) => copy.resources.liveDecodedFrames !== 0 || copy.resources.liveAudioData !== 0 || copy.resources.peakDecodedFrames > 48)) throw new Error('Decoder resource leak or reserve overflow')
-    if (files.has(id) && result.error) throw new Error(`${id}: ${JSON.stringify(result)}`)
-    if (id === 'long' && (result.copies.length !== 2 || result.original.durationMs !== 61000 || result.original.audioRate !== 44100)) throw new Error('Original/seam measurement drift')
+    if (['span-short', 'span-missing'].includes(id) && result.error !== 'CLIP_INPUT_TOO_LARGE') throw new Error('Sparse original tail was not refused through actual EOF')
+    if (id === 'span-valid' && (result.error || result.original.durationMs !== 6000 || result.original.decodedFrames !== 3 || result.original.cadenceVerified)) throw new Error('Gapped VFR source EOF measurement drift')
+    if (files.has(id) && !['span-short','span-missing'].includes(id) && result.error) throw new Error(`${id}: ${JSON.stringify(result)}`)
+    if (id === 'long' && ((!measurementOnly && result.copies.length !== 2) || result.original.durationMs !== 61000 || result.original.audioRate !== 44100)) throw new Error('Original/seam measurement drift')
     if (id === 'rotated' && (result.original.width !== 180 || result.original.height !== 320)) throw new Error('Rotation geometry drift')
     if (id === 'silent' && result.original.hasAudio) throw new Error('Silent source gained audio')
     if (id === 'vfr' && result.original.cadenceVerified) throw new Error('VFR became verified constant cadence')

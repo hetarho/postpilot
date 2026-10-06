@@ -4,7 +4,12 @@ import type { AnalysisCopySlot, AnalysisSource } from '@/features/prepare-clip-b
 declare global {
   interface Window {
     analysisFixture: {
-      run(url: string, fingerprint: string, mode?: string): Promise<unknown>
+      run(
+        url: string,
+        fingerprint: string,
+        mode?: string,
+        durationBudgetMs?: number,
+      ): Promise<unknown>
     }
   }
 }
@@ -54,13 +59,14 @@ window.Worker = class extends NativeWorker {
   }
 }
 window.analysisFixture = {
-  async run(url, fingerprint, mode) {
+  async run(url, fingerprint, mode, durationBudgetMs) {
     const controller = new AbortController(),
       encoder = createAnalysisEncoder(controller.signal)
     const source: AnalysisSource = {
       sourceId: 'synthetic',
       fingerprint,
       access: { kind: 'url', url },
+      durationBudgetMs,
     }
     const deadline = setTimeout(() => controller.abort(new Error('Fixture timed out')), 180000)
     console.log('analysis-start', mode)
@@ -70,6 +76,13 @@ window.analysisFixture = {
       const original = await encoder.measure(source)
       const measuredMs = performance.now() - began
       console.log('analysis-measured', mode, JSON.stringify(original))
+      if (mode?.startsWith('span-'))
+        return {
+          original,
+          measuredMs,
+          resourceEvents: resourceEvents.slice(eventStart),
+          qualification: false,
+        }
       const copies = []
       for (let offset = 0, ordinal = 0; offset < original.durationMs; offset += 60000, ordinal++) {
         const slot: AnalysisCopySlot = {

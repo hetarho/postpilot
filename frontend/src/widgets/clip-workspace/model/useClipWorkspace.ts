@@ -79,7 +79,7 @@ export function useClipWorkspace(ownerId: string, project: ClipProject) {
     projectId: project.id,
     selectionKey: JSON.stringify([
       project.editPlanRevision,
-      upload.readyBatch?.id,
+      upload.readyBatch?.id ?? upload.attempt?.batchId,
       upload.entries.map((entry) => [entry.sourceId, entry.metadata.fingerprint]),
     ]),
     job: project.latestJob,

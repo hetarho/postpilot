@@ -31,6 +31,7 @@ export interface FiniteMediaCopyProfile extends MediaRangeLimits {
   durationMs: number
   decoderReserveFrames: number
   decoderReserveBytes: number
+  operationTimeoutMs?: number
   maxCopyBytes: number
   fps: number
   longEdge: number
@@ -88,6 +89,10 @@ export async function measureOriginalMedia(
   limits: FiniteMediaCopyProfile,
   signal: AbortSignal,
 ) {
+  if (!Number.isSafeInteger(limits.durationMs) || limits.durationMs <= 0)
+    throw new Error('CLIP_INPUT_TOO_LARGE')
+  const began = performance.now()
+  const operationTimeoutMs = limits.operationTimeoutMs ?? limits.timeoutMs
   const video = await openOriginalVideo(access, sourceLimits(limits), signal)
   let audioInput: Input | undefined
   let audioReader: ReturnType<typeof createFiniteMediaSource> | undefined
@@ -116,9 +121,23 @@ export async function measureOriginalMedia(
       previous: number | undefined,
       cadence: number | undefined,
       constant = true
-    for await (const sample of video.samples(0, limits.durationMs / 1000 + 1)) {
+    // An end timestamp filters distant PTS before this validator sees them.
+    // Decode to actual EOF; source-time admission is checked on every sample.
+    for await (const sample of video.samples(0, Infinity)) {
       try {
         signal.throwIfAborted()
+        if (performance.now() - began > operationTimeoutMs) throw new Error('CLIP_SOURCE_TIMEOUT')
+        if (
+          !Number.isFinite(sample.timestamp) ||
+          !Number.isFinite(sample.duration) ||
+          sample.duration < 0
+        )
+          throw new Error('CLIP_SOURCE_TIMESTAMP_INVALID')
+        if (
+          sample.timestamp > limits.durationMs / 1000 ||
+          sample.timestamp + sample.duration > limits.durationMs / 1000 + 0.022
+        )
+          throw new Error('CLIP_INPUT_TOO_LARGE')
         const ticks = Math.round(sample.timestamp * metadata.timeResolution)
         if (previous !== undefined) {
           const delta = ticks - previous
