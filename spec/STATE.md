@@ -104,6 +104,3 @@
 - 261006 update-ssot MODEL start: explain voice design versus script reading, show public cost references and prefill common account-price drafts
 - 261006 T588 start: reproducible browser media phase/resource baselines and qualified dependency/license inventory
 - 261006 create-task browser media done: T588-T604; CLIP r56 CDS r33 QUOTA r35 consumed, scoped ARCH/INFRA mappings preserve earlier pending work
-- 261006 T586/T587 freshness: ARCH r16 browser execution and QUOTA r35 commercial-export changes do not affect speech catalog administration; task bases synchronized
-- 261006 T587 done: list administration and common pricing UI; 3292 FE tests, complete local CI and deterministic generation passed
-- 261006 T586 done: unique server-owned registrations, common tariff snapshots and retained legacy bindings; all BE tests passed after sequential clip-store recheck
