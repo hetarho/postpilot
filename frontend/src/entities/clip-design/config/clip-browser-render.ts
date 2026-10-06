@@ -14,6 +14,11 @@ export const CLIP_BROWSER_RENDER = {
   speechEncodedBytes: 8 * 1024 * 1024,
   audioBatchFrames: 2048,
   encodeQueueFrames: 4,
+  encodedPacketWindow: 8,
+  encodedPacketBytes: 4 * 1024 * 1024,
+  temporaryOutputBytes: 128 * 1024 * 1024,
+  outputPageBytes: 256 * 1024,
+  outputNamespace: 'postpilot-browser-output-v1',
   keyFrameIntervalFrames: 60,
   sourceTimeoutMs: 30_000,
   // One determinate scale; these are phase weights, never a time estimate.

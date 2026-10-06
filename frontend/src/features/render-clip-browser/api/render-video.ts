@@ -21,6 +21,10 @@ export function renderBrowserVideo(
   signal?: AbortSignal,
   originals?: BrowserOriginals,
   captionFrames?: CaptionFrameLoader,
+  packetSink?: (
+    packet: BrowserVideoTrack['chunks'][number],
+    decoderConfig?: VideoDecoderConfig,
+  ) => Promise<void>,
 ): BrowserVideoRender {
   const controller = new AbortController()
   const sources = input.snapshot
@@ -35,6 +39,7 @@ export function renderBrowserVideo(
   const send = (message: VideoWorkerInput, transfer: Transferable[] = []) =>
     worker.postMessage(message, transfer)
   let stopped = false
+  let sinkChain = Promise.resolve()
   let cleanupTimer: ReturnType<typeof setTimeout> | undefined
   let latest: BrowserVideoProgress | undefined
   let wake: (() => void) | undefined
@@ -78,7 +83,28 @@ export function renderBrowserVideo(
       if (message.type === 'cancelled') terminate()
       return
     }
-    if (message.type === 'sourceAccess') {
+    if (message.type === 'packet') {
+      if (!packetSink) {
+        fail(new Error('CLIP_PACKET_SINK_UNAVAILABLE'))
+        return
+      }
+      sinkChain = sinkChain
+        .then(async () => {
+          if (stopped) return
+          await packetSink(message.packet, message.decoderConfig)
+          if (!stopped) send({ type: 'packetAck', requestId: message.requestId })
+        })
+        .catch((error: unknown) => {
+          if (!stopped) {
+            send({
+              type: 'packetAck',
+              requestId: message.requestId,
+              error: error instanceof Error ? error.message : 'CLIP_PACKET_SINK_FAILED',
+            })
+            fail(error)
+          }
+        })
+    } else if (message.type === 'sourceAccess') {
       void localOriginals
         .source(message.fingerprint)
         .then(
@@ -157,7 +183,7 @@ export function renderBrowserVideo(
   if (signal?.aborted) cancel()
   else {
     try {
-      send({ type: 'start', input })
+      send({ type: 'start', input: { ...input, ...(packetSink ? { streamPackets: true } : {}) } })
     } catch (error) {
       fail(error)
     }
