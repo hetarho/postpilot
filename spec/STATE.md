@@ -70,6 +70,7 @@
 - T585 speech setup/error feedback is complete. T533-T550 offline implementation is complete; T539/T550 retain deferred real voice/listening/export/device qualification, and ordinary production voice/narration readiness stays closed.
 - update-ssot ARCH so ARCH-10 makes the production database PostgreSQL as INFRA-6 states (ARCH-10 still says SQLite), then create-task INFRA r1 (all) and ARCH (ARCH-52+ ARCH-53+ ARCH-56+ ARCH-57+ ARCH-34✎); create-task POST r32 (POST-108+ implemented by 12d2f428; verification-only); create-task VOICE r8 (VOICE-32✎ implemented by 68ae9a79; verification-only); update-ssot VOICE-31 remains open.
 - ops: lower TEMPLATE_PHOTO_ROW_MAX / VITE_TEMPLATE_PHOTO_ROW_MAX to 3 wherever production sets them explicitly (VPS .env, Cloudflare build vars).
+- ideation searchable-details continues: per-post search inflow from the owner's Naver statistics screenshots.
 
 ## log
 - 261005 T585 done: actionable speech setup reasons, truthful saved-list failure/recovery, 3289 FE tests and all local CI checks passed
