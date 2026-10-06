@@ -1,0 +1,551 @@
+{
+  "head": "57deafaee51ad252cf7c66b4041c39419fbdead3",
+  "checks": [
+    {
+      "command": "TMPDIR=/private/tmp GOCACHE=/private/tmp/postpilot-go-cache go test -timeout 30m ./internal/clip/design ./internal/clip/media ./internal/clip ./internal/clip/rpc",
+      "exit": 0,
+      "log": "/private/tmp/postpilot-browser-media-prep-analysis/t598-final-current-packages.log",
+      "sha256": "59e4ed8c8956288bbfa6da86a144bb90e71df31509ebcdf0fd95df2f52a5dbd3",
+      "result": "ok  \tgithub.com/postpilot/backend/internal/clip/design\t0.645s\nok  \tgithub.com/postpilot/backend/internal/clip/media\t19.855s\nok  \tgithub.com/postpilot/backend/internal/clip\t1.894s\nok  \tgithub.com/postpilot/backend/internal/clip/rpc\t0.985s\n"
+    },
+    {
+      "command": "TMPDIR=/private/tmp GOCACHE=/private/tmp/postpilot-go-cache go test -timeout 5m ./internal/clip/store -run '^Test(LocalBackgroundVerdictAndUploadRemainRevisionAndCancellationBound|BrowserLocalComposition)' -count=1",
+      "exit": 0,
+      "log": "/private/tmp/postpilot-browser-media-prep-analysis/t598-final-store-background.log",
+      "sha256": "8d3fdb0af7001edb4e3d4340c2de0093f220cabc365c56eb18fbf946d5f267e2",
+      "result": "ok  \tgithub.com/postpilot/backend/internal/clip/store\t6.327s\n"
+    }
+  ],
+  "allOwnedSessionsCompleted": true,
+  "qualification": false,
+  "browserNativeProof": {
+    "command": "POSTPILOT_BROWSER_BACKGROUND_PROOF=/private/tmp/postpilot-browser-background-final/report.json go test ./internal/clip/media -run '^TestBrowserOriginalBackgroundProof$' -count=1",
+    "exit": 0,
+    "log": "/private/tmp/postpilot-browser-media-prep-analysis/t598-final-browser-native-proof.log",
+    "logSHA256": "8eb1f8552d8a86088635fbfb8d974b6035a4991be9e332e45c1f476aa30ef90c",
+    "result": "ok  \tgithub.com/postpilot/backend/internal/clip/media\t0.551s\n"
+  },
+  "combinedPriorRun": {
+    "at": "fe3a9e1e6001e607fd4ce85c4a797cdbead7065e",
+    "command": "go test -timeout 30m ./...",
+    "session": 89959,
+    "aggregateExit": 1,
+    "onlyReportedFailure": {
+      "package": "github.com/postpilot/backend/internal/clip/design",
+      "test": "TestBrowserInkCatalogMatchesNative",
+      "message": "browser ink catalog differs from the native caption registry"
+    },
+    "majorPackageResults": {
+      "cmdApi": {
+        "passed": true,
+        "seconds": 374.686
+      },
+      "clipStore": {
+        "passed": true,
+        "seconds": 512.024
+      },
+      "clipApp": {
+        "passed": true,
+        "seconds": 5.88
+      },
+      "clipMedia": {
+        "passed": true,
+        "seconds": 42.302
+      },
+      "clipWorker": {
+        "passed": true,
+        "seconds": 3.194
+      },
+      "clipWorkerClient": {
+        "passed": true,
+        "seconds": 3.312
+      }
+    },
+    "correction": {
+      "at": "57deafaee51ad252cf7c66b4041c39419fbdead3",
+      "catalogNativeRegenerationPassed": true,
+      "goPackages": [
+        "internal/clip/design",
+        "internal/clip",
+        "internal/clip/media"
+      ],
+      "focusedExit": 0,
+      "affectedFrontend": {
+        "files": 4,
+        "tests": 52,
+        "exit": 0
+      },
+      "equivalenceReceipt": "t598-identity-equivalence.json"
+    },
+    "frontendFull": {
+      "at": "fe3a9e1e6001e607fd4ce85c4a797cdbead7065e",
+      "session": 57114,
+      "exit": 0,
+      "files": 423,
+      "tests": 3473,
+      "seconds": 363.56
+    },
+    "build": {
+      "exit": 0,
+      "modules": 4433,
+      "version": "Vite8.2.2"
+    },
+    "lint": {
+      "exit": 0
+    },
+    "logsPartial": true,
+    "note": "All package statuses were returned by actual Go tool output; no runtime/image qualification substituted. Aggregate Go failure retained, corrected package checks recorded independently.",
+    "packageResults": [
+      {
+        "package": "github.com/postpilot/backend/cmd/adduser",
+        "reportedResult": "no test files"
+      },
+      {
+        "package": "github.com/postpilot/backend/cmd/api",
+        "reportedResult": "passed"
+      },
+      {
+        "package": "github.com/postpilot/backend/cmd/media-worker",
+        "reportedResult": "no test files"
+      },
+      {
+        "package": "github.com/postpilot/backend/cmd/seed",
+        "reportedResult": "passed"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/auth",
+        "reportedResult": "passed"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/auth/provision",
+        "reportedResult": "passed"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/auth/rpc",
+        "reportedResult": "passed"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/auth/store",
+        "reportedResult": "passed"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/auth/store/sqlc",
+        "reportedResult": "no test files"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/billing",
+        "reportedResult": "passed"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/billing/rpc",
+        "reportedResult": "passed"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/billing/store",
+        "reportedResult": "passed"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/billing/store/sqlc",
+        "reportedResult": "no test files"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/clip",
+        "reportedResult": "passed"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/clip/ai",
+        "reportedResult": "passed"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/clip/app",
+        "reportedResult": "passed"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/clip/composition",
+        "reportedResult": "passed"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/clip/design",
+        "reportedResult": "failed"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/clip/diagnostic",
+        "reportedResult": "passed"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/clip/localmedia",
+        "reportedResult": "passed"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/clip/media",
+        "reportedResult": "passed"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/clip/mediacodec",
+        "reportedResult": "no test files"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/clip/overlay",
+        "reportedResult": "passed"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/clip/rpc",
+        "reportedResult": "passed"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/clip/store",
+        "reportedResult": "passed"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/clip/store/sqlc",
+        "reportedResult": "no test files"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/clip/worker",
+        "reportedResult": "passed"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/clip/workerclient",
+        "reportedResult": "passed"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/devseed",
+        "reportedResult": "passed"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/experiment",
+        "reportedResult": "passed"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/experiment/rpc",
+        "reportedResult": "passed"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/experiment/store",
+        "reportedResult": "passed"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/experiment/store/sqlc",
+        "reportedResult": "no test files"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/fxrate",
+        "reportedResult": "passed"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/gen/postpilot/v1",
+        "reportedResult": "no test files"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/gen/postpilot/v1/postpilotv1connect",
+        "reportedResult": "no test files"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/generation",
+        "reportedResult": "passed"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/generation/rpc",
+        "reportedResult": "passed"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/googleauth",
+        "reportedResult": "passed"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/guideline",
+        "reportedResult": "passed"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/guideline/rpc",
+        "reportedResult": "passed"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/guideline/store",
+        "reportedResult": "passed"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/guideline/store/sqlc",
+        "reportedResult": "no test files"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/job",
+        "reportedResult": "passed"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/job/rpc",
+        "reportedResult": "passed"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/job/store",
+        "reportedResult": "passed"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/job/store/sqlc",
+        "reportedResult": "no test files"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/llm",
+        "reportedResult": "passed"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/llm/elevenlabs",
+        "reportedResult": "passed"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/llm/openaicompat",
+        "reportedResult": "passed"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/mail",
+        "reportedResult": "passed"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/memory",
+        "reportedResult": "passed"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/memory/rpc",
+        "reportedResult": "passed"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/memory/store",
+        "reportedResult": "passed"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/memory/store/sqlc",
+        "reportedResult": "no test files"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/modelcatalog",
+        "reportedResult": "passed"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/modelcatalog/app",
+        "reportedResult": "passed"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/modelcatalog/openrouter",
+        "reportedResult": "passed"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/modelcatalog/rpc",
+        "reportedResult": "passed"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/modelcatalog/store",
+        "reportedResult": "passed"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/modelcatalog/store/sqlc",
+        "reportedResult": "no test files"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/plan",
+        "reportedResult": "passed"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/plan/rpc",
+        "reportedResult": "passed"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/platform/config",
+        "reportedResult": "passed"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/platform/db",
+        "reportedResult": "passed"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/platform/health",
+        "reportedResult": "no test files"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/platform/rpcserver",
+        "reportedResult": "passed"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/post",
+        "reportedResult": "passed"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/post/rpc",
+        "reportedResult": "passed"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/post/store",
+        "reportedResult": "passed"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/post/store/sqlc",
+        "reportedResult": "no test files"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/provider",
+        "reportedResult": "passed"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/provider/rpc",
+        "reportedResult": "passed"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/provider/store",
+        "reportedResult": "passed"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/provider/store/sqlc",
+        "reportedResult": "no test files"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/quality",
+        "reportedResult": "passed"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/quality/rpc",
+        "reportedResult": "passed"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/quality/store",
+        "reportedResult": "passed"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/quality/store/sqlc",
+        "reportedResult": "no test files"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/storage",
+        "reportedResult": "passed"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/template",
+        "reportedResult": "passed"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/template/rpc",
+        "reportedResult": "passed"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/template/store",
+        "reportedResult": "passed"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/template/store/sqlc",
+        "reportedResult": "no test files"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/tosspay",
+        "reportedResult": "passed"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/usage",
+        "reportedResult": "passed"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/usage/store",
+        "reportedResult": "passed"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/usage/store/sqlc",
+        "reportedResult": "no test files"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/voice",
+        "reportedResult": "passed"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/voice/rpc",
+        "reportedResult": "passed"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/voice/spoken",
+        "reportedResult": "no test files"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/voice/spoken/app",
+        "reportedResult": "passed"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/voice/spoken/rpc",
+        "reportedResult": "no test files"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/voice/spoken/store",
+        "reportedResult": "passed"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/voice/spoken/store/sqlc",
+        "reportedResult": "no test files"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/voice/store",
+        "reportedResult": "passed"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/voice/store/sqlc",
+        "reportedResult": "no test files"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/voucher",
+        "reportedResult": "passed"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/voucher/rpc",
+        "reportedResult": "passed"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/voucher/store",
+        "reportedResult": "passed"
+      },
+      {
+        "package": "github.com/postpilot/backend/internal/voucher/store/sqlc",
+        "reportedResult": "no test files"
+      }
+    ],
+    "logNote": "Tool output was collected in chunks; warning-heavy frontend chunks were truncated by tool limits. Exact final exits/test counts and every Go package status are retained; no complete untruncated stdout log is claimed.",
+    "finalGoSourceModifiedAfterCompilation": "Catalog/identity regenerated only after the design package reported its failure; later source change does not turn this aggregate exit1 into success."
+  },
+  "identityCorrection": {
+    "from": "fe3a9e1e6001e607fd4ce85c4a797cdbead7065e",
+    "sourceChanges": [
+      "backend/internal/clip/browser_render.go",
+      "frontend/src/entities/clip-design/config/browser-composition.ts",
+      "frontend/src/entities/clip-design/config/clip-caption-ink.json",
+      "frontend/src/entities/clip-design/config/clip-ink-identity.json"
+    ],
+    "stylesAndPaintUnchanged": true,
+    "wasmAndFontsAndScaleUnchanged": true,
+    "newAssetVersion": "clip-design-assets-v1-ink-eb1c291be037eb2d4798592f4c3fb3123b79f4d61434be3508f02938afb35b60",
+    "nativePainterSources": {
+      "caption_draw.go": "5aa87f5c4e47bb649c7e501a3717ec9c857e6f5623f37a263deb22ff5bddbd73",
+      "caption_frame.go": "1ec1922b88b81ddba77015a8e65ef13a6b26568ad7bf529da86486ca6b08abfe",
+      "caption_transform.go": "ad99b6d63b6f35e8de553791ea60145e9e9c44369e5bacee572ed52e32da232a"
+    },
+    "oldNativePainterSources": {
+      "caption_draw.go": "26061d8ffa903cb380a4191d5cdbcf3cce71d92db9a9fffbb87cec8e9e1fac4e",
+      "caption_frame.go": "d851bbb16dc2b5d551336cbc384992ffc735cc48a809b5339370568563ed7ba5",
+      "caption_transform.go": "ad99b6d63b6f35e8de553791ea60145e9e9c44369e5bacee572ed52e32da232a"
+    },
+    "priorFullFrontend": {
+      "files": 423,
+      "tests": 3473,
+      "exit": 0
+    }
+  },
+  "browserRun": {
+    "exit": 0,
+    "log": "/private/tmp/postpilot-browser-background-final-run.log",
+    "logSHA256": "fb3c19db03da8b95877e09d036819223f7cf87cbadd5907e5263c9e611240f20",
+    "reportSHA256": "b7ead1abb328230ad97ca44a0fa88ef9d2b9ab799e016d6c89f997541d115996"
+  },
+  "specConformance": {
+    "exit": 0,
+    "log": "/private/tmp/postpilot-browser-media-prep-analysis/t598-final-spec-lint.log",
+    "logSHA256": "764df24f041de36a1f1cf026a91cab4283163ee6ec8884fe9febd6c0ddfcd6e0",
+    "inheritedWarnings": 46,
+    "editorialHints": 18
+  },
+  "metadataChecks": {
+    "gitDiffCheckExit": 0,
+    "gofmtCheckExit": 0
+  }
+}

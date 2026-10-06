@@ -1,0 +1,112 @@
+{
+  "source": "/Users/ihaelam/project/.haeram-worktrees/postpilot-f6c0250f/browser-media-604-T598-c5fb5089",
+  "sourceHead": "57deafaee51ad252cf7c66b4041c39419fbdead3",
+  "backendTree": "b38b2a177f72844cae12234b71cbc3eb7443b74d",
+  "dockerfileSHA256": "a937e3451c9456b0216589a5a4f42a60c0b670dc04fce6f49174e2f2cf81fda4",
+  "cleanAtStart": true,
+  "startedAt": 1791317627.3165598,
+  "checks": [
+    {
+      "name": "build",
+      "command": [
+        "docker",
+        "build",
+        "--progress=plain",
+        "--build-arg",
+        "SOURCE_REVISION=57deafaee51ad252cf7c66b4041c39419fbdead3",
+        "--target",
+        "media-worker-smoke",
+        "-t",
+        "postpilot:t598-final-57deafae",
+        "-f",
+        "backend/Dockerfile",
+        "."
+      ],
+      "startedAt": 1791317627.31692,
+      "log": "/private/tmp/postpilot-t598-final-image-build.log",
+      "exit": 0,
+      "finishedAt": 1791317693.572595,
+      "logSHA256": "16a0fa8cc1a864d24e70e5813ecae6d10a45a1a2dd0249bcef77db6aff04d8d6"
+    },
+    {
+      "name": "full",
+      "command": [
+        "docker",
+        "run",
+        "--rm",
+        "--network",
+        "none",
+        "--memory",
+        "1g",
+        "--memory-swap",
+        "1g",
+        "--cpus",
+        "2",
+        "sha256:76e2da809164bb4e7ab0c3c453d136da18acd6a78151deffe24d4ea296051202"
+      ],
+      "startedAt": 1791317693.611208,
+      "log": "/private/tmp/postpilot-t598-final-image-full.log",
+      "exit": 0,
+      "finishedAt": 1791318218.118536,
+      "logSHA256": "bd8eeeb9af6299dceb0eb7a449110d63181afacc78c5bfc92886dfbf10fddfce"
+    },
+    {
+      "name": "bounded-analysis",
+      "command": [
+        "docker",
+        "run",
+        "--rm",
+        "--network",
+        "none",
+        "--memory",
+        "256m",
+        "--memory-swap",
+        "256m",
+        "--cpus",
+        "0.5",
+        "--entrypoint",
+        "/media.test",
+        "sha256:76e2da809164bb4e7ab0c3c453d136da18acd6a78151deffe24d4ea296051202",
+        "-test.run=^TestAnalysisCopyVerificationSmoke$",
+        "-test.v",
+        "-test.timeout=10m"
+      ],
+      "startedAt": 1791318218.121818,
+      "log": "/private/tmp/postpilot-t598-final-image-bounded-analysis.log",
+      "exit": 0,
+      "finishedAt": 1791318224.297651,
+      "logSHA256": "cee36c43fbfac72f4814f1b386913b73a9414a4e33c7429ef2ac2b53716f25ba"
+    }
+  ],
+  "passed": true,
+  "imageId": "sha256:76e2da809164bb4e7ab0c3c453d136da18acd6a78151deffe24d4ea296051202",
+  "architecture": "arm64",
+  "user": "nonroot:nonroot",
+  "labels": {
+    "org.opencontainers.image.architecture": "arm64",
+    "org.opencontainers.image.revision": "57deafaee51ad252cf7c66b4041c39419fbdead3",
+    "org.opencontainers.image.title": "Postpilot CPU media worker",
+    "org.postpilot.media.asset-input-sha256": "3496ae816cd2b3b9c10af0e78ec78dc39235f9740b16c6a8803d1c9f94786b5a",
+    "org.postpilot.media.assets": "assets-v3",
+    "org.postpilot.media.manifest-command": "/media-worker manifest",
+    "org.postpilot.media.protocol": "3",
+    "org.postpilot.media.renderer": "cpu-v4"
+  },
+  "entrypoint": [
+    "/media.test",
+    "-test.run=^Test(WorkerExecutionParity|WorkerCommandHealth|WorkerImageIsolation|ExecRunnerReapsDescendants|NarratedExportSmoke|AnalysisCopyVerificationSmoke)$",
+    "-test.v",
+    "-test.timeout=45m"
+  ],
+  "smokeScope": {
+    "kind": "full",
+    "entrypoint": [
+      "/media.test",
+      "-test.run=^Test(WorkerExecutionParity|WorkerCommandHealth|WorkerImageIsolation|ExecRunnerReapsDescendants|NarratedExportSmoke|AnalysisCopyVerificationSmoke)$",
+      "-test.v",
+      "-test.timeout=45m"
+    ]
+  },
+  "cleanAtFinish": true,
+  "finishedAt": 1791318224.3817081
+}
