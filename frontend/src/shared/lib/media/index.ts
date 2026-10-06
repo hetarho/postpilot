@@ -45,3 +45,5 @@ export type {
   DecodedVideoResource,
   VideoDrawRect,
 } from './video/range-video'
+
+export { measureOriginalMedia, transcodeMediaInterval } from './analysis-copy'

@@ -30,6 +30,30 @@ async function openApproval(amount: number) {
   return screen.findByRole('button', { name: `최대 ${amount} 크레딧 · 승인하고 생성` })
 }
 
+const preparationFixture = vi.hoisted(() => ({ unsupported: false, refused: false }))
+
+// The codec path has separate real-browser fixtures. These page tests exercise
+// quote and durable ownership transitions through the preparation port.
+vi.mock('@/features/prepare-clip-browser', async (original) => ({
+  ...(await original<object>()),
+  usePrepareClipBrowser: () => ({
+    preparation: {
+      run: async (_input: unknown, startParent: (id: string) => Promise<{ jobId: string }>) => {
+        if (preparationFixture.unsupported) {
+          preparationFixture.refused = true
+          throw new Error('CLIP_ANALYSIS_ENCODER_UNSUPPORTED')
+        }
+        return startParent('preparation-fixture')
+      },
+    },
+    busy: false,
+    progress: undefined,
+    refusal: preparationFixture.refused ? 'codec' : undefined,
+    jobId: undefined,
+    cancel: vi.fn(),
+  }),
+}))
+
 vi.mock('@/features/upload-clip-sources/model/manifest', async (original) => ({
   ...(await original<object>()),
   readSourceManifest: vi.fn(),
@@ -40,6 +64,8 @@ vi.mock('@/shared/lib/upload', async (original) => ({
 }))
 afterEach(() => {
   vi.restoreAllMocks()
+  preparationFixture.unsupported = false
+  preparationFixture.refused = false
   discardClipStorylineQueues()
   initializeI18n('ko')
 })
@@ -282,6 +308,7 @@ it('approves once, retains local previews after terminal and refetches the resul
     observeModel: { providerId: 'p', modelId: 'o' },
     writeModel: { providerId: 'p', modelId: 'w' },
     quoteId: 'quote-1',
+    analysisPreparationId: 'preparation-fixture',
     approvedMaxCredits: 20,
     cancellationPolicyVersion: 1,
   })
@@ -1218,4 +1245,16 @@ it('keeps the revision composer on the flow and the narration', async () => {
       .getAllByRole('tab')
       .map((tab) => tab.textContent),
   ).toEqual(['영상 흐름', '자막', '둘 다'])
+})
+
+it('names a refused browser codec and never starts a parent or native preparation', async () => {
+  preparationFixture.unsupported = true
+  const starts: unknown[] = [],
+    calls: string[] = []
+  mount({ generationStarts: starts, calls })
+  const { user } = await selectSource()
+  await user.click(await openApproval(20))
+  expect(await screen.findByText(/필요한 영상·오디오 코덱을 지원하지 않아요/)).toBeVisible()
+  expect(starts).toHaveLength(0)
+  expect(calls).not.toContain('StartClipGeneration')
 })
