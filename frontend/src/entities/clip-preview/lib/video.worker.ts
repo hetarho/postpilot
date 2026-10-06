@@ -1,5 +1,5 @@
 import { clipBrowserEncoderConfig } from '../model/browser-render-capability'
-import { CLIP_BROWSER_RENDER } from '@/entities/clip-design/@x/clip-preview'
+import { CLIP_BROWSER_RENDER, CLIP_DESIGN } from '@/entities/clip-design/@x/clip-preview'
 import type { BrowserVideoInput, EncodedClipChunk } from '../model/browser-video'
 import type { VideoWorkerInput, VideoWorkerOutput } from '../model/video-worker-protocol'
 import { compositeBrowserVideo } from '../model/composite-video'
@@ -8,8 +8,15 @@ import type { CaptionCell } from '../model/caption-sheets'
 import { MediaPhaseRecorder } from '@/shared/lib'
 import { CLIP_VIDEO_MEASUREMENT_PHASES } from '../config/render-measurements'
 import { readBrowserCompositionSnapshot } from '../model/browser-composition'
-import { BrowserFootageResources } from '../model/browser-footage'
+import { BrowserFootageResources, type BrowserSourceAccess } from '../model/browser-footage'
 import type { BrowserMediaSourceAccess } from '@/shared/lib'
+import { NativeFadeBlackSurface } from '../model/native-fadeblack'
+import { BrowserLocalComponents } from '../model/local-components'
+import {
+  measureBrowserBackground,
+  type BrowserBackgroundEvidence,
+} from '../model/background-sampling'
+import { drawMeasuredBrowserComponents } from '../model/background-paint'
 
 const send = (message: VideoWorkerOutput, transfer: Transferable[] = []) =>
   self.postMessage(message, { transfer })
@@ -30,66 +37,93 @@ async function render(input: BrowserVideoInput, controller: AbortController) {
     : undefined
   const signal = controller.signal
   signal.throwIfAborted()
-  const footage = input.snapshot
-    ? new BrowserFootageResources(
-        input.snapshot,
-        (sourceId, fingerprint, sourceSignal) =>
-          new Promise((resolve, reject) => {
-            const id = ++requestId
-            const cleanup = () => {
-              waitingAccess.delete(id)
-              sourceSignal.removeEventListener('abort', cancelled)
-            }
-            const cancelled = () => {
-              cleanup()
-              reject(sourceSignal.reason)
-            }
-            sourceSignal.addEventListener('abort', cancelled, { once: true })
-            waitingAccess.set(id, {
-              resolve: (access) => {
-                cleanup()
-                resolve(access)
-              },
-              reject: (error) => {
-                cleanup()
-                reject(error)
-              },
-            })
-            send({ type: 'sourceAccess', requestId: id, sourceId, fingerprint })
-          }),
-        signal,
-        {
-          opened: (elapsed) => measurements?.record('sourceOpen', elapsed),
-          read: (_bytes, elapsed) => measurements?.record('sourceRead', elapsed),
-          decoded: (elapsed) => measurements?.record('sourceDecode', elapsed),
-        },
-      )
-    : undefined
+  if (input.snapshot && input.assets.length) throw new Error('CLIP_BACKGROUND_FOREIGN_ASSETS')
+  if (typeof OffscreenCanvas === 'undefined' || typeof VideoEncoder === 'undefined')
+    throw new Error('CLIP_BACKGROUND_UNSUPPORTED')
   const config = clipBrowserEncoderConfig(input.ratio).video
   const canvas = new OffscreenCanvas(config.width, config.height)
   const context = canvas.getContext('2d', { alpha: false })
-  if (!context) throw new Error('CLIP_CANVAS_UNAVAILABLE')
+  if (!context) {
+    canvas.width = 0
+    canvas.height = 0
+    throw new Error('CLIP_CANVAS_UNAVAILABLE')
+  }
+  const sourceAccess: BrowserSourceAccess = (sourceId, fingerprint, sourceSignal) =>
+    new Promise((resolve, reject) => {
+      sourceSignal.throwIfAborted()
+      const id = ++requestId
+      const cleanup = () => {
+        waitingAccess.delete(id)
+        sourceSignal.removeEventListener('abort', cancelled)
+      }
+      const cancelled = () => {
+        cleanup()
+        reject(sourceSignal.reason)
+      }
+      sourceSignal.addEventListener('abort', cancelled, { once: true })
+      waitingAccess.set(id, {
+        resolve: (access) => {
+          cleanup()
+          resolve(access)
+        },
+        reject: (error) => {
+          cleanup()
+          reject(error)
+        },
+      })
+      send({ type: 'sourceAccess', requestId: id, sourceId, fingerprint })
+    })
+  let local: BrowserLocalComponents | undefined
+  let background: BrowserBackgroundEvidence | undefined
+  try {
+    if (input.snapshot) {
+      local = new BrowserLocalComponents(input.snapshot)
+      background = await measureBrowserBackground(input.snapshot, local, sourceAccess, signal)
+    }
+  } catch (error) {
+    local?.destroy()
+    canvas.width = 0
+    canvas.height = 0
+    throw error
+  }
+  const footage = input.snapshot
+    ? new BrowserFootageResources(input.snapshot, sourceAccess, signal, {
+        opened: (elapsed) => measurements?.record('sourceOpen', elapsed),
+        read: (_bytes, elapsed) => measurements?.record('sourceRead', elapsed),
+        decoded: (elapsed) => measurements?.record('sourceDecode', elapsed),
+      })
+    : undefined
   const chunks: EncodedClipChunk[] = []
+  let fadeBlack: NativeFadeBlackSurface | undefined
   let decoderConfig: VideoDecoderConfig | undefined
   let failure: DOMException | undefined
   let pressureReject: ((error: unknown) => void) | undefined
-  const encoder = new VideoEncoder({
-    output: (chunk, metadata) => {
-      const data = new Uint8Array(chunk.byteLength)
-      chunk.copyTo(data)
-      chunks.push({
-        type: chunk.type,
-        timestamp: chunk.timestamp,
-        duration: chunk.duration ?? 0,
-        data,
-      })
-      if (metadata?.decoderConfig) decoderConfig = metadata.decoderConfig
-    },
-    error: (error) => {
-      failure = error
-      pressureReject?.(error)
-    },
-  })
+  let encoder: VideoEncoder
+  try {
+    encoder = new VideoEncoder({
+      output: (chunk, metadata) => {
+        const data = new Uint8Array(chunk.byteLength)
+        chunk.copyTo(data)
+        chunks.push({
+          type: chunk.type,
+          timestamp: chunk.timestamp,
+          duration: chunk.duration ?? 0,
+          data,
+        })
+        if (metadata?.decoderConfig) decoderConfig = metadata.decoderConfig
+      },
+      error: (error) => {
+        failure = error
+        pressureReject?.(error)
+      },
+    })
+  } catch (error) {
+    local?.destroy()
+    await footage?.dispose()
+    canvas.width = 0
+    canvas.height = 0
+    throw error
+  }
   const closeEncoder = () => {
     if (encoder.state !== 'closed') encoder.close()
   }
@@ -103,6 +137,36 @@ async function render(input: BrowserVideoInput, controller: AbortController) {
     encoder.configure(config)
     const timing = await compositeBrowserVideo(input, {
       context,
+      local:
+        local && background && input.snapshot
+          ? async (frame) => {
+              const snapshot = input.snapshot!
+              const active = background!.measurements.filter((m) =>
+                frame.components.some(
+                  (s) =>
+                    s.component.instanceId === m.instanceId &&
+                    (s.phraseIndex ?? 0) === m.phraseIndex,
+                ),
+              )
+              const resources = await local!.prepare(frame, signal, (id) => ({
+                accent:
+                  CLIP_DESIGN.accent[
+                    (frame.components.find((s) => s.component.instanceId === id)?.component.element
+                      .accent ?? '') as keyof typeof CLIP_DESIGN.accent
+                  ],
+                accentWhite: active.some((m) => m.instanceId === id && m.accentWhite),
+              }))
+              try {
+                drawMeasuredBrowserComponents(context, snapshot, frame, resources, background!)
+              } finally {
+                resources.forEach((r) => r.close())
+              }
+            }
+          : undefined,
+      nativeFadeBlack: (rest) => {
+        fadeBlack ??= new NativeFadeBlackSurface(config.width, config.height)
+        fadeBlack.apply(canvas, context, rest)
+      },
       measurements,
       footage,
       source: (fingerprint, timeMs) =>
@@ -198,6 +262,9 @@ async function render(input: BrowserVideoInput, controller: AbortController) {
       {
         type: 'done',
         track: {
+          compositionVersion: input.snapshot?.versions.renderer,
+          snapshotFingerprint: input.snapshot?.authoritativeFingerprint,
+          backgroundEvidence: background,
           config,
           decoderConfig,
           chunks,
@@ -215,10 +282,14 @@ async function render(input: BrowserVideoInput, controller: AbortController) {
       Object.assign(error, { measurements: measurements.snapshot() })
     throw error
   } finally {
+    local?.destroy()
+    fadeBlack?.close()
     await footage?.dispose()
     signal.removeEventListener('abort', closeEncoder)
     if (encoder.state !== 'closed') encoder.close()
     bitmaps.retain(new Set())
+    canvas.width = 0
+    canvas.height = 0
   }
 }
 

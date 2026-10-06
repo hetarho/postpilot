@@ -75,3 +75,10 @@ export {
 } from './model/ink-static'
 export type { InkPaint, InkRegionPart } from './model/ink-static'
 export { ClipInkError } from './model/ink-typography'
+export { measureBrowserBackground, CLIP_BACKGROUND_LIMITS } from './model/background-sampling'
+export type {
+  BrowserBackgroundMeasurement,
+  BrowserBackgroundEvidence,
+  BrowserBackgroundDiagnostics,
+} from './model/background-sampling'
+export type { BrowserBackgroundGeometry } from './model/local-components'

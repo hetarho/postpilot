@@ -102,6 +102,7 @@ export {
   openOriginalVideo,
   OriginalVideoCursor,
   nativeOutputFrame,
+  NATIVE_SOURCE_COLOR_VERSION,
 } from './media'
 export type {
   BrowserMediaSourceAccess,

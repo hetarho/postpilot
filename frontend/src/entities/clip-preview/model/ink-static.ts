@@ -20,6 +20,7 @@ import {
 } from './ink-typography'
 import { inkCaptionFonts, inkStrokeWidth, inkPlace, type InkCaptionLayout } from './ink-layout'
 import type { BrowserInkRasterizer, InkDocument } from './ink-raster'
+import { backgroundBoxUnion } from './background-math'
 
 export interface InkPaint {
   accent?: string
@@ -157,6 +158,7 @@ export async function inkStaticRegion(
     role: InkRole
     spec: (typeof slots)[number]['spec']
     x: number
+    box: InkBox
   }[] = []
   for (const slot of slots) {
     if (slot.over) throw new ClipInkError('CLIP_INK_COPY_LIMIT', `${kind}/${id}/${slot.index}`)
@@ -167,11 +169,20 @@ export async function inkStaticRegion(
       inkValidateText(line.text)
       const measured = await rasterizer.measure(line.text, role, false, signal)
       const width = (measured.width * role.size) / 100
+      const x = line.align === 'left' ? line.x : line.x - width / 2
       positioned.push({
         line,
         role,
         spec: slot.spec,
-        x: line.align === 'left' ? line.x : line.x - width / 2,
+        x,
+        box: line.arc
+          ? slot.box
+          : {
+              x,
+              y: line.baseline + (measured.y * role.size) / 100,
+              width,
+              height: (measured.height * role.size) / 100,
+            },
       })
     }
   }
@@ -226,6 +237,13 @@ export async function inkStaticRegion(
       : ''
     return `<defs>${shadow('shadow', defaultShadow(), false)}</defs>${draw(false)}${turn}`
   })
+  doc.sampledBounds = backgroundBoxUnion(layout.slots.map((slot) => slot.box))
+  doc.contrastParts = positioned.map(({ box, spec }) => ({
+    box,
+    fill: token(spec.fill)?.hex || spec.fill,
+    alpha: spec.alpha ?? token(spec.fill)?.alpha ?? 1,
+    stroke: !spec.outline && (spec.stroke === 'text' || spec.stroke === 'small'),
+  }))
   return { document: doc, layout }
 }
 
@@ -373,5 +391,20 @@ export async function inkStaticInfo(
         .join('')
     )
   })
+  let top = box.y
+  doc.contrastParts = []
+  doc.sampledBounds = backgroundBoxUnion(
+    measured.map((m) => {
+      const bounds = {
+        x: box.x + (box.width - m.box.width) / 2,
+        y: top,
+        width: m.box.width,
+        height: m.box.height,
+      }
+      top += Math.max(m.role.size, m.box.height) + CLIP_DESIGN.spacing.gap_stack
+      doc.contrastParts!.push({ box: bounds, fill: m.fill, alpha: m.alpha, stroke: true })
+      return bounds
+    }),
+  )
   return { document: doc, box }
 }

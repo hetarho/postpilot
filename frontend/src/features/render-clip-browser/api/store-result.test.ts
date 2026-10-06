@@ -54,6 +54,57 @@ function fixture() {
 }
 
 describe('durable browser output', () => {
+  it('refuses new local composition output without complete same-admission background evidence before PUT', async () => {
+    for (const background of ['missing', 'another admission']) {
+      const f = fixture()
+      f.video.compositionVersion = 'clip-browser-composition-v1'
+      f.video.snapshotFingerprint = 'a'.repeat(64)
+      if (background === 'another admission')
+        f.video.backgroundEvidence = {
+          version: 'clip-browser-background-v1',
+          snapshotFingerprint: 'b'.repeat(64),
+          sourceColorVersion: 'native-source-color-v1',
+          digest: 'c'.repeat(64),
+          measurements: [],
+          notices: [],
+        }
+      await expect(f.run()).rejects.toBeInstanceOf(BrowserRenderVerdictError)
+      expect(f.store.prepare).not.toHaveBeenCalled()
+      expect(f.store.put).not.toHaveBeenCalled()
+      expect(f.store.complete).not.toHaveBeenCalled()
+      expect(f.video.chunks).toEqual([])
+    }
+  })
+  it('keeps browser background notices and digest in the producing verdict through successful upload', async () => {
+    const f = fixture()
+    f.video.compositionVersion = 'clip-browser-composition-v1'
+    f.video.snapshotFingerprint = 'a'.repeat(64)
+    const notices = [
+      { code: 'composition_contrast', action: 'shortfall', elementId: 'caption', cutId: 'cut' },
+    ]
+    f.video.backgroundEvidence = {
+      version: 'clip-browser-background-v1',
+      snapshotFingerprint: f.video.snapshotFingerprint,
+      sourceColorVersion: 'native-source-color-v1',
+      digest: 'b'.repeat(64),
+      measurements: [],
+      notices,
+    }
+    expect(await f.run()).toBe(f.project)
+    expect(f.store.report).toHaveBeenCalledWith(
+      'admission',
+      expect.objectContaining({
+        passed: true,
+        measurements: expect.objectContaining({
+          backgroundComplete: true,
+          backgroundDigest: 'b'.repeat(64),
+          backgroundSnapshotFingerprint: 'a'.repeat(64),
+          backgroundNotices: notices,
+        }),
+      }),
+      expect.any(AbortSignal),
+    )
+  })
   it('accepts reordered encoded packets when their presentation covers every frame', async () => {
     const f = fixture()
     const one = f.video.chunks[1]!

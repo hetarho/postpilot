@@ -7,6 +7,11 @@ import {
   type MediaRangePorts,
 } from './range-source'
 import { VideoFrameBudget } from './frame-budget'
+import {
+  bindNativeSourceColor,
+  nativeSourceColorSpace,
+  NATIVE_SOURCE_COLOR_VERSION,
+} from './source-color'
 
 export interface OriginalVideoMetadata {
   provenance: 'browser_client'
@@ -21,6 +26,8 @@ export interface OriginalVideoMetadata {
   rotation: number
   flip: boolean
   streamNumber?: number
+  colorVersion?: string
+  colorSpace?: VideoColorSpaceInit
 }
 
 export interface NativeVideoTrackCandidate {
@@ -104,6 +111,8 @@ export async function openOriginalVideo(
       track.getCodec(),
     ])
     signal.throwIfAborted()
+    const colorSpace = nativeSourceColorSpace(await track.getColorSpace())
+    bindNativeSourceColor(track, colorSpace)
     const sink = new VideoSampleSink(track)
     const metadata: OriginalVideoMetadata = {
       provenance: 'browser_client',
@@ -118,6 +127,8 @@ export async function openOriginalVideo(
       flip,
       codec: codec ?? 'unknown',
       streamNumber: track.number,
+      colorVersion: NATIVE_SOURCE_COLOR_VERSION,
+      colorSpace,
     }
     // Time resolution is a PTS lattice, not proof of original minimum cadence.
     // Caller-authorized allowedRatePermille remains the slow-motion authority.

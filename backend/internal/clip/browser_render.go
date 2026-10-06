@@ -16,9 +16,15 @@ import (
 // BrowserCompositionVersion identifies product-bundled drawing/time rules.
 // It never certifies output quality or authorizes a client-supplied plan.
 const BrowserCompositionVersion = "clip-browser-composition-v1"
-const BrowserComponentVersion = "native-cds-r33-v1"
+const BrowserComponentVersion = "native-cds-r33-v1-ground-v1"
 const BrowserFontVersion = "bundled-clip-fonts-v1"
 const BrowserAssetVersion = "clip-design-assets-v1-ink-9475eb4e66026e871002e2ea1107621f831a00b81d226506e448abd7b159c20f"
+const BrowserBackgroundVersion = "clip-browser-background-v1"
+
+func validBrowserSHA256(value string) bool {
+	b, e := hex.DecodeString(value)
+	return e == nil && len(b) == sha256.Size && hex.EncodeToString(b) == value
+}
 
 var ErrBrowserCompositionVersion = errors.New("browser composition version is incompatible")
 
@@ -120,6 +126,10 @@ func (r BrowserRender) ResultKey() string {
 
 type RenderMeasurements struct {
 	CompositionVersion, SnapshotFingerprint                              string
+	BackgroundVersion, BackgroundSnapshotFingerprint, BackgroundDigest   string       `json:",omitempty"`
+	BackgroundComplete                                                   bool         `json:",omitempty"`
+	BackgroundSampleCount                                                int          `json:",omitempty"`
+	BackgroundNotices                                                    []PlanNotice `json:",omitempty"`
 	TruePeakDBTP                                                         *float64
 	SpeechFingerprint                                                    string
 	Width, Height, FrameRateNumerator, FrameRateDenominator, VideoFrames int
@@ -159,7 +169,13 @@ func CheckRenderMeasurements(cfg RenderConfig, r BrowserRender, m RenderMeasurem
 		if m.CompositionVersion != r.Composition.Version || m.SnapshotFingerprint != r.Composition.SnapshotFingerprint {
 			return RenderVerdict{}, ErrInvalidMedia
 		}
+		if m.BackgroundVersion != BrowserBackgroundVersion || m.BackgroundSnapshotFingerprint != r.Composition.SnapshotFingerprint || !m.BackgroundComplete || !validBrowserSHA256(m.BackgroundDigest) || m.BackgroundSampleCount < 0 || m.BackgroundSampleCount > 2400 || m.BackgroundSampleCount%3 != 0 || len(m.BackgroundNotices) > 200 {
+			return RenderVerdict{}, ErrInvalidMedia
+		}
 	} else if m.CompositionVersion != "" || m.SnapshotFingerprint != "" {
+		return RenderVerdict{}, ErrInvalidMedia
+	}
+	if r.Composition == nil && (m.BackgroundVersion != "" || m.BackgroundSnapshotFingerprint != "" || m.BackgroundDigest != "" || m.BackgroundComplete || m.BackgroundSampleCount != 0 || len(m.BackgroundNotices) != 0) {
 		return RenderVerdict{}, ErrInvalidMedia
 	}
 	if m.TruePeakDBTP != nil && (math.IsNaN(*m.TruePeakDBTP) || math.IsInf(*m.TruePeakDBTP, 0)) || len(m.SpeechFingerprint) > 64 || m.Width <= 0 || m.Height <= 0 || m.FrameRateNumerator <= 0 || m.FrameRateDenominator <= 0 || m.VideoFrames <= 0 ||
@@ -173,6 +189,12 @@ func CheckRenderMeasurements(cfg RenderConfig, r BrowserRender, m RenderMeasurem
 		return RenderVerdict{}, err
 	}
 	v := RenderVerdict{Measurements: m, Passed: true}
+	for _, n := range m.BackgroundNotices {
+		if n.Reason != "composition_contrast" || n.Action != "shortfall" || n.ElementID == "" || len(n.ElementID) > 256 || len(n.CutID) > 256 {
+			return RenderVerdict{}, ErrInvalid
+		}
+		v.Notices = append(v.Notices, n)
+	}
 	notice := func(check string) {
 		v.Passed = false
 		v.Notices = append(v.Notices, PlanNotice{CopyFallback: CopyFallback{Reason: check}, Action: "shortfall"})

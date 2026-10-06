@@ -22,6 +22,9 @@ export interface InkDocument {
   bounds: InkBox
   phase?: { x: number; y: number }
   placement?: InkBox
+  /** Authoritative native sampling box; distinct from padded raster bounds. */
+  sampledBounds?: InkBox
+  contrastParts?: { box: InkBox; fill: string; alpha: number; stroke: boolean }[]
 }
 export interface BrowserInkRasterizer {
   measure(text: string, role: InkRole, caption: boolean, signal?: AbortSignal): Promise<InkBox>

@@ -42,6 +42,9 @@ const (
 	// ClipRenderServiceStartClipRenderProcedure is the fully-qualified name of the ClipRenderService's
 	// StartClipRender RPC.
 	ClipRenderServiceStartClipRenderProcedure = "/postpilot.v1.ClipRenderService/StartClipRender"
+	// ClipRenderServiceStartClipBrowserCompositionRenderProcedure is the fully-qualified name of the
+	// ClipRenderService's StartClipBrowserCompositionRender RPC.
+	ClipRenderServiceStartClipBrowserCompositionRenderProcedure = "/postpilot.v1.ClipRenderService/StartClipBrowserCompositionRender"
 	// ClipRenderServiceReportClipRenderVerdictProcedure is the fully-qualified name of the
 	// ClipRenderService's ReportClipRenderVerdict RPC.
 	ClipRenderServiceReportClipRenderVerdictProcedure = "/postpilot.v1.ClipRenderService/ReportClipRenderVerdict"
@@ -61,6 +64,7 @@ type ClipRenderServiceClient interface {
 	PrepareClipPreview(context.Context, *connect.Request[v1.PrepareClipPreviewRequest]) (*connect.Response[v1.PrepareClipPreviewResponse], error)
 	PrepareClipCaptionFrames(context.Context, *connect.Request[v1.PrepareClipCaptionFramesRequest]) (*connect.Response[v1.PrepareClipCaptionFramesResponse], error)
 	StartClipRender(context.Context, *connect.Request[v1.StartClipRenderRequest]) (*connect.Response[v1.StartClipRenderResponse], error)
+	StartClipBrowserCompositionRender(context.Context, *connect.Request[v1.StartClipBrowserCompositionRenderRequest]) (*connect.Response[v1.StartClipBrowserCompositionRenderResponse], error)
 	ReportClipRenderVerdict(context.Context, *connect.Request[v1.ReportClipRenderVerdictRequest]) (*connect.Response[v1.ReportClipRenderVerdictResponse], error)
 	PrepareClipRenderUpload(context.Context, *connect.Request[v1.PrepareClipRenderUploadRequest]) (*connect.Response[v1.PrepareClipRenderUploadResponse], error)
 	CompleteClipRenderUpload(context.Context, *connect.Request[v1.CompleteClipRenderUploadRequest]) (*connect.Response[v1.CompleteClipRenderUploadResponse], error)
@@ -96,6 +100,12 @@ func NewClipRenderServiceClient(httpClient connect.HTTPClient, baseURL string, o
 			connect.WithSchema(clipRenderServiceMethods.ByName("StartClipRender")),
 			connect.WithClientOptions(opts...),
 		),
+		startClipBrowserCompositionRender: connect.NewClient[v1.StartClipBrowserCompositionRenderRequest, v1.StartClipBrowserCompositionRenderResponse](
+			httpClient,
+			baseURL+ClipRenderServiceStartClipBrowserCompositionRenderProcedure,
+			connect.WithSchema(clipRenderServiceMethods.ByName("StartClipBrowserCompositionRender")),
+			connect.WithClientOptions(opts...),
+		),
 		reportClipRenderVerdict: connect.NewClient[v1.ReportClipRenderVerdictRequest, v1.ReportClipRenderVerdictResponse](
 			httpClient,
 			baseURL+ClipRenderServiceReportClipRenderVerdictProcedure,
@@ -125,13 +135,14 @@ func NewClipRenderServiceClient(httpClient connect.HTTPClient, baseURL string, o
 
 // clipRenderServiceClient implements ClipRenderServiceClient.
 type clipRenderServiceClient struct {
-	prepareClipPreview       *connect.Client[v1.PrepareClipPreviewRequest, v1.PrepareClipPreviewResponse]
-	prepareClipCaptionFrames *connect.Client[v1.PrepareClipCaptionFramesRequest, v1.PrepareClipCaptionFramesResponse]
-	startClipRender          *connect.Client[v1.StartClipRenderRequest, v1.StartClipRenderResponse]
-	reportClipRenderVerdict  *connect.Client[v1.ReportClipRenderVerdictRequest, v1.ReportClipRenderVerdictResponse]
-	prepareClipRenderUpload  *connect.Client[v1.PrepareClipRenderUploadRequest, v1.PrepareClipRenderUploadResponse]
-	completeClipRenderUpload *connect.Client[v1.CompleteClipRenderUploadRequest, v1.CompleteClipRenderUploadResponse]
-	cancelClipBrowserRender  *connect.Client[v1.CancelClipBrowserRenderRequest, v1.CancelClipBrowserRenderResponse]
+	prepareClipPreview                *connect.Client[v1.PrepareClipPreviewRequest, v1.PrepareClipPreviewResponse]
+	prepareClipCaptionFrames          *connect.Client[v1.PrepareClipCaptionFramesRequest, v1.PrepareClipCaptionFramesResponse]
+	startClipRender                   *connect.Client[v1.StartClipRenderRequest, v1.StartClipRenderResponse]
+	startClipBrowserCompositionRender *connect.Client[v1.StartClipBrowserCompositionRenderRequest, v1.StartClipBrowserCompositionRenderResponse]
+	reportClipRenderVerdict           *connect.Client[v1.ReportClipRenderVerdictRequest, v1.ReportClipRenderVerdictResponse]
+	prepareClipRenderUpload           *connect.Client[v1.PrepareClipRenderUploadRequest, v1.PrepareClipRenderUploadResponse]
+	completeClipRenderUpload          *connect.Client[v1.CompleteClipRenderUploadRequest, v1.CompleteClipRenderUploadResponse]
+	cancelClipBrowserRender           *connect.Client[v1.CancelClipBrowserRenderRequest, v1.CancelClipBrowserRenderResponse]
 }
 
 // PrepareClipPreview calls postpilot.v1.ClipRenderService.PrepareClipPreview.
@@ -147,6 +158,12 @@ func (c *clipRenderServiceClient) PrepareClipCaptionFrames(ctx context.Context, 
 // StartClipRender calls postpilot.v1.ClipRenderService.StartClipRender.
 func (c *clipRenderServiceClient) StartClipRender(ctx context.Context, req *connect.Request[v1.StartClipRenderRequest]) (*connect.Response[v1.StartClipRenderResponse], error) {
 	return c.startClipRender.CallUnary(ctx, req)
+}
+
+// StartClipBrowserCompositionRender calls
+// postpilot.v1.ClipRenderService.StartClipBrowserCompositionRender.
+func (c *clipRenderServiceClient) StartClipBrowserCompositionRender(ctx context.Context, req *connect.Request[v1.StartClipBrowserCompositionRenderRequest]) (*connect.Response[v1.StartClipBrowserCompositionRenderResponse], error) {
+	return c.startClipBrowserCompositionRender.CallUnary(ctx, req)
 }
 
 // ReportClipRenderVerdict calls postpilot.v1.ClipRenderService.ReportClipRenderVerdict.
@@ -174,6 +191,7 @@ type ClipRenderServiceHandler interface {
 	PrepareClipPreview(context.Context, *connect.Request[v1.PrepareClipPreviewRequest]) (*connect.Response[v1.PrepareClipPreviewResponse], error)
 	PrepareClipCaptionFrames(context.Context, *connect.Request[v1.PrepareClipCaptionFramesRequest]) (*connect.Response[v1.PrepareClipCaptionFramesResponse], error)
 	StartClipRender(context.Context, *connect.Request[v1.StartClipRenderRequest]) (*connect.Response[v1.StartClipRenderResponse], error)
+	StartClipBrowserCompositionRender(context.Context, *connect.Request[v1.StartClipBrowserCompositionRenderRequest]) (*connect.Response[v1.StartClipBrowserCompositionRenderResponse], error)
 	ReportClipRenderVerdict(context.Context, *connect.Request[v1.ReportClipRenderVerdictRequest]) (*connect.Response[v1.ReportClipRenderVerdictResponse], error)
 	PrepareClipRenderUpload(context.Context, *connect.Request[v1.PrepareClipRenderUploadRequest]) (*connect.Response[v1.PrepareClipRenderUploadResponse], error)
 	CompleteClipRenderUpload(context.Context, *connect.Request[v1.CompleteClipRenderUploadRequest]) (*connect.Response[v1.CompleteClipRenderUploadResponse], error)
@@ -203,6 +221,12 @@ func NewClipRenderServiceHandler(svc ClipRenderServiceHandler, opts ...connect.H
 		ClipRenderServiceStartClipRenderProcedure,
 		svc.StartClipRender,
 		connect.WithSchema(clipRenderServiceMethods.ByName("StartClipRender")),
+		connect.WithHandlerOptions(opts...),
+	)
+	clipRenderServiceStartClipBrowserCompositionRenderHandler := connect.NewUnaryHandler(
+		ClipRenderServiceStartClipBrowserCompositionRenderProcedure,
+		svc.StartClipBrowserCompositionRender,
+		connect.WithSchema(clipRenderServiceMethods.ByName("StartClipBrowserCompositionRender")),
 		connect.WithHandlerOptions(opts...),
 	)
 	clipRenderServiceReportClipRenderVerdictHandler := connect.NewUnaryHandler(
@@ -237,6 +261,8 @@ func NewClipRenderServiceHandler(svc ClipRenderServiceHandler, opts ...connect.H
 			clipRenderServicePrepareClipCaptionFramesHandler.ServeHTTP(w, r)
 		case ClipRenderServiceStartClipRenderProcedure:
 			clipRenderServiceStartClipRenderHandler.ServeHTTP(w, r)
+		case ClipRenderServiceStartClipBrowserCompositionRenderProcedure:
+			clipRenderServiceStartClipBrowserCompositionRenderHandler.ServeHTTP(w, r)
 		case ClipRenderServiceReportClipRenderVerdictProcedure:
 			clipRenderServiceReportClipRenderVerdictHandler.ServeHTTP(w, r)
 		case ClipRenderServicePrepareClipRenderUploadProcedure:
@@ -264,6 +290,10 @@ func (UnimplementedClipRenderServiceHandler) PrepareClipCaptionFrames(context.Co
 
 func (UnimplementedClipRenderServiceHandler) StartClipRender(context.Context, *connect.Request[v1.StartClipRenderRequest]) (*connect.Response[v1.StartClipRenderResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ClipRenderService.StartClipRender is not implemented"))
+}
+
+func (UnimplementedClipRenderServiceHandler) StartClipBrowserCompositionRender(context.Context, *connect.Request[v1.StartClipBrowserCompositionRenderRequest]) (*connect.Response[v1.StartClipBrowserCompositionRenderResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ClipRenderService.StartClipBrowserCompositionRender is not implemented"))
 }
 
 func (UnimplementedClipRenderServiceHandler) ReportClipRenderVerdict(context.Context, *connect.Request[v1.ReportClipRenderVerdictRequest]) (*connect.Response[v1.ReportClipRenderVerdictResponse], error) {

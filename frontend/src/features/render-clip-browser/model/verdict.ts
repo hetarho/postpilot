@@ -12,6 +12,14 @@ export function browserRenderVerdict(
   const expected = clipBrowserEncoderConfig(ratio).video
   const codec = video.decoderConfig.codec
   const measurements = {
+    compositionVersion: video.compositionVersion ?? '',
+    snapshotFingerprint: video.snapshotFingerprint ?? '',
+    backgroundVersion: video.backgroundEvidence?.version ?? '',
+    backgroundSnapshotFingerprint: video.backgroundEvidence?.snapshotFingerprint ?? '',
+    backgroundDigest: video.backgroundEvidence?.digest ?? '',
+    backgroundComplete: !!video.backgroundEvidence,
+    backgroundSampleCount: (video.backgroundEvidence?.measurements.length ?? 0) * 3,
+    backgroundNotices: video.backgroundEvidence?.notices ?? [],
     width: video.config.width,
     height: video.config.height,
     frameRateNumerator: video.config.framerate ?? 0,
@@ -33,6 +41,13 @@ export function browserRenderVerdict(
   // Encoders return decode order; B-frames may have earlier presentation times.
   const presentation = [...video.chunks].sort((a, b) => a.timestamp - b.timestamp)
   const passed =
+    (!video.compositionVersion ||
+      (!!video.backgroundEvidence &&
+        video.backgroundEvidence.version === 'clip-browser-background-v1' &&
+        video.backgroundEvidence.sourceColorVersion === 'native-source-color-v1' &&
+        video.backgroundEvidence.snapshotFingerprint === video.snapshotFingerprint &&
+        /^[a-f0-9]{64}$/u.test(video.backgroundEvidence.digest) &&
+        video.backgroundEvidence.measurements.length <= 800)) &&
     measurements.width === expected.width &&
     measurements.height === expected.height &&
     fps === CLIP_BROWSER_RENDER.frameRate &&

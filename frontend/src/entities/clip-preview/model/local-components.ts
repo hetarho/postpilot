@@ -2,6 +2,7 @@ import {
   CLIP_DESIGN,
   CLIP_INK_FONT_DATA,
   CLIP_TRANSITION,
+  type ClipRegionLayout,
 } from '@/entities/clip-design/@x/clip-preview'
 import {
   evaluateBrowserFrame,
@@ -21,14 +22,26 @@ import {
   type InkPaint,
 } from './ink-static'
 import { previewMotion } from './draft-preview'
+import { backgroundBoxUnion } from './background-math'
+import type { InkBox } from './ink-typography'
 
 type Component = BrowserCompositionSnapshot['components'][number]
 type State = BrowserEvaluatedFrame['components'][number]
 interface Description {
   document?: InkDocument
   caption?: InkCaptionLayout
+  regionBlock?: { layout: ClipRegionLayout; owner: boolean; offset: number; count: number }
   layer: number
   motion: { inMs: number; outMs: number; dy: number }
+}
+export interface BrowserBackgroundGeometry {
+  region: InkBox
+  caption?: InkCaptionLayout
+  anchor: string
+  plate: boolean
+  motion?: { inMs: number; outMs: number; dy: number }
+  contrastParts?: { box: InkBox; fill: string; alpha: number; stroke: boolean }[]
+  regionBlock?: { layout: ClipRegionLayout; owner: boolean; offset: number; count: number }
 }
 export interface BrowserLocalComponent extends BrowserInkLease {
   readonly component: State
@@ -152,6 +165,17 @@ export class BrowserLocalComponents {
             x: item.document.bounds.x + dx,
             y: item.document.bounds.y + dy,
           },
+          sampledBounds: item.document.sampledBounds
+            ? {
+                ...item.document.sampledBounds,
+                x: item.document.sampledBounds.x + dx,
+                y: item.document.sampledBounds.y + dy,
+              }
+            : undefined,
+          contrastParts: item.document.contrastParts?.map((p) => ({
+            ...p,
+            box: { ...p.box, x: p.box.x + dx, y: p.box.y + dy },
+          })),
         }
       item.box = { x, y, width: item.box.width, height }
     }
@@ -255,6 +279,12 @@ export class BrowserLocalComponents {
       const transition = state.durationMs >= CLIP_TRANSITION.fade_ms ? CLIP_TRANSITION.fade_ms : 0
       return {
         document: result.document,
+        regionBlock: {
+          layout: result.layout,
+          owner: region.part.rules,
+          offset: region.part.offset,
+          count: region.part.count,
+        },
         layer: 2,
         motion: {
           inMs: e.role === 'ending' ? transition : 0,
@@ -347,6 +377,45 @@ export class BrowserLocalComponents {
       throw error
     }
   }
+  /** Resolve native sampling geometry before any background-dependent paint. */
+  async backgroundGeometry(
+    state: State,
+    signal?: AbortSignal,
+  ): Promise<BrowserBackgroundGeometry | undefined> {
+    if (!this.components.has(state.component)) throw new ClipInkError('CLIP_INK_SUPERSEDED')
+    const role = state.component.element.role
+    if (!['caption', 'hook', 'ending', 'info'].includes(role)) return undefined
+    const description = await this.describe(state, {}, signal)
+    if (signal?.aborted || !this.components.has(state.component))
+      throw new ClipInkError('CLIP_INK_SUPERSEDED')
+    if (description.caption) {
+      const lines = description.caption.lines
+      if (lines.some((line) => !line.glyphBounds)) throw new ClipInkError('CLIP_BACKGROUND_MISSING')
+      return {
+        region: backgroundBoxUnion(lines.map((line) => line.glyphBounds!)),
+        caption: description.caption,
+        anchor: state.component.element.effectivePosition || state.component.element.position,
+        plate: !!description.caption.style.rule.plate,
+        motion: description.motion,
+        contrastParts: lines.map((line) => ({
+          box: line.glyphBounds!,
+          fill: description.caption!.style.paint.fill,
+          alpha: 1,
+          stroke: !!description.caption!.style.rule.stroke,
+        })),
+      }
+    }
+    const region = description.document?.sampledBounds
+    if (!region) return undefined
+    return {
+      region,
+      anchor: state.component.element.position,
+      plate: false,
+      motion: description.motion,
+      regionBlock: description.regionBlock,
+      contrastParts: description.document?.contrastParts,
+    }
+  }
   measurements() {
     return this.cache.measurements()
   }
@@ -354,6 +423,7 @@ export class BrowserLocalComponents {
     this.cache.dropGPU(owner)
   }
   destroy() {
+    this.components.clear()
     this.cache.destroy()
     this.rasterizer.destroy()
     this.descriptions.clear()

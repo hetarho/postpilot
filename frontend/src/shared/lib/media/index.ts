@@ -32,6 +32,7 @@ export type {
 } from './video/range-source'
 export { VideoFrameBudget } from './video/frame-budget'
 export { openOriginalVideo, OriginalVideoCursor, nativeOutputFrame } from './video/range-video'
+export { NATIVE_SOURCE_COLOR_VERSION } from './video/source-color'
 export type {
   OriginalVideoInput,
   OriginalVideoMetadata,

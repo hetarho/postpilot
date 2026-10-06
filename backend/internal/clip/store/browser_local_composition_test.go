@@ -2,6 +2,7 @@ package store_test
 
 import (
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/postpilot/backend/internal/clip"
@@ -59,6 +60,8 @@ func TestQualifiedLocalBrowserAdmissionUsesServerIdentityWithoutRasterOrSampling
 		t.Fatal("unbound report", err)
 	}
 	m.CompositionVersion, m.SnapshotFingerprint = contract.Version, contract.SnapshotFingerprint
+	m.BackgroundVersion, m.BackgroundSnapshotFingerprint, m.BackgroundDigest = clip.BrowserBackgroundVersion, contract.SnapshotFingerprint, strings.Repeat("b", 64)
+	m.BackgroundComplete, m.BackgroundSampleCount = true, 3
 	if _, err := h.service.PrepareBrowserUpload(t.Context(), "alice", id, 1234); err != nil {
 		t.Fatal(err)
 	}

@@ -5,6 +5,7 @@ import type { MediaPhaseSnapshot } from '@/shared/lib'
 import type { CLIP_VIDEO_MEASUREMENT_PHASES } from '../config/render-measurements'
 import type { BrowserCompositionSnapshot } from './browser-composition'
 import type { BrowserFootageResources } from './browser-footage'
+import type { BrowserBackgroundEvidence } from './background-sampling'
 
 export type BrowserVideoMeasurements = MediaPhaseSnapshot<
   (typeof CLIP_VIDEO_MEASUREMENT_PHASES)[number]
@@ -30,6 +31,9 @@ export interface EncodedClipChunk {
   data: Uint8Array<ArrayBuffer>
 }
 export interface BrowserVideoTrack {
+  compositionVersion?: string
+  snapshotFingerprint?: string
+  backgroundEvidence?: BrowserBackgroundEvidence
   sourceResources?: ReturnType<BrowserFootageResources['measurements']>
   config: VideoEncoderConfig
   decoderConfig: VideoDecoderConfig

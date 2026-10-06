@@ -1,0 +1,198 @@
+import { NativeFadeBlackSurface } from '@/entities/clip-preview/model/native-fadeblack'
+import { nativeFadeBlackPixel } from '@/entities/clip-preview/model/background-math'
+import { freezeBrowserComposition } from '@/entities/clip-preview/model/browser-composition'
+import { BrowserLocalComponents } from '@/entities/clip-preview/model/local-components'
+import {
+  measureBrowserBackground,
+  type BrowserBackgroundDiagnostics,
+} from '@/entities/clip-preview/model/background-sampling'
+import type { ClipRatio } from '@/entities/clip-project'
+import type { ClipEditableText } from '@/entities/clip-plan'
+
+declare global {
+  interface Window {
+    backgroundFixture: () => unknown
+    measureBackgroundFixture: (
+      inputs: { url: string; fingerprint: string }[],
+      ratio: ClipRatio,
+      transitionMs?: number,
+      cancel?: boolean,
+    ) => Promise<unknown>
+  }
+}
+window.measureBackgroundFixture = async (inputs, ratio, transitionMs = 0, cancel = false) => {
+  const controller = new AbortController()
+  const durationMs = inputs.length * 1000 - transitionMs
+  const startMs = inputs.length > 1 ? 1000 - transitionMs : 0
+  const endMs = inputs.length > 1 ? 1000 : durationMs
+  const base = {
+    kind: 'fixed',
+    position: 'bottom',
+    align: 'center',
+    basis: 'output-start',
+    startMs,
+    endMs,
+    resolvedStartMs: startMs,
+    resolvedEndMs: endMs,
+    pace: 'steady',
+    accent: 'cyan',
+    keyword: '',
+    groupId: '',
+    itemId: '',
+    cutId: '',
+  }
+  const roles = ['caption', 'info', 'hook', 'ending']
+  const elements = roles.map((role, i) => ({
+    ...base,
+    instanceId: `${role}-instance`,
+    elementId: role,
+    role,
+    text: '화면 기록',
+    rows:
+      role === 'info'
+        ? [
+            { role: 'label', text: '정보' },
+            { role: 'caption', text: '현재 화면' },
+          ]
+        : role === 'hook'
+          ? [
+              { role: 'caption', text: '시작' },
+              { role: 'caption', text: '기록' },
+            ]
+          : role === 'ending'
+            ? [
+                { role: 'caption', text: '평점' },
+                { role: 'caption', text: '4.5' },
+                { role: 'caption', text: '다음 기록' },
+              ]
+            : [],
+    style: 'bold',
+    position: i === 1 ? 'header' : 'bottom',
+  })) as ClipEditableText[]
+  const plan = {
+    durationMs,
+    nativeComposition: true,
+    cuts: inputs.map((source, i) => ({
+      id: `cut-${i}`,
+      sourceId: `source-${i}`,
+      fingerprint: source.fingerprint,
+      startMs: 0,
+      endMs: 1000,
+      transitionMs: i ? transitionMs : 0,
+      playbackRatePermille: 1000,
+      volumePermille: 0,
+      copies: [],
+      focal: { x: i ? 1 : 0, y: 0.5 },
+    })),
+    elements,
+  }
+  const snapshot = await freezeBrowserComposition({
+    ownerId: 'fixture',
+    projectId: 'fixture',
+    projectRevision: 1,
+    planRevision: 1,
+    plan,
+    ratio,
+    authoritativeFingerprint: 'a'.repeat(64),
+    design: { hideDisclosure: true },
+    sources: inputs.map((source, i) => ({
+      sourceId: `source-${i}`,
+      fingerprint: source.fingerprint,
+      durationMs: 2000,
+      width: 64,
+      height: 32,
+      hasAudio: false,
+      allowedRatePermille: [1000],
+    })),
+  })
+  const components = new BrowserLocalComponents(snapshot)
+  let diagnostics: BrowserBackgroundDiagnostics | undefined
+  try {
+    const evidence = await measureBrowserBackground(
+      snapshot,
+      components,
+      async (sourceId, fingerprint, signal) => {
+        signal.throwIfAborted()
+        const index = Number(sourceId.slice('source-'.length))
+        if (inputs[index]?.fingerprint !== fingerprint) throw new Error('CLIP_SOURCE_UNAVAILABLE')
+        if (cancel) controller.abort(new DOMException('Fixture cancel', 'AbortError'))
+        return { kind: 'url', url: inputs[index]!.url }
+      },
+      controller.signal,
+      (value) => {
+        diagnostics = value
+      },
+    )
+    return { evidence, diagnostics, qualification: false }
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : String(error),
+      diagnostics,
+      qualification: false,
+    }
+  } finally {
+    components.destroy()
+  }
+}
+window.backgroundFixture = () => {
+  const canvas = new OffscreenCanvas(64, 32),
+    context = canvas.getContext('2d', { alpha: false })!
+  const gpu = new NativeFadeBlackSurface(64, 32)
+  const cases = []
+  const palette = ['#FF0000', '#00FF00', '#0000FF', '#FFFFFF'] // style-escape: fixed diagnostic RGB quadrants
+  try {
+    for (const weight of [0, 0.1, 0.2, 0.5, 0.8, 1]) {
+      context.globalAlpha = 1
+      context.fillStyle = '#000000' // style-escape: physical diagnostic video black
+      context.fillRect(0, 0, 64, 32)
+      context.globalAlpha = weight
+      context.fillStyle = '#FFFFFF' // style-escape: physical diagnostic video white
+      context.fillRect(0, 0, 64, 32)
+      context.globalAlpha = 1
+      gpu.apply(canvas, context, 1 - weight)
+      const pixel = Array.from(context.getImageData(0, 0, 1, 1).data)
+      const expected = nativeFadeBlackPixel([1, 1, 1], [0, 0, 0], weight, 0).map((v) =>
+        Math.round(v * 255),
+      )
+      cases.push({
+        weight,
+        pixel,
+        expected,
+        error: Math.max(...expected.map((v, c) => Math.abs(v - pixel[c]!))),
+      })
+      context.fillStyle = '#000000' // style-escape: physical diagnostic video black
+      context.fillRect(0, 0, 64, 32)
+      context.globalAlpha = weight
+      for (let i = 0; i < 4; i++) {
+        context.fillStyle = palette[i]!
+        context.fillRect((i % 2) * 32, Math.floor(i / 2) * 16, 32, 16)
+      }
+      context.globalAlpha = 1
+      gpu.apply(canvas, context, 1 - weight)
+      for (let i = 0; i < 4; i++) {
+        const rgb = [1, 3, 5].map((at) => parseInt(palette[i]!.slice(at, at + 2), 16) / 255) as [
+          number,
+          number,
+          number,
+        ]
+        const expected = nativeFadeBlackPixel(rgb, [0, 0, 0], weight, 0).map((v) =>
+          Math.round(v * 255),
+        )
+        const pixel = Array.from(
+          context.getImageData((i % 2) * 32 + 8, Math.floor(i / 2) * 16 + 8, 1, 1).data,
+        )
+        cases.push({
+          weight,
+          pixel,
+          expected,
+          error: Math.max(...expected.map((v, c) => Math.abs(v - pixel[c]!))),
+        })
+      }
+    }
+    return { cases, passed: cases.every((c) => c.error <= 1), qualification: false }
+  } finally {
+    gpu.close()
+    canvas.width = 0
+    canvas.height = 0
+  }
+}
