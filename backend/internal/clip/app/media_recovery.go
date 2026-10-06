@@ -218,6 +218,26 @@ func (r *MediaReconciler) reconcileStage(ctx context.Context, id string) error {
 				return err
 			}
 		}
+		// Admission persists native stages before dispatch. A crash between
+		// claiming the parent and its first Park must not become an interrupted
+		// render when the generic running-job sweep follows this reconciliation.
+		if s.Operation == clip.MediaRender && j.Kind == clip.JobKindRender && j.Status == job.StatusRunning && j.DispatchReady && s.ContractVersion == clip.MediaContractVersion && s.RendererVersion == clip.MediaRendererVersion && s.AssetVersion == clip.MediaAssetVersion {
+			if _, e := p.Waits.Continuation(ctx, parent); errors.Is(e, job.ErrInvalidWait) {
+				task, e := mediacodec.DecodeTask(s.Payload)
+				if e == nil {
+					e = authorizeMediaParent(ctx, p, s, task, now)
+				}
+				if e == nil {
+					if e = p.Waits.Park(ctx, parent, MediaWaitKey(id), mediaResumePolicy(s.Operation), now); e != nil {
+						return e
+					}
+				} else if !errors.Is(e, clip.ErrInvalid) && !errors.Is(e, clip.ErrInvalidMedia) && !errors.Is(e, clip.ErrMediaIncompatible) && !errors.Is(e, clip.ErrMediaLeaseLost) && !errors.Is(e, clip.ErrMediaCancelled) && !errors.Is(e, clip.ErrSourceState) && !errors.Is(e, clip.ErrNotFound) {
+					return e
+				}
+			} else if e != nil {
+				return e
+			}
+		}
 		if (s.State == clip.MediaQueued || s.State == clip.MediaRunning) && j.Stage != clip.MediaJobStage(s) {
 			if err = p.Waits.UpdateProgress(ctx, s.ParentJobID, clip.MediaJobStage(s), 0, 0, now); err != nil {
 				return err
