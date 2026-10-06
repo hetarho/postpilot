@@ -1,5 +1,5 @@
 import type { ClipEditPlan } from '@/entities/clip-plan'
-import { browserAudioPlan, speechDecodeKey } from '@/entities/clip-preview'
+import { browserAudioPlan, speechDecodeKey, CLIP_AUDIO_PROCESSING } from '@/entities/clip-preview'
 import { CLIP_BROWSER_RENDER } from '@/entities/clip-design'
 export class BrowserAudioRenderError extends Error {
   constructor(
@@ -37,14 +37,34 @@ export function browserAudioPreflight(plan: ClipEditPlan) {
     }
   }
   const unique = new Map(schedule.speech.map((s) => [speechDecodeKey(s.speech), s]))
+  const largestSourceFrames = Math.max(0, ...schedule.cuts.map((c) => c.sourceFrames))
+  const largestCutFrames = Math.max(0, ...schedule.cuts.map((c) => c.frames))
+  const guardFrames = Math.ceil(
+    ((CLIP_AUDIO_PROCESSING.decoderPrerollMs + CLIP_AUDIO_PROCESSING.decoderTailMs) *
+      schedule.sampleRate) /
+      1000,
+  )
   const reservedBytes =
-    schedule.sampleFrames * 2 * 4 * 6 +
+    schedule.sampleFrames * 2 * 4 * CLIP_AUDIO_PROCESSING.mixCopies +
     [...unique.values()].reduce(
-      (total, s) => total + Math.ceil(s.duration * schedule.sampleRate) * 2 * 4 * 2,
+      (total, s) =>
+        total +
+        Math.ceil(s.duration * schedule.sampleRate) * 2 * 4 * CLIP_AUDIO_PROCESSING.speechCopies,
       0,
     ) +
-    schedule.cuts.reduce((total, c) => total + c.frames * 2 * 4, 0)
+    schedule.cuts.reduce((total, c) => total + c.frames * 2 * 4, 0) +
+    largestCutFrames * 2 * 4 +
+    (schedule.cuts.length
+      ? (largestSourceFrames + guardFrames) * 2 * 4 * CLIP_AUDIO_PROCESSING.canonicalRangeCopies
+      : 0) +
+    CLIP_AUDIO_PROCESSING.dspWorkingBytes +
+    CLIP_AUDIO_PROCESSING.encodedPacketBytes
   if (!Number.isSafeInteger(reservedBytes) || reservedBytes > CLIP_BROWSER_RENDER.audioDecodedBytes)
     throw new BrowserAudioRenderError('memory')
-  return { schedule, reservedBytes }
+  const rangePcmBytes = Math.floor(
+    (CLIP_BROWSER_RENDER.audioDecodedBytes - reservedBytes) /
+      CLIP_AUDIO_PROCESSING.transientRangeCopies,
+  )
+  if (schedule.cuts.length && rangePcmBytes <= 0) throw new BrowserAudioRenderError('memory')
+  return { schedule, reservedBytes, rangePcmBytes }
 }

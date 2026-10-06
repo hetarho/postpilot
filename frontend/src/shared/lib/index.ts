@@ -1,5 +1,14 @@
 export { isInAppPath, SIGNED_IN_HOME } from './redirect'
 export { createAudioProcessor } from './media'
+export { createAudioRangeReader, audioGuardWindow, decodeOriginalAudioRange } from './media'
+export { canonicalSelectedAudio } from './media'
+export { loudnessRange48k } from './media'
+export type {
+  AudioRangeLimits,
+  AudioSourceRange,
+  OriginalAudioMetadata,
+  SelectedAudioRange,
+} from './media'
 export { MediaPhaseRecorder } from './media'
 export type { MediaPhaseMeasurement, MediaPhaseSnapshot } from './media'
 export { integratedLoudness48k, normalizeLoudness48k, truePeak48k } from './media'
