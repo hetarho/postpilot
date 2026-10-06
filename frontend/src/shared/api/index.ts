@@ -504,3 +504,9 @@ export { ClipSpeechService } from './gen/postpilot/v1/clip_speech_pb'
 
 export { VoiceOrigin as ProtoVoiceOrigin } from './gen/postpilot/v1/voice_pb'
 export { WritingVoiceCandidateService } from './gen/postpilot/v1/writing_voice_candidate_pb'
+
+export {
+  ConfigurationAuthoringService,
+  ConfigurationKind as ProtoConfigurationKind,
+  AuthoringMode as ProtoAuthoringMode,
+} from './gen/postpilot/v1/configuration_authoring_pb'

@@ -1,0 +1,110 @@
+syntax = "proto3";
+package postpilot.v1;
+import "postpilot/v1/provider.proto";
+option go_package = "github.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1";
+
+service ConfigurationAuthoringService {
+  rpc CreateAuthoringSession(CreateAuthoringSessionRequest) returns (AuthoringSessionResponse) {}
+  rpc GetAuthoringSession(GetAuthoringSessionRequest) returns (AuthoringSessionResponse) {}
+  rpc GetLatestAuthoringSession(GetLatestAuthoringSessionRequest) returns (AuthoringSessionResponse) {}
+  rpc EstimateAuthoringOperation(EstimateAuthoringOperationRequest) returns (EstimateAuthoringOperationResponse) {}
+  rpc StartAuthoringOperation(StartAuthoringOperationRequest) returns (StartAuthoringOperationResponse) {}
+  rpc SelectAuthoringCandidate(SelectAuthoringCandidateRequest) returns (AuthoringSessionResponse) {}
+  rpc CancelAuthoringOperation(CancelAuthoringOperationRequest) returns (AuthoringSessionResponse) {}
+  rpc SaveAuthoringSession(SaveAuthoringSessionRequest) returns (AuthoringSessionResponse) {}
+}
+enum ConfigurationKind {
+  CONFIGURATION_KIND_UNSPECIFIED = 0;
+  CONFIGURATION_KIND_POST_TEMPLATE = 1;
+  CONFIGURATION_KIND_VIDEO_TEMPLATE = 2;
+  CONFIGURATION_KIND_POST_GUIDELINE = 3;
+  CONFIGURATION_KIND_VIDEO_GUIDELINE = 4;
+  CONFIGURATION_KIND_WRITING_VOICE = 5;
+}
+enum AuthoringMode {
+  AUTHORING_MODE_UNSPECIFIED = 0;
+  AUTHORING_MODE_RECOMMEND = 1;
+  AUTHORING_MODE_REFINE = 2;
+}
+message AuthoringArtifact {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  string body = 4;
+  string title_area = 5;
+}
+message AuthoringTurn {
+  string id = 1;
+  string request = 2;
+  string reply = 3;
+  string job_id = 4;
+  string status = 5;
+}
+message AuthoringSavedRef {
+  ConfigurationKind kind = 1;
+  string id = 2;
+  string name = 3;
+}
+message AuthoringSession {
+  string id = 1;
+  ConfigurationKind kind = 2;
+  uint32 revision = 3;
+  string phase = 4;
+  repeated AuthoringArtifact candidates = 5;
+  AuthoringArtifact selected = 6;
+  repeated AuthoringTurn turns = 7;
+  string active_job_id = 8;
+  AuthoringSavedRef saved = 9;
+  string target_id = 10;
+  string target_version = 11;
+  string failure_reason = 12;
+  string pending_request = 13;
+}
+message CreateAuthoringSessionRequest {
+  ConfigurationKind kind = 1;
+  string target_id = 2;
+  string request_id = 3;
+}
+message GetAuthoringSessionRequest { string session_id = 1; }
+message GetLatestAuthoringSessionRequest {
+  ConfigurationKind kind = 1;
+  string target_id = 2;
+}
+message AuthoringSessionResponse { AuthoringSession session = 1; }
+message EstimateAuthoringOperationRequest {
+  ConfigurationKind kind = 1;
+  AuthoringMode mode = 2;
+  ModelRef write_model = 3;
+  // Existing drafts use their actual bounded size for the same frozen output cap.
+  string session_id = 4;
+}
+message EstimateAuthoringOperationResponse {
+  optional int64 credits = 1;
+  bool free = 2;
+}
+message StartAuthoringOperationRequest {
+  string session_id = 1;
+  uint32 expected_revision = 2;
+  string request_id = 3;
+  AuthoringMode mode = 4;
+  string prompt = 5;
+  ModelRef write_model = 6;
+}
+message StartAuthoringOperationResponse {
+  string job_id = 1;
+  AuthoringSession session = 2;
+}
+message SelectAuthoringCandidateRequest {
+  string session_id = 1;
+  uint32 expected_revision = 2;
+  string candidate_id = 3;
+}
+message CancelAuthoringOperationRequest {
+  string session_id = 1;
+  string job_id = 2;
+}
+message SaveAuthoringSessionRequest {
+  string session_id = 1;
+  uint32 expected_revision = 2;
+  bool make_default = 3;
+}

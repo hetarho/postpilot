@@ -1,6 +1,17 @@
 import type { AppFailureReason } from '@/shared/api'
 
 export const errors = {
+  AUTHORING_SESSION_NOT_FOUND: '이 초안을 찾을 수 없어요. 새로 시작해 주세요.',
+  AUTHORING_REVISION_CONFLICT: '다른 화면에서 초안이 바뀌었어요. 최신 내용을 확인해 주세요.',
+  AUTHORING_RUNNING: '이미 AI가 초안을 만들고 있어요. 진행 상황을 확인해 주세요.',
+  AUTHORING_OUTPUT_INVALID: '초안을 완성하지 못했어요. 이전 내용은 그대로예요. 다시 요청해 주세요.',
+  AUTHORING_NOT_READY: '마음에 드는 초안을 먼저 골라 주세요.',
+  AUTHORING_MESSAGE_INVALID: '원하는 내용을 2,000자 이내로 적어 주세요.',
+  AUTHORING_HISTORY_FULL: '이 대화는 충분히 길어졌어요. 새 대화로 이어가 주세요.',
+  AUTHORING_SAVE_CONFLICT:
+    '저장된 설정이 바뀌었어요. 초안은 그대로 있으니 최신 설정을 확인해 주세요.',
+  AUTHORING_KIND_INVALID: '이 설정은 AI 편집에서 사용할 수 없어요.',
+  AUTHORING_MODEL_REQUIRED: 'AI를 준비하지 못했어요. 다시 확인하거나 AI 설정을 살펴봐 주세요.',
   WRITING_VOICE_CANDIDATE_NOT_FOUND: '이 말투 후보를 찾을 수 없어요. 새 스타일을 만들어 주세요.',
   WRITING_VOICE_CANDIDATES_NOT_READY: '아직 말투 후보를 준비하고 있어요. 잠시만 기다려 주세요.',
   WRITING_VOICE_CANDIDATES_RUNNING:

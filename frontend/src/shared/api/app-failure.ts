@@ -18,6 +18,16 @@ export type AppFailureReason = keyof typeof FailureReason
 // What params each reason is allowed to carry. Keyed by the enum, so adding a reason to the
 // proto makes this object incomplete until it is given a spec.
 export const appFailureSpecs = {
+  AUTHORING_SESSION_NOT_FOUND: {},
+  AUTHORING_REVISION_CONFLICT: {},
+  AUTHORING_RUNNING: { optional: ['active_job_id'] },
+  AUTHORING_OUTPUT_INVALID: {},
+  AUTHORING_NOT_READY: {},
+  AUTHORING_MESSAGE_INVALID: {},
+  AUTHORING_HISTORY_FULL: {},
+  AUTHORING_SAVE_CONFLICT: {},
+  AUTHORING_KIND_INVALID: {},
+  AUTHORING_MODEL_REQUIRED: {},
   WRITING_VOICE_CANDIDATE_NOT_FOUND: {},
   WRITING_VOICE_CANDIDATES_NOT_READY: {},
   WRITING_VOICE_CANDIDATES_RUNNING: { required: ['active_job_id'] },

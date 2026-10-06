@@ -140,3 +140,11 @@ sql:
         package: "sqlc"
         out: "internal/quality/store/sqlc"
         omit_unused_structs: true
+  - engine: "sqlite"
+    schema: "internal/platform/db/migrations"
+    queries: "internal/authoring/store/queries"
+    gen:
+      go:
+        package: "sqlc"
+        out: "internal/authoring/store/sqlc"
+        omit_unused_structs: true

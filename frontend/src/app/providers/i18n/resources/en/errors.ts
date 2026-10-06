@@ -1,6 +1,18 @@
 import type { AppFailureReason } from '@/shared/api'
 
 export const errors = {
+  AUTHORING_SESSION_NOT_FOUND: 'This draft is unavailable. Start a new one.',
+  AUTHORING_REVISION_CONFLICT: 'This draft changed in another view. Check the latest version.',
+  AUTHORING_RUNNING: 'AI is already working on a draft. Check its progress.',
+  AUTHORING_OUTPUT_INVALID:
+    'Could not finish this draft. Your previous draft is preserved. Send another request.',
+  AUTHORING_NOT_READY: 'Choose a draft before continuing.',
+  AUTHORING_MESSAGE_INVALID: 'Describe your change in up to 2,000 characters.',
+  AUTHORING_HISTORY_FULL: 'This conversation is full. Continue in a new conversation.',
+  AUTHORING_SAVE_CONFLICT:
+    'The saved setting changed. Your draft is preserved. Check the latest setting.',
+  AUTHORING_KIND_INVALID: 'This setting is unavailable in AI authoring.',
+  AUTHORING_MODEL_REQUIRED: 'AI is not ready. Check again or review your AI settings.',
   WRITING_VOICE_CANDIDATE_NOT_FOUND:
     'This writing style is unavailable. Create a new set of styles.',
   WRITING_VOICE_CANDIDATES_NOT_READY: 'Your writing styles are still being prepared. Please wait.',
