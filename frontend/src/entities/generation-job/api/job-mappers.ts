@@ -12,6 +12,7 @@ function toModelRef(ref: ProtoGenerationJob['observeModel']): ModelRef | undefin
 
 export function toGenerationJob(job: ProtoGenerationJob): GenerationJob {
   return {
+    ...(job.waitExpiresAt ? { waitExpiresAt: job.waitExpiresAt } : {}),
     ...(job.cancelRequestedAt ? { cancelRequestedAt: job.cancelRequestedAt } : {}),
     ...(job.cancellationPolicyVersion > 0
       ? { cancellationPolicyVersion: job.cancellationPolicyVersion }

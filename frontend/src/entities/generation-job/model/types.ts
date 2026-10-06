@@ -7,6 +7,7 @@ export interface ModelRef {
 }
 
 export interface GenerationJob {
+  waitExpiresAt?: string
   cancelRequestedAt?: string
   cancellationPolicyVersion?: number
   canCancel?: boolean
@@ -87,7 +88,7 @@ export function progressLabel(
     Partial<
       Pick<
         GenerationJob,
-        'kind' | 'progressDone' | 'progressTotal' | 'cancelRequestedAt' | 'status'
+        'kind' | 'progressDone' | 'progressTotal' | 'cancelRequestedAt' | 'status' | 'waitExpiresAt'
       >
     >,
 ): string {
@@ -116,6 +117,21 @@ export function progressLabel(
         current: job.progressDone,
         total: job.progressTotal,
       })
+    }
+    if (job.kind === 'render_clip' && job.stage === 'render_wait' && job.waitExpiresAt) {
+      const deadline = new Date(job.waitExpiresAt)
+      if (Number.isFinite(deadline.getTime())) {
+        return i18next.t('generation.renderWaitDeadline', {
+          ns: 'clips',
+          stage: label,
+          time: deadline.toLocaleString(i18next.resolvedLanguage ?? i18next.language, {
+            month: 'numeric',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+          }),
+        })
+      }
     }
     return label
   }

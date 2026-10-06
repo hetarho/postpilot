@@ -103,7 +103,7 @@ func serve(ctx context.Context, c *contexts) error {
 	servers := []*http.Server{server}
 	if cfg.MediaInternalAddr != "" {
 		artifacts := clipapp.NewMediaArtifacts(handle.Writer, c.clipPorts, p.bucket, clip.DefaultMediaConfig(clipEnvironment(cfg)), nil)
-		private := cliprpc.NewMediaWorkerServer(cfg.MediaInternalAddr, cfg.MediaWorkerCredentials, clipapp.NewMediaWorker(clipapp.NewMediaControl(handle.Writer, c.clipPorts, c.clipStore), artifacts, nil))
+		private := cliprpc.NewMediaWorkerServer(cfg.MediaInternalAddr, cfg.MediaWorkerCredentials, clipapp.NewMediaWorker(clipapp.NewMediaControl(handle.Writer, c.clipPorts, c.clipStore, clip.DefaultRenderCapacity(clipEnvironment(cfg))), artifacts, nil))
 		handler := private.Handler
 		private.Handler = http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			if ctx.Err() != nil {

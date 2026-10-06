@@ -86,16 +86,18 @@ type MediaPublicationTx interface {
 
 // Ports is what one writer transaction exposes to a saga.
 type Ports struct {
-	Jobs        JobTx
-	Waits       JobWaitTx
-	Media       MediaArtifactTx
-	Stages      MediaDispatchTx
-	Publication MediaPublicationTx
-	Recovery    MediaRecoveryTx
-	Control     MediaControlTx
-	Clips       ClipTx
-	Admission   Admission
-	Exports     clip.ExportReservations
+	Starts        RenderJobTx
+	RenderSources RenderSourceTx
+	Jobs          JobTx
+	Waits         JobWaitTx
+	Media         MediaArtifactTx
+	Stages        MediaDispatchTx
+	Publication   MediaPublicationTx
+	Recovery      MediaRecoveryTx
+	Control       MediaControlTx
+	Clips         ClipTx
+	Admission     Admission
+	Exports       clip.ExportReservations
 }
 
 // Binder turns the open transaction into the tx-scoped ports. It is the one

@@ -159,7 +159,16 @@ func (l Loop) RunLease(parent context.Context, w clip.MediaWork) error {
 			}
 		}
 	}()
+	started := time.Now()
 	result, err := l.Executor.Execute(ctx, w)
+	outcome := "ok"
+	if err != nil {
+		outcome = "failed"
+	}
+	// Only the bounded operation name and numeric execution timing escape.
+	if w.Operation == clip.MediaPrepare || w.Operation == clip.MediaRender || w.Operation == clip.MediaSample {
+		slog.Info("clip worker execution", "operation", w.Operation, "outcome", outcome, "elapsed_ms", time.Since(started).Milliseconds())
+	}
 	if ctx.Err() != nil {
 		err = context.Cause(ctx)
 	}

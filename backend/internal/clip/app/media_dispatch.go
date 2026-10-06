@@ -147,8 +147,17 @@ func (d *MediaDispatch) Request(ctx context.Context, in MediaDispatchRequest) (s
 		}
 		switch stage.State {
 		case clip.MediaQueued, clip.MediaRunning:
+			// Native admission creates the stage before dispatch. Its first
+			// execution parks here without changing the admission deadline.
+			if _, err := p.Waits.Continuation(ctx, in.JobID); errors.Is(err, job.ErrInvalidWait) {
+				if err := p.Waits.Park(ctx, in.JobID, MediaWaitKey(stage.ID), mediaResumePolicy(in.Operation), now); err != nil {
+					return err
+				}
+			} else if err != nil {
+				return err
+			}
 			pending = true
-			return nil
+			return p.Waits.UpdateProgress(ctx, in.JobID, clip.MediaJobStage(stage), 0, 0, now)
 		case clip.MediaSucceeded:
 			continuation, err := p.Waits.Continuation(ctx, in.JobID)
 			if err != nil {

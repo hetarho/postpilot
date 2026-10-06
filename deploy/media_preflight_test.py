@@ -35,4 +35,12 @@ class CapacityGate(unittest.TestCase):
         self.assertFalse(preflight.assess(c,0,0,1,1,1,1)['pass'])
         self.assertFalse(preflight.assess(c,512*1024**2,-1,1,1,1,1)['pass'])
 
+    def test_worker_limit_reserves_api_cpu_and_remote_can_exclude_it(self):
+        c=dict(available_memory_bytes=10**12,available_disk_bytes=10**12,cpu_capacity=1)
+        budgets=(512*1024**2,256*1024**2,256*1024**2,8*1024**3,2*1024**3,1)
+        self.assertFalse(preflight.assess(c,*budgets)['pass'])
+        self.assertTrue(preflight.assess(c,*budgets,api_cpus=0)['pass'])
+        for invalid in [-1,float('inf'),float('nan')]:
+            self.assertFalse(preflight.assess(c,*budgets,api_cpus=invalid)['pass'])
+
 if __name__=='__main__':unittest.main()

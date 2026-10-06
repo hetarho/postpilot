@@ -6,6 +6,7 @@ export const i18n = {
   ko: {
     generation: {
       responseRetryCount: '{{stage}} ({{current}}/{{total}})',
+      renderWaitDeadline: '{{stage}} · 대기 만료 {{time}}',
       generate: '생성',
       retry: '다시 생성',
       storylineFirst: '스토리라인 먼저',
@@ -75,6 +76,7 @@ export const i18n = {
   en: {
     generation: {
       responseRetryCount: '{{stage}} ({{current}}/{{total}})',
+      renderWaitDeadline: '{{stage}} · wait expires {{time}}',
       generate: 'Generate',
       retry: 'Generate again',
       storylineFirst: 'Storyline first',

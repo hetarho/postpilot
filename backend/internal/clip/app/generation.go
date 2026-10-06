@@ -20,28 +20,29 @@ import (
 )
 
 type GenerationService struct {
-	voices        clip.SpokenVoiceResolver
-	speech        *SpeechService
-	previewOwners sync.Map
-	remoteMedia   *MediaDispatch
-	store         clip.GenerationStore
-	projects      *Service
-	sources       *SourceService
-	objects       clip.ProcessingObjects
-	media         clip.Media
-	planner       clip.Planner
-	renderer      clip.Renderer
-	jobs          clip.GenerationJobs
-	finisher      clip.ClipFinisher
-	cfg           clip.GenerationConfig
-	pricing       clip.QuotePricing
-	accounting    clip.AccountingReader
-	admission     clip.AnalysisAdmission
-	candidates    clip.GuidelineCandidates
-	guidelines    VideoGuidelineSource
-	exports       clip.ExportReservations
-	prepareExport func(context.Context, string) (bool, error)
-	now           func() time.Time
+	nativeAdmission *RenderAdmission
+	voices          clip.SpokenVoiceResolver
+	speech          *SpeechService
+	previewOwners   sync.Map
+	remoteMedia     *MediaDispatch
+	store           clip.GenerationStore
+	projects        *Service
+	sources         *SourceService
+	objects         clip.ProcessingObjects
+	media           clip.Media
+	planner         clip.Planner
+	renderer        clip.Renderer
+	jobs            clip.GenerationJobs
+	finisher        clip.ClipFinisher
+	cfg             clip.GenerationConfig
+	pricing         clip.QuotePricing
+	accounting      clip.AccountingReader
+	admission       clip.AnalysisAdmission
+	candidates      clip.GuidelineCandidates
+	guidelines      VideoGuidelineSource
+	exports         clip.ExportReservations
+	prepareExport   func(context.Context, string) (bool, error)
+	now             func() time.Time
 }
 
 // videoGuidelines is the 영상 지침 this project is written under right now, read once per quote or
@@ -58,8 +59,9 @@ func (s *GenerationService) videoGuidelines(ctx context.Context, p clip.Project)
 // the pricing and accounting sit on the credit path, and the admission answers
 // eligibility — a service missing any of them refuses or misreports rather than runs.
 type GenerationDeps struct {
-	Voices clip.SpokenVoiceResolver
-	Speech *SpeechService
+	NativeAdmission *RenderAdmission
+	Voices          clip.SpokenVoiceResolver
+	Speech          *SpeechService
 	// Nil is the temporary embedded rollout path; removed by T387.
 	RemoteMedia *MediaDispatch
 	Finisher    clip.ClipFinisher
@@ -85,7 +87,7 @@ func NewGenerationService(store clip.GenerationStore, projects *Service, sources
 	if deps.Finisher == nil || deps.Pricing == nil || deps.Accounting == nil || deps.Admission == nil || deps.Voices == nil {
 		panic("clip: finisher, pricing, accounting, admission and spoken voice resolver are required")
 	}
-	s := &GenerationService{speech: deps.Speech, voices: deps.Voices, remoteMedia: deps.RemoteMedia, store: store, projects: projects, sources: sources, objects: objects, media: media, planner: planner, renderer: renderer, jobs: jobs, cfg: cfg, now: time.Now,
+	s := &GenerationService{nativeAdmission: deps.NativeAdmission, speech: deps.Speech, voices: deps.Voices, remoteMedia: deps.RemoteMedia, store: store, projects: projects, sources: sources, objects: objects, media: media, planner: planner, renderer: renderer, jobs: jobs, cfg: cfg, now: time.Now,
 		finisher: deps.Finisher, pricing: deps.Pricing, accounting: deps.Accounting, admission: deps.Admission,
 		candidates: deps.Candidates, guidelines: deps.Guidelines, exports: deps.Exports, prepareExport: deps.PrepareExport}
 	// The project service and its generation side need each other; the pair is closed

@@ -1415,6 +1415,7 @@ type GenerationJob struct {
 	CancelRequestedAt         string          `protobuf:"bytes,16,opt,name=cancel_requested_at,json=cancelRequestedAt,proto3" json:"cancel_requested_at,omitempty"`
 	CancellationPolicyVersion int32           `protobuf:"varint,17,opt,name=cancellation_policy_version,json=cancellationPolicyVersion,proto3" json:"cancellation_policy_version,omitempty"`
 	CanCancel                 bool            `protobuf:"varint,18,opt,name=can_cancel,json=canCancel,proto3" json:"can_cancel,omitempty"`
+	WaitExpiresAt             string          `protobuf:"bytes,19,opt,name=wait_expires_at,json=waitExpiresAt,proto3" json:"wait_expires_at,omitempty"`
 	unknownFields             protoimpl.UnknownFields
 	sizeCache                 protoimpl.SizeCache
 }
@@ -1574,6 +1575,13 @@ func (x *GenerationJob) GetCanCancel() bool {
 		return x.CanCancel
 	}
 	return false
+}
+
+func (x *GenerationJob) GetWaitExpiresAt() string {
+	if x != nil {
+		return x.WaitExpiresAt
+	}
+	return ""
 }
 
 type GetGenerationRequest struct {
@@ -3865,7 +3873,7 @@ const file_postpilot_v1_post_proto_rawDesc = "" +
 	"\x0ftarget_language\x18\t \x01(\x0e2\x1d.postpilot.v1.ContentLanguageR\x0etargetLanguage\x12H\n" +
 	"\x10content_language\x18\n" +
 	" \x01(\x0e2\x1d.postpilot.v1.ContentLanguageR\x0fcontentLanguage\x12\x12\n" +
-	"\x04tags\x18\v \x03(\tR\x04tags\"\xc8\x05\n" +
+	"\x04tags\x18\v \x03(\tR\x04tags\"\xf0\x05\n" +
 	"\rGenerationJob\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04kind\x18\x02 \x01(\tR\x04kind\x12\x16\n" +
@@ -3889,7 +3897,8 @@ const file_postpilot_v1_post_proto_rawDesc = "" +
 	"\x13cancel_requested_at\x18\x10 \x01(\tR\x11cancelRequestedAt\x12>\n" +
 	"\x1bcancellation_policy_version\x18\x11 \x01(\x05R\x19cancellationPolicyVersion\x12\x1d\n" +
 	"\n" +
-	"can_cancel\x18\x12 \x01(\bR\tcanCancel\"&\n" +
+	"can_cancel\x18\x12 \x01(\bR\tcanCancel\x12&\n" +
+	"\x0fwait_expires_at\x18\x13 \x01(\tR\rwaitExpiresAt\"&\n" +
 	"\x14GetGenerationRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"F\n" +
 	"\x15GetGenerationResponse\x12-\n" +

@@ -60,3 +60,24 @@ func TestProjectLastRenderKindComesOnlyFromItsResult(t *testing.T) {
 		}
 	}
 }
+
+func TestNativeCapacityRefusalsAreDistinctProductFailures(t *testing.T) {
+	for _, tc := range []struct {
+		cause  error
+		reason string
+	}{
+		{clip.ErrRenderOverloaded, "CLIP_SERVER_RENDER_OVERLOADED"},
+		{clip.ErrRenderAccountBusy, "CLIP_SERVER_RENDER_ACCOUNT_BUSY"},
+	} {
+		err := toConnectError(tc.cause)
+		var rpc *connect.Error
+		if !errors.As(err, &rpc) || rpc.Code() != connect.CodeResourceExhausted || len(rpc.Details()) != 1 {
+			t.Fatal(err)
+		}
+		value, e := rpc.Details()[0].Value()
+		detail, ok := value.(*v1.AppErrorDetail)
+		if e != nil || !ok || detail.Reason != tc.reason {
+			t.Fatal(value, e)
+		}
+	}
+}

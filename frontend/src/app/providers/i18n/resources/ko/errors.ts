@@ -148,12 +148,18 @@ export const errors = {
     '분석용 영상을 안전한 용량 안으로 준비하지 못해 AI 생성을 시작하지 않았어요. 원본을 확인한 뒤 다시 시도해 주세요.',
   CLIP_WORKSPACE_LIMIT:
     '영상 처리에 필요한 임시 공간이 부족해 중단했어요. 이전 결과는 보존돼요. 잠시 후 다시 시도해 주세요.',
+  CLIP_SERVER_RENDER_OVERLOADED:
+    '서버 렌더링이 가득 찼어요. 잠시 후 다시 시도하거나 지원되는 기기에서 브라우저로 내보내 주세요. AI 크레딧과 출력 횟수는 사용하지 않았어요.',
+  CLIP_SERVER_RENDER_ACCOUNT_BUSY:
+    '이 계정의 서버 렌더링이 이미 대기 또는 실행 중이에요. 해당 작업을 마치거나 취소한 뒤 다시 시도해 주세요.',
   CLIP_SERVER_EXPORT_PLAN_REQUIRED:
     '새 서버 렌더링은 Max에서 이용할 수 있어요. 지원하는 기기에서는 브라우저 내보내기를 이용할 수 있어요.',
   CLIP_SERVER_EXPORT_EXHAUSTED:
     '이번 달 서버 내보내기 횟수를 모두 사용했어요. 다음 갱신 때 다시 이용해 주세요. 이 기기에서 지원하면 브라우저 내보내기도 할 수 있어요.',
   CLIP_MODEL_INPUT_UNSUPPORTED:
     '선택한 모델은 클립의 영상 입력 방식을 지원하지 않아요. 클립 분석을 지원하는 모델을 선택해 주세요.',
+  CLIP_MEDIA_WAIT_EXPIRED:
+    '영상 처리 대기 시간이 만료되어 중단했어요. 이전 결과와 완료된 분석은 유지돼요. 잠시 후 다시 시도하거나 지원되는 기기에서 브라우저로 내보내 주세요.',
   CLIP_MEDIA_UNAVAILABLE:
     '영상 처리를 시작하지 못했습니다. 잠시 후 다시 시도하세요. 완료된 분석과 이전 결과는 유지됩니다.',
   CLIP_MEDIA_RETRY_EXHAUSTED:

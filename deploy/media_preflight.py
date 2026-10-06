@@ -27,11 +27,11 @@ def read_capacity(work_root, proc=Path('/proc'), cgroup=Path('/sys/fs/cgroup')):
     return {'available_memory_bytes': available, 'available_disk_bytes': disk, 'cpu_capacity': cpus}
 
 
-def assess(capacity, worker_memory, api_extra, reserve, workspace, disk_reserve, worker_cpus):
+def assess(capacity, worker_memory, api_extra, reserve, workspace, disk_reserve, worker_cpus, api_cpus=1):
     required_memory = worker_memory + api_extra + reserve
     required_disk = workspace + disk_reserve
     errors = []
-    if not math.isfinite(worker_cpus) or min(worker_memory, reserve, workspace, disk_reserve, worker_cpus) <= 0 or api_extra < 0:
+    if not math.isfinite(worker_cpus) or not math.isfinite(api_cpus) or min(worker_memory, reserve, workspace, disk_reserve, worker_cpus) <= 0 or api_extra < 0 or api_cpus < 0:
         errors.append('budgets must be positive (API extra may be zero on a worker-only host)')
     if worker_memory < 256 * 1024**2:
         errors.append('worker memory must be at least 256MiB; this floor is not a tested workload guarantee')
@@ -41,10 +41,10 @@ def assess(capacity, worker_memory, api_extra, reserve, workspace, disk_reserve,
         errors.append('insufficient currently available memory for worker + additional API + reserve')
     if capacity['available_disk_bytes'] < required_disk:
         errors.append('insufficient free disk for one bounded workspace + disk reserve')
-    if worker_cpus > capacity['cpu_capacity']:
-        errors.append('worker CPU limit exceeds host/cgroup capacity')
+    if worker_cpus + api_cpus > capacity['cpu_capacity']:
+        errors.append('worker + reserved API CPU limits exceed host/cgroup capacity')
     return {**capacity, 'required_memory_bytes': required_memory, 'required_disk_bytes': required_disk,
-            'worker_cpus': worker_cpus, 'pass': not errors, 'failures': errors,
+            'worker_cpus': worker_cpus, 'api_cpus': api_cpus, 'pass': not errors, 'failures': errors,
             'scope': 'point-in-time headroom; existing workloads already consume MemAvailable; no speed or future-load guarantee'}
 
 
@@ -53,6 +53,7 @@ def main():
     parser.add_argument('--work-root', type=Path, required=True, help='existing path on the filesystem holding worker scratch')
     parser.add_argument('--worker-memory', required=True, help='same value as MEDIA_WORKER_MEMORY')
     parser.add_argument('--worker-cpus', type=float, default=1)
+    parser.add_argument('--api-cpus', type=float, default=1, help='reserved API CPU budget; use 0 on a worker-only host')
     parser.add_argument('--api-extra-memory', default='256m', help='additional API headroom; use 0 on separate worker host')
     parser.add_argument('--reserve-memory', default='256m', help='additional headroom for cohost services beyond present usage')
     parser.add_argument('--workspace', default='8g', help='one production workspace bound; do not lower for arbitrary user inputs')
@@ -61,7 +62,7 @@ def main():
     try:
         if not args.work_root.is_dir():
             raise ValueError('--work-root must be an existing directory on the target filesystem')
-        report = assess(read_capacity(args.work_root), *(memory_bytes(v) for v in [args.worker_memory, args.api_extra_memory, args.reserve_memory, args.workspace, args.reserve_disk]), args.worker_cpus)
+        report = assess(read_capacity(args.work_root), *(memory_bytes(v) for v in [args.worker_memory, args.api_extra_memory, args.reserve_memory, args.workspace, args.reserve_disk]), args.worker_cpus, args.api_cpus)
     except (OSError, KeyError, ValueError, RolloutError) as error:
         parser.exit(2, f'capacity unavailable: {error}; run on the Linux Docker host, not a macOS Docker client\n')
     print(json.dumps(report, indent=2))

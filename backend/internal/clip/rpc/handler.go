@@ -192,6 +192,10 @@ func toConnectError(err error) error {
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip target duration is required", postpilotv1.FailureReason_CLIP_TARGET_DURATION_REQUIRED, nil)
 	case errors.Is(err, clip.ErrBusy):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip is busy", postpilotv1.FailureReason_CLIP_BUSY, nil)
+	case errors.Is(err, clip.ErrRenderOverloaded):
+		return rpcserver.NewAppError(connect.CodeResourceExhausted, "server rendering is full", postpilotv1.FailureReason_CLIP_SERVER_RENDER_OVERLOADED, nil)
+	case errors.Is(err, clip.ErrRenderAccountBusy):
+		return rpcserver.NewAppError(connect.CodeResourceExhausted, "account has active server rendering", postpilotv1.FailureReason_CLIP_SERVER_RENDER_ACCOUNT_BUSY, nil)
 	case errors.Is(err, clip.ErrServerExportPlan):
 		return rpcserver.NewAppError(connect.CodePermissionDenied, "server export requires Max", postpilotv1.FailureReason_CLIP_SERVER_EXPORT_PLAN_REQUIRED, nil)
 	case errors.Is(err, clip.ErrExportAllowance):

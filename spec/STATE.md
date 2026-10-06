@@ -65,7 +65,7 @@
 |---|---|---|---|---|
 | T539 | Qualify the complete Korean voice-creation milestone | ARCH DUB MODEL CDS THEME | T538 | blocked@261005 |
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
-| T590 | Bound Max server-render admission and waiting | ARCH CLIP INFRA | T589 | todo |
+| T590 | Bound Max server-render admission and waiting | ARCH CLIP INFRA | T589 | blocked@261006 |
 | T591 | Freeze one browser composition and time contract | ARCH CLIP CDS | T588 | todo |
 | T592 | Decode selected video ranges in a bounded browser pipeline | ARCH CLIP CDS | T591 | todo |
 | T593 | Bound selected audio and immutable narration processing | ARCH CLIP CDS DUB | T591 | todo |
@@ -82,11 +82,15 @@
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | todo |
 
 ## next
-- T588/T589 are complete. The user requested stopping after T589; T590 is the next browser-media task, followed by T591-T604 dependencies, and none has started. T539/T550 retain real voice/listening qualification and current browser-contract revalidation.
+- T590 implementation and all available local CI checks pass; blocked on the unresponsive Docker daemon. Restore Docker, run the Docker generator checks and matching CPU smokes, then close T590. T591 is the next todo; T539/T550 keep voice/listening and browser qualification gates.
 - ARCH r16 and INFRA r2 browser changes are mapped to T588-T604; earlier ARCH revisions and unrelated INFRA database/backups remain unconsumed, so ARCH tasked=9 and INFRA tasked=0 stay. ARCH-10/INFRA-6 database alignment, POST r32 and VOICE r8 verification-only deltas and VOICE-31 remain outside this scope.
-- ops: lower TEMPLATE_PHOTO_ROW_MAX / VITE_TEMPLATE_PHOTO_ROW_MAX to 3 in explicit production overrides. Ideation searchable-details continues; ordinary voice/narration readiness remains closed until its existing qualification passes.
+- ops: lower TEMPLATE_PHOTO_ROW_MAX / VITE_TEMPLATE_PHOTO_ROW_MAX to 3 in explicit production overrides. Ideation searchable-details continues; ordinary voice/narration readiness stays closed until qualification passes. Doc-review ARCH QUOTA VOICE handles existing document-quality hints.
 
 ## log
+- 261006 parallel browser-media start: isolated task workers through T604 with dependency-aware dispatch and independent reviews; preserve T590 implementation and its Docker gate
+- 261006 T590 blocked: durable 1/2/1 native limits, atomic reservations and queue expiry verified; full BE tests, race tests, 3323 FE tests and 62 deploy tests passed; Docker generators/image smokes await daemon recovery
+- 261006 T590 verification scope: installed locked dependencies restored; ignored backend/tmp diagnostic programs excluded from an identical-source CI copy; no production deployment or database changes
+- 261006 T590 start: durable finite Max render capacity, cancellable bounded waiting and same-host resource reservations
 - 261006 T589 done: current Max-only native access, preserved legacy jobs/history and browser-first ko/en surfaces; 3321 FE tests and full local CI passed
 - 261006 user stop boundary: finish T589 and commit current browser-media work; T590-T604 remain todo
 - 261006 T589 start: Max-only commercial server admission and browser-first controls, preserving previously accepted work and usage history
@@ -103,7 +107,3 @@
 - 261006 update-ssot ARCH r16 CLIP r56 CDS r33 QUOTA r35 INFRA r2: browser media contracts, qualified motion/proxies and bounded Max-only exports
 - 261006 planning impact: T539/T550 require browser-contract revalidation; T586/T587 retain unchanged speech decisions but must check advanced ARCH/QUOTA bases; active task files are not edited
 - 261006 update-ssot CLIP CDS QUOTA and create-architecture start: browser-first media execution, motion parity and analysis-quality qualification
-- 261006 T587 start: list registration, direct grade changes, optional synthesis settings and common tariff editor
-- 261006 T586 start: server-owned speech bindings, unique catalog registrations and atomic common tariff snapshots
-- 261006 create-task MODEL r30 done: T586 server registration/pricing then T587 list administration
-- 261006 create-task MODEL start: implement r30 speech catalog registration and common verified pricing

@@ -96,7 +96,7 @@ func (e *StageFailure) Failure() llm.Failure {
 		reason := "CLIP_PROCESSING_FAILED"
 		switch media.Code {
 		case MediaFailureWaitExpired:
-			reason = "CLIP_MEDIA_UNAVAILABLE"
+			reason = "CLIP_MEDIA_WAIT_EXPIRED"
 		case MediaFailureAttemptsExhausted:
 			reason = "CLIP_MEDIA_RETRY_EXHAUSTED"
 		case MediaFailureDeadlineExceeded:

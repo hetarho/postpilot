@@ -339,6 +339,10 @@ func (s *Store) GetByID(ctx context.Context, id string) (job.Job, error) {
 }
 
 func toJob(row sqlc.GenerationJob) (job.Job, error) {
+	waitExpiry, err := parseOptionalTime(row.WaitExpiresAt)
+	if err != nil {
+		return job.Job{}, fmt.Errorf("job %s wait_expires_at: %w", row.ID, err)
+	}
 	cancelled, err := parseOptionalTime(row.CancelRequestedAt)
 	if err != nil {
 		return job.Job{}, fmt.Errorf("job %s cancel_requested_at: %w", row.ID, err)
@@ -364,6 +368,7 @@ func toJob(row sqlc.GenerationJob) (job.Job, error) {
 		return job.Job{}, fmt.Errorf("job %s failure: %w", row.ID, err)
 	}
 	return job.Job{
+		WaitExpiresAt:     waitExpiry,
 		CancelRequestedAt: cancelled, CancellationPolicyVersion: int(row.CancellationPolicyVersion),
 		ID: row.ID, UserID: row.UserID, Kind: row.Kind, Subjects: rowSubjects(row),
 		DispatchReady: row.DispatchReady != 0,

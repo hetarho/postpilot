@@ -300,6 +300,8 @@ type Config struct {
 	ClipOverlayDir                                                 string
 	ClipWorkStaleAge, ClipMediaTimeout                             time.Duration
 	ClipMediaLeaseTTL, ClipMediaWaitTimeout, ClipMediaStageTimeout time.Duration
+	ClipServerRenderActive, ClipServerRenderPerAccount             int
+	ClipServerRenderWaiting                                        *int
 	ClipMediaMaxAttempts                                           int
 	// How many threads one ffmpeg may take. libx264 above one thread is not
 	// bit-exact, so raising the encoder moves delivered bytes (CLIP-124,

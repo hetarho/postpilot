@@ -2,6 +2,11 @@
 # no worker/control port is published and the worker never joins the shared edge.
 services:
   api:
+    cpus: ${API_CPUS:-1.0}
+    cpu_shares: 1024
+    mem_limit: ${API_MEMORY:-256m}
+    memswap_limit: ${API_MEMORY:-256m}
+    mem_reservation: ${API_MEMORY:-256m}
     environment:
       MEDIA_INTERNAL_ADDR: ":9000"
     networks:
@@ -10,6 +15,7 @@ services:
     image: ghcr.io/hetarho/postpilot-media-worker:${MEDIA_WORKER_IMAGE_TAG:?Set the worker image SHA in worker.env}
     env_file: worker.env
     restart: unless-stopped
+    cpu_shares: 512
     cpus: ${MEDIA_WORKER_CPUS:-1.0}
     mem_limit: ${MEDIA_WORKER_MEMORY:-512m}
     memswap_limit: ${MEDIA_WORKER_MEMORY:-512m}

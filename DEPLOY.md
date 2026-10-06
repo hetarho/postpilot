@@ -419,6 +419,38 @@ curl --fail 'https://<api-domain>/health'
 `--check`는 이미지를 pull하고 일회용 검사 컨테이너를 실행하지만 운영 서비스를 중지하거나 입력 태그를 영구 반영하지 않는다. 첫 전환 설정은 `.deploy/bootstrap-before`에 보관한다. 구 API로 롤백할 수 없는 첫 배포가 실패하면 새 버전을 유지하고 로그의 원인을 수정한다. 오래된 DB 복원으로 이미지 롤백을 강제하지 않는다. 이후 지원 버전끼리는 자동 롤백이 동작한다.
 
 <a id="media-single-gpu"></a>
+#### 서버 렌더 용량과 공유 호스트 예약
+
+API `.env`의 기본값은 `CLIP_SERVER_RENDER_ACTIVE=1`, `CLIP_SERVER_RENDER_WAITING=2`, `CLIP_SERVER_RENDER_PER_ACCOUNT=1`이다. 실행 가능 슬롯 하나와 추가 대기 슬롯 두 개를 DB의 미종료 작업으로 집계한다. 워커를 아직 배정받지 못한 작업도 슬롯을 점유한다. 실제 네이티브 실행은 유효한 렌더 임대로 별도 제한하며, 취소된 워커가 정지 확인 또는 임대 만료를 기다리는 동안에도 새 실행이 그 용량을 넘지 않는다. 계정당 한도는 master에도 적용한다. 같은 요청은 기존 작업 ID를 반환한다. 초과 요청은 AI 크레딧·성공 내보내기 횟수를 사용하지 않고 거절한다. 브라우저 내보내기와 분석 검증은 이 서버 렌더 슬롯을 예약하지 않는다.
+
+대기 만료는 승인 시점에 고정한 `CLIP_MEDIA_WAIT_TIMEOUT`(기본 30분)이며, API가 재시작해도 새로 연장하지 않는다. 실행·복구에는 기존 `CLIP_MEDIA_STAGE_TIMEOUT`과 임대/재시도 한도를 적용한다. 월간 예약은 완료·취소 시 최초 기간에 정산한다. 용량을 낮추면 이미 승인한 작업을 유지하고 새로운 요청만 거절한다. Active는 1–8, Waiting은 0–64, Per-account는 1–전체 슬롯 범위만 허용하며 CPU/메모리 재검증 없이 한도를 올리지 않는다.
+
+Colocated Compose는 API에 `API_CPUS=1.0`, `API_MEMORY=256m`, 워커에 `MEDIA_WORKER_CPUS=1.0`, `MEDIA_WORKER_MEMORY=512m`의 CPU·메모리 상한과 swap 금지를 실제 적용한다. CPU 경합에서는 API의 share가 1024, 워커가 512다. 최소 API·워커 CPU 합계와 OS/Caddy/다른 서비스의 추가 여유를 가진 호스트에서 8.6 preflight를 통과해야 한다. 다른 프로젝트가 이 예비 용량을 사용하도록 배치하지 않는다. 이 설정은 완료시간 보장이 아니다.
+
+워커 작업 공간은 작업별 8GiB, 기본 동시 작업은 하나다. 배포 시 `media_work` Docker 볼륨에는 전용 12GiB 파일시스템 또는 파일시스템 project quota를 적용하고, API DB 볼륨과 분리한다. 볼륨 경로는 `docker volume inspect`의 Mountpoint로 확인한다. 디스크 quota는 [Docker Compose 자원 설정](https://docs.docker.com/reference/compose-file/services/)의 `mem_limit`이나 기본 named volume이 설정해 주지 않으므로 **운영자가 적용하고 초과 쓰기가 ENOSPC로 거절되는지 검증해야 한다**. 8.6의 여유 공간 검사와 작업별 앱 상한도 함께 적용한다. 저장소의 이번 변경은 호스트/DB/운영 env를 수정하거나 두 번째 워커·GPU를 구매하지 않는다.
+
+디스크 한도를 새로 준비하는 운영자용 Linux 예시다. 먼저 controller로 워커를 drain하고 중지한 상태에서 수행한다. 기존 작업 파일을 가리는 mount이므로 중간 파일 정리·백업 정책은 운영자가 확인한다. 다음 명령은 운영 절차이며 이번 태스크에서는 실행하지 않는다.
+
+```sh
+set -eu
+# 실제 Compose 볼륨 이름으로 바꾼다. API DB 볼륨을 지정하지 않는다.
+postpilot_scratch_volume='<stack>_media_work'
+postpilot_scratch_mount=$(docker volume inspect --format '{{.Mountpoint}}' "$postpilot_scratch_volume")
+postpilot_scratch_image='/var/lib/postpilot-media-scratch.ext4'
+# 기존 image가 없고, 호스트 여유가 12GiB + API/OS 예비 2GiB 이상인지 먼저 확인한다.
+test ! -e "$postpilot_scratch_image"
+sudo fallocate -l 12G "$postpilot_scratch_image"
+sudo mkfs.ext4 -F "$postpilot_scratch_image"
+sudo mount -o loop,nosuid,nodev "$postpilot_scratch_image" "$postpilot_scratch_mount"
+sudo chown 65532:65532 "$postpilot_scratch_mount"
+findmnt -T "$postpilot_scratch_mount"
+df -h "$postpilot_scratch_mount"
+```
+
+재부팅 때 Docker/워커보다 먼저 이 mount이 준비되도록 `/etc/fstab`과 서비스 순서를 운영자가 설정한다. 워커가 정지된 검증 환경에서 파일시스템 한도를 넘는 쓰기가 ENOSPC로 실패하는지 확인한 후 테스트 파일을 삭제하고 8.6 preflight를 실행한다. 상한 없는 원래 디렉터리로 부팅하면 안 된다. 이미 유효한 filesystem quota가 있는 호스트는 해당 quota 증거를 사용한다.
+
+대기·실행·과부하 지표에는 코드 소유 단계/결과와 시간·횟수만 기록하며 미디어·문장·서명 URL을 기록하지 않는다. 대기 만료·취소·과부하에서 이전 성공 파일은 유지한다.
+
 ### 8.3 NVIDIA GPU가 있는 한 서버
 
 **CPU 실행만 원하면 8.2를 그대로 사용한다. GPU 드라이버도 필요 없다.** GPU 장치 노출/진단을 준비할 때만 8.7의 1회성 드라이버·toolkit 설정을 먼저 완료한다. API/SQLite/Caddy 위치, 네트워크, 데이터 디렉터리는 8.2와 같다.
@@ -560,7 +592,7 @@ python3 deploy/media_preflight.py \
   --workspace 8g --reserve-disk 2g
 ```
 
-`worker.env`의 `MEDIA_WORKER_MEMORY`/`MEDIA_WORKER_CPUS`와 같은 값을 넣는다. 메모리는 전체 RAM이 아니라 **현재 MemAvailable**과 cgroup 잔여량 중 작은 값이다. 이미 실행 중인 DB/API/Caddy 등은 현재 사용량으로 반영되며, API 추가 여유와 다른 서비스의 증가분도 별도로 남긴다. 원격 워커 전용 호스트에서는 `--api-extra-memory 0`을 사용한다. 기본 디스크 요구량은 제품의 작업 공간 상한 8GiB + 여유 2GiB다. 실패(exit 1)하면 서버 증설, 동시 워크로드 축소 또는 별도 워커 호스트를 결정한 뒤 다시 점검한다. 이 일회성 검사는 미래 부하와 처리 속도를 보장하지 않는다.
+`worker.env`의 `MEDIA_WORKER_MEMORY`/`MEDIA_WORKER_CPUS`와 같은 값을 넣는다. 메모리는 전체 RAM이 아니라 **현재 MemAvailable**과 cgroup 잔여량 중 작은 값이다. 이미 실행 중인 DB/API/Caddy 등은 현재 사용량으로 반영되며, API 추가 여유와 다른 서비스의 증가분도 별도로 남긴다. 원격 워커 전용 호스트에서는 `--api-extra-memory 0 --api-cpus 0`을 사용한다. 기본 디스크 요구량은 제품의 작업 공간 상한 8GiB + 여유 2GiB다. 실패(exit 1)하면 서버 증설, 동시 워크로드 축소 또는 별도 워커 호스트를 결정한 뒤 다시 점검한다. 이 일회성 검사는 미래 부하와 처리 속도를 보장하지 않는다.
 
 개발 머신에서 재현하는 명령이다. 자원 측정 smoke에는 cgroup v2의 `memory.peak`를 제공하는 Linux Docker 환경이 필요하다. 지표를 읽을 수 없으면 검증은 실패한다.
 

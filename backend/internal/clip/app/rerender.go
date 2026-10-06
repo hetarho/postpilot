@@ -157,6 +157,11 @@ func (s *GenerationService) startRender(ctx context.Context, user, id, batch str
 	if len(reuse) > 0 && reuse[0] && kind == clip.RenderServer && p.Result != nil && p.Result.Key != "" && p.Result.RenderKind() == kind && p.RenderedPlanRevision == revision {
 		return renderStarted{reused: true}, nil
 	}
+	if kind == clip.RenderServer && s.nativeAdmission != nil {
+		if existing, err := s.nativeAdmission.Existing(ctx, user, id, batch, revision, p.EditPlan); err != nil || existing != "" {
+			return renderStarted{jobID: existing}, err
+		}
+	}
 	operator := false
 	if kind == clip.RenderServer {
 		// Reuse above creates no work. Every new start resolves current rights
@@ -267,6 +272,13 @@ func (s *GenerationService) startRender(ctx context.Context, user, id, batch str
 	raw, err := json.Marshal(frozen)
 	if err != nil {
 		return none, err
+	}
+	if s.remoteMedia != nil {
+		if s.nativeAdmission == nil || frozen.Execution == nil {
+			return none, clip.ErrCompositionUnavailable
+		}
+		job, err := s.nativeAdmission.Admit(ctx, clip.GenerationStart{UserID: user, ProjectID: id, Payload: raw, RenderOnly: true}, batch, revision, *frozen.Execution, operator)
+		return renderStarted{jobID: job}, err
 	}
 	reservation := ""
 	if s.exports != nil {

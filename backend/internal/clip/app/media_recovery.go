@@ -29,6 +29,7 @@ type MediaRecoveryStore interface {
 	QueueOrphanMediaDeletion(context.Context, string, time.Time) error
 }
 type MediaRecoveryJobs interface {
+	FailQueued(context.Context, string, string, job.Failure) (bool, error)
 	AcknowledgeWaitCancellation(context.Context, string, string) (bool, error)
 	FailWait(context.Context, string, string, job.Failure) (bool, error)
 }
@@ -126,6 +127,7 @@ func (r *MediaReconciler) Reconcile(ctx context.Context) error {
 
 func (r *MediaReconciler) reconcileStage(ctx context.Context, id string) error {
 	var ack, parent string
+	var queuedUser string
 	err := WriteTx(ctx, r.writer, r.bind, func(p Ports) error {
 		now := r.now().UTC()
 		state, err := p.Recovery.MediaRecoveryState(ctx, id)
@@ -165,6 +167,18 @@ func (r *MediaReconciler) reconcileStage(ctx context.Context, id string) error {
 				} else {
 					return p.Recovery.MarkMediaReconciled(ctx, id, now)
 				}
+			}
+			return nil
+		}
+		// Native admission freezes a stage before its API dispatcher runs. Do
+		// not classify that valid queued parent as a lost media owner; its
+		// original finite wait deadline still applies while the API is busy.
+		if j.Status == job.StatusQueued && j.DispatchReady {
+			if !s.QueueDeadlineAt.After(now) {
+				if err := p.Recovery.SetMediaRecoveryState(ctx, id, clip.MediaFailed, clip.MediaFailureWaitExpired, time.Time{}); err != nil {
+					return err
+				}
+				queuedUser = j.UserID
 			}
 			return nil
 		}
@@ -220,6 +234,9 @@ func (r *MediaReconciler) reconcileStage(ctx context.Context, id string) error {
 	})
 	if err == nil && ack != "" {
 		_, err = r.queue.AcknowledgeWaitCancellation(ctx, parent, ack)
+	}
+	if err == nil && queuedUser != "" {
+		_, err = r.queue.FailQueued(ctx, parent, queuedUser, job.Failure{Reason: "CLIP_MEDIA_WAIT_EXPIRED"})
 	}
 	return err
 }

@@ -59,7 +59,7 @@ func TestMediaProgressPreparationWaitAndRecoverySpendNoAI(t *testing.T) {
 		p.Recovery, p.Control = c, c
 		return p
 	}
-	c := clipapp.NewMediaControl(g.h.db.Writer, bind, g.h.store)
+	c := clipapp.NewMediaControl(g.h.db.Writer, bind, g.h.store, clip.DefaultRenderCapacity(clip.Environment{}))
 	for _, stage := range []string{"prepare_wait", "prepare", "prepare_retry"} {
 		j, err := g.h.jobs.GetByID(t.Context(), id)
 		if err != nil || j.Stage != stage || j.ProgressTotal != 0 || j.ProgressDone != 0 {

@@ -54,18 +54,37 @@ const (
 const OriginalRetention = 24 * time.Hour
 
 const (
-	MediaLeaseTTL         = time.Minute
-	MediaHeartbeatHint    = 15 * time.Second
-	MediaWaitTimeout      = 30 * time.Minute
-	MediaStageTimeout     = 2 * time.Hour
-	MediaStageTimeoutMax  = 6 * time.Hour
-	MediaAttempts         = 3
-	MediaAttemptsMax      = 5
-	MediaPayloadMaxBytes  = 2 * 1024 * 1024
-	MediaManifestMaxBytes = 16 * 1024
-	MediaLabelMaxBytes    = 256
-	MediaProgressMax      = 1000
+	ServerRenderActive     = 1
+	ServerRenderWaiting    = 2
+	ServerRenderPerAccount = 1
+	ServerRenderActiveMax  = 8
+	ServerRenderWaitingMax = 64
+	MediaLeaseTTL          = time.Minute
+	MediaHeartbeatHint     = 15 * time.Second
+	MediaWaitTimeout       = 30 * time.Minute
+	MediaStageTimeout      = 2 * time.Hour
+	MediaStageTimeoutMax   = 6 * time.Hour
+	MediaAttempts          = 3
+	MediaAttemptsMax       = 5
+	MediaPayloadMaxBytes   = 2 * 1024 * 1024
+	MediaManifestMaxBytes  = 16 * 1024
+	MediaLabelMaxBytes     = 256
+	MediaProgressMax       = 1000
 )
+
+func DefaultRenderCapacity(env Environment) RenderCapacity {
+	l := RenderCapacity{Active: ServerRenderActive, Waiting: ServerRenderWaiting, PerAccount: ServerRenderPerAccount}
+	if env.ServerRenderActive != 0 {
+		l.Active = env.ServerRenderActive
+	}
+	if env.ServerRenderWaiting != nil {
+		l.Waiting = *env.ServerRenderWaiting
+	}
+	if env.ServerRenderPerAccount != 0 {
+		l.PerAccount = env.ServerRenderPerAccount
+	}
+	return l
+}
 
 func DefaultMediaStageLimits(env Environment) MediaStageLimits {
 	l := MediaStageLimits{LeaseTTL: MediaLeaseTTL, WaitTimeout: MediaWaitTimeout, StageTimeout: MediaStageTimeout, MaxAttempts: MediaAttempts}
@@ -89,6 +108,8 @@ func DefaultMediaStageLimits(env Environment) MediaStageLimits {
 // platform owns. cmd/api fills it from the parsed env and the Default*
 // constructors below merge it into the product limits.
 type Environment struct {
+	ServerRenderActive, ServerRenderPerAccount         int
+	ServerRenderWaiting                                *int
 	MediaLeaseTTL, MediaWaitTimeout, MediaStageTimeout time.Duration
 	MediaMaxAttempts                                   int
 	WorkRoot                                           string
