@@ -14,8 +14,29 @@ UPDATE speech_profiles SET current_revision = sqlc.arg(revision), updated_at = s
 WHERE id = sqlc.arg(id) AND current_revision = sqlc.arg(expected_revision);
 
 -- name: InsertSpeechRevision :exec
-INSERT INTO speech_profile_revisions(profile_id, revision, provider_id, design_model_id, speech_model_id, label, level, enabled, binding_json, prices_json, created_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+INSERT INTO speech_profile_revisions(profile_id, revision, provider_id, design_model_id, speech_model_id, label, level, enabled, binding_json, prices_json, created_at, catalog_grade, tariff_revision)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+-- name: ClaimSpeechCombination :execrows
+INSERT OR IGNORE INTO speech_catalog_registrations(provider_id, design_model_id, speech_model_id, profile_id)
+VALUES (?, ?, ?, ?);
+
+-- name: GetSpeechCombination :one
+SELECT profile_id FROM speech_catalog_registrations
+WHERE provider_id = ? AND design_model_id = ? AND speech_model_id = ?;
+
+-- name: GetSpeechTariff :one
+SELECT t.* FROM speech_account_tariffs t JOIN speech_account_tariff_current c ON c.revision = t.revision WHERE c.id = 1;
+
+-- name: InsertSpeechTariff :exec
+INSERT INTO speech_account_tariffs(revision, connection_scope, design_usd_per_unit, speech_usd_per_unit, confirmation_usd, source, complete, checked_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+
+-- name: CreateSpeechTariffPointer :exec
+INSERT INTO speech_account_tariff_current(id, revision) VALUES (1, ?);
+
+-- name: AdvanceSpeechTariffPointer :execrows
+UPDATE speech_account_tariff_current SET revision = sqlc.arg(revision) WHERE id = 1 AND revision = sqlc.arg(expected_revision);
 
 -- name: RecordSpeechVoiceReadiness :execrows
 UPDATE speech_profile_revisions SET voice_evidence = sqlc.arg(evidence)

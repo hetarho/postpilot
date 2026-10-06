@@ -83,6 +83,8 @@ type SpeechProfile struct {
 	VoiceEvidence  string
 	ExportEvidence string
 	CreatedAt      time.Time
+	CatalogManaged bool
+	TariffRevision int64
 }
 
 // The customer projection deliberately cannot contain supplier evidence or
@@ -109,10 +111,32 @@ type SpeechChoice struct {
 }
 
 type SpeechAdminBrowse struct {
-	Profiles   []SpeechProfile
-	Candidates []llm.SpeechModel
-	Choices    []SpeechChoice
-	FetchError string
+	Profiles     []SpeechProfile
+	Candidates   []llm.SpeechModel
+	Choices      []SpeechChoice
+	FetchError   string
+	Combinations []SpeechProfile
+	Tariff       SpeechAccountTariff
+}
+
+type SpeechAccountTariff struct {
+	Revision         int64
+	ConnectionScope  string
+	DesignUSDPerUnit string
+	SpeechUSDPerUnit string
+	ConfirmationUSD  string
+	Source           string
+	Complete         bool
+	CheckedAt        time.Time
+}
+
+type SpeechRegistration struct {
+	ID                string
+	ExpectedRevision  int64
+	Design, Synthesis llm.ModelRef
+	Enabled           bool
+	Level             Level
+	Adjustments       *llm.SpeechSettings
 }
 
 type SpeechQualificationSession struct {
@@ -147,6 +171,9 @@ type SpeechProfileStore interface {
 	RecordSpeechReadiness(context.Context, string, int64, string, bool) error
 	CreateSpeechQualification(context.Context, SpeechQualificationSession) error
 	GetSpeechQualification(context.Context, string, string) (SpeechQualificationSession, error)
+	GetSpeechCombination(context.Context, llm.ModelRef, llm.ModelRef) (string, error)
+	GetSpeechTariff(context.Context) (SpeechAccountTariff, error)
+	SaveSpeechTariff(context.Context, SpeechAccountTariff, int64, []SpeechProfile) error
 }
 type SpeechCatalogSource interface {
 	llm.SpeechCatalogReader

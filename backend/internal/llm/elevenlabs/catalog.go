@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math/big"
 	"net/http"
 	"slices"
 	"time"
@@ -84,14 +85,32 @@ func (p *Provider) ReadSpeechCatalog(ctx context.Context, refresh bool) (llm.Spe
 		out.Models = append(out.Models, llm.SpeechModel{Ref: llm.ModelRef{ProviderID: p.id, ModelID: row.ID}, Label: row.Name,
 			Synthesis: row.Speech, Korean: ko, Style: row.Style, SpeakerBoost: row.SpeakerBoost, RequiresAlpha: row.Alpha, MaxText: row.Max,
 			TokenCostFactor: row.Factor.String(), CharacterCostMultiplier: row.Rates.Character.String(), CostDiscountMultiplier: row.Rates.Discount.String()})
+		// Only the unambiguous unit-rate path has a qualified bound here.
+		// Other factors stay catalog candidates, without guessed billing rules.
+		if unitBillingFactor(row.Factor) && unitBillingFactor(row.Rates.Character) && unitBillingFactor(row.Rates.Discount) {
+			out.BillingRules = append(out.BillingRules, llm.SpeechBillingRule{Ref: llm.ModelRef{ProviderID: p.id, ModelID: row.ID}, Operation: "speech", Unit: llm.SpeechUnitCharacterCost, UnitsPerInputCharacter: "1", Source: speechBillingSource})
+		}
 	}
 	for _, id := range designModels {
 		out.Models = append(out.Models, llm.SpeechModel{Ref: llm.ModelRef{ProviderID: p.id, ModelID: id}, Label: id, Design: true, MaxText: llm.SpeechPreviewMax})
+		out.BillingRules = append(out.BillingRules, llm.SpeechBillingRule{Ref: llm.ModelRef{ProviderID: p.id, ModelID: id}, Operation: "voice_design", Unit: llm.SpeechUnitCharacterCost, UnitsPerInputCharacter: "1", Source: designBillingSource})
 	}
 	p.catalog = cloneCatalog(out)
 	return out, nil
 }
 
-func cloneCatalog(c llm.SpeechCatalog) llm.SpeechCatalog { c.Models = slices.Clone(c.Models); return c }
+const speechBillingSource = "https://elevenlabs.io/docs/api-reference/models/list"
+const designBillingSource = "https://help.elevenlabs.io/hc/en-us/articles/29315418701073-How-much-does-Voice-Design-cost"
+
+func cloneCatalog(c llm.SpeechCatalog) llm.SpeechCatalog {
+	c.Models = slices.Clone(c.Models)
+	c.BillingRules = slices.Clone(c.BillingRules)
+	return c
+}
 
 var _ llm.SpeechCatalogReader = (*Provider)(nil)
+
+func unitBillingFactor(v json.Number) bool {
+	n, ok := new(big.Rat).SetString(v.String())
+	return ok && n.Cmp(big.NewRat(1, 1)) == 0
+}

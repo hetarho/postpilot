@@ -83,4 +83,26 @@ export interface SpeechAdminBrowse {
   candidates: SpeechCandidate[]
   choices: SpeechProfileChoice[]
   fetchError: string
+  combinations: AdminSpeechProfile[]
+  tariff: SpeechAccountTariff | null
+}
+
+export interface SpeechAccountTariff {
+  revision: bigint
+  designUsdPerUnit: string
+  speechUsdPerUnit: string
+  confirmationUsd: string
+  source: string
+  complete: boolean
+  checkedAt: string
+}
+
+export interface SpeechRegistration {
+  profileId: string
+  expectedRevision: bigint
+  designModel: ModelRef
+  speechModel: ModelRef
+  enabled: boolean
+  grade: LevelName | ''
+  adjustments?: { stability: number; similarity: number; style: number }
 }

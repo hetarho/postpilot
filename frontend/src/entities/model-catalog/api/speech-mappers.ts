@@ -2,8 +2,14 @@ import type {
   ProtoSpeechProfileChoice,
   ProtoAdminSpeechProfile,
   ProtoSpeechAdminBrowse,
+  ProtoSpeechAccountTariff,
 } from '@/shared/api'
-import type { AdminSpeechProfile, SpeechProfileChoice, SpeechAdminBrowse } from '../model/speech'
+import type {
+  AdminSpeechProfile,
+  SpeechProfileChoice,
+  SpeechAdminBrowse,
+  SpeechAccountTariff,
+} from '../model/speech'
 import { isLevelName } from '../model/level'
 
 export function toSpeechChoice(p: ProtoSpeechProfileChoice): SpeechProfileChoice {
@@ -89,6 +95,8 @@ export function toSpeechAdminBrowse(data: ProtoSpeechAdminBrowse): SpeechAdminBr
     profiles: data.profiles.map(toAdminSpeechProfile),
     choices: data.choices.map(toSpeechChoice),
     fetchError: data.fetchError,
+    combinations: data.combinations.map(toAdminSpeechProfile),
+    tariff: data.tariff ? toSpeechAccountTariff(data.tariff) : null,
     candidates: data.candidates.map((m) => ({
       ref: { providerId: m.ref?.providerId ?? '', modelId: m.ref?.modelId ?? '' },
       label: m.label,
@@ -103,5 +111,17 @@ export function toSpeechAdminBrowse(data: ProtoSpeechAdminBrowse): SpeechAdminBr
       characterCostMultiplier: m.characterCostMultiplier,
       costDiscountMultiplier: m.costDiscountMultiplier,
     })),
+  }
+}
+
+export function toSpeechAccountTariff(t: ProtoSpeechAccountTariff): SpeechAccountTariff {
+  return {
+    revision: t.revision,
+    designUsdPerUnit: t.designUsdPerUnit,
+    speechUsdPerUnit: t.speechUsdPerUnit,
+    confirmationUsd: t.confirmationUsd,
+    source: t.source,
+    complete: t.complete,
+    checkedAt: t.checkedAt,
   }
 }

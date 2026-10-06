@@ -6,7 +6,7 @@ import (
 )
 
 func TestSpeechCurationAndQualificationAreInTheClosedMasterSet(t *testing.T) {
-	for _, procedure := range []string{postpilotv1connect.SpeechProfileServiceAdminListSpeechProfilesProcedure, postpilotv1connect.SpeechProfileServiceSaveSpeechProfileProcedure, postpilotv1connect.SpeechProfileServiceStartSpeechQualificationProcedure} {
+	for _, procedure := range []string{postpilotv1connect.SpeechProfileServiceAdminListSpeechProfilesProcedure, postpilotv1connect.SpeechProfileServiceSaveSpeechProfileProcedure, postpilotv1connect.SpeechProfileServiceStartSpeechQualificationProcedure, postpilotv1connect.SpeechProfileServiceRegisterSpeechCombinationProcedure, postpilotv1connect.SpeechProfileServiceSaveSpeechTariffProcedure} {
 		if !masterProcedures[procedure] {
 			t.Errorf("unprivileged speech operator procedure: %s", procedure)
 		}

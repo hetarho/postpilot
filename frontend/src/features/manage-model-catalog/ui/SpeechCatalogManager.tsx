@@ -1,7 +1,7 @@
 import { useId, useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
-import { useAdminSpeechProfiles, type AdminSpeechProfile } from '@/entities/model-catalog'
+import { useAdminSpeechProfiles, refKey, type AdminSpeechProfile } from '@/entities/model-catalog'
 import {
   AppFailureMessage,
   Button,
@@ -9,9 +9,11 @@ import {
   Notice,
   TextField,
   Typography,
+  Disclosure,
   buttonStyles,
 } from '@/shared/ui'
-import { SpeechProfileForm } from './SpeechProfileForm'
+import { SpeechCombinationRow } from './SpeechCombinationRow'
+import { SpeechTariffEditor } from './SpeechTariffEditor'
 
 export function SpeechCatalogManager() {
   const { t } = useTranslation('models')
@@ -22,29 +24,20 @@ export function SpeechCatalogManager() {
     catalog.isError ||
     Boolean(catalog.browse.fetchError) ||
     catalog.browse.candidates.length === 0
-  const [editing, setEditing] = useState<AdminSpeechProfile | null | undefined>()
-  const [session, setSession] = useState(0)
   const [budget, setBudget] = useState('')
   const [testProfile, setTestProfile] = useState<AdminSpeechProfile | null>(null)
-  const open = (p: AdminSpeechProfile | null) => {
-    setEditing(p)
-    setSession((s) => s + 1)
+  const pairKey = (p: AdminSpeechProfile) =>
+    `${refKey(p.binding.designModel)}:${refKey(p.binding.speechModel)}`
+  const rows = new Map(catalog.browse.combinations.map((p) => [pairKey(p), p]))
+  for (const p of catalog.browse.profiles) {
+    // The oldest retained registration owns a legacy duplicate pair.
+    if (!rows.get(pairKey(p))?.id) rows.set(pairKey(p), p)
   }
-  const save = async (p: AdminSpeechProfile) => {
-    try {
-      await catalog.save(p)
-      setEditing(undefined)
-    } catch {
-      /* The mutation owns the displayed failure. */
-    }
-  }
+  const busy = catalog.saving || catalog.savingTariff
   return (
     <div className="mt-6 space-y-5">
       <Typography variant="body">{t('speechAdmin.description')}</Typography>
       <div className="flex flex-wrap gap-3">
-        <Button variant="secondary" disabled={metadataUnavailable} onClick={() => open(null)}>
-          {t('speechAdmin.new')}
-        </Button>
         <Button variant="ghost" pending={catalog.refreshing} onClick={catalog.refresh}>
           {t('catalog.refresh')}
         </Button>
@@ -64,62 +57,46 @@ export function SpeechCatalogManager() {
           {t('catalog.loading')}
         </Typography>
       )}
-      {catalog.hasData &&
-        !catalog.isPending &&
-        !catalog.isError &&
-        catalog.browse.profiles.length === 0 && (
-          <Typography variant="body">{t('speechAdmin.empty')}</Typography>
-        )}
-      {catalog.browse.profiles.map((p) => {
-        const choice = catalog.browse.choices.find((c) => c.id === p.id)
-        return (
-          <div key={p.id} className="space-y-2 py-3">
-            <Typography variant="fieldTitle">
-              {p.label} · {p.grade ? t(`level.${p.grade}`) : t('catalog.levelUnset')}
-            </Typography>
-            <Typography variant="meta">
-              {p.binding.designModel.modelId} → {p.binding.speechModel.modelId} ·{' '}
-              {t('speechAdmin.revision', { revision: p.revision.toString() })}
-            </Typography>
-            <Typography variant="meta">
-              {t(p.voiceReady ? 'speechAdmin.voiceReady' : 'speechAdmin.voicePending')} ·{' '}
-              {t(p.exportReady ? 'speechAdmin.exportReady' : 'speechAdmin.exportPending')}
-            </Typography>
-            {choice && !choice.available && (
-              <Typography variant="meta">
-                {t(`speech.reason.${choice.unavailableReason}`, {
-                  defaultValue: t('speech.unavailable'),
-                })}
-              </Typography>
-            )}
-            <div className="flex flex-wrap gap-3">
-              <Button variant="ghost" onClick={() => open(p)}>
-                {t('speechAdmin.edit')}
-              </Button>
-              <Button
-                variant="secondary"
-                onClick={() => {
-                  setTestProfile(p)
-                  setBudget('')
-                }}
-                disabled={!p.enabled}
-              >
-                {t('speechAdmin.qualify')}
-              </Button>
-            </div>
-          </div>
-        )
-      })}
-      {editing !== undefined && (
-        <SpeechProfileForm
-          key={session}
-          profile={editing}
-          candidates={catalog.browse.candidates}
-          saving={catalog.saving}
-          onSave={save}
-          onCancel={() => setEditing(undefined)}
-        />
+      {catalog.hasData && !catalog.isPending && !catalog.isError && rows.size === 0 && (
+        <Typography variant="body">{t('speechAdmin.empty')}</Typography>
       )}
+      <Disclosure title={t('speechAdmin.commonTariff')} size="row">
+        <SpeechTariffEditor
+          key={catalog.browse.tariff?.revision.toString() ?? 'unset'}
+          tariff={catalog.browse.tariff}
+          saving={catalog.savingTariff}
+          unavailable={metadataUnavailable || busy}
+          onSave={catalog.saveTariff}
+        />
+      </Disclosure>
+      <ul>
+        {[...rows.values()].map((p) => (
+          <SpeechCombinationRow
+            key={`${pairKey(p)}:${p.revision}`}
+            profile={p}
+            designName={
+              catalog.browse.candidates.find((m) => refKey(m.ref) === refKey(p.binding.designModel))
+                ?.label ?? catalog.browse.choices.find((c) => c.id === p.id)?.designLabel
+            }
+            speechName={
+              catalog.browse.candidates.find((m) => refKey(m.ref) === refKey(p.binding.speechModel))
+                ?.label ?? catalog.browse.choices.find((c) => c.id === p.id)?.speechLabel
+            }
+            saving={busy}
+            metadataAvailable={!metadataUnavailable}
+            styleSupported={
+              catalog.browse.candidates.find((m) => refKey(m.ref) === refKey(p.binding.speechModel))
+                ?.style ?? p.binding.settings.style > 0
+            }
+            reason={catalog.browse.choices.find((choice) => choice.id === p.id)?.unavailableReason}
+            onSave={catalog.save}
+            onQualify={(profile) => {
+              setTestProfile(profile)
+              setBudget('')
+            }}
+          />
+        ))}
+      </ul>
       {testProfile && (
         <section className="max-w-measure space-y-3">
           <Typography variant="fieldTitle">

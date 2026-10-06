@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file postpilot/v1/speech_profile.proto.
  */
 export const file_postpilot_v1_speech_profile: GenFile = /*@__PURE__*/
-  fileDesc("CiFwb3N0cGlsb3QvdjEvc3BlZWNoX3Byb2ZpbGUucHJvdG8SDHBvc3RwaWxvdC52MSKzAwoTU3BlZWNoUHJvZmlsZUNob2ljZRIKCgJpZBgBIAEoCRIQCghyZXZpc2lvbhgCIAEoAxINCgVsYWJlbBgDIAEoCRIsCgxkZXNpZ25fbW9kZWwYBCABKAsyFi5wb3N0cGlsb3QudjEuTW9kZWxSZWYSFAoMZGVzaWduX2xhYmVsGAUgASgJEiwKDHNwZWVjaF9tb2RlbBgGIAEoCzIWLnBvc3RwaWxvdC52MS5Nb2RlbFJlZhIUCgxzcGVlY2hfbGFiZWwYByABKAkSDQoFZ3JhZGUYCCABKAkSFQoNcmVxdWlyZWRfcGxhbhgJIAEoCRIQCghlbnRpdGxlZBgKIAEoCBIRCglhdmFpbGFibGUYCyABKAgSGgoSdW5hdmFpbGFibGVfcmVhc29uGAwgASgJEhcKD2Rlc2NyaXB0aW9uX21heBgNIAEoBRITCgtwcmV2aWV3X21pbhgOIAEoBRITCgtwcmV2aWV3X21heBgPIAEoBRISCgpzcGVlY2hfbWF4GBAgASgFEhMKC3ZvaWNlX3JlYWR5GBEgASgIEhQKDGV4cG9ydF9yZWFkeRgSIAEoCCI9ChlMaXN0U3BlZWNoUHJvZmlsZXNSZXF1ZXN0EiAKGHF1YWxpZmljYXRpb25fc2Vzc2lvbl9pZBgBIAEoCSJRChpMaXN0U3BlZWNoUHJvZmlsZXNSZXNwb25zZRIzCghwcm9maWxlcxgBIAMoCzIhLnBvc3RwaWxvdC52MS5TcGVlY2hQcm9maWxlQ2hvaWNlIq0CChRTcGVlY2hNb2RlbENhbmRpZGF0ZRIjCgNyZWYYASABKAsyFi5wb3N0cGlsb3QudjEuTW9kZWxSZWYSDQoFbGFiZWwYAiABKAkSDgoGZGVzaWduGAMgASgIEhEKCXN5bnRoZXNpcxgEIAEoCBIOCgZrb3JlYW4YBSABKAgSDQoFc3R5bGUYBiABKAgSFQoNc3BlYWtlcl9ib29zdBgHIAEoCBIWCg5yZXF1aXJlc19hbHBoYRgIIAEoCBIQCghtYXhfdGV4dBgJIAEoBRIZChF0b2tlbl9jb3N0X2ZhY3RvchgKIAEoCRIhChljaGFyYWN0ZXJfY29zdF9tdWx0aXBsaWVyGAsgASgJEiAKGGNvc3RfZGlzY291bnRfbXVsdGlwbGllchgMIAEoCSJ5ChVTcGVlY2hQcm9maWxlU2V0dGluZ3MSEQoJc3RhYmlsaXR5GAEgASgBEhgKEHNpbWlsYXJpdHlfYm9vc3QYAiABKAESDQoFc3R5bGUYAyABKAESFQoNc3BlYWtlcl9ib29zdBgEIAEoCBINCgVzcGVlZBgFIAEoASKCAgoUU3BlZWNoUHJvZmlsZUJpbmRpbmcSLAoMZGVzaWduX21vZGVsGAEgASgLMhYucG9zdHBpbG90LnYxLk1vZGVsUmVmEiwKDHNwZWVjaF9tb2RlbBgCIAEoCzIWLnBvc3RwaWxvdC52MS5Nb2RlbFJlZhI1CghzZXR0aW5ncxgDIAEoCzIjLnBvc3RwaWxvdC52MS5TcGVlY2hQcm9maWxlU2V0dGluZ3MSFQoNb3V0cHV0X2Zvcm1hdBgEIAEoCRIXCg9kZXNjcmlwdGlvbl9tYXgYBSABKAUSEwoLcHJldmlld19tYXgYBiABKAUSEgoKc3BlZWNoX21heBgHIAEoBSKIAQoUU3BlZWNoUHJpY2VDb21wb25lbnQSDAoEdW5pdBgBIAEoCRIUCgx1c2RfcGVyX3VuaXQYAiABKAkSEgoKbXVsdGlwbGllchgDIAEoCRIVCg1tYXhpbXVtX3VuaXRzGAQgASgJEiEKGXVuaXRzX3Blcl9pbnB1dF9jaGFyYWN0ZXIYBSABKAkiqwEKFFNwZWVjaE9wZXJhdGlvblByaWNlEhEKCW9wZXJhdGlvbhgBIAEoCRIzCgdjaGFyZ2VzGAIgAygLMiIucG9zdHBpbG90LnYxLlNwZWVjaFByaWNlQ29tcG9uZW50Eg4KBnNvdXJjZRgDIAEoCRIVCg1ib3VuZHNfc291cmNlGAQgASgJEhIKCmNoZWNrZWRfYXQYBSABKAkSEAoIY29tcGxldGUYBiABKAgi9QEKEkFkbWluU3BlZWNoUHJvZmlsZRIKCgJpZBgBIAEoCRIQCghyZXZpc2lvbhgCIAEoAxINCgVsYWJlbBgDIAEoCRINCgVncmFkZRgEIAEoCRIPCgdlbmFibGVkGAUgASgIEjMKB2JpbmRpbmcYBiABKAsyIi5wb3N0cGlsb3QudjEuU3BlZWNoUHJvZmlsZUJpbmRpbmcSMgoGcHJpY2VzGAcgAygLMiIucG9zdHBpbG90LnYxLlNwZWVjaE9wZXJhdGlvblByaWNlEhMKC3ZvaWNlX3JlYWR5GAggASgIEhQKDGV4cG9ydF9yZWFkeRgJIAEoCCIxCh5BZG1pbkxpc3RTcGVlY2hQcm9maWxlc1JlcXVlc3QSDwoHcmVmcmVzaBgBIAEoCCLWAQofQWRtaW5MaXN0U3BlZWNoUHJvZmlsZXNSZXNwb25zZRIyCghwcm9maWxlcxgBIAMoCzIgLnBvc3RwaWxvdC52MS5BZG1pblNwZWVjaFByb2ZpbGUSNgoKY2FuZGlkYXRlcxgCIAMoCzIiLnBvc3RwaWxvdC52MS5TcGVlY2hNb2RlbENhbmRpZGF0ZRIyCgdjaG9pY2VzGAMgAygLMiEucG9zdHBpbG90LnYxLlNwZWVjaFByb2ZpbGVDaG9pY2USEwoLZmV0Y2hfZXJyb3IYBCABKAkiaAoYU2F2ZVNwZWVjaFByb2ZpbGVSZXF1ZXN0EjEKB3Byb2ZpbGUYASABKAsyIC5wb3N0cGlsb3QudjEuQWRtaW5TcGVlY2hQcm9maWxlEhkKEWV4cGVjdGVkX3JldmlzaW9uGAIgASgDIk4KGVNhdmVTcGVlY2hQcm9maWxlUmVzcG9uc2USMQoHcHJvZmlsZRgBIAEoCzIgLnBvc3RwaWxvdC52MS5BZG1pblNwZWVjaFByb2ZpbGUiXAofU3RhcnRTcGVlY2hRdWFsaWZpY2F0aW9uUmVxdWVzdBISCgpwcm9maWxlX2lkGAEgASgJEhAKCHJldmlzaW9uGAIgASgDEhMKC21heGltdW1fdXNkGAMgASgJInAKIFN0YXJ0U3BlZWNoUXVhbGlmaWNhdGlvblJlc3BvbnNlEhIKCnNlc3Npb25faWQYASABKAkSEgoKcHJvZmlsZV9pZBgCIAEoCRIQCghyZXZpc2lvbhgDIAEoAxISCgpleHBpcmVzX2F0GAQgASgJMuADChRTcGVlY2hQcm9maWxlU2VydmljZRJpChJMaXN0U3BlZWNoUHJvZmlsZXMSJy5wb3N0cGlsb3QudjEuTGlzdFNwZWVjaFByb2ZpbGVzUmVxdWVzdBooLnBvc3RwaWxvdC52MS5MaXN0U3BlZWNoUHJvZmlsZXNSZXNwb25zZSIAEngKF0FkbWluTGlzdFNwZWVjaFByb2ZpbGVzEiwucG9zdHBpbG90LnYxLkFkbWluTGlzdFNwZWVjaFByb2ZpbGVzUmVxdWVzdBotLnBvc3RwaWxvdC52MS5BZG1pbkxpc3RTcGVlY2hQcm9maWxlc1Jlc3BvbnNlIgASZgoRU2F2ZVNwZWVjaFByb2ZpbGUSJi5wb3N0cGlsb3QudjEuU2F2ZVNwZWVjaFByb2ZpbGVSZXF1ZXN0GicucG9zdHBpbG90LnYxLlNhdmVTcGVlY2hQcm9maWxlUmVzcG9uc2UiABJ7ChhTdGFydFNwZWVjaFF1YWxpZmljYXRpb24SLS5wb3N0cGlsb3QudjEuU3RhcnRTcGVlY2hRdWFsaWZpY2F0aW9uUmVxdWVzdBouLnBvc3RwaWxvdC52MS5TdGFydFNwZWVjaFF1YWxpZmljYXRpb25SZXNwb25zZSIAQkRaQmdpdGh1Yi5jb20vcG9zdHBpbG90L2JhY2tlbmQvaW50ZXJuYWwvZ2VuL3Bvc3RwaWxvdC92MTtwb3N0cGlsb3R2MWIGcHJvdG8z", [file_postpilot_v1_provider]);
+  fileDesc("CiFwb3N0cGlsb3QvdjEvc3BlZWNoX3Byb2ZpbGUucHJvdG8SDHBvc3RwaWxvdC52MSKzAwoTU3BlZWNoUHJvZmlsZUNob2ljZRIKCgJpZBgBIAEoCRIQCghyZXZpc2lvbhgCIAEoAxINCgVsYWJlbBgDIAEoCRIsCgxkZXNpZ25fbW9kZWwYBCABKAsyFi5wb3N0cGlsb3QudjEuTW9kZWxSZWYSFAoMZGVzaWduX2xhYmVsGAUgASgJEiwKDHNwZWVjaF9tb2RlbBgGIAEoCzIWLnBvc3RwaWxvdC52MS5Nb2RlbFJlZhIUCgxzcGVlY2hfbGFiZWwYByABKAkSDQoFZ3JhZGUYCCABKAkSFQoNcmVxdWlyZWRfcGxhbhgJIAEoCRIQCghlbnRpdGxlZBgKIAEoCBIRCglhdmFpbGFibGUYCyABKAgSGgoSdW5hdmFpbGFibGVfcmVhc29uGAwgASgJEhcKD2Rlc2NyaXB0aW9uX21heBgNIAEoBRITCgtwcmV2aWV3X21pbhgOIAEoBRITCgtwcmV2aWV3X21heBgPIAEoBRISCgpzcGVlY2hfbWF4GBAgASgFEhMKC3ZvaWNlX3JlYWR5GBEgASgIEhQKDGV4cG9ydF9yZWFkeRgSIAEoCCI9ChlMaXN0U3BlZWNoUHJvZmlsZXNSZXF1ZXN0EiAKGHF1YWxpZmljYXRpb25fc2Vzc2lvbl9pZBgBIAEoCSJRChpMaXN0U3BlZWNoUHJvZmlsZXNSZXNwb25zZRIzCghwcm9maWxlcxgBIAMoCzIhLnBvc3RwaWxvdC52MS5TcGVlY2hQcm9maWxlQ2hvaWNlIq0CChRTcGVlY2hNb2RlbENhbmRpZGF0ZRIjCgNyZWYYASABKAsyFi5wb3N0cGlsb3QudjEuTW9kZWxSZWYSDQoFbGFiZWwYAiABKAkSDgoGZGVzaWduGAMgASgIEhEKCXN5bnRoZXNpcxgEIAEoCBIOCgZrb3JlYW4YBSABKAgSDQoFc3R5bGUYBiABKAgSFQoNc3BlYWtlcl9ib29zdBgHIAEoCBIWCg5yZXF1aXJlc19hbHBoYRgIIAEoCBIQCghtYXhfdGV4dBgJIAEoBRIZChF0b2tlbl9jb3N0X2ZhY3RvchgKIAEoCRIhChljaGFyYWN0ZXJfY29zdF9tdWx0aXBsaWVyGAsgASgJEiAKGGNvc3RfZGlzY291bnRfbXVsdGlwbGllchgMIAEoCSJ5ChVTcGVlY2hQcm9maWxlU2V0dGluZ3MSEQoJc3RhYmlsaXR5GAEgASgBEhgKEHNpbWlsYXJpdHlfYm9vc3QYAiABKAESDQoFc3R5bGUYAyABKAESFQoNc3BlYWtlcl9ib29zdBgEIAEoCBINCgVzcGVlZBgFIAEoASKCAgoUU3BlZWNoUHJvZmlsZUJpbmRpbmcSLAoMZGVzaWduX21vZGVsGAEgASgLMhYucG9zdHBpbG90LnYxLk1vZGVsUmVmEiwKDHNwZWVjaF9tb2RlbBgCIAEoCzIWLnBvc3RwaWxvdC52MS5Nb2RlbFJlZhI1CghzZXR0aW5ncxgDIAEoCzIjLnBvc3RwaWxvdC52MS5TcGVlY2hQcm9maWxlU2V0dGluZ3MSFQoNb3V0cHV0X2Zvcm1hdBgEIAEoCRIXCg9kZXNjcmlwdGlvbl9tYXgYBSABKAUSEwoLcHJldmlld19tYXgYBiABKAUSEgoKc3BlZWNoX21heBgHIAEoBSKIAQoUU3BlZWNoUHJpY2VDb21wb25lbnQSDAoEdW5pdBgBIAEoCRIUCgx1c2RfcGVyX3VuaXQYAiABKAkSEgoKbXVsdGlwbGllchgDIAEoCRIVCg1tYXhpbXVtX3VuaXRzGAQgASgJEiEKGXVuaXRzX3Blcl9pbnB1dF9jaGFyYWN0ZXIYBSABKAkiqwEKFFNwZWVjaE9wZXJhdGlvblByaWNlEhEKCW9wZXJhdGlvbhgBIAEoCRIzCgdjaGFyZ2VzGAIgAygLMiIucG9zdHBpbG90LnYxLlNwZWVjaFByaWNlQ29tcG9uZW50Eg4KBnNvdXJjZRgDIAEoCRIVCg1ib3VuZHNfc291cmNlGAQgASgJEhIKCmNoZWNrZWRfYXQYBSABKAkSEAoIY29tcGxldGUYBiABKAgi9QEKEkFkbWluU3BlZWNoUHJvZmlsZRIKCgJpZBgBIAEoCRIQCghyZXZpc2lvbhgCIAEoAxINCgVsYWJlbBgDIAEoCRINCgVncmFkZRgEIAEoCRIPCgdlbmFibGVkGAUgASgIEjMKB2JpbmRpbmcYBiABKAsyIi5wb3N0cGlsb3QudjEuU3BlZWNoUHJvZmlsZUJpbmRpbmcSMgoGcHJpY2VzGAcgAygLMiIucG9zdHBpbG90LnYxLlNwZWVjaE9wZXJhdGlvblByaWNlEhMKC3ZvaWNlX3JlYWR5GAggASgIEhQKDGV4cG9ydF9yZWFkeRgJIAEoCCIxCh5BZG1pbkxpc3RTcGVlY2hQcm9maWxlc1JlcXVlc3QSDwoHcmVmcmVzaBgBIAEoCCLBAgofQWRtaW5MaXN0U3BlZWNoUHJvZmlsZXNSZXNwb25zZRIyCghwcm9maWxlcxgBIAMoCzIgLnBvc3RwaWxvdC52MS5BZG1pblNwZWVjaFByb2ZpbGUSNgoKY2FuZGlkYXRlcxgCIAMoCzIiLnBvc3RwaWxvdC52MS5TcGVlY2hNb2RlbENhbmRpZGF0ZRIyCgdjaG9pY2VzGAMgAygLMiEucG9zdHBpbG90LnYxLlNwZWVjaFByb2ZpbGVDaG9pY2USEwoLZmV0Y2hfZXJyb3IYBCABKAkSNgoMY29tYmluYXRpb25zGAUgAygLMiAucG9zdHBpbG90LnYxLkFkbWluU3BlZWNoUHJvZmlsZRIxCgZ0YXJpZmYYBiABKAsyIS5wb3N0cGlsb3QudjEuU3BlZWNoQWNjb3VudFRhcmlmZiKxAQoTU3BlZWNoQWNjb3VudFRhcmlmZhIQCghyZXZpc2lvbhgBIAEoAxIbChNkZXNpZ25fdXNkX3Blcl91bml0GAIgASgJEhsKE3NwZWVjaF91c2RfcGVyX3VuaXQYAyABKAkSGAoQY29uZmlybWF0aW9uX3VzZBgEIAEoCRIOCgZzb3VyY2UYBSABKAkSEAoIY29tcGxldGUYBiABKAgSEgoKY2hlY2tlZF9hdBgHIAEoCSJnChdTYXZlU3BlZWNoVGFyaWZmUmVxdWVzdBIxCgZ0YXJpZmYYASABKAsyIS5wb3N0cGlsb3QudjEuU3BlZWNoQWNjb3VudFRhcmlmZhIZChFleHBlY3RlZF9yZXZpc2lvbhgCIAEoAyJNChhTYXZlU3BlZWNoVGFyaWZmUmVzcG9uc2USMQoGdGFyaWZmGAEgASgLMiEucG9zdHBpbG90LnYxLlNwZWVjaEFjY291bnRUYXJpZmYijAIKIFJlZ2lzdGVyU3BlZWNoQ29tYmluYXRpb25SZXF1ZXN0EhIKCnByb2ZpbGVfaWQYASABKAkSGQoRZXhwZWN0ZWRfcmV2aXNpb24YAiABKAMSLAoMZGVzaWduX21vZGVsGAMgASgLMhYucG9zdHBpbG90LnYxLk1vZGVsUmVmEiwKDHNwZWVjaF9tb2RlbBgEIAEoCzIWLnBvc3RwaWxvdC52MS5Nb2RlbFJlZhIPCgdlbmFibGVkGAUgASgIEg0KBWdyYWRlGAYgASgJEj0KC2FkanVzdG1lbnRzGAcgASgLMigucG9zdHBpbG90LnYxLlNwZWVjaFN5bnRoZXNpc0FkanVzdG1lbnRzIlIKGlNwZWVjaFN5bnRoZXNpc0FkanVzdG1lbnRzEhEKCXN0YWJpbGl0eRgBIAEoARISCgpzaW1pbGFyaXR5GAIgASgBEg0KBXN0eWxlGAMgASgBImgKGFNhdmVTcGVlY2hQcm9maWxlUmVxdWVzdBIxCgdwcm9maWxlGAEgASgLMiAucG9zdHBpbG90LnYxLkFkbWluU3BlZWNoUHJvZmlsZRIZChFleHBlY3RlZF9yZXZpc2lvbhgCIAEoAyJOChlTYXZlU3BlZWNoUHJvZmlsZVJlc3BvbnNlEjEKB3Byb2ZpbGUYASABKAsyIC5wb3N0cGlsb3QudjEuQWRtaW5TcGVlY2hQcm9maWxlIlwKH1N0YXJ0U3BlZWNoUXVhbGlmaWNhdGlvblJlcXVlc3QSEgoKcHJvZmlsZV9pZBgBIAEoCRIQCghyZXZpc2lvbhgCIAEoAxITCgttYXhpbXVtX3VzZBgDIAEoCSJwCiBTdGFydFNwZWVjaFF1YWxpZmljYXRpb25SZXNwb25zZRISCgpzZXNzaW9uX2lkGAEgASgJEhIKCnByb2ZpbGVfaWQYAiABKAkSEAoIcmV2aXNpb24YAyABKAMSEgoKZXhwaXJlc19hdBgEIAEoCTK9BQoUU3BlZWNoUHJvZmlsZVNlcnZpY2USaQoSTGlzdFNwZWVjaFByb2ZpbGVzEicucG9zdHBpbG90LnYxLkxpc3RTcGVlY2hQcm9maWxlc1JlcXVlc3QaKC5wb3N0cGlsb3QudjEuTGlzdFNwZWVjaFByb2ZpbGVzUmVzcG9uc2UiABJ4ChdBZG1pbkxpc3RTcGVlY2hQcm9maWxlcxIsLnBvc3RwaWxvdC52MS5BZG1pbkxpc3RTcGVlY2hQcm9maWxlc1JlcXVlc3QaLS5wb3N0cGlsb3QudjEuQWRtaW5MaXN0U3BlZWNoUHJvZmlsZXNSZXNwb25zZSIAEmYKEVNhdmVTcGVlY2hQcm9maWxlEiYucG9zdHBpbG90LnYxLlNhdmVTcGVlY2hQcm9maWxlUmVxdWVzdBonLnBvc3RwaWxvdC52MS5TYXZlU3BlZWNoUHJvZmlsZVJlc3BvbnNlIgASewoYU3RhcnRTcGVlY2hRdWFsaWZpY2F0aW9uEi0ucG9zdHBpbG90LnYxLlN0YXJ0U3BlZWNoUXVhbGlmaWNhdGlvblJlcXVlc3QaLi5wb3N0cGlsb3QudjEuU3RhcnRTcGVlY2hRdWFsaWZpY2F0aW9uUmVzcG9uc2UiABJ2ChlSZWdpc3RlclNwZWVjaENvbWJpbmF0aW9uEi4ucG9zdHBpbG90LnYxLlJlZ2lzdGVyU3BlZWNoQ29tYmluYXRpb25SZXF1ZXN0GicucG9zdHBpbG90LnYxLlNhdmVTcGVlY2hQcm9maWxlUmVzcG9uc2UiABJjChBTYXZlU3BlZWNoVGFyaWZmEiUucG9zdHBpbG90LnYxLlNhdmVTcGVlY2hUYXJpZmZSZXF1ZXN0GiYucG9zdHBpbG90LnYxLlNhdmVTcGVlY2hUYXJpZmZSZXNwb25zZSIAQkRaQmdpdGh1Yi5jb20vcG9zdHBpbG90L2JhY2tlbmQvaW50ZXJuYWwvZ2VuL3Bvc3RwaWxvdC92MTtwb3N0cGlsb3R2MWIGcHJvdG8z", [file_postpilot_v1_provider]);
 
 /**
  * @generated from message postpilot.v1.SpeechProfileChoice
@@ -487,6 +487,16 @@ export type AdminListSpeechProfilesResponse = Message<"postpilot.v1.AdminListSpe
    * @generated from field: string fetch_error = 4;
    */
   fetchError: string;
+
+  /**
+   * @generated from field: repeated postpilot.v1.AdminSpeechProfile combinations = 5;
+   */
+  combinations: AdminSpeechProfile[];
+
+  /**
+   * @generated from field: postpilot.v1.SpeechAccountTariff tariff = 6;
+   */
+  tariff?: SpeechAccountTariff | undefined;
 };
 
 /**
@@ -495,6 +505,170 @@ export type AdminListSpeechProfilesResponse = Message<"postpilot.v1.AdminListSpe
  */
 export const AdminListSpeechProfilesResponseSchema: GenMessage<AdminListSpeechProfilesResponse> = /*@__PURE__*/
   messageDesc(file_postpilot_v1_speech_profile, 10);
+
+/**
+ * Master-only monetary terms. Billing rules and bounds are server-owned.
+ *
+ * @generated from message postpilot.v1.SpeechAccountTariff
+ */
+export type SpeechAccountTariff = Message<"postpilot.v1.SpeechAccountTariff"> & {
+  /**
+   * @generated from field: int64 revision = 1;
+   */
+  revision: bigint;
+
+  /**
+   * @generated from field: string design_usd_per_unit = 2;
+   */
+  designUsdPerUnit: string;
+
+  /**
+   * @generated from field: string speech_usd_per_unit = 3;
+   */
+  speechUsdPerUnit: string;
+
+  /**
+   * @generated from field: string confirmation_usd = 4;
+   */
+  confirmationUsd: string;
+
+  /**
+   * @generated from field: string source = 5;
+   */
+  source: string;
+
+  /**
+   * @generated from field: bool complete = 6;
+   */
+  complete: boolean;
+
+  /**
+   * @generated from field: string checked_at = 7;
+   */
+  checkedAt: string;
+};
+
+/**
+ * Describes the message postpilot.v1.SpeechAccountTariff.
+ * Use `create(SpeechAccountTariffSchema)` to create a new message.
+ */
+export const SpeechAccountTariffSchema: GenMessage<SpeechAccountTariff> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_speech_profile, 11);
+
+/**
+ * @generated from message postpilot.v1.SaveSpeechTariffRequest
+ */
+export type SaveSpeechTariffRequest = Message<"postpilot.v1.SaveSpeechTariffRequest"> & {
+  /**
+   * @generated from field: postpilot.v1.SpeechAccountTariff tariff = 1;
+   */
+  tariff?: SpeechAccountTariff | undefined;
+
+  /**
+   * @generated from field: int64 expected_revision = 2;
+   */
+  expectedRevision: bigint;
+};
+
+/**
+ * Describes the message postpilot.v1.SaveSpeechTariffRequest.
+ * Use `create(SaveSpeechTariffRequestSchema)` to create a new message.
+ */
+export const SaveSpeechTariffRequestSchema: GenMessage<SaveSpeechTariffRequest> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_speech_profile, 12);
+
+/**
+ * @generated from message postpilot.v1.SaveSpeechTariffResponse
+ */
+export type SaveSpeechTariffResponse = Message<"postpilot.v1.SaveSpeechTariffResponse"> & {
+  /**
+   * @generated from field: postpilot.v1.SpeechAccountTariff tariff = 1;
+   */
+  tariff?: SpeechAccountTariff | undefined;
+};
+
+/**
+ * Describes the message postpilot.v1.SaveSpeechTariffResponse.
+ * Use `create(SaveSpeechTariffResponseSchema)` to create a new message.
+ */
+export const SaveSpeechTariffResponseSchema: GenMessage<SaveSpeechTariffResponse> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_speech_profile, 13);
+
+/**
+ * @generated from message postpilot.v1.RegisterSpeechCombinationRequest
+ */
+export type RegisterSpeechCombinationRequest = Message<"postpilot.v1.RegisterSpeechCombinationRequest"> & {
+  /**
+   * @generated from field: string profile_id = 1;
+   */
+  profileId: string;
+
+  /**
+   * @generated from field: int64 expected_revision = 2;
+   */
+  expectedRevision: bigint;
+
+  /**
+   * @generated from field: postpilot.v1.ModelRef design_model = 3;
+   */
+  designModel?: ModelRef | undefined;
+
+  /**
+   * @generated from field: postpilot.v1.ModelRef speech_model = 4;
+   */
+  speechModel?: ModelRef | undefined;
+
+  /**
+   * @generated from field: bool enabled = 5;
+   */
+  enabled: boolean;
+
+  /**
+   * @generated from field: string grade = 6;
+   */
+  grade: string;
+
+  /**
+   * Omitted settings use product defaults. Only these three values are accepted.
+   *
+   * @generated from field: postpilot.v1.SpeechSynthesisAdjustments adjustments = 7;
+   */
+  adjustments?: SpeechSynthesisAdjustments | undefined;
+};
+
+/**
+ * Describes the message postpilot.v1.RegisterSpeechCombinationRequest.
+ * Use `create(RegisterSpeechCombinationRequestSchema)` to create a new message.
+ */
+export const RegisterSpeechCombinationRequestSchema: GenMessage<RegisterSpeechCombinationRequest> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_speech_profile, 14);
+
+/**
+ * @generated from message postpilot.v1.SpeechSynthesisAdjustments
+ */
+export type SpeechSynthesisAdjustments = Message<"postpilot.v1.SpeechSynthesisAdjustments"> & {
+  /**
+   * @generated from field: double stability = 1;
+   */
+  stability: number;
+
+  /**
+   * @generated from field: double similarity = 2;
+   */
+  similarity: number;
+
+  /**
+   * @generated from field: double style = 3;
+   */
+  style: number;
+};
+
+/**
+ * Describes the message postpilot.v1.SpeechSynthesisAdjustments.
+ * Use `create(SpeechSynthesisAdjustmentsSchema)` to create a new message.
+ */
+export const SpeechSynthesisAdjustmentsSchema: GenMessage<SpeechSynthesisAdjustments> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_speech_profile, 15);
 
 /**
  * @generated from message postpilot.v1.SaveSpeechProfileRequest
@@ -516,7 +690,7 @@ export type SaveSpeechProfileRequest = Message<"postpilot.v1.SaveSpeechProfileRe
  * Use `create(SaveSpeechProfileRequestSchema)` to create a new message.
  */
 export const SaveSpeechProfileRequestSchema: GenMessage<SaveSpeechProfileRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_speech_profile, 11);
+  messageDesc(file_postpilot_v1_speech_profile, 16);
 
 /**
  * @generated from message postpilot.v1.SaveSpeechProfileResponse
@@ -533,7 +707,7 @@ export type SaveSpeechProfileResponse = Message<"postpilot.v1.SaveSpeechProfileR
  * Use `create(SaveSpeechProfileResponseSchema)` to create a new message.
  */
 export const SaveSpeechProfileResponseSchema: GenMessage<SaveSpeechProfileResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_speech_profile, 12);
+  messageDesc(file_postpilot_v1_speech_profile, 17);
 
 /**
  * @generated from message postpilot.v1.StartSpeechQualificationRequest
@@ -562,7 +736,7 @@ export type StartSpeechQualificationRequest = Message<"postpilot.v1.StartSpeechQ
  * Use `create(StartSpeechQualificationRequestSchema)` to create a new message.
  */
 export const StartSpeechQualificationRequestSchema: GenMessage<StartSpeechQualificationRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_speech_profile, 13);
+  messageDesc(file_postpilot_v1_speech_profile, 18);
 
 /**
  * @generated from message postpilot.v1.StartSpeechQualificationResponse
@@ -594,7 +768,7 @@ export type StartSpeechQualificationResponse = Message<"postpilot.v1.StartSpeech
  * Use `create(StartSpeechQualificationResponseSchema)` to create a new message.
  */
 export const StartSpeechQualificationResponseSchema: GenMessage<StartSpeechQualificationResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_speech_profile, 14);
+  messageDesc(file_postpilot_v1_speech_profile, 19);
 
 /**
  * This family never extends the five-purpose bulk document or model selections.
@@ -635,6 +809,22 @@ export const SpeechProfileService: GenService<{
     methodKind: "unary";
     input: typeof StartSpeechQualificationRequestSchema;
     output: typeof StartSpeechQualificationResponseSchema;
+  },
+  /**
+   * @generated from rpc postpilot.v1.SpeechProfileService.RegisterSpeechCombination
+   */
+  registerSpeechCombination: {
+    methodKind: "unary";
+    input: typeof RegisterSpeechCombinationRequestSchema;
+    output: typeof SaveSpeechProfileResponseSchema;
+  },
+  /**
+   * @generated from rpc postpilot.v1.SpeechProfileService.SaveSpeechTariff
+   */
+  saveSpeechTariff: {
+    methodKind: "unary";
+    input: typeof SaveSpeechTariffRequestSchema;
+    output: typeof SaveSpeechTariffResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_postpilot_v1_speech_profile, 0);

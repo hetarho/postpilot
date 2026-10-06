@@ -6,7 +6,7 @@ import {
 } from '@connectrpc/connect-query'
 import { useQueryClient } from '@tanstack/react-query'
 import { SpeechProfileService, appFailureFromConnect } from '@/shared/api'
-import type { AdminSpeechProfile } from '../model/speech'
+import type { SpeechRegistration, SpeechAccountTariff } from '../model/speech'
 import { toSpeechAdminBrowse, toSpeechChoice } from './speech-mappers'
 
 export function useSpeechProfiles(qualificationSessionId = '') {
@@ -30,37 +30,51 @@ export function useAdminSpeechProfiles() {
         data,
       ),
   })
-  const save = useMutation(SpeechProfileService.method.saveSpeechProfile, {
-    onSuccess: () => {
-      void cache.invalidateQueries({
+  const invalidate = () =>
+    Promise.all([
+      cache.invalidateQueries({
         queryKey: createConnectQueryKey({
           schema: SpeechProfileService.method.adminListSpeechProfiles,
           transport,
           cardinality: 'finite',
         }),
-      })
-      void cache.invalidateQueries({
+      }),
+      cache.invalidateQueries({
         queryKey: createConnectQueryKey({
           schema: SpeechProfileService.method.listSpeechProfiles,
           transport,
           cardinality: 'finite',
         }),
-      })
-    },
+      }),
+    ])
+  const save = useMutation(SpeechProfileService.method.registerSpeechCombination, {
+    onSuccess: invalidate,
+  })
+  const tariff = useMutation(SpeechProfileService.method.saveSpeechTariff, {
+    onSuccess: invalidate,
   })
   const qualification = useMutation(SpeechProfileService.method.startSpeechQualification)
   return {
     browse: query.data
       ? toSpeechAdminBrowse(query.data)
-      : { profiles: [], choices: [], candidates: [], fetchError: '' },
+      : {
+          profiles: [],
+          choices: [],
+          candidates: [],
+          combinations: [],
+          tariff: null,
+          fetchError: '',
+        },
     isPending: query.isPending,
     hasData: query.data !== undefined,
     isError: query.isError || refresh.isError,
     refresh: () => refresh.mutate({ refresh: true }),
     refreshing: refresh.isPending,
-    save: (profile: AdminSpeechProfile) =>
-      save.mutateAsync({ profile, expectedRevision: profile.revision }),
+    save: (registration: SpeechRegistration) => save.mutateAsync(registration),
     saving: save.isPending,
+    saveTariff: (account: SpeechAccountTariff) =>
+      tariff.mutateAsync({ tariff: account, expectedRevision: account.revision }),
+    savingTariff: tariff.isPending,
     startQualification: (id: string, revision: bigint, maximumUsd: string) =>
       qualification.mutateAsync({ profileId: id, revision, maximumUsd }),
     qualification: qualification.data
@@ -73,8 +87,10 @@ export function useAdminSpeechProfiles() {
       : undefined,
     qualifying: qualification.isPending,
     failure:
-      save.error || refresh.error || qualification.error || query.error
-        ? appFailureFromConnect(save.error ?? refresh.error ?? qualification.error ?? query.error)
+      save.error || tariff.error || refresh.error || qualification.error || query.error
+        ? appFailureFromConnect(
+            save.error ?? tariff.error ?? refresh.error ?? qualification.error ?? query.error,
+          )
         : undefined,
   }
 }

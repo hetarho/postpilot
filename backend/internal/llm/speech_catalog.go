@@ -34,7 +34,17 @@ type SpeechCatalog struct {
 	// a catalog/model ID alone cannot authorize another supplier account's voice.
 	ConnectionScope string
 	Models          []SpeechModel
+	BillingRules    []SpeechBillingRule
 	CheckedAt       time.Time
+}
+
+// A provider-qualified bound for its reported billing unit, not a USD tariff.
+type SpeechBillingRule struct {
+	Ref                    ModelRef
+	Operation              string
+	Unit                   SpeechUnit
+	UnitsPerInputCharacter string
+	Source                 string
 }
 
 type SpeechCatalogReader interface {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"errors"
 	"slices"
 	"strings"
 	"time"
@@ -29,6 +30,10 @@ func (s *SpeechService) BrowseSpeech(ctx context.Context, refresh bool) (SpeechA
 		return SpeechAdminBrowse{}, err
 	}
 	browse := SpeechAdminBrowse{Profiles: profiles}
+	browse.Tariff, err = s.store.GetSpeechTariff(ctx)
+	if err != nil {
+		return SpeechAdminBrowse{}, err
+	}
 	var catalog llm.SpeechCatalog
 	connection := s.source.SpeechConnection()
 	switch {
@@ -45,11 +50,13 @@ func (s *SpeechService) BrowseSpeech(ctx context.Context, refresh bool) (SpeechA
 		catalog, err = s.source.ReadSpeechCatalog(ctx, refresh)
 		if err != nil {
 			browse.FetchError = "SPEECH_CATALOG_UNAVAILABLE"
+			catalog = llm.SpeechCatalog{}
 		}
 	}
 	browse.Candidates = catalog.Models
+	browse.Combinations = speechCombinations(catalog, browse.Tariff)
 	for _, p := range profiles {
-		browse.Choices = append(browse.Choices, s.choice(p, plan.Master, catalog, err))
+		browse.Choices = append(browse.Choices, s.choice(ctx, p, plan.Master, catalog, err))
 	}
 	return browse, nil
 }
@@ -62,7 +69,7 @@ func (s *SpeechService) SpeechChoices(ctx context.Context, tier plan.Plan) ([]Sp
 	catalog, fetchErr := s.source.ReadSpeechCatalog(ctx, false)
 	out := make([]SpeechChoice, 0, len(profiles))
 	for _, p := range profiles {
-		out = append(out, s.choice(p, tier, catalog, fetchErr))
+		out = append(out, s.choice(ctx, p, tier, catalog, fetchErr))
 	}
 	return out, nil
 }
@@ -80,7 +87,7 @@ func (s *SpeechService) QualificationSpeechChoices(ctx context.Context, owner st
 		return nil, err
 	}
 	catalog, fetchErr := s.source.ReadSpeechCatalog(ctx, false)
-	c := s.choice(p, tier, catalog, fetchErr)
+	c := s.choice(ctx, p, tier, catalog, fetchErr)
 	// Only live readiness is provisional; every other compatibility/price gate
 	// has already passed. The live qualification flags remain false.
 	if c.UnavailableReason == "SPEECH_NOT_QUALIFIED" {
@@ -89,13 +96,13 @@ func (s *SpeechService) QualificationSpeechChoices(ctx context.Context, owner st
 	return []SpeechChoice{c}, nil
 }
 
-func (s *SpeechService) choice(p SpeechProfile, tier plan.Plan, catalog llm.SpeechCatalog, fetchErr error) SpeechChoice {
+func (s *SpeechService) choice(ctx context.Context, p SpeechProfile, tier plan.Plan, catalog llm.SpeechCatalog, fetchErr error) SpeechChoice {
 	required, entitled := plan.AllowsModelGrade(tier, string(p.Level))
 	out := SpeechChoice{ID: p.ID, Revision: p.Revision, Label: p.Label, Design: p.Binding.Design, DesignLabel: p.Binding.DesignModel.Label,
 		Synthesis: p.Binding.Synthesis, SynthesisLabel: p.Binding.SpeechModel.Label, Level: p.Level, RequiredPlan: required, Entitled: entitled,
 		DescriptionMax: p.Binding.DescriptionMax, PreviewMin: llm.SpeechPreviewMin, PreviewMax: p.Binding.PreviewMax, SpeechMax: p.Binding.SpeechMax,
 		VoiceReady: p.VoiceEvidence != "", ExportReady: p.ExportEvidence != ""}
-	out.UnavailableReason = s.readiness(p, catalog, fetchErr)
+	out.UnavailableReason = s.readiness(ctx, p, catalog, fetchErr)
 	if out.UnavailableReason == "" && !out.VoiceReady {
 		out.UnavailableReason = "SPEECH_NOT_QUALIFIED"
 	}
@@ -106,13 +113,16 @@ func (s *SpeechService) choice(p SpeechProfile, tier plan.Plan, catalog llm.Spee
 	return out
 }
 
-func (s *SpeechService) readiness(p SpeechProfile, catalog llm.SpeechCatalog, fetchErr error) string {
+func (s *SpeechService) readiness(ctx context.Context, p SpeechProfile, catalog llm.SpeechCatalog, fetchErr error) string {
 	c := s.source.SpeechConnection()
 	if c.Disabled || c.ProviderID == "" {
 		return "SPEECH_CONNECTION_UNAVAILABLE"
 	}
 	if !p.Enabled {
 		return "SPEECH_PROFILE_UNAVAILABLE"
+	}
+	if p.Level == "" {
+		return "MODEL_UNCLASSIFIED"
 	}
 	if c.ProviderID != p.Binding.Design.ProviderID || c.ProviderID != p.Binding.Synthesis.ProviderID {
 		return "SPEECH_BINDING_INCOMPATIBLE"
@@ -133,6 +143,18 @@ func (s *SpeechService) readiness(p SpeechProfile, catalog llm.SpeechCatalog, fe
 	}
 	if !p.PricingReady(s.now()) {
 		return "SPEECH_PRICE_UNAVAILABLE"
+	}
+	owner, ownershipErr := s.store.GetSpeechCombination(ctx, p.Binding.Design, p.Binding.Synthesis)
+	if ownershipErr != nil && !errors.Is(ownershipErr, ErrNotFound) || owner != "" && owner != p.ID {
+		return "SPEECH_PROFILE_UNAVAILABLE"
+	}
+	if p.CatalogManaged {
+		// This is also rechecked by ResolveSpeechProfile at paid admission.
+		// Tariff errors or drift never authorize a stale snapshot.
+		t, err := s.store.GetSpeechTariff(ctx)
+		if err != nil || t.Revision != p.TariffRevision || t.ConnectionScope != catalog.ConnectionScope {
+			return "SPEECH_PRICE_UNAVAILABLE"
+		}
 	}
 	if p.Level == LevelFree && !p.ZeroPriced(s.now()) {
 		return "SPEECH_PRICE_UNAVAILABLE"
@@ -160,10 +182,17 @@ func validSpeechCapabilities(b SpeechBinding, d, v llm.SpeechModel) bool {
 // Every curation change produces a revision. Historical snapshots remain intact;
 // an old voice can read its binding but cannot bypass current live safety gates.
 func (s *SpeechService) SaveSpeechProfile(ctx context.Context, p SpeechProfile, expected int64) (SpeechProfile, error) {
+	if p.CatalogManaged || p.Level == "" {
+		return SpeechProfile{}, ErrSpeechProfileInvalid
+	}
+	return s.saveSpeechProfile(ctx, p, expected)
+}
+
+func (s *SpeechService) saveSpeechProfile(ctx context.Context, p SpeechProfile, expected int64) (SpeechProfile, error) {
 	if strings.TrimSpace(p.Label) == "" || !utf8.ValidString(p.Label) || utf8.RuneCountInString(p.Label) > SpeechProfileLabelMax {
 		return SpeechProfile{}, ErrSpeechProfileInvalid
 	}
-	if _, ok := plan.ModelGradeRequired(string(p.Level)); !ok {
+	if _, err := ParseLevel(string(p.Level)); err != nil {
 		return SpeechProfile{}, ErrInvalidLevel
 	}
 	if p.Binding.Design.ProviderID == "" || p.Binding.Design.ProviderID != p.Binding.Synthesis.ProviderID || p.Binding.Design.ModelID == "" || p.Binding.Synthesis.ModelID == "" {
@@ -191,6 +220,9 @@ func (s *SpeechService) SaveSpeechProfile(ctx context.Context, p SpeechProfile, 
 		previous, err = s.store.GetSpeechRevision(ctx, p.ID, expected)
 		if err != nil {
 			return SpeechProfile{}, err
+		}
+		if previous.CatalogManaged && !p.CatalogManaged {
+			return SpeechProfile{}, ErrSpeechProfileInvalid
 		}
 	} else {
 		if expected != 0 {
@@ -249,7 +281,7 @@ func (s *SpeechService) StartSpeechQualification(ctx context.Context, owner, id 
 		return SpeechQualificationSession{}, ErrSpeechProfileConflict
 	}
 	catalog, fetchErr := s.source.ReadSpeechCatalog(ctx, false)
-	if s.readiness(p, catalog, fetchErr) != "" {
+	if s.readiness(ctx, p, catalog, fetchErr) != "" {
 		return SpeechQualificationSession{}, ErrSpeechProfileUnavailable
 	}
 	if cap.Sign() == 0 && !p.ZeroPriced(s.now()) {
@@ -288,7 +320,7 @@ func (s *SpeechService) ResolveSpeechProfile(ctx context.Context, owner string, 
 		return SpeechProfile{}, ErrSpeechProfileUnavailable
 	}
 	catalog, fetchErr := s.source.ReadSpeechCatalog(ctx, false)
-	if s.readiness(p, catalog, fetchErr) != "" {
+	if s.readiness(ctx, p, catalog, fetchErr) != "" {
 		return SpeechProfile{}, ErrSpeechProfileUnavailable
 	}
 	if sessionID != "" {

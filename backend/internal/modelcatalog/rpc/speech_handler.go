@@ -20,6 +20,8 @@ type speechProfileService interface {
 	BrowseSpeech(context.Context, bool) (modelcatalog.SpeechAdminBrowse, error)
 	SaveSpeechProfile(context.Context, modelcatalog.SpeechProfile, int64) (modelcatalog.SpeechProfile, error)
 	StartSpeechQualification(context.Context, string, string, int64, string) (modelcatalog.SpeechQualificationSession, error)
+	RegisterSpeechCombination(context.Context, modelcatalog.SpeechRegistration) (modelcatalog.SpeechProfile, error)
+	SaveSpeechAccountTariff(context.Context, modelcatalog.SpeechAccountTariff, int64) (modelcatalog.SpeechAccountTariff, error)
 }
 type SpeechHandler struct{ svc speechProfileService }
 
@@ -69,6 +71,10 @@ func (h *SpeechHandler) AdminListSpeechProfiles(ctx context.Context, req *connec
 		return nil, speechError(err)
 	}
 	response := &v1.AdminListSpeechProfilesResponse{FetchError: browse.FetchError}
+	response.Tariff = speechTariff(browse.Tariff)
+	for _, p := range browse.Combinations {
+		response.Combinations = append(response.Combinations, speechAdmin(p))
+	}
 	for _, p := range browse.Profiles {
 		response.Profiles = append(response.Profiles, speechAdmin(p))
 	}
@@ -81,6 +87,45 @@ func (h *SpeechHandler) AdminListSpeechProfiles(ctx context.Context, req *connec
 	return connect.NewResponse(response), nil
 }
 
+func speechTariff(t modelcatalog.SpeechAccountTariff) *v1.SpeechAccountTariff {
+	checked := ""
+	if !t.CheckedAt.IsZero() {
+		checked = t.CheckedAt.Format(time.RFC3339Nano)
+	}
+	return &v1.SpeechAccountTariff{Revision: t.Revision, DesignUsdPerUnit: t.DesignUSDPerUnit, SpeechUsdPerUnit: t.SpeechUSDPerUnit, ConfirmationUsd: t.ConfirmationUSD, Source: t.Source, Complete: t.Complete, CheckedAt: checked}
+}
+
+func (h *SpeechHandler) RegisterSpeechCombination(ctx context.Context, req *connect.Request[v1.RegisterSpeechCombinationRequest]) (*connect.Response[v1.SaveSpeechProfileResponse], error) {
+	if err := requireSpeechMaster(ctx); err != nil {
+		return nil, err
+	}
+	m := req.Msg
+	r := modelcatalog.SpeechRegistration{ID: m.GetProfileId(), ExpectedRevision: m.GetExpectedRevision(), Design: speechDomainRef(m.GetDesignModel()), Synthesis: speechDomainRef(m.GetSpeechModel()), Enabled: m.GetEnabled(), Level: modelcatalog.Level(m.GetGrade())}
+	if a := m.GetAdjustments(); a != nil {
+		r.Adjustments = &llm.SpeechSettings{Stability: a.GetStability(), SimilarityBoost: a.GetSimilarity(), Style: a.GetStyle(), Speed: 1}
+	}
+	p, err := h.svc.RegisterSpeechCombination(ctx, r)
+	if err != nil {
+		return nil, speechError(err)
+	}
+	return connect.NewResponse(&v1.SaveSpeechProfileResponse{Profile: speechAdmin(p)}), nil
+}
+
+func (h *SpeechHandler) SaveSpeechTariff(ctx context.Context, req *connect.Request[v1.SaveSpeechTariffRequest]) (*connect.Response[v1.SaveSpeechTariffResponse], error) {
+	if err := requireSpeechMaster(ctx); err != nil {
+		return nil, err
+	}
+	if req.Msg.GetTariff() == nil {
+		return nil, speechError(modelcatalog.ErrSpeechProfileInvalid)
+	}
+	m := req.Msg.GetTariff()
+	t, err := h.svc.SaveSpeechAccountTariff(ctx, modelcatalog.SpeechAccountTariff{DesignUSDPerUnit: m.GetDesignUsdPerUnit(), SpeechUSDPerUnit: m.GetSpeechUsdPerUnit(), ConfirmationUSD: m.GetConfirmationUsd(), Source: m.GetSource(), Complete: m.GetComplete()}, req.Msg.GetExpectedRevision())
+	if err != nil {
+		return nil, speechError(err)
+	}
+	return connect.NewResponse(&v1.SaveSpeechTariffResponse{Tariff: speechTariff(t)}), nil
+}
+
 func (h *SpeechHandler) SaveSpeechProfile(ctx context.Context, req *connect.Request[v1.SaveSpeechProfileRequest]) (*connect.Response[v1.SaveSpeechProfileResponse], error) {
 	if err := requireSpeechMaster(ctx); err != nil {
 		return nil, err
@@ -88,6 +133,10 @@ func (h *SpeechHandler) SaveSpeechProfile(ctx context.Context, req *connect.Requ
 	p, err := speechDraft(req.Msg.GetProfile())
 	if err != nil {
 		return nil, speechError(err)
+	}
+	// New registrations use the lean server-owned catalog path.
+	if p.ID == "" {
+		return nil, speechError(modelcatalog.ErrSpeechProfileInvalid)
 	}
 	saved, err := h.svc.SaveSpeechProfile(ctx, p, req.Msg.GetExpectedRevision())
 	if err != nil {

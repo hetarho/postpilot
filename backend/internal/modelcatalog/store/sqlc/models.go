@@ -4,6 +4,21 @@
 
 package sqlc
 
+import (
+	"database/sql"
+)
+
+type SpeechAccountTariff struct {
+	Revision         int64
+	ConnectionScope  string
+	DesignUsdPerUnit string
+	SpeechUsdPerUnit string
+	ConfirmationUsd  string
+	Source           string
+	Complete         int64
+	CheckedAt        string
+}
+
 type SpeechProfileRevision struct {
 	ProfileID      string
 	Revision       int64
@@ -18,6 +33,8 @@ type SpeechProfileRevision struct {
 	VoiceEvidence  string
 	ExportEvidence string
 	CreatedAt      string
+	CatalogGrade   sql.NullString
+	TariffRevision int64
 }
 
 type SpeechQualificationSession struct {

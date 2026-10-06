@@ -118,3 +118,31 @@ func TestSpeechAdminProceduresRefuseNonMasterBeforeReadingOrWriting(t *testing.T
 		t.Fatalf("owner spoof: %s %v", fixture.owner, err)
 	}
 }
+
+func (f *speechRPCFixture) RegisterSpeechCombination(_ context.Context, r modelcatalog.SpeechRegistration) (modelcatalog.SpeechProfile, error) {
+	f.calls++
+	return modelcatalog.SpeechProfile{}, f.err
+}
+func (f *speechRPCFixture) SaveSpeechAccountTariff(_ context.Context, t modelcatalog.SpeechAccountTariff, _ int64) (modelcatalog.SpeechAccountTariff, error) {
+	f.calls++
+	return t, f.err
+}
+
+func TestSpeechCatalogMutationsAreMasterOnly(t *testing.T) {
+	f := &speechRPCFixture{}
+	h := NewSpeechHandler(f)
+	for _, tier := range []plan.Plan{plan.Free, plan.Light, plan.Pro, plan.Max} {
+		ctx := auth.WithActor(t.Context(), auth.Actor{UserID: "ordinary", Plan: tier})
+		_, err := h.RegisterSpeechCombination(ctx, connect.NewRequest(&v1.RegisterSpeechCombinationRequest{}))
+		if connect.CodeOf(err) != connect.CodePermissionDenied {
+			t.Fatal(err)
+		}
+		_, err = h.SaveSpeechTariff(ctx, connect.NewRequest(&v1.SaveSpeechTariffRequest{}))
+		if connect.CodeOf(err) != connect.CodePermissionDenied {
+			t.Fatal(err)
+		}
+	}
+	if f.calls != 0 {
+		t.Fatal("unprivileged mutation reached service")
+	}
+}

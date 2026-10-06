@@ -276,6 +276,7 @@ export type {
   SpeechProfileChoice as ProtoSpeechProfileChoice,
   AdminSpeechProfile as ProtoAdminSpeechProfile,
   AdminListSpeechProfilesResponse as ProtoSpeechAdminBrowse,
+  SpeechAccountTariff as ProtoSpeechAccountTariff,
 } from './gen/postpilot/v1/speech_profile_pb'
 export {
   ApplyCatalogDocumentResponseSchema,

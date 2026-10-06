@@ -7,6 +7,8 @@ export type {
   SpeechPriceComponent,
   AdminSpeechProfile,
   SpeechAdminBrowse,
+  SpeechAccountTariff,
+  SpeechRegistration,
 } from './model/speech'
 export { useSpeechProfiles, useAdminSpeechProfiles } from './api/useSpeechProfiles'
 export { SpeechProfilePicker } from './ui/SpeechProfilePicker'

@@ -41,34 +41,66 @@ func (s *Store) SaveSpeechRevision(ctx context.Context, p modelcatalog.SpeechPro
 	if p.Revision != expected+1 || expected < 0 {
 		return modelcatalog.SpeechProfile{}, modelcatalog.ErrSpeechProfileConflict
 	}
-	binding, prices, err := encodeSpeech(p)
-	if err != nil {
-		return modelcatalog.SpeechProfile{}, err
-	}
 	tx, err := s.writer.BeginTx(ctx, nil)
 	if err != nil {
 		return modelcatalog.SpeechProfile{}, err
 	}
 	defer tx.Rollback()
 	q := s.write.WithTx(tx)
+	if p.CatalogManaged {
+		tariff, err := q.GetSpeechTariff(ctx)
+		if err != nil && !errors.Is(err, sql.ErrNoRows) {
+			return modelcatalog.SpeechProfile{}, err
+		}
+		if tariff.Revision != p.TariffRevision {
+			return modelcatalog.SpeechProfile{}, modelcatalog.ErrSpeechProfileConflict
+		}
+	}
+	if err := saveSpeechRevision(ctx, q, p, expected); err != nil {
+		return modelcatalog.SpeechProfile{}, err
+	}
+	return p, tx.Commit()
+}
+
+func saveSpeechRevision(ctx context.Context, q *sqlc.Queries, p modelcatalog.SpeechProfile, expected int64) error {
+	binding, prices, err := encodeSpeech(p)
+	if err != nil {
+		return err
+	}
 	stamp := formatTime(p.CreatedAt)
 	if expected == 0 {
 		if err := q.CreateSpeechProfile(ctx, sqlc.CreateSpeechProfileParams{ID: p.ID, CurrentRevision: p.Revision, CreatedAt: stamp, UpdatedAt: stamp}); err != nil {
-			return modelcatalog.SpeechProfile{}, fmt.Errorf("create speech profile: %w", err)
+			return err
 		}
 	} else {
 		n, err := q.AdvanceSpeechProfile(ctx, sqlc.AdvanceSpeechProfileParams{ID: p.ID, Revision: p.Revision, Stamp: stamp, ExpectedRevision: expected})
 		if err != nil {
-			return modelcatalog.SpeechProfile{}, err
+			return err
 		}
 		if n != 1 {
-			return modelcatalog.SpeechProfile{}, modelcatalog.ErrSpeechProfileConflict
+			return modelcatalog.ErrSpeechProfileConflict
 		}
 	}
-	if err := q.InsertSpeechRevision(ctx, sqlc.InsertSpeechRevisionParams{ProfileID: p.ID, Revision: p.Revision, ProviderID: p.Binding.Design.ProviderID, DesignModelID: p.Binding.Design.ModelID, SpeechModelID: p.Binding.Synthesis.ModelID, Label: p.Label, Level: string(p.Level), Enabled: boolToInt(p.Enabled), BindingJson: binding, PricesJson: prices, CreatedAt: stamp}); err != nil {
-		return modelcatalog.SpeechProfile{}, fmt.Errorf("insert speech revision: %w", err)
+	if p.CatalogManaged {
+		n, err := q.ClaimSpeechCombination(ctx, sqlc.ClaimSpeechCombinationParams{ProviderID: p.Binding.Design.ProviderID, DesignModelID: p.Binding.Design.ModelID, SpeechModelID: p.Binding.Synthesis.ModelID, ProfileID: p.ID})
+		if err != nil {
+			return err
+		}
+		if n != 1 {
+			id, err := q.GetSpeechCombination(ctx, sqlc.GetSpeechCombinationParams{ProviderID: p.Binding.Design.ProviderID, DesignModelID: p.Binding.Design.ModelID, SpeechModelID: p.Binding.Synthesis.ModelID})
+			if err != nil {
+				return err
+			}
+			if id != p.ID {
+				return modelcatalog.ErrSpeechProfileConflict
+			}
+		}
 	}
-	return p, tx.Commit()
+	level := string(p.Level)
+	if level == "" {
+		level = string(modelcatalog.LevelValue)
+	}
+	return q.InsertSpeechRevision(ctx, sqlc.InsertSpeechRevisionParams{ProfileID: p.ID, Revision: p.Revision, ProviderID: p.Binding.Design.ProviderID, DesignModelID: p.Binding.Design.ModelID, SpeechModelID: p.Binding.Synthesis.ModelID, Label: p.Label, Level: level, Enabled: boolToInt(p.Enabled), BindingJson: binding, PricesJson: prices, CreatedAt: stamp, CatalogGrade: sql.NullString{String: string(p.Level), Valid: p.CatalogManaged}, TariffRevision: p.TariffRevision})
 }
 
 func (s *Store) RecordSpeechReadiness(ctx context.Context, id string, rev int64, evidence string, export bool) error {
@@ -118,7 +150,11 @@ func speechFromRow(row sqlc.SpeechProfileRevision) (modelcatalog.SpeechProfile, 
 	if binding.Design.ProviderID != row.ProviderID || binding.Synthesis.ProviderID != row.ProviderID || binding.Design.ModelID != row.DesignModelID || binding.Synthesis.ModelID != row.SpeechModelID {
 		return modelcatalog.SpeechProfile{}, errors.New("speech binding columns disagree")
 	}
-	level, err := modelcatalog.ParseLevel(row.Level)
+	grade := row.Level
+	if row.CatalogGrade.Valid {
+		grade = row.CatalogGrade.String
+	}
+	level, err := modelcatalog.ParseLevel(grade)
 	if err != nil {
 		return modelcatalog.SpeechProfile{}, err
 	}
@@ -126,7 +162,7 @@ func speechFromRow(row sqlc.SpeechProfileRevision) (modelcatalog.SpeechProfile, 
 	if err != nil {
 		return modelcatalog.SpeechProfile{}, err
 	}
-	return modelcatalog.SpeechProfile{ID: row.ProfileID, Revision: row.Revision, Label: row.Label, Level: level, Enabled: row.Enabled == 1, Binding: binding, Prices: prices, VoiceEvidence: row.VoiceEvidence, ExportEvidence: row.ExportEvidence, CreatedAt: at}, nil
+	return modelcatalog.SpeechProfile{ID: row.ProfileID, Revision: row.Revision, Label: row.Label, Level: level, Enabled: row.Enabled == 1, Binding: binding, Prices: prices, VoiceEvidence: row.VoiceEvidence, ExportEvidence: row.ExportEvidence, CreatedAt: at, CatalogManaged: row.CatalogGrade.Valid, TariffRevision: row.TariffRevision}, nil
 }
 
 var _ modelcatalog.SpeechProfileStore = (*Store)(nil)

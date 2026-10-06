@@ -910,6 +910,8 @@ type AdminListSpeechProfilesResponse struct {
 	Candidates    []*SpeechModelCandidate `protobuf:"bytes,2,rep,name=candidates,proto3" json:"candidates,omitempty"`
 	Choices       []*SpeechProfileChoice  `protobuf:"bytes,3,rep,name=choices,proto3" json:"choices,omitempty"`
 	FetchError    string                  `protobuf:"bytes,4,opt,name=fetch_error,json=fetchError,proto3" json:"fetch_error,omitempty"`
+	Combinations  []*AdminSpeechProfile   `protobuf:"bytes,5,rep,name=combinations,proto3" json:"combinations,omitempty"`
+	Tariff        *SpeechAccountTariff    `protobuf:"bytes,6,opt,name=tariff,proto3" json:"tariff,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -972,6 +974,362 @@ func (x *AdminListSpeechProfilesResponse) GetFetchError() string {
 	return ""
 }
 
+func (x *AdminListSpeechProfilesResponse) GetCombinations() []*AdminSpeechProfile {
+	if x != nil {
+		return x.Combinations
+	}
+	return nil
+}
+
+func (x *AdminListSpeechProfilesResponse) GetTariff() *SpeechAccountTariff {
+	if x != nil {
+		return x.Tariff
+	}
+	return nil
+}
+
+// Master-only monetary terms. Billing rules and bounds are server-owned.
+type SpeechAccountTariff struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	Revision         int64                  `protobuf:"varint,1,opt,name=revision,proto3" json:"revision,omitempty"`
+	DesignUsdPerUnit string                 `protobuf:"bytes,2,opt,name=design_usd_per_unit,json=designUsdPerUnit,proto3" json:"design_usd_per_unit,omitempty"`
+	SpeechUsdPerUnit string                 `protobuf:"bytes,3,opt,name=speech_usd_per_unit,json=speechUsdPerUnit,proto3" json:"speech_usd_per_unit,omitempty"`
+	ConfirmationUsd  string                 `protobuf:"bytes,4,opt,name=confirmation_usd,json=confirmationUsd,proto3" json:"confirmation_usd,omitempty"`
+	Source           string                 `protobuf:"bytes,5,opt,name=source,proto3" json:"source,omitempty"`
+	Complete         bool                   `protobuf:"varint,6,opt,name=complete,proto3" json:"complete,omitempty"`
+	CheckedAt        string                 `protobuf:"bytes,7,opt,name=checked_at,json=checkedAt,proto3" json:"checked_at,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *SpeechAccountTariff) Reset() {
+	*x = SpeechAccountTariff{}
+	mi := &file_postpilot_v1_speech_profile_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SpeechAccountTariff) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SpeechAccountTariff) ProtoMessage() {}
+
+func (x *SpeechAccountTariff) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_speech_profile_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SpeechAccountTariff.ProtoReflect.Descriptor instead.
+func (*SpeechAccountTariff) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_speech_profile_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *SpeechAccountTariff) GetRevision() int64 {
+	if x != nil {
+		return x.Revision
+	}
+	return 0
+}
+
+func (x *SpeechAccountTariff) GetDesignUsdPerUnit() string {
+	if x != nil {
+		return x.DesignUsdPerUnit
+	}
+	return ""
+}
+
+func (x *SpeechAccountTariff) GetSpeechUsdPerUnit() string {
+	if x != nil {
+		return x.SpeechUsdPerUnit
+	}
+	return ""
+}
+
+func (x *SpeechAccountTariff) GetConfirmationUsd() string {
+	if x != nil {
+		return x.ConfirmationUsd
+	}
+	return ""
+}
+
+func (x *SpeechAccountTariff) GetSource() string {
+	if x != nil {
+		return x.Source
+	}
+	return ""
+}
+
+func (x *SpeechAccountTariff) GetComplete() bool {
+	if x != nil {
+		return x.Complete
+	}
+	return false
+}
+
+func (x *SpeechAccountTariff) GetCheckedAt() string {
+	if x != nil {
+		return x.CheckedAt
+	}
+	return ""
+}
+
+type SaveSpeechTariffRequest struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	Tariff           *SpeechAccountTariff   `protobuf:"bytes,1,opt,name=tariff,proto3" json:"tariff,omitempty"`
+	ExpectedRevision int64                  `protobuf:"varint,2,opt,name=expected_revision,json=expectedRevision,proto3" json:"expected_revision,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *SaveSpeechTariffRequest) Reset() {
+	*x = SaveSpeechTariffRequest{}
+	mi := &file_postpilot_v1_speech_profile_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SaveSpeechTariffRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SaveSpeechTariffRequest) ProtoMessage() {}
+
+func (x *SaveSpeechTariffRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_speech_profile_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SaveSpeechTariffRequest.ProtoReflect.Descriptor instead.
+func (*SaveSpeechTariffRequest) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_speech_profile_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *SaveSpeechTariffRequest) GetTariff() *SpeechAccountTariff {
+	if x != nil {
+		return x.Tariff
+	}
+	return nil
+}
+
+func (x *SaveSpeechTariffRequest) GetExpectedRevision() int64 {
+	if x != nil {
+		return x.ExpectedRevision
+	}
+	return 0
+}
+
+type SaveSpeechTariffResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Tariff        *SpeechAccountTariff   `protobuf:"bytes,1,opt,name=tariff,proto3" json:"tariff,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SaveSpeechTariffResponse) Reset() {
+	*x = SaveSpeechTariffResponse{}
+	mi := &file_postpilot_v1_speech_profile_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SaveSpeechTariffResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SaveSpeechTariffResponse) ProtoMessage() {}
+
+func (x *SaveSpeechTariffResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_speech_profile_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SaveSpeechTariffResponse.ProtoReflect.Descriptor instead.
+func (*SaveSpeechTariffResponse) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_speech_profile_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *SaveSpeechTariffResponse) GetTariff() *SpeechAccountTariff {
+	if x != nil {
+		return x.Tariff
+	}
+	return nil
+}
+
+type RegisterSpeechCombinationRequest struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	ProfileId        string                 `protobuf:"bytes,1,opt,name=profile_id,json=profileId,proto3" json:"profile_id,omitempty"`
+	ExpectedRevision int64                  `protobuf:"varint,2,opt,name=expected_revision,json=expectedRevision,proto3" json:"expected_revision,omitempty"`
+	DesignModel      *ModelRef              `protobuf:"bytes,3,opt,name=design_model,json=designModel,proto3" json:"design_model,omitempty"`
+	SpeechModel      *ModelRef              `protobuf:"bytes,4,opt,name=speech_model,json=speechModel,proto3" json:"speech_model,omitempty"`
+	Enabled          bool                   `protobuf:"varint,5,opt,name=enabled,proto3" json:"enabled,omitempty"`
+	Grade            string                 `protobuf:"bytes,6,opt,name=grade,proto3" json:"grade,omitempty"`
+	// Omitted settings use product defaults. Only these three values are accepted.
+	Adjustments   *SpeechSynthesisAdjustments `protobuf:"bytes,7,opt,name=adjustments,proto3" json:"adjustments,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RegisterSpeechCombinationRequest) Reset() {
+	*x = RegisterSpeechCombinationRequest{}
+	mi := &file_postpilot_v1_speech_profile_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RegisterSpeechCombinationRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RegisterSpeechCombinationRequest) ProtoMessage() {}
+
+func (x *RegisterSpeechCombinationRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_speech_profile_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RegisterSpeechCombinationRequest.ProtoReflect.Descriptor instead.
+func (*RegisterSpeechCombinationRequest) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_speech_profile_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *RegisterSpeechCombinationRequest) GetProfileId() string {
+	if x != nil {
+		return x.ProfileId
+	}
+	return ""
+}
+
+func (x *RegisterSpeechCombinationRequest) GetExpectedRevision() int64 {
+	if x != nil {
+		return x.ExpectedRevision
+	}
+	return 0
+}
+
+func (x *RegisterSpeechCombinationRequest) GetDesignModel() *ModelRef {
+	if x != nil {
+		return x.DesignModel
+	}
+	return nil
+}
+
+func (x *RegisterSpeechCombinationRequest) GetSpeechModel() *ModelRef {
+	if x != nil {
+		return x.SpeechModel
+	}
+	return nil
+}
+
+func (x *RegisterSpeechCombinationRequest) GetEnabled() bool {
+	if x != nil {
+		return x.Enabled
+	}
+	return false
+}
+
+func (x *RegisterSpeechCombinationRequest) GetGrade() string {
+	if x != nil {
+		return x.Grade
+	}
+	return ""
+}
+
+func (x *RegisterSpeechCombinationRequest) GetAdjustments() *SpeechSynthesisAdjustments {
+	if x != nil {
+		return x.Adjustments
+	}
+	return nil
+}
+
+type SpeechSynthesisAdjustments struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Stability     float64                `protobuf:"fixed64,1,opt,name=stability,proto3" json:"stability,omitempty"`
+	Similarity    float64                `protobuf:"fixed64,2,opt,name=similarity,proto3" json:"similarity,omitempty"`
+	Style         float64                `protobuf:"fixed64,3,opt,name=style,proto3" json:"style,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SpeechSynthesisAdjustments) Reset() {
+	*x = SpeechSynthesisAdjustments{}
+	mi := &file_postpilot_v1_speech_profile_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SpeechSynthesisAdjustments) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SpeechSynthesisAdjustments) ProtoMessage() {}
+
+func (x *SpeechSynthesisAdjustments) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_speech_profile_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SpeechSynthesisAdjustments.ProtoReflect.Descriptor instead.
+func (*SpeechSynthesisAdjustments) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_speech_profile_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *SpeechSynthesisAdjustments) GetStability() float64 {
+	if x != nil {
+		return x.Stability
+	}
+	return 0
+}
+
+func (x *SpeechSynthesisAdjustments) GetSimilarity() float64 {
+	if x != nil {
+		return x.Similarity
+	}
+	return 0
+}
+
+func (x *SpeechSynthesisAdjustments) GetStyle() float64 {
+	if x != nil {
+		return x.Style
+	}
+	return 0
+}
+
 type SaveSpeechProfileRequest struct {
 	state            protoimpl.MessageState `protogen:"open.v1"`
 	Profile          *AdminSpeechProfile    `protobuf:"bytes,1,opt,name=profile,proto3" json:"profile,omitempty"`
@@ -982,7 +1340,7 @@ type SaveSpeechProfileRequest struct {
 
 func (x *SaveSpeechProfileRequest) Reset() {
 	*x = SaveSpeechProfileRequest{}
-	mi := &file_postpilot_v1_speech_profile_proto_msgTypes[11]
+	mi := &file_postpilot_v1_speech_profile_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -994,7 +1352,7 @@ func (x *SaveSpeechProfileRequest) String() string {
 func (*SaveSpeechProfileRequest) ProtoMessage() {}
 
 func (x *SaveSpeechProfileRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_speech_profile_proto_msgTypes[11]
+	mi := &file_postpilot_v1_speech_profile_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1007,7 +1365,7 @@ func (x *SaveSpeechProfileRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SaveSpeechProfileRequest.ProtoReflect.Descriptor instead.
 func (*SaveSpeechProfileRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_speech_profile_proto_rawDescGZIP(), []int{11}
+	return file_postpilot_v1_speech_profile_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *SaveSpeechProfileRequest) GetProfile() *AdminSpeechProfile {
@@ -1033,7 +1391,7 @@ type SaveSpeechProfileResponse struct {
 
 func (x *SaveSpeechProfileResponse) Reset() {
 	*x = SaveSpeechProfileResponse{}
-	mi := &file_postpilot_v1_speech_profile_proto_msgTypes[12]
+	mi := &file_postpilot_v1_speech_profile_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1045,7 +1403,7 @@ func (x *SaveSpeechProfileResponse) String() string {
 func (*SaveSpeechProfileResponse) ProtoMessage() {}
 
 func (x *SaveSpeechProfileResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_speech_profile_proto_msgTypes[12]
+	mi := &file_postpilot_v1_speech_profile_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1058,7 +1416,7 @@ func (x *SaveSpeechProfileResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SaveSpeechProfileResponse.ProtoReflect.Descriptor instead.
 func (*SaveSpeechProfileResponse) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_speech_profile_proto_rawDescGZIP(), []int{12}
+	return file_postpilot_v1_speech_profile_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *SaveSpeechProfileResponse) GetProfile() *AdminSpeechProfile {
@@ -1080,7 +1438,7 @@ type StartSpeechQualificationRequest struct {
 
 func (x *StartSpeechQualificationRequest) Reset() {
 	*x = StartSpeechQualificationRequest{}
-	mi := &file_postpilot_v1_speech_profile_proto_msgTypes[13]
+	mi := &file_postpilot_v1_speech_profile_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1092,7 +1450,7 @@ func (x *StartSpeechQualificationRequest) String() string {
 func (*StartSpeechQualificationRequest) ProtoMessage() {}
 
 func (x *StartSpeechQualificationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_speech_profile_proto_msgTypes[13]
+	mi := &file_postpilot_v1_speech_profile_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1105,7 +1463,7 @@ func (x *StartSpeechQualificationRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StartSpeechQualificationRequest.ProtoReflect.Descriptor instead.
 func (*StartSpeechQualificationRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_speech_profile_proto_rawDescGZIP(), []int{13}
+	return file_postpilot_v1_speech_profile_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *StartSpeechQualificationRequest) GetProfileId() string {
@@ -1141,7 +1499,7 @@ type StartSpeechQualificationResponse struct {
 
 func (x *StartSpeechQualificationResponse) Reset() {
 	*x = StartSpeechQualificationResponse{}
-	mi := &file_postpilot_v1_speech_profile_proto_msgTypes[14]
+	mi := &file_postpilot_v1_speech_profile_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1153,7 +1511,7 @@ func (x *StartSpeechQualificationResponse) String() string {
 func (*StartSpeechQualificationResponse) ProtoMessage() {}
 
 func (x *StartSpeechQualificationResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_speech_profile_proto_msgTypes[14]
+	mi := &file_postpilot_v1_speech_profile_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1166,7 +1524,7 @@ func (x *StartSpeechQualificationResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StartSpeechQualificationResponse.ProtoReflect.Descriptor instead.
 func (*StartSpeechQualificationResponse) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_speech_profile_proto_rawDescGZIP(), []int{14}
+	return file_postpilot_v1_speech_profile_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *StartSpeechQualificationResponse) GetSessionId() string {
@@ -1289,7 +1647,7 @@ const file_postpilot_v1_speech_profile_proto_rawDesc = "" +
 	"voiceReady\x12!\n" +
 	"\fexport_ready\x18\t \x01(\bR\vexportReady\":\n" +
 	"\x1eAdminListSpeechProfilesRequest\x12\x18\n" +
-	"\arefresh\x18\x01 \x01(\bR\arefresh\"\x81\x02\n" +
+	"\arefresh\x18\x01 \x01(\bR\arefresh\"\x82\x03\n" +
 	"\x1fAdminListSpeechProfilesResponse\x12<\n" +
 	"\bprofiles\x18\x01 \x03(\v2 .postpilot.v1.AdminSpeechProfileR\bprofiles\x12B\n" +
 	"\n" +
@@ -1297,7 +1655,38 @@ const file_postpilot_v1_speech_profile_proto_rawDesc = "" +
 	"candidates\x12;\n" +
 	"\achoices\x18\x03 \x03(\v2!.postpilot.v1.SpeechProfileChoiceR\achoices\x12\x1f\n" +
 	"\vfetch_error\x18\x04 \x01(\tR\n" +
-	"fetchError\"\x83\x01\n" +
+	"fetchError\x12D\n" +
+	"\fcombinations\x18\x05 \x03(\v2 .postpilot.v1.AdminSpeechProfileR\fcombinations\x129\n" +
+	"\x06tariff\x18\x06 \x01(\v2!.postpilot.v1.SpeechAccountTariffR\x06tariff\"\x8d\x02\n" +
+	"\x13SpeechAccountTariff\x12\x1a\n" +
+	"\brevision\x18\x01 \x01(\x03R\brevision\x12-\n" +
+	"\x13design_usd_per_unit\x18\x02 \x01(\tR\x10designUsdPerUnit\x12-\n" +
+	"\x13speech_usd_per_unit\x18\x03 \x01(\tR\x10speechUsdPerUnit\x12)\n" +
+	"\x10confirmation_usd\x18\x04 \x01(\tR\x0fconfirmationUsd\x12\x16\n" +
+	"\x06source\x18\x05 \x01(\tR\x06source\x12\x1a\n" +
+	"\bcomplete\x18\x06 \x01(\bR\bcomplete\x12\x1d\n" +
+	"\n" +
+	"checked_at\x18\a \x01(\tR\tcheckedAt\"\x81\x01\n" +
+	"\x17SaveSpeechTariffRequest\x129\n" +
+	"\x06tariff\x18\x01 \x01(\v2!.postpilot.v1.SpeechAccountTariffR\x06tariff\x12+\n" +
+	"\x11expected_revision\x18\x02 \x01(\x03R\x10expectedRevision\"U\n" +
+	"\x18SaveSpeechTariffResponse\x129\n" +
+	"\x06tariff\x18\x01 \x01(\v2!.postpilot.v1.SpeechAccountTariffR\x06tariff\"\xe0\x02\n" +
+	" RegisterSpeechCombinationRequest\x12\x1d\n" +
+	"\n" +
+	"profile_id\x18\x01 \x01(\tR\tprofileId\x12+\n" +
+	"\x11expected_revision\x18\x02 \x01(\x03R\x10expectedRevision\x129\n" +
+	"\fdesign_model\x18\x03 \x01(\v2\x16.postpilot.v1.ModelRefR\vdesignModel\x129\n" +
+	"\fspeech_model\x18\x04 \x01(\v2\x16.postpilot.v1.ModelRefR\vspeechModel\x12\x18\n" +
+	"\aenabled\x18\x05 \x01(\bR\aenabled\x12\x14\n" +
+	"\x05grade\x18\x06 \x01(\tR\x05grade\x12J\n" +
+	"\vadjustments\x18\a \x01(\v2(.postpilot.v1.SpeechSynthesisAdjustmentsR\vadjustments\"p\n" +
+	"\x1aSpeechSynthesisAdjustments\x12\x1c\n" +
+	"\tstability\x18\x01 \x01(\x01R\tstability\x12\x1e\n" +
+	"\n" +
+	"similarity\x18\x02 \x01(\x01R\n" +
+	"similarity\x12\x14\n" +
+	"\x05style\x18\x03 \x01(\x01R\x05style\"\x83\x01\n" +
 	"\x18SaveSpeechProfileRequest\x12:\n" +
 	"\aprofile\x18\x01 \x01(\v2 .postpilot.v1.AdminSpeechProfileR\aprofile\x12+\n" +
 	"\x11expected_revision\x18\x02 \x01(\x03R\x10expectedRevision\"W\n" +
@@ -1316,12 +1705,14 @@ const file_postpilot_v1_speech_profile_proto_rawDesc = "" +
 	"profile_id\x18\x02 \x01(\tR\tprofileId\x12\x1a\n" +
 	"\brevision\x18\x03 \x01(\x03R\brevision\x12\x1d\n" +
 	"\n" +
-	"expires_at\x18\x04 \x01(\tR\texpiresAt2\xe0\x03\n" +
+	"expires_at\x18\x04 \x01(\tR\texpiresAt2\xbd\x05\n" +
 	"\x14SpeechProfileService\x12i\n" +
 	"\x12ListSpeechProfiles\x12'.postpilot.v1.ListSpeechProfilesRequest\x1a(.postpilot.v1.ListSpeechProfilesResponse\"\x00\x12x\n" +
 	"\x17AdminListSpeechProfiles\x12,.postpilot.v1.AdminListSpeechProfilesRequest\x1a-.postpilot.v1.AdminListSpeechProfilesResponse\"\x00\x12f\n" +
 	"\x11SaveSpeechProfile\x12&.postpilot.v1.SaveSpeechProfileRequest\x1a'.postpilot.v1.SaveSpeechProfileResponse\"\x00\x12{\n" +
-	"\x18StartSpeechQualification\x12-.postpilot.v1.StartSpeechQualificationRequest\x1a..postpilot.v1.StartSpeechQualificationResponse\"\x00BDZBgithub.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1b\x06proto3"
+	"\x18StartSpeechQualification\x12-.postpilot.v1.StartSpeechQualificationRequest\x1a..postpilot.v1.StartSpeechQualificationResponse\"\x00\x12v\n" +
+	"\x19RegisterSpeechCombination\x12..postpilot.v1.RegisterSpeechCombinationRequest\x1a'.postpilot.v1.SaveSpeechProfileResponse\"\x00\x12c\n" +
+	"\x10SaveSpeechTariff\x12%.postpilot.v1.SaveSpeechTariffRequest\x1a&.postpilot.v1.SaveSpeechTariffResponse\"\x00BDZBgithub.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1b\x06proto3"
 
 var (
 	file_postpilot_v1_speech_profile_proto_rawDescOnce sync.Once
@@ -1335,7 +1726,7 @@ func file_postpilot_v1_speech_profile_proto_rawDescGZIP() []byte {
 	return file_postpilot_v1_speech_profile_proto_rawDescData
 }
 
-var file_postpilot_v1_speech_profile_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
+var file_postpilot_v1_speech_profile_proto_msgTypes = make([]protoimpl.MessageInfo, 20)
 var file_postpilot_v1_speech_profile_proto_goTypes = []any{
 	(*SpeechProfileChoice)(nil),              // 0: postpilot.v1.SpeechProfileChoice
 	(*ListSpeechProfilesRequest)(nil),        // 1: postpilot.v1.ListSpeechProfilesRequest
@@ -1348,19 +1739,24 @@ var file_postpilot_v1_speech_profile_proto_goTypes = []any{
 	(*AdminSpeechProfile)(nil),               // 8: postpilot.v1.AdminSpeechProfile
 	(*AdminListSpeechProfilesRequest)(nil),   // 9: postpilot.v1.AdminListSpeechProfilesRequest
 	(*AdminListSpeechProfilesResponse)(nil),  // 10: postpilot.v1.AdminListSpeechProfilesResponse
-	(*SaveSpeechProfileRequest)(nil),         // 11: postpilot.v1.SaveSpeechProfileRequest
-	(*SaveSpeechProfileResponse)(nil),        // 12: postpilot.v1.SaveSpeechProfileResponse
-	(*StartSpeechQualificationRequest)(nil),  // 13: postpilot.v1.StartSpeechQualificationRequest
-	(*StartSpeechQualificationResponse)(nil), // 14: postpilot.v1.StartSpeechQualificationResponse
-	(*ModelRef)(nil),                         // 15: postpilot.v1.ModelRef
+	(*SpeechAccountTariff)(nil),              // 11: postpilot.v1.SpeechAccountTariff
+	(*SaveSpeechTariffRequest)(nil),          // 12: postpilot.v1.SaveSpeechTariffRequest
+	(*SaveSpeechTariffResponse)(nil),         // 13: postpilot.v1.SaveSpeechTariffResponse
+	(*RegisterSpeechCombinationRequest)(nil), // 14: postpilot.v1.RegisterSpeechCombinationRequest
+	(*SpeechSynthesisAdjustments)(nil),       // 15: postpilot.v1.SpeechSynthesisAdjustments
+	(*SaveSpeechProfileRequest)(nil),         // 16: postpilot.v1.SaveSpeechProfileRequest
+	(*SaveSpeechProfileResponse)(nil),        // 17: postpilot.v1.SaveSpeechProfileResponse
+	(*StartSpeechQualificationRequest)(nil),  // 18: postpilot.v1.StartSpeechQualificationRequest
+	(*StartSpeechQualificationResponse)(nil), // 19: postpilot.v1.StartSpeechQualificationResponse
+	(*ModelRef)(nil),                         // 20: postpilot.v1.ModelRef
 }
 var file_postpilot_v1_speech_profile_proto_depIdxs = []int32{
-	15, // 0: postpilot.v1.SpeechProfileChoice.design_model:type_name -> postpilot.v1.ModelRef
-	15, // 1: postpilot.v1.SpeechProfileChoice.speech_model:type_name -> postpilot.v1.ModelRef
+	20, // 0: postpilot.v1.SpeechProfileChoice.design_model:type_name -> postpilot.v1.ModelRef
+	20, // 1: postpilot.v1.SpeechProfileChoice.speech_model:type_name -> postpilot.v1.ModelRef
 	0,  // 2: postpilot.v1.ListSpeechProfilesResponse.profiles:type_name -> postpilot.v1.SpeechProfileChoice
-	15, // 3: postpilot.v1.SpeechModelCandidate.ref:type_name -> postpilot.v1.ModelRef
-	15, // 4: postpilot.v1.SpeechProfileBinding.design_model:type_name -> postpilot.v1.ModelRef
-	15, // 5: postpilot.v1.SpeechProfileBinding.speech_model:type_name -> postpilot.v1.ModelRef
+	20, // 3: postpilot.v1.SpeechModelCandidate.ref:type_name -> postpilot.v1.ModelRef
+	20, // 4: postpilot.v1.SpeechProfileBinding.design_model:type_name -> postpilot.v1.ModelRef
+	20, // 5: postpilot.v1.SpeechProfileBinding.speech_model:type_name -> postpilot.v1.ModelRef
 	4,  // 6: postpilot.v1.SpeechProfileBinding.settings:type_name -> postpilot.v1.SpeechProfileSettings
 	6,  // 7: postpilot.v1.SpeechOperationPrice.charges:type_name -> postpilot.v1.SpeechPriceComponent
 	5,  // 8: postpilot.v1.AdminSpeechProfile.binding:type_name -> postpilot.v1.SpeechProfileBinding
@@ -1368,21 +1764,32 @@ var file_postpilot_v1_speech_profile_proto_depIdxs = []int32{
 	8,  // 10: postpilot.v1.AdminListSpeechProfilesResponse.profiles:type_name -> postpilot.v1.AdminSpeechProfile
 	3,  // 11: postpilot.v1.AdminListSpeechProfilesResponse.candidates:type_name -> postpilot.v1.SpeechModelCandidate
 	0,  // 12: postpilot.v1.AdminListSpeechProfilesResponse.choices:type_name -> postpilot.v1.SpeechProfileChoice
-	8,  // 13: postpilot.v1.SaveSpeechProfileRequest.profile:type_name -> postpilot.v1.AdminSpeechProfile
-	8,  // 14: postpilot.v1.SaveSpeechProfileResponse.profile:type_name -> postpilot.v1.AdminSpeechProfile
-	1,  // 15: postpilot.v1.SpeechProfileService.ListSpeechProfiles:input_type -> postpilot.v1.ListSpeechProfilesRequest
-	9,  // 16: postpilot.v1.SpeechProfileService.AdminListSpeechProfiles:input_type -> postpilot.v1.AdminListSpeechProfilesRequest
-	11, // 17: postpilot.v1.SpeechProfileService.SaveSpeechProfile:input_type -> postpilot.v1.SaveSpeechProfileRequest
-	13, // 18: postpilot.v1.SpeechProfileService.StartSpeechQualification:input_type -> postpilot.v1.StartSpeechQualificationRequest
-	2,  // 19: postpilot.v1.SpeechProfileService.ListSpeechProfiles:output_type -> postpilot.v1.ListSpeechProfilesResponse
-	10, // 20: postpilot.v1.SpeechProfileService.AdminListSpeechProfiles:output_type -> postpilot.v1.AdminListSpeechProfilesResponse
-	12, // 21: postpilot.v1.SpeechProfileService.SaveSpeechProfile:output_type -> postpilot.v1.SaveSpeechProfileResponse
-	14, // 22: postpilot.v1.SpeechProfileService.StartSpeechQualification:output_type -> postpilot.v1.StartSpeechQualificationResponse
-	19, // [19:23] is the sub-list for method output_type
-	15, // [15:19] is the sub-list for method input_type
-	15, // [15:15] is the sub-list for extension type_name
-	15, // [15:15] is the sub-list for extension extendee
-	0,  // [0:15] is the sub-list for field type_name
+	8,  // 13: postpilot.v1.AdminListSpeechProfilesResponse.combinations:type_name -> postpilot.v1.AdminSpeechProfile
+	11, // 14: postpilot.v1.AdminListSpeechProfilesResponse.tariff:type_name -> postpilot.v1.SpeechAccountTariff
+	11, // 15: postpilot.v1.SaveSpeechTariffRequest.tariff:type_name -> postpilot.v1.SpeechAccountTariff
+	11, // 16: postpilot.v1.SaveSpeechTariffResponse.tariff:type_name -> postpilot.v1.SpeechAccountTariff
+	20, // 17: postpilot.v1.RegisterSpeechCombinationRequest.design_model:type_name -> postpilot.v1.ModelRef
+	20, // 18: postpilot.v1.RegisterSpeechCombinationRequest.speech_model:type_name -> postpilot.v1.ModelRef
+	15, // 19: postpilot.v1.RegisterSpeechCombinationRequest.adjustments:type_name -> postpilot.v1.SpeechSynthesisAdjustments
+	8,  // 20: postpilot.v1.SaveSpeechProfileRequest.profile:type_name -> postpilot.v1.AdminSpeechProfile
+	8,  // 21: postpilot.v1.SaveSpeechProfileResponse.profile:type_name -> postpilot.v1.AdminSpeechProfile
+	1,  // 22: postpilot.v1.SpeechProfileService.ListSpeechProfiles:input_type -> postpilot.v1.ListSpeechProfilesRequest
+	9,  // 23: postpilot.v1.SpeechProfileService.AdminListSpeechProfiles:input_type -> postpilot.v1.AdminListSpeechProfilesRequest
+	16, // 24: postpilot.v1.SpeechProfileService.SaveSpeechProfile:input_type -> postpilot.v1.SaveSpeechProfileRequest
+	18, // 25: postpilot.v1.SpeechProfileService.StartSpeechQualification:input_type -> postpilot.v1.StartSpeechQualificationRequest
+	14, // 26: postpilot.v1.SpeechProfileService.RegisterSpeechCombination:input_type -> postpilot.v1.RegisterSpeechCombinationRequest
+	12, // 27: postpilot.v1.SpeechProfileService.SaveSpeechTariff:input_type -> postpilot.v1.SaveSpeechTariffRequest
+	2,  // 28: postpilot.v1.SpeechProfileService.ListSpeechProfiles:output_type -> postpilot.v1.ListSpeechProfilesResponse
+	10, // 29: postpilot.v1.SpeechProfileService.AdminListSpeechProfiles:output_type -> postpilot.v1.AdminListSpeechProfilesResponse
+	17, // 30: postpilot.v1.SpeechProfileService.SaveSpeechProfile:output_type -> postpilot.v1.SaveSpeechProfileResponse
+	19, // 31: postpilot.v1.SpeechProfileService.StartSpeechQualification:output_type -> postpilot.v1.StartSpeechQualificationResponse
+	17, // 32: postpilot.v1.SpeechProfileService.RegisterSpeechCombination:output_type -> postpilot.v1.SaveSpeechProfileResponse
+	13, // 33: postpilot.v1.SpeechProfileService.SaveSpeechTariff:output_type -> postpilot.v1.SaveSpeechTariffResponse
+	28, // [28:34] is the sub-list for method output_type
+	22, // [22:28] is the sub-list for method input_type
+	22, // [22:22] is the sub-list for extension type_name
+	22, // [22:22] is the sub-list for extension extendee
+	0,  // [0:22] is the sub-list for field type_name
 }
 
 func init() { file_postpilot_v1_speech_profile_proto_init() }
@@ -1397,7 +1804,7 @@ func file_postpilot_v1_speech_profile_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_postpilot_v1_speech_profile_proto_rawDesc), len(file_postpilot_v1_speech_profile_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   15,
+			NumMessages:   20,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

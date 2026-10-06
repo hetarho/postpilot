@@ -7,7 +7,7 @@ export const i18n = {
     speechAdmin: {
       tab: '목소리',
       description:
-        '목소리 생성 모델과 더빙용 합성 모델을 한 조합으로 관리합니다. 말투 모델과 별도로 저장되며, 일괄 편집 문서는 이 조합을 바꾸지 않습니다.',
+        'ElevenLabs가 제공하는 목소리 모델 조합에서 사용할 항목과 등급을 선택합니다. 말투 모델과 별도로 저장됩니다.',
       new: '목소리 모델 추가',
       edit: '조합 수정',
       name: '조합 이름',
@@ -18,7 +18,41 @@ export const i18n = {
       grade: '등급',
       chooseGrade: '등급을 선택하세요',
       enabled: '새 생성에 제공',
-      settings: '저장할 합성 설정',
+      settings: '더빙 합성 설정',
+      settingsHelp:
+        '이 설정은 저장한 목소리의 더빙 합성에 적용됩니다. 목소리 후보 미리듣기에는 적용되지 않습니다.',
+      useLabel: '{{name}} 사용',
+      saveSettings: '합성 설정 저장',
+      commonTariff: '서비스 비용 계산에 쓰는 기본 단가',
+      combinationTitle: '{{speech}} · {{design}}',
+      designRole: '① 목소리 만들기: {{model}}',
+      designRoleHelp:
+        '원하는 목소리를 설명하면 미리듣기 후보를 만듭니다. 새 목소리를 만들 때 사용합니다.',
+      speechRole: '② 대본 읽기: {{model}}',
+      speechRoleHelp:
+        '저장한 목소리로 더빙 대본을 읽습니다. 대본을 음성으로 만들 때마다 사용합니다.',
+      modelDetails: '모델 ID 보기',
+      costTitle: '대략적인 공급사 비용',
+      designEstimate: '목소리 후보 만들기 1회: 미리듣기 {{characters}}자 약 ${{usd}}',
+      confirmEstimate: '목소리 저장(확정) 1회: 기본 예상 ${{usd}}',
+      speechEstimate: '대본 읽기: 대본 {{characters}}자 약 ${{usd}}',
+      speechEstimateUnknown: '대본 읽기: 이 모델의 공개 단가는 아직 확인되지 않았습니다',
+      publicPromotion: '{{until}}까지 공개 할인 기준 · 일반 요금은 1,000자당 ${{usd}}',
+      designEstimateBasis:
+        '후보 생성은 미리듣기 글자 수로 과금됩니다. 위 금액은 표준 API 단가로 계산한 참고 값입니다.',
+      publicEstimateBasis: '{{at}} 공개 요금 참고 값 · 실제 계정 요금과 다를 수 있습니다.',
+      accountEstimateBasis: '저장한 계정 단가로 계산한 예상 비용입니다.',
+      publicPriceSource: 'ElevenLabs 공개 요금 보기',
+      tariffHelp:
+        '우리 서비스가 목소리 생성과 더빙의 공급사 비용을 계산할 때 쓰는 공통 단가입니다. 공개 일반 요금을 참고 기본값으로 넣었습니다. 계정에 적용되는 요금이 다르면 수정하세요. 후보 생성 금액은 표준 API 단가 기준 예상이고, 저장 비용 0도 계정 확인 전에는 확정 요금이 아닙니다. 확인 후 저장하면 모든 등록 조합에 적용됩니다.',
+      designUsdPerUnit: '목소리 만들기 기본 단가 (1,000자당 USD)',
+      speechUsdPerUnit: '대본 읽기 기본 단가 (1,000자당 USD)',
+      confirmationUsd: '목소리 저장(확정) 1회 USD',
+      tariffComplete: '이 계정의 전체 요금과 청구 단위·입력 상한을 확인했습니다',
+      saveTariff: '공통 요금 저장',
+      tariffChecked: '요금 확인: {{at}}',
+      pricePending: '요금 설정 또는 청구 단위 검증이 필요합니다',
+      resolvedPrice: '{{operation}}: 청구 단위당 ${{usd}}',
       stability: '안정성 (0–1)',
       similarityBoost: '유사도 (0–1)',
       style: '스타일 강도 (0–1)',
@@ -56,7 +90,7 @@ export const i18n = {
           'TTS 공급사 연결을 사용할 수 없습니다. 서버의 공급사 연결 설정을 확인한 뒤 새로고침하세요.',
       },
       empty:
-        '등록한 목소리 모델 조합이 없습니다. 공급사 연결 후 목소리 모델 추가에서 생성·합성 모델과 요금 근거를 등록하세요.',
+        '제공 가능한 목소리 모델 조합이 없습니다. ElevenLabs 연결 상태를 확인한 뒤 목록을 새로고침하세요.',
       revision: '버전 {{revision}}',
       voiceReady: '목소리 생성 검증 완료',
       voicePending: '목소리 생성 미검증',
@@ -245,7 +279,7 @@ export const i18n = {
     speechAdmin: {
       tab: 'Spoken voices',
       description:
-        'Curate a voice design model with its dubbing synthesis model. These profiles are separate from writing styles and are outside the bulk models document.',
+        'Choose the offered ElevenLabs voice model combinations and their grades. Stored separately from writing-style models.',
       new: 'Add voice model profile',
       edit: 'Edit profile',
       name: 'Profile name',
@@ -256,7 +290,43 @@ export const i18n = {
       grade: 'Grade',
       chooseGrade: 'Choose a grade',
       enabled: 'Offer for new generation',
-      settings: 'Saved synthesis settings',
+      settings: 'Dubbing synthesis settings',
+      settingsHelp:
+        'These settings affect later dubbing synthesis with the saved voice, not voice-design auditions.',
+      useLabel: 'Use {{name}}',
+      saveSettings: 'Save synthesis settings',
+      commonTariff: 'Base rates for service cost estimates',
+      combinationTitle: '{{speech}} · {{design}}',
+      designRole: '① Create a voice: {{model}}',
+      designRoleHelp:
+        'Describe the desired voice to generate audition candidates. Used when creating a new voice.',
+      speechRole: '② Read the script: {{model}}',
+      speechRoleHelp:
+        'Reads dubbing scripts with your saved voice. Used each time a script becomes audio.',
+      modelDetails: 'Show model IDs',
+      costTitle: 'Approximate supplier costs',
+      designEstimate:
+        'Create voice candidates once: about ${{usd}} for {{characters}} audition characters',
+      confirmEstimate: 'Save (confirm) a voice once: reference estimate ${{usd}}',
+      speechEstimate: 'Read a script: about ${{usd}} for {{characters}} script characters',
+      speechEstimateUnknown: 'Read a script: no public price has been verified for this model',
+      publicPromotion:
+        'Public promotion until {{until}} · standard rate ${{usd}} per 1,000 characters',
+      designEstimateBasis:
+        'Candidate generation is billed by audition-text characters. The amount above assumes the standard API rate.',
+      publicEstimateBasis: 'Public pricing reference reviewed {{at}} · account prices may differ.',
+      accountEstimateBasis: 'Estimated using the saved account rates.',
+      publicPriceSource: 'View ElevenLabs public pricing',
+      tariffHelp:
+        'These shared rates estimate supplier costs for voice creation and dubbing. Public standard-rate references are prefilled; adjust them if your account has different prices. The design amount assumes the standard API rate, and the zero confirmation estimate is provisional until verified for your account. Save after verification to apply the rates to registered combinations.',
+      designUsdPerUnit: 'Voice creation base rate (USD per 1,000 characters)',
+      speechUsdPerUnit: 'Script reading base rate (USD per 1,000 characters)',
+      confirmationUsd: 'USD per voice save (confirmation)',
+      tariffComplete: 'I verified this account’s complete prices, billing units and input bounds',
+      saveTariff: 'Save common pricing',
+      tariffChecked: 'Pricing checked: {{at}}',
+      pricePending: 'Pricing setup or billing-unit verification is required',
+      resolvedPrice: '{{operation}}: ${{usd}} per billing unit',
       stability: 'Stability (0–1)',
       similarityBoost: 'Similarity (0–1)',
       style: 'Style strength (0–1)',
@@ -294,7 +364,7 @@ export const i18n = {
           'The TTS provider connection is unavailable. Check the server provider configuration and refresh.',
       },
       empty:
-        'No voice model profiles have been registered. Connect the provider, then use Add voice model profile to register design and synthesis models with pricing evidence.',
+        'No voice model combinations are available. Check the ElevenLabs connection and refresh the list.',
       revision: 'Revision {{revision}}',
       voiceReady: 'Voice creation qualified',
       voicePending: 'Voice creation not qualified',

@@ -92,6 +92,8 @@ var masterProcedures = map[string]bool{
 	postpilotv1connect.SpeechProfileServiceAdminListSpeechProfilesProcedure:      true,
 	postpilotv1connect.SpeechProfileServiceSaveSpeechProfileProcedure:            true,
 	postpilotv1connect.SpeechProfileServiceStartSpeechQualificationProcedure:     true,
+	postpilotv1connect.SpeechProfileServiceRegisterSpeechCombinationProcedure:    true,
+	postpilotv1connect.SpeechProfileServiceSaveSpeechTariffProcedure:             true,
 	postpilotv1connect.SpokenVoiceGenerationServiceQuoteVoiceReuseProbeProcedure: true,
 	postpilotv1connect.SpokenVoiceGenerationServiceStartVoiceReuseProbeProcedure: true,
 

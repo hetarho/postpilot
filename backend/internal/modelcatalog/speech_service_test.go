@@ -16,10 +16,12 @@ import (
 type speechMemory struct {
 	profiles map[string][]SpeechProfile
 	sessions map[string]SpeechQualificationSession
+	tariff   SpeechAccountTariff
+	owners   map[string]string
 }
 
 func newSpeechMemory() *speechMemory {
-	return &speechMemory{map[string][]SpeechProfile{}, map[string]SpeechQualificationSession{}}
+	return &speechMemory{profiles: map[string][]SpeechProfile{}, sessions: map[string]SpeechQualificationSession{}, owners: map[string]string{}}
 }
 func (m *speechMemory) ListSpeechProfiles(context.Context) ([]SpeechProfile, error) {
 	out := []SpeechProfile{}
@@ -40,6 +42,13 @@ func (m *speechMemory) SaveSpeechRevision(_ context.Context, p SpeechProfile, ex
 	ps := m.profiles[p.ID]
 	if int64(len(ps)) != expected {
 		return SpeechProfile{}, ErrSpeechProfileConflict
+	}
+	key := p.Binding.Design.String() + ":" + p.Binding.Synthesis.String()
+	if owner := m.owners[key]; expected == 0 && owner != "" && p.CatalogManaged {
+		return SpeechProfile{}, ErrSpeechProfileConflict
+	}
+	if m.owners[key] == "" {
+		m.owners[key] = p.ID
 	}
 	m.profiles[p.ID] = append(ps, cloneSpeechProfile(p))
 	return cloneSpeechProfile(p), nil
@@ -405,4 +414,32 @@ func TestVoiceQualificationAloneCannotEnableNarratedSpeech(t *testing.T) {
 	if _, err = s.ResolveSpeechProfile(ctx, "owner", plan.Master, saved.ID, saved.Revision, "", true); !errors.Is(err, ErrSpeechProfileUnavailable) {
 		t.Fatal("missing both-export evidence admitted narration", err)
 	}
+}
+
+func (m *speechMemory) GetSpeechTariff(context.Context) (SpeechAccountTariff, error) {
+	return m.tariff, nil
+}
+func (m *speechMemory) GetSpeechCombination(_ context.Context, d, v llm.ModelRef) (string, error) {
+	if id := m.owners[d.String()+":"+v.String()]; id != "" {
+		return id, nil
+	}
+	return "", ErrNotFound
+}
+
+func (m *speechMemory) SaveSpeechTariff(ctx context.Context, t SpeechAccountTariff, expected int64, updates []SpeechProfile) error {
+	if m.tariff.Revision != expected {
+		return ErrSpeechProfileConflict
+	}
+	for _, p := range updates {
+		if int64(len(m.profiles[p.ID])) != p.Revision-1 {
+			return ErrSpeechProfileConflict
+		}
+	}
+	for _, p := range updates {
+		if _, err := m.SaveSpeechRevision(ctx, p, p.Revision-1); err != nil {
+			return err
+		}
+	}
+	m.tariff = t
+	return nil
 }

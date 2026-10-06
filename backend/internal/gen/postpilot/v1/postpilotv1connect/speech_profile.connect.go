@@ -45,6 +45,12 @@ const (
 	// SpeechProfileServiceStartSpeechQualificationProcedure is the fully-qualified name of the
 	// SpeechProfileService's StartSpeechQualification RPC.
 	SpeechProfileServiceStartSpeechQualificationProcedure = "/postpilot.v1.SpeechProfileService/StartSpeechQualification"
+	// SpeechProfileServiceRegisterSpeechCombinationProcedure is the fully-qualified name of the
+	// SpeechProfileService's RegisterSpeechCombination RPC.
+	SpeechProfileServiceRegisterSpeechCombinationProcedure = "/postpilot.v1.SpeechProfileService/RegisterSpeechCombination"
+	// SpeechProfileServiceSaveSpeechTariffProcedure is the fully-qualified name of the
+	// SpeechProfileService's SaveSpeechTariff RPC.
+	SpeechProfileServiceSaveSpeechTariffProcedure = "/postpilot.v1.SpeechProfileService/SaveSpeechTariff"
 )
 
 // SpeechProfileServiceClient is a client for the postpilot.v1.SpeechProfileService service.
@@ -54,6 +60,8 @@ type SpeechProfileServiceClient interface {
 	AdminListSpeechProfiles(context.Context, *connect.Request[v1.AdminListSpeechProfilesRequest]) (*connect.Response[v1.AdminListSpeechProfilesResponse], error)
 	SaveSpeechProfile(context.Context, *connect.Request[v1.SaveSpeechProfileRequest]) (*connect.Response[v1.SaveSpeechProfileResponse], error)
 	StartSpeechQualification(context.Context, *connect.Request[v1.StartSpeechQualificationRequest]) (*connect.Response[v1.StartSpeechQualificationResponse], error)
+	RegisterSpeechCombination(context.Context, *connect.Request[v1.RegisterSpeechCombinationRequest]) (*connect.Response[v1.SaveSpeechProfileResponse], error)
+	SaveSpeechTariff(context.Context, *connect.Request[v1.SaveSpeechTariffRequest]) (*connect.Response[v1.SaveSpeechTariffResponse], error)
 }
 
 // NewSpeechProfileServiceClient constructs a client for the postpilot.v1.SpeechProfileService
@@ -91,15 +99,29 @@ func NewSpeechProfileServiceClient(httpClient connect.HTTPClient, baseURL string
 			connect.WithSchema(speechProfileServiceMethods.ByName("StartSpeechQualification")),
 			connect.WithClientOptions(opts...),
 		),
+		registerSpeechCombination: connect.NewClient[v1.RegisterSpeechCombinationRequest, v1.SaveSpeechProfileResponse](
+			httpClient,
+			baseURL+SpeechProfileServiceRegisterSpeechCombinationProcedure,
+			connect.WithSchema(speechProfileServiceMethods.ByName("RegisterSpeechCombination")),
+			connect.WithClientOptions(opts...),
+		),
+		saveSpeechTariff: connect.NewClient[v1.SaveSpeechTariffRequest, v1.SaveSpeechTariffResponse](
+			httpClient,
+			baseURL+SpeechProfileServiceSaveSpeechTariffProcedure,
+			connect.WithSchema(speechProfileServiceMethods.ByName("SaveSpeechTariff")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // speechProfileServiceClient implements SpeechProfileServiceClient.
 type speechProfileServiceClient struct {
-	listSpeechProfiles       *connect.Client[v1.ListSpeechProfilesRequest, v1.ListSpeechProfilesResponse]
-	adminListSpeechProfiles  *connect.Client[v1.AdminListSpeechProfilesRequest, v1.AdminListSpeechProfilesResponse]
-	saveSpeechProfile        *connect.Client[v1.SaveSpeechProfileRequest, v1.SaveSpeechProfileResponse]
-	startSpeechQualification *connect.Client[v1.StartSpeechQualificationRequest, v1.StartSpeechQualificationResponse]
+	listSpeechProfiles        *connect.Client[v1.ListSpeechProfilesRequest, v1.ListSpeechProfilesResponse]
+	adminListSpeechProfiles   *connect.Client[v1.AdminListSpeechProfilesRequest, v1.AdminListSpeechProfilesResponse]
+	saveSpeechProfile         *connect.Client[v1.SaveSpeechProfileRequest, v1.SaveSpeechProfileResponse]
+	startSpeechQualification  *connect.Client[v1.StartSpeechQualificationRequest, v1.StartSpeechQualificationResponse]
+	registerSpeechCombination *connect.Client[v1.RegisterSpeechCombinationRequest, v1.SaveSpeechProfileResponse]
+	saveSpeechTariff          *connect.Client[v1.SaveSpeechTariffRequest, v1.SaveSpeechTariffResponse]
 }
 
 // ListSpeechProfiles calls postpilot.v1.SpeechProfileService.ListSpeechProfiles.
@@ -122,6 +144,16 @@ func (c *speechProfileServiceClient) StartSpeechQualification(ctx context.Contex
 	return c.startSpeechQualification.CallUnary(ctx, req)
 }
 
+// RegisterSpeechCombination calls postpilot.v1.SpeechProfileService.RegisterSpeechCombination.
+func (c *speechProfileServiceClient) RegisterSpeechCombination(ctx context.Context, req *connect.Request[v1.RegisterSpeechCombinationRequest]) (*connect.Response[v1.SaveSpeechProfileResponse], error) {
+	return c.registerSpeechCombination.CallUnary(ctx, req)
+}
+
+// SaveSpeechTariff calls postpilot.v1.SpeechProfileService.SaveSpeechTariff.
+func (c *speechProfileServiceClient) SaveSpeechTariff(ctx context.Context, req *connect.Request[v1.SaveSpeechTariffRequest]) (*connect.Response[v1.SaveSpeechTariffResponse], error) {
+	return c.saveSpeechTariff.CallUnary(ctx, req)
+}
+
 // SpeechProfileServiceHandler is an implementation of the postpilot.v1.SpeechProfileService
 // service.
 type SpeechProfileServiceHandler interface {
@@ -130,6 +162,8 @@ type SpeechProfileServiceHandler interface {
 	AdminListSpeechProfiles(context.Context, *connect.Request[v1.AdminListSpeechProfilesRequest]) (*connect.Response[v1.AdminListSpeechProfilesResponse], error)
 	SaveSpeechProfile(context.Context, *connect.Request[v1.SaveSpeechProfileRequest]) (*connect.Response[v1.SaveSpeechProfileResponse], error)
 	StartSpeechQualification(context.Context, *connect.Request[v1.StartSpeechQualificationRequest]) (*connect.Response[v1.StartSpeechQualificationResponse], error)
+	RegisterSpeechCombination(context.Context, *connect.Request[v1.RegisterSpeechCombinationRequest]) (*connect.Response[v1.SaveSpeechProfileResponse], error)
+	SaveSpeechTariff(context.Context, *connect.Request[v1.SaveSpeechTariffRequest]) (*connect.Response[v1.SaveSpeechTariffResponse], error)
 }
 
 // NewSpeechProfileServiceHandler builds an HTTP handler from the service implementation. It returns
@@ -163,6 +197,18 @@ func NewSpeechProfileServiceHandler(svc SpeechProfileServiceHandler, opts ...con
 		connect.WithSchema(speechProfileServiceMethods.ByName("StartSpeechQualification")),
 		connect.WithHandlerOptions(opts...),
 	)
+	speechProfileServiceRegisterSpeechCombinationHandler := connect.NewUnaryHandler(
+		SpeechProfileServiceRegisterSpeechCombinationProcedure,
+		svc.RegisterSpeechCombination,
+		connect.WithSchema(speechProfileServiceMethods.ByName("RegisterSpeechCombination")),
+		connect.WithHandlerOptions(opts...),
+	)
+	speechProfileServiceSaveSpeechTariffHandler := connect.NewUnaryHandler(
+		SpeechProfileServiceSaveSpeechTariffProcedure,
+		svc.SaveSpeechTariff,
+		connect.WithSchema(speechProfileServiceMethods.ByName("SaveSpeechTariff")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/postpilot.v1.SpeechProfileService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case SpeechProfileServiceListSpeechProfilesProcedure:
@@ -173,6 +219,10 @@ func NewSpeechProfileServiceHandler(svc SpeechProfileServiceHandler, opts ...con
 			speechProfileServiceSaveSpeechProfileHandler.ServeHTTP(w, r)
 		case SpeechProfileServiceStartSpeechQualificationProcedure:
 			speechProfileServiceStartSpeechQualificationHandler.ServeHTTP(w, r)
+		case SpeechProfileServiceRegisterSpeechCombinationProcedure:
+			speechProfileServiceRegisterSpeechCombinationHandler.ServeHTTP(w, r)
+		case SpeechProfileServiceSaveSpeechTariffProcedure:
+			speechProfileServiceSaveSpeechTariffHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -196,4 +246,12 @@ func (UnimplementedSpeechProfileServiceHandler) SaveSpeechProfile(context.Contex
 
 func (UnimplementedSpeechProfileServiceHandler) StartSpeechQualification(context.Context, *connect.Request[v1.StartSpeechQualificationRequest]) (*connect.Response[v1.StartSpeechQualificationResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.SpeechProfileService.StartSpeechQualification is not implemented"))
+}
+
+func (UnimplementedSpeechProfileServiceHandler) RegisterSpeechCombination(context.Context, *connect.Request[v1.RegisterSpeechCombinationRequest]) (*connect.Response[v1.SaveSpeechProfileResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.SpeechProfileService.RegisterSpeechCombination is not implemented"))
+}
+
+func (UnimplementedSpeechProfileServiceHandler) SaveSpeechTariff(context.Context, *connect.Request[v1.SaveSpeechTariffRequest]) (*connect.Response[v1.SaveSpeechTariffResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.SpeechProfileService.SaveSpeechTariff is not implemented"))
 }

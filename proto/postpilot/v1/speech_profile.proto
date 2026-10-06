@@ -11,6 +11,8 @@ service SpeechProfileService {
   rpc AdminListSpeechProfiles(AdminListSpeechProfilesRequest) returns (AdminListSpeechProfilesResponse) {}
   rpc SaveSpeechProfile(SaveSpeechProfileRequest) returns (SaveSpeechProfileResponse) {}
   rpc StartSpeechQualification(StartSpeechQualificationRequest) returns (StartSpeechQualificationResponse) {}
+  rpc RegisterSpeechCombination(RegisterSpeechCombinationRequest) returns (SaveSpeechProfileResponse) {}
+  rpc SaveSpeechTariff(SaveSpeechTariffRequest) returns (SaveSpeechTariffResponse) {}
 }
 
 message SpeechProfileChoice {
@@ -103,6 +105,38 @@ message AdminListSpeechProfilesResponse {
   repeated SpeechModelCandidate candidates = 2;
   repeated SpeechProfileChoice choices = 3;
   string fetch_error = 4;
+  repeated AdminSpeechProfile combinations = 5;
+  SpeechAccountTariff tariff = 6;
+}
+// Master-only monetary terms. Billing rules and bounds are server-owned.
+message SpeechAccountTariff {
+  int64 revision = 1;
+  string design_usd_per_unit = 2;
+  string speech_usd_per_unit = 3;
+  string confirmation_usd = 4;
+  string source = 5;
+  bool complete = 6;
+  string checked_at = 7;
+}
+message SaveSpeechTariffRequest {
+  SpeechAccountTariff tariff = 1;
+  int64 expected_revision = 2;
+}
+message SaveSpeechTariffResponse { SpeechAccountTariff tariff = 1; }
+message RegisterSpeechCombinationRequest {
+  string profile_id = 1;
+  int64 expected_revision = 2;
+  ModelRef design_model = 3;
+  ModelRef speech_model = 4;
+  bool enabled = 5;
+  string grade = 6;
+  // Omitted settings use product defaults. Only these three values are accepted.
+  SpeechSynthesisAdjustments adjustments = 7;
+}
+message SpeechSynthesisAdjustments {
+  double stability = 1;
+  double similarity = 2;
+  double style = 3;
 }
 message SaveSpeechProfileRequest {
   AdminSpeechProfile profile = 1;

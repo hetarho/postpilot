@@ -7,6 +7,7 @@ package sqlc
 
 import (
 	"context"
+	"database/sql"
 )
 
 const advanceSpeechProfile = `-- name: AdvanceSpeechProfile :execrows
@@ -27,6 +28,48 @@ func (q *Queries) AdvanceSpeechProfile(ctx context.Context, arg AdvanceSpeechPro
 		arg.Stamp,
 		arg.ID,
 		arg.ExpectedRevision,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const advanceSpeechTariffPointer = `-- name: AdvanceSpeechTariffPointer :execrows
+UPDATE speech_account_tariff_current SET revision = ?1 WHERE id = 1 AND revision = ?2
+`
+
+type AdvanceSpeechTariffPointerParams struct {
+	Revision         int64
+	ExpectedRevision int64
+}
+
+func (q *Queries) AdvanceSpeechTariffPointer(ctx context.Context, arg AdvanceSpeechTariffPointerParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, advanceSpeechTariffPointer, arg.Revision, arg.ExpectedRevision)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const claimSpeechCombination = `-- name: ClaimSpeechCombination :execrows
+INSERT OR IGNORE INTO speech_catalog_registrations(provider_id, design_model_id, speech_model_id, profile_id)
+VALUES (?, ?, ?, ?)
+`
+
+type ClaimSpeechCombinationParams struct {
+	ProviderID    string
+	DesignModelID string
+	SpeechModelID string
+	ProfileID     string
+}
+
+func (q *Queries) ClaimSpeechCombination(ctx context.Context, arg ClaimSpeechCombinationParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, claimSpeechCombination,
+		arg.ProviderID,
+		arg.DesignModelID,
+		arg.SpeechModelID,
+		arg.ProfileID,
 	)
 	if err != nil {
 		return 0, err
@@ -81,6 +124,33 @@ func (q *Queries) CreateSpeechQualification(ctx context.Context, arg CreateSpeec
 	return err
 }
 
+const createSpeechTariffPointer = `-- name: CreateSpeechTariffPointer :exec
+INSERT INTO speech_account_tariff_current(id, revision) VALUES (1, ?)
+`
+
+func (q *Queries) CreateSpeechTariffPointer(ctx context.Context, revision int64) error {
+	_, err := q.db.ExecContext(ctx, createSpeechTariffPointer, revision)
+	return err
+}
+
+const getSpeechCombination = `-- name: GetSpeechCombination :one
+SELECT profile_id FROM speech_catalog_registrations
+WHERE provider_id = ? AND design_model_id = ? AND speech_model_id = ?
+`
+
+type GetSpeechCombinationParams struct {
+	ProviderID    string
+	DesignModelID string
+	SpeechModelID string
+}
+
+func (q *Queries) GetSpeechCombination(ctx context.Context, arg GetSpeechCombinationParams) (string, error) {
+	row := q.db.QueryRowContext(ctx, getSpeechCombination, arg.ProviderID, arg.DesignModelID, arg.SpeechModelID)
+	var profile_id string
+	err := row.Scan(&profile_id)
+	return profile_id, err
+}
+
 const getSpeechQualification = `-- name: GetSpeechQualification :one
 SELECT id, owner_id, profile_id, revision, maximum_usd, expires_at FROM speech_qualification_sessions WHERE owner_id = ? AND id = ?
 `
@@ -105,7 +175,7 @@ func (q *Queries) GetSpeechQualification(ctx context.Context, arg GetSpeechQuali
 }
 
 const getSpeechRevision = `-- name: GetSpeechRevision :one
-SELECT profile_id, revision, provider_id, design_model_id, speech_model_id, label, level, enabled, binding_json, prices_json, voice_evidence, export_evidence, created_at FROM speech_profile_revisions WHERE profile_id = ? AND revision = ?
+SELECT profile_id, revision, provider_id, design_model_id, speech_model_id, label, level, enabled, binding_json, prices_json, voice_evidence, export_evidence, created_at, catalog_grade, tariff_revision FROM speech_profile_revisions WHERE profile_id = ? AND revision = ?
 `
 
 type GetSpeechRevisionParams struct {
@@ -130,27 +200,51 @@ func (q *Queries) GetSpeechRevision(ctx context.Context, arg GetSpeechRevisionPa
 		&i.VoiceEvidence,
 		&i.ExportEvidence,
 		&i.CreatedAt,
+		&i.CatalogGrade,
+		&i.TariffRevision,
+	)
+	return i, err
+}
+
+const getSpeechTariff = `-- name: GetSpeechTariff :one
+SELECT t.revision, t.connection_scope, t.design_usd_per_unit, t.speech_usd_per_unit, t.confirmation_usd, t.source, t.complete, t.checked_at FROM speech_account_tariffs t JOIN speech_account_tariff_current c ON c.revision = t.revision WHERE c.id = 1
+`
+
+func (q *Queries) GetSpeechTariff(ctx context.Context) (SpeechAccountTariff, error) {
+	row := q.db.QueryRowContext(ctx, getSpeechTariff)
+	var i SpeechAccountTariff
+	err := row.Scan(
+		&i.Revision,
+		&i.ConnectionScope,
+		&i.DesignUsdPerUnit,
+		&i.SpeechUsdPerUnit,
+		&i.ConfirmationUsd,
+		&i.Source,
+		&i.Complete,
+		&i.CheckedAt,
 	)
 	return i, err
 }
 
 const insertSpeechRevision = `-- name: InsertSpeechRevision :exec
-INSERT INTO speech_profile_revisions(profile_id, revision, provider_id, design_model_id, speech_model_id, label, level, enabled, binding_json, prices_json, created_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+INSERT INTO speech_profile_revisions(profile_id, revision, provider_id, design_model_id, speech_model_id, label, level, enabled, binding_json, prices_json, created_at, catalog_grade, tariff_revision)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `
 
 type InsertSpeechRevisionParams struct {
-	ProfileID     string
-	Revision      int64
-	ProviderID    string
-	DesignModelID string
-	SpeechModelID string
-	Label         string
-	Level         string
-	Enabled       int64
-	BindingJson   string
-	PricesJson    string
-	CreatedAt     string
+	ProfileID      string
+	Revision       int64
+	ProviderID     string
+	DesignModelID  string
+	SpeechModelID  string
+	Label          string
+	Level          string
+	Enabled        int64
+	BindingJson    string
+	PricesJson     string
+	CreatedAt      string
+	CatalogGrade   sql.NullString
+	TariffRevision int64
 }
 
 func (q *Queries) InsertSpeechRevision(ctx context.Context, arg InsertSpeechRevisionParams) error {
@@ -166,12 +260,44 @@ func (q *Queries) InsertSpeechRevision(ctx context.Context, arg InsertSpeechRevi
 		arg.BindingJson,
 		arg.PricesJson,
 		arg.CreatedAt,
+		arg.CatalogGrade,
+		arg.TariffRevision,
+	)
+	return err
+}
+
+const insertSpeechTariff = `-- name: InsertSpeechTariff :exec
+INSERT INTO speech_account_tariffs(revision, connection_scope, design_usd_per_unit, speech_usd_per_unit, confirmation_usd, source, complete, checked_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+`
+
+type InsertSpeechTariffParams struct {
+	Revision         int64
+	ConnectionScope  string
+	DesignUsdPerUnit string
+	SpeechUsdPerUnit string
+	ConfirmationUsd  string
+	Source           string
+	Complete         int64
+	CheckedAt        string
+}
+
+func (q *Queries) InsertSpeechTariff(ctx context.Context, arg InsertSpeechTariffParams) error {
+	_, err := q.db.ExecContext(ctx, insertSpeechTariff,
+		arg.Revision,
+		arg.ConnectionScope,
+		arg.DesignUsdPerUnit,
+		arg.SpeechUsdPerUnit,
+		arg.ConfirmationUsd,
+		arg.Source,
+		arg.Complete,
+		arg.CheckedAt,
 	)
 	return err
 }
 
 const listSpeechProfiles = `-- name: ListSpeechProfiles :many
-SELECT r.profile_id, r.revision, r.provider_id, r.design_model_id, r.speech_model_id, r.label, r.level, r.enabled, r.binding_json, r.prices_json, r.voice_evidence, r.export_evidence, r.created_at FROM speech_profiles p
+SELECT r.profile_id, r.revision, r.provider_id, r.design_model_id, r.speech_model_id, r.label, r.level, r.enabled, r.binding_json, r.prices_json, r.voice_evidence, r.export_evidence, r.created_at, r.catalog_grade, r.tariff_revision FROM speech_profiles p
 JOIN speech_profile_revisions r ON r.profile_id = p.id AND r.revision = p.current_revision
 ORDER BY p.created_at, p.id
 `
@@ -199,6 +325,8 @@ func (q *Queries) ListSpeechProfiles(ctx context.Context) ([]SpeechProfileRevisi
 			&i.VoiceEvidence,
 			&i.ExportEvidence,
 			&i.CreatedAt,
+			&i.CatalogGrade,
+			&i.TariffRevision,
 		); err != nil {
 			return nil, err
 		}
