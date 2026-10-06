@@ -4,7 +4,7 @@
   "transformInkScale": 2,
   "transformInkStyles": ["word-pop", "pop", "stack", "sticker", "bubble"],
   "fontsManifestSHA256": "51ad5c795ede98d22e4dfea750946889af3717c04dee3642b87e3419c835970c",
-  "catalogSHA256": "87d587cc46b02b3485e09c55974859b6e2c5558c6386a77b4d1b4c4a3ce39aa5",
+  "catalogSHA256": "edf2eb4f4aec49d1ab7cd9052953aa8cceae2a9fcb30377e88ca4e6c30eda27e",
   "wasmSHA256": "22bf6e9f9a100d972da0411a69c5ba504367fc1fa87b3b64e3f35e53926d2d70",
   "fontAssets": [
     {
@@ -40,5 +40,5 @@
       "sha256": "60c0077fce069ba90ae97c0a3679f6eb3712e0ca637bdd0c15b72d335ec46db7"
     }
   ],
-  "assetVersion": "clip-design-assets-v1-ink-658bc158aacde853089103085afc23d3923c18e2e605072e51e0dcf08c2dc196"
+  "assetVersion": "clip-design-assets-v1-ink-eb1c291be037eb2d4798592f4c3fb3123b79f4d61434be3508f02938afb35b60"
 }
