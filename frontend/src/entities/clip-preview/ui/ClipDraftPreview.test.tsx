@@ -259,7 +259,9 @@ it('keeps the last painted footage frame when the video decoder has no current f
 
   Object.defineProperty(decoder, 'readyState', { configurable: true, value: 4 })
   fireEvent.loadedData(decoder)
-  expect(drawImage).toHaveBeenCalledWith(decoder, 0, 0, 270, 480)
+  // A committed src can precede the passive paint effect; that effect also
+  // paints the current decoded frame when it attaches.
+  await waitFor(() => expect(drawImage).toHaveBeenCalledWith(decoder, 0, 0, 270, 480))
   const painted = drawImage.mock.calls.length
   Object.defineProperty(decoder, 'readyState', { configurable: true, value: 1 })
   fireEvent.seeked(decoder)
