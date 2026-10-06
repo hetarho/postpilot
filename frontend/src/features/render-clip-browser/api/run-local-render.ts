@@ -1,6 +1,15 @@
-import type { BrowserCompositionSnapshot, BrowserVideoTrack } from '@/entities/clip-preview'
+import {
+  CLIP_AUDIO_PROCESSING,
+  type BrowserCompositionSnapshot,
+  type BrowserVideoTrack,
+} from '@/entities/clip-preview'
 import { CLIP_BROWSER_RENDER } from '@/entities/clip-design'
-import { createBoundedMediaOutput, createMp4PacketMux, measureMp4Output } from '@/shared/lib/media'
+import {
+  createBoundedMediaOutput,
+  createMp4PacketMux,
+  measureMp4Output,
+  verifyMp4Audio,
+} from '@/shared/lib/media'
 import { BrowserOriginals } from '../lib/originals'
 import { browserAudioPreflight } from '../model/audio-preflight'
 import { browserRenderVerdict } from '../model/verdict'
@@ -118,6 +127,23 @@ export async function runLocalBrowserRender(
       snapshot.frameCount,
       controller.signal,
     )
+    if (audio) {
+      const measured = await verifyMp4Audio(
+        file,
+        {
+          sampleFrames: audio.sampleFrames,
+          sampleRate: audio.config.sampleRate,
+          channels: audio.config.numberOfChannels,
+          maxBytes: CLIP_AUDIO_PROCESSING.maxPcmBytes,
+          paddingFrames: CLIP_AUDIO_PROCESSING.encoderPaddingFrames,
+          maxSampleFrames: CLIP_AUDIO_PROCESSING.maxSampleFrames,
+        },
+        controller.signal,
+      )
+      audio.loudnessLUFS = measured.loudnessLUFS
+      audio.truePeakDBTP = measured.truePeakDBTP
+      audio.silent = measured.silent
+    }
     const verdict = browserRenderVerdict(track, audio, input.ratio, input.plan.durationMs)
     if (!verdict.passed) throw new BrowserRenderVerdictError([])
     const ownedOutput = output

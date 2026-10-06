@@ -1,0 +1,860 @@
+{
+  "version": 1,
+  "qualification": false,
+  "scope": "Actual Chrome production Worker, codecs, standard seekable MP4, synthetic requested audio and origin-output ownership. No hardware, real-voice, native full-composition or release qualification.",
+  "browser": "154.0.8037.98",
+  "executablePath": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+  "node": "v24.18.0",
+  "fixtures": {
+    "silent": {
+      "bytes": 1833655,
+      "sha256": "a4439dd8607684d920bf329cca3eea0ff8089e7ec49419ab7237a64d18aa80b4"
+    },
+    "source": {
+      "bytes": 75080,
+      "sha256": "aeeffdeb534b69553c49d2dbfede42e344da42b2517042ce95ed2bbd81d7a5bc"
+    },
+    "speech": {
+      "bytes": 176478,
+      "sha256": "1a29cafa914a8b89787c83f06600dad19f697afbba0a6c3577d1f835a787de70"
+    }
+  },
+  "storage": {
+    "kind": "opfs",
+    "bytes": [
+      1,
+      2,
+      3,
+      13,
+      14,
+      15,
+      0,
+      0,
+      8,
+      9,
+      10,
+      11
+    ],
+    "liveNames": [
+      "live-owner-a.mp4"
+    ],
+    "remaining": [],
+    "overflow": "MEDIA_OUTPUT_SIZE_LIMIT",
+    "afterCancel": []
+  },
+  "recovery": {
+    "before": [
+      "abandoned-owner-a.mp4"
+    ],
+    "after": []
+  },
+  "cases": [
+    {
+      "mode": "silent",
+      "ratio": "vertical",
+      "verdict": {
+        "measurements": {
+          "compositionVersion": "clip-browser-composition-v1",
+          "snapshotFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "backgroundVersion": "clip-browser-background-v1",
+          "backgroundSnapshotFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "backgroundDigest": "cda4f731fd3a80bd99abd1a2c849a558572ba42a22f8633e214eb8618181e021",
+          "backgroundComplete": true,
+          "backgroundSampleCount": 0,
+          "backgroundNotices": [],
+          "width": 1080,
+          "height": 1920,
+          "frameRateNumerator": 30,
+          "frameRateDenominator": 1,
+          "videoFrames": 450,
+          "videoCodec": "h264",
+          "videoProfile": "High",
+          "hasAudio": false,
+          "audioCodec": "",
+          "audioRate": 0,
+          "silent": false,
+          "speechFingerprint": ""
+        },
+        "passed": true
+      },
+      "fileBytes": 14259425,
+      "kind": "opfs",
+      "storedBytes": {
+        "bytes": 14259425,
+        "writes": 33,
+        "allocatedBytes": 0
+      },
+      "packetResources": {
+        "peakPackets": 7,
+        "peakBytes": 296304
+      },
+      "output": {
+        "width": 1080,
+        "height": 1920,
+        "codec": "avc1.640028",
+        "videoFrames": 450,
+        "videoDurationUs": 15000000,
+        "presentationValid": true,
+        "hasAudio": false,
+        "audioCodec": "",
+        "audioRate": 0
+      },
+      "frameCount": 450,
+      "retainedVideoPackets": 0,
+      "sourceResources": {
+        "sourceReads": 1261,
+        "sourceBytes": 1294504,
+        "sourceReadMs": 1411.8450021743774,
+        "decodeMs": 40.01000118255615,
+        "openMs": 14.974999904632568,
+        "peakActiveCuts": 1,
+        "activeCuts": 0,
+        "peakDecoderReservedBytes": 11059200,
+        "decoderReservedBytes": 0,
+        "presentation": {
+          "liveFrames": 0,
+          "liveBytes": 0,
+          "peakFrames": 1,
+          "peakBytes": 230400,
+          "queued": 0
+        },
+        "frameExports": 450,
+        "bitmapCopies": 0,
+        "physicalPeakBytes": null,
+        "originals": [
+          {
+            "provenance": "browser_client",
+            "codedWidth": 320,
+            "codedHeight": 180,
+            "displayWidth": 320,
+            "displayHeight": 180,
+            "timeResolution": 15360,
+            "firstTimestamp": 0,
+            "durationFromMetadata": 30,
+            "rotation": 0,
+            "flip": false,
+            "codec": "avc",
+            "streamNumber": 1,
+            "colorVersion": "native-source-color-v1",
+            "colorSpace": {
+              "matrix": "smpte170m",
+              "primaries": "bt709",
+              "transfer": "bt709",
+              "fullRange": false
+            }
+          }
+        ]
+      },
+      "seeks": [
+        0.1,
+        7.5,
+        14.9
+      ],
+      "completed": 450,
+      "qualification": false
+    },
+    {
+      "mode": "silent",
+      "ratio": "horizontal",
+      "verdict": {
+        "measurements": {
+          "compositionVersion": "clip-browser-composition-v1",
+          "snapshotFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "backgroundVersion": "clip-browser-background-v1",
+          "backgroundSnapshotFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "backgroundDigest": "0c75ea3c310721aa0881b7989567d40f1b1d125b443bf5e7ad5e7b2762fc5bff",
+          "backgroundComplete": true,
+          "backgroundSampleCount": 0,
+          "backgroundNotices": [],
+          "width": 1920,
+          "height": 1080,
+          "frameRateNumerator": 30,
+          "frameRateDenominator": 1,
+          "videoFrames": 450,
+          "videoCodec": "h264",
+          "videoProfile": "High",
+          "hasAudio": false,
+          "audioCodec": "",
+          "audioRate": 0,
+          "silent": false,
+          "speechFingerprint": ""
+        },
+        "passed": true
+      },
+      "fileBytes": 14889450,
+      "kind": "opfs",
+      "storedBytes": {
+        "bytes": 14889450,
+        "writes": 33,
+        "allocatedBytes": 0
+      },
+      "packetResources": {
+        "peakPackets": 3,
+        "peakBytes": 108962
+      },
+      "output": {
+        "width": 1920,
+        "height": 1080,
+        "codec": "avc1.640028",
+        "videoFrames": 450,
+        "videoDurationUs": 15000000,
+        "presentationValid": true,
+        "hasAudio": false,
+        "audioCodec": "",
+        "audioRate": 0
+      },
+      "frameCount": 450,
+      "retainedVideoPackets": 0,
+      "sourceResources": {
+        "sourceReads": 1167,
+        "sourceBytes": 1196052,
+        "sourceReadMs": 1411.164996623993,
+        "decodeMs": 41.474997997283936,
+        "openMs": 13.660000324249268,
+        "peakActiveCuts": 1,
+        "activeCuts": 0,
+        "peakDecoderReservedBytes": 11059200,
+        "decoderReservedBytes": 0,
+        "presentation": {
+          "liveFrames": 0,
+          "liveBytes": 0,
+          "peakFrames": 1,
+          "peakBytes": 230400,
+          "queued": 0
+        },
+        "frameExports": 450,
+        "bitmapCopies": 0,
+        "physicalPeakBytes": null,
+        "originals": [
+          {
+            "provenance": "browser_client",
+            "codedWidth": 320,
+            "codedHeight": 180,
+            "displayWidth": 320,
+            "displayHeight": 180,
+            "timeResolution": 15360,
+            "firstTimestamp": 0,
+            "durationFromMetadata": 30,
+            "rotation": 0,
+            "flip": false,
+            "codec": "avc",
+            "streamNumber": 1,
+            "colorVersion": "native-source-color-v1",
+            "colorSpace": {
+              "matrix": "smpte170m",
+              "primaries": "bt709",
+              "transfer": "bt709",
+              "fullRange": false
+            }
+          }
+        ]
+      },
+      "seeks": [
+        0.1,
+        7.5,
+        14.9
+      ],
+      "completed": 450,
+      "qualification": false
+    },
+    {
+      "mode": "silent",
+      "ratio": "square",
+      "verdict": {
+        "measurements": {
+          "compositionVersion": "clip-browser-composition-v1",
+          "snapshotFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "backgroundVersion": "clip-browser-background-v1",
+          "backgroundSnapshotFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "backgroundDigest": "9531d3f36476cbd86f9ebfef406ce3f3b3e9fcfeb9d9c86d18eeef23b1ec2e77",
+          "backgroundComplete": true,
+          "backgroundSampleCount": 0,
+          "backgroundNotices": [],
+          "width": 1080,
+          "height": 1080,
+          "frameRateNumerator": 30,
+          "frameRateDenominator": 1,
+          "videoFrames": 450,
+          "videoCodec": "h264",
+          "videoProfile": "High",
+          "hasAudio": false,
+          "audioCodec": "",
+          "audioRate": 0,
+          "silent": false,
+          "speechFingerprint": ""
+        },
+        "passed": true
+      },
+      "fileBytes": 14947521,
+      "kind": "opfs",
+      "storedBytes": {
+        "bytes": 14947521,
+        "writes": 33,
+        "allocatedBytes": 0
+      },
+      "packetResources": {
+        "peakPackets": 2,
+        "peakBytes": 90988
+      },
+      "output": {
+        "width": 1080,
+        "height": 1080,
+        "codec": "avc1.640020",
+        "videoFrames": 450,
+        "videoDurationUs": 15000000,
+        "presentationValid": true,
+        "hasAudio": false,
+        "audioCodec": "",
+        "audioRate": 0
+      },
+      "frameCount": 450,
+      "retainedVideoPackets": 0,
+      "sourceResources": {
+        "sourceReads": 1264,
+        "sourceBytes": 1297404,
+        "sourceReadMs": 1308.6800045967102,
+        "decodeMs": 33.15999794006348,
+        "openMs": 10.960000038146973,
+        "peakActiveCuts": 1,
+        "activeCuts": 0,
+        "peakDecoderReservedBytes": 11059200,
+        "decoderReservedBytes": 0,
+        "presentation": {
+          "liveFrames": 0,
+          "liveBytes": 0,
+          "peakFrames": 1,
+          "peakBytes": 230400,
+          "queued": 0
+        },
+        "frameExports": 450,
+        "bitmapCopies": 0,
+        "physicalPeakBytes": null,
+        "originals": [
+          {
+            "provenance": "browser_client",
+            "codedWidth": 320,
+            "codedHeight": 180,
+            "displayWidth": 320,
+            "displayHeight": 180,
+            "timeResolution": 15360,
+            "firstTimestamp": 0,
+            "durationFromMetadata": 30,
+            "rotation": 0,
+            "flip": false,
+            "codec": "avc",
+            "streamNumber": 1,
+            "colorVersion": "native-source-color-v1",
+            "colorSpace": {
+              "matrix": "smpte170m",
+              "primaries": "bt709",
+              "transfer": "bt709",
+              "fullRange": false
+            }
+          }
+        ]
+      },
+      "seeks": [
+        0.1,
+        7.5,
+        14.9
+      ],
+      "completed": 450,
+      "qualification": false
+    },
+    {
+      "mode": "source",
+      "ratio": "square",
+      "decodedAudio": {
+        "sampleFrames": 720000,
+        "decodedFrames": 722944,
+        "firstSample": -2112,
+        "lastSample": 720832,
+        "loudnessLUFS": -16.000633541923268,
+        "truePeakDBTP": -14.885241837526717,
+        "silent": false
+      },
+      "verdict": {
+        "measurements": {
+          "compositionVersion": "clip-browser-composition-v1",
+          "snapshotFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "backgroundVersion": "clip-browser-background-v1",
+          "backgroundSnapshotFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "backgroundDigest": "2e269a273917a7845ca552b24aa8fb614720020b355fe6d990949e4bd09213b1",
+          "backgroundComplete": true,
+          "backgroundSampleCount": 0,
+          "backgroundNotices": [],
+          "width": 1080,
+          "height": 1080,
+          "frameRateNumerator": 30,
+          "frameRateDenominator": 1,
+          "videoFrames": 450,
+          "videoCodec": "h264",
+          "videoProfile": "High",
+          "hasAudio": true,
+          "audioCodec": "aac",
+          "audioRate": 48000,
+          "loudnessLufs": -16.000633541923268,
+          "silent": false,
+          "truePeakDbtp": -14.885241837526717,
+          "speechFingerprint": ""
+        },
+        "passed": true
+      },
+      "fileBytes": 272298,
+      "kind": "opfs",
+      "storedBytes": {
+        "bytes": 272298,
+        "writes": 63,
+        "allocatedBytes": 0
+      },
+      "packetResources": {
+        "peakPackets": 2,
+        "peakBytes": 325
+      },
+      "output": {
+        "width": 1080,
+        "height": 1080,
+        "codec": "avc1.640020",
+        "videoFrames": 450,
+        "videoDurationUs": 15000000,
+        "presentationValid": true,
+        "hasAudio": true,
+        "audioCodec": "mp4a.40.2",
+        "audioRate": 48000
+      },
+      "frameCount": 450,
+      "retainedVideoPackets": 0,
+      "sourceResources": {
+        "sourceReads": 1070,
+        "sourceBytes": 366965,
+        "sourceReadMs": 1049.6149978637695,
+        "decodeMs": 445.1300039291382,
+        "openMs": 56.55499982833862,
+        "peakActiveCuts": 1,
+        "activeCuts": 0,
+        "peakDecoderReservedBytes": 393216,
+        "decoderReservedBytes": 0,
+        "presentation": {
+          "liveFrames": 0,
+          "liveBytes": 0,
+          "peakFrames": 1,
+          "peakBytes": 8192,
+          "queued": 0
+        },
+        "frameExports": 450,
+        "bitmapCopies": 0,
+        "physicalPeakBytes": null,
+        "originals": [
+          {
+            "provenance": "browser_client",
+            "codedWidth": 64,
+            "codedHeight": 32,
+            "displayWidth": 64,
+            "displayHeight": 32,
+            "timeResolution": 15360,
+            "firstTimestamp": 0,
+            "durationFromMetadata": 7,
+            "rotation": 0,
+            "flip": false,
+            "codec": "avc",
+            "streamNumber": 1,
+            "colorVersion": "native-source-color-v1",
+            "colorSpace": {
+              "matrix": "smpte170m",
+              "primaries": "bt709",
+              "transfer": "bt709",
+              "fullRange": false
+            }
+          }
+        ]
+      },
+      "audioSamples": 720000,
+      "primingFrames": 2112,
+      "speechFingerprint": "",
+      "seeks": [
+        0.1,
+        7.5,
+        14.9
+      ],
+      "completed": 450,
+      "qualification": false
+    },
+    {
+      "mode": "narration",
+      "ratio": "vertical",
+      "decodedAudio": {
+        "sampleFrames": 720000,
+        "decodedFrames": 722944,
+        "firstSample": -2112,
+        "lastSample": 720832,
+        "loudnessLUFS": -16.000033013980026,
+        "truePeakDBTP": -14.313746274943549,
+        "silent": false
+      },
+      "verdict": {
+        "measurements": {
+          "compositionVersion": "clip-browser-composition-v1",
+          "snapshotFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "backgroundVersion": "clip-browser-background-v1",
+          "backgroundSnapshotFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "backgroundDigest": "0c021d1a3378f3973711d2140c5209de2596055fa4f1b6f973eb555b16bbce76",
+          "backgroundComplete": true,
+          "backgroundSampleCount": 0,
+          "backgroundNotices": [],
+          "width": 1080,
+          "height": 1920,
+          "frameRateNumerator": 30,
+          "frameRateDenominator": 1,
+          "videoFrames": 450,
+          "videoCodec": "h264",
+          "videoProfile": "High",
+          "hasAudio": true,
+          "audioCodec": "aac",
+          "audioRate": 48000,
+          "loudnessLufs": -16.000033013980026,
+          "silent": false,
+          "truePeakDbtp": -14.313746274943549,
+          "speechFingerprint": "dbdf9ce49d3b58edf74612a6740d543fc96ce651b64e062e2148ff8ce070709f"
+        },
+        "passed": true
+      },
+      "fileBytes": 14274983,
+      "kind": "opfs",
+      "storedBytes": {
+        "bytes": 14274983,
+        "writes": 63,
+        "allocatedBytes": 0
+      },
+      "packetResources": {
+        "peakPackets": 2,
+        "peakBytes": 77208
+      },
+      "output": {
+        "width": 1080,
+        "height": 1920,
+        "codec": "avc1.640028",
+        "videoFrames": 450,
+        "videoDurationUs": 15000000,
+        "presentationValid": true,
+        "hasAudio": true,
+        "audioCodec": "mp4a.40.2",
+        "audioRate": 48000
+      },
+      "frameCount": 450,
+      "retainedVideoPackets": 0,
+      "sourceResources": {
+        "sourceReads": 1222,
+        "sourceBytes": 1260300,
+        "sourceReadMs": 1452.0300064086914,
+        "decodeMs": 45.62499713897705,
+        "openMs": 13.389999866485596,
+        "peakActiveCuts": 1,
+        "activeCuts": 0,
+        "peakDecoderReservedBytes": 11059200,
+        "decoderReservedBytes": 0,
+        "presentation": {
+          "liveFrames": 0,
+          "liveBytes": 0,
+          "peakFrames": 1,
+          "peakBytes": 230400,
+          "queued": 0
+        },
+        "frameExports": 450,
+        "bitmapCopies": 0,
+        "physicalPeakBytes": null,
+        "originals": [
+          {
+            "provenance": "browser_client",
+            "codedWidth": 320,
+            "codedHeight": 180,
+            "displayWidth": 320,
+            "displayHeight": 180,
+            "timeResolution": 15360,
+            "firstTimestamp": 0,
+            "durationFromMetadata": 30,
+            "rotation": 0,
+            "flip": false,
+            "codec": "avc",
+            "streamNumber": 1,
+            "colorVersion": "native-source-color-v1",
+            "colorSpace": {
+              "matrix": "smpte170m",
+              "primaries": "bt709",
+              "transfer": "bt709",
+              "fullRange": false
+            }
+          }
+        ]
+      },
+      "audioSamples": 720000,
+      "primingFrames": 2112,
+      "speechFingerprint": "dbdf9ce49d3b58edf74612a6740d543fc96ce651b64e062e2148ff8ce070709f",
+      "seeks": [
+        0.1,
+        7.5,
+        14.9
+      ],
+      "completed": 450,
+      "qualification": false
+    },
+    {
+      "mode": "mixed",
+      "ratio": "square",
+      "decodedAudio": {
+        "sampleFrames": 720000,
+        "decodedFrames": 722944,
+        "firstSample": -2112,
+        "lastSample": 720832,
+        "loudnessLUFS": -16.000934731815157,
+        "truePeakDBTP": -10.681807983107543,
+        "silent": false
+      },
+      "verdict": {
+        "measurements": {
+          "compositionVersion": "clip-browser-composition-v1",
+          "snapshotFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "backgroundVersion": "clip-browser-background-v1",
+          "backgroundSnapshotFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "backgroundDigest": "59e0e1b1cf63e3ec730d8dea3458c3e5f94ba65088c3ae5987cd7003d35478da",
+          "backgroundComplete": true,
+          "backgroundSampleCount": 0,
+          "backgroundNotices": [],
+          "width": 1080,
+          "height": 1080,
+          "frameRateNumerator": 30,
+          "frameRateDenominator": 1,
+          "videoFrames": 450,
+          "videoCodec": "h264",
+          "videoProfile": "High",
+          "hasAudio": true,
+          "audioCodec": "aac",
+          "audioRate": 48000,
+          "loudnessLufs": -16.000934731815157,
+          "silent": false,
+          "truePeakDbtp": -10.681807983107543,
+          "speechFingerprint": "dbdf9ce49d3b58edf74612a6740d543fc96ce651b64e062e2148ff8ce070709f"
+        },
+        "passed": true
+      },
+      "fileBytes": 275311,
+      "kind": "opfs",
+      "storedBytes": {
+        "bytes": 275311,
+        "writes": 63,
+        "allocatedBytes": 0
+      },
+      "packetResources": {
+        "peakPackets": 3,
+        "peakBytes": 325
+      },
+      "output": {
+        "width": 1080,
+        "height": 1080,
+        "codec": "avc1.640020",
+        "videoFrames": 450,
+        "videoDurationUs": 15000000,
+        "presentationValid": true,
+        "hasAudio": true,
+        "audioCodec": "mp4a.40.2",
+        "audioRate": 48000
+      },
+      "frameCount": 450,
+      "retainedVideoPackets": 0,
+      "sourceResources": {
+        "sourceReads": 1070,
+        "sourceBytes": 366965,
+        "sourceReadMs": 967.8450102806091,
+        "decodeMs": 411.0249996185303,
+        "openMs": 57.179999351501465,
+        "peakActiveCuts": 1,
+        "activeCuts": 0,
+        "peakDecoderReservedBytes": 393216,
+        "decoderReservedBytes": 0,
+        "presentation": {
+          "liveFrames": 0,
+          "liveBytes": 0,
+          "peakFrames": 1,
+          "peakBytes": 8192,
+          "queued": 0
+        },
+        "frameExports": 450,
+        "bitmapCopies": 0,
+        "physicalPeakBytes": null,
+        "originals": [
+          {
+            "provenance": "browser_client",
+            "codedWidth": 64,
+            "codedHeight": 32,
+            "displayWidth": 64,
+            "displayHeight": 32,
+            "timeResolution": 15360,
+            "firstTimestamp": 0,
+            "durationFromMetadata": 7,
+            "rotation": 0,
+            "flip": false,
+            "codec": "avc",
+            "streamNumber": 1,
+            "colorVersion": "native-source-color-v1",
+            "colorSpace": {
+              "matrix": "smpte170m",
+              "primaries": "bt709",
+              "transfer": "bt709",
+              "fullRange": false
+            }
+          }
+        ]
+      },
+      "audioSamples": 720000,
+      "primingFrames": 2112,
+      "speechFingerprint": "dbdf9ce49d3b58edf74612a6740d543fc96ce651b64e062e2148ff8ce070709f",
+      "seeks": [
+        0.1,
+        7.5,
+        14.9
+      ],
+      "completed": 450,
+      "qualification": false
+    },
+    {
+      "mode": "silent",
+      "ratio": "square",
+      "verdict": {
+        "measurements": {
+          "compositionVersion": "clip-browser-composition-v1",
+          "snapshotFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "backgroundVersion": "clip-browser-background-v1",
+          "backgroundSnapshotFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "backgroundDigest": "9531d3f36476cbd86f9ebfef406ce3f3b3e9fcfeb9d9c86d18eeef23b1ec2e77",
+          "backgroundComplete": true,
+          "backgroundSampleCount": 0,
+          "backgroundNotices": [],
+          "width": 1080,
+          "height": 1080,
+          "frameRateNumerator": 30,
+          "frameRateDenominator": 1,
+          "videoFrames": 450,
+          "videoCodec": "h264",
+          "videoProfile": "High",
+          "hasAudio": false,
+          "audioCodec": "",
+          "audioRate": 0,
+          "silent": false,
+          "speechFingerprint": ""
+        },
+        "passed": true
+      },
+      "fileBytes": 14947521,
+      "kind": "blob",
+      "storedBytes": {
+        "bytes": 14947521,
+        "writes": 33,
+        "allocatedBytes": 0
+      },
+      "packetResources": {
+        "peakPackets": 2,
+        "peakBytes": 90988
+      },
+      "output": {
+        "width": 1080,
+        "height": 1080,
+        "codec": "avc1.640020",
+        "videoFrames": 450,
+        "videoDurationUs": 15000000,
+        "presentationValid": true,
+        "hasAudio": false,
+        "audioCodec": "",
+        "audioRate": 0
+      },
+      "frameCount": 450,
+      "retainedVideoPackets": 0,
+      "sourceResources": {
+        "sourceReads": 1232,
+        "sourceBytes": 1269395,
+        "sourceReadMs": 1395.544994354248,
+        "decodeMs": 35.18500328063965,
+        "openMs": 11.980000019073486,
+        "peakActiveCuts": 1,
+        "activeCuts": 0,
+        "peakDecoderReservedBytes": 11059200,
+        "decoderReservedBytes": 0,
+        "presentation": {
+          "liveFrames": 0,
+          "liveBytes": 0,
+          "peakFrames": 1,
+          "peakBytes": 230400,
+          "queued": 0
+        },
+        "frameExports": 450,
+        "bitmapCopies": 0,
+        "physicalPeakBytes": null,
+        "originals": [
+          {
+            "provenance": "browser_client",
+            "codedWidth": 320,
+            "codedHeight": 180,
+            "displayWidth": 320,
+            "displayHeight": 180,
+            "timeResolution": 15360,
+            "firstTimestamp": 0,
+            "durationFromMetadata": 30,
+            "rotation": 0,
+            "flip": false,
+            "codec": "avc",
+            "streamNumber": 1,
+            "colorVersion": "native-source-color-v1",
+            "colorSpace": {
+              "matrix": "smpte170m",
+              "primaries": "bt709",
+              "transfer": "bt709",
+              "fullRange": false
+            }
+          }
+        ]
+      },
+      "seeks": [
+        0.1,
+        7.5,
+        14.9
+      ],
+      "completed": 450,
+      "qualification": false
+    }
+  ],
+  "cancelled": {
+    "error": "Render cancelled",
+    "name": "AbortError",
+    "completed": 1,
+    "qualification": false
+  },
+  "afterCancel": {
+    "before": [],
+    "after": []
+  },
+  "sourceHashes": {
+    "frontend/src/shared/lib/media/bounded-output.ts": "917db96fc4917c1b447bf9ab48716903b1980fa3e5afb86dbe8cd6bbad2a9e84",
+    "frontend/src/shared/lib/media/packet-window.ts": "51f6376fabac67d46fb999bbc3a220b3ddfd310394ac13935fd17d0fe90aba45",
+    "frontend/src/shared/lib/media/stream-mp4.ts": "213e1117350861b8db7468313ec865c90dd19ed84f8a5b30d16d39c54b3cb8c3",
+    "frontend/src/shared/lib/media/measure-mp4.ts": "7232799a2ea3812407d5da9288198cfdbcb47ea4fcc54e3dfabd4295c3101b7f",
+    "frontend/src/shared/lib/media/verify-mp4-audio.ts": "dee047225204fbf8aabb642f55749c12eeb648855848389a4090fd599263ae80",
+    "frontend/src/entities/clip-preview/lib/video.worker.ts": "3352d7c6ac4e57b1b5dbf35f31bd0bc30c69b1dd57d50afda0d0e9fff3d871f8",
+    "frontend/src/features/render-clip-browser/api/render-video.ts": "8e7e4d77d4343b6cfdf2a144ec793080bc0cc92a809276ba961ba383b022738a",
+    "frontend/src/features/render-clip-browser/api/render-audio.ts": "554e31390b0dd2576842bd1d16b4c7a51d677bfbe92f9f1908ae95262fe63d63",
+    "frontend/src/features/render-clip-browser/model/verdict.ts": "f59d43eff2d7dca9bf2c8c6b264139382578c26f907c1899f10b4454c519dca0",
+    "frontend/src/test/browser-media/export-entry.ts": "290fe9fa6c787380807c6c715eadb5542e2b1b675fbdedf9a6d90e4173f90e8c",
+    "frontend/src/entities/clip-preview/model/composite-video.ts": "8466dac13d6cceae381214088d2c36e08d0b03689c08d4c3c973284df6d89f72",
+    "frontend/src/entities/clip-preview/model/browser-composition.ts": "8146e5f5eb3760bd4ba01b337ae54cf1c874543447d56c301dae877314fc39e4"
+  },
+  "corrections": [
+    {
+      "before": "Slow5ms actual Chrome sink refused MEDIA_PACKET_WINDOW_LIMIT at frame202 despite checking encodeQueueSize and pending packet capacity.",
+      "after": "Each submitted frame reserves one of8 credits until its output packet is accepted; all450frames complete, observed peak7packets/296304bytes.",
+      "cause": "WebCodecs control queue removal precedes delivery of asynchronous encoded callbacks."
+    },
+    {
+      "before": "Actual cancellation storage check still found cancelled-owner-b.mp4 after a second dispose returned.",
+      "after": "Idempotent disposal returns the same in-flight cleanup promise; actual cancelled/abandoned recovery checks leave zero files.",
+      "cause": "The first asynchronous abort cleanup had set stopped before delete completed."
+    }
+  ],
+  "sourceHashScope": "Preparation ledger captured after execution; formatting occurred during the diagnostic run. Final same-source replay is required after the shared T600 seam is integrated."
+}

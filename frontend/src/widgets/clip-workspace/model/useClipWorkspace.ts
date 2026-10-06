@@ -102,7 +102,12 @@ export function useClipWorkspace(ownerId: string, project: ClipProject) {
     owned: upload.markOwned,
     rejected: upload.rejectAttempt,
   }
-  const browser = useBrowserRender(ownerId, project.id)
+  const browser = useBrowserRender(
+    ownerId,
+    project.id,
+    project.editPlanRevision,
+    !!project.finalized,
+  )
   const job = generation.job
   // A project that already has a plan stays in the refining lifecycle throughout another
   // storyline/generation run. Follow the successful job too, so a request started from ①
