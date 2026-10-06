@@ -43,3 +43,23 @@ it('cancels a waiting sink without flushing healthy encoder work', async () => {
   controller.abort(new Error('cancelled'))
   await waiting
 })
+it('reserves all submitted frames until their asynchronous output has been accepted', async () => {
+  const window = new MediaPacketWindow(
+    { packets: 2, bytes: 8, timeoutMs: 1000 },
+    new AbortController().signal,
+  )
+  await window.reserve()
+  await window.reserve()
+  const ready = vi.fn(),
+    waiting = window.reserve().then(ready)
+  await Promise.resolve()
+  expect(ready).not.toHaveBeenCalled()
+  let first = 0
+  window.send(4, (id) => {
+    first = id
+  })
+  await Promise.resolve()
+  expect(ready).not.toHaveBeenCalled()
+  window.ack(first)
+  await waiting
+})

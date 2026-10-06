@@ -116,6 +116,10 @@ async function render(input: BrowserVideoInput, controller: AbortController) {
     encoder = new VideoEncoder({
       output: (chunk, metadata) => {
         if (signal.aborted) return
+        if (input.streamPackets && chunk.byteLength > CLIP_BROWSER_RENDER.encodedPacketBytes) {
+          controller.abort(new Error('MEDIA_PACKET_WINDOW_LIMIT'))
+          return
+        }
         if (metadata?.decoderConfig) decoderConfig = metadata.decoderConfig
         const data = new Uint8Array(chunk.byteLength)
         chunk.copyTo(data)
@@ -241,7 +245,7 @@ async function render(input: BrowserVideoInput, controller: AbortController) {
         }),
       releaseAssets: (keys) => bitmaps.retain(keys),
       encode: async (timestamp, duration, keyFrame) => {
-        if (input.streamPackets) await packets.capacity(CLIP_BROWSER_RENDER.encodeQueueFrames)
+        if (input.streamPackets) await packets.reserve()
         signal.throwIfAborted()
         // A bounded batch also surfaces codec failures before requesting more source frames.
         if (encoder.encodeQueueSize >= CLIP_BROWSER_RENDER.encodeQueueFrames) {

@@ -8,6 +8,7 @@ export class MediaPacketWindow {
   private bytes = 0
   private peakPackets = 0
   private peakBytes = 0
+  private reservations = 0
   constructor(
     private limits: { packets: number; bytes: number; timeoutMs: number },
     private signal: AbortSignal,
@@ -15,6 +16,7 @@ export class MediaPacketWindow {
   send(bytes: number, publish: (id: number) => void) {
     this.signal.throwIfAborted()
     if (this.failure) throw this.failure
+    if (this.reservations) this.reservations--
     if (
       this.pending.size >= this.limits.packets ||
       bytes <= 0 ||
@@ -44,8 +46,12 @@ export class MediaPacketWindow {
   async capacity(reserve = 0) {
     await this.wait(() => this.pending.size + reserve < this.limits.packets)
   }
+  async reserve() {
+    await this.wait(() => this.pending.size + this.reservations < this.limits.packets)
+    this.reservations++
+  }
   async drain() {
-    await this.wait(() => !this.pending.size)
+    await this.wait(() => !this.pending.size && !this.reservations)
   }
   private async wait(ready: () => boolean) {
     this.signal.throwIfAborted()

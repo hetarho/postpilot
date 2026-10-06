@@ -103,15 +103,18 @@ export async function createBoundedMediaOutput(
       throw error
     }
   }
-  const dispose = async () => {
-    if (stopped) return
-    stopped = true
-    signal.removeEventListener('abort', abort)
-    pages.clear()
-    finalizedFile = undefined
-    await writer?.abort().catch(() => undefined)
-    if (directory && name) await directory.removeEntry(name).catch(() => undefined)
-    release?.()
+  let cleanup: Promise<void> | undefined
+  const dispose = () => {
+    cleanup ??= (async () => {
+      stopped = true
+      signal.removeEventListener('abort', abort)
+      pages.clear()
+      finalizedFile = undefined
+      await writer?.abort().catch(() => undefined)
+      if (directory && name) await directory.removeEntry(name).catch(() => undefined)
+      release?.()
+    })()
+    return cleanup
   }
   const abort = () => {
     void dispose()
