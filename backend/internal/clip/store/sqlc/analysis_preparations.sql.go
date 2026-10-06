@@ -592,11 +592,11 @@ func (q *Queries) InsertAnalysisVerificationAttempt(ctx context.Context, arg Ins
 }
 
 const liveAnalysisPreparations = `-- name: LiveAnalysisPreparations :many
-SELECT id, user_id, project_id, batch_id, quote_id, profile_version, expected_revision, metadata_json, manifest_digest, state, parent_job_id, current_attempt_id, attempt_count, progress, created_at, expires_at, queue_deadline_at, deadline_at, accepted_result, failure, cleanup_at, reconciled_at FROM clip_analysis_preparations WHERE reconciled_at IS NULL ORDER BY id LIMIT 100
+SELECT id, user_id, project_id, batch_id, quote_id, profile_version, expected_revision, metadata_json, manifest_digest, state, parent_job_id, current_attempt_id, attempt_count, progress, created_at, expires_at, queue_deadline_at, deadline_at, accepted_result, failure, cleanup_at, reconciled_at FROM clip_analysis_preparations WHERE reconciled_at IS NULL AND id>? ORDER BY id LIMIT 100
 `
 
-func (q *Queries) LiveAnalysisPreparations(ctx context.Context) ([]ClipAnalysisPreparation, error) {
-	rows, err := q.db.QueryContext(ctx, liveAnalysisPreparations)
+func (q *Queries) LiveAnalysisPreparations(ctx context.Context, id string) ([]ClipAnalysisPreparation, error) {
+	rows, err := q.db.QueryContext(ctx, liveAnalysisPreparations, id)
 	if err != nil {
 		return nil, err
 	}

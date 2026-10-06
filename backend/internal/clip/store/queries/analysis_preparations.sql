@@ -8,7 +8,7 @@ SELECT * FROM clip_analysis_preparations WHERE quote_id=? AND user_id=?;
 -- name: AnalysisPreparationForStage :one
 SELECT * FROM clip_analysis_preparations WHERE id=?;
 -- name: LiveAnalysisPreparations :many
-SELECT * FROM clip_analysis_preparations WHERE reconciled_at IS NULL ORDER BY id LIMIT 100;
+SELECT * FROM clip_analysis_preparations WHERE reconciled_at IS NULL AND id>? ORDER BY id LIMIT 100;
 -- name: AnalysisPreparationCapacity :one
 SELECT COUNT(*) FROM clip_analysis_preparations WHERE state IN ('preparing','verifying') AND expires_at>?;
 -- name: AnalysisPreparationAccountCapacity :one

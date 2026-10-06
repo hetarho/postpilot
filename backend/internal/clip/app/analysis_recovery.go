@@ -15,9 +15,18 @@ import (
 // Reconcile never invokes a model or reserves credits. Accepted waiting
 // handoffs survive boot; claimed paid continuations retain FailOnInterrupt.
 func (a *AnalysisPreparations) Reconcile(ctx context.Context) error {
-	rows, e := a.store.AnalysisPreparationsForRecovery(ctx)
+	a.recoveryMu.Lock()
+	defer a.recoveryMu.Unlock()
+	rows, e := a.store.AnalysisPreparationsForRecovery(ctx, a.recoveryCursor)
 	if e != nil {
 		return e
+	}
+	if len(rows) == 0 && a.recoveryCursor != "" {
+		a.recoveryCursor = ""
+		rows, e = a.store.AnalysisPreparationsForRecovery(ctx, "")
+		if e != nil {
+			return e
+		}
 	}
 	for _, row := range rows {
 		var parent, ack, fail string
@@ -39,7 +48,7 @@ func (a *AnalysisPreparations) Reconcile(ctx context.Context) error {
 				cancelled = cancelled || j.CancelRequestedAt != nil
 				closed = closed || terminal || cancelled
 			}
-			if !s.ExpiresAt.After(now) || !s.DeadlineAt.After(now) {
+			if !s.ExpiresAt.After(now) || s.State == "verifying" && !s.DeadlineAt.After(now) {
 				closed = true
 				if !cancelled && !terminal {
 					if e = p.Analysis.SetAnalysisPreparationState(ctx, s.ID, "expired", "deadline_exceeded"); e != nil {
@@ -127,6 +136,7 @@ func (a *AnalysisPreparations) Reconcile(ctx context.Context) error {
 				return e
 			}
 		}
+		a.recoveryCursor = row.ID
 	}
 	return nil
 }

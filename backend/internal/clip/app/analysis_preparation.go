@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"reflect"
 	"slices"
+	"sync"
 	"time"
 
 	"github.com/postpilot/backend/internal/clip"
@@ -38,7 +39,7 @@ type AnalysisPreparationTx interface {
 }
 type AnalysisPreparationStore interface {
 	GetAnalysisPreparation(context.Context, string, string) (clip.AnalysisPreparation, error)
-	AnalysisPreparationsForRecovery(context.Context) ([]clip.AnalysisPreparation, error)
+	AnalysisPreparationsForRecovery(context.Context, string) ([]clip.AnalysisPreparation, error)
 	DueAnalysisCopyCleanup(context.Context, time.Time) ([]clip.MediaDeletion, error)
 	FinishAnalysisCopyCleanup(context.Context, string) error
 	QueueAnalysisOrphan(context.Context, string, time.Time) error
@@ -56,15 +57,17 @@ type AnalysisPreparationJobs interface {
 }
 
 type AnalysisPreparations struct {
-	writer    *sql.DB
-	bind      Binder
-	store     AnalysisPreparationStore
-	objects   AnalysisPreparationObjects
-	jobs      AnalysisPreparationJobs
-	cfg       clip.MediaConfig
-	limits    clip.AnalysisPreparationLimits
-	now       func() time.Time
-	qualified func(string) bool
+	writer         *sql.DB
+	bind           Binder
+	store          AnalysisPreparationStore
+	objects        AnalysisPreparationObjects
+	jobs           AnalysisPreparationJobs
+	cfg            clip.MediaConfig
+	limits         clip.AnalysisPreparationLimits
+	now            func() time.Time
+	qualified      func(string) bool
+	recoveryMu     sync.Mutex
+	recoveryCursor string
 }
 
 func NewAnalysisPreparations(writer *sql.DB, bind Binder, store AnalysisPreparationStore, objects AnalysisPreparationObjects, jobs AnalysisPreparationJobs, cfg clip.MediaConfig, limits clip.AnalysisPreparationLimits, now func() time.Time) *AnalysisPreparations {

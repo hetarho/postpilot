@@ -390,8 +390,8 @@ func (s *Store) RetireAnalysisPreparation(ctx context.Context, id string, now ti
 	}
 	return s.write.MarkAnalysisPreparationCleanup(ctx, sqlc.MarkAnalysisPreparationCleanupParams{CleanupAt: nullable(stamp(now)), ID: id})
 }
-func (s *Store) AnalysisPreparationsForRecovery(ctx context.Context) ([]clip.AnalysisPreparation, error) {
-	rows, e := s.read.LiveAnalysisPreparations(ctx)
+func (s *Store) AnalysisPreparationsForRecovery(ctx context.Context, after string) ([]clip.AnalysisPreparation, error) {
+	rows, e := s.read.LiveAnalysisPreparations(ctx, after)
 	if e != nil {
 		return nil, e
 	}
