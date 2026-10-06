@@ -42,6 +42,13 @@ func TestRenderKindRefusedBeforeWork(t *testing.T) {
 	}
 }
 
+func TestBrowserIncompatibleVersionRefusesExplicitly(t *testing.T) {
+	err := toConnectError(clip.ErrBrowserCompositionVersion)
+	if connect.CodeOf(err) != connect.CodeFailedPrecondition || !errors.Is(err, clip.ErrBrowserCompositionVersion) {
+		t.Fatal(err)
+	}
+}
+
 func TestProjectLastRenderKindComesOnlyFromItsResult(t *testing.T) {
 	if p := projectProto(clip.Project{}); p.LastRenderKind != nil || p.Result != nil {
 		t.Fatal("unrendered project acquired a kind", p)

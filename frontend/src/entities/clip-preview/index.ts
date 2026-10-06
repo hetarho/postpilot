@@ -4,6 +4,25 @@ export type { ClipPreviewRequest } from './api/preview'
 export { useClipBrowserRenderCapability } from './api/useClipBrowserRenderCapability'
 export { createClipVideoWorker } from './lib/create-video-worker'
 export { browserAudioPlan } from './model/browser-audio-plan'
+export {
+  BrowserCompositionError,
+  BrowserSnapshotEpoch,
+  evaluateBrowserFrame,
+  freezeBrowserComposition,
+  readBrowserCompositionSnapshot,
+} from './model/browser-composition'
+export type {
+  BrowserCompositionSnapshot,
+  BrowserCompositionInput,
+  BrowserCompositionVersions,
+  BrowserCompositionDesign,
+  BrowserCompositionComponent,
+  BrowserSourceIdentity,
+  BrowserEvaluatedFrame,
+  BrowserMediaResolver,
+  BrowserSnapshotToken,
+  BrowserFrozen,
+} from './model/browser-composition'
 export type { SpeechAudioLoader } from './model/speech-playback'
 export { canonicalSpeechBuffer, speechDecodeKey, SpeechDecodeCache } from './model/speech-playback'
 export { speechRenderFingerprint } from './model/speech-fingerprint'

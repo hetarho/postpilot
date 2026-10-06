@@ -7,6 +7,7 @@ import { RenderRasterCache } from '../model/render-raster-cache'
 import type { CaptionCell } from '../model/caption-sheets'
 import { MediaPhaseRecorder } from '@/shared/lib'
 import { CLIP_VIDEO_MEASUREMENT_PHASES } from '../config/render-measurements'
+import { readBrowserCompositionSnapshot } from '../model/browser-composition'
 
 const send = (message: VideoWorkerOutput, transfer: Transferable[] = []) =>
   self.postMessage(message, { transfer })
@@ -15,6 +16,8 @@ const waiting = new Map<number, (bitmap: ImageBitmap) => void>()
 const waitingCells = new Map<number, (cell: CaptionCell | undefined) => void>()
 
 async function render(input: BrowserVideoInput) {
+  if (input.snapshot)
+    input = { ...input, snapshot: await readBrowserCompositionSnapshot(input.snapshot) }
   const measurements = input.collectMeasurements
     ? new MediaPhaseRecorder(CLIP_VIDEO_MEASUREMENT_PHASES)
     : undefined

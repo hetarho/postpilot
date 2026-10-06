@@ -83,6 +83,9 @@ func (s *Store) CompleteBrowserRender(ctx context.Context, user, id string, now 
 			return "", err
 		}
 		m := r.Verdict.Measurements
+		if r.Composition != nil && (m.CompositionVersion != r.Composition.Version || m.SnapshotFingerprint != r.Composition.SnapshotFingerprint) {
+			return "", clip.ErrInvalidMedia
+		}
 		if r.Verdict.Measurements.SpeechFingerprint != clip.SpeechFingerprint(r.Speech) {
 			return "", clip.ErrInvalidMedia
 		}

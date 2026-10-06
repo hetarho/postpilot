@@ -9,7 +9,11 @@ import {
 } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Film, Images, Play, RefreshCw, RotateCcw, Volume2, VolumeX } from 'lucide-react'
-import { CLIP_DRAFT_PREVIEW, CLIP_DESIGN } from '@/entities/clip-design/@x/clip-preview'
+import {
+  CLIP_BROWSER_RENDER,
+  CLIP_DRAFT_PREVIEW,
+  CLIP_DESIGN,
+} from '@/entities/clip-design/@x/clip-preview'
 import { type ClipRatioId } from '@/entities/clip-design/@x/clip-preview'
 import { appFailureFromConnect } from '@/shared/api'
 import { AppFailureMessage, Button, Slider, Typography } from '@/shared/ui'
@@ -39,6 +43,7 @@ import {
   type SpeechAudioLoader,
   type ScheduledSpeech,
 } from '../model/speech-playback'
+import { evaluateBrowserFrame, type BrowserCompositionSnapshot } from '../model/browser-composition'
 
 export interface ClipDisplayedFrame {
   cutId: string
@@ -63,6 +68,7 @@ function PreviewVideo({
   onFrame,
   onDisplayedFrame,
   onPlayRefused,
+  outputSourceMs,
 }: {
   item: PreviewCut
   source?: RetainedClipSource
@@ -81,6 +87,7 @@ function PreviewVideo({
   onDisplayedFrame?: (frame: ClipDisplayedFrame) => void
   /** The browser refused to start this footage without a gesture (autoplay policy). */
   onPlayRefused?: () => void
+  outputSourceMs?: number
 }) {
   const { t } = useTranslation('clips')
   const video = useRef<HTMLVideoElement>(null)
@@ -102,10 +109,12 @@ function PreviewVideo({
   })
   const fp = item.cut.fingerprint
   const rate = cutRate(item.cut) / 1000
-  const sourceMs = outputToSourceMs(
-    item,
-    Math.max(item.startMs, Math.min(item.endMs - CLIP_DRAFT_PREVIEW.frameToleranceMs, timeMs)),
-  )
+  const sourceMs =
+    outputSourceMs ??
+    outputToSourceMs(
+      item,
+      Math.max(item.startMs, Math.min(item.endMs - CLIP_DRAFT_PREVIEW.frameToleranceMs, timeMs)),
+    )
   const url = media.fingerprint === fp ? media.url : undefined
   const error = media.fingerprint === fp ? media.error : undefined
   const crop = previewCrop(
@@ -407,6 +416,7 @@ export function ClipDraftPreview({
   editingOverlay,
   captionPosition,
   loadSpeech,
+  snapshot,
 }: {
   /** The prepared caption/graphic overlay for this plan, fetched by
    *  `features/preview-clip-draft` — this component renders it and owns no transport. */
@@ -430,7 +440,14 @@ export function ClipDraftPreview({
   editingOverlay?: ReactNode
   captionPosition?: { instanceId: string; x: number; y: number }
   loadSpeech?: SpeechAudioLoader
+  /** Qualified local callers use the same output evaluator as export. */
+  snapshot?: BrowserCompositionSnapshot
 }) {
+  if (
+    snapshot &&
+    (snapshot.ratio !== ratio || JSON.stringify(snapshot.plan) !== JSON.stringify(plan))
+  )
+    throw new Error('CLIP_SNAPSHOT_SUPERSEDED')
   const { t } = useTranslation('clips')
   const [localTime, setLocalTime] = useState(0)
   const [playing, setPlaying] = useState(false)
@@ -548,7 +565,20 @@ export function ClipDraftPreview({
 
   const canvas =
     CLIP_DESIGN.ratios[ratio as ClipRatioId]?.canvas ?? CLIP_DESIGN.ratios.vertical.canvas
-  const frames = previewFrame(timeline, timeMs)
+  const frames = snapshot
+    ? evaluateBrowserFrame(
+        snapshot,
+        Math.min(
+          snapshot.frameCount - 1,
+          Math.floor((timeMs * CLIP_BROWSER_RENDER.frameRate) / 1000),
+        ),
+      ).footageLayers.map((layer) => ({
+        ...timeline.find((cut) => cut.cut.id === layer.cutInstanceId)!,
+        sourceMs: layer.sourceTimestampUs / 1000,
+        opacity: layer.alpha,
+        audioGain: layer.weight,
+      }))
+    : previewFrame(timeline, timeMs)
   const next = timeline[(frames.at(-1)?.index ?? 0) + 1]
   const slots = frames.map((frame) => ({ ...frame, master: frame === frames.at(-1) }))
   if (slots.length < 2 && next)
@@ -631,7 +661,7 @@ export function ClipDraftPreview({
               !suspended &&
               slots.map((slot) => (
                 <PreviewVideo
-                  key={slot.index % 2}
+                  key={snapshot ? `${snapshot.snapshotFingerprint}/${slot.cut.id}` : slot.index % 2}
                   item={slot}
                   source={sources.find(
                     (s) => s.id === slot.cut.sourceId && s.fingerprint === slot.cut.fingerprint,
@@ -639,6 +669,7 @@ export function ClipDraftPreview({
                   access={resolvePlayback}
                   reload={reload}
                   timeMs={timeMs}
+                  outputSourceMs={snapshot ? slot.sourceMs : undefined}
                   playing={playing && timeMs >= slot.startMs && timeMs < slot.endMs}
                   muted={muted || !sourceAudioEnabled(plan, slot.cut)}
                   opacity={slot.opacity}
