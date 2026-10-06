@@ -210,6 +210,8 @@ export function inkCaptionEffectsScene(
         })
       } else throw new Error(`CLIP_INK_STYLE_NOT_IMPLEMENTED:${style.id}`)
     }
+  if (style.id === 'glitch')
+    nodes.sort((a, b) => Number(a.id.includes('/band/')) - Number(b.id.includes('/band/')))
   const canvas = CLIP_DESIGN.ratios[ratio].canvas
   let left = region.x - style.bleed,
     top = region.y - style.bleed,

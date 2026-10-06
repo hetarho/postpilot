@@ -70,6 +70,7 @@ describe('native filter state and reusable ink', () => {
   it('glitch repeats the modular RGB and six world-clipped bands for each line', () => {
     const scene = inkCaptionEffectsScene('vertical', layout('glitch'))
     expect(scene.nodes).toHaveLength(16)
+    expect(scene.nodes.slice(0, 4).every((node) => !node.id.includes('/band/'))).toBe(true)
     for (const p of [0.007, 0.12, 0.5, 0.99])
       for (const node of scene.nodes.filter((n) => n.id.includes('band'))) {
         const pose = node.pose(p, 4500)

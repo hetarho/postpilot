@@ -18,7 +18,7 @@ import (
 const BrowserCompositionVersion = "clip-browser-composition-v1"
 const BrowserComponentVersion = "native-cds-r33-pop-exposure-v2-filters-v1"
 const BrowserFontVersion = "bundled-clip-fonts-v1"
-const BrowserAssetVersion = "clip-design-assets-v1-ink-62736cf130a334decc16453f6946d7331f0e14057e4270967dd62fa32313753b"
+const BrowserAssetVersion = "clip-design-assets-v1-ink-8c06d408b7f22ffb2bf312ea9dc3258247ae5375c61358597381da64e1c0f6a0"
 
 var ErrBrowserCompositionVersion = errors.New("browser composition version is incompatible")
 

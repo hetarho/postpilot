@@ -17,9 +17,40 @@ const kernel = [0.000489, 0.002403, 0.009246, 0.02784, 0.065602, 0.120999, 0.174
 const deviation = Math.sqrt(
   kernel.slice(0, 7).reduce((sum, weight, index) => sum + 2 * weight * (7 - index) ** 2, 0),
 )
+/** Linear texture sampling adds fractional-pixel variance to every tap. Solve
+ * that exact discrete variance as well: a continuous-only sigma conversion
+ * noticeably softens rapid blur-in when native sigma is below one pixel. */
+export function captionGaussianStrength(sigma: number) {
+  const sum = kernel[7]! + 2 * kernel.slice(0, 7).reduce((value, weight) => value + weight, 0)
+  const normalizer = Math.sqrt(1 + 0.25 + 0.0625 + 0.015625)
+  const variance = (strength: number) =>
+    [1, 0.5, 0.25, 0.125].reduce((total, coefficient) => {
+      const step = (strength * coefficient) / normalizer
+      return (
+        total +
+        kernel.slice(0, 7).reduce((value, weight, index) => {
+          const offset = (7 - index) * step,
+            whole = Math.floor(offset),
+            fraction = offset - whole
+          return (
+            value +
+            (2 * weight * (whole * whole * (1 - fraction) + (whole + 1) ** 2 * fraction)) / sum
+          )
+        }, 0)
+      )
+    }, 0)
+  let low = 0,
+    high = sigma / deviation
+  for (let i = 0; i < 22; i++) {
+    const middle = (low + high) / 2
+    if (variance(middle) > sigma * sigma) high = middle
+    else low = middle
+  }
+  return (low + high) / 2
+}
 export function captionGaussian(sigma: number) {
   const filter = new BlurFilter({
-    strength: sigma / deviation,
+    strength: captionGaussianStrength(sigma),
     quality: 4,
     kernelSize: 15,
     resolution: 1,
@@ -28,7 +59,7 @@ export function captionGaussian(sigma: number) {
   return filter
 }
 export function captionGaussianSigma(filter: BlurFilter, sigma: number) {
-  filter.strength = sigma / deviation
+  filter.strength = captionGaussianStrength(sigma)
   filter.padding = 0
 }
 
