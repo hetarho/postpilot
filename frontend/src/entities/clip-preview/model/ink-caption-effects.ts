@@ -18,6 +18,8 @@ import {
   type InkCaptionPose,
 } from './ink-caption-scene'
 
+import { inkCaptionEmberScene } from './ink-caption-ember'
+
 const identity = inkTranslation(0, 0)
 const pose = (opacity = 1, matrix = identity): InkCaptionPose => ({
   opacity: inkRound(opacity),
@@ -30,6 +32,7 @@ export function inkCaptionEffectsScene(
   ratio: ClipRatioId,
   layout: InkCaptionLayout,
 ): InkCaptionScene {
+  if (layout.style.id === 'ember') return inkCaptionEmberScene(ratio, layout)
   const { style, role, region, lines } = layout,
     fonts = inkCaptionFonts(layout)
   const doc = (id: string, box: InkBox, markup: (origin: { x: number; y: number }) => string) =>

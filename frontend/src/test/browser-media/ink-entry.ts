@@ -31,6 +31,7 @@ export interface Fixture {
     accentWhite: boolean
     mean: number
   } | null
+  nativeEmber?: { paths: number[][]; sparks: number[][] }
   nativeLayout?: { Text: string; X: number; Y: number; Width: number; Height: number }[]
 }
 // One isolated diagnostic realm. Tag actual core-pool sources without changing allocation or execution.
@@ -108,6 +109,22 @@ window.browserInkFixtures = {
           sceneRenderer.render(resource.scene, target, index === 0)
         else resource.draw(context)
       })
+      if (fixture.nativeEmber) {
+        const scene = resources.find((r) => r.kind === 'scene')
+        if (!scene || scene.kind !== 'scene') throw new Error('CLIP_EMBER_GEOMETRY_SCENE')
+        const paths = scene.scene.nodes.flatMap((n) => n.pose.flames?.map((f) => f.points) ?? []),
+          sparks = scene.scene.nodes.flatMap(
+            (n) =>
+              n.pose.sparks
+                ?.filter((s) => s.radius > 0)
+                .map((s) => [s.cx, s.cy, s.radius, s.alpha]) ?? [],
+          )
+        if (
+          JSON.stringify(paths) !== JSON.stringify(fixture.nativeEmber.paths) ||
+          JSON.stringify(sparks) !== JSON.stringify(fixture.nativeEmber.sparks ?? [])
+        )
+          throw new Error('CLIP_EMBER_NATIVE_GEOMETRY')
+      }
       const gpu = target && pixi?.extract.pixels({ target })
       if (gpu) {
         const pixels = new Uint8ClampedArray(gpu.pixels)
@@ -300,6 +317,12 @@ window.browserInkFixtures = {
         binary += String.fromCharCode(...bytes.subarray(index, index + 8192))
       const measurements = components.measurements()
       const gpuMeasurements = sceneRenderer?.measurements()
+      if (
+        fixture.nativeEmber &&
+        gpuMeasurements &&
+        (gpuMeasurements.dynamicShapes > 70 || gpuMeasurements.geometryBytes > 168)
+      )
+        throw new Error('CLIP_EMBER_GEOMETRY_BUDGET')
       sceneRenderer?.destroy()
       if (
         sceneRenderer &&

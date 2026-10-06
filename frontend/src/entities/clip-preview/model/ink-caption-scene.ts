@@ -15,7 +15,20 @@ import { inkNumber as num, inkTextMarkup, type InkBox } from './ink-typography'
 import type { InkDocument } from './ink-raster'
 
 export type InkMatrix = readonly [number, number, number, number, number, number]
+export interface InkCaptionFlame {
+  points: readonly number[]
+  bounds: InkBox
+}
+export interface InkCaptionSpark {
+  index: number
+  cx: number
+  cy: number
+  radius: number
+  alpha: number
+}
 export interface InkCaptionPose {
+  flames?: readonly InkCaptionFlame[]
+  sparks?: readonly InkCaptionSpark[]
   opacity: number
   matrix: InkMatrix
   clip?: InkBox
@@ -36,6 +49,8 @@ export interface InkCaptionPose {
   light?: { ellipses: readonly { cx: number; cy: number; rx: number; ry: number }[] }
 }
 export interface InkCaptionSceneNode {
+  flames?: { sigma: number; stops: readonly { at: number; hex: string; alpha: number }[] }
+  sparks?: { fill: string }
   id: string
   document?: InkDocument
   rect?: {

@@ -1,0 +1,543 @@
+{
+  "browser": "154.0.8037.98",
+  "qualification": false,
+  "results": [
+    {
+      "ratio": "vertical",
+      "pace": "steady",
+      "checks": [
+        {
+          "frame": 32,
+          "reason": "initial/rapid/seek",
+          "changedChannels": 0,
+          "activeNodes": 4,
+          "geometryBytes": 168
+        },
+        {
+          "frame": 99,
+          "reason": "initial/rapid/seek",
+          "changedChannels": 0,
+          "activeNodes": 4,
+          "geometryBytes": 168
+        },
+        {
+          "frame": 166,
+          "reason": "initial/rapid/seek",
+          "changedChannels": 0,
+          "activeNodes": 4,
+          "geometryBytes": 168
+        },
+        {
+          "frame": 99,
+          "reason": "initial/rapid/seek",
+          "changedChannels": 0,
+          "activeNodes": 4,
+          "geometryBytes": 168
+        },
+        {
+          "frame": 32,
+          "reason": "initial/rapid/seek",
+          "changedChannels": 0,
+          "activeNodes": 4,
+          "geometryBytes": 168
+        },
+        {
+          "frame": 32,
+          "reason": "text-replacement/reverse",
+          "changedChannels": 0,
+          "activeNodes": 4,
+          "geometryBytes": 168
+        },
+        {
+          "frame": 99,
+          "reason": "text-replacement/reverse",
+          "changedChannels": 0,
+          "activeNodes": 4,
+          "geometryBytes": 168
+        },
+        {
+          "frame": 166,
+          "reason": "text-replacement/reverse",
+          "changedChannels": 0,
+          "activeNodes": 4,
+          "geometryBytes": 168
+        },
+        {
+          "frame": 99,
+          "reason": "text-replacement/reverse",
+          "changedChannels": 0,
+          "activeNodes": 4,
+          "geometryBytes": 168
+        },
+        {
+          "frame": 32,
+          "reason": "text-replacement/reverse",
+          "changedChannels": 0,
+          "activeNodes": 4,
+          "geometryBytes": 168
+        },
+        {
+          "frame": 32,
+          "reason": "post-eviction/reverse",
+          "changedChannels": 0,
+          "activeNodes": 4,
+          "geometryBytes": 168
+        },
+        {
+          "frame": 99,
+          "reason": "post-eviction/reverse",
+          "changedChannels": 0,
+          "activeNodes": 4,
+          "geometryBytes": 168
+        },
+        {
+          "frame": 166,
+          "reason": "post-eviction/reverse",
+          "changedChannels": 0,
+          "activeNodes": 4,
+          "geometryBytes": 168
+        },
+        {
+          "frame": 99,
+          "reason": "post-eviction/reverse",
+          "changedChannels": 0,
+          "activeNodes": 4,
+          "geometryBytes": 168
+        },
+        {
+          "frame": 32,
+          "reason": "post-eviction/reverse",
+          "changedChannels": 0,
+          "activeNodes": 4,
+          "geometryBytes": 168
+        }
+      ],
+      "evictionCases": 72,
+      "cleanup": true,
+      "qualification": false
+    },
+    {
+      "ratio": "vertical",
+      "pace": "rapid",
+      "checks": [
+        {
+          "frame": 32,
+          "reason": "initial/rapid/seek",
+          "changedChannels": 0,
+          "activeNodes": 4,
+          "geometryBytes": 168
+        },
+        {
+          "frame": 55,
+          "reason": "initial/rapid/seek",
+          "changedChannels": 0,
+          "activeNodes": 4,
+          "geometryBytes": 168
+        },
+        {
+          "frame": 32,
+          "reason": "initial/rapid/seek",
+          "changedChannels": 0,
+          "activeNodes": 4,
+          "geometryBytes": 168
+        },
+        {
+          "frame": 43,
+          "reason": "initial/rapid/seek",
+          "changedChannels": 0,
+          "activeNodes": 4,
+          "geometryBytes": 168
+        },
+        {
+          "frame": 43,
+          "reason": "text-replacement/reverse",
+          "changedChannels": 0,
+          "activeNodes": 4,
+          "geometryBytes": 168
+        },
+        {
+          "frame": 32,
+          "reason": "text-replacement/reverse",
+          "changedChannels": 0,
+          "activeNodes": 4,
+          "geometryBytes": 168
+        },
+        {
+          "frame": 55,
+          "reason": "text-replacement/reverse",
+          "changedChannels": 0,
+          "activeNodes": 4,
+          "geometryBytes": 168
+        },
+        {
+          "frame": 32,
+          "reason": "text-replacement/reverse",
+          "changedChannels": 0,
+          "activeNodes": 4,
+          "geometryBytes": 168
+        }
+      ],
+      "evictionCases": 0,
+      "cleanup": true,
+      "qualification": false
+    },
+    {
+      "ratio": "horizontal",
+      "pace": "steady",
+      "checks": [
+        {
+          "frame": 32,
+          "reason": "initial/rapid/seek",
+          "changedChannels": 0,
+          "activeNodes": 4,
+          "geometryBytes": 168
+        },
+        {
+          "frame": 99,
+          "reason": "initial/rapid/seek",
+          "changedChannels": 0,
+          "activeNodes": 4,
+          "geometryBytes": 168
+        },
+        {
+          "frame": 166,
+          "reason": "initial/rapid/seek",
+          "changedChannels": 0,
+          "activeNodes": 4,
+          "geometryBytes": 168
+        },
+        {
+          "frame": 99,
+          "reason": "initial/rapid/seek",
+          "changedChannels": 0,
+          "activeNodes": 4,
+          "geometryBytes": 168
+        },
+        {
+          "frame": 32,
+          "reason": "initial/rapid/seek",
+          "changedChannels": 0,
+          "activeNodes": 4,
+          "geometryBytes": 168
+        },
+        {
+          "frame": 32,
+          "reason": "text-replacement/reverse",
+          "changedChannels": 0,
+          "activeNodes": 4,
+          "geometryBytes": 168
+        },
+        {
+          "frame": 99,
+          "reason": "text-replacement/reverse",
+          "changedChannels": 0,
+          "activeNodes": 4,
+          "geometryBytes": 168
+        },
+        {
+          "frame": 166,
+          "reason": "text-replacement/reverse",
+          "changedChannels": 0,
+          "activeNodes": 4,
+          "geometryBytes": 168
+        },
+        {
+          "frame": 99,
+          "reason": "text-replacement/reverse",
+          "changedChannels": 0,
+          "activeNodes": 4,
+          "geometryBytes": 168
+        },
+        {
+          "frame": 32,
+          "reason": "text-replacement/reverse",
+          "changedChannels": 0,
+          "activeNodes": 4,
+          "geometryBytes": 168
+        },
+        {
+          "frame": 32,
+          "reason": "post-eviction/reverse",
+          "changedChannels": 0,
+          "activeNodes": 4,
+          "geometryBytes": 168
+        },
+        {
+          "frame": 99,
+          "reason": "post-eviction/reverse",
+          "changedChannels": 0,
+          "activeNodes": 4,
+          "geometryBytes": 168
+        },
+        {
+          "frame": 166,
+          "reason": "post-eviction/reverse",
+          "changedChannels": 0,
+          "activeNodes": 4,
+          "geometryBytes": 168
+        },
+        {
+          "frame": 99,
+          "reason": "post-eviction/reverse",
+          "changedChannels": 0,
+          "activeNodes": 4,
+          "geometryBytes": 168
+        },
+        {
+          "frame": 32,
+          "reason": "post-eviction/reverse",
+          "changedChannels": 0,
+          "activeNodes": 4,
+          "geometryBytes": 168
+        }
+      ],
+      "evictionCases": 72,
+      "cleanup": true,
+      "qualification": false
+    },
+    {
+      "ratio": "horizontal",
+      "pace": "rapid",
+      "checks": [
+        {
+          "frame": 32,
+          "reason": "initial/rapid/seek",
+          "changedChannels": 0,
+          "activeNodes": 4,
+          "geometryBytes": 168
+        },
+        {
+          "frame": 55,
+          "reason": "initial/rapid/seek",
+          "changedChannels": 0,
+          "activeNodes": 4,
+          "geometryBytes": 168
+        },
+        {
+          "frame": 32,
+          "reason": "initial/rapid/seek",
+          "changedChannels": 0,
+          "activeNodes": 4,
+          "geometryBytes": 168
+        },
+        {
+          "frame": 43,
+          "reason": "initial/rapid/seek",
+          "changedChannels": 0,
+          "activeNodes": 4,
+          "geometryBytes": 168
+        },
+        {
+          "frame": 43,
+          "reason": "text-replacement/reverse",
+          "changedChannels": 0,
+          "activeNodes": 4,
+          "geometryBytes": 168
+        },
+        {
+          "frame": 32,
+          "reason": "text-replacement/reverse",
+          "changedChannels": 0,
+          "activeNodes": 4,
+          "geometryBytes": 168
+        },
+        {
+          "frame": 55,
+          "reason": "text-replacement/reverse",
+          "changedChannels": 0,
+          "activeNodes": 4,
+          "geometryBytes": 168
+        },
+        {
+          "frame": 32,
+          "reason": "text-replacement/reverse",
+          "changedChannels": 0,
+          "activeNodes": 4,
+          "geometryBytes": 168
+        }
+      ],
+      "evictionCases": 0,
+      "cleanup": true,
+      "qualification": false
+    },
+    {
+      "ratio": "square",
+      "pace": "steady",
+      "checks": [
+        {
+          "frame": 32,
+          "reason": "initial/rapid/seek",
+          "changedChannels": 0,
+          "activeNodes": 4,
+          "geometryBytes": 168
+        },
+        {
+          "frame": 99,
+          "reason": "initial/rapid/seek",
+          "changedChannels": 0,
+          "activeNodes": 4,
+          "geometryBytes": 168
+        },
+        {
+          "frame": 166,
+          "reason": "initial/rapid/seek",
+          "changedChannels": 0,
+          "activeNodes": 4,
+          "geometryBytes": 168
+        },
+        {
+          "frame": 99,
+          "reason": "initial/rapid/seek",
+          "changedChannels": 0,
+          "activeNodes": 4,
+          "geometryBytes": 168
+        },
+        {
+          "frame": 32,
+          "reason": "initial/rapid/seek",
+          "changedChannels": 0,
+          "activeNodes": 4,
+          "geometryBytes": 168
+        },
+        {
+          "frame": 32,
+          "reason": "text-replacement/reverse",
+          "changedChannels": 0,
+          "activeNodes": 4,
+          "geometryBytes": 168
+        },
+        {
+          "frame": 99,
+          "reason": "text-replacement/reverse",
+          "changedChannels": 0,
+          "activeNodes": 4,
+          "geometryBytes": 168
+        },
+        {
+          "frame": 166,
+          "reason": "text-replacement/reverse",
+          "changedChannels": 0,
+          "activeNodes": 4,
+          "geometryBytes": 168
+        },
+        {
+          "frame": 99,
+          "reason": "text-replacement/reverse",
+          "changedChannels": 0,
+          "activeNodes": 4,
+          "geometryBytes": 168
+        },
+        {
+          "frame": 32,
+          "reason": "text-replacement/reverse",
+          "changedChannels": 0,
+          "activeNodes": 4,
+          "geometryBytes": 168
+        },
+        {
+          "frame": 32,
+          "reason": "post-eviction/reverse",
+          "changedChannels": 0,
+          "activeNodes": 4,
+          "geometryBytes": 168
+        },
+        {
+          "frame": 99,
+          "reason": "post-eviction/reverse",
+          "changedChannels": 0,
+          "activeNodes": 4,
+          "geometryBytes": 168
+        },
+        {
+          "frame": 166,
+          "reason": "post-eviction/reverse",
+          "changedChannels": 0,
+          "activeNodes": 4,
+          "geometryBytes": 168
+        },
+        {
+          "frame": 99,
+          "reason": "post-eviction/reverse",
+          "changedChannels": 0,
+          "activeNodes": 4,
+          "geometryBytes": 168
+        },
+        {
+          "frame": 32,
+          "reason": "post-eviction/reverse",
+          "changedChannels": 0,
+          "activeNodes": 4,
+          "geometryBytes": 168
+        }
+      ],
+      "evictionCases": 72,
+      "cleanup": true,
+      "qualification": false
+    },
+    {
+      "ratio": "square",
+      "pace": "rapid",
+      "checks": [
+        {
+          "frame": 32,
+          "reason": "initial/rapid/seek",
+          "changedChannels": 0,
+          "activeNodes": 4,
+          "geometryBytes": 168
+        },
+        {
+          "frame": 55,
+          "reason": "initial/rapid/seek",
+          "changedChannels": 0,
+          "activeNodes": 4,
+          "geometryBytes": 168
+        },
+        {
+          "frame": 32,
+          "reason": "initial/rapid/seek",
+          "changedChannels": 0,
+          "activeNodes": 4,
+          "geometryBytes": 168
+        },
+        {
+          "frame": 43,
+          "reason": "initial/rapid/seek",
+          "changedChannels": 0,
+          "activeNodes": 4,
+          "geometryBytes": 168
+        },
+        {
+          "frame": 43,
+          "reason": "text-replacement/reverse",
+          "changedChannels": 0,
+          "activeNodes": 4,
+          "geometryBytes": 168
+        },
+        {
+          "frame": 32,
+          "reason": "text-replacement/reverse",
+          "changedChannels": 0,
+          "activeNodes": 4,
+          "geometryBytes": 168
+        },
+        {
+          "frame": 55,
+          "reason": "text-replacement/reverse",
+          "changedChannels": 0,
+          "activeNodes": 4,
+          "geometryBytes": 168
+        },
+        {
+          "frame": 32,
+          "reason": "text-replacement/reverse",
+          "changedChannels": 0,
+          "activeNodes": 4,
+          "geometryBytes": 168
+        }
+      ],
+      "evictionCases": 0,
+      "cleanup": true,
+      "qualification": false
+    }
+  ]
+}

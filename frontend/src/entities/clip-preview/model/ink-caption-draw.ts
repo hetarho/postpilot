@@ -1,4 +1,5 @@
 import { Color } from 'pixi.js'
+import { inkEmberFilterBounds } from './ink-caption-ember'
 import type { BrowserInkLease } from './ink-cache'
 import type { InkDocument } from './ink-raster'
 import type { InkCaptionScene, InkCaptionSceneNode, InkCaptionPose } from './ink-caption-scene'
@@ -11,6 +12,8 @@ export interface BrowserCaptionSceneNode {
   readonly ink?: BrowserInkLease
   readonly rect?: InkCaptionSceneNode['rect']
   readonly light?: InkCaptionSceneNode['light']
+  readonly flames?: InkCaptionSceneNode['flames']
+  readonly sparks?: InkCaptionSceneNode['sparks']
 }
 export interface BrowserCaptionPreparedScene {
   readonly style?: string
@@ -58,7 +61,7 @@ export class BrowserCaptionSceneCanvas {
         group.rect(clip.x, clip.y, clip.width, clip.height)
         group.clip()
       }
-      if (node.light || node.pose.effect) {
+      if (node.light || node.pose.effect || node.flames) {
         if (!('filter' in group)) throw new ClipInkError('CLIP_INK_FILTER_UNSUPPORTED', scene.style)
         this.source ??= new OffscreenCanvas(width, height)
         this.effect ??= new OffscreenCanvas(width, height)
@@ -91,7 +94,37 @@ export class BrowserCaptionSceneCanvas {
             node.document.bounds.width,
             node.document.bounds.height,
           )
-        if (node.light && node.pose.light) {
+        if (node.flames && node.pose.flames) {
+          for (const flame of node.pose.flames) {
+            const b = flame.bounds,
+              p = flame.points
+            source.save()
+            source.translate(b.x, b.y)
+            source.scale(b.width, b.height)
+            const gradient = source.createRadialGradient(0.5, 0.88, 0, 0.5, 0.88, 0.68)
+            for (const stop of node.flames.stops)
+              gradient.addColorStop(
+                stop.at,
+                this.color.setValue(stop.hex).setAlpha(stop.alpha).toRgbaString(),
+              )
+            source.fillStyle = gradient
+            const x = (i: number) => (p[i]! - b.x) / b.width,
+              y = (i: number) => (p[i]! - b.y) / b.height
+            source.beginPath()
+            source.moveTo(x(0), y(1))
+            source.bezierCurveTo(x(2), y(3), x(4), y(5), x(6), y(7))
+            source.bezierCurveTo(x(8), y(9), x(10), y(11), x(12), y(13))
+            source.closePath()
+            source.fill()
+            source.restore()
+          }
+          effect.filter = `blur(${node.flames.sigma}px)`
+          effect.drawImage(this.source, bounds.x, bounds.y)
+          const b = inkEmberFilterBounds(node.pose.flames)
+          group.beginPath()
+          group.rect(b.x, b.y, b.width, b.height)
+          group.clip()
+        } else if (node.light && node.pose.light) {
           for (const [index, ellipse] of node.pose.light.ellipses.entries()) {
             source.save()
             source.translate(ellipse.cx, ellipse.cy)
@@ -151,6 +184,15 @@ export class BrowserCaptionSceneCanvas {
           effect.drawImage(this.source, bounds.x, bounds.y)
         }
         group.drawImage(this.effect, bounds.x, bounds.y)
+      } else if (node.sparks && node.pose.sparks) {
+        group.fillStyle = node.sparks.fill
+        for (const spark of node.pose.sparks) {
+          if (spark.radius <= 0) continue
+          group.globalAlpha = node.pose.opacity * spark.alpha
+          group.beginPath()
+          group.arc(spark.cx, spark.cy, spark.radius, 0, Math.PI * 2)
+          group.fill()
+        }
       } else if (node.ink && node.document) {
         const { bitmap, offset } = node.ink,
           document = node.document
