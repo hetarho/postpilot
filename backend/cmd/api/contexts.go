@@ -248,7 +248,7 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 		return nil, fmt.Errorf("spoken operation recovery: %w", err)
 	}
 	// External handoffs are reconciled before interruption/hold/source cleanup.
-	if err := c.clipMediaRecovery.Reconcile(ctx); err != nil {
+	if err := c.clipMediaRecovery.ReconcileStartup(ctx); err != nil {
 		return nil, fmt.Errorf("media handoff recovery: %w", err)
 	}
 	if n, err := c.jobs.SweepRunning(ctx); err != nil {

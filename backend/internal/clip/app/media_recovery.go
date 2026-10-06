@@ -69,22 +69,67 @@ func NewMediaReconciler(writer *sql.DB, bind Binder, store MediaRecoveryStore, w
 func (r *MediaReconciler) Reconcile(ctx context.Context) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	stages, err := r.store.MediaRecoveryStages(ctx, r.stageCursor)
-	if err != nil {
+	if _, err := r.reconcileStages(ctx, false); err != nil {
 		return err
 	}
-	for _, stage := range stages {
-		if err = r.reconcileStage(ctx, stage.ID); err != nil {
+	_, err := r.reconcileWaits(ctx)
+	return err
+}
+
+// ReconcileStartup runs before dispatchers and the generic interruption sweep.
+// Every read and writer transaction stays bounded while all existing pages are
+// visited; a periodic pass still visits only one page and never parks live work.
+func (r *MediaReconciler) ReconcileStartup(ctx context.Context) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.stageCursor, r.waitCursor = "", ""
+	for {
+		more, err := r.reconcileStages(ctx, true)
+		if err != nil {
 			return err
+		}
+		if !more {
+			break
+		}
+	}
+	for {
+		more, err := r.reconcileWaits(ctx)
+		if err != nil {
+			return err
+		}
+		if !more {
+			return nil
+		}
+	}
+}
+
+func (r *MediaReconciler) reconcileStages(ctx context.Context, startup bool) (bool, error) {
+	if err := ctx.Err(); err != nil {
+		return false, err
+	}
+	stages, err := r.store.MediaRecoveryStages(ctx, r.stageCursor)
+	if err != nil {
+		return false, err
+	}
+	for _, stage := range stages {
+		if err = r.reconcileStage(ctx, stage.ID, startup); err != nil {
+			return false, err
 		}
 		r.stageCursor = stage.ID
 	}
 	if len(stages) < 100 {
 		r.stageCursor = ""
 	}
+	return len(stages) == 100, nil
+}
+
+func (r *MediaReconciler) reconcileWaits(ctx context.Context) (bool, error) {
+	if err := ctx.Err(); err != nil {
+		return false, err
+	}
 	waits, err := r.waits.WaitingContinuations(ctx, "clip-media:", r.waitCursor)
 	if err != nil {
-		return err
+		return false, err
 	}
 	for _, wait := range waits {
 		var missing, cancelled bool
@@ -105,7 +150,7 @@ func (r *MediaReconciler) Reconcile(ctx context.Context) error {
 			return nil
 		})
 		if err != nil {
-			return err
+			return false, err
 		}
 		if missing {
 			if cancelled {
@@ -114,7 +159,7 @@ func (r *MediaReconciler) Reconcile(ctx context.Context) error {
 				_, err = r.queue.FailWait(ctx, wait.JobID, wait.WaitKey, job.Failure{Reason: "CLIP_MEDIA_UNAVAILABLE"})
 			}
 			if err != nil {
-				return err
+				return false, err
 			}
 		}
 		r.waitCursor = wait.JobID
@@ -122,10 +167,10 @@ func (r *MediaReconciler) Reconcile(ctx context.Context) error {
 	if len(waits) < 100 {
 		r.waitCursor = ""
 	}
-	return nil
+	return len(waits) == 100, nil
 }
 
-func (r *MediaReconciler) reconcileStage(ctx context.Context, id string) error {
+func (r *MediaReconciler) reconcileStage(ctx context.Context, id string, startup bool) error {
 	var ack, parent string
 	var queuedUser string
 	err := WriteTx(ctx, r.writer, r.bind, func(p Ports) error {
@@ -216,6 +261,26 @@ func (r *MediaReconciler) reconcileStage(ctx context.Context, id string) error {
 			}
 			if err = stop("expired"); err != nil {
 				return err
+			}
+		}
+		// Admission persists native stages before dispatch. A crash between
+		// claiming the parent and its first Park must not become an interrupted
+		// render when the generic running-job sweep follows this reconciliation.
+		if startup && s.Operation == clip.MediaRender && j.Kind == clip.JobKindRender && j.Status == job.StatusRunning && j.DispatchReady && s.ContractVersion == clip.MediaContractVersion && s.RendererVersion == clip.MediaRendererVersion && s.AssetVersion == clip.MediaAssetVersion {
+			if _, e := p.Waits.Continuation(ctx, parent); errors.Is(e, job.ErrInvalidWait) {
+				task, e := mediacodec.DecodeTask(s.Payload)
+				if e == nil {
+					e = authorizeMediaParent(ctx, p, s, task, now)
+				}
+				if e == nil {
+					if e = p.Waits.Park(ctx, parent, MediaWaitKey(id), mediaResumePolicy(s.Operation), now); e != nil {
+						return e
+					}
+				} else if !errors.Is(e, clip.ErrInvalid) && !errors.Is(e, clip.ErrInvalidMedia) && !errors.Is(e, clip.ErrMediaIncompatible) && !errors.Is(e, clip.ErrMediaLeaseLost) && !errors.Is(e, clip.ErrMediaCancelled) && !errors.Is(e, clip.ErrSourceState) && !errors.Is(e, clip.ErrNotFound) {
+					return e
+				}
+			} else if e != nil {
+				return e
 			}
 		}
 		if (s.State == clip.MediaQueued || s.State == clip.MediaRunning) && j.Stage != clip.MediaJobStage(s) {

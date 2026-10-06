@@ -160,6 +160,23 @@ func (d *MediaDispatch) Request(ctx context.Context, in MediaDispatchRequest) (s
 			return p.Waits.UpdateProgress(ctx, in.JobID, clip.MediaJobStage(stage), 0, 0, now)
 		case clip.MediaSucceeded:
 			continuation, err := p.Waits.Continuation(ctx, in.JobID)
+			if errors.Is(err, job.ErrInvalidWait) {
+				// An admission-created stage can finish before its parent first
+				// parks. Keep publication on the ordinary claimed continuation.
+				key := MediaWaitKey(stage.ID)
+				if err := p.Waits.Park(ctx, in.JobID, key, mediaResumePolicy(in.Operation), now); err != nil {
+					return err
+				}
+				woken, err := p.Waits.Wake(ctx, in.JobID, key, now)
+				if err != nil {
+					return err
+				}
+				if !woken {
+					return job.ErrInvalidWait
+				}
+				pending = true
+				return nil
+			}
 			if err != nil {
 				return err
 			}
