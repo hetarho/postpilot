@@ -5,141 +5,191 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"github.com/postpilot/backend/internal/clip"
-	"github.com/postpilot/backend/internal/job"
 	"log/slog"
 	"strings"
 	"time"
+
+	"github.com/postpilot/backend/internal/clip"
+	"github.com/postpilot/backend/internal/job"
 )
 
 // Reconcile never invokes a model or reserves credits. Accepted waiting
 // handoffs survive boot; claimed paid continuations retain FailOnInterrupt.
 func (a *AnalysisPreparations) Reconcile(ctx context.Context) error {
+	return a.reconcile(ctx, false)
+}
+
+// ReconcileStartup drains bounded pages before the generic running-job sweep.
+// A single periodic page can miss an authorized parent interrupted before Park.
+// Boot invokes this before listeners/workers start; no provider is called.
+func (a *AnalysisPreparations) ReconcileStartup(ctx context.Context) error {
+	return a.reconcile(ctx, true)
+}
+
+func (a *AnalysisPreparations) reconcile(ctx context.Context, startup bool) error {
 	a.recoveryMu.Lock()
 	defer a.recoveryMu.Unlock()
-	rows, e := a.store.AnalysisPreparationsForRecovery(ctx, a.recoveryCursor)
-	if e != nil {
-		return e
-	}
-	if len(rows) == 0 && a.recoveryCursor != "" {
+	if startup {
 		a.recoveryCursor = ""
-		rows, e = a.store.AnalysisPreparationsForRecovery(ctx, "")
+		defer func() { a.recoveryCursor = "" }()
+	}
+	for {
+		rows, e := a.store.AnalysisPreparationsForRecovery(ctx, a.recoveryCursor)
 		if e != nil {
 			return e
 		}
-	}
-	for _, row := range rows {
-		var parent, ack, fail string
-		reconciled := false
-		e = WriteTx(ctx, a.writer, a.bind, func(p Ports) error {
-			s, e := p.Analysis.GetAnalysisPreparation(ctx, row.UserID, row.ID)
+		if !startup && len(rows) == 0 && a.recoveryCursor != "" {
+			a.recoveryCursor = ""
+			rows, e = a.store.AnalysisPreparationsForRecovery(ctx, "")
 			if e != nil {
 				return e
 			}
-			now := a.now().UTC()
-			parent = s.ParentJobID
-			closed, cancelled, terminal := !clip.AnalysisPreparationLive(s.State), s.State == "cancelled", false
-			if parent != "" {
-				j, e := p.Jobs.GetByID(ctx, parent)
-				if e != nil && !errors.Is(e, job.ErrNotFound) {
-					return e
-				}
-				terminal = errors.Is(e, job.ErrNotFound) || job.Terminal(j.Status)
-				cancelled = cancelled || j.CancelRequestedAt != nil
-				closed = closed || terminal || cancelled
-			}
-			if !s.ExpiresAt.After(now) || s.State == "verifying" && !s.DeadlineAt.After(now) {
-				closed = true
-				if !cancelled && !terminal {
-					if e = p.Analysis.SetAnalysisPreparationState(ctx, s.ID, "expired", "deadline_exceeded"); e != nil {
-						return e
-					}
-					fail = "CLIP_MEDIA_UNAVAILABLE"
-				}
-			}
-			if !closed {
-				e = p.Analysis.AuthorizeAnalysisPreparation(ctx, s, now)
+		}
+		for _, row := range rows {
+			var parent, ack, fail string
+			reconciled := false
+			e = WriteTx(ctx, a.writer, a.bind, func(p Ports) error {
+				s, e := p.Analysis.GetAnalysisPreparation(ctx, row.UserID, row.ID)
 				if e != nil {
-					if !errors.Is(e, clip.ErrNotFound) && !errors.Is(e, clip.ErrFinalized) && !errors.Is(e, clip.ErrPlanConflict) && !errors.Is(e, clip.ErrSourceState) && !errors.Is(e, clip.ErrAnalysisPreparationState) {
+					return e
+				}
+				now := a.now().UTC()
+				parent = s.ParentJobID
+				closed, cancelled, terminal := !clip.AnalysisPreparationLive(s.State), s.State == "cancelled", false
+				if parent != "" {
+					j, e := p.Jobs.GetByID(ctx, parent)
+					if e != nil && !errors.Is(e, job.ErrNotFound) {
 						return e
 					}
+					terminal = errors.Is(e, job.ErrNotFound) || job.Terminal(j.Status)
+					cancelled = cancelled || j.CancelRequestedAt != nil
+					closed = closed || terminal || cancelled
+				}
+				if !s.ExpiresAt.After(now) || s.State == "verifying" && !s.DeadlineAt.After(now) {
 					closed = true
-					if e = p.Analysis.SetAnalysisPreparationState(ctx, s.ID, "failed", "invalid_input"); e != nil {
-						return e
+					if !cancelled && !terminal {
+						if e = p.Analysis.SetAnalysisPreparationState(ctx, s.ID, "expired", "deadline_exceeded"); e != nil {
+							return e
+						}
+						fail = "CLIP_MEDIA_UNAVAILABLE"
 					}
-					fail = "CLIP_PROCESSING_FAILED"
 				}
-			}
-			stopped, e := p.Analysis.AnalysisLeaseStopped(ctx, s, now)
-			if e != nil {
-				return e
-			}
-			if !closed && s.State == "verifying" && (s.Attempts == 0 && !s.QueueDeadlineAt.After(now) || stopped && s.Attempts >= a.limits.Stages.MaxAttempts) {
-				closed = true
-				fail = "CLIP_MEDIA_UNAVAILABLE"
-				if e = p.Analysis.SetAnalysisPreparationState(ctx, s.ID, "failed", "verification_expired"); e != nil {
+				if !closed {
+					e = p.Analysis.AuthorizeAnalysisPreparation(ctx, s, now)
+					if e != nil {
+						if !errors.Is(e, clip.ErrNotFound) && !errors.Is(e, clip.ErrFinalized) && !errors.Is(e, clip.ErrPlanConflict) && !errors.Is(e, clip.ErrSourceState) && !errors.Is(e, clip.ErrAnalysisPreparationState) {
+							return e
+						}
+						closed = true
+						if e = p.Analysis.SetAnalysisPreparationState(ctx, s.ID, "failed", "invalid_input"); e != nil {
+							return e
+						}
+						fail = "CLIP_PROCESSING_FAILED"
+					}
+				}
+				stopped, e := p.Analysis.AnalysisLeaseStopped(ctx, s, now)
+				if e != nil {
 					return e
 				}
-			}
-			if closed {
-				if cancelled {
-					if e = p.Analysis.SetAnalysisPreparationState(ctx, s.ID, "cancelled", ""); e != nil {
+				if !closed && s.State == "verifying" && (s.Attempts == 0 && !s.QueueDeadlineAt.After(now) || stopped && s.Attempts >= a.limits.Stages.MaxAttempts) {
+					closed = true
+					fail = "CLIP_MEDIA_UNAVAILABLE"
+					if e = p.Analysis.SetAnalysisPreparationState(ctx, s.ID, "failed", "verification_expired"); e != nil {
 						return e
 					}
 				}
-				if !stopped {
-					return nil
-				}
-				if s.CurrentAttemptID != "" {
-					if e = p.Analysis.StopAnalysisAttempt(ctx, s.CurrentAttemptID, "abandoned", now); e != nil {
-						return e
-					}
-				}
-				if e = p.Analysis.RetireAnalysisPreparation(ctx, s.ID, now); e != nil {
-					return e
-				}
-				reconciled = terminal || parent == ""
-				if parent != "" && !terminal {
+				if closed {
 					if cancelled {
-						ack = AnalysisPreparationWaitKey(s.ID)
-					} else {
-						if fail == "" {
-							fail = "CLIP_PROCESSING_FAILED"
+						if e = p.Analysis.SetAnalysisPreparationState(ctx, s.ID, "cancelled", ""); e != nil {
+							return e
 						}
 					}
+					if !stopped {
+						return nil
+					}
+					if s.CurrentAttemptID != "" {
+						if e = p.Analysis.StopAnalysisAttempt(ctx, s.CurrentAttemptID, "abandoned", now); e != nil {
+							return e
+						}
+					}
+					if e = p.Analysis.RetireAnalysisPreparation(ctx, s.ID, now); e != nil {
+						return e
+					}
+					reconciled = terminal || parent == ""
+					if parent != "" && !terminal {
+						if cancelled {
+							ack = AnalysisPreparationWaitKey(s.ID)
+						} else {
+							if fail == "" {
+								fail = "CLIP_PROCESSING_FAILED"
+							}
+						}
+					}
+					return nil
 				}
-				return nil
-			}
-			if s.State == "accepted" && parent != "" {
-				_, e = p.Waits.Wake(ctx, parent, AnalysisPreparationWaitKey(s.ID), now)
-			}
-			return e
-		})
-		if e != nil {
-			return e
-		}
-		if ack != "" {
-			changed, ackErr := a.jobs.AcknowledgeWaitCancellation(ctx, parent, ack)
-			if ackErr != nil {
-				return ackErr
-			}
-			reconciled = changed
-		} else if fail != "" && parent != "" {
-			changed, failErr := a.jobs.FailWait(ctx, parent, AnalysisPreparationWaitKey(row.ID), job.Failure{Reason: fail})
-			if failErr != nil {
-				return failErr
-			}
-			reconciled = changed
-		}
-		if reconciled {
-			if e = WriteTx(ctx, a.writer, a.bind, func(p Ports) error { return p.Analysis.MarkAnalysisPreparationReconciled(ctx, row.ID, a.now()) }); e != nil {
+				return a.restorePreparationWait(ctx, p, s, now)
+			})
+			if e != nil {
 				return e
 			}
+			if ack != "" {
+				changed, ackErr := a.jobs.AcknowledgeWaitCancellation(ctx, parent, ack)
+				if ackErr != nil {
+					return ackErr
+				}
+				reconciled = changed
+			} else if fail != "" && parent != "" {
+				changed, failErr := a.jobs.FailWait(ctx, parent, AnalysisPreparationWaitKey(row.ID), job.Failure{Reason: fail})
+				if failErr != nil {
+					return failErr
+				}
+				reconciled = changed
+			}
+			if reconciled {
+				if e = WriteTx(ctx, a.writer, a.bind, func(p Ports) error { return p.Analysis.MarkAnalysisPreparationReconciled(ctx, row.ID, a.now()) }); e != nil {
+					return e
+				}
+			}
+			a.recoveryCursor = row.ID
 		}
-		a.recoveryCursor = row.ID
+		if !startup || len(rows) == 0 {
+			return nil
+		}
 	}
-	return nil
 }
+
+// Only unconsumed, authorized page-owned work can acquire a missing wait.
+// A claimed continuation may already have started paid work: never reset it.
+func (a *AnalysisPreparations) restorePreparationWait(ctx context.Context, p Ports, s clip.AnalysisPreparation, now time.Time) error {
+	if s.ParentJobID == "" || s.State != "preparing" && s.State != "verifying" && s.State != "accepted" {
+		return nil
+	}
+	if e := a.parent(ctx, p, s, true); e != nil {
+		return e
+	}
+	parent, e := p.Jobs.GetByID(ctx, s.ParentJobID)
+	if e != nil || parent.Status != job.StatusRunning {
+		return e
+	}
+	key := AnalysisPreparationWaitKey(s.ID)
+	wait, e := p.Waits.Continuation(ctx, parent.ID)
+	if errors.Is(e, job.ErrInvalidWait) {
+		if e = p.Waits.Park(ctx, parent.ID, key, job.FailOnInterrupt, now); e != nil {
+			return e
+		}
+	} else if e != nil {
+		return e
+	} else if wait.WaitKey != key || wait.Policy != job.FailOnInterrupt {
+		return job.ErrInvalidWait
+	} else if wait.State == job.ContinuationClaimed {
+		return nil
+	}
+	if s.State == "accepted" {
+		_, e = p.Waits.Wake(ctx, parent.ID, key, now)
+	}
+	return e
+}
+
 func (a *AnalysisPreparations) Cleanup(ctx context.Context) error {
 	rows, e := a.store.DueAnalysisCopyCleanup(ctx, a.now().Add(-a.limits.OrphanGrace))
 	if e != nil {

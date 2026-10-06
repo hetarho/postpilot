@@ -249,7 +249,7 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 	if err := c.spokenGeneration.Recover(ctx); err != nil {
 		return nil, fmt.Errorf("spoken operation recovery: %w", err)
 	}
-	if err := c.clipAnalysis.Reconcile(ctx); err != nil {
+	if err := c.clipAnalysis.ReconcileStartup(ctx); err != nil {
 		return nil, fmt.Errorf("browser analysis recovery: %w", err)
 	}
 	// External handoffs are reconciled before interruption/hold/source cleanup.
