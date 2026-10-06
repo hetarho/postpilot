@@ -6,6 +6,8 @@
     "pixi": "8.22.0",
     "quality": 4,
     "sources": {
+      "frontend/src/entities/clip-preview/config/composition-placement.ts": "52201c37f3f77c0a1d668e9230073d30c1b7ac68842d31ca3941a9dff05aed35",
+      "frontend/src/entities/clip-preview/model/composition-placement.ts": "becaf3203a11f993c5ec3df20dd6020ec2a000121699c51583ac81d089065788",
       "frontend/src/entities/clip-preview/model/ink-caption-draw.ts": "138f4b37659dfbca8bd16321f8dcbb9fd2a67791536ff66a563e3ee72178794f",
       "frontend/src/entities/clip-preview/model/ink-caption-effects.ts": "a2633b1e51c23f8e9882b527a33ccec9c188acaeb2683ea948adcba7ba5a310b",
       "frontend/src/entities/clip-preview/model/ink-caption-ember-pixi.ts": "22109b4f60d5d74654ae6899d21b70b872e43170c669949f8164470aef010b0b",
@@ -13,7 +15,7 @@
       "frontend/src/entities/clip-preview/model/ink-caption-filter-pixi.ts": "0b13ee759196c59ea7c084e7f4c1bbdea8b27e32196f2cc4124250f4fb045f32",
       "frontend/src/entities/clip-preview/model/ink-caption-pixi.ts": "099765cae9854564ec694adc740e8d7f2d63896086f6bfae4f187269b8559c89",
       "frontend/src/entities/clip-preview/model/ink-caption-scene.ts": "00b6f5684f084fd1affeef52e5500dff404dfc7a7ef73663c0949c1829e0f10c",
-      "frontend/src/entities/clip-preview/model/local-components.ts": "b7182116a7f63cac835ac806e63c3d17e0bccb9b741ab1b46b9ec10c3a91bc33",
+      "frontend/src/entities/clip-preview/model/local-components.ts": "61d18c7c52314aa77d33676c447c9f9ae6a5cf7171222d9eb8bbb6d521c3edb1",
       "pnpm-lock.yaml": "d07c4a1bd3aeab4df41155c2d63d85e6a487959534ed7b27b4710315d7a07319"
     },
     "version": "caption-filters-v1-ember-v2-retained"

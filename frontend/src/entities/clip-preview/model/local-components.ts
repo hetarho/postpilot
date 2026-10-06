@@ -528,6 +528,7 @@ export class BrowserLocalComponents {
     frame: BrowserEvaluatedFrame,
     signal?: AbortSignal,
     paintFor?: (instanceId: string) => InkPaint,
+    options?: { representative?: boolean; position?: { instanceId: string; x: number; y: number } },
   ): Promise<BrowserLocalComponent[]> {
     await this.resolveLayout(signal)
     const resources: BrowserLocalComponent[] = []
@@ -552,7 +553,10 @@ export class BrowserLocalComponents {
           throw new ClipInkError('CLIP_INK_SUPERSEDED')
         if (value.scene) {
           const scene = value.scene,
-            progress = state.component.element.pace === 'rapid' ? 0.5 : state.progress
+            progress =
+              options?.representative || state.component.element.pace === 'rapid'
+                ? 0.5
+                : state.progress
           const nodes: BrowserCaptionPreparedScene['nodes'][number][] = []
           let closed = false
           try {
@@ -591,7 +595,12 @@ export class BrowserLocalComponents {
             draw: (context) => {
               if (closed || !this.components.has(state.component))
                 throw new ClipInkError('CLIP_INK_SUPERSEDED')
+              context.save()
+              const at = options?.position
+              if (at?.instanceId === state.component.instanceId && value.caption)
+                context.translate(at.x - value.caption.region.x, at.y - value.caption.region.y)
               this.sceneCanvas.draw(context, prepared)
+              context.restore()
             },
             close: () => {
               if (!closed) {
@@ -609,10 +618,12 @@ export class BrowserLocalComponents {
           lease.close()
           throw new ClipInkError('CLIP_INK_SUPERSEDED')
         }
-        const motion = previewMotion(
-          { startMs: state.component.startMs, endMs: state.component.endMs, ...value.motion },
-          frame.timeMs,
-        )
+        const motion = options?.representative
+          ? { opacity: 1, dy: 0 }
+          : previewMotion(
+              { startMs: state.component.startMs, endMs: state.component.endMs, ...value.motion },
+              frame.timeMs,
+            )
         let closed = false
         resources.push({
           ...lease,
@@ -625,6 +636,9 @@ export class BrowserLocalComponents {
             if (closed || !this.components.has(state.component))
               throw new ClipInkError('CLIP_INK_SUPERSEDED')
             context.save()
+            const at = options?.position
+            if (at?.instanceId === state.component.instanceId && value.caption)
+              context.translate(at.x - value.caption.region.x, at.y - value.caption.region.y)
             context.globalAlpha *= motion.opacity
             context.drawImage(
               lease.bitmap,

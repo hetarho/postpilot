@@ -17,7 +17,7 @@ export interface CompositeFramePorts {
     'globalAlpha' | 'fillStyle' | 'fillRect' | 'drawImage'
   >
   source?: (fingerprint: string, timeMs: number) => Promise<ImageBitmap>
-  footage?: BrowserFootageResources
+  footage?: Pick<BrowserFootageResources, 'prepare'>
   nativeFadeBlack?: (rest: number) => void
   local?: (frame: ReturnType<typeof evaluateBrowserFrame>) => Promise<void>
   asset: (asset: PreparedAsset) => Promise<ImageBitmap>
@@ -178,6 +178,8 @@ export async function compositeBrowserFrame(
 }
 
 export async function compositeBrowserVideo(input: BrowserVideoInput, ports: CompositePorts) {
+  if (input.snapshot && input.snapshot.purpose !== 'export')
+    throw new Error('CLIP_SNAPSHOT_EXPORT_PURPOSE_REQUIRED')
   if (
     input.snapshot &&
     (input.snapshot.ratio !== input.ratio ||

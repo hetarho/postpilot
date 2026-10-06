@@ -2,9 +2,15 @@
   "manifestVersion": 1,
   "inkVersion": "clip-ink-v2-resvg-2.6.2",
   "transformInkScale": 2,
-  "transformInkStyles": ["word-pop", "pop", "stack", "sticker", "bubble"],
+  "transformInkStyles": [
+    "word-pop",
+    "pop",
+    "stack",
+    "sticker",
+    "bubble"
+  ],
   "fontsManifestSHA256": "51ad5c795ede98d22e4dfea750946889af3717c04dee3642b87e3419c835970c",
-  "catalogSHA256": "fc2fef39bdb245cc1e816a0f64530fc1916c3c03870cbd042792dd1b0ba2dbc7",
+  "catalogSHA256": "a20712c2a7985c78fde3f316be1d7b0918ccdd1cc91ae19b4b4bc8ee197e6883",
   "wasmSHA256": "22bf6e9f9a100d972da0411a69c5ba504367fc1fa87b3b64e3f35e53926d2d70",
   "fontAssets": [
     {
@@ -40,5 +46,5 @@
       "sha256": "60c0077fce069ba90ae97c0a3679f6eb3712e0ca637bdd0c15b72d335ec46db7"
     }
   ],
-  "assetVersion": "clip-design-assets-v1-ink-0653d8957a58f313de8d74c813b2a587dc64e9b5cc155754bf169304aa37152f"
+  "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
 }
