@@ -17,6 +17,7 @@ const option = (name, fallback) =>
   args.includes(name) ? args[args.indexOf(name) + 1] : fallback;
 const output = resolve(option("--output", "tmp/browser-background-check"));
 const fixtures = resolve(output, "fixtures");
+const nativeFixtures = option("--native-fixtures", "");
 const ffmpeg = option("--ffmpeg", "ffmpeg");
 const ffprobe = option("--ffprobe", "ffprobe");
 mkdirSync(fixtures, { recursive: true });
@@ -133,6 +134,19 @@ const server = await createServer({
           if (request.url === "/file/whole") {
             response.writeHead(200, { "Content-Type": "video/mp4" });
             response.end(readFileSync(files.get("gray204")));
+            return;
+          }
+          if (nativeFixtures && request.url?.startsWith("/native/")) {
+            const name = request.url.slice("/native/".length);
+            if (
+              !/^(word-pop|outline)-(bright|dark)-(1|30|58)\.png$/.test(name)
+            ) {
+              response.statusCode = 404;
+              response.end();
+              return;
+            }
+            response.setHeader("Content-Type", "image/png");
+            response.end(readFileSync(resolve(nativeFixtures, name)));
             return;
           }
           const path = files.get(request.url?.slice("/file/".length));
@@ -319,9 +333,26 @@ try {
         },
       ];
       const scene = await page.evaluate(
-        ({ inputs, style }) =>
-          window.measureBackgroundFixture(inputs, "vertical", 0, false, style),
-        { inputs, style },
+        ({ inputs, style, references }) =>
+          window.measureBackgroundFixture(
+            inputs,
+            "vertical",
+            0,
+            false,
+            style,
+            references,
+          ),
+        {
+          inputs,
+          style,
+          references: nativeFixtures
+            ? [1, 30, 58].map((frame) => ({
+                frame,
+                url:
+                  origin + "/native/" + style + "-" + id + "-" + frame + ".png",
+              }))
+            : undefined,
+        },
       );
       if (
         scene.error ||
@@ -345,6 +376,19 @@ try {
         scene.scenes.every((s) => s.cyan === 0)
       )
         throw new Error("Dark ground lost scene accent");
+      if (
+        nativeFixtures &&
+        scene.scenes.some(
+          (s) =>
+            !s.comparison ||
+            s.comparison.mean > 2 ||
+            s.comparison.captionMean > 15,
+        )
+      )
+        throw new Error(
+          "Native scene/background pixel mismatch: " +
+            JSON.stringify(scene.scenes),
+        );
       sceneCases.push({ style, id, ...scene });
     }
   const inputs = [

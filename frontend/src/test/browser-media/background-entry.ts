@@ -21,6 +21,7 @@ declare global {
       transitionMs?: number,
       cancel?: boolean,
       style?: string,
+      references?: { frame: number; url: string }[],
     ) => Promise<unknown>
   }
 }
@@ -30,6 +31,7 @@ window.measureBackgroundFixture = async (
   transitionMs = 0,
   cancel = false,
   style,
+  references,
 ) => {
   const controller = new AbortController()
   const durationMs = inputs.length * (style ? 2000 : 1000) - transitionMs
@@ -155,6 +157,7 @@ window.measureBackgroundFixture = async (
             let ink = 0,
               cyan = 0,
               changed = 0
+            let comparison: unknown
             for (let at = 0; at < data.length; at += 4) {
               if (
                 data[at] !== brightness[0] ||
@@ -164,6 +167,52 @@ window.measureBackgroundFixture = async (
                 changed++
               if (data[at]! > 240 && data[at + 1]! > 240 && data[at + 2]! > 240) ink++
               if (data[at + 1]! > data[at]! + 40 && data[at + 2]! > data[at]! + 40) cyan++
+            }
+            const reference = references?.find((r) => r.frame === index)
+            if (reference) {
+              const response = await fetch(reference.url)
+              if (!response.ok) throw new Error('Native reference missing')
+              const bitmap = await createImageBitmap(await response.blob())
+              const expected = new OffscreenCanvas(canvas.width, canvas.height)
+              try {
+                const ctx = expected.getContext('2d', { willReadFrequently: true })!
+                ctx.drawImage(bitmap, 0, 0)
+                const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height).data
+                const box = evidence.measurements[0]!.geometry.caption!.region
+                let total = 0,
+                  captionTotal = 0,
+                  captionPixels = 0,
+                  max = 0
+                for (let at = 0; at < data.length; at += 4) {
+                  const x = (at / 4) % canvas.width,
+                    y = Math.floor(at / 4 / canvas.width)
+                  let delta = 0
+                  for (let c = 0; c < 3; c++) {
+                    const d = Math.abs(data[at + c]! - pixels[at + c]!)
+                    delta += d
+                    max = Math.max(max, d)
+                  }
+                  total += delta
+                  if (
+                    x >= box.x - 40 &&
+                    x < box.x + box.width + 40 &&
+                    y >= box.y - 40 &&
+                    y < box.y + box.height + 40
+                  ) {
+                    captionTotal += delta
+                    captionPixels++
+                  }
+                }
+                comparison = {
+                  mean: total / (canvas.width * canvas.height * 3),
+                  captionMean: captionTotal / (captionPixels * 3),
+                  max,
+                }
+              } finally {
+                bitmap.close()
+                expected.width = 0
+                expected.height = 0
+              }
             }
             scenes.push({
               frame: index,
@@ -181,6 +230,7 @@ window.measureBackgroundFixture = async (
               changed,
               ink,
               cyan,
+              comparison,
             })
           } finally {
             resources.forEach((r) => r.close())
