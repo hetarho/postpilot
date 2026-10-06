@@ -87,6 +87,8 @@ export {
 } from './api/credits'
 
 export {
+  clipAnalysisPreparationCalls,
+  useClipAnalysisPreparationCalls,
   beginClipAnalysisPreparation,
   reserveClipAnalysisCopy,
   completeClipAnalysisPreparation,

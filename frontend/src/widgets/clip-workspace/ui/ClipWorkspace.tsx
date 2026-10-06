@@ -1,3 +1,4 @@
+import { ClipBrowserPreparationStatus } from '@/features/prepare-clip-browser'
 import { useState } from 'react'
 import { isTerminal } from '@/entities/generation-job'
 import { useTranslation } from 'react-i18next'
@@ -658,16 +659,26 @@ export function ClipWorkspace({ ownerId, project }: { ownerId: string; project: 
         </Typography>
         {run.focused && (
           <>
-            <ProgressBar label={run.title} done={run.progress?.done} total={run.progress?.total} />
+            <ClipBrowserPreparationStatus {...generation.analysis} />
+            {!generation.analysis.busy && (
+              <ProgressBar
+                label={run.title}
+                done={run.progress?.done}
+                total={run.progress?.total}
+              />
+            )}
             <ClipSourcePicker upload={upload} processing readOnly />
-            <CancelClipAction
-              action={revision.cancellation}
-              job={job}
-              accounting={generation.accounting}
-            />
+            {!generation.analysis.busy && (
+              <CancelClipAction
+                action={revision.cancellation}
+                job={job}
+                accounting={generation.accounting}
+              />
+            )}
           </>
         )}
       </section>
+      {!run.focused && <ClipBrowserPreparationStatus {...generation.analysis} />}
       {/* Both of these are about the ATTEMPT rather than about a step, and both are controls with
           something to press, so they stay outside the panel and outside the status line (which
           says what is true, not what to do — CLIP-38). */}
@@ -691,7 +702,7 @@ export function ClipWorkspace({ ownerId, project }: { ownerId: string; project: 
       {!run.focused && !project.finalized && (
         <>
           <ClipCreditSettlement job={job} accounting={generation.accounting} />
-          {job?.kind === 'speech_clip' && !isTerminal(job) && (
+          {job?.kind === 'speech_clip' && !isTerminal(job) && !generation.analysis.busy && (
             <CancelClipAction
               action={revision.cancellation}
               job={job}

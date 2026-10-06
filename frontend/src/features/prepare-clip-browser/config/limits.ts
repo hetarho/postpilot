@@ -1,0 +1,24 @@
+/** Page-owned allocations and finite stage clocks; physical device memory is
+ * measured independently during release qualification. */
+export const ANALYSIS_PREPARATION_LIMITS = {
+  sources: 20,
+  durationMs: 30 * 60_000,
+  copies: 49,
+  intervalMs: 60_000,
+  longEdge: 720,
+  fps: 15,
+  maxCopyBytes: 8 * 1024 * 1024,
+  videoBitrates: [900_000, 650_000],
+  audioBitrate: 64_000,
+  audioRate: 48_000,
+  maxFileBytes: 2 * 1024 * 1024 * 1024,
+  maxReadBytes: 4 * 1024 * 1024,
+  maxReadTotalBytes: 4 * 1024 * 1024 * 1024,
+  maxCacheBytes: 1024 * 1024,
+  timeoutMs: 30_000,
+  operationTimeoutMs: 2 * 60 * 60_000,
+  cleanupTimeoutMs: 1000,
+  decoderReserveFrames: 48,
+  decoderReserveBytes: 1024 * 1024 * 1024,
+  maxDimension: 8192,
+} as const

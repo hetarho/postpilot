@@ -1,3 +1,5 @@
+import { useMemo } from 'react'
+import { useTransport } from '@connectrpc/connect-query'
 import { createClient, type Transport } from '@connectrpc/connect'
 import { ClipSourceService, type ClipAnalysisPreparationResponse } from '@/shared/api'
 import {
@@ -179,4 +181,23 @@ export async function cancelClipAnalysisPreparation(
       { signal },
     ),
   )
+}
+
+export function clipAnalysisPreparationCalls(transport: Transport) {
+  return {
+    begin: (input: ClipAnalysisPreparationInput, signal: AbortSignal) =>
+      beginClipAnalysisPreparation(transport, input, signal),
+    reserve: (
+      input: { preparationId: string; slot: string; bytes: number; sha256: string },
+      signal: AbortSignal,
+    ) => reserveClipAnalysisCopy(transport, input, signal),
+    complete: (id: string, signal: AbortSignal) =>
+      completeClipAnalysisPreparation(transport, id, signal),
+    cancel: (id: string) => cancelClipAnalysisPreparation(transport, id),
+  }
+}
+
+export function useClipAnalysisPreparationCalls() {
+  const transport = useTransport()
+  return useMemo(() => clipAnalysisPreparationCalls(transport), [transport])
 }

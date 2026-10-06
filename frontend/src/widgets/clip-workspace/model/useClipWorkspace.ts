@@ -24,6 +24,7 @@ import {
 } from '@/features/edit-clip-regions'
 import { useFinalizeClip } from '@/features/finalize-clip'
 import { useGenerateClip } from '@/features/generate-clip'
+import { usePrepareClipBrowser } from '@/features/prepare-clip-browser'
 import { useBrowserRender } from '@/features/render-clip-browser'
 import { useClipSourceBinding } from '@/features/bind-clip-source-item'
 import { useClipSourceUpload } from '@/features/upload-clip-sources'
@@ -71,7 +72,28 @@ export function useClipWorkspace(ownerId: string, project: ClipProject) {
     })),
   )
   useSoundBatchHandoff(correction.soundBatch, upload.acceptSoundBatch)
-  const generation = useGenerateClip(ownerId, project, upload.attempt?.jobId)
+  const analysis = usePrepareClipBrowser({
+    ownerId,
+    projectId: project.id,
+    selectionKey: JSON.stringify([
+      project.editPlanRevision,
+      upload.readyBatch?.id,
+      upload.entries.map((entry) => [entry.sourceId, entry.metadata.fingerprint]),
+    ]),
+    job: project.latestJob,
+    resolveAccess: async (sourceId, fingerprint, signal) => {
+      signal.throwIfAborted()
+      const entry = upload.entries.find(
+        (entry) => entry.sourceId === sourceId && entry.metadata.fingerprint === fingerprint,
+      )
+      if (!entry) throw new Error('CLIP_SOURCE_UNAVAILABLE')
+      if (entry.file) return { kind: 'blob', blob: entry.file }
+      const url = await upload.ensurePlayback(fingerprint)
+      signal.throwIfAborted()
+      return { kind: 'url', url }
+    },
+  })
+  const generation = useGenerateClip(ownerId, project, upload.attempt?.jobId, analysis.preparation)
   const ownership = {
     begin: upload.beginAttempt,
     owned: upload.markOwned,
@@ -150,8 +172,8 @@ export function useClipWorkspace(ownerId: string, project: ClipProject) {
       job?.kind === 'revise_storyline_clip' ||
       job?.kind === 'speech_clip') &&
     !isTerminal(job)
-  const focused = !project.finalized && generation.busy && !revising
-  const pending = generation.busy || uploading || finalization.busy || browser.busy
+  const focused = !project.finalized && (generation.busy || analysis.busy) && !revising
+  const pending = generation.busy || analysis.busy || uploading || finalization.busy || browser.busy
   useDiscardQueueWhenFinalized(project.id, project.finalized, discardClipDraftQueue)
   useDiscardQueueWhenFinalized(project.id, project.finalized, discardClipRegionQueue)
   useDiscardQueueWhenFinalized(project.id, project.finalized, discardClipStorylineQueue)
@@ -169,7 +191,9 @@ export function useClipWorkspace(ownerId: string, project: ClipProject) {
     title: cancellation.cancelling
       ? t('cancellation.cancelling')
       : job
-        ? progressLabel(job)
+        ? analysis.jobId === job.id && job.stage === 'prepare'
+          ? t('analysisPreparation.verifying')
+          : progressLabel(job)
         : t('generation.running'),
   }
   const sources = {
@@ -296,7 +320,13 @@ export function useClipWorkspace(ownerId: string, project: ClipProject) {
     regions,
     storyline,
     correction,
-    generation: { ...generation, ownership },
+    generation: {
+      ...generation,
+      busy: generation.busy || analysis.busy,
+      starting: generation.starting || analysis.busy,
+      ownership,
+      analysis,
+    },
     sources,
     render,
     revision,
