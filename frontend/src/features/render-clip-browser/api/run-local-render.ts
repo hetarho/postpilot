@@ -38,6 +38,17 @@ export async function runLocalBrowserRender(
   signal: AbortSignal,
   progress: (value: BrowserRenderProgress) => void,
 ) {
+  if (!('purpose' in input.snapshot) || input.snapshot.purpose !== 'export')
+    throw new Error('CLIP_SNAPSHOT_EXPORT_PURPOSE_REQUIRED')
+  if (
+    input.snapshot.ownerId !== input.ownerId ||
+    input.snapshot.projectId !== input.projectId ||
+    input.snapshot.planRevision !== input.revision ||
+    input.snapshot.ratio !== input.ratio
+  )
+    throw new Error('CLIP_SNAPSHOT_SUPERSEDED')
+  if (!operations.bindSnapshot || !operations.storeLocal)
+    throw new Error('CLIP_LOCAL_COMPOSITION_UNAVAILABLE')
   const controller = new AbortController()
   const abort = () => controller.abort(signal.reason)
   signal.addEventListener('abort', abort, { once: true })

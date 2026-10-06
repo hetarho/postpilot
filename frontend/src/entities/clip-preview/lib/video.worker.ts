@@ -32,9 +32,11 @@ let packetWindow: MediaPacketWindow | undefined
 
 async function render(input: BrowserVideoInput, controller: AbortController) {
   if (input.snapshot && (!('purpose' in input.snapshot) || input.snapshot.purpose !== 'export'))
-    throw new Error('CLIP_SNAPSHOT_PURPOSE_UNSUPPORTED')
+    throw new Error('CLIP_SNAPSHOT_EXPORT_PURPOSE_REQUIRED')
   if (input.snapshot)
     input = { ...input, snapshot: await readBrowserCompositionSnapshot(input.snapshot) }
+  if (input.snapshot && (!('purpose' in input.snapshot) || input.snapshot.purpose !== 'export'))
+    throw new Error('CLIP_SNAPSHOT_EXPORT_PURPOSE_REQUIRED')
   const measurements = input.collectMeasurements
     ? new MediaPhaseRecorder(CLIP_VIDEO_MEASUREMENT_PHASES)
     : undefined
