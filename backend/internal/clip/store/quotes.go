@@ -30,7 +30,17 @@ func (s *Store) GetQuote(ctx context.Context, user, id string) (clip.GenerationQ
 	if err != nil {
 		return clip.GenerationQuote{}, dbError(err)
 	}
-	return quoteRow(r)
+	out, err := quoteRow(r)
+	if err != nil {
+		return out, err
+	}
+	prep, e := s.read.AnalysisPreparationForQuote(ctx, sqlc.AnalysisPreparationForQuoteParams{QuoteID: id, UserID: user})
+	if e == nil {
+		out.AnalysisPreparationID = prep.ID
+	} else if !errors.Is(dbError(e), clip.ErrNotFound) {
+		return out, e
+	}
+	return out, nil
 }
 
 func validateQuoteInputs(ctx context.Context, q *sqlc.Queries, quote clip.GenerationQuote, now time.Time) error {
@@ -67,7 +77,21 @@ func validateQuoteInputs(ctx context.Context, q *sqlc.Queries, quote clip.Genera
 	if !clip.ValidQuoteBatch(b, quote.UserID, quote.ProjectID, now) {
 		return clip.ErrSourceState
 	}
-	if quote.ExpiresAt.After(b.ExpiresAt) || quote.InputDigest != clip.QuoteInputDigest(p, t, b, quote.Pricing) {
+	digest := clip.QuoteInputDigest(p, t, b, quote.Pricing)
+	prepRow, e := q.AnalysisPreparationForQuote(ctx, sqlc.AnalysisPreparationForQuoteParams{QuoteID: quote.ID, UserID: quote.UserID})
+	if e == nil {
+		prep, parseErr := analysisPreparationRow(ctx, q, prepRow)
+		if parseErr != nil {
+			return parseErr
+		}
+		if prep.ExpectedRevision != p.EditPlanRevision || prep.State != "preparing" || !prep.ExpiresAt.After(now) {
+			return clip.ErrQuoteChanged
+		}
+		digest = clip.AnalysisBoundQuoteDigest(digest, prep.QuoteManifestDigest)
+	} else if !errors.Is(dbError(e), clip.ErrNotFound) {
+		return e
+	}
+	if quote.ExpiresAt.After(b.ExpiresAt) || quote.InputDigest != digest {
 		return clip.ErrQuoteChanged
 	}
 	raw, err := q.GetClipRecovery(ctx, sqlc.GetClipRecoveryParams{UserID: quote.UserID, ProjectID: quote.ProjectID})
@@ -128,11 +152,11 @@ func (s *Store) saveQuote(ctx context.Context, quote clip.GenerationQuote, now t
 // and neither the batch nor the template decides what this job rewrites.
 func (s *Store) LinkRevisionJob(ctx context.Context, quote clip.GenerationQuote, job string, now time.Time) error {
 	_, err := transact(ctx, s, func(q *sqlc.Queries) (struct{}, error) {
-		r, err := q.GetClipQuote(ctx, sqlc.GetClipQuoteParams{UserID: quote.UserID, ID: quote.ID})
+		_, err := q.GetClipQuote(ctx, sqlc.GetClipQuoteParams{UserID: quote.UserID, ID: quote.ID})
 		if err != nil {
 			return struct{}{}, err
 		}
-		stored, err := quoteRow(r)
+		stored, err := (&Store{read: q, write: q}).GetQuote(ctx, quote.UserID, quote.ID)
 		if err != nil {
 			return struct{}{}, err
 		}
@@ -162,11 +186,11 @@ func (s *Store) LinkRevisionJob(ctx context.Context, quote clip.GenerationQuote,
 
 func (s *Store) LinkApprovedSourceJob(ctx context.Context, quote clip.GenerationQuote, job string, now time.Time) error {
 	_, err := transact(ctx, s, func(q *sqlc.Queries) (struct{}, error) {
-		r, err := q.GetClipQuote(ctx, sqlc.GetClipQuoteParams{UserID: quote.UserID, ID: quote.ID})
+		_, err := q.GetClipQuote(ctx, sqlc.GetClipQuoteParams{UserID: quote.UserID, ID: quote.ID})
 		if err != nil {
 			return struct{}{}, err
 		}
-		stored, err := quoteRow(r)
+		stored, err := (&Store{read: q, write: q}).GetQuote(ctx, quote.UserID, quote.ID)
 		if err != nil {
 			return struct{}{}, err
 		}

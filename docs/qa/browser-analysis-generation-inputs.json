@@ -1,0 +1,12 @@
+{
+  "generationSourceHead": "5ac03f89b353def6f6305364b475f4f0da31fea6",
+  "currentHead": "7db220c746e2a608e19846bc888d6b295eba7ed4",
+  "dockerExecuted": true,
+  "sourceConsistencyVerified": true,
+  "inputCount": 218,
+  "outputCount": 152,
+  "unchangedInputs": true,
+  "unchangedOutputs": true,
+  "sourceReceipt": "/private/tmp/postpilot-t602-startup-only-docker-generation-proof.json",
+  "scope": "Recorded actual Docker generation with current identical input/output hashes; no additional generator execution."
+}

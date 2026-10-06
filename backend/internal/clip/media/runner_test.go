@@ -26,6 +26,8 @@ func TestMediaRunnerHelper(t *testing.T) {
 	case "error":
 		fmt.Fprint(os.Stderr, strings.Repeat("x", 20000))
 		os.Exit(9)
+	case "damaged":
+		fmt.Fprint(os.Stderr, "decoder concealed invalid sample https://private.invalid/token")
 	case "tree":
 		child := exec.Command(os.Args[0], "-test.run=^TestMediaRunnerHelper$", "--", "--media-helper", "wait")
 		child.Stdout, child.Stderr = os.Stdout, os.Stderr
@@ -42,6 +44,22 @@ func TestMediaRunnerHelper(t *testing.T) {
 		fmt.Print(strings.Join(os.Args[marker+2:], "\n"))
 	}
 	os.Exit(0)
+}
+
+func TestStructuredDecoderRejectsConcealedDamageOnSuccessfulExit(t *testing.T) {
+	binary, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+	}
+	runner := ExecRunner{StdoutLimit: 1024, StderrLimit: 32, WaitDelay: time.Second}
+	command := Command{Binary: binary, Args: []string{"-test.run=^TestMediaRunnerHelper$", "--", "--media-helper", "damaged"}, RejectStderr: true}
+	if _, err = runner.Run(t.Context(), command); err == nil || strings.Contains(err.Error(), "private") {
+		t.Fatal("successful decoder exit concealed damage or leaked its log", err)
+	}
+	command.RejectStderr = false
+	if _, err = runner.Run(t.Context(), command); err != nil {
+		t.Fatal("native runner compatibility changed", err)
+	}
 }
 func TestExecRunnerBoundsOutputAndCancels(t *testing.T) {
 	binary, err := os.Executable()

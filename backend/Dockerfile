@@ -138,7 +138,7 @@ COPY --from=media-worker-tooling /media-worker /media-worker
 FROM media-worker-deployable AS media-worker-smoke
 COPY --from=builder /media.test /media.test
 ENV CLIP_MEDIA_SMOKE=1
-ENTRYPOINT ["/media.test", "-test.run=^Test(WorkerExecutionParity|WorkerCommandHealth|WorkerImageIsolation|ExecRunnerReapsDescendants|NarratedExportSmoke)$", "-test.v", "-test.timeout=45m"]
+ENTRYPOINT ["/media.test", "-test.run=^Test(WorkerExecutionParity|WorkerCommandHealth|WorkerImageIsolation|ExecRunnerReapsDescendants|NarratedExportSmoke|AnalysisCopyVerificationSmoke)$", "-test.v", "-test.timeout=45m"]
 
 # Disposable multi-process gate; fixture endpoints exist only in this test binary.
 FROM release-smoke AS media-release-api

@@ -7,6 +7,10 @@ import "postpilot/v1/clip.proto";
 // The footage a clip is cut from: reserving an upload, confirming it, and what a session
 // needs to play back an original it did not upload itself.
 service ClipSourceService {
+  rpc BeginClipAnalysisPreparation(BeginClipAnalysisPreparationRequest) returns (ClipAnalysisPreparationResponse) {}
+  rpc ReserveClipAnalysisCopy(ReserveClipAnalysisCopyRequest) returns (ReserveClipAnalysisCopyResponse) {}
+  rpc CompleteClipAnalysisPreparation(CompleteClipAnalysisPreparationRequest) returns (ClipAnalysisPreparationResponse) {}
+  rpc CancelClipAnalysisPreparation(CancelClipAnalysisPreparationRequest) returns (ClipAnalysisPreparationResponse) {}
   rpc CreateClipSourceBatch(CreateClipSourceBatchRequest) returns (CreateClipSourceBatchResponse) {}
   rpc ConfirmClipSource(ConfirmClipSourceRequest) returns (ConfirmClipSourceResponse) {}
   rpc DiscardClipSourceBatch(DiscardClipSourceBatchRequest) returns (DiscardClipSourceBatchResponse) {}
@@ -61,3 +65,83 @@ message ReorderClipSourcesRequest {
 }
 
 message ReorderClipSourcesResponse { ClipSourceBatch batch = 1; }
+
+// Client measurements bind coverage; they are never native original proof.
+message ClipAnalysisOriginalMeasurement {
+  string source_id = 1;
+  string fingerprint = 2;
+  int32 duration_ms = 3;
+  int32 width = 4;
+  int32 height = 5;
+  int32 frame_rate_numerator = 6;
+  int32 frame_rate_denominator = 7;
+  bool cadence_verified = 8;
+  int32 decoded_frames = 9;
+  bool has_audio = 10;
+  int32 audio_rate = 11;
+  int32 audio_channels = 12;
+}
+message BeginClipAnalysisPreparationRequest {
+  string project_id = 1;
+  string batch_id = 2;
+  int32 expected_revision = 3;
+  string quote_id = 4;
+  string profile_version = 5;
+  repeated ClipAnalysisOriginalMeasurement originals = 6;
+}
+message ClipAnalysisProfile {
+  string version = 1;
+  int32 interval_ms = 2;
+  int32 long_edge = 3;
+  int32 frames_per_second = 4;
+  int64 max_copy_bytes = 5;
+  string video_codec = 6;
+  string pixel_format = 7;
+  string audio_codec = 8;
+  int32 audio_rate = 9;
+  int32 audio_channels = 10;
+  int32 audio_bitrate = 11;
+  bool qualified = 12;
+}
+message ClipAnalysisCopySlot {
+  string slot = 1;
+  string source_id = 2;
+  string fingerprint = 3;
+  int32 ordinal = 4;
+  int32 offset_ms = 5;
+  int32 duration_ms = 6;
+  int32 width = 7;
+  int32 height = 8;
+  bool has_audio = 9;
+  string state = 10;
+  int64 bytes = 11;
+  string sha256 = 12;
+}
+message ClipAnalysisPreparationResponse {
+  string preparation_id = 1;
+  string project_id = 2;
+  string batch_id = 3;
+  int32 expected_revision = 4;
+  string state = 5;
+  string expires_at = 6;
+  ClipAnalysisProfile profile = 7;
+  repeated ClipAnalysisCopySlot copies = 8;
+  string original_measurement_provenance = 9;
+  int32 progress = 10;
+  string failure = 11;
+  string job_id = 12;
+}
+message ReserveClipAnalysisCopyRequest {
+  string preparation_id = 1;
+  string slot = 2;
+  int64 bytes = 3;
+  string sha256 = 4;
+}
+message ReserveClipAnalysisCopyResponse {
+  string slot = 1;
+  string put_url = 2;
+  map<string, string> headers = 3;
+  string expires_at = 4;
+}
+message CompleteClipAnalysisPreparationRequest { string preparation_id = 1; }
+message CancelClipAnalysisPreparationRequest { string preparation_id = 1; }

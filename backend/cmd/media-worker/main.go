@@ -69,13 +69,22 @@ func run() error {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 	mcfg := clip.DefaultMediaConfig(environment(cfg))
+	if cfg.Role == clip.AnalysisVerificationRole {
+		mcfg, err = media.AnalysisVerificationConfig(mcfg)
+		if err != nil {
+			return err
+		}
+	}
 	adapter, err := media.New(mcfg, nil)
 	if err != nil {
 		return fmt.Errorf("worker media settings: %w", err)
 	}
-	renderer, err := media.NewRenderer(adapter, clip.DefaultRenderConfig(environment(cfg)))
-	if err != nil {
-		return fmt.Errorf("worker renderer settings: %w", err)
+	var renderer *media.Rendering
+	if cfg.Role == clip.NativeWorkerRole {
+		renderer, err = media.NewRenderer(adapter, clip.DefaultRenderConfig(environment(cfg)))
+		if err != nil {
+			return fmt.Errorf("worker renderer settings: %w", err)
+		}
 	}
 	if command == "run" {
 		releaseRoot, err := worker.LockWorkRoot(cfg.WorkRoot)
@@ -87,7 +96,12 @@ func run() error {
 			return errors.New("media workspace recovery failed")
 		}
 	}
-	profile, err := renderer.RuntimeProfile(ctx, cfg.Accel)
+	var profile clip.MediaWorkerProfile
+	if cfg.Role == clip.AnalysisVerificationRole {
+		profile, err = adapter.AnalysisVerificationProfile(ctx)
+	} else {
+		profile, err = renderer.RuntimeProfile(ctx, cfg.Accel)
+	}
 	if err != nil {
 		return err
 	}
@@ -109,7 +123,7 @@ func run() error {
 	if command != "run" {
 		check, cancel := context.WithTimeout(ctx, clip.MediaUnaryTimeout)
 		defer cancel()
-		status, err := client.Status(check)
+		status, err := client.StatusForProfile(check, profile)
 		if err != nil {
 			return err
 		}
@@ -140,6 +154,10 @@ func run() error {
 		}
 	}()
 	slog.Info("media worker ready", "profile", profile.Profile, "concurrency", cfg.Concurrency)
-	loop := worker.Loop{Control: client, Executor: worker.NewExecutor(adapter, renderer, workerclient.NewTransfers(client), mcfg), Profile: profile, DrainTimeout: cfg.DrainTimeout, PollDelay: workerclient.PollDelay}
+	var execution worker.Execution = worker.NewExecutor(adapter, renderer, workerclient.NewTransfers(client), mcfg)
+	if cfg.Role == clip.AnalysisVerificationRole {
+		execution = worker.NewAnalysisVerifier(adapter, workerclient.NewTransfers(client), mcfg)
+	}
+	loop := worker.Loop{Control: client, Executor: execution, Profile: profile, DrainTimeout: cfg.DrainTimeout, PollDelay: workerclient.PollDelay}
 	return loop.Run(ctx)
 }
