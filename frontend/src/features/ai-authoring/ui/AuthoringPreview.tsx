@@ -15,6 +15,8 @@ export function AuthoringPreview({
   artifact: AuthoringArtifact
 }) {
   const { t } = useTranslation('authoring')
+  if (kind === 'writing-voice' && artifact.body.trim() === '')
+    return <Typography variant="body">{t('voiceNeedsExample')}</Typography>
   if (kind === 'post-template') {
     const parsed = parseTemplate(artifact.titleArea, artifact.body, TEMPLATE_PARSE_OPTIONS)
     return parsed.ok ? (

@@ -1,11 +1,11 @@
-import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useId, useRef, type ReactNode } from 'react'
+import { useMachine } from '@xstate/react'
 import { Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
-import { SendHorizontal, Check, Sparkles } from 'lucide-react'
+import { ArrowLeft, SendHorizontal, Sparkles } from 'lucide-react'
 import {
   authoringScopeKey,
   completedAuthoringExchanges,
-  AUTHORING_MESSAGE_MAX_CHARS,
   AUTHORING_MAX_EXCHANGES,
   type AuthoringScope,
   type AuthoringSavedRef,
@@ -14,11 +14,11 @@ import {
 import { useInitializeDefaultSelections, useStageSelection } from '@/entities/model-catalog'
 import {
   AppFailureMessage,
-  Badge,
   Button,
   Checkbox,
+  ChoiceButton,
   Dialog,
-  FieldLabel,
+  FieldMessage,
   Notice,
   Textarea,
   Typography,
@@ -26,6 +26,11 @@ import {
 } from '@/shared/ui'
 import { readableAuthoringProse } from '../lib/readable-prose'
 import { useAuthoring } from '../model/useAuthoring'
+import {
+  studioFlowMachine,
+  studioFlowView,
+  type StudioAIAvailability,
+} from '../model/studio-flow-machine'
 import { AuthoringPreview } from './AuthoringPreview'
 
 export interface AuthoringEditorProps extends AuthoringScope {
@@ -34,6 +39,12 @@ export interface AuthoringEditorProps extends AuthoringScope {
   renderPreview?: (artifact: AuthoringArtifact) => ReactNode
   className?: string
   initialMakeDefault?: boolean
+  active?: boolean
+  onNavigationChange?: (navigation: StudioNavigation | undefined) => void
+}
+export interface StudioNavigation {
+  canGoBack: boolean
+  goBack: () => void
 }
 export function AuthoringEditor(props: AuthoringEditorProps) {
   return <ScopedEditor key={authoringScopeKey(props)} {...props} />
@@ -47,78 +58,194 @@ function ScopedEditor({
   renderPreview,
   className,
   initialMakeDefault = false,
+  active = true,
+  onNavigationChange,
 }: AuthoringEditorProps) {
   const { t } = useTranslation('authoring')
   const scope = { ownerId, kind, targetId }
+  const scopeKey = authoringScopeKey(scope)
+  // Navigation never mounts a second operation consumer, poller or save queue.
   const controller = useAuthoring(scope, { onSaved, onBusyChange })
   const { state, busy } = controller
   const write = useStageSelection('write')
   const defaults = useInitializeDefaultSelections(ownerId)
-  const id = useId()
-  const [makeDefault, setMakeDefault] = useState(kind === 'writing-voice' && initialMakeDefault)
-  const [cancelOpen, setCancelOpen] = useState(false)
-  const [candidatesOpen, setCandidatesOpen] = useState(false)
-  const selectionToFocus = useRef<string | undefined>(undefined)
-  const heading = useRef<HTMLDivElement>(null)
-  const selected = state.session?.selected
-  const selectedId = selected?.id
+  const ai: StudioAIAvailability =
+    defaults.isPending || write.isPending ? 'preparing' : write.selected ? 'ready' : 'unavailable'
+  const [flow, send] = useMachine(
+    studioFlowMachine.provide({
+      actions: {
+        setChat: ({ event }) => {
+          if (event.type === 'CHAT_CHANGED') controller.setText(event.text)
+        },
+        requestRecommend: ({ context }) => {
+          controller.setText(context.purpose)
+          if (write.selected) void controller.quote('recommend', write.selected)
+        },
+        requestRefine: () => {
+          if (write.selected) void controller.quote('refine', write.selected)
+        },
+        loadExisting: () => void controller.edit(),
+        selectCandidate: ({ event }) => {
+          if (event.type === 'CHOOSE') controller.select(event.candidateId)
+        },
+        publish: ({ context }) => controller.save(context.makeDefault),
+        retry: () => void controller.retryOperation(),
+        fresh: controller.fresh,
+        cancel: controller.cancel,
+      },
+    }),
+    { input: { scope, operation: state, ai, initialMakeDefault } },
+  )
   useEffect(() => {
-    if (selectedId && selectionToFocus.current === selectedId) {
-      selectionToFocus.current = undefined
-      heading.current?.querySelector('h3')?.focus()
+    send({ type: 'OBSERVE', scopeKey, operation: state, ai })
+  }, [state, ai, scopeKey, send])
+  const view = studioFlowView(flow)
+  const id = useId()
+  const heading = useRef<HTMLDivElement>(null)
+  const previousView = useRef(view)
+  const previouslyActive = useRef(active)
+  useEffect(() => {
+    if (active && (previousView.current !== view || !previouslyActive.current)) {
+      heading.current?.querySelector('h2')?.focus()
     }
-  }, [selectedId])
-  const characters = Array.from(state.text).length
-  const completed = completedAuthoringExchanges(state.session)
-  const canRequest =
-    !!write.selected &&
-    !write.isPending &&
-    !defaults.isPending &&
-    !busy &&
-    !state.command &&
-    state.phase !== 'checking' &&
-    state.phase !== 'saved' &&
-    characters <= AUTHORING_MESSAGE_MAX_CHARS
-  const canRefine =
-    canRequest && !!selected && state.text.trim() !== '' && completed < AUTHORING_MAX_EXCHANGES
-  const recoveredSave =
-    state.session?.phase === 'saving' && !state.session.activeJobId && state.phase === 'active'
+    previousView.current = view
+    previouslyActive.current = active
+  }, [view, active])
+  const goBack = useCallback(() => send({ type: 'BACK', scopeKey }), [scopeKey, send])
+  const canGoBack = flow.can({ type: 'BACK', scopeKey })
+  useEffect(() => {
+    onNavigationChange?.({ canGoBack, goBack })
+  }, [canGoBack, goBack, onNavigationChange])
+  useEffect(() => () => onNavigationChange?.(undefined), [onNavigationChange])
+  const selected = state.session?.selected
   const failure = state.failure
   const conflict =
     failure?.reason === 'AUTHORING_SAVE_CONFLICT' ||
     failure?.reason === 'AUTHORING_REVISION_CONFLICT'
-  const status =
-    state.phase === 'checking'
-      ? t('checking')
-      : state.phase === 'quoting'
-        ? t('quoting')
-        : state.phase === 'saving' || recoveredSave
-          ? t('saving')
-          : state.phase === 'active' ||
-              state.phase === 'starting' ||
-              state.phase === 'creating' ||
-              state.phase === 'selecting' ||
-              state.phase === 'cancelling'
-            ? t('working')
-            : state.phase === 'saved'
-              ? t('saved')
-              : ''
-  const request = (mode: 'recommend' | 'refine') => {
-    if (write.selected) void controller.quote(mode, write.selected)
+  const recoveredSave =
+    state.session?.phase === 'saving' && !state.session.activeJobId && state.phase === 'active'
+  const canSaveDraft = !!selected?.body.trim()
+  const characters = Array.from(view === 'purpose' ? flow.context.purpose : state.text).length
+  const blocked = busy || !!state.command
+  const hasFailure = !!failure || state.session?.phase === 'failed'
+  const frozenPublication = flow.context.intent === 'save' && !!failure
+  const historyFull = completedAuthoringExchanges(state.session) >= AUTHORING_MAX_EXCHANGES
+  const workingStatus =
+    state.phase === 'quoting'
+      ? t('quoting')
+      : state.phase === 'saving' || recoveredSave
+        ? t('saving')
+        : state.phase === 'selecting'
+          ? t('selecting')
+          : state.phase === 'creating'
+            ? t('loadingDraft')
+            : state.phase === 'cancelling'
+              ? t('cancelling')
+              : state.phase === 'confirming'
+                ? t('quoteReady')
+                : t('working')
+  const event = (type: Parameters<typeof send>[0]['type']) => {
+    // Payload-bearing events are sent explicitly by their inputs below.
+    if (
+      type !== 'OBSERVE' &&
+      type !== 'PURPOSE_CHANGED' &&
+      type !== 'CHAT_CHANGED' &&
+      type !== 'CHOOSE' &&
+      type !== 'DEFAULT_CHANGED'
+    )
+      send({ type, scopeKey })
   }
+  const preview = selected && (
+    <div className="min-w-0">
+      <Typography variant="fieldTitle" as="h3" className="break-words">
+        {selected.name}
+      </Typography>
+      {selected.description && (
+        <Typography variant="body" className="text-content-secondary mt-3 break-words">
+          {selected.description}
+        </Typography>
+      )}
+      <div className="mt-6">
+        {renderPreview ? (
+          renderPreview(selected)
+        ) : (
+          <AuthoringPreview kind={kind} artifact={selected} />
+        )}
+      </div>
+    </div>
+  )
+  const retry = hasFailure && (
+    <div className="mt-8 flex flex-wrap items-center gap-4">
+      <Button variant="cta" onClick={() => event('RETRY')}>
+        {t(frozenPublication ? 'saveRetry' : 'retry')}
+      </Button>
+      {conflict && (
+        <Button variant="ghost" onClick={() => event('FRESH')}>
+          {t('fresh')}
+        </Button>
+      )}
+    </div>
+  )
+  const aiAvailability = ai !== 'ready' && (
+    <div className="mt-6 space-y-3">
+      <Typography variant="body" className="text-content-secondary">
+        {t(ai === 'preparing' ? 'modelPreparing' : 'modelUnavailable')}
+      </Typography>
+      {ai === 'unavailable' && (
+        <div className="flex flex-wrap gap-4">
+          <Button variant="secondary" onClick={defaults.retry}>
+            {t('retryAI')}
+          </Button>
+          <Link to="/ai-models" className={buttonStyles({ variant: 'ghost' })}>
+            {t('settings')}
+          </Link>
+        </div>
+      )}
+    </div>
+  )
+  const inputFeedback = flow.context.problem && (
+    <FieldMessage id={id + '-error'} className="mt-3">
+      {t(`inputProblems.${flow.context.problem}`)}
+    </FieldMessage>
+  )
   return (
-    <section aria-labelledby={`${id}-title`} className={`@container min-w-0 ${className ?? ''}`}>
-      <Typography variant="title" id={`${id}-title`}>
-        {t('title', { kind: t(`kinds.${kind}`) })}
-      </Typography>
-      <Typography variant="body" className="text-content-secondary max-w-measure mt-3">
-        {t(targetId ? 'existing' : 'intro')}
-      </Typography>
-      <Typography variant="body" role="status" aria-live="polite" className="mt-4 empty:hidden">
-        {status}
-      </Typography>
-      {(failure || state.session?.phase === 'failed') && (
-        <Notice tone="danger" role="alert" className="mt-4">
+    <section aria-labelledby={id + '-title'} className={'@container min-w-0 ' + (className ?? '')}>
+      <div ref={heading}>
+        {canGoBack && !onNavigationChange && (
+          <Button variant="ghost" className="mb-6" onClick={() => event('BACK')}>
+            <ArrowLeft aria-hidden="true" className="size-4" />
+            {t('back')}
+          </Button>
+        )}
+        <Typography variant="meta" className="text-content-secondary mb-3 block">
+          {t(`kinds.${kind}`)}
+        </Typography>
+        <Typography
+          variant="title"
+          as="h2"
+          tabIndex={-1}
+          id={id + '-title'}
+          className="break-words"
+        >
+          {view === 'purpose' ? t(`purposeQuestions.${kind}`) : t(`steps.${view}`)}
+        </Typography>
+        {view !== 'working' && view !== 'restoring' && view !== 'confirmed' && (
+          <Typography variant="body" className="text-content-secondary max-w-measure mt-3">
+            {t(`stepHelp.${view}`)}
+          </Typography>
+        )}
+        <Typography variant="body" role="status" aria-live="polite" className="mt-4 empty:hidden">
+          {view === 'working'
+            ? workingStatus
+            : view === 'restoring'
+              ? t('checking')
+              : view === 'confirmed'
+                ? t('saved')
+                : ''}
+        </Typography>
+      </div>
+      {hasFailure && (
+        <Notice tone="danger" role="alert" className="mt-6">
           {conflict ? (
             t('conflict')
           ) : failure ? (
@@ -126,305 +253,298 @@ function ScopedEditor({
           ) : (
             t('failed')
           )}
-          <Button
-            variant="ghost"
-            className="mt-2"
-            disabled={busy}
-            onClick={() => void controller.retryOperation()}
-          >
-            {t('retry')}
-          </Button>
-          {conflict && (
-            <Button variant="secondary" className="mt-2" disabled={busy} onClick={controller.fresh}>
-              {t('fresh')}
-            </Button>
-          )}
         </Notice>
       )}
       {controller.readFailure && (
-        <Notice tone="danger" role="alert" className="mt-4">
+        <Notice tone="danger" role="alert" className="mt-6">
           <AppFailureMessage failure={controller.readFailure} />
-          <Button variant="ghost" className="mt-2" onClick={controller.retryRead}>
+          <Button variant="ghost" className="mt-3" onClick={controller.retryRead}>
             {t('retryRead')}
           </Button>
         </Notice>
       )}
-      {(defaults.isPending || write.isPending || !write.selected) && (
-        <div className="mt-4">
-          <Typography variant="body" className="text-content-secondary">
-            {t(defaults.isPending || write.isPending ? 'modelPreparing' : 'modelUnavailable')}
+      {view === 'purpose' && (
+        <form
+          className="max-w-measure mt-8"
+          onSubmit={(submit) => {
+            submit.preventDefault()
+            event('RECOMMEND')
+          }}
+        >
+          <Textarea
+            aria-labelledby={id + '-title'}
+            aria-describedby={flow.context.problem ? id + '-error' : id + '-hint'}
+            aria-invalid={!!flow.context.problem}
+            rows={3}
+            autoGrow
+            value={flow.context.purpose}
+            onChange={(change) =>
+              send({ type: 'PURPOSE_CHANGED', scopeKey, text: change.target.value })
+            }
+            placeholder={t(`examples.${kind}`)}
+            disabled={blocked}
+            className="max-h-field"
+          />
+          <Typography variant="body" id={id + '-hint'} className="text-content-secondary mt-3">
+            {t(`purposeHints.${kind}`)}
           </Typography>
-          {!defaults.isPending && !write.isPending && (
-            <div className="mt-2 flex flex-wrap gap-3">
-              <Button variant="ghost" onClick={defaults.retry}>
-                {t('retryAI')}
-              </Button>
-              <Link to="/ai-models" className={buttonStyles({ variant: 'ghost' })}>
-                {t('settings')}
-              </Link>
-            </div>
+          {characters > 0 && (
+            <Typography variant="meta" className="mt-3 block">
+              {t('limit', { count: characters })}
+            </Typography>
+          )}
+          {inputFeedback}
+          <Button
+            variant="ghost"
+            className="mt-3"
+            disabled={blocked}
+            onClick={() => send({ type: 'PURPOSE_CHANGED', scopeKey, text: t(`examples.${kind}`) })}
+          >
+            {t('useExample')}
+          </Button>
+          {aiAvailability}
+          {hasFailure ? (
+            retry
+          ) : ai === 'ready' ? (
+            <Button type="submit" variant="cta" className="mt-8 w-full sm:w-auto">
+              <Sparkles aria-hidden="true" className="size-4" />
+              {t('recommend')}
+            </Button>
+          ) : null}
+        </form>
+      )}
+      {view === 'existing' && (
+        <div className="mt-8">
+          {hasFailure ? (
+            retry
+          ) : (
+            <Button variant="cta" onClick={() => event('LOAD_EXISTING')}>
+              {t(selected ? 'loadedDraft' : 'editStart')}
+            </Button>
           )}
         </div>
       )}
-      {!selected &&
-        !state.session?.candidates.length &&
-        state.phase !== 'checking' &&
-        state.phase !== 'saved' && (
-          <div className="mt-8">
-            {targetId ? (
-              <Button
-                variant="cta"
-                disabled={busy}
-                pending={state.phase === 'creating'}
-                onClick={() => void controller.edit()}
-              >
-                {t('editStart')}
-              </Button>
-            ) : (
-              <>
-                <FieldLabel htmlFor={`${id}-purpose`}>{t('purpose')}</FieldLabel>
-                <Textarea
-                  id={`${id}-purpose`}
-                  rows={2}
-                  autoGrow
-                  value={state.text}
-                  disabled={busy || !!state.command}
-                  onChange={(event) => controller.setText(event.target.value)}
-                  placeholder={t('purposePlaceholder')}
-                  className="max-h-field mt-2"
-                />
-                <Typography variant="meta" className="mt-2 block">
-                  {t('limit', { count: characters })}
-                </Typography>
-                <Button
-                  variant="secondary"
-                  className="mt-3"
-                  disabled={busy || !!state.command}
-                  onClick={() => controller.setText(t(`examples.${kind}`))}
-                >
-                  {t(`examples.${kind}`)}
-                </Button>
-                <Button
-                  variant="cta"
-                  className="mt-4 w-full sm:w-auto"
-                  disabled={!canRequest}
-                  onClick={() => request('recommend')}
-                >
-                  <Sparkles aria-hidden="true" className="size-4" />
-                  {t('recommend')}
-                </Button>
-              </>
-            )}
-          </div>
-        )}
-      {!!state.session?.candidates.length && selected && (
-        <div className="mt-6 flex min-w-0 flex-wrap items-center justify-between gap-3">
-          <Typography variant="body" className="min-w-0 break-words">
-            {t('selectedChoice', { name: selected.name })}
-          </Typography>
-          <Button
-            variant="ghost"
-            disabled={busy}
-            aria-expanded={candidatesOpen}
-            aria-controls={`${id}-candidates`}
-            onClick={() => setCandidatesOpen(!candidatesOpen)}
+      {view === 'choices' && (
+        <div className="mt-8">
+          <div
+            aria-label={t('suggestions')}
+            className="grid gap-4 @lg:grid-cols-2 @6xl:grid-cols-4"
           >
-            {t(candidatesOpen ? 'hideChoices' : 'changeChoice')}
-          </Button>
-        </div>
-      )}
-      {!!state.session?.candidates.length && (
-        <section
-          id={`${id}-candidates`}
-          hidden={!!selected && !candidatesOpen}
-          aria-labelledby={`${id}-suggestions`}
-          className="mt-8"
-        >
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <Typography variant="title" as="h3" id={`${id}-suggestions`}>
-              {t('suggestions')}
-            </Typography>
-            <Button variant="ghost" disabled={!canRequest} onClick={() => request('recommend')}>
-              {t('reroll')}
-            </Button>
-          </div>
-          <div className="mt-4 grid gap-4 @lg:grid-cols-2 @6xl:grid-cols-4">
-            {state.session!.candidates.map((candidate) => (
-              <article key={candidate.id} className="bg-surface-raised min-w-0 rounded-lg p-4">
-                <Typography variant="fieldTitle" as="h4" className="break-words">
-                  {candidate.name}
-                </Typography>
-                <Typography variant="body" className="text-content-secondary mt-2 break-words">
-                  {candidate.description}
-                </Typography>
-                {selected?.id === candidate.id && (
-                  <Badge className="mt-3">
-                    <Check aria-hidden="true" className="mr-1 inline size-3" />
-                    {t('selected')}
-                  </Badge>
-                )}
-                <Button
-                  variant="secondary"
-                  className="mt-4 w-full"
-                  disabled={busy || !!state.command || state.phase === 'saved'}
-                  aria-pressed={selected?.id === candidate.id}
-                  onClick={() => {
-                    selectionToFocus.current = candidate.id
-                    setCandidatesOpen(false)
-                    controller.select(candidate.id)
-                  }}
-                >
-                  {t('choose')}
-                </Button>
-              </article>
+            {state.session?.candidates.map((candidate) => (
+              <ChoiceButton
+                key={candidate.id}
+                title={candidate.name}
+                description={candidate.description}
+                selected={selected?.id === candidate.id}
+                disabled={blocked || frozenPublication}
+                onClick={() => send({ type: 'CHOOSE', scopeKey, candidateId: candidate.id })}
+              />
             ))}
           </div>
-        </section>
+          {hasFailure ? (
+            retry
+          ) : (
+            <Button variant="ghost" className="mt-8" onClick={() => event('RECOMMEND')}>
+              {t('reroll')}
+            </Button>
+          )}
+        </div>
       )}
-      {selected && (
-        <div className="mt-10 grid gap-8 @3xl:grid-cols-2 @3xl:items-start @3xl:gap-12">
-          <div ref={heading} className="min-w-0">
-            <Typography variant="title" as="h3" tabIndex={-1} className="break-words">
-              {selected.name}
-            </Typography>
-            <Typography variant="body" className="text-content-secondary mt-3 break-words">
-              {selected.description}
-            </Typography>
-            <div className="mt-6">
-              {renderPreview ? (
-                renderPreview(selected)
-              ) : (
-                <AuthoringPreview kind={kind} artifact={selected} />
-              )}
-            </div>
+      {view === 'review' && selected && (
+        <div className="mt-8">
+          {preview}
+          <div className="mt-8 flex flex-wrap items-center gap-4">
+            {hasFailure ? (
+              retry
+            ) : (
+              <Button
+                variant="cta"
+                className="w-full sm:w-auto"
+                onClick={() => event(canSaveDraft ? 'OPEN_PUBLICATION' : 'OPEN_REFINEMENT')}
+              >
+                {t(canSaveDraft ? 'continueSave' : 'prepareVoiceExample')}
+              </Button>
+            )}
+            {canSaveDraft && (
+              <Button variant="ghost" onClick={() => event('OPEN_REFINEMENT')}>
+                {t('openRefinement')}
+              </Button>
+            )}
           </div>
-          <section aria-labelledby={`${id}-chat`} className="min-w-0">
-            <Typography variant="title" as="h3" id={`${id}-chat`}>
-              {t('chat')}
-            </Typography>
-            {state.session!.turns.length ? (
-              <ol className="mt-4 space-y-6">
-                {state.session!.turns.map((turn) => (
+        </div>
+      )}
+      {view === 'refining' && selected && (
+        <div className="mt-8 grid gap-8 @3xl:grid-cols-2 @3xl:items-start @3xl:gap-12">
+          {preview}
+          <div className="min-w-0">
+            {state.session?.turns.length ? (
+              <ol aria-label={t('chat')} className="mb-6 space-y-6">
+                {state.session.turns.map((turn) => (
                   <li key={turn.id} className="min-w-0 space-y-3">
-                    <Typography
-                      variant="body"
-                      className="bg-surface-recessed rounded-lg p-4 break-words whitespace-pre-wrap"
-                    >
+                    <Typography variant="body" className="break-words whitespace-pre-wrap">
                       {turn.request}
                     </Typography>
                     {turn.status === 'done' && turn.reply && (
-                      <Typography variant="body" className="break-words whitespace-pre-wrap">
+                      <Typography
+                        variant="body"
+                        className="text-content-secondary break-words whitespace-pre-wrap"
+                      >
                         {readableAuthoringProse(turn.reply) ? turn.reply : t('replyReady')}
                       </Typography>
                     )}
                   </li>
                 ))}
               </ol>
+            ) : null}
+            {historyFull ? (
+              <div className="space-y-6">
+                <Typography variant="body">{t('historyFull')}</Typography>
+                <Button variant="cta" onClick={() => event('FINISH_REFINEMENT')}>
+                  {t('finishRefinement')}
+                </Button>
+              </div>
             ) : (
-              <Typography variant="body" className="text-content-secondary mt-4">
-                {t('historyEmpty')}
-              </Typography>
-            )}
-            {completed >= AUTHORING_MAX_EXCHANGES && (
-              <Notice tone="info" className="mt-6">
-                {t('historyFull')}
-              </Notice>
-            )}
-            <form
-              className="mt-6"
-              onSubmit={(event) => {
-                event.preventDefault()
-                if (canRefine) request('refine')
-              }}
-            >
-              <FieldLabel htmlFor={`${id}-message`}>{t('chatLabel')}</FieldLabel>
-              <Textarea
-                id={`${id}-message`}
-                rows={3}
-                autoGrow
-                value={state.text}
-                onChange={(event) => controller.setText(event.target.value)}
-                disabled={busy || !!state.command || state.phase === 'saved'}
-                placeholder={t('chatPlaceholder')}
-                className="max-h-field mt-2"
-              />
-              <Typography variant="meta" className="mt-2 block">
-                {t('limit', { count: characters })}
-              </Typography>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {(['concise', 'friendly', 'simple'] as const).map((chip) => (
-                  <Button
-                    key={chip}
-                    variant="ghost"
-                    disabled={busy || !!state.command || state.phase === 'saved'}
-                    onClick={() => controller.setText(t(`chips.${chip}`))}
-                  >
-                    {t(`chips.${chip}`)}
-                  </Button>
-                ))}
-              </div>
-              <Button
-                type="submit"
-                variant="secondary"
-                className="mt-3 w-full sm:w-auto"
-                disabled={!canRefine}
+              <form
+                onSubmit={(submit) => {
+                  submit.preventDefault()
+                  event('REFINE')
+                }}
               >
-                <SendHorizontal aria-hidden="true" className="size-4" />
-                {t('send')}
-              </Button>
-            </form>
-            {kind === 'writing-voice' && (
-              <div className="mt-6 space-y-3">
-                <Typography variant="body" className="text-content-secondary">
-                  {t('voiceCopy')}
-                </Typography>
-                <label className="flex min-h-11 cursor-pointer items-center gap-4 px-3">
-                  <Checkbox
-                    checked={makeDefault}
-                    onChange={(event) => setMakeDefault(event.target.checked)}
-                    disabled={busy || state.phase === 'saved'}
-                  />
-                  <Typography variant="body" as="span">
-                    {t('defaultVoice')}
+                <Textarea
+                  aria-labelledby={id + '-title'}
+                  aria-describedby={flow.context.problem ? id + '-error' : undefined}
+                  aria-invalid={!!flow.context.problem}
+                  rows={4}
+                  autoGrow
+                  value={state.text}
+                  onChange={(change) =>
+                    send({ type: 'CHAT_CHANGED', scopeKey, text: change.target.value })
+                  }
+                  disabled={blocked || frozenPublication}
+                  placeholder={t(`refineExamples.${kind}`)}
+                  className="max-h-field"
+                />
+                {characters > 0 && (
+                  <Typography variant="meta" className="mt-3 block">
+                    {t('limit', { count: characters })}
                   </Typography>
-                </label>
-              </div>
-            )}
-            {state.phase !== 'saved' && (
-              <Button
-                variant="cta"
-                className="mt-6 w-full sm:w-auto"
-                pending={state.phase === 'saving'}
-                disabled={(busy && !recoveredSave) || !!state.command}
-                onClick={() => controller.save(makeDefault)}
-              >
-                {t(
-                  recoveredSave
-                    ? 'saveRetry'
-                    : kind === 'writing-voice'
-                      ? 'saveVoice'
-                      : targetId
-                        ? 'apply'
-                        : 'save',
                 )}
-              </Button>
+                {inputFeedback}
+                <Button
+                  variant="ghost"
+                  className="mt-3"
+                  disabled={blocked}
+                  onClick={() =>
+                    send({ type: 'CHAT_CHANGED', scopeKey, text: t(`refineExamples.${kind}`) })
+                  }
+                >
+                  {t('useExample')}
+                </Button>
+                {aiAvailability}
+                {hasFailure ? (
+                  retry
+                ) : ai === 'ready' ? (
+                  <Button type="submit" variant="cta" className="mt-8 w-full sm:w-auto">
+                    <SendHorizontal aria-hidden="true" className="size-4" />
+                    {t('send')}
+                  </Button>
+                ) : null}
+                <div className="mt-4">
+                  <Button
+                    variant="ghost"
+                    disabled={blocked}
+                    onClick={() => event('FINISH_REFINEMENT')}
+                  >
+                    {t('finishRefinement')}
+                  </Button>
+                </div>
+              </form>
             )}
-          </section>
+          </div>
         </div>
       )}
-      {state.phase === 'active' && state.session?.activeJobId && (
-        <Button variant="secondary" className="mt-6" onClick={() => setCancelOpen(true)}>
-          {t('cancel')}
-        </Button>
+      {view === 'publication' && selected && (
+        <div className="max-w-measure mt-8">
+          <Typography variant="fieldTitle" as="h3" className="break-words">
+            {selected.name}
+          </Typography>
+          <Typography variant="body" className="text-content-secondary mt-3">
+            {t(
+              kind === 'writing-voice'
+                ? 'voiceCopy'
+                : targetId
+                  ? `publicationPreserves.${kind}`
+                  : `publicationCreates.${kind}`,
+            )}
+          </Typography>
+          {kind === 'writing-voice' && !recoveredSave && (
+            <label className="mt-6 flex min-h-11 cursor-pointer items-center gap-4 py-3">
+              <Checkbox
+                checked={flow.context.makeDefault}
+                onChange={(change) =>
+                  send({ type: 'DEFAULT_CHANGED', scopeKey, checked: change.target.checked })
+                }
+                disabled={frozenPublication}
+              />
+              <Typography variant="body" as="span">
+                {t('defaultVoice')}
+              </Typography>
+            </label>
+          )}
+          {hasFailure ? (
+            retry
+          ) : (
+            <Button
+              variant="cta"
+              className="mt-8 w-full sm:w-auto"
+              onClick={() => event('PUBLISH')}
+            >
+              {t(
+                recoveredSave
+                  ? 'saveRetry'
+                  : kind === 'writing-voice'
+                    ? 'saveVoice'
+                    : targetId
+                      ? 'apply'
+                      : 'save',
+              )}
+            </Button>
+          )}
+        </div>
       )}
-      {state.phase === 'saved' && (
-        <Button variant="secondary" className="mt-6" onClick={controller.fresh}>
-          {t('fresh')}
-        </Button>
+      {view === 'working' && (
+        <div className="mt-8">
+          {state.phase === 'active' && state.session?.activeJobId && (
+            <Button variant="secondary" className="mt-6" onClick={() => event('ASK_CANCEL')}>
+              {t('cancel')}
+            </Button>
+          )}
+          {selected && (
+            <div className="mt-8">
+              <Typography variant="body" className="text-content-secondary max-w-measure mb-6">
+                {t('previousDraft', { name: selected.name })}
+              </Typography>
+              {preview}
+            </div>
+          )}
+        </div>
+      )}
+      {view === 'restoring' && retry}
+      {view === 'confirmed' && (
+        <div className="mt-8">
+          {state.session?.saved && (
+            <Typography variant="fieldTitle" className="break-words">
+              {state.session.saved.name}
+            </Typography>
+          )}
+          <Button variant="cta" className="mt-8" onClick={() => event('FRESH')}>
+            {t('fresh')}
+          </Button>
+        </div>
       )}
       <Dialog
         open={state.phase === 'confirming' || state.phase === 'starting'}
-        title={t('confirmTitle')}
+        title={t(state.command?.mode === 'refine' ? 'confirmRefine' : 'confirmRecommend')}
         onClose={state.phase === 'starting' ? () => {} : controller.dismissQuote}
         confirmLabel={t('confirm')}
         cancelLabel={t('back')}
@@ -436,15 +556,12 @@ function ScopedEditor({
         </Typography>
       </Dialog>
       <Dialog
-        open={cancelOpen}
+        open={flow.matches({ working: 'confirmingCancellation' })}
         title={t('cancelTitle')}
-        onClose={() => setCancelOpen(false)}
+        onClose={() => event('DISMISS_CANCEL')}
         confirmLabel={t('cancel')}
         cancelLabel={t('keepWorking')}
-        onConfirm={() => {
-          setCancelOpen(false)
-          controller.cancel()
-        }}
+        onConfirm={() => event('CONFIRM_CANCEL')}
       >
         <Typography variant="body">{t('cancelHelp')}</Typography>
       </Dialog>

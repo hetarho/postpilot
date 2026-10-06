@@ -5,11 +5,36 @@ import { renderAppAt } from '@/test/app'
 
 describe('configuration authoring entrypoints', () => {
   it.each([
-    { route: '/templates/new', title: '새 템플릿', manual: true },
-    { route: '/video-templates/new', title: '새 영상 템플릿', manual: true },
-    { route: '/guidelines', title: '지침', trigger: 'AI로 지침 만들기' },
-    { route: '/video-guidelines', title: '영상 지침', trigger: 'AI로 영상 지침 만들기' },
-    { route: '/voices', title: '말투', trigger: 'AI 말투 추천받기' },
+    {
+      route: '/templates/new',
+      title: '새 템플릿',
+      manual: true,
+      goal: '글을 어떤 순서로 풀어 쓰고 싶으세요?',
+    },
+    {
+      route: '/video-templates/new',
+      title: '새 영상 템플릿',
+      manual: true,
+      goal: '영상이 어떤 순서로 이어지면 좋을까요?',
+    },
+    {
+      route: '/guidelines',
+      title: '지침',
+      trigger: 'AI로 지침 만들기',
+      goal: '글을 쓸 때 어떤 점을 지키면 좋을까요?',
+    },
+    {
+      route: '/video-guidelines',
+      title: '영상 지침',
+      trigger: 'AI로 영상 지침 만들기',
+      goal: '영상 속 문구를 어떻게 쓰면 좋을까요?',
+    },
+    {
+      route: '/voices',
+      title: '말투',
+      trigger: 'AI 말투 추천받기',
+      goal: '어떤 말투로 이야기하고 싶으세요?',
+    },
   ])('opens $route as a readable AI draft without starting or saving work', async (entry) => {
     const user = userEvent.setup()
     const calls: string[] = []
@@ -22,9 +47,9 @@ describe('configuration authoring entrypoints', () => {
       expect(calls).not.toContain('GetLatestAuthoringSession')
       await user.click(primary)
       const dialog = await screen.findByRole('dialog')
-      expect(await within(dialog).findByRole('button', { name: '8가지 추천받기' })).toBeVisible()
+      expect(await within(dialog).findByRole('heading', { name: entry.goal })).toBeVisible()
     } else {
-      expect(await screen.findByRole('button', { name: '8가지 추천받기' })).toBeVisible()
+      expect(await screen.findByRole('heading', { name: entry.goal })).toBeVisible()
       expect(screen.getByRole('button', { name: '직접 편집' })).toBeEnabled()
       expect(screen.queryByLabelText('이름')).not.toBeInTheDocument()
       expect(screen.queryByLabelText('템플릿 이름')).not.toBeInTheDocument()

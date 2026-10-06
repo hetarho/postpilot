@@ -8,7 +8,7 @@ import {
   RouterProvider,
 } from '@tanstack/react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, render, screen, within, waitFor, act } from '@testing-library/react'
+import { cleanup, render, screen, within, waitFor, act, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { authoringSessionQueryKey } from '@/entities/ai-authoring'
 import { initializeI18n } from '@/app/providers/i18n'
@@ -118,7 +118,23 @@ function server(
     })
     rpc(Service.method.createAuthoringSession, (request) => {
       calls.push('Create')
-      current = current ?? makeSession({ kind: request.kind, targetId: request.targetId })
+      current =
+        current ??
+        makeSession({
+          kind: request.kind,
+          targetId: request.targetId,
+          ...(request.targetId
+            ? {
+                phase: 'editing',
+                targetVersion: 'captured-version',
+                selected: {
+                  id: request.targetId,
+                  name: '저장한 지침',
+                  body: '현재 지침을 초안으로 불러왔어요.',
+                },
+              }
+            : {}),
+        })
       return create(Service.method.createAuthoringSession.output, { session: current })
     })
     rpc(Service.method.estimateAuthoringOperation, (request) => {
@@ -263,30 +279,32 @@ async function recommend(user: ReturnType<typeof userEvent.setup>) {
   expect(within(dialog).getByText('이번 요청은 최대 5크레딧을 사용해요.')).toBeInTheDocument()
   await user.click(within(dialog).getByRole('button', { name: '이대로 요청하기' }))
 }
+async function publication(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(await screen.findByRole('button', { name: '저장할 내용 확인하기' }))
+  await screen.findByRole('heading', { name: '저장할 내용을 확인해 주세요' })
+}
 describe('conversational authoring', () => {
   it('only reads on entry, creates eight together on a confirmed request, and keeps selection separate from save', async () => {
     const fake = server()
     const { saved } = mount(fake)
     const user = userEvent.setup()
-    await screen.findByLabelText('어떤 느낌을 원하세요? (선택)')
+    await screen.findByRole('textbox', { name: '글을 쓸 때 어떤 점을 지키면 좋을까요?' })
     expect(fake.calls).toEqual(['GetLatest'])
     expect(screen.queryByRole('combobox')).toBeNull()
     await recommend(user)
-    const buttons = await screen.findAllByRole('button', { name: '이 제안 선택하기' })
+    const buttons = await screen.findAllByRole('button', { name: /^제안 [1-8]$/ })
     expect(buttons).toHaveLength(8)
     expect(fake.calls.filter((call) => call === 'Start')).toHaveLength(1)
     await user.click(buttons[0]!)
     expect(
       await screen.findByText('실제 경험을 바탕으로 1번째 방향으로 써 주세요.'),
     ).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: '이 제안 선택하기' })).toBeNull()
-    expect(screen.getByRole('button', { name: '다른 제안 보기' })).toHaveAttribute(
-      'aria-expanded',
-      'false',
-    )
-    expect(screen.getByRole('heading', { name: '제안 1' })).toHaveFocus()
+    expect(screen.queryByRole('button', { name: /^제안 [1-8]$/ })).toBeNull()
+    expect(screen.getByRole('button', { name: '돌아가기' })).toBeEnabled()
+    expect(screen.getByRole('heading', { name: '선택한 결과를 확인해 주세요' })).toHaveFocus()
     expect(fake.calls).not.toContain('Save')
     expect(saved).not.toHaveBeenCalled()
+    await publication(user)
     await user.dblClick(screen.getByRole('button', { name: '이걸로 저장하기' }))
     await waitFor(() => expect(saved).toHaveBeenCalledOnce())
     expect(fake.calls.filter((call) => call === 'Save')).toHaveLength(1)
@@ -302,7 +320,11 @@ describe('conversational authoring', () => {
     const fake = server({ initial: makeSession({ phase: 'editing', selected }) })
     mount(fake)
     const user = userEvent.setup()
-    await user.type(await screen.findByLabelText('어떤 점을 바꿔 볼까요?'), '조금 더 짧게 해 줘')
+    await user.click(await screen.findByRole('button', { name: '조금 다듬기' }))
+    await user.type(
+      await screen.findByRole('textbox', { name: '어떤 점을 바꿔 볼까요?' }),
+      '조금 더 짧게 해 줘',
+    )
     await user.dblClick(screen.getByRole('button', { name: '다듬어 주세요' }))
     await user.click(
       within(await screen.findByRole('dialog')).getByRole('button', { name: '이대로 요청하기' }),
@@ -324,7 +346,7 @@ describe('conversational authoring', () => {
     const user = userEvent.setup()
     await recommend(user)
     await user.click(await screen.findByRole('button', { name: '다시 확인하고 시도하기' }))
-    await screen.findAllByRole('button', { name: '이 제안 선택하기' })
+    await screen.findAllByRole('button', { name: /^제안 [1-8]$/ })
     expect(fake.starts).toHaveLength(2)
     expect(fake.starts[0]!.requestId).toBe(fake.starts[1]!.requestId)
     expect(fake.starts[0]!.expectedRevision).toBe(fake.starts[1]!.expectedRevision)
@@ -345,13 +367,20 @@ describe('conversational authoring', () => {
     })
     const { saved } = mount(fake)
     const user = userEvent.setup()
+    await user.click(await screen.findByRole('button', { name: '조금 다듬기' }))
     await user.type(
-      await screen.findByLabelText('어떤 점을 바꿔 볼까요?'),
+      await screen.findByRole('textbox', { name: '어떤 점을 바꿔 볼까요?' }),
       '입력한 요청도 남아 있어요',
     )
+    await user.click(screen.getByRole('button', { name: '결과 확인으로 돌아가기' }))
+    await publication(user)
     await user.click(screen.getByRole('button', { name: '이걸로 저장하기' }))
     expect(await screen.findByText(/설정이 다른 곳에서 바뀌었어요/)).toBeInTheDocument()
-    expect(screen.getByLabelText('어떤 점을 바꿔 볼까요?')).toHaveValue('입력한 요청도 남아 있어요')
+    await user.click(screen.getByRole('button', { name: '돌아가기' }))
+    await user.click(screen.getByRole('button', { name: '조금 다듬기' }))
+    expect(screen.getByRole('textbox', { name: '어떤 점을 바꿔 볼까요?' })).toHaveValue(
+      '입력한 요청도 남아 있어요',
+    )
     expect(screen.getByText('이 초안은 계속 남아 있어요.')).toBeInTheDocument()
     expect(saved).not.toHaveBeenCalled()
   })
@@ -389,6 +418,7 @@ describe('conversational authoring', () => {
     })
     const { unmount, saved } = mount(fake)
     const user = userEvent.setup()
+    await publication(user)
     await user.click(await screen.findByRole('button', { name: '이걸로 저장하기' }))
     unmount()
     await act(async () => release())
@@ -408,6 +438,7 @@ describe('conversational authoring', () => {
     })
     const { saved } = mount(fake, { kind: 'writing-voice', initialMakeDefault: true })
     const user = userEvent.setup()
+    await publication(user)
     const checkbox = await screen.findByRole('checkbox', { name: '이 말투를 기본으로 사용하기' })
     expect(checkbox).toBeChecked()
     await user.click(checkbox)
@@ -441,6 +472,7 @@ describe('conversational authoring', () => {
     )
     const user = userEvent.setup()
     await screen.findByText('Alice의 개인 초안')
+    await publication(user)
     await user.click(screen.getByRole('button', { name: '이걸로 저장하기' }))
     await waitFor(() => expect(fake.calls).toContain('Save'))
     fake.setSession(
@@ -477,8 +509,9 @@ describe('conversational authoring', () => {
     })
     const { saved, cache } = mount(fake)
     const user = userEvent.setup()
+    await publication(user)
     await user.click(await screen.findByRole('button', { name: '이걸로 저장하기' }))
-    await screen.findByRole('button', { name: '다시 확인하고 시도하기' })
+    await screen.findByRole('button', { name: '저장 결과 다시 확인하기' })
     expect(saved).not.toHaveBeenCalled()
     await cache.invalidateQueries({
       queryKey: authoringSessionQueryKey(
@@ -493,5 +526,161 @@ describe('conversational authoring', () => {
     const reopened = mount(fake)
     await screen.findByText('저장했어요. 다음 작업부터 사용할 수 있어요.')
     expect(reopened.saved).not.toHaveBeenCalled()
+  })
+  it('preserves the purpose when going back from eight suggestions without another request', async () => {
+    const fake = server()
+    mount(fake)
+    const user = userEvent.setup()
+    const purpose = await screen.findByRole('textbox', {
+      name: '글을 쓸 때 어떤 점을 지키면 좋을까요?',
+    })
+    await user.type(purpose, '경험을 편하게 설명하고 싶어요')
+    await recommend(user)
+    await screen.findAllByRole('button', { name: /^제안 [1-8]$/ })
+    await user.click(screen.getByRole('button', { name: '돌아가기' }))
+    expect(
+      screen.getByRole('textbox', { name: '글을 쓸 때 어떤 점을 지키면 좋을까요?' }),
+    ).toHaveValue('경험을 편하게 설명하고 싶어요')
+    expect(fake.starts).toHaveLength(1)
+    expect(fake.calls).not.toContain('Select')
+    expect(fake.calls).not.toContain('Save')
+  })
+  it('explains chat input on an attempt and retains it across review and publication Back', async () => {
+    const fake = server({
+      initial: makeSession({
+        phase: 'editing',
+        selected: { id: 'draft', name: '현재 결과', body: '저장 가능한 지침이에요.' },
+      }),
+    })
+    mount(fake)
+    const user = userEvent.setup()
+    await screen.findByRole('button', { name: '저장할 내용 확인하기' })
+    expect(screen.queryByRole('textbox')).toBeNull()
+    await user.click(screen.getByRole('button', { name: '조금 다듬기' }))
+    const send = screen.getByRole('button', { name: '다듬어 주세요' })
+    expect(send).toBeEnabled()
+    await user.click(send)
+    expect(screen.getByRole('alert')).toHaveTextContent('바꾸고 싶은 점을 적어 주세요')
+    const field = screen.getByRole('textbox', { name: '어떤 점을 바꿔 볼까요?' })
+    fireEvent.change(field, { target: { value: '가'.repeat(2001) } })
+    await user.click(send)
+    expect(screen.getByRole('alert')).toHaveTextContent('2000자 안으로 적어 주세요')
+    expect(field).toHaveValue('가'.repeat(2001))
+    fireEvent.change(field, { target: { value: '아직 보내지 않은 요청이에요' } })
+    await user.click(screen.getByRole('button', { name: '결과 확인으로 돌아가기' }))
+    await publication(user)
+    await user.click(screen.getByRole('button', { name: '돌아가기' }))
+    await user.click(screen.getByRole('button', { name: '조금 다듬기' }))
+    expect(screen.getByRole('textbox', { name: '어떤 점을 바꿔 볼까요?' })).toHaveValue(
+      '아직 보내지 않은 요청이에요',
+    )
+    expect(fake.calls).not.toContain('Estimate')
+    expect(fake.calls).not.toContain('Start')
+    expect(fake.calls).not.toContain('Save')
+  })
+  it('browses and reuses the current choice without another selection mutation', async () => {
+    const fake = server()
+    mount(fake)
+    const user = userEvent.setup()
+    await recommend(user)
+    await user.click(await screen.findByRole('button', { name: '제안 1' }))
+    await screen.findByRole('button', { name: '저장할 내용 확인하기' })
+    await user.click(screen.getByRole('button', { name: '돌아가기' }))
+    const current = screen.getByRole('button', { name: '제안 1' })
+    expect(current).toHaveAttribute('aria-pressed', 'true')
+    await user.click(current)
+    await screen.findByRole('button', { name: '저장할 내용 확인하기' })
+    expect(fake.calls.filter((call) => call === 'Select')).toHaveLength(1)
+    expect(fake.starts).toHaveLength(1)
+  })
+  it('loads an existing target only on request and never recommends to start editing it', async () => {
+    const fake = server()
+    mount(fake, { targetId: 'owned-guide' })
+    const user = userEvent.setup()
+    await screen.findByRole('button', { name: '수정 초안 불러오기' })
+    expect(fake.calls).toEqual(['GetLatest'])
+    await user.click(screen.getByRole('button', { name: '수정 초안 불러오기' }))
+    expect(await screen.findByText('현재 지침을 초안으로 불러왔어요.')).toBeInTheDocument()
+    expect(screen.queryByRole('textbox')).toBeNull()
+    await user.click(screen.getByRole('button', { name: '조금 다듬기' }))
+    expect(screen.getByRole('textbox', { name: '어떤 점을 바꿔 볼까요?' })).toBeEnabled()
+    expect(fake.calls.filter((call) => call === 'Create')).toHaveLength(1)
+    expect(fake.calls).not.toContain('Estimate')
+    expect(fake.calls).not.toContain('Start')
+  })
+  it('offers explicit recovery for an interrupted publication even while its durable phase is saving', async () => {
+    const fake = server({
+      initial: makeSession({
+        phase: 'saving',
+        selected: { id: 'draft', name: '저장 중인 지침', body: '확인할 지침이에요.' },
+        activeJobId: '',
+      }),
+    })
+    const { saved } = mount(fake)
+    const user = userEvent.setup()
+    const recover = await screen.findByRole('button', { name: '저장 결과 다시 확인하기' })
+    expect(recover).toBeEnabled()
+    await user.click(recover)
+    await waitFor(() => expect(saved).toHaveBeenCalledOnce())
+    expect(fake.calls.filter((call) => call === 'Save')).toHaveLength(1)
+    expect(fake.calls).not.toContain('Start')
+  })
+  it('keeps hidden actors alive without moving focus and exposes an actor-guarded parent Back port', async () => {
+    const fake = server({
+      initial: makeSession({
+        phase: 'editing',
+        selected: { id: 'draft', name: '숨긴 초안', body: '유지할 지침이에요.' },
+      }),
+    })
+    const navigation = vi.fn()
+    const cache = createTestQueryClient()
+    const props = {
+      ownerId: 'alice',
+      kind: 'post-guideline' as const,
+      onNavigationChange: navigation,
+    }
+    const view = render(<AuthoringEditor {...props} active={false} />, {
+      wrapper: withProviders(fake.transport, cache),
+    })
+    const user = userEvent.setup()
+    await screen.findByText('유지할 지침이에요.')
+    expect(screen.getByRole('heading', { name: '선택한 결과를 확인해 주세요' })).not.toHaveFocus()
+    expect(screen.queryByRole('button', { name: '돌아가기' })).toBeNull()
+    view.rerender(<AuthoringEditor {...props} active />)
+    await waitFor(() =>
+      expect(screen.getByRole('heading', { name: '선택한 결과를 확인해 주세요' })).toHaveFocus(),
+    )
+    await user.click(screen.getByRole('button', { name: '조금 다듬기' }))
+    const port = navigation.mock.calls.at(-1)![0]!
+    expect(port.canGoBack).toBe(true)
+    await act(async () => port.goBack())
+    expect(screen.getByRole('button', { name: '저장할 내용 확인하기' })).toBeInTheDocument()
+    expect(fake.latestCalls).toBe(1)
+    expect(fake.calls).not.toContain('Start')
+  })
+  it('offers review when the bounded conversation is complete without showing an unusable send form', async () => {
+    const fake = server({
+      initial: makeSession({
+        phase: 'editing',
+        selected: { id: 'draft', name: '완성된 지침', body: '이 결과를 사용할 수 있어요.' },
+        turns: Array.from({ length: 20 }, (_, index) => ({
+          id: 'turn-' + index,
+          request: '수정 요청',
+          reply: '다듬었어요.',
+          jobId: 'job-' + index,
+          status: 'done',
+        })),
+      }),
+    })
+    mount(fake)
+    const user = userEvent.setup()
+    await user.click(await screen.findByRole('button', { name: '조금 다듬기' }))
+    expect(screen.getByText(/이 대화에서 스무 번을 다듬었어요/)).toBeInTheDocument()
+    expect(screen.queryByRole('textbox')).toBeNull()
+    expect(screen.queryByRole('button', { name: '다듬어 주세요' })).toBeNull()
+    await user.click(screen.getByRole('button', { name: '결과 확인으로 돌아가기' }))
+    await publication(user)
+    expect(fake.calls).not.toContain('Estimate')
+    expect(fake.calls).not.toContain('Start')
   })
 })
