@@ -82,10 +82,12 @@
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | todo |
 
 ## next
+- Commit each subsequent authorized task separately after verification, following the user's requested workflow.
 - Creation-first novice UX follow-up is complete (T608–T611); use the existing browser-media work group/assigned workspaces for its remaining implementation and qualification gates.
 - doc-review ARCH QUOTA POST VOICE GEN MODEL when documentation cleanup is requested; current lint hints are informational.
 
 ## log
+- 261007 task commits: T606 be489e55, T607 9074f741, T608 fb856773, T609 a6c4a953, T610 a3003583, T611 a39ae36d; isolated staged-tree checks preserve existing workspace edits
 - 261007 T611 done: 3383 FE tests, BE/build/tooling and 62 deploy tests pass; 80 live-browser layout checks and personal/AI/settings recovery flows pass
 - 261007 T612 done: grounded targeted tags in both languages; generation/guideline tests, vet and production build pass; whole-tree build fails on existing tmp main/run duplicates
 - 261007 T612 start: implement grounded entity and area/topic priority in both tag-rule languages
@@ -105,4 +107,3 @@
 - 261007 update-ssot novice UX done: THEME r24 AUTH r13 MODEL r33 VOICE r10 QUOTA r36; no browser-media contract change
 - 261007 update-ssot THEME AUTH MODEL VOICE start: responsive creation, automatic recommended models, ten-question voice bootstrap and eight synthetic candidates
 - 261007 T607 done: 3330 frontend tests, all FE/tooling gates and real-browser setup/reload/touch/zoom checks pass; guarded optional setup preserves durable account work
-- 261007 create-task POST r34 no-op (no code impact): existing replace preserves creation-home/prior history
