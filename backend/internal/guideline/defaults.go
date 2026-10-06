@@ -144,9 +144,19 @@ var postDefaults = []DefaultGuideline{
 		"Title rules",
 		"Do not write the title as long boilerplate in which only a single piece of information changes, and do not use any keyword twice or more within one title. When the template has a title form, follow it and apply this only to what you write inside its <write>."),
 	post("tags", "태그 규칙",
-		"tags는 먼저 떠오르는 단어를 그대로 쓰지 말고, 이 글의 내용에 이미 들어맞는 이름 가운데서 고르세요.",
+		`tags는 이 글을 찾는 사람이 검색할 법한 구체적인 이름과 자연스러운 조합으로 고르세요.
+글에서 다루고 재료로 확인되는 상호·장소·브랜드·제품명을 우선하고, 지역명+메뉴·업종·활동 또는 대상명+핵심 주제 조합을 이어서 고르세요. 관련성이 높은 순서로 적고, 같은 태그나 띄어쓰기만 바꾼 태그는 반복하지 마세요.
+예를 들어 글이 '답십리역 부근 진아분식에서 떡볶이를 먹었다'는 내용이면 '진아분식', '답십리떡볶이', '답십리분식'을 우선하세요. 이 예시의 이름을 다른 글에 그대로 쓰지는 마세요.
+'내돈내산', '일상', '맛집', '떡볶이'만 쓴 태그처럼 범용적인 태그는 구체적인 태그보다 후순위로 두고, 태그 수를 채우려고 덧붙이지 마세요.
+확인되지 않은 지역·상호·메뉴·구매 여부·평가를 만들어 태그에 넣지 마세요. 역 이름으로 확인되는 같은 지역의 이름은 써도 되지만, 지역을 모르면 상호나 주제만으로 고르세요. 태그에 맞추려고 본문에 어색한 단어를 넣거나 내용을 바꾸지 마세요.
+글 수정에서는 태그 변경을 요청받았을 때만 이 기준으로 태그를 다시 고르세요.`,
 		"Tag rule",
-		"Choose the tags among labels already true of this post, not the first words that come to mind."),
+		`Choose specific names and natural combinations someone looking for this post might search for as tags.
+Prioritize business, place, brand and product names covered by the post and supported by its material, then area + menu, business category or activity, or entity + core topic. Order tags by relevance; do not repeat a tag or a variant that differs only in spacing.
+For example, if the post describes eating tteokbokki at Jinabunsik near Dapsimni Station, prefer Jinabunsik, DapsimniTteokbokki and DapsimniBunsik. Never copy these example names into an unrelated post.
+Broad labels such as PaidForItMyself, DailyLife, Foodie or Tteokbokki alone rank after specific tags; do not add them just to fill the requested count.
+Never invent an area, business, menu item, payment claim or endorsement for a tag. You may use the same area's name from a stated station name; when the area is unknown, use the supported entity or topic alone. Do not insert awkward words into the prose or change its content to justify a tag.
+For a revision, reselect tags by this rule only when the request asks to change tags.`),
 	// The run of identical endings is a writing rule, not voice text (VOICE-47): its count is
 	// EndingMaxConsecutive, which the text states in words.
 	{

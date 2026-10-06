@@ -28,7 +28,7 @@
 | QUOTA | 35 | 35 | - | 0 |
 | POST | 32 | 31 | POST-108+ | 0 |
 | VOICE | 8 | 7 | VOICE-32✎ | 0 |
-| GEN | 23 | 23 | - | 0 |
+| GEN | 24 | 24 | - | 0 |
 | MODEL | 31 | 31 | - | 0 |
 | TMPL | 21 | 21 | - | 0 |
 | GUIDE | 13 | 13 | - | 0 |
@@ -87,6 +87,11 @@
 - ops: lower TEMPLATE_PHOTO_ROW_MAX / VITE_TEMPLATE_PHOTO_ROW_MAX to 3 in explicit production overrides. Ideation searchable-details continues; ordinary voice/narration readiness remains closed until its existing qualification passes.
 
 ## log
+- 261007 T612 done: grounded targeted tags in both languages; generation/guideline tests, vet and production build pass; whole-tree build fails on existing tmp main/run duplicates
+- 261007 T612 start: implement grounded entity and area/topic priority in both tag-rule languages
+- 261007 create-task GEN r24 done: T612 updates the existing switchable tag rule and prompt goldens
+- 261007 update-ssot GEN r24 done: grounded entity and area/topic tags take priority; create-task GEN start
+- 261007 update-ssot GEN start: prioritize grounded entity and local topic tags over broad hashtags
 - 261006 T589 done: current Max-only native access, preserved legacy jobs/history and browser-first ko/en surfaces; 3321 FE tests and full local CI passed
 - 261006 user stop boundary: finish T589 and commit current browser-media work; T590-T604 remain todo
 - 261006 T589 start: Max-only commercial server admission and browser-first controls, preserving previously accepted work and usage history
@@ -102,8 +107,3 @@
 - 261006 create-task browser media start: consume CLIP r56 CDS r33 QUOTA r35; map scoped ARCH r16 and INFRA r2 changes without consuming older infrastructure work
 - 261006 update-ssot ARCH r16 CLIP r56 CDS r33 QUOTA r35 INFRA r2: browser media contracts, qualified motion/proxies and bounded Max-only exports
 - 261006 planning impact: T539/T550 require browser-contract revalidation; T586/T587 retain unchanged speech decisions but must check advanced ARCH/QUOTA bases; active task files are not edited
-- 261006 update-ssot CLIP CDS QUOTA and create-architecture start: browser-first media execution, motion parity and analysis-quality qualification
-- 261006 T587 start: list registration, direct grade changes, optional synthesis settings and common tariff editor
-- 261006 T586 start: server-owned speech bindings, unique catalog registrations and atomic common tariff snapshots
-- 261006 create-task MODEL r30 done: T586 server registration/pricing then T587 list administration
-- 261006 create-task MODEL start: implement r30 speech catalog registration and common verified pricing
