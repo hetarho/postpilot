@@ -82,16 +82,17 @@
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | todo |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | todo |
 
-| T613 | Create durable eight-suggestion and conversational configuration drafts | EDIT QUOTA | - | doing@261007.ai |
-| T614 | Publish conversational drafts through idempotent domain-owned settings writes | EDIT TMPL GUIDE VOICE CLIP | T613 | doing@261007.ai |
-| T615 | Build one guarded eight-suggestion preview and chat studio | EDIT THEME | T613 | doing@261007.ai |
-| T616 | Make conversational AI the default reusable-settings creation experience | EDIT AUTH TMPL GUIDE VOICE CLIP THEME | T614 T615 | todo |
-
 ## next
-- implement-task T613, then T614/T615 and T616; commit each verified task independently.
-- Existing browser-media assignments and qualification gates remain separate.
+- Check the existing browser-media work-group board before claiming T591 or any other remaining task.
+- Existing blocked qualification and render-capacity work remain separate.
 
 ## log
+- 261007 T616 done: all five AI settings/setup hosts, manual alternatives and personal learning preserved; FE3422/staged222, BE80 packages, deploy62 and fifteen browser flows pass
+- 261007 T615 done: owner-scoped guarded eight-suggestion preview/chat Studio; responsive themes/focus/zoom and no-call entry/recovery pass
+- 261007 T614 done: domain-owned atomic receipt publication, CAS/protected fields, concurrent replay/tombstones and synthetic-only voice forks pass
+- 261007 T613 done: durable five-kind sessions, request replay, frozen bounded calls, revision/account fences and interrupted-save recovery pass24 core/RPC/SQLite tests
+- 261007 task commits: T613 e8335bb1, T614 199dd222, T615 d98cca13, T616 4b9e6f5a; existing render-capacity source bytes preserved
+- 261007 T616 start: root integrates default AI template/guideline/voice entrypoints while isolated backend and Studio proposals proceed
 - 261007 T613-T615 start: root owns main/codegen/commits; isolated core, publication and Studio proposals execute in parallel
 - 261007 create-task EDIT and related deltas done: T613 durable drafts, T614 domain publication, T615 shared Studio, T616 entrypoints/qualification
 - 261007 create-ssot EDIT r1 and update-ssot complete: durable eight-suggestion chat drafts, explicit guarded domain publication and responsive shared settings/setup UX
@@ -106,9 +107,3 @@
 - 261007 T610 done: durable one-call eight-style generation, owner recovery, atomic synthetic adoption and provenance pass backend/concurrency/usage checks
 - 261007 T609 done: 222 friendly stable Korean scenes, ten-answer readiness and legacy compatibility pass personal voice checks
 - 261007 T608 done: recommended active defaults preserve manual/comparison selections; SQLite races and owner-scoped frontend regressions pass
-- 261007 create-task consumes VOICE r11 into owned T611 settings entry; T609/T610 unchanged personal/backend contracts rebased
-- 261007 update-ssot VOICE r11: generated styles remain directly accessible from writing settings after onboarding; fix MODEL-87 cross-reference
-- 261007 verification fix: synthetic media graph fixtures use the existing disk-probe seam; real capacity/refusal tests and production limits remain unchanged
-- 261007 notation correction: default-selection decision is MODEL-87; existing MODEL-85 speech tariff remains unchanged
-- 261007 create-task novice UX done: T608 model defaults, T609 personal question contract, T610 generated style backend, T611 responsive novice UI
-- 261007 T608-T611 start: root owns execution/state and applies isolated reviewed patch proposals; code dependencies integrate before final verification
