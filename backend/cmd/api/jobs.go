@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"github.com/postpilot/backend/internal/authoring"
 	"strings"
 	"time"
 
@@ -114,6 +115,9 @@ func registerJobs(c *contexts) {
 	}))
 	q.Register(job.KindWritingVoiceCandidates, metered(func(ctx context.Context, found job.Job, progress job.Progress) error {
 		return c.voiceCandidates.Run(ctx, voice.CandidateRun{ID: found.ID, UserID: found.UserID, WriteModel: found.WriteModel, Payload: found.Payload}, voice.Progress(progress))
+	}))
+	q.Register(authoring.JobKind, metered(func(ctx context.Context, found job.Job, progress job.Progress) error {
+		return c.authoring.Run(ctx, authoring.Run{ID: found.ID, UserID: found.UserID, WriteModel: found.WriteModel, Payload: found.Payload}, func(stage string, done, total int) { progress(stage, done, total) })
 	}))
 	registerClipJobs(q, c.clipGeneration, c.clipSources)
 	q.Register(clip.JobKindSpeech, metered(c.clipSpeech.Run))

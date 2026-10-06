@@ -361,6 +361,9 @@ func (s *CandidateService) Adopt(ctx context.Context, userID, jobID, candidateID
 		return Voice{}, err
 	}
 	now := s.now()
-	analysis := Analysis{Origin: OriginSynthetic, SyntheticSample: chosen.Sample, Counted: FingerprintOf([]Material{{Text: chosen.Sample, Kind: SampleKindPost}}), AI: AIPart{Impression: chosen.Description}, MaterialIDs: []string{}, AnalyzeModel: found.WriteModel, CreatedAt: now}
+	analysis, err := BuildSyntheticAnalysis(WritingStyleDraft{Name: chosen.Name, Description: chosen.Description, Sample: chosen.Sample}, found.WriteModel, now)
+	if err != nil {
+		return Voice{}, err
+	}
 	return s.store.AdoptCandidate(ctx, CandidateAdoption{Voice: Voice{ID: s.newID(), UserID: userID, Name: chosen.Name, CreatedAt: now, UpdatedAt: now}, JobID: jobID, CandidateID: candidateID, Analysis: analysis, MakeDefault: makeDefault})
 }

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	authoringrpc "github.com/postpilot/backend/internal/authoring/rpc"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -223,6 +224,9 @@ func handlers(c *contexts) []rpcserver.Registrar {
 		},
 		func(opts ...connect.HandlerOption) (string, http.Handler) {
 			return postpilotv1connect.NewWritingVoiceCandidateServiceHandler(voicerpc.NewCandidateHandler(c.voiceCandidates), opts...)
+		},
+		func(opts ...connect.HandlerOption) (string, http.Handler) {
+			return postpilotv1connect.NewConfigurationAuthoringServiceHandler(authoringrpc.NewHandler(c.authoring), opts...)
 		},
 		func(opts ...connect.HandlerOption) (string, http.Handler) {
 			return postpilotv1connect.NewModelExperimentServiceHandler(experimentrpc.NewHandler(c.experiment), opts...)

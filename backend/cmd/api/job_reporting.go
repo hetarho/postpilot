@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"github.com/postpilot/backend/internal/authoring"
 
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/job"
@@ -56,5 +57,5 @@ func (jobReporting) SafeStage(kind, stage string) (string, bool) {
 
 // Clip failures may wrap subprocess stderr, media paths or provider bodies.
 func (jobReporting) Redacted(kind string) bool {
-	return clip.IsJobKind(kind) || spoken.IsJobKind(kind) || kind == job.KindWritingVoiceCandidates
+	return clip.IsJobKind(kind) || spoken.IsJobKind(kind) || kind == job.KindWritingVoiceCandidates || kind == authoring.JobKind
 }

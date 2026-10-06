@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"github.com/postpilot/backend/internal/authoring"
+	authoringstore "github.com/postpilot/backend/internal/authoring/store"
 	"log/slog"
 	"net/http"
 	"time"
@@ -52,7 +54,8 @@ import (
 // contexts is every bounded context the server runs, constructed once in dependency
 // order. Adapters between contexts live in this package and nowhere else (ARCH-6).
 type contexts struct {
-	platform *platform
+	authoring *authoring.Service
+	platform  *platform
 
 	jobs     *job.Queue
 	auth     *auth.Service
@@ -335,6 +338,18 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 		voiceCandidateModels{registry: c.metered, dispatch: jobstore.New(handle.Writer, handle.Reader, jobKinds())},
 		voiceCandidateJobs{queue: c.jobs}, voicestore.New(handle.Writer, handle.Reader),
 		cfg.LLMCompletionBudget, voiceCandidateEstimates{rates: c.ledger},
+	)
+	c.authoring = authoring.NewService(
+		authoringstore.New(handle.Writer, handle.Reader),
+		authoringModels{registry: c.metered, dispatch: jobstore.New(handle.Writer, handle.Reader, jobKinds())},
+		authoringJobs{queue: c.jobs},
+		authoringTargets{
+			postTemplates:  template.NewAuthoring(c.template, templatestore.New(handle.Writer, handle.Reader)),
+			videoTemplates: clipapp.NewAuthoring(c.clip, c.clipStore),
+			guidelines:     guideline.NewAuthoring(c.guideline, guidelinestore.New(handle.Writer, handle.Reader)),
+			voices:         voice.NewAuthoring(c.voice, voicestore.New(handle.Writer, handle.Reader)),
+		},
+		authoringBudget{config: cfg.LLMCompletionBudget}, authoringEstimates{rates: c.ledger},
 	)
 	c.voice.ConfigurePhotos(voiceObjects{bucket: p.bucket}, voice.PhotoLimits{
 		PutTTL: cfg.PresignPutTTL, GetTTL: cfg.PresignGetTTL, MaxBytes: cfg.MaxImageBytes,
