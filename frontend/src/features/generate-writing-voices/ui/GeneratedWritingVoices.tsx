@@ -1,4 +1,6 @@
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useMemo, useRef } from 'react'
+import { useActorRef, useSelector } from '@xstate/react'
+import { fromPromise, type SnapshotFrom } from 'xstate'
 import { useTranslation } from 'react-i18next'
 import { clsx } from 'clsx'
 import {
@@ -16,7 +18,6 @@ import {
   useCancelWritingVoiceCandidates,
   useAdoptWritingVoiceCandidate,
 } from '@/entities/voice-candidate'
-import { appFailureFromConnect } from '@/shared/api'
 import {
   AppFailureMessage,
   Button,
@@ -27,10 +28,12 @@ import {
   typographyStyles,
 } from '@/shared/ui'
 import {
-  initialCandidateState,
-  candidateTransition,
+  candidateMachine,
+  candidateStateOf,
   candidateBusy,
   type CandidateEvent,
+  type CandidateWork,
+  type CandidateResult,
 } from '../model/candidate-machine'
 
 export interface GeneratedWritingVoicesProps {
@@ -43,31 +46,60 @@ export function GeneratedWritingVoices(props: GeneratedWritingVoicesProps) {
 }
 function AccountCandidates({ ownerId, onAdopted, onBusyChange }: GeneratedWritingVoicesProps) {
   const { t } = useTranslation('voices')
-  const [state, setState] = useState(() => initialCandidateState(ownerId))
-  const current = useRef(state)
-  const mounted = useRef(true)
-  useEffect(() => {
-    mounted.current = true
-    return () => {
-      mounted.current = false
-    }
-  }, [])
-  const send = useCallback((event: CandidateEvent) => {
-    const next = candidateTransition(current.current, event)
-    if (mounted.current) {
-      current.current = next
-      setState(next)
-    }
-    return next
-  }, [])
+  const start = useStartWritingVoiceCandidates(ownerId)
+  const cancel = useCancelWritingVoiceCandidates(ownerId)
+  const adopt = useAdoptWritingVoiceCandidate(ownerId)
+  const observer = useCallback(
+    (snapshot: SnapshotFrom<typeof candidateMachine>) => {
+      onBusyChange?.(candidateBusy(candidateStateOf(snapshot)))
+    },
+    [onBusyChange],
+  )
+  const actorRef = useActorRef(
+    candidateMachine.provide({
+      actors: {
+        perform: fromPromise<CandidateResult, CandidateWork>(async ({ input }) => {
+          if (input.kind === 'start') {
+            if (!input.model) throw new Error('Generated writing model unavailable')
+            const result = await start.start(input.model)
+            return { ownerId: input.ownerId, operation: input.operation, jobId: result.jobId }
+          }
+          if (input.kind === 'cancel') {
+            await cancel.cancel(input.jobId)
+            return { ownerId: input.ownerId, operation: input.operation }
+          }
+          const voice = await adopt.adopt({
+            jobId: input.resultJobId,
+            candidateId: input.selectedId,
+          })
+          return { ownerId: input.ownerId, operation: input.operation, voice }
+        }),
+      },
+      actions: {
+        notifyAdopted: ({ event }) => {
+          const result = (event as unknown as { output: CandidateResult }).output
+          if (result.ownerId === ownerId && result.voice) onAdopted(result.voice)
+        },
+        refreshCancelled: () => progress.refetch(),
+      },
+    }),
+    { input: { ownerId } },
+    observer,
+  )
+  const state = useSelector(actorRef, candidateStateOf)
+  const getSnapshot = () => candidateStateOf(actorRef.getSnapshot())
+  const send = useCallback(
+    (event: CandidateEvent) => {
+      if (actorRef.getSnapshot().status === 'active') actorRef.send(event)
+      return candidateStateOf(actorRef.getSnapshot())
+    },
+    [actorRef],
+  )
   const latest = useLatestWritingVoiceCandidates(ownerId)
   const preparation = useInitializeDefaultSelections(ownerId)
   const writing = useStageSelection('write')
   const models = useModels()
   const selections = useSelections()
-  const start = useStartWritingVoiceCandidates(ownerId)
-  const cancel = useCancelWritingVoiceCandidates(ownerId)
-  const adopt = useAdoptWritingVoiceCandidate(ownerId)
   const quote = useEstimateWritingVoiceCandidates(
     ownerId,
     state.phase === 'confirming' ? state.frozenModel : undefined,
@@ -91,9 +123,6 @@ function AccountCandidates({ ownerId, onAdopted, onBusyChange }: GeneratedWritin
   useEffect(() => {
     busyCallback.current = onBusyChange
   }, [onBusyChange])
-  useEffect(() => {
-    busyCallback.current?.(busy)
-  }, [busy])
   useEffect(() => () => busyCallback.current?.(false), [])
   const openConfirmation = () => {
     if (
@@ -105,8 +134,8 @@ function AccountCandidates({ ownerId, onAdopted, onBusyChange }: GeneratedWritin
     )
       send({ type: 'confirm', ownerId, model: writing.selected })
   }
-  const run = async () => {
-    const before = current.current
+  const run = () => {
+    const before = getSnapshot()
     const price = quote.estimate
     if (
       preparation.isPending ||
@@ -118,62 +147,9 @@ function AccountCandidates({ ownerId, onAdopted, onBusyChange }: GeneratedWritin
       return
     const next = send({ type: 'start', ownerId })
     if (next === before || !next.frozenModel) return
-    try {
-      const result = await start.start(next.frozenModel)
-      if (mounted.current)
-        send({ type: 'started', ownerId, operation: next.operation, jobId: result.jobId })
-    } catch (error) {
-      if (mounted.current)
-        send({
-          type: 'failure',
-          ownerId,
-          operation: next.operation,
-          failure: appFailureFromConnect(error),
-        })
-    }
   }
-  const stop = async () => {
-    const before = current.current
-    const next = send({ type: 'cancel', ownerId })
-    if (next === before) return
-    try {
-      await cancel.cancel(next.jobId)
-      if (mounted.current) send({ type: 'cancelled', ownerId, operation: next.operation })
-      progress.refetch()
-    } catch (error) {
-      if (mounted.current)
-        send({
-          type: 'failure',
-          ownerId,
-          operation: next.operation,
-          failure: appFailureFromConnect(error),
-        })
-    }
-  }
-  const adoptSelected = async () => {
-    const before = current.current
-    const next = send({ type: 'adopt', ownerId })
-    if (next === before) return
-    try {
-      const voice = await adopt.adopt({ jobId: next.resultJobId, candidateId: next.selectedId })
-      if (
-        !mounted.current ||
-        current.current.operation !== next.operation ||
-        current.current.phase !== 'adopting'
-      )
-        return
-      send({ type: 'adopted', ownerId, operation: next.operation })
-      onAdopted(voice)
-    } catch (error) {
-      if (mounted.current)
-        send({
-          type: 'failure',
-          ownerId,
-          operation: next.operation,
-          failure: appFailureFromConnect(error),
-        })
-    }
-  }
+  const stop = () => send({ type: 'cancel', ownerId })
+  const adoptSelected = () => send({ type: 'adopt', ownerId })
   const confirmTitle = useId()
   const priceReady =
     !!quote.estimate &&

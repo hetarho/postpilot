@@ -1,5 +1,14 @@
+import {
+  assign,
+  fromPromise,
+  getInitialSnapshot,
+  getNextSnapshot,
+  setup,
+  type SnapshotFrom,
+} from 'xstate'
+import type { Voice } from '@/entities/voice'
 import { completeCandidateBatch, type WritingVoiceCandidateBatch } from '@/entities/voice-candidate'
-import type { AppFailure } from '@/shared/api'
+import { appFailureFromConnect, type AppFailure } from '@/shared/api'
 
 export type CandidatePhase =
   'idle' | 'confirming' | 'starting' | 'running' | 'ready' | 'failed' | 'cancelling' | 'adopting'
@@ -15,16 +24,14 @@ export interface CandidateState extends WritingVoiceCandidateBatch {
   settledJobId: string
   settledStatus: string
 }
-export const initialCandidateState = (ownerId: string): CandidateState => ({
+const initialCandidateData = (ownerId: string): CandidateContext => ({
   ownerId,
-  phase: 'idle',
   hydrated: false,
   jobId: '',
   resultJobId: '',
   candidates: [],
   selectedId: '',
   operation: 0,
-  cancelDialog: false,
   settledJobId: '',
   settledStatus: '',
 })
@@ -46,135 +53,315 @@ export type CandidateEvent = { ownerId: string } & (
 export function candidateBusy(state: CandidateState) {
   return ['starting', 'running', 'cancelling', 'adopting'].includes(state.phase)
 }
-export function candidateTransition(state: CandidateState, event: CandidateEvent): CandidateState {
-  if (!state.ownerId || event.ownerId !== state.ownerId) return state
-  if (event.type === 'latest') {
-    if (['starting', 'adopting'].includes(state.phase)) return state
-    if (candidateBusy(state) && state.jobId && event.batch.jobId !== state.jobId) return state
-    const valid = !!event.batch.resultJobId && completeCandidateBatch(event.batch.candidates)
-    const batchChanged = valid && event.batch.resultJobId !== state.resultJobId
-    const next = {
-      ...state,
-      hydrated: true,
-      ...(valid
-        ? {
-            resultJobId: event.batch.resultJobId,
-            candidates: event.batch.candidates,
-            selectedId: batchChanged ? '' : state.selectedId,
-          }
-        : {}),
-    }
-    if (state.phase === 'confirming') return next
-    if (state.phase === 'cancelling')
-      return valid && event.batch.resultJobId === state.jobId && state.settledStatus === 'done'
-        ? { ...next, phase: 'ready', cancelDialog: false }
-        : next
-    if (event.batch.jobId === state.settledJobId && state.settledStatus === 'failed')
-      return { ...next, phase: 'failed' }
-    if (event.batch.jobId === state.settledJobId && state.settledStatus === 'cancelled')
-      return { ...next, phase: next.candidates.length ? 'ready' : 'idle' }
-    if (event.batch.jobId && event.batch.jobId !== event.batch.resultJobId)
-      return {
-        ...next,
-        jobId: event.batch.jobId,
-        phase: state.phase === 'failed' && state.jobId === event.batch.jobId ? 'failed' : 'running',
-      }
-    return { ...next, jobId: event.batch.jobId, phase: valid ? 'ready' : 'idle' }
-  }
-  if (event.type === 'terminal') {
-    if (event.jobId !== state.jobId || !['running', 'cancelling'].includes(state.phase))
-      return state
-    const settled = { settledJobId: event.jobId, settledStatus: event.status }
-    if (event.status === 'failed')
-      return { ...state, ...settled, phase: 'failed', cancelDialog: false, failure: event.failure }
-    if (event.status === 'cancelled')
-      return {
-        ...state,
-        ...settled,
-        phase: state.candidates.length ? 'ready' : 'idle',
-        cancelDialog: false,
-        failure: undefined,
-      }
-    if (
+
+type CandidateContext = Omit<CandidateState, 'phase' | 'cancelDialog'>
+export interface CandidateWork {
+  ownerId: string
+  operation: number
+  kind: 'start' | 'cancel' | 'adopt'
+  model?: { providerId: string; modelId: string }
+  jobId: string
+  resultJobId: string
+  selectedId: string
+}
+export interface CandidateResult {
+  ownerId: string
+  operation: number
+  jobId?: string
+  voice?: Voice
+}
+function resultOf(event: unknown) {
+  return (event as { output?: CandidateResult }).output
+}
+function currentResult(context: CandidateContext, event: unknown) {
+  const result = resultOf(event)
+  return !!result && result.ownerId === context.ownerId && result.operation === context.operation
+}
+const workInput =
+  (kind: CandidateWork['kind']) =>
+  ({ context }: { context: CandidateContext }): CandidateWork => ({
+    ownerId: context.ownerId,
+    operation: context.operation,
+    kind,
+    model: context.frozenModel,
+    jobId: context.jobId,
+    resultJobId: context.resultJobId,
+    selectedId: context.selectedId,
+  })
+function owns(context: CandidateContext, event: CandidateEvent) {
+  return !!context.ownerId && context.ownerId === event.ownerId
+}
+function latestPhase(
+  context: CandidateContext,
+  event: CandidateEvent,
+  phase: CandidatePhase,
+): CandidatePhase | undefined {
+  if (!owns(context, event) || event.type !== 'latest') return undefined
+  if (
+    ['running', 'cancelling'].includes(phase) &&
+    context.jobId &&
+    event.batch.jobId !== context.jobId
+  )
+    return undefined
+  const valid = !!event.batch.resultJobId && completeCandidateBatch(event.batch.candidates)
+  if (phase === 'confirming') return 'confirming'
+  if (phase === 'cancelling')
+    return valid && event.batch.resultJobId === context.jobId && context.settledStatus === 'done'
+      ? 'ready'
+      : 'cancelling'
+  if (event.batch.jobId === context.settledJobId && context.settledStatus === 'failed')
+    return 'failed'
+  if (event.batch.jobId === context.settledJobId && context.settledStatus === 'cancelled')
+    return (valid ? event.batch.candidates : context.candidates).length ? 'ready' : 'idle'
+  if (event.batch.jobId && event.batch.jobId !== event.batch.resultJobId)
+    return phase === 'failed' && context.jobId === event.batch.jobId ? 'failed' : 'running'
+  return valid ? 'ready' : 'idle'
+}
+const latestTransitions = (from: CandidatePhase) =>
+  (['idle', 'confirming', 'running', 'ready', 'failed', 'cancelling'] as const).map((to) => ({
+    guard: { type: 'latestPhase' as const, params: { from, to } },
+    target: from === to ? undefined : to,
+    actions: { type: 'latest' as const, params: { from } },
+  }))
+const terminalTransitions = [
+  { guard: 'terminalFailed', target: 'failed', actions: ['settled', 'terminalFailure'] },
+  { guard: 'terminalCancelledReady', target: 'ready', actions: ['settled', 'clearFailure'] },
+  { guard: 'terminalCancelled', target: 'idle', actions: ['settled', 'clearFailure'] },
+  { guard: 'terminalDoneReady', target: 'ready', actions: ['settled', 'clearFailure'] },
+  { guard: 'terminalDone', actions: 'settled' },
+] as const
+const selectable = {
+  confirm: { guard: 'model', target: 'confirming', actions: 'confirm' },
+  select: { guard: 'candidate', actions: 'select' },
+  adopt: { guard: 'adoptable', target: 'adopting', actions: ['begin', 'clearFailure'] },
+} as const
+function terminalMatches(context: CandidateContext, event: CandidateEvent) {
+  return owns(context, event) && event.type === 'terminal' && event.jobId === context.jobId
+}
+export const candidateMachine = setup({
+  types: {
+    context: {} as CandidateContext,
+    events: {} as CandidateEvent,
+    input: {} as { ownerId: string },
+  },
+  actors: {
+    perform: fromPromise<CandidateResult, CandidateWork>(async () => {
+      throw new Error('Generated style actor unavailable')
+    }),
+  },
+  guards: {
+    startedResult: ({ context, event }) =>
+      currentResult(context, event) && !!resultOf(event)?.jobId,
+    adoptedResult: ({ context, event }) =>
+      currentResult(context, event) &&
+      !!resultOf(event)?.voice?.made &&
+      !resultOf(event)?.voice?.deleted,
+    cancelledResult: ({ context, event }) => currentResult(context, event),
+    cancelledReadyResult: ({ context, event }) =>
+      currentResult(context, event) &&
+      context.resultJobId === context.jobId &&
+      completeCandidateBatch(context.candidates),
+    owned: ({ context, event }) => owns(context, event),
+    latestPhase: ({ context, event }, params: { from: CandidatePhase; to: CandidatePhase }) =>
+      latestPhase(context, event, params.from) === params.to,
+    model: ({ context, event }) =>
+      owns(context, event) &&
+      event.type === 'confirm' &&
+      !!event.model.providerId &&
+      !!event.model.modelId,
+    hasCandidates: ({ context, event }) => owns(context, event) && context.candidates.length > 0,
+    frozen: ({ context, event }) => owns(context, event) && !!context.frozenModel,
+    started: ({ context, event }) =>
+      owns(context, event) &&
+      event.type === 'started' &&
+      event.operation === context.operation &&
+      !!event.jobId,
+    operation: ({ context, event }) =>
+      owns(context, event) && 'operation' in event && event.operation === context.operation,
+    candidate: ({ context, event }) =>
+      owns(context, event) &&
+      event.type === 'select' &&
+      context.candidates.some((candidate) => candidate.id === event.candidateId),
+    adoptable: ({ context, event }) =>
+      owns(context, event) &&
+      !!context.resultJobId &&
+      completeCandidateBatch(context.candidates) &&
+      context.candidates.some((candidate) => candidate.id === context.selectedId),
+    terminalFailed: ({ context, event }) =>
+      terminalMatches(context, event) && event.type === 'terminal' && event.status === 'failed',
+    terminalCancelledReady: ({ context, event }) =>
+      terminalMatches(context, event) &&
+      event.type === 'terminal' &&
+      event.status === 'cancelled' &&
+      context.candidates.length > 0,
+    terminalCancelled: ({ context, event }) =>
+      terminalMatches(context, event) && event.type === 'terminal' && event.status === 'cancelled',
+    terminalDoneReady: ({ context, event }) =>
+      terminalMatches(context, event) &&
+      event.type === 'terminal' &&
       event.status === 'done' &&
-      state.resultJobId === event.jobId &&
-      completeCandidateBatch(state.candidates)
-    )
-      return { ...state, ...settled, phase: 'ready', cancelDialog: false, failure: undefined }
-    return event.status === 'done' ? { ...state, ...settled } : state
-  }
-  if (event.type === 'result-failed') {
-    return event.jobId === state.jobId && ['running', 'cancelling'].includes(state.phase)
-      ? { ...state, phase: 'failed', failure: event.failure, cancelDialog: false }
-      : state
-  }
-  if (event.type === 'failure') {
-    if (
-      event.operation !== state.operation ||
-      !['starting', 'adopting', 'cancelling'].includes(state.phase)
-    )
-      return state
-    return {
-      ...state,
-      phase: state.phase === 'cancelling' ? 'running' : 'failed',
-      cancelDialog: false,
-      failure: event.failure,
+      context.resultJobId === event.jobId &&
+      completeCandidateBatch(context.candidates),
+    terminalDone: ({ context, event }) =>
+      terminalMatches(context, event) && event.type === 'terminal' && event.status === 'done',
+    resultFailed: ({ context, event }) =>
+      owns(context, event) && event.type === 'result-failed' && context.jobId === event.jobId,
+    cancelledReady: ({ context, event }) =>
+      owns(context, event) &&
+      event.type === 'cancelled' &&
+      event.operation === context.operation &&
+      context.resultJobId === context.jobId &&
+      completeCandidateBatch(context.candidates),
+  },
+  actions: {
+    latest: assign(({ context, event }, params: { from: CandidatePhase }) => {
+      if (event.type !== 'latest') return {}
+      const valid = !!event.batch.resultJobId && completeCandidateBatch(event.batch.candidates)
+      const retainJob =
+        params.from === 'confirming' ||
+        params.from === 'cancelling' ||
+        (event.batch.jobId === context.settledJobId &&
+          ['failed', 'cancelled'].includes(context.settledStatus))
+      return {
+        hydrated: true,
+        ...(valid
+          ? {
+              resultJobId: event.batch.resultJobId,
+              candidates: event.batch.candidates,
+              selectedId: event.batch.resultJobId !== context.resultJobId ? '' : context.selectedId,
+            }
+          : {}),
+        ...(!retainJob ? { jobId: event.batch.jobId } : {}),
+      }
+    }),
+    confirm: assign(({ event }) =>
+      event.type === 'confirm' ? { frozenModel: { ...event.model }, failure: undefined } : {},
+    ),
+    dismiss: assign({ frozenModel: undefined }),
+    begin: assign(({ context }) => ({ operation: context.operation + 1 })),
+    started: assign(({ event }) => (event.type === 'started' ? { jobId: event.jobId } : {})),
+    startedResult: assign(({ event }) => ({ jobId: resultOf(event)!.jobId! })),
+    select: assign(({ event }) =>
+      event.type === 'select' ? { selectedId: event.candidateId } : {},
+    ),
+    failure: assign(({ event }) =>
+      event.type === 'failure' || event.type === 'result-failed' ? { failure: event.failure } : {},
+    ),
+    terminalFailure: assign(({ event }) =>
+      event.type === 'terminal' ? { failure: event.failure } : {},
+    ),
+    settled: assign(({ event }) =>
+      event.type === 'terminal' ? { settledJobId: event.jobId, settledStatus: event.status } : {},
+    ),
+    clearFailure: assign({ failure: undefined }),
+    invocationFailed: assign(({ event }) => ({
+      failure: appFailureFromConnect((event as unknown as { error: unknown }).error),
+    })),
+    notifyAdopted: () => {},
+    refreshCancelled: () => {},
+  },
+}).createMachine({
+  id: 'writingCandidates',
+  initial: 'idle',
+  context: ({ input }) => initialCandidateData(input.ownerId),
+  states: {
+    idle: { on: { latest: latestTransitions('idle'), confirm: selectable.confirm } },
+    confirming: {
+      on: {
+        latest: latestTransitions('confirming'),
+        'dismiss-confirm': [
+          { guard: 'hasCandidates', target: 'ready', actions: 'dismiss' },
+          { guard: 'owned', target: 'idle', actions: 'dismiss' },
+        ],
+        start: { guard: 'frozen', target: 'starting', actions: 'begin' },
+      },
+    },
+    starting: {
+      invoke: {
+        src: 'perform',
+        input: workInput('start'),
+        onDone: { guard: 'startedResult', target: 'running', actions: 'startedResult' },
+        onError: { target: 'failed', actions: 'invocationFailed' },
+      },
+      on: {
+        started: { guard: 'started', target: 'running', actions: 'started' },
+        failure: { guard: 'operation', target: 'failed', actions: 'failure' },
+      },
+    },
+    ready: { on: { ...selectable, latest: latestTransitions('ready') } },
+    failed: { on: { ...selectable, latest: latestTransitions('failed') } },
+    adopting: {
+      invoke: {
+        src: 'perform',
+        input: workInput('adopt'),
+        onDone: { guard: 'adoptedResult', target: 'ready', actions: 'notifyAdopted' },
+        onError: { target: 'failed', actions: 'invocationFailed' },
+      },
+      on: {
+        adopted: { guard: 'operation', target: 'ready' },
+        failure: { guard: 'operation', target: 'failed', actions: 'failure' },
+      },
+    },
+    running: {
+      initial: 'active',
+      on: {
+        latest: latestTransitions('running'),
+        terminal: terminalTransitions,
+        'result-failed': { guard: 'resultFailed', target: 'failed', actions: 'failure' },
+      },
+      states: {
+        active: { on: { 'open-cancel': { guard: 'owned', target: 'confirming' } } },
+        confirming: {
+          on: {
+            'dismiss-cancel': { guard: 'owned', target: 'active' },
+            cancel: { guard: 'owned', target: '#writingCandidates.cancelling', actions: 'begin' },
+          },
+        },
+      },
+    },
+    cancelling: {
+      invoke: {
+        src: 'perform',
+        input: workInput('cancel'),
+        onDone: [
+          { guard: 'cancelledReadyResult', target: 'ready', actions: 'refreshCancelled' },
+          { guard: 'cancelledResult', actions: 'refreshCancelled' },
+        ],
+        onError: { target: 'running', actions: 'invocationFailed' },
+      },
+      on: {
+        latest: latestTransitions('cancelling'),
+        terminal: terminalTransitions,
+        'result-failed': { guard: 'resultFailed', target: 'failed', actions: 'failure' },
+        failure: { guard: 'operation', target: 'running', actions: 'failure' },
+        cancelled: [{ guard: 'cancelledReady', target: 'ready' }, { guard: 'operation' }],
+      },
+    },
+  },
+})
+const projections = new WeakMap<object, CandidateState>()
+export function candidateStateOf(snapshot: SnapshotFrom<typeof candidateMachine>): CandidateState {
+  let state = projections.get(snapshot)
+  if (!state) {
+    state = {
+      ...snapshot.context,
+      phase: typeof snapshot.value === 'string' ? (snapshot.value as CandidatePhase) : 'running',
+      cancelDialog: snapshot.matches({ running: 'confirming' }),
     }
+    projections.set(snapshot, state)
   }
-  switch (event.type) {
-    case 'confirm':
-      return !candidateBusy(state) &&
-        state.phase !== 'confirming' &&
-        event.model.modelId &&
-        event.model.providerId
-        ? { ...state, phase: 'confirming', frozenModel: { ...event.model }, failure: undefined }
-        : state
-    case 'dismiss-confirm':
-      return state.phase === 'confirming'
-        ? { ...state, phase: state.candidates.length ? 'ready' : 'idle', frozenModel: undefined }
-        : state
-    case 'start':
-      return state.phase === 'confirming' && state.frozenModel
-        ? { ...state, phase: 'starting', operation: state.operation + 1 }
-        : state
-    case 'started':
-      return state.phase === 'starting' && event.operation === state.operation && event.jobId
-        ? { ...state, phase: 'running', jobId: event.jobId, cancelDialog: false }
-        : state
-    case 'select':
-      return ['ready', 'failed'].includes(state.phase) &&
-        state.candidates.some((candidate) => candidate.id === event.candidateId)
-        ? { ...state, selectedId: event.candidateId }
-        : state
-    case 'adopt':
-      return ['ready', 'failed'].includes(state.phase) &&
-        !!state.resultJobId &&
-        completeCandidateBatch(state.candidates) &&
-        state.candidates.some((candidate) => candidate.id === state.selectedId)
-        ? { ...state, phase: 'adopting', operation: state.operation + 1, failure: undefined }
-        : state
-    case 'adopted':
-      return state.phase === 'adopting' && event.operation === state.operation
-        ? { ...state, phase: 'ready' }
-        : state
-    case 'open-cancel':
-      return state.phase === 'running' ? { ...state, cancelDialog: true } : state
-    case 'dismiss-cancel':
-      return state.phase === 'running' ? { ...state, cancelDialog: false } : state
-    case 'cancel':
-      return state.phase === 'running' && state.cancelDialog
-        ? { ...state, phase: 'cancelling', operation: state.operation + 1 }
-        : state
-    case 'cancelled':
-      return state.phase === 'cancelling' && event.operation === state.operation
-        ? {
-            ...state,
-            cancelDialog: false,
-            phase:
-              state.resultJobId === state.jobId && completeCandidateBatch(state.candidates)
-                ? 'ready'
-                : 'cancelling',
-          }
-        : state
-  }
+  return state
+}
+export function initialCandidateState(ownerId: string): CandidateState {
+  return candidateStateOf(getInitialSnapshot(candidateMachine, { ownerId }))
+}
+export function candidateTransition(state: CandidateState, event: CandidateEvent): CandidateState {
+  const { phase, cancelDialog, ...context } = state
+  const value = phase === 'running' ? { running: cancelDialog ? 'confirming' : 'active' } : phase
+  const snapshot = candidateMachine.resolveState({ value, context })
+  const next = getNextSnapshot(candidateMachine, snapshot, event)
+  return next.context === snapshot.context &&
+    JSON.stringify(next.value) === JSON.stringify(snapshot.value)
+    ? state
+    : candidateStateOf(next)
 }

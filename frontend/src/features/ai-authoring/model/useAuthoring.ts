@@ -1,4 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
+import { useActorRef, useSelector } from '@xstate/react'
+import { fromPromise, type SnapshotFrom } from 'xstate'
 import {
   authoringScopeKey,
   useAuthoringAPI,
@@ -12,105 +14,155 @@ import {
 import { isTerminal, useJob } from '@/entities/generation-job'
 import { appFailureFromConnect } from '@/shared/api'
 import {
-  initialAuthoringState,
-  authoringTransition,
+  authoringMachine,
+  authoringStateOf,
   studioBusy,
   type AuthoringEvent,
+  type AuthoringRetry,
+  type AuthoringQuote,
+  type AuthoringQuoted,
+  type AuthoringWork,
+  type AuthoringResult,
 } from './authoring-machine'
 
-type Retry =
-  | { type: 'edit'; requestId: string }
-  | { type: 'select'; sessionId: string; revision: number; candidateId: string }
-  | { type: 'save'; sessionId: string; revision: number; makeDefault: boolean }
-  | { type: 'cancel'; sessionId: string; jobId: string }
 export function useAuthoring(
   scope: AuthoringScope,
   callbacks: { onSaved?: (ref: AuthoringSavedRef) => void; onBusyChange?: (busy: boolean) => void },
 ) {
   const scopeKey = authoringScopeKey(scope)
-  const [state, setState] = useState(() => initialAuthoringState(scope))
-  const current = useRef(state)
-  const mounted = useRef(true)
   const latest = useLatestAuthoringSession(scope)
   const api = useAuthoringAPI(scope)
-  const sessionQuery = useAuthoringSession(scope, state.session?.id ?? '')
-  const retry = useRef<Retry | undefined>(undefined)
   const callbackRef = useRef(callbacks)
   useEffect(() => {
     callbackRef.current = callbacks
   }, [callbacks])
+  const onBusyChange = callbacks.onBusyChange
+  const observer = useCallback(
+    (snapshot: SnapshotFrom<typeof authoringMachine>) => {
+      onBusyChange?.(studioBusy(authoringStateOf(snapshot)))
+    },
+    [onBusyChange],
+  )
+  const logic = authoringMachine.provide({
+    actors: {
+      estimate: fromPromise<AuthoringQuoted, AuthoringQuote>(async ({ input }) => ({
+        scopeKey: input.scopeKey,
+        operation: input.operation,
+        estimate: await api.estimate(
+          input.command.mode,
+          input.command.writeModel,
+          input.command.sessionId,
+        ),
+      })),
+      execute: fromPromise<AuthoringResult, AuthoringWork>(async ({ input, signal }) => {
+        let session
+        if (input.phase === 'starting') {
+          let command = input.command
+          if (!command) throw new Error('Authoring confirmed command unavailable')
+          if (!command.sessionId) {
+            session = await api.create(command.createRequestId)
+            // A confirmed create may finish after the view closes. Never continue its paid start.
+            if (signal.aborted) throw new DOMException('Authoring view closed', 'AbortError')
+            input.created(session)
+            command = { ...command, sessionId: session.id, expectedRevision: session.revision }
+          }
+          if (signal.aborted) throw new DOMException('Authoring view closed', 'AbortError')
+          session = (await api.start(command)).session
+        } else {
+          const retry = input.retry
+          if (!retry) throw new Error('Authoring explicit operation unavailable')
+          if (retry.type === 'edit') session = await api.create(retry.requestId)
+          else if (retry.type === 'select')
+            session = await api.select(retry.sessionId, retry.revision, retry.candidateId)
+          else if (retry.type === 'save')
+            session = await api.save(retry.sessionId, retry.revision, retry.makeDefault)
+          else session = await api.cancel(retry.sessionId, retry.jobId)
+        }
+        return {
+          scopeKey: input.scopeKey,
+          operation: input.operation,
+          session,
+          clearText: input.phase === 'starting',
+        }
+      }),
+    },
+    actions: {
+      notifySaved: ({ context, event }) => {
+        const response =
+          (event as unknown as { output?: AuthoringResult }).output ??
+          (event.type === 'response' ? event : undefined)
+        if (
+          response?.session.saved &&
+          context.retry?.type === 'save' &&
+          response.scopeKey === scopeKey &&
+          response.operation === context.operation &&
+          context.retry.sessionId === response.session.id
+        )
+          callbacks.onSaved?.(response.session.saved)
+      },
+      notifyHydratedSave: ({ context, event }) => {
+        if (
+          event.type === 'hydrate' &&
+          event.scopeKey === scopeKey &&
+          event.session?.phase === 'saved' &&
+          event.session.saved &&
+          context.retry?.type === 'save' &&
+          context.retry.sessionId === event.session.id
+        )
+          callbacks.onSaved?.(event.session.saved)
+      },
+    },
+  })
+  const actorRef = useActorRef(logic, { input: scope }, observer)
+  const state = useSelector(actorRef, authoringStateOf)
+  const getSnapshot = useCallback(() => authoringStateOf(actorRef.getSnapshot()), [actorRef])
+  const send = useCallback(
+    (event: AuthoringEvent) => {
+      if (actorRef.getSnapshot().status === 'active') actorRef.send(event)
+      return authoringStateOf(actorRef.getSnapshot())
+    },
+    [actorRef],
+  )
+  useEffect(() => () => callbackRef.current.onBusyChange?.(false), [])
+  const sessionQuery = useAuthoringSession(scope, state.session?.id ?? '')
+  const job = useJob(state.session?.activeJobId ?? '', [sessionQuery.queryKey])
   useEffect(() => {
-    mounted.current = true
-    return () => {
-      mounted.current = false
-      callbackRef.current.onBusyChange?.(false)
-    }
-  }, [])
-  const send = useCallback((event: AuthoringEvent) => {
-    const before = current.current
-    if (!mounted.current) return before
-    const next = authoringTransition(before, event)
-    current.current = next
-    if (next !== before) {
-      callbackRef.current.onBusyChange?.(studioBusy(next))
-      setState(next)
-    }
-    return next
-  }, [])
-  const fail = (operation: number, error: unknown) =>
-    send({ type: 'failed', scopeKey, operation, failure: appFailureFromConnect(error) })
-  useEffect(() => {
-    if (current.current.phase !== 'checking') return
+    if (actorRef.getSnapshot().value !== 'checking') return
     if (latest.isError)
       send({
         type: 'failed',
         scopeKey,
-        operation: current.current.operation,
+        operation: getSnapshot().operation,
         failure: appFailureFromConnect(latest.error),
       })
     else if (latest.data !== undefined) send({ type: 'hydrate', scopeKey, session: latest.data })
-  }, [latest.data, latest.error, latest.isError, scopeKey, send])
+  }, [
+    latest.data,
+    latest.error,
+    latest.isError,
+    state.phase,
+    scopeKey,
+    send,
+    actorRef,
+    getSnapshot,
+  ])
   useEffect(() => {
-    if (!sessionQuery.data) return
-    const before = current.current
-    const next = send({ type: 'hydrate', scopeKey, session: sessionQuery.data })
-    const publication = retry.current
-    if (
-      next !== before &&
-      next.phase === 'saved' &&
-      next.session?.saved &&
-      publication?.type === 'save' &&
-      publication.sessionId === next.session.id &&
-      mounted.current
-    ) {
-      retry.current = undefined
-      callbackRef.current.onSaved?.(next.session.saved)
-    }
+    if (sessionQuery.data) send({ type: 'hydrate', scopeKey, session: sessionQuery.data })
   }, [sessionQuery.data, state.phase, scopeKey, send])
-  const job = useJob(state.session?.activeJobId ?? '', [sessionQuery.queryKey])
-  const publish = (
-    operation: number,
-    session: NonNullable<typeof state.session>,
-    clearText = false,
-  ) => {
-    const before = current.current
-    const next = send({ type: 'response', scopeKey, operation, session, clearText })
-    if (
-      next !== before &&
-      next.phase === 'saved' &&
-      session.saved &&
-      mounted.current &&
-      next.operation === operation &&
-      retry.current?.type === 'save' &&
-      retry.current.sessionId === session.id
-    ) {
-      retry.current = undefined
-      callbackRef.current.onSaved?.(session.saved)
-    }
+  const run = (retry: AuthoringRetry) => {
+    const phase =
+      retry.type === 'edit'
+        ? 'creating'
+        : retry.type === 'select'
+          ? 'selecting'
+          : retry.type === 'save'
+            ? 'saving'
+            : 'cancelling'
+    return send({ type: 'begin', scopeKey, phase, retry })
   }
-  const quote = async (mode: AuthoringMode, model: AuthoringModelRef) => {
-    const before = current.current
-    const next = send({
+  const quote = (mode: AuthoringMode, model: AuthoringModelRef) => {
+    const before = getSnapshot()
+    return send({
       type: 'quote',
       scopeKey,
       command: {
@@ -123,91 +175,22 @@ export function useAuthoring(
         requestId: crypto.randomUUID(),
       },
     })
-    if (next === before || !next.command) return
-    try {
-      send({
-        type: 'quoted',
-        scopeKey,
-        operation: next.operation,
-        estimate: await api.estimate(
-          next.command.mode,
-          next.command.writeModel,
-          next.command.sessionId,
-        ),
-      })
-    } catch (error) {
-      fail(next.operation, error)
-    }
   }
-  const confirm = async () => {
-    const before = current.current
-    const next = send({ type: 'begin', scopeKey, phase: 'starting' })
-    if (next === before || !next.command) return
-    let command = next.command
-    try {
-      if (!command.sessionId) {
-        const session = await api.create(command.createRequestId)
-        const created = send({ type: 'created', scopeKey, operation: next.operation, session })
-        if (!mounted.current || created.operation !== next.operation || !created.command) return
-        command = created.command
-      }
-      const result = await api.start(command)
-      publish(next.operation, result.session, true)
-    } catch (error) {
-      fail(next.operation, error)
-    }
-  }
-  const run = async (action: Retry) => {
-    const before = current.current
-    const phase =
-      action.type === 'edit'
-        ? 'creating'
-        : action.type === 'select'
-          ? 'selecting'
-          : action.type === 'save'
-            ? 'saving'
-            : 'cancelling'
-    const next = send({ type: 'begin', scopeKey, phase })
-    if (next === before) return
-    retry.current = action
-    try {
-      const session =
-        action.type === 'edit'
-          ? await api.create(action.requestId)
-          : action.type === 'select'
-            ? await api.select(action.sessionId, action.revision, action.candidateId)
-            : action.type === 'save'
-              ? await api.save(action.sessionId, action.revision, action.makeDefault)
-              : await api.cancel(action.sessionId, action.jobId)
-      publish(next.operation, session)
-      retry.current = undefined
-    } catch (error) {
-      fail(next.operation, error)
-    }
-  }
+  const confirm = () => send({ type: 'begin', scopeKey, phase: 'starting' })
   const retryOperation = async () => {
-    const snapshot = current.current
-    if (snapshot.command?.confirmed) return confirm()
-    if (snapshot.command) {
-      const next = send({ type: 'retry-quote', scopeKey })
-      if (next === snapshot || !next.command) return
-      try {
-        send({
-          type: 'quoted',
-          scopeKey,
-          operation: next.operation,
-          estimate: await api.estimate(
-            next.command.mode,
-            next.command.writeModel,
-            next.command.sessionId,
-          ),
-        })
-      } catch (error) {
-        fail(next.operation, error)
-      }
+    const context = actorRef.getSnapshot().context
+    if (context.command?.confirmed) {
+      confirm()
       return
     }
-    if (retry.current) return run(retry.current)
+    if (context.command) {
+      send({ type: 'retry-quote', scopeKey })
+      return
+    }
+    if (context.retry) {
+      run(context.retry)
+      return
+    }
     send({ type: 'retry-load', scopeKey })
     const result = await latest.refetch()
     if (result.data !== undefined) send({ type: 'hydrate', scopeKey, session: result.data })
@@ -223,30 +206,29 @@ export function useAuthoring(
     confirm,
     retryOperation,
     dismissQuote: () => send({ type: 'dismiss-quote', scopeKey }),
-    edit: () =>
-      run({
+    edit: () => {
+      const retry = actorRef.getSnapshot().context.retry
+      return run({
         type: 'edit',
-        requestId: retry.current?.type === 'edit' ? retry.current.requestId : crypto.randomUUID(),
-      }),
+        requestId: retry?.type === 'edit' ? retry.requestId : crypto.randomUUID(),
+      })
+    },
     select: (candidateId: string) => {
-      const session = current.current.session
+      const session = getSnapshot().session
       if (session?.candidates.some((candidate) => candidate.id === candidateId))
-        void run({ type: 'select', sessionId: session.id, revision: session.revision, candidateId })
+        run({ type: 'select', sessionId: session.id, revision: session.revision, candidateId })
     },
     save: (makeDefault: boolean) => {
-      const session = current.current.session
+      const session = getSnapshot().session
       if (session)
-        void run({ type: 'save', sessionId: session.id, revision: session.revision, makeDefault })
+        run({ type: 'save', sessionId: session.id, revision: session.revision, makeDefault })
     },
     cancel: () => {
-      const session = current.current.session
+      const session = getSnapshot().session
       if (session?.activeJobId)
-        void run({ type: 'cancel', sessionId: session.id, jobId: session.activeJobId })
+        run({ type: 'cancel', sessionId: session.id, jobId: session.activeJobId })
     },
-    fresh: () => {
-      retry.current = undefined
-      send({ type: 'new-session', scopeKey })
-    },
+    fresh: () => send({ type: 'new-session', scopeKey }),
     readFailure: sessionQuery.isError ? appFailureFromConnect(sessionQuery.error) : undefined,
     retryRead: () => {
       void sessionQuery.refetch()

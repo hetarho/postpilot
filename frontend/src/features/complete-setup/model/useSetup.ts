@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect } from 'react'
+import { useActorRef, useSelector } from '@xstate/react'
 import { useSetupAvailability } from './useSetupAvailability'
 import {
-  initialSetupState,
-  setupTransition,
+  setupMachine,
+  setupStateOf,
   setupProgressOf,
   type SetupEvent,
   type SetupForm,
@@ -12,14 +13,16 @@ import { writeSetupProgress } from './setup-progress'
 
 export function useSetup(ownerId: string, restart: boolean) {
   const availability = useSetupAvailability(ownerId, restart, true)
-  const [state, setState] = useState(() => initialSetupState(ownerId))
-  const current = useRef(state)
-  const send = useCallback((event: SetupEvent) => {
-    const next = setupTransition(current.current, event)
-    current.current = next
-    setState(next)
-    return next
-  }, [])
+  const actorRef = useActorRef(setupMachine, { input: { ownerId } })
+  const state = useSelector(actorRef, setupStateOf)
+  const getSnapshot = () => setupStateOf(actorRef.getSnapshot())
+  const send = useCallback(
+    (event: SetupEvent) => {
+      if (actorRef.getSnapshot().status === 'active') actorRef.send(event)
+      return setupStateOf(actorRef.getSnapshot())
+    },
+    [actorRef],
+  )
   useEffect(() => {
     if (availability.status !== 'ready') return
     const missing: SetupForm[] = []
@@ -40,7 +43,7 @@ export function useSetup(ownerId: string, restart: boolean) {
     if (state.phase !== 'checking') writeSetupProgress(ownerId, setupProgressOf(state))
   }, [ownerId, state])
   const begin = (step: SetupForm) => {
-    const before = current.current
+    const before = getSnapshot()
     const next = send({ type: 'begin', ownerId, step })
     return next === before ? null : next.operation
   }
@@ -49,9 +52,9 @@ export function useSetup(ownerId: string, restart: boolean) {
     availability,
     begin,
     next: (confirmed = true) =>
-      send({ type: 'next', ownerId, step: current.current.step, confirmed }),
+      send({ type: 'next', ownerId, step: getSnapshot().step, confirmed }),
     skip: () => {
-      const step = current.current.step
+      const step = getSnapshot().step
       if (step !== 'welcome' && step !== 'ready') send({ type: 'skip', ownerId, step })
     },
     back: () => send({ type: 'back', ownerId }),
