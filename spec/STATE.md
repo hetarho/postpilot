@@ -82,9 +82,9 @@
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | todo |
 
 ## next
-- T590 implementation and all available local CI checks pass; blocked on the unresponsive Docker daemon. Restore Docker, run the Docker generator checks and matching CPU smokes, then close T590. T591 is the next todo; T539/T550 keep voice/listening and browser qualification gates.
-- ARCH r16 and INFRA r2 browser changes are mapped to T588-T604; earlier ARCH revisions and unrelated INFRA database/backups remain unconsumed, so ARCH tasked=9 and INFRA tasked=0 stay. ARCH-10/INFRA-6 database alignment, POST r32 and VOICE r8 verification-only deltas and VOICE-31 remain outside this scope.
-- ops: lower TEMPLATE_PHOTO_ROW_MAX / VITE_TEMPLATE_PHOTO_ROW_MAX to 3 in explicit production overrides. Ideation searchable-details continues; ordinary voice/narration readiness stays closed until qualification passes. Doc-review ARCH QUOTA VOICE handles existing document-quality hints.
+- browser-media-604 runs in /private/tmp/postpilot-browser-media-604 on work/browser-media-604-plan with three implementation slots and one reviewer/coordinator; runtime board owns assignments. T591 unlocks video/audio/components/analysis authorization, then T592-T604 follow their task dependencies.
+- T590 code is preserved in planning baseline 47f9cd2f; Docker daemon restoration and matching CPU smokes remain required before its completion. T603 billable comparison has no approved spend cap; qualification/activation gates stay closed without actual evidence and review.
+- Earlier ARCH/INFRA database/backups, POST/VOICE deltas and T539/T550 remain outside this group; doc-review ARCH QUOTA VOICE addresses existing hints. Main checkout's T590 changes are preserved while group commits are isolated.
 
 ## log
 - 261006 parallel browser-media start: isolated task workers through T604 with dependency-aware dispatch and independent reviews; preserve T590 implementation and its Docker gate
