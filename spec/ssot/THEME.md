@@ -1,5 +1,5 @@
 # THEME theme preference and design language
-> r26 | The browser-owned System / Light / Dark preference that maps onto the `day` and `night` semantic token maps, and the binding design language every frontend surface is held to — phone-first, planes not lines, colour as role, one design system, with the promotional surfaces (→THEME-37) as the one named exemption from its restraint.
+> r27 | The browser-owned System / Light / Dark preference that maps onto the `day` and `night` semantic token maps, and the binding design language every frontend surface is held to — phone-first, planes not lines, colour as role, one design system, with the promotional surfaces (→THEME-37) as the one named exemption from its restraint.
 
 ## decisions
 - THEME-1 [o] three browser-owned preferences: `system` (the default, follows `prefers-color-scheme`), `light` → the `day` semantic map, `dark` → the `night` map; the effective theme is always exactly `day|night`; components consume semantic or functional tokens and never branch on a preference, an effective theme or a palette step
@@ -72,13 +72,14 @@
   | role | element | recipe | use |
   |---|---|---|---|
   | `launch` | `h1` | `text-4xl sm:text-6xl font-semibold tracking-tight leading-tight` | the creation launch heading under →THEME-47 |
-  | `hero` | `p`/`span` | `text-3xl sm:text-4xl font-bold tracking-tight` | the one figure a promotional surface leads with — a plan's price — and nothing else; it outranks `display` only because on a surface whose job is to be chosen from the thing being compared outranks the page's own name, and it is the one role that may be painted as gradient text through `PromoText`, →THEME-37 |
-  | `display` | `h1` | `text-2xl font-semibold tracking-tight` | the screen's one top title |
-  | `title` | `h2` | `text-lg font-semibold tracking-tight` | every section heading and dialog title, `as` for deeper levels |
-  | `fieldTitle` | `h3`/`label` | `text-base font-bold tracking-tight` | a field's own name beside a step's action |
-  | `body` | `p` | `text-sm leading-relaxed` | - |
+  | `hero` | `p`/`span` | `text-xl sm:text-4xl font-bold tracking-tight` | the one figure a promotional surface leads with — a plan's price — and nothing else; it outranks `display` only because on a surface whose job is to be chosen from the thing being compared outranks the page's own name, and it is the one role that may be painted as gradient text through `PromoText`, →THEME-37 |
+  | `display` | `h1` | `text-3xl sm:text-4xl font-semibold tracking-tight leading-tight` | the screen's one top title |
+  | `stepTitle` | `h2` | `text-2xl sm:text-3xl font-semibold tracking-tight leading-tight` | the current guided task above its explanation and controls |
+  | `title` | `h2` | `text-xl sm:text-2xl font-semibold tracking-tight leading-snug` | every section heading and dialog title, `as` for deeper levels |
+  | `fieldTitle` | `h3`/`label` | `text-lg font-semibold tracking-tight leading-snug` | a field's own name beside a step's action |
+  | `body` | `p` | `text-base leading-relaxed` | primary reading and supporting explanations |
   | `input` | - | `text-base sm:text-sm` | field primitives only |
-  | `label` | `span` | `text-sm text-content-secondary` | no ad-hoc weight |
+  | `label` | `span` | `text-sm font-medium text-content-secondary` | concise labels and secondary annotations |
   | `meta` | `span` | `text-xs text-content-tertiary` | `mono` for verbatim ids |
   | `eyebrow` | `span` | `text-[10px] font-medium uppercase tracking-wide` | - |
   - a slice never composes a raw type utility (`text-<size>` `font-<weight>` `font-mono` `tracking-*` `leading-*`) and `pnpm lint:style` fails on one in a non-test slice `.tsx` outside `shared/ui` unless it carries a reasoned `// style-escape:` pragma (the sanctioned case is a nav control's active-state `font-medium`)
@@ -240,6 +241,13 @@
 - THEME-54 [o] guided controls for a later unavailable stage are absent, not shown disabled as a teaser. Current required-input errors are explained beside the input after an explicit attempt; unavailable AI and in-flight actions state the reason and preserve an available way back or manual alternative.
 - THEME-55 [o] stage movement retains owner-scoped drafts and selected results, restores focus to the new stage heading only on actual navigation, and supports explicit Back without a paid call or canonical mutation.
 - THEME-56 [o] guided progress describes the current task and uses numeric completion only when the total is known; loading, working, recoverable failure and confirmed success have distinct truthful views with one contextual next action.
+
+- THEME-57 [o] guided text hierarchy makes the current action readable before context and detail.
+  - an authoring route's record/new-record name is a smaller contextual h1; its active task uses stepTitle as h2, preserving semantic order and visible emphasis
+  - setup keeps one display goal with a stepTitle for the current method/task; a questionnaire's actual question uses title, while hints and examples use body
+  - peer-choice labels and selected-preview names use fieldTitle; weight is semibold rather than heavier than the main heading
+  - action guidance, provenance and recovery explanations never use metadata size; meta is reserved for brief progress/count/time information
+  - sizes, line height, readable measure and group spacing are defined by shared roles, not per-screen raw font utilities; zoom/reflow preserves content and actor lifetime
 
 ## flow
 - bootstrap: read `postpilot.theme` → resolve(`system` → matchMedia | `light` → `day` | `dark` → `night`) → set `data-theme`, `color-scheme`, `theme-color` before React → provider from the snapshot → menu selection → apply + persist | remove key
