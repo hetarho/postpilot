@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file postpilot/v1/clip_source.proto.
  */
 export const file_postpilot_v1_clip_source: GenFile = /*@__PURE__*/
-  fileDesc("Ch5wb3N0cGlsb3QvdjEvY2xpcF9zb3VyY2UucHJvdG8SDHBvc3RwaWxvdC52MSJlChxDcmVhdGVDbGlwU291cmNlQmF0Y2hSZXF1ZXN0EhIKCnByb2plY3RfaWQYASABKAkSMQoHc291cmNlcxgCIAMoCzIgLnBvc3RwaWxvdC52MS5DbGlwU291cmNlTWV0YWRhdGEifgodQ3JlYXRlQ2xpcFNvdXJjZUJhdGNoUmVzcG9uc2USLAoFYmF0Y2gYASABKAsyHS5wb3N0cGlsb3QudjEuQ2xpcFNvdXJjZUJhdGNoEi8KB3VwbG9hZHMYAiADKAsyHi5wb3N0cGlsb3QudjEuQ2xpcFNvdXJjZVVwbG9hZCI/ChhDb25maXJtQ2xpcFNvdXJjZVJlcXVlc3QSEAoIYmF0Y2hfaWQYASABKAkSEQoJc291cmNlX2lkGAIgASgJIkkKGUNvbmZpcm1DbGlwU291cmNlUmVzcG9uc2USLAoFYmF0Y2gYASABKAsyHS5wb3N0cGlsb3QudjEuQ2xpcFNvdXJjZUJhdGNoIjEKHURpc2NhcmRDbGlwU291cmNlQmF0Y2hSZXF1ZXN0EhAKCGJhdGNoX2lkGAEgASgJIiAKHkRpc2NhcmRDbGlwU291cmNlQmF0Y2hSZXNwb25zZSIrChVHZXRDbGlwU291cmNlc1JlcXVlc3QSEgoKcHJvamVjdF9pZBgBIAEoCSJIChZHZXRDbGlwU291cmNlc1Jlc3BvbnNlEi4KB2JhdGNoZXMYASADKAsyHS5wb3N0cGlsb3QudjEuQ2xpcFNvdXJjZUJhdGNoImMKHEdldENsaXBTb3VyY2VQbGF5YmFja1JlcXVlc3QSEgoKcHJvamVjdF9pZBgBIAEoCRIRCglzb3VyY2VfaWQYAiABKAkSHAoUZXhwZWN0ZWRfZmluZ2VycHJpbnQYAyABKAkiQAodR2V0Q2xpcFNvdXJjZVBsYXliYWNrUmVzcG9uc2USCwoDdXJsGAEgASgJEhIKCmV4cGlyZXNfYXQYAiABKAkitAEKIVNldENsaXBTb3VyY2VPcmlnaW5hbFNvdW5kUmVxdWVzdBISCgpwcm9qZWN0X2lkGAEgASgJEhAKCGJhdGNoX2lkGAIgASgJEhEKCXNvdXJjZV9pZBgDIAEoCRIcChRleHBlY3RlZF9maW5nZXJwcmludBgEIAEoCRIdChVyZXRhaW5fb3JpZ2luYWxfYXVkaW8YBSABKAgSGQoRZXhwZWN0ZWRfcmV2aXNpb24YBiABKAUifgoiU2V0Q2xpcFNvdXJjZU9yaWdpbmFsU291bmRSZXNwb25zZRIsCgViYXRjaBgBIAEoCzIdLnBvc3RwaWxvdC52MS5DbGlwU291cmNlQmF0Y2gSKgoHcHJvamVjdBgCIAEoCzIZLnBvc3RwaWxvdC52MS5DbGlwUHJvamVjdCJVChlSZW9yZGVyQ2xpcFNvdXJjZXNSZXF1ZXN0EhIKCnByb2plY3RfaWQYASABKAkSEAoIYmF0Y2hfaWQYAiABKAkSEgoKc291cmNlX2lkcxgDIAMoCSJKChpSZW9yZGVyQ2xpcFNvdXJjZXNSZXNwb25zZRIsCgViYXRjaBgBIAEoCzIdLnBvc3RwaWxvdC52MS5DbGlwU291cmNlQmF0Y2gyqAYKEUNsaXBTb3VyY2VTZXJ2aWNlEnIKFUNyZWF0ZUNsaXBTb3VyY2VCYXRjaBIqLnBvc3RwaWxvdC52MS5DcmVhdGVDbGlwU291cmNlQmF0Y2hSZXF1ZXN0GisucG9zdHBpbG90LnYxLkNyZWF0ZUNsaXBTb3VyY2VCYXRjaFJlc3BvbnNlIgASZgoRQ29uZmlybUNsaXBTb3VyY2USJi5wb3N0cGlsb3QudjEuQ29uZmlybUNsaXBTb3VyY2VSZXF1ZXN0GicucG9zdHBpbG90LnYxLkNvbmZpcm1DbGlwU291cmNlUmVzcG9uc2UiABJ1ChZEaXNjYXJkQ2xpcFNvdXJjZUJhdGNoEisucG9zdHBpbG90LnYxLkRpc2NhcmRDbGlwU291cmNlQmF0Y2hSZXF1ZXN0GiwucG9zdHBpbG90LnYxLkRpc2NhcmRDbGlwU291cmNlQmF0Y2hSZXNwb25zZSIAEl0KDkdldENsaXBTb3VyY2VzEiMucG9zdHBpbG90LnYxLkdldENsaXBTb3VyY2VzUmVxdWVzdBokLnBvc3RwaWxvdC52MS5HZXRDbGlwU291cmNlc1Jlc3BvbnNlIgAScgoVR2V0Q2xpcFNvdXJjZVBsYXliYWNrEioucG9zdHBpbG90LnYxLkdldENsaXBTb3VyY2VQbGF5YmFja1JlcXVlc3QaKy5wb3N0cGlsb3QudjEuR2V0Q2xpcFNvdXJjZVBsYXliYWNrUmVzcG9uc2UiABKBAQoaU2V0Q2xpcFNvdXJjZU9yaWdpbmFsU291bmQSLy5wb3N0cGlsb3QudjEuU2V0Q2xpcFNvdXJjZU9yaWdpbmFsU291bmRSZXF1ZXN0GjAucG9zdHBpbG90LnYxLlNldENsaXBTb3VyY2VPcmlnaW5hbFNvdW5kUmVzcG9uc2UiABJpChJSZW9yZGVyQ2xpcFNvdXJjZXMSJy5wb3N0cGlsb3QudjEuUmVvcmRlckNsaXBTb3VyY2VzUmVxdWVzdBooLnBvc3RwaWxvdC52MS5SZW9yZGVyQ2xpcFNvdXJjZXNSZXNwb25zZSIAQkRaQmdpdGh1Yi5jb20vcG9zdHBpbG90L2JhY2tlbmQvaW50ZXJuYWwvZ2VuL3Bvc3RwaWxvdC92MTtwb3N0cGlsb3R2MWIGcHJvdG8z", [file_postpilot_v1_clip]);
+  fileDesc("Ch5wb3N0cGlsb3QvdjEvY2xpcF9zb3VyY2UucHJvdG8SDHBvc3RwaWxvdC52MSJlChxDcmVhdGVDbGlwU291cmNlQmF0Y2hSZXF1ZXN0EhIKCnByb2plY3RfaWQYASABKAkSMQoHc291cmNlcxgCIAMoCzIgLnBvc3RwaWxvdC52MS5DbGlwU291cmNlTWV0YWRhdGEifgodQ3JlYXRlQ2xpcFNvdXJjZUJhdGNoUmVzcG9uc2USLAoFYmF0Y2gYASABKAsyHS5wb3N0cGlsb3QudjEuQ2xpcFNvdXJjZUJhdGNoEi8KB3VwbG9hZHMYAiADKAsyHi5wb3N0cGlsb3QudjEuQ2xpcFNvdXJjZVVwbG9hZCI/ChhDb25maXJtQ2xpcFNvdXJjZVJlcXVlc3QSEAoIYmF0Y2hfaWQYASABKAkSEQoJc291cmNlX2lkGAIgASgJIkkKGUNvbmZpcm1DbGlwU291cmNlUmVzcG9uc2USLAoFYmF0Y2gYASABKAsyHS5wb3N0cGlsb3QudjEuQ2xpcFNvdXJjZUJhdGNoIjEKHURpc2NhcmRDbGlwU291cmNlQmF0Y2hSZXF1ZXN0EhAKCGJhdGNoX2lkGAEgASgJIiAKHkRpc2NhcmRDbGlwU291cmNlQmF0Y2hSZXNwb25zZSIrChVHZXRDbGlwU291cmNlc1JlcXVlc3QSEgoKcHJvamVjdF9pZBgBIAEoCSJIChZHZXRDbGlwU291cmNlc1Jlc3BvbnNlEi4KB2JhdGNoZXMYASADKAsyHS5wb3N0cGlsb3QudjEuQ2xpcFNvdXJjZUJhdGNoImMKHEdldENsaXBTb3VyY2VQbGF5YmFja1JlcXVlc3QSEgoKcHJvamVjdF9pZBgBIAEoCRIRCglzb3VyY2VfaWQYAiABKAkSHAoUZXhwZWN0ZWRfZmluZ2VycHJpbnQYAyABKAkiQAodR2V0Q2xpcFNvdXJjZVBsYXliYWNrUmVzcG9uc2USCwoDdXJsGAEgASgJEhIKCmV4cGlyZXNfYXQYAiABKAkitAEKIVNldENsaXBTb3VyY2VPcmlnaW5hbFNvdW5kUmVxdWVzdBISCgpwcm9qZWN0X2lkGAEgASgJEhAKCGJhdGNoX2lkGAIgASgJEhEKCXNvdXJjZV9pZBgDIAEoCRIcChRleHBlY3RlZF9maW5nZXJwcmludBgEIAEoCRIdChVyZXRhaW5fb3JpZ2luYWxfYXVkaW8YBSABKAgSGQoRZXhwZWN0ZWRfcmV2aXNpb24YBiABKAUifgoiU2V0Q2xpcFNvdXJjZU9yaWdpbmFsU291bmRSZXNwb25zZRIsCgViYXRjaBgBIAEoCzIdLnBvc3RwaWxvdC52MS5DbGlwU291cmNlQmF0Y2gSKgoHcHJvamVjdBgCIAEoCzIZLnBvc3RwaWxvdC52MS5DbGlwUHJvamVjdCJVChlSZW9yZGVyQ2xpcFNvdXJjZXNSZXF1ZXN0EhIKCnByb2plY3RfaWQYASABKAkSEAoIYmF0Y2hfaWQYAiABKAkSEgoKc291cmNlX2lkcxgDIAMoCSJKChpSZW9yZGVyQ2xpcFNvdXJjZXNSZXNwb25zZRIsCgViYXRjaBgBIAEoCzIdLnBvc3RwaWxvdC52MS5DbGlwU291cmNlQmF0Y2girAIKH0NsaXBBbmFseXNpc09yaWdpbmFsTWVhc3VyZW1lbnQSEQoJc291cmNlX2lkGAEgASgJEhMKC2ZpbmdlcnByaW50GAIgASgJEhMKC2R1cmF0aW9uX21zGAMgASgFEg0KBXdpZHRoGAQgASgFEg4KBmhlaWdodBgFIAEoBRIcChRmcmFtZV9yYXRlX251bWVyYXRvchgGIAEoBRIeChZmcmFtZV9yYXRlX2Rlbm9taW5hdG9yGAcgASgFEhgKEGNhZGVuY2VfdmVyaWZpZWQYCCABKAgSFgoOZGVjb2RlZF9mcmFtZXMYCSABKAUSEQoJaGFzX2F1ZGlvGAogASgIEhIKCmF1ZGlvX3JhdGUYCyABKAUSFgoOYXVkaW9fY2hhbm5lbHMYDCABKAUi0wEKI0JlZ2luQ2xpcEFuYWx5c2lzUHJlcGFyYXRpb25SZXF1ZXN0EhIKCnByb2plY3RfaWQYASABKAkSEAoIYmF0Y2hfaWQYAiABKAkSGQoRZXhwZWN0ZWRfcmV2aXNpb24YAyABKAUSEAoIcXVvdGVfaWQYBCABKAkSFwoPcHJvZmlsZV92ZXJzaW9uGAUgASgJEkAKCW9yaWdpbmFscxgGIAMoCzItLnBvc3RwaWxvdC52MS5DbGlwQW5hbHlzaXNPcmlnaW5hbE1lYXN1cmVtZW50IpcCChNDbGlwQW5hbHlzaXNQcm9maWxlEg8KB3ZlcnNpb24YASABKAkSEwoLaW50ZXJ2YWxfbXMYAiABKAUSEQoJbG9uZ19lZGdlGAMgASgFEhkKEWZyYW1lc19wZXJfc2Vjb25kGAQgASgFEhYKDm1heF9jb3B5X2J5dGVzGAUgASgDEhMKC3ZpZGVvX2NvZGVjGAYgASgJEhQKDHBpeGVsX2Zvcm1hdBgHIAEoCRITCgthdWRpb19jb2RlYxgIIAEoCRISCgphdWRpb19yYXRlGAkgASgFEhYKDmF1ZGlvX2NoYW5uZWxzGAogASgFEhUKDWF1ZGlvX2JpdHJhdGUYCyABKAUSEQoJcXVhbGlmaWVkGAwgASgIIuUBChRDbGlwQW5hbHlzaXNDb3B5U2xvdBIMCgRzbG90GAEgASgJEhEKCXNvdXJjZV9pZBgCIAEoCRITCgtmaW5nZXJwcmludBgDIAEoCRIPCgdvcmRpbmFsGAQgASgFEhEKCW9mZnNldF9tcxgFIAEoBRITCgtkdXJhdGlvbl9tcxgGIAEoBRINCgV3aWR0aBgHIAEoBRIOCgZoZWlnaHQYCCABKAUSEQoJaGFzX2F1ZGlvGAkgASgIEg0KBXN0YXRlGAogASgJEg0KBWJ5dGVzGAsgASgDEg4KBnNoYTI1NhgMIAEoCSLhAgofQ2xpcEFuYWx5c2lzUHJlcGFyYXRpb25SZXNwb25zZRIWCg5wcmVwYXJhdGlvbl9pZBgBIAEoCRISCgpwcm9qZWN0X2lkGAIgASgJEhAKCGJhdGNoX2lkGAMgASgJEhkKEWV4cGVjdGVkX3JldmlzaW9uGAQgASgFEg0KBXN0YXRlGAUgASgJEhIKCmV4cGlyZXNfYXQYBiABKAkSMgoHcHJvZmlsZRgHIAEoCzIhLnBvc3RwaWxvdC52MS5DbGlwQW5hbHlzaXNQcm9maWxlEjIKBmNvcGllcxgIIAMoCzIiLnBvc3RwaWxvdC52MS5DbGlwQW5hbHlzaXNDb3B5U2xvdBInCh9vcmlnaW5hbF9tZWFzdXJlbWVudF9wcm92ZW5hbmNlGAkgASgJEhAKCHByb2dyZXNzGAogASgFEg8KB2ZhaWx1cmUYCyABKAkSDgoGam9iX2lkGAwgASgJImUKHlJlc2VydmVDbGlwQW5hbHlzaXNDb3B5UmVxdWVzdBIWCg5wcmVwYXJhdGlvbl9pZBgBIAEoCRIMCgRzbG90GAIgASgJEg0KBWJ5dGVzGAMgASgDEg4KBnNoYTI1NhgEIAEoCSLRAQofUmVzZXJ2ZUNsaXBBbmFseXNpc0NvcHlSZXNwb25zZRIMCgRzbG90GAEgASgJEg8KB3B1dF91cmwYAiABKAkSSwoHaGVhZGVycxgDIAMoCzI6LnBvc3RwaWxvdC52MS5SZXNlcnZlQ2xpcEFuYWx5c2lzQ29weVJlc3BvbnNlLkhlYWRlcnNFbnRyeRISCgpleHBpcmVzX2F0GAQgASgJGi4KDEhlYWRlcnNFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBIkAKJkNvbXBsZXRlQ2xpcEFuYWx5c2lzUHJlcGFyYXRpb25SZXF1ZXN0EhYKDnByZXBhcmF0aW9uX2lkGAEgASgJIj4KJENhbmNlbENsaXBBbmFseXNpc1ByZXBhcmF0aW9uUmVxdWVzdBIWCg5wcmVwYXJhdGlvbl9pZBgBIAEoCTK5CgoRQ2xpcFNvdXJjZVNlcnZpY2USggEKHEJlZ2luQ2xpcEFuYWx5c2lzUHJlcGFyYXRpb24SMS5wb3N0cGlsb3QudjEuQmVnaW5DbGlwQW5hbHlzaXNQcmVwYXJhdGlvblJlcXVlc3QaLS5wb3N0cGlsb3QudjEuQ2xpcEFuYWx5c2lzUHJlcGFyYXRpb25SZXNwb25zZSIAEngKF1Jlc2VydmVDbGlwQW5hbHlzaXNDb3B5EiwucG9zdHBpbG90LnYxLlJlc2VydmVDbGlwQW5hbHlzaXNDb3B5UmVxdWVzdBotLnBvc3RwaWxvdC52MS5SZXNlcnZlQ2xpcEFuYWx5c2lzQ29weVJlc3BvbnNlIgASiAEKH0NvbXBsZXRlQ2xpcEFuYWx5c2lzUHJlcGFyYXRpb24SNC5wb3N0cGlsb3QudjEuQ29tcGxldGVDbGlwQW5hbHlzaXNQcmVwYXJhdGlvblJlcXVlc3QaLS5wb3N0cGlsb3QudjEuQ2xpcEFuYWx5c2lzUHJlcGFyYXRpb25SZXNwb25zZSIAEoQBCh1DYW5jZWxDbGlwQW5hbHlzaXNQcmVwYXJhdGlvbhIyLnBvc3RwaWxvdC52MS5DYW5jZWxDbGlwQW5hbHlzaXNQcmVwYXJhdGlvblJlcXVlc3QaLS5wb3N0cGlsb3QudjEuQ2xpcEFuYWx5c2lzUHJlcGFyYXRpb25SZXNwb25zZSIAEnIKFUNyZWF0ZUNsaXBTb3VyY2VCYXRjaBIqLnBvc3RwaWxvdC52MS5DcmVhdGVDbGlwU291cmNlQmF0Y2hSZXF1ZXN0GisucG9zdHBpbG90LnYxLkNyZWF0ZUNsaXBTb3VyY2VCYXRjaFJlc3BvbnNlIgASZgoRQ29uZmlybUNsaXBTb3VyY2USJi5wb3N0cGlsb3QudjEuQ29uZmlybUNsaXBTb3VyY2VSZXF1ZXN0GicucG9zdHBpbG90LnYxLkNvbmZpcm1DbGlwU291cmNlUmVzcG9uc2UiABJ1ChZEaXNjYXJkQ2xpcFNvdXJjZUJhdGNoEisucG9zdHBpbG90LnYxLkRpc2NhcmRDbGlwU291cmNlQmF0Y2hSZXF1ZXN0GiwucG9zdHBpbG90LnYxLkRpc2NhcmRDbGlwU291cmNlQmF0Y2hSZXNwb25zZSIAEl0KDkdldENsaXBTb3VyY2VzEiMucG9zdHBpbG90LnYxLkdldENsaXBTb3VyY2VzUmVxdWVzdBokLnBvc3RwaWxvdC52MS5HZXRDbGlwU291cmNlc1Jlc3BvbnNlIgAScgoVR2V0Q2xpcFNvdXJjZVBsYXliYWNrEioucG9zdHBpbG90LnYxLkdldENsaXBTb3VyY2VQbGF5YmFja1JlcXVlc3QaKy5wb3N0cGlsb3QudjEuR2V0Q2xpcFNvdXJjZVBsYXliYWNrUmVzcG9uc2UiABKBAQoaU2V0Q2xpcFNvdXJjZU9yaWdpbmFsU291bmQSLy5wb3N0cGlsb3QudjEuU2V0Q2xpcFNvdXJjZU9yaWdpbmFsU291bmRSZXF1ZXN0GjAucG9zdHBpbG90LnYxLlNldENsaXBTb3VyY2VPcmlnaW5hbFNvdW5kUmVzcG9uc2UiABJpChJSZW9yZGVyQ2xpcFNvdXJjZXMSJy5wb3N0cGlsb3QudjEuUmVvcmRlckNsaXBTb3VyY2VzUmVxdWVzdBooLnBvc3RwaWxvdC52MS5SZW9yZGVyQ2xpcFNvdXJjZXNSZXNwb25zZSIAQkRaQmdpdGh1Yi5jb20vcG9zdHBpbG90L2JhY2tlbmQvaW50ZXJuYWwvZ2VuL3Bvc3RwaWxvdC92MTtwb3N0cGlsb3R2MWIGcHJvdG8z", [file_postpilot_v1_clip]);
 
 /**
  * @generated from message postpilot.v1.CreateClipSourceBatchRequest
@@ -319,12 +319,474 @@ export const ReorderClipSourcesResponseSchema: GenMessage<ReorderClipSourcesResp
   messageDesc(file_postpilot_v1_clip_source, 13);
 
 /**
+ * Client measurements bind coverage; they are never native original proof.
+ *
+ * @generated from message postpilot.v1.ClipAnalysisOriginalMeasurement
+ */
+export type ClipAnalysisOriginalMeasurement = Message<"postpilot.v1.ClipAnalysisOriginalMeasurement"> & {
+  /**
+   * @generated from field: string source_id = 1;
+   */
+  sourceId: string;
+
+  /**
+   * @generated from field: string fingerprint = 2;
+   */
+  fingerprint: string;
+
+  /**
+   * @generated from field: int32 duration_ms = 3;
+   */
+  durationMs: number;
+
+  /**
+   * @generated from field: int32 width = 4;
+   */
+  width: number;
+
+  /**
+   * @generated from field: int32 height = 5;
+   */
+  height: number;
+
+  /**
+   * @generated from field: int32 frame_rate_numerator = 6;
+   */
+  frameRateNumerator: number;
+
+  /**
+   * @generated from field: int32 frame_rate_denominator = 7;
+   */
+  frameRateDenominator: number;
+
+  /**
+   * @generated from field: bool cadence_verified = 8;
+   */
+  cadenceVerified: boolean;
+
+  /**
+   * @generated from field: int32 decoded_frames = 9;
+   */
+  decodedFrames: number;
+
+  /**
+   * @generated from field: bool has_audio = 10;
+   */
+  hasAudio: boolean;
+
+  /**
+   * @generated from field: int32 audio_rate = 11;
+   */
+  audioRate: number;
+
+  /**
+   * @generated from field: int32 audio_channels = 12;
+   */
+  audioChannels: number;
+};
+
+/**
+ * Describes the message postpilot.v1.ClipAnalysisOriginalMeasurement.
+ * Use `create(ClipAnalysisOriginalMeasurementSchema)` to create a new message.
+ */
+export const ClipAnalysisOriginalMeasurementSchema: GenMessage<ClipAnalysisOriginalMeasurement> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_clip_source, 14);
+
+/**
+ * @generated from message postpilot.v1.BeginClipAnalysisPreparationRequest
+ */
+export type BeginClipAnalysisPreparationRequest = Message<"postpilot.v1.BeginClipAnalysisPreparationRequest"> & {
+  /**
+   * @generated from field: string project_id = 1;
+   */
+  projectId: string;
+
+  /**
+   * @generated from field: string batch_id = 2;
+   */
+  batchId: string;
+
+  /**
+   * @generated from field: int32 expected_revision = 3;
+   */
+  expectedRevision: number;
+
+  /**
+   * @generated from field: string quote_id = 4;
+   */
+  quoteId: string;
+
+  /**
+   * @generated from field: string profile_version = 5;
+   */
+  profileVersion: string;
+
+  /**
+   * @generated from field: repeated postpilot.v1.ClipAnalysisOriginalMeasurement originals = 6;
+   */
+  originals: ClipAnalysisOriginalMeasurement[];
+};
+
+/**
+ * Describes the message postpilot.v1.BeginClipAnalysisPreparationRequest.
+ * Use `create(BeginClipAnalysisPreparationRequestSchema)` to create a new message.
+ */
+export const BeginClipAnalysisPreparationRequestSchema: GenMessage<BeginClipAnalysisPreparationRequest> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_clip_source, 15);
+
+/**
+ * @generated from message postpilot.v1.ClipAnalysisProfile
+ */
+export type ClipAnalysisProfile = Message<"postpilot.v1.ClipAnalysisProfile"> & {
+  /**
+   * @generated from field: string version = 1;
+   */
+  version: string;
+
+  /**
+   * @generated from field: int32 interval_ms = 2;
+   */
+  intervalMs: number;
+
+  /**
+   * @generated from field: int32 long_edge = 3;
+   */
+  longEdge: number;
+
+  /**
+   * @generated from field: int32 frames_per_second = 4;
+   */
+  framesPerSecond: number;
+
+  /**
+   * @generated from field: int64 max_copy_bytes = 5;
+   */
+  maxCopyBytes: bigint;
+
+  /**
+   * @generated from field: string video_codec = 6;
+   */
+  videoCodec: string;
+
+  /**
+   * @generated from field: string pixel_format = 7;
+   */
+  pixelFormat: string;
+
+  /**
+   * @generated from field: string audio_codec = 8;
+   */
+  audioCodec: string;
+
+  /**
+   * @generated from field: int32 audio_rate = 9;
+   */
+  audioRate: number;
+
+  /**
+   * @generated from field: int32 audio_channels = 10;
+   */
+  audioChannels: number;
+
+  /**
+   * @generated from field: int32 audio_bitrate = 11;
+   */
+  audioBitrate: number;
+
+  /**
+   * @generated from field: bool qualified = 12;
+   */
+  qualified: boolean;
+};
+
+/**
+ * Describes the message postpilot.v1.ClipAnalysisProfile.
+ * Use `create(ClipAnalysisProfileSchema)` to create a new message.
+ */
+export const ClipAnalysisProfileSchema: GenMessage<ClipAnalysisProfile> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_clip_source, 16);
+
+/**
+ * @generated from message postpilot.v1.ClipAnalysisCopySlot
+ */
+export type ClipAnalysisCopySlot = Message<"postpilot.v1.ClipAnalysisCopySlot"> & {
+  /**
+   * @generated from field: string slot = 1;
+   */
+  slot: string;
+
+  /**
+   * @generated from field: string source_id = 2;
+   */
+  sourceId: string;
+
+  /**
+   * @generated from field: string fingerprint = 3;
+   */
+  fingerprint: string;
+
+  /**
+   * @generated from field: int32 ordinal = 4;
+   */
+  ordinal: number;
+
+  /**
+   * @generated from field: int32 offset_ms = 5;
+   */
+  offsetMs: number;
+
+  /**
+   * @generated from field: int32 duration_ms = 6;
+   */
+  durationMs: number;
+
+  /**
+   * @generated from field: int32 width = 7;
+   */
+  width: number;
+
+  /**
+   * @generated from field: int32 height = 8;
+   */
+  height: number;
+
+  /**
+   * @generated from field: bool has_audio = 9;
+   */
+  hasAudio: boolean;
+
+  /**
+   * @generated from field: string state = 10;
+   */
+  state: string;
+
+  /**
+   * @generated from field: int64 bytes = 11;
+   */
+  bytes: bigint;
+
+  /**
+   * @generated from field: string sha256 = 12;
+   */
+  sha256: string;
+};
+
+/**
+ * Describes the message postpilot.v1.ClipAnalysisCopySlot.
+ * Use `create(ClipAnalysisCopySlotSchema)` to create a new message.
+ */
+export const ClipAnalysisCopySlotSchema: GenMessage<ClipAnalysisCopySlot> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_clip_source, 17);
+
+/**
+ * @generated from message postpilot.v1.ClipAnalysisPreparationResponse
+ */
+export type ClipAnalysisPreparationResponse = Message<"postpilot.v1.ClipAnalysisPreparationResponse"> & {
+  /**
+   * @generated from field: string preparation_id = 1;
+   */
+  preparationId: string;
+
+  /**
+   * @generated from field: string project_id = 2;
+   */
+  projectId: string;
+
+  /**
+   * @generated from field: string batch_id = 3;
+   */
+  batchId: string;
+
+  /**
+   * @generated from field: int32 expected_revision = 4;
+   */
+  expectedRevision: number;
+
+  /**
+   * @generated from field: string state = 5;
+   */
+  state: string;
+
+  /**
+   * @generated from field: string expires_at = 6;
+   */
+  expiresAt: string;
+
+  /**
+   * @generated from field: postpilot.v1.ClipAnalysisProfile profile = 7;
+   */
+  profile?: ClipAnalysisProfile | undefined;
+
+  /**
+   * @generated from field: repeated postpilot.v1.ClipAnalysisCopySlot copies = 8;
+   */
+  copies: ClipAnalysisCopySlot[];
+
+  /**
+   * @generated from field: string original_measurement_provenance = 9;
+   */
+  originalMeasurementProvenance: string;
+
+  /**
+   * @generated from field: int32 progress = 10;
+   */
+  progress: number;
+
+  /**
+   * @generated from field: string failure = 11;
+   */
+  failure: string;
+
+  /**
+   * @generated from field: string job_id = 12;
+   */
+  jobId: string;
+};
+
+/**
+ * Describes the message postpilot.v1.ClipAnalysisPreparationResponse.
+ * Use `create(ClipAnalysisPreparationResponseSchema)` to create a new message.
+ */
+export const ClipAnalysisPreparationResponseSchema: GenMessage<ClipAnalysisPreparationResponse> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_clip_source, 18);
+
+/**
+ * @generated from message postpilot.v1.ReserveClipAnalysisCopyRequest
+ */
+export type ReserveClipAnalysisCopyRequest = Message<"postpilot.v1.ReserveClipAnalysisCopyRequest"> & {
+  /**
+   * @generated from field: string preparation_id = 1;
+   */
+  preparationId: string;
+
+  /**
+   * @generated from field: string slot = 2;
+   */
+  slot: string;
+
+  /**
+   * @generated from field: int64 bytes = 3;
+   */
+  bytes: bigint;
+
+  /**
+   * @generated from field: string sha256 = 4;
+   */
+  sha256: string;
+};
+
+/**
+ * Describes the message postpilot.v1.ReserveClipAnalysisCopyRequest.
+ * Use `create(ReserveClipAnalysisCopyRequestSchema)` to create a new message.
+ */
+export const ReserveClipAnalysisCopyRequestSchema: GenMessage<ReserveClipAnalysisCopyRequest> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_clip_source, 19);
+
+/**
+ * @generated from message postpilot.v1.ReserveClipAnalysisCopyResponse
+ */
+export type ReserveClipAnalysisCopyResponse = Message<"postpilot.v1.ReserveClipAnalysisCopyResponse"> & {
+  /**
+   * @generated from field: string slot = 1;
+   */
+  slot: string;
+
+  /**
+   * @generated from field: string put_url = 2;
+   */
+  putUrl: string;
+
+  /**
+   * @generated from field: map<string, string> headers = 3;
+   */
+  headers: { [key: string]: string };
+
+  /**
+   * @generated from field: string expires_at = 4;
+   */
+  expiresAt: string;
+};
+
+/**
+ * Describes the message postpilot.v1.ReserveClipAnalysisCopyResponse.
+ * Use `create(ReserveClipAnalysisCopyResponseSchema)` to create a new message.
+ */
+export const ReserveClipAnalysisCopyResponseSchema: GenMessage<ReserveClipAnalysisCopyResponse> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_clip_source, 20);
+
+/**
+ * @generated from message postpilot.v1.CompleteClipAnalysisPreparationRequest
+ */
+export type CompleteClipAnalysisPreparationRequest = Message<"postpilot.v1.CompleteClipAnalysisPreparationRequest"> & {
+  /**
+   * @generated from field: string preparation_id = 1;
+   */
+  preparationId: string;
+};
+
+/**
+ * Describes the message postpilot.v1.CompleteClipAnalysisPreparationRequest.
+ * Use `create(CompleteClipAnalysisPreparationRequestSchema)` to create a new message.
+ */
+export const CompleteClipAnalysisPreparationRequestSchema: GenMessage<CompleteClipAnalysisPreparationRequest> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_clip_source, 21);
+
+/**
+ * @generated from message postpilot.v1.CancelClipAnalysisPreparationRequest
+ */
+export type CancelClipAnalysisPreparationRequest = Message<"postpilot.v1.CancelClipAnalysisPreparationRequest"> & {
+  /**
+   * @generated from field: string preparation_id = 1;
+   */
+  preparationId: string;
+};
+
+/**
+ * Describes the message postpilot.v1.CancelClipAnalysisPreparationRequest.
+ * Use `create(CancelClipAnalysisPreparationRequestSchema)` to create a new message.
+ */
+export const CancelClipAnalysisPreparationRequestSchema: GenMessage<CancelClipAnalysisPreparationRequest> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_clip_source, 22);
+
+/**
  * The footage a clip is cut from: reserving an upload, confirming it, and what a session
  * needs to play back an original it did not upload itself.
  *
  * @generated from service postpilot.v1.ClipSourceService
  */
 export const ClipSourceService: GenService<{
+  /**
+   * @generated from rpc postpilot.v1.ClipSourceService.BeginClipAnalysisPreparation
+   */
+  beginClipAnalysisPreparation: {
+    methodKind: "unary";
+    input: typeof BeginClipAnalysisPreparationRequestSchema;
+    output: typeof ClipAnalysisPreparationResponseSchema;
+  },
+  /**
+   * @generated from rpc postpilot.v1.ClipSourceService.ReserveClipAnalysisCopy
+   */
+  reserveClipAnalysisCopy: {
+    methodKind: "unary";
+    input: typeof ReserveClipAnalysisCopyRequestSchema;
+    output: typeof ReserveClipAnalysisCopyResponseSchema;
+  },
+  /**
+   * @generated from rpc postpilot.v1.ClipSourceService.CompleteClipAnalysisPreparation
+   */
+  completeClipAnalysisPreparation: {
+    methodKind: "unary";
+    input: typeof CompleteClipAnalysisPreparationRequestSchema;
+    output: typeof ClipAnalysisPreparationResponseSchema;
+  },
+  /**
+   * @generated from rpc postpilot.v1.ClipSourceService.CancelClipAnalysisPreparation
+   */
+  cancelClipAnalysisPreparation: {
+    methodKind: "unary";
+    input: typeof CancelClipAnalysisPreparationRequestSchema;
+    output: typeof ClipAnalysisPreparationResponseSchema;
+  },
   /**
    * @generated from rpc postpilot.v1.ClipSourceService.CreateClipSourceBatch
    */

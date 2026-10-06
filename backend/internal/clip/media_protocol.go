@@ -8,14 +8,16 @@ import (
 // These are compatibility identifiers, not host or library version detection.
 // A changed execution/output contract must change the matching identifier.
 const (
-	MediaContractVersion = 3
-	MediaRendererVersion = "cpu-v2"
-	MediaAssetVersion    = "assets-v3"
-	MediaCPUProfile      = "cpu"
-	MediaRequestMaxBytes = 4 << 20
-	MediaUnaryTimeout    = 10 * time.Second
-	MediaPollInterval    = 2 * time.Second
-	MediaPollJitter      = 500 * time.Millisecond
+	NativeWorkerRole         = "native"
+	AnalysisVerificationRole = "analysis-verification"
+	MediaContractVersion     = 3
+	MediaRendererVersion     = "cpu-v2"
+	MediaAssetVersion        = "assets-v3"
+	MediaCPUProfile          = "cpu"
+	MediaRequestMaxBytes     = 4 << 20
+	MediaUnaryTimeout        = 10 * time.Second
+	MediaPollInterval        = 2 * time.Second
+	MediaPollJitter          = 500 * time.Millisecond
 )
 
 var (
@@ -27,6 +29,9 @@ var (
 )
 
 func (p MediaWorkerProfile) Compatible() bool {
+	if p.Operation == MediaVerifyAnalysis {
+		return p.ContractVersion == MediaContractVersion && p.RendererVersion == AnalysisVerificationRenderer && p.AssetVersion == AnalysisVerificationAssets && p.Profile == AnalysisVerificationProfile
+	}
 	return p.ContractVersion == MediaContractVersion && p.RendererVersion == MediaRendererVersion && p.AssetVersion == MediaAssetVersion && p.Profile == MediaCPUProfile
 }
 

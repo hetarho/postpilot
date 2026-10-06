@@ -16,6 +16,9 @@ import (
 type AnalysisSource struct {
 	RenderSource
 	Filename string
+	// Browser measurements remain explicit in recovery. Absence is the
+	// existing native-verified cache and preserves its serialized shape.
+	OriginalMeasurementProvenance string `json:",omitempty"`
 }
 type Segment struct {
 	StartMS, EndMS         int
@@ -228,6 +231,9 @@ func ValidateAnalysisSources(l AnalysisLimits, sources []AnalysisSource) error {
 	}
 	seen, fingerprints, total := map[string]bool{}, map[string]bool{}, 0
 	for _, source := range sources {
+		if source.OriginalMeasurementProvenance != "" && source.OriginalMeasurementProvenance != BrowserOriginalProvenance {
+			return ErrInvalid
+		}
 		if strings.TrimSpace(source.ID) == "" || source.Fingerprint == "" || strings.TrimSpace(source.Filename) == "" || seen[source.ID] || fingerprints[source.Fingerprint] || source.Info.DurationMS <= 0 || source.Info.DurationMS > l.MaxSourceDurationMS-total || source.Info.Width <= 0 || source.Info.Height <= 0 {
 			return ErrInvalid
 		}

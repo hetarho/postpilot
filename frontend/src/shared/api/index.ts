@@ -501,3 +501,7 @@ export {
 export type { SpokenOperation as ProtoSpokenOperation } from './gen/postpilot/v1/spoken_voice_generation_pb'
 
 export { ClipSpeechService } from './gen/postpilot/v1/clip_speech_pb'
+
+export type { ClipAnalysisPreparationResponse } from './gen/postpilot/v1/clip_source_pb'
+
+export { ClipAnalysisPreparationResponseSchema } from './gen/postpilot/v1/clip_source_pb'

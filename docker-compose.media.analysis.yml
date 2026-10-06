@@ -1,0 +1,30 @@
+# Optional colocated verification process. It never claims native preparation,
+# sampling or rendering. Operator admission keeps browser quality gated on T603.
+services:
+  analysis-verifier:
+    image: ghcr.io/hetarho/postpilot-media-worker:${ANALYSIS_WORKER_IMAGE_TAG:?Set the verified worker image SHA}
+    env_file: analysis-worker.env
+    restart: unless-stopped
+    cpu_shares: 256
+    cpus: ${ANALYSIS_WORKER_CPUS:-0.5}
+    mem_limit: ${ANALYSIS_WORKER_MEMORY:-256m}
+    memswap_limit: ${ANALYSIS_WORKER_MEMORY:-256m}
+    stop_grace_period: 45s
+    environment:
+      MEDIA_WORKER_ROLE: analysis-verification
+      MEDIA_ACCEL: cpu
+      MEDIA_WORKER_CONCURRENCY: "1"
+      CLIP_DECODE_THREADS: "1"
+    volumes:
+      - analysis_work:/var/lib/postpilot-media
+    networks:
+      - media
+    healthcheck:
+      test: ["CMD", "/media-worker", "health"]
+      interval: 15s
+      timeout: 30s
+      start_period: 30s
+      retries: 4
+
+volumes:
+  analysis_work:

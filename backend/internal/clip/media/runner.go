@@ -16,6 +16,9 @@ type Command struct {
 	// them — on stderr and nowhere else, so a caller that needs one asks for
 	// stderr instead of stdout. The bound and the failure text are unchanged.
 	CaptureStderr bool
+	// A structured decoder run uses -v error: any stderr is failed input,
+	// even when a tool otherwise exits successfully after concealing damage.
+	RejectStderr bool
 }
 type Runner interface {
 	Run(context.Context, Command) ([]byte, error)
@@ -64,6 +67,9 @@ func (r ExecRunner) Run(ctx context.Context, command Command) ([]byte, error) {
 	}
 	if out.exceeded {
 		return nil, errors.New("media command output exceeded its bound")
+	}
+	if command.RejectStderr && (len(stderr.data) > 0 || stderr.exceeded) {
+		return nil, errors.New("media decoder reported invalid input")
 	}
 	if command.CaptureStderr {
 		// A filter report arrives at the END of the log, so a truncated stderr

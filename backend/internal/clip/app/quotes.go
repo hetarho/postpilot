@@ -177,8 +177,8 @@ func (s *GenerationService) quoteInputs(ctx context.Context, user, id, batch, ob
 	skipFlow := written && (recovered.FlowReady || recovered.PlanReady)
 	skipNarration := skipFlow && recovered.PlanReady
 	upperCount := count
-	// Verified source durations supersede conservative browser estimates only for
-	// the exact retained source identity; count only missing chunks.
+	// Compatible retained coverage supplies exact missing intervals. Browser
+	// original measurements keep their provenance and are not native proof.
 	count = 0
 	for _, v := range b.Sources {
 		one := b
@@ -373,7 +373,7 @@ func (s *GenerationService) startMode(ctx context.Context, user, id, batch, obse
 	if err != nil {
 		return "", err
 	}
-	if q.ProjectID != id || q.BatchID != batch || q.Pricing.MaxCredits != *a.MaxCredits || q.Pricing.Observe.Ref != modelRef(observe) || q.Pricing.Plan.Ref != modelRef(write) {
+	if q.AnalysisPreparationID != a.AnalysisPreparationID || q.ProjectID != id || q.BatchID != batch || q.Pricing.MaxCredits != *a.MaxCredits || q.Pricing.Observe.Ref != modelRef(observe) || q.Pricing.Plan.Ref != modelRef(write) {
 		return "", clip.ErrQuoteChanged
 	}
 	if q.ConsumedJobID != "" {
@@ -386,7 +386,17 @@ func (s *GenerationService) startMode(ctx context.Context, user, id, batch, obse
 	if err != nil {
 		return "", err
 	}
-	if !reflect.DeepEqual(q.Pricing, pricing) || q.InputDigest != clip.QuoteInputDigest(p, t, b, pricing) {
+	digest := clip.QuoteInputDigest(p, t, b, pricing)
+	if a.AnalysisPreparationID != "" {
+		if s.analysisPreparations == nil {
+			return "", clip.ErrMediaUnsupported
+		}
+		if err = s.analysisPreparations.StartBinding(ctx, user, q, a.AnalysisPreparationID, p.EditPlanRevision, digest); err != nil {
+			return "", err
+		}
+		digest = q.InputDigest
+	}
+	if !reflect.DeepEqual(q.Pricing, pricing) || q.InputDigest != digest {
 		return "", clip.ErrQuoteChanged
 	}
 	c, err := clip.GenerationComposition(t, p, s.projects.limits.Composition)
@@ -406,7 +416,11 @@ func (s *GenerationService) startMode(ctx context.Context, user, id, batch, obse
 	}
 	recovery := s.selectRecovery(upgraded, b, modelRef(observe), p.Language)
 	regions := clip.EffectiveProjectRegions(p)
-	payload, err := json.Marshal(clip.GenerationPayload{Dubbing: p.Dubbing, Language: p.Language, Recovery: &recovery, Composition: c, Version: clip.GenerationPayloadVersion, ProjectID: id, Ratio: p.Ratio, Observe: observe, Write: write, TargetDurationMS: p.TargetDurationMS, Template: t.Recipe, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, Instruction: p.Instruction, Guidelines: guidelines, FollowStoryline: followed(mode, p), Regions: &regions, CaptionPace: p.CaptionPace, Accent: p.Accent, IntroPreset: p.IntroPreset, OutroPreset: p.OutroPreset, CaptionStyles: p.CaptionStyles, Batch: b, Approval: &clip.GenerationApproval{QuoteID: q.ID, MaxCredits: q.Pricing.MaxCredits, Pricing: q.Pricing}})
+	version := clip.GenerationPayloadVersion
+	if a.AnalysisPreparationID != "" {
+		version = clip.BrowserAnalysisGenerationPayloadVersion
+	}
+	payload, err := json.Marshal(clip.GenerationPayload{AnalysisPreparationID: a.AnalysisPreparationID, Dubbing: p.Dubbing, Language: p.Language, Recovery: &recovery, Composition: c, Version: version, ProjectID: id, Ratio: p.Ratio, Observe: observe, Write: write, TargetDurationMS: p.TargetDurationMS, Template: t.Recipe, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, Instruction: p.Instruction, Guidelines: guidelines, FollowStoryline: followed(mode, p), Regions: &regions, CaptionPace: p.CaptionPace, Accent: p.Accent, IntroPreset: p.IntroPreset, OutroPreset: p.OutroPreset, CaptionStyles: p.CaptionStyles, Batch: b, Approval: &clip.GenerationApproval{QuoteID: q.ID, MaxCredits: q.Pricing.MaxCredits, Pricing: q.Pricing}})
 	if err != nil {
 		return "", err
 	}
@@ -441,7 +455,7 @@ func (s *GenerationService) acceptedJob(ctx context.Context, user, id, batch, ob
 	if j.Kind != "generate_clip" || json.Unmarshal(j.Payload, &p) != nil || !clip.SupportedGenerationPayload(p.Version) || p.ProjectID != id || p.Batch.UserID != user || p.Batch.ID != batch || p.Observe != observe || p.Write != write || p.Approval == nil || p.Approval.QuoteID != a.QuoteID {
 		return "", nil
 	}
-	if a.MaxCredits == nil || p.Approval.MaxCredits != *a.MaxCredits || a.CancellationPolicyVersion != p.Approval.Pricing.CancellationPolicyVersion {
+	if p.AnalysisPreparationID != a.AnalysisPreparationID || a.MaxCredits == nil || p.Approval.MaxCredits != *a.MaxCredits || a.CancellationPolicyVersion != p.Approval.Pricing.CancellationPolicyVersion {
 		return "", clip.ErrQuoteChanged
 	}
 	// An unlinked queued row is not an accepted quote yet.

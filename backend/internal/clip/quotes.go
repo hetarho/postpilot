@@ -110,6 +110,7 @@ func (p GenerationPricing) ObserveCalls(chunks int) int {
 }
 
 type GenerationQuote struct {
+	AnalysisPreparationID                                      string
 	ID, UserID, ProjectID, BatchID, InputDigest, ConsumedJobID string
 	Pricing                                                    GenerationPricing
 	ExpiresAt                                                  time.Time
@@ -120,6 +121,7 @@ type GenerationApproval struct {
 	Pricing    GenerationPricing
 }
 type QuoteApproval struct {
+	AnalysisPreparationID     string
 	CancellationPolicyVersion int
 	QuoteID                   string
 	MaxCredits                *int

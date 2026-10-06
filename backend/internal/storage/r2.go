@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"sync"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -34,6 +35,8 @@ const signingRegion = "auto"
 // API reaches MinIO by its compose service name while the browser reaches the published
 // port.
 type Bucket struct {
+	analysisListMu     sync.Mutex
+	analysisListCursor string
 	// ops issues the calls this process makes itself.
 	ops s3API
 	// presign only ever builds URLs — it never dials anything.
