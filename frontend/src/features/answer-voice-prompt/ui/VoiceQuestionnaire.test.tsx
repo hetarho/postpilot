@@ -114,6 +114,42 @@ async function answer(
 }
 
 describe('reusable voice questionnaire', () => {
+  it('hands ten confirmed answers to review without exposing or calling analysis in the collection step', async () => {
+    const current = profile(Array.from({ length: 10 }, (_, index) => `question-${index}`))
+    const review = vi.fn()
+    const analyze = vi.fn()
+    render(
+      <VoiceQuestionnaire
+        ownerId="alice"
+        voiceId="voice"
+        samples={current.samples}
+        profile={current}
+        onReview={review}
+        renderMakeVoice={() => <Button onClick={analyze}>말투 만들기</Button>}
+      />,
+    )
+    const user = userEvent.setup()
+    expect(await screen.findByText('열 개의 답변이 모였어요.')).toBeInTheDocument()
+    expect(screen.queryByRole('textbox')).toBeNull()
+    expect(screen.queryByRole('button', { name: '말투 만들기' })).toBeNull()
+    expect(screen.queryByRole('button', { name: '질문 10개 더 답하기' })).toBeNull()
+    await user.click(screen.getByRole('button', { name: '저장한 답변 확인하기' }))
+    expect(review).toHaveBeenCalledOnce()
+    expect(analyze).not.toHaveBeenCalled()
+    expect(fake.answer).not.toHaveBeenCalled()
+  })
+
+  it('keeps the actor and unsaved answer when its collection view is hidden and shown again', async () => {
+    const { props, rerender } = mount()
+    const user = userEvent.setup()
+    await user.type(await screen.findByLabelText('답'), '돌아와서 이어 쓸 내 답변이에요.')
+    rerender(<VoiceQuestionnaire {...props} active={false} />)
+    rerender(<VoiceQuestionnaire {...props} active />)
+    expect(screen.getByLabelText('답')).toHaveValue('돌아와서 이어 쓸 내 답변이에요.')
+    expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '0')
+    expect(fake.answer).not.toHaveBeenCalled()
+  })
+
   it('shows friendly scene/hint and stops at ten instead of rendering or exhausting hundreds of forms', async () => {
     const current = profile()
     current.readiness.percent = 100
@@ -140,7 +176,8 @@ describe('reusable voice questionnaire', () => {
     expect(await screen.findByText('4번째 상황을 친구에게 말해 볼까요?')).toBeInTheDocument()
     expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '3')
     for (let index = 0; index < 7; index++) await answer(user)
-    await user.click(await screen.findByRole('button', { name: '질문 10개 더 답하기' }))
+    await user.click(await screen.findByRole('button', { name: '답변을 더 보태거나 고치기' }))
+    await user.click(screen.getByRole('button', { name: '질문 10개 더 답하기' }))
     expect(screen.getByText('11번째 상황을 친구에게 말해 볼까요?')).toBeInTheDocument()
     expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '0')
     expect(fake.answer.mock.calls.map(([input]) => input.promptKey)).toEqual(

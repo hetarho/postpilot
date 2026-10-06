@@ -5,6 +5,8 @@ export const i18n = {
   namespace: 'voices',
   ko: {
     prompts: {
+      reviewNext: '저장한 답변 확인하기',
+      moreOptions: '답변을 더 보태거나 고치기',
       open: '문항 풀기',
       title: '문항 풀기',
       back: '문항 목록',
@@ -47,6 +49,8 @@ export const i18n = {
   },
   en: {
     prompts: {
+      reviewNext: 'Review my saved answers',
+      moreOptions: 'Add or edit answers',
       open: 'Answer prompts',
       title: 'Answer prompts',
       back: 'All prompts',

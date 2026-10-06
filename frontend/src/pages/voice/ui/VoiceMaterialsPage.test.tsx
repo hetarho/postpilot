@@ -57,13 +57,24 @@ function renderMaterials(
   voice: FakeVoiceOptions = {},
   calls: string[] = [],
   providers: RenderAppOptions['providers'] = WITH_ANALYZE,
+  jobs?: RenderAppOptions['jobs'],
 ) {
   return renderAppAt(MATERIALS, {
     user: { id: 'alice' },
     calls,
     providers,
+    jobs,
     voice: { voices: UNMADE, prompts: LEGACY_PROMPTS, ...voice },
   })
+}
+
+// The made voice's management sheets remain available after the first-use funnel.
+function renderLegacyMaterials(
+  voice: FakeVoiceOptions = {},
+  calls: string[] = [],
+  providers: RenderAppOptions['providers'] = WITH_ANALYZE,
+) {
+  return renderMaterials({ voices: MADE, ...voice }, calls, providers)
 }
 
 describe('the 학습 데이터 screen', () => {
@@ -80,18 +91,18 @@ describe('the 학습 데이터 screen', () => {
     )
     expect(screen.getByText('질문 1 / 10개')).toBeInTheDocument()
     expect(screen.getByText('질문 9개만 더 답하면 돼요.')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '말투 만들기' })).toBeDisabled()
-    expect(
-      screen.getByText('말투 학습에 필요한 정보가 100%가 되면 누를 수 있어요.'),
-    ).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '이 자료로 내 말투 만들기' })).toBeNull()
+    expect(screen.getByRole('button', { name: '자료 더 보태기' })).toBeEnabled()
   })
 
   it('shows live progress without offering analysis before the question session completes', async () => {
     const user = userEvent.setup()
     renderMaterials({ samples: [{ id: 'p', label: '글', body: sentences(48) }] })
 
-    await user.click(await screen.findByRole('button', { name: '문항 풀기' }))
-    const sheet = within(await screen.findByRole('dialog'))
+    await user.click(await screen.findByRole('button', { name: '자료 더 보태기' }))
+    const sheet = within(
+      await screen.findByRole('region', { name: '짧은 질문으로 내 말투 알아보기' }),
+    )
     expect(sheet.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '0')
     await user.click(sheet.getByLabelText('답'))
     await user.paste(sentences(12))
@@ -100,7 +111,7 @@ describe('the 학습 데이터 screen', () => {
     await waitFor(() =>
       expect(sheet.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '1'),
     )
-    expect(sheet.queryByRole('button', { name: '말투 만들기' })).toBeNull()
+    expect(sheet.queryByRole('button', { name: '이 자료로 내 말투 만들기' })).toBeNull()
   })
 
   // VOICE-23, VOICE-55: at 100% 말투 만들기 starts one analysis on the active analyze selection.
@@ -111,23 +122,46 @@ describe('the 학습 데이터 screen', () => {
     renderMaterials({ samples: [{ id: 'p', label: '글', body: sentences(60) }], analyses }, calls)
 
     expect(await screen.findByText('이제 말투를 만들 수 있어요')).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: '말투 만들기' }))
+    await user.click(await screen.findByRole('button', { name: '이 자료로 내 말투 만들기' }))
     await waitFor(() =>
       expect(analyses).toEqual([{ voiceId: 'voice-default', model: 'stub/analyze' }]),
     )
-    expect(await screen.findByRole('region', { name: '문체 분석 상태' })).toBeInTheDocument()
+    expect(
+      await screen.findByRole('heading', { name: '내 글에 담긴 말투를 살펴보고 있어요' }),
+    ).toBeInTheDocument()
   })
 
   it('reveals the three tabs when the first analysis publishes', async () => {
     const user = userEvent.setup()
-    renderMaterials({
-      samples: [{ id: 'p', label: '글', body: sentences(60) }],
-      analysisAfterAnalysis: '차분한 말투예요.',
-    })
+    const calls: string[] = []
+    renderMaterials(
+      {
+        samples: [{ id: 'p', label: '글', body: sentences(60) }],
+        analysisAfterAnalysis: '차분한 말투예요.',
+      },
+      calls,
+      WITH_ANALYZE,
+      {
+        jobs: [
+          {
+            id: 'voice-job',
+            kind: 'analyze_voice',
+            status: 'done',
+            stage: 'analyze',
+            progressDone: 1,
+            progressTotal: 1,
+          },
+        ],
+      },
+    )
 
     expect(await screen.findByRole('heading', { level: 2, name: '말투 학습' })).toBeInTheDocument()
     expect(screen.queryByRole('navigation', { name: '말투 설정' })).not.toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: '말투 만들기' }))
+    await user.click(await screen.findByRole('button', { name: '이 자료로 내 말투 만들기' }))
+    const use = await screen.findByRole('button', { name: '이 말투를 내 글에 사용하기' })
+    expect(calls).not.toContain('SetDefaultVoice')
+    await user.click(use)
+    await waitFor(() => expect(calls).toContain('SetDefaultVoice'))
     const tabs = within(await screen.findByRole('navigation', { name: '말투 설정' })).getAllByRole(
       'link',
     )
@@ -140,12 +174,15 @@ describe('the 학습 데이터 screen', () => {
 
   it('says a model is needed, with the way to choose one, when there is none', async () => {
     renderMaterials({ samples: [{ id: 'p', label: '글', body: sentences(60) }] }, [], {})
-    expect(await screen.findByText(/말투 분석에 쓸 AI 모델을 먼저 골라 주세요/)).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'AI 모델 고르기' })).toHaveAttribute(
+    expect(
+      await screen.findByText('AI를 준비하지 못했어요. 다시 확인해 주세요.'),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'AI 설정 확인하기' })).toHaveAttribute(
       'href',
       '/ai-models',
     )
-    expect(screen.getByRole('button', { name: '말투 만들기' })).toBeDisabled()
+    expect(screen.queryByRole('button', { name: '이 자료로 내 말투 만들기' })).toBeNull()
+    expect(screen.getByRole('button', { name: 'AI 다시 준비하기' })).toBeEnabled()
   })
 
   // A made voice offers 다시 분석 and no meter.
@@ -164,14 +201,16 @@ describe('the 학습 데이터 screen', () => {
   it('pastes a post as a 학습 글 without starting anything', async () => {
     const user = userEvent.setup()
     const calls: string[] = []
-    renderMaterials({}, calls)
+    renderLegacyMaterials({}, calls)
 
     await user.click(await screen.findByRole('button', { name: '글 붙여넣기' }))
     const sheet = within(await screen.findByRole('dialog'))
     await user.type(sheet.getByLabelText('제목 (선택)'), '제주 여행')
     await user.type(sheet.getByLabelText('내가 쓴 글'), '가'.repeat(199))
-    expect(sheet.getByRole('button', { name: '추가' })).toBeDisabled()
-    expect(sheet.getByText('1자 더 필요해요')).toBeInTheDocument()
+    expect(sheet.getByRole('button', { name: '추가' })).toBeEnabled()
+    await user.click(sheet.getByRole('button', { name: '추가' }))
+    expect(sheet.getByRole('alert')).toHaveTextContent('1자 더 필요해요')
+    expect(calls).not.toContain('AddVoiceSample')
     await user.type(sheet.getByLabelText('내가 쓴 글'), '가')
     await user.click(sheet.getByRole('button', { name: '추가' }))
 
@@ -182,7 +221,7 @@ describe('the 학습 데이터 screen', () => {
     expect(screen.getByRole('dialog')).toBeInTheDocument()
     expect(sheet.getByRole('status')).toHaveTextContent('글을 추가했어요')
     expect(sheet.getByLabelText('제목 (선택)')).toHaveValue('')
-    expect(sheet.getByLabelText('제목 (선택)')).toHaveFocus()
+    await waitFor(() => expect(sheet.getByLabelText('제목 (선택)')).toHaveFocus())
     expect(sheet.getByLabelText('내가 쓴 글')).toHaveValue('')
     expect(sheet.queryByRole('button', { name: '취소' })).not.toBeInTheDocument()
 
@@ -201,7 +240,7 @@ describe('the 학습 데이터 screen', () => {
   // VOICE-65: a refused post keeps the sheet on it, text and all.
   it('keeps a refused post in the sheet', async () => {
     const user = userEvent.setup()
-    renderMaterials({ addError: 'too short' })
+    renderLegacyMaterials({ addError: 'too short' })
 
     await user.click(await screen.findByRole('button', { name: '글 붙여넣기' }))
     const sheet = within(await screen.findByRole('dialog'))
@@ -209,7 +248,7 @@ describe('the 학습 데이터 screen', () => {
     await user.paste('가'.repeat(200))
     await user.click(sheet.getByRole('button', { name: '추가' }))
 
-    expect(await sheet.findByText(/200자/, { selector: '[id$="-error"]' })).toBeInTheDocument()
+    expect(await sheet.findByRole('alert')).toHaveTextContent('200자')
     expect(sheet.getByLabelText('내가 쓴 글')).toHaveValue('가'.repeat(200))
     expect(sheet.getByRole('status')).toHaveTextContent('')
     expect(sheet.getByRole('button', { name: '취소' })).toBeInTheDocument()
@@ -219,7 +258,7 @@ describe('the 학습 데이터 screen', () => {
   it('answers a prompt and moves on to the next one', async () => {
     const user = userEvent.setup()
     const answers: NonNullable<FakeVoiceOptions['answers']> = []
-    renderMaterials({ answers })
+    renderLegacyMaterials({ answers, prompts: LEGACY_PROMPTS.filter((prompt) => !prompt.photo) })
 
     await user.click(await screen.findByRole('button', { name: '문항 풀기' }))
     const sheet = within(await screen.findByRole('dialog'))
@@ -250,7 +289,7 @@ describe('the 학습 데이터 screen', () => {
   it('shows completion after the last unanswered prompt at 100%', async () => {
     const user = userEvent.setup()
     const answers: NonNullable<FakeVoiceOptions['answers']> = []
-    renderMaterials({
+    renderLegacyMaterials({
       answers,
       samples: [
         { id: 'a0', label: '', kind: 'answer', promptKey: 'opening_greeting', body: sentences(57) },
@@ -288,7 +327,7 @@ describe('the 학습 데이터 screen', () => {
   it('offers completion and explicit review when the catalog is exhausted', async () => {
     const user = userEvent.setup()
     const answers: NonNullable<FakeVoiceOptions['answers']> = []
-    renderMaterials({
+    renderLegacyMaterials({
       answers,
       samples: [
         { id: 'a0', label: '', kind: 'answer', promptKey: 'opening_greeting', body: '안녕하세요.' },
@@ -319,6 +358,7 @@ describe('the 학습 데이터 screen', () => {
     )
     expect(await sheet.findByText('모든 문항에 답했어요.')).toBeInTheDocument()
     expect(sheet.queryByLabelText('답')).toBeNull()
+    await user.click(sheet.getByRole('button', { name: '답변을 더 보태거나 고치기' }))
     expect(sheet.getByRole('combobox', { name: /저장한 답변 다시 보기/ })).toBeInTheDocument()
     expect(sheet.queryByRole('button', { name: '답 고치기' })).toBeNull()
   })
@@ -328,7 +368,7 @@ describe('the 학습 데이터 screen', () => {
   it('rewrites an answered prompt with more sentences', async () => {
     const user = userEvent.setup()
     const answers: NonNullable<FakeVoiceOptions['answers']> = []
-    renderMaterials({
+    renderLegacyMaterials({
       answers,
       samples: [
         {
@@ -365,6 +405,7 @@ describe('the 학습 데이터 screen', () => {
 
     await user.click(await screen.findByRole('button', { name: '문항 풀기' }))
     const sheet = within(await screen.findByRole('dialog'))
+    await user.click(await sheet.findByRole('button', { name: '답변을 더 보태거나 고치기' }))
     await user.click(await sheet.findByRole('combobox', { name: /저장한 답변 다시 보기/ }))
     await user.click(
       await screen.findByRole('option', { name: /블로그 글을 시작할 때 쓰는 첫인사/ }),
@@ -410,7 +451,7 @@ describe('the 학습 데이터 screen', () => {
     const user = userEvent.setup()
     const calls: string[] = []
     const answers: NonNullable<FakeVoiceOptions['answers']> = []
-    renderMaterials(
+    renderLegacyMaterials(
       {
         answers,
         voices: MADE,
@@ -448,7 +489,7 @@ describe('the 학습 데이터 screen', () => {
     const user = userEvent.setup()
     const answers: NonNullable<FakeVoiceOptions['answers']> = []
     vi.mocked(putPhoto).mockRejectedValueOnce(new Error('offline'))
-    renderMaterials({
+    renderLegacyMaterials({
       answers,
       voices: MADE,
       samples: [{ id: 'a0', label: '', kind: 'answer', promptKey: 'opening_greeting' }],

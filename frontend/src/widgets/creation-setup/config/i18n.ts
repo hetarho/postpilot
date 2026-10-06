@@ -45,8 +45,7 @@ export const i18n = {
         otherMethod: '다른 방법으로 준비하기',
         moreWays: '직접 쓴 글이 이미 있나요?',
         title: '글에 나의 말투를 담아볼까요?',
-        description:
-          '직접 쓴 글이나 짧은 답변으로 당신의 표현을 배워요. 지금은 건너뛰어도 글을 쓸 수 있어요.',
+        description: '편한 방법으로 평소 쓰는 표현과 문장의 느낌을 알려 주세요.',
         name: '말투 이름',
         placeholder: '예: 평소의 나',
         create: '이 말투로 준비하기',

@@ -9,13 +9,12 @@ import {
 } from '@/entities/voice'
 import { Button, FieldLabel, FieldMessage, Listbox, ProgressBar, Typography } from '@/shared/ui'
 import {
-  initialQuestionnaireState,
   questionnaireCurrentKey,
   questionnaireSavedCount,
-  questionnaireTransition,
   QUESTIONNAIRE_BATCH_SIZE,
   type QuestionnaireEvent,
 } from '../model/questionnaire-machine'
+import { useQuestionnaire } from '../model/useQuestionnaire'
 import { AnswerForm } from './AnswerForm'
 
 export interface VoiceQuestionnaireProps {
@@ -26,6 +25,11 @@ export interface VoiceQuestionnaireProps {
   renderMakeVoice: (close: () => void) => ReactNode
   onClose?: () => void
   onBusyChange?: (busy: boolean) => void
+  onReview?: () => void
+  active?: boolean
+  onNavigationChange?: (
+    navigation: { canGoBack: boolean; goBack: () => void; startNewBatch: () => void } | undefined,
+  ) => void
 }
 
 /** One mounted form for one scene; saved keys, rather than catalog size, define completion. */
@@ -41,13 +45,16 @@ function AccountQuestionnaire({
   renderMakeVoice,
   onClose,
   onBusyChange,
+  onReview,
+  active = true,
+  onNavigationChange,
 }: VoiceQuestionnaireProps) {
   const { t } = useTranslation('voices')
   const titleId = useId()
   const heading = useRef<HTMLElement>(null)
   const query = useVoicePrompts()
-  const [state, setState] = useState(() => initialQuestionnaireState(ownerId, voiceId))
-  const stateRef = useRef(state)
+  const { state, send: actorSend, getSnapshot } = useQuestionnaire(ownerId, voiceId)
+  const [moreOpen, setMoreOpen] = useState(false)
   const [savedMessage, setSavedMessage] = useState(false)
   const mounted = useRef(true)
   useEffect(() => {
@@ -56,23 +63,18 @@ function AccountQuestionnaire({
       mounted.current = false
     }
   }, [])
-  // Keep the ref synchronous: two presses in the same browser frame still reserve one save.
   const send = useCallback(
     (event: QuestionnaireEvent) => {
-      const current = stateRef.current
-      if (!mounted.current) return current
-      const next = questionnaireTransition(current, event)
-      stateRef.current = next
-      if (next !== current) {
-        onBusyChange?.(next.phase === 'saving')
-        setState(next)
-      }
+      const before = getSnapshot()
+      if (!mounted.current) return before
+      const next = actorSend(event)
+      if (next !== before) onBusyChange?.(next.phase === 'saving')
       return next
     },
-    [onBusyChange],
+    [getSnapshot, actorSend, onBusyChange],
   )
   useEffect(() => {
-    if (query.isPending || query.isError || stateRef.current.phase !== 'loading') return
+    if (query.isPending || query.isError || getSnapshot().phase !== 'loading') return
     send({
       ownerId,
       voiceId,
@@ -94,22 +96,37 @@ function AccountQuestionnaire({
     ownerId,
     voiceId,
     send,
+    getSnapshot,
   ])
   const key = questionnaireCurrentKey(state)
   const prompt = query.prompts.find((question) => question.key === key)
   const previousKey = useRef('')
   useEffect(() => {
-    if (state.phase !== 'loading' && key !== previousKey.current) {
+    if (active && state.phase !== 'loading' && key !== previousKey.current) {
       heading.current?.querySelector('h2')?.focus({ preventScroll: true })
       previousKey.current = key
     }
-  }, [key, state.phase])
+  }, [key, state.phase, active])
   const identity = { ownerId, voiceId }
   const count = questionnaireSavedCount(state)
   const busy = state.phase === 'saving'
+  useEffect(() => {
+    onNavigationChange?.(
+      active
+        ? {
+            canGoBack: !busy && (state.cursor > 0 || state.reviewing),
+            goBack: () => send({ ownerId, voiceId, type: 'back' }),
+            startNewBatch: () => send({ ownerId, voiceId, type: 'new-session' }),
+          }
+        : undefined,
+    )
+    return () => onNavigationChange?.(undefined)
+  }, [onNavigationChange, active, busy, state.cursor, state.reviewing, ownerId, voiceId, send])
+
   const submission = useRef<{ key: string; operation: number } | null>(null)
   const begin = () => {
-    const previous = stateRef.current
+    if (!active) return false
+    const previous = getSnapshot()
     const next = send({ ...identity, type: 'begin', key })
     if (next === previous || next.phase !== 'saving') return false
     submission.current = { key, operation: next.operation }
@@ -119,7 +136,7 @@ function AccountQuestionnaire({
   const complete = (success: boolean) => {
     const pending = submission.current
     if (!pending || !mounted.current) return
-    const previous = stateRef.current
+    const previous = getSnapshot()
     const next = send({ ...identity, ...pending, type: success ? 'success' : 'failure' })
     submission.current = null
     if (success && next !== previous) setSavedMessage(true)
@@ -128,6 +145,7 @@ function AccountQuestionnaire({
     if (!busy) onClose?.()
   }
   const changeBody = (body: string) => {
+    if (!active) return
     send({ ...identity, type: 'draft', key, body })
     setSavedMessage(false)
   }
@@ -148,6 +166,7 @@ function AccountQuestionnaire({
     onDone: () => complete(true),
     onBack: () => send({ ...identity, type: 'back' }),
     backLabel: t('prompts.previous'),
+    hideBack: !!onNavigationChange,
     backDisabled: state.cursor === 0 && !state.reviewing,
     secondaryActions: !state.saved.includes(key) && (
       <Button
@@ -210,8 +229,17 @@ function AccountQuestionnaire({
           <Typography variant="body" className="text-content-secondary">
             {t(state.completion === 'ten' ? 'prompts.batchHelp' : 'prompts.exhaustedHelp')}
           </Typography>
-          {profile.readiness.percent >= 100 && <div>{renderMakeVoice(close)}</div>}
-          {canContinue && (
+          {onReview ? (
+            <Button variant="cta" onClick={onReview}>
+              {t('prompts.reviewNext')}
+            </Button>
+          ) : (
+            profile.readiness.percent >= 100 && <div>{renderMakeVoice(close)}</div>
+          )}
+          <Button variant="ghost" aria-expanded={moreOpen} onClick={() => setMoreOpen(!moreOpen)}>
+            {t('prompts.moreOptions')}
+          </Button>
+          {moreOpen && canContinue && (
             <Button
               variant="secondary"
               onClick={() => {
@@ -222,7 +250,7 @@ function AccountQuestionnaire({
               {t('prompts.anotherTen')}
             </Button>
           )}
-          {state.saved.length > 0 && (
+          {moreOpen && state.saved.length > 0 && (
             <div>
               <FieldLabel id={`${titleId}-review-label`} htmlFor={`${titleId}-review`}>
                 {t('prompts.review')}

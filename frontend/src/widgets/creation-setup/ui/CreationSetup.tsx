@@ -1,11 +1,11 @@
 import { clsx } from 'clsx'
 import { useEffect, useRef } from 'react'
 import { useNavigate } from '@tanstack/react-router'
-import { useIsMutating, useIsFetching } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { useSession } from '@/entities/session'
 import { useSetup } from '@/features/complete-setup'
 import { Button, Notice, ProgressBar, Typography, pageStyles } from '@/shared/ui'
+import type { VoiceLearningNavigation } from '@/features/prepare-writing-voice'
 import { VoiceSetup } from './VoiceSetup'
 import { TemplateSetup } from './TemplateSetup'
 
@@ -20,14 +20,13 @@ function AccountSetup({ ownerId, restart }: { ownerId: string; restart: boolean 
   const navigate = useNavigate()
   const controller = useSetup(ownerId, restart)
   const { state } = controller
-  const mutating = useIsMutating() > 0
-  const fetching = useIsFetching() > 0
-  const busy = state.phase === 'saving' || state.phase === 'running' || mutating || fetching
+  const busy = state.phase === 'saving' || state.phase === 'running'
+  const voiceNavigation = useRef<VoiceLearningNavigation | null>(null)
   const heading = useRef<HTMLDivElement>(null)
   useEffect(() => {
     if (state.phase !== 'checking')
       heading.current?.querySelector('h1')?.focus({ preventScroll: true })
-  }, [state.step, state.phase])
+  }, [state.step])
   useEffect(() => {
     if (state.phase === 'completed') void navigate({ to: state.target, replace: true })
   }, [state.phase, state.target, navigate])
@@ -121,7 +120,15 @@ function AccountSetup({ ownerId, restart }: { ownerId: string; restart: boolean 
                 </Button>
               </div>
             )}
-            {state.step === 'voice' && <VoiceSetup ownerId={ownerId} controller={controller} />}
+            {state.step === 'voice' && (
+              <VoiceSetup
+                ownerId={ownerId}
+                controller={controller}
+                onNavigationChange={(navigation) => {
+                  voiceNavigation.current = navigation
+                }}
+              />
+            )}
             {(state.step === 'post-template' || state.step === 'clip-template') && (
               <TemplateSetup
                 key={state.step}
@@ -146,7 +153,14 @@ function AccountSetup({ ownerId, restart }: { ownerId: string; restart: boolean 
           </div>
           {state.step !== 'welcome' && state.step !== 'ready' && (
             <div className="mt-8 flex flex-wrap justify-between gap-3">
-              <Button variant="ghost" disabled={busy} onClick={controller.back}>
+              <Button
+                variant="ghost"
+                disabled={busy}
+                onClick={() => {
+                  if (state.step === 'voice' && voiceNavigation.current?.back()) return
+                  controller.back()
+                }}
+              >
                 {t('setup.back')}
               </Button>
               <Button variant="ghost" disabled={busy} onClick={controller.skip}>

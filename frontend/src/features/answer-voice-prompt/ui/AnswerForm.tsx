@@ -29,6 +29,7 @@ export function AnswerForm({
   onBack,
   backLabel,
   backDisabled = false,
+  hideBack = false,
   secondaryActions,
   onDone,
 }: {
@@ -50,6 +51,7 @@ export function AnswerForm({
   onBack: () => void
   backLabel?: string
   backDisabled?: boolean
+  hideBack?: boolean
   secondaryActions?: ReactNode
   onDone: () => void
 }) {
@@ -236,9 +238,11 @@ export function AnswerForm({
         )}
       </div>
       <div className="flex flex-wrap justify-end gap-2">
-        <Button variant="ghost" disabled={pending || backDisabled} onClick={onBack}>
-          {backLabel ?? t('prompts.back', { ns: 'voices' })}
-        </Button>
+        {!hideBack && (
+          <Button variant="ghost" disabled={pending || backDisabled} onClick={onBack}>
+            {backLabel ?? t('prompts.back', { ns: 'voices' })}
+          </Button>
+        )}
         {secondaryActions}
         <Button
           type="submit"

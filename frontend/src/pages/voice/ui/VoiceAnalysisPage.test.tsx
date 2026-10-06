@@ -86,13 +86,13 @@ describe('the 말투 분석 tab', () => {
     })
 
     expect(await screen.findByRole('heading', { level: 2, name: '말투 학습' })).toBeInTheDocument()
-    expect(screen.getByRole('meter', { name: '나의 말투 찾기' })).toHaveAttribute(
-      'aria-valuenow',
-      '0',
-    )
+    expect(screen.queryByRole('meter', { name: '나의 말투 찾기' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '내가 쓴 글로 말투 알려 주기' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'AI가 추천한 말투에서 고르기' })).toBeInTheDocument()
     expect(router.state.location.pathname).toBe(`${DEFAULT}/materials`)
     expect(screen.queryByRole('navigation', { name: '말투 설정' })).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '말투 만들기' })).toBeDisabled()
+    expect(screen.queryByRole('button', { name: '말투 만들기' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '질문 10개로 내 말투 찾기' })).toBeInTheDocument()
     expect(screen.queryByRole('region', { name: '분석 항목' })).not.toBeInTheDocument()
   })
 

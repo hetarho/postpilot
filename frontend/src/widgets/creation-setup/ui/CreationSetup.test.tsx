@@ -136,9 +136,9 @@ it.each(['pending', 'failed'] as const)(
       ),
     })
     const user = await start()
-    expect(await screen.findByRole('button', { name: '질문 10개로 나의 말투 찾기' })).toBeEnabled()
+    expect(await screen.findByRole('button', { name: '질문 10개로 내 말투 찾기' })).toBeEnabled()
     expect(screen.queryByRole('heading', { name: '함께 만들 AI를 골라볼까요?' })).toBeNull()
-    await user.click(screen.getByRole('button', { name: '질문 10개로 나의 말투 찾기' }))
+    await user.click(screen.getByRole('button', { name: '질문 10개로 내 말투 찾기' }))
     expect(await screen.findByLabelText('답')).toBeEnabled()
     await act(async () => release())
   },
@@ -208,7 +208,7 @@ it('creates a personal voice once with an automatic name and holds the funnel wh
   mountFresh({ voice: { voices: [], calls, creates, createGate: gate } })
   const user = userEvent.setup()
   expect(screen.queryByLabelText('말투 이름')).toBeNull()
-  await user.dblClick(await screen.findByRole('button', { name: '질문 10개로 나의 말투 찾기' }))
+  await user.dblClick(await screen.findByRole('button', { name: '질문 10개로 내 말투 찾기' }))
   expect(calls.filter((call) => call === 'CreateVoice')).toHaveLength(1)
   expect(screen.getByRole('button', { name: '지금은 건너뛰기' })).toBeDisabled()
   await act(async () => release())
@@ -217,16 +217,23 @@ it('creates a personal voice once with an automatic name and holds the funnel wh
   expect(screen.getByRole('heading', { name: '글에 나의 말투를 담아볼까요?' })).toBeInTheDocument()
   expect(calls).not.toContain('AnalyzeVoice')
 })
-it('keeps both learning choices and the current step after a failed automatic create', async () => {
+it('retains the failed step and returns to all three methods on explicit Back without another create', async () => {
   resumeSetup('voice')
-  mountFresh({ voice: { voices: [], createFails: true } })
+  const calls: string[] = []
+  mountFresh({ voice: { voices: [], createFails: true, calls } })
   const user = userEvent.setup()
-  await user.click(await screen.findByRole('button', { name: '질문 10개로 나의 말투 찾기' }))
+  await user.click(await screen.findByRole('button', { name: '질문 10개로 내 말투 찾기' }))
   await screen.findByText(/연결|네트워크|요청을 마치지/)
   expect(screen.queryByLabelText('말투 이름')).toBeNull()
   expect(screen.getByRole('heading', { name: '글에 나의 말투를 담아볼까요?' })).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: '질문 10개로 나의 말투 찾기' })).toBeEnabled()
-  expect(screen.getByRole('button', { name: 'AI가 만든 8가지 스타일에서 고르기' })).toBeEnabled()
+  expect(screen.queryByRole('button', { name: '질문 10개로 내 말투 찾기' })).toBeNull()
+  expect(screen.getByRole('button', { name: '다시 확인하고 시도하기' })).toBeEnabled()
+  await user.click(screen.getByRole('button', { name: '이전' }))
+  expect(screen.getByRole('button', { name: '질문 10개로 내 말투 찾기' })).toBeEnabled()
+  expect(screen.getByRole('button', { name: '내가 쓴 글로 말투 알려 주기' })).toBeEnabled()
+  expect(screen.getByRole('button', { name: 'AI가 추천한 말투에서 고르기' })).toBeEnabled()
+  expect(calls.filter((call) => call === 'CreateVoice')).toHaveLength(1)
+  expect(calls).not.toContain('AnalyzeVoice')
 })
 it('authors and saves a post template once before advancing, retaining content on a server refusal', async () => {
   resumeSetup('post-template')
@@ -262,13 +269,13 @@ it('recovers a running voice analysis after reload without starting another paid
     },
     jobs: { jobs: [{ id: 'voice-job', kind: 'analyze_voice', status: 'done', stage: 'analyze' }] },
   })
-  expect(await screen.findByText('말투가 준비됐어요.')).toBeInTheDocument()
+  expect(await screen.findByText('내 말투가 준비됐어요')).toBeInTheDocument()
   expect(calls).not.toContain('AnalyzeVoice')
   const user = userEvent.setup()
   await waitFor(() =>
-    expect(screen.getByRole('button', { name: '이 말투를 기본으로 사용' })).toBeEnabled(),
+    expect(screen.getByRole('button', { name: '이 말투를 내 글에 사용하기' })).toBeEnabled(),
   )
-  await user.click(screen.getByRole('button', { name: '이 말투를 기본으로 사용' }))
+  await user.click(screen.getByRole('button', { name: '이 말투를 내 글에 사용하기' }))
   expect(
     await screen.findByRole('heading', { name: '자주 쓰는 글의 구성을 정해요.' }),
   ).toBeInTheDocument()
@@ -379,11 +386,11 @@ it('starts with writing identity while available recommended models are prepared
   })
   await start()
   expect(
-    await screen.findByRole('button', { name: '질문 10개로 나의 말투 찾기' }),
+    await screen.findByRole('button', { name: '질문 10개로 내 말투 찾기' }),
   ).toBeInTheDocument()
-  expect(
-    screen.getByRole('button', { name: 'AI가 만든 8가지 스타일에서 고르기' }),
-  ).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'AI가 추천한 말투에서 고르기' })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: '내가 쓴 글로 말투 알려 주기' })).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: '이 자료로 내 말투 만들기' })).toBeNull()
   expect(screen.queryByRole('combobox')).toBeNull()
   expect(screen.queryByLabelText('말투 이름')).toBeNull()
   await waitFor(() => expect(calls).toContain('InitializeDefaultSelections'))
@@ -422,8 +429,12 @@ it('saves ten short answers through setup and waits for an explicit analysis act
   expect(new Set(answers.map((answer) => answer.promptKey)).size).toBe(10)
   expect(analyses).toEqual([])
   expect(calls).not.toContain('AnalyzeVoice')
-  await waitFor(() => expect(screen.getByRole('button', { name: '말투 만들기' })).toBeEnabled())
-  await user.click(screen.getByRole('button', { name: '말투 만들기' }))
+  await user.click(screen.getByRole('button', { name: '저장한 답변 확인하기' }))
+  expect(analyses).toEqual([])
+  await waitFor(() =>
+    expect(screen.getByRole('button', { name: '이 자료로 내 말투 만들기' })).toBeEnabled(),
+  )
+  await user.click(screen.getByRole('button', { name: '이 자료로 내 말투 만들기' }))
   await waitFor(() =>
     expect(analyses).toEqual([{ voiceId: 'voice-default', model: 'stub/recommended' }]),
   )

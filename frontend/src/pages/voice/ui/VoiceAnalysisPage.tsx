@@ -1,16 +1,12 @@
 import { useState } from 'react'
-import { Link, useNavigate } from '@tanstack/react-router'
+import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
-import {
-  VoiceReadinessMeter,
-  fingerprintRows,
-  type VoiceAiField,
-  type VoiceAnalysis,
-} from '@/entities/voice'
+import { fingerprintRows, type VoiceAiField, type VoiceAnalysis } from '@/entities/voice'
 import { MakeVoiceButton } from '@/features/make-voice'
 import { RestorePreviousAnalysisButton } from '@/features/restore-voice-analysis'
 import { AIAuthoringSheet } from '@/widgets/ai-authoring-studio'
-import { Button, Notice, Typography, typographyStyles } from '@/shared/ui'
+import { Button, Notice, Typography } from '@/shared/ui'
+import { PersonalVoiceLearning } from './PersonalVoiceLearning'
 import { VoiceRunStatus } from './VoiceRunStatus'
 import { VoiceScreen, type VoiceScreenContext } from './VoiceScreen'
 
@@ -20,7 +16,7 @@ export function VoiceAnalysisPage() {
   const { t } = useTranslation('nav')
   return (
     <VoiceScreen title={t('voice.analysis')}>
-      {(context) => <AnalysisPanel {...context} />}
+      {(context) => <AnalysisPanel key={`${context.ownerId}:${context.voiceId}`} {...context} />}
     </VoiceScreen>
   )
 }
@@ -28,37 +24,23 @@ export function VoiceAnalysisPage() {
 function AnalysisPanel({ ownerId, voiceId, voice, profile }: VoiceScreenContext) {
   const { t } = useTranslation('voices')
   const [startedJobId, setStartedJobId] = useState('')
+  const [guided, setGuided] = useState(!profile.analysis)
   const [authoringOpen, setAuthoringOpen] = useState(false)
   const { t: authoringText } = useTranslation('authoring')
   const navigate = useNavigate()
   const jobId = startedJobId || profile.activeJobId
-  if (!profile.analysis) {
-    return (
-      <>
-        <VoiceReadinessMeter readiness={profile.readiness} />
-        <Link
-          to="/voices/$voiceId/materials"
-          params={{ voiceId }}
-          className={typographyStyles({
-            variant: 'label',
-            className:
-              'text-link-fg hover:text-link-fg-hover mt-2 inline-flex min-h-11 items-center underline',
-          })}
-        >
-          {t('screens.toMaterials')}
-        </Link>
-        <div className="mt-4">
-          <MakeVoiceButton
-            ownerId={ownerId}
-            voiceId={voiceId}
-            profile={profile}
-            onStarted={setStartedJobId}
-          />
-        </div>
-        <VoiceRunStatus ownerId={ownerId} voiceId={voiceId} jobId={jobId} />
-      </>
+  if (guided || !profile.analysis)
+    return voice.deleted ? (
+      <Notice tone="warning" role="status">
+        {t('screens.materialsBlocked')}
+      </Notice>
+    ) : (
+      <PersonalVoiceLearning
+        ownerId={ownerId}
+        voiceId={voiceId}
+        onComplete={() => setGuided(false)}
+      />
     )
-  }
   const notice =
     profile.notice.kind === 'added'
       ? t('analysis.noticeAdded', { count: profile.notice.count })

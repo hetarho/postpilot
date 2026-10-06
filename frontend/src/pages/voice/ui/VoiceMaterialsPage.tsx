@@ -5,6 +5,7 @@ import { AnswerPromptsSheet } from '@/features/answer-voice-prompt'
 import { MakeVoiceButton } from '@/features/make-voice'
 import { SampleList } from '@/features/manage-voice-samples'
 import { PasteMaterialSheet } from '@/features/paste-voice-material'
+import { PersonalVoiceLearning } from './PersonalVoiceLearning'
 import { Notice } from '@/shared/ui'
 import { VoiceRunStatus } from './VoiceRunStatus'
 import { VoiceScreen, type VoiceScreenContext } from './VoiceScreen'
@@ -15,7 +16,7 @@ export function VoiceMaterialsPage() {
   const { t } = useTranslation('nav')
   return (
     <VoiceScreen title={({ profile }) => t(profile.made ? 'voice.materials' : 'voice.learning')}>
-      {(context) => <MaterialsPanel {...context} />}
+      {(context) => <MaterialsPanel key={`${context.ownerId}:${context.voiceId}`} {...context} />}
     </VoiceScreen>
   )
 }
@@ -25,6 +26,19 @@ function MaterialsPanel({ ownerId, voiceId, voice, profile }: VoiceScreenContext
   // The id the just-started analysis returned outruns the profile refetch that will carry it,
   // so this screen holds it until the query catches up.
   const [startedJobId, setStartedJobId] = useState('')
+  const [guided, setGuided] = useState(!profile.made)
+  if (guided)
+    return voice.deleted ? (
+      <Notice tone="warning" role="status">
+        {t('screens.materialsBlocked')}
+      </Notice>
+    ) : (
+      <PersonalVoiceLearning
+        ownerId={ownerId}
+        voiceId={voiceId}
+        onComplete={() => setGuided(false)}
+      />
+    )
   return (
     <>
       {!profile.made && <VoiceReadinessMeter readiness={profile.readiness} />}
