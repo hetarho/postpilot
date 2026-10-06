@@ -1,4 +1,13 @@
 export type PcmChannels = Float32Array<ArrayBuffer>[]
+export interface AudioProcessorLimits {
+  maxPcmBytes: number
+  maxEncodedBytes: number
+  maxEncodedPackets: number
+  maxPacketBytes: number
+  maxPrimingFrames: number
+  operationTimeoutMs: number
+  cleanupTimeoutMs: number
+}
 export interface EncodedAudioTrack {
   config: AudioEncoderConfig
   decoderConfig: AudioDecoderConfig
@@ -39,8 +48,9 @@ export type AudioOperation =
       batchFrames: number
       queueSize: number
     }
-export type AudioWorkerRequest = AudioOperation & { id: number }
+export type AudioWorkerRequest = AudioOperation & { id: number; limits: AudioProcessorLimits }
 export type AudioWorkerResponse =
   | { id: number; kind: 'result'; result: PcmChannels | AudioNormalization | EncodedAudioTrack }
   | { id: number; kind: 'error'; error: string }
   | { id: number; kind: 'progress'; completedFrames: number; totalFrames: number }
+  | { kind: 'cancelled' }

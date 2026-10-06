@@ -1,0 +1,847 @@
+{
+  "version": 1,
+  "qualification": false,
+  "browser": "154.0.8037.98",
+  "node": "v24.18.0",
+  "nativeFfmpegVersion": "ffmpeg version 9.0.1 Copyright (c) 2000-2026 the FFmpeg developers",
+  "mediabunny": "1.58.0",
+  "lockfileSHA256": "d07c4a1bd3aeab4df41155c2d63d85e6a487959534ed7b27b4710315d7a07319",
+  "fixtures": {
+    "long": {
+      "bytes": 3661768,
+      "sha256": "a0a3ea3e699807d57caca9b3badbb2ce1d9a0a589bcdc26d5c56982f2675575d"
+    },
+    "mono": {
+      "bytes": 99408,
+      "sha256": "98223afa536d986deadead2be44d67d7cd2bf5f710063833023a2002f2d2f6a7"
+    },
+    "multiple": {
+      "bytes": 133372,
+      "sha256": "8066d1d80aa5dbf500e05b72b569c7fbbbe498b770f3b8b9f50c6d7a722b3e05"
+    },
+    "speech": {
+      "bytes": 176478,
+      "sha256": "1a29cafa914a8b89787c83f06600dad19f697afbba0a6c3577d1f835a787de70"
+    },
+    "multichannel": {
+      "bytes": 3006,
+      "sha256": "8a7df5c77110017e46f9fc6d4bacfcd66af61dd7963464a2006a72080cdf9c13"
+    },
+    "block": {
+      "bytes": 37507,
+      "sha256": "f837e0c5f75a55f7b3d967ef06311ab8c9c048c2efcd220331d01557b3e7b244"
+    }
+  },
+  "results": [
+    {
+      "id": "long-selected",
+      "metadata": {
+        "provenance": "browser_client",
+        "codec": "aac",
+        "streamNumber": 1,
+        "sampleRate": 48000,
+        "channels": 2,
+        "firstTimestamp": -0.021333333333333333
+      },
+      "measurements": {
+        "sourceReads": 113,
+        "sourceBytes": 81225,
+        "sourceReadMs": 298.37499952316284,
+        "openMs": 14.944999694824219,
+        "decodeMs": 296.25999641418457,
+        "decodedSamples": 108544,
+        "logicalPcmBytes": 864000,
+        "decoderReservedBytes": 786432,
+        "physicalPeakBytes": null
+      },
+      "decodeStart": 123.331,
+      "startSample": 5919888,
+      "frames": 96000,
+      "resources": {
+        "peakFrames": 2,
+        "peakBytes": 16384,
+        "liveFrames": 0,
+        "liveBytes": 0
+      },
+      "nativeReference": {
+        "frames": 96000,
+        "rmse": 4.312928331607171e-09,
+        "maxDifference": 4.470348358154297e-08
+      }
+    },
+    {
+      "id": "file-priming",
+      "metadata": {
+        "provenance": "browser_client",
+        "codec": "aac",
+        "streamNumber": 1,
+        "sampleRate": 48000,
+        "channels": 2,
+        "firstTimestamp": -0.021333333333333333
+      },
+      "measurements": {
+        "sourceReads": 108,
+        "sourceBytes": 78172,
+        "sourceReadMs": 185.04499864578247,
+        "openMs": 12.664999961853027,
+        "decodeMs": 182.9350028038025,
+        "decodedSamples": 103424,
+        "logicalPcmBytes": 816000,
+        "decoderReservedBytes": 786432,
+        "physicalPeakBytes": null
+      },
+      "decodeStart": -0.021333333333333333,
+      "startSample": 0,
+      "frames": 96000,
+      "resources": {
+        "peakFrames": 1,
+        "peakBytes": 8192,
+        "liveFrames": 0,
+        "liveBytes": 0
+      },
+      "nativeReference": {
+        "frames": 96000,
+        "rmse": 4.302154254392349e-09,
+        "maxDifference": 4.470348358154297e-08
+      }
+    },
+    {
+      "id": "mono-clock",
+      "metadata": {
+        "provenance": "browser_client",
+        "codec": "aac",
+        "streamNumber": 1,
+        "sampleRate": 44100,
+        "channels": 1,
+        "firstTimestamp": -0.023219954648526078
+      },
+      "measurements": {
+        "sourceReads": 105,
+        "sourceBytes": 66808,
+        "sourceReadMs": 239.72500133514404,
+        "openMs": 19.710000038146973,
+        "decodeMs": 231.8550000190735,
+        "decodedSamples": 100352,
+        "logicalPcmBytes": 397256,
+        "decoderReservedBytes": 393216,
+        "physicalPeakBytes": null
+      },
+      "decodeStart": 2.99,
+      "startSample": 131859,
+      "frames": 96000,
+      "currentReference": {
+        "rmse": 0.00012096614717527343,
+        "maxDifference": 0.00027809356932187446
+      },
+      "resources": {
+        "peakFrames": 2,
+        "peakBytes": 8192,
+        "liveFrames": 0,
+        "liveBytes": 0
+      },
+      "nativeReference": {
+        "frames": 96000,
+        "rmse": 0.0027551299074313777,
+        "maxDifference": 0.005464270710945129
+      }
+    },
+    {
+      "id": "first-audio",
+      "metadata": {
+        "provenance": "browser_client",
+        "codec": "aac",
+        "streamNumber": 1,
+        "sampleRate": 48000,
+        "channels": 2,
+        "firstTimestamp": -0.021333333333333333
+      },
+      "measurements": {
+        "sourceReads": 108,
+        "sourceBytes": 74970,
+        "sourceReadMs": 201.51999950408936,
+        "openMs": 11.90500020980835,
+        "decodeMs": 199.04499769210815,
+        "decodedSamples": 103424,
+        "logicalPcmBytes": 816000,
+        "decoderReservedBytes": 786432,
+        "physicalPeakBytes": null
+      },
+      "decodeStart": -0.021333333333333333,
+      "startSample": 0,
+      "frames": 96000,
+      "resources": {
+        "peakFrames": 1,
+        "peakBytes": 8192,
+        "liveFrames": 0,
+        "liveBytes": 0
+      },
+      "nativeReference": {
+        "frames": 96000,
+        "rmse": 2.4403443644763117e-09,
+        "maxDifference": 1.4901161193847656e-08
+      }
+    },
+    {
+      "id": "block-refusal",
+      "error": "CLIP_SOURCE_AUDIO_BLOCK_UNSUPPORTED",
+      "name": "Error",
+      "resources": {
+        "peakFrames": 0,
+        "peakBytes": 0,
+        "liveFrames": 0
+      }
+    },
+    {
+      "id": "channel-refusal",
+      "error": "CLIP_SOURCE_AUDIO_CHANNELS_UNSUPPORTED",
+      "name": "Error",
+      "resources": {
+        "peakFrames": 0,
+        "peakBytes": 0,
+        "liveFrames": 0
+      }
+    },
+    {
+      "id": "memory-refusal",
+      "error": "CLIP_SOURCE_AUDIO_MEMORY_LIMIT",
+      "name": "Error",
+      "resources": {
+        "peakFrames": 0,
+        "peakBytes": 0,
+        "liveFrames": 0
+      }
+    },
+    {
+      "id": "range-refusal",
+      "error": "CLIP_SOURCE_RANGE_UNSUPPORTED",
+      "name": "Error",
+      "resources": {
+        "peakFrames": 0,
+        "peakBytes": 0,
+        "liveFrames": 0
+      }
+    },
+    {
+      "id": "expired",
+      "error": "CLIP_SOURCE_EXPIRED",
+      "name": "Error",
+      "resources": {
+        "peakFrames": 0,
+        "peakBytes": 0,
+        "liveFrames": 0
+      }
+    },
+    {
+      "id": "decode-cancel",
+      "error": "Input has been disposed.",
+      "name": "InputDisposedError",
+      "resources": {
+        "peakFrames": 0,
+        "peakBytes": 0,
+        "liveFrames": 0
+      }
+    },
+    {
+      "id": "rate-500",
+      "sampleFrames": 192000,
+      "scheduleFrames": 192000,
+      "durationUs": 4000000,
+      "primingFrames": 2112,
+      "loudnessLUFS": -16.001519353242017,
+      "truePeakDBTP": -14.970696797164022,
+      "sourceResources": {
+        "sourceReads": 108,
+        "sourceBytes": 74970,
+        "sourceReadMs": 102.33499765396118,
+        "openMs": 9.045000076293945,
+        "decodeMs": 101.11000299453735,
+        "peakRangePcmBytes": 1602432,
+        "originals": [
+          {
+            "provenance": "browser_client",
+            "codec": "aac",
+            "streamNumber": 1,
+            "sampleRate": 48000,
+            "channels": 2,
+            "firstTimestamp": -0.021333333333333333
+          }
+        ],
+        "physicalPeakBytes": null
+      },
+      "speechFingerprint": "",
+      "sourceCalls": 1,
+      "speechCalls": 0,
+      "sourceWindows": [
+        {
+          "startSample": 0,
+          "frames": 192000,
+          "fadeOutStart": 4
+        }
+      ],
+      "pitch": {
+        "browser440Hz": 0.16361536273720542,
+        "browser880Hz": 0.00011250481325449766,
+        "native440Hz": 0.0880224087343672,
+        "native880Hz": 8.8439390202243e-06
+      }
+    },
+    {
+      "id": "rate-750",
+      "sampleFrames": 128000,
+      "scheduleFrames": 128000,
+      "durationUs": 2666667,
+      "primingFrames": 2112,
+      "loudnessLUFS": -15.998148735273016,
+      "truePeakDBTP": -15.009439441642387,
+      "sourceResources": {
+        "sourceReads": 108,
+        "sourceBytes": 74970,
+        "sourceReadMs": 99.01000213623047,
+        "openMs": 10.019999980926514,
+        "decodeMs": 96.97000360488892,
+        "peakRangePcmBytes": 1602432,
+        "originals": [
+          {
+            "provenance": "browser_client",
+            "codec": "aac",
+            "streamNumber": 1,
+            "sampleRate": 48000,
+            "channels": 2,
+            "firstTimestamp": -0.021333333333333333
+          }
+        ],
+        "physicalPeakBytes": null
+      },
+      "speechFingerprint": "",
+      "sourceCalls": 1,
+      "speechCalls": 0,
+      "sourceWindows": [
+        {
+          "startSample": 0,
+          "frames": 128000,
+          "fadeOutStart": 2.666
+        }
+      ],
+      "pitch": {
+        "browser440Hz": 0.17115250173759233,
+        "browser880Hz": 3.26385973177418e-05,
+        "native440Hz": 0.08772038437580165,
+        "native880Hz": 2.4816723846170073e-05
+      }
+    },
+    {
+      "id": "rate-1000",
+      "sampleFrames": 96000,
+      "scheduleFrames": 96000,
+      "durationUs": 2000000,
+      "primingFrames": 2112,
+      "loudnessLUFS": -16.00030349869052,
+      "truePeakDBTP": -14.925180930055749,
+      "sourceResources": {
+        "sourceReads": 108,
+        "sourceBytes": 74970,
+        "sourceReadMs": 91.69000148773193,
+        "openMs": 10.65500020980835,
+        "decodeMs": 89.48500061035156,
+        "peakRangePcmBytes": 1602432,
+        "originals": [
+          {
+            "provenance": "browser_client",
+            "codec": "aac",
+            "streamNumber": 1,
+            "sampleRate": 48000,
+            "channels": 2,
+            "firstTimestamp": -0.021333333333333333
+          }
+        ],
+        "physicalPeakBytes": null
+      },
+      "speechFingerprint": "",
+      "sourceCalls": 1,
+      "speechCalls": 0,
+      "sourceWindows": [
+        {
+          "startSample": 0,
+          "frames": 96000,
+          "fadeOutStart": 2
+        }
+      ],
+      "pitch": {
+        "browser440Hz": 0.17148165102890692,
+        "browser880Hz": 1.7016399534208025e-06,
+        "native440Hz": 0.08830937861332547,
+        "native880Hz": 9.155052611797999e-07
+      }
+    },
+    {
+      "id": "rate-1250",
+      "sampleFrames": 76800,
+      "scheduleFrames": 76800,
+      "durationUs": 1600000,
+      "primingFrames": 2112,
+      "loudnessLUFS": -16.001432046015946,
+      "truePeakDBTP": -14.992806906494735,
+      "sourceResources": {
+        "sourceReads": 108,
+        "sourceBytes": 74970,
+        "sourceReadMs": 123.760000705719,
+        "openMs": 9.290000438690186,
+        "decodeMs": 122.73000192642212,
+        "peakRangePcmBytes": 1602432,
+        "originals": [
+          {
+            "provenance": "browser_client",
+            "codec": "aac",
+            "streamNumber": 1,
+            "sampleRate": 48000,
+            "channels": 2,
+            "firstTimestamp": -0.021333333333333333
+          }
+        ],
+        "physicalPeakBytes": null
+      },
+      "speechFingerprint": "",
+      "sourceCalls": 1,
+      "speechCalls": 0,
+      "sourceWindows": [
+        {
+          "startSample": 0,
+          "frames": 76800,
+          "fadeOutStart": 1.6
+        }
+      ],
+      "pitch": {
+        "browser440Hz": 0.17134735723329078,
+        "browser880Hz": 1.3072488422901056e-05,
+        "native440Hz": 0.08820805784640068,
+        "native880Hz": 7.975311166569305e-06
+      }
+    },
+    {
+      "id": "rate-1500",
+      "sampleFrames": 64000,
+      "scheduleFrames": 64000,
+      "durationUs": 1333333,
+      "primingFrames": 2112,
+      "loudnessLUFS": -16.000452088027473,
+      "truePeakDBTP": -14.99122809730624,
+      "sourceResources": {
+        "sourceReads": 108,
+        "sourceBytes": 74970,
+        "sourceReadMs": 126.33500242233276,
+        "openMs": 9.230000019073486,
+        "decodeMs": 125.34499835968018,
+        "peakRangePcmBytes": 1602432,
+        "originals": [
+          {
+            "provenance": "browser_client",
+            "codec": "aac",
+            "streamNumber": 1,
+            "sampleRate": 48000,
+            "channels": 2,
+            "firstTimestamp": -0.021333333333333333
+          }
+        ],
+        "physicalPeakBytes": null
+      },
+      "speechFingerprint": "",
+      "sourceCalls": 1,
+      "speechCalls": 0,
+      "sourceWindows": [
+        {
+          "startSample": 0,
+          "frames": 64000,
+          "fadeOutStart": 1.333
+        }
+      ],
+      "pitch": {
+        "browser440Hz": 0.17135787810103414,
+        "browser880Hz": 7.2936450127752776e-06,
+        "native440Hz": 0.08794530002640019,
+        "native880Hz": 1.4572063993466175e-05
+      }
+    },
+    {
+      "id": "rate-2000",
+      "sampleFrames": 48000,
+      "scheduleFrames": 48000,
+      "durationUs": 1000000,
+      "primingFrames": 2112,
+      "loudnessLUFS": -16.00355832461847,
+      "truePeakDBTP": -15.031483696249364,
+      "sourceResources": {
+        "sourceReads": 108,
+        "sourceBytes": 74970,
+        "sourceReadMs": 97.88000202178955,
+        "openMs": 12.119999885559082,
+        "decodeMs": 93.864999294281,
+        "peakRangePcmBytes": 1602432,
+        "originals": [
+          {
+            "provenance": "browser_client",
+            "codec": "aac",
+            "streamNumber": 1,
+            "sampleRate": 48000,
+            "channels": 2,
+            "firstTimestamp": -0.021333333333333333
+          }
+        ],
+        "physicalPeakBytes": null
+      },
+      "speechFingerprint": "",
+      "sourceCalls": 1,
+      "speechCalls": 0,
+      "sourceWindows": [
+        {
+          "startSample": 0,
+          "frames": 48000,
+          "fadeOutStart": 1
+        }
+      ],
+      "pitch": {
+        "browser440Hz": 0.17057285872384426,
+        "browser880Hz": 3.0344643659299585e-05,
+        "native440Hz": 0.08814851962533145,
+        "native880Hz": 5.424159528713555e-06
+      }
+    },
+    {
+      "id": "source-seam",
+      "sampleFrames": 137600,
+      "scheduleFrames": 137600,
+      "durationUs": 2866667,
+      "primingFrames": 2112,
+      "loudnessLUFS": -15.99968348973625,
+      "truePeakDBTP": -14.804845127106125,
+      "sourceResources": {
+        "sourceReads": 150,
+        "sourceBytes": 164935,
+        "sourceReadMs": 123.38999843597412,
+        "openMs": 13.619999885559082,
+        "decodeMs": 120.17499923706055,
+        "peakRangePcmBytes": 1356288,
+        "originals": [
+          {
+            "provenance": "browser_client",
+            "codec": "aac",
+            "streamNumber": 1,
+            "sampleRate": 48000,
+            "channels": 2,
+            "firstTimestamp": -0.021333333333333333
+          },
+          {
+            "provenance": "browser_client",
+            "codec": "aac",
+            "streamNumber": 1,
+            "sampleRate": 48000,
+            "channels": 2,
+            "firstTimestamp": -0.021333333333333333
+          }
+        ],
+        "physicalPeakBytes": null
+      },
+      "speechFingerprint": "",
+      "sourceCalls": 2,
+      "speechCalls": 0,
+      "sourceWindows": [
+        {
+          "startSample": 0,
+          "frames": 59200,
+          "fadeOutStart": 1.173
+        },
+        {
+          "startSample": 59200,
+          "frames": 78400,
+          "fadeOutStart": 2.8663333333333334
+        }
+      ],
+      "levels": {
+        "source": 0.17401908919093537,
+        "speech": 1.186889248700412e-05
+      },
+      "nativeSeam": {
+        "frames": 137600,
+        "nativeFadeRatio": 0.503970356553271,
+        "browserFadeRatio": 0.504186451175172
+      }
+    },
+    {
+      "id": "narration-only",
+      "sampleFrames": 96000,
+      "scheduleFrames": 96000,
+      "durationUs": 2000000,
+      "primingFrames": 2112,
+      "loudnessLUFS": -16.000033013980026,
+      "truePeakDBTP": -14.313746274943549,
+      "sourceResources": {
+        "sourceReads": 0,
+        "sourceBytes": 0,
+        "sourceReadMs": 0,
+        "openMs": 0,
+        "decodeMs": 0,
+        "peakRangePcmBytes": 0,
+        "originals": [],
+        "physicalPeakBytes": null
+      },
+      "speechFingerprint": "dbdf9ce49d3b58edf74612a6740d543fc96ce651b64e062e2148ff8ce070709f",
+      "sourceCalls": 0,
+      "speechCalls": 1,
+      "sourceWindows": [],
+      "levels": {
+        "source": 2.7708814991997968e-06,
+        "speech": 0.1893755811482343
+      }
+    },
+    {
+      "id": "mixed",
+      "sampleFrames": 96000,
+      "scheduleFrames": 96000,
+      "durationUs": 2000000,
+      "primingFrames": 2112,
+      "loudnessLUFS": -16.000433682795553,
+      "truePeakDBTP": -11.789200195226934,
+      "sourceResources": {
+        "sourceReads": 108,
+        "sourceBytes": 74970,
+        "sourceReadMs": 85.83499765396118,
+        "openMs": 8.915000438690186,
+        "decodeMs": 84.52500009536743,
+        "peakRangePcmBytes": 1602432,
+        "originals": [
+          {
+            "provenance": "browser_client",
+            "codec": "aac",
+            "streamNumber": 1,
+            "sampleRate": 48000,
+            "channels": 2,
+            "firstTimestamp": -0.021333333333333333
+          }
+        ],
+        "physicalPeakBytes": null
+      },
+      "speechFingerprint": "dbdf9ce49d3b58edf74612a6740d543fc96ce651b64e062e2148ff8ce070709f",
+      "sourceCalls": 1,
+      "speechCalls": 1,
+      "sourceWindows": [
+        {
+          "startSample": 0,
+          "frames": 96000,
+          "fadeOutStart": 2
+        }
+      ],
+      "levels": {
+        "source": 0.14978042377515813,
+        "speech": 0.1050099124287255
+      }
+    },
+    {
+      "id": "mixed-source-low",
+      "sampleFrames": 96000,
+      "scheduleFrames": 96000,
+      "durationUs": 2000000,
+      "primingFrames": 2112,
+      "loudnessLUFS": -16.002275245108773,
+      "truePeakDBTP": -11.386237136288585,
+      "sourceResources": {
+        "sourceReads": 108,
+        "sourceBytes": 74970,
+        "sourceReadMs": 87.74500226974487,
+        "openMs": 9.295000076293945,
+        "decodeMs": 86.08500099182129,
+        "peakRangePcmBytes": 1602432,
+        "originals": [
+          {
+            "provenance": "browser_client",
+            "codec": "aac",
+            "streamNumber": 1,
+            "sampleRate": 48000,
+            "channels": 2,
+            "firstTimestamp": -0.021333333333333333
+          }
+        ],
+        "physicalPeakBytes": null
+      },
+      "speechFingerprint": "dbdf9ce49d3b58edf74612a6740d543fc96ce651b64e062e2148ff8ce070709f",
+      "sourceCalls": 1,
+      "speechCalls": 1,
+      "sourceWindows": [
+        {
+          "startSample": 0,
+          "frames": 96000,
+          "fadeOutStart": 2
+        }
+      ],
+      "levels": {
+        "source": 0.07042802583899459,
+        "speech": 0.19748099947805126
+      }
+    },
+    {
+      "id": "mixed-speech-low",
+      "sampleFrames": 96000,
+      "scheduleFrames": 96000,
+      "durationUs": 2000000,
+      "primingFrames": 2112,
+      "loudnessLUFS": -16.001465087999247,
+      "truePeakDBTP": -13.396423468410543,
+      "sourceResources": {
+        "sourceReads": 108,
+        "sourceBytes": 74970,
+        "sourceReadMs": 86.05999755859375,
+        "openMs": 9.005000114440918,
+        "decodeMs": 84.47000217437744,
+        "peakRangePcmBytes": 1602432,
+        "originals": [
+          {
+            "provenance": "browser_client",
+            "codec": "aac",
+            "streamNumber": 1,
+            "sampleRate": 48000,
+            "channels": 2,
+            "firstTimestamp": -0.021333333333333333
+          }
+        ],
+        "physicalPeakBytes": null
+      },
+      "speechFingerprint": "eb5d7260909996694efbb965fe63aaf57041c80c5a94fb2baf19c5d54d58da18",
+      "sourceCalls": 1,
+      "speechCalls": 1,
+      "sourceWindows": [
+        {
+          "startSample": 0,
+          "frames": 96000,
+          "fadeOutStart": 2
+        }
+      ],
+      "levels": {
+        "source": 0.1680550067401627,
+        "speech": 0.0420696852904487
+      }
+    },
+    {
+      "id": "mixed-hook",
+      "sampleFrames": 96000,
+      "scheduleFrames": 96000,
+      "durationUs": 2000000,
+      "primingFrames": 2112,
+      "loudnessLUFS": -16.001448901375657,
+      "truePeakDBTP": -10.315814241551298,
+      "sourceResources": {
+        "sourceReads": 108,
+        "sourceBytes": 74970,
+        "sourceReadMs": 81.42000246047974,
+        "openMs": 9.099999904632568,
+        "decodeMs": 79.87000179290771,
+        "peakRangePcmBytes": 1602432,
+        "originals": [
+          {
+            "provenance": "browser_client",
+            "codec": "aac",
+            "streamNumber": 1,
+            "sampleRate": 48000,
+            "channels": 2,
+            "firstTimestamp": -0.021333333333333333
+          }
+        ],
+        "physicalPeakBytes": null
+      },
+      "speechFingerprint": "dbdf9ce49d3b58edf74612a6740d543fc96ce651b64e062e2148ff8ce070709f",
+      "sourceCalls": 1,
+      "speechCalls": 1,
+      "sourceWindows": [
+        {
+          "startSample": 0,
+          "frames": 96000,
+          "fadeOutStart": 2
+        }
+      ],
+      "levels": {
+        "source": 0.0888622456697058,
+        "speech": 0.12441075367352848
+      }
+    },
+    {
+      "id": "speech-hash-refusal",
+      "error": "CLIP_BROWSER_AUDIO_AUDIO",
+      "name": "Error",
+      "sourceCalls": 0,
+      "speechCalls": 1
+    },
+    {
+      "id": "render-cancel",
+      "error": "Fixture cancelled",
+      "name": "AbortError",
+      "sourceCalls": 1,
+      "speechCalls": 0
+    },
+    {
+      "id": "packet-refusal",
+      "error": "AUDIO_PACKET_MEMORY_LIMIT"
+    },
+    {
+      "id": "verification-refusal",
+      "error": "AUDIO_VERIFY_MEMORY_LIMIT"
+    }
+  ],
+  "limits": [
+    "Synthetic signals do not establish real-voice/listening, identified-device throughput or final T604 release qualification.",
+    "Logical PCM/decoder reservations do not measure private codec/GPU/browser heap allocations.",
+    "PCM/ALAC/FLAC block layouts and multichannel rematrix remain refused before decoder allocation; actual PCM evidence is AAC mono/stereo.",
+    "125ms preroll evidence covers these AAC fixtures; changed-rate resampling is measured separately against current and native references.",
+    "AudioData lifecycle counters instrument source decoding; codec-private memory and whole-process allocation remain unmeasured."
+  ],
+  "sources": [
+    "https://mediabunny.dev/guide/media-sinks",
+    "https://mediabunny.dev/guide/reading-media-files"
+  ],
+  "requestSummary": {
+    "file/long": {
+      "requests": 234,
+      "maxRangeBytes": 34538,
+      "wholeResponses": 0
+    },
+    "file/mono": {
+      "requests": 106,
+      "maxRangeBytes": 36387,
+      "wholeResponses": 0
+    },
+    "reference/mono": {
+      "requests": 1,
+      "maxRangeBytes": 0,
+      "wholeResponses": 1
+    },
+    "file/multiple": {
+      "requests": 1460,
+      "maxRangeBytes": 60336,
+      "wholeResponses": 0
+    },
+    "file/block": {
+      "requests": 5,
+      "maxRangeBytes": 770,
+      "wholeResponses": 0
+    },
+    "file/multichannel": {
+      "requests": 5,
+      "maxRangeBytes": 1126,
+      "wholeResponses": 0
+    },
+    "file/whole": {
+      "requests": 1,
+      "maxRangeBytes": 0,
+      "wholeResponses": 1
+    },
+    "reference/speech": {
+      "requests": 6,
+      "maxRangeBytes": 0,
+      "wholeResponses": 6
+    }
+  },
+  "fixtureProvenance": {
+    "long": "Existing synthetic 180-second stereo48 AAC preparation fixture; identity hash recorded.",
+    "mono": "Existing synthetic 8-second mono44.1 AAC preparation fixture; identity hash recorded.",
+    "multiple": "Synthetic 4-second first440Hz/default false, second880Hz/default true AAC tracks in container order.",
+    "speech": "Synthetic 1-second 770Hz stereo44.1 PCM WAV; exact immutable SHA256 used in fixture speech ref. No voice provider call.",
+    "multichannel": "Synthetic 2-second 5.1 AAC silence, explicitly refused before decoder.",
+    "block": "Synthetic 2-second stereo ALAC, explicitly refused before decoder because this bounded profile does not qualify its variable block layout."
+  }
+}

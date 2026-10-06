@@ -4,6 +4,7 @@ import {
   clipBrowserEncoderConfig,
   speechDecodeKey,
   SpeechDecodeCache,
+  CLIP_AUDIO_PROCESSING,
   speechRenderFingerprint,
   type SpeechAudioLoader,
 } from '@/entities/clip-preview'
@@ -11,29 +12,41 @@ import { type ClipRatio } from '@/entities/clip-project'
 import { CLIP_BROWSER_RENDER, CLIP_DESIGN } from '@/entities/clip-design'
 import {
   createAudioProcessor,
-  mp4AudioDecodedBytes,
+  createAudioRangeReader,
   type EncodedAudioTrack,
   type PcmChannels,
+  type OriginalAudioMetadata,
 } from '@/shared/lib'
 import type { BrowserOriginals } from '../lib/originals'
 import { BrowserAudioRenderError, browserAudioPreflight } from '../model/audio-preflight'
+import { canonicalSelectedAudio } from '../lib/selected-audio'
 
 export interface BrowserAudioTrack extends EncodedAudioTrack {
   speechFingerprint?: string
   loudnessLUFS?: number
   truePeakDBTP: number
   silent: boolean
+  sourceResources?: {
+    sourceReads: number
+    sourceBytes: number
+    sourceReadMs: number
+    openMs: number
+    decodeMs: number
+    peakRangePcmBytes: number
+    originals: OriginalAudioMetadata[]
+    physicalPeakBytes: null
+  }
 }
 export async function renderBrowserAudio(
   plan: ClipEditPlan,
   ratio: ClipRatio,
-  originals: Pick<BrowserOriginals, 'get'>,
+  originals: Pick<BrowserOriginals, 'source'>,
   signal: AbortSignal,
   progress?: (completed: number, total: number) => void,
   loadSpeech?: SpeechAudioLoader,
 ): Promise<BrowserAudioTrack | undefined> {
   signal.throwIfAborted()
-  const { schedule, reservedBytes } = browserAudioPreflight(plan)
+  const { schedule, rangePcmBytes } = browserAudioPreflight(plan)
   if (!schedule.cuts.length && !schedule.speech.length) return undefined
   if (schedule.speech.length && !loadSpeech) throw new BrowserAudioRenderError('speech')
   if (
@@ -55,14 +68,32 @@ export async function renderBrowserAudio(
   } catch {
     throw new BrowserAudioRenderError('capability')
   }
-  const decoded = new Map<string, AudioBuffer | undefined>()
   const nodes: AudioNode[] = []
   let processor: ReturnType<typeof createAudioProcessor> | undefined
+  let rangeReader: ReturnType<typeof createAudioRangeReader> | undefined
   let hasAudio = false
-  let sourceBytes = 0
+  const sourceResources: NonNullable<BrowserAudioTrack['sourceResources']> = {
+    sourceReads: 0,
+    sourceBytes: 0,
+    sourceReadMs: 0,
+    openMs: 0,
+    decodeMs: 0,
+    peakRangePcmBytes: 0,
+    originals: [],
+    physicalPeakBytes: null,
+  }
   const speechCache = new SpeechDecodeCache()
   try {
-    processor = createAudioProcessor(signal)
+    processor = createAudioProcessor(signal, {
+      maxPcmBytes: CLIP_AUDIO_PROCESSING.maxPcmBytes,
+      maxEncodedBytes: CLIP_AUDIO_PROCESSING.encodedPacketBytes,
+      maxEncodedPackets: CLIP_AUDIO_PROCESSING.encodedPackets,
+      maxPacketBytes: CLIP_AUDIO_PROCESSING.encodedPacketMaxBytes,
+      maxPrimingFrames: CLIP_AUDIO_PROCESSING.encoderPaddingFrames,
+      operationTimeoutMs: CLIP_AUDIO_PROCESSING.operationTimeoutMs,
+      cleanupTimeoutMs: CLIP_AUDIO_PROCESSING.cleanupTimeoutMs,
+    })
+    if (schedule.cuts.length) rangeReader = createAudioRangeReader(signal, CLIP_AUDIO_PROCESSING)
     const context = new OfflineAudioContext(2, schedule.sampleFrames, schedule.sampleRate)
     const master = context.createGain()
     master.gain.setValueAtTime(1, 0)
@@ -74,49 +105,36 @@ export async function renderBrowserAudio(
     nodes.push(master)
     for (const cut of schedule.cuts) {
       signal.throwIfAborted()
-      if (!decoded.has(cut.fingerprint)) {
-        const blob = await originals.get(cut.fingerprint)
-        signal.throwIfAborted()
-        let buffer: AudioBuffer | undefined
-        const estimate = await mp4AudioDecodedBytes(blob, schedule.sampleRate, signal)
-        if (estimate) {
-          if (sourceBytes + reservedBytes + estimate > CLIP_BROWSER_RENDER.audioDecodedBytes)
-            throw new BrowserAudioRenderError('memory')
-          buffer = await decoder.decodeAudioData(await blob.arrayBuffer())
-          signal.throwIfAborted()
-          if (buffer.numberOfChannels !== 2) {
-            const stereo = new OfflineAudioContext(2, buffer.length, schedule.sampleRate)
-            const source = stereo.createBufferSource(),
-              gain = stereo.createGain()
-            source.buffer = buffer
-            // FFmpeg's mono-to-stereo rematrix preserves total channel energy.
-            gain.gain.value = buffer.numberOfChannels === 1 ? Math.SQRT1_2 : 1
-            source.connect(gain).connect(stereo.destination)
-            source.start()
-            buffer = await stereo.startRendering()
-            source.disconnect()
-            gain.disconnect()
-          }
-        }
-        if (buffer) {
-          sourceBytes += buffer.length * buffer.numberOfChannels * 4
-          if (sourceBytes + reservedBytes > CLIP_BROWSER_RENDER.audioDecodedBytes)
-            throw new BrowserAudioRenderError('memory')
-        }
-        decoded.set(cut.fingerprint, buffer)
-      }
-      const buffer = decoded.get(cut.fingerprint)
-      if (!buffer) continue
+      const access = await originals.source(cut.fingerprint)
+      signal.throwIfAborted()
+      const range = await rangeReader!.decode(
+        access,
+        {
+          startUs: cut.sourceStartUs,
+          endUs: cut.sourceEndUs,
+          targetSampleRate: schedule.sampleRate,
+        },
+        rangePcmBytes,
+      )
+      if (!range) continue
+      sourceResources.sourceReads += range.measurements.sourceReads
+      sourceResources.sourceBytes += range.measurements.sourceBytes
+      sourceResources.sourceReadMs += range.measurements.sourceReadMs
+      sourceResources.openMs += range.measurements.openMs
+      sourceResources.decodeMs += range.measurements.decodeMs
+      sourceResources.peakRangePcmBytes = Math.max(
+        sourceResources.peakRangePcmBytes,
+        range.measurements.logicalPcmBytes + range.measurements.decoderReservedBytes,
+      )
+      sourceResources.originals.push(range.metadata)
       hasAudio = true
-      const channels: PcmChannels = [0, 1].map((channel) => {
-        const samples = new Float32Array(cut.sourceFrames)
-        samples.set(
-          buffer
-            .getChannelData(channel)
-            .subarray(cut.sourceStart, cut.sourceStart + cut.sourceFrames),
-        )
-        return samples
-      })
+      const channels = await canonicalSelectedAudio(
+        range,
+        cut.sourceStart,
+        cut.sourceFrames,
+        schedule.sampleRate,
+        signal,
+      )
       const stretched = await processor.stretch(
         channels,
         schedule.sampleRate,
@@ -133,8 +151,8 @@ export async function renderBrowserAudio(
       gain.gain.setValueAtTime(cut.fadeIn ? 0 : 1, cut.start)
       if (cut.fadeIn) gain.gain.linearRampToValueAtTime(1, cut.start + cut.fadeIn)
       if (cut.fadeOut) {
-        gain.gain.setValueAtTime(1, cut.end - cut.fadeOut)
-        gain.gain.linearRampToValueAtTime(0, cut.end)
+        gain.gain.setValueAtTime(1, cut.fadeOutStart)
+        gain.gain.linearRampToValueAtTime(0, cut.fadeOutStart + cut.fadeOut)
       }
       source.connect(gain).connect(master)
       source.start(cut.start)
@@ -205,11 +223,11 @@ export async function renderBrowserAudio(
       track.chunks.length = 0
       throw new BrowserAudioRenderError('audio')
     }
-    return { ...track, speechFingerprint: await speechRenderFingerprint(plan) }
+    return { ...track, sourceResources, speechFingerprint: await speechRenderFingerprint(plan) }
   } finally {
     processor?.close()
+    rangeReader?.close()
     for (const node of nodes) node.disconnect()
-    decoded.clear()
     speechCache.clear()
     await decoder.close()
   }
