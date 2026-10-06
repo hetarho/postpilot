@@ -819,7 +819,7 @@
     "Small corpus/repetition counts establish no population-level statistical guarantee."
   ],
   "verification": {
-    "codeCommit": "a49d82ba41d05cc8d2e79d43e61d49e4291b3234",
+    "codeCommit": "96af4ff348f1599e08e39b662b9c23981c740e96",
     "command": "POSTPILOT_ANALYSIS_TEST_EVIDENCE=<new-private-file> GOCACHE=<existing-task-cache> GOMAXPROCS=2 go test -p 2 -timeout 5m ./internal/clip/diagnostic/analysisquality -run ^TestProductionReplaySeparateMetricsUnknownsAndCriticalFailures$ -count=1",
     "sourceSha256": {
       "backend/cmd/api/analysis_quality.go": "c76f6338b601c8aaac2cbf107565b027a46065114836426938ebd30de4c457ef",
@@ -843,7 +843,11 @@
       "backend/internal/clip/diagnostic/analysisquality/score.go": "9497c959ab588ad1ab409a3d86a14af680e771f115d65491c15a28ba07ebeb14",
       "backend/internal/clip/diagnostic/analysisquality/types.go": "05c958a32bd7f6c19a78afa32d962ac0ae89f0ba8e9745a915933fc26b28ca2b",
       "backend/internal/clip/limits.go": "64b5ad460228231180bf9e92927e818fb203e820800ec7adec907114fd748ecf",
-      "backend/internal/clip/media/analysis_verify.go": "cc57e71d1af97b603d404783f6d221ead33da65cfad0a2f7a4778f1e1251bf22",
+      "backend/internal/clip/media/analysis_verify.go": "f38475c10a5364b83d66bf5d915f3bbf2c2ab0c6d0290b760d918eaa58a1a5c4",
+      "backend/internal/clip/media/analysis_verify_aac_test.go": "64fea2c0cd6c00a179875d9278c8ff05bae0955620029031b416904ac583b636",
+      "backend/internal/clip/media/testdata/analysis-aac-browser-frames.json": "5e77efbae78ba4472a85ecbd9e1cdbd3aad0e152dfbc6907c8a1fe85f6ba0f0b",
+      "backend/internal/clip/media/testdata/analysis-aac-browser-packets.json": "5c74c51ab21a021b30d410bbcbcbc5eb2da852caca9d08b070323d5e7844e8d4",
+      "backend/internal/clip/media/testdata/analysis-aac-browser.md": "4071e8fbec104ebbfb8868c324d8f7e6d9c8e18c1387097ee79fcac77812be7e",
       "backend/internal/clip/recovery.go": "02695a35ffafd1489b5a4c48de3ce1261cd20eaa98675cb352faa0096888621a",
       "backend/internal/llm/call_policy.go": "269fe09a33479fa15e75e2475385af6cd16a4399618b72f5161750445d40f32b",
       "backend/internal/llm/call_pricing.go": "c03b3b6b470bc2e13a67902edc3dc04a7454f018184b4b613a0e35b75f60fd57",
@@ -852,6 +856,8 @@
     },
     "actualSemanticEvidence": false,
     "actualHumanReview": false,
-    "actualProviderCalls": 0
+    "actualProviderCalls": 0,
+    "historicalFullGoCommit": "a49d82ba41d05cc8d2e79d43e61d49e4291b3234",
+    "historicalFullGoScope": "pre-AAC-fix complete102-package suite; current changed scope is verified separately"
   }
 }

@@ -40,7 +40,9 @@ The optional budget primitive requires trusted local admission before constructi
 
 ## Verification and remaining work
 
-Code checkpoint `a49d82ba41d05cc8d2e79d43e61d49e4291b3234` retains the initial implementation and two independently reproduced corrections: caller/callback mutation of approval data and unavailable pairwise arms. Focused diagnostic/budget/correction/operator tests and the independent checkpoint overlay pass. Root coordinates the full local CI and execution-image verifier checks against the unchanged code source.
+Code checkpoint `96af4ff348f1599e08e39b662b9c23981c740e96` retains the initial implementation and two independently reproduced corrections: caller/callback mutation of approval data and unavailable pairwise arms. Focused diagnostic/budget/correction/operator tests and the independent checkpoint overlay pass. The complete 102-package backend suite, gofmt, vet and build passed at the preceding `a49d82ba41d05cc8d2e79d43e61d49e4291b3234` source. That result is retained as pre-AAC-fix evidence; the changed media/diagnostic/application scope is checked separately.
+
+Actual reuse of the existing 8,291-byte T601 synthetic copy exposed a narrow codec compatibility bug: the raw AAC timeline includes priming and terminal padding while presentation/full decode preserves one second and 48,000 samples. Both pinned CPU ffprobe 7.1 and host 9.0.1 report 15 video and 49 AAC packets. The old two-frame span guard rejects this file; the corrected analysis-only allowance is 2,112 priming plus fewer than 1,024 padding samples, preserving all presentation/full-sample/EOF bounds. The actual host LocalVerifier and retained [packet/frame regression](../../backend/internal/clip/media/testdata/analysis-aac-browser.md) pass, while a 50th AAC packet, hidden 65-second tails, gaps, duplicates, nonfinite values and oversized packets remain refused. No packet/audio is dropped. Root coordinates the remaining current affected-package and matching-image checks. The earlier broad media-package disk-capacity failure is retained as an environment failure, without disguising it as a current pass or relaxing the capacity guard.
 
 ```sh
 cd backend
