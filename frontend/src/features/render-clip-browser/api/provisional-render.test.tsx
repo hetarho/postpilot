@@ -166,3 +166,76 @@ it.each(['owner', 'revision', 'finalized'] as const)(
     expect(put).not.toHaveBeenCalled()
   },
 )
+it('reports durable completion when it won cancellation during an active first upload', async () => {
+  const f = harness()
+  f.cancelled.mockResolvedValue({ cancelled: false })
+  run.mockImplementation(
+    (input, operations, signal: AbortSignal) =>
+      new Promise((resolve, reject) => {
+        input.onLocalReady(f.artifact)
+        signal.addEventListener(
+          'abort',
+          () => {
+            void operations.cancel('render').then(async (cancelled: boolean) => {
+              if (cancelled) reject(signal.reason)
+              else resolve(await operations.refresh('clip'))
+            })
+          },
+          { once: true },
+        )
+      }),
+  )
+  let running!: Promise<void>
+  await act(async () => {
+    running = f.view.result.current.start({
+      batchId: 'batch',
+      localSources: [],
+      resolvePlayback: vi.fn(),
+      flush: async () => 3,
+    })
+  })
+  await vi.waitFor(() => expect(f.view.result.current.state.local).toBeDefined())
+  await act(async () => {
+    f.view.result.current.cancel()
+    await running
+  })
+  expect(f.view.result.current.state.phase).toBe('done')
+  expect(f.view.result.current.state.local).toBeUndefined()
+  expect(f.cancelled).toHaveBeenCalledTimes(1)
+  expect(f.artifact.dispose).toHaveBeenCalledTimes(1)
+})
+it('settles a retry completion-won cancellation through the authoritative result instead of cancelled', async () => {
+  const f = harness()
+  await f.start()
+  f.cancelled.mockResolvedValue({ cancelled: false })
+  put.mockResolvedValue(undefined)
+  let finish!: () => void
+  f.complete.mockImplementation(
+    () =>
+      new Promise((resolve) => {
+        finish = () =>
+          resolve({
+            project: create(ClipProjectSchema, {
+              id: 'clip',
+              ratio: 'vertical',
+              editPlanRevision: 3,
+              renderedPlanRevision: 3,
+            }),
+          })
+      }),
+  )
+  let retry!: Promise<void>
+  await act(async () => {
+    retry = f.view.result.current.retry()
+    await Promise.resolve()
+  })
+  await vi.waitFor(() => expect(f.complete).toHaveBeenCalled())
+  await act(async () => {
+    f.view.result.current.cancel()
+    finish()
+    await retry
+  })
+  expect(f.view.result.current.state.phase).toBe('done')
+  expect(f.view.result.current.state.local).toBeUndefined()
+  expect(f.artifact.dispose).toHaveBeenCalledTimes(1)
+})

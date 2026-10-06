@@ -63,6 +63,7 @@ export function useBrowserRender(
   const mounted = useRef(true)
   const activeRevision = useRef<number | undefined>(undefined)
   const retrying = useRef(false)
+  const cancelOutcome = useRef<Promise<boolean> | undefined>(undefined)
   const [state, setState] = useState<BrowserRenderState>({
     phase: 'idle',
     progress: { stage: 'encoding', percent: 0 },
@@ -125,6 +126,7 @@ export function useBrowserRender(
   async function start(input: StartInput) {
     if (current.current) return
     const controller = new AbortController()
+    cancelOutcome.current = undefined
     current.current = controller
     setState({ phase: 'running', progress: { stage: 'encoding', percent: 0 } })
     let uploadPending = false
@@ -292,8 +294,21 @@ export function useBrowserRender(
       } catch (error) {
         if (controller.signal.aborted) {
           releaseLocal()
-          if (mounted.current && current.current === controller)
-            setState({ phase: 'cancelled', progress: { stage: 'storing', percent: 0 } })
+          try {
+            const cancelled = await cancelOutcome.current
+            if (cancelled === false && mounted.current && current.current === controller) {
+              await calls.fetch(projectId)
+              setState({ phase: 'done', progress: { stage: 'storing', percent: 100 } })
+            } else if (mounted.current && current.current === controller)
+              setState({ phase: 'cancelled', progress: { stage: 'storing', percent: 0 } })
+          } catch (cancelError) {
+            if (mounted.current && current.current === controller)
+              setState({
+                phase: 'failed',
+                failure: appFailureFromConnect(cancelError),
+                progress: { stage: 'storing', percent: 0 },
+              })
+          }
           if (current.current === controller) current.current = undefined
         } else if (mounted.current && current.current === controller)
           setState((state) => ({
@@ -307,17 +322,43 @@ export function useBrowserRender(
       }
     },
     cancel: () => {
-      if (!current.current) return
-      setState((state) => ({ ...state, phase: 'cancelling' }))
-      current.current.abort()
-      if (provisional.current) {
-        void renders
-          .cancelBrowserRender(provisional.current.artifact.renderId)
-          .catch(() => undefined)
+      const controller = current.current,
+        local = provisional.current
+      if (!controller) return
+      setState((state) => ({ ...state, phase: 'cancelling', local: undefined }))
+      controller.abort()
+      if (local) {
         releaseLocal()
-        current.current = undefined
-        setState({ phase: 'cancelled', progress: { stage: 'storing', percent: 0 } })
-        void refresh.all()
+        // An active first upload has its run's authoritative completion-won
+        // handling. A retained artifact/retry has no live run to settle it.
+        if (state.phase === 'upload_pending' || retrying.current) {
+          const retry = retrying.current
+          const outcome = renders.cancelBrowserRender(local.artifact.renderId)
+          cancelOutcome.current = outcome
+          if (!retry)
+            void (async () => {
+              try {
+                const cancelled = await outcome
+                if (cancelled === false && mounted.current && current.current === controller)
+                  await calls.fetch(projectId)
+                if (mounted.current && current.current === controller)
+                  setState({
+                    phase: cancelled ? 'cancelled' : 'done',
+                    progress: { stage: 'storing', percent: cancelled ? 0 : 100 },
+                  })
+              } catch (error) {
+                if (mounted.current && current.current === controller)
+                  setState({
+                    phase: 'failed',
+                    failure: appFailureFromConnect(error),
+                    progress: { stage: 'storing', percent: 0 },
+                  })
+              } finally {
+                if (current.current === controller) current.current = undefined
+                await refresh.all()
+              }
+            })()
+        }
       }
     },
   }
