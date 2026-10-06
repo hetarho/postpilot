@@ -412,7 +412,7 @@ export async function transcodeMediaInterval(
       // The native copy strips descriptive source metadata. Keep no original
       // stream name or language tag beyond the footage/audio itself.
       video.getName = async () => null
-      video.getLanguageCode = async () => null
+      video.getLanguageCode = async () => 'und'
       const target = boundedMediaCopyTarget(limits.maxCopyBytes)
       output = new Output({
         format: new Mp4OutputFormat({ fastStart: false }),
