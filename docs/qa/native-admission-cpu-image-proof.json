@@ -1,0 +1,76 @@
+{
+  "source": "/Users/ihaelam/project/.haeram-worktrees/postpilot-f6c0250f/browser-media-604-T590-5d9f02db",
+  "sourceHead": "783e25bc439e566124a325243b1567714b5e1346",
+  "backendTree": "091a91f9e2f41b855911312ff10f1156c29b4ecf",
+  "dockerfileSHA256": "f71315a6e967a208a267a837bc0705ebbd92d2d0a7ded2f297741bb6b2edd7c4",
+  "cleanAtStart": true,
+  "startedAt": 1791313293.400179,
+  "checks": [
+    {
+      "name": "build",
+      "command": [
+        "docker",
+        "build",
+        "--progress=plain",
+        "--build-arg",
+        "SOURCE_REVISION=783e25bc439e566124a325243b1567714b5e1346",
+        "--target",
+        "release-smoke",
+        "-t",
+        "postpilot:t590-startup-release",
+        "-f",
+        "backend/Dockerfile",
+        "."
+      ],
+      "startedAt": 1791313293.400776,
+      "log": "/private/tmp/postpilot-t590-startup-image-build.log",
+      "exit": 0,
+      "finishedAt": 1791313803.159265,
+      "logSHA256": "75ecc7e49351ee33e8769026f6e937eab3fe838c5cc2a6927dcddfeec010c4b4"
+    },
+    {
+      "name": "full",
+      "command": [
+        "docker",
+        "run",
+        "--rm",
+        "--network",
+        "none",
+        "--memory",
+        "1g",
+        "--memory-swap",
+        "1g",
+        "--cpus",
+        "2",
+        "sha256:cee924efb9cc6ae89f1463cc91a856e0766b9835b81b7e9c1e9407642f7bd16f"
+      ],
+      "startedAt": 1791313803.238397,
+      "log": "/private/tmp/postpilot-t590-startup-image-full.log",
+      "exit": 0,
+      "finishedAt": 1791314093.740056,
+      "logSHA256": "982ee0075e8af9c36bc44703157f1fb85bf435e1970feb8e39ccf6b0949372f0"
+    }
+  ],
+  "passed": true,
+  "imageId": "sha256:cee924efb9cc6ae89f1463cc91a856e0766b9835b81b7e9c1e9407642f7bd16f",
+  "architecture": "arm64",
+  "user": "nonroot:nonroot",
+  "labels": {
+    "org.opencontainers.image.architecture": "arm64",
+    "org.opencontainers.image.revision": "783e25bc439e566124a325243b1567714b5e1346",
+    "org.opencontainers.image.title": "Postpilot API",
+    "org.postpilot.media.asset-input-sha256": "3496ae816cd2b3b9c10af0e78ec78dc39235f9740b16c6a8803d1c9f94786b5a",
+    "org.postpilot.media.assets": "assets-v3",
+    "org.postpilot.media.protocol": "3",
+    "org.postpilot.media.renderer": "cpu-v2",
+    "org.postpilot.media.rollback-safe": "1"
+  },
+  "entrypoint": [
+    "/clip-release.test",
+    "-test.run=^TestClipRelease$",
+    "-test.v",
+    "-test.timeout=45m"
+  ],
+  "cleanAtFinish": true,
+  "finishedAt": 1791314093.934048
+}
