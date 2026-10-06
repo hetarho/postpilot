@@ -1,6 +1,7 @@
 package rpc
 
 import (
+	"errors"
 	"testing"
 
 	clipapp "github.com/postpilot/backend/internal/clip/app"
@@ -10,6 +11,19 @@ import (
 	"github.com/postpilot/backend/internal/clip"
 	v1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 )
+
+func TestNativeExportPlanRefusalIsAProductFailure(t *testing.T) {
+	err := toConnectError(clip.ErrServerExportPlan)
+	var rpc *connect.Error
+	if !errors.As(err, &rpc) || rpc.Code() != connect.CodePermissionDenied || len(rpc.Details()) != 1 {
+		t.Fatal(err)
+	}
+	value, e := rpc.Details()[0].Value()
+	detail, ok := value.(*v1.AppErrorDetail)
+	if e != nil || !ok || detail.Reason != "CLIP_SERVER_EXPORT_PLAN_REQUIRED" || len(detail.Params) != 0 {
+		t.Fatal(value, e)
+	}
+}
 
 func TestRenderKindRefusedBeforeWork(t *testing.T) {
 	h := NewHandler(nil)

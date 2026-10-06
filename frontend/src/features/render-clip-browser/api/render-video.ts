@@ -104,7 +104,8 @@ export function renderBrowserVideo(
     } else if (message.type === 'progress') {
       latest = message.progress
       wake?.()
-    } else if (message.type === 'error') fail(new Error(message.error))
+    } else if (message.type === 'error')
+      fail(Object.assign(new Error(message.error), { measurements: message.measurements }))
     else {
       stop()
       resolve(message.track)

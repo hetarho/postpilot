@@ -5,7 +5,7 @@ import { Button, Popover, Typography } from '@/shared/ui'
 
 /** ②'s render control (CLIP-40, CLIP-153): ONE trigger that opens the choice of kind — a browser
  *  render or a server one — rather than a button naming a kind beside a switch to the other. The
- *  last successful kind leads (browser on a project that has none yet), and a browser the device
+ *  supported browser leads independently of the last successful kind, and a browser the device
  *  cannot render on keeps its option, refused, with the reason beside it (CLIP-155). */
 export function ClipRenderAction({
   lastKind,
@@ -13,6 +13,7 @@ export function ClipRenderAction({
   browserRefusal,
   serverWindow,
   serverPlan,
+  serverEntitled = false,
   currentRender = false,
   pending,
   disabled,
@@ -24,6 +25,7 @@ export function ClipRenderAction({
   browserRefusal?: 'capability' | 'memory'
   serverWindow?: MyPlan['serverExportWindow']
   serverPlan?: MyPlan['plan']
+  serverEntitled?: boolean
   currentRender?: boolean
   pending: boolean
   disabled: boolean
@@ -38,7 +40,12 @@ export function ClipRenderAction({
     preferred === 'browser' ? ['browser', 'server'] : ['server', 'browser']
   const label = t(currentRender ? 'timeline.rerender' : 'timeline.render')
   const existingServerResult = currentRender && lastKind === 'server'
-  const serverExhausted = !!serverWindow && serverWindow.remaining <= 0 && !existingServerResult
+  const serverNeedsPlan = !serverEntitled && !existingServerResult
+  const serverExhausted =
+    serverEntitled &&
+    serverPlan !== 'master' &&
+    (!serverWindow || serverWindow.remaining <= 0) &&
+    !existingServerResult
   const renewal = serverWindow?.endsAt ? new Date(serverWindow.endsAt).toLocaleString() : ''
   return (
     <Popover
@@ -55,7 +62,8 @@ export function ClipRenderAction({
         <div className="grid gap-4">
           <Typography variant="body">{t('render.choose')}</Typography>
           {kinds.map((kind) => {
-            const refused = kind === 'browser' ? !browserAvailable : serverExhausted
+            const refused =
+              kind === 'browser' ? !browserAvailable : serverNeedsPlan || serverExhausted
             return (
               <div key={kind} className="grid gap-1">
                 <Button
@@ -72,23 +80,30 @@ export function ClipRenderAction({
                 <Typography variant="meta" as="p" role={refused ? 'status' : undefined}>
                   {kind === 'server' && existingServerResult
                     ? t('render.serverExisting')
-                    : kind === 'server' && serverWindow
-                      ? t('render.serverBalance', {
-                          used: serverWindow.used,
-                          reserved: serverWindow.reserved,
-                          remaining: serverWindow.remaining,
-                          allowance: serverWindow.allowance,
-                        })
-                      : refused && kind === 'browser' && browserRefusal
-                        ? t(`render.refusal.${browserRefusal}`)
-                        : t(`render.kindHelp.${kind}`)}
+                    : kind === 'server' && serverNeedsPlan
+                      ? t(
+                          serverPlan && serverPlan !== 'max'
+                            ? 'render.serverMaxRequired'
+                            : 'render.serverAccessUnknown',
+                        )
+                      : kind === 'server' && serverWindow
+                        ? t('render.serverBalance', {
+                            used: serverWindow.used,
+                            reserved: serverWindow.reserved,
+                            remaining: serverWindow.remaining,
+                            allowance: serverWindow.allowance,
+                          })
+                        : refused && kind === 'browser' && browserRefusal
+                          ? t(`render.refusal.${browserRefusal}`)
+                          : t(`render.kindHelp.${kind}`)}
                 </Typography>
-                {kind === 'server' && serverExhausted && (
+                {kind === 'server' && (serverExhausted || serverNeedsPlan) && (
                   <Typography variant="meta" as="p" role="status">
-                    {renewal
-                      ? t('render.serverRenewal', { at: renewal })
-                      : t('render.serverNoAllowance')}
-                    {serverPlan && ['free', 'light', 'basic', 'pro'].includes(serverPlan) && (
+                    {serverExhausted &&
+                      (renewal
+                        ? t('render.serverRenewal', { at: renewal })
+                        : t('render.serverNoAllowance'))}
+                    {serverNeedsPlan && serverPlan && (
                       <>
                         {' '}
                         <a href="/plans">{t('render.serverUpgrade')}</a>

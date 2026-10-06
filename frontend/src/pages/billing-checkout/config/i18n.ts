@@ -7,10 +7,10 @@ export const i18n = {
     checkout: {
       title: '구독 시작',
       description: '플랜과 결제 주기를 확인한 뒤 구독을 시작합니다.',
+      serverExports: '서버 내보내기 월 {{count}}회',
       invalid: '구독할 유료 플랜을 다시 선택해 주세요.',
       loadFailed: '구독 가격을 불러오지 못했습니다.',
-      benefits:
-        '하루 {{daily}} 크레딧 · 매월 보너스 {{bonus}} 크레딧 · 서버 내보내기 {{exports}}회',
+      benefits: '하루 {{daily}} 크레딧 · 매월 보너스 {{bonus}} 크레딧',
       termHeading: '결제 주기',
       term: { monthly: '월간', annual: '연간' },
       annualValue: '12개월에 10개월 요금',
@@ -33,10 +33,10 @@ export const i18n = {
     checkout: {
       title: 'Start subscription',
       description: 'Confirm your plan and billing term before subscribing.',
+      serverExports: '{{count}} server exports per month',
       invalid: 'Choose a paid plan to subscribe to.',
       loadFailed: 'The subscription price could not be loaded.',
-      benefits:
-        '{{daily}} credits daily · {{bonus}} monthly bonus credits · {{exports}} server exports',
+      benefits: '{{daily}} credits daily · {{bonus}} monthly bonus credits',
       termHeading: 'Billing term',
       term: { monthly: 'Monthly', annual: 'Annual' },
       annualValue: '12 months for the price of 10',

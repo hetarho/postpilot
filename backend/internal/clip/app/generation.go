@@ -72,8 +72,9 @@ type GenerationDeps struct {
 	// Guidelines resolves the 영상 지침 a quote binds and a start freezes. Nil freezes none.
 	Guidelines VideoGuidelineSource
 	Exports    clip.ExportReservations
-	// PrepareExport opens the current entitlement month. True denotes the
-	// operator path, which carries no commercial numeric allowance.
+	// PrepareExport authorizes current native-export rights and opens their
+	// current benefit month. It is required for a new server start. True denotes
+	// the operator path, which carries no commercial numeric allowance.
 	PrepareExport func(context.Context, string) (bool, error)
 }
 

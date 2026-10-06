@@ -1,5 +1,5 @@
 # CLIP generated video projects and templates
-> r55 | Source-based short-form video creation and explicit browser/server exports, with outputs of 15–60 seconds and plan-bound monthly successful server-export allowances.
+> r56 | Browser-first source-based short-form creation with local animated components and analysis preparation, qualified 15–60 second output, and explicitly bounded Max server exports.
 
 ## decisions
 - CLIP-1 [o] a clip project is independent of a post and owns its title, chosen video template, template answers, owner instruction, intro/outro enablement, presets and slot instructions/text, target duration, aspect ratio, caption pace, accent, analysis, edit plan, the record of what it was asked for and latest successful result
@@ -21,7 +21,7 @@
   - ordinary clips write footage flow then timed visible narration captions
   - narrated clips write the dedicated spoken script, generate approved speech, then write footage flow against measured speech; derive independently editable starting captions (→CLIP-135 →DUB-19 →DUB-22)
 - CLIP-12 [o] generated copy is rendered as exact typeset text through approved visual templates ← AI-drawn Korean lettering can be misspelled or visually inconsistent
-- CLIP-13 [o] the copy renderer uses only product-bundled, fixed-version fonts — Wanted Sans Variable as the primary face, Paperlogy for hook and emphasis text, Noto Sans KR as the fallback (→CDS-17) — and never a device or host system font ← the same project must render identically across environments
+- CLIP-13 [o] every renderer uses the product-bundled, fixed-version faces and glyph-substitution rules in CDS-17 and CDS-84; no device or host system font is substituted ← changing execution location must not change the declared typography
 - CLIP-14 [o] a template declares no per-element style: it supplies outline entries and starting intro/outro slot content plus one starting design selection under CLIP-166; the project's region content may override those starting values, and its presets, AI caption style set, accent and caption pace remain its own (→CDS-22 →CDS-70 →CDS-15 →CLIP-111 →CLIP-142 →CLIP-168)
 - CLIP-15 [o] the disclosure badge uses the CDS safe areas, supported anchors and the symmetric header bounds at its authored position; a caption is placed automatically as a starting point and the owner's own placement in ② outranks it (→CDS-9 →CDS-12 →CDS-13 →CDS-57 →CDS-38 →CLIP-143)
 - CLIP-16 [o] cuts join with a hard cut by default and a short fade only where the scene type changes (→CDS-36)
@@ -35,7 +35,9 @@
   - explicit speech generation/regeneration is separately approved under DUB; script typing only marks speech stale
   - successful server encoding consumes CLIP-193's count; browser, failed and cancelled exports consume none; AI revisions/storyline actions remain separate (→CLIP-19 →CLIP-131 →CLIP-180 →CLIP-187)
 - CLIP-21 [o] unfinalized projects retain private source originals for 24 hours under CLIP-73; analysis copies are private attempt-scoped artifacts that may cross media stages through object storage and are recoverably deleted with local worker files on success, failure or cancellation, or when crash recovery establishes abandonment, while metadata, analysis, the edit plan and latest successful result remain until project deletion
-- CLIP-22 [o] before source selection, the upload surface discloses external analysis of compressed footage and audible speech through OpenRouter, the 24-hour original-retention rule and original deletion on finalization; service cleanup makes no promise about external-provider retention
+- CLIP-22 [o] before source selection, the surface distinguishes local browser media processing, private original/result storage and external analysis of compressed footage and audible speech through OpenRouter.
+  - disclose the 24-hour original-retention rule and original deletion on finalization; local processing does not imply that originals, analysis copies or results are never uploaded
+  - service cleanup makes no promise about external-provider retention (→CLIP-203)
 - CLIP-23 [o] while retained originals remain available, refresh, reopening, AI retry and manual rerender reuse matching originals without reselection; after expiry or missing media, only operations needing those pixels request matching originals again and never start automatically
 - CLIP-24 [o] deleting a project removes its originals, result, analysis, edit plan and metadata, with object cleanup recoverable after interruption
 - CLIP-25 [o] deleting a video template detaches it from projects while preserving their answers, analysis, resolved composition, edit plan and result; manual correction uses that retained composition and another AI generation runs from the project's own settings whether or not a template is still selected
@@ -46,8 +48,12 @@
 - CLIP-30 [o] clip observation admits a purpose-registered model entitled to the account and advertising video input only when a current OpenRouter endpoint accepts the bounded inline MP4, required parameters and complete price ceiling. Eligibility is vendor-neutral, never a provider/model-family allowlist. Quote, admission and completion recheck current endpoint safety; free access also satisfies MODEL-68 and never falls back to paid work.
 - CLIP-31 [o] writing receives bounded structured observations, template outline, frozen 영상 지침, owner instruction/answers and storyline where present, plus the resolved flow for ordinary captions or measured approved speech timing for narrated flow; it receives no video bytes or URLs
   - final rendering uses originals, owner-enabled original audio and the exact approved narration assets, never compressed analysis copies
-- CLIP-32 [o] preparation verifies every source and every analysis copy before the first AI call; bounded recompression may occur only during preparation, and a copy still exceeding a limit fails without AI rather than silently increasing the chunk count, omitting footage or changing its timing
-- CLIP-33 [o] clip preparation and server rendering execute on separately deployable media workers under ARCH-45; preparation processes originals sequentially through bounded temporary disk storage, sharing one read and decode of each original for verification and analysis-copy preparation, and transmission never accumulates whole originals or all encoded copies in memory
+- CLIP-32 [o] browser preparation measures originals and produces bounded analysis copies; before the first AI call the server validates the authorized artifact identities, finite copy bounds, complete declared coverage and actual analysis-copy decodability under CLIP-203.
+  - client measurements are not trusted evidence of provider input size, decoded duration or billing bounds; native server rendering independently verifies its originals
+  - bounded recompression occurs only during preparation; an oversized copy fails without AI rather than silently adding chunks, omitting footage or changing timing
+- CLIP-33 [o] browser preparation processes originals sequentially with bounded frame and byte windows, reusing matching prepared intervals; server media workers retain bounded analysis-copy verification and native server rendering under ARCH-45.
+  - a supported browser path requires no server full-original transcode or per-frame component drawing; transmitting copies never accumulates every original or encoded copy in memory
+  - any retained server preparation route is explicit and qualified, never an automatic browser failure fallback (→CLIP-155 →CLIP-203)
 - CLIP-34 [o] local source previews survive attempt completion while the working page still uses them; leaving or refreshing releases local references without stopping a server job, and reopening obtains authorized playback access to unexpired retained originals without persisting media in browser storage
 - CLIP-35 [x] a separate force-reanalysis action remains deferred; a written revision request rewrites the plan under CLIP-131 and explicit failure/cancellation continuation reuses compatible analysis under CLIP-93
 - CLIP-36 [o] `/clips/$clipId` has three steps 생성 · 수정 · 완성 under THEME-39, drawn as text steps on the top row between 목록 and 삭제 (→CLIP-37)
@@ -62,7 +68,7 @@
   - ① keeps `스토리라인 먼저` and `바로 만들기` with model refusals and approved ceiling
   - ② puts reachable contextual editing tools around the preview/timeline; its dock holds 렌더하기 and, once a render exists, 확정하기, with render primary until then
   - an explicit AI edit entry opens the target/selection-aware request composer and credit approval; its text field does not permanently lead or cover the existing draft
-  - 렌더하기 chooses browser/server, last successful kind first or browser initially; unsupported choices retain their reason; a current render names the action 다시 렌더
+  - 렌더하기 offers browser first on supported devices; server rendering is an explicit entitled choice under QUOTA-7, and unsupported choices retain their reason; a current render names the action 다시 렌더
   - ③ offers download only; ② download sits under the result preview; template/completion-model selection remains in ①, confirmed voice selection is reachable in ① and ②
   - focused running work substitutes cancellation under THEME-40; committing actions flush saves (→CLIP-39 →CLIP-75)
 - CLIP-41 [o] `/clips` uses whole-row links, title, one status badge, template/ratio metadata, relative updated time, URL-backed title search/status filtering and one docked 새 클립 under POST-43 and POST-65 through POST-69; badges prioritize active work 생성 중/취소 중, failure 실패, cancellation 취소됨, then 초안/다듬는 중/완성, with 완성 reserved for explicit finalization and automatic polling until the latest job is terminal
@@ -218,8 +224,9 @@
   - the sheet shows the current style and named visual samples for every product-approved style; choosing one updates only the selected caption and its draft preview (→CLIP-142 →CDS-83)
   - position and size are directly editable; the chosen style supplies face, plate, outline and animation, without independent controls for those properties (→CDS-80)
   - movement stays inside the safe area, size respects the role's floor, and low contrast records a notice (→CDS-82 →CLIP-191)
-- CLIP-145 [o] no ceiling limits a clip's sequence-rendered captions; AI approval states the longest render its AI style set admits, with every caption sequence-rendered where that set permits it (→CDS-81 →CLIP-19)
-  - a later manual style choice may change rendering work beyond that estimate; it neither invokes AI nor requires another credit approval (→CLIP-20 →CLIP-142)
+- CLIP-145 [o] no ceiling limits a clip's frame-dependent approved captions; generation approval distinguishes reusable static drawing from frame-dependent effects using the most demanding case its selected styles admit (→CDS-81 →CLIP-19).
+  - this is a workload estimate, not a longest elapsed-time promise across devices; device/render timings follow CLIP-207
+  - a later manual style choice may change work beyond that estimate; it invokes no AI and requires no new credit approval (→CLIP-20 →CLIP-142)
 - CLIP-146 [o] having no video template is a normal project state and is never presented as something missing: the list shows 템플릿 없음 as plain metadata, ①'s template selector stays re-selectable and offers 없음 as a choice beside every template, and only a project whose named template is gone says so (→CLIP-5 →CLIP-25 →CLIP-40 →CLIP-41)
 - CLIP-148 [o] one info control on the preview's frame, at its top-right beside the player's own controls, carries everything ② has to say about the whole clip — what the draft preview cannot promise about the delivered render (browser timing tolerance, approximate frame position, on-source contrast and final loudness) and every notice naming no cut and no caption — and none of it stands as permanent text in the flow ② edits in (→CLIP-56 →CLIP-57 →CLIP-109 →THEME-29 →THEME-39)
 - CLIP-150 [o] ②'s read-only reference — the stored observations, the source strip and the verbatim request record — is reached on demand from the editing surface and never stands open beneath it, while ① keeps them in flow where settings are what the step is for (→CLIP-47 →CLIP-48 →CLIP-53 →CLIP-133) ← one phone screen of editor followed by three open panels is scrolled past rather than read
@@ -230,14 +237,27 @@
   - neither saving a template nor generation is refused solely over the region entry count (→CLIP-113 →CDS-70)
 - CLIP-151 [o] a generation stops at the validated plan and renders nothing: the attempt succeeds with a plan and no result file, and the owner reviews it in ②'s draft preview before starting a render themselves (→CLIP-56 →CLIP-97 →CLIP-132 →CLIP-26) ← rendering unasked spends the longest wait of the job before the owner knows whether the plan is the clip they asked for
 - CLIP-152 [o] ② holds two reviews of the same clip: the plan before any render, read in the draft preview, and the delivered render before finalization, played as the file it hands over; an edit after either returns the project to a plan awaiting a render, and 확정하기 stands only while a render matches the current plan (→CLIP-56 →CLIP-75 →CLIP-149)
-- CLIP-153 [o] a render is of one of two kinds — browser or server — chosen in ② each time one is started and recorded with its result, the kind offered first being the one this project last rendered with and the browser kind where it has rendered none; both draw the same plan under the same output contract, both leave their file in the project's private storage and either satisfies finalization (→CLIP-20 →CLIP-27 →CLIP-75 →CLIP-158 →CDS-52)
+- CLIP-153 [o] a render is browser or server, chosen explicitly in ② and recorded with its result; browser is offered first on a supported device, independently of the previous result's kind.
+  - new commercial server work requires Max under QUOTA-7; master retains its operator exemption and execution bounds
+  - both materialize the same plan under the same output contract, retain their successful file in private storage and satisfy finalization only after durable completion (→CLIP-75 →CLIP-158 →CDS-52)
 - CLIP-154 [o] every check knowable from the plan runs on the server before a render of either kind starts, and whichever side produced the file checks the file: a browser render measures its own output's resolution, frame rate, codec, loudness and duration and reports that verdict with its measurements, which the server records rather than decoding the stored file again (→CDS-52 →CLIP-88 →CLIP-109 →CLIP-158) ← re-measuring the file on the server would spend exactly the decode the browser kind exists to avoid
-- CLIP-155 [o] an unsupported browser renderer refuses with its capability/memory reason and offers server rendering only when the account has server entitlement. Missing local originals may be fetched under CLIP-23. Never switch render kind automatically; the owner chooses which execution and quota to use.
-- CLIP-159 [o] a browser render sets no type and invents no drawing: every caption, region line and badge is drawn from what the server drew — a static style's one raster with the motion that style declares applied by the browser, and the server's own drawing of each output frame for a sequence-rendered style — so the words, the face, the size, the position and the appearance all stay the server's; a browser that cannot obtain those frames refuses under CLIP-155 rather than delivering a caption that stands still (→CLIP-12 →CLIP-13 →CLIP-155 →CDS-80 →CDS-81 →CLIP-157)
-- CLIP-192 [o] a browser render's drawing carries what the footage decides: before the browser draws, the server samples the retained originals under CDS-44 as its own render does, and the rasters and frames it serves for that render carry the resulting scrim, accent colour and contrast notices; a render whose originals the server no longer holds asks for them under CLIP-23 as a server render does, and a sampling that cannot be done refuses the render under CLIP-155 rather than delivering the unsampled drawing (→CLIP-23 →CLIP-155 →CLIP-157 →CLIP-159 →CDS-32 →CDS-44 →CDS-85) ← a bright ground left unscrimmed in one kind alone would make the choice of kind change what the viewer can read
-- CLIP-158 [o] a browser render is complete only once its file has reached the project's private storage: ② plays and offers the stored file and never the local one, a store that does not finish leaves the render unsuccessful with the previous result standing, and the local copy is released once stored (→CLIP-21 →CLIP-34 →CLIP-76 →CLIP-153 →CLIP-156) ← the owner reviews the file they will hand over, and a result the server never held would not survive finalization, another device or a cleared browser
+- CLIP-155 [o] unsupported browser preparation or rendering identifies the actual codec, component, memory or device limitation and offers a compatible browser/device; server export is offered only to an entitled account.
+  - missing local originals may be fetched under CLIP-23; a supported lower-level execution path must preserve the selected composition rather than omit an effect
+  - no failure silently changes render kind, buys a plan, invokes AI or consumes a server-export count
+- CLIP-159 [o] the browser draws approved captions, region slots and disclosure locally from fixed-version product components, fonts, layout and time rules.
+  - static ink is reusable; frame-dependent styles retain their declared motion and appearance on every output frame under CDS-103 and CDS-104
+  - no export requires server-generated caption PNGs or frame sheets; an unavailable drawing refuses by name under CLIP-155 rather than standing still or switching style
+- CLIP-192 [o] browser rendering measures CDS-44's first, middle and last background frames locally from the originals after the declared rate, crop and transition transforms.
+  - the resulting scrim, accent and contrast notices belong to the frozen render and follow the same rules as server output
+  - analysis copies and thumbnails are not contrast evidence; the browser requires no server sampling job or rendered footage intermediate
+  - missing originals or an unavailable measurement refuse under CLIP-23 and CLIP-155 instead of delivering an unsampled drawing
+- CLIP-158 [o] a verified browser MP4 may be previewed and downloaded locally in ② while its private upload is explicitly shown as pending.
+  - only accepted private-storage completion replaces the durable result and permits finalization or cross-device result playback; local readiness is never presented as saved completion
+  - upload failure preserves the previous durable result and allows retry of the same valid local file while the page retains it, without another render or AI call
+  - leaving or cancelling releases local resources under CLIP-156; a late or stale upload cannot replace a newer revision or bypass deletion/finalization
 - CLIP-157 [o] browser and server exports owe the same intended composition: cuts, ranges, rates, transitions, displayed text, faces, placement, timing, source-audio state and exact narration assets/volume
-  - only compression is implementation-specific; voice omission, changed voice or shifted speech is a defect; unsupported audio execution refuses before work (→DUB-25 →CDS-52)
+  - compression and qualified platform rasterization may differ under CDS-104; changed text, geometry, style appearance, motion timing, omitted voice or shifted speech is a defect
+  - unsupported audio execution refuses before work (→DUB-25 →CDS-52)
 - CLIP-156 [o] a browser render runs inside ② with its own progress and cancellation and never the focused job view; its progress covers the encode and the store that completes it, leaving the page ends it while the project keeps its plan and its previous result, and a server render remains a job under CLIP-78 through CLIP-80 (→CLIP-34 →CLIP-78 →CLIP-79 →CLIP-158)
 - CLIP-160 [o] a finalized project's ① and ② open read-only:
   - ① states the settings, answers, instruction and design selection the clip was made with, without the stage model selectors, which are account settings the project does not record
@@ -311,7 +331,7 @@
   - valid changes autosave, support undo/redo and appear in video preview and flow simulation before export; a prior render stays labelled with its own revision and requires rerender for the new appearance (→CLIP-39 →CLIP-55 →CLIP-56 →CLIP-152 →CLIP-173)
   - style selection makes no AI call and uses no credits (→CLIP-20)
 
-- CLIP-193 [o] monthly server-export counts are QUOTA-7's 0/2/6/15/60 for the commercial offers, separate from AI credits.
+- CLIP-193 [o] new commercial server exports are Max-only with QUOTA-7's 0/0/0/0/60 monthly counts, separate from AI credits; master keeps its operator exemption.
   - consume one count for one successful server export with an available stored result; an explicitly requested changed-output export consumes another
   - existing-file download/reuse, manual edits, preview, browser exports and failed/cancelled renders consume no count
   - expose remaining/reserved counts and the monthly benefit renewal; unused counts expire without rollover, including during annual coverage
@@ -319,7 +339,9 @@
   - concurrent starts cannot exceed remaining entitlement; completion commits one count once, including duplicate notifications and worker retries
   - failure/cancellation releases the originating reservation; a later period never gains a replacement for an already-expired slot
   - an admitted render crossing reset or paid expiry completes against its original slot; a new explicit export requires current entitlement
-- CLIP-195 [o] exhausted server allowance offers next monthly renewal, an available upgrade or a supported browser export; existing-result download remains available. There is no separate export-count purchase and no AI-credit-to-export exchange. Browser support stays bounded by existing device, preparation and storage contracts rather than an unlimited-server promise.
+- CLIP-195 [o] an account without server entitlement is offered supported browser export and the Max plan; an entitled account with exhausted allowance is offered its next monthly renewal and supported browser export.
+  - existing-result download remains available; there is no separate export-count purchase, AI-credit exchange or automatic paid execution
+  - browser support remains device-, memory- and storage-bounded and makes no unlimited-server promise
 - CLIP-196 [o] drawn intro and outro intervals belong to their region text, with no caption visible in either interval in draft preview, browser export or server export (→CLIP-66 →CLIP-170).
   - narration generation writes captions only in the interval between the regions; an unedited generated or template caption in a retained plan is fitted inside that interval or omitted with an element notice when it cannot fit
   - a caption interval explicitly edited by the owner is never moved or removed to clear a region; an overlap is identified on that caption and blocks saving or rendering until corrected (→CLIP-67)
@@ -335,6 +357,30 @@
   - finalization keeps the confirmed plan's speech provenance and result, disables regeneration and permits recoverable cleanup of unused project speech
   - project/account deletion revokes asset access and cleans the corresponding private speech; reusable account voices survive deletion or finalization of one clip (→DUB-29)
 
+- CLIP-201 [o] browser export owns original decoding, component layout/drawing, background measurements, source/narration mixing and final encoding on the owner's device; server authorization, plan checks and durable result storage remain authoritative.
+  - supported browser exports neither reserve a media-render worker nor wait behind another account's render or component generation
+  - source retention, publication guards, output limits and immutable speech provenance remain unchanged
+- CLIP-202 [o] the release requires no desktop installation; a desktop application is reconsidered only if measured browser limitations remain after browser optimization, not as the initial rendering path.
+- CLIP-203 [o] browser analysis preparation produces private, attempt-owned copies over complete original source-time intervals before approved AI work.
+  - the server validates ownership, source/copy fingerprints, coverage, finite decoded copy bounds and actual decodability before provider transmission; malformed or dishonest declarations authorize no paid call
+  - full-original measurement performed by the browser has explicit client provenance; native server work independently verifies the originals it uses
+  - copies upload directly to private storage, carry no provider credential and have recoverable cleanup on failure, cancellation, expiry and abandoned handoff
+  - a missing preparation capability offers a compatible device; it never silently starts a native server transcode or additional AI request
+- CLIP-204 [o] browser analysis preparation retains the code-owned analysis profile and CLIP-29 limits; moving computation alone never lowers its target resolution, frame rate, audio quality or coverage.
+  - final rendering always uses originals and exact approved speech, not analysis copies; source cadence and time offsets are measured separately from the proxy's cadence
+  - an encoder or analysis-profile change requires CLIP-205 qualification; equal dimensions or byte counts do not prove equal information preservation
+- CLIP-205 [o] analysis-quality qualification compares authorized original/high-quality references, existing server copies and equivalent browser copies using fixed model, endpoint and prompt versions.
+  - evaluate scene/event coverage, small Korean text and numbers, fast cuts/actions, speech, source-time boundaries and focus/shake decisions separately; structural JSON validity is not semantic accuracy
+  - provider sampling and internal media resolution are separate from file resolution/FPS and may not be assumed identical across endpoints
+  - unreadable important facts remain unknown; reducing quality or adding high-detail reanalysis is not automatic and any additional billable work needs explicit approval within verified bounds
+- CLIP-206 [o] server export has finite global active/waiting capacity and an account active-work limit, checked atomically before new work and without charging AI credits or committing an export count on refusal.
+  - admitted work remains cancellable with finite wait/operation expiry; overload is actionable and preserves the prior result
+  - current runtime capacity is an operator setting under ARCH-52/INFRA-12; master is exempt from the commercial allowance, not execution bounds
+- CLIP-207 [o] browser release qualification measures cold/warm preparation, source reading/decoding, layout, effects, audio, encoding and upload separately on identified browsers/devices.
+  - compare the optimized Canvas 2D and GPU paths at the same composition/output quality; retain uncertainty where no real-device evidence exists
+  - support claims require actual input decoding, component drawing, H.264 output and required AAC execution, not API presence or a hardware hint alone
+  - no fixed completion-time or zero-infrastructure-cost promise is introduced; existing voice/provider qualification gates remain independent
+
 ## flow
 - create: choose title/ratio and optional template → arrange sources and explicitly retain any original sound → choose regions, caption styles/pace, facts, target duration and instruction → optionally enable dubbing and choose a confirmed voice → choose 스토리라인 먼저 or 바로 만들기 → approve its remaining work
 - template: 형식 안내 복사 → outside AI writes the outline, or 원문 복사 hands it the template already saved → paste 원문, or build the same entries in the block builder → choose the design selection in the preview → validate with entry/line errors → save → offer for a project
@@ -346,8 +392,11 @@
 - revise: explicitly open AI editing and name target/selection → approve writing calls → rewrite current flow/narration on stored observations → validate and preserve owner-edited visible text → updated draft, with changed spoken segments stale → separately approve required speech regeneration → review timing conflicts → render
 - execute: the contract both kinds follow — validated assembly document + originals + owner source-audio choices + ready requested speech → apply declared cut/rate/crop/transition/audio operations → split and typeset exact caption text by fixed rules → encode result → measure the encoded output against CDS-52's output rules
 - steps: ① settings → 스토리라인 먼저 (→ ② storyline → 이 스토리로 만들기) | 바로 만들기 → ② review the plan, edit, render in either kind and download → flush saves and confirm a matching result in the finalization dialog → ③ result preview/download, with ① and ② readable
-- generate: approve ceiling and cancellation rule → focused durable job → media worker verifies sources and stores bounded private analysis copies → API reads verified copies and reserves within approval (refusal: no AI/debit, preserve prior result and reusable originals) → reuse compatible evidence or observe missing chunks as ordered scenes with bounded response correction → reuse compatible assembly/script/speech checkpoints or compose ordinary flow then captions | narrated script then approved speech then speech-led flow → validate, repair or remove, and save the plan → ② draft preview and settlement → clean worker copies, renew original retention
-- render: the server runs every plan check first → ② chooses the kind → server: reserve its monthly slot under CLIP-194, then a durable job waits for a compatible media worker, which executes over the retained originals under CLIP-78 and CLIP-164 | browser: the server samples the retained originals for the drawing the footage decides under CLIP-192, then the page executes the same contract over the originals it already holds, refusing under CLIP-155 where it cannot, then stores its file before showing it → the producing side reports its output measurements → server success commits its reserved count once → ② plays the stored render beside the plan it came from
+- generate: approve ceiling and cancellation rule → browser measures matching originals and uploads only missing bounded analysis copies → server verifies authorized copy coverage/decodability → durable AI job reserves remaining work within approval → reuse compatible observations or observe missing chunks → compose ordinary or approved narrated assembly → validate and save plan → ② draft preview and settlement → recoverable copy cleanup and original-retention renewal
+- render: server plan/ownership checks → ② explicitly chooses its eligible kind
+  - browser: freeze plan/components → locally decode originals and measure backgrounds → draw/mix/encode → verify output → local preview/download while uploading → commit private result → allow finalization
+  - server: current entitlement and finite queue admission → reserve monthly slot → durable native media work over verified originals → verify/store output → commit its count once
+  - failure/cancellation: preserve prior durable result and stop local or leased work without switching kind or invoking AI
 - correct: ② composed draft preview → select observed scene, cut or caption → contextual controls appear beside the preview/timeline, with phone details on explicit request → create/split/trim/reorder, set fixed rate and source sound, write/time/add/remove captions and select one to move/resize it or choose a named visual style sample over its representative frame → the draft autosaves → preview transformed draft → validate → render in the chosen kind → ② matching result; download sits under the preview and is available before confirmation
 - region editing: ① choose 사용 안 함 or a preset → ② storyline region slots → draft via an approved storyline/build action or type exact text → edit slot text → autosave and update the current preview without AI → render the changed plan
 - media interruption: keep the same owning job → bounded wait or media-stage retry under CLIP-162 → validated completion | exhausted/expired → failure; cancellation stops recovery
@@ -361,14 +410,15 @@
 ## constraints
 - source limits: 20 videos per project · 30 minutes combined
 - media capacity follows the worker budgets under ARCH-52; neither one shared CPU core nor GPU availability is a product assumption, and no elapsed-time guarantee is introduced
-- a browser render is bounded by the page's own memory and by the originals it already holds, and offloads video execution from the server workers; it relaxes no part of the output contract
+- browser media work is bounded by active frame/audio/cache windows and authorized originals; server copy validation and storage remain bounded costs, while local render execution does not depend on server rasterization or a render queue
 - result limits: 15–60 seconds on the playback-rate-transformed output timeline after transition overlap · exactly one of 9:16, 16:9 or 1:1 per project
 - source originals are private, time-limited editing inputs; confirmation or project deletion ends retention before the 24-hour deadline
 - analysis limits apply before provider transmission: at most 60 seconds · long edge at most 720 pixels · at most 8 MiB per compressed copy; the encoded request and temporary workspace have separate finite bounds, and compression never authorizes extra paid calls
 - analysis copies preserve source timing, visible events and audible speech; codec, frame-rate and bitrate choices require media-quality and resource verification under ARCH-24 and provider-contract verification under ARCH-33, not a change to original-footage rendering
 - scene observations cover every prepared source-time span with a concise scene or explicit unknown, uncertain or unusable state; completeness never promises semantic perfection, and an observation that cannot satisfy this bounded contract fails without silently omitting a span under CLIP-90
 - original uploads and a browser render's finished file remain browser-to-private-storage transfers; inline analysis is an API-to-provider exception using verified bounded copies from private attempt storage and does not enlarge public RPC bodies or make source objects public
-- worker-local originals, private attempt analysis objects and encoded request bodies are cleaned on success, failure and cancellation, with crash recovery retaining active-stage artifacts and reclaiming abandoned ones; private object originals follow CLIP-73 through CLIP-76 and CLIP-82, and media bytes/signed links never enter logs, durable job payloads or persistent browser storage
+- worker-local originals, private attempt analysis objects and encoded requests are recoverably cleaned; private originals retain CLIP-73 through CLIP-76/82, and media bytes/signed links never enter logs or durable job payloads
+- browser originals and decoded media are runtime-only; bounded temporary output spooling may use private origin storage under ARCH-65, is never an original cache and is reclaimed after completion, cancellation or abandoned-run recovery
 - credit authority is QUOTA-43 through QUOTA-54; a provider unit-price limit and a per-attempt user-credit ceiling are distinct protections
 - delivery must satisfy the common short-form upload contract — container, codec, resolution, frame rate and loudness (→CDS-52) — for all three ratios; a single platform's extra requirement belongs to a delivery profile, never to this contract or to the design constants (→CDS-78)
 - surface: directories and editor chrome follow THEME-39 and POST-43 through POST-49 and POST-65 through POST-69; step ② uses CLIP-53 through CLIP-57 while preserving the mounted page and one scroller, with THEME-40 governing the focused running view

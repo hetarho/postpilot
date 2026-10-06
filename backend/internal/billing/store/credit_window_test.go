@@ -311,7 +311,7 @@ func TestSupportAssignmentAtomicallyOpensAndUpgradesBenefits(t *testing.T) {
 	if err := h.handle.Reader.QueryRowContext(ctx, "SELECT count(*) FROM billing_events WHERE user_id='alice' AND kind='charge'").Scan(&charges); err != nil {
 		t.Fatal(err)
 	}
-	if daily != 15 || monthly != 290 || exports != 2 || subscriptions != 0 || charges != 0 {
+	if daily != 15 || monthly != 290 || exports != 0 || subscriptions != 0 || charges != 0 {
 		t.Fatalf("support benefits daily=%d monthly=%d exports=%d subscriptions=%d charges=%d", daily, monthly, exports, subscriptions, charges)
 	}
 	if err := h.service.AssignSupportTier(ctx, "alice", plan.Light); err != nil {
@@ -333,7 +333,7 @@ func TestSupportAssignmentAtomicallyOpensAndUpgradesBenefits(t *testing.T) {
 	if err := h.handle.Reader.QueryRowContext(ctx, "SELECT allowance FROM server_export_windows WHERE user_id='alice'").Scan(&exports); err != nil {
 		t.Fatal(err)
 	}
-	if exports < 2 || exports > 6 {
+	if exports != 0 {
 		t.Fatalf("prorated exports=%d", exports)
 	}
 }

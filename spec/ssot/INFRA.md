@@ -1,5 +1,5 @@
 # INFRA hosting and durability
-> r1 | Where postpilot's backend runs, what it may cost, how much data it may lose, how fast it recovers and how much it can render at once
+> r2 | Backend cost and durability, with browser-owned media work and explicitly bounded Max server-render capacity on the existing CPU deployment.
 
 ## decisions
 - INFRA-1 [o] scope: hosts, database operation, backups, recovery, render capacity and infrastructure cost of postpilot's backend; code-level deployment and media-worker contracts stay in ARCH (→ARCH-32 →ARCH-45 →ARCH-52 →ARCH-54), and the frontend stays static on Cloudflare Workers (→ARCH-4)
@@ -20,16 +20,24 @@
   - the rebuild is a written procedure, rehearsed as a full restore onto a fresh host every quarter and before any host move
 - INFRA-9 [o] every host is rebuildable from the repository, the off-host backups and the secret inventory alone; no host holds the only copy of data, configuration or a secret ← INFRA-8's 4 hours and any provider move depend on it
 - INFRA-10 [o] R2 objects (photos, clip sources, delivered clips) have no backup beyond the bucket's own durability; an object that a code path or the operator deletes is not recoverable
-- INFRA-11 [o] user media is processed only on machines rented under the operator's account from a hosting provider; personal, acquaintance-owned and marketplace-hosted machines never process it ← uploaded footage passes through the worker's disk and memory, and every processor must be one the privacy policy can name
-- INFRA-12 [o] two clips render at once from launch, each worker on CPU and memory of its own so neither slows the other (→ARCH-52); more render capacity is an owner decision within INFRA-2 ← one worker makes a second owner wait the 10–20 minutes the first clip takes before their render starts
+- INFRA-11 [o] browser preparation and rendering process only the authenticated owner's media on that owner's device; server-side processors remain machines rented under the operator's hosting accounts.
+  - no peer rendering, cross-account media distribution, acquaintance-owned worker or marketplace-hosted worker processes user footage
+  - privacy disclosures distinguish local browser computation, private storage and external AI analysis (→CLIP-22 →CLIP-203)
+- INFRA-12 [o] ordinary media execution is browser-first; commercial server rendering is Max-only and starts with one active render on the existing CPU deployment (→CLIP-206 →QUOTA-7 →ARCH-52).
+  - waiting work is finitely bounded and remains cancellable; overload refuses admission instead of accumulating an unbounded queue
+  - browser export never waits for a server rendering slot; lightweight validation and storage costs remain separately measured
+  - no second dedicated worker, GPU rental or automatic capacity purchase is required for launch; additional capacity is an owner decision within INFRA-2
 - INFRA-13 [o] a worker host may run outside Seoul and apart from the API host (→ARCH-54) ← workers pull jobs and move files through R2, so their distance from users costs nothing
-- INFRA-14 [o] each clip's wait between its render request and a worker claiming it is recorded where the owner can read it ← the signal for INFRA-12's capacity decision
-- INFRA-15 [o] a worker host sustains full CPU for a whole render: no credit-based burstable plan, and a provider's sustained-use throttling is checked against both workers running continuously before its host is chosen ← credit exhaustion slows a render about ninefold and runs it into the media timeout
-- INFRA-16 [o] other projects may share the API host but never a worker host, and postpilot's reserved capacity on the API host is not lent to them
-- INFRA-17 [?] the API host and the worker hosts are chosen by running the release render benchmark on candidate plans that satisfy INFRA-2, INFRA-3, INFRA-5 and INFRA-15
+- INFRA-14 [o] a server export shows its actual waiting/running state and configured wait expiry; queue delay, execution time and overload refusals are recorded for capacity decisions without a promised completion time.
+  - browser preparation, render and upload durations are recorded separately from server queue delay (→CLIP-207)
+- INFRA-15 [o] any added worker host is qualified under sustained rendering load and its explicit CPU/memory budgets; burst-credit exhaustion or provider throttling is included in the benchmark before selection.
+- INFRA-16 [o] the API and one CPU media worker may share the existing host with explicit CPU, memory and temporary-disk limits reserving API capacity; other projects receive no postpilot-reserved capacity (→ARCH-52).
+  - future dedicated worker hosts carry no unrelated projects
+- INFRA-17 [?] whether measured Max queue delay, validation cost and sustained resource use justify another hosting plan within INFRA-2; existing CPU placement remains the default until a benchmark supports a change
 
 ## flow
 - host loss: `/health` fails → operator alert(≤5 min) → fresh host from the repository → database restored to its latest point → secrets from the inventory → DNS switched → `/health` passes(≤4 h from the failure)
 
 ## chg
+- r2 261006 INFRA-11✎ hosting machines only→owner browser plus operator-hosted server processors; INFRA-12✎ two dedicated renders at launch→browser-first and one bounded Max CPU render; INFRA-14✎ worker-claim wait→separate browser/server timings; INFRA-15✎ two sustained workers→measured added capacity; INFRA-16✎ separate worker host→bounded existing-host colocation; INFRA-17✎ host selection→benchmark-triggered expansion
 - r1 261002 initial

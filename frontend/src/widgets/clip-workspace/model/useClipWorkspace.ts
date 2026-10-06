@@ -12,7 +12,7 @@ import {
 } from '@/entities/clip-project'
 import { clipRegionElementId, clipRegionRows } from '@/entities/clip-plan'
 import { isTerminal, progressLabel, progressRatio } from '@/entities/generation-job'
-import { useMyPlan } from '@/entities/plan'
+import { useMyPlan, hasServerExportAccess } from '@/entities/plan'
 import { useClipCorrection } from '@/features/correct-clip'
 import { useCancelClip } from '@/features/cancel-clip'
 import { discardClipDraftQueue, useClipDraftSave } from '@/features/edit-clip-project'
@@ -215,6 +215,7 @@ export function useClipWorkspace(ownerId: string, project: ClipProject) {
       !!project.result && !correction.dirty && project.renderedPlanRevision === correction.revision,
     serverWindow: myPlan?.serverExportWindow,
     serverPlan: myPlan?.plan,
+    serverEntitled: hasServerExportAccess(myPlan),
     // A revision states its own refusal beside its composer: the dock's alert is about the
     // render it commits.
     failure: job?.kind === 'revise_clip' ? undefined : generation.failure,

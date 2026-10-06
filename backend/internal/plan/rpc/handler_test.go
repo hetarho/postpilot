@@ -26,7 +26,7 @@ func (s stubExports) Current(context.Context, string, time.Time) (planrpc.Export
 
 func TestGetMyPlanKeepsExportCountsOutsideCreditBalance(t *testing.T) {
 	start := time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC)
-	ctx := auth.WithActor(context.Background(), auth.Actor{UserID: "alice", Plan: plan.Basic})
+	ctx := auth.WithActor(context.Background(), auth.Actor{UserID: "alice", Plan: plan.Max})
 	h := planrpc.NewHandler(stubLedger{}, stubEstimator{}).WithExports(stubExports{window: planrpc.ExportBalance{
 		CoverageID: "paid:alice", StartsAt: start, EndsAt: start.AddDate(0, 1, 0), Allowance: 6, Used: 2, Reserved: 1,
 	}})
@@ -37,6 +37,21 @@ func TestGetMyPlanKeepsExportCountsOutsideCreditBalance(t *testing.T) {
 	w := response.Msg.ServerExportWindow
 	if w == nil || w.Allowance != 6 || w.Used != 2 || w.Reserved != 1 || w.Remaining != 3 || w.EndsAt != "2026-10-01T00:00:00Z" || response.Msg.Balance.Credits != 220 {
 		t.Fatalf("export=%+v balance=%+v", w, response.Msg.Balance)
+	}
+}
+
+func TestLowerTiersKeepHistoricalExportCountsWithoutNewRemainingRights(t *testing.T) {
+	for _, tier := range []plan.Plan{plan.Free, plan.Light, plan.Basic, plan.Pro} {
+		ctx := auth.WithActor(t.Context(), auth.Actor{UserID: "alice", Plan: tier})
+		h := planrpc.NewHandler(stubLedger{}, stubEstimator{}).WithExports(stubExports{window: planrpc.ExportBalance{CoverageID: "old", Allowance: 6, Used: 2, Reserved: 1}})
+		response, err := h.GetMyPlan(ctx, connect.NewRequest(&postpilotv1.GetMyPlanRequest{}))
+		if err != nil {
+			t.Fatal(err)
+		}
+		w := response.Msg.ServerExportWindow
+		if w == nil || w.Allowance != 6 || w.Used != 2 || w.Reserved != 1 || w.Remaining != 0 {
+			t.Fatalf("%s: %+v", tier, w)
+		}
 	}
 }
 

@@ -94,6 +94,7 @@ export function ClipCorrectionWorkspace({
     capability?: ClipBrowserRenderCapability
     serverWindow?: MyPlan['serverExportWindow']
     serverPlan?: MyPlan['plan']
+    serverEntitled?: boolean
     start: (kind: ClipRenderKind) => void
   }
   /** The originals ② draws frames from: the local copies, and the way to reach an unexpired
@@ -734,6 +735,7 @@ export function ClipCorrectionWorkspace({
                     browserAvailable={browserCapability?.available ?? false}
                     serverWindow={render.serverWindow}
                     serverPlan={render.serverPlan}
+                    serverEntitled={render.serverEntitled}
                     browserRefusal={
                       browserCapability && !browserCapability.available
                         ? browserCapability.reason

@@ -651,7 +651,7 @@ func TestExportWindowAtIsTheCappedBenefitMonth(t *testing.T) {
 		return time.Date(2027, month, day, hour, 0, 0, 0, seoul)
 	}
 	anchor := at(time.January, 31, 10)
-	open := Coverage{ID: "paid", Anchor: anchor, Tier: plan.Pro}
+	open := Coverage{ID: "paid", Anchor: anchor, Tier: plan.Max}
 	for _, tc := range []struct {
 		name       string
 		coverage   Coverage
@@ -661,13 +661,13 @@ func TestExportWindowAtIsTheCappedBenefitMonth(t *testing.T) {
 		{"just before a boundary", open, at(time.February, 28, 10).Add(-time.Nanosecond), anchor, at(time.February, 28, 10)},
 		{"at a boundary, clamped to February's end", open, at(time.February, 28, 10), at(time.February, 28, 10), at(time.March, 31, 10)},
 		{"back on the 31st", open, at(time.April, 1, 0), at(time.March, 31, 10), at(time.April, 30, 10)},
-		{"coverage ending inside the month", Coverage{ID: "paid", Anchor: anchor, End: at(time.February, 15, 0), Tier: plan.Pro},
+		{"coverage ending inside the month", Coverage{ID: "paid", Anchor: anchor, End: at(time.February, 15, 0), Tier: plan.Max},
 			at(time.February, 10, 0), anchor, at(time.February, 15, 0)},
-		{"coverage ending after the month", Coverage{ID: "paid", Anchor: anchor, End: at(time.June, 1, 0), Tier: plan.Pro},
+		{"coverage ending after the month", Coverage{ID: "paid", Anchor: anchor, End: at(time.June, 1, 0), Tier: plan.Max},
 			at(time.February, 10, 0), anchor, at(time.February, 28, 10)},
 	} {
 		window, ok := ExportWindowAt("alice", tc.coverage, tc.at)
-		want := ExportWindow{UserID: "alice", CoverageID: "paid", Start: tc.start, End: tc.end, Allowance: 15}
+		want := ExportWindow{UserID: "alice", CoverageID: "paid", Start: tc.start, End: tc.end, Allowance: 60}
 		if !ok || !window.Start.Equal(want.Start) || !window.End.Equal(want.End) || window.UserID != want.UserID ||
 			window.CoverageID != want.CoverageID || window.Allowance != want.Allowance {
 			t.Errorf("%s: window = %+v ok=%v, want %+v", tc.name, window, ok, want)

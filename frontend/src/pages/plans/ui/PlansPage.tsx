@@ -245,6 +245,9 @@ export function PlansPage() {
             <Typography variant="meta" className="text-content-secondary mt-6 block text-center">
               {t('compare.clipCap', { ns: 'plans' })}
             </Typography>
+            <Typography variant="meta" className="text-content-secondary mt-1 block text-center">
+              {t('compare.browserRendering', { ns: 'plans' })}
+            </Typography>
           </section>
 
           <ProductionComparison

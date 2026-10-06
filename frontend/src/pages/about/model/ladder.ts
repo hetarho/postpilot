@@ -26,7 +26,7 @@ export const PUBLIC_LADDER: readonly PlanOffer[] = [
     dailyCredits: 15,
     monthlyBonus: 290,
     modelCeiling: 'value',
-    monthlyServerExports: 2,
+    monthlyServerExports: 0,
     recommended: false,
   },
   {
@@ -36,7 +36,7 @@ export const PUBLIC_LADDER: readonly PlanOffer[] = [
     dailyCredits: 45,
     monthlyBonus: 510,
     modelCeiling: 'balanced',
-    monthlyServerExports: 6,
+    monthlyServerExports: 0,
     recommended: false,
   },
   {
@@ -46,7 +46,7 @@ export const PUBLIC_LADDER: readonly PlanOffer[] = [
     dailyCredits: 85,
     monthlyBonus: 1070,
     modelCeiling: 'premium',
-    monthlyServerExports: 15,
+    monthlyServerExports: 0,
     recommended: true,
   },
   {

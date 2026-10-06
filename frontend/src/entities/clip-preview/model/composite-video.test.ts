@@ -5,6 +5,8 @@ import type { ClipEditPlan } from '@/entities/clip-plan'
 import { compositeBrowserVideo } from './composite-video'
 import fixture from './cut-timeline.fixture.json'
 import { RenderRasterCache } from './render-raster-cache'
+import { MediaPhaseRecorder } from '@/shared/lib'
+import { CLIP_VIDEO_MEASUREMENT_PHASES } from '../config/render-measurements'
 
 function bitmap(name: string) {
   return { name, width: 1920, height: 1080, close: vi.fn() } as unknown as ImageBitmap
@@ -39,7 +41,11 @@ function cellFor(frame: number) {
     height: 250,
   }
 }
-async function run(transitionMs = 200, captionFrame?: CompositeFramePort) {
+async function run(
+  transitionMs = 200,
+  captionFrame?: CompositeFramePort,
+  measurements?: MediaPhaseRecorder<(typeof CLIP_VIDEO_MEASUREMENT_PHASES)[number]>,
+) {
   const plan = clipTimelineFixture().plan
   plan.cuts[0] = {
     ...plan.cuts[0],
@@ -93,6 +99,7 @@ async function run(transitionMs = 200, captionFrame?: CompositeFramePort) {
         frames.push({ timestamp, duration, keyFrame })
       },
       progress,
+      measurements,
     },
   )
   return { result, sources, draws, load, frames, progress, context, cells }
@@ -102,6 +109,29 @@ type CompositeFramePort = (
   frame: number,
 ) => Promise<ReturnType<typeof cellFor> | undefined>
 describe('browser video composition', () => {
+  it('diagnostic recording preserves pixels, timestamps and bitmap release while exposing waits', async () => {
+    let clock = 0
+    const metrics = new MediaPhaseRecorder(CLIP_VIDEO_MEASUREMENT_PHASES, () => clock++)
+    const plain = await run()
+    const measured = await run(200, undefined, metrics)
+    const draws = (value: Awaited<ReturnType<typeof run>>) =>
+      value.draws.map((draw) => ({ args: draw.args, alpha: draw.alpha, frame: draw.frame }))
+    expect(draws(measured)).toEqual(draws(plain))
+    expect(measured.frames).toEqual(plain.frames)
+    expect(
+      measured.sources.every((source) => vi.mocked(source.image.close).mock.calls.length === 1),
+    ).toBe(true)
+    const snapshot = metrics.snapshot()
+    expect(snapshot.phases.sourceWait?.samples).toBe(measured.sources.length)
+    expect(snapshot.phases.assetWait?.samples).toBe(90)
+    expect(snapshot.phases.composeSubmit?.samples).toBeGreaterThan(measured.frames.length)
+    expect(snapshot.phases.encodeWait).toBeNull()
+    const failed = new MediaPhaseRecorder(CLIP_VIDEO_MEASUREMENT_PHASES, () => clock++)
+    await expect(
+      run(200, () => Promise.reject(new Error('CAPTION_FAILED')), failed),
+    ).rejects.toThrow('CAPTION_FAILED')
+    expect(failed.snapshot().phases.assetWait?.samples).toBe(2)
+  })
   it('uses rate-adjusted output intervals, focal cover crop, a 200 ms fade and 30 fps', async () => {
     const value = await run()
     expect(value.result).toEqual({ frameCount: 144, durationUs: 4_800_000 })

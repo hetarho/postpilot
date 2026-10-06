@@ -1,6 +1,6 @@
 import { clipCostMilli, clipsPerGrant, illustrativeMonthlyCredits } from './types'
 import { describe, expect, it } from 'vitest'
-import { postsPerFigure } from './types'
+import { postsPerFigure, hasServerExportAccess, type MyPlan, type PlanName } from './types'
 
 describe('postsPerFigure', () => {
   it("floors what a grant covers at a level's per-post credits", () => {
@@ -51,5 +51,26 @@ describe('clip estimates', () => {
         { sources: 3, seconds: 30 },
       ),
     ).toBe(0)
+  })
+})
+
+describe('server export access', () => {
+  const offers = (['free', 'light', 'basic', 'pro', 'max'] as const).map((plan) => ({
+    plan,
+    monthlyServerExports: plan === 'max' ? 60 : 0,
+  })) as MyPlan['offers']
+  const projection = (plan: PlanName) =>
+    ({ plan, offers, serverExportWindow: { remaining: 6 } }) as MyPlan
+  it.each(['free', 'light', 'basic', 'pro'] as const)(
+    'does not let %s use historical positive counts as rights',
+    (plan) => {
+      expect(hasServerExportAccess(projection(plan))).toBe(false)
+    },
+  )
+  it('uses current offer access, preserves the operator exemption and refuses missing authority', () => {
+    expect(hasServerExportAccess(projection('max'))).toBe(true)
+    expect(hasServerExportAccess(projection('master'))).toBe(true)
+    expect(hasServerExportAccess(undefined)).toBe(false)
+    expect(hasServerExportAccess({ ...projection('max'), offers: [] })).toBe(false)
   })
 })

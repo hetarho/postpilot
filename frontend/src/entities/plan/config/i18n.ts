@@ -63,6 +63,8 @@ export const i18n = {
       dailyReset: '다음 일일 지급',
       monthlyReset: '다음 월 혜택 갱신',
       exports: '서버 내보내기 {{remaining}} / {{allowance}}회 · {{at}} 갱신',
+      browserRendering:
+        '지원하는 기기에서는 브라우저 렌더링을 이용할 수 있어요. 서버 렌더링은 Max에서 제공해요.',
       lotDaily: '일일',
       lotCompensation: '오류 보상',
       lotMonthly: '월 정기',
@@ -194,6 +196,8 @@ export const i18n = {
       dailyReset: 'Next daily grant',
       monthlyReset: 'Next monthly benefit',
       exports: '{{remaining}} / {{allowance}} server exports · renews {{at}}',
+      browserRendering:
+        'Render in a supported browser/device. Server rendering is available with Max.',
       lotDaily: 'Daily',
       lotCompensation: 'Fault compensation',
       lotMonthly: 'Monthly',

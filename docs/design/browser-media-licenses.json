@@ -1,0 +1,369 @@
+{
+  "version": 1,
+  "lockfileSHA256": "d07c4a1bd3aeab4df41155c2d63d85e6a487959534ed7b27b4710315d7a07319",
+  "packages": [
+    {
+      "name": "@pixi/colord",
+      "version": "2.9.6",
+      "declaredLicense": "MIT",
+      "repository": "omgovich/colord",
+      "packageMetadataSHA256": "d92aec39b7b030ebb6419b8ca4da12fd1a9b7bbd12d2979ab019308b417507e8",
+      "packagedNotices": [],
+      "obligation": "Preserve applicable copyright, license and disclaimer notices.",
+      "topLevel": false,
+      "coveredSourceEvidence": null
+    },
+    {
+      "name": "@resvg/resvg-wasm",
+      "version": "2.6.2",
+      "declaredLicense": "MPL-2.0",
+      "repository": "https://github.com/yisibl/resvg-js",
+      "packageMetadataSHA256": "4a9efcb54b2670726ccf9b91086413676c3de0fae607cce3b8a5a0d25abaff48",
+      "packagedNotices": [],
+      "obligation": "Preserve notices and provide access to the covered source, including modifications, for distributed JS/WASM.",
+      "topLevel": true,
+      "coveredSourceEvidence": {
+        "url": "https://raw.githubusercontent.com/thx/resvg-js/v2.6.2/LICENSE",
+        "sha256": "4b89d4518bd135ab4ee154a7bce722246b57a98c3d7efc1a09409898160c2bd1",
+        "versionPinned": true
+      },
+      "wasmSourceDeclaration": {
+        "url": "https://raw.githubusercontent.com/thx/resvg-js/v2.6.2/Cargo.toml",
+        "sha256": "72880b4d3e64bd62caf033579a21057c97ed069002bdef67a0029b7fc6e340a9",
+        "declaredResvgVersion": "0.34.0",
+        "patchedResvgRevision": "3495d870",
+        "nativeReferenceVersion": "0.48.1",
+        "binaryDependencyGraphVerified": false,
+        "limit": "Published WASM binary provenance and patched Rust dependency licenses still require release review; native/WASM renderer versions are not assumed equivalent."
+      }
+    },
+    {
+      "name": "@soundtouchjs/core",
+      "version": "2.1.1",
+      "declaredLicense": "MPL-2.0",
+      "repository": "https://github.com/cutterbl/SoundTouchJS",
+      "packageMetadataSHA256": "b6624f855f7ad9007c78d2afb25a5477caa5c3fd4347c8732d81f95b73994139",
+      "packagedNotices": [
+        {
+          "file": "LICENSE",
+          "sha256": "753801acf995db0807e9dab615775310b1f74696e7776ee246bf9b31714cdaf9"
+        }
+      ],
+      "obligation": "Preserve notices and provide access to the covered source, including modifications, for distributed JS/WASM.",
+      "topLevel": true,
+      "coveredSourceEvidence": {
+        "url": "https://raw.githubusercontent.com/cutterbl/SoundTouchJS/d9e39a7ddcf74c7a145bbba45856f30068c82b79/packages/core/LICENSE",
+        "sha256": "753801acf995db0807e9dab615775310b1f74696e7776ee246bf9b31714cdaf9",
+        "versionPinned": true
+      },
+      "sourceRevision": "d9e39a7ddcf74c7a145bbba45856f30068c82b79"
+    },
+    {
+      "name": "@soundtouchjs/interpolation-strategy-lanczos",
+      "version": "2.1.1",
+      "declaredLicense": "MPL-2.0",
+      "repository": "https://github.com/cutterbl/SoundTouchJS",
+      "packageMetadataSHA256": "b2b022a08d6000020e6d4484c67648d2f3e73a1fd871bfc7ff95cddb2959c61f",
+      "packagedNotices": [
+        {
+          "file": "LICENSE",
+          "sha256": "753801acf995db0807e9dab615775310b1f74696e7776ee246bf9b31714cdaf9"
+        }
+      ],
+      "obligation": "Preserve notices and provide access to the covered source, including modifications, for distributed JS/WASM.",
+      "topLevel": false,
+      "coveredSourceEvidence": null
+    },
+    {
+      "name": "@types/dom-mediacapture-transform",
+      "version": "0.1.12",
+      "declaredLicense": "MIT",
+      "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped",
+      "packageMetadataSHA256": "0d4a78731fdf4dab2333dd750b530d3dcfe367069c49376720a39e03a9bba0b7",
+      "packagedNotices": [
+        {
+          "file": "LICENSE",
+          "sha256": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383"
+        }
+      ],
+      "obligation": "Preserve applicable copyright, license and disclaimer notices.",
+      "topLevel": false,
+      "coveredSourceEvidence": null
+    },
+    {
+      "name": "@types/dom-webcodecs",
+      "version": "0.1.13",
+      "declaredLicense": "MIT",
+      "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped",
+      "packageMetadataSHA256": "962672d1b0e1ed92d8a46060685fcc634c691bcb59f38a787472ac2126df884c",
+      "packagedNotices": [
+        {
+          "file": "LICENSE",
+          "sha256": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383"
+        }
+      ],
+      "obligation": "Preserve applicable copyright, license and disclaimer notices.",
+      "topLevel": false,
+      "coveredSourceEvidence": null
+    },
+    {
+      "name": "@types/earcut",
+      "version": "3.0.0",
+      "declaredLicense": "MIT",
+      "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped",
+      "packageMetadataSHA256": "2fe143a9a24ed33c08964698dd39d7bc08e2f3b587b88b7177197a8a378fbee3",
+      "packagedNotices": [
+        {
+          "file": "LICENSE",
+          "sha256": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383"
+        }
+      ],
+      "obligation": "Preserve applicable copyright, license and disclaimer notices.",
+      "topLevel": false,
+      "coveredSourceEvidence": null
+    },
+    {
+      "name": "@types/gradient-parser",
+      "version": "0.1.5",
+      "declaredLicense": "MIT",
+      "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped",
+      "packageMetadataSHA256": "5e46f588723c9c092a0f6fa26556367d5ff677431b5be4c36014ee089468c81e",
+      "packagedNotices": [
+        {
+          "file": "LICENSE",
+          "sha256": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383"
+        }
+      ],
+      "obligation": "Preserve applicable copyright, license and disclaimer notices.",
+      "topLevel": false,
+      "coveredSourceEvidence": null
+    },
+    {
+      "name": "@webgpu/types",
+      "version": "0.1.74",
+      "declaredLicense": "BSD-3-Clause",
+      "repository": "https://github.com/gpuweb/types",
+      "packageMetadataSHA256": "c58597e365f42b61a165210e49e90a864730ee4716473de67d36dfa42519ec99",
+      "packagedNotices": [
+        {
+          "file": "LICENSE",
+          "sha256": "ad88400fc55c2871ba2ed33930dc13001ef01907c2ddcbfa3caa8656e9142f05"
+        }
+      ],
+      "obligation": "Preserve applicable copyright, license and disclaimer notices.",
+      "topLevel": false,
+      "coveredSourceEvidence": null
+    },
+    {
+      "name": "@xmldom/xmldom",
+      "version": "0.8.15",
+      "declaredLicense": "MIT",
+      "repository": "git://github.com/xmldom/xmldom",
+      "packageMetadataSHA256": "35aecb16da42bf3843ed197db638dff79d178fc23783bfae77070fcfa4d0ae94",
+      "packagedNotices": [
+        {
+          "file": "LICENSE",
+          "sha256": "4da724fc305d81606b245b324d4d2586916b9d248b23d82183df753ace0fdf71"
+        }
+      ],
+      "obligation": "Preserve applicable copyright, license and disclaimer notices.",
+      "topLevel": false,
+      "coveredSourceEvidence": null
+    },
+    {
+      "name": "earcut",
+      "version": "3.2.4",
+      "declaredLicense": "ISC",
+      "repository": "git://github.com/mapbox/earcut",
+      "packageMetadataSHA256": "c48653ade72118ac2dd1c05bdfe4608e6ad9ae19b4b1c218b62af3fb272c81e4",
+      "packagedNotices": [
+        {
+          "file": "LICENSE",
+          "sha256": "0b348fff56384b43dbb37593906904e56d0f9deb51eae590d4dc6d427fbf1808"
+        }
+      ],
+      "obligation": "Preserve applicable copyright, license and disclaimer notices.",
+      "topLevel": false,
+      "coveredSourceEvidence": null
+    },
+    {
+      "name": "eventemitter3",
+      "version": "5.0.4",
+      "declaredLicense": "MIT",
+      "repository": "git://github.com/primus/eventemitter3",
+      "packageMetadataSHA256": "0dd9bc32a77be8238fad41d58aa5b24ccdfee79d8bcf4cbee85f16e3d15c1658",
+      "packagedNotices": [
+        {
+          "file": "LICENSE",
+          "sha256": "3aecc12b1cb28832b5f65ab64291de96568c3f236a74d646281b4491f7bcadbf"
+        }
+      ],
+      "obligation": "Preserve applicable copyright, license and disclaimer notices.",
+      "topLevel": false,
+      "coveredSourceEvidence": null
+    },
+    {
+      "name": "gifuct-js",
+      "version": "2.1.2",
+      "declaredLicense": "MIT",
+      "repository": "https://github.com/matt-way/gifuct-js",
+      "packageMetadataSHA256": "1e7ef2e860e4e37fb1c41ae146fcd456cda76d4d9e80f6dd73ecb93c79ae0772",
+      "packagedNotices": [
+        {
+          "file": "LICENSE",
+          "sha256": "8633cda68d7b47e98e3e563a2833e63792edeecdb24cab02bfb15f25c1b37072"
+        }
+      ],
+      "obligation": "Preserve applicable copyright, license and disclaimer notices.",
+      "topLevel": false,
+      "coveredSourceEvidence": null
+    },
+    {
+      "name": "ismobilejs",
+      "version": "1.1.1",
+      "declaredLicense": "MIT",
+      "repository": "https://github.com/kaimallea/isMobile",
+      "packageMetadataSHA256": "fa75a337970c3796eb19f60340a13f301a1a2ead018161753accf7c8de582afd",
+      "packagedNotices": [
+        {
+          "file": "LICENSE",
+          "sha256": "57c43c929cbc20653cb0e62620a413a8bc456888c1874ebc25d08e0122cd953e"
+        }
+      ],
+      "obligation": "Preserve applicable copyright, license and disclaimer notices.",
+      "topLevel": false,
+      "coveredSourceEvidence": null
+    },
+    {
+      "name": "js-binary-schema-parser",
+      "version": "2.0.3",
+      "declaredLicense": "MIT",
+      "repository": "https://github.com/matt-way/jsBinarySchemaParser",
+      "packageMetadataSHA256": "30f7493f5e528d41b190c8aca110f78cb6ab73ab13df384e94f92d409ad809ad",
+      "packagedNotices": [
+        {
+          "file": "LICENSE",
+          "sha256": "8633cda68d7b47e98e3e563a2833e63792edeecdb24cab02bfb15f25c1b37072"
+        }
+      ],
+      "obligation": "Preserve applicable copyright, license and disclaimer notices.",
+      "topLevel": false,
+      "coveredSourceEvidence": null
+    },
+    {
+      "name": "mediabunny",
+      "version": "1.58.0",
+      "declaredLicense": "MPL-2.0",
+      "repository": "https://github.com/Vanilagy/mediabunny",
+      "packageMetadataSHA256": "b15865a5e3cc0d5e755fff6ae4113aa547cc19a2eb22bdff1c44fea3cf81b4e3",
+      "packagedNotices": [
+        {
+          "file": "LICENSE",
+          "sha256": "3f3d9e0024b1921b067d6f7f88deb4a60cbe7a78e76c64e3f1d7fc3b779b9d04"
+        }
+      ],
+      "obligation": "Preserve notices and provide access to the covered source, including modifications, for distributed JS/WASM.",
+      "topLevel": true,
+      "coveredSourceEvidence": {
+        "url": "https://raw.githubusercontent.com/Vanilagy/mediabunny/v1.58.0/LICENSE",
+        "sha256": "3f3d9e0024b1921b067d6f7f88deb4a60cbe7a78e76c64e3f1d7fc3b779b9d04",
+        "versionPinned": true
+      }
+    },
+    {
+      "name": "parse-svg-path",
+      "version": "0.2.0",
+      "declaredLicense": "MIT",
+      "repository": "git://github.com/jkroso/parse-svg-path",
+      "packageMetadataSHA256": "d11ae2ae076b9395f94e0729214501f51ac3771a635f0997304376cfcef63a42",
+      "packagedNotices": [
+        {
+          "file": "LICENSE",
+          "sha256": "2d5ffdfe09268750ba687a149db8392038772e7f156db3a98b615a7de0cab76e"
+        }
+      ],
+      "obligation": "Preserve applicable copyright, license and disclaimer notices.",
+      "topLevel": false,
+      "coveredSourceEvidence": null
+    },
+    {
+      "name": "pixi-filters",
+      "version": "6.1.5",
+      "declaredLicense": "MIT",
+      "repository": "https://github.com/pixijs/filters",
+      "packageMetadataSHA256": "c995c8ce3eed91e1ed83c8adecdb12b5c55e82f7055fddd8db11eb27a0457e59",
+      "packagedNotices": [
+        {
+          "file": "LICENSE",
+          "sha256": "d554721b2cd409d9bc075d743bb34f960e05ba55de1818a62fa60caf21ca6188"
+        }
+      ],
+      "obligation": "Preserve applicable copyright, license and disclaimer notices.",
+      "topLevel": true,
+      "coveredSourceEvidence": null
+    },
+    {
+      "name": "pixi.js",
+      "version": "8.22.0",
+      "declaredLicense": "MIT",
+      "repository": "https://github.com/pixijs/pixijs",
+      "packageMetadataSHA256": "2bb6b7570ca5f4a062609b34fd16fecfa2a76e8c3599c67a5b996a276eabaa32",
+      "packagedNotices": [
+        {
+          "file": "LICENSE",
+          "sha256": "5ce7447bc57f7349ffc48338782fbcabe613696e00712b20d66bc58e780f9473"
+        }
+      ],
+      "obligation": "Preserve applicable copyright, license and disclaimer notices.",
+      "topLevel": true,
+      "coveredSourceEvidence": null
+    },
+    {
+      "name": "tiny-lru",
+      "version": "11.4.7",
+      "declaredLicense": "BSD-3-Clause",
+      "repository": "git://github.com/avoidwork/tiny-lru",
+      "packageMetadataSHA256": "58a0d04d3958c8a4ce25b93ea1d48d5cd4eef2b0e7835c88a1baf7758575cce6",
+      "packagedNotices": [
+        {
+          "file": "LICENSE",
+          "sha256": "8106f20bacca3558946439afb5e4854333f0a9944eee1c60488aa7ac7fc8f52b"
+        }
+      ],
+      "obligation": "Preserve applicable copyright, license and disclaimer notices.",
+      "topLevel": false,
+      "coveredSourceEvidence": null
+    }
+  ],
+  "unresolved": [],
+  "fonts": [
+    {
+      "file": "frontend/public/fonts/clip/LICENSE",
+      "license": "OFL-1.1",
+      "sha256": "db345ad0216d0b73ba5dd3a540507281da6695f234e0a4e70cf2e1a8f30d4331"
+    },
+    {
+      "file": "frontend/public/fonts/clip/LICENSE-Paperlogy",
+      "license": "OFL-1.1",
+      "sha256": "a5a9b6832b5d91b5389e258b82f788791493fb786979eb80b5e142b5664ba22a"
+    },
+    {
+      "file": "frontend/public/fonts/clip/LICENSE-Jua",
+      "license": "OFL-1.1",
+      "sha256": "44a7c6e4c5572392ae122d3b1d8c6ba6fd640a7797e675384585d947f2773e3c"
+    },
+    {
+      "file": "frontend/public/fonts/clip/LICENSE-NanumMyeongjo",
+      "license": "OFL-1.1",
+      "sha256": "8eb1c1019fe7fe6d0b6e7d7bbbba1d9cbdd969d8c5f26455708f6cfb8a77284c"
+    }
+  ],
+  "sourceAccessVerified": true,
+  "distributionApproved": false,
+  "limits": [
+    "Dependency metadata is an inventory, not a substitute for actual bundled-license review.",
+    "resvg-wasm embeds Rust dependencies whose versioned source/licenses require build-provenance review.",
+    "The production FFmpeg libx264 build is GPL-enabled; this browser inventory does not redistribute it.",
+    "Remotion is an optional comparison under its own license; it is not installed in the production bundle."
+  ]
+}

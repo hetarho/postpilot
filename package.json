@@ -19,7 +19,7 @@
     "lint:style": "node scripts/lint-style-escapes.mjs",
     "lint:style:probe": "node scripts/lint-style-escapes.mjs --probe",
     "test": "pnpm --filter ./frontend test",
-    "test:dev": "node --test scripts/dev.test.mjs",
+    "test:dev": "node --test scripts/dev.test.mjs scripts/browser-media-report.test.mjs scripts/browser-media-licenses.test.mjs",
     "smoke": "docker build --progress=plain --target production -t postpilot:gate -f backend/Dockerfile .",
     "smoke:media": "docker build --progress=plain --target media-smoke -t postpilot:gate-media -f backend/Dockerfile .",
     "smoke:input": "docker build --progress=plain --target clip-input-smoke -t postpilot:gate-input -f backend/Dockerfile .",
@@ -28,11 +28,16 @@
     "infra:up": "docker compose up -d",
     "infra:down": "docker compose down",
     "smoke:media-worker": "docker build --target media-worker-smoke -t postpilot:gate-media-worker -f backend/Dockerfile . && docker run --rm --network none --memory 1g --cpus 2 postpilot:gate-media-worker",
-    "smoke:media-release": "python3 scripts/media-release.py"
+    "smoke:media-release": "python3 scripts/media-release.py",
+    "test:browser-media": "node --test scripts/browser-media-report.test.mjs scripts/browser-media-licenses.test.mjs",
+    "benchmark:browser": "node scripts/browser-media-benchmark.mjs",
+    "benchmark:browser:container": "node scripts/browser-media-container.mjs",
+    "licenses:browser-media": "node scripts/browser-media-licenses.mjs"
   },
   "devDependencies": {
     "concurrently": "^9.2.1",
-    "haeram-spec-creator": "^0.2.4"
+    "haeram-spec-creator": "^0.2.4",
+    "playwright": "^1.63.0"
   },
   "packageManager": "pnpm@10.30.3",
   "engines": {

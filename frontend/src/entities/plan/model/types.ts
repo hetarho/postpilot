@@ -21,6 +21,15 @@ export function planLabel(plan: PlanName | undefined): string {
  *  operator tier, not something anyone is offered. */
 export const OFFERED_PLANS = ['free', 'light', 'basic', 'pro', 'max'] as const
 
+/** Current offer authority, independent of legacy positive export balances. */
+export function hasServerExportAccess(value: MyPlan | undefined): boolean {
+  return (
+    !!value?.plan &&
+    (value.plan === 'master' ||
+      value.offers.some((offer) => offer.plan === value.plan && offer.monthlyServerExports > 0))
+  )
+}
+
 /** One grant of credits. Consumption spends every expiring lot first by expiry — monthly,
  *  voucher and an expiring bonus alike — then never-expiring bonus, then purchased (QUOTA-12),
  *  which is the order the server sends and the order they are rendered in. */

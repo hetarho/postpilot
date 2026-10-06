@@ -157,6 +157,21 @@ func (s *GenerationService) startRender(ctx context.Context, user, id, batch str
 	if len(reuse) > 0 && reuse[0] && kind == clip.RenderServer && p.Result != nil && p.Result.Key != "" && p.Result.RenderKind() == kind && p.RenderedPlanRevision == revision {
 		return renderStarted{reused: true}, nil
 	}
+	operator := false
+	if kind == clip.RenderServer {
+		// Reuse above creates no work. Every new start resolves current rights
+		// before opening media/layout work, even with old positive window counts.
+		if s.prepareExport == nil {
+			return none, clip.ErrCompositionUnavailable
+		}
+		operator, err = s.prepareExport(ctx, user)
+		if err != nil {
+			return none, err
+		}
+		if !operator && s.exports == nil {
+			return none, clip.ErrCompositionUnavailable
+		}
+	}
 	active, err := s.jobs.Active(ctx, user, id)
 	if err != nil {
 		return none, err
@@ -255,13 +270,6 @@ func (s *GenerationService) startRender(ctx context.Context, user, id, batch str
 	}
 	reservation := ""
 	if s.exports != nil {
-		operator := false
-		if s.prepareExport != nil {
-			operator, err = s.prepareExport(ctx, user)
-			if err != nil {
-				return none, err
-			}
-		}
 		if !operator {
 			reservation = newID()
 			if err = s.exports.ReserveExport(ctx, user, id, revision, reservation, s.now()); err != nil {

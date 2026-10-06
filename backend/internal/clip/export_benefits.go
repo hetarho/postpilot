@@ -21,6 +21,7 @@ type ExportWindows interface {
 }
 
 var ErrExportAllowance = errors.New("server export allowance exhausted")
+var ErrServerExportPlan = errors.New("server export requires Max")
 
 // ExportAllowanceError carries the origin benefit month's exact balance and renewal.
 type ExportAllowanceError struct{ Window ExportWindow }

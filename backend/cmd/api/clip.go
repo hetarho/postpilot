@@ -13,6 +13,7 @@ import (
 	"github.com/postpilot/backend/internal/job"
 	jobstore "github.com/postpilot/backend/internal/job/store"
 	"github.com/postpilot/backend/internal/llm"
+	"github.com/postpilot/backend/internal/plan"
 	"github.com/postpilot/backend/internal/platform/config"
 	"github.com/postpilot/backend/internal/storage"
 	"github.com/postpilot/backend/internal/usage"
@@ -98,7 +99,10 @@ func newClipGeneration(ctx context.Context, cfg *config.Config, store *clipstore
 			if err != nil {
 				return false, err
 			}
-			if tier == "master" {
+			if !plan.AllowsServerExport(tier) {
+				return false, clip.ErrServerExportPlan
+			}
+			if tier == plan.Master {
 				return true, nil
 			}
 			_, err = models.ledger.BalanceFor(ctx, user, tier)

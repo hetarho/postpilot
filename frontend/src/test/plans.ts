@@ -154,7 +154,7 @@ export function registerPlanServices(router: ConnectRouter, options: FakePlansOp
           dailyCredits: 15,
           monthlyBonus: 290,
           modelCeiling: 'value',
-          monthlyServerExports: 2,
+          monthlyServerExports: 0,
         },
         {
           plan: ProtoPlan.BASIC,
@@ -162,7 +162,7 @@ export function registerPlanServices(router: ConnectRouter, options: FakePlansOp
           annualKrw: 49000,
           dailyCredits: 45,
           monthlyBonus: 510,
-          monthlyServerExports: 6,
+          monthlyServerExports: 0,
           modelCeiling: 'balanced',
         },
         {
@@ -171,7 +171,7 @@ export function registerPlanServices(router: ConnectRouter, options: FakePlansOp
           annualKrw: 99000,
           dailyCredits: 85,
           monthlyBonus: 1070,
-          monthlyServerExports: 15,
+          monthlyServerExports: 0,
           modelCeiling: 'premium',
           recommended: true,
         },

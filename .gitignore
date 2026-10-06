@@ -46,3 +46,6 @@ __pycache__/
 tmp/caption-styles/*.mp4
 tmp/caption-styles/stills/*.png
 tmp/caption-styles/fonts/*.png
+
+# Synthetic browser benchmark media, isolated SDK builds and local reports
+tmp/browser-media/

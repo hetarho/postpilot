@@ -207,11 +207,11 @@ func TestRefundEvidenceAndGuardAgreeOnWhatAPaymentFunded(t *testing.T) {
 				t.Fatal(err)
 			}
 			*clock = at.Add(2*24*time.Hour + time.Hour)
-			quote, err := h.service.QuoteChange(ctx, "alice", plan.Pro, billing.TermAnnual)
+			quote, err := h.service.QuoteChange(ctx, "alice", plan.Max, billing.TermAnnual)
 			if err != nil {
 				t.Fatal(err)
 			}
-			if _, applied, err := h.service.ChangeSubscriptionQuoted(ctx, "alice", plan.Pro, billing.TermAnnual, quote.ID); err != nil || !applied {
+			if _, applied, err := h.service.ChangeSubscriptionQuoted(ctx, "alice", plan.Max, billing.TermAnnual, quote.ID); err != nil || !applied {
 				t.Fatalf("upgrade applied=%t err=%v", applied, err)
 			}
 			order := chargeOrder(t, h, "upgrade")
@@ -219,18 +219,18 @@ func TestRefundEvidenceAndGuardAgreeOnWhatAPaymentFunded(t *testing.T) {
 			*clock = clock.Add(24 * time.Hour)
 			ledger := usage.NewService(usagestore.New(h.handle.Writer, h.handle.Reader), nil, 0,
 				billingCoverage{h.service}, testRates).WithClock(func() time.Time { return *clock })
-			if _, err := ledger.BalanceFor(ctx, "alice", plan.Pro); err != nil {
+			if _, err := ledger.BalanceFor(ctx, "alice", plan.Max); err != nil {
 				t.Fatal(err)
 			}
 			lazy := idsWhere(t, h, `SELECT id FROM credit_lots WHERE coverage_id=? AND kind='daily'
 				AND issuance_cause='lazy' AND window_start>=?`, sub.CoverageID, fundingStamp(quote.EffectiveAt))
-			pro, _ := plan.CommercialOffer(plan.Pro)
+			raised, _ := plan.CommercialOffer(plan.Max)
 			var granted int
 			if len(lazy) != 1 {
 				t.Fatalf("lazy daily lots in the upgrade's window = %v", lazy)
 			}
-			if err := h.handle.Reader.QueryRow(`SELECT granted FROM credit_lots WHERE id=?`, lazy[0]).Scan(&granted); err != nil || granted != pro.DailyCredits {
-				t.Fatalf("lazy daily grant=%d err=%v, want the raised tier's %d", granted, err, pro.DailyCredits)
+			if err := h.handle.Reader.QueryRow(`SELECT granted FROM credit_lots WHERE id=?`, lazy[0]).Scan(&granted); err != nil || granted != raised.DailyCredits {
+				t.Fatalf("lazy daily grant=%d err=%v, want the raised tier's %d", granted, err, raised.DailyCredits)
 			}
 			lots := append(lazy, idsWhere(t, h, `SELECT id FROM credit_lots WHERE correlation_id=?`, order)...)
 			slices.Sort(lots)

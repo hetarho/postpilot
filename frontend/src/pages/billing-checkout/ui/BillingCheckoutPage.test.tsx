@@ -57,9 +57,7 @@ describe('BillingCheckoutPage', () => {
     })
 
     expect(await screen.findByRole('heading', { name: 'Pro' })).toBeInTheDocument()
-    expect(
-      screen.getByText('하루 85 크레딧 · 매월 보너스 1070 크레딧 · 서버 내보내기 15회'),
-    ).toBeInTheDocument()
+    expect(screen.getByText('하루 85 크레딧 · 매월 보너스 1070 크레딧')).toBeInTheDocument()
     expect(screen.getByText('9,900원')).toBeInTheDocument()
     await user.click(screen.getByRole('tab', { name: '연간' }))
     expect(screen.getByText('12개월에 10개월 요금')).toBeInTheDocument()
@@ -140,4 +138,13 @@ describe('BillingCheckoutPage', () => {
       '구독할 유료 플랜을 다시 선택해 주세요.',
     )
   })
+})
+
+it('adds the server allowance only for the Max checkout', async () => {
+  renderAppAt('/billing/checkout?tier=max&term=monthly', {
+    user: verifiedUser,
+    plans: { plan: ProtoPlan.FREE },
+    billing: { paymentMethod: true },
+  })
+  expect(await screen.findByText('서버 내보내기 월 60회')).toBeInTheDocument()
 })

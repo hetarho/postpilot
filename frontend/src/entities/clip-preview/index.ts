@@ -16,7 +16,7 @@ export type {
   BrowserVideoTrack,
   EncodedClipChunk,
 } from './model/browser-video'
-export { previewElementIDs, previewTimeline } from './model/draft-preview'
+export { previewElementIDs, previewTimeline, previewMotion } from './model/draft-preview'
 export type { ClipPreviewOverlay } from './model/draft-preview'
 export { CaptionSheets } from './model/caption-sheets'
 export type { CaptionCell, CaptionFrameLoader, CaptionFramePage } from './model/caption-sheets'

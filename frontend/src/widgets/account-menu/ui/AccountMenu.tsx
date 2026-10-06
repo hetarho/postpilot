@@ -2,7 +2,7 @@ import type { ComponentType, ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from '@tanstack/react-router'
 import { CreditCard, LogOut, Settings, ShieldCheck, Sparkles, UserRound } from 'lucide-react'
-import { useMyPlan, planLabel, type MyPlan } from '@/entities/plan'
+import { useMyPlan, planLabel, hasServerExportAccess, type MyPlan } from '@/entities/plan'
 import { formatDateTime } from '@/shared/lib'
 import { useLogout, useSession } from '@/entities/session'
 import {
@@ -294,7 +294,7 @@ function CreditSummary({
           )}
         </dl>
       )}
-      {myPlan.serverExportWindow && (
+      {hasServerExportAccess(myPlan) && myPlan.serverExportWindow && (
         <Typography variant="meta">
           {t('balance.exports', {
             remaining: myPlan.serverExportWindow.remaining,
@@ -302,6 +302,9 @@ function CreditSummary({
             at: formatDateTime(myPlan.serverExportWindow.endsAt),
           })}
         </Typography>
+      )}
+      {!hasServerExportAccess(myPlan) && (
+        <Typography variant="meta">{t('balance.browserRendering')}</Typography>
       )}
       {/* The lots behind the total, in the order they will be spent. A single number cannot say
           that half the balance lapses at the month boundary and half does not, which is the one

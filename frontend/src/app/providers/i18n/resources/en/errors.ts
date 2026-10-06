@@ -150,8 +150,10 @@ export const errors = {
     'The analysis video could not be prepared within the safe size limit, so AI generation did not start. Check the sources before retrying.',
   CLIP_WORKSPACE_LIMIT:
     'Video processing stopped because temporary storage is insufficient. Your previous result is preserved. Try again later.',
+  CLIP_SERVER_EXPORT_PLAN_REQUIRED:
+    'New server renders require Max. You can export in a supported browser/device.',
   CLIP_SERVER_EXPORT_EXHAUSTED:
-    'Your server exports for this month are used up. Wait for renewal, upgrade your plan, or export in a supported browser.',
+    'Your server exports for this month are used up. Wait for renewal or export in a supported browser.',
   CLIP_MODEL_INPUT_UNSUPPORTED:
     'The selected model does not support clip video input. Choose a model that supports clip analysis.',
   CLIP_MEDIA_UNAVAILABLE:

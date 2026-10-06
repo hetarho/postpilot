@@ -177,12 +177,12 @@ func TestPricingLifecycleFromFreeThroughRefund(t *testing.T) {
 		t.Fatal("annual monthly benefit charged again")
 	}
 	*clock = clock.Add(10 * 24 * time.Hour)
-	quote, err = h.service.QuoteChange(ctx, "alice", plan.Basic, billing.TermAnnual)
+	quote, err = h.service.QuoteChange(ctx, "alice", plan.Max, billing.TermAnnual)
 	if err != nil {
 		t.Fatal(err)
 	}
-	upgraded, applied, err := h.service.ChangeSubscriptionQuoted(ctx, "alice", plan.Basic, billing.TermAnnual, quote.ID)
-	if err != nil || !applied || upgraded.Tier != plan.Basic || !upgraded.AnchorAt.Equal(start) || !upgraded.TermEnd.Equal(annual.TermEnd) {
+	upgraded, applied, err := h.service.ChangeSubscriptionQuoted(ctx, "alice", plan.Max, billing.TermAnnual, quote.ID)
+	if err != nil || !applied || upgraded.Tier != plan.Max || !upgraded.AnchorAt.Equal(start) || !upgraded.TermEnd.Equal(annual.TermEnd) {
 		t.Fatalf("mid-cycle upgrade=%+v applied=%t err=%v", upgraded, applied, err)
 	}
 	anchor.sub = &upgraded
@@ -211,7 +211,7 @@ func TestPricingLifecycleFromFreeThroughRefund(t *testing.T) {
 	}
 	// A reported service failure charges confirmed cost and grants half as separate compensation.
 	failed := paid
-	failed.Plan, failed.JobID = plan.Basic, "service-fault"
+	failed.Plan, failed.JobID = plan.Max, "service-fault"
 	if err := credits.Hold(ctx, failed); err != nil {
 		t.Fatal(err)
 	}

@@ -17,6 +17,7 @@ export {
   PLANS,
   isPlanName,
   planLabel,
+  hasServerExportAccess,
   clipCostMilli,
   clipsPerGrant,
   postsAffordable,

@@ -14,9 +14,9 @@ func TestOfferRules(t *testing.T) {
 		grade                                  string
 	}{
 		{plan.Free, 0, 0, 0, 0, 0, "none"},
-		{plan.Light, 1900, 19000, 15, 290, 2, "value"},
-		{plan.Basic, 4900, 49000, 45, 510, 6, "balanced"},
-		{plan.Pro, 9900, 99000, 85, 1070, 15, "premium"},
+		{plan.Light, 1900, 19000, 15, 290, 0, "value"},
+		{plan.Basic, 4900, 49000, 45, 510, 0, "balanced"},
+		{plan.Pro, 9900, 99000, 85, 1070, 0, "premium"},
 		{plan.Max, 29900, 299000, 235, 3170, 60, "top"},
 	}
 	offers := plan.Offers()
@@ -34,6 +34,25 @@ func TestOfferRules(t *testing.T) {
 	}
 	if got := plan.Packs(); len(got) != 3 || got[0].PriceKRW != 3000 || got[0].Credits != 1000 || got[1].PriceKRW != 9000 || got[1].Credits != 3000 || got[2].PriceKRW != 30000 || got[2].Credits != 10000 {
 		t.Errorf("packs = %+v", got)
+	}
+}
+
+func TestServerExportRightsAreIndependentOfRetainedBalances(t *testing.T) {
+	for _, tier := range []plan.Plan{plan.Free, plan.Light, plan.Basic, plan.Pro, "", "unknown", "MAX"} {
+		if plan.AllowsServerExport(tier) {
+			t.Fatalf("%q obtained new native access", tier)
+		}
+	}
+	for _, tier := range []plan.Plan{plan.Max, plan.Master} {
+		if !plan.AllowsServerExport(tier) {
+			t.Fatalf("%q lost native access", tier)
+		}
+	}
+	start := time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC)
+	end := start.Add(30 * 24 * time.Hour)
+	quote, err := plan.QuoteUpgrade(plan.Pro, plan.Max, false, start, end, start, end, start.Add(15*24*time.Hour))
+	if err != nil || quote.ServerExports != 30 {
+		t.Fatalf("Max half-month upgrade=%+v %v", quote, err)
 	}
 }
 
@@ -127,11 +146,11 @@ func TestProrationBoundariesAndRepeatedUpgrades(t *testing.T) {
 	paidEnd := plan.CoverageEnd(anchor, anchor, true)
 	benefitEnd := plan.MonthBoundary(anchor, 1)
 	first, err := plan.QuoteUpgrade(plan.Light, plan.Basic, true, anchor, paidEnd, anchor, benefitEnd, anchor)
-	if err != nil || first.ChargeKRW != 30000 || first.BonusCredits != 220 || first.ServerExports != 4 {
+	if err != nil || first.ChargeKRW != 30000 || first.BonusCredits != 220 || first.ServerExports != 0 {
 		t.Errorf("light→basic = %+v, %v", first, err)
 	}
 	second, err := plan.QuoteUpgrade(plan.Basic, plan.Pro, true, anchor, paidEnd, anchor, benefitEnd, anchor)
-	if err != nil || second.ChargeKRW != 50000 || second.BonusCredits != 560 || second.ServerExports != 9 {
+	if err != nil || second.ChargeKRW != 50000 || second.BonusCredits != 560 || second.ServerExports != 0 {
 		t.Errorf("basic→pro = %+v, %v", second, err)
 	}
 }

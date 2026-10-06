@@ -4,7 +4,7 @@ import { preferredClipRenderKind } from './render-kind'
 it.each([
   [undefined, true, 'browser'],
   ['browser', true, 'browser'],
-  ['server', true, 'server'],
+  ['server', true, 'browser'],
   [undefined, false, 'server'],
   ['browser', false, 'server'],
   ['server', false, 'server'],

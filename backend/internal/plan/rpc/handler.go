@@ -163,6 +163,9 @@ func (h *Handler) GetMyPlan(ctx context.Context, _ *connect.Request[postpilotv1.
 				StartsAt: wireTime(current.StartsAt), EndsAt: wireTime(current.EndsAt),
 				Allowance: int32(current.Allowance), Used: int32(current.Used), Reserved: int32(current.Reserved),
 				Remaining: int32(max(0, current.Allowance-current.Used-current.Reserved))}
+			if !plan.AllowsServerExport(acting) {
+				serverWindow.Remaining = 0
+			}
 		} else {
 			serverWindow = &postpilotv1.ServerExportWindow{EndsAt: wireTime(balance.RenewsAt)}
 		}

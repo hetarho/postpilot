@@ -12,7 +12,25 @@ async function open(name: string) {
 
 it('offers the browser first on a new project and renders the kind the owner picks', async () => {
   const onRender = vi.fn()
-  render(<ClipRenderAction browserAvailable pending={false} disabled={false} onRender={onRender} />)
+  render(
+    <ClipRenderAction
+      serverPlan="max"
+      serverEntitled
+      serverWindow={{
+        coverageId: 'max',
+        startsAt: '',
+        endsAt: '',
+        allowance: 60,
+        used: 0,
+        reserved: 0,
+        remaining: 60,
+      }}
+      browserAvailable
+      pending={false}
+      disabled={false}
+      onRender={onRender}
+    />,
+  )
   // ONE trigger, naming no kind: where the render runs is chosen per render (CLIP-153).
   expect(screen.getAllByRole('button')).toHaveLength(1)
   const choice = await open('렌더하기')
@@ -26,9 +44,11 @@ it('offers the browser first on a new project and renders the kind the owner pic
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
 })
 
-it('leads with the last successful kind and reads 다시 렌더 only for a render of the current plan', async () => {
+it('offers the supported browser before the last successful kind and reads 다시 렌더 only for a render of the current plan', async () => {
   const props = {
     lastKind: 'server' as const,
+    serverPlan: 'max' as const,
+    serverEntitled: true,
     browserAvailable: true,
     pending: false,
     disabled: false,
@@ -37,8 +57,8 @@ it('leads with the last successful kind and reads 다시 렌더 only for a rende
   const view = render(<ClipRenderAction {...props} currentRender />)
   const choice = await open('다시 렌더')
   expect(choice.getAllByRole('button', { name: /에서 렌더$/ }).map((b) => b.textContent)).toEqual([
-    '서버에서 렌더',
     '브라우저에서 렌더',
+    '서버에서 렌더',
   ])
   await userEvent.keyboard('{Escape}')
   view.rerender(<ClipRenderAction {...props} />)
@@ -49,6 +69,8 @@ it('keeps the browser option, refused with its reason, while browser rendering i
   const onRender = vi.fn()
   render(
     <ClipRenderAction
+      serverPlan="master"
+      serverEntitled
       lastKind="browser"
       browserRefusal="capability"
       pending={false}
@@ -81,7 +103,8 @@ it('shows the monthly server balance and keeps browser export available when slo
   render(
     <ClipRenderAction
       browserAvailable
-      serverPlan="basic"
+      serverPlan="max"
+      serverEntitled
       serverWindow={{
         coverageId: 'paid',
         startsAt: '2026-09-01T00:00:00Z',
@@ -99,7 +122,77 @@ it('shows the monthly server balance and keeps browser export available when slo
   const choice = await open('렌더하기')
   expect(choice.getByRole('button', { name: '서버에서 렌더' })).toBeDisabled()
   expect(choice.getByText(/사용 5, 예약 1, 남음 0\/6/)).toBeInTheDocument()
-  expect(choice.getByRole('link', { name: '요금제 보기' })).toHaveAttribute('href', '/plans')
+  expect(choice.queryByRole('link', { name: '요금제 보기' })).not.toBeInTheDocument()
+  expect(choice.getByText(/갱신돼요/)).toBeInTheDocument()
   await userEvent.click(choice.getByRole('button', { name: '브라우저에서 렌더' }))
   expect(onRender).toHaveBeenCalledExactlyOnceWith('browser')
+})
+
+it.each(['free', 'light', 'basic', 'pro'] as const)(
+  'refuses new server work for %s despite old positive balances',
+  async (serverPlan) => {
+    const onRender = vi.fn()
+    render(
+      <ClipRenderAction
+        browserAvailable
+        serverPlan={serverPlan}
+        serverWindow={{
+          coverageId: 'old',
+          startsAt: '',
+          endsAt: '',
+          allowance: 6,
+          used: 0,
+          reserved: 0,
+          remaining: 6,
+        }}
+        pending={false}
+        disabled={false}
+        onRender={onRender}
+      />,
+    )
+    const choice = await open('렌더하기')
+    expect(choice.getByRole('button', { name: '서버에서 렌더' })).toBeDisabled()
+    expect(choice.getByText(/새 서버 렌더링은 Max/)).toBeInTheDocument()
+    expect(choice.getByRole('link', { name: '요금제 보기' })).toHaveAttribute('href', '/plans')
+    await userEvent.click(choice.getByRole('button', { name: '서버에서 렌더' }))
+    expect(onRender).not.toHaveBeenCalled()
+    await userEvent.click(choice.getByRole('button', { name: '브라우저에서 렌더' }))
+    expect(onRender).toHaveBeenCalledExactlyOnceWith('browser')
+  },
+)
+
+it('keeps an unchanged existing server file reusable after a downgrade', async () => {
+  const onRender = vi.fn()
+  render(
+    <ClipRenderAction
+      lastKind="server"
+      currentRender
+      serverPlan="basic"
+      browserAvailable
+      pending={false}
+      disabled={false}
+      onRender={onRender}
+    />,
+  )
+  const choice = await open('다시 렌더')
+  expect(choice.getByText(/현재 저장된 서버 결과/)).toBeInTheDocument()
+  await userEvent.click(choice.getByRole('button', { name: '서버에서 렌더' }))
+  expect(onRender).toHaveBeenCalledExactlyOnceWith('server')
+})
+
+it('keeps unknown rights closed without automatically starting either executor', async () => {
+  const onRender = vi.fn()
+  render(
+    <ClipRenderAction
+      browserRefusal="capability"
+      pending={false}
+      disabled={false}
+      onRender={onRender}
+    />,
+  )
+  const choice = await open('렌더하기')
+  expect(choice.getByRole('button', { name: '서버에서 렌더' })).toBeDisabled()
+  expect(choice.getByRole('button', { name: '브라우저에서 렌더' })).toBeDisabled()
+  expect(choice.getByText(/현재 플랜을 확인한 뒤/)).toBeInTheDocument()
+  expect(onRender).not.toHaveBeenCalled()
 })

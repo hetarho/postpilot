@@ -5,6 +5,8 @@ import type { VideoWorkerInput, VideoWorkerOutput } from '../model/video-worker-
 import { compositeBrowserVideo } from '../model/composite-video'
 import { RenderRasterCache } from '../model/render-raster-cache'
 import type { CaptionCell } from '../model/caption-sheets'
+import { MediaPhaseRecorder } from '@/shared/lib'
+import { CLIP_VIDEO_MEASUREMENT_PHASES } from '../config/render-measurements'
 
 const send = (message: VideoWorkerOutput, transfer: Transferable[] = []) =>
   self.postMessage(message, { transfer })
@@ -13,6 +15,9 @@ const waiting = new Map<number, (bitmap: ImageBitmap) => void>()
 const waitingCells = new Map<number, (cell: CaptionCell | undefined) => void>()
 
 async function render(input: BrowserVideoInput) {
+  const measurements = input.collectMeasurements
+    ? new MediaPhaseRecorder(CLIP_VIDEO_MEASUREMENT_PHASES)
+    : undefined
   const config = clipBrowserEncoderConfig(input.ratio).video
   const canvas = new OffscreenCanvas(config.width, config.height)
   const context = canvas.getContext('2d', { alpha: false })
@@ -45,6 +50,7 @@ async function render(input: BrowserVideoInput) {
     encoder.configure(config)
     const timing = await compositeBrowserVideo(input, {
       context,
+      measurements,
       source: (fingerprint, timeMs) =>
         new Promise((resolve) => {
           const id = ++requestId
@@ -62,25 +68,44 @@ async function render(input: BrowserVideoInput) {
       releaseAssets: (keys) => bitmaps.retain(keys),
       encode: async (timestamp, duration, keyFrame) => {
         // A bounded batch also surfaces codec failures before requesting more source frames.
-        if (encoder.encodeQueueSize >= CLIP_BROWSER_RENDER.encodeQueueFrames) await encoder.flush()
+        if (encoder.encodeQueueSize >= CLIP_BROWSER_RENDER.encodeQueueFrames) {
+          if (measurements) await measurements.measureAsync('encodeWait', () => encoder.flush())
+          else await encoder.flush()
+        }
         if (failure) throw failure
+        const submitEnd = measurements?.begin('encodeSubmit')
         const frame = new VideoFrame(canvas, { timestamp, duration })
         try {
           encoder.encode(frame, { keyFrame })
         } finally {
           frame.close()
+          submitEnd?.()
         }
       },
       progress: (progress) => send({ type: 'progress', progress }),
     })
-    await encoder.flush()
+    if (measurements) await measurements.measureAsync('encodeWait', () => encoder.flush())
+    else await encoder.flush()
     if (failure) throw failure
     if (!decoderConfig || chunks.length !== timing.frameCount)
       throw new Error('CLIP_VIDEO_TRACK_INVALID')
     send(
-      { type: 'done', track: { config, decoderConfig, chunks, ...timing } },
+      {
+        type: 'done',
+        track: {
+          config,
+          decoderConfig,
+          chunks,
+          ...timing,
+          ...(measurements ? { measurements: measurements.snapshot() } : {}),
+        },
+      },
       chunks.map((chunk) => chunk.data.buffer),
     )
+  } catch (error) {
+    if (measurements && error instanceof Error)
+      Object.assign(error, { measurements: measurements.snapshot() })
+    throw error
   } finally {
     if (encoder.state !== 'closed') encoder.close()
     bitmaps.retain(new Set())
@@ -91,7 +116,16 @@ self.onmessage = (event: MessageEvent<VideoWorkerInput>) => {
   const message = event.data
   if (message.type === 'start') {
     void render(message.input).catch((error: unknown) =>
-      send({ type: 'error', error: error instanceof Error ? error.message : String(error) }),
+      send({
+        type: 'error',
+        error: error instanceof Error ? error.message : String(error),
+        ...(error instanceof Error && 'measurements' in error
+          ? {
+              measurements:
+                error.measurements as import('../model/browser-video').BrowserVideoMeasurements,
+            }
+          : {}),
+      }),
     )
     return
   }

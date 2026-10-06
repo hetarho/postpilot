@@ -72,5 +72,8 @@ func generationDeps(f clip.ClipFinisher, p clip.QuotePricing, a clip.AccountingR
 	if a == nil {
 		a = neutralAccounting{}
 	}
-	return clipapp.GenerationDeps{Voices: clip.UnavailableSpokenVoices{}, Finisher: f, Pricing: p, Accounting: a, Admission: neutralAdmission{}}
+	return clipapp.GenerationDeps{Voices: clip.UnavailableSpokenVoices{}, Finisher: f, Pricing: p, Accounting: a, Admission: neutralAdmission{},
+		// These media fixtures exercise the operator path. Commercial entitlement
+		// and numeric reservations are tested with explicit current-tier ports.
+		PrepareExport: func(context.Context, string) (bool, error) { return true, nil }}
 }

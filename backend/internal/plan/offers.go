@@ -13,11 +13,15 @@ type offerRule struct {
 
 var offerRules = map[Plan]offerRule{
 	Free:  {modelCeiling: "none"},
-	Light: {1900, 19000, 15, 290, "value", 2},
-	Basic: {4900, 49000, 45, 510, "balanced", 6},
-	Pro:   {9900, 99000, 85, 1070, "premium", 15},
+	Light: {1900, 19000, 15, 290, "value", 0},
+	Basic: {4900, 49000, 45, 510, "balanced", 0},
+	Pro:   {9900, 99000, 85, 1070, "premium", 0},
 	Max:   {29900, 299000, 235, 3170, "top", 60},
 }
+
+// AllowsServerExport is independent of retained window counts. Only current
+// commercial Max access or the operator exemption permits a new native export.
+func AllowsServerExport(tier Plan) bool { return tier == Max || tier == Master }
 
 // ModelGradeRequired is the first paid offer that may use a curated grade.
 // Free is a separate classification available to every offer. An empty or

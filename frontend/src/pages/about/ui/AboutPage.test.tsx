@@ -23,7 +23,7 @@ const TIERS = [
     annualKrw: 19000,
     dailyCredits: 15,
     monthlyBonus: 290,
-    monthlyServerExports: 2,
+    monthlyServerExports: 0,
     modelCeiling: 'value',
   },
   {
@@ -32,7 +32,7 @@ const TIERS = [
     annualKrw: 49000,
     dailyCredits: 45,
     monthlyBonus: 510,
-    monthlyServerExports: 6,
+    monthlyServerExports: 0,
     modelCeiling: 'balanced',
   },
   {
@@ -41,7 +41,7 @@ const TIERS = [
     annualKrw: 99000,
     dailyCredits: 85,
     monthlyBonus: 1070,
-    monthlyServerExports: 15,
+    monthlyServerExports: 0,
     modelCeiling: 'premium',
   },
   {
@@ -128,9 +128,11 @@ describe.each(['ko', 'en'] as const)('About page in %s', (locale) => {
         continue
       }
       expect(card.getAllByText(new RegExp(tier.dailyCredits.toString())).length).toBeGreaterThan(0)
-      expect(
-        card.getAllByText(new RegExp(tier.monthlyServerExports.toString())).length,
-      ).toBeGreaterThan(0)
+      if (tier.monthlyServerExports > 0) {
+        expect(card.getByText(/(서버 내보내기|server exports)/)).toHaveTextContent('60')
+      } else {
+        expect(card.queryByText(/(서버 내보내기|server exports)/)).not.toBeInTheDocument()
+      }
       expect(
         card.getByText(new RegExp(tier.monthlyKrw.toLocaleString('en-US'))),
       ).toBeInTheDocument()

@@ -1,5 +1,5 @@
 # QUOTA plans, credits, metering
-> r34 | Paid plans grant daily AI credits and monthly bonuses with model and server-export entitlements; free models cost no credits, while paid AI work reserves and settles confirmed usage at a job-frozen KRW conversion. Billing and cash refunds belong to BILL.
+> r35 | Paid plans grant daily AI credits and monthly bonuses with model access; Max alone includes commercial server exports, while browser exports spend no export count. AI work reserves and settles confirmed usage at a job-frozen KRW conversion; BILL owns payments and refunds.
 
 ## decisions
 - QUOTA-1 [o] every account carries exactly one plan `free | light | basic | pro | max | master`; free is the provisioning default, light/basic/pro/max are paid offers and master is operator-only. Stored plans and wire mappings reject unknown values without renumbering existing enum identities.
@@ -12,12 +12,14 @@
   | tier / ko name | monthly KRW | annual KRW | daily credits | monthly bonus | paid model ceiling | monthly server exports |
   |---|---|---|---|---|---|---|
   | free / 무료 | 0 | - | 0 | 0 | none; free models only | 0 |
-  | light / 라이트 | 1900 | 19000 | 15 | 290 | value | 2 |
-  | basic / 베이직 | 4900 | 49000 | 45 | 510 | balanced | 6 |
-  | pro / 프로 | 9900 | 99000 | 85 | 1070 | premium | 15 |
+  | light / 라이트 | 1900 | 19000 | 15 | 290 | value | 0 |
+  | basic / 베이직 | 4900 | 49000 | 45 | 510 | balanced | 0 |
+  | pro / 프로 | 9900 | 99000 | 85 | 1070 | premium | 0 |
   | max / 맥스 | 29900 | 299000 | 235 | 3170 | top | 60 |
   - paid grades are cumulative; all tiers may use separately managed free models (→MODEL-57 →MODEL-68)
   - pro alone is recommended; master is not sold and keeps QUOTA-16's operator exemption
+  - Max alone may admit a new commercial server export; browser rendering remains available to every tier on a supported device, independently of AI-model and credit entitlement
+  - a previously admitted export retains its originating reservation; changing the offer never deletes a stored result, rewrites historical counts or revokes accepted work
   - daily and monthly figures are separate entitlements, never an immediately spendable monthly sum; BILL owns charges and subscription coverage
 - QUOTA-8 [o] every number in the ladder is a code-owned product rule in `backend/internal/plan`, published to the client; the frontend hardcodes none ← two deploys must never disagree
 - QUOTA-9 [o] signup and payment-method registration grant no credits. Credits arise from paid daily/monthly grants, purchased packs, voucher redemption, fault compensation (→QUOTA-60) or an explicit operator grant; free-model access requires no credit grant.
@@ -65,7 +67,8 @@
 - QUOTA-28 [o] `/plans` compares free/light/basic/pro/max and is the subscription entry.
   - one monthly/annual selector immediately above the cards changes every paid card's displayed price together; monthly is the initial selection, and the ten-for-twelve saving is stated accurately once, on the annual option (→QUOTA-55), never on a card
   - monthly shows the listed monthly charge; annual shows the full twelve-month upfront charge with one clearly approximate monthly-equivalent line beneath it
-  - a card holds only, in this order: tier with at most one state label (current or recommended), the selected-term price, its button, then four benefit lines: daily credits, monthly bonus, highest eligible model grade and monthly server exports
+  - a paid card holds only, in this order: tier with at most one state label (current or recommended), the selected-term price, its button, then daily credits, monthly bonus and highest eligible model grade; Max additionally shows its monthly server-export allowance
+  - state browser rendering as the shared supported-device capability below the cards; Light, Basic and Pro show no included-server-export claim or zero-valued export benefit
   - the free card replaces the four lines with free-model access and its provider-limited caveat, and shows no zero-valued benefit
   - no production estimate, per-post figure, estimate basis or shared condition sits inside a card; the 60-second clip cap is stated once below the cards
   - every card has exactly one button in the same position under the price, chosen by billing state; no button suggests that the card itself charges money:
@@ -79,7 +82,7 @@
     | free, as the current plan | disabled, naming the current plan |
     | a paid card, for master | Subscribe, disabled (→QUOTA-68 →BILL-20) |
     | free, for master | disabled, naming the free plan |
-  - keep only pro marked as recommended and make price/action and the four benefit labels legible in both themes without relying on colour alone (→THEME-41)
+  - keep only pro marked as recommended and make price/action and the applicable benefit labels legible in both themes without relying on colour alone (→THEME-41)
   - stack on phones and reflow five offers without horizontal scroll; retain THEME-37/41's promotional primitives
   - current-tier management and renewal/cancellation/refund details live on BILL's screen; About mirrors the offer without checkout (→MKT-5)
 - QUOTA-29 [o] insufficient credit blocks cost-incurring AI work, not compatible free-model work. Manual editing, reading, preview and existing-result download remain available; a new server export independently requires its export entitlement (→CLIP-193).
@@ -150,7 +153,10 @@
   - zero confirmed charge means zero compensation; retain raw supplier cost and display compensation separately
   - this grants credit, not cash or model rights; cash refunds remain BILL-11's
 - QUOTA-61 [o] an admitted job retains the credit/export period secured at start across daily/monthly resets and paid-coverage expiry; newly issued grants are untouched. Unused reserved credit retains its original expiry and does not revive if expired. New jobs and explicit new retries require current entitlement; settlement never charges the same job twice.
-- QUOTA-62 [o] successful server exports use a separate monthly allowance under QUOTA-7 and CLIP-193/194, not AI credits. Monthly benefit renewal replaces unused counts without rollover, including during annual coverage; extra-credit purchases and vouchers buy no export counts.
+- QUOTA-62 [o] Max's successful server exports use a separate monthly allowance under QUOTA-7 and CLIP-193/194, not AI credits.
+  - Free, Light, Basic and Pro admit no new server export; a positive retained count cannot override current plan entitlement
+  - browser exports spend no monthly export count; master retains its existing operator exemption and the same execution-capacity limits
+  - monthly renewal replaces unused counts without rollover, including during annual coverage; extra-credit purchases and vouchers buy no export counts
 - QUOTA-63 [o] a master account leaves master only through another master's support assignment (`AdminService.SetUserPlan`, →QUOTA-4) or the shell `api setplan`; no other path moves it ← an operator must never lose administrative access to their own click, and the shell stays the recovery path
   - `SetUserPlan` targeting the calling account is refused server-side with its own reason, whatever tier is requested and however many masters exist
   - 계정 관리 shows the caller's own row as a fixed tier label with no tier control; hiding the control is an affordance, the server refusal is the rule
@@ -219,4 +225,4 @@
 - frontend reads contracts through `entities/plan`; `/plans`, admin plan management, the account menu and header share the published offer and balance semantics
 
 ## chg
-- r34 261005 QUOTA-14✎ every call held at 30 000 prompt tokens except clips→also except a voice analysis, held at the larger of 30 000 and one token per character of its prompt
+-

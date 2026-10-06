@@ -1,9 +1,9 @@
 import type { ClipRenderKind } from './types'
 
-/** Preference belongs to the last successful result, never to a stored setting. */
+/** Supported local execution leads independently of the historical result kind. */
 export function preferredClipRenderKind(
-  lastKind: ClipRenderKind | undefined,
+  _lastKind: ClipRenderKind | undefined,
   browserAvailable: boolean,
 ): ClipRenderKind {
-  return browserAvailable ? (lastKind ?? 'browser') : 'server'
+  return browserAvailable ? 'browser' : 'server'
 }

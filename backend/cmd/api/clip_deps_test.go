@@ -72,5 +72,8 @@ func generationDeps(f clip.ClipFinisher, p clip.QuotePricing, a clip.AccountingR
 	if a == nil {
 		a = neutralAccounting{}
 	}
-	return clipapp.GenerationDeps{Voices: clip.UnavailableSpokenVoices{}, Finisher: f, Pricing: p, Accounting: a, Admission: neutralAdmission{}}
+	return clipapp.GenerationDeps{Voices: clip.UnavailableSpokenVoices{}, Finisher: f, Pricing: p, Accounting: a, Admission: neutralAdmission{},
+		// These media fixtures explicitly use the allowance-exempt native path;
+		// current commercial rights are tested against real account rows in clip/store.
+		PrepareExport: func(context.Context, string) (bool, error) { return true, nil }}
 }

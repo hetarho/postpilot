@@ -383,6 +383,7 @@ export function ClipWorkspace({ ownerId, project }: { ownerId: string; project: 
           current: render.current,
           serverWindow: render.serverWindow,
           serverPlan: render.serverPlan,
+          serverEntitled: render.serverEntitled,
           capability: render.capability,
           start: render.start,
         }}

@@ -23,9 +23,9 @@
 ## ssot
 | id | rev | tasked | pending | [?] |
 |---|---|---|---|---|
-| ARCH | 15 | 9 | ARCH-52+ ARCH-53+ ARCH-56+ ARCH-57+ ARCH-34✎ | 0 |
+| ARCH | 16 | 9 | ARCH-52+ ARCH-53+ ARCH-56+ ARCH-57+ ARCH-34✎ ARCH-11✎ ARCH-45✎ ARCH-60+ ARCH-61+ ARCH-62+ ARCH-63+ ARCH-64+ ARCH-65+ ARCH-66+ ARCH-67+ ARCH-68+ | 0 |
 | AUTH | 11 | 11 | - | 0 |
-| QUOTA | 34 | 34 | - | 0 |
+| QUOTA | 35 | 35 | - | 0 |
 | POST | 32 | 31 | POST-108+ | 0 |
 | VOICE | 8 | 7 | VOICE-32✎ | 0 |
 | GEN | 23 | 23 | - | 0 |
@@ -37,14 +37,14 @@
 | THEME | 22 | 22 | - | 0 |
 | MKT | 9 | 9 | - | 0 |
 | VIDEO | 6 | 6 | - | 0 |
-| CLIP | 55 | 55 | - | 2 |
-| CDS | 32 | 32 | - | 1 |
+| CLIP | 56 | 56 | - | 2 |
+| CDS | 33 | 33 | - | 1 |
 | BILL | 9 | 9 | - | 0 |
 | MEM | 5 | 5 | - | 2 |
 | QUAL | 7 | 7 | - | 0 |
 | GIFT | 3 | 3 | - | 0 |
 | DUB | 3 | 3 | - | 0 |
-| INFRA | 1 | 0 | all | 1 |
+| INFRA | 2 | 0 | all | 1 |
 
 ## review
 | id | st |
@@ -65,31 +65,46 @@
 |---|---|---|---|---|
 | T539 | Qualify the complete Korean voice-creation milestone | ARCH DUB MODEL CDS THEME | T538 | blocked@261005 |
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
+| T589 | Restrict new commercial server exports to Max | ARCH QUOTA CLIP | - | doing@261006.br |
+| T590 | Bound Max server-render admission and waiting | ARCH CLIP INFRA | T589 | todo |
+| T591 | Freeze one browser composition and time contract | ARCH CLIP CDS | T588 | todo |
+| T592 | Decode selected video ranges in a bounded browser pipeline | ARCH CLIP CDS | T591 | todo |
+| T593 | Bound selected audio and immutable narration processing | ARCH CLIP CDS DUB | T591 | todo |
+| T594 | Draw bundled typography and static components locally | ARCH CLIP CDS | T591 | todo |
+| T595 | Animate caption transforms and masks from output time | ARCH CLIP CDS | T594 | todo |
+| T596 | Port caption blur, light, colour and glitch effects | ARCH CLIP CDS | T595 | todo |
+| T597 | Render ember caption geometry and particles locally | ARCH CLIP CDS | T596 | todo |
+| T598 | Measure caption backgrounds from local original frames | ARCH CLIP CDS | T592 T594 | todo |
+| T599 | Stream browser output and promote the verified private result | ARCH CLIP CDS | T592 T593 T595 T596 T597 T598 | todo |
+| T600 | Use the browser composition engine throughout editing previews | ARCH CLIP CDS | T592 T593 T594 T595 T596 T597 T598 | todo |
+| T601 | Prepare bounded AI analysis copies in the browser | ARCH CLIP CDS | T592 T602 | todo |
+| T602 | Authorize and verify browser-prepared analysis artifacts | ARCH CLIP QUOTA | T591 | todo |
+| T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | todo |
+| T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | todo |
 
 ## next
-- T586/T587/T605 speech catalog registration, common pricing and public cost references are complete. T539/T550 retain real voice/listening/export/device qualification and require MODEL r31 revalidation; ordinary production voice/narration readiness stays closed.
-- update-ssot ARCH so ARCH-10 makes the production database PostgreSQL as INFRA-6 states (ARCH-10 still says SQLite), then create-task INFRA r1 (all) and ARCH (ARCH-52+ ARCH-53+ ARCH-56+ ARCH-57+ ARCH-34✎); create-task POST r32 (POST-108+ implemented by 12d2f428; verification-only); create-task VOICE r8 (VOICE-32✎ implemented by 68ae9a79; verification-only); update-ssot VOICE-31 remains open.
-- ops: lower TEMPLATE_PHOTO_ROW_MAX / VITE_TEMPLATE_PHOTO_ROW_MAX to 3 wherever production sets them explicitly (VPS .env, Cloudflare build vars).
-- ideation searchable-details continues: per-post search inflow from the owner's Naver statistics screenshots.
+- implement-task T589, then follow T590-T604 dependencies: browser media baseline/licenses, Max admission, local composition/codecs/motion, verified analysis copies and independent release gates. T539/T550 retain real voice/listening qualification and require current browser-contract revalidation.
+- ARCH r16 and INFRA r2 browser changes are mapped to T588-T604; earlier ARCH revisions and unrelated INFRA database/backups remain unconsumed, so ARCH tasked=9 and INFRA tasked=0 stay. ARCH-10/INFRA-6 database alignment, POST r32 and VOICE r8 verification-only deltas and VOICE-31 remain outside this scope.
+- ops: lower TEMPLATE_PHOTO_ROW_MAX / VITE_TEMPLATE_PHOTO_ROW_MAX to 3 in explicit production overrides. Ideation searchable-details continues; ordinary voice/narration readiness remains closed until its existing qualification passes.
 
 ## log
+- 261006 T589 start: Max-only commercial server admission and browser-first controls, preserving previously accepted work and usage history
+- 261006 T588 done: measured browser baseline, common output verification and version/license evidence; 3307 FE tests and local CI passed, SDK timeline and real-device gates remain unqualified
 - 261006 T605 done: friendly voice roles, sourced expiring cost references and precise public-rate draft defaults; 3306 FE tests and all local checks passed
 - 261006 T605 start: labelled creation/reading models, sourced public cost references and exact prefilled pricing drafts; MODEL r31 consumed
 - 261006 update-ssot MODEL start: explain voice design versus script reading, show public cost references and prefill common account-price drafts
+- 261006 T588 start: reproducible browser media phase/resource baselines and qualified dependency/license inventory
+- 261006 create-task browser media done: T588-T604; CLIP r56 CDS r33 QUOTA r35 consumed, scoped ARCH/INFRA mappings preserve earlier pending work
+- 261006 T586/T587 freshness: ARCH r16 browser execution and QUOTA r35 commercial-export changes do not affect speech catalog administration; task bases synchronized
 - 261006 T587 done: list administration and common pricing UI; 3292 FE tests, complete local CI and deterministic generation passed
 - 261006 T586 done: unique server-owned registrations, common tariff snapshots and retained legacy bindings; all BE tests passed after sequential clip-store recheck
+- 261006 create-task browser media start: consume CLIP r56 CDS r33 QUOTA r35; map scoped ARCH r16 and INFRA r2 changes without consuming older infrastructure work
+- 261006 update-ssot ARCH r16 CLIP r56 CDS r33 QUOTA r35 INFRA r2: browser media contracts, qualified motion/proxies and bounded Max-only exports
+- 261006 planning impact: T539/T550 require browser-contract revalidation; T586/T587 retain unchanged speech decisions but must check advanced ARCH/QUOTA bases; active task files are not edited
+- 261006 update-ssot CLIP CDS QUOTA and create-architecture start: browser-first media execution, motion parity and analysis-quality qualification
 - 261006 T587 start: list registration, direct grade changes, optional synthesis settings and common tariff editor
 - 261006 T586 start: server-owned speech bindings, unique catalog registrations and atomic common tariff snapshots
 - 261006 create-task MODEL r30 done: T586 server registration/pricing then T587 list administration
 - 261006 create-task MODEL start: implement r30 speech catalog registration and common verified pricing
 - 261006 update-ssot MODEL r30: single ElevenLabs catalog registration, optional synthesis controls and common pricing; T539/T550 remain blocked on real qualification
 - 261006 update-ssot MODEL start: simplify the single-supplier speech catalog to list registration and product-managed defaults/pricing
-- 261005 T585 done: actionable speech setup reasons, truthful saved-list failure/recovery, 3289 FE tests and all local CI checks passed
-- 261005 T585 start: distinguish missing speech setup from supplier failure and unknown saved-list state; development credential is absent
-- 261005 speech catalog diagnosis start: inspect provider connection, catalog failures and saved-list state before correcting administration feedback
-- 261005 T550 blocked: lifecycle/readiness implementation, full local CI, five CPU narration/boundary cases, ordinary parity and Chromium editing/export checks passed; real supplier/human qualification is deferred
-- 261005 T550 start: durable private speech cleanup, finalization provenance and complete offline workflow/boundary qualification
-- 261005 T549 done: independent bounded browser narration, exact durable speech fingerprints, 3282 FE tests, full local CI, CPU smokes and browser/server decoded parity passed
-- 261005 T549 start: bounded natural-speed browser audio and frozen speech fingerprints for output verification
-- 261005 T548 done: owned natural-speed worker narration, immutable output provenance, 3269 FE tests, full local CI and CPU-image audio/ordinary parity passed
-- 261005 T548 start: owned immutable speech admission, versioned worker retrieval and independent natural-speed final mixing

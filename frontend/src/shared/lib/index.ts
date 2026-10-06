@@ -1,5 +1,7 @@
 export { isInAppPath, SIGNED_IN_HOME } from './redirect'
 export { createAudioProcessor } from './media'
+export { MediaPhaseRecorder } from './media'
+export type { MediaPhaseMeasurement, MediaPhaseSnapshot } from './media'
 export { integratedLoudness48k, normalizeLoudness48k, truePeak48k } from './media'
 export { mp4HasAudio, mp4AudioDecodedBytes } from './media'
 export type { AudioNormalization, EncodedAudioTrack, PcmChannels } from './media'

@@ -192,6 +192,8 @@ func toConnectError(err error) error {
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip target duration is required", postpilotv1.FailureReason_CLIP_TARGET_DURATION_REQUIRED, nil)
 	case errors.Is(err, clip.ErrBusy):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip is busy", postpilotv1.FailureReason_CLIP_BUSY, nil)
+	case errors.Is(err, clip.ErrServerExportPlan):
+		return rpcserver.NewAppError(connect.CodePermissionDenied, "server export requires Max", postpilotv1.FailureReason_CLIP_SERVER_EXPORT_PLAN_REQUIRED, nil)
 	case errors.Is(err, clip.ErrExportAllowance):
 		var quota *clip.ExportAllowanceError
 		params := map[string]string{}

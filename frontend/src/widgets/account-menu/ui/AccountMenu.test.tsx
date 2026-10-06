@@ -233,3 +233,46 @@ describe('AccountMenu', () => {
     expect(await screen.findByText('크레딧을 불러오지 못했어요.')).toBeInTheDocument()
   })
 })
+
+it('keeps lower-tier historical counts out of current server benefits', async () => {
+  const user = userEvent.setup()
+  renderAppAt('/posts', {
+    user: USER,
+    plans: {
+      plan: ProtoPlan.PRO,
+      serverExportWindow: {
+        coverageId: 'old',
+        startsAt: '2026-10-01T00:00:00Z',
+        endsAt: '2026-11-01T00:00:00Z',
+        allowance: 6,
+        used: 0,
+        reserved: 0,
+        remaining: 6,
+      },
+    },
+  })
+  const panel = within(await openAccountPopover(user))
+  expect(panel.queryByText(/서버 내보내기 6/)).not.toBeInTheDocument()
+  expect(panel.getByText(/지원하는 기기에서는 브라우저 렌더링/)).toBeInTheDocument()
+})
+
+it('shows the current Max server balance independently of AI credits', async () => {
+  const user = userEvent.setup()
+  renderAppAt('/posts', {
+    user: USER,
+    plans: {
+      plan: ProtoPlan.MAX,
+      serverExportWindow: {
+        coverageId: 'max',
+        startsAt: '2026-10-01T00:00:00Z',
+        endsAt: '2026-11-01T00:00:00Z',
+        allowance: 60,
+        used: 3,
+        reserved: 2,
+        remaining: 55,
+      },
+    },
+  })
+  const panel = within(await openAccountPopover(user))
+  expect(panel.getByText(/서버 내보내기 55 \/ 60회/)).toBeInTheDocument()
+})

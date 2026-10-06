@@ -38,7 +38,7 @@ function cardControls(card: HTMLElement) {
 }
 
 describe('the plan cards', () => {
-  it('holds only tier, price, one button and four benefits, with shared copy outside', async () => {
+  it('holds tier, price, one button and current benefits, with shared copy outside', async () => {
     renderAppAt('/plans', { user: USER, plans: { plan: ProtoPlan.BASIC } })
     const items = await cards()
     expect(items).toHaveLength(5)
@@ -46,9 +46,9 @@ describe('the plan cards', () => {
       within(await screen.findByRole('region', { name: '플랜' })).getAllByRole('list')[0],
     ).toHaveClass('md:grid-cols-2', 'xl:grid-cols-5')
     for (const [index, name, monthly, daily, bonus, exports, level] of [
-      [1, 'Light', 1900, 15, 290, 2, '가성비'],
-      [2, 'Basic', 4900, 45, 510, 6, '밸런스'],
-      [3, 'Pro', 9900, 85, 1070, 15, '고급'],
+      [1, 'Light', 1900, 15, 290, 0, '가성비'],
+      [2, 'Basic', 4900, 45, 510, 0, '밸런스'],
+      [3, 'Pro', 9900, 85, 1070, 0, '고급'],
       [4, 'Max', 29900, 235, 3170, 60, '최고'],
     ] as const) {
       const card = within(items[index])
@@ -62,7 +62,7 @@ describe('the plan cards', () => {
         `매일 ${daily} 크레딧 지급`,
         `매월 보너스 ${bonus} 크레딧`,
         `무료 모델 + ${level} 등급까지`,
-        `서버 내보내기 월 ${exports}회`,
+        ...(exports > 0 ? [`서버 내보내기 월 ${exports}회`] : []),
       ])
       expect(cardControls(items[index])).toHaveLength(1)
     }

@@ -4,6 +4,8 @@ import type { PreparedAsset } from './preview-assets'
 import type { CaptionCell } from './caption-sheets'
 import { CLIP_BROWSER_RENDER } from '@/entities/clip-design/@x/clip-preview'
 import type { BrowserVideoInput, BrowserVideoProgress } from './browser-video'
+import type { MediaPhaseRecorder } from '@/shared/lib'
+import type { CLIP_VIDEO_MEASUREMENT_PHASES } from '../config/render-measurements'
 
 interface CompositePorts {
   context: Pick<
@@ -17,6 +19,7 @@ interface CompositePorts {
   releaseAssets: (keys: Set<string>) => void
   encode: (timestamp: number, duration: number, keyFrame: boolean) => Promise<void>
   progress: (value: BrowserVideoProgress) => void
+  measurements?: MediaPhaseRecorder<(typeof CLIP_VIDEO_MEASUREMENT_PHASES)[number]>
 }
 
 /** Both the preview and export read the plan's resolved intervals and manifest motion. The
@@ -30,13 +33,21 @@ export async function compositeBrowserVideo(input: BrowserVideoInput, ports: Com
   if (!totalFrames) throw new Error('CLIP_RENDER_EMPTY')
   const assets = [...input.assets].sort((a, b) => a.layer - b.layer)
   const ctx = ports.context
+  const measurements = ports.measurements
   for (let frame = 0; frame < totalFrames; frame++) {
     const timeMs = (frame * 1000) / fps
+    const matteEnd = measurements?.begin('composeSubmit')
     ctx.globalAlpha = 1
     ctx.fillStyle = CLIP_BROWSER_RENDER.matte
     ctx.fillRect(0, 0, config.width, config.height)
+    matteEnd?.()
     for (const current of frameLayers(timeline, frame)) {
-      const bitmap = await ports.source(current.cut.fingerprint, current.sourceMs)
+      const bitmap = measurements
+        ? await measurements.measureAsync('sourceWait', () =>
+            ports.source(current.cut.fingerprint, current.sourceMs),
+          )
+        : await ports.source(current.cut.fingerprint, current.sourceMs)
+      const drawEnd = measurements?.begin('composeSubmit')
       try {
         const crop = previewCrop(
           bitmap.width,
@@ -54,6 +65,7 @@ export async function compositeBrowserVideo(input: BrowserVideoInput, ports: Com
           (crop.height * config.height) / 100,
         )
       } finally {
+        drawEnd?.()
         bitmap.close()
       }
     }
@@ -64,17 +76,24 @@ export async function compositeBrowserVideo(input: BrowserVideoInput, ports: Com
       // motion and all, so nothing here adds to it: the browser owns only which
       // frame belongs where (CLIP-159).
       if (asset.representativeFrame) {
-        const cell = await ports.captionFrame(asset, frame)
+        const cell = measurements
+          ? await measurements.measureAsync('assetWait', () => ports.captionFrame(asset, frame))
+          : await ports.captionFrame(asset, frame)
         if (!cell) continue
+        const cellEnd = measurements?.begin('composeSubmit')
         try {
           ctx.globalAlpha = 1
           ctx.drawImage(cell.bitmap, cell.x, cell.y, cell.width, cell.height)
         } finally {
+          cellEnd?.()
           cell.bitmap.close()
         }
         continue
       }
-      const bitmap = await ports.asset(asset)
+      const bitmap = measurements
+        ? await measurements.measureAsync('assetWait', () => ports.asset(asset))
+        : await ports.asset(asset)
+      const assetEnd = measurements?.begin('composeSubmit')
       // A static style is one raster moved the way that style declares (CDS-4):
       // the server chain fades and settles it from these very in/out/dy numbers,
       // so a browser render that held it still delivered a different clip from
@@ -83,6 +102,7 @@ export async function compositeBrowserVideo(input: BrowserVideoInput, ports: Com
       const motion = previewMotion(asset, timeMs)
       ctx.globalAlpha = motion.opacity
       ctx.drawImage(bitmap, asset.x, asset.y + motion.dy, asset.width, asset.height)
+      assetEnd?.()
     }
     const timestamp = Math.round((frame * 1_000_000) / fps)
     const duration = Math.round(((frame + 1) * 1_000_000) / fps) - timestamp

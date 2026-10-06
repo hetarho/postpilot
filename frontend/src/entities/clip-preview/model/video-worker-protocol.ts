@@ -1,4 +1,9 @@
-import type { BrowserVideoInput, BrowserVideoProgress, BrowserVideoTrack } from './browser-video'
+import type {
+  BrowserVideoInput,
+  BrowserVideoProgress,
+  BrowserVideoTrack,
+  BrowserVideoMeasurements,
+} from './browser-video'
 
 export type VideoWorkerInput =
   | { type: 'start'; input: BrowserVideoInput }
@@ -20,4 +25,4 @@ export type VideoWorkerOutput =
   | { type: 'frames'; requestId: number; instanceId: string; frame: number }
   | { type: 'progress'; progress: BrowserVideoProgress }
   | { type: 'done'; track: BrowserVideoTrack }
-  | { type: 'error'; error: string }
+  | { type: 'error'; error: string; measurements?: BrowserVideoMeasurements }

@@ -338,7 +338,7 @@ func TestSeedExportWindowsEndWithTheCoverage(t *testing.T) {
 	exports := &capturedExports{}
 	credits := seedBenefitCredits{Service: usage.NewService(store, noModels{}, 0, anchors{auth: authSvc}, usage.NewRateSelector(noRates{}, store)), exports: exports}
 	now := time.Now()
-	coverage := billing.Coverage{ID: "support:alice", Anchor: now.Add(-time.Hour), End: now.Add(24 * time.Hour), Tier: plan.Pro, DailyTier: plan.Basic}
+	coverage := billing.Coverage{ID: "support:alice", Anchor: now.Add(-time.Hour), End: now.Add(24 * time.Hour), Tier: plan.Max, DailyTier: plan.Basic}
 	if err := credits.OpenCoverage(ctx, "alice", coverage, now, "open"); err != nil {
 		t.Fatal(err)
 	}
@@ -349,8 +349,8 @@ func TestSeedExportWindowsEndWithTheCoverage(t *testing.T) {
 		t.Fatalf("export writes = opened %+v raised %+v", exports.opened, exports.raised)
 	}
 	for _, window := range []clip.ExportWindow{exports.opened[0], exports.raised[0]} {
-		if !window.Start.Equal(coverage.Anchor) || !window.End.Equal(coverage.End) || window.Allowance != 15 || window.CoverageID != coverage.ID {
-			t.Fatalf("window = %+v, want [%s, %s) with the Pro allowance", window, coverage.Anchor, coverage.End)
+		if !window.Start.Equal(coverage.Anchor) || !window.End.Equal(coverage.End) || window.Allowance != 60 || window.CoverageID != coverage.ID {
+			t.Fatalf("window = %+v, want [%s, %s) with the Max allowance", window, coverage.Anchor, coverage.End)
 		}
 	}
 }

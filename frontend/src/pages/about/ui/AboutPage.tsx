@@ -147,6 +147,9 @@ export function AboutPage() {
             <Typography variant="meta" className="text-content-secondary mt-4 block text-center">
               {t('compare.clipCap', { ns: 'plans' })}
             </Typography>
+            <Typography variant="meta" className="text-content-secondary mt-1 block text-center">
+              {t('compare.browserRendering', { ns: 'plans' })}
+            </Typography>
           </PromoStage>
           <Typography variant="body" className="text-content-secondary max-w-measure mt-5">
             {t('plans.assignment')}

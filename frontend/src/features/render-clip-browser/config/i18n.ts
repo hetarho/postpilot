@@ -18,11 +18,12 @@ export const i18n = {
       },
       refusal: {
         speech: '대본과 맞는 음성을 먼저 만들어 주세요. 더빙의 시간 배치도 확인해 주세요.',
-        audio: '이 브라우저에서 더빙 음성을 읽거나 해독하지 못했어요. 서버 렌더를 선택해 주세요.',
+        audio:
+          '이 브라우저에서 더빙 음성을 읽거나 해독하지 못했어요. 지원하는 브라우저·기기를 이용해 주세요.',
         capability: '이 브라우저는 필요한 영상·음성 인코딩을 지원하지 않아요.',
         memory: '이 기기의 메모리가 브라우저 렌더에 부족해요.',
         sampling:
-          '브라우저 렌더에 필요한 영상 밝기 확인을 마치지 못했어요. 서버 렌더를 선택해 주세요.',
+          '브라우저 렌더에 필요한 영상 밝기 확인을 마치지 못했어요. 원본을 확인하고 다시 시도해 주세요.',
       },
       choose: '어디서 렌더할까요?',
       kind: { browser: '브라우저에서 렌더', server: '서버에서 렌더' },
@@ -35,6 +36,8 @@ export const i18n = {
       serverExisting: '현재 저장된 서버 결과를 그대로 사용해요. 횟수가 차감되지 않아요.',
       serverRenewal: '{{at}}에 서버 내보내기 횟수가 갱신돼요.',
       serverNoAllowance: '현재 사용할 수 있는 서버 내보내기 횟수가 없어요.',
+      serverMaxRequired: '새 서버 렌더링은 Max 플랜에서 이용할 수 있어요.',
+      serverAccessUnknown: '현재 플랜을 확인한 뒤 서버 렌더링을 이용할 수 있어요.',
       serverUpgrade: '요금제 보기',
       serverBrowserOption: '이 기기에서는 브라우저 내보내기를 선택할 수 있어요.',
     },
@@ -54,11 +57,12 @@ export const i18n = {
       },
       refusal: {
         speech: 'Create the speech that matches the script and check its timing first.',
-        audio: 'This browser could not read or decode the narration. Choose server rendering.',
+        audio:
+          'This browser could not read or decode the narration. Try a supported browser/device.',
         capability: 'This browser does not support the required video or audio encoding.',
         memory: 'This device reports too little memory for browser rendering.',
         sampling:
-          'The footage check a browser render needs did not finish. Choose server rendering.',
+          'The footage check a browser render needs did not finish. Check the originals and retry.',
       },
       choose: 'Where should this render run?',
       kind: { browser: 'Render in this browser', server: 'Render on the server' },
@@ -71,6 +75,8 @@ export const i18n = {
       serverExisting: 'Use the current stored server result. No export is spent.',
       serverRenewal: 'Server exports renew at {{at}}.',
       serverNoAllowance: 'No server exports are currently available.',
+      serverMaxRequired: 'New server renders are available with Max.',
+      serverAccessUnknown: 'Your current plan must be confirmed before server rendering.',
       serverUpgrade: 'See plans',
       serverBrowserOption: 'You can choose a browser export on this device.',
     },

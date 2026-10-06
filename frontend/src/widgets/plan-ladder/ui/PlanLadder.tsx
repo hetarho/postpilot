@@ -150,7 +150,9 @@ function PlanCard({
                 offer.modelCeiling === 'none'
                   ? t('compare.freeModels')
                   : t('compare.models', { level: t(`estimator.combos.${offer.modelCeiling}`) }),
-                t('compare.exports', { count: offer.monthlyServerExports }),
+                ...(offer.monthlyServerExports > 0
+                  ? [t('compare.exports', { count: offer.monthlyServerExports })]
+                  : []),
               ]
             : [t('compare.freeModels'), t('compare.freeLimits')]
           ).map((benefit) => (

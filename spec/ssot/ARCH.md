@@ -1,5 +1,5 @@
 # ARCH postpilot architecture
-> r15 | Where code goes, which way dependencies point, and the gates every task must pass.
+> r16 | Code placement and gates, including a browser-owned media pipeline, qualified local components and bounded server validation/Max exports.
 
 ## decisions
 - ARCH-1 [o] product: a paid product anyone may sign up for (→AUTH-1, →BILL) — photos + notes → a blog draft in the user's own voice → per-platform copy export for manual posting; ko/en UI. Behavior lives in the domain SSOTs; root PRD.md is a reference brief and ssot/ wins on conflict
@@ -32,7 +32,9 @@
 - ARCH-8 [o] aggregates: an entity with its own lifecycle is its own root; a shared entity is referenced by id, never owned; relationships computable from stored data are not promoted to domain types (a projection only if performance demands it and it can be rebuilt); domain services are pure functions
 - ARCH-9 [o] `internal/llm` is a hard boundary: nothing above it learns which provider answered, no provider SDK type appears above it, and the model choice is an input per stage rather than a global
 - ARCH-10 [o] persistence: SQLite via `modernc.org/sqlite` (pure Go), WAL, one serialized writer connection plus a read pool; on every API process boot goose reads the stored schema version and applies only pending `//go:embed`-ed migrations under `backend/internal/platform/db/migrations/NNNN_<slug>.sql` before any context or listener; a failed migration kills the process so the deploy health gate rolls back; there is no separate migration command, and a write transaction never spans a provider call ← keeps the image CGO-free and distroless, and the schema can never disagree with the binary reading it
-- ARCH-11 [o] long work is a durable job record and the client polls; model work stays in the API process under GEN, while CLIP preparation and server rendering execute in separate media workers under ARCH-45; restart fails interrupted in-process execution, but reconciles jobs waiting on durable media stages under ARCH-50
+- ARCH-11 [o] long server work has a durable job record and polling; model work stays in the API under GEN, and native CLIP validation/rendering uses leased media workers under ARCH-45 and ARCH-50.
+  - browser preparation/rendering is page-owned cancellable work with server-authorized identities and revision fences, not an in-process server execution job
+  - API restart fails interrupted in-process model execution and reconciles durable media handoffs without replaying uncertain paid calls
 - ARCH-13 [o] frontend = Feature-Sliced Design: layers `app → pages → widgets → features → entities → shared`, imports flow left to right only, same-layer cross-import forbidden except `entities`↔`entities` through `@x`; exactly one `index.ts` per slice and nothing reaches inside a slice; enforced by steiger and ESLint boundaries
 - ARCH-14 [o] FE layer by what the thing is:
   | the thing | layer |
@@ -80,7 +82,7 @@
   | I2 | the canonical post is a block array and every platform output is derived from it (POST) |
   | I3 | generation separates observe from write with every model choice explicit — ordinary generation observes once and calls one writer; an explicit comparison alone fans out to two editor candidates or two to five model-lab candidates over one frozen input (GEN, MODEL) |
   | I4 | voices are mutually isolated per account and a post selects at most one (VOICE) |
-  | I5 | long work is a job record (ARCH-11) |
+  | I5 | long server work is a durable job; browser work has page ownership and durable admission/publication fences (ARCH-11) |
   | I6 | image work happens in the browser (ARCH-19) |
   | I7 | migrations are embedded and run at boot (ARCH-10) |
 - ARCH-35 [o] doc truth order: behavior → `ssot/<DOMAIN>.md`, placement and gates → this file, progress → STATE.md; root PRD.md and DEPLOY.md are reference docs and ssot/ wins on conflict
@@ -99,7 +101,9 @@
   - a command that can destroy account data is its own `cmd/` the production image does not build (`cmd/seed`), while operator commands that must exist on the box stay dispatched from `cmd/api` ← a delete-every-account path reachable from the deployed ENTRYPOINT is one mistyped argument from an outage
   - the fixture wipes account-owned rows only and leaves installation-wide curation standing ← a seed that erased the registered models would leave a fresh install unable to generate
 
-- ARCH-45 [o] server clip source verification, analysis-copy preparation, final rendering and output verification run in a media-worker process separate from the API even on one host; same-host and remote deployments use the same worker contract, while the API owns planning, account authorization, credits and durable state
+- ARCH-45 [o] server media execution is separate from the API even on one host: bounded analysis-copy verification, explicit qualified native preparation and native final rendering/output checks use the same leased worker contract locally or remotely.
+  - supported browser preparation/rendering owns full-original decoding/transcoding, layout, caption frames and background sampling; it requests no server rasterization or rendering slot
+  - the API owns artifact authorization, planning, credits, export entitlement and durable state; verification never accepts unbounded client claims (→CLIP-203)
 - ARCH-46 [o] a versioned media job freezes its operation, owning attempt and project revision, source fingerprints, required renderer/asset versions and output contract; requests carry bounded domain data and artifact references, never shared filesystem paths or arbitrary subprocess commands
 - ARCH-47 [o] workers pull authorized jobs and report progress/results through authenticated internal API operations scoped to their deployment and current lease; worker identities confer no user-session authority, direct SQLite access or provider/credit authority
 - ARCH-48 [o] workers download inputs and upload stage outputs through short-lived access to private S3-compatible storage; durable records carry object references rather than signed URLs, heavy render intermediates stay in bounded worker-local workspaces, and no shared volume or warm cache is required for correctness
@@ -115,6 +119,44 @@
 - ARCH-58 [x] AMD/Intel/Apple GPU backends, automatic machine provisioning/scaling and a cloud-provider-specific scheduler are deferred
 - ARCH-59 [o] the default deployment remains API plus CPU media worker on the existing VPS; README links to DEPLOY.md procedures for one server without GPU, one server with NVIDIA GPU, and one API server plus a separate NVIDIA worker server, covering per-host services/env, image/device selection, prerequisites, private connectivity, verification and rollback; repository delivery includes configuration and locally verified procedures, while installing on another host, moving live workers and running real-GPU validation happen later under operator control
 
+- ARCH-60 [o] browser media stack: existing React editor plus Mediabunny/WebCodecs for media input/output, with a PixiJS 8 WebGL compositor qualified against an optimized Canvas 2D control.
+  - WebGPU is optional only after the same qualification; API or hardware-hint presence alone never proves acceleration or faster export
+  - resvg-wasm supplies compatible cached bundled-font/SVG ink where needed; existing SoundTouchJS core and local loudness processing retain pitch-preserving audio semantics
+  - PixiJS Filters 6 may supply needed effects for PixiJS 8; import only qualified effects, and use authored shaders/geometry for styles it cannot reproduce
+  - Remotion web-renderer is an isolated comparison candidate, not a second production framework unless the measured comparison supports an explicit architecture change
+- ARCH-61 [o] a frozen browser render snapshot is versioned domain data derived from ClipEditPlan, not executable AI HTML, CSS, shader or JavaScript.
+  - bind project/plan revision, authorized source identities/fingerprints and time transforms, component/font/asset versions, exact text/placement/intervals and immutable speech hashes/volume
+  - one pure output-frame/time evaluator drives preview and export; seeking, cancellation and supersession invalidate older decode callbacks and publication
+  - runtime signed URLs and decoded media never become durable plan fields; cross-version reuse requires explicit compatibility checks
+- ARCH-62 [o] browser media placement follows FSD: generic demux/decode/encode/mux and resource adapters stay in shared/lib/media; clip frame evaluation, placement, styles and component drawing stay behind entities/clip-preview with clip-design's published rules.
+  - features own preparation/render admission, upload/result promotion and page lifecycle; the existing workspace composes controls and preview without owning transport or codec internals
+  - React edits plan state and draws editor controls; frame generation does not require a React render or DOM seek per output frame
+- ARCH-63 [o] browser export pipelines selected source-range decoding, local composition and asynchronous encoding inside a bounded Worker/OffscreenCanvas path.
+  - use sequential/sample-window decoding and a small active transition set; bound in-flight VideoFrames, audio samples, encoded packets and cached textures, closing/releasing each after use
+  - per-frame queue pressure waits for capacity; final drains and error boundaries use flush without repeatedly draining a healthy pipeline
+  - export advances explicit frame timestamps without real-time playback waits or frame drops; preview may reduce resolution/cadence while preserving the composition clock
+  - source audio reads selected ranges plus codec/time-stretch guard samples, rather than decoding a long original wholesale; speech remains natural-speed and exact under DUB
+- ARCH-64 [o] local component drawing reuses text/word masks, plates, outlines and static shadows; transforms, gradient/mask state, filters and animated geometry derive from frozen output time.
+  - cache keys include every property affecting ink/layout; movement-only changes do not rerasterize text, and filters use bounded areas including declared bleed
+  - typography/glyph fallback, sRGB/alpha handling and sampled-background rules remain shared contracts; whole-frame CPU readback is not the ordinary effect path
+  - render-specific background measurements read transformed original frames locally and are bound to that plan/version, never borrowed from analysis proxies or another render
+- ARCH-65 [o] original/proxy uploads and finished output use short-lived owner-bound direct private-storage transfers; browser output is muxed incrementally with explicit packet backpressure.
+  - prefer a supported seekable file writer; otherwise use bounded private origin temporary MP4 spooling, then a bounded Blob fallback; MP4 position-aware writes are not blindly concatenated or PUT as sequential chunks
+  - spooling stores no original, decoded audio, caption frame or credential; completion/cancellation/logout and abandoned-run recovery reclaim files, and another account cannot reopen them
+  - local output becomes durable only through the existing revision/verdict/upload-promotion fences; upload retry never re-encodes valid bytes or repeats AI work
+- ARCH-66 [o] browser media dependencies are locked to qualified versions and carry a version-specific license/source inventory before distribution.
+  - MIT components preserve notices; MPL-2.0 components provide covered source access including modifications; bundled fonts retain their OFL notices
+  - the shipped minified JS/WASM exposes the applicable notices and source-access path; audit bundled dependencies as well as the top-level package name
+  - hardware codec availability is a runtime capability, not a promise supplied by a library license; optional comparison/commercial SDKs do not enter the production bundle implicitly
+- ARCH-67 [o] browser qualification uses reproducible identified-device runs with cold/warm phase timings, peak resources and output checks, including Canvas 2D/PixiJS comparison and blur-in/neon/glitch/ember stress cases.
+  - browser integration tests exercise real Worker, codec, fonts, canvas, audio and storage behavior; unit mocks cannot establish performance or hardware use
+  - analysis evaluation isolates high-quality references, native proxies and browser proxies at matched inputs/model/endpoint/prompt versions, with human-grounded labels and a separately approved live-call budget
+  - record missing hardware, provider credentials or review as unmet gates; compile success and synthetic structure tests do not certify semantic accuracy or production voice readiness
+- ARCH-68 [o] release qualifies and activates browser final rendering separately from browser analysis preparation.
+  - final-render activation requires complete component/output parity and real-device performance; analysis activation additionally requires server artifact-verification and semantic-quality evidence
+  - HTTPS, private-storage CORS, module Worker URLs, versioned font/WASM assets, notices/source access and temporary-output cleanup are checked in the static deployment
+  - same-host CPU workers retain finite job/queue/resource budgets; an unsupported browser never triggers an implicit native job, GPU rental or desktop installation
+
 ## constraints
 - Node is pinned by `.node-version` (24.18.0); run FE verify on that version (fnm/nvm read the file) — newer local Node versions break the jsdom-based tests
 - Docker is required for `pnpm gen:*` (buf, sqlc), `pnpm dev:api`, and the media smokes (ARCH-37); Go 1.26 for BE
@@ -123,6 +165,7 @@
 - dev ports: web 2564, api 7678 (compose maps 7678 → 8080; containers use 8080)
 
 ## chg
+- r16 261006 ARCH-11✎ ARCH-34✎ server-only jobs→page-owned browser work with durable fences; ARCH-45✎ native preparation/drawing→browser execution and bounded copy verification; ARCH-60+ ARCH-61+ ARCH-62+ ARCH-63+ ARCH-64+ ARCH-65+ ARCH-66+ ARCH-67+ ARCH-68+
 - r15 261001 ARCH-34✎ explicit A/B-only fan-out→explicit two-candidate editor or two-to-five-candidate lab comparison fan-out
 - r12 260927 ARCH-5✎ contexts auth billing experiment generation guideline health job llm modelcatalog plan platform post provider storage template usage voice→every `backend/internal` directory but gen and devseed: +clip fxrate googleauth mail memory quality tosspay voucher, -health (platform/health →ARCH-6) · ARCH-31✎ CI runs ARCH-25 + ARCH-27 + ARCH-28 and ARCH-26→also `pnpm test:dev`, ARCH-30's `haeram-spec-creator check` and the deploy Python unittests
 - r11 260925 ARCH-37✎ hardware required for any GPU task→hardware required for production GPU activation, with packaging/docs/isolated diagnostics allowed to finish as GPU-unverified; ARCH-57✎ CPU split then immediate NVIDIA measurements→CPU split plus three-environment guides, later hardware validation and operator-controlled migration; ARCH-59+ existing CPU VPS default, three deployment procedures and explicit repository/operator delivery boundary

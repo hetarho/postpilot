@@ -27,6 +27,8 @@ export const i18n = {
       exports_one: '서버 내보내기 월 {{count}}회',
       exports_other: '서버 내보내기 월 {{count}}회',
       clipCap: '클립 원본·완성본 최대 60초',
+      browserRendering:
+        '지원하는 기기에서는 모든 플랜으로 브라우저에서 영상을 만들 수 있어요. 서버 렌더링은 Max에 포함돼요.',
       freeLimits: '무료 모델은 제공사 제한에 따라 사용',
       annual: '연간 선결제 {{price, number}}원',
       monthlyEquivalent: '월 약 {{price, number}}원꼴',
@@ -80,6 +82,8 @@ export const i18n = {
       exports_one: '{{count}} server export per month',
       exports_other: '{{count}} server exports per month',
       clipCap: '60-second cap for source and finished clips',
+      browserRendering:
+        'Every plan can render in a supported browser/device. Server rendering is included with Max.',
       freeLimits: 'Free models subject to provider limits',
       annual: '{{price, number}} KRW prepaid annually',
       monthlyEquivalent: 'About {{price, number}} KRW/month equivalent',

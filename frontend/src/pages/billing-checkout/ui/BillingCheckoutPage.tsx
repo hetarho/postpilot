@@ -131,9 +131,13 @@ export function BillingCheckoutPage() {
                 ns: 'billing',
                 daily: offer.dailyCredits ?? 0,
                 bonus: offer.monthlyBonus ?? 0,
-                exports: offer.monthlyServerExports ?? 0,
               })}
             </Typography>
+            {offer.monthlyServerExports > 0 && (
+              <Typography variant="body" className="text-content-secondary">
+                {t('checkout.serverExports', { ns: 'billing', count: offer.monthlyServerExports })}
+              </Typography>
+            )}
           </section>
 
           <section className="grid gap-3">

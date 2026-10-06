@@ -77,7 +77,7 @@ BEGIN SELECT RAISE(ABORT, 'export unavailable'); END`); err != nil {
 	if err := handle.Reader.QueryRow("SELECT allowance FROM server_export_windows WHERE user_id='alice'").Scan(&allowance); err != nil {
 		t.Fatal(err)
 	}
-	if allowance != 6 {
+	if allowance != 0 {
 		t.Fatalf("export allowance=%d", allowance)
 	}
 	if _, err := handle.Writer.ExecContext(ctx, "UPDATE credit_lots SET remaining=remaining-7 WHERE user_id='alice' AND kind='monthly'"); err != nil {
