@@ -1,3 +1,4 @@
+import { i18n as authoringI18n } from '@/features/ai-authoring/config/i18n'
 import { i18n as writingCandidatesI18n } from '@/entities/voice-candidate/config/i18n'
 import { i18n as candidateFlowI18n } from '@/features/generate-writing-voices/config/i18n'
 import { i18n as setupI18n } from '@/widgets/creation-setup/config/i18n'
@@ -131,6 +132,7 @@ import { postsI18n as editWithAiPostsI18n } from '@/features/edit-with-ai/config
 export const defaultNS = 'common' as const
 
 export const RESOURCE_NAMESPACES = [
+  'authoring',
   'creation',
   'spokenVoice',
   'createSpokenVoice',
@@ -163,6 +165,7 @@ export const RESOURCE_NAMESPACES = [
 import { i18n as clipDubbingI18n } from '@/features/regenerate-clip-speech/config/i18n'
 
 export const FRAGMENTS: readonly I18nFragment[] = [
+  authoringI18n,
   writingCandidatesI18n,
   candidateFlowI18n,
   setupI18n,
@@ -279,6 +282,7 @@ export const FRAGMENTS: readonly I18nFragment[] = [
 
 export const resources = {
   ko: {
+    authoring: { ...authoringI18n.ko },
     creation: { ...homeI18n.ko, ...libraryI18n.ko, ...settingsI18n.ko, ...setupI18n.ko },
     spokenVoice: spokenVoiceResources.ko,
     createSpokenVoice: createSpokenVoiceResources.ko,
@@ -412,6 +416,7 @@ export const resources = {
     },
   },
   en: {
+    authoring: { ...authoringI18n.en },
     creation: { ...homeI18n.en, ...libraryI18n.en, ...settingsI18n.en, ...setupI18n.en },
     spokenVoice: spokenVoiceResources.en,
     createSpokenVoice: createSpokenVoiceResources.en,
