@@ -82,3 +82,8 @@ export type {
   BrowserBackgroundDiagnostics,
 } from './model/background-sampling'
 export type { BrowserBackgroundGeometry } from './model/local-components'
+export { inkCaptionScene, inkPopProgress } from './model/ink-caption-scene'
+export type { InkCaptionScene, InkCaptionPose, InkMatrix } from './model/ink-caption-scene'
+export { BrowserCaptionScenePixi } from './model/ink-caption-pixi'
+export type { BrowserCaptionPreparedScene, BrowserCaptionSceneNode } from './model/ink-caption-draw'
+export { BrowserCaptionSceneCanvas } from './model/ink-caption-draw'

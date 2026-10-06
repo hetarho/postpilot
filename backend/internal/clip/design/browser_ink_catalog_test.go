@@ -1,7 +1,9 @@
 package design
 
 import (
+	"crypto/sha256"
 	"encoding/json"
+	"fmt"
 	"os"
 	"reflect"
 	"testing"
@@ -24,7 +26,15 @@ func TestBrowserInkCatalogMatchesNative(t *testing.T) {
 				"shadow": map[string]any{"hex": s.Hex, "alpha": s.Alpha, "blur": s.Blur, "dx": s.DX, "dy": s.DY}},
 		}
 	}
-	expected, err := json.MarshalIndent(map[string]any{"version": 1, "styles": styles}, "", "  ")
+	implementation := map[string]string{}
+	for _, file := range []string{"caption_draw.go", "caption_frame.go", "caption_transform.go"} {
+		body, err := os.ReadFile(file)
+		if err != nil {
+			t.Fatal(err)
+		}
+		implementation[file] = fmt.Sprintf("%x", sha256.Sum256(body))
+	}
+	expected, err := json.MarshalIndent(map[string]any{"version": 2, "styles": styles, "transformPaint": CaptionTransformPaint(), "nativePainterSources": implementation}, "", "  ")
 	if err != nil {
 		t.Fatal(err)
 	}

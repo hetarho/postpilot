@@ -121,7 +121,7 @@ const versions = (): BrowserCompositionVersions => ({
 })
 const domainKeys = new Set(
   `ownerId projectId projectRevision planRevision plan ratio sources design versions schemaVersion
-  fonts ink manifestVersion inkVersion fontsManifestSHA256 catalogSHA256 wasmSHA256 fontAssets assetVersion components speechFingerprint snapshotFingerprint authoritativeFingerprint frameCount renderer assets captionStyles captionPace introPreset outroPreset disclosure hideDisclosure
+  fonts ink manifestVersion inkVersion transformInkScale transformInkStyles fontsManifestSHA256 catalogSHA256 wasmSHA256 fontAssets assetVersion components speechFingerprint snapshotFingerprint authoritativeFingerprint frameCount renderer assets captionStyles captionPace introPreset outroPreset disclosure hideDisclosure
   sourceId fingerprint durationMs width height hasAudio allowedRatePermille id sha256 componentId componentVersion element
   instanceId firstFrame visibleFirstFrame endFrame phraseIndex sequence nativeComposition sourceAudio sourceVolumePermille associations elements cuts narration
   focal x y startMs endMs transitionMs copies volumePermille playbackRatePermille pace text anchor align keyword style accent

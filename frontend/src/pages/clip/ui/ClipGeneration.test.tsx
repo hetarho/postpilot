@@ -232,7 +232,7 @@ it('states the sequence-rendered captions on the approval surface', async () => 
   })
   await selectSource()
   const approve = await openApproval(20)
-  expect(screen.getByText('프레임마다 그리는 자막 2개 · 렌더링에 약 3초 더 걸려요')).toBeVisible()
+  expect(screen.getByText(/^효과 자막 2개.*서버 예상 추가 시간 약 3초/)).toBeVisible()
   await waitFor(() => expect(approve).toBeEnabled())
 })
 it('approves once, retains local previews after terminal and refetches the result', async () => {

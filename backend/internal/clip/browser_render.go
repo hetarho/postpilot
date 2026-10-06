@@ -16,9 +16,9 @@ import (
 // BrowserCompositionVersion identifies product-bundled drawing/time rules.
 // It never certifies output quality or authorizes a client-supplied plan.
 const BrowserCompositionVersion = "clip-browser-composition-v1"
-const BrowserComponentVersion = "native-cds-r33-v1-ground-v1"
+const BrowserComponentVersion = "native-cds-r33-pop-exposure-v2-ground-v1"
 const BrowserFontVersion = "bundled-clip-fonts-v1"
-const BrowserAssetVersion = "clip-design-assets-v1-ink-9475eb4e66026e871002e2ea1107621f831a00b81d226506e448abd7b159c20f"
+const BrowserAssetVersion = "clip-design-assets-v1-ink-658bc158aacde853089103085afc23d3923c18e2e605072e51e0dcf08c2dc196"
 const BrowserBackgroundVersion = "clip-browser-background-v1"
 
 func validBrowserSHA256(value string) bool {

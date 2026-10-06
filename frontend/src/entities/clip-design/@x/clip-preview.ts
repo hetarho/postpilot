@@ -13,6 +13,8 @@ export {
   CLIP_INK_FONT_DATA,
   CLIP_INK_IDENTITY,
   CLIP_CAPTION_INK,
+  CLIP_CAPTION_TRANSFORM_PAINT,
+  CLIP_CAPTION_TRANSFORM_STYLES,
   clipInkFont,
   clipInkCoverage,
   clipInkMetrics,

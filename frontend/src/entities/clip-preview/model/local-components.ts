@@ -3,6 +3,7 @@ import {
   CLIP_INK_FONT_DATA,
   CLIP_TRANSITION,
   type ClipRegionLayout,
+  CLIP_CAPTION_TRANSFORM_STYLES,
 } from '@/entities/clip-design/@x/clip-preview'
 import {
   evaluateBrowserFrame,
@@ -24,6 +25,8 @@ import {
 import { previewMotion } from './draft-preview'
 import { backgroundBoxUnion } from './background-math'
 import type { InkBox } from './ink-typography'
+import { inkCaptionScene, type InkCaptionScene } from './ink-caption-scene'
+import { BrowserCaptionSceneCanvas, type BrowserCaptionPreparedScene } from './ink-caption-draw'
 
 type Component = BrowserCompositionSnapshot['components'][number]
 type State = BrowserEvaluatedFrame['components'][number]
@@ -31,6 +34,7 @@ interface Description {
   document?: InkDocument
   caption?: InkCaptionLayout
   regionBlock?: { layout: ClipRegionLayout; owner: boolean; offset: number; count: number }
+  scene?: InkCaptionScene
   layer: number
   motion: { inMs: number; outMs: number; dy: number }
 }
@@ -43,13 +47,18 @@ export interface BrowserBackgroundGeometry {
   contrastParts?: { box: InkBox; fill: string; alpha: number; stroke: boolean }[]
   regionBlock?: { layout: ClipRegionLayout; owner: boolean; offset: number; count: number }
 }
-export interface BrowserLocalComponent extends BrowserInkLease {
+interface BrowserLocalComponentBase {
   readonly component: State
-  readonly document: InkDocument
   readonly caption?: InkCaptionLayout
   readonly layer: number
   draw(context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void
+  close(): void
 }
+export type BrowserLocalComponent = BrowserLocalComponentBase &
+  (
+    | ({ readonly kind: 'ink'; readonly document: InkDocument } & BrowserInkLease)
+    | { readonly kind: 'scene'; readonly scene: BrowserCaptionPreparedScene }
+  )
 
 /** Local owned drawing; its only inputs are a frozen component/time contract and fixed assets. */
 export class BrowserLocalComponents {
@@ -57,6 +66,7 @@ export class BrowserLocalComponents {
   private cache: BrowserInkCache
   private headers?: Promise<Map<string, InkDocument | undefined>>
   private components: Set<Component>
+  private sceneCanvas = new BrowserCaptionSceneCanvas()
   constructor(
     private snapshot: BrowserCompositionSnapshot,
     private rasterizer: BrowserInkRasterizer = new ResvgBrowserInk(),
@@ -75,7 +85,10 @@ export class BrowserLocalComponents {
     for (const component of snapshot.components)
       if (component.element.role === 'caption') {
         const style = inkCaptionStyle(component.componentId.slice('caption/'.length))
-        if (style.rendering !== 'static')
+        if (
+          style.rendering !== 'static' &&
+          !CLIP_CAPTION_TRANSFORM_STYLES.some((id) => id === style.id)
+        )
           throw new ClipInkError('CLIP_INK_STYLE_NOT_IMPLEMENTED', style.id)
       }
   }
@@ -260,7 +273,9 @@ export class BrowserLocalComponents {
       )
       return {
         caption,
-        document: inkStaticCaption(ratio, caption, paint),
+        ...(caption.style.rendering === 'static'
+          ? { document: inkStaticCaption(ratio, caption, paint) }
+          : { scene: inkCaptionScene(ratio, caption, paint) }),
         layer: 1,
         motion: e.pace === 'rapid' ? { inMs: 0, outMs: 0, dy: 0 } : caption.style.motion,
       }
@@ -342,6 +357,54 @@ export class BrowserLocalComponents {
         const value = await description
         if (signal?.aborted || !this.components.has(state.component))
           throw new ClipInkError('CLIP_INK_SUPERSEDED')
+        if (value.scene) {
+          const scene = value.scene,
+            progress = state.component.element.pace === 'rapid' ? 0.5 : state.progress
+          const nodes: BrowserCaptionPreparedScene['nodes'][number][] = []
+          let closed = false
+          try {
+            for (const node of scene.nodes) {
+              const ink = node.document
+                ? await this.cache.acquire(node.document, signal)
+                : undefined
+              nodes.push({
+                id: node.id,
+                document: node.document,
+                ink,
+                rect: node.rect,
+                pose: node.pose(progress, state.durationMs),
+              })
+            }
+            if (!this.components.has(state.component)) throw new ClipInkError('CLIP_INK_SUPERSEDED')
+          } catch (error) {
+            nodes.forEach((node) => node.ink?.close())
+            throw error
+          }
+          const prepared = {
+            bounds: scene.bounds,
+            nodes,
+            opacity: scene.opacity(progress, state.durationMs),
+          }
+          resources.push({
+            kind: 'scene',
+            component: state,
+            caption: value.caption,
+            layer: value.layer,
+            scene: prepared,
+            draw: (context) => {
+              if (closed || !this.components.has(state.component))
+                throw new ClipInkError('CLIP_INK_SUPERSEDED')
+              this.sceneCanvas.draw(context, prepared)
+            },
+            close: () => {
+              if (!closed) {
+                closed = true
+                nodes.forEach((node) => node.ink?.close())
+              }
+            },
+          })
+          continue
+        }
         if (!value.document) continue
         const doc = value.document,
           lease = await this.cache.acquire(doc, signal)
@@ -353,13 +416,17 @@ export class BrowserLocalComponents {
           { startMs: state.component.startMs, endMs: state.component.endMs, ...value.motion },
           frame.timeMs,
         )
+        let closed = false
         resources.push({
           ...lease,
+          kind: 'ink',
           component: state,
           document: doc,
           caption: value.caption,
           layer: value.layer,
           draw: (context) => {
+            if (closed || !this.components.has(state.component))
+              throw new ClipInkError('CLIP_INK_SUPERSEDED')
             context.save()
             context.globalAlpha *= motion.opacity
             context.drawImage(
@@ -368,6 +435,12 @@ export class BrowserLocalComponents {
               doc.bounds.y + lease.offset.y + motion.dy,
             )
             context.restore()
+          },
+          close: () => {
+            if (!closed) {
+              closed = true
+              lease.close()
+            }
           },
         })
       }
@@ -428,5 +501,6 @@ export class BrowserLocalComponents {
     this.rasterizer.destroy()
     this.descriptions.clear()
     this.headers = undefined
+    this.sceneCanvas.destroy()
   }
 }

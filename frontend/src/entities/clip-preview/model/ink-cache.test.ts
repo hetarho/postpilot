@@ -10,6 +10,52 @@ const document = (key: string): InkDocument => ({
 })
 const bitmap = () => ({ width: 10, height: 10, close: vi.fn() }) as unknown as ImageBitmap
 describe('bounded reusable browser ink', () => {
+  it('reserves physical doubled-mask bytes and rejects a renderer that returns the wrong size', async () => {
+    const scaled = { ...document('scaled'), rasterScale: 2 }
+    const close = vi.fn()
+    const cache = new BrowserInkCache(
+      async () => ({ width: 20, height: 20, close }) as unknown as ImageBitmap,
+      { bytes: 1600, entries: 1 },
+    )
+    const lease = await cache.acquire(scaled)
+    expect(cache.measurements().bytes).toBe(1600)
+    await expect(cache.acquire(document('another'))).rejects.toThrow('CLIP_INK_RESOURCE_LIMIT')
+    lease.close()
+    cache.destroy()
+    expect(close).toHaveBeenCalledOnce()
+    const wrong = bitmap()
+    const invalid = new BrowserInkCache(async () => wrong)
+    await expect(invalid.acquire(scaled)).rejects.toThrow(
+      'CLIP_INK_INVALID_GEOMETRY:raster dimensions',
+    )
+    expect(wrong.close).toHaveBeenCalledOnce()
+    expect(invalid.measurements()).toMatchObject({ entries: 0, bytes: 0, leases: 0, rasters: 0 })
+  })
+  it.each([NaN, Infinity, -1, 0, 1.5, 3])(
+    'rejects unversioned raster scale %s before rasterization',
+    async (rasterScale) => {
+      const render = vi.fn(async () => bitmap()),
+        cache = new BrowserInkCache(render)
+      await expect(cache.acquire({ ...document('invalid'), rasterScale })).rejects.toThrow(
+        'CLIP_INK_RESOURCE_LIMIT:raster scale',
+      )
+      expect(render).not.toHaveBeenCalled()
+      expect(cache.measurements().bytes).toBe(0)
+    },
+  )
+  it('refuses GPU creation from a closed lease and destroys each owned texture once', async () => {
+    const cache = new BrowserInkCache(async () => bitmap()),
+      owner = {},
+      destroy = vi.fn()
+    const lease = await cache.acquire(document('owned'))
+    lease.gpu(owner, () => ({ value: {}, destroy }))
+    lease.close()
+    expect(() => lease.gpu(owner, () => ({ value: {}, destroy }))).toThrow('CLIP_INK_CANCELLED')
+    cache.dropGPU(owner)
+    cache.dropGPU(owner)
+    cache.destroy()
+    expect(destroy).toHaveBeenCalledOnce()
+  })
   it('reuses glyph ink across fractional movement while compensating the original raster phase', async () => {
     const render = vi.fn(async () => bitmap())
     const cache = new BrowserInkCache(render)
