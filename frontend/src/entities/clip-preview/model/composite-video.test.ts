@@ -7,10 +7,61 @@ import fixture from './cut-timeline.fixture.json'
 import { RenderRasterCache } from './render-raster-cache'
 import { MediaPhaseRecorder } from '@/shared/lib'
 import { CLIP_VIDEO_MEASUREMENT_PHASES } from '../config/render-measurements'
+import { freezeBrowserComposition, evaluateBrowserFrame } from './browser-composition'
 
 function bitmap(name: string) {
   return { name, width: 1920, height: 1080, close: vi.fn() } as unknown as ImageBitmap
 }
+
+it('consumes the frozen evaluator clock and refuses a plan changed after freezing', async () => {
+  const plan = clipTimelineFixture().plan
+  const snapshot = await freezeBrowserComposition({
+    ownerId: 'alice',
+    projectId: 'project',
+    projectRevision: 2,
+    planRevision: 2,
+    plan,
+    ratio: 'vertical',
+    design: { hideDisclosure: true },
+    sources: plan.cuts.map((cut) => ({
+      sourceId: cut.sourceId,
+      fingerprint: cut.fingerprint,
+      durationMs: 20000,
+      width: 1920,
+      height: 1080,
+      hasAudio: false,
+      allowedRatePermille: [1000],
+    })),
+  })
+  const sources: { fingerprint: string; timeMs: number }[] = []
+  const ports = {
+    context: { globalAlpha: 1, fillStyle: '', fillRect: vi.fn(), drawImage: vi.fn() },
+    source: async (fingerprint: string, timeMs: number) => {
+      sources.push({ fingerprint, timeMs })
+      return bitmap('source')
+    },
+    asset: vi.fn(),
+    captionFrame: vi.fn(),
+    releaseAssets: vi.fn(),
+    encode: vi.fn(),
+    progress: vi.fn(),
+  }
+  const result = await compositeBrowserVideo(
+    { plan, ratio: 'vertical', assets: [], snapshot },
+    ports,
+  )
+  expect(result.frameCount).toBe(snapshot.frameCount)
+  expect(sources[1]!.timeMs).toBe(
+    evaluateBrowserFrame(snapshot, 1).footageLayers[0]!.sourceTimestampUs / 1000,
+  )
+  expect(ports.encode.mock.calls.at(-1)![0]).toBe(
+    evaluateBrowserFrame(snapshot, snapshot.frameCount - 1).timestampUs,
+  )
+  plan.cuts[0]!.volumePermille = 0
+  await expect(
+    compositeBrowserVideo({ plan, ratio: 'vertical', assets: [], snapshot }, ports),
+  ).rejects.toThrow('CLIP_SNAPSHOT_SUPERSEDED')
+})
 function raster(representativeFrame: boolean, rapid = false): PreparedAsset {
   return {
     key: rapid ? 'rapid' : representativeFrame ? 'sequence' : 'static',

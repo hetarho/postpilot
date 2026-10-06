@@ -66,7 +66,6 @@
 | T539 | Qualify the complete Korean voice-creation milestone | ARCH DUB MODEL CDS THEME | T538 | blocked@261005 |
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
 | T590 | Bound Max server-render admission and waiting | ARCH CLIP INFRA | T589 | blocked@261006 |
-| T591 | Freeze one browser composition and time contract | ARCH CLIP CDS | T588 | todo |
 | T592 | Decode selected video ranges in a bounded browser pipeline | ARCH CLIP CDS | T591 | todo |
 | T593 | Bound selected audio and immutable narration processing | ARCH CLIP CDS DUB | T591 | todo |
 | T594 | Draw bundled typography and static components locally | ARCH CLIP CDS | T591 | todo |
@@ -82,11 +81,10 @@
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | todo |
 
 ## next
-- browser-media-604 runs in /private/tmp/postpilot-browser-media-604 on work/browser-media-604-plan with three implementation slots and one reviewer/coordinator; runtime board owns assignments. T591 unlocks video/audio/components/analysis authorization, then T592-T604 follow their task dependencies.
-- T590 code is preserved in planning baseline 47f9cd2f; Docker daemon restoration and matching CPU smokes remain required before its completion. T603 billable comparison has no approved spend cap; qualification/activation gates stay closed without actual evidence and review.
-- Earlier ARCH/INFRA database/backups, POST/VOICE deltas and T539/T550 remain outside this group; doc-review ARCH QUOTA VOICE addresses existing hints. Main checkout's T590 changes are preserved while group commits are isolated.
+- inspect work board for remaining tasks
 
 ## log
+- 261006 T591 integrated
 - 261007 manage-work integration compatibility: temporary CLI preserves only46 inherited FORMAT/history warnings; structural errors and new warnings still reject; actual baseline/candidate conformance passed, installed package/skills/runtime JSON unchanged
 - 261007 T591 independent native comparison correction: global pace/accent, declared disclosure only and exact-ms visibility require correction before integration; parent remains unchanged and prior approval invalidated
 - 261007 create-task browser-media parallel hint refinement start: unassigned todo scope hints allow isolated overlapping worktrees with serial review/integration; task goals, acceptance, SSOT bases and dependencies stay unchanged
@@ -106,4 +104,3 @@
 - 261006 T586/T587 freshness: ARCH r16 browser execution and QUOTA r35 commercial-export changes do not affect speech catalog administration; task bases synchronized
 - 261006 T587 done: list administration and common pricing UI; 3292 FE tests, complete local CI and deterministic generation passed
 - 261006 T586 done: unique server-owned registrations, common tariff snapshots and retained legacy bindings; all BE tests passed after sequential clip-store recheck
-- 261006 create-task browser media start: consume CLIP r56 CDS r33 QUOTA r35; map scoped ARCH r16 and INFRA r2 changes without consuming older infrastructure work

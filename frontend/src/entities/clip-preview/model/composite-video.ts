@@ -6,6 +6,7 @@ import { CLIP_BROWSER_RENDER } from '@/entities/clip-design/@x/clip-preview'
 import type { BrowserVideoInput, BrowserVideoProgress } from './browser-video'
 import type { MediaPhaseRecorder } from '@/shared/lib'
 import type { CLIP_VIDEO_MEASUREMENT_PHASES } from '../config/render-measurements'
+import { evaluateBrowserFrame } from './browser-composition'
 
 interface CompositePorts {
   context: Pick<
@@ -26,10 +27,16 @@ interface CompositePorts {
  *  footage of each output frame is the server render's: the same cuts on the same frames,
  *  joined by the same xfade curve (CLIP-192). */
 export async function compositeBrowserVideo(input: BrowserVideoInput, ports: CompositePorts) {
+  if (
+    input.snapshot &&
+    (input.snapshot.ratio !== input.ratio ||
+      JSON.stringify(input.snapshot.plan) !== JSON.stringify(input.plan))
+  )
+    throw new Error('CLIP_SNAPSHOT_SUPERSEDED')
   const config = clipBrowserEncoderConfig(input.ratio).video
   const fps = CLIP_BROWSER_RENDER.frameRate
   const timeline = frameTimeline(input.plan, fps)
-  const totalFrames = timeline.total
+  const totalFrames = input.snapshot?.frameCount ?? timeline.total
   if (!totalFrames) throw new Error('CLIP_RENDER_EMPTY')
   const assets = [...input.assets].sort((a, b) => a.layer - b.layer)
   const ctx = ports.context
@@ -41,7 +48,14 @@ export async function compositeBrowserVideo(input: BrowserVideoInput, ports: Com
     ctx.fillStyle = CLIP_BROWSER_RENDER.matte
     ctx.fillRect(0, 0, config.width, config.height)
     matteEnd?.()
-    for (const current of frameLayers(timeline, frame)) {
+    const evaluated = input.snapshot ? evaluateBrowserFrame(input.snapshot, frame) : undefined
+    const layers =
+      evaluated?.footageLayers.map((layer) => ({
+        cut: input.plan.cuts.find((cut) => cut.id === layer.cutInstanceId)!,
+        sourceMs: layer.sourceTimestampUs / 1000,
+        alpha: layer.alpha,
+      })) ?? frameLayers(timeline, frame)
+    for (const current of layers) {
       const bitmap = measurements
         ? await measurements.measureAsync('sourceWait', () =>
             ports.source(current.cut.fingerprint, current.sourceMs),
@@ -104,8 +118,9 @@ export async function compositeBrowserVideo(input: BrowserVideoInput, ports: Com
       ctx.drawImage(bitmap, asset.x, asset.y + motion.dy, asset.width, asset.height)
       assetEnd?.()
     }
-    const timestamp = Math.round((frame * 1_000_000) / fps)
-    const duration = Math.round(((frame + 1) * 1_000_000) / fps) - timestamp
+    const timestamp = evaluated?.timestampUs ?? Math.round((frame * 1_000_000) / fps)
+    const duration =
+      evaluated?.durationUs ?? Math.round(((frame + 1) * 1_000_000) / fps) - timestamp
     await ports.encode(
       timestamp,
       duration,

@@ -3,12 +3,15 @@ import type { ClipRatio } from '@/entities/clip-project/@x/clip-preview'
 import type { PreparedAsset } from './preview-assets'
 import type { MediaPhaseSnapshot } from '@/shared/lib'
 import type { CLIP_VIDEO_MEASUREMENT_PHASES } from '../config/render-measurements'
+import type { BrowserCompositionSnapshot } from './browser-composition'
 
 export type BrowserVideoMeasurements = MediaPhaseSnapshot<
   (typeof CLIP_VIDEO_MEASUREMENT_PHASES)[number]
 >
 
 export interface BrowserVideoInput {
+  /** New local composition callers share this frozen contract with the preview. */
+  snapshot?: BrowserCompositionSnapshot
   plan: ClipEditPlan
   ratio: ClipRatio
   assets: PreparedAsset[]

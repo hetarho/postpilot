@@ -13,7 +13,7 @@ import (
 func browserRender(row sqlc.ClipBrowserRender) (clip.BrowserRender, error) {
 	r := clip.BrowserRender{ID: row.ID, UserID: row.UserID, ProjectID: row.ProjectID, Revision: int(row.PlanRevision), Ratio: row.Ratio, DurationMS: int(row.DurationMs), Audio: row.HasAudio != 0, UploadBytes: row.UploadBytes}
 	var err error
-	r.Speech, err = decodeResultSpeech(row.SpeechJson)
+	r.Speech, r.Composition, err = decodeBrowserComposition(row.SpeechJson)
 	if err != nil {
 		return r, err
 	}
@@ -145,7 +145,7 @@ func (s *Store) SaveBrowserRenderGrounds(ctx context.Context, user, render, job 
 }
 
 func (s *Store) BeginBrowserRender(ctx context.Context, r clip.BrowserRender) error {
-	speech, err := encodeResultSpeech(r.Speech)
+	speech, err := encodeBrowserComposition(r)
 	if err != nil {
 		return err
 	}

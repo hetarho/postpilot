@@ -230,6 +230,8 @@ func toConnectError(err error) error {
 		return rpcserver.NewAppError(connect.CodeAlreadyExists, "video template name already exists", postpilotv1.FailureReason_CLIP_TEMPLATE_NAME_TAKEN, nil)
 	case errors.Is(err, clip.ErrRenderUnavailable):
 		return connect.NewError(connect.CodeUnimplemented, err)
+	case errors.Is(err, clip.ErrBrowserCompositionVersion):
+		return connect.NewError(connect.CodeFailedPrecondition, err)
 	case errors.Is(err, clip.ErrInvalid):
 		return rpcserver.NewAppError(connect.CodeInvalidArgument, "invalid clip input", postpilotv1.FailureReason_CLIP_INVALID_INPUT, nil)
 	default:

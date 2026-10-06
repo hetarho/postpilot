@@ -132,6 +132,22 @@ type renderStarted struct {
 }
 
 func (s *GenerationService) startRender(ctx context.Context, user, id, batch string, revision int, kind clip.RenderKind, reuse ...bool) (renderStarted, error) {
+	return s.startRenderWithBrowserVersion(ctx, user, id, batch, revision, kind, nil, reuse...)
+}
+
+// StartBrowserCompositionRender uses the same authoritative admission and
+// publication records while the qualified browser owns layout and sampling.
+// The rollout gate is independent of recognizing the version.
+func (s *GenerationService) StartBrowserCompositionRender(ctx context.Context, user, id, batch string, revision int, version string) (string, clip.BrowserCompositionContract, error) {
+	contract := clip.BrowserCompositionContract{Version: version, Components: clip.BrowserComponentVersion, Fonts: clip.BrowserFontVersion, Assets: clip.BrowserAssetVersion}
+	if err := clip.CheckBrowserCompositionVersion(version, s.cfg.BrowserCompositionQualified); err != nil {
+		return "", contract, err
+	}
+	started, err := s.startRenderWithBrowserVersion(ctx, user, id, batch, revision, clip.RenderBrowser, &contract)
+	return started.renderID, contract, err
+}
+
+func (s *GenerationService) startRenderWithBrowserVersion(ctx context.Context, user, id, batch string, revision int, kind clip.RenderKind, contract *clip.BrowserCompositionContract, reuse ...bool) (renderStarted, error) {
 	none := renderStarted{}
 	switch kind {
 	case clip.RenderServer, clip.RenderBrowser:
@@ -233,7 +249,13 @@ func (s *GenerationService) startRender(ctx context.Context, user, id, batch str
 	if err := clip.RefuseUnrenderableRates(plan, refs); err != nil {
 		return none, err
 	}
-	if validator, ok := s.renderer.(clip.RenderPlanValidator); ok {
+	localComposition := kind == clip.RenderBrowser && contract != nil
+	if localComposition {
+		if err := clip.CheckBrowserCompositionVersion(contract.Version, s.cfg.BrowserCompositionQualified); err != nil {
+			return none, err
+		}
+		contract.SnapshotFingerprint = clip.BrowserCompositionIdentity(p, plan, refs)
+	} else if validator, ok := s.renderer.(clip.RenderPlanValidator); ok {
 		plan, err = validator.ValidateRenderPlan(ctx, plan, refs)
 	} else {
 		layout, ok := s.renderer.(clip.CompositionLayouter)
@@ -246,9 +268,16 @@ func (s *GenerationService) startRender(ctx context.Context, user, id, batch str
 		return none, err
 	}
 	if kind == clip.RenderBrowser {
-		render, err := s.beginBrowserRender(ctx, p, plan, refs)
+		var contracts []clip.BrowserCompositionContract
+		if contract != nil {
+			contracts = append(contracts, *contract)
+		}
+		render, err := s.beginBrowserRender(ctx, p, plan, refs, contracts...)
 		if err != nil {
 			return none, err
+		}
+		if localComposition {
+			return renderStarted{renderID: render}, nil
 		}
 		sampling, err := s.startBrowserSampling(ctx, p, plan, sources, b, render, speechAssets...)
 		if err != nil {
