@@ -9,7 +9,7 @@
       "frontend/src/entities/clip-preview/model/ink-caption-draw.ts": "c50becc5901f969a45dae527bd2914cc7c584a2468d2887a80314ba83282bcef",
       "frontend/src/entities/clip-preview/model/ink-caption-effects.ts": "43d5e03d7928f05d2398cdf44588e1764224043775491399f8d6bc35538c62d9",
       "frontend/src/entities/clip-preview/model/ink-caption-filter-pixi.ts": "0b13ee759196c59ea7c084e7f4c1bbdea8b27e32196f2cc4124250f4fb045f32",
-      "frontend/src/entities/clip-preview/model/ink-caption-pixi.ts": "172e4758e881b77a9e28c2e9a3a36cce457952728bba41e4e771abdc11aa13c0",
+      "frontend/src/entities/clip-preview/model/ink-caption-pixi.ts": "3fb52981d024e88856e804632f27c5aeb136fbc7bf2b2e5e9ee4bcc1ac012391",
       "pnpm-lock.yaml": "d07c4a1bd3aeab4df41155c2d63d85e6a487959534ed7b27b4710315d7a07319"
     },
     "version": "caption-filters-v1"

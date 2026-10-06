@@ -367,18 +367,21 @@ export class BrowserCaptionScenePixi {
     this.renderer.render({ container: this.presentation, target, clear, clearColor: [0, 0, 0, 0] })
   }
   measurements() {
+    const pooled = this.renderer.texture.managedTextures.filter((source) =>
+      source?.label?.startsWith('texturePool_'),
+    )
     return {
       nodes: this.nodes.size,
       managedTextureBytes: this.renderer.texture.managedTextures.reduce(
         (bytes, source) => bytes + (source?.pixelWidth ?? 0) * (source?.pixelHeight ?? 0) * 4,
         0,
       ),
-      filterScratchBytes: this.renderer.texture.managedTextures
-        .filter((source) => source?.label?.startsWith('texturePool_'))
-        .reduce(
-          (bytes, source) => bytes + (source?.pixelWidth ?? 0) * (source?.pixelHeight ?? 0) * 4,
-          0,
-        ),
+      filterScratchBytes: pooled.length
+        ? pooled.reduce(
+            (bytes, source) => bytes + (source?.pixelWidth ?? 0) * (source?.pixelHeight ?? 0) * 4,
+            0,
+          )
+        : undefined,
       effectBytes: [...this.nodes.values()].reduce(
         (bytes, node) => bytes + (node.neon?.measurements() ?? 0),
         0,

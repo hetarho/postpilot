@@ -23,7 +23,7 @@ func TestExportBrowserCaptionFilterFixtures(t *testing.T) {
 	}
 	r := realMetricsRenderer(t)
 	var cases []map[string]any
-	export := func(id, ratio, style, pace, text string) {
+	export := func(id, ratio, style, pace, text, groundName string) {
 		t.Helper()
 		plan := declaredPlan(t, fmt.Sprintf(`<clip version="1" pace="%s" styles="%s"><text id="caption" kind="fixed" role="caption" style="%s" position="bottom" basis="output-start" start="1.05" end="5.55">%s</text></clip>`, pace, style, style, escaped(text)), ratio)
 		plan.CaptionStyles = []string{style}
@@ -36,10 +36,30 @@ func TestExportBrowserCaptionFilterFixtures(t *testing.T) {
 			}
 			canvas, _ := clip.ClipCanvas(ratio)
 			for visualIndex, selected := range layout.visuals {
+				var ground any
+				backdrop := ""
+				if groundName != "" {
+					rgb := [3]float64{0, 0, 0}
+					if groundName == "bright" {
+						rgb = [3]float64{253.0 / 255, 1, 1}
+					}
+					value := relativeLuminance(rgb[0], rgb[1], rgb[2])
+					selected.ground = summarize([]float64{value, value, value}, [][3]float64{rgb, rgb, rgb})
+					applyDeclaredGround(canvas, &selected)
+					ground = map[string]any{"hex": selected.ground.Hex(), "rgb": rgb, "scrim": selected.ground.Scrim(), "accentWhite": selected.ground.AccentWhite(), "mean": selected.ground.Mean}
+					backdrop = fmt.Sprintf(`<rect width="100%%" height="100%%" fill="%s"/>`, selected.ground.Hex())
+				}
 				start, end := selected.manifest.StartMS, selected.manifest.EndMS
 				first, visible, last := int(math.Floor(float64(start)*30/1000)), (start*30+999)/1000, (end*30+999)/1000
 				frames := []int{visible, visible + 1, visible + 4, last - 2, last - 1}
-				for _, p := range []float64{1.0 / 12, 19.0 / 97, 0.25, 0.5, 7.0 / 12, 0.75} {
+				if groundName != "" {
+					frames = []int{visible, visible + 4, last - 2}
+				}
+				points := []float64{1.0 / 12, 19.0 / 97, 0.25, 0.5, 7.0 / 12, 0.75}
+				if groundName != "" {
+					points = []float64{1.0 / 12, 19.0 / 97, 0.5}
+				}
+				for _, p := range points {
 					frames = append(frames, first+int(math.Round(p*float64(last-first-1))))
 				}
 				seen := map[int]bool{}
@@ -56,7 +76,7 @@ func TestExportBrowserCaptionFilterFixtures(t *testing.T) {
 					if !ok {
 						return fmt.Errorf("not a sequence style: %s", style)
 					}
-					svg := fmt.Sprintf(`<svg xmlns="http://www.w3.org/2000/svg" width="%d" height="%d"><defs>%s</defs>%s</svg>`, canvas.Width, canvas.Height, defs, body)
+					svg := fmt.Sprintf(`<svg xmlns="http://www.w3.org/2000/svg" width="%d" height="%d"><defs>%s</defs>%s%s</svg>`, canvas.Width, canvas.Height, defs, backdrop, body)
 					file := fmt.Sprintf("%s-%d.png", id, frame)
 					if pace == "rapid" {
 						file = fmt.Sprintf("%s-cue%d-%d.png", id, visualIndex, frame)
@@ -68,7 +88,7 @@ func TestExportBrowserCaptionFilterFixtures(t *testing.T) {
 					if err := copyIdentityFile(local, filepath.Join(root, file)); err != nil {
 						return err
 					}
-					cases = append(cases, map[string]any{"id": strings.TrimSuffix(file, ".png"), "ratio": ratio, "frame": frame, "reference": file, "style": style, "pace": pace, "nativeProgress": progress, "nativeLayout": captionFrame(canvas, selected.copy, selected.caption, end-start, progress).Lines,
+					cases = append(cases, map[string]any{"id": strings.TrimSuffix(file, ".png"), "ratio": ratio, "frame": frame, "reference": file, "style": style, "pace": pace, "nativeProgress": progress, "ground": ground, "nativeLayout": captionFrame(canvas, selected.copy, selected.caption, end-start, progress).Lines,
 						"plan":   map[string]any{"nativeComposition": true, "durationMs": plan.DurationMS, "elements": browserInkFixtureElements(layout.plan), "cuts": []map[string]any{{"id": "cut", "sourceId": "source", "fingerprint": strings.Repeat("a", 64), "startMs": 0, "endMs": 15000, "transitionMs": 0, "playbackRatePermille": 1000, "volumePermille": 0, "copies": []any{}}}},
 						"design": map[string]any{"hideDisclosure": true, "introPreset": "a", "outroPreset": "b", "captionStyles": []string{style}, "captionPace": pace, "accent": plan.Accent}})
 				}
@@ -82,12 +102,23 @@ func TestExportBrowserCaptionFilterFixtures(t *testing.T) {
 	for _, ratio := range []string{"vertical", "horizontal", "square"} {
 		for _, style := range []string{"blur-in", "ambient", "neon", "iridescent", "glitch"} {
 			for _, pace := range []string{"steady", "rapid"} {
-				export(ratio+"-"+style+"-"+pace, ratio, style, pace, "갂 AV 12,500원")
-				export(ratio+"-"+style+"-two-"+pace, ratio, style, pace, "갂 AV\n정확한 두 줄")
+				if os.Getenv("CLIP_BROWSER_FILTER_GROUND_ONLY") != "1" {
+					export(ratio+"-"+style+"-"+pace, ratio, style, pace, "갂 AV 12,500원", "")
+				}
+				if os.Getenv("CLIP_BROWSER_FILTER_GROUND_ONLY") != "1" {
+					export(ratio+"-"+style+"-two-"+pace, ratio, style, pace, "갂 AV\n정확한 두 줄", "")
+				}
+				for _, ground := range []string{"bright", "dark"} {
+					export(ratio+"-"+style+"-two-"+pace+"-"+ground, ratio, style, pace, "갂 AV\n정확한 두 줄", ground)
+				}
 			}
 		}
 	}
-	data, err := json.MarshalIndent(map[string]any{"version": 1, "native": "resvg0.48.1-host", "syntheticOnly": true, "rendererVersion": clip.MediaRendererVersion, "componentVersion": clip.BrowserComponentVersion, "cases": cases}, "", "  ")
+	nativeProfile := "resvg0.48.1-host"
+	if os.Getenv("CLIP_MEDIA_SMOKE") == "1" {
+		nativeProfile = "resvg0.48.1-cpu-image"
+	}
+	data, err := json.MarshalIndent(map[string]any{"version": 1, "native": nativeProfile, "syntheticOnly": true, "rendererVersion": clip.MediaRendererVersion, "componentVersion": clip.BrowserComponentVersion, "cases": cases}, "", "  ")
 	if err != nil {
 		t.Fatal(err)
 	}

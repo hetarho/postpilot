@@ -5,7 +5,7 @@ export const CLIP_BROWSER_COMPOSITION = {
   components: 'native-cds-r33-pop-exposure-v2-ground-v1-filters-v1',
   fonts: 'bundled-clip-fonts-v1',
   assets:
-    'clip-design-assets-v1-ink-5ed2ba1ff17d9bbbb492cd105143a4a52c7b7e6b58c5485ba0d67e15002499d5',
+    'clip-design-assets-v1-ink-1ee0ee713d623ff754b9373b6b6622c49c0962b263edcf125ebe0f81bc9dead5',
   qualified: false,
 } as const
 
