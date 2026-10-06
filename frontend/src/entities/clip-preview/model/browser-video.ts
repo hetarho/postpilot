@@ -4,6 +4,7 @@ import type { PreparedAsset } from './preview-assets'
 import type { MediaPhaseSnapshot } from '@/shared/lib'
 import type { CLIP_VIDEO_MEASUREMENT_PHASES } from '../config/render-measurements'
 import type { BrowserCompositionSnapshot } from './browser-composition'
+import type { BrowserFootageResources } from './browser-footage'
 
 export type BrowserVideoMeasurements = MediaPhaseSnapshot<
   (typeof CLIP_VIDEO_MEASUREMENT_PHASES)[number]
@@ -29,6 +30,7 @@ export interface EncodedClipChunk {
   data: Uint8Array<ArrayBuffer>
 }
 export interface BrowserVideoTrack {
+  sourceResources?: ReturnType<BrowserFootageResources['measurements']>
   config: VideoEncoderConfig
   decoderConfig: VideoDecoderConfig
   chunks: EncodedClipChunk[]

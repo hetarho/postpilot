@@ -19,6 +19,27 @@ it('shares one local or authorized remote blob across video and audio readers', 
   expect(load.mock.calls[1][0]).toBe('blob:local')
   originals.dispose()
 })
+it('returns lazy File or refreshed URL access without eagerly downloading an original', async () => {
+  const file = new File(['held original'], 'one.mp4'),
+    resolve = vi.fn(async () => 'fresh-url'),
+    load = vi.fn()
+  const originals = new BrowserOriginals(
+    [{ fingerprint: 'local', url: 'blob:local', file }],
+    resolve,
+    new AbortController().signal,
+    load,
+  )
+  expect(await originals.source('local')).toEqual({ kind: 'blob', blob: file })
+  const [first, second] = await Promise.all([
+    originals.source('remote'),
+    originals.source('remote'),
+  ])
+  expect(first).toBe(second)
+  expect(first).toEqual({ kind: 'url', url: 'fresh-url' })
+  expect(resolve).toHaveBeenCalledOnce()
+  expect(load).not.toHaveBeenCalled()
+  originals.dispose()
+})
 it('never reads bytes after access resolution was cancelled', async () => {
   const controller = new AbortController()
   const load = vi.fn()

@@ -2,6 +2,14 @@ import { describe, expect, it } from 'vitest'
 import { MediaPhaseRecorder } from './phase-metrics'
 
 describe('media phase observations', () => {
+  it('accepts externally observed resource spans and preserves unknown physical costs', () => {
+    const recorder = new MediaPhaseRecorder(['read', 'decode'] as const)
+    recorder.record('read', 4)
+    recorder.record('read', 2)
+    expect(recorder.snapshot().phases.read).toEqual({ samples: 2, totalMs: 6, minMs: 2, maxMs: 4 })
+    expect(recorder.snapshot().phases.decode).toBeNull()
+    expect(() => recorder.record('read', Infinity)).toThrow('clock')
+  })
   it('preserves unknown phases and does not add overlapping spans into elapsed time', () => {
     let now = 0
     const recorder = new MediaPhaseRecorder(['source', 'encode', 'upload'] as const, () => now)

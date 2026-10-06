@@ -4,6 +4,13 @@ export type { ClipPreviewRequest } from './api/preview'
 export { useClipBrowserRenderCapability } from './api/useClipBrowserRenderCapability'
 export { createClipVideoWorker } from './lib/create-video-worker'
 export { browserAudioPlan } from './model/browser-audio-plan'
+export { BrowserFootageResources } from './model/browser-footage'
+export type {
+  BrowserPreparedFootage,
+  BrowserSourceAccess,
+  BrowserFootagePorts,
+} from './model/browser-footage'
+export { CLIP_VIDEO_DECODING } from './config/video-decoding'
 export {
   BrowserCompositionError,
   BrowserSnapshotEpoch,

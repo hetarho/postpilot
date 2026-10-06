@@ -1,0 +1,465 @@
+{
+  "version": 1,
+  "qualification": false,
+  "browser": "154.0.8037.98",
+  "hardwareUsage": "unmeasured; default installed browser launch",
+  "node": "v24.18.0",
+  "mediabunny": "1.58.0",
+  "lockfileSHA256": "d07c4a1bd3aeab4df41155c2d63d85e6a487959534ed7b27b4710315d7a07319",
+  "fixtures": {
+    "cfr": {
+      "bytes": 1833655,
+      "sha256": "a4439dd8607684d920bf329cca3eea0ff8089e7ec49419ab7237a64d18aa80b4"
+    },
+    "vfr": {
+      "bytes": 386453,
+      "sha256": "491b630c7cb211a8ef71b99c05a493fc3440a07b4ab44fbc3daccecf5d57aaa4"
+    }
+  },
+  "sources": [
+    "https://mediabunny.dev/guide/reading-media-files",
+    "https://mediabunny.dev/guide/media-sinks"
+  ],
+  "results": [
+    {
+      "id": "rate-500",
+      "selected": [
+        2100000,
+        2116666,
+        2133333,
+        2150000,
+        2166666,
+        2183333,
+        2200000,
+        2216666
+      ],
+      "metadata": {
+        "provenance": "browser_client",
+        "codedWidth": 320,
+        "codedHeight": 180,
+        "displayWidth": 320,
+        "displayHeight": 180,
+        "timeResolution": 15360,
+        "firstTimestamp": 0,
+        "durationFromMetadata": 30,
+        "rotation": 0,
+        "flip": false,
+        "codec": "avc"
+      },
+      "readBytes": 154971,
+      "readCalls": 22,
+      "budget": {
+        "liveFrames": 0,
+        "liveBytes": 0,
+        "peakFrames": 1,
+        "peakBytes": 230400,
+        "queued": 0
+      },
+      "decodedResources": {
+        "peakDecodedFrames": 2,
+        "liveDecodedFrames": 0
+      },
+      "qualified": false
+    },
+    {
+      "id": "rate-750",
+      "selected": [
+        2100000,
+        2133333,
+        2150000,
+        2183333,
+        2200000,
+        2233333,
+        2250000,
+        2283333
+      ],
+      "metadata": {
+        "provenance": "browser_client",
+        "codedWidth": 320,
+        "codedHeight": 180,
+        "displayWidth": 320,
+        "displayHeight": 180,
+        "timeResolution": 15360,
+        "firstTimestamp": 0,
+        "durationFromMetadata": 30,
+        "rotation": 0,
+        "flip": false,
+        "codec": "avc"
+      },
+      "readBytes": 158580,
+      "readCalls": 26,
+      "budget": {
+        "liveFrames": 0,
+        "liveBytes": 0,
+        "peakFrames": 1,
+        "peakBytes": 230400,
+        "queued": 0
+      },
+      "decodedResources": {
+        "peakDecodedFrames": 2,
+        "liveDecodedFrames": 0
+      },
+      "qualified": false
+    },
+    {
+      "id": "rate-1000",
+      "selected": [
+        2100000,
+        2133333,
+        2166666,
+        2200000,
+        2233333,
+        2266666,
+        2300000,
+        2333333
+      ],
+      "metadata": {
+        "provenance": "browser_client",
+        "codedWidth": 320,
+        "codedHeight": 180,
+        "displayWidth": 320,
+        "displayHeight": 180,
+        "timeResolution": 15360,
+        "firstTimestamp": 0,
+        "durationFromMetadata": 30,
+        "rotation": 0,
+        "flip": false,
+        "codec": "avc"
+      },
+      "readBytes": 161935,
+      "readCalls": 29,
+      "budget": {
+        "liveFrames": 0,
+        "liveBytes": 0,
+        "peakFrames": 1,
+        "peakBytes": 230400,
+        "queued": 0
+      },
+      "decodedResources": {
+        "peakDecodedFrames": 2,
+        "liveDecodedFrames": 0
+      },
+      "qualified": false
+    },
+    {
+      "id": "rate-1250",
+      "selected": [
+        2116666,
+        2150000,
+        2200000,
+        2233333,
+        2283333,
+        2316666,
+        2366666,
+        2400000
+      ],
+      "metadata": {
+        "provenance": "browser_client",
+        "codedWidth": 320,
+        "codedHeight": 180,
+        "displayWidth": 320,
+        "displayHeight": 180,
+        "timeResolution": 15360,
+        "firstTimestamp": 0,
+        "durationFromMetadata": 30,
+        "rotation": 0,
+        "flip": false,
+        "codec": "avc"
+      },
+      "readBytes": 165394,
+      "readCalls": 33,
+      "budget": {
+        "liveFrames": 0,
+        "liveBytes": 0,
+        "peakFrames": 1,
+        "peakBytes": 230400,
+        "queued": 0
+      },
+      "decodedResources": {
+        "peakDecodedFrames": 2,
+        "liveDecodedFrames": 0
+      },
+      "qualified": false
+    },
+    {
+      "id": "rate-1500",
+      "selected": [
+        2116666,
+        2166666,
+        2216666,
+        2266666,
+        2316666,
+        2366666,
+        2416666,
+        2466666
+      ],
+      "metadata": {
+        "provenance": "browser_client",
+        "codedWidth": 320,
+        "codedHeight": 180,
+        "displayWidth": 320,
+        "displayHeight": 180,
+        "timeResolution": 15360,
+        "firstTimestamp": 0,
+        "durationFromMetadata": 30,
+        "rotation": 0,
+        "flip": false,
+        "codec": "avc"
+      },
+      "readBytes": 169115,
+      "readCalls": 37,
+      "budget": {
+        "liveFrames": 0,
+        "liveBytes": 0,
+        "peakFrames": 1,
+        "peakBytes": 230400,
+        "queued": 0
+      },
+      "decodedResources": {
+        "peakDecodedFrames": 2,
+        "liveDecodedFrames": 0
+      },
+      "qualified": false
+    },
+    {
+      "id": "rate-2000",
+      "selected": [
+        2116666,
+        2183333,
+        2250000,
+        2316666,
+        2383333,
+        2450000,
+        2516666,
+        2583333
+      ],
+      "metadata": {
+        "provenance": "browser_client",
+        "codedWidth": 320,
+        "codedHeight": 180,
+        "displayWidth": 320,
+        "displayHeight": 180,
+        "timeResolution": 15360,
+        "firstTimestamp": 0,
+        "durationFromMetadata": 30,
+        "rotation": 0,
+        "flip": false,
+        "codec": "avc"
+      },
+      "readBytes": 175777,
+      "readCalls": 44,
+      "budget": {
+        "liveFrames": 0,
+        "liveBytes": 0,
+        "peakFrames": 1,
+        "peakBytes": 230400,
+        "queued": 0
+      },
+      "decodedResources": {
+        "peakDecodedFrames": 2,
+        "liveDecodedFrames": 0
+      },
+      "qualified": false
+    },
+    {
+      "id": "local-file",
+      "selected": [
+        2100000,
+        2133333,
+        2166666,
+        2200000,
+        2233333,
+        2266666,
+        2300000,
+        2333333
+      ],
+      "metadata": {
+        "provenance": "browser_client",
+        "codedWidth": 320,
+        "codedHeight": 180,
+        "displayWidth": 320,
+        "displayHeight": 180,
+        "timeResolution": 15360,
+        "firstTimestamp": 0,
+        "durationFromMetadata": 30,
+        "rotation": 0,
+        "flip": false,
+        "codec": "avc"
+      },
+      "readBytes": 161935,
+      "readCalls": 29,
+      "budget": {
+        "liveFrames": 0,
+        "liveBytes": 0,
+        "peakFrames": 1,
+        "peakBytes": 230400,
+        "queued": 0
+      },
+      "decodedResources": {
+        "peakDecodedFrames": 2,
+        "liveDecodedFrames": 0
+      },
+      "qualified": false
+    },
+    {
+      "id": "vfr",
+      "selected": [
+        2100000,
+        2133333,
+        2150000,
+        2200000,
+        2233333,
+        2250000,
+        2300000,
+        2333333
+      ],
+      "metadata": {
+        "provenance": "browser_client",
+        "codedWidth": 320,
+        "codedHeight": 180,
+        "displayWidth": 320,
+        "displayHeight": 180,
+        "timeResolution": 15360,
+        "firstTimestamp": 0,
+        "durationFromMetadata": 8,
+        "rotation": 0,
+        "flip": false,
+        "codec": "avc"
+      },
+      "readBytes": 118176,
+      "readCalls": 102,
+      "budget": {
+        "liveFrames": 0,
+        "liveBytes": 0,
+        "peakFrames": 1,
+        "peakBytes": 230400,
+        "queued": 0
+      },
+      "decodedResources": {
+        "peakDecodedFrames": 2,
+        "liveDecodedFrames": 0
+      },
+      "qualified": false
+    },
+    {
+      "id": "whole",
+      "error": "CLIP_SOURCE_RANGE_UNSUPPORTED",
+      "readBytes": 0,
+      "readCalls": 0,
+      "budget": {
+        "liveFrames": 0,
+        "liveBytes": 0,
+        "peakFrames": 0,
+        "peakBytes": 0,
+        "queued": 0
+      },
+      "decodedResources": {
+        "peakDecodedFrames": 0,
+        "liveDecodedFrames": 0
+      },
+      "qualified": false
+    },
+    {
+      "id": "expired",
+      "error": "CLIP_SOURCE_EXPIRED",
+      "readBytes": 0,
+      "readCalls": 0,
+      "budget": {
+        "liveFrames": 0,
+        "liveBytes": 0,
+        "peakFrames": 0,
+        "peakBytes": 0,
+        "queued": 0
+      },
+      "decodedResources": {
+        "peakDecodedFrames": 0,
+        "liveDecodedFrames": 0
+      },
+      "qualified": false
+    },
+    {
+      "id": "production-worker",
+      "frameCount": 94,
+      "decodedFrames": 94,
+      "completed": 94,
+      "config": {
+        "codec": "avc1.640028",
+        "width": 1080,
+        "height": 1920,
+        "framerate": 30,
+        "bitrate": 8000000,
+        "avc": {
+          "format": "avc"
+        }
+      },
+      "durationUs": 3133333,
+      "sourceResources": {
+        "sourceReads": 461,
+        "sourceBytes": 629916,
+        "sourceReadMs": 449.56500005722046,
+        "decodeMs": 166.22500276565552,
+        "openMs": 26.62999963760376,
+        "peakActiveCuts": 2,
+        "activeCuts": 0,
+        "peakDecoderReservedBytes": 22118400,
+        "decoderReservedBytes": 0,
+        "presentation": {
+          "liveFrames": 0,
+          "liveBytes": 0,
+          "peakFrames": 2,
+          "peakBytes": 460800,
+          "queued": 0
+        },
+        "frameExports": 109,
+        "bitmapCopies": 0,
+        "physicalPeakBytes": null,
+        "originals": [
+          {
+            "provenance": "browser_client",
+            "codedWidth": 320,
+            "codedHeight": 180,
+            "displayWidth": 320,
+            "displayHeight": 180,
+            "timeResolution": 15360,
+            "firstTimestamp": 0,
+            "durationFromMetadata": 30,
+            "rotation": 0,
+            "flip": false,
+            "codec": "avc"
+          }
+        ]
+      },
+      "qualified": false
+    },
+    {
+      "id": "production-cancel",
+      "error": "Render cancelled",
+      "name": "AbortError",
+      "completed": 1,
+      "qualified": false
+    }
+  ],
+  "requestSummary": {
+    "cfr": {
+      "requests": 738,
+      "maxRequestedBytes": 119757,
+      "wholeResponseRequests": 0
+    },
+    "vfr": {
+      "requests": 104,
+      "maxRequestedBytes": 7210,
+      "wholeResponseRequests": 0
+    },
+    "whole": {
+      "requests": 1,
+      "maxRequestedBytes": 0,
+      "wholeResponseRequests": 1
+    }
+  },
+  "limits": [
+    "Headless codec/cleanup correctness, not final component/output or identified-device throughput qualification.",
+    "No physical GPU/decoder allocation or zero-copy claim; decoder reservation and presentation bytes are explicit logical bounds.",
+    "VFR timestamp handling does not confer original slow-motion eligibility; authoritative allowedRatePermille is retained.",
+    "Native source-generation proof is equivalent validation, not a passing Docker image/runtime gate."
+  ]
+}
