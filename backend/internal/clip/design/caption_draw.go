@@ -365,10 +365,14 @@ func drawOutline(fr CaptionFrame) (string, string) {
 func drawPop(fr CaptionFrame) (string, string) {
 	op, _ := fr.entrance()
 	var b strings.Builder
+	words := 0
+	for _, line := range fr.Lines {
+		words += len(line.Words)
+	}
 	index := 0
 	for _, l := range fr.Lines {
 		for _, w := range l.Words {
-			p := clamp01((fr.Progress - (0.05 + float64(index)*0.13)) / 0.30)
+			p := popWordProgress(fr.Progress, index, words)
 			scale := 0.001
 			if p > 0 {
 				scale = math.Max(easeOutBack(p), 0.001)

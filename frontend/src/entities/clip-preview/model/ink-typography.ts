@@ -32,6 +32,21 @@ export class ClipInkError extends Error {
     super(subject ? `${code}:${subject}` : code)
   }
 }
+/** Physical pixels are reserved before raster work; only versioned scales are admitted. */
+export function inkRasterDimensions(bounds: InkBox, scale = 1) {
+  if (
+    ![bounds.x, bounds.y, bounds.width, bounds.height].every(Number.isFinite) ||
+    bounds.width <= 0 ||
+    bounds.height <= 0
+  )
+    throw new ClipInkError('CLIP_INK_INVALID_GEOMETRY')
+  if (scale !== 1 && scale !== CLIP_INK.transformInkScale)
+    throw new ClipInkError('CLIP_INK_RESOURCE_LIMIT', 'raster scale')
+  const width = Math.ceil(bounds.width),
+    height = Math.ceil(bounds.height)
+  if (width * height > CLIP_INK.maxSurfacePixels) throw new ClipInkError('CLIP_INK_RESOURCE_LIMIT')
+  return { width: width * scale, height: height * scale }
+}
 export const inkNumber = (value: number) => value.toFixed(3)
 export const inkEscape = (value: string) =>
   value.replace(

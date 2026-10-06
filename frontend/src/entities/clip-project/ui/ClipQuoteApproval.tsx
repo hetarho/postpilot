@@ -44,8 +44,8 @@ export function ClipQuoteApproval({
   const [open, setOpen] = useState(false)
   const insufficient =
     !!quote && !!balance && !balance.unlimited && quote.maxCredits > balance.credits
-  /** A plan quotes its own captions; before narration, the whole target is
-   *  the longest case allowed by the selection. Both are stated in seconds. */
+  /** Server seconds are estimates. Browser work separates reusable ink from
+   * word/mask and filter/geometry updates; neither is a universal time bound. */
   const sequenceCaptionLine = (cost: NonNullable<ClipQuote['sequenceCaptions']>) => {
     if (cost.fromPlan)
       return cost.captions

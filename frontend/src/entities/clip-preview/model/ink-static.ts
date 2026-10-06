@@ -51,7 +51,7 @@ function text(
 ) {
   return `<text x="${inkNumber(x)}" y="${inkNumber(y)}" xml:space="preserve" font-family="${clipInkFont(role.face, role.weight).family}" font-size="${role.size.toFixed(0)}" font-weight="${role.weight}" letter-spacing="${(role.tracking * role.size).toFixed(4)}" ${paint}>${inkTextMarkup(text, role, caption, keyword, accent)}</text>`
 }
-function document(
+export function document(
   ratio: ClipRatioId,
   kind: string,
   bounds: InkBox,

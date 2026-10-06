@@ -243,7 +243,7 @@ it('keeps the last painted footage frame when the video decoder has no current f
   const drawImage = vi.fn()
   vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({
     drawImage,
-  } as unknown as CanvasRenderingContext2D)
+  } as unknown as ReturnType<HTMLCanvasElement['getContext']>)
   vi.spyOn(HTMLCanvasElement.prototype, 'getBoundingClientRect').mockReturnValue({
     width: 270,
     height: 480,
