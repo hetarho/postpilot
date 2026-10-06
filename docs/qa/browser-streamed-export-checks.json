@@ -84,7 +84,7 @@
     "frontend/src/features/render-clip-browser/api/run-local-render.ts": "9c34e7a8325f7a0f41a18fc24804e3ab7c9feb127b8c957b66a23c541da19e77",
     "frontend/src/features/render-clip-browser/api/run-render.ts": "f584970cb6d553368c734f6e3caf5f62ca96ba83d03bd2901ea4ceca479d02c9",
     "frontend/src/features/render-clip-browser/api/store-result.ts": "dfcb1ddaa552dc6ea62a570e551d8afc479989d85aab9c38c683e1533a821a01",
-    "frontend/src/features/render-clip-browser/api/useBrowserRender.ts": "d4f5bab93a47e99bb3ea3ba388670024510a2cef03d867012220458cf13430a1",
+    "frontend/src/features/render-clip-browser/api/useBrowserRender.ts": "4143d2a6277bdcc50d96487c2a946e2cb37949d3766d83cf9cfff50c6d7e36dc",
     "frontend/src/features/render-clip-browser/config/i18n.ts": "5c0ee5226e7b660eb3af4c55f94828ec97f5cfe00aaeade8e90c1a4e6a864558",
     "frontend/src/features/render-clip-browser/index.ts": "53ba462a028f4ecc47a394181f2a36e566d24b530ca2aecb10522bf662c8d082",
     "frontend/src/features/render-clip-browser/lib/originals.ts": "45683beb6e83776fa8d9d799b53467822dfda14f546f5198a17274d247e336b6",
@@ -123,9 +123,929 @@
     "frontend/src/shared/lib/media/video/range-source.ts": "be02047486c9f79ca115dd76fc3e297bb47cdcdeee7791b29cd47c8af763b1cd",
     "frontend/src/shared/lib/media/video/range-video.ts": "fd370a8ae189812dc21967cd5fd9b382bc15b807cca57a470dd1a240b8b9db51",
     "frontend/src/shared/lib/media/video/source-color.ts": "aa12d392caebc6afb3d095ed409a2a1e6f646fb8c5a6b089c3c4412f55eff4e9",
-    "frontend/src/test/browser-media/export-entry.ts": "64298a2914d7c740e96684f72b67c1673a2a36cf23da9005cc747d1f3cd34307",
+    "frontend/src/test/browser-media/export-entry.ts": "69dce99a0ed67e1c9f69c5b8d74c33ef0f7a343f2455da1c1bced8082aef216b",
     "pnpm-lock.yaml": "d07c4a1bd3aeab4df41155c2d63d85e6a487959534ed7b27b4710315d7a07319",
-    "scripts/browser-export-check.mjs": "dca7595b91ed63675494b55127bb2dc2b81575a168344a12ce07c9df4fb222f9"
+    "scripts/browser-export-check.mjs": "44184161cd1bae5f184ff3664989d78e1dc54707d745078fe1d168c5a467a025"
+  },
+  "nativeLayout": {
+    "manifestSHA256": "c42108757c824334b1850ccfd02312be5f50ec981cf89d8593003dedcd282871",
+    "expectedCases": 114,
+    "results": [
+      {
+        "id": "vertical-bold-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "vertical-bold-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "vertical-keynote-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "vertical-keynote-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "vertical-film-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "vertical-film-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "vertical-word-pop-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "vertical-word-pop-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "vertical-blur-in-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "vertical-blur-in-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "vertical-ambient-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "vertical-ambient-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "vertical-neon-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "vertical-neon-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "vertical-iridescent-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "vertical-iridescent-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "vertical-glitch-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "vertical-glitch-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "vertical-ember-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "vertical-ember-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "vertical-stack-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "vertical-stack-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "vertical-outline-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "vertical-outline-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "vertical-pop-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "vertical-pop-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "vertical-sticker-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "vertical-sticker-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "vertical-bubble-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "vertical-bubble-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "vertical-serif-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "vertical-serif-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "vertical-safe",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "vertical-subject",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "vertical-readable",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "vertical-crop",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "vertical-header",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "vertical-owner",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "horizontal-bold-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "horizontal-bold-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "horizontal-keynote-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "horizontal-keynote-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "horizontal-film-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "horizontal-film-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "horizontal-word-pop-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "horizontal-word-pop-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "horizontal-blur-in-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "horizontal-blur-in-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "horizontal-ambient-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "horizontal-ambient-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "horizontal-neon-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "horizontal-neon-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "horizontal-iridescent-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "horizontal-iridescent-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "horizontal-glitch-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "horizontal-glitch-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "horizontal-ember-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "horizontal-ember-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "horizontal-stack-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "horizontal-stack-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "horizontal-outline-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "horizontal-outline-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "horizontal-pop-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "horizontal-pop-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "horizontal-sticker-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "horizontal-sticker-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "horizontal-bubble-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "horizontal-bubble-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "horizontal-serif-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "horizontal-serif-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "horizontal-safe",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "horizontal-subject",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "horizontal-readable",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "horizontal-crop",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "horizontal-header",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "horizontal-owner",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "square-bold-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "square-bold-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "square-keynote-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "square-keynote-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "square-film-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "square-film-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "square-word-pop-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "square-word-pop-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "square-blur-in-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "square-blur-in-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "square-ambient-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "square-ambient-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "square-neon-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "square-neon-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "square-iridescent-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "square-iridescent-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "square-glitch-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "square-glitch-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "square-ember-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "square-ember-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "square-stack-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "square-stack-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "square-outline-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "square-outline-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "square-pop-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "square-pop-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "square-sticker-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "square-sticker-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "square-bubble-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "square-bubble-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "square-serif-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "square-serif-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "square-safe",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "square-subject",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "square-readable",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "square-crop",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "square-header",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "square-owner",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      }
+    ],
+    "qualification": false,
+    "scope": "Independent native declarations compared through strict export freeze and the exact resolveLayout method called by the export Worker."
   },
   "sourceHashScope": "Exact bytes recorded before and checked after actual execution.",
   "qualification": false,
@@ -239,11 +1159,11 @@
       "frameCount": 450,
       "retainedVideoPackets": 0,
       "sourceResources": {
-        "sourceReads": 1265,
-        "sourceBytes": 1297984,
-        "sourceReadMs": 1663.5749979019165,
-        "decodeMs": 33.755001068115234,
-        "openMs": 15.549999713897705,
+        "sourceReads": 1263,
+        "sourceBytes": 1296077,
+        "sourceReadMs": 1288.0500111579895,
+        "decodeMs": 28.805011749267578,
+        "openMs": 14.095000267028809,
         "peakActiveCuts": 1,
         "activeCuts": 0,
         "peakDecoderReservedBytes": 11059200,
@@ -327,8 +1247,8 @@
         "allocatedBytes": 0
       },
       "packetResources": {
-        "peakPackets": 3,
-        "peakBytes": 96179
+        "peakPackets": 2,
+        "peakBytes": 110282
       },
       "output": {
         "width": 1920,
@@ -344,11 +1264,11 @@
       "frameCount": 450,
       "retainedVideoPackets": 0,
       "sourceResources": {
-        "sourceReads": 1177,
-        "sourceBytes": 1206997,
-        "sourceReadMs": 1407.46999502182,
-        "decodeMs": 36.53000020980835,
-        "openMs": 14.40500020980835,
+        "sourceReads": 1352,
+        "sourceBytes": 1383721,
+        "sourceReadMs": 1317.0000095367432,
+        "decodeMs": 33.459996700286865,
+        "openMs": 13.195000171661377,
         "peakActiveCuts": 1,
         "activeCuts": 0,
         "peakDecoderReservedBytes": 11059200,
@@ -449,11 +1369,11 @@
       "frameCount": 450,
       "retainedVideoPackets": 0,
       "sourceResources": {
-        "sourceReads": 1244,
-        "sourceBytes": 1279500,
-        "sourceReadMs": 1316.704996585846,
-        "decodeMs": 33.54500675201416,
-        "openMs": 10.605000019073486,
+        "sourceReads": 1286,
+        "sourceBytes": 1318050,
+        "sourceReadMs": 1427.1400065422058,
+        "decodeMs": 34.809996604919434,
+        "openMs": 10.78499984741211,
         "peakActiveCuts": 1,
         "activeCuts": 0,
         "peakDecoderReservedBytes": 11059200,
@@ -567,9 +1487,9 @@
       "sourceResources": {
         "sourceReads": 1070,
         "sourceBytes": 366965,
-        "sourceReadMs": 1005.0699944496155,
-        "decodeMs": 438.9050016403198,
-        "openMs": 35.075000286102295,
+        "sourceReadMs": 865.7099981307983,
+        "decodeMs": 361.85499334335327,
+        "openMs": 34.204999923706055,
         "peakActiveCuts": 1,
         "activeCuts": 0,
         "peakDecoderReservedBytes": 393216,
@@ -684,11 +1604,11 @@
       "frameCount": 450,
       "retainedVideoPackets": 0,
       "sourceResources": {
-        "sourceReads": 1260,
-        "sourceBytes": 1293339,
-        "sourceReadMs": 1402.5149993896484,
-        "decodeMs": 36.2799973487854,
-        "openMs": 13.739999771118164,
+        "sourceReads": 1264,
+        "sourceBytes": 1297404,
+        "sourceReadMs": 1383.0200090408325,
+        "decodeMs": 38.820019245147705,
+        "openMs": 14.78499984741211,
         "peakActiveCuts": 1,
         "activeCuts": 0,
         "peakDecoderReservedBytes": 11059200,
@@ -805,9 +1725,9 @@
       "sourceResources": {
         "sourceReads": 1070,
         "sourceBytes": 366965,
-        "sourceReadMs": 949.0549960136414,
-        "decodeMs": 399.2350015640259,
-        "openMs": 35.5799994468689,
+        "sourceReadMs": 884.3950061798096,
+        "decodeMs": 380.5800004005432,
+        "openMs": 35.265000343322754,
         "peakActiveCuts": 1,
         "activeCuts": 0,
         "peakDecoderReservedBytes": 393216,
@@ -894,7 +1814,7 @@
         "allocatedBytes": 0
       },
       "packetResources": {
-        "peakPackets": 2,
+        "peakPackets": 3,
         "peakBytes": 90988
       },
       "output": {
@@ -911,11 +1831,11 @@
       "frameCount": 450,
       "retainedVideoPackets": 0,
       "sourceResources": {
-        "sourceReads": 1291,
-        "sourceBytes": 1322927,
-        "sourceReadMs": 1340.9100050926208,
-        "decodeMs": 34.450002670288086,
-        "openMs": 11.385000228881836,
+        "sourceReads": 1431,
+        "sourceBytes": 1460373,
+        "sourceReadMs": 1316.5499949455261,
+        "decodeMs": 31.94999599456787,
+        "openMs": 10.21500015258789,
         "peakActiveCuts": 1,
         "activeCuts": 0,
         "peakDecoderReservedBytes": 11059200,
@@ -1017,11 +1937,11 @@
       "frameCount": 450,
       "retainedVideoPackets": 0,
       "sourceResources": {
-        "sourceReads": 1257,
-        "sourceBytes": 1290880,
-        "sourceReadMs": 1436.4900007247925,
-        "decodeMs": 19.34999704360962,
-        "openMs": 7.53000020980835,
+        "sourceReads": 1256,
+        "sourceBytes": 1290249,
+        "sourceReadMs": 1204.9250102043152,
+        "decodeMs": 23.250001907348633,
+        "openMs": 6.225000381469727,
         "peakActiveCuts": 1,
         "activeCuts": 0,
         "peakDecoderReservedBytes": 11059200,
@@ -1124,7 +2044,7 @@
         "allocatedBytes": 0
       },
       "packetResources": {
-        "peakPackets": 3,
+        "peakPackets": 2,
         "peakBytes": 116930
       },
       "output": {
@@ -1141,11 +2061,11 @@
       "frameCount": 450,
       "retainedVideoPackets": 0,
       "sourceResources": {
-        "sourceReads": 1335,
-        "sourceBytes": 1367571,
-        "sourceReadMs": 1792.959994316101,
-        "decodeMs": 23.71000576019287,
-        "openMs": 8.450000286102295,
+        "sourceReads": 1471,
+        "sourceBytes": 1501121,
+        "sourceReadMs": 1759.4700107574463,
+        "decodeMs": 23.090001583099365,
+        "openMs": 6.909999847412109,
         "peakActiveCuts": 1,
         "activeCuts": 0,
         "peakDecoderReservedBytes": 11059200,
@@ -1216,6 +2136,11 @@
       "before": "Actual cancellation storage check still found cancelled-owner-b.mp4 after a second dispose returned.",
       "after": "Idempotent disposal returns the same in-flight cleanup promise; actual cancelled/abandoned recovery checks leave zero files.",
       "cause": "The first asynchronous abort cleanup had set stopped before delete completed."
+    },
+    {
+      "before": "Cancelling an active private upload with a local artifact cleared its UI owner before the completion-won(false) refresh could settle; retry cancellation also assumed cancellation won.",
+      "after": "Active first upload retains its run owner through authoritative completion-won handling. Retained-artifact and retry cancellation settle the authoritative bool; false refreshes the accepted result and reports durable success.",
+      "verification": "Mounted active-first-upload and retry completion-won regressions pass; publication fences remain server-authoritative."
     }
   ]
 }

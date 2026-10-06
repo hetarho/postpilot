@@ -1,4 +1,10 @@
-import { freezeBrowserComposition, CLIP_AUDIO_PROCESSING } from '@/entities/clip-preview'
+import {
+  freezeBrowserComposition,
+  CLIP_AUDIO_PROCESSING,
+  BrowserLocalComponents,
+  evaluateBrowserFrame,
+  type BrowserCompositionInput,
+} from '@/entities/clip-preview'
 import { CLIP_BROWSER_RENDER } from '@/entities/clip-design'
 import type { ClipRatio } from '@/entities/clip-project'
 import type { ClipEditPlan } from '@/entities/clip-plan'
@@ -24,6 +30,22 @@ type Request = {
   memory?: boolean
   captionStyle?: 'bold' | 'ember'
 }
+interface NativeLayoutCase extends Omit<
+  BrowserCompositionInput,
+  'ownerId' | 'projectId' | 'projectRevision' | 'planRevision'
+> {
+  id: string
+  expected: {
+    instanceId: string
+    startMs: number
+    endMs: number
+    text: string
+    style: string
+    position: string
+    fontSize: number
+    box: { x: number; y: number; width: number; height: number }
+  }[]
+}
 declare global {
   interface Window {
     exportFixture: {
@@ -31,11 +53,68 @@ declare global {
       storage(): Promise<unknown>
       leaveAbandoned(): Promise<void>
       recover(): Promise<unknown>
+      layout(input: NativeLayoutCase): Promise<unknown>
     }
   }
 }
 const namespace = 'postpilot-browser-output-fixture-v1'
 window.exportFixture = {
+  async layout(input) {
+    const snapshot = await freezeBrowserComposition({
+      plan: input.plan,
+      ratio: input.ratio,
+      sources: input.sources,
+      layoutObservations: input.layoutObservations,
+      design: input.design,
+      ownerId: 'native-export-layout',
+      projectId: input.id,
+      projectRevision: 1,
+      planRevision: 1,
+    })
+    const local = new BrowserLocalComponents(snapshot)
+    try {
+      await local.resolveLayout()
+      for (const expected of input.expected) {
+        const component = snapshot.components.find(
+          (c) =>
+            c.instanceId === expected.instanceId &&
+            c.startMs === expected.startMs &&
+            c.endMs === expected.endMs,
+        )
+        if (!component) throw new Error(`NATIVE_EXPORT_WINDOW:${input.id}`)
+        const state = evaluateBrowserFrame(snapshot, component.visibleFirstFrame).components.find(
+          (s) => s.component === component,
+        )!
+        const geometry = await local.backgroundGeometry(state)
+        const caption = geometry?.caption
+        const text =
+          component.phraseIndex === undefined
+            ? component.element.text
+            : component.element.phrases![component.phraseIndex]!.text
+        if (
+          !caption ||
+          text !== expected.text ||
+          caption.style.id !== expected.style ||
+          caption.role.size !== expected.fontSize ||
+          geometry.anchor !== expected.position
+        )
+          throw new Error(`NATIVE_EXPORT_LAYOUT:${input.id}`)
+        for (const key of ['x', 'y', 'width', 'height'] as const)
+          if (Math.abs(caption.region[key] - expected.box[key]) > 0.001)
+            throw new Error(`NATIVE_EXPORT_BOX:${input.id}:${key}`)
+      }
+      return {
+        id: input.id,
+        purpose: snapshot.purpose,
+        expectedElements: input.expected.length,
+        passed: true,
+        componentVersion: snapshot.versions.components,
+        assetVersion: snapshot.versions.assets,
+      }
+    } finally {
+      local.destroy()
+    }
+  },
   async render(request) {
     const controller = new AbortController(),
       signal = controller.signal

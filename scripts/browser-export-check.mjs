@@ -153,6 +153,35 @@ try {
   if (recovery.before.length !== 1 || recovery.after.length)
     throw Error(JSON.stringify(recovery));
   await secondPage.close();
+  let nativeLayout;
+  const manifestPath = option("--native-layout", "");
+  if (manifestPath) {
+    const bytes = readFileSync(manifestPath),
+      manifest = JSON.parse(bytes);
+    const results = [];
+    for (const input of manifest.cases) {
+      const result = await page.evaluate(
+        (input) => window.exportFixture.layout(input),
+        input,
+      );
+      if (
+        !result.passed ||
+        result.purpose !== "export" ||
+        result.componentVersion !== manifest.componentVersion ||
+        result.assetVersion !== manifest.assetVersion
+      )
+        throw Error("Native strict export layout mismatch");
+      results.push(result);
+    }
+    nativeLayout = {
+      manifestSHA256: createHash("sha256").update(bytes).digest("hex"),
+      expectedCases: manifest.cases.length,
+      results,
+      qualification: false,
+      scope:
+        "Independent native declarations compared through strict export freeze and the exact resolveLayout method called by the export Worker.",
+    };
+  }
   const cases = [];
   for (const [mode, ratio, memory, captionStyle] of [
     ["silent", "vertical"],
@@ -235,6 +264,7 @@ try {
   const report = {
     version: 1,
     sourceHashes,
+    nativeLayout,
     sourceHashScope:
       "Exact bytes recorded before and checked after actual execution.",
     qualification: false,
