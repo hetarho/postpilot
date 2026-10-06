@@ -217,7 +217,11 @@ try {
         throw new Error(
           "HDR was not explicitly refused/cleaned: " + JSON.stringify(result),
         );
-      refusals.push({ id, ...result });
+      refusals.push({
+        ...result,
+        id,
+        nativeColorMetadata: JSON.parse(metadata.stdout.toString()),
+      });
       continue;
     }
     if (result.error) throw new Error(JSON.stringify(result));
@@ -303,6 +307,46 @@ try {
         backgrounds.push({ ids, ratio, transitionMs, ...background });
       }
     }
+  const sceneCases = [];
+  for (const style of ["word-pop", "outline"])
+    for (const id of ["bright", "dark"]) {
+      const inputs = [
+        {
+          url: origin + "/file/" + id,
+          fingerprint: createHash("sha256")
+            .update(readFileSync(files.get(id)))
+            .digest("hex"),
+        },
+      ];
+      const scene = await page.evaluate(
+        ({ inputs, style }) =>
+          window.measureBackgroundFixture(inputs, "vertical", 0, false, style),
+        { inputs, style },
+      );
+      if (
+        scene.error ||
+        scene.scenes.length !== 3 ||
+        scene.scenes.some(
+          (s) => s.kinds.some((kind) => kind !== "scene") || s.changed === 0,
+        )
+      )
+        throw new Error(
+          "Scene/background seam failed: " + JSON.stringify(scene),
+        );
+      if (
+        style === "word-pop" &&
+        id === "bright" &&
+        scene.scenes.some((s) => s.cyan > 0)
+      )
+        throw new Error("Bright ground retained cyan scene accent");
+      if (
+        style === "word-pop" &&
+        id === "dark" &&
+        scene.scenes.every((s) => s.cyan === 0)
+      )
+        throw new Error("Dark ground lost scene accent");
+      sceneCases.push({ style, id, ...scene });
+    }
   const inputs = [
     {
       url: origin + "/file/gray204",
@@ -344,6 +388,7 @@ try {
   }
   const report = {
     backgrounds,
+    sceneCases,
     cancellation,
     fadeblack,
     qualification: false,

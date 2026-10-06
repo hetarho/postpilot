@@ -2,6 +2,9 @@ import { NativeFadeBlackSurface } from '@/entities/clip-preview/model/native-fad
 import { nativeFadeBlackPixel } from '@/entities/clip-preview/model/background-math'
 import { freezeBrowserComposition } from '@/entities/clip-preview/model/browser-composition'
 import { BrowserLocalComponents } from '@/entities/clip-preview/model/local-components'
+import { evaluateBrowserFrame } from '@/entities/clip-preview/model/browser-composition'
+import { drawMeasuredBrowserComponents } from '@/entities/clip-preview/model/background-paint'
+import { CLIP_DESIGN } from '@/entities/clip-design'
 import {
   measureBrowserBackground,
   type BrowserBackgroundDiagnostics,
@@ -17,12 +20,19 @@ declare global {
       ratio: ClipRatio,
       transitionMs?: number,
       cancel?: boolean,
+      style?: string,
     ) => Promise<unknown>
   }
 }
-window.measureBackgroundFixture = async (inputs, ratio, transitionMs = 0, cancel = false) => {
+window.measureBackgroundFixture = async (
+  inputs,
+  ratio,
+  transitionMs = 0,
+  cancel = false,
+  style,
+) => {
   const controller = new AbortController()
-  const durationMs = inputs.length * 1000 - transitionMs
+  const durationMs = inputs.length * (style ? 2000 : 1000) - transitionMs
   const startMs = inputs.length > 1 ? 1000 - transitionMs : 0
   const endMs = inputs.length > 1 ? 1000 : durationMs
   const base = {
@@ -41,13 +51,13 @@ window.measureBackgroundFixture = async (inputs, ratio, transitionMs = 0, cancel
     itemId: '',
     cutId: '',
   }
-  const roles = ['caption', 'info', 'hook', 'ending']
+  const roles = style ? ['caption'] : ['caption', 'info', 'hook', 'ending']
   const elements = roles.map((role, i) => ({
     ...base,
     instanceId: `${role}-instance`,
     elementId: role,
     role,
-    text: '화면 기록',
+    text: style ? '지금 보는 화면 기록' : '화면 기록',
     rows:
       role === 'info'
         ? [
@@ -66,7 +76,8 @@ window.measureBackgroundFixture = async (inputs, ratio, transitionMs = 0, cancel
                 { role: 'caption', text: '다음 기록' },
               ]
             : [],
-    style: 'bold',
+    style: style ?? 'bold',
+    keyword: style ? '화면' : '',
     position: i === 1 ? 'header' : 'bottom',
   })) as ClipEditableText[]
   const plan = {
@@ -77,7 +88,7 @@ window.measureBackgroundFixture = async (inputs, ratio, transitionMs = 0, cancel
       sourceId: `source-${i}`,
       fingerprint: source.fingerprint,
       startMs: 0,
-      endMs: 1000,
+      endMs: style ? 2000 : 1000,
       transitionMs: i ? transitionMs : 0,
       playbackRatePermille: 1000,
       volumePermille: 0,
@@ -94,7 +105,7 @@ window.measureBackgroundFixture = async (inputs, ratio, transitionMs = 0, cancel
     plan,
     ratio,
     authoritativeFingerprint: 'a'.repeat(64),
-    design: { hideDisclosure: true },
+    design: { hideDisclosure: true, accent: style ? 'blue' : '', captionStyles: [style ?? 'bold'] },
     sources: inputs.map((source, i) => ({
       sourceId: `source-${i}`,
       fingerprint: source.fingerprint,
@@ -123,7 +134,78 @@ window.measureBackgroundFixture = async (inputs, ratio, transitionMs = 0, cancel
         diagnostics = value
       },
     )
-    return { evidence, diagnostics, qualification: false }
+    const scenes = []
+    if (style) {
+      const canvasSize = CLIP_DESIGN.ratios[ratio].canvas
+      const canvas = new OffscreenCanvas(canvasSize.width, canvasSize.height)
+      const context = canvas.getContext('2d', { alpha: false })!
+      try {
+        for (const index of [1, 30, 58]) {
+          const frame = evaluateBrowserFrame(snapshot, index)
+          const resources = await components.prepare(frame, controller.signal, () => ({
+            accent: CLIP_DESIGN.accent.blue,
+            accentWhite: evidence.measurements[0]!.accentWhite,
+          }))
+          const brightness = evidence.measurements[0]!.ground.rgb.map((v) => Math.round(v * 255))
+          context.fillStyle = `rgb(${brightness.join(',')})` // style-escape: actual measured synthetic footage colour
+          context.fillRect(0, 0, canvas.width, canvas.height)
+          try {
+            drawMeasuredBrowserComponents(context, snapshot, frame, resources, evidence)
+            const data = context.getImageData(0, 0, canvas.width, canvas.height).data
+            let ink = 0,
+              cyan = 0,
+              changed = 0
+            for (let at = 0; at < data.length; at += 4) {
+              if (
+                data[at] !== brightness[0] ||
+                data[at + 1] !== brightness[1] ||
+                data[at + 2] !== brightness[2]
+              )
+                changed++
+              if (data[at]! > 240 && data[at + 1]! > 240 && data[at + 2]! > 240) ink++
+              if (data[at + 1]! > data[at]! + 40 && data[at + 2]! > data[at]! + 40) cyan++
+            }
+            scenes.push({
+              frame: index,
+              kinds: resources.map((r) => r.kind),
+              nodes: resources.flatMap((r) =>
+                r.kind === 'scene'
+                  ? r.scene.nodes.map((n) => ({
+                      id: n.id,
+                      tint: n.pose.tint,
+                      opacity: n.pose.opacity,
+                      clip: n.pose.clip,
+                    }))
+                  : [],
+              ),
+              changed,
+              ink,
+              cyan,
+            })
+          } finally {
+            resources.forEach((r) => r.close())
+          }
+        }
+        const frame = evaluateBrowserFrame(snapshot, 30)
+        const resources = await components.prepare(frame, controller.signal)
+        let staleRefused = false
+        try {
+          drawMeasuredBrowserComponents(context, snapshot, frame, resources, {
+            ...evidence,
+            localSnapshotFingerprint: 'b'.repeat(64),
+          })
+        } catch (error) {
+          staleRefused = error instanceof Error && error.message === 'CLIP_SNAPSHOT_SUPERSEDED'
+        } finally {
+          resources.forEach((r) => r.close())
+        }
+        if (!staleRefused) throw new Error('CLIP_BACKGROUND_STALE_EVIDENCE_ACCEPTED')
+      } finally {
+        canvas.width = 0
+        canvas.height = 0
+      }
+    }
+    return { evidence, diagnostics, scenes, qualification: false }
   } catch (error) {
     return {
       error: error instanceof Error ? error.message : String(error),

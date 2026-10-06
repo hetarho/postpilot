@@ -40,6 +40,12 @@ type captionSequence struct {
 func sequenceCrop(canvas clip.Canvas, l copyLayout) clip.Region {
 	bleed := l.Caption.Bleed()
 	p := l.Region
+	if l.GroundScrim != nil {
+		band := clip.Region(l.GroundScrim.Region)
+		// An entrance can move the band down within the same canvas clip.
+		band.Height += float64(l.Caption.Motion.InDY)
+		p = unionRegion(p, band)
+	}
 	x, y := math.Max(0, math.Floor(p.X-bleed)), math.Max(0, math.Floor(p.Y-bleed))
 	right := math.Min(float64(canvas.Width), math.Ceil(p.X+p.Width+bleed))
 	bottom := math.Min(float64(canvas.Height), math.Ceil(p.Y+p.Height+bleed))
@@ -54,10 +60,14 @@ func captionFrame(canvas clip.Canvas, c clip.Copy, l copyLayout, durationMS int,
 	if !l.Caption.Paint.Accent {
 		accent = ""
 	}
+	if accent != "" && l.Ground.Sampled() && l.Ground.AccentWhite() && !l.Style.Highlight {
+		accent = design.Color["text_white"].Hex
+	}
 	left, right, vertical := copyInsets(l.Style)
 	inner, top := l.Region.Width-left-right, l.Region.Y+vertical
 	frame := design.CaptionFrame{
-		Canvas: design.Size{Width: canvas.Width, Height: canvas.Height}, Style: l.Caption,
+		GroundScrim: l.GroundScrim,
+		Canvas:      design.Size{Width: canvas.Width, Height: canvas.Height}, Style: l.Caption,
 		Family: design.FontFamily(l.Caption.Face), Size: l.FontSize, Tracking: l.Role.Tracking,
 		Region: design.Bounds(l.Region), Accent: accent, Progress: progress, DurationMS: durationMS,
 		Substitute: l.Substitute,

@@ -468,13 +468,15 @@ export class BrowserLocalComponents {
         region: backgroundBoxUnion(lines.map((line) => line.glyphBounds!)),
         caption: description.caption,
         anchor: state.component.element.effectivePosition || state.component.element.position,
-        plate: !!description.caption.style.rule.plate,
+        plate: !!(description.caption.style.rule.plate || description.caption.style.paint.plate),
         motion: description.motion,
         contrastParts: lines.map((line) => ({
           box: line.glyphBounds!,
           fill: description.caption!.style.paint.fill,
           alpha: 1,
-          stroke: !!description.caption!.style.rule.stroke,
+          stroke:
+            !!description.caption!.style.rule.stroke &&
+            description.caption!.style.paint.stroke === CLIP_DESIGN.color.stroke_dark.hex,
         })),
       }
     }

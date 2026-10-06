@@ -43,6 +43,8 @@ it('draws each component scrim immediately before its ink in native overlay orde
     draw: () => events.push(state.component.instanceId),
   })) as unknown as BrowserLocalComponent[]
   const evidence = {
+    snapshotFingerprint: snapshot.authoritativeFingerprint ?? snapshot.snapshotFingerprint,
+    localSnapshotFingerprint: snapshot.snapshotFingerprint,
     measurements: frame.components
       .map((state) => ({
         instanceId: state.component.instanceId,

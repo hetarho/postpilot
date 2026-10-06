@@ -5,6 +5,8 @@ import type { BrowserLocalComponent } from './local-components'
 import type { BrowserCompositionSnapshot, BrowserEvaluatedFrame } from './browser-composition'
 import type { BrowserBackgroundEvidence } from './background-sampling'
 import { previewMotion } from './draft-preview'
+import { inkEntrance } from './ink-caption-scene'
+import { ClipInkError } from './ink-typography'
 
 export interface BrowserScrim {
   kind: 'linear' | 'radial'
@@ -74,8 +76,16 @@ export function drawMeasuredBrowserComponents(
   resources: readonly BrowserLocalComponent[],
   evidence: BrowserBackgroundEvidence,
 ): void {
+  if (
+    evidence.localSnapshotFingerprint !== snapshot.snapshotFingerprint ||
+    evidence.snapshotFingerprint !==
+      (snapshot.authoritativeFingerprint ?? snapshot.snapshotFingerprint)
+  )
+    throw new ClipInkError('CLIP_SNAPSHOT_SUPERSEDED')
   for (const resource of resources) {
     const state = resource.component
+    if (!snapshot.components.includes(state.component))
+      throw new ClipInkError('CLIP_INK_SUPERSEDED')
     const measurement = evidence.measurements.find(
       (m) =>
         m.instanceId === state.component.instanceId && m.phraseIndex === (state.phraseIndex ?? 0),
@@ -86,7 +96,7 @@ export function drawMeasuredBrowserComponents(
     ) {
       const scrim = backgroundScrim(snapshot.ratio, measurement)
       if (scrim) {
-        const motion = previewMotion(
+        let motion = previewMotion(
           {
             startMs: state.component.startMs,
             endMs: state.component.endMs,
@@ -94,6 +104,18 @@ export function drawMeasuredBrowserComponents(
           },
           frame.timeMs,
         )
+        if (resource.kind === 'scene' && measurement.geometry.caption) {
+          const progress = state.component.element.pace === 'rapid' ? 0.5 : state.progress
+          const entrance = inkEntrance(measurement.geometry.caption, progress, state.durationMs)
+          motion = {
+            opacity: resource.scene.opacity,
+            dy: ['word-pop', 'blur-in', 'glitch', 'stack', 'pop', 'sticker'].includes(
+              measurement.geometry.caption.style.id,
+            )
+              ? 0
+              : entrance.dy,
+          }
+        }
         context.save()
         context.globalAlpha = motion.opacity
         context.translate(0, motion.dy)

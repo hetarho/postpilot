@@ -40,6 +40,7 @@ export interface BrowserBackgroundMeasurement {
 export interface BrowserBackgroundEvidence {
   version: string
   snapshotFingerprint: string
+  localSnapshotFingerprint: string
   sourceColorVersion: string
   digest: string
   measurements: BrowserBackgroundMeasurement[]
@@ -220,6 +221,7 @@ export async function measureBrowserBackground(
     const proof = {
       version: CLIP_BACKGROUND_VERSION,
       snapshotFingerprint: snapshot.authoritativeFingerprint ?? snapshot.snapshotFingerprint,
+      localSnapshotFingerprint: snapshot.snapshotFingerprint,
       sourceColorVersion: NATIVE_SOURCE_COLOR_VERSION,
       measurements: visuals,
       notices,

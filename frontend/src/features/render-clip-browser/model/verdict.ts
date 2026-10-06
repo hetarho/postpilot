@@ -46,6 +46,8 @@ export function browserRenderVerdict(
         video.backgroundEvidence.version === 'clip-browser-background-v1' &&
         video.backgroundEvidence.sourceColorVersion === 'native-source-color-v1' &&
         video.backgroundEvidence.snapshotFingerprint === video.snapshotFingerprint &&
+        !!video.localSnapshotFingerprint &&
+        video.backgroundEvidence.localSnapshotFingerprint === video.localSnapshotFingerprint &&
         /^[a-f0-9]{64}$/u.test(video.backgroundEvidence.digest) &&
         video.backgroundEvidence.measurements.length <= 800)) &&
     measurements.width === expected.width &&

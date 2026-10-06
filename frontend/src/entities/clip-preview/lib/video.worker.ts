@@ -264,6 +264,7 @@ async function render(input: BrowserVideoInput, controller: AbortController) {
         track: {
           compositionVersion: input.snapshot?.versions.renderer,
           snapshotFingerprint: input.snapshot?.authoritativeFingerprint,
+          localSnapshotFingerprint: input.snapshot?.snapshotFingerprint,
           backgroundEvidence: background,
           config,
           decoderConfig,

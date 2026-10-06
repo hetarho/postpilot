@@ -33,6 +33,7 @@ export interface EncodedClipChunk {
 export interface BrowserVideoTrack {
   compositionVersion?: string
   snapshotFingerprint?: string
+  localSnapshotFingerprint?: string
   backgroundEvidence?: BrowserBackgroundEvidence
   sourceResources?: ReturnType<BrowserFootageResources['measurements']>
   config: VideoEncoderConfig

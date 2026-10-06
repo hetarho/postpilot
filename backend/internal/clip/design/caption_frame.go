@@ -18,6 +18,12 @@ type CaptionWord struct {
 	Width float64
 }
 
+// A sampled unplated caption owns this backdrop alongside its own ink.
+type CaptionScrim struct {
+	Region Bounds
+	Paint  ScrimPaint
+}
+
 // One laid-out line: the <text> element's own x and baseline y, plus the ink box
 // the measurement produced, all on the canvas.
 type CaptionLine struct {
@@ -34,13 +40,14 @@ type CaptionLine struct {
 
 // CaptionFrame is one caption at one instant of its own interval.
 type CaptionFrame struct {
-	Canvas   Size
-	Style    CaptionStyle
-	Family   string
-	Size     float64
-	Tracking float64
-	Lines    []CaptionLine
-	Region   Bounds
+	GroundScrim *CaptionScrim
+	Canvas      Size
+	Style       CaptionStyle
+	Family      string
+	Size        float64
+	Tracking    float64
+	Lines       []CaptionLine
+	Region      Bounds
 	// The project's accent, already resolved to a hex colour, or empty where
 	// the project chose none or the style admits none (CDS-15).
 	Accent string

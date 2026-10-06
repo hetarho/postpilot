@@ -59,11 +59,13 @@ describe('durable browser output', () => {
       const f = fixture()
       f.video.compositionVersion = 'clip-browser-composition-v1'
       f.video.snapshotFingerprint = 'a'.repeat(64)
+      f.video.localSnapshotFingerprint = 'd'.repeat(64)
       if (background === 'another admission')
         f.video.backgroundEvidence = {
           version: 'clip-browser-background-v1',
           snapshotFingerprint: 'b'.repeat(64),
           sourceColorVersion: 'native-source-color-v1',
+          localSnapshotFingerprint: 'd'.repeat(64),
           digest: 'c'.repeat(64),
           measurements: [],
           notices: [],
@@ -79,6 +81,7 @@ describe('durable browser output', () => {
     const f = fixture()
     f.video.compositionVersion = 'clip-browser-composition-v1'
     f.video.snapshotFingerprint = 'a'.repeat(64)
+    f.video.localSnapshotFingerprint = 'd'.repeat(64)
     const notices = [
       { code: 'composition_contrast', action: 'shortfall', elementId: 'caption', cutId: 'cut' },
     ]
@@ -86,6 +89,7 @@ describe('durable browser output', () => {
       version: 'clip-browser-background-v1',
       snapshotFingerprint: f.video.snapshotFingerprint,
       sourceColorVersion: 'native-source-color-v1',
+      localSnapshotFingerprint: 'd'.repeat(64),
       digest: 'b'.repeat(64),
       measurements: [],
       notices,

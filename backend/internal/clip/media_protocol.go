@@ -9,7 +9,7 @@ import (
 // A changed execution/output contract must change the matching identifier.
 const (
 	MediaContractVersion = 3
-	MediaRendererVersion = "cpu-v3"
+	MediaRendererVersion = "cpu-v4"
 	MediaAssetVersion    = "assets-v3"
 	MediaCPUProfile      = "cpu"
 	MediaRequestMaxBytes = 4 << 20
