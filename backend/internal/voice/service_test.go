@@ -554,7 +554,7 @@ func TestAssembleCorpusHeadsEachPieceAndKeepsProseOnly(t *testing.T) {
 		{Kind: voice.SampleKindPost, Label: "첫 글", Body: "첫 번째 본문이에요.\n#맛집 #연남동\n📍 서울 마포구 연남동 123"},
 		{Kind: voice.SampleKindAnswer, PromptKey: "closing_greeting", Body: "다음에 또 만나요!"},
 	})
-	for _, expected := range []string{"===== 학습 글 1: 첫 글 =====", "첫 번째 본문이에요.", "===== 학습 글 2: 글을 마무리할 때", "다음에 또 만나요!"} {
+	for _, expected := range []string{"===== 학습 글 1: 첫 글 =====", "첫 번째 본문이에요.", "===== 학습 글 2: 가벼운 끝인사로", "다음에 또 만나요!"} {
 		if !strings.Contains(corpus, expected) {
 			t.Errorf("corpus missing %q: %s", expected, corpus)
 		}

@@ -243,6 +243,7 @@ func (q *Queries) GetSampleBody(ctx context.Context, arg GetSampleBodyParams) (G
 
 const getVoice = `-- name: GetVoice :one
 SELECT v.id, v.user_id, v.name, v.is_default, v.deleted_at, v.created_at, v.updated_at,
+       CAST(CASE WHEN EXISTS(SELECT 1 FROM voice_analyses o WHERE o.voice_id=v.id AND o.user_id=v.user_id AND o.slot='current' AND json_extract(o.snapshot,'$.origin')='synthetic') THEN 'synthetic' ELSE 'personal' END AS TEXT) AS origin,
        CAST(EXISTS (
            SELECT 1 FROM voice_analyses a
            WHERE a.voice_id = v.id AND a.user_id = v.user_id AND a.slot = 'current'
@@ -271,6 +272,7 @@ type GetVoiceRow struct {
 	DeletedAt   sql.NullString
 	CreatedAt   string
 	UpdatedAt   string
+	Origin      string
 	Made        int64
 	SampleCount int64
 	AnalyzedAt  string
@@ -287,6 +289,7 @@ func (q *Queries) GetVoice(ctx context.Context, arg GetVoiceParams) (GetVoiceRow
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Origin,
 		&i.Made,
 		&i.SampleCount,
 		&i.AnalyzedAt,
@@ -628,6 +631,7 @@ func (q *Queries) ListSamplePhotoKeys(ctx context.Context) ([]sql.NullString, er
 const listVoices = `-- name: ListVoices :many
 
 SELECT v.id, v.user_id, v.name, v.is_default, v.deleted_at, v.created_at, v.updated_at,
+       CAST(CASE WHEN EXISTS(SELECT 1 FROM voice_analyses o WHERE o.voice_id=v.id AND o.user_id=v.user_id AND o.slot='current' AND json_extract(o.snapshot,'$.origin')='synthetic') THEN 'synthetic' ELSE 'personal' END AS TEXT) AS origin,
        CAST(EXISTS (
            SELECT 1 FROM voice_analyses a
            WHERE a.voice_id = v.id AND a.user_id = v.user_id AND a.slot = 'current'
@@ -652,6 +656,7 @@ type ListVoicesRow struct {
 	DeletedAt   sql.NullString
 	CreatedAt   string
 	UpdatedAt   string
+	Origin      string
 	Made        int64
 	SampleCount int64
 	AnalyzedAt  string
@@ -677,6 +682,7 @@ func (q *Queries) ListVoices(ctx context.Context, userID string) ([]ListVoicesRo
 			&i.DeletedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Origin,
 			&i.Made,
 			&i.SampleCount,
 			&i.AnalyzedAt,

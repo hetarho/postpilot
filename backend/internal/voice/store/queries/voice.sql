@@ -14,6 +14,7 @@ VALUES (?, ?, ?, ?, NULL, ?, ?);
 
 -- name: ListVoices :many
 SELECT v.id, v.user_id, v.name, v.is_default, v.deleted_at, v.created_at, v.updated_at,
+       CAST(CASE WHEN EXISTS(SELECT 1 FROM voice_analyses o WHERE o.voice_id=v.id AND o.user_id=v.user_id AND o.slot='current' AND json_extract(o.snapshot,'$.origin')='synthetic') THEN 'synthetic' ELSE 'personal' END AS TEXT) AS origin,
        CAST(EXISTS (
            SELECT 1 FROM voice_analyses a
            WHERE a.voice_id = v.id AND a.user_id = v.user_id AND a.slot = 'current'
@@ -31,6 +32,7 @@ ORDER BY v.deleted_at IS NOT NULL, v.is_default DESC, v.name, v.id;
 
 -- name: GetVoice :one
 SELECT v.id, v.user_id, v.name, v.is_default, v.deleted_at, v.created_at, v.updated_at,
+       CAST(CASE WHEN EXISTS(SELECT 1 FROM voice_analyses o WHERE o.voice_id=v.id AND o.user_id=v.user_id AND o.slot='current' AND json_extract(o.snapshot,'$.origin')='synthetic') THEN 'synthetic' ELSE 'personal' END AS TEXT) AS origin,
        CAST(EXISTS (
            SELECT 1 FROM voice_analyses a
            WHERE a.voice_id = v.id AND a.user_id = v.user_id AND a.slot = 'current'

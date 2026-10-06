@@ -22,10 +22,12 @@ const (
 const analysisSnapshotVersion = 1
 
 type analysisSnapshot struct {
-	Version       int               `json:"version"`
-	Counted       voice.Fingerprint `json:"counted"`
-	AI            voice.AIPart      `json:"ai"`
-	MaterialCount int               `json:"material_count"`
+	Origin          voice.Origin      `json:"origin,omitempty"`
+	SyntheticSample string            `json:"synthetic_sample,omitempty"`
+	Version         int               `json:"version"`
+	Counted         voice.Fingerprint `json:"counted"`
+	AI              voice.AIPart      `json:"ai"`
+	MaterialCount   int               `json:"material_count"`
 }
 
 func nullableString(value string) sql.NullString {
@@ -55,7 +57,7 @@ func (s *Store) CurrentAnalysis(ctx context.Context, userID, voiceID string) (*v
 	if err != nil {
 		return nil, fmt.Errorf("analysis created_at: %w", err)
 	}
-	return &voice.Analysis{Counted: snapshot.Counted, AI: snapshot.AI, MaterialIDs: ids, AnalyzeModel: row.AnalyzeModel, CreatedAt: created}, nil
+	return &voice.Analysis{Origin: voice.NormalizedOrigin(snapshot.Origin), SyntheticSample: snapshot.SyntheticSample, Counted: snapshot.Counted, AI: snapshot.AI, MaterialIDs: ids, AnalyzeModel: row.AnalyzeModel, CreatedAt: created}, nil
 }
 
 func (s *Store) HasPreviousAnalysis(ctx context.Context, userID, voiceID string) (bool, error) {
@@ -69,7 +71,7 @@ func (s *Store) HasPreviousAnalysis(ctx context.Context, userID, voiceID string)
 // PublishAnalysis discards the previous analysis, moves the current one there and stores the
 // new current, in one transaction (VOICE-25, VOICE-30).
 func (s *Store) PublishAnalysis(ctx context.Context, userID, voiceID string, analysis voice.Analysis) error {
-	snapshot, err := json.Marshal(analysisSnapshot{Version: analysisSnapshotVersion, Counted: analysis.Counted, AI: analysis.AI, MaterialCount: len(analysis.MaterialIDs)})
+	snapshot, err := json.Marshal(analysisSnapshot{Origin: voice.NormalizedOrigin(analysis.Origin), SyntheticSample: analysis.SyntheticSample, Version: analysisSnapshotVersion, Counted: analysis.Counted, AI: analysis.AI, MaterialCount: len(analysis.MaterialIDs)})
 	if err != nil {
 		return fmt.Errorf("encode analysis snapshot: %w", err)
 	}

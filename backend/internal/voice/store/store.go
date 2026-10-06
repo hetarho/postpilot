@@ -175,7 +175,7 @@ func toVoice(row sqlc.ListVoicesRow) (voice.Voice, error) {
 		analyzed = &value
 	}
 	return voice.Voice{
-		ID: row.ID, UserID: row.UserID, Name: row.Name, IsDefault: row.IsDefault == 1, CreatedAt: created, UpdatedAt: updated,
+		Origin: voice.Origin(row.Origin), ID: row.ID, UserID: row.UserID, Name: row.Name, IsDefault: row.IsDefault == 1, CreatedAt: created, UpdatedAt: updated,
 		DeletedAt: deleted, Made: row.Made == 1, SampleCount: int(row.SampleCount), AnalyzedAt: analyzed,
 	}, nil
 }

@@ -116,7 +116,8 @@ func TestAVoiceCheckWritesOnceWithTheAnswerWithheld(t *testing.T) {
 		t.Fatalf("calls=%d request=%+v", h.models.completeCalls, request)
 	}
 	task := request.Messages[0].Parts[0].Text
-	if !strings.Contains(task, "[문항]\n블로그 글을 시작할 때") || !strings.Contains(task, "10~15문장") {
+	prompt, _ := voice.PromptByKey("opening_greeting")
+	if !strings.Contains(task, "[상황]\n"+prompt.Scene) || !strings.Contains(task, "[문항]\n"+prompt.Text) || !strings.Contains(task, "10~15문장") {
 		t.Fatalf("the task = %q", task)
 	}
 	checks, active, err := h.svc.ListVoiceChecks(ctx, "alice", alice)

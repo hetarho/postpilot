@@ -155,7 +155,7 @@ func (h *Handler) ListVoicePrompts(ctx context.Context, _ *connect.Request[postp
 	prompts := h.service.Prompts()
 	out := make([]*postpilotv1.VoicePrompt, 0, len(prompts))
 	for _, prompt := range prompts {
-		out = append(out, &postpilotv1.VoicePrompt{Key: prompt.Key, Part: toProtoPart(prompt.Part), Photo: prompt.Photo, Text: prompt.Text})
+		out = append(out, &postpilotv1.VoicePrompt{Key: prompt.Key, Part: toProtoPart(prompt.Part), Photo: prompt.Photo, Text: prompt.Text, Scene: prompt.Scene, Hint: prompt.Hint, Starter: prompt.Starter})
 	}
 	return connect.NewResponse(&postpilotv1.ListVoicePromptsResponse{Prompts: out}), nil
 }
@@ -318,7 +318,7 @@ func toProtoVoice(v voice.Voice) *postpilotv1.Voice {
 	return &postpilotv1.Voice{
 		Id: v.ID, Name: v.Name, IsDefault: v.IsDefault, Deleted: v.Deleted(),
 		CreatedAt: v.CreatedAt.UTC().Format(timeLayout), UpdatedAt: v.UpdatedAt.UTC().Format(timeLayout), DeletedAt: deleted,
-		Made: v.Made, MaterialCount: int32(v.SampleCount), AnalyzedAt: analyzed, ReadinessPercent: int32(v.ReadinessPercent),
+		Origin: toProtoOrigin(v.Origin), Made: v.Made, MaterialCount: int32(v.SampleCount), AnalyzedAt: analyzed, ReadinessPercent: int32(v.ReadinessPercent),
 	}
 }
 
@@ -361,6 +361,7 @@ func toProtoAnalysis(analysis voice.Analysis) *postpilotv1.VoiceAnalysis {
 		ai.Examples = append(ai.Examples, &postpilotv1.VoiceAiExample{Field: toProtoAIField(example.Field), Sentence: example.Sentence, MaterialId: example.MaterialID})
 	}
 	return &postpilotv1.VoiceAnalysis{
+		Origin: toProtoOrigin(analysis.Origin), SyntheticSample: analysis.SyntheticSample,
 		Counted:       ToProtoFingerprint(analysis.Counted),
 		Ai:            ai,
 		MaterialCount: int32(len(analysis.MaterialIDs)),
@@ -443,7 +444,7 @@ func toProtoReadiness(readiness voice.Readiness) *postpilotv1.VoiceReadiness {
 		missing = append(missing, toProtoPart(part))
 	}
 	return &postpilotv1.VoiceReadiness{
-		Percent: int32(readiness.Percent), Sentences: int32(readiness.Sentences), Needed: int32(readiness.Needed), MissingParts: missing,
+		Percent: int32(readiness.Percent), Sentences: int32(readiness.Sentences), Needed: int32(readiness.Needed), MissingParts: missing, AnsweredQuestions: int32(readiness.AnsweredQuestions), RequiredQuestions: int32(readiness.RequiredQuestions),
 	}
 }
 
@@ -462,3 +463,14 @@ func toProtoPart(part voice.PromptPart) postpilotv1.VoicePromptPart {
 }
 
 var _ postpilotv1connect.VoiceServiceHandler = (*Handler)(nil)
+
+func toProtoOrigin(origin voice.Origin) postpilotv1.VoiceOrigin {
+	switch voice.NormalizedOrigin(origin) {
+	case voice.OriginPersonal:
+		return postpilotv1.VoiceOrigin_VOICE_ORIGIN_PERSONAL
+	case voice.OriginSynthetic:
+		return postpilotv1.VoiceOrigin_VOICE_ORIGIN_SYNTHETIC
+	default:
+		panic("voice: unsupported analysis origin")
+	}
+}

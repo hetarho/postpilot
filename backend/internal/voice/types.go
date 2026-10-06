@@ -80,7 +80,23 @@ func (e *VoiceNameError) Error() string {
 
 // Voice is the aggregate root the directory manages. DeletedAt is a tombstone: the voice
 // keeps its profile and its posts and stays readable, but cannot start or receive AI work.
+type Origin string
+
+const (
+	OriginPersonal  Origin = "personal"
+	OriginSynthetic Origin = "synthetic"
+)
+
+// NormalizedOrigin preserves analyses written before provenance was introduced.
+func NormalizedOrigin(origin Origin) Origin {
+	if origin == "" {
+		return OriginPersonal
+	}
+	return origin
+}
+
 type Voice struct {
+	Origin    Origin
 	ID        string
 	UserID    string
 	Name      string
@@ -210,11 +226,13 @@ type AIPart struct {
 // Analysis is one immutable snapshot (VOICE-26): the counted fingerprint, the AI part, the 학습
 // 글 it read and when.
 type Analysis struct {
-	Counted      Fingerprint
-	AI           AIPart
-	MaterialIDs  []string
-	AnalyzeModel string
-	CreatedAt    time.Time
+	Origin          Origin
+	SyntheticSample string
+	Counted         Fingerprint
+	AI              AIPart
+	MaterialIDs     []string
+	AnalyzeModel    string
+	CreatedAt       time.Time
 }
 
 // AnalysisJob is one queued analysis. MaterialIDs is the snapshot frozen at its start

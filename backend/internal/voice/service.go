@@ -277,6 +277,7 @@ func (s *Service) Get(ctx context.Context, userID, voiceID string) (Profile, err
 		return Profile{}, fmt.Errorf("current analysis: %w", err)
 	}
 	if current != nil {
+		profile.Voice.Origin = NormalizedOrigin(current.Origin)
 		present := make(map[string]bool, len(samples))
 		for _, sample := range samples {
 			present[sample.ID] = true
@@ -458,7 +459,7 @@ func (s *Service) AnswerPrompt(ctx context.Context, userID, voiceID string, answ
 		return Sample{}, ErrPromptNotFound
 	}
 	body := strings.TrimSpace(answer.Body)
-	if body == "" {
+	if body == "" || !containsKoreanProse(ProseSentences(body)) {
 		return Sample{}, ErrAnswerRequired
 	}
 	previous, err := s.answerTo(ctx, userID, voiceID, prompt.Key)

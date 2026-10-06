@@ -76,7 +76,7 @@ func (s *Service) writeCheck(ctx context.Context, found CheckJob, check Check, r
 // writePiece is 검증's one call, shared with 말투 반영 비교 (MODEL-67): the frozen projection as
 // the system prompt, the prompt and the request as the task, and a photo prompt's photo.
 func (s *Service) writePiece(ctx context.Context, ref llm.ModelRef, projection string, prompt Prompt, photoKey string) (string, llm.Usage, error) {
-	parts := []llm.Part{{Text: "[문항]\n" + prompt.Text + "\n[요청]\n" + checkRequest}}
+	parts := []llm.Part{{Text: "[상황]\n" + prompt.Scene + "\n[문항]\n" + prompt.Text + "\n[요청]\n" + checkRequest}}
 	if prompt.Photo {
 		if photoKey == "" {
 			return "", llm.Usage{}, ErrPhotoRequired

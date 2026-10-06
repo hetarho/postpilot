@@ -64,7 +64,7 @@ func toProtoCheck(check voice.CheckView) *postpilotv1.VoiceCheck {
 		CreatedAt: check.CreatedAt.UTC().Format(timeLayout),
 	}
 	if check.Prompt.Key != "" {
-		out.Prompt = &postpilotv1.VoicePrompt{Key: check.Prompt.Key, Part: toProtoPart(check.Prompt.Part), Photo: check.Prompt.Photo, Text: check.Prompt.Text}
+		out.Prompt = &postpilotv1.VoicePrompt{Key: check.Prompt.Key, Part: toProtoPart(check.Prompt.Part), Photo: check.Prompt.Photo, Text: check.Prompt.Text, Scene: check.Prompt.Scene, Hint: check.Prompt.Hint, Starter: check.Prompt.Starter}
 	}
 	if providerID, modelID, ok := strings.Cut(check.WriteModel, "/"); ok {
 		out.WriteModel = &postpilotv1.ModelRef{ProviderId: providerID, ModelId: modelID}

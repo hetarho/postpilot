@@ -1,13 +1,13 @@
 # VOICE voices
-> r8 | An account owns zero or more mutually isolated 말투 (voices), each a fingerprint of its owner's surface habits made only from 학습 글 the owner adds — posts they wrote by hand and answers to the product's prompts — counted by the product, described briefly by one explicit analysis call, read back in plain words, checked against the owner's own answer, and projected into prompts without fallback (invariant I4).
+> r11 | Mutually isolated personal writing voices learned from ten-question sessions or owner writing, and explicitly generated eight-style batches with labelled synthetic provenance.
 
 ## decisions
-- VOICE-1 [o] an account owns zero or more voices (`voices`), the user-facing noun 말투 — several when the owner writes in more than one mood, a calm one and a cheerful one; each voice owns its 학습 글, its current analysis, at most one previous analysis and its 검증 results, all keyed by `(user_id, voice_id)`; no shared account-level analysis, inheritance, copying or fallback: a voice with no 학습 글 holds nothing even when a sibling is made ← a merged analysis can never be separated again
+- VOICE-1 [o] account-owned writing voices are mutually isolated and have explicit personal or synthetic provenance; each owns its materials, current/previous analysis and verification results under (user_id, voice_id). Personal voices learn only owner-authored writing; synthetic styles follow VOICE-68/69 and never become evidence of the owner's personal habits.
 - VOICE-2 [o] active display names are unique within the account (`voices_active_name`) and a tombstone's name reserves nothing; at most one active, made voice is the account's 기본 (partial unique index `voices_one_default`), and an account may have none
 - VOICE-3 [o] every store query and RPC is scoped by the authenticated user and by one voice, named explicitly (`voice_id` on analysis, 학습 글, 검증 and comparison requests) or derived from an owned aggregate (a post); no request carries a user id; a foreign voice id is indistinguishable from an unknown one (`NotFound`); a same-account id from another voice is refused — never interchangeable material
-- VOICE-4 [o] no voice is created automatically: `adduser`, sign-up and reads never create a voice or an analysis, and a new account starts with none ← a voice holds only prose its owner chose to give it
+- VOICE-4 [o] signup, provisioning, reads and page entry create no voice or analysis; a personal voice is created only on an explicit questionnaire/paste action and a generated style only on explicit adoption (→VOICE-68).
 - VOICE-5 [o] a voice belongs to no 분야 and no template: it is the owner's own voice on a post of any 분야 and any template, and neither a template's text nor a guideline enters its analysis or changes it; no revision path writes voice state ← a fingerprint is surface habit, which holds across topics and forms, while the template decides the post's form (→TMPL-1)
-- VOICE-6 [o] a voice's analysis is the fingerprint (→VOICE-24) of the 학습 글 it read with one example sentence per item; nothing else is voice state — no rule list, no override, and no history beyond the one previous analysis (→VOICE-30)
+- VOICE-6 [o] a personal analysis is the counted fingerprint of its owner materials plus the AI impression and cited examples; a synthetic analysis separately stores its origin and bounded illustrative sample under VOICE-69. Neither kind holds a user-authored rule override, and only one previous analysis is retained.
 - VOICE-8 [o] a 학습 글 is private to its owner: its full text — and an answered photo prompt's photo — opens for the owner on the voice's 학습 데이터 screen (→VOICE-64) and reaches no other account, voice or log
 - VOICE-9 [o] ListVoices returns the account's voices including tombstones — active first, the 기본 first among them, then by name and id — each carrying whether it is made and, until it is, its readiness (→VOICE-32); the order is part of the contract and the frontend re-applies it after a cache patch; GetVoiceProfile returns the voice summary with its current analysis
 - VOICE-10 [o] CreateVoice trims the name, requires 1–`VoiceNameMaxChars` (50) Unicode scalar values (`InvalidArgument` otherwise), refuses an active-name collision (`AlreadyExists`) and creates a Korean voice that is not yet made (`만드는 중`, no analysis); it takes no language, description or 분야, calls no model, and there is no voice-count limit
@@ -22,7 +22,7 @@
   - there is no hard-delete path ← a tombstone keeps post history renderable without cascading rows away
 - VOICE-14 [o] RestoreVoice clears `deleted_at` without enqueueing anything, fails `AlreadyExists` while an active voice holds the same name (rename the tombstone first), and never changes the default
 - VOICE-15 [o] a deleted voice stays addressable for display — its analysis, 학습 글 and 검증 results readable — but every change (adding or deleting a 학습 글, 말투 만들기, 다시 분석, 이전 분석으로 되돌리기, 검증, a 말투 반영 비교 start) is refused `FailedPrecondition` before any enqueue or provider call
-- VOICE-16 [o] directory reads, lifecycle mutations, gathering (pasting, answering, the readiness meter), page load, polling, copy, export, time and boot make no provider call and enqueue no work (I5); the only provider work a voice starts is 말투 만들기, 다시 분석 and 검증, each an explicit press (말투 반영 비교 →MODEL-67)
+- VOICE-16 [o] reads, lifecycle edits, gathering, page entry, polling, copying/export and boot issue no model call or job. Provider work is limited to explicit analysis/reanalysis, verification, model comparison under MODEL-67 and generated-style requests under VOICE-68.
 - VOICE-20 [o] a pasted 학습 글 is trimmed and must contain at least `SampleMinChars` (200) Unicode characters (the rejection names the measured count); an empty label falls back to the first `LabelFallbackChars` (20) characters; pasting needs no model and enqueues nothing
 - VOICE-21 [o] adding or deleting a 학습 글 enqueues nothing:
   - before the voice is made it moves the readiness meter (→VOICE-32)
@@ -48,11 +48,11 @@
 - VOICE-27 [o] the product computes every counted item itself and never asks the model to estimate one; the call names every AI field it expects and attaches the embedded schema `internal/voice/schemas/voice_analysis.schema.json` when the resolved model declares `structured_output`, falling back to the prompt alone otherwise
 - VOICE-30 [o] after a 다시 분석 the voice offers one `이전 분석으로 되돌리기`, which makes the previous analysis current again and discards the one it replaced; there is no redo and no older history, and a deleted voice offers none ← it exists for a re-analysis the owner dislikes
 - VOICE-31 [o] `GetVoiceProfile.active_job_id` exposes the voice's queued or running analysis or 검증 so clients resume polling after navigation or reload
-- VOICE-32 [o] until the voice is made, a readiness meter counts its 학습 글 by the fingerprint's own segmentation and shows `말투 학습에 필요한 정보 N% 확보`, then at 100% `이제 말투를 만들 수 있어요` with 말투 만들기:
-  - 100% needs `VOICE_READY_SENTENCES` (60) sentences and at least one opening, one description and one closing
-  - a pasted post counts as all three parts; an answer counts as its prompt's part (→VOICE-60)
-  - N is the sentence share, held below 100 while a part is missing; below 100% the meter says how many more sentences are needed (e.g. `20문장이 더 필요해요.`) and names the missing part
-  - a voice not yet made cannot be picked for a post or made 기본 ← the analysis needs enough of the owner's own sentences to hold
+- VOICE-32 [o] a personal voice becomes ready for its first explicit analysis after ten distinct valid question answers covering opening, description and closing, or the existing sixty owner-prose sentences covering those parts.
+  - each question answer must contain owner-authored Korean prose; hashtags/info-only/emoji-only text does not advance readiness
+  - the first ten-question set covers every part without a photo requirement; server readiness reports answered/required questions and sentence fallback separately
+  - the percent is the larger valid answer-count/sentence share, held below 100 while a part is missing; short material preserves unknown fingerprint facets instead of inventing measured values
+  - a personal voice remains unselectable and cannot be default before successful analysis; an adopted synthetic style is independently usable under VOICE-68
 - VOICE-43 [o] 검증 checks that the voice applies: the owner picks one of the voice's answered prompts — or answers one there, the answer becoming a 학습 글 too — and one durable `check_voice` job on the account's active write-stage selection writes a short piece on that prompt's subject in this voice
   - the call receives the voice's projection (→VOICE-46) with that prompt's own answer withheld from the excerpts, the prompt, and a photo prompt's photo
   - the piece is `VOICE_CHECK_SENTENCES` (10~15) sentences with an opening and a closing ← two to five sentences cannot show a ratio
@@ -74,7 +74,7 @@
 - VOICE-51 [o] no third-party sentence, Korean morphology, vector, embedding, SDK, Python, CGO, sidecar or model dependency: segmentation, counting, ending buckets, the readiness meter and excerpt retrieval use the Go standard library ← keeps the static SPA + distroless Go deployment and makes unit tests deterministic
 - VOICE-52 [o] 말투 is the directory `/voices`, a LIST in 내 글's row shape (→POST-43): each active voice is one row and one link — its name, a `기본` badge on the 기본 and a meta line (`만드는 중 N%` until made, then the 학습 글 count and the analysis date) — with nothing interactive on the row ← one list design across the app
   - tombstones live in a `삭제된 말투 N개` disclosure rendered only when one exists, closed on load, its rows keeping `복원`
-  - the page's one CTA is a docked `새 말투 만들기`, and an empty list says in plain words what a voice is
+  - docked actions offer `새 말투 만들기` for personal learning and `AI 말투 추천받기` for explicit generated styles; an empty list explains personal learning in plain words
 - VOICE-53 [o] `새 말투 만들기` — on the list and in a post's voice picker (→POST-101) — opens the shared `Sheet` (a bottom sheet below `md:`) with the name field and its `n / 50자` count
   - the commit action sits in flow after the field rather than in the pinned footer ← the panel is anchored to the layout viewport the software keyboard does not resize
   - success closes the sheet and opens the new voice on `/materials` 말투 학습
@@ -85,47 +85,61 @@
   - a tombstone shows a notice with `복원` and blocks every change with the reason; an unowned id reads `없는 말투예요.`
   - `/voice` and `/voice/<tab>` redirect to the same tab of the 기본 voice, or to `/voices` when there is none, creating nothing
   - each tab issues only the queries its panel renders, and an in-flight list reads as loading rather than as an empty voice
-  - the top-level destinations are 글 / 영상 / AI 모델, with 말투 inside the 글 group (→THEME-38)
-- VOICE-55 [o] the paste form is disabled below 200 trimmed Unicode characters; 말투 만들기 and 다시 분석 are disabled below 100% or without a usable analyze selection, and 검증 without a usable write selection, each saying why in place; an RPC rejection renders from stable `AppFailure` reason/params in the active locale, never raw transport prose; `active_job_id` resumes polling and a finished job refreshes that voice's queries
+  - 말투 is a writing settings destination under THEME-38, with optional first-use learning under AUTH-51
+- VOICE-55 [o] the paste form retains its 200-character rule; analysis/reanalysis require server readiness and an eligible prepared analyze ref, verification an eligible write ref. Initial model defaults follow MODEL-87 without a model-selection screen. Refusals use localized stable AppFailure messages and active jobs resume polling; completion refreshes the owning voice.
 - VOICE-56 [o] every voice query cache is partitioned by `(account, voice)` — `voices`, `voice-analysis`, `voice-materials`, `voice-checks` — so two voices of one account and two accounts on one device never read each other's entry
   - directory mutations patch the cached list in the server's order (create/rename/delete/restore upsert one voice, set-default installs the returned list)
   - rename, delete and restore also mark the voice's scope and every cached post stale
   - the SPA removes every account-scoped cache on logout and on a mid-session authentication failure
 - VOICE-57 [x] a topic, project, category or folder hierarchy; a cross-voice 학습 글 picker or copy; moving 학습 글, analyses or 검증 results on reassignment; automatic voice selection from content; hard-deleting a voice; a voice-count cap; scheduled or automatic analysis, embeddings or a background judge; English voices, which would arrive with their own items and prompts — out of scope
 - VOICE-58 [o] 학습 글 (their text and photos), analyses and 검증 results are private account data cascading from the owning account; a soft-deleted voice keeps every row and only stops accepting changes; no private prose or photo is logged; no cross-account or cross-voice retrieval, comparison, check or prompt input exists
-- VOICE-59 [o] a voice is made only of 학습 글 the owner adds — posts they wrote by hand, pasted, and their answers to the product's prompts — and grows only the same two ways, then 다시 분석; never from a finished post, a revision, an edit diff or any AI output ← only the owner's own writing carries the owner's voice
-- VOICE-60 [o] the prompts are one code-owned set shared by every voice, `VOICE_PROMPT_COUNT` (20): 4 openings, 12 descriptions (6 on a photo, 6 on a situation) and 4 closings, each asking for 2~5 sentences (`고른 사진을 블로그에 쓰듯 2~5문장으로 써 보세요`, `처음 가 본 곳에 들어섰을 때를 써 보세요`)
-  - a photo prompt's photo is the owner's own, picked on their device, converted in the browser and stored privately as a post photo is (→POST-31 … POST-39); the product supplies no photo ← the owner writes about what they actually ate or saw, as when writing a post
-  - each prompt holds one answer; answering it again replaces the answer in one save, keeping its photo unless the owner picks a new one, and deleting it frees the prompt
-  - an answer is trimmed and non-empty; the prompt texts are product copy, never rows or config
+- VOICE-59 [o] personal learning contains only owner-authored pasted writing and prompt answers, never generated posts, revisions, edit diffs or AI candidates. Synthetic generation/adoption is a separate explicitly labelled origin under VOICE-68/69, with no synthetic example inserted into personal materials or readiness.
+- VOICE-60 [o] writing questions form an extensible code-owned catalog of at least 200 stable keys with natural Korean situational wording, a concrete scene, optional writing hint, part and starter designation.
+  - preserve all existing prompt keys and saved-answer/photo semantics; improve their wording without invalidating answers
+  - the starter set has ten different ordinary-life situations covering opening/description/closing, requires no photo upload and asks for one to three natural sentences in the owner's usual style
+  - further questions cover varied everyday feelings, recommendations, surprises, frustrations, decisions, places and objects; no prompt requires an invented personal history or specialist knowledge
+  - optional photo questions still use only owner-picked private photos; answers are nonempty Korean prose, saving again replaces only that key
+  - reads and question browsing create no provider work; text and catalog keys are code, not generated at runtime
 - VOICE-61 [o] a line that is not the owner's prose counts toward no sentence and feeds no item: a hashtag-only line, a `[출처]` line, an info line (one that opens with 주소 · 영업시간 · 운영시간 · 전화 · 휴무 · 주차 · 가격 · 위치 followed by `:` or a space, or with 📍 ⏰ ☎️), a Korean address line, and a line holding no Hangul ← a voice is learned only from prose the owner wrote, and a pasted Naver post carries its place card and hashtags
 - VOICE-62 [o] the fingerprint comparison measures a text by the analysis's own counting and shows each counted item as the voice's value beside the text's, in the item's own unit, the item farthest from the voice first (distance relative to the voice's own value); an item the text is too short to show reads 알 수 없음; it makes no call and is used by 검증 (→VOICE-43), ② (→POST-102) and 말투 반영 비교 (→MODEL-67)
 - VOICE-63 [o] the 말투 분석 tab shows the current analysis read-only: each counted item as one plain sentence with its number (e.g. `문장의 32%를 느낌표로 끝내요`) without a `숫자로 본 습관` group title, followed by `AI가 읽은 인상`; each item has its example sentence, with no provenance badge or per-item edit
   - VOICE-21's notice and `이전 분석으로 되돌리기` sit above the groups
 - VOICE-64 [o] the 학습 데이터 tab lists the voice's 학습 글 newest first — a pasted post by its label, an answer by its prompt — each opening to its full text and photo with `삭제`; it carries `글 붙여넣기` (the paste form, 제목 (선택) first) and `문항 풀기` (the sequential prompt sheet →VOICE-65), both taking entries until closed, and until the voice is made the readiness meter
-- VOICE-65 [o] a learning sheet keeps taking entries until the owner closes it: a save never closes the sheet ← enough 학습 글 takes many entries, and reopening the sheet for each one breaks the run
-  - 문항 풀기 opens the first unanswered prompt in the set's order, one question at a time; each saved answer opens the next unanswered prompt on a blank form
-  - the sheet has no skip or prompt-list control; closing it preserves saved answers and discards only the unsaved answer, and reopening resumes at the first unanswered prompt
-  - for an unmade voice the sheet shows its current readiness progress bar after each answer, including the missing part; from 80% until 100% it says `거의 다 왔어요`, and at 100% it offers the explicit 말투 만들기 action
-  - once no unanswered prompt remains, a voice below 100% continues one answered prompt at a time, prefilled for adding sentences; each save advances to the next answered prompt, wrapping as needed, and keeps that prompt's photo unless the owner changes it
-  - once no unanswered prompt remains and readiness is 100% (or the voice is made), the sheet shows completion and the close action
-  - 글 붙여넣기: a saved post empties the form for the next one, and its cancel action reads `닫기` from then on
-  - each save is confirmed in place (`답을 저장했어요`, `글을 추가했어요`)
-  - a refused save keeps the same entry with its text; closing the sheet discards only the unsaved entry
-  - 검증's answer-one path still saves one answer and returns to 검증 (→VOICE-43)
-
+- VOICE-65 [o] questionnaire sessions present ten questions at a time, one concrete scene and answer per view, with saved-count progress, Back and an explicit skip that replaces a skipped question rather than counting it as answered.
+  - saved answers and stable keys are the resume authority; failed saves retain text/photo and the same question, and duplicate/stale submit responses cannot advance another owner or question
+  - the first session uses the starter questions and stops after ten valid saved answers with an explicit analysis action once ready; it never requires exhausting the catalog or padding every answer to many sentences
+  - further sessions choose ten unanswered questions, preserving all previous answers; the catalog can keep growing into hundreds without changing the saved format
+  - editing a saved answer is explicit; question exhaustion offers review/completion instead of silently rewriting earlier answers
+  - questionnaire UI is reusable inline during setup and in settings; pasted writing and verification's answer-one path retain their separate save contracts
+- VOICE-66 [o] voice setup offers two clear initial paths: answer ten friendly questions to learn personal writing, or explicitly ask AI for eight ready-to-choose writing styles; owner writing paste and later name changes remain available without being prerequisites.
+- VOICE-67 [o] personal questionnaire readiness is not a promise that every fingerprint facet is known; the first profile may be used with measured/unknown facets, and additional personal answers improve the next explicitly requested analysis.
+- VOICE-68 [o] an owner-triggered writing-style generation is one durable account-owned batch with exactly eight distinct candidates presented together.
+  - the same explicit generate/compare/adopt flow is available during initial setup and later from `/voices` writing settings; opening or closing its wide sheet starts no AI, closing preserves durable work, and successful adoption opens the confirmed voice
+  - one eligible saved write-model ref, randomized contrasting style directions, a shared fictional preview situation and bounded output are frozen at admission; one planned metered completion call produces the batch, without automatic paid corrections or fallback
+  - candidates contain a short name, plain-language feel and a readable Korean sample; generated text is labelled AI-created style, not inferred personal identity or real owner facts
+  - show the bounded credit estimate before explicit generation, reserve through QUOTA-13/14 and settle confirmed usage under QUOTA-46/49/52; regeneration requires another explicit request
+  - one active batch per account, durable owner-only polling/result reads, explicit cancellation and no adoption of incomplete/failed/cancelled output; restart never repeats uncertain provider work
+  - explicit adoption atomically creates one made voice, its synthetic current analysis and an idempotency record for (owner, job, candidate); it performs no AI call and creates no personal sample
+  - duplicate adoption returns the same voice without undoing subsequent explicit changes; display-name collisions receive a bounded unique suffix, and optional defaulting applies only on the first adoption
+- VOICE-69 [o] synthetic provenance is preserved in saved analysis and exposed wherever a style is chosen or inspected.
+  - count the synthetic example separately, describe its requested style, and keep its sample labelled fictional; do not claim its ratios were measured from the owner's writing
+  - synthetic samples are absent from personal readiness, sample CRUD and personal excerpt retrieval; style projection may use the bounded labelled synthetic example while explicitly forbidding copied facts or phrases
+  - personal material can accumulate on an adopted style; successful explicit personal reanalysis changes the current origin to personal and retains the prior synthetic snapshot under the existing restore contract
+  - snapshots without an origin decode as personal, preserving existing analyses and posts
 ## flow
-- create: 새 말투 만들기 → CreateVoice(name) → `만드는 중` → 말투 학습(`/materials`: 글 붙여넣기 | 문항 풀기 one question at a time) → next entry in the same sheet until it closes (→VOICE-65) → meter N% (no call) → 100% → 말투 만들기 → `analyze_voice`(count → one call) → made → 말투 분석 · 학습 데이터 · 검증 tabs
-- grow: 학습 글 added | deleted → notice → 다시 분석(at 100%) → current = new, previous kept → 이전 분석으로 되돌리기
-- check: 검증 → an answered prompt | answer one → `check_voice`(one write call, that answer withheld) → piece beside the answer + fingerprint comparison
-- delete: DeleteVoice(busy → refuse | tombstone) → posts keep `VoiceRef{deleted}` → RestoreVoice | reassign the post
+- personal start: choose ten questions | paste own writing → explicitly create/resume one personal voice → save owner answers in a ten-question session → ten valid answers with every part or sixty owner sentences → explicit analysis → made personal voice → optional default → creation
+- further learning: choose another ten unanswered situations | paste → save private materials → keep existing analysis → explicit reanalysis → current personal snapshot with previous retained
+- generated styles: explicit generation with visible estimate → bounded durable one-call batch → eight labelled styles → explicit selection/adoption → atomic made synthetic voice/default choice → creation
+- questionnaire: starter/unanswered batch → scene + natural answer → guarded save → next question | failure retains answer → ten answers → explicit analysis or completion; saved-key resume after navigation/reload
+- check: answered prompt or answer one → explicit check job → withheld-answer comparison
+- delete: guarded soft delete → retained historical refs → explicit restore/reassignment
 
 ## constraints
-- constants BE `internal/voice`: `VoiceNameMaxChars` 50 · `SampleMinChars` 200 · `LabelFallbackChars` 20 · `VOICE_READY_SENTENCES` 60 · `VOICE_PROMPT_COUNT` 20 (openings 4 · descriptions 12 · closings 4) · `VOICE_CHECK_SENTENCES` 10~15 · `VOICE_FEW_SHOT_MAX` 3 · `VOICE_FEW_SHOT_EXCERPT_TARGET_CHARS` / `MAX_CHARS` 500 / 800; FE constants live in their owning slices — `entities/voice/config` mirrors `VOICE_NAME_MAX_CHARS` 50 and the paste feature mirrors `VOICE_SAMPLE_MIN_CHARS` 200; the prompt set and the non-prose patterns are code; no env var, no schedule, no interval
+- constants BE `internal/voice`: `VoiceNameMaxChars` 50 · `SampleMinChars` 200 · `LabelFallbackChars` 20 · `VOICE_READY_SENTENCES` 60 · `VOICE_INITIAL_QUESTION_COUNT` 10 · code-owned prompt catalog ≥200 · `VOICE_CANDIDATE_COUNT` 8 · `VOICE_CHECK_SENTENCES` 10~15 · `VOICE_FEW_SHOT_MAX` 3 · `VOICE_FEW_SHOT_EXCERPT_TARGET_CHARS` / `MAX_CHARS` 500 / 800; FE constants live in their owning slices — `entities/voice/config` mirrors `VOICE_NAME_MAX_CHARS` 50 and the paste feature mirrors `VOICE_SAMPLE_MIN_CHARS` 200; the prompt set and the non-prose patterns are code; no env var, no schedule, no interval
 - schema: `voices(id PK, user_id FK cascade, name, is_default, deleted_at, created_at, updated_at, UNIQUE(id, user_id))` with `voices_one_default` and `voices_active_name`, plus tables for 학습 글 (a pasted post or a prompt answer with its photo key), analyses (current and previous) and 검증 results, each keyed by `(user_id, voice_id)`
 - placement BE: `backend/internal/voice` (domain, service, fingerprint counting, store, rpc, `schemas/`); it publishes ports consumed by post (`VoiceDirectory`), generation (`Profiles`) and experiment (`VoiceDirectory`, the fingerprint comparison), and asks `Jobs` before a delete; all adapted only in `cmd/api`; a boundary test forbids sibling `store`/`sqlc` imports inside `internal/`
 - placement FE: `entities/voice` (model, api, ui, config) · `features/create-voice` `rename-voice` `set-default-voice` `delete-voice` `restore-voice` `select-post-voice` and the other verb slices taking `voiceId` · the fingerprint comparison widget shared by 검증, ② and the model lab · `pages/voices` `pages/voice` · `widgets/voice-warning` · `app/routes` (voice layout, `/voice` redirect)
 - contracts: `voice.proto`, plus `VoiceRef` in `post.proto` and `voice_id` in `model_experiment.proto`
 
 ## chg
-- r8 261002 VOICE-32✎ meter names the missing part→also says how many more sentences are needed
+-

@@ -155,7 +155,7 @@ func TestVoiceMaterialRPCs(t *testing.T) {
 	alice := auth.WithUser(ctx, "alice")
 
 	prompts, err := handler.ListVoicePrompts(alice, connect.NewRequest(&postpilotv1.ListVoicePromptsRequest{}))
-	if err != nil || len(prompts.Msg.GetPrompts()) != 20 {
+	if err != nil || len(prompts.Msg.GetPrompts()) < 200 {
 		t.Fatalf("prompts = %d err=%v", len(prompts.Msg.GetPrompts()), err)
 	}
 	photos := 0
@@ -166,7 +166,7 @@ func TestVoiceMaterialRPCs(t *testing.T) {
 			photos++
 		}
 	}
-	if photos != 6 || parts[postpilotv1.VoicePromptPart_VOICE_PROMPT_PART_OPENING] != 4 || parts[postpilotv1.VoicePromptPart_VOICE_PROMPT_PART_DESCRIPTION] != 12 || parts[postpilotv1.VoicePromptPart_VOICE_PROMPT_PART_CLOSING] != 4 {
+	if photos != 6 || parts[postpilotv1.VoicePromptPart_VOICE_PROMPT_PART_OPENING] < 4 || parts[postpilotv1.VoicePromptPart_VOICE_PROMPT_PART_DESCRIPTION] < 12 || parts[postpilotv1.VoicePromptPart_VOICE_PROMPT_PART_CLOSING] < 4 {
 		t.Fatalf("prompt parts = %v photos=%d", parts, photos)
 	}
 

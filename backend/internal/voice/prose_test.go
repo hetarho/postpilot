@@ -81,8 +81,8 @@ func TestReadinessCountsSentencesAndParts(t *testing.T) {
 		{"more than enough", []Sample{post(90)}, 100, []PromptPart{}},
 		{"answers without a closing", []Sample{answer("opening_greeting", 30), answer("photo_food", 40)}, 99, []PromptPart{PartClosing}},
 		{"answers covering every part", []Sample{answer("opening_greeting", 20), answer("situation_value", 20), answer("closing_reader", 20)}, 100, []PromptPart{}},
-		{"a short answer set", []Sample{answer("opening_greeting", 3)}, 5, []PromptPart{PartDescription, PartClosing}},
-		{"non-prose lines count nothing", []Sample{{Kind: SampleKindPost, Body: strings.Repeat("#태그\n", 80)}}, 0, []PromptPart{}},
+		{"a short answer set", []Sample{answer("opening_greeting", 3)}, 10, []PromptPart{PartDescription, PartClosing}},
+		{"non-prose lines count nothing", []Sample{{Kind: SampleKindPost, Body: strings.Repeat("#태그\n", 80)}}, 0, []PromptPart{PartOpening, PartDescription, PartClosing}},
 	} {
 		got := ReadinessOf(test.samples)
 		if got.Percent != test.percent || !reflect.DeepEqual(got.MissingParts, test.missing) || got.Needed != ReadySentences {
@@ -109,7 +109,7 @@ func TestThePromptSetHasItsShape(t *testing.T) {
 		}
 		keys[prompt.Key] = true
 	}
-	if len(keys) != 20 || counts[PartOpening] != 4 || counts[PartDescription] != 12 || counts[PartClosing] != 4 || photos != 6 {
+	if len(keys) < 200 || counts[PartOpening] < 4 || counts[PartDescription] < 12 || counts[PartClosing] < 4 || photos != 6 {
 		t.Fatalf("prompt set = %v photos=%d total=%d", counts, photos, len(keys))
 	}
 }

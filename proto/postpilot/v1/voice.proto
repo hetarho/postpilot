@@ -165,12 +165,22 @@ message VoiceAiPart {
 
 // One analysis (VOICE-26): the counted fingerprint, the AI part, how many 학습 글 it read, the
 // model and when.
+enum VoiceOrigin {
+  VOICE_ORIGIN_UNSPECIFIED = 0;
+  VOICE_ORIGIN_PERSONAL = 1;
+  VOICE_ORIGIN_SYNTHETIC = 2;
+}
+
 message VoiceAnalysis {
   VoiceFingerprint counted = 1;
   VoiceAiPart ai = 2;
   int32 material_count = 3;
   string analyze_model = 4;
   string created_at = 5;
+  // Missing origin is personal for existing saved snapshots.
+  VoiceOrigin origin = 6;
+  // AI-created fictional illustration, never a personal learning material.
+  string synthetic_sample = 7;
 }
 
 // How the 학습 글 moved since the current analysis read them (VOICE-21).
@@ -201,6 +211,8 @@ message VoiceReadiness {
   int32 sentences = 2;
   int32 needed = 3;
   repeated VoicePromptPart missing_parts = 4;
+  int32 answered_questions = 5;
+  int32 required_questions = 6;
 }
 
 message VoiceProfile {
@@ -254,6 +266,9 @@ message VoicePrompt {
   VoicePromptPart part = 2;
   bool photo = 3;
   string text = 4;
+  string scene = 5;
+  string hint = 6;
+  bool starter = 7;
 }
 
 // A voice as the directory talks about it. `deleted` is a tombstone: the voice keeps its
@@ -278,6 +293,7 @@ message Voice {
   string analyzed_at = 11;
   // The readiness meter's share until the voice is made (VOICE-9); 0 once it is.
   int32 readiness_percent = 12;
+  VoiceOrigin origin = 13;
 }
 
 message ListVoicesRequest {}
