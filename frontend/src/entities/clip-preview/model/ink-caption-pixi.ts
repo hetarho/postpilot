@@ -243,7 +243,8 @@ export class BrowserCaptionScenePixi {
       this.presentation.addChild(this.quad)
     } else if (this.surface.width !== width || this.surface.height !== height)
       this.surface.resize(width, height)
-    const active = new Set<string>()
+    const active = new Set<string>(),
+      ordered: Container[] = []
     for (const current of scene.nodes) {
       const key = current.id + '/' + (current.document?.key ?? (current.light ? 'light' : 'rect'))
       active.add(key)
@@ -252,6 +253,7 @@ export class BrowserCaptionScenePixi {
         node = this.create(current)
         this.nodes.set(key, node)
       }
+      ordered.push(node.container)
       const m = current.pose.matrix
       node.matrix.set(...m)
       node.container.setFromMatrix(node.matrix)
@@ -361,6 +363,11 @@ export class BrowserCaptionScenePixi {
         node.container.destroy({ children: true })
         this.nodes.delete(key)
       }
+    // Retained geometry survives text/phrase replacement; restore declared
+    // paint order after removing old ink without rebuilding owned resources.
+    ordered.forEach((container, index) => {
+      if (this.group.children[index] !== container) this.group.setChildIndex(container, index)
+    })
     this.view.set(1, 0, 0, 1, -bounds.x, -bounds.y)
     this.renderer.render({
       container: this.group,
