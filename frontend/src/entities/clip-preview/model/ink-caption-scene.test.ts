@@ -33,10 +33,16 @@ function layout(id: string, count = 3): InkCaptionLayout {
   }
 }
 describe('frozen caption scene state', () => {
-  it('refuses use after a Canvas scene owner is destroyed',()=>{
-    const canvas=new BrowserCaptionSceneCanvas()
+  it('refuses use after a Canvas scene owner is destroyed', () => {
+    const canvas = new BrowserCaptionSceneCanvas()
     canvas.destroy()
-    expect(()=>canvas.draw({} as CanvasRenderingContext2D,{bounds:{x:0,y:0,width:1,height:1},opacity:1,nodes:[]})).toThrow('CLIP_INK_CANCELLED')
+    expect(() =>
+      canvas.draw({} as CanvasRenderingContext2D, {
+        bounds: { x: 0, y: 0, width: 1, height: 1 },
+        opacity: 1,
+        nodes: [],
+      }),
+    ).toThrow('CLIP_INK_CANCELLED')
   })
   it('retains the old four-word envelope and exposes every long word in rapid and settled snapshots', () => {
     expect(inkPopProgress(0.5, 3, 4)).toBeCloseTo(0.2, 12)

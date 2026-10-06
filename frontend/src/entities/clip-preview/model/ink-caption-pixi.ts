@@ -118,7 +118,7 @@ export class BrowserCaptionScenePixi {
   render(scene: BrowserCaptionPreparedScene, target?: RenderTexture, clear = true) {
     if (this.destroyed) throw new ClipInkError('CLIP_INK_CANCELLED')
     const { bounds } = scene,
-      {width,height} = inkRasterDimensions(bounds)
+      { width, height } = inkRasterDimensions(bounds)
     if (!this.surface) {
       this.surface = RenderTexture.create({ width, height, resolution: 1, antialias: true })
       this.quad = new Sprite(this.surface)

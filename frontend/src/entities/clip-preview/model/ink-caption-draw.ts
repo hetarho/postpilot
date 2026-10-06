@@ -26,9 +26,9 @@ export class BrowserCaptionSceneCanvas {
     context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
     scene: BrowserCaptionPreparedScene,
   ) {
-    if(this.destroyed) throw new ClipInkError('CLIP_INK_CANCELLED')
+    if (this.destroyed) throw new ClipInkError('CLIP_INK_CANCELLED')
     const { bounds, nodes } = scene,
-      {width,height} = inkRasterDimensions(bounds)
+      { width, height } = inkRasterDimensions(bounds)
     this.group ??= new OffscreenCanvas(width, height)
     if (this.group.width !== width || this.group.height !== height) {
       this.group.width = width
