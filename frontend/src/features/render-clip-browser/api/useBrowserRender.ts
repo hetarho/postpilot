@@ -62,7 +62,19 @@ export function useBrowserRender(
     phase: 'idle',
     progress: { stage: 'encoding', percent: 0 },
   })
-  const busy = state.phase === 'running' || state.phase === 'cancelling'
+  const visibleState: BrowserRenderState =
+    state.local &&
+    (!provisional.current ||
+      state.local.ownerId !== ownerId ||
+      state.local.projectId !== projectId ||
+      finalized ||
+      (planRevision !== undefined && state.local.revision !== planRevision))
+      ? { ...state, phase: 'cancelled', local: undefined }
+      : state
+  const busy =
+    visibleState.phase === 'running' ||
+    visibleState.phase === 'cancelling' ||
+    visibleState.phase === 'upload_pending'
   const releaseLocal = useCallback(() => {
     const local = provisional.current
     provisional.current = undefined
@@ -75,6 +87,8 @@ export function useBrowserRender(
     mounted.current = true
     void reclaimMediaOutputs(CLIP_BROWSER_RENDER.outputNamespace).catch(() => undefined)
     const leave = () => {
+      if (mounted.current && current.current)
+        setState((state) => ({ ...state, phase: 'cancelled', local: undefined }))
       current.current?.abort()
       const local = provisional.current
       if (local) void renders.cancelBrowserRender(local.artifact.renderId).catch(() => undefined)
@@ -215,15 +229,7 @@ export function useBrowserRender(
     }
   }
   return {
-    state:
-      state.local &&
-      (!provisional.current ||
-        state.local.ownerId !== ownerId ||
-        state.local.projectId !== projectId ||
-        finalized ||
-        (planRevision !== undefined && state.local.revision !== planRevision))
-        ? { ...state, phase: 'cancelled' as const, local: undefined }
-        : state,
+    state: visibleState,
     busy,
     start,
     retry: async () => {

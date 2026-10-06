@@ -106,12 +106,21 @@ try {
   )
     throw Error(JSON.stringify(storage));
   await page.evaluate(() => window.exportFixture.leaveAbandoned());
+  const secondPage = await page.context().newPage();
+  await secondPage.goto(origin + "/probe");
+  await secondPage.waitForFunction(() => !!window.exportFixture);
+  const liveRecovery = await secondPage.evaluate(() =>
+    window.exportFixture.recover(),
+  );
+  if (liveRecovery.before.length !== 1 || liveRecovery.after.length !== 1)
+    throw Error("Recovery removed another live page's owned output");
   await page.goto("about:blank");
   await page.goto(origin + "/probe");
   await page.waitForFunction(() => !!window.exportFixture);
   const recovery = await page.evaluate(() => window.exportFixture.recover());
   if (recovery.before.length !== 1 || recovery.after.length)
     throw Error(JSON.stringify(recovery));
+  await secondPage.close();
   const cases = [];
   for (const [mode, ratio, memory] of [
     ["silent", "vertical"],
@@ -202,6 +211,7 @@ try {
       ]),
     ),
     storage,
+    liveRecovery,
     recovery,
     cases,
     cancelled,

@@ -104,6 +104,7 @@ it('keeps a verified local preview while private upload is pending and retries b
     local: { url: 'blob:verified-local', revision: 3 },
   })
   expect(f.complete).not.toHaveBeenCalled()
+  expect(f.view.result.current.busy).toBe(true)
   expect(f.artifact.dispose).not.toHaveBeenCalled()
   put.mockResolvedValue(undefined)
   await act(() => f.view.result.current.retry())

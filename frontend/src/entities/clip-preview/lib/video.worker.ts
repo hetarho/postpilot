@@ -43,6 +43,8 @@ async function render(input: BrowserVideoInput, controller: AbortController) {
     throw new Error('CLIP_BACKGROUND_UNSUPPORTED')
   const config = clipBrowserEncoderConfig(input.ratio).video
   const canvas = new OffscreenCanvas(config.width, config.height)
+  const contextLost = () => controller.abort(new Error('CLIP_CANVAS_CONTEXT_LOST'))
+  canvas.addEventListener('contextlost', contextLost, { once: true })
   const context = canvas.getContext('2d', { alpha: false })
   if (!context) {
     canvas.width = 0
@@ -332,6 +334,7 @@ async function render(input: BrowserVideoInput, controller: AbortController) {
       Object.assign(error, { measurements: measurements.snapshot() })
     throw error
   } finally {
+    canvas.removeEventListener('contextlost', contextLost)
     if (packetWindow === packets) packetWindow = undefined
     local?.destroy()
     fadeBlack?.close()
