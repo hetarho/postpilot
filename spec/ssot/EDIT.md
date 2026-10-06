@@ -1,5 +1,5 @@
 # EDIT conversational configuration authoring
-> r1 | Private AI-assisted drafting of reusable writing and video settings through eight suggestions, one selected draft, conversational refinement and explicit publication.
+> r2 | Private AI-assisted drafting of reusable writing and video settings through eight suggestions, one selected draft, conversational refinement and explicit publication.
 
 ## decisions
 - EDIT-1 [o] the authoring kinds are post templates, video templates, post guidelines, video guidelines and writing styles; each session fixes one kind and belongs to one authenticated account.
@@ -26,6 +26,11 @@
 - EDIT-14 [o] the default authoring surface is suggestions, readable preview and chat; manual forms, template builders and raw source remain explicit advanced alternatives. Saved-setting editors offer AI refinement from the owned current setting.
 - EDIT-15 [o] first-use setup and settings destinations share the same authoring behavior. Closing keeps durable work available on return, and a confirmed save updates the caller's actual setting and destination.
 - EDIT-16 [o] authoring stores only the requested setting, its necessary scope/version metadata and conversation; it reads no unrelated materials, account writing, photo or other settings into the model request. Account deletion removes the private authoring records.
+
+- EDIT-17 [o] the authoring funnel separates purpose, eight-candidate comparison, one selected-result review, optional chat, explicit save and completion; changing views never starts a provider request or publishes a setting.
+  - the selected preview remains available in refinement, which is optional; saving without chat is allowed when the domain validates the selected draft
+  - saving a writing style shows its synthetic new-copy semantics and optional default choice at publication; templates/guidelines state the preserved target scope when relevant
+  - the server session and job, not a presentation step, determine valid work, owner isolation, interrupted-save recovery and mutation eligibility
 
 ## flow
 - create: choose setting kind → explicit eight suggestions with estimate → durable generation → select one → readable draft + chat → optional explicit refinement → Save → confirmed setting

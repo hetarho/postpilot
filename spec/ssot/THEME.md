@@ -1,5 +1,5 @@
 # THEME theme preference and design language
-> r25 | The browser-owned System / Light / Dark preference that maps onto the `day` and `night` semantic token maps, and the binding design language every frontend surface is held to — phone-first, planes not lines, colour as role, one design system, with the promotional surfaces (→THEME-37) as the one named exemption from its restraint.
+> r26 | The browser-owned System / Light / Dark preference that maps onto the `day` and `night` semantic token maps, and the binding design language every frontend surface is held to — phone-first, planes not lines, colour as role, one design system, with the promotional surfaces (→THEME-37) as the one named exemption from its restraint.
 
 ## decisions
 - THEME-1 [o] three browser-owned preferences: `system` (the default, follows `prefers-color-scheme`), `light` → the `day` semantic map, `dark` → the `night` map; the effective theme is always exactly `day|night`; components consume semantic or functional tokens and never branch on a preference, an effective theme or a palette step
@@ -224,13 +224,23 @@
   - no history, metrics, selectors, feeds or extra creation actions populate the canvas; menu/account access stays available
   - large typography, shared choice primitives and semantic planes supply emphasis; both themes, keyboard, reduced motion, 200% zoom and 320 px reflow remain supported
   - opening home or a choice creates no record or AI work
-- THEME-48 [o] setup is a calm focused funnel with visible progress, natural-language guidance, one current question/form and explicit continue/back/skip controls.
-  - phone shows a finished vertical composition with the committing action following its field; desktop uses the board frame with guidance/progress beside the active form and an available preview instead of a centered narrow phone column
-  - model defaults are background settings under MODEL-87, not the first question; writing questions and labelled generated styles follow VOICE-65 through VOICE-69
-  - errors preserve input/current step, busy operations cannot advance and confirmation/explicit skip controls progression; state and form lifetime remain intact when viewport shape changes
+- THEME-48 [o] setup is a focused sequence of purposeful screens: choose an acquisition method, supply only that method's input, review when eligible, explicitly create or confirm, then continue.
+  - the current title, one short explanation and available actions describe the active step; unrelated methods, later analysis/save and advanced controls do not appear beneath an earlier step
+  - method choices are equally readable navigation rows with an explanation inside each row; selection opens the chosen step without a disabled continuation control
+  - phone keeps action after its field; desktop uses a wide purposeful guidance/work layout or related preview panes, preserving actor and form lifetimes across widths
+  - model defaults stay in background settings under MODEL-87; confirmed facts, explicit skip and guarded back drive progression
 - THEME-49 [o] menu and setup navigation are explicit finite-state transitions with guarded events; repeated events are idempotent, completed/missing domain facts determine eligibility, and route changes never masquerade as saves or generation.
-- THEME-50 [o] EDIT authoring is a readable creation workspace: explain the purpose, compare eight understandable suggestions, then show the selected preview with conversational refinement and an explicit Save. Desktop gives preview and conversation separate usable regions in the board frame; mobile keeps one reading flow with the composer action after its field. Default views expose no XML, JSON, model selector or specialist prerequisite; advanced manual editing stays reachable.
+- THEME-50 [o] EDIT presents purpose entry, eight-suggestion selection, selected-result review with optional conversational refinement, explicit publication and confirmed completion as separate focused views.
+  - one selected result can be saved without sending a chat message; chat controls appear only after requesting refinement and remain beside the related preview on desktop
+  - comparison, changing the selection, direct editing and model settings are secondary paths; previous/later forms are not stacked in the active screen
+  - existing settings start from an explicit draft-loading action without recommendation or provider work; the current captured setting is then reviewable and directly refinable
 - THEME-51 [o] the authoring UI uses guarded finite-state transitions for loading, recommending, choosing, refining, cancelling and publishing; each response is fenced by owner, kind, session, revision and operation, and failures retain valid previews and unsent text.
+- THEME-52 [o] every guided view has one user goal and at most one emphasized committing action; method and candidate choices are peer navigation, while Back, skip, optional refinement and advanced editing have lower visual emphasis.
+- THEME-53 [o] guided copy explains the immediate next action using familiar words, matches the active method and setting kind, and avoids duplicated headings, generic travel prompts, specialist labels and unverified time/benefit claims.
+- THEME-54 [o] guided controls for a later unavailable stage are absent, not shown disabled as a teaser. Current required-input errors are explained beside the input after an explicit attempt; unavailable AI and in-flight actions state the reason and preserve an available way back or manual alternative.
+- THEME-55 [o] stage movement retains owner-scoped drafts and selected results, restores focus to the new stage heading only on actual navigation, and supports explicit Back without a paid call or canonical mutation.
+- THEME-56 [o] guided progress describes the current task and uses numeric completion only when the total is known; loading, working, recoverable failure and confirmed success have distinct truthful views with one contextual next action.
+
 ## flow
 - bootstrap: read `postpilot.theme` → resolve(`system` → matchMedia | `light` → `day` | `dark` → `night`) → set `data-theme`, `color-scheme`, `theme-color` before React → provider from the snapshot → menu selection → apply + persist | remove key
 - shipping a screen: author unprefixed for 360 → tokens and `shared/ui` primitives only → `pnpm lint:style` → the THEME-34 checklist → both themes

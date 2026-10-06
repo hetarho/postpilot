@@ -23,18 +23,18 @@
 ## ssot
 | id | rev | tasked | pending | [?] |
 |---|---|---|---|---|
-| ARCH | 16 | 9 | ARCH-52+ ARCH-53+ ARCH-56+ ARCH-57+ ARCH-34✎ ARCH-11✎ ARCH-45✎ ARCH-60+ ARCH-61+ ARCH-62+ ARCH-63+ ARCH-64+ ARCH-65+ ARCH-66+ ARCH-67+ ARCH-68+ | 0 |
-| AUTH | 14 | 14 | - | 0 |
+| ARCH | 17 | 17 | - | 0 |
+| AUTH | 15 | 15 | - | 0 |
 | QUOTA | 37 | 37 | - | 0 |
 | POST | 34 | 34 | - | 0 |
-| VOICE | 12 | 12 | - | 0 |
+| VOICE | 13 | 13 | - | 0 |
 | GEN | 24 | 24 | - | 0 |
 | MODEL | 33 | 33 | - | 0 |
 | TMPL | 23 | 23 | - | 0 |
 | GUIDE | 15 | 15 | - | 0 |
 | EXPORT | 10 | 10 | - | 0 |
 | LANG | 7 | 7 | - | 0 |
-| THEME | 25 | 25 | - | 0 |
+| THEME | 26 | 26 | - | 0 |
 | MKT | 9 | 9 | - | 0 |
 | VIDEO | 6 | 6 | - | 0 |
 | CLIP | 58 | 58 | - | 2 |
@@ -44,7 +44,7 @@
 | QUAL | 7 | 7 | - | 0 |
 | GIFT | 3 | 3 | - | 0 |
 | DUB | 3 | 3 | - | 0 |
-| EDIT | 1 | 1 | - | 0 |
+| EDIT | 2 | 2 | - | 0 |
 | INFRA | 2 | 0 | all | 1 |
 
 ## review
@@ -81,12 +81,21 @@
 | T602 | Authorize and verify browser-prepared analysis artifacts | ARCH CLIP QUOTA | T591 | todo |
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | todo |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | todo |
+| T617 | Make XState actors the authority for guided creation workflows | ARCH THEME AUTH VOICE EDIT | - | doing@261007.ux |
+| T618 | Guide writing voice learning through one purposeful step at a time | VOICE AUTH THEME | T617 | doing@261007.ux |
+| T619 | Separate AI authoring into purpose choice review and optional refinement | EDIT THEME | T617 | doing@261007.ux |
+| T620 | Integrate and qualify the research-backed guided design language | ARCH THEME AUTH VOICE EDIT | T617 T618 T619 | doing@261007.ux |
 
 ## next
-- Check the existing browser-media work-group board before claiming T591 or any other remaining task.
-- Existing blocked qualification and render-capacity work remain separate.
+- Implement T617 actors, T618 personal learning and T619 staged authoring; integrate and qualify T620.
+- Commit each task independently; preserve existing browser-media assignments and dirty work.
 
 ## log
+- 261007 T617-T620 start: root owns documentation/dependencies/commits; actor, personal-learning and authoring proposals have isolated file ownership
+- 261007 create-task focused UX done: T617 XState authority, T618 personal funnel, T619 staged AI workspace, T620 shared design/integration
+- 261007 ARCH r10..r16 allocation reconciled to existing T380/T386/T388 and T591-T604; scoped ARCH-69 allocated to T617/T620 without existing task rewrites
+- 261007 update-ssot THEME r26 AUTH r15 VOICE r13 EDIT r2 and ARCH r17 done: focused method/collection/review/publication screens, contextual actions and XState authority
+- 261007 update-ssot THEME AUTH VOICE EDIT and ARCH start: primary-source UX research, progressive task funnels and XState interaction ownership
 - 261007 T616 done: all five AI settings/setup hosts, manual alternatives and personal learning preserved; FE3422/staged222, BE80 packages, deploy62 and fifteen browser flows pass
 - 261007 T615 done: owner-scoped guarded eight-suggestion preview/chat Studio; responsive themes/focus/zoom and no-call entry/recovery pass
 - 261007 T614 done: domain-owned atomic receipt publication, CAS/protected fields, concurrent replay/tombstones and synthetic-only voice forks pass
@@ -102,8 +111,3 @@
 - 261007 T612 done: grounded targeted tags in both languages; generation/guideline tests, vet and production build pass; whole-tree build fails on existing tmp main/run duplicates
 - 261007 T612 start: implement grounded entity and area/topic priority in both tag-rule languages
 - 261007 create-task GEN r24 done: T612 updates the existing switchable tag rule and prompt goldens
-- 261007 update-ssot GEN r24 done: grounded entity and area/topic tags take priority; create-task GEN start
-- 261007 update-ssot GEN start: prioritize grounded entity and local topic tags over broad hashtags
-- 261007 T610 done: durable one-call eight-style generation, owner recovery, atomic synthetic adoption and provenance pass backend/concurrency/usage checks
-- 261007 T609 done: 222 friendly stable Korean scenes, ten-answer readiness and legacy compatibility pass personal voice checks
-- 261007 T608 done: recommended active defaults preserve manual/comparison selections; SQLite races and owner-scoped frontend regressions pass

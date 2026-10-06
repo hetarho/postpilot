@@ -1,5 +1,5 @@
 # VOICE voices
-> r12 | Mutually isolated personal writing voices learned from ten-question sessions or owner writing, and explicitly generated eight-style batches with labelled synthetic provenance.
+> r13 | Mutually isolated personal writing voices learned from ten-question sessions or owner writing, and explicitly generated eight-style batches with labelled synthetic provenance.
 
 ## decisions
 - VOICE-1 [o] account-owned writing voices are mutually isolated and have explicit personal or synthetic provenance; each owns its materials, current/previous analysis and verification results under (user_id, voice_id). Personal voices learn only owner-authored writing; synthetic styles follow VOICE-68/69 and never become evidence of the owner's personal habits.
@@ -111,7 +111,10 @@
   - further sessions choose ten unanswered questions, preserving all previous answers; the catalog can keep growing into hundreds without changing the saved format
   - editing a saved answer is explicit; question exhaustion offers review/completion instead of silently rewriting earlier answers
   - questionnaire UI is reusable inline during setup and in settings; pasted writing and verification's answer-one path retain their separate save contracts
-- VOICE-66 [o] voice setup offers two clear initial paths: answer ten friendly questions to learn personal writing, or explicitly ask AI for eight ready-to-choose writing styles; owner writing paste and later name changes remain available without being prerequisites.
+- VOICE-66 [o] writing-voice setup starts with three understandable peer methods: use owner-written text, answer ten everyday situations, or choose from eight explicitly AI-generated styles.
+  - opening or inspecting methods creates no voice, analysis or provider work; an explicit personal-learning action may create/resume a named personal voice
+  - each method opens its own input/review flow; questionnaire wording does not ask for an existing written post, and pasting does not expose unanswered questions
+  - existing work offers an explicit continuation into its actual current stage; synthetic examples remain separate from personal writing
 - VOICE-67 [o] personal questionnaire readiness is not a promise that every fingerprint facet is known; the first profile may be used with measured/unknown facets, and additional personal answers improve the next explicitly requested analysis.
 - VOICE-68 [o] an owner-triggered writing-style generation is one durable account-owned batch with exactly eight distinct candidates presented together.
   - the same explicit generate/compare/adopt flow is available during initial setup and later from `/voices` writing settings; opening or closing its wide sheet starts no AI, closing preserves durable work, and successful adoption opens the confirmed voice
@@ -127,6 +130,12 @@
   - personal material can accumulate on an adopted style; successful explicit personal reanalysis changes the current origin to personal and retains the prior synthetic snapshot under the existing restore contract
   - snapshots without an origin decode as personal, preserving existing analyses and posts
 - VOICE-70 [o] generated writing styles may be selected and refined conversationally under EDIT before explicit publication. Synthetic provenance and personal-material isolation remain mandatory; personal voice refinement publishes a new synthetic style, and existing synthetic refinement also publishes a new labelled style without replacing the source analysis.
+- VOICE-71 [o] an unmade personal voice uses a guided learning sequence: choose paste or ten questions, save private material, review confirmed readiness, explicitly analyze, then inspect/use the made voice.
+  - analysis is absent until actual readiness allows it; opening, saving a sample, question navigation and review never start analysis automatically
+  - collected material is reviewable through a secondary action, not a permanently expanded sample list under the initial form
+  - additional paste, another question batch and answer edits are optional explicit paths after the focused first batch; domain readiness and existing analysis remain authoritative
+  - closing and returning recover confirmed samples and active analysis without replaying create/analyze/default actions
+
 ## flow
 - personal start: choose ten questions | paste own writing → explicitly create/resume one personal voice → save owner answers in a ten-question session → ten valid answers with every part or sixty owner sentences → explicit analysis → made personal voice → optional default → creation
 - further learning: choose another ten unanswered situations | paste → save private materials → keep existing analysis → explicit reanalysis → current personal snapshot with previous retained
