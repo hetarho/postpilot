@@ -44,8 +44,10 @@ Cancellation first uses the existing durable parent cancellation, then fences
 the page session. Lease loss stops publication; terminal/expired/abandoned
 sessions preserve originals and previous results and queue recoverable copy
 deletion beyond issued PUT expiry plus orphan grace. Bounded rotating object
-listing catches late orphan uploads. Restart reconciles waiting handoffs and
-never replays uncertain paid calls.
+listing catches late orphan uploads. Startup drains bounded recovery pages before
+the generic interruption sweep and restores only unconsumed authorized missing
+waits. Periodic recovery never requeues a live initial handler; accepted work
+wakes through existing waits and claimed/consumed work never replays paid calls.
 
 ## Existing-host verification process
 

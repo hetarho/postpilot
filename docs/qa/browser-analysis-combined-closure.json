@@ -1,0 +1,19 @@
+{
+  "beforeHead": "75c77fe145e98ad078e78177f77f0d4a382d52c2",
+  "afterHead": "7db220c746e2a608e19846bc888d6b295eba7ed4",
+  "changedInputs": [
+    "backend/Dockerfile",
+    "backend/build/RENDER.md",
+    "backend/internal/clip/browser_render.go",
+    "backend/internal/clip/design/caption_draw.go",
+    "backend/internal/clip/design/caption_transform.go",
+    "backend/internal/clip/media/browser_caption_transform_fixture_test.go",
+    "backend/internal/clip/media_protocol.go",
+    "dependency:github.com/postpilot/backend/internal/clip/media.test/80e542a6abf491c7fceb7dfde7a89939e746fa870ca275510bb142f43a28b5ea-d",
+    "dependency:github.com/postpilot/backend/internal/clip/media.test/9d5fe129496026aa4f6d909c924776c202a76ece8229a344f4d69eca366ecbaf-d"
+  ],
+  "inputCount": 2003,
+  "packageCount": 303,
+  "closureDigest": "eebd658147355dfdd1964dfc1f336a6c1ab9ea21e51335ee095d2196431523bf",
+  "scope": "Native cpu-v3 caption transform/version/build input changes are expected; verifier app/store/media files are independently unchanged; exact combined focused/bounded image executed separately."
+}

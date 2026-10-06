@@ -1,10 +1,10 @@
 {
-  "at": "1c089bede5a4577f0f88c88cd3947b2264d33b6f",
+  "at": "5ac03f89b353def6f6305364b475f4f0da31fea6",
   "dockerExecuted": true,
   "sourceConsistencyVerified": true,
-  "startedAt": 1791311020.844866,
+  "startedAt": 1791313500.7534158,
   "source": "/Users/ihaelam/project/.haeram-worktrees/postpilot-f6c0250f/browser-media-604-T602-742257ea",
-  "copy": "/private/tmp/postpilot-docker-proof-e3_jj2rq",
+  "copy": "/private/tmp/postpilot-docker-proof-3mraf4k0",
   "inputHashes": {
     "backend/buf.gen.yaml": "7246a7c5fe1e49e007f3ca2239b16cdc897084fdcf340fe027c6490e5b4ebc8f",
     "backend/internal/auth/store/queries/auth.sql": "000486e94d68a4d6750b9c6e266d108db52252842a734568d8138ee061b80e91",
@@ -176,7 +176,7 @@
     "backend/internal/platform/db/migrations/0142_clip_speech_cleanup.sql": "4b35986a891cee894a9d6fbbb021bf36a61e6a5da70208cb4a236b1d86ec8f88",
     "backend/internal/platform/db/migrations/0143_speech_catalog_tariff.sql": "55372a5a46aabcfdf83da4cc34e454bb6e38f0ccdd37e54de08325f65d82bae1",
     "backend/internal/platform/db/migrations/0144_job_wait_expiry.sql": "b1f9d6b0a1e1b2178d87c8d01d3689f0f03be7c1eba89bbdb614bc2a2cd1088b",
-    "backend/internal/platform/db/migrations/0146_browser_analysis_preparations.sql": "023d7bd2af7828fa19f1f450c9c98a39c31d3b969e2964bb951709e2eccefbb4",
+    "backend/internal/platform/db/migrations/0148_browser_analysis_preparations.sql": "023d7bd2af7828fa19f1f450c9c98a39c31d3b969e2964bb951709e2eccefbb4",
     "backend/internal/post/store/queries/images.sql": "5946596613f7ec459bdb3422347d91ad537cb2f982f1e5289faeed0dabd4898a",
     "backend/internal/post/store/queries/post_template_answers.sql": "4c0cea4830ff04f9c21cb5cec4f432eb9c5e3bfa734ccb6321a17e78e1972896",
     "backend/internal/post/store/queries/posts.sql": "64eeef3a863a8166ee28c229d113f8395618bb0d4890a818004b0b6b670aef8b",
@@ -386,7 +386,7 @@
         "gen:proto"
       ],
       "exit": 0,
-      "output": "> postpilot@0.0.1 gen:proto /private/tmp/postpilot-docker-proof-e3_jj2rq\n> node scripts/gen.mjs proto\n\n\n\u001b[36m\u25b6 codegen\u001b[0m\n  \u001b[2m\u00b7\u001b[0m buf generate (proto \u2192 Go\u00b7TS)\n  \u001b[32m\u2713\u001b[0m buf \uc644\ub8cc"
+      "output": "> postpilot@0.0.1 gen:proto /private/tmp/postpilot-docker-proof-3mraf4k0\n> node scripts/gen.mjs proto\n\n\n\u001b[36m\u25b6 codegen\u001b[0m\n  \u001b[2m\u00b7\u001b[0m buf generate (proto \u2192 Go\u00b7TS)\n  \u001b[32m\u2713\u001b[0m buf \uc644\ub8cc"
     },
     {
       "command": [
@@ -406,7 +406,7 @@
         "gen:sql"
       ],
       "exit": 0,
-      "output": "> postpilot@0.0.1 gen:sql /private/tmp/postpilot-docker-proof-e3_jj2rq\n> node scripts/gen.mjs sql\n\n\n\u001b[36m\u25b6 codegen\u001b[0m\n  \u001b[2m\u00b7\u001b[0m sqlc generate (SQL \u2192 Go)\n  \u001b[32m\u2713\u001b[0m sqlc \uc644\ub8cc"
+      "output": "> postpilot@0.0.1 gen:sql /private/tmp/postpilot-docker-proof-3mraf4k0\n> node scripts/gen.mjs sql\n\n\n\u001b[36m\u25b6 codegen\u001b[0m\n  \u001b[2m\u00b7\u001b[0m sqlc generate (SQL \u2192 Go)\n  \u001b[32m\u2713\u001b[0m sqlc \uc644\ub8cc"
     },
     {
       "command": [
@@ -622,8 +622,8 @@
       "Size": 35891030
     }
   },
-  "inputManifestSHA256": "7bb9f2b990d9b12352ea48e8a532415e8b24963e509e3502771fa21d821ad5d8",
+  "inputManifestSHA256": "b83c373958063bff1275906f85acf3a1989f6e7ad6479e47f60472a22cc687fe",
   "outputManifestSHA256": "c76d4981a18ede74b6ca0603c18ca8f1704956757344a227170a3b38e6b374e0",
   "copyRemoved": true,
-  "finishedAt": 1791311079.357433
+  "finishedAt": 1791313785.655006
 }
