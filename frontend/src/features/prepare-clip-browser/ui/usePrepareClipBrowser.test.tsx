@@ -69,8 +69,10 @@ describe('browser preparation page lifecycle', () => {
     rerender({ ...props, job: { id: 'old', status: 'done' } as GenerationJob })
     expect(state.signal?.aborted).toBe(false)
     const assertion = expect(run).rejects.toThrow()
-    await act(async () => {
+    act(() => {
       rerender({ ...props, selectionKey: 'replacement' })
+    })
+    await act(async () => {
       await assertion
     })
     expect(state.signal?.aborted).toBe(true)
@@ -85,11 +87,13 @@ describe('browser preparation page lifecycle', () => {
       await Promise.resolve()
     })
     const assertion = expect(run).rejects.toThrow()
-    await act(async () => {
+    act(() => {
       rerender({
         ...props,
         job: { id: 'owned', status: 'running', cancelRequestedAt: 'now' } as GenerationJob,
       })
+    })
+    await act(async () => {
       await assertion
     })
     expect(state.signal?.aborted).toBe(true)

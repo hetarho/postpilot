@@ -9,9 +9,10 @@ import {
   Output,
 } from 'mediabunny'
 import { describe, expect, it } from 'vitest'
+import { explicitSquarePixelsMp4 } from './square-pixel-mp4'
 import { boundedMediaCopyTarget, runMediaSizeAttempts } from './analysis-copy'
 
-const fixture = readFileSync(new URL('./testdata/analysis-silent.mp4', import.meta.url))
+const fixture = readFileSync('src/shared/lib/media/testdata/analysis-silent.mp4')
 async function remux(cap: number) {
   const input = new Input({ formats: [MP4], source: new BlobSource(new Blob([fixture])) })
   const target = boundedMediaCopyTarget(cap),
@@ -31,7 +32,7 @@ async function remux(cap: number) {
     await output.finalize()
     return target.result()
   } finally {
-    await output.cancel()
+    await output.cancel().catch(() => undefined)
     input.dispose()
   }
 }
@@ -77,5 +78,78 @@ describe('finite position-aware completed media target', () => {
       }),
     ).rejects.toThrow('CLIP_ANALYSIS_COPY_COVERAGE')
     expect(failures).toBe(1)
+  })
+})
+
+describe('explicit square-pixel container compatibility', () => {
+  it('inserts unit pasp into trailing moov without moving media or packet timing and is idempotent', async () => {
+    const original = await remux(8 * 1024 * 1024)
+    const patched = explicitSquarePixelsMp4(original, 8 * 1024 * 1024)
+    expect(patched.byteLength).toBe(original.byteLength + 16)
+    expect(explicitSquarePixelsMp4(patched, 8 * 1024 * 1024)).toBe(patched)
+    const before = Buffer.from(original),
+      after = Buffer.from(patched),
+      moov = before.indexOf('moov') - 4
+    expect(after.subarray(0, moov)).toEqual(before.subarray(0, moov))
+    const packets = async (buffer: ArrayBuffer) => {
+      const input = new Input({ formats: [MP4], source: new BlobSource(new Blob([buffer])) })
+      try {
+        const video = (await input.getVideoTracks())[0]
+        expect(await video.getPixelAspectRatio()).toEqual({ num: 1, den: 1 })
+        const values = []
+        for await (const packet of new EncodedPacketSink(video).packets())
+          values.push({
+            timestamp: packet.timestamp,
+            duration: packet.duration,
+            data: Buffer.from(packet.data).toString('hex'),
+          })
+        return values
+      } finally {
+        input.dispose()
+      }
+    }
+    expect(await packets(patched)).toEqual(await packets(original))
+    for (const type of ['moov', 'trak', 'mdia', 'minf', 'stbl', 'stsd', 'avc1']) {
+      const offset = before.lastIndexOf(type) - 4
+      expect(after.readUInt32BE(offset)).toBe(before.readUInt32BE(offset) + 16)
+    }
+  })
+  it('refuses non-square or duplicated pasp, malformed bounds, nontrailing moov and cap crossing', async () => {
+    const original = await remux(8 * 1024 * 1024),
+      patched = explicitSquarePixelsMp4(original, 8 * 1024 * 1024)
+    const wrong = patched.slice(0),
+      bytes = Buffer.from(wrong),
+      pasp = bytes.indexOf('pasp') - 4
+    bytes.writeUInt32BE(2, pasp + 8)
+    expect(() => explicitSquarePixelsMp4(wrong, 8 * 1024 * 1024)).toThrow(
+      'CLIP_ANALYSIS_COPY_PROFILE',
+    )
+    const duplicate = Buffer.concat([
+      Buffer.from(patched).subarray(0, pasp + 16),
+      Buffer.from(patched).subarray(pasp, pasp + 16),
+      Buffer.from(patched).subarray(pasp + 16),
+    ])
+    for (const type of ['moov', 'trak', 'mdia', 'minf', 'stbl', 'stsd', 'avc1']) {
+      const offset = Buffer.from(patched).lastIndexOf(type) - 4
+      duplicate.writeUInt32BE(duplicate.readUInt32BE(offset) + 16, offset)
+    }
+    expect(() =>
+      explicitSquarePixelsMp4(Uint8Array.from(duplicate).buffer, 8 * 1024 * 1024),
+    ).toThrow('CLIP_ANALYSIS_COPY_PROFILE')
+    const malformed = original.slice(0)
+    new DataView(malformed).setUint32(0, original.byteLength + 1)
+    expect(() => explicitSquarePixelsMp4(malformed, 8 * 1024 * 1024)).toThrow(
+      'CLIP_ANALYSIS_COPY_PROFILE',
+    )
+    const appended = new Uint8Array(original.byteLength + 8)
+    appended.set(new Uint8Array(original))
+    new DataView(appended.buffer).setUint32(original.byteLength, 8)
+    appended.set([102, 114, 101, 101], original.byteLength + 4)
+    expect(() => explicitSquarePixelsMp4(appended.buffer, 8 * 1024 * 1024)).toThrow(
+      'CLIP_ANALYSIS_COPY_PROFILE',
+    )
+    expect(() => explicitSquarePixelsMp4(original, original.byteLength + 15)).toThrow(
+      'CLIP_ANALYSIS_COPY_TOO_LARGE',
+    )
   })
 })

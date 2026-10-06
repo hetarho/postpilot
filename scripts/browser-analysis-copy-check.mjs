@@ -15,7 +15,8 @@ const executablePath = option('--browser', '/Applications/Google Chrome.app/Cont
 const require = createRequire(resolve(root, 'frontend/package.json'))
 const { createServer } = await import(pathToFileURL(require.resolve('vite')).href)
 const files = new Map([
-  ['long', resolve(fixtures, 'long-original.mp4')], ['rotated', resolve(fixtures, 'rotated-original.mp4')], ['silent', resolve(fixtures, 'silent-original.mp4')],
+  ['long', resolve(fixtures, 'long-original.mp4')], ['rotated', resolve(fixtures, 'source-extra/rotated-original-v2.mp4')], ['silent', resolve(fixtures, 'silent-original.mp4')],
+  ['large', resolve(fixtures, 'source-extra/large-original.mp4')], ['stereo', resolve(fixtures, 'source-extra/stereo-original.mp4')],
   ['vfr', '/private/tmp/postpilot-browser-media-prep-video/original-vfr.mp4'], ['first-track', '/private/tmp/postpilot-browser-media-prep-video/multiple-video-default-second.mp4'],
   ['delayed-audio', '/private/tmp/postpilot-browser-media-prep-audio/delayed-audio.mp4'],
   ['color', '/private/tmp/postpilot-browser-media-prep-analysis/t598-color/tagged709-red.mp4'],
@@ -52,10 +53,10 @@ await server.listen()
 const origin = server.resolvedUrls.local[0].replace(/\/$/, '')
 const browser = await chromium.launch({ executablePath })
 try {
-  const page = await browser.newPage(); await page.goto(`${origin}/__analysis__/`)
+  const page = await browser.newPage(); page.on('console', (message) => console.log('browser:', message.text())); page.on('pageerror', (error) => console.log('pageerror:', error.message)); await page.goto(`${origin}/__analysis__/`)
   await page.waitForFunction(() => !!window.analysisFixture)
   const results = []
-  for (const id of [...files.keys(), 'expired', 'whole', 'cancel']) {
+  for (const id of option('--cases', [...files.keys(), 'expired', 'whole', 'cancel'].join(',')).split(',')) {
     const path = files.get(id) ?? files.get('long'), fingerprint = createHash('sha256').update(readFileSync(path)).digest('hex')
     const result = await page.evaluate(({ origin, id, fingerprint }) => window.analysisFixture.run(`${origin}/__analysis__/file/${id === 'cancel' ? 'long' : id}`, fingerprint, id), { origin, id, fingerprint })
     results.push({ id, ...result })
@@ -66,7 +67,7 @@ try {
     if (result.copies?.some((copy) => copy.resources.liveDecodedFrames !== 0 || copy.resources.liveAudioData !== 0 || copy.resources.peakDecodedFrames > 48)) throw new Error('Decoder resource leak or reserve overflow')
     if (files.has(id) && result.error) throw new Error(`${id}: ${JSON.stringify(result)}`)
     if (id === 'long' && (result.copies.length !== 2 || result.original.durationMs !== 61000 || result.original.audioRate !== 44100)) throw new Error('Original/seam measurement drift')
-    if (id === 'rotated' && (result.original.width !== 90 || result.original.height !== 160)) throw new Error('Rotation geometry drift')
+    if (id === 'rotated' && (result.original.width !== 180 || result.original.height !== 320)) throw new Error('Rotation geometry drift')
     if (id === 'silent' && result.original.hasAudio) throw new Error('Silent source gained audio')
     if (id === 'vfr' && result.original.cadenceVerified) throw new Error('VFR became verified constant cadence')
     console.log(JSON.stringify({ id, passed: true, copies: result.copies?.length, error: result.error }))

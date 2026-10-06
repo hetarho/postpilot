@@ -23,6 +23,7 @@ import {
   type BrowserMediaSourceAccess,
   type MediaRangeLimits,
 } from './video/range-source'
+import { explicitSquarePixelsMp4 } from './square-pixel-mp4'
 import type { EncodedAudioTrack } from './audio/processing-types'
 import { openOriginalVideo } from './video/range-video'
 
@@ -66,6 +67,20 @@ export interface CompletedMediaCopy {
   }
 }
 
+function coverageFailure(details: Record<string, unknown>): never {
+  throw Object.assign(new Error('CLIP_ANALYSIS_COPY_COVERAGE'), { details })
+}
+
+function sourceLimits(limits: MediaRangeLimits): MediaRangeLimits {
+  return {
+    maxFileBytes: limits.maxFileBytes,
+    maxReadBytes: limits.maxReadBytes,
+    maxReadTotalBytes: limits.maxReadTotalBytes,
+    maxCacheBytes: limits.maxCacheBytes,
+    timeoutMs: limits.timeoutMs,
+  }
+}
+
 /** Full-original source time and cadence are measured separately from the copy
  * encoder. Only one decoded sample is retained by this consumer. */
 export async function measureOriginalMedia(
@@ -73,7 +88,7 @@ export async function measureOriginalMedia(
   limits: FiniteMediaCopyProfile,
   signal: AbortSignal,
 ) {
-  const video = await openOriginalVideo(access, limits, signal)
+  const video = await openOriginalVideo(access, sourceLimits(limits), signal)
   let audioInput: Input | undefined
   let audioReader: ReturnType<typeof createFiniteMediaSource> | undefined
   try {
@@ -127,7 +142,7 @@ export async function measureOriginalMedia(
     const declared = metadata.durationFromMetadata
     if (declared !== null && Math.abs(declared * 1000 - durationMs) <= 22)
       durationMs = Math.round(declared * 1000)
-    audioReader = createFiniteMediaSource(access, limits, signal)
+    audioReader = createFiniteMediaSource(access, sourceLimits(limits), signal)
     audioInput = new Input({ source: audioReader.source, formats: [MP4, QTFF, WEBM, MATROSKA] })
     const audio = (await audioInput.getAudioTracks())[0]
     if (
@@ -198,6 +213,7 @@ async function inspectCompletedCopy(
   bitrate: number,
   limits: FiniteMediaCopyProfile,
   signal: AbortSignal,
+  primingFrames = 0,
 ) {
   const input = new Input({ source: new BlobSource(new Blob([buffer])), formats: [MP4] })
   const abort = () => input.dispose()
@@ -234,7 +250,13 @@ async function inspectCompletedCopy(
           (previous !== undefined &&
             Math.abs(sample.timestamp - previous - 1 / limits.fps) > 0.000002)
         )
-          throw new Error('CLIP_ANALYSIS_COPY_COVERAGE')
+          coverageFailure({
+            phase: 'video',
+            videoFrames,
+            previous,
+            timestamp: sample.timestamp,
+            duration: sample.duration,
+          })
         previous = sample.timestamp
         videoFrames++
         videoStartMs = Math.min(videoStartMs, sample.timestamp * 1000)
@@ -246,17 +268,43 @@ async function inspectCompletedCopy(
     let audioSamples = 0,
       audioStartMs = Infinity,
       audioEndMs = 0
+    let rawSamples = 0,
+      rawEnd: number | undefined
+    const expectedAudioSamples = (slot.durationMs * limits.audioRate) / 1000
     if (audio)
       for await (const sample of new AudioSampleSink(audio).samples()) {
         try {
           signal.throwIfAborted()
-          if (audioSamples && Math.abs(sample.timestamp * 1000 - audioEndMs) > 0.05)
-            throw new Error('CLIP_ANALYSIS_COPY_COVERAGE')
-          audioSamples += sample.numberOfFrames
-          if (audioSamples > limits.audioRate * 60 + 1024)
-            throw new Error('CLIP_ANALYSIS_COPY_COVERAGE')
-          audioStartMs = Math.min(audioStartMs, sample.timestamp * 1000)
-          audioEndMs = Math.max(audioEndMs, (sample.timestamp + sample.duration) * 1000)
+          const sampleStart = Math.round(sample.timestamp * limits.audioRate)
+          const sampleEnd = sampleStart + sample.numberOfFrames
+          rawSamples += sample.numberOfFrames
+          if (
+            sample.sampleRate !== limits.audioRate ||
+            sample.numberOfChannels !== 1 ||
+            (rawEnd !== undefined && sampleStart !== rawEnd) ||
+            sampleStart < -primingFrames - 1 ||
+            sampleEnd > expectedAudioSamples + 1024 ||
+            rawSamples > expectedAudioSamples + primingFrames + 1024
+          )
+            coverageFailure({
+              phase: 'audioRaw',
+              rawSamples,
+              rawEnd,
+              sampleStart,
+              sampleEnd,
+              primingFrames,
+            })
+          rawEnd = sampleEnd
+          // Decoder warmup and packet padding are decoded through EOF, but the
+          // playable edit window contributes only its exact source-time samples.
+          const begin = Math.max(0, sampleStart),
+            end = Math.min(expectedAudioSamples, sampleEnd)
+          if (end > begin) {
+            if (begin !== audioSamples) coverageFailure({ phase: 'audioGap', begin, audioSamples })
+            audioSamples += end - begin
+            audioStartMs = Math.min(audioStartMs, (begin * 1000) / limits.audioRate)
+            audioEndMs = (end * 1000) / limits.audioRate
+          }
         } finally {
           sample.close()
         }
@@ -310,7 +358,7 @@ async function inspectCompletedCopy(
           Math.abs(p.audioEndMs - slot.durationMs) > 22 ||
           Math.abs(p.audioSamples - (slot.durationMs * limits.audioRate) / 1000) > 1024))
     )
-      throw new Error('CLIP_ANALYSIS_COPY_COVERAGE')
+      coverageFailure({ phase: 'completed', expectedMs: slot.durationMs, ...p })
     return artifact
   } finally {
     signal.removeEventListener('abort', abort)
@@ -385,7 +433,7 @@ export async function transcodeMediaInterval(
     throw new Error('CLIP_SOURCE_AUDIO_TIMESTAMP_INVALID')
   return runMediaSizeAttempts(limits.videoBitrates, signal, async (bitrate) => {
     signal.throwIfAborted()
-    const reader = createFiniteMediaSource(access, limits, signal)
+    const reader = createFiniteMediaSource(access, sourceLimits(limits), signal)
     const input = new Input({ source: reader.source, formats: [MP4, QTFF, WEBM, MATROSKA] })
     let conversion: Conversion | undefined
     let output: Output | undefined
@@ -424,7 +472,6 @@ export async function transcodeMediaInterval(
         tracks: 'all',
         composable: true,
         copy: false,
-        tags: {},
         trim: { start: slot.offsetMs / 1000, end: (slot.offsetMs + slot.durationMs) / 1000 },
         video: (track) =>
           track === video
@@ -466,11 +513,18 @@ export async function transcodeMediaInterval(
       ])
       await output.finalize()
       signal.throwIfAborted()
-      return await inspectCompletedCopy(target.result(), slot, bitrate, limits, signal)
+      return await inspectCompletedCopy(
+        explicitSquarePixelsMp4(target.result(), limits.maxCopyBytes),
+        slot,
+        bitrate,
+        limits,
+        signal,
+        encodedAudio?.primingFrames ?? 0,
+      )
     } finally {
       signal.removeEventListener('abort', abort)
       await conversion?.cancel().catch(() => undefined)
-      await output?.cancel().catch(() => undefined)
+      if (output?.state !== 'finalized') await output?.cancel().catch(() => undefined)
       input.dispose()
       reader.dispose()
     }

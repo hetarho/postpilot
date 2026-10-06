@@ -52,6 +52,7 @@ self.onmessage = async (
       kind: 'error',
       id: message.id,
       error: error instanceof Error ? error.message : 'CLIP_ANALYSIS_WORKER_FAILED',
+      details: error instanceof Error && 'details' in error ? error.details : undefined,
     })
   } finally {
     busy = false

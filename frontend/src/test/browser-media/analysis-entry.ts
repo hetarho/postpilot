@@ -26,7 +26,11 @@ window.Worker = class extends NativeWorker {
       self.AudioDecoder = class extends NativeAudioDecoder { constructor(options) { super({ ...options, output(sample) { samples.add(sample); peakAudio = Math.max(peakAudio, samples.size); options.output(sample); } }); } };
       const send = self.postMessage.bind(self);
       self.postMessage = (message, options) => { if (message.kind === 'result') message.result.resources = { peakDecodedFrames: peakFrames, liveDecodedFrames: frames.size, peakAudioData: peakAudio, liveAudioData: samples.size }; send(message, options); };
+      const pending = [];
+      self.onmessage = (event) => pending.push(event.data);
       await import(${JSON.stringify(String(url))});
+      const dispatch = self.onmessage;
+      for (const data of pending) dispatch(new MessageEvent('message', { data }));
     `,
       ],
       { type: 'text/javascript' },
@@ -34,6 +38,14 @@ window.Worker = class extends NativeWorker {
     const objectURL = URL.createObjectURL(bootstrap)
     super(objectURL, options)
     this.addEventListener('message', (event) => {
+      if (['result', 'error', 'cancelled'].includes(event.data.kind))
+        console.log(
+          'worker-event',
+          String(url),
+          event.data.kind,
+          event.data.error ?? '',
+          JSON.stringify(event.data.details ?? {}),
+        )
       if (event.data.kind === 'result')
         resourceEvents.push({ module: String(url), resources: event.data.result.resources })
       URL.revokeObjectURL(objectURL)
@@ -50,11 +62,14 @@ window.analysisFixture = {
       fingerprint,
       access: { kind: 'url', url },
     }
+    const deadline = setTimeout(() => controller.abort(new Error('Fixture timed out')), 180000)
+    console.log('analysis-start', mode)
     const began = performance.now(),
       eventStart = resourceEvents.length
     try {
       const original = await encoder.measure(source)
       const measuredMs = performance.now() - began
+      console.log('analysis-measured', mode, JSON.stringify(original))
       const copies = []
       for (let offset = 0, ordinal = 0; offset < original.durationMs; offset += 60000, ordinal++) {
         const slot: AnalysisCopySlot = {
@@ -75,6 +90,7 @@ window.analysisFixture = {
           await encoder.encode(source, slot)
           throw new Error('Cancellation failed')
         }
+        console.log('analysis-encoding', mode, ordinal)
         const started = performance.now(),
           artifact = await encoder.encode(source, slot)
         const response = await fetch(`/__analysis__/output/${mode ?? 'source'}-${ordinal}`, {
@@ -105,6 +121,7 @@ window.analysisFixture = {
         qualification: false,
       }
     } finally {
+      clearTimeout(deadline)
       encoder.close()
     }
   },

@@ -186,7 +186,7 @@ describe('page-owned browser analysis preparation', () => {
       }),
       expect.any(AbortSignal),
     )
-    expect(h.parent).toHaveBeenCalledExactlyOnceWith('prep', expect.any(AbortSignal))
+    expect(h.parent).toHaveBeenCalledExactlyOnceWith('prep')
     expect(h.peak()).toBe(1)
     expect(h.encoder.close).toHaveBeenCalled()
   })

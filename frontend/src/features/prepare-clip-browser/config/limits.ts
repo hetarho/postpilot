@@ -24,7 +24,12 @@ export const ANALYSIS_PREPARATION_LIMITS = {
 } as const
 
 export const ANALYSIS_AUDIO_LIMITS = {
-  ...ANALYSIS_PREPARATION_LIMITS,
+  maxFileBytes: ANALYSIS_PREPARATION_LIMITS.maxFileBytes,
+  maxReadBytes: ANALYSIS_PREPARATION_LIMITS.maxReadBytes,
+  maxReadTotalBytes: ANALYSIS_PREPARATION_LIMITS.maxReadTotalBytes,
+  maxCacheBytes: ANALYSIS_PREPARATION_LIMITS.maxCacheBytes,
+  timeoutMs: ANALYSIS_PREPARATION_LIMITS.timeoutMs,
+  cleanupTimeoutMs: ANALYSIS_PREPARATION_LIMITS.cleanupTimeoutMs,
   maxPcmBytes: 128 * 1024 * 1024,
   maxChannels: 2,
   maxSampleRate: 192000,
