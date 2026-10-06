@@ -6,6 +6,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { createHash } from "node:crypto";
+import { execFileSync } from "node:child_process";
 import { createRequire } from "node:module";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -17,6 +18,36 @@ const root = resolve(import.meta.dirname, ".."),
 const option = (name, fallback) =>
   args.includes(name) ? args[args.indexOf(name) + 1] : fallback;
 const output = resolve(option("--output", "tmp/browser-export-check"));
+const sourcePaths = execFileSync(
+  "git",
+  [
+    "ls-files",
+    "frontend/src/entities/clip-preview",
+    "frontend/src/entities/clip-design/config",
+    "frontend/src/entities/clip-plan/model",
+    "frontend/src/shared/lib/media",
+    "frontend/src/features/render-clip-browser",
+    "frontend/src/test/browser-media/export-entry.ts",
+    "scripts/browser-export-check.mjs",
+    "pnpm-lock.yaml",
+    "backend/internal/clip/browser_render.go",
+  ],
+  { cwd: root, encoding: "utf8" },
+)
+  .trim()
+  .split("\n")
+  .filter((path) => path && !/\.(test|spec)\./u.test(path));
+const hashes = () =>
+  Object.fromEntries(
+    sourcePaths.map((path) => [
+      path,
+      createHash("sha256")
+        .update(readFileSync(resolve(root, path)))
+        .digest("hex"),
+    ]),
+  );
+const sourceHashes = hashes();
+
 const files = new Map([
   [
     "silent",
@@ -91,7 +122,8 @@ const executablePath = option(
 );
 const browser = await chromium.launch({ executablePath });
 try {
-  const page = await browser.newPage();
+  const context = await browser.newContext();
+  const page = await context.newPage();
   await page.goto(origin + "/probe");
   await page.waitForFunction(() => !!window.exportFixture);
   const storage = await page.evaluate(() => window.exportFixture.storage());
@@ -122,7 +154,7 @@ try {
     throw Error(JSON.stringify(recovery));
   await secondPage.close();
   const cases = [];
-  for (const [mode, ratio, memory] of [
+  for (const [mode, ratio, memory, captionStyle] of [
     ["silent", "vertical"],
     ["silent", "horizontal"],
     ["silent", "square"],
@@ -130,6 +162,8 @@ try {
     ["narration", "vertical"],
     ["mixed", "square"],
     ["silent", "square", true],
+    ["silent", "vertical", false, "bold"],
+    ["narration", "square", false, "ember"],
   ]) {
     const source = mode === "source" || mode === "mixed" ? "source" : "silent";
     const fingerprint = createHash("sha256")
@@ -141,6 +175,7 @@ try {
         mode,
         ratio,
         memory,
+        captionStyle,
         url: origin + "/file/" + source,
         fingerprint,
         speechUrl: origin + "/file/speech",
@@ -160,6 +195,8 @@ try {
       result.seeks.length !== 3
     )
       throw Error(JSON.stringify(result));
+    if (captionStyle && result.backgroundSamples !== 3)
+      throw Error("Missing original-bound caption background evidence");
     if ((mode === "narration" || mode === "mixed") && !result.speechFingerprint)
       throw Error("Missing exact speech provenance");
     cases.push(result);
@@ -193,8 +230,13 @@ try {
   const afterCancel = await page.evaluate(() => window.exportFixture.recover());
   if (afterCancel.before.length || afterCancel.after.length)
     throw Error("Cancelled output persisted");
+  if (JSON.stringify(sourceHashes) !== JSON.stringify(hashes()))
+    throw Error("Source changed during actual browser verification");
   const report = {
     version: 1,
+    sourceHashes,
+    sourceHashScope:
+      "Exact bytes recorded before and checked after actual execution.",
     qualification: false,
     scope:
       "Actual Chrome production Worker, codecs, standard seekable MP4, synthetic requested audio and origin-output ownership. No hardware, real-voice, native full-composition or release qualification.",

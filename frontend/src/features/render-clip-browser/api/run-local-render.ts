@@ -1,5 +1,6 @@
 import {
   CLIP_AUDIO_PROCESSING,
+  BrowserCompositionOriginals,
   type BrowserCompositionSnapshot,
   type BrowserVideoTrack,
 } from '@/entities/clip-preview'
@@ -11,7 +12,6 @@ import {
   measureMp4Output,
   verifyMp4Audio,
 } from '@/shared/lib/media'
-import { BrowserOriginals } from '../lib/originals'
 import { browserAudioPreflight } from '../model/audio-preflight'
 import { browserRenderVerdict } from '../model/verdict'
 import { BrowserRenderVerdictError, type VerifiedBrowserResult } from './store-result'
@@ -52,7 +52,8 @@ export async function runLocalBrowserRender(
   const controller = new AbortController()
   const abort = () => controller.abort(signal.reason)
   signal.addEventListener('abort', abort, { once: true })
-  const originals = new BrowserOriginals(
+  const originals = new BrowserCompositionOriginals(
+    input.snapshot,
     input.localSources,
     input.resolvePlayback,
     controller.signal,
@@ -93,7 +94,7 @@ export async function runLocalBrowserRender(
       ? await operations.audio(
           input.plan,
           input.ratio,
-          originals,
+          { source: (fingerprint) => originals.audioSource(fingerprint, controller.signal) },
           controller.signal,
           (done, total) => progress({ stage: 'encoding', percent: (20 * done) / total }),
           input.loadSpeech,
@@ -132,9 +133,11 @@ export async function runLocalBrowserRender(
       input.localSources,
       input.resolvePlayback,
       controller.signal,
-      originals,
+      undefined,
       undefined,
       mux.video,
+      (sourceId, fingerprint, sourceSignal) =>
+        originals.source(sourceId, fingerprint, sourceSignal),
     )
     progressJob = (async () => {
       for await (const frame of video!.progress) {

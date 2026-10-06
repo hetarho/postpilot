@@ -85,6 +85,7 @@ async function render(input: BrowserVideoInput, controller: AbortController) {
   try {
     if (input.snapshot) {
       local = new BrowserLocalComponents(input.snapshot)
+      await local.resolveLayout(signal)
       background = await measureBrowserBackground(input.snapshot, local, sourceAccess, signal)
     }
   } catch (error) {

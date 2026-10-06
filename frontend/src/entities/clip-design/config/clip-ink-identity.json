@@ -2,13 +2,7 @@
   "manifestVersion": 1,
   "inkVersion": "clip-ink-v2-resvg-2.6.2",
   "transformInkScale": 2,
-  "transformInkStyles": [
-    "word-pop",
-    "pop",
-    "stack",
-    "sticker",
-    "bubble"
-  ],
+  "transformInkStyles": ["word-pop", "pop", "stack", "sticker", "bubble"],
   "fontsManifestSHA256": "51ad5c795ede98d22e4dfea750946889af3717c04dee3642b87e3419c835970c",
   "catalogSHA256": "a20712c2a7985c78fde3f316be1d7b0918ccdd1cc91ae19b4b4bc8ee197e6883",
   "wasmSHA256": "22bf6e9f9a100d972da0411a69c5ba504367fc1fa87b3b64e3f35e53926d2d70",

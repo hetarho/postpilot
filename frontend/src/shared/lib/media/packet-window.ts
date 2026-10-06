@@ -47,8 +47,11 @@ export class MediaPacketWindow {
     await this.wait(() => this.pending.size + reserve < this.limits.packets)
   }
   async reserve() {
-    await this.wait(() => this.pending.size + this.reservations < this.limits.packets)
-    this.reservations++
+    await this.wait(() => {
+      if (this.pending.size + this.reservations >= this.limits.packets) return false
+      this.reservations++
+      return true
+    })
   }
   async drain() {
     await this.wait(() => !this.pending.size && !this.reservations)

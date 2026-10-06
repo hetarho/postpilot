@@ -1,3 +1,4 @@
+import { webcrypto } from 'node:crypto'
 import { create } from '@bufbuild/protobuf'
 import { createRouterTransport } from '@connectrpc/connect'
 import { act, renderHook } from '@testing-library/react'
@@ -27,6 +28,7 @@ vi.mock('./run-render', async (original) => ({
 vi.mock('@/shared/lib/upload', () => ({ putBlobWithProgress: put }))
 beforeEach(() => {
   vi.clearAllMocks()
+  vi.stubGlobal('crypto', webcrypto)
   vi.stubGlobal(
     'URL',
     Object.assign(URL, { createObjectURL: createUrl, revokeObjectURL: revokeUrl }),
@@ -64,10 +66,12 @@ function harness() {
         id: 'clip',
         title: 'Test',
         ratio: 'vertical',
+        hideDisclosure: true,
         editPlanRevision: 3,
         renderedPlanRevision: 1,
         editing: create(ClipEditingStateSchema, {
           ...editing,
+          sources: editing.sources.map((source) => ({ ...source, hasAudio: false })),
           plan: clipPlanToProto(editing.plan),
         }),
       }),

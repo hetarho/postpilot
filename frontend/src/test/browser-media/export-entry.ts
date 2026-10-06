@@ -22,6 +22,7 @@ type Request = {
   cancelAt?: number
   slowMs?: number
   memory?: boolean
+  captionStyle?: 'bold' | 'ember'
 }
 declare global {
   interface Window {
@@ -57,6 +58,31 @@ window.exportFixture = {
         copies: [],
       })),
     }
+    if (request.captionStyle)
+      plan.elements = [
+        {
+          instanceId: 'caption',
+          elementId: 'caption',
+          cutId: '',
+          groupId: '',
+          itemId: '',
+          kind: 'fixed',
+          role: 'caption',
+          text: '지금 보는 화면 기록',
+          rows: [],
+          style: request.captionStyle,
+          keyword: '화면',
+          position: 'lower_mid',
+          align: 'center',
+          basis: 'output-start',
+          startMs: 0,
+          endMs: 15000,
+          resolvedStartMs: 0,
+          resolvedEndMs: 15000,
+          pace: 'steady',
+          accent: 'cyan',
+        },
+      ]
     let speechBytes: ArrayBuffer | undefined
     if (narrated) {
       speechBytes = await (await fetch(request.speechUrl)).arrayBuffer()
@@ -214,6 +240,8 @@ window.exportFixture = {
         player.pause()
         return {
           mode: request.mode,
+          captionStyle: request.captionStyle,
+          backgroundSamples: (video.backgroundEvidence?.measurements.length ?? 0) * 3,
           ratio: request.ratio,
           decodedAudio,
           verdict,

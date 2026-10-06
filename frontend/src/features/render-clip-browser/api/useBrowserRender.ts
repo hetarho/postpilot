@@ -4,7 +4,12 @@ import {
   useRefreshClipProjects,
   type ClipNotice,
 } from '@/entities/clip-project'
-import { useClipPreviewRequest, useClipRenderCalls } from '@/entities/clip-preview'
+import {
+  useClipPreviewRequest,
+  useClipRenderCalls,
+  freezeBrowserComposition,
+  projectBrowserComposition,
+} from '@/entities/clip-preview'
 import { useClipSpeechCalls } from '@/entities/clip-plan'
 import { BrowserAudioRenderError } from '../model/audio-preflight'
 import { useGenerationJobCalls } from '@/entities/generation-job'
@@ -136,6 +141,29 @@ export function useBrowserRender(
         update({ phase: 'failed', failure: { reason: 'CLIP_PLAN_CONFLICT', params: {} } })
         return
       }
+      if (project.finalized) throw new Error('CLIP_PLAN_CONFLICT')
+      const snapshot = await freezeBrowserComposition(
+        projectBrowserComposition({
+          ownerId,
+          projectId,
+          projectRevision: revision,
+          planRevision: revision,
+          plan: project.editing.plan,
+          ratio: project.ratio,
+          sources: project.editing.sources,
+          layoutObservations: project.editing.layoutObservations,
+          design: {
+            captionStyles: project.allowedCaptionStyles,
+            captionPace: project.captionPace,
+            accent: project.accent,
+            introPreset: project.introPreset,
+            outroPreset: project.outroPreset,
+            disclosure: project.disclosure,
+            hideDisclosure: project.hideDisclosure,
+          },
+        }),
+      )
+      controller.signal.throwIfAborted()
       await runBrowserRender(
         {
           ...input,
@@ -145,6 +173,7 @@ export function useBrowserRender(
           plan: project.editing.plan,
           ratio: project.ratio,
           ownerId,
+          snapshot,
           onLocalReady: (artifact) => {
             if (controller.signal.aborted || !mounted.current) {
               void artifact.dispose()

@@ -10,6 +10,7 @@ import {
   type BrowserVideoTrack,
   type VideoWorkerInput,
   type VideoWorkerOutput,
+  type BrowserSourceAccess,
   CLIP_VIDEO_DECODING,
 } from '@/entities/clip-preview'
 
@@ -25,6 +26,7 @@ export function renderBrowserVideo(
     packet: BrowserVideoTrack['chunks'][number],
     decoderConfig?: VideoDecoderConfig,
   ) => Promise<void>,
+  sourceAccess?: BrowserSourceAccess,
 ): BrowserVideoRender {
   const controller = new AbortController()
   const sources = input.snapshot
@@ -105,8 +107,11 @@ export function renderBrowserVideo(
           }
         })
     } else if (message.type === 'sourceAccess') {
-      void localOriginals
-        .source(message.fingerprint)
+      void (
+        sourceAccess
+          ? sourceAccess(message.sourceId, message.fingerprint, controller.signal)
+          : localOriginals.source(message.fingerprint)
+      )
         .then(
           (access) => {
             if (!stopped) send({ type: 'sourceAccess', requestId: message.requestId, access })
