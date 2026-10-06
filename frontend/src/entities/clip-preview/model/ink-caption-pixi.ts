@@ -15,7 +15,7 @@ import {
 import type { BrowserCaptionPreparedScene, BrowserCaptionSceneNode } from './ink-caption-draw'
 import { ClipInkError, inkRasterDimensions } from './ink-typography'
 
-const rgb = (hex: string) =>
+const colorVector = (hex: string) =>
   new Float32Array([1, 3, 5].map((index) => parseInt(hex.slice(index, index + 2), 16) / 255))
 const vertex = `#version 300 es
 in vec2 aPosition;
@@ -103,9 +103,12 @@ export class BrowserCaptionScenePixi {
       const uniforms = new UniformGroup({
         uBox: { value: new Float32Array(4), type: 'vec4<f32>' },
         uRect: { value: new Float32Array(4), type: 'vec4<f32>' },
-        uFill: { value: rgb(node.rect.fill), type: 'vec3<f32>' },
+        uFill: { value: colorVector(node.rect.fill), type: 'vec3<f32>' },
         uShadow: { value: new Float32Array(4), type: 'vec4<f32>' },
-        uShadowColor: { value: rgb(node.rect.shadow?.hex ?? node.rect.fill), type: 'vec3<f32>' },
+        uShadowColor: {
+          value: colorVector(node.rect.shadow?.hex ?? node.rect.fill),
+          type: 'vec3<f32>',
+        },
         uAlpha: { value: node.pose.opacity, type: 'f32' },
       })
       const shader = new Shader({ glProgram: this.program, resources: { shape: uniforms } })
@@ -176,7 +179,7 @@ export class BrowserCaptionScenePixi {
           rect.height + extent * 2,
         ])
         uniforms.uRect.set([rect.x, rect.y, rect.width, rect.height])
-        uniforms.uFill.set(rgb(current.rect.fill))
+        uniforms.uFill.set(colorVector(current.rect.fill))
         uniforms.uShadow.set(s ? [s.dx, s.dy, s.blur / 2, s.alpha] : [0, 0, 0, 0])
         uniforms.uAlpha = current.pose.opacity
         node.uniforms.update()

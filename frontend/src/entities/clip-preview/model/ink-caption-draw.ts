@@ -1,3 +1,4 @@
+import { Color } from 'pixi.js'
 import type { BrowserInkLease } from './ink-cache'
 import type { InkDocument } from './ink-raster'
 import type { InkCaptionScene, InkCaptionSceneNode, InkCaptionPose } from './ink-caption-scene'
@@ -22,6 +23,7 @@ export class BrowserCaptionSceneCanvas {
   private group?: OffscreenCanvas
   private tint?: OffscreenCanvas
   private destroyed = false
+  private color = new Color()
   draw(
     context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
     scene: BrowserCaptionPreparedScene,
@@ -81,8 +83,7 @@ export class BrowserCaptionSceneCanvas {
         const r = node.pose.rect,
           s = node.rect.shadow
         if (s) {
-          const rgb = [1, 3, 5].map((index) => parseInt(s.hex.slice(index, index + 2), 16))
-          group.shadowColor = `rgba(${rgb.join(',')},${s.alpha})`
+          group.shadowColor = this.color.setValue(s.hex).setAlpha(s.alpha).toRgbaString()
           group.shadowBlur = s.blur
           group.shadowOffsetX = s.dx
           group.shadowOffsetY = s.dy
