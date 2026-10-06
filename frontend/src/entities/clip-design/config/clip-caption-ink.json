@@ -1,6 +1,98 @@
 {
+  "effectImplementation": {
+    "alpha": "premultiplied-alpha",
+    "colorSpace": "sRGB",
+    "kernel": 15,
+    "pixi": "8.22.0",
+    "quality": 4,
+    "sources": {
+      "frontend/src/entities/clip-preview/model/ink-caption-draw.ts": "c50becc5901f969a45dae527bd2914cc7c584a2468d2887a80314ba83282bcef",
+      "frontend/src/entities/clip-preview/model/ink-caption-effects.ts": "43d5e03d7928f05d2398cdf44588e1764224043775491399f8d6bc35538c62d9",
+      "frontend/src/entities/clip-preview/model/ink-caption-filter-pixi.ts": "0b13ee759196c59ea7c084e7f4c1bbdea8b27e32196f2cc4124250f4fb045f32",
+      "frontend/src/entities/clip-preview/model/ink-caption-pixi.ts": "3fb52981d024e88856e804632f27c5aeb136fbc7bf2b2e5e9ee4bcc1ac012391",
+      "pnpm-lock.yaml": "d07c4a1bd3aeab4df41155c2d63d85e6a487959534ed7b27b4710315d7a07319"
+    },
+    "version": "caption-filters-v1"
+  },
+  "effectPaint": {
+    "ambient": {
+      "a": [
+        {
+          "alpha": 0.95,
+          "at": 0,
+          "hex": "#8B5CF6"
+        },
+        {
+          "alpha": 0.42,
+          "at": 0.55,
+          "hex": "#6D3BF5"
+        },
+        {
+          "alpha": 0,
+          "at": 1,
+          "hex": "#4C1D95"
+        }
+      ],
+      "b": [
+        {
+          "alpha": 0.9,
+          "at": 0,
+          "hex": "#4AD9E8"
+        },
+        {
+          "alpha": 0.34,
+          "at": 0.5,
+          "hex": "#22B8CF"
+        },
+        {
+          "alpha": 0,
+          "at": 1,
+          "hex": "#0E7490"
+        }
+      ]
+    },
+    "glitch": {
+      "cyan": "#00E5FF",
+      "red": "#FF2D55"
+    },
+    "iridescent": {
+      "glow": "#7C3AED",
+      "stops": [
+        {
+          "at": -0.45,
+          "hex": "#5EEAD4"
+        },
+        {
+          "at": -0.18,
+          "hex": "#818CF8"
+        },
+        {
+          "at": 0.1,
+          "hex": "#F472B6"
+        },
+        {
+          "at": 0.38,
+          "hex": "#FDBA74"
+        },
+        {
+          "at": 0.66,
+          "hex": "#5EEAD4"
+        },
+        {
+          "at": 0.95,
+          "hex": "#818CF8"
+        }
+      ]
+    },
+    "neon": {
+      "tight": "#7DF9FF",
+      "wide": "#22D3EE"
+    },
+    "version": "caption-filters-v1"
+  },
   "nativePainterSources": {
     "caption_draw.go": "5aa87f5c4e47bb649c7e501a3717ec9c857e6f5623f37a263deb22ff5bddbd73",
+    "caption_effect.go": "b66c69f03fabe918b64752eaf7f23a38a892f1c149e25cfdcfa157a683cf8d96",
     "caption_frame.go": "1ec1922b88b81ddba77015a8e65ef13a6b26568ad7bf529da86486ca6b08abfe",
     "caption_transform.go": "ad99b6d63b6f35e8de553791ea60145e9e9c44369e5bacee572ed52e32da232a"
   },
@@ -852,5 +944,5 @@
     "version": "pop-exposure-v2",
     "white": "#FFFFFF"
   },
-  "version": 2
+  "version": 3
 }

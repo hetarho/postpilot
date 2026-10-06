@@ -65,7 +65,6 @@
 |---|---|---|---|---|
 | T539 | Qualify the complete Korean voice-creation milestone | ARCH DUB MODEL CDS THEME | T538 | blocked@261005 |
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
-| T596 | Port caption blur, light, colour and glitch effects | ARCH CLIP CDS | T595 | todo |
 | T597 | Render ember caption geometry and particles locally | ARCH CLIP CDS | T596 | todo |
 | T599 | Stream browser output and promote the verified private result | ARCH CLIP CDS | T592 T593 T595 T596 T597 T598 | todo |
 | T600 | Use the browser composition engine throughout editing previews | ARCH CLIP CDS | T592 T593 T594 T595 T596 T597 T598 | todo |
@@ -77,6 +76,7 @@
 - inspect work board for remaining tasks
 
 ## log
+- 261006 T596 integrated
 - 261006 T598 integrated
 - 261006 T602 integrated
 - 261006 T595 integrated
@@ -96,4 +96,3 @@
 - 261006 T590 blocked: durable 1/2/1 native limits, atomic reservations and queue expiry verified; full BE tests, race tests, 3323 FE tests and 62 deploy tests passed; Docker generators/image smokes await daemon recovery
 - 261006 T590 verification scope: installed locked dependencies restored; ignored backend/tmp diagnostic programs excluded from an identical-source CI copy; no production deployment or database changes
 - 261006 T590 start: durable finite Max render capacity, cancellable bounded waiting and same-host resource reservations
-- 261006 T589 done: current Max-only native access, preserved legacy jobs/history and browser-first ko/en surfaces; 3321 FE tests and full local CI passed

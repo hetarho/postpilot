@@ -1,6 +1,7 @@
 import { expect, it, vi } from 'vitest'
 import {
   CLIP_CAPTION_TRANSFORM_STYLES,
+  CLIP_CAPTION_EFFECT_STYLES,
   CLIP_CAPTION_INK,
   type ClipRatioId,
 } from '@/entities/clip-design/@x/clip-preview'
@@ -65,7 +66,7 @@ it('binds all shipped derived ink assets and refuses changed resource definition
   )
   expect(() => evaluateBrowserFrame(changed, 0)).toThrow('CLIP_SNAPSHOT_INCOMPATIBLE_VERSION:ink')
 })
-it.each(CLIP_CAPTION_TRANSFORM_STYLES)(
+it.each([...CLIP_CAPTION_TRANSFORM_STYLES, ...CLIP_CAPTION_EFFECT_STYLES])(
   '%s reuses prepared masks in every ratio and pace across seek/replay',
   async (style) => {
     for (const ratio of ['vertical', 'square', 'horizontal'] as const)

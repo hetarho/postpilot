@@ -1,0 +1,697 @@
+{
+  "task": "T596",
+  "version": 1,
+  "codeCommit": "ccb263f9a858d36c07c126ad8137b45afd22083d",
+  "productionQualified": false,
+  "timingQualified": false,
+  "physicalMemoryQualified": false,
+  "deviceMatrixQualified": false,
+  "humanReleaseReviewComplete": false,
+  "nativeProfile": "cpu-v4",
+  "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1",
+  "ink": {
+    "manifestVersion": 1,
+    "inkVersion": "clip-ink-v2-resvg-2.6.2",
+    "transformInkScale": 2,
+    "transformInkStyles": [
+      "word-pop",
+      "pop",
+      "stack",
+      "sticker",
+      "bubble"
+    ],
+    "fontsManifestSHA256": "51ad5c795ede98d22e4dfea750946889af3717c04dee3642b87e3419c835970c",
+    "catalogSHA256": "d67b69fd856eaa43e1836d9c528d680de51937796efa05dad2e5e2548b611815",
+    "wasmSHA256": "22bf6e9f9a100d972da0411a69c5ba504367fc1fa87b3b64e3f35e53926d2d70",
+    "fontAssets": [
+      {
+        "id": "wantedsans:400",
+        "sha256": "7a38e0fdf56a7a2cad934393751e3f12dcaf81067bddec4e87f4dd787037aae6"
+      },
+      {
+        "id": "wantedsans:600",
+        "sha256": "567d4c7d67baa092e74f6c982dcc76b340f10c9d1f78eff6d60897d083e703a0"
+      },
+      {
+        "id": "wantedsans:700",
+        "sha256": "0ca0e18d8409fc34520d6fb872d381bc563049ca9d75272ee6b9fab8ef4e63b0"
+      },
+      {
+        "id": "wantedsans:800",
+        "sha256": "9b3b38d8892521e4da5b24290cecf4be35da946f1905364f69fe4695ffabddd8"
+      },
+      {
+        "id": "paperlogy:800",
+        "sha256": "fb0324f8ac057e50f4f4632331617e347bfe5a04184f7b0db514be682fb6b25c"
+      },
+      {
+        "id": "jua:400",
+        "sha256": "769677aef240bfc3b9965f2b50748075bff885e6c6992fc591a3fb268279f898"
+      },
+      {
+        "id": "nanummyeongjo:400",
+        "sha256": "7ed9e8653a8ed04285d51dc343ffea6eb3d9c73afc27383ea8929ee4ffd03205"
+      },
+      {
+        "id": "nanummyeongjo:800",
+        "sha256": "60c0077fce069ba90ae97c0a3679f6eb3712e0ca637bdd0c15b72d335ec46db7"
+      }
+    ],
+    "assetVersion": "clip-design-assets-v1-ink-1ee0ee713d623ff754b9373b6b6622c49c0962b263edcf125ebe0f81bc9dead5"
+  },
+  "corpus": {
+    "styles": [
+      "blur-in",
+      "ambient",
+      "neon",
+      "iridescent",
+      "glitch"
+    ],
+    "ratios": [
+      "vertical",
+      "horizontal",
+      "square"
+    ],
+    "paces": [
+      "steady",
+      "rapid"
+    ],
+    "text": [
+      "rare Hangul fallback, AV kerning, 12,500\uc6d0 punctuation",
+      "explicit two-line caption"
+    ],
+    "intrinsicFrames": 810,
+    "controlledGroundFrames": 450,
+    "backgrounds": [
+      "synthetic bright RGB(253,255,255)",
+      "synthetic dark RGB(0,0,0)"
+    ],
+    "scope": "Native math/layout/ink/effect/scrim composition. T598 separately proves original-based sampling authority."
+  },
+  "engines": {
+    "pixi": {
+      "environment": {
+        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/154.0.0.0 Safari/537.36",
+        "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Max, Unspecified Version)",
+        "crossOriginIsolated": true,
+        "hardwareConcurrency": 10
+      },
+      "intrinsicReport": "/private/tmp/postpilot-browser-media-prep-ink/T596-pixi-discrete-final/report.json",
+      "intrinsicReportSHA256": "b329019799c3951f74c003119b4291a432fb41b0140beede55991722ca31f012",
+      "controlledGroundReport": "/private/tmp/postpilot-browser-media-prep-ink/T596-ground-pixi-final/report.json",
+      "controlledGroundReportSHA256": "f83413d8df6197f78dc9bf2274818b7456f869be50c7358dad7c655e765b9740",
+      "styleResiduals": [
+        {
+          "style": "blur-in",
+          "intrinsicFrames": 162,
+          "maxPremultipliedError": 0.016905610737604177,
+          "intrinsicWorstCase": "vertical-blur-in-two-steady-36",
+          "controlledGroundFrames": 90,
+          "maxCaptionRGBError": 0.005277004726193266,
+          "groundWorstCase": "vertical-blur-in-two-steady-dark-36",
+          "maxWholeOpaqueFramePremultipliedError": 0.0005450733276849835
+        },
+        {
+          "style": "ambient",
+          "intrinsicFrames": 162,
+          "maxPremultipliedError": 0.0027110424037085534,
+          "intrinsicWorstCase": "vertical-ambient-two-steady-32",
+          "controlledGroundFrames": 90,
+          "maxCaptionRGBError": 0.0012718982305244483,
+          "groundWorstCase": "horizontal-ambient-two-rapid-bright-cue0-32",
+          "maxWholeOpaqueFramePremultipliedError": 0.0002868907851206326
+        },
+        {
+          "style": "neon",
+          "intrinsicFrames": 162,
+          "maxPremultipliedError": 0.004187939278707487,
+          "intrinsicWorstCase": "horizontal-neon-two-steady-42",
+          "controlledGroundFrames": 90,
+          "maxCaptionRGBError": 0.0013100924441616325,
+          "groundWorstCase": "horizontal-neon-two-steady-dark-42",
+          "maxWholeOpaqueFramePremultipliedError": 0.0003239437921945184
+        },
+        {
+          "style": "iridescent",
+          "intrinsicFrames": 162,
+          "maxPremultipliedError": 0.002470819241639201,
+          "intrinsicWorstCase": "horizontal-iridescent-two-steady-32",
+          "controlledGroundFrames": 90,
+          "maxCaptionRGBError": 0.0017451939098581842,
+          "groundWorstCase": "vertical-iridescent-two-steady-bright-32",
+          "maxWholeOpaqueFramePremultipliedError": 0.0002641855953629737
+        },
+        {
+          "style": "glitch",
+          "intrinsicFrames": 162,
+          "maxPremultipliedError": 0.009659804824427628,
+          "intrinsicWorstCase": "vertical-glitch-two-steady-33",
+          "controlledGroundFrames": 90,
+          "maxCaptionRGBError": 0.0018753846686217239,
+          "groundWorstCase": "vertical-glitch-two-steady-bright-57",
+          "maxWholeOpaqueFramePremultipliedError": 0.0002618665779068829
+        }
+      ],
+      "layoutTolerancePx": 0.001,
+      "cleanupAll": true,
+      "warmRasterReuse": true,
+      "warmGPUNodeReuse": true
+    },
+    "canvas": {
+      "environment": {
+        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/154.0.0.0 Safari/537.36",
+        "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Max, Unspecified Version)",
+        "crossOriginIsolated": true,
+        "hardwareConcurrency": 10
+      },
+      "intrinsicReport": "/private/tmp/postpilot-browser-media-prep-ink/T596-canvas-intrinsic/report.json",
+      "intrinsicReportSHA256": "1c927d5319ef8a5fef3be223d0e96e726b34c3dae5e95c7f78c3dda63d553996",
+      "controlledGroundReport": "/private/tmp/postpilot-browser-media-prep-ink/T596-ground-canvas-final/report.json",
+      "controlledGroundReportSHA256": "ca08be59fdd127d258fcb4e1cffec624e67ba9e8fa518b69cb2ad4c8832ed28b",
+      "styleResiduals": [
+        {
+          "style": "blur-in",
+          "intrinsicFrames": 162,
+          "maxPremultipliedError": 0.015685263014155883,
+          "intrinsicWorstCase": "square-blur-in-two-rapid-cue1-41",
+          "controlledGroundFrames": 90,
+          "maxCaptionRGBError": 0.004810708147800953,
+          "groundWorstCase": "vertical-blur-in-two-steady-dark-36",
+          "maxWholeOpaqueFramePremultipliedError": 0.0004969085370773824
+        },
+        {
+          "style": "ambient",
+          "intrinsicFrames": 162,
+          "maxPremultipliedError": 0.002525979806829427,
+          "intrinsicWorstCase": "horizontal-ambient-two-steady-32",
+          "controlledGroundFrames": 90,
+          "maxCaptionRGBError": 0.0012911317049593902,
+          "groundWorstCase": "vertical-ambient-two-rapid-bright-cue0-32",
+          "maxWholeOpaqueFramePremultipliedError": 0.00028658483283574063
+        },
+        {
+          "style": "neon",
+          "intrinsicFrames": 162,
+          "maxPremultipliedError": 0.0037578843097231737,
+          "intrinsicWorstCase": "vertical-neon-two-steady-42",
+          "controlledGroundFrames": 90,
+          "maxCaptionRGBError": 0.0012749792380740694,
+          "groundWorstCase": "vertical-neon-two-rapid-bright-cue0-32",
+          "maxWholeOpaqueFramePremultipliedError": 0.0003580347776970871
+        },
+        {
+          "style": "iridescent",
+          "intrinsicFrames": 162,
+          "maxPremultipliedError": 0.0025508246226184296,
+          "intrinsicWorstCase": "horizontal-iridescent-two-steady-32",
+          "controlledGroundFrames": 90,
+          "maxCaptionRGBError": 0.001766887050602659,
+          "groundWorstCase": "vertical-iridescent-two-steady-bright-32",
+          "maxWholeOpaqueFramePremultipliedError": 0.00026417719008042177
+        },
+        {
+          "style": "glitch",
+          "intrinsicFrames": 162,
+          "maxPremultipliedError": 0.008564534225813943,
+          "intrinsicWorstCase": "vertical-glitch-steady-99",
+          "controlledGroundFrames": 90,
+          "maxCaptionRGBError": 0.0018906165260515384,
+          "groundWorstCase": "vertical-glitch-two-steady-bright-57",
+          "maxWholeOpaqueFramePremultipliedError": 0.0002629525404125985
+        }
+      ],
+      "layoutTolerancePx": 0.001,
+      "cleanupAll": true,
+      "warmRasterReuse": true,
+      "warmGPUNodeReuse": false
+    }
+  },
+  "stress": {
+    "pixi": {
+      "reportSHA256": "5570580a2d757dd896f8566334d5561f768a7a256e2ba2a53e05a4a0256a9599",
+      "environment": {
+        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/154.0.0.0 Safari/537.36",
+        "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Max, Unspecified Version)",
+        "crossOriginIsolated": true,
+        "hardwareConcurrency": 10
+      },
+      "results": [
+        {
+          "id": "vertical-blur-in-steady-99",
+          "engine": "pixi",
+          "frames": 268,
+          "coldMs": 92.33499956130981,
+          "warmP50Ms": 0.2950000762939453,
+          "warmP95Ms": 0.5600004196166992,
+          "warmRasters": 1,
+          "peakCPUBytes": 18781672,
+          "peakManagedGPUBytes": 32129212,
+          "peakSharedFilterScratchBytes": 4718592,
+          "deterministicFrames": 10,
+          "cancellation": true,
+          "eviction": true,
+          "contextLoss": true,
+          "unsupported": true,
+          "cleanup": true,
+          "rendererOwnedSharedPool": true,
+          "productionQualified": false
+        },
+        {
+          "id": "vertical-ambient-steady-99",
+          "engine": "pixi",
+          "frames": 268,
+          "coldMs": 88.08500003814697,
+          "warmP50Ms": 0.3000001907348633,
+          "warmP95Ms": 0.5699996948242188,
+          "warmRasters": 1,
+          "peakCPUBytes": 67105428,
+          "peakManagedGPUBytes": 82836616,
+          "peakSharedFilterScratchBytes": 6291456,
+          "deterministicFrames": 10,
+          "cancellation": true,
+          "eviction": true,
+          "contextLoss": true,
+          "unsupported": true,
+          "cleanup": true,
+          "rendererOwnedSharedPool": true,
+          "productionQualified": false
+        },
+        {
+          "id": "vertical-neon-steady-99",
+          "engine": "pixi",
+          "frames": 268,
+          "coldMs": 40.81500005722046,
+          "warmP50Ms": 0.434999942779541,
+          "warmP95Ms": 0.7400002479553223,
+          "warmRasters": 1,
+          "peakCPUBytes": 67084248,
+          "peakManagedGPUBytes": 85514868,
+          "peakSharedFilterScratchBytes": 6291456,
+          "deterministicFrames": 10,
+          "cancellation": true,
+          "eviction": true,
+          "contextLoss": true,
+          "unsupported": true,
+          "cleanup": true,
+          "rendererOwnedSharedPool": true,
+          "productionQualified": false
+        },
+        {
+          "id": "vertical-iridescent-steady-99",
+          "engine": "pixi",
+          "frames": 268,
+          "coldMs": 80.10500001907349,
+          "warmP50Ms": 0.1699995994567871,
+          "warmP95Ms": 0.44500017166137695,
+          "warmRasters": 3,
+          "peakCPUBytes": 26263328,
+          "peakManagedGPUBytes": 34973596,
+          "peakSharedFilterScratchBytes": 0,
+          "deterministicFrames": 10,
+          "cancellation": true,
+          "eviction": true,
+          "contextLoss": true,
+          "unsupported": true,
+          "cleanup": true,
+          "rendererOwnedSharedPool": true,
+          "productionQualified": false
+        },
+        {
+          "id": "vertical-glitch-steady-99",
+          "engine": "pixi",
+          "frames": 268,
+          "coldMs": 30.69000005722046,
+          "warmP50Ms": 0.4650001525878906,
+          "warmP95Ms": 0.7649998664855957,
+          "warmRasters": 1,
+          "peakCPUBytes": 25937408,
+          "peakManagedGPUBytes": 34833392,
+          "peakSharedFilterScratchBytes": 196608,
+          "deterministicFrames": 10,
+          "cancellation": true,
+          "eviction": true,
+          "contextLoss": true,
+          "unsupported": true,
+          "cleanup": true,
+          "rendererOwnedSharedPool": true,
+          "productionQualified": false
+        }
+      ],
+      "uniqueMaskEvictionCasesPerStyle": 72,
+      "runtimeRefusalScope": "real WebGL1 and WEBGL_lose_context on Pixi; not applicable to Canvas"
+    },
+    "canvas": {
+      "reportSHA256": "52c7ea3ce57e71ccd86e37d2ed3fee5b98ca9e902cc4fe3e926b252d89ddcb5a",
+      "environment": {
+        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/154.0.0.0 Safari/537.36",
+        "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Max, Unspecified Version)",
+        "crossOriginIsolated": true,
+        "hardwareConcurrency": 10
+      },
+      "results": [
+        {
+          "id": "vertical-blur-in-steady-99",
+          "engine": "canvas",
+          "frames": 268,
+          "coldMs": 117.57499980926514,
+          "warmP50Ms": 0.05499982833862305,
+          "warmP95Ms": 0.2799997329711914,
+          "warmRasters": 1,
+          "peakCPUBytes": 20164408,
+          "peakManagedGPUBytes": 0,
+          "peakSharedFilterScratchBytes": 0,
+          "deterministicFrames": 10,
+          "cancellation": true,
+          "eviction": true,
+          "contextLoss": false,
+          "unsupported": false,
+          "cleanup": true,
+          "rendererOwnedSharedPool": true,
+          "productionQualified": false
+        },
+        {
+          "id": "vertical-ambient-steady-99",
+          "engine": "canvas",
+          "frames": 268,
+          "coldMs": 80.17000007629395,
+          "warmP50Ms": 0.059999942779541016,
+          "warmP95Ms": 0.30499982833862305,
+          "warmRasters": 1,
+          "peakCPUBytes": 71686740,
+          "peakManagedGPUBytes": 0,
+          "peakSharedFilterScratchBytes": 0,
+          "deterministicFrames": 10,
+          "cancellation": true,
+          "eviction": true,
+          "contextLoss": false,
+          "unsupported": false,
+          "cleanup": true,
+          "rendererOwnedSharedPool": true,
+          "productionQualified": false
+        },
+        {
+          "id": "vertical-neon-steady-99",
+          "engine": "canvas",
+          "frames": 268,
+          "coldMs": 61.32000017166138,
+          "warmP50Ms": 0.07000017166137695,
+          "warmP95Ms": 0.2800002098083496,
+          "warmRasters": 1,
+          "peakCPUBytes": 72203192,
+          "peakManagedGPUBytes": 0,
+          "peakSharedFilterScratchBytes": 0,
+          "deterministicFrames": 10,
+          "cancellation": true,
+          "eviction": true,
+          "contextLoss": false,
+          "unsupported": false,
+          "cleanup": true,
+          "rendererOwnedSharedPool": true,
+          "productionQualified": false
+        },
+        {
+          "id": "vertical-iridescent-steady-99",
+          "engine": "canvas",
+          "frames": 268,
+          "coldMs": 85.72500038146973,
+          "warmP50Ms": 0.05499982833862305,
+          "warmP95Ms": 0.2350001335144043,
+          "warmRasters": 3,
+          "peakCPUBytes": 27926784,
+          "peakManagedGPUBytes": 0,
+          "peakSharedFilterScratchBytes": 0,
+          "deterministicFrames": 10,
+          "cancellation": true,
+          "eviction": true,
+          "contextLoss": false,
+          "unsupported": false,
+          "cleanup": true,
+          "rendererOwnedSharedPool": true,
+          "productionQualified": false
+        },
+        {
+          "id": "vertical-glitch-steady-99",
+          "engine": "canvas",
+          "frames": 268,
+          "coldMs": 27.59999990463257,
+          "warmP50Ms": 0.125,
+          "warmP95Ms": 0.3299999237060547,
+          "warmRasters": 1,
+          "peakCPUBytes": 26749160,
+          "peakManagedGPUBytes": 0,
+          "peakSharedFilterScratchBytes": 0,
+          "deterministicFrames": 10,
+          "cancellation": true,
+          "eviction": true,
+          "contextLoss": false,
+          "unsupported": false,
+          "cleanup": true,
+          "rendererOwnedSharedPool": true,
+          "productionQualified": false
+        }
+      ],
+      "uniqueMaskEvictionCasesPerStyle": 72,
+      "runtimeRefusalScope": "real WebGL1 and WEBGL_lose_context on Pixi; not applicable to Canvas"
+    }
+  },
+  "limits": [
+    "All comparisons are synthetic diagnostic caption fixtures on one Chrome154/Apple M1 Max Metal device; complete MP4, human/device-matrix/performance/release qualification remains T604.",
+    "Native resvg0.48.1 and resvg-wasm2.6.2 have raster/filter antialiasing residuals; exact text/layout/time/effect contracts remain unchanged.",
+    "Managed texture bytes are a lower bound excluding driver/MSAA, JS/font/WASM heaps and process overhead. Shared filter scratch is measured by tagged renderer-owned sources in the isolated diagnostic only; the product neither clears a shared pool nor invents a zero for unknown pool allocation.",
+    "Stress cold/warm values are observations with competing work. Canvas draws are asynchronous while the Pixi diagnostic gl.finish waits for GL completion; these values do not establish a faster engine.",
+    "Controlled ground fixtures are marked syntheticOnly and sampledOriginals:false; they do not authorize reusing analysis-copy pixels for contrast.",
+    "No new filter dependency was added. Existing PixiJS8.22.0 core filters and product-authored shaders are used; distribution/source-access gates from T588 remain closed."
+  ],
+  "effectDependency": {
+    "name": "pixi.js",
+    "version": "8.22.0",
+    "license": "MIT",
+    "notices": [
+      {
+        "file": "LICENSE",
+        "sha256": "5ce7447bc57f7349ffc48338782fbcabe613696e00712b20d66bc58e780f9473"
+      }
+    ],
+    "newDependencies": false,
+    "pixiFilters6Imported": false,
+    "implementation": {
+      "alpha": "premultiplied-alpha",
+      "colorSpace": "sRGB",
+      "kernel": 15,
+      "pixi": "8.22.0",
+      "quality": 4,
+      "sources": {
+        "frontend/src/entities/clip-preview/model/ink-caption-draw.ts": "c50becc5901f969a45dae527bd2914cc7c584a2468d2887a80314ba83282bcef",
+        "frontend/src/entities/clip-preview/model/ink-caption-effects.ts": "43d5e03d7928f05d2398cdf44588e1764224043775491399f8d6bc35538c62d9",
+        "frontend/src/entities/clip-preview/model/ink-caption-filter-pixi.ts": "0b13ee759196c59ea7c084e7f4c1bbdea8b27e32196f2cc4124250f4fb045f32",
+        "frontend/src/entities/clip-preview/model/ink-caption-pixi.ts": "3fb52981d024e88856e804632f27c5aeb136fbc7bf2b2e5e9ee4bcc1ac012391",
+        "pnpm-lock.yaml": "d07c4a1bd3aeab4df41155c2d63d85e6a487959534ed7b27b4710315d7a07319"
+      },
+      "version": "caption-filters-v1"
+    }
+  },
+  "testedSourceHashes": {
+    "backend/internal/clip/browser_render.go": "cf4c5b1a4c6c0e8870717f7cd7d89c037540cd9e8226152f970f4d3cf8001289",
+    "backend/internal/clip/design/browser_ink_catalog_test.go": "1272be9acf082adcf0429c19627103fd4b2486ec03ce4ee5994f164ae513935d",
+    "backend/internal/clip/design/caption_effect.go": "b66c69f03fabe918b64752eaf7f23a38a892f1c149e25cfdcfa157a683cf8d96",
+    "backend/internal/clip/design/caption_effect_test.go": "bb36289ef7d3864165026a73b98c588b0b7d5e7edc4ef59b358ed7ca2494165b",
+    "backend/internal/clip/media/browser_caption_filter_fixture_test.go": "edbd29cc5303e5142b50d87d39c45c556b30294f32ec4df3ad01d9cb4d23f646",
+    "frontend/src/entities/clip-design/@x/clip-preview.ts": "ef8d79083afc8b563b6c4d3fb9ea539712005c4e73936c38d68078e3955d9664",
+    "frontend/src/entities/clip-design/config/browser-composition.ts": "7536f75a03135562639c30094ee898df9c70a5da9a335af0775b912f3747c0be",
+    "frontend/src/entities/clip-design/config/clip-caption-ink.json": "0a1876a4726654433740c2e1535bd348d9acd00f15824beac92d3523cfed554e",
+    "frontend/src/entities/clip-design/config/clip-ink-identity.json": "3038df10c9a6472afbc99f3d7ad4f4260f02e2fe2ce581158e741b7cecbcd29e",
+    "frontend/src/entities/clip-design/config/clip-ink.ts": "985e183aa04b2a6efbaeb4634dd6d812f986824c6cfb83a92975a18f598d56e4",
+    "frontend/src/entities/clip-preview/model/ink-caption-draw.ts": "c50becc5901f969a45dae527bd2914cc7c584a2468d2887a80314ba83282bcef",
+    "frontend/src/entities/clip-preview/model/ink-caption-effects.test.ts": "c0415c32c014507789843d351ab4be3580256e60aaf012362792049c09549e8e",
+    "frontend/src/entities/clip-preview/model/ink-caption-effects.ts": "43d5e03d7928f05d2398cdf44588e1764224043775491399f8d6bc35538c62d9",
+    "frontend/src/entities/clip-preview/model/ink-caption-filter-pixi.ts": "0b13ee759196c59ea7c084e7f4c1bbdea8b27e32196f2cc4124250f4fb045f32",
+    "frontend/src/entities/clip-preview/model/ink-caption-pixi.ts": "3fb52981d024e88856e804632f27c5aeb136fbc7bf2b2e5e9ee4bcc1ac012391",
+    "frontend/src/entities/clip-preview/model/ink-caption-scene.ts": "339d334032b5391991ee5283f6001258b49b4cd34c84d1b1c3c3b06378e18f1c",
+    "frontend/src/entities/clip-preview/model/local-components.test.ts": "3fe21cd4b28bcae2983df309b1d215e4ff99e68e41a363db9e59a9d633be3b8b",
+    "frontend/src/entities/clip-preview/model/local-components.ts": "dcd2058f5d60b5006e21bf296c88124f475bbbf69abdacfef071953b63ab5bc6",
+    "frontend/src/test/browser-media/ink-entry.ts": "ec1d1daea6e76c267d8b9fd3959992c61a57bf8be1ea4a9f6959fda99e78faf1",
+    "frontend/src/test/browser-media/ink-stress.ts": "4087e95e6b56405cf1425b916834b79b6a09b7af34135eaed3b9aa96e3041e8e",
+    "scripts/browser-ink-benchmark.mjs": "a58de2a967d88f1524f7275b0202fcd60247a476decf374c7bb76e2d2c6b7c11",
+    "pnpm-lock.yaml": "d07c4a1bd3aeab4df41155c2d63d85e6a487959534ed7b27b4710315d7a07319",
+    "package.json": "8d3626a945b07733b817fbda45364f4c2386595e7ac67c8280b760f1d31e37b4",
+    ".node-version": "55075b5ec4e8b31936cbbc282b8829116d1fd48f2f2f1856dee592a6650700ce",
+    ".github/workflows/ci.yml": "e7aba46a17aaf81171063f75d79affc06764e8c6fbf60df2b0e766bdbf10f906",
+    "backend/Dockerfile": "a937e3451c9456b0216589a5a4f42a60c0b670dc04fce6f49174e2f2cf81fda4",
+    "backend/go.mod": "b3b8890ade060863f6790b8bb5f8c43202a0ad0721c388df8f16f80156b7fe99",
+    "backend/go.sum": "9b9a9269db3199dc26847f382f3c8335c96e5ca3a59e47f9d89f5e4ba191210a"
+  },
+  "checks": [
+    {
+      "name": "mergedCI",
+      "at": "ccb263f9a858d36c07c126ad8137b45afd22083d",
+      "command": "pnpm lint && pnpm lint:fsd && pnpm lint:style:probe && pnpm lint:style && pnpm lint:retirement && pnpm test:dev && pnpm exec haeram-spec-creator check && pnpm build:web",
+      "exit": 0,
+      "log": "/private/tmp/postpilot-browser-media-prep-ink/T596-merged-ci-v4.log",
+      "logSHA256": "d12cf4f1cec110ed928f572ff1feb9477c7a6eb7b6c6e651a8ffbf138c7e6fdc"
+    },
+    {
+      "name": "mergedNative",
+      "at": "ccb263f9a858d36c07c126ad8137b45afd22083d",
+      "command": "go test -p 2 -timeout 5m ./internal/clip/design ./internal/clip/media ./internal/clip ./internal/clip/worker ./internal/clip/workerclient -run Test(Browser|CaptionEffect|CaptionTransform|Pop|GroundedSequence|PlatedCaptions|DrawCaption|SequenceCaption|CaptionMotion|MediaProfile|WorkerProfile) -count=1",
+      "exit": 0,
+      "log": "/private/tmp/postpilot-browser-media-prep-ink/T596-merged-go-v4.log",
+      "logSHA256": "470d550bbb7c6c4c2469a0c5157c27e4fabb0cf84c571a6f552ec9080c20770e"
+    },
+    {
+      "name": "nativeRoles",
+      "at": "ccb263f9a858d36c07c126ad8137b45afd22083d",
+      "command": "go test -p 2 -timeout 5m ./internal/clip ./internal/clip/worker ./internal/clip/workerclient -run Test(MediaWorkerProfile|RuntimeHealth|AnalysisVerifier|WorkerJob|BrowserKnownResourceVersions) -count=1",
+      "exit": 0,
+      "log": "/private/tmp/postpilot-browser-media-prep-ink/T596-role-go-v4.log",
+      "logSHA256": "4261ca62a2b087b267b469b5212863bed13295f1e2013288a1cc725a570364e3"
+    },
+    {
+      "name": "nativeVetBuild",
+      "at": "ccb263f9a858d36c07c126ad8137b45afd22083d",
+      "command": "test -z \"$(gofmt -l .)\" && go vet ./... && go build ./...",
+      "exit": 0,
+      "log": "/private/tmp/postpilot-browser-media-prep-ink/T596-merged-vet-build-v4.log",
+      "logSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "mergedFrontend",
+      "at": "ccb263f9a858d36c07c126ad8137b45afd22083d",
+      "command": "vitest run affected8files;83tests",
+      "exit": 0,
+      "log": "/private/tmp/postpilot-browser-media-prep-ink/T596-merged-tests-final.log",
+      "logSHA256": "0f1c17e836fd8e244b55abbd2907d51e0a19871d26158609f730c96295b2bded"
+    }
+  ],
+  "retainedFullChecks": {
+    "at": "66db9720",
+    "frontend": {
+      "command": "pnpm --filter ./frontend test",
+      "exit": 0,
+      "files": 420,
+      "tests": 3469,
+      "logSHA256": "270e6ed5e7629f92813a376cc6c56ed6f1cf3d7c30a4f4cb2869c81ce8a13372"
+    },
+    "backend": {
+      "command": "test -z \"$(gofmt -l .)\" && go vet ./... && go build ./... && go test -timeout 30m ./...",
+      "exit": 0,
+      "logSHA256": "3b95b4688a7ee4b9764e9de1216930fee4973f54741599b29cf22b037b7146e2"
+    },
+    "scope": "Historical full suites before approved T598 merge. Unchanged paths retain these checks; approved T598 current package and83-test merged regressions plus current lint/vet/build cover affected deltas. No final whole-source full-suite run is claimed."
+  },
+  "nativeHostEquivalence": {
+    "receipt": "docs/qa/browser-caption-filters-host-equivalence.json",
+    "sha256": "c75b843efc869812350adf79a009d90f8dd03a06e0eb5d1ac0268644fe3cf793",
+    "exit": 0,
+    "nativeFrames": 1260,
+    "retainedIntrinsicFramesByteIdentical": 810,
+    "controlledGroundFramesByteIdentical": 450
+  },
+  "preservedNonPassingChecks": [
+    {
+      "name": "deploy missingPyYAML/Desktop probe",
+      "log": "/private/tmp/postpilot-browser-media-prep-ink/T596-deploy-tests.log",
+      "logSHA256": "4e86a4a811f0ac61edd8ef616fdb253017fff61f51d7b19303bdb2f2a944768d",
+      "passed": false
+    },
+    {
+      "name": "deploy interrupted",
+      "receipt": "/private/tmp/postpilot-browser-media-prep-ink/T596-deploy-interrupted-proof.json",
+      "receiptSHA256": "90924908cb7eecdb99d5648f44d6561ceb7ed378b55c20f45986472bef4a21f9",
+      "exit": 143,
+      "passed": false
+    },
+    {
+      "name": "host export without explicit resvg path",
+      "log": "/private/tmp/postpilot-browser-media-prep-ink/T596-native-final-host.log",
+      "logSHA256": "81151b776717ff06dfaf74abf79e6a019ea8da4994f568268c3c574190109b15",
+      "exit": 1,
+      "passed": false,
+      "correction": "Explicit CLIP_RESVG_PATH=/opt/homebrew/bin/resvg;1260currentHostFrames passed independently."
+    },
+    {
+      "name": "Initial image focused scope",
+      "receipt": "docs/qa/browser-caption-filters-original-image-proof.json",
+      "receiptSHA256": "e2c3d6e51cf00b73925a0370c4c1813fcee2826faf129967109a1db58fd9a7ef",
+      "log": "/private/tmp/postpilot-t596-final-image-focused.log",
+      "logSHA256": "c531e26dc30965813047e5ec20054f632cd100658441c6c24baf58341b32530c",
+      "exit": 1,
+      "passed": false,
+      "causes": [
+        "Worker image has no /api",
+        "Repository-relative unit-font paths are unavailable in worker container",
+        "Historical delivered baseline is host dependent; current repeat and same-host T598 output bytes agree"
+      ],
+      "correctedActualScope": "docs/qa/browser-caption-filters-image-proof.json"
+    }
+  ],
+  "intrinsicBrowserRetention": {
+    "sourceDelta": "RGB copies sorted before all six-band groups across lines; all other intrinsic effect/source math unchanged since full comparison.",
+    "narrowFinalTwoLineGlitchFramesPerEngine": 81,
+    "actualFinalPNGByteIdenticalToRetainedReports": true,
+    "receipt": "docs/qa/browser-caption-filters-glitch-equivalence.json",
+    "sha256": "d8aa07cb868b07e939099d41da5fad258a48abbd1bae385bf487debd539fccda"
+  },
+  "nativeSuiteReuse": {
+    "base": "e4a7db6f694ef2ce336e4b2573620056b28af43f",
+    "existingProductionFilesUnchanged": 1146,
+    "wholeGoClosureUnchanged": false,
+    "excludedChangedFile": "backend/internal/clip/browser_render.go",
+    "addedProductionFunctionOnlyTestCallers": "backend/internal/clip/design/caption_effect.go:CaptionEffectPaint; only test call sites, absent from native painting/worker execution.",
+    "receipt": "docs/qa/browser-caption-filters-native-reuse.json",
+    "sha256": "df0db3609c284278b7433d759c22a1e4e8966481a8dd878dc5ddf764eb5f83d0",
+    "actualPriorImageReceipt": "docs/qa/browser-local-background-image-proof.json",
+    "actualPriorImageReceiptSHA256": "492f9924c4a4ac248ce5d5f935679540334412f29a61c36c3a0a404f63a4a26b",
+    "actualPriorFullSuiteExit": 0,
+    "scope": "Retain actual T598 full cpu-v4 execution suite for unchanged native runtime and assets; fresh combined image/version/native checks are independently required."
+  },
+  "generatedSource": {
+    "dockerExecutedPreviously": true,
+    "dockerExecutedByThisWorker": false,
+    "actualReceipt": "docs/qa/browser-local-background-docker-generation-proof.json",
+    "receiptSHA256": "4c7ed89977f5f94ab19bf42cfd7979eeb3ff22178485d34126067292175ccf0e",
+    "inputHashesCount": 218,
+    "outputHashesCount": 152,
+    "currentMapsExactlyEqualToActualReceipt": true,
+    "inputManifestSHA256": "a7225bae6a8540ac693157da17188cb0753bb2492abb8e777f53fa6a6373859a",
+    "outputManifestSHA256": "6e97eb79c7552bc3ad244592a50052c0ecdeda7392c1aa7b6a81e3508459181d"
+  },
+  "nativeImage": {
+    "receipt": "docs/qa/browser-caption-filters-image-proof.json",
+    "receiptSHA256": "1032d394b512cf26f1cd05c3590a463037907324827fcfc8c0e28d22caa1d66b",
+    "passed": true,
+    "imageId": "sha256:0c804452bcc5df66f7fa4c2ba75b5d583e9269cd9ca00df7d621cb0143f92f2e",
+    "originalBuildReceipt": "docs/qa/browser-caption-filters-original-image-proof.json",
+    "originalBuildReceiptSHA256": "e2c3d6e51cf00b73925a0370c4c1813fcee2826faf129967109a1db58fd9a7ef",
+    "scope": "Fresh actual matching nonroot CPU image; worker health/isolation/cleanup and450filter export pass. Retained actual T598 full native suite applies only to explicitly compared unchanged runtime/assets."
+  },
+  "nativeImageExport": {
+    "receipt": "docs/qa/browser-caption-filters-image-equivalence.json",
+    "receiptSHA256": "da5768df58fae52490d2e662a826ab9610651b26c3125ea234d2367978ea6613",
+    "controlledGroundPNGByteIdentical": true,
+    "frames": 450,
+    "caseInputsExactlyEqual": true
+  },
+  "sameHostDeliveredIdentity": {
+    "receipt": "docs/qa/browser-caption-filters-same-host-identity-proof.json",
+    "receiptSHA256": "c53742e64d15fe0dd7b231bd9592753222dfaa7a2c84566f72069bae4a00a97b",
+    "digest": "e2d120be4476e9f761d86306ec2565d80956ba5e7e8d545edc1a301c03b24c59",
+    "sameHostOutputByteIdentical": true,
+    "historicalCrossHostBaselineUpdated": false,
+    "historicalDiagnosticPassed": false
+  },
+  "deployUnitTests": {
+    "receipt": "docs/qa/browser-caption-filters-deploy-proof.json",
+    "receiptSHA256": "375bfacb086bab584f6dd882c7a4662f89e0e3fcdff9ae08094e00f61c3399be",
+    "exit": 0,
+    "tests": 62,
+    "exactCurrentInputHashesVerified": true
+  },
+  "specConformance": {
+    "exit": 0,
+    "log": "/private/tmp/postpilot-browser-media-prep-ink/T596-final-spec-lint.log",
+    "logSHA256": "75daec11d6ee76704008777fc7a7e4db1398e5682305f136872dfab7e7679d66",
+    "inheritedWarnings": 46,
+    "newWarnings": 0,
+    "editorialHintsRequirePlanningReview": true
+  }
+}
