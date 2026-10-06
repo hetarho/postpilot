@@ -6,13 +6,16 @@
     "pixi": "8.22.0",
     "quality": 4,
     "sources": {
-      "frontend/src/entities/clip-preview/model/ink-caption-draw.ts": "c50becc5901f969a45dae527bd2914cc7c584a2468d2887a80314ba83282bcef",
-      "frontend/src/entities/clip-preview/model/ink-caption-effects.ts": "43d5e03d7928f05d2398cdf44588e1764224043775491399f8d6bc35538c62d9",
+      "frontend/src/entities/clip-preview/model/ink-caption-draw.ts": "138f4b37659dfbca8bd16321f8dcbb9fd2a67791536ff66a563e3ee72178794f",
+      "frontend/src/entities/clip-preview/model/ink-caption-effects.ts": "a2633b1e51c23f8e9882b527a33ccec9c188acaeb2683ea948adcba7ba5a310b",
+      "frontend/src/entities/clip-preview/model/ink-caption-ember-pixi.ts": "8e03213c9ec2cb7f40ac52e4909c57e576c9453c54d257f15e599869b457ecf3",
+      "frontend/src/entities/clip-preview/model/ink-caption-ember.ts": "e4bb41e6db3c278230539a5482e6fde35f26587cf5f6ad29b9a7fff291fc0479",
       "frontend/src/entities/clip-preview/model/ink-caption-filter-pixi.ts": "0b13ee759196c59ea7c084e7f4c1bbdea8b27e32196f2cc4124250f4fb045f32",
-      "frontend/src/entities/clip-preview/model/ink-caption-pixi.ts": "3fb52981d024e88856e804632f27c5aeb136fbc7bf2b2e5e9ee4bcc1ac012391",
+      "frontend/src/entities/clip-preview/model/ink-caption-pixi.ts": "81d5532c350b54acf6a026139bb4b5edeadc14f583a3e2d2774bee70adb45d6e",
+      "frontend/src/entities/clip-preview/model/ink-caption-scene.ts": "00b6f5684f084fd1affeef52e5500dff404dfc7a7ef73663c0949c1829e0f10c",
       "pnpm-lock.yaml": "d07c4a1bd3aeab4df41155c2d63d85e6a487959534ed7b27b4710315d7a07319"
     },
-    "version": "caption-filters-v1"
+    "version": "caption-filters-v1-ember-v1"
   },
   "effectPaint": {
     "ambient": {
@@ -51,6 +54,33 @@
         }
       ]
     },
+    "ember": {
+      "spark": "#FFC978",
+      "stops": [
+        {
+          "alpha": 1,
+          "at": 0,
+          "hex": "#FFF6DC"
+        },
+        {
+          "alpha": 1,
+          "at": 0.28,
+          "hex": "#FFB443"
+        },
+        {
+          "alpha": 0.85,
+          "at": 0.62,
+          "hex": "#FF6A2B"
+        },
+        {
+          "alpha": 0,
+          "at": 1,
+          "hex": "#E0431B"
+        }
+      ],
+      "tight": "#FFB443",
+      "wide": "#FF5A1F"
+    },
     "glitch": {
       "cyan": "#00E5FF",
       "red": "#FF2D55"
@@ -88,11 +118,11 @@
       "tight": "#7DF9FF",
       "wide": "#22D3EE"
     },
-    "version": "caption-filters-v1"
+    "version": "caption-filters-v1-ember-v1"
   },
   "nativePainterSources": {
     "caption_draw.go": "5aa87f5c4e47bb649c7e501a3717ec9c857e6f5623f37a263deb22ff5bddbd73",
-    "caption_effect.go": "b66c69f03fabe918b64752eaf7f23a38a892f1c149e25cfdcfa157a683cf8d96",
+    "caption_effect.go": "860b65521b8e2ce9434d7d7462136b754fc21bc5b69f503b78ee47e07a34d68c",
     "caption_frame.go": "1ec1922b88b81ddba77015a8e65ef13a6b26568ad7bf529da86486ca6b08abfe",
     "caption_transform.go": "ad99b6d63b6f35e8de553791ea60145e9e9c44369e5bacee572ed52e32da232a"
   },

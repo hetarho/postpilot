@@ -29,6 +29,7 @@ export const CLIP_CAPTION_EFFECT_STYLES = [
   'neon',
   'iridescent',
   'glitch',
+  'ember',
 ] as const
 export const CLIP_CAPTION_TRANSFORM_STYLES = [
   'word-pop',

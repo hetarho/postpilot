@@ -25,7 +25,7 @@ func TestCaptionEffectPaletteMatchesNativePainter(t *testing.T) {
 			}
 		}
 	}
-	for _, id := range []string{"ambient", "neon", "iridescent", "glitch"} {
+	for _, id := range []string{"ambient", "neon", "iridescent", "glitch", "ember"} {
 		style, ok := design.LookupCaptionStyle(id)
 		if !ok {
 			t.Fatal(id)

@@ -381,6 +381,8 @@ export class BrowserLocalComponents {
                 ink,
                 rect: node.rect,
                 light: node.light,
+                flames: node.flames,
+                sparks: node.sparks,
                 pose: node.pose(progress, state.durationMs),
               })
             }
