@@ -368,6 +368,12 @@ func (s *Store) ReadOriginReview(ctx context.Context, userID, slug string, ident
 }
 
 func withdrawOriginIncarnation(ctx context.Context, q *sqlc.Queries, slug, mediaID string) error {
+	// Captured prompts may include interpretation of several attachments in one
+	// fragment. Erase the complete private selection rather than retaining or
+	// retargeting any withdrawn source's request text.
+	if err := q.PurgeWithdrawnPostRequestCaptures(ctx, slug); err != nil {
+		return err
+	}
 	row, err := q.GetPost(ctx, slug)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil

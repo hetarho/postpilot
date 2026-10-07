@@ -245,11 +245,13 @@ type TemplateAnswer struct {
 }
 
 type PostInput struct {
-	StorylineFingerprint string
-	InputRevision        int64
-	Slug                 string
-	UserID               string
-	Voice                VoiceRef
+	SourceFingerprint     string
+	StorylineFingerprint  string
+	StorylineEditedByHand bool
+	InputRevision         int64
+	Slug                  string
+	UserID                string
+	Voice                 VoiceRef
 	// TemplateID is what the post currently points at, read only at enqueue time. Handlers
 	// never resolve it: they use Template, which the job payload froze.
 	TemplateID string
@@ -368,6 +370,7 @@ type StartRequest struct {
 // GenerateJob is one queued generate as the worker hands it over: the row's routing plus the
 // payload Start encoded.
 type GenerateJob struct {
+	ID           string
 	UserID       string
 	PostSlug     string
 	VoiceID      string
@@ -402,6 +405,7 @@ type StartRevisionRequest struct {
 }
 
 type RevisionJob struct {
+	ID         string
 	UserID     string
 	PostSlug   string
 	VoiceID    string

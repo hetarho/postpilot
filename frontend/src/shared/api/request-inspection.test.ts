@@ -46,6 +46,59 @@ const captured = () =>
   })
 
 describe('safe request inspection projection', () => {
+  it('preserves code applicability, safe call media identity and frozen effective flags', () => {
+    const value = captured()
+    value.callId = 'job:write:1'
+    value.attachments = [
+      { $typeName: 'postpilot.v1.InspectionAttachment', id: 'photo-incarnation', kind: 'photo' },
+    ]
+    value.composer = 'composeWrite'
+    value.parser = 'parsePost'
+    value.consumer = 'publishPost'
+    value.activation = 'selected stage'
+    value.sourceFiles = ['generation/request_composition.go']
+    value.omissions = [
+      {
+        $typeName: 'postpilot.v1.RequestOmission',
+        id: 'stock-tone',
+        reason: 'owner_voice_selected',
+        activation: 'selected voice',
+        sourceFiles: ['generation/write.go'],
+      },
+    ]
+    value.conditions!.disableReasoning = false
+    value.conditions!.freeCall = true
+    value.conditions!.defaultBudget = false
+    value.conditions!.frozenExecution = true
+    value.conditions!.reasoningOmitted = false
+    const result = requestInspectionFromProto(value)
+    expect(result.callId).toBe('job:write:1')
+    expect(result.attachments).toEqual([{ id: 'photo-incarnation', kind: 'photo' }])
+    expect(result.omissions?.[0]?.reason).toBe('owner_voice_selected')
+    expect(result.conditions?.disableReasoning).toBe(false)
+    expect(result.conditions?.frozenExecution).toBe(true)
+    expect(result.conditions?.reasoningOmitted).toBe(false)
+    value.attachments[0]!.kind = 'raw_media'
+    expect(requestInspectionFromProto(value).status).toBe('unavailable')
+  })
+
+  it('shows an honest unavailable reason without rebuilding private material', () => {
+    const value = create(RequestInspectionSchema, {
+      version: 1,
+      status: InspectionStatus.UNAVAILABLE,
+      stage: 'write',
+      unavailableReason: 'capture_missing_stale_or_purged',
+    })
+    expect(requestInspectionFromProto(value)).toEqual({
+      version: 1,
+      status: 'unavailable',
+      stage: 'write',
+      mode: '',
+      fragments: [],
+      selectedRuleIds: [],
+      unavailableReason: 'capture_missing_stale_or_purged',
+    })
+  })
   it.each([
     [InspectionStatus, inspectionStatusNames],
     [InspectionRole, inspectionRoleNames],

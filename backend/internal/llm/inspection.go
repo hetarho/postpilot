@@ -158,6 +158,12 @@ type InspectionMeasures struct {
 	ProviderReasoningTokens  *int64
 }
 
+// InspectionAttachment identifies product-owned media without exposing its
+// storage location, bytes or a runtime signed link.
+type InspectionAttachment struct {
+	ID, Kind string
+}
+
 // RequestInspection is a private product projection. The slice order is request
 // composition order and must not be sorted by ID, role or author. Owning contexts
 // apply their authenticated ownership, retention and blind-comparison fences before
@@ -167,25 +173,30 @@ type InspectionMeasures struct {
 // independent of the registry's observe/write/analyze purpose names. No provider
 // payload, credential, base URL, signed media link or supplier cost has a field here.
 type RequestInspection struct {
-	Version         int
-	Status          InspectionStatus
-	Stage           string
-	Mode            string
-	PromptVersion   string
-	SchemaVersion   string
-	Fragments       []RequestFragment
-	SelectedRuleIDs []string
-	Output          OutputContractInspection
-	Conditions      *EffectiveRequestConditions
-	Measures        InspectionMeasures
-	IssuedAt        *time.Time
-	Composer        string
-	Parser          string
-	Consumer        string
-	Activation      string
-	SourceFiles     []string
-	NativeFields    []RequestNativeField
-	Omissions       []RequestOmission
+	Version int
+	Status  InspectionStatus
+	// UnavailableReason is a code-owned explanation, never a provider error or
+	// material reconstructed from an unavailable private request.
+	UnavailableReason string
+	CallID            string
+	Attachments       []InspectionAttachment
+	Stage             string
+	Mode              string
+	PromptVersion     string
+	SchemaVersion     string
+	Fragments         []RequestFragment
+	SelectedRuleIDs   []string
+	Output            OutputContractInspection
+	Conditions        *EffectiveRequestConditions
+	Measures          InspectionMeasures
+	IssuedAt          *time.Time
+	Composer          string
+	Parser            string
+	Consumer          string
+	Activation        string
+	SourceFiles       []string
+	NativeFields      []RequestNativeField
+	Omissions         []RequestOmission
 }
 
 // UnavailableRequestInspection projects an absent, purged or uncaptured request.
@@ -207,13 +218,26 @@ func (r RequestInspection) Validate() error {
 	}
 	if r.Status == InspectionUnavailable {
 		if r.PromptVersion != "" || r.SchemaVersion != "" || len(r.Fragments) != 0 || len(r.SelectedRuleIDs) != 0 ||
-			r.Output != (OutputContractInspection{}) || r.Conditions != nil || r.Measures != (InspectionMeasures{}) || r.IssuedAt != nil || r.Composer != "" || r.Parser != "" || r.Consumer != "" || r.Activation != "" || len(r.SourceFiles) != 0 || len(r.NativeFields) != 0 || len(r.Omissions) != 0 {
+			r.Output != (OutputContractInspection{}) || r.Conditions != nil || r.Measures != (InspectionMeasures{}) || r.IssuedAt != nil || r.Composer != "" || r.Parser != "" || r.Consumer != "" || r.Activation != "" || len(r.SourceFiles) != 0 || len(r.NativeFields) != 0 || len(r.Omissions) != 0 || r.CallID != "" || len(r.Attachments) != 0 {
 			return invalid("unavailable request carries private payload or runtime evidence")
 		}
-		if !utf8.ValidString(r.Stage) || !utf8.ValidString(r.Mode) {
+		if !utf8.ValidString(r.Stage) || !utf8.ValidString(r.Mode) || !utf8.ValidString(r.UnavailableReason) {
 			return invalid("view identifiers are not UTF-8")
 		}
 		return nil
+	}
+	if r.UnavailableReason != "" {
+		return invalid("available request carries an unavailable reason")
+	}
+	if r.CallID != "" && (r.Status != InspectionCaptured || !inspectionName(r.CallID)) {
+		return invalid("call identity requires captured evidence")
+	}
+	mediaIDs := make(map[string]bool, len(r.Attachments))
+	for _, media := range r.Attachments {
+		if !inspectionName(media.ID) || (media.Kind != "photo" && media.Kind != "video") || mediaIDs[media.ID] {
+			return invalid("attachment identity or kind is invalid")
+		}
+		mediaIDs[media.ID] = true
 	}
 	for _, name := range []string{r.Stage, r.Mode, r.PromptVersion, r.SchemaVersion, r.Output.Name, r.Output.Version} {
 		if !inspectionName(name) {

@@ -23,6 +23,8 @@ func RequestInspectionToProto(value llm.RequestInspection) (*postpilotv1.Request
 		Version: uint32(value.Version), Status: status,
 		Stage: value.Stage, Mode: value.Mode, PromptVersion: value.PromptVersion, SchemaVersion: value.SchemaVersion,
 		SelectedRuleIds: slices.Clone(value.SelectedRuleIDs),
+		Composer:        value.Composer, Parser: value.Parser, Consumer: value.Consumer, Activation: value.Activation,
+		SourceFiles: slices.Clone(value.SourceFiles), UnavailableReason: value.UnavailableReason, CallId: value.CallID,
 	}
 	if value.Fragments != nil {
 		result.Fragments = make([]*postpilotv1.RequestFragment, len(value.Fragments))
@@ -39,7 +41,21 @@ func RequestInspectionToProto(value llm.RequestInspection) (*postpilotv1.Request
 		result.Fragments[index] = &postpilotv1.RequestFragment{
 			Id: fragment.ID, Role: role, Authorship: authorship, MaterialRole: fragment.MaterialRole,
 			Text: fragment.Text, SourceRefs: slices.Clone(fragment.SourceRefs),
+			SourceFiles: slices.Clone(fragment.SourceFiles), Activation: fragment.Activation,
 		}
+	}
+	for _, field := range value.NativeFields {
+		author, err := fragmentAuthorshipToProto(field.Authorship)
+		if err != nil {
+			return nil, err
+		}
+		result.NativeFields = append(result.NativeFields, &postpilotv1.RequestNativeField{Id: field.ID, Authorship: author, MaterialRole: field.MaterialRole, Text: field.Text, Activation: field.Activation, SourceRefs: slices.Clone(field.SourceRefs), SourceFiles: slices.Clone(field.SourceFiles)})
+	}
+	for _, omission := range value.Omissions {
+		result.Omissions = append(result.Omissions, &postpilotv1.RequestOmission{Id: omission.ID, Reason: omission.Reason, Activation: omission.Activation, SourceFiles: slices.Clone(omission.SourceFiles)})
+	}
+	for _, attachment := range value.Attachments {
+		result.Attachments = append(result.Attachments, &postpilotv1.InspectionAttachment{Id: attachment.ID, Kind: attachment.Kind})
 	}
 	if value.Output != (llm.OutputContractInspection{}) {
 		result.Output = &postpilotv1.OutputContractInspection{
@@ -50,6 +66,7 @@ func RequestInspectionToProto(value llm.RequestInspection) (*postpilotv1.Request
 		result.Conditions = &postpilotv1.EffectiveRequestConditions{
 			MaxCompletionTokens: inspectionCopyOptional(value.Conditions.MaxCompletionTokens),
 			StructuredOutput:    inspectionCopyOptional(value.Conditions.StructuredOutput),
+			DisableReasoning:    inspectionCopyOptional(value.Conditions.DisableReasoning), FreeCall: inspectionCopyOptional(value.Conditions.FreeCall), DefaultBudget: inspectionCopyOptional(value.Conditions.DefaultBudget), FrozenExecution: inspectionCopyOptional(value.Conditions.FrozenExecution), ReasoningOmitted: inspectionCopyOptional(value.Conditions.ReasoningOmitted),
 		}
 		if value.Conditions.Model != nil {
 			result.Conditions.Model = &postpilotv1.ModelRef{ProviderId: value.Conditions.Model.ProviderID, ModelId: value.Conditions.Model.ModelID}
@@ -92,6 +109,8 @@ func RequestInspectionFromProto(value *postpilotv1.RequestInspection) (llm.Reque
 		Version: int(value.Version), Status: status,
 		Stage: value.Stage, Mode: value.Mode, PromptVersion: value.PromptVersion, SchemaVersion: value.SchemaVersion,
 		SelectedRuleIDs: slices.Clone(value.SelectedRuleIds),
+		Composer:        value.Composer, Parser: value.Parser, Consumer: value.Consumer, Activation: value.Activation,
+		SourceFiles: slices.Clone(value.SourceFiles), UnavailableReason: value.UnavailableReason, CallID: value.CallId,
 	}
 	if value.Fragments != nil {
 		result.Fragments = make([]llm.RequestFragment, len(value.Fragments))
@@ -111,7 +130,30 @@ func RequestInspectionFromProto(value *postpilotv1.RequestInspection) (llm.Reque
 		result.Fragments[index] = llm.RequestFragment{
 			ID: fragment.Id, Role: role, Authorship: authorship, MaterialRole: fragment.MaterialRole,
 			Text: fragment.Text, SourceRefs: slices.Clone(fragment.SourceRefs),
+			SourceFiles: slices.Clone(fragment.SourceFiles), Activation: fragment.Activation,
 		}
+	}
+	for _, field := range value.NativeFields {
+		if field == nil {
+			return llm.RequestInspection{}, invalidInspectionMapping("native field is absent")
+		}
+		author, err := fragmentAuthorshipFromProto(field.Authorship)
+		if err != nil {
+			return llm.RequestInspection{}, err
+		}
+		result.NativeFields = append(result.NativeFields, llm.RequestNativeField{ID: field.Id, Authorship: author, MaterialRole: field.MaterialRole, Text: field.Text, Activation: field.Activation, SourceRefs: slices.Clone(field.SourceRefs), SourceFiles: slices.Clone(field.SourceFiles)})
+	}
+	for _, omission := range value.Omissions {
+		if omission == nil {
+			return llm.RequestInspection{}, invalidInspectionMapping("omission is absent")
+		}
+		result.Omissions = append(result.Omissions, llm.RequestOmission{ID: omission.Id, Reason: omission.Reason, Activation: omission.Activation, SourceFiles: slices.Clone(omission.SourceFiles)})
+	}
+	for _, attachment := range value.Attachments {
+		if attachment == nil {
+			return llm.RequestInspection{}, invalidInspectionMapping("attachment is absent")
+		}
+		result.Attachments = append(result.Attachments, llm.InspectionAttachment{ID: attachment.Id, Kind: attachment.Kind})
 	}
 	if value.Output != nil {
 		result.Output = llm.OutputContractInspection{Name: value.Output.Name, Version: value.Output.Version, Schema: value.Output.Schema}
@@ -120,6 +162,7 @@ func RequestInspectionFromProto(value *postpilotv1.RequestInspection) (llm.Reque
 		result.Conditions = &llm.EffectiveRequestConditions{
 			MaxCompletionTokens: inspectionCopyOptional(value.Conditions.MaxCompletionTokens),
 			StructuredOutput:    inspectionCopyOptional(value.Conditions.StructuredOutput),
+			DisableReasoning:    inspectionCopyOptional(value.Conditions.DisableReasoning), FreeCall: inspectionCopyOptional(value.Conditions.FreeCall), DefaultBudget: inspectionCopyOptional(value.Conditions.DefaultBudget), FrozenExecution: inspectionCopyOptional(value.Conditions.FrozenExecution), ReasoningOmitted: inspectionCopyOptional(value.Conditions.ReasoningOmitted),
 		}
 		if value.Conditions.Model != nil {
 			result.Conditions.Model = &llm.ModelRef{ProviderID: value.Conditions.Model.ProviderId, ModelID: value.Conditions.Model.ModelId}

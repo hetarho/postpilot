@@ -186,6 +186,8 @@ type RequestFragment struct {
 	MaterialRole  string                 `protobuf:"bytes,4,opt,name=material_role,json=materialRole,proto3" json:"material_role,omitempty"`
 	Text          string                 `protobuf:"bytes,5,opt,name=text,proto3" json:"text,omitempty"`
 	SourceRefs    []string               `protobuf:"bytes,6,rep,name=source_refs,json=sourceRefs,proto3" json:"source_refs,omitempty"`
+	SourceFiles   []string               `protobuf:"bytes,7,rep,name=source_files,json=sourceFiles,proto3" json:"source_files,omitempty"`
+	Activation    string                 `protobuf:"bytes,8,opt,name=activation,proto3" json:"activation,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -262,6 +264,232 @@ func (x *RequestFragment) GetSourceRefs() []string {
 	return nil
 }
 
+func (x *RequestFragment) GetSourceFiles() []string {
+	if x != nil {
+		return x.SourceFiles
+	}
+	return nil
+}
+
+func (x *RequestFragment) GetActivation() string {
+	if x != nil {
+		return x.Activation
+	}
+	return ""
+}
+
+type RequestNativeField struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Authorship    FragmentAuthorship     `protobuf:"varint,2,opt,name=authorship,proto3,enum=postpilot.v1.FragmentAuthorship" json:"authorship,omitempty"`
+	MaterialRole  string                 `protobuf:"bytes,3,opt,name=material_role,json=materialRole,proto3" json:"material_role,omitempty"`
+	Text          string                 `protobuf:"bytes,4,opt,name=text,proto3" json:"text,omitempty"`
+	SourceRefs    []string               `protobuf:"bytes,5,rep,name=source_refs,json=sourceRefs,proto3" json:"source_refs,omitempty"`
+	SourceFiles   []string               `protobuf:"bytes,6,rep,name=source_files,json=sourceFiles,proto3" json:"source_files,omitempty"`
+	Activation    string                 `protobuf:"bytes,7,opt,name=activation,proto3" json:"activation,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RequestNativeField) Reset() {
+	*x = RequestNativeField{}
+	mi := &file_postpilot_v1_request_inspection_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RequestNativeField) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RequestNativeField) ProtoMessage() {}
+
+func (x *RequestNativeField) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_request_inspection_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RequestNativeField.ProtoReflect.Descriptor instead.
+func (*RequestNativeField) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_request_inspection_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *RequestNativeField) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *RequestNativeField) GetAuthorship() FragmentAuthorship {
+	if x != nil {
+		return x.Authorship
+	}
+	return FragmentAuthorship_FRAGMENT_AUTHORSHIP_UNSPECIFIED
+}
+
+func (x *RequestNativeField) GetMaterialRole() string {
+	if x != nil {
+		return x.MaterialRole
+	}
+	return ""
+}
+
+func (x *RequestNativeField) GetText() string {
+	if x != nil {
+		return x.Text
+	}
+	return ""
+}
+
+func (x *RequestNativeField) GetSourceRefs() []string {
+	if x != nil {
+		return x.SourceRefs
+	}
+	return nil
+}
+
+func (x *RequestNativeField) GetSourceFiles() []string {
+	if x != nil {
+		return x.SourceFiles
+	}
+	return nil
+}
+
+func (x *RequestNativeField) GetActivation() string {
+	if x != nil {
+		return x.Activation
+	}
+	return ""
+}
+
+type RequestOmission struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Reason        string                 `protobuf:"bytes,2,opt,name=reason,proto3" json:"reason,omitempty"`
+	SourceFiles   []string               `protobuf:"bytes,3,rep,name=source_files,json=sourceFiles,proto3" json:"source_files,omitempty"`
+	Activation    string                 `protobuf:"bytes,4,opt,name=activation,proto3" json:"activation,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RequestOmission) Reset() {
+	*x = RequestOmission{}
+	mi := &file_postpilot_v1_request_inspection_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RequestOmission) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RequestOmission) ProtoMessage() {}
+
+func (x *RequestOmission) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_request_inspection_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RequestOmission.ProtoReflect.Descriptor instead.
+func (*RequestOmission) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_request_inspection_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *RequestOmission) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *RequestOmission) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+func (x *RequestOmission) GetSourceFiles() []string {
+	if x != nil {
+		return x.SourceFiles
+	}
+	return nil
+}
+
+func (x *RequestOmission) GetActivation() string {
+	if x != nil {
+		return x.Activation
+	}
+	return ""
+}
+
+type InspectionAttachment struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Kind          string                 `protobuf:"bytes,2,opt,name=kind,proto3" json:"kind,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *InspectionAttachment) Reset() {
+	*x = InspectionAttachment{}
+	mi := &file_postpilot_v1_request_inspection_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *InspectionAttachment) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*InspectionAttachment) ProtoMessage() {}
+
+func (x *InspectionAttachment) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_request_inspection_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use InspectionAttachment.ProtoReflect.Descriptor instead.
+func (*InspectionAttachment) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_request_inspection_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *InspectionAttachment) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *InspectionAttachment) GetKind() string {
+	if x != nil {
+		return x.Kind
+	}
+	return ""
+}
+
 type OutputContractInspection struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
@@ -273,7 +501,7 @@ type OutputContractInspection struct {
 
 func (x *OutputContractInspection) Reset() {
 	*x = OutputContractInspection{}
-	mi := &file_postpilot_v1_request_inspection_proto_msgTypes[1]
+	mi := &file_postpilot_v1_request_inspection_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -285,7 +513,7 @@ func (x *OutputContractInspection) String() string {
 func (*OutputContractInspection) ProtoMessage() {}
 
 func (x *OutputContractInspection) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_request_inspection_proto_msgTypes[1]
+	mi := &file_postpilot_v1_request_inspection_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -298,7 +526,7 @@ func (x *OutputContractInspection) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OutputContractInspection.ProtoReflect.Descriptor instead.
 func (*OutputContractInspection) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_request_inspection_proto_rawDescGZIP(), []int{1}
+	return file_postpilot_v1_request_inspection_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *OutputContractInspection) GetName() string {
@@ -328,13 +556,18 @@ type EffectiveRequestConditions struct {
 	MaxCompletionTokens *int64                 `protobuf:"varint,2,opt,name=max_completion_tokens,json=maxCompletionTokens,proto3,oneof" json:"max_completion_tokens,omitempty"`
 	ReasoningEffort     *string                `protobuf:"bytes,3,opt,name=reasoning_effort,json=reasoningEffort,proto3,oneof" json:"reasoning_effort,omitempty"`
 	StructuredOutput    *bool                  `protobuf:"varint,4,opt,name=structured_output,json=structuredOutput,proto3,oneof" json:"structured_output,omitempty"`
+	DisableReasoning    *bool                  `protobuf:"varint,5,opt,name=disable_reasoning,json=disableReasoning,proto3,oneof" json:"disable_reasoning,omitempty"`
+	FreeCall            *bool                  `protobuf:"varint,6,opt,name=free_call,json=freeCall,proto3,oneof" json:"free_call,omitempty"`
+	DefaultBudget       *bool                  `protobuf:"varint,7,opt,name=default_budget,json=defaultBudget,proto3,oneof" json:"default_budget,omitempty"`
+	FrozenExecution     *bool                  `protobuf:"varint,8,opt,name=frozen_execution,json=frozenExecution,proto3,oneof" json:"frozen_execution,omitempty"`
+	ReasoningOmitted    *bool                  `protobuf:"varint,9,opt,name=reasoning_omitted,json=reasoningOmitted,proto3,oneof" json:"reasoning_omitted,omitempty"`
 	unknownFields       protoimpl.UnknownFields
 	sizeCache           protoimpl.SizeCache
 }
 
 func (x *EffectiveRequestConditions) Reset() {
 	*x = EffectiveRequestConditions{}
-	mi := &file_postpilot_v1_request_inspection_proto_msgTypes[2]
+	mi := &file_postpilot_v1_request_inspection_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -346,7 +579,7 @@ func (x *EffectiveRequestConditions) String() string {
 func (*EffectiveRequestConditions) ProtoMessage() {}
 
 func (x *EffectiveRequestConditions) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_request_inspection_proto_msgTypes[2]
+	mi := &file_postpilot_v1_request_inspection_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -359,7 +592,7 @@ func (x *EffectiveRequestConditions) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EffectiveRequestConditions.ProtoReflect.Descriptor instead.
 func (*EffectiveRequestConditions) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_request_inspection_proto_rawDescGZIP(), []int{2}
+	return file_postpilot_v1_request_inspection_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *EffectiveRequestConditions) GetModel() *ModelRef {
@@ -390,6 +623,41 @@ func (x *EffectiveRequestConditions) GetStructuredOutput() bool {
 	return false
 }
 
+func (x *EffectiveRequestConditions) GetDisableReasoning() bool {
+	if x != nil && x.DisableReasoning != nil {
+		return *x.DisableReasoning
+	}
+	return false
+}
+
+func (x *EffectiveRequestConditions) GetFreeCall() bool {
+	if x != nil && x.FreeCall != nil {
+		return *x.FreeCall
+	}
+	return false
+}
+
+func (x *EffectiveRequestConditions) GetDefaultBudget() bool {
+	if x != nil && x.DefaultBudget != nil {
+		return *x.DefaultBudget
+	}
+	return false
+}
+
+func (x *EffectiveRequestConditions) GetFrozenExecution() bool {
+	if x != nil && x.FrozenExecution != nil {
+		return *x.FrozenExecution
+	}
+	return false
+}
+
+func (x *EffectiveRequestConditions) GetReasoningOmitted() bool {
+	if x != nil && x.ReasoningOmitted != nil {
+		return *x.ReasoningOmitted
+	}
+	return false
+}
+
 type InspectionMeasures struct {
 	state                    protoimpl.MessageState `protogen:"open.v1"`
 	Characters               *int64                 `protobuf:"varint,1,opt,name=characters,proto3,oneof" json:"characters,omitempty"`
@@ -404,7 +672,7 @@ type InspectionMeasures struct {
 
 func (x *InspectionMeasures) Reset() {
 	*x = InspectionMeasures{}
-	mi := &file_postpilot_v1_request_inspection_proto_msgTypes[3]
+	mi := &file_postpilot_v1_request_inspection_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -416,7 +684,7 @@ func (x *InspectionMeasures) String() string {
 func (*InspectionMeasures) ProtoMessage() {}
 
 func (x *InspectionMeasures) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_request_inspection_proto_msgTypes[3]
+	mi := &file_postpilot_v1_request_inspection_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -429,7 +697,7 @@ func (x *InspectionMeasures) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InspectionMeasures.ProtoReflect.Descriptor instead.
 func (*InspectionMeasures) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_request_inspection_proto_rawDescGZIP(), []int{3}
+	return file_postpilot_v1_request_inspection_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *InspectionMeasures) GetCharacters() int64 {
@@ -476,26 +744,36 @@ func (x *InspectionMeasures) GetProviderReasoningTokens() int64 {
 
 // Safe application projection: no SDK payload, credentials, media or cost field.
 type RequestInspection struct {
-	state           protoimpl.MessageState      `protogen:"open.v1"`
-	Version         uint32                      `protobuf:"varint,1,opt,name=version,proto3" json:"version,omitempty"`
-	Status          InspectionStatus            `protobuf:"varint,2,opt,name=status,proto3,enum=postpilot.v1.InspectionStatus" json:"status,omitempty"`
-	Stage           string                      `protobuf:"bytes,3,opt,name=stage,proto3" json:"stage,omitempty"`
-	Mode            string                      `protobuf:"bytes,4,opt,name=mode,proto3" json:"mode,omitempty"`
-	PromptVersion   string                      `protobuf:"bytes,5,opt,name=prompt_version,json=promptVersion,proto3" json:"prompt_version,omitempty"`
-	SchemaVersion   string                      `protobuf:"bytes,6,opt,name=schema_version,json=schemaVersion,proto3" json:"schema_version,omitempty"`
-	Fragments       []*RequestFragment          `protobuf:"bytes,7,rep,name=fragments,proto3" json:"fragments,omitempty"`
-	SelectedRuleIds []string                    `protobuf:"bytes,8,rep,name=selected_rule_ids,json=selectedRuleIds,proto3" json:"selected_rule_ids,omitempty"`
-	Output          *OutputContractInspection   `protobuf:"bytes,9,opt,name=output,proto3" json:"output,omitempty"`
-	Conditions      *EffectiveRequestConditions `protobuf:"bytes,10,opt,name=conditions,proto3" json:"conditions,omitempty"`
-	Measures        *InspectionMeasures         `protobuf:"bytes,11,opt,name=measures,proto3" json:"measures,omitempty"`
-	IssuedAt        *timestamppb.Timestamp      `protobuf:"bytes,12,opt,name=issued_at,json=issuedAt,proto3" json:"issued_at,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	state             protoimpl.MessageState      `protogen:"open.v1"`
+	Version           uint32                      `protobuf:"varint,1,opt,name=version,proto3" json:"version,omitempty"`
+	Status            InspectionStatus            `protobuf:"varint,2,opt,name=status,proto3,enum=postpilot.v1.InspectionStatus" json:"status,omitempty"`
+	Stage             string                      `protobuf:"bytes,3,opt,name=stage,proto3" json:"stage,omitempty"`
+	Mode              string                      `protobuf:"bytes,4,opt,name=mode,proto3" json:"mode,omitempty"`
+	PromptVersion     string                      `protobuf:"bytes,5,opt,name=prompt_version,json=promptVersion,proto3" json:"prompt_version,omitempty"`
+	SchemaVersion     string                      `protobuf:"bytes,6,opt,name=schema_version,json=schemaVersion,proto3" json:"schema_version,omitempty"`
+	Fragments         []*RequestFragment          `protobuf:"bytes,7,rep,name=fragments,proto3" json:"fragments,omitempty"`
+	SelectedRuleIds   []string                    `protobuf:"bytes,8,rep,name=selected_rule_ids,json=selectedRuleIds,proto3" json:"selected_rule_ids,omitempty"`
+	Output            *OutputContractInspection   `protobuf:"bytes,9,opt,name=output,proto3" json:"output,omitempty"`
+	Conditions        *EffectiveRequestConditions `protobuf:"bytes,10,opt,name=conditions,proto3" json:"conditions,omitempty"`
+	Measures          *InspectionMeasures         `protobuf:"bytes,11,opt,name=measures,proto3" json:"measures,omitempty"`
+	IssuedAt          *timestamppb.Timestamp      `protobuf:"bytes,12,opt,name=issued_at,json=issuedAt,proto3" json:"issued_at,omitempty"`
+	Composer          string                      `protobuf:"bytes,13,opt,name=composer,proto3" json:"composer,omitempty"`
+	Parser            string                      `protobuf:"bytes,14,opt,name=parser,proto3" json:"parser,omitempty"`
+	Consumer          string                      `protobuf:"bytes,15,opt,name=consumer,proto3" json:"consumer,omitempty"`
+	Activation        string                      `protobuf:"bytes,16,opt,name=activation,proto3" json:"activation,omitempty"`
+	SourceFiles       []string                    `protobuf:"bytes,17,rep,name=source_files,json=sourceFiles,proto3" json:"source_files,omitempty"`
+	NativeFields      []*RequestNativeField       `protobuf:"bytes,18,rep,name=native_fields,json=nativeFields,proto3" json:"native_fields,omitempty"`
+	Omissions         []*RequestOmission          `protobuf:"bytes,19,rep,name=omissions,proto3" json:"omissions,omitempty"`
+	UnavailableReason string                      `protobuf:"bytes,20,opt,name=unavailable_reason,json=unavailableReason,proto3" json:"unavailable_reason,omitempty"`
+	CallId            string                      `protobuf:"bytes,21,opt,name=call_id,json=callId,proto3" json:"call_id,omitempty"`
+	Attachments       []*InspectionAttachment     `protobuf:"bytes,22,rep,name=attachments,proto3" json:"attachments,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *RequestInspection) Reset() {
 	*x = RequestInspection{}
-	mi := &file_postpilot_v1_request_inspection_proto_msgTypes[4]
+	mi := &file_postpilot_v1_request_inspection_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -507,7 +785,7 @@ func (x *RequestInspection) String() string {
 func (*RequestInspection) ProtoMessage() {}
 
 func (x *RequestInspection) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_request_inspection_proto_msgTypes[4]
+	mi := &file_postpilot_v1_request_inspection_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -520,7 +798,7 @@ func (x *RequestInspection) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RequestInspection.ProtoReflect.Descriptor instead.
 func (*RequestInspection) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_request_inspection_proto_rawDescGZIP(), []int{4}
+	return file_postpilot_v1_request_inspection_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *RequestInspection) GetVersion() uint32 {
@@ -607,6 +885,76 @@ func (x *RequestInspection) GetIssuedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *RequestInspection) GetComposer() string {
+	if x != nil {
+		return x.Composer
+	}
+	return ""
+}
+
+func (x *RequestInspection) GetParser() string {
+	if x != nil {
+		return x.Parser
+	}
+	return ""
+}
+
+func (x *RequestInspection) GetConsumer() string {
+	if x != nil {
+		return x.Consumer
+	}
+	return ""
+}
+
+func (x *RequestInspection) GetActivation() string {
+	if x != nil {
+		return x.Activation
+	}
+	return ""
+}
+
+func (x *RequestInspection) GetSourceFiles() []string {
+	if x != nil {
+		return x.SourceFiles
+	}
+	return nil
+}
+
+func (x *RequestInspection) GetNativeFields() []*RequestNativeField {
+	if x != nil {
+		return x.NativeFields
+	}
+	return nil
+}
+
+func (x *RequestInspection) GetOmissions() []*RequestOmission {
+	if x != nil {
+		return x.Omissions
+	}
+	return nil
+}
+
+func (x *RequestInspection) GetUnavailableReason() string {
+	if x != nil {
+		return x.UnavailableReason
+	}
+	return ""
+}
+
+func (x *RequestInspection) GetCallId() string {
+	if x != nil {
+		return x.CallId
+	}
+	return ""
+}
+
+func (x *RequestInspection) GetAttachments() []*InspectionAttachment {
+	if x != nil {
+		return x.Attachments
+	}
+	return nil
+}
+
 type GetPostOriginReviewRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	PostSlug      string                 `protobuf:"bytes,1,opt,name=post_slug,json=postSlug,proto3" json:"post_slug,omitempty"`
@@ -616,7 +964,7 @@ type GetPostOriginReviewRequest struct {
 
 func (x *GetPostOriginReviewRequest) Reset() {
 	*x = GetPostOriginReviewRequest{}
-	mi := &file_postpilot_v1_request_inspection_proto_msgTypes[5]
+	mi := &file_postpilot_v1_request_inspection_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -628,7 +976,7 @@ func (x *GetPostOriginReviewRequest) String() string {
 func (*GetPostOriginReviewRequest) ProtoMessage() {}
 
 func (x *GetPostOriginReviewRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_request_inspection_proto_msgTypes[5]
+	mi := &file_postpilot_v1_request_inspection_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -641,7 +989,7 @@ func (x *GetPostOriginReviewRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetPostOriginReviewRequest.ProtoReflect.Descriptor instead.
 func (*GetPostOriginReviewRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_request_inspection_proto_rawDescGZIP(), []int{5}
+	return file_postpilot_v1_request_inspection_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *GetPostOriginReviewRequest) GetPostSlug() string {
@@ -660,7 +1008,7 @@ type GetPostOriginReviewResponse struct {
 
 func (x *GetPostOriginReviewResponse) Reset() {
 	*x = GetPostOriginReviewResponse{}
-	mi := &file_postpilot_v1_request_inspection_proto_msgTypes[6]
+	mi := &file_postpilot_v1_request_inspection_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -672,7 +1020,7 @@ func (x *GetPostOriginReviewResponse) String() string {
 func (*GetPostOriginReviewResponse) ProtoMessage() {}
 
 func (x *GetPostOriginReviewResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_request_inspection_proto_msgTypes[6]
+	mi := &file_postpilot_v1_request_inspection_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -685,7 +1033,7 @@ func (x *GetPostOriginReviewResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetPostOriginReviewResponse.ProtoReflect.Descriptor instead.
 func (*GetPostOriginReviewResponse) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_request_inspection_proto_rawDescGZIP(), []int{6}
+	return file_postpilot_v1_request_inspection_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *GetPostOriginReviewResponse) GetReview() *OriginReview {
@@ -706,7 +1054,7 @@ type GetPostRequestInspectionRequest struct {
 
 func (x *GetPostRequestInspectionRequest) Reset() {
 	*x = GetPostRequestInspectionRequest{}
-	mi := &file_postpilot_v1_request_inspection_proto_msgTypes[7]
+	mi := &file_postpilot_v1_request_inspection_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -718,7 +1066,7 @@ func (x *GetPostRequestInspectionRequest) String() string {
 func (*GetPostRequestInspectionRequest) ProtoMessage() {}
 
 func (x *GetPostRequestInspectionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_request_inspection_proto_msgTypes[7]
+	mi := &file_postpilot_v1_request_inspection_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -731,7 +1079,7 @@ func (x *GetPostRequestInspectionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetPostRequestInspectionRequest.ProtoReflect.Descriptor instead.
 func (*GetPostRequestInspectionRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_request_inspection_proto_rawDescGZIP(), []int{7}
+	return file_postpilot_v1_request_inspection_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *GetPostRequestInspectionRequest) GetPostSlug() string {
@@ -758,13 +1106,14 @@ func (x *GetPostRequestInspectionRequest) GetStatus() InspectionStatus {
 type GetPostRequestInspectionResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Inspection    *RequestInspection     `protobuf:"bytes,1,opt,name=inspection,proto3" json:"inspection,omitempty"`
+	Inspections   []*RequestInspection   `protobuf:"bytes,2,rep,name=inspections,proto3" json:"inspections,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *GetPostRequestInspectionResponse) Reset() {
 	*x = GetPostRequestInspectionResponse{}
-	mi := &file_postpilot_v1_request_inspection_proto_msgTypes[8]
+	mi := &file_postpilot_v1_request_inspection_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -776,7 +1125,7 @@ func (x *GetPostRequestInspectionResponse) String() string {
 func (*GetPostRequestInspectionResponse) ProtoMessage() {}
 
 func (x *GetPostRequestInspectionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_request_inspection_proto_msgTypes[8]
+	mi := &file_postpilot_v1_request_inspection_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -789,12 +1138,19 @@ func (x *GetPostRequestInspectionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetPostRequestInspectionResponse.ProtoReflect.Descriptor instead.
 func (*GetPostRequestInspectionResponse) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_request_inspection_proto_rawDescGZIP(), []int{8}
+	return file_postpilot_v1_request_inspection_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *GetPostRequestInspectionResponse) GetInspection() *RequestInspection {
 	if x != nil {
 		return x.Inspection
+	}
+	return nil
+}
+
+func (x *GetPostRequestInspectionResponse) GetInspections() []*RequestInspection {
+	if x != nil {
+		return x.Inspections
 	}
 	return nil
 }
@@ -811,7 +1167,7 @@ type GetWritingTestRequestInspectionRequest struct {
 
 func (x *GetWritingTestRequestInspectionRequest) Reset() {
 	*x = GetWritingTestRequestInspectionRequest{}
-	mi := &file_postpilot_v1_request_inspection_proto_msgTypes[9]
+	mi := &file_postpilot_v1_request_inspection_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -823,7 +1179,7 @@ func (x *GetWritingTestRequestInspectionRequest) String() string {
 func (*GetWritingTestRequestInspectionRequest) ProtoMessage() {}
 
 func (x *GetWritingTestRequestInspectionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_request_inspection_proto_msgTypes[9]
+	mi := &file_postpilot_v1_request_inspection_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -836,7 +1192,7 @@ func (x *GetWritingTestRequestInspectionRequest) ProtoReflect() protoreflect.Mes
 
 // Deprecated: Use GetWritingTestRequestInspectionRequest.ProtoReflect.Descriptor instead.
 func (*GetWritingTestRequestInspectionRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_request_inspection_proto_rawDescGZIP(), []int{9}
+	return file_postpilot_v1_request_inspection_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *GetWritingTestRequestInspectionRequest) GetTestId() string {
@@ -876,7 +1232,7 @@ type GetWritingTestRequestInspectionResponse struct {
 
 func (x *GetWritingTestRequestInspectionResponse) Reset() {
 	*x = GetWritingTestRequestInspectionResponse{}
-	mi := &file_postpilot_v1_request_inspection_proto_msgTypes[10]
+	mi := &file_postpilot_v1_request_inspection_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -888,7 +1244,7 @@ func (x *GetWritingTestRequestInspectionResponse) String() string {
 func (*GetWritingTestRequestInspectionResponse) ProtoMessage() {}
 
 func (x *GetWritingTestRequestInspectionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_request_inspection_proto_msgTypes[10]
+	mi := &file_postpilot_v1_request_inspection_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -901,7 +1257,7 @@ func (x *GetWritingTestRequestInspectionResponse) ProtoReflect() protoreflect.Me
 
 // Deprecated: Use GetWritingTestRequestInspectionResponse.ProtoReflect.Descriptor instead.
 func (*GetWritingTestRequestInspectionResponse) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_request_inspection_proto_rawDescGZIP(), []int{10}
+	return file_postpilot_v1_request_inspection_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *GetWritingTestRequestInspectionResponse) GetInspection() *RequestInspection {
@@ -922,7 +1278,7 @@ type GetAuthoringRequestInspectionRequest struct {
 
 func (x *GetAuthoringRequestInspectionRequest) Reset() {
 	*x = GetAuthoringRequestInspectionRequest{}
-	mi := &file_postpilot_v1_request_inspection_proto_msgTypes[11]
+	mi := &file_postpilot_v1_request_inspection_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -934,7 +1290,7 @@ func (x *GetAuthoringRequestInspectionRequest) String() string {
 func (*GetAuthoringRequestInspectionRequest) ProtoMessage() {}
 
 func (x *GetAuthoringRequestInspectionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_request_inspection_proto_msgTypes[11]
+	mi := &file_postpilot_v1_request_inspection_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -947,7 +1303,7 @@ func (x *GetAuthoringRequestInspectionRequest) ProtoReflect() protoreflect.Messa
 
 // Deprecated: Use GetAuthoringRequestInspectionRequest.ProtoReflect.Descriptor instead.
 func (*GetAuthoringRequestInspectionRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_request_inspection_proto_rawDescGZIP(), []int{11}
+	return file_postpilot_v1_request_inspection_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *GetAuthoringRequestInspectionRequest) GetDraftId() string {
@@ -980,7 +1336,7 @@ type GetAuthoringRequestInspectionResponse struct {
 
 func (x *GetAuthoringRequestInspectionResponse) Reset() {
 	*x = GetAuthoringRequestInspectionResponse{}
-	mi := &file_postpilot_v1_request_inspection_proto_msgTypes[12]
+	mi := &file_postpilot_v1_request_inspection_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -992,7 +1348,7 @@ func (x *GetAuthoringRequestInspectionResponse) String() string {
 func (*GetAuthoringRequestInspectionResponse) ProtoMessage() {}
 
 func (x *GetAuthoringRequestInspectionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_request_inspection_proto_msgTypes[12]
+	mi := &file_postpilot_v1_request_inspection_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1005,7 +1361,7 @@ func (x *GetAuthoringRequestInspectionResponse) ProtoReflect() protoreflect.Mess
 
 // Deprecated: Use GetAuthoringRequestInspectionResponse.ProtoReflect.Descriptor instead.
 func (*GetAuthoringRequestInspectionResponse) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_request_inspection_proto_rawDescGZIP(), []int{12}
+	return file_postpilot_v1_request_inspection_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *GetAuthoringRequestInspectionResponse) GetInspection() *RequestInspection {
@@ -1019,7 +1375,7 @@ var File_postpilot_v1_request_inspection_proto protoreflect.FileDescriptor
 
 const file_postpilot_v1_request_inspection_proto_rawDesc = "" +
 	"\n" +
-	"%postpilot/v1/request_inspection.proto\x12\fpostpilot.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1bpostpilot/v1/provider.proto\x1a\"postpilot/v1/semantic_origin.proto\"\xef\x01\n" +
+	"%postpilot/v1/request_inspection.proto\x12\fpostpilot.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1bpostpilot/v1/provider.proto\x1a\"postpilot/v1/semantic_origin.proto\"\xb2\x02\n" +
 	"\x0fRequestFragment\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x120\n" +
 	"\x04role\x18\x02 \x01(\x0e2\x1c.postpilot.v1.InspectionRoleR\x04role\x12@\n" +
@@ -1029,19 +1385,57 @@ const file_postpilot_v1_request_inspection_proto_rawDesc = "" +
 	"\rmaterial_role\x18\x04 \x01(\tR\fmaterialRole\x12\x12\n" +
 	"\x04text\x18\x05 \x01(\tR\x04text\x12\x1f\n" +
 	"\vsource_refs\x18\x06 \x03(\tR\n" +
-	"sourceRefs\"`\n" +
+	"sourceRefs\x12!\n" +
+	"\fsource_files\x18\a \x03(\tR\vsourceFiles\x12\x1e\n" +
+	"\n" +
+	"activation\x18\b \x01(\tR\n" +
+	"activation\"\x83\x02\n" +
+	"\x12RequestNativeField\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12@\n" +
+	"\n" +
+	"authorship\x18\x02 \x01(\x0e2 .postpilot.v1.FragmentAuthorshipR\n" +
+	"authorship\x12#\n" +
+	"\rmaterial_role\x18\x03 \x01(\tR\fmaterialRole\x12\x12\n" +
+	"\x04text\x18\x04 \x01(\tR\x04text\x12\x1f\n" +
+	"\vsource_refs\x18\x05 \x03(\tR\n" +
+	"sourceRefs\x12!\n" +
+	"\fsource_files\x18\x06 \x03(\tR\vsourceFiles\x12\x1e\n" +
+	"\n" +
+	"activation\x18\a \x01(\tR\n" +
+	"activation\"|\n" +
+	"\x0fRequestOmission\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
+	"\x06reason\x18\x02 \x01(\tR\x06reason\x12!\n" +
+	"\fsource_files\x18\x03 \x03(\tR\vsourceFiles\x12\x1e\n" +
+	"\n" +
+	"activation\x18\x04 \x01(\tR\n" +
+	"activation\":\n" +
+	"\x14InspectionAttachment\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
+	"\x04kind\x18\x02 \x01(\tR\x04kind\"`\n" +
 	"\x18OutputContractInspection\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x18\n" +
 	"\aversion\x18\x02 \x01(\tR\aversion\x12\x16\n" +
-	"\x06schema\x18\x03 \x01(\tR\x06schema\"\xaa\x02\n" +
+	"\x06schema\x18\x03 \x01(\tR\x06schema\"\xee\x04\n" +
 	"\x1aEffectiveRequestConditions\x12,\n" +
 	"\x05model\x18\x01 \x01(\v2\x16.postpilot.v1.ModelRefR\x05model\x127\n" +
 	"\x15max_completion_tokens\x18\x02 \x01(\x03H\x00R\x13maxCompletionTokens\x88\x01\x01\x12.\n" +
 	"\x10reasoning_effort\x18\x03 \x01(\tH\x01R\x0freasoningEffort\x88\x01\x01\x120\n" +
-	"\x11structured_output\x18\x04 \x01(\bH\x02R\x10structuredOutput\x88\x01\x01B\x18\n" +
+	"\x11structured_output\x18\x04 \x01(\bH\x02R\x10structuredOutput\x88\x01\x01\x120\n" +
+	"\x11disable_reasoning\x18\x05 \x01(\bH\x03R\x10disableReasoning\x88\x01\x01\x12 \n" +
+	"\tfree_call\x18\x06 \x01(\bH\x04R\bfreeCall\x88\x01\x01\x12*\n" +
+	"\x0edefault_budget\x18\a \x01(\bH\x05R\rdefaultBudget\x88\x01\x01\x12.\n" +
+	"\x10frozen_execution\x18\b \x01(\bH\x06R\x0ffrozenExecution\x88\x01\x01\x120\n" +
+	"\x11reasoning_omitted\x18\t \x01(\bH\aR\x10reasoningOmitted\x88\x01\x01B\x18\n" +
 	"\x16_max_completion_tokensB\x13\n" +
 	"\x11_reasoning_effortB\x14\n" +
-	"\x12_structured_output\"\xee\x03\n" +
+	"\x12_structured_outputB\x14\n" +
+	"\x12_disable_reasoningB\f\n" +
+	"\n" +
+	"_free_callB\x11\n" +
+	"\x0f_default_budgetB\x13\n" +
+	"\x11_frozen_executionB\x14\n" +
+	"\x12_reasoning_omitted\"\xee\x03\n" +
 	"\x12InspectionMeasures\x12#\n" +
 	"\n" +
 	"characters\x18\x01 \x01(\x03H\x00R\n" +
@@ -1057,7 +1451,7 @@ const file_postpilot_v1_request_inspection_proto_rawDesc = "" +
 	"\x19_reference_token_estimateB\x19\n" +
 	"\x17_provider_prompt_tokensB\x1d\n" +
 	"\x1b_provider_completion_tokensB\x1c\n" +
-	"\x1a_provider_reasoning_tokens\"\xc7\x04\n" +
+	"\x1a_provider_reasoning_tokens\"\xec\a\n" +
 	"\x11RequestInspection\x12\x18\n" +
 	"\aversion\x18\x01 \x01(\rR\aversion\x126\n" +
 	"\x06status\x18\x02 \x01(\x0e2\x1e.postpilot.v1.InspectionStatusR\x06status\x12\x14\n" +
@@ -1073,7 +1467,19 @@ const file_postpilot_v1_request_inspection_proto_rawDesc = "" +
 	" \x01(\v2(.postpilot.v1.EffectiveRequestConditionsR\n" +
 	"conditions\x12<\n" +
 	"\bmeasures\x18\v \x01(\v2 .postpilot.v1.InspectionMeasuresR\bmeasures\x127\n" +
-	"\tissued_at\x18\f \x01(\v2\x1a.google.protobuf.TimestampR\bissuedAt\"9\n" +
+	"\tissued_at\x18\f \x01(\v2\x1a.google.protobuf.TimestampR\bissuedAt\x12\x1a\n" +
+	"\bcomposer\x18\r \x01(\tR\bcomposer\x12\x16\n" +
+	"\x06parser\x18\x0e \x01(\tR\x06parser\x12\x1a\n" +
+	"\bconsumer\x18\x0f \x01(\tR\bconsumer\x12\x1e\n" +
+	"\n" +
+	"activation\x18\x10 \x01(\tR\n" +
+	"activation\x12!\n" +
+	"\fsource_files\x18\x11 \x03(\tR\vsourceFiles\x12E\n" +
+	"\rnative_fields\x18\x12 \x03(\v2 .postpilot.v1.RequestNativeFieldR\fnativeFields\x12;\n" +
+	"\tomissions\x18\x13 \x03(\v2\x1d.postpilot.v1.RequestOmissionR\tomissions\x12-\n" +
+	"\x12unavailable_reason\x18\x14 \x01(\tR\x11unavailableReason\x12\x17\n" +
+	"\acall_id\x18\x15 \x01(\tR\x06callId\x12D\n" +
+	"\vattachments\x18\x16 \x03(\v2\".postpilot.v1.InspectionAttachmentR\vattachments\"9\n" +
 	"\x1aGetPostOriginReviewRequest\x12\x1b\n" +
 	"\tpost_slug\x18\x01 \x01(\tR\bpostSlug\"Q\n" +
 	"\x1bGetPostOriginReviewResponse\x122\n" +
@@ -1081,11 +1487,12 @@ const file_postpilot_v1_request_inspection_proto_rawDesc = "" +
 	"\x1fGetPostRequestInspectionRequest\x12\x1b\n" +
 	"\tpost_slug\x18\x01 \x01(\tR\bpostSlug\x12\x14\n" +
 	"\x05stage\x18\x02 \x01(\tR\x05stage\x126\n" +
-	"\x06status\x18\x03 \x01(\x0e2\x1e.postpilot.v1.InspectionStatusR\x06status\"c\n" +
+	"\x06status\x18\x03 \x01(\x0e2\x1e.postpilot.v1.InspectionStatusR\x06status\"\xa6\x01\n" +
 	" GetPostRequestInspectionResponse\x12?\n" +
 	"\n" +
 	"inspection\x18\x01 \x01(\v2\x1f.postpilot.v1.RequestInspectionR\n" +
-	"inspection\"\xb2\x01\n" +
+	"inspection\x12A\n" +
+	"\vinspections\x18\x02 \x03(\v2\x1f.postpilot.v1.RequestInspectionR\vinspections\"\xb2\x01\n" +
 	"&GetWritingTestRequestInspectionRequest\x12\x17\n" +
 	"\atest_id\x18\x01 \x01(\tR\x06testId\x12!\n" +
 	"\fcandidate_id\x18\x02 \x01(\tR\vcandidateId\x12\x14\n" +
@@ -1137,58 +1544,66 @@ func file_postpilot_v1_request_inspection_proto_rawDescGZIP() []byte {
 }
 
 var file_postpilot_v1_request_inspection_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_postpilot_v1_request_inspection_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
+var file_postpilot_v1_request_inspection_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
 var file_postpilot_v1_request_inspection_proto_goTypes = []any{
 	(InspectionStatus)(0),                           // 0: postpilot.v1.InspectionStatus
 	(InspectionRole)(0),                             // 1: postpilot.v1.InspectionRole
 	(FragmentAuthorship)(0),                         // 2: postpilot.v1.FragmentAuthorship
 	(*RequestFragment)(nil),                         // 3: postpilot.v1.RequestFragment
-	(*OutputContractInspection)(nil),                // 4: postpilot.v1.OutputContractInspection
-	(*EffectiveRequestConditions)(nil),              // 5: postpilot.v1.EffectiveRequestConditions
-	(*InspectionMeasures)(nil),                      // 6: postpilot.v1.InspectionMeasures
-	(*RequestInspection)(nil),                       // 7: postpilot.v1.RequestInspection
-	(*GetPostOriginReviewRequest)(nil),              // 8: postpilot.v1.GetPostOriginReviewRequest
-	(*GetPostOriginReviewResponse)(nil),             // 9: postpilot.v1.GetPostOriginReviewResponse
-	(*GetPostRequestInspectionRequest)(nil),         // 10: postpilot.v1.GetPostRequestInspectionRequest
-	(*GetPostRequestInspectionResponse)(nil),        // 11: postpilot.v1.GetPostRequestInspectionResponse
-	(*GetWritingTestRequestInspectionRequest)(nil),  // 12: postpilot.v1.GetWritingTestRequestInspectionRequest
-	(*GetWritingTestRequestInspectionResponse)(nil), // 13: postpilot.v1.GetWritingTestRequestInspectionResponse
-	(*GetAuthoringRequestInspectionRequest)(nil),    // 14: postpilot.v1.GetAuthoringRequestInspectionRequest
-	(*GetAuthoringRequestInspectionResponse)(nil),   // 15: postpilot.v1.GetAuthoringRequestInspectionResponse
-	(*ModelRef)(nil),                                // 16: postpilot.v1.ModelRef
-	(*timestamppb.Timestamp)(nil),                   // 17: google.protobuf.Timestamp
-	(*OriginReview)(nil),                            // 18: postpilot.v1.OriginReview
+	(*RequestNativeField)(nil),                      // 4: postpilot.v1.RequestNativeField
+	(*RequestOmission)(nil),                         // 5: postpilot.v1.RequestOmission
+	(*InspectionAttachment)(nil),                    // 6: postpilot.v1.InspectionAttachment
+	(*OutputContractInspection)(nil),                // 7: postpilot.v1.OutputContractInspection
+	(*EffectiveRequestConditions)(nil),              // 8: postpilot.v1.EffectiveRequestConditions
+	(*InspectionMeasures)(nil),                      // 9: postpilot.v1.InspectionMeasures
+	(*RequestInspection)(nil),                       // 10: postpilot.v1.RequestInspection
+	(*GetPostOriginReviewRequest)(nil),              // 11: postpilot.v1.GetPostOriginReviewRequest
+	(*GetPostOriginReviewResponse)(nil),             // 12: postpilot.v1.GetPostOriginReviewResponse
+	(*GetPostRequestInspectionRequest)(nil),         // 13: postpilot.v1.GetPostRequestInspectionRequest
+	(*GetPostRequestInspectionResponse)(nil),        // 14: postpilot.v1.GetPostRequestInspectionResponse
+	(*GetWritingTestRequestInspectionRequest)(nil),  // 15: postpilot.v1.GetWritingTestRequestInspectionRequest
+	(*GetWritingTestRequestInspectionResponse)(nil), // 16: postpilot.v1.GetWritingTestRequestInspectionResponse
+	(*GetAuthoringRequestInspectionRequest)(nil),    // 17: postpilot.v1.GetAuthoringRequestInspectionRequest
+	(*GetAuthoringRequestInspectionResponse)(nil),   // 18: postpilot.v1.GetAuthoringRequestInspectionResponse
+	(*ModelRef)(nil),                                // 19: postpilot.v1.ModelRef
+	(*timestamppb.Timestamp)(nil),                   // 20: google.protobuf.Timestamp
+	(*OriginReview)(nil),                            // 21: postpilot.v1.OriginReview
 }
 var file_postpilot_v1_request_inspection_proto_depIdxs = []int32{
 	1,  // 0: postpilot.v1.RequestFragment.role:type_name -> postpilot.v1.InspectionRole
 	2,  // 1: postpilot.v1.RequestFragment.authorship:type_name -> postpilot.v1.FragmentAuthorship
-	16, // 2: postpilot.v1.EffectiveRequestConditions.model:type_name -> postpilot.v1.ModelRef
-	0,  // 3: postpilot.v1.RequestInspection.status:type_name -> postpilot.v1.InspectionStatus
-	3,  // 4: postpilot.v1.RequestInspection.fragments:type_name -> postpilot.v1.RequestFragment
-	4,  // 5: postpilot.v1.RequestInspection.output:type_name -> postpilot.v1.OutputContractInspection
-	5,  // 6: postpilot.v1.RequestInspection.conditions:type_name -> postpilot.v1.EffectiveRequestConditions
-	6,  // 7: postpilot.v1.RequestInspection.measures:type_name -> postpilot.v1.InspectionMeasures
-	17, // 8: postpilot.v1.RequestInspection.issued_at:type_name -> google.protobuf.Timestamp
-	18, // 9: postpilot.v1.GetPostOriginReviewResponse.review:type_name -> postpilot.v1.OriginReview
-	0,  // 10: postpilot.v1.GetPostRequestInspectionRequest.status:type_name -> postpilot.v1.InspectionStatus
-	7,  // 11: postpilot.v1.GetPostRequestInspectionResponse.inspection:type_name -> postpilot.v1.RequestInspection
-	0,  // 12: postpilot.v1.GetWritingTestRequestInspectionRequest.status:type_name -> postpilot.v1.InspectionStatus
-	7,  // 13: postpilot.v1.GetWritingTestRequestInspectionResponse.inspection:type_name -> postpilot.v1.RequestInspection
-	0,  // 14: postpilot.v1.GetAuthoringRequestInspectionRequest.status:type_name -> postpilot.v1.InspectionStatus
-	7,  // 15: postpilot.v1.GetAuthoringRequestInspectionResponse.inspection:type_name -> postpilot.v1.RequestInspection
-	8,  // 16: postpilot.v1.WritingInspectionService.GetPostOriginReview:input_type -> postpilot.v1.GetPostOriginReviewRequest
-	10, // 17: postpilot.v1.WritingInspectionService.GetPostRequestInspection:input_type -> postpilot.v1.GetPostRequestInspectionRequest
-	12, // 18: postpilot.v1.WritingInspectionService.GetWritingTestRequestInspection:input_type -> postpilot.v1.GetWritingTestRequestInspectionRequest
-	14, // 19: postpilot.v1.WritingInspectionService.GetAuthoringRequestInspection:input_type -> postpilot.v1.GetAuthoringRequestInspectionRequest
-	9,  // 20: postpilot.v1.WritingInspectionService.GetPostOriginReview:output_type -> postpilot.v1.GetPostOriginReviewResponse
-	11, // 21: postpilot.v1.WritingInspectionService.GetPostRequestInspection:output_type -> postpilot.v1.GetPostRequestInspectionResponse
-	13, // 22: postpilot.v1.WritingInspectionService.GetWritingTestRequestInspection:output_type -> postpilot.v1.GetWritingTestRequestInspectionResponse
-	15, // 23: postpilot.v1.WritingInspectionService.GetAuthoringRequestInspection:output_type -> postpilot.v1.GetAuthoringRequestInspectionResponse
-	20, // [20:24] is the sub-list for method output_type
-	16, // [16:20] is the sub-list for method input_type
-	16, // [16:16] is the sub-list for extension type_name
-	16, // [16:16] is the sub-list for extension extendee
-	0,  // [0:16] is the sub-list for field type_name
+	2,  // 2: postpilot.v1.RequestNativeField.authorship:type_name -> postpilot.v1.FragmentAuthorship
+	19, // 3: postpilot.v1.EffectiveRequestConditions.model:type_name -> postpilot.v1.ModelRef
+	0,  // 4: postpilot.v1.RequestInspection.status:type_name -> postpilot.v1.InspectionStatus
+	3,  // 5: postpilot.v1.RequestInspection.fragments:type_name -> postpilot.v1.RequestFragment
+	7,  // 6: postpilot.v1.RequestInspection.output:type_name -> postpilot.v1.OutputContractInspection
+	8,  // 7: postpilot.v1.RequestInspection.conditions:type_name -> postpilot.v1.EffectiveRequestConditions
+	9,  // 8: postpilot.v1.RequestInspection.measures:type_name -> postpilot.v1.InspectionMeasures
+	20, // 9: postpilot.v1.RequestInspection.issued_at:type_name -> google.protobuf.Timestamp
+	4,  // 10: postpilot.v1.RequestInspection.native_fields:type_name -> postpilot.v1.RequestNativeField
+	5,  // 11: postpilot.v1.RequestInspection.omissions:type_name -> postpilot.v1.RequestOmission
+	6,  // 12: postpilot.v1.RequestInspection.attachments:type_name -> postpilot.v1.InspectionAttachment
+	21, // 13: postpilot.v1.GetPostOriginReviewResponse.review:type_name -> postpilot.v1.OriginReview
+	0,  // 14: postpilot.v1.GetPostRequestInspectionRequest.status:type_name -> postpilot.v1.InspectionStatus
+	10, // 15: postpilot.v1.GetPostRequestInspectionResponse.inspection:type_name -> postpilot.v1.RequestInspection
+	10, // 16: postpilot.v1.GetPostRequestInspectionResponse.inspections:type_name -> postpilot.v1.RequestInspection
+	0,  // 17: postpilot.v1.GetWritingTestRequestInspectionRequest.status:type_name -> postpilot.v1.InspectionStatus
+	10, // 18: postpilot.v1.GetWritingTestRequestInspectionResponse.inspection:type_name -> postpilot.v1.RequestInspection
+	0,  // 19: postpilot.v1.GetAuthoringRequestInspectionRequest.status:type_name -> postpilot.v1.InspectionStatus
+	10, // 20: postpilot.v1.GetAuthoringRequestInspectionResponse.inspection:type_name -> postpilot.v1.RequestInspection
+	11, // 21: postpilot.v1.WritingInspectionService.GetPostOriginReview:input_type -> postpilot.v1.GetPostOriginReviewRequest
+	13, // 22: postpilot.v1.WritingInspectionService.GetPostRequestInspection:input_type -> postpilot.v1.GetPostRequestInspectionRequest
+	15, // 23: postpilot.v1.WritingInspectionService.GetWritingTestRequestInspection:input_type -> postpilot.v1.GetWritingTestRequestInspectionRequest
+	17, // 24: postpilot.v1.WritingInspectionService.GetAuthoringRequestInspection:input_type -> postpilot.v1.GetAuthoringRequestInspectionRequest
+	12, // 25: postpilot.v1.WritingInspectionService.GetPostOriginReview:output_type -> postpilot.v1.GetPostOriginReviewResponse
+	14, // 26: postpilot.v1.WritingInspectionService.GetPostRequestInspection:output_type -> postpilot.v1.GetPostRequestInspectionResponse
+	16, // 27: postpilot.v1.WritingInspectionService.GetWritingTestRequestInspection:output_type -> postpilot.v1.GetWritingTestRequestInspectionResponse
+	18, // 28: postpilot.v1.WritingInspectionService.GetAuthoringRequestInspection:output_type -> postpilot.v1.GetAuthoringRequestInspectionResponse
+	25, // [25:29] is the sub-list for method output_type
+	21, // [21:25] is the sub-list for method input_type
+	21, // [21:21] is the sub-list for extension type_name
+	21, // [21:21] is the sub-list for extension extendee
+	0,  // [0:21] is the sub-list for field type_name
 }
 
 func init() { file_postpilot_v1_request_inspection_proto_init() }
@@ -1198,15 +1613,15 @@ func file_postpilot_v1_request_inspection_proto_init() {
 	}
 	file_postpilot_v1_provider_proto_init()
 	file_postpilot_v1_semantic_origin_proto_init()
-	file_postpilot_v1_request_inspection_proto_msgTypes[2].OneofWrappers = []any{}
-	file_postpilot_v1_request_inspection_proto_msgTypes[3].OneofWrappers = []any{}
+	file_postpilot_v1_request_inspection_proto_msgTypes[5].OneofWrappers = []any{}
+	file_postpilot_v1_request_inspection_proto_msgTypes[6].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_postpilot_v1_request_inspection_proto_rawDesc), len(file_postpilot_v1_request_inspection_proto_rawDesc)),
 			NumEnums:      3,
-			NumMessages:   13,
+			NumMessages:   16,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

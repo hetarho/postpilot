@@ -84,23 +84,8 @@ func (s *Service) observeCandidate(ctx context.Context, post PostInput, targets 
 			filenames = append(filenames, image.Filename)
 		}
 		parts = append(parts, llm.TextPart("files: "+strings.Join(filenames, ", ")))
-		request := composePhotoObservationRequest(parts, filenames, s.fullWritingTest)
-		var sources []postdomain.OriginSource
-		if post.OriginProtocolVersion == OriginProtocolVersion {
-			sources = observationSources(filenames, false, originAttachmentIDs(batch))
-			request = appendOriginContract(request, sources, nil, observationOriginContract)
-		}
-		request.Reasoning = s.reasoning.Observe
-		request.MaxTokens = s.budget.Observation()
-		schema := ObservationsSchema()
-		if post.OriginProtocolVersion == 0 {
-			schema = LegacyObservationsSchema()
-		}
-		setOriginOutput(&request, "Observations", schema, post.OriginProtocolVersion)
-		if info, ok := s.models.Resolve(model); ok && info.StructuredOutput {
-			request.JSONSchema = schema
-		}
-		response, err := s.models.Complete(ctx, model, request)
+		request, sources := s.preparePhotoObservationRequest(parts, batch, model, post.OriginProtocolVersion)
+		response, err := s.completePostRequest(ctx, model, request, batch)
 		usage.PromptTokens += response.Usage.PromptTokens
 		usage.CompletionTokens += response.Usage.CompletionTokens
 		if response.Usage.CostReported {
@@ -162,31 +147,12 @@ func (s *Service) observeVideo(ctx context.Context, video Image, model llm.Model
 	if err != nil {
 		return nil, usage, fmt.Errorf("sign video %s: %w", video.Filename, err)
 	}
-	contentType := video.ContentType
-	if contentType == "" {
-		contentType = "video/mp4"
-	}
 	protocol := 0
 	if len(protocols) == 1 {
 		protocol = protocols[0]
 	}
-	request := composeVideoObservationRequest(url, contentType, video.Filename, s.fullWritingTest)
-	var sources []postdomain.OriginSource
-	if protocol == OriginProtocolVersion {
-		sources = observationSources([]string{video.Filename}, true, originAttachmentIDs([]Image{video}))
-		request = appendOriginContract(request, sources, nil, observationOriginContract)
-	}
-	request.Reasoning = s.reasoning.Observe
-	request.MaxTokens = s.budget.Observation()
-	schema := VideoObservationsSchema()
-	if protocol == 0 {
-		schema = LegacyVideoObservationsSchema()
-	}
-	setOriginOutput(&request, "VideoObservations", schema, protocol)
-	if info, ok := s.models.Resolve(model); ok && info.StructuredOutput {
-		request.JSONSchema = schema
-	}
-	response, err := s.models.Complete(ctx, model, request)
+	request, sources := s.prepareVideoObservationRequest(video, url, model, protocol)
+	response, err := s.completePostRequest(ctx, model, request, []Image{video})
 	usage = response.Usage
 	if err != nil {
 		return nil, usage, providerCallError("영상 관찰", err)
@@ -395,4 +361,55 @@ func observedImages(images []Image, observations []Observation) []Image {
 		}
 	}
 	return out
+}
+
+func (s *Service) preparePhotoObservationRequest(parts []llm.Part, batch []Image, model llm.ModelRef, protocol int) (llm.Request, []postdomain.OriginSource) {
+	filenames := make([]string, 0, len(batch))
+	for _, image := range batch {
+		filenames = append(filenames, image.Filename)
+	}
+	request := composePhotoObservationRequest(parts, filenames, s.fullWritingTest)
+	var sources []postdomain.OriginSource
+	if protocol == OriginProtocolVersion {
+		sources = observationSources(filenames, false, originAttachmentIDs(batch))
+		request = appendOriginContract(request, sources, nil, observationOriginContract)
+	}
+	request.Reasoning = s.reasoning.Observe
+	request.MaxTokens = s.budget.Observation()
+	schema := ObservationsSchema()
+	if protocol == 0 {
+		schema = LegacyObservationsSchema()
+	}
+	setOriginOutput(&request, "Observations", schema, protocol)
+	if info, ok := s.models.Resolve(model); ok && info.StructuredOutput {
+		request.JSONSchema = schema
+	}
+	return request, sources
+}
+
+func videoContentType(video Image) string {
+	if video.ContentType != "" {
+		return video.ContentType
+	}
+	return "video/mp4"
+}
+
+func (s *Service) prepareVideoObservationRequest(video Image, url string, model llm.ModelRef, protocol int) (llm.Request, []postdomain.OriginSource) {
+	request := composeVideoObservationRequest(url, videoContentType(video), video.Filename, s.fullWritingTest)
+	var sources []postdomain.OriginSource
+	if protocol == OriginProtocolVersion {
+		sources = observationSources([]string{video.Filename}, true, originAttachmentIDs([]Image{video}))
+		request = appendOriginContract(request, sources, nil, observationOriginContract)
+	}
+	request.Reasoning = s.reasoning.Observe
+	request.MaxTokens = s.budget.Observation()
+	schema := VideoObservationsSchema()
+	if protocol == 0 {
+		schema = LegacyVideoObservationsSchema()
+	}
+	setOriginOutput(&request, "VideoObservations", schema, protocol)
+	if info, ok := s.models.Resolve(model); ok && info.StructuredOutput {
+		request.JSONSchema = schema
+	}
+	return request, sources
 }

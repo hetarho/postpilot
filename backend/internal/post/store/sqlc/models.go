@@ -54,6 +54,24 @@ type Post struct {
 	StorylineOrigins        sql.NullString
 }
 
+type PostRequestCapture struct {
+	PostSlug              string
+	UserID                string
+	JobID                 string
+	CallID                string
+	CallSequence          int64
+	AttachmentID          string
+	Stage                 string
+	InputRevision         int64
+	ContentRevision       int64
+	SourceFingerprint     string
+	SourcePlanFingerprint string
+	ResultRevision        sql.NullInt64
+	ResultHash            sql.NullString
+	PlanFingerprint       sql.NullString
+	Payload               string
+}
+
 type Upload struct {
 	ID          string
 	PostSlug    string

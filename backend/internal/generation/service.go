@@ -13,6 +13,7 @@ import (
 )
 
 type Service struct {
+	inspection     *RequestInspectionDependencies
 	originProtocol int
 	originPosts    OriginPostPublisher
 	originPlans    OriginStorylinePublisher

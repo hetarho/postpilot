@@ -148,6 +148,7 @@ func stripProviderInspectionError(err error) error {
 
 func cloneRequestInspection(in RequestInspection) RequestInspection {
 	copy := in
+	copy.Attachments = append([]InspectionAttachment(nil), in.Attachments...)
 	copy.SourceFiles = append([]string(nil), in.SourceFiles...)
 	copy.SelectedRuleIDs = append([]string(nil), in.SelectedRuleIDs...)
 	copy.Fragments = make([]RequestFragment, len(in.Fragments))

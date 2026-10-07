@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	postdomain "github.com/postpilot/backend/internal/post"
 )
 
 // Generate handles one durable generate job. Each model call completes before its
@@ -20,6 +21,8 @@ func (s *Service) Generate(ctx context.Context, job GenerateJob, progress Progre
 	if err != nil {
 		return fmt.Errorf("load generation input: %w", err)
 	}
+	ctx, finishCapture := s.beginRequestCapture(ctx, job.ID, post)
+	defer finishCapture()
 	// A backstop no product path reaches, since a paste waits while this job is active: a
 	// post published after the enqueue calls no provider.
 	if post.Published {
@@ -78,12 +81,30 @@ func (s *Service) Generate(ctx context.Context, job GenerateJob, progress Progre
 	// clear the ones the last generation stored (GEN-55).
 	var publishErr error
 	if options.OriginProtocolVersion == OriginProtocolVersion {
-		_, publishErr = s.originPosts.PublishGeneratedResult(ctx, post.UserID, post.Slug, OriginPostCompletion{Content: answer.Content, Language: options.TargetLanguage, Annotations: answer.Annotations(), Origins: answer.Origins, ExpectedPlanFingerprint: options.ExpectedPlanFingerprint, ExpectedContentRevision: post.ContentRevision})
+		var identity postdomain.OriginResultIdentity
+		identity, publishErr = s.originPosts.PublishGeneratedResult(ctx, post.UserID, post.Slug, OriginPostCompletion{Content: answer.Content, Language: options.TargetLanguage, Annotations: answer.Annotations(), Origins: answer.Origins, ExpectedPlanFingerprint: options.ExpectedPlanFingerprint, ExpectedContentRevision: post.ContentRevision})
+		if publishErr == nil {
+			bindRequestCaptureResult(ctx, identity)
+		}
 	} else {
 		publishErr = s.posts.SetGeneratedContent(ctx, post.UserID, post.Slug, answer.Content, options.TargetLanguage, answer.Annotations())
 	}
 	if err := publishErr; err != nil {
 		return fmt.Errorf("persist generated content: %w", err)
+	}
+	if answer.Storyline != nil {
+		if !s.bindPublishedRequestCapturePlan(ctx, post.UserID, post.Slug, *answer.Storyline) {
+			if state, ok := ctx.Value(requestCaptureContextKey{}).(*requestCaptureContext); ok && state.completion != nil {
+				// A plan edited after publication cannot be relabeled as this run's
+				// plan. Leave the witnesses unbound and the canonical result intact.
+				state.completion.Result = nil
+				if len(state.completion.UnavailableStages) == 0 {
+					state.completion = nil
+				}
+			}
+		}
+	} else if state, ok := ctx.Value(requestCaptureContextKey{}).(*requestCaptureContext); ok {
+		bindRequestCapturePlan(ctx, state.run.PlanFingerprint)
 	}
 	progress("write", 1, 1)
 	return nil

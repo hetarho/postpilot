@@ -247,6 +247,7 @@ func (a generationPosts) AttachedImages(ctx context.Context, userID, slug string
 		return generation.PostInput{}, generationPostError(err)
 	}
 	input := generation.PostInput{
+		SourceFingerprint:    post.RequestCaptureSourceFingerprint(found),
 		StorylineFingerprint: post.StorylineFingerprint(found.Storyline),
 		InputRevision:        found.InputRevision,
 		Slug:                 found.Slug, UserID: found.UserID, Title: found.Title, Memo: found.Memo,
@@ -333,6 +334,7 @@ func (a generationPosts) AttachedImages(ctx context.Context, userID, slug string
 	}
 	if found.Storyline != nil {
 		input.Storyline = generationStoryline(*found.Storyline)
+		input.StorylineEditedByHand = found.Storyline.EditedByHand
 	}
 	return input, nil
 }

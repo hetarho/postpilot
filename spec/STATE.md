@@ -71,7 +71,6 @@
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
-| T640 | Capture and inspect the owner post effective product requests | ARCH POST MODEL GEN | T635 T637 | todo |
 | T641 | Extend test and authoring private evidence with origin-safe inspection | ARCH MODEL EDIT GEN POST MEM | T638 T640 T628 | todo |
 | T642 | Render accessible phrase origins and preserve editor continuity | ARCH POST THEME EXPORT GEN | T637 | todo |
 | T643 | Show safe current prepared and captured requests in named technical views | ARCH POST MODEL EDIT TMPL THEME | T640 T641 | todo |
@@ -80,10 +79,13 @@
 | T646 | Qualify origin-aware writing inspection and clean publication handoff | ARCH GEN POST MODEL THEME EXPORT MKT LANG | T636 T637 T639 T641 T642 T643 T644 T645 T631 | todo |
 
 ## next
-- T640 next for sequential implementation through T646 after the T639 commit.
+- T641 next for sequential implementation through T646 after the T640 commit.
 - Editorial follow-up: doc-review ARCH; preserve independent review and blocked qualification.
 
 ## log
+- 261008 T640 done on main: private actual post call captures, exact source/result/plan fences and provider-free configured previews; owning/consumer/RPC/race/generator/build/spec checks pass
+- 261008 T640 start on main at3cbcccf0: persist safe actual post request witnesses and owner read-only previews; preserve independent review changes
+- 261008 T640 freshness: MODEL36 only changes missing-slot setting preparation under MODEL92; post inspection policies unchanged, base refreshed
 - 261008 T639 done on main: explicit video target/data roles, consumed frozen-story/speech schemas, declared stock applicability and actual native call metadata; owning/consumer/race/build/spec checks pass
 - 261008 T639 start on main at52fe1ef5: admitted video/speech stage responsibilities and explicit material/target contracts; preserve independent review changes
 - 261008 T639 freshness: MODEL36 only updates missing-slot setting preparation under MODEL92; video/speech inventory policies unchanged, base refreshed
@@ -101,6 +103,3 @@
 - 261008 T653 bounded-memory fix candidate: lightweight exact cgroup/disk observer, active owner-generation/runtime-bound worker health, and explicit probe filter thread limit; keep API256Mi/worker512Mi and all codecs/presets/CRF/decoder/default budgets, rerun affected final gates
 - 261008 T653 final candidate refresh: include committed T631 at935b47e0 plus canonical-path CI repair; rerun invalidated frontend/backend/generated/image checks, preserve uncommitted T633/review work
 - 261008 T653 start: repair removed Alpine zlib-r0 media build pins using official3.24 r1 packages, retain exact real-image gates and existing CI fixes; preserve active T631 changes
-- 261008 CI repair and push start: inspect exact failed051bb0e5 workflow/jobs, preserve active T631 edits, verify final committed push candidate with full CI and applicable deploy/media gates, then inspect every triggered remote workflow
-- 261008 T631 done on main: production graph/receipts/private recovery and real16-entry tests; full Go, FE4141, current-main browser70, generation/tooling and task-candidate spec pass
-- 261008 T650 T651 T652 done on main: phone answer777→371px, header120→64px; all57 routes/580 combined browser cases, FE522 files/4133 tests and lint/build pass; preserve concurrent domain work

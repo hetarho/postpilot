@@ -45,6 +45,30 @@ message RequestFragment {
   string material_role = 4;
   string text = 5;
   repeated string source_refs = 6;
+  repeated string source_files = 7;
+  string activation = 8;
+}
+
+message RequestNativeField {
+  string id = 1;
+  FragmentAuthorship authorship = 2;
+  string material_role = 3;
+  string text = 4;
+  repeated string source_refs = 5;
+  repeated string source_files = 6;
+  string activation = 7;
+}
+
+message RequestOmission {
+  string id = 1;
+  string reason = 2;
+  repeated string source_files = 3;
+  string activation = 4;
+}
+
+message InspectionAttachment {
+  string id = 1;
+  string kind = 2;
 }
 
 message OutputContractInspection {
@@ -58,6 +82,11 @@ message EffectiveRequestConditions {
   optional int64 max_completion_tokens = 2;
   optional string reasoning_effort = 3;
   optional bool structured_output = 4;
+  optional bool disable_reasoning = 5;
+  optional bool free_call = 6;
+  optional bool default_budget = 7;
+  optional bool frozen_execution = 8;
+  optional bool reasoning_omitted = 9;
 }
 
 message InspectionMeasures {
@@ -83,6 +112,16 @@ message RequestInspection {
   EffectiveRequestConditions conditions = 10;
   InspectionMeasures measures = 11;
   google.protobuf.Timestamp issued_at = 12;
+  string composer = 13;
+  string parser = 14;
+  string consumer = 15;
+  string activation = 16;
+  repeated string source_files = 17;
+  repeated RequestNativeField native_fields = 18;
+  repeated RequestOmission omissions = 19;
+  string unavailable_reason = 20;
+  string call_id = 21;
+  repeated InspectionAttachment attachments = 22;
 }
 
 message GetPostOriginReviewRequest { string post_slug = 1; }
@@ -92,7 +131,10 @@ message GetPostRequestInspectionRequest {
   string stage = 2;
   InspectionStatus status = 3;
 }
-message GetPostRequestInspectionResponse { RequestInspection inspection = 1; }
+message GetPostRequestInspectionResponse {
+  RequestInspection inspection = 1;
+  repeated RequestInspection inspections = 2;
+}
 message GetWritingTestRequestInspectionRequest {
   string test_id = 1;
   string candidate_id = 2;

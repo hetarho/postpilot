@@ -44,6 +44,16 @@ func requestInspectionFixture() llm.RequestInspection {
 
 func TestRequestInspectionProtoRoundTripPreservesOrderVersionsTextAndPresence(t *testing.T) {
 	value := requestInspectionFixture()
+	no, yes := false, true
+	value.Conditions.DisableReasoning, value.Conditions.FreeCall, value.Conditions.DefaultBudget, value.Conditions.FrozenExecution, value.Conditions.ReasoningOmitted = &no, &yes, &no, &yes, &no
+	value.CallID = "job-1:write:1"
+	value.Attachments = []llm.InspectionAttachment{{ID: "photo-incarnation", Kind: "photo"}}
+	value.Composer, value.Parser, value.Consumer, value.Activation = "composeWrite", "parsePost", "publishPost", "selected post stage"
+	value.SourceFiles = []string{"generation/request_composition.go"}
+	value.Fragments[0].Activation = "always"
+	value.Fragments[0].SourceFiles = []string{"generation/write.go"}
+	value.NativeFields = []llm.RequestNativeField{{ID: "native-description", Authorship: llm.FragmentAuthorshipCode, MaterialRole: "description", Text: "exact native description", SourceFiles: []string{"generation/request_composition.go"}}}
+	value.Omissions = []llm.RequestOmission{{ID: "stock-tone", Reason: "owner_voice_selected", Activation: "selected voice", SourceFiles: []string{"generation/request_composition.go"}}}
 	wire, err := RequestInspectionToProto(value)
 	if err != nil {
 		t.Fatal(err)

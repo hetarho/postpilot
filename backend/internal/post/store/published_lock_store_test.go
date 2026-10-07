@@ -149,6 +149,10 @@ var predicateGuarded = map[string]func(*store.Store) (bool, error){
 // with the store method that runs it: each checks PostIsPublished first in its own write
 // transaction, and refuses a published post with ErrPostPublished.
 var transactionGuarded = map[string]func(*store.Store) error{
+	"DeleteOtherPostStageCaptures": writePublishedRequestCapture,
+	"WritePostRequestCapture":      writePublishedRequestCapture,
+	"DeletePostStageCaptures":      finishPublishedRequestCapture,
+	"BindPostRequestCapture":       finishPublishedRequestCapture,
 	"UpsertPostTemplateAnswer": func(s *store.Store) error {
 		return s.UpsertTemplateAnswers(context.Background(), "p", []post.TemplateAnswer{{Label: "총평", Text: "흐렸다", Enabled: true}}, lockLater)
 	},
@@ -169,15 +173,55 @@ var transactionGuarded = map[string]func(*store.Store) error{
 	},
 }
 
+func publishedRequestCaptureRun(s *store.Store) (post.RequestCaptureRun, error) {
+	ctx := context.Background()
+	found, err := s.GetPost(ctx, "p")
+	if err != nil {
+		return post.RequestCaptureRun{}, err
+	}
+	found.Images, err = s.ListImages(ctx, "p")
+	if err != nil {
+		return post.RequestCaptureRun{}, err
+	}
+	found.Videos, err = s.ListVideos(ctx, "p")
+	if err != nil {
+		return post.RequestCaptureRun{}, err
+	}
+	found.TemplateAnswers, err = s.ListTemplateAnswers(ctx, "p")
+	if err != nil {
+		return post.RequestCaptureRun{}, err
+	}
+	return post.RequestCaptureRun{JobID: "capture-job", UserID: "alice", PostSlug: "p", InputRevision: found.InputRevision, ContentRevision: found.ContentRevision, SourceFingerprint: post.RequestCaptureSourceFingerprint(found), PlanFingerprint: post.StorylineFingerprint(found.Storyline)}, nil
+}
+
+func writePublishedRequestCapture(s *store.Store) error {
+	run, err := publishedRequestCaptureRun(s)
+	if err != nil {
+		return err
+	}
+	return s.WritePostRequestCapture(context.Background(), run, post.RequestCaptureCall{ID: "call"}, requestCaptureFixture())
+}
+
+func finishPublishedRequestCapture(s *store.Store) error {
+	run, err := publishedRequestCaptureRun(s)
+	if err != nil {
+		return err
+	}
+	return s.FinishPostRequestCapture(context.Background(), run, &post.RequestCaptureCompletion{UnavailableStages: []string{"post-writing"}, UnavailableReason: "capture_persistence_failed"})
+}
+
 // publishedLockExemptStatements are the writes the lock deliberately lets through, with why.
 var publishedLockExemptStatements = map[string]string{
-	"CreatePostTestPublication": "durable receipt only, inserted after the owned publication guard in the same transaction",
-	"CreatePost":                "the create: no post exists to be locked",
-	"PublishPost":               "records or replaces the address (POST-73, POST-75)",
-	"UnpublishPost":             "clears the address",
-	"DeletePost":                "POST-74 lets a published post be deleted",
-	"DeleteUpload":              "a pending upload is the sweep's ledger, not the post: confirm runs it inside its guarded transaction, and the sweep and a retry run it by design",
-	"SetObservedImageRotation":  "runs only inside UpdateObservations' transaction, after UpdatePostObservations' published predicate matched a row (GEN-79)",
+	"PurgePostRequestCaptures":          "privacy erasure removes private request payload even when canonical published content is locked",
+	"FencePostRequestCapturePurge":      "private purge tombstone prevents restoring erased payload; it changes no canonical content or input",
+	"PurgeWithdrawnPostRequestCaptures": "privacy erasure within guarded attachment deletion; preserves the published canonical result",
+	"CreatePostTestPublication":         "durable receipt only, inserted after the owned publication guard in the same transaction",
+	"CreatePost":                        "the create: no post exists to be locked",
+	"PublishPost":                       "records or replaces the address (POST-73, POST-75)",
+	"UnpublishPost":                     "clears the address",
+	"DeletePost":                        "POST-74 lets a published post be deleted",
+	"DeleteUpload":                      "a pending upload is the sweep's ledger, not the post: confirm runs it inside its guarded transaction, and the sweep and a retry run it by design",
+	"SetObservedImageRotation":          "runs only inside UpdateObservations' transaction, after UpdatePostObservations' published predicate matched a row (GEN-79)",
 }
 
 // Internal revision and publication statements are checked directly because neither

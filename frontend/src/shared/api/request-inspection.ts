@@ -35,6 +35,24 @@ export interface RequestInspectionView {
   mode: string
   promptVersion?: string
   schemaVersion?: string
+  unavailableReason?: string
+  callId?: string
+  attachments?: { id: string; kind: 'photo' | 'video' }[]
+  composer?: string
+  parser?: string
+  consumer?: string
+  activation?: string
+  sourceFiles?: string[]
+  omissions?: { id: string; reason: string; activation: string; sourceFiles: string[] }[]
+  nativeFields?: {
+    id: string
+    authorship: 'code' | 'account'
+    materialRole: string
+    text: string
+    sourceRefs: string[]
+    sourceFiles: string[]
+    activation: string
+  }[]
   fragments: {
     id: string
     role: 'system' | 'user' | 'assistant'
@@ -42,6 +60,8 @@ export interface RequestInspectionView {
     materialRole: string
     text: string
     sourceRefs: string[]
+    sourceFiles?: string[]
+    activation?: string
   }[]
   selectedRuleIds: string[]
   output?: { name: string; version: string; schema: string }
@@ -50,6 +70,11 @@ export interface RequestInspectionView {
     maxCompletionTokens?: bigint
     reasoningEffort?: string
     structuredOutput?: boolean
+    disableReasoning?: boolean
+    freeCall?: boolean
+    defaultBudget?: boolean
+    frozenExecution?: boolean
+    reasoningOmitted?: boolean
   }
   measures?: {
     characters?: bigint
@@ -90,7 +115,19 @@ export function requestInspectionFromProto(value?: RequestInspection): RequestIn
   }
   if (!value) return unavailable
   const status = inspectionStatusNames[value.status]
+  if (status === 'unavailable' && scalarText(value.unavailableReason) && value.unavailableReason) {
+    unavailable.unavailableReason = value.unavailableReason
+  }
   if (!status || status === 'unavailable' || value.version !== 1) return unavailable
+  if (
+    ![value.composer, value.parser, value.consumer, value.activation].every(scalarText) ||
+    !inspectionNames(value.sourceFiles) ||
+    value.unavailableReason !== '' ||
+    (value.callId !== '' && (status !== 'captured' || !inspectionName(value.callId))) ||
+    !inspectionNames(value.attachments.map((attachment) => attachment.id)) ||
+    value.attachments.some((attachment) => !['photo', 'video'].includes(attachment.kind))
+  )
+    return unavailable
   if (
     !value.output ||
     ![
@@ -161,6 +198,8 @@ export function requestInspectionFromProto(value?: RequestInspection): RequestIn
       fragmentIds.has(fragment.id) ||
       !inspectionName(fragment.materialRole) ||
       !inspectionNames(fragment.sourceRefs) ||
+      !inspectionNames(fragment.sourceFiles) ||
+      !scalarText(fragment.activation) ||
       !scalarText(fragment.text)
     )
       return unavailable
@@ -172,8 +211,44 @@ export function requestInspectionFromProto(value?: RequestInspection): RequestIn
       materialRole: fragment.materialRole,
       text: fragment.text,
       sourceRefs: [...fragment.sourceRefs],
+      sourceFiles: [...fragment.sourceFiles],
+      activation: fragment.activation,
     })
   }
+  const nativeFields: NonNullable<RequestInspectionView['nativeFields']> = []
+  for (const field of value.nativeFields) {
+    const authorship = fragmentAuthorshipNames[field.authorship]
+    if (
+      !authorship ||
+      !inspectionName(field.id) ||
+      fragmentIds.has(field.id) ||
+      !inspectionName(field.materialRole) ||
+      ![field.text, field.activation].every(scalarText) ||
+      !inspectionNames(field.sourceRefs) ||
+      !inspectionNames(field.sourceFiles)
+    )
+      return unavailable
+    fragmentIds.add(field.id)
+    nativeFields.push({
+      id: field.id,
+      authorship,
+      materialRole: field.materialRole,
+      text: field.text,
+      activation: field.activation,
+      sourceRefs: [...field.sourceRefs],
+      sourceFiles: [...field.sourceFiles],
+    })
+  }
+  if (
+    value.omissions.some(
+      (omission) =>
+        !inspectionName(omission.id) ||
+        !inspectionName(omission.reason) ||
+        !scalarText(omission.activation) ||
+        !inspectionNames(omission.sourceFiles),
+    )
+  )
+    return unavailable
   return {
     version: value.version,
     status,
@@ -181,6 +256,23 @@ export function requestInspectionFromProto(value?: RequestInspection): RequestIn
     mode: value.mode,
     promptVersion: value.promptVersion,
     schemaVersion: value.schemaVersion,
+    callId: value.callId || undefined,
+    attachments: value.attachments.map((attachment) => ({
+      id: attachment.id,
+      kind: attachment.kind as 'photo' | 'video',
+    })),
+    composer: value.composer || undefined,
+    parser: value.parser || undefined,
+    consumer: value.consumer || undefined,
+    activation: value.activation || undefined,
+    sourceFiles: [...value.sourceFiles],
+    nativeFields,
+    omissions: value.omissions.map((omission) => ({
+      id: omission.id,
+      reason: omission.reason,
+      activation: omission.activation,
+      sourceFiles: [...omission.sourceFiles],
+    })),
     fragments,
     selectedRuleIds: [...value.selectedRuleIds],
     output: { name: value.output.name, version: value.output.version, schema: value.output.schema },
@@ -192,6 +284,11 @@ export function requestInspectionFromProto(value?: RequestInspection): RequestIn
       maxCompletionTokens: value.conditions.maxCompletionTokens,
       reasoningEffort: value.conditions.reasoningEffort,
       structuredOutput: value.conditions.structuredOutput,
+      disableReasoning: value.conditions.disableReasoning,
+      freeCall: value.conditions.freeCall,
+      defaultBudget: value.conditions.defaultBudget,
+      frozenExecution: value.conditions.frozenExecution,
+      reasoningOmitted: value.conditions.reasoningOmitted,
     },
     measures: value.measures && {
       characters: value.measures.characters,

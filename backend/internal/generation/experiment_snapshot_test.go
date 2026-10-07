@@ -165,6 +165,8 @@ func TestEveryWriteSnapshotMemberRoundTrips(t *testing.T) {
 	fixture.post.WriteNativeEffort = true
 	fixture.post.InputRevision = 3
 	fixture.post.StorylineFingerprint = "fixture-plan"
+	fixture.post.SourceFingerprint = "private-post-capture-source"
+	fixture.post.StorylineEditedByHand = true
 	fixture.post.OriginProtocolVersion, fixture.post.OriginCompletionTokens, fixture.post.OriginFictional, fixture.post.ContentRevision = OriginProtocolVersion, 16384, true, 2
 	for i := range fixture.observations {
 		fixture.observations[i].Origins = originFixtureObservation(fixture.observations[i])
@@ -204,6 +206,8 @@ func TestEveryWriteSnapshotMemberRoundTrips(t *testing.T) {
 	// storyline, stored or followed (GEN-72).
 	want.Post.Field, want.Post.QualityRuleIDs, want.Post.Published = "", nil, false
 	want.Post.Storyline, want.Post.FollowStoryline = nil, nil
+	// Post inspection source fences do not enter legacy private comparison snapshots.
+	want.Post.SourceFingerprint, want.Post.StorylineEditedByHand = "", false
 	// Current aggregate revision/review and followed-plan context are not inputs to
 	// an admitted legacy comparison. Full-test source revisions live in its common DTO.
 	want.Post.FollowStorylineOrigins, want.Post.ContentOrigins, want.Post.ContentOriginIdentity, want.Post.ContentRevision = nil, nil, nil, 0

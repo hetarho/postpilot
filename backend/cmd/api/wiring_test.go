@@ -57,7 +57,7 @@ func TestBuildContextsWiresEveryRequiredCollaborator(t *testing.T) {
 	}
 	registerJobs(app)
 	got := handlers(app)
-	if len(got) != 28 {
+	if len(got) != 29 {
 		t.Fatalf("handlers = %d, want every Connect service", len(got))
 	}
 	for _, register := range got {
@@ -75,6 +75,8 @@ func TestBuildContextsWiresEveryRequiredCollaborator(t *testing.T) {
 		"/postpilot.v1.WritingTestService/StartWritingTest":               http.StatusUnauthorized,
 		"/postpilot.v1.WritingTestService/ListWritingTests":               http.StatusUnauthorized,
 		"/postpilot.v1.PostService/ListPosts":                             http.StatusUnauthorized,
+		"/postpilot.v1.WritingInspectionService/GetPostRequestInspection": http.StatusUnauthorized,
+		"/postpilot.v1.WritingInspectionService/GetPostOriginReview":      http.StatusUnauthorized,
 		"/postpilot.v1.VoiceService/UpdateVoiceSample":                    http.StatusUnauthorized,
 		"/postpilot.v1.VoiceService/EstimateVoiceAnalysis":                http.StatusUnauthorized,
 		"/postpilot.v1.SpeechProfileService/ListSpeechProfiles":           http.StatusUnauthorized,

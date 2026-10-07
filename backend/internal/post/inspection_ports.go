@@ -17,3 +17,9 @@ type OriginReviewReader interface {
 type RequestInspectionReader interface {
 	ReadPostRequestInspection(context.Context, string, string, string, llm.InspectionStatus) (llm.RequestInspection, error)
 }
+
+// PostRequestCaptureReader returns every available call of the selected current
+// stage in call order. Missing/private-purged history is an empty selection.
+type PostRequestCaptureReader interface {
+	ReadPostRequestCaptures(context.Context, string, string, string) ([]llm.RequestInspection, error)
+}

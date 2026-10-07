@@ -35,6 +35,7 @@ type StartStorylineRequest struct {
 
 // StorylineJob is one queued storyline job as the worker hands it over.
 type StorylineJob struct {
+	ID           string
 	UserID       string
 	PostSlug     string
 	ObserveModel string
@@ -60,6 +61,7 @@ type StartStorylineRevisionRequest struct {
 
 // StorylineRevisionJob is one queued storyline request as the worker hands it over.
 type StorylineRevisionJob struct {
+	ID         string
 	UserID     string
 	PostSlug   string
 	WriteModel string
@@ -177,6 +179,8 @@ func (s *Service) WriteStoryline(ctx context.Context, job StorylineJob, progress
 	if err != nil {
 		return fmt.Errorf("load storyline input: %w", err)
 	}
+	ctx, finishCapture := s.beginRequestCapture(ctx, job.ID, post)
+	defer finishCapture()
 	if post.Published {
 		return ErrPostPublished
 	}
@@ -193,13 +197,7 @@ func (s *Service) WriteStoryline(ctx context.Context, job StorylineJob, progress
 		Template: post.Template, DefaultGuidelines: post.DefaultGuidelines, StockGuidelines: post.StockGuidelines, Guidelines: post.Guidelines,
 		Memories: post.Memories,
 	}
-	request := ComposeStorylineRequest(input)
-	var sources []postdomain.OriginSource
-	if options.OriginProtocolVersion == OriginProtocolVersion {
-		sources = WritingOriginSources(WritePromptInput{Title: input.Title, Memo: input.Memo, Template: input.Template, Memories: input.Memories, Photos: photos, Videos: videos, Observations: observations}, false, originAttachmentIDs(post.Images))
-		request = appendOriginRequest(request, sources, nil)
-		request.MaxTokens = options.CompletionTokens
-	}
+	request, sources := preparePlanRequest(input, options.OriginProtocolVersion, options.CompletionTokens, originAttachmentIDs(post.Images), nil)
 	progress("storyline", 0, 1)
 	result, err := s.storylineCall(ctx, job.WriteModel, options.WriteNativeEffort, request, shown, sources, options.OriginProtocolVersion)
 	if err != nil {
@@ -216,6 +214,7 @@ func (s *Service) WriteStoryline(ctx context.Context, job StorylineJob, progress
 	if err := publishErr; err != nil {
 		return fmt.Errorf("persist storyline: %w", err)
 	}
+	s.bindPublishedRequestCapturePlan(ctx, post.UserID, post.Slug, result)
 	progress("storyline", 1, 1)
 	return nil
 }
@@ -233,6 +232,8 @@ func (s *Service) ReviseStoryline(ctx context.Context, job StorylineRevisionJob,
 	if err != nil {
 		return fmt.Errorf("load storyline revision input: %w", err)
 	}
+	ctx, finishCapture := s.beginRequestCapture(ctx, job.ID, post)
+	defer finishCapture()
 	if post.Published {
 		return ErrPostPublished
 	}
@@ -247,21 +248,7 @@ func (s *Service) ReviseStoryline(ctx context.Context, job StorylineRevisionJob,
 		Template: options.Template, DefaultGuidelines: options.DefaultGuidelines, StockGuidelines: options.StockGuidelines, Guidelines: options.Guidelines,
 		Memories: options.Memories, Current: options.Storyline, Request: options.Request,
 	}
-	request := ComposeStorylineRequest(input)
-	var sources []postdomain.OriginSource
-	if options.OriginProtocolVersion == OriginProtocolVersion {
-		sources = WritingOriginSources(WritePromptInput{Title: input.Title, Memo: input.Memo, Template: input.Template, Memories: input.Memories, Photos: photos, Videos: videos, Observations: input.Observations}, false, originAttachmentIDs(post.Images))
-		prior := ValidateStoredPlanOrigins(options.Storyline, options.PlanOrigins)
-		sources = catalogWithPriorPlan(sources, options.Storyline, prior, photos, videos)
-		catalog := originCatalog{sources: sources}
-		for _, source := range sources {
-			catalog.chars += utf8.RuneCountInString(source.Text)
-		}
-		catalog.add("current.edit", postdomain.OriginSourceOwnerEdit, options.Request, "", true)
-		sources = catalog.sources
-		request = appendOriginRequest(request, sources, priorPlanProjection(prior))
-		request.MaxTokens = options.CompletionTokens
-	}
+	request, sources := preparePlanRequest(input, options.OriginProtocolVersion, options.CompletionTokens, originAttachmentIDs(post.Images), options.PlanOrigins)
 	progress("storyline", 0, 1)
 	result, err := s.storylineCall(ctx, job.WriteModel, options.WriteNativeEffort, request, shown, sources, options.OriginProtocolVersion)
 	if err != nil {
@@ -282,6 +269,7 @@ func (s *Service) ReviseStoryline(ctx context.Context, job StorylineRevisionJob,
 	if err := publishErr; err != nil {
 		return fmt.Errorf("persist storyline: %w", err)
 	}
+	s.bindPublishedRequestCapturePlan(ctx, post.UserID, post.Slug, result)
 	progress("storyline", 1, 1)
 	return nil
 }
@@ -295,19 +283,8 @@ func (s *Service) storylineCall(ctx context.Context, writeModel string, nativeEf
 	if !ok {
 		return Storyline{}, ErrWriteModelRequired
 	}
-	request.Reasoning = llm.ReasoningLow
-	if request.MaxTokens <= 0 {
-		request.MaxTokens = s.budget.Storyline(nativeEffort)
-	}
-	schema := StorylineAnswerSchema()
-	if protocol == 0 {
-		schema = LegacyStorylineAnswerSchema()
-	}
-	setOriginOutput(&request, "StorylineAnswer", schema, protocol)
-	if info, found := s.models.Resolve(model); found && info.StructuredOutput {
-		request.JSONSchema = schema
-	}
-	response, err := s.models.Complete(ctx, model, request)
+	request = s.prepareStorylineCall(request, model, nativeEffort, protocol)
+	response, err := s.completePostRequest(ctx, model, request, captureAttachments(ctx, shown))
 	if err != nil {
 		return Storyline{}, providerCallError("스토리라인 작성", err)
 	}
@@ -551,4 +528,45 @@ func cloneParagraphs(paragraphs []StorylineParagraph) []StorylineParagraph {
 
 func cloneObservations(observations []Observation) []Observation {
 	return decodeObservations(encodeObservations(observations))
+}
+
+func (s *Service) prepareStorylineCall(request llm.Request, model llm.ModelRef, nativeEffort bool, protocol int) llm.Request {
+	request.Reasoning = llm.ReasoningLow
+	if request.MaxTokens <= 0 {
+		request.MaxTokens = s.budget.Storyline(nativeEffort)
+	}
+	schema := StorylineAnswerSchema()
+	if protocol == 0 {
+		schema = LegacyStorylineAnswerSchema()
+	}
+	setOriginOutput(&request, "StorylineAnswer", schema, protocol)
+	if info, found := s.models.Resolve(model); found && info.StructuredOutput {
+		request.JSONSchema = schema
+	}
+	return request
+}
+
+// preparePlanRequest owns both create/rewrite material and origin composition.
+// Preview and admitted plan execution call this same pure assembly.
+func preparePlanRequest(input StorylinePromptInput, protocol, completionTokens int, attachmentIDs map[string]string, origins *PlanOriginReview) (llm.Request, []postdomain.OriginSource) {
+	request := ComposeStorylineRequest(input)
+	var sources []postdomain.OriginSource
+	if protocol == OriginProtocolVersion {
+		sources = WritingOriginSources(WritePromptInput{Title: input.Title, Memo: input.Memo, Template: input.Template, Memories: input.Memories, Photos: input.Photos, Videos: input.Videos, Observations: input.Observations}, false, attachmentIDs)
+		var projection any
+		if input.Request != "" {
+			prior := ValidateStoredPlanOrigins(input.Current, origins)
+			sources = catalogWithPriorPlan(sources, input.Current, prior, input.Photos, input.Videos)
+			catalog := originCatalog{sources: sources}
+			for _, source := range sources {
+				catalog.chars += utf8.RuneCountInString(source.Text)
+			}
+			catalog.add("current.edit", postdomain.OriginSourceOwnerEdit, input.Request, "", true)
+			sources = catalog.sources
+			projection = priorPlanProjection(prior)
+		}
+		request = appendOriginRequest(request, sources, projection)
+		request.MaxTokens = completionTokens
+	}
+	return request, sources
 }

@@ -85,6 +85,47 @@ func TestRequestInspectionDistinguishesViewsAndNeverReconstructsMissingCapture(t
 	}
 }
 
+func TestUnavailableInspectionExplainsAbsenceWithoutReconstructingPayload(t *testing.T) {
+	view := llm.UnavailableRequestInspection("post-writing", "direct")
+	view.UnavailableReason = "Historical private request capture is absent or purged."
+	if err := view.Validate(); err != nil {
+		t.Fatal(err)
+	}
+	view.UnavailableReason = string([]byte{0xff})
+	if err := view.Validate(); !errors.Is(err, llm.ErrInvalidInspection) {
+		t.Fatalf("invalid unavailable explanation accepted: %v", err)
+	}
+	available := inspectionFixture()
+	available.UnavailableReason = "absent"
+	if err := available.Validate(); !errors.Is(err, llm.ErrInvalidInspection) {
+		t.Fatalf("available request claimed missing evidence: %v", err)
+	}
+}
+
+func TestInspectionMediaAndDurableCallIdentityAreSafeAndStatusBound(t *testing.T) {
+	view := inspectionFixture()
+	view.Attachments = []llm.InspectionAttachment{{ID: "owned-opaque-photo", Kind: "photo"}}
+	if err := view.Validate(); err != nil {
+		t.Fatal(err)
+	}
+	view.CallID = "job-observe-1"
+	if err := view.Validate(); !errors.Is(err, llm.ErrInvalidInspection) {
+		t.Fatalf("preview claimed a durable issued call: %v", err)
+	}
+	view.Status = llm.InspectionCaptured
+	if err := view.Validate(); err != nil {
+		t.Fatal(err)
+	}
+	view.Attachments = append(view.Attachments, view.Attachments[0])
+	if err := view.Validate(); !errors.Is(err, llm.ErrInvalidInspection) {
+		t.Fatalf("ambiguous duplicate attachment admitted: %v", err)
+	}
+	view.Attachments = []llm.InspectionAttachment{{ID: "owned-opaque-photo", Kind: "storage-key"}}
+	if err := view.Validate(); !errors.Is(err, llm.ErrInvalidInspection) {
+		t.Fatalf("unknown media kind admitted: %v", err)
+	}
+}
+
 func TestRequestInspectionRejectsFalseExecutionEvidenceAndMalformedStructure(t *testing.T) {
 	negative := int64(-1)
 	zero := int64(0)

@@ -81,7 +81,7 @@ func registerJobs(c *contexts) {
 			return job.ErrInvalidTarget
 		}
 		return generationSvc.Revise(ctx, generation.RevisionJob{
-			UserID: found.UserID, PostSlug: slug, VoiceID: found.Subject(voice.JobSubject), WriteModel: found.WriteModel,
+			ID: found.ID, UserID: found.UserID, PostSlug: slug, VoiceID: found.Subject(voice.JobSubject), WriteModel: found.WriteModel,
 			Payload: found.Payload,
 		}, generation.Progress(progress))
 	}))
@@ -91,7 +91,7 @@ func registerJobs(c *contexts) {
 			return job.ErrInvalidTarget
 		}
 		return generationSvc.WriteStoryline(ctx, generation.StorylineJob{
-			UserID: found.UserID, PostSlug: slug, ObserveModel: found.ObserveModel, WriteModel: found.WriteModel,
+			ID: found.ID, UserID: found.UserID, PostSlug: slug, ObserveModel: found.ObserveModel, WriteModel: found.WriteModel,
 			Payload: found.Payload,
 		}, generation.Progress(progress))
 	}))
@@ -101,7 +101,7 @@ func registerJobs(c *contexts) {
 			return job.ErrInvalidTarget
 		}
 		return generationSvc.ReviseStoryline(ctx, generation.StorylineRevisionJob{
-			UserID: found.UserID, PostSlug: slug, WriteModel: found.WriteModel, Payload: found.Payload,
+			ID: found.ID, UserID: found.UserID, PostSlug: slug, WriteModel: found.WriteModel, Payload: found.Payload,
 		}, generation.Progress(progress))
 	}))
 	// The template request (TMPL-58) writes its answer back onto its own row; the draft it is
@@ -191,7 +191,7 @@ func generateJob(found job.Job) (generation.GenerateJob, error) {
 		return generation.GenerateJob{}, job.ErrInvalidTarget
 	}
 	return generation.GenerateJob{
-		UserID: found.UserID, PostSlug: slug, VoiceID: found.Subject(voice.JobSubject),
+		ID: found.ID, UserID: found.UserID, PostSlug: slug, VoiceID: found.Subject(voice.JobSubject),
 		ObserveModel: found.ObserveModel, WriteModel: found.WriteModel, Payload: found.Payload,
 	}, nil
 }

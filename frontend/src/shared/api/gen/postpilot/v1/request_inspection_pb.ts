@@ -16,7 +16,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file postpilot/v1/request_inspection.proto.
  */
 export const file_postpilot_v1_request_inspection: GenFile = /*@__PURE__*/
-  fileDesc("CiVwb3N0cGlsb3QvdjEvcmVxdWVzdF9pbnNwZWN0aW9uLnByb3RvEgxwb3N0cGlsb3QudjEiuQEKD1JlcXVlc3RGcmFnbWVudBIKCgJpZBgBIAEoCRIqCgRyb2xlGAIgASgOMhwucG9zdHBpbG90LnYxLkluc3BlY3Rpb25Sb2xlEjQKCmF1dGhvcnNoaXAYAyABKA4yIC5wb3N0cGlsb3QudjEuRnJhZ21lbnRBdXRob3JzaGlwEhUKDW1hdGVyaWFsX3JvbGUYBCABKAkSDAoEdGV4dBgFIAEoCRITCgtzb3VyY2VfcmVmcxgGIAMoCSJJChhPdXRwdXRDb250cmFjdEluc3BlY3Rpb24SDAoEbmFtZRgBIAEoCRIPCgd2ZXJzaW9uGAIgASgJEg4KBnNjaGVtYRgDIAEoCSLrAQoaRWZmZWN0aXZlUmVxdWVzdENvbmRpdGlvbnMSJQoFbW9kZWwYASABKAsyFi5wb3N0cGlsb3QudjEuTW9kZWxSZWYSIgoVbWF4X2NvbXBsZXRpb25fdG9rZW5zGAIgASgDSACIAQESHQoQcmVhc29uaW5nX2VmZm9ydBgDIAEoCUgBiAEBEh4KEXN0cnVjdHVyZWRfb3V0cHV0GAQgASgISAKIAQFCGAoWX21heF9jb21wbGV0aW9uX3Rva2Vuc0ITChFfcmVhc29uaW5nX2VmZm9ydEIUChJfc3RydWN0dXJlZF9vdXRwdXQi9gIKEkluc3BlY3Rpb25NZWFzdXJlcxIXCgpjaGFyYWN0ZXJzGAEgASgDSACIAQESFwoKdXRmOF9ieXRlcxgCIAEoA0gBiAEBEiUKGHJlZmVyZW5jZV90b2tlbl9lc3RpbWF0ZRgDIAEoA0gCiAEBEiMKFnByb3ZpZGVyX3Byb21wdF90b2tlbnMYBCABKANIA4gBARInChpwcm92aWRlcl9jb21wbGV0aW9uX3Rva2VucxgFIAEoA0gEiAEBEiYKGXByb3ZpZGVyX3JlYXNvbmluZ190b2tlbnMYBiABKANIBYgBAUINCgtfY2hhcmFjdGVyc0INCgtfdXRmOF9ieXRlc0IbChlfcmVmZXJlbmNlX3Rva2VuX2VzdGltYXRlQhkKF19wcm92aWRlcl9wcm9tcHRfdG9rZW5zQh0KG19wcm92aWRlcl9jb21wbGV0aW9uX3Rva2Vuc0IcChpfcHJvdmlkZXJfcmVhc29uaW5nX3Rva2VucyLHAwoRUmVxdWVzdEluc3BlY3Rpb24SDwoHdmVyc2lvbhgBIAEoDRIuCgZzdGF0dXMYAiABKA4yHi5wb3N0cGlsb3QudjEuSW5zcGVjdGlvblN0YXR1cxINCgVzdGFnZRgDIAEoCRIMCgRtb2RlGAQgASgJEhYKDnByb21wdF92ZXJzaW9uGAUgASgJEhYKDnNjaGVtYV92ZXJzaW9uGAYgASgJEjAKCWZyYWdtZW50cxgHIAMoCzIdLnBvc3RwaWxvdC52MS5SZXF1ZXN0RnJhZ21lbnQSGQoRc2VsZWN0ZWRfcnVsZV9pZHMYCCADKAkSNgoGb3V0cHV0GAkgASgLMiYucG9zdHBpbG90LnYxLk91dHB1dENvbnRyYWN0SW5zcGVjdGlvbhI8Cgpjb25kaXRpb25zGAogASgLMigucG9zdHBpbG90LnYxLkVmZmVjdGl2ZVJlcXVlc3RDb25kaXRpb25zEjIKCG1lYXN1cmVzGAsgASgLMiAucG9zdHBpbG90LnYxLkluc3BlY3Rpb25NZWFzdXJlcxItCglpc3N1ZWRfYXQYDCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIi8KGkdldFBvc3RPcmlnaW5SZXZpZXdSZXF1ZXN0EhEKCXBvc3Rfc2x1ZxgBIAEoCSJJChtHZXRQb3N0T3JpZ2luUmV2aWV3UmVzcG9uc2USKgoGcmV2aWV3GAEgASgLMhoucG9zdHBpbG90LnYxLk9yaWdpblJldmlldyJzCh9HZXRQb3N0UmVxdWVzdEluc3BlY3Rpb25SZXF1ZXN0EhEKCXBvc3Rfc2x1ZxgBIAEoCRINCgVzdGFnZRgCIAEoCRIuCgZzdGF0dXMYAyABKA4yHi5wb3N0cGlsb3QudjEuSW5zcGVjdGlvblN0YXR1cyJXCiBHZXRQb3N0UmVxdWVzdEluc3BlY3Rpb25SZXNwb25zZRIzCgppbnNwZWN0aW9uGAEgASgLMh8ucG9zdHBpbG90LnYxLlJlcXVlc3RJbnNwZWN0aW9uIo4BCiZHZXRXcml0aW5nVGVzdFJlcXVlc3RJbnNwZWN0aW9uUmVxdWVzdBIPCgd0ZXN0X2lkGAEgASgJEhQKDGNhbmRpZGF0ZV9pZBgCIAEoCRINCgVzdGFnZRgDIAEoCRIuCgZzdGF0dXMYBCABKA4yHi5wb3N0cGlsb3QudjEuSW5zcGVjdGlvblN0YXR1cyJeCidHZXRXcml0aW5nVGVzdFJlcXVlc3RJbnNwZWN0aW9uUmVzcG9uc2USMwoKaW5zcGVjdGlvbhgBIAEoCzIfLnBvc3RwaWxvdC52MS5SZXF1ZXN0SW5zcGVjdGlvbiJ3CiRHZXRBdXRob3JpbmdSZXF1ZXN0SW5zcGVjdGlvblJlcXVlc3QSEAoIZHJhZnRfaWQYASABKAkSDQoFc3RhZ2UYAiABKAkSLgoGc3RhdHVzGAMgASgOMh4ucG9zdHBpbG90LnYxLkluc3BlY3Rpb25TdGF0dXMiXAolR2V0QXV0aG9yaW5nUmVxdWVzdEluc3BlY3Rpb25SZXNwb25zZRIzCgppbnNwZWN0aW9uGAEgASgLMh8ucG9zdHBpbG90LnYxLlJlcXVlc3RJbnNwZWN0aW9uKrcBChBJbnNwZWN0aW9uU3RhdHVzEiEKHUlOU1BFQ1RJT05fU1RBVFVTX1VOU1BFQ0lGSUVEEAASHQoZSU5TUEVDVElPTl9TVEFUVVNfQ1VSUkVOVBABEh4KGklOU1BFQ1RJT05fU1RBVFVTX1BSRVBBUkVEEAISHgoaSU5TUEVDVElPTl9TVEFUVVNfQ0FQVFVSRUQQAxIhCh1JTlNQRUNUSU9OX1NUQVRVU19VTkFWQUlMQUJMRRAEKoYBCg5JbnNwZWN0aW9uUm9sZRIfChtJTlNQRUNUSU9OX1JPTEVfVU5TUEVDSUZJRUQQABIaChZJTlNQRUNUSU9OX1JPTEVfU1lTVEVNEAESGAoUSU5TUEVDVElPTl9ST0xFX1VTRVIQAhIdChlJTlNQRUNUSU9OX1JPTEVfQVNTSVNUQU5UEAMqeAoSRnJhZ21lbnRBdXRob3JzaGlwEiMKH0ZSQUdNRU5UX0FVVEhPUlNISVBfVU5TUEVDSUZJRUQQABIcChhGUkFHTUVOVF9BVVRIT1JTSElQX0NPREUQARIfChtGUkFHTUVOVF9BVVRIT1JTSElQX0FDQ09VTlQQAjKdBAoYV3JpdGluZ0luc3BlY3Rpb25TZXJ2aWNlEmoKE0dldFBvc3RPcmlnaW5SZXZpZXcSKC5wb3N0cGlsb3QudjEuR2V0UG9zdE9yaWdpblJldmlld1JlcXVlc3QaKS5wb3N0cGlsb3QudjEuR2V0UG9zdE9yaWdpblJldmlld1Jlc3BvbnNlEnkKGEdldFBvc3RSZXF1ZXN0SW5zcGVjdGlvbhItLnBvc3RwaWxvdC52MS5HZXRQb3N0UmVxdWVzdEluc3BlY3Rpb25SZXF1ZXN0Gi4ucG9zdHBpbG90LnYxLkdldFBvc3RSZXF1ZXN0SW5zcGVjdGlvblJlc3BvbnNlEo4BCh9HZXRXcml0aW5nVGVzdFJlcXVlc3RJbnNwZWN0aW9uEjQucG9zdHBpbG90LnYxLkdldFdyaXRpbmdUZXN0UmVxdWVzdEluc3BlY3Rpb25SZXF1ZXN0GjUucG9zdHBpbG90LnYxLkdldFdyaXRpbmdUZXN0UmVxdWVzdEluc3BlY3Rpb25SZXNwb25zZRKIAQodR2V0QXV0aG9yaW5nUmVxdWVzdEluc3BlY3Rpb24SMi5wb3N0cGlsb3QudjEuR2V0QXV0aG9yaW5nUmVxdWVzdEluc3BlY3Rpb25SZXF1ZXN0GjMucG9zdHBpbG90LnYxLkdldEF1dGhvcmluZ1JlcXVlc3RJbnNwZWN0aW9uUmVzcG9uc2VCRFpCZ2l0aHViLmNvbS9wb3N0cGlsb3QvYmFja2VuZC9pbnRlcm5hbC9nZW4vcG9zdHBpbG90L3YxO3Bvc3RwaWxvdHYxYgZwcm90bzM", [file_google_protobuf_timestamp, file_postpilot_v1_provider, file_postpilot_v1_semantic_origin]);
+  fileDesc("CiVwb3N0cGlsb3QvdjEvcmVxdWVzdF9pbnNwZWN0aW9uLnByb3RvEgxwb3N0cGlsb3QudjEi4wEKD1JlcXVlc3RGcmFnbWVudBIKCgJpZBgBIAEoCRIqCgRyb2xlGAIgASgOMhwucG9zdHBpbG90LnYxLkluc3BlY3Rpb25Sb2xlEjQKCmF1dGhvcnNoaXAYAyABKA4yIC5wb3N0cGlsb3QudjEuRnJhZ21lbnRBdXRob3JzaGlwEhUKDW1hdGVyaWFsX3JvbGUYBCABKAkSDAoEdGV4dBgFIAEoCRITCgtzb3VyY2VfcmVmcxgGIAMoCRIUCgxzb3VyY2VfZmlsZXMYByADKAkSEgoKYWN0aXZhdGlvbhgIIAEoCSK6AQoSUmVxdWVzdE5hdGl2ZUZpZWxkEgoKAmlkGAEgASgJEjQKCmF1dGhvcnNoaXAYAiABKA4yIC5wb3N0cGlsb3QudjEuRnJhZ21lbnRBdXRob3JzaGlwEhUKDW1hdGVyaWFsX3JvbGUYAyABKAkSDAoEdGV4dBgEIAEoCRITCgtzb3VyY2VfcmVmcxgFIAMoCRIUCgxzb3VyY2VfZmlsZXMYBiADKAkSEgoKYWN0aXZhdGlvbhgHIAEoCSJXCg9SZXF1ZXN0T21pc3Npb24SCgoCaWQYASABKAkSDgoGcmVhc29uGAIgASgJEhQKDHNvdXJjZV9maWxlcxgDIAMoCRISCgphY3RpdmF0aW9uGAQgASgJIjAKFEluc3BlY3Rpb25BdHRhY2htZW50EgoKAmlkGAEgASgJEgwKBGtpbmQYAiABKAkiSQoYT3V0cHV0Q29udHJhY3RJbnNwZWN0aW9uEgwKBG5hbWUYASABKAkSDwoHdmVyc2lvbhgCIAEoCRIOCgZzY2hlbWEYAyABKAki4QMKGkVmZmVjdGl2ZVJlcXVlc3RDb25kaXRpb25zEiUKBW1vZGVsGAEgASgLMhYucG9zdHBpbG90LnYxLk1vZGVsUmVmEiIKFW1heF9jb21wbGV0aW9uX3Rva2VucxgCIAEoA0gAiAEBEh0KEHJlYXNvbmluZ19lZmZvcnQYAyABKAlIAYgBARIeChFzdHJ1Y3R1cmVkX291dHB1dBgEIAEoCEgCiAEBEh4KEWRpc2FibGVfcmVhc29uaW5nGAUgASgISAOIAQESFgoJZnJlZV9jYWxsGAYgASgISASIAQESGwoOZGVmYXVsdF9idWRnZXQYByABKAhIBYgBARIdChBmcm96ZW5fZXhlY3V0aW9uGAggASgISAaIAQESHgoRcmVhc29uaW5nX29taXR0ZWQYCSABKAhIB4gBAUIYChZfbWF4X2NvbXBsZXRpb25fdG9rZW5zQhMKEV9yZWFzb25pbmdfZWZmb3J0QhQKEl9zdHJ1Y3R1cmVkX291dHB1dEIUChJfZGlzYWJsZV9yZWFzb25pbmdCDAoKX2ZyZWVfY2FsbEIRCg9fZGVmYXVsdF9idWRnZXRCEwoRX2Zyb3plbl9leGVjdXRpb25CFAoSX3JlYXNvbmluZ19vbWl0dGVkIvYCChJJbnNwZWN0aW9uTWVhc3VyZXMSFwoKY2hhcmFjdGVycxgBIAEoA0gAiAEBEhcKCnV0ZjhfYnl0ZXMYAiABKANIAYgBARIlChhyZWZlcmVuY2VfdG9rZW5fZXN0aW1hdGUYAyABKANIAogBARIjChZwcm92aWRlcl9wcm9tcHRfdG9rZW5zGAQgASgDSAOIAQESJwoacHJvdmlkZXJfY29tcGxldGlvbl90b2tlbnMYBSABKANIBIgBARImChlwcm92aWRlcl9yZWFzb25pbmdfdG9rZW5zGAYgASgDSAWIAQFCDQoLX2NoYXJhY3RlcnNCDQoLX3V0ZjhfYnl0ZXNCGwoZX3JlZmVyZW5jZV90b2tlbl9lc3RpbWF0ZUIZChdfcHJvdmlkZXJfcHJvbXB0X3Rva2Vuc0IdChtfcHJvdmlkZXJfY29tcGxldGlvbl90b2tlbnNCHAoaX3Byb3ZpZGVyX3JlYXNvbmluZ190b2tlbnMi9gUKEVJlcXVlc3RJbnNwZWN0aW9uEg8KB3ZlcnNpb24YASABKA0SLgoGc3RhdHVzGAIgASgOMh4ucG9zdHBpbG90LnYxLkluc3BlY3Rpb25TdGF0dXMSDQoFc3RhZ2UYAyABKAkSDAoEbW9kZRgEIAEoCRIWCg5wcm9tcHRfdmVyc2lvbhgFIAEoCRIWCg5zY2hlbWFfdmVyc2lvbhgGIAEoCRIwCglmcmFnbWVudHMYByADKAsyHS5wb3N0cGlsb3QudjEuUmVxdWVzdEZyYWdtZW50EhkKEXNlbGVjdGVkX3J1bGVfaWRzGAggAygJEjYKBm91dHB1dBgJIAEoCzImLnBvc3RwaWxvdC52MS5PdXRwdXRDb250cmFjdEluc3BlY3Rpb24SPAoKY29uZGl0aW9ucxgKIAEoCzIoLnBvc3RwaWxvdC52MS5FZmZlY3RpdmVSZXF1ZXN0Q29uZGl0aW9ucxIyCghtZWFzdXJlcxgLIAEoCzIgLnBvc3RwaWxvdC52MS5JbnNwZWN0aW9uTWVhc3VyZXMSLQoJaXNzdWVkX2F0GAwgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIQCghjb21wb3NlchgNIAEoCRIOCgZwYXJzZXIYDiABKAkSEAoIY29uc3VtZXIYDyABKAkSEgoKYWN0aXZhdGlvbhgQIAEoCRIUCgxzb3VyY2VfZmlsZXMYESADKAkSNwoNbmF0aXZlX2ZpZWxkcxgSIAMoCzIgLnBvc3RwaWxvdC52MS5SZXF1ZXN0TmF0aXZlRmllbGQSMAoJb21pc3Npb25zGBMgAygLMh0ucG9zdHBpbG90LnYxLlJlcXVlc3RPbWlzc2lvbhIaChJ1bmF2YWlsYWJsZV9yZWFzb24YFCABKAkSDwoHY2FsbF9pZBgVIAEoCRI3CgthdHRhY2htZW50cxgWIAMoCzIiLnBvc3RwaWxvdC52MS5JbnNwZWN0aW9uQXR0YWNobWVudCIvChpHZXRQb3N0T3JpZ2luUmV2aWV3UmVxdWVzdBIRCglwb3N0X3NsdWcYASABKAkiSQobR2V0UG9zdE9yaWdpblJldmlld1Jlc3BvbnNlEioKBnJldmlldxgBIAEoCzIaLnBvc3RwaWxvdC52MS5PcmlnaW5SZXZpZXcicwofR2V0UG9zdFJlcXVlc3RJbnNwZWN0aW9uUmVxdWVzdBIRCglwb3N0X3NsdWcYASABKAkSDQoFc3RhZ2UYAiABKAkSLgoGc3RhdHVzGAMgASgOMh4ucG9zdHBpbG90LnYxLkluc3BlY3Rpb25TdGF0dXMijQEKIEdldFBvc3RSZXF1ZXN0SW5zcGVjdGlvblJlc3BvbnNlEjMKCmluc3BlY3Rpb24YASABKAsyHy5wb3N0cGlsb3QudjEuUmVxdWVzdEluc3BlY3Rpb24SNAoLaW5zcGVjdGlvbnMYAiADKAsyHy5wb3N0cGlsb3QudjEuUmVxdWVzdEluc3BlY3Rpb24ijgEKJkdldFdyaXRpbmdUZXN0UmVxdWVzdEluc3BlY3Rpb25SZXF1ZXN0Eg8KB3Rlc3RfaWQYASABKAkSFAoMY2FuZGlkYXRlX2lkGAIgASgJEg0KBXN0YWdlGAMgASgJEi4KBnN0YXR1cxgEIAEoDjIeLnBvc3RwaWxvdC52MS5JbnNwZWN0aW9uU3RhdHVzIl4KJ0dldFdyaXRpbmdUZXN0UmVxdWVzdEluc3BlY3Rpb25SZXNwb25zZRIzCgppbnNwZWN0aW9uGAEgASgLMh8ucG9zdHBpbG90LnYxLlJlcXVlc3RJbnNwZWN0aW9uIncKJEdldEF1dGhvcmluZ1JlcXVlc3RJbnNwZWN0aW9uUmVxdWVzdBIQCghkcmFmdF9pZBgBIAEoCRINCgVzdGFnZRgCIAEoCRIuCgZzdGF0dXMYAyABKA4yHi5wb3N0cGlsb3QudjEuSW5zcGVjdGlvblN0YXR1cyJcCiVHZXRBdXRob3JpbmdSZXF1ZXN0SW5zcGVjdGlvblJlc3BvbnNlEjMKCmluc3BlY3Rpb24YASABKAsyHy5wb3N0cGlsb3QudjEuUmVxdWVzdEluc3BlY3Rpb24qtwEKEEluc3BlY3Rpb25TdGF0dXMSIQodSU5TUEVDVElPTl9TVEFUVVNfVU5TUEVDSUZJRUQQABIdChlJTlNQRUNUSU9OX1NUQVRVU19DVVJSRU5UEAESHgoaSU5TUEVDVElPTl9TVEFUVVNfUFJFUEFSRUQQAhIeChpJTlNQRUNUSU9OX1NUQVRVU19DQVBUVVJFRBADEiEKHUlOU1BFQ1RJT05fU1RBVFVTX1VOQVZBSUxBQkxFEAQqhgEKDkluc3BlY3Rpb25Sb2xlEh8KG0lOU1BFQ1RJT05fUk9MRV9VTlNQRUNJRklFRBAAEhoKFklOU1BFQ1RJT05fUk9MRV9TWVNURU0QARIYChRJTlNQRUNUSU9OX1JPTEVfVVNFUhACEh0KGUlOU1BFQ1RJT05fUk9MRV9BU1NJU1RBTlQQAyp4ChJGcmFnbWVudEF1dGhvcnNoaXASIwofRlJBR01FTlRfQVVUSE9SU0hJUF9VTlNQRUNJRklFRBAAEhwKGEZSQUdNRU5UX0FVVEhPUlNISVBfQ09ERRABEh8KG0ZSQUdNRU5UX0FVVEhPUlNISVBfQUNDT1VOVBACMp0EChhXcml0aW5nSW5zcGVjdGlvblNlcnZpY2USagoTR2V0UG9zdE9yaWdpblJldmlldxIoLnBvc3RwaWxvdC52MS5HZXRQb3N0T3JpZ2luUmV2aWV3UmVxdWVzdBopLnBvc3RwaWxvdC52MS5HZXRQb3N0T3JpZ2luUmV2aWV3UmVzcG9uc2USeQoYR2V0UG9zdFJlcXVlc3RJbnNwZWN0aW9uEi0ucG9zdHBpbG90LnYxLkdldFBvc3RSZXF1ZXN0SW5zcGVjdGlvblJlcXVlc3QaLi5wb3N0cGlsb3QudjEuR2V0UG9zdFJlcXVlc3RJbnNwZWN0aW9uUmVzcG9uc2USjgEKH0dldFdyaXRpbmdUZXN0UmVxdWVzdEluc3BlY3Rpb24SNC5wb3N0cGlsb3QudjEuR2V0V3JpdGluZ1Rlc3RSZXF1ZXN0SW5zcGVjdGlvblJlcXVlc3QaNS5wb3N0cGlsb3QudjEuR2V0V3JpdGluZ1Rlc3RSZXF1ZXN0SW5zcGVjdGlvblJlc3BvbnNlEogBCh1HZXRBdXRob3JpbmdSZXF1ZXN0SW5zcGVjdGlvbhIyLnBvc3RwaWxvdC52MS5HZXRBdXRob3JpbmdSZXF1ZXN0SW5zcGVjdGlvblJlcXVlc3QaMy5wb3N0cGlsb3QudjEuR2V0QXV0aG9yaW5nUmVxdWVzdEluc3BlY3Rpb25SZXNwb25zZUJEWkJnaXRodWIuY29tL3Bvc3RwaWxvdC9iYWNrZW5kL2ludGVybmFsL2dlbi9wb3N0cGlsb3QvdjE7cG9zdHBpbG90djFiBnByb3RvMw", [file_google_protobuf_timestamp, file_postpilot_v1_provider, file_postpilot_v1_semantic_origin]);
 
 /**
  * @generated from message postpilot.v1.RequestFragment
@@ -51,6 +51,16 @@ export type RequestFragment = Message<"postpilot.v1.RequestFragment"> & {
    * @generated from field: repeated string source_refs = 6;
    */
   sourceRefs: string[];
+
+  /**
+   * @generated from field: repeated string source_files = 7;
+   */
+  sourceFiles: string[];
+
+  /**
+   * @generated from field: string activation = 8;
+   */
+  activation: string;
 };
 
 /**
@@ -59,6 +69,107 @@ export type RequestFragment = Message<"postpilot.v1.RequestFragment"> & {
  */
 export const RequestFragmentSchema: GenMessage<RequestFragment> = /*@__PURE__*/
   messageDesc(file_postpilot_v1_request_inspection, 0);
+
+/**
+ * @generated from message postpilot.v1.RequestNativeField
+ */
+export type RequestNativeField = Message<"postpilot.v1.RequestNativeField"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: postpilot.v1.FragmentAuthorship authorship = 2;
+   */
+  authorship: FragmentAuthorship;
+
+  /**
+   * @generated from field: string material_role = 3;
+   */
+  materialRole: string;
+
+  /**
+   * @generated from field: string text = 4;
+   */
+  text: string;
+
+  /**
+   * @generated from field: repeated string source_refs = 5;
+   */
+  sourceRefs: string[];
+
+  /**
+   * @generated from field: repeated string source_files = 6;
+   */
+  sourceFiles: string[];
+
+  /**
+   * @generated from field: string activation = 7;
+   */
+  activation: string;
+};
+
+/**
+ * Describes the message postpilot.v1.RequestNativeField.
+ * Use `create(RequestNativeFieldSchema)` to create a new message.
+ */
+export const RequestNativeFieldSchema: GenMessage<RequestNativeField> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_request_inspection, 1);
+
+/**
+ * @generated from message postpilot.v1.RequestOmission
+ */
+export type RequestOmission = Message<"postpilot.v1.RequestOmission"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string reason = 2;
+   */
+  reason: string;
+
+  /**
+   * @generated from field: repeated string source_files = 3;
+   */
+  sourceFiles: string[];
+
+  /**
+   * @generated from field: string activation = 4;
+   */
+  activation: string;
+};
+
+/**
+ * Describes the message postpilot.v1.RequestOmission.
+ * Use `create(RequestOmissionSchema)` to create a new message.
+ */
+export const RequestOmissionSchema: GenMessage<RequestOmission> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_request_inspection, 2);
+
+/**
+ * @generated from message postpilot.v1.InspectionAttachment
+ */
+export type InspectionAttachment = Message<"postpilot.v1.InspectionAttachment"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string kind = 2;
+   */
+  kind: string;
+};
+
+/**
+ * Describes the message postpilot.v1.InspectionAttachment.
+ * Use `create(InspectionAttachmentSchema)` to create a new message.
+ */
+export const InspectionAttachmentSchema: GenMessage<InspectionAttachment> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_request_inspection, 3);
 
 /**
  * @generated from message postpilot.v1.OutputContractInspection
@@ -85,7 +196,7 @@ export type OutputContractInspection = Message<"postpilot.v1.OutputContractInspe
  * Use `create(OutputContractInspectionSchema)` to create a new message.
  */
 export const OutputContractInspectionSchema: GenMessage<OutputContractInspection> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_request_inspection, 1);
+  messageDesc(file_postpilot_v1_request_inspection, 4);
 
 /**
  * @generated from message postpilot.v1.EffectiveRequestConditions
@@ -110,6 +221,31 @@ export type EffectiveRequestConditions = Message<"postpilot.v1.EffectiveRequestC
    * @generated from field: optional bool structured_output = 4;
    */
   structuredOutput?: boolean | undefined;
+
+  /**
+   * @generated from field: optional bool disable_reasoning = 5;
+   */
+  disableReasoning?: boolean | undefined;
+
+  /**
+   * @generated from field: optional bool free_call = 6;
+   */
+  freeCall?: boolean | undefined;
+
+  /**
+   * @generated from field: optional bool default_budget = 7;
+   */
+  defaultBudget?: boolean | undefined;
+
+  /**
+   * @generated from field: optional bool frozen_execution = 8;
+   */
+  frozenExecution?: boolean | undefined;
+
+  /**
+   * @generated from field: optional bool reasoning_omitted = 9;
+   */
+  reasoningOmitted?: boolean | undefined;
 };
 
 /**
@@ -117,7 +253,7 @@ export type EffectiveRequestConditions = Message<"postpilot.v1.EffectiveRequestC
  * Use `create(EffectiveRequestConditionsSchema)` to create a new message.
  */
 export const EffectiveRequestConditionsSchema: GenMessage<EffectiveRequestConditions> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_request_inspection, 2);
+  messageDesc(file_postpilot_v1_request_inspection, 5);
 
 /**
  * @generated from message postpilot.v1.InspectionMeasures
@@ -159,7 +295,7 @@ export type InspectionMeasures = Message<"postpilot.v1.InspectionMeasures"> & {
  * Use `create(InspectionMeasuresSchema)` to create a new message.
  */
 export const InspectionMeasuresSchema: GenMessage<InspectionMeasures> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_request_inspection, 3);
+  messageDesc(file_postpilot_v1_request_inspection, 6);
 
 /**
  * Safe application projection: no SDK payload, credentials, media or cost field.
@@ -226,6 +362,56 @@ export type RequestInspection = Message<"postpilot.v1.RequestInspection"> & {
    * @generated from field: google.protobuf.Timestamp issued_at = 12;
    */
   issuedAt?: Timestamp | undefined;
+
+  /**
+   * @generated from field: string composer = 13;
+   */
+  composer: string;
+
+  /**
+   * @generated from field: string parser = 14;
+   */
+  parser: string;
+
+  /**
+   * @generated from field: string consumer = 15;
+   */
+  consumer: string;
+
+  /**
+   * @generated from field: string activation = 16;
+   */
+  activation: string;
+
+  /**
+   * @generated from field: repeated string source_files = 17;
+   */
+  sourceFiles: string[];
+
+  /**
+   * @generated from field: repeated postpilot.v1.RequestNativeField native_fields = 18;
+   */
+  nativeFields: RequestNativeField[];
+
+  /**
+   * @generated from field: repeated postpilot.v1.RequestOmission omissions = 19;
+   */
+  omissions: RequestOmission[];
+
+  /**
+   * @generated from field: string unavailable_reason = 20;
+   */
+  unavailableReason: string;
+
+  /**
+   * @generated from field: string call_id = 21;
+   */
+  callId: string;
+
+  /**
+   * @generated from field: repeated postpilot.v1.InspectionAttachment attachments = 22;
+   */
+  attachments: InspectionAttachment[];
 };
 
 /**
@@ -233,7 +419,7 @@ export type RequestInspection = Message<"postpilot.v1.RequestInspection"> & {
  * Use `create(RequestInspectionSchema)` to create a new message.
  */
 export const RequestInspectionSchema: GenMessage<RequestInspection> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_request_inspection, 4);
+  messageDesc(file_postpilot_v1_request_inspection, 7);
 
 /**
  * @generated from message postpilot.v1.GetPostOriginReviewRequest
@@ -250,7 +436,7 @@ export type GetPostOriginReviewRequest = Message<"postpilot.v1.GetPostOriginRevi
  * Use `create(GetPostOriginReviewRequestSchema)` to create a new message.
  */
 export const GetPostOriginReviewRequestSchema: GenMessage<GetPostOriginReviewRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_request_inspection, 5);
+  messageDesc(file_postpilot_v1_request_inspection, 8);
 
 /**
  * @generated from message postpilot.v1.GetPostOriginReviewResponse
@@ -267,7 +453,7 @@ export type GetPostOriginReviewResponse = Message<"postpilot.v1.GetPostOriginRev
  * Use `create(GetPostOriginReviewResponseSchema)` to create a new message.
  */
 export const GetPostOriginReviewResponseSchema: GenMessage<GetPostOriginReviewResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_request_inspection, 6);
+  messageDesc(file_postpilot_v1_request_inspection, 9);
 
 /**
  * @generated from message postpilot.v1.GetPostRequestInspectionRequest
@@ -294,7 +480,7 @@ export type GetPostRequestInspectionRequest = Message<"postpilot.v1.GetPostReque
  * Use `create(GetPostRequestInspectionRequestSchema)` to create a new message.
  */
 export const GetPostRequestInspectionRequestSchema: GenMessage<GetPostRequestInspectionRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_request_inspection, 7);
+  messageDesc(file_postpilot_v1_request_inspection, 10);
 
 /**
  * @generated from message postpilot.v1.GetPostRequestInspectionResponse
@@ -304,6 +490,11 @@ export type GetPostRequestInspectionResponse = Message<"postpilot.v1.GetPostRequ
    * @generated from field: postpilot.v1.RequestInspection inspection = 1;
    */
   inspection?: RequestInspection | undefined;
+
+  /**
+   * @generated from field: repeated postpilot.v1.RequestInspection inspections = 2;
+   */
+  inspections: RequestInspection[];
 };
 
 /**
@@ -311,7 +502,7 @@ export type GetPostRequestInspectionResponse = Message<"postpilot.v1.GetPostRequ
  * Use `create(GetPostRequestInspectionResponseSchema)` to create a new message.
  */
 export const GetPostRequestInspectionResponseSchema: GenMessage<GetPostRequestInspectionResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_request_inspection, 8);
+  messageDesc(file_postpilot_v1_request_inspection, 11);
 
 /**
  * @generated from message postpilot.v1.GetWritingTestRequestInspectionRequest
@@ -343,7 +534,7 @@ export type GetWritingTestRequestInspectionRequest = Message<"postpilot.v1.GetWr
  * Use `create(GetWritingTestRequestInspectionRequestSchema)` to create a new message.
  */
 export const GetWritingTestRequestInspectionRequestSchema: GenMessage<GetWritingTestRequestInspectionRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_request_inspection, 9);
+  messageDesc(file_postpilot_v1_request_inspection, 12);
 
 /**
  * @generated from message postpilot.v1.GetWritingTestRequestInspectionResponse
@@ -360,7 +551,7 @@ export type GetWritingTestRequestInspectionResponse = Message<"postpilot.v1.GetW
  * Use `create(GetWritingTestRequestInspectionResponseSchema)` to create a new message.
  */
 export const GetWritingTestRequestInspectionResponseSchema: GenMessage<GetWritingTestRequestInspectionResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_request_inspection, 10);
+  messageDesc(file_postpilot_v1_request_inspection, 13);
 
 /**
  * @generated from message postpilot.v1.GetAuthoringRequestInspectionRequest
@@ -387,7 +578,7 @@ export type GetAuthoringRequestInspectionRequest = Message<"postpilot.v1.GetAuth
  * Use `create(GetAuthoringRequestInspectionRequestSchema)` to create a new message.
  */
 export const GetAuthoringRequestInspectionRequestSchema: GenMessage<GetAuthoringRequestInspectionRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_request_inspection, 11);
+  messageDesc(file_postpilot_v1_request_inspection, 14);
 
 /**
  * @generated from message postpilot.v1.GetAuthoringRequestInspectionResponse
@@ -404,7 +595,7 @@ export type GetAuthoringRequestInspectionResponse = Message<"postpilot.v1.GetAut
  * Use `create(GetAuthoringRequestInspectionResponseSchema)` to create a new message.
  */
 export const GetAuthoringRequestInspectionResponseSchema: GenMessage<GetAuthoringRequestInspectionResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_request_inspection, 12);
+  messageDesc(file_postpilot_v1_request_inspection, 15);
 
 /**
  * @generated from enum postpilot.v1.InspectionStatus
