@@ -90,28 +90,29 @@
 | T628 | Run private binary tournaments with exact metering and explicit winner publication | ARCH MODEL QUOTA GEN LANG | T622 T624 T625 T626 T627 T630 | todo |
 | T630 | Show named setting states and integrate direct AI editing and real-writing tests | ARCH EDIT THEME TMPL GUIDE MODEL | T622 T625 | todo |
 | T631 | Complete UX wiring and qualify creation settings and sixteen-entry tests | ARCH THEME POST CLIP EDIT VOICE MODEL QUOTA | T622 T623 T624 T625 T626 T627 T628 T629 T630 | todo |
-| T632 | Publish additive semantic-origin and safe inspection contracts | ARCH GEN POST MODEL | T631 | todo |
-| T633 | Preserve template material roles and declared stock-rule stages | ARCH TMPL GUIDE GEN | T632 | todo |
+| T632 | Publish additive semantic-origin and safe inspection contracts | ARCH GEN POST MODEL | T622 T624 T625 | todo |
+| T633 | Preserve template material roles and declared stock-rule stages | ARCH TMPL GUIDE GEN | T632 T631 | todo |
 | T634 | Align post stage contracts and grounded maximum-tag behavior | ARCH GEN GUIDE POST LANG | T633 | todo |
 | T635 | Expose real prompt composition and effective request snapshots | ARCH MODEL GEN | T632 | todo |
 | T636 | Generate reviewable origins through observation planning and revision | ARCH GEN VOICE MEM MODEL POST | T634 T635 | todo |
 | T637 | Persist current-result origins and preserve them through manual edits | ARCH GEN POST MEM MODEL | T636 | todo |
-| T638 | Scope setting style and memory composers to their consumed outputs | ARCH EDIT VOICE MEM GUIDE TMPL GEN MODEL | T633 T635 | todo |
+| T638 | Scope setting style and memory composers to their consumed outputs | ARCH EDIT VOICE MEM GUIDE TMPL GEN MODEL | T633 T635 T626 T630 | todo |
 | T639 | Align existing video and speech prompt-stage responsibilities | ARCH GEN MODEL GUIDE LANG CLIP | T633 T635 | todo |
 | T640 | Capture and inspect the owner post effective product requests | ARCH POST MODEL GEN | T635 T637 | todo |
-| T641 | Extend test and authoring private evidence with origin-safe inspection | ARCH MODEL EDIT GEN POST MEM | T638 T640 | todo |
+| T641 | Extend test and authoring private evidence with origin-safe inspection | ARCH MODEL EDIT GEN POST MEM | T638 T640 T628 | todo |
 | T642 | Render accessible phrase origins and preserve editor continuity | ARCH POST THEME EXPORT GEN | T637 | todo |
 | T643 | Show safe current prepared and captured requests in named technical views | ARCH POST MODEL EDIT TMPL THEME | T640 T641 | todo |
 | T644 | Present maximum tags and clean owner-controlled writing copy | ARCH POST TMPL GEN EXPORT MKT QUAL THEME | T634 T642 T643 | todo |
 | T645 | Build reproducible prompt inspection and controlled writing evaluation | ARCH GEN MODEL LANG QUAL | T638 T639 T641 | todo |
-| T646 | Qualify origin-aware writing inspection and clean publication handoff | ARCH GEN POST MODEL THEME EXPORT MKT LANG | T636 T637 T639 T641 T642 T643 T644 T645 | todo |
+| T646 | Qualify origin-aware writing inspection and clean publication handoff | ARCH GEN POST MODEL THEME EXPORT MKT LANG | T636 T637 T639 T641 T642 T643 T644 T645 T631 | todo |
 
 ## next
 - implement-task T623 on main, then complete one dependency-ready task at a time under ARCH-70; T622/T624/T625/T629 are complete.
-- Reassess current SSOT before each remaining task. Prompt-engineering follow-up tasks run after T631 and their own recorded prerequisites.
+- After T623 completes, the T632→T635 foundation batch uses completed T622/T624/T625 seams; later behavior/source consumers retain their real prerequisites and T631 integration guard.
 - Existing browser-media tasks and blocked qualifications retain their scope; THEME-61 visual decisions remain open.
 
 ## log
+- 261007 create-task foundation batch done: T632 depends on completed T622/T624/T625, T635 reports current helper availability; later consumers retain explicit profile/factory/tournament/integration gates; implementation waits for current T623 ownership to end
 - 261007 create-task prompt-engineering verified: T632–T646 cover all51 committed decisions; current ARCH@20 bases, STATE/dependency DAG/references/IDs/links and diff checks pass; spec lint exit0 with136 history/freshness warnings and13 editorial hints; no implementation/provider execution
 - 261007 create-task prompt-engineering done: T632–T646 cover thirteen committed SSOT deltas with bounded contracts/roles, semantic-origin production/storage/editor, safe private request inspection, tag/export/copy and controlled evaluation; this conversion did not modify preexisting task contracts, and new tasks follow concurrently updated ARCH@20
 - 261007 create-task prompt-engineering start: decompose committed requirements without duplicating existing UX implementation
@@ -131,4 +132,3 @@
 - 261007 ideation prompt-engineering start: improve writing quality before owner-observed view trials; trace actual prompt composition and the recent tag change, then explore a comprehensive prompt refactor
 - 261007 ideation searchable-details research round recorded: 64 linked sources, official 2026 content guides and search changes checked; numeric SEO claims assessed, three first-benefit candidates remain open
 - 261007 ideation searchable-details research start: recheck Naver Blog search principles, recent search changes and practitioner SEO claims; product choices remain open
-- 261007 create-architecture ARCH r19 done: task-impact checks at completion, full CI and applicable backend/media gates before push; local agent instructions and runnable parity runbook added, remote failure logs unavailable

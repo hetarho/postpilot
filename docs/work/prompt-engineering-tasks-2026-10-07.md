@@ -8,25 +8,26 @@ The current execution policy is ARCH-70: one dependency-ready task in the existi
 
 | Task | Result | Prerequisites |
 |---|---|---|
-| [T632](../../spec/tasks/T632.writing-origin-and-inspection-seams.md) | Additive origin/source and safe request-inspection seams, shared Unicode/quote fixtures | T631 |
-| [T633](../../spec/tasks/T633.typed-material-and-stock-rule-stages.md) | Distinguishable template literal/instruction/facts and declared stock guideline stages | T632 |
+| [T632](../../spec/tasks/T632.writing-origin-and-inspection-seams.md) | Additive origin/source and safe request-inspection seams, shared Unicode/quote fixtures | T622 T624 T625 |
+| [T633](../../spec/tasks/T633.typed-material-and-stock-rule-stages.md) | Distinguishable template literal/instruction/facts and declared stock guideline stages | T632 T631 |
 | [T634](../../spec/tasks/T634.post-prompt-contracts-and-tag-cap.md) | Consistent post stage contracts, photo chronology safeguard and maximum grounded tags | T633 |
 | [T635](../../spec/tasks/T635.effective-request-inventory.md) | Real composer inventory and effective prepared/dispatched request projection | T632 |
 | [T636](../../spec/tasks/T636.source-aware-generation.md) | Existing model calls produce optional source candidates and preserve plan/revision lineage | T634 T635 |
 | [T637](../../spec/tasks/T637.origin-storage-and-edit-alignment.md) | Current-result origin persistence, manual-edit alignment, atomic publication and deletion | T636 |
-| [T638](../../spec/tasks/T638.authoring-style-memory-composers.md) | Kind/mode-specific setting, style and memory composition without duplicate workflows | T633 T635 |
+| [T638](../../spec/tasks/T638.authoring-style-memory-composers.md) | Kind/mode-specific setting, style and memory composition without duplicate workflows | T633 T635 T626 T630 |
 | [T639](../../spec/tasks/T639.video-and-speech-prompt-parity.md) | Existing video/speech stage responsibility and inventory parity | T633 T635 |
 | [T640](../../spec/tasks/T640.post-request-capture-and-inspection.md) | Owner post current/prepared/captured request reads and private capture | T635 T637 |
-| [T641](../../spec/tasks/T641.test-and-authoring-private-evidence.md) | Authoring/test inspection, blind source restrictions and thirty-day payload purge | T638 T640 |
+| [T641](../../spec/tasks/T641.test-and-authoring-private-evidence.md) | Authoring/test inspection, blind source restrictions and thirty-day payload purge | T638 T640 T628 |
 | [T642](../../spec/tasks/T642.phrase-origin-review-editor.md) | Accessible default phrase review, source details and editor continuity | T637 |
 | [T643](../../spec/tasks/T643.owner-prompt-inspection-ui.md) | Named optional technical request views with truthful status and server-enforced privacy | T640 T641 |
 | [T644](../../spec/tasks/T644.maximum-tags-clean-export-copy.md) | Maximum tag controls, clean copy/export and shipped owner-control/QUAL wording | T634 T642 T643 |
 | [T645](../../spec/tasks/T645.prompt-contract-and-language-evaluation.md) | Actual-composer fixtures/inventory and controlled instruction-language evaluation | T638 T639 T641 |
-| [T646](../../spec/tasks/T646.owner-controlled-writing-qualification.md) | Integrated behavioral, privacy, editor/export and browser qualification | T636 T637 T639 T641 T642 T643 T644 T645 |
+| [T646](../../spec/tasks/T646.owner-controlled-writing-qualification.md) | Integrated behavioral, privacy, editor/export and browser qualification | T636 T637 T639 T641 T642 T643 T644 T645 T631 |
 
 ```mermaid
 flowchart TD
-  ux[T631: existing UX contracts] --> seams[T632: additive contracts]
+  completed[T622/T624/T625: completed seams] --> seams[T632: additive contracts]
+  ux[T631: complete runtime] --> roles[T633: material and stock stages]
   seams --> roles[T633: material and stock stages]
   seams --> inventory[T635: effective request inventory]
   roles --> prompts[T634: post contracts and tag cap]
@@ -68,7 +69,7 @@ flowchart TD
 
 ## Existing work and scope
 
-T622–T631 already own navigation, durable authoring, accepted voice versions, frozen writing-test inputs, tournaments and target-domain publication. This conversion creates follow-up features instead of repeating those acceptance contracts. T632 waits for completed T631 wiring/contracts; the implementation must verify archived dependency tasks and actual main code rather than treating a CLI ready/integrated attempt as completion.
+T622–T631 already own navigation, durable authoring, accepted voice versions, frozen writing-test inputs, tournaments and target-domain publication. This conversion creates follow-up features instead of repeating those acceptance contracts. T632 consumes the completed T622/T624/T625 seams; T635 uses the existing dispatch path. Together they are the first safe foundation batch after the current T623 session releases main. T633 keeps the full runtime gate, T638 retains T626/T630 factories, T641 retains T628 private tournaments, and final T646 retains T631. Verify archived dependency tasks and actual main code rather than treating a CLI status as completion.
 
 Use ARCH@20 and complete one dependency-ready task at a time on main. Current STATE, task completion records and referenced SSOT govern execution. Existing UX requirements and the new semantic-origin tasks retain their declared dependencies.
 
@@ -101,3 +102,7 @@ Live origin accuracy, low-cost JSON success, Korean/English prose quality and ow
 | QUAL | r8 | T644 T645 |
 
 Planning verification passed: `pnpm exec haeram-spec-creator lint` (exit0;136 history/freshness warnings and13 editorial hints), `python3 /tmp/postpilot-verify-prompt-tasks-261007.py` (15 IDs,51 deltas, STATE/base/dependency/reference/coverage/link checks), and `git diff --check`. These verify planning documents, not future product behavior.
+
+## First push boundary
+
+The first implementation batch is T632 followed by T635, with one completed main commit per task. It publishes additive review/request contracts and effective request inventory/projection. It does not activate richer AI expressions before their source producer/storage/UI is ready. T630 owns helper retirement; inventory reports its current actual availability and does not assume it is already retired. Later behavioral changes retain the full runtime/source-consumer dependencies.
