@@ -297,7 +297,7 @@ export function useAuthoring(
         return run({
           type: 'patch',
           sessionId: before.session.id,
-          revision: before.session.revision,
+          revision: before.sourceRevision ?? before.session.revision,
           operationKey: crypto.randomUUID(),
           source: { ...source },
         })

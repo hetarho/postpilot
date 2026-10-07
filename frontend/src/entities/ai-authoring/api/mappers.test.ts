@@ -206,3 +206,26 @@ it('does not turn a known deleted-target conflict back into saved availability',
   })
   expect(mapAuthoringSession(incoming, scope).savedAvailable).toBe(false)
 })
+
+it('recovers a new published setting under its saved id without changing receipt scope or voice semantics', () => {
+  const incoming = wire({
+    targetId: '',
+    phase: 'editing',
+    savedAvailable: true,
+    hasUnpublishedChanges: true,
+    saved: create(Service.method.getAuthoringSession.output, {
+      session: { saved: { id: 'published', kind: ProtoConfigurationKind.POST_TEMPLATE } },
+    }).session!.saved,
+  })
+  expect(mapAuthoringSession(incoming, { ...scope, targetId: 'published' }).targetId).toBe(
+    'published',
+  )
+  expect(incoming.targetId).toBe('')
+  expect(mapAuthoringSession(incoming, { ...scope, targetId: '' }).targetId).toBe('')
+  expect(() => mapAuthoringSession(incoming, { ...scope, targetId: 'another' })).toThrow()
+  incoming.kind = ProtoConfigurationKind.WRITING_VOICE
+  incoming.saved!.kind = ProtoConfigurationKind.WRITING_VOICE
+  expect(() =>
+    mapAuthoringSession(incoming, { ...scope, kind: 'writing-voice', targetId: 'published' }),
+  ).toThrow()
+})

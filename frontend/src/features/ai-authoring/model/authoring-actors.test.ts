@@ -181,3 +181,31 @@ it('admits one manual CAS, retains invalid source separately from preview, and i
   expect(authoringStateOf(actor.getSnapshot()).session?.revision).toBe(4)
   actor.stop()
 })
+
+it('keeps the direct input baseline and reports a conflict when a newer read arrives', () => {
+  const actor = createActor(authoringMachine, { input: scope }).start()
+  const scopeKey = actor.getSnapshot().context.scopeKey
+  actor.send({ type: 'hydrate', scopeKey, session })
+  const source = { ...session.selected!, body: 'My unfinished local edit' }
+  actor.send({ type: 'source', scopeKey, source })
+  actor.send({
+    type: 'hydrate',
+    scopeKey,
+    session: {
+      ...session,
+      revision: 4,
+      workingSource: { ...source, body: 'Other tab edit' },
+      selected: { ...source, body: 'Other tab edit' },
+    },
+  })
+  let state = authoringStateOf(actor.getSnapshot())
+  expect(state.session?.revision).toBe(4)
+  expect(state.directSource?.body).toBe(source.body)
+  expect(state.sourceRevision).toBe(3)
+  expect(state.failure?.reason).toBe('AUTHORING_REVISION_CONFLICT')
+  actor.send({ type: 'source', scopeKey, source: { ...source, name: 'Keep my new name' } })
+  state = authoringStateOf(actor.getSnapshot())
+  expect(state.sourceRevision).toBe(3)
+  expect(state.directSource?.name).toBe('Keep my new name')
+  actor.stop()
+})

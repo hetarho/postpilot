@@ -208,3 +208,98 @@ func TestRealDomainPublicationRefreshesOnlyItsOwnVersionAndContinuesAfterConflic
 func secondServiceWithTargets(h harness, targets authoring.Targets) *authoring.Service {
 	return authoring.NewService(h.store, h.models, h.jobs, targets, budget{}, estimates{})
 }
+
+func TestNewPublishedSettingRecoversContinuationByTargetWithoutChangingReceipts(t *testing.T) {
+	for _, kind := range []authoring.Kind{authoring.PostGuideline, authoring.VideoGuideline, authoring.VideoTemplate} {
+		t.Run(string(kind), func(t *testing.T) {
+			h := fixture(t)
+			ctx := context.Background()
+			domains := realTargets(h)
+			h.svc = secondServiceWithTargets(h, domains)
+			s, err := h.svc.Create(ctx, "alice", kind, "", "new-setting")
+			if err != nil {
+				t.Fatal(err)
+			}
+			body := "First valid direction"
+			if kind == authoring.VideoTemplate {
+				body = videoBody("First scene")
+			}
+			s, err = h.svc.PatchDraft(ctx, authoring.DraftMutation{UserID: "alice", SessionID: s.ID, ExpectedRevision: s.Revision, OperationKey: "manual-new", WorkingSource: authoring.Artifact{Name: "My setting", Body: body}})
+			if err != nil {
+				t.Fatal(err)
+			}
+			save := authoring.ResetMutation{UserID: "alice", SessionID: s.ID, ExpectedRevision: s.Revision, OperationKey: "first-save"}
+			saved, err := h.svc.SaveWithKey(ctx, save, false)
+			if err != nil {
+				t.Fatal(err)
+			}
+			published := *saved.Publication
+			if published.TargetID != "" || saved.TargetVersion == "" {
+				t.Fatal("first creation receipt or confirmed version is invalid")
+			}
+			continuedBody := "Unpublished continuation"
+			if kind == authoring.VideoTemplate {
+				continuedBody = videoBody("Unpublished scene")
+			}
+			continued := patch(t, h, saved, "continue-new", continuedBody)
+			latest, err := h.svc.Latest(ctx, "alice", kind, saved.Saved.ID)
+			if err != nil || latest == nil || latest.ID != continued.ID || latest.WorkingSource.Body != continuedBody || !latest.HasUnpublishedChanges {
+				t.Fatal("published target lost its continuing draft", err)
+			}
+			if latest.TargetID != "" || latest.TargetVersion != saved.TargetVersion {
+				t.Fatal("recovery changed the immutable source target or version fence")
+			}
+			rows, _, err := h.svc.ListSummaries(ctx, authoring.SummaryQuery{UserID: "alice", Kind: kind})
+			if err != nil || len(rows) != 1 || rows[0].TargetID != saved.Saved.ID || !rows[0].SavedAvailable || !rows[0].HasUnpublishedChanges {
+				t.Fatal("summary cannot associate the draft with its saved target", rows, err)
+			}
+			unsaved, _, err := h.svc.ListSummaries(ctx, authoring.SummaryQuery{UserID: "alice", Kind: kind, UnsavedOnly: true})
+			if err != nil || len(unsaved) != 0 {
+				t.Fatal("a published setting was mixed into new creations", unsaved, err)
+			}
+			foreign, err := h.svc.Latest(ctx, "bob", kind, saved.Saved.ID)
+			if err != nil || foreign != nil {
+				t.Fatal("published-id recovery crossed owners", err)
+			}
+			replay, err := h.svc.SaveWithKey(ctx, save, false)
+			if err != nil || *replay.Publication != published || replay.TargetID != "" || replay.Saved.ID != saved.Saved.ID {
+				t.Fatal("creation receipt changed after target-based recovery", err)
+			}
+			current, _ := h.svc.Get(ctx, "alice", saved.ID)
+			if current.Revision != continued.Revision || current.WorkingSource.Body != continuedBody {
+				t.Fatal("receipt replay rewound continuing work")
+			}
+			second, err := h.svc.SaveWithKey(ctx, authoring.ResetMutation{UserID: "alice", SessionID: current.ID, ExpectedRevision: current.Revision, OperationKey: "second-save"}, false)
+			if err != nil || second.Saved.ID != saved.Saved.ID || second.Publication.TargetID != saved.Saved.ID {
+				t.Fatal("continued publication did not update the same target", err)
+			}
+			newest, err := h.svc.Create(ctx, "alice", kind, saved.Saved.ID, "another-target-session")
+			if err != nil {
+				t.Fatal(err)
+			}
+			rows, _, err = h.svc.ListSummaries(ctx, authoring.SummaryQuery{UserID: "alice", Kind: kind})
+			if err != nil || len(rows) != 1 || rows[0].SessionID != newest.ID {
+				t.Fatal("published-id alias duplicated a named target summary", rows, err)
+			}
+		})
+	}
+}
+
+func TestPublishedVoiceCopyKeepsItsSourceSessionScope(t *testing.T) {
+	h := fixture(t)
+	ctx := context.Background()
+	s := selected(t, h, authoring.WritingVoice)
+	saved, err := h.svc.Save(ctx, "alice", s.ID, s.Revision, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	continued := patch(t, h, saved, "continue-style", saved.WorkingSource.Body+" 새 방향")
+	latest, err := h.svc.Latest(ctx, "alice", authoring.WritingVoice, saved.Saved.ID)
+	if err != nil || latest != nil {
+		t.Fatal("synthetic copy rebound its originating session", err)
+	}
+	rows, _, err := h.svc.ListSummaries(ctx, authoring.SummaryQuery{UserID: "alice", Kind: authoring.WritingVoice})
+	if err != nil || len(rows) != 1 || rows[0].TargetID != continued.TargetID {
+		t.Fatal("synthetic copy changed summary source semantics", rows, err)
+	}
+}

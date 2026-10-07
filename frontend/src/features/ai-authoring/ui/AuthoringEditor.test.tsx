@@ -48,6 +48,7 @@ function server(
     saveConflict?: boolean
     saveGate?: Promise<void>
     uncertainSave?: boolean
+    sessionReadGate?: Promise<void>
   } = {},
 ) {
   let current = options.initial
@@ -62,6 +63,7 @@ function server(
   }> = []
   const estimates: Array<{ sessionId: string; model: string }> = []
   const defaults: boolean[] = []
+  const patches: Array<{ expectedRevision: number; body: string }> = []
   const accepted = new Map<string, Wire>()
   let requestedCount = 8
   let uncertain = true
@@ -116,8 +118,9 @@ function server(
       latestCalls++
       return create(Service.method.getLatestAuthoringSession.output, { session: current })
     })
-    rpc(Service.method.getAuthoringSession, () => {
+    rpc(Service.method.getAuthoringSession, async () => {
       calls.push('Get')
+      if (options.sessionReadGate) await options.sessionReadGate
       return create(Service.method.getAuthoringSession.output, { session: current })
     })
     rpc(Service.method.createAuthoringSession, (request) => {
@@ -188,6 +191,9 @@ function server(
     rpc(Service.method.patchAuthoringDraft, (request) => {
       calls.push('Patch')
       const source = request.workingSource!
+      patches.push({ expectedRevision: request.expectedRevision, body: source.body })
+      if (request.expectedRevision !== current!.revision)
+        throw connectAppError('AUTHORING_REVISION_CONFLICT', Code.Aborted)
       const valid = source.body.trim() !== '' && source.body !== '<invalid'
       current = makeSession({
         ...current!,
@@ -284,6 +290,7 @@ function server(
     starts,
     estimates,
     defaults,
+    patches,
     setSession: (session: Wire) => {
       current = session
     },
@@ -1066,4 +1073,80 @@ it('saves, reopens and continues editing with retained conversation and keeps un
   expect(fake.calls).not.toContain('ResetChat')
   expect(fake.starts).toHaveLength(0)
   expect(fake.calls.filter((call) => call === 'Save')).toHaveLength(2)
+})
+
+it('preserves local input and sends its original CAS revision after a delayed newer session read', async () => {
+  let releaseRead!: () => void
+  const baseline = { id: 'draft', name: '동시 편집 지침', body: '기존 방향' }
+  const fake = server({
+    sessionReadGate: new Promise<void>((resolve) => {
+      releaseRead = resolve
+    }),
+    initial: makeSession({
+      revision: 3,
+      phase: 'editing',
+      selected: baseline,
+      workingSource: baseline,
+    }),
+  })
+  mount(fake)
+  const user = userEvent.setup()
+  await user.click(await screen.findByRole('button', { name: '“동시 편집 지침” 직접 편집하기' }))
+  fireEvent.change(screen.getByRole('textbox', { name: '내용' }), {
+    target: { value: '아직 보관하지 않은 내 편집' },
+  })
+  await waitFor(() => expect(fake.calls).toContain('Get'))
+  fake.setSession(
+    makeSession({
+      ...fake.current!,
+      revision: 4,
+      selected: { ...baseline, body: '다른 화면에서 보관한 편집' },
+      workingSource: { ...baseline, body: '다른 화면에서 보관한 편집' },
+    }),
+  )
+  await act(async () => releaseRead())
+  expect(await screen.findByRole('alert')).toHaveTextContent('설정이 다른 곳에서 바뀌었어요')
+  expect(screen.getByRole('textbox', { name: '내용' })).toHaveValue('아직 보관하지 않은 내 편집')
+  await user.click(screen.getByRole('button', { name: '편집 내용 보관하고 확인하기' }))
+  await waitFor(() =>
+    expect(fake.patches).toEqual([{ expectedRevision: 3, body: '아직 보관하지 않은 내 편집' }]),
+  )
+  await user.click(await screen.findByRole('button', { name: '“동시 편집 지침” 직접 편집하기' }))
+  expect(screen.getByRole('textbox', { name: '내용' })).toHaveValue('아직 보관하지 않은 내 편집')
+  expect(fake.current?.workingSource?.body).toBe('다른 화면에서 보관한 편집')
+  expect(fake.calls).not.toContain('Save')
+  expect(fake.starts).toHaveLength(0)
+})
+
+it('reopens a newly published setting by its saved target id and retains its continued work', async () => {
+  const source = { id: 'manual', name: '새 저장 지침', body: '이어 쓰던 방향' }
+  const fake = server({
+    initial: makeSession({
+      targetId: '',
+      phase: 'editing',
+      selected: source,
+      workingSource: source,
+      savedAvailable: true,
+      hasUnpublishedChanges: true,
+      saved: {
+        id: 'published-guide',
+        kind: ProtoConfigurationKind.POST_GUIDELINE,
+        name: source.name,
+      },
+    }),
+  })
+  mount(fake, { targetId: 'published-guide' })
+  const user = userEvent.setup()
+  await user.click(await screen.findByRole('button', { name: '“새 저장 지침” 직접 편집하기' }))
+  expect(screen.getByRole('textbox', { name: '내용' })).toHaveValue(source.body)
+  fireEvent.change(screen.getByRole('textbox', { name: '내용' }), {
+    target: { value: '새 대상에서 계속한 방향' },
+  })
+  await user.click(screen.getByRole('button', { name: '편집 내용 보관하고 확인하기' }))
+  await screen.findByRole('button', { name: '저장할 내용 확인하기' })
+  expect(fake.current?.workingSource?.body).toBe('새 대상에서 계속한 방향')
+  expect(fake.current?.targetId).toBe('')
+  expect(fake.calls).not.toContain('Create')
+  expect(fake.calls).not.toContain('Save')
+  expect(fake.starts).toHaveLength(0)
 })

@@ -52,6 +52,7 @@ export type StudioPhase =
   | 'failed'
 export interface AuthoringState {
   directSource?: AuthoringArtifact
+  sourceRevision?: number
   sourceDirty?: boolean
   scopeKey: string
   phase: StudioPhase
@@ -399,8 +400,16 @@ export const authoringMachine = setup({
       !!context.session?.activeJobId,
   },
   actions: {
-    source: assign(({ event }) =>
-      event.type === 'source' ? { directSource: { ...event.source }, sourceDirty: true } : {},
+    source: assign(({ context, event }) =>
+      event.type === 'source'
+        ? {
+            directSource: { ...event.source },
+            sourceRevision: context.sourceDirty
+              ? context.sourceRevision
+              : context.session?.revision,
+            sourceDirty: true,
+          }
+        : {},
     ),
     draft: assign(({ event }) => (event.type === 'draft' ? { text: event.text } : {})),
     freezeQuote: assign(({ context, event }) =>
@@ -442,6 +451,7 @@ export const authoringMachine = setup({
       return {
         session: response.session,
         directSource: response.session.workingSource ?? response.session.selected,
+        sourceRevision: undefined,
         sourceDirty: false,
         text: response.clearText ? '' : context.text,
         failure: undefined,
@@ -463,19 +473,27 @@ export const authoringMachine = setup({
         session &&
         !authoringSessionBusy(session) &&
         session.phase !== 'failed'
+      const sourceConflict =
+        context.sourceDirty &&
+        context.sourceRevision !== undefined &&
+        session &&
+        session.revision > context.sourceRevision
       return {
         session,
         directSource: context.sourceDirty
           ? context.directSource
           : (session?.workingSource ?? session?.selected),
         sourceDirty: context.sourceDirty,
+        sourceRevision: context.sourceRevision,
         text: successful
           ? ''
           : context.text ||
             (session?.phase === 'failed' || authoringSessionBusy(session)
               ? (session?.pendingRequest ?? '')
               : ''),
-        failure: undefined,
+        failure: sourceConflict
+          ? { reason: 'AUTHORING_REVISION_CONFLICT' as const, params: {} }
+          : undefined,
         command: admitted ? undefined : context.command,
         estimate: admitted ? undefined : context.estimate,
         retry: session?.phase === 'saved' ? undefined : context.retry,
@@ -490,6 +508,9 @@ export const authoringMachine = setup({
     retryQuote: assign(({ context }) => ({ operation: context.operation + 1, failure: undefined })),
     fresh: assign(({ context }) => ({
       session: undefined,
+      directSource: undefined,
+      sourceRevision: undefined,
+      sourceDirty: false,
       text: '',
       operation: context.operation + 1,
       command: undefined,
@@ -645,6 +666,7 @@ export function authoringStateOf(snapshot: SnapshotFrom<typeof authoringMachine>
       estimate,
       failure,
       directSource,
+      sourceRevision,
       sourceDirty,
     } = snapshot.context
     const context = {
@@ -656,6 +678,7 @@ export function authoringStateOf(snapshot: SnapshotFrom<typeof authoringMachine>
       estimate,
       failure,
       directSource,
+      sourceRevision,
       sourceDirty,
     }
     state = { ...context, phase: snapshot.value as StudioPhase }

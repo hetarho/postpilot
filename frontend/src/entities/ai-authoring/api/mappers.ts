@@ -39,10 +39,18 @@ export const authoringModeToProto = (mode: AuthoringMode) =>
 
 export function mapAuthoringSession(wire: WireSession, scope: AuthoringScope): AuthoringSession {
   const kind = authoringKindFromProto(wire.kind)
+  const targetId = scope.targetId ?? ''
+  // The captured source target stays immutable for operation/receipt replay.
+  // A new non-voice setting also becomes recoverable under its published id.
+  const publishedTarget =
+    kind !== 'writing-voice' &&
+    wire.targetId === '' &&
+    targetId !== '' &&
+    wire.saved?.id === targetId
   if (
     !wire.id ||
     kind !== scope.kind ||
-    wire.targetId !== (scope.targetId ?? '') ||
+    (wire.targetId !== targetId && !publishedTarget) ||
     !Number.isInteger(wire.revision) ||
     wire.revision < 0 ||
     !AUTHORING_PHASES.includes(wire.phase as AuthoringSession['phase'])
@@ -100,7 +108,7 @@ export function mapAuthoringSession(wire: WireSession, scope: AuthoringScope): A
     candidateCount: count as AuthoringCandidateCount,
     revision: wire.revision,
     phase: wire.phase as AuthoringSession['phase'],
-    targetId: wire.targetId,
+    targetId,
     targetVersion: wire.targetVersion,
     candidates,
     selected: wire.selected
