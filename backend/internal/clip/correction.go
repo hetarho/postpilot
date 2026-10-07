@@ -52,6 +52,7 @@ type CorrectionPlan struct {
 type CorrectionState struct {
 	Plan                                                        CorrectionPlan
 	Sources                                                     []AnalysisSource
+	LayoutObservations                                          []SourceAnalysis
 	FadeMS, MaxCuts, MaxCopyRunes, MinDurationMS, MaxDurationMS int
 }
 
@@ -309,7 +310,11 @@ func editingState(plan EditPlan, analyses []SourceAnalysis, cfg RenderConfig) *C
 	for _, a := range analyses {
 		sources = append(sources, a.Source)
 	}
-	return &CorrectionState{CorrectionFromPlan(plan), sources, cfg.FadeMS, cfg.MaxCuts, cfg.MaxCopyRunes, cfg.MinDurationMS, cfg.MaxDurationMS}
+	state := &CorrectionState{Plan: CorrectionFromPlan(plan), Sources: sources, FadeMS: cfg.FadeMS, MaxCuts: cfg.MaxCuts, MaxCopyRunes: cfg.MaxCopyRunes, MinDurationMS: cfg.MinDurationMS, MaxDurationMS: cfg.MaxDurationMS}
+	if plan.Portable != nil {
+		state.LayoutObservations = slices.Clone(plan.Portable.Observations)
+	}
+	return state
 }
 func ApplyCorrection(cfg RenderConfig, p Project, input CorrectionPlan) (EditPlan, error) {
 	// Reject an unsupported explicit rate before interval resolution turns its

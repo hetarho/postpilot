@@ -149,3 +149,48 @@ it('cannot publish a resolved access descriptor into a cancelled frozen run', as
   expect(worker.postMessage).toHaveBeenCalledTimes(2)
   message({ type: 'cancelled' })
 })
+
+it('acknowledges streamed packets only after ordered asynchronous mux admission', async () => {
+  let accept!: () => void
+  const sink = vi
+    .fn()
+    .mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          accept = resolve
+        }),
+    )
+    .mockResolvedValue(undefined)
+  const handle = renderBrowserVideo(input(), [], vi.fn(), undefined, undefined, undefined, sink)
+  const packet = { type: 'key', timestamp: 0, duration: 33333, data: new Uint8Array([1]) }
+  message({ type: 'packet', requestId: 1, packet })
+  message({ type: 'packet', requestId: 2, packet: { ...packet, timestamp: 33333 } })
+  await vi.waitFor(() => expect(sink).toHaveBeenCalledTimes(1))
+  expect(worker.postMessage).toHaveBeenCalledTimes(1)
+  accept()
+  await vi.waitFor(() => expect(sink).toHaveBeenCalledTimes(2))
+  expect(worker.postMessage.mock.calls.slice(1).map(([value]) => value)).toEqual([
+    { type: 'packetAck', requestId: 1 },
+    { type: 'packetAck', requestId: 2 },
+  ])
+  handle.cancel()
+  await expect(handle.result).rejects.toMatchObject({ name: 'AbortError' })
+})
+it('stops the Worker after a delayed mux failure and never acknowledges a late cancelled write', async () => {
+  const sink = vi.fn(async () => {
+    throw new Error('quota exhausted')
+  })
+  const handle = renderBrowserVideo(input(), [], vi.fn(), undefined, undefined, undefined, sink)
+  const failure = expect(handle.result).rejects.toThrow('quota exhausted')
+  message({
+    type: 'packet',
+    requestId: 1,
+    packet: { type: 'key', timestamp: 0, duration: 33333, data: new Uint8Array([1]) },
+  })
+  await failure
+  expect(worker.terminate).toHaveBeenCalledOnce()
+  expect(worker.postMessage).toHaveBeenCalledWith(
+    { type: 'packetAck', requestId: 1, error: 'quota exhausted' },
+    [],
+  )
+})

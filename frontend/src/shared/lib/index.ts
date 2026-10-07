@@ -10,6 +10,8 @@ export type {
   SelectedAudioRange,
 } from './media'
 export { MediaPhaseRecorder } from './media'
+export { MediaPacketWindow } from './media'
+export type { Mp4TrackMeasurements } from './media'
 export type { MediaPhaseMeasurement, MediaPhaseSnapshot } from './media'
 export { integratedLoudness48k, normalizeLoudness48k, truePeak48k } from './media'
 export { mp4HasAudio, mp4AudioDecodedBytes } from './media'

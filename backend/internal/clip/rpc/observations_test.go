@@ -50,7 +50,7 @@ func TestRetainedObservationDetailIsOwnerScopedAndStructured(t *testing.T) {
 		Source: clip.AnalysisSource{RenderSource: clip.RenderSource{ID: "source-a", Fingerprint: "fingerprint-a",
 			Info: clip.MediaInfo{DurationMS: 12000, Width: 1920, Height: 1080}}, Filename: "a.mp4"},
 		Segments: []clip.Segment{{StartMS: 3500, EndMS: 10500, Event: "음식을 촬영", Action: "접시를 든다",
-			Motion: "카메라가 다가간다", Subjects: []string{"접시"},
+			Motion: "카메라가 다가간다", Subjects: []string{"접시"}, Subject: clip.Region{X: .2, Y: .3, Width: .4, Height: .5}, CaptionSafe: []clip.Region{{X: 0, Y: 0, Width: 1, Height: .2}},
 			Speech: "맛있어요", Quality: "선명함", Focal: clip.Point{X: .5, Y: .5}, Scene: "food", ReadableText: true,
 			Certainty: clip.CertaintyUncertain, Usability: clip.UsabilityUsable},
 			// A record stored before the v2 contract keeps its two empty status
@@ -80,6 +80,9 @@ func TestRetainedObservationDetailIsOwnerScopedAndStructured(t *testing.T) {
 	if segment.StartMs != 3500 || segment.EndMs != 10500 || segment.Event != "음식을 촬영" || segment.Speech != "맛있어요" || segment.Quality != "선명함" || strings.Join(segment.Subjects, ",") != "접시" {
 		t.Fatalf("evidence changed: %v", segment)
 	}
+	if segment.Scene != "food" || !segment.ReadableText || segment.GetSubject().GetX() != .2 || len(segment.CaptionSafe) != 1 || segment.CaptionSafe[0].Height != .2 {
+		t.Fatalf("recorded normalized geometry lost: %v", segment)
+	}
 	if segment.Action != "접시를 든다" || segment.Motion != "카메라가 다가간다" || segment.Certainty != "uncertain" || segment.Usability != "usable" {
 		t.Fatalf("recorded action, motion or status lost: %v", segment)
 	}
@@ -87,7 +90,7 @@ func TestRetainedObservationDetailIsOwnerScopedAndStructured(t *testing.T) {
 		t.Fatalf("a legacy record was given an invented status: %v", legacy)
 	}
 	wire, _ := protojson.Marshal(got)
-	for _, forbidden := range []string{"private-result-key", "readableText", "https://", "analysisJson", "confidence"} {
+	for _, forbidden := range []string{"private-result-key", "https://", "analysisJson", "confidence"} {
 		if strings.Contains(string(wire), forbidden) {
 			t.Fatalf("private/unsupported detail %q", forbidden)
 		}

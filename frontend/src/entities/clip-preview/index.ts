@@ -17,11 +17,13 @@ export {
   BrowserSnapshotEpoch,
   evaluateBrowserFrame,
   freezeBrowserComposition,
+  freezeBrowserPreviewComposition,
   readBrowserCompositionSnapshot,
 } from './model/browser-composition'
 export type {
   BrowserCompositionSnapshot,
   BrowserCompositionInput,
+  BrowserLayoutObservation,
   BrowserCompositionVersions,
   BrowserCompositionDesign,
   BrowserCompositionComponent,
@@ -87,3 +89,17 @@ export type { InkCaptionScene, InkCaptionPose, InkMatrix } from './model/ink-cap
 export { BrowserCaptionScenePixi } from './model/ink-caption-pixi'
 export type { BrowserCaptionPreparedScene, BrowserCaptionSceneNode } from './model/ink-caption-draw'
 export { BrowserCaptionSceneCanvas } from './model/ink-caption-draw'
+
+export { projectBrowserComposition } from './model/project-composition'
+export type { BrowserProjectCompositionInput } from './model/project-composition'
+export { compositeBrowserFrame } from './model/composite-video'
+export type { CompositeFramePorts } from './model/composite-video'
+export { BrowserCompositionOriginals } from './model/composition-originals'
+export type { BrowserLocalOriginal } from './model/composition-originals'
+export {
+  prepareBrowserAudioSources,
+  loadVerifiedSpeechBuffer,
+  BrowserAudioCompositionError,
+} from './model/composition-audio'
+export type { BrowserPreparedAudioSources } from './model/composition-audio'
+export { BrowserCompositionPlayback } from './model/composition-playback'

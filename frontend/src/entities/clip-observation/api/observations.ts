@@ -37,6 +37,10 @@ export function toClipObservations(value: ProtoClipObservations): ClipObservatio
         durationMs: item.source!.durationMs,
         width: item.source!.width,
         height: item.source!.height,
+        ...(item.source!.hasAudio !== undefined ? { hasAudio: item.source!.hasAudio } : {}),
+        ...(item.source!.originalMeasurementProvenance
+          ? { originalMeasurementProvenance: item.source!.originalMeasurementProvenance }
+          : {}),
         // A server that predates the rate set offers 1x and faster only, which
         // is exactly what an unverified cadence earns.
         allowedRatePermille:
@@ -46,6 +50,28 @@ export function toClipObservations(value: ProtoClipObservations): ClipObservatio
       },
       segments: item.segments.map((segment) => ({
         ...(segment.focal ? { focal: { x: segment.focal.x, y: segment.focal.y } } : {}),
+        ...(segment.subject || segment.scene || segment.readableText || segment.captionSafe.length
+          ? {
+              scene: segment.scene,
+              readableText: segment.readableText,
+              captionSafe: segment.captionSafe.map(({ x, y, width, height }) => ({
+                x,
+                y,
+                width,
+                height,
+              })),
+            }
+          : {}),
+        ...(segment.subject
+          ? {
+              subject: {
+                x: segment.subject.x,
+                y: segment.subject.y,
+                width: segment.subject.width,
+                height: segment.subject.height,
+              },
+            }
+          : {}),
         startMs: segment.startMs,
         endMs: segment.endMs,
         event: segment.event,

@@ -1,3 +1,4 @@
+import { CLIP_COMPOSITION_PLACEMENT } from '../config/composition-placement'
 import {
   CLIP_BROWSER_COMPOSITION,
   CLIP_BROWSER_FONTS,
@@ -36,7 +37,8 @@ export interface BrowserSourceIdentity {
   durationMs: number
   width: number
   height: number
-  hasAudio: boolean
+  hasAudio?: boolean
+  originalMeasurementProvenance?: string
   allowedRatePermille: readonly number[]
 }
 export interface BrowserCompositionVersions {
@@ -67,7 +69,24 @@ export interface BrowserCompositionComponent {
   phraseIndex?: number
   sequence: boolean
 }
+export interface BrowserLayoutObservation {
+  sourceId: string
+  fingerprint: string
+  durationMs: number
+  width: number
+  height: number
+  originalMeasurementProvenance: string
+  segments: readonly {
+    startMs: number
+    endMs: number
+    scene: string
+    readableText: boolean
+    subject: { x: number; y: number; width: number; height: number }
+    captionSafe: readonly { x: number; y: number; width: number; height: number }[]
+  }[]
+}
 export interface BrowserCompositionInput {
+  layoutObservations?: readonly BrowserLayoutObservation[]
   ownerId: string
   projectId: string
   projectRevision: number
@@ -82,6 +101,8 @@ export interface BrowserCompositionInput {
 }
 export type BrowserCompositionSnapshot = BrowserFrozen<{
   schemaVersion: 1
+  purpose: 'export' | 'preview'
+  layoutObservations: readonly BrowserLayoutObservation[]
   ownerId: string
   projectId: string
   projectRevision: number
@@ -120,7 +141,7 @@ const versions = (): BrowserCompositionVersions => ({
   assets: CLIP_BROWSER_COMPOSITION.assets,
 })
 const domainKeys = new Set(
-  `ownerId projectId projectRevision planRevision plan ratio sources design versions schemaVersion
+  `ownerId projectId projectRevision planRevision plan ratio sources design versions schemaVersion purpose layoutObservations scene readableText subject captionSafe originalMeasurementProvenance
   fonts ink manifestVersion inkVersion transformInkScale transformInkStyles fontsManifestSHA256 catalogSHA256 wasmSHA256 fontAssets assetVersion components speechFingerprint snapshotFingerprint authoritativeFingerprint frameCount renderer assets captionStyles captionPace introPreset outroPreset disclosure hideDisclosure
   sourceId fingerprint durationMs width height hasAudio allowedRatePermille id sha256 componentId componentVersion element
   instanceId firstFrame visibleFirstFrame endFrame phraseIndex sequence nativeComposition sourceAudio sourceVolumePermille associations elements cuts narration
@@ -389,9 +410,89 @@ function componentsOf(
   })
 }
 
+function validateLayoutObservations(
+  input: readonly BrowserLayoutObservation[],
+  sources: readonly BrowserSourceIdentity[],
+): BrowserLayoutObservation[] {
+  if (!Array.isArray(input) || input.length > sources.length)
+    refuse('CLIP_SNAPSHOT_INVALID', 'layout observations')
+  const ids = new Set<string>()
+  const box = (value: BrowserLayoutObservation['segments'][number]['subject'], empty: boolean) => {
+    if (
+      !value ||
+      ![value.x, value.y, value.width, value.height].every(Number.isFinite) ||
+      value.x < 0 ||
+      value.y < 0 ||
+      value.width < 0 ||
+      value.height < 0 ||
+      value.x + value.width > 1 ||
+      value.y + value.height > 1 ||
+      (!empty && (!value.width || !value.height))
+    )
+      refuse('CLIP_SNAPSHOT_INVALID', 'layout box')
+    return { ...value }
+  }
+  return input.map((observation: BrowserLayoutObservation) => {
+    const source = sources.find((s) => s.sourceId === observation.sourceId)
+    if (
+      !source ||
+      ids.has(observation.sourceId) ||
+      observation.fingerprint !== source.fingerprint ||
+      observation.durationMs !== source.durationMs ||
+      observation.width !== source.width ||
+      observation.height !== source.height ||
+      observation.originalMeasurementProvenance !== (source.originalMeasurementProvenance ?? '') ||
+      !Array.isArray(observation.segments) ||
+      observation.segments.length > CLIP_COMPOSITION_LIMITS.cues
+    )
+      refuse('CLIP_SNAPSHOT_INVALID', 'layout source')
+    ids.add(observation.sourceId)
+    let end = 0
+    return {
+      ...observation,
+      segments: observation.segments.map(
+        (segment: BrowserLayoutObservation['segments'][number]) => {
+          if (
+            !Number.isSafeInteger(segment.startMs) ||
+            !Number.isSafeInteger(segment.endMs) ||
+            segment.startMs < end ||
+            segment.endMs <= segment.startMs ||
+            segment.endMs > source.durationMs ||
+            typeof segment.scene !== 'string' ||
+            typeof segment.readableText !== 'boolean' ||
+            !Array.isArray(segment.captionSafe) ||
+            segment.captionSafe.length > CLIP_COMPOSITION_PLACEMENT.maxCaptionSafe
+          )
+            refuse('CLIP_SNAPSHOT_INVALID', 'layout segment')
+          end = segment.endMs
+          return {
+            ...segment,
+            subject: box(segment.subject, true),
+            captionSafe: segment.captionSafe.map(
+              (b: BrowserLayoutObservation['segments'][number]['subject']) => box(b, false),
+            ),
+          }
+        },
+      ),
+    }
+  })
+}
+
 /** A page-owned run freezes a saved plan; URLs and resources are resolved separately. */
 export async function freezeBrowserComposition(
   input: BrowserCompositionInput,
+): Promise<BrowserCompositionSnapshot> {
+  return freezeComposition(input, 'export')
+}
+/** Editing preserves requested narration and reports unavailable assets without export admission. */
+export async function freezeBrowserPreviewComposition(
+  input: BrowserCompositionInput,
+): Promise<BrowserCompositionSnapshot> {
+  return freezeComposition(input, 'preview')
+}
+async function freezeComposition(
+  input: BrowserCompositionInput,
+  purpose: 'export' | 'preview',
 ): Promise<BrowserCompositionSnapshot> {
   plainData(input)
   if (!input || !input.plan || !Array.isArray(input.plan.cuts) || !Array.isArray(input.sources))
@@ -447,11 +548,14 @@ export async function freezeBrowserComposition(
       !positiveInteger(source.height) ||
       source.width > 16384 ||
       source.height > 16384 ||
-      typeof source.hasAudio !== 'boolean' ||
+      (source.hasAudio !== undefined && typeof source.hasAudio !== 'boolean') ||
+      (purpose === 'export' && source.hasAudio === undefined) ||
+      !['', 'browser_client'].includes(source.originalMeasurementProvenance ?? '') ||
       sources.filter((s) => s.sourceId === source.sourceId).length !== 1
     )
       refuse('CLIP_SNAPSHOT_INVALID', 'source')
   }
+  const layoutObservations = validateLayoutObservations(input.layoutObservations ?? [], sources)
   for (const cut of plan.cuts) {
     const source = sources.find(
       (s) => s.sourceId === cut.sourceId && s.fingerprint === cut.fingerprint,
@@ -506,11 +610,13 @@ export async function freezeBrowserComposition(
       !Number.isSafeInteger(narration.volumePermille) ||
       narration.volumePermille < 0 ||
       narration.volumePermille > 1000 ||
-      !narration.segments.length
+      (purpose === 'export' && !narration.segments.length)
     )
       refuse('CLIP_SNAPSHOT_INVALID', 'speech')
     for (const segment of narration.segments) {
       const speech = segment.speech
+      if (purpose === 'preview' && spokenState(narration, segment, plan.durationMs) !== 'ready')
+        continue
       if (
         spokenState(narration, segment, plan.durationMs) !== 'ready' ||
         !speech ||
@@ -543,9 +649,17 @@ export async function freezeBrowserComposition(
   }
   const design = designOf(input.design)
   const components = componentsOf(plan, design)
-  const speechFingerprint = await speechRenderFingerprint(plan)
+  const incompleteSpeech =
+    plan.narration?.enabled &&
+    plan.narration.segments.some(
+      (segment) => spokenState(plan.narration!, segment, plan.durationMs) !== 'ready',
+    )
+  const speechFingerprint =
+    purpose === 'preview' && incompleteSpeech ? '' : await speechRenderFingerprint(plan)
   const snapshot = {
     schemaVersion: 1 as const,
+    purpose,
+    layoutObservations,
     ownerId,
     projectId,
     projectRevision,
@@ -578,7 +692,11 @@ export async function readBrowserCompositionSnapshot(
   if (!saved || saved.schemaVersion !== CLIP_BROWSER_COMPOSITION.schemaVersion || !saved.versions)
     refuse('CLIP_SNAPSHOT_INCOMPATIBLE_VERSION', 'schema')
   compatible(saved.versions)
-  const rebuilt = await freezeBrowserComposition(saved as unknown as BrowserCompositionInput)
+  if (!['export', 'preview'].includes(saved.purpose)) refuse('CLIP_SNAPSHOT_INVALID', 'purpose')
+  const rebuilt = await freezeComposition(
+    saved as unknown as BrowserCompositionInput,
+    saved.purpose,
+  )
   if (canonical(saved) !== canonical(rebuilt)) refuse('CLIP_SNAPSHOT_INVALID', 'derived contract')
   return rebuilt
 }
@@ -625,7 +743,7 @@ export function evaluateBrowserFrame(snapshot: BrowserCompositionSnapshot, frame
       focal: layer.cut.focal ?? { x: 0.5, y: 0.5 },
       alpha: layer.alpha,
       weight: layer.weight,
-      retainOriginalAudio: source.hasAudio && sourceAudioEnabled(plan, layer.cut),
+      retainOriginalAudio: source.hasAudio !== false && sourceAudioEnabled(plan, layer.cut),
       crop: previewCrop(source.width, source.height, canvas.width, canvas.height, layer.cut.focal),
     }
   })

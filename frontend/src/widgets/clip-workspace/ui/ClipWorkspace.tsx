@@ -57,7 +57,11 @@ export function ClipWorkspace({ ownerId, project }: { ownerId: string; project: 
   const reading = !!project.finalized
   const job = run.job
   const browserStatus = (
-    <ClipBrowserRenderStatus state={render.browser.state} cancel={render.browser.cancel} />
+    <ClipBrowserRenderStatus
+      state={render.browser.state}
+      cancel={render.browser.cancel}
+      retry={render.browser.retry}
+    />
   )
   const correctionStatus: CorrectionStatus = correction.dirty
     ? 'dirty'

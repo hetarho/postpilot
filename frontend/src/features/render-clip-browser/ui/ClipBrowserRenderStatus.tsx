@@ -6,9 +6,11 @@ import type { BrowserRenderState } from '../api/useBrowserRender'
 export function ClipBrowserRenderStatus({
   state,
   cancel,
+  retry,
 }: {
   state: BrowserRenderState
   cancel: () => void
+  retry?: () => void
 }) {
   const { t } = useTranslation('clips')
   if (state.phase === 'idle') return null
@@ -24,12 +26,40 @@ export function ClipBrowserRenderStatus({
         <Typography variant="meta" role="status">
           {label}
         </Typography>
-        {busy && (
+        {(busy || state.phase === 'upload_pending') && (
           <Button variant="ghost" pending={state.phase === 'cancelling'} onClick={cancel}>
             {t('render.progress.cancel')}
           </Button>
         )}
       </div>
+      {state.local && (
+        <div className="space-y-2">
+          <Typography variant="meta">{t('render.localReady')}</Typography>
+          <video
+            className="w-full"
+            controls
+            preload="metadata"
+            src={state.local.url}
+            aria-label={t('render.localPreview')}
+          />
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="ghost"
+              onClick={() => {
+                const link = document.createElement('a')
+                link.href = state.local!.url
+                link.download = 'clip.mp4'
+                link.click()
+              }}
+            >
+              {t('render.localDownload')}
+            </Button>
+            {state.phase === 'upload_pending' && retry && (
+              <Button onClick={retry}>{t('render.retryUpload')}</Button>
+            )}
+          </div>
+        </div>
+      )}
       {state.failure && (
         <div role="alert" className="space-y-1">
           {state.refusal && (

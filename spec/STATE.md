@@ -65,17 +65,15 @@
 |---|---|---|---|---|
 | T539 | Qualify the complete Korean voice-creation milestone | ARCH DUB MODEL CDS THEME | T538 | blocked@261005 |
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
-| T599 | Stream browser output and promote the verified private result | ARCH CLIP CDS | T592 T593 T595 T596 T597 T598 | todo |
 | T600 | Use the browser composition engine throughout editing previews | ARCH CLIP CDS | T592 T593 T594 T595 T596 T597 T598 | todo |
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | todo |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | todo |
 
 ## next
-- finish T599/T600 verification, independent review and serial integration
-- T603 technical source is retained with all real qualification gates blocked
-- implement T604 after T599/T600 integration; preserve independent release gates
+- inspect work board for remaining tasks
 
 ## log
+- 261007 T599 integrated
 - 261007 T603 source-only integration start: reviewed technical harness/AAC guard and actual pinned verifier proof; all six real qualification checks remain open and runtime blocked
 - 261006 T597 integrated
 - 261006 T601 integrated
@@ -95,4 +93,3 @@
 - 261007 manage-work integration compatibility: temporary CLI preserves only46 inherited FORMAT/history warnings; structural errors and new warnings still reject; actual baseline/candidate conformance passed, installed package/skills/runtime JSON unchanged
 - 261007 T591 independent native comparison correction: global pace/accent, declared disclosure only and exact-ms visibility require correction before integration; parent remains unchanged and prior approval invalidated
 - 261007 create-task browser-media parallel hint refinement start: unassigned todo scope hints allow isolated overlapping worktrees with serial review/integration; task goals, acceptance, SSOT bases and dependencies stay unchanged
-- 261006 parallel browser-media start: isolated task workers through T604 with dependency-aware dispatch and independent reviews; preserve T590 implementation and its Docker gate

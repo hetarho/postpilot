@@ -1,3 +1,4 @@
+import type { ClipLayoutObservations } from '@/entities/clip-observation/@x/clip-plan'
 import { cloneNarration, type ClipNarration, type ClipDerivedCaption } from './spoken'
 import {
   CLIP_COPY,
@@ -194,6 +195,8 @@ export interface ClipEditPlan {
   cuts: ClipEditCut[]
 }
 export interface RetainedClipSource {
+  hasAudio?: boolean
+  originalMeasurementProvenance?: string
   id: string
   fingerprint: string
   filename: string
@@ -206,6 +209,7 @@ export interface RetainedClipSource {
   allowedRatePermille: number[]
 }
 export interface ClipEditingState {
+  layoutObservations?: ClipLayoutObservations
   plan: ClipEditPlan
   sources: RetainedClipSource[]
 

@@ -459,10 +459,18 @@ export function applyTimelineEdit(plan: ClipEditPlan, edit: TimelineEdit): ClipE
   } else if (edit.type === 'text') {
     next.elements = next.elements?.map((text) => {
       if (text.instanceId !== edit.id) return text
-      const changedContent =
-        edit.patch.text !== undefined ||
-        edit.patch.rows !== undefined ||
-        edit.patch.phrases !== undefined
+      const drawingChanged = Object.keys(edit.patch).some(
+        (key) =>
+          key !== 'evidenceReviewed' &&
+          JSON.stringify(edit.patch[key as keyof typeof edit.patch]) !==
+            JSON.stringify(text[key as keyof typeof text]),
+      )
+      const changedContent = ['text', 'rows', 'phrases'].some(
+        (key) =>
+          key in edit.patch &&
+          JSON.stringify(edit.patch[key as keyof typeof edit.patch]) !==
+            JSON.stringify(text[key as keyof typeof text]),
+      )
       return {
         ...text,
         ...edit.patch,
@@ -496,18 +504,18 @@ export function applyTimelineEdit(plan: ClipEditPlan, edit: TimelineEdit): ClipE
               },
             }
           : {}),
-        ...(Object.keys(edit.patch).some((key) => key !== 'evidenceReviewed')
-          ? { ownerEdited: true }
-          : {}),
-        ...(Object.keys(edit.patch).some((key) => key !== 'evidenceReviewed')
-          ? { effectiveStartMs: undefined, effectiveEndMs: undefined }
+        ...(drawingChanged ? { ownerEdited: true } : {}),
+        ...(drawingChanged
+          ? { effectiveStartMs: undefined, effectiveEndMs: undefined, effectivePosition: undefined }
           : {}),
         ...(edit.patch.phrases?.length
           ? { text: edit.patch.phrases.map((p) => p.text).join(' ') }
           : {}),
         ...(changedContent ? { staleEvidence: false, evidenceReviewed: true } : {}),
         // Automatic rapid splitting is regenerated for a newly typed sentence.
-        ...(edit.patch.text !== undefined && edit.patch.phrases === undefined
+        ...(edit.patch.text !== undefined &&
+        edit.patch.text !== text.text &&
+        edit.patch.phrases === undefined
           ? { phrases: [] }
           : {}),
       }

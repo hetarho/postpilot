@@ -6,6 +6,7 @@ import type { CLIP_VIDEO_MEASUREMENT_PHASES } from '../config/render-measurement
 import type { BrowserCompositionSnapshot } from './browser-composition'
 import type { BrowserFootageResources } from './browser-footage'
 import type { BrowserBackgroundEvidence } from './background-sampling'
+import type { Mp4TrackMeasurements } from '@/shared/lib'
 
 export type BrowserVideoMeasurements = MediaPhaseSnapshot<
   (typeof CLIP_VIDEO_MEASUREMENT_PHASES)[number]
@@ -19,6 +20,8 @@ export interface BrowserVideoInput {
   assets: PreparedAsset[]
   /** Diagnostic-only observations; never part of a saved plan or server verdict. */
   collectMeasurements?: boolean
+  /** Stream every packet to an acknowledged async mux sink. */
+  streamPackets?: boolean
 }
 export interface BrowserVideoProgress {
   completedFrames: number
@@ -39,6 +42,11 @@ export interface BrowserVideoTrack {
   config: VideoEncoderConfig
   decoderConfig: VideoDecoderConfig
   chunks: EncodedClipChunk[]
+  packetCount?: number
+  speechFingerprint?: string
+  presentationValid?: boolean
+  packetResources?: { peakPackets: number; peakBytes: number }
+  outputMeasurements?: Mp4TrackMeasurements
   frameCount: number
   durationUs: number
   measurements?: BrowserVideoMeasurements

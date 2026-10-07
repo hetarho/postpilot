@@ -303,6 +303,7 @@ func applyTextEdit(t PortableText, edit CorrectionText, changed []SourceAssociat
 	edit.Derived = before.Derived
 	edit.Evidence, edit.FallbackReason, edit.StaleEvidence = before.Evidence, before.FallbackReason, before.StaleEvidence
 	edit.EffectiveStartMS, edit.EffectiveEndMS = before.EffectiveStartMS, before.EffectiveEndMS
+	edit.EffectivePosition = before.EffectivePosition
 	reviewed := edit.EvidenceReviewed
 	edit.EvidenceReviewed = false
 	// Derived intervals are output only and never make a content edit.
