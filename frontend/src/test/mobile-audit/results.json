@@ -49,16 +49,8 @@
   "baseline": {
     "registeredRoutes": 64,
     "concretePaths": 57,
-    "widths": [
-      320,
-      360,
-      390,
-      430
-    ],
-    "themes": [
-      "light",
-      "dark"
-    ],
+    "widths": [320, 360, 390, 430],
+    "themes": ["light", "dark"],
     "receipts": 456
   },
   "additionalReceipts": 114,
@@ -92,11 +84,7 @@
         "source": "frontend/src/pages/login/ui/LoginPage.tsx",
         "status": "changed",
         "finding": "Phone form starts at top; Google and email actions remain named.",
-        "inspectedStates": [
-          "input",
-          "loading",
-          "failure"
-        ]
+        "inspectedStates": ["input", "loading", "failure"]
       }
     },
     {
@@ -113,11 +101,7 @@
         "source": "frontend/src/pages/signup/ui/SignupPage.tsx",
         "status": "changed",
         "finding": "Phone form starts at top; password hints and consent remain in flow.",
-        "inspectedStates": [
-          "input",
-          "loading",
-          "failure"
-        ]
+        "inspectedStates": ["input", "loading", "failure"]
       }
     },
     {
@@ -134,11 +118,7 @@
         "source": "frontend/src/pages/google-sign-in-callback/ui/GoogleSignInCallbackPage.tsx",
         "status": "checked",
         "finding": "Expected rejected callback shows named error and login return; provider exchange is fixture only.",
-        "inspectedStates": [
-          "populated",
-          "loading",
-          "failure"
-        ]
+        "inspectedStates": ["populated", "loading", "failure"]
       }
     },
     {
@@ -155,11 +135,7 @@
         "source": "frontend/src/pages/verify-email/ui/VerifyEmailPage.tsx",
         "status": "changed",
         "finding": "Top anchor keeps recovery email input ahead of unused vertical centering.",
-        "inspectedStates": [
-          "populated",
-          "loading",
-          "failure"
-        ]
+        "inspectedStates": ["populated", "loading", "failure"]
       }
     },
     {
@@ -176,11 +152,7 @@
         "source": "frontend/src/pages/forgot-password/ui/ForgotPasswordPage.tsx",
         "status": "changed",
         "finding": "Phone reset request is top anchored and retains confirmation state.",
-        "inspectedStates": [
-          "input",
-          "loading",
-          "failure"
-        ]
+        "inspectedStates": ["input", "loading", "failure"]
       }
     },
     {
@@ -197,11 +169,7 @@
         "source": "frontend/src/pages/reset-password/ui/ResetPasswordPage.tsx",
         "status": "changed",
         "finding": "Top anchored password form; valid token and invalid-link retry are distinct states.",
-        "inspectedStates": [
-          "input",
-          "loading",
-          "failure"
-        ]
+        "inspectedStates": ["input", "loading", "failure"]
       }
     },
     {
@@ -218,11 +186,7 @@
         "source": "frontend/src/pages/about/ui/AboutPage.tsx",
         "status": "checked",
         "finding": "Long marketing text and plan comparison are intentionally readable content, not a pre-input stack.",
-        "inspectedStates": [
-          "populated",
-          "loading",
-          "failure"
-        ]
+        "inspectedStates": ["populated", "loading", "failure"]
       }
     },
     {
@@ -239,11 +203,7 @@
         "source": "frontend/src/pages/gift/ui/GiftPage.tsx",
         "status": "checked",
         "finding": "A short centered gift confirmation has no authoring input; validity and credit amount stay visible.",
-        "inspectedStates": [
-          "populated",
-          "loading",
-          "failure"
-        ]
+        "inspectedStates": ["populated", "loading", "failure"]
       }
     },
     {
@@ -275,11 +235,7 @@
         "source": "frontend/src/pages/home/ui/HomePage.tsx",
         "status": "changed",
         "finding": "Phone choices are shorter rows with horizontal icons; retain both post and clip destinations.",
-        "inspectedStates": [
-          "populated",
-          "loading",
-          "failure"
-        ]
+        "inspectedStates": ["populated", "loading", "failure"]
       }
     },
     {
@@ -296,11 +252,7 @@
         "source": "frontend/src/pages/library/ui/LibraryPage.tsx",
         "status": "checked",
         "finding": "Two existing horizontal destination rows are already compact.",
-        "inspectedStates": [
-          "populated",
-          "loading",
-          "failure"
-        ]
+        "inspectedStates": ["populated", "loading", "failure"]
       }
     },
     {
@@ -317,11 +269,7 @@
         "source": "frontend/src/pages/settings/ui/SettingsPage.tsx",
         "status": "changed",
         "finding": "Group links use two columns on phones, single-column groups on desktop; every destination retained.",
-        "inspectedStates": [
-          "populated",
-          "loading",
-          "failure"
-        ]
+        "inspectedStates": ["populated", "loading", "failure"]
       }
     },
     {
@@ -338,11 +286,7 @@
         "source": "frontend/src/pages/setup/ui/SetupPage.tsx",
         "status": "checked",
         "finding": "Shell/question compression belongs to T650; this fixture checks the initial setup only.",
-        "inspectedStates": [
-          "populated",
-          "loading",
-          "failure"
-        ]
+        "inspectedStates": ["populated", "loading", "failure"]
       }
     },
     {
@@ -359,11 +303,7 @@
         "source": "frontend/src/pages/writing-tests/ui/WritingTestsPage.tsx",
         "status": "changed",
         "finding": "Factor peers use2x2 compact choices with one help paragraph. Prior T649 candidate baseline2/4/8/16 measured800/850/1202/1906px at390:16 selectors remain one phone column (44px each), while48px Next dock remains732px; handoff asks coordinator to compact current T649 slot presentation without touching behavior.",
-        "inspectedStates": [
-          "populated",
-          "loading",
-          "failure"
-        ]
+        "inspectedStates": ["populated", "loading", "failure"]
       }
     },
     {
@@ -405,11 +345,7 @@
         "source": "frontend/src/pages/model-experiment/ui/WritingTestRecordPage.tsx",
         "status": "checked",
         "finding": "Legacy result keeps contextual return and one comparison surface.",
-        "inspectedStates": [
-          "populated",
-          "loading",
-          "failure"
-        ]
+        "inspectedStates": ["populated", "loading", "failure"]
       }
     },
     {
@@ -426,11 +362,7 @@
         "source": "frontend/src/pages/writing-tests/ui/WritingTestsPage.tsx",
         "status": "changed",
         "finding": "One complete candidate panel is required context for a comparison; current test operation and failure states checked.",
-        "inspectedStates": [
-          "populated",
-          "loading",
-          "failure"
-        ]
+        "inspectedStates": ["populated", "loading", "failure"]
       }
     },
     {
@@ -487,11 +419,7 @@
         "source": "frontend/src/pages/editor/ui/EditorPage.tsx",
         "status": "changed",
         "finding": "Draft title is available before optional generation fields; no duplicated create page title.",
-        "inspectedStates": [
-          "input",
-          "loading",
-          "failure"
-        ]
+        "inspectedStates": ["input", "loading", "failure"]
       }
     },
     {
@@ -508,11 +436,7 @@
         "source": "frontend/src/pages/model-experiment/ui/WritingTestRecordPage.tsx",
         "status": "checked",
         "finding": "Legacy result keeps contextual return and one comparison surface.",
-        "inspectedStates": [
-          "populated",
-          "loading",
-          "failure"
-        ],
+        "inspectedStates": ["populated", "loading", "failure"],
         "redirect": "/tests/records/record"
       }
     },
@@ -530,11 +454,7 @@
         "source": "frontend/src/pages/editor/ui/EditorPage.tsx",
         "status": "changed",
         "finding": "Measurement values use a phone two-column grid and editing gaps shrink; missing-photo error remains required.",
-        "inspectedStates": [
-          "populated",
-          "loading",
-          "failure"
-        ]
+        "inspectedStates": ["populated", "loading", "failure"]
       }
     },
     {
@@ -723,11 +643,7 @@
         "source": "frontend/src/pages/voice/ui/VoiceAnalysisPage.tsx",
         "status": "checked",
         "finding": "Saved analysis and current AI editing presentation belong to T651; baseline saved profile is populated.",
-        "inspectedStates": [
-          "populated",
-          "loading",
-          "failure"
-        ]
+        "inspectedStates": ["populated", "loading", "failure"]
       }
     },
     {
@@ -744,11 +660,7 @@
         "source": "frontend/src/pages/voice/ui/VoiceMaterialsPage.tsx",
         "status": "checked",
         "finding": "Samples/count actions are row based; current voice heading shell belongs to T651.",
-        "inspectedStates": [
-          "populated",
-          "loading",
-          "failure"
-        ]
+        "inspectedStates": ["populated", "loading", "failure"]
       }
     },
     {
@@ -856,11 +768,7 @@
         "source": "frontend/src/pages/spoken-voices/ui/NewSpokenVoicePage.tsx",
         "status": "checked",
         "finding": "Voice creation names profile/description/current work; generated candidate/confirmation capabilities are fixture only.",
-        "inspectedStates": [
-          "input",
-          "loading",
-          "failure"
-        ]
+        "inspectedStates": ["input", "loading", "failure"]
       }
     },
     {
@@ -877,11 +785,7 @@
         "source": "frontend/src/pages/clip/ui/ClipPage.tsx",
         "status": "checked",
         "finding": "Title is first named form field; ratio choice and creation dock remain explicit.",
-        "inspectedStates": [
-          "input",
-          "loading",
-          "failure"
-        ]
+        "inspectedStates": ["input", "loading", "failure"]
       }
     },
     {
@@ -898,11 +802,7 @@
         "source": "frontend/src/pages/clip/ui/ClipPage.tsx",
         "status": "checked",
         "finding": "Phone design gallery was6467px open; explicit design/styles disclosure retains the visible selected-setting summary, desktop starts expanded and can close independently; preserved title/caret/design at keyboard and desktop widths. Final saved result, active/failed jobs and private-video capability limits are distinct.",
-        "inspectedStates": [
-          "populated",
-          "loading",
-          "failure"
-        ]
+        "inspectedStates": ["populated", "loading", "failure"]
       }
     },
     {
@@ -1067,11 +967,7 @@
         "source": "frontend/src/pages/admin/ui/AdminPage.tsx",
         "status": "changed",
         "finding": "Shorter phone section gaps retain account rows, self-assignment constraint and refund review.",
-        "inspectedStates": [
-          "populated",
-          "loading",
-          "failure"
-        ]
+        "inspectedStates": ["populated", "loading", "failure"]
       }
     },
     {
@@ -1088,11 +984,7 @@
         "source": "frontend/src/pages/admin/ui/AdminModelsPage.tsx",
         "status": "changed",
         "finding": "Search/filter group precedes long catalog intro; disabling consequence remains before controls; catalog document gaps compact.",
-        "inspectedStates": [
-          "populated",
-          "loading",
-          "failure"
-        ]
+        "inspectedStates": ["populated", "loading", "failure"]
       }
     },
     {
@@ -1109,11 +1001,7 @@
         "source": "frontend/src/pages/admin/ui/AdminEstimatorPage.tsx",
         "status": "changed",
         "finding": "Each tier pairs observer/writer selectors horizontally even at320px; labels/half-selection constraints retained.",
-        "inspectedStates": [
-          "populated",
-          "loading",
-          "failure"
-        ]
+        "inspectedStates": ["populated", "loading", "failure"]
       }
     },
     {
@@ -1130,11 +1018,7 @@
         "source": "frontend/src/pages/admin/ui/AdminVouchersPage.tsx",
         "status": "changed",
         "finding": "Five named presets plus custom mode use one listbox, custom quantities pair into two columns, all issue validation retained.",
-        "inspectedStates": [
-          "populated",
-          "loading",
-          "failure"
-        ]
+        "inspectedStates": ["populated", "loading", "failure"]
       }
     },
     {
@@ -1151,11 +1035,7 @@
         "source": "frontend/src/pages/admin/ui/AdminCostsPage.tsx",
         "status": "changed",
         "finding": "Smaller phone section gaps retain exchange-rate and measured/unavailable cost quality.",
-        "inspectedStates": [
-          "populated",
-          "loading",
-          "failure"
-        ]
+        "inspectedStates": ["populated", "loading", "failure"]
       }
     },
     {
@@ -1172,11 +1052,7 @@
         "source": "frontend/src/pages/plans/ui/PlansPage.tsx",
         "status": "checked",
         "finding": "Pricing ladder/comparison is required long content; responsive promo dimensions and compact phone heading already exist.",
-        "inspectedStates": [
-          "populated",
-          "loading",
-          "failure"
-        ]
+        "inspectedStates": ["populated", "loading", "failure"]
       }
     },
     {
@@ -1193,11 +1069,7 @@
         "source": "frontend/src/pages/billing/ui/BillingPage.tsx",
         "status": "changed",
         "finding": "Smaller phone section gaps; subscription/payment/history still precede optional purchase/refund forms by financial context.",
-        "inspectedStates": [
-          "populated",
-          "loading",
-          "failure"
-        ]
+        "inspectedStates": ["populated", "loading", "failure"]
       }
     },
     {
@@ -1214,11 +1086,7 @@
         "source": "frontend/src/pages/billing-checkout/ui/BillingCheckoutPage.tsx",
         "status": "changed",
         "finding": "Shorter phone gaps retain tier, term, server quote and committing action; absent/invalid tier is separate from valid quote.",
-        "inspectedStates": [
-          "populated",
-          "loading",
-          "failure"
-        ]
+        "inspectedStates": ["populated", "loading", "failure"]
       }
     },
     {
@@ -1235,11 +1103,7 @@
         "source": "frontend/src/pages/billing-method-success/ui/BillingMethodSuccessPage.tsx",
         "status": "checked",
         "finding": "Absent provider keys intentionally render registration error/return; valid fixture mutation redirects to billing.",
-        "inspectedStates": [
-          "populated",
-          "loading",
-          "failure"
-        ]
+        "inspectedStates": ["populated", "loading", "failure"]
       }
     },
     {
@@ -1256,11 +1120,7 @@
         "source": "frontend/src/pages/billing-method-fail/ui/BillingMethodFailPage.tsx",
         "status": "checked",
         "finding": "Named provider failure/technical detail and valid internal return remain readable.",
-        "inspectedStates": [
-          "populated",
-          "loading",
-          "failure"
-        ]
+        "inspectedStates": ["populated", "loading", "failure"]
       }
     },
     {
@@ -1277,11 +1137,7 @@
         "source": "frontend/src/pages/account/ui/AccountPage.tsx",
         "status": "changed",
         "finding": "Smaller phone section gaps keep account facts and current/new password form together.",
-        "inspectedStates": [
-          "input",
-          "loading",
-          "failure"
-        ]
+        "inspectedStates": ["input", "loading", "failure"]
       }
     },
     {
@@ -1298,11 +1154,7 @@
         "source": "frontend/src/pages/voice/ui/VoiceAnalysisPage.tsx",
         "status": "checked",
         "finding": "Saved analysis and current AI editing presentation belong to T651; baseline saved profile is populated.",
-        "inspectedStates": [
-          "populated",
-          "loading",
-          "failure"
-        ],
+        "inspectedStates": ["populated", "loading", "failure"],
         "redirect": "/voices/voice-default"
       }
     },
@@ -1320,11 +1172,7 @@
         "source": "frontend/src/pages/voice/ui/VoiceMaterialsPage.tsx",
         "status": "checked",
         "finding": "Samples/count actions are row based; current voice heading shell belongs to T651.",
-        "inspectedStates": [
-          "populated",
-          "loading",
-          "failure"
-        ],
+        "inspectedStates": ["populated", "loading", "failure"],
         "redirect": "/voices/voice-default/materials"
       }
     },
@@ -1357,11 +1205,7 @@
         "source": "frontend/src/pages/ai-models/ui/AIModelsPage.tsx",
         "status": "changed",
         "finding": "Smaller phone secondary-section gaps retain three active-stage forms and explicit comparison destinations.",
-        "inspectedStates": [
-          "populated",
-          "loading",
-          "failure"
-        ]
+        "inspectedStates": ["populated", "loading", "failure"]
       }
     },
     {
@@ -1378,11 +1222,7 @@
         "source": "frontend/src/pages/writing-tests/ui/WritingTestsPage.tsx",
         "status": "changed",
         "finding": "Factor peers use 2x2 compact choices with one shared help paragraph; actors and entrants retained.",
-        "inspectedStates": [
-          "populated",
-          "loading",
-          "failure"
-        ],
+        "inspectedStates": ["populated", "loading", "failure"],
         "redirect": "/tests"
       }
     },
@@ -1452,11 +1292,7 @@
         "source": "frontend/src/pages/model-experiment/ui/WritingTestRecordPage.tsx",
         "status": "checked",
         "finding": "Legacy result keeps contextual return and one comparison surface.",
-        "inspectedStates": [
-          "populated",
-          "loading",
-          "failure"
-        ],
+        "inspectedStates": ["populated", "loading", "failure"],
         "redirect": "/tests/records/record"
       }
     }
@@ -1471,10 +1307,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/login",
-      "matchIds": [
-        "__root__",
-        "/login"
-      ],
+      "matchIds": ["__root__", "/login"],
       "header": null,
       "main": {
         "y": 0,
@@ -1547,9 +1380,7 @@
         }
       ],
       "alerts": [],
-      "methods": [
-        "GetMe"
-      ],
+      "methods": ["GetMe"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /login with 로그인",
@@ -1635,10 +1466,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/login",
-      "matchIds": [
-        "__root__",
-        "/login"
-      ],
+      "matchIds": ["__root__", "/login"],
       "header": null,
       "main": {
         "y": 0,
@@ -1711,9 +1539,7 @@
         }
       ],
       "alerts": [],
-      "methods": [
-        "GetMe"
-      ],
+      "methods": ["GetMe"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /login with 로그인",
@@ -1799,10 +1625,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/signup",
-      "matchIds": [
-        "__root__",
-        "/signup"
-      ],
+      "matchIds": ["__root__", "/signup"],
       "header": null,
       "main": {
         "y": 0,
@@ -1865,9 +1688,7 @@
         }
       ],
       "alerts": [],
-      "methods": [
-        "GetMe"
-      ],
+      "methods": ["GetMe"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /signup with 회원가입",
@@ -1953,10 +1774,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/signup",
-      "matchIds": [
-        "__root__",
-        "/signup"
-      ],
+      "matchIds": ["__root__", "/signup"],
       "header": null,
       "main": {
         "y": 0,
@@ -2019,9 +1837,7 @@
         }
       ],
       "alerts": [],
-      "methods": [
-        "GetMe"
-      ],
+      "methods": ["GetMe"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /signup with 회원가입",
@@ -2107,10 +1923,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/login/google/callback",
-      "matchIds": [
-        "__root__",
-        "/login/google/callback"
-      ],
+      "matchIds": ["__root__", "/login/google/callback"],
       "header": null,
       "main": {
         "y": 0,
@@ -2141,12 +1954,8 @@
         "name": "로그인으로"
       },
       "inputs": [],
-      "alerts": [
-        "Google 로그인을 완료하지 못했어요. 다시 시도해 주세요."
-      ],
-      "methods": [
-        "GetMe"
-      ],
+      "alerts": ["Google 로그인을 완료하지 못했어요. 다시 시도해 주세요."],
+      "methods": ["GetMe"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /login/google/callback with  / Google 로그인을 완료하지 못했어요"
@@ -2160,10 +1969,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/login/google/callback",
-      "matchIds": [
-        "__root__",
-        "/login/google/callback"
-      ],
+      "matchIds": ["__root__", "/login/google/callback"],
       "header": null,
       "main": {
         "y": 0,
@@ -2194,12 +2000,8 @@
         "name": "로그인으로"
       },
       "inputs": [],
-      "alerts": [
-        "Google 로그인을 완료하지 못했어요. 다시 시도해 주세요."
-      ],
-      "methods": [
-        "GetMe"
-      ],
+      "alerts": ["Google 로그인을 완료하지 못했어요. 다시 시도해 주세요."],
+      "methods": ["GetMe"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /login/google/callback with  / Google 로그인을 완료하지 못했어요"
@@ -2213,10 +2015,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/verify-email",
-      "matchIds": [
-        "__root__",
-        "/verify-email"
-      ],
+      "matchIds": ["__root__", "/verify-email"],
       "header": null,
       "main": {
         "y": 0,
@@ -2242,10 +2041,7 @@
       },
       "inputs": [],
       "alerts": [],
-      "methods": [
-        "GetMe",
-        "VerifyEmail"
-      ],
+      "methods": ["GetMe", "VerifyEmail"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /verify-email with 이메일 인증 완료"
@@ -2259,10 +2055,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/verify-email",
-      "matchIds": [
-        "__root__",
-        "/verify-email"
-      ],
+      "matchIds": ["__root__", "/verify-email"],
       "header": null,
       "main": {
         "y": 0,
@@ -2288,10 +2081,7 @@
       },
       "inputs": [],
       "alerts": [],
-      "methods": [
-        "GetMe",
-        "VerifyEmail"
-      ],
+      "methods": ["GetMe", "VerifyEmail"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /verify-email with 이메일 인증 완료"
@@ -2305,10 +2095,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/forgot-password",
-      "matchIds": [
-        "__root__",
-        "/forgot-password"
-      ],
+      "matchIds": ["__root__", "/forgot-password"],
       "header": null,
       "main": {
         "y": 0,
@@ -2351,10 +2138,7 @@
         }
       ],
       "alerts": [],
-      "methods": [
-        "GetMe",
-        "VerifyEmail"
-      ],
+      "methods": ["GetMe", "VerifyEmail"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /forgot-password with 비밀번호 찾기",
@@ -2440,10 +2224,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/forgot-password",
-      "matchIds": [
-        "__root__",
-        "/forgot-password"
-      ],
+      "matchIds": ["__root__", "/forgot-password"],
       "header": null,
       "main": {
         "y": 0,
@@ -2486,10 +2267,7 @@
         }
       ],
       "alerts": [],
-      "methods": [
-        "GetMe",
-        "VerifyEmail"
-      ],
+      "methods": ["GetMe", "VerifyEmail"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /forgot-password with 비밀번호 찾기",
@@ -2575,10 +2353,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/reset-password?token=valid-audit-token",
-      "matchIds": [
-        "__root__",
-        "/reset-password"
-      ],
+      "matchIds": ["__root__", "/reset-password"],
       "header": null,
       "main": {
         "y": 0,
@@ -2621,10 +2396,7 @@
         }
       ],
       "alerts": [],
-      "methods": [
-        "GetMe",
-        "VerifyEmail"
-      ],
+      "methods": ["GetMe", "VerifyEmail"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /reset-password with 새 비밀번호 설정",
@@ -2710,10 +2482,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/reset-password?token=valid-audit-token",
-      "matchIds": [
-        "__root__",
-        "/reset-password"
-      ],
+      "matchIds": ["__root__", "/reset-password"],
       "header": null,
       "main": {
         "y": 0,
@@ -2756,10 +2525,7 @@
         }
       ],
       "alerts": [],
-      "methods": [
-        "GetMe",
-        "VerifyEmail"
-      ],
+      "methods": ["GetMe", "VerifyEmail"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /reset-password with 새 비밀번호 설정",
@@ -2845,10 +2611,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/about",
-      "matchIds": [
-        "__root__",
-        "/about"
-      ],
+      "matchIds": ["__root__", "/about"],
       "header": {
         "y": 0,
         "height": 56,
@@ -3000,10 +2763,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/about",
-      "matchIds": [
-        "__root__",
-        "/about"
-      ],
+      "matchIds": ["__root__", "/about"],
       "header": {
         "y": 0,
         "height": 56,
@@ -3155,10 +2915,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/gift/gift",
-      "matchIds": [
-        "__root__",
-        "/gift/$token"
-      ],
+      "matchIds": ["__root__", "/gift/$token"],
       "header": null,
       "main": {
         "y": 0,
@@ -3184,11 +2941,7 @@
       },
       "inputs": [],
       "alerts": [],
-      "methods": [
-        "GetMe",
-        "GetVoucher",
-        "GetMyPlan"
-      ],
+      "methods": ["GetMe", "GetVoucher", "GetMyPlan"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /gift/$token with 1150 크레딧"
@@ -3202,10 +2955,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/gift/gift",
-      "matchIds": [
-        "__root__",
-        "/gift/$token"
-      ],
+      "matchIds": ["__root__", "/gift/$token"],
       "header": null,
       "main": {
         "y": 0,
@@ -3231,11 +2981,7 @@
       },
       "inputs": [],
       "alerts": [],
-      "methods": [
-        "GetMe",
-        "GetVoucher",
-        "GetMyPlan"
-      ],
+      "methods": ["GetMe", "GetVoucher", "GetMyPlan"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /gift/$token with 1150 크레딧"
@@ -3249,11 +2995,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/"],
       "header": {
         "y": 0,
         "height": 64,
@@ -3283,12 +3025,7 @@
       },
       "inputs": [],
       "alerts": [],
-      "methods": [
-        "GetMe",
-        "GetVoucher",
-        "GetMyPlan",
-        "InitializeDefaultSelections"
-      ],
+      "methods": ["GetMe", "GetVoucher", "GetMyPlan", "InitializeDefaultSelections"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /authenticated/ with 당신의 이야기를,\n새로운 작품으로.",
@@ -3315,11 +3052,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/"],
       "header": {
         "y": 0,
         "height": 64,
@@ -3349,12 +3082,7 @@
       },
       "inputs": [],
       "alerts": [],
-      "methods": [
-        "GetMe",
-        "GetVoucher",
-        "GetMyPlan",
-        "InitializeDefaultSelections"
-      ],
+      "methods": ["GetMe", "GetVoucher", "GetMyPlan", "InitializeDefaultSelections"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /authenticated/ with 당신의 이야기를,\n새로운 작품으로.",
@@ -3381,11 +3109,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/library",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/library"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/library"],
       "header": {
         "y": 0,
         "height": 96,
@@ -3415,12 +3139,7 @@
       },
       "inputs": [],
       "alerts": [],
-      "methods": [
-        "GetMe",
-        "GetVoucher",
-        "GetMyPlan",
-        "InitializeDefaultSelections"
-      ],
+      "methods": ["GetMe", "GetVoucher", "GetMyPlan", "InitializeDefaultSelections"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /authenticated/library with 작업 내역"
@@ -3434,11 +3153,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/library",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/library"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/library"],
       "header": {
         "y": 0,
         "height": 96,
@@ -3468,12 +3183,7 @@
       },
       "inputs": [],
       "alerts": [],
-      "methods": [
-        "GetMe",
-        "GetVoucher",
-        "GetMyPlan",
-        "InitializeDefaultSelections"
-      ],
+      "methods": ["GetMe", "GetVoucher", "GetMyPlan", "InitializeDefaultSelections"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /authenticated/library with 작업 내역"
@@ -3487,11 +3197,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/settings",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/settings"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/settings"],
       "header": {
         "y": 0,
         "height": 96,
@@ -3539,12 +3245,7 @@
       },
       "inputs": [],
       "alerts": [],
-      "methods": [
-        "GetMe",
-        "GetVoucher",
-        "GetMyPlan",
-        "InitializeDefaultSelections"
-      ],
+      "methods": ["GetMe", "GetVoucher", "GetMyPlan", "InitializeDefaultSelections"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /authenticated/settings with 설정 / 글쓰기 / 영상 만들기 / AI와 계정",
@@ -3571,11 +3272,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/settings",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/settings"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/settings"],
       "header": {
         "y": 0,
         "height": 96,
@@ -3623,12 +3320,7 @@
       },
       "inputs": [],
       "alerts": [],
-      "methods": [
-        "GetMe",
-        "GetVoucher",
-        "GetMyPlan",
-        "InitializeDefaultSelections"
-      ],
+      "methods": ["GetMe", "GetVoucher", "GetMyPlan", "InitializeDefaultSelections"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /authenticated/settings with 설정 / 글쓰기 / 영상 만들기 / AI와 계정",
@@ -3655,11 +3347,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/setup?restart=false",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/setup"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/setup"],
       "header": {
         "y": 0,
         "height": 120,
@@ -3715,11 +3403,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/setup?restart=false",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/setup"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/setup"],
       "header": {
         "y": 0,
         "height": 120,
@@ -3775,11 +3459,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/tests?factor=model&stage=write&count=2",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests"],
       "header": {
         "y": 0,
         "height": 96,
@@ -3853,11 +3533,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/tests?factor=model&stage=write&count=2",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests"],
       "header": {
         "y": 0,
         "height": 96,
@@ -3931,11 +3607,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/tests/history",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests/history"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests/history"],
       "header": {
         "y": 0,
         "height": 164,
@@ -4016,11 +3688,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/tests/history",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests/history"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests/history"],
       "header": {
         "y": 0,
         "height": 164,
@@ -4101,11 +3769,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/tests/records/record",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests/records/$id"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests/records/$id"],
       "header": {
         "y": 0,
         "height": 148,
@@ -4163,11 +3827,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/tests/records/record",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests/records/$id"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests/records/$id"],
       "header": {
         "y": 0,
         "height": 148,
@@ -4225,11 +3885,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/tests/test",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests/$testId"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests/$testId"],
       "header": {
         "y": 0,
         "height": 120,
@@ -4312,11 +3968,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/tests/test",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests/$testId"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests/$testId"],
       "header": {
         "y": 0,
         "height": 120,
@@ -4783,11 +4435,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/tests/records/record",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests/records/$id"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests/records/$id"],
       "header": {
         "y": 0,
         "height": 148,
@@ -4846,11 +4494,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/tests/records/record",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests/records/$id"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests/records/$id"],
       "header": {
         "y": 0,
         "height": 148,
@@ -6323,11 +5967,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/tests/history?stage=voice&voiceId=voice-default&entry=%2Fvoices",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests/history"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests/history"],
       "header": {
         "y": 0,
         "height": 164,
@@ -6413,11 +6053,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/tests/history?stage=voice&voiceId=voice-default&entry=%2Fvoices",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests/history"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests/history"],
       "header": {
         "y": 0,
         "height": 164,
@@ -7127,9 +6763,7 @@
           "label": "클립 제목"
         }
       ],
-      "alerts": [
-        "제목은 1~100자로 입력해 주세요."
-      ],
+      "alerts": ["제목은 1~100자로 입력해 주세요."],
       "methods": [
         "GetMe",
         "GetMyPlan",
@@ -7217,9 +6851,7 @@
           "label": "클립 제목"
         }
       ],
-      "alerts": [
-        "제목은 1~100자로 입력해 주세요."
-      ],
+      "alerts": ["제목은 1~100자로 입력해 주세요."],
       "methods": [
         "GetMe",
         "GetMyPlan",
@@ -8349,12 +7981,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/admin",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/admin",
-        "/authenticated/admin/"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/admin", "/authenticated/admin/"],
       "header": {
         "y": 0,
         "height": 120,
@@ -8438,12 +8065,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/admin",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/admin",
-        "/authenticated/admin/"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/admin", "/authenticated/admin/"],
       "header": {
         "y": 0,
         "height": 120,
@@ -9849,11 +9471,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/plans",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/plans"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/plans"],
       "header": {
         "y": 0,
         "height": 120,
@@ -10002,11 +9620,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/plans",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/plans"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/plans"],
       "header": {
         "y": 0,
         "height": 120,
@@ -10155,11 +9769,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/billing",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/billing"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/billing"],
       "header": {
         "y": 0,
         "height": 120,
@@ -10271,9 +9881,7 @@
           "label": null
         }
       ],
-      "alerts": [
-        "크레딧 구매는 활성 유료 구독에서만 가능해요."
-      ],
+      "alerts": ["크레딧 구매는 활성 유료 구독에서만 가능해요."],
       "methods": [
         "GetMe",
         "GetMyPlan",
@@ -10412,11 +10020,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/billing",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/billing"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/billing"],
       "header": {
         "y": 0,
         "height": 120,
@@ -10528,9 +10132,7 @@
           "label": null
         }
       ],
-      "alerts": [
-        "크레딧 구매는 활성 유료 구독에서만 가능해요."
-      ],
+      "alerts": ["크레딧 구매는 활성 유료 구독에서만 가능해요."],
       "methods": [
         "GetMe",
         "GetMyPlan",
@@ -10669,11 +10271,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/billing/checkout",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/billing/checkout"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/billing/checkout"],
       "header": {
         "y": 0,
         "height": 148,
@@ -10697,9 +10295,7 @@
       "firstInput": null,
       "firstAction": null,
       "inputs": [],
-      "alerts": [
-        "구독할 유료 플랜을 다시 선택해 주세요."
-      ],
+      "alerts": ["구독할 유료 플랜을 다시 선택해 주세요."],
       "methods": [
         "GetMe",
         "GetMyPlan",
@@ -10754,11 +10350,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/billing/checkout",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/billing/checkout"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/billing/checkout"],
       "header": {
         "y": 0,
         "height": 120,
@@ -10782,9 +10374,7 @@
       "firstInput": null,
       "firstAction": null,
       "inputs": [],
-      "alerts": [
-        "구독할 유료 플랜을 다시 선택해 주세요."
-      ],
+      "alerts": ["구독할 유료 플랜을 다시 선택해 주세요."],
       "methods": [
         "GetMe",
         "GetMyPlan",
@@ -10839,11 +10429,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/billing/method/success",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/billing/method/success"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/billing/method/success"],
       "header": {
         "y": 0,
         "height": 148,
@@ -10872,9 +10458,7 @@
         "name": "결제 관리로 돌아가기"
       },
       "inputs": [],
-      "alerts": [
-        "카드 등록 응답이 올바르지 않습니다."
-      ],
+      "alerts": ["카드 등록 응답이 올바르지 않습니다."],
       "methods": [
         "GetMe",
         "GetMyPlan",
@@ -10929,11 +10513,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/billing/method/success",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/billing/method/success"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/billing/method/success"],
       "header": {
         "y": 0,
         "height": 148,
@@ -10962,9 +10542,7 @@
         "name": "결제 관리로 돌아가기"
       },
       "inputs": [],
-      "alerts": [
-        "카드 등록 응답이 올바르지 않습니다."
-      ],
+      "alerts": ["카드 등록 응답이 올바르지 않습니다."],
       "methods": [
         "GetMe",
         "GetMyPlan",
@@ -11019,11 +10597,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/billing/method/fail",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/billing/method/fail"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/billing/method/fail"],
       "header": {
         "y": 0,
         "height": 148,
@@ -11052,9 +10626,7 @@
         "name": "결제 관리로 돌아가기"
       },
       "inputs": [],
-      "alerts": [
-        "카드 등록을 완료하지 못했습니다. 다시 시도해 주세요."
-      ],
+      "alerts": ["카드 등록을 완료하지 못했습니다. 다시 시도해 주세요."],
       "methods": [
         "GetMe",
         "GetMyPlan",
@@ -11109,11 +10681,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/billing/method/fail",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/billing/method/fail"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/billing/method/fail"],
       "header": {
         "y": 0,
         "height": 148,
@@ -11142,9 +10710,7 @@
         "name": "결제 관리로 돌아가기"
       },
       "inputs": [],
-      "alerts": [
-        "카드 등록을 완료하지 못했습니다. 다시 시도해 주세요."
-      ],
+      "alerts": ["카드 등록을 완료하지 못했습니다. 다시 시도해 주세요."],
       "methods": [
         "GetMe",
         "GetMyPlan",
@@ -11199,11 +10765,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/account",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/account"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/account"],
       "header": {
         "y": 0,
         "height": 120,
@@ -11410,11 +10972,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/account",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/account"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/account"],
       "header": {
         "y": 0,
         "height": 120,
@@ -12233,11 +11791,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/tests?factor=model&stage=write&count=2",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests"],
       "header": {
         "y": 0,
         "height": 96,
@@ -12328,11 +11882,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/tests?factor=model&stage=write&count=2",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests"],
       "header": {
         "y": 0,
         "height": 96,
@@ -12423,11 +11973,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/tests/history",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests/history"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests/history"],
       "header": {
         "y": 0,
         "height": 164,
@@ -12536,11 +12082,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/tests/history",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests/history"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests/history"],
       "header": {
         "y": 0,
         "height": 164,
@@ -12649,11 +12191,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/tests/history",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests/history"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests/history"],
       "header": {
         "y": 0,
         "height": 164,
@@ -12762,11 +12300,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/tests/history",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests/history"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests/history"],
       "header": {
         "y": 0,
         "height": 164,
@@ -12875,11 +12409,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/tests/records/record",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests/records/$id"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests/records/$id"],
       "header": {
         "y": 0,
         "height": 148,
@@ -12964,11 +12494,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/tests/records/record",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests/records/$id"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests/records/$id"],
       "header": {
         "y": 0,
         "height": 148,
@@ -13053,10 +12579,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/login",
-      "matchIds": [
-        "__root__",
-        "/login"
-      ],
+      "matchIds": ["__root__", "/login"],
       "header": null,
       "main": {
         "y": 0,
@@ -13129,9 +12652,7 @@
         }
       ],
       "alerts": [],
-      "methods": [
-        "GetMe"
-      ],
+      "methods": ["GetMe"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /login with 로그인",
@@ -13217,10 +12738,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/login",
-      "matchIds": [
-        "__root__",
-        "/login"
-      ],
+      "matchIds": ["__root__", "/login"],
       "header": null,
       "main": {
         "y": 0,
@@ -13293,9 +12811,7 @@
         }
       ],
       "alerts": [],
-      "methods": [
-        "GetMe"
-      ],
+      "methods": ["GetMe"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /login with 로그인",
@@ -13381,10 +12897,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/signup",
-      "matchIds": [
-        "__root__",
-        "/signup"
-      ],
+      "matchIds": ["__root__", "/signup"],
       "header": null,
       "main": {
         "y": 0,
@@ -13447,9 +12960,7 @@
         }
       ],
       "alerts": [],
-      "methods": [
-        "GetMe"
-      ],
+      "methods": ["GetMe"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /signup with 회원가입",
@@ -13535,10 +13046,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/login/google/callback",
-      "matchIds": [
-        "__root__",
-        "/login/google/callback"
-      ],
+      "matchIds": ["__root__", "/login/google/callback"],
       "header": null,
       "main": {
         "y": 0,
@@ -13569,12 +13077,8 @@
         "name": "로그인으로"
       },
       "inputs": [],
-      "alerts": [
-        "Google 로그인을 완료하지 못했어요. 다시 시도해 주세요."
-      ],
-      "methods": [
-        "GetMe"
-      ],
+      "alerts": ["Google 로그인을 완료하지 못했어요. 다시 시도해 주세요."],
+      "methods": ["GetMe"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /login/google/callback with  / Google 로그인을 완료하지 못했어요"
@@ -13588,10 +13092,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/verify-email",
-      "matchIds": [
-        "__root__",
-        "/verify-email"
-      ],
+      "matchIds": ["__root__", "/verify-email"],
       "header": null,
       "main": {
         "y": 0,
@@ -13617,10 +13118,7 @@
       },
       "inputs": [],
       "alerts": [],
-      "methods": [
-        "GetMe",
-        "VerifyEmail"
-      ],
+      "methods": ["GetMe", "VerifyEmail"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /verify-email with 이메일 인증 완료"
@@ -13634,10 +13132,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/forgot-password",
-      "matchIds": [
-        "__root__",
-        "/forgot-password"
-      ],
+      "matchIds": ["__root__", "/forgot-password"],
       "header": null,
       "main": {
         "y": 0,
@@ -13680,10 +13175,7 @@
         }
       ],
       "alerts": [],
-      "methods": [
-        "GetMe",
-        "VerifyEmail"
-      ],
+      "methods": ["GetMe", "VerifyEmail"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /forgot-password with 비밀번호 찾기",
@@ -13769,10 +13261,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/reset-password?token=valid-audit-token",
-      "matchIds": [
-        "__root__",
-        "/reset-password"
-      ],
+      "matchIds": ["__root__", "/reset-password"],
       "header": null,
       "main": {
         "y": 0,
@@ -13815,10 +13304,7 @@
         }
       ],
       "alerts": [],
-      "methods": [
-        "GetMe",
-        "VerifyEmail"
-      ],
+      "methods": ["GetMe", "VerifyEmail"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /reset-password with 새 비밀번호 설정",
@@ -13904,10 +13390,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/signup",
-      "matchIds": [
-        "__root__",
-        "/signup"
-      ],
+      "matchIds": ["__root__", "/signup"],
       "header": null,
       "main": {
         "y": 0,
@@ -13970,9 +13453,7 @@
         }
       ],
       "alerts": [],
-      "methods": [
-        "GetMe"
-      ],
+      "methods": ["GetMe"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /signup with 회원가입",
@@ -14058,10 +13539,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/about",
-      "matchIds": [
-        "__root__",
-        "/about"
-      ],
+      "matchIds": ["__root__", "/about"],
       "header": {
         "y": 0,
         "height": 56,
@@ -14213,10 +13691,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/gift/gift",
-      "matchIds": [
-        "__root__",
-        "/gift/$token"
-      ],
+      "matchIds": ["__root__", "/gift/$token"],
       "header": null,
       "main": {
         "y": 0,
@@ -14242,11 +13717,7 @@
       },
       "inputs": [],
       "alerts": [],
-      "methods": [
-        "GetMe",
-        "GetVoucher",
-        "GetMyPlan"
-      ],
+      "methods": ["GetMe", "GetVoucher", "GetMyPlan"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /gift/$token with 1150 크레딧"
@@ -14260,11 +13731,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/"],
       "header": {
         "y": 0,
         "height": 64,
@@ -14294,12 +13761,7 @@
       },
       "inputs": [],
       "alerts": [],
-      "methods": [
-        "GetMe",
-        "GetVoucher",
-        "GetMyPlan",
-        "InitializeDefaultSelections"
-      ],
+      "methods": ["GetMe", "GetVoucher", "GetMyPlan", "InitializeDefaultSelections"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /authenticated/ with 당신의 이야기를,\n새로운 작품으로.",
@@ -14326,10 +13788,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/login/google/callback",
-      "matchIds": [
-        "__root__",
-        "/login/google/callback"
-      ],
+      "matchIds": ["__root__", "/login/google/callback"],
       "header": null,
       "main": {
         "y": 0,
@@ -14360,12 +13819,8 @@
         "name": "로그인으로"
       },
       "inputs": [],
-      "alerts": [
-        "Google 로그인을 완료하지 못했어요. 다시 시도해 주세요."
-      ],
-      "methods": [
-        "GetMe"
-      ],
+      "alerts": ["Google 로그인을 완료하지 못했어요. 다시 시도해 주세요."],
+      "methods": ["GetMe"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /login/google/callback with  / Google 로그인을 완료하지 못했어요"
@@ -14379,11 +13834,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/library",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/library"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/library"],
       "header": {
         "y": 0,
         "height": 96,
@@ -14413,12 +13864,7 @@
       },
       "inputs": [],
       "alerts": [],
-      "methods": [
-        "GetMe",
-        "GetVoucher",
-        "GetMyPlan",
-        "InitializeDefaultSelections"
-      ],
+      "methods": ["GetMe", "GetVoucher", "GetMyPlan", "InitializeDefaultSelections"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /authenticated/library with 작업 내역"
@@ -14432,10 +13878,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/verify-email",
-      "matchIds": [
-        "__root__",
-        "/verify-email"
-      ],
+      "matchIds": ["__root__", "/verify-email"],
       "header": null,
       "main": {
         "y": 0,
@@ -14461,10 +13904,7 @@
       },
       "inputs": [],
       "alerts": [],
-      "methods": [
-        "GetMe",
-        "VerifyEmail"
-      ],
+      "methods": ["GetMe", "VerifyEmail"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /verify-email with 이메일 인증 완료"
@@ -14478,11 +13918,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/settings",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/settings"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/settings"],
       "header": {
         "y": 0,
         "height": 96,
@@ -14530,12 +13966,7 @@
       },
       "inputs": [],
       "alerts": [],
-      "methods": [
-        "GetMe",
-        "GetVoucher",
-        "GetMyPlan",
-        "InitializeDefaultSelections"
-      ],
+      "methods": ["GetMe", "GetVoucher", "GetMyPlan", "InitializeDefaultSelections"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /authenticated/settings with 설정 / 글쓰기 / 영상 만들기 / AI와 계정",
@@ -14562,10 +13993,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/forgot-password",
-      "matchIds": [
-        "__root__",
-        "/forgot-password"
-      ],
+      "matchIds": ["__root__", "/forgot-password"],
       "header": null,
       "main": {
         "y": 0,
@@ -14608,10 +14036,7 @@
         }
       ],
       "alerts": [],
-      "methods": [
-        "GetMe",
-        "VerifyEmail"
-      ],
+      "methods": ["GetMe", "VerifyEmail"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /forgot-password with 비밀번호 찾기",
@@ -14697,11 +14122,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/setup?restart=false",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/setup"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/setup"],
       "header": {
         "y": 0,
         "height": 120,
@@ -14757,10 +14178,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/reset-password?token=valid-audit-token",
-      "matchIds": [
-        "__root__",
-        "/reset-password"
-      ],
+      "matchIds": ["__root__", "/reset-password"],
       "header": null,
       "main": {
         "y": 0,
@@ -14803,10 +14221,7 @@
         }
       ],
       "alerts": [],
-      "methods": [
-        "GetMe",
-        "VerifyEmail"
-      ],
+      "methods": ["GetMe", "VerifyEmail"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /reset-password with 새 비밀번호 설정",
@@ -14892,11 +14307,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/tests?factor=model&stage=write&count=2",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests"],
       "header": {
         "y": 0,
         "height": 96,
@@ -14970,11 +14381,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/tests/history",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests/history"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests/history"],
       "header": {
         "y": 0,
         "height": 164,
@@ -15055,11 +14462,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/tests/records/record",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests/records/$id"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests/records/$id"],
       "header": {
         "y": 0,
         "height": 120,
@@ -15117,11 +14520,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/tests/test",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests/$testId"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests/$testId"],
       "header": {
         "y": 0,
         "height": 120,
@@ -15396,11 +14795,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/tests/records/record",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests/records/$id"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests/records/$id"],
       "header": {
         "y": 0,
         "height": 120,
@@ -16003,10 +15398,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/about",
-      "matchIds": [
-        "__root__",
-        "/about"
-      ],
+      "matchIds": ["__root__", "/about"],
       "header": {
         "y": 0,
         "height": 56,
@@ -16242,10 +15634,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/gift/gift",
-      "matchIds": [
-        "__root__",
-        "/gift/$token"
-      ],
+      "matchIds": ["__root__", "/gift/$token"],
       "header": null,
       "main": {
         "y": 0,
@@ -16271,11 +15660,7 @@
       },
       "inputs": [],
       "alerts": [],
-      "methods": [
-        "GetMe",
-        "GetVoucher",
-        "GetMyPlan"
-      ],
+      "methods": ["GetMe", "GetVoucher", "GetMyPlan"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /gift/$token with 1150 크레딧"
@@ -16368,11 +15753,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/"],
       "header": {
         "y": 0,
         "height": 64,
@@ -16402,12 +15783,7 @@
       },
       "inputs": [],
       "alerts": [],
-      "methods": [
-        "GetMe",
-        "GetVoucher",
-        "GetMyPlan",
-        "InitializeDefaultSelections"
-      ],
+      "methods": ["GetMe", "GetVoucher", "GetMyPlan", "InitializeDefaultSelections"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /authenticated/ with 당신의 이야기를,\n새로운 작품으로.",
@@ -16434,11 +15810,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/tests/history?stage=voice&voiceId=voice-default&entry=%2Fvoices",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests/history"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests/history"],
       "header": {
         "y": 0,
         "height": 164,
@@ -16858,9 +16230,7 @@
           "label": "클립 제목"
         }
       ],
-      "alerts": [
-        "제목은 1~100자로 입력해 주세요."
-      ],
+      "alerts": ["제목은 1~100자로 입력해 주세요."],
       "methods": [
         "GetMe",
         "GetMyPlan",
@@ -17175,11 +16545,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/library",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/library"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/library"],
       "header": {
         "y": 0,
         "height": 96,
@@ -17209,12 +16575,7 @@
       },
       "inputs": [],
       "alerts": [],
-      "methods": [
-        "GetMe",
-        "GetVoucher",
-        "GetMyPlan",
-        "InitializeDefaultSelections"
-      ],
+      "methods": ["GetMe", "GetVoucher", "GetMyPlan", "InitializeDefaultSelections"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /authenticated/library with 작업 내역"
@@ -17315,11 +16676,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/settings",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/settings"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/settings"],
       "header": {
         "y": 0,
         "height": 96,
@@ -17367,12 +16724,7 @@
       },
       "inputs": [],
       "alerts": [],
-      "methods": [
-        "GetMe",
-        "GetVoucher",
-        "GetMyPlan",
-        "InitializeDefaultSelections"
-      ],
+      "methods": ["GetMe", "GetVoucher", "GetMyPlan", "InitializeDefaultSelections"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /authenticated/settings with 설정 / 글쓰기 / 영상 만들기 / AI와 계정",
@@ -17584,12 +16936,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/admin",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/admin",
-        "/authenticated/admin/"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/admin", "/authenticated/admin/"],
       "header": {
         "y": 0,
         "height": 120,
@@ -18334,11 +17681,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/plans",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/plans"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/plans"],
       "header": {
         "y": 0,
         "height": 120,
@@ -18487,11 +17830,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/billing",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/billing"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/billing"],
       "header": {
         "y": 0,
         "height": 120,
@@ -18603,9 +17942,7 @@
           "label": null
         }
       ],
-      "alerts": [
-        "크레딧 구매는 활성 유료 구독에서만 가능해요."
-      ],
+      "alerts": ["크레딧 구매는 활성 유료 구독에서만 가능해요."],
       "methods": [
         "GetMe",
         "GetMyPlan",
@@ -18744,11 +18081,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/billing/checkout",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/billing/checkout"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/billing/checkout"],
       "header": {
         "y": 0,
         "height": 120,
@@ -18772,9 +18105,7 @@
       "firstInput": null,
       "firstAction": null,
       "inputs": [],
-      "alerts": [
-        "구독할 유료 플랜을 다시 선택해 주세요."
-      ],
+      "alerts": ["구독할 유료 플랜을 다시 선택해 주세요."],
       "methods": [
         "GetMe",
         "GetMyPlan",
@@ -18829,11 +18160,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/billing/method/success",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/billing/method/success"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/billing/method/success"],
       "header": {
         "y": 0,
         "height": 120,
@@ -18862,9 +18189,7 @@
         "name": "결제 관리로 돌아가기"
       },
       "inputs": [],
-      "alerts": [
-        "카드 등록 응답이 올바르지 않습니다."
-      ],
+      "alerts": ["카드 등록 응답이 올바르지 않습니다."],
       "methods": [
         "GetMe",
         "GetMyPlan",
@@ -18919,11 +18244,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/setup?restart=false",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/setup"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/setup"],
       "header": {
         "y": 0,
         "height": 120,
@@ -18979,11 +18300,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/billing/method/fail",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/billing/method/fail"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/billing/method/fail"],
       "header": {
         "y": 0,
         "height": 120,
@@ -19012,9 +18329,7 @@
         "name": "결제 관리로 돌아가기"
       },
       "inputs": [],
-      "alerts": [
-        "카드 등록을 완료하지 못했습니다. 다시 시도해 주세요."
-      ],
+      "alerts": ["카드 등록을 완료하지 못했습니다. 다시 시도해 주세요."],
       "methods": [
         "GetMe",
         "GetMyPlan",
@@ -19069,11 +18384,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/account",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/account"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/account"],
       "header": {
         "y": 0,
         "height": 120,
@@ -19586,11 +18897,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/tests?factor=model&stage=write&count=2",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests"],
       "header": {
         "y": 0,
         "height": 96,
@@ -19673,11 +18980,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/tests?factor=model&stage=write&count=2",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests"],
       "header": {
         "y": 0,
         "height": 96,
@@ -19768,11 +19071,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/tests/history",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests/history"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests/history"],
       "header": {
         "y": 0,
         "height": 164,
@@ -19881,11 +19180,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/tests/history",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests/history"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests/history"],
       "header": {
         "y": 0,
         "height": 164,
@@ -19994,11 +19289,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/tests/records/record",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests/records/$id"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests/records/$id"],
       "header": {
         "y": 0,
         "height": 120,
@@ -20083,11 +19374,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/tests/history",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests/history"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests/history"],
       "header": {
         "y": 0,
         "height": 120,
@@ -20161,11 +19448,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/tests/records/record",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests/records/$id"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests/records/$id"],
       "header": {
         "y": 0,
         "height": 120,
@@ -20223,11 +19506,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/tests/test",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests/$testId"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests/$testId"],
       "header": {
         "y": 0,
         "height": 120,
@@ -20498,10 +19777,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/login",
-      "matchIds": [
-        "__root__",
-        "/login"
-      ],
+      "matchIds": ["__root__", "/login"],
       "header": null,
       "main": {
         "y": 0,
@@ -20574,9 +19850,7 @@
         }
       ],
       "alerts": [],
-      "methods": [
-        "GetMe"
-      ],
+      "methods": ["GetMe"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /login with 로그인",
@@ -20662,11 +19936,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/tests/records/record",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests/records/$id"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests/records/$id"],
       "header": {
         "y": 0,
         "height": 120,
@@ -20889,10 +20159,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/signup",
-      "matchIds": [
-        "__root__",
-        "/signup"
-      ],
+      "matchIds": ["__root__", "/signup"],
       "header": null,
       "main": {
         "y": 0,
@@ -20955,9 +20222,7 @@
         }
       ],
       "alerts": [],
-      "methods": [
-        "GetMe"
-      ],
+      "methods": ["GetMe"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /signup with 회원가입",
@@ -21268,10 +20533,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/login/google/callback",
-      "matchIds": [
-        "__root__",
-        "/login/google/callback"
-      ],
+      "matchIds": ["__root__", "/login/google/callback"],
       "header": null,
       "main": {
         "y": 0,
@@ -21302,12 +20564,8 @@
         "name": "로그인으로"
       },
       "inputs": [],
-      "alerts": [
-        "Google 로그인을 완료하지 못했어요. 다시 시도해 주세요."
-      ],
-      "methods": [
-        "GetMe"
-      ],
+      "alerts": ["Google 로그인을 완료하지 못했어요. 다시 시도해 주세요."],
+      "methods": ["GetMe"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /login/google/callback with  / Google 로그인을 완료하지 못했어요"
@@ -21397,10 +20655,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/verify-email",
-      "matchIds": [
-        "__root__",
-        "/verify-email"
-      ],
+      "matchIds": ["__root__", "/verify-email"],
       "header": null,
       "main": {
         "y": 0,
@@ -21426,10 +20681,7 @@
       },
       "inputs": [],
       "alerts": [],
-      "methods": [
-        "GetMe",
-        "VerifyEmail"
-      ],
+      "methods": ["GetMe", "VerifyEmail"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /verify-email with 이메일 인증 완료"
@@ -21443,10 +20695,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/forgot-password",
-      "matchIds": [
-        "__root__",
-        "/forgot-password"
-      ],
+      "matchIds": ["__root__", "/forgot-password"],
       "header": null,
       "main": {
         "y": 0,
@@ -21489,10 +20738,7 @@
         }
       ],
       "alerts": [],
-      "methods": [
-        "GetMe",
-        "VerifyEmail"
-      ],
+      "methods": ["GetMe", "VerifyEmail"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /forgot-password with 비밀번호 찾기",
@@ -21818,10 +21064,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/reset-password?token=valid-audit-token",
-      "matchIds": [
-        "__root__",
-        "/reset-password"
-      ],
+      "matchIds": ["__root__", "/reset-password"],
       "header": null,
       "main": {
         "y": 0,
@@ -21864,10 +21107,7 @@
         }
       ],
       "alerts": [],
-      "methods": [
-        "GetMe",
-        "VerifyEmail"
-      ],
+      "methods": ["GetMe", "VerifyEmail"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /reset-password with 새 비밀번호 설정",
@@ -21953,11 +21193,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/tests/history?stage=voice&voiceId=voice-default&entry=%2Fvoices",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests/history"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests/history"],
       "header": {
         "y": 0,
         "height": 164,
@@ -22369,9 +21605,7 @@
           "label": "클립 제목"
         }
       ],
-      "alerts": [
-        "제목은 1~100자로 입력해 주세요."
-      ],
+      "alerts": ["제목은 1~100자로 입력해 주세요."],
       "methods": [
         "GetMe",
         "GetMyPlan",
@@ -22860,10 +22094,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/about",
-      "matchIds": [
-        "__root__",
-        "/about"
-      ],
+      "matchIds": ["__root__", "/about"],
       "header": {
         "y": 0,
         "height": 56,
@@ -23113,10 +22344,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/gift/gift",
-      "matchIds": [
-        "__root__",
-        "/gift/$token"
-      ],
+      "matchIds": ["__root__", "/gift/$token"],
       "header": null,
       "main": {
         "y": 0,
@@ -23142,11 +22370,7 @@
       },
       "inputs": [],
       "alerts": [],
-      "methods": [
-        "GetMe",
-        "GetVoucher",
-        "GetMyPlan"
-      ],
+      "methods": ["GetMe", "GetVoucher", "GetMyPlan"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /gift/$token with 1150 크레딧"
@@ -23160,11 +22384,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/"],
       "header": {
         "y": 0,
         "height": 64,
@@ -23194,12 +22414,7 @@
       },
       "inputs": [],
       "alerts": [],
-      "methods": [
-        "GetMe",
-        "GetVoucher",
-        "GetMyPlan",
-        "InitializeDefaultSelections"
-      ],
+      "methods": ["GetMe", "GetVoucher", "GetMyPlan", "InitializeDefaultSelections"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /authenticated/ with 당신의 이야기를,\n새로운 작품으로.",
@@ -23226,12 +22441,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/admin",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/admin",
-        "/authenticated/admin/"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/admin", "/authenticated/admin/"],
       "header": {
         "y": 0,
         "height": 120,
@@ -23403,12 +22613,7 @@
         }
       ],
       "alerts": [],
-      "methods": [
-        "GetMe",
-        "GetMyPlan",
-        "ListCatalog",
-        "InitializeDefaultSelections"
-      ],
+      "methods": ["GetMe", "GetMyPlan", "ListCatalog", "InitializeDefaultSelections"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /authenticated/admin/models with 운영 관리 / 모델 관리",
@@ -23506,11 +22711,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/library",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/library"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/library"],
       "header": {
         "y": 0,
         "height": 96,
@@ -23540,12 +22741,7 @@
       },
       "inputs": [],
       "alerts": [],
-      "methods": [
-        "GetMe",
-        "GetVoucher",
-        "GetMyPlan",
-        "InitializeDefaultSelections"
-      ],
+      "methods": ["GetMe", "GetVoucher", "GetMyPlan", "InitializeDefaultSelections"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /authenticated/library with 작업 내역"
@@ -23559,11 +22755,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/settings",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/settings"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/settings"],
       "header": {
         "y": 0,
         "height": 96,
@@ -23611,12 +22803,7 @@
       },
       "inputs": [],
       "alerts": [],
-      "methods": [
-        "GetMe",
-        "GetVoucher",
-        "GetMyPlan",
-        "InitializeDefaultSelections"
-      ],
+      "methods": ["GetMe", "GetVoucher", "GetMyPlan", "InitializeDefaultSelections"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /authenticated/settings with 설정 / 글쓰기 / 영상 만들기 / AI와 계정",
@@ -23643,11 +22830,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/setup?restart=false",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/setup"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/setup"],
       "header": {
         "y": 0,
         "height": 120,
@@ -23768,12 +22951,7 @@
       },
       "inputs": [],
       "alerts": [],
-      "methods": [
-        "GetMe",
-        "GetMyPlan",
-        "ListCatalog",
-        "InitializeDefaultSelections"
-      ],
+      "methods": ["GetMe", "GetMyPlan", "ListCatalog", "InitializeDefaultSelections"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /authenticated/admin/estimator with 운영 관리 / 편수 기준 조합 / 가성비 / 밸런스 / 고급 / 최고"
@@ -24014,11 +23192,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/tests?factor=model&stage=write&count=2",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests"],
       "header": {
         "y": 0,
         "height": 96,
@@ -24092,11 +23266,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/tests/history",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests/history"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests/history"],
       "header": {
         "y": 0,
         "height": 164,
@@ -24177,11 +23347,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/tests/records/record",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests/records/$id"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests/records/$id"],
       "header": {
         "y": 0,
         "height": 148,
@@ -24239,11 +23405,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/tests/test",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests/$testId"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests/$testId"],
       "header": {
         "y": 0,
         "height": 120,
@@ -24518,11 +23680,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/tests/records/record",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests/records/$id"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests/records/$id"],
       "header": {
         "y": 0,
         "height": 148,
@@ -24996,11 +24154,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/plans",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/plans"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/plans"],
       "header": {
         "y": 0,
         "height": 120,
@@ -25224,11 +24378,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/billing",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/billing"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/billing"],
       "header": {
         "y": 0,
         "height": 120,
@@ -25340,9 +24490,7 @@
           "label": null
         }
       ],
-      "alerts": [
-        "크레딧 구매는 활성 유료 구독에서만 가능해요."
-      ],
+      "alerts": ["크레딧 구매는 활성 유료 구독에서만 가능해요."],
       "methods": [
         "GetMe",
         "GetMyPlan",
@@ -25797,11 +24945,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/tests/history?stage=voice&voiceId=voice-default&entry=%2Fvoices",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests/history"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests/history"],
       "header": {
         "y": 0,
         "height": 164,
@@ -26221,9 +25365,7 @@
           "label": "클립 제목"
         }
       ],
-      "alerts": [
-        "제목은 1~100자로 입력해 주세요."
-      ],
+      "alerts": ["제목은 1~100자로 입력해 주세요."],
       "methods": [
         "GetMe",
         "GetMyPlan",
@@ -26364,11 +25506,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/billing/checkout",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/billing/checkout"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/billing/checkout"],
       "header": {
         "y": 0,
         "height": 120,
@@ -26392,9 +25530,7 @@
       "firstInput": null,
       "firstAction": null,
       "inputs": [],
-      "alerts": [
-        "구독할 유료 플랜을 다시 선택해 주세요."
-      ],
+      "alerts": ["구독할 유료 플랜을 다시 선택해 주세요."],
       "methods": [
         "GetMe",
         "GetMyPlan",
@@ -26536,11 +25672,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/billing/method/success",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/billing/method/success"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/billing/method/success"],
       "header": {
         "y": 0,
         "height": 148,
@@ -26569,9 +25701,7 @@
         "name": "결제 관리로 돌아가기"
       },
       "inputs": [],
-      "alerts": [
-        "카드 등록 응답이 올바르지 않습니다."
-      ],
+      "alerts": ["카드 등록 응답이 올바르지 않습니다."],
       "methods": [
         "GetMe",
         "GetMyPlan",
@@ -26626,11 +25756,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/billing/method/fail",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/billing/method/fail"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/billing/method/fail"],
       "header": {
         "y": 0,
         "height": 148,
@@ -26659,9 +25785,7 @@
         "name": "결제 관리로 돌아가기"
       },
       "inputs": [],
-      "alerts": [
-        "카드 등록을 완료하지 못했습니다. 다시 시도해 주세요."
-      ],
+      "alerts": ["카드 등록을 완료하지 못했습니다. 다시 시도해 주세요."],
       "methods": [
         "GetMe",
         "GetMyPlan",
@@ -26890,11 +26014,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/account",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/account"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/account"],
       "header": {
         "y": 0,
         "height": 120,
@@ -27286,12 +26406,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/admin",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/admin",
-        "/authenticated/admin/"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/admin", "/authenticated/admin/"],
       "header": {
         "y": 0,
         "height": 120,
@@ -28234,11 +27349,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/plans",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/plans"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/plans"],
       "header": {
         "y": 0,
         "height": 120,
@@ -28495,11 +27606,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/billing",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/billing"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/billing"],
       "header": {
         "y": 0,
         "height": 120,
@@ -28611,9 +27718,7 @@
           "label": null
         }
       ],
-      "alerts": [
-        "크레딧 구매는 활성 유료 구독에서만 가능해요."
-      ],
+      "alerts": ["크레딧 구매는 활성 유료 구독에서만 가능해요."],
       "methods": [
         "GetMe",
         "GetMyPlan",
@@ -28752,11 +27857,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/tests?factor=model&stage=write&count=2",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests"],
       "header": {
         "y": 0,
         "height": 96,
@@ -28847,11 +27948,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/tests/history",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests/history"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests/history"],
       "header": {
         "y": 0,
         "height": 164,
@@ -28960,11 +28057,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/billing/checkout",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/billing/checkout"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/billing/checkout"],
       "header": {
         "y": 0,
         "height": 148,
@@ -28988,9 +28081,7 @@
       "firstInput": null,
       "firstAction": null,
       "inputs": [],
-      "alerts": [
-        "구독할 유료 플랜을 다시 선택해 주세요."
-      ],
+      "alerts": ["구독할 유료 플랜을 다시 선택해 주세요."],
       "methods": [
         "GetMe",
         "GetMyPlan",
@@ -29045,11 +28136,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/tests/history",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests/history"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests/history"],
       "header": {
         "y": 0,
         "height": 164,
@@ -29158,11 +28245,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/billing/method/success",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/billing/method/success"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/billing/method/success"],
       "header": {
         "y": 0,
         "height": 148,
@@ -29191,9 +28274,7 @@
         "name": "결제 관리로 돌아가기"
       },
       "inputs": [],
-      "alerts": [
-        "카드 등록 응답이 올바르지 않습니다."
-      ],
+      "alerts": ["카드 등록 응답이 올바르지 않습니다."],
       "methods": [
         "GetMe",
         "GetMyPlan",
@@ -29248,11 +28329,7 @@
       "theme": "day",
       "status": "checked",
       "route": "/tests/records/record",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests/records/$id"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests/records/$id"],
       "header": {
         "y": 0,
         "height": 120,
@@ -29337,11 +28414,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/billing/method/fail",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/billing/method/fail"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/billing/method/fail"],
       "header": {
         "y": 0,
         "height": 148,
@@ -29370,9 +28443,7 @@
         "name": "결제 관리로 돌아가기"
       },
       "inputs": [],
-      "alerts": [
-        "카드 등록을 완료하지 못했습니다. 다시 시도해 주세요."
-      ],
+      "alerts": ["카드 등록을 완료하지 못했습니다. 다시 시도해 주세요."],
       "methods": [
         "GetMe",
         "GetMyPlan",
@@ -29427,11 +28498,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/account",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/account"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/account"],
       "header": {
         "y": 0,
         "height": 120,
@@ -29944,11 +29011,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/tests?factor=model&stage=write&count=2",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests"],
       "header": {
         "y": 0,
         "height": 96,
@@ -30039,11 +29102,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/tests/history",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests/history"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests/history"],
       "header": {
         "y": 0,
         "height": 164,
@@ -30152,10 +29211,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/login",
-      "matchIds": [
-        "__root__",
-        "/login"
-      ],
+      "matchIds": ["__root__", "/login"],
       "header": null,
       "main": {
         "y": 0,
@@ -30228,9 +29284,7 @@
         }
       ],
       "alerts": [],
-      "methods": [
-        "GetMe"
-      ],
+      "methods": ["GetMe"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /login with 로그인",
@@ -30316,11 +29370,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/tests/history",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests/history"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests/history"],
       "header": {
         "y": 0,
         "height": 164,
@@ -30429,11 +29479,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/tests/records/record",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests/records/$id"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests/records/$id"],
       "header": {
         "y": 0,
         "height": 148,
@@ -30518,10 +29564,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/signup",
-      "matchIds": [
-        "__root__",
-        "/signup"
-      ],
+      "matchIds": ["__root__", "/signup"],
       "header": null,
       "main": {
         "y": 0,
@@ -30584,9 +29627,7 @@
         }
       ],
       "alerts": [],
-      "methods": [
-        "GetMe"
-      ],
+      "methods": ["GetMe"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /signup with 회원가입",
@@ -30672,10 +29713,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/login/google/callback",
-      "matchIds": [
-        "__root__",
-        "/login/google/callback"
-      ],
+      "matchIds": ["__root__", "/login/google/callback"],
       "header": null,
       "main": {
         "y": 0,
@@ -30706,12 +29744,8 @@
         "name": "로그인으로"
       },
       "inputs": [],
-      "alerts": [
-        "Google 로그인을 완료하지 못했어요. 다시 시도해 주세요."
-      ],
-      "methods": [
-        "GetMe"
-      ],
+      "alerts": ["Google 로그인을 완료하지 못했어요. 다시 시도해 주세요."],
+      "methods": ["GetMe"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /login/google/callback with  / Google 로그인을 완료하지 못했어요"
@@ -30725,10 +29759,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/verify-email",
-      "matchIds": [
-        "__root__",
-        "/verify-email"
-      ],
+      "matchIds": ["__root__", "/verify-email"],
       "header": null,
       "main": {
         "y": 0,
@@ -30754,10 +29785,7 @@
       },
       "inputs": [],
       "alerts": [],
-      "methods": [
-        "GetMe",
-        "VerifyEmail"
-      ],
+      "methods": ["GetMe", "VerifyEmail"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /verify-email with 이메일 인증 완료"
@@ -30771,10 +29799,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/forgot-password",
-      "matchIds": [
-        "__root__",
-        "/forgot-password"
-      ],
+      "matchIds": ["__root__", "/forgot-password"],
       "header": null,
       "main": {
         "y": 0,
@@ -30817,10 +29842,7 @@
         }
       ],
       "alerts": [],
-      "methods": [
-        "GetMe",
-        "VerifyEmail"
-      ],
+      "methods": ["GetMe", "VerifyEmail"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /forgot-password with 비밀번호 찾기",
@@ -30906,10 +29928,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/login",
-      "matchIds": [
-        "__root__",
-        "/login"
-      ],
+      "matchIds": ["__root__", "/login"],
       "header": null,
       "main": {
         "y": 0,
@@ -30982,9 +30001,7 @@
         }
       ],
       "alerts": [],
-      "methods": [
-        "GetMe"
-      ],
+      "methods": ["GetMe"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /login with 로그인",
@@ -31070,10 +30087,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/reset-password?token=valid-audit-token",
-      "matchIds": [
-        "__root__",
-        "/reset-password"
-      ],
+      "matchIds": ["__root__", "/reset-password"],
       "header": null,
       "main": {
         "y": 0,
@@ -31116,10 +30130,7 @@
         }
       ],
       "alerts": [],
-      "methods": [
-        "GetMe",
-        "VerifyEmail"
-      ],
+      "methods": ["GetMe", "VerifyEmail"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /reset-password with 새 비밀번호 설정",
@@ -31205,10 +30216,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/signup",
-      "matchIds": [
-        "__root__",
-        "/signup"
-      ],
+      "matchIds": ["__root__", "/signup"],
       "header": null,
       "main": {
         "y": 0,
@@ -31271,9 +30279,7 @@
         }
       ],
       "alerts": [],
-      "methods": [
-        "GetMe"
-      ],
+      "methods": ["GetMe"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /signup with 회원가입",
@@ -31359,10 +30365,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/login/google/callback",
-      "matchIds": [
-        "__root__",
-        "/login/google/callback"
-      ],
+      "matchIds": ["__root__", "/login/google/callback"],
       "header": null,
       "main": {
         "y": 0,
@@ -31393,12 +30396,8 @@
         "name": "로그인으로"
       },
       "inputs": [],
-      "alerts": [
-        "Google 로그인을 완료하지 못했어요. 다시 시도해 주세요."
-      ],
-      "methods": [
-        "GetMe"
-      ],
+      "alerts": ["Google 로그인을 완료하지 못했어요. 다시 시도해 주세요."],
+      "methods": ["GetMe"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /login/google/callback with  / Google 로그인을 완료하지 못했어요"
@@ -31412,10 +30411,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/verify-email",
-      "matchIds": [
-        "__root__",
-        "/verify-email"
-      ],
+      "matchIds": ["__root__", "/verify-email"],
       "header": null,
       "main": {
         "y": 0,
@@ -31441,10 +30437,7 @@
       },
       "inputs": [],
       "alerts": [],
-      "methods": [
-        "GetMe",
-        "VerifyEmail"
-      ],
+      "methods": ["GetMe", "VerifyEmail"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /verify-email with 이메일 인증 완료"
@@ -31458,10 +30451,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/forgot-password",
-      "matchIds": [
-        "__root__",
-        "/forgot-password"
-      ],
+      "matchIds": ["__root__", "/forgot-password"],
       "header": null,
       "main": {
         "y": 0,
@@ -31504,10 +30494,7 @@
         }
       ],
       "alerts": [],
-      "methods": [
-        "GetMe",
-        "VerifyEmail"
-      ],
+      "methods": ["GetMe", "VerifyEmail"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /forgot-password with 비밀번호 찾기",
@@ -31593,10 +30580,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/about",
-      "matchIds": [
-        "__root__",
-        "/about"
-      ],
+      "matchIds": ["__root__", "/about"],
       "header": {
         "y": 0,
         "height": 56,
@@ -31748,10 +30732,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/gift/gift",
-      "matchIds": [
-        "__root__",
-        "/gift/$token"
-      ],
+      "matchIds": ["__root__", "/gift/$token"],
       "header": null,
       "main": {
         "y": 0,
@@ -31777,11 +30758,7 @@
       },
       "inputs": [],
       "alerts": [],
-      "methods": [
-        "GetMe",
-        "GetVoucher",
-        "GetMyPlan"
-      ],
+      "methods": ["GetMe", "GetVoucher", "GetMyPlan"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /gift/$token with 1150 크레딧"
@@ -31795,10 +30772,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/reset-password?token=valid-audit-token",
-      "matchIds": [
-        "__root__",
-        "/reset-password"
-      ],
+      "matchIds": ["__root__", "/reset-password"],
       "header": null,
       "main": {
         "y": 0,
@@ -31841,10 +30815,7 @@
         }
       ],
       "alerts": [],
-      "methods": [
-        "GetMe",
-        "VerifyEmail"
-      ],
+      "methods": ["GetMe", "VerifyEmail"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /reset-password with 새 비밀번호 설정",
@@ -31930,11 +30901,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/"],
       "header": {
         "y": 0,
         "height": 64,
@@ -31964,12 +30931,7 @@
       },
       "inputs": [],
       "alerts": [],
-      "methods": [
-        "GetMe",
-        "GetVoucher",
-        "GetMyPlan",
-        "InitializeDefaultSelections"
-      ],
+      "methods": ["GetMe", "GetVoucher", "GetMyPlan", "InitializeDefaultSelections"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /authenticated/ with 당신의 이야기를,\n새로운 작품으로.",
@@ -31996,11 +30958,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/library",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/library"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/library"],
       "header": {
         "y": 0,
         "height": 96,
@@ -32030,12 +30988,7 @@
       },
       "inputs": [],
       "alerts": [],
-      "methods": [
-        "GetMe",
-        "GetVoucher",
-        "GetMyPlan",
-        "InitializeDefaultSelections"
-      ],
+      "methods": ["GetMe", "GetVoucher", "GetMyPlan", "InitializeDefaultSelections"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /authenticated/library with 작업 내역"
@@ -32049,11 +31002,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/settings",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/settings"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/settings"],
       "header": {
         "y": 0,
         "height": 96,
@@ -32101,12 +31050,7 @@
       },
       "inputs": [],
       "alerts": [],
-      "methods": [
-        "GetMe",
-        "GetVoucher",
-        "GetMyPlan",
-        "InitializeDefaultSelections"
-      ],
+      "methods": ["GetMe", "GetVoucher", "GetMyPlan", "InitializeDefaultSelections"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /authenticated/settings with 설정 / 글쓰기 / 영상 만들기 / AI와 계정",
@@ -32133,10 +31077,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/about",
-      "matchIds": [
-        "__root__",
-        "/about"
-      ],
+      "matchIds": ["__root__", "/about"],
       "header": {
         "y": 0,
         "height": 56,
@@ -32288,11 +31229,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/setup?restart=false",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/setup"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/setup"],
       "header": {
         "y": 0,
         "height": 120,
@@ -32348,10 +31285,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/gift/gift",
-      "matchIds": [
-        "__root__",
-        "/gift/$token"
-      ],
+      "matchIds": ["__root__", "/gift/$token"],
       "header": null,
       "main": {
         "y": 0,
@@ -32377,11 +31311,7 @@
       },
       "inputs": [],
       "alerts": [],
-      "methods": [
-        "GetMe",
-        "GetVoucher",
-        "GetMyPlan"
-      ],
+      "methods": ["GetMe", "GetVoucher", "GetMyPlan"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /gift/$token with 1150 크레딧"
@@ -32395,11 +31325,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/"],
       "header": {
         "y": 0,
         "height": 64,
@@ -32429,12 +31355,7 @@
       },
       "inputs": [],
       "alerts": [],
-      "methods": [
-        "GetMe",
-        "GetVoucher",
-        "GetMyPlan",
-        "InitializeDefaultSelections"
-      ],
+      "methods": ["GetMe", "GetVoucher", "GetMyPlan", "InitializeDefaultSelections"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /authenticated/ with 당신의 이야기를,\n새로운 작품으로.",
@@ -32461,11 +31382,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/library",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/library"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/library"],
       "header": {
         "y": 0,
         "height": 96,
@@ -32495,12 +31412,7 @@
       },
       "inputs": [],
       "alerts": [],
-      "methods": [
-        "GetMe",
-        "GetVoucher",
-        "GetMyPlan",
-        "InitializeDefaultSelections"
-      ],
+      "methods": ["GetMe", "GetVoucher", "GetMyPlan", "InitializeDefaultSelections"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /authenticated/library with 작업 내역"
@@ -32514,11 +31426,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/settings",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/settings"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/settings"],
       "header": {
         "y": 0,
         "height": 96,
@@ -32566,12 +31474,7 @@
       },
       "inputs": [],
       "alerts": [],
-      "methods": [
-        "GetMe",
-        "GetVoucher",
-        "GetMyPlan",
-        "InitializeDefaultSelections"
-      ],
+      "methods": ["GetMe", "GetVoucher", "GetMyPlan", "InitializeDefaultSelections"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /authenticated/settings with 설정 / 글쓰기 / 영상 만들기 / AI와 계정",
@@ -32598,11 +31501,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/tests?factor=model&stage=write&count=2",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests"],
       "header": {
         "y": 0,
         "height": 96,
@@ -32676,11 +31575,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/tests/history",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests/history"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests/history"],
       "header": {
         "y": 0,
         "height": 164,
@@ -32761,11 +31656,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/tests/records/record",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests/records/$id"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests/records/$id"],
       "header": {
         "y": 0,
         "height": 148,
@@ -32823,11 +31714,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/tests/test",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests/$testId"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests/$testId"],
       "header": {
         "y": 0,
         "height": 120,
@@ -33102,11 +31989,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/tests/records/record",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests/records/$id"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests/records/$id"],
       "header": {
         "y": 0,
         "height": 148,
@@ -33165,11 +32048,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/setup?restart=false",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/setup"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/setup"],
       "header": {
         "y": 0,
         "height": 120,
@@ -33932,11 +32811,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/tests?factor=model&stage=write&count=2",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests"],
       "header": {
         "y": 0,
         "height": 96,
@@ -34019,11 +32894,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/tests/history?stage=voice&voiceId=voice-default&entry=%2Fvoices",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests/history"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests/history"],
       "header": {
         "y": 0,
         "height": 164,
@@ -34109,11 +32980,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/tests/history",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests/history"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests/history"],
       "header": {
         "y": 0,
         "height": 120,
@@ -34279,11 +33146,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/tests/records/record",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests/records/$id"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests/records/$id"],
       "header": {
         "y": 0,
         "height": 120,
@@ -34424,11 +33287,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/tests/test",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests/$testId"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests/$testId"],
       "header": {
         "y": 0,
         "height": 120,
@@ -34858,9 +33717,7 @@
           "label": "클립 제목"
         }
       ],
-      "alerts": [
-        "제목은 1~100자로 입력해 주세요."
-      ],
+      "alerts": ["제목은 1~100자로 입력해 주세요."],
       "methods": [
         "GetMe",
         "GetMyPlan",
@@ -34904,11 +33761,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/tests/records/record",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests/records/$id"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests/records/$id"],
       "header": {
         "y": 0,
         "height": 120,
@@ -36136,12 +34989,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/admin",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/admin",
-        "/authenticated/admin/"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/admin", "/authenticated/admin/"],
       "header": {
         "y": 0,
         "height": 120,
@@ -36525,11 +35373,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/tests/history?stage=voice&voiceId=voice-default&entry=%2Fvoices",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests/history"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests/history"],
       "header": {
         "y": 0,
         "height": 164,
@@ -37282,9 +36126,7 @@
           "label": "클립 제목"
         }
       ],
-      "alerts": [
-        "제목은 1~100자로 입력해 주세요."
-      ],
+      "alerts": ["제목은 1~100자로 입력해 주세요."],
       "methods": [
         "GetMe",
         "GetMyPlan",
@@ -37611,11 +36453,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/plans",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/plans"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/plans"],
       "header": {
         "y": 0,
         "height": 120,
@@ -37851,11 +36689,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/billing",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/billing"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/billing"],
       "header": {
         "y": 0,
         "height": 120,
@@ -37967,9 +36801,7 @@
           "label": null
         }
       ],
-      "alerts": [
-        "크레딧 구매는 활성 유료 구독에서만 가능해요."
-      ],
+      "alerts": ["크레딧 구매는 활성 유료 구독에서만 가능해요."],
       "methods": [
         "GetMe",
         "GetMyPlan",
@@ -38282,11 +37114,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/billing/checkout",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/billing/checkout"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/billing/checkout"],
       "header": {
         "y": 0,
         "height": 120,
@@ -38310,9 +37138,7 @@
       "firstInput": null,
       "firstAction": null,
       "inputs": [],
-      "alerts": [
-        "구독할 유료 플랜을 다시 선택해 주세요."
-      ],
+      "alerts": ["구독할 유료 플랜을 다시 선택해 주세요."],
       "methods": [
         "GetMe",
         "GetMyPlan",
@@ -38465,11 +37291,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/billing/method/success",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/billing/method/success"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/billing/method/success"],
       "header": {
         "y": 0,
         "height": 148,
@@ -38498,9 +37320,7 @@
         "name": "결제 관리로 돌아가기"
       },
       "inputs": [],
-      "alerts": [
-        "카드 등록 응답이 올바르지 않습니다."
-      ],
+      "alerts": ["카드 등록 응답이 올바르지 않습니다."],
       "methods": [
         "GetMe",
         "GetMyPlan",
@@ -38555,12 +37375,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/admin",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/admin",
-        "/authenticated/admin/"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/admin", "/authenticated/admin/"],
       "header": {
         "y": 0,
         "height": 120,
@@ -38644,11 +37459,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/billing/method/fail",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/billing/method/fail"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/billing/method/fail"],
       "header": {
         "y": 0,
         "height": 148,
@@ -38677,9 +37488,7 @@
         "name": "결제 관리로 돌아가기"
       },
       "inputs": [],
-      "alerts": [
-        "카드 등록을 완료하지 못했습니다. 다시 시도해 주세요."
-      ],
+      "alerts": ["카드 등록을 완료하지 못했습니다. 다시 시도해 주세요."],
       "methods": [
         "GetMe",
         "GetMyPlan",
@@ -38822,12 +37631,7 @@
         }
       ],
       "alerts": [],
-      "methods": [
-        "GetMe",
-        "GetMyPlan",
-        "ListCatalog",
-        "InitializeDefaultSelections"
-      ],
+      "methods": ["GetMe", "GetMyPlan", "ListCatalog", "InitializeDefaultSelections"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /authenticated/admin/models with 운영 관리 / 모델 관리",
@@ -38925,11 +37729,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/account",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/account"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/account"],
       "header": {
         "y": 0,
         "height": 120,
@@ -39201,12 +38001,7 @@
       },
       "inputs": [],
       "alerts": [],
-      "methods": [
-        "GetMe",
-        "GetMyPlan",
-        "ListCatalog",
-        "InitializeDefaultSelections"
-      ],
+      "methods": ["GetMe", "GetMyPlan", "ListCatalog", "InitializeDefaultSelections"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /authenticated/admin/estimator with 운영 관리 / 편수 기준 조합 / 가성비 / 밸런스 / 고급 / 최고"
@@ -39852,11 +38647,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/tests?factor=model&stage=write&count=2",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests"],
       "header": {
         "y": 0,
         "height": 96,
@@ -39947,11 +38738,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/tests/history",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests/history"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests/history"],
       "header": {
         "y": 0,
         "height": 164,
@@ -40060,11 +38847,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/plans",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/plans"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/plans"],
       "header": {
         "y": 0,
         "height": 120,
@@ -40213,11 +38996,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/tests/history",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests/history"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests/history"],
       "header": {
         "y": 0,
         "height": 164,
@@ -40326,11 +39105,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/billing",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/billing"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/billing"],
       "header": {
         "y": 0,
         "height": 120,
@@ -40442,9 +39217,7 @@
           "label": null
         }
       ],
-      "alerts": [
-        "크레딧 구매는 활성 유료 구독에서만 가능해요."
-      ],
+      "alerts": ["크레딧 구매는 활성 유료 구독에서만 가능해요."],
       "methods": [
         "GetMe",
         "GetMyPlan",
@@ -40583,11 +39356,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/tests/records/record",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests/records/$id"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests/records/$id"],
       "header": {
         "y": 0,
         "height": 148,
@@ -40672,11 +39441,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/billing/checkout",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/billing/checkout"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/billing/checkout"],
       "header": {
         "y": 0,
         "height": 120,
@@ -40700,9 +39465,7 @@
       "firstInput": null,
       "firstAction": null,
       "inputs": [],
-      "alerts": [
-        "구독할 유료 플랜을 다시 선택해 주세요."
-      ],
+      "alerts": ["구독할 유료 플랜을 다시 선택해 주세요."],
       "methods": [
         "GetMe",
         "GetMyPlan",
@@ -40757,11 +39520,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/billing/method/success",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/billing/method/success"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/billing/method/success"],
       "header": {
         "y": 0,
         "height": 148,
@@ -40790,9 +39549,7 @@
         "name": "결제 관리로 돌아가기"
       },
       "inputs": [],
-      "alerts": [
-        "카드 등록 응답이 올바르지 않습니다."
-      ],
+      "alerts": ["카드 등록 응답이 올바르지 않습니다."],
       "methods": [
         "GetMe",
         "GetMyPlan",
@@ -40847,11 +39604,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/billing/method/fail",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/billing/method/fail"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/billing/method/fail"],
       "header": {
         "y": 0,
         "height": 148,
@@ -40880,9 +39633,7 @@
         "name": "결제 관리로 돌아가기"
       },
       "inputs": [],
-      "alerts": [
-        "카드 등록을 완료하지 못했습니다. 다시 시도해 주세요."
-      ],
+      "alerts": ["카드 등록을 완료하지 못했습니다. 다시 시도해 주세요."],
       "methods": [
         "GetMe",
         "GetMyPlan",
@@ -40937,11 +39688,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/account",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/account"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/account"],
       "header": {
         "y": 0,
         "height": 120,
@@ -41346,10 +40093,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/login",
-      "matchIds": [
-        "__root__",
-        "/login"
-      ],
+      "matchIds": ["__root__", "/login"],
       "header": null,
       "main": {
         "y": 0,
@@ -41422,9 +40166,7 @@
         }
       ],
       "alerts": [],
-      "methods": [
-        "GetMe"
-      ],
+      "methods": ["GetMe"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /login with 로그인",
@@ -41618,11 +40360,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/tests?factor=model&stage=write&count=2",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests"],
       "header": {
         "y": 0,
         "height": 96,
@@ -41713,11 +40451,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/tests/history",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests/history"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests/history"],
       "header": {
         "y": 0,
         "height": 164,
@@ -41826,10 +40560,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/signup",
-      "matchIds": [
-        "__root__",
-        "/signup"
-      ],
+      "matchIds": ["__root__", "/signup"],
       "header": null,
       "main": {
         "y": 0,
@@ -41892,9 +40623,7 @@
         }
       ],
       "alerts": [],
-      "methods": [
-        "GetMe"
-      ],
+      "methods": ["GetMe"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /signup with 회원가입",
@@ -41980,11 +40709,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/tests/history",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests/history"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests/history"],
       "header": {
         "y": 0,
         "height": 164,
@@ -42093,11 +40818,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/tests/records/record",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests/records/$id"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests/records/$id"],
       "header": {
         "y": 0,
         "height": 120,
@@ -42182,10 +40903,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/login/google/callback",
-      "matchIds": [
-        "__root__",
-        "/login/google/callback"
-      ],
+      "matchIds": ["__root__", "/login/google/callback"],
       "header": null,
       "main": {
         "y": 0,
@@ -42216,12 +40934,8 @@
         "name": "로그인으로"
       },
       "inputs": [],
-      "alerts": [
-        "Google 로그인을 완료하지 못했어요. 다시 시도해 주세요."
-      ],
-      "methods": [
-        "GetMe"
-      ],
+      "alerts": ["Google 로그인을 완료하지 못했어요. 다시 시도해 주세요."],
+      "methods": ["GetMe"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /login/google/callback with  / Google 로그인을 완료하지 못했어요"
@@ -42235,10 +40949,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/verify-email",
-      "matchIds": [
-        "__root__",
-        "/verify-email"
-      ],
+      "matchIds": ["__root__", "/verify-email"],
       "header": null,
       "main": {
         "y": 0,
@@ -42264,10 +40975,7 @@
       },
       "inputs": [],
       "alerts": [],
-      "methods": [
-        "GetMe",
-        "VerifyEmail"
-      ],
+      "methods": ["GetMe", "VerifyEmail"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /verify-email with 이메일 인증 완료"
@@ -42281,10 +40989,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/forgot-password",
-      "matchIds": [
-        "__root__",
-        "/forgot-password"
-      ],
+      "matchIds": ["__root__", "/forgot-password"],
       "header": null,
       "main": {
         "y": 0,
@@ -42327,10 +41032,7 @@
         }
       ],
       "alerts": [],
-      "methods": [
-        "GetMe",
-        "VerifyEmail"
-      ],
+      "methods": ["GetMe", "VerifyEmail"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /forgot-password with 비밀번호 찾기",
@@ -42416,10 +41118,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/reset-password?token=valid-audit-token",
-      "matchIds": [
-        "__root__",
-        "/reset-password"
-      ],
+      "matchIds": ["__root__", "/reset-password"],
       "header": null,
       "main": {
         "y": 0,
@@ -42462,10 +41161,7 @@
         }
       ],
       "alerts": [],
-      "methods": [
-        "GetMe",
-        "VerifyEmail"
-      ],
+      "methods": ["GetMe", "VerifyEmail"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /reset-password with 새 비밀번호 설정",
@@ -42551,10 +41247,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/about",
-      "matchIds": [
-        "__root__",
-        "/about"
-      ],
+      "matchIds": ["__root__", "/about"],
       "header": {
         "y": 0,
         "height": 56,
@@ -42706,10 +41399,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/gift/gift",
-      "matchIds": [
-        "__root__",
-        "/gift/$token"
-      ],
+      "matchIds": ["__root__", "/gift/$token"],
       "header": null,
       "main": {
         "y": 0,
@@ -42735,11 +41425,7 @@
       },
       "inputs": [],
       "alerts": [],
-      "methods": [
-        "GetMe",
-        "GetVoucher",
-        "GetMyPlan"
-      ],
+      "methods": ["GetMe", "GetVoucher", "GetMyPlan"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /gift/$token with 1150 크레딧"
@@ -42753,11 +41439,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/"],
       "header": {
         "y": 0,
         "height": 64,
@@ -42787,12 +41469,7 @@
       },
       "inputs": [],
       "alerts": [],
-      "methods": [
-        "GetMe",
-        "GetVoucher",
-        "GetMyPlan",
-        "InitializeDefaultSelections"
-      ],
+      "methods": ["GetMe", "GetVoucher", "GetMyPlan", "InitializeDefaultSelections"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /authenticated/ with 당신의 이야기를,\n새로운 작품으로.",
@@ -42819,11 +41496,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/library",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/library"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/library"],
       "header": {
         "y": 0,
         "height": 96,
@@ -42853,12 +41526,7 @@
       },
       "inputs": [],
       "alerts": [],
-      "methods": [
-        "GetMe",
-        "GetVoucher",
-        "GetMyPlan",
-        "InitializeDefaultSelections"
-      ],
+      "methods": ["GetMe", "GetVoucher", "GetMyPlan", "InitializeDefaultSelections"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /authenticated/library with 작업 내역"
@@ -42872,11 +41540,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/settings",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/settings"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/settings"],
       "header": {
         "y": 0,
         "height": 96,
@@ -42924,12 +41588,7 @@
       },
       "inputs": [],
       "alerts": [],
-      "methods": [
-        "GetMe",
-        "GetVoucher",
-        "GetMyPlan",
-        "InitializeDefaultSelections"
-      ],
+      "methods": ["GetMe", "GetVoucher", "GetMyPlan", "InitializeDefaultSelections"],
       "pointerCoarse": true,
       "errors": [],
       "assertedState": "Mounted /authenticated/settings with 설정 / 글쓰기 / 영상 만들기 / AI와 계정",
@@ -42956,11 +41615,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/setup?restart=false",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/setup"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/setup"],
       "header": {
         "y": 0,
         "height": 120,
@@ -43016,11 +41671,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/tests?factor=model&stage=write&count=2",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests"],
       "header": {
         "y": 0,
         "height": 96,
@@ -43094,11 +41745,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/tests/history",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests/history"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests/history"],
       "header": {
         "y": 0,
         "height": 164,
@@ -43179,11 +41826,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/tests/records/record",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests/records/$id"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests/records/$id"],
       "header": {
         "y": 0,
         "height": 120,
@@ -43241,11 +41884,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/tests/test",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests/$testId"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests/$testId"],
       "header": {
         "y": 0,
         "height": 120,
@@ -43520,11 +42159,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/tests/records/record",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests/records/$id"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests/records/$id"],
       "header": {
         "y": 0,
         "height": 120,
@@ -44290,11 +42925,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/tests/history?stage=voice&voiceId=voice-default&entry=%2Fvoices",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests/history"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests/history"],
       "header": {
         "y": 0,
         "height": 164,
@@ -44714,9 +43345,7 @@
           "label": "클립 제목"
         }
       ],
-      "alerts": [
-        "제목은 1~100자로 입력해 주세요."
-      ],
+      "alerts": ["제목은 1~100자로 입력해 주세요."],
       "methods": [
         "GetMe",
         "GetMyPlan",
@@ -45303,12 +43932,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/admin",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/admin",
-        "/authenticated/admin/"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/admin", "/authenticated/admin/"],
       "header": {
         "y": 0,
         "height": 120,
@@ -46053,11 +44677,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/plans",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/plans"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/plans"],
       "header": {
         "y": 0,
         "height": 120,
@@ -46206,11 +44826,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/billing",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/billing"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/billing"],
       "header": {
         "y": 0,
         "height": 120,
@@ -46322,9 +44938,7 @@
           "label": null
         }
       ],
-      "alerts": [
-        "크레딧 구매는 활성 유료 구독에서만 가능해요."
-      ],
+      "alerts": ["크레딧 구매는 활성 유료 구독에서만 가능해요."],
       "methods": [
         "GetMe",
         "GetMyPlan",
@@ -46463,11 +45077,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/billing/checkout",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/billing/checkout"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/billing/checkout"],
       "header": {
         "y": 0,
         "height": 120,
@@ -46491,9 +45101,7 @@
       "firstInput": null,
       "firstAction": null,
       "inputs": [],
-      "alerts": [
-        "구독할 유료 플랜을 다시 선택해 주세요."
-      ],
+      "alerts": ["구독할 유료 플랜을 다시 선택해 주세요."],
       "methods": [
         "GetMe",
         "GetMyPlan",
@@ -46548,11 +45156,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/billing/method/success",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/billing/method/success"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/billing/method/success"],
       "header": {
         "y": 0,
         "height": 120,
@@ -46581,9 +45185,7 @@
         "name": "결제 관리로 돌아가기"
       },
       "inputs": [],
-      "alerts": [
-        "카드 등록 응답이 올바르지 않습니다."
-      ],
+      "alerts": ["카드 등록 응답이 올바르지 않습니다."],
       "methods": [
         "GetMe",
         "GetMyPlan",
@@ -46638,11 +45240,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/billing/method/fail",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/billing/method/fail"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/billing/method/fail"],
       "header": {
         "y": 0,
         "height": 120,
@@ -46671,9 +45269,7 @@
         "name": "결제 관리로 돌아가기"
       },
       "inputs": [],
-      "alerts": [
-        "카드 등록을 완료하지 못했습니다. 다시 시도해 주세요."
-      ],
+      "alerts": ["카드 등록을 완료하지 못했습니다. 다시 시도해 주세요."],
       "methods": [
         "GetMe",
         "GetMyPlan",
@@ -46728,11 +45324,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/account",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/account"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/account"],
       "header": {
         "y": 0,
         "height": 120,
@@ -47245,11 +45837,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/tests?factor=model&stage=write&count=2",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests"],
       "header": {
         "y": 0,
         "height": 96,
@@ -47340,11 +45928,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/tests/history",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests/history"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests/history"],
       "header": {
         "y": 0,
         "height": 164,
@@ -47453,11 +46037,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/tests/history",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests/history"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests/history"],
       "header": {
         "y": 0,
         "height": 164,
@@ -47566,11 +46146,7 @@
       "theme": "night",
       "status": "checked",
       "route": "/tests/records/record",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests/records/$id"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests/records/$id"],
       "header": {
         "y": 0,
         "height": 120,
@@ -48272,11 +46848,7 @@
       "status": "checked",
       "assertedState": "empty",
       "route": "/billing",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/billing"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/billing"],
       "header": {
         "y": 0,
         "height": 120,
@@ -48425,11 +46997,7 @@
       "status": "checked",
       "assertedState": "empty",
       "route": "/tests/history",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests/history"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests/history"],
       "header": {
         "y": 0,
         "height": 120,
@@ -48546,9 +47114,7 @@
           "label": "검색"
         }
       ],
-      "alerts": [
-        "목록을 불러오지 못했어요.\n다시 시도"
-      ],
+      "alerts": ["목록을 불러오지 못했어요.\n다시 시도"],
       "methods": [
         "GetMe",
         "GetMyPlan",
@@ -48621,9 +47187,7 @@
           "label": "클립 검색"
         }
       ],
-      "alerts": [
-        "네트워크에 연결할 수 없어요.\n다시 시도"
-      ],
+      "alerts": ["네트워크에 연결할 수 없어요.\n다시 시도"],
       "methods": [
         "GetMe",
         "GetMyPlan",
@@ -48681,9 +47245,7 @@
         "name": "다시 시도"
       },
       "inputs": [],
-      "alerts": [
-        "템플릿 목록을 불러오지 못했어요.\n다시 시도"
-      ],
+      "alerts": ["템플릿 목록을 불러오지 못했어요.\n다시 시도"],
       "methods": [
         "GetMe",
         "GetMyPlan",
@@ -48743,9 +47305,7 @@
         "name": "다시 시도"
       },
       "inputs": [],
-      "alerts": [
-        "영상 템플릿을 불러오지 못했어요.\n다시 시도"
-      ],
+      "alerts": ["영상 템플릿을 불러오지 못했어요.\n다시 시도"],
       "methods": [
         "GetMe",
         "GetMyPlan",
@@ -48805,9 +47365,7 @@
         "name": "다시 시도"
       },
       "inputs": [],
-      "alerts": [
-        "지침 목록을 불러오지 못했어요.\n다시 시도"
-      ],
+      "alerts": ["지침 목록을 불러오지 못했어요.\n다시 시도"],
       "methods": [
         "GetMe",
         "GetMyPlan",
@@ -48868,9 +47426,7 @@
         "name": "다시 시도"
       },
       "inputs": [],
-      "alerts": [
-        "기억을 불러오지 못했어요.\n다시 시도"
-      ],
+      "alerts": ["기억을 불러오지 못했어요.\n다시 시도"],
       "methods": [
         "GetMe",
         "GetMyPlan",
@@ -48932,9 +47488,7 @@
         "name": "다시 시도"
       },
       "inputs": [],
-      "alerts": [
-        "말투 목록을 불러오지 못했어요.\n다시 시도"
-      ],
+      "alerts": ["말투 목록을 불러오지 못했어요.\n다시 시도"],
       "methods": [
         "GetMe",
         "GetMyPlan",
@@ -49028,11 +47582,7 @@
       "status": "checked",
       "assertedState": "error",
       "route": "/billing",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/billing"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/billing"],
       "header": {
         "y": 0,
         "height": 120,
@@ -49056,9 +47606,7 @@
       "firstInput": null,
       "firstAction": null,
       "inputs": [],
-      "alerts": [
-        "결제 정보를 불러오지 못했습니다."
-      ],
+      "alerts": ["결제 정보를 불러오지 못했습니다."],
       "methods": [
         "GetMe",
         "GetMyPlan",
@@ -49270,15 +47818,8 @@
           "label": null
         }
       ],
-      "alerts": [
-        "모델 목록을 불러오지 못했어요."
-      ],
-      "methods": [
-        "GetMe",
-        "GetMyPlan",
-        "ListCatalog",
-        "InitializeDefaultSelections"
-      ],
+      "alerts": ["모델 목록을 불러오지 못했어요."],
+      "methods": ["GetMe", "GetMyPlan", "ListCatalog", "InitializeDefaultSelections"],
       "pointerCoarse": true,
       "errors": []
     },
@@ -49333,15 +47874,8 @@
         "name": "계정 관리"
       },
       "inputs": [],
-      "alerts": [
-        "조합을 불러오지 못했어요."
-      ],
-      "methods": [
-        "GetMe",
-        "GetMyPlan",
-        "ListCatalog",
-        "InitializeDefaultSelections"
-      ],
+      "alerts": ["조합을 불러오지 못했어요."],
+      "methods": ["GetMe", "GetMyPlan", "ListCatalog", "InitializeDefaultSelections"],
       "pointerCoarse": true,
       "errors": []
     },
@@ -49396,9 +47930,7 @@
         "name": "계정 관리"
       },
       "inputs": [],
-      "alerts": [
-        "이용권을 불러오지 못했어요."
-      ],
+      "alerts": ["이용권을 불러오지 못했어요."],
       "methods": [
         "GetMe",
         "GetMyPlan",
@@ -49552,9 +48084,7 @@
         "name": "작업 내역으로 돌아가기"
       },
       "inputs": [],
-      "alerts": [
-        "네트워크에 연결할 수 없어요."
-      ],
+      "alerts": ["네트워크에 연결할 수 없어요."],
       "methods": [
         "GetMe",
         "GetMyPlan",
@@ -49606,15 +48136,8 @@
         "name": "작업 내역으로 돌아가기"
       },
       "inputs": [],
-      "alerts": [
-        "네트워크에 연결할 수 없어요.\n다시 시도"
-      ],
-      "methods": [
-        "GetMe",
-        "GetMyPlan",
-        "GetClipProject",
-        "InitializeDefaultSelections"
-      ],
+      "alerts": ["네트워크에 연결할 수 없어요.\n다시 시도"],
+      "methods": ["GetMe", "GetMyPlan", "GetClipProject", "InitializeDefaultSelections"],
       "controls": [],
       "pointerCoarse": true,
       "errors": []
@@ -49657,9 +48180,7 @@
         "name": "← 템플릿 목록"
       },
       "inputs": [],
-      "alerts": [
-        "템플릿 목록을 불러오지 못했어요.\n다시 시도"
-      ],
+      "alerts": ["템플릿 목록을 불러오지 못했어요.\n다시 시도"],
       "methods": [
         "GetMe",
         "GetMyPlan",
@@ -49728,9 +48249,7 @@
         "name": "영상 템플릿 목록"
       },
       "inputs": [],
-      "alerts": [
-        "영상 템플릿을 불러오지 못했어요.\n다시 시도"
-      ],
+      "alerts": ["영상 템플릿을 불러오지 못했어요.\n다시 시도"],
       "methods": [
         "GetMe",
         "GetMyPlan",
@@ -50369,9 +48888,7 @@
           "id": "_r_5_-input"
         }
       ],
-      "alerts": [
-        "AI 모델을 잠시 사용할 수 없어요."
-      ],
+      "alerts": ["AI 모델을 잠시 사용할 수 없어요."],
       "methods": [
         "GetMe",
         "GetMyPlan",
@@ -50712,11 +49229,7 @@
       "status": "checked",
       "assertedState": "working",
       "route": "/tests/test",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests/$testId"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests/$testId"],
       "header": {
         "y": 0,
         "height": 120,
@@ -50778,11 +49291,7 @@
       "status": "checked",
       "assertedState": "failed",
       "route": "/tests/test",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests/$testId"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests/$testId"],
       "header": {
         "y": 0,
         "height": 120,
@@ -50844,11 +49353,7 @@
       "status": "checked",
       "assertedState": "working",
       "route": "/tests/history",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests/history"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests/history"],
       "header": {
         "y": 0,
         "height": 120,
@@ -50923,11 +49428,7 @@
       "status": "checked",
       "assertedState": "failed",
       "route": "/tests/history",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests/history"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests/history"],
       "header": {
         "y": 0,
         "height": 120,
@@ -51080,13 +49581,7 @@
         }
       ],
       "alerts": [],
-      "methods": [
-        "GetMe",
-        "GetMyPlan",
-        "GetPost",
-        "InitializeDefaultSelections",
-        "ListTemplates"
-      ],
+      "methods": ["GetMe", "GetMyPlan", "GetPost", "InitializeDefaultSelections", "ListTemplates"],
       "pointerCoarse": true,
       "errors": []
     },
@@ -51160,11 +49655,7 @@
       "status": "checked",
       "assertedState": "checkout",
       "route": "/billing/checkout?tier=pro&term=monthly",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/billing/checkout"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/billing/checkout"],
       "header": {
         "y": 0,
         "height": 120,
@@ -51251,10 +49742,7 @@
       "status": "checked",
       "assertedState": "invalid-reset",
       "route": "/reset-password?token=expired-audit-token",
-      "matchIds": [
-        "__root__",
-        "/reset-password"
-      ],
+      "matchIds": ["__root__", "/reset-password"],
       "header": null,
       "main": {
         "y": 0,
@@ -51296,12 +49784,8 @@
           "label": "새 비밀번호"
         }
       ],
-      "alerts": [
-        "비밀번호 재설정 링크가 올바르지 않거나 만료됐어요."
-      ],
-      "methods": [
-        "ResetPassword"
-      ],
+      "alerts": ["비밀번호 재설정 링크가 올바르지 않거나 만료됐어요."],
+      "methods": ["ResetPassword"],
       "pointerCoarse": true,
       "errors": []
     },
@@ -51316,10 +49800,7 @@
       "status": "checked",
       "assertedState": "error",
       "route": "/verify-email?token=expired-audit-token",
-      "matchIds": [
-        "__root__",
-        "/verify-email"
-      ],
+      "matchIds": ["__root__", "/verify-email"],
       "header": null,
       "main": {
         "y": 0,
@@ -51361,12 +49842,8 @@
           "label": "이메일"
         }
       ],
-      "alerts": [
-        "인증 링크가 올바르지 않거나 만료됐어요."
-      ],
-      "methods": [
-        "VerifyEmail"
-      ],
+      "alerts": ["인증 링크가 올바르지 않거나 만료됐어요."],
+      "methods": ["VerifyEmail"],
       "pointerCoarse": true,
       "errors": []
     },
@@ -52560,11 +51037,7 @@
       "status": "checked",
       "assertedState": "empty",
       "route": "/billing",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/billing"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/billing"],
       "header": {
         "y": 0,
         "height": 120,
@@ -52713,11 +51186,7 @@
       "status": "checked",
       "assertedState": "empty",
       "route": "/tests/history",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests/history"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests/history"],
       "header": {
         "y": 0,
         "height": 120,
@@ -52834,9 +51303,7 @@
           "label": "검색"
         }
       ],
-      "alerts": [
-        "목록을 불러오지 못했어요.\n다시 시도"
-      ],
+      "alerts": ["목록을 불러오지 못했어요.\n다시 시도"],
       "methods": [
         "GetMe",
         "GetMyPlan",
@@ -52909,9 +51376,7 @@
           "label": "클립 검색"
         }
       ],
-      "alerts": [
-        "네트워크에 연결할 수 없어요.\n다시 시도"
-      ],
+      "alerts": ["네트워크에 연결할 수 없어요.\n다시 시도"],
       "methods": [
         "GetMe",
         "GetMyPlan",
@@ -52969,9 +51434,7 @@
         "name": "다시 시도"
       },
       "inputs": [],
-      "alerts": [
-        "템플릿 목록을 불러오지 못했어요.\n다시 시도"
-      ],
+      "alerts": ["템플릿 목록을 불러오지 못했어요.\n다시 시도"],
       "methods": [
         "GetMe",
         "GetMyPlan",
@@ -53031,9 +51494,7 @@
         "name": "다시 시도"
       },
       "inputs": [],
-      "alerts": [
-        "영상 템플릿을 불러오지 못했어요.\n다시 시도"
-      ],
+      "alerts": ["영상 템플릿을 불러오지 못했어요.\n다시 시도"],
       "methods": [
         "GetMe",
         "GetMyPlan",
@@ -53093,9 +51554,7 @@
         "name": "다시 시도"
       },
       "inputs": [],
-      "alerts": [
-        "지침 목록을 불러오지 못했어요.\n다시 시도"
-      ],
+      "alerts": ["지침 목록을 불러오지 못했어요.\n다시 시도"],
       "methods": [
         "GetMe",
         "GetMyPlan",
@@ -53156,9 +51615,7 @@
         "name": "다시 시도"
       },
       "inputs": [],
-      "alerts": [
-        "기억을 불러오지 못했어요.\n다시 시도"
-      ],
+      "alerts": ["기억을 불러오지 못했어요.\n다시 시도"],
       "methods": [
         "GetMe",
         "GetMyPlan",
@@ -53220,9 +51677,7 @@
         "name": "다시 시도"
       },
       "inputs": [],
-      "alerts": [
-        "말투 목록을 불러오지 못했어요.\n다시 시도"
-      ],
+      "alerts": ["말투 목록을 불러오지 못했어요.\n다시 시도"],
       "methods": [
         "GetMe",
         "GetMyPlan",
@@ -53316,11 +51771,7 @@
       "status": "checked",
       "assertedState": "error",
       "route": "/billing",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/billing"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/billing"],
       "header": {
         "y": 0,
         "height": 120,
@@ -53344,9 +51795,7 @@
       "firstInput": null,
       "firstAction": null,
       "inputs": [],
-      "alerts": [
-        "결제 정보를 불러오지 못했습니다."
-      ],
+      "alerts": ["결제 정보를 불러오지 못했습니다."],
       "methods": [
         "GetMe",
         "GetMyPlan",
@@ -53558,15 +52007,8 @@
           "label": null
         }
       ],
-      "alerts": [
-        "모델 목록을 불러오지 못했어요."
-      ],
-      "methods": [
-        "GetMe",
-        "GetMyPlan",
-        "ListCatalog",
-        "InitializeDefaultSelections"
-      ],
+      "alerts": ["모델 목록을 불러오지 못했어요."],
+      "methods": ["GetMe", "GetMyPlan", "ListCatalog", "InitializeDefaultSelections"],
       "pointerCoarse": true,
       "errors": []
     },
@@ -53621,15 +52063,8 @@
         "name": "계정 관리"
       },
       "inputs": [],
-      "alerts": [
-        "조합을 불러오지 못했어요."
-      ],
-      "methods": [
-        "GetMe",
-        "GetMyPlan",
-        "ListCatalog",
-        "InitializeDefaultSelections"
-      ],
+      "alerts": ["조합을 불러오지 못했어요."],
+      "methods": ["GetMe", "GetMyPlan", "ListCatalog", "InitializeDefaultSelections"],
       "pointerCoarse": true,
       "errors": []
     },
@@ -53684,9 +52119,7 @@
         "name": "계정 관리"
       },
       "inputs": [],
-      "alerts": [
-        "이용권을 불러오지 못했어요."
-      ],
+      "alerts": ["이용권을 불러오지 못했어요."],
       "methods": [
         "GetMe",
         "GetMyPlan",
@@ -53840,9 +52273,7 @@
         "name": "작업 내역으로 돌아가기"
       },
       "inputs": [],
-      "alerts": [
-        "네트워크에 연결할 수 없어요."
-      ],
+      "alerts": ["네트워크에 연결할 수 없어요."],
       "methods": [
         "GetMe",
         "GetMyPlan",
@@ -53894,15 +52325,8 @@
         "name": "작업 내역으로 돌아가기"
       },
       "inputs": [],
-      "alerts": [
-        "네트워크에 연결할 수 없어요.\n다시 시도"
-      ],
-      "methods": [
-        "GetMe",
-        "GetMyPlan",
-        "GetClipProject",
-        "InitializeDefaultSelections"
-      ],
+      "alerts": ["네트워크에 연결할 수 없어요.\n다시 시도"],
+      "methods": ["GetMe", "GetMyPlan", "GetClipProject", "InitializeDefaultSelections"],
       "controls": [],
       "pointerCoarse": true,
       "errors": []
@@ -53945,9 +52369,7 @@
         "name": "← 템플릿 목록"
       },
       "inputs": [],
-      "alerts": [
-        "템플릿 목록을 불러오지 못했어요.\n다시 시도"
-      ],
+      "alerts": ["템플릿 목록을 불러오지 못했어요.\n다시 시도"],
       "methods": [
         "GetMe",
         "GetMyPlan",
@@ -54016,9 +52438,7 @@
         "name": "영상 템플릿 목록"
       },
       "inputs": [],
-      "alerts": [
-        "영상 템플릿을 불러오지 못했어요.\n다시 시도"
-      ],
+      "alerts": ["영상 템플릿을 불러오지 못했어요.\n다시 시도"],
       "methods": [
         "GetMe",
         "GetMyPlan",
@@ -54657,9 +53077,7 @@
           "id": "_r_5_-input"
         }
       ],
-      "alerts": [
-        "AI 모델을 잠시 사용할 수 없어요."
-      ],
+      "alerts": ["AI 모델을 잠시 사용할 수 없어요."],
       "methods": [
         "GetMe",
         "GetMyPlan",
@@ -55000,11 +53418,7 @@
       "status": "checked",
       "assertedState": "working",
       "route": "/tests/test",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests/$testId"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests/$testId"],
       "header": {
         "y": 0,
         "height": 120,
@@ -55066,11 +53480,7 @@
       "status": "checked",
       "assertedState": "failed",
       "route": "/tests/test",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests/$testId"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests/$testId"],
       "header": {
         "y": 0,
         "height": 120,
@@ -55132,11 +53542,7 @@
       "status": "checked",
       "assertedState": "working",
       "route": "/tests/history",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests/history"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests/history"],
       "header": {
         "y": 0,
         "height": 120,
@@ -55211,11 +53617,7 @@
       "status": "checked",
       "assertedState": "failed",
       "route": "/tests/history",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests/history"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests/history"],
       "header": {
         "y": 0,
         "height": 120,
@@ -55368,13 +53770,7 @@
         }
       ],
       "alerts": [],
-      "methods": [
-        "GetMe",
-        "GetMyPlan",
-        "GetPost",
-        "InitializeDefaultSelections",
-        "ListTemplates"
-      ],
+      "methods": ["GetMe", "GetMyPlan", "GetPost", "InitializeDefaultSelections", "ListTemplates"],
       "pointerCoarse": true,
       "errors": []
     },
@@ -55448,11 +53844,7 @@
       "status": "checked",
       "assertedState": "checkout",
       "route": "/billing/checkout?tier=pro&term=monthly",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/billing/checkout"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/billing/checkout"],
       "header": {
         "y": 0,
         "height": 120,
@@ -55539,10 +53931,7 @@
       "status": "checked",
       "assertedState": "invalid-reset",
       "route": "/reset-password?token=expired-audit-token",
-      "matchIds": [
-        "__root__",
-        "/reset-password"
-      ],
+      "matchIds": ["__root__", "/reset-password"],
       "header": null,
       "main": {
         "y": 0,
@@ -55584,12 +53973,8 @@
           "label": "새 비밀번호"
         }
       ],
-      "alerts": [
-        "비밀번호 재설정 링크가 올바르지 않거나 만료됐어요."
-      ],
-      "methods": [
-        "ResetPassword"
-      ],
+      "alerts": ["비밀번호 재설정 링크가 올바르지 않거나 만료됐어요."],
+      "methods": ["ResetPassword"],
       "pointerCoarse": true,
       "errors": []
     },
@@ -55604,10 +53989,7 @@
       "status": "checked",
       "assertedState": "error",
       "route": "/verify-email?token=expired-audit-token",
-      "matchIds": [
-        "__root__",
-        "/verify-email"
-      ],
+      "matchIds": ["__root__", "/verify-email"],
       "header": null,
       "main": {
         "y": 0,
@@ -55649,12 +54031,8 @@
           "label": "이메일"
         }
       ],
-      "alerts": [
-        "인증 링크가 올바르지 않거나 만료됐어요."
-      ],
-      "methods": [
-        "VerifyEmail"
-      ],
+      "alerts": ["인증 링크가 올바르지 않거나 만료됐어요."],
+      "methods": ["VerifyEmail"],
       "pointerCoarse": true,
       "errors": []
     },
@@ -56298,12 +54676,7 @@
       },
       "inputs": [],
       "alerts": [],
-      "methods": [
-        "GetMe",
-        "GetMyPlan",
-        "ListCatalog",
-        "InitializeDefaultSelections"
-      ],
+      "methods": ["GetMe", "GetMyPlan", "ListCatalog", "InitializeDefaultSelections"],
       "pointerCoarse": true,
       "errors": []
     },
@@ -56383,12 +54756,7 @@
       },
       "inputs": [],
       "alerts": [],
-      "methods": [
-        "GetMe",
-        "GetMyPlan",
-        "ListCatalog",
-        "InitializeDefaultSelections"
-      ],
+      "methods": ["GetMe", "GetMyPlan", "ListCatalog", "InitializeDefaultSelections"],
       "pointerCoarse": true,
       "errors": []
     },
@@ -56561,12 +54929,7 @@
         }
       ],
       "alerts": [],
-      "methods": [
-        "GetMe",
-        "GetMyPlan",
-        "ListCatalog",
-        "InitializeDefaultSelections"
-      ],
+      "methods": ["GetMe", "GetMyPlan", "ListCatalog", "InitializeDefaultSelections"],
       "pointerCoarse": true,
       "errors": []
     },
@@ -56739,12 +55102,7 @@
         }
       ],
       "alerts": [],
-      "methods": [
-        "GetMe",
-        "GetMyPlan",
-        "ListCatalog",
-        "InitializeDefaultSelections"
-      ],
+      "methods": ["GetMe", "GetMyPlan", "ListCatalog", "InitializeDefaultSelections"],
       "pointerCoarse": true,
       "errors": []
     },
@@ -56759,11 +55117,7 @@
       "status": "checked",
       "assertedState": "candidates",
       "route": "/tests?count=2&draft=audit-count-2&factor=model&stage=write",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests"],
       "header": {
         "y": 0,
         "height": 96,
@@ -56869,11 +55223,7 @@
       "status": "checked",
       "assertedState": "candidates",
       "route": "/tests?count=4&draft=audit-count-4&factor=model&stage=write",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests"],
       "header": {
         "y": 0,
         "height": 96,
@@ -56993,11 +55343,7 @@
       "status": "checked",
       "assertedState": "candidates",
       "route": "/tests?count=8&draft=audit-count-8&factor=model&stage=write",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests"],
       "header": {
         "y": 0,
         "height": 96,
@@ -57145,11 +55491,7 @@
       "status": "checked",
       "assertedState": "candidates",
       "route": "/tests?count=16&draft=audit-count-16&factor=model&stage=write",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests"],
       "header": {
         "y": 0,
         "height": 96,
@@ -57353,11 +55695,7 @@
       "status": "checked",
       "assertedState": "candidates",
       "route": "/tests?count=2&draft=audit-count-2&factor=model&stage=write",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests"],
       "header": {
         "y": 0,
         "height": 96,
@@ -57463,11 +55801,7 @@
       "status": "checked",
       "assertedState": "candidates",
       "route": "/tests?count=4&draft=audit-count-4&factor=model&stage=write",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests"],
       "header": {
         "y": 0,
         "height": 96,
@@ -57587,11 +55921,7 @@
       "status": "checked",
       "assertedState": "candidates",
       "route": "/tests?count=8&draft=audit-count-8&factor=model&stage=write",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests"],
       "header": {
         "y": 0,
         "height": 96,
@@ -57739,11 +56069,7 @@
       "status": "checked",
       "assertedState": "candidates",
       "route": "/tests?count=16&draft=audit-count-16&factor=model&stage=write",
-      "matchIds": [
-        "__root__",
-        "/authenticated",
-        "/authenticated/tests"
-      ],
+      "matchIds": ["__root__", "/authenticated", "/authenticated/tests"],
       "header": {
         "y": 0,
         "height": 96,
