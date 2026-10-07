@@ -1,5 +1,5 @@
 # ARCH postpilot architecture
-> r19 | Code placement and gates, including task-impact verification, pre-push CI/CD parity and a browser-owned media pipeline.
+> r20 | Code placement and gates, including task-impact verification, pre-push CI/CD parity and a browser-owned media pipeline.
 
 ## decisions
 - ARCH-1 [o] product: a paid product anyone may sign up for (→AUTH-1, →BILL) — photos + notes → a blog draft in the user's own voice → per-platform copy export for manual posting; ko/en UI. Behavior lives in the domain SSOTs; root PRD.md is a reference brief and ssot/ wins on conflict
@@ -82,7 +82,7 @@
 - ARCH-29 [o] format: `pnpm --filter ./frontend format` (Prettier; `dist/` and `shared/api/gen` are ignored) · `cd backend && gofmt -w .`
 - ARCH-30 [o] verify skills: `pnpm exec haeram-spec-creator check` — the skills haeram-spec-creator installs into `.claude/skills` and `.codex/skills`, as `.haeram-spec-creator-lock.json` lists them, are package-managed and never hand-edited; `recomend-models`, in both directories, is the project's own skill and is edited in place
 - ARCH-31 [o] verification has separate task-completion and pre-push stages
-  - task done, worker submission and individual task integration use ARCH-24's impact-selected checks; reproducing every CI/CD step locally is a pre-push obligation, not a per-task obligation
+  - task completion and commits on main use ARCH-24's impact-selected checks; reproducing every CI/CD step locally is a pre-push obligation, not a per-task obligation
   - before push, run the full local equivalent of `CI`: `pnpm test:dev`, ARCH-25 + ARCH-27 + ARCH-28 + ARCH-30 on the pinned Node, and ARCH-26 plus the deploy Python unittests with `deploy/requirements-test.txt` installed
   - when the push can trigger `Deploy backend` or `Verify media`, also validate the production Compose layouts, build both deployed CPU images and execute all three media gates: production image smokes, CPU worker execution and separate-process CPU release in colocated and remote layouts; commands and local environment handling live in `docs/verification.md`
   - verify the final push candidate with the workflows' image targets, test flags and CPU/memory budgets; source/configuration/dependency changes invalidate affected evidence, while unchanged successful checks need not be repeated within that pre-push verification
@@ -176,6 +176,12 @@
   - actors survive viewport changes and do not turn stop/close into paid work or server cancellation
   - recovery reads durable records/jobs and never restores a snapshot that reissues provider calls or canonical writes
   - test actual actors through duplicate/stale events, owner changes, interruption, mode changes, binary decisions and publication recovery; pure projections remain framework-free
+- ARCH-70 [o] development uses the main checkout and completes one dependency-ready task at a time.
+  - read the current SSOT and task, record its start in STATE, implement its acceptance and run ARCH-24 checks
+  - record the result, archive the completed task, update STATE and commit on main before starting the next task
+  - keep correctness review within implementation and verification, with additional review only for concrete unresolved risks
+  - preserve unrelated work and reconcile pending SSOT changes before implementation; ARCH-31 remains the pre-push gate
+
 ## constraints
 - Node is pinned by `.node-version` (24.18.0); run FE verify on that version (fnm/nvm read the file) — newer local Node versions break the jsdom-based tests
 - Docker is required for `pnpm gen:*` (buf, sqlc), `pnpm dev:api`, and the media smokes (ARCH-37); Go 1.26 for BE
@@ -185,3 +191,4 @@
 
 ## chg
 - r19 261007 ARCH-24✎ ARCH-25✎ ARCH-26✎ ARCH-31✎ ARCH-37✎ every-task full local CI/media verification→impact-selected task completion and full CI plus applicable deploy/media gates before push; exact workflow/revision failure evidence required
+- r20 261007 ARCH-70+ ARCH-31✎ separate task submission/integration lifecycle→one dependency-ready task implemented, verified and committed directly on main

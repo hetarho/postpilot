@@ -25,7 +25,7 @@
 ## ssot
 | id | rev | tasked | pending | [?] |
 |---|---|---|---|---|
-| ARCH | 19 | 18 | ARCH-24✎ ARCH-25✎ ARCH-26✎ ARCH-31✎ ARCH-37✎ | 0 |
+| ARCH | 20 | 20 | - | 0 |
 | AUTH | 15 | 15 | - | 0 |
 | QUOTA | 38 | 38 | - | 0 |
 | POST | 36 | 35 | POST-63✎ POST-112+ POST-113+ POST-114+ POST-115+ | 0 |
@@ -92,17 +92,18 @@
 | T628 | Run private binary tournaments with exact metering and explicit winner publication | ARCH MODEL QUOTA GEN LANG | T622 T624 T625 T626 T627 T630 | todo |
 | T629 | Build one human A/B and knockout test experience for reusable writing settings | ARCH THEME MODEL QUOTA | T622 | todo |
 | T630 | Show named setting states and integrate direct AI editing and real-writing tests | ARCH EDIT THEME TMPL GUIDE MODEL | T622 T625 | todo |
-| T631 | Integrate isolated UX bundles and qualify creation settings and sixteen-entry tests | ARCH THEME POST CLIP EDIT VOICE MODEL QUOTA | T622 T623 T624 T625 T626 T627 T628 T629 T630 | todo |
+| T631 | Complete UX wiring and qualify creation settings and sixteen-entry tests | ARCH THEME POST CLIP EDIT VOICE MODEL QUOTA | T622 T623 T624 T625 T626 T627 T628 T629 T630 | todo |
 
 ## next
-- create-task ARCH; active creation-comparison-ux attempts must sync ARCH@19 verification stages before continuing the T622–T631 plan in docs/work/creation-and-comparison-ux.md; final visual arrangement remains THEME-61 open.
-- Existing browser-media tasks/blocked qualifications retain their scope; shared touches must respect any active ownership.
-- create-task GEN POST GUIDE TMPL THEME EXPORT MKT LANG VOICE MEM QUAL MODEL EDIT: consume the prompt-engineering deltas with existing T624–T631 ownership; see docs/work/prompt-engineering-ssot-2026-10-07.md. Instruction-language and live-model quality comparisons are validation, not open product policy.
+- Complete the merged T624/T625/T629 records on main, then continue with dependency-ready T623, one task at a time under ARCH-70.
+- Reconcile current prompt-engineering requirements with remaining UX tasks before implementation; preserve their separate task planning.
+- Existing browser-media tasks and blocked qualifications retain their requirements; THEME-61 visual decisions remain open.
 
 ## log
+- 261007 ARCH r19..r20 workflow/verification documentation consumed: main task execution and commit policy requires no runtime task
+- 261007 create-architecture ARCH r20 done: one dependency-ready task implemented, verified, recorded and committed on main
 - 261007 main integration start: combine completed T624/T625/T629 with baseline/CAS/recovery corrections; preserve pending prompt-engineering requirements and validate the combined code
 - 261007 update-ssot prompt-engineering verified: spec lint exit0 with124 history/freshness warnings and13 editorial hints; thirteen revisions and51 decision deltas match STATE/chg, historical IDs/references/links/log checks and diff check pass; tasks/product code unchanged
-- 261007 update-ssot prompt-engineering affects active creation-comparison-ux attempts T624/17671fdd changes_requested, T625/2182ddca changes_requested and T629/7c124aa5 ready: synchronize/reassess affected deltas before submission/integration; existing checks do not verify new semantic-origin behavior
 - 261007 update-ssot prompt-engineering done: thirteen domains revised; phrase origins, visible AI expression, no photo-order chronology, maximum grounded tags and safe prompt inspection fixed; converted ideation has no open product decisions, existing unrelated open items retained
 - 261007 update-ssot GEN POST GUIDE TMPL THEME EXPORT MKT LANG VOICE MODEL QUAL MEM EDIT start: convert prompt efficiency and owner-controlled writing decisions; reconcile three-source review, visible AI expression and photo chronology with current policies
 - 261007 ideation prompt-engineering owner-control round recorded: scope corrected; three semantic sources, expressive assistance and photo-order chronology explored with an interactive synthetic mockup; granularity/addition policy pending, SSOT/tasks unchanged
@@ -114,10 +115,6 @@
 - 261007 ideation searchable-details research round recorded: 64 linked sources, official 2026 content guides and search changes checked; numeric SEO claims assessed, three first-benefit candidates remain open
 - 261007 ideation searchable-details research start: recheck Naver Blog search principles, recent search changes and practitioner SEO claims; product choices remain open
 - 261007 create-architecture ARCH r19 done: task-impact checks at completion, full CI and applicable backend/media gates before push; local agent instructions and runnable parity runbook added, remote failure logs unavailable
-- 261007 ARCH r19 affects active creation-comparison-ux/T622 attempt and pending ARCH tasks: sync/reassess the verification policy before further submission or integration; no worker workspace changed
 - 261007 create-architecture ARCH start: separate task impact verification from pre-push CI/CD checks and inspect backend/media workflow failures
-- 261007 create-task creation/comparison UX done: T622–T631 form ten atomic session bundles with touches/dependency ownership; thirteen SSOT deltas consumed and visual decision THEME-61 remains open
-- 261007 manage-work planning recorded: native task claims are bundle claims; scope-filter T622–T631 to avoid unrelated media work, workers10 configured only when work group is started
 - 261007 update-ssot creation/comparison UX done: thirteen domains revised, human winners and once-per-entrant generation fixed; final visual arrangement stays THEME-61 open
-- 261007 create-task ARCH THEME POST CLIP EDIT VOICE TMPL GUIDE MODEL GEN QUOTA LANG VIDEO start: ten atomically claimable session bundles with isolated touches and explicit integration gates
 - 261007 update-ssot THEME POST CLIP AUTH EDIT VOICE TMPL GUIDE MODEL GEN QUOTA start: review contextual navigation, operational history, understandable setting drafts, editable learning material and unified binary tournaments; unresolved product choices stay open

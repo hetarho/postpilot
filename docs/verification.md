@@ -1,6 +1,6 @@
 # Task and pre-push verification
 
-The policy is [ARCH-24 and ARCH-31](../spec/ssot/ARCH.md). Task completion and pushing have different verification scopes. Installed implementation/work-management skills use these stages when selecting their verification commands.
+The policy is [ARCH-24 and ARCH-31](../spec/ssot/ARCH.md). Task completion and pushing have different verification scopes. Complete and commit one task on `main` before starting the next; installed implementation skills use these stages when selecting their verification commands.
 
 ## Complete a task
 
@@ -10,7 +10,7 @@ Include FE consumers, shared harnesses and relevant user flows; include BE packa
 
 Vitest can select affected tests with `--changed` against the recorded task-start SHA, or `related --run` against source paths relative to `frontend/`. Import-based selection needs an explicit check for effects outside the import graph. Do not switch the baseline to the latest intermediate commit. Go tests select packages and, where the full package is expensive, explicit test names covering the changed behavior and its consumers.
 
-Acceptance and relevant lint, formatting and build/type checks must also pass. Task completion, worker submission and individual task integration do not automatically run the pre-push gate. A final integration/qualification task still runs every check required by its own acceptance.
+Acceptance and relevant lint, formatting and build/type checks must also pass before the task's `main` commit. The pre-push gate runs for the final push candidate. A final wiring/qualification task still runs every check required by its own acceptance.
 
 ## Before push: full CI
 

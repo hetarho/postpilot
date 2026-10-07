@@ -48,18 +48,11 @@ Wire shape, annotation representation, phrase alignment, storage/indexes, exact 
 
 ## Existing work and freshness
 
-The shared CLI board reports an active `creation-comparison-ux` group at `/tmp/postpilot-creation-comparison-ux-planning`. STATE's todo rows are not evidence that these tasks are unstarted.
+Development continues on main, one dependency-ready task at a time, under ARCH-70. Read STATE, the selected task and current SSOT before implementation; complete its acceptance, verification, result and main commit before proceeding.
 
-| Task / attempt | Board state at handoff | Impact |
-|---|---|---|
-|T622 /c26888f2|integrated| Existing shared contract work does not retroactively establish the new semantic-origin contract |
-|T624 /17671fdd|changes_requested| POST/GEN origin lifecycle, full-text review and private request evidence; existing acceptance provenance is language/frozen-publication metadata |
-|T625 /2182ddca|changes_requested| EDIT kind/mode composition, shared template material roles and safe technical inspection |
-|T629 /7c124aa5|ready| MODEL blind identity, matching source review, private payload expiry and readable candidate handling |
+T622/T624/T625/T629 provide the existing shared contracts, creation/history, authoring and test presentation. Their implementation and prior checks do not establish this newer semantic-origin contract. Baseline consistency, local-edit revision fencing and saved-target draft recovery are corrected during the main merge and remain pinned by regressions.
 
-The current T624/T625 review requests are existing code-review outcomes, independent of this new policy delta. T624's baseline-consistency finding must remain visible. Neither review status nor previous passing tests demonstrate new origin behavior.
-
-Next `create-task` must reconcile T624–T631 touches/dependencies and these attempts before assigning new delta. Existing T626 accepted projections, T627 frozen input/version work, T628 publications/metering, T630 hosts and T631 integration already own related concerns. Do not duplicate them or edit worker checkouts during planning. Workers/reviewers must synchronize the affected policy and reassess acceptance/verification before integration; policy changes do not silently extend their task acceptance.
+Next `create-task` must reconcile the pending prompt-engineering changes with remaining T623/T626/T627/T628/T630/T631 requirements and dependencies. Reuse their applicable work rather than creating duplicate implementations. Preserve the new SSOT decisions and historical implementation evidence; prior passing tests are not evidence of new origin behavior.
 
 ## Verification
 
