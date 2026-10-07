@@ -24,7 +24,7 @@
 ## ssot
 | id | rev | tasked | pending | [?] |
 |---|---|---|---|---|
-| ARCH | 19 | 18 | ARCH-24✎ ARCH-25✎ ARCH-26✎ ARCH-31✎ ARCH-37✎ | 0 |
+| ARCH | 19 | 19 | - | 0 |
 | AUTH | 15 | 15 | - | 0 |
 | QUOTA | 38 | 38 | - | 0 |
 | POST | 35 | 35 | - | 0 |
@@ -94,11 +94,14 @@
 | T631 | Integrate isolated UX bundles and qualify creation settings and sixteen-entry tests | ARCH THEME POST CLIP EDIT VOICE MODEL QUOTA | T622 T623 T624 T625 T626 T627 T628 T629 T630 | todo |
 
 ## next
-- create-task ARCH; active creation-comparison-ux attempts must sync ARCH@19 verification stages before continuing the T622–T631 plan in docs/work/creation-and-comparison-ux.md; final visual arrangement remains THEME-61 open.
+- Resume sequential T623–T631 bundle implementation on rebased creation-comparison-ux with ARCH@19 impact-selected completion checks; T622 is integrated and T625 partial SQL work is preserved for reassignment.
 - Existing browser-media tasks/blocked qualifications retain their scope; shared touches must respect any active ownership.
 - ideation searchable-details continues: choose the first user benefit and acceptable input effort, then validate source coverage and personal-versus-pooled learning.
 
 ## log
+- 261007 create-task ARCH r19 done: verification-only delta needs no runtime task; remaining UX todo contracts refreshed to ARCH@19 with impact rationale and pre-push separation; completed/blocked tasks unchanged
+- 261007 manage-work main rebase done: main95da3ad4 included; T622 approved code unchanged and completion merge preserved; interrupted T625 released with its partial query patch retained
+- 261007 create-task ARCH r19 start: reassess verification-only delta after main rebase; stopped T625 attempt released with its SQL patch preserved
 - 261007 T622 integrated; main rebase preserves the independently approved code and completion record
 - 261007 manage-work creation-comparison-ux start: isolated planning workspace; T590 file status aligned with its existing blocked STATE record before atomic UX claims
 - 261007 create-architecture ARCH r19 done: task-impact checks at completion, full CI and applicable backend/media gates before push; local agent instructions and runnable parity runbook added, remote failure logs unavailable
@@ -116,6 +119,3 @@
 - 261007 media-release fixture fix done: Max support assignment passes colocated182.53s/remote159.11s CPU releases, BE80, deploy61, Go vet/build/gofmt and spec lint with existing warnings; verified default release image tags refreshed
 - 261007 T621 done: typography b152f586 and final voice-context 4d634b14;3468 FE tests,145 browser measurements and all available unchanged-source/tooling gates pass
 - 261007 create-task THEME r27 done; T621 start: shared type scale, focused role assignment and browser hierarchy verification
-- 261007 update-ssot THEME r27 done: coherent responsive title/body scale and active-stage hierarchy
-- 261007 update-ssot THEME start: responsive typography scale, active-step hierarchy and readable supporting copy
-- 261007 T620 done: FE3468/430 files, clean258, backend80/deploy62/tooling/generator gates, twenty AI and four personal browser sessions pass;58 existing dirty files preserved

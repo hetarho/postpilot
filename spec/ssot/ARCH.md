@@ -184,4 +184,4 @@
 - dev ports: web 2564, api 7678 (compose maps 7678 → 8080; containers use 8080)
 
 ## chg
-- r19 261007 ARCH-24✎ ARCH-25✎ ARCH-26✎ ARCH-31✎ ARCH-37✎ every-task full local CI/media verification→impact-selected task completion and full CI plus applicable deploy/media gates before push; exact workflow/revision failure evidence required
+-
