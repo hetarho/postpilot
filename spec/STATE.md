@@ -36,7 +36,7 @@
 | GUIDE | 17 | 17 | - | 0 |
 | EXPORT | 11 | 11 | - | 0 |
 | LANG | 9 | 9 | - | 0 |
-| THEME | 30 | 30 | - | 1 |
+| THEME | 31 | 31 | - | 1 |
 | MKT | 10 | 10 | - | 0 |
 | VIDEO | 7 | 7 | - | 0 |
 | CLIP | 59 | 59 | - | 2 |
@@ -93,6 +93,7 @@
 - Editorial follow-up: doc-review ARCH; preserve blocked independent media/voice qualification.
 
 ## log
+- 261007 T648 done on main: compact translucent docks, bounded composers and48px actions across the app; consumer608 plus final55, build/lint and Chromium196 routes/308 geometry/70 continuity checks pass
 - 261007 T627 done on main: immutable single-factor factories and private complete outputs, exact checkpoint/retry plans and current direct/refined references; owning/domain/wiring tests, builds/vet and FE124 consumers pass
 - 261007 Docker Desktop termination complete: 9 app processes received SIGTERM; 4 remaining or respawned processes required SIGKILL; independent scans confirmed no Docker.app processes or port 7678 listener; separate Colima/Lima and persistent data files retained
 - 261007 T630 done on main: named durable setting editing, private reference/metadata continuity, terminal paginated summaries and atomic domain receipts; full FE4077, owning Go/wiring, builds/lint/codegen and real viewport checks pass
@@ -112,4 +113,3 @@
 - 261007 final remote verification start at6a944d1f: user requests remaining CI/deployment/media checks to finish before final verification record commit/push; no further implementation task is started
 - 261007 post-push verification complete: whole Go run passed every package except the corrected rpcserver reason scan; rpcserver/authoring/authoring-rpc full owning suites, vet/build and format pass after genuine missing-capability/private-reason fixes; whole frontend failures corrected with owning-suite passes, generated-code drift/spec checks and production build pass; deployment recovery62 and all production/worker/both-layout media gates pass
 - 261007 final backend correction scope: unsupported durable authoring adapter returns typed existing unavailable314 after authentication; reason scanner recognizes actual private failure fields without enum exemptions; media/worker execution paths unchanged and real release API adapter implements durable drafts, so compatible runtime gate evidence is retained and final deployable image metadata is rebuilt for pushed HEAD
-- 261007 post-push frontend verification: full suite3992/4004 passed; the12 breadcrumb selector failures are corrected and owning suites pass (Admin26, Templates7); ESLint, format, FSD, style, retirement and production build pass; backend/media verification continues

@@ -70,6 +70,11 @@ export function buttonStyles({
       // wrapping in a narrow column — and two 20px lines leave 2px of air inside 44px. On the
       // single line every other button has, `items-center` makes the tighter line box invisible.
       'relative inline-flex items-center justify-center gap-2 rounded-md text-sm leading-snug font-medium active:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50',
+      // Stable CSS hooks give dock-contained buttons, links and file labels the same larger
+      // targets without changing their pointer sizing anywhere else, including portalled panels.
+      'ui-button',
+      size === 'icon' && 'ui-button-icon',
+      variant === 'cta' && 'ui-button-cta',
       VARIANT_STYLES[variant],
       sizeStyles(size, variant),
       className,

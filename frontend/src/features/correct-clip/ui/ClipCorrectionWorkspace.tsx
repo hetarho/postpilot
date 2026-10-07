@@ -718,7 +718,7 @@ export function ClipCorrectionWorkspace({
       </div>
       <div ref={actions} className="contents">
         {!readOnly && (
-          <ActionBar ariaLabel={t('correction.actions')} className="space-y-3">
+          <ActionBar width="content" ariaLabel={t('correction.actions')} className="space-y-3">
             {/* Only while there is something to report: an empty first row would still push the
               composer down by the bar's own row gap. */}
             {(renderProgress || failure) && (

@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ActionBar, proseStyles } from '@/shared/ui'
+import { ActionBar } from '@/shared/ui'
 
 /** The editor's docked bar. It holds the one thing a phone could not otherwise reach — the step's
  *  committing action, which sat in normal flow roughly 1,000px down a 4,000px page (THEME-24) — the
@@ -27,8 +27,8 @@ export function EditorDock({
   return (
     <>
       <div aria-hidden className="h-6 shrink-0" />
-      <ActionBar ariaLabel={t('editor.actionAria')} className="mt-0">
-        <div className={proseStyles('flex flex-col gap-2')}>
+      <ActionBar width="content" ariaLabel={t('editor.actionAria')} className="mt-0">
+        <div className="flex min-w-0 flex-col gap-3">
           {header}
           {children}
         </div>

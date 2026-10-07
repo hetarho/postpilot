@@ -1,4 +1,8 @@
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { createPortal } from 'react-dom'
+import { Button } from '../button/Button'
+import { buttonStyles } from '../button/buttonStyles'
 import { ActionBar } from './ActionBar'
 
 describe('ActionBar', () => {
@@ -21,17 +25,99 @@ describe('ActionBar', () => {
     }
   })
 
-  // The column-spanning dock is the one that keeps a surface: it carries a view's committing
-  // controls and their refusals, not one add action.
-  it('keeps the column-spanning dock on its own plane', () => {
+  it('fits and centers an action group without stretching across its column', () => {
     render(
       <ActionBar dock="always" ariaLabel="초안">
         <button>생성</button>
       </ActionBar>,
     )
 
-    const spanning = screen.getByLabelText('초안')
-    expect(spanning).toHaveClass('sticky', 'rounded-xl', 'shadow-md', 'bg-surface-highest')
-    expect(spanning.className).not.toMatch(/w-fit|ml-auto/)
+    const bar = screen.getByLabelText('초안')
+    expect(bar).toHaveClass('sticky', 'rounded-xl', 'shadow-md', 'w-fit', 'max-w-full', 'mx-auto')
+    expect(bar).toHaveClass('self-center', 'p-2')
+    expect(bar).toHaveAttribute('data-action-bar', 'always')
+    expect(bar).not.toHaveClass('bg-surface-highest', 'w-full', 'sm:p-4')
+  })
+
+  it('provides bounded readable space when the dock contains a composer', () => {
+    render(
+      <ActionBar width="content" ariaLabel="수정 작업">
+        <textarea aria-label="수정 요청" />
+        <Button>수정</Button>
+      </ActionBar>,
+    )
+
+    const bar = screen.getByLabelText('수정 작업')
+    expect(bar).toHaveClass('w-full', 'max-w-measure', 'mx-auto', 'self-center')
+    expect(bar).not.toHaveClass('w-fit')
+    expect(bar).toContainElement(screen.getByRole('textbox', { name: '수정 요청' }))
+  })
+
+  it('preserves the mounted action and its accessible label while work is pending', async () => {
+    const user = userEvent.setup()
+    const started = vi.fn()
+    const action = (pending: boolean) => (
+      <ActionBar ariaLabel="저장 작업">
+        <Button pending={pending} onClick={started}>
+          저장하기
+        </Button>
+      </ActionBar>
+    )
+    const { rerender } = render(action(false))
+    const button = screen.getByRole('button', { name: '저장하기' })
+    await user.tab()
+    expect(button).toHaveFocus()
+    await user.click(button)
+    expect(started).toHaveBeenCalledOnce()
+
+    rerender(action(true))
+    expect(screen.getByRole('button', { name: '저장하기' })).toBe(button)
+    expect(button).toHaveAttribute('aria-busy', 'true')
+    expect(button).toBeDisabled()
+    expect(button.querySelector('.opacity-0')).toHaveTextContent('저장하기')
+    await user.click(button)
+    expect(started).toHaveBeenCalledOnce()
+
+    rerender(action(false))
+    expect(screen.getByRole('button', { name: '저장하기' })).toBe(button)
+    expect(button).not.toHaveAttribute('aria-busy')
+    expect(button).toBeEnabled()
+  })
+
+  it('scopes dock targets to its DOM while linked actions and portalled controls keep semantics', () => {
+    render(
+      <>
+        <Button>일반 동작</Button>
+        <ActionBar ariaLabel="후보 작업">
+          <Button size="compact">이전 단계</Button>
+          <Button size="icon" aria-label="안내">
+            ?
+          </Button>
+          <a href="/tests/history" className={buttonStyles({ variant: 'cta' })}>
+            작업 내역
+          </a>
+          {createPortal(<Button>대화상자 동작</Button>, document.body)}
+        </ActionBar>
+      </>,
+    )
+
+    for (const target of [
+      screen.getByRole('button', { name: '이전 단계' }),
+      screen.getByRole('button', { name: '안내' }),
+      screen.getByRole('link', { name: '작업 내역' }),
+    ]) {
+      expect(target.closest('[data-action-bar]')).toBe(screen.getByLabelText('후보 작업'))
+      expect(target).toHaveClass('ui-button')
+    }
+    expect(screen.getByRole('button', { name: '안내' })).toHaveClass('ui-button-icon')
+    expect(screen.getByRole('link', { name: '작업 내역' })).toHaveAttribute(
+      'href',
+      '/tests/history',
+    )
+    for (const name of ['일반 동작', '대화상자 동작']) {
+      const button = screen.getByRole('button', { name })
+      expect(button.closest('[data-action-bar]')).toBeNull()
+      expect(button).toHaveClass('min-h-10', 'pointer-coarse:min-h-11')
+    }
   })
 })

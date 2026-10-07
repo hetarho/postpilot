@@ -140,10 +140,9 @@ export const ReviseForm = forwardRef<ReviseFormHandle, ReviseFormProps>(function
           the user can read.
           `fieldTitle`, not `title`: this is a field's name standing beside the step's way out, not
           a second step heading, so it is smaller than the step title and heavier than a caption
-          (THEME-19). The action slot takes the ROW'S whole remaining width — 확정하기 is two words, and
-          at its natural size it read as an afterthought next to the label instead of as the
-          thing that ends the step. */}
-      <div className="flex items-center justify-between gap-3">
+          (THEME-19). Keep the step action at its natural label width; when it cannot fit beside
+          the field label, the heading row wraps without splitting its button into characters. */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <Typography
           variant="fieldTitle"
           as="label"
@@ -152,7 +151,7 @@ export const ReviseForm = forwardRef<ReviseFormHandle, ReviseFormProps>(function
         >
           {t('revision.instruction')}
         </Typography>
-        {action}
+        {action && <div className="min-w-0 shrink-0">{action}</div>}
       </div>
       {/* Validation and failure sit ABOVE the controls, so the keyboard covering the bottom ~40%
           of the screen hides at most a button and never the reason it is disabled (THEME-31). */}

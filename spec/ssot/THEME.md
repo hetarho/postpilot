@@ -1,5 +1,5 @@
 # THEME theme preference and design language
-> r30 | Shared accessible visual contracts for creation, authoring, comparisons and semantic-origin review.
+> r31 | Shared accessible visual contracts for creation, authoring, comparisons and semantic-origin review.
 
 ## decisions
 - THEME-1 [o] three browser-owned preferences: `system` (the default, follows `prefers-color-scheme`), `light` → the `day` semantic map, `dark` → the `night` map; the effective theme is always exactly `day|night`; components consume semantic or functional tokens and never branch on a preference, an effective theme or a palette step
@@ -95,6 +95,7 @@
   - under a coarse pointer (`pointer-coarse:`, a thumb) every pressed control keeps the 44 × 44 CSS px floor counting both dimensions (a bare text link like `말투` is ~28 px wide and fails, so text-sized controls get horizontal padding)
   - under a fine pointer the resting height is 40 px (`min-h-10` / `size-10`) for buttons, fields, listbox triggers and tabs, 36 px (`min-h-9`) for menu rows and listbox options, and 32 px (`min-h-8`) for `compact` — every one above WCAG 2.5.8's 24 px minimum ← 44 px controls under a mouse read as a touch layout blown up, and the web norm is 32–40 (WCAG 2.5.8 sets 24, 2.5.5 and Apple's HIG set 44 for touch, Material draws a 40 dp button on a 48 dp touch target)
   - the primitive carries both values itself (`min-h-10 pointer-coarse:min-h-11`) so a slice never sizes a control, and a bare text link with no plane of its own keeps a 44 px box at every pointer since nothing visible is oversized
+  - controls inside the shared bottom action dock use a48px height floor and proportional horizontal padding at every pointer; icon controls stay square
   - 24 × 24 is the absolute floor
   - ≥ 8 px between adjacent targets
   - when the visible box must stay small the primitive grows the hit area itself
@@ -108,7 +109,8 @@
   - navigation is reachable from anywhere in the scroll
   - a control and the thing it commits stay on one screen — after the field, or docked
   - a dock for a list's add action stays docked at every width, carries NO plane of its own — no surface, no padding and no shadow behind the control — and takes only the width its control needs, right-aligned at every width, the control itself floating over the rows on its own shadow ← a long list pushes the one action the screen exists for below the fold, and a plane behind one button is the card THEME-13 forbids however narrow it gets, while a bare floating control also covers less of the list it sits over
-  - a dock whose reason is the distance between content and control (the editor's) keeps its plane (→THEME-29), and the bar is one element at every width
+  - a multi-action dock wraps only its controls at their useful width, centered within its parent and capped by available space; an input/composer dock uses a bounded readable width rather than spanning the desktop workspace
+  - multi-action and composer docks use a compact translucent semantic surface with backdrop blur; unsupported blur falls back to a readable solid surface; the bar is one element at every width
   - one docked bar per scroller ← two sticky bars pin to the same offset
   - a dock may carry more than one row and an unused row collapses
   - feedback renders where the user is looking, in a live region mounted before its text changes
@@ -123,7 +125,7 @@
   - radii `rounded-sm` (6 px) chips · `rounded-md` (10) controls · `rounded-lg` (14) panels and cards · `rounded-xl` (20) sheets, dialogs and a docked bar · `rounded-full` avatars and pills
   - an inner control is one step smaller than its panel
   - an edge-attached surface rounds the free side only (`rounded-t-xl`)
-  - no gradients on surfaces and no glassmorphism outside the promotional surfaces THEME-37 exempts — the dock is opaque in both themes
+  - no gradients on surfaces; glassmorphism is limited to the shared compact action dock under THEME-24 and promotional surfaces under THEME-37, with readable text and focus in both themes
 - THEME-28 [o] motion:
   - `duration-fast` (120 ms) hover and press · `duration-base` (200 ms) reveal and dismiss · `duration-slow` (320 ms) a sheet or page transition
   - `ease-standard` for everything and `ease-emphasized` only for something arriving
@@ -143,7 +145,7 @@
   - `Editable` (read first, edit on request behind a pencil `aria-label`led with the field; the caller supplies both views and every action)
   - `Badge` (`rounded-sm`, no border, `px-2 py-0.5`, always a text label; `badge-accent-*` for a mid-way state, a `notice-*` tone for good/bad/urgent)
   - `Notice` (a tone, explanatory text, no border, `px-4 py-3`, the caller's `role="alert"` or `"status"`)
-  - `ActionBar` (the dock, clearing the viewport edge and home indicator itself and floating a step clear of what is under it, at the end of a `flex-1 flex-col` page with `mt-auto`, mounted only when it holds something; `dock="always"` spans the column on an opaque `surface-highest`, `rounded-xl`, `shadow-md`, `p-3 sm:p-4`, while `dock="list"` has no plane at all — `w-fit ml-auto` at every width and the shadow on the control it holds, →THEME-24)
+  - `ActionBar` (one shared dock with viewport/home-indicator clearance, mounted only when it holds controls or refusals; multi-action content fits its controls with compact padding and a translucent blurred surface, composers use a bounded readable width, and contained buttons use the48px dock floor; `dock="list"` remains natural-width with no background plane and control shadows, →THEME-23/24)
   - overlays: all portalled, all return focus, all `Escape`-closable, all lock the body scroll
   - `Sheet` takes arbitrary content and on a phone is a full-bleed bottom sheet, `rounded-t-xl`, safe-area padded, its body the one scroller, rising from and sinking back into the edge (`duration-slow`, emphasized in, standard out) while a `md:` dialog only fades; the panel outlives `open` by exactly one animation and `animationend` unmounts it while scroll lock, focus and the `Escape` claim are surrendered the moment `open` goes false, the leftover picture `inert`
   - `Dialog` is `Sheet` with the confirm shape — one title, one explanation, its pair ONE row split 3 : 7 on a phone with cancel left and the CTA right, collapsing to a right-aligned row from `md:`; a destructive action is confirmed through `Dialog`, never `window.confirm`

@@ -227,7 +227,7 @@ export function GuidelineDirectory({
           <ActionBar
             dock="list"
             ariaLabel={t('create.dockAria', { ns: 'guidelines' })}
-            className="mt-auto flex gap-2"
+            className="mt-auto flex flex-wrap items-center justify-end gap-3"
           >
             <DefaultGuidelineSheet ownerId={ownerId} kind={kind} />
             <Button

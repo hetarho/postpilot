@@ -879,7 +879,7 @@ function OwnedStudio({
             <FieldMessage>{t('requiredChoices', { count: plan.count })}</FieldMessage>
           )}
           <ActionBar ariaLabel={title}>
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap items-center justify-center gap-3">
               <Button
                 variant="ghost"
                 onClick={() => flow.sendPresentation({ type: 'BACK' })}
@@ -1113,7 +1113,7 @@ function OwnedStudio({
               </FieldMessage>
             )}
           <ActionBar ariaLabel={title}>
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap items-center justify-center gap-3">
               <Button variant="ghost" onClick={() => flow.sendPresentation({ type: 'BACK' })}>
                 {t('back')}
               </Button>
@@ -1147,7 +1147,7 @@ function OwnedStudio({
               : t('credits', { count: flow.context.quote?.credits ?? 0 })}
           </Typography>
           <ActionBar ariaLabel={title}>
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap items-center justify-center gap-3">
               <Button variant="ghost" onClick={() => flow.sendPresentation({ type: 'BACK' })}>
                 {t('back')}
               </Button>
@@ -1345,7 +1345,7 @@ function OwnedStudio({
               <FieldMessage>{t('requiredInput')}</FieldMessage>
             )}
           <ActionBar ariaLabel={title}>
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap items-center justify-center gap-3">
               <Button variant="ghost" onClick={() => flow.sendPresentation({ type: 'BACK' })}>
                 {t('back')}
               </Button>

@@ -341,6 +341,11 @@
   --button-danger-quiet-bg-hover: var(--intent-danger-subtle);
   --button-danger-quiet-fg: var(--intent-danger);
 
+  /* A compact committing dock lets the page remain visible beneath it. The solid role also
+     supplies the fallback on browsers that cannot blur the background. */
+  --action-dock-solid: var(--surface-highest);
+  --action-dock-bg: color-mix(in oklab, var(--surface-highest) 82%, transparent);
+
   /* fields */
   --field-bg: var(--surface-recessed);
   --field-bg-hover: var(--surface-lowest);
@@ -757,6 +762,8 @@
   --color-button-ghost-fg: var(--button-ghost-fg);
   --color-button-danger-quiet-bg-hover: var(--button-danger-quiet-bg-hover);
   --color-button-danger-quiet-fg: var(--button-danger-quiet-fg);
+  --color-action-dock-solid: var(--action-dock-solid);
+  --color-action-dock-bg: var(--action-dock-bg);
 
   /* fields */
   --color-field-bg: var(--field-bg);
@@ -820,6 +827,57 @@
   --shadow-sm: 0 1px 2px color-mix(in oklab, var(--shadow-color) 40%, transparent);
   --shadow-md: 0 6px 18px color-mix(in oklab, var(--shadow-color) 45%, transparent);
   --shadow-lg: 0 18px 48px color-mix(in oklab, var(--shadow-color) 50%, transparent);
+}
+
+/* Keep these in the utility layer: the compound selector wins over the ordinary/coarse pointer
+   button utilities by specificity, without overriding unrelated controls. Portalled dialogs
+   and menus are outside this DOM subtree and retain their ordinary target sizes. */
+@layer utilities {
+  /* Full-bleed directories reserve both page gutters even when several controls wrap. */
+  [data-action-bar='list'].action-list-inset {
+    max-width: calc(100% - var(--spacing) * 8);
+    margin-right: calc(var(--spacing) * 4);
+
+    @variant sm {
+      max-width: calc(100% - var(--spacing) * 12);
+      margin-right: calc(var(--spacing) * 6);
+    }
+
+    @variant lg {
+      max-width: calc(100% - var(--spacing) * 16);
+      margin-right: calc(var(--spacing) * 8);
+    }
+  }
+
+  [data-action-bar='always'] {
+    background-color: var(--color-action-dock-solid);
+  }
+
+  @supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+    [data-action-bar='always'] {
+      background-color: var(--color-action-dock-bg);
+      -webkit-backdrop-filter: blur(var(--blur-lg));
+      backdrop-filter: blur(var(--blur-lg));
+    }
+  }
+
+  [data-action-bar] button,
+  [data-action-bar] summary,
+  [data-action-bar] .ui-button {
+    min-height: calc(var(--spacing) * 12);
+    min-width: calc(var(--spacing) * 12);
+    padding-inline: calc(var(--spacing) * 6);
+  }
+
+  [data-action-bar] .ui-button.ui-button-cta {
+    padding-inline: calc(var(--spacing) * 7);
+  }
+
+  [data-action-bar] .ui-button.ui-button-icon {
+    width: calc(var(--spacing) * 12);
+    height: calc(var(--spacing) * 12);
+    padding: 0;
+  }
 }
 
 /* ── Base ───────────────────────────────────────────────────────────────────────────────────── */

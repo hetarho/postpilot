@@ -46,6 +46,7 @@ describe('Button', () => {
     expect(styles).toContain('size-10')
     expect(styles).toContain('pointer-coarse:size-11')
     expect(styles).toContain('shrink-0')
+    expect(styles).toContain('ui-button-icon')
   })
 
   // The one documented step below the floor, and it keeps a touch step of its own.
@@ -53,5 +54,28 @@ describe('Button', () => {
     const styles = buttonStyles({ size: 'compact' })
     expect(styles).toContain('min-h-8')
     expect(styles).toContain('pointer-coarse:min-h-9')
+  })
+
+  it('marks styled links and file labels for the same contextual dock sizing as buttons', () => {
+    render(
+      <>
+        <Button variant="cta">생성</Button>
+        <a href="/tests" className={buttonStyles({ variant: 'cta' })}>
+          글쓰기 테스트
+        </a>
+        <label htmlFor="attachment" className={buttonStyles({ size: 'icon' })}>
+          첨부
+        </label>
+        <input id="attachment" type="file" />
+      </>,
+    )
+
+    expect(screen.getByRole('button', { name: '생성' })).toHaveClass('ui-button', 'ui-button-cta')
+    expect(screen.getByRole('link', { name: '글쓰기 테스트' })).toHaveClass(
+      'ui-button',
+      'ui-button-cta',
+    )
+    expect(screen.getByText('첨부')).toHaveClass('ui-button', 'ui-button-icon')
+    expect(screen.getByLabelText('첨부')).toHaveAttribute('type', 'file')
   })
 })

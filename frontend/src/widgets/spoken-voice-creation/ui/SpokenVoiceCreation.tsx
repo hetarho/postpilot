@@ -120,7 +120,7 @@ export function SpokenVoiceCreation({
               }
             />
             <ActionBar className="static">
-              <div className="flex flex-wrap items-center gap-3">
+              <div className="flex flex-wrap items-center justify-center gap-3">
                 <Button
                   variant="ghost"
                   disabled={!c.valid || c.busy || !c.dirty || !!c.draft?.confirmedVoiceId}

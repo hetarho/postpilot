@@ -119,7 +119,7 @@ export function VoicesPage() {
           <ActionBar
             dock="list"
             ariaLabel={t('create.dockAria', { ns: 'voices' })}
-            className="mt-auto"
+            className="action-list-inset mt-auto flex flex-wrap items-center justify-end gap-3"
           >
             <CreateVoiceSheet ownerId={ownerId} />
             <Button variant="cta" onClick={() => setAuthoringOpen(true)}>
