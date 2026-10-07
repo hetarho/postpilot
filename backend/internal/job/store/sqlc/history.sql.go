@@ -17,7 +17,7 @@ WITH ranked AS (
    AND (?2='[]' OR g.kind IN (SELECT value FROM json_each(?2)))
    AND g.experiment_id IN (SELECT value FROM json_each(?3))
 )
-SELECT j.id, j.post_slug, j.user_id, j.voice_id, j.kind, j.status, j.stage, j.progress_done, j.progress_total, j.error, j.observe_model, j.write_model, j.payload, j.created_at, j.updated_at, j.started_at, j.finished_at, j.target_language, j.error_reason, j.error_params, j.technical_detail, j.clip_project_id, j.dispatch_ready, j.cancel_requested_at, j.cancellation_policy_version, j.experiment_id FROM generation_jobs j JOIN ranked r ON r.id=j.id WHERE r.position=1
+SELECT j.id, j.post_slug, j.user_id, j.voice_id, j.kind, j.status, j.stage, j.progress_done, j.progress_total, j.error, j.observe_model, j.write_model, j.payload, j.created_at, j.updated_at, j.started_at, j.finished_at, j.target_language, j.error_reason, j.error_params, j.technical_detail, j.clip_project_id, j.dispatch_ready, j.cancel_requested_at, j.cancellation_policy_version, j.experiment_id, j.wait_expires_at FROM generation_jobs j JOIN ranked r ON r.id=j.id WHERE r.position=1
 `
 
 type LatestExperimentJobsParams struct {
@@ -62,6 +62,7 @@ func (q *Queries) LatestExperimentJobs(ctx context.Context, arg LatestExperiment
 			&i.CancelRequestedAt,
 			&i.CancellationPolicyVersion,
 			&i.ExperimentID,
+			&i.WaitExpiresAt,
 		); err != nil {
 			return nil, err
 		}
@@ -84,7 +85,7 @@ WITH ranked AS (
    AND (?2='[]' OR g.kind IN (SELECT value FROM json_each(?2)))
    AND g.post_slug IN (SELECT value FROM json_each(?3))
 )
-SELECT j.id, j.post_slug, j.user_id, j.voice_id, j.kind, j.status, j.stage, j.progress_done, j.progress_total, j.error, j.observe_model, j.write_model, j.payload, j.created_at, j.updated_at, j.started_at, j.finished_at, j.target_language, j.error_reason, j.error_params, j.technical_detail, j.clip_project_id, j.dispatch_ready, j.cancel_requested_at, j.cancellation_policy_version, j.experiment_id FROM generation_jobs j JOIN ranked r ON r.id=j.id WHERE r.position=1
+SELECT j.id, j.post_slug, j.user_id, j.voice_id, j.kind, j.status, j.stage, j.progress_done, j.progress_total, j.error, j.observe_model, j.write_model, j.payload, j.created_at, j.updated_at, j.started_at, j.finished_at, j.target_language, j.error_reason, j.error_params, j.technical_detail, j.clip_project_id, j.dispatch_ready, j.cancel_requested_at, j.cancellation_policy_version, j.experiment_id, j.wait_expires_at FROM generation_jobs j JOIN ranked r ON r.id=j.id WHERE r.position=1
 `
 
 type LatestPostJobsParams struct {
@@ -130,6 +131,7 @@ func (q *Queries) LatestPostJobs(ctx context.Context, arg LatestPostJobsParams) 
 			&i.CancelRequestedAt,
 			&i.CancellationPolicyVersion,
 			&i.ExperimentID,
+			&i.WaitExpiresAt,
 		); err != nil {
 			return nil, err
 		}
@@ -152,7 +154,7 @@ WITH ranked AS (
    AND (?2='[]' OR g.kind IN (SELECT value FROM json_each(?2)))
    AND g.clip_project_id IN (SELECT value FROM json_each(?3))
 )
-SELECT j.id, j.post_slug, j.user_id, j.voice_id, j.kind, j.status, j.stage, j.progress_done, j.progress_total, j.error, j.observe_model, j.write_model, j.payload, j.created_at, j.updated_at, j.started_at, j.finished_at, j.target_language, j.error_reason, j.error_params, j.technical_detail, j.clip_project_id, j.dispatch_ready, j.cancel_requested_at, j.cancellation_policy_version, j.experiment_id FROM generation_jobs j JOIN ranked r ON r.id=j.id WHERE r.position=1
+SELECT j.id, j.post_slug, j.user_id, j.voice_id, j.kind, j.status, j.stage, j.progress_done, j.progress_total, j.error, j.observe_model, j.write_model, j.payload, j.created_at, j.updated_at, j.started_at, j.finished_at, j.target_language, j.error_reason, j.error_params, j.technical_detail, j.clip_project_id, j.dispatch_ready, j.cancel_requested_at, j.cancellation_policy_version, j.experiment_id, j.wait_expires_at FROM generation_jobs j JOIN ranked r ON r.id=j.id WHERE r.position=1
 `
 
 type LatestProjectJobsParams struct {
@@ -197,6 +199,7 @@ func (q *Queries) LatestProjectJobs(ctx context.Context, arg LatestProjectJobsPa
 			&i.CancelRequestedAt,
 			&i.CancellationPolicyVersion,
 			&i.ExperimentID,
+			&i.WaitExpiresAt,
 		); err != nil {
 			return nil, err
 		}
@@ -219,7 +222,7 @@ WITH ranked AS (
    AND (?2='[]' OR g.kind IN (SELECT value FROM json_each(?2)))
    AND g.voice_id IN (SELECT value FROM json_each(?3))
 )
-SELECT j.id, j.post_slug, j.user_id, j.voice_id, j.kind, j.status, j.stage, j.progress_done, j.progress_total, j.error, j.observe_model, j.write_model, j.payload, j.created_at, j.updated_at, j.started_at, j.finished_at, j.target_language, j.error_reason, j.error_params, j.technical_detail, j.clip_project_id, j.dispatch_ready, j.cancel_requested_at, j.cancellation_policy_version, j.experiment_id FROM generation_jobs j JOIN ranked r ON r.id=j.id WHERE r.position=1
+SELECT j.id, j.post_slug, j.user_id, j.voice_id, j.kind, j.status, j.stage, j.progress_done, j.progress_total, j.error, j.observe_model, j.write_model, j.payload, j.created_at, j.updated_at, j.started_at, j.finished_at, j.target_language, j.error_reason, j.error_params, j.technical_detail, j.clip_project_id, j.dispatch_ready, j.cancel_requested_at, j.cancellation_policy_version, j.experiment_id, j.wait_expires_at FROM generation_jobs j JOIN ranked r ON r.id=j.id WHERE r.position=1
 `
 
 type LatestVoiceJobsParams struct {
@@ -264,6 +267,7 @@ func (q *Queries) LatestVoiceJobs(ctx context.Context, arg LatestVoiceJobsParams
 			&i.CancelRequestedAt,
 			&i.CancellationPolicyVersion,
 			&i.ExperimentID,
+			&i.WaitExpiresAt,
 		); err != nil {
 			return nil, err
 		}
