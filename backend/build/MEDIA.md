@@ -9,7 +9,7 @@ FFmpeg and ffprobe are separate, statically linked musl executables, invoked wit
 |---|---|---|---|
 | FFmpeg | 9.0.1 | cf38e0e28c7e5605942c4a77755349b0145804a397af37eb1fb4c77cb237f635 | GPL-2.0-or-later for this libx264-enabled build |
 | x264 | stable b35605ace3ddf7c1a5d67a2eb553f034aef41d55 | 6eeb82934e69fd51e043bd8c5b0d152839638d1ce7aa4eea65a3fedcf83ff224 | GPL-2.0-or-later |
-| musl / zlib | musl 1.2.6-r2 / zlib 1.3.2-r0, with resolved Alpine package versions recorded in the image | Signed Alpine packages; media-build base sha256:ce864e7223ac17b1775e6fd0b4c0db580c2eb50e7953a427916379e4b92a1628 | MIT / Zlib |
+| musl / zlib | musl 1.2.6-r2 / zlib 1.3.2-r1 (runtime, development and static packages), with resolved Alpine package versions recorded in the image | Signed Alpine packages; media-build base sha256:ce864e7223ac17b1775e6fd0b4c0db580c2eb50e7953a427916379e4b92a1628 | MIT / Zlib |
 
 FFmpeg source and signature: https://ffmpeg.org/releases/ffmpeg-9.0.1.tar.xz
 and `.asc`; the build checks SHA-256 and the official signing fingerprint

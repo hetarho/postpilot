@@ -67,6 +67,7 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
+| T653 | Restore current pinned media image builds and qualify CI delivery | ARCH | - | doing@261008.ci |
 | T539 | Qualify the complete Korean voice-creation milestone | ARCH DUB MODEL CDS THEME | T538 | blocked@261005 |
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
@@ -92,6 +93,8 @@
 - Editorial follow-up: doc-review ARCH; full pre-push/deployment verification stays separate.
 
 ## log
+- 261008 T653 start: repair removed Alpine zlib-r0 media build pins using official3.24 r1 packages, retain exact real-image gates and existing CI fixes; preserve active T631 changes
+- 261008 CI repair and push start: inspect exact failed051bb0e5 workflow/jobs, preserve active T631 edits, verify final committed push candidate with full CI and applicable deploy/media gates, then inspect every triggered remote workflow
 - 261008 T650 T651 T652 done on main: phone answer777→371px, header120→64px; all57 routes/580 combined browser cases, FE522 files/4133 tests and lint/build pass; preserve concurrent domain work
 - 261008 mobile manual integration: package integrator rejects inherited spec FORMAT/editorial warnings; independent reviews and exact production hashes retain final24ecfce6 source verification
 - 261008 T628 done on main: durable exact-metered binary tournaments, zero-call recovery, private retention and receipt-first publication; full product Go, actual factory/SQLite/race, FE164, codegen/build/vet and spec checks pass
