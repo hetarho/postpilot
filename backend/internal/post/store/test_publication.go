@@ -143,6 +143,9 @@ func (s *TestResultStore) ApplyTestResult(ctx context.Context, in post.TestOutpu
 	if err != nil {
 		return empty, err
 	}
+	if baseline != content {
+		return empty, fmt.Errorf("%w: machine baseline must match applied test output", post.ErrInvalidContent)
+	}
 	storyline, err := marshalStoryline(in.Storyline)
 	if err != nil {
 		return empty, err

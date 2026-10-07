@@ -165,6 +165,46 @@ func TestTestOutputReceiptFailureRollsBackTheWholePublication(t *testing.T) {
 	}
 }
 
+func TestTestOutputRejectsDifferentValidBaselineWithoutWritingOrReceipt(t *testing.T) {
+	s, handle := newStoreWithHandle(t)
+	seedPost(t, s, "p", "alice", testNow)
+	in := frozenPublication(t, s)
+	in.Baseline = post.PostContent{Title: "Winner", Blocks: []post.Block{{Type: post.BlockText, Content: "Different baseline output"}}}
+	before, err := s.GetPost(context.Background(), "p")
+	if err != nil {
+		t.Fatal(err)
+	}
+	publication := publicationStore(handle)
+	if _, err := publication.ApplyTestResult(context.Background(), in, testNow); !errors.Is(err, post.ErrInvalidContent) {
+		t.Fatalf("different valid baseline = %v", err)
+	}
+	after, err := s.GetPost(context.Background(), "p")
+	if err != nil || !reflect.DeepEqual(before, after) {
+		t.Fatalf("rejected baseline changed post: %v", err)
+	}
+	var receipts int
+	if err := handle.Reader.QueryRow("SELECT count(*) FROM post_test_publications").Scan(&receipts); err != nil || receipts != 0 {
+		t.Fatalf("rejected baseline receipts = %d, %v", receipts, err)
+	}
+	// The refused request did not consume its key. Correcting the payload publishes once.
+	in.Baseline = in.Content
+	first, err := publication.ApplyTestResult(context.Background(), in, testNow)
+	if err != nil {
+		t.Fatal(err)
+	}
+	after, err = s.GetPost(context.Background(), "p")
+	if err != nil || after.Content == nil || !reflect.DeepEqual(*after.Content, in.Content) || after.ContentRevision != after.MachineBaselineRevision {
+		t.Fatalf("applied content and baseline diverged: %+v, %v", after, err)
+	}
+	var storedContent, storedBaseline sql.NullString
+	if err := handle.Reader.QueryRow("SELECT content, machine_baseline FROM posts WHERE slug = ?", "p").Scan(&storedContent, &storedBaseline); err != nil || !storedContent.Valid || !storedBaseline.Valid || storedContent.String != storedBaseline.String {
+		t.Fatalf("persisted machine baseline differs: %v", err)
+	}
+	if replay, err := publication.ApplyTestResult(context.Background(), in, testNow); err != nil || replay != first {
+		t.Fatalf("corrected publication replay = %+v, %v", replay, err)
+	}
+}
+
 func TestTestOutputPublicationAndManualEditShareRevisionFence(t *testing.T) {
 	s, handle := newStoreWithHandle(t)
 	seedPost(t, s, "p", "alice", testNow)
