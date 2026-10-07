@@ -71,17 +71,19 @@
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
-| T642 | Render accessible phrase origins and preserve editor continuity | ARCH POST THEME EXPORT GEN | T637 | todo |
 | T643 | Show safe current prepared and captured requests in named technical views | ARCH POST MODEL EDIT TMPL THEME | T640 T641 | todo |
 | T644 | Present maximum tags and clean owner-controlled writing copy | ARCH POST TMPL GEN EXPORT MKT QUAL THEME | T634 T642 T643 | todo |
 | T645 | Build reproducible prompt inspection and controlled writing evaluation | ARCH GEN MODEL LANG QUAL | T638 T639 T641 | todo |
 | T646 | Qualify origin-aware writing inspection and clean publication handoff | ARCH GEN POST MODEL THEME EXPORT MKT LANG | T636 T637 T639 T641 T642 T643 T644 T645 T631 | todo |
 
 ## next
-- T642 next for sequential implementation through T646 after the T641 commit.
+- T643 next for sequential implementation through T646 after the T642 commit.
 - Editorial follow-up: doc-review ARCH; preserve independent review and blocked qualification.
 
 ## log
+- 261008 T642 done on main: accessible aligned phrase origins, safe source details and editor/copy/caret continuity; full affected FE coverage, browser themes/reflow/contrast and lint/build/spec checks pass
+- 261008 T642 start on main at8ce2d602: accessible current phrase origins and editor continuity; preserve independent review changes
+- 261008 T642 freshness: THEME30–32 only change navigation/workspace/mobile density, retaining THEME62 origin review contracts; base refreshed
 - 261008 T641 done on main: private test origin/request evidence, atomic purge-fenced champion publication and owner/kind/revision authoring inspections; owning/consumer/RPC/race/generator/build/spec checks pass
 - 261008 T641 start on main at80f7fd8f: origin/request private test evidence and owner-scoped authoring inspection; preserve independent review changes
 - 261008 T641 freshness: MODEL36 and EDIT5 only change missing-slot mapping and exact integer1..16 preparation counts; retain integrated privacy/count contracts, bases refreshed
@@ -99,6 +101,3 @@
 - 261008 T635 done on main: 50 actual-composer synthetic inventory modes, shared effective registry resolution and safe captured response/error/native evidence; full83 Go packages, final boundaries/races/API/build/spec pass
 - 261008 T634 done on main: stage-specific meaning/evidence and block contracts, maximum tags with unchanged revision arrays preserved; full generation/guideline, post/test/API consumers and build/vet/spec pass
 - 261008 T633 done on main: typed template roles and stock applicability frozen through ordinary/test paths, stage-owned source honesty and revision facts; full owning/consumer, API, race, build/vet and task-candidate spec checks pass
-- 261008 T653 done: ff9 source pushed; full CI, actual deployment/health/CORS/R2 and three native media jobs pass; archive task and source-bound QA proof, preserve unrelated main work
-- 261008 T653 health packaging repair: kernel proves remote512Mi OOM with Go1.26 SHA-linked32Mi entropy BSS under Rosetta; helper-only official v1.0.0-c2097c7c snapshot/checksum retains SHA/protocol and lowers measured RSS42,876→10,072KiB; no API/worker setting or budget change, final gates pending
-- 261008 T653 release memory follow-up: live-owner authenticated Unix health probe and single-frame PNG decode remove unnecessary concurrent work; owning/race/deployment/bitwise-output checks pass, exact default256/512Mi release remains required

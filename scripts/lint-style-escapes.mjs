@@ -82,7 +82,7 @@ const ARBITRARY_COLOUR_UTILITY =
 const TYPE_UTILITY = new RegExp(
   '(?<![\\w-])(?:[\\w-]+:)*(?:' +
     'text-(?:xs|sm|base|lg|[2-9]?xl)' +
-    '|text-(?!(?:(?:left|center|right|justify|start|end|wrap|nowrap|balance|pretty|ellipsis|clip|transparent|current|inherit)(?![\\w-])|(?:badge|button|content|field|link|media|notice)-))[a-z][\\w-]*' +
+    '|text-(?!(?:(?:left|center|right|justify|start|end|wrap|nowrap|balance|pretty|ellipsis|clip|transparent|current|inherit)(?![\\w-])|(?:badge|button|content|field|link|media|notice|origin)-))[a-z][\\w-]*' +
     '|text-\\[(?:\\d|\\.|length:|xx-small|x-small|small|medium|large|x-large|xx-large|xxx-large|larger|smaller|math|clamp\\(|calc\\(|min\\(|max\\(|round\\(|mod\\(|rem\\(|sin\\(|cos\\(|tan\\(|asin\\(|acos\\(|atan\\(|atan2\\(|pow\\(|sqrt\\(|hypot\\(|log\\(|exp\\(|abs\\(|sign\\()[^\\]]*\\]' +
     '|text-\\(length:[^)]*\\)' +
     '|font-(?:[a-z][\\w-]*|\\[[^\\]]*\\]|\\([^)]*\\))' +
@@ -173,6 +173,10 @@ function runProbe() {
     { source: 'text-media-scrim-fg', gated: false },
     { source: 'text-link-fg', gated: false },
     { source: 'text-notice-danger-fg', gated: false },
+    { source: 'text-origin-owner-foreground', gated: false },
+    { source: 'text-origin-visual-foreground', gated: false },
+    { source: 'text-origin-ai-foreground', gated: false },
+    { source: 'text-origin-unconfirmed-foreground', gated: false },
     { source: 'text-transparent', gated: false },
   ]
   const typeFailures = typeCases.filter(({ source, gated }) => {

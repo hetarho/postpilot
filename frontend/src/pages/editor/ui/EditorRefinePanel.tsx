@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { BlockList, isPublished, type PostDraft } from '@/entities/post'
 import { PostMeasurementRow } from '@/entities/quality'
 import { BlockEditor, type BlockEditorHandle } from '@/features/edit-post-content'
+import { WritingOriginReview } from '@/features/review-writing-origins'
 import type { PostContent } from '@/shared/api'
 import { Notice, Typography } from '@/shared/ui'
 import { PostFingerprintRow } from '@/widgets/voice-fingerprint'
@@ -57,13 +58,22 @@ export function EditorRefinePanel({
         </Notice>
       )}
       {isPublished(post) ? (
-        <BlockList content={result} images={post.images} videos={post.videos} />
+        <WritingOriginReview ownerId={ownerId} post={post} content={result}>
+          {(fields) => (
+            <BlockList content={result} images={post.images} videos={post.videos} {...fields} />
+          )}
+        </WritingOriginReview>
       ) : (
         <BlockEditor
-          key={`${post.slug}:${post.machineBaselineRevision}`}
+          key={`${ownerId}:${post.slug}:${post.machineBaselineRevision}`}
           ref={editorRef}
           post={post}
           onContentChange={onContentChange}
+          renderReview={({ content, pending, children }) => (
+            <WritingOriginReview ownerId={ownerId} post={post} content={content} pending={pending}>
+              {children}
+            </WritingOriginReview>
+          )}
           // This post's own M2, M3 and M4 (QUAL-36), then its fingerprint beside its voice's
           // (POST-102), both read at the revision on screen; a post with 말투 없음 has none.
           beforeArticle={

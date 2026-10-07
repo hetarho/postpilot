@@ -13,6 +13,7 @@ import {
   type PostContent,
 } from '@/shared/api'
 import { getPostQueryKey, listPostsQueryKey } from './post-queries'
+import { isFinalizedOrLater, isPublished } from '../model/types'
 
 export class ContentRevisionConflictError extends Error {
   constructor() {
@@ -24,14 +25,38 @@ export function useSavePostContent() {
   const transport = useTransport()
   const queryClient = useQueryClient()
   const mutation = useMutation(PostService.method.savePostContent, {
-    onSuccess: (data) => {
+    onMutate: (input) => ({
+      query: queryClient.getQueryCache().find({
+        queryKey: getPostQueryKey(transport, input.slug ?? ''),
+        exact: true,
+      }),
+    }),
+    onSuccess: (data, input, scope) => {
       const saved = data.post
       if (!saved) return
       const key = getPostQueryKey(transport, saved.slug)
+      if (queryClient.getQueryCache().find({ queryKey: key, exact: true }) !== scope?.query) return
       const cached = queryClient.getQueryData<GetPostResponse>(key)
+      // A refetch or machine replacement can overtake this response. The old save is still
+      // acknowledged to its queue, but must never replace a newer result or its evidence.
+      if (cached?.post && cached.post.contentRevision > saved.contentRevision) return
+      if (
+        cached?.post &&
+        cached.post.contentRevision === saved.contentRevision &&
+        ((isPublished(cached.post) && !isPublished(saved)) ||
+          (isFinalizedOrLater(cached.post) && !isFinalizedOrLater(saved)))
+      )
+        return
       const post = cached?.post ? clone(PostSchema, cached.post) : clone(PostSchema, saved)
       post.content = saved.content ? clone(PostContentSchema, saved.content) : undefined
       post.contentRevision = saved.contentRevision
+      post.contentHash = saved.contentHash
+      // Input/source withdrawal can happen while the content save is in flight. Do not revive
+      // available frozen sources from its earlier snapshot; a fresh owning read aligns them.
+      const sourcesChanged = Boolean(
+        cached?.post && cached.post.inputRevision > saved.inputRevision,
+      )
+      post.contentOrigins = sourcesChanged ? undefined : saved.contentOrigins
       post.contentLanguage = saved.contentLanguage
       post.machineBaselineRevision = saved.machineBaselineRevision
       post.canFinalize = saved.canFinalize
@@ -40,6 +65,10 @@ export function useSavePostContent() {
       post.finalizedAt = saved.finalizedAt
       post.updatedAt = saved.updatedAt
       queryClient.setQueryData(key, create(GetPostResponseSchema, { post }))
+      if (sourcesChanged)
+        void queryClient.invalidateQueries({
+          queryKey: getPostQueryKey(transport, input.slug ?? ''),
+        })
       void queryClient.invalidateQueries({ queryKey: listPostsQueryKey(transport) })
       // A new revision is a new measurement (QUAL-3); the row reads it by revision already, and
       // this reaches every other reading that counted the old text.

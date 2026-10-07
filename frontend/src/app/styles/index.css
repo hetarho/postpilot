@@ -253,6 +253,16 @@
   --intent-on-info: var(--palette-blue-950);
   --intent-info-subtle: var(--palette-blue-950);
 
+  /* Semantic evidence remains separate from action and status intent. */
+  --evidence-owner-foreground: var(--palette-green-300);
+  --evidence-owner-highlight: var(--palette-green-950);
+  --evidence-visual-foreground: var(--palette-blue-300);
+  --evidence-visual-highlight: var(--palette-blue-950);
+  --evidence-ai-foreground: var(--palette-gold-300);
+  --evidence-ai-highlight: var(--palette-gold-950);
+  --evidence-unconfirmed-foreground: var(--palette-mauve-300);
+  --evidence-unconfirmed-highlight: var(--palette-mauve-800);
+
   /* interaction + physical light */
   --interaction-focus: var(--palette-violet-300);
   --physical-scrim: var(--palette-mauve-950);
@@ -310,6 +320,16 @@
   --intent-info: var(--palette-blue-600);
   --intent-on-info: var(--palette-white);
   --intent-info-subtle: var(--palette-blue-50);
+
+  /* Semantic evidence remains separate from action and status intent. */
+  --evidence-owner-foreground: var(--palette-green-700);
+  --evidence-owner-highlight: var(--palette-green-50);
+  --evidence-visual-foreground: var(--palette-blue-700);
+  --evidence-visual-highlight: var(--palette-blue-50);
+  --evidence-ai-foreground: var(--palette-gold-700);
+  --evidence-ai-highlight: var(--palette-gold-50);
+  --evidence-unconfirmed-foreground: var(--palette-mauve-700);
+  --evidence-unconfirmed-highlight: var(--palette-mauve-100);
 
   --interaction-focus: var(--palette-violet-500);
   --physical-scrim: var(--palette-mauve-950);
@@ -389,6 +409,16 @@
   --notice-success-fg: var(--intent-success);
   --notice-warning-bg: var(--intent-warning-subtle);
   --notice-warning-fg: var(--intent-warning);
+  /* Review-only phrase roles, registered for both themes. */
+  --origin-owner-foreground: var(--evidence-owner-foreground);
+  --origin-owner-highlight: var(--evidence-owner-highlight);
+  --origin-visual-foreground: var(--evidence-visual-foreground);
+  --origin-visual-highlight: var(--evidence-visual-highlight);
+  --origin-ai-foreground: var(--evidence-ai-foreground);
+  --origin-ai-highlight: var(--evidence-ai-highlight);
+  --origin-unconfirmed-foreground: var(--evidence-unconfirmed-foreground);
+  --origin-unconfirmed-highlight: var(--evidence-unconfirmed-highlight);
+
   --notice-info-bg: var(--intent-info-subtle);
   --notice-info-fg: var(--intent-info);
 
@@ -809,6 +839,16 @@
   --color-notice-warning-fg: var(--notice-warning-fg);
   --color-notice-info-bg: var(--notice-info-bg);
   --color-notice-info-fg: var(--notice-info-fg);
+
+  /* Semantic phrase review */
+  --color-origin-owner-foreground: var(--origin-owner-foreground);
+  --color-origin-owner-highlight: var(--origin-owner-highlight);
+  --color-origin-visual-foreground: var(--origin-visual-foreground);
+  --color-origin-visual-highlight: var(--origin-visual-highlight);
+  --color-origin-ai-foreground: var(--origin-ai-foreground);
+  --color-origin-ai-highlight: var(--origin-ai-highlight);
+  --color-origin-unconfirmed-foreground: var(--origin-unconfirmed-foreground);
+  --color-origin-unconfirmed-highlight: var(--origin-unconfirmed-highlight);
 
   /* system interaction */
   --color-focus-ring: var(--focus-ring);

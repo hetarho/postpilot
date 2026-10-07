@@ -16,6 +16,7 @@ import {
   newBlock,
   PHOTO_GROUP_MAX,
   postContentWith,
+  type OriginTextRenderer,
   type PostDraft,
 } from '@/entities/post'
 import { BlockType, GalleryLayout, type Block, type PostContent } from '@/shared/api'
@@ -39,6 +40,16 @@ export interface BlockEditorHandle {
   content: () => PostContent
 }
 
+/** The page composes review actions; editing keeps ownership of its current draft and queue. */
+export interface ContentReviewRender {
+  content: PostContent
+  pending: boolean
+  children: (fields: {
+    renderTextField?: OriginTextRenderer
+    renderAltField?: OriginTextRenderer
+  }) => ReactNode
+}
+
 /** The draft, read first. `BlockList` renders it as prose — the reading view POST-55 specifies —
  *  and each block carries one edit control that swaps just that block for the controls it has
  *  always had.
@@ -55,8 +66,9 @@ export const BlockEditor = forwardRef<
     /** Rendered directly above the article, under the heading and its save status — where ②
      *  shows this post's own measurements (POST-83). */
     beforeArticle?: ReactNode
+    renderReview?: (review: ContentReviewRender) => ReactNode
   }
->(function BlockEditor({ post, onContentChange, beforeArticle }, ref) {
+>(function BlockEditor({ post, onContentChange, beforeArticle, renderReview }, ref) {
   const { t } = useTranslation('posts')
   const [content, setContent] = useState(() => copyPostContent(post.content!))
   const valid = useMemo(
@@ -108,6 +120,46 @@ export const BlockEditor = forwardRef<
     setContent(next)
   }
 
+  const article = ({
+    renderTextField,
+    renderAltField,
+  }: Parameters<ContentReviewRender['children']>[0] = {}) => (
+    <BlockList
+      content={content}
+      images={post.images}
+      videos={post.videos}
+      renderTextField={renderTextField}
+      renderAltField={renderAltField}
+      renderHeader={(rendered) => (
+        <Editable
+          editLabel={t('edit.titleSummaryTags')}
+          edit={(exit) => (
+            <>
+              <HeaderFields content={content} onChange={setContent} onDone={exit} />
+              {renderTextField && <div className="mt-4">{rendered}</div>}
+            </>
+          )}
+        >
+          {rendered}
+        </Editable>
+      )}
+      renderBlock={(block, index, rendered) => (
+        <BlockEditRow
+          block={block}
+          index={index}
+          blockCount={content.blocks.length}
+          filenames={post.images.map((image) => image.filename)}
+          videoFilenames={post.videos.map((video) => video.filename)}
+          onChange={(value) => updateBlock(index, value)}
+          onMove={(direction) => moveBlock(index, direction)}
+          onRemove={() => removeBlock(index)}
+          showReview={Boolean(renderTextField)}
+        >
+          {rendered}
+        </BlockEditRow>
+      )}
+    />
+  )
   return (
     <section aria-labelledby="content-editor-heading" className="mt-6 sm:mt-10">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -130,33 +182,13 @@ export const BlockEditor = forwardRef<
       )}
 
       {beforeArticle}
-      <BlockList
-        content={content}
-        images={post.images}
-        videos={post.videos}
-        renderHeader={(rendered) => (
-          <Editable
-            editLabel={t('edit.titleSummaryTags')}
-            edit={(exit) => <HeaderFields content={content} onChange={setContent} onDone={exit} />}
-          >
-            {rendered}
-          </Editable>
-        )}
-        renderBlock={(block, index, rendered) => (
-          <BlockEditRow
-            block={block}
-            index={index}
-            blockCount={content.blocks.length}
-            filenames={post.images.map((image) => image.filename)}
-            videoFilenames={post.videos.map((video) => video.filename)}
-            onChange={(value) => updateBlock(index, value)}
-            onMove={(direction) => moveBlock(index, direction)}
-            onRemove={() => removeBlock(index)}
-          >
-            {rendered}
-          </BlockEditRow>
-        )}
-      />
+      {renderReview
+        ? renderReview({
+            content,
+            pending: ['error', 'conflict'].includes(autosave.state),
+            children: article,
+          })
+        : article()}
 
       <Button
         variant="secondary"
@@ -182,6 +214,7 @@ function BlockEditRow({
   onChange,
   onMove,
   onRemove,
+  showReview = false,
   children,
 }: {
   block: Block
@@ -192,6 +225,7 @@ function BlockEditRow({
   onChange: (block: Block) => void
   onMove: (direction: -1 | 1) => void
   onRemove: () => void
+  showReview?: boolean
   children: ReactNode
 }) {
   const { t } = useTranslation('posts')
@@ -199,17 +233,20 @@ function BlockEditRow({
     <Editable
       editLabel={t('edit.blockEdit', { index: index + 1 })}
       edit={(exit) => (
-        <BlockControls
-          block={block}
-          index={index}
-          blockCount={blockCount}
-          filenames={filenames}
-          videoFilenames={videoFilenames}
-          onChange={onChange}
-          onMove={onMove}
-          onRemove={onRemove}
-          onDone={exit}
-        />
+        <>
+          <BlockControls
+            block={block}
+            index={index}
+            blockCount={blockCount}
+            filenames={filenames}
+            videoFilenames={videoFilenames}
+            onChange={onChange}
+            onMove={onMove}
+            onRemove={onRemove}
+            onDone={exit}
+          />
+          {showReview && <div className="mt-4">{children}</div>}
+        </>
       )}
     >
       {children}

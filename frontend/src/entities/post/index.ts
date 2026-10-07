@@ -38,7 +38,7 @@ export {
   observationByFile,
   postContentWith,
 } from './model/content'
-export { BlockList } from './ui/BlockList'
+export { BlockList, type OriginTextRenderer } from './ui/BlockList'
 export { PhotoGroup, type PhotoFit } from './ui/PhotoGroup'
 export type { PostLoadFailure } from './api/usePost'
 export { usePost } from './api/usePost'
@@ -68,4 +68,10 @@ export {
 } from './api/post-queries'
 
 export * from './model/semantic-origin'
+export {
+  originContentMatches,
+  originFieldSegments,
+  originReadableFields,
+  type OriginFieldSegment,
+} from './model/origin-projection'
 export { originReviewFromProto, validateOriginReviewFromProto } from './api/semantic-origin'

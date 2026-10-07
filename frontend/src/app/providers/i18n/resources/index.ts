@@ -111,6 +111,7 @@ import { vouchers as adminVouchersI18n } from '@/pages/admin/config/i18n'
 import { i18n as issueVoucherI18n } from '@/features/issue-voucher/config/i18n'
 import { i18n as revokeVoucherI18n } from '@/features/revoke-voucher/config/i18n'
 import { i18n as voucherEntityI18n } from '@/entities/voucher/config/i18n'
+import { i18n as writingOriginsI18n } from '@/features/review-writing-origins/config/i18n'
 import { i18n as postI18n } from '@/entities/post/config/i18n'
 import { i18n as postsI18n } from '@/pages/posts/config/i18n'
 import { i18n as purchaseCreditsI18n } from '@/features/purchase-credits/config/i18n'
@@ -267,6 +268,7 @@ export const FRAGMENTS: readonly I18nFragment[] = [
   qualityI18n,
   chooseQualityRulesI18n,
   postI18n,
+  writingOriginsI18n,
   postsI18n,
   uploadPhotosI18n,
   deleteTemplateI18n,
@@ -323,6 +325,7 @@ export const resources = {
       ...qualityI18n.ko,
       ...chooseQualityRulesI18n.ko,
       ...postI18n.ko,
+      ...writingOriginsI18n.ko,
       ...postsI18n.ko,
       ...uploadPhotosI18n.ko,
     },
@@ -460,6 +463,7 @@ export const resources = {
       ...qualityI18n.en,
       ...chooseQualityRulesI18n.en,
       ...postI18n.en,
+      ...writingOriginsI18n.en,
       ...postsI18n.en,
       ...uploadPhotosI18n.en,
     },

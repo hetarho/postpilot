@@ -381,7 +381,10 @@ describe('the post measurement row', () => {
 
     const region = await screen.findByRole('region', { name: HEADING })
     // Directly above the article, under 글 다듬기 and its save status.
-    expect(region.nextElementSibling).toBe(screen.getByRole('article', { name: '생성된 글' }))
+    expect(
+      region.compareDocumentPosition(screen.getByRole('article', { name: '생성된 글' })) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
     expect(screen.getByRole('region', { name: '글 다듬기' })).toContainElement(region)
     expect(await within(region).findByText('본문 명사 중 가장 잦은 명사')).toBeInTheDocument()
     expect(within(region).getByText('주의')).toBeInTheDocument()
@@ -488,7 +491,10 @@ describe('the fingerprint row', () => {
 
     const region = await screen.findByRole('region', { name: HEADING })
     expect(screen.getByRole('region', { name: '이 글의 측정값' }).nextElementSibling).toBe(region)
-    expect(region.nextElementSibling).toBe(screen.getByRole('article', { name: '생성된 글' }))
+    expect(
+      region.compareDocumentPosition(screen.getByRole('article', { name: '생성된 글' })) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
     const rows = within(region).getAllByRole('listitem')
     expect(rows[0]).toHaveTextContent("문장 끝'~해요' 내 말투 92% · 이 글 0%")
     expect(rows[1]).toHaveTextContent('이모지와 자모알 수 없음')

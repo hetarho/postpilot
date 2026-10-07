@@ -138,8 +138,14 @@ describe('a published post', () => {
     const prose = screen.getByRole('article', { name: '생성된 글' })
     expect(within(prose).getByRole('heading', { name: '비 온 뒤의 제주' })).toBeInTheDocument()
     expect(within(prose).getByText('비가 그치기를 기다렸다.')).toBeInTheDocument()
-    // No control on its prose, and no measurement row read or shown.
-    expect(within(prose).queryByRole('button')).toBeNull()
+    // Read-only source inspection stays available; every prose action opens an explanation.
+    // No editing control or measurement row is read or shown.
+    const sourceActions = within(prose).getAllByRole('button')
+    for (const action of sourceActions) expect(action).toHaveAttribute('aria-haspopup', 'dialog')
+    await user.click(sourceActions[0]!)
+    expect(await screen.findByRole('dialog', { name: '문구의 출처' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '닫기' }))
+    expect(calls).not.toContain('SavePostContent')
     expect(screen.queryByRole('region', { name: '이 글의 측정값' })).toBeNull()
     expect(calls.filter((call) => call === 'GetPostMeasurement')).toHaveLength(0)
     // No block editor: nothing edits or moves a block, and nothing can start a content save.

@@ -181,6 +181,40 @@ it('renders a GALLERY block of the block array as one group', () => {
   expect(within(article).getByText('창가')).toBeInTheDocument()
 })
 
+it('uses the group caption seam once and keeps the group alt native when evidence is inspected', () => {
+  const content = create(PostContentSchema, {
+    title: '사진 근거',
+    blocks: [
+      group(GalleryLayout.COLLAGE, ['a.jpg', 'gone.jpg'], '보이는 캡션😀', '그룹 대체 텍스트😀'),
+    ],
+  })
+  const renderTextField = vi.fn((_field, text: string) => <span>{text}</span>)
+  const renderAltField = vi.fn((_field, text: string) => <p>{`alt 근거: ${text}`}</p>)
+  render(
+    <BlockList
+      content={content}
+      images={[photo('a.jpg')]}
+      renderTextField={renderTextField}
+      renderAltField={renderAltField}
+    />,
+  )
+  expect(renderTextField).toHaveBeenCalledWith(
+    { kind: 'block_caption', blockIndex: 0 },
+    '보이는 캡션😀',
+  )
+  expect(screen.getAllByText('보이는 캡션😀')).toHaveLength(1)
+  expect(screen.getByRole('img', { name: '그룹 대체 텍스트😀 (1/2)' })).toHaveAttribute(
+    'alt',
+    '그룹 대체 텍스트😀 (1/2)',
+  )
+  expect(renderAltField).toHaveBeenCalledWith(
+    { kind: 'block_alt', blockIndex: 0 },
+    '그룹 대체 텍스트😀',
+  )
+  expect(screen.getByText('alt 근거: 그룹 대체 텍스트😀')).toBeInTheDocument()
+  expect(screen.getByText('gone.jpg')).toBeInTheDocument()
+})
+
 // POST-107: the reading view shows a turned photo upright — a single photo in a frame of the
 // turned shape, a group's cell turned in place.
 it('shows turned photos upright in the reading view', () => {

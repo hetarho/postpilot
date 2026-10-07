@@ -1,0 +1,813 @@
+{
+  "sourceRevision": "8ce2d6023f063c16fc0425b18d07fe1c94597cbd",
+  "sourceFiles": [
+    {
+      "path": "frontend/src/app/providers/i18n/resources/index.ts",
+      "sha256": "1c3be4bb2936e672b97123ff54376495c468dbc21a498bbf033da2122a94532a"
+    },
+    {
+      "path": "frontend/src/app/styles/index.css",
+      "sha256": "f037ff6c3ba04a4ff85e31f21aea1bd2dd5c96eb2791a8fa05307d9708a79448"
+    },
+    {
+      "path": "frontend/src/entities/post/api/useSavePostContent.ts",
+      "sha256": "749b28bac1e5a1246be23ff127e6e1e6630f2b2bbcf137b1c1c94284801e5e88"
+    },
+    {
+      "path": "frontend/src/entities/post/index.ts",
+      "sha256": "a039f34d474f4f705825f74abc5e1fb08a0092647bc8e5df8a4615bd30802774"
+    },
+    {
+      "path": "frontend/src/entities/post/model/origin-projection.ts",
+      "sha256": "8ca0374e75616f80a2f819e05aca21a6ffbf585193fea47fed6aa304bf6b5dd7"
+    },
+    {
+      "path": "frontend/src/entities/post/ui/BlockList.tsx",
+      "sha256": "d3b6408e021f7881fd7a4d4ff1522a9d92d38aff398aa910eadaf087f7a39e6c"
+    },
+    {
+      "path": "frontend/src/features/edit-post-content/ui/BlockEditor.tsx",
+      "sha256": "d95b47ab1e2b40b67dbe50ae3189b90f29991b005c1b012ecccd168926124026"
+    },
+    {
+      "path": "frontend/src/features/review-writing-origins/config/i18n.ts",
+      "sha256": "ca24a2558c3c6e03d539dddcc49d280b771d4ffc006a9ac8cea7c80a8739121c"
+    },
+    {
+      "path": "frontend/src/features/review-writing-origins/index.ts",
+      "sha256": "d2b7bc8a98aa23ec326202b4f7c986f1b8da6242c186466977254483d8c6bab5"
+    },
+    {
+      "path": "frontend/src/features/review-writing-origins/ui/WritingOriginReview.tsx",
+      "sha256": "f1905148e74db5263119c66baf683873a22d5de14387f508b247d89b245eecd2"
+    },
+    {
+      "path": "frontend/src/pages/editor/lib/phrase-origins.browser.mjs",
+      "sha256": "eda35c6b929aad9dd6fe23694015359ef2ea9010a1a8c9bac159666c471d7d8e"
+    },
+    {
+      "path": "frontend/src/pages/editor/ui/EditorRefinePanel.tsx",
+      "sha256": "d31890a3625663e9b892e3f8316ae193c5a9c199f65259a66585f16339c95a10"
+    },
+    {
+      "path": "frontend/src/shared/ui/index.ts",
+      "sha256": "b56c7614a0edc7d5b4afe3ce4de3273c085d10f5c816f2d80cad752f2d3e7a4e"
+    },
+    {
+      "path": "frontend/src/shared/ui/selectable-text/SelectableText.tsx",
+      "sha256": "9417ad5b23d8102a37a4a868ad3c4e1076b5fcf4f2f7e571eb5654c971b468c9"
+    },
+    {
+      "path": "scripts/lint-style-escapes.mjs",
+      "sha256": "f96325a7509463400473c53a0c6b15978d0bf654d42fbab16caf627b97c2157a"
+    }
+  ],
+  "fixture": "Synthetic intercepted owner RPCs; no backend/provider calls",
+  "zoomMethod": "200% desktop reflow emulated at720x450 CSS pixels withdeviceScaleFactor2 for1440x900 physical pixels",
+  "results": [
+    {
+      "theme": "light",
+      "display": {
+        "width": 320,
+        "height": 640,
+        "touch": true
+      },
+      "measurement": {
+        "overflow": false,
+        "documentWidth": 320,
+        "viewportWidth": 320,
+        "innerScrollers": 0,
+        "roles": [
+          {
+            "role": "owner",
+            "ratio": 7.173871025351754,
+            "color": "oklch(0.435 0.035 156)",
+            "background": "oklch(0.975 0.062 156)"
+          },
+          {
+            "role": "visual",
+            "ratio": 7.226843055690048,
+            "color": "oklch(0.435 0.107 240)",
+            "background": "oklch(0.975 0.02 240)"
+          },
+          {
+            "role": "ai",
+            "ratio": 6.872129633223257,
+            "color": "oklch(0.435 0.01 85)",
+            "background": "oklch(0.975 0.123 85)"
+          },
+          {
+            "role": "unconfirmed",
+            "ratio": 6.662839617134679,
+            "color": "oklch(0.435 0.01 298)",
+            "background": "oklch(0.94 0.008 298)"
+          }
+        ]
+      },
+      "retained": {
+        "marker": "original",
+        "value": "한글 😀 입력을 이어갑니다.",
+        "caret": 5
+      },
+      "selected": "서울 😀",
+      "reachedSources": [
+        {
+          "name": "직접 입력 기반 출처 보기: 직접 방문한 서울 😀",
+          "reachable": true,
+          "pointer": "touch"
+        },
+        {
+          "name": "사진에서 추론 출처 보기: 커피가 놓인 창가",
+          "reachable": true,
+          "pointer": "touch"
+        }
+      ],
+      "inputReachable": true,
+      "errors": [],
+      "calls": [
+        "GetMe",
+        "GetPost",
+        "InitializeDefaultSelections",
+        "GetPostMeasurement",
+        "ListModels",
+        "GetSelections",
+        "ListTemplates"
+      ]
+    },
+    {
+      "theme": "light",
+      "display": {
+        "width": 390,
+        "height": 844,
+        "touch": true
+      },
+      "measurement": {
+        "overflow": false,
+        "documentWidth": 390,
+        "viewportWidth": 390,
+        "innerScrollers": 0,
+        "roles": [
+          {
+            "role": "owner",
+            "ratio": 7.173871025351754,
+            "color": "oklch(0.435 0.035 156)",
+            "background": "oklch(0.975 0.062 156)"
+          },
+          {
+            "role": "visual",
+            "ratio": 7.226843055690048,
+            "color": "oklch(0.435 0.107 240)",
+            "background": "oklch(0.975 0.02 240)"
+          },
+          {
+            "role": "ai",
+            "ratio": 6.872129633223257,
+            "color": "oklch(0.435 0.01 85)",
+            "background": "oklch(0.975 0.123 85)"
+          },
+          {
+            "role": "unconfirmed",
+            "ratio": 6.662839617134679,
+            "color": "oklch(0.435 0.01 298)",
+            "background": "oklch(0.94 0.008 298)"
+          }
+        ]
+      },
+      "retained": {
+        "marker": "original",
+        "value": "한글 😀 입력을 이어갑니다.",
+        "caret": 5
+      },
+      "selected": "서울 😀",
+      "reachedSources": [
+        {
+          "name": "직접 입력 기반 출처 보기: 직접 방문한 서울 😀",
+          "reachable": true,
+          "pointer": "touch"
+        },
+        {
+          "name": "사진에서 추론 출처 보기: 커피가 놓인 창가",
+          "reachable": true,
+          "pointer": "touch"
+        }
+      ],
+      "inputReachable": true,
+      "errors": [],
+      "calls": [
+        "GetMe",
+        "GetPost",
+        "InitializeDefaultSelections",
+        "GetPostMeasurement",
+        "ListModels",
+        "GetSelections",
+        "ListTemplates"
+      ]
+    },
+    {
+      "theme": "light",
+      "display": {
+        "width": 1440,
+        "height": 900
+      },
+      "measurement": {
+        "overflow": false,
+        "documentWidth": 1440,
+        "viewportWidth": 1440,
+        "innerScrollers": 0,
+        "roles": [
+          {
+            "role": "owner",
+            "ratio": 7.173871025351754,
+            "color": "oklch(0.435 0.035 156)",
+            "background": "oklch(0.975 0.062 156)"
+          },
+          {
+            "role": "visual",
+            "ratio": 7.226843055690048,
+            "color": "oklch(0.435 0.107 240)",
+            "background": "oklch(0.975 0.02 240)"
+          },
+          {
+            "role": "ai",
+            "ratio": 6.872129633223257,
+            "color": "oklch(0.435 0.01 85)",
+            "background": "oklch(0.975 0.123 85)"
+          },
+          {
+            "role": "unconfirmed",
+            "ratio": 6.662839617134679,
+            "color": "oklch(0.435 0.01 298)",
+            "background": "oklch(0.94 0.008 298)"
+          }
+        ]
+      },
+      "retained": {
+        "marker": "original",
+        "value": "한글 😀 입력을 이어갑니다.",
+        "caret": 5
+      },
+      "selected": "서울 😀",
+      "reachedSources": [
+        {
+          "name": "직접 입력 기반 출처 보기: 직접 방문한 서울 😀",
+          "reachable": true,
+          "pointer": "mouse"
+        },
+        {
+          "name": "사진에서 추론 출처 보기: 커피가 놓인 창가",
+          "reachable": true,
+          "pointer": "mouse"
+        }
+      ],
+      "inputReachable": true,
+      "errors": [],
+      "calls": [
+        "GetMe",
+        "GetMyPlan",
+        "GetPost",
+        "InitializeDefaultSelections",
+        "GetPostMeasurement",
+        "ListModels",
+        "GetSelections",
+        "ListTemplates"
+      ]
+    },
+    {
+      "theme": "light",
+      "display": {
+        "width": 1920,
+        "height": 1080
+      },
+      "measurement": {
+        "overflow": false,
+        "documentWidth": 1920,
+        "viewportWidth": 1920,
+        "innerScrollers": 0,
+        "roles": [
+          {
+            "role": "owner",
+            "ratio": 7.173871025351754,
+            "color": "oklch(0.435 0.035 156)",
+            "background": "oklch(0.975 0.062 156)"
+          },
+          {
+            "role": "visual",
+            "ratio": 7.226843055690048,
+            "color": "oklch(0.435 0.107 240)",
+            "background": "oklch(0.975 0.02 240)"
+          },
+          {
+            "role": "ai",
+            "ratio": 6.872129633223257,
+            "color": "oklch(0.435 0.01 85)",
+            "background": "oklch(0.975 0.123 85)"
+          },
+          {
+            "role": "unconfirmed",
+            "ratio": 6.662839617134679,
+            "color": "oklch(0.435 0.01 298)",
+            "background": "oklch(0.94 0.008 298)"
+          }
+        ]
+      },
+      "retained": {
+        "marker": "original",
+        "value": "한글 😀 입력을 이어갑니다.",
+        "caret": 5
+      },
+      "selected": "서울 😀",
+      "reachedSources": [
+        {
+          "name": "직접 입력 기반 출처 보기: 직접 방문한 서울 😀",
+          "reachable": true,
+          "pointer": "mouse"
+        },
+        {
+          "name": "사진에서 추론 출처 보기: 커피가 놓인 창가",
+          "reachable": true,
+          "pointer": "mouse"
+        }
+      ],
+      "inputReachable": true,
+      "errors": [],
+      "calls": [
+        "GetMe",
+        "GetMyPlan",
+        "GetPost",
+        "InitializeDefaultSelections",
+        "GetPostMeasurement",
+        "ListModels",
+        "GetSelections",
+        "ListTemplates"
+      ]
+    },
+    {
+      "theme": "light",
+      "display": {
+        "width": 720,
+        "height": 450,
+        "zoom": 2
+      },
+      "measurement": {
+        "overflow": false,
+        "documentWidth": 720,
+        "viewportWidth": 720,
+        "innerScrollers": 0,
+        "roles": [
+          {
+            "role": "owner",
+            "ratio": 7.173871025351754,
+            "color": "oklch(0.435 0.035 156)",
+            "background": "oklch(0.975 0.062 156)"
+          },
+          {
+            "role": "visual",
+            "ratio": 7.226843055690048,
+            "color": "oklch(0.435 0.107 240)",
+            "background": "oklch(0.975 0.02 240)"
+          },
+          {
+            "role": "ai",
+            "ratio": 6.872129633223257,
+            "color": "oklch(0.435 0.01 85)",
+            "background": "oklch(0.975 0.123 85)"
+          },
+          {
+            "role": "unconfirmed",
+            "ratio": 6.662839617134679,
+            "color": "oklch(0.435 0.01 298)",
+            "background": "oklch(0.94 0.008 298)"
+          }
+        ]
+      },
+      "retained": {
+        "marker": "original",
+        "value": "한글 😀 입력을 이어갑니다.",
+        "caret": 5
+      },
+      "selected": "서울 😀",
+      "reachedSources": [
+        {
+          "name": "직접 입력 기반 출처 보기: 직접 방문한 서울 😀",
+          "reachable": true,
+          "pointer": "mouse"
+        },
+        {
+          "name": "사진에서 추론 출처 보기: 커피가 놓인 창가",
+          "reachable": true,
+          "pointer": "mouse"
+        }
+      ],
+      "inputReachable": true,
+      "errors": [],
+      "calls": [
+        "GetMe",
+        "GetPost",
+        "InitializeDefaultSelections",
+        "GetPostMeasurement",
+        "ListModels",
+        "GetSelections",
+        "ListTemplates"
+      ]
+    },
+    {
+      "theme": "dark",
+      "display": {
+        "width": 320,
+        "height": 640,
+        "touch": true
+      },
+      "measurement": {
+        "overflow": false,
+        "documentWidth": 320,
+        "viewportWidth": 320,
+        "innerScrollers": 0,
+        "roles": [
+          {
+            "role": "owner",
+            "ratio": 10.88696669301799,
+            "color": "oklch(0.8 0.133 156)",
+            "background": "oklch(0.165 0.001 156)"
+          },
+          {
+            "role": "visual",
+            "ratio": 10.465097334158289,
+            "color": "oklch(0.8 0.089 240)",
+            "background": "oklch(0.165 0.01 240)"
+          },
+          {
+            "role": "ai",
+            "ratio": 10.261722195046628,
+            "color": "oklch(0.8 0.142 85)",
+            "background": "oklch(0.165 0 85)"
+          },
+          {
+            "role": "unconfirmed",
+            "ratio": 7.031781546978182,
+            "color": "oklch(0.8 0.01 298)",
+            "background": "oklch(0.31 0.01 298)"
+          }
+        ]
+      },
+      "retained": {
+        "marker": "original",
+        "value": "한글 😀 입력을 이어갑니다.",
+        "caret": 5
+      },
+      "selected": "서울 😀",
+      "reachedSources": [
+        {
+          "name": "직접 입력 기반 출처 보기: 직접 방문한 서울 😀",
+          "reachable": true,
+          "pointer": "touch"
+        },
+        {
+          "name": "사진에서 추론 출처 보기: 커피가 놓인 창가",
+          "reachable": true,
+          "pointer": "touch"
+        }
+      ],
+      "inputReachable": true,
+      "errors": [],
+      "calls": [
+        "GetMe",
+        "GetPost",
+        "InitializeDefaultSelections",
+        "GetPostMeasurement",
+        "ListModels",
+        "GetSelections",
+        "ListTemplates"
+      ]
+    },
+    {
+      "theme": "dark",
+      "display": {
+        "width": 390,
+        "height": 844,
+        "touch": true
+      },
+      "measurement": {
+        "overflow": false,
+        "documentWidth": 390,
+        "viewportWidth": 390,
+        "innerScrollers": 0,
+        "roles": [
+          {
+            "role": "owner",
+            "ratio": 10.88696669301799,
+            "color": "oklch(0.8 0.133 156)",
+            "background": "oklch(0.165 0.001 156)"
+          },
+          {
+            "role": "visual",
+            "ratio": 10.465097334158289,
+            "color": "oklch(0.8 0.089 240)",
+            "background": "oklch(0.165 0.01 240)"
+          },
+          {
+            "role": "ai",
+            "ratio": 10.261722195046628,
+            "color": "oklch(0.8 0.142 85)",
+            "background": "oklch(0.165 0 85)"
+          },
+          {
+            "role": "unconfirmed",
+            "ratio": 7.031781546978182,
+            "color": "oklch(0.8 0.01 298)",
+            "background": "oklch(0.31 0.01 298)"
+          }
+        ]
+      },
+      "retained": {
+        "marker": "original",
+        "value": "한글 😀 입력을 이어갑니다.",
+        "caret": 5
+      },
+      "selected": "서울 😀",
+      "reachedSources": [
+        {
+          "name": "직접 입력 기반 출처 보기: 직접 방문한 서울 😀",
+          "reachable": true,
+          "pointer": "touch"
+        },
+        {
+          "name": "사진에서 추론 출처 보기: 커피가 놓인 창가",
+          "reachable": true,
+          "pointer": "touch"
+        }
+      ],
+      "inputReachable": true,
+      "errors": [],
+      "calls": [
+        "GetMe",
+        "GetPost",
+        "InitializeDefaultSelections",
+        "GetPostMeasurement",
+        "ListModels",
+        "GetSelections",
+        "ListTemplates"
+      ]
+    },
+    {
+      "theme": "dark",
+      "display": {
+        "width": 1440,
+        "height": 900
+      },
+      "measurement": {
+        "overflow": false,
+        "documentWidth": 1440,
+        "viewportWidth": 1440,
+        "innerScrollers": 0,
+        "roles": [
+          {
+            "role": "owner",
+            "ratio": 10.88696669301799,
+            "color": "oklch(0.8 0.133 156)",
+            "background": "oklch(0.165 0.001 156)"
+          },
+          {
+            "role": "visual",
+            "ratio": 10.465097334158289,
+            "color": "oklch(0.8 0.089 240)",
+            "background": "oklch(0.165 0.01 240)"
+          },
+          {
+            "role": "ai",
+            "ratio": 10.261722195046628,
+            "color": "oklch(0.8 0.142 85)",
+            "background": "oklch(0.165 0 85)"
+          },
+          {
+            "role": "unconfirmed",
+            "ratio": 7.031781546978182,
+            "color": "oklch(0.8 0.01 298)",
+            "background": "oklch(0.31 0.01 298)"
+          }
+        ]
+      },
+      "retained": {
+        "marker": "original",
+        "value": "한글 😀 입력을 이어갑니다.",
+        "caret": 5
+      },
+      "selected": "서울 😀",
+      "reachedSources": [
+        {
+          "name": "직접 입력 기반 출처 보기: 직접 방문한 서울 😀",
+          "reachable": true,
+          "pointer": "mouse"
+        },
+        {
+          "name": "사진에서 추론 출처 보기: 커피가 놓인 창가",
+          "reachable": true,
+          "pointer": "mouse"
+        }
+      ],
+      "inputReachable": true,
+      "errors": [],
+      "calls": [
+        "GetMe",
+        "GetMyPlan",
+        "GetPost",
+        "InitializeDefaultSelections",
+        "GetPostMeasurement",
+        "ListModels",
+        "GetSelections",
+        "ListTemplates"
+      ]
+    },
+    {
+      "theme": "dark",
+      "display": {
+        "width": 1920,
+        "height": 1080
+      },
+      "measurement": {
+        "overflow": false,
+        "documentWidth": 1920,
+        "viewportWidth": 1920,
+        "innerScrollers": 0,
+        "roles": [
+          {
+            "role": "owner",
+            "ratio": 10.88696669301799,
+            "color": "oklch(0.8 0.133 156)",
+            "background": "oklch(0.165 0.001 156)"
+          },
+          {
+            "role": "visual",
+            "ratio": 10.465097334158289,
+            "color": "oklch(0.8 0.089 240)",
+            "background": "oklch(0.165 0.01 240)"
+          },
+          {
+            "role": "ai",
+            "ratio": 10.261722195046628,
+            "color": "oklch(0.8 0.142 85)",
+            "background": "oklch(0.165 0 85)"
+          },
+          {
+            "role": "unconfirmed",
+            "ratio": 7.031781546978182,
+            "color": "oklch(0.8 0.01 298)",
+            "background": "oklch(0.31 0.01 298)"
+          }
+        ]
+      },
+      "retained": {
+        "marker": "original",
+        "value": "한글 😀 입력을 이어갑니다.",
+        "caret": 5
+      },
+      "selected": "서울 😀",
+      "reachedSources": [
+        {
+          "name": "직접 입력 기반 출처 보기: 직접 방문한 서울 😀",
+          "reachable": true,
+          "pointer": "mouse"
+        },
+        {
+          "name": "사진에서 추론 출처 보기: 커피가 놓인 창가",
+          "reachable": true,
+          "pointer": "mouse"
+        }
+      ],
+      "inputReachable": true,
+      "errors": [],
+      "calls": [
+        "GetMe",
+        "GetMyPlan",
+        "GetPost",
+        "InitializeDefaultSelections",
+        "GetPostMeasurement",
+        "ListModels",
+        "GetSelections",
+        "ListTemplates"
+      ]
+    },
+    {
+      "theme": "dark",
+      "display": {
+        "width": 720,
+        "height": 450,
+        "zoom": 2
+      },
+      "measurement": {
+        "overflow": false,
+        "documentWidth": 720,
+        "viewportWidth": 720,
+        "innerScrollers": 0,
+        "roles": [
+          {
+            "role": "owner",
+            "ratio": 10.88696669301799,
+            "color": "oklch(0.8 0.133 156)",
+            "background": "oklch(0.165 0.001 156)"
+          },
+          {
+            "role": "visual",
+            "ratio": 10.465097334158289,
+            "color": "oklch(0.8 0.089 240)",
+            "background": "oklch(0.165 0.01 240)"
+          },
+          {
+            "role": "ai",
+            "ratio": 10.261722195046628,
+            "color": "oklch(0.8 0.142 85)",
+            "background": "oklch(0.165 0 85)"
+          },
+          {
+            "role": "unconfirmed",
+            "ratio": 7.031781546978182,
+            "color": "oklch(0.8 0.01 298)",
+            "background": "oklch(0.31 0.01 298)"
+          }
+        ]
+      },
+      "retained": {
+        "marker": "original",
+        "value": "한글 😀 입력을 이어갑니다.",
+        "caret": 5
+      },
+      "selected": "서울 😀",
+      "reachedSources": [
+        {
+          "name": "직접 입력 기반 출처 보기: 직접 방문한 서울 😀",
+          "reachable": true,
+          "pointer": "mouse"
+        },
+        {
+          "name": "사진에서 추론 출처 보기: 커피가 놓인 창가",
+          "reachable": true,
+          "pointer": "mouse"
+        }
+      ],
+      "inputReachable": true,
+      "errors": [],
+      "calls": [
+        "GetMe",
+        "GetPost",
+        "InitializeDefaultSelections",
+        "GetPostMeasurement",
+        "ListModels",
+        "GetSelections",
+        "ListTemplates"
+      ]
+    }
+  ],
+  "task": "T642",
+  "rendering": "Production Vite build served by local preview on26143; intercepted synthetic owner RPCs only.",
+  "coverage": [
+    "default three-category origins for every canonical readable field and separate native-alt inspection",
+    "keyboard Enter/Escape and exact focus return",
+    "44px phone source picker and phrase choices",
+    "native copy selection preserved through pointerdown and click",
+    "scrolled LIST/media-caption direct pointer hit tests and frozen source details",
+    "active editor input hit test, retained mounted input/caret through toggle and known cancel snapshot",
+    "both themes320/390/1440/1920 and200% desktop reflow emulation; no horizontal overflow or nested document scroller"
+  ],
+  "screenshots": [
+    {
+      "path": "/tmp/postpilot-t642-browser-final/dark-1440.png",
+      "sha256": "5ce96f9fb5a25c589a63e63c355c4f8442ab13eb68183943f42452da27603529"
+    },
+    {
+      "path": "/tmp/postpilot-t642-browser-final/dark-1920.png",
+      "sha256": "97d2e0e21d095a53929e8916e2f986bbc1bf3313f43cc5e2449d4256035f1eb3"
+    },
+    {
+      "path": "/tmp/postpilot-t642-browser-final/dark-320.png",
+      "sha256": "cd70e5eaf200dfe54d4e59b813179fc38da60fac93119a529801e69851705948"
+    },
+    {
+      "path": "/tmp/postpilot-t642-browser-final/dark-390.png",
+      "sha256": "00c989c462e4a00627ae5c4521bbd9aaec60c9cfeb7d2ac927d1b440e33bab36"
+    },
+    {
+      "path": "/tmp/postpilot-t642-browser-final/dark-720-zoom200.png",
+      "sha256": "1192b78b75de82ca4767e90675f73ea4fb9ce427311bbd856babc2d0c1696eb5"
+    },
+    {
+      "path": "/tmp/postpilot-t642-browser-final/light-1440.png",
+      "sha256": "12634c6e3b25ddc0850b49c7ac288fb5069adcc46ba07fa932a1d8a80e410ae7"
+    },
+    {
+      "path": "/tmp/postpilot-t642-browser-final/light-1920.png",
+      "sha256": "25d101c1497e3c1b83baf7ea4702af329cf66c207bbfc055ad627ed61a6ef0b4"
+    },
+    {
+      "path": "/tmp/postpilot-t642-browser-final/light-320.png",
+      "sha256": "209849e8b0e4c2ae0cc65f30bdc16b2f5d7c8c2c9889510f9b694ab1e2cf19ee"
+    },
+    {
+      "path": "/tmp/postpilot-t642-browser-final/light-390.png",
+      "sha256": "486c2d006d8f12e3c4cf2c8b1e808e081b56b008b75b675d551e29a726bdcccf"
+    },
+    {
+      "path": "/tmp/postpilot-t642-browser-final/light-720-zoom200.png",
+      "sha256": "a2c52442ed24a515ca3b4675a3f8fc112259c6b4c5dbec68ea2a77bae55ba5b8"
+    }
+  ],
+  "limits": "Synthetic source correspondence and actual browser presentation evidence; no live model semantic-quality, paid-provider, deployment or push claim.200% uses720x450 CSS reflow/DPR2 for1440x900 physical pixels."
+}

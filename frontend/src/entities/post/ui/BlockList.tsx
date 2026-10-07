@@ -5,8 +5,12 @@ import { BlockType, type PostContent } from '@/shared/api'
 import { RotatedImage, Typography } from '@/shared/ui'
 import type { PostImage } from '@/entities/image/@x/post'
 import type { PostVideo } from '@/entities/video/@x/post'
-import { blockKey, imageByFile } from '../model/content'
+import { imageByFile } from '../model/content'
+import type { OriginFieldLocator } from '../model/semantic-origin'
 import { PhotoGroup } from './PhotoGroup'
+
+/** Evidence presentation receives canonical strings, never editable markers or rewritten text. */
+export type OriginTextRenderer = (field: OriginFieldLocator, text: string) => ReactNode
 
 interface BlockListProps {
   content: PostContent
@@ -29,6 +33,10 @@ interface BlockListProps {
   ) => ReactNode
   /** Wraps the title/summary/tags header for the same reason. */
   renderHeader?: (rendered: ReactNode) => ReactNode
+  /** Presents the exact named title, summary, tag, block text, list item or media caption. */
+  renderTextField?: OriginTextRenderer
+  /** Adds a named alt inspection beside media. Native image alt strings retain their semantics. */
+  renderAltField?: OriginTextRenderer
   /** Rendered in place of an IMAGE block whose file has no matching image. The default (nothing)
    *  is right for the reading and editing views; the export preview holds the marker's position
    *  with its own placeholder, because a dropped position would shift every later photo against
@@ -48,6 +56,8 @@ export function BlockList({
   className,
   renderBlock,
   renderHeader,
+  renderTextField,
+  renderAltField,
   renderMissingImage,
   renderVideo,
 }: BlockListProps) {
@@ -57,8 +67,21 @@ export function BlockList({
   // The key stays on this wrapper rather than on whatever the consumer returns — and it is the
   // block's POSITION, not `blockKey`'s content-derived string: a consumer that edits the block in
   // place would otherwise remount it on every keystroke and lose both the open editor and the caret.
-  const wrap = (block: PostContent['blocks'][number], index: number, rendered: ReactNode) =>
-    renderBlock ? <Fragment key={index}>{renderBlock(block, index, rendered)}</Fragment> : rendered
+  const wrap = (block: PostContent['blocks'][number], index: number, rendered: ReactNode) => (
+    <Fragment key={index}>{renderBlock ? renderBlock(block, index, rendered) : rendered}</Fragment>
+  )
+  const text = (field: OriginFieldLocator, value: string) =>
+    renderTextField ? renderTextField(field, value) : value
+  const alt = (block: PostContent['blocks'][number], index: number) =>
+    renderAltField && block.alt
+      ? renderAltField({ kind: 'block_alt', blockIndex: index }, block.alt)
+      : null
+  const caption = (block: PostContent['blocks'][number], index: number) =>
+    block.caption && (
+      <Typography variant="label" as="p" className="mt-2 break-words">
+        {text({ kind: 'block_caption', blockIndex: index }, block.caption)}
+      </Typography>
+    )
 
   return (
     <article
@@ -77,23 +100,23 @@ export function BlockList({
               a nested reading section, so it keeps heading semantics without competing with the
               page title for the top visual role (THEME-19). */}
           <Typography variant="title" as="h3" className="mt-1 break-words">
-            {content.title}
+            {text({ kind: 'title' }, content.title)}
           </Typography>
           {content.summary && (
             <Typography variant="body" className="text-content-secondary mt-3 break-words">
-              {content.summary}
+              {text({ kind: 'summary' }, content.summary)}
             </Typography>
           )}
           {content.tags.length > 0 && (
             <ul aria-label={t('tags')} className="mt-3 flex flex-wrap gap-2">
-              {content.tags.map((tag) => (
+              {content.tags.map((tag, tagIndex) => (
                 <Typography
                   variant="meta"
                   as="li"
-                  key={tag}
+                  key={tagIndex}
                   className="bg-surface-raised text-content-secondary rounded-sm px-2 py-1 break-words"
                 >
-                  #{tag}
+                  #{text({ kind: 'tag', tagIndex }, tag)}
                 </Typography>
               ))}
             </ul>
@@ -103,14 +126,14 @@ export function BlockList({
 
       <div className="mt-8 space-y-5">
         {content.blocks.map((block, index) => {
-          const key = blockKey(block, index)
+          const key = index
           switch (block.type) {
             case BlockType.TEXT:
               return wrap(
                 block,
                 index,
                 <Typography variant="body" key={key} className="break-words whitespace-pre-wrap">
-                  {block.content}
+                  {text({ kind: 'block_content', blockIndex: index }, block.content)}
                 </Typography>,
               )
             case BlockType.HEADING:
@@ -119,17 +142,17 @@ export function BlockList({
                 index,
                 block.level === 3 ? (
                   <Typography variant="title" as="h5" key={key} className="pt-3 break-words">
-                    {block.content}
+                    {text({ kind: 'block_content', blockIndex: index }, block.content)}
                   </Typography>
                 ) : (
                   <Typography variant="title" as="h4" key={key} className="pt-5 break-words">
-                    {block.content}
+                    {text({ kind: 'block_content', blockIndex: index }, block.content)}
                   </Typography>
                 ),
               )
             case BlockType.IMAGE: {
               const image = imagesByFile.get(block.file)
-              if (!image)
+              if (!image && !renderTextField && !renderAltField)
                 return renderMissingImage ? (
                   <Fragment key={key}>{renderMissingImage(block, index)}</Fragment>
                 ) : null
@@ -142,7 +165,9 @@ export function BlockList({
                       rendered at a third of the column with the top and bottom of a portrait shot
                       cropped away (THEME-8). Here it fills the column at its own
                       aspect ratio, which `width`/`height` reserve before the pixels land (THEME-32). */}
-                  {image.viewUrl ? (
+                  {!image ? (
+                    renderMissingImage?.(block, index)
+                  ) : image.viewUrl ? (
                     <RotatedImage
                       fit="natural"
                       rotation={image.rotation}
@@ -160,11 +185,8 @@ export function BlockList({
                     // open so the text below it does not jump when the photo paints.
                     <div className="bg-surface-recessed aspect-square w-full rounded-lg" />
                   )}
-                  {block.caption && (
-                    <Typography variant="label" as="p" className="mt-2 break-words">
-                      {block.caption}
-                    </Typography>
-                  )}
+                  {alt(block, index)}
+                  {(image || renderTextField || renderAltField) && caption(block, index)}
                 </div>,
               )
             }
@@ -173,7 +195,14 @@ export function BlockList({
               return wrap(
                 block,
                 index,
-                <PhotoGroup key={key} block={block} images={imagesByFile} />,
+                <Fragment key={key}>
+                  <PhotoGroup
+                    block={block}
+                    images={imagesByFile}
+                    renderCaption={renderTextField ? (group) => caption(group, index) : undefined}
+                  />
+                  {alt(block, index)}
+                </Fragment>,
               )
             case BlockType.VIDEO: {
               const video = videosByFile.get(block.file)
@@ -200,11 +229,8 @@ export function BlockList({
                       {block.file}
                     </Typography>
                   )}
-                  {block.caption && (
-                    <Typography variant="label" as="p" className="mt-2 break-words">
-                      {block.caption}
-                    </Typography>
-                  )}
+                  {alt(block, index)}
+                  {caption(block, index)}
                 </div>
               )
               return wrap(block, index, renderVideo ? renderVideo(block, rendered) : rendered)
@@ -219,7 +245,7 @@ export function BlockList({
                   key={key}
                   className="bg-surface-recessed text-content-secondary rounded-md px-4 py-3 break-words"
                 >
-                  {block.content}
+                  {text({ kind: 'block_content', blockIndex: index }, block.content)}
                 </Typography>,
               )
             case BlockType.LIST:
@@ -233,7 +259,9 @@ export function BlockList({
                   className="list-disc space-y-1 pl-5 break-words"
                 >
                   {block.items.map((item, itemIndex) => (
-                    <li key={`${item}:${itemIndex}`}>{item}</li>
+                    <li key={itemIndex}>
+                      {text({ kind: 'block_item', blockIndex: index, itemIndex }, item)}
+                    </li>
                   ))}
                 </Typography>,
               )
