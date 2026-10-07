@@ -141,5 +141,5 @@ type WritingTestSnapshot struct {
 }
 type WritingTestSnapshots interface {
 	FreezeWritingTest(context.Context, WritingTestSnapshotRequest) (WritingTestSnapshot, error)
-	WriteTestEntrant(context.Context, WritingTestSnapshot, int, Progress) (PostContent, error)
+	WriteTestEntrant(context.Context, WritingTestSnapshot, int, Progress) (WriteAnswer, error)
 }

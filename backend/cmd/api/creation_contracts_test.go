@@ -15,6 +15,7 @@ import (
 	"github.com/postpilot/backend/internal/authoring"
 	"github.com/postpilot/backend/internal/experiment"
 	v1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
+	"github.com/postpilot/backend/internal/generation"
 )
 
 func TestWritingTestShapeRefusesBeforeAnyAdmission(t *testing.T) {
@@ -186,5 +187,45 @@ func TestFrozenRefusalContractsUseRegisteredParameterFreeReasons(t *testing.T) {
 		if _, ok := v1.FailureReason_value[refusal.Reason()]; !ok || len(refusal.Params()) != 0 || refusal.Error() == "" {
 			t.Fatalf("invalid frozen refusal: %v", refusal)
 		}
+	}
+}
+
+// Exercise the published generation port as its experiment consumer sees it.
+type testSnapshotWriter struct{ answer generation.WriteAnswer }
+
+func (w testSnapshotWriter) FreezeWritingTest(context.Context, generation.WritingTestSnapshotRequest) (generation.WritingTestSnapshot, error) {
+	return generation.WritingTestSnapshot{}, nil
+}
+func (w testSnapshotWriter) WriteTestEntrant(context.Context, generation.WritingTestSnapshot, int, generation.Progress) (generation.WriteAnswer, error) {
+	return w.answer, nil
+}
+func TestFrozenGenerationResultCarriesStorylineAndNounsToItsConsumer(t *testing.T) {
+	var producer generation.WritingTestSnapshots = testSnapshotWriter{answer: generation.WriteAnswer{Content: generation.PostContent{Title: "complete candidate"}, Nouns: []string{"owned scene"}, Storyline: &generation.Storyline{Paragraphs: []generation.StorylineParagraph{{Text: "candidate-specific plan", Files: []string{"owned.jpg"}}}, MadeWith: []string{"owned.jpg"}}}}
+	answer, err := producer.WriteTestEntrant(context.Background(), generation.WritingTestSnapshot{}, 0, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	annotations := answer.Annotations()
+	if answer.Content.Title != "complete candidate" || annotations.Storyline == nil || annotations.Storyline.Paragraphs[0].Text != "candidate-specific plan" || annotations.Storyline.MadeWith[0] != "owned.jpg" || annotations.Nouns[0] != "owned scene" {
+		t.Fatalf("generation consumer lost annotations: %#v", answer)
+	}
+}
+func TestFailedRetryQuoteShapeDoesNotChangeTheOriginalTestFormat(t *testing.T) {
+	request := experiment.TestRetryQuoteRequest{UserID: "alice", TestID: "four-entry-test", ExpectedRevision: 3, CandidateIDs: []string{"failed-one"}}
+	if err := experiment.ValidateRetryQuoteShape(request); err != nil {
+		t.Fatal(err)
+	}
+	request.CandidateIDs = []string{"failed-one", "failed-one"}
+	if !errors.Is(experiment.ValidateRetryQuoteShape(request), experiment.ErrTestDuplicate) {
+		t.Fatal("duplicate retry admitted")
+	}
+	request.CandidateIDs = nil
+	if !errors.Is(experiment.ValidateRetryQuoteShape(request), experiment.ErrTestOperation) {
+		t.Fatal("empty retry admitted")
+	}
+	request.CandidateIDs = []string{"failed-one"}
+	request.UserID = ""
+	if !errors.Is(experiment.ValidateRetryQuoteShape(request), experiment.ErrTestOperation) {
+		t.Fatal("unowned retry admitted")
 	}
 }

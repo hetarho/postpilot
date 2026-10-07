@@ -727,6 +727,7 @@ type TestPlan struct {
 	Free            bool
 }
 type OutputApplication struct {
+	Nouns []string
 	TestMutation
 	WinnerID, PostSlug, AssignmentsHash string
 	InputRevision, ContentRevision      int64
@@ -790,3 +791,29 @@ var (
 	ErrTestMaterialInvalid     = &TestRefusal{reason: FailureReasonTestMaterialInvalid, message: "writing test common material is invalid"}
 	ErrTestLegacyReadOnly      = &TestRefusal{reason: FailureReasonTestLegacyReadOnly, message: "earlier comparison is read only"}
 )
+
+const MaxTestEntrants = 16
+
+// A retry quote refers only to a stored test and failed candidates, keeping its original format.
+type TestRetryQuoteRequest struct {
+	UserID, TestID   string
+	ExpectedRevision uint32
+	CandidateIDs     []string
+}
+
+func ValidateRetryQuoteShape(request TestRetryQuoteRequest) error {
+	if request.UserID == "" || request.TestID == "" || len(request.CandidateIDs) == 0 || len(request.CandidateIDs) > MaxTestEntrants {
+		return ErrTestOperation
+	}
+	seen := map[string]bool{}
+	for _, id := range request.CandidateIDs {
+		if id == "" {
+			return ErrTestEntrant
+		}
+		if seen[id] {
+			return ErrTestDuplicate
+		}
+		seen[id] = true
+	}
+	return nil
+}

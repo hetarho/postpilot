@@ -7,6 +7,7 @@ import {
   WritingTestService,
   WritingTestEntrantSchema,
   WritingTestPlanSchema,
+  EstimateFailedTestCandidatesRequestSchema,
 } from './gen/postpilot/v1/writing_test_pb'
 import { VoiceAnalysisSchema, VoiceSampleSchema } from './gen/postpilot/v1/voice_pb'
 
@@ -52,4 +53,22 @@ describe('additive creation transport contracts', () => {
       WritingTestService.method.decideTestMatch.input.fields.map((field) => field.name),
     ).toEqual(['test_id', 'expected_revision', 'request_key', 'match_id', 'winner_candidate_id'])
   })
+})
+
+it('requotes failed-only work from the owned stored revision after reload or quote expiry', () => {
+  const request = create(EstimateFailedTestCandidatesRequestSchema, {
+    testId: 'test-four',
+    expectedRevision: 7,
+    candidateIds: ['failed-one'],
+  })
+  const recovered = fromBinary(
+    EstimateFailedTestCandidatesRequestSchema,
+    toBinary(EstimateFailedTestCandidatesRequestSchema, request),
+  )
+  expect(recovered.testId).toBe('test-four')
+  expect(recovered.expectedRevision).toBe(7)
+  expect(recovered.candidateIds).toEqual(['failed-one'])
+  expect(
+    WritingTestService.method.estimateFailedTestCandidates.input.fields.map((field) => field.name),
+  ).toEqual(['test_id', 'expected_revision', 'candidate_ids'])
 })

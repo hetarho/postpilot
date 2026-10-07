@@ -13,6 +13,7 @@ option go_package = "github.com/postpilot/backend/internal/gen/postpilot/v1;post
 // Owner comes exclusively from authentication. This service is wired after domain integration.
 service WritingTestService {
   rpc EstimateWritingTest(EstimateWritingTestRequest) returns (EstimateWritingTestResponse) {}
+  rpc EstimateFailedTestCandidates(EstimateFailedTestCandidatesRequest) returns (EstimateWritingTestResponse) {}
   rpc StartWritingTest(StartWritingTestRequest) returns (WritingTestResponse) {}
   rpc GetWritingTest(GetWritingTestRequest) returns (WritingTestResponse) {}
   rpc ListWritingTests(ListWritingTestsRequest) returns (ListWritingTestsResponse) {}
@@ -170,6 +171,13 @@ message WritingTest {
   Failure failure = 20;
 }
 message EstimateWritingTestRequest { WritingTestPlan plan = 1; }
+// Requote only the selected failed work of the stored immutable test after reload/expiry.
+// This request never supplies a replacement plan or regenerates successful candidates.
+message EstimateFailedTestCandidatesRequest {
+  string test_id = 1;
+  uint32 expected_revision = 2;
+  repeated string candidate_ids = 3;
+}
 message EstimateWritingTestResponse {
   optional int64 credits = 1;
   bool free = 2;

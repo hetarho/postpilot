@@ -36,6 +36,9 @@ const (
 	// WritingTestServiceEstimateWritingTestProcedure is the fully-qualified name of the
 	// WritingTestService's EstimateWritingTest RPC.
 	WritingTestServiceEstimateWritingTestProcedure = "/postpilot.v1.WritingTestService/EstimateWritingTest"
+	// WritingTestServiceEstimateFailedTestCandidatesProcedure is the fully-qualified name of the
+	// WritingTestService's EstimateFailedTestCandidates RPC.
+	WritingTestServiceEstimateFailedTestCandidatesProcedure = "/postpilot.v1.WritingTestService/EstimateFailedTestCandidates"
 	// WritingTestServiceStartWritingTestProcedure is the fully-qualified name of the
 	// WritingTestService's StartWritingTest RPC.
 	WritingTestServiceStartWritingTestProcedure = "/postpilot.v1.WritingTestService/StartWritingTest"
@@ -65,6 +68,7 @@ const (
 // WritingTestServiceClient is a client for the postpilot.v1.WritingTestService service.
 type WritingTestServiceClient interface {
 	EstimateWritingTest(context.Context, *connect.Request[v1.EstimateWritingTestRequest]) (*connect.Response[v1.EstimateWritingTestResponse], error)
+	EstimateFailedTestCandidates(context.Context, *connect.Request[v1.EstimateFailedTestCandidatesRequest]) (*connect.Response[v1.EstimateWritingTestResponse], error)
 	StartWritingTest(context.Context, *connect.Request[v1.StartWritingTestRequest]) (*connect.Response[v1.WritingTestResponse], error)
 	GetWritingTest(context.Context, *connect.Request[v1.GetWritingTestRequest]) (*connect.Response[v1.WritingTestResponse], error)
 	ListWritingTests(context.Context, *connect.Request[v1.ListWritingTestsRequest]) (*connect.Response[v1.ListWritingTestsResponse], error)
@@ -90,6 +94,12 @@ func NewWritingTestServiceClient(httpClient connect.HTTPClient, baseURL string, 
 			httpClient,
 			baseURL+WritingTestServiceEstimateWritingTestProcedure,
 			connect.WithSchema(writingTestServiceMethods.ByName("EstimateWritingTest")),
+			connect.WithClientOptions(opts...),
+		),
+		estimateFailedTestCandidates: connect.NewClient[v1.EstimateFailedTestCandidatesRequest, v1.EstimateWritingTestResponse](
+			httpClient,
+			baseURL+WritingTestServiceEstimateFailedTestCandidatesProcedure,
+			connect.WithSchema(writingTestServiceMethods.ByName("EstimateFailedTestCandidates")),
 			connect.WithClientOptions(opts...),
 		),
 		startWritingTest: connect.NewClient[v1.StartWritingTestRequest, v1.WritingTestResponse](
@@ -145,20 +155,26 @@ func NewWritingTestServiceClient(httpClient connect.HTTPClient, baseURL string, 
 
 // writingTestServiceClient implements WritingTestServiceClient.
 type writingTestServiceClient struct {
-	estimateWritingTest       *connect.Client[v1.EstimateWritingTestRequest, v1.EstimateWritingTestResponse]
-	startWritingTest          *connect.Client[v1.StartWritingTestRequest, v1.WritingTestResponse]
-	getWritingTest            *connect.Client[v1.GetWritingTestRequest, v1.WritingTestResponse]
-	listWritingTests          *connect.Client[v1.ListWritingTestsRequest, v1.ListWritingTestsResponse]
-	retryFailedTestCandidates *connect.Client[v1.RetryFailedTestCandidatesRequest, v1.WritingTestResponse]
-	decideTestMatch           *connect.Client[v1.DecideTestMatchRequest, v1.WritingTestResponse]
-	cancelWritingTest         *connect.Client[v1.CancelWritingTestRequest, v1.WritingTestResponse]
-	saveWritingTestWinner     *connect.Client[v1.SaveWritingTestWinnerRequest, v1.WritingTestPublicationResponse]
-	applyWritingTestOutput    *connect.Client[v1.ApplyWritingTestOutputRequest, v1.WritingTestPublicationResponse]
+	estimateWritingTest          *connect.Client[v1.EstimateWritingTestRequest, v1.EstimateWritingTestResponse]
+	estimateFailedTestCandidates *connect.Client[v1.EstimateFailedTestCandidatesRequest, v1.EstimateWritingTestResponse]
+	startWritingTest             *connect.Client[v1.StartWritingTestRequest, v1.WritingTestResponse]
+	getWritingTest               *connect.Client[v1.GetWritingTestRequest, v1.WritingTestResponse]
+	listWritingTests             *connect.Client[v1.ListWritingTestsRequest, v1.ListWritingTestsResponse]
+	retryFailedTestCandidates    *connect.Client[v1.RetryFailedTestCandidatesRequest, v1.WritingTestResponse]
+	decideTestMatch              *connect.Client[v1.DecideTestMatchRequest, v1.WritingTestResponse]
+	cancelWritingTest            *connect.Client[v1.CancelWritingTestRequest, v1.WritingTestResponse]
+	saveWritingTestWinner        *connect.Client[v1.SaveWritingTestWinnerRequest, v1.WritingTestPublicationResponse]
+	applyWritingTestOutput       *connect.Client[v1.ApplyWritingTestOutputRequest, v1.WritingTestPublicationResponse]
 }
 
 // EstimateWritingTest calls postpilot.v1.WritingTestService.EstimateWritingTest.
 func (c *writingTestServiceClient) EstimateWritingTest(ctx context.Context, req *connect.Request[v1.EstimateWritingTestRequest]) (*connect.Response[v1.EstimateWritingTestResponse], error) {
 	return c.estimateWritingTest.CallUnary(ctx, req)
+}
+
+// EstimateFailedTestCandidates calls postpilot.v1.WritingTestService.EstimateFailedTestCandidates.
+func (c *writingTestServiceClient) EstimateFailedTestCandidates(ctx context.Context, req *connect.Request[v1.EstimateFailedTestCandidatesRequest]) (*connect.Response[v1.EstimateWritingTestResponse], error) {
+	return c.estimateFailedTestCandidates.CallUnary(ctx, req)
 }
 
 // StartWritingTest calls postpilot.v1.WritingTestService.StartWritingTest.
@@ -204,6 +220,7 @@ func (c *writingTestServiceClient) ApplyWritingTestOutput(ctx context.Context, r
 // WritingTestServiceHandler is an implementation of the postpilot.v1.WritingTestService service.
 type WritingTestServiceHandler interface {
 	EstimateWritingTest(context.Context, *connect.Request[v1.EstimateWritingTestRequest]) (*connect.Response[v1.EstimateWritingTestResponse], error)
+	EstimateFailedTestCandidates(context.Context, *connect.Request[v1.EstimateFailedTestCandidatesRequest]) (*connect.Response[v1.EstimateWritingTestResponse], error)
 	StartWritingTest(context.Context, *connect.Request[v1.StartWritingTestRequest]) (*connect.Response[v1.WritingTestResponse], error)
 	GetWritingTest(context.Context, *connect.Request[v1.GetWritingTestRequest]) (*connect.Response[v1.WritingTestResponse], error)
 	ListWritingTests(context.Context, *connect.Request[v1.ListWritingTestsRequest]) (*connect.Response[v1.ListWritingTestsResponse], error)
@@ -225,6 +242,12 @@ func NewWritingTestServiceHandler(svc WritingTestServiceHandler, opts ...connect
 		WritingTestServiceEstimateWritingTestProcedure,
 		svc.EstimateWritingTest,
 		connect.WithSchema(writingTestServiceMethods.ByName("EstimateWritingTest")),
+		connect.WithHandlerOptions(opts...),
+	)
+	writingTestServiceEstimateFailedTestCandidatesHandler := connect.NewUnaryHandler(
+		WritingTestServiceEstimateFailedTestCandidatesProcedure,
+		svc.EstimateFailedTestCandidates,
+		connect.WithSchema(writingTestServiceMethods.ByName("EstimateFailedTestCandidates")),
 		connect.WithHandlerOptions(opts...),
 	)
 	writingTestServiceStartWritingTestHandler := connect.NewUnaryHandler(
@@ -279,6 +302,8 @@ func NewWritingTestServiceHandler(svc WritingTestServiceHandler, opts ...connect
 		switch r.URL.Path {
 		case WritingTestServiceEstimateWritingTestProcedure:
 			writingTestServiceEstimateWritingTestHandler.ServeHTTP(w, r)
+		case WritingTestServiceEstimateFailedTestCandidatesProcedure:
+			writingTestServiceEstimateFailedTestCandidatesHandler.ServeHTTP(w, r)
 		case WritingTestServiceStartWritingTestProcedure:
 			writingTestServiceStartWritingTestHandler.ServeHTTP(w, r)
 		case WritingTestServiceGetWritingTestProcedure:
@@ -306,6 +331,10 @@ type UnimplementedWritingTestServiceHandler struct{}
 
 func (UnimplementedWritingTestServiceHandler) EstimateWritingTest(context.Context, *connect.Request[v1.EstimateWritingTestRequest]) (*connect.Response[v1.EstimateWritingTestResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.WritingTestService.EstimateWritingTest is not implemented"))
+}
+
+func (UnimplementedWritingTestServiceHandler) EstimateFailedTestCandidates(context.Context, *connect.Request[v1.EstimateFailedTestCandidatesRequest]) (*connect.Response[v1.EstimateWritingTestResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.WritingTestService.EstimateFailedTestCandidates is not implemented"))
 }
 
 func (UnimplementedWritingTestServiceHandler) StartWritingTest(context.Context, *connect.Request[v1.StartWritingTestRequest]) (*connect.Response[v1.WritingTestResponse], error) {

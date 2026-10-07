@@ -159,3 +159,9 @@ type TestStore interface {
 	BeginPublication(context.Context, WinnerPublication) (TestPublication, error)
 	ConfirmPublication(context.Context, TestPublication, PublicationReceipt) (TestPublication, error)
 }
+
+// Reads the same owned test revision/snapshot and plans only remaining failed calls.
+// Successful output, common inputs, entrants and prior confirmed usage stay unchanged.
+type FailedTestPreparation interface {
+	PrepareFailedTestCandidates(context.Context, TestRetryQuoteRequest) (TestPlan, error)
+}
