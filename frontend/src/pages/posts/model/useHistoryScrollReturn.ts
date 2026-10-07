@@ -65,13 +65,14 @@ export function useHistoryScrollReturn(
         ]) !== identity
       )
         return
-      const targetLoaded = posts.some((post) => post.slug === entry.targetId)
       const documentHeight = Math.max(
         document.documentElement.scrollHeight,
         document.body.scrollHeight,
       )
       const positionAvailable = documentHeight - window.innerHeight >= entry.scrollY
-      if (!targetLoaded && !positionAvailable && hasNextPage) {
+      // Editing moves a target to the newest row. Its presence does not mean the
+      // older rows needed for the retained document position have loaded yet.
+      if (!positionAvailable && hasNextPage) {
         const page = JSON.stringify([identity, posts.length, posts.at(-1)?.slug])
         if (requestedPage.current !== page) {
           requestedPage.current = page

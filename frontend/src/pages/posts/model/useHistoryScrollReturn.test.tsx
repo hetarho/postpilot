@@ -105,6 +105,7 @@ describe('cold history scroll return', () => {
     })
     paint()
     expect(window.scrollTo).not.toHaveBeenCalled()
+    height = 2600
     view.rerender({
       list: { ...initial, posts: [...first, { slug: 'target' }], hasNextPage: true },
     })
@@ -136,9 +137,56 @@ describe('cold history scroll return', () => {
     expect(window.scrollTo).not.toHaveBeenCalled()
     expect(complete).not.toHaveBeenCalled()
     expect(context.entry).toBeDefined()
+    height = 2600
     view.rerender({ q: '제주', settled: '제주' })
     paint()
     expect(window.scrollTo).toHaveBeenCalledExactlyOnceWith(0, 1400)
+  })
+
+  it('loads enough older pages for the retained position when an edited target is already newest', () => {
+    remember()
+    const first = [
+      { slug: 'target' },
+      ...Array.from({ length: 19 }, (_, index) => ({ slug: `older-${index}` })),
+    ]
+    const view = renderHook(({ list }) => useHistoryScrollReturn('alice', {}, '', list), {
+      initialProps: { list: { ...initial, posts: first, hasNextPage: true } },
+    })
+    paint()
+    expect(initial.fetchNextPage).toHaveBeenCalledOnce()
+    expect(window.scrollTo).not.toHaveBeenCalled()
+    expect(complete).not.toHaveBeenCalled()
+    view.rerender({
+      list: {
+        ...initial,
+        posts: first,
+        hasNextPage: true,
+        isFetching: true,
+        isFetchingNextPage: true,
+      },
+    })
+    paint()
+    expect(initial.fetchNextPage).toHaveBeenCalledOnce()
+    expect(context.entry).toBeDefined()
+    // Even the next page can be shorter than the document position being restored.
+    height = 1800
+    const second = [
+      ...first,
+      ...Array.from({ length: 20 }, (_, index) => ({ slug: `second-${index}` })),
+    ]
+    view.rerender({ list: { ...initial, posts: second, hasNextPage: true } })
+    paint()
+    expect(initial.fetchNextPage).toHaveBeenCalledTimes(2)
+    expect(window.scrollTo).not.toHaveBeenCalled()
+    expect(complete).not.toHaveBeenCalled()
+    height = 2400
+    view.rerender({
+      list: { ...initial, posts: [...second, { slug: 'third-page' }], hasNextPage: true },
+    })
+    paint()
+    expect(window.scrollTo).toHaveBeenCalledExactlyOnceWith(0, 1400)
+    expect(complete).toHaveBeenCalledOnce()
+    expect(initial.fetchNextPage).toHaveBeenCalledTimes(2)
   })
 
   it('keeps a failed page pending and lets an explicit retry finish without an automatic retry loop', () => {

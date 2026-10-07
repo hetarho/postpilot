@@ -506,6 +506,54 @@ describe('PostsPage paging (POST-90..92)', () => {
     }
   })
 
+  it('waits for sufficient rendered history height even when the edited target is on the first page', async () => {
+    rememberPostEntry(USER.id, {
+      path: '/posts',
+      section: 'posts',
+      filters: {},
+      scrollY: 1400,
+      targetId: 'post-00',
+    })
+    expect(markPostHistoryReturn(USER.id, 'post-00')).toBe(true)
+    let release!: () => void
+    const listPageGate = new Promise<void>((resolve) => (release = resolve))
+    const listRequests: FakeListRequest[] = []
+    const scroll = vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
+    const originalHeight = Object.getOwnPropertyDescriptor(document.documentElement, 'scrollHeight')
+    vi.stubGlobal('innerHeight', 900)
+    // jsdom has no layout; derive the available height from committed history rows.
+    // Page 1 is too short, while page 2 is sufficient with page 3 still unloaded.
+    Object.defineProperty(document.documentElement, 'scrollHeight', {
+      configurable: true,
+      get: () => (document.querySelectorAll('[data-post-slug]').length >= 40 ? 2600 : 1100),
+    })
+    const view = renderList({ posts: manyPosts(45), listPageGate, listRequests })
+    try {
+      expect((await screen.findByRole('link', { name: /글 1번/ })).closest('li')).toHaveAttribute(
+        'data-post-slug',
+        'post-00',
+      )
+      expect(await screen.findByText('불러오는 중…')).toBeInTheDocument()
+      expect(rowCount()).toBe(20)
+      expect(scroll).not.toHaveBeenCalledWith(0, 1400)
+      expect(readPostHistoryReturn(USER.id)).toBeDefined()
+      release()
+      await screen.findByRole('link', { name: /글 40번/ })
+      await waitFor(() => expect(scroll).toHaveBeenCalledWith(0, 1400))
+      expect(readPostHistoryReturn(USER.id)).toBeUndefined()
+      expect(rowCount()).toBe(40)
+      expect(screen.queryByRole('link', { name: /글 45번/ })).not.toBeInTheDocument()
+      expect(listRequests).toHaveLength(2)
+    } finally {
+      release()
+      view.unmount()
+      scroll.mockRestore()
+      if (originalHeight)
+        Object.defineProperty(document.documentElement, 'scrollHeight', originalHeight)
+      else Reflect.deleteProperty(document.documentElement, 'scrollHeight')
+    }
+  })
+
   it('loads the first page, the next as the end nears, and nothing past the last', async () => {
     const listRequests: FakeListRequest[] = []
     renderList({ posts: manyPosts(25), listRequests })
