@@ -188,4 +188,4 @@
 - contract: `proto/postpilot/v1/template.proto`
 
 ## chg
-- r25 261007 TMPL-21✎ TMPL-26✎ TMPL-47✎ TMPL-49✎ TMPL-70+ unchanged literal/write rendering→role-preserving rendering; unbound photo placement→explicit chronology prohibition; ordinary-only raw grammar view→named technical-inspection exception; tag count seeds/labels→maximum tag seeds/labels
+-

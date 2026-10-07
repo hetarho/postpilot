@@ -67,4 +67,4 @@
 - tests that pin it: locale precedence including malformed and denied storage · primary-subtag matching and URL/session stability · pre-paint `lang` and metadata · catalog key and placeholder parity · enum ↔ tag ↔ SQL round trips rejecting unknown values · target changes preserving content byte-for-byte · observation request equality across targets · exact Korean and portable projection snapshots · every reason mapping to both catalogs · unknown or reason-less failures never rendering raw detail as the sole message · UI locale choosing defaults only for a new post
 
 ## chg
-- r9 261007 LANG-29+ instruction-language baseline and fixed-output comparison added
+-

@@ -211,4 +211,4 @@
 - ops: the production bucket needs a CORS rule allowing PUT/GET/HEAD from the FE origin (DEPLOY.md); MinIO in `docker-compose.yml` serves local development
 
 ## chg
-- r36 261007 POST-63✎ POST-112+ POST-113+ POST-114+ POST-115+ requested tag number→maximum tag number; unspecified option revision→unchanged content revision with POST-111 input revision; phrase origins and source lifecycle added
+-

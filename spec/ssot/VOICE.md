@@ -142,4 +142,4 @@
 - contracts: `voice.proto`, plus `VoiceRef` in `post.proto` and `voice_id` in `model_experiment.proto`
 
 ## chg
-- r15 261007 VOICE-75+ style examples cannot supply current-post facts or owner-input origins
+-

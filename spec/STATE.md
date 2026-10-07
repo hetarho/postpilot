@@ -28,25 +28,25 @@
 | ARCH | 20 | 20 | - | 0 |
 | AUTH | 15 | 15 | - | 0 |
 | QUOTA | 38 | 38 | - | 0 |
-| POST | 36 | 35 | POST-63✎ POST-112+ POST-113+ POST-114+ POST-115+ | 0 |
-| VOICE | 15 | 14 | VOICE-75+ | 0 |
-| GEN | 26 | 25 | GEN-14✎ GEN-16✎ GEN-40✎ GEN-41✎ GEN-46✎ GEN-49✎ GEN-50✎ GEN-68✎ GEN-70✎ GEN-73✎ GEN-77✎ GEN-80+ GEN-81+ GEN-82+ GEN-83+ GEN-84+ GEN-85+ GEN-86+ | 0 |
-| MODEL | 35 | 34 | MODEL-5✎ MODEL-32✎ MODEL-37✎ MODEL-42✎ MODEL-93+ MODEL-94+ MODEL-95+ | 0 |
-| TMPL | 25 | 24 | TMPL-21✎ TMPL-26✎ TMPL-47✎ TMPL-49✎ TMPL-70+ | 0 |
-| GUIDE | 17 | 16 | GUIDE-1✎ GUIDE-15✎ GUIDE-37✎ GUIDE-41✎ GUIDE-50+ | 0 |
-| EXPORT | 11 | 10 | EXPORT-27+ | 0 |
-| LANG | 9 | 8 | LANG-29+ | 0 |
-| THEME | 29 | 28 | THEME-62+ THEME-63+ | 1 |
-| MKT | 10 | 9 | MKT-17+ | 0 |
+| POST | 36 | 36 | - | 0 |
+| VOICE | 15 | 15 | - | 0 |
+| GEN | 26 | 26 | - | 0 |
+| MODEL | 35 | 35 | - | 0 |
+| TMPL | 25 | 25 | - | 0 |
+| GUIDE | 17 | 17 | - | 0 |
+| EXPORT | 11 | 11 | - | 0 |
+| LANG | 9 | 9 | - | 0 |
+| THEME | 29 | 29 | - | 1 |
+| MKT | 10 | 10 | - | 0 |
 | VIDEO | 7 | 7 | - | 0 |
 | CLIP | 59 | 59 | - | 2 |
 | CDS | 33 | 33 | - | 1 |
 | BILL | 9 | 9 | - | 0 |
-| MEM | 7 | 6 | MEM-22✎ MEM-31+ | 2 |
-| QUAL | 8 | 7 | QUAL-6✎ QUAL-48+ | 0 |
+| MEM | 7 | 7 | - | 2 |
+| QUAL | 8 | 8 | - | 0 |
 | GIFT | 3 | 3 | - | 0 |
 | DUB | 3 | 3 | - | 0 |
-| EDIT | 4 | 3 | EDIT-24+ | 0 |
+| EDIT | 4 | 4 | - | 0 |
 | INFRA | 2 | 0 | all | 1 |
 
 ## review
@@ -90,6 +90,21 @@
 | T628 | Run private binary tournaments with exact metering and explicit winner publication | ARCH MODEL QUOTA GEN LANG | T622 T624 T625 T626 T627 T630 | todo |
 | T630 | Show named setting states and integrate direct AI editing and real-writing tests | ARCH EDIT THEME TMPL GUIDE MODEL | T622 T625 | todo |
 | T631 | Complete UX wiring and qualify creation settings and sixteen-entry tests | ARCH THEME POST CLIP EDIT VOICE MODEL QUOTA | T622 T623 T624 T625 T626 T627 T628 T629 T630 | todo |
+| T632 | Publish additive semantic-origin and safe inspection contracts | ARCH GEN POST MODEL | T631 | todo |
+| T633 | Preserve template material roles and declared stock-rule stages | ARCH TMPL GUIDE GEN | T632 | todo |
+| T634 | Align post stage contracts and grounded maximum-tag behavior | ARCH GEN GUIDE POST LANG | T633 | todo |
+| T635 | Expose real prompt composition and effective request snapshots | ARCH MODEL GEN | T632 | todo |
+| T636 | Generate reviewable origins through observation planning and revision | ARCH GEN VOICE MEM MODEL POST | T634 T635 | todo |
+| T637 | Persist current-result origins and preserve them through manual edits | ARCH GEN POST MEM MODEL | T636 | todo |
+| T638 | Scope setting style and memory composers to their consumed outputs | ARCH EDIT VOICE MEM GUIDE TMPL GEN MODEL | T633 T635 | todo |
+| T639 | Align existing video and speech prompt-stage responsibilities | ARCH GEN MODEL GUIDE LANG CLIP | T633 T635 | todo |
+| T640 | Capture and inspect the owner post effective product requests | ARCH POST MODEL GEN | T635 T637 | todo |
+| T641 | Extend test and authoring private evidence with origin-safe inspection | ARCH MODEL EDIT GEN POST MEM | T638 T640 | todo |
+| T642 | Render accessible phrase origins and preserve editor continuity | ARCH POST THEME EXPORT GEN | T637 | todo |
+| T643 | Show safe current prepared and captured requests in named technical views | ARCH POST MODEL EDIT TMPL THEME | T640 T641 | todo |
+| T644 | Present maximum tags and clean owner-controlled writing copy | ARCH POST TMPL GEN EXPORT MKT QUAL THEME | T634 T642 T643 | todo |
+| T645 | Build reproducible prompt inspection and controlled writing evaluation | ARCH GEN MODEL LANG QUAL | T638 T639 T641 | todo |
+| T646 | Qualify origin-aware writing inspection and clean publication handoff | ARCH GEN POST MODEL THEME EXPORT MKT LANG | T636 T637 T639 T641 T642 T643 T644 T645 | todo |
 
 ## next
 - implement-task T623 on main, then complete one dependency-ready task at a time under ARCH-70; T622/T624/T625/T629 are complete.
@@ -97,6 +112,9 @@
 - Existing browser-media tasks and blocked qualifications retain their scope; THEME-61 visual decisions remain open.
 
 ## log
+- 261007 create-task prompt-engineering verified: T632–T646 cover all51 committed decisions; current ARCH@20 bases, STATE/dependency DAG/references/IDs/links and diff checks pass; spec lint exit0 with136 history/freshness warnings and13 editorial hints; no implementation/provider execution
+- 261007 create-task prompt-engineering done: T632–T646 cover thirteen committed SSOT deltas with bounded contracts/roles, semantic-origin production/storage/editor, safe private request inspection, tag/export/copy and controlled evaluation; this conversion did not modify preexisting task contracts, and new tasks follow concurrently updated ARCH@20
+- 261007 create-task prompt-engineering start: decompose committed requirements without duplicating existing UX implementation
 - 261007 T624 T625 T629 done on main: merged completed implementations, corrected baseline/CAS/saved-draft recovery, aligned retired consumer tests and completed combined verification
 - 261007 main sequential workflow active: dependencies and task completion records govern the next task; completed execution bookkeeping retired
 - 261007 ARCH r19..r20 workflow/verification documentation consumed: main task execution and commit policy requires no runtime task
@@ -114,6 +132,3 @@
 - 261007 ideation searchable-details research round recorded: 64 linked sources, official 2026 content guides and search changes checked; numeric SEO claims assessed, three first-benefit candidates remain open
 - 261007 ideation searchable-details research start: recheck Naver Blog search principles, recent search changes and practitioner SEO claims; product choices remain open
 - 261007 create-architecture ARCH r19 done: task-impact checks at completion, full CI and applicable backend/media gates before push; local agent instructions and runnable parity runbook added, remote failure logs unavailable
-- 261007 create-architecture ARCH start: separate task impact verification from pre-push CI/CD checks and inspect backend/media workflow failures
-- 261007 update-ssot creation/comparison UX done: thirteen domains revised, human winners and once-per-entrant generation fixed; final visual arrangement stays THEME-61 open
-- 261007 update-ssot THEME POST CLIP AUTH EDIT VOICE TMPL GUIDE MODEL GEN QUOTA start: review contextual navigation, operational history, understandable setting drafts, editable learning material and unified binary tournaments; unresolved product choices stay open

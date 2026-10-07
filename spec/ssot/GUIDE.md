@@ -153,4 +153,4 @@
 - contract: `proto/postpilot/v1/guideline.proto`
 
 ## chg
-- r17 261007 GUIDE-1✎ GUIDE-15✎ GUIDE-37✎ GUIDE-41✎ GUIDE-50+ format-only system boundary→evidence-aware request boundary; all-stage rules→stage-applicable rules; unconstrained preference precedence→preference precedence within evidence contracts; owner-only impressions and assumed event order→visible AI proposals and explicitly supplied event order
+-

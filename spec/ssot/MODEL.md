@@ -291,4 +291,4 @@
 - known gap: `MODEL_PURPOSE_NOT_REGISTERED` and `MODEL_PURPOSE_INELIGIBLE` have no entry in the frontend's normalized reason catalog and render as the generic failure (LANG owns that catalog)
 
 ## chg
-- r35 261007 MODEL-5✎ MODEL-32✎ MODEL-37✎ MODEL-42✎ MODEL-93+ MODEL-94+ MODEL-95+ capability-only schema boundary→syntax and semantic accuracy distinguished; unrestricted blind details→identity-safe inspection; content-only application→matching origin review; input/output expiry→origin/request expiry
+-

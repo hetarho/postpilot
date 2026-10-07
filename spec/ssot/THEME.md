@@ -281,4 +281,4 @@
 - gates: `pnpm lint:style` and `pnpm lint:style:probe` (→ARCH-25); review at360/390/430px,320px reflow,1440x900/1920x1080 desktop,200% zoom, contextual return, keyboard and screen reader, both themes
 
 ## chg
-- r29 261007 THEME-62+ THEME-63+ phrase origin highlighting and separate technical inspection added
+-

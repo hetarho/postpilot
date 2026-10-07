@@ -69,4 +69,4 @@
 - config: the M2 run length (8 어절), M1's window (100 titles), M2/M3/M4's window (20 posts), the per-metric minimums and the bands are product-owned settings, not per-account options
 
 ## chg
-- r8 261007 QUAL-6✎ QUAL-48+ claimed official numeric title penalty→product-owned limits; origin review distinguished from scores and truth
+-

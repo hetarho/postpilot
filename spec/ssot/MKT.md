@@ -56,4 +56,4 @@
 - no environment value, tuning value, Connect contract, server package, migration or job; the canonical origin is derived from the current document origin
 
 ## chg
-- r10 261007 MKT-17+ owner-control positioning and shipped-only origin-review claims added
+-

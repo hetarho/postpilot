@@ -64,4 +64,4 @@
 - publication must tolerate an interruption between a target-domain commit and its authoring receipt without duplicate settings or later-state reversal
 
 ## chg
-- r4 261007 EDIT-24+ kind/mode-specific request boundaries and safe technical inspection added
+-

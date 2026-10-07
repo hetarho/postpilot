@@ -60,4 +60,4 @@
 - a post with `use_memory` off produces a prompt byte-identical to the one it produces without this domain
 
 ## chg
-- r7 261007 MEM-22✎ MEM-31+ write-only memory stage claim→writing and storyline, revision excluded; approved memory facts and newly inferred meaning distinguished
+-

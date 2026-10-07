@@ -221,4 +221,4 @@
 - tests that pin it: prompt-assembly snapshots (order, a 말투 없음 prompt carrying no voice bytes, each 기본 지침 present only while switched on, the naturalness 기본 지침 for a Korean target only, 기억을 통한 감상 추가 only in a prompt carrying `[기억]`) · block validator and attachment filter with crafted payloads · `ceil(N/4)` observation calls with a stubbed provider · frozen re-observation set and non-shrinking snapshot · no write transaction across a provider call (handler harness) · guard collisions carry the active id · boot sweep reasons · the direct write answer schema orders `storyline` first and the post stores it
 
 ## chg
-- r26 261007 GEN-14✎ GEN-16✎ GEN-40✎ GEN-41✎ GEN-46✎ GEN-49✎ GEN-50✎ GEN-68✎ GEN-70✎ GEN-73✎ GEN-77✎ GEN-80+ GEN-81+ GEN-82+ GEN-83+ GEN-84+ GEN-85+ GEN-86+ format-only→evidence; exact tags→cap; impressions/memory inference→visible AI; untraced revisions→origins; plan authority→arrangement; title source claim→recommendation; global stock rules→stage rules
+-
