@@ -42,7 +42,9 @@ def resource_snapshot(name):
     except RuntimeError as error:
         # A successful fixture can exit between the driver's Running check and
         # this exec. Its final report and prior positive samples remain required.
-        if 'is not running' not in str(error):
+        # Docker can return empty output when the successful container exit
+        # terminates an exec that already started, rather than rejecting it.
+        if str(error).strip() and 'is not running' not in str(error):
             raise
         state = json.loads(run('inspect', name))[0]['State']
         if not state['Running'] and state['ExitCode'] == 0 and not state['OOMKilled']:

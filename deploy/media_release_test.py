@@ -35,20 +35,22 @@ class ReleaseBudget(unittest.TestCase):
 
     def test_clean_exit_between_state_check_and_probe_does_not_invent_a_sample(self):
         state = {'Running': False, 'ExitCode': 0, 'OOMKilled': False}
-        with patch.object(fixture, 'run', side_effect=[RuntimeError('container is not running'),
-                                                     fixture.json.dumps([{'State': state}])]) as docker:
-            self.assertIsNone(fixture.resource_snapshot('release-api'))
-            self.assertEqual(docker.call_args_list, [call('exec', 'release-api', '/media-resource'),
-                                                    call('inspect', 'release-api')])
+        for message in ('container is not running', ''):
+            with self.subTest(message=message), patch.object(fixture, 'run', side_effect=[
+                    RuntimeError(message), fixture.json.dumps([{'State': state}])]) as docker:
+                self.assertIsNone(fixture.resource_snapshot('release-api'))
+                self.assertEqual(docker.call_args_list, [call('exec', 'release-api', '/media-resource'),
+                                                        call('inspect', 'release-api')])
 
     def test_stopped_oom_failed_or_running_container_does_not_hide_probe_failure(self):
         for state in ({'Running': False, 'ExitCode': 137, 'OOMKilled': True},
                       {'Running': False, 'ExitCode': 1, 'OOMKilled': False},
                       {'Running': True, 'ExitCode': 0, 'OOMKilled': False}):
-            with self.subTest(state=state), patch.object(fixture, 'run', side_effect=[
-                    RuntimeError('container is not running'), fixture.json.dumps([{'State': state}])]):
-                with self.assertRaisesRegex(RuntimeError, 'container is not running'):
-                    fixture.resource_snapshot('release-api')
+            for message in ('container is not running', ''):
+                with self.subTest(state=state, message=message), patch.object(fixture, 'run', side_effect=[
+                        RuntimeError(message), fixture.json.dumps([{'State': state}])]):
+                    with self.assertRaises(RuntimeError):
+                        fixture.resource_snapshot('release-api')
 
     def test_insufficient_memory_or_cpu_creates_no_resources(self):
         for override in ({'envelope_mib': 1023}, {'envelope_cpus': 1.9}):
