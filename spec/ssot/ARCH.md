@@ -1,5 +1,5 @@
 # ARCH postpilot architecture
-> r18 | Code placement and gates, including a browser-owned media pipeline, qualified local components and bounded server validation/Max exports.
+> r19 | Code placement and gates, including task-impact verification, pre-push CI/CD parity and a browser-owned media pipeline.
 
 ## decisions
 - ARCH-1 [o] product: a paid product anyone may sign up for (→AUTH-1, →BILL) — photos + notes → a blog draft in the user's own voice → per-platform copy export for manual posting; ko/en UI. Behavior lives in the domain SSOTs; root PRD.md is a reference brief and ssot/ wins on conflict
@@ -65,14 +65,28 @@
   - formulas, prompt text, and the proto/DB schema are code, not config
 - ARCH-22 [o] naming: Go package = context name, lower case, no underscores, the product's own nouns; FE kebab-case singular slices, PascalCase component files, camelCase elsewhere, named exports only
 - ARCH-23 [o] auth mechanics: self-signup with the email as the login id and verification before the first session, Google sign-in, and the operator CLI beside it (`cmd/adduser`, or `api adduser` in the container); argon2id, HttpOnly cookie session; the session token never appears in a body, log, or URL; authenticated handlers read the actor from the interceptor-set context, never from the payload; every user-facing RPC except `/health` is 401 without a session (behavior in AUTH); internal media RPCs use separately authenticated worker identities under ARCH-47
-- ARCH-24 [o] tests are mandatory for every task: FE vitest (jsdom + Testing Library) beside the code, BE `go test` beside the code; a task's acceptance names the tests that pin it
-- ARCH-25 [o] verify FE: `pnpm --filter ./frontend test` · `pnpm lint` · `pnpm lint:fsd` · `pnpm lint:style:probe && pnpm lint:style` · `pnpm build:web`
-- ARCH-26 [o] verify BE: `cd backend && test -z "$(gofmt -l .)" && go vet ./... && go build ./... && go test -timeout 30m ./...` ← two packages run real SQLite and the whole boot sequence and pass Go's ten-minute per-package default on their own; the flag bounds a hang without failing work that is merely long
+- ARCH-24 [o] tests are mandatory for every implementation task: FE vitest (jsdom + Testing Library) beside the code, BE `go test` beside the code; a task's acceptance names the tests that pin it
+  - task completion runs the tests added or modified by that task and existing tests for plausible side effects; unrelated full suites are reserved for the pre-push gate (→ARCH-31)
+  - assess the complete task delta from its starting revision, including intermediate commits, deletions and uncommitted changes; FE consumers/shared harnesses and BE reverse dependencies/wiring belong in the impact assessment
+  - import-based selection is an aid, not proof of complete coverage; shared contracts, migrations, authentication, media behavior or test configuration require the matching consumer/integration regressions, and an impact that cannot be bounded expands to the affected full suite
+  - acceptance plus relevant lint, formatter and build/type checks must pass; record the selected commands and the impact rationale in the task result, and never count an empty selection as successful behavioral verification
+- ARCH-25 [o] pre-push full FE verification:
+  - `pnpm --filter ./frontend test`
+  - `pnpm lint`
+  - `pnpm lint:fsd`
+  - `pnpm lint:style:probe && pnpm lint:style`
+  - `pnpm build:web`
+- ARCH-26 [o] pre-push full BE verification: `cd backend && test -z "$(gofmt -l .)" && go vet ./... && go build ./... && go test -timeout 30m ./...` ← two packages run real SQLite and the whole boot sequence and pass Go's ten-minute per-package default on their own; the flag bounds a hang without failing work that is merely long
 - ARCH-27 [o] verify publishing automation stays absent (ARCH-34 I1): `pnpm lint:retirement`
 - ARCH-28 [o] verify generated code (buf and sqlc run through Docker): `pnpm gen:proto && git diff --exit-code -- backend/internal/gen frontend/src/shared/api/gen` · `pnpm gen:sql && git diff --exit-code -- backend`
 - ARCH-29 [o] format: `pnpm --filter ./frontend format` (Prettier; `dist/` and `shared/api/gen` are ignored) · `cd backend && gofmt -w .`
 - ARCH-30 [o] verify skills: `pnpm exec haeram-spec-creator check` — the skills haeram-spec-creator installs into `.claude/skills` and `.codex/skills`, as `.haeram-spec-creator-lock.json` lists them, are package-managed and never hand-edited; `recomend-models`, in both directories, is the project's own skill and is edited in place
-- ARCH-31 [o] CI (`.github/workflows/ci.yml`, PRs and pushes to main) runs `pnpm test:dev`, ARCH-25 + ARCH-27 + ARCH-28 + ARCH-30 on the pinned Node, and ARCH-26 plus the deploy Python unittests (`python3 -m unittest discover -s deploy -p '*_test.py'` with `deploy/requirements-test.txt` installed); a task is done only when the same steps pass locally, and when pushed, only when CI is green
+- ARCH-31 [o] verification has separate task-completion and pre-push stages
+  - task done, worker submission and individual task integration use ARCH-24's impact-selected checks; reproducing every CI/CD step locally is a pre-push obligation, not a per-task obligation
+  - before push, run the full local equivalent of `CI`: `pnpm test:dev`, ARCH-25 + ARCH-27 + ARCH-28 + ARCH-30 on the pinned Node, and ARCH-26 plus the deploy Python unittests with `deploy/requirements-test.txt` installed
+  - when the push can trigger `Deploy backend` or `Verify media`, also validate the production Compose layouts, build both deployed CPU images and execute all three media gates: production image smokes, CPU worker execution and separate-process CPU release in colocated and remote layouts; commands and local environment handling live in `docs/verification.md`
+  - verify the final push candidate with the workflows' image targets, test flags and CPU/memory budgets; source/configuration/dependency changes invalidate affected evidence, while unchanged successful checks need not be repeated within that pre-push verification
+  - a local pass does not certify GitHub runners, GHCR, SSH, production health or external CORS; after push inspect `CI` and every triggered deployment/media workflow for that revision, record the failing workflow/job/step and first meaningful error, and resolve the release failure without hiding it or repeatedly rerunning all task tests
 - ARCH-32 [o] deploy: FE → Cloudflare Workers static (dashboard build `pnpm --filter ./frontend build`, deploy `npx wrangler deploy`); API → `ghcr.io/hetarho/postpilot-api` from `backend/Dockerfile` (golang:1.26-alpine builder, `CGO_ENABLED=0`, `gcr.io/distroless/static-debian12:nonroot`) behind the shared edge Caddy in `deploy/edge`; a separately versioned media-worker image runs beside it or on another Linux Docker host with a CPU or NVIDIA runtime; `main` → prod, `develop` → staging; each service rollout health-gates and rolls back on failure, and only API startup migrates the API-local SQLite volume ← root DEPLOY.md is the ops runbook
 - ARCH-33 [o] dependencies: before adding, upgrading, or configuring any library or service, read the current official docs (context7 MCP first, otherwise the official site), install through the package manager's latest resolver (`pnpm add`, `go get`), confirm the resolved version in the lockfile, copy env-var and config names verbatim from those docs, and use official scaffolds only when they target this exact stack (Vite SPA + TanStack Router, connect-go) ← stale-memory setups fail only at runtime
 - ARCH-34 [o] invariants no task may break silently (stop and resolve with the owner first):
@@ -87,7 +101,7 @@
   | I7 | migrations are embedded and run at boot (ARCH-10) |
 - ARCH-35 [o] doc truth order: behavior → `ssot/<DOMAIN>.md`, placement and gates → this file, progress → STATE.md; root PRD.md and DEPLOY.md are reference docs and ssot/ wins on conflict
 - ARCH-36 [o] real-binary media and clip-input smokes run in the image that executes each supported media profile, including its fonts, filters and runtime libraries; CPU images keep the nonroot runtime and a GPU profile is additionally exercised on matching NVIDIA hardware; env gates keep these smokes outside ARCH-26
-- ARCH-37 [o] a task that changes production media behavior is done only when its matching image smoke has been built and run locally; introducing or enabling a production GPU profile additionally requires a run on supported GPU hardware, with unavailable hardware recorded as an unmet activation gate; documentation, image packaging and isolated diagnostic tooling may complete with build/configuration/CPU checks while recording GPU execution as unverified, never as a passing GPU substitute; the smokes never join ARCH-26
+- ARCH-37 [o] production media changes use impact-selected behavioral tests at task completion (→ARCH-24) and the matching real-image smoke before push (→ARCH-31); introducing or enabling a production GPU profile additionally requires a run on supported GPU hardware, with unavailable hardware recorded as an unmet activation gate; documentation, image packaging and isolated diagnostic tooling may complete with build/configuration/CPU checks while recording GPU execution as unverified, never as a passing GPU substitute; the smokes never join ARCH-26
 - ARCH-38 [o] until closed beta opens, the smokes run beside the deploy instead of upstream of it: the pushed image does not depend on them, the rollout does not wait, and a failure is reported rather than withheld from production; the blocking gate returns when closed beta opens ← the smokes are ten of the deploy's twelve minutes while the owner is the only user, and ARCH-32's health gate and rollback still stand
 - ARCH-39 [o] each media image is checked at build time against every filter, decoder, encoder and muxer its declared execution profiles name; a hardware profile also passes the runtime capability check in ARCH-53 ← compiled-in encoder names alone do not prove that a device and driver can execute them
 - ARCH-40 [o] construction: a collaborator a service needs to do its job is a constructor argument; `Set*`/`With*` setters exist only for optional behaviour whose absence is a legal, tested mode; the API composition root is `loadPlatform → buildContexts → registerJobs → serve`; the media-worker root wires configuration, transport and execution adapters only, with no application rule bodies in either command and no database migrations in the worker ← a forgotten setter is a nil at runtime and only the slowest test package can catch it
@@ -170,4 +184,4 @@
 - dev ports: web 2564, api 7678 (compose maps 7678 → 8080; containers use 8080)
 
 ## chg
--
+- r19 261007 ARCH-24✎ ARCH-25✎ ARCH-26✎ ARCH-31✎ ARCH-37✎ every-task full local CI/media verification→impact-selected task completion and full CI plus applicable deploy/media gates before push; exact workflow/revision failure evidence required

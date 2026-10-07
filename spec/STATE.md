@@ -24,7 +24,7 @@
 ## ssot
 | id | rev | tasked | pending | [?] |
 |---|---|---|---|---|
-| ARCH | 18 | 18 | - | 0 |
+| ARCH | 19 | 18 | ARCH-24✎ ARCH-25✎ ARCH-26✎ ARCH-31✎ ARCH-37✎ | 0 |
 | AUTH | 15 | 15 | - | 0 |
 | QUOTA | 38 | 38 | - | 0 |
 | POST | 35 | 35 | - | 0 |
@@ -95,11 +95,14 @@
 | T631 | Integrate isolated UX bundles and qualify creation settings and sixteen-entry tests | ARCH THEME POST CLIP EDIT VOICE MODEL QUOTA | T622 T623 T624 T625 T626 T627 T628 T629 T630 | todo |
 
 ## next
-- Implement T622 first, then atomically claim an eligible T622–T631 session bundle using docs/work/creation-and-comparison-ux.md; final visual arrangement remains THEME-61 open.
+- create-task ARCH; active creation-comparison-ux attempts must sync ARCH@19 verification stages before continuing the T622–T631 plan in docs/work/creation-and-comparison-ux.md; final visual arrangement remains THEME-61 open.
 - Existing browser-media tasks/blocked qualifications retain their scope; shared touches must respect any active ownership.
 - ideation searchable-details continues: choose the first user benefit and acceptable input effort, then validate source coverage and personal-versus-pooled learning.
 
 ## log
+- 261007 create-architecture ARCH r19 done: task-impact checks at completion, full CI and applicable backend/media gates before push; local agent instructions and runnable parity runbook added, remote failure logs unavailable
+- 261007 ARCH r19 affects active creation-comparison-ux/T622 attempt and pending ARCH tasks: sync/reassess the verification policy before further submission or integration; no worker workspace changed
+- 261007 create-architecture ARCH start: separate task impact verification from pre-push CI/CD checks and inspect backend/media workflow failures
 - 261007 create-task creation/comparison UX done: T622–T631 form ten atomic session bundles with touches/dependency ownership; thirteen SSOT deltas consumed and visual decision THEME-61 remains open
 - 261007 manage-work planning recorded: native task claims are bundle claims; scope-filter T622–T631 to avoid unrelated media work, workers10 configured only when work group is started
 - 261007 update-ssot creation/comparison UX done: thirteen domains revised, human winners and once-per-entrant generation fixed; final visual arrangement stays THEME-61 open
@@ -117,6 +120,3 @@
 - 261007 T620 done: FE3468/430 files, clean258, backend80/deploy62/tooling/generator gates, twenty AI and four personal browser sessions pass;58 existing dirty files preserved
 - 261007 T619 done: focused five-kind purpose/choice/review/optional-chat/publication actors;37 tests and112 day/night/mobile/desktop layout checks pass
 - 261007 T618 done: method-specific personal learning, explicit analysis/use and readonly uncertain-job recovery; actor/API9 and host regressions77 pass
-- 261007 T617 done: four real XState workflow authorities with invoked async fencing and frozen retries;60 actor/live-consumer tests pass
-- 261007 task commits: T61799c13926, T618122ad5ac, T6191dd7a065, T620c3fd6d58; independent source commits plus final linked verification records
-- 261007 T617-T620 start: root owns documentation/dependencies/commits; actor, personal-learning and authoring proposals have isolated file ownership
