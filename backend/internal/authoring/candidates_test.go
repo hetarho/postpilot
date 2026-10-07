@@ -23,7 +23,7 @@ func countedBatch(kind Kind, count int) string {
 func TestExactCandidateCountsAcrossEveryDomain(t *testing.T) {
 	svc := &Service{targets: testTargetGuide{}}
 	for _, kind := range []Kind{PostTemplate, VideoTemplate, PostGuideline, VideoGuideline, WritingVoice} {
-		for _, count := range []int{2, 4, 8, 16} {
+		for count := 1; count <= MaxCandidateCount; count++ {
 			t.Run(fmt.Sprintf("%s/%d", kind, count), func(t *testing.T) {
 				in := operationInput{Kind: kind, Mode: Recommend, OperationID: "op", CandidateCount: count}
 				out, err := svc.parseResponse(in, countedBatch(kind, count))
@@ -40,6 +40,9 @@ func TestExactCandidateCountsAcrossEveryDomain(t *testing.T) {
 				array := parsed["properties"].(map[string]any)["candidates"].(map[string]any)
 				if array["minItems"] != float64(count) || array["maxItems"] != float64(count) {
 					t.Fatal("schema did not freeze exact count")
+				}
+				if count == 1 {
+					return
 				}
 				out.Candidates[1].Body = out.Candidates[0].Body
 				var malformed []artifactWire
@@ -59,7 +62,7 @@ func TestCandidateBudgetsUseExactBatchSizeAndConfiguredCeiling(t *testing.T) {
 	budget := &countBudget{}
 	svc := &Service{targets: testTargetGuide{}, budget: budget}
 	info := llm.ModelInfo{ContextTokens: 131072}
-	for _, count := range []int{2, 4, 8, 16} {
+	for count := 1; count <= MaxCandidateCount; count++ {
 		in, err := svc.freezeInput(Session{Kind: PostGuideline}, Operation{}, Start{Mode: Recommend, RequestedCandidateCount: count}, info)
 		expectedChars := RecommendationOutputChars(PostGuideline) / CandidateCount * count
 		expectedCap := min(max(8192, expectedChars*2), 32768)
@@ -70,13 +73,29 @@ func TestCandidateBudgetsUseExactBatchSizeAndConfiguredCeiling(t *testing.T) {
 			t.Fatal("count missing from provider prompt")
 		}
 	}
-	info.ContextTokens = 12000
-	if _, err := svc.freezeInput(Session{Kind: PostGuideline}, Operation{}, Start{Mode: Recommend, RequestedCandidateCount: 16}, info); err != ErrModel {
-		t.Fatalf("unsafe sixteen silently shrank: %v", err)
+	for count := CandidateCount + 1; count <= MaxCandidateCount; count++ {
+		for _, contextTokens := range []int64{12000, 0} {
+			info.ContextTokens = contextTokens
+			if _, err := svc.freezeInput(Session{Kind: PostGuideline}, Operation{}, Start{Mode: Recommend, RequestedCandidateCount: count}, info); err != ErrModel {
+				t.Fatalf("unsafe count%d with context%d was admitted or shrank: %v", count, contextTokens, err)
+			}
+		}
 	}
-	info.ContextTokens = 0
-	if _, err := svc.freezeInput(Session{Kind: PostGuideline}, Operation{}, Start{Mode: Recommend, RequestedCandidateCount: 16}, info); err != ErrModel {
-		t.Fatalf("unknown sixteen context was admitted: %v", err)
+}
+
+func TestCandidateCountBoundsPreserveTheOrdinaryDefault(t *testing.T) {
+	if count, err := NormalizeCandidateCount(0); err != nil || count != CandidateCount {
+		t.Fatal("ordinary default changed", count, err)
+	}
+	for count := 1; count <= MaxCandidateCount; count++ {
+		if actual, err := NormalizeCandidateCount(count); err != nil || actual != count {
+			t.Fatal("explicit count changed", count, actual, err)
+		}
+	}
+	for _, count := range []int{-1, MaxCandidateCount + 1, int(^uint(0) >> 1)} {
+		if _, err := NormalizeCandidateCount(count); err != ErrCandidateCount {
+			t.Fatal("unbounded count admitted", count, err)
+		}
 	}
 }
 func TestRefineUsesInvalidCurrentSourceWithoutClippingOrOldPreview(t *testing.T) {

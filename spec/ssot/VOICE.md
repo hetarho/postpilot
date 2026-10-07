@@ -1,5 +1,5 @@
 # VOICE voices
-> r15 | Private accepted personal/synthetic expression profiles with source-preserving style-only projections.
+> r16 | Private accepted personal/synthetic expression profiles with source-preserving style-only projections.
 
 ## decisions
 - VOICE-1 [o] account-owned writing voices are isolated and labelled personal or synthetic; each owns its materials and current/previous analysis. Personal voices learn only owner prose; generated styles and test winners follow VOICE-68/69 and are never personal-habit evidence.
@@ -99,7 +99,7 @@
   - each method opens its own input/review flow; questionnaire wording does not ask for an existing written post, and pasting does not expose unanswered questions
   - existing work offers an explicit continuation into its actual current stage; synthetic examples remain separate from personal writing
 - VOICE-67 [o] personal questionnaire readiness is not a promise that every fingerprint facet is known; the first profile may be used with measured/unknown facets, and additional personal answers improve the next explicitly requested analysis.
-- VOICE-68 [o] explicit writing-style preparation creates a durable owner batch with requested2/4/8/16 distinct candidates; ordinary recommendation defaults to eight and test preparation uses the selected format count.
+- VOICE-68 [o] explicit writing-style preparation creates a durable owner batch with requested2/4/8/16 distinct candidates; ordinary recommendation defaults to eight; unified test preparation follows EDIT-2 and fills only unassigned style slots, independently of the tournament format.
   - explain synthetic provenance, show an estimate and admit one bounded prepared write call with count-specific budgets/schema
   - each validated candidate has a name, readable character and labelled fictional example/projection; incomplete/duplicate/invalid batches fail, never silently shrink or retry
   - one ordinary candidate batch may be active per account; failed/cancelled/incomplete batches cannot be adopted

@@ -129,9 +129,9 @@ it.each([
     await screen.findByRole('heading', { name: '글쓰기 테스트', level: 1 })
     await userEvent.click(screen.getByRole('button', { name: label }))
     expect(await screen.findByRole('combobox', { name: /^후보 1/ })).toHaveTextContent(
-      '선택해 주세요',
+      'AI가 준비해요',
     )
-    expect(screen.getByRole('combobox', { name: /^후보 2/ })).toHaveTextContent('선택해 주세요')
+    expect(screen.getByRole('combobox', { name: /^후보 2/ })).toHaveTextContent('AI가 준비해요')
     expect(fixture.calls).not.toContain('GetComparisonPairs')
     expect(fixture.estimates).toHaveLength(0)
     expect(fixture.admissions).toHaveLength(0)

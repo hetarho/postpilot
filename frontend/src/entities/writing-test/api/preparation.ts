@@ -7,7 +7,8 @@ import {
   ProtoAuthoringMode,
   ProtoConfigurationKind,
 } from '@/shared/api'
-import { TEST_COUNTS, type TestSettingKind } from '../model/types'
+import type { TestSettingKind } from '../model/types'
+import { PREPARATION_COUNTS } from '../model/preparation'
 import type {
   CandidatePreparationClient,
   CandidatePreparationScope,
@@ -21,7 +22,7 @@ const kinds: Record<TestSettingKind, ProtoConfigurationKind> = {
   'post-guideline': ProtoConfigurationKind.POST_GUIDELINE,
 }
 function check(scope: CandidatePreparationScope) {
-  if (!TEST_COUNTS.includes(scope.count) || !kinds[scope.kind])
+  if (!PREPARATION_COUNTS.includes(scope.count) || !kinds[scope.kind])
     throw new WritingTestValidationError('preparation format')
 }
 export function createCandidatePreparationClient(transport: Transport): CandidatePreparationClient {
@@ -46,10 +47,11 @@ export function createCandidatePreparationClient(transport: Transport): Candidat
     )
       throw new WritingTestValidationError('prepared phase')
     if (
-      wire.candidates.length &&
+      (wire.activeJobId || wire.candidates.length) &&
       (wire.candidateCount !== scope.count ||
-        wire.candidates.length !== scope.count ||
-        new Set(wire.candidates.map((candidate) => candidate.id)).size !== scope.count)
+        (wire.candidates.length > 0 &&
+          (wire.candidates.length !== scope.count ||
+            new Set(wire.candidates.map((candidate) => candidate.id)).size !== scope.count)))
     )
       throw new WritingTestValidationError('prepared candidate count')
     const candidates = wire.candidates.map((candidate) => {

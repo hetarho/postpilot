@@ -136,3 +136,88 @@ it('refuses absent artifact revisions, inconsistent counts and scoped session su
     'prepared session identity',
   )
 })
+
+it.each([1, 3, 15] as const)(
+  'quotes and admits exactly %i missing candidates without rounding the batch',
+  async (count) => {
+    const model = { providerId: 'p', modelId: 'writer' }
+    const client = createCandidatePreparationClient(
+      createRouterTransport(({ rpc }) => {
+        rpc(Service.method.estimateAuthoringOperation, (request) => {
+          expect(request.candidateCount).toBe(count)
+          return create(Service.method.estimateAuthoringOperation.output, { free: true })
+        })
+        rpc(Service.method.startAuthoringOperation, (request) => {
+          expect(request.candidateCount).toBe(count)
+          return create(Service.method.startAuthoringOperation.output, {
+            jobId: 'job',
+            session: {
+              id: 'session',
+              kind: ProtoConfigurationKind.POST_TEMPLATE,
+              phase: 'generating',
+              revision: 2,
+              candidateCount: count,
+              activeJobId: 'job',
+            },
+          })
+        })
+        rpc(Service.method.getAuthoringSession, () =>
+          create(Service.method.getAuthoringSession.output, {
+            session: {
+              id: 'session',
+              kind: ProtoConfigurationKind.POST_TEMPLATE,
+              phase: 'choosing',
+              revision: 3,
+              candidateCount: count,
+              candidates: Array.from({ length: count }, (_, index) => ({
+                id: `candidate-${index}`,
+                name: `Template ${index}`,
+                body: '<write/>',
+                revision: 1,
+              })),
+            },
+          }),
+        )
+      }),
+    )
+    const scope = { kind: 'post-template' as const, count }
+    await expect(client.estimate({ ...scope, writeModel: model })).resolves.toEqual({
+      free: true,
+      credits: 0,
+    })
+    await expect(
+      client.start({
+        ...scope,
+        sessionId: 'session',
+        expectedRevision: 1,
+        requestKey: 'explicit',
+        prompt: 'Use familiar review structures.',
+        writeModel: model,
+      }),
+    ).resolves.toMatchObject({ status: 'running', count })
+    const read = await client.get({ ...scope, sessionId: 'session' })
+    expect(read.candidates).toHaveLength(count)
+  },
+)
+it.each([0, 17, 1.5])(
+  'rejects invalid preparation count %s before issuing an RPC',
+  async (count) => {
+    let calls = 0
+    const client = createCandidatePreparationClient(
+      createRouterTransport(({ rpc }) =>
+        rpc(Service.method.estimateAuthoringOperation, () => {
+          calls++
+          return create(Service.method.estimateAuthoringOperation.output, { free: true })
+        }),
+      ),
+    )
+    await expect(
+      client.estimate({
+        kind: 'writing-voice',
+        count: count as 1,
+        writeModel: { providerId: 'p', modelId: 'm' },
+      }),
+    ).rejects.toThrow('preparation format')
+    expect(calls).toBe(0)
+  },
+)

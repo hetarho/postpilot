@@ -165,3 +165,86 @@ it('a readonly restored sixteen-candidate result survives an unchanged caller de
   expect(api.estimate).not.toHaveBeenCalled()
   hook.unmount()
 })
+
+it('keeps an exact three-slot session and mapping after a four-entry plan is filled and across reload', async () => {
+  const api = client()
+  const partial: PreparationDraft = {
+    ...draft,
+    count: 3,
+    testCount: 4,
+    slotIndices: [1, 2, 3],
+    retainedRefs: [],
+  }
+  const base = { ...session(), count: 3 as const }
+  const completed = { ...ready(), count: 3 as const, candidates: ready().candidates.slice(0, 3) }
+  vi.mocked(api.create).mockResolvedValue(base)
+  vi.mocked(api.start).mockResolvedValue({
+    ...base,
+    status: 'running',
+    revision: 2,
+    activeJobId: 'job',
+  })
+  vi.mocked(api.get).mockResolvedValue(completed)
+  const hook = renderHook(
+    ({ currentDraft }) =>
+      useCandidatePreparation({
+        ownerId: 'alice',
+        seedKey: 'mixed',
+        client: api,
+        draft: currentDraft,
+      }),
+    { initialProps: { currentDraft: partial } },
+  )
+  act(() => hook.result.current.send({ type: 'ESTIMATE' }))
+  await waitFor(() => expect(hook.result.current.phase).toBe('quoted'))
+  act(() => hook.result.current.send({ type: 'CONFIRM' }))
+  await waitFor(() => expect(hook.result.current.phase).toBe('running'))
+  act(() => hook.result.current.send({ type: 'REFRESH' }))
+  await waitFor(() => expect(hook.result.current.phase).toBe('ready'))
+  const refs = completed.candidates.map((candidate) => candidate.source)
+  const filled = { ...partial, count: 4 as const, slotIndices: undefined, retainedRefs: refs }
+  hook.rerender({ currentDraft: filled })
+  expect(hook.result.current.phase).toBe('ready')
+  expect(hook.result.current.context.draft).toMatchObject({
+    count: 3,
+    testCount: 4,
+    slotIndices: [1, 2, 3],
+  })
+  expect(hook.result.current.context.session?.count).toBe(3)
+  expect(hook.result.current.context.artifacts).toHaveLength(3)
+  hook.unmount()
+  const restored = renderHook(() =>
+    useCandidatePreparation({ ownerId: 'alice', seedKey: 'mixed', client: api, draft: filled }),
+  )
+  await waitFor(() => expect(restored.result.current.phase).toBe('ready'))
+  expect(restored.result.current.context.artifacts).toHaveLength(3)
+  expect(restored.result.current.context.draft.slotIndices).toEqual([1, 2, 3])
+  expect(api.start).toHaveBeenCalledTimes(1)
+  expect(api.create).toHaveBeenCalledTimes(1)
+  restored.unmount()
+})
+it('does not expose private artifacts from a persisted owner substitution', () => {
+  const api = client()
+  const scopeKey = JSON.stringify(['bob', 'private'])
+  const candidates = ready().candidates
+  const inputDraft = { ...draft, retainedRefs: candidates.map((candidate) => candidate.source) }
+  sessionStorage.setItem(
+    `postpilot:test-candidates:${scopeKey}`,
+    JSON.stringify({
+      scopeKey,
+      recovery: {
+        ownerId: 'alice',
+        draft: inputDraft,
+        session: ready(),
+        artifacts: candidates,
+      },
+    }),
+  )
+  const hook = renderHook(() =>
+    useCandidatePreparation({ ownerId: 'bob', seedKey: 'private', client: api, draft: inputDraft }),
+  )
+  expect(hook.result.current.context.artifacts).toEqual([])
+  expect(hook.result.current.context.session).toBeUndefined()
+  expect(api.get).not.toHaveBeenCalled()
+  hook.unmount()
+})

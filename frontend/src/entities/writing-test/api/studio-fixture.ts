@@ -1,4 +1,4 @@
-import { create } from '@bufbuild/protobuf'
+import { create, type MessageInitShape, type MessageShape } from '@bufbuild/protobuf'
 import { Code, ConnectError, createRouterTransport } from '@connectrpc/connect'
 import {
   AuthService,
@@ -11,7 +11,10 @@ import {
   ProviderService,
   Stage,
   TemplateService,
+  TemplateSchema,
   VoiceService,
+  VoiceSchema,
+  GuidelineSchema,
   WritingTestIdentitySchema,
   WritingTestPublicationAction,
   WritingTestPublicationStatus,
@@ -38,6 +41,11 @@ export function createWritingTestStudioFixture(
     readableTest?: boolean
     generationGate?: Promise<void>
     estimateFailure?: boolean
+    ownedVoices?: MessageInitShape<typeof VoiceSchema>[]
+    ownedTemplates?: MessageInitShape<typeof TemplateSchema>[]
+    ownedGuidelines?: MessageInitShape<typeof GuidelineSchema>[]
+    /** Each explicit batch may produce a different required-input contract. */
+    preparationBodies?: string[]
     comparisonPairs?: Array<{
       stage: Stage
       candidateA: { providerId: string; modelId: string }
@@ -61,6 +69,12 @@ export function createWritingTestStudioFixture(
     requestKey: string
   }[] = []
   const preparationEstimates: { kind: ProtoConfigurationKind; count: number }[] = []
+  type Session = NonNullable<
+    MessageShape<typeof Authoring.method.getAuthoringSession.output>['session']
+  >
+  const preparationSessions = new Map<string, { ownerId: string; session: Session }>()
+  const preparationCreates: string[] = []
+  const createRequests = new Map<string, string>()
   let ownerId = 'alice'
   let estimatesToRefuse = options.estimateFailure ? 1 : 0
   let ledgerOwnerId = 'alice'
@@ -144,7 +158,7 @@ export function createWritingTestStudioFixture(
     })
     rpc(VoiceService.method.listVoices, () => {
       calls.push('ListVoices')
-      return create(VoiceService.method.listVoices.output, {})
+      return create(VoiceService.method.listVoices.output, { voices: options.ownedVoices ?? [] })
     })
     rpc(VoiceService.method.listVoiceChecks, () => {
       calls.push('ListVoiceChecks')
@@ -152,11 +166,15 @@ export function createWritingTestStudioFixture(
     })
     rpc(TemplateService.method.listTemplates, () => {
       calls.push('ListTemplates')
-      return create(TemplateService.method.listTemplates.output, {})
+      return create(TemplateService.method.listTemplates.output, {
+        templates: options.ownedTemplates ?? [],
+      })
     })
     rpc(GuidelineService.method.listGuidelines, () => {
       calls.push('ListGuidelines')
-      return create(GuidelineService.method.listGuidelines.output, {})
+      return create(GuidelineService.method.listGuidelines.output, {
+        guidelines: options.ownedGuidelines ?? [],
+      })
     })
     rpc(ModelExperimentService.method.listExperiments, () => {
       calls.push('ListExperiments')
@@ -207,26 +225,54 @@ export function createWritingTestStudioFixture(
     })
     rpc(Authoring.method.createAuthoringSession, (request) => {
       calls.push('CreateAuthoringSession')
-      return create(Authoring.method.createAuthoringSession.output, {
+      const requestKey = JSON.stringify([ownerId, request.requestId])
+      const existingId = createRequests.get(requestKey)
+      if (existingId)
+        return create(Authoring.method.createAuthoringSession.output, {
+          session: preparationSessions.get(existingId)!.session,
+        })
+      const sessionId = `prepared-${ownerId}${preparationCreates.length ? '-' + (preparationCreates.length + 1) : ''}`
+      preparationCreates.push(sessionId)
+      createRequests.set(requestKey, sessionId)
+      const response = create(Authoring.method.createAuthoringSession.output, {
         session: {
-          id: `prepared-${ownerId}`,
+          id: sessionId,
           revision: 1,
           kind: request.kind,
           phase: 'choosing',
           candidateCount: 8,
         },
       })
+      preparationSessions.set(sessionId, { ownerId, session: response.session! })
+      return response
+    })
+    rpc(Authoring.method.getAuthoringSession, (request) => {
+      calls.push('GetAuthoringSession')
+      const stored = preparationSessions.get(request.sessionId)
+      if (!stored || stored.ownerId !== ownerId) throw new ConnectError('not found', Code.NotFound)
+      return create(Authoring.method.getAuthoringSession.output, { session: stored.session })
     })
     rpc(Authoring.method.startAuthoringOperation, (request) => {
       calls.push('StartAuthoringOperation')
-      const kind = preparationEstimates.at(-1)?.kind ?? ProtoConfigurationKind.POST_TEMPLATE
+      const stored = preparationSessions.get(request.sessionId)
+      if (!stored || stored.ownerId !== ownerId) throw new ConnectError('not found', Code.NotFound)
+      const repeated = preparations.find((entry) => entry.requestKey === request.requestId)
+      if (repeated)
+        return create(Authoring.method.startAuthoringOperation.output, {
+          jobId: 'preparation-job',
+          session: stored.session,
+        })
+      const kind = stored.session.kind
+      const body =
+        options.preparationBodies?.[preparations.length] ??
+        '<write>Prepared writing structure</write>'
       preparations.push({
         kind,
         count: request.candidateCount,
         prompt: request.prompt,
         requestKey: request.requestId,
       })
-      return create(Authoring.method.startAuthoringOperation.output, {
+      const response = create(Authoring.method.startAuthoringOperation.output, {
         jobId: 'preparation-job',
         session: {
           id: request.sessionId,
@@ -239,10 +285,12 @@ export function createWritingTestStudioFixture(
             revision: index + 2,
             name: `Prepared ${index + 1}`,
             description: `Unsaved ${index + 1}`,
-            body: '<write>Prepared writing structure</write>',
+            body,
           })),
         },
       })
+      stored.session = response.session!
+      return response
     })
     rpc(Service.method.estimateWritingTest, (request) => {
       calls.push('EstimateWritingTest')
@@ -397,6 +445,8 @@ export function createWritingTestStudioFixture(
     applications,
     preparations,
     preparationEstimates,
+    preparationCreates,
+    preparationSessions,
     plan,
     setOwner: (id: string) => {
       ownerId = id
