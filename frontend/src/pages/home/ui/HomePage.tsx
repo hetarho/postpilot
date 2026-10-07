@@ -1,3 +1,6 @@
+import { useSession } from '@/entities/session'
+import { rememberPostEntry } from '@/entities/post'
+import { rememberClipEntry } from '@/entities/clip-project'
 import { Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { ArrowUpRight, PenLine, Clapperboard } from 'lucide-react'
@@ -6,6 +9,7 @@ import { choiceStyles, Typography, pageStyles } from '@/shared/ui'
 
 export function HomePage() {
   const { t } = useTranslation('creation')
+  const { user } = useSession()
   return (
     <FirstUseSetupGate>
       <main
@@ -31,6 +35,14 @@ export function HomePage() {
           >
             <Link
               to="/posts/new"
+              onClick={() =>
+                rememberPostEntry(user?.id ?? '', {
+                  path: '/',
+                  section: 'creation',
+                  filters: {},
+                  scrollY: window.scrollY,
+                })
+              }
               aria-labelledby="home-post-label"
               aria-describedby="home-post-description"
               className={choiceStyles(
@@ -60,6 +72,14 @@ export function HomePage() {
             </Link>
             <Link
               to="/clips/new"
+              onClick={() =>
+                rememberClipEntry(user?.id ?? '', {
+                  path: '/',
+                  section: 'creation',
+                  filters: {},
+                  scrollY: window.scrollY,
+                })
+              }
               aria-labelledby="home-clip-label"
               aria-describedby="home-clip-description"
               className={choiceStyles(

@@ -206,7 +206,7 @@ it('returning to the list never cancels work; opening it again restores focused 
   const calls: string[] = []
   const view = mount({ projects: [{ ...project(), latestJob: job }], calls }, [job])
   await screen.findByRole('progressbar')
-  await userEvent.click(screen.getByRole('link', { name: '클립 목록' }))
+  await userEvent.click(screen.getByRole('link', { name: '작업 내역으로 돌아가기' }))
   await screen.findByRole('link', { name: /Lifecycle/ })
   await userEvent.click(screen.getByRole('link', { name: /Lifecycle/ }))
   await screen.findByRole('progressbar')

@@ -9,6 +9,8 @@ import { Badge, Button, Notice, Typography, buttonStyles, type BadgeTone } from 
 export interface WritingTestHistoryProps {
   ownerId: string
   voiceId?: string
+  stage?: WritingTest['modelStage'] | 'voice'
+  sourcePostSlug?: string
   testHref?: (id: string) => string
 }
 
@@ -27,7 +29,13 @@ function mergeTests(previous: WritingTest[], incoming: WritingTest[]) {
       Date.parse(right.createdAt || right.updatedAt) - Date.parse(left.createdAt || left.updatedAt),
   )
 }
-function OwnedHistory({ ownerId, voiceId, testHref }: WritingTestHistoryProps) {
+function OwnedHistory({
+  ownerId,
+  voiceId,
+  stage,
+  sourcePostSlug,
+  testHref,
+}: WritingTestHistoryProps) {
   const { t } = useWritingTestTranslation()
   const [cursor, setCursor] = useState('')
   const query = useWritingTests(ownerId, { pageSize: 20, pageToken: cursor })
@@ -44,6 +52,26 @@ function OwnedHistory({ ownerId, voiceId, testHref }: WritingTestHistoryProps) {
       tokens: loaded.tokens.includes(cursor) ? loaded.tokens : [...loaded.tokens, cursor],
     })
   const next = query.data?.nextPageToken
+  const tests = loaded.tests.filter(
+    (test) =>
+      (!stage || (stage === 'voice' ? test.factor === 'voice' : test.modelStage === stage)) &&
+      (!sourcePostSlug || test.sourcePostSlug === sourcePostSlug) &&
+      (!voiceId ||
+        test.candidates.some((candidate) => {
+          const source = candidate.identity?.source
+          return (
+            source?.type === 'setting' &&
+            source.setting.kind === 'writing-voice' &&
+            source.setting.id === voiceId
+          )
+        })),
+  )
+  const historySearch = new URLSearchParams()
+  if (stage) historySearch.set('stage', stage)
+  if (sourcePostSlug) historySearch.set('source', sourcePostSlug)
+  if (voiceId) historySearch.set('voiceId', voiceId)
+  const historyEntry = historySearch.size ? `/tests/history?${historySearch}` : undefined
+  const entrySearch = historyEntry ? `?entry=${encodeURIComponent(historyEntry)}` : ''
   return (
     <div className="grid gap-8">
       <section aria-labelledby="writing-test-history-title" className="min-w-0">
@@ -78,17 +106,17 @@ function OwnedHistory({ ownerId, voiceId, testHref }: WritingTestHistoryProps) {
             {t('loading')}
           </Notice>
         )}
-        {query.isSuccess && loaded.tests.length === 0 && (
+        {query.isSuccess && tests.length === 0 && (
           <Typography variant="body" className="mt-6">
             {t('historyEmpty')}
           </Typography>
         )}
         <ol className="mt-4 grid gap-0">
-          {loaded.tests.map((test) => (
+          {tests.map((test) => (
             <TestRecord
               key={test.id}
               test={test}
-              href={testHref?.(test.id) ?? `/tests/${encodeURIComponent(test.id)}`}
+              href={testHref?.(test.id) ?? `/tests/${encodeURIComponent(test.id)}${entrySearch}`}
             />
           ))}
         </ol>
@@ -108,9 +136,12 @@ function OwnedHistory({ ownerId, voiceId, testHref }: WritingTestHistoryProps) {
           key={`legacy:${ownerId}:${voiceId ?? ''}`}
           ownerId={ownerId}
           voiceId={voiceId}
+          stage={stage}
+          sourcePostSlug={sourcePostSlug}
+          entry={historyEntry}
         />
       )}
-      {ownerId && voiceId && (
+      {ownerId && voiceId && !sourcePostSlug && (!stage || stage === 'voice') && (
         <LegacyVoiceChecks
           key={`checks:${ownerId}:${voiceId}`}
           ownerId={ownerId}
@@ -195,11 +226,30 @@ function TestRecord({ test, href }: { test: WritingTest; href: string }) {
     </li>
   )
 }
-function LegacyRecords({ ownerId, voiceId }: { ownerId: string; voiceId?: string }) {
+function LegacyRecords({
+  ownerId,
+  voiceId,
+  stage,
+  sourcePostSlug,
+  entry,
+}: Omit<WritingTestHistoryProps, 'testHref'> & { entry?: string }) {
   const { t } = useWritingTestTranslation()
-  const query = useExperiments(undefined, voiceId ? 'voice' : undefined, ownerId)
+  const modelStage = stage === 'voice' ? 'write' : stage
+  const source =
+    stage === 'voice' || (!stage && voiceId && !sourcePostSlug)
+      ? 'voice'
+      : stage
+        ? 'post'
+        : undefined
+  const query = useExperiments(modelStage, source, ownerId)
   const experiments = query.experiments
-    .filter((record) => !voiceId || record.voiceId === voiceId)
+    .filter(
+      (record) =>
+        (!modelStage || record.stage === modelStage) &&
+        (!source || record.source === source) &&
+        (!voiceId || record.voiceId === voiceId) &&
+        (!sourcePostSlug || record.postSlug === sourcePostSlug),
+    )
     .toSorted((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt))
   return (
     <section aria-labelledby="legacy-writing-test-history-title" className="min-w-0">
@@ -266,7 +316,7 @@ function LegacyRecords({ ownerId, voiceId }: { ownerId: string; voiceId?: string
             </div>
             <div className="self-center">
               <a
-                href={`/ai-models/experiments/${encodeURIComponent(experiment.id)}`}
+                href={`/ai-models/experiments/${encodeURIComponent(experiment.id)}${entry ? `?entry=${encodeURIComponent(entry)}` : ''}`}
                 className={buttonStyles({ variant: 'ghost' })}
               >
                 {t('keep')}

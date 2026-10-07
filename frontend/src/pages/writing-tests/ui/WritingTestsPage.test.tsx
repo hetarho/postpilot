@@ -99,12 +99,25 @@ it('opens a deep test link with its real actor and private server match without 
 it('mounts common and one selected voice history as read-only and offers an explicit fresh draft action', async () => {
   const fixture = createWritingTestStudioFixture({ readableTest: true })
   mount('/tests/history?voiceId=voice-history', fixture)
-  await screen.findByRole('link', { name: '테스트 이어보기' })
+  await waitFor(() => expect(fixture.calls).toContain('ListWritingTests'))
   expect(screen.getByRole('button', { name: '새 테스트' })).toBeEnabled()
   await waitFor(() =>
     expect(fixture.calls.filter((name) => name === 'ListVoiceChecks')).toHaveLength(1),
   )
+  // Blind model records carry no proof that they used the requested voice.
+  expect(screen.queryByRole('link', { name: '테스트 이어보기' })).not.toBeInTheDocument()
   expect(fixture.admissions).toHaveLength(0)
   expect(fixture.votes).toHaveLength(0)
+  expect(fixture.publications).toHaveLength(0)
+})
+
+it('applies stage and source history URL filters to the actual displayed records', async () => {
+  const fixture = createWritingTestStudioFixture({ readableTest: true })
+  const record = fixture.getTest()!
+  record.sourcePostSlug = 'recorded-source'
+  mount('/tests/history?stage=observe&source=another-source', fixture)
+  await waitFor(() => expect(fixture.calls).toContain('ListWritingTests'))
+  expect(screen.queryByRole('link', { name: '테스트 이어보기' })).not.toBeInTheDocument()
+  expect(fixture.admissions).toHaveLength(0)
   expect(fixture.publications).toHaveLength(0)
 })

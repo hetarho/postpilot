@@ -63,10 +63,35 @@ it('retains named source and safe internal return filters while refusing externa
     source: undefined,
     voiceId: undefined,
   })
-  expect(writingTestHistorySearchSchema({ voiceId: ['a', 'b'] })).toEqual({ voiceId: undefined })
+  expect(writingTestHistorySearchSchema({ voiceId: ['a', 'b'] })).toEqual({
+    stage: undefined,
+    source: undefined,
+    voiceId: undefined,
+  })
 })
 
 it('retains the common source from the writing editor test entry', () => {
   expect(writingTestSearchSchema({ sourcePost: 'owned-source' }).source).toBe('owned-source')
   expect(writingTestSearchSchema({ source: 'chosen', sourcePost: 'other' }).source).toBe('chosen')
+  expect(writingTestSearchSchema({ postSlug: 'legacy-source' }).source).toBe('legacy-source')
+})
+
+it('keeps meaningful history stage, source and voice filters while dropping ranking filters and malformed values', () => {
+  for (const stage of ['observe', 'write', 'voice'])
+    expect(
+      writingTestHistorySearchSchema({
+        stage,
+        sourcePostSlug: 'recorded-source',
+        voiceId: 'owned-voice',
+        scope: 'all',
+        window: 'month',
+        rating: 1700,
+      }),
+    ).toEqual({ stage, source: 'recorded-source', voiceId: 'owned-voice' })
+  expect(
+    writingTestHistorySearchSchema({ stage: 'analyze', postSlug: 'from-editor', voiceId: ' ' }),
+  ).toEqual({ stage: undefined, source: 'from-editor', voiceId: undefined })
+  expect(
+    writingTestHistorySearchSchema({ stage: ['voice'], source: {}, voiceId: ['other'] }),
+  ).toEqual({ stage: undefined, source: undefined, voiceId: undefined })
 })

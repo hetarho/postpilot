@@ -84,7 +84,6 @@
 | T602 | Authorize and verify browser-prepared analysis artifacts | ARCH CLIP QUOTA | T591 | todo |
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | todo |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | todo |
-| T623 | Expose current location parent access and contextual creation return | ARCH THEME CLIP MODEL | T622 T629 | todo |
 | T626 | Edit learning materials while preserving accepted voice profiles and test provenance | ARCH VOICE MODEL QUOTA | T622 T625 | todo |
 | T627 | Prepare frozen single-factor inputs and one complete post per test entrant | ARCH GEN MODEL TMPL GUIDE LANG VIDEO QUOTA | T622 T625 T626 T630 | todo |
 | T628 | Run private binary tournaments with exact metering and explicit winner publication | ARCH MODEL QUOTA GEN LANG | T622 T624 T625 T626 T627 T630 | todo |
@@ -107,11 +106,13 @@
 | T646 | Qualify origin-aware writing inspection and clean publication handoff | ARCH GEN POST MODEL THEME EXPORT MKT LANG | T636 T637 T639 T641 T642 T643 T644 T645 T631 | todo |
 
 ## next
-- implement-task T623 on main, then complete one dependency-ready task at a time under ARCH-70; T622/T624/T625/T629 are complete.
+- implement-task T626 on main, then complete the remaining dependency-ready UX tasks one at a time under ARCH-70; T622/T623/T624/T625/T629 are complete.
 - After T623 completes, the T632→T635 foundation batch uses completed T622/T624/T625 seams; later behavior/source consumers retain their real prerequisites and T631 integration guard.
 - Existing browser-media tasks and blocked qualifications retain their scope; THEME-61 visual decisions remain open.
 
 ## log
+- 261007 T623 done on main: visible desktop/phone hierarchy and contextual creation/settings/test return;330 impact-selected tests, final40tests, browser matrix/caret/mint and build/lint checks pass
+- 261007 T623 start on main: visible section/parent/navigation, contextual creation return and test routes; preserve unrelated planning changes
 - 261007 create-task foundation batch done: T632 depends on completed T622/T624/T625, T635 reports current helper availability; later consumers retain explicit profile/factory/tournament/integration gates; implementation waits for current T623 ownership to end
 - 261007 create-task prompt-engineering verified: T632–T646 cover all51 committed decisions; current ARCH@20 bases, STATE/dependency DAG/references/IDs/links and diff checks pass; spec lint exit0 with136 history/freshness warnings and13 editorial hints; no implementation/provider execution
 - 261007 create-task prompt-engineering done: T632–T646 cover thirteen committed SSOT deltas with bounded contracts/roles, semantic-origin production/storage/editor, safe private request inspection, tag/export/copy and controlled evaluation; this conversion did not modify preexisting task contracts, and new tasks follow concurrently updated ARCH@20
@@ -130,5 +131,3 @@
 - 261007 ideation prompt-engineering deep review start: audit prompt structure, length and contradictions across stages; research Korean versus English instructions with Korean output and separate evidence from hypotheses
 - 261007 ideation prompt-engineering round recorded: current prompt map and 995bcee9 tag path traced; thirteen existing tests pass; both inspection audiences and up-to-N grounded tags chosen, refactor scope remains open
 - 261007 ideation prompt-engineering start: improve writing quality before owner-observed view trials; trace actual prompt composition and the recent tag change, then explore a comprehensive prompt refactor
-- 261007 ideation searchable-details research round recorded: 64 linked sources, official 2026 content guides and search changes checked; numeric SEO claims assessed, three first-benefit candidates remain open
-- 261007 ideation searchable-details research start: recheck Naver Blog search principles, recent search changes and practitioner SEO claims; product choices remain open

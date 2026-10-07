@@ -52,6 +52,7 @@ afterEach(() => {
   // The settings autosave queue is module state that outlives its form on purpose (CLIP-39), so
   // an unsent draft would leak into the next test the way it would leak into the next session.
   discardClipDraftQueues()
+  sessionStorage.clear()
   initializeI18n('ko')
 })
 async function fillSetup() {
@@ -160,7 +161,7 @@ describe('clip directory and setup', () => {
     // button is what says to select sources.
     expect(await screen.findByRole('status', { name: '클립 상태' })).toHaveTextContent('')
   })
-  it('keeps directory and workspace free of group chrome and retains the list return', async () => {
+  it('keeps directory and workspace free of group chrome and gives direct records a named history return', async () => {
     const directory = mount('/clips')
     await screen.findByRole('list', { name: '저장된 클립' })
     expect(screen.queryByRole('navigation', { name: '영상 메뉴' })).toBeNull()
@@ -171,7 +172,7 @@ describe('clip directory and setup', () => {
     expect(screen.queryByRole('navigation', { name: '영상 메뉴' })).toBeNull()
     expect(document.querySelector('aside')).toBeNull()
     // One row (CLIP-37): the way back, the step bar and 삭제, in that order.
-    const back = screen.getByRole('link', { name: '클립 목록' })
+    const back = screen.getByRole('link', { name: '작업 내역으로 돌아가기' })
     expect(back).toHaveAttribute('href', '/clips')
     const steps = screen.getByRole('tablist', { name: '클립 단계' })
     const remove = screen.getByRole('button', { name: '삭제' })
@@ -182,7 +183,10 @@ describe('clip directory and setup', () => {
   })
   it('gives /clips/new the workspace top row and no lifecycle', async () => {
     mount('/clips/new')
-    expect(await screen.findByRole('link', { name: '클립 목록' })).toBeInTheDocument()
+    expect(await screen.findByRole('link', { name: '만들기로 돌아가기' })).toHaveAttribute(
+      'href',
+      '/',
+    )
     // The page's ONE status region is mounted before there is a project to have a status
     // (CLIP-37), and a draft with no lifecycle shows no step bar and nothing to delete.
     expect(screen.getByRole('status', { name: '클립 상태' })).toBeInTheDocument()
@@ -250,14 +254,14 @@ describe('clip directory and setup', () => {
     const { router, unmount } = mount('/clips/project')
     await user.type(await screen.findByLabelText('클립 제목'), ' 기록')
     // No dialog: there is nothing to lose by leaving a project that saves itself (CLIP-39).
-    await user.click(screen.getByRole('link', { name: '클립 목록' }))
+    await user.click(screen.getByRole('link', { name: '작업 내역으로 돌아가기' }))
     await waitFor(() => expect(router.state.location.pathname).toBe('/clips'))
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     unmount()
 
     const created = mount('/clips/new')
     await user.type(await screen.findByLabelText('클립 제목'), '새 클립')
-    await user.click(screen.getByRole('link', { name: '클립 목록' }))
+    await user.click(screen.getByRole('link', { name: '만들기로 돌아가기' }))
     // `/clips/new` is the one screen whose input is not queued anywhere yet.
     expect(await screen.findByRole('dialog')).toBeInTheDocument()
     expect(created.router.state.location.pathname).toBe('/clips/new')

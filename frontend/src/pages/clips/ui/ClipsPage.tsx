@@ -1,4 +1,5 @@
 import type { TFunction } from 'i18next'
+import { useEffect } from 'react'
 import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import {
@@ -6,6 +7,9 @@ import {
   clipStateLabel,
   type ClipProject,
   useClipProjects,
+  rememberClipEntry,
+  readClipHistoryReturn,
+  completeClipHistoryReturn,
 } from '@/entities/clip-project'
 import { useClipTemplates } from '@/entities/clip-template'
 import { isTerminal, progressLabel } from '@/entities/generation-job'
@@ -64,7 +68,7 @@ function stateTone(state: ReturnType<typeof clipState>): BadgeTone {
  *  shared link (CLIP-41). */
 export function ClipsPage() {
   const { t } = useTranslation(['clips', 'common'])
-  // The integration bundle registers the new fragment centrally. Owned defaults keep the
+  // The app registers the fragment centrally. Slice defaults keep the
   // history usable before that wiring lands and still follow the selected UI language.
   const historyText = (key: keyof typeof i18n.ko.history) =>
     t(`history.${key}`, { ns: 'clips', defaultValue: i18n[activeLocale()].history[key] })
@@ -73,6 +77,29 @@ export function ClipsPage() {
   const templates = useClipTemplates(user?.id ?? '')
   const narrowing: ClipNarrowing = useSearch({ strict: false })
   const navigate = useNavigate()
+  useEffect(() => {
+    if (projects.isPending || projects.isError || !user?.id) return
+    const origin = readClipHistoryReturn(user.id)
+    if (!origin) return
+    const frame = window.requestAnimationFrame(() => {
+      window.scrollTo(0, origin.scrollY)
+      completeClipHistoryReturn(user.id)
+    })
+    return () => window.cancelAnimationFrame(frame)
+  }, [projects.isPending, projects.isError, user?.id])
+  const remember = (targetId: string) => {
+    if (!user?.id) return
+    rememberClipEntry(user.id, {
+      path: '/clips',
+      section: 'clips',
+      scrollY: window.scrollY,
+      targetId,
+      filters: {
+        ...(narrowing.q ? { q: narrowing.q } : {}),
+        ...(narrowing.status ? { status: narrowing.status } : {}),
+      },
+    })
+  }
   // `replace`, not a push: a history entry per keystroke would make 뒤로 mean "one character ago"
   // instead of "the screen I came from". An emptied field drops the param rather than carrying `?q=`.
   const narrow = (next: ClipNarrowing) =>
@@ -198,6 +225,7 @@ export function ClipsPage() {
               <Link
                 to="/clips/$clipId"
                 params={{ clipId: project.id }}
+                onClick={() => remember(project.id)}
                 className="hover:bg-row-bg-hover active:bg-row-bg-active flex min-h-11 min-w-0 flex-1 flex-col items-start justify-center gap-1 px-4 py-3 sm:px-6 lg:flex-row lg:items-center lg:gap-4 lg:px-8"
               >
                 <Typography
@@ -246,6 +274,7 @@ export function ClipsPage() {
                 <Link
                   to="/clips/$clipId"
                   params={{ clipId: project.id }}
+                  onClick={() => remember(project.id)}
                   className={buttonStyles({ variant: 'ghost', className: '-ml-3' })}
                 >
                   {historyText(project.finalized || runningJob ? 'open' : 'continue')}
@@ -261,6 +290,7 @@ export function ClipsPage() {
                   <Link
                     to="/clips/$clipId"
                     params={{ clipId: project.id }}
+                    onClick={() => remember(project.id)}
                     className={buttonStyles({ variant: 'ghost' })}
                   >
                     {historyText('export')}

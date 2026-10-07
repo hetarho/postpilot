@@ -1,7 +1,14 @@
 import { useState } from 'react'
+import { useNavigate } from '@tanstack/react-router'
 import { isTerminal } from '@/entities/generation-job'
 import { useTranslation } from 'react-i18next'
-import { ClipFailureNotice, ClipRequestRecord, type ClipProject } from '@/entities/clip-project'
+import {
+  ClipFailureNotice,
+  ClipRequestRecord,
+  clipReturnDestination,
+  markClipHistoryReturn,
+  type ClipProject,
+} from '@/entities/clip-project'
 import { ClipCorrectionWorkspace } from '@/features/correct-clip'
 import { ClipStorylineSpace, discardClipStorylineQueue } from '@/features/edit-clip-storyline'
 import { ClipStorylineRequest } from '@/features/request-clip-storyline'
@@ -41,6 +48,16 @@ import { ClipProgressBar, ClipStatusLine, type CorrectionStatus } from './ClipSt
  *  page routes to it and composes it; every hook the steps run on lives in `useClipWorkspace`. */
 export function ClipWorkspace({ ownerId, project }: { ownerId: string; project: ClipProject }) {
   const { t } = useTranslation('clips')
+  const navigate = useNavigate()
+  const destination = clipReturnDestination(ownerId, project.id)
+  const returnTo = {
+    href: destination.href,
+    label: t(destination.path === '/' ? 'navigation.returnCreation' : 'navigation.returnHistory'),
+    onReturn: async (replace = false) => {
+      markClipHistoryReturn(ownerId, project.id)
+      await navigate({ href: destination.href, replace })
+    },
+  }
   const workspace = useClipWorkspace(ownerId, project)
   // The run view takes the screen, so it takes the focus: the ref stays OUT of the handles,
   // because a ref reached through an object is a ref read during render.
@@ -602,6 +619,8 @@ export function ClipWorkspace({ ownerId, project }: { ownerId: string; project: 
         <ClipProgressBar job={job?.kind === 'speech_clip' ? job : undefined} upload={upload} />
       )}
       <ClipTopRow
+        returnTo={returnTo}
+        contextTitle={project.title.trim() || t('navigation.untitled')}
         status={
           !run.focused && (
             <ClipStatusLine
@@ -635,6 +654,7 @@ export function ClipWorkspace({ ownerId, project }: { ownerId: string; project: 
               ownerId={ownerId}
               project={project}
               disabled={pending}
+              onReturn={() => returnTo.onReturn(true)}
               // A queue outlives its form, so a retry left running would keep saving an id the
               // server no longer has. Stopped before the navigation unmounts the page.
               onDeleted={() => {

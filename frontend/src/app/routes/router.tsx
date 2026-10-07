@@ -3,6 +3,7 @@ import { transport } from '@/shared/api'
 import { queryClient } from '../providers/query-client'
 import { RoutePending } from './RoutePending'
 import { scrollRestorationKey } from './scroll-restoration'
+import { writingTestRoutes } from './writing-tests'
 import { accountRoutes } from './account'
 import { adminRoute, adminRoutes } from './admin'
 import { authRoutes } from './auth'
@@ -37,6 +38,7 @@ export const routeTree = rootRoute.addChildren([
   authenticatedRoute.addChildren([
     indexRoute,
     ...creationRoutes,
+    ...writingTestRoutes,
     writingGroupRoute.addChildren([
       ...postRoutes,
       ...voiceRoutes,

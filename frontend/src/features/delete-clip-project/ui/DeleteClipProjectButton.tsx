@@ -1,8 +1,14 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from '@tanstack/react-router'
 import { Trash2 } from 'lucide-react'
-import { type ClipProject, useClipProjectMutations } from '@/entities/clip-project'
+import {
+  clipReturnDestination,
+  markClipHistoryReturn,
+  forgetClipEntry,
+  type ClipProject,
+  useClipProjectMutations,
+} from '@/entities/clip-project'
 import { appFailureFromConnect } from '@/shared/api'
 import { AppFailureMessage, Button, Dialog } from '@/shared/ui'
 
@@ -18,6 +24,7 @@ export function DeleteClipProjectButton({
   project,
   disabled = false,
   onDeleted,
+  onReturn,
 }: {
   ownerId: string
   project: Pick<ClipProject, 'id'>
@@ -26,25 +33,42 @@ export function DeleteClipProjectButton({
    *  settings autosave queue is what has to be stopped here, and it belongs to a sibling feature
    *  slice this one may not import (ARCH-13), so the page supplies the call. */
   onDeleted?: () => void
+  /** Contextual navigation after confirmed deletion and queue cleanup. Leaving never cancels work. */
+  onReturn?: () => void | Promise<void>
 }) {
   const { t } = useTranslation('clips')
   const navigate = useNavigate()
   const { remove } = useClipProjectMutations(ownerId)
   const [confirming, setConfirming] = useState(false)
+  const authority = useRef(0)
+  useEffect(() => {
+    authority.current += 1
+    return () => {
+      authority.current += 1
+    }
+  }, [ownerId, project.id])
 
   const confirm = async () => {
+    const operation = authority.current
     try {
       await remove.mutateAsync(project.id)
     } catch {
       // A refusal renders beside the trigger, and the dialog closes on failure too so the message
       // is not left behind the scrim. Only the DELETE is caught: a navigation that fails after it
       // must not be reported as a refusal, because by then the project really is gone.
-      setConfirming(false)
+      if (operation === authority.current) setConfirming(false)
       return
     }
-    setConfirming(false)
     onDeleted?.()
-    await navigate({ to: '/clips', replace: true })
+    const destination = clipReturnDestination(ownerId, project.id)
+    markClipHistoryReturn(ownerId, project.id)
+    forgetClipEntry(ownerId, project.id)
+    if (operation !== authority.current) return
+    setConfirming(false)
+    if (onReturn) await onReturn()
+    else {
+      await navigate({ href: destination.href, replace: true })
+    }
   }
 
   return (

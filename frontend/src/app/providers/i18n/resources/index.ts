@@ -1,3 +1,5 @@
+import { writingTestI18n } from '@/features/writing-test/config/i18n'
+import { navigationI18n } from '@/app/routes/navigation-i18n'
 import { i18n as authoringI18n } from '@/features/ai-authoring/config/i18n'
 import { i18n as voicePreparationI18n } from '@/features/prepare-writing-voice/config/i18n'
 import { i18n as writingCandidatesI18n } from '@/entities/voice-candidate/config/i18n'
@@ -144,6 +146,7 @@ export const RESOURCE_NAMESPACES = [
   'common',
   'auth',
   'nav',
+  'writingTests',
   'posts',
   'voices',
   'templates',
@@ -167,6 +170,8 @@ export const RESOURCE_NAMESPACES = [
 import { i18n as clipDubbingI18n } from '@/features/regenerate-clip-speech/config/i18n'
 
 export const FRAGMENTS: readonly I18nFragment[] = [
+  navigationI18n,
+  writingTestI18n,
   voicePreparationI18n,
   authoringI18n,
   writingCandidatesI18n,
@@ -295,7 +300,8 @@ export const resources = {
     spokenVoices: spokenVoicesResources.ko,
     common: koCommon,
     auth: { ...koAuth, ...logInI18n.ko },
-    nav: koNav,
+    nav: { ...koNav, ...navigationI18n.ko },
+    writingTests: writingTestI18n.ko,
     posts: {
       ...blogFieldI18n.ko,
       ...candidateComparisonI18n.ko,
@@ -430,7 +436,8 @@ export const resources = {
     spokenVoices: spokenVoicesResources.en,
     common: enCommon,
     auth: { ...enAuth, ...logInI18n.en },
-    nav: enNav,
+    nav: { ...enNav, ...navigationI18n.en },
+    writingTests: writingTestI18n.en,
     posts: {
       ...blogFieldI18n.en,
       ...candidateComparisonI18n.en,

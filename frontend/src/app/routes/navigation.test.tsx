@@ -1,16 +1,31 @@
-import { afterEach, expect, it } from 'vitest'
-import { cleanup, screen, waitFor, within } from '@testing-library/react'
+import { afterEach, expect, it, vi } from 'vitest'
+import { act, cleanup, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { initializeI18n } from '@/app/providers/i18n'
 import { ProtoPlan } from '@/shared/api'
 import { renderAppAt } from '@/test/app'
-import { currentDestination } from './navigation'
+import { currentDestination, routeLocation } from './navigation'
+import { readNavigationEntry } from '../model/navigation-entry'
 
+function viewport(desktop: boolean) {
+  vi.stubGlobal('matchMedia', (query: string) => ({
+    matches: desktop && query.includes('64rem'),
+    media: query,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    addListener: () => {},
+    removeListener: () => {},
+    dispatchEvent: () => true,
+    onchange: null,
+  }))
+}
 afterEach(() => {
   cleanup()
+  vi.unstubAllGlobals()
+  vi.restoreAllMocks()
+  sessionStorage.clear()
   initializeI18n('ko')
 })
-
 it.each([
   ['/', '/'],
   ['/posts/new', '/'],
@@ -18,85 +33,122 @@ it.each([
   ['/posts/example', '/library'],
   ['/clips/example', '/library'],
   ['/voices/example/materials', '/settings'],
-  ['/ai-models/compare', '/settings'],
+  ['/tests', '/tests'],
+  ['/tests/history', '/tests'],
+  ['/tests/test', '/tests'],
+  ['/ai-models/compare', '/tests'],
   ['/billing', '/settings'],
-])('resolves %s to the menu destination %s', (pathname, current) => {
-  expect(currentDestination(pathname)).toBe(current)
+] as const)('resolves %s to %s', (path, section) => expect(currentDestination(path)).toBe(section))
+it('keeps minted creation distinct from a direct history record and exposes deterministic hierarchy', () => {
+  expect(currentDestination('/posts/minted', true)).toBe('/')
+  expect(currentDestination('/clips/minted', true)).toBe('/')
+  expect(routeLocation('/voices/voice/materials').ancestors.map((x) => x.href)).toEqual([
+    '/settings',
+    '/settings#settings-writing',
+    '/voices',
+    '/voices/voice',
+  ])
+  expect(routeLocation('/tests/id').ancestors.map((x) => x.href)).toEqual([
+    '/tests',
+    '/tests/history',
+  ])
 })
-
-it('keeps navigation out of the canvas and opens one accessible menu on request', async () => {
+it('shows primary destinations and current section on desktop without a hamburger or modal', async () => {
+  viewport(true)
+  const calls: string[] = []
+  renderAppAt('/posts', { user: { id: 'alice', plan: ProtoPlan.FREE }, calls })
+  await screen.findByRole('heading', { name: '글 작업 내역' })
+  const nav = screen.getByRole('navigation', { name: '주요' })
+  expect(
+    within(nav)
+      .getAllByRole('link')
+      .map((x) => x.getAttribute('href')),
+  ).toEqual(['/', '/tests', '/settings', '/library'])
+  expect(within(nav).getByRole('link', { name: '작업 내역' })).toHaveAttribute(
+    'aria-current',
+    'page',
+  )
+  expect(screen.queryByRole('button', { name: '이동 메뉴' })).toBeNull()
+  expect(screen.queryByRole('dialog', { name: '메뉴' })).toBeNull()
+  expect(screen.getByRole('navigation', { name: '현재 위치' })).toHaveTextContent('글 작업 내역')
+  expect(calls.some((x) => /^(Start|Save|Cancel|Create)/.test(x))).toBe(false)
+})
+it('uses a nonmodal edge-attached phone menu with visible dismissal, Escape and focus return', async () => {
+  viewport(false)
   const user = userEvent.setup()
   renderAppAt('/posts', { user: { id: 'alice', plan: ProtoPlan.FREE } })
   await screen.findByRole('heading', { name: '글 작업 내역' })
-  expect(screen.queryByRole('navigation', { name: '주요' })).toBeNull()
-  expect(document.querySelector('aside')).toBeNull()
-  expect(document.querySelector('nav.fixed')).toBeNull()
-  const trigger = screen.getByRole('button', { name: '주요 메뉴 열기' })
+  const trigger = screen.getByRole('button', { name: '이동 메뉴' })
   await user.click(trigger)
-  const menu = screen.getByRole('dialog', { name: '메뉴' })
-  const links = within(menu).getAllByRole('link')
-  expect(links.map((link) => link.getAttribute('href'))).toEqual(['/', '/library', '/settings'])
-  expect(within(menu).getByRole('link', { name: '보관함' })).toHaveAttribute('aria-current', 'page')
+  const menu = screen.getByRole('dialog', { name: '이동 메뉴' })
+  expect(menu).not.toHaveAttribute('aria-modal', 'true')
+  expect(menu).toHaveClass('right-0', 'top-full')
+  expect(
+    within(menu)
+      .getAllByRole('link')
+      .map((x) => x.getAttribute('href')),
+  ).toEqual(['/', '/tests', '/settings', '/library'])
+  expect(within(menu).getByRole('button', { name: '이동 메뉴 닫기' })).toBeInTheDocument()
   expect(menu.contains(document.activeElement)).toBe(true)
   await user.keyboard('{Escape}')
-  expect(screen.queryByRole('dialog', { name: '메뉴' })).toBeNull()
+  expect(screen.queryByRole('dialog', { name: '이동 메뉴' })).toBeNull()
   expect(trigger).toHaveFocus()
 })
-
-it('closes the menu after navigation and makes every configuration accessible from settings', async () => {
-  const user = userEvent.setup()
-  const { router } = renderAppAt('/posts', { user: { id: 'alice', plan: ProtoPlan.FREE } })
-  await user.click(await screen.findByRole('button', { name: '주요 메뉴 열기' }))
-  await user.click(screen.getByRole('link', { name: '설정' }))
+it('retains settings parent access and filters across child navigation and history', async () => {
+  viewport(true)
+  const { router } = renderAppAt('/settings', { user: { id: 'alice', plan: ProtoPlan.FREE } })
   await screen.findByRole('heading', { name: '설정' })
-  expect(router.state.location.pathname).toBe('/settings')
-  expect(screen.queryByRole('dialog', { name: '메뉴' })).toBeNull()
-  const main = screen.getByRole('main')
-  for (const path of [
-    '/voices',
-    '/templates',
-    '/guidelines',
-    '/memories',
-    '/spoken-voices',
-    '/video-templates',
-    '/video-guidelines',
-    '/ai-models',
-    '/ai-models/compare',
-    '/ai-models/experiments',
-    '/ai-models/leaderboard',
-    '/account',
-    '/plans',
-    '/billing',
-  ])
-    expect(
-      within(main)
-        .getAllByRole('link')
-        .some((link) => link.getAttribute('href') === path),
-    ).toBe(true)
-  expect(within(main).queryByRole('link', { name: '관리자' })).toBeNull()
-  await router.navigate({ to: '/library' })
-  expect(await screen.findByRole('link', { name: /글 작업 내역/ })).toHaveAttribute(
+  await act(() => router.navigate({ to: '/templates' }))
+  await waitFor(() => expect(router.state.location.pathname).toBe('/templates'))
+  const breadcrumb = screen.getByRole('navigation', { name: '현재 위치' })
+  expect(within(breadcrumb).getByRole('link', { name: '설정' })).toHaveAttribute(
     'href',
-    '/posts',
+    '/settings',
   )
-  expect(screen.getByRole('link', { name: /클립 작업 내역/ })).toHaveAttribute('href', '/clips')
-  await waitFor(() => expect(router.state.status).toBe('idle'))
+  expect(within(breadcrumb).getByRole('link', { name: '글 설정' })).toHaveAttribute(
+    'href',
+    '/settings#settings-writing',
+  )
+  await act(() => router.navigate({ to: '/settings' }))
+  await waitFor(() => expect(router.state.location.pathname).toBe('/settings'))
+  expect(screen.getByRole('navigation', { name: '주요' })).toHaveTextContent('설정')
 })
-
-it('exposes administration only to the operator in settings', async () => {
+it('keeps administration protected and discoverable only to its owner role', async () => {
+  viewport(true)
   renderAppAt('/settings', { user: { id: 'operator', plan: ProtoPlan.MASTER } })
   expect(await screen.findByRole('link', { name: '관리자' })).toHaveAttribute('href', '/admin')
 })
-
+it('retains a settings origin through reload and restores its document position on explicit return', async () => {
+  viewport(true)
+  const calls: string[] = []
+  const scroll = vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
+  vi.spyOn(window, 'scrollY', 'get').mockReturnValue(480)
+  vi.spyOn(document.documentElement, 'scrollHeight', 'get').mockReturnValue(2400)
+  const view = renderAppAt('/settings', { user: { id: 'alice' }, calls })
+  await screen.findByRole('heading', { name: '설정' })
+  await act(() => view.router.navigate({ to: '/templates' }))
+  await waitFor(() => expect(view.router.state.location.pathname).toBe('/templates'))
+  expect(readNavigationEntry('alice', '/templates')).toMatchObject({
+    path: '/settings',
+    scrollY: 480,
+  })
+  view.unmount()
+  const reopened = renderAppAt('/templates', { transport: view.transport })
+  await userEvent.click(await screen.findByRole('link', { name: '돌아가기' }))
+  await waitFor(() => expect(reopened.router.state.location.pathname).toBe('/settings'))
+  await waitFor(() => expect(scroll).toHaveBeenCalledWith(0, 480))
+  expect(calls.some((x) => /^(Start|Save|Cancel|Create)/.test(x))).toBe(false)
+})
 it.each([
   ['ko', '새 글 작성하기', '새 클립 만들기'],
   ['en', 'Write a new post', 'Create a new clip'],
 ] as const)(
-  'shows exactly two creation choices in %s without object writes',
+  'keeps exactly two home content actions in %s without object writes',
   async (locale, post, clip) => {
+    viewport(true)
     initializeI18n(locale)
     const calls: string[] = []
-    const { router } = renderAppAt('/', { user: { id: 'alice' }, calls })
+    renderAppAt('/', { user: { id: 'alice' }, calls })
     const main = await screen.findByRole('main')
     expect(within(main).getAllByRole('link')).toHaveLength(2)
     expect(within(main).getByRole('link', { name: new RegExp(post) })).toHaveAttribute(
@@ -107,7 +159,6 @@ it.each([
       'href',
       '/clips/new',
     )
-    expect(router.state.location.pathname).toBe('/')
-    expect(calls.every((call) => !/Create|Start|Save/.test(call))).toBe(true)
+    expect(calls.some((x) => /^(Start|Save|Cancel|Create)/.test(x))).toBe(false)
   },
 )

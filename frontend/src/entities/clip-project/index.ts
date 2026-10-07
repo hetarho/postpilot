@@ -1,5 +1,17 @@
 /** The clip project itself: its lifecycle, its sources, its price and the state it is in. */
 export {
+  rememberClipEntry,
+  readClipReturnContext,
+  clipReturnDestination,
+  retainMintedClipEntry,
+  markClipHistoryReturn,
+  readClipHistoryReturn,
+  completeClipHistoryReturn,
+  forgetClipEntry,
+  type ClipEntry,
+  type ClipReturnDestination,
+} from './lib/navigation-context'
+export {
   clipProjectsKey,
   toClipProject,
   toClipSourceBatch,

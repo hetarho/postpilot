@@ -11,7 +11,7 @@ import { POST_TARGET_LENGTH_DEFAULT, POST_TAG_COUNT_DEFAULT } from '@/entities/p
 import { WritingTestStudio, WritingTestHistory } from '@/widgets/writing-test'
 import { WRITING_TEST_NEW_GUIDELINE_SLOT } from '@/features/writing-test'
 import { activeLocale } from '@/shared/lib'
-import { Button, Breadcrumb, Typography, pageStyles } from '@/shared/ui'
+import { Button, Typography, pageStyles } from '@/shared/ui'
 import {
   writingTestSearchSchema,
   writingTestHistorySearchSchema,
@@ -73,7 +73,6 @@ function OwnedNewPage({ ownerId, seed }: { ownerId: string; seed: WritingTestSea
     )
   return (
     <main className={pageStyles({ width: 'workspace', className: 'flex flex-1 flex-col' })}>
-      <Breadcrumb ariaLabel={t('location')} />
       <Typography variant="title" as="h1">
         {t('title')}
       </Typography>
@@ -99,7 +98,6 @@ export function WritingTestPage() {
   }
   return (
     <main className={pageStyles({ width: 'workspace', className: 'flex flex-1 flex-col' })}>
-      <Breadcrumb ariaLabel={t('location')} />
       <Typography variant="title" as="h1">
         {t('title')}
       </Typography>
@@ -119,7 +117,6 @@ export function WritingTestHistoryPage() {
   const search = writingTestHistorySearchSchema(raw as Record<string, unknown>)
   return (
     <main className={pageStyles({ width: 'wide', className: 'flex flex-1 flex-col' })}>
-      <Breadcrumb ariaLabel={t('location')} />
       <Typography variant="display">{t('history')}</Typography>
       <Typography variant="body" className="max-w-measure mt-3">
         {t('historyHelp')}
@@ -133,7 +130,12 @@ export function WritingTestHistoryPage() {
       >
         {t('newTest')}
       </Button>
-      <WritingTestHistory ownerId={user?.id ?? ''} voiceId={search.voiceId} />
+      <WritingTestHistory
+        ownerId={user?.id ?? ''}
+        voiceId={search.voiceId}
+        stage={search.stage}
+        sourcePostSlug={search.source}
+      />
     </main>
   )
 }

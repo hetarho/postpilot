@@ -31,7 +31,7 @@ export function writingTestSearchSchema(raw: Record<string, unknown>): WritingTe
     throw new Error('Unsupported writing test selection')
   const text = (key: string) =>
     typeof raw[key] === 'string' && raw[key] !== '' ? (raw[key] as string) : undefined
-  const source = text('source') ?? text('sourcePost') ?? text('sourcePostSlug')
+  const source = text('source') ?? text('sourcePost') ?? text('sourcePostSlug') ?? text('postSlug')
   const entry = text('entry')
   return {
     factor: factor as TestFactor,
@@ -45,6 +45,24 @@ export function writingTestSearchSchema(raw: Record<string, unknown>): WritingTe
     draft: text('draft'),
   }
 }
-export const writingTestHistorySearchSchema = (raw: Record<string, unknown>) => ({
-  voiceId: typeof raw.voiceId === 'string' ? raw.voiceId : undefined,
-})
+export interface WritingTestHistorySearch {
+  stage?: TestStage | 'voice'
+  source?: string
+  voiceId?: string
+}
+export function writingTestHistorySearchSchema(
+  raw: Record<string, unknown>,
+): WritingTestHistorySearch {
+  const text = (key: string) =>
+    typeof raw[key] === 'string' && (raw[key] as string).trim() !== ''
+      ? (raw[key] as string)
+      : undefined
+  return {
+    stage:
+      raw.stage === 'observe' || raw.stage === 'write' || raw.stage === 'voice'
+        ? raw.stage
+        : undefined,
+    source: text('source') ?? text('sourcePost') ?? text('sourcePostSlug') ?? text('postSlug'),
+    voiceId: text('voiceId'),
+  }
+}

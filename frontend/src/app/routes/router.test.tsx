@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Code, ConnectError, createRouterTransport } from '@connectrpc/connect'
@@ -12,6 +12,7 @@ import { createThemeTestEnvironment } from '@/test/theme'
 afterEach(() => {
   cleanup()
   initializeI18n('ko')
+  vi.unstubAllGlobals()
 })
 
 /** A backend that cannot answer at all — an outage, not a logout. */
@@ -426,6 +427,18 @@ describe('lazily loaded routes', () => {
 })
 
 describe('theme preferences in the real route tree', () => {
+  beforeEach(() =>
+    vi.stubGlobal('matchMedia', (query: string) => ({
+      matches: query.includes('64rem') && window.innerWidth >= 1024,
+      media: query,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      addListener: () => {},
+      removeListener: () => {},
+      dispatchEvent: () => true,
+      onchange: null,
+    })),
+  )
   it.each([
     {
       surface: 'login',
@@ -608,34 +621,25 @@ describe('theme preferences in the real route tree', () => {
     expect(await screen.findByRole('heading', { name: '글 작업 내역' })).toBeInTheDocument()
     const header = screen.getByRole('banner')
     const credits = within(header).getByRole('link', { name: /플랜/ })
-    const theme = screen.getByRole('button', { name: '테마' })
-    const locale = screen.getByRole('button', { name: '언어' })
     const account = screen.getByRole('button', { name: '내 계정' })
-    // Reading order: credits · theme · locale · account. The balance leads because it is a
-    // destination rather than a preference, and the account control keeps the viewport-side
-    // edge so its right-aligned panel lands inside the 320px shell gutters.
-    expect(credits.compareDocumentPosition(theme) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0)
-    expect(theme.compareDocumentPosition(locale) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0)
-    expect(locale.compareDocumentPosition(account) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0)
-    for (const trigger of [theme, locale, account]) {
-      expect(trigger).toHaveClass('size-10', 'pointer-coarse:size-11')
-    }
-    // A text-sized control earns its 44px in width the only way it can, and the header holds
-    // nothing else: the destinations are the phone's bottom bar at this width, so the
-    // header's own nav is not painted here.
+    const navigation = screen.getByRole('button', { name: '이동 메뉴' })
+    expect(credits.compareDocumentPosition(navigation) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(
+      0,
+    )
+    expect(navigation.compareDocumentPosition(account) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(
+      0,
+    )
     expect(credits).toHaveClass('min-h-11', 'px-2')
     expect(within(header).queryByRole('navigation', { name: '주요' })).toBeNull()
-    // The cluster is exactly these four: one link to the ladder and three icon triggers.
     const cluster = credits.parentElement as HTMLElement
     expect(within(cluster).getAllByRole('link')).toHaveLength(1)
-    expect(within(cluster).getAllByRole('button')).toHaveLength(4)
-
+    expect(within(cluster).getAllByRole('button')).toHaveLength(2)
     await user.click(account)
-    expect(screen.getByRole('dialog', { name: '내 계정' })).toHaveClass('right-0', 'w-72')
+    const menu = screen.getByRole('dialog', { name: '내 계정' })
+    expect(menu).toHaveClass('right-0', 'w-72')
+    expect(within(menu).getByRole('tablist', { name: '테마' })).toBeInTheDocument()
+    expect(within(menu).getByRole('tablist', { name: '언어' })).toBeInTheDocument()
     await user.keyboard('{Escape}')
-
-    await user.click(theme)
-    expect(screen.getByRole('menu', { name: '테마' })).toHaveClass('right-0')
 
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1024 })
     window.dispatchEvent(new Event('resize'))
@@ -834,7 +838,7 @@ describe('localized registered-route smoke', () => {
       expect(shell?.querySelectorAll('[class~="overflow-y-auto"]')).toHaveLength(0)
       expect(screen.queryByRole('navigation', { name: '주요' })).toBeNull()
       expect(document.querySelector('aside')).toBeNull()
-      expect(screen.getByRole('button', { name: '주요 메뉴 열기' })).toHaveAttribute(
+      expect(screen.getByRole('button', { name: '이동 메뉴' })).toHaveAttribute(
         'aria-expanded',
         'false',
       )

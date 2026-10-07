@@ -19,6 +19,7 @@ import {
   ExperimentSource,
   ExperimentOrigin,
   ProtoVoiceCheckStatus,
+  ProtoConfigurationKind,
 } from '@/shared/api'
 import { writingTestI18n } from '@/features/writing-test'
 import { createTestQueryClient, withProviders } from '@/test/session'
@@ -241,4 +242,167 @@ it('clears prior-owner pages immediately and fences late reads on an account cha
   })
   expect(screen.queryByText('alice left')).not.toBeInTheDocument()
   expect(screen.getByText('bob left')).toBeVisible()
+})
+
+it('applies source and stage to real records across pages and passes matching legacy read filters', async () => {
+  const pages: string[] = []
+  const legacyReads: Array<{ stage: Stage; source: ExperimentSource }> = []
+  const transport = createRouterTransport(({ rpc }) => {
+    rpc(Service.method.listWritingTests, (request) => {
+      pages.push(request.pageToken)
+      return create(Service.method.listWritingTests.output, {
+        tests: request.pageToken
+          ? [
+              {
+                ...test('match', 1, 'Matching source', '2026-10-06T00:00:00Z'),
+                modelStage: WritingTestStage.OBSERVE,
+                sourcePostSlug: 'owned-source',
+              },
+            ]
+          : [
+              {
+                ...test('wrong-stage', 1, 'Wrong stage', '2026-10-07T00:00:00Z'),
+                sourcePostSlug: 'owned-source',
+              },
+              {
+                ...test('wrong-source', 1, 'Wrong source', '2026-10-07T00:00:00Z'),
+                modelStage: WritingTestStage.OBSERVE,
+                sourcePostSlug: 'different-source',
+              },
+            ],
+        nextPageToken: request.pageToken ? '' : 'next',
+      })
+    })
+    rpc(ModelExperimentService.method.listExperiments, (request) => {
+      legacyReads.push({ stage: request.stage, source: request.source })
+      return create(ModelExperimentService.method.listExperiments.output, {
+        experiments: [
+          {
+            id: 'paid-match',
+            stage: Stage.OBSERVE,
+            source: ExperimentSource.POST,
+            status: ExperimentStatus.DECIDED,
+            origin: ExperimentOrigin.LAB,
+            postSlug: 'owned-source',
+            templateName: 'Matching paid source',
+          },
+          {
+            id: 'paid-other',
+            stage: Stage.OBSERVE,
+            source: ExperimentSource.POST,
+            status: ExperimentStatus.DECIDED,
+            origin: ExperimentOrigin.LAB,
+            postSlug: 'another-source',
+            templateName: 'Different paid source',
+          },
+        ],
+      })
+    })
+  })
+  render(<WritingTestHistory ownerId="alice" stage="observe" sourcePostSlug="owned-source" />, {
+    wrapper: withProviders(transport, createTestQueryClient()),
+  })
+  await screen.findByRole('button', { name: '기록 더 보기' })
+  expect(screen.queryByText('Wrong stage left')).not.toBeInTheDocument()
+  expect(screen.queryByText('Wrong source left')).not.toBeInTheDocument()
+  await userEvent.click(screen.getByRole('button', { name: '기록 더 보기' }))
+  expect(await screen.findByText('Matching source left')).toBeVisible()
+  expect(await screen.findByText('Matching paid source')).toBeVisible()
+  expect(screen.queryByText('Different paid source')).not.toBeInTheDocument()
+  expect(pages).toEqual(['', 'next'])
+  expect(legacyReads).toEqual([{ stage: Stage.OBSERVE, source: ExperimentSource.POST }])
+  const href = screen.getByRole('link', { name: '테스트 이어보기' }).getAttribute('href')!
+  expect(new URL(href, 'https://fixture').searchParams.get('entry')).toBe(
+    '/tests/history?stage=observe&source=owned-source',
+  )
+  const legacyHref = screen.getByRole('link', { name: '계속 보기' }).getAttribute('href')!
+  expect(new URL(legacyHref, 'https://fixture').pathname).toBe('/ai-models/experiments/paid-match')
+  expect(new URL(legacyHref, 'https://fixture').searchParams.get('entry')).toBe(
+    '/tests/history?stage=observe&source=owned-source',
+  )
+})
+
+it('filters one voice only from revealed identities and never infers a blind candidate voice', async () => {
+  const voiceRecord = (id: string, voiceId: string) => {
+    const record = test(id, 1, id, '2026-10-07T00:00:00Z')
+    return {
+      ...record,
+      factor: WritingTestFactor.VOICE,
+      candidates: record.candidates.map((candidate, index) => ({
+        ...candidate,
+        identity: {
+          label: `${id} ${index === 0 ? 'left' : 'right'}`,
+          source: {
+            source: {
+              case: 'setting' as const,
+              value: {
+                kind: ProtoConfigurationKind.WRITING_VOICE,
+                id: index ? `${voiceId}-other` : voiceId,
+                revision: 'frozen-1',
+              },
+            },
+          },
+        },
+      })),
+    }
+  }
+  const voiceReads: string[] = []
+  const legacyReads: Array<{ stage: Stage; source: ExperimentSource }> = []
+  const transport = createRouterTransport(({ rpc }) => {
+    rpc(Service.method.listWritingTests, () => {
+      const blind = voiceRecord('blind', 'chosen')
+      return create(Service.method.listWritingTests.output, {
+        tests: [
+          voiceRecord('match', 'chosen'),
+          voiceRecord('other', 'another'),
+          {
+            ...blind,
+            status: WritingTestStatus.REVIEW,
+            revealed: false,
+            winnerCandidateId: '',
+            matches: blind.matches.map((match) => ({ ...match, winnerCandidateId: '' })),
+          },
+        ],
+      })
+    })
+    rpc(ModelExperimentService.method.listExperiments, (request) => {
+      legacyReads.push({ stage: request.stage, source: request.source })
+      return create(ModelExperimentService.method.listExperiments.output, {
+        experiments: [
+          {
+            id: 'legacy-chosen',
+            stage: Stage.WRITE,
+            source: ExperimentSource.VOICE,
+            voiceId: 'chosen',
+            status: ExperimentStatus.DECIDED,
+            origin: ExperimentOrigin.LAB,
+            templateName: 'Chosen paid voice',
+          },
+          {
+            id: 'legacy-other',
+            stage: Stage.WRITE,
+            source: ExperimentSource.VOICE,
+            voiceId: 'another',
+            status: ExperimentStatus.DECIDED,
+            origin: ExperimentOrigin.LAB,
+            templateName: 'Other paid voice',
+          },
+        ],
+      })
+    })
+    rpc(VoiceService.method.listVoiceChecks, (request) => {
+      voiceReads.push(request.voiceId)
+      return create(VoiceService.method.listVoiceChecks.output, {})
+    })
+  })
+  render(<WritingTestHistory ownerId="alice" stage="voice" voiceId="chosen" />, {
+    wrapper: withProviders(transport, createTestQueryClient()),
+  })
+  expect(await screen.findByText('match left')).toBeVisible()
+  expect(await screen.findByText('Chosen paid voice')).toBeVisible()
+  expect(screen.queryByText('other left')).not.toBeInTheDocument()
+  expect(screen.queryByText('Other paid voice')).not.toBeInTheDocument()
+  expect(screen.getAllByRole('link', { name: '테스트 이어보기' })).toHaveLength(1)
+  expect(legacyReads).toEqual([{ stage: Stage.WRITE, source: ExperimentSource.VOICE }])
+  await waitFor(() => expect(voiceReads).toEqual(['chosen']))
 })

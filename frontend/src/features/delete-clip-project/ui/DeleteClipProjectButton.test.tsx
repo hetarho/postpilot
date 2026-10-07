@@ -1,5 +1,5 @@
-import { expect, it, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { beforeEach, expect, it, vi } from 'vitest'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Code, createRouterTransport } from '@connectrpc/connect'
 import { create } from '@bufbuild/protobuf'
@@ -11,28 +11,41 @@ import {
 import { connectAppError } from '@/test/app-error'
 import { createTestQueryClient, withProviders } from '@/test/session'
 import { DeleteClipProjectButton } from './DeleteClipProjectButton'
+import { rememberClipEntry } from '@/entities/clip-project'
 
 const navigate = vi.hoisted(() => vi.fn())
 vi.mock('@tanstack/react-router', () => ({ useNavigate: () => navigate }))
+beforeEach(() => sessionStorage.clear())
 
-function renderButton(options: { refusal?: AppFailureReason; disabled?: boolean } = {}) {
+function renderButton(
+  options: {
+    refusal?: AppFailureReason
+    disabled?: boolean
+    gate?: Promise<void>
+    onDeleted?: () => void
+    onReturn?: () => void | Promise<void>
+  } = {},
+) {
   const calls: string[] = []
   const transport = createRouterTransport(({ rpc }) => {
-    rpc(ClipGenerationService.method.deleteClipProject, (req) => {
+    rpc(ClipGenerationService.method.deleteClipProject, async (req) => {
       calls.push(req.id)
+      if (options.gate) await options.gate
       if (options.refusal) throw connectAppError(options.refusal, Code.FailedPrecondition)
       return create(DeleteClipProjectResponseSchema, {})
     })
   })
-  render(
+  const view = render(
     <DeleteClipProjectButton
       ownerId="alice"
       project={{ id: 'clip' }}
       disabled={options.disabled}
+      onDeleted={options.onDeleted}
+      onReturn={options.onReturn}
     />,
     { wrapper: withProviders(transport, createTestQueryClient()) },
   )
-  return { calls, user: userEvent.setup() }
+  return { ...view, calls, user: userEvent.setup() }
 }
 
 it('destroys nothing until the confirmation is accepted', async () => {
@@ -46,13 +59,13 @@ it('destroys nothing until the confirmation is accepted', async () => {
   expect(navigate).not.toHaveBeenCalled()
 })
 
-it('deletes once and leaves for the directory', async () => {
+it('deletes once and uses its named history parent when there is no retained origin', async () => {
   navigate.mockClear()
   const { calls, user } = renderButton()
   await user.click(screen.getByRole('button', { name: '삭제' }))
   await user.click(screen.getAllByRole('button', { name: '삭제', hidden: true })[1]!)
   expect(calls).toEqual(['clip'])
-  expect(navigate).toHaveBeenCalledWith({ to: '/clips', replace: true })
+  expect(navigate).toHaveBeenCalledWith({ href: '/clips', replace: true })
 })
 
 it('keeps the owner on the project and reports a refusal beside the trigger', async () => {
@@ -68,4 +81,58 @@ it('keeps the owner on the project and reports a refusal beside the trigger', as
 it('is refused outright while the workspace is busy', () => {
   renderButton({ disabled: true })
   expect(screen.getByRole('button', { name: '삭제' })).toBeDisabled()
+})
+it('returns a creation-origin clip to home only after server-confirmed deletion', async () => {
+  navigate.mockClear()
+  rememberClipEntry('alice', {
+    path: '/',
+    section: 'creation',
+    filters: {},
+    scrollY: 0,
+    targetId: 'clip',
+  })
+  const { calls, user } = renderButton()
+  await user.click(screen.getByRole('button', { name: '삭제' }))
+  expect(navigate).not.toHaveBeenCalled()
+  await user.click(screen.getAllByRole('button', { name: '삭제', hidden: true })[1]!)
+  expect(calls).toEqual(['clip'])
+  expect(navigate).toHaveBeenCalledWith({ href: '/', replace: true })
+})
+it('uses the injected return only after confirmed deletion and queue cleanup', async () => {
+  navigate.mockClear()
+  const order: string[] = []
+  const { user } = renderButton({
+    onDeleted: () => {
+      order.push('cleanup')
+    },
+    onReturn: () => {
+      order.push('return')
+    },
+  })
+  await user.click(screen.getByRole('button', { name: '삭제' }))
+  expect(order).toEqual([])
+  await user.click(screen.getAllByRole('button', { name: '삭제', hidden: true })[1]!)
+  await waitFor(() => expect(order).toEqual(['cleanup', 'return']))
+  expect(navigate).not.toHaveBeenCalled()
+})
+it('a late confirmed deletion cleans the old queues but cannot navigate after its owner view has closed', async () => {
+  navigate.mockClear()
+  let release!: () => void
+  const gate = new Promise<void>((done) => {
+    release = done
+  })
+  const cleanup = vi.fn()
+  const returned = vi.fn()
+  const view = renderButton({ gate, onDeleted: cleanup, onReturn: returned })
+  await view.user.click(screen.getByRole('button', { name: '삭제' }))
+  await view.user.click(screen.getAllByRole('button', { name: '삭제', hidden: true })[1]!)
+  await waitFor(() => expect(view.calls).toEqual(['clip']))
+  view.unmount()
+  await act(async () => {
+    release()
+    await gate
+  })
+  await waitFor(() => expect(cleanup).toHaveBeenCalledTimes(1))
+  expect(returned).not.toHaveBeenCalled()
+  expect(navigate).not.toHaveBeenCalled()
 })

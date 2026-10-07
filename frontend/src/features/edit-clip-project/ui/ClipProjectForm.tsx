@@ -18,6 +18,8 @@ import {
   type ClipProject,
   type ClipProjectDraft,
   useClipProjectMutations,
+  retainMintedClipEntry,
+  readClipReturnContext,
   validClipProject,
   validNewClipProject,
 } from '@/entities/clip-project'
@@ -98,6 +100,13 @@ export function ClipProjectForm({
   const { save } = useClipProjectMutations(ownerId)
   const submitting = useRef(false)
   const leaving = useRef(false)
+  const authority = useRef(0)
+  useEffect(() => {
+    authority.current += 1
+    return () => {
+      authority.current += 1
+    }
+  }, [ownerId, stored?.id])
   const selected = templates.templates.find((v) => v.id === draft.videoTemplateId)
   const bodyFor = (next: ClipProjectDraft) => {
     const template = templates.templates.find((v) => v.id === next.videoTemplateId)
@@ -195,8 +204,12 @@ export function ClipProjectForm({
   const submit = async () => {
     if (pending || !valid || stored || submitting.current) return
     submitting.current = true
+    const operation = authority.current
+    const origin = readClipReturnContext(ownerId)
     try {
       const value = await save.mutateAsync({ draft })
+      retainMintedClipEntry(ownerId, value.id, undefined, origin ?? null)
+      if (operation !== authority.current) return
       setDraft(projectDraft(value))
       setBaseline(JSON.stringify(normalizeClipProject(value)))
       leaving.current = true
