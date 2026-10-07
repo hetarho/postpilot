@@ -75,8 +75,11 @@ it('closes the menu after navigation and makes every configuration accessible fr
     ).toBe(true)
   expect(within(main).queryByRole('link', { name: '관리자' })).toBeNull()
   await router.navigate({ to: '/library' })
-  expect(await screen.findByRole('link', { name: /내 글/ })).toHaveAttribute('href', '/posts')
-  expect(screen.getByRole('link', { name: /내 클립/ })).toHaveAttribute('href', '/clips')
+  expect(await screen.findByRole('link', { name: /글 작업 내역/ })).toHaveAttribute(
+    'href',
+    '/posts',
+  )
+  expect(screen.getByRole('link', { name: /클립 작업 내역/ })).toHaveAttribute('href', '/clips')
   await waitFor(() => expect(router.state.status).toBe('idle'))
 })
 

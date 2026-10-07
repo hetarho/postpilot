@@ -115,7 +115,7 @@ it('opens the editor result in writing navigation and returns to its post', asyn
     posts: { posts },
     experiments: { history },
   })
-  await user.click(await screen.findByRole('link', { name: 'AI 결과 확인 →' }))
+  await user.click(await screen.findByRole('link', { name: 'A/B 결과 확인' }))
   await waitFor(() => expect(router.state.location.pathname).toBe('/posts/experiments/review-1'))
   await user.click(await screen.findByRole('link', { name: '← 글로 돌아가기' }))
   await waitFor(() => expect(router.state.location.pathname).toBe('/posts/draft-1'))

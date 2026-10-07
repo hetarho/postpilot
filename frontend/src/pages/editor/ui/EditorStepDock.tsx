@@ -1,4 +1,5 @@
 import type { ReactNode, RefObject } from 'react'
+import { useNavigate } from '@tanstack/react-router'
 import type { GenerationJob } from '@/entities/generation-job'
 import type { PostDraft } from '@/entities/post'
 import {
@@ -56,6 +57,7 @@ export function EditorStepDock({
   onStepChange: (step: EditorStep) => void
 }) {
   const job: GenerationJob | undefined = jobView.job
+  const navigate = useNavigate()
   if (!(step === 'generate' || (step === 'refine' && Boolean(result)) || hasJobNotice)) return null
   return (
     <EditorDock header={step === 'generate' ? dockHeader : undefined}>
@@ -69,6 +71,14 @@ export function EditorStepDock({
           jobPending={jobView.isPending}
           onStarted={(id) => jobView.onStarted(id, 'generate')}
           beforeStart={beforeStart}
+          onReviewResult={async () => {
+            await beforeStart()
+            await flushContentQueue(post.slug)
+            await navigate({
+              to: '/posts/experiments/$id',
+              params: { id: post.pendingExperimentId },
+            })
+          }}
           checkRequiredAnswers={checkRequiredAnswers}
           onOpenBrief={onOpenBrief}
         />

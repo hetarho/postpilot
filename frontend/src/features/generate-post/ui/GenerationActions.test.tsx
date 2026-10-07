@@ -403,3 +403,74 @@ it.each([
   expect(screen.getByRole('button', { name: '스토리라인 먼저' })).toBeDisabled()
   expect(beforeStart).not.toHaveBeenCalled()
 })
+
+it('awaits the page material flush before opening a retained paid result', async () => {
+  const user = userEvent.setup()
+  let finish!: () => void
+  const saved = new Promise<void>((resolve) => {
+    finish = resolve
+  })
+  const navigate = vi.fn()
+  const onReviewResult = vi.fn(async () => {
+    await saved
+    navigate()
+  })
+  const { starts, storylineStarts } = renderActions({ pendingExperimentId: 'retained' }, PICKED, {
+    onReviewResult,
+  })
+  const link = screen.getByRole('link', { name: 'A/B 결과 확인' })
+  expect(link).toHaveAttribute('href', '/posts/experiments/retained')
+  let defaultPrevented = false
+  document.addEventListener(
+    'click',
+    (event) => {
+      defaultPrevented = event.defaultPrevented
+    },
+    { once: true },
+  )
+  await user.click(link)
+  expect(defaultPrevented).toBe(true)
+  expect(onReviewResult).toHaveBeenCalledTimes(1)
+  expect(navigate).not.toHaveBeenCalled()
+  expect(link).toHaveAttribute('aria-busy', 'true')
+  expect(screen.getByRole('button', { name: '바로 글 쓰기' })).toBeDisabled()
+  await user.click(link)
+  expect(onReviewResult).toHaveBeenCalledTimes(1)
+  expect(starts).toHaveLength(0)
+  expect(storylineStarts).toHaveLength(0)
+  await act(async () => {
+    finish()
+    await saved
+  })
+  await waitFor(() => expect(navigate).toHaveBeenCalledTimes(1))
+  await waitFor(() => expect(link).not.toHaveAttribute('aria-busy'))
+})
+
+it('keeps a retained paid result in place when the page material flush rejects', async () => {
+  const user = userEvent.setup()
+  const navigate = vi.fn()
+  const saveMaterial = vi.fn(async () => {
+    throw new Error('private save cause')
+  })
+  const onReviewResult = vi.fn(async () => {
+    await saveMaterial()
+    navigate()
+  })
+  renderActions({ pendingExperimentId: 'retained' }, PICKED, { onReviewResult })
+  const link = screen.getByRole('link', { name: 'A/B 결과 확인' })
+  let defaultPrevented = false
+  document.addEventListener(
+    'click',
+    (event) => {
+      defaultPrevented = event.defaultPrevented
+    },
+    { once: true },
+  )
+  await user.click(link)
+  expect(defaultPrevented).toBe(true)
+  expect(saveMaterial).toHaveBeenCalledTimes(1)
+  expect(navigate).not.toHaveBeenCalled()
+  expect(link).toHaveAttribute('href', '/posts/experiments/retained')
+  await waitFor(() => expect(link).not.toHaveAttribute('aria-busy'))
+  expect(screen.queryByText('private save cause')).not.toBeInTheDocument()
+})

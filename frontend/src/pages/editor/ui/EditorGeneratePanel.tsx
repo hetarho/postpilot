@@ -1,9 +1,7 @@
 import type { ReactNode } from 'react'
-import { Link } from '@tanstack/react-router'
-import { useTranslation } from 'react-i18next'
-import { isTerminal, type GenerationJob } from '@/entities/generation-job'
+import { type GenerationJob } from '@/entities/generation-job'
 import type { PostDraft } from '@/entities/post'
-import { typographyStyles, proseStyles } from '@/shared/ui'
+import { proseStyles } from '@/shared/ui'
 import { ContactSheet } from '@/widgets/contact-sheet'
 import { EditorPhotos } from './EditorPhotos'
 import { EditorVoiceWarning } from './EditorVoiceWarning'
@@ -28,7 +26,6 @@ export function EditorGeneratePanel({
   ensureSlug: () => Promise<string>
   job?: GenerationJob
 }) {
-  const { t } = useTranslation('posts')
   return (
     <div className={proseStyles()}>
       {titleField}
@@ -36,20 +33,6 @@ export function EditorGeneratePanel({
       {memoField}
       <EditorPhotos post={post} ensureSlug={ensureSlug} />
       <EditorVoiceWarning ownerId={ownerId} voice={post.voice} />
-
-      {post.pendingExperimentId && (!job || isTerminal(job)) && (
-        <Link
-          to="/posts/experiments/$id"
-          params={{ id: post.pendingExperimentId }}
-          className={typographyStyles({
-            variant: 'label',
-            className:
-              'bg-notice-info-bg text-notice-info-fg mt-6 flex min-h-11 items-center rounded-md px-3 py-2',
-          })}
-        >
-          {t('editor.reviewAiResult')}
-        </Link>
-      )}
 
       {post.images.length > 0 && (
         <ContactSheet

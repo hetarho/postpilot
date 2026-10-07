@@ -1,7 +1,7 @@
 // The editor page's frame: opening a post, a new draft, the delete, the three steps and the one
 // status line.
 import { afterEach, describe, expect, it } from 'vitest'
-import { screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Stage } from '@/shared/api'
 import { renderAppAt } from '@/test/app'
@@ -30,8 +30,9 @@ describe('opening a post', () => {
     expect(screen.queryByRole('heading', { name: '내보내기' })).not.toBeInTheDocument()
   })
 
-  it('routes a failed A/B job to its existing recovery screen', async () => {
+  it('retains a failed paid comparison as a separate result follow-up', async () => {
     const user = userEvent.setup()
+    const draftMaterials: Array<{ slug: string; title: string; memo: string }> = []
     const failed = {
       id: 'comparison-job',
       kind: 'model_experiment',
@@ -41,6 +42,7 @@ describe('opening a post', () => {
     const { router } = renderAppAt('/posts/20260820-jeju', {
       user: USER,
       posts: {
+        draftMaterials,
         posts: [
           {
             slug: '20260820-jeju',
@@ -54,15 +56,18 @@ describe('opening a post', () => {
       jobs: { jobs: [failed] },
     })
 
-    // The failure is reported on every step; its retry is mounted on the step that owns the job.
-    expect(await screen.findByText('AI 결과 형식을 읽을 수 없어요.')).toBeInTheDocument()
+    await screen.findByRole('tab', { name: '글 다듬기' })
+    // Independent tests are not an ordinary post job; their retained result stays reachable.
+    expect(screen.queryByText('AI 결과 형식을 읽을 수 없어요.')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '다시 시도' })).not.toBeInTheDocument()
 
     await openStep(user, '글 생성')
-    await user.click(await screen.findByRole('button', { name: '다시 시도' }))
+    fireEvent.change(screen.getByLabelText('메모'), { target: { value: '마지막 기록' } })
+    await user.click(await screen.findByRole('link', { name: 'A/B 결과 확인' }))
     await waitFor(() =>
       expect(router.state.location.pathname).toBe('/posts/experiments/experiment-pending'),
     )
+    expect(draftMaterials.at(-1)?.memo).toBe('마지막 기록')
   })
 
   // Someone else's slug is 403, not 404 (POST-3).

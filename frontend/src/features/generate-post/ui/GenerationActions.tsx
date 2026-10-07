@@ -51,6 +51,8 @@ export const GenerationActions = forwardRef<
     jobPending?: boolean
     onStarted: (jobId: string) => void
     beforeStart?: () => Promise<void>
+    /** The page flushes both material/content queues before opening the retained paid result. */
+    onReviewResult?: () => Promise<void> | void
     /** Returns false after pointing the author to missing required template answers. */
     checkRequiredAnswers?: () => boolean
     /** Opens the writing brief — where the active 관찰/작성 models are chosen — for a press
@@ -67,6 +69,7 @@ export const GenerationActions = forwardRef<
     jobPending = false,
     onStarted,
     beforeStart,
+    onReviewResult,
     checkRequiredAnswers,
     onOpenBrief,
   },
@@ -79,6 +82,7 @@ export const GenerationActions = forwardRef<
   const storyline = useStartStoryline()
   const [preparing, setPreparing] = useState<ActionMode | ''>('')
   const [prepareFailure, setPrepareFailure] = useState<AppFailure>()
+  const [reviewingResult, setReviewingResult] = useState(false)
   // The mode a confirmed picker will start. Non-empty IS the picker's open state: there is one
   // picker for both actions, and the answer only means something together with the action.
   const [picking, setPicking] = useState<ActionMode | ''>('')
@@ -100,7 +104,12 @@ export const GenerationActions = forwardRef<
   // fetch, so without it every visit to 글 생성 would treat an unanswered catalog as a missing
   // model and send the press to the brief.
   const modelPending = selections.isPending || selectionSaving
-  const busy = jobPending || Boolean(preparing) || generation.isPending || storyline.isPending
+  const busy =
+    jobPending ||
+    Boolean(preparing) ||
+    generation.isPending ||
+    storyline.isPending ||
+    reviewingResult
   const sharedDisabled = modelPending || busy
 
   // `reobserveFiles` undefined is a start with no re-observation decision (no picker was
@@ -247,6 +256,29 @@ export const GenerationActions = forwardRef<
         <a
           href={`/posts/experiments/${encodeURIComponent(post.pendingExperimentId)}`}
           className={buttonStyles({ variant: 'ghost', className: 'mt-2 w-full sm:w-auto' })}
+          aria-disabled={reviewingResult || undefined}
+          aria-busy={reviewingResult || undefined}
+          onClick={(event) => {
+            if (
+              !onReviewResult ||
+              event.button !== 0 ||
+              event.metaKey ||
+              event.ctrlKey ||
+              event.altKey ||
+              event.shiftKey
+            )
+              return
+            event.preventDefault()
+            if (reviewingResult) return
+            setReviewingResult(true)
+            void Promise.resolve()
+              .then(onReviewResult)
+              .catch(() => {
+                // The page's autosave status exposes a refused flush; the retained result
+                // remains available and no default document navigation may bypass that refusal.
+              })
+              .finally(() => setReviewingResult(false))
+          }}
         >
           {t('generation.reviewResult')}
         </a>
