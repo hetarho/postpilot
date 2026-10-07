@@ -552,7 +552,7 @@ export async function frameParity(frame: number) {
 }
 
 /** Actual production finalized workspace, with a saved-file fixture and no draft source resolver. */
-export async function mountFinalizedEditor() {
+export async function mountFinalizedEditor(resultBytes: number) {
   if (!project) throw new Error('No fixture project')
   root?.unmount()
   current = undefined
@@ -569,8 +569,8 @@ export async function mountFinalizedEditor() {
     result: {
       id: 'saved-fixture',
       contentType: 'video/mp4',
-      bytes: 5,
-      durationMs: 15000,
+      bytes: resultBytes,
+      durationMs: project.editing!.sources[0]!.durationMs,
       createdAt: '2026-10-07T00:00:00Z',
       viewUrl: originalUrl.replace('/source', '/saved-result'),
       downloadUrl: originalUrl.replace('/source', '/saved-result'),
@@ -652,11 +652,25 @@ export async function blankPresetSlots() {
     const state = evaluateBrowserFrame(snapshot, 45),
       resources = await local.prepare(state, new AbortController().signal)
     try {
-      if (state.components.length || resources.length)
-        throw new Error('Blank preset slots invented visible text')
+      const size =
+          snapshot.ratio === 'vertical'
+            ? { width: 1080, height: 1920 }
+            : snapshot.ratio === 'horizontal'
+              ? { width: 1920, height: 1080 }
+              : { width: 1080, height: 1080 },
+        canvas = new OffscreenCanvas(size.width, size.height),
+        context = canvas.getContext('2d')!
+      resources.forEach((resource) => resource.draw(context))
+      const pixels = context.getImageData(0, 0, size.width, size.height).data
+      let paintedPixels = 0
+      for (let index = 3; index < pixels.length; index += 4) if (pixels[index]) paintedPixels++
+      canvas.width = 0
+      canvas.height = 0
+      if (paintedPixels) throw new Error('Blank preset slots painted invented content')
       return {
         components: state.components.length,
-        drawnResources: resources.length,
+        preparedResources: resources.length,
+        paintedPixels,
         purpose: snapshot.purpose,
       }
     } finally {

@@ -35,15 +35,14 @@ if(args.includes('--native-visibility')) {
  browser=await chromium.connectOverCDP(endpoint,{noDefaults:true})
 } else browser=await chromium.launch({ executablePath: option('--browser', '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome') })
 mkdirSync(output, { recursive: true })
+const cases=[],mounted=[],errors=[]
 try {
-  const page = nativeProcess ? browser.contexts()[0].pages()[0] : await browser.newPage(), errors = []
+  const page = nativeProcess ? browser.contexts()[0].pages()[0] : await browser.newPage()
   await page.setViewportSize({width:1280,height:900})
   page.on('pageerror', (error) => { errors.push(error.message); console.error('BROWSER_PAGE_ERROR',error.message) })
   await page.goto(server.resolvedUrls.local[0].replace(/\/$/u, '') + '/__editor-fixture__/')
   await page.waitForFunction(() => !!window.browserEditorFixture)
-  const cases = []
   if(!args.includes('--mounted-only')) for (const fixture of manifest.cases) cases.push(await page.evaluate((fixture) => window.browserEditorFixture.layout(fixture), fixture))
-  const mounted=[]
   if(args.includes('--mounted')||args.includes('--mounted-only')){
    const input={url:server.resolvedUrls.local[0].replace(/\/$/u,'')+'/__editor-file__/source',fingerprint:createHash('sha256').update(readFileSync(sourcePath)).digest('hex'),speech:manifest.speechAssets[0]}
    const metadata=await page.evaluate(input=>window.browserEditorFixture.mount(input),{...input,audioMode:'silent'})
@@ -117,7 +116,7 @@ try {
    mounted.push({id:'blank-preset-slots',result:await page.evaluate(()=>window.browserEditorFixture.blank())})
    await page.evaluate(()=>window.browserEditorFixture.edit({type:'removeText',id:'caption'}));await page.waitForFunction(()=>window.browserEditorFixture.state().plan.elements.length===0);await page.evaluate(()=>window.browserEditorFixture.seek(1500));await page.waitForFunction(()=>Number(document.querySelector('[data-clip-local-preview]')?.dataset.clipLocalFrame)===45)
    mounted.push({id:'caption-delete-current-frame',state:await page.evaluate(()=>window.browserEditorFixture.state())})
-   const saved=await page.evaluate(()=>window.browserEditorFixture.finalized());await page.getByRole('tab',{name:'Refine',exact:true}).click();await page.waitForFunction(()=>!!document.querySelector('video'))
+   const saved=await page.evaluate(bytes=>window.browserEditorFixture.finalized(bytes),statSync(sourcePath).size);await page.getByRole('tab',{name:'Refine',exact:true}).click();await page.waitForFunction(()=>!!document.querySelector('video'))
    const finalized=await page.evaluate(()=>({state:window.browserEditorFixture.state(),video:document.querySelector('video')?.src,localPreview:!!document.querySelector('[data-clip-local-preview]'),editable:!!document.querySelector('textarea')}))
    if(finalized.video!==saved.resultUrl||finalized.localPreview||finalized.editable||finalized.state.sourceAccessCalls||finalized.state.rpcCalls.some(name=>['PrepareClipPreview','GetClipCaptionPreview','PrepareClipCaptionFrames'].includes(name)))throw Error('Finalized workspace opened draft preview or editable controls:'+JSON.stringify(finalized));mounted.push({id:'actual-finalized-workspace',result:finalized})
 
@@ -127,9 +126,11 @@ try {
   if (errors.length) throw new Error(JSON.stringify(errors))
   const identity = JSON.parse(readFileSync(resolve(root, 'frontend/src/entities/clip-design/config/clip-ink-identity.json'), 'utf8'))
   const fenceAfter=sourceFence();if(JSON.stringify(fenceBefore)!==JSON.stringify(fenceAfter))throw Error('Browser check source bytes changed during run')
-  const report = { version: 1, sourceFence:{before:fenceBefore,after:fenceAfter,unchanged:true,scope:'All tracked frontend source/public/config plus lock/package, runner dependencies and native fixture exporter; installed dependencies are pinned by the exact lock bytes.'}, nativeVisibility:!!nativeProcess, sourceFixture:{bytes:statSync(sourcePath).size,sha256:createHash('sha256').update(readFileSync(sourcePath)).digest('hex')}, speechFixture:manifest.speechAssets[0], qualification: false, syntheticOnly: true, competingWork: true, browser: await browser.version(), node: process.version, componentVersion: manifest.componentVersion, assetVersion: identity.assetVersion, nativeManifestSHA256: createHash('sha256').update(readFileSync(manifestPath)).digest('hex'), nativeFixtures: cases.length, cases, mounted, requests, limits: ['Native JSON placements/first-cue boxes are independent expected values; these are actual browser font/WASM/layout checks.', 'Mounted synthetic owned sources exercise actual Worker/codec/font/WASM/control/audio behavior when requested; synthetic tones do not establish real-voice or human/device release qualification.'] }
+  const report = { version: 1, sourceFence:{before:fenceBefore,after:fenceAfter,unchanged:true,scope:'All tracked frontend source/public/config plus lock/package, runner dependencies and native fixture exporter; installed dependencies are pinned by the exact lock bytes.'}, nativeVisibility:!!nativeProcess, sourceFixture:{bytes:statSync(sourcePath).size,sha256:createHash('sha256').update(readFileSync(sourcePath)).digest('hex')}, speechFixture:manifest.speechAssets[0], qualification: false, syntheticOnly: true, competingWork: true, browser: await browser.version(), node: process.version, componentVersion: manifest.componentVersion, assetVersion: identity.assetVersion, nativeManifestSHA256: createHash('sha256').update(readFileSync(manifestPath)).digest('hex'), nativeFixtures: cases.length, cases, mounted, requests, limits: ['Native JSON placements/first-cue boxes are independent expected values; these are actual browser font/WASM/layout checks.', 'Mounted synthetic owned sources exercise actual Worker/codec/font/WASM/control/audio behavior when requested; synthetic tones do not establish real-voice or human/device release qualification.', 'Finalized production workspace reads the owned input through a saved-file fixture URL; that UI path does not qualify any finalized export bytes.'] }
   writeFileSync(resolve(output, 'report.json'), JSON.stringify(report, null, 2) + '\n')
   console.log(JSON.stringify({ passed: true, qualification: false, cases: cases.length, report: resolve(output, 'report.json') }))
+} catch(error) {
+ writeFileSync(resolve(output,'failure.json'),JSON.stringify({passed:false,sourceFence:{before:fenceBefore,after:sourceFence()},nativeVisibility:!!nativeProcess,error:String(error),cases,mounted,requests},null,2)+'\n');throw error
 } finally {
  if(nativeProcess){await (await browser.newBrowserCDPSession()).send('Browser.close').catch(()=>{});await new Promise(resolve=>{if(nativeProcess.exitCode!==null)return resolve();nativeProcess.once('exit',resolve);setTimeout(()=>{nativeProcess.kill();resolve()},2000)});rmSync(nativeProfile,{recursive:true,force:true})}else await browser.close()
  await server.close()
