@@ -112,6 +112,7 @@ import { i18n as issueVoucherI18n } from '@/features/issue-voucher/config/i18n'
 import { i18n as revokeVoucherI18n } from '@/features/revoke-voucher/config/i18n'
 import { i18n as voucherEntityI18n } from '@/entities/voucher/config/i18n'
 import { i18n as writingOriginsI18n } from '@/features/review-writing-origins/config/i18n'
+import { i18n as requestInspectionI18n } from '@/features/inspect-writing-request/config/i18n'
 import { i18n as postI18n } from '@/entities/post/config/i18n'
 import { i18n as postsI18n } from '@/pages/posts/config/i18n'
 import { i18n as purchaseCreditsI18n } from '@/features/purchase-credits/config/i18n'
@@ -137,6 +138,7 @@ import { postsI18n as editWithAiPostsI18n } from '@/features/edit-with-ai/config
 export const defaultNS = 'common' as const
 
 export const RESOURCE_NAMESPACES = [
+  'requestInspection',
   'authoring',
   'voicePreparation',
   'creation',
@@ -173,6 +175,7 @@ export const RESOURCE_NAMESPACES = [
 import { i18n as clipDubbingI18n } from '@/features/regenerate-clip-speech/config/i18n'
 
 export const FRAGMENTS: readonly I18nFragment[] = [
+  requestInspectionI18n,
   navigationI18n,
   writingTestI18n,
   voiceMaterialEditI18n,
@@ -295,6 +298,7 @@ export const FRAGMENTS: readonly I18nFragment[] = [
 
 export const resources = {
   ko: {
+    requestInspection: requestInspectionI18n.ko,
     authoring: { ...authoringI18n.ko },
     voicePreparation: { ...voicePreparationI18n.ko },
     creation: { ...homeI18n.ko, ...libraryI18n.ko, ...settingsI18n.ko, ...setupI18n.ko },
@@ -433,6 +437,7 @@ export const resources = {
     },
   },
   en: {
+    requestInspection: requestInspectionI18n.en,
     authoring: { ...authoringI18n.en },
     voicePreparation: { ...voicePreparationI18n.en },
     creation: { ...homeI18n.en, ...libraryI18n.en, ...settingsI18n.en, ...setupI18n.en },

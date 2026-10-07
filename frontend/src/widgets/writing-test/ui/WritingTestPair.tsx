@@ -8,12 +8,14 @@ import {
   type WritingTestMatch,
 } from '@/entities/writing-test'
 import { currentWritingTestMatch } from '@/features/writing-test'
+import { InspectWritingRequestAction } from '@/features/inspect-writing-request'
 import { toMarkdown } from '@/features/export-markdown'
 import { toNaver } from '@/features/export-naver'
 import { copyText } from '@/shared/lib'
 import { ActionBar, Button, Notice, SegmentedControl, Textarea, Typography } from '@/shared/ui'
 
 interface WritingTestPairProps {
+  ownerId?: string
   test: WritingTest
   match: WritingTestMatch
   pending?: boolean
@@ -26,6 +28,7 @@ interface WritingTestPairProps {
 
 /** Exactly the server's current pair. Reading or copying never starts generation or decides a match. */
 export function WritingTestPair({
+  ownerId,
   test,
   match,
   pending = false,
@@ -169,6 +172,7 @@ export function WritingTestPair({
               </Typography>
             )}
             <WritingTestPost
+              ownerId={ownerId}
               key={`${test.id}:${candidate.id}`}
               candidate={candidate}
               test={test}
@@ -213,10 +217,12 @@ export function WritingTestPair({
 }
 
 export function WritingTestPost({
+  ownerId,
   candidate,
   test,
   label,
 }: {
+  ownerId?: string
   candidate: WritingTestCandidate
   test: WritingTest
   label: string
@@ -256,6 +262,23 @@ export function WritingTestPost({
           </Button>
         ))}
       </div>
+      {ownerId && (
+        <InspectWritingRequestAction
+          target={{
+            kind: 'test',
+            ownerId,
+            testId: test.id,
+            candidateId: candidate.id,
+            revision: test.revision,
+            payloadExpiresAt: test.contentExpiresAt,
+            blind: !test.revealed,
+          }}
+          contextKey={`${test.status}:${candidate.status}:${test.updatedAt}`}
+          stages={['observe', 'write']}
+          defaultStatus="captured"
+          className="mt-2"
+        />
+      )}
       {currentFeedback && (
         <Typography variant="label" as="p" role="status" className="mt-2">
           {t(currentFeedback.copied ? 'copied' : 'manualCopy')}

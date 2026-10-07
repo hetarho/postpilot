@@ -1244,6 +1244,7 @@ function OwnedStudio({
       {flow.view === 'compare' && test && match && (
         <section className="mt-5">
           <WritingTestPair
+            ownerId={ownerId}
             test={test}
             match={match}
             pending={flow.phase === 'deciding'}
@@ -1300,7 +1301,7 @@ function OwnedStudio({
             </Notice>
           )}
           <WritingTestBracket test={test} />
-          <WritingTestChampionOutput test={test} />
+          <WritingTestChampionOutput test={test} ownerId={ownerId} />
         </section>
       )}
       {flow.view === 'publication' && test && winner && (
@@ -1514,7 +1515,7 @@ function OwnedStudio({
               {t('cancel')}
             </Button>
           )}
-          {test && winner && <WritingTestChampionOutput test={test} />}
+          {test && winner && <WritingTestChampionOutput test={test} ownerId={ownerId} />}
           <a href="/tests/history" className={buttonStyles({ variant: 'ghost' })}>
             {t('history')}
           </a>

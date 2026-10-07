@@ -5,6 +5,7 @@ import {
   hasContent,
   isPublished,
   useRefreshPostImages,
+  originContentMatches,
   type PostDraft,
   type PostStorylineParagraph,
 } from '@/entities/post'
@@ -16,6 +17,7 @@ import type {
 } from '@/features/generate-post'
 import type { BlockEditorHandle } from '@/features/edit-post-content'
 import { type ReviseFormHandle } from '@/features/edit-with-ai'
+import { InspectWritingRequestAction } from '@/features/inspect-writing-request'
 import { proseStyles } from '@/shared/ui'
 import type { SaveState } from '@/features/save-draft'
 import { StorylineSpace } from '@/widgets/storyline-space'
@@ -49,6 +51,7 @@ export function LifecycleSteps({
   ensureSlug,
   jobView,
   storyline,
+  inspection,
 }: {
   post: PostDraft
   ownerId: string
@@ -77,6 +80,7 @@ export function LifecycleSteps({
     onChange: (paragraphs: PostStorylineParagraph[]) => void
     saveState: SaveState
   }
+  inspection?: { contextKey: string; sourcePending: boolean }
 }) {
   const { t } = useTranslation('posts')
   const generateRef = useRef<GenerationActionsHandle>(null)
@@ -180,6 +184,27 @@ export function LifecycleSteps({
 
   return (
     <>
+      {ownerId && (
+        <InspectWritingRequestAction
+          target={{
+            kind: 'post',
+            ownerId,
+            postSlug: post.slug,
+            sourceRevision: String(post.inputRevision),
+            resultRevision: `${post.contentRevision}:${post.contentHash ?? ''}`,
+            planRevision: JSON.stringify(post.storyline),
+          }}
+          contextKey={JSON.stringify([inspection?.contextKey, liveContent])}
+          stages={['observe', 'plan', 'write', 'write-from-storyline', 'revise']}
+          blockedReason={
+            inspection?.sourcePending ||
+            (liveContent && result && !originContentMatches(liveContent, result))
+              ? t('unsavedSource', { ns: 'requestInspection' })
+              : undefined
+          }
+          className="my-4"
+        />
+      )}
       <div
         id={STEP_PANEL_ID}
         role="tabpanel"

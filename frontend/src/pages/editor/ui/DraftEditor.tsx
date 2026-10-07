@@ -163,6 +163,30 @@ export function DraftEditor({ post, defaultVoice }: DraftEditorProps) {
   // The brief widget SETS the target length and the tag count while the generate action SENDS
   // them from another layer, so the screen they both hang off owns the values.
   const brief = useBriefMirror(post)
+  const inspectionContext = JSON.stringify([
+    autosave.title,
+    autosave.memo,
+    autosave.answers,
+    autosave.storyline,
+    voiceId,
+    templateId,
+    targetLanguage,
+    brief.targetLength,
+    brief.tagCount,
+  ])
+  const inspectionSourcePending = Boolean(
+    post &&
+    (autosave.title !== post.title ||
+      autosave.memo !== post.memo ||
+      JSON.stringify(toAnswerPatch(fields)) !==
+        JSON.stringify(toAnswerPatch(answerFields(selectedTemplate, post.templateAnswers))) ||
+      JSON.stringify(autosave.storyline) !== JSON.stringify(post.storyline?.paragraphs) ||
+      voiceId !== (post.voice?.id ?? '') ||
+      templateId !== post.template.id ||
+      targetLanguage !== post.targetLanguage ||
+      brief.targetLength !== post.targetLength ||
+      brief.tagCount !== post.tagCount),
+  )
   const briefRef = useRef<PopoverHandle>(null)
   // The run a press of 생성 or A/B 비교 was refused for, while the brief that press opened is up:
   // the brief marks what that run is missing. The count restarts the marked fields' shake.
@@ -362,6 +386,7 @@ export function DraftEditor({ post, defaultVoice }: DraftEditorProps) {
             onChange: autosave.setStoryline,
             saveState: autosave.state,
           }}
+          inspection={{ contextKey: inspectionContext, sourcePending: inspectionSourcePending }}
         />
       ) : (
         <>

@@ -4,7 +4,13 @@ import { Notice, Typography } from '@/shared/ui'
 import { WritingTestPost } from './WritingTestPair'
 
 /** Read and copy the server-confirmed champion without applying it or creating a new match. */
-export function WritingTestChampionOutput({ test }: { test: WritingTest }) {
+export function WritingTestChampionOutput({
+  test,
+  ownerId,
+}: {
+  test: WritingTest
+  ownerId?: string
+}) {
   const { t } = useWritingTestTranslation()
   if (test.status !== 'completed' || !test.revealed || !test.winnerCandidateId) return null
   const champion = test.candidates.find((candidate) => candidate.id === test.winnerCandidateId)
@@ -32,6 +38,7 @@ export function WritingTestChampionOutput({ test }: { test: WritingTest }) {
         {t('frozenLanguage', { language: t(test.targetLanguage) })}
       </Typography>
       <WritingTestPost
+        ownerId={ownerId}
         key={`${test.id}:${champion.id}`}
         test={test}
         candidate={champion}

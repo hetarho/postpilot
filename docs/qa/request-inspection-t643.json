@@ -1,0 +1,232 @@
+{
+  "fixture": "Synthetic intercepted owner RPCs; no backend or provider calls",
+  "zoomMethod": "200% desktop reflow emulation at720x450 CSS pixels and DPR2, not native browser menu zoom",
+  "sourceFiles": {
+    "frontend/src/app/providers/i18n/resources/index.ts": "52d9030b24a272813971120be5aa75020a4df078f0cb275abee7eb1306c0487f",
+    "frontend/src/app/styles/index.css": "f037ff6c3ba04a4ff85e31f21aea1bd2dd5c96eb2791a8fa05307d9708a79448",
+    "frontend/src/entities/request-inspection/api/client.ts": "a2754a1c9bf7d88b1317274391ab41f14dd56f07af9feb76c13698d99a64e9fa",
+    "frontend/src/entities/request-inspection/api/hooks.ts": "6bd489ce6f19f93a97ec45983a24a89b733ac704de5ac7a24a2d989398071eda",
+    "frontend/src/entities/request-inspection/model/types.ts": "65e6418b2851f846ad103d37bd085efd307439c5321ba583898978d6e8e3854d",
+    "frontend/src/features/ai-authoring/ui/AuthoringEditor.tsx": "036e0721b72c74b4d0d86aacc98f42e8e17857c279eb4efce94a57ad6fbdd4ef",
+    "frontend/src/features/inspect-writing-request/config/i18n.ts": "6d1b42b435dc6059373b8d588129af1754bf539be28cdc2f127d28fa77102347",
+    "frontend/src/features/inspect-writing-request/model/request-document.ts": "82e55cbce7ae3e32ead2dbadb7f28a456a87cca0c9bacfe126123681b8d0fdde",
+    "frontend/src/features/inspect-writing-request/ui/InspectWritingRequestAction.tsx": "f2f87928da8b5b18a3fe84e84d440f412d56e4716bdb91350b5272e610560d1b",
+    "frontend/src/features/inspect-writing-request/ui/RequestInspectionDocument.tsx": "656a8b79d724f6d5e26417fa78bafe938b86fbbb47be1ba34c9b303114829a50",
+    "frontend/src/pages/editor/lib/request-inspection.browser.mjs": "0edff9902dabb9ab27c19789e93e50f3cef2a64198ca575b85341c5dd11f3223",
+    "frontend/src/pages/editor/ui/DraftEditor.tsx": "50fa0b1a39599bc2a729c83790507fdb7dad5b92368bc181c527b647bdb222a8",
+    "frontend/src/pages/editor/ui/LifecycleSteps.tsx": "aa813ad5cb0d403e77a63905f02b2fb25c7f4aaf77935a37ef7968cb730603ea",
+    "frontend/src/shared/ui/button/Button.tsx": "9839c4b2117959568ed5ad510f5487420a371a29011cd11f4144e3ddbc79e5a1",
+    "frontend/src/shared/ui/listbox/Listbox.tsx": "c5225b5d821f28e5058f72abfd379bf251857e247244897c129fe6fafe764166",
+    "frontend/src/shared/ui/sheet/Sheet.tsx": "572b99153478fe0fe0da55c9341118623ee0c5a22cbbb6a038cd50e5dc7523af",
+    "frontend/src/shared/ui/typography/Typography.tsx": "26007c36f8d3efa880ef032d2114b507bbba4e3181841f3e334da86d83ecf238",
+    "frontend/src/widgets/ai-authoring-studio/ui/AIAuthoringStudio.tsx": "5ac85afe5493a818dbbd288a5bc8578a3683f244673c068e8dea466da1e91ac3",
+    "frontend/src/widgets/writing-test/ui/WritingTestPair.tsx": "cfb8c2a42896157c817836d1fe1b3e1216dd41af064fc95a386e2bb4380b0f28"
+  },
+  "results": [
+    {
+      "theme": "light",
+      "width": 320,
+      "zoom": 1,
+      "minFont": 16,
+      "horizontalOverflow": false,
+      "scrollers": 1,
+      "minContrast": 7.952710596678241,
+      "closeHeight": 44,
+      "reads": 5,
+      "noAdditionalWorkCalls": true,
+      "existingHostWork": [
+        "InitializeDefaultSelections"
+      ],
+      "screenshot": "/tmp/postpilot-t643-browser-final3/light-320.png"
+    },
+    {
+      "theme": "light",
+      "width": 390,
+      "zoom": 1,
+      "minFont": 16,
+      "horizontalOverflow": false,
+      "scrollers": 1,
+      "minContrast": 7.952710596678241,
+      "closeHeight": 44,
+      "reads": 5,
+      "noAdditionalWorkCalls": true,
+      "existingHostWork": [
+        "InitializeDefaultSelections"
+      ],
+      "screenshot": "/tmp/postpilot-t643-browser-final3/light-390.png"
+    },
+    {
+      "theme": "light",
+      "width": 1440,
+      "zoom": 1,
+      "minFont": 16,
+      "horizontalOverflow": false,
+      "scrollers": 1,
+      "minContrast": 7.952710596678241,
+      "closeHeight": 40,
+      "reads": 5,
+      "noAdditionalWorkCalls": true,
+      "existingHostWork": [
+        "InitializeDefaultSelections"
+      ],
+      "screenshot": "/tmp/postpilot-t643-browser-final3/light-1440.png"
+    },
+    {
+      "theme": "light",
+      "width": 1920,
+      "zoom": 1,
+      "minFont": 16,
+      "horizontalOverflow": false,
+      "scrollers": 1,
+      "minContrast": 7.952710596678241,
+      "closeHeight": 40,
+      "reads": 5,
+      "noAdditionalWorkCalls": true,
+      "existingHostWork": [
+        "InitializeDefaultSelections"
+      ],
+      "screenshot": "/tmp/postpilot-t643-browser-final3/light-1920.png"
+    },
+    {
+      "theme": "light",
+      "width": 720,
+      "zoom": 2,
+      "minFont": 16,
+      "horizontalOverflow": false,
+      "scrollers": 1,
+      "minContrast": 7.952710596678241,
+      "closeHeight": 40,
+      "reads": 5,
+      "noAdditionalWorkCalls": true,
+      "existingHostWork": [
+        "InitializeDefaultSelections"
+      ],
+      "screenshot": "/tmp/postpilot-t643-browser-final3/light-720-zoom200.png"
+    },
+    {
+      "theme": "dark",
+      "width": 320,
+      "zoom": 1,
+      "minFont": 16,
+      "horizontalOverflow": false,
+      "scrollers": 1,
+      "minContrast": 7.031781546978182,
+      "closeHeight": 44,
+      "reads": 5,
+      "noAdditionalWorkCalls": true,
+      "existingHostWork": [
+        "InitializeDefaultSelections"
+      ],
+      "screenshot": "/tmp/postpilot-t643-browser-final3/dark-320.png"
+    },
+    {
+      "theme": "dark",
+      "width": 390,
+      "zoom": 1,
+      "minFont": 16,
+      "horizontalOverflow": false,
+      "scrollers": 1,
+      "minContrast": 7.031781546978182,
+      "closeHeight": 44,
+      "reads": 5,
+      "noAdditionalWorkCalls": true,
+      "existingHostWork": [
+        "InitializeDefaultSelections"
+      ],
+      "screenshot": "/tmp/postpilot-t643-browser-final3/dark-390.png"
+    },
+    {
+      "theme": "dark",
+      "width": 1440,
+      "zoom": 1,
+      "minFont": 16,
+      "horizontalOverflow": false,
+      "scrollers": 1,
+      "minContrast": 7.031781546978182,
+      "closeHeight": 40,
+      "reads": 5,
+      "noAdditionalWorkCalls": true,
+      "existingHostWork": [
+        "InitializeDefaultSelections"
+      ],
+      "screenshot": "/tmp/postpilot-t643-browser-final3/dark-1440.png"
+    },
+    {
+      "theme": "dark",
+      "width": 1920,
+      "zoom": 1,
+      "minFont": 16,
+      "horizontalOverflow": false,
+      "scrollers": 1,
+      "minContrast": 7.031781546978182,
+      "closeHeight": 40,
+      "reads": 5,
+      "noAdditionalWorkCalls": true,
+      "existingHostWork": [
+        "InitializeDefaultSelections"
+      ],
+      "screenshot": "/tmp/postpilot-t643-browser-final3/dark-1920.png"
+    },
+    {
+      "theme": "dark",
+      "width": 720,
+      "zoom": 2,
+      "minFont": 16,
+      "horizontalOverflow": false,
+      "scrollers": 1,
+      "minContrast": 7.031781546978182,
+      "closeHeight": 40,
+      "reads": 5,
+      "noAdditionalWorkCalls": true,
+      "existingHostWork": [
+        "InitializeDefaultSelections"
+      ],
+      "screenshot": "/tmp/postpilot-t643-browser-final3/dark-720-zoom200.png"
+    }
+  ],
+  "taskStartRevision": "f5fcc6c0460b265aad98d801fcaca7af32ba2a7b",
+  "verificationScope": "T643 browser feature through real post host on built static preview; post/authoring/test behavior also covered by owning host tests and real production server privacy regressions.",
+  "limits": "Owner RPCs intercepted synthetic fixtures, no provider/backend execution or deployment claim. Existing host InitializeDefaultSelections runs before opening; technical reads/status changes/copy add no work RPCs. Desktop200% reflow emulated, not native menu zoom.",
+  "screenshots": [
+    {
+      "path": "/tmp/postpilot-t643-browser-final3/light-320.png",
+      "sha256": "e1aa86e1f156cedb2e49228a9413667b7d11c6d829b1595fcd1f92cd5f34f826"
+    },
+    {
+      "path": "/tmp/postpilot-t643-browser-final3/light-390.png",
+      "sha256": "279727ac30ac0bddaee1ee5b39b450412b0f91af8d224e86fa5c601618127889"
+    },
+    {
+      "path": "/tmp/postpilot-t643-browser-final3/light-1440.png",
+      "sha256": "06a8ae16d509b6abdccb97451b7d4e7fcaca9273f7f67992d6dc2162ee303088"
+    },
+    {
+      "path": "/tmp/postpilot-t643-browser-final3/light-1920.png",
+      "sha256": "ab6faba98affb4ad27f79eedefd2c12d2c9c8e594133c3428c7787d90612aac0"
+    },
+    {
+      "path": "/tmp/postpilot-t643-browser-final3/light-720-zoom200.png",
+      "sha256": "b2713634521c39598b0a5f51c42c27a246767febdfca6f6e074a8390f48d38e9"
+    },
+    {
+      "path": "/tmp/postpilot-t643-browser-final3/dark-320.png",
+      "sha256": "83b575ad92310bc99b9ed5f67642eba8417a2b0041256cd5bd6d1bccaba67001"
+    },
+    {
+      "path": "/tmp/postpilot-t643-browser-final3/dark-390.png",
+      "sha256": "d38a78215459dd4fc9f493c57b395c98f36a73cd194c6fb6c7afa42dd413d36c"
+    },
+    {
+      "path": "/tmp/postpilot-t643-browser-final3/dark-1440.png",
+      "sha256": "3ed9d7f2c5e516b28716029233a9657825949cc5bf9a643caa3bfce4334a4c0e"
+    },
+    {
+      "path": "/tmp/postpilot-t643-browser-final3/dark-1920.png",
+      "sha256": "dd40ad442c7d74825b6b6d48055687dd03b335ff461d032db6ae1bd9262e94bb"
+    },
+    {
+      "path": "/tmp/postpilot-t643-browser-final3/dark-720-zoom200.png",
+      "sha256": "746280526007724b1c7cf54c6443bd1d69b47674b2154d70e6ee37ce9896e544"
+    }
+  ]
+}

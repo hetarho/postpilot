@@ -12,6 +12,9 @@ import {
   type AuthoringSavedRef,
   type AuthoringArtifact,
   type AuthoringCandidateCount,
+  type AuthoringKind,
+  type AuthoringMode,
+  type AuthoringModelRef,
 } from '@/entities/ai-authoring'
 import { useInitializeDefaultSelections, useStageSelection } from '@/entities/model-catalog'
 import {
@@ -54,10 +57,23 @@ export interface AuthoringEditorProps extends AuthoringScope {
   onSaved?: (ref: AuthoringSavedRef) => void
   onBusyChange?: (busy: boolean) => void
   renderPreview?: (artifact: AuthoringArtifact, lastValid?: AuthoringArtifact) => ReactNode
+  renderInspection?: (context: AuthoringInspectionContext) => ReactNode
   className?: string
   initialMakeDefault?: boolean
   active?: boolean
   onNavigationChange?: (navigation: StudioNavigation | undefined) => void
+}
+export interface AuthoringInspectionContext {
+  ownerId: string
+  sessionId: string
+  kind: AuthoringKind
+  revision: number
+  mode: AuthoringMode
+  prompt: string
+  model?: AuthoringModelRef
+  candidateCount: AuthoringCandidateCount
+  operationId: string
+  sourceDirty: boolean
 }
 export interface StudioNavigation {
   canGoBack: boolean
@@ -85,6 +101,7 @@ function ScopedEditor({
   onSaved,
   onBusyChange,
   renderPreview,
+  renderInspection,
   className,
   initialMakeDefault = false,
   active = true,
@@ -419,6 +436,29 @@ function ScopedEditor({
           </Button>
         </Notice>
       )}
+      {active &&
+        state.session &&
+        renderInspection?.({
+          ownerId,
+          sessionId: state.session.id,
+          kind,
+          revision: state.session.revision,
+          mode:
+            view === 'purpose' ||
+            view === 'choices' ||
+            state.session.phase === 'generating' ||
+            (view !== 'refining' &&
+              view !== 'direct' &&
+              state.session.phase !== 'refining' &&
+              state.session.turns.length === 0)
+              ? 'recommend'
+              : 'refine',
+          prompt: view === 'purpose' ? flow.context.purpose : state.text,
+          model: write.selected ?? undefined,
+          candidateCount,
+          operationId: state.session.activeJobId,
+          sourceDirty: Boolean(state.sourceDirty),
+        })}
       {view === 'purpose' && (
         <form
           className="max-w-measure mt-8"
