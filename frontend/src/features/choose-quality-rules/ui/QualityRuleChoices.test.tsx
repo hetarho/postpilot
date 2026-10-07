@@ -304,10 +304,10 @@ describe('the brief quality rows', () => {
     expect(within).toHaveTextContent('반복 5% · 제목 관련성 70%')
     expect(screen.getByText('양호')).toHaveClass('bg-notice-success-bg')
     expect(screen.queryAllByRole('checkbox')).toHaveLength(0)
-    // QUAL-6: whose thresholds, and counted from what.
+    // QUAL-6 and POST-112: whose thresholds, what is counted, and what origins mean.
     expect(
       screen.getByText(
-        '배지 기준은 PostPilot이 정한 값이에요. PostPilot에 저장된 발행 글에서 센 값이에요.',
+        '배지 기준은 PostPilot이 정한 값이에요. 문구 출처는 별도의 글 검토 정보이며, 이 측정값이나 사실 인증이 아니에요. PostPilot에 저장된 발행 글에서 센 값이에요.',
       ),
     ).toBeInTheDocument()
   })
