@@ -72,7 +72,8 @@ describe('the template directory', () => {
     renderTemplates({ templates: [] })
 
     expect(await screen.findByText('아직 저장된 템플릿이 없어요')).toBeInTheDocument()
-    expect(screen.queryByRole('listitem')).not.toBeInTheDocument()
+    expect(within(screen.getByRole('main')).queryByRole('listitem')).not.toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: '저장된 템플릿' })).not.toBeInTheDocument()
     const page = document.body.textContent ?? ''
     for (const syntax of ['<write', '<repeat', '<slot', '<note', '{작성}', '{반복}', '{자리}']) {
       expect(page).not.toContain(syntax)

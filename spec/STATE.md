@@ -97,6 +97,7 @@
 - T603/T604 real semantic/hardware/release qualification stays blocked; no renderer, analysis, voice or distribution activation is authorized by this merge.
 
 ## log
+- 261007 post-push frontend verification: full suite3992/4004 passed; the12 breadcrumb selector failures are corrected and owning suites pass (Admin26, Templates7); ESLint, format, FSD, style, retirement and production build pass; backend/media verification continues
 - 261007 post-push corrections: preserve normalized voice test factor and safe filtered paid-history return; canonical consumers64, Admin catalog26, parser10 and migration compatibility11 cases pass; full FE/BE/media verification remains active
 - 261007 main pushed normally through5edb107a after user requested push-first ordering; origin/local synchronized, deployment workflow success observed, initial CI FE/BE test failures retained for reproduction and correction
 - 261007 main merge corrections complete: published browser148/wait149 preserved, local creation/writing schemas moved to150/151 with recognized legacy-schema reconciliation; full verification deferred until after push by user request
