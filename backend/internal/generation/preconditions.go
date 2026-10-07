@@ -7,8 +7,8 @@ import (
 )
 
 // startStage is what one start's preconditions differ by. Every start runs the one chain in
-// startPreconditions — the published lock, the start's own material, the language, the voice, a
-// pending editor comparison, the write model, the observe model — and a stage switches a link off
+// startPreconditions — the published lock, the start's own material, the language, the voice, the
+// write model, the observe model — and a stage switches a link off
 // or fills one in, never reorders one: the order decides which refusal the owner sees (GEN-23,
 // GEN-25).
 type startStage struct {
@@ -27,8 +27,7 @@ type startStage struct {
 	// right after the voice check.
 	beforeVoice func(*PostInput) error
 	withVoice   func(post PostInput, voiceID string) error
-	// comparison skips the pending-comparison refusal and the write model: the experiment resolves
-	// its own candidates and refuses a second pending comparison itself.
+	// comparison resolves its own write candidates and skips the ordinary write-model check.
 	comparison bool
 	writeModel string
 	// observe is how the start observes. observeModel is checked only when the post has something
@@ -126,9 +125,6 @@ func (s *Service) startPreconditions(ctx context.Context, userID, postSlug strin
 		}
 	}
 	if !stage.comparison {
-		if err := s.refusePendingExperiment(ctx, userID, postSlug); err != nil {
-			return startInput{}, err
-		}
 		if in.write, err = s.requireWriteModel(stage.writeModel); err != nil {
 			return startInput{}, err
 		}
@@ -138,20 +134,6 @@ func (s *Service) startPreconditions(ctx context.Context, userID, postSlug strin
 	}
 	in.post = post
 	return in, nil
-}
-
-func (s *Service) refusePendingExperiment(ctx context.Context, userID, postSlug string) error {
-	if s.experiments == nil {
-		return nil
-	}
-	id, err := s.experiments.BlockingWriteForPost(ctx, userID, postSlug)
-	if err != nil {
-		return err
-	}
-	if id != "" {
-		return &ExperimentPendingError{ExperimentID: id}
-	}
-	return nil
 }
 
 // requireWriteModel is every start's write-model precondition: an enabled model that serves the

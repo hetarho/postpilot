@@ -101,7 +101,7 @@ func TestOnlyTheOwnerHandlerWritesGuidelines(t *testing.T) {
 					}
 				}
 			}
-			if rel != "internal/guideline/store/store.go" && rel != "internal/guideline/store/authoring.go" {
+			if !strings.HasPrefix(rel, "internal/guideline/store/") {
 				ast.Inspect(file, func(node ast.Node) bool {
 					if call, ok := node.(*ast.CallExpr); ok {
 						if selector, ok := call.Fun.(*ast.SelectorExpr); ok && writingQueries[selector.Sel.Name] {

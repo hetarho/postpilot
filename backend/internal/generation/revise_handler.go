@@ -90,6 +90,9 @@ func (s *Service) Revise(ctx context.Context, job RevisionJob, progress Progress
 	if _, err := frozenVoice(current, voiceID); err != nil {
 		return err
 	}
+	if err := s.validateFrozenProfile(ctx, job.UserID, voiceID, decodeProfile(payload.Profile)); err != nil {
+		return err
+	}
 	// The FRESH attachment snapshot, both kinds: a revision is filtered against what the post
 	// carries now, not against what it carried when the job was queued.
 	currentPhotos, currentVideos := AttachmentNames(current.Images)

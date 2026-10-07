@@ -220,10 +220,32 @@ func (s *Service) publicationFailure(ctx context.Context, user, id string, err e
 	_ = store.PublicationFailure(context.WithoutCancel(ctx), user, id, reason, errors.Is(err, ErrNotFound))
 }
 func (s *Service) FreezeCandidate(ctx context.Context, user string, ref OwnedCandidateRef) (FrozenCandidate, error) {
+	if user == "" || ref.SessionID == "" || ref.CandidateID == "" || ref.Revision == 0 {
+		return FrozenCandidate{}, ErrNotFound
+	}
 	state, err := s.store.Get(ctx, user, ref.SessionID)
 	if err != nil {
 		return FrozenCandidate{}, err
 	}
+	freeze := func(candidate Artifact, target, version string) FrozenCandidate {
+		candidate.TemplateIDs = slices.Clone(candidate.TemplateIDs)
+		candidate.Fields = slices.Clone(candidate.Fields)
+		if candidate.TargetLength != nil {
+			value := *candidate.TargetLength
+			candidate.TargetLength = &value
+		}
+		if candidate.TagCount != nil {
+			value := *candidate.TagCount
+			candidate.TagCount = &value
+		}
+		if candidate.Scope != nil {
+			value := *candidate.Scope
+			candidate.Scope = &value
+		}
+		return FrozenCandidate{Kind: state.Kind, Artifact: candidate, TargetID: target, TargetVersion: version, Synthetic: true}
+	}
+	// Explicit historical recommendations retain their admitted target context,
+	// even after the selected working source or canonical target changes.
 	for _, candidate := range state.Candidates {
 		if candidate.ID == ref.CandidateID && candidate.Revision == ref.Revision && candidate.Revision != 0 {
 			if err := s.validArtifact(state.Kind, candidate); err != nil {
@@ -239,8 +261,20 @@ func (s *Service) FreezeCandidate(ctx context.Context, user string, ref OwnedCan
 			if err != nil {
 				return FrozenCandidate{}, err
 			}
-			return FrozenCandidate{Kind: state.Kind, Artifact: candidate, TargetID: target, TargetVersion: version, Synthetic: true}, nil
+			return freeze(candidate, target, version), nil
 		}
+	}
+	// Direct/refined work has its own immutable artifact revision. Never resolve
+	// an invalid current source through the previous valid preview.
+	if candidate := currentSource(state); candidate != nil && candidate.ID == ref.CandidateID && candidate.Revision == ref.Revision {
+		if state.DraftState != DraftValid || s.validatePublication(state.Kind, *candidate) != nil {
+			return FrozenCandidate{}, ErrDraftInvalid
+		}
+		target := state.TargetID
+		if target == "" && state.Saved != nil {
+			target = state.Saved.ID
+		}
+		return freeze(*candidate, target, state.TargetVersion), nil
 	}
 	return FrozenCandidate{}, ErrNotFound
 }

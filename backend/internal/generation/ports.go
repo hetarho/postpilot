@@ -59,13 +59,6 @@ type Jobs interface {
 	GetGeneration(ctx context.Context, id, userID string) (*JobSummary, error)
 }
 
-// PendingExperiments is the experiment context's published post guard. Generation asks
-// only for the editor write comparison that holds the post (GEN-23); it never reads
-// experiment rows.
-type PendingExperiments interface {
-	BlockingWriteForPost(ctx context.Context, userID, postSlug string) (string, error)
-}
-
 // TemplateBriefs is the template context's published render, consumed only at enqueue time.
 // `ok` false means the post has no template or it was deleted between the save and the start
 // — an ordinary case, not an error, because a prompt without a template is a valid one.
@@ -146,5 +139,5 @@ type WritingTestSnapshot struct {
 }
 type WritingTestSnapshots interface {
 	FreezeWritingTest(context.Context, WritingTestSnapshotRequest) (WritingTestSnapshot, error)
-	WriteTestEntrant(context.Context, WritingTestSnapshot, int, Progress) (WriteAnswer, error)
+	WriteTestEntrant(context.Context, WritingTestSnapshot, int, *WritingTestCheckpoint, WritingTestRunOptions) (WriteAnswer, error)
 }

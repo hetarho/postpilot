@@ -219,12 +219,12 @@ type testSnapshotWriter struct{ answer generation.WriteAnswer }
 func (w testSnapshotWriter) FreezeWritingTest(context.Context, generation.WritingTestSnapshotRequest) (generation.WritingTestSnapshot, error) {
 	return generation.WritingTestSnapshot{}, nil
 }
-func (w testSnapshotWriter) WriteTestEntrant(context.Context, generation.WritingTestSnapshot, int, generation.Progress) (generation.WriteAnswer, error) {
+func (w testSnapshotWriter) WriteTestEntrant(context.Context, generation.WritingTestSnapshot, int, *generation.WritingTestCheckpoint, generation.WritingTestRunOptions) (generation.WriteAnswer, error) {
 	return w.answer, nil
 }
 func TestFrozenGenerationResultCarriesStorylineAndNounsToItsConsumer(t *testing.T) {
 	var producer generation.WritingTestSnapshots = testSnapshotWriter{answer: generation.WriteAnswer{Content: generation.PostContent{Title: "complete candidate"}, Nouns: []string{"owned scene"}, Storyline: &generation.Storyline{Paragraphs: []generation.StorylineParagraph{{Text: "candidate-specific plan", Files: []string{"owned.jpg"}}}, MadeWith: []string{"owned.jpg"}}}}
-	answer, err := producer.WriteTestEntrant(context.Background(), generation.WritingTestSnapshot{}, 0, nil)
+	answer, err := producer.WriteTestEntrant(context.Background(), generation.WritingTestSnapshot{}, 0, nil, generation.WritingTestRunOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -372,8 +372,8 @@ func (e *JobAlreadyInProgressError) Error() string {
 	return fmt.Sprintf("generation job %s is already in progress", e.ActiveID)
 }
 
-// ExperimentPendingError is GEN-23's refusal: an editor write comparison holds the post. It
-// names the comparison, which is not a job, so its id never passes for an active job id.
+// ExperimentPendingError is a retained transport error identity. Ordinary generation
+// no longer asks legacy comparisons to authorize writing.
 type ExperimentPendingError struct{ ExperimentID string }
 
 func (e *ExperimentPendingError) Error() string {

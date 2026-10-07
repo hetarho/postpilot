@@ -7,11 +7,10 @@ import (
 )
 
 // testDeps is the neutral set of cross-context collaborators: each answers the way the
-// context behaved before the collaborator existed (no pending experiment, no brief, no
+// context behaved before the collaborator existed (no brief, no
 // 지침, nothing recorded, no video link), so a test that cares about one replaces it.
 func testDeps() Deps {
 	return Deps{
-		Experiments: neutralExperiments{},
 		Templates:   neutralBriefs{},
 		Guidelines:  neutralGuidelines{},
 		Memories:    neutralMemories{},
@@ -27,12 +26,6 @@ type neutralQualityRules struct{}
 
 func (neutralQualityRules) RulesFor(context.Context, string, string, []string, Language) ([]string, error) {
 	return nil, nil
-}
-
-type neutralExperiments struct{}
-
-func (neutralExperiments) BlockingWriteForPost(context.Context, string, string) (string, error) {
-	return "", nil
 }
 
 type neutralBriefs struct{}

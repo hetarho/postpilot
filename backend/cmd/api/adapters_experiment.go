@@ -178,7 +178,7 @@ func (a experimentJobs) HasRunnableExperiment(ctx context.Context, experimentID 
 	return a.queue.HasActiveFor(ctx, job.Subject{Dimension: experiment.JobSubject, ID: experimentID}, job.Filter{})
 }
 
-// postExperiments reaches the experiment context from post and generation, both of which
+// postExperiments reaches the retained experiment context from post, which
 // are constructed before it; the lookup happens at call time, after buildContexts has
 // finished, so the adapter names where the service will be rather than holding a nil.
 type postExperiments struct{ app *contexts }
@@ -191,10 +191,6 @@ func (a postExperiments) PendingForPost(ctx context.Context, userID, slug string
 		return "", err
 	}
 	return found.ID, nil
-}
-
-func (a postExperiments) BlockingWriteForPost(ctx context.Context, userID, slug string) (string, error) {
-	return a.service().BlockingWriteForPost(ctx, userID, slug)
 }
 
 func (a postExperiments) PurgePost(ctx context.Context, userID, slug string) error {

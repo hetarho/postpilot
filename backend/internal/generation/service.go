@@ -17,7 +17,6 @@ type Service struct {
 	models       LLM
 	images       ImageReader
 	jobs         Jobs
-	experiments  PendingExperiments
 	templates    TemplateBriefs
 	guidelines   GuidelinesForPrompt
 	memories     MemoriesForPrompt
@@ -66,12 +65,9 @@ type CompletionBudget interface {
 
 // Deps are the collaborators from other contexts a generation run reads or writes
 // through (ARCH-40). Every one is required: a missing template brief, 지침, candidate
-// recorder, version-sample writer or experiment finder would not fail a run, it would
+// recorder, version-sample writer  would not fail a run, it would
 // silently produce a poorer or unrecorded post — exactly the wire nobody notices.
 type Deps struct {
-	// Experiments answers whether a post has a pending A/B run (generation must not
-	// overwrite what an experiment is about to judge).
-	Experiments PendingExperiments
 	// Templates is the template context's published brief lookup, read once at enqueue.
 	Templates TemplateBriefs
 	// Guidelines is the guideline context's published resolution, read once at enqueue.
@@ -100,7 +96,7 @@ func NewService(posts Posts, profiles Profiles, models LLM, images ImageReader, 
 	if budget == nil {
 		panic("generation: a completion budget policy is required")
 	}
-	for name, dep := range map[string]any{"experiments": deps.Experiments, "template briefs": deps.Templates, "guidelines": deps.Guidelines, "memories": deps.Memories, "guideline candidates": deps.Candidates, "video linker": deps.Videos, "quality rules": deps.QualityRules} {
+	for name, dep := range map[string]any{"template briefs": deps.Templates, "guidelines": deps.Guidelines, "memories": deps.Memories, "guideline candidates": deps.Candidates, "video linker": deps.Videos, "quality rules": deps.QualityRules} {
 		if dep == nil {
 			panic("generation: " + name + " collaborator is required")
 		}
@@ -109,7 +105,7 @@ func NewService(posts Posts, profiles Profiles, models LLM, images ImageReader, 
 		panic("generation: video link TTL must be positive")
 	}
 	return &Service{posts: posts, profiles: profiles, models: models, images: images, jobs: jobs, batchSize: batchSize, reasoning: reasoning, budget: budget,
-		experiments: deps.Experiments, templates: deps.Templates, guidelines: deps.Guidelines, memories: deps.Memories, candidates: deps.Candidates, videos: deps.Videos, videoURLTTL: deps.VideoURLTTL,
+		templates: deps.Templates, guidelines: deps.Guidelines, memories: deps.Memories, candidates: deps.Candidates, videos: deps.Videos, videoURLTTL: deps.VideoURLTTL,
 		qualityRules: deps.QualityRules}
 }
 

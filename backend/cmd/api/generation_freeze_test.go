@@ -121,12 +121,11 @@ func TestPostTickIdsAreTheQualityMetrics(t *testing.T) {
 
 // Generation's other collaborators, each answering "nothing here".
 type (
-	freezeProfiles    struct{}
-	freezeImages      struct{}
-	freezeExperiments struct{}
-	freezeMemories    struct{}
-	freezeCandidates  struct{}
-	freezeLinker      struct{}
+	freezeProfiles   struct{}
+	freezeImages     struct{}
+	freezeMemories   struct{}
+	freezeCandidates struct{}
+	freezeLinker     struct{}
 )
 
 func (freezeProfiles) ProfileForPrompt(context.Context, string, string, generation.Language) (generation.Profile, error) {
@@ -135,9 +134,7 @@ func (freezeProfiles) ProfileForPrompt(context.Context, string, string, generati
 func (freezeImages) Read(context.Context, string) ([]byte, error) {
 	return nil, errors.New("no images in this test")
 }
-func (freezeExperiments) BlockingWriteForPost(context.Context, string, string) (string, error) {
-	return "", nil
-}
+
 func (freezeMemories) ForPost(context.Context, string, []string) ([]string, error) { return nil, nil }
 func (freezeCandidates) Record(context.Context, string, string, string) error      { return nil }
 func (freezeLinker) PresignGet(context.Context, string, time.Duration) (string, error) {
@@ -228,7 +225,7 @@ func newDrainHarness(t *testing.T, models *recordingModels) *drainHarness {
 		generationPosts{service: postSvc}, freezeProfiles{}, models, freezeImages{},
 		generationJobs{queue: queue, budget: testCompletionBudget()}, 4, generation.DefaultReasoningPolicy(), generationBudget{testCompletionBudget()},
 		generation.Deps{
-			Experiments: freezeExperiments{}, Templates: generationTemplates{service: templateSvc},
+			Templates:  generationTemplates{service: templateSvc},
 			Guidelines: generationGuidelines{service: guidelineSvc}, Memories: freezeMemories{},
 			Candidates: freezeCandidates{}, Videos: freezeLinker{}, VideoURLTTL: time.Minute,
 			QualityRules: generationQuality{service: qualitySvc},

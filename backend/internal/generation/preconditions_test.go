@@ -13,18 +13,14 @@ const (
 	refusePublished startRefusal = iota
 	refuseLanguage
 	refuseVoice
-	refusePendingComparison
 	refuseWriteModel
 	refuseObserveModel
 	refuseNothing
 )
 
 func (r startRefusal) String() string {
-	return [...]string{"published", "language", "deleted voice", "pending comparison", "missing write model", "missing observe model", "nothing"}[r]
+	return [...]string{"published", "language", "deleted voice", "missing write model", "missing observe model", "nothing"}[r]
 }
-
-// errPendingComparison stands for the ExperimentPendingError naming the comparison.
-var errPendingComparison = errors.New("the pending comparison is named")
 
 // preconditionFixture fails the link `from` and every link after it, so a start answers with
 // the first one it checks: the table below pins each start's reasons and their order together.
@@ -48,9 +44,6 @@ func preconditionFixture(from startRefusal) (*fakePosts, Deps, string, string) {
 		post.Voice = deletedVoice
 	}
 	deps := testDeps()
-	if from <= refusePendingComparison {
-		deps.Experiments = fakePendingExperiments{id: "experiment-pending"}
-	}
 	write, observe := writeRef.String(), observeRef.String()
 	if from <= refuseWriteModel {
 		write = ""
@@ -63,7 +56,7 @@ func preconditionFixture(from startRefusal) (*fakePosts, Deps, string, string) {
 
 // GEN-23, GEN-25, GEN-38, GEN-68, GEN-69: every start runs one precondition chain and answers
 // with the first link that fails. A revision checks its content language, the comparisons
-// resolve their own write candidates and refuse a pending comparison themselves, a lab
+// resolve their own write candidates, a lab
 // comparison reads a published post, and the starts that observe nothing take no observe model.
 func TestEveryStartAnswersItsFirstFailingPrecondition(t *testing.T) {
 	type start func(ctx context.Context, svc *Service, write, observe string) error
@@ -77,35 +70,35 @@ func TestEveryStartAnswersItsFirstFailingPrecondition(t *testing.T) {
 			return err
 		}, map[startRefusal]error{
 			refusePublished: ErrPostPublished, refuseLanguage: ErrLanguageRequired, refuseVoice: ErrVoiceDeleted,
-			refusePendingComparison: errPendingComparison, refuseWriteModel: ErrWriteModelRequired, refuseObserveModel: ErrObserveModelRequired,
+			refuseWriteModel: ErrWriteModelRequired, refuseObserveModel: ErrObserveModelRequired,
 		}},
 		{"generation along the storyline", func(ctx context.Context, svc *Service, write, observe string) error {
 			_, err := svc.Start(ctx, StartRequest{UserID: "alice", PostSlug: "post", WriteModel: write, ObserveModel: observe, FromStoryline: true})
 			return err
 		}, map[startRefusal]error{
 			refusePublished: ErrPostPublished, refuseLanguage: ErrLanguageRequired, refuseVoice: ErrVoiceDeleted,
-			refusePendingComparison: errPendingComparison, refuseWriteModel: ErrWriteModelRequired, refuseObserveModel: ErrObserveModelRequired,
+			refuseWriteModel: ErrWriteModelRequired, refuseObserveModel: ErrObserveModelRequired,
 		}},
 		{"storyline", func(ctx context.Context, svc *Service, write, observe string) error {
 			_, err := svc.StartStoryline(ctx, StartStorylineRequest{UserID: "alice", PostSlug: "post", WriteModel: write, ObserveModel: observe})
 			return err
 		}, map[startRefusal]error{
 			refusePublished: ErrPostPublished, refuseLanguage: ErrLanguageRequired, refuseVoice: ErrVoiceDeleted,
-			refusePendingComparison: errPendingComparison, refuseWriteModel: ErrWriteModelRequired, refuseObserveModel: ErrObserveModelRequired,
+			refuseWriteModel: ErrWriteModelRequired, refuseObserveModel: ErrObserveModelRequired,
 		}},
 		{"storyline request", func(ctx context.Context, svc *Service, write, _ string) error {
 			_, err := svc.StartStorylineRevision(ctx, StartStorylineRevisionRequest{UserID: "alice", PostSlug: "post", Request: "더 짧게", WriteModel: write})
 			return err
 		}, map[startRefusal]error{
 			refusePublished: ErrPostPublished, refuseLanguage: ErrLanguageRequired, refuseVoice: ErrVoiceDeleted,
-			refusePendingComparison: errPendingComparison, refuseWriteModel: ErrWriteModelRequired, refuseObserveModel: nil,
+			refuseWriteModel: ErrWriteModelRequired, refuseObserveModel: nil,
 		}},
 		{"revision", func(ctx context.Context, svc *Service, write, _ string) error {
 			_, err := svc.StartRevision(ctx, StartRevisionRequest{UserID: "alice", PostSlug: "post", Instruction: "더 짧게", WriteModel: write})
 			return err
 		}, map[startRefusal]error{
 			refusePublished: ErrPostPublished, refuseLanguage: ErrContentLanguageRequired, refuseVoice: ErrVoiceDeleted,
-			refusePendingComparison: errPendingComparison, refuseWriteModel: ErrWriteModelRequired, refuseObserveModel: nil,
+			refuseWriteModel: ErrWriteModelRequired, refuseObserveModel: nil,
 		}},
 		{"editor comparison snapshot", func(ctx context.Context, svc *Service, _, observe string) error {
 			ref, _ := parseModelRef(observe)
@@ -113,7 +106,7 @@ func TestEveryStartAnswersItsFirstFailingPrecondition(t *testing.T) {
 			return err
 		}, map[startRefusal]error{
 			refusePublished: ErrPostPublished, refuseLanguage: ErrLanguageRequired, refuseVoice: ErrVoiceDeleted,
-			refusePendingComparison: ErrObserveModelRequired, refuseWriteModel: ErrObserveModelRequired, refuseObserveModel: ErrObserveModelRequired,
+			refuseWriteModel: ErrObserveModelRequired, refuseObserveModel: ErrObserveModelRequired,
 		}},
 		{"lab comparison snapshot", func(ctx context.Context, svc *Service, _, observe string) error {
 			ref, _ := parseModelRef(observe)
@@ -121,7 +114,7 @@ func TestEveryStartAnswersItsFirstFailingPrecondition(t *testing.T) {
 			return err
 		}, map[startRefusal]error{
 			refusePublished: ErrLanguageRequired, refuseLanguage: ErrLanguageRequired, refuseVoice: ErrVoiceDeleted,
-			refusePendingComparison: ErrObserveModelRequired, refuseWriteModel: ErrObserveModelRequired, refuseObserveModel: ErrObserveModelRequired,
+			refuseWriteModel: ErrObserveModelRequired, refuseObserveModel: ErrObserveModelRequired,
 		}},
 	}
 	for _, test := range starts {
@@ -131,13 +124,7 @@ func TestEveryStartAnswersItsFirstFailingPrecondition(t *testing.T) {
 			models, jobs := newFakeModels(), &fakeJobs{id: "job"}
 			svc := NewService(posts, fakeProfiles{}, models, fakeImages{}, jobs, 4, testReasoningPolicy, testBudget, deps)
 			err := test.start(context.Background(), svc, write, observe)
-			var pending *ExperimentPendingError
-			switch {
-			case want == errPendingComparison:
-				if !errors.As(err, &pending) || pending.ExperimentID != "experiment-pending" {
-					t.Errorf("%s from %s: err = %v, want the pending comparison named", test.name, from, err)
-				}
-			case !errors.Is(err, want) || (want == nil && err != nil):
+			if !errors.Is(err, want) || (want == nil && err != nil) {
 				t.Errorf("%s from %s: err = %v, want %v", test.name, from, err, want)
 			}
 			if len(models.calls) != 0 {

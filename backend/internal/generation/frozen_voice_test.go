@@ -105,3 +105,34 @@ func TestWithdrawalDuringObservationStopsTheRemainingWriterWithoutReplacingItsSn
 		t.Fatalf("err=%v calls=%v", err, models.calls)
 	}
 }
+
+func TestAcceptedSourceWithdrawalDuringWriterPreventsOrdinaryPublication(t *testing.T) {
+	for _, kind := range []string{"write", "revise"} {
+		t.Run(kind, func(t *testing.T) {
+			svc, posts, jobs, models, profiles := acceptedProfileHarness()
+			models.complete = func(_ llm.ModelRef, _ llm.Request) (llm.Response, error) {
+				profiles.withdrawn = true
+				return llm.Response{Text: `{"title":"replacement","summary":"summary","tags":["one","two","three","four"],"blocks":[{"type":"TEXT","content":"new content"}]}`}, nil
+			}
+			ctx := context.Background()
+			if kind == "write" {
+				if _, err := svc.Start(ctx, StartRequest{UserID: "alice", PostSlug: "post", WriteModel: writeRef.String()}); err != nil {
+					t.Fatal(err)
+				}
+				if err := svc.Generate(ctx, jobs.queued(0), func(string, int, int) {}); err == nil {
+					t.Fatal("withdrawn source published")
+				}
+			} else {
+				if _, err := svc.StartRevision(ctx, StartRevisionRequest{UserID: "alice", PostSlug: "post", WriteModel: writeRef.String(), Instruction: "make it clear"}); err != nil {
+					t.Fatal(err)
+				}
+				if err := svc.Revise(ctx, RevisionJob{UserID: "alice", PostSlug: "post", VoiceID: liveVoice.ID, WriteModel: writeRef.String(), Payload: jobs.payloads[0]}, func(string, int, int) {}); err == nil {
+					t.Fatal("withdrawn source revised canonical content")
+				}
+			}
+			if len(models.calls) != 1 || len(posts.contents) != 0 || posts.input.Content.Blocks[0].Content != "Original body" {
+				t.Fatal("withdrawal replayed work or changed content")
+			}
+		})
+	}
+}

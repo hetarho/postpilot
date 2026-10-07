@@ -488,32 +488,19 @@ func TestWriteExperimentUsesOnePreparedSnapshotAndDoesNotApplyBeforeChoice(t *te
 	}
 }
 
-// GEN-23, GEN-38: the refusal names the comparison that holds the post, never as a job.
-func TestOrdinaryGenerationAndRevisionRefuseAnUnresolvedWriteExperiment(t *testing.T) {
-	posts := &fakePosts{input: PostInput{
-		Slug: "post", UserID: "alice", Voice: liveVoice, Content: revisionContent("existing"),
-	}}
-	jobs := &fakeJobs{id: "should-not-enqueue"}
+// Ordinary writing admits one writer without any retained comparison dependency.
+func TestOrdinaryGenerationAndRevisionHaveNoLegacyComparisonDependency(t *testing.T) {
+	posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", Voice: liveVoice, Content: revisionContent("existing")}}
+	jobs := &fakeJobs{id: "job"}
 	svc := NewService(posts, fakeProfiles{}, newFakeModels(), fakeImages{}, jobs, 4, testReasoningPolicy, testBudget, testDeps())
-	svc.experiments = fakePendingExperiments{id: "experiment-pending"}
-
-	_, err := svc.Start(context.Background(), StartRequest{
-		UserID: "alice", PostSlug: "post", WriteModel: writeRef.String(),
-	})
-	var pending *ExperimentPendingError
-	var active *JobAlreadyInProgressError
-	if !errors.As(err, &pending) || pending.ExperimentID != "experiment-pending" || errors.As(err, &active) {
-		t.Fatalf("ordinary generation error = %v", err)
+	if _, err := svc.Start(context.Background(), StartRequest{UserID: "alice", PostSlug: "post", WriteModel: writeRef.String()}); err != nil {
+		t.Fatal(err)
 	}
-	_, err = svc.StartRevision(context.Background(), StartRevisionRequest{
-		UserID: "alice", PostSlug: "post", Instruction: "더 짧게",
-		WriteModel: writeRef.String(),
-	})
-	if !errors.As(err, &pending) || pending.ExperimentID != "experiment-pending" || errors.As(err, &active) {
-		t.Fatalf("revision error = %v", err)
+	if _, err := svc.StartRevision(context.Background(), StartRevisionRequest{UserID: "alice", PostSlug: "post", Instruction: "더 짧게", WriteModel: writeRef.String()}); err != nil {
+		t.Fatal(err)
 	}
-	if jobs.enqueues != 0 {
-		t.Fatalf("blocked starts mutated state: jobs=%d", jobs.enqueues)
+	if jobs.enqueues != 2 {
+		t.Fatal("single-writer starts were blocked", jobs.enqueues)
 	}
 }
 
@@ -721,21 +708,7 @@ func (f fakeJobs) GetGeneration(context.Context, string, string) (*JobSummary, e
 	return nil, ErrNotFound
 }
 
-type fakePendingExperiments struct {
-	id  string
-	err error
-}
-
-func (f fakePendingExperiments) BlockingWriteForPost(context.Context, string, string) (string, error) {
-	return f.id, f.err
-}
-
-// fakeBudget is the per-stage completion budget policy, in the shape internal/platform/config
-// serves it. It lives here rather than importing config: the generation context receives a
-// policy and holds no number of its own.
-type fakeBudget struct {
-	observe, floor, perChar, ceiling int
-}
+type fakeBudget struct{ observe, floor, perChar, ceiling int }
 
 func (b fakeBudget) Write(targetLength *int, nativeEffort bool) int {
 	chars := 0

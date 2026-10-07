@@ -71,6 +71,9 @@ func (s *Service) Generate(ctx context.Context, job GenerateJob, progress Progre
 	if _, err := frozenVoice(current, voiceID); err != nil {
 		return err
 	}
+	if err := s.validateFrozenProfile(ctx, job.UserID, voiceID, options.Profile); err != nil {
+		return err
+	}
 	// The answer's annotations replace the post's, a noun-less write's included: its nil nouns
 	// clear the ones the last generation stored (GEN-55).
 	if err := s.posts.SetGeneratedContent(ctx, post.UserID, post.Slug, answer.Content, options.TargetLanguage, answer.Annotations()); err != nil {

@@ -57,7 +57,7 @@ func TestAnObserveComparisonHoldsEveryObserveCall(t *testing.T) {
 		attachedPost{input: generation.PostInput{Slug: "post", UserID: "alice", Images: images}}, freezeProfiles{}, &recordingModels{}, freezeImages{}, nil,
 		batch, generation.DefaultReasoningPolicy(), generationBudget{testCompletionBudget()},
 		generation.Deps{
-			Experiments: freezeExperiments{}, Templates: unreadTemplates{}, Guidelines: unreadGuidelines{}, Memories: freezeMemories{},
+			Templates: unreadTemplates{}, Guidelines: unreadGuidelines{}, Memories: freezeMemories{},
 			Candidates: freezeCandidates{}, Videos: freezeLinker{}, VideoURLTTL: time.Minute, QualityRules: unreadQualityRules{},
 		},
 	)

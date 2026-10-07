@@ -373,9 +373,6 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 		// owner what their work needs, and this context holds no cap of its own.
 		generationBudget{cfg.LLMCompletionBudget},
 		generation.Deps{
-			// The experiment context is constructed after generation; the adapter resolves
-			// it at call time (see postExperiments).
-			Experiments: postExperiments{app: c},
 			// Generation reads a brief and the 지침 only at enqueue, to freeze them; the
 			// template and guideline contexts never learn that generation exists.
 			Templates:  generationTemplates{service: c.template},

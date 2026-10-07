@@ -67,37 +67,26 @@ func TestStartStorylineChecksStartsPreconditions(t *testing.T) {
 	for name, test := range map[string]struct {
 		input        PostInput
 		keepLanguage bool
-		pending      string
 		observe      string
 		write        string
 		want         error
 	}{
-		"published":            {input: published, observe: observeRef.String(), write: writeRef.String(), want: ErrPostPublished},
-		"no target language":   {input: noLanguage, keepLanguage: true, observe: observeRef.String(), write: writeRef.String(), want: ErrLanguageRequired},
-		"a deleted voice":      {input: deleted, observe: observeRef.String(), write: writeRef.String(), want: ErrVoiceDeleted},
-		"a pending comparison": {input: storylinePost(), pending: "experiment-pending", observe: observeRef.String(), write: writeRef.String()},
-		"no write model":       {input: storylinePost(), observe: observeRef.String(), write: "", want: ErrWriteModelRequired},
-		"no observe model":     {input: storylinePost(), observe: "", write: writeRef.String(), want: ErrObserveModelRequired},
-		"a video-blind model":  {input: videoPost, observe: observeRef.String(), write: writeRef.String(), want: ErrVideoUnsupported},
+		"published":           {input: published, observe: observeRef.String(), write: writeRef.String(), want: ErrPostPublished},
+		"no target language":  {input: noLanguage, keepLanguage: true, observe: observeRef.String(), write: writeRef.String(), want: ErrLanguageRequired},
+		"a deleted voice":     {input: deleted, observe: observeRef.String(), write: writeRef.String(), want: ErrVoiceDeleted},
+		"no write model":      {input: storylinePost(), observe: observeRef.String(), write: "", want: ErrWriteModelRequired},
+		"no observe model":    {input: storylinePost(), observe: "", write: writeRef.String(), want: ErrObserveModelRequired},
+		"a video-blind model": {input: videoPost, observe: observeRef.String(), write: writeRef.String(), want: ErrVideoUnsupported},
 	} {
 		posts := &fakePosts{input: test.input, preserveMissingLanguages: test.keepLanguage}
 		jobs := &fakeJobs{id: "job"}
 		models := storylineModels(storylineAnswer)
 		deps := testDeps()
-		if test.pending != "" {
-			deps.Experiments = fakePendingExperiments{id: test.pending}
-		}
 		svc := storylineService(posts, jobs, models, deps)
 		_, err := svc.StartStoryline(context.Background(), StartStorylineRequest{
 			UserID: "alice", PostSlug: "post", ObserveModel: test.observe, WriteModel: test.write,
 		})
-		var pending *ExperimentPendingError
-		switch {
-		case test.pending != "":
-			if !errors.As(err, &pending) {
-				t.Errorf("%s: err = %v, want the comparison named", name, err)
-			}
-		case !errors.Is(err, test.want):
+		if !errors.Is(err, test.want) {
 			t.Errorf("%s: err = %v, want %v", name, err, test.want)
 		}
 		if jobs.enqueues != 0 || len(models.calls) != 0 {
