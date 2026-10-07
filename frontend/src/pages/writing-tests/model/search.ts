@@ -31,7 +31,7 @@ export function writingTestSearchSchema(raw: Record<string, unknown>): WritingTe
     throw new Error('Unsupported writing test selection')
   const text = (key: string) =>
     typeof raw[key] === 'string' && raw[key] !== '' ? (raw[key] as string) : undefined
-  const source = text('source') ?? text('sourcePostSlug')
+  const source = text('source') ?? text('sourcePost') ?? text('sourcePostSlug')
   const entry = text('entry')
   return {
     factor: factor as TestFactor,

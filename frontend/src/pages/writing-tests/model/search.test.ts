@@ -65,3 +65,8 @@ it('retains named source and safe internal return filters while refusing externa
   })
   expect(writingTestHistorySearchSchema({ voiceId: ['a', 'b'] })).toEqual({ voiceId: undefined })
 })
+
+it('retains the common source from the writing editor test entry', () => {
+  expect(writingTestSearchSchema({ sourcePost: 'owned-source' }).source).toBe('owned-source')
+  expect(writingTestSearchSchema({ source: 'chosen', sourcePost: 'other' }).source).toBe('chosen')
+})
