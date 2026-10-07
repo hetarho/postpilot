@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import {
   mkdtempSync,
   mkdirSync,
+  realpathSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -92,7 +93,7 @@ test("fixture serving rejects path traversal, foreign symlinks and invalid range
     );
     assert.equal(
       resolveFixtureFile(join(root, "fixtures"), "source.mp4"),
-      join(root, "fixtures", "source.mp4"),
+      realpathSync(join(root, "fixtures", "source.mp4")),
     );
     for (const name of [
       "../outside.json",
