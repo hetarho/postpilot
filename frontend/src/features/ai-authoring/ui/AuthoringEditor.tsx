@@ -7,13 +7,16 @@ import {
   authoringScopeKey,
   completedAuthoringExchanges,
   AUTHORING_MAX_EXCHANGES,
+  AUTHORING_NAME_SUMMARY_MAX_CHARS,
   type AuthoringScope,
   type AuthoringSavedRef,
   type AuthoringArtifact,
+  type AuthoringCandidateCount,
 } from '@/entities/ai-authoring'
 import { useInitializeDefaultSelections, useStageSelection } from '@/entities/model-catalog'
 import {
   AppFailureMessage,
+  TextField,
   Button,
   Checkbox,
   ChoiceButton,
@@ -34,6 +37,9 @@ import {
 import { AuthoringPreview } from './AuthoringPreview'
 
 export interface AuthoringEditorProps extends AuthoringScope {
+  sessionId?: string
+  targetName?: string
+  candidateCount?: AuthoringCandidateCount
   onSaved?: (ref: AuthoringSavedRef) => void
   onBusyChange?: (busy: boolean) => void
   renderPreview?: (artifact: AuthoringArtifact) => ReactNode
@@ -47,12 +53,20 @@ export interface StudioNavigation {
   goBack: () => void
 }
 export function AuthoringEditor(props: AuthoringEditorProps) {
-  return <ScopedEditor key={authoringScopeKey(props)} {...props} />
+  return (
+    <ScopedEditor
+      key={JSON.stringify([authoringScopeKey(props), props.sessionId ?? ''])}
+      {...props}
+    />
+  )
 }
 function ScopedEditor({
   ownerId,
   kind,
   targetId,
+  sessionId,
+  targetName,
+  candidateCount = 8,
   onSaved,
   onBusyChange,
   renderPreview,
@@ -65,7 +79,7 @@ function ScopedEditor({
   const scope = { ownerId, kind, targetId }
   const scopeKey = authoringScopeKey(scope)
   // Navigation never mounts a second operation consumer, poller or save queue.
-  const controller = useAuthoring(scope, { onSaved, onBusyChange })
+  const controller = useAuthoring(scope, { onSaved, onBusyChange }, sessionId)
   const { state, busy } = controller
   const write = useStageSelection('write')
   const defaults = useInitializeDefaultSelections(ownerId)
@@ -79,7 +93,7 @@ function ScopedEditor({
         },
         requestRecommend: ({ context }) => {
           controller.setText(context.purpose)
-          if (write.selected) void controller.quote('recommend', write.selected)
+          if (write.selected) void controller.quote('recommend', write.selected, candidateCount)
         },
         requestRefine: () => {
           if (write.selected) void controller.quote('refine', write.selected)
@@ -91,6 +105,8 @@ function ScopedEditor({
         publish: ({ context }) => controller.save(context.makeDefault),
         retry: () => void controller.retryOperation(),
         fresh: controller.fresh,
+        keepDirect: () => controller.patch(),
+        resetBaseline: () => controller.resetBaseline(),
         cancel: controller.cancel,
       },
     }),
@@ -118,17 +134,45 @@ function ScopedEditor({
   }, [canGoBack, goBack, onNavigationChange])
   useEffect(() => () => onNavigationChange?.(undefined), [onNavigationChange])
   const selected = state.session?.selected
+  const source = state.directSource ?? state.session?.workingSource ?? selected
+  const summarySource = state.session?.savedBaseline ?? source ?? selected
+  const summaryName =
+    summarySource && readableAuthoringProse(summarySource.body)
+      ? Array.from(summarySource.body.trim().replace(/\s+/g, ' '))
+          .slice(0, AUTHORING_NAME_SUMMARY_MAX_CHARS)
+          .join('')
+      : ''
+  const name =
+    targetName ||
+    state.session?.savedBaseline?.name ||
+    source?.name ||
+    selected?.name ||
+    summaryName ||
+    t(`kinds.${kind}`)
+  const named = { kind: t(`kinds.${kind}`), name }
+  const draftInvalid =
+    state.session?.draftState === 'invalid' || state.session?.draftState === 'incomplete'
+  const needsVoiceExample =
+    kind === 'writing-voice' &&
+    !!selected &&
+    !selected.body.trim() &&
+    !state.session?.hasUnpublishedChanges &&
+    !state.sourceDirty
+  const changeSource = (field: 'name' | 'description' | 'body' | 'titleArea', value: string) => {
+    if (source) controller.setSource({ ...source, [field]: value })
+  }
   const failure = state.failure
   const conflict =
     failure?.reason === 'AUTHORING_SAVE_CONFLICT' ||
+    state.session?.failureReason === 'AUTHORING_SAVE_CONFLICT' ||
     failure?.reason === 'AUTHORING_REVISION_CONFLICT'
   const recoveredSave =
     state.session?.phase === 'saving' && !state.session.activeJobId && state.phase === 'active'
-  const canSaveDraft = !!selected?.body.trim()
+  const canSaveDraft = !!selected?.body.trim() && !draftInvalid && !state.sourceDirty
   const characters = Array.from(view === 'purpose' ? flow.context.purpose : state.text).length
   const blocked = busy || !!state.command
-  const hasFailure = !!failure || state.session?.phase === 'failed'
-  const frozenPublication = flow.context.intent === 'save' && !!failure
+  const hasFailure = !!failure || state.session?.phase === 'failed' || conflict
+  const frozenPublication = (flow.context.intent === 'save' || recoveredSave) && hasFailure
   const historyFull = completedAuthoringExchanges(state.session) >= AUTHORING_MAX_EXCHANGES
   const workingStatus =
     state.phase === 'quoting'
@@ -158,7 +202,7 @@ function ScopedEditor({
   const preview = selected && (
     <div className="min-w-0">
       <Typography variant="fieldTitle" as="h3" className="break-words">
-        {selected.name}
+        {selected.name || name}
       </Typography>
       {selected.description && (
         <Typography variant="body" className="text-content-secondary mt-3 break-words">
@@ -218,7 +262,7 @@ function ScopedEditor({
           </Button>
         )}
         <Typography variant="meta" className="text-content-secondary mb-3 block">
-          {t(`kinds.${kind}`)}
+          {t('namedSetting', named)}
         </Typography>
         <Typography
           variant="stepTitle"
@@ -227,7 +271,11 @@ function ScopedEditor({
           id={id + '-title'}
           className="break-words"
         >
-          {view === 'purpose' ? t(`purposeQuestions.${kind}`) : t(`steps.${view}`)}
+          {view === 'purpose'
+            ? t(`purposeQuestions.${kind}`)
+            : view === 'review' && state.session?.savedAvailable
+              ? t('reviewNamed', named)
+              : t(`steps.${view}`)}
         </Typography>
         {view !== 'working' && view !== 'restoring' && view !== 'confirmed' && (
           <Typography variant="body" className="text-content-secondary max-w-measure mt-3">
@@ -240,10 +288,28 @@ function ScopedEditor({
             : view === 'restoring'
               ? t('checking')
               : view === 'confirmed'
-                ? t('saved')
+                ? t(targetId && kind !== 'writing-voice' ? 'confirmedUpdate' : 'confirmedCreate', {
+                    kind: t(`kinds.${kind}`),
+                    name: state.session?.saved?.name || name,
+                  })
                 : ''}
         </Typography>
       </div>
+      {state.session?.savedAvailable && view !== 'confirmed' && (
+        <Typography variant="body" className="text-content-secondary mt-4">
+          {t('savedUsable', named)}
+        </Typography>
+      )}
+      {(state.session?.hasUnpublishedChanges || state.sourceDirty) && (
+        <Typography variant="body" role="status" className="mt-4">
+          {t('unpublished', named)}
+        </Typography>
+      )}
+      {draftInvalid && !needsVoiceExample && (
+        <Notice tone="danger" className="mt-4">
+          {t(selected ? 'invalidSource' : 'invalidSourceNoPreview')}
+        </Notice>
+      )}
       {hasFailure && (
         <Notice tone="danger" role="alert" className="mt-6">
           {conflict ? (
@@ -308,7 +374,7 @@ function ScopedEditor({
           ) : ai === 'ready' ? (
             <Button type="submit" variant="cta" className="mt-8 w-full sm:w-auto">
               <Sparkles aria-hidden="true" className="size-4" />
-              {t('recommend')}
+              {t('recommendCount', { count: candidateCount })}
             </Button>
           ) : null}
         </form>
@@ -319,7 +385,7 @@ function ScopedEditor({
             retry
           ) : (
             <Button variant="cta" onClick={() => event('LOAD_EXISTING')}>
-              {t(selected ? 'loadedDraft' : 'editStart')}
+              {t('reviewNamed', named)}
             </Button>
           )}
         </div>
@@ -327,7 +393,9 @@ function ScopedEditor({
       {view === 'choices' && (
         <div className="mt-8">
           <div
-            aria-label={t('suggestions')}
+            aria-label={t('suggestionsCount', {
+              count: state.session?.candidateCount ?? candidateCount,
+            })}
             className="grid gap-4 @lg:grid-cols-2 @6xl:grid-cols-4"
           >
             {state.session?.candidates.map((candidate) => (
@@ -345,7 +413,7 @@ function ScopedEditor({
             retry
           ) : (
             <Button variant="ghost" className="mt-8" onClick={() => event('RECOMMEND')}>
-              {t('reroll')}
+              {t('rerollCount', { count: candidateCount })}
             </Button>
           )}
         </div>
@@ -360,23 +428,133 @@ function ScopedEditor({
               <Button
                 variant="cta"
                 className="w-full sm:w-auto"
-                onClick={() => event(canSaveDraft ? 'OPEN_PUBLICATION' : 'OPEN_REFINEMENT')}
+                onClick={() =>
+                  event(
+                    canSaveDraft
+                      ? 'OPEN_PUBLICATION'
+                      : draftInvalid && !needsVoiceExample
+                        ? 'OPEN_DIRECT'
+                        : 'OPEN_REFINEMENT',
+                  )
+                }
               >
-                {t(canSaveDraft ? 'continueSave' : 'prepareVoiceExample')}
+                {t(
+                  canSaveDraft
+                    ? 'continueSave'
+                    : draftInvalid && !needsVoiceExample
+                      ? 'fixSource'
+                      : 'prepareVoiceExample',
+                )}
               </Button>
             )}
-            {canSaveDraft && (
-              <Button variant="ghost" onClick={() => event('OPEN_REFINEMENT')}>
-                {t('openRefinement')}
+            <Button variant="ghost" disabled={blocked} onClick={() => event('OPEN_REFINEMENT')}>
+              {t('aiNamed', named)}
+            </Button>
+            <Button variant="ghost" disabled={blocked} onClick={() => event('OPEN_DIRECT')}>
+              {t('directNamed', named)}
+            </Button>
+            {state.session?.hasUnpublishedChanges && (
+              <Button variant="ghost" onClick={() => event('OPEN_DIRECT')}>
+                {t('continueNamed', named)}
               </Button>
             )}
           </div>
         </div>
       )}
-      {view === 'refining' && selected && (
+      {view === 'direct' && source && (
+        <div className="mt-8 grid gap-8 @3xl:grid-cols-2 @3xl:items-start @3xl:gap-12">
+          {preview}
+          <form
+            className="min-w-0 space-y-6"
+            onSubmit={(e) => {
+              e.preventDefault()
+              event('FINISH_DIRECT')
+            }}
+          >
+            <label className="block">
+              <Typography variant="fieldTitle" as="span">
+                {t('fields.name')}
+              </Typography>
+              <TextField
+                value={source.name}
+                onChange={(e) => changeSource('name', e.target.value)}
+                maxLength={200}
+                className="mt-3"
+              />
+            </label>
+            <label className="block">
+              <Typography variant="fieldTitle" as="span">
+                {t('fields.description')}
+              </Typography>
+              <TextField
+                value={source.description}
+                onChange={(e) => changeSource('description', e.target.value)}
+                maxLength={200}
+                className="mt-3"
+              />
+            </label>
+            <label className="block">
+              <Typography variant="fieldTitle" as="span">
+                {t('fields.body')}
+              </Typography>
+              <Textarea
+                value={source.body}
+                onChange={(e) => changeSource('body', e.target.value)}
+                rows={10}
+                autoGrow
+                className="max-h-field mt-3"
+              />
+            </label>
+            {kind === 'post-template' && (
+              <label className="block">
+                <Typography variant="fieldTitle" as="span">
+                  {t('fields.titleArea')}
+                </Typography>
+                <Textarea
+                  value={source.titleArea}
+                  onChange={(e) => changeSource('titleArea', e.target.value)}
+                  rows={3}
+                  autoGrow
+                  className="mt-3"
+                />
+              </label>
+            )}
+            <Typography variant="body" className="text-content-secondary">
+              {t('directHelp')}
+            </Typography>
+            <div className="flex flex-wrap gap-4">
+              <Button variant="cta" type="submit">
+                {t('keepDirect')}
+              </Button>
+              <Button variant="ghost" onClick={() => event('OPEN_REFINEMENT')}>
+                {t('aiNamed', named)}
+              </Button>
+            </div>
+            {state.session?.savedBaseline && (
+              <Button variant="ghost" onClick={() => event('ASK_RESET')}>
+                {t('resetNamed', named)}
+              </Button>
+            )}
+          </form>
+        </div>
+      )}
+      {view === 'refining' && (selected || source) && (
         <div className="mt-8 grid gap-8 @3xl:grid-cols-2 @3xl:items-start @3xl:gap-12">
           {preview}
           <div className="min-w-0">
+            <div className="mb-6 flex flex-wrap gap-4">
+              <Button variant="ghost" onClick={() => event('OPEN_DIRECT')}>
+                {t('directNamed', named)}
+              </Button>
+              <Button variant="ghost" onClick={() => event('FRESH')}>
+                {t('fresh')}
+              </Button>
+              {state.session?.savedBaseline && (
+                <Button variant="ghost" onClick={() => event('ASK_RESET')}>
+                  {t('resetNamed', named)}
+                </Button>
+              )}
+            </div>
             {state.session?.turns.length ? (
               <ol aria-label={t('chat')} className="mb-6 space-y-6">
                 {state.session.turns.map((turn) => (
@@ -399,8 +577,11 @@ function ScopedEditor({
             {historyFull ? (
               <div className="space-y-6">
                 <Typography variant="body">{t('historyFull')}</Typography>
-                <Button variant="cta" onClick={() => event('FINISH_REFINEMENT')}>
-                  {t('finishRefinement')}
+                <Button
+                  variant="cta"
+                  onClick={() => event(selected ? 'FINISH_REFINEMENT' : 'OPEN_DIRECT')}
+                >
+                  {t(selected ? 'finishRefinement' : 'directNamed', named)}
                 </Button>
               </div>
             ) : (
@@ -453,9 +634,9 @@ function ScopedEditor({
                   <Button
                     variant="ghost"
                     disabled={blocked}
-                    onClick={() => event('FINISH_REFINEMENT')}
+                    onClick={() => event(selected ? 'FINISH_REFINEMENT' : 'OPEN_DIRECT')}
                   >
-                    {t('finishRefinement')}
+                    {t(selected ? 'finishRefinement' : 'directNamed', named)}
                   </Button>
                 </div>
               </form>
@@ -466,7 +647,7 @@ function ScopedEditor({
       {view === 'publication' && selected && (
         <div className="max-w-measure mt-8">
           <Typography variant="fieldTitle" as="h3" className="break-words">
-            {selected.name}
+            {selected.name || name}
           </Typography>
           <Typography variant="body" className="text-content-secondary mt-3">
             {t(
@@ -534,17 +715,19 @@ function ScopedEditor({
         <div className="mt-8">
           {state.session?.saved && (
             <Typography variant="fieldTitle" className="break-words">
-              {state.session.saved.name}
+              {state.session.saved.name || name}
             </Typography>
           )}
           <Button variant="cta" className="mt-8" onClick={() => event('FRESH')}>
-            {t('fresh')}
+            {t('continueNamed', named)}
           </Button>
         </div>
       )}
       <Dialog
         open={state.phase === 'confirming' || state.phase === 'starting'}
-        title={t(state.command?.mode === 'refine' ? 'confirmRefine' : 'confirmRecommend')}
+        title={t(state.command?.mode === 'refine' ? 'confirmRefine' : 'confirmRecommendCount', {
+          count: state.command?.candidateCount ?? candidateCount,
+        })}
         onClose={state.phase === 'starting' ? () => {} : controller.dismissQuote}
         confirmLabel={t('confirm')}
         cancelLabel={t('back')}
@@ -554,6 +737,16 @@ function ScopedEditor({
         <Typography variant="body">
           {state.estimate?.free ? t('free') : t('quote', { credits: state.estimate?.credits ?? 0 })}
         </Typography>
+      </Dialog>
+      <Dialog
+        open={flow.context.resetOpen}
+        title={t('resetNamed', named)}
+        onClose={() => event('DISMISS_RESET')}
+        confirmLabel={t('discard')}
+        cancelLabel={t('back')}
+        onConfirm={() => event('CONFIRM_RESET')}
+      >
+        <Typography variant="body">{t('resetWarning', named)}</Typography>
       </Dialog>
       <Dialog
         open={flow.matches({ working: 'confirmingCancellation' })}

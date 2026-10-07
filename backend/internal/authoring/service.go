@@ -72,9 +72,14 @@ func (s *Service) Create(ctx context.Context, owner string, kind Kind, targetID,
 		return Session{}, e
 	}
 	now := s.now().UTC()
-	state := Session{ID: newID(), UserID: owner, Kind: kind, Phase: "choosing", TargetID: targetID, TargetVersion: seed.TargetVersion, Selected: seed.Artifact, ForkVoice: seed.ForkVoice, SourceContext: seed.SourceContext, Candidates: []Artifact{}, Turns: []Turn{}, CreatedAt: now, UpdatedAt: now}
+	state := Session{ID: newID(), UserID: owner, Kind: kind, Phase: "choosing", TargetID: targetID, TargetVersion: seed.TargetVersion, Selected: seed.Artifact, SavedBaseline: seed.Artifact, WorkingSource: seed.Artifact, SavedAvailable: targetID != "", DraftState: DraftValid, RequestedCandidateCount: CandidateCount, ForkVoice: seed.ForkVoice, SourceContext: seed.SourceContext, Candidates: []Artifact{}, Turns: []Turn{}, CreatedAt: now, UpdatedAt: now}
 	if seed.Artifact != nil {
 		state.Phase = "editing"
+		if strings.TrimSpace(seed.Artifact.Body) == "" {
+			state.DraftState = DraftIncomplete
+		} else if s.targets.Validate(kind, *seed.Artifact) != nil {
+			state.DraftState = DraftInvalid
+		}
 	}
 	return s.store.Create(ctx, state, requestID)
 }
@@ -175,6 +180,13 @@ func (s *Service) Estimate(ctx context.Context, kind Kind, mode Mode, ref llm.Mo
 	return s.EstimateFor(ctx, "", kind, mode, ref, "")
 }
 func (s *Service) EstimateFor(ctx context.Context, owner string, kind Kind, mode Mode, ref llm.ModelRef, sessionID string) (Estimate, error) {
+	return s.EstimateCount(ctx, owner, kind, mode, ref, sessionID, 0)
+}
+func (s *Service) EstimateCount(ctx context.Context, owner string, kind Kind, mode Mode, ref llm.ModelRef, sessionID string, count int) (Estimate, error) {
+	count, e := NormalizeCandidateCount(count)
+	if e != nil {
+		return Estimate{}, e
+	}
 	if !kind.Valid() {
 		return Estimate{}, ErrInvalidKind
 	}
@@ -185,7 +197,7 @@ func (s *Service) EstimateFor(ctx context.Context, owner string, kind Kind, mode
 	if e != nil {
 		return Estimate{}, e
 	}
-	in := operationInput{Kind: kind, Mode: mode, Guide: s.targets.Guide(kind)}
+	in := operationInput{Kind: kind, Mode: mode, CandidateCount: count, Guide: s.targets.Guide(kind)}
 	chars := 0
 	if sessionID != "" {
 		state, e := s.Get(ctx, owner, sessionID)
@@ -197,8 +209,8 @@ func (s *Service) EstimateFor(ctx context.Context, owner string, kind Kind, mode
 		}
 		in.Purpose = state.Purpose
 		in.SourceContext = state.SourceContext
-		if state.Selected != nil {
-			a := artifactToWire(*state.Selected)
+		if current := currentSource(state); current != nil {
+			a := artifactToWire(*current)
 			in.Selected = &a
 			chars = utf8.RuneCountInString(a.Name + a.Description + a.Body + a.TitleArea)
 		}
@@ -223,7 +235,12 @@ func (s *Service) Start(ctx context.Context, owner string, in Start) (string, Se
 	if !in.Mode.Valid() || !requestKey(in.RequestID) || utf8.RuneCountInString(in.Prompt) > MaxPromptChars || (in.Mode == Refine && strings.TrimSpace(in.Prompt) == "") {
 		return "", Session{}, ErrInvalid
 	}
-	hash := sha256.Sum256([]byte(fmt.Sprintf("%d\x00%s\x00%s\x00%s", in.ExpectedRevision, in.Mode, in.Prompt, in.WriteModel.String())))
+	count, e := NormalizeCandidateCount(in.RequestedCandidateCount)
+	if e != nil {
+		return "", Session{}, e
+	}
+	in.RequestedCandidateCount = count
+	hash := sha256.Sum256([]byte(fmt.Sprintf("%d\x00%s\x00%s\x00%s\x00%d", in.ExpectedRevision, in.Mode, in.Prompt, in.WriteModel.String(), count)))
 	fingerprint := hex.EncodeToString(hash[:])
 	prior, e := s.store.Operation(ctx, owner, in.SessionID, in.RequestID)
 	if e == nil {
@@ -256,7 +273,7 @@ func (s *Service) Start(ctx context.Context, owner string, in Start) (string, Se
 		return "", state, ErrBusy
 	}
 	if in.Mode == Refine {
-		if state.Selected == nil {
+		if currentSource(state) == nil {
 			return "", state, ErrNoSelection
 		}
 		done := 0
@@ -365,6 +382,9 @@ func (s *Service) Save(ctx context.Context, owner, id string, revision uint32, m
 	if state.Selected == nil {
 		return state, ErrNoSelection
 	}
+	if state.Phase != "saving" && state.DraftState != DraftValid {
+		return state, ErrDraftInvalid
+	}
 	if state.Phase != "saving" {
 		if e = s.targets.Validate(state.Kind, *state.Selected); e != nil {
 			return state, fmt.Errorf("%w: %w", ErrOutput, e)
@@ -376,10 +396,14 @@ func (s *Service) Save(ctx context.Context, owner, id string, revision uint32, m
 	}
 	ref, e := s.targets.Publish(ctx, p)
 	if e != nil {
+		s.publicationFailure(ctx, owner, id, e)
+		if errors.Is(e, ErrNotFound) {
+			return state, ErrTargetConflict
+		}
 		return state, e
 	}
 	if ref.Kind != state.Kind || ref.ID == "" {
 		return state, ErrPublication
 	}
-	return s.store.FinalizeSave(ctx, owner, id, p.Key, ref)
+	return s.finalizePublication(ctx, owner, id, p, ref)
 }

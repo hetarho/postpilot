@@ -1,11 +1,16 @@
 import { create } from '@bufbuild/protobuf'
 import { describe, expect, it } from 'vitest'
-import { ConfigurationAuthoringService as Service, ProtoConfigurationKind } from '@/shared/api'
+import {
+  ConfigurationAuthoringService as Service,
+  ProtoConfigurationKind,
+  ProtoAuthoringDraftState,
+} from '@/shared/api'
 import { AUTHORING_KINDS, type AuthoringScope } from '../model/types'
 import {
   authoringKindFromProto,
   authoringKindToProto,
   mapAuthoringEstimate,
+  authoringDraftStateFromProto,
   mapAuthoringSession,
   type WireSession,
 } from './mappers'
@@ -83,4 +88,121 @@ describe('strict authoring boundary', () => {
     for (const credits of [undefined, -1n, BigInt(Number.MAX_SAFE_INTEGER) + 1n])
       expect(() => mapAuthoringEstimate({ free: false, credits })).toThrow()
   })
+})
+
+it.each([2, 4, 8, 16])(
+  'requires every explicitly requested %d candidate and retains bounded invalid manual source',
+  (count) => {
+    const candidates = Array.from({ length: count }, (_, i) => ({
+      id: `c-${i}`,
+      revision: 3,
+      name: `n${i}`,
+      description: '',
+      body: `body${i}`,
+      titleArea: '',
+    }))
+    const result = wire({
+      candidateCount: count,
+      candidates: candidates as WireSession['candidates'],
+    })
+    expect(mapAuthoringSession(result, scope).candidates).toHaveLength(count)
+    result.candidates.pop()
+    expect(() => mapAuthoringSession(result, scope)).toThrow()
+    const retained = wire({
+      phase: 'editing',
+      workingSource: {
+        id: 'draft',
+        name: 'unfinished',
+        body: '',
+        titleArea: '',
+        description: '',
+        revision: 4,
+      } as WireSession['workingSource'],
+      draftState: ProtoAuthoringDraftState.INCOMPLETE,
+      selected: {
+        id: 'draft',
+        name: 'last-valid',
+        body: 'old body',
+        titleArea: '',
+        description: '',
+        revision: 2,
+      } as WireSession['selected'],
+    })
+    const mapped = mapAuthoringSession(retained, scope)
+    expect(mapped.draftState).toBe('incomplete')
+    expect(mapped.workingSource?.body).toBe('')
+    expect(mapped.selected?.body).toBe('old body')
+  },
+)
+it('pins every wire draft state and rejects an unknown value', () => {
+  for (const value of Object.values(ProtoAuthoringDraftState).filter((v) => typeof v === 'number'))
+    expect(() => authoringDraftStateFromProto(value)).not.toThrow()
+  expect(() => authoringDraftStateFromProto(999 as ProtoAuthoringDraftState)).toThrow()
+})
+
+it('retains a valid untitled saved guideline instead of turning the read into a missing draft', () => {
+  const selected = {
+    id: 'owned',
+    name: '',
+    description: '',
+    body: 'Readable saved direction',
+    titleArea: '',
+    revision: 1,
+  }
+  const incoming = wire({
+    kind: ProtoConfigurationKind.POST_GUIDELINE,
+    phase: 'editing',
+    savedAvailable: true,
+    selected: selected as WireSession['selected'],
+  })
+  expect(mapAuthoringSession(incoming, { ...scope, kind: 'post-guideline' }).selected?.name).toBe(
+    '',
+  )
+})
+
+it('keeps a captured personal voice readable while it has no synthetic example yet', () => {
+  const selected = {
+    id: 'personal',
+    name: '내 말투',
+    description: '저장한 문장 특징',
+    body: '',
+    titleArea: '',
+    revision: 0,
+  }
+  const incoming = wire({
+    kind: ProtoConfigurationKind.WRITING_VOICE,
+    phase: 'editing',
+    targetId: 'personal',
+    savedAvailable: true,
+    draftState: ProtoAuthoringDraftState.INCOMPLETE,
+    selected: selected as WireSession['selected'],
+    savedBaseline: selected as WireSession['savedBaseline'],
+  })
+  const mapped = mapAuthoringSession(incoming, {
+    ownerId: 'alice',
+    kind: 'writing-voice',
+    targetId: 'personal',
+  })
+  expect(mapped.selected?.body).toBe('')
+  expect(mapped.draftState).toBe('incomplete')
+  expect(mapped.savedAvailable).toBe(true)
+})
+
+it('does not turn a known deleted-target conflict back into saved availability', () => {
+  const selected = {
+    id: 'owned',
+    name: 'saved',
+    description: '',
+    body: 'saved body',
+    titleArea: '',
+    revision: 1,
+  }
+  const incoming = wire({
+    phase: 'saving',
+    savedAvailable: false,
+    failureReason: 'AUTHORING_SAVE_CONFLICT',
+    selected: selected as WireSession['selected'],
+    savedBaseline: selected as WireSession['savedBaseline'],
+  })
+  expect(mapAuthoringSession(incoming, scope).savedAvailable).toBe(false)
 })

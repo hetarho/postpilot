@@ -2,7 +2,34 @@ import type { I18nFragment } from '@/shared/lib'
 export const i18n = {
   namespace: 'authoring',
   ko: {
+    namedSetting: '{{kind}} · {{name}}',
+    reviewNamed: '“{{name}}” {{kind}} 확인하기',
+    aiNamed: '“{{name}}” AI로 편집하기',
+    directNamed: '“{{name}}” 직접 편집하기',
+    continueNamed: '“{{name}}” 이어서 편집하기',
+    resetNamed: '저장한 “{{name}}”으로 되돌리기',
+    resetWarning:
+      '저장하지 않은 편집 내용을 버리고 “{{name}}” {{kind}}의 저장 내용으로 돌아가요. 대화도 지워져요.',
+    discard: '변경사항 버리기',
+    savedUsable: '저장한 “{{name}}” {{kind}}은 지금 사용할 수 있어요.',
+    unpublished: '“{{name}}”의 편집 내용은 아직 저장하지 않았어요.',
+    invalidSourceNoPreview:
+      '미완성 입력을 보관했어요. 직접 편집하거나 AI와 함께 완성한 뒤 저장해 주세요.',
+    invalidSource:
+      '미완성 또는 올바르지 않은 입력을 보관했어요. 마지막 유효한 미리보기를 보여 드려요. 저장하려면 입력을 수정해 주세요.',
+    directHelp:
+      '입력 내용을 보관해 다른 편집 방법으로 이어갈 수 있어요. 설정에 적용하려면 결과를 확인한 뒤 저장해 주세요.',
+    keepDirect: '편집 내용 보관하고 확인하기',
+    fixSource: '입력 수정하기',
+    fields: { name: '이름', description: '설명', body: '내용', titleArea: '제목 영역' },
+    confirmedCreate: '“{{name}}” {{kind}}을 새로 저장했어요.',
+    confirmedUpdate: '“{{name}}” {{kind}}의 변경사항을 저장했어요.',
+    confirmRecommendCount: '{{count}}가지 제안을 준비할까요?',
+    recommendCount: '{{count}}가지 추천받기',
+    rerollCount: '다른 {{count}}가지 추천받기',
+    suggestionsCount: '{{count}}가지 제안',
     steps: {
+      direct: '직접 내용을 편집해 주세요',
       restoring: '준비한 내용을 확인할게요',
       purpose: '원하는 방향을 알려 주세요',
       existing: '저장한 설정으로 시작해 볼까요?',
@@ -18,6 +45,7 @@ export const i18n = {
       existing: '현재 설정을 초안으로 불러와요. 저장하기 전에는 설정이 바뀌지 않아요.',
       choices: '각 제안을 눌러 결과를 확인할 수 있어요. 아직 설정으로 저장되지는 않아요.',
       review: '마음에 들면 이대로 저장하고, 바꾸고 싶은 점이 있으면 조금 다듬어 보세요.',
+      direct: 'AI 편집과 같은 작업 내용을 편집해요. 미완성 입력도 보관할 수 있어요.',
       refining: '결과를 보면서 원하는 점을 이야기해 주세요. 다듬기는 선택이에요.',
       publication: '아래 내용을 저장하면 다음 작업부터 사용할 수 있어요.',
     },
@@ -179,7 +207,34 @@ export const i18n = {
     previewUnavailable: '읽을 수 있는 초안을 준비하지 못했어요. 이전 제안으로 다시 준비해 주세요.',
   },
   en: {
+    namedSetting: '{{kind}} · {{name}}',
+    reviewNamed: 'Review “{{name}}” {{kind}}',
+    aiNamed: 'Edit “{{name}}” with AI',
+    directNamed: 'Edit “{{name}}” directly',
+    continueNamed: 'Continue editing “{{name}}”',
+    resetNamed: 'Reset to saved “{{name}}”',
+    resetWarning:
+      'Discard unpublished edits and return to the saved “{{name}}” {{kind}}. The conversation will also be cleared.',
+    discard: 'Discard changes',
+    savedUsable: 'Your saved “{{name}}” {{kind}} is available to use.',
+    unpublished: 'Your edits to “{{name}}” have not been published.',
+    invalidSourceNoPreview:
+      'Your unfinished input is retained. Complete it directly or with AI before saving.',
+    invalidSource:
+      'Your incomplete or invalid input is retained. The preview shows the last valid version. Fix the input before saving.',
+    directHelp:
+      'Keep this input to continue with another editing method. Review and save explicitly to apply it to your setting.',
+    keepDirect: 'Keep edits and review',
+    fixSource: 'Fix the input',
+    fields: { name: 'Name', description: 'Description', body: 'Content', titleArea: 'Title area' },
+    confirmedCreate: 'Created “{{name}}” {{kind}}.',
+    confirmedUpdate: 'Saved changes to “{{name}}” {{kind}}.',
+    confirmRecommendCount: 'Prepare {{count}} suggestions?',
+    recommendCount: 'Get {{count}} suggestions',
+    rerollCount: 'Get {{count}} different suggestions',
+    suggestionsCount: '{{count}} suggestions',
     steps: {
+      direct: 'Edit the content directly',
       restoring: 'Checking your draft',
       purpose: 'Tell us what you have in mind',
       existing: 'Start with your saved setting?',
@@ -195,6 +250,8 @@ export const i18n = {
       existing: 'Bring your current setting into a draft. Your setting changes only when you save.',
       choices: 'Choose a suggestion to review it. This does not save a setting yet.',
       review: 'Save it as it is, or refine anything you would like to change.',
+      direct:
+        'Edit the same working content used by AI editing. Incomplete input can also be retained.',
       refining: 'Describe a change while reviewing the result. Refinement is optional.',
       publication: 'Save the setting below to use it in your next creation.',
     },

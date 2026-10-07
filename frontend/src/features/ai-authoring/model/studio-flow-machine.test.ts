@@ -20,7 +20,7 @@ function session(patch: Partial<AuthoringSession> = {}): AuthoringSession {
     targetId: '',
     targetVersion: '',
     revision: 1,
-    phase: 'choosing',
+    phase: patch.selected ? 'editing' : 'choosing',
     candidates,
     turns: [],
     activeJobId: '',

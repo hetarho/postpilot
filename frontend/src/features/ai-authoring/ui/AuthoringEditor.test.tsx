@@ -16,6 +16,7 @@ import {
   ConfigurationAuthoringService as Service,
   GenerationService,
   ProtoConfigurationKind,
+  ProtoAuthoringDraftState,
   Stage,
 } from '@/shared/api'
 import { createTestQueryClient, withProviders } from '@/test/session'
@@ -57,13 +58,15 @@ function server(
     expectedRevision: number
     prompt: string
     model: string
+    candidateCount: number
   }> = []
   const estimates: Array<{ sessionId: string; model: string }> = []
   const defaults: boolean[] = []
   const accepted = new Map<string, Wire>()
+  let requestedCount = 8
   let uncertain = true
   let publicationUnknown = true
-  const candidates = Array.from({ length: 8 }, (_, i) => ({
+  const candidates = Array.from({ length: 16 }, (_, i) => ({
     id: `candidate-${i}`,
     name: `제안 ${i + 1}`,
     description: '과장 없이 편하게 설명해요',
@@ -78,7 +81,8 @@ function server(
         revision: current.revision + 1,
         phase: 'choosing',
         activeJobId: '',
-        candidates,
+        candidateCount: requestedCount,
+        candidates: candidates.slice(0, requestedCount),
       })
     else
       current = makeSession({
@@ -149,12 +153,14 @@ function server(
         expectedRevision: request.expectedRevision,
         prompt: request.prompt,
         model: request.writeModel?.modelId ?? '',
+        candidateCount: request.candidateCount,
       })
       if (options.uncertainStart && uncertain) {
         uncertain = false
         throw new ConnectError('unknown delivery', Code.Unavailable)
       }
       if (!accepted.has(request.requestId)) {
+        if (request.mode === 1) requestedCount = request.candidateCount || 8
         current = makeSession({
           ...current!,
           revision: current!.revision + 1,
@@ -178,6 +184,50 @@ function server(
         selected: candidates.find((candidate) => candidate.id === request.candidateId),
       })
       return create(Service.method.selectAuthoringCandidate.output, { session: current })
+    })
+    rpc(Service.method.patchAuthoringDraft, (request) => {
+      calls.push('Patch')
+      const source = request.workingSource!
+      const valid = source.body.trim() !== '' && source.body !== '<invalid'
+      current = makeSession({
+        ...current!,
+        revision: current!.revision + 1,
+        phase: 'editing',
+        workingSource: { ...source, id: current!.selected?.id ?? 'manual' },
+        draftState: valid
+          ? ProtoAuthoringDraftState.VALID
+          : source.body.trim()
+            ? ProtoAuthoringDraftState.INVALID
+            : ProtoAuthoringDraftState.INCOMPLETE,
+        hasUnpublishedChanges: true,
+        selected: valid ? { ...source, id: current!.selected?.id ?? 'manual' } : current!.selected,
+      })
+      return create(Service.method.patchAuthoringDraft.output, { session: current })
+    })
+    rpc(Service.method.resetAuthoringChat, () => {
+      calls.push('ResetChat')
+      current = makeSession({
+        ...current!,
+        revision: current!.revision + 1,
+        phase: 'editing',
+        turns: [],
+        pendingRequest: '',
+      })
+      return create(Service.method.resetAuthoringChat.output, { session: current })
+    })
+    rpc(Service.method.resetAuthoringBaseline, () => {
+      calls.push('ResetBaseline')
+      current = makeSession({
+        ...current!,
+        revision: current!.revision + 1,
+        phase: 'editing',
+        workingSource: current!.savedBaseline,
+        selected: current!.savedBaseline,
+        draftState: ProtoAuthoringDraftState.VALID,
+        hasUnpublishedChanges: false,
+        turns: [],
+      })
+      return create(Service.method.resetAuthoringBaseline.output, { session: current })
     })
     rpc(Service.method.cancelAuthoringOperation, () => {
       calls.push('Cancel')
@@ -268,7 +318,11 @@ function mount(fake: ReturnType<typeof server>, props: Partial<AuthoringEditorPr
   }
 }
 beforeEach(() => initializeI18n('ko'))
+const initialViewport = window.innerWidth
+
 afterEach(() => {
+  Object.defineProperty(window, 'innerWidth', { configurable: true, value: initialViewport })
+  delete document.documentElement.dataset.theme
   cleanup()
   initializeI18n('ko')
 })
@@ -320,7 +374,7 @@ describe('conversational authoring', () => {
     const fake = server({ initial: makeSession({ phase: 'editing', selected }) })
     mount(fake)
     const user = userEvent.setup()
-    await user.click(await screen.findByRole('button', { name: '조금 다듬기' }))
+    await user.click(await screen.findByRole('button', { name: /AI로 편집하기$/ }))
     await user.type(
       await screen.findByRole('textbox', { name: '어떤 점을 바꿔 볼까요?' }),
       '조금 더 짧게 해 줘',
@@ -367,7 +421,7 @@ describe('conversational authoring', () => {
     })
     const { saved } = mount(fake)
     const user = userEvent.setup()
-    await user.click(await screen.findByRole('button', { name: '조금 다듬기' }))
+    await user.click(await screen.findByRole('button', { name: /AI로 편집하기$/ }))
     await user.type(
       await screen.findByRole('textbox', { name: '어떤 점을 바꿔 볼까요?' }),
       '입력한 요청도 남아 있어요',
@@ -377,7 +431,7 @@ describe('conversational authoring', () => {
     await user.click(screen.getByRole('button', { name: '이걸로 저장하기' }))
     expect(await screen.findByText(/설정이 다른 곳에서 바뀌었어요/)).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: '돌아가기' }))
-    await user.click(screen.getByRole('button', { name: '조금 다듬기' }))
+    await user.click(screen.getByRole('button', { name: /AI로 편집하기$/ }))
     expect(screen.getByRole('textbox', { name: '어떤 점을 바꿔 볼까요?' })).toHaveValue(
       '입력한 요청도 남아 있어요',
     )
@@ -524,7 +578,7 @@ describe('conversational authoring', () => {
     expect(fake.calls.filter((call) => call === 'Save')).toHaveLength(1)
     cleanup()
     const reopened = mount(fake)
-    await screen.findByText('저장했어요. 다음 작업부터 사용할 수 있어요.')
+    await screen.findByText(/새로 저장했어요/)
     expect(reopened.saved).not.toHaveBeenCalled()
   })
   it('preserves the purpose when going back from eight suggestions without another request', async () => {
@@ -556,7 +610,7 @@ describe('conversational authoring', () => {
     const user = userEvent.setup()
     await screen.findByRole('button', { name: '저장할 내용 확인하기' })
     expect(screen.queryByRole('textbox')).toBeNull()
-    await user.click(screen.getByRole('button', { name: '조금 다듬기' }))
+    await user.click(screen.getByRole('button', { name: /AI로 편집하기$/ }))
     const send = screen.getByRole('button', { name: '다듬어 주세요' })
     expect(send).toBeEnabled()
     await user.click(send)
@@ -570,7 +624,7 @@ describe('conversational authoring', () => {
     await user.click(screen.getByRole('button', { name: '결과 확인으로 돌아가기' }))
     await publication(user)
     await user.click(screen.getByRole('button', { name: '돌아가기' }))
-    await user.click(screen.getByRole('button', { name: '조금 다듬기' }))
+    await user.click(screen.getByRole('button', { name: /AI로 편집하기$/ }))
     expect(screen.getByRole('textbox', { name: '어떤 점을 바꿔 볼까요?' })).toHaveValue(
       '아직 보내지 않은 요청이에요',
     )
@@ -597,12 +651,12 @@ describe('conversational authoring', () => {
     const fake = server()
     mount(fake, { targetId: 'owned-guide' })
     const user = userEvent.setup()
-    await screen.findByRole('button', { name: '수정 초안 불러오기' })
+    await screen.findByRole('button', { name: /작문 지침 확인하기$/ })
     expect(fake.calls).toEqual(['GetLatest'])
-    await user.click(screen.getByRole('button', { name: '수정 초안 불러오기' }))
+    await user.click(screen.getByRole('button', { name: /작문 지침 확인하기$/ }))
     expect(await screen.findByText('현재 지침을 초안으로 불러왔어요.')).toBeInTheDocument()
     expect(screen.queryByRole('textbox')).toBeNull()
-    await user.click(screen.getByRole('button', { name: '조금 다듬기' }))
+    await user.click(screen.getByRole('button', { name: /AI로 편집하기$/ }))
     expect(screen.getByRole('textbox', { name: '어떤 점을 바꿔 볼까요?' })).toBeEnabled()
     expect(fake.calls.filter((call) => call === 'Create')).toHaveLength(1)
     expect(fake.calls).not.toContain('Estimate')
@@ -650,7 +704,7 @@ describe('conversational authoring', () => {
     await waitFor(() =>
       expect(screen.getByRole('heading', { name: '선택한 결과를 확인해 주세요' })).toHaveFocus(),
     )
-    await user.click(screen.getByRole('button', { name: '조금 다듬기' }))
+    await user.click(screen.getByRole('button', { name: /AI로 편집하기$/ }))
     const port = navigation.mock.calls.at(-1)![0]!
     expect(port.canGoBack).toBe(true)
     await act(async () => port.goBack())
@@ -674,7 +728,7 @@ describe('conversational authoring', () => {
     })
     mount(fake)
     const user = userEvent.setup()
-    await user.click(await screen.findByRole('button', { name: '조금 다듬기' }))
+    await user.click(await screen.findByRole('button', { name: /AI로 편집하기$/ }))
     expect(screen.getByText(/이 대화에서 스무 번을 다듬었어요/)).toBeInTheDocument()
     expect(screen.queryByRole('textbox')).toBeNull()
     expect(screen.queryByRole('button', { name: '다듬어 주세요' })).toBeNull()
@@ -683,4 +737,246 @@ describe('conversational authoring', () => {
     expect(fake.calls).not.toContain('Estimate')
     expect(fake.calls).not.toContain('Start')
   })
+})
+
+describe('one named AI and direct working draft', () => {
+  it.each(['day', 'night'])(
+    'keeps invalid direct source, changes methods without spending, and separates chat reset from discard (%s)',
+    async (theme) => {
+      document.documentElement.dataset.theme = theme
+      const baseline = {
+        id: 'draft',
+        name: '동네 산책 지침',
+        description: '담백한 글',
+        body: '저장한 지침 내용',
+        titleArea: '',
+      }
+      const fake = server({
+        initial: makeSession({
+          phase: 'editing',
+          targetId: 'owned-guide',
+          targetVersion: 'captured',
+          savedAvailable: true,
+          savedBaseline: baseline,
+          workingSource: baseline,
+          selected: baseline,
+          turns: [{ id: 'turn', request: '이전 요청', reply: '이전 답변', status: 'done' }],
+        }),
+      })
+      const view = mount(fake, { targetId: 'owned-guide' })
+      const user = userEvent.setup()
+      await user.click(
+        await screen.findByRole('button', { name: '“동네 산책 지침” 직접 편집하기' }),
+      )
+      expect(screen.getByRole('heading', { name: '직접 내용을 편집해 주세요' })).toBeInTheDocument()
+      fireEvent.change(screen.getByRole('textbox', { name: '내용' }), {
+        target: { value: '<invalid' },
+      })
+      await user.click(screen.getByRole('button', { name: '“동네 산책 지침” AI로 편집하기' }))
+      await screen.findByRole('heading', { name: '어떤 점을 바꿔 볼까요?' })
+      expect(fake.current?.workingSource?.body).toBe('<invalid')
+      expect(fake.current?.selected?.body).toBe(baseline.body)
+      expect(screen.getByText(/미완성 또는 올바르지 않은 입력을 보관했어요/)).toBeInTheDocument()
+      await user.click(screen.getByRole('button', { name: '새 대화 시작하기' }))
+      await waitFor(() => expect(fake.calls).toContain('ResetChat'))
+      expect(fake.current?.workingSource?.body).toBe('<invalid')
+      expect(fake.current?.turns).toHaveLength(0)
+      expect(fake.calls).not.toContain('ResetBaseline')
+      // Reopen under another viewport: durable source survives and no request is reissued.
+      view.unmount()
+      Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1440 })
+      mount(fake, { targetId: 'owned-guide' })
+      await user.click(
+        await screen.findByRole('button', { name: '“동네 산책 지침” 직접 편집하기' }),
+      )
+      expect(screen.getByRole('textbox', { name: '내용' })).toHaveValue('<invalid')
+      await user.click(screen.getByRole('button', { name: '저장한 “동네 산책 지침”으로 되돌리기' }))
+      const dialog = await screen.findByRole('dialog')
+      expect(within(dialog).getByText(/저장하지 않은 편집 내용을 버리고/)).toBeInTheDocument()
+      expect(fake.calls).not.toContain('ResetBaseline')
+      await user.click(within(dialog).getByRole('button', { name: '변경사항 버리기' }))
+      await waitFor(() => expect(fake.current?.workingSource?.body).toBe(baseline.body))
+      expect(fake.calls.filter((call) => ['Start', 'Estimate', 'Save'].includes(call))).toEqual([])
+      delete document.documentElement.dataset.theme
+    },
+  )
+})
+
+it.each([2, 4, 16] as const)(
+  'quotes and explicitly requests exactly %d unsaved candidates with truthful count copy',
+  async (count) => {
+    const fake = server()
+    mount(fake, { candidateCount: count })
+    const user = userEvent.setup()
+    await user.click(await screen.findByRole('button', { name: `${count}가지 추천받기` }))
+    const dialog = await screen.findByRole('dialog')
+    expect(
+      within(dialog).getByRole('heading', { name: `${count}가지 제안을 준비할까요?` }),
+    ).toBeInTheDocument()
+    expect(fake.starts).toHaveLength(0)
+    await user.click(within(dialog).getByRole('button', { name: '이대로 요청하기' }))
+    await screen.findByRole('button', { name: `제안 ${count}` })
+    expect(fake.current?.candidates).toHaveLength(count)
+    expect(fake.starts).toHaveLength(1)
+    expect(fake.starts[0].candidateCount).toBe(count)
+    expect(fake.calls).not.toContain('Save')
+  },
+)
+it('opens an untitled saved guideline with its readable content identity and confirms its named update', async () => {
+  const baseline = {
+    id: 'draft',
+    name: '',
+    body: '짧고 읽기 쉬운 문장으로 써 주세요.',
+    description: '',
+    titleArea: '',
+  }
+  const fake = server({
+    initial: makeSession({
+      phase: 'editing',
+      targetId: 'owned-guide',
+      selected: baseline,
+      workingSource: baseline,
+      savedBaseline: baseline,
+      savedAvailable: true,
+    }),
+  })
+  mount(fake, { targetId: 'owned-guide' })
+  const user = userEvent.setup()
+  expect(
+    await screen.findByRole('button', {
+      name: '“짧고 읽기 쉬운 문장으로 써 주세요.” 직접 편집하기',
+    }),
+  ).toBeInTheDocument()
+  await publication(user)
+  await user.click(screen.getByRole('button', { name: '변경사항 적용하기' }))
+  expect(
+    await screen.findByText(
+      '“짧고 읽기 쉬운 문장으로 써 주세요.” 작문 지침의 변경사항을 저장했어요.',
+    ),
+  ).toBeInTheDocument()
+  expect(fake.starts).toHaveLength(0)
+})
+
+it('reviews a personal voice without a synthetic example and offers AI preparation without starting work', async () => {
+  const baseline = {
+    id: 'personal',
+    name: '내 말투',
+    description: '저장한 문장 특징',
+    body: '',
+    titleArea: '',
+  }
+  const fake = server({
+    initial: makeSession({
+      kind: ProtoConfigurationKind.WRITING_VOICE,
+      phase: 'editing',
+      targetId: 'personal',
+      selected: baseline,
+      workingSource: baseline,
+      savedBaseline: baseline,
+      savedAvailable: true,
+      draftState: ProtoAuthoringDraftState.INCOMPLETE,
+    }),
+  })
+  mount(fake, { kind: 'writing-voice', targetId: 'personal' })
+  const user = userEvent.setup()
+  await user.click(await screen.findByRole('button', { name: '말투 예문 만들어 보기' }))
+  expect(screen.getByRole('heading', { name: '어떤 점을 바꿔 볼까요?' })).toBeInTheDocument()
+  expect(screen.getByText('저장한 문장 특징')).toBeInTheDocument()
+  expect(fake.starts).toHaveLength(0)
+  expect(fake.calls).not.toContain('Save')
+})
+
+it('recovers the explicitly chosen new creation without loading the latest conversation or starting paid work', async () => {
+  const fake = server({
+    initial: makeSession({
+      id: 'chosen-creation',
+      phase: 'editing',
+      selected: { id: 'draft', name: '이어 쓸 지침', body: '이전에 준비한 지침이에요.' },
+    }),
+  })
+  mount(fake, { sessionId: 'chosen-creation' })
+  expect(await screen.findByText('이전에 준비한 지침이에요.')).toBeInTheDocument()
+  expect(fake.calls).toContain('Get')
+  expect(fake.calls).not.toContain('GetLatest')
+  expect(fake.starts).toHaveLength(0)
+  expect(fake.calls).not.toContain('Create')
+  expect(fake.calls).not.toContain('Save')
+})
+
+it('keeps an eight-entry preview while preparing two new choices and opens the completed new choices without publishing', async () => {
+  const candidates = Array.from({ length: 8 }, (_, i) => ({
+    id: `old-${i}`,
+    name: `이전 ${i + 1}`,
+    description: '이전 방향',
+    body: `이전 내용 ${i + 1}`,
+    titleArea: '',
+  }))
+  const fake = server({
+    initial: makeSession({
+      phase: 'choosing',
+      candidateCount: 8,
+      candidates,
+      selected: candidates[0],
+    }),
+  })
+  mount(fake, { candidateCount: 2 })
+  const user = userEvent.setup()
+  await user.click(await screen.findByRole('button', { name: '다른 2가지 추천받기' }))
+  const dialog = await screen.findByRole('dialog')
+  await user.click(within(dialog).getByRole('button', { name: '이대로 요청하기' }))
+  expect(await screen.findByRole('button', { name: '제안 2' })).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: '제안 3' })).toBeNull()
+  expect(fake.current?.candidates).toHaveLength(2)
+  expect(fake.current?.selected?.body).toBe('이전 내용 1')
+  expect(fake.calls).not.toContain('Save')
+})
+
+it('restores a persisted target conflict as a conflict instead of presenting an ordinary uncertain save', async () => {
+  const baseline = {
+    id: 'draft',
+    name: '저장 지침',
+    description: '',
+    body: '유지할 지침',
+    titleArea: '',
+  }
+  const fake = server({
+    initial: makeSession({
+      phase: 'saving',
+      targetId: 'owned-guide',
+      failureReason: 'AUTHORING_SAVE_CONFLICT',
+      savedAvailable: true,
+      savedBaseline: baseline,
+      workingSource: baseline,
+      selected: baseline,
+    }),
+  })
+  mount(fake, { targetId: 'owned-guide' })
+  expect(await screen.findByRole('alert')).toHaveTextContent('설정이 다른 곳에서 바뀌었어요')
+  expect(screen.getByRole('button', { name: '저장 결과 다시 확인하기' })).toBeInTheDocument()
+  expect(fake.calls).not.toContain('Save')
+  expect(fake.starts).toHaveLength(0)
+})
+
+it('recovers unfinished new manual work with no valid preview and can switch to AI without losing the source or spending', async () => {
+  const source = { id: 'manual', name: '준비 중인 구성', description: '', body: '', titleArea: '' }
+  const fake = server({
+    initial: makeSession({
+      id: 'unfinished',
+      kind: ProtoConfigurationKind.POST_TEMPLATE,
+      phase: 'editing',
+      workingSource: source,
+      hasUnpublishedChanges: true,
+      draftState: ProtoAuthoringDraftState.INCOMPLETE,
+    }),
+  })
+  mount(fake, { kind: 'post-template', sessionId: 'unfinished' })
+  const user = userEvent.setup()
+  expect(await screen.findByRole('textbox', { name: '이름' })).toHaveValue(source.name)
+  expect(screen.getByRole('textbox', { name: '내용' })).toHaveValue('')
+  await user.click(screen.getByRole('button', { name: '“준비 중인 구성” AI로 편집하기' }))
+  expect(screen.getByRole('textbox', { name: '어떤 점을 바꿔 볼까요?' })).toBeInTheDocument()
+  expect(fake.current?.workingSource?.name).toBe(source.name)
+  expect(fake.current?.selected).toBeUndefined()
+  expect(fake.starts).toHaveLength(0)
+  expect(fake.calls).not.toContain('Save')
 })

@@ -15,6 +15,7 @@ export type StudioView =
   | 'existing'
   | 'choices'
   | 'review'
+  | 'direct'
   | 'refining'
   | 'publication'
   | 'working'
@@ -38,6 +39,7 @@ interface FlowContext {
   problem?: InputProblem
   makeDefault: boolean
   initialMakeDefault: boolean
+  resetOpen: boolean
 }
 type Scoped = { scopeKey: string }
 export type StudioFlowEvent = Scoped &
@@ -50,6 +52,11 @@ export type StudioFlowEvent = Scoped &
         type:
           | 'RECOMMEND'
           | 'LOAD_EXISTING'
+          | 'OPEN_DIRECT'
+          | 'FINISH_DIRECT'
+          | 'ASK_RESET'
+          | 'DISMISS_RESET'
+          | 'CONFIRM_RESET'
           | 'OPEN_REFINEMENT'
           | 'REFINE'
           | 'FINISH_REFINEMENT'
@@ -151,6 +158,14 @@ export const studioFlowMachine = setup({
     publishResult: ({ context }) =>
       (context.intent === 'save' || context.operation.session?.phase === 'saving') &&
       !!context.operation.session?.selected,
+    recommended: ({ context }) =>
+      context.operation.session?.phase === 'choosing' &&
+      !!context.operation.session.candidates.length,
+    incompleteSource: ({ context }) =>
+      !!context.operation.session?.workingSource && !context.operation.session.selected,
+    canRefinement: ({ context, event }) =>
+      navigable(context, event) &&
+      !!(context.operation.session?.workingSource ?? context.operation.session?.selected),
     selected: ({ context }) => !!context.operation.session?.selected,
     hasCandidates: ({ context }) => !!context.operation.session?.candidates.length,
     existing: ({ context }) => context.targetId !== '',
@@ -161,7 +176,7 @@ export const studioFlowMachine = setup({
     canRefine: ({ context, event }) =>
       available(context, event) &&
       context.ai === 'ready' &&
-      !!context.operation.session?.selected &&
+      !!(context.operation.session?.workingSource ?? context.operation.session?.selected) &&
       !problem(context, true),
     canChoose: ({ context, event }) =>
       available(context, event) &&
@@ -176,7 +191,16 @@ export const studioFlowMachine = setup({
     canReview: ({ context, event }) =>
       navigable(context, event) && !!context.operation.session?.selected,
     canPublish: ({ context, event }) =>
-      available(context, event) && !!context.operation.session?.selected?.body.trim(),
+      available(context, event) &&
+      !context.operation.sourceDirty &&
+      context.operation.session?.draftState !== 'invalid' &&
+      context.operation.session?.draftState !== 'incomplete' &&
+      !!context.operation.session?.selected?.body.trim(),
+    hasSource: ({ context, event }) => available(context, event) && !!context.operation.session,
+    sourceDirty: ({ context, event }) =>
+      available(context, event) && !!context.operation.sourceDirty,
+    canReset: ({ context, event }) =>
+      available(context, event) && !!context.operation.session?.savedBaseline,
     canChangeSelection: ({ context, event }) =>
       navigable(context, event) && !!context.operation.session?.candidates.length,
     canRetry: ({ context, event }) =>
@@ -207,6 +231,9 @@ export const studioFlowMachine = setup({
     editing: assign({ intent: 'edit', problem: undefined }),
     publishing: assign({ intent: 'save', problem: undefined }),
     cancelling: assign({ intent: 'cancel' }),
+    showReset: assign({ resetOpen: true }),
+    hideReset: assign({ resetOpen: false }),
+    keepingDirect: assign({ intent: 'edit', problem: undefined }),
     reset: assign(({ context }) => ({
       purpose: '',
       intent: undefined,
@@ -224,11 +251,14 @@ export const studioFlowMachine = setup({
     retry: () => {},
     fresh: () => {},
     cancel: () => {},
+    keepDirect: () => {},
+    resetBaseline: () => {},
   },
 }).createMachine({
   id: 'studioFlow',
   initial: 'deciding',
   context: ({ input }) => ({
+    resetOpen: false,
     scopeKey: authoringScopeKey(input.scope),
     targetId: input.scope.targetId ?? '',
     operation: input.operation,
@@ -246,7 +276,14 @@ export const studioFlowMachine = setup({
       { guard: 'accepted', actions: 'observe' },
     ],
     RETRY: { guard: 'canRetry', target: '.working', actions: 'retry' },
-    FRESH: { guard: 'canFresh', target: '.resetting', actions: ['reset', 'fresh'] },
+    FRESH: { guard: 'canFresh', target: '.working', actions: ['refining', 'fresh'] },
+    ASK_RESET: { guard: 'canReset', actions: 'showReset' },
+    DISMISS_RESET: { guard: 'accepted', actions: 'hideReset' },
+    CONFIRM_RESET: {
+      guard: 'canReset',
+      target: '.working',
+      actions: ['hideReset', 'keepingDirect', 'resetBaseline'],
+    },
   },
   states: {
     deciding: {
@@ -256,6 +293,8 @@ export const studioFlowMachine = setup({
         { guard: 'working', target: 'working' },
         { guard: 'refineResult', target: 'refining' },
         { guard: 'publishResult', target: 'publication' },
+        { guard: 'recommended', target: 'choices' },
+        { guard: 'incompleteSource', target: 'direct' },
         { guard: 'selected', target: 'review' },
         { guard: 'hasCandidates', target: 'choices' },
         { guard: 'existing', target: 'existing' },
@@ -315,6 +354,7 @@ export const studioFlowMachine = setup({
     },
     review: {
       on: {
+        OPEN_DIRECT: { guard: 'hasSource', target: 'direct', actions: 'clearProblem' },
         OPEN_REFINEMENT: { guard: 'canReview', target: 'refining', actions: 'clearProblem' },
         OPEN_PUBLICATION: { guard: 'canPublish', target: 'publication' },
         CHANGE_SELECTION: { guard: 'canChangeSelection', target: 'choices' },
@@ -324,8 +364,26 @@ export const studioFlowMachine = setup({
         ],
       },
     },
+    direct: {
+      on: {
+        FINISH_DIRECT: {
+          guard: 'hasSource',
+          target: 'working',
+          actions: ['keepingDirect', 'keepDirect'],
+        },
+        OPEN_REFINEMENT: [
+          { guard: 'sourceDirty', target: 'working', actions: ['refining', 'keepDirect'] },
+          { guard: 'canRefinement', target: 'refining' },
+        ],
+        BACK: [
+          { guard: 'sourceDirty', target: 'working', actions: ['keepingDirect', 'keepDirect'] },
+          { guard: 'canReview', target: 'review' },
+        ],
+      },
+    },
     refining: {
       on: {
+        OPEN_DIRECT: { guard: 'hasSource', target: 'direct' },
         CHAT_CHANGED: { guard: 'available', actions: ['clearProblem', 'setChat'] },
         REFINE: [
           { guard: 'canRefine', target: 'working', actions: ['refining', 'requestRefine'] },

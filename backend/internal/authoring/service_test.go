@@ -56,7 +56,7 @@ func TestFrozenContextNeverClipsCurrentDraftOrLatestRequest(t *testing.T) {
 	svc := &Service{targets: targets, budget: testBudget{}}
 	request := strings.Repeat("한", MaxPromptChars)
 	selected := Artifact{ID: "private-artifact-id", Name: "스타일", Description: "설명", Body: strings.Repeat("가", 700)}
-	state := Session{ID: "private-session-id", UserID: "secret-owner-id", Kind: WritingVoice, Selected: &selected, SourceContext: "counted style projection"}
+	state := Session{ID: "private-session-id", UserID: "secret-owner-id", Kind: WritingVoice, TargetID: "private-target-id", TargetVersion: "private-target-version", Selected: &selected, SourceContext: "counted style projection"}
 	for n := 0; n < 20; n++ {
 		state.Turns = append(state.Turns, Turn{Status: "done", Request: strings.Repeat("나", 800), Reply: strings.Repeat("다", 200)})
 	}
@@ -72,7 +72,7 @@ func TestFrozenContextNeverClipsCurrentDraftOrLatestRequest(t *testing.T) {
 	if len(input.History) >= 20 {
 		t.Fatal("unbounded history reached provider")
 	}
-	for _, private := range []string{state.ID, state.UserID, selected.ID, "private-operation-id"} {
+	for _, private := range []string{state.ID, state.UserID, state.TargetID, state.TargetVersion, selected.ID, "private-operation-id"} {
 		if strings.Contains(text, private) {
 			t.Fatalf("private identifier %s reached provider", private)
 		}

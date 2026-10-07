@@ -22,7 +22,11 @@ export interface AuthoringScope {
   kind: AuthoringKind
   targetId?: string
 }
+export const AUTHORING_CANDIDATE_COUNTS = [2, 4, 8, 16] as const
+export type AuthoringCandidateCount = (typeof AUTHORING_CANDIDATE_COUNTS)[number]
+export type AuthoringDraftState = 'valid' | 'incomplete' | 'invalid'
 export interface AuthoringArtifact {
+  revision?: number
   id: string
   name: string
   description: string
@@ -42,6 +46,12 @@ export interface AuthoringSavedRef {
   name: string
 }
 export interface AuthoringSession {
+  workingSource?: AuthoringArtifact
+  savedBaseline?: AuthoringArtifact
+  draftState?: AuthoringDraftState
+  hasUnpublishedChanges?: boolean
+  savedAvailable?: boolean
+  candidateCount?: AuthoringCandidateCount
   id: string
   kind: AuthoringKind
   revision: number
@@ -65,6 +75,7 @@ export interface AuthoringEstimate {
   credits?: number
 }
 export interface AuthoringStart {
+  candidateCount?: AuthoringCandidateCount
   sessionId: string
   expectedRevision: number
   requestId: string
@@ -72,6 +83,7 @@ export interface AuthoringStart {
   prompt: string
   writeModel: AuthoringModelRef
 }
+export const AUTHORING_NAME_SUMMARY_MAX_CHARS = 80
 export const AUTHORING_SUGGESTION_COUNT = 8
 export const AUTHORING_MESSAGE_MAX_CHARS = 2000
 export const AUTHORING_MAX_EXCHANGES = 20
@@ -86,4 +98,20 @@ export function authoringSessionBusy(session: AuthoringSession | undefined): boo
 }
 export function completedAuthoringExchanges(session: AuthoringSession | undefined): number {
   return session?.turns.filter((turn) => turn.status === 'done').length ?? 0
+}
+
+export interface AuthoringSummary {
+  sessionId: string
+  kind: AuthoringKind
+  targetId: string
+  displayName: string
+  revision: number
+  savedAvailable: boolean
+  hasUnpublishedChanges: boolean
+  activeJobId: string
+  publicationPending: boolean
+  targetConflict: boolean
+  draftState: AuthoringDraftState
+  lastPublication?: AuthoringSavedRef
+  updatedAt: string
 }

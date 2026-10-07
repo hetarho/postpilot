@@ -5,9 +5,12 @@ export {
   authoringModeToProto,
   mapAuthoringSession,
   mapAuthoringEstimate,
+  mapAuthoringSummary,
+  authoringDraftStateFromProto,
 } from './api/mappers'
 export {
   useAuthoringAPI,
+  useAuthoringSummaries,
   useLatestAuthoringSession,
   useAuthoringSession,
   authoringLatestQueryKey,

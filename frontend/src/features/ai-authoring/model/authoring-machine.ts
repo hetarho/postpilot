@@ -17,10 +17,13 @@ import {
   type AuthoringEstimate,
   type AuthoringModelRef,
   type AuthoringMode,
+  type AuthoringArtifact,
+  type AuthoringCandidateCount,
 } from '@/entities/ai-authoring'
 import { appFailureFromConnect, type AppFailure } from '@/shared/api'
 
 export interface FrozenAuthoringCommand {
+  candidateCount?: AuthoringCandidateCount
   mode: AuthoringMode
   prompt: string
   writeModel: AuthoringModelRef
@@ -39,6 +42,8 @@ export type StudioPhase =
   | 'confirming'
   | 'creating'
   | 'starting'
+  | 'patching'
+  | 'resetting'
   | 'selecting'
   | 'active'
   | 'saving'
@@ -46,6 +51,8 @@ export type StudioPhase =
   | 'saved'
   | 'failed'
 export interface AuthoringState {
+  directSource?: AuthoringArtifact
+  sourceDirty?: boolean
   scopeKey: string
   phase: StudioPhase
   session?: AuthoringSession
@@ -60,13 +67,15 @@ export type AuthoringEvent = Scoped &
   (
     | { type: 'hydrate'; session: AuthoringSession | null }
     | { type: 'draft'; text: string }
+    | { type: 'source'; source: AuthoringArtifact }
     | { type: 'quote'; command: FrozenAuthoringCommand }
     | { type: 'quoted'; operation: number; estimate: AuthoringEstimate }
     | { type: 'dismiss-quote' }
     | { type: 'retry-quote' }
     | {
         type: 'begin'
-        phase: 'creating' | 'starting' | 'selecting' | 'saving' | 'cancelling'
+        phase:
+          'creating' | 'starting' | 'selecting' | 'saving' | 'cancelling' | 'patching' | 'resetting'
         retry?: AuthoringRetry
       }
     | { type: 'created'; operation: number; session: AuthoringSession }
@@ -77,14 +86,39 @@ export type AuthoringEvent = Scoped &
 
 export type AuthoringRetry =
   | { type: 'edit'; requestId: string }
-  | { type: 'select'; sessionId: string; revision: number; candidateId: string }
-  | { type: 'save'; sessionId: string; revision: number; makeDefault: boolean }
+  | {
+      type: 'patch'
+      sessionId: string
+      revision: number
+      operationKey: string
+      source: AuthoringArtifact
+    }
+  | {
+      type: 'reset-chat' | 'reset-baseline'
+      sessionId: string
+      revision: number
+      operationKey: string
+    }
+  | {
+      type: 'select'
+      sessionId: string
+      revision: number
+      candidateId: string
+      operationKey?: string
+    }
+  | {
+      type: 'save'
+      sessionId: string
+      revision: number
+      makeDefault: boolean
+      operationKey?: string
+    }
   | { type: 'cancel'; sessionId: string; jobId: string }
 type AuthoringContext = Omit<AuthoringState, 'phase'> & { retry?: AuthoringRetry }
 export interface AuthoringWork {
   scopeKey: string
   operation: number
-  phase: 'creating' | 'starting' | 'selecting' | 'saving' | 'cancelling'
+  phase: 'creating' | 'starting' | 'selecting' | 'saving' | 'cancelling' | 'patching' | 'resetting'
   command?: FrozenAuthoringCommand
   retry?: AuthoringRetry
   created: (session: AuthoringSession) => void
@@ -107,6 +141,8 @@ export interface AuthoringQuoted {
 }
 export function studioBusy(state: AuthoringState): boolean {
   return [
+    'patching',
+    'resetting',
     'quoting',
     'confirming',
     'creating',
@@ -122,6 +158,7 @@ function remotePhase(session: AuthoringSession | undefined): StudioPhase {
   if (authoringSessionBusy(session)) return 'active'
   if (session.phase === 'saved') return 'saved'
   if (session.phase === 'failed') return 'failed'
+  if (session.phase === 'choosing' && session.candidates.length) return 'choosing'
   return session.selected ? 'editing' : session.candidates.length ? 'choosing' : 'idle'
 }
 function owns(context: AuthoringContext, event: AuthoringEvent) {
@@ -175,7 +212,7 @@ function quoteValid(context: AuthoringContext, event: AuthoringEvent) {
   return (
     chars <= AUTHORING_MESSAGE_MAX_CHARS &&
     (command.mode !== 'refine' ||
-      (!!context.session?.selected &&
+      (!!(context.session?.workingSource ?? context.session?.selected) &&
         chars > 0 &&
         completedAuthoringExchanges(context.session) < AUTHORING_MAX_EXCHANGES)) &&
     !!command.writeModel.providerId &&
@@ -213,7 +250,10 @@ const available = {
   hydrate: hydrateTransitions,
   draft: { guard: 'canDraft', actions: 'draft' },
   quote: { guard: 'validQuote', target: 'quoting', actions: 'freezeQuote' },
+  source: { guard: 'canDraft', actions: 'source' },
   begin: [
+    { guard: 'patchAllowed', target: 'patching', actions: 'begin' },
+    { guard: 'resetAllowed', target: 'resetting', actions: 'begin' },
     { guard: 'createAllowed', target: 'creating', actions: 'begin' },
     { guard: 'selectAllowed', target: 'selecting', actions: 'begin' },
     { guard: 'saveAllowed', target: 'saving', actions: 'begin' },
@@ -261,6 +301,18 @@ export const authoringMachine = setup({
     }),
   },
   guards: {
+    patchAllowed: ({ context, event }) =>
+      owns(context, event) &&
+      event.type === 'begin' &&
+      event.phase === 'patching' &&
+      !!context.session &&
+      !context.command,
+    resetAllowed: ({ context, event }) =>
+      owns(context, event) &&
+      event.type === 'begin' &&
+      event.phase === 'resetting' &&
+      !!context.session &&
+      !context.command,
     owned: ({ context, event }) => owns(context, event),
     canDraft: ({ context, event }) => owns(context, event) && !context.command,
     validQuote: ({ context, event }) => quoteValid(context, event),
@@ -320,6 +372,9 @@ export const authoringMachine = setup({
       event.type === 'begin' &&
       event.phase === 'saving' &&
       !!context.session?.selected &&
+      context.session?.draftState !== 'invalid' &&
+      context.session?.draftState !== 'incomplete' &&
+      !context.sourceDirty &&
       !context.command,
     recoveredSave: ({ context, event }) =>
       owns(context, event) &&
@@ -336,6 +391,9 @@ export const authoringMachine = setup({
       !!context.session?.activeJobId,
   },
   actions: {
+    source: assign(({ event }) =>
+      event.type === 'source' ? { directSource: { ...event.source }, sourceDirty: true } : {},
+    ),
     draft: assign(({ event }) => (event.type === 'draft' ? { text: event.text } : {})),
     freezeQuote: assign(({ context, event }) =>
       event.type === 'quote'
@@ -375,6 +433,8 @@ export const authoringMachine = setup({
       const response = responseOf(event)!
       return {
         session: response.session,
+        directSource: response.session.workingSource ?? response.session.selected,
+        sourceDirty: false,
         text: response.clearText ? '' : context.text,
         failure: undefined,
         command: undefined,
@@ -397,6 +457,10 @@ export const authoringMachine = setup({
         session.phase !== 'failed'
       return {
         session,
+        directSource: context.sourceDirty
+          ? context.directSource
+          : (session?.workingSource ?? session?.selected),
+        sourceDirty: context.sourceDirty,
         text: successful
           ? ''
           : context.text ||
@@ -504,6 +568,20 @@ export const authoringMachine = setup({
         failed: { guard: 'operationFailure', target: 'failed', actions: 'failure' },
       },
     },
+    patching: {
+      invoke: invocation('patching'),
+      on: {
+        response: responseTransitions,
+        failed: { guard: 'operationFailure', target: 'failed', actions: 'failure' },
+      },
+    },
+    resetting: {
+      invoke: invocation('resetting'),
+      on: {
+        response: responseTransitions,
+        failed: { guard: 'operationFailure', target: 'failed', actions: 'failure' },
+      },
+    },
     selecting: {
       invoke: invocation('selecting'),
       on: {
@@ -537,6 +615,8 @@ export const authoringMachine = setup({
     saved: {
       on: {
         hydrate: hydrateTransitions,
+        begin: available.begin,
+        source: available.source,
         'new-session': { guard: 'owned', target: 'idle', actions: 'fresh' },
         'retry-load': { guard: 'owned', target: 'checking', actions: 'clearFailure' },
       },
@@ -547,8 +627,28 @@ const projections = new WeakMap<object, AuthoringState>()
 export function authoringStateOf(snapshot: SnapshotFrom<typeof authoringMachine>): AuthoringState {
   let state = projections.get(snapshot)
   if (!state) {
-    const { scopeKey, session, text, operation, command, estimate, failure } = snapshot.context
-    const context = { scopeKey, session, text, operation, command, estimate, failure }
+    const {
+      scopeKey,
+      session,
+      text,
+      operation,
+      command,
+      estimate,
+      failure,
+      directSource,
+      sourceDirty,
+    } = snapshot.context
+    const context = {
+      scopeKey,
+      session,
+      text,
+      operation,
+      command,
+      estimate,
+      failure,
+      directSource,
+      sourceDirty,
+    }
     state = { ...context, phase: snapshot.value as StudioPhase }
     projections.set(snapshot, state)
   }
