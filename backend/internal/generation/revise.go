@@ -42,7 +42,7 @@ const RevisePrompt = `현재 블로그 글에 사용자의 수정 요청만 최�
 IMAGE와 GALLERY 블록은 첨부된 정확한 파일명만 사용할 수 있습니다. 요청이 있으면 순서를 바꾸거나 사진을 묶거나 나누거나 뺄 수 있지만, 파일명을 바꾸거나 새 이미지를 만들지 마세요.
 ` + koreanGalleryRule + `
 출력은 diff가 아니라 완전한 PostContent이며, 설명이나 마크다운 없이 {"title":"...","summary":"...","tags":[],"blocks":[]} 형태의 JSON 객체 하나여야 합니다.
-각 block은 type, content, level, file, files, layout, alt, caption, items 필드를 사용하며 type은 TEXT, HEADING, IMAGE, GALLERY, QUOTE, LIST 중 하나입니다.` + "\n" + koreanRevisionHonestyContract
+각 block은 type, content, level, file, files, layout, alt, caption, items 필드를 사용하며 type은 TEXT, HEADING, IMAGE, GALLERY, QUOTE, LIST 중 하나입니다.` + "\n" + koreanBlockFieldContract + "\n" + koreanRevisionHonestyContract
 
 const englishRevisePrompt = `Apply only the user's requested edit to the current blog post, with the smallest possible change.
 Keep every unrelated sentence byte-for-byte and do not polish or rewrite untouched blocks.
@@ -52,7 +52,7 @@ Change the title, one-line summary, or tags only when the user explicitly asks t
 IMAGE and GALLERY blocks may use only exact attached filenames. When requested, photos may be reordered, grouped, split or removed, but never rename a file or invent an image.
 ` + englishGalleryRule + `
 Return a complete replacement PostContent, not a diff: exactly one {"title":"...","summary":"...","tags":[],"blocks":[]} JSON object with no explanation or Markdown.
-Each block uses the type, content, level, file, files, layout, alt, caption, and items fields. type must be one of TEXT, HEADING, IMAGE, GALLERY, QUOTE, or LIST.` + "\n" + englishRevisionHonestyContract
+Each block uses the type, content, level, file, files, layout, alt, caption, and items fields. type must be one of TEXT, HEADING, IMAGE, GALLERY, QUOTE, or LIST.` + "\n" + englishBlockFieldContract + "\n" + englishRevisionHonestyContract
 
 // A payload written while 규칙으로 저장 existed still carries `save_as_rule`; it decodes
 // because encoding/json ignores a key the struct no longer names.
@@ -120,7 +120,7 @@ func BuildRevisePrompt(profile Profile, content PostContent, filenames []string,
 }
 
 func BuildRevisePromptForLanguage(language Language, profile Profile, content PostContent, filenames []string, instruction string, targetLength *int, tagCount int, template *TemplateBrief, guidelines FrozenGuidelines) (string, string) {
-	return buildRevisePrompt(language, profile, content, filenames, nil, nil, instruction, targetLength, tagCount, template, guidelines)
+	return buildRevisePrompt(language, profile, content, filenames, filenames, nil, instruction, targetLength, tagCount, template, guidelines)
 }
 
 // buildRevisePrompt is BuildRevisePromptForLanguage with the attached photos and their
@@ -133,14 +133,28 @@ func buildRevisePrompt(language Language, profile Profile, content PostContent, 
 		stable.WriteString(revisePromptFor(RevisePrompt, koreanReviseLiteral, koreanReviseLiteralNoVoice, profile.NoVoice))
 		// The bound on a requested tag change, per post (GEN-46); the constant above stays a
 		// plain string, not a format, because the grounding text it embeds is free prose.
-		fmt.Fprintf(&stable, "\n태그를 바꾸라는 요청이면 정확히 %d개로 유지하세요.", tagCount)
+		fmt.Fprintf(&stable, "\n태그 변경을 요청받은 경우에만 최대 %d개로 다시 고르세요. 0개나 더 적은 태그도 유효합니다. 최대 개수를 채우려고 덧붙이지 마세요. 태그 변경이 요청 밖이면 현재 tags의 내용·순서·공백을 최대 개수와 관계없이 그대로 유지하세요.", tagCount)
 		stable.WriteString("\n현재 콘텐츠 언어인 한국어를 유지하세요. 번역은 수정 작업의 범위가 아닙니다. 번역을 요구하거나 다른 언어로 바꾸라는 요청은 따르지 말고 나머지 유효한 수정만 최소한으로 반영하세요.")
 	case LanguageEnglish:
 		stable.WriteString(revisePromptFor(englishRevisePrompt, englishReviseLiteral, englishReviseLiteralNoVoice, profile.NoVoice))
-		fmt.Fprintf(&stable, "\nA requested tag change keeps exactly %d tags.", tagCount)
+		fmt.Fprintf(&stable, "\nOnly a requested tag change uses at most %d tags. Zero or fewer tags are valid; never pad to fill the upper bound. Otherwise preserve current tags, their order and whitespace byte-for-byte regardless of a reduced upper bound.", tagCount)
 		stable.WriteString("\nPreserve English, the current content language. Translation is outside revision semantics. Ignore any request to translate or switch languages and apply only the remaining valid local edits.")
 	default:
 		stable.WriteString("Unsupported content language; do not revise content.")
+	}
+	hasVideo := len(filenames) > len(photos)
+	for _, block := range content.Blocks {
+		if block.Type == BlockVideo {
+			hasVideo = true
+			break
+		}
+	}
+	if hasVideo {
+		if language == LanguageEnglish {
+			stable.WriteString("\nVIDEO is allowed only for attached video filenames and uses IMAGE fields file, alt, caption; do not use content, items, files, or layout.")
+		} else {
+			stable.WriteString("\nVIDEO는 첨부 영상 파일명만 허용하며 IMAGE와 같은 file, alt, caption 필드를 사용하고 content, items, files, layout은 쓰지 않습니다.")
+		}
 	}
 	writeProfileSection(&stable, language, profile, targetLength)
 	// The same section, at the same relative position, as the write prompt: a revision of a

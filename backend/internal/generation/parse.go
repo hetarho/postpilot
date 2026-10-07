@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"slices"
 	"strings"
 
 	"github.com/postpilot/backend/internal/llm"
@@ -82,12 +83,29 @@ type observationsJSON struct {
 }
 
 // ParseContent turns the model's text into a PostContent. tagCount is the frozen per-post
-// count: a longer tag list keeps its first tagCount entries in model order and a shorter one
-// is accepted as written (GEN-46) — failing a paid write over a miscount is worse than a
-// shorter list. A missing `tags` key is still bad output.
+// upper bound: a longer tag list keeps its first tagCount entries in model order;
+// fewer or zero tags are valid without padding (GEN-46). A missing `tags` key
+// is still bad output.
 func ParseContent(raw string, tagCount int) (*PostContent, error) {
 	content, _, err := parseContentFields(raw, tagCount)
 	return content, err
+}
+
+// ParseRevisionContent preserves an unchanged returned tag array before applying
+// the requested-change upper bound. Equality covers order and exact strings;
+// this boundary neither interprets prose instructions nor guesses user intent.
+// The explicit requested-only rule belongs to the revision prompt (GEN-40).
+func ParseRevisionContent(raw string, tagCount int, current PostContent) (*PostContent, error) {
+	content, _, err := parseContentFields(raw, 0)
+	if err != nil {
+		return nil, err
+	}
+	if slices.Equal(content.Tags, current.Tags) {
+		content.Tags = slices.Clone(current.Tags)
+	} else if tagCount > 0 && len(content.Tags) > tagCount {
+		content.Tags = content.Tags[:tagCount]
+	}
+	return content, nil
 }
 
 // ParseWriteAnswer is ParseContent for the write pass, whose answer also carries `nouns`

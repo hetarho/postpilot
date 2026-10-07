@@ -103,9 +103,9 @@ const naturalKorean = "아래 기준은 새로 쓰거나 수정 요청으로 손
 
 var postDefaults = []DefaultGuideline{
 	post("facts", "재료에 있는 사실만",
-		"메모, 사진 관찰, 템플릿 입력란, 기억, 스토리라인에 없는 구체적 사실은 쓰지 마세요. 사람과의 상호작용, 시설, 서비스, 대화, 가격처럼 확인되지 않은 내용을 지어내지 마세요. 확인할 수 없는 사실은 생략하거나 관찰된 범위 안에서만 쓰세요.",
+		"메모, 사진·영상 관찰, 해당 템플릿 입력란의 명시적인 답변, 선택된 기억, 근거가 있는 스토리라인 재료에 없는 구체적 사실은 쓰지 마세요. AI가 만든 계획이나 그 배치를 승인한 것만으로 그 안의 주장을 글쓴이가 준 사실로 보지 마세요. 사람과의 상호작용, 시설, 서비스, 대화, 가격처럼 확인되지 않은 내용을 지어내지 마세요. 확인할 수 없는 사실은 생략하거나 관찰된 범위 안에서만 쓰세요.",
 		"Facts from the material only",
-		"State no concrete fact the memo, the photo observations, the template's fields, the memories and the storyline do not carry. Do not invent interactions with people, facilities, services, conversations, or prices. Omit what you cannot confirm, or keep it within what was observed.", postMaterial(OutputTitle, OutputTags, OutputProse, OutputCaptions)),
+		"State no concrete fact the memo, photo or video observations, explicit answers in the relevant template field, selected memories or supported storyline material do not carry. An AI-generated plan or approval of its arrangement never makes its claims author-supplied facts. Do not invent interactions with people, facilities, services, conversations, or prices. Omit what you cannot confirm, or keep it within what was observed.", postMaterial(OutputTitle, OutputTags, OutputProse, OutputCaptions)),
 	post("impressions", "내 감상을 지키고 AI 제안 구분",
 		"글쓴이가 메모, 명시적인 템플릿 답변, 스토리라인에 직접 준 감상·맛·평가는 의미를 바꾸거나 덮어쓰지 마세요. AI가 문장 표현을 다듬어도 같은 의미는 글쓴이가 준 것으로 남습니다. 직접 주지 않은 감각·감상·해석을 제안할 때는 AI가 더한 의미로 분명히 구분하고, 이 방문에서 글쓴이가 실제로 느끼거나 경험한 일처럼 쓰지 마세요. 사진만으로 맛이나 사진 밖의 행동·사건을 증명하지 마세요.",
 		"Preserve my impressions and distinguish AI proposals",
@@ -146,9 +146,9 @@ var postDefaults = []DefaultGuideline{
 		"No listing of observations",
 		"The photo observations are grounding and placement material, not a list to describe one by one. No paragraph has to point at a photo. Do not write visual detail that carries nothing for the post: lighting, walls, ceilings, fixtures, the arrangement of a room.", postFinal(OutputProse)),
 	post("titles", "제목 규칙",
-		"제목을 정보 하나만 바꿔 넣은 긴 상투 문구로 쓰지 말고, 한 제목 안에서 같은 키워드를 두 번 이상 쓰지 마세요. 템플릿에 제목 형식이 있으면 그 형식을 따르고, 이 규칙은 형식의 <write> 안에서 직접 쓰는 부분에만 적용하세요.",
+		"제목을 정보 하나만 바꿔 넣은 긴 상투 문구로 쓰지 말고, 한 제목 안에서 같은 키워드를 두 번 이상 쓰지 마세요. 템플릿에 제목 형식이 있으면 그 형식을 따르고, 이 규칙은 형식의 <write> 안에서 직접 쓰는 부분에만 적용하세요. 이 기준은 제품의 추천이며 네이버가 공개한 수치적 감점 기준이나 노출 보장이 아닙니다.",
 		"Title rules",
-		"Do not write the title as long boilerplate in which only a single piece of information changes, and do not use any keyword twice or more within one title. When the template has a title form, follow it and apply this only to what you write inside its <write>.", postFinal(OutputTitle)),
+		"Do not write the title as long boilerplate in which only a single piece of information changes, and do not use any keyword twice or more within one title. When the template has a title form, follow it and apply this only to what you write inside its <write>. These are product recommendations, not a published Naver numeric penalty threshold or a guarantee of exposure.", postFinal(OutputTitle)),
 	post("tags", "태그 규칙",
 		`tags는 이 글을 찾는 사람이 검색할 법한 구체적인 이름과 자연스러운 조합으로 고르세요.
 글에서 다루고 재료로 확인되는 상호·장소·브랜드·제품명을 우선하고, 지역명+메뉴·업종·활동 또는 대상명+핵심 주제 조합을 이어서 고르세요. 관련성이 높은 순서로 적고, 같은 태그나 띄어쓰기만 바꾼 태그는 반복하지 마세요.
@@ -160,7 +160,7 @@ var postDefaults = []DefaultGuideline{
 		`Choose specific names and natural combinations someone looking for this post might search for as tags.
 Prioritize business, place, brand and product names covered by the post and supported by its material, then area + menu, business category or activity, or entity + core topic. Order tags by relevance; do not repeat a tag or a variant that differs only in spacing.
 For example, if the post describes eating tteokbokki at Jinabunsik near Dapsimni Station, prefer Jinabunsik, DapsimniTteokbokki and DapsimniBunsik. Never copy these example names into an unrelated post.
-Broad labels such as PaidForItMyself, DailyLife, Foodie or Tteokbokki alone rank after specific tags; do not add them just to fill the requested count.
+Broad labels such as PaidForItMyself, DailyLife, Foodie or Tteokbokki alone rank after specific tags; do not add them just to fill the upper bound.
 Never invent an area, business, menu item, payment claim or endorsement for a tag. You may use the same area's name from a stated station name; when the area is unknown, use the supported entity or topic alone. Do not insert awkward words into the prose or change its content to justify a tag.
 For a revision, reselect tags by this rule only when the request asks to change tags.`, postFinal(OutputTags)),
 	// The run of identical endings is a writing rule, not voice text (VOICE-47): its count is

@@ -10,7 +10,7 @@ import (
 // The second line names the convention observe.go sends: `file: 이름` immediately before the
 // photo it names. Without it a model reads the labels as one more list and falls back to
 // position, which is the binding this change exists to remove.
-const ObservePrompt = `사진마다 파일명을 정확히 대응해 관찰 사실만 반환하세요. 추측하거나 이야기를 만들지 마세요.
+const ObservePrompt = `사진마다 파일명을 정확히 대응해 식별 가능한 시각적 근거를 반환하세요. 장면·대상·분위기의 범주화는 시각적 해석이며 사용자가 준 사실이나 맛·사진 밖의 사건을 증명하지 않습니다. 사진 업로드·저장 배열·파일명·촬영 순서로 시간 경과·장소나 좌석 이동·행동 순서를 만들지 마세요. 식별되지 않는 의미를 임의로 채우거나 이야기를 만들지 마세요.
 각 사진 바로 앞에 그 사진의 파일명이 "file: 이름" 한 줄로 옵니다. 파일명은 순서로 짐작하지 말고 그 사진 바로 앞 줄에서 그대로 가져오세요.
 rotation은 사진 속 장면이 똑바로 보이도록 시계 방향으로 돌려야 하는 각도이며 0, 90, 180, 270 중 하나입니다. 이미 똑바르면 0입니다.
 출력은 설명이나 마크다운 없이 {"observations":[{"file":"...","scene":"...","mood":"...","visible_text":"...","objects":[],"people_present":false,"rotation":0}]} 형태의 JSON 객체 하나여야 합니다.`
@@ -21,10 +21,10 @@ rotation은 사진 속 장면이 똑바로 보이도록 시계 방향으로 돌�
 // is never told about a block type the post has no file for, which is an invitation to invent
 // one (VIDEO-12).
 const videoWriteInstructions = "\nVIDEO 블록은 첨부 영상 파일명만 쓰고, storyline에서 그 영상이 놓인 문단의 자리에 놓으세요." +
-	"\nblock의 type에는 VIDEO도 쓸 수 있습니다."
+	"\nblock의 type에는 VIDEO도 쓸 수 있습니다. VIDEO는 IMAGE와 같은 file, alt, caption 필드를 쓰며 file에는 첨부 영상 파일명만 넣고 content, items, files, layout은 비워 둡니다."
 
 const englishVideoWriteInstructions = "\nA VIDEO block may use only an attached video filename. Place it where its storyline paragraph stands." +
-	"\nA block's type may also be VIDEO."
+	"\nA block's type may also be VIDEO. VIDEO uses the IMAGE fields file, alt, and caption; file must name an attached video, and content, items, files, and layout remain empty."
 
 // ObserveVideoPrompt is the photo prompt's facts-only rule for one clip. One video per call
 // (VIDEO-8), so the `files:` line names exactly one file and the answer is one entry.
@@ -32,7 +32,7 @@ const englishVideoWriteInstructions = "\nA VIDEO block may use only an attached 
 // `events` and `speech` are what a still frame cannot carry and are the whole reason a clip is
 // observed at all; both are required, so a model that heard nothing says so with an empty
 // string rather than by omitting the field (VIDEO-9).
-const ObserveVideoPrompt = `영상에서 관찰한 사실만 파일명에 정확히 대응해 반환하세요. 추측하거나 이야기를 만들지 마세요.
+const ObserveVideoPrompt = `영상 안에서 식별되는 시각적·청각적 근거를 파일명에 정확히 대응해 반환하세요. 범주와 분위기는 관찰 해석이며 사용자가 준 감상·맛이나 영상 밖의 사건을 증명하지 않습니다. 영상 안에서 실제 관찰한 시간 순서는 별도의 근거지만, 사진 업로드·저장 배열·파일명·촬영 순서는 사건 순서나 이동·행동의 근거가 아닙니다. 식별되지 않는 의미를 임의로 채우거나 이야기를 만들지 마세요.
 events는 일어난 일을 시간 순서대로 짧은 사실 문장으로 적으세요.
 speech는 들린 말의 요약입니다. 들리지 않거나 소리를 들을 수 없으면 빈 문자열로 두세요.
 출력은 설명이나 마크다운 없이 {"observations":[{"file":"...","scene":"...","mood":"...","visible_text":"...","objects":[],"people_present":false,"events":[],"speech":"..."}]} 형태의 JSON 객체 하나여야 합니다.`
@@ -76,7 +76,7 @@ IMAGE와 GALLERY 블록은 제공된 정확한 파일명만 사용하고, 목록
 ` + koreanGalleryRule + `
 출력은 설명이나 마크다운 없이 {"storyline":[{"text":"...","files":[]}],"title":"...","summary":"...","tags":[],"blocks":[],"nouns":[]} 형태의 JSON 객체 하나여야 합니다.
 각 block은 type, content, level, file, files, layout, alt, caption, items 필드를 사용하며 type은 TEXT, HEADING, IMAGE, GALLERY, QUOTE, LIST 중 하나입니다.
-` + koreanNounsRule + "\n" + koreanSourceHonestyContract
+` + koreanBlockFieldContract + "\n" + koreanNounsRule + "\n" + koreanSourceHonestyContract
 
 const englishWritePrompt = `Write an English blog post from the photo observations and memo.
 Use exactly one TEXT block for each paragraph.
@@ -86,14 +86,14 @@ Place every attached photo exactly once, as an IMAGE block or inside a GALLERY b
 ` + englishGalleryRule + `
 Return exactly one JSON object shaped as {"storyline":[{"text":"...","files":[]}],"title":"...","summary":"...","tags":[],"blocks":[],"nouns":[]} with no explanation or Markdown.
 Each block uses the type, content, level, file, files, layout, alt, caption, and items fields. type must be one of TEXT, HEADING, IMAGE, GALLERY, QUOTE, or LIST.
-` + englishNounsRule + "\n" + englishSourceHonestyContract
+` + englishBlockFieldContract + "\n" + englishNounsRule + "\n" + englishSourceHonestyContract
 
 // koreanWriteAlongStorylineRule / englishWriteAlongStorylineRule replace the storyline rule on
 // the storyline path (GEN-70): the frozen [스토리라인] decides what the post covers and in what
 // order, and the material only fills in its details.
-const koreanWriteAlongStorylineRule = "[스토리라인]이 이 글이 다룰 내용과 순서를 정합니다. 스토리라인에 없는 내용은 메모에 있어도 쓰지 말고, 재료는 스토리라인이 다루는 내용의 세부를 채우는 데만 쓰세요. 각 사진과 영상은 스토리라인에서 그 파일이 놓인 문단의 자리에 한 번씩 놓으세요."
+const koreanWriteAlongStorylineRule = "[스토리라인]이 이 글이 다룰 내용과 순서를 정합니다. 스토리라인에 없는 내용은 메모에 있어도 쓰지 말고, 재료는 스토리라인이 다루는 내용의 세부를 채우는 데만 쓰세요. 각 사진과 영상은 스토리라인에서 그 파일이 놓인 문단의 자리에 한 번씩 놓으세요. 승인된 배열은 글의 구조이고, 계획 안의 AI 주장이 새 사용자 사실이나 실제 사건 순서로 승격되는 것은 아닙니다."
 
-const englishWriteAlongStorylineRule = "[스토리라인] sets what this post covers and in what order. Do not write anything the storyline does not cover, even when the memo has it, and use the material only to fill in the details of what the storyline covers. Place each photo and video once, where the paragraph holding it stands."
+const englishWriteAlongStorylineRule = "[스토리라인] sets what this post covers and in what order. Do not write anything the storyline does not cover, even when the memo has it, and use the material only to fill in the details of what the storyline covers. Place each photo and video once, where the paragraph holding it stands. Approved arrangement is structure: AI claims inside the plan do not become new owner facts or actual event chronology."
 
 // The storyline path's static rules are the direct write's with the storyline asked for no more:
 // the rule becomes the storyline-path rule, the answer shape loses its `storyline` member, and
@@ -410,7 +410,7 @@ func BuildWritePromptForLanguage(input WritePromptInput) (string, string) {
 	switch input.Language {
 	case LanguageKorean:
 		stable.WriteString(writeStaticRules(input.Language, following))
-		fmt.Fprintf(&stable, "\ntitle, 한 줄 summary, 정확히 %d개의 tags, blocks를 반환하세요.", input.TagCount)
+		fmt.Fprintf(&stable, "\ntitle, 한 줄 summary, 최대 %d개의 tags, blocks를 반환하세요. tags는 0개여도 되고 더 적어도 됩니다. 최대 개수를 채우려고 태그를 덧붙이지 마세요.", input.TagCount)
 		members := "storyline, title"
 		if following {
 			members = "title"
@@ -429,7 +429,7 @@ func BuildWritePromptForLanguage(input WritePromptInput) (string, string) {
 		}
 	case LanguageEnglish:
 		stable.WriteString(writeStaticRules(input.Language, following))
-		fmt.Fprintf(&stable, "\nReturn title, a one-line summary, exactly %d tags, and blocks.", input.TagCount)
+		fmt.Fprintf(&stable, "\nReturn title, a one-line summary, at most %d tags, and blocks. Zero or fewer tags are valid; never add tags just to fill the upper bound.", input.TagCount)
 		members := "the storyline, title"
 		if following {
 			members = "the title"

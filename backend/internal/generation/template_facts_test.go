@@ -59,7 +59,7 @@ func TestTheFactsDefaultNamesTheTemplateFields(t *testing.T) {
 	if !strings.Contains(defaultText("facts", LanguageKorean), "템플릿 입력란") {
 		t.Error("the Korean facts 기본 지침 does not name the template's fields")
 	}
-	if !strings.Contains(defaultText("facts", LanguageEnglish), "the template's fields") {
+	if !strings.Contains(defaultText("facts", LanguageEnglish), "explicit answers in the relevant template field") {
 		t.Error("the English facts 기본 지침 does not name the template's fields")
 	}
 	defaults := productDefaults(LanguageKorean)

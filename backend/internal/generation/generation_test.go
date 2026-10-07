@@ -111,7 +111,7 @@ func TestBuildWritePromptOrderAndRules(t *testing.T) {
 			t.Errorf("write prompt still carries %s", gone)
 		}
 	}
-	for _, required := range []string{"하나의 문단마다 TEXT 블록 하나", "목록에 없는 이미지를 절대", "정확히 4개의 tags", "고유 사실, 주제, 문구를 복사하지"} {
+	for _, required := range []string{"하나의 문단마다 TEXT 블록 하나", "목록에 없는 이미지를 절대", "최대 4개의 tags", "고유 사실, 주제, 문구를 복사하지"} {
 		if !strings.Contains(system, required) {
 			t.Errorf("system prompt missing %q", required)
 		}
@@ -309,7 +309,7 @@ func TestGenerateUsesFrozenTargetInsteadOfLaterPostOption(t *testing.T) {
 		if !strings.Contains(request.System, "목표 길이: 약 850자") || strings.Contains(request.System, "1600") {
 			t.Fatalf("prompt did not use frozen target: %s", request.System)
 		}
-		if !strings.Contains(request.System, "정확히 9개의 tags") || strings.Contains(request.System, "정확히 3개의 tags") {
+		if !strings.Contains(request.System, "최대 9개의 tags") || strings.Contains(request.System, "최대 3개의 tags") {
 			t.Fatalf("prompt did not use the frozen tag count: %s", request.System)
 		}
 		return llm.Response{Text: `{"title":"t","summary":"s","tags":["a","b","c"],"blocks":[{"type":"TEXT","content":"ok"}]}`}, nil

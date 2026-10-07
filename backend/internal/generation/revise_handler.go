@@ -73,7 +73,7 @@ func (s *Service) Revise(ctx context.Context, job RevisionJob, progress Progress
 	if err != nil {
 		return providerCallError("글 수정", err)
 	}
-	content, err := ParseContent(response.Text, tagCount)
+	content, err := ParseRevisionContent(response.Text, tagCount, *post.Content)
 	if err != nil {
 		return responseParseError(response, err)
 	}

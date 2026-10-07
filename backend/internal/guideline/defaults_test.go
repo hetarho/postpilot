@@ -83,3 +83,28 @@ func isASCIIKey(key string) bool {
 	}
 	return true
 }
+
+func TestPostRecommendationsKeepPlanClaimsSeparateAndAttributeTitleAdvice(t *testing.T) {
+	facts, _ := DefaultFor(KindPost, "facts")
+	for _, needle := range []string{"해당 템플릿 입력란", "근거가 있는 스토리라인", "배치를 승인한 것만으로"} {
+		if !strings.Contains(facts.Ko.Text, needle) {
+			t.Fatalf("grounding lost its source boundary: %q", needle)
+		}
+	}
+	if !strings.Contains(facts.En.Text, "approval of its arrangement never makes its claims author-supplied facts") {
+		t.Fatal("English grounding promotes plan approval to an owner fact")
+	}
+	title, _ := DefaultFor(KindPost, "titles")
+	if !strings.Contains(title.Ko.Text, "제품의 추천") || !strings.Contains(title.Ko.Text, "노출 보장이 아닙니다") || !strings.Contains(title.En.Text, "product recommendations") || !strings.Contains(title.En.Text, "not a published Naver numeric penalty threshold") {
+		t.Fatal("title recommendation claims unsupported platform authority")
+	}
+	tags, _ := DefaultFor(KindPost, "tags")
+	for _, needle := range []string{"재료로 확인되는", "후순위", "태그 수를 채우려고 덧붙이지", "다른 글에 그대로 쓰지는", "요청받았을 때만"} {
+		if !strings.Contains(tags.Ko.Text, needle) {
+			t.Fatalf("switchable tag selection lost %q", needle)
+		}
+	}
+	if !strings.Contains(tags.En.Text, "fill the upper bound") {
+		t.Fatal("English tag advice still asks to fill a required count")
+	}
+}

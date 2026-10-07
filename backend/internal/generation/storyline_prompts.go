@@ -31,6 +31,9 @@ const englishStorylineLanguage = "The output language is English. Write every st
 // there, and every attachment still stands in exactly one paragraph.
 const koreanStorylineRequestRule = "[현재 스토리라인]을 [수정 요청]대로 고치세요. 요청이 다루지 않는 문단과 사진 배치는 그대로 두고, 첨부 사진과 영상은 모두 정확히 한 문단에 한 번씩 두세요."
 
+const koreanPlanMeaningContract = "스토리라인은 앞으로 쓸 내용과 배열의 계획입니다. 문단 text는 계획을 말하고 files는 첨부 배치를 나타내며, 계획 문장이나 그 배열을 실제 경험·사건의 근거로 확정하지 않습니다. 작성할 문단과 files만 반환하고 최종 제목·태그·본문 블록을 작성하지 마세요. 기존 계획을 선택하거나 표현만 고쳐도 다른 AI 주장이 사용자 사실로 바뀌지 않습니다. 수정 요청에 새 사실이 명시적으로 제공된 경우와 배열 승인만을 구분하세요."
+const englishPlanMeaningContract = "A storyline proposes content and arrangement: paragraph text states a plan and files assigns attachment placement. Plan wording or arrangement is not evidence of actual experience or events. Return only the planned paragraphs and files, never final title, tags, or prose blocks. Selecting a plan or rewording it does not turn other AI claims into owner facts. Distinguish explicitly supplied new edit facts from approval of arrangement alone."
+
 const englishStorylineRequestRule = "Revise [현재 스토리라인] as [수정 요청] asks. Leave the paragraphs and the photo placement the request does not touch as they are, and keep every attached photo and video in exactly one paragraph."
 
 // storylineGuidelinePrecedence closes [작문 지침] in the storyline prompts (GUIDE-15): the same
@@ -71,6 +74,7 @@ func BuildStorylinePromptForLanguage(input StorylinePromptInput) (string, string
 		stable.WriteString("\n" + koreanStorylineParagraphRule)
 		stable.WriteString("\n출력은 설명이나 마크다운 없이 " + storylineAnswerShape + " 형태의 JSON 객체 하나여야 합니다.")
 		stable.WriteString("\n" + koreanStorylineLanguage)
+		stable.WriteString("\n" + koreanPlanMeaningContract)
 		if revising {
 			stable.WriteString("\n" + koreanStorylineRequestRule)
 		}
@@ -79,6 +83,7 @@ func BuildStorylinePromptForLanguage(input StorylinePromptInput) (string, string
 		stable.WriteString("\n" + englishStorylineParagraphRule)
 		stable.WriteString("\nReturn exactly one JSON object shaped as " + storylineAnswerShape + " with no explanation or Markdown.")
 		stable.WriteString("\n" + englishStorylineLanguage)
+		stable.WriteString("\n" + englishPlanMeaningContract)
 		if revising {
 			stable.WriteString("\n" + englishStorylineRequestRule)
 		}
