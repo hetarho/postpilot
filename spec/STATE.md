@@ -110,6 +110,7 @@
 - Existing browser-media tasks and blocked qualifications retain their scope; THEME-61 visual decisions remain open.
 
 ## log
+- 261007 main synchronization start: merge published origin/main browser-media history with local completed UX history, preserve both commit graphs and stopped task scope, run final-candidate pre-push checks before ordinary push
 - 261007 T626 done on main: editable private sources and accepted snapshots, explicit estimated reanalysis, exact binary style batches and safe publication; owning/consumer tests, builds, codegen and lint checks pass; stopped as requested without starting another task
 - 261007 user scope limited to current T626: finish implementation, verification and main commit, then stop without starting a next task
 - 261007 T626 start on main after0d49753b: editable materials, accepted revision/source snapshots, explicit reanalysis and binary style preparation; VOICE@15/MODEL@35 prompt-inspection additions remain in T632/T638/T641
@@ -129,4 +130,3 @@
 - 261007 update-ssot GEN POST GUIDE TMPL THEME EXPORT MKT LANG VOICE MODEL QUAL MEM EDIT start: convert prompt efficiency and owner-controlled writing decisions; reconcile three-source review, visible AI expression and photo chronology with current policies
 - 261007 ideation prompt-engineering owner-control round recorded: scope corrected; three semantic sources, expressive assistance and photo-order chronology explored with an interactive synthetic mockup; granularity/addition policy pending, SSOT/tasks unchanged
 - 261007 ideation prompt-engineering owner-control round start: correct scope to context efficiency/maintainability plus writing/tag quality; explore three-source text review, AI-assisted expression and photo-order-independent storytelling before SSOT/task conversion
-- 261007 ideation prompt-engineering deep review recorded: thirty-one audit candidates and twenty primary-source links; twelve existing checks plus five synthetic diagnostics, reference-token measurements and independent reviews; language choice remains open, tag default ownership confirmed
