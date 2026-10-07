@@ -6,3 +6,4 @@ export type {
   ClipObservedSegment,
   ClipSourceObservation,
 } from './model/observations'
+export type { ClipLayoutObservations, ClipNormalizedSourceBox } from './model/observations'

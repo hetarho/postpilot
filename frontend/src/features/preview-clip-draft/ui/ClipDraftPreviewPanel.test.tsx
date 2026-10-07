@@ -23,6 +23,7 @@ afterEach(() => {
 it('keeps the frame clock callback while playback advances', () => {
   render(
     <ClipDraftPreviewPanel
+      ownerId="owner"
       projectId="project"
       revision={1}
       plan={{ durationMs: 2000, cuts: [] } as ClipEditPlan}

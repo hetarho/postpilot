@@ -371,6 +371,17 @@ export function ClipWorkspace({ ownerId, project }: { ownerId: string; project: 
       <ClipCorrectionWorkspace
         project={{
           id: project.id,
+          ownerId,
+          ratio: project.ratio,
+          design: {
+            captionStyles: project.allowedCaptionStyles,
+            captionPace: project.captionPace,
+            accent: project.accent,
+            introPreset: project.introPreset,
+            outroPreset: project.outroPreset,
+            disclosure: project.disclosure,
+            hideDisclosure: project.hideDisclosure,
+          },
           state: plan,
           captionStyles: project.allowedCaptionStyles,
           // A slot's notice stands in its storyline block, beside the words it is about.
@@ -404,8 +415,21 @@ export function ClipWorkspace({ ownerId, project }: { ownerId: string; project: 
             ) : (
               <ClipDraftPreviewPanel
                 {...controls}
+                ownerId={ownerId}
                 projectId={project.id}
+                projectRevision={project.editPlanRevision}
                 revision={correction.revision}
+                design={{
+                  captionStyles: project.allowedCaptionStyles,
+                  captionPace: project.captionPace,
+                  accent: project.accent,
+                  introPreset: project.introPreset,
+                  outroPreset: project.outroPreset,
+                  disclosure: project.disclosure,
+                  hideDisclosure: project.hideDisclosure,
+                }}
+                layoutObservations={plan.layoutObservations}
+                localSources={sources.localSources}
                 plan={correction.previewPlan}
                 ratio={project.ratio}
                 sources={plan.sources}

@@ -188,6 +188,7 @@ export function useClipWorkspace(ownerId: string, project: ClipProject) {
   const reorderSources = useReorderClipSources()
   const localSources = upload.entries.map((entry) => ({
     sourceId: entry.sourceId,
+    file: entry.file,
     fingerprint: entry.metadata.fingerprint,
     url: entry.previewURL,
   }))

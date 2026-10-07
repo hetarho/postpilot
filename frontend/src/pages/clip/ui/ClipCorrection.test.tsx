@@ -1,3 +1,4 @@
+import { localSamplesForControls } from '@/test/clip-local-samples'
 import { afterEach, expect, it, vi } from 'vitest'
 import { create } from '@bufbuild/protobuf'
 import { ClipSourceBatchSchema } from '@/shared/api'
@@ -823,7 +824,9 @@ it('starts a server render when the retained batch includes an unused original',
 })
 
 const styleRadio = (name: string) =>
-  within(screen.getByRole('radiogroup', { name: '자막 스타일' })).getByRole('radio', { name })
+  within(screen.getByRole('radiogroup', { name: '자막 스타일' })).getByRole('radio', {
+    name: new RegExp('^' + name),
+  })
 
 // CLIP-142, CLIP-143, CLIP-191: the owner gives ONE caption a style outside the project's AI set.
 // Only that caption changes — its words and window stay — the AI set is not touched, and the
@@ -909,4 +912,30 @@ it('selects each caption by its identity, several on one cut and one across cuts
   await selectText('컷을 건너가는 자막')
   expect(screen.getByLabelText('자막 원문')).toHaveValue('컷을 건너가는 자막')
   expect(styleRadio('기본 스타일')).toHaveAttribute('aria-checked', 'true')
+})
+
+vi.mock('@/entities/clip-preview/ui/useLocalSamples', () => localSamplesForControls)
+
+// Control/store tests use the deterministic compatibility player; actual local Worker/audio
+// and bitmap/gesture behavior are exercised in the mounted Chrome harness.
+vi.mock('@/features/preview-clip-draft', async (original) => {
+  const actual = await original<object>()
+  const { ClipDraftPreview } = await import('@/entities/clip-preview')
+  return {
+    ...actual,
+    ClipDraftPreviewPanel: (props: import('react').ComponentProps<typeof ClipDraftPreview>) => (
+      <ClipDraftPreview
+        {...props}
+        localMode={false}
+        preview={{
+          assets: [],
+          canvasWidth: 1080,
+          canvasHeight: 1920,
+          ready: true,
+          updating: false,
+          onRetry: () => {},
+        }}
+      />
+    ),
+  }
 })
