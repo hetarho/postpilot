@@ -36,7 +36,7 @@
 | GUIDE | 17 | 17 | - | 0 |
 | EXPORT | 11 | 11 | - | 0 |
 | LANG | 9 | 9 | - | 0 |
-| THEME | 31 | 31 | - | 1 |
+| THEME | 32 | 32 | - | 1 |
 | MKT | 10 | 10 | - | 0 |
 | VIDEO | 7 | 7 | - | 0 |
 | CLIP | 59 | 59 | - | 2 |
@@ -67,6 +67,9 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
+| T650 | Compact first-use setup and header location | ARCH THEME | T648 | todo |
+| T651 | Keep mobile authoring inputs ahead of previews and history | ARCH THEME | T648 | todo |
+| T652 | Audit every mobile route and compact remaining screen layouts | ARCH THEME | T648 | todo |
 | T539 | Qualify the complete Korean voice-creation milestone | ARCH DUB MODEL CDS THEME | T538 | blocked@261005 |
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
@@ -89,10 +92,13 @@
 | T646 | Qualify origin-aware writing inspection and clean publication handoff | ARCH GEN POST MODEL THEME EXPORT MKT LANG | T636 T637 T639 T641 T642 T643 T644 T645 T631 | todo |
 
 ## next
-- T628 is dependency-ready; continue verified task commits on main through T646.
-- Editorial follow-up: doc-review ARCH; preserve blocked independent media/voice qualification.
+- Parallel mobile work: T650 shell/setup, T651 authoring/voice, T652 exhaustive route audit and remaining density corrections.
+- Integrate verified mobile results independently of active main T649/T628; preserve all unrelated edits.
 
 ## log
+- 261007 create-task THEME r32 consumed into T650–T652; explicit parallel authorization overrides sequential execution for this isolated mobile group
+- 261007 update-ssot THEME r32: compact focused setup and phone header location plus app-wide height-aware composition; T648 dock48px contract and active T649/T628 behavior preserved
+- 261007 update-ssot THEME start: mobile height and focused first-use location contracts, parallel work explicitly authorized for this request
 - 261007 T648 done on main: compact translucent docks, bounded composers and48px actions across the app; consumer608 plus final55, build/lint and Chromium196 routes/308 geometry/70 continuity checks pass
 - 261007 T627 done on main: immutable single-factor factories and private complete outputs, exact checkpoint/retry plans and current direct/refined references; owning/domain/wiring tests, builds/vet and FE124 consumers pass
 - 261007 Docker Desktop termination complete: 9 app processes received SIGTERM; 4 remaining or respawned processes required SIGKILL; independent scans confirmed no Docker.app processes or port 7678 listener; separate Colima/Lima and persistent data files retained
@@ -110,6 +116,3 @@
 - 261007 remote deployment at6a944d1f: build and actual rollout/health/browser-CORS/R2-GET steps all pass, none skipped — https://github.com/hetarho/postpilot/actions/runs/37603126041
 - 261007 remote media verification at6a944d1f: image, worker and both-layout release jobs all pass — https://github.com/hetarho/postpilot/actions/runs/37603618318
 - 261007 remote CI frontend failure at6a944d1f: usePostList retained-terminal polling test expected failed but saw running in picker; diagnose real observer/timer ordering before correcting it, preserve both-list refresh and stopped-poll assertions; remote deployment/release/worker gates pass and image/backend checks continue
-- 261007 final remote verification start at6a944d1f: user requests remaining CI/deployment/media checks to finish before final verification record commit/push; no further implementation task is started
-- 261007 post-push verification complete: whole Go run passed every package except the corrected rpcserver reason scan; rpcserver/authoring/authoring-rpc full owning suites, vet/build and format pass after genuine missing-capability/private-reason fixes; whole frontend failures corrected with owning-suite passes, generated-code drift/spec checks and production build pass; deployment recovery62 and all production/worker/both-layout media gates pass
-- 261007 final backend correction scope: unsupported durable authoring adapter returns typed existing unavailable314 after authentication; reason scanner recognizes actual private failure fields without enum exemptions; media/worker execution paths unchanged and real release API adapter implements durable drafts, so compatible runtime gate evidence is retained and final deployable image metadata is rebuilt for pushed HEAD
