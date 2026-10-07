@@ -44,7 +44,7 @@ export class BrowserCompositionOriginals {
         const url = selected?.url?.startsWith('blob:')
           ? selected.url
           : await this.resolvePlayback(fingerprint, this.refreshAccess)
-        this.check(signal)
+        this.check(this.signal)
         return { kind: 'url' as const, url }
       })()
       this.accesses.set(key, access)
@@ -52,7 +52,19 @@ export class BrowserCompositionOriginals {
         if (this.accesses.get(key) === access) this.accesses.delete(key)
       })
     }
-    const resolved = await access
+    let resolved: BrowserMediaSourceAccess
+    try {
+      resolved = await access
+    } catch (error) {
+      if (
+        error &&
+        typeof error === 'object' &&
+        'reason' in error &&
+        ['expired', 'missing', 'unavailable'].includes(String(error.reason))
+      )
+        throw new BrowserCompositionError(`CLIP_SOURCE_${String(error.reason).toUpperCase()}`)
+      throw error
+    }
     this.check(signal)
     return resolved
   }

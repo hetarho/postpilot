@@ -197,6 +197,7 @@ export function ClipCaptionStage({
             }}
             className="pointer-events-auto absolute min-h-11 min-w-11 cursor-move touch-none rounded-sm"
             style={{
+              touchAction: 'none',
               left: percent(placed.x, canvas.width),
               top: percent(placed.y, canvas.height),
               width: percent(box.width, canvas.width),

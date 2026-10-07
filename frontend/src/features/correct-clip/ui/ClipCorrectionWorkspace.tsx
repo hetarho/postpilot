@@ -1,3 +1,9 @@
+import {
+  useClipLocalCaptionPreview,
+  useClipLocalStyleSamples,
+  type BrowserCompositionDesign,
+} from '@/entities/clip-preview'
+import type { ClipRatioId } from '@/entities/clip-design'
 import { type ClipBrowserRenderCapability } from '@/entities/clip-preview'
 import type { MyPlan } from '@/entities/plan'
 import { ClipNoticeList, type ClipNotice, type ClipRenderKind } from '@/entities/clip-project'
@@ -16,8 +22,6 @@ import {
   minExposureMs,
   textInterval,
   type ClipSpokenSegment,
-  useClipCaptionPreview,
-  useClipCaptionStyleSamples,
 } from '@/entities/clip-plan'
 import { type ClipDisplayedFrame } from '@/entities/clip-preview'
 import { Info, X } from 'lucide-react'
@@ -74,6 +78,9 @@ export function ClipCorrectionWorkspace({
   /** The SAVED side: what the server holds for this project, including the plan ② edits from. */
   project: {
     id: string
+    ownerId?: string
+    ratio?: ClipRatioId
+    design?: Partial<BrowserCompositionDesign>
     state: ClipEditingState
     /** The caption styles this project allows (CLIP-142). */
     captionStyles?: readonly string[]
@@ -276,19 +283,29 @@ export function ClipCorrectionWorkspace({
     Math.abs(frame.outputMs - timeline.timeMs) <= CLIP_DRAFT_PREVIEW.frameToleranceMs
       ? outputToSourceMs(cutTime!, snapClipTime(frame.outputMs))
       : undefined
-  // ② draws each caption from the SERVER's own fragment (CDS-83). The query is
-  // keyed by what the captions draw, so selecting one or dragging it asks
-  // nothing: only their words, styles, sizes and pacing do.
-  const captionPreview = useClipCaptionPreview(
-    projectId,
-    correction.revision,
-    draft,
-    !!draft.nativeComposition && !!draft.elements?.some((t) => t.role === 'caption') && !readOnly,
+  const captionPreview = useClipLocalCaptionPreview(
+    project.ownerId && project.ratio
+      ? {
+          ownerId: project.ownerId,
+          projectId,
+          projectRevision: correction.revision,
+          planRevision: correction.revision,
+          plan: draft,
+          ratio: project.ratio,
+          sources: state.sources,
+          layoutObservations: state.layoutObservations,
+          design: project.design,
+        }
+      : undefined,
+    !!draft.nativeComposition && !readOnly,
+    text?.instanceId,
   )
   const fragment = captionPreview.data?.captions.find((c) => c.instanceId === text?.instanceId)
-  // Every approved style, drawn once by the renderer for the caption sheet's picker (CDS-83);
-  // the same session-long query ① reads, retried only while the renderer is busy.
-  const styleSamples = useClipCaptionStyleSamples(projectId, text?.role === 'caption' && !readOnly)
+  const styleSamples = useClipLocalStyleSamples(
+    project.ratio ?? 'vertical',
+    text?.role === 'caption' && !readOnly,
+    project.design?.captionPace,
+  )
   // The cut the caption's interval STARTS in: a caption may cross several, and
   // it is placed once, against the frame it opens over (CLIP-143).
   const captionCut = text ? captionStartCut(draft, text) : undefined

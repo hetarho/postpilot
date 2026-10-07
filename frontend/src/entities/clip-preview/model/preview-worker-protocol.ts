@@ -2,11 +2,13 @@ import type { BrowserCompositionSnapshot } from './browser-composition'
 import type { BrowserMediaSourceAccess } from '@/shared/lib'
 export interface BrowserPreviewFrameRequest {
   frame: number
+  timeMs?: number
   flow: boolean
   captionPosition?: { instanceId: string; x: number; y: number }
 }
 export interface BrowserPreviewFrameResult {
   bitmap: ImageBitmap
+  captionPosition?: { instanceId: string; x: number; y: number }
   frame: number
   flow: boolean
   fingerprint: string

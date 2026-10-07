@@ -34,3 +34,4 @@ export type {
   ClipRegionSlotSpec,
   ClipPlacedRegionSlot,
 } from '../model/region-layout'
+export { CLIP_CAPTION_STYLES } from '../config/clip-design'

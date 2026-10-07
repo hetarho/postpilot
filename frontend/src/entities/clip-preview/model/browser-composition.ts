@@ -21,7 +21,14 @@ import {
   type ClipEditableText,
   type ClipSpeechRef,
 } from '@/entities/clip-plan/@x/clip-preview'
-import { frameLayers, frameTimeline, previewCrop, previewTimeline } from './draft-preview'
+import {
+  frameLayers,
+  frameTimeline,
+  previewCrop,
+  previewTimeline,
+  flowInstant,
+  flowCut,
+} from './draft-preview'
 import { speechRenderFingerprint } from './speech-fingerprint'
 
 export type BrowserFrozen<T> = T extends readonly (infer U)[]
@@ -781,6 +788,74 @@ export function evaluateBrowserFrame(snapshot: BrowserCompositionSnapshot, frame
     durationUs: Math.round(((frame + 1) * 1_000_000) / fps) - timestampUs,
     footageLayers,
     components,
+  }
+}
+/** Flow reads the same immutable intervals at the requested ms, with a still source and settled components. */
+export function evaluateBrowserFlow(
+  snapshot: BrowserCompositionSnapshot,
+  requestedMs: number,
+): ReturnType<typeof evaluateBrowserFrame> {
+  if (!Number.isFinite(requestedMs)) refuse('CLIP_SNAPSHOT_INVALID', 'flow time')
+  const plan = snapshot.plan as ClipEditPlan,
+    timeline = previewTimeline(plan),
+    timeMs = flowInstant(timeline, requestedMs)
+  const frame = Math.min(
+    snapshot.frameCount - 1,
+    Math.max(0, Math.floor((timeMs * CLIP_BROWSER_RENDER.frameRate) / 1000)),
+  )
+  const base = evaluateBrowserFrame(snapshot, frame),
+    selected = flowCut(timeline, timeMs)!
+  const source = snapshot.sources.find(
+    (source) =>
+      source.sourceId === selected.cut.sourceId && source.fingerprint === selected.cut.fingerprint,
+  )!
+  const outputCut = frameTimeline(plan, CLIP_BROWSER_RENDER.frameRate).cuts.find(
+    (item) => item.cut.id === selected.cut.id,
+  )!
+  const canvas = CLIP_DESIGN.ratios[snapshot.ratio].canvas
+  return {
+    ...base,
+    timeMs,
+    footageLayers: [
+      {
+        ...base.footageLayers[0]!,
+        cutInstanceId: selected.cut.id,
+        sourceId: source.sourceId,
+        fingerprint: source.fingerprint,
+        sourceTimestampUs: selected.cut.startMs * 1000,
+        sourceStartUs: selected.cut.startMs * 1000,
+        sourceEndUs: selected.cut.endMs * 1000,
+        cutStartFrame: outputCut.startFrame,
+        cutLocalFrame: 0,
+        ratePermille: 1000,
+        focal: selected.cut.focal ?? { x: 0.5, y: 0.5 },
+        alpha: 1,
+        weight: 1,
+        retainOriginalAudio: false,
+        crop: previewCrop(
+          source.width,
+          source.height,
+          canvas.width,
+          canvas.height,
+          selected.cut.focal,
+        ),
+      },
+    ],
+    components: snapshot.components
+      .filter((component) => component.startMs <= timeMs && timeMs < component.endMs)
+      .map((component) => ({
+        component,
+        localFrame: frame - component.firstFrame,
+        localTimeMs: timeMs - component.startMs,
+        durationMs: component.endMs - component.startMs,
+        progress: 0.5,
+        animationProgress: 0.5,
+        phraseIndex: component.phraseIndex,
+        text:
+          component.phraseIndex === undefined
+            ? component.element.text
+            : component.element.phrases![component.phraseIndex]!.text,
+      })),
   }
 }
 export type BrowserEvaluatedFrame = ReturnType<typeof evaluateBrowserFrame>

@@ -1,3 +1,5 @@
+import { ClipBrowserDraftPreview } from './ClipBrowserDraftPreview'
+import type { ClipLocalCompositionRuntime } from '../model/local-preview'
 import {
   useCallback,
   useEffect,
@@ -399,25 +401,7 @@ function PreviewVideo({
   )
 }
 
-export function ClipDraftPreview({
-  preview,
-  plan,
-  ratio,
-  sources,
-  resolvePlayback,
-  timeMs: controlledTime,
-  onTimeChange,
-  onDisplayedFrame,
-  maxHeight,
-  compact = false,
-  suspended = false,
-  stickyTop,
-  corner,
-  editingOverlay,
-  captionPosition,
-  loadSpeech,
-  snapshot,
-}: {
+export type ClipDraftPreviewProps = {
   /** The prepared caption/graphic overlay for this plan, fetched by
    *  `features/preview-clip-draft` — this component renders it and owns no transport. */
   preview: ClipPreviewOverlay
@@ -442,7 +426,37 @@ export function ClipDraftPreview({
   loadSpeech?: SpeechAudioLoader
   /** Qualified local callers use the same output evaluator as export. */
   snapshot?: BrowserCompositionSnapshot
-}) {
+  local?: ClipLocalCompositionRuntime
+  localMode?: boolean
+}
+
+export function ClipDraftPreview(props: ClipDraftPreviewProps) {
+  return props.localMode ? (
+    <ClipBrowserDraftPreview {...props} />
+  ) : (
+    <ClipLegacyDraftPreview {...props} />
+  )
+}
+
+function ClipLegacyDraftPreview({
+  preview,
+  plan,
+  ratio,
+  sources,
+  resolvePlayback,
+  timeMs: controlledTime,
+  onTimeChange,
+  onDisplayedFrame,
+  maxHeight,
+  compact = false,
+  suspended = false,
+  stickyTop,
+  corner,
+  editingOverlay,
+  captionPosition,
+  loadSpeech,
+  snapshot,
+}: ClipDraftPreviewProps) {
   if (
     snapshot &&
     (snapshot.ratio !== ratio || JSON.stringify(snapshot.plan) !== JSON.stringify(plan))

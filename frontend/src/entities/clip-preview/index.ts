@@ -16,6 +16,7 @@ export {
   BrowserCompositionError,
   BrowserSnapshotEpoch,
   evaluateBrowserFrame,
+  evaluateBrowserFlow,
   freezeBrowserComposition,
   freezeBrowserPreviewComposition,
   readBrowserCompositionSnapshot,
@@ -103,3 +104,10 @@ export {
 } from './model/composition-audio'
 export type { BrowserPreparedAudioSources } from './model/composition-audio'
 export { BrowserCompositionPlayback } from './model/composition-playback'
+export type { ClipLocalCompositionRuntime } from './model/local-preview'
+export { BrowserPreviewWorker } from './lib/create-preview-worker'
+export {
+  useClipLocalStyleSamples,
+  useClipLocalPresetSamples,
+  useClipLocalCaptionPreview,
+} from './ui/useLocalSamples'

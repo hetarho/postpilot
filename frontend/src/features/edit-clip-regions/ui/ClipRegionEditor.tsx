@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { useClipRegionPresetSamples } from '@/entities/clip-plan'
+import { useClipLocalPresetSamples } from '@/entities/clip-preview'
 import { CLIP_DESIGN, type ClipRegionKind } from '@/entities/clip-design'
 import type { ClipRatio } from '@/entities/clip-project'
 import type { ClipRegionsEditor } from '../model/useClipRegionsEditor'
@@ -11,7 +11,6 @@ import { ClipRegionBlock } from './ClipRegionBlock'
 export function ClipRegionEditor({
   editor,
   kind,
-  projectId,
   ratio,
 }: {
   editor: ClipRegionsEditor
@@ -20,7 +19,7 @@ export function ClipRegionEditor({
   ratio: ClipRatio
 }) {
   const { t } = useTranslation('clips')
-  const samples = useClipRegionPresetSamples(projectId, t('composition.design.slotLabel'))
+  const samples = useClipLocalPresetSamples(ratio, t('composition.design.slotLabel'))
   const region = editor.regions?.[kind]
   if (!region) return null
   const preset = editor.presets[kind]

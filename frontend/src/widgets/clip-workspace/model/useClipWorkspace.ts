@@ -182,6 +182,8 @@ export function useClipWorkspace(ownerId: string, project: ClipProject) {
   useDiscardQueueWhenFinalized(project.id, project.finalized, discardClipStorylineQueue)
   const reorderSources = useReorderClipSources()
   const localSources = upload.entries.map((entry) => ({
+    sourceId: entry.sourceId,
+    file: entry.file,
     fingerprint: entry.metadata.fingerprint,
     url: entry.previewURL,
   }))

@@ -3,6 +3,7 @@ import type { ClipEditPlan } from '@/entities/clip-plan/@x/clip-preview'
 import { CLIP_LOCAL_PREVIEW } from '../config/local-preview'
 import {
   readBrowserCompositionSnapshot,
+  evaluateBrowserFlow,
   type BrowserCompositionSnapshot,
   type BrowserEvaluatedFrame,
 } from '../model/browser-composition'
@@ -14,7 +15,6 @@ import {
 } from '../model/background-sampling'
 import { drawMeasuredBrowserComponents } from '../model/background-paint'
 import { compositeBrowserFrame } from '../model/composite-video'
-import { flowCut, previewTimeline } from '../model/draft-preview'
 import { NativeFadeBlackSurface } from '../model/native-fadeblack'
 import type {
   BrowserPreviewWorkerInput,
@@ -35,6 +35,7 @@ let lifetime = new AbortController(),
   background: BrowserBackgroundEvidence | undefined,
   backgroundPending: Promise<BrowserBackgroundEvidence> | undefined,
   fadeBlack: NativeFadeBlackSurface | undefined
+let lastFlow = false
 let requestId = 0,
   epoch = 0,
   generation = 0,
@@ -125,7 +126,7 @@ async function render(request: { id: number; epoch: number } & BrowserPreviewFra
       throw new Error('CLIP_SNAPSHOT_SUPERSEDED')
     frameOwner!.signal.throwIfAborted()
   }
-  if (request.flow || request.frame < lastFrame || !footage) {
+  if (request.flow !== lastFlow || (!request.flow && request.frame < lastFrame) || !footage) {
     await footage?.dispose()
     footage = undefined
     frameOwner?.abort()
@@ -135,7 +136,15 @@ async function render(request: { id: number; epoch: number } & BrowserPreviewFra
   check()
   let measured = background
   if (!request.flow) {
-    backgroundPending ??= measureBrowserBackground(current, local, access, lifetime.signal)
+    backgroundPending ??= measureBrowserBackground(
+      current,
+      local,
+      access,
+      frameOwner!.signal,
+    ).catch((error) => {
+      if (current === snapshot) backgroundPending = undefined
+      throw error
+    })
     measured = await backgroundPending
     check()
     background = measured
@@ -153,27 +162,7 @@ async function render(request: { id: number; epoch: number } & BrowserPreviewFra
       footage: {
         prepare: async (evaluated: BrowserEvaluatedFrame) => {
           let state = evaluated
-          if (request.flow) {
-            const selected = flowCut(
-              previewTimeline(current.plan as ClipEditPlan),
-              evaluated.timeMs,
-            )
-            const layer =
-              evaluated.footageLayers.find((layer) => layer.cutInstanceId === selected?.cut.id) ??
-              evaluated.footageLayers.at(-1)!
-            state = {
-              ...evaluated,
-              footageLayers: [
-                {
-                  ...layer,
-                  sourceTimestampUs: layer.sourceStartUs,
-                  cutLocalFrame: 0,
-                  alpha: 1,
-                  weight: 1,
-                },
-              ],
-            }
-          }
+          if (request.flow) state = evaluateBrowserFlow(current, request.timeMs ?? evaluated.timeMs)
           try {
             return await frameFootage.prepare(state)
           } catch (error) {
@@ -193,14 +182,7 @@ async function render(request: { id: number; epoch: number } & BrowserPreviewFra
       },
       local: async (evaluated) => {
         const state = request.flow
-          ? {
-              ...evaluated,
-              components: evaluated.components.map((component) => ({
-                ...component,
-                progress: 0.5,
-                animationProgress: 0.5,
-              })),
-            }
+          ? evaluateBrowserFlow(current, request.timeMs ?? evaluated.timeMs)
           : evaluated
         const resources = await local.prepare(
           state,
@@ -212,7 +194,13 @@ async function render(request: { id: number; epoch: number } & BrowserPreviewFra
                   ?.component.element.accent ?? '') as keyof typeof CLIP_DESIGN.accent
               ],
             accentWhite: measured?.measurements.some(
-              (m) => m.instanceId === instanceId && m.accentWhite,
+              (m) =>
+                m.instanceId === instanceId &&
+                m.phraseIndex ===
+                  (state.components.find(
+                    (component) => component.component.instanceId === instanceId,
+                  )?.phraseIndex ?? 0) &&
+                m.accentWhite,
             ),
           }),
           { representative: request.flow, position: request.captionPosition },
@@ -241,6 +229,7 @@ async function render(request: { id: number; epoch: number } & BrowserPreviewFra
   )
   check()
   lastFrame = request.frame
+  lastFlow = request.flow
   const stats = footage.measurements(),
     bitmap = target.transferToImageBitmap()
   send(
@@ -250,6 +239,7 @@ async function render(request: { id: number; epoch: number } & BrowserPreviewFra
       epoch: request.epoch,
       result: {
         bitmap,
+        captionPosition: request.captionPosition,
         frame: request.frame,
         flow: request.flow,
         fingerprint: current.snapshotFingerprint,
