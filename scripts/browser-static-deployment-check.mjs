@@ -123,14 +123,23 @@ try{
  if(denied.error!=='TypeError')throw new Error('Foreign origin unexpectedly accessed private range')
  report.checks.push({kind:'origin-scope-negative',result:denied});await foreign.close()
  const assets=readdirSync(resolve(artifact,'assets'))
- const wasm=assets.find(name=>/^index_bg-.+\.wasm$/.test(name)),worker=assets.find(name=>/^video\.worker-.+\.js$/.test(name))
- if(!wasm||!worker)throw new Error('Missing current built Worker/WASM')
+ const wasm=assets.find(name=>/^index_bg-.+\.wasm$/.test(name)),worker=assets.find(name=>/^video\.worker-.+\.js$/.test(name)),preview=assets.find(name=>/^preview\.worker-.+\.js$/.test(name))
+ if(!wasm||!worker||!preview)throw new Error('Missing current built Worker/WASM')
  const wasmResult=await page.evaluate(async path=>{const r=await fetch(path);const b=await r.arrayBuffer();await WebAssembly.compile(b);return{status:r.status,mime:r.headers.get('content-type'),sha256:Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',b)),x=>x.toString(16).padStart(2,'0')).join('')}},'/assets/'+wasm)
  if(wasmResult.status!==200||wasmResult.mime!=='application/wasm'||wasmResult.sha256!=='22bf6e9f9a100d972da0411a69c5ba504367fc1fa87b3b64e3f35e53926d2d70')throw new Error('Current WASM byte/MIME failure')
  report.checks.push({kind:'actual-built-wasm-compile',asset:wasm,result:wasmResult})
  const workerResult=await page.evaluate(path=>new Promise((resolve,reject)=>{const w=new Worker(path,{type:'module'});const timer=setTimeout(()=>{w.terminate();reject(new Error('Worker timeout'))},10000);w.onmessage=e=>{clearTimeout(timer);w.terminate();resolve(e.data)};w.onerror=e=>{clearTimeout(timer);w.terminate();reject(new Error(e.message))};w.postMessage({type:'start',input:{snapshot:{purpose:'preview'}}})}),'/assets/'+worker)
  if(workerResult.type!=='error'||workerResult.error!=='CLIP_SNAPSHOT_EXPORT_PURPOSE_REQUIRED')throw new Error('Actual built module Worker failed purpose fence')
  report.checks.push({kind:'actual-built-module-worker-execution',asset:worker,result:workerResult,scope:'Known bounded wrong-purpose rejection, not a final-render or performance run.'})
+ const previewResult=await page.evaluate(path=>new Promise((resolve,reject)=>{const w=new Worker(path,{type:'module'});const timer=setTimeout(()=>{w.terminate();reject(new Error('Preview Worker timeout'))},10000);w.onmessage=e=>{clearTimeout(timer);w.terminate();resolve(e.data)};w.onerror=e=>{clearTimeout(timer);w.terminate();reject(new Error(e.message))};w.postMessage({type:'initialize',id:1,snapshot:{purpose:'preview'}})}),'/assets/'+preview)
+ if(previewResult.type!=='failed'||previewResult.error!=='CLIP_SNAPSHOT_INCOMPATIBLE_VERSION')throw new Error('Actual built preview Worker failed malformed-version fence')
+ report.checks.push({kind:'actual-built-preview-module-worker-execution',asset:preview,result:previewResult,scope:'Known malformed version rejection, separate from actual mounted-frame/codec evidence.'})
+ const inventoryPath=option('--bundle-inventory',null)
+ const inventory=inventoryPath?readJSON(resolve(inventoryPath)):null
+ const associationFiles=inventory?[...new Set(inventory.mediaChunks), 'assets/'+wasm]:['assets/'+worker,'assets/'+preview,'assets/'+wasm]
+ const associations=[]
+ for(const file of associationFiles){const r=await page.request.get(appOrigin+'/'+file);const link=r.headers()['link']??'';if(r.status()!==200||!link.includes('/licenses/browser-media/index.html')||!link.includes('/licenses/browser-media/source-access.json'))throw new Error('Missing notice/source association '+file);const bytes=await r.body();if(hash(bytes)!==hash(readFileSync(resolve(artifact,file))))throw new Error('Changed associated media chunk '+file);associations.push({file,sha256:hash(bytes),link,mime:r.headers()['content-type']})}
+ report.checks.push({kind:'actual-https-emitted-media-notice-source-association',inventorySourceCommit:inventory?.sourceCommit??null,files:associations})
  const fonts=await page.evaluate(async resources=>{const out=[];for(const f of resources){const r=await fetch('/fonts/clip/'+f.file);const b=await r.arrayBuffer();const h=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',b)),x=>x.toString(16).padStart(2,'0')).join('');const face=await new FontFace(f.family,b,{weight:String(f.weight)}).load();document.fonts.add(face);out.push({file:f.file,bytes:b.byteLength,sha256:h,status:face.status})}return out},fontManifest.resources)
  for(let i=0;i<fonts.length;i++)if(fonts[i].bytes!==fontManifest.resources[i].bytes||fonts[i].sha256!==fontManifest.resources[i].sha256||fonts[i].status!=='loaded')throw new Error('Bundled font byte/load mismatch')
  report.checks.push({kind:'actual-https-font-bytes-and-FontFace-load',fonts,assetVersion:ink.assetVersion})
