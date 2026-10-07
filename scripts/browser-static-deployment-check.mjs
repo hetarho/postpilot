@@ -132,7 +132,8 @@ try{
  if(workerResult.type!=='error'||workerResult.error!=='CLIP_SNAPSHOT_EXPORT_PURPOSE_REQUIRED')throw new Error('Actual built module Worker failed purpose fence')
  report.checks.push({kind:'actual-built-module-worker-execution',asset:worker,result:workerResult,scope:'Known bounded wrong-purpose rejection, not a final-render or performance run.'})
  const previewResult=await page.evaluate(path=>new Promise((resolve,reject)=>{const w=new Worker(path,{type:'module'});const timer=setTimeout(()=>{w.terminate();reject(new Error('Preview Worker timeout'))},10000);w.onmessage=e=>{clearTimeout(timer);w.terminate();resolve(e.data)};w.onerror=e=>{clearTimeout(timer);w.terminate();reject(new Error(e.message))};w.postMessage({type:'initialize',id:1,snapshot:{purpose:'preview'}})}),'/assets/'+preview)
- if(previewResult.type!=='failed'||previewResult.error!=='CLIP_SNAPSHOT_INCOMPATIBLE_VERSION')throw new Error('Actual built preview Worker failed malformed-version fence')
+ report.previewProtocolResult=previewResult;save()
+ if(previewResult.type!=='failed'||previewResult.error!=='CLIP_SNAPSHOT_INCOMPATIBLE_VERSION:schema')throw new Error('Actual built preview Worker failed malformed-version fence: '+JSON.stringify(previewResult))
  report.checks.push({kind:'actual-built-preview-module-worker-execution',asset:preview,result:previewResult,scope:'Known malformed version rejection, separate from actual mounted-frame/codec evidence.'})
  const inventoryPath=option('--bundle-inventory',null)
  const inventory=inventoryPath?readJSON(resolve(inventoryPath)):null
