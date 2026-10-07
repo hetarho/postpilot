@@ -120,15 +120,23 @@ message WritingTestIdentity {
   WritingTestEntrant source = 2;
   bool synthetic = 3;
 }
+// Public usage after reveal. Supplier prices/costs and provider metadata never enter this message.
+message WritingTestUsage {
+  int64 prompt_tokens = 1;
+  int64 completion_tokens = 2;
+  int64 latency_ms = 3;
+}
 message WritingTestCandidate {
   string id = 1;
   WritingTestCandidateStatus status = 2;
   PostContent output = 3;
   Failure failure = 4;
-  // Absent while blind, including failure/accounting projections. No cost/provider metadata.
+  // Absent while blind, including identity-bearing failure projections.
   WritingTestIdentity identity = 5;
   string display_label = 6;
   Storyline storyline = 7;
+  // Absent while blind; preserved for completed or explicitly abandoned tests, including failed calls.
+  WritingTestUsage usage = 8;
 }
 message WritingTestMatch {
   string id = 1;
@@ -169,6 +177,9 @@ message WritingTest {
   int64 confirmed_credits = 18;
   int64 reserved_credits = 19;
   Failure failure = 20;
+  // Stored admission target and every output's content-language provenance, also on history reads.
+  // Never substitute the current UI locale or a source post's later target language for export.
+  ContentLanguage target_language = 21;
 }
 message EstimateWritingTestRequest { WritingTestPlan plan = 1; }
 // Requote only the selected failed work of the stored immutable test after reload/expiry.

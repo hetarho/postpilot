@@ -659,15 +659,24 @@ type TestCandidate struct {
 	Status                            string
 	Failure                           *Failure
 	Identity                          *TestCandidateIdentity
+	// Decoded by the store edge from private accounting; nil means no recorded call usage.
+	Usage *Usage
+}
+
+// TestCandidateUsage carries only customer-visible timing/tokens, never supplier costs.
+type TestCandidateUsage struct {
+	PromptTokens, CompletionTokens, LatencyMS int64
 }
 
 // BlindCandidate intentionally excludes source refs/revisions, seed positions, frozen values
-// and accounting. A UI must use this projection rather than marshal the private store record.
+// and private accounting. Identity and public usage are present only after reveal.
+// A UI must use this projection rather than marshal the private store record.
 type BlindCandidate struct {
 	ID, DisplayLabel, Status string
 	Output                   []byte
 	Failure                  *Failure
 	Identity                 *TestCandidateIdentity
+	Usage                    *TestCandidateUsage
 }
 
 func (c TestCandidate) Project(revealed bool, label string) BlindCandidate {
@@ -679,6 +688,12 @@ func (c TestCandidate) Project(revealed bool, label string) BlindCandidate {
 	if revealed && c.Identity != nil {
 		identity := *c.Identity
 		out.Identity = &identity
+	}
+	if revealed && c.Usage != nil {
+		out.Usage = &TestCandidateUsage{
+			PromptTokens: c.Usage.PromptTokens, CompletionTokens: c.Usage.CompletionTokens,
+			LatencyMS: c.Usage.LatencyMS,
+		}
 	}
 	return out
 }

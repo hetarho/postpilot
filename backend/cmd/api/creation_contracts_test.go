@@ -9,6 +9,7 @@ import (
 	authoringrpc "github.com/postpilot/backend/internal/authoring/rpc"
 	"github.com/postpilot/backend/internal/voice"
 	voicerpc "github.com/postpilot/backend/internal/voice/rpc"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -124,10 +125,10 @@ func TestOrdinaryAuthoringCountDefaultIsBackwardCompatible(t *testing.T) {
 	}
 }
 func TestBlindWritingTestProjectionCannotExposePrivateCandidateData(t *testing.T) {
-	c := experiment.TestCandidate{ID: "opaque", UserID: "alice", SourceRevision: "private", SeedPosition: 7, Ref: experiment.TestEntrantRef{SourceKind: "model", Model: experiment.ModelRef{ModelID: "secret"}}, FrozenVariant: []byte("private prose"), Accounting: []byte("supplier cost"), Output: []byte("readable post"), Identity: &experiment.TestCandidateIdentity{Label: "secret model"}, Failure: &experiment.Failure{Reason: "UNKNOWN_FAILURE", Params: map[string]string{"model": "secret"}, TechnicalDetail: "provider secret"}}
+	c := experiment.TestCandidate{ID: "opaque", UserID: "alice", SourceRevision: "private", SeedPosition: 7, Ref: experiment.TestEntrantRef{SourceKind: "model", Model: experiment.ModelRef{ModelID: "secret"}}, FrozenVariant: []byte("private prose"), Accounting: []byte("supplier cost"), Usage: &experiment.Usage{PromptTokens: 120, CompletionTokens: 45, LatencyMS: 678, CostMicrousd: 999, CostSource: experiment.CostReported}, Output: []byte("readable post"), Identity: &experiment.TestCandidateIdentity{Label: "secret model"}, Failure: &experiment.Failure{Reason: "UNKNOWN_FAILURE", Params: map[string]string{"model": "secret"}, TechnicalDetail: "provider secret"}}
 	blind := c.Project(false, "A")
-	if blind.Identity != nil || len(blind.Failure.Params) != 0 || blind.Failure.TechnicalDetail != "" {
-		t.Fatal("blind result exposed identity")
+	if blind.Identity != nil || blind.Usage != nil || len(blind.Failure.Params) != 0 || blind.Failure.TechnicalDetail != "" {
+		t.Fatal("blind result exposed identity or usage")
 	}
 	blind.Output[0] = 'x'
 	if string(c.Output) != "readable post" {
@@ -135,6 +136,38 @@ func TestBlindWritingTestProjectionCannotExposePrivateCandidateData(t *testing.T
 	}
 	if c.Project(true, "A").Identity.Label != "secret model" {
 		t.Fatal("completed identity unavailable")
+	}
+}
+
+func TestWritingTestRevealedUsagePreservesFailedCallEvidenceWithoutSupplierCosts(t *testing.T) {
+	publicFields := reflect.TypeFor[experiment.TestCandidateUsage]()
+	var names []string
+	for i := range publicFields.NumField() {
+		names = append(names, publicFields.Field(i).Name)
+	}
+	if !reflect.DeepEqual(names, []string{"PromptTokens", "CompletionTokens", "LatencyMS"}) {
+		t.Fatalf("public usage includes unexpected fields: %v", names)
+	}
+	for _, status := range []experiment.TestCandidateStatus{experiment.TestCandidateSucceeded, experiment.TestCandidateFailed, experiment.TestCandidateCancelled} {
+		t.Run(string(status), func(t *testing.T) {
+			c := experiment.TestCandidate{Status: string(status), Accounting: []byte("private supplier cost"), Usage: &experiment.Usage{PromptTokens: 120, CompletionTokens: 45, LatencyMS: 678, CostMicrousd: 999, CostSource: experiment.CostReported}}
+			if c.Project(false, "A").Usage != nil {
+				t.Fatal("blind projection exposed usage")
+			}
+			// Usage remains readable after abandonment even if the historical identity is absent.
+			revealed := c.Project(true, "A")
+			want := experiment.TestCandidateUsage{PromptTokens: 120, CompletionTokens: 45, LatencyMS: 678}
+			if revealed.Usage == nil || *revealed.Usage != want {
+				t.Fatalf("revealed call evidence lost: %#v", revealed.Usage)
+			}
+			revealed.Usage.PromptTokens = 0
+			if c.Project(true, "A").Usage.PromptTokens != 120 {
+				t.Fatal("projection shares mutable accounting")
+			}
+		})
+	}
+	if (experiment.TestCandidate{}).Project(true, "A").Usage != nil {
+		t.Fatal("reveal fabricated usage for an unissued call")
 	}
 }
 
