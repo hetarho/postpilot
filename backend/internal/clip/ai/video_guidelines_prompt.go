@@ -1,10 +1,71 @@
 package ai
 
 import (
+	"slices"
 	"strings"
 
 	"github.com/postpilot/backend/internal/clip"
 )
+
+// videoRuleResponsibility is a stage/output declaration, never a classifier of
+// arbitrary owner text. The owning guideline supplies each stock rule's text
+// and applicability; old untyped defaults retain their original behavior.
+func videoRuleResponsibility(mode string) (string, []string) {
+	switch mode {
+	case "flow", "flow-measured-speech":
+		return "clip-write", []string{"plan", "placements"}
+	case "flow-follow-storyline", "flow-follow-storyline-measured-speech":
+		return "clip-write", []string{"placements"}
+	case "flow-revision":
+		return "clip-revise", []string{"placements"}
+	case "narration":
+		return "clip-write", []string{"captions"}
+	case "narration-revision":
+		return "clip-revise", []string{"captions"}
+	case "storyline", "storyline-revision":
+		return "clip-storyline", []string{"plan", "placements"}
+	case "spoken-script":
+		return "clip-write", []string{"narration", "plan", "placements"}
+	case "spoken-script-follow-storyline":
+		return "clip-write", []string{"narration"}
+	case "spoken-script-revision":
+		return "clip-revise", []string{"narration"}
+	default:
+		return "", nil
+	}
+}
+
+func videoStockApplies(rule clip.VideoStockRule, mode string) bool {
+	stage, outputs := videoRuleResponsibility(mode)
+	for _, applicability := range rule.Applicability {
+		if applicability.Stage != stage || stage == "" {
+			continue
+		}
+		for _, output := range outputs {
+			if slices.Contains(applicability.Outputs, output) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func videoGuidelinesFor(g clip.VideoGuidelines, mode string) clip.VideoGuidelines {
+	if mode == "observe" {
+		return clip.VideoGuidelines{}
+	}
+	selected := clip.VideoGuidelines{Owner: g.Owner}
+	if g.Stock == nil {
+		selected.Defaults = g.Defaults
+		return selected
+	}
+	for _, rule := range g.Stock {
+		if videoStockApplies(rule, mode) {
+			selected.Defaults = append(selected.Defaults, rule.Text)
+		}
+	}
+	return selected
+}
 
 // The [영상 지침] block's fixed words, Korean for every language like the post prompt's
 // [작문 지침] (GUIDE-15, GUIDE-17). The texts themselves are in the project's language.

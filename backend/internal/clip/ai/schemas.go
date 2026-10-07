@@ -11,10 +11,10 @@ import (
 var chunkSchema []byte
 
 //go:embed schemas/flow.schema.json
-var flowSchema []byte
+var legacyFlowSchema []byte
 
 //go:embed schemas/narration.schema.json
-var narrationSchema []byte
+var legacyNarrationSchema []byte
 
 //go:embed schemas/storyline.schema.json
 var storylineSchema []byte
@@ -30,16 +30,37 @@ func compactContract(value []byte) string {
 // revisionFlowSchema is the flow contract a revision's flow rewrite answers: the same
 // document without the storyline and the intro/outro words that come with it, which a
 // revision never writes (CLIP-131, CLIP-178, CLIP-188).
+// Legacy responses may echo computed duration and unused caption IDs/cuts. New
+// requests omit them; the local parser still admits their original typed shape.
+var flowSchema = withoutProperty(legacyFlowSchema, "duration_ms")
+var flowParseSchema = withoutRequirement(legacyFlowSchema, "duration_ms")
 var revisionFlowSchema = withoutProperty(withoutProperty(flowSchema, "storyline"), "region_slots")
+var revisionFlowParseSchema = withoutProperty(withoutProperty(flowParseSchema, "storyline"), "region_slots")
+var narrationSchema = withoutNestedProperty(withoutProperty(legacyNarrationSchema, "cuts"), "id", "properties", "captions", "items")
+var narrationParseSchema = withoutRequirementAt(legacyNarrationSchema, "id", "properties", "captions", "items")
 
 // withoutProperty is a code-owned contract with one top-level property and its requirement
 // removed.
 func withoutProperty(contract []byte, key string) []byte {
-	var doc map[string]any
-	if err := json.Unmarshal(contract, &doc); err != nil {
-		panic(err)
-	}
-	delete(doc["properties"].(map[string]any), key)
+	return withoutNestedProperty(contract, key)
+}
+
+func withoutNestedProperty(contract []byte, key string, path ...string) []byte {
+	return changeSchema(contract, path, func(doc map[string]any) {
+		delete(doc["properties"].(map[string]any), key)
+		removeRequirement(doc, key)
+	})
+}
+
+func withoutRequirement(contract []byte, key string) []byte {
+	return withoutRequirementAt(contract, key)
+}
+
+func withoutRequirementAt(contract []byte, key string, path ...string) []byte {
+	return changeSchema(contract, path, func(doc map[string]any) { removeRequirement(doc, key) })
+}
+
+func removeRequirement(doc map[string]any, key string) {
 	required := []any{}
 	for _, name := range doc["required"].([]any) {
 		if name != key {
@@ -47,6 +68,18 @@ func withoutProperty(contract []byte, key string) []byte {
 		}
 	}
 	doc["required"] = required
+}
+
+func changeSchema(contract []byte, path []string, change func(map[string]any)) []byte {
+	var doc map[string]any
+	if err := json.Unmarshal(contract, &doc); err != nil {
+		panic(err)
+	}
+	target := doc
+	for _, key := range path {
+		target = target[key].(map[string]any)
+	}
+	change(target)
 	out, err := json.Marshal(doc)
 	if err != nil {
 		panic(err)

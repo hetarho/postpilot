@@ -1,6 +1,7 @@
 package ai
 
 import (
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"github.com/postpilot/backend/internal/clip"
@@ -10,7 +11,7 @@ import (
 )
 
 func clipDescriptor(mode string) llm.RequestComposition {
-	c := llm.RequestComposition{Stage: "video-composition", Mode: mode, PromptVersion: "clip-" + mode + "-v1", SchemaVersion: "clip-" + mode + "-v1", Consumer: "private video attempt result; validated edit plan or reviewed storyline", Activation: "current admitted frozen video call policy; bounded validation correction only", SourceFiles: []string{"internal/clip/ai/service.go", "internal/clip/ai/response_correction.go"}}
+	c := llm.RequestComposition{Stage: "video-composition", Mode: mode, PromptVersion: "clip-" + mode + "-v2", Consumer: "private video attempt result; validated edit plan or reviewed storyline", Activation: "current admitted frozen video call policy; bounded validation correction only", SourceFiles: []string{"internal/clip/ai/service.go", "internal/clip/ai/response_correction.go", "internal/clip/ai/material_contract.go", "internal/clip/ai/video_guidelines_prompt.go", "internal/clip/ai/schemas.go"}}
 	var schema []byte
 	switch mode {
 	case "observe":
@@ -18,45 +19,49 @@ func clipDescriptor(mode string) llm.RequestComposition {
 		c.Composer = "clip/ai.Service.ObserveChunk/BuildObservePrompt"
 		c.Parser = "clip/ai.parseChunk"
 		c.SourceFiles = append(c.SourceFiles, "internal/clip/ai/prompts.go")
-		schema = ChunkSchema()
-	case "flow":
+		schema = chunkSchema
+	case "flow", "flow-measured-speech":
 		c.Composer = "clip/ai.Service.Flow/BuildFlowPrompt"
-		c.Parser = "clip/ai.parseFlowPlan/validatePlan"
-		c.SourceFiles = append(c.SourceFiles, "internal/clip/ai/flow_prompt.go")
-		schema = FlowSchema()
-	case "flow-follow-storyline":
+		c.Parser = "clip/ai.parseFlowPlan/composeTimeline/clip.ResolveSelectedComposition/composition.Resolve/validatePlan"
+		c.SourceFiles = append(c.SourceFiles, "internal/clip/ai/flow_prompt.go", "internal/clip/ai/flow_parse.go", "internal/clip/ai/timeline.go")
+		schema = flowSchema
+	case "flow-follow-storyline", "flow-follow-storyline-measured-speech":
 		c.Composer = "clip/ai.Service.Flow/BuildFlowPrompt"
-		c.Parser = "clip/ai.parseFlowPlan/validatePlan"
+		c.Parser = "clip/ai.parseFlowPlan/composeTimeline/clip.ResolveSelectedComposition/composition.Resolve/validatePlan"
 		c.Activation += "; frozen reviewed storyline, no new storyline output"
-		c.SourceFiles = append(c.SourceFiles, "internal/clip/ai/flow_prompt.go")
-		schema = RevisionFlowSchema()
+		c.SourceFiles = append(c.SourceFiles, "internal/clip/ai/flow_prompt.go", "internal/clip/ai/flow_parse.go", "internal/clip/ai/timeline.go")
+		schema = revisionFlowSchema
 	case "flow-revision":
 		c.Composer = "clip/ai.Service.Revise/buildFlowRevisionPrompt"
-		c.Parser = "clip/ai.parseFlowPlan/validatePlan"
-		c.SourceFiles = append(c.SourceFiles, "internal/clip/ai/revision_prompt.go")
-		schema = RevisionFlowSchema()
+		c.Parser = "clip/ai.parseFlowPlan/composeTimeline/clip.ResolveSelectedComposition/composition.Resolve/validatePlan"
+		c.SourceFiles = append(c.SourceFiles, "internal/clip/ai/revision_prompt.go", "internal/clip/ai/flow_parse.go", "internal/clip/ai/timeline.go")
+		schema = revisionFlowSchema
 	case "narration":
 		c.Composer = "clip/ai.Service.Narrate/BuildNarrationPrompt"
-		c.Parser = "clip/ai.parseNarration/validatePlan"
-		c.SourceFiles = append(c.SourceFiles, "internal/clip/ai/narration_prompt.go")
-		schema = NarrationSchema()
+		c.Parser = "clip/ai.parseNarration/clip.ResolveSelectedComposition/composition.Resolve/validatePlan"
+		c.SourceFiles = append(c.SourceFiles, "internal/clip/ai/narration_prompt.go", "internal/clip/ai/narration_parse.go")
+		schema = narrationSchema
 	case "narration-revision":
 		c.Composer = "clip/ai.Service.Revise/buildNarrationRevisionPrompt"
-		c.Parser = "clip/ai.parseNarration/validatePlan"
-		c.SourceFiles = append(c.SourceFiles, "internal/clip/ai/revision_prompt.go")
-		schema = NarrationSchema()
+		c.Parser = "clip/ai.parseNarration/clip.ResolveSelectedComposition/composition.Resolve/validatePlan"
+		c.SourceFiles = append(c.SourceFiles, "internal/clip/ai/revision_prompt.go", "internal/clip/ai/narration_parse.go")
+		schema = narrationSchema
 	case "storyline", "storyline-revision":
 		c.Composer = "clip/ai.Service.Storyline/BuildStorylinePrompt"
 		c.Parser = "clip/ai.parseStoryline"
 		c.Consumer = "reviewed storyline only; no canonical edit plan"
 		c.SourceFiles = append(c.SourceFiles, "internal/clip/ai/storyline_prompt.go")
-		schema = StorylineSchema()
-	case "spoken-script":
+		schema = storylineSchema
+	case "spoken-script", "spoken-script-follow-storyline":
 		c.Composer = "clip/ai.Service.SpokenScript/BuildSpokenScriptPrompt"
 		c.Parser = "clip/ai.parseSpokenScript"
 		c.Consumer = "private spoken draft preceding synthesis and footage flow"
 		c.SourceFiles = append(c.SourceFiles, "internal/clip/ai/spoken_script.go")
 		schema = spokenScriptSchema
+		if mode == "spoken-script-follow-storyline" {
+			c.Activation += "; frozen reviewed storyline and slots; spoken_lines only"
+			schema = spokenRevisionSchema
+		}
 	case "spoken-script-revision":
 		c.Composer = "clip/ai.Service.reviseSpoken"
 		c.Parser = "clip/ai.reviseSpoken spoken_lines validation"
@@ -64,6 +69,13 @@ func clipDescriptor(mode string) llm.RequestComposition {
 		c.SourceFiles = append(c.SourceFiles, "internal/clip/ai/spoken_revision.go")
 		schema = spokenRevisionSchema
 	}
+	if strings.HasSuffix(mode, "-measured-speech") {
+		c.Activation += "; immutable measured speech intervals precede footage selection"
+	}
+	if strings.HasPrefix(mode, "flow") || strings.HasPrefix(mode, "narration") {
+		c.SourceFiles = append(c.SourceFiles, "internal/clip/selected_composition.go", "internal/clip/composition/parse.go", "internal/clip/composition/resolve.go", "internal/clip/composition/interval.go", "internal/clip/composition/rate.go")
+	}
+	c.SchemaVersion = fmt.Sprintf("sha256:%x", sha256.Sum256(schema))
 	c.Output = llm.OutputContractInspection{Name: "clip-" + mode, Version: c.SchemaVersion, Schema: string(schema)}
 	return c
 }
@@ -74,7 +86,10 @@ func RequestCompositions() []llm.RequestComposition {
 	cfg := DefaultConfig(clip.Environment{})
 	document := clip.NoTemplateComposition()
 	source := clip.AnalysisSource{RenderSource: clip.RenderSource{ID: "synthetic-source", Info: clip.MediaInfo{DurationMS: 15000, Width: 1080, Height: 1920}}, Filename: "synthetic.mp4"}
-	in := clip.PlanningInput{Language: "en", Composition: &document, Ratio: "vertical", TargetDurationMS: 15000, Instruction: "Synthetic owner direction", Guidelines: clip.VideoGuidelines{Defaults: []string{"Synthetic stock video rule"}, Owner: []string{"Synthetic owner video rule"}}, Analyses: []clip.SourceAnalysis{{Source: source, Segments: []clip.Segment{{StartMS: 0, EndMS: 15000, Event: "Synthetic observed scene", Certainty: clip.CertaintyCertain, Usability: clip.UsabilityUsable}}}}}
+	in := clip.PlanningInput{Language: "en", Composition: &document, Ratio: "vertical", TargetDurationMS: 15000, Instruction: "Synthetic owner direction", Guidelines: clip.VideoGuidelines{Stock: []clip.VideoStockRule{
+		{Key: "synthetic-video-material", Text: "Synthetic stock video rule", Applicability: []clip.VideoRuleApplicability{{Stage: "clip-write", Outputs: []string{"plan", "placements", "captions", "narration"}}, {Stage: "clip-revise", Outputs: []string{"placements", "captions", "narration"}}, {Stage: "clip-storyline", Outputs: []string{"plan", "placements"}}}},
+		{Key: "synthetic-caption-only", Text: "Synthetic caption rule", Applicability: []clip.VideoRuleApplicability{{Stage: "clip-write", Outputs: []string{"captions"}}, {Stage: "clip-revise", Outputs: []string{"captions"}}}},
+	}, Owner: []string{"Synthetic owner video rule"}}, Analyses: []clip.SourceAnalysis{{Source: source, Segments: []clip.Segment{{StartMS: 0, EndMS: 15000, Event: "Synthetic observed scene", Certainty: clip.CertaintyCertain, Usability: clip.UsabilityUsable}}}}}
 	limits := compositionLimits(cfg, in)
 	story := clip.Storyline{Paragraphs: []clip.StorylineParagraph{{Text: "Synthetic reviewed storyline", ObservationIDs: []string{clip.ObservationID(source.ID, 0)}}}}
 	plan := clip.EditPlan{Portable: &clip.PortablePlan{}, DurationMS: 15000, Ratio: "vertical", Cuts: []clip.EditCut{{ID: "synthetic-cut", SourceID: source.ID, StartMS: 0, EndMS: 15000, PlaybackRatePermille: 1000}}, Storyline: &story}
@@ -94,6 +109,13 @@ func RequestCompositions() []llm.RequestComposition {
 	following.FollowStoryline = &story
 	system, user = BuildFlowPrompt(following, cfg.Render.FadeMS, limits)
 	add("flow-follow-storyline", system, user)
+	measured := in
+	measured.MeasuredNarration = &clip.NarrationPlan{Enabled: true, Segments: []clip.SpokenSegment{{ID: "synthetic-speech", Text: "Synthetic measured spoken text", StartMS: 0, EndMS: 1000}}}
+	system, user = BuildFlowPrompt(measured, cfg.Render.FadeMS, limits)
+	add(flowMode(measured), system, user)
+	measured.FollowStoryline = &story
+	system, user = BuildFlowPrompt(measured, cfg.Render.FadeMS, limits)
+	add(flowMode(measured), system, user)
 	system, user = buildFlowRevisionPrompt(revision, cfg.Render.FadeMS, limits)
 	add("flow-revision", system, user)
 	system, user = BuildNarrationPrompt(clip.NarrationInput{PlanningInput: in, Flow: plan}, limits)
@@ -106,6 +128,8 @@ func RequestCompositions() []llm.RequestComposition {
 	add("storyline-revision", system, user)
 	system, user = BuildSpokenScriptPrompt(in, limits)
 	add("spoken-script", system, user)
+	system, user = BuildSpokenScriptPrompt(following, limits)
+	add("spoken-script-follow-storyline", system, user)
 	revision.Current.Narration = &clip.NarrationPlan{Enabled: true, Segments: []clip.SpokenSegment{{ID: "synthetic-segment", Text: "Synthetic reviewed spoken text", StartMS: 0, EndMS: 1000}}}
 	system, user = buildSpokenRevisionPrompt(revision, revision.Current, limits)
 	add("spoken-script-revision", system, user)
@@ -114,6 +138,29 @@ func RequestCompositions() []llm.RequestComposition {
 
 func clipComposition(mode, system, user string, g clip.VideoGuidelines, refs []string) *llm.RequestComposition {
 	c := clipDescriptor(mode)
+	stage, outputs := videoRuleResponsibility(mode)
+	if g.Stock != nil {
+		for _, rule := range g.Stock {
+			if videoStockApplies(rule, mode) {
+				c.SelectedRuleIDs = append(c.SelectedRuleIDs, rule.Key)
+			} else {
+				c.Omissions = append(c.Omissions, llm.RequestOmission{ID: rule.Key, Reason: "frozen stock rule does not declare the current stage/output responsibility", Activation: stage + ": " + strings.Join(outputs, ","), SourceFiles: []string{"internal/clip/ai/video_guidelines_prompt.go"}})
+			}
+		}
+	}
+	for i := range g.Owner {
+		if mode != "observe" {
+			c.SelectedRuleIDs = append(c.SelectedRuleIDs, fmt.Sprintf("frozen-owner-video-rule-%d", i))
+		}
+	}
+	switch mode {
+	case "flow", "flow-measured-speech", "flow-follow-storyline", "flow-follow-storyline-measured-speech", "flow-revision":
+		c.Omissions = append(c.Omissions, llm.RequestOmission{ID: "computed-duration", Reason: "duration_ms is computed from admitted source ranges, rates and transitions; legacy echo remains readable"})
+	case "narration", "narration-revision":
+		c.Omissions = append(c.Omissions, llm.RequestOmission{ID: "generated-caption-id-and-flow", Reason: "caption IDs are code-minted and supplied cuts are immutable; legacy typed echoes remain readable"})
+	case "spoken-script-follow-storyline":
+		c.Omissions = append(c.Omissions, llm.RequestOmission{ID: "replacement-storyline-and-slots", Reason: "retained storyline and reviewed slot words are frozen; consumer accepts spoken_lines only"})
+	}
 	occurrences := map[string]int{}
 	add := func(role llm.InspectionRole, author llm.FragmentAuthorship, material, text string) {
 		id := fmt.Sprintf("%s-%d", material, occurrences[material])
@@ -195,8 +242,10 @@ func clipInputRole(key string) (llm.FragmentAuthorship, string) {
 	switch key {
 	case "project_instruction", "request", "revision_request":
 		return llm.FragmentAuthorshipAccount, "explicit-owner-direction"
-	case "global_values", "item_groups", "item_hints":
-		return llm.FragmentAuthorshipAccount, "frozen-composition-inputs"
+	case "global_values", "item_groups":
+		return llm.FragmentAuthorshipAccount, "exact-owner-facts-without-instruction-authority"
+	case "item_hints":
+		return llm.FragmentAuthorshipAccount, "owner-footage-associations-not-directions"
 	case "template_outline", "declared_captions", "intro_outro":
 		return llm.FragmentAuthorshipAccount, "frozen-template-and-reviewed-slot-context"
 	case "source_order", "source_name":

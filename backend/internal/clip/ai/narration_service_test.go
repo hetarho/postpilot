@@ -96,7 +96,7 @@ func TestNarrationRequestCarriesTheResolvedFlowAndNothingToChangeIt(t *testing.T
 	}
 	for _, sentence := range []string{
 		"The flow is FINAL",
-		"a cuts key in your response is ignored",
+		"return no id, cuts, storyline or duration_ms",
 		"ABSOLUTE integer times on the output timeline",
 		"Captions never overlap one another",
 		"At most 100 captions",

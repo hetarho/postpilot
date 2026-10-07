@@ -21,7 +21,7 @@ project_instruction is the CONTENT authority: the order of the footage, its rhyt
 With no instruction, take the sources in source_order and the footage of one source in source time. No template structure admits or forbids footage: the cut budget follows target_duration_ms and the footage that was actually observed. Fewer cuts is valid; never repeat footage, stretch a still frame or reuse a range to fill missing duration.
 Copy IDs verbatim. Each cut needs a unique nonempty id, a real source_id and observation_refs covering its entire source interval without gaps. The server supplies fingerprints and transitions.
 item_hints say which item a span of footage shows. Each is a fact about that footage the narration may use later; nothing depends on one, and no cut, order or count is required by it.
-Preserve ratio and target_duration_ms (15000..60000). Integer start_ms/end_ms are absolute SOURCE times. Select enough observed footage; the server reconciles cut lengths and transition overlap.
+Preserve ratio and target_duration_ms (15000..60000). Integer start_ms/end_ms are absolute SOURCE times. Select enough observed footage; the server reconciles cut lengths and transition overlap and computes duration_ms. Return no duration_ms.
 Each cut states exactly one rate_permille from that source's own allowed_rate_permille list; a rate outside that list is refused, never adjusted. Read the rate from what the cut's own observation already records — the activity, the camera motion, the scene type and whether speech is audible. A span whose activity repeats, prepares or only travels may go faster; a span holding the moment the clip exists for may go slower where its source allows it; a span whose observation supports neither stays at 1000. At most 40 % of the cuts may leave 1000, and no minimum asks you to transform any. A cut whose observation records audible speech stays at 1000 while its source has retains_original_audio true; the same source's silent spans stay transformable. Never choose a rate to reach the target duration. No variable ramp, reverse, freeze, frame synthesis, background music or effect this contract does not name.
 One source may supply several cuts, but every cut lies WHOLLY inside ONE observed segment of that source, and two cuts of the same source never share a millisecond — ranges are half-open, so touching ends are adjacent, not overlapping.
 Never select a segment whose usability is unusable or whose certainty is unknown. A segment with certainty uncertain and usability usable may be selected only at rate_permille 1000, or left unused.
@@ -46,16 +46,26 @@ var storylineFlowPrompt = strings.NewReplacer(
 // the instruction's here — and writes no storyline of its own.
 const followStorylineRule = "Build the cuts along storyline, part by part, in its order: the storyline's order and pace outrank project_instruction's. analyses show only the observed scenes the storyline holds; select footage only from them.\n"
 
-// storylineFlowRule is how the storyline is set (CLIP-178, CLIP-104): in the language the
-// observations are written in, which is the project's.
-const storylineFlowRule = "Before the cuts, set storyline: the clip told in order, paragraph by paragraph, each paragraph two or three sentences of plan saying what that part shows and says, and observation_ids naming the observed scenes it uses. Follow the template's stages in order when there is a template. Then choose the cuts along it. Write the storyline in the language of the observations; at most 30 paragraphs of at most 1000 characters each."
+// storylineFlowRule is how the directly generated storyline is set (CLIP-178).
+const storylineFlowRule = "Before the cuts, set storyline: the clip told in order, paragraph by paragraph, each paragraph two or three sentences of plan saying what that part shows and says, and observation_ids naming the observed scenes it uses. Follow the template's stages in order when there is a template. Then choose the cuts along it. Write the storyline in the required output language; at most 30 paragraphs of at most 1000 characters each."
 
 // BuildFlowPrompt is the flow call's request, exported so the frozen input
 // allowance can be measured on the exact bytes the call will send (CLIP-90) —
 // the 영상 지침 block included.
 func BuildFlowPrompt(in clip.PlanningInput, fadeMS int, limits composition.Limits) (string, string) {
 	system, user := flowPromptParts(in, fadeMS, limits, true)
-	return system + videoGuidelineBlock(in.Guidelines), user
+	return system + videoGuidelineBlock(videoGuidelinesFor(in.Guidelines, flowMode(in))), user
+}
+
+func flowMode(in clip.PlanningInput) string {
+	mode := "flow"
+	if in.FollowStoryline != nil {
+		mode = "flow-follow-storyline"
+	}
+	if in.MeasuredNarration != nil {
+		mode += "-measured-speech"
+	}
+	return mode
 }
 
 // flowPromptParts is the flow request without the 영상 지침 block, which a revision appends
@@ -125,7 +135,7 @@ func flowPromptParts(in clip.PlanningInput, fadeMS int, limits composition.Limit
 			payload["intro_outro"] = slots
 		}
 	}
-	return prompt + responseContract + contract, promptJSON(payload)
+	return videoWritingContract(in.Language) + prompt + responseContract + contract, promptJSON(payload)
 }
 
 // templateOutline is the template's form as the flow and narration calls read it:

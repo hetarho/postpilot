@@ -106,7 +106,7 @@ func (a clipGuidelineCandidates) ForClip(ctx context.Context, userID, videoTempl
 	if err != nil {
 		return clip.VideoGuidelines{}, err
 	}
-	return clip.VideoGuidelines{Defaults: got.Defaults, Owner: got.Owner}, nil
+	return clip.VideoGuidelines{Defaults: got.Defaults, Owner: got.Owner, Stock: clipStockRules(got.Stock)}, nil
 }
 
 // postCandidateLinks lets post deletion drop the link without the post context learning what
@@ -640,4 +640,25 @@ func (a generationJobs) GetGeneration(ctx context.Context, id, userID string) (*
 		TargetLanguage: generation.Language(found.TargetLanguage),
 		CreatedAt:      found.CreatedAt, UpdatedAt: found.UpdatedAt,
 	}, nil
+}
+
+func clipStockRules(rules []guideline.StockRule) []clip.VideoStockRule {
+	if rules == nil {
+		return nil
+	}
+	result := make([]clip.VideoStockRule, len(rules))
+	for i, r := range rules {
+		result[i] = clip.VideoStockRule{Key: r.Key, Text: r.Text, SourceOrder: r.SourceOrder}
+		if r.Applicability != nil {
+			result[i].Applicability = make([]clip.VideoRuleApplicability, len(r.Applicability))
+			for j, a := range r.Applicability {
+				result[i].Applicability[j].Stage = string(a.Stage)
+				result[i].Applicability[j].Outputs = make([]string, len(a.Outputs))
+				for k, o := range a.Outputs {
+					result[i].Applicability[j].Outputs[k] = string(o)
+				}
+			}
+		}
+	}
+	return result
 }

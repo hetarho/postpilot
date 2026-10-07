@@ -32,8 +32,8 @@ func (h *generationHarness) withGuidelines(source clipapp.VideoGuidelineSource) 
 }
 
 var (
-	firstGuidelines  = clip.VideoGuidelines{Defaults: []string{"입력한 사실만 쓰기"}, Owner: []string{"자막에 가격을 적지 않기"}}
-	secondGuidelines = clip.VideoGuidelines{Defaults: []string{"입력한 사실만 쓰기"}, Owner: []string{"자막은 두 줄까지"}}
+	firstGuidelines  = clip.VideoGuidelines{Stock: []clip.VideoStockRule{{Key: "source-facts", Text: "입력한 사실만 쓰기", SourceOrder: 0, Applicability: []clip.VideoRuleApplicability{{Stage: "clip-write", Outputs: []string{"captions", "narration"}}, {Stage: "clip-storyline", Outputs: []string{"plan", "placements"}}}}}, Defaults: []string{"입력한 사실만 쓰기"}, Owner: []string{"자막에 가격을 적지 않기"}}
+	secondGuidelines = clip.VideoGuidelines{Stock: []clip.VideoStockRule{{Key: "source-facts", Text: "입력한 사실만 쓰기", SourceOrder: 0, Applicability: []clip.VideoRuleApplicability{{Stage: "clip-write", Outputs: []string{"captions", "narration"}}, {Stage: "clip-storyline", Outputs: []string{"plan", "placements"}}}}}, Defaults: []string{"입력한 사실만 쓰기"}, Owner: []string{"자막은 두 줄까지"}}
 )
 
 // QUOTA-45, GUIDE-15: a clip quote binds the 영상 지침 it was taken under, so a change before

@@ -473,7 +473,14 @@ func (s *SpeechService) Recover(ctx context.Context) error {
 }
 
 func (s *SpeechService) synthesizeAsset(ctx context.Context, r SpeechRun, c SpeechCall) (clip.SpeechAsset, error) {
-	response, e := s.Models.SynthesizeSpeech(ctx, c.Request)
+	// Rebuild only descriptive metadata at the actual call boundary, including
+	// retained admitted runs whose persisted request predates composition evidence.
+	// The model/handle/text/settings stay the exact claimed frozen input.
+	request := segmentSpeechRequest(c.Request.Model, c.Request.Voice, c.Request.Text, c.Request.Settings, c.SegmentID)
+	if r.ParentGeneration {
+		request = initialSegmentSpeechRequest(c.Request.Model, c.Request.Voice, c.Request.Text, c.Request.Settings, c.SegmentID)
+	}
+	response, e := s.Models.SynthesizeSpeech(ctx, request)
 	if e != nil {
 
 		return clip.SpeechAsset{}, e

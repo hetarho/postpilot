@@ -44,7 +44,7 @@ type narrationJSON struct {
 	Cuts []json.RawMessage `json:"cuts"`
 }
 
-var narrationShape = readShape(narrationSchema)
+var narrationShape = readShape(narrationParseSchema)
 
 // parseNarration writes the captions onto the flow the server resolved, and
 // changes nothing else about it. Every removal it

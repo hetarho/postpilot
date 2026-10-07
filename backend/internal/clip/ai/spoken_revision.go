@@ -3,6 +3,7 @@ package ai
 import (
 	"context"
 	_ "embed"
+	"encoding/json"
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/clip/composition"
 	"github.com/postpilot/backend/internal/llm"
@@ -44,7 +45,7 @@ func (s *Service) reviseSpoken(ctx context.Context, model llm.ModelRef, in clip.
 			t.Resolved.Element.EndMS = &b
 		}
 	}
-	result, spent, e := s.write(ctx, model, in.PlanningInput, "script", "spoken-script-revision", s.cfg.NarrationCompletionTokens, spokenRevisionSchema, func() (string, string) {
+	result, spent, e := s.write(ctx, model, in.PlanningInput, "script", "spoken-script-revision", s.cfg.NarrationCompletionTokens, structuralSchema(spokenRevisionSchema), func() (string, string) {
 		return buildSpokenRevisionPrompt(in, next, compositionLimits(s.cfg, in.PlanningInput))
 	}, func(raw string) (clip.EditPlan, error) {
 		var wire struct {
@@ -98,8 +99,21 @@ func buildSpokenRevisionPrompt(in clip.RevisionInput, next clip.EditPlan, limits
 		lines = append(lines, map[string]any{"id": seg.ID, "text": seg.Text, "start_ms": seg.StartMS, "end_ms": seg.EndMS})
 	}
 	_, user := BuildStorylinePrompt(clip.StorylineInput{PlanningInput: in.PlanningInput}, limits)
-	system := spokenScriptRule
-	system += "\nFor this revision return ONLY spoken_lines under the supplied closed contract. Rewrite the dedicated spoken script in response to revision_request. Visible captions and all owner-authored words are independent and immutable. Never synthesize or change audio speed.\n" + compactContract(spokenRevisionSchema)
+	var data map[string]any
+	_ = json.Unmarshal([]byte(user), &data)
+	delete(data, "intro_outro")
+	if shown := regionTextPayload(in.PlanningInput, limits); len(shown) > 0 {
+		data["intro_outro"] = shown
+	}
+	user = promptJSON(data)
+	system := videoWritingContract(in.Language) + spokenScriptRule
+	system += "\nFor this revision return ONLY spoken_lines under the supplied closed contract. Rewrite the dedicated spoken script in response to revision_request, preserving lines the request does not ask to change. Visible captions and all owner-authored words are independent and immutable. Never synthesize or change audio speed.\n" + responseContract
+	if in.Policy.StructuredOutput {
+		system += "Use the supplied response schema."
+	} else {
+		system += compactContract(spokenRevisionSchema)
+	}
+	system += videoGuidelineBlock(videoGuidelinesFor(in.Guidelines, "spoken-script-revision"))
 	user += promptJSON(map[string]any{"current_spoken_script": lines, "revision_request": in.Request, "output_duration_ms": next.DurationMS})
 	return system, user
 }

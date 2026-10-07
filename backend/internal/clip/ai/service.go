@@ -157,10 +157,7 @@ func (s *Service) Flow(ctx context.Context, model llm.ModelRef, input clip.Plann
 	if err != nil {
 		return clip.EditPlan{}, llm.Usage{}, err
 	}
-	mode := "flow"
-	if input.FollowStoryline != nil {
-		mode = "flow-follow-storyline"
-	}
+	mode := flowMode(input)
 	system, user := BuildFlowPrompt(input, s.cfg.Render.FadeMS, compositionLimits(s.cfg, input))
 	request := llm.Request{Composition: clipComposition(mode, system, user, input.Guidelines, planningSourceRefs(input)), System: system, Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(user)}}}, Stage: llm.StageNameWrite, Reasoning: input.Policy.Reasoning, DisableReasoning: input.Policy.DisableReasoning, MaxTokens: input.Policy.CompletionTokens, Execution: execution}
 	if execution.Call.StructuredOutput {

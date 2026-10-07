@@ -29,8 +29,8 @@ type flowJSON struct {
 	Cuts        []flowCutJSON       `json:"cuts"`
 }
 
-var flowShape = readShape(flowSchema)
-var revisionFlowShape = readShape(revisionFlowSchema)
+var flowShape = readShape(flowParseSchema)
+var revisionFlowShape = readShape(revisionFlowParseSchema)
 
 // parseFlowPlan admits the footage flow. Every check the single writer's cuts
 // answered still applies — source, range, coverage, one contained scene,

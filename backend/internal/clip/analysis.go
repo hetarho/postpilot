@@ -139,12 +139,26 @@ type PlanningInput struct {
 // language, then the owner's that apply to its video template, each in injection order
 // (GUIDE-14). Frozen with an approval, so a guideline edited mid-flight changes nothing in
 // flight.
+// VideoStockRule carries frozen owning-guideline applicability without inferring
+// policy from its prose. Nil Stock on retained payloads preserves legacy defaults.
+type VideoRuleApplicability struct {
+	Stage   string
+	Outputs []string
+}
+type VideoStockRule struct {
+	Key, Text     string
+	SourceOrder   int
+	Applicability []VideoRuleApplicability
+}
 type VideoGuidelines struct {
-	Defaults []string `json:",omitempty"`
-	Owner    []string `json:",omitempty"`
+	Stock    []VideoStockRule `json:",omitempty"`
+	Defaults []string         `json:",omitempty"`
+	Owner    []string         `json:",omitempty"`
 }
 
-func (g VideoGuidelines) Empty() bool { return len(g.Defaults) == 0 && len(g.Owner) == 0 }
+func (g VideoGuidelines) Empty() bool {
+	return len(g.Stock) == 0 && len(g.Defaults) == 0 && len(g.Owner) == 0
+}
 
 // IsZero lets a payload omit an empty value whole, so a job frozen with none reads byte for byte
 // as it did before 영상 지침 existed.

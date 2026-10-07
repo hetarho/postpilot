@@ -71,7 +71,6 @@
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
-| T639 | Align existing video and speech prompt-stage responsibilities | ARCH GEN MODEL GUIDE LANG CLIP | T633 T635 | todo |
 | T640 | Capture and inspect the owner post effective product requests | ARCH POST MODEL GEN | T635 T637 | todo |
 | T641 | Extend test and authoring private evidence with origin-safe inspection | ARCH MODEL EDIT GEN POST MEM | T638 T640 T628 | todo |
 | T642 | Render accessible phrase origins and preserve editor continuity | ARCH POST THEME EXPORT GEN | T637 | todo |
@@ -81,10 +80,13 @@
 | T646 | Qualify origin-aware writing inspection and clean publication handoff | ARCH GEN POST MODEL THEME EXPORT MKT LANG | T636 T637 T639 T641 T642 T643 T644 T645 T631 | todo |
 
 ## next
-- T639 next for sequential implementation through T646 after the T638 commit.
-- Editorial follow-up: doc-review ARCH; preserve independent release/review and blocked qualification.
+- T640 next for sequential implementation through T646 after the T639 commit.
+- Editorial follow-up: doc-review ARCH; preserve independent review and blocked qualification.
 
 ## log
+- 261008 T639 done on main: explicit video target/data roles, consumed frozen-story/speech schemas, declared stock applicability and actual native call metadata; owning/consumer/race/build/spec checks pass
+- 261008 T639 start on main at52fe1ef5: admitted video/speech stage responsibilities and explicit material/target contracts; preserve independent review changes
+- 261008 T639 freshness: MODEL36 only updates missing-slot setting preparation under MODEL92; video/speech inventory policies unchanged, base refreshed
 - 261008 T638 done on main: kind/mode-scoped authoring fields and shared grammar, single style example sets and fenced approval-only memory proposals; owning/consumer/race/build/spec checks pass
 - 261008 T638 freshness: exactT649 changes only missing-slot candidate admission/counts; retain integrated1..16 behavior and scoped composer contracts, bases refreshed
 - 261008 T638 start on main at376709cd: selected authoring/style/memory composition and explicit material boundaries; preserve independent release/review changes
@@ -102,6 +104,3 @@
 - 261008 CI repair and push start: inspect exact failed051bb0e5 workflow/jobs, preserve active T631 edits, verify final committed push candidate with full CI and applicable deploy/media gates, then inspect every triggered remote workflow
 - 261008 T631 done on main: production graph/receipts/private recovery and real16-entry tests; full Go, FE4141, current-main browser70, generation/tooling and task-candidate spec pass
 - 261008 T650 T651 T652 done on main: phone answer777→371px, header120→64px; all57 routes/580 combined browser cases, FE522 files/4133 tests and lint/build pass; preserve concurrent domain work
-- 261008 mobile manual integration: package integrator rejects inherited spec FORMAT/editorial warnings; independent reviews and exact production hashes retain final24ecfce6 source verification
-- 261008 T628 done on main: durable exact-metered binary tournaments, zero-call recovery, private retention and receipt-first publication; full product Go, actual factory/SQLite/race, FE164, codegen/build/vet and spec checks pass
-- 261008 T649 done on main: saved-or-AI slots prepare exact missing1/3/15 counts with retained refs/template inputs; FE598 plus final33/11, owning Go/count/migration, lint/build, browser52 and42-percent glass checks pass

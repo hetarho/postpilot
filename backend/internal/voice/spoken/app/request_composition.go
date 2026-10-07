@@ -6,17 +6,22 @@ import (
 )
 
 func spokenDescriptor(mode string) llm.RequestComposition {
-	c := llm.RequestComposition{Stage: "spoken-voice", Mode: mode, PromptVersion: "spoken-native-v1", SchemaVersion: "spoken-native-v1", Composer: "spoken/app." + mode + "Request", Parser: "llm speech product validation and private audio validation", Consumer: "owned spoken operation publication or qualification probe", Activation: "explicit admitted owned qualified frozen speech profile; no chat role contract", SourceFiles: []string{"internal/voice/spoken/app/generation.go", "internal/voice/spoken/app/probe.go"}, Output: llm.OutputContractInspection{Name: "spoken-" + mode, Version: "spoken-native-v1"}}
+	c := llm.RequestComposition{Stage: "spoken-voice", Mode: mode, PromptVersion: "spoken-native-v2", SchemaVersion: "spoken-native-v2", Composer: "spoken/app." + mode + "Request", Parser: "llm speech product validation and private audio validation", Consumer: "owned spoken operation publication or qualification probe", Activation: "explicit admitted owned frozen native profile; no chat role contract", SourceFiles: []string{"internal/voice/spoken/app/generation.go", "internal/voice/spoken/app/probe.go"}, Output: llm.OutputContractInspection{Name: "spoken-" + mode, Version: "spoken-native-v2"}}
 	switch mode {
 	case "design":
 		c.Composer = "spoken/app.designRequest"
 		c.Output.Name = "voice-design-candidates"
+		c.Activation = "explicit admitted owned design operation over exact description/preview text; endpoint qualification remains separate"
+		c.SourceFiles = []string{"internal/voice/spoken/app/generation.go", "internal/voice/spoken/app/request_composition.go"}
 	case "confirm":
 		c.Composer = "spoken/app.confirmRequest"
 		c.Output.Name = "confirmed-spoken-voice"
+		c.Activation = "explicit admitted owner-selected candidate confirmation; supplier candidate handle omitted from safe product projection"
+		c.SourceFiles = []string{"internal/voice/spoken/app/generation.go", "internal/voice/spoken/app/request_composition.go"}
 	case "speech":
 		c.Composer = "spoken/app.speechRequest"
 		c.Output.Name = "speech-audio-timing"
+		c.SourceFiles = []string{"internal/voice/spoken/app/generation.go", "internal/voice/spoken/app/probe.go", "internal/voice/spoken/app/qualification.go", "internal/voice/spoken/app/request_composition.go"}
 		c.Activation += "; two distinct frozen qualification texts, cached compatible audio makes no call"
 	}
 	return c
@@ -29,7 +34,7 @@ func RequestCompositions() []llm.RequestComposition {
 func spokenComposition(mode string, o spoken.Operation, index int) *llm.RequestComposition {
 	c := spokenDescriptor(mode)
 	add := func(id, material, text string, author llm.FragmentAuthorship) {
-		c.NativeFields = append(c.NativeFields, llm.RequestNativeField{ID: id, Authorship: author, MaterialRole: material, Text: text, SourceFiles: []string{"internal/voice/spoken/app/generation.go"}})
+		c.NativeFields = append(c.NativeFields, llm.RequestNativeField{ID: id, Authorship: author, MaterialRole: material, Text: text, SourceFiles: append([]string(nil), c.SourceFiles...)})
 	}
 	switch mode {
 	case "design":

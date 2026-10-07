@@ -152,7 +152,7 @@ func (s *SpeechService) AssembleInitial(ctx context.Context, owner, project, id,
 		if len(p.Units) != 1 {
 			return usage.ErrUnitCall
 		}
-		r.Calls = append(r.Calls, SpeechCall{SegmentID: seg.ID, Text: seg.Text, InputHash: seg.InputHash, Request: llm.SpeechRequest{Model: p.Voice.Model, Voice: p.Voice.Handle, Settings: p.Voice.Settings, Text: seg.Text}, Budget: p.Units[0]})
+		r.Calls = append(r.Calls, SpeechCall{SegmentID: seg.ID, Text: seg.Text, InputHash: seg.InputHash, Request: initialSegmentSpeechRequest(p.Voice.Model, p.Voice.Handle, seg.Text, p.Voice.Settings, seg.ID), Budget: p.Units[0]})
 	}
 	if e := keep(); e != nil {
 		return e
