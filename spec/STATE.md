@@ -85,21 +85,20 @@
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | todo |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | todo |
 | T623 | Expose current location parent access and contextual creation return | ARCH THEME CLIP MODEL | T622 T629 | todo |
-| T624 | Make writing spacious and replace archive browsing with operational history | ARCH THEME POST CLIP GEN | T622 | todo |
-| T625 | Unify named AI and direct editing with bounded seed-free candidate preparation | ARCH EDIT THEME MODEL QUOTA | T622 | todo |
 | T626 | Edit learning materials while preserving accepted voice profiles and test provenance | ARCH VOICE MODEL QUOTA | T622 T625 | todo |
 | T627 | Prepare frozen single-factor inputs and one complete post per test entrant | ARCH GEN MODEL TMPL GUIDE LANG VIDEO QUOTA | T622 T625 T626 T630 | todo |
 | T628 | Run private binary tournaments with exact metering and explicit winner publication | ARCH MODEL QUOTA GEN LANG | T622 T624 T625 T626 T627 T630 | todo |
-| T629 | Build one human A/B and knockout test experience for reusable writing settings | ARCH THEME MODEL QUOTA | T622 | todo |
 | T630 | Show named setting states and integrate direct AI editing and real-writing tests | ARCH EDIT THEME TMPL GUIDE MODEL | T622 T625 | todo |
 | T631 | Complete UX wiring and qualify creation settings and sixteen-entry tests | ARCH THEME POST CLIP EDIT VOICE MODEL QUOTA | T622 T623 T624 T625 T626 T627 T628 T629 T630 | todo |
 
 ## next
-- Complete the merged T624/T625/T629 records on main, then continue with dependency-ready T623, one task at a time under ARCH-70.
-- Reconcile current prompt-engineering requirements with remaining UX tasks before implementation; preserve their separate task planning.
-- Existing browser-media tasks and blocked qualifications retain their requirements; THEME-61 visual decisions remain open.
+- implement-task T623 on main, then complete one dependency-ready task at a time under ARCH-70; T622/T624/T625/T629 are complete.
+- Reassess current SSOT before each remaining task. Prompt-engineering follow-up tasks run after T631 and their own recorded prerequisites.
+- Existing browser-media tasks and blocked qualifications retain their scope; THEME-61 visual decisions remain open.
 
 ## log
+- 261007 T624 T625 T629 done on main: merged completed implementations, corrected baseline/CAS/saved-draft recovery, aligned retired consumer tests and completed combined verification
+- 261007 main sequential workflow active: dependencies and task completion records govern the next task; completed execution bookkeeping retired
 - 261007 ARCH r19..r20 workflow/verification documentation consumed: main task execution and commit policy requires no runtime task
 - 261007 create-architecture ARCH r20 done: one dependency-ready task implemented, verified, recorded and committed on main
 - 261007 main integration start: combine completed T624/T625/T629 with baseline/CAS/recovery corrections; preserve pending prompt-engineering requirements and validate the combined code
