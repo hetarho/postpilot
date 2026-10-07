@@ -168,6 +168,15 @@ function ScopedEditor({
   ])
   const [directPane, setDirectPane] = useState<'input' | 'preview'>('input')
   const [refiningPane, setRefiningPane] = useState<'input' | 'preview'>('input')
+  const [paneEntry, setPaneEntry] = useState({ view, active })
+  // A new editing entry opens its current input. This visual state never drives the actor.
+  if (paneEntry.view !== view || paneEntry.active !== active) {
+    setPaneEntry({ view, active })
+    if (active && (paneEntry.view !== view || !paneEntry.active)) {
+      if (view === 'direct') setDirectPane('input')
+      if (view === 'refining') setRefiningPane('input')
+    }
+  }
   const guidelineKind = kind === 'post-guideline' || kind === 'video-guideline'
   const id = useId()
   const heading = useRef<HTMLDivElement>(null)

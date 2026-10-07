@@ -345,6 +345,88 @@ afterEach(() => {
   initializeI18n('ko')
 })
 describe('mobile authoring views', () => {
+  it.each(['direct', 'ai'] as const)(
+    'reopens %s with its current input after leaving the preview',
+    async (method) => {
+      const selected = { id: 'draft', name: '보존할 설정', body: '현재 내용을 보존해요.' }
+      const fake = server({
+        initial: makeSession({ phase: 'editing', selected, workingSource: selected }),
+      })
+      mount(fake, { initialMethod: method })
+      const user = userEvent.setup()
+      const label = method === 'direct' ? '내용' : '어떤 점을 바꿔 볼까요?'
+      const input = await screen.findByRole('textbox', { name: label })
+      if (method === 'ai') fireEvent.change(input, { target: { value: '아직 보내지 않은 요청' } })
+      const value = (input as HTMLTextAreaElement).value
+      const paneName = method === 'direct' ? '편집과 미리 보기' : '다듬기와 미리 보기'
+      await user.click(
+        within(screen.getByRole('tablist', { name: paneName })).getByRole('tab', {
+          name: '미리 보기',
+        }),
+      )
+      const calls = [...fake.calls]
+      await user.click(screen.getByRole('button', { name: '돌아가기' }))
+      await user.click(
+        await screen.findByRole('button', {
+          name: method === 'direct' ? '“보존할 설정” 직접 편집하기' : '“보존할 설정” AI로 편집하기',
+        }),
+      )
+      expect(
+        within(screen.getByRole('tablist', { name: paneName })).getByRole('tab', {
+          name: method === 'direct' ? '편집' : '함께 다듬기',
+        }),
+      ).toHaveAttribute('aria-selected', 'true')
+      expect(screen.getByRole('textbox', { name: label })).toHaveValue(value)
+      expect(fake.calls).toEqual(calls)
+      expect(fake.current?.selected?.body).toBe(selected.body)
+      expect(fake.starts).toHaveLength(0)
+    },
+  )
+
+  it.each(['direct', 'ai'] as const)(
+    'reactivates %s at its input while retaining the mounted draft and actor',
+    async (method) => {
+      const selected = { id: 'draft', name: '보존할 설정', body: '현재 내용을 보존해요.' }
+      const fake = server({
+        initial: makeSession({ phase: 'editing', selected, workingSource: selected }),
+      })
+      const props = { ownerId: 'alice', kind: 'post-guideline' as const, initialMethod: method }
+      const view = render(<AuthoringEditor {...props} active />, {
+        wrapper: withProviders(fake.transport, createTestQueryClient()),
+      })
+      const user = userEvent.setup()
+      const label = method === 'direct' ? '내용' : '어떤 점을 바꿔 볼까요?'
+      const input = (await screen.findByRole('textbox', { name: label })) as HTMLTextAreaElement
+      fireEvent.change(input, { target: { value: '아직 보내거나 보관하지 않은 수정' } })
+      input.focus()
+      input.setSelectionRange(4, 8)
+      const panes = within(
+        screen.getByRole('tablist', {
+          name: method === 'direct' ? '편집과 미리 보기' : '다듬기와 미리 보기',
+        }),
+      )
+      await user.click(panes.getByRole('tab', { name: '미리 보기' }))
+      const calls = [...fake.calls]
+      await act(async () => {
+        Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1440 })
+        window.dispatchEvent(new Event('resize'))
+      })
+      expect(panes.getByRole('tab', { name: '미리 보기' })).toHaveAttribute('aria-selected', 'true')
+      view.rerender(<AuthoringEditor {...props} active={false} />)
+      view.rerender(<AuthoringEditor {...props} active />)
+      expect(
+        panes.getByRole('tab', { name: method === 'direct' ? '편집' : '함께 다듬기' }),
+      ).toHaveAttribute('aria-selected', 'true')
+      expect(screen.getByRole('textbox', { name: label })).toBe(input)
+      expect(input).toHaveValue('아직 보내거나 보관하지 않은 수정')
+      expect([input.selectionStart, input.selectionEnd]).toEqual([4, 8])
+      expect(fake.calls).toEqual(calls)
+      expect(fake.current?.selected?.body).toBe(selected.body)
+      expect(fake.patches).toHaveLength(0)
+      expect(fake.starts).toHaveLength(0)
+    },
+  )
+
   it.each([
     ['post-template', ProtoConfigurationKind.POST_TEMPLATE],
     ['video-template', ProtoConfigurationKind.VIDEO_TEMPLATE],
