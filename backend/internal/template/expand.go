@@ -69,8 +69,8 @@ func Render(name string, nodes []Node, hasPhotos bool, answers []Answer) Rendere
 		facts:     make([]Fact, 0, 4),
 		answers:   answersByLabel(answers),
 	}
-	renderNodes(&body, state, resolveAsks(nodes, answers))
-	return Rendered{Name: name, Body: body.String(), Facts: state.facts}
+	parts := renderNodes(&body, state, resolveAsks(nodes, answers))
+	return Rendered{Name: name, Body: body.String(), Facts: state.facts, BodyParts: parts}
 }
 
 // RenderTemplate renders a template's two areas for one post (TMPL-50). The body renders
@@ -82,6 +82,9 @@ func RenderTemplate(name string, title, body []Node, hasPhotos bool, answers []A
 	heading := Render(name, title, false, answers)
 	if !isBlank(heading.Body) {
 		rendered.TitleArea = heading.Body
+		rendered.TitleParts = heading.BodyParts
+	} else {
+		rendered.TitleParts = []MaterialPart{}
 	}
 	rendered.Facts = append(heading.Facts, rendered.Facts...)
 	return rendered
@@ -127,31 +130,52 @@ type renderState struct {
 	answers map[string]Answer
 }
 
-func renderNodes(out *strings.Builder, state *renderState, nodes []Node) {
+func renderNodes(out *strings.Builder, state *renderState, nodes []Node) []MaterialPart {
+	parts := make([]MaterialPart, 0, len(nodes))
 	for _, node := range nodes {
 		switch node.Kind {
 		case NodeLiteral:
-			out.WriteString(Decode(node.Text))
+			text := Decode(node.Text)
+			out.WriteString(text)
+			parts = appendMaterial(parts, MaterialPart{Kind: MaterialLiteral, Text: text})
 		case NodeWrite:
 			out.WriteString("<write>")
 			out.WriteString(Decode(node.Text))
 			out.WriteString("</write>")
+			parts = append(parts, MaterialPart{Kind: MaterialWrite, Text: Decode(node.Text)})
 		case NodeAsk:
 			// Only resolved fields reach here — resolveAsks dropped the rest. The verbatim
 			// flavor IS literal text on the page, so it renders as exactly that; the write
 			// flavor renders its instruction plus the value fenced as fact beside it.
-			renderAsk(out, state, node)
+			parts = append(parts, renderAsk(out, state, node))
 		case NodeSlot:
-			renderSlot(out, state, node)
+			if part := renderSlot(out, state, node); part != nil {
+				parts = appendMaterial(parts, *part)
+			}
 		case NodeRepeat:
 			// Once, marked, whatever the photo count: the writer repeats it per photo group.
 			if state.hasPhotos {
 				out.WriteString(repeatOpen)
-				renderNodes(out, state, node.Children)
+				children := renderNodes(out, state, node.Children)
 				out.WriteString(repeatClose)
+				parts = append(parts, MaterialPart{Kind: MaterialRepeat, Parts: children})
 			}
 		}
 	}
+	return parts
+}
+
+// Removing a field/photo node must leave precisely the same typed material as
+// deleting it from the grammar. Adjacent authored literal slices are one part.
+func appendMaterial(parts []MaterialPart, part MaterialPart) []MaterialPart {
+	if part.Kind == MaterialLiteral && len(parts) > 0 && parts[len(parts)-1].Kind == MaterialLiteral {
+		parts[len(parts)-1].Text += part.Text
+		return parts
+	}
+	if part.Kind == MaterialLiteral && part.Text == "" {
+		return parts
+	}
+	return append(parts, part)
 }
 
 // renderAsk writes one RESOLVED data field: resolveAsks already dropped the ones with no
@@ -160,13 +184,13 @@ func renderNodes(out *strings.Builder, state *renderState, nodes []Node) {
 // The verbatim flavor IS literal text on the page, so it renders as exactly that. The write
 // flavor renders the author's instruction as an ordinary `<write>` plus the value fenced as
 // fact beside it — the value is authored fact and never an instruction (TMPL-46).
-func renderAsk(out *strings.Builder, state *renderState, node Node) {
+func renderAsk(out *strings.Builder, state *renderState, node Node) MaterialPart {
 	label := Decode(node.Label)
 	value := strings.TrimSpace(state.answers[label].Text)
 	instruction := Decode(node.Text)
 	if instruction == "" {
 		out.WriteString(value)
-		return
+		return MaterialPart{Kind: MaterialAnswerLiteral, Label: label, Parts: []MaterialPart{{Kind: MaterialFact, Text: value}}}
 	}
 	out.WriteString("<write>")
 	out.WriteString(instruction)
@@ -181,20 +205,24 @@ func renderAsk(out *strings.Builder, state *renderState, node Node) {
 	out.WriteString(value)
 	out.WriteString(factClose)
 	state.facts = append(state.facts, Fact{Label: label, Value: value})
+	return MaterialPart{Kind: MaterialAnswerWrite, Label: label, Text: instruction, Parts: []MaterialPart{{Kind: MaterialFact, Text: value}}}
 }
 
 // renderSlot writes a photo position as its marked place, or a legacy place/link position as
 // its label. The place carries its row size and names no photo (TMPL-21, TMPL-40).
-func renderSlot(out *strings.Builder, state *renderState, node Node) {
+func renderSlot(out *strings.Builder, state *renderState, node Node) *MaterialPart {
 	// There is no place or link position (TMPL-37): a stored one is a 고정 문구 whose text is its
 	// label, so no run carries a slot token, a slot block or a slot marker.
 	if node.SlotKind != SlotPhoto {
-		out.WriteString(legacySlotText(node))
-		return
+		text := legacySlotText(node)
+		out.WriteString(text)
+		return &MaterialPart{Kind: MaterialLiteral, Text: text}
 	}
 	if state.hasPhotos {
 		out.WriteString(PhotoPlace(node.Count))
+		return &MaterialPart{Kind: MaterialPhoto, Count: max(1, min(node.Count, PhotoGroupCap))}
 	}
+	return nil
 }
 
 // legacySlotText is the literal text a stored place/link position reads as: its label, or 지도 ·

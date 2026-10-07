@@ -60,6 +60,7 @@ type snapshotPost struct {
 	Template          *snapshotTemplate     `json:"Template"`
 	Guidelines        []string              `json:"Guidelines"`
 	DefaultGuidelines []string              `json:"default_guidelines,omitempty"`
+	StockGuidelines   *[]stockGuidelineJSON `json:"stock_guidelines,omitempty"`
 	UseMemory         bool                  `json:"UseMemory"`
 	Memories          []string              `json:"Memories"`
 	QualityRules      []string              `json:"quality_rules,omitempty"`
@@ -83,10 +84,12 @@ type snapshotVoice struct {
 }
 
 type snapshotTemplate struct {
-	Name      string         `json:"Name"`
-	Body      string         `json:"Body"`
-	Facts     []snapshotFact `json:"Facts"`
-	TitleArea string         `json:"TitleArea,omitempty"`
+	Name       string              `json:"Name"`
+	Body       string              `json:"Body"`
+	Facts      []snapshotFact      `json:"Facts"`
+	TitleArea  string              `json:"TitleArea,omitempty"`
+	BodyParts  *[]materialPartJSON `json:"body_parts,omitempty"`
+	TitleParts *[]materialPartJSON `json:"title_parts,omitempty"`
 }
 
 type snapshotFact struct {
@@ -278,7 +281,7 @@ func toSnapshotPost(post PostInput) snapshotPost {
 		Slug: post.Slug, UserID: post.UserID,
 		Voice:      toSnapshotVoice(post.Voice),
 		TemplateID: post.TemplateID, Template: toSnapshotTemplate(post.Template),
-		Guidelines: copyTexts(post.Guidelines), DefaultGuidelines: copyTexts(post.DefaultGuidelines),
+		Guidelines: copyTexts(post.Guidelines), DefaultGuidelines: copyTexts(post.DefaultGuidelines), StockGuidelines: encodeStockGuidelines(post.StockGuidelines),
 		UseMemory: post.UseMemory, Memories: copyTexts(post.Memories),
 		QualityRules: copyTexts(post.QualityRules),
 		TemplateAnswers: mapSlice(post.TemplateAnswers, func(a TemplateAnswer) snapshotAnswer {
@@ -307,7 +310,7 @@ func fromSnapshotPost(wire snapshotPost) PostInput {
 		Slug: wire.Slug, UserID: wire.UserID,
 		Voice:      fromSnapshotVoice(wire.Voice),
 		TemplateID: wire.TemplateID, Template: fromSnapshotTemplate(wire.Template),
-		Guidelines: copyTexts(wire.Guidelines), DefaultGuidelines: copyTexts(wire.DefaultGuidelines),
+		Guidelines: copyTexts(wire.Guidelines), DefaultGuidelines: copyTexts(wire.DefaultGuidelines), StockGuidelines: decodeStockGuidelines(wire.StockGuidelines),
 		UseMemory: wire.UseMemory, Memories: copyTexts(wire.Memories),
 		QualityRules: copyTexts(wire.QualityRules),
 		TemplateAnswers: mapSlice(wire.TemplateAnswers, func(a snapshotAnswer) TemplateAnswer {
@@ -336,7 +339,7 @@ func toSnapshotTemplate(brief *TemplateBrief) *snapshotTemplate {
 	return &snapshotTemplate{
 		Name: brief.Name, Body: brief.Body,
 		Facts:     mapSlice(brief.Facts, func(f TemplateFact) snapshotFact { return snapshotFact{Label: f.Label, Value: f.Value} }),
-		TitleArea: brief.TitleArea,
+		TitleArea: brief.TitleArea, BodyParts: encodeMaterialParts(brief.BodyParts), TitleParts: encodeMaterialParts(brief.TitleParts),
 	}
 }
 
@@ -347,7 +350,7 @@ func fromSnapshotTemplate(wire *snapshotTemplate) *TemplateBrief {
 	return &TemplateBrief{
 		Name: wire.Name, Body: wire.Body,
 		Facts:     mapSlice(wire.Facts, func(f snapshotFact) TemplateFact { return TemplateFact{Label: f.Label, Value: f.Value} }),
-		TitleArea: wire.TitleArea,
+		TitleArea: wire.TitleArea, BodyParts: decodeMaterialParts(wire.BodyParts), TitleParts: decodeMaterialParts(wire.TitleParts),
 	}
 }
 

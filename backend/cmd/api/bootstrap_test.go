@@ -400,7 +400,7 @@ func TestGenerationAdapterCarriesThePostTemplateThroughToTheFrozenBrief(t *testi
 	}
 	// And the prompt that render produces actually carries it.
 	system, _ := generation.BuildWritePrompt(generation.Profile{}, nil, "", "", nil, nil, &brief, nil)
-	if !strings.Contains(system, "[글 템플릿: 정보성 식당 리뷰]") {
+	if !strings.Contains(system, `[글 템플릿: "정보성 식당 리뷰"]`) || !strings.Contains(system, `[본문 역할 데이터]`) {
 		t.Fatalf("the frozen template did not reach the prompt:\n%s", system)
 	}
 
@@ -510,10 +510,13 @@ func TestGenerationAdapterCarriesTheTitleAreaIntoTheFrozenBrief(t *testing.T) {
 	write, _ := generation.BuildWritePrompt(generation.Profile{}, nil, "", "", nil, nil, &brief, nil)
 	revise, _ := generation.BuildRevisePrompt(generation.Profile{}, generation.PostContent{Title: "을지로 노포 방문 후기"}, nil, "고쳐줘", nil, &brief, nil)
 	for name, system := range map[string]string{"write": write, "revise": revise} {
-		section, title, body := strings.Index(system, "[글 템플릿:"), strings.Index(system, brief.TitleArea), strings.Index(system, brief.Body)
+		section, title, body := strings.Index(system, "[글 템플릿:"), strings.Index(system, "[제목 역할 데이터]"), strings.Index(system, "[본문 역할 데이터]")
 		if section < 0 || title <= section || body <= title {
 			t.Fatalf("%s prompt: section at %d, title area at %d, body at %d:\n%s", name, section, title, body, system)
 		}
+	}
+	if len(brief.TitleParts) != 2 || brief.TitleParts[0].Kind != "answer_write" || brief.TitleParts[0].Parts[0].Text != "을지로 노포" || len(brief.BodyParts) != 1 || brief.BodyParts[0].Label != "총평" {
+		t.Fatalf("adapter lost template field roles: %+v", brief)
 	}
 }
 
@@ -668,7 +671,7 @@ func TestGuidelineAdapterCarriesScopeThroughToTheFrozenPromptSection(t *testing.
 		t.Fatalf("a run with memories froze %q", withMemories.Defaults)
 	}
 	system, _ := generation.BuildWritePromptForLanguage(generation.WritePromptInput{
-		Language: generation.LanguageKorean, DefaultGuidelines: frozen.Defaults, Guidelines: texts,
+		Language: generation.LanguageKorean, DefaultGuidelines: frozen.Defaults, StockGuidelines: frozen.Stock, Guidelines: texts,
 	})
 	if !strings.Contains(system, "\n사용자 지침:\n- 없는 사실을 쓰지 않기\n- CCTV를 언급하지 않기") {
 		t.Fatalf("the frozen guidelines did not reach the prompt:\n%s", system)

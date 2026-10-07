@@ -64,10 +64,23 @@ type writingTestCommonWire struct {
 	InputRevision           int64                      `json:"input_revision"`
 	ContentRevision         int64                      `json:"content_revision"`
 	Attachments             []WritingTestAttachment    `json:"attachments"`
-	Rules                   WritingTestRules           `json:"rules"`
+	Rules                   writingTestRulesWire       `json:"rules"`
 	RequiredFields          []WritingTestTemplateField `json:"required_fields"`
 	QualityRuleIDs          []string                   `json:"quality_rule_ids"`
 }
+type writingTestRulesWire struct {
+	Defaults []string              `json:"Defaults"`
+	Owner    []WritingTestRule     `json:"Owner"`
+	Stock    *[]stockGuidelineJSON `json:"stock,omitempty"`
+}
+
+func encodeWritingTestRules(r WritingTestRules) writingTestRulesWire {
+	return writingTestRulesWire{Defaults: r.Defaults, Owner: r.Owner, Stock: encodeStockGuidelines(r.Stock)}
+}
+func decodeWritingTestRules(r writingTestRulesWire) WritingTestRules {
+	return WritingTestRules{Defaults: r.Defaults, Owner: r.Owner, Stock: decodeStockGuidelines(r.Stock)}
+}
+
 type writingTestVariantWire struct {
 	Reference               WritingTestReference `json:"reference"`
 	Revision                string               `json:"revision"`
@@ -91,7 +104,7 @@ func encodeWritingTestCommon(in writingTestCommon) ([]byte, error) {
 		ObserveModel: testModelString(in.ObserveModel), ObserveFiles: copyOptionalTexts(in.ObserveFiles), Observations: mapSlice(in.Observations, toSnapshotObservation),
 		Prepared: in.Prepared, Fictional: in.Fictional, BatchSize: in.BatchSize, ObserveCompletionTokens: in.ObserveCompletionTokens, ObservePromptTokens: in.ObservePromptTokens, WritePromptTokens: in.WritePromptTokens,
 		ObserveStructuredOutput: in.ObserveStructuredOutput, Reasoning: in.Reasoning, PromptVersion: in.PromptVersion, SchemaVersion: in.SchemaVersion, SourceRevision: in.SourceRevision, AssignmentsHash: in.AssignmentsHash,
-		Attachments: in.Attachments, Rules: in.Rules, RequiredFields: in.RequiredFields, QualityRuleIDs: in.QualityRuleIDs,
+		Attachments: in.Attachments, Rules: encodeWritingTestRules(in.Rules), RequiredFields: in.RequiredFields, QualityRuleIDs: in.QualityRuleIDs,
 		VoiceRevision: in.VoiceRevision, TemplateRevision: in.TemplateRevision, InputRevision: in.InputRevision, ContentRevision: in.ContentRevision,
 	})
 }
@@ -123,7 +136,7 @@ func decodeWritingTestSnapshot(snapshot WritingTestSnapshot) (writingTestCommon,
 		ObserveModel: observe, ObserveFiles: copyOptionalTexts(wire.ObserveFiles), Observations: mapSlice(wire.Observations, fromSnapshotObservation), Prepared: wire.Prepared, Fictional: wire.Fictional,
 		BatchSize: wire.BatchSize, ObserveCompletionTokens: wire.ObserveCompletionTokens, ObservePromptTokens: wire.ObservePromptTokens, WritePromptTokens: wire.WritePromptTokens,
 		ObserveStructuredOutput: wire.ObserveStructuredOutput, Reasoning: wire.Reasoning, PromptVersion: wire.PromptVersion, SchemaVersion: wire.SchemaVersion, SourceRevision: wire.SourceRevision, AssignmentsHash: wire.AssignmentsHash,
-		Attachments: wire.Attachments, Rules: wire.Rules, RequiredFields: wire.RequiredFields, QualityRuleIDs: wire.QualityRuleIDs,
+		Attachments: wire.Attachments, Rules: decodeWritingTestRules(wire.Rules), RequiredFields: wire.RequiredFields, QualityRuleIDs: wire.QualityRuleIDs,
 		VoiceRevision: wire.VoiceRevision, TemplateRevision: wire.TemplateRevision, InputRevision: wire.InputRevision, ContentRevision: wire.ContentRevision,
 	}
 	variants := make([]writingTestVariant, len(snapshot.Variants))

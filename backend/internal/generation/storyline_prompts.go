@@ -49,6 +49,7 @@ type StorylinePromptInput struct {
 	Observations      []Observation
 	Template          *TemplateBrief
 	DefaultGuidelines []string
+	StockGuidelines   []StockGuideline
 	Guidelines        []string
 	Memories          []string
 	// Current is the stored storyline the request rewrites; Request is the owner's request.
@@ -84,10 +85,11 @@ func BuildStorylinePromptForLanguage(input StorylinePromptInput) (string, string
 	default:
 		stable.WriteString("Unsupported output language; do not plan a storyline.")
 	}
+	writeSourceHonestyContract(&stable, input.Language)
 	if input.Template != nil {
 		writeTemplateForm(&stable, input.Template, "")
 	}
-	writeGuidelinesSectionClosedBy(&stable, input.DefaultGuidelines, input.Guidelines, storylineGuidelinePrecedence)
+	writeGuidelinesSectionClosedBy(&stable, selectStockGuidelines(input.StockGuidelines, input.DefaultGuidelines, "storyline"), input.Guidelines, storylineGuidelinePrecedence)
 
 	user := fmt.Sprintf("[이번 글]\n가제: %s\n메모: %s\n%s%s", input.Title, input.Memo, memorySection(input.Memories), attachmentMaterial(input.Photos, input.Videos, input.Observations, nil))
 	if revising {

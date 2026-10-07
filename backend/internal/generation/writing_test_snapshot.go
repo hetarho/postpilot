@@ -75,6 +75,7 @@ func (f *WritingTestFactory) FreezeWritingTest(ctx context.Context, request Writ
 	post.UseMemory, post.QualityRuleIDs = material.UseMemory, copyTexts(material.QualityRules)
 	post.Content, post.ContentLanguage, post.Storyline, post.FollowStoryline = nil, nil, nil, nil
 	post.Template, post.Guidelines, post.DefaultGuidelines, post.Memories, post.QualityRules = nil, nil, nil, nil, nil
+	post.StockGuidelines = nil
 	post.WriteNativeEffort, post.Voice = false, VoiceRef{}
 	if material.Fictional {
 		post.Memo = "가상 시나리오(사용자의 실제 경험이 아님)\n" + post.Memo
@@ -121,6 +122,7 @@ func (f *WritingTestFactory) FreezeWritingTest(ctx context.Context, request Writ
 		return WritingTestSnapshot{}, err
 	}
 	post.DefaultGuidelines = copyTexts(common.Rules.Defaults)
+	post.StockGuidelines = cloneStockGuidelines(common.Rules.Stock)
 	for _, rule := range common.Rules.Owner {
 		if rule.ID == "" || rule.Revision == "" || strings.TrimSpace(rule.Text) == "" {
 			return WritingTestSnapshot{}, ErrWritingTestMaterial

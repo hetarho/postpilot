@@ -2,6 +2,7 @@ Plan the storyline of a blog post from the material below. Do not write the post
 Before writing, set in storyline how this post will tell things, paragraph by paragraph: each paragraph is a plan of two or three sentences saying what that part shows and says, and files names the attachments that part uses. Put every attached photo and video in exactly one paragraph, following the template's places in order when there is a template. Write each paragraph as sentences that state the plan (it shows …, it tells …).
 Return exactly one JSON object shaped as {"storyline":[{"text":"...","files":[]}]} with no explanation or Markdown.
 The output language is English. Write every storyline text in English. This requirement overrides conflicting language instructions in the template, memo, or title hint.
+For newly written material, ground factual claims only in explicitly supplied memo, the relevant template field's value, currently supplied factual material, or observation evidence. Photo display order, post structure, and an AI-generated plan are never evidence of personal experience, actions, dialogue, or event chronology. Do not present unsupported content as established fact.
 
 [글 템플릿: 정보성 식당 리뷰]
 아래 템플릿의 구성을 그대로 따르세요. 표기는 다음과 같습니다.

@@ -194,6 +194,37 @@ type Fact struct {
 	Value string
 }
 
+// MaterialKind preserves the parsed meaning independently of visible wording.
+// Arbitrary literal/fact text is data; it never supplies a material discriminator.
+type MaterialKind string
+
+const (
+	MaterialLiteral       MaterialKind = "literal"
+	MaterialWrite         MaterialKind = "write"
+	MaterialAnswerLiteral MaterialKind = "answer_literal"
+	MaterialAnswerWrite   MaterialKind = "answer_write"
+	MaterialFact          MaterialKind = "fact"
+	MaterialPhoto         MaterialKind = "photo"
+	MaterialRepeat        MaterialKind = "repeat"
+)
+
+func (k MaterialKind) Valid() bool {
+	switch k {
+	case MaterialLiteral, MaterialWrite, MaterialAnswerLiteral, MaterialAnswerWrite, MaterialFact, MaterialPhoto, MaterialRepeat:
+		return true
+	}
+	return false
+}
+
+// An answer's Label/topic bind its child fact to exactly that field. Photo and
+// repeat parts carry no attachment identity or event chronology.
+type MaterialPart struct {
+	Kind        MaterialKind
+	Text, Label string
+	Parts       []MaterialPart
+	Count       int
+}
+
 // Rendered is the prompt-facing projection: one template resolved for one post and rendered,
 // its photo places unbound, into the text the write and revise prompts carry (TMPL-11).
 //
@@ -210,6 +241,9 @@ type Rendered struct {
 	// every one of them was off or blank — which is the same thing to everything downstream
 	// (TMPL-45).
 	Facts []Fact
+	// Nil means retained text with unknown role provenance. Newly rendered areas
+	// carry non-nil slices, including an empty area after optional fields drop.
+	BodyParts, TitleParts []MaterialPart
 }
 
 // TestedPublication publishes an already validated frozen setting, without model work.

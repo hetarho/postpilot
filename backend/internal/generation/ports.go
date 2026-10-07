@@ -77,6 +77,7 @@ type TemplateBriefs interface {
 type FrozenGuidelines struct {
 	Defaults []string
 	Owner    []string
+	Stock    []StockGuideline
 }
 
 // GuidelinesForPrompt is the guideline context's published resolution, consumed only at

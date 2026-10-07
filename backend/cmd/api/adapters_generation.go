@@ -56,7 +56,7 @@ func (a generationGuidelines) ForPrompt(ctx context.Context, userID string, temp
 	if err != nil {
 		return generation.FrozenGuidelines{}, err
 	}
-	return generation.FrozenGuidelines{Defaults: resolved.Defaults, Owner: resolved.Owner}, nil
+	return generation.FrozenGuidelines{Defaults: resolved.Defaults, Owner: resolved.Owner, Stock: generationStockRules(resolved.Stock)}, nil
 }
 
 // generationMemories hands the generation context the memory context's retrieval. What
@@ -144,7 +144,42 @@ func (a generationTemplates) renderedFor(ctx context.Context, userID, templateID
 	}
 	return generation.TemplateBrief{
 		Name: rendered.Name, Body: rendered.Body, Facts: facts, TitleArea: rendered.TitleArea,
+		BodyParts: generationMaterialParts(rendered.BodyParts), TitleParts: generationMaterialParts(rendered.TitleParts),
 	}, true, nil
+}
+
+func generationMaterialParts(parts []template.MaterialPart) []generation.TemplateMaterialPart {
+	if parts == nil {
+		return nil
+	}
+	out := make([]generation.TemplateMaterialPart, len(parts))
+	for index, part := range parts {
+		out[index] = generation.TemplateMaterialPart{Kind: string(part.Kind), Text: part.Text, Label: part.Label, Count: part.Count, Parts: generationMaterialParts(part.Parts)}
+	}
+	return out
+}
+
+func generationStockRules(rules []guideline.StockRule) []generation.StockGuideline {
+	if rules == nil {
+		return nil
+	}
+	out := make([]generation.StockGuideline, len(rules))
+	for index, rule := range rules {
+		out[index] = generation.StockGuideline{Key: rule.Key, Text: rule.Text, SourceOrder: rule.SourceOrder}
+		if rule.Applicability != nil {
+			out[index].Applicability = make([]generation.StockRuleApplicability, len(rule.Applicability))
+		}
+		for j, applicability := range rule.Applicability {
+			out[index].Applicability[j].Stage = string(applicability.Stage)
+			if applicability.Outputs != nil {
+				out[index].Applicability[j].Outputs = make([]string, len(applicability.Outputs))
+			}
+			for k, output := range applicability.Outputs {
+				out[index].Applicability[j].Outputs[k] = string(output)
+			}
+		}
+	}
+	return out
 }
 
 // experimentVoices adapts the directory for the experiment context: only an owned, active

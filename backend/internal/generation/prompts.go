@@ -76,7 +76,7 @@ IMAGE와 GALLERY 블록은 제공된 정확한 파일명만 사용하고, 목록
 ` + koreanGalleryRule + `
 출력은 설명이나 마크다운 없이 {"storyline":[{"text":"...","files":[]}],"title":"...","summary":"...","tags":[],"blocks":[],"nouns":[]} 형태의 JSON 객체 하나여야 합니다.
 각 block은 type, content, level, file, files, layout, alt, caption, items 필드를 사용하며 type은 TEXT, HEADING, IMAGE, GALLERY, QUOTE, LIST 중 하나입니다.
-` + koreanNounsRule
+` + koreanNounsRule + "\n" + koreanSourceHonestyContract
 
 const englishWritePrompt = `Write an English blog post from the photo observations and memo.
 Use exactly one TEXT block for each paragraph.
@@ -86,7 +86,7 @@ Place every attached photo exactly once, as an IMAGE block or inside a GALLERY b
 ` + englishGalleryRule + `
 Return exactly one JSON object shaped as {"storyline":[{"text":"...","files":[]}],"title":"...","summary":"...","tags":[],"blocks":[],"nouns":[]} with no explanation or Markdown.
 Each block uses the type, content, level, file, files, layout, alt, caption, and items fields. type must be one of TEXT, HEADING, IMAGE, GALLERY, QUOTE, or LIST.
-` + englishNounsRule
+` + englishNounsRule + "\n" + englishSourceHonestyContract
 
 // koreanWriteAlongStorylineRule / englishWriteAlongStorylineRule replace the storyline rule on
 // the storyline path (GEN-70): the frozen [스토리라인] decides what the post covers and in what
@@ -213,6 +213,10 @@ func writeTemplateSection(out *strings.Builder, brief *TemplateBrief, titleInstr
 // prompt uses it alone — it plans the body, has no title to write and no voice to rank the
 // template against (GEN-68).
 func writeTemplateForm(out *strings.Builder, brief *TemplateBrief, titleInstruction string) {
+	if brief.BodyParts != nil || brief.TitleParts != nil {
+		writeTypedTemplateForm(out, brief, titleInstruction)
+		return
+	}
 	fmt.Fprintf(out, "\n\n[글 템플릿: %s]", brief.Name)
 	legend := templateLegend
 	if len(brief.Facts) > 0 {
@@ -384,6 +388,7 @@ type WritePromptInput struct {
 	// DefaultGuidelines and Guidelines are the frozen 기본 지침 and owner 지침 texts, each in
 	// injection order (GUIDE-14).
 	DefaultGuidelines []string
+	StockGuidelines   []StockGuideline
 	Guidelines        []string
 	// Memories are the frozen 기억 texts, empty for a post that did not opt in (MEM-20).
 	Memories []string
@@ -444,7 +449,7 @@ func BuildWritePromptForLanguage(input WritePromptInput) (string, string) {
 	}
 	writeProfileSection(&stable, input.Language, input.Profile, input.TargetLength)
 	writeTemplateSection(&stable, input.Template, templateTitleInstruction, input.Profile.NoVoice)
-	writeGuidelinesSection(&stable, input.DefaultGuidelines, input.Guidelines, input.Profile.NoVoice)
+	writeGuidelinesSection(&stable, selectStockGuidelines(input.StockGuidelines, input.DefaultGuidelines, "write"), input.Guidelines, input.Profile.NoVoice)
 
 	photoMaterial := attachmentMaterial(input.Photos, input.Videos, input.Observations, input.Portraits)
 	// The memory section sits between the memo and the attachments and renders to the empty

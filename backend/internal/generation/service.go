@@ -153,6 +153,7 @@ func (s *Service) StartRevision(ctx context.Context, request StartRevisionReques
 		return "", err
 	}
 	request.Guidelines, request.DefaultGuidelines = guidelines.Owner, guidelines.Defaults
+	request.StockGuidelines = cloneStockGuidelines(guidelines.Stock)
 	profile, err := s.profileForTopic(ctx, request.UserID, in.voiceID, in.language, post.Title+" "+post.Memo, contentTags(post.Content))
 	if err != nil {
 		return "", fmt.Errorf("freeze revision voice: %w", err)
@@ -381,6 +382,7 @@ type writeMaterial struct {
 	Template          *TemplateBrief
 	Guidelines        []string
 	DefaultGuidelines []string
+	StockGuidelines   []StockGuideline
 	Memories          []string
 	QualityRules      []string
 }
@@ -391,6 +393,7 @@ func (m writeMaterial) onto(post PostInput) PostInput {
 	post.Template = m.Template
 	post.Guidelines = m.Guidelines
 	post.DefaultGuidelines = m.DefaultGuidelines
+	post.StockGuidelines = m.StockGuidelines
 	post.Memories = m.Memories
 	post.QualityRules = m.QualityRules
 	return post
@@ -419,7 +422,7 @@ func (s *Service) freezeWriteMaterial(ctx context.Context, post PostInput) (writ
 	if err != nil {
 		return writeMaterial{}, err
 	}
-	return writeMaterial{Template: brief, Guidelines: guidelines.Owner, DefaultGuidelines: guidelines.Defaults, Memories: memories, QualityRules: rules}, nil
+	return writeMaterial{Template: brief, Guidelines: guidelines.Owner, DefaultGuidelines: guidelines.Defaults, StockGuidelines: cloneStockGuidelines(guidelines.Stock), Memories: memories, QualityRules: rules}, nil
 }
 
 // freezeQualityRules renders the ticked rules once, at enqueue, in the run's target language.

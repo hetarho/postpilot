@@ -62,6 +62,7 @@ type DefaultState struct {
 // PromptGuidelines are the texts one run is given, in injection order (GUIDE-14): the enabled
 // 기본 지침 of the kind in the product's order and the target language, then the owner's own.
 type PromptGuidelines struct {
+	Stock    []StockRule
 	Defaults []string
 	Owner    []string
 }

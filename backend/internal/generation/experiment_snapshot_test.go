@@ -157,6 +157,9 @@ func TestWriteSnapshotEncodingIsPinned(t *testing.T) {
 // named unfrozen — an explicit "does this re-hash every snapshot?" decision.
 func TestEveryWriteSnapshotMemberRoundTrips(t *testing.T) {
 	fixture := fullSnapshotFixture()
+	fixture.post.Template.BodyParts = []TemplateMaterialPart{{Kind: "literal", Text: "body"}}
+	fixture.post.Template.TitleParts = []TemplateMaterialPart{{Kind: "write", Text: "title"}}
+	fixture.post.StockGuidelines = testStockGuidelines()
 	fixture.post.Memories = []string{"매운 음식을 못 먹는다"}
 	fixture.post.Observations = fixture.observations
 	fixture.post.WriteNativeEffort = true

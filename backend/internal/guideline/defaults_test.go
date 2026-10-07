@@ -57,7 +57,7 @@ func TestDefaultRegistryIsTheProductsOrder(t *testing.T) {
 	// GEN-73: the memories default names itself the exception to 감상은 내가 쓴 것만 and reads the
 	// 취향: label memory retrieval puts on a taste, in both languages.
 	memories, _ := DefaultFor(KindPost, "memory_impressions")
-	if memories.Ko.Name != "기억을 통한 감상 추가" || !strings.Contains(memories.Ko.Text, "'감상은 내가 쓴 것만'의 예외") ||
+	if memories.Ko.Name != "기억을 통한 감상 추가" || !strings.Contains(memories.Ko.Text, "'내 감상을 지키고 AI 제안 구분'과 함께 적용") ||
 		!strings.Contains(memories.Ko.Text, "'취향:'") || !strings.Contains(memories.En.Text, "'취향:'") {
 		t.Errorf("memory_impressions = %+v", memories)
 	}

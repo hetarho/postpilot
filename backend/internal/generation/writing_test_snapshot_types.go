@@ -117,6 +117,7 @@ type WritingTestRule struct {
 type WritingTestRules struct {
 	Defaults []string
 	Owner    []WritingTestRule
+	Stock    []StockGuideline
 }
 
 type WritingTestGuidelines interface {

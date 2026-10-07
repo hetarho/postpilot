@@ -42,7 +42,7 @@ const RevisePrompt = `현재 블로그 글에 사용자의 수정 요청만 최�
 IMAGE와 GALLERY 블록은 첨부된 정확한 파일명만 사용할 수 있습니다. 요청이 있으면 순서를 바꾸거나 사진을 묶거나 나누거나 뺄 수 있지만, 파일명을 바꾸거나 새 이미지를 만들지 마세요.
 ` + koreanGalleryRule + `
 출력은 diff가 아니라 완전한 PostContent이며, 설명이나 마크다운 없이 {"title":"...","summary":"...","tags":[],"blocks":[]} 형태의 JSON 객체 하나여야 합니다.
-각 block은 type, content, level, file, files, layout, alt, caption, items 필드를 사용하며 type은 TEXT, HEADING, IMAGE, GALLERY, QUOTE, LIST 중 하나입니다.`
+각 block은 type, content, level, file, files, layout, alt, caption, items 필드를 사용하며 type은 TEXT, HEADING, IMAGE, GALLERY, QUOTE, LIST 중 하나입니다.` + "\n" + koreanRevisionHonestyContract
 
 const englishRevisePrompt = `Apply only the user's requested edit to the current blog post, with the smallest possible change.
 Keep every unrelated sentence byte-for-byte and do not polish or rewrite untouched blocks.
@@ -52,7 +52,7 @@ Change the title, one-line summary, or tags only when the user explicitly asks t
 IMAGE and GALLERY blocks may use only exact attached filenames. When requested, photos may be reordered, grouped, split or removed, but never rename a file or invent an image.
 ` + englishGalleryRule + `
 Return a complete replacement PostContent, not a diff: exactly one {"title":"...","summary":"...","tags":[],"blocks":[]} JSON object with no explanation or Markdown.
-Each block uses the type, content, level, file, files, layout, alt, caption, and items fields. type must be one of TEXT, HEADING, IMAGE, GALLERY, QUOTE, or LIST.`
+Each block uses the type, content, level, file, files, layout, alt, caption, and items fields. type must be one of TEXT, HEADING, IMAGE, GALLERY, QUOTE, or LIST.` + "\n" + englishRevisionHonestyContract
 
 // A payload written while 규칙으로 저장 existed still carries `save_as_rule`; it decodes
 // because encoding/json ignores a key the struct no longer names.
@@ -65,8 +65,9 @@ type revisionPayloadJSON struct {
 	Template *templatePayload `json:"template,omitempty"`
 	// Likewise for the owner's applicable guideline texts, in injection order, and the enabled
 	// 기본 지침 ahead of them; absent is none (GUIDE-17).
-	Guidelines        []string `json:"guidelines,omitempty"`
-	DefaultGuidelines []string `json:"default_guidelines,omitempty"`
+	Guidelines        []string              `json:"guidelines,omitempty"`
+	StockGuidelines   *[]stockGuidelineJSON `json:"stock_guidelines,omitempty"`
+	DefaultGuidelines []string              `json:"default_guidelines,omitempty"`
 	// Frozen at Start like the brief (GEN-46); a payload from before the member decodes 0,
 	// which the handler resolves to the default.
 	TagCount          int  `json:"tag_count,omitempty"`
@@ -89,8 +90,8 @@ func encodeRevisionPayloadForLanguage(instruction string, language Language, tem
 		Profile:     profile,
 		Instruction: instruction, ContentLanguage: language,
 		Template: encodeTemplate(template), Guidelines: cloneTexts(guidelines.Owner),
-		DefaultGuidelines: cloneTexts(guidelines.Defaults),
-		TagCount:          tagCount, WriteNativeEffort: nativeEffort,
+		DefaultGuidelines: cloneTexts(guidelines.Defaults), StockGuidelines: encodeStockGuidelines(guidelines.Stock),
+		TagCount: tagCount, WriteNativeEffort: nativeEffort,
 	})
 }
 
@@ -147,7 +148,7 @@ func buildRevisePrompt(language Language, profile Profile, content PostContent, 
 	writeTemplateSection(&stable, template, reviseTemplateTitleInstruction, profile.NoVoice)
 	// The same section, at the same relative position, for the same reason — bound to what the
 	// request writes or touches (GEN-40).
-	if writeGuidelinesSection(&stable, guidelines.Defaults, guidelines.Owner, profile.NoVoice) {
+	if writeGuidelinesSection(&stable, selectStockGuidelines(guidelines.Stock, guidelines.Defaults, "revise"), guidelines.Owner, profile.NoVoice) {
 		stable.WriteString("\n" + reviseGuidelineScope)
 	}
 

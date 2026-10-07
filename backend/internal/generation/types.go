@@ -167,7 +167,24 @@ type TemplateBrief struct {
 	// TitleArea is the rendered title form, empty when the template authored none (TMPL-50).
 	// The experiment snapshot marshals the brief by field name, so omitempty is what keeps
 	// every snapshot frozen before the member existed byte-identical, hash and all.
-	TitleArea string
+	TitleArea             string
+	BodyParts, TitleParts []TemplateMaterialPart
+}
+
+type TemplateMaterialPart struct {
+	Kind        string
+	Text, Label string
+	Parts       []TemplateMaterialPart
+	Count       int
+}
+type StockRuleApplicability struct {
+	Stage   string
+	Outputs []string
+}
+type StockGuideline struct {
+	Key, Text     string
+	SourceOrder   int
+	Applicability []StockRuleApplicability
 }
 
 // RequiredTemplateAnswerError crosses the template port for a new-write start. Label is the
@@ -207,6 +224,7 @@ type PostInput struct {
 	// DefaultGuidelines are the frozen 기본 지침 texts, rendered ahead of the owner's (GUIDE-14),
 	// in the run's target language.
 	DefaultGuidelines []string
+	StockGuidelines   []StockGuideline
 	// UseMemory is the post's opt-in, read at enqueue. It is the ONLY thing that decides
 	// whether this context asks the memory context anything at all (MEM-18).
 	UseMemory bool
@@ -324,6 +342,7 @@ type StartRevisionRequest struct {
 	Template          *TemplateBrief
 	Guidelines        []string
 	DefaultGuidelines []string
+	StockGuidelines   []StockGuideline
 	// The enqueue adapter uses the same frozen length facts as the revision handler to price
 	// the completion budget. Neither field is sent by the client or persisted independently.
 	TargetLength *int

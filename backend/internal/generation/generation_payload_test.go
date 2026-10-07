@@ -29,7 +29,8 @@ func filledGenerationOptions() generationOptions {
 			Name: "하루 기록", Body: "<write>인트로</write>네이버 지도",
 			Facts:     []TemplateFact{{Label: "가게 이름", Value: "을지로 노포"}},
 			TitleArea: "<ask>가게 이름</ask> 다녀온 날",
-		}, Guidelines: []string{"CCTV를 언급하지 않기"}, DefaultGuidelines: []string{"메모의 이름으로 쓰세요"}, Memories: []string{"매운 음식을 못 먹는다"}, QualityRules: []string{"제목에 같은 말을 되풀이하지 않는다"}},
+			BodyParts: []TemplateMaterialPart{{Kind: "literal", Text: "body"}}, TitleParts: []TemplateMaterialPart{{Kind: "write", Text: "title"}},
+		}, Guidelines: []string{"CCTV를 언급하지 않기"}, DefaultGuidelines: []string{"메모의 이름으로 쓰세요"}, StockGuidelines: testStockGuidelines(), Memories: []string{"매운 음식을 못 먹는다"}, QualityRules: []string{"제목에 같은 말을 되풀이하지 않는다"}},
 	}
 }
 
@@ -46,6 +47,12 @@ func requireNoZero(t *testing.T, path string, v reflect.Value) {
 		}
 		requireNoZero(t, path, v.Elem())
 	case reflect.Struct:
+		if v.Type() == reflect.TypeOf(TemplateMaterialPart{}) {
+			if v.FieldByName("Kind").String() == "" {
+				t.Errorf("%s role is missing", path)
+			}
+			return
+		}
 		for i := 0; i < v.NumField(); i++ {
 			requireNoZero(t, path+"."+v.Type().Field(i).Name, v.Field(i))
 		}
@@ -142,7 +149,7 @@ func TestStartFreezesEveryOption(t *testing.T) {
 	models.infos[writeRef] = info
 	deps := testDeps()
 	deps.Templates = &fakeTemplateBriefs{brief: *filledGenerationOptions().Template}
-	deps.Guidelines = &fakeGuidelines{texts: testGuidelines(), defaults: productDefaults(LanguageKorean)}
+	deps.Guidelines = &fakeGuidelines{texts: testGuidelines(), defaults: productDefaults(LanguageKorean), stock: testStockGuidelines()}
 	deps.Memories = &recordingMemories{texts: testMemories()}
 	deps.QualityRules = &recordingRules{answer: []string{"제목에 같은 말을 되풀이하지 않는다"}}
 	jobs := &fakeJobs{id: "job"}

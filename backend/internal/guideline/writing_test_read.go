@@ -6,6 +6,7 @@ import (
 )
 
 type TestRules struct {
+	Stock    []StockRule
 	Defaults []string
 	Owner    []Guideline
 }
@@ -17,7 +18,8 @@ func (s *Service) TestRules(ctx context.Context, user, templateID, field string,
 	if err != nil {
 		return TestRules{}, err
 	}
-	out := TestRules{Defaults: defaultPromptTexts(defaults, target, withMemories)}
+	out := TestRules{Stock: defaultPromptStock(defaults, target, withMemories)}
+	out.Defaults = stockTexts(out.Stock)
 	rules, err := s.store.List(ctx, user, KindPost)
 	if err != nil {
 		return TestRules{}, err
@@ -30,14 +32,5 @@ func (s *Service) TestRules(ctx context.Context, user, templateID, field string,
 	return out, nil
 }
 func defaultPromptTexts(states []DefaultState, target Language, withMemories bool) []string {
-	var result []string
-	for _, state := range states {
-		if !state.Enabled || state.Default.MemoriesOnly && !withMemories {
-			continue
-		}
-		if text, ok := state.Default.Text(target); ok {
-			result = append(result, text)
-		}
-	}
-	return result
+	return stockTexts(defaultPromptStock(states, target, withMemories))
 }

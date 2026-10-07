@@ -18,6 +18,7 @@ func testGuidelines() []string {
 type fakeGuidelines struct {
 	texts         []string
 	defaults      []string
+	stock         []StockGuideline
 	calls         int
 	askedTemplate *string
 	askedField    *string
@@ -42,7 +43,7 @@ func (f *fakeGuidelines) ForPrompt(_ context.Context, _ string, templateID, fiel
 		id := *field
 		f.askedField = &id
 	}
-	return FrozenGuidelines{Defaults: f.defaults, Owner: f.texts}, nil
+	return FrozenGuidelines{Defaults: f.defaults, Stock: cloneStockGuidelines(f.stock), Owner: f.texts}, nil
 }
 
 func guidelineAwareService(t *testing.T, guidelines *fakeGuidelines, briefs *fakeTemplateBriefs, posts *fakePosts, jobs *fakeJobs, models *fakeModels) *Service {
@@ -445,7 +446,7 @@ func TestAComparisonFreezesTheWriteMaterialStartFreezes(t *testing.T) {
 	// Every brief member set: the payload's decoder turns an absent slice into an empty one, so
 	// only a full brief compares the two freezes rather than the two codecs.
 	deps.Templates = &fakeTemplateBriefs{brief: *filledGenerationOptions().Template}
-	deps.Guidelines = &fakeGuidelines{texts: testGuidelines(), defaults: []string{"메모의 이름으로 쓰세요"}}
+	deps.Guidelines = &fakeGuidelines{texts: testGuidelines(), defaults: []string{"메모의 이름으로 쓰세요"}, stock: testStockGuidelines()}
 	deps.Memories = &recordingMemories{texts: testMemories()}
 	deps.QualityRules = &recordingRules{answer: testQualityRules()}
 	jobs := &fakeJobs{id: "job"}
@@ -464,7 +465,7 @@ func TestAComparisonFreezesTheWriteMaterialStartFreezes(t *testing.T) {
 	frozen := jobs.frozen(t, 0).writeMaterial
 	compared := writeMaterial{
 		Template: snapshot.Post.Template, Guidelines: snapshot.Post.Guidelines,
-		DefaultGuidelines: snapshot.Post.DefaultGuidelines, Memories: snapshot.Post.Memories,
+		DefaultGuidelines: snapshot.Post.DefaultGuidelines, StockGuidelines: snapshot.Post.StockGuidelines, Memories: snapshot.Post.Memories,
 		QualityRules: snapshot.Post.QualityRules,
 	}
 	requireNoZero(t, "frozen", reflect.ValueOf(frozen))

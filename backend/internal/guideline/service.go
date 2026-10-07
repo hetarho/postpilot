@@ -257,20 +257,21 @@ func (s *Service) ForPrompt(ctx context.Context, userID string, kind Kind, templ
 		return PromptGuidelines{}, err
 	}
 	var out PromptGuidelines
-	out.Defaults = defaultPromptTexts(defaults, target, withMemories)
+	out.Stock = defaultPromptStock(defaults, target, withMemories)
+	out.Defaults = stockTexts(out.Stock)
 	if kind == KindClip {
 		texts, err := s.store.ClipApplicableTexts(ctx, userID, trimmed(templateID))
 		if err != nil {
 			return PromptGuidelines{}, fmt.Errorf("resolve applicable clip guidelines: %w", err)
 		}
-		out.Owner = texts
+		out.Owner = append([]string(nil), texts...)
 		return out, nil
 	}
 	texts, err := s.store.ApplicableTexts(ctx, userID, trimmed(templateID), trimmed(field))
 	if err != nil {
 		return PromptGuidelines{}, fmt.Errorf("resolve applicable guidelines: %w", err)
 	}
-	out.Owner = texts
+	out.Owner = append([]string(nil), texts...)
 	return out, nil
 }
 

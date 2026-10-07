@@ -41,14 +41,9 @@ func runWritingSettingTournament(t *testing.T, h *writingIntegrationHarness, pla
 	if err != nil {
 		t.Fatal(err)
 	}
-	current := started.Msg.Test
-	for deadline := time.Now().Add(30 * time.Second); current.Status != v1.WritingTestStatus_WRITING_TEST_STATUS_REVIEW && time.Now().Before(deadline); {
-		time.Sleep(10 * time.Millisecond)
-		current = h.get(t, current.Id)
-		if current.Status == v1.WritingTestStatus_WRITING_TEST_STATUS_FAILED || current.Status == v1.WritingTestStatus_WRITING_TEST_STATUS_PARTIAL {
-			t.Fatalf("setting generation failed=%+v", current.Failure)
-		}
-	}
+	// All-success output can become reviewable before terminal accounting commits.
+	// Read after that durable fence so both voting and publication use its revision.
+	current := h.settledTest(t, started.Msg.Test.Id, v1.WritingTestStatus_WRITING_TEST_STATUS_REVIEW)
 	if current.Status != v1.WritingTestStatus_WRITING_TEST_STATUS_REVIEW || len(current.Candidates) != 2 || len(current.Matches) != 1 {
 		t.Fatalf("all-success pair missing=%+v", current)
 	}

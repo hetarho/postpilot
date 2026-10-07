@@ -195,7 +195,8 @@ func (r *WritingTestResolvers) RenderWritingTestTemplate(_ context.Context, _ st
 		}
 		return generation.TemplateBrief{}, err
 	}
-	brief := generation.TemplateBrief{Name: rendered.Name, Body: rendered.Body, TitleArea: rendered.TitleArea}
+	brief := generation.TemplateBrief{Name: rendered.Name, Body: rendered.Body, TitleArea: rendered.TitleArea,
+		BodyParts: testTemplateMaterialParts(rendered.BodyParts), TitleParts: testTemplateMaterialParts(rendered.TitleParts)}
 	for _, fact := range rendered.Facts {
 		brief.Facts = append(brief.Facts, generation.TemplateFact{Label: fact.Label, Value: fact.Value})
 	}
@@ -206,11 +207,46 @@ func (r *WritingTestResolvers) FreezeWritingTestGuidelines(ctx context.Context, 
 	if err != nil {
 		return generation.WritingTestRules{}, err
 	}
-	result := generation.WritingTestRules{Defaults: slices.Clone(frozen.Defaults)}
+	result := generation.WritingTestRules{Defaults: slices.Clone(frozen.Defaults), Stock: testStockRules(frozen.Stock)}
 	for _, rule := range frozen.Owner {
 		result.Owner = append(result.Owner, generation.WritingTestRule{ID: rule.ID, Name: rule.Title, Text: rule.Text, Revision: guideline.AuthoringVersion(rule)})
 	}
 	return result, nil
+}
+
+func testTemplateMaterialParts(parts []template.MaterialPart) []generation.TemplateMaterialPart {
+	if parts == nil {
+		return nil
+	}
+	result := make([]generation.TemplateMaterialPart, len(parts))
+	for index, part := range parts {
+		result[index] = generation.TemplateMaterialPart{Kind: string(part.Kind), Text: part.Text, Label: part.Label, Count: part.Count, Parts: testTemplateMaterialParts(part.Parts)}
+	}
+	return result
+}
+
+func testStockRules(rules []guideline.StockRule) []generation.StockGuideline {
+	if rules == nil {
+		return nil
+	}
+	result := make([]generation.StockGuideline, len(rules))
+	for index, rule := range rules {
+		result[index] = generation.StockGuideline{Key: rule.Key, Text: rule.Text, SourceOrder: rule.SourceOrder}
+		if rule.Applicability != nil {
+			result[index].Applicability = make([]generation.StockRuleApplicability, len(rule.Applicability))
+			for scopeIndex, scope := range rule.Applicability {
+				var outputs []string
+				if scope.Outputs != nil {
+					outputs = make([]string, len(scope.Outputs))
+				}
+				for outputIndex, output := range scope.Outputs {
+					outputs[outputIndex] = string(output)
+				}
+				result[index].Applicability[scopeIndex] = generation.StockRuleApplicability{Stage: string(scope.Stage), Outputs: outputs}
+			}
+		}
+	}
+	return result
 }
 func (r *WritingTestResolvers) ResolveWritingTestGuideline(ctx context.Context, user string, ref generation.WritingTestReference, p *generation.WritingTestPreparedSetting) (generation.WritingTestRule, error) {
 	var frozen guideline.TestSnapshot

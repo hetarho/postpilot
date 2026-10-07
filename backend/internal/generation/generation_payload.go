@@ -16,7 +16,9 @@ type templatePayload struct {
 	TitleArea string `json:"title_area,omitempty"`
 	// Facts is omitempty for the same reason, and because a template whose data fields were
 	// all switched off has to be byte-identical to one that never declared any.
-	Facts []templateFactJSON `json:"facts,omitempty"`
+	Facts      []templateFactJSON  `json:"facts,omitempty"`
+	BodyParts  *[]materialPartJSON `json:"body_parts,omitempty"`
+	TitleParts *[]materialPartJSON `json:"title_parts,omitempty"`
 }
 
 type templateFactJSON struct {
@@ -52,8 +54,9 @@ type generationPayload struct {
 	// The owner's applicable guideline texts in injection order, frozen exactly as Template is,
 	// and the enabled 기본 지침 ahead of them. A payload written before either existed decodes
 	// with it absent, which is "none" (GUIDE-17).
-	Guidelines        []string `json:"guidelines,omitempty"`
-	DefaultGuidelines []string `json:"default_guidelines,omitempty"`
+	Guidelines        []string              `json:"guidelines,omitempty"`
+	DefaultGuidelines []string              `json:"default_guidelines,omitempty"`
+	StockGuidelines   *[]stockGuidelineJSON `json:"stock_guidelines,omitempty"`
 	// The retrieved memory texts, frozen exactly as Guidelines are. Absent is "none", which
 	// is what a payload written before memories existed decodes as — and also what a post
 	// with the option off freezes, so the two are one state on the wire (MEM-19).
@@ -114,6 +117,7 @@ func encodeGenerationPayload(options generationOptions) ([]byte, error) {
 		Template:          encodeTemplate(options.Template),
 		Guidelines:        cloneTexts(options.Guidelines),
 		DefaultGuidelines: cloneTexts(options.DefaultGuidelines),
+		StockGuidelines:   encodeStockGuidelines(options.StockGuidelines),
 		Memories:          cloneTexts(options.Memories),
 		QualityRules:      cloneTexts(options.QualityRules),
 		ObserveFiles:      cloneOptionalTexts(options.ObserveFiles),
@@ -164,6 +168,7 @@ func decodeGenerationPayload(raw []byte) (generationOptions, error) {
 			Template:          decodeTemplate(payload.Template),
 			Guidelines:        cloneTexts(payload.Guidelines),
 			DefaultGuidelines: cloneTexts(payload.DefaultGuidelines),
+			StockGuidelines:   decodeStockGuidelines(payload.StockGuidelines),
 			Memories:          cloneTexts(payload.Memories),
 			QualityRules:      cloneTexts(payload.QualityRules),
 		},
@@ -261,7 +266,7 @@ func encodeTemplate(brief *TemplateBrief) *templatePayload {
 	for _, fact := range brief.Facts {
 		facts = append(facts, templateFactJSON{Label: fact.Label, Value: fact.Value})
 	}
-	return &templatePayload{Name: brief.Name, Body: brief.Body, TitleArea: brief.TitleArea, Facts: facts}
+	return &templatePayload{Name: brief.Name, Body: brief.Body, TitleArea: brief.TitleArea, Facts: facts, BodyParts: encodeMaterialParts(brief.BodyParts), TitleParts: encodeMaterialParts(brief.TitleParts)}
 }
 
 // decodeTemplate reads a payload written before templates existed as "no template" rather
@@ -274,5 +279,5 @@ func decodeTemplate(payload *templatePayload) *TemplateBrief {
 	for _, fact := range payload.Facts {
 		facts = append(facts, TemplateFact{Label: fact.Label, Value: fact.Value})
 	}
-	return &TemplateBrief{Name: payload.Name, Body: payload.Body, Facts: facts, TitleArea: payload.TitleArea}
+	return &TemplateBrief{Name: payload.Name, Body: payload.Body, Facts: facts, TitleArea: payload.TitleArea, BodyParts: decodeMaterialParts(payload.BodyParts), TitleParts: decodeMaterialParts(payload.TitleParts)}
 }

@@ -28,9 +28,10 @@ func TestEveryWritePromptInputMemberReachesThePrompt(t *testing.T) {
 		"DefaultGuidelines": func(in *WritePromptInput) {
 			in.DefaultGuidelines = []string{"메모의 이름으로 쓰세요"}
 		},
-		"Memories":     func(in *WritePromptInput) { in.Memories = testMemories() },
-		"QualityRules": func(in *WritePromptInput) { in.QualityRules = testQualityRules() },
-		"Portraits":    func(in *WritePromptInput) { in.Portraits = map[string]bool{"IMG_1.jpg": true} },
+		"StockGuidelines": func(in *WritePromptInput) { in.StockGuidelines = testStockGuidelines() },
+		"Memories":        func(in *WritePromptInput) { in.Memories = testMemories() },
+		"QualityRules":    func(in *WritePromptInput) { in.QualityRules = testQualityRules() },
+		"Portraits":       func(in *WritePromptInput) { in.Portraits = map[string]bool{"IMG_1.jpg": true} },
 	}
 	baseSystem, baseUser := BuildWritePromptForLanguage(base)
 	members := reflect.TypeOf(WritePromptInput{})

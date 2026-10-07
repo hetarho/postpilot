@@ -140,6 +140,8 @@ func cloneTemplate(value *TemplateBrief) *TemplateBrief {
 		return nil
 	}
 	copied := *value
+	copied.BodyParts = cloneMaterialParts(value.BodyParts)
+	copied.TitleParts = cloneMaterialParts(value.TitleParts)
 	if len(value.Facts) > 0 {
 		copied.Facts = append([]TemplateFact(nil), value.Facts...)
 	}
