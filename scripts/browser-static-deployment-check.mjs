@@ -34,6 +34,24 @@ execFileSync(option('--openssl','openssl'),['req','-x509','-newkey','rsa:2048','
 execFileSync('chmod',['600',keyPath,certPath])
 const tls={key:readFileSync(keyPath),cert:readFileSync(certPath)}
 const cors=readJSON(configPath('r2-cors.json'))
+const configuredOrigin=option('--configured-origin','https://postpilot.<domain>')
+function policyIssues(policy){
+ const rules=policy.rules??[],issues=[]
+ if(rules.some(r=>r.allowed?.origins?.includes('*')))issues.push('wildcard_origin')
+ const scoped=rules.filter(r=>r.allowed?.origins?.includes(configuredOrigin))
+ if(!scoped.length)issues.push('configured_origin_missing')
+ if(!scoped.some(r=>['GET','PUT','HEAD'].every(m=>r.allowed.methods?.includes(m))))issues.push('required_method_missing')
+ if(!scoped.some(r=>['range','content-type','if-none-match'].every(h=>r.allowed.headers?.map(x=>x.toLowerCase()).includes(h))))issues.push('required_header_missing')
+ if(!scoped.some(r=>['etag','content-range'].every(h=>r.exposeHeaders?.map(x=>x.toLowerCase()).includes(h))))issues.push('required_exposed_header_missing')
+ return issues
+}
+const policyVariants={correct:cors,wildcard:structuredClone(cors),foreignOnly:structuredClone(cors),missingExpose:structuredClone(cors),missingGet:structuredClone(cors),missingRangeHeader:structuredClone(cors)}
+policyVariants.wildcard.rules.forEach(r=>r.allowed.origins=['*'])
+policyVariants.foreignOnly.rules.forEach(r=>r.allowed.origins=['https://foreign.invalid'])
+policyVariants.missingExpose.rules.forEach(r=>r.exposeHeaders=r.exposeHeaders.filter(h=>h.toLowerCase()!=='content-range'))
+policyVariants.missingGet.rules.forEach(r=>r.allowed.methods=r.allowed.methods.filter(m=>m!=='GET'))
+policyVariants.missingRangeHeader.rules.forEach(r=>r.allowed.headers=r.allowed.headers.filter(h=>h.toLowerCase()!=='range'))
+if(policyIssues(cors).length)throw new Error('Configured private CORS policy invalid: '+policyIssues(cors).join(','))
 const headersText=readFileSync(configPath('_headers'),'utf8')
 const fontManifest=readJSON(resolve(source,'frontend/src/entities/clip-design/config/clip-ink-fonts.json'))
 const ink=readJSON(resolve(source,'frontend/src/entities/clip-design/config/clip-ink-identity.json'))
@@ -80,12 +98,17 @@ const storage=createServer(tls,(req,res)=>{
   const url=new URL(req.url,'https://localhost'),mode=url.searchParams.get('mode')??'correct'
   const origin=req.headers.origin
   if(url.searchParams.get('cap')!==token){res.writeHead(403);res.end();return}
-  const rule=cors.rules[0]
-  const allowed=origin===appOrigin
-  if(allowed){res.setHeader('Access-Control-Allow-Origin',appOrigin);res.setHeader('Vary','Origin');res.setHeader('Access-Control-Expose-Headers',mode==='hidden'?'etag':rule.exposeHeaders.join(','))}
+  const policy=policyVariants[url.searchParams.get('policy')??'correct']
+  if(!policy){res.writeHead(400);res.end();return}
+  const mappedOrigin=origin===appOrigin?configuredOrigin:origin
+  const requestedMethod=req.method==='OPTIONS'?req.headers['access-control-request-method']:req.method
+  const rule=policy.rules.find(r=>(r.allowed.origins.includes(mappedOrigin)||r.allowed.origins.includes('*'))&&r.allowed.methods.includes(requestedMethod))
+  const requestedHeaders=String(req.headers['access-control-request-headers']??'').split(',').map(h=>h.trim().toLowerCase()).filter(Boolean)
+  const allowed=!!rule&&(req.method!=='OPTIONS'||requestedHeaders.every(h=>rule.allowed.headers.map(x=>x.toLowerCase()).includes(h)))
+  if(allowed){res.setHeader('Access-Control-Allow-Origin',rule.allowed.origins.includes('*')?'*':origin);res.setHeader('Vary','Origin');res.setHeader('Access-Control-Expose-Headers',mode==='hidden'?'etag':rule.exposeHeaders.join(','))}
   if(req.method==='OPTIONS'){
     if(allowed){res.setHeader('Access-Control-Allow-Methods',rule.allowed.methods.join(','));res.setHeader('Access-Control-Allow-Headers',rule.allowed.headers.join(','))}
-    res.writeHead(204);res.end();return
+    res.writeHead(allowed?204:403);res.end();return
   }
   const m=req.headers.range?.match(/^bytes=(\d+)-(\d+)$/)
   const start=m?Number(m[1]):0,end=m?Number(m[2]):fixture.length-1
@@ -117,6 +140,19 @@ try{
   if(mode==='whole'&&result.error!=='CLIP_SOURCE_RANGE_UNSUPPORTED')throw new Error('Whole response not rejected')
   report.checks.push({kind:'cross-origin-actual-range-adapter',mode,result});save()
  }
+ const policyChecks=[]
+ for(const name of Object.keys(policyVariants)){
+  const issues=policyIssues(policyVariants[name])
+  if(name==='correct'&&issues.length||name!=='correct'&&!issues.length)throw new Error('Policy validation did not distinguish '+name)
+  const preflight=await page.request.fetch(storageOrigin+'/object?cap='+token+'&policy='+name,{method:'OPTIONS',headers:{Origin:appOrigin,'Access-Control-Request-Method':'GET','Access-Control-Request-Headers':'range'}})
+  const result=await page.evaluate(url=>window.rangeProbe(url),storageOrigin+'/object?cap='+token+'&policy='+name)
+  if(name==='correct'&&(preflight.status()!==204||result.error))throw new Error('Configured positive policy failed')
+  if(['foreignOnly','missingGet'].includes(name)&&result.error!=='TypeError')throw new Error('Origin/method policy was not enforced '+name)
+  if(name==='missingExpose'&&result.error!=='CLIP_SOURCE_RANGE_INVALID')throw new Error('Missing exposed header policy was not enforced')
+  if(name==='missingRangeHeader'&&preflight.status()!==403)throw new Error('Missing Range header preflight was not refused')
+  policyChecks.push({policy:name,acceptedForRelease:issues.length===0,issues,preflightStatus:preflight.status(),rangeResult:result})
+ }
+ report.checks.push({kind:'actual-configured-policy-matrix',mapping:{loopbackOrigin:appOrigin,configuredOrigin,foreignOriginsUnmapped:true},policies:policyChecks,scope:'Wildcard may permit a credentialless browser request, but strict private-origin release validation rejects it; single-range GET is CORS-safelisted while explicit Range preflight validates AllowedHeaders.'});save()
  const foreign=await browser.newPage({ignoreHTTPSErrors:true})
  await foreign.goto('https://localhost:'+app.address().port+'/__probe__/');await foreign.waitForFunction(()=>typeof window.rangeProbe==='function')
  const denied=await foreign.evaluate(url=>window.rangeProbe(url),storageOrigin+'/object?cap='+token+'&mode=correct')
@@ -149,6 +185,9 @@ try{
  const fetched=[]
  for(const name of noticeFiles){const path='/licenses/browser-media/'+name;const r=await page.request.get(appOrigin+path);if(r.status()!==200)throw new Error('Unreachable notice '+name);const b=await r.body();if(hash(b)!==hash(readFileSync(resolve(notices,name))))throw new Error('Changed served notice '+name);fetched.push({file:name,bytes:b.length,sha256:hash(b)})}
  report.checks.push({kind:'actual-https-notice-and-source-manifest-access',files:fetched,sourceAccessVerified:sourceAccess.sourceAccessVerified,binaryDependencyGraphVerified:sourceAccess.binaryDependencyGraphVerified})
+ const fontNotices=[]
+ for(const file of ['LICENSE','LICENSE-Paperlogy','LICENSE-Jua','LICENSE-NanumMyeongjo','INK-NOTICE.txt']){const r=await page.request.get(appOrigin+'/fonts/clip/'+file);if(r.status()!==200)throw new Error('Unreachable font notice '+file);const b=await r.body();if(hash(b)!==hash(readFileSync(resolve(source,'frontend/public/fonts/clip',file))))throw new Error('Changed served font notice '+file);fontNotices.push({file,bytes:b.length,sha256:hash(b)})}
+ report.checks.push({kind:'actual-https-original-OFL-and-ink-notice-bodies',files:fontNotices})
  report.requests=requests;report.staticBodies=staticBodies
  report.passed=true;report.limits=['Loopback self-signed HTTPS with browser ignoreHTTPSErrors does not certify a public domain or live Cloudflare/R2 configuration.','The production module Worker proves built URL/execution and wrong-purpose refusal only; previously source-bound media runs remain separate.','Hardware acceleration, semantic preservation, real voice and human output review remain unqualified.','The original npm WASM complete Rust source/license graph remains unresolved.']
  save();console.log(JSON.stringify({passed:true,sourceRevision:revision,browser:report.browser,checks:report.checks.length,report:resolve(output,'report.json'),qualified:false}))
