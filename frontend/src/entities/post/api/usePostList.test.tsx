@@ -66,46 +66,71 @@ it('answers each narrowing from its own pages, newest first and without repeats'
   expect(view.result.current.hasNextPage).toBe(false)
 })
 
-it('refreshes both history and picker while an ordinary job runs, then stops on a retained terminal snapshot', async () => {
-  let failed = false
-  let reads = 0
-  const transport = createRouterTransport((router) => {
-    router.rpc(PostService.method.listPosts, () => {
-      reads += 1
-      return create(ListPostsResponseSchema, {
-        posts: [
-          create(PostSummarySchema, {
-            slug: 'running',
-            targetLanguage: contentLanguageToProto('ko'),
-            activeJob: create(GenerationJobSchema, {
-              id: 'job',
-              status: failed ? 'failed' : 'running',
-              stage: 'write',
+it.each(['queued', 'running'])(
+  'refreshes both history and picker while an ordinary job is %s, then stops on a retained failed snapshot',
+  async (initialStatus) => {
+    // Use one clock for polling and React Query's deferred observer notifications from mount.
+    // Switching only intervals later leaves waitFor's retry clock frozen while delivery is real.
+    vi.useFakeTimers()
+    let failed = false
+    const reads = { history: 0, picker: 0 }
+    const transport = createRouterTransport((router) => {
+      router.rpc(PostService.method.listPosts, (request) => {
+        reads[request.pageSize ? 'history' : 'picker'] += 1
+        return create(ListPostsResponseSchema, {
+          posts: [
+            create(PostSummarySchema, {
+              slug: 'running',
+              targetLanguage: contentLanguageToProto('ko'),
+              activeJob: create(GenerationJobSchema, {
+                id: 'job',
+                status: failed ? 'failed' : initialStatus,
+                stage: 'write',
+              }),
             }),
-          }),
-        ],
+          ],
+        })
       })
     })
-  })
-  const queryClient = createTestQueryClient()
-  const view = renderHook(() => ({ pages: usePostList({}), whole: usePosts() }), {
-    wrapper: withProviders(transport, queryClient),
-  })
-  try {
-    await waitFor(() => expect(view.result.current.pages.posts).toHaveLength(1))
-    await waitFor(() => expect(view.result.current.whole.posts).toHaveLength(1))
-    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] })
-    // Recreate polling intervals under the controlled clock after initial notifications.
-    await act(() => queryClient.refetchQueries())
-    failed = true
-    await act(() => vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS + 100))
-    await waitFor(() => expect(view.result.current.pages.posts[0].activeJob?.status).toBe('failed'))
-    await waitFor(() => expect(view.result.current.whole.posts[0].activeJob?.status).toBe('failed'))
-    const terminalReads = reads
-    await act(() => vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS * 3))
-    expect(reads).toBe(terminalReads)
-  } finally {
-    view.unmount()
-    vi.useRealTimers()
-  }
-})
+    const queryClient = createTestQueryClient()
+    const view = renderHook(() => ({ pages: usePostList({}), whole: usePosts() }), {
+      wrapper: withProviders(transport, queryClient),
+    })
+    const tick = async (ms: number) => {
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(ms)
+      })
+    }
+    try {
+      // The separate notification turn is the same fake-clock flush used by usePosts/useJob.
+      await tick(1)
+      expect(view.result.current.pages.posts).toHaveLength(1)
+      expect(view.result.current.whole.posts).toHaveLength(1)
+      expect(view.result.current.pages.posts[0].activeJob?.status).toBe(initialStatus)
+      expect(view.result.current.whole.posts[0].activeJob?.status).toBe(initialStatus)
+      expect(reads).toEqual({ history: 1, picker: 1 })
+
+      await tick(POLL_INTERVAL_MS)
+      await tick(1)
+      expect(reads).toEqual({ history: 2, picker: 2 })
+      expect(view.result.current.pages.posts[0].activeJob?.status).toBe(initialStatus)
+      expect(view.result.current.whole.posts[0].activeJob?.status).toBe(initialStatus)
+
+      failed = true
+      await tick(POLL_INTERVAL_MS)
+      await tick(1)
+      expect(view.result.current.pages.posts[0].activeJob?.status).toBe('failed')
+      expect(view.result.current.whole.posts[0].activeJob?.status).toBe('failed')
+      const terminalReads = { ...reads }
+      expect(terminalReads).toEqual({ history: 3, picker: 3 })
+      await tick(POLL_INTERVAL_MS * 3)
+      expect(reads).toEqual(terminalReads)
+      expect(view.result.current.pages.posts[0].activeJob?.status).toBe('failed')
+      expect(view.result.current.whole.posts[0].activeJob?.status).toBe('failed')
+    } finally {
+      view.unmount()
+      queryClient.clear()
+      vi.useRealTimers()
+    }
+  },
+)
