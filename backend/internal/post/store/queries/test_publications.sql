@@ -24,3 +24,6 @@ INSERT INTO post_test_publications
 VALUES (sqlc.arg(user_id), sqlc.arg(test_id), sqlc.arg(winner_candidate_id), 'apply_output',
     sqlc.arg(request_key), sqlc.arg(fingerprint), sqlc.arg(post_slug),
     sqlc.arg(resulting_content_revision), sqlc.arg(receipt), sqlc.arg(created_at));
+
+-- name: ReadTestPublicationReceipt :one
+SELECT receipt FROM post_test_publications WHERE user_id=? AND test_id=? AND winner_candidate_id=? AND action='apply_output';

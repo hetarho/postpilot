@@ -12,6 +12,7 @@ var ErrTestPublicationConflict = errors.New("model adoption action conflicts wit
 // TestModelAdoptionStore owns the selection and receipt transaction. Receipt lookup
 // precedes live eligibility checks, so recovery cannot undo a newer manual choice.
 type TestModelAdoptionStore interface {
+	ReadTestPublicationReceipt(context.Context, string, string, string) (TestModelReceipt, bool, error)
 	TestModelReceipt(context.Context, TestModelAdoption) (TestModelReceipt, bool, error)
 	CommitTestModelAdoption(context.Context, TestModelAdoption, time.Time) (TestModelReceipt, error)
 }
@@ -42,3 +43,8 @@ func (a *TestModelAdoptionsService) AdoptTestModel(ctx context.Context, in TestM
 }
 
 var _ TestedModelAdoptions = (*TestModelAdoptionsService)(nil)
+
+// ReadTestPublicationReceipt reads proof of a committed action without private payload or live target gates.
+func (p *TestModelAdoptionsService) ReadTestPublicationReceipt(ctx context.Context, userID, testID, winnerID string) (TestModelReceipt, bool, error) {
+	return p.store.ReadTestPublicationReceipt(ctx, userID, testID, winnerID)
+}

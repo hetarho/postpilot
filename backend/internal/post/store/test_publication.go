@@ -184,3 +184,18 @@ func (s *TestResultStore) ApplyTestResult(ctx context.Context, in post.TestOutpu
 	}
 	return receipt, nil
 }
+
+func (s *TestResultStore) ReadTestPublicationReceipt(ctx context.Context, userID, testID, winnerID string) (post.TestOutputReceipt, bool, error) {
+	var result post.TestOutputReceipt
+	raw, err := s.store.read.ReadTestPublicationReceipt(ctx, sqlc.ReadTestPublicationReceiptParams{UserID: userID, TestID: testID, WinnerCandidateID: winnerID})
+	if errors.Is(err, sql.ErrNoRows) {
+		return result, false, nil
+	}
+	if err != nil {
+		return result, false, err
+	}
+	if err = json.Unmarshal([]byte(raw), &result); err != nil {
+		return result, false, err
+	}
+	return result, true, nil
+}

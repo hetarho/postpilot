@@ -85,13 +85,16 @@ func TestOnlyTheOwnerHandlerWritesGuidelines(t *testing.T) {
 			}
 			inContext := strings.HasPrefix(rel, "internal/guideline/")
 			inWiring := strings.HasPrefix(rel, "cmd/api/")
+			// Test publication consumes only the published guideline API. Its app
+			// coordinates domain-owned transactions; its RPC maps typed refusals.
+			publishedTestConsumer := rel == "internal/experiment/app/publications.go" || rel == "internal/experiment/rpc/writing_target_errors.go"
 			local := ""
 			for _, imported := range file.Imports {
 				target := strings.Trim(imported.Path.Value, `"`)
 				if target != context && !strings.HasPrefix(target, context+"/") {
 					continue
 				}
-				if !inContext && !inWiring {
+				if !inContext && !inWiring && !(publishedTestConsumer && target == context) {
 					t.Errorf("%s imports %s: only the context and its wiring may", rel, target)
 				}
 				if target == context {
@@ -111,7 +114,7 @@ func TestOnlyTheOwnerHandlerWritesGuidelines(t *testing.T) {
 					return true
 				})
 			}
-			if inWiring && local != "" {
+			if (inWiring || publishedTestConsumer) && local != "" {
 				checkNoGuidelineWrites(t, rel, file, local, writingMethods)
 			}
 			return nil

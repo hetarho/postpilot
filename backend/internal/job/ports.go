@@ -73,3 +73,19 @@ type Store interface {
 	SavePayload(ctx context.Context, id string, payload []byte, at time.Time) (bool, error)
 	ClearFinishedPayload(ctx context.Context, userID, id, kind string, at time.Time) (bool, error)
 }
+
+// EnqueueIdentityStore commits a caller-stable identity and its job together.
+// The fingerprint survives private payload deletion; a receipt without a job is
+// a conflict, never permission to reserve or dispatch the work again.
+type EnqueueIdentityStore interface {
+	ClaimEnqueueIdentity(context.Context, EnqueueIdentity, time.Time) error
+	InsertWithIdentity(context.Context, Job, EnqueueIdentity) error
+	GetEnqueueIdentity(context.Context, string) (EnqueueIdentity, error)
+	AbandonEnqueueIdentity(context.Context, string) (bool, error)
+}
+
+type EnqueueIdentity struct {
+	JobID, UserID, Fingerprint string
+	Committed                  bool
+	Abandoned                  bool
+}

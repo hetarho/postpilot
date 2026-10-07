@@ -21,60 +21,34 @@ import (
 	"github.com/postpilot/backend/internal/usage"
 )
 
-type Handler struct{ service *experiment.Service }
+// Earlier paid records expose reads and proof of already-completed actions only.
+// New admission, ranking and mutation behavior is absent from this transport dependency.
+type legacyRecords interface {
+	Get(context.Context, string, string) (experiment.Experiment, error)
+	List(context.Context, string, experiment.Stage, experiment.Source) ([]experiment.Experiment, error)
+	ReflectionDetail(context.Context, experiment.Experiment) (experiment.ReflectionDetail, error)
+	ReflectionPromptText(experiment.Experiment) string
+}
+type Handler struct{ service legacyRecords }
 
-func NewHandler(service *experiment.Service) *Handler { return &Handler{service: service} }
+func NewHandler(service legacyRecords) *Handler {
+	if service == nil {
+		panic("experiment: retained history reader is required")
+	}
+	return &Handler{service: service}
+}
 
 func (h *Handler) StartObserveExperiment(ctx context.Context, req *connect.Request[postpilotv1.StartObserveExperimentRequest]) (*connect.Response[postpilotv1.StartExperimentResponse], error) {
-	userID, err := actingUser(ctx)
-	if err != nil {
-		return nil, err
-	}
-	started, err := h.service.Start(ctx, experiment.StartRequest{
-		UserID: userID, PostSlug: req.Msg.GetPostSlug(), Stage: experiment.StageObserve,
-		ModelA: fromProtoRef(req.Msg.GetModelA()), ModelB: fromProtoRef(req.Msg.GetModelB()),
-		Candidates: fromProtoRefs(req.Msg.GetCandidates()),
-	})
-	if err != nil {
-		return nil, toConnectError("start observe experiment", err)
-	}
-	return connect.NewResponse(&postpilotv1.StartExperimentResponse{ExperimentId: started.ExperimentID, JobId: started.JobID}), nil
+	return nil, legacyComparisonRetired(ctx)
 }
 
 func (h *Handler) StartWriteExperiment(ctx context.Context, req *connect.Request[postpilotv1.StartWriteExperimentRequest]) (*connect.Response[postpilotv1.StartExperimentResponse], error) {
-	userID, err := actingUser(ctx)
-	if err != nil {
-		return nil, err
-	}
-	started, err := h.service.Start(ctx, experiment.StartRequest{
-		UserID: userID, PostSlug: req.Msg.GetPostSlug(), Stage: experiment.StageWrite,
-		ObserveModel: fromProtoRef(req.Msg.GetObserveModel()), ModelA: fromProtoRef(req.Msg.GetModelA()), ModelB: fromProtoRef(req.Msg.GetModelB()),
-		Candidates:   fromProtoRefs(req.Msg.GetCandidates()),
-		TargetLength: optionalTargetLength(req.Msg.TargetLength),
-		ObserveFiles: reobserveFiles(req.Msg.GetReobserve()),
-		Origin:       fromProtoOrigin(req.Msg.GetOrigin()),
-	})
-	if err != nil {
-		return nil, toConnectError("start write experiment", err)
-	}
-	return connect.NewResponse(&postpilotv1.StartExperimentResponse{ExperimentId: started.ExperimentID, JobId: started.JobID}), nil
+	return nil, legacyComparisonRetired(ctx)
 }
 
 // StartVoiceReflectionExperiment is 말투 반영 비교's start (MODEL-67).
 func (h *Handler) StartVoiceReflectionExperiment(ctx context.Context, req *connect.Request[postpilotv1.StartVoiceReflectionExperimentRequest]) (*connect.Response[postpilotv1.StartExperimentResponse], error) {
-	userID, err := actingUser(ctx)
-	if err != nil {
-		return nil, err
-	}
-	started, err := h.service.StartVoiceReflection(ctx, experiment.ReflectionStartRequest{
-		UserID: userID, VoiceID: req.Msg.GetVoiceId(), PromptKey: req.Msg.GetPromptKey(),
-		ModelA: fromProtoRef(req.Msg.GetModelA()), ModelB: fromProtoRef(req.Msg.GetModelB()),
-		Candidates: fromProtoRefs(req.Msg.GetCandidates()),
-	})
-	if err != nil {
-		return nil, toConnectError("start voice reflection experiment", err)
-	}
-	return connect.NewResponse(&postpilotv1.StartExperimentResponse{ExperimentId: started.ExperimentID, JobId: started.JobID}), nil
+	return nil, legacyComparisonRetired(ctx)
 }
 
 // full is one comparison as its review reads it: a voice-sourced one with its prompt, the
@@ -119,80 +93,27 @@ func (h *Handler) ListExperiments(ctx context.Context, req *connect.Request[post
 }
 
 func (h *Handler) RetryCandidate(ctx context.Context, req *connect.Request[postpilotv1.RetryCandidateRequest]) (*connect.Response[postpilotv1.RetryCandidateResponse], error) {
-	userID, err := actingUser(ctx)
-	if err != nil {
-		return nil, err
-	}
-	started, err := h.service.Retry(ctx, userID, req.Msg.GetExperimentId())
-	if err != nil {
-		return nil, toConnectError("retry candidate", err)
-	}
-	found, err := h.service.Get(ctx, userID, started.ExperimentID)
-	if err != nil {
-		return nil, toConnectError("get retried experiment", err)
-	}
-	return connect.NewResponse(&postpilotv1.RetryCandidateResponse{JobId: started.JobID, Experiment: h.full(ctx, found)}), nil
+	return nil, legacyComparisonRetired(ctx)
 }
 
 func (h *Handler) ChooseWinner(ctx context.Context, req *connect.Request[postpilotv1.ChooseWinnerRequest]) (*connect.Response[postpilotv1.ChooseWinnerResponse], error) {
-	found, err := h.choose(ctx, req.Msg.GetExperimentId(), req.Msg.GetCandidateId(), false, fromProtoBadges(req.Msg.GetBadges()))
-	if err != nil {
-		return nil, err
-	}
-	return connect.NewResponse(&postpilotv1.ChooseWinnerResponse{Experiment: h.full(ctx, found)}), nil
+	return nil, legacyComparisonRetired(ctx)
 }
 
 func (h *Handler) UseSingleCandidate(ctx context.Context, req *connect.Request[postpilotv1.UseSingleCandidateRequest]) (*connect.Response[postpilotv1.ChooseWinnerResponse], error) {
-	// The survivor of a half-failed comparison ranks nothing and opens no sheet (MODEL-61),
-	// so it carries no badges.
-	found, err := h.choose(ctx, req.Msg.GetExperimentId(), req.Msg.GetCandidateId(), true, nil)
-	if err != nil {
-		return nil, err
-	}
-	return connect.NewResponse(&postpilotv1.ChooseWinnerResponse{Experiment: h.full(ctx, found)}), nil
+	return nil, legacyComparisonRetired(ctx)
 }
 
 func (h *Handler) choose(ctx context.Context, experimentID, candidateID string, single bool, badges []experiment.CandidateBadges) (experiment.Experiment, error) {
-	userID, err := actingUser(ctx)
-	if err != nil {
-		return experiment.Experiment{}, err
-	}
-	found, err := h.service.Choose(ctx, userID, experimentID, candidateID, single, badges)
-	if err != nil {
-		return experiment.Experiment{}, toConnectError("choose experiment candidate", err)
-	}
-	return found, nil
+	return experiment.Experiment{}, legacyComparisonRetired(ctx)
 }
 
 func (h *Handler) DismissExperiment(ctx context.Context, req *connect.Request[postpilotv1.DismissExperimentRequest]) (*connect.Response[postpilotv1.DismissExperimentResponse], error) {
-	userID, err := actingUser(ctx)
-	if err != nil {
-		return nil, err
-	}
-	found, err := h.service.Dismiss(ctx, userID, req.Msg.GetExperimentId())
-	if err != nil {
-		return nil, toConnectError("dismiss experiment", err)
-	}
-	return connect.NewResponse(&postpilotv1.DismissExperimentResponse{Experiment: h.full(ctx, found)}), nil
+	return nil, legacyComparisonRetired(ctx)
 }
 
 func (h *Handler) CompleteExperimentReview(ctx context.Context, req *connect.Request[postpilotv1.CompleteExperimentReviewRequest]) (*connect.Response[postpilotv1.CompleteExperimentReviewResponse], error) {
-	userID, err := actingUser(ctx)
-	if err != nil {
-		return nil, err
-	}
-	ranks := make([]experiment.CandidateRank, 0, len(req.Msg.GetRanks()))
-	for _, rank := range req.Msg.GetRanks() {
-		ranks = append(ranks, experiment.CandidateRank{
-			CandidateID: rank.GetCandidateId(), Rank: int(rank.GetRank()),
-			Badges: fromProtoBadgeList(rank.GetBadges()), OtherNote: rank.GetOtherNote(),
-		})
-	}
-	found, err := h.service.CompleteReview(ctx, userID, req.Msg.GetExperimentId(), ranks, req.Msg.GetSkip())
-	if err != nil {
-		return nil, toConnectError("complete experiment review", err)
-	}
-	return connect.NewResponse(&postpilotv1.CompleteExperimentReviewResponse{Experiment: h.full(ctx, found)}), nil
+	return nil, legacyComparisonRetired(ctx)
 }
 
 func (h *Handler) ApplyCandidateOutput(ctx context.Context, req *connect.Request[postpilotv1.ApplyCandidateOutputRequest]) (*connect.Response[postpilotv1.ApplyCandidateOutputResponse], error) {
@@ -200,9 +121,12 @@ func (h *Handler) ApplyCandidateOutput(ctx context.Context, req *connect.Request
 	if err != nil {
 		return nil, err
 	}
-	found, err := h.service.ApplyCandidateOutput(ctx, userID, req.Msg.GetExperimentId(), req.Msg.GetCandidateId(), req.Msg.GetAdoptModel())
+	found, err := h.service.Get(ctx, userID, req.Msg.GetExperimentId())
 	if err != nil {
-		return nil, toConnectError("apply experiment candidate", err)
+		return nil, toConnectError("read earlier candidate publication", err)
+	}
+	if found.AppliedAt == nil || found.AppliedCandidateID != req.Msg.GetCandidateId() || (req.Msg.GetAdoptModel() && (found.AdoptedAt == nil || found.AdoptedCandidateID != req.Msg.GetCandidateId())) {
+		return nil, legacyComparisonRetired(ctx)
 	}
 	return connect.NewResponse(&postpilotv1.ApplyCandidateOutputResponse{Experiment: h.full(ctx, found)}), nil
 }
@@ -212,18 +136,15 @@ func (h *Handler) AdoptCandidateModel(ctx context.Context, req *connect.Request[
 	if err != nil {
 		return nil, err
 	}
-	ref, stage, err := h.service.AdoptCandidateModel(ctx, userID, req.Msg.GetExperimentId(), req.Msg.GetCandidateId())
-	if err != nil {
-		return nil, toConnectError("adopt experiment candidate", err)
-	}
 	found, err := h.service.Get(ctx, userID, req.Msg.GetExperimentId())
 	if err != nil {
-		return nil, toConnectError("get adopted experiment", err)
+		return nil, toConnectError("read earlier candidate adoption", err)
 	}
-	return connect.NewResponse(&postpilotv1.AdoptCandidateModelResponse{
-		Experiment: h.full(ctx, found),
-		Selection:  &postpilotv1.Selection{Stage: toProtoStage(stage), Ref: toProtoRef(ref), Slot: postpilotv1.SelectionSlot_SELECTION_SLOT_ACTIVE},
-	}), nil
+	candidate := found.Candidate(req.Msg.GetCandidateId())
+	if found.AdoptedAt == nil || found.AdoptedCandidateID != req.Msg.GetCandidateId() || candidate == nil {
+		return nil, legacyComparisonRetired(ctx)
+	}
+	return connect.NewResponse(&postpilotv1.AdoptCandidateModelResponse{Experiment: h.full(ctx, found), Selection: &postpilotv1.Selection{Stage: toProtoStage(found.Stage), Ref: toProtoRef(candidate.Model), Slot: postpilotv1.SelectionSlot_SELECTION_SLOT_ACTIVE}}), nil
 }
 
 func (h *Handler) ApplyWinnerOutput(ctx context.Context, req *connect.Request[postpilotv1.ApplyWinnerOutputRequest]) (*connect.Response[postpilotv1.ApplyWinnerOutputResponse], error) {
@@ -231,9 +152,13 @@ func (h *Handler) ApplyWinnerOutput(ctx context.Context, req *connect.Request[po
 	if err != nil {
 		return nil, err
 	}
-	found, err := h.service.ApplyWinner(ctx, userID, req.Msg.GetExperimentId())
+	found, err := h.service.Get(ctx, userID, req.Msg.GetExperimentId())
 	if err != nil {
-		return nil, toConnectError("apply experiment winner", err)
+		return nil, toConnectError("read earlier publication", err)
+	}
+	winner := found.Winner()
+	if found.AppliedAt == nil || winner == nil || (found.AppliedCandidateID != "" && found.AppliedCandidateID != winner.ID) {
+		return nil, legacyComparisonRetired(ctx)
 	}
 	return connect.NewResponse(&postpilotv1.ApplyWinnerOutputResponse{Experiment: h.full(ctx, found)}), nil
 }
@@ -243,43 +168,23 @@ func (h *Handler) AdoptWinnerModel(ctx context.Context, req *connect.Request[pos
 	if err != nil {
 		return nil, err
 	}
-	ref, stage, err := h.service.AdoptWinner(ctx, userID, req.Msg.GetExperimentId())
+	found, err := h.service.Get(ctx, userID, req.Msg.GetExperimentId())
 	if err != nil {
-		return nil, toConnectError("adopt experiment winner", err)
+		return nil, toConnectError("read earlier adoption", err)
 	}
-	return connect.NewResponse(&postpilotv1.AdoptWinnerModelResponse{Selection: &postpilotv1.Selection{
-		Stage: toProtoStage(stage), Ref: toProtoRef(ref), Slot: postpilotv1.SelectionSlot_SELECTION_SLOT_ACTIVE,
-	}}), nil
+	winner := found.Winner()
+	if found.AdoptedAt == nil || winner == nil || (found.AdoptedCandidateID != "" && found.AdoptedCandidateID != winner.ID) {
+		return nil, legacyComparisonRetired(ctx)
+	}
+	return connect.NewResponse(&postpilotv1.AdoptWinnerModelResponse{Selection: &postpilotv1.Selection{Stage: toProtoStage(found.Stage), Ref: toProtoRef(winner.Model), Slot: postpilotv1.SelectionSlot_SELECTION_SLOT_ACTIVE}}), nil
 }
 
 func (h *Handler) DecideWriteExperiment(ctx context.Context, req *connect.Request[postpilotv1.DecideWriteExperimentRequest]) (*connect.Response[postpilotv1.ChooseWinnerResponse], error) {
-	userID, err := actingUser(ctx)
-	if err != nil {
-		return nil, err
-	}
-	found, err := h.service.DecideWrite(ctx, userID, req.Msg.GetExperimentId(), req.Msg.GetCandidateId(),
-		req.Msg.GetAdoptWinnerModel(), fromProtoBadges(req.Msg.GetBadges()))
-	if err != nil {
-		return nil, toConnectError("decide write experiment", err)
-	}
-	return connect.NewResponse(&postpilotv1.ChooseWinnerResponse{Experiment: h.full(ctx, found)}), nil
+	return nil, legacyComparisonRetired(ctx)
 }
 
 func (h *Handler) GetLeaderboard(ctx context.Context, req *connect.Request[postpilotv1.GetLeaderboardRequest]) (*connect.Response[postpilotv1.GetLeaderboardResponse], error) {
-	userID, err := actingUser(ctx)
-	if err != nil {
-		return nil, err
-	}
-	entries, err := h.service.Leaderboard(ctx, userID, fromProtoStage(req.Msg.GetStage()),
-		fromProtoWindow(req.Msg.GetWindow()), fromProtoScope(req.Msg.GetScope()))
-	if err != nil {
-		return nil, toConnectError("get leaderboard", err)
-	}
-	out := make([]*postpilotv1.LeaderboardEntry, 0, len(entries))
-	for _, entry := range entries {
-		out = append(out, toProtoLeaderboardEntry(entry))
-	}
-	return connect.NewResponse(&postpilotv1.GetLeaderboardResponse{Entries: out}), nil
+	return nil, legacyComparisonRetired(ctx)
 }
 
 // toProtoLeaderboardEntry projects only public quality and usage evidence (MODEL-39).
@@ -325,12 +230,10 @@ func toConnectError(op string, err error) error {
 	switch {
 	case errors.As(err, &requiredAnswer):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "a required template answer is missing", postpilotv1.FailureReason_TEMPLATE_REQUIRED_ANSWER_MISSING, map[string]string{"label": requiredAnswer.Label})
-	case errors.Is(err, experiment.ErrNotFound):
+	case errors.Is(err, experiment.ErrNotFound), errors.Is(err, experiment.ErrForbidden):
 		return rpcserver.NewAppError(connect.CodeNotFound, "experiment not found", postpilotv1.FailureReason_EXPERIMENT_NOT_FOUND, nil)
 	case errors.Is(err, experiment.ErrCandidateNotFound):
 		return rpcserver.NewAppError(connect.CodeNotFound, "experiment candidate not found", postpilotv1.FailureReason_EXPERIMENT_CANDIDATE_NOT_FOUND, nil)
-	case errors.Is(err, experiment.ErrForbidden):
-		return rpcserver.NewAppError(connect.CodePermissionDenied, "experiment belongs to another user", postpilotv1.FailureReason_EXPERIMENT_FORBIDDEN, nil)
 	case errors.Is(err, experiment.ErrInvalidStage), errors.Is(err, experiment.ErrInvalidWindow), errors.Is(err, experiment.ErrInvalidScope):
 		return rpcserver.NewAppError(connect.CodeInvalidArgument, "invalid experiment stage", postpilotv1.FailureReason_EXPERIMENT_STAGE_INVALID, nil)
 	case errors.Is(err, experiment.ErrDuplicateCandidates):
@@ -381,7 +284,7 @@ func toConnectError(op string, err error) error {
 	case errors.As(err, &active):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "experiment is already in progress", postpilotv1.FailureReason_EXPERIMENT_ALREADY_RUNNING, activeJobParams(active.ActiveID))
 	default:
-		slog.Error(op+" failed", "err", err)
+		slog.Error(op+" failed", "reason", "UNKNOWN_FAILURE")
 		return rpcserver.NewAppError(connect.CodeInternal, "experiment request failed", postpilotv1.FailureReason_UNKNOWN_FAILURE, nil)
 	}
 }

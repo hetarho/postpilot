@@ -16,6 +16,9 @@ func (q *Queue) Get(ctx context.Context, id, userID string) (*JobSummary, error)
 		return nil, fmt.Errorf("get job: %w", err)
 	}
 	if found.UserID != userID {
+		if q.detailsProtected(found.Kind) {
+			return nil, ErrNotFound
+		}
 		return nil, ErrForbidden
 	}
 	return q.summarize(found), nil

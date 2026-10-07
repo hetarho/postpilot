@@ -82,6 +82,12 @@ func TestTestOutputReceiptReplaysAfterLaterEditsAndTargetDeletion(t *testing.T) 
 	if again, err := publication.ApplyTestResult(ctx, in); err != nil || again != first {
 		t.Fatalf("deleted-target replay = %+v, %v", again, err)
 	}
+	if retained, found, err := publication.ReadTestPublicationReceipt(ctx, "alice", "test", "champion"); err != nil || !found || retained != first {
+		t.Fatalf("payload-free post receipt=%+v found=%v err=%v", retained, found, err)
+	}
+	if _, found, err := publication.ReadTestPublicationReceipt(ctx, "bob", "test", "champion"); err != nil || found {
+		t.Fatalf("foreign post receipt found=%v err=%v", found, err)
+	}
 	in.Content.Title = "Other operation"
 	if _, err := publication.ApplyTestResult(ctx, in); !errors.Is(err, post.ErrTestPublicationConflict) {
 		t.Fatalf("conflicting replay = %v", err)

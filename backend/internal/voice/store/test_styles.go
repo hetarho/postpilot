@@ -172,3 +172,18 @@ func (s *Store) PublishTestStyle(ctx context.Context, in voice.TestStylePublicat
 }
 
 var _ voice.TestStyleStore = (*Store)(nil)
+
+func (s *Store) ReadTestPublicationReceipt(ctx context.Context, userID, testID, winnerID string, action string) (voice.TestStyleReceipt, bool, error) {
+	var result voice.TestStyleReceipt
+	raw, err := s.read.ReadTestPublicationReceipt(ctx, sqlc.ReadTestPublicationReceiptParams{UserID: userID, TestID: testID, WinnerCandidateID: winnerID, Action: action})
+	if errors.Is(err, sql.ErrNoRows) {
+		return result, false, nil
+	}
+	if err != nil {
+		return result, false, err
+	}
+	if err = json.Unmarshal([]byte(raw), &result); err != nil {
+		return result, false, err
+	}
+	return result, true, nil
+}

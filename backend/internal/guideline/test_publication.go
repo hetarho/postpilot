@@ -26,6 +26,7 @@ func DecodeTestSnapshot(content []byte) (TestSnapshot, error) {
 }
 
 type TestPublicationStore interface {
+	ReadTestPublicationReceipt(context.Context, string, string, string, string) (TestedPublicationReceipt, bool, error)
 	TestPublicationReceipt(context.Context, TestedPublication) (TestedPublicationReceipt, bool, error)
 	CommitTestPublication(context.Context, TestedPublication, TestSnapshot, ScopePatch, string, time.Time, int) (TestedPublicationReceipt, error)
 }
@@ -33,6 +34,30 @@ type TestPublicationStore interface {
 type TestedSettingsService struct {
 	service *Service
 	store   TestPublicationStore
+}
+
+func (p *TestedSettingsService) ValidateTestPublicationChoices(ctx context.Context, in TestedPublication) error {
+	if in.MakeDefault || (in.Action != "save_setting" && in.Action != "use_setting") {
+		return ErrTestPublicationConflict
+	}
+	if in.Action == "save_setting" {
+		if _, err := p.service.validTitle(in.Name); err != nil {
+			return err
+		}
+	}
+	scope := ScopePatch{Scope: Scope(in.Scope)}
+	switch scope.Scope {
+	case ScopeTemplates:
+		scope.TemplateIDs = in.ScopeIDs
+	case ScopeFields:
+		scope.Fields = in.ScopeIDs
+	case ScopeGlobal:
+		if len(in.ScopeIDs) != 0 {
+			return ErrScopeShape
+		}
+	}
+	_, err := p.service.validScope(ctx, in.UserID, KindPost, scope)
+	return err
 }
 
 func NewTestedSettings(service *Service, store TestPublicationStore) *TestedSettingsService {
@@ -97,4 +122,9 @@ func sameTestScope(a, b ScopePatch) bool {
 		return slices.Equal(slices.Compact(left), slices.Compact(right))
 	}
 	return equalIDs(a.TemplateIDs, b.TemplateIDs) && equalIDs(a.Fields, b.Fields)
+}
+
+// ReadTestPublicationReceipt reads proof of a committed action without private payload or live target gates.
+func (p *TestedSettingsService) ReadTestPublicationReceipt(ctx context.Context, userID, testID, winnerID string, action string) (TestedPublicationReceipt, bool, error) {
+	return p.store.ReadTestPublicationReceipt(ctx, userID, testID, winnerID, action)
 }

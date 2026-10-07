@@ -46,6 +46,7 @@ func (a *Authoring) PrepareWritingStyle(value WritingStyleDraft, model string, a
 }
 
 type TestStyleStore interface {
+	ReadTestPublicationReceipt(context.Context, string, string, string, string) (TestStyleReceipt, bool, error)
 	PublishTestStyle(context.Context, TestStylePublication, Voice) (TestStyleReceipt, error)
 }
 type TestStylePublisher struct {
@@ -59,6 +60,16 @@ func NewTestStylePublisher(store TestStyleStore) *TestStylePublisher {
 		panic("voice: test style publisher requires its atomic store")
 	}
 	return &TestStylePublisher{store: store, now: time.Now, newID: newID}
+}
+func (p *TestStylePublisher) ValidateTestPublicationChoices(_ context.Context, in TestStylePublication) error {
+	if in.Action == "save_setting" {
+		_, err := normalizeVoiceName(in.Name)
+		return err
+	}
+	if in.Action != "use_setting" {
+		return ErrTestStylePublicationConflict
+	}
+	return nil
 }
 func ValidTestStylePublication(in TestStylePublication) error {
 	if strings.TrimSpace(in.UserID) == "" || strings.TrimSpace(in.TestID) == "" || strings.TrimSpace(in.WinnerID) == "" || strings.TrimSpace(in.RequestKey) == "" || strings.TrimSpace(in.Fingerprint) == "" || (in.Action != "save_setting" && in.Action != "use_setting") {
@@ -123,3 +134,8 @@ func TestStylePublicationFingerprint(in TestStylePublication) (string, error) {
 
 var _ StyleFactory = (*Authoring)(nil)
 var _ TestedStyles = (*TestStylePublisher)(nil)
+
+// ReadTestPublicationReceipt reads proof of a committed action without private payload or live target gates.
+func (p *TestStylePublisher) ReadTestPublicationReceipt(ctx context.Context, userID, testID, winnerID string, action string) (TestStyleReceipt, bool, error) {
+	return p.store.ReadTestPublicationReceipt(ctx, userID, testID, winnerID, action)
+}

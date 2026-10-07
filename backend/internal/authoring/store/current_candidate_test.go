@@ -47,7 +47,9 @@ func TestCurrentDirectCandidateFreezesExactOwnedRevisionWithoutModelOrPublicatio
 	}
 	unchanged, err := h.svc.Get(ctx, "alice", s.ID)
 	if err != nil || !reflect.DeepEqual(unchanged, before) {
-		t.Fatal("freeze mutated current work", err)
+		beforeJSON, _ := json.Marshal(before)
+		afterJSON, _ := json.Marshal(unchanged)
+		t.Fatalf("freeze mutated current work: %v; before=%s after=%s", err, beforeJSON, afterJSON)
 	}
 	later := patch(t, h, s, "later", "later composition")
 	if frozen.Artifact.Body != source.Body || *frozen.Artifact.TargetLength != "1800" || later.WorkingSource.Body == frozen.Artifact.Body {

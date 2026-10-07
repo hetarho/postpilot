@@ -3,6 +3,7 @@ package store_test
 import (
 	"context"
 	"errors"
+	"strings"
 	"sync"
 	"testing"
 
@@ -15,6 +16,23 @@ func publicationService(s *store.Store, max int) *template.Service {
 		NameMaxChars: 40, DescriptionMaxChars: 200, BodyMaxChars: 4000, TitleAreaMaxChars: 200,
 		MaxPerAccount: max, PhotoRowMax: 3, AskLabelMaxChars: 40, AskMaxPerBody: 10,
 	}, template.NumberBounds{TargetLengthMin: 100, TargetLengthMax: 10000, TagCountMin: 1, TagCountMax: 50}))
+}
+func TestTemplateWinnerChoiceValidationUsesOwnedNameLimitsBeforeAnyReceiptOrTarget(t *testing.T) {
+	s, handle := newStore(t)
+	pub := template.NewTestedSettings(publicationService(s, 5), s)
+	ctx := context.Background()
+	for _, in := range []template.TestedPublication{{Action: "save_setting", Name: ""}, {Action: "save_setting", Name: strings.Repeat("명", 41)}, {Action: "save_setting", Name: "Valid", MakeDefault: true}, {Action: "save_setting", Name: "Valid", Scope: "global"}} {
+		if err := pub.ValidateTestPublicationChoices(ctx, in); err == nil {
+			t.Fatalf("invalid initial choice accepted=%+v", in)
+		}
+	}
+	if err := pub.ValidateTestPublicationChoices(ctx, template.TestedPublication{Action: "save_setting", Name: "Corrected copy"}); err != nil {
+		t.Fatal(err)
+	}
+	var receipts int
+	if err := handle.Reader.QueryRow("SELECT count(*) FROM template_test_publications").Scan(&receipts); err != nil || receipts != 0 {
+		t.Fatalf("preflight wrote receipts=%d err=%v", receipts, err)
+	}
 }
 
 func TestAuthoringNumbersAreExplicitOwnerEditsUnderTheSameVersionFence(t *testing.T) {
@@ -127,6 +145,17 @@ func TestTemplateWinnerCopiesCommitOnceAndReceiptSurvivesLaterEditsAndDeletion(t
 	}
 	if replay, err := pub.PublishTestWinner(ctx, in); err != nil || replay != receipt {
 		t.Fatalf("deleted copy replay=%+v %v", replay, err)
+	}
+	if retained, found, err := pub.ReadTestPublicationReceipt(ctx, "alice", "test", "winner", "save_setting"); err != nil || !found || retained != receipt {
+		t.Fatalf("payload-free receipt=%+v found=%v err=%v", retained, found, err)
+	}
+	for _, user := range []string{"bob", "missing"} {
+		if _, found, err := pub.ReadTestPublicationReceipt(ctx, user, "test", "winner", "save_setting"); err != nil || found {
+			t.Fatalf("foreign receipt user=%s found=%v err=%v", user, found, err)
+		}
+	}
+	if _, found, err := pub.ReadTestPublicationReceipt(ctx, "alice", "test", "winner", "use_setting"); err != nil || found {
+		t.Fatalf("different action receipt found=%v err=%v", found, err)
 	}
 	rows, _ := s.List(ctx, "alice")
 	if len(rows) != 0 {

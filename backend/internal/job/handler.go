@@ -23,12 +23,14 @@ type Queue struct {
 	pollInterval time.Duration
 	wake         chan struct{}
 
-	mu       sync.RWMutex
-	handlers map[string]Handler
-	terminal map[string]func(context.Context, Job, time.Time) error
-	running  map[string]context.CancelFunc
-	now      func() time.Time
-	newID    func() string
+	mu               sync.RWMutex
+	enqueueMu        sync.Mutex
+	handlers         map[string]Handler
+	terminal         map[string]func(context.Context, Job, time.Time) error
+	running          map[string]context.CancelFunc
+	protectedDetails map[string]bool
+	now              func() time.Time
+	newID            func() string
 }
 
 // New takes the reporting collaborator explicitly. A nil one is the queue's own bare
@@ -82,7 +84,7 @@ func (q *Queue) stageLogged(kind, stage string) (string, bool) {
 }
 
 func (q *Queue) redacted(kind string) bool {
-	return q.reporting != nil && q.reporting.Redacted(kind)
+	return q.detailsProtected(kind) || q.reporting != nil && q.reporting.Redacted(kind)
 }
 
 // Register binds a kind to its owning context at the composition root.

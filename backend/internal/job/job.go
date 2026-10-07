@@ -243,7 +243,7 @@ type JobSummary struct {
 }
 
 func (q *Queue) summarize(found Job) *JobSummary {
-	return &JobSummary{
+	out := &JobSummary{
 		WaitExpiresAt:     found.WaitExpiresAt,
 		CanCancel:         q.canCancel(found),
 		CancelRequestedAt: found.CancelRequestedAt, CancellationPolicyVersion: found.CancellationPolicyVersion,
@@ -253,6 +253,13 @@ func (q *Queue) summarize(found Job) *JobSummary {
 		ObserveModel: found.ObserveModel, WriteModel: found.WriteModel, TargetLanguage: found.TargetLanguage,
 		CreatedAt: found.CreatedAt, UpdatedAt: found.UpdatedAt, FinishedAt: found.FinishedAt,
 	}
+	if q.detailsProtected(found.Kind) {
+		out.ObserveModel, out.WriteModel = "", ""
+		if out.Failure != nil {
+			out.Failure.Params, out.Failure.TechnicalDetail = nil, ""
+		}
+	}
+	return out
 }
 
 // canCancel reports whether the owner may still stop this job right now.

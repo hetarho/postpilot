@@ -3,6 +3,7 @@ package store_test
 import (
 	"context"
 	"errors"
+	"strings"
 	"sync"
 	"testing"
 
@@ -18,6 +19,23 @@ type publicationTemplates struct{}
 
 func (publicationTemplates) Templates(_ context.Context, user string) ([]guideline.TemplateRef, error) {
 	return []guideline.TemplateRef{{ID: user + "-p1", Name: "First"}, {ID: user + "-p2", Name: "Second"}}, nil
+}
+func TestGuidelineWinnerChoiceValidationUsesOwnedOptionalTitleAndExplicitScopeWithoutPublication(t *testing.T) {
+	s, handle := newStore(t)
+	pub := guideline.NewTestedSettings(publicationService(s, 5), s)
+	ctx := context.Background()
+	for _, in := range []guideline.TestedPublication{{UserID: "alice", Action: "save_setting"}, {UserID: "alice", Action: "save_setting", Scope: "global", ScopeIDs: []string{"extra"}}, {UserID: "alice", Action: "save_setting", Scope: "templates", ScopeIDs: []string{"bob-p1"}}, {UserID: "alice", Action: "save_setting", Scope: "fields", ScopeIDs: []string{"missing"}}, {UserID: "alice", Action: "save_setting", Scope: "global", Name: strings.Repeat("명", 41)}} {
+		if err := pub.ValidateTestPublicationChoices(ctx, in); err == nil {
+			t.Fatalf("invalid initial choice accepted=%+v", in)
+		}
+	}
+	// GUIDE's owner title is optional; preflight retains that existing rule.
+	if err := pub.ValidateTestPublicationChoices(ctx, guideline.TestedPublication{UserID: "alice", Action: "save_setting", Scope: "global"}); err != nil {
+		t.Fatal(err)
+	}
+	if count(t, handle, "SELECT count(*) FROM guideline_test_publications") != 0 {
+		t.Fatal("preflight created an action")
+	}
 }
 
 func publicationService(s *store.Store, max int) *guideline.Service {
@@ -143,6 +161,17 @@ func TestGuidelineWinnerCopiesAreScopedAndIdempotentAfterLaterEditOrDeletion(t *
 	}
 	if replay, err := pub.PublishTestWinner(ctx, in); err != nil || replay != receipt {
 		t.Fatalf("deleted winner receipt=%+v %v", replay, err)
+	}
+	if retained, found, err := pub.ReadTestPublicationReceipt(ctx, "alice", "test", "winner", "save_setting"); err != nil || !found || retained != receipt {
+		t.Fatalf("payload-free receipt=%+v found=%v err=%v", retained, found, err)
+	}
+	for _, user := range []string{"bob", "missing"} {
+		if _, found, err := pub.ReadTestPublicationReceipt(ctx, user, "test", "winner", "save_setting"); err != nil || found {
+			t.Fatalf("foreign receipt user=%s found=%v err=%v", user, found, err)
+		}
+	}
+	if _, found, err := pub.ReadTestPublicationReceipt(ctx, "alice", "test", "winner", "use_setting"); err != nil || found {
+		t.Fatalf("different action receipt found=%v err=%v", found, err)
 	}
 	rows, _ := s.List(ctx, "alice", guideline.KindPost)
 	if len(rows) != 0 || count(t, handle, `SELECT count(*) FROM guideline_test_publications`) != 1 {

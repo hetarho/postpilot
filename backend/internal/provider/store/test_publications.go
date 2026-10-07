@@ -63,3 +63,18 @@ func (s *Store) CommitTestModelAdoption(ctx context.Context, in provider.TestMod
 }
 
 var _ provider.TestModelAdoptionStore = (*Store)(nil)
+
+func (s *Store) ReadTestPublicationReceipt(ctx context.Context, userID, testID, winnerID string) (provider.TestModelReceipt, bool, error) {
+	var result provider.TestModelReceipt
+	raw, err := s.read.ReadTestPublicationReceipt(ctx, sqlc.ReadTestPublicationReceiptParams{UserID: userID, TestID: testID, WinnerCandidateID: winnerID})
+	if errors.Is(err, sql.ErrNoRows) {
+		return result, false, nil
+	}
+	if err != nil {
+		return result, false, err
+	}
+	if err = json.Unmarshal([]byte(raw), &result); err != nil {
+		return result, false, err
+	}
+	return result, true, nil
+}

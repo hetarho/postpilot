@@ -24,7 +24,7 @@ func TestExperimentErrorsHaveStableReasonsCodesAndAllowlistedParams(t *testing.T
 	}{
 		"not found":                {experiment.ErrNotFound, connect.CodeNotFound, "EXPERIMENT_NOT_FOUND", nil},
 		"candidate not found":      {experiment.ErrCandidateNotFound, connect.CodeNotFound, "EXPERIMENT_CANDIDATE_NOT_FOUND", nil},
-		"forbidden":                {experiment.ErrForbidden, connect.CodePermissionDenied, "EXPERIMENT_FORBIDDEN", nil},
+		"forbidden":                {experiment.ErrForbidden, connect.CodeNotFound, "EXPERIMENT_NOT_FOUND", nil},
 		"stage":                    {experiment.ErrInvalidStage, connect.CodeInvalidArgument, "EXPERIMENT_STAGE_INVALID", nil},
 		"duplicate candidates":     {experiment.ErrDuplicateCandidates, connect.CodeInvalidArgument, "EXPERIMENT_CANDIDATES_DUPLICATE", nil},
 		"target length":            {experiment.ErrInvalidTargetLength, connect.CodeInvalidArgument, "EXPERIMENT_TARGET_LENGTH_INVALID", nil},

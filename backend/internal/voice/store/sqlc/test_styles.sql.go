@@ -104,6 +104,29 @@ func (q *Queries) LockTestStylePublication(ctx context.Context) error {
 	return err
 }
 
+const readTestPublicationReceipt = `-- name: ReadTestPublicationReceipt :one
+SELECT receipt FROM voice_test_publications WHERE user_id=? AND test_id=? AND winner_candidate_id=? AND action=?
+`
+
+type ReadTestPublicationReceiptParams struct {
+	UserID            string
+	TestID            string
+	WinnerCandidateID string
+	Action            string
+}
+
+func (q *Queries) ReadTestPublicationReceipt(ctx context.Context, arg ReadTestPublicationReceiptParams) (string, error) {
+	row := q.db.QueryRowContext(ctx, readTestPublicationReceipt,
+		arg.UserID,
+		arg.TestID,
+		arg.WinnerCandidateID,
+		arg.Action,
+	)
+	var receipt string
+	err := row.Scan(&receipt)
+	return receipt, err
+}
+
 const testStyleSourcePresent = `-- name: TestStyleSourcePresent :one
 SELECT COUNT(*) FROM voice_samples WHERE id=? AND user_id=? AND voice_id=?
 `

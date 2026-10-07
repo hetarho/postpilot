@@ -60,6 +60,9 @@ func TestEveryTypedReasonIsEmitted(t *testing.T) {
 		// notice codes the clip plan and the voice profile carry as data, rendered from the
 		// same catalogue as a failure
 		"CLIP_LAYOUT_FREQUENCY": true, "VOICE_PROFILE_FIELD_REQUIRED": true,
+		// The retired comparison transport retains its previous wire identity.
+		// New owner-scoped reads make foreign and unknown references alike.
+		"EXPERIMENT_FORBIDDEN": true,
 	}
 	var dead []string
 	for name := range postpilotv1.FailureReason_value {

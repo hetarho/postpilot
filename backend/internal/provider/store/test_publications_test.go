@@ -96,6 +96,12 @@ func TestModelAdoptionReceiptAndSelectionCommitAtomicallyAndRecoverWithoutReplay
 	if err != nil || receipt.RequestKey != in.RequestKey || receipt.Ref != in.Ref || catalog.reads != reads {
 		t.Fatalf("receipt=%+v err=%v live reads=%d/%d", receipt, err, catalog.reads, reads)
 	}
+	if retained, found, err := adoptions.ReadTestPublicationReceipt(ctx, "alice", "test", "winner"); err != nil || !found || retained != receipt || catalog.reads != reads {
+		t.Fatalf("payload-free model receipt=%+v found=%v err=%v", retained, found, err)
+	}
+	if _, found, err := adoptions.ReadTestPublicationReceipt(ctx, "bob", "test", "winner"); err != nil || found {
+		t.Fatalf("foreign model receipt found=%v err=%v", found, err)
+	}
 	assertSelection(manual.Ref)
 	for _, mutate := range []func(*provider.TestModelAdoption){
 		func(v *provider.TestModelAdoption) { v.Fingerprint = "changed" },

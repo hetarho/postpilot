@@ -47,6 +47,10 @@ type testedStoreFake struct {
 	created     Voice
 }
 
+func (s *testedStoreFake) ReadTestPublicationReceipt(context.Context, string, string, string, string) (TestStyleReceipt, bool, error) {
+	return TestStyleReceipt{}, false, nil
+}
+
 func (s *testedStoreFake) PublishTestStyle(_ context.Context, in TestStylePublication, v Voice) (TestStyleReceipt, error) {
 	s.calls++
 	s.publication = in
@@ -82,5 +86,22 @@ func TestStylePublisherAcceptsExactSyntheticProfileWithoutRegenerationAndCannotC
 	in.AcceptedRevision = AcceptedAnalysisRevision(personal)
 	if _, err := publisher.PublishTestWinner(context.Background(), in); err != nil {
 		t.Fatal(err)
+	}
+}
+func TestStylePublisherChoiceValidationUsesOwnedNameRulesWithoutCreatingTarget(t *testing.T) {
+	store := &testedStoreFake{}
+	publisher := NewTestStylePublisher(store)
+	ctx := context.Background()
+	for _, name := range []string{"", strings.Repeat("명", VoiceNameMaxChars+1)} {
+		var bad *VoiceNameError
+		if err := publisher.ValidateTestPublicationChoices(ctx, TestStylePublication{Action: "save_setting", Name: name}); !errors.As(err, &bad) {
+			t.Fatalf("invalid name accepted=%q err=%v", name, err)
+		}
+	}
+	if err := publisher.ValidateTestPublicationChoices(ctx, TestStylePublication{Action: "save_setting", Name: "Corrected copy", MakeDefault: true}); err != nil {
+		t.Fatal(err)
+	}
+	if store.calls != 0 {
+		t.Fatal("choice validation created a target")
 	}
 }

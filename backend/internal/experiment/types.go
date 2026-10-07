@@ -612,17 +612,17 @@ func ValidateTestShape(r TestStart) error {
 		var key string
 		switch e.SourceKind {
 		case "model":
-			if r.Factor != FactorModel || e.Model.ProviderID == "" || e.Model.ModelID == "" || e.SettingID != "" || e.AuthoringSessionID != "" {
+			if r.Factor != FactorModel || e.Model.ProviderID == "" || e.Model.ModelID == "" || e.SettingKind != "" || e.SettingID != "" || e.SettingRevision != "" || e.AuthoringSessionID != "" || e.AuthoringCandidateID != "" || e.AuthoringRevision != 0 {
 				return ErrTestEntrant
 			}
 			key = "model:" + e.Model.String()
 		case "setting":
-			if r.Factor == FactorModel || e.SettingID == "" || e.SettingRevision == "" || e.SettingKind != string(r.Factor) || e.Model.ProviderID != "" || e.Model.ModelID != "" || e.AuthoringSessionID != "" {
+			if r.Factor == FactorModel || e.SettingID == "" || e.SettingRevision == "" || e.SettingKind != string(r.Factor) || e.Model != (ModelRef{}) || e.AuthoringSessionID != "" || e.AuthoringCandidateID != "" || e.AuthoringRevision != 0 {
 				return ErrTestEntrant
 			}
 			key = "setting:" + e.SettingKind + ":" + e.SettingID
 		case "authoring_candidate":
-			if r.Factor == FactorModel || e.AuthoringSessionID == "" || e.AuthoringCandidateID == "" || e.Model.ProviderID != "" || e.Model.ModelID != "" || e.SettingID != "" {
+			if r.Factor == FactorModel || e.AuthoringSessionID == "" || e.AuthoringCandidateID == "" || e.AuthoringRevision == 0 || e.Model != (ModelRef{}) || e.SettingID != "" || e.SettingRevision != "" || (e.SettingKind != "" && e.SettingKind != string(r.Factor)) {
 				return ErrTestEntrant
 			}
 			key = "authoring:" + e.AuthoringSessionID + ":" + e.AuthoringCandidateID
@@ -653,6 +653,7 @@ type TestCandidateIdentity struct {
 type TestCandidate struct {
 	ID, TestID, UserID                string
 	SeedPosition                      int
+	SnapshotIndex                     int
 	Ref                               TestEntrantRef
 	SourceRevision, SemanticKey       string
 	FrozenVariant, Output, Accounting []byte
@@ -717,13 +718,16 @@ type WritingTest struct {
 	Candidates                                                                   []TestCandidate
 	Matches                                                                      []TestMatch
 	Publications                                                                 []TestPublication
+	ConfirmedCredits, ReservedCredits                                            int
+	Failure                                                                      *Failure
+	ContentExpiresAt                                                             *time.Time
 	CreatedAt, UpdatedAt                                                         time.Time
 }
 type FrozenTestVariant struct {
-	Reference             TestEntrantRef
-	Content               []byte
-	SemanticKey, Revision string
-	Synthetic             bool
+	Reference                    TestEntrantRef
+	Content                      []byte
+	SemanticKey, Revision, Label string
+	Synthetic                    bool
 }
 type TestSnapshot struct {
 	Common                               []byte
@@ -757,10 +761,11 @@ type ModelAdoption struct {
 }
 type WinnerPublication struct {
 	TestMutation
-	WinnerID, Action, Name, Scope string
-	ScopeIDs                      []string
-	MakeDefault                   bool
-	Variant                       FrozenTestVariant
+	WinnerID, Action, Name, Scope  string
+	InputRevision, ContentRevision int64
+	ScopeIDs                       []string
+	MakeDefault                    bool
+	Variant                        FrozenTestVariant
 }
 type PublicationReceipt struct {
 	UserID, TestID, WinnerID, Action, RequestKey, TargetID string

@@ -78,3 +78,130 @@ type ModelExperimentCandidate struct {
 	TechnicalDetail  sql.NullString
 	Rank             sql.NullInt64
 }
+
+type WritingTest struct {
+	ID                string
+	UserID            string
+	OperationKey      string
+	Fingerprint       string
+	Kind              string
+	Factor            string
+	ModelStage        string
+	Count             int64
+	Status            string
+	Revision          int64
+	SourcePostSlug    sql.NullString
+	Context           string
+	CommonSnapshot    []byte
+	CommonHash        string
+	PromptVersion     string
+	PurgeFence        int64
+	JobID             string
+	WinnerCandidateID sql.NullString
+	ConfirmedCredits  int64
+	ReservedCredits   int64
+	FailureReason     string
+	CreatedAt         string
+	UpdatedAt         string
+	ContentExpiresAt  sql.NullString
+}
+
+type WritingTestAttempt struct {
+	ID               string
+	UserID           string
+	TestID           string
+	RequestKey       string
+	Fingerprint      string
+	Epoch            int64
+	PurgeFence       int64
+	QuoteID          string
+	JobID            string
+	Status           string
+	CandidateIds     string
+	ConfirmedCredits int64
+	Settled          int64
+	NonMetered       int64
+	FailureReason    string
+	CreatedAt        string
+	UpdatedAt        string
+}
+
+type WritingTestAttemptCheckpoint struct {
+	UserID     string
+	TestID     string
+	AttemptID  string
+	SlotID     string
+	Checkpoint []byte
+	UpdatedAt  string
+}
+
+type WritingTestCandidate struct {
+	ID             string
+	UserID         string
+	TestID         string
+	SeedPosition   int64
+	SourceKind     string
+	SourceID       string
+	SourceRevision string
+	SemanticKey    string
+	FrozenVariant  []byte
+	Output         []byte
+	Status         string
+	FailureReason  string
+	Accounting     []byte
+	StartedAt      sql.NullString
+	FinishedAt     sql.NullString
+}
+
+type WritingTestMatch struct {
+	ID                string
+	UserID            string
+	TestID            string
+	Round             int64
+	MatchIndex        int64
+	LeftCandidateID   string
+	RightCandidateID  string
+	WinnerCandidateID sql.NullString
+	DecisionKey       sql.NullString
+	DecidedAt         sql.NullString
+}
+
+type WritingTestOperation struct {
+	UserID       string
+	OperationKey string
+	TestID       string
+	Action       string
+	Fingerprint  string
+	CreatedAt    string
+}
+
+type WritingTestPublication struct {
+	ID                string
+	UserID            string
+	TestID            string
+	WinnerCandidateID string
+	Action            string
+	RequestKey        string
+	Fingerprint       string
+	TargetID          string
+	Status            string
+	FailureReason     string
+	CreatedAt         string
+	ConfirmedAt       sql.NullString
+}
+
+type WritingTestQuote struct {
+	ID                 string
+	UserID             string
+	TestID             sql.NullString
+	SourcePostSlug     sql.NullString
+	Fingerprint        string
+	Request            string
+	Plan               []byte
+	EstimatedCredits   int64
+	Free               int64
+	ConsumedRequestKey string
+	ConsumedTestID     string
+	CreatedAt          string
+	ExpiresAt          string
+}

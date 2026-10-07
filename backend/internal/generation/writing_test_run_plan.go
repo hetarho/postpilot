@@ -1,8 +1,9 @@
 package generation
 
 // PlanWritingTestRetry describes only remaining shared preparation and the explicitly selected
-// failed entrant pipelines. The caller derives failedIndices from its owner-scoped test record;
-// a completed output or an issued-unconfirmed checkpoint can never become retry work.
+// failed entrant pipelines. The caller derives failedIndices from its owner-scoped
+// test record. A durable answer can finish a missed aggregate write with no call;
+// an issued-unconfirmed checkpoint can never become retry work.
 func (f *WritingTestFactory) PlanWritingTestRetry(snapshot WritingTestSnapshot, shared *WritingTestCheckpoint, checkpoints map[int]WritingTestCheckpoint, failedIndices []int) ([]WritingTestCall, error) {
 	common, variants, err := decodeWritingTestSnapshot(snapshot)
 	if err != nil {
@@ -57,7 +58,7 @@ func (f *WritingTestFactory) PlanWritingTestRetry(snapshot WritingTestSnapshot, 
 			}
 		}
 		if checkpoint.Answer != nil {
-			return nil, ErrWritingTestRetryRequired
+			continue
 		}
 		if err := writingTestResumeAllowed(checkpoint, true); err != nil {
 			return nil, err

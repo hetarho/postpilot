@@ -59,6 +59,17 @@ func TestTestedStylePublicationRetainsExactSyntheticProfileAndReceiptAcrossLater
 	if err != nil || !found.Deleted() || found.IsDefault || found.Name != "나중에 정한 이름" {
 		t.Fatalf("replay overwrote later edit %+v %v", found, err)
 	}
+	if retained, found, err := publisher.ReadTestPublicationReceipt(ctx, "alice", "test", "winner", "save_setting"); err != nil || !found || retained != receipt {
+		t.Fatalf("payload-free voice receipt=%+v found=%v err=%v", retained, found, err)
+	}
+	for _, user := range []string{"bob", "missing"} {
+		if _, found, err := publisher.ReadTestPublicationReceipt(ctx, user, "test", "winner", "save_setting"); err != nil || found {
+			t.Fatalf("foreign voice receipt found=%v err=%v", found, err)
+		}
+	}
+	if _, found, err := publisher.ReadTestPublicationReceipt(ctx, "alice", "test", "winner", "use_setting"); err != nil || found {
+		t.Fatalf("different action receipt found=%v err=%v", found, err)
+	}
 	var n int
 	if err := h.db.Reader.QueryRow("SELECT count(*) FROM voice_test_publications WHERE user_id='alice'").Scan(&n); err != nil || n != 1 {
 		t.Fatalf("receipts=%d %v", n, err)

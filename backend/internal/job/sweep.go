@@ -37,6 +37,23 @@ func (q *Queue) SweepOpenHolds(ctx context.Context) (int, error) {
 	for _, id := range ids {
 		found, err := q.store.GetByID(ctx, id)
 		if errors.Is(err, ErrNotFound) {
+			if identities, ok := q.store.(EnqueueIdentityStore); ok {
+				identity, readErr := identities.GetEnqueueIdentity(ctx, id)
+				if readErr != nil && !errors.Is(readErr, ErrNotFound) {
+					return settled, readErr
+				}
+				if readErr == nil {
+					abandoned, abandonErr := identities.AbandonEnqueueIdentity(ctx, id)
+					if abandonErr != nil {
+						return settled, abandonErr
+					}
+					if !abandoned && !identity.Abandoned {
+						// The stable writer may have committed after our read.
+						// Its immutable claim must stay reserved for that worker.
+						continue
+					}
+				}
+			}
 			// The hold outlived its job row: an insert that failed after the hold was taken
 			// and whose release did not land. Returning it is exactly what release would have.
 			q.admitter.Release(ctx, id)

@@ -71,7 +71,6 @@
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
-| T628 | Run private binary tournaments with exact metering and explicit winner publication | ARCH MODEL QUOTA GEN LANG | T622 T624 T625 T626 T627 T630 | todo |
 | T631 | Complete UX wiring and qualify creation settings and sixteen-entry tests | ARCH THEME POST CLIP EDIT VOICE MODEL QUOTA | T622 T623 T624 T625 T626 T627 T628 T629 T630 | todo |
 | T633 | Preserve template material roles and declared stock-rule stages | ARCH TMPL GUIDE GEN | T632 T631 | todo |
 | T634 | Align post stage contracts and grounded maximum-tag behavior | ARCH GEN GUIDE POST LANG | T633 | todo |
@@ -90,10 +89,11 @@
 
 ## next
 - T649 is complete; preserve independently owned backend/mobile work before selecting another task.
-- T628 is dependency-ready; continue verified task commits on main through T646.
+- T631 next: complete service wiring and qualify the creation/test milestone, then continue through T646.
 - Editorial follow-up: doc-review ARCH; preserve blocked independent media/voice qualification.
 
 ## log
+- 261008 T628 done on main: durable exact-metered binary tournaments, zero-call recovery, private retention and receipt-first publication; full product Go, actual factory/SQLite/race, FE164, codegen/build/vet and spec checks pass
 - 261008 T649 done on main: saved-or-AI slots prepare exact missing1/3/15 counts with retained refs/template inputs; FE598 plus final33/11, owning Go/count/migration, lint/build, browser52 and42-percent glass checks pass
 - 261007 T648 done on main: compact translucent docks, bounded composers and48px actions across the app; consumer608 plus final55, build/lint and Chromium196 routes/308 geometry/70 continuity checks pass
 - 261007 T627 done on main: immutable single-factor factories and private complete outputs, exact checkpoint/retry plans and current direct/refined references; owning/domain/wiring tests, builds/vet and FE124 consumers pass
@@ -113,4 +113,3 @@
 - 261007 remote media verification at6a944d1f: image, worker and both-layout release jobs all pass — https://github.com/hetarho/postpilot/actions/runs/37603618318
 - 261007 remote CI frontend failure at6a944d1f: usePostList retained-terminal polling test expected failed but saw running in picker; diagnose real observer/timer ordering before correcting it, preserve both-list refresh and stopped-poll assertions; remote deployment/release/worker gates pass and image/backend checks continue
 - 261007 final remote verification start at6a944d1f: user requests remaining CI/deployment/media checks to finish before final verification record commit/push; no further implementation task is started
-- 261007 post-push verification complete: whole Go run passed every package except the corrected rpcserver reason scan; rpcserver/authoring/authoring-rpc full owning suites, vet/build and format pass after genuine missing-capability/private-reason fixes; whole frontend failures corrected with owning-suite passes, generated-code drift/spec checks and production build pass; deployment recovery62 and all production/worker/both-layout media gates pass

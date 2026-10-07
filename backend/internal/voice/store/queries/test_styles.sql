@@ -11,3 +11,6 @@ VALUES(?,?,?,?,?,?,?,?,?);
 
 -- name: TestStyleSourcePresent :one
 SELECT COUNT(*) FROM voice_samples WHERE id=? AND user_id=? AND voice_id=?;
+
+-- name: ReadTestPublicationReceipt :one
+SELECT receipt FROM voice_test_publications WHERE user_id=? AND test_id=? AND winner_candidate_id=? AND action=?;

@@ -244,8 +244,8 @@ func TestWritingTestCheckpointsFenceFailedOnlyRetryAndSuccessfulReplay(t *testin
 	if err != nil || !replayed.Replayed || replayed.Usage != (CandidateUsage{}) || len(models.calls) != 4 {
 		t.Fatalf("replay=%+v err=%v", replayed, err)
 	}
-	if _, err := factory.PlanWritingTestRetry(snapshot, nil, stored, []int{0}); !errors.Is(err, ErrWritingTestRetryRequired) {
-		t.Fatalf("successful entrant retry: %v", err)
+	if calls, err := factory.PlanWritingTestRetry(snapshot, nil, stored, []int{0}); err != nil || len(calls) != 0 {
+		t.Fatalf("durable answer recovery must plan no new call: %v, %+v", err, calls)
 	}
 }
 

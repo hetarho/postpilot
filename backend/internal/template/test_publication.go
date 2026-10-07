@@ -26,6 +26,7 @@ func DecodeTestSnapshot(content []byte) (TestSnapshot, error) {
 }
 
 type TestPublicationStore interface {
+	ReadTestPublicationReceipt(context.Context, string, string, string, string) (TestedPublicationReceipt, bool, error)
 	TestPublicationReceipt(context.Context, TestedPublication) (TestedPublicationReceipt, bool, error)
 	CommitTestPublication(context.Context, TestedPublication, TestSnapshot, string, time.Time, int) (TestedPublicationReceipt, error)
 }
@@ -33,6 +34,22 @@ type TestPublicationStore interface {
 type TestedSettingsService struct {
 	service *Service
 	store   TestPublicationStore
+}
+
+// ValidateTestPublicationChoices rejects fixable owner choices before the test
+// records an immutable action. The atomic commit still enforces all live guards.
+func (p *TestedSettingsService) ValidateTestPublicationChoices(_ context.Context, in TestedPublication) error {
+	if in.MakeDefault || in.Scope != "" || len(in.ScopeIDs) != 0 {
+		return ErrTestPublicationConflict
+	}
+	if in.Action == "save_setting" {
+		_, err := p.service.validName(in.Name)
+		return err
+	}
+	if in.Action != "use_setting" {
+		return ErrTestPublicationConflict
+	}
+	return nil
 }
 
 func NewTestedSettings(service *Service, store TestPublicationStore) *TestedSettingsService {
@@ -69,3 +86,8 @@ func (p *TestedSettingsService) PublishTestWinner(ctx context.Context, in Tested
 }
 
 var _ TestedSettings = (*TestedSettingsService)(nil)
+
+// ReadTestPublicationReceipt reads proof of a committed action without private payload or live target gates.
+func (p *TestedSettingsService) ReadTestPublicationReceipt(ctx context.Context, userID, testID, winnerID string, action string) (TestedPublicationReceipt, bool, error) {
+	return p.store.ReadTestPublicationReceipt(ctx, userID, testID, winnerID, action)
+}

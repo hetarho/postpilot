@@ -112,13 +112,15 @@ func TestFrozenWritingTestEnumMirrorsCoverGeneratedValues(t *testing.T) {
 	}
 }
 func TestOrdinaryAuthoringCountDefaultIsBackwardCompatible(t *testing.T) {
-	for _, n := range []int{0, 2, 4, 8, 16} {
+	// Preparation may fill any exact number of missing slots. Its omitted count
+	// retains the ordinary default; tournament formats stay independently bounded.
+	for n := 0; n <= 16; n++ {
 		result, err := authoring.NormalizeCandidateCount(n)
 		if err != nil || (n == 0 && result != 8) {
 			t.Fatalf("count %d: %d %v", n, result, err)
 		}
 	}
-	for _, n := range []int{-1, 1, 3, 5, 17} {
+	for _, n := range []int{-1, 17} {
 		if _, err := authoring.NormalizeCandidateCount(n); err == nil {
 			t.Fatalf("count %d accepted", n)
 		}

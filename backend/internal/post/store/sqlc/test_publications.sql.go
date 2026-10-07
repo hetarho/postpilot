@@ -138,3 +138,20 @@ func (q *Queries) GetPostTestPublications(ctx context.Context, arg GetPostTestPu
 	}
 	return items, nil
 }
+
+const readTestPublicationReceipt = `-- name: ReadTestPublicationReceipt :one
+SELECT receipt FROM post_test_publications WHERE user_id=? AND test_id=? AND winner_candidate_id=? AND action='apply_output'
+`
+
+type ReadTestPublicationReceiptParams struct {
+	UserID            string
+	TestID            string
+	WinnerCandidateID string
+}
+
+func (q *Queries) ReadTestPublicationReceipt(ctx context.Context, arg ReadTestPublicationReceiptParams) (string, error) {
+	row := q.db.QueryRowContext(ctx, readTestPublicationReceipt, arg.UserID, arg.TestID, arg.WinnerCandidateID)
+	var receipt string
+	err := row.Scan(&receipt)
+	return receipt, err
+}

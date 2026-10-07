@@ -14,28 +14,8 @@ const releaseTimeout = 5 * time.Second
 // Enqueue persists queued work and only then wakes the worker. It never runs the
 // handler in the caller's request.
 func (q *Queue) Enqueue(ctx context.Context, input NewJob) (string, error) {
-	// The queue honours one cancellation policy version besides "none"; which kinds may
-	// carry it is the enqueueing context's rule, checked before it gets here.
-	if input.CancellationPolicyVersion < 0 || input.CancellationPolicyVersion > 1 {
-		return "", ErrInvalidTarget
-	}
-	if input.Kind == "" || input.UserID == "" {
-		return "", fmt.Errorf("enqueue job: kind and user are required")
-	}
-	for _, s := range input.Subjects {
-		if !s.valid() {
-			return "", ErrInvalidTarget
-		}
-	}
-	// Work that spends nothing may not also defer a hold it will never take.
-	if input.NonMetered && input.DeferHold {
-		return "", ErrInvalidTarget
-	}
-	if languageRequired(input.Kind) && input.TargetLanguage == "" {
-		return "", fmt.Errorf("enqueue job: target language is required for %s", input.Kind)
-	}
-	if input.TargetLanguage != "" && input.TargetLanguage != "ko" && input.TargetLanguage != "en" {
-		return "", fmt.Errorf("enqueue job: unsupported target language %q", input.TargetLanguage)
+	if err := validateNewJob(input); err != nil {
+		return "", err
 	}
 
 	active, err := q.activeForInput(ctx, input)
@@ -131,4 +111,32 @@ func languageRequired(kind string) bool {
 	default:
 		return false
 	}
+}
+
+func validateNewJob(input NewJob) error {
+	// The queue honours one cancellation policy version besides "none"; which kinds may
+	// carry it is the enqueueing context's rule, checked before it gets here.
+	if input.CancellationPolicyVersion < 0 || input.CancellationPolicyVersion > 1 {
+		return ErrInvalidTarget
+	}
+	if input.Kind == "" || input.UserID == "" {
+		return fmt.Errorf("enqueue job: kind and user are required")
+	}
+	for _, s := range input.Subjects {
+		if !s.valid() {
+			return ErrInvalidTarget
+		}
+	}
+	// Work that spends nothing may not also defer a hold it will never take.
+	if input.NonMetered && input.DeferHold {
+		return ErrInvalidTarget
+	}
+	if languageRequired(input.Kind) && input.TargetLanguage == "" {
+		return fmt.Errorf("enqueue job: target language is required for %s", input.Kind)
+	}
+	if input.TargetLanguage != "" && input.TargetLanguage != "ko" && input.TargetLanguage != "en" {
+		return fmt.Errorf("enqueue job: unsupported target language %q", input.TargetLanguage)
+	}
+
+	return nil
 }

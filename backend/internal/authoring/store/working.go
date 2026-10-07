@@ -143,6 +143,12 @@ func (s *Store) mutate(ctx context.Context, in authoring.ResetMutation, action s
 	if err = s.writeSession(ctx, q, state, in.ExpectedRevision); err != nil {
 		return state, err
 	}
+	// Return the same timestamp and normalized state the transaction actually
+	// stored. writeSession sets its authoritative timestamp on its value copy.
+	state, err = load(ctx, q, in.UserID, in.SessionID)
+	if err != nil {
+		return state, err
+	}
 	if in.OperationKey != "" {
 		raw, err := rowReceipt(ctx, q, in.UserID, in.SessionID)
 		if err != nil {

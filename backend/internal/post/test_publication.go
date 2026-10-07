@@ -32,6 +32,7 @@ type TestOutputReceipt struct {
 }
 
 type TestResultStore interface {
+	ReadTestPublicationReceipt(context.Context, string, string, string) (TestOutputReceipt, bool, error)
 	ApplyTestResult(context.Context, TestOutputPublication, time.Time) (TestOutputReceipt, error)
 }
 
@@ -106,4 +107,9 @@ func ValidateTestStoryline(storyline *Storyline, images []Image, videos []Video)
 		}
 	}
 	return nil
+}
+
+// ReadTestPublicationReceipt reads proof of a committed action without private payload or live target gates.
+func (p *TestResultService) ReadTestPublicationReceipt(ctx context.Context, userID, testID, winnerID string) (TestOutputReceipt, bool, error) {
+	return p.store.ReadTestPublicationReceipt(ctx, userID, testID, winnerID)
 }

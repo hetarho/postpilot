@@ -93,3 +93,18 @@ func (s *Store) CommitTestPublication(ctx context.Context, in guideline.TestedPu
 }
 
 var _ guideline.TestPublicationStore = (*Store)(nil)
+
+func (s *Store) ReadTestPublicationReceipt(ctx context.Context, userID, testID, winnerID string, action string) (guideline.TestedPublicationReceipt, bool, error) {
+	var result guideline.TestedPublicationReceipt
+	raw, err := s.read.ReadTestPublicationReceipt(ctx, sqlc.ReadTestPublicationReceiptParams{UserID: userID, TestID: testID, WinnerCandidateID: winnerID, Action: action})
+	if errors.Is(err, sql.ErrNoRows) {
+		return result, false, nil
+	}
+	if err != nil {
+		return result, false, err
+	}
+	if err = json.Unmarshal([]byte(raw), &result); err != nil {
+		return result, false, err
+	}
+	return result, true, nil
+}
