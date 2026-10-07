@@ -144,6 +144,11 @@ func run() error {
 	if err = publishValidatedProfile(cfg, validatedBinding, profile); err != nil {
 		return err
 	}
+	closeHealth, err := worker.StartHealth(ctx, runningRoot, healthHandler(cfg))
+	if err != nil {
+		return err
+	}
+	defer closeHealth()
 	// The adapter tracks active workspaces, so the cleanup cannot reap live work.
 	go func() {
 		ticker := time.NewTicker(time.Hour)

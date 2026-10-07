@@ -25,6 +25,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /api ./cmd/a
 RUN CGO_ENABLED=0 GOOS=linux go test -c -o /media.test ./internal/clip/media
 
 RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /media-worker ./cmd/media-worker
+RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /media-health ./cmd/media-health
 RUN mkdir -p /worker-work
 RUN CGO_ENABLED=0 GOOS=linux go test -c -o /diagnostic.test ./internal/clip/diagnostic
 
@@ -125,8 +126,9 @@ LABEL org.opencontainers.image.title="Postpilot CPU media worker" \
       org.postpilot.media.manifest-command="/media-worker manifest"
 COPY --from=builder /media-worker /media-worker
 COPY --from=builder --chown=65532:65532 /worker-work /var/lib/postpilot-media/work
+COPY --from=builder /media-health /media-health
 ENV MEDIA_ACCEL=cpu CLIP_WORK_ROOT=/var/lib/postpilot-media/work
-HEALTHCHECK --interval=30s --timeout=30s --start-period=30s --retries=3 CMD ["/media-worker", "health"]
+HEALTHCHECK --interval=30s --timeout=30s --start-period=30s --retries=3 CMD ["/media-health"]
 ENTRYPOINT ["/media-worker"]
 
 FROM media-worker-runtime AS media-worker-tooling
@@ -169,6 +171,7 @@ LABEL org.opencontainers.image.revision=$SOURCE_REVISION \
       org.postpilot.media.gpu-candidate="nvenc-candidate-v1" \
       org.postpilot.media.gpu-production-approved="false"
 COPY --from=media-worker-deployable /media-worker /media-worker
+COPY --from=media-worker-deployable /media-health /media-health
 COPY --from=media-runtime /usr/local/bin/ /usr/local/bin/
 COPY --from=media-runtime /usr/share/postpilot-fonts/ /usr/share/postpilot-fonts/
 COPY --from=media-runtime /usr/share/postpilot-media/ /usr/share/postpilot-media/
@@ -182,6 +185,7 @@ ENV MEDIA_ACCEL=cpu CLIP_WORK_ROOT=/var/lib/postpilot-media/work \
     NVIDIA_DRIVER_CAPABILITIES=compute,video,utility \
     LD_LIBRARY_PATH=/usr/local/nvidia/lib:/usr/local/nvidia/lib64
 USER 65532:65532
+HEALTHCHECK --interval=30s --timeout=30s --start-period=30s --retries=3 CMD ["/media-health"]
 ENTRYPOINT ["/media-worker"]
 
 FROM media-worker-nvidia-runtime AS media-worker-nvidia-candidate

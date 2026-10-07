@@ -55,20 +55,25 @@ func publishValidatedProfile(cfg config.WorkerConfig, before worker.ProfileBindi
 }
 
 func reportStatus(ctx context.Context, cfg config.WorkerConfig, profile clip.MediaWorkerProfile) error {
+	raw, err := statusJSON(ctx, cfg, profile)
+	if err != nil {
+		return err
+	}
+	fmt.Println(string(raw))
+	return nil
+}
+
+func statusJSON(ctx context.Context, cfg config.WorkerConfig, profile clip.MediaWorkerProfile) ([]byte, error) {
 	check, cancel := context.WithTimeout(ctx, clip.MediaUnaryTimeout)
 	defer cancel()
 	status, err := workerclient.New(cfg.APIURL, cfg.ID, cfg.Token).StatusForProfile(check, profile)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	raw, err := json.Marshal(struct {
 		Ready                      bool
 		Profile                    string
 		Waiting, Active, OwnActive int64
 	}{true, profile.Profile, status.Waiting, status.Active, status.OwnActive})
-	if err != nil {
-		return err
-	}
-	fmt.Println(string(raw))
-	return nil
+	return raw, err
 }

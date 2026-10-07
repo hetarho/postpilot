@@ -107,7 +107,7 @@ services:
       - media_worker_work:/var/lib/postpilot-media
     stop_grace_period: 45s
     healthcheck:
-      test: ["CMD", "/app/tmp/media-worker", "health"]
+      test: ["CMD", "/usr/local/bin/media-health"]
       interval: 15s
       timeout: 30s
       start_period: 300s

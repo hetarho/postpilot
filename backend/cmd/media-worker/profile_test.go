@@ -35,9 +35,57 @@ type healthPeer struct {
 
 func (h healthPeer) GetMediaRuntimeStatus(_ context.Context, req *connect.Request[pb.GetMediaRuntimeStatusRequest]) (*connect.Response[pb.GetMediaRuntimeStatusResponse], error) {
 	if req.Header().Get("X-Media-Worker-ID") != "worker" || req.Header().Get("Authorization") != "Bearer "+healthToken() {
-		h.t.Error("health omitted current private API credentials")
+		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("worker credential rejected"))
 	}
 	return connect.NewResponse(h.status), nil
+}
+
+func TestLiveHealthRetainsOwnerConfigAssetsAndPrivateAuthorization(t *testing.T) {
+	for _, mode := range []string{"valid", "wrong-worker", "changed-config", "changed-token", "changed-asset", "private-unready", "stopped"} {
+		t.Run(mode, func(t *testing.T) {
+			cfg, profile := healthFixture(t, clip.NativeWorkerRole, mode != "private-unready")
+			release, err := worker.LockWorkRoot(cfg.WorkRoot)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer release()
+			binding, err := profileBinding(cfg)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err = worker.PublishProfile(cfg.WorkRoot, binding, profile); err != nil {
+				t.Fatal(err)
+			}
+			check := healthHandler(cfg)
+			request := httptest.NewRequest(http.MethodGet, "http://worker/health", nil)
+			request.Header.Set("X-Media-Worker-ID", cfg.ID)
+			request.Header.Set("X-Media-Worker-Config", healthEnvironmentStamp())
+			request.Header.Set("Authorization", "Bearer "+cfg.Token)
+			switch mode {
+			case "wrong-worker":
+				request.Header.Set("X-Media-Worker-ID", "other")
+			case "changed-config":
+				request.Header.Set("X-Media-Worker-Config", "other-config")
+			case "changed-token":
+				request.Header.Set("Authorization", "Bearer "+strings.Repeat("b", 43))
+			case "changed-asset":
+				err = os.WriteFile(cfg.FFmpegPath, []byte("changed runtime tool"), 0600)
+			case "stopped":
+				release()
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			raw, err := check(t.Context(), request)
+			if mode == "valid" {
+				if err != nil || !strings.Contains(string(raw), `"OwnActive":1`) {
+					t.Fatal("live worker status changed", err, string(raw))
+				}
+			} else if err == nil {
+				t.Fatal("unsafe live worker health accepted", mode, string(raw))
+			}
+		})
+	}
 }
 
 func healthFixture(t *testing.T, role string, ready bool) (config.WorkerConfig, clip.MediaWorkerProfile) {

@@ -29,7 +29,7 @@ class MediaDevTest(unittest.TestCase):
         self.assertNotIn('deploy', worker)
         self.assertEqual(worker['environment']['MEDIA_ACCEL'], 'cpu')
         self.assertEqual(worker['depends_on']['backend']['condition'], 'service_healthy')
-        self.assertEqual(worker['healthcheck']['test'], ['CMD', '/app/tmp/media-worker', 'health'])
+        self.assertEqual(worker['healthcheck']['test'], ['CMD', '/usr/local/bin/media-health'])
         self.assertEqual(api['develop']['watch'], worker['develop']['watch'])
         watched = {r['path'] for r in worker['develop']['watch'] if r['action'] == 'rebuild'}
         self.assertTrue({'./backend/assets', './backend/build', './backend/internal/clip/overlay', './backend/internal/clip/design'} <= watched)
