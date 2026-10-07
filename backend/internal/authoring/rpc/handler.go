@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"strings"
 
 	"connectrpc.com/connect"
 	"github.com/postpilot/backend/internal/auth"
@@ -74,13 +75,21 @@ func ref(v *v1.ModelRef) llm.ModelRef {
 	return llm.ModelRef{ProviderID: v.GetProviderId(), ModelID: v.GetModelId()}
 }
 func artifact(a authoring.Artifact) *v1.AuthoringArtifact {
-	return &v1.AuthoringArtifact{Id: a.ID, Name: a.Name, Description: a.Description, Body: a.Body, TitleArea: a.TitleArea}
+	return &v1.AuthoringArtifact{Id: a.ID, Name: a.Name, Description: a.Description, Body: a.Body, TitleArea: a.TitleArea, Revision: a.Revision}
 }
 func session(s *authoring.Session) *v1.AuthoringSession {
 	if s == nil {
 		return nil
 	}
 	out := &v1.AuthoringSession{Id: s.ID, Kind: kindProto(s.Kind), Revision: s.Revision, Phase: s.Phase, ActiveJobId: s.ActiveJobID, TargetId: s.TargetID, TargetVersion: s.TargetVersion, FailureReason: s.FailureReason, PendingRequest: s.PendingRequest}
+	out.DraftState = draftState(s.DraftState)
+	out.HasUnpublishedChanges, out.SavedAvailable, out.CandidateCount = s.HasUnpublishedChanges, s.SavedAvailable, int32(s.RequestedCandidateCount)
+	if s.WorkingSource != nil {
+		out.WorkingSource = artifact(*s.WorkingSource)
+	}
+	if s.SavedBaseline != nil {
+		out.SavedBaseline = artifact(*s.SavedBaseline)
+	}
 	for _, a := range s.Candidates {
 		out.Candidates = append(out.Candidates, artifact(a))
 	}
@@ -137,10 +146,7 @@ func (h *Handler) EstimateAuthoringOperation(ctx context.Context, r *connect.Req
 	if err != nil {
 		return nil, rpcserver.NewAppError(connect.CodeInvalidArgument, "invalid candidate count", v1.FailureReason_AUTHORING_CANDIDATE_COUNT_INVALID, nil)
 	}
-	if count != authoring.CandidateCount {
-		return nil, rpcserver.NewAppError(connect.CodeUnimplemented, "candidate preparation is not integrated", v1.FailureReason_AUTHORING_FEATURE_UNAVAILABLE, nil)
-	}
-	e0, e := h.service.EstimateFor(ctx, u, kind(r.Msg.GetKind()), mode(r.Msg.GetMode()), ref(r.Msg.GetWriteModel()), r.Msg.GetSessionId())
+	e0, e := h.service.EstimateCount(ctx, u, kind(r.Msg.GetKind()), mode(r.Msg.GetMode()), ref(r.Msg.GetWriteModel()), r.Msg.GetSessionId(), count)
 	if e != nil {
 		return nil, toError(e)
 	}
@@ -160,10 +166,10 @@ func (h *Handler) StartAuthoringOperation(ctx context.Context, r *connect.Reques
 	if err != nil {
 		return nil, rpcserver.NewAppError(connect.CodeInvalidArgument, "invalid candidate count", v1.FailureReason_AUTHORING_CANDIDATE_COUNT_INVALID, nil)
 	}
-	if count != authoring.CandidateCount {
-		return nil, rpcserver.NewAppError(connect.CodeUnimplemented, "candidate preparation is not integrated", v1.FailureReason_AUTHORING_FEATURE_UNAVAILABLE, nil)
+	if !mode(r.Msg.GetMode()).Valid() || strings.TrimSpace(r.Msg.GetSessionId()) == "" || strings.TrimSpace(r.Msg.GetRequestId()) == "" {
+		return nil, toError(authoring.ErrInvalid)
 	}
-	id, s, e := h.service.Start(ctx, u, authoring.Start{SessionID: r.Msg.GetSessionId(), ExpectedRevision: r.Msg.GetExpectedRevision(), RequestID: r.Msg.GetRequestId(), Mode: mode(r.Msg.GetMode()), Prompt: r.Msg.GetPrompt(), WriteModel: ref(r.Msg.GetWriteModel())})
+	id, s, e := h.service.Start(ctx, u, authoring.Start{RequestedCandidateCount: count, SessionID: r.Msg.GetSessionId(), ExpectedRevision: r.Msg.GetExpectedRevision(), RequestID: r.Msg.GetRequestId(), Mode: mode(r.Msg.GetMode()), Prompt: r.Msg.GetPrompt(), WriteModel: ref(r.Msg.GetWriteModel())})
 	if e != nil {
 		return nil, toError(e)
 	}
@@ -174,7 +180,7 @@ func (h *Handler) SelectAuthoringCandidate(ctx context.Context, r *connect.Reque
 	if e != nil {
 		return nil, e
 	}
-	s, e := h.service.Select(ctx, u, r.Msg.GetSessionId(), r.Msg.GetExpectedRevision(), r.Msg.GetCandidateId())
+	s, e := h.service.SelectWithKey(ctx, authoring.ResetMutation{UserID: u, SessionID: r.Msg.GetSessionId(), ExpectedRevision: r.Msg.GetExpectedRevision(), OperationKey: r.Msg.GetOperationKey()}, r.Msg.GetCandidateId())
 	return respond(s, e)
 }
 func (h *Handler) CancelAuthoringOperation(ctx context.Context, r *connect.Request[v1.CancelAuthoringOperationRequest]) (*connect.Response[v1.AuthoringSessionResponse], error) {
@@ -190,7 +196,7 @@ func (h *Handler) SaveAuthoringSession(ctx context.Context, r *connect.Request[v
 	if e != nil {
 		return nil, e
 	}
-	s, e := h.service.Save(ctx, u, r.Msg.GetSessionId(), r.Msg.GetExpectedRevision(), r.Msg.GetMakeDefault())
+	s, e := h.service.SaveWithKey(ctx, authoring.ResetMutation{UserID: u, SessionID: r.Msg.GetSessionId(), ExpectedRevision: r.Msg.GetExpectedRevision(), OperationKey: r.Msg.GetOperationKey()}, r.Msg.GetMakeDefault())
 	return respond(s, e)
 }
 func toError(e error) error {
@@ -215,6 +221,8 @@ func toError(e error) error {
 		reason = v1.FailureReason_AUTHORING_RUNNING
 	case errors.Is(e, authoring.ErrOutput):
 		reason = v1.FailureReason_AUTHORING_OUTPUT_INVALID
+	case errors.Is(e, authoring.ErrCandidateCount):
+		code, reason = connect.CodeInvalidArgument, v1.FailureReason_AUTHORING_CANDIDATE_COUNT_INVALID
 	case errors.Is(e, authoring.ErrInvalid):
 		code, reason = connect.CodeInvalidArgument, v1.FailureReason_AUTHORING_MESSAGE_INVALID
 	case errors.Is(e, authoring.ErrHistoryFull):

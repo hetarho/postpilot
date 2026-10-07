@@ -41,6 +41,34 @@ func fromSession(r sqlc.ConfigurationAuthoringSession) (authoring.Session, error
 	}
 	s.ID, s.UserID, s.Kind, s.TargetID, s.Phase = r.ID, r.UserID, authoring.Kind(r.Kind), r.TargetID, r.Phase
 	s.Revision = uint32(r.Revision)
+	s.RequestedCandidateCount = int(r.CandidateCount)
+	s.DraftState = authoring.DraftState(r.DraftState)
+	s.HasUnpublishedChanges, s.SavedAvailable = r.HasUnpublishedChanges != 0, r.SavedAvailable != 0
+	if r.WorkingSource.Valid {
+		a, err := decodeArtifact(r.WorkingSource)
+		if err != nil {
+			return s, err
+		}
+		s.WorkingSource = a
+	} else if s.Selected != nil {
+		a := *s.Selected
+		s.WorkingSource = &a
+	}
+	if r.SavedBaseline.Valid {
+		a, err := decodeArtifact(r.SavedBaseline)
+		if err != nil {
+			return s, err
+		}
+		s.SavedBaseline = a
+	}
+	// Older rows did not capture a baseline. Only they need the compatibility
+	// projection; an explicit missing-target verdict must stay unavailable.
+	if s.SavedBaseline == nil && (s.TargetID != "" || s.Saved != nil) && s.FailureReason != "AUTHORING_SAVE_CONFLICT" {
+		s.SavedAvailable = true
+	}
+	if s.WorkingSource != nil && s.SavedBaseline == nil && s.Phase != "saved" {
+		s.HasUnpublishedChanges = true
+	}
 	s.CreatedAt, e = time.Parse(time.RFC3339Nano, r.CreatedAt)
 	if e != nil {
 		return s, e
@@ -74,7 +102,7 @@ func (s *Store) writeSession(ctx context.Context, q *sqlc.Queries, state authori
 	if e != nil {
 		return e
 	}
-	n, e := q.UpdateAuthoringSession(ctx, sqlc.UpdateAuthoringSessionParams{Revision: int64(state.Revision), Phase: state.Phase, Snapshot: raw, UpdatedAt: state.UpdatedAt.Format(stampLayout), UserID: state.UserID, ID: state.ID, Revision_2: int64(old)})
+	n, e := q.UpdateAuthoringSession(ctx, sqlc.UpdateAuthoringSessionParams{Revision: int64(state.Revision), Phase: state.Phase, Snapshot: raw, SavedBaseline: encodeArtifact(state.SavedBaseline), WorkingSource: encodeArtifact(state.WorkingSource), DraftState: string(state.DraftState), HasUnpublishedChanges: bit(state.HasUnpublishedChanges), SavedAvailable: bit(state.SavedAvailable), PublicationPending: bit(state.Phase == "saving"), TargetConflict: bit(state.FailureReason == "AUTHORING_SAVE_CONFLICT"), DisplayName: displayName(state), CandidateCount: int64(candidateCount(state.RequestedCandidateCount)), UpdatedAt: state.UpdatedAt.Format(stampLayout), UserID: state.UserID, ID: state.ID, Revision_2: int64(old)})
 	if e == nil && n != 1 {
 		return authoring.ErrStale
 	}
@@ -127,7 +155,7 @@ func (s *Store) Create(ctx context.Context, state authoring.Session, requestID s
 	if e != nil {
 		return state, e
 	}
-	e = q.InsertAuthoringSession(ctx, sqlc.InsertAuthoringSessionParams{ID: state.ID, UserID: state.UserID, Kind: string(state.Kind), TargetID: state.TargetID, RequestID: requestID, Revision: int64(state.Revision), Phase: state.Phase, Snapshot: raw, CreatedAt: state.CreatedAt.UTC().Format(stampLayout), UpdatedAt: state.UpdatedAt.UTC().Format(stampLayout)})
+	e = q.InsertAuthoringSession(ctx, sqlc.InsertAuthoringSessionParams{ID: state.ID, UserID: state.UserID, Kind: string(state.Kind), TargetID: state.TargetID, RequestID: requestID, Revision: int64(state.Revision), Phase: state.Phase, Snapshot: raw, SavedBaseline: encodeArtifact(state.SavedBaseline), WorkingSource: encodeArtifact(state.WorkingSource), DraftState: string(state.DraftState), HasUnpublishedChanges: bit(state.HasUnpublishedChanges), SavedAvailable: bit(state.SavedAvailable), DisplayName: displayName(state), CandidateCount: int64(candidateCount(state.RequestedCandidateCount)), CreatedAt: state.CreatedAt.UTC().Format(stampLayout), UpdatedAt: state.UpdatedAt.UTC().Format(stampLayout)})
 	if e != nil {
 		return state, e
 	}
@@ -190,7 +218,7 @@ func (s *Store) Reserve(ctx context.Context, user, id string, revision uint32, o
 		return state, op, false, authoring.ErrBusy
 	}
 	if op.Mode == authoring.Refine {
-		if state.Selected == nil {
+		if state.WorkingSource == nil && state.Selected == nil {
 			return state, op, false, authoring.ErrNoSelection
 		}
 		done := 0
@@ -282,7 +310,7 @@ func (s *Store) Bind(ctx context.Context, user, opID, jobID string) (authoring.S
 		if op.Status != "pending" && op.Status != "admitted" {
 			return authoring.ErrStale
 		}
-		if state.ActiveRequestID != op.ID || state.Revision != op.BaseRevision+1 {
+		if state.ActiveRequestID != op.ID {
 			return authoring.ErrStale
 		}
 		op.JobID, op.Status = jobID, "admitted"
@@ -306,8 +334,20 @@ func (s *Store) Reconcile(ctx context.Context, user, opID, status, reason string
 		if status != "done" && status != "failed" && status != "cancelled" {
 			return authoring.ErrInvalid
 		}
-		if state.ActiveRequestID != op.ID || state.Revision != op.BaseRevision+1 {
+		if state.ActiveRequestID != op.ID {
 			return authoring.ErrStale
+		}
+		if state.Revision != op.BaseRevision+1 {
+			// Settle the issued job without replacing newer direct work.
+			op.Status, op.FailureReason = status, reason
+			state.ActiveJobID, state.ActiveRequestID = "", ""
+			state.Phase = "editing"
+			for i := range state.Turns {
+				if state.Turns[i].ID == op.ID {
+					state.Turns[i].Status = "superseded"
+				}
+			}
+			return bump(state)
 		}
 		if status == "done" && result == nil {
 			return authoring.ErrOutput
@@ -323,10 +363,23 @@ func (s *Store) Reconcile(ctx context.Context, user, opID, status, reason string
 			state.PendingRequest = ""
 			state.WriteModel = result.WriteModel
 			if op.Mode == authoring.Recommend {
-				if len(result.Candidates) != authoring.CandidateCount {
+				var input struct {
+					CandidateCount int `json:"candidate_count"`
+				}
+				if err := json.Unmarshal(op.Payload, &input); err != nil {
 					return authoring.ErrOutput
 				}
+				requested := candidateCount(input.CandidateCount)
+				if requested == 0 || len(result.Candidates) != requested {
+					return authoring.ErrOutput
+				}
+				// The visible batch keeps its previous count until a complete
+				// replacement has passed validation; failed/cancelled work keeps it.
+				state.RequestedCandidateCount = requested
 				state.Candidates = append([]authoring.Artifact(nil), result.Candidates...)
+				for i := range state.Candidates {
+					state.Candidates[i].Revision = state.Revision
+				}
 				state.Purpose = result.Purpose
 				state.Phase = "choosing"
 			} else {
@@ -334,7 +387,11 @@ func (s *Store) Reconcile(ctx context.Context, user, opID, status, reason string
 					return authoring.ErrOutput
 				}
 				a := *result.Selected
+				a.Revision = state.Revision
 				state.Selected = &a
+				state.WorkingSource = &a
+				state.DraftState = authoring.DraftValid
+				state.HasUnpublishedChanges = !sameContent(state.WorkingSource, state.SavedBaseline)
 				state.Phase = "editing"
 			}
 			for i := range state.Turns {
@@ -385,7 +442,11 @@ func (s *Store) Select(ctx context.Context, user, id string, revision uint32, ca
 	if e = bump(&state); e != nil {
 		return state, e
 	}
+	selected.Revision = state.Revision
 	state.Selected = selected
+	state.WorkingSource = selected
+	state.DraftState = authoring.DraftValid
+	state.HasUnpublishedChanges = !sameContent(state.WorkingSource, state.SavedBaseline)
 	state.Phase = "editing"
 	state.FailureReason = ""
 	if e = s.writeSession(ctx, q, state, revision); e != nil {
@@ -416,7 +477,14 @@ func (s *Store) PrepareSave(ctx context.Context, user, id string, revision uint3
 	if state.Selected == nil {
 		return state, authoring.Publication{}, authoring.ErrNoSelection
 	}
-	p := authoring.Publication{Key: fmt.Sprintf("%s:%d", state.ID, state.Revision), UserID: user, SessionID: id, Kind: state.Kind, Revision: state.Revision, Artifact: *state.Selected, TargetID: state.TargetID, TargetVersion: state.TargetVersion, MakeDefault: makeDefault, WriteModel: state.WriteModel}
+	if state.DraftState != authoring.DraftValid {
+		return state, authoring.Publication{}, authoring.ErrDraftInvalid
+	}
+	target := state.TargetID
+	if target == "" && state.Saved != nil {
+		target = state.Saved.ID
+	}
+	p := authoring.Publication{Key: fmt.Sprintf("%s:%d", state.ID, state.Revision), UserID: user, SessionID: id, Kind: state.Kind, Revision: state.Revision, Artifact: *state.Selected, TargetID: target, TargetVersion: state.TargetVersion, MakeDefault: makeDefault, WriteModel: state.WriteModel}
 	if e = bump(&state); e != nil {
 		return state, p, e
 	}
@@ -429,6 +497,9 @@ func (s *Store) PrepareSave(ctx context.Context, user, id string, revision uint3
 	return state, p, tx.Commit()
 }
 func (s *Store) FinalizeSave(ctx context.Context, user, id, key string, ref authoring.SavedRef) (authoring.Session, error) {
+	return s.FinalizeSaveVersion(ctx, user, id, key, ref, "")
+}
+func (s *Store) FinalizeSaveVersion(ctx context.Context, user, id, key string, ref authoring.SavedRef, version string) (authoring.Session, error) {
 	tx, e := s.writer.BeginTx(ctx, nil)
 	if e != nil {
 		return authoring.Session{}, e
@@ -453,9 +524,31 @@ func (s *Store) FinalizeSave(ctx context.Context, user, id, key string, ref auth
 		return state, e
 	}
 	state.Saved = &ref
+	if version != "" {
+		state.TargetVersion = version
+	}
+	state.SavedAvailable = true
+	state.HasUnpublishedChanges = false
+	if state.Selected != nil {
+		a := *state.Selected
+		state.SavedBaseline = &a
+		state.WorkingSource = &a
+	}
 	state.Phase = "saved"
 	state.FailureReason = ""
 	if e = s.writeSession(ctx, q, state, old); e != nil {
+		return state, e
+	}
+	raw, e := rowReceipt(ctx, q, user, id)
+	if e != nil {
+		return state, e
+	}
+	if e = q.ConfirmAuthoringSaveMutations(ctx, sqlc.ConfirmAuthoringSaveMutationsParams{Response: raw, UserID: user, SessionID: id, ExpectedRevision: int64(state.Publication.Revision)}); e != nil {
+		return state, e
+	}
+	// A reopened view can confirm the same pending publication with a new key
+	// at its prepared revision. Confirm that receipt atomically as well.
+	if e = q.ConfirmAuthoringSaveMutations(ctx, sqlc.ConfirmAuthoringSaveMutationsParams{Response: raw, UserID: user, SessionID: id, ExpectedRevision: int64(old)}); e != nil {
 		return state, e
 	}
 	return state, tx.Commit()

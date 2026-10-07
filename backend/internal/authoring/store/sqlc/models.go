@@ -8,6 +8,17 @@ import (
 	"database/sql"
 )
 
+type ConfigurationAuthoringMutation struct {
+	UserID           string
+	SessionID        string
+	OperationKey     string
+	Action           string
+	ExpectedRevision int64
+	Fingerprint      string
+	Response         string
+	CreatedAt        string
+}
+
 type ConfigurationAuthoringOperation struct {
 	ID            string
 	UserID        string

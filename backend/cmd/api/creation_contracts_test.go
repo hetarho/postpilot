@@ -171,25 +171,19 @@ func TestWritingTestRevealedUsagePreservesFailedCallEvidenceWithoutSupplierCosts
 	}
 }
 
-func TestUnintegratedCountsNeverReachBaselineProviderWork(t *testing.T) {
-	// A nil service would panic if these count gates admitted existing eight-output execution.
+func TestAuthoringCountsRejectMissingStartBeforeProviderWork(t *testing.T) {
+	// T625 activates 2/4/8/16. Unsupported counts and missing explicit start
+	// fields still refuse before service/provider work; a nil service pins that fence.
 	handler := authoringrpc.NewHandler(nil)
-	for _, count := range []int32{1, 3, 5, 17, 2, 4, 16} {
+	for _, count := range []int32{1, 3, 5, 17, 2, 4, 8, 16} {
 		_, err := handler.StartAuthoringOperation(auth.WithUser(context.Background(), "alice"), connect.NewRequest(&v1.StartAuthoringOperationRequest{CandidateCount: count}))
-		if err == nil {
-			t.Fatalf("count %d started baseline work", count)
-		}
-		if count == 2 || count == 4 || count == 16 {
-			if connect.CodeOf(err) != connect.CodeUnimplemented {
-				t.Fatalf("count %d: %v", count, err)
-			}
-		} else if connect.CodeOf(err) != connect.CodeInvalidArgument {
-			t.Fatalf("count %d: %v", count, err)
+		if connect.CodeOf(err) != connect.CodeInvalidArgument {
+			t.Fatalf("count %d admitted an incomplete request: %v", count, err)
 		}
 	}
 	_, err := handler.StartAuthoringOperation(context.Background(), connect.NewRequest(&v1.StartAuthoringOperationRequest{CandidateCount: 3}))
 	if connect.CodeOf(err) != connect.CodeUnauthenticated {
-		t.Fatal("count gate bypassed authentication")
+		t.Fatal("count validation bypassed authentication")
 	}
 }
 

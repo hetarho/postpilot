@@ -7,6 +7,7 @@ import (
 )
 
 type artifactSnapshot struct {
+	Revision    uint32 `json:"revision"`
 	ID          string `json:"id"`
 	Name        string `json:"name"`
 	Description string `json:"description"`
@@ -56,10 +57,10 @@ type sessionSnapshot struct {
 }
 
 func artifactToSnapshot(a authoring.Artifact) artifactSnapshot {
-	return artifactSnapshot{a.ID, a.Name, a.Description, a.Body, a.TitleArea}
+	return artifactSnapshot{a.Revision, a.ID, a.Name, a.Description, a.Body, a.TitleArea}
 }
 func artifactFromSnapshot(a artifactSnapshot) authoring.Artifact {
-	return authoring.Artifact{ID: a.ID, Name: a.Name, Description: a.Description, Body: a.Body, TitleArea: a.TitleArea}
+	return authoring.Artifact{Revision: a.Revision, ID: a.ID, Name: a.Name, Description: a.Description, Body: a.Body, TitleArea: a.TitleArea}
 }
 func encodeSession(s authoring.Session) (string, error) {
 	p := sessionSnapshot{Version: 1, TargetVersion: s.TargetVersion, ActiveJobID: s.ActiveJobID, ActiveRequestID: s.ActiveRequestID, FailureReason: s.FailureReason, PendingRequest: s.PendingRequest, ForkVoice: s.ForkVoice, SourceContext: s.SourceContext, Purpose: s.Purpose, WriteModel: s.WriteModel}

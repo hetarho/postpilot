@@ -9,6 +9,7 @@ import {
   authoringModeToProto,
   mapAuthoringEstimate,
   mapAuthoringSession,
+  mapAuthoringSummary,
   type WireSession,
 } from './mappers'
 import {
@@ -18,6 +19,8 @@ import {
   type AuthoringMode,
   type AuthoringModelRef,
   type AuthoringStart,
+  type AuthoringArtifact,
+  type AuthoringCandidateCount,
 } from '../model/types'
 
 export function authoringLatestQueryKey(transport: Transport, scope: AuthoringScope) {
@@ -64,6 +67,9 @@ export function useAuthoringAPI(scope: AuthoringScope) {
         (previous) =>
           previous?.id === session.id && previous.revision > session.revision ? previous : session,
       )
+      void cache.invalidateQueries({
+        queryKey: ['authoring-summaries', ownedScope.ownerId, ownedScope.kind],
+      })
       return session
     }
     return {
@@ -79,13 +85,19 @@ export function useAuthoringAPI(scope: AuthoringScope) {
         ),
       load: async (sessionId: string) =>
         publish((await client.getAuthoringSession({ sessionId })).session, sessionId),
-      estimate: async (mode: AuthoringMode, writeModel: AuthoringModelRef, sessionId = '') =>
+      estimate: async (
+        mode: AuthoringMode,
+        writeModel: AuthoringModelRef,
+        sessionId = '',
+        candidateCount: AuthoringCandidateCount = 8,
+      ) =>
         mapAuthoringEstimate(
           await client.estimateAuthoringOperation({
             kind: authoringKindToProto(ownedScope.kind),
             mode: authoringModeToProto(mode),
             writeModel,
             sessionId,
+            candidateCount,
           }),
         ),
       start: async (input: AuthoringStart) => {
@@ -96,21 +108,73 @@ export function useAuthoringAPI(scope: AuthoringScope) {
           mode: authoringModeToProto(input.mode),
           prompt: input.prompt,
           writeModel: input.writeModel,
+          candidateCount: input.candidateCount ?? 8,
         })
         if (!response.jobId) throw new Error('Authoring job unconfirmed')
         return { jobId: response.jobId, session: publish(response.session, input.sessionId) }
       },
-      select: async (sessionId: string, expectedRevision: number, candidateId: string) =>
+      select: async (
+        sessionId: string,
+        expectedRevision: number,
+        candidateId: string,
+        operationKey: string = crypto.randomUUID(),
+      ) =>
         publish(
-          (await client.selectAuthoringCandidate({ sessionId, expectedRevision, candidateId }))
+          (
+            await client.selectAuthoringCandidate({
+              sessionId,
+              expectedRevision,
+              candidateId,
+              operationKey,
+            })
+          ).session,
+          sessionId,
+        ),
+      patch: async (
+        sessionId: string,
+        expectedRevision: number,
+        operationKey: string,
+        workingSource: AuthoringArtifact,
+      ) =>
+        publish(
+          (
+            await client.patchAuthoringDraft({
+              sessionId,
+              expectedRevision,
+              operationKey,
+              workingSource,
+            })
+          ).session,
+          sessionId,
+        ),
+      resetChat: async (sessionId: string, expectedRevision: number, operationKey: string) =>
+        publish(
+          (await client.resetAuthoringChat({ sessionId, expectedRevision, operationKey })).session,
+          sessionId,
+        ),
+      resetBaseline: async (sessionId: string, expectedRevision: number, operationKey: string) =>
+        publish(
+          (await client.resetAuthoringBaseline({ sessionId, expectedRevision, operationKey }))
             .session,
           sessionId,
         ),
       cancel: async (sessionId: string, jobId: string) =>
         publish((await client.cancelAuthoringOperation({ sessionId, jobId })).session, sessionId),
-      save: async (sessionId: string, expectedRevision: number, makeDefault: boolean) => {
+      save: async (
+        sessionId: string,
+        expectedRevision: number,
+        makeDefault: boolean,
+        operationKey: string = crypto.randomUUID(),
+      ) => {
         const session = publish(
-          (await client.saveAuthoringSession({ sessionId, expectedRevision, makeDefault })).session,
+          (
+            await client.saveAuthoringSession({
+              sessionId,
+              expectedRevision,
+              makeDefault,
+              operationKey,
+            })
+          ).session,
           sessionId,
         )
         if (session.phase !== 'saved' || !session.saved)
@@ -120,7 +184,7 @@ export function useAuthoringAPI(scope: AuthoringScope) {
     }
   }, [cache, transport, ownedScope])
 }
-export function useLatestAuthoringSession(scope: AuthoringScope) {
+export function useLatestAuthoringSession(scope: AuthoringScope, enabled = true) {
   const cache = useQueryClient()
   const transport = useTransport()
   const client = useMemo(() => createClient(Service, transport), [transport])
@@ -140,7 +204,7 @@ export function useLatestAuthoringSession(scope: AuthoringScope) {
         ? previous
         : incoming
     },
-    enabled: scope.ownerId !== '',
+    enabled: scope.ownerId !== '' && enabled,
     retry: false,
     refetchOnWindowFocus: false,
   })
@@ -166,4 +230,45 @@ export function useAuthoringSession(scope: AuthoringScope, id: string) {
     refetchInterval: (query) => (authoringSessionBusy(query.state.data) ? POLL_INTERVAL_MS : false),
   })
   return { ...query, queryKey }
+}
+
+export function useAuthoringSummaries(scope: AuthoringScope, unsavedOnly = false) {
+  const transport = useTransport()
+  const client = useMemo(() => createClient(Service, transport), [transport])
+  return useQuery({
+    queryKey: [
+      'authoring-summaries',
+      scope.ownerId,
+      scope.kind,
+      ...createConnectQueryKey({
+        schema: Service.method.listAuthoringSummaries,
+        input: { kind: authoringKindToProto(scope.kind), unsavedOnly, pageSize: 100 },
+        transport,
+        cardinality: 'finite',
+      }),
+    ],
+    enabled: !!scope.ownerId,
+    retry: false,
+    refetchOnWindowFocus: false,
+    queryFn: async ({ signal }) => {
+      const summaries = []
+      let pageToken = ''
+      const seen = new Set<string>()
+      do {
+        if (seen.has(pageToken)) throw new Error('Authoring summary cursor unavailable')
+        seen.add(pageToken)
+        const response = await client.listAuthoringSummaries(
+          { kind: authoringKindToProto(scope.kind), unsavedOnly, pageSize: 100, pageToken },
+          { signal },
+        )
+        summaries.push(
+          ...response.summaries.map((summary) => mapAuthoringSummary(summary, scope.kind)),
+        )
+        if (response.nextPageToken === pageToken && pageToken)
+          throw new Error('Authoring summary cursor unavailable')
+        pageToken = response.nextPageToken
+      } while (pageToken)
+      return summaries
+    },
+  })
 }

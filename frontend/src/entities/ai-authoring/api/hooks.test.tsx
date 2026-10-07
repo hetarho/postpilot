@@ -1,5 +1,5 @@
 import { create } from '@bufbuild/protobuf'
-import { createRouterTransport } from '@connectrpc/connect'
+import { createRouterTransport, ConnectError, Code } from '@connectrpc/connect'
 import { renderHook, waitFor, cleanup, act } from '@testing-library/react'
 import { afterEach, expect, it } from 'vitest'
 import { ConfigurationAuthoringService as Service, ProtoConfigurationKind } from '@/shared/api'
@@ -10,6 +10,7 @@ import {
   useAuthoringAPI,
   useLatestAuthoringSession,
   useAuthoringSession,
+  useAuthoringSummaries,
 } from './hooks'
 import type { AuthoringScope } from '../model/types'
 
@@ -112,4 +113,52 @@ it('preserves a newer mutation while an older in-flight session read finishes', 
   await waitFor(() => expect(hook.result.current.isFetching).toBe(false))
   expect(hook.result.current.data?.revision).toBe(8)
   expect(cache.getQueryData<{ revision: number }>(key)?.revision).toBe(8)
+})
+
+it('reads one paged owner/kind summary batch without reading any conversation, and preserves failures', async () => {
+  let fail = false
+  const requests: string[] = []
+  const transport = createRouterTransport(({ rpc }) => {
+    rpc(Service.method.listAuthoringSummaries, (request) => {
+      requests.push(request.pageToken)
+      if (fail) throw new ConnectError('summary unavailable', Code.Unavailable)
+      return create(Service.method.listAuthoringSummaries.output, {
+        summaries: [
+          {
+            sessionId: request.pageToken ? 'second' : 'first',
+            kind: ProtoConfigurationKind.POST_TEMPLATE,
+            revision: 1,
+            savedAvailable: !request.unsavedOnly,
+            updatedAt: '2026-10-07T01:00:00Z',
+          },
+        ],
+        nextPageToken: request.pageToken ? '' : 'next',
+      })
+    })
+  })
+  const cache = createTestQueryClient()
+  const hook = renderHook(
+    () => {
+      const query = useAuthoringSummaries(scope)
+      return { data: query.data, isError: query.isError, refetch: query.refetch }
+    },
+    {
+      wrapper: withProviders(transport, cache),
+    },
+  )
+  await waitFor(() => expect(hook.result.current.data).toHaveLength(2))
+  expect(requests).toEqual(['', 'next'])
+  fail = true
+  await act(async () => {
+    const response = await hook.result.current.refetch()
+    expect(response.isError).toBe(true)
+  })
+  expect(requests).toEqual(['', 'next', ''])
+  await waitFor(() => expect(hook.result.current.isError).toBe(true))
+  expect(hook.result.current.data).toHaveLength(2)
+  const foreign = renderHook(() => useAuthoringSummaries({ ...scope, ownerId: 'bob' }), {
+    wrapper: withProviders(transport, cache),
+  })
+  await waitFor(() => expect(foreign.result.current.isError).toBe(true))
+  expect(foreign.result.current.data).toBeUndefined()
 })
