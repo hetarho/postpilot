@@ -2142,5 +2142,18 @@
       "after": "Active first upload retains its run owner through authoritative completion-won handling. Retained-artifact and retry cancellation settle the authoritative bool; false refreshes the accepted result and reports durable success.",
       "verification": "Mounted active-first-upload and retry completion-won regressions pass; publication fences remain server-authoritative."
     }
-  ]
+  ],
+  "postRunHookFence": {
+    "scope": "Hook-only post-fetch controller/mount fence; prior actual Chrome sourceHashes remain unchanged and are not presented as a rerun of this new hook. Renderer, media, layout, proto and codec bytes are unchanged.",
+    "sourcePath": "frontend/src/features/render-clip-browser/api/useBrowserRender.ts",
+    "actualChromeSourceSHA256": "4143d2a6277bdcc50d96487c2a946e2cb37949d3766d83cf9cfff50c6d7e36dc",
+    "correctedHookSHA256": "13178a47e05edef1b302ba363e2f24aca9f6b603bdf645538e8ea877d0475575",
+    "changedActualChromeSourcePaths": [
+      "frontend/src/features/render-clip-browser/api/useBrowserRender.ts"
+    ],
+    "beforeFenceRegressionExit": 1,
+    "beforeFenceLogSHA256": "eb5fd8ac4f57e9215dfbfb361909ac954250ca6729ca549f1ddcfde9a5b24850",
+    "afterFenceRegression": "8 mounted provisional-render tests pass, including deferred completion-won fetch during owner replacement and a new pending run.",
+    "qualification": false
+  }
 }

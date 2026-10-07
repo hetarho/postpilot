@@ -298,7 +298,8 @@ export function useBrowserRender(
             const cancelled = await cancelOutcome.current
             if (cancelled === false && mounted.current && current.current === controller) {
               await calls.fetch(projectId)
-              setState({ phase: 'done', progress: { stage: 'storing', percent: 100 } })
+              if (mounted.current && current.current === controller)
+                setState({ phase: 'done', progress: { stage: 'storing', percent: 100 } })
             } else if (mounted.current && current.current === controller)
               setState({ phase: 'cancelled', progress: { stage: 'storing', percent: 0 } })
           } catch (cancelError) {

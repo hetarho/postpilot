@@ -54,6 +54,7 @@ function harness() {
         renderedPlanRevision: 3,
       }),
     }))
+  const fetched = vi.fn(async () => {})
   const transport = createRouterTransport((router) => {
     router.service(ClipRenderService, {
       cancelClipBrowserRender: cancelled,
@@ -61,21 +62,24 @@ function harness() {
       reportClipRenderVerdict: report,
       completeClipRenderUpload: complete,
     })
-    router.rpc(ClipGenerationService.method.getClipProject, () => ({
-      project: create(ClipProjectSchema, {
-        id: 'clip',
-        title: 'Test',
-        ratio: 'vertical',
-        hideDisclosure: true,
-        editPlanRevision: 3,
-        renderedPlanRevision: 1,
-        editing: create(ClipEditingStateSchema, {
-          ...editing,
-          sources: editing.sources.map((source) => ({ ...source, hasAudio: false })),
-          plan: clipPlanToProto(editing.plan),
+    router.rpc(ClipGenerationService.method.getClipProject, async () => {
+      await fetched()
+      return {
+        project: create(ClipProjectSchema, {
+          id: 'clip',
+          title: 'Test',
+          ratio: 'vertical',
+          hideDisclosure: true,
+          editPlanRevision: 3,
+          renderedPlanRevision: 1,
+          editing: create(ClipEditingStateSchema, {
+            ...editing,
+            sources: editing.sources.map((source) => ({ ...source, hasAudio: false })),
+            plan: clipPlanToProto(editing.plan),
+          }),
         }),
-      }),
-    }))
+      }
+    })
     router.rpc(ClipGenerationService.method.listClipProjects, () => ({ projects: [] }))
   })
   run.mockImplementation(async (input) => {
@@ -98,7 +102,7 @@ function harness() {
         flush: async () => 3,
       }),
     )
-  return { view, artifact, cancelled, prepare, report, complete, start }
+  return { view, artifact, cancelled, prepare, report, complete, start, fetched }
 }
 it('keeps a verified local preview while private upload is pending and retries bytes without encoding again', async () => {
   const f = harness()
@@ -238,4 +242,58 @@ it('settles a retry completion-won cancellation through the authoritative result
   expect(f.view.result.current.state.phase).toBe('done')
   expect(f.view.result.current.state.local).toBeUndefined()
   expect(f.artifact.dispose).toHaveBeenCalledTimes(1)
+})
+it('cannot let a deferred completion-won fetch mark a replacement owner and run done', async () => {
+  const f = harness()
+  await f.start()
+  f.cancelled.mockResolvedValue({ cancelled: false })
+  put.mockResolvedValue(undefined)
+  let finishCompletion!: () => void, finishFetch!: () => void
+  f.complete.mockImplementation(
+    () =>
+      new Promise((resolve) => {
+        finishCompletion = () =>
+          resolve({
+            project: create(ClipProjectSchema, {
+              id: 'clip',
+              ratio: 'vertical',
+              editPlanRevision: 3,
+              renderedPlanRevision: 3,
+            }),
+          })
+      }),
+  )
+  f.fetched.mockImplementationOnce(
+    () =>
+      new Promise<void>((resolve) => {
+        finishFetch = resolve
+      }),
+  )
+  let retry!: Promise<void>
+  await act(async () => {
+    retry = f.view.result.current.retry()
+    await Promise.resolve()
+  })
+  await vi.waitFor(() => expect(f.complete).toHaveBeenCalled())
+  await act(async () => {
+    f.view.result.current.cancel()
+    finishCompletion()
+    await Promise.resolve()
+  })
+  await vi.waitFor(() => expect(finishFetch).toBeDefined())
+  f.view.rerender({ ownerId: 'bob', revision: 3, finalized: false })
+  await f.start()
+  expect(f.view.result.current.state).toMatchObject({
+    phase: 'upload_pending',
+    local: { ownerId: 'bob' },
+  })
+  await act(async () => {
+    finishFetch()
+    await retry
+  })
+  expect(f.view.result.current.state).toMatchObject({
+    phase: 'upload_pending',
+    local: { ownerId: 'bob' },
+  })
+  expect(f.view.result.current.busy).toBe(true)
 })
