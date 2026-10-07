@@ -1,3 +1,4 @@
+import { freezeBrowserComposition, projectBrowserComposition } from '@/entities/clip-preview'
 import { create } from '@bufbuild/protobuf'
 import { Code, type ConnectError, type createRouterTransport } from '@connectrpc/connect'
 import {
@@ -1016,6 +1017,44 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
       downloadUrl: 'https://private.test/browser-download.mp4',
     }
     return { project: projectProto(p) }
+  })
+  router.rpc(ClipRenderService.method.startClipBrowserCompositionRender, async (req) => {
+    options.calls?.push('StartClipBrowserCompositionRender')
+    const p = projects.get(req.projectId),
+      b = batches.get(req.batchId)
+    if (!p || !b || b.state !== 'ready' || p.finalized)
+      throw connectAppError('CLIP_SOURCE_UNAVAILABLE', Code.FailedPrecondition)
+    if (p.editPlanRevision !== req.expectedRevision)
+      throw connectAppError('CLIP_PLAN_CONFLICT', Code.Aborted)
+    const snapshot = await freezeBrowserComposition(
+      projectBrowserComposition({
+        ownerId: options.ownerId ?? 'alice',
+        projectId: p.id,
+        projectRevision: req.expectedRevision,
+        planRevision: req.expectedRevision,
+        plan: p.editing!.plan,
+        ratio: p.ratio ?? 'vertical',
+        sources: p.editing!.sources,
+        layoutObservations: p.editing!.layoutObservations,
+        design: { hideDisclosure: p.hideDisclosure, disclosure: p.disclosure },
+      }),
+    )
+    const renderId = `browser-render-${browserRenders.size + 1}`
+    browserRenders.set(renderId, {
+      projectId: p.id,
+      revision: req.expectedRevision,
+      cancelled: false,
+      stored: false,
+      passed: false,
+    })
+    return {
+      renderId,
+      compositionVersion: snapshot.versions.renderer,
+      componentVersion: snapshot.versions.components,
+      fontVersion: snapshot.versions.fonts,
+      assetVersion: snapshot.versions.assets,
+      snapshotFingerprint: 'a'.repeat(64),
+    }
   })
   router.rpc(ClipRenderService.method.startClipRender, (req) => {
     options.calls?.push('StartClipRender')

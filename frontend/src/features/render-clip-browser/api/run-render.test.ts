@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import type { BrowserVideoTrack } from '@/entities/clip-preview'
+import type { BrowserVideoTrack, BrowserCompositionSnapshot } from '@/entities/clip-preview'
 import type { ClipProject } from '@/entities/clip-project'
 import { clipTimelineFixture } from '@/test/clip-editing'
 import {
@@ -225,4 +225,14 @@ it('does not start video or store a narrated result when its audio path refuses'
   expect(f.operations.video).not.toHaveBeenCalled()
   expect(f.operations.store).not.toHaveBeenCalled()
   expect(f.operations.cancel).not.toHaveBeenCalled()
+})
+it('refuses preview-purpose input before original/audio/admission/mux initialization', async () => {
+  const f = fixture()
+  f.input.snapshot = { purpose: 'preview' } as unknown as BrowserCompositionSnapshot
+  await expect(f.run()).rejects.toThrow('CLIP_SNAPSHOT_EXPORT_PURPOSE_REQUIRED')
+  expect(f.operations.audio).not.toHaveBeenCalled()
+  expect(f.operations.admit).not.toHaveBeenCalled()
+  expect(f.operations.prepare).not.toHaveBeenCalled()
+  expect(f.operations.video).not.toHaveBeenCalled()
+  expect(f.operations.store).not.toHaveBeenCalled()
 })

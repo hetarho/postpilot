@@ -4,6 +4,9 @@ import {
   type SpeechAudioLoader,
   type BrowserVideoTrack,
   type ClipRenderCalls,
+  type BrowserCompositionSnapshot,
+  type BrowserCompositionInput,
+  freezeBrowserComposition,
 } from '@/entities/clip-preview'
 import { type ClipProject, type ClipRatio } from '@/entities/clip-project'
 import { CLIP_BROWSER_RENDER } from '@/entities/clip-design'
@@ -17,15 +20,20 @@ import { renderBrowserVideo } from './render-video'
 import { renderBrowserAudio, type BrowserAudioTrack } from './render-audio'
 import { browserAudioPreflight } from '../model/audio-preflight'
 import { createBrowserResultStore, storeBrowserResult } from './store-result'
+import { storeVerifiedBrowserResult, type VerifiedBrowserResult } from './store-result'
+import { runLocalBrowserRender } from './run-local-render'
 
 export interface BrowserRenderInput {
+  ownerId?: string
+  snapshot?: BrowserCompositionSnapshot
+  onLocalReady?: (artifact: VerifiedBrowserResult) => void
   projectId: string
   loadSpeech?: SpeechAudioLoader
   revision: number
   batchId: string
   plan: ClipEditPlan
   ratio: ClipRatio
-  localSources: readonly { fingerprint: string; url: string; file?: File }[]
+  localSources: readonly { sourceId?: string; fingerprint: string; url: string; file?: File }[]
   resolvePlayback: (fingerprint: string) => Promise<string>
 }
 export interface BrowserRenderProgress {
@@ -42,7 +50,24 @@ export class BrowserRenderSamplingError extends Error {
 }
 export interface BrowserRenderOperations {
   /** The render's identity, and the job its grounds are sampled by (none without a worker). */
-  admit(input: BrowserRenderInput): Promise<{ renderId: string; jobId: string }>
+  admit(input: BrowserRenderInput): Promise<{
+    renderId: string
+    jobId: string
+    snapshotFingerprint?: string
+    compositionVersion?: string
+    componentVersion?: string
+    fontVersion?: string
+    assetVersion?: string
+  }>
+  bindSnapshot?: (
+    snapshot: BrowserCompositionSnapshot,
+    admission: Awaited<ReturnType<BrowserRenderOperations['admit']>>,
+  ) => Promise<BrowserCompositionSnapshot>
+  storeLocal?: (
+    artifact: VerifiedBrowserResult,
+    signal: AbortSignal,
+    progress: (percent: number) => void,
+  ) => Promise<ClipProject>
   /** Resolves once the sampling job kept the grounds; rejects when it ended otherwise. */
   sampled(jobId: string, signal: AbortSignal): Promise<void>
   cancel(id: string): Promise<boolean>
@@ -73,7 +98,33 @@ export function browserRenderOperations(calls: {
   job: GenerationJobCalls
 }): BrowserRenderOperations {
   return {
+    async bindSnapshot(snapshot, admitted) {
+      if (
+        !admitted.snapshotFingerprint ||
+        admitted.compositionVersion !== snapshot.versions.renderer ||
+        admitted.componentVersion !== snapshot.versions.components ||
+        admitted.fontVersion !== snapshot.versions.fonts ||
+        admitted.assetVersion !== snapshot.versions.assets
+      )
+        throw new Error('CLIP_COMPOSITION_VERSION_UNSUPPORTED')
+      return freezeBrowserComposition(
+        structuredClone({
+          ...snapshot,
+          authoritativeFingerprint: admitted.snapshotFingerprint,
+        }) as unknown as BrowserCompositionInput,
+      )
+    },
     async admit(input) {
+      if (input.snapshot) {
+        if (!calls.render.admitComposition) throw new Error('CLIP_LOCAL_COMPOSITION_UNAVAILABLE')
+        const admitted = await calls.render.admitComposition({
+          projectId: input.projectId,
+          expectedRevision: input.revision,
+          batchId: input.batchId,
+          compositionVersion: input.snapshot.versions.renderer,
+        })
+        return { ...admitted, jobId: '' }
+      }
       const { renderId, jobId } = await calls.render.admit({
         projectId: input.projectId,
         expectedRevision: input.revision,
@@ -117,6 +168,13 @@ export function browserRenderOperations(calls: {
         signal,
         progress,
       ),
+    storeLocal: (artifact, signal, progress) =>
+      storeVerifiedBrowserResult(
+        artifact,
+        createBrowserResultStore(calls.render),
+        signal,
+        progress,
+      ),
   }
 }
 
@@ -128,6 +186,13 @@ export async function runBrowserRender(
   signal: AbortSignal,
   progress: (value: BrowserRenderProgress) => void,
 ): Promise<ClipProject> {
+  if (input.snapshot)
+    return runLocalBrowserRender(
+      { ...input, snapshot: input.snapshot },
+      operations,
+      signal,
+      progress,
+    )
   const controller = new AbortController()
   let id: string | undefined
   let cancellation: Promise<boolean> | undefined

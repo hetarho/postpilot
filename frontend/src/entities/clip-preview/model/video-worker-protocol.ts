@@ -3,12 +3,14 @@ import type {
   BrowserVideoProgress,
   BrowserVideoTrack,
   BrowserVideoMeasurements,
+  EncodedClipChunk,
 } from './browser-video'
 import type { BrowserMediaSourceAccess } from '@/shared/lib'
 
 export type VideoWorkerInput =
   | { type: 'start'; input: BrowserVideoInput }
   | { type: 'cancel' }
+  | { type: 'packetAck'; requestId: number; error?: string }
   | { type: 'sourceAccess'; requestId: number; access?: BrowserMediaSourceAccess; error?: string }
   | { type: 'source'; requestId: number; bitmap: ImageBitmap }
   // A sequence caption's own frame for this output frame, drawn by the server and
@@ -24,6 +26,12 @@ export type VideoWorkerInput =
       height: number
     }
 export type VideoWorkerOutput =
+  | {
+      type: 'packet'
+      requestId: number
+      packet: EncodedClipChunk
+      decoderConfig?: VideoDecoderConfig
+    }
   | { type: 'sourceAccess'; requestId: number; sourceId: string; fingerprint: string }
   | { type: 'cancelled' }
   | { type: 'source'; requestId: number; fingerprint: string; timeMs: number }

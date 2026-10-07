@@ -1,3 +1,4 @@
+import { webcrypto } from 'node:crypto'
 import { create } from '@bufbuild/protobuf'
 import { act, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -11,37 +12,74 @@ import { renderAppAt } from '@/test/app'
 import { discardClipDraftQueues } from '@/features/edit-clip-project'
 
 const media = vi.hoisted(() => ({ video: vi.fn(), dispose: vi.fn(), captionFrames: vi.fn() }))
+// UI orchestration only. Real Worker/codec/storage qualification is exercised by
+// scripts/browser-export-check.mjs with actual media and finalized-file measurements.
 vi.mock('@/features/render-clip-browser/api/run-render', async (original) => {
   const actual = await original<typeof import('@/features/render-clip-browser/api/run-render')>()
-  const { storeBrowserResult, createBrowserResultStore } =
-    await import('@/features/render-clip-browser/api/store-result')
+  const { BrowserUploadPendingError } =
+    await import('@/features/render-clip-browser/api/run-local-render')
+  const { browserRenderVerdict } = await import('@/features/render-clip-browser/model/verdict')
   return {
     ...actual,
-    browserRenderOperations: (calls: Parameters<typeof actual.browserRenderOperations>[0]) =>
-      ({
-        ...actual.browserRenderOperations(calls),
-        prepare: async () => ({
-          assets: [],
-          width: 1080,
-          height: 1920,
-          captionFrames: media.captionFrames,
-          dispose: media.dispose,
-        }),
-        video: media.video,
-        audio: async () => undefined,
-        store: (id, video, audio, input, signal, progress) =>
-          storeBrowserResult(
-            id,
-            video,
-            audio,
-            input.ratio,
-            input.plan.durationMs,
-            createBrowserResultStore(calls.render),
-            signal,
-            progress,
-            async () => new Blob(['encoded-mp4'], { type: 'video/mp4' }),
-          ),
-      }) satisfies ReturnType<typeof actual.browserRenderOperations>,
+    browserRenderOperations: (calls: Parameters<typeof actual.browserRenderOperations>[0]) => ({
+      ...actual.browserRenderOperations(calls),
+      video: media.video,
+    }),
+    runBrowserRender: async (
+      ...[input, operations, signal, progress]: Parameters<typeof actual.runBrowserRender>
+    ) => {
+      const admitted = await operations.admit(input)
+      const snapshot = await operations.bindSnapshot!(input.snapshot!, admitted)
+      const handle = operations.video(
+        { snapshot, plan: input.plan, ratio: input.ratio, assets: [] },
+        input.localSources,
+        input.resolvePlayback,
+        signal,
+      )
+      let local = false
+      const progressJob = (async () => {
+        for await (const value of handle.progress)
+          progress({
+            stage: 'encoding',
+            percent: 20 + (60 * value.completedFrames) / value.totalFrames,
+          })
+      })()
+      void progressJob.catch(() => {})
+      try {
+        const video = await handle.result
+        await progressJob
+        signal.throwIfAborted()
+        const artifact = {
+          renderId: admitted.renderId,
+          file: new Blob(['encoded-mp4'], { type: 'video/mp4' }),
+          verdict: browserRenderVerdict(video, undefined, input.ratio, input.plan.durationMs),
+          dispose: async () => {},
+        }
+        input.onLocalReady!(artifact)
+        local = true
+        progress({ stage: 'storing', percent: 80 })
+        return await operations.storeLocal!(artifact, signal, (percent) =>
+          progress({ stage: 'storing', percent: 80 + 0.19 * percent }),
+        )
+      } catch (error) {
+        if (local && !signal.aborted)
+          throw new BrowserUploadPendingError(
+            {
+              renderId: admitted.renderId,
+              file: new Blob(['encoded-mp4']),
+              verdict: browserRenderVerdict(track, undefined, input.ratio, input.plan.durationMs),
+              dispose: async () => {},
+            },
+            error,
+          )
+        await operations.cancel(admitted.renderId)
+        throw error
+      } finally {
+        handle.cancel()
+        await Promise.allSettled([progressJob])
+        media.dispose()
+      }
+    },
   }
 })
 vi.mock('@/shared/lib/upload', async (original) => ({
@@ -65,6 +103,11 @@ let uploadProgress: (percent: number) => void
 let track: BrowserVideoTrack
 
 beforeEach(() => {
+  vi.stubGlobal('crypto', webcrypto)
+  vi.stubGlobal(
+    'URL',
+    Object.assign(URL, { createObjectURL: () => 'blob:verified-output', revokeObjectURL: vi.fn() }),
+  )
   vi.stubGlobal('VideoEncoder', { isConfigSupported: async () => ({ supported: true }) })
   vi.stubGlobal('AudioEncoder', { isConfigSupported: async () => ({ supported: true }) })
   encoded = deferred()
@@ -122,6 +165,9 @@ afterEach(() => {
 async function mount() {
   const project = observedClipFixture()
   project.editing = clipTimelineFixture()
+  project.editing.sources.forEach((source) => {
+    source.hasAudio = false
+  })
   project.targetDurationMs = 19800
   project.result!.renderKind = 'browser'
   project.editing.plan.sourceAudio = project.editing.plan.cuts.map((c) => ({
@@ -166,7 +212,7 @@ async function mount() {
 it('keeps ② interactive and reports one monotonic scale from encoding through durable storage', async () => {
   const { calls } = await mount()
   await waitFor(() =>
-    expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '20'),
+    expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '35'),
   )
   expect(screen.queryByRole('region', { name: '클립 작업 진행' })).not.toBeInTheDocument()
   expect(screen.getByRole('tab', { name: '수정' })).toHaveAttribute('aria-selected', 'true')
@@ -245,11 +291,11 @@ it('shows storage failure beside the render controls and leaves the old download
   await act(async () => encoded.resolve(track))
   await waitFor(() => expect(uploadSignal).toBeDefined())
   await act(async () => uploaded.reject(new Error('storage unavailable')))
-  await screen.findByText('브라우저 렌더를 완료하지 못했어요.')
+  await screen.findByText('이 기기의 영상은 준비됐어요. 비공개 저장을 다시 시도해 주세요.')
   expect(screen.getByRole('link', { name: '렌더 1 다운로드' })).toHaveAttribute(
     'href',
     'https://example.test/download.mp4',
   )
   expect(calls).not.toContain('CompleteClipRenderUpload')
-  expect(calls).toContain('CancelClipBrowserRender')
+  expect(calls).not.toContain('CancelClipBrowserRender')
 })

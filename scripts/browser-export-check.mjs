@@ -1,0 +1,300 @@
+import {
+  createReadStream,
+  readFileSync,
+  statSync,
+  mkdirSync,
+  writeFileSync,
+} from "node:fs";
+import { createHash } from "node:crypto";
+import { execFileSync } from "node:child_process";
+import { createRequire } from "node:module";
+import { resolve } from "node:path";
+import { pathToFileURL } from "node:url";
+import { chromium } from "playwright";
+import { parseByteRange } from "./browser-media-report.mjs";
+
+const root = resolve(import.meta.dirname, ".."),
+  args = process.argv.slice(2);
+const option = (name, fallback) =>
+  args.includes(name) ? args[args.indexOf(name) + 1] : fallback;
+const output = resolve(option("--output", "tmp/browser-export-check"));
+const sourcePaths = execFileSync(
+  "git",
+  [
+    "ls-files",
+    "frontend/src/entities/clip-preview",
+    "frontend/src/entities/clip-design/config",
+    "frontend/src/entities/clip-plan/model",
+    "frontend/src/shared/lib/media",
+    "frontend/src/features/render-clip-browser",
+    "frontend/src/test/browser-media/export-entry.ts",
+    "scripts/browser-export-check.mjs",
+    "pnpm-lock.yaml",
+    "backend/internal/clip/browser_render.go",
+  ],
+  { cwd: root, encoding: "utf8" },
+)
+  .trim()
+  .split("\n")
+  .filter((path) => path && !/\.(test|spec)\./u.test(path));
+const hashes = () =>
+  Object.fromEntries(
+    sourcePaths.map((path) => [
+      path,
+      createHash("sha256")
+        .update(readFileSync(resolve(root, path)))
+        .digest("hex"),
+    ]),
+  );
+const sourceHashes = hashes();
+
+const files = new Map([
+  [
+    "silent",
+    option(
+      "--video",
+      "/private/tmp/postpilot-browser-media-prep-video/original-cfr60.mp4",
+    ),
+  ],
+  [
+    "source",
+    option(
+      "--audio-video",
+      "/private/tmp/postpilot-browser-media-prep-audio/delayed-audio.mp4",
+    ),
+  ],
+  [
+    "speech",
+    option(
+      "--speech",
+      "/private/tmp/postpilot-browser-media-prep-audio/synthetic-speech.wav",
+    ),
+  ],
+]);
+const require = createRequire(resolve(root, "frontend/package.json"));
+const { createServer } = await import(
+  pathToFileURL(require.resolve("vite")).href
+);
+const server = await createServer({
+  configFile: false,
+  root: resolve(root, "frontend"),
+  cacheDir: resolve(output, "vite-cache"),
+  resolve: { alias: { "@": resolve(root, "frontend/src") } },
+  server: { host: "127.0.0.1", port: 0, hmr: false, watch: null },
+  plugins: [
+    {
+      name: "export-fixture",
+      configureServer(vite) {
+        vite.middlewares.use((request, response, next) => {
+          response.setHeader("Cross-Origin-Opener-Policy", "same-origin");
+          response.setHeader("Cross-Origin-Embedder-Policy", "require-corp");
+          if (request.url === "/probe") {
+            response.setHeader("Content-Type", "text/html");
+            response.end(
+              '<script type=module src="/src/test/browser-media/export-entry.ts"></script>',
+            );
+            return;
+          }
+          const path = files.get(request.url?.slice("/file/".length));
+          if (!request.url?.startsWith("/file/") || !path) return next();
+          const size = statSync(path).size,
+            range = parseByteRange(request.headers.range, size);
+          response.writeHead(range ? 206 : 200, {
+            "Content-Type": path.endsWith(".wav") ? "audio/wav" : "video/mp4",
+            "Content-Length": range ? range.end - range.start + 1 : size,
+            ...(range
+              ? { "Content-Range": `bytes ${range.start}-${range.end}/${size}` }
+              : {}),
+          });
+          const stream = createReadStream(path, range ?? {});
+          response.on("close", () => stream.destroy());
+          stream.pipe(response);
+        });
+      },
+    },
+  ],
+});
+await server.listen();
+const origin = server.resolvedUrls.local[0].replace(/\/$/, "");
+const executablePath = option(
+  "--browser",
+  "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+);
+const browser = await chromium.launch({ executablePath });
+try {
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  await page.goto(origin + "/probe");
+  await page.waitForFunction(() => !!window.exportFixture);
+  const storage = await page.evaluate(() => window.exportFixture.storage());
+  if (
+    storage.kind !== "opfs" ||
+    JSON.stringify(storage.bytes) !==
+      JSON.stringify([1, 2, 3, 13, 14, 15, 0, 0, 8, 9, 10, 11]) ||
+    storage.liveNames.length !== 1 ||
+    storage.remaining.length ||
+    storage.afterCancel.length ||
+    storage.overflow !== "MEDIA_OUTPUT_SIZE_LIMIT"
+  )
+    throw Error(JSON.stringify(storage));
+  await page.evaluate(() => window.exportFixture.leaveAbandoned());
+  const secondPage = await page.context().newPage();
+  await secondPage.goto(origin + "/probe");
+  await secondPage.waitForFunction(() => !!window.exportFixture);
+  const liveRecovery = await secondPage.evaluate(() =>
+    window.exportFixture.recover(),
+  );
+  if (liveRecovery.before.length !== 1 || liveRecovery.after.length !== 1)
+    throw Error("Recovery removed another live page's owned output");
+  await page.goto("about:blank");
+  await page.goto(origin + "/probe");
+  await page.waitForFunction(() => !!window.exportFixture);
+  const recovery = await page.evaluate(() => window.exportFixture.recover());
+  if (recovery.before.length !== 1 || recovery.after.length)
+    throw Error(JSON.stringify(recovery));
+  await secondPage.close();
+  let nativeLayout;
+  const manifestPath = option("--native-layout", "");
+  if (manifestPath) {
+    const bytes = readFileSync(manifestPath),
+      manifest = JSON.parse(bytes);
+    const results = [];
+    for (const input of manifest.cases) {
+      const result = await page.evaluate(
+        (input) => window.exportFixture.layout(input),
+        input,
+      );
+      if (
+        !result.passed ||
+        result.purpose !== "export" ||
+        result.componentVersion !== manifest.componentVersion ||
+        result.assetVersion !== manifest.assetVersion
+      )
+        throw Error("Native strict export layout mismatch");
+      results.push(result);
+    }
+    nativeLayout = {
+      manifestSHA256: createHash("sha256").update(bytes).digest("hex"),
+      expectedCases: manifest.cases.length,
+      results,
+      qualification: false,
+      scope:
+        "Independent native declarations compared through strict export freeze and the exact resolveLayout method called by the export Worker.",
+    };
+  }
+  const cases = [];
+  for (const [mode, ratio, memory, captionStyle] of [
+    ["silent", "vertical"],
+    ["silent", "horizontal"],
+    ["silent", "square"],
+    ["source", "square"],
+    ["narration", "vertical"],
+    ["mixed", "square"],
+    ["silent", "square", true],
+    ["silent", "vertical", false, "bold"],
+    ["narration", "square", false, "ember"],
+  ]) {
+    const source = mode === "source" || mode === "mixed" ? "source" : "silent";
+    const fingerprint = createHash("sha256")
+      .update(readFileSync(files.get(source)))
+      .digest("hex");
+    const result = await page.evaluate(
+      (request) => window.exportFixture.render(request),
+      {
+        mode,
+        ratio,
+        memory,
+        captionStyle,
+        url: origin + "/file/" + source,
+        fingerprint,
+        speechUrl: origin + "/file/speech",
+        slowMs: mode === "silent" && ratio === "vertical" ? 5 : 0,
+      },
+    );
+    if (
+      result.error ||
+      !result.verdict.passed ||
+      result.frameCount !== 450 ||
+      result.output.videoFrames !== 450 ||
+      result.retainedVideoPackets !== 0 ||
+      result.kind !== (memory ? "blob" : "opfs") ||
+      result.packetResources.peakPackets > 8 ||
+      result.packetResources.peakBytes > 4 * 1024 * 1024 ||
+      result.sourceResources.presentation.liveFrames !== 0 ||
+      result.seeks.length !== 3
+    )
+      throw Error(JSON.stringify(result));
+    if (captionStyle && result.backgroundSamples !== 3)
+      throw Error("Missing original-bound caption background evidence");
+    if ((mode === "narration" || mode === "mixed") && !result.speechFingerprint)
+      throw Error("Missing exact speech provenance");
+    cases.push(result);
+    console.log(
+      JSON.stringify({
+        mode,
+        ratio,
+        kind: result.kind,
+        decodedAudio: result.decodedAudio,
+        bytes: result.fileBytes,
+        packets: result.packetResources,
+        passed: true,
+      }),
+    );
+  }
+  const fingerprint = createHash("sha256")
+    .update(readFileSync(files.get("silent")))
+    .digest("hex");
+  const cancelled = await page.evaluate(
+    (request) => window.exportFixture.render(request),
+    {
+      mode: "silent",
+      ratio: "square",
+      url: origin + "/file/silent",
+      fingerprint,
+      speechUrl: origin + "/file/speech",
+      cancelAt: 1,
+    },
+  );
+  if (cancelled.name !== "AbortError") throw Error(JSON.stringify(cancelled));
+  const afterCancel = await page.evaluate(() => window.exportFixture.recover());
+  if (afterCancel.before.length || afterCancel.after.length)
+    throw Error("Cancelled output persisted");
+  if (JSON.stringify(sourceHashes) !== JSON.stringify(hashes()))
+    throw Error("Source changed during actual browser verification");
+  const report = {
+    version: 1,
+    sourceHashes,
+    nativeLayout,
+    sourceHashScope:
+      "Exact bytes recorded before and checked after actual execution.",
+    qualification: false,
+    scope:
+      "Actual Chrome production Worker, codecs, standard seekable MP4, synthetic requested audio and origin-output ownership. No hardware, real-voice, native full-composition or release qualification.",
+    browser: await browser.version(),
+    executablePath,
+    node: process.version,
+    fixtures: Object.fromEntries(
+      [...files].map(([id, path]) => [
+        id,
+        {
+          bytes: statSync(path).size,
+          sha256: createHash("sha256").update(readFileSync(path)).digest("hex"),
+        },
+      ]),
+    ),
+    storage,
+    liveRecovery,
+    recovery,
+    cases,
+    cancelled,
+    afterCancel,
+  };
+  mkdirSync(output, { recursive: true });
+  writeFileSync(
+    resolve(output, "report.json"),
+    JSON.stringify(report, null, 2) + "\n",
+  );
+} finally {
+  await browser.close();
+  await server.close();
+}

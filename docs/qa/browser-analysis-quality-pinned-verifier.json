@@ -1,0 +1,100 @@
+{
+  "version": 1,
+  "sourceCommit": "e5ba9590a4d2098b7de1623a479b6b7eead74e7e",
+  "backendTree": "927d90a4a99e0c1f6b66207ce25a4768cfc15d53",
+  "imageId": "sha256:dab6a36166d2d4fccb298ffed9cacff51fcf412a19a6a9b4d75bac317b805c3a",
+  "architecture": "arm64",
+  "imageDefaultUser": "nonroot:nonroot",
+  "verifierUser": "501:20",
+  "sourceHoldUnchanged": true,
+  "productionDockerfileSHA256": "a937e3451c9456b0216589a5a4f42a60c0b670dc04fce6f49174e2f2cf81fda4",
+  "diagnosticDockerfileSHA256": "10eab239518c279f8efe0d13d38779a46cda63c151618c893fbc8356b1ced508",
+  "actualToolVersions": {
+    "ffmpeg": "9.0.1",
+    "ffprobe": "9.0.1",
+    "resvg": "0.48.1"
+  },
+  "executedBinaryArtifacts": {
+    "/analysisquality.test": {
+      "bytes": 6804725,
+      "sha256": "5b7329cb367e15ed16c8a1a5f057dde8680905eff31bea65804723d7e133b28b"
+    },
+    "/media-worker": {
+      "bytes": 15401122,
+      "sha256": "ee4ddaa3cdddd534998206b0f2c6dd297910bb3c4589261348138079d8dd2771"
+    }
+  },
+  "existingSyntheticCopy": {
+    "bytes": 8291,
+    "sha256": "facb48b73c141f37edf2d3c4d85a23b6630fb81cc77797a82b1395ba98ad4362",
+    "producer": "T601 b3ec132c Chrome WebCodecs synthetic diagnostic",
+    "durationMs": 1000,
+    "decodedFrames": 15,
+    "audioSamples": 48000,
+    "privateInputUsed": true
+  },
+  "verifier": {
+    "testPattern": "^TestLocalVerifierExistingAuthorizedSyntheticCopy$",
+    "exit": 0,
+    "network": "none",
+    "readOnlyRoot": true,
+    "memoryBytes": 268435456,
+    "memorySwapBytes": 268435456,
+    "nanoCpus": 500000000,
+    "logSHA256": "ee0b73257b136326bd3c62aef69b82402ec9b309aa7cbe1d998094ec36aa64dc"
+  },
+  "checks": [
+    {
+      "name": "build",
+      "exit": 0,
+      "logSHA256": "b4655a3ef325048d6eb785428df9de52002a2f6c64093ad53e87789b96585492"
+    },
+    {
+      "name": "ffmpeg-version",
+      "exit": 0,
+      "logSHA256": "477624b2aebb13a61838174d8f65fec948156e8803d838c108c6fd9e2b822c20"
+    },
+    {
+      "name": "ffprobe-version",
+      "exit": 0,
+      "logSHA256": "8b4884307e7284ff2af90dcac47e2002f4f008912529060232466b54af2cac25"
+    },
+    {
+      "name": "resvg-version",
+      "exit": 0,
+      "logSHA256": "abf6e6e1886aa5496ae513cdcffbe669dc21180249c383f5ddc3118633fb0f32"
+    },
+    {
+      "name": "production-worker-manifest",
+      "exit": 0,
+      "logSHA256": "65846e76b0505fca3a2f9e5374ea809a794438bd1f711c9544cf023646144c26"
+    },
+    {
+      "name": "verifier",
+      "exit": 0,
+      "logSHA256": "ee0b73257b136326bd3c62aef69b82402ec9b309aa7cbe1d998094ec36aa64dc"
+    }
+  ],
+  "executionScope": {
+    "verifier": "Actual current LocalVerifier test binary, existing authorized synthetic AAC MP4; no new corpus or provider call.",
+    "additionalProductionManifest": "Actual current production worker manifest invocation includes native capability checks in an isolated network-none container; separately recorded from verifier acceptance.",
+    "priorFFmpeg7_1Evidence": "Earlier packet-JSON comparison is distinct evidence, not this current binary execution."
+  },
+  "priorPacketImageVersion": {
+    "imageId": "sha256:a8b186217f03287799fc47da77fd1e472d26f35d9274c981b7315966cb0bcc8b",
+    "sourceCommit": "31674c3cd386fce8317968dad29cdcb4d11f2b0a",
+    "actualFFprobeVersion": "9.0.1",
+    "versionCommandExit": 0,
+    "versionLogSHA256": "8b4884307e7284ff2af90dcac47e2002f4f008912529060232466b54af2cac25"
+  },
+  "syntheticOnly": true,
+  "providerCalls": 0,
+  "semanticQualified": false,
+  "productionRoleImageQualified": false,
+  "acceptanceCompleted": false,
+  "limits": [
+    "UID501 diagnostic fixture access does not certify the UID65532 production analysis role.",
+    "No semantic corpus, live provider comparison, approved spend ceiling or human review was supplied.",
+    "Prior full102-package backend pass is pre-AAC-fix; current affected checks and current image execution are separately scoped."
+  ]
+}
