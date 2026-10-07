@@ -24,5 +24,7 @@
   "analysisQualification": false,
   "voiceQualification": false,
   "fullCI": "pending",
-  "remotePush": "pending"
+  "remotePush": "pending",
+  "currentAssetVersion": "clip-design-assets-v1-ink-8f58a59b925711cb5ae8b8b3159b116c5d2200f4774315f8d7a42811c30bf7c2",
+  "catalogRegenerationScope": "Only effectImplementation.sources/pnpm-lock.yaml changed; native catalog styles/paint and all font/WASM bytes are unchanged."
 }

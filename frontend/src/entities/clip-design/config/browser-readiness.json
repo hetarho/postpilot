@@ -4,7 +4,7 @@
     "renderer": "clip-browser-composition-v1",
     "components": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
     "fonts": "bundled-clip-fonts-v1",
-    "assets": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3",
+    "assets": "clip-design-assets-v1-ink-8f58a59b925711cb5ae8b8b3159b116c5d2200f4774315f8d7a42811c30bf7c2",
     "wasmSHA256": "22bf6e9f9a100d972da0411a69c5ba504367fc1fa87b3b64e3f35e53926d2d70",
     "wasmVersion": "2.6.2",
     "qualified": false,
