@@ -146,3 +146,14 @@ type Jobs interface {
 	HasActiveForVoice(ctx context.Context, voiceID string) (bool, error)
 }
 type Progress func(stage string, done, total int)
+
+// MaterialEdits preserves sample kind/prompt, accepts only owned uploaded photos and records
+// its operation receipt atomically with content CAS. Label-only changes keep content revision.
+type MaterialEdits interface {
+	UpdateVoiceSample(context.Context, SampleMutation) (Sample, error)
+}
+
+// AcceptedProfiles resolves exactly the owned accepted snapshot, excluding withdrawn excerpts.
+type AcceptedProfiles interface {
+	AcceptedProfile(context.Context, string, string, string) (Analysis, error)
+}

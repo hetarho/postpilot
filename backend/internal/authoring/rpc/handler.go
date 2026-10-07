@@ -16,7 +16,10 @@ import (
 	"github.com/postpilot/backend/internal/usage"
 )
 
-type Handler struct{ service *authoring.Service }
+type Handler struct {
+	postpilotv1connect.UnimplementedConfigurationAuthoringServiceHandler
+	service *authoring.Service
+}
 
 var _ postpilotv1connect.ConfigurationAuthoringServiceHandler = (*Handler)(nil)
 
@@ -130,6 +133,13 @@ func (h *Handler) EstimateAuthoringOperation(ctx context.Context, r *connect.Req
 	if e != nil {
 		return nil, e
 	}
+	count, err := authoring.NormalizeCandidateCount(int(r.Msg.GetCandidateCount()))
+	if err != nil {
+		return nil, rpcserver.NewAppError(connect.CodeInvalidArgument, "invalid candidate count", v1.FailureReason_AUTHORING_CANDIDATE_COUNT_INVALID, nil)
+	}
+	if count != authoring.CandidateCount {
+		return nil, rpcserver.NewAppError(connect.CodeUnimplemented, "candidate preparation is not integrated", v1.FailureReason_AUTHORING_FEATURE_UNAVAILABLE, nil)
+	}
 	e0, e := h.service.EstimateFor(ctx, u, kind(r.Msg.GetKind()), mode(r.Msg.GetMode()), ref(r.Msg.GetWriteModel()), r.Msg.GetSessionId())
 	if e != nil {
 		return nil, toError(e)
@@ -145,6 +155,13 @@ func (h *Handler) StartAuthoringOperation(ctx context.Context, r *connect.Reques
 	u, e := owner(ctx)
 	if e != nil {
 		return nil, e
+	}
+	count, err := authoring.NormalizeCandidateCount(int(r.Msg.GetCandidateCount()))
+	if err != nil {
+		return nil, rpcserver.NewAppError(connect.CodeInvalidArgument, "invalid candidate count", v1.FailureReason_AUTHORING_CANDIDATE_COUNT_INVALID, nil)
+	}
+	if count != authoring.CandidateCount {
+		return nil, rpcserver.NewAppError(connect.CodeUnimplemented, "candidate preparation is not integrated", v1.FailureReason_AUTHORING_FEATURE_UNAVAILABLE, nil)
 	}
 	id, s, e := h.service.Start(ctx, u, authoring.Start{SessionID: r.Msg.GetSessionId(), ExpectedRevision: r.Msg.GetExpectedRevision(), RequestID: r.Msg.GetRequestId(), Mode: mode(r.Msg.GetMode()), Prompt: r.Msg.GetPrompt(), WriteModel: ref(r.Msg.GetWriteModel())})
 	if e != nil {

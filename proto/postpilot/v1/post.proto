@@ -222,6 +222,7 @@ message Post {
   repeated QualityMetric quality_rules = 31;
   // The storyline the write answered first, unset when the post has none (POST-99).
   Storyline storyline = 32;
+  int64 input_revision = 33;
 }
 
 // One part of a storyline: what it shows and says, and the attachment names it uses.
@@ -292,6 +293,12 @@ message PostSummary {
   // The current content revision's tags, so the list can be searched by tag (POST-65). Empty
   // for a post whose content has not been written yet.
   repeated string tags = 11;
+  bool content_ready = 12;
+  bool export_ready = 13;
+  string published_url = 14;
+  GenerationJob latest_ordinary_failure = 15;
+  int64 input_revision = 16;
+  int64 content_revision = 17;
 }
 
 message GenerationJob {

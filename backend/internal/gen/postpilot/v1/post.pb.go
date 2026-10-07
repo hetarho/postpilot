@@ -691,6 +691,7 @@ type Post struct {
 	QualityRules []QualityMetric `protobuf:"varint,31,rep,packed,name=quality_rules,json=qualityRules,proto3,enum=postpilot.v1.QualityMetric" json:"quality_rules,omitempty"`
 	// The storyline the write answered first, unset when the post has none (POST-99).
 	Storyline     *Storyline `protobuf:"bytes,32,opt,name=storyline,proto3" json:"storyline,omitempty"`
+	InputRevision int64      `protobuf:"varint,33,opt,name=input_revision,json=inputRevision,proto3" json:"input_revision,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -933,6 +934,13 @@ func (x *Post) GetStoryline() *Storyline {
 		return x.Storyline
 	}
 	return nil
+}
+
+func (x *Post) GetInputRevision() int64 {
+	if x != nil {
+		return x.InputRevision
+	}
+	return 0
 }
 
 // One part of a storyline: what it shows and says, and the attachment names it uses.
@@ -1282,9 +1290,15 @@ type PostSummary struct {
 	ContentLanguage     ContentLanguage        `protobuf:"varint,10,opt,name=content_language,json=contentLanguage,proto3,enum=postpilot.v1.ContentLanguage" json:"content_language,omitempty"`
 	// The current content revision's tags, so the list can be searched by tag (POST-65). Empty
 	// for a post whose content has not been written yet.
-	Tags          []string `protobuf:"bytes,11,rep,name=tags,proto3" json:"tags,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Tags                  []string       `protobuf:"bytes,11,rep,name=tags,proto3" json:"tags,omitempty"`
+	ContentReady          bool           `protobuf:"varint,12,opt,name=content_ready,json=contentReady,proto3" json:"content_ready,omitempty"`
+	ExportReady           bool           `protobuf:"varint,13,opt,name=export_ready,json=exportReady,proto3" json:"export_ready,omitempty"`
+	PublishedUrl          string         `protobuf:"bytes,14,opt,name=published_url,json=publishedUrl,proto3" json:"published_url,omitempty"`
+	LatestOrdinaryFailure *GenerationJob `protobuf:"bytes,15,opt,name=latest_ordinary_failure,json=latestOrdinaryFailure,proto3" json:"latest_ordinary_failure,omitempty"`
+	InputRevision         int64          `protobuf:"varint,16,opt,name=input_revision,json=inputRevision,proto3" json:"input_revision,omitempty"`
+	ContentRevision       int64          `protobuf:"varint,17,opt,name=content_revision,json=contentRevision,proto3" json:"content_revision,omitempty"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
 }
 
 func (x *PostSummary) Reset() {
@@ -1392,6 +1406,48 @@ func (x *PostSummary) GetTags() []string {
 		return x.Tags
 	}
 	return nil
+}
+
+func (x *PostSummary) GetContentReady() bool {
+	if x != nil {
+		return x.ContentReady
+	}
+	return false
+}
+
+func (x *PostSummary) GetExportReady() bool {
+	if x != nil {
+		return x.ExportReady
+	}
+	return false
+}
+
+func (x *PostSummary) GetPublishedUrl() string {
+	if x != nil {
+		return x.PublishedUrl
+	}
+	return ""
+}
+
+func (x *PostSummary) GetLatestOrdinaryFailure() *GenerationJob {
+	if x != nil {
+		return x.LatestOrdinaryFailure
+	}
+	return nil
+}
+
+func (x *PostSummary) GetInputRevision() int64 {
+	if x != nil {
+		return x.InputRevision
+	}
+	return 0
+}
+
+func (x *PostSummary) GetContentRevision() int64 {
+	if x != nil {
+		return x.ContentRevision
+	}
+	return 0
 }
 
 type GenerationJob struct {
@@ -3782,7 +3838,7 @@ const file_postpilot_v1_post_proto_rawDesc = "" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x18\n" +
 	"\adeleted\x18\x03 \x01(\bR\adeleted\x12\x12\n" +
-	"\x04made\x18\x05 \x01(\bR\x04madeJ\x04\b\x04\x10\x05R\x0fsource_language\"\xae\v\n" +
+	"\x04made\x18\x05 \x01(\bR\x04madeJ\x04\b\x04\x10\x05R\x0fsource_language\"\xd5\v\n" +
 	"\x04Post\x12\x12\n" +
 	"\x04slug\x18\x01 \x01(\tR\x04slug\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12\x12\n" +
@@ -3818,7 +3874,8 @@ const file_postpilot_v1_post_proto_rawDesc = "" +
 	"\fpublished_at\x18\x1c \x01(\tR\vpublishedAt\x12-\n" +
 	"\x05field\x18\x1d \x01(\x0e2\x17.postpilot.v1.BlogFieldR\x05field\x12@\n" +
 	"\rquality_rules\x18\x1f \x03(\x0e2\x1b.postpilot.v1.QualityMetricR\fqualityRules\x125\n" +
-	"\tstoryline\x18  \x01(\v2\x17.postpilot.v1.StorylineR\tstorylineB\x10\n" +
+	"\tstoryline\x18  \x01(\v2\x17.postpilot.v1.StorylineR\tstoryline\x12%\n" +
+	"\x0einput_revision\x18! \x01(\x03R\rinputRevisionB\x10\n" +
 	"\x0e_target_lengthB\f\n" +
 	"\n" +
 	"_tag_countJ\x04\b\x13\x10\x14J\x04\b\x1e\x10\x1fR\x19machine_baseline_voice_idR\x16replacement_candidates\">\n" +
@@ -3850,7 +3907,7 @@ const file_postpilot_v1_post_proto_rawDesc = "" +
 	"\bview_url\x18\x06 \x01(\tR\aviewUrl\x12\x1f\n" +
 	"\vduration_ms\x18\a \x01(\x03R\n" +
 	"durationMs\x12!\n" +
-	"\fcontent_type\x18\b \x01(\tR\vcontentType\"\xe9\x03\n" +
+	"\fcontent_type\x18\b \x01(\tR\vcontentType\"\xfd\x05\n" +
 	"\vPostSummary\x12\x12\n" +
 	"\x04slug\x18\x01 \x01(\tR\x04slug\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12\x16\n" +
@@ -3865,7 +3922,13 @@ const file_postpilot_v1_post_proto_rawDesc = "" +
 	"\x0ftarget_language\x18\t \x01(\x0e2\x1d.postpilot.v1.ContentLanguageR\x0etargetLanguage\x12H\n" +
 	"\x10content_language\x18\n" +
 	" \x01(\x0e2\x1d.postpilot.v1.ContentLanguageR\x0fcontentLanguage\x12\x12\n" +
-	"\x04tags\x18\v \x03(\tR\x04tags\"\xc8\x05\n" +
+	"\x04tags\x18\v \x03(\tR\x04tags\x12#\n" +
+	"\rcontent_ready\x18\f \x01(\bR\fcontentReady\x12!\n" +
+	"\fexport_ready\x18\r \x01(\bR\vexportReady\x12#\n" +
+	"\rpublished_url\x18\x0e \x01(\tR\fpublishedUrl\x12S\n" +
+	"\x17latest_ordinary_failure\x18\x0f \x01(\v2\x1b.postpilot.v1.GenerationJobR\x15latestOrdinaryFailure\x12%\n" +
+	"\x0einput_revision\x18\x10 \x01(\x03R\rinputRevision\x12)\n" +
+	"\x10content_revision\x18\x11 \x01(\x03R\x0fcontentRevision\"\xc8\x05\n" +
 	"\rGenerationJob\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04kind\x18\x02 \x01(\tR\x04kind\x12\x16\n" +
@@ -4182,80 +4245,81 @@ var file_postpilot_v1_post_proto_depIdxs = []int32{
 	55, // 19: postpilot.v1.PostSummary.template:type_name -> postpilot.v1.TemplateRef
 	56, // 20: postpilot.v1.PostSummary.target_language:type_name -> postpilot.v1.ContentLanguage
 	56, // 21: postpilot.v1.PostSummary.content_language:type_name -> postpilot.v1.ContentLanguage
-	58, // 22: postpilot.v1.GenerationJob.observe_model:type_name -> postpilot.v1.ModelRef
-	58, // 23: postpilot.v1.GenerationJob.write_model:type_name -> postpilot.v1.ModelRef
-	56, // 24: postpilot.v1.GenerationJob.target_language:type_name -> postpilot.v1.ContentLanguage
-	59, // 25: postpilot.v1.GenerationJob.failure:type_name -> postpilot.v1.Failure
-	14, // 26: postpilot.v1.GetGenerationResponse.job:type_name -> postpilot.v1.GenerationJob
-	57, // 27: postpilot.v1.QualityRuleTicks.metrics:type_name -> postpilot.v1.QualityMetric
-	58, // 28: postpilot.v1.StartGenerationRequest.observe_model:type_name -> postpilot.v1.ModelRef
-	58, // 29: postpilot.v1.StartGenerationRequest.write_model:type_name -> postpilot.v1.ModelRef
-	17, // 30: postpilot.v1.StartGenerationRequest.reobserve:type_name -> postpilot.v1.ReobserveSelection
-	58, // 31: postpilot.v1.StartRevisionRequest.write_model:type_name -> postpilot.v1.ModelRef
-	17, // 32: postpilot.v1.StartStorylineRequest.reobserve:type_name -> postpilot.v1.ReobserveSelection
-	58, // 33: postpilot.v1.StartStorylineRequest.observe_model:type_name -> postpilot.v1.ModelRef
-	58, // 34: postpilot.v1.StartStorylineRequest.write_model:type_name -> postpilot.v1.ModelRef
-	58, // 35: postpilot.v1.StartStorylineRevisionRequest.write_model:type_name -> postpilot.v1.ModelRef
-	56, // 36: postpilot.v1.SavePostDraftRequest.target_language:type_name -> postpilot.v1.ContentLanguage
-	27, // 37: postpilot.v1.SavePostDraftRequest.template_answers:type_name -> postpilot.v1.TemplateAnswer
-	3,  // 38: postpilot.v1.SavePostDraftRequest.field:type_name -> postpilot.v1.BlogField
-	29, // 39: postpilot.v1.SavePostDraftRequest.storyline:type_name -> postpilot.v1.StorylineEdit
-	9,  // 40: postpilot.v1.StorylineEdit.paragraphs:type_name -> postpilot.v1.StorylineParagraph
-	8,  // 41: postpilot.v1.SavePostDraftResponse.post:type_name -> postpilot.v1.Post
-	5,  // 42: postpilot.v1.SavePostContentRequest.content:type_name -> postpilot.v1.PostContent
-	8,  // 43: postpilot.v1.SavePostContentResponse.post:type_name -> postpilot.v1.Post
-	18, // 44: postpilot.v1.SavePostGenerationOptionsRequest.quality_rules:type_name -> postpilot.v1.QualityRuleTicks
-	3,  // 45: postpilot.v1.SavePostGenerationOptionsRequest.field:type_name -> postpilot.v1.BlogField
-	8,  // 46: postpilot.v1.SavePostGenerationOptionsResponse.post:type_name -> postpilot.v1.Post
-	8,  // 47: postpilot.v1.FinalizePostResponse.post:type_name -> postpilot.v1.Post
-	8,  // 48: postpilot.v1.SavePostPublishedUrlResponse.post:type_name -> postpilot.v1.Post
-	8,  // 49: postpilot.v1.GetPostResponse.post:type_name -> postpilot.v1.Post
-	13, // 50: postpilot.v1.ListPostsResponse.posts:type_name -> postpilot.v1.PostSummary
-	2,  // 51: postpilot.v1.CreateUploadRequest.kind:type_name -> postpilot.v1.AttachmentKind
-	11, // 52: postpilot.v1.ConfirmUploadResponse.image:type_name -> postpilot.v1.Image
-	12, // 53: postpilot.v1.ConfirmUploadResponse.video:type_name -> postpilot.v1.Video
-	11, // 54: postpilot.v1.RotateImageResponse.image:type_name -> postpilot.v1.Image
-	28, // 55: postpilot.v1.PostService.SavePostDraft:input_type -> postpilot.v1.SavePostDraftRequest
-	31, // 56: postpilot.v1.PostService.SavePostContent:input_type -> postpilot.v1.SavePostContentRequest
-	33, // 57: postpilot.v1.PostService.SavePostGenerationOptions:input_type -> postpilot.v1.SavePostGenerationOptionsRequest
-	35, // 58: postpilot.v1.PostService.FinalizePost:input_type -> postpilot.v1.FinalizePostRequest
-	37, // 59: postpilot.v1.PostService.SavePostPublishedUrl:input_type -> postpilot.v1.SavePostPublishedUrlRequest
-	39, // 60: postpilot.v1.PostService.GetPost:input_type -> postpilot.v1.GetPostRequest
-	41, // 61: postpilot.v1.PostService.ListPosts:input_type -> postpilot.v1.ListPostsRequest
-	43, // 62: postpilot.v1.PostService.DeletePost:input_type -> postpilot.v1.DeletePostRequest
-	45, // 63: postpilot.v1.PostService.CreateUpload:input_type -> postpilot.v1.CreateUploadRequest
-	47, // 64: postpilot.v1.PostService.ConfirmUpload:input_type -> postpilot.v1.ConfirmUploadRequest
-	49, // 65: postpilot.v1.PostService.DeleteImage:input_type -> postpilot.v1.DeleteImageRequest
-	51, // 66: postpilot.v1.PostService.RotateImage:input_type -> postpilot.v1.RotateImageRequest
-	53, // 67: postpilot.v1.PostService.DeleteVideo:input_type -> postpilot.v1.DeleteVideoRequest
-	19, // 68: postpilot.v1.GenerationService.StartGeneration:input_type -> postpilot.v1.StartGenerationRequest
-	21, // 69: postpilot.v1.GenerationService.StartRevision:input_type -> postpilot.v1.StartRevisionRequest
-	23, // 70: postpilot.v1.GenerationService.StartStoryline:input_type -> postpilot.v1.StartStorylineRequest
-	25, // 71: postpilot.v1.GenerationService.StartStorylineRevision:input_type -> postpilot.v1.StartStorylineRevisionRequest
-	15, // 72: postpilot.v1.GenerationService.GetGeneration:input_type -> postpilot.v1.GetGenerationRequest
-	30, // 73: postpilot.v1.PostService.SavePostDraft:output_type -> postpilot.v1.SavePostDraftResponse
-	32, // 74: postpilot.v1.PostService.SavePostContent:output_type -> postpilot.v1.SavePostContentResponse
-	34, // 75: postpilot.v1.PostService.SavePostGenerationOptions:output_type -> postpilot.v1.SavePostGenerationOptionsResponse
-	36, // 76: postpilot.v1.PostService.FinalizePost:output_type -> postpilot.v1.FinalizePostResponse
-	38, // 77: postpilot.v1.PostService.SavePostPublishedUrl:output_type -> postpilot.v1.SavePostPublishedUrlResponse
-	40, // 78: postpilot.v1.PostService.GetPost:output_type -> postpilot.v1.GetPostResponse
-	42, // 79: postpilot.v1.PostService.ListPosts:output_type -> postpilot.v1.ListPostsResponse
-	44, // 80: postpilot.v1.PostService.DeletePost:output_type -> postpilot.v1.DeletePostResponse
-	46, // 81: postpilot.v1.PostService.CreateUpload:output_type -> postpilot.v1.CreateUploadResponse
-	48, // 82: postpilot.v1.PostService.ConfirmUpload:output_type -> postpilot.v1.ConfirmUploadResponse
-	50, // 83: postpilot.v1.PostService.DeleteImage:output_type -> postpilot.v1.DeleteImageResponse
-	52, // 84: postpilot.v1.PostService.RotateImage:output_type -> postpilot.v1.RotateImageResponse
-	54, // 85: postpilot.v1.PostService.DeleteVideo:output_type -> postpilot.v1.DeleteVideoResponse
-	20, // 86: postpilot.v1.GenerationService.StartGeneration:output_type -> postpilot.v1.StartGenerationResponse
-	22, // 87: postpilot.v1.GenerationService.StartRevision:output_type -> postpilot.v1.StartRevisionResponse
-	24, // 88: postpilot.v1.GenerationService.StartStoryline:output_type -> postpilot.v1.StartStorylineResponse
-	26, // 89: postpilot.v1.GenerationService.StartStorylineRevision:output_type -> postpilot.v1.StartStorylineRevisionResponse
-	16, // 90: postpilot.v1.GenerationService.GetGeneration:output_type -> postpilot.v1.GetGenerationResponse
-	73, // [73:91] is the sub-list for method output_type
-	55, // [55:73] is the sub-list for method input_type
-	55, // [55:55] is the sub-list for extension type_name
-	55, // [55:55] is the sub-list for extension extendee
-	0,  // [0:55] is the sub-list for field type_name
+	14, // 22: postpilot.v1.PostSummary.latest_ordinary_failure:type_name -> postpilot.v1.GenerationJob
+	58, // 23: postpilot.v1.GenerationJob.observe_model:type_name -> postpilot.v1.ModelRef
+	58, // 24: postpilot.v1.GenerationJob.write_model:type_name -> postpilot.v1.ModelRef
+	56, // 25: postpilot.v1.GenerationJob.target_language:type_name -> postpilot.v1.ContentLanguage
+	59, // 26: postpilot.v1.GenerationJob.failure:type_name -> postpilot.v1.Failure
+	14, // 27: postpilot.v1.GetGenerationResponse.job:type_name -> postpilot.v1.GenerationJob
+	57, // 28: postpilot.v1.QualityRuleTicks.metrics:type_name -> postpilot.v1.QualityMetric
+	58, // 29: postpilot.v1.StartGenerationRequest.observe_model:type_name -> postpilot.v1.ModelRef
+	58, // 30: postpilot.v1.StartGenerationRequest.write_model:type_name -> postpilot.v1.ModelRef
+	17, // 31: postpilot.v1.StartGenerationRequest.reobserve:type_name -> postpilot.v1.ReobserveSelection
+	58, // 32: postpilot.v1.StartRevisionRequest.write_model:type_name -> postpilot.v1.ModelRef
+	17, // 33: postpilot.v1.StartStorylineRequest.reobserve:type_name -> postpilot.v1.ReobserveSelection
+	58, // 34: postpilot.v1.StartStorylineRequest.observe_model:type_name -> postpilot.v1.ModelRef
+	58, // 35: postpilot.v1.StartStorylineRequest.write_model:type_name -> postpilot.v1.ModelRef
+	58, // 36: postpilot.v1.StartStorylineRevisionRequest.write_model:type_name -> postpilot.v1.ModelRef
+	56, // 37: postpilot.v1.SavePostDraftRequest.target_language:type_name -> postpilot.v1.ContentLanguage
+	27, // 38: postpilot.v1.SavePostDraftRequest.template_answers:type_name -> postpilot.v1.TemplateAnswer
+	3,  // 39: postpilot.v1.SavePostDraftRequest.field:type_name -> postpilot.v1.BlogField
+	29, // 40: postpilot.v1.SavePostDraftRequest.storyline:type_name -> postpilot.v1.StorylineEdit
+	9,  // 41: postpilot.v1.StorylineEdit.paragraphs:type_name -> postpilot.v1.StorylineParagraph
+	8,  // 42: postpilot.v1.SavePostDraftResponse.post:type_name -> postpilot.v1.Post
+	5,  // 43: postpilot.v1.SavePostContentRequest.content:type_name -> postpilot.v1.PostContent
+	8,  // 44: postpilot.v1.SavePostContentResponse.post:type_name -> postpilot.v1.Post
+	18, // 45: postpilot.v1.SavePostGenerationOptionsRequest.quality_rules:type_name -> postpilot.v1.QualityRuleTicks
+	3,  // 46: postpilot.v1.SavePostGenerationOptionsRequest.field:type_name -> postpilot.v1.BlogField
+	8,  // 47: postpilot.v1.SavePostGenerationOptionsResponse.post:type_name -> postpilot.v1.Post
+	8,  // 48: postpilot.v1.FinalizePostResponse.post:type_name -> postpilot.v1.Post
+	8,  // 49: postpilot.v1.SavePostPublishedUrlResponse.post:type_name -> postpilot.v1.Post
+	8,  // 50: postpilot.v1.GetPostResponse.post:type_name -> postpilot.v1.Post
+	13, // 51: postpilot.v1.ListPostsResponse.posts:type_name -> postpilot.v1.PostSummary
+	2,  // 52: postpilot.v1.CreateUploadRequest.kind:type_name -> postpilot.v1.AttachmentKind
+	11, // 53: postpilot.v1.ConfirmUploadResponse.image:type_name -> postpilot.v1.Image
+	12, // 54: postpilot.v1.ConfirmUploadResponse.video:type_name -> postpilot.v1.Video
+	11, // 55: postpilot.v1.RotateImageResponse.image:type_name -> postpilot.v1.Image
+	28, // 56: postpilot.v1.PostService.SavePostDraft:input_type -> postpilot.v1.SavePostDraftRequest
+	31, // 57: postpilot.v1.PostService.SavePostContent:input_type -> postpilot.v1.SavePostContentRequest
+	33, // 58: postpilot.v1.PostService.SavePostGenerationOptions:input_type -> postpilot.v1.SavePostGenerationOptionsRequest
+	35, // 59: postpilot.v1.PostService.FinalizePost:input_type -> postpilot.v1.FinalizePostRequest
+	37, // 60: postpilot.v1.PostService.SavePostPublishedUrl:input_type -> postpilot.v1.SavePostPublishedUrlRequest
+	39, // 61: postpilot.v1.PostService.GetPost:input_type -> postpilot.v1.GetPostRequest
+	41, // 62: postpilot.v1.PostService.ListPosts:input_type -> postpilot.v1.ListPostsRequest
+	43, // 63: postpilot.v1.PostService.DeletePost:input_type -> postpilot.v1.DeletePostRequest
+	45, // 64: postpilot.v1.PostService.CreateUpload:input_type -> postpilot.v1.CreateUploadRequest
+	47, // 65: postpilot.v1.PostService.ConfirmUpload:input_type -> postpilot.v1.ConfirmUploadRequest
+	49, // 66: postpilot.v1.PostService.DeleteImage:input_type -> postpilot.v1.DeleteImageRequest
+	51, // 67: postpilot.v1.PostService.RotateImage:input_type -> postpilot.v1.RotateImageRequest
+	53, // 68: postpilot.v1.PostService.DeleteVideo:input_type -> postpilot.v1.DeleteVideoRequest
+	19, // 69: postpilot.v1.GenerationService.StartGeneration:input_type -> postpilot.v1.StartGenerationRequest
+	21, // 70: postpilot.v1.GenerationService.StartRevision:input_type -> postpilot.v1.StartRevisionRequest
+	23, // 71: postpilot.v1.GenerationService.StartStoryline:input_type -> postpilot.v1.StartStorylineRequest
+	25, // 72: postpilot.v1.GenerationService.StartStorylineRevision:input_type -> postpilot.v1.StartStorylineRevisionRequest
+	15, // 73: postpilot.v1.GenerationService.GetGeneration:input_type -> postpilot.v1.GetGenerationRequest
+	30, // 74: postpilot.v1.PostService.SavePostDraft:output_type -> postpilot.v1.SavePostDraftResponse
+	32, // 75: postpilot.v1.PostService.SavePostContent:output_type -> postpilot.v1.SavePostContentResponse
+	34, // 76: postpilot.v1.PostService.SavePostGenerationOptions:output_type -> postpilot.v1.SavePostGenerationOptionsResponse
+	36, // 77: postpilot.v1.PostService.FinalizePost:output_type -> postpilot.v1.FinalizePostResponse
+	38, // 78: postpilot.v1.PostService.SavePostPublishedUrl:output_type -> postpilot.v1.SavePostPublishedUrlResponse
+	40, // 79: postpilot.v1.PostService.GetPost:output_type -> postpilot.v1.GetPostResponse
+	42, // 80: postpilot.v1.PostService.ListPosts:output_type -> postpilot.v1.ListPostsResponse
+	44, // 81: postpilot.v1.PostService.DeletePost:output_type -> postpilot.v1.DeletePostResponse
+	46, // 82: postpilot.v1.PostService.CreateUpload:output_type -> postpilot.v1.CreateUploadResponse
+	48, // 83: postpilot.v1.PostService.ConfirmUpload:output_type -> postpilot.v1.ConfirmUploadResponse
+	50, // 84: postpilot.v1.PostService.DeleteImage:output_type -> postpilot.v1.DeleteImageResponse
+	52, // 85: postpilot.v1.PostService.RotateImage:output_type -> postpilot.v1.RotateImageResponse
+	54, // 86: postpilot.v1.PostService.DeleteVideo:output_type -> postpilot.v1.DeleteVideoResponse
+	20, // 87: postpilot.v1.GenerationService.StartGeneration:output_type -> postpilot.v1.StartGenerationResponse
+	22, // 88: postpilot.v1.GenerationService.StartRevision:output_type -> postpilot.v1.StartRevisionResponse
+	24, // 89: postpilot.v1.GenerationService.StartStoryline:output_type -> postpilot.v1.StartStorylineResponse
+	26, // 90: postpilot.v1.GenerationService.StartStorylineRevision:output_type -> postpilot.v1.StartStorylineRevisionResponse
+	16, // 91: postpilot.v1.GenerationService.GetGeneration:output_type -> postpilot.v1.GetGenerationResponse
+	74, // [74:92] is the sub-list for method output_type
+	56, // [56:74] is the sub-list for method input_type
+	56, // [56:56] is the sub-list for extension type_name
+	56, // [56:56] is the sub-list for extension extendee
+	0,  // [0:56] is the sub-list for field type_name
 }
 
 func init() { file_postpilot_v1_post_proto_init() }

@@ -474,3 +474,279 @@ var (
 	ErrPromptUnanswered = errors.New("the prompt has no answer to compare against")
 	ErrPhotoUnsupported = errors.New("a photo prompt needs both candidates to read images")
 )
+
+// Writing tests coexist with retained paid comparisons; their mutations never reuse a ranking.
+type TestFactor string
+
+const (
+	FactorModel     TestFactor = "model"
+	FactorVoice     TestFactor = "voice"
+	FactorTemplate  TestFactor = "template"
+	FactorGuideline TestFactor = "guideline"
+)
+
+func (f TestFactor) Valid() bool {
+	return f == FactorModel || f == FactorVoice || f == FactorTemplate || f == FactorGuideline
+}
+
+type TestStatus string
+
+const (
+	TestQueued    TestStatus = "queued"
+	TestRunning   TestStatus = "running"
+	TestPartial   TestStatus = "partial"
+	TestReview    TestStatus = "review"
+	TestCompleted TestStatus = "completed"
+	TestCancelled TestStatus = "cancelled"
+	TestFailed    TestStatus = "failed"
+)
+
+func (s TestStatus) Valid() bool {
+	switch s {
+	case TestQueued, TestRunning, TestPartial, TestReview, TestCompleted, TestCancelled, TestFailed:
+		return true
+	}
+	return false
+}
+func ValidTestCount(n int) bool { return n == 2 || n == 4 || n == 8 || n == 16 }
+
+type TestCandidateStatus string
+
+const (
+	TestCandidatePending   TestCandidateStatus = "pending"
+	TestCandidateRunning   TestCandidateStatus = "running"
+	TestCandidateSucceeded TestCandidateStatus = "succeeded"
+	TestCandidateFailed    TestCandidateStatus = "failed"
+	TestCandidateCancelled TestCandidateStatus = "cancelled"
+)
+
+func (s TestCandidateStatus) Valid() bool {
+	switch s {
+	case TestCandidatePending, TestCandidateRunning, TestCandidateSucceeded, TestCandidateFailed, TestCandidateCancelled:
+		return true
+	}
+	return false
+}
+
+type TestPublicationAction string
+
+const (
+	TestSaveSetting TestPublicationAction = "save_setting"
+	TestUseSetting  TestPublicationAction = "use_setting"
+	TestAdoptModel  TestPublicationAction = "adopt_model"
+	TestApplyOutput TestPublicationAction = "apply_output"
+)
+
+func (a TestPublicationAction) Valid() bool {
+	return a == TestSaveSetting || a == TestUseSetting || a == TestAdoptModel || a == TestApplyOutput
+}
+
+type TestPublicationStatus string
+
+const (
+	TestPublicationPending   TestPublicationStatus = "pending"
+	TestPublicationConfirmed TestPublicationStatus = "confirmed"
+	TestPublicationConflict  TestPublicationStatus = "conflict"
+)
+
+func (s TestPublicationStatus) Valid() bool {
+	return s == TestPublicationPending || s == TestPublicationConfirmed || s == TestPublicationConflict
+}
+
+type TestEntrantRef struct {
+	SourceKind                               string
+	Model                                    ModelRef
+	SettingKind, SettingID, SettingRevision  string
+	AuthoringSessionID, AuthoringCandidateID string
+	AuthoringRevision                        uint32
+}
+type TestInput struct {
+	SourcePostSlug                       string
+	InputRevision, ContentRevision       int64
+	Material                             string
+	Fictional                            bool
+	AttachmentIDs                        []string
+	TemplateAnswers                      []TestAnswer
+	ObserveModel, WriteModel             ModelRef
+	VoiceID, TemplateID, GuidelineSlotID string
+	TargetLanguage                       string
+	TargetLength, TagCount               int
+	UseMemory                            bool
+	QualityRules                         []string
+}
+type TestAnswer struct {
+	Label, Answer string
+	Enabled       bool
+}
+type TestStart struct {
+	UserID, RequestKey, QuoteKey string
+	Factor                       TestFactor
+	ModelStage                   Stage
+	Count                        int
+	Entrants                     []TestEntrantRef
+	Input                        TestInput
+}
+
+var (
+	ErrTestCount     = errors.New("writing test entrant count is invalid")
+	ErrTestFactor    = errors.New("writing test factor is invalid")
+	ErrTestEntrant   = errors.New("writing test entrant is invalid")
+	ErrTestDuplicate = errors.New("writing test entrants repeat")
+	ErrTestOperation = errors.New("writing test operation key is invalid")
+)
+
+// ValidateTestShape runs before resolution, job/hold creation or any provider work.
+// Eligibility, semantic snapshot uniqueness and domain revisions are checked by owned ports.
+func ValidateTestShape(r TestStart) error {
+	if !ValidTestCount(r.Count) || len(r.Entrants) != r.Count {
+		return ErrTestCount
+	}
+	if !r.Factor.Valid() || (r.Factor == FactorModel && r.ModelStage != StageObserve && r.ModelStage != StageWrite) || (r.Factor != FactorModel && r.ModelStage != "") {
+		return ErrTestFactor
+	}
+	if r.UserID == "" || r.RequestKey == "" {
+		return ErrTestOperation
+	}
+	seen := map[string]bool{}
+	for _, e := range r.Entrants {
+		var key string
+		switch e.SourceKind {
+		case "model":
+			if r.Factor != FactorModel || e.Model.ProviderID == "" || e.Model.ModelID == "" || e.SettingID != "" || e.AuthoringSessionID != "" {
+				return ErrTestEntrant
+			}
+			key = "model:" + e.Model.String()
+		case "setting":
+			if r.Factor == FactorModel || e.SettingID == "" || e.SettingRevision == "" || e.SettingKind != string(r.Factor) || e.Model.ProviderID != "" || e.Model.ModelID != "" || e.AuthoringSessionID != "" {
+				return ErrTestEntrant
+			}
+			key = "setting:" + e.SettingKind + ":" + e.SettingID
+		case "authoring_candidate":
+			if r.Factor == FactorModel || e.AuthoringSessionID == "" || e.AuthoringCandidateID == "" || e.Model.ProviderID != "" || e.Model.ModelID != "" || e.SettingID != "" {
+				return ErrTestEntrant
+			}
+			key = "authoring:" + e.AuthoringSessionID + ":" + e.AuthoringCandidateID
+		default:
+			return ErrTestEntrant
+		}
+		if seen[key] {
+			return ErrTestDuplicate
+		}
+		seen[key] = true
+	}
+	return nil
+}
+
+type TestMutation struct {
+	UserID, TestID, RequestKey string
+	ExpectedRevision           uint32
+}
+type MatchDecision struct {
+	TestMutation
+	MatchID, WinnerCandidateID string
+}
+type TestCandidateIdentity struct {
+	Label     string
+	Ref       TestEntrantRef
+	Synthetic bool
+}
+type TestCandidate struct {
+	ID, TestID, UserID                string
+	SeedPosition                      int
+	Ref                               TestEntrantRef
+	SourceRevision, SemanticKey       string
+	FrozenVariant, Output, Accounting []byte
+	Status                            string
+	Failure                           *Failure
+	Identity                          *TestCandidateIdentity
+}
+
+// BlindCandidate intentionally excludes source refs/revisions, seed positions, frozen values
+// and accounting. A UI must use this projection rather than marshal the private store record.
+type BlindCandidate struct {
+	ID, DisplayLabel, Status string
+	Output                   []byte
+	Failure                  *Failure
+	Identity                 *TestCandidateIdentity
+}
+
+func (c TestCandidate) Project(revealed bool, label string) BlindCandidate {
+	out := BlindCandidate{ID: c.ID, DisplayLabel: label, Status: c.Status, Output: append([]byte(nil), c.Output...)}
+	// Technical detail can reveal the model, so it never enters a blind projection.
+	if c.Failure != nil {
+		out.Failure = &Failure{Reason: c.Failure.Reason}
+	}
+	if revealed && c.Identity != nil {
+		identity := *c.Identity
+		out.Identity = &identity
+	}
+	return out
+}
+
+type TestMatch struct {
+	ID                                     string
+	Round, Index                           int
+	LeftID, RightID, WinnerID, DecisionKey string
+}
+type TestPublication struct{ ID, UserID, TestID, WinnerID, Action, RequestKey, TargetID, Status, Fingerprint string }
+type WritingTest struct {
+	ID, UserID, Kind, SourcePostSlug, JobID, CommonHash, PromptVersion, WinnerID string
+	Factor                                                                       TestFactor
+	ModelStage                                                                   Stage
+	Count                                                                        int
+	Status                                                                       TestStatus
+	Revision                                                                     uint32
+	Input                                                                        TestInput
+	CommonSnapshot                                                               []byte
+	PurgeFence                                                                   uint64
+	Candidates                                                                   []TestCandidate
+	Matches                                                                      []TestMatch
+	Publications                                                                 []TestPublication
+	CreatedAt, UpdatedAt                                                         time.Time
+}
+type FrozenTestVariant struct {
+	Reference             TestEntrantRef
+	Content               []byte
+	SemanticKey, Revision string
+	Synthetic             bool
+}
+type TestSnapshot struct {
+	Common                               []byte
+	Hash, PromptVersion, AssignmentsHash string
+	Variants                             []FrozenTestVariant
+}
+type TestCall struct {
+	Ref                                   ModelRef
+	Stage                                 Stage
+	Count, PromptTokens, CompletionTokens int
+}
+type TestPlan struct {
+	Snapshot        TestSnapshot
+	Calls           []TestCall
+	EstimateCredits int
+	Free            bool
+}
+type OutputApplication struct {
+	TestMutation
+	WinnerID, PostSlug, AssignmentsHash string
+	InputRevision, ContentRevision      int64
+	Output, Storyline, Baseline         []byte
+	ContentLanguage                     string
+}
+type ModelAdoption struct {
+	TestMutation
+	WinnerID string
+	Stage    Stage
+	Model    ModelRef
+}
+type WinnerPublication struct {
+	TestMutation
+	WinnerID, Action, Name, Scope string
+	ScopeIDs                      []string
+	MakeDefault                   bool
+	Variant                       FrozenTestVariant
+}
+type PublicationReceipt struct {
+	UserID, TestID, WinnerID, Action, RequestKey, TargetID string
+	ResultingRevision                                      int64
+}

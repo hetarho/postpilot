@@ -28,7 +28,7 @@ export { Slider } from './slider/Slider'
 export { RangeSlider } from './slider/RangeSlider'
 export { useVisualViewport } from './viewport/useVisualViewport'
 export { useNearViewport } from './viewport/useNearViewport'
-export { pageStyles, type PageWidth } from './page/pageStyles'
+export { pageStyles, proseStyles, type PageWidth } from './page/pageStyles'
 export { SegmentedControl } from './segmented-control/SegmentedControl'
 export { ListControls } from './list-controls/ListControls'
 export { SortableList, type SortableDensity, type SortableItem } from './sortable-list/SortableList'
@@ -52,3 +52,12 @@ export { RadioGroup, type RadioOption } from './radio-group/RadioGroup'
 export { useMediaQuery, MD_MEDIA_QUERY } from './media-query/useMediaQuery'
 
 export { choiceStyles } from './choice/choiceStyles'
+export { NavigationProvider } from './navigation/NavigationProvider'
+export { Breadcrumb } from './navigation/Breadcrumb'
+export { ContextualReturn } from './navigation/ContextualReturn'
+export {
+  useNavigationContext,
+  type NavigationValue,
+  type NavigationDestination,
+  type NavigationLinkProps,
+} from './navigation/context'

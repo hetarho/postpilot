@@ -97,3 +97,9 @@ type VideoTemplateDirectory interface {
 type FieldDirectory interface {
 	Known(id string) bool
 }
+
+// TestedSettings commits a frozen winner and its receipt atomically under ordinary caps.
+// A retry reads the committed receipt even if its target was later edited or deleted.
+type TestedSettings interface {
+	PublishTestWinner(context.Context, TestedPublication) (TestedPublicationReceipt, error)
+}

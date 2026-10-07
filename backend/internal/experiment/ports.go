@@ -131,3 +131,31 @@ type Runner interface {
 }
 
 type Progress func(stage string, done, total int)
+
+// All immutable variants resolve in their owning contexts before any admission or hold.
+type TestVariants interface {
+	ResolveTestVariant(context.Context, string, TestFactor, TestEntrantRef) (FrozenTestVariant, error)
+}
+type TestPreparation interface {
+	PrepareWritingTest(context.Context, TestStart, []FrozenTestVariant) (TestPlan, error)
+}
+type TestPostPublication interface {
+	ApplyTestResult(context.Context, OutputApplication) (PublicationReceipt, error)
+}
+type TestModelPublication interface {
+	AdoptTestModel(context.Context, ModelAdoption) (PublicationReceipt, error)
+}
+type TestSettingPublication interface {
+	PublishTestWinner(context.Context, WinnerPublication) (PublicationReceipt, error)
+}
+
+// The target mutation and receipt commit together; retries read that receipt before live CAS.
+type TestStore interface {
+	AdmitTest(context.Context, TestStart, TestPlan) (WritingTest, bool, error)
+	GetTest(context.Context, string, string) (WritingTest, error)
+	ListTests(context.Context, string, int, string) ([]WritingTest, string, error)
+	DecideMatch(context.Context, MatchDecision) (WritingTest, error)
+	CancelTest(context.Context, TestMutation) (WritingTest, error)
+	BeginPublication(context.Context, WinnerPublication) (TestPublication, error)
+	ConfirmPublication(context.Context, TestPublication, PublicationReceipt) (TestPublication, error)
+}

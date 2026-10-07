@@ -130,18 +130,19 @@ const (
 // photo it was written on (VOICE-60); a post has neither. Label is empty for an answer: its
 // prompt text is product copy, never a row.
 type Sample struct {
-	ID          string
-	UserID      string
-	VoiceID     string
-	Kind        SampleKind
-	PromptKey   string
-	Label       string
-	Body        string
-	Chars       int
-	PhotoKey    string
-	PhotoWidth  int
-	PhotoHeight int
-	CreatedAt   time.Time
+	ContentRevision int64
+	ID              string
+	UserID          string
+	VoiceID         string
+	Kind            SampleKind
+	PromptKey       string
+	Label           string
+	Body            string
+	Chars           int
+	PhotoKey        string
+	PhotoWidth      int
+	PhotoHeight     int
+	CreatedAt       time.Time
 }
 
 // HasPhoto reports an answer written on a photo.
@@ -226,33 +227,40 @@ type AIPart struct {
 // Analysis is one immutable snapshot (VOICE-26): the counted fingerprint, the AI part, the 학습
 // 글 it read and when.
 type Analysis struct {
-	Origin          Origin
-	SyntheticSample string
-	Counted         Fingerprint
-	AI              AIPart
-	MaterialIDs     []string
-	AnalyzeModel    string
-	CreatedAt       time.Time
+	AcceptedSources     []AcceptedSource
+	SourceVersionsKnown bool
+	AcceptedMaterials   []AcceptedMaterial
+	Origin              Origin
+	SyntheticSample     string
+	Counted             Fingerprint
+	AI                  AIPart
+	MaterialIDs         []string
+	AnalyzeModel        string
+	CreatedAt           time.Time
 }
 
 // AnalysisJob is one queued analysis. MaterialIDs is the snapshot frozen at its start
 // (VOICE-22): the run reads those 학습 글 that still exist and nothing added since.
 type AnalysisJob struct {
-	UserID      string
-	VoiceID     string
-	WriteModel  string
-	MaterialIDs []string
+	AcceptedSources   []AcceptedSource
+	AcceptedMaterials []AcceptedMaterial
+	UserID            string
+	VoiceID           string
+	WriteModel        string
+	MaterialIDs       []string
 }
 
 // AnalysisJobRequest starts one analysis over the snapshot its start read. PromptTokens is the
 // size of the prompt the run will send over that snapshot, at one token per Unicode character,
 // which the hold prices (QUOTA-14).
 type AnalysisJobRequest struct {
-	UserID       string
-	VoiceID      string
-	WriteModel   string
-	MaterialIDs  []string
-	PromptTokens int
+	AcceptedSources   []AcceptedSource
+	AcceptedMaterials []AcceptedMaterial
+	UserID            string
+	VoiceID           string
+	WriteModel        string
+	MaterialIDs       []string
+	PromptTokens      int
 }
 
 type ActiveJob struct{ ID string }
@@ -262,3 +270,22 @@ type JobAlreadyInProgressError struct{ ActiveID string }
 func (e *JobAlreadyInProgressError) Error() string {
 	return fmt.Sprintf("analysis job %s is already in progress", e.ActiveID)
 }
+
+// Historical unknown snapshots stay unknown until an explicit analysis accepts versions.
+type AcceptedSource struct {
+	SampleID        string
+	ContentRevision int64
+}
+type AcceptedMaterial struct {
+	Source                  AcceptedSource
+	Body, PhotoKey          string
+	PhotoWidth, PhotoHeight int
+}
+type SampleMutation struct {
+	UserID, VoiceID, SampleID, OperationKey string
+	ExpectedContentRevision                 int64
+	Label, Body, PhotoUploadID              *string
+	PhotoWidth, PhotoHeight                 *int
+}
+
+var ErrSampleRevisionConflict = errors.New("voice material revision changed")

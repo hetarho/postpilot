@@ -35,6 +35,7 @@ const (
 func (m Mode) Valid() bool { return m == Recommend || m == Refine }
 
 type Artifact struct {
+	Revision    uint32
 	ID          string
 	Name        string
 	Description string
@@ -54,28 +55,34 @@ type SavedRef struct {
 	Name string
 }
 type Session struct {
-	ID              string
-	UserID          string
-	Kind            Kind
-	Revision        uint32
-	Phase           string
-	Candidates      []Artifact
-	Selected        *Artifact
-	Turns           []Turn
-	ActiveJobID     string
-	Saved           *SavedRef
-	TargetID        string
-	TargetVersion   string
-	FailureReason   string
-	PendingRequest  string
-	ForkVoice       bool
-	SourceContext   string
-	Purpose         string
-	WriteModel      string
-	ActiveRequestID string
-	Publication     *Publication
-	CreatedAt       time.Time
-	UpdatedAt       time.Time
+	WorkingSource           *Artifact
+	SavedBaseline           *Artifact
+	DraftState              DraftState
+	HasUnpublishedChanges   bool
+	SavedAvailable          bool
+	RequestedCandidateCount int
+	ID                      string
+	UserID                  string
+	Kind                    Kind
+	Revision                uint32
+	Phase                   string
+	Candidates              []Artifact
+	Selected                *Artifact
+	Turns                   []Turn
+	ActiveJobID             string
+	Saved                   *SavedRef
+	TargetID                string
+	TargetVersion           string
+	FailureReason           string
+	PendingRequest          string
+	ForkVoice               bool
+	SourceContext           string
+	Purpose                 string
+	WriteModel              string
+	ActiveRequestID         string
+	Publication             *Publication
+	CreatedAt               time.Time
+	UpdatedAt               time.Time
 }
 type Seed struct {
 	Artifact      *Artifact
@@ -114,12 +121,13 @@ type Run struct {
 	Payload                []byte
 }
 type Start struct {
-	SessionID        string
-	ExpectedRevision uint32
-	RequestID        string
-	Mode             Mode
-	Prompt           string
-	WriteModel       llm.ModelRef
+	RequestedCandidateCount int
+	SessionID               string
+	ExpectedRevision        uint32
+	RequestID               string
+	Mode                    Mode
+	Prompt                  string
+	WriteModel              llm.ModelRef
 }
 type Estimate struct {
 	Credits         int
@@ -139,3 +147,63 @@ var (
 	ErrTargetConflict = errors.New("authoring target changed")
 	ErrPublication    = errors.New("authoring publication is unconfirmed")
 )
+
+// Zero preserves the ordinary authoring default; tests must supply an exact count.
+func NormalizeCandidateCount(count int) (int, error) {
+	if count == 0 {
+		return CandidateCount, nil
+	}
+	switch count {
+	case 2, 4, 8, 16:
+		return count, nil
+	}
+	return 0, ErrCandidateCount
+}
+
+var ErrCandidateCount = errors.New("authoring requires two, four, eight or sixteen candidates")
+
+type DraftState string
+
+const (
+	DraftValid      DraftState = "valid"
+	DraftIncomplete DraftState = "incomplete"
+	DraftInvalid    DraftState = "invalid"
+)
+
+type DraftMutation struct {
+	UserID, SessionID, OperationKey string
+	ExpectedRevision                uint32
+	WorkingSource                   Artifact
+}
+type ResetMutation struct {
+	UserID, SessionID, OperationKey string
+	ExpectedRevision                uint32
+}
+type Summary struct {
+	SessionID, TargetID, DisplayName, ActiveJobID                             string
+	Kind                                                                      Kind
+	Revision                                                                  uint32
+	SavedAvailable, HasUnpublishedChanges, PublicationPending, TargetConflict bool
+	LastPublication                                                           *SavedRef
+	DraftState                                                                DraftState
+	UpdatedAt                                                                 time.Time
+}
+type SummaryQuery struct {
+	UserID      string
+	Kind        Kind
+	UnsavedOnly bool
+	PageSize    int
+	PageToken   string
+}
+
+// OwnedCandidateRef is a server-resolved unpublished revision, never a client artifact.
+type OwnedCandidateRef struct {
+	SessionID, CandidateID string
+	Revision               uint32
+}
+type FrozenCandidate struct {
+	Kind                    Kind
+	Artifact                Artifact
+	TargetID, TargetVersion string
+	Synthetic               bool
+}

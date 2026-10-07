@@ -57,3 +57,15 @@ type Store interface {
 type Estimator interface {
 	CallCredits(context.Context, llm.ModelInfo, int64, int64) (int, bool)
 }
+
+// WorkingDrafts is separate from the baseline Store until the durable implementation lands.
+// Every method atomically records its owner-scoped operation receipt with the revision CAS.
+type WorkingDrafts interface {
+	PatchDraft(context.Context, DraftMutation) (Session, error)
+	ResetChat(context.Context, ResetMutation) (Session, error)
+	ResetBaseline(context.Context, ResetMutation) (Session, error)
+	ListSummaries(context.Context, SummaryQuery) ([]Summary, string, error)
+}
+type TestCandidates interface {
+	FreezeCandidate(context.Context, string, OwnedCandidateRef) (FrozenCandidate, error)
+}
