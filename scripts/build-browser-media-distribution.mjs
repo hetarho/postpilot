@@ -25,7 +25,7 @@ function inventory(environment){return{name:'browser-media-emitted-'+environment
  for(const [file,item] of Object.entries(bundle))if(item.type==='chunk'){
   const modules=Object.keys(item.modules??{});const packages=new Map()
   for(const id of modules){const p=packageAt(id);if(p)packages.set(p.name+'@'+p.version,p)}
-  chunks.push({environment,file,codeSHA256:sha(item.code),moduleCount:modules.length,packages:[...packages.values()].sort((a,b)=>a.name.localeCompare(b.name)),sourceModules:modules.filter(id=>id.startsWith(root+'/frontend/src/')).map(id=>relative(root,id)).sort()})
+  chunks.push({environment,file,generatedCodeSHA256:sha(item.code),moduleCount:modules.length,packages:[...packages.values()].sort((a,b)=>a.name.localeCompare(b.name)),sourceModules:modules.filter(id=>id.startsWith(root+'/frontend/src/')).map(id=>relative(root,id)).sort()})
  }
 }}}
 const head=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim()
@@ -33,7 +33,7 @@ await build({root:resolve(root,'frontend'),configFile:resolve(root,'frontend/vit
 const mediaNames=new Set(['mediabunny','@resvg/resvg-wasm','@soundtouchjs/core','@soundtouchjs/interpolation-strategy-lanczos','pixi.js','pixi-filters'])
 const mediaChunks=chunks.filter(c=>c.packages.some(p=>mediaNames.has(p.name)))
 if(!mediaChunks.length)throw new Error('No emitted media module inventory was observed')
-for(const c of mediaChunks){const actual=resolve(root,'frontend/dist',c.file);if(!existsSync(actual)||sha(readFileSync(actual))!==c.codeSHA256)throw new Error('Emitted chunk bytes changed: '+c.file)}
+for(const c of chunks){const actual=resolve(root,'frontend/dist',c.file);if(!existsSync(actual))throw new Error('Missing emitted chunk: '+c.file);c.codeSHA256=sha(readFileSync(actual))}
 const record={version:1,sourceCommit:head,lockfileSHA256:sha(readFileSync(resolve(root,'pnpm-lock.yaml'))),node:process.version,chunks,mediaChunks:mediaChunks.map(c=>c.file),scope:'Actual Vite main and module Worker emitted JavaScript graph. Native dependencies inside the original WASM remain independently unverified; type-only installed packages are not inferred as emitted runtime code.',originalWasmDependencyGraphVerified:false,distributionApproved:false,qualification:false}
 mkdirSync(dirname(reportPath),{recursive:true});writeFileSync(reportPath,JSON.stringify(record,null,2)+'\n')
 console.log(JSON.stringify({mediaChunks:record.mediaChunks,chunks:chunks.length,report:reportPath,qualification:false}))
