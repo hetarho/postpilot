@@ -3,7 +3,7 @@ import { Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { isTerminal, type GenerationJob } from '@/entities/generation-job'
 import type { PostDraft } from '@/entities/post'
-import { typographyStyles } from '@/shared/ui'
+import { typographyStyles, proseStyles } from '@/shared/ui'
 import { ContactSheet } from '@/widgets/contact-sheet'
 import { EditorPhotos } from './EditorPhotos'
 import { EditorVoiceWarning } from './EditorVoiceWarning'
@@ -30,7 +30,7 @@ export function EditorGeneratePanel({
 }) {
   const { t } = useTranslation('posts')
   return (
-    <>
+    <div className={proseStyles()}>
       {titleField}
       {answerFields}
       {memoField}
@@ -59,6 +59,6 @@ export function EditorGeneratePanel({
           activeJob={job}
         />
       )}
-    </>
+    </div>
   )
 }

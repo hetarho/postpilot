@@ -73,7 +73,7 @@ describe('opening a post', () => {
     })
 
     expect(await screen.findByRole('alert')).toHaveTextContent('다른 사람의 글이에요')
-    expect(screen.getByRole('link', { name: '글 목록으로' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '작업 내역으로 돌아가기' })).toBeInTheDocument()
   })
 
   it('reports an unknown slug as missing', async () => {
@@ -267,7 +267,7 @@ describe('the editor lifecycle steps', () => {
     expect(screen.queryByLabelText('수정 요청을 입력하세요')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '확정하기' })).not.toBeInTheDocument()
     const brief = await openBrief(user)
-    expect(within(brief).getByRole('combobox', { name: /후보 A/ })).toBeInTheDocument()
+    expect(within(brief).queryByRole('combobox', { name: /후보 A/ })).toBeNull()
     await user.keyboard('{Escape}')
 
     // ③ carries 기억으로 저장, the manual export and the 발행 URL field, and nothing that would
@@ -388,7 +388,7 @@ describe('the editor lifecycle steps', () => {
     const generate = await within(dock).findByRole('button', { name: '바로 글 쓰기' })
     await waitFor(() => expect(generate).toBeEnabled())
     expect(within(dock).getByRole('button', { name: '스토리라인 먼저' })).toBeEnabled()
-    expect(within(dock).getByRole('button', { name: '다른 방법으로 쓰기' })).toBeEnabled()
+    expect(within(dock).queryByRole('button', { name: '다른 방법으로 쓰기' })).toBeNull()
     // Nothing is written under the row, and there is no second route out of the bar.
     expect(within(dock).queryByText(WRITE)).not.toBeInTheDocument()
     expect(within(dock).queryByRole('link')).not.toBeInTheDocument()
@@ -500,7 +500,7 @@ describe('the editor status region', () => {
   })
 
   // A5: one statement of what to do, and it is the control that resolves it.
-  it('leaves the A/B way out as the only word on a pending comparison', async () => {
+  it('retains the paid comparison link without blocking ordinary writing', async () => {
     renderAppAt('/posts/20260820-jeju', {
       user: USER,
       posts: {
@@ -520,9 +520,9 @@ describe('the editor status region', () => {
     })
 
     expect(await screen.findByRole('link', { name: 'A/B 결과 확인' })).toBeInTheDocument()
-    await waitFor(() => expect(screen.getByRole('button', { name: '바로 글 쓰기' })).toBeDisabled())
-    expect(screen.getByRole('button', { name: '스토리라인 먼저' })).toBeDisabled()
-    expect(screen.getByRole('button', { name: '다른 방법으로 쓰기' })).toBeDisabled()
+    await waitFor(() => expect(screen.getByRole('button', { name: '바로 글 쓰기' })).toBeEnabled())
+    expect(screen.getByRole('button', { name: '스토리라인 먼저' })).toBeEnabled()
+    expect(screen.queryByRole('button', { name: '다른 방법으로 쓰기' })).toBeNull()
     expect(screen.queryByText('먼저 대기 중인 A/B 결과를 확인해 주세요.')).not.toBeInTheDocument()
     expect(screen.queryByText(/^생성:/)).not.toBeInTheDocument()
   })

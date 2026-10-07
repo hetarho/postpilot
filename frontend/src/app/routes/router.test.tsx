@@ -440,7 +440,7 @@ describe('theme preferences in the real route tree', () => {
       at: '/posts?view=recent#preferences',
       user: { id: 'alice' },
       readyRole: 'heading' as const,
-      readyName: '내 글',
+      readyName: '글 작업 내역',
       // The shell reads the balance for its credit control (QUOTA-27), so the authenticated
       // surface also prepares active model defaults; this case pins that the preferences add
       // none of their own.
@@ -505,7 +505,7 @@ describe('theme preferences in the real route tree', () => {
       theme: theme.ports,
     })
 
-    expect(await screen.findByRole('heading', { name: '내 글' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: '글 작업 내역' })).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: '테마' }))
     await user.click(await screen.findByRole('menuitemradio', { name: '어둡게' }))
     expect(document.documentElement).toHaveAttribute('data-theme', 'night')
@@ -539,7 +539,7 @@ describe('theme preferences in the real route tree', () => {
       user: { id: 'alice' },
       theme: theme.ports,
     })
-    expect(await screen.findByRole('heading', { name: '내 글' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: '글 작업 내역' })).toBeInTheDocument()
     expect(document.documentElement).toHaveAttribute('data-theme', 'night')
     await user.click(screen.getByRole('button', { name: '테마' }))
     expect(
@@ -586,7 +586,7 @@ describe('theme preferences in the real route tree', () => {
       theme: theme.ports,
     })
 
-    expect(await screen.findByRole('heading', { name: 'My posts' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Writing history' })).toBeInTheDocument()
     await waitFor(() => expect(calls).toContain('ListPosts'))
     const callsBeforeSelection = [...calls]
     const locationBeforeSelection = router.state.location.href
@@ -605,7 +605,7 @@ describe('theme preferences in the real route tree', () => {
     const user = userEvent.setup()
     renderAppAt('/posts', { user: { id: 'alice' } })
 
-    expect(await screen.findByRole('heading', { name: '내 글' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: '글 작업 내역' })).toBeInTheDocument()
     const header = screen.getByRole('banner')
     const credits = within(header).getByRole('link', { name: /플랜/ })
     const theme = screen.getByRole('button', { name: '테마' })
@@ -667,7 +667,7 @@ describe('localized registered-route smoke', () => {
   const copy = {
     ko: {
       login: '로그인',
-      posts: '내 글',
+      posts: '글 작업 내역',
       voices: '말투',
       templates: '템플릿',
       guidelines: '지침',
@@ -680,7 +680,7 @@ describe('localized registered-route smoke', () => {
     },
     en: {
       login: 'Log in',
-      posts: 'My posts',
+      posts: 'Writing history',
       voices: 'Voices',
       templates: 'Templates',
       guidelines: 'Guidelines',
@@ -850,7 +850,9 @@ describe('retired publishing route', () => {
     const calls: string[] = []
     const { router } = renderAppAt('/publishing-agents', { user: account, calls })
 
-    expect(await screen.findByRole('heading', { level: 1, name: '내 글' })).toBeInTheDocument()
+    expect(
+      await screen.findByRole('heading', { level: 1, name: '글 작업 내역' }),
+    ).toBeInTheDocument()
     expect(router.state.location.pathname).toBe('/posts')
     expect(hrefs()).not.toContain('/publishing-agents')
     expect(calls.filter((call) => /publish/i.test(call))).toEqual([])

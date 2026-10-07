@@ -9,10 +9,16 @@ function post(overrides: Partial<PostListItem> & { slug: string }): PostListItem
     voice: { id: 'voice-1', name: '기본', deleted: false, made: true },
     template: { id: '', name: '' },
     activeJob: undefined,
+    latestOrdinaryFailure: undefined,
     pendingExperimentId: '',
     targetLanguage: 'ko',
     contentLanguage: undefined,
     tags: [],
+    contentReady: false,
+    exportReady: false,
+    publishedUrl: '',
+    inputRevision: 1n,
+    contentRevision: 0n,
     ...overrides,
   }
 }

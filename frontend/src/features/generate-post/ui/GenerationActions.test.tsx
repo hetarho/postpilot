@@ -1,8 +1,8 @@
-import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, expect, it, vi } from 'vitest'
 import type { PostDraft } from '@/entities/post'
-import { ExperimentOrigin, Stage } from '@/shared/api'
+import { Stage } from '@/shared/api'
 import { OBSERVATIONS_FIXTURE, POST_IMAGES_FIXTURE } from '@/test/fixtures/postContent'
 import type { FakeProvidersOptions } from '@/test/providers'
 import { createFakeAuthTransport, createTestQueryClient, withProviders } from '@/test/session'
@@ -14,17 +14,7 @@ afterEach(cleanup)
 
 type User = ReturnType<typeof userEvent.setup>
 
-/** A/B 비교 lives in the ▾ beside 바로 글 쓰기: open it, then choose the row. */
-async function pressComparison(user: User) {
-  const trigger = screen.getByRole('button', { name: '다른 방법으로 쓰기' })
-  await waitFor(() => expect(trigger).toBeEnabled())
-  await user.click(trigger)
-  const menu = await screen.findByRole('menu', { name: '다른 방법으로 쓰기' })
-  await user.click(within(menu).getByRole('menuitem', { name: 'A/B 비교' }))
-}
-
-async function press(user: User, name: '바로 글 쓰기' | '스토리라인 먼저' | 'A/B 비교') {
-  if (name === 'A/B 비교') return pressComparison(user)
+async function press(user: User, name: '바로 글 쓰기' | '스토리라인 먼저') {
   const button = screen.getByRole('button', { name })
   await waitFor(() => expect(button).toBeEnabled())
   await user.click(button)
@@ -96,14 +86,14 @@ function setup(signedVideoUrl: boolean, checkRequiredAnswers = vi.fn(() => true)
   }
 }
 
-it('checks required template answers before writing, planning or comparing', async () => {
+it('checks required template answers before ordinary writing or planning', async () => {
   const user = userEvent.setup()
   const checkRequiredAnswers = vi.fn(() => false)
   const { starts, storylineStarts, comparisons, beforeStart } = setup(true, checkRequiredAnswers)
-  for (const name of ['바로 글 쓰기', '스토리라인 먼저', 'A/B 비교'] as const) {
+  for (const name of ['바로 글 쓰기', '스토리라인 먼저'] as const) {
     await press(user, name)
   }
-  expect(checkRequiredAnswers).toHaveBeenCalledTimes(3)
+  expect(checkRequiredAnswers).toHaveBeenCalledTimes(2)
   expect(beforeStart).not.toHaveBeenCalled()
   expect(starts).toHaveLength(0)
   expect(storylineStarts).toHaveLength(0)
@@ -119,7 +109,6 @@ it('sends a press its setup refused to the brief, before saving anything', async
   for (const [name, mode] of [
     ['바로 글 쓰기', 'generation'],
     ['스토리라인 먼저', 'generation'],
-    ['A/B 비교', 'comparison'],
   ] as const) {
     await press(user, name)
     expect(onOpenBrief).toHaveBeenLastCalledWith(mode)
@@ -132,20 +121,17 @@ it('sends a press its setup refused to the brief, before saving anything', async
   expect(comparisons).toHaveLength(0)
 })
 
-it.each(['바로 글 쓰기', '스토리라인 먼저', 'A/B 비교'] as const)(
+it.each(['바로 글 쓰기', '스토리라인 먼저'] as const)(
   'sends the observation model for a video-only %s request',
   async (name) => {
     const user = userEvent.setup()
-    const { starts, storylineStarts, comparisons, beforeStart, onOpenBrief, observe } = setup(true)
+    const { starts, storylineStarts, beforeStart, onOpenBrief, observe } = setup(true)
     await press(user, name)
-    const requests =
-      name === '바로 글 쓰기' ? starts : name === '스토리라인 먼저' ? storylineStarts : comparisons
+    const requests = name === '바로 글 쓰기' ? starts : storylineStarts
     await waitFor(() => expect(requests).toHaveLength(1))
     expect(requests[0].observeModel).toEqual(observe)
     expect(beforeStart).toHaveBeenCalledTimes(1)
     expect(onOpenBrief).not.toHaveBeenCalled()
-    // A comparison started here writes the post the editor is on, so its verdict applies.
-    if (name === 'A/B 비교') expect(comparisons[0].origin).toBe(ExperimentOrigin.EDITOR)
   },
 )
 
@@ -166,13 +152,17 @@ const PICKED: FakeProvidersOptions = {
 }
 
 /** The actions over a post of the case's own, with every start recorded. */
-function renderActions(post: Partial<ActionsPost> = {}, providers: FakeProvidersOptions = PICKED) {
+function renderActions(
+  post: Partial<ActionsPost> = {},
+  providers: FakeProvidersOptions = PICKED,
+  props: Partial<Omit<Parameters<typeof GenerationActions>[0], 'post'>> = {},
+) {
   const starts: FakeGenerationStart[] = []
   const storylineStarts: FakeGenerationStart[] = []
   const onStarted = vi.fn()
   const comparisons: FakeWriteExperimentStart[] = []
   const calls: string[] = []
-  const beforeStart = vi.fn(async () => {})
+  const beforeStart = vi.fn(props.beforeStart ?? (async () => {}))
   const onOpenBrief = vi.fn()
   const transport = createFakeAuthTransport({
     user: { id: 'alice' },
@@ -183,6 +173,7 @@ function renderActions(post: Partial<ActionsPost> = {}, providers: FakeProviders
   })
   render(
     <GenerationActions
+      {...props}
       post={{
         slug: 'post',
         status: 'draft' as PostDraft['status'],
@@ -202,30 +193,24 @@ function renderActions(post: Partial<ActionsPost> = {}, providers: FakeProviders
   return { starts, storylineStarts, comparisons, calls, beforeStart, onOpenBrief, onStarted }
 }
 
-// The press is the way to the fix (owner decision 2026-09-25): an A/B 비교 with no pair stays live,
-// says nothing under the row, and hands the brief its own run to mark.
-it('keeps ordinary generation usable when only the A/B pair is missing', async () => {
+it('keeps both ordinary actions usable without legacy candidate pairs or a start menu', async () => {
   const user = userEvent.setup()
   const { starts, comparisons, onOpenBrief } = renderActions(
-    {},
+    { images: POST_IMAGES_FIXTURE },
     {
-      models: [writer, { providerId: 'openrouter', modelId: 'writer-new' }],
-      selections: [{ stage: Stage.WRITE, ...writer }],
+      models: [writer, { ...observer, vision: true }],
+      selections: [
+        { stage: Stage.WRITE, ...writer },
+        { stage: Stage.OBSERVE, ...observer },
+      ],
     },
   )
-  const generate = screen.getByRole('button', { name: '바로 글 쓰기' })
-  await waitFor(() => expect(generate).toBeEnabled())
+  await press(user, '바로 글 쓰기')
   expect(screen.getByRole('button', { name: '스토리라인 먼저' })).toBeEnabled()
-  expect(screen.queryByText('작성 A/B 모델 두 개를 선택하세요.')).toBeNull()
-
-  await user.click(screen.getByRole('button', { name: '다른 방법으로 쓰기' }))
-  const compare = within(await screen.findByRole('menu')).getByRole('menuitem', {
-    name: 'A/B 비교',
-  })
-  expect(compare).not.toHaveAttribute('aria-disabled')
-  await user.click(compare)
-  expect(onOpenBrief).toHaveBeenCalledWith('comparison')
-  expect(starts).toHaveLength(0)
+  expect(screen.queryByRole('button', { name: '다른 방법으로 쓰기' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('menuitem', { name: 'A/B 비교' })).not.toBeInTheDocument()
+  await waitFor(() => expect(starts).toHaveLength(1))
+  expect(onOpenBrief).not.toHaveBeenCalled()
   expect(comparisons).toHaveLength(0)
 })
 
@@ -295,40 +280,26 @@ it('routes 스토리라인 먼저 through the same picker', async () => {
   expect(storylineStarts[0].reobserveFiles).toEqual([])
 })
 
-// A8: the A/B comparison shares the picker and the same reuse contract.
-it('routes the A/B comparison through the same picker', async () => {
-  const user = userEvent.setup()
-  const { comparisons } = renderActions({
-    images: POST_IMAGES_FIXTURE,
-    observations: OBSERVATIONS_FIXTURE,
-  })
-  await pressComparison(user)
-  await user.click(await screen.findByRole('button', { name: '이대로 시작' }))
-
-  await waitFor(() => expect(comparisons).toHaveLength(1))
-  expect(comparisons[0].reobserveFiles).toEqual([])
-})
-
-// A pending A/B result holds every action, so the picker never opens and nothing is saved or
-// enqueued.
-it('keeps every action disabled while an A/B result is pending', async () => {
-  const user = userEvent.setup()
-  const { starts, calls, beforeStart } = renderActions({
-    images: POST_IMAGES_FIXTURE,
-    observations: OBSERVATIONS_FIXTURE,
-    pendingExperimentId: 'experiment-1',
-  })
-  const generate = screen.getByRole('button', { name: '바로 글 쓰기' })
-  await waitFor(() => expect(calls).toContain('GetSelections'))
-  expect(generate).toBeDisabled()
-  expect(screen.getByRole('button', { name: '스토리라인 먼저' })).toBeDisabled()
-  expect(screen.getByRole('button', { name: '다른 방법으로 쓰기' })).toBeDisabled()
-  await user.click(generate)
-  expect(screen.queryByRole('dialog', { name: '다시 관찰할 사진 선택' })).not.toBeInTheDocument()
-  expect(beforeStart).not.toHaveBeenCalled()
-  expect(calls).not.toContain('StartGeneration')
-  expect(starts).toHaveLength(0)
-})
+it.each(['바로 글 쓰기', '스토리라인 먼저'] as const)(
+  'allows %s while a retained test result awaits review',
+  async (name) => {
+    const user = userEvent.setup()
+    const { starts, storylineStarts, calls, beforeStart } = renderActions({
+      images: POST_IMAGES_FIXTURE,
+      observations: OBSERVATIONS_FIXTURE,
+      pendingExperimentId: 'experiment-1',
+    })
+    const result = screen.getByRole('link', { name: 'A/B 결과 확인' })
+    expect(result).toHaveAttribute('href', '/posts/experiments/experiment-1')
+    await press(user, name)
+    expect(beforeStart).not.toHaveBeenCalled()
+    await user.click(await screen.findByRole('button', { name: '이대로 시작' }))
+    const requests = name === '바로 글 쓰기' ? starts : storylineStarts
+    await waitFor(() => expect(requests).toHaveLength(1))
+    expect(beforeStart).toHaveBeenCalledTimes(1)
+    expect(calls).not.toContain('StartWriteExperiment')
+  },
+)
 
 // GEN-8: nothing to reuse means no picker.
 it('starts directly when the post has photos but no stored observation', async () => {
@@ -343,13 +314,12 @@ it('starts directly when the post has photos but no stored observation', async (
 
 // POST-108: a run with nothing attached asks once; cancelling saves and starts nothing, and
 // confirming starts the run the press asked for.
-it.each(['바로 글 쓰기', '스토리라인 먼저', 'A/B 비교'] as const)(
+it.each(['바로 글 쓰기', '스토리라인 먼저'] as const)(
   'asks before a %s run with no photo or video attached',
   async (name) => {
     const user = userEvent.setup()
-    const { starts, storylineStarts, comparisons, beforeStart } = renderActions()
-    const requests =
-      name === '바로 글 쓰기' ? starts : name === '스토리라인 먼저' ? storylineStarts : comparisons
+    const { starts, storylineStarts, beforeStart } = renderActions()
+    const requests = name === '바로 글 쓰기' ? starts : storylineStarts
 
     await press(user, name)
     let dialog = await screen.findByRole('dialog', { name: '사진 없이 만들까요?' })
@@ -368,3 +338,68 @@ it.each(['바로 글 쓰기', '스토리라인 먼저', 'A/B 비교'] as const)(
     expect(beforeStart).toHaveBeenCalledTimes(1)
   },
 )
+
+it.each(['바로 글 쓰기', '스토리라인 먼저'] as const)(
+  'awaits the newest draft flush before starting %s',
+  async (name) => {
+    const user = userEvent.setup()
+    let finish!: () => void
+    const saved = new Promise<void>((resolve) => {
+      finish = resolve
+    })
+    const { starts, storylineStarts, beforeStart } = renderActions(
+      { images: POST_IMAGES_FIXTURE },
+      PICKED,
+      { beforeStart: () => saved },
+    )
+    await press(user, name)
+    expect(beforeStart).toHaveBeenCalledTimes(1)
+    expect(starts).toHaveLength(0)
+    expect(storylineStarts).toHaveLength(0)
+    expect(screen.getByRole('button', { name })).toBeDisabled()
+    await act(async () => {
+      finish()
+      await saved
+    })
+    const requests = name === '바로 글 쓰기' ? starts : storylineStarts
+    await waitFor(() => expect(requests).toHaveLength(1))
+  },
+)
+
+it('preserves the draft and reports a failed material flush without starting AI', async () => {
+  const user = userEvent.setup()
+  const { starts, storylineStarts, comparisons } = renderActions(
+    { images: POST_IMAGES_FIXTURE },
+    PICKED,
+    {
+      beforeStart: async () => {
+        throw new Error('private cause')
+      },
+    },
+  )
+  await press(user, '바로 글 쓰기')
+  const alert = await screen.findByRole('alert')
+  expect(alert).toHaveTextContent('요청을 마치지 못했어요.')
+  expect(alert).not.toHaveTextContent('private cause')
+  expect(starts).toHaveLength(0)
+  expect(storylineStarts).toHaveLength(0)
+  expect(comparisons).toHaveLength(0)
+})
+
+it.each([
+  { name: 'published post', post: { status: 'published' as const } },
+  {
+    name: 'deleted voice',
+    post: { voice: { id: 'gone', name: 'Gone', deleted: true, made: true } },
+  },
+  {
+    name: 'unmade voice',
+    post: { voice: { id: 'making', name: 'Making', deleted: false, made: false } },
+  },
+])('keeps ordinary actions guarded for a $name alongside a retained result', async ({ post }) => {
+  const { calls, beforeStart } = renderActions({ ...post, pendingExperimentId: 'retained' })
+  await waitFor(() => expect(calls).toContain('GetSelections'))
+  expect(screen.getByRole('button', { name: '바로 글 쓰기' })).toBeDisabled()
+  expect(screen.getByRole('button', { name: '스토리라인 먼저' })).toBeDisabled()
+  expect(beforeStart).not.toHaveBeenCalled()
+})

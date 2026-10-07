@@ -155,8 +155,7 @@ export const StorylineActionsProvider = forwardRef<StorylineActionsHandle, Story
       generation.isPending ||
       storyline.isPending ||
       revision.isPending
-    const sharedDisabled =
-      selections.isPending || selectionSaving || busy || Boolean(post.pendingExperimentId)
+    const sharedDisabled = selections.isPending || selectionSaving || busy
     const disabled = sharedDisabled || (!ordinary.ok && !setupRefused)
     const hasContent = Boolean(post.content)
     const observeRef = post.images.length || post.videos.length ? observeSelection?.ref : undefined

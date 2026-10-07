@@ -143,7 +143,7 @@ describe('opening a post', () => {
     // the list row is read from (A8/A9).
     await user.type(screen.getByLabelText('메모'), '뒷이야기')
     await waitFor(() => expect(draftSaves).toHaveLength(1), { timeout: 4_000 })
-    await user.click(screen.getByRole('link', { name: '글 목록' }))
+    await user.click(screen.getByRole('link', { name: '작업 내역으로 돌아가기' }))
     expect(
       await screen.findByRole('link', { name: new RegExp(POST_CONTENT_FIXTURE.title) }),
     ).toBeInTheDocument()

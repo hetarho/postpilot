@@ -52,6 +52,7 @@ export function toPostDraft(post: Post): PostDraft {
     observations: post.observations,
     pendingExperimentId: post.pendingExperimentId,
     contentRevision: post.contentRevision,
+    inputRevision: post.inputRevision,
     machineBaselineRevision: post.machineBaselineRevision,
     canFinalize: post.canFinalize,
     targetLength: post.targetLength,
@@ -90,6 +91,14 @@ export function toPostListItem(summary: PostSummary): PostListItem {
     voice: toVoiceRef(summary.voice),
     template: toTemplateRef(summary.template),
     activeJob: summary.activeJob ? toGenerationJob(summary.activeJob) : undefined,
+    contentReady: summary.contentReady,
+    exportReady: summary.exportReady,
+    publishedUrl: summary.publishedUrl,
+    latestOrdinaryFailure: summary.latestOrdinaryFailure
+      ? toGenerationJob(summary.latestOrdinaryFailure)
+      : undefined,
+    inputRevision: summary.inputRevision,
+    contentRevision: summary.contentRevision,
     pendingExperimentId: summary.pendingExperimentId,
     targetLanguage: requireContentLanguage(summary.targetLanguage),
     contentLanguage: contentLanguageFromProto(summary.contentLanguage),

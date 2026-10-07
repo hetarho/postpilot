@@ -1,8 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { act, screen, waitFor } from '@testing-library/react'
+import { act, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderAppAt } from '@/test/app'
 import type { FakeListRequest, FakePostRow, FakePostsOptions } from '@/test/posts'
+import { POST_CONTENT_FIXTURE } from '@/test/fixtures/postContent'
+import {
+  markPostHistoryReturn,
+  readPostHistoryReturn,
+  readPostReturnContext,
+  rememberPostEntry,
+} from '@/entities/post'
 
 const USER = { id: 'alice' }
 
@@ -149,20 +156,97 @@ describe('PostsPage', () => {
     await waitFor(() => expect(router.state.location.pathname).toBe('/posts/20260828-jeju'))
   })
 
-  it('offers a new draft', async () => {
+  it('keeps history secondary and offers no docked new-writing action', async () => {
+    renderList()
+    await screen.findByText(/아직 글이 없어요/)
+    expect(screen.queryByRole('link', { name: '새 글' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: '글 작성' })).not.toBeInTheDocument()
+  })
+
+  it('uses canonical content for separate continuation and export actions without reading each post', async () => {
+    const calls: string[] = []
+    renderList({
+      calls,
+      posts: [
+        {
+          slug: 'review-content',
+          title: '내용 있는 검토 글',
+          status: 'review',
+          content: POST_CONTENT_FIXTURE,
+        },
+        { slug: 'empty-finalized', title: '내용 없는 확정 글', status: 'finalized' },
+        {
+          slug: 'published-content',
+          title: '발행한 작업',
+          status: 'published',
+          content: POST_CONTENT_FIXTURE,
+          publishedUrl: 'https://blog.naver.com/alice/1',
+        },
+      ],
+    })
+    const history = await screen.findByRole('list', { name: '글 작업 내역' })
+    const [review, empty, published] = await within(history).findAllByRole('listitem')
+    const resume = within(review).getByRole('link', { name: '이어서 작성' })
+    const exportAction = within(review).getByRole('link', { name: '내보내기' })
+    expect(resume).toHaveAttribute('href', '/posts/review-content')
+    expect(exportAction).toHaveAttribute('href', '/posts/review-content')
+    expect(exportAction.closest('a')?.parentElement?.closest('a')).toBeNull()
+    expect(within(empty).queryByRole('link', { name: '내보내기' })).not.toBeInTheDocument()
+    expect(within(published).getByRole('link', { name: '발행한 글' })).toHaveAttribute(
+      'href',
+      'https://blog.naver.com/alice/1',
+    )
+    expect(calls).not.toContain('GetPost')
+    expect(within(history).queryByText(POST_CONTENT_FIXTURE.summary)).not.toBeInTheDocument()
+  })
+
+  it('prioritizes an ordinary failure without hiding a retained test result or usable content', async () => {
+    renderList({
+      posts: [
+        {
+          slug: 'failed',
+          title: '다시 쓸 작업',
+          status: 'review',
+          content: POST_CONTENT_FIXTURE,
+          pendingExperimentId: 'legacy-result',
+          latestOrdinaryFailure: {
+            id: 'failed-write',
+            kind: 'generate_post',
+            status: 'failed',
+            stage: 'write',
+            failureReason: 'NETWORK_UNAVAILABLE',
+          },
+        },
+      ],
+    })
+    const history = await screen.findByRole('list', { name: '글 작업 내역' })
+    const work = await within(history).findByRole('link', { name: /다시 쓸 작업/ })
+    expect(work).toHaveTextContent('AI 결과 오류')
+    expect(work).toHaveAttribute('href', '/posts/failed')
+    expect(within(history).getByRole('link', { name: '내보내기' })).toBeInTheDocument()
+    expect(within(history).getByRole('link', { name: '이전 AI 결과 확인' })).toHaveAttribute(
+      'href',
+      '/posts/experiments/legacy-result?from=posts',
+    )
+  })
+
+  it('retains the history narrowing and export intent when opening a content-bearing draft', async () => {
     const user = userEvent.setup()
-    const { router } = renderList()
-
-    // ONE 새 글 in the tree, not one per breakpoint: the bar under the list is the same element
-    // at every width, docked at every width and only narrower above the phone (THEME-24). A
-    // second copy beside the heading would be a second link to the same route, so `getByRole`
-    // (which throws on more than one match) is the assertion.
-    const cta = await screen.findByRole('link', { name: '새 글' })
-    expect(cta).toHaveAttribute('href', '/posts/new')
-
-    await user.click(cta)
-
-    await waitFor(() => expect(router.state.location.pathname).toBe('/posts/new'))
+    const { router } = renderAppAt('/posts?q=제주&status=review', {
+      user: USER,
+      posts: {
+        posts: [
+          { slug: 'jeju', title: '제주 작업', status: 'review', content: POST_CONTENT_FIXTURE },
+        ],
+      },
+    })
+    await user.click(await screen.findByRole('link', { name: '내보내기' }))
+    await waitFor(() => expect(router.state.location.pathname).toBe('/posts/jeju'))
+    expect(readPostReturnContext(USER.id, 'jeju')).toMatchObject({
+      path: '/posts',
+      targetId: 'jeju',
+      filters: { q: '제주', status: 'review', intent: 'export' },
+    })
   })
 
   it('says so when there is nothing yet', async () => {
@@ -307,8 +391,7 @@ describe('PostsPage', () => {
 
     expect(await screen.findByText(/"없는말"에 맞는 글이 없어요/)).toBeInTheDocument()
     expect(screen.queryByText(/아직 글이 없어요/)).toBeNull()
-    // The one action the screen exists for stays where it is (POST-64).
-    expect(screen.getByRole('link', { name: '새 글' })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: '새 글' })).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: '초기화' }))
 
@@ -390,6 +473,38 @@ describe('PostsPage paging (POST-90..92)', () => {
   }
 
   const rowCount = () => screen.getAllByRole('link', { name: /글 \d+번|제주/ }).length
+
+  it('restores an explicit cold-cache return after the page containing its target arrives', async () => {
+    rememberPostEntry(USER.id, {
+      path: '/posts',
+      section: 'posts',
+      filters: {},
+      scrollY: 1400,
+      targetId: 'post-24',
+    })
+    expect(markPostHistoryReturn(USER.id, 'post-24')).toBe(true)
+    let release!: () => void
+    const listPageGate = new Promise<void>((resolve) => (release = resolve))
+    const listRequests: FakeListRequest[] = []
+    const scroll = vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
+    const view = renderList({ posts: manyPosts(25), listPageGate, listRequests })
+    try {
+      await screen.findByRole('link', { name: /글 20번/ })
+      expect(await screen.findByText('불러오는 중…')).toBeInTheDocument()
+      expect(scroll).not.toHaveBeenCalledWith(0, 1400)
+      expect(readPostHistoryReturn(USER.id)).toBeDefined()
+      release()
+      const last = await screen.findByRole('link', { name: /글 25번/ })
+      expect(last.closest('li')).toHaveAttribute('data-post-slug', 'post-24')
+      await waitFor(() => expect(scroll).toHaveBeenCalledWith(0, 1400))
+      expect(readPostHistoryReturn(USER.id)).toBeUndefined()
+      expect(listRequests).toHaveLength(2)
+    } finally {
+      release()
+      view.unmount()
+      scroll.mockRestore()
+    }
+  })
 
   it('loads the first page, the next as the end nears, and nothing past the last', async () => {
     const listRequests: FakeListRequest[] = []

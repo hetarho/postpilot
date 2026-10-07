@@ -1,4 +1,14 @@
 export * from './config'
+export {
+  rememberPostEntry,
+  readPostReturnContext,
+  postReturnDestination,
+  retainMintedPostEntry,
+  markPostHistoryReturn,
+  readPostHistoryReturn,
+  completePostHistoryReturn,
+  type PostEntry,
+} from './lib/navigation-context'
 export type {
   GenerationOptionsSet,
   PostDraft,

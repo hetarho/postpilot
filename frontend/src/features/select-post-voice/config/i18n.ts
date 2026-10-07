@@ -10,7 +10,6 @@ export const i18n = {
     },
     assignment: {
       jobBlocked: 'AI 작업이 끝나면 말투를 바꿀 수 있어요.',
-      experimentBlocked: '대기 중인 A/B 결과를 먼저 확인하면 말투를 바꿀 수 있어요.',
       blocked:
         '지금은 말투를 바꿀 수 없어요. 진행 중인 AI 작업이 끝났는지, 고른 말투가 아직 있는지 확인해 주세요.',
       notFound: '고른 말투를 찾을 수 없어요. 목록을 새로 고친 뒤 다시 시도해 주세요.',
@@ -30,7 +29,6 @@ export const i18n = {
     },
     assignment: {
       jobBlocked: 'You can change the voice after the AI job finishes.',
-      experimentBlocked: 'Review the pending A/B result before changing the voice.',
       blocked:
         'The voice cannot be changed now. Check that the AI job has finished and the selected voice still exists.',
       notFound: 'The selected voice could not be found. Refresh the list and try again.',

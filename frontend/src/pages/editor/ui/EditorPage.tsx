@@ -1,11 +1,12 @@
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link, useParams } from '@tanstack/react-router'
-import { usePost } from '@/entities/post'
+import { useNavigate, useParams } from '@tanstack/react-router'
+import { usePost, postReturnDestination } from '@/entities/post'
 import { useSession } from '@/entities/session'
 import { useVoices } from '@/entities/voice'
 import { AppFailureMessage, Button, typographyStyles, pageStyles } from '@/shared/ui'
 import { DraftEditor } from './DraftEditor'
+import { editorNavigationCopy } from '../config/i18n'
 
 /** `/posts/new` — a draft that does not exist yet. The first autosave creates it and
  *  moves the URL to the minted slug (see DraftEditor's `onMinted`).
@@ -65,19 +66,28 @@ export function PostEditorPage() {
 }
 
 function LoadFailure({ message, onRetry }: { message: ReactNode; onRetry?: () => void }) {
-  const { t } = useTranslation(['posts', 'common'])
+  const { t, i18n } = useTranslation(['posts', 'common'])
+  const { user } = useSession()
+  const { slug } = useParams({ strict: false })
+  const navigate = useNavigate()
+  const returnTo = postReturnDestination(user?.id ?? '', slug)
+  const copy = editorNavigationCopy[i18n.resolvedLanguage?.startsWith('ko') ? 'ko' : 'en']
   return (
     <EditorPlaceholder>
       <span role="alert" className="text-notice-danger-fg">
         {message}
       </span>
       <span className="mt-4 flex flex-wrap items-center gap-2">
-        <Link
-          to="/posts"
+        <a
+          href={returnTo.href}
+          onClick={(event) => {
+            event.preventDefault()
+            void navigate({ href: returnTo.href })
+          }}
           className="text-link-fg hover:text-link-fg-hover inline-flex min-h-11 items-center px-2 underline"
         >
-          {t('editor.backToListPlain', { ns: 'posts' })}
-        </Link>
+          {returnTo.path === '/' ? copy.home : copy.history}
+        </a>
         {onRetry && (
           <Button variant="ghost" onClick={onRetry} className="underline">
             {t('action.retry', { ns: 'common' })}
@@ -94,6 +104,7 @@ function EditorPlaceholder({ children }: { children: ReactNode }) {
       className={typographyStyles({
         variant: 'body',
         className: pageStyles({
+          width: 'workspace',
           className: 'text-content-tertiary flex flex-col items-start py-16',
         }),
       })}

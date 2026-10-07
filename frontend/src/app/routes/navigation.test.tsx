@@ -27,7 +27,7 @@ it.each([
 it('keeps navigation out of the canvas and opens one accessible menu on request', async () => {
   const user = userEvent.setup()
   renderAppAt('/posts', { user: { id: 'alice', plan: ProtoPlan.FREE } })
-  await screen.findByRole('heading', { name: '내 글' })
+  await screen.findByRole('heading', { name: '글 작업 내역' })
   expect(screen.queryByRole('navigation', { name: '주요' })).toBeNull()
   expect(document.querySelector('aside')).toBeNull()
   expect(document.querySelector('nav.fixed')).toBeNull()

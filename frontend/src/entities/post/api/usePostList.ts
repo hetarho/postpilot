@@ -45,7 +45,11 @@ export function usePostList(narrowing: PostListNarrowing): {
       // Every loaded page is refetched in turn while one of its rows has a job running; a page is
       // twenty short rows and the poll stops with the job.
       refetchInterval: (state) =>
-        state.state.data?.pages.some((page) => page.posts.some((post) => post.activeJob))
+        state.state.data?.pages.some((page) =>
+          page.posts.some(
+            (post) => post.activeJob?.status === 'queued' || post.activeJob?.status === 'running',
+          ),
+        )
           ? POLL_INTERVAL_MS
           : false,
     },

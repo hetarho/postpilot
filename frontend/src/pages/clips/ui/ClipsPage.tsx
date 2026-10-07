@@ -8,13 +8,12 @@ import {
   useClipProjects,
 } from '@/entities/clip-project'
 import { useClipTemplates } from '@/entities/clip-template'
-import { isTerminal } from '@/entities/generation-job'
+import { isTerminal, progressLabel } from '@/entities/generation-job'
 import { useSession } from '@/entities/session'
 import { ClipListControls, narrowClips, type ClipNarrowing } from '@/features/filter-clips'
 import { appFailureFromConnect } from '@/shared/api'
-import { formatRelativeTime } from '@/shared/lib'
+import { activeLocale, formatAppFailure, formatRelativeTime } from '@/shared/lib'
 import {
-  ActionBar,
   AppFailureMessage,
   Badge,
   Button,
@@ -25,6 +24,7 @@ import {
   type BadgeTone,
 } from '@/shared/ui'
 import { pageStyles } from '@/shared/ui'
+import { i18n } from '../config/i18n'
 
 /** The one status chip a row carries. Colour never travels alone (THEME-18): the tone only reinforces
  *  the label, so the label is chosen first and the tone follows it.
@@ -64,6 +64,10 @@ function stateTone(state: ReturnType<typeof clipState>): BadgeTone {
  *  shared link (CLIP-41). */
 export function ClipsPage() {
   const { t } = useTranslation(['clips', 'common'])
+  // The integration bundle registers the new fragment centrally. Owned defaults keep the
+  // history usable before that wiring lands and still follow the selected UI language.
+  const historyText = (key: keyof typeof i18n.ko.history) =>
+    t(`history.${key}`, { ns: 'clips', defaultValue: i18n[activeLocale()].history[key] })
   const { user } = useSession()
   const projects = useClipProjects(user?.id ?? '')
   const templates = useClipTemplates(user?.id ?? '')
@@ -100,7 +104,7 @@ export function ClipsPage() {
       })}
     >
       <div className="px-4 sm:px-6 lg:px-8">
-        <Typography variant="display">{t('title', { ns: 'clips' })}</Typography>
+        <Typography variant="display">{historyText('title')}</Typography>
       </div>
 
       {/* On the screen at every project count: a search that appears at some number of projects
@@ -175,23 +179,34 @@ export function ClipsPage() {
         {narrowed.map((project) => {
           const status = rowStatus(project, t)
           const template = templates.templates.find((v) => v.id === project.videoTemplateId)
+          const runningJob =
+            project.latestJob && !isTerminal(project.latestJob) ? project.latestJob : undefined
+          const failure =
+            project.latestJob?.status === 'failed' ? project.latestJob.failure : undefined
           // Two stacked lines on a phone, one line on the desk — the same rule the post list
           // follows: at 360px a single row leaves the title about ten Hangul, and from `lg:` up
           // the same two lines read as a ragged double-height list with the right two thirds empty.
           return (
-            <li key={project.id}>
+            <li
+              key={project.id}
+              className={
+                runningJob || failure
+                  ? 'flex flex-col'
+                  : 'flex flex-col lg:flex-row lg:items-center'
+              }
+            >
               <Link
                 to="/clips/$clipId"
                 params={{ clipId: project.id }}
-                className="hover:bg-row-bg-hover active:bg-row-bg-active flex min-h-11 flex-col items-start justify-center gap-1 px-4 py-3 sm:px-6 lg:flex-row lg:items-center lg:gap-4 lg:px-8"
+                className="hover:bg-row-bg-hover active:bg-row-bg-active flex min-h-11 min-w-0 flex-1 flex-col items-start justify-center gap-1 px-4 py-3 sm:px-6 lg:flex-row lg:items-center lg:gap-4 lg:px-8"
               >
                 <Typography
                   variant="label"
                   className="text-content-primary w-full truncate lg:w-auto lg:min-w-0 lg:flex-1"
                 >
-                  {project.title}
+                  {project.title.trim() || historyText('untitled')}
                 </Typography>
-                <span className="flex w-full min-w-0 items-center gap-2 lg:w-auto lg:shrink-0 lg:justify-end">
+                <span className="flex w-full min-w-0 flex-wrap items-center gap-2 lg:w-auto lg:shrink-0 lg:justify-end">
                   <Badge tone={status.tone}>{status.label}</Badge>
                   <span className={typographyStyles({ variant: 'meta', className: 'truncate' })}>
                     {template?.name ??
@@ -219,23 +234,43 @@ export function ClipsPage() {
                   </time>
                 </span>
               </Link>
+              <div className="flex shrink-0 flex-wrap items-center gap-x-2 gap-y-1 px-4 pb-2 sm:px-6 lg:px-8 lg:py-2">
+                {(runningJob || failure) && (
+                  <Typography
+                    variant={runningJob ? 'meta' : 'body'}
+                    className="text-content-secondary w-full"
+                  >
+                    {runningJob ? progressLabel(runningJob) : failure && formatAppFailure(failure)}
+                  </Typography>
+                )}
+                <Link
+                  to="/clips/$clipId"
+                  params={{ clipId: project.id }}
+                  className={buttonStyles({ variant: 'ghost', className: '-ml-3' })}
+                >
+                  {historyText(project.finalized || runningJob ? 'open' : 'continue')}
+                </Link>
+                {project.result?.downloadUrl ? (
+                  <a
+                    href={project.result.downloadUrl}
+                    className={buttonStyles({ variant: 'ghost' })}
+                  >
+                    {historyText('download')}
+                  </a>
+                ) : project.result ? (
+                  <Link
+                    to="/clips/$clipId"
+                    params={{ clipId: project.id }}
+                    className={buttonStyles({ variant: 'ghost' })}
+                  >
+                    {historyText('export')}
+                  </Link>
+                ) : null}
+              </div>
             </li>
           )
         })}
       </ul>
-
-      {/* ONE 새 클립, docked in the thumb's band on a phone and shrunk to the button's own width
-          above it (THEME-24). `mt-auto` puts it at the bottom of a SHORT list; `sticky` keeps it
-          there once the list is long enough to scroll. */}
-      <ActionBar
-        dock="list"
-        ariaLabel={t('project.newDockAria', { ns: 'clips' })}
-        className="mt-auto mr-4 sm:mr-6 lg:mr-8"
-      >
-        <Link to="/clips/new" className={buttonStyles({ variant: 'cta' })}>
-          {t('project.new', { ns: 'clips' })}
-        </Link>
-      </ActionBar>
     </main>
   )
 }

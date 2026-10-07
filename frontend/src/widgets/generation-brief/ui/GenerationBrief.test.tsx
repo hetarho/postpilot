@@ -1,4 +1,4 @@
-import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { TransportProvider } from '@connectrpc/connect-query'
@@ -12,7 +12,6 @@ import {
   createRouter,
 } from '@tanstack/react-router'
 import { PostCreditsBasis, ProtoPlan, Stage } from '@/shared/api'
-import { chooseOption } from '@/test/listbox'
 import type { FakeOptionsSave } from '@/test/posts'
 import type { FakePlansOptions } from '@/test/plans'
 import type { FakeProvidersOptions } from '@/test/providers'
@@ -184,112 +183,78 @@ describe('GenerationBrief', () => {
     await user.click(await screen.findByRole('button', { name: '글쓰기 옵션' }))
     const panel = screen.getByRole('dialog', { name: '글쓰기 옵션' })
 
-    for (const label of ['관찰 모델', '작성 모델', '후보 A', '후보 B', '글 언어']) {
+    for (const label of ['관찰 모델', '작성 모델', '글 언어']) {
       await waitFor(() =>
         expect(screen.getByRole('combobox', { name: new RegExp(label) })).toBeInTheDocument(),
       )
     }
-    for (const absent of [/말투/, /템플릿/]) {
+    for (const absent of [/말투/, /템플릿/, /후보 A/, /후보 B/]) {
       expect(screen.queryByRole('combobox', { name: absent })).not.toBeInTheDocument()
     }
     expect(screen.getByLabelText('목표 글자 수 사용')).toBeInTheDocument()
     // The tag count sits under the length, always visible, holding the post's value (POST-63).
     expect(screen.getByLabelText('태그 개수')).toHaveValue(4)
-    // The A/B pair is chosen HERE now, so the way out to the AI 모델 page that stood in for it is
-    // gone — following it mid-draft cost the user their place.
+    // The legacy pair editor is absent; the common test flow receives named source context.
     expect(panel.textContent).not.toContain('AI 모델에서 두 후보 설정')
     expect(within(panel).queryByRole('link')).not.toBeInTheDocument()
   })
 
-  // The pair has no 저장 button here, unlike the same fields on the AI 모델 page: the brief is a
-  // surface of self-saving fields, so the save rides the second choice.
-  it('saves the A/B pair as soon as both candidates name different models', async () => {
+  it('opens the named common test only after newest material finishes saving', async () => {
     const user = userEvent.setup()
-    const { calls } = renderBrief()
-
-    await user.click(await screen.findByRole('button', { name: '글쓰기 옵션' }))
-    const candidateA = await screen.findByRole('combobox', { name: /후보 A/ })
-    const candidateB = await screen.findByRole('combobox', { name: /후보 B/ })
-
-    // One candidate is not a pair, and the backend has nothing to store for half of one.
-    await chooseOption(user, candidateA, 'Writer')
+    let finishSaving!: () => void
+    const saved = new Promise<void>((resolve) => {
+      finishSaving = resolve
+    })
+    const navigate = vi.fn()
+    const onOpen = vi.fn(async () => {
+      await saved
+      navigate()
+    })
+    const href = '/tests?sourcePost=post-a'
+    const { calls } = renderBrief({ writingTest: { href, onOpen } })
+    const panel = await openBrief(user)
+    const link = within(panel).getByRole('link', { name: '글 설정 비교 테스트' })
+    expect(link).toHaveAttribute('href', href)
+    await user.click(link)
+    expect(onOpen).toHaveBeenCalledTimes(1)
+    expect(link).toHaveAttribute('aria-busy', 'true')
+    expect(navigate).not.toHaveBeenCalled()
+    expect(panel).toBeInTheDocument()
     expect(calls).not.toContain('SaveComparisonPair')
-
-    await chooseOption(user, candidateB, 'Rival')
-    await waitFor(() => expect(calls).toContain('SaveComparisonPair'))
+    await act(async () => {
+      finishSaving()
+      await saved
+    })
+    await waitFor(() => expect(navigate).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
   })
 
-  // The backend refuses two identical candidates, so neither field lists what the other holds and
-  // the pair cannot be made duplicate in the first place.
-  it('drops the model one candidate holds from the other candidate\u2019s list', async () => {
+  it('keeps the brief and source in place when the material flush fails', async () => {
     const user = userEvent.setup()
-    renderBrief()
-
-    await user.click(await screen.findByRole('button', { name: '글쓰기 옵션' }))
-    await chooseOption(user, await screen.findByRole('combobox', { name: /후보 A/ }), 'Writer')
-
-    await user.click(await screen.findByRole('combobox', { name: /후보 B/ }))
-    expect(screen.getAllByRole('option').map((option) => option.textContent)).toEqual([
-      'Rival',
-      'Third',
-    ])
-    expect(screen.queryByRole('option', { name: 'Writer' })).not.toBeInTheDocument()
+    const onOpen = vi.fn(async () => {
+      throw new Error('private transport detail')
+    })
+    renderBrief({ writingTest: { href: '/tests?sourcePost=post-a', onOpen } })
+    const panel = await openBrief(user)
+    await user.click(within(panel).getByRole('link', { name: '글 설정 비교 테스트' }))
+    const alert = await within(panel).findByRole('alert')
+    expect(alert).toHaveTextContent('요청을 마치지 못했어요.')
+    expect(alert).not.toHaveTextContent('private transport detail')
+    expect(panel).toBeInTheDocument()
+    expect(onOpen).toHaveBeenCalledTimes(1)
   })
 
-  // A blanked candidate is not a state the pair can be IN: `SaveComparisonPair` refuses an empty
-  // ref and no RPC clears one. Offering the choice anyway emptied the field, sent nothing, and
-  // left 글 생성's A/B 비교 running the candidate the user had just watched disappear.
-  it('offers no way to blank a candidate the server could not clear', async () => {
+  it('marks and focuses the ordinary active writer without test entrant fields', async () => {
     const user = userEvent.setup()
-    renderBrief({}, { savedPair: true })
-
-    await user.click(await screen.findByRole('button', { name: '글쓰기 옵션' }))
-    const candidateA = await screen.findByRole('combobox', { name: /후보 A/ })
-    await waitFor(() => expect(candidateA).toHaveTextContent('Writer'))
-
-    // The panel lists models and nothing else: every row it offers is a choice this surface can
-    // actually carry out.
-    await user.click(candidateA)
-    expect(screen.queryByRole('option', { name: '모델을 선택하세요' })).not.toBeInTheDocument()
-    // Its own model, plus the one nobody holds. Rival is 후보 B's and is therefore not offered.
-    expect(screen.getAllByRole('option').map((option) => option.textContent)).toEqual([
-      'Writer',
-      'Third',
-    ])
-  })
-
-  // Never set is the field's EMPTY STATE rather than a listed choice, so it still reads as empty
-  // before either candidate has been chosen.
-  it('reads as unset while no pair has been saved', async () => {
-    const user = userEvent.setup()
-    renderBrief()
-
-    await user.click(await screen.findByRole('button', { name: '글쓰기 옵션' }))
-    const candidateA = await screen.findByRole('combobox', { name: /후보 A/ })
-    expect(candidateA).toHaveTextContent('모델을 선택하세요')
-  })
-
-  // A 생성 or A/B 비교 refused for its setup opens the brief on what that run waits for, marked the
-  // way a validation error is: here the pair, with the ordinary run's own field unmarked.
-  it('marks the pair a refused comparison is waiting on, and focuses its first candidate', async () => {
-    const user = userEvent.setup()
-    renderBrief({ refusal: { mode: 'comparison', count: 1 } })
-
-    const brief = await openBrief(user)
-    const PAIR = '작성 A/B 모델 두 개를 선택하세요.'
-    expect(within(brief).getByText(PAIR)).toBeInTheDocument()
-    expect(within(brief).queryByRole('link')).not.toBeInTheDocument()
-    for (const label of [/후보 A/, /후보 B/]) {
-      const candidate = await within(brief).findByRole('combobox', { name: label })
-      expect(candidate).toHaveAttribute('aria-invalid', 'true')
-      expect(candidate).toHaveAccessibleDescription(expect.stringContaining(PAIR))
-    }
-    expect(within(brief).getByRole('combobox', { name: /^작성 모델/ })).not.toHaveAttribute(
-      'aria-invalid',
+    renderBrief({ refusal: { mode: 'generation', count: 1 } }, { selections: [] })
+    const panel = await openBrief(user)
+    const writer = await within(panel).findByRole('combobox', { name: /^작성 모델/ })
+    expect(writer).toHaveAttribute('aria-invalid', 'true')
+    expect(writer).toHaveAccessibleDescription(
+      expect.stringContaining('활성 작성 모델을 선택하세요.'),
     )
-    await waitFor(() =>
-      expect(within(brief).getByRole('combobox', { name: /후보 A/ })).toHaveFocus(),
-    )
+    await waitFor(() => expect(writer).toHaveFocus())
+    expect(within(panel).queryByRole('combobox', { name: /후보/ })).not.toBeInTheDocument()
   })
 
   // POST-81: the 발행 글 점검 rows sit after 목표 분량, one per metric in catalogue order, each in the

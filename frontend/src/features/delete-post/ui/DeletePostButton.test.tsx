@@ -13,7 +13,13 @@ vi.mock('@tanstack/react-router', () => ({ useNavigate: () => navigate }))
 
 const POST = { slug: 'post-a', title: '제주 3일' }
 
-function renderButton(options: { refusal?: AppFailureReason; onDeleted?: () => void } = {}) {
+function renderButton(
+  options: {
+    refusal?: AppFailureReason
+    onDeleted?: () => void
+    returnTo?: { href: string; scrollY: number }
+  } = {},
+) {
   const calls: string[] = []
   const transport = createRouterTransport(({ rpc }) => {
     rpc(PostService.method.deletePost, (req) => {
@@ -24,9 +30,12 @@ function renderButton(options: { refusal?: AppFailureReason; onDeleted?: () => v
       return create(DeletePostResponseSchema, {})
     })
   })
-  render(<DeletePostButton post={POST} onDeleted={options.onDeleted} />, {
-    wrapper: withProviders(transport, createTestQueryClient()),
-  })
+  render(
+    <DeletePostButton post={POST} onDeleted={options.onDeleted} returnTo={options.returnTo} />,
+    {
+      wrapper: withProviders(transport, createTestQueryClient()),
+    },
+  )
   return { calls, user: userEvent.setup() }
 }
 
@@ -69,4 +78,13 @@ it('explains a running AI job and stays on the editor', async () => {
 
   expect(await screen.findByRole('alert')).toHaveTextContent('AI 작업이 진행 중이에요')
   expect(navigate).not.toHaveBeenCalled()
+})
+
+it('returns a creation-origin post to home after stopping only its queues', async () => {
+  navigate.mockClear()
+  const onDeleted = vi.fn()
+  const { user } = renderButton({ onDeleted, returnTo: { href: '/', scrollY: 0 } })
+  await openAndConfirm(user)
+  expect(onDeleted).toHaveBeenCalledBefore(navigate)
+  expect(navigate).toHaveBeenCalledWith({ href: '/' })
 })

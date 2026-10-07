@@ -4,6 +4,7 @@ import type { I18nFragment } from '@/shared/lib'
 export const i18n = {
   namespace: 'posts',
   ko: {
+    writingTestEntry: { label: '글 설정 비교 테스트' },
     storylineActions: {
       remake: '다시 만들기',
       write: '이 스토리로 글 쓰기',
@@ -23,6 +24,7 @@ export const i18n = {
     },
   },
   en: {
+    writingTestEntry: { label: 'Compare writing settings' },
     storylineActions: {
       remake: 'Make again',
       write: 'Write from this storyline',

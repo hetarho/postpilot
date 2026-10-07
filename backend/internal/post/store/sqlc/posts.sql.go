@@ -10,8 +10,27 @@ import (
 	"database/sql"
 )
 
+const advancePostInputRevision = `-- name: AdvancePostInputRevision :execrows
+UPDATE posts SET input_revision = input_revision + 1, updated_at = ?1
+WHERE slug = ?2 AND status <> 'published'
+`
+
+type AdvancePostInputRevisionParams struct {
+	UpdatedAt string
+	Slug      string
+}
+
+// Runs in the same transaction as a changed answer, attachment or orientation.
+func (q *Queries) AdvancePostInputRevision(ctx context.Context, arg AdvancePostInputRevisionParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, advancePostInputRevision, arg.UpdatedAt, arg.Slug)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const assignPostField = `-- name: AssignPostField :execrows
-UPDATE posts SET field = ?1, updated_at = ?2
+UPDATE posts SET input_revision = input_revision + 1, field = ?1, updated_at = ?2
 WHERE slug = ?3 AND user_id = ?4 AND status <> 'published'
   AND field IS NOT ?1
 `
@@ -40,7 +59,10 @@ func (q *Queries) AssignPostField(ctx context.Context, arg AssignPostFieldParams
 }
 
 const assignPostTemplate = `-- name: AssignPostTemplate :execrows
-UPDATE posts SET template_id = ?1,
+UPDATE posts SET input_revision = input_revision + CASE WHEN template_id IS NOT ?1
+        OR target_length IS NOT COALESCE(?2, target_length)
+        OR COALESCE(tag_count, 4) IS NOT COALESCE(?3, tag_count, 4) THEN 1 ELSE 0 END,
+    template_id = ?1,
     target_length = COALESCE(?2, target_length),
     tag_count = COALESCE(?3, tag_count),
     updated_at = ?4
@@ -167,8 +189,9 @@ func (q *Queries) DeletePost(ctx context.Context, arg DeletePostParams) (int64, 
 
 const finalizePost = `-- name: FinalizePost :execrows
 UPDATE posts SET status = 'finalized', finalized_revision = content_revision,
-    title = ?, finalized_at = ?, updated_at = ?
-WHERE slug = ? AND user_id = ? AND content_revision = ?
+    input_revision = input_revision + CASE WHEN title IS NOT ?1 THEN 1 ELSE 0 END,
+    title = ?1, finalized_at = ?2, updated_at = ?3
+WHERE slug = ?4 AND user_id = ?5 AND content_revision = ?6
   AND content IS NOT NULL AND status <> 'published'
 `
 
@@ -246,6 +269,8 @@ func (q *Queries) GetPost(ctx context.Context, slug string) (Post, error) {
 
 const listPostSummariesByUser = `-- name: ListPostSummariesByUser :many
 SELECT slug, title, status, updated_at, voice_id, template_id, target_language, content_language,
+    input_revision, content_revision, published_url,
+    CAST(content IS NOT NULL AND content <> 'null' AND COALESCE(json_array_length(content, '$.blocks'), 0) > 0 AS INTEGER) AS content_ready,
     json_extract(content, '$.title') AS content_title,
     json_extract(content, '$.tags') AS content_tags
 FROM posts
@@ -275,6 +300,10 @@ type ListPostSummariesByUserRow struct {
 	TemplateID      sql.NullString
 	TargetLanguage  string
 	ContentLanguage sql.NullString
+	InputRevision   int64
+	ContentRevision int64
+	PublishedUrl    sql.NullString
+	ContentReady    int64
 	ContentTitle    interface{}
 	ContentTags     interface{}
 }
@@ -308,6 +337,10 @@ func (q *Queries) ListPostSummariesByUser(ctx context.Context, arg ListPostSumma
 			&i.TemplateID,
 			&i.TargetLanguage,
 			&i.ContentLanguage,
+			&i.InputRevision,
+			&i.ContentRevision,
+			&i.PublishedUrl,
+			&i.ContentReady,
 			&i.ContentTitle,
 			&i.ContentTags,
 		); err != nil {
@@ -432,7 +465,7 @@ func (q *Queries) PublishPost(ctx context.Context, arg PublishPostParams) (int64
 }
 
 const reassignPostVoice = `-- name: ReassignPostVoice :execrows
-UPDATE posts SET voice_id = ?1, updated_at = ?2
+UPDATE posts SET input_revision = input_revision + 1, voice_id = ?1, updated_at = ?2
 WHERE slug = ?3 AND user_id = ?4 AND status <> 'published'
   AND voice_id IS NOT ?1
 `
@@ -491,8 +524,12 @@ func (q *Queries) SavePostContent(ctx context.Context, arg SavePostContentParams
 }
 
 const savePostGenerationOptions = `-- name: SavePostGenerationOptions :execrows
-UPDATE posts SET target_length = ?, tag_count = ?, use_memory = ?, quality_rules = ?, field = ?, updated_at = ?
-WHERE slug = ? AND user_id = ? AND status <> 'published'
+UPDATE posts SET input_revision = input_revision + CASE WHEN target_length IS NOT ?1
+        OR COALESCE(tag_count, 4) IS NOT ?2 OR use_memory IS NOT ?3
+        OR quality_rules IS NOT ?4 OR field IS NOT ?5 THEN 1 ELSE 0 END,
+    target_length = ?1, tag_count = ?2, use_memory = ?3,
+    quality_rules = ?4, field = ?5, updated_at = ?6
+WHERE slug = ?7 AND user_id = ?8 AND status <> 'published'
 `
 
 type SavePostGenerationOptionsParams struct {
@@ -547,27 +584,28 @@ func (q *Queries) UnpublishPost(ctx context.Context, arg UnpublishPostParams) (i
 }
 
 const updateGeneratedContent = `-- name: UpdateGeneratedContent :execrows
-UPDATE posts SET content = ?1, machine_baseline = ?2,
-    content_language = ?3,
-    content_nouns = ?4,
-    storyline = ?5,
+UPDATE posts SET input_revision = input_revision + CASE WHEN storyline IS NOT ?1 THEN 1 ELSE 0 END,
+    content = ?2, machine_baseline = ?3,
+    content_language = ?4,
+    content_nouns = ?5,
+    storyline = ?1,
     content_revision = content_revision + 1,
     machine_baseline_revision = content_revision + 1,
     status = 'review', finalized_revision = NULL, finalized_at = NULL, updated_at = ?6
 WHERE slug = ?7 AND user_id = ?8 AND status <> 'published'
-  AND (content IS NULL OR content <> ?1 OR status <> 'review'
+  AND (content IS NULL OR content <> ?2 OR status <> 'review'
        OR machine_baseline_revision <> content_revision
-       OR content_language IS NULL OR content_language <> ?3
-       OR content_nouns IS NOT ?4
-       OR storyline IS NOT ?5)
+       OR content_language IS NULL OR content_language <> ?4
+       OR content_nouns IS NOT ?5
+       OR storyline IS NOT ?1)
 `
 
 type UpdateGeneratedContentParams struct {
+	Storyline       sql.NullString
 	Content         sql.NullString
 	MachineBaseline sql.NullString
 	ContentLanguage sql.NullString
 	ContentNouns    sql.NullString
-	Storyline       sql.NullString
 	UpdatedAt       string
 	Slug            string
 	UserID          string
@@ -578,11 +616,11 @@ type UpdateGeneratedContentParams struct {
 // identical content with different ones is a new machine write.
 func (q *Queries) UpdateGeneratedContent(ctx context.Context, arg UpdateGeneratedContentParams) (int64, error) {
 	result, err := q.db.ExecContext(ctx, updateGeneratedContent,
+		arg.Storyline,
 		arg.Content,
 		arg.MachineBaseline,
 		arg.ContentLanguage,
 		arg.ContentNouns,
-		arg.Storyline,
 		arg.UpdatedAt,
 		arg.Slug,
 		arg.UserID,
@@ -594,13 +632,14 @@ func (q *Queries) UpdateGeneratedContent(ctx context.Context, arg UpdateGenerate
 }
 
 const updatePostAttachmentTraces = `-- name: UpdatePostAttachmentTraces :execrows
-UPDATE posts SET observations = ?1, storyline = ?2, updated_at = ?3
+UPDATE posts SET input_revision = input_revision + CASE WHEN storyline IS NOT ?1 THEN 1 ELSE 0 END,
+    observations = ?2, storyline = ?1, updated_at = ?3
 WHERE slug = ?4 AND user_id = ?5 AND status <> 'published'
 `
 
 type UpdatePostAttachmentTracesParams struct {
-	Observations sql.NullString
 	Storyline    sql.NullString
+	Observations sql.NullString
 	UpdatedAt    string
 	Slug         string
 	UserID       string
@@ -610,8 +649,8 @@ type UpdatePostAttachmentTracesParams struct {
 // (POST-18). NULL storyline is none.
 func (q *Queries) UpdatePostAttachmentTraces(ctx context.Context, arg UpdatePostAttachmentTracesParams) (int64, error) {
 	result, err := q.db.ExecContext(ctx, updatePostAttachmentTraces,
-		arg.Observations,
 		arg.Storyline,
+		arg.Observations,
 		arg.UpdatedAt,
 		arg.Slug,
 		arg.UserID,
@@ -623,7 +662,10 @@ func (q *Queries) UpdatePostAttachmentTraces(ctx context.Context, arg UpdatePost
 }
 
 const updatePostDraft = `-- name: UpdatePostDraft :execrows
-UPDATE posts SET title = ?1, memo = ?2,
+UPDATE posts SET input_revision = input_revision + CASE WHEN title IS NOT ?1
+        OR memo IS NOT ?2
+        OR target_language IS NOT COALESCE(?3, target_language) THEN 1 ELSE 0 END,
+    title = ?1, memo = ?2,
     target_language = COALESCE(?3, target_language),
     updated_at = ?4
 WHERE slug = ?5 AND user_id = ?6 AND status <> 'published'
@@ -679,7 +721,8 @@ func (q *Queries) UpdatePostObservations(ctx context.Context, arg UpdatePostObse
 }
 
 const updatePostStoryline = `-- name: UpdatePostStoryline :execrows
-UPDATE posts SET storyline = ?1, updated_at = ?2
+UPDATE posts SET input_revision = input_revision + CASE WHEN storyline IS NOT ?1 THEN 1 ELSE 0 END,
+    storyline = ?1, updated_at = ?2
 WHERE slug = ?3 AND user_id = ?4 AND status <> 'published'
 `
 
