@@ -532,18 +532,27 @@ try {
       kind: "error",
     },
     { at: "/clips/review", state: "draft", kind: "design-gallery" },
+    { at: "/clips/review", state: "finalized", kind: "readonly-appearance" },
     { at: "/admin/models", state: "catalog-populated", kind: "catalog" },
     {
       at: "/admin/estimator",
       state: "catalog-populated",
       kind: "catalog-estimator",
     },
-    ...[2, 4, 8, 16].map((count) => ({
-      at: `/tests?count=${count}&draft=audit-count-${count}`,
-      state: "populated",
-      kind: "candidates",
-      count,
-    })),
+    ...(process.env.MOBILE_CANDIDATE_WIDTHS ?? "390")
+      .split(",")
+      .map(Number)
+      .flatMap((width) =>
+        ["write", "observe"].flatMap((stage) =>
+          [2, 4, 8, 16].map((count) => ({
+            at: `/tests?stage=${stage}&count=${count}&draft=audit-${stage}-${count}-${width}`,
+            state: "populated",
+            kind: "candidates",
+            count,
+            width,
+          })),
+        ),
+      ),
     { at: "/templates/template", state: "populated", kind: "direct-template" },
     {
       at: "/video-templates/video-template",
@@ -561,6 +570,7 @@ try {
       const errors = [];
       page.on("pageerror", (e) => errors.push(e.message));
       try {
+        await page.setViewportSize({ width: c.width ?? 390, height: 800 });
         await open(page, c.at, c.state);
         const basePath = c.at.split("?")[0];
         const expected = expectations[basePath];
@@ -574,6 +584,60 @@ try {
             .waitFor();
           const choices = page.getByRole("combobox", { name: /후보|참가/ });
           assert.equal(await choices.count(), c.count);
+          const peers = await choices.evaluateAll((nodes) =>
+            nodes.map((n) => {
+              const r = n.getBoundingClientRect();
+              return { y: r.top, width: r.width, height: r.height };
+            }),
+          );
+          for (let i = 0; i < peers.length; i++) {
+            assert.ok(
+              peers[i].height >= 44 &&
+                peers[i].width >= 44 &&
+                peers[i].width < (c.width ?? 390) * 0.6,
+              "Candidate selector keeps its phone target in two columns",
+            );
+            if (i % 2 === 1)
+              assert.ok(
+                Math.abs(peers[i].y - peers[i - 1].y) < 1,
+                "Peer selectors share a phone row",
+              );
+          }
+          const nextButton = page.getByRole("button", {
+            name: "다음",
+            exact: true,
+          });
+          assert.ok((await nextButton.boundingBox()).height >= 48);
+          if (c.count === 16) {
+            await choices.first().focus();
+            await choices.first().evaluate((n) => (window.__candidateNode = n));
+            await page.setViewportSize({ width: c.width ?? 390, height: 480 });
+            assert.ok(
+              await choices
+                .first()
+                .evaluate(
+                  (n) =>
+                    n === window.__candidateNode &&
+                    document.activeElement === n,
+                ),
+            );
+            await page.setViewportSize({ width: c.width ?? 390, height: 800 });
+            assert.ok(
+              await choices
+                .first()
+                .evaluate(
+                  (n) =>
+                    n === window.__candidateNode &&
+                    document.activeElement === n,
+                ),
+            );
+          }
+          assert.ok(
+            !(await page.evaluate(() => window.__mobileAudit.procedures)).some(
+              (name) => name.startsWith("Start"),
+            ),
+            "Candidate composition never starts paid work",
+          );
         }
         if (c.kind === "invalid-reset") {
           await page.locator("input[type=password]").fill("password-audit");
@@ -590,6 +654,32 @@ try {
               { exact: true },
             )
             .waitFor();
+        }
+        if (c.kind === "readonly-appearance") {
+          await page.getByRole("tab", { name: "생성", exact: true }).click();
+          const toggle = page.getByRole("button", {
+            name: "디자인과 자막 스타일",
+            exact: true,
+          });
+          assert.equal(await toggle.isEnabled(), true);
+          await toggle.click();
+          const controls = page
+            .getByRole("radiogroup", { name: "인트로 디자인", exact: true })
+            .getByRole("radio");
+          assert.ok((await controls.count()) > 0);
+          for (const control of await controls.all())
+            assert.equal(await control.isEnabled(), false);
+          const names = await page.evaluate(
+            () => window.__mobileAudit.procedures,
+          );
+          assert.ok(
+            !names.some((name) =>
+              /^(Update|Save|Start|Finalize|Confirm|Cancel)/.test(name),
+            ),
+            "Readonly disclosure never writes or starts AI",
+          );
+          await toggle.click();
+          assert.equal(await toggle.getAttribute("aria-expanded"), "false");
         }
         const closed =
           c.kind === "design-gallery" ? await geometry(page) : undefined;
@@ -733,7 +823,7 @@ try {
           id: expected.expectedLeaf,
           path: basePath,
           at: c.at,
-          width: 390,
+          width: c.width ?? 390,
           theme,
           scenario: c.state,
           interaction: c.kind,

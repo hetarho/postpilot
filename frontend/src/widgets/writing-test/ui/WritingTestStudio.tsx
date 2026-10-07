@@ -775,7 +775,7 @@ function OwnedStudio({
                   </Button>
                 </Notice>
               )}
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid min-w-0 grid-cols-2 gap-4">
                 {Array.from({ length: plan.count }, (_, index) => (
                   <WritingSelect
                     key={index}

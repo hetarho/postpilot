@@ -138,7 +138,7 @@
     "sourceReview": {
       "source": "frontend/src/pages/writing-tests/ui/WritingTestsPage.tsx",
       "status": "changed",
-      "finding": "Factor peers use2x2 compact choices with one help paragraph. Prior T649 candidate baseline2/4/8/16 measured800/850/1202/1906px at390:16 selectors remain one phone column (44px each), while48px Next dock remains732px; handoff asks coordinator to compact current T649 slot presentation without touching behavior.",
+      "finding": "Factor peers use2x2 compact choices and one shared help paragraph; model candidates now use2 phone columns with min-w-0. The corrected2/4/8/16 write/observe view matrix covers320/360/390/430 in both themes,44px selectors/48px dock, and16-candidate keyboard-height DOM/focus continuity; prior16 candidate1906px document fell to1202px at390. Business and slot behavior remain the isolated prior-T649 baseline until final coordinated merge qualification.",
       "inspectedStates": ["populated", "loading", "failure"]
     }
   },
