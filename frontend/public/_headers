@@ -2,6 +2,7 @@
 /assets/*
   Cache-Control: public, max-age=31536000, immutable
   X-Content-Type-Options: nosniff
+  Link: </licenses/browser-media/index.html>; rel="license", </licenses/browser-media/source-access.json>; rel="describedby"
 
 /assets/*.wasm
   Content-Type: application/wasm
@@ -13,21 +14,3 @@
 
 /licenses/*
   Cache-Control: public, max-age=0, must-revalidate
-
-/assets/video.worker-*
-  Link: </licenses/browser-media/index.html>; rel="license", </licenses/browser-media/source-access.json>; rel="describedby"
-
-/assets/preview.worker-*
-  Link: </licenses/browser-media/index.html>; rel="license", </licenses/browser-media/source-access.json>; rel="describedby"
-
-/assets/analysis.worker-*
-  Link: </licenses/browser-media/index.html>; rel="license", </licenses/browser-media/source-access.json>; rel="describedby"
-
-/assets/range-audio.worker-*
-  Link: </licenses/browser-media/index.html>; rel="license", </licenses/browser-media/source-access.json>; rel="describedby"
-
-/assets/processing.worker-*
-  Link: </licenses/browser-media/index.html>; rel="license", </licenses/browser-media/source-access.json>; rel="describedby"
-
-/assets/index_bg-*.wasm
-  Link: </licenses/browser-media/index.html>; rel="license", </licenses/browser-media/source-access.json>; rel="describedby"
