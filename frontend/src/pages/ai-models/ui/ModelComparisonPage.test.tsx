@@ -2,11 +2,14 @@ import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import { create } from '@bufbuild/protobuf'
-import { ExperimentOrigin, ObservationSchema, Stage } from '@/shared/api'
+import { ObservationSchema, Stage } from '@/shared/api'
 import type { FakeWriteExperimentStart, FakeExperimentsOptions } from '@/test/experiments'
 import { chooseOption } from '@/test/listbox'
 import { renderAppAt } from '@/test/app'
 import { FAKE_PUBLISHED_URL } from '@/test/posts'
+
+const retirementMessage =
+  '이전 비교 결과는 읽기만 가능해요. 다시 비교하려면 글쓰기 테스트를 시작해 주세요.'
 
 const writeModels = [
   { providerId: 'openrouter', modelId: 'writer-a', label: 'Writer A' },
@@ -19,7 +22,7 @@ const writePair = {
   candidateB: { providerId: 'openrouter', modelId: 'writer-b' },
 }
 
-it('starts a no-photo write comparison from the model tab with the persisted target length', async () => {
+it('refuses a retired no-photo write start and preserves the selected post and stage', async () => {
   const user = userEvent.setup()
   const starts: FakeWriteExperimentStart[] = []
   const { router } = renderAppAt('/ai-models/compare', {
@@ -39,30 +42,14 @@ it('starts a no-photo write comparison from the model tab with the persisted tar
   await waitFor(() => expect(start).not.toHaveAttribute('aria-disabled'))
   await user.click(start)
 
-  await waitFor(() =>
-    expect(starts).toEqual([
-      {
-        postSlug: 'post-1',
-        // Started in the lab, so its verdict will be a pick that applies nothing.
-        origin: ExperimentOrigin.LAB,
-        observeModel: undefined,
-        modelA: { providerId: 'openrouter', modelId: 'writer-a' },
-        modelB: { providerId: 'openrouter', modelId: 'writer-b' },
-        targetLength: 1_600,
-      },
-    ]),
-  )
-  await waitFor(() =>
-    expect(router.state.location.pathname).toBe('/ai-models/experiments/write-experiment-1'),
-  )
-  expect(router.state.location.search.from).toBe('compare')
-  expect(await screen.findByRole('link', { name: '← 모델 비교로 돌아가기' })).toHaveAttribute(
-    'href',
-    '/ai-models/compare?stage=write',
-  )
+  expect(await screen.findByText(retirementMessage)).toBeInTheDocument()
+  expect(starts).toEqual([])
+  expect(router.state.location.pathname).toBe('/ai-models/compare')
+  expect(router.state.location.search.stage).toBe('write')
+  expect(screen.getByRole('combobox', { name: /비교할 글/ })).toHaveTextContent('첫 글')
 })
 
-it('starts one write comparison with all five persisted lab candidates in order', async () => {
+it('keeps five saved candidates readable without starting a retired multiway comparison', async () => {
   const user = userEvent.setup()
   const candidateStarts: NonNullable<FakeExperimentsOptions['candidateStarts']> = []
   renderAppAt('/ai-models/compare', {
@@ -94,14 +81,9 @@ it('starts one write comparison with all five persisted lab candidates in order'
   const start = screen.getByRole('button', { name: '비교 시작' })
   await waitFor(() => expect(start).not.toHaveAttribute('aria-disabled'))
   await user.click(start)
-  await waitFor(() => expect(candidateStarts).toHaveLength(1))
-  expect(candidateStarts[0]).toEqual({
-    kind: 'write',
-    refs: ['a', 'b', 'c', 'd', 'e'].map((id) => ({
-      providerId: 'openrouter',
-      modelId: `writer-${id}`,
-    })),
-  })
+  expect(await screen.findByText(retirementMessage)).toBeInTheDocument()
+  expect(candidateStarts).toEqual([])
+  expect(screen.getByRole('combobox', { name: /후보 E/ })).toHaveTextContent('Writer E')
 })
 
 it('blocks a changed or saving C row until the server confirms the visible list', async () => {
@@ -135,13 +117,9 @@ it('blocks a changed or saving C row until the server confirms the visible list'
   release()
   await waitFor(() => expect(start).not.toHaveAttribute('aria-disabled'))
   await user.click(start)
-  await waitFor(() =>
-    expect(candidateStarts[0]?.refs.map((ref) => ref.modelId)).toEqual([
-      'writer-a',
-      'writer-b',
-      'writer-c',
-    ]),
-  )
+  expect(await screen.findByText(retirementMessage)).toBeInTheDocument()
+  expect(candidateStarts).toEqual([])
+  expect(screen.getByRole('combobox', { name: /후보 C/ })).toHaveTextContent('Writer C')
 })
 
 it('shows an A/B collision or locked extra and refuses to start', async () => {
@@ -190,7 +168,7 @@ it('shows an A/B collision or locked extra and refuses to start', async () => {
   expect(screen.getByRole('combobox', { name: /후보 C/ })).toHaveTextContent('Locked')
 })
 
-it('requires and sends the explicit active observe model for a post with photos', async () => {
+it('retains the active observe selection for a photo-backed post while refusing its retired start', async () => {
   const user = userEvent.setup()
   const starts: FakeWriteExperimentStart[] = []
   renderAppAt('/ai-models/compare', {
@@ -221,12 +199,8 @@ it('requires and sends the explicit active observe model for a post with photos'
   await waitFor(() => expect(start).not.toHaveAttribute('aria-disabled'))
   await user.click(start)
 
-  await waitFor(() =>
-    expect(starts[0]?.observeModel).toEqual({
-      providerId: 'openrouter',
-      modelId: 'vision',
-    }),
-  )
+  expect(await screen.findByText(retirementMessage)).toBeInTheDocument()
+  expect(starts).toEqual([])
 })
 
 // The model-lab half: the write comparison's second entry point (MODEL-31) goes through the
@@ -282,11 +256,11 @@ it('routes a model-lab comparison through the re-observation picker', async () =
   await user.click(within(picker).getByRole('checkbox', { name: 'photo.jpg 다시 관찰' }))
   await user.click(within(picker).getByRole('button', { name: '이대로 시작' }))
 
-  await waitFor(() => expect(starts).toHaveLength(1))
-  expect(starts[0].reobserveFiles).toEqual(['photo.jpg'])
+  expect(await screen.findByText(retirementMessage)).toBeInTheDocument()
+  expect(starts).toEqual([])
 })
 
-it('keeps photo-backed writing blocked without an active observe model and reports start errors', async () => {
+it('keeps photo-backed writing blocked without an active observe model and reports retirement for a valid text post', async () => {
   const user = userEvent.setup()
   renderAppAt('/ai-models/compare', {
     user: { id: 'owner-1' },
@@ -313,7 +287,7 @@ it('keeps photo-backed writing blocked without an active observe model and repor
   const start = screen.getByRole('button', { name: '비교 시작' })
   await waitFor(() => expect(start).not.toHaveAttribute('aria-disabled'))
   await user.click(start)
-  expect(await screen.findByText('네트워크에 연결할 수 없어요.')).toBeInTheDocument()
+  expect(await screen.findByText(retirementMessage)).toBeInTheDocument()
 })
 
 it('blocks posts with active work or an unresolved write experiment', async () => {
@@ -348,9 +322,8 @@ it('blocks posts with active work or an unresolved write experiment', async () =
   expect(starts).toHaveLength(0)
 })
 
-// MODEL-31: the lab's write tab takes an owned post in any status. A lab comparison writes
-// nothing to its post (MODEL-66), so the published lock that guards writes does not hold it.
-it('starts a lab write comparison on a published post', async () => {
+// Legacy source selection remains readable; its retired start must not write a published post.
+it('retains a published source post and refuses its retired comparison without rewriting it', async () => {
   const user = userEvent.setup()
   const starts: FakeWriteExperimentStart[] = []
   renderAppAt('/ai-models/compare', {
@@ -375,13 +348,12 @@ it('starts a lab write comparison on a published post', async () => {
   await waitFor(() => expect(startButton).not.toHaveAttribute('aria-disabled'))
   expect(screen.queryByText(/발행된 글은 바꿀 수 없어요/)).not.toBeInTheDocument()
   await user.click(startButton)
-  await waitFor(() => expect(starts).toHaveLength(1))
-  expect(starts[0]).toMatchObject({ postSlug: 'published-post', origin: ExperimentOrigin.LAB })
+  expect(await screen.findByText(retirementMessage)).toBeInTheDocument()
+  expect(starts).toEqual([])
 })
 
-// MODEL-31, review F76: a video-only post observes too, so the lab sends the active observe
-// model for it exactly as the editor's entry does — without it the start is refused.
-it('sends the observe model for a post with videos and no photos', async () => {
+// Video-only source selection cannot bypass the retired comparison admission.
+it('refuses the retired video-only comparison without sending an observation or generation request', async () => {
   const user = userEvent.setup()
   const starts: FakeWriteExperimentStart[] = []
   renderAppAt('/ai-models/compare', {
@@ -418,9 +390,8 @@ it('sends the observe model for a post with videos and no photos', async () => {
   const start = screen.getByRole('button', { name: '비교 시작' })
   await waitFor(() => expect(start).not.toHaveAttribute('aria-disabled'))
   await user.click(start)
-  await waitFor(() =>
-    expect(starts[0]?.observeModel).toEqual({ providerId: 'openrouter', modelId: 'vision' }),
-  )
+  expect(await screen.findByText(retirementMessage)).toBeInTheDocument()
+  expect(starts).toEqual([])
 })
 
 const photoPost = {
@@ -499,7 +470,7 @@ it('starts nothing while the fields show a pair the store does not hold', async 
   await waitFor(() => expect(start).not.toHaveAttribute('aria-disabled'))
 })
 
-it('opens observation comparison without work and starts only with the chosen saved pair and post', async () => {
+it('retains an observation pair and source post while refusing a retired start without navigation', async () => {
   const user = userEvent.setup()
   const observeStarts: NonNullable<FakeExperimentsOptions['observeStarts']> = []
   const candidateStarts: NonNullable<FakeExperimentsOptions['candidateStarts']> = []
@@ -538,37 +509,17 @@ it('opens observation comparison without work and starts only with the chosen sa
   await waitFor(() => expect(start).not.toHaveAttribute('aria-disabled'))
   expect(observeStarts).toEqual([])
   await user.click(start)
-  await waitFor(() =>
-    expect(observeStarts).toEqual([
-      {
-        postSlug: 'photo-post',
-        modelA: writePair.candidateA,
-        modelB: writePair.candidateB,
-      },
-    ]),
-  )
-  expect(candidateStarts[0]).toEqual({
-    kind: 'observe',
-    refs: [
-      writePair.candidateA,
-      writePair.candidateB,
-      { providerId: 'openrouter', modelId: 'writer-c' },
-    ],
-  })
-  await waitFor(() =>
-    expect(router.state.location.pathname).toBe('/ai-models/experiments/observe-1'),
-  )
-  expect(router.state.location.search.from).toBe('compare')
-  expect(await screen.findByRole('link', { name: '← 모델 비교로 돌아가기' })).toHaveAttribute(
-    'href',
-    '/ai-models/compare?stage=observe',
-  )
-  expect(router.state.location.search.stage).toBe('observe')
+  expect(await screen.findByText(retirementMessage)).toBeInTheDocument()
+  expect(observeStarts).toEqual([])
+  expect(candidateStarts).toEqual([])
+  expect(router.state.location.pathname).toBe('/ai-models/compare')
+  expect(screen.getByRole('tab', { name: '관찰' })).toHaveAttribute('aria-selected', 'true')
+  expect(screen.getByRole('combobox', { name: /사진이 있는 글/ })).toHaveTextContent('관찰할 사진')
 })
 
 // MODEL-41, MODEL-67: 말투 반영 picks a made voice — the 기본 first and chosen — one of its answered
 // prompts, and the saved write pair; a photo prompt is listed but not choosable unless both write
-// models read images, and 비교 시작 starts the comparison and opens its review.
+// models read images; comparison admission is retired and offers common-test guidance.
 describe('the 말투 반영 tab', () => {
   const voices = [
     { id: 'voice-review', name: '리뷰' },
@@ -592,7 +543,7 @@ describe('the 말투 반영 tab', () => {
     },
   ]
 
-  it('starts a comparison on the 기본 and an answered prompt', async () => {
+  it('retains the chosen voice and answered prompt while refusing a retired reflection start', async () => {
     const user = userEvent.setup()
     const reflectionStarts: NonNullable<FakeExperimentsOptions['reflectionStarts']> = []
     const candidateStarts: NonNullable<FakeExperimentsOptions['candidateStarts']> = []
@@ -654,27 +605,13 @@ describe('the 말투 반영 tab', () => {
     const start = screen.getByRole('button', { name: '비교 시작' })
     await waitFor(() => expect(start).not.toHaveAttribute('aria-disabled'))
     await user.click(start)
-    await waitFor(() =>
-      expect(reflectionStarts).toEqual([
-        {
-          voiceId: 'voice-default',
-          promptKey: 'opening_greeting',
-          modelA: { providerId: 'openrouter', modelId: 'writer-a' },
-          modelB: { providerId: 'openrouter', modelId: 'writer-b' },
-        },
-      ]),
-    )
-    expect(candidateStarts[0]).toEqual({
-      kind: 'voice',
-      refs: [
-        writePair.candidateA,
-        writePair.candidateB,
-        { providerId: 'openrouter', modelId: 'writer-c' },
-      ],
-    })
-    await waitFor(() =>
-      expect(router.state.location.pathname).toBe('/ai-models/experiments/reflection-1'),
-    )
+    expect(await screen.findByText(retirementMessage)).toBeInTheDocument()
+    expect(reflectionStarts).toEqual([])
+    expect(candidateStarts).toEqual([])
+    expect(router.state.location.pathname).toBe('/ai-models/compare')
+    expect(router.state.location.search.stage).toBe('voice')
+    expect(voice).toHaveTextContent('기본 말투')
+    expect(prompt).toHaveTextContent('블로그 글을 시작할 때')
   })
 
   it('offers a photo prompt once both write models read images', async () => {

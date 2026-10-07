@@ -17,11 +17,13 @@ function readsCollector() {
   return reads
 }
 
-it('shows a master the same Elo evidence without supplier cost', async () => {
+it('offers common tests and retained paid history to a master without restoring Elo evidence or supplier cost', async () => {
+  const calls: string[] = []
   renderAppAt('/ai-models/leaderboard?scope=all', {
     user: { id: 'root', plan: ProtoPlan.MASTER },
     plans: { plan: ProtoPlan.MASTER },
     experiments: {
+      calls,
       leaderboardEntries: [
         create(LeaderboardEntrySchema, {
           rank: 1,
@@ -38,9 +40,18 @@ it('shows a master the same Elo evidence without supplier cost', async () => {
       ],
     },
   })
-  expect(await screen.findByText('Elo 1516')).toBeInTheDocument()
-  expect(screen.getByText('1회 평가 · 상대별 1전 1승 0패 0무')).toBeInTheDocument()
+  expect(await screen.findByRole('link', { name: '글쓰기 테스트 시작하기' })).toHaveAttribute(
+    'href',
+    '/tests',
+  )
+  expect(screen.getByRole('link', { name: '글쓰기 테스트 기록' })).toHaveAttribute(
+    'href',
+    '/tests/history',
+  )
+  expect(screen.queryByText(/Elo 1516|1회 평가 · 상대별/)).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /순위|승자|비교 시작/ })).not.toBeInTheDocument()
   expect(screen.queryByText(/\$/)).not.toBeInTheDocument()
+  expect(calls.filter((call) => !call.startsWith('Get') && !call.startsWith('List'))).toEqual([])
 })
 
 // A board is named by three controls at once, so the address has to carry all three. Opening
@@ -130,7 +141,7 @@ it('offers three bounded periods and no all-time board', async () => {
 
 // MODEL-44: the boards are observe and write. Analyze is never compared, so it has no board,
 // and an address that still names it opens the observe board instead of asking for one.
-it('ranks observe and write only, reading an address naming analyze as observe', async () => {
+it('retains observe/write URL context and reads an address naming analyze as observe', async () => {
   const reads = readsCollector()
   renderAppAt('/ai-models/leaderboard?stage=analyze&window=day', {
     user: { id: 'alice' },

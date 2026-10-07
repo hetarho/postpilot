@@ -174,7 +174,7 @@ it('shows the operator the per-post figure without a posts count', async () => {
   expect(main.queryByText(/남은 크레딧으로/)).not.toBeInTheDocument()
 })
 
-it('preserves the explicit stage through navigation, browser history, and saved experiment links', async () => {
+it('preserves the explicit stage through navigation, browser history, and read-only paid records with a common-history exit', async () => {
   const user = userEvent.setup()
   const { router } = renderAppAt('/ai-models/experiments?stage=write', {
     user: { id: 'alice' },
@@ -196,9 +196,15 @@ it('preserves the explicit stage through navigation, browser history, and saved 
   await act(async () => router.history.back())
   await waitFor(() => expect(router.state.location.pathname).toBe('/ai-models/experiments'))
   await user.click(await screen.findByRole('link', { name: /first-post/ }))
-  const back = await screen.findByRole('link', { name: '← 비교 기록' })
-  expect(back).toHaveAttribute('href', '/ai-models/experiments?stage=write')
-  await user.click(back)
+  await waitFor(() => expect(router.state.location.search.stage).toBe('write'))
+  expect(router.state.location.pathname).toBe('/ai-models/experiments/writing-1')
+  const back = await screen.findByRole('link', { name: '← 글쓰기 테스트 기록' })
+  expect(back).toHaveAttribute('href', '/tests/history')
+  // The common destination is registered by T623; browser history still recovers this
+  // retained paid record's original stage and source context without a new comparison.
+  await act(async () => router.history.back())
+  await waitFor(() => expect(router.state.location.pathname).toBe('/ai-models/experiments'))
+  expect(router.state.location.search.stage).toBe('write')
   expect(await screen.findByRole('link', { name: /first-post/ })).toBeInTheDocument()
 })
 
