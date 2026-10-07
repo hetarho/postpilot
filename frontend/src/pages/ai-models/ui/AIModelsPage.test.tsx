@@ -184,11 +184,11 @@ it('preserves stage/source in canonical history, browser Back and retained paid 
   const legacy = within(screen.getByRole('region', { name: '이전 유료 비교 기록' }))
   const href = (await legacy.findByRole('link', { name: '계속 보기' })).getAttribute('href')!
   const url = new URL(href, 'http://localhost')
-  expect(url.pathname).toBe('/ai-models/experiments/writing-1')
+  expect(url.pathname).toBe('/tests/records/writing-1')
   expect(url.searchParams.get('entry')).toBe('/tests/history?stage=write&source=first-post')
   await act(() => router.navigate({ href }))
   expect(
-    await within(screen.getByRole('main')).findByRole('link', { name: '돌아가기' }),
+    await within(screen.getByRole('main')).findByRole('link', { name: '테스트 기록' }),
   ).toHaveAttribute('href', '/tests/history?stage=write&source=first-post')
   await act(() => router.history.back())
   await screen.findByRole('heading', { level: 1, name: '테스트 기록' })

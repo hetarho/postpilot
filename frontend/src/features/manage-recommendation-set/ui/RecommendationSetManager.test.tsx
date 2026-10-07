@@ -109,9 +109,8 @@ describe('the 추천 조합 tab', () => {
   it('is 모델 관리’s sixth tab and keeps only the shared 일괄 편집 entry', async () => {
     await renderTab({ sets: [] })
     await findTab()
-    const adminTabs = screen
+    const adminTabs = within(screen.getByRole('navigation', { name: '운영 관리' }))
       .getAllByRole('link')
-      .filter((link) => link.getAttribute('href')?.startsWith('/admin'))
       .map((link) => link.getAttribute('href'))
     expect(adminTabs).toEqual([
       '/admin',

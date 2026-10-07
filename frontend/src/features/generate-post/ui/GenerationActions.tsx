@@ -254,7 +254,7 @@ export const GenerationActions = forwardRef<
       </div>
       {post.pendingExperimentId && (
         <a
-          href={`/posts/experiments/${encodeURIComponent(post.pendingExperimentId)}`}
+          href={`/tests/records/${encodeURIComponent(post.pendingExperimentId)}?source=${encodeURIComponent(post.slug)}`}
           className={buttonStyles({ variant: 'ghost', className: 'mt-2 w-full sm:w-auto' })}
           aria-disabled={reviewingResult || undefined}
           aria-busy={reviewingResult || undefined}

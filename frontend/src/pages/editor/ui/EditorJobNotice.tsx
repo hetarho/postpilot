@@ -58,8 +58,9 @@ export function EditorJobNotice({
                     : job.kind === 'model_experiment'
                       ? post.pendingExperimentId
                         ? void navigate({
-                            to: '/posts/experiments/$id',
+                            to: '/tests/records/$id',
                             params: { id: post.pendingExperimentId },
+                            search: { source: post.slug },
                           })
                         : undefined
                       : generateRef.current?.startGeneration()

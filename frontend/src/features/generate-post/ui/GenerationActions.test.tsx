@@ -290,7 +290,7 @@ it.each(['바로 글 쓰기', '스토리라인 먼저'] as const)(
       pendingExperimentId: 'experiment-1',
     })
     const result = screen.getByRole('link', { name: 'A/B 결과 확인' })
-    expect(result).toHaveAttribute('href', '/posts/experiments/experiment-1')
+    expect(result).toHaveAttribute('href', '/tests/records/experiment-1?source=post')
     await press(user, name)
     expect(beforeStart).not.toHaveBeenCalled()
     await user.click(await screen.findByRole('button', { name: '이대로 시작' }))
@@ -419,7 +419,7 @@ it('awaits the page material flush before opening a retained paid result', async
     onReviewResult,
   })
   const link = screen.getByRole('link', { name: 'A/B 결과 확인' })
-  expect(link).toHaveAttribute('href', '/posts/experiments/retained')
+  expect(link).toHaveAttribute('href', '/tests/records/retained?source=post')
   let defaultPrevented = false
   document.addEventListener(
     'click',
@@ -470,7 +470,7 @@ it('keeps a retained paid result in place when the page material flush rejects',
   expect(defaultPrevented).toBe(true)
   expect(saveMaterial).toHaveBeenCalledTimes(1)
   expect(navigate).not.toHaveBeenCalled()
-  expect(link).toHaveAttribute('href', '/posts/experiments/retained')
+  expect(link).toHaveAttribute('href', '/tests/records/retained?source=post')
   await waitFor(() => expect(link).not.toHaveAttribute('aria-busy'))
   expect(screen.queryByText('private save cause')).not.toBeInTheDocument()
 })

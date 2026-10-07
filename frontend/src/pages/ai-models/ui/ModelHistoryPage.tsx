@@ -51,9 +51,9 @@ export function ModelHistoryPage() {
               {experiments.slice(0, 8).map((item) => (
                 <li key={item.id}>
                   <Link
-                    to="/ai-models/experiments/$id"
+                    to="/tests/records/$id"
                     params={{ id: item.id }}
-                    search={{ stage: tab }}
+                    search={{ entry: `/tests/history?stage=${tab}` }}
                     className={typographyStyles({
                       variant: 'label',
                       className:

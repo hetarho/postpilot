@@ -32,7 +32,14 @@ import {
   readNavigationEntry,
   rememberNavigationEntry,
 } from '../model/navigation-entry'
-import { currentDestination, DESTINATIONS, routeLocation } from './navigation'
+import {
+  currentDestination,
+  DESTINATIONS,
+  isStructuralNavigationEntry,
+  isTopLevelDestination,
+  navigationPathname,
+  routeLocation,
+} from './navigation'
 import { NAV_DESKTOP_MEDIA_QUERY, NAV_SCROLL_RESTORE_TIMEOUT_MS } from './navigation-config'
 
 function NavigationLink({ href, children, className }: NavigationLinkProps) {
@@ -66,24 +73,39 @@ export function AuthenticatedLayout() {
   const defaults = useInitializeDefaultSelections(ownerId)
   const navigate = useNavigate()
   const location = useRouterState({ select: (state) => state.location })
-  const pathname = location.pathname
+  const pathname = navigationPathname(location.pathname)
   const search = location.search as Record<string, unknown>
   const router = useRouter()
   const header = useRef<HTMLElement>(null)
   const wide = useMediaQuery(NAV_DESKTOP_MEDIA_QUERY)
   const postSlug = /^\/posts\/([^/]+)$/.exec(pathname)?.[1]
   const clipId = /^\/clips\/([^/]+)$/.exec(pathname)?.[1]
-  const postReturn = postSlug ? postReturnDestination(ownerId, postSlug) : undefined
-  const clipReturn = clipId ? clipReturnDestination(ownerId, clipId) : undefined
+  const postReturn = postSlug
+    ? postReturnDestination(ownerId, postSlug === 'new' ? undefined : postSlug)
+    : undefined
+  const clipReturn = clipId
+    ? clipReturnDestination(ownerId, clipId === 'new' ? undefined : clipId)
+    : undefined
   const creationOrigin = postReturn?.path === '/' || clipReturn?.path === '/'
   const current = currentDestination(pathname, creationOrigin)
   const metadata = routeLocation(pathname, creationOrigin)
   const stored = readNavigationEntry(ownerId, location.href)
+  const accessibleParent = (href: string) => {
+    const candidate = navigationParent(href)
+    return candidate?.path === '/admin' && user?.plan !== 'master' ? undefined : candidate
+  }
+  const explicitParent =
+    typeof search.entry === 'string' ? accessibleParent(search.entry) : undefined
   const explicit =
-    typeof search.entry === 'string' && navigationParent(search.entry) ? search.entry : undefined
-  const origin = stored ? entryHref(stored) : explicit
+    !isTopLevelDestination(pathname) &&
+    explicitParent &&
+    explicitParent.path.split('#', 1)[0] !== pathname
+      ? entryHref(explicitParent)
+      : undefined
+  const origin =
+    explicit ?? (stored && accessibleParent(entryHref(stored)) ? entryHref(stored) : undefined)
   const sourceSlug =
-    pathname === '/tests'
+    pathname === '/tests' || pathname.startsWith('/tests/records/')
       ? typeof search.source === 'string'
         ? search.source
         : typeof search.sourcePost === 'string'
@@ -92,18 +114,19 @@ export function AuthenticatedLayout() {
       : ''
   const source = useWritingTestSource(ownerId, sourceSlug)
   const ownedSourceReturn =
-    source.data?.context.sourcePostSlug === sourceSlug && sourceSlug
+    source.isSuccess && source.data?.context.sourcePostSlug === sourceSlug && sourceSlug
       ? `/posts/${encodeURIComponent(sourceSlug)}`
       : undefined
   const parent = metadata.ancestors.at(-1)
-  const returnHref = ownedSourceReturn ?? origin ?? parent?.href ?? '/'
+  const returnHref =
+    postReturn?.href ?? clipReturn?.href ?? ownedSourceReturn ?? origin ?? parent?.href
   const returnName = ownedSourceReturn
     ? t('location.post')
     : parent && returnHref === parent.href
       ? t(`location.${parent.key}`)
-      : origin && navigationParent(origin)?.path === '/'
-        ? t('location.creation')
-        : t('returnLabel')
+      : returnHref
+        ? t(`location.${routeLocation(returnHref.split(/[?#]/u, 1)[0]).current}`)
+        : undefined
   const immersive = pathname === '/plans'
   const quiet = pathname === '/' || pathname === '/setup'
 
@@ -122,7 +145,8 @@ export function AuthenticatedLayout() {
       const to = event.toLocation.href
       if (!ownerId || !from || from === to) return
       const inherited = readNavigationEntry(ownerId, from)
-      if (inherited && entryHref(inherited) === to) {
+      const returnParent = navigationParent(to)
+      if (inherited && returnParent && entryHref(inherited) === entryHref(returnParent)) {
         restore = () => {
           let finished = false
           let frame = 0
@@ -155,14 +179,28 @@ export function AuthenticatedLayout() {
         }
         return
       }
-      const entry = navigationParent(from) ? from : inherited ? entryHref(inherited) : undefined
+      const targetEntry = (event.toLocation.search as Record<string, unknown>).entry
+      const targetParent =
+        typeof targetEntry === 'string' ? navigationParent(targetEntry) : undefined
+      const fromParent = navigationParent(from)
+      const explicitFrom =
+        targetParent && fromParent && entryHref(targetParent) === entryHref(fromParent)
+      const structural = isStructuralNavigationEntry(to, from)
+      const entry =
+        explicitFrom || (structural && navigationParent(from))
+          ? from
+          : structural && inherited && isStructuralNavigationEntry(to, entryHref(inherited))
+            ? entryHref(inherited)
+            : undefined
       if (entry)
         rememberNavigationEntry(
           ownerId,
           to,
           entry,
-          currentDestination(event.fromLocation?.pathname ?? '/'),
+          currentDestination(event.fromLocation?.pathname ?? '/') ?? '/',
           navigationParent(from) ? window.scrollY : (inherited?.scrollY ?? 0),
+          undefined,
+          !!explicitFrom,
         )
     })
     const resolved = router.subscribe('onResolved', () => {
@@ -176,7 +214,8 @@ export function AuthenticatedLayout() {
     }
   }, [router, ownerId])
   useEffect(() => {
-    if (explicit && !stored) rememberNavigationEntry(ownerId, location.href, explicit, current, 0)
+    if (explicit && (!stored || entryHref(stored) !== explicit))
+      rememberNavigationEntry(ownerId, location.href, explicit, current ?? '/', 0, undefined, true)
   }, [explicit, stored, ownerId, location.href, current])
   useLayoutEffect(() => {
     const node = header.current
@@ -203,7 +242,7 @@ export function AuthenticatedLayout() {
       href: item.href,
       label: t(`location.${item.key}`),
     })),
-    returnTo: { href: returnHref, label: returnName },
+    returnTo: returnHref && returnName ? { href: returnHref, label: returnName } : undefined,
     Link: NavigationLink,
   }
   return (
@@ -319,6 +358,7 @@ export function AuthenticatedLayout() {
               {origin &&
                 origin !== parent?.href &&
                 !/^\/(posts|clips)\/[^/]+$/.test(pathname) &&
+                !pathname.startsWith('/tests/records/') &&
                 pathname !== '/tests' &&
                 !(pathname.startsWith('/tests/') && pathname !== '/tests/history') && (
                   <ContextualReturn />

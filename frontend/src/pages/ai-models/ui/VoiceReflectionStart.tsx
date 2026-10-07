@@ -102,9 +102,9 @@ export function VoiceReflectionStart({
         refs.slice(2),
       )
       void navigate({
-        to: '/ai-models/experiments/$id',
+        to: '/tests/records/$id',
         params: { id: response.experimentId },
-        search: { stage: 'voice', from: 'compare' },
+        search: { entry: '/tests' },
       })
     } catch {
       // The refusal renders beside the action.

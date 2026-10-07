@@ -63,6 +63,7 @@ it('addresses exactly the product’s URLs, whatever file assembles them', () =>
     '/tests',
     '/tests/$testId',
     '/tests/history',
+    '/tests/records/$id',
     '/verify-email',
     '/video-guidelines',
     '/video-templates',

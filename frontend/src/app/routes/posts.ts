@@ -1,5 +1,5 @@
-import { createRoute, lazyRouteComponent } from '@tanstack/react-router'
-import { postReviewSearchSchema } from '@/pages/model-experiment'
+import { createRoute, redirect } from '@tanstack/react-router'
+import { postReviewSearchSchema, testRecordSearchSchema } from '@/pages/model-experiment'
 import { postsSearchSchema } from '@/pages/posts'
 import { NewDraftPage, PostEditorPage } from '@/pages/editor'
 import { PostsPage } from '@/pages/posts'
@@ -32,8 +32,22 @@ export const postExperimentRoute = createRoute({
   validateSearch: (search) => ({
     ...postReviewSearchSchema(search),
     ...postsSearchSchema(search),
+    ...testRecordSearchSchema(search),
   }),
-  component: lazyRouteComponent(() => import('@/pages/model-experiment'), 'PostExperimentPage'),
+  beforeLoad: ({ params, search }) => {
+    const filters = new URLSearchParams()
+    if (search.q) filters.set('q', search.q)
+    if (search.status) filters.set('status', search.status)
+    const entry =
+      search.entry ??
+      (search.from === 'posts' ? `/posts${filters.size ? '?' + filters : ''}` : undefined)
+    throw redirect({
+      to: '/tests/records/$id',
+      params: { id: params.id },
+      search: { entry, source: search.source },
+      replace: true,
+    })
+  },
 })
 
 /** The group's routes, in the order the tree adds them: a static path always before the

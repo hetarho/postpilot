@@ -1,13 +1,12 @@
 import { createRoute, lazyRouteComponent, redirect } from '@tanstack/react-router'
 import { aiModelsSearchSchema } from '@/pages/ai-models'
-import { modelReviewSearchSchema } from '@/pages/model-experiment'
+import { testRecordSearchSchema } from '@/pages/model-experiment'
 import {
   writingTestSearchSchema,
   writingTestHistorySearchSchema,
   type WritingTestSearch,
   type WritingTestHistorySearch,
 } from '@/pages/writing-tests'
-import { safeInternalPath } from '@/shared/lib/navigation'
 import { authenticatedRoute } from './tree'
 import { ContentGroupLayout } from './ContentGroupLayout'
 
@@ -48,12 +47,10 @@ export const modelLeaderboardRoute = createRoute({
 export const modelExperimentRoute = createRoute({
   getParentRoute: () => modelGroupRoute,
   path: '/ai-models/experiments/$id',
-  validateSearch: (search): { from?: 'compare'; entry?: string } => ({
-    ...modelReviewSearchSchema(search),
-    entry:
-      typeof search.entry === 'string' && safeInternalPath(search.entry) ? search.entry : undefined,
-  }),
-  component: lazyRouteComponent(() => import('@/pages/model-experiment'), 'ModelExperimentPage'),
+  validateSearch: testRecordSearchSchema,
+  beforeLoad: ({ params, search }) => {
+    throw redirect({ to: '/tests/records/$id', params: { id: params.id }, search, replace: true })
+  },
 })
 
 export function legacyModelComparisonSearchSchema(raw: Record<string, unknown>): WritingTestSearch {

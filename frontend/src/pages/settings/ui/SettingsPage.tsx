@@ -25,9 +25,6 @@ const GROUPS = [
     key: 'ai',
     links: [
       ['/ai-models', 'models'],
-      ['/ai-models/compare', 'compare'],
-      ['/ai-models/experiments', 'history'],
-      ['/ai-models/leaderboard', 'leaderboard'],
       ['/account', 'account'],
       ['/plans', 'plans'],
       ['/billing', 'billing'],

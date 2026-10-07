@@ -5,7 +5,24 @@ import { useVoiceChecks, useVoiceChecksQueryKey } from '@/entities/voice'
 import { ProgressLine, FailureNotice, isTerminal, useJob } from '@/entities/generation-job'
 import { useWritingTests, type TestList, type WritingTest } from '@/entities/writing-test'
 import { formatDateTime } from '@/shared/lib'
-import { Badge, Button, Notice, Typography, buttonStyles, type BadgeTone } from '@/shared/ui'
+import {
+  Badge,
+  Button,
+  Notice,
+  Typography,
+  buttonStyles,
+  useNavigationContext,
+  type BadgeTone,
+  type NavigationLinkProps,
+} from '@/shared/ui'
+
+function NativeLink(props: NavigationLinkProps) {
+  return <a {...props} />
+}
+function HistoryLink(props: NavigationLinkProps) {
+  const Link = useNavigationContext()?.Link ?? NativeLink
+  return <Link {...props} />
+}
 
 export interface WritingTestHistoryProps {
   ownerId: string
@@ -71,7 +88,7 @@ function OwnedHistory({
   if (stage) historySearch.set('stage', stage)
   if (sourcePostSlug) historySearch.set('source', sourcePostSlug)
   if (voiceId) historySearch.set('voiceId', voiceId)
-  const historyEntry = historySearch.size ? `/tests/history?${historySearch}` : undefined
+  const historyEntry = historySearch.size ? `/tests/history?${historySearch}` : '/tests/history'
   const entrySearch = historyEntry ? `?entry=${encodeURIComponent(historyEntry)}` : ''
   return (
     <div className="grid gap-8">
@@ -220,9 +237,9 @@ function TestRecord({ test, href }: { test: WritingTest; href: string }) {
         )}
       </div>
       <div className="self-center">
-        <a href={href} className={buttonStyles({ variant: 'ghost' })}>
+        <HistoryLink href={href} className={buttonStyles({ variant: 'ghost' })}>
           {t('resume')}
-        </a>
+        </HistoryLink>
       </div>
     </li>
   )
@@ -316,12 +333,12 @@ function LegacyRecords({
               )}
             </div>
             <div className="self-center">
-              <a
-                href={`/ai-models/experiments/${encodeURIComponent(experiment.id)}${entry ? `?entry=${encodeURIComponent(entry)}` : ''}`}
+              <HistoryLink
+                href={`/tests/records/${encodeURIComponent(experiment.id)}${entry ? `?entry=${encodeURIComponent(entry)}` : ''}`}
                 className={buttonStyles({ variant: 'ghost' })}
               >
                 {t('keep')}
-              </a>
+              </HistoryLink>
             </div>
           </li>
         ))}

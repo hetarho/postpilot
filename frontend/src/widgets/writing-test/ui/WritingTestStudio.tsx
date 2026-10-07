@@ -544,7 +544,14 @@ function OwnedStudio({
   }
   return (
     <div className="min-w-0">
-      <ContextualReturn />
+      <div className="flex flex-wrap items-center gap-2">
+        <ContextualReturn />
+        {!testId && flow.view === 'factor' && (
+          <a href="/tests/history" className={buttonStyles({ variant: 'ghost' })}>
+            {t('history')}
+          </a>
+        )}
+      </div>
       <Typography
         variant="stepTitle"
         id={headingId}

@@ -112,7 +112,7 @@ it('retains all loaded pages, deduplicates overlaps monotonically, and uses real
     screen
       .getAllByRole('link', { name: '테스트 이어보기' })
       .map((link) => link.getAttribute('href')),
-  ).toEqual(['/tests/newer', '/tests/older'])
+  ).toEqual(['/tests/newer?entry=%2Ftests%2Fhistory', '/tests/older?entry=%2Ftests%2Fhistory'])
   expect(pages).toEqual(['', 'next-page'])
   expect(voiceReads).toBe(0)
 })
@@ -158,7 +158,7 @@ it('shows durable champion and expired metadata beside paid legacy records witho
   )
   expect(screen.getByRole('link', { name: '계속 보기' })).toHaveAttribute(
     'href',
-    '/ai-models/experiments/old-three-way',
+    '/tests/records/old-three-way?entry=%2Ftests%2Fhistory',
   )
   expect(screen.getAllByText('1 / 1번 선택 완료')).toHaveLength(1)
   expect(
@@ -316,7 +316,7 @@ it('applies source and stage to real records across pages and passes matching le
     '/tests/history?stage=observe&source=owned-source',
   )
   const legacyHref = screen.getByRole('link', { name: '계속 보기' }).getAttribute('href')!
-  expect(new URL(legacyHref, 'https://fixture').pathname).toBe('/ai-models/experiments/paid-match')
+  expect(new URL(legacyHref, 'https://fixture').pathname).toBe('/tests/records/paid-match')
   expect(new URL(legacyHref, 'https://fixture').searchParams.get('entry')).toBe(
     '/tests/history?stage=observe&source=owned-source',
   )

@@ -1,5 +1,5 @@
 # THEME theme preference and design language
-> r29 | Shared accessible visual contracts for creation, authoring, comparisons and semantic-origin review.
+> r30 | Shared accessible visual contracts for creation, authoring, comparisons and semantic-origin review.
 
 ## decisions
 - THEME-1 [o] three browser-owned preferences: `system` (the default, follows `prefers-color-scheme`), `light` → the `day` semantic map, `dark` → the `night` map; the effective theme is always exactly `day|night`; components consume semantic or functional tokens and never branch on a preference, an effective theme or a palette step
@@ -197,6 +197,8 @@
   - use strong primary/secondary text contrast and spacing to separate price, action, benefits and the lower production comparison; supporting copy recedes without losing AA contrast, and the recommended state has a text label as well as a visual mark
   - post and clip estimates live below the cards with inline condition controls (→QUOTA-41); both themes, reduced motion, readable surface pairs, keyboard access and 320 px reflow remain supported
 - THEME-38 [o] the shell visibly distinguishes creation, unified writing tests and settings, with work history as a secondary operational destination.
+  - creation/home, writing tests, settings and work history are sibling destinations; their breadcrumbs start at the current destination, without another destination as an ancestor
+  - test history and retained comparison records belong to writing tests; settings do not expose comparison or leaderboard destinations
   - the brand returns home; home keeps exactly two content actions under THEME-47
   - settings show their writing/video/AI-account hierarchy and the current named item; child destinations provide visible parent/breadcrumb access
   - creating a post/clip and later minting its address preserve its creation context instead of implying arrival from history
@@ -250,7 +252,11 @@
   - action guidance, provenance and recovery explanations never use metadata size; meta is reserved for brief progress/count/time information
   - sizes, line height, readable measure and group spacing are defined by shared roles, not per-screen raw font utilities; zoom/reflow preserves content and actor lifetime
 
-- THEME-58 [o] every authenticated non-home route has visible location and a deterministic parent or contextual return.
+- THEME-58 [o] every authenticated route has visible location; child routes have a deterministic parent or contextual return.
+  - top-level destinations have no implicit return; moving between sibling destinations does not establish a parent or overwrite a child origin
+  - child breadcrumbs show structural ancestry; a contextual return names its actual destination and never changes that ancestry
+  - automatic return context comes only from structural ancestors; explicit workflow origins may cross destinations when validated, including an owned source post
+  - test results opened directly return to writing tests; results opened from test history retain that filtered history; retained comparison records use test history as their named parent
   - creation returns to its originating creation destination, not an unconditional post/clip list; history-opened work returns to that history context
   - preserve safe internal entry route, filters and relevant scroll position through autosave minting, reload, child settings and test review
   - direct links with no valid origin use a named domain parent or home; reject external, malformed, deleted-target and other-owner return contexts

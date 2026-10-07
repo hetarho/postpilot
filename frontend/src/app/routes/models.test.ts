@@ -87,12 +87,12 @@ it('replaces old history and leaderboard destinations with filtered private hist
   expect(modelLeaderboardRoute.options.beforeLoad).toBeTypeOf('function')
 })
 
-it('keeps active model settings and paid experiment detail routes instead of redirecting their stored records', () => {
+it('keeps active model settings and redirects retained records to writing tests without deleting their outputs', () => {
   expect('path' in aiModelsRoute.options && aiModelsRoute.options.path).toBe('/ai-models')
   expect(aiModelsRoute.options.beforeLoad).toBeUndefined()
   expect('path' in modelExperimentRoute.options && modelExperimentRoute.options.path).toBe(
     '/ai-models/experiments/$id',
   )
-  expect(modelExperimentRoute.options.beforeLoad).toBeUndefined()
-  expect(modelExperimentRoute.options.component).toBeTypeOf('function')
+  expect(modelExperimentRoute.options.beforeLoad).toBeTypeOf('function')
+  expect(modelExperimentRoute.options.component).toBeUndefined()
 })

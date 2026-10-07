@@ -63,10 +63,16 @@ describe('opening a post', () => {
 
     await openStep(user, '글 생성')
     fireEvent.change(screen.getByLabelText('메모'), { target: { value: '마지막 기록' } })
-    await user.click(await screen.findByRole('link', { name: 'A/B 결과 확인' }))
-    await waitFor(() =>
-      expect(router.state.location.pathname).toBe('/posts/experiments/experiment-pending'),
+    const retained = await screen.findByRole('link', { name: 'A/B 결과 확인' })
+    expect(retained).toHaveAttribute(
+      'href',
+      '/tests/records/experiment-pending?source=20260820-jeju',
     )
+    await user.click(retained)
+    await waitFor(() =>
+      expect(router.state.location.pathname).toBe('/tests/records/experiment-pending'),
+    )
+    expect(router.state.location.search.source).toBe('20260820-jeju')
     expect(draftMaterials.at(-1)?.memo).toBe('마지막 기록')
   })
 

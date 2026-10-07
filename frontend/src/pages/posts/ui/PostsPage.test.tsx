@@ -61,7 +61,7 @@ describe('PostsPage', () => {
     expect(await screen.findByRole('link', { name: /제주 3일/ })).toHaveTextContent('AI 생성 중')
   })
 
-  it('opens a durable pending AI result in the blind comparison route', async () => {
+  it('opens a durable pending AI result in the canonical retained-record route', async () => {
     const user = userEvent.setup()
     const { router } = renderList({
       posts: [
@@ -75,10 +75,10 @@ describe('PostsPage', () => {
 
     const row = await screen.findByRole('link', { name: /제주 3일/ })
     expect(row).toHaveTextContent('AI 결과 확인')
+    expect(row).toHaveAttribute('href', '/tests/records/experiment-1?entry=%2Fposts')
     await user.click(row)
-    await waitFor(() =>
-      expect(router.state.location.pathname).toBe('/posts/experiments/experiment-1'),
-    )
+    await waitFor(() => expect(router.state.location.pathname).toBe('/tests/records/experiment-1'))
+    expect(router.state.location.search.entry).toBe('/posts')
   })
 
   // POST-25: a row names its voice, and a deleted one says so in words.
@@ -226,7 +226,7 @@ describe('PostsPage', () => {
     expect(within(history).getByRole('link', { name: '내보내기' })).toBeInTheDocument()
     expect(within(history).getByRole('link', { name: '이전 AI 결과 확인' })).toHaveAttribute(
       'href',
-      '/posts/experiments/legacy-result?from=posts',
+      '/tests/records/legacy-result?entry=%2Fposts',
     )
   })
 

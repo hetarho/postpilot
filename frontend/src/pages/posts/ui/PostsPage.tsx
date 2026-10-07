@@ -76,6 +76,10 @@ export function PostsPage() {
   const narrowing: PostNarrowing = useSearch({ strict: false })
   // The URL follows every keystroke; the request waits for the typing to stop. The status is one
   // choice, not typing, so it is sent at once.
+  const historyFilters = new URLSearchParams()
+  if (narrowing.q) historyFilters.set('q', narrowing.q)
+  if (narrowing.status) historyFilters.set('status', narrowing.status)
+  const historyEntry = `/posts${historyFilters.size ? '?' + historyFilters : ''}`
   const settledQ = useSettledValue(narrowing.q ?? '', POSTS_SEARCH_DEBOUNCE_MS)
   const list = usePostList({ q: settledQ, status: narrowing.status })
   useHistoryScrollReturn(user?.id ?? '', narrowing, settledQ, list)
@@ -286,9 +290,9 @@ export function PostsPage() {
             >
               {post.pendingExperimentId && !runningJob && !failedJob ? (
                 <Link
-                  to="/posts/experiments/$id"
+                  to="/tests/records/$id"
                   params={{ id: post.pendingExperimentId }}
-                  search={{ from: 'posts', q: narrowing.q, status: narrowing.status }}
+                  search={{ entry: historyEntry }}
                   className={rowClass}
                   onClick={() => remember(post)}
                 >
@@ -340,9 +344,9 @@ export function PostsPage() {
                 )}
                 {post.pendingExperimentId && (runningJob || failedJob) && (
                   <Link
-                    to="/posts/experiments/$id"
+                    to="/tests/records/$id"
                     params={{ id: post.pendingExperimentId }}
-                    search={{ from: 'posts', q: narrowing.q, status: narrowing.status }}
+                    search={{ entry: historyEntry }}
                     onClick={() => remember(post)}
                     className={buttonStyles({ variant: 'ghost' })}
                   >

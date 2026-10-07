@@ -15,36 +15,34 @@ afterEach(() => initializeI18n('ko'))
 
 const entries = [
   {
+    path: '/tests/records/review-1',
+    back: '/tests/history',
+    ko: '테스트 기록',
+    en: 'Test history',
+  },
+  {
     path: '/ai-models/experiments/review-1?stage=write&from=compare',
     back: '/tests/history',
     ko: '테스트 기록',
     en: 'Test history',
-    primary: '/ai-models',
-    group: '/ai-models/compare',
   },
   {
     path: '/ai-models/experiments/review-1?stage=write',
     back: '/tests/history',
     ko: '테스트 기록',
     en: 'Test history',
-    primary: '/ai-models',
-    group: '/ai-models/experiments',
   },
   {
     path: '/posts/experiments/review-1',
-    back: '/posts/draft-1',
-    ko: '← 글로 돌아가기',
-    en: '← Back to post',
-    primary: '/posts',
-    group: '/posts',
+    back: '/tests/history',
+    ko: '테스트 기록',
+    en: 'Test history',
   },
   {
     path: '/posts/experiments/review-1?from=posts&q=Draft&status=draft',
     back: '/posts?q=Draft&status=draft',
-    ko: '← 내 글 목록으로 돌아가기',
-    en: '← Back to my posts',
-    primary: '/posts',
-    group: '/posts',
+    ko: '글 작업 내역',
+    en: 'Post work history',
   },
 ] as const
 
@@ -53,7 +51,7 @@ it.each(
 )('returns to the actual entry for $path in $locale', async ({ path, back, ko, en, locale }) => {
   initializeI18n(locale)
   const user = userEvent.setup()
-  const { router } = renderAppAt(path, {
+  const { router, procedures } = renderLegacyModelRoute(path, {
     user: { id: 'alice' },
     posts: { posts },
     experiments: { history },
@@ -64,12 +62,22 @@ it.each(
   const link = within(screen.getByRole('main')).getByRole('link', {
     name: locale === 'ko' ? ko : en,
   })
+  expect(router.state.location.pathname).toBe('/tests/records/review-1')
   expect(link).toHaveAttribute('href', back)
   expect(document.querySelector('aside')).toBeNull()
+  const breadcrumb = screen.getByRole('navigation', {
+    name: locale === 'ko' ? '현재 위치' : 'Current location',
+  })
+  expect(
+    within(breadcrumb)
+      .getAllByRole('link')
+      .map((item) => item.getAttribute('href')),
+  ).toEqual(['/tests', '/tests/history'])
   if (back.startsWith('/posts')) {
     await user.click(link)
     await waitFor(() => expect(router.state.location.href).toBe(back))
   }
+  expect(paidActions(procedures)).toEqual([])
 })
 
 it.each(['', '?from=https://example.com', '?from=posts&stage=invalid'])(
@@ -83,7 +91,7 @@ it.each(['', '?from=https://example.com', '?from=posts&stage=invalid'])(
     expect(
       within(screen.getByRole('main')).getByRole('link', { name: '테스트 기록' }),
     ).toHaveAttribute('href', '/tests/history')
-    expect(screen.queryByRole('link', { name: '← 글로 돌아가기' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: '글 작성' })).not.toBeInTheDocument()
   },
 )
 
@@ -97,9 +105,12 @@ it('opens a retained paid record from canonical history and returns to the same 
   const record = await within(
     screen.getByRole('region', { name: '이전 유료 비교 기록' }),
   ).findByRole('link', { name: '계속 보기' })
+  expect(new URL(record.getAttribute('href')!, 'https://fixture').pathname).toBe(
+    '/tests/records/review-1',
+  )
   await act(() => router.navigate({ href: record.getAttribute('href')! }))
   await screen.findByRole('heading', { name: '이전 유료 비교 기록' })
-  const back = within(screen.getByRole('main')).getByRole('link', { name: '돌아가기' })
+  const back = within(screen.getByRole('main')).getByRole('link', { name: '테스트 기록' })
   expect(back).toHaveAttribute('href', '/tests/history?stage=write&source=draft-1')
   await user.click(back)
   await waitFor(() => expect(router.state.location.pathname).toBe('/tests/history'))
@@ -114,44 +125,49 @@ it('carries the narrowed post list through a pending result and back', async () 
     posts: { posts },
     experiments: { history },
   })
-  await user.click(await screen.findByRole('link', { name: /Draft/ }))
-  await waitFor(() => expect(router.state.location.pathname).toBe('/posts/experiments/review-1'))
-  await user.click(await screen.findByRole('link', { name: '← 내 글 목록으로 돌아가기' }))
+  const record = await screen.findByRole('link', { name: /Draft/ })
+  const recordUrl = new URL(record.getAttribute('href')!, 'https://fixture')
+  expect(recordUrl.pathname).toBe('/tests/records/review-1')
+  expect(recordUrl.searchParams.get('entry')).toBe('/posts?q=Draft&status=draft')
+  await user.click(record)
+  await waitFor(() => expect(router.state.location.pathname).toBe('/tests/records/review-1'))
+  await user.click(await screen.findByRole('link', { name: '글 작업 내역' }))
   await waitFor(() => expect(router.state.location.href).toBe('/posts?q=Draft&status=draft'))
   expect(await screen.findByRole('link', { name: /Draft/ })).toBeInTheDocument()
 })
 
-it('opens the editor result in writing navigation and returns to its post', async () => {
+it('opens the editor result in canonical test navigation and returns to its owned post', async () => {
   const user = userEvent.setup()
   const { router } = renderAppAt('/posts/draft-1', {
     user: { id: 'alice' },
     posts: { posts },
     experiments: { history },
   })
-  await user.click(await screen.findByRole('link', { name: 'A/B 결과 확인' }))
-  await waitFor(() => expect(router.state.location.pathname).toBe('/posts/experiments/review-1'))
-  await user.click(await screen.findByRole('link', { name: '← 글로 돌아가기' }))
+  const record = await screen.findByRole('link', { name: 'A/B 결과 확인' })
+  expect(record).toHaveAttribute('href', '/tests/records/review-1?source=draft-1')
+  await user.click(record)
+  await waitFor(() => expect(router.state.location.pathname).toBe('/tests/records/review-1'))
+  await user.click(await screen.findByRole('link', { name: '글 작성' }))
   await waitFor(() => expect(router.state.location.pathname).toBe('/posts/draft-1'))
 })
 
 it.each(['', '?from=compare', '?from=https://example.com'])(
-  'falls back to the post list when the writing result has no source: %s',
+  'falls back to named test history when a retained record has no explicit source: %s',
   async (search) => {
     renderAppAt(`/posts/experiments/review-1${search}`, {
       user: { id: 'alice' },
       experiments: { history: [{ id: 'review-1', stage: Stage.WRITE }] },
     })
     await screen.findByRole('heading', { name: '이전 유료 비교 기록' })
-    expect(screen.getByRole('link', { name: '← 내 글 목록으로 돌아가기' })).toHaveAttribute(
-      'href',
-      '/posts',
-    )
+    expect(
+      within(screen.getByRole('main')).getByRole('link', { name: '테스트 기록' }),
+    ).toHaveAttribute('href', '/tests/history')
   },
 )
 
 it.each([
   ['/ai-models/experiments/review-1?from=compare&stage=write', '테스트 기록', '/tests/history'],
-  ['/posts/experiments/review-1?from=posts&q=Draft', '← 내 글 목록으로 돌아가기', '/posts?q=Draft'],
+  ['/posts/experiments/review-1?from=posts&q=Draft', '글 작업 내역', '/posts?q=Draft'],
 ])('retains an exit through loading and failed reads at %s', async (path, name, href) => {
   let release!: () => void
   const readGate = new Promise<void>((resolve) => {

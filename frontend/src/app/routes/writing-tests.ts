@@ -1,5 +1,6 @@
 import { createRoute, lazyRouteComponent } from '@tanstack/react-router'
 import { writingTestSearchSchema, writingTestHistorySearchSchema } from '@/pages/writing-tests'
+import { testRecordSearchSchema } from '@/pages/model-experiment'
 import { safeInternalPath } from '@/shared/lib/navigation'
 import { authenticatedRoute } from './tree'
 
@@ -24,4 +25,15 @@ export const writingTestRoute = createRoute({
   }),
   component: lazyRouteComponent(() => import('@/pages/writing-tests'), 'WritingTestPage'),
 })
-export const writingTestRoutes = [writingTestsRoute, writingTestHistoryRoute, writingTestRoute]
+export const writingTestRecordRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/tests/records/$id',
+  validateSearch: testRecordSearchSchema,
+  component: lazyRouteComponent(() => import('@/pages/model-experiment'), 'WritingTestRecordPage'),
+})
+export const writingTestRoutes = [
+  writingTestsRoute,
+  writingTestHistoryRoute,
+  writingTestRecordRoute,
+  writingTestRoute,
+]

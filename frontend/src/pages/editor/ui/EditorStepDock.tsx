@@ -75,8 +75,9 @@ export function EditorStepDock({
             await beforeStart()
             await flushContentQueue(post.slug)
             await navigate({
-              to: '/posts/experiments/$id',
+              to: '/tests/records/$id',
               params: { id: post.pendingExperimentId },
+              search: { source: post.slug },
             })
           }}
           checkRequiredAnswers={checkRequiredAnswers}

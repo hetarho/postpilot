@@ -100,9 +100,9 @@ export function ModelComparisonPage() {
     try {
       const response = await start.startObserve(postSlug, refs[0], refs[1], refs.slice(2))
       void navigate({
-        to: '/ai-models/experiments/$id',
+        to: '/tests/records/$id',
         params: { id: response.experimentId },
-        search: { stage, from: 'compare' },
+        search: { entry: '/tests' },
       })
     } catch {
       // The mutation's refusal stays beside the start control.
@@ -376,9 +376,9 @@ function SelectedPostWriteComparison({
         refs.slice(2),
       )
       void navigate({
-        to: '/ai-models/experiments/$id',
+        to: '/tests/records/$id',
         params: { id: response.experimentId },
-        search: { stage: 'write', from: 'compare' },
+        search: { entry: '/tests' },
       })
     } catch {
       // The mutation's transport error is rendered beside the action.

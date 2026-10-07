@@ -768,6 +768,7 @@ describe('localized registered-route smoke', () => {
           role: 'button',
           name: text.retry,
           signedIn: true,
+          expectedPath: '/tests/records/smoke',
         },
         { path: '/posts/new', role: 'textbox', name: text.title, signedIn: true },
         { path: '/posts/smoke-post', role: 'textbox', name: text.title, signedIn: true },

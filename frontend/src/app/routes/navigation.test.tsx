@@ -48,10 +48,7 @@ it('keeps minted creation distinct from a direct history record and exposes dete
     '/voices',
     '/voices/voice',
   ])
-  expect(routeLocation('/tests/id').ancestors.map((x) => x.href)).toEqual([
-    '/tests',
-    '/tests/history',
-  ])
+  expect(routeLocation('/tests/id').ancestors.map((x) => x.href)).toEqual(['/tests'])
 })
 it('shows primary destinations and current section on desktop without a hamburger or modal', async () => {
   viewport(true)
@@ -134,7 +131,11 @@ it('retains a settings origin through reload and restores its document position 
   })
   view.unmount()
   const reopened = renderAppAt('/templates', { transport: view.transport })
-  await userEvent.click(await screen.findByRole('link', { name: '돌아가기' }))
+  await userEvent.click(
+    within(await screen.findByRole('navigation', { name: '현재 위치' })).getByRole('link', {
+      name: '설정',
+    }),
+  )
   await waitFor(() => expect(reopened.router.state.location.pathname).toBe('/settings'))
   await waitFor(() => expect(scroll).toHaveBeenCalledWith(0, 480))
   expect(calls.some((x) => /^(Start|Save|Cancel|Create)/.test(x))).toBe(false)
@@ -162,3 +163,21 @@ it.each([
     expect(calls.some((x) => /^(Start|Save|Cancel|Create)/.test(x))).toBe(false)
   },
 )
+
+it('derives named child locations and unknown-route behavior from the same hierarchy', () => {
+  for (const path of ['/', '/tests', '/settings', '/library']) {
+    expect(routeLocation(path).ancestors).toEqual([])
+    expect(routeLocation(path).destination).toBe(path)
+  }
+  expect(currentDestination('/setup')).toBe('/')
+  expect(routeLocation('/admin/models')).toMatchObject({
+    current: 'adminModels',
+    destination: '/settings',
+  })
+  expect(routeLocation('/billing/checkout').ancestors.at(-1)?.href).toBe('/billing')
+  expect(routeLocation('/missing')).toMatchObject({
+    current: 'notFound',
+    ancestors: [],
+    destination: undefined,
+  })
+})
