@@ -8,6 +8,23 @@ import {
 import { create } from '@bufbuild/protobuf'
 import { BlockSchema, BlockType, PostContentSchema } from '@/shared/api'
 import { naverPhotoOrder, naverVideoOrder, toNaver } from './convert'
+import {
+  OWNER_CONTROL_CONTENT,
+  OWNER_CONTROL_TEXT,
+  PRIVATE_REVIEW_SENTINEL,
+  PRIVATE_REQUEST_SENTINEL,
+} from '@/test/fixtures/ownerControlContent'
+
+it('preserves genuine marker-like owner writing while excluding origin and technical sidecars', () => {
+  for (const language of ['ko', 'en'] as const) {
+    const output = toNaver(OWNER_CONTROL_CONTENT, POST_IMAGES_FIXTURE, language)
+    expect(output).toContain(OWNER_CONTROL_TEXT)
+    expect(output).not.toContain(PRIVATE_REVIEW_SENTINEL)
+    expect(output).not.toContain(PRIVATE_REQUEST_SENTINEL)
+    expect(output.match(/text-origin-owner-foreground/g)).toHaveLength(1)
+    expect(OWNER_CONTROL_CONTENT.blocks[0]!.content).toBe(OWNER_CONTROL_TEXT)
+  }
+})
 
 it('converts every block to the Naver plain-text contract', () => {
   const output = toNaver(POST_CONTENT_FIXTURE, POST_IMAGES_FIXTURE, 'ko')

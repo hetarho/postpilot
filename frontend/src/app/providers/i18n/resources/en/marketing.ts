@@ -4,7 +4,7 @@ export const marketing = {
   metadata: {
     title: 'What is Postpilot? | Blog drafts from photos and rough notes',
     description:
-      'Turn photos and rough notes into a blog draft in a voice you trained. Photo observation is separated from writing, and you pick the AI model for each step.',
+      'Turn photos and rough notes into a blog draft in your chosen voice. AI helps with phrasing and structure; you review meaning based on your input, inferred from photos or added by AI, edit it, and publish manually.',
   },
   about: {
     link: 'What is Postpilot?',
@@ -15,8 +15,9 @@ export const marketing = {
     login: 'Log in',
   },
   hero: {
+    positioning: 'AI helps you move faster. You stay in control of your writing.',
     title: 'Photos and rough notes into a blog draft in your own voice',
-    body: 'Upload the photos you took and a few lines of notes, and Postpilot writes a draft you can paste into your blog, in a voice profile you trained. Reading it and making one pass of edits is part of the same flow.',
+    body: 'Turn your photos and a few lines of notes into a blog draft in your own voice. AI helps with phrasing and structure; you inspect where a phrase’s meaning came from, make your own edits, and publish it yourself.',
     access:
       'An email address and password open an account, and you verify the address by mail before your first login. Google sign-in is also available.',
     haveAccount: 'Already have an account?',
@@ -33,11 +34,11 @@ export const marketing = {
     },
     step3: {
       title: 'Observe the photos first, then write',
-      body: 'Postpilot first records what the photos actually show, then writes the prose from that. You pick the model for the observation step and for the writing step separately.',
+      body: 'AI helps with phrasing and structure using the photo observations. You pick the model for observation and for writing separately.',
     },
     step4: {
-      title: 'Revise, finalize, and export',
-      body: 'Ask for the change you want and only that part is rewritten; then copy the finalized post in the format your platform wants and publish it manually on the destination service.',
+      title: 'Review origins, edit, and publish yourself',
+      body: 'Review whether a phrase’s meaning is based on your input, inferred from photos or added by AI. Edit the sentences yourself or request an AI revision, then copy the finalized post in your platform’s format and publish manually on the destination service.',
     },
   },
   different: {
@@ -48,7 +49,7 @@ export const marketing = {
     },
     observation: {
       title: 'Observation is separate from writing',
-      body: 'Recording what the photos show is a step of its own, and the post is written from that record.',
+      body: 'Photo observation and writing are separate steps. In the draft, you can inspect each phrase’s links to your input or photo observations and the meaning added by AI.',
     },
     blocks: {
       title: 'The post is stored as structured blocks',
@@ -56,12 +57,12 @@ export const marketing = {
     },
     control: {
       title: 'You choose the models and the runs',
-      body: 'You pick which model runs each step, and comparing two models side by side or running a revision are always explicit actions you take.',
+      body: 'You pick which model runs each step and decide when to compare drafts or request an AI revision.',
     },
   },
   outputs: {
     title: 'Where the result goes',
-    body: 'One finalized post produces every format below. Nothing is rewritten per format, and you manually publish the copied result on the destination service.',
+    body: 'One finalized post produces every format below. Origin labels and technical details stay out of the copied writing. You manually publish the copied result on the destination service.',
     naver: 'Naver Blog',
     tistory: 'Tistory',
     html: 'HTML for your own site',

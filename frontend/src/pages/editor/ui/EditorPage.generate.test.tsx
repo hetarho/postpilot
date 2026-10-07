@@ -482,7 +482,7 @@ describe('the brief run options', () => {
     expect(screen.queryByRole('checkbox', { name: '기억 사용' })).toBeNull()
 
     const brief = await openBrief(user)
-    const tags = within(brief).getByLabelText('태그 개수')
+    const tags = within(brief).getByLabelText('최대 태그 수')
     const quality = await within(brief).findByText('발행 글 점검')
     const field = within(brief).getByRole('group', { name: '분야' })
     const memory = within(brief).getByRole('checkbox', { name: '기억 사용' })
@@ -562,7 +562,7 @@ describe('the brief run options', () => {
     const brief = await openBrief(user)
     expect(await within(brief).findByRole('combobox', { name: /작성 모델/ })).toBeInTheDocument()
     expect(within(brief).queryByRole('checkbox', { name: '목표 글자 수 사용' })).toBeNull()
-    expect(within(brief).queryByLabelText('태그 개수')).toBeNull()
+    expect(within(brief).queryByLabelText('최대 태그 수')).toBeNull()
     expect(within(brief).queryByText('발행 글 점검')).toBeNull()
     expect(within(brief).queryByRole('group', { name: '분야' })).toBeNull()
     expect(within(brief).queryByRole('checkbox', { name: '기억 사용' })).toBeNull()

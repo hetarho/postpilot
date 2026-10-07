@@ -18,6 +18,7 @@ import {
   FieldMessage,
   Notice,
   TextField,
+  Typography,
   typographyStyles,
 } from '@/shared/ui'
 import { formatNumber } from '@/shared/lib'
@@ -42,7 +43,7 @@ export interface RunOptionsForm {
   jobRunning: boolean
 }
 
-/** The writing brief's run options as ONE form saved by its 저장 (POST-89): 목표 분량 and 태그 개수
+/** The writing brief's run options as ONE form saved by its 저장 (POST-89): 목표 분량 and 최대 태그 수
  *  here, then whatever the brief renders into `children` (발행 글 점검, 분야, 기억 사용). A tick, a
  *  chip or a typed number sends nothing; 저장 sends the whole set in one request and closes the
  *  brief once it lands, and closing without it discards the change. The form is seeded once, from
@@ -153,8 +154,7 @@ export function GenerationOptions({
           )}
         </div>
       )}
-      {/* Always visible, no enabling tick: a tag list has no "natural" count to fall back to, so
-          the field arrives holding the number the next run will use (POST-63). */}
+      {/* Always visible, no enabling tick: this caps the next run's grounded tags (POST-63). */}
       <div className="mt-3">
         <FieldLabel htmlFor={`generation-tags-${slug}`}>
           {t('generation.options.tagCount', { ns: 'posts' })}
@@ -164,12 +164,17 @@ export function GenerationOptions({
           type="number"
           min={POST_TAG_COUNT_MIN}
           max={POST_TAG_COUNT_MAX}
+          required
           value={draft.tags}
           disabled={numbersDisabled}
           onChange={(event) => update({ tags: event.target.value })}
           aria-invalid={!tagsOk || undefined}
+          aria-describedby={`generation-tags-help-${slug}`}
           className="mt-1"
         />
+        <Typography id={`generation-tags-help-${slug}`} variant="body" className="mt-1">
+          {t('generation.options.tagCountHelp', { ns: 'posts' })}
+        </Typography>
         {!tagsOk && (
           <FieldMessage className="mt-1">
             {t('generation.options.tagCountRange', {

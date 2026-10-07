@@ -66,7 +66,7 @@ interface GenerationBriefProps {
 
 /** Everything the next AI run is given that is a SETTING rather than a per-draft decision:
  *  관찰 모델 · 작성 모델 · 글 언어, each saving on its own, then the run options —
- *  목표 분량 · 태그 개수 · 발행 글 점검 · 분야 · 기억 사용 — as ONE form saved by its 저장, and
+ *  목표 분량 · 최대 태그 수 · 발행 글 점검 · 분야 · 기억 사용 — as ONE form saved by its 저장, and
  *  discarded by any close without it (POST-89).
  *
  *  It is a WIDGET because it composes several `features/*` slices and a feature may not import a

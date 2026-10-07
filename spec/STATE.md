@@ -71,15 +71,17 @@
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
-| T644 | Present maximum tags and clean owner-controlled writing copy | ARCH POST TMPL GEN EXPORT MKT QUAL THEME | T634 T642 T643 | todo |
 | T645 | Build reproducible prompt inspection and controlled writing evaluation | ARCH GEN MODEL LANG QUAL | T638 T639 T641 | todo |
 | T646 | Qualify origin-aware writing inspection and clean publication handoff | ARCH GEN POST MODEL THEME EXPORT MKT LANG | T636 T637 T639 T641 T642 T643 T644 T645 T631 | todo |
 
 ## next
-- T644 next for sequential implementation through T646 after the T643 commit.
+- T645 next for sequential implementation through T646 after the T644 commit.
 - Editorial follow-up: doc-review ARCH; preserve independent review and blocked qualification.
 
 ## log
+- 261008 T644 done on main: maximum-tag copy preserves option/seed contracts; clean owner-wording exports/fallbacks, product-owned bands and shipped public owner-control claims pass affected checks
+- 261008 T644 start on main ataa5e27b1: maximum-tag presentation, clean canonical exports and shipped owner-control copy; preserve independent review changes
+- 261008 T644 freshness: THEME30–32 change navigation/docks/mobile density only, retaining THEME62 origin/export contracts; base refreshed
 - 261008 T643 done on main: named owner-fenced technical post/authoring/test reads, honest current/prepared/captured views and blind denial; full affected FE coverage, server privacy and browser/lint/build/spec checks pass
 - 261008 T643 start on main atf5fcc6c0: owner-scoped optional technical request views; preserve independent review changes
 - 261008 T643 freshness: MODEL36/EDIT5 only change missing-slot integer1..16 preparation; THEME30–32 change navigation/docks/mobile density, retaining technical inspection contracts; bases refreshed
@@ -97,6 +99,3 @@
 - 261008 T639 freshness: MODEL36 only updates missing-slot setting preparation under MODEL92; video/speech inventory policies unchanged, base refreshed
 - 261008 T638 done on main: kind/mode-scoped authoring fields and shared grammar, single style example sets and fenced approval-only memory proposals; owning/consumer/race/build/spec checks pass
 - 261008 T638 freshness: exactT649 changes only missing-slot candidate admission/counts; retain integrated1..16 behavior and scoped composer contracts, bases refreshed
-- 261008 T638 start on main at376709cd: selected authoring/style/memory composition and explicit material boundaries; preserve independent release/review changes
-- 261008 T637 done on main: atomic current-result origins, conservative manual alignment and immutable attachment/plan fences; full product Go, impacted FE2870, current race, generators/build/spec pass
-- 261008 T636 done on main: bounded semantic-origin calls, strict canonical-tail salvage, validated current sources and structural revision retention; full owning/consumer/API/race/build/spec checks pass

@@ -193,7 +193,7 @@ describe('GenerationBrief', () => {
     }
     expect(screen.getByLabelText('목표 글자 수 사용')).toBeInTheDocument()
     // The tag count sits under the length, always visible, holding the post's value (POST-63).
-    expect(screen.getByLabelText('태그 개수')).toHaveValue(4)
+    expect(screen.getByLabelText('최대 태그 수')).toHaveValue(4)
     // The legacy pair editor is absent; the common test flow receives named source context.
     expect(panel.textContent).not.toContain('AI 모델에서 두 후보 설정')
     expect(within(panel).queryByRole('link')).not.toBeInTheDocument()
@@ -265,7 +265,7 @@ describe('GenerationBrief', () => {
 
     await openBrief(user)
     const heading = await screen.findByText('발행 글 점검')
-    expect(before(screen.getByLabelText('태그 개수'), heading)).toBe(true)
+    expect(before(screen.getByLabelText('최대 태그 수'), heading)).toBe(true)
     expect(await screen.findByRole('checkbox', { name: /^글 간 고정 문구 15%/ })).toBeEnabled()
     expect(
       screen.getByText('발행한 글이 10편 이상이면 비교해요. 지금은 5편이에요.'),
@@ -290,7 +290,7 @@ describe('GenerationBrief', () => {
     const field = screen.getByRole('group', { name: '분야' })
     const memory = screen.getByRole('checkbox', { name: '기억 사용' })
     const save = screen.getByRole('button', { name: '저장' })
-    const order = [length, screen.getByLabelText('태그 개수'), quality, field, memory, save]
+    const order = [length, screen.getByLabelText('최대 태그 수'), quality, field, memory, save]
     expect(order.every((node, i) => i === 0 || before(order[i - 1], node))).toBe(true)
     const form = length.closest('form')
     expect(form).not.toBeNull()
@@ -371,7 +371,7 @@ describe('GenerationBrief', () => {
     await openBrief(user)
     expect(await screen.findByRole('checkbox', { name: /^글 간 고정 문구 15%/ })).toBeDisabled()
     expect(screen.getByLabelText('목표 글자 수 사용')).toBeDisabled()
-    expect(screen.getByLabelText('태그 개수')).toBeDisabled()
+    expect(screen.getByLabelText('최대 태그 수')).toBeDisabled()
     expect(screen.getByRole('button', { name: '카페' })).toBeEnabled()
     expect(screen.getByRole('checkbox', { name: '기억 사용' })).toBeEnabled()
     await user.click(screen.getByRole('button', { name: '카페' }))
@@ -387,7 +387,7 @@ describe('GenerationBrief', () => {
     await openBrief(user)
     expect(await screen.findByRole('checkbox', { name: /^글 간 고정 문구 15%/ })).toBeDisabled()
     expect(screen.getByLabelText('목표 글자 수 사용')).toBeDisabled()
-    expect(screen.getByLabelText('태그 개수')).toBeDisabled()
+    expect(screen.getByLabelText('최대 태그 수')).toBeDisabled()
     const chips = within(screen.getByRole('group', { name: '분야' })).getAllByRole('button')
     expect(chips).toHaveLength(10)
     for (const chip of chips) expect(chip).toBeDisabled()
@@ -406,7 +406,7 @@ describe('GenerationBrief', () => {
     await openBrief(user)
     expect(await screen.findByRole('combobox', { name: /작성 모델/ })).toBeInTheDocument()
     expect(screen.queryByLabelText('목표 글자 수 사용')).not.toBeInTheDocument()
-    expect(screen.queryByLabelText('태그 개수')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('최대 태그 수')).not.toBeInTheDocument()
     expect(screen.queryByText('발행 글 점검')).not.toBeInTheDocument()
     expect(screen.queryByRole('group', { name: '분야' })).not.toBeInTheDocument()
     expect(screen.queryByRole('checkbox', { name: '기억 사용' })).not.toBeInTheDocument()

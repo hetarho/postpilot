@@ -179,7 +179,7 @@ export function PostMeasurementRow({
               </div>
             ))}
           </dl>
-          <Typography variant="meta" as="p" className="text-content-secondary mt-3">
+          <Typography variant="body" as="p" className="text-content-secondary mt-3">
             {bandsAreOwnLine()}
           </Typography>
         </>

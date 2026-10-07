@@ -18,7 +18,8 @@ export const i18n = {
       verdict: { over_band: '주의', within_band: '양호' },
       absent: '측정할 수 없어요',
       belowMinimum: '발행한 글이 {{minimum}}편 이상이면 비교해요. 지금은 {{count}}편이에요.',
-      bandsOwn: '배지 기준은 PostPilot이 정한 값이에요.',
+      bandsOwn:
+        '배지 기준은 PostPilot이 정한 값이에요. 문구 출처는 별도의 글 검토 정보이며, 이 측정값이나 사실 인증이 아니에요.',
       band: {
         atMost: '기준 {{edge}} 이하',
         atLeast: '기준 {{edge}} 이상',
@@ -60,7 +61,8 @@ export const i18n = {
       verdict: { over_band: 'Caution', within_band: 'Good' },
       absent: 'Can’t be measured',
       belowMinimum: 'Compared once {{minimum}} posts are published. You have {{count}} now.',
-      bandsOwn: 'The badge thresholds are PostPilot’s own.',
+      bandsOwn:
+        'The badge thresholds are PostPilot’s own. Phrase origins are separate writing review information, not these measurements or proof of truth.',
       band: {
         atMost: 'target {{edge}} or less',
         atLeast: 'target {{edge}} or more',

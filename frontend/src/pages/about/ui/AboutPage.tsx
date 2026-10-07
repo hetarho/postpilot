@@ -33,6 +33,9 @@ export function AboutPage() {
       <AboutHeader />
       <main className="mx-auto w-full max-w-3xl flex-1 px-4 pb-16 sm:px-6 lg:max-w-5xl lg:px-8">
         <section aria-labelledby="about-hero" className="pt-10 sm:pt-16">
+          <Typography variant="label" as="p" className="text-content-secondary mb-3">
+            {t('hero.positioning')}
+          </Typography>
           <Typography variant="display" id="about-hero">
             {t('hero.title')}
           </Typography>

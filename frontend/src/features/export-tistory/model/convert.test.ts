@@ -8,6 +8,27 @@ import {
   POST_CONTENT_FIXTURE,
 } from '@/test/fixtures/postContent'
 import { toTistory } from './convert'
+import {
+  OWNER_CONTROL_CONTENT,
+  OWNER_CONTROL_TEXT,
+  PRIVATE_REVIEW_SENTINEL,
+  PRIVATE_REQUEST_SENTINEL,
+} from '@/test/fixtures/ownerControlContent'
+
+it('preserves genuine marker-like owner writing while excluding origin and technical sidecars', () => {
+  for (const language of ['ko', 'en'] as const) {
+    const output = toTistory(OWNER_CONTROL_CONTENT, POST_IMAGES_FIXTURE, language)
+    const parsed = new DOMParser().parseFromString(output, 'text/html')
+    expect([...parsed.querySelectorAll('p')].map((node) => node.textContent)).toContain(
+      OWNER_CONTROL_TEXT,
+    )
+    expect(parsed.querySelector('write')).toBeNull()
+    expect(output).not.toContain(PRIVATE_REVIEW_SENTINEL)
+    expect(output).not.toContain(PRIVATE_REQUEST_SENTINEL)
+    expect(output.match(/text-origin-owner-foreground/g)).toHaveLength(1)
+    expect(OWNER_CONTROL_CONTENT.blocks[0]!.content).toBe(OWNER_CONTROL_TEXT)
+  }
+})
 
 it('converts every block to the Tistory fragment contract', () => {
   const output = toTistory(POST_CONTENT_FIXTURE, POST_IMAGES_FIXTURE, 'ko')

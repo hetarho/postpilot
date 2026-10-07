@@ -244,7 +244,11 @@ describe('the post measurement row', () => {
     ).toEqual([M2, M3, M4])
     expect(within(region).queryByText('제목 도배율')).toBeNull()
     expect(region.querySelector('dl')).toHaveClass('grid-cols-2', 'sm:grid-cols-3')
-    expect(within(region).getByText('배지 기준은 PostPilot이 정한 값이에요.')).toBeInTheDocument()
+    expect(
+      within(region).getByText(
+        '배지 기준은 PostPilot이 정한 값이에요. 문구 출처는 별도의 글 검토 정보이며, 이 측정값이나 사실 인증이 아니에요.',
+      ),
+    ).toBeInTheDocument()
   })
 
   // QUAL-3: a new revision is a new measurement — a generation moves it without any save hook — and
@@ -333,6 +337,10 @@ describe('the post measurement row', () => {
       'Average sentence length 41.2 words',
     ])
     expect(within(m4).getByText('Caution')).toBeInTheDocument()
-    expect(screen.getByText('The badge thresholds are PostPilot’s own.')).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        'The badge thresholds are PostPilot’s own. Phrase origins are separate writing review information, not these measurements or proof of truth.',
+      ),
+    ).toBeInTheDocument()
   })
 })

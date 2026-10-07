@@ -8,6 +8,30 @@ import {
   POST_CONTENT_FIXTURE,
 } from '@/test/fixtures/postContent'
 import { toMarkdown } from './convert'
+import { escapeHtml } from '@/shared/lib'
+import {
+  OWNER_CONTROL_CONTENT,
+  OWNER_CONTROL_TEXT,
+  PRIVATE_REVIEW_SENTINEL,
+  PRIVATE_REQUEST_SENTINEL,
+} from '@/test/fixtures/ownerControlContent'
+
+it('preserves genuine marker-like owner writing while excluding origin and technical sidecars', () => {
+  for (const language of ['ko', 'en'] as const) {
+    const output = toMarkdown(
+      OWNER_CONTROL_CONTENT,
+      POST_IMAGES_FIXTURE,
+      '2026-10-08T00:00:00Z',
+      language,
+    )
+    expect(output).toContain(escapeHtml(OWNER_CONTROL_TEXT))
+    expect(output).toContain(`language: ${language}`)
+    expect(output).not.toContain(PRIVATE_REVIEW_SENTINEL)
+    expect(output).not.toContain(PRIVATE_REQUEST_SENTINEL)
+    expect(output.match(/text-origin-owner-foreground/g)).toHaveLength(1)
+    expect(OWNER_CONTROL_CONTENT.blocks[0]!.content).toBe(OWNER_CONTROL_TEXT)
+  }
+})
 
 it('converts every block to Markdown with YAML front matter', () => {
   const output = toMarkdown(POST_CONTENT_FIXTURE, POST_IMAGES_FIXTURE, '2026-08-29T03:04:05Z', 'ko')

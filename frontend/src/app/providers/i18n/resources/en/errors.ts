@@ -306,7 +306,7 @@ export const errors = {
   UPLOAD_VIDEO_UNSUPPORTED: 'That video format is not supported.',
   UPLOAD_VIDEO_INVALID: 'The video could not be uploaded. Check its length and size.',
   GENERATION_TARGET_LENGTH_INVALID: 'Check the target length.',
-  POST_TAG_COUNT_INVALID: 'Check the tag count.',
+  POST_TAG_COUNT_INVALID: 'Check the maximum tag count.',
   POST_TARGET_LENGTH_INVALID: 'Enter a target length between {{min}} and {{max}} characters.',
   POST_PHOTO_MISSING:
     '{{count}} photo places in the text name photos that are no longer attached. Remove those photo blocks in ② or upload the photos again, then finalize.',

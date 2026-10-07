@@ -214,7 +214,7 @@ describe('a published post', () => {
     expect(within(brief).getByRole('combobox', { name: /^작성 모델/ })).toBeEnabled()
     expect(within(brief).getByRole('combobox', { name: /^글 언어/ })).toBeDisabled()
     expect(within(brief).getByRole('checkbox', { name: '목표 글자 수 사용' })).toBeDisabled()
-    expect(within(brief).getByLabelText('태그 개수')).toBeDisabled()
+    expect(within(brief).getByLabelText('최대 태그 수')).toBeDisabled()
     expect(within(brief).getByRole('checkbox', { name: '기억 사용' })).toBeDisabled()
     for (const chip of within(within(brief).getByRole('group', { name: '분야' })).getAllByRole(
       'button',

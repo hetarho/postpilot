@@ -2,6 +2,9 @@ import { afterEach, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { naverPhotoOrder, toNaver } from '@/features/export-naver'
+import { toMarkdown } from '@/features/export-markdown'
+import { toTistory } from '@/features/export-tistory'
+import { toSite } from '@/features/export-site'
 import { BlockType } from '@/shared/api'
 import {
   POST_CONTENT_FIXTURE,
@@ -11,6 +14,137 @@ import {
   POST_VIDEOS_FIXTURE,
 } from '@/test/fixtures/postContent'
 import { ExportPanel } from './ExportPanel'
+import {
+  OWNER_CONTROL_CONTENT,
+  OWNER_CONTROL_TEXT,
+  OWNER_CONTROL_CAPTION,
+  PRIVATE_REVIEW_SENTINEL,
+  PRIVATE_REQUEST_SENTINEL,
+} from '@/test/fixtures/ownerControlContent'
+
+const OWNER_CREATED_AT = '2026-10-08T00:00:00Z'
+const OWNER_FORMATS = [
+  { format: 'naver', label: '네이버 블로그' },
+  { format: 'tistory', label: '티스토리' },
+  { format: 'site', label: '자체 사이트' },
+  { format: 'markdown', label: '마크다운' },
+] as const
+const ownerOutputs = (content: typeof OWNER_CONTROL_CONTENT, language: 'ko' | 'en') => ({
+  naver: toNaver(content, POST_IMAGES_FIXTURE, language),
+  tistory: toTistory(content, POST_IMAGES_FIXTURE, language),
+  site: toSite(content, POST_IMAGES_FIXTURE, OWNER_CREATED_AT, language),
+  markdown: toMarkdown(content, POST_IMAGES_FIXTURE, OWNER_CREATED_AT, language),
+})
+
+it.each(OWNER_FORMATS)(
+  'manual $format fallback preserves latest marker-like owner wording and excludes visible review chrome',
+  async ({ format, label }) => {
+    const user = userEvent.setup()
+    setClipboard(undefined)
+    const select = vi.spyOn(HTMLTextAreaElement.prototype, 'select')
+    const fetch = vi.spyOn(globalThis, 'fetch')
+    const panel = (content: typeof OWNER_CONTROL_CONTENT, language: 'ko' | 'en') => (
+      <>
+        <aside>
+          {PRIVATE_REVIEW_SENTINEL} {PRIVATE_REQUEST_SENTINEL} text-origin-owner-foreground
+        </aside>
+        <ExportPanel
+          content={content}
+          images={POST_IMAGES_FIXTURE}
+          createdAt={OWNER_CREATED_AT}
+          contentLanguage={language}
+        />
+      </>
+    )
+    const view = render(panel(OWNER_CONTROL_CONTENT, 'ko'))
+    await user.click(screen.getByRole('tab', { name: label }))
+    for (const language of ['ko', 'en'] as const) {
+      const latest = {
+        ...OWNER_CONTROL_CONTENT,
+        blocks: OWNER_CONTROL_CONTENT.blocks.map((block, index) =>
+          index === 0
+            ? {
+                ...block,
+                content: `${OWNER_CONTROL_TEXT}\n소유자가 마지막으로 고친 문장 ${language}`,
+              }
+            : block,
+        ),
+      }
+      view.rerender(panel(latest, language))
+      await user.click(screen.getByRole('button', { name: '복사' }))
+      await waitFor(() => expect(select).toHaveBeenCalled())
+      const fallback = screen.getByLabelText<HTMLTextAreaElement>('내보내기 결과')
+      expect(fallback.value).toBe(ownerOutputs(latest, language)[format])
+      expect(fallback.value).toContain(`소유자가 마지막으로 고친 문장 ${language}`)
+      expect(fallback.value).not.toContain(PRIVATE_REVIEW_SENTINEL)
+      expect(fallback.value).not.toContain(PRIVATE_REQUEST_SENTINEL)
+      expect(fallback.value.match(/text-origin-owner-foreground/g)).toHaveLength(1)
+      expect(fallback.selectionStart).toBe(0)
+      expect(fallback.selectionEnd).toBe(fallback.value.length)
+    }
+    expect(fetch).not.toHaveBeenCalled()
+  },
+)
+
+it('copies only canonical title, tags, caption and four body formats while preserving genuine origin-label wording', async () => {
+  const user = userEvent.setup()
+  const writeText = vi.fn<Clipboard['writeText']>().mockResolvedValue(undefined)
+  setClipboard({ writeText })
+  render(
+    <>
+      <aside>
+        {PRIVATE_REVIEW_SENTINEL} {PRIVATE_REQUEST_SENTINEL}
+      </aside>
+      <ExportPanel
+        content={OWNER_CONTROL_CONTENT}
+        images={POST_IMAGES_FIXTURE}
+        createdAt={OWNER_CREATED_AT}
+        contentLanguage="ko"
+      />
+    </>,
+  )
+  await user.click(screen.getByRole('button', { name: '제목 복사' }))
+  await waitFor(() => expect(writeText).toHaveBeenLastCalledWith(OWNER_CONTROL_CONTENT.title))
+  await user.click(screen.getByRole('button', { name: '태그 복사' }))
+  await waitFor(() => expect(writeText).toHaveBeenLastCalledWith('#owner_input #출처 미확인'))
+  await user.click(screen.getByRole('button', { name: '1번 사진 캡션 복사' }))
+  await waitFor(() => expect(writeText).toHaveBeenLastCalledWith(OWNER_CONTROL_CAPTION))
+  for (const { format, label } of OWNER_FORMATS) {
+    await user.click(screen.getByRole('tab', { name: label }))
+    await user.click(screen.getByRole('button', { name: '복사' }))
+    await waitFor(() =>
+      expect(writeText).toHaveBeenLastCalledWith(ownerOutputs(OWNER_CONTROL_CONTENT, 'ko')[format]),
+    )
+  }
+  for (const [text] of writeText.mock.calls) {
+    expect(text).not.toContain(PRIVATE_REVIEW_SENTINEL)
+    expect(text).not.toContain(PRIVATE_REQUEST_SENTINEL)
+  }
+})
+
+it('manual title, tag and caption fallbacks preserve owner words that look like origin annotations', async () => {
+  const user = userEvent.setup()
+  setClipboard(undefined)
+  render(
+    <ExportPanel
+      content={OWNER_CONTROL_CONTENT}
+      images={POST_IMAGES_FIXTURE}
+      createdAt={OWNER_CREATED_AT}
+      contentLanguage="ko"
+    />,
+  )
+  for (const [button, field, expected] of [
+    ['제목 복사', '네이버 제목', OWNER_CONTROL_CONTENT.title],
+    ['태그 복사', '태그', '#owner_input #출처 미확인'],
+    ['1번 사진 캡션 복사', '캡션 텍스트', OWNER_CONTROL_CAPTION],
+  ]) {
+    await user.click(screen.getByRole('button', { name: button }))
+    const fallback = await screen.findByLabelText<HTMLInputElement | HTMLTextAreaElement>(field!)
+    expect(fallback).toHaveValue(expected)
+    expect(fallback.selectionStart).toBe(0)
+    expect(fallback.selectionEnd).toBe(expected!.length)
+  }
+})
 
 const originalClipboard = navigator.clipboard
 

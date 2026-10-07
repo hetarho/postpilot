@@ -295,7 +295,7 @@ export const errors = {
   UPLOAD_VIDEO_UNSUPPORTED: '지원하지 않는 영상 형식이에요.',
   UPLOAD_VIDEO_INVALID: '영상을 올리지 못했어요. 길이나 크기를 확인해 주세요.',
   GENERATION_TARGET_LENGTH_INVALID: '목표 글자 수를 확인해 주세요.',
-  POST_TAG_COUNT_INVALID: '태그 개수를 확인해 주세요.',
+  POST_TAG_COUNT_INVALID: '최대 태그 수를 확인해 주세요.',
   POST_TARGET_LENGTH_INVALID: '목표 글자 수는 {{min}}~{{max}}자 사이로 입력해 주세요.',
   POST_PHOTO_MISSING:
     '글에 사진이 없는 자리가 {{count}}곳 남아 있어요. ②에서 그 사진 블록을 지우거나 사진을 다시 올린 뒤 완성해 주세요.',

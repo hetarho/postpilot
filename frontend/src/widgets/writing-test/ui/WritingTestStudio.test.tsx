@@ -1,4 +1,4 @@
-import { act, cleanup, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import i18next from 'i18next'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
@@ -67,6 +67,37 @@ async function decideAll(fixture: Fixture) {
   }
   await screen.findByText('Frozen setting 1')
 }
+
+it.each([1, 10])(
+  'names the maximum tag count and freezes the valid boundary %i after refusing invalid input',
+  async (maximum) => {
+    const fixture = createWritingTestStudioFixture()
+    mount(fixture)
+    await modelCandidates(fixture)
+    const tags = screen.getByRole('spinbutton', { name: '최대 태그 수' })
+    expect(tags).toHaveValue(4)
+    expect(tags).toHaveAttribute('min', '1')
+    expect(tags).toHaveAttribute('max', '10')
+    expect(screen.queryByRole('checkbox', { name: /태그/ })).not.toBeInTheDocument()
+    for (const value of ['', '0', '11', '2.5']) {
+      fireEvent.change(tags, { target: { value } })
+      await userEvent.click(screen.getByRole('button', { name: '글 2편 생성 비용 확인' }))
+      expect(screen.getByText('최대 태그 수는 1~10 사이의 정수로 입력해 주세요.')).toBeVisible()
+      expect(fixture.estimates).toHaveLength(0)
+      expect(fixture.admissions).toHaveLength(0)
+    }
+    fireEvent.change(tags, { target: { value: String(maximum) } })
+    await userEvent.click(screen.getByRole('button', { name: '글 2편 생성 비용 확인' }))
+    await screen.findByRole('button', { name: '글 2편 만들기' })
+    expect(fixture.estimates).toHaveLength(1)
+    expect(fixture.estimates[0].context?.tagCount).toBe(maximum)
+    expect(fixture.admissions).toHaveLength(0)
+    await userEvent.click(screen.getByRole('button', { name: '글 2편 만들기' }))
+    await screen.findByRole('button', { name: '후보 A를 승자로 선택' })
+    expect(fixture.admissions).toHaveLength(1)
+    expect(fixture.admissions[0].plan?.context?.tagCount).toBe(maximum)
+  },
+)
 
 it('requires every chosen slot and preserves unsent material through Back without implicit AI', async () => {
   const fixture = createWritingTestStudioFixture()

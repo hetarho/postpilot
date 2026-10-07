@@ -8,6 +8,33 @@ import {
   POST_CONTENT_FIXTURE,
 } from '@/test/fixtures/postContent'
 import { toSite } from './convert'
+import {
+  OWNER_CONTROL_CONTENT,
+  OWNER_CONTROL_TEXT,
+  PRIVATE_REVIEW_SENTINEL,
+  PRIVATE_REQUEST_SENTINEL,
+} from '@/test/fixtures/ownerControlContent'
+
+it('preserves genuine marker-like owner writing while excluding origin and technical sidecars', () => {
+  for (const language of ['ko', 'en'] as const) {
+    const output = toSite(
+      OWNER_CONTROL_CONTENT,
+      POST_IMAGES_FIXTURE,
+      '2026-10-08T00:00:00Z',
+      language,
+    )
+    const parsed = new DOMParser().parseFromString(output, 'text/html')
+    expect([...parsed.querySelectorAll('article p')].map((node) => node.textContent)).toContain(
+      OWNER_CONTROL_TEXT,
+    )
+    expect(parsed.documentElement.lang).toBe(language)
+    expect(parsed.querySelector('write')).toBeNull()
+    expect(output).not.toContain(PRIVATE_REVIEW_SENTINEL)
+    expect(output).not.toContain(PRIVATE_REQUEST_SENTINEL)
+    expect(output.match(/text-origin-owner-foreground/g)).toHaveLength(1)
+    expect(OWNER_CONTROL_CONTENT.blocks[0]!.content).toBe(OWNER_CONTROL_TEXT)
+  }
+})
 
 it('converts every block to one standalone fixed-template page', () => {
   const output = toSite(POST_CONTENT_FIXTURE, POST_IMAGES_FIXTURE, '2026-08-29T03:04:05Z', 'ko')

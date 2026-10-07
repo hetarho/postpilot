@@ -1,9 +1,10 @@
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { readFileSync } from 'node:fs'
-import { screen, within } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { initializeI18n } from '@/app/providers/i18n'
 import { renderAppAt } from '@/test/app'
+import { createFakeAuthTransport } from '@/test/session'
 import { PUBLIC_LADDER } from '../model/ladder'
 
 const CANONICAL = readFileSync('../backend/internal/plan/offers.go', 'utf8')
@@ -83,6 +84,84 @@ describe('public offer mirror', () => {
 })
 
 describe.each(['ko', 'en'] as const)('About page in %s', (locale) => {
+  it('presents AI assistance, phrase-origin review, owner edits and manual publication', async () => {
+    initializeI18n(locale)
+    renderAppAt('/about')
+    await screen.findByRole('heading', { level: 1 })
+
+    expect(
+      screen.getByText(
+        locale === 'ko'
+          ? 'AI는 속도를, 글의 주도권은 나에게'
+          : 'AI helps you move faster. You stay in control of your writing.',
+      ),
+    ).toBeVisible()
+    const hero = screen.getByRole('region', {
+      name:
+        locale === 'ko'
+          ? '사진과 메모를 내 말투의 블로그 초안으로'
+          : 'Photos and rough notes into a blog draft in your own voice',
+    })
+    expect(hero).toHaveTextContent(
+      locale === 'ko' ? 'AI는 표현과 구성을 돕고' : 'AI helps with phrasing and structure',
+    )
+
+    const flow = within(
+      screen.getByRole('region', { name: locale === 'ko' ? '어떻게 쓰나요' : 'How it works' }),
+    )
+    const reviewAndPublish = flow.getAllByRole('listitem')[3]!
+    for (const origin of locale === 'ko'
+      ? ['직접 입력 기반', '사진에서 추론', 'AI가 보탠 내용']
+      : ['based on your input', 'inferred from photos', 'added by AI']) {
+      expect(reviewAndPublish).toHaveTextContent(origin)
+    }
+    expect(reviewAndPublish).toHaveTextContent(
+      locale === 'ko'
+        ? '필요한 문장을 직접 고치거나 AI 수정을 요청하고'
+        : 'Edit the sentences yourself',
+    )
+    expect(reviewAndPublish).toHaveTextContent(
+      locale === 'ko'
+        ? '플랫폼 형식으로 복사해 목적지 서비스에 직접 게시합니다'
+        : 'copy the finalized post in your platform’s format and publish manually',
+    )
+    const outputs = screen.getByRole('region', {
+      name: locale === 'ko' ? '결과물은 어디로 가나요' : 'Where the result goes',
+    })
+    expect(outputs).toHaveTextContent(
+      locale === 'ko'
+        ? '출처 표시와 기술 정보는 복사한 글에 섞이지 않습니다'
+        : 'Origin labels and technical details stay out of the copied writing',
+    )
+    expect(screen.getByRole('main')).not.toHaveTextContent(
+      /\d+\s*(?:배 더 빠르|times faster|x faster)|사실 보장|정확도 보장|AI 없는 글|검색 순위 향상|자동 (?:발행|게시)|guaranteed truth|AI-free writing|search-rank gain|automatically publish/i,
+    )
+  })
+
+  it.each([
+    ['anonymous', undefined],
+    ['signed in', { id: 'marketing-owner' }],
+  ] as const)(
+    'mounts for a %s visitor without any private or model RPC',
+    async (_session, user) => {
+      initializeI18n(locale)
+      const calls: string[] = []
+      const transport = createFakeAuthTransport({ user, calls })
+      // Observe the real transport entry points as well as registered fake procedures: even an
+      // unregistered private/model/inspection request must fail this network-free public contract.
+      const unary = vi.spyOn(transport, 'unary')
+      const stream = vi.spyOn(transport, 'stream')
+      const { router } = renderAppAt('/about', { transport })
+      await screen.findByRole('heading', { level: 1 })
+      await waitFor(() => expect(router.state.isLoading).toBe(false))
+
+      expect(router.state.location.pathname).toBe('/about')
+      expect(calls).toEqual([])
+      expect(unary).not.toHaveBeenCalled()
+      expect(stream).not.toHaveBeenCalled()
+    },
+  )
+
   it('keeps the public explanation, signup path and ordered flow', async () => {
     initializeI18n(locale)
     const { container } = renderAppAt('/about?redirect=%2Fposts%2Fwelcome')

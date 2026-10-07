@@ -89,7 +89,7 @@ export const i18n = {
     },
     publicationPreserves: {
       'post-template':
-        '현재 초안의 글 구성과 직접 선택한 글 분량·태그 수를 저장해요. AI 편집은 숫자를 바꾸지 않아요.',
+        '현재 초안의 글 구성과 직접 선택한 글 분량·최대 태그 수를 저장해요. AI 편집은 숫자를 바꾸지 않아요.',
       'video-template': '영상의 구성만 바뀌어요. 저장한 디자인은 그대로예요.',
       'post-guideline':
         '현재 초안의 지침과 직접 선택한 적용 범위를 저장해요. AI 편집은 적용 범위를 바꾸지 않아요.',
@@ -316,7 +316,7 @@ export const i18n = {
     },
     publicationPreserves: {
       'post-template':
-        'Save the draft structure and explicitly chosen length and tag count. AI editing preserves the numbers.',
+        'Save the draft structure and explicitly chosen length and maximum tag count. AI editing preserves the numbers.',
       'video-template': 'Update the video structure. Your saved design stays the same.',
       'post-guideline':
         'Save the draft text and explicitly chosen scope. AI editing preserves the scope.',
