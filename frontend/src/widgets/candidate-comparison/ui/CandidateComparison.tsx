@@ -12,6 +12,7 @@ import { badgeGroup, badgeTone } from '@/entities/model-experiment'
 import { AppFailureMessage, Badge, Notice, Typography, type BadgeTone } from '@/shared/ui'
 import type { FingerprintComparisonItem } from '@/entities/voice'
 import { formatNumber } from '@/shared/lib'
+import { BlockType, GalleryLayout } from '@/shared/api'
 
 interface CandidateComparisonProps {
   experiment: ModelExperiment
@@ -89,7 +90,7 @@ export function CandidateComparison({
         experiment.reviewMode === 'candidate_ranking' &&
         !sides.some(({ candidate }) => candidate.rank) && (
           <Typography variant="label" as="p" className="mt-6">
-            {t('ranking.skipped', { ns: 'models' })}
+            {t('comparison.noRankingRecorded')}
           </Typography>
         )}
       {experiment.revealed && (
@@ -120,7 +121,7 @@ function CandidateOutput({
   if (!candidate.output)
     return (
       <Typography variant="body" className="text-content-tertiary mt-4">
-        {t('comparison.waiting')}
+        {t(candidate.status === 'succeeded' ? 'comparison.expired' : 'comparison.waiting')}
       </Typography>
     )
   if (candidate.output.kind === 'voice') {
@@ -147,19 +148,28 @@ function CandidateOutput({
             {content.summary}
           </Typography>
         )}
+        {content.tags.length > 0 && (
+          <ul aria-label={t('tags')} className="mt-3 flex flex-wrap gap-2">
+            {content.tags.map((tag, index) => (
+              <Typography variant="label" as="li" key={`${tag}:${index}`} className="break-words">
+                #{tag}
+              </Typography>
+            ))}
+          </ul>
+        )}
         <div className="mt-5 space-y-4">
           {content.blocks.map((block, index) =>
-            block.type === 5 ? (
+            block.type === BlockType.LIST ? (
               <Typography key={index} variant="body" as="ul" className="list-disc space-y-1 pl-5">
                 {block.items.map((item) => (
                   <li key={item}>{item}</li>
                 ))}
               </Typography>
-            ) : block.type === 2 ? (
+            ) : block.type === BlockType.HEADING ? (
               <Typography key={index} variant="title" as="h4">
                 {block.content}
               </Typography>
-            ) : block.type === 3 ? (
+            ) : block.type === BlockType.IMAGE ? (
               // `break-words`: the filename comes from the server (THEME-21).
               <Typography
                 key={index}
@@ -169,7 +179,25 @@ function CandidateOutput({
                 {t('comparison.photo', { filename: block.file })}
                 {block.caption ? `: ${block.caption}` : ''}
               </Typography>
-            ) : block.type === 7 ? (
+            ) : block.type === BlockType.VIDEO ? (
+              <Typography
+                key={index}
+                variant="body"
+                className="bg-surface-recessed rounded-md px-3 py-2 break-words"
+              >
+                {t('comparison.video', { filename: block.file })}
+                {block.caption ? `: ${block.caption}` : ''}
+              </Typography>
+            ) : block.type === BlockType.QUOTE ? (
+              <Typography
+                key={index}
+                variant="body"
+                as="blockquote"
+                className="break-words whitespace-pre-wrap"
+              >
+                {block.content}
+              </Typography>
+            ) : block.type === BlockType.GALLERY ? (
               // A photo group is one line, as it is one place in the post (GEN-77); layout 2 is
               // SLIDE, anything else reads as a collage (GEN-78).
               <Typography
@@ -179,7 +207,9 @@ function CandidateOutput({
               >
                 {t('comparison.photoGroup', {
                   layout: t(
-                    block.layout === 2 ? 'comparison.layout.slide' : 'comparison.layout.collage',
+                    block.layout === GalleryLayout.SLIDE
+                      ? 'comparison.layout.slide'
+                      : 'comparison.layout.collage',
                   ),
                   filenames: block.files.join(', '),
                 })}
@@ -223,6 +253,26 @@ function CandidateOutput({
               <span className="text-content-tertiary">{t('comparison.people')}</span>{' '}
               {item.peoplePresent ? t('comparison.present') : t('comparison.absent')}
             </p>
+            {item.events.length > 0 && (
+              <div>
+                <Typography variant="label" as="p" className="text-content-tertiary">
+                  {t('comparison.events')}
+                </Typography>
+                <Typography variant="label" as="ol" className="list-decimal space-y-1 pl-5">
+                  {item.events.map((event, index) => (
+                    <li key={`${index}:${event}`} className="break-words whitespace-pre-wrap">
+                      {event}
+                    </li>
+                  ))}
+                </Typography>
+              </div>
+            )}
+            {item.speech && (
+              <p className="break-words whitespace-pre-wrap">
+                <span className="text-content-tertiary">{t('comparison.speech')}</span>{' '}
+                {item.speech}
+              </p>
+            )}
           </Typography>
         </div>
       ))}
@@ -251,9 +301,9 @@ function RevealBand({ sides, ranked }: { sides: CandidateSide[]; ranked: boolean
           <dd className="mt-1">
             {ranked && candidate.rank && (
               <Typography variant="label" as="p" className="text-content-primary">
-                {t('ranking.place', { ns: 'models', rank: candidate.rank })}
+                {t('comparison.historicalRank', { rank: candidate.rank })}
                 {sides.filter(({ candidate: other }) => other.rank === candidate.rank).length > 1
-                  ? ` · ${t('ranking.tie', { ns: 'models' })}`
+                  ? ` · ${t('comparison.historicalTie')}`
                   : ''}
               </Typography>
             )}

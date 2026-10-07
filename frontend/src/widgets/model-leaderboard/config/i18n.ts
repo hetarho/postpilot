@@ -4,6 +4,12 @@ import type { I18nFragment } from '@/shared/lib'
 export const i18n = {
   namespace: 'models',
   ko: {
+    legacyLeaderboard: {
+      description:
+        '실제 글을 나란히 읽고 고르는 글쓰기 테스트로 비교해 보세요. 이전 유료 결과는 테스트 기록에서 볼 수 있어요.',
+      openTests: '글쓰기 테스트 시작하기',
+      openHistory: '글쓰기 테스트 기록',
+    },
     unavailable: '등록 해제된 모델',
     leaderboard: {
       empty: '아직 순위를 매긴 비교 결과가 없어요.',
@@ -27,6 +33,12 @@ export const i18n = {
     },
   },
   en: {
+    legacyLeaderboard: {
+      description:
+        'Compare complete posts in writing tests and choose the result you prefer. Earlier paid results remain in test history.',
+      openTests: 'Start a writing test',
+      openHistory: 'Writing test history',
+    },
     unavailable: 'Unregistered model',
     leaderboard: {
       empty: 'No ranked comparisons yet.',
