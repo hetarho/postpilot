@@ -1,5 +1,5 @@
 # QUOTA plans, credits, metering
-> r37 | Paid plans grant daily AI credits and monthly bonuses with model access; Max alone includes commercial server exports, while browser exports spend no export count. AI work reserves and settles confirmed usage at a job-frozen KRW conversion; BILL owns payments and refunds.
+> r38 | Paid plans grant daily AI credits and monthly bonuses with model access; Max alone includes commercial server exports, while browser exports spend no export count. AI work reserves and settles confirmed usage at a job-frozen KRW conversion; BILL owns payments and refunds.
 
 ## decisions
 - QUOTA-1 [o] every account carries exactly one plan `free | light | basic | pro | max | master`; free is the provisioning default, light/basic/pro/max are paid offers and master is operator-only. Stored plans and wire mappings reject unknown values without renumbering existing enum identities.
@@ -32,9 +32,9 @@
   - daily, monthly bonus, voucher and compensation credits participate by their actual expiry, so a sooner-expiring voucher may precede a daily grant
   - expired remainders stay in history and never roll over; unused daily allowance does not accumulate and requires no login claim
   - paid grants renew once per eligible window under QUOTA-37, atomically with balance/admission operations
-- QUOTA-13 [o] every model-consuming job start, including generation/revision, personal voice analysis/verification, writing-style candidate batches under VOICE-68, memories, comparisons, storylines, template requests and DUB work, passes the shared job.Queue.Enqueue admission gate.
-  - each job reserves its exact planned bounded calls before issuing them; comparisons share their preparation, and clips retain QUOTA-43
-  - default model initialization under MODEL-87 creates no job, reservation or debit
+- QUOTA-13 [o] every cost-incurring model start passes shared queue admission, including writing/revision, personal analysis, bounded setting/style preparation, actual-writing tests, memories, storylines, template requests and DUB work.
+  - reserve exact planned bounded calls with model refs/counts/budgets before issuing them; test plans follow QUOTA-74 and clips retain QUOTA-43
+  - reads, source/manual edits, match decisions and ordinary setting publication issue no model call or reservation
 - QUOTA-14 [o] hold every planned completion call at its worst case: 30 000 prompt tokens (`holdInputTokens`), except clips freeze QUOTA-53's input allowance and a voice analysis (→VOICE-23) holds the larger of 30 000 and one token per Unicode character of the prompt it will send, plus the actual completion budget at the applicable prices; speech uses QUOTA-69's separate unit budgets ← an analysis reads every 학습 글, so a fixed prompt allowance would leave a large corpus's overrun unpaid
   - convert the total once and deduct lots in consumption order in one `BEGIN IMMEDIATE` transaction with admission before the job row, except QUOTA-43's clip preparation
   - the owning context declares every planned call; neither a token fallback nor an implicit retry may price speech
@@ -169,9 +169,6 @@
   - shown on the `/ai-models` stage selectors and comparison candidates (the stage figure), on post creation (the selected pair's figure and how many posts the balance covers) and in `/plans`' below-card post comparison (→QUOTA-36)
   - labelled 최근 사용량 기준 or 예상; figures may lag the window by up to one day; free models show provider-limited availability instead (→QUOTA-56)
   - an estimate is never a quote: admission, reservation and settlement stay authoritative
-- QUOTA-67 [o] a template request (→TMPL-58) is one admission whose reservation plans its first call and `TEMPLATE_REQUEST_CORRECTIONS_MAX` corrections, each priced as QUOTA-14 and QUOTA-32 price a call; every issued call is metered, unused correction allowance returns under settlement and cancellation (→QUOTA-49), and a request that fails charges confirmed usage only (→QUOTA-46) ← the corrections are bounded, so the reservation can cover them as clip composition's do (→QUOTA-54)
-  - the editor's 약 n 크레딧 is the catalog-based estimate of one call on the 글 작성 모델 (→QUOTA-40), a free model shows 무료, and no recent-usage figure exists for it ← QUOTA-64's figures are credits per post from `generate` jobs, which say nothing about one request
-  - the figure is never a quote: admission, reservation and settlement stay authoritative, and it carries no conversion or cost (→QUOTA-65)
 - QUOTA-65 [o] the credit↔KRW conversion is internal: customer-facing screens show credit amounts and the fixed KRW retail prices (→QUOTA-7 →QUOTA-34) only, to every tier ← credits must read as the user's own balance, never as a cost to re-check against what they paid
   - no customer-facing response, screen, copy, mail or error states a KRW-per-credit or AI-cost value, the KRW/USD reference or applied rate, the charge formula or a temporary-rate status, master included (→QUOTA-68)
   - /admin's 비용·환율 tab shows the rate in effect with its source, publication date, reference and applied values and temporary flag; per-job snapshots stay recorded for audit (→QUOTA-59) without a screen
@@ -202,11 +199,19 @@
   - AI script/flow revision remains separately approved writing work and never silently synthesizes changed speech; expose pending speech and its separate quote
   - caption refresh, visible text/style/position and timeline-only edits remain credit-free
 
-- QUOTA-72 [o] a writing-style candidate batch returns eight choices from one planned bounded write call; candidate count is not billable call count.
-  - display the conservative bounded estimate before explicit generation; freeze model/input/completion budget at admission, apply the shared reservation gate and record every actual issued call
-  - invalid provider output fails without an unreserved automatic retry; regeneration is a new explicit operation
-  - result reads, preview, adoption, questionnaire browsing/answers and default model initialization consume no AI credits; cancellation/failure settles confirmed usage once under QUOTA-46/49/52
-- QUOTA-73 [o] EDIT recommendation and each chat refinement are distinct explicit admissions with one planned bounded write completion each; eight suggestions still count as one call. Estimate, selection, reading, local preview and publication issue no completion or credit hold. Invalid output and cancellation settle only confirmed issued usage under the existing shared rules.
+- QUOTA-72 [o] writing-style preparation returns the explicit2/4/8/16 validated choices from one planned bounded write call; the count-specific completion budget is frozen, and candidate count is not the number of provider calls.
+  - show the bounded credit estimate before explicit generation; invalid batches fail without hidden correction/retry
+  - actual posts for those settings are a separate explicit test start, and preparation alone publishes no style
+  - viewing/adoption/material edits/default initialization are AI-credit free; failure/cancellation settles confirmed issued usage once
+- QUOTA-73 [o] EDIT recommendation and each sent refinement are separate explicit admissions with one bounded completion; an explicit2/4/8/16 suggestion batch still plans one call with its actual count-specific budget. Reading, local/manual edits, method switching and publication issue no model call/hold; invalid output/cancellation uses shared confirmed-usage settlement.
+
+- QUOTA-74 [o] actual-writing tests reserve their full exact plan before generation and display its bounded credit estimate.
+  - writer/style/template/guideline tests plan common missing observation calls plus N complete-post writes
+  - observer-model tests plan N independent attachment-observation pipelines plus N calls to the fixed writer
+  - prepared setting-candidate generation is a separately estimated explicit operation and never bundled invisibly into match decisions
+  - N-1 human decisions, later rounds, rereading and winner publication have zero AI calls/holds; failed-only retry reserves only remaining failed work
+  - cancellation/abandonment settles confirmed issued usage once and returns unissued reservation under existing lot-expiry/compensation rules; no failure or missing usage is charged as a fabricated match fee
+
 ## flow
 - paid subscribe → BILL confirms payment → first daily grant + monthly bonus/export window; daily access → materialize the current eligible daily grant once; monthly boundary → expire old bonus/counts and open new entitlements while paid
 - AI start → entitlement/compatibility check → free-only work(zero-credit admission) | paid work(freeze FX → estimate → reserve eligible lots) → admitted job → metered calls

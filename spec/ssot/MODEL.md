@@ -1,5 +1,5 @@
 # MODEL providers, model catalog, experiments
-> r33 | Operator-managed OpenRouter models and understandable single-supplier speech combinations with sourced cost references, explicit eligible selections and blind comparisons.
+> r34 | Explicit eligible models and unified private actual-writing knockout tests of one model, style, template or guideline factor.
 
 ## decisions
 - MODEL-1 [o] `backend/internal/llm` is the only way a model is called: no adapter package or provider SDK is imported anywhere except under `internal/llm/…` and in `cmd/api`, enforced by `internal/llm/boundary_test.go` over `go list -deps`; every completion, voice-design, voice-confirmation and speech operation carries an explicit admitted model/profile reference through a provider-neutral port with no default (→ARCH-9 →MODEL-77)
@@ -63,7 +63,7 @@
   - removed comparison refs retain their existing once-visible missing/conditional-clear behavior
   - loading or failed catalog reads never imply removal; downgrade/insufficient credit preserve selections and history and never silently substitute a model
 - MODEL-25 [o] manual selection, comparison and full recommendation application accept only compatible, registered, enabled and account-entitled refs; insufficient balance alone does not invalidate a saved choice.
-  - pairs and optional candidates stay distinct under their existing contracts; explicit full recommendation application validates all seven slots before an atomic write
+  - saved pair refs stay distinct and larger test draft candidates pass MODEL-75; explicit full recommendation application validates all seven slots before an atomic write
   - MODEL-87 automatic active defaults are separate from full recommendation application and never create or alter comparison choices
 - MODEL-26 [o] recommendation refs are validated against current registration, compatibility and plan entitlement at apply time; the operator's save checks registration and classification only (→MODEL-70). No tier may apply a set containing a ref outside its rights. Removed models remain readable in snapshots, and newly adopted active refs must pass the same gate as manual selection.
   - a fresh installation starts with one seeded set `balanced-2026-08` (Gemini/Qwen observe, GPT analyze, Claude/Grok write) that the operator edits or deletes like any other, without promising that every tier can apply it
@@ -76,73 +76,45 @@
   - the row's effort and 등급 Listboxes appear only on a tab the model serves, the 등급 one marked while unset (→MODEL-58)
   - `SetModelPurpose` writes the registration and its gate in one transaction
   - `UpdateModel` names its purpose and is refused server-side for one the model is not registered to
-- MODEL-30 [o] one experiment varies exactly one stage — `observe` (identical ordered photos and observation schema, no writing call) or `write`, from a post (identical observations, memo, filenames, voice projection or its absence, target, optional length and tag count, and the rest of the frozen write material →GEN-18) or, as 말투 반영 비교, from one voice's projection and one of its answered prompts (→MODEL-67) — and every candidate receives the same immutable snapshot, prompt version, schema and validation path, differing only by ModelRef
-  - the stage owner produces the canonical snapshot and prompt-version string before enqueue and experiment stores its SHA-256
-  - the snapshot is also the retry boundary — a photo gone or a snapshot that cannot be reconstructed means a new comparison with the fixed 새 비교 reason, never a hidden ref
-- MODEL-31 [o] ordinary generation is not an experiment and calls one active writer
-  - the editor's explicit `A/B 비교 생성` uses the saved A/B write pair; the model lab's write tab selects an existing post and uses its saved two-to-five-candidate write list (→MODEL-74); both take the optional target and active observe ref, observe once and fan out at write
-  - a write comparison records its origin at start — `editor` for the editor's button, `lab` for the model lab's write tab, which accepts an owned post in any status — and the origin, never the address the review is opened from (→MODEL-60), selects the available result actions (→MODEL-36)
-  - observe comparisons and 말투 반영 비교 run only from the model lab and never mutate their source while candidates run
-  - a 말투 반영 비교 names one explicit active, made, owned `voice_id` and one of its answered prompts (`InvalidArgument` missing, `NotFound` unknown or foreign, `FailedPrecondition` deleted or not made) and stores them
-  - a post's write experiment freezes the post's voice, or its absence, and required target with the snapshot
-  - observe is target-independent
-- MODEL-32 [o] blind on the wire: the server assigns each candidate one display position, A through E, with a cryptographic shuffle and persists it; existing left/right comparisons remain readable as A/B; before the owner submits or skips a ranking, RPC responses contain opaque candidate ids, display positions and outputs but omit model refs, labels, accounting and provider errors (removed-model retry errors are identity-free too); React never merely hides delivered identity; reloading or changing breakpoint never swaps positions; submitting or skipping a ranking reveals the snapshotted identities, latency and token counts, while provider cost stays master-only (→QUOTA-66)
-- MODEL-33 [o] candidate calls run concurrently, bounded to the experiment's two-to-five candidates; progress is one monotonic `compare_<stage>` counter; provider work never runs inside a SQLite transaction
-- MODEL-34 [o] a comparison's lifecycle is `queued → running → review | partial | failed → completed`, with a submitted ranking or explicit skip as the completion and identity-reveal boundary (→MODEL-32)
-  - start persists the experiment and queue job before returning both ids and before any provider call
-  - result application or model adoption is a separate action after completion (→MODEL-36)
-  - one unresolved write experiment may exist per post: a lab comparison resolves at completion unless a requested follow-up remains incomplete; an editor comparison resolves after its chosen output is applied and any requested adoption finishes
-  - lab comparisons do not block ordinary generation (→GEN-23), and the post projection publishes an unresolved comparison's id
-- MODEL-35 [o] a partial or failed retry before ranking completion resets and invokes only the failed candidates against the original snapshot; an enqueue failure restores their prior failure state; boot recovery fails interrupted `running` experiments and only those `queued` experiments that have no runnable queue record, so surviving queued jobs continue and recovered candidates become retryable
-- MODEL-36 [o] candidate completion and ranking change neither canonical post nor active model.
-  - after a ranking is submitted or skipped, the owner can choose any successful candidate's output for an editor write result; `결과 적용` and `결과 적용하고 활성 모델로 변경` apply it once, only the latter adopting that candidate's write model ← an editor comparison has no content until one result is applied
-  - a lab comparison may apply any successful post result only while the source post is `draft` or `review`, absent once finalized and refused `FailedPrecondition` when the post finalized meanwhile; it may separately adopt any successful candidate's model, the only follow-up for 말투 반영 비교
-  - one comparison may apply at most one candidate's output; the chosen candidate id, `applied_at`, `adoption_requested`, `adopted_at` and fixed public error markers make each boundary reload-safe and idempotent — adoption retry checks the active selection first, and no retry reapplies content or resubmits a ranking
-  - if application fails, the completed ranking remains with a visible retry and the previous content and status are preserved
-- MODEL-37 [o] write apply replaces validated `PostContent`, establishes a baseline, moves the post to `review`, stores the frozen target as content language without overwriting a newer post target, and never finalizes
-  - observe apply replaces observations
-  - a `lab` content application is offered and accepted only while the source post is `draft` or `review` (→MODEL-36) ← a finalized post's confirmed content is not rewritten from a comparison
-  - observe adoption stays a separate explicit action
-  - `순위 건너뛰기` completes the comparison without a ranking or badges, and any successful candidate remains eligible for the same explicit result actions ← an owner may want the output without judging model quality
-  - a single successful candidate cannot form a ranking but may be applied under the same gates
-- MODEL-38 [o] a leaderboard is keyed by `(scope, stage, window)`:
-  - scope `me` (the account's own ranked comparisons) or `all` (every account's ranked comparisons as model-level figures, →MODEL-41)
-  - window 일간 · 주간 · 월간 = the 24 hours · 7 days · 30 days ending at the request, and no all-time board ← model quality moves with every release, so an unbounded board ranks today's models by last year's comparisons
-  - replay submitted rankings in decision order from Elo 1500, K = 32; each higher-ranked candidate beats each lower-ranked one, and tied candidates draw (`score = 0.5`); an expected score against opponent j is `1 / (1 + 10^((Rj − Ri)/400))`
-  - calculate every candidate's raw change from the ratings before that comparison: `Δi = 32 / (n − 1) × Σj≠i(score(i,j) − expected(i,j))` for its n ranked candidates ← five-candidate comparisons contain more pairwise evidence but must not move one model four times as far as a two-candidate comparison
-  - for n = 2, round the first candidate's change to the nearest integer and give the other its opposite, preserving the existing pairwise rule; for n ≥ 3, floor every raw change and distribute the remaining integer points to the largest fractional remainders, ties by persisted display position, so each comparison's integer changes sum to zero
-  - a legacy winner verdict replays as its original two-candidate match; a legacy two-delivery dismissal retains one loss per candidate against the fixed 1500 reference opponent, which never moves or ranks; failed, single-delivery and skipped outcomes contribute no rating (→MODEL-76)
-  - count one evaluated comparison per participating model, independent of its number of opponents; show Elo, evaluated comparisons, pairwise wins/losses/draws and badge tallies (→MODEL-63)
-  - a model appears only through a counted ranking or legacy outcome; fewer than 3 evaluated comparisons stay visible as provisional; nonprovisional entries rank first, then by Elo descending, evaluated comparisons descending and model ref
-  - usage, latency, cost-quality and badge aggregates use each participating candidate once per counted comparison
-  - every board is recomputed from immutable ranked and legacy outcome metadata (a materialized table, if ever added, must be rebuildable and never the source of truth)
-  - target language does not partition the leaderboard
-- MODEL-39 [o] each candidate records prompt/completion tokens, wall-clock provider latency and cost; cost and its quality marker reach no experiment or leaderboard read, master included; /admin's 비용·환율 tab shows each model's comparison cost by stage and leaderboard window across all accounts, with its quality marker (→QUOTA-66)
-  - provider-reported cost is authoritative ← routing, caching, reasoning and promotions make a static token-rate calculation wrong
-  - otherwise a catalog-price estimate marked `≈` only when usage tokens are present
-  - missing usage or pricing is `unavailable`, never an estimated zero (the port defines zero token counts as "not reported")
-  - aggregates preserve `reported` `estimated` `mixed` `unavailable`
-  - a candidate that fails after usage was reported keeps those values with a structured stable failure, and emits one ERROR log with experiment id, candidate id, model ref and the normalized cause — never a snapshot, prompt, photo, 학습 글 or output
-- MODEL-40 [o] model refs, labels and usage stay legible after catalog removal; removed or disabled models cannot start, retry or become active, and capability checks still happen before a network call
-- MODEL-41 [o] every experiment read and action, and the `me` leaderboard, are scoped from the authenticated account and no request accepts an account id; the `all` leaderboard scope is a flag, not an account: it aggregates every account's rankings into per-model Elo, evaluated comparisons, pairwise wins/losses/draws and badge counts and exposes no account, experiment, output or note; the model lab's 말투 반영 비교 tab carries a required picker of the account's made voices, initialized to the 기본 when there is one, and a picker of that voice's answered prompts; the recent-comparison list and the detail name the frozen voice
-- MODEL-42 [o] ranking submission or an explicit skip starts a 30-day content-retention clock (`EXPERIMENT_CONTENT_RETENTION` 720h, swept every `EXPERIMENT_SWEEP_INTERVAL` 24h): input snapshots, candidate output and 기타 badge notes are purged while candidate ranks, badge ids, model snapshot, usage and timing stay for leaderboard replay
-  - historical pairwise records retain the same clock from their stored decision time (→MODEL-76)
-  - DeletePost calls the experiment purge transactionally before deleting the post so the FK may detach retained metadata only after private payload is gone (→POST-28); account deletion cascades every experiment row
-  - logs may contain ids, stage and accounting but never snapshots, photos, samples or output
-- MODEL-44 [o] AI models is a settings category under THEME-38 with its existing direct routes and named links, ordered:
-  | destination | address | holds |
-  |---|---|---|
-  | 모델 변경 | `/ai-models` | active per-stage selections, explicit recommendation application and the per-post credit estimate (→QUOTA-64) |
-  | 모델 비교 | `/ai-models/compare` | saved A/B pair plus up to three optional lab candidates and explicit comparison start |
-  | 최근 관찰 비교 | `/ai-models/experiments` | recent records defaulting to observe, with write and 말투 반영 filters retained |
-  | 리더보드 | `/ai-models/leaderboard` | observe and write Elo rankings under 일간 · 주간 · 월간 and 나 · 전체 switches, →MODEL-38 |
-  - comparison/history stage filters and the leaderboard's stage, window and scope persist in the URL, the leaderboard defaulting to 주간 · 나
-  - an experiment's address is `/ai-models/experiments/<id>`
-  - opening or changing a destination never saves a model or starts a job
-  - every list `ListModels` feeds — the per-stage selectors and the candidate form — shows its free/paid classification and orders 무료 → 가성비 → 최고, with locked entries marked by required plan and unclassified entries confined to operator curation and MODEL-28's 기본 order inside a level (→MODEL-57 →MODEL-58)
-  - on desktop at most two candidate results render in a row, on a phone a candidate switch preserves each candidate's reading position and the choice controls stay at least 44 px
-  - every comparison's output is readable without horizontal prose
-- MODEL-45 [x] a second provider entry, a direct-vendor adapter or BYOK, automatic curation or a background sync loop, persisting the full source catalog, separate duplicated catalogs per user or plan, automatic traffic splitting or silent winner choice, more than five lab candidates, more than two editor candidates or more than one stage per comparison, statistical-significance claims, prompt optimization, in-app routing or fallback between models — out of scope
+- MODEL-30 [o] one actual-writing test varies exactly one factor: a model ref at observe or write stage, a writing-style profile, a post-template structure, or one designated post-guideline slot.
+  - freeze common material, attachment identities, target/length/tags, nonvaried profiles/template/rules, memory opt-in and selected memories, quality options, prompt/schema versions and entrant-specific values before generation
+  - changing templates does not recalculate guideline scope, target length or tag count; changing one guideline keeps all other enabled rules and their order fixed
+  - identical named template-answer material is available to every contestant; resolve every candidate's required inputs before start rather than inventing answers
+  - seed-free tests accept explicit material/scenarios without requiring a saved post; fictional scenarios are labelled and never claimed as owner experience
+- MODEL-31 [o] ordinary generation calls one prepared active writer; an explicit common test produces one complete validated PostContent per contestant without changing its source.
+  - writer/style/template/guideline tests prepare common observations once; observer-model tests observe the same real attachments independently for each contestant then write with one fixed writer
+  - observer tests require attachments and compatible models; every contestant produces a complete post, not isolated observation output or a short verification sample
+  - a creation editor may enter the common two-contestant model format with retained material/context; larger formats use the same common test workflow
+- MODEL-32 [o] candidate identities are blind on the wire until champion confirmation or explicit abandonment; persist opaque contestant IDs and one cryptographically shuffled initial bracket, stable through reload/viewport changes.
+  - predecision responses include complete outputs and bracket positions, omitting model/setting identity, accounting and identity-bearing errors
+  - later rounds reuse the same stored outputs and seeded progression; completed history reveals frozen identities/timing/tokens while supplier cost remains master-only
+- MODEL-33 [o] tests accept up to sixteen entrants but run at most five candidate pipelines concurrently; queue/progress are bounded and durable, provider work runs outside database transactions, and a round decision never issues a provider call.
+- MODEL-34 [o] a test progresses from queued/running generation to ready matches, then completed champion or explicit abandonment; partial/failed generation is recoverable under MODEL-35.
+  - persist the account-owned test and job before provider work; all requested outputs must succeed before any bracket decision
+  - matches contain two contestants and one human winner, with N-1 decisions for N entrants; no tie, bye or failed-candidate automatic advancement
+  - test jobs do not block ordinary source-post writing, and test review is distinct from canonical publication
+- MODEL-35 [o] partial/failed generation offers explicit failed-only retry or abandonment, retaining successful outputs and original frozen inputs. Retry is a new admitted job and never regenerates a successful entrant. Interrupted uncertain calls never repeat automatically; no failure silently changes format or awards a champion.
+- MODEL-36 [o] champion confirmation changes no saved setting, default, active model or canonical post; subsequent actions are explicit and separately named.
+  - a model champion may be adopted as its matching active stage only after live eligibility checks
+  - a setting champion may be saved/used under MODEL-90; readable test outputs support manual copy/export
+  - source-post output application is available only for a compatible model-factor test with an owned draft/review source, expected input/content revisions and unchanged frozen writing assignments; other setting-factor results are exported or used through a newly chosen setting
+  - a publication retry resumes its existing receipt, never rerunning votes/generation or overwriting later explicit changes
+- MODEL-37 [o] explicit compatible source-post application replaces validated content and the matching storyline, establishes the machine baseline, moves to review and preserves frozen content-language provenance without changing a newer target; never finalize implicitly. A stale/deleted/finalized/published source preserves the champion and offers export rather than overwrite.
+- MODEL-39 [o] every actual candidate/provider call records usage and latency and retains billable failure evidence; supplier cost is authoritative when reported and otherwise explicitly estimated/unavailable under QUOTA.
+  - customer test/history reads omit supplier price/cost for every tier; master-only admin cost reads may aggregate by stage and24h/7d/30d windows
+  - logs include IDs/stage/accounting and normalized failure, never material, prompts, examples or output
+- MODEL-40 [o] frozen model/setting names and versions remain understandable after catalog/source changes; new start/retry/model adoption rechecks entitlement, availability and capability. Source changes do not mutate stored contestant output or silently replace a contender.
+- MODEL-41 [o] every test/candidate/match/receipt/history read/action derives the owner from authentication, with foreign/unknown owned references indistinguishable. No public/global model quality ranking is offered; private material never becomes a shared ranking dataset.
+- MODEL-42 [o] finished/abandoned tests retain private inputs and outputs for thirty days under the existing content sweep; durable factor/format/bracket/champion/usage metadata remains readable without private payload.
+  - an explicitly adopted setting is independently owned and survives test payload expiry
+  - source-post deletion purges associated private test payload before detaching history metadata; account deletion cascades tests and their private data
+  - deletion/expiry marks a durable payload-purge fence; queued/in-flight/late callbacks cannot restore purged private data or publish a result from it
+  - payload expiry is not a new generation or a reason to recreate an adopted setting
+- MODEL-44 [o] unified writing tests are a first-class destination at /tests with history at /tests/history and owner detail at /tests/$testId; model selections remain named settings at /ai-models.
+  - voice/template/guideline/model entry points all seed the same factor/format/material flow; changing routes or choosing candidates starts no work
+  - model/setting selectors show eligibility/classification and readable unavailability reasons; incomplete formats refuse start before admission
+  - desktop review shows two complete readable posts beside each other; phone review preserves candidate reading positions and shows the same pair with explicit winner controls
+- MODEL-45 [o] automated judges/winner selection, round-by-round regeneration, three/five-way ranking, Elo winner selection, multi-factor changes, video-render tournaments, automatic traffic splitting/model fallback, statistical-superiority claims, BYOK and a second completion provider are outside unified writing tests.
 - MODEL-46 [o] `LLMCompletionBudget` applies a code-owned headroom multiplier to the write and revision budgets only when the resolved model's `reasoning_native_effort` is true, bounded by `Ceiling` ← for a native-effort model the effort string is passed through and is a hint, not a cap, so reasoning can spend the whole completion budget and truncate, while on a model whose effort OpenRouter converts to a percentage extra room would only buy a longer think
   - observation keeps its batch-derived budget
   - `LLM_MAX_TOKENS_DEFAULT` and `WriteFloor` are never lowered by it
@@ -167,33 +139,9 @@
   - admin offers a separate free-group view/filter and explicit classification controls; user selectors order free before the four paid grades
 - MODEL-58 [o] classification gates ordinary selections, preset application, comparisons and execution through QUOTA-19, as well as paid estimator-combo assignment. Unclassified registrations remain visible only for operator curation and cannot bypass entitlement. Locked higher grades stay visible to users with the required plan; being price-zero alone does not classify a registration as free.
 - MODEL-59 [o] a models-v1 paste line is an id optionally followed by `free`, `value`, `balanced`, `premium` or `top`. An omitted classification explicitly unsets it; export/preview/apply round-trip the complete membership and classification. Unknown tokens reject the whole document; ordinary access follows MODEL-58.
-- MODEL-60 [o] comparison review keeps the navigation context of the entry point: model comparison returns to its stage's comparison form, recent comparisons returns to its stage's history, writing returns to its source post, and a post-list result returns to the list with its search/status filters
-  - model-lab and writing reviews use distinct routed pages with shared candidate/decision UI, and each keeps its entry-point return destination under the common header menu
-  - the entry context survives reload, browser history and opening a link in a new tab
-  - a model-review address with no entry annotation defaults to model history, and missing/deleted source posts fall back to the post list
-  - the existence of a source post never identifies where the owner entered
-- MODEL-61 [o] before identities are revealed, the owner ranks every successful candidate from best to worst, allowing equal ranks; failed candidates cannot be ranked
-  - submitted ranks are dense integers starting at 1 (for example 1, 1, 2), with every successful candidate present exactly once and at least two successful candidates; the server validates the whole list before one write
-  - each ranked candidate may carry zero or more badges from the shared catalog (→MODEL-62), positive and negative mixed freely, plus MODEL-62's optional bounded 기타 note; badges do not change Elo
-  - `순위 저장` commits the complete ranking once, while `순위 건너뛰기` explicitly submits none; a single survivor can only skip; saving or skipping reveals identities and never applies content or adopts a model (→MODEL-32 →MODEL-36)
-- MODEL-62 [o] one fixed code-owned badge catalog shared by every comparison, ids stable:
-  - positive `fast` 속도가 빨라요 · `natural` 자연스러워요 · `on_brief` 지시를 잘 지켰어요 · `structured` 구조가 좋아요 · `accurate` 내용이 정확해요 · `in_voice` 문체가 잘 맞아요 · `concise` 간결해요
-  - negative `slow` 느려요 · `ai_like` AI 같아요 · `off_brief` 지시를 벗어났어요 · `verbose` 장황해요 · `inaccurate` 내용이 틀렸어요 · `off_voice` 문체가 안 맞아요 · `repetitive` 반복이 많아요 · `broken_format` 형식이 깨졌어요
-  - below both groups one `other` 기타, a group of its own that is neither positive nor negative and stays apart from and below both wherever badges are shown or tallied, carrying an optional note of at most 200 characters
-  - the voice pair (`in_voice` `off_voice`) is offered for write comparisons alone, a post's and 말투 반영 비교
-  - ko/en copy lives in the UI locale resources (LANG)
-- MODEL-63 [o] badges are per-candidate ranking metadata: written once with that candidate's rank, immutable afterwards, never weighed into Elo ← they explain a comparison, they do not amplify it; the completed detail lists each ranked candidate's badges and note beside its revealed identity; a leaderboard row shows the model's badge tallies for the same scope, stage and window, most frequent first — at most 3 positive and 3 negative tallies, counted separately — and below both the `other` tally as its own group, counted without its notes
-- MODEL-66 [o] a `lab` comparison writes nothing to its source post at any point before the owner's own explicit result application: not at start, not while candidates run, not when a ranking is submitted or skipped — its observation stage keeps what it observed in the frozen snapshot alone and the post's own observations are left exactly as they were ← a comparison run to judge models is a reading of the post, and a reading that edits what it read makes the model lab unusable on anything already finished; an `editor` comparison is the post's own writing run and persists its observation as ordinary generation does (→GEN-19)
-- MODEL-65 [o] the A/B pair is saved as it is chosen, with no separate save action: changing either candidate writes the pair the moment it names two distinct models registered to the stage, and a change that leaves it incomplete or names the same model twice writes nothing, says so on the field and leaves the stored pair as it was ← the active selection beside it already saves on change, and a form that waits for a button lets a comparison start against a pair the screen has stopped showing; a refused write is reported on the candidate that caused it
-- MODEL-64 [x] calendar-aligned periods with a browsable past, an all-time board beside the windows, an operator-editable badge catalog, badge-weighted Elo
-
-- MODEL-67 [o] 말투 반영 비교 compares how two to five write models reflect one voice:
-  - it takes a made voice and one of its answered prompts (a voice with none has the owner answer one first, the answer becoming a 학습 글 →VOICE-43) and the saved write candidate list (→MODEL-74), and freezes the voice's projection with that prompt's answer withheld, the prompt and a photo prompt's photo
-  - each candidate writes 검증's piece (→VOICE-43) in one call; a photo prompt needs every candidate model to read images
-  - review shows every piece blind beside the owner's answer, each with its fingerprint comparison (→VOICE-62)
-  - a submitted ranking counts toward the write stage's Elo with each candidate's own badges (→MODEL-62), and any successful candidate's write model may be adopted explicitly after review ← how well a writer reflects the owner's voice is a write-stage quality
-  - two to five write calls under one admission (→QUOTA-13)
-
+- MODEL-60 [o] tests retain the originating creation/settings/history location under THEME-58, including filters and safe return through reload or new-tab deep links. A direct test link defaults to test history; a missing source does not imply an unconditional post-list return.
+- MODEL-66 [o] test admission, generation and match decisions never mutate source content, observations, voice, template, guideline or active model. Only MODEL-36/90 explicit result actions publish; the test origin controls contextual return, not hidden source mutation.
+- MODEL-65 [o] saved eligible model A/B pairs may prefill the two-contestant model test; choosing a complete distinct pair saves it atomically, while count4/8/16 candidates belong to the test draft. Existing seven-slot operator recommendation documents remain compatible and do not silently populate/replace larger test entrants.
 - MODEL-68 [o] a curated free model is usable by every tier at zero credit cost and zero credit balance, subject to the same purpose/capability and bounded-execution checks.
   - verify zero cost for the applicable request path; unknown prices or drift to paid pricing make free execution unavailable, never silently bill or select a paid replacement
   - disclose that provider daily/rate/capacity limits can restrict free-model availability; no product per-user daily count or guaranteed daily job total is offered
@@ -213,7 +161,6 @@
 
 - MODEL-71 [o] a set is advice: saving, reordering or deleting it rewrites no account's selections, pairs, experiments or history, and applying copies the set as it is at that moment (→MODEL-25)
   - `/ai-models` lists every set in the operator's order, each with its label, its blocking reasons and its own apply control (→MODEL-26); the id is never shown; with no set the section says there is no recommendation
-  - the leaderboard's 추천 mark names a ref filling a slot of that stage in any current set
 
 - MODEL-72 [o] the document's `[recommendations]` section is the complete ordered list of recommendation sets: applying makes the sets exactly the section's, in its order; a document without the section leaves the sets untouched, and an empty section removes every set
   - a set is a `set <label>` line followed by exactly one line per stage, ids verbatim as MODEL-51 with the registry's single provider implied (→MODEL-10):
@@ -231,15 +178,11 @@
   - a set identical to a current set in label and slots is kept without re-validation ← a later deregistration never edits a saved set (→MODEL-70), so an exported document pasted back previews as no change
   - preview reports the sets added, removed, changed and reordered beside the purpose diff (→MODEL-54); applying rewrites no account's selections (→MODEL-71)
 
-- MODEL-74 [o] the model lab's observe, write and 말투 반영 comparison forms use the saved A/B pair for their first two candidates and offer up to three optional C/D/E candidates from the same stage (→MODEL-23 →MODEL-65); the editor and recommendation sets continue using A/B alone.
-  - adding, replacing or removing an optional candidate saves on change, and removing one compacts the optional list; a fresh account with a pair starts with two candidates
-  - a candidate cannot duplicate any other visible candidate; an incomplete, invalid or unsaved visible list cannot start, and a refused save identifies the offending field
-  - changing or applying a pair never silently removes optional candidates; if it creates a duplicate or an unavailable optional candidate, the form shows the conflict until the owner resolves it
-- MODEL-75 [o] a lab comparison starts with two to five distinct eligible candidate refs explicitly sent in displayed selection order; the server validates count, uniqueness, purpose, capability, provider and account entitlement for every ref before enqueue (→MODEL-16), and freezes the full list with one input snapshot. The editor start accepts exactly two refs. No missing or unavailable saved ref is silently skipped.
-- MODEL-76 [o] existing two-candidate winner, dismissal and unpaired records remain readable with their stored outcomes and any pending result application or adoption; eligible winner and two-delivery dismissal outcomes continue their original Elo replay (→MODEL-38)
-  - an older client that sends only the legacy A/B start fields retains the pairwise record and actions; a current client sends the full candidate list, including for the editor's two-candidate action, and uses ranking
-  - each experiment records which review contract it uses; no old record is silently rewritten, and new ranked records keep the order independent of the candidate chosen for an output action
-
+- MODEL-75 [o] the only valid entrant counts are2,4,8,16, mapped to A/B, four/eight/sixteen-entry knockout formats. Validate the exact count, unique semantic contestants, domain validity, all source ownership/revisions and every model's execution rights before admission; never skip an invalid slot or silently shrink the format.
+- MODEL-76 [o] paid comparison/verification history is retained read-only without inventing a binary bracket or champion from a stored multiway outcome.
+  - deprecated starts/ranking/check mutations refuse with a localized common-test destination; existing admitted jobs finish/settle safely without automatic replay
+  - existing requested publication receipts may finish idempotently, but no new ranking or legacy follow-up is created
+  - retained unresolved records do not block ordinary writing; data/privacy/retention remain owner-scoped and no migration silently discards paid outputs
 - MODEL-77 [o] speech profiles are curated separately from the five completion/generation purposes and their models-v1 bulk document; each profile identifies one description-based voice-design model and one compatible reusable-voice speech model under the same configured speech connection
   - profile identity and revision are stable; the confirmed voice freezes both explicit refs and the settings needed to preserve its sound
   - the creation picker shows the design model and the associated speech model; the clip picker selects the confirmed voice instead of selecting models again (→DUB-11)
@@ -292,6 +235,18 @@
   - preserve every existing active ref, including locked, missing and unavailable choices, and every comparison slot; concurrent initialization/manual saves use insert-if-absent semantics and return the actual saved selections
   - a stage with no eligible ref stays unavailable with readable retry/settings help, without an onboarding model-choice requirement or a fabricated fallback
   - repeated login/navigation/catalog changes do not replace an established choice; the owner may change it in settings
+
+- MODEL-88 [o] contestants reference an eligible registered ModelRef, an owned setting revision or an owned prepared authoring candidate revision, never arbitrary client-supplied profile/template/rule payload. Generated contenders remain unsaved, labelled synthetic drafts; snapshot material is server-validated and supports no unrelated private-data lookup.
+- MODEL-89 [o] each match admits exactly one human-selected winner from its two stored contestants with expected test revision and an idempotent operation key; duplicate decisions return the existing result and stale/conflicting decisions preserve the current bracket. Completion needs exactly N-1 confirmed decisions and never permits undo that regenerates/recharges work.
+- MODEL-90 [o] explicit winner saving publishes the tested frozen setting exactly once with an owner/test/winner/action receipt.
+  - generated writing styles keep their tested synthetic analysis/fictional example and never become personal evidence; model adoption requires current stage eligibility
+  - template saving retains valid structure/numeric domain rules; guideline saving requires explicit application scope and normal caps/uniqueness
+  - unchanged existing owned winners may be used directly; changed/deleted synthetic styles, templates or guidelines offer an explicitly named new copy rather than silent overwrite/resurrection
+  - personal-voice winners use only their still-active owned accepted profile; changed/deleted personal sources remain historical results until explicit restore/reanalysis/retest, never transferring personal materials/analyses to a new voice
+  - default/assignment choices are explicit; lost-response retries return the same confirmed setting and never repeat defaulting or undo a later edit
+- MODEL-91 [o] explicit cancellation/abandonment names the test and its confirmed usage consequence; stop remaining planned work where possible, settle issued usage once and fence late results. Closing/navigating only preserves recoverable work and never cancels or spends.
+- MODEL-92 [o] seed-free preparation uses EDIT/VOICE bounded2/4/8/16 private candidates and is a separate estimated explicit action from generating actual test posts. The winner can become an owned reusable seed; nonwinning candidates are not automatically saved.
+
 ## flow
 - call: caller(stage, ref, request) → Registry.Complete(admitted entitlement + stage membership + capability/price checks → effort resolution(override → stage → none) → budget → adapter stream → normalized usage / error)
 - curate: 모델 관리 tab → ListCatalog(live read ∪ DB rows | DB rows + fetch_error) → SetModelPurpose | SetModelReasoning | SetModelLevel → the next Complete sees it
@@ -299,15 +254,14 @@
 - speech pricing: common ElevenLabs account setup → verified supplier/account terms and operation rules → resolve combination tariffs/limits → freeze evidence for a bounded quote → explicit paid-work approval under QUOTA-69
 - recommend: 모델 관리 추천 조합 tab → save(whole-set validation → one write) | reorder | delete → /ai-models lists sets in order → owner apply(MODEL-26 gate over seven refs → one transaction)
 - bulk curate: 일괄 편집 → export(current five sections + recommendations) | paste → preview(per-purpose diff + set diff | rejected lines, no write) → apply(re-validate against the document's own registrations → one transaction) → the next Complete sees it
-- experiment: Start(freeze snapshot → hash → origin → experiment + job) → compare_<stage>(editor: 2 · lab: 2–5 candidates) → review(blind; retry failed candidates | rank every successful candidate, ties allowed, with optional badges | skip) → completed(reveal identities → explicit candidate output application or active-model adoption) → 30-day purge
-- leaderboard: (scope, stage, window) → ranked comparisons + legacy counted outcomes in window → normalized pairwise Elo replay + comparison/win/loss/draw counts + badge tallies → rank
+- test: choose factor/format → owned or prepared entrants + common material → freeze/validate/estimate → explicit generation → all outputs ready → N-1 human pair decisions → champion/reveal → explicit save/adopt/export → thirty-day private-payload sweep
 
 ## constraints
 - speech administration uses one ElevenLabs connection; catalog registration performs no voice generation, supplier charge or readiness promotion, and preserves MODEL-77/79/80/82's compatibility, pricing, history and qualification contracts
-- config: `PROVIDERS_CONFIG` · the yaml's `api_key_env` (`OPENROUTER_API_KEY`) · `LLM_MAX_TOKENS_DEFAULT` 8192 (env, refused at boot when invalid) · `LLM_STAGE_TIMEOUT` 5m · `OPENROUTER_CATALOG_TTL` 5m · `OPENROUTER_CATALOG_FETCH_TIMEOUT` 15s · candidate concurrency ≤ 5 per experiment · `EXPERIMENT_CONTENT_RETENTION` 720h and `EXPERIMENT_SWEEP_INTERVAL` 24h (env) · Elo initial 1500 / K 32 / provisional below 3 comparisons / legacy dismissal reference 1500 · leaderboard windows 24h · 7d · 30d · badge note ≤ 200 characters · recommendation sets ≤ 10 · set label ≤ 60 characters · leaderboard row tallies ≤ 3 positive + 3 negative · the badge catalog (→MODEL-62) and window lengths are code-owned constants mirrored on both ends; the FE reads `provisional` from the server and mirrors no min-comparison constant; FE `entities/model-catalog/config`: `MODEL_CATALOG_STALE_MS` 300000 · `MODEL_PURPOSES`; FE `features/manage-model-catalog/config`: `FEATURED_MODEL_PROVIDERS` · `CATALOG_ROW_ESTIMATE_PX` 132 · `CATALOG_ROW_OVERSCAN` 6; the per-stage budgets and the MODEL-46 headroom multiplier are code-owned in `backend/internal/platform/config`, the stage reasoning policy in `backend/internal/generation` (`DefaultReasoningPolicy`); the eight-value effort list in `entities/model-catalog/model/types.ts` is the fallback for a model with no published list
-- schema: `catalog_models` (id, provider slug, label, `vision` `video_input` `structured_output` `image_output` `video_output`, context, pricing snapshot + `pricing_checked_at`, `listed`, `last_seen_at`, `source_created_at`, `reasons` `reasoning_efforts` `reasoning_default_effort` `reasoning_mandatory` `reasoning_native_effort` `reasoning_max_tokens`) · `catalog_model_purposes(model_id, purpose, reasoning_effort, level)` · `model_selections` · `model_experiments` and candidates (`post_slug` SET NULL); migrations 0018 0019 0020 0021 0024
-- placement BE: `backend/internal/llm` (port, registry, errors, cost resolver, `openaicompat`, boundary test) · `backend/internal/modelcatalog` (+ `openrouter` client, mapping, availability) · `backend/internal/provider` (selections, pairs, recommendation sets, `ListModels` with affordability) · `backend/internal/experiment` (aggregate, runner, candidate rankings, Elo leaderboard, retention sweeper)
-- placement FE: `entities/model-catalog` · `entities/model-experiment` · `features/select-model` `configure-model-pair` `apply-model-recommendation` `manage-model-catalog` `start-model-experiment` `review-model-experiment` · `widgets/candidate-comparison` `widgets/model-leaderboard` · `pages/ai-models` `pages/model-experiment` `pages/admin`
+- config: `PROVIDERS_CONFIG` · the yaml's `api_key_env` (`OPENROUTER_API_KEY`) · `LLM_MAX_TOKENS_DEFAULT` 8192 (env, refused at boot when invalid) · `LLM_STAGE_TIMEOUT` 5m · `OPENROUTER_CATALOG_TTL` 5m · `OPENROUTER_CATALOG_FETCH_TIMEOUT` 15s · candidate concurrency ≤ 5 per experiment · `EXPERIMENT_CONTENT_RETENTION` 720h and `EXPERIMENT_SWEEP_INTERVAL` 24h (env) · admin cost windows24h/7d/30d · recommendation sets ≤ 10 · set label ≤ 60 characters; test format/count and admin cost windows are code-owned constants; FE `entities/model-catalog/config`: `MODEL_CATALOG_STALE_MS` 300000 · `MODEL_PURPOSES`; FE `features/manage-model-catalog/config`: `FEATURED_MODEL_PROVIDERS` · `CATALOG_ROW_ESTIMATE_PX` 132 · `CATALOG_ROW_OVERSCAN` 6; the per-stage budgets and the MODEL-46 headroom multiplier are code-owned in `backend/internal/platform/config`, the stage reasoning policy in `backend/internal/generation` (`DefaultReasoningPolicy`); the eight-value effort list in `entities/model-catalog/model/types.ts` is the fallback for a model with no published list
+- schema: `catalog_models` (id, provider slug, label, `vision` `video_input` `structured_output` `image_output` `video_output`, context, pricing snapshot + `pricing_checked_at`, `listed`, `last_seen_at`, `source_created_at`, `reasons` `reasoning_efforts` `reasoning_default_effort` `reasoning_mandatory` `reasoning_native_effort` `reasoning_max_tokens`) · `catalog_model_purposes(model_id, purpose, reasoning_effort, level)` · `model_selections` · owner-scoped writing tests, candidates, matches and publications beside retained paid experiment metadata; source-post associations detach only after private payload purge
+- placement BE: `backend/internal/llm` (port, registry, errors, cost resolver, `openaicompat`, boundary test) · `backend/internal/modelcatalog` (+ `openrouter` client, mapping, availability) · `backend/internal/provider` (selections, pairs, recommendation sets, `ListModels` with affordability) · `backend/internal/experiment` (aggregate, runner, single-factor snapshots, binary test matches, publication receipts, retained paid history and retention sweeper)
+- placement FE: `entities/model-catalog` · `entities/model-experiment` · `features/select-model` `configure-model-pair` `apply-model-recommendation` `manage-model-catalog` `start-model-experiment` `review-model-experiment` · `widgets/candidate-comparison` · `pages/ai-models` `pages/model-experiment` `pages/admin`
 - dependencies: `github.com/goccy/go-yaml` (BE, `gopkg.in/yaml.v3` is archived) · `@tanstack/react-virtual` (FE)
 - known gap: `MODEL_PURPOSE_NOT_REGISTERED` and `MODEL_PURPOSE_INELIGIBLE` have no entry in the frontend's normalized reason catalog and render as the generic failure (LANG owns that catalog)
 

@@ -1,5 +1,5 @@
 # ARCH postpilot architecture
-> r17 | Code placement and gates, including a browser-owned media pipeline, qualified local components and bounded server validation/Max exports.
+> r18 | Code placement and gates, including a browser-owned media pipeline, qualified local components and bounded server validation/Max exports.
 
 ## decisions
 - ARCH-1 [o] product: a paid product anyone may sign up for (→AUTH-1, →BILL) — photos + notes → a blog draft in the user's own voice → per-platform copy export for manual posting; ko/en UI. Behavior lives in the domain SSOTs; root PRD.md is a reference brief and ssot/ wins on conflict
@@ -13,7 +13,7 @@
   - pnpm workspace, Node pinned by `.node-version`
 - ARCH-3 [o] the proto contract is the only seam between sides; generated code (`backend/internal/gen`, `frontend/src/shared/api/gen`) is committed, never hand-edited, and consumed only through the adapter that owns it (BE `<context>/rpc`, FE `shared/api`); every hand-kept mirror of a proto enum (BE string enums and FE mirrors) is pinned by a test that walks the generated enum, and a default/fallback branch in such a mapping is a test failure, not a value ← builds must not depend on buf/sqlc being installed, and a silently degraded enum copy is how a typo becomes behavior
 - ARCH-4 [o] the frontend is purely static: Cloudflare Workers static assets via `wrangler.jsonc` with SPA not-found handling; no SSR, no server-only FE code; `VITE_*` values are baked at build time so they carry public values only, secrets stay in backend env
-- ARCH-5 [o] backend = one package per bounded context under `backend/internal/<context>`, named for the domain (auth billing clip experiment fxrate generation googleauth guideline job llm mail memory modelcatalog plan platform post provider quality storage template tosspay usage voice voucher — every directory there but the generated `gen` (→ARCH-3) and the dev-only `devseed` (→ARCH-44))
+- ARCH-5 [o] backend = one package per bounded context under `backend/internal/<context>`, named for the domain (auth authoring billing clip experiment fxrate generation googleauth guideline job llm mail memory modelcatalog plan platform post provider quality storage template tosspay usage voice voucher — every directory there but the generated `gen` (→ARCH-3) and the dev-only `devseed` (→ARCH-44))
   - start flat, split into domain/ · app/ · store/ · rpc/ only when the flat package is actually noisy ← no empty packages to satisfy a diagram
 - ARCH-6 [o] BE placement:
   | what | where |
@@ -80,7 +80,7 @@
   |---|---|
   | I1 | no destination-platform publishing automation or credentials |
   | I2 | the canonical post is a block array and every platform output is derived from it (POST) |
-  | I3 | generation separates observe from write with every model choice explicit — ordinary generation observes once and calls one writer; an explicit comparison alone fans out to two editor candidates or two to five model-lab candidates over one frozen input (GEN, MODEL) |
+  | I3 | generation separates observe from write with every model choice explicit — ordinary generation observes once and calls one writer; an explicit single-factor writing test prepares exactly2/4/8/16 complete posts once, shares observation unless the observer is the varied factor, and uses human binary decisions with no further provider calls (GEN, MODEL) |
   | I4 | voices are mutually isolated per account and a post selects at most one (VOICE) |
   | I5 | long server work is a durable job; browser work has page ownership and durable admission/publication fences (ARCH-11) |
   | I6 | image work happens in the browser (ARCH-19) |
@@ -157,13 +157,11 @@
   - HTTPS, private-storage CORS, module Worker URLs, versioned font/WASM assets, notices/source access and temporary-output cleanup are checked in the static deployment
   - same-host CPU workers retain finite job/queue/resource budgets; an unsupported browser never triggers an implicit native job, GPU rental or desktop installation
 
-- ARCH-69 [o] guided frontend setup, personal-questionnaire, generated-style and EDIT workflows use XState v5 statecharts and official React actors as the transition authority.
-  - declare reachable states, scoped typed events and synchronous guards; no reducer hidden behind a fromTransition wrapper and no separate mutable flow state shadowing the actor
-  - async work is admitted once by actor events; explicit request keys and owner/session/revision/operation fences remain mandatory, even when invoked actors discard late results
-  - React actors have owner/kind/target keyed lifetimes; viewport changes do not recreate them, and actor stop or UI close never substitutes for an explicitly confirmed server cancellation
-  - recovery reads the owning durable records and jobs; never restore an actor snapshot that would repeat a provider request or canonical write automatically
-  - tests drive actual actors through valid/invalid events, duplicate actions, stale responses, owner changes, interruption and recovery; pure projections remain framework-free
-
+- ARCH-69 [o] guided setup, personal learning, EDIT authoring and unified writing-test presentation use XState v5 statecharts and official React actors as their transition authority.
+  - typed owner/session/revision/operation-fenced events and synchronous guards admit each action once; no reducer wrapper or second mutable shadow flow
+  - actors survive viewport changes and do not turn stop/close into paid work or server cancellation
+  - recovery reads durable records/jobs and never restores a snapshot that reissues provider calls or canonical writes
+  - test actual actors through duplicate/stale events, owner changes, interruption, mode changes, binary decisions and publication recovery; pure projections remain framework-free
 ## constraints
 - Node is pinned by `.node-version` (24.18.0); run FE verify on that version (fnm/nvm read the file) — newer local Node versions break the jsdom-based tests
 - Docker is required for `pnpm gen:*` (buf, sqlc), `pnpm dev:api`, and the media smokes (ARCH-37); Go 1.26 for BE

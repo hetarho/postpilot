@@ -14,6 +14,7 @@
 | clip-template-as-preset | converted@260917 |
 | post-quality-and-related-links | converted@260923 |
 | searchable-details | open@260926 |
+| creation-and-comparison-ux | open@261007 |
 | storyline-first | converted@260927 |
 | voice-tidy | converted@260929 |
 | daily-credit-plans | converted@260929 |
@@ -23,28 +24,28 @@
 ## ssot
 | id | rev | tasked | pending | [?] |
 |---|---|---|---|---|
-| ARCH | 17 | 17 | - | 0 |
+| ARCH | 18 | 18 | - | 0 |
 | AUTH | 15 | 15 | - | 0 |
-| QUOTA | 37 | 37 | - | 0 |
-| POST | 34 | 34 | - | 0 |
-| VOICE | 13 | 13 | - | 0 |
-| GEN | 24 | 24 | - | 0 |
-| MODEL | 33 | 33 | - | 0 |
-| TMPL | 23 | 23 | - | 0 |
-| GUIDE | 15 | 15 | - | 0 |
+| QUOTA | 38 | 38 | - | 0 |
+| POST | 35 | 35 | - | 0 |
+| VOICE | 14 | 14 | - | 0 |
+| GEN | 25 | 25 | - | 0 |
+| MODEL | 34 | 34 | - | 0 |
+| TMPL | 24 | 24 | - | 0 |
+| GUIDE | 16 | 16 | - | 0 |
 | EXPORT | 10 | 10 | - | 0 |
-| LANG | 7 | 7 | - | 0 |
-| THEME | 27 | 27 | - | 0 |
+| LANG | 8 | 8 | - | 0 |
+| THEME | 28 | 28 | - | 1 |
 | MKT | 9 | 9 | - | 0 |
-| VIDEO | 6 | 6 | - | 0 |
-| CLIP | 58 | 58 | - | 2 |
+| VIDEO | 7 | 7 | - | 0 |
+| CLIP | 59 | 59 | - | 2 |
 | CDS | 33 | 33 | - | 1 |
 | BILL | 9 | 9 | - | 0 |
 | MEM | 6 | 6 | - | 2 |
 | QUAL | 7 | 7 | - | 0 |
 | GIFT | 3 | 3 | - | 0 |
 | DUB | 3 | 3 | - | 0 |
-| EDIT | 2 | 2 | - | 0 |
+| EDIT | 3 | 3 | - | 0 |
 | INFRA | 2 | 0 | all | 1 |
 
 ## review
@@ -60,6 +61,7 @@
 | clip-narrate-failure-260926 | converted@260926 |
 | conformance-all-260927 | converted@260927 |
 | perf-cost-261004 | converted@261005 |
+| desktop-ux-policy-261007 | converted@261007 |
 
 ## tasks
 | id | title | ssot | dep | st |
@@ -81,12 +83,29 @@
 | T602 | Authorize and verify browser-prepared analysis artifacts | ARCH CLIP QUOTA | T591 | todo |
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | todo |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | todo |
+| T622 | Freeze shared navigation authoring material and writing-test contracts | ARCH THEME POST EDIT VOICE MODEL QUOTA LANG | - | todo |
+| T623 | Expose current location parent access and contextual creation return | ARCH THEME CLIP MODEL | T622 T629 | todo |
+| T624 | Make writing spacious and replace archive browsing with operational history | ARCH THEME POST CLIP GEN | T622 | todo |
+| T625 | Unify named AI and direct editing with bounded seed-free candidate preparation | ARCH EDIT THEME MODEL QUOTA | T622 | todo |
+| T626 | Edit learning materials while preserving accepted voice profiles and test provenance | ARCH VOICE MODEL QUOTA | T622 T625 | todo |
+| T627 | Prepare frozen single-factor inputs and one complete post per test entrant | ARCH GEN MODEL TMPL GUIDE LANG VIDEO QUOTA | T622 T625 T626 T630 | todo |
+| T628 | Run private binary tournaments with exact metering and explicit winner publication | ARCH MODEL QUOTA GEN LANG | T622 T624 T625 T626 T627 T630 | todo |
+| T629 | Build one human A/B and knockout test experience for reusable writing settings | ARCH THEME MODEL QUOTA | T622 | todo |
+| T630 | Show named setting states and integrate direct AI editing and real-writing tests | ARCH EDIT THEME TMPL GUIDE MODEL | T622 T625 | todo |
+| T631 | Integrate isolated UX bundles and qualify creation settings and sixteen-entry tests | ARCH THEME POST CLIP EDIT VOICE MODEL QUOTA | T622 T623 T624 T625 T626 T627 T628 T629 T630 | todo |
 
 ## next
-- Check the existing browser-media work-group board before claiming another remaining task.
-- Existing blocked qualification and render-capacity work remain separate.
+- Implement T622 first, then atomically claim an eligible T622–T631 session bundle using docs/work/creation-and-comparison-ux.md; final visual arrangement remains THEME-61 open.
+- Existing browser-media tasks/blocked qualifications retain their scope; shared touches must respect any active ownership.
 
 ## log
+- 261007 create-task creation/comparison UX done: T622–T631 form ten atomic session bundles with touches/dependency ownership; thirteen SSOT deltas consumed and visual decision THEME-61 remains open
+- 261007 manage-work planning recorded: native task claims are bundle claims; scope-filter T622–T631 to avoid unrelated media work, workers10 configured only when work group is started
+- 261007 update-ssot creation/comparison UX done: thirteen domains revised, human winners and once-per-entrant generation fixed; final visual arrangement stays THEME-61 open
+- 261007 create-task ARCH THEME POST CLIP EDIT VOICE TMPL GUIDE MODEL GEN QUOTA LANG VIDEO start: ten atomically claimable session bundles with isolated touches and explicit integration gates
+- 261007 update-ssot THEME POST CLIP AUTH EDIT VOICE TMPL GUIDE MODEL GEN QUOTA start: review contextual navigation, operational history, understandable setting drafts, editable learning material and unified binary tournaments; unresolved product choices stay open
+- 261007 review-code desktop-ux-policy-261007 done: all-width menu policy, Sheet modal contract, prose-frame exception and missing writing-height/desktop checks traced;54 tests/style61 pass and six Chromium width/theme reproductions recorded
+- 261007 review-code desktop-ux-policy-261007 start: trace navigation overlays, desktop composition and writing-area sizing against policy and acceptance checks
 - 261007 media-release fixture fix done: Max support assignment passes colocated182.53s/remote159.11s CPU releases, BE80, deploy61, Go vet/build/gofmt and spec lint with existing warnings; verified default release image tags refreshed
 - 261007 T621 done: typography b152f586 and final voice-context 4d634b14;3468 FE tests,145 browser measurements and all available unchanged-source/tooling gates pass
 - 261007 create-task THEME r27 done; T621 start: shared type scale, focused role assignment and browser hierarchy verification
@@ -100,10 +119,3 @@
 - 261007 T617-T620 start: root owns documentation/dependencies/commits; actor, personal-learning and authoring proposals have isolated file ownership
 - 261007 create-task focused UX done: T617 XState authority, T618 personal funnel, T619 staged AI workspace, T620 shared design/integration
 - 261007 ARCH r10..r16 allocation reconciled to existing T380/T386/T388 and T591-T604; scoped ARCH-69 allocated to T617/T620 without existing task rewrites
-- 261007 update-ssot THEME r26 AUTH r15 VOICE r13 EDIT r2 and ARCH r17 done: focused method/collection/review/publication screens, contextual actions and XState authority
-- 261007 update-ssot THEME AUTH VOICE EDIT and ARCH start: primary-source UX research, progressive task funnels and XState interaction ownership
-- 261007 T616 done: all five AI settings/setup hosts, manual alternatives and personal learning preserved; FE3422/staged222, BE80 packages, deploy62 and fifteen browser flows pass
-- 261007 T615 done: owner-scoped guarded eight-suggestion preview/chat Studio; responsive themes/focus/zoom and no-call entry/recovery pass
-- 261007 T614 done: domain-owned atomic receipt publication, CAS/protected fields, concurrent replay/tombstones and synthetic-only voice forks pass
-- 261007 T613 done: durable five-kind sessions, request replay, frozen bounded calls, revision/account fences and interrupted-save recovery pass24 core/RPC/SQLite tests
-- 261007 task commits: T613 e8335bb1, T614 199dd222, T615 d98cca13, T616 4b9e6f5a; existing render-capacity source bytes preserved

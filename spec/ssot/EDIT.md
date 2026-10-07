@@ -1,9 +1,9 @@
 # EDIT conversational configuration authoring
-> r2 | Private AI-assisted drafting of reusable writing and video settings through eight suggestions, one selected draft, conversational refinement and explicit publication.
+> r3 | Private AI-assisted drafting of reusable writing and video settings through explicit bounded suggestions, one selected draft, conversational refinement and explicit publication.
 
 ## decisions
 - EDIT-1 [o] the authoring kinds are post templates, video templates, post guidelines, video guidelines and writing styles; each session fixes one kind and belongs to one authenticated account.
-- EDIT-2 [o] an explicit recommendation request produces exactly eight different, valid suggestions together from one bounded write-model call; the eligible prepared active write selection is frozen at admission without a model-selection prerequisite.
+- EDIT-2 [o] an explicit recommendation request produces the requested2/4/8/16 different valid suggestions from one bounded write-model call; ordinary setting creation defaults to eight and unified tests request their exact entrant count. Freeze the prepared eligible write ref and the count/budgets at admission; never silently reduce a batch.
 - EDIT-3 [o] post-template suggestions cover familiar blog structures such as a visit review, travel journal, product review, everyday diary, practical guide, curated list, comparison and information summary; suggestions may adapt these structures to the owner's plain-language request without copying a real blog or inventing owner facts.
 - EDIT-4 [o] choosing a suggestion changes the session's draft only; reading, selecting, previewing, opening and closing create no model work or saved setting.
 - EDIT-5 [o] a sent chat message is one explicit bounded model job using the selected current draft, the session purpose and a bounded recent conversation; its validated response updates the draft and adds a plain-language reply, while the canonical saved setting changes only on explicit Save.
@@ -23,22 +23,38 @@
   - choosing the default voice is explicit and applies only on first publication of that revision
 - EDIT-12 [o] every generation and chat request displays its estimate and uses shared admission, metering, cancellation and settlement; no hidden correction, fallback, automatic acceptance or preview call spends credits.
 - EDIT-13 [o] AI-generated content is bounded and domain-valid before it becomes a visible completed draft; invalid output fails with a friendly stable reason and retains the previous valid state.
-- EDIT-14 [o] the default authoring surface is suggestions, readable preview and chat; manual forms, template builders and raw source remain explicit advanced alternatives. Saved-setting editors offer AI refinement from the owned current setting.
-- EDIT-15 [o] first-use setup and settings destinations share the same authoring behavior. Closing keeps durable work available on return, and a confirmed save updates the caller's actual setting and destination.
-- EDIT-16 [o] authoring stores only the requested setting, its necessary scope/version metadata and conversation; it reads no unrelated materials, account writing, photo or other settings into the model request. Account deletion removes the private authoring records.
+- EDIT-14 [o] an existing saved setting opens as that named usable item and offers peer AI editing and direct editing methods, both starting from its same captured saved baseline.
+  - manual builders/source views remain submodes of direct editing, not a competing source of truth
+  - unfinished work is continued through a separately named state action; loading saved content is not presented as an editing method
+  - personal voice fingerprints stay read-only; editing a voice description follows EDIT-11 synthetic-new-copy semantics, while personal source editing follows VOICE-64
+- EDIT-15 [o] setup/settings hosts share the same authoring behavior and recover owner/kind/target-scoped unpublished work. Confirmed publication identifies the setting kind/name and whether it created a new item or updated the named target, then shows the confirmed saved item.
+- EDIT-16 [o] authoring stores only its requested setting, necessary scope/version metadata, conversation and any explicitly owner-supplied bounded form reference. It automatically reads no account prose, photos, other settings or unrelated materials into the model request; account deletion removes all private authoring data.
+- EDIT-17 [o] new setting creation separates purpose, candidate choice, selected review, optional refinement, explicit named publication and completion; an existing-setting edit starts from saved-item review and an explicit method, without an irrelevant recommendation/purpose prerequisite.
+  - selected valid drafts may save without chat; refinement keeps the related preview available
+  - voice publication states synthetic new-copy/default semantics; template/guideline publication names the retained scope
+  - server session/job/receipts determine valid mutations and uncertain-save recovery; presentation movement starts neither AI nor publication
 
-- EDIT-17 [o] the authoring funnel separates purpose, eight-candidate comparison, one selected-result review, optional chat, explicit save and completion; changing views never starts a provider request or publishes a setting.
-  - the selected preview remains available in refinement, which is optional; saving without chat is allowed when the domain validates the selected draft
-  - saving a writing style shows its synthetic new-copy semantics and optional default choice at publication; templates/guidelines state the preserved target scope when relevant
-  - the server session and job, not a presentation step, determine valid work, owner isolation, interrupted-save recovery and mutation eligibility
+- EDIT-18 [o] saved availability and private editing state are separate facts: usable saved item, unpublished changes, active AI request, publication confirmation needed, or target conflict.
+  - a saved item remains usable while a private draft is edited; an unsaved new item is not shown as an already usable setting
+  - failures/unknown reads are not treated as absence; summaries identify the current kind/target and confirmed publication
+- EDIT-19 [o] known-target copy identifies kind, display name and outcome for entry, draft continuation, save and completion.
+  - use concrete AI editing/direct editing/continue editing/save changes wording, not an unexplained load revision draft or saved settings phrase
+  - if a title is absent, identify the kind plus a readable text summary; synthetic voice saving explicitly creates a new AI-generated style
+- EDIT-20 [o] starting a fresh chat retains the current working draft and clearly resets conversation context; resetting to the named saved baseline is a separate explicit discard action with a warning when it loses unpublished changes. Neither action publishes a setting or performs AI work.
+- EDIT-21 [o] AI and direct editing of the same session share one durable working draft and captured target version; switching methods retains changes, while explicit Save alone changes the canonical target.
+  - direct changes use the same revision/idempotency/owner fencing as chat; a stale response cannot undo a newer manual edit
+  - bounded incomplete/invalid manual source is retained with its parse state and last valid preview; publication and AI-completed output require domain validity
+  - domain-owned scope, generation numbers and provenance are retained unless the owner explicitly edits permitted fields; AI output/method switches never change them silently
+- EDIT-22 [o] owner-scoped directory summaries expose saved availability, unpublished-work state, active job and last confirmed publication without per-row conversation/content fetches; new unsaved creations are separately recoverable and are never silently mixed into the saved directory.
+- EDIT-23 [o] unified tests may consume a frozen unpublished candidate revision after domain validation without publishing it; explicit winner adoption publishes exactly the tested setting snapshot under MODEL-90, never regenerating or labeling synthetic writing as personal evidence.
 
 ## flow
-- create: choose setting kind → explicit eight suggestions with estimate → durable generation → select one → readable draft + chat → optional explicit refinement → Save → confirmed setting
-- refine: owned setting → AI refinement session → chat + preview → explicit Apply → matching target version updated | personal voice becomes a new synthetic style
+- create: choose setting kind → explicit candidate suggestions with estimate → durable generation → select one → readable draft + chat → optional explicit refinement → Save → confirmed setting
+- refine: named saved item → AI editing | direct editing → one retained private draft → explicit named Save → version-matched template/guideline update | new synthetic voice copy
 - recover: reopen → owner/kind/target session read → pending job progress | prior valid suggestions/draft → continue without automatic model work
 
 ## constraints
-- counts: eight recommendations; user message ≤2000 Unicode characters; twenty completed exchanges; recent model context is bounded independently of stored conversation
+- counts: recommendation count2/4/8/16; user message ≤2000 Unicode characters; twenty completed exchanges; recent model context is bounded independently of stored conversation
 - the target domain owns content limits, parsing, account caps, scope, uniqueness, defaulting and lifecycle guards
 - publication must tolerate an interruption between a target-domain commit and its authoring receipt without duplicate settings or later-state reversal
 

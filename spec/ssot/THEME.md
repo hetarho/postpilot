@@ -1,5 +1,5 @@
 # THEME theme preference and design language
-> r27 | The browser-owned System / Light / Dark preference that maps onto the `day` and `night` semantic token maps, and the binding design language every frontend surface is held to — phone-first, planes not lines, colour as role, one design system, with the promotional surfaces (→THEME-37) as the one named exemption from its restraint.
+> r28 | Browser-owned themes and a shared responsive creation language with visible location, operational history, usable workspaces and explicit setting states.
 
 ## decisions
 - THEME-1 [o] three browser-owned preferences: `system` (the default, follows `prefers-color-scheme`), `light` → the `day` semantic map, `dark` → the `night` map; the effective theme is always exactly `day|night`; components consume semantic or functional tokens and never branch on a preference, an effective theme or a palette step
@@ -98,7 +98,7 @@
   - 24 × 24 is the absolute floor
   - ≥ 8 px between adjacent targets
   - when the visible box must stay small the primitive grows the hit area itself
-  - a row in a list is one target
+  - a settings/list row has one primary target; operational history may expose a separate named recovery/export action without nesting interactive targets
   - padding is a ratio, not a leftover — the height floor is a floor, not padding, and a control's horizontal padding is roughly twice its effective vertical: buttons, fields and selects `px-4` (`px-5` for a CTA), icon buttons square at the pointer floor, list rows `px-4 py-3`, a row holding a control `px-4 py-2 min-h-16`, chips `px-2 py-0.5`, inline notices `px-4 py-3`, cards `p-4` (`p-5` for a sheet)
   - a row is never inset less than the gutter it sits in
   - a control and its panel never share a padding step or a radius
@@ -114,7 +114,10 @@
   - feedback renders where the user is looking, in a live region mounted before its text changes
   - a dock holds controls and refusals while what is merely TRUE goes to ONE page-top status region outside the focused-job exception in THEME-40 — a `ProgressBar` pinned to the top edge (`sticky`, in normal flow, no layout height, pinned below every sticky chrome row through the one `top-chrome` token, →THEME-38) plus one `meta` line carrying at most one thing in a stated precedence where a state the user must act on outranks one they only need to know, numbers belong to the bar and not the prose, and a standing state never gets an event's presentation (the editor is the reference, →POST-45)
 - THEME-25 [o] one scroller per screen: the document is the only vertical scroll container — no `max-h-* overflow-y-auto` content panel and no fixed-`rows` textarea holding more than it shows (a textarea grows with `autoGrow`); four deliberate exceptions: a horizontal strip (a photo strip, a tab row, the contact-sheet carousel whose cards are narrower than the strip so a sliver of the next one shows, with a 현재/전체 indicator), a sheet's own body, a form field capped at `max-h-field` and a copy-only document (→THEME-43) ← an uncapped generated value would put the committing control thousands of pixels from the caret, and reach wins; the editor's title and memo are not capped; all four set `overscroll-behavior: contain`
-- THEME-26 [o] every width keeps the compact header and on-demand menu without persistent rail or bottom navigation. Desktop creation/setup uses the shared wide board frame aligned with the header, useful side-by-side regions and bounded readable prose; single record prose/directory widths remain available when their content warrants them. One document scroller and reachable form actions remain unchanged.
+- THEME-26 [o] desktop creation and settings expose visible primary destinations and current location; the desktop shell has no hamburger-only navigation or centered modal for primary navigation.
+  - creation workspaces use the wide shared frame aligned with shell content; bound readable prose inside the workspace rather than shrinking the whole workspace
+  - compact chronological work history is secondary operational information; home retains its two content choices under THEME-47
+  - phones retain visible current section and parent/return access; overflow destinations may open an edge-attached panel, never becoming the only location signal
 - THEME-27 [o] elevation and shape:
   - three shadow steps mixed from `shadow-color` — `shadow-sm` resting, `shadow-md` a floating panel, `shadow-lg` a modal — encoding distance from the page, never importance, and most surfaces cast none
   - radii `rounded-sm` (6 px) chips · `rounded-md` (10) controls · `rounded-lg` (14) panels and cards · `rounded-xl` (20) sheets, dialogs and a docked bar · `rounded-full` avatars and pills
@@ -171,19 +174,16 @@
   - `overflow-x: hidden` on `html` or `body` hides the symptom and is never the fix
   - every `<img>` carries `width`, `height` and `alt`, below-the-fold images carry `loading="lazy" decoding="async"`, and `aspect-ratio` reserves the box
   - the INP budget is ≤ 200 ms
-- THEME-33 [o] the accessibility baseline, enforced at review:
-  - every control has a visible label or an `aria-label` (icon-only buttons always)
-  - focus is always visible through the one global `:focus-visible` indicator (`outline: 2px`, `outline-offset: 2px`) and a primitive adds no second ring
-  - a scroller whose contents can be focused reserves the ring's 4 px with `p-focus-gutter -m-focus-gutter` ← a scroll container resolves its cross axis away from `visible` and cuts a `w-full` field's ring
-  - live regions (`role="status"` / `role="alert"`) for save state, upload progress and errors render where the user is looking
-  - the current destination is marked `aria-current="page"` and shown, not implied by a URL a phone may not display
-  - contrast ≥ AA in both themes
-  - everything is keyboard reachable, overlays trap and return focus and `Escape` closes
-  - orientation is never locked and text survives 200 % zoom
-- THEME-34 [o] the review checklist runs over every FE diff before it is done:
-  - design system — no control hand-rolled in a slice, no unused primitive or speculative variant, functional roles only and none of the utility families THEME-11 bans, `pnpm lint:style` and `lint:style:probe` green with no arbitrary sizes, every `border-*` one of THEME-12's exceptions, every card passing the two-part test, exactly one CTA per view on the `button-cta-*` contract, slice text through `Typography` with every pragma reasoned, state reported once in the page-top region and never also in the dock or a `Notice` nothing takes down, focus gutters on focusable scrollers, portalled panels paying their four costs
-  - the phone at 360 px — a finished screen with every `sm:`/`md:` class deleted, no horizontal scroll at 320 px with `min-w-0` on text children, every target at the pointer floor THEME-23 sets including width with ≥ 8 px gaps, the padding ratio with no 1 : 1 boxes, every typeable control ≥ 16 px stating its keyboard, the committing action in the lower band on the same screen as what it commits, one scroller, an `active:` state on everything, pending states holding size and accessible name with feedback in a pre-mounted live region, at most one docked `ActionBar` per scroller on a page that fills the shell, safe-area padded edge chrome
-  - both themes, toggled on `<html data-theme>` in devtools
+- THEME-33 [o] the accessibility baseline is enforced at review:
+  - every control has a visible label or accessible name and visible keyboard focus; focusable scrollers reserve the shared focus gutter
+  - the current section and object are visible in the normal page, with aria-current on the matching destination; a hidden menu alone never communicates location
+  - save/job/error changes use pre-mounted live regions; both themes meet AA, overlays return focus and close on Escape
+  - content survives orientation changes and200% zoom without losing mounted input or actor state
+- THEME-34 [o] every frontend change is reviewed for shared primitives, semantic tokens, one current goal, purposeful emphasis, input preservation and accessible truthful feedback.
+  - check320/360/390/430px phones, pointer target floors, keyboard/software-keyboard reach, safe areas and one document scroller
+  - check1440x900 and1920x1080 desktop composition: visible location/navigation, workspace alignment, current actions, readable prose and appropriate empty authoring height
+  - exercise home-to-create-to-minted-address, nested settings-to-parent, explicit return, deep links, reload and owner changes
+  - style lint/probes, both themes, keyboard focus and200% zoom supplement these route-specific checks; no-overflow alone does not establish usable composition
 - THEME-35 [x] additional palettes, user-authored colours, accent selection, scheduled or per-route themes, account or server theme sync, a styling library or runtime dependency, theme-dependent business behaviour, provider calls, jobs or telemetry — out of scope
 - THEME-36 [o] every enabled pointer-activated surface advertises that it is clickable with the pointer cursor: links with a destination, native buttons, disclosure summaries, file-picker labels, and ARIA button/tab/menu/option/radio controls; disabled native or `aria-disabled` controls never retain the pointer cursor; text fields keep the text cursor and drag handles keep their grab/grabbing cursors ← the desktop UI already provides hover, active, focus and touch-target feedback, but leaving the system arrow on an otherwise clickable surface makes the interaction boundary look accidental and forces each feature to rediscover the same affordance
 - THEME-37 [o] promotional surfaces — `/plans`' ladder with its estimator, `/about`'s plans section, and any landing or marketing section whose job is to get one option among peers chosen — are exempt from the design language's restraint: THEME-8's quiet motion, THEME-12's border rule, THEME-18's accent-never-area rule, THEME-27's no-gradient and no-glass rule and THEME-28's confirm-only motion do not bind them ← a comparison is the one surface whose job is to be chosen from, and keeping the exemption named and scoped is what stops it from putting gradients back on every card in the app
@@ -196,18 +196,19 @@
   - keep the heading and supporting copy short; place the billing-period selector immediately before the cards, and make tier, large price, action and four distinct benefit lines the visual reading order (→QUOTA-28)
   - use strong primary/secondary text contrast and spacing to separate price, action, benefits and the lower production comparison; supporting copy recedes without losing AA contrast, and the recommended state has a text label as well as a visual mark
   - post and clip estimates live below the cards with inline condition controls (→QUOTA-41); both themes, reduced motion, readable surface pairs, keyboard access and 320 px reflow remain supported
-- THEME-38 [o] the header links the brand to `/` and exposes one menu trigger, account access and context-appropriate credit feedback. The menu contains home, saved work (`/library`) and settings (`/settings`), with plans/account/billing and authorized administration reachable through settings or the account menu.
-  - `/library` links to existing post and clip directories; `/settings` groups writing identity/direction, video defaults and AI/account options without making them primary creation destinations
-  - configuration routes and bookmarks remain supported; the shell shows no group tabs, secondary brand-row menu, tablet navigation band or bottom app bar
-  - one `top-chrome` token clears the compact sticky header at every width; dock clearance includes only viewport spacing and the safe area
-  - destinations use visible text and `aria-current="page"`; the drawer closes on navigation, Escape and outside press, traps focus while open and returns it to its trigger
+- THEME-38 [o] the shell visibly distinguishes creation, unified writing tests and settings, with work history as a secondary operational destination.
+  - the brand returns home; home keeps exactly two content actions under THEME-47
+  - settings show their writing/video/AI-account hierarchy and the current named item; child destinations provide visible parent/breadcrumb access
+  - creating a post/clip and later minting its address preserve its creation context instead of implying arrival from history
+  - one measured shared top-chrome clearance accounts for the actual sticky shell rows, independently of final navigation arrangement
+  - primary navigation has a distinct desktop presentation under THEME-26; phone overflow panels are edge-attached with explicit dismissal/focus return
 - THEME-39 [o] one shape for every surface that drives an object through a lifecycle, whatever the object produces ← two shapes for one job make one product read as two apps
   - the lifecycle is a `SegmentedControl` step bar derived from persisted domain lifecycle state, including explicit domain finalization where defined, with no presentation-only step state, standing first under the page's top row — or riding the top row itself in the control's `steps` shape, the station names as text with the current one told by colour alone and no plane under them, where the row has the room (→CLIP-36; a pill row between two controls reads as three more buttons) —, with every step selectable unless the domain defines irreversible finalization, no step change starting anything or altering state, and an unreached step saying what it waits for and offering the way to the step that produces it
   - the steps are panels of ONE mounted page, so a step change cannot remount a save queue, a job poll or an upload session
   - everything the screen has to SAY about its own state lives in ONE region — the `top-chrome` sticky bar plus one `meta` line carrying at most one thing in a precedence the surface states — and nowhere else outside the focused-job exception in THEME-40
-  - exactly one `ActionBar` per step, holding that step's committing control and the reasons it is refused and nothing that is merely true (→THEME-24 →THEME-25)
+  - visible location and contextual return coexist with the lifecycle; exactly one `ActionBar` per step holds its committing control and refusal reasons (→THEME-24 →THEME-25)
   - the post editor (→POST-44 →POST-45 →POST-47) and the clip workspace (→CLIP-36) are its instances, while a screen that only edits and saves one record has no lifecycle and keeps the directory-item form's shape instead — back link, the record's name as the heading, one status line above the dock, one docked save
-- THEME-40 [o] clip generation and rerender use one focused running view in place of the step bar, editing panels, dock and page-top progress/status: one real stage/progress region, labelled read-only original playback, cancellation with its cost rule and one confirmation, and navigation back to the list; the preview stays bounded so progress and cancellation remain reachable in one document scroller, queues/uploads/polling keep their mounted lifetime, and other lifecycle surfaces retain THEME-39 unless their domain explicitly adopts this pattern
+- THEME-40 [o] running clip generation/rendering shows its actual stage/progress, bounded read-only original playback, explicit cancellation and contextual return under THEME-58; editing controls remain hidden while mounted uploads/save/polling survive. Leaving is not cancellation.
 - THEME-42 [o] keyboard in an anchored panel: Tab and Shift+Tab move through the panel's own controls in order, a composite control moved through by arrow keys (a `Listbox`) counting as one; Tab from the last or Shift+Tab from the first closes the panel and continues from its trigger in page order ← handing focus back on any Tab leaves every control after the first unreachable (→THEME-33)
 - THEME-43 [o] a read-only document the operator copies from inside a sheet — 일괄 편집's current document (→MODEL-55) — is capped at `max-h-field` with `overflow-y-auto`, is a keyboard-focusable named region, and carries an icon copy control pinned to its top-right corner over the text, which leaves room for it ← an export runs to hundreds of lines and would push the paste field a sheet's height below it, and the control stays in reach however far the text is scrolled
 
@@ -231,13 +232,13 @@
   - phone keeps action after its field; desktop uses a wide purposeful guidance/work layout or related preview panes, preserving actor and form lifetimes across widths
   - model defaults stay in background settings under MODEL-87; confirmed facts, explicit skip and guarded back drive progression
 - THEME-49 [o] menu and setup navigation are explicit finite-state transitions with guarded events; repeated events are idempotent, completed/missing domain facts determine eligibility, and route changes never masquerade as saves or generation.
-- THEME-50 [o] EDIT presents purpose entry, eight-suggestion selection, selected-result review with optional conversational refinement, explicit publication and confirmed completion as separate focused views.
-  - one selected result can be saved without sending a chat message; chat controls appear only after requesting refinement and remain beside the related preview on desktop
-  - comparison, changing the selection, direct editing and model settings are secondary paths; previous/later forms are not stacked in the active screen
-  - existing settings start from an explicit draft-loading action without recommendation or provider work; the current captured setting is then reviewable and directly refinable
+- THEME-50 [o] AI setting creation separates purpose, candidate selection, selected review, optional refinement, explicit publication and confirmed completion; existing-setting editing opens the named saved item and offers AI editing or direct editing under EDIT-14/17.
+  - AI and manual editing retain one working draft under EDIT-21; they are methods, while continuing unfinished work is a separate state action
+  - a valid selected draft can be saved without chat; refinement keeps the relevant preview alongside conversation on desktop
+  - current actions follow their related input; previous/later forms are not stacked, and saved results identify the exact target and creation/update outcome
 - THEME-51 [o] the authoring UI uses guarded finite-state transitions for loading, recommending, choosing, refining, cancelling and publishing; each response is fenced by owner, kind, session, revision and operation, and failures retain valid previews and unsent text.
 - THEME-52 [o] every guided view has one user goal and at most one emphasized committing action; method and candidate choices are peer navigation, while Back, skip, optional refinement and advanced editing have lower visual emphasis.
-- THEME-53 [o] guided copy explains the immediate next action using familiar words, matches the active method and setting kind, and avoids duplicated headings, generic travel prompts, specialist labels and unverified time/benefit claims.
+- THEME-53 [o] guided copy names the known setting kind, display name and immediate outcome, follows EDIT-19 and matches the active method; generic setting/draft wording cannot replace available target information. Avoid repeated headings, specialist prerequisites and unsupported benefit/time claims.
 - THEME-54 [o] guided controls for a later unavailable stage are absent, not shown disabled as a teaser. Current required-input errors are explained beside the input after an explicit attempt; unavailable AI and in-flight actions state the reason and preserve an available way back or manual alternative.
 - THEME-55 [o] stage movement retains owner-scoped drafts and selected results, restores focus to the new stage heading only on actual navigation, and supports explicit Back without a paid call or canonical mutation.
 - THEME-56 [o] guided progress describes the current task and uses numeric completion only when the total is known; loading, working, recoverable failure and confirmed success have distinct truthful views with one contextual next action.
@@ -249,6 +250,17 @@
   - action guidance, provenance and recovery explanations never use metadata size; meta is reserved for brief progress/count/time information
   - sizes, line height, readable measure and group spacing are defined by shared roles, not per-screen raw font utilities; zoom/reflow preserves content and actor lifetime
 
+- THEME-58 [o] every authenticated non-home route has visible location and a deterministic parent or contextual return.
+  - creation returns to its originating creation destination, not an unconditional post/clip list; history-opened work returns to that history context
+  - preserve safe internal entry route, filters and relevant scroll position through autosave minting, reload, child settings and test review
+  - direct links with no valid origin use a named domain parent or home; reject external, malformed, deleted-target and other-owner return contexts
+  - navigation alone never starts AI, publishes changes or cancels work; existing flush/unsaved-change rules still apply
+- THEME-59 [o] a creation workspace allocates usable space to the primary writing input while it is empty or short; additional viewport height does not become a large vacant gap above a dock.
+  - the outer workspace and the readable text measure are separate roles; inputs grow naturally beyond their initial workspace allocation in one document scroller
+  - keep necessary material and actions reachable, preserve caret/autosave across widths, and retain the phone software-keyboard behavior
+- THEME-60 [o] saved reusable settings visibly distinguish usability, unpublished editing, active AI work, uncertain publication and conflicts using EDIT-18 summaries. Current actions and named completion feedback remain in the current reading/working flow rather than appearing without an identified trigger.
+- THEME-61 [?] the final desktop navigation arrangement, operational-history presentation/name and exact visual dimensions remain open; functional location/return/workspace contracts and route-specific acceptance apply independently of a final visual design.
+
 ## flow
 - bootstrap: read `postpilot.theme` → resolve(`system` → matchMedia | `light` → `day` | `dark` → `night`) → set `data-theme`, `color-scheme`, `theme-color` before React → provider from the snapshot → menu selection → apply + persist | remove key
 - shipping a screen: author unprefixed for 360 → tokens and `shared/ui` primitives only → `pnpm lint:style` → the THEME-34 checklist → both themes
@@ -256,7 +268,7 @@
 ## constraints
 - config FE `shared/config`: `THEME_PREFERENCE_STORAGE_KEY` `postpilot.theme` · `DEFAULT_THEME_PREFERENCE` `system`; beside their primitives (→ARCH-21): `shared/ui/listbox/config.ts` (`LISTBOX_MAX_VIEWPORT_RATIO` · `LISTBOX_MIN_PANEL_PX` · the panel's viewport gutter and trigger gap) · `shared/ui/popover/config.ts` (`POPOVER_MIN_PANEL_PX` · the panel's viewport gutter and trigger gap) · `shared/ui/promo-frame/config.ts` (`PROMO_TILT_MAX_DEG` · `PROMO_TILT_PERSPECTIVE_PX`); `shared/lib/theme`: the media query `(prefers-color-scheme: dark)` and the supported preferences; `light → day`, `dark → night`, the two semantic maps, the token scales and the breakpoints are web and design code contracts, not deployment configuration
 - placement FE: `shared/lib/theme` (pure resolution, exception-safe injectable storage and media adapters) · `app/providers/theme` (bootstrap snapshot, document and browser-chrome side effects, runtime provider) · `features/change-theme` (the app-injected controller and translated selector) · `widgets/interface-preferences` · `app/styles/index.css` (palette, foundations, roles, themes, base layer) · `shared/ui/*` (the primitives) · `frontend/index.html` (viewport, theme-colour data attributes, icons)
-- gates: `pnpm lint:style` and `pnpm lint:style:probe` (→ARCH-25); review at 360 / 390 / 430 px, 320 px reflow, 200 % zoom, keyboard and screen reader, both themes
+- gates: `pnpm lint:style` and `pnpm lint:style:probe` (→ARCH-25); review at360/390/430px,320px reflow,1440x900/1920x1080 desktop,200% zoom, contextual return, keyboard and screen reader, both themes
 
 ## chg
 -
