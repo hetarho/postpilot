@@ -94,6 +94,7 @@
 - Editorial follow-up: doc-review ARCH; preserve blocked independent media/voice qualification.
 
 ## log
+- 261007 Docker Desktop termination complete: 9 app processes received SIGTERM; 4 remaining or respawned processes required SIGKILL; independent scans confirmed no Docker.app processes or port 7678 listener; separate Colima/Lima and persistent data files retained
 - 261007 T630 done on main: named durable setting editing, private reference/metadata continuity, terminal paginated summaries and atomic domain receipts; full FE4077, owning Go/wiring, builds/lint/codegen and real viewport checks pass
 - 261007 T630 final freshness: committed T647 supplies THEME30 routing delta; named setting policies50/53/60 remain unchanged, T630 base refreshed and current route consumers verified
 - 261007 local API diagnostic: frontend2564 responds but API7678 health resets; Docker Desktop engine _ping times out without bytes and compose startup/status/log reads hang; GetMe502 propagates through the existing root error boundary, with no routing code change
@@ -113,4 +114,3 @@
 - 261007 final backend correction scope: unsupported durable authoring adapter returns typed existing unavailable314 after authentication; reason scanner recognizes actual private failure fields without enum exemptions; media/worker execution paths unchanged and real release API adapter implements durable drafts, so compatible runtime gate evidence is retained and final deployable image metadata is rebuilt for pushed HEAD
 - 261007 post-push frontend verification: full suite3992/4004 passed; the12 breadcrumb selector failures are corrected and owning suites pass (Admin26, Templates7); ESLint, format, FSD, style, retirement and production build pass; backend/media verification continues
 - 261007 post-push corrections: preserve normalized voice test factor and safe filtered paid-history return; canonical consumers64, Admin catalog26, parser10 and migration compatibility11 cases pass; full FE/BE/media verification remains active
-- 261007 main pushed normally through5edb107a after user requested push-first ordering; origin/local synchronized, deployment workflow success observed, initial CI FE/BE test failures retained for reproduction and correction
