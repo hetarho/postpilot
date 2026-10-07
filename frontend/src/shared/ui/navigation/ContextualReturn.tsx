@@ -8,7 +8,10 @@ function NativeLink(props: NavigationLinkProps) {
 }
 export function ContextualReturn() {
   const navigation = useNavigationContext()
-  const destination = navigation?.returnTo ?? navigation?.ancestors.at(-1)
+  const destination =
+    navigation?.returnTo && safeInternalPath(navigation.returnTo.href)
+      ? navigation.returnTo
+      : navigation?.ancestors.findLast((item) => safeInternalPath(item.href))
   if (!navigation || !destination || !safeInternalPath(destination.href)) return null
   const Link = navigation.Link ?? NativeLink
   return (

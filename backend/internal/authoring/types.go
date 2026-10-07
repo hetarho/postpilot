@@ -207,3 +207,14 @@ type FrozenCandidate struct {
 	TargetID, TargetVersion string
 	Synthetic               bool
 }
+
+// Structural failures are frozen alongside the transport enum and locale contracts.
+const FailureReasonDraftInvalid = "AUTHORING_DRAFT_INVALID"
+
+type DraftRefusal struct{ reason, message string }
+
+func (e *DraftRefusal) Error() string             { return e.message }
+func (e *DraftRefusal) Reason() string            { return e.reason }
+func (e *DraftRefusal) Params() map[string]string { return nil }
+
+var ErrDraftInvalid = &DraftRefusal{reason: FailureReasonDraftInvalid, message: "current working source is invalid"}

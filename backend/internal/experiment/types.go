@@ -588,11 +588,11 @@ type TestStart struct {
 }
 
 var (
-	ErrTestCount     = errors.New("writing test entrant count is invalid")
-	ErrTestFactor    = errors.New("writing test factor is invalid")
-	ErrTestEntrant   = errors.New("writing test entrant is invalid")
-	ErrTestDuplicate = errors.New("writing test entrants repeat")
-	ErrTestOperation = errors.New("writing test operation key is invalid")
+	ErrTestCount     = &TestRefusal{reason: FailureReasonTestCount, message: "writing test entrant count is invalid"}
+	ErrTestFactor    = &TestRefusal{reason: FailureReasonTestFactor, message: "writing test factor is invalid"}
+	ErrTestEntrant   = &TestRefusal{reason: FailureReasonTestEntrant, message: "writing test entrant is invalid"}
+	ErrTestDuplicate = &TestRefusal{reason: FailureReasonTestDuplicate, message: "writing test entrants repeat"}
+	ErrTestOperation = &TestRefusal{reason: FailureReasonTestOperation, message: "writing test operation key is invalid"}
 )
 
 // ValidateTestShape runs before resolution, job/hold creation or any provider work.
@@ -750,3 +750,43 @@ type PublicationReceipt struct {
 	UserID, TestID, WinnerID, Action, RequestKey, TargetID string
 	ResultingRevision                                      int64
 }
+
+// Consumer-owned typed failures expose safe reasons without transport imports.
+const (
+	FailureReasonTestCount               = "WRITING_TEST_COUNT_INVALID"
+	FailureReasonTestFactor              = "WRITING_TEST_FACTOR_INVALID"
+	FailureReasonTestEntrant             = "WRITING_TEST_ENTRANT_INVALID"
+	FailureReasonTestDuplicate           = "WRITING_TEST_ENTRANTS_DUPLICATE"
+	FailureReasonTestOperation           = "WRITING_TEST_OPERATION_INVALID"
+	FailureReasonTestNotFound            = "WRITING_TEST_NOT_FOUND"
+	FailureReasonTestRevisionConflict    = "WRITING_TEST_REVISION_CONFLICT"
+	FailureReasonTestMatchInvalid        = "WRITING_TEST_MATCH_INVALID"
+	FailureReasonTestDecisionConflict    = "WRITING_TEST_DECISION_CONFLICT"
+	FailureReasonTestStateInvalid        = "WRITING_TEST_STATE_INVALID"
+	FailureReasonTestPublicationConflict = "WRITING_TEST_PUBLICATION_CONFLICT"
+	FailureReasonTestOutputIncompatible  = "WRITING_TEST_OUTPUT_INCOMPATIBLE"
+	FailureReasonTestQuoteRequired       = "WRITING_TEST_QUOTE_REQUIRED"
+	FailureReasonTestRunning             = "WRITING_TEST_RUNNING"
+	FailureReasonTestMaterialInvalid     = "WRITING_TEST_MATERIAL_INVALID"
+	FailureReasonTestLegacyReadOnly      = "WRITING_TEST_LEGACY_READ_ONLY"
+)
+
+type TestRefusal struct{ reason, message string }
+
+func (e *TestRefusal) Error() string             { return e.message }
+func (e *TestRefusal) Reason() string            { return e.reason }
+func (e *TestRefusal) Params() map[string]string { return nil }
+
+var (
+	ErrTestNotFound            = &TestRefusal{reason: FailureReasonTestNotFound, message: "writing test is not found"}
+	ErrTestRevisionConflict    = &TestRefusal{reason: FailureReasonTestRevisionConflict, message: "writing test revision changed"}
+	ErrTestMatchInvalid        = &TestRefusal{reason: FailureReasonTestMatchInvalid, message: "writing test match is invalid"}
+	ErrTestDecisionConflict    = &TestRefusal{reason: FailureReasonTestDecisionConflict, message: "writing test decision already exists"}
+	ErrTestStateInvalid        = &TestRefusal{reason: FailureReasonTestStateInvalid, message: "writing test action is not available"}
+	ErrTestPublicationConflict = &TestRefusal{reason: FailureReasonTestPublicationConflict, message: "writing test publication target changed"}
+	ErrTestOutputIncompatible  = &TestRefusal{reason: FailureReasonTestOutputIncompatible, message: "writing test output cannot apply to this source"}
+	ErrTestQuoteRequired       = &TestRefusal{reason: FailureReasonTestQuoteRequired, message: "writing test requires an approved quote"}
+	ErrTestRunning             = &TestRefusal{reason: FailureReasonTestRunning, message: "writing test preparation is active"}
+	ErrTestMaterialInvalid     = &TestRefusal{reason: FailureReasonTestMaterialInvalid, message: "writing test common material is invalid"}
+	ErrTestLegacyReadOnly      = &TestRefusal{reason: FailureReasonTestLegacyReadOnly, message: "earlier comparison is read only"}
+)

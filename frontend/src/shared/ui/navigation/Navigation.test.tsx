@@ -30,6 +30,7 @@ describe('injected navigation primitives', () => {
       <NavigationProvider
         value={{
           current: 'Current',
+          returnTo: { href: '//evil-return.test', label: 'Unsafe return' },
           ancestors: [
             { href: '//evil.test', label: 'Unsafe' },
             { href: '/parent', label: 'Parent' },
@@ -41,6 +42,7 @@ describe('injected navigation primitives', () => {
       </NavigationProvider>,
     )
     expect(screen.queryByRole('link', { name: 'Unsafe' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Unsafe return' })).not.toBeInTheDocument()
     expect(screen.getAllByRole('link', { name: 'Parent' })).toHaveLength(2)
   })
   it('supports an injected router/flush link and tolerates absent providers', () => {

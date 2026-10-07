@@ -288,7 +288,7 @@ type SampleMutation struct {
 	PhotoWidth, PhotoHeight                 *int
 }
 
-var ErrSampleRevisionConflict = errors.New("voice material revision changed")
+var ErrSampleRevisionConflict = &MaterialRefusal{reason: FailureReasonSampleRevisionConflict, message: "voice material revision changed"}
 
 // Ordinary legacy factories default to eight; unified preparation explicitly chooses a format.
 func NormalizeCandidateCount(count int) (int, error) {
@@ -315,3 +315,18 @@ type TestStylePublication struct {
 type TestStyleReceipt struct{ VoiceID, RequestKey string }
 
 var ErrCandidateCount = errors.New("writing style candidate count is invalid")
+
+const (
+	FailureReasonSampleRevisionConflict = "VOICE_SAMPLE_REVISION_CONFLICT"
+	FailureReasonSampleUpdateInvalid    = "VOICE_SAMPLE_UPDATE_INVALID"
+	FailureReasonCheckRetired           = "VOICE_CHECK_RETIRED"
+)
+
+type MaterialRefusal struct{ reason, message string }
+
+func (e *MaterialRefusal) Error() string             { return e.message }
+func (e *MaterialRefusal) Reason() string            { return e.reason }
+func (e *MaterialRefusal) Params() map[string]string { return nil }
+
+var ErrSampleUpdateInvalid = &MaterialRefusal{reason: FailureReasonSampleUpdateInvalid, message: "voice material update is invalid"}
+var ErrCheckRetired = &MaterialRefusal{reason: FailureReasonCheckRetired, message: "voice check admission is retired"}

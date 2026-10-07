@@ -29,7 +29,14 @@ function unsafeCharacters(value: string, raw = false): boolean {
 /** Check both raw and decoded input so URL normalization cannot hide unsafe separators. */
 export function safeInternalPath(value: string): boolean {
   if (!value || value.length > MAX_RETURN_PATH_CHARS || unsafeCharacters(value, true)) return false
-  let decoded = value
+  // Validate escaped query text once, then inspect only the pathname for nested separators.
+  // A literal percent in a filter must not stop decoding an unsafe path or lose a valid return.
+  try {
+    if (unsafeCharacters(decodeURIComponent(value))) return false
+  } catch {
+    return false
+  }
+  let decoded = value.split(/[?#]/u, 1)[0]
   for (let round = 0; round < 3; round += 1) {
     if (!decoded.startsWith('/') || decoded.startsWith('//') || unsafeCharacters(decoded))
       return false

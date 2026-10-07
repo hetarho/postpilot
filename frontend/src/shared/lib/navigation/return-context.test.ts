@@ -36,6 +36,8 @@ describe('safe retained return context', () => {
   })
   it('retains safely encoded search text', () => {
     expect(safeInternalPath('/work?q=coffee%20shop')).toBe(true)
+    expect(safeInternalPath('/work?q=50%25')).toBe(true)
+    expect(safeInternalPath('/%252f%252fevil.test?q=50%25')).toBe(false)
   })
   it('preserves section, filters, target and scroll without restoring another owner or deleted target', () => {
     expect(validateReturnContext(entry, 'alice', ports)).toEqual(entry)

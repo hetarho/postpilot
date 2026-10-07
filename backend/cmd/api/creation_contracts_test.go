@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/postpilot/backend/internal/auth"
 	authoringrpc "github.com/postpilot/backend/internal/authoring/rpc"
+	"github.com/postpilot/backend/internal/voice"
 	voicerpc "github.com/postpilot/backend/internal/voice/rpc"
 	"strings"
 	"testing"
@@ -171,6 +172,19 @@ func TestUnintegratedStyleCountsNeverReachBaselineProviderWork(t *testing.T) {
 			}
 		} else if connect.CodeOf(err) != connect.CodeInvalidArgument {
 			t.Fatalf("count %d: %v", count, err)
+		}
+	}
+}
+
+func TestFrozenRefusalContractsUseRegisteredParameterFreeReasons(t *testing.T) {
+	refusals := []interface {
+		error
+		Reason() string
+		Params() map[string]string
+	}{authoring.ErrDraftInvalid, voice.ErrSampleRevisionConflict, voice.ErrSampleUpdateInvalid, voice.ErrCheckRetired, experiment.ErrTestCount, experiment.ErrTestFactor, experiment.ErrTestEntrant, experiment.ErrTestDuplicate, experiment.ErrTestOperation, experiment.ErrTestNotFound, experiment.ErrTestRevisionConflict, experiment.ErrTestMatchInvalid, experiment.ErrTestDecisionConflict, experiment.ErrTestStateInvalid, experiment.ErrTestPublicationConflict, experiment.ErrTestOutputIncompatible, experiment.ErrTestQuoteRequired, experiment.ErrTestRunning, experiment.ErrTestMaterialInvalid, experiment.ErrTestLegacyReadOnly}
+	for _, refusal := range refusals {
+		if _, ok := v1.FailureReason_value[refusal.Reason()]; !ok || len(refusal.Params()) != 0 || refusal.Error() == "" {
+			t.Fatalf("invalid frozen refusal: %v", refusal)
 		}
 	}
 }
