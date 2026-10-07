@@ -2,6 +2,7 @@
 import base64
 import json
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import tempfile
@@ -12,6 +13,40 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class MediaDevTest(unittest.TestCase):
+    def assert_health_crypto_pin(self, source):
+        instructions = [line.strip() for line in source.replace('\\\n', '').splitlines()]
+        runs = [line for line in instructions if line.startswith('RUN ')]
+        health = [line for line in runs if './cmd/media-health' in line]
+        self.assertEqual(len(health), 1)
+        snapshot = 'v1.0.0-c2097c7c'
+        checksum = 'daf3614e0406f67ae6323c902db3f953a1effb199142362a039e7526dfb9368b'
+        self.assertIn(f'GOFIPS140={snapshot} CGO_ENABLED=0', health[0])
+        self.assertIn(f'/lib/fips140/{snapshot}.zip', health[0])
+        self.assertIn(checksum, health[0])
+        self.assertIn('sha256sum -c -', health[0])
+        self.assertIn('LICENSE', health[0])
+        self.assertEqual([line for line in runs if 'GOFIPS140=' in line], health)
+        self.assertFalse(any(re.match(r'^(ENV|ARG)\s', line) and 'GOFIPS140' in line for line in instructions))
+
+    def test_health_crypto_snapshot_is_verified_and_scoped_to_the_client(self):
+        for name in ['Dockerfile', 'Dockerfile.dev']:
+            with self.subTest(name=name):
+                source = (ROOT / 'backend' / name).read_text()
+                self.assert_health_crypto_pin(source)
+                # An unpinned alias, changed archive or global build setting can
+                # recreate the expensive health process or change other roles.
+                mutations = {
+                    'missing': source.replace('GOFIPS140=v1.0.0-c2097c7c ', ''),
+                    'alias': source.replace('GOFIPS140=v1.0.0-c2097c7c ', 'GOFIPS140=v1.0.0 '),
+                    'checksum': source.replace('daf3614e0406f67ae6323c902db3f953a1effb199142362a039e7526dfb9368b', '0' * 64),
+                    'global': source + '\nENV GOFIPS140=v1.0.0-c2097c7c\n',
+                    'other-role': source + '\nRUN GOFIPS140=v1.0.0-c2097c7c go build ./cmd/api\n',
+                }
+                for mutation, invalid in mutations.items():
+                    with self.subTest(mutation=mutation):
+                        with self.assertRaises(AssertionError):
+                            self.assert_health_crypto_pin(invalid)
+
     def test_services_share_sources_but_not_database_secrets_or_work(self):
         cfg = yaml.safe_load((ROOT / 'docker-compose.yml').read_text())
         api, worker = cfg['services']['backend'], cfg['services']['media-worker']
@@ -29,7 +64,7 @@ class MediaDevTest(unittest.TestCase):
         self.assertNotIn('deploy', worker)
         self.assertEqual(worker['environment']['MEDIA_ACCEL'], 'cpu')
         self.assertEqual(worker['depends_on']['backend']['condition'], 'service_healthy')
-        self.assertEqual(worker['healthcheck']['test'], ['CMD', '/app/tmp/media-worker', 'health'])
+        self.assertEqual(worker['healthcheck']['test'], ['CMD', '/usr/local/bin/media-health'])
         self.assertEqual(api['develop']['watch'], worker['develop']['watch'])
         watched = {r['path'] for r in worker['develop']['watch'] if r['action'] == 'rebuild'}
         self.assertTrue({'./backend/assets', './backend/build', './backend/internal/clip/overlay', './backend/internal/clip/design'} <= watched)

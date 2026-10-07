@@ -501,7 +501,7 @@ func assertThreadRoles(t *testing.T, a *Adapter, args []string) {
 	if strings.Contains(after, " -c:v ") && !strings.Contains(after, encode) {
 		t.Fatalf("the encoder is not pinned to %d thread: %v", a.cfg.EncodeThreads, args)
 	}
-	if strings.Contains(before, " -filter_threads ") && !strings.Contains(before, fmt.Sprintf(" -filter_threads %d ", a.cfg.EncodeThreads)) {
-		t.Fatalf("filter threads moved: %v", args)
+	if strings.Count(before, " -filter_threads ") != 1 || !strings.Contains(before, fmt.Sprintf(" -filter_threads %d ", a.cfg.EncodeThreads)) {
+		t.Fatalf("filters are not pinned to %d thread before decoding: %v", a.cfg.EncodeThreads, args)
 	}
 }

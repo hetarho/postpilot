@@ -73,11 +73,15 @@ func (r *Rendering) declaredLayer(ctx context.Context, ws clip.MediaWorkspace, c
 // enters through `image2` at the output frame rate rather than through
 // `image2pipe`: the chain already takes several inputs, feeding pipes
 // concurrently makes scheduling and partial-failure retry much harder, and
-// files let one failed caption re-render alone. Decoder threads stay limited on
-// it exactly as they are on a single-frame input, because an unbounded image
-// demuxer can leave the scheduler waiting once an overlay stops consuming.
+// files let one failed caption re-render alone. Sequences use the configured
+// decoder bound. A static plate has only one PNG to decode, so it needs no
+// frame-thread contexts before the graph loops that one decoded image.
 func (r *Rendering) layerInput(args []string, layer captionLayer, window overlayWindow) []string {
-	args = append(args, "-threads", strconv.Itoa(r.media.cfg.DecodeThreads), "-framerate", strconv.Itoa(r.cfg.FPS))
+	decodeThreads := r.media.cfg.DecodeThreads
+	if layer.Sequence == nil {
+		decodeThreads = 1
+	}
+	args = append(args, "-threads", strconv.Itoa(decodeThreads), "-framerate", strconv.Itoa(r.cfg.FPS))
 	if layer.Sequence != nil {
 		// A caption that began before this window RESUMES at the frame the
 		// window opens on rather than starting over: the sequence is the

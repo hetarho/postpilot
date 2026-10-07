@@ -25,11 +25,17 @@ RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /api ./cmd/a
 RUN CGO_ENABLED=0 GOOS=linux go test -c -o /media.test ./internal/clip/media
 
 RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /media-worker ./cmd/media-worker
+# The small health process uses the pinned stdlib snapshot without Go 1.26's
+# 32 MiB entropy scratch BSS. API and worker cryptography keep their defaults.
+RUN printf '%s  %s\n' 'daf3614e0406f67ae6323c902db3f953a1effb199142362a039e7526dfb9368b' "$(go env GOROOT)/lib/fips140/v1.0.0-c2097c7c.zip" | sha256sum -c - \
+    && GOFIPS140=v1.0.0-c2097c7c CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /media-health ./cmd/media-health \
+    && cp "$(go env GOMODCACHE)/golang.org/fips140@v1.0.0-c2097c7c/LICENSE" /media-health-license
 RUN mkdir -p /worker-work
 RUN CGO_ENABLED=0 GOOS=linux go test -c -o /diagnostic.test ./internal/clip/diagnostic
 
 FROM builder AS release-builder
 RUN CGO_ENABLED=0 GOOS=linux go test -c -o /clip-release.test ./cmd/api
+RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /media-resource ./cmd/media-resource
 
 FROM gcr.io/distroless/static-debian12:nonroot@sha256:afa5c872c891853ca7fcf1f12c3edb23f7eeef36189728842dd51042ff57f7ab AS media-runtime
 # Both independently versioned images declare the same contract and asset inputs.
@@ -121,11 +127,16 @@ COPY --from=media-tooling /usr/local/bin/ffmpeg /usr/local/bin/ffmpeg
 # Execution-only runtime: no API binary, registry config, database or provider env.
 FROM media-runtime AS media-worker-runtime
 LABEL org.opencontainers.image.title="Postpilot CPU media worker" \
-      org.postpilot.media.manifest-command="/media-worker manifest"
+      org.postpilot.media.manifest-command="/media-worker manifest" \
+      org.postpilot.media.health.gofips140="v1.0.0-c2097c7c" \
+      org.postpilot.media.health.crypto-archive-sha256="daf3614e0406f67ae6323c902db3f953a1effb199142362a039e7526dfb9368b"
 COPY --from=builder /media-worker /media-worker
 COPY --from=builder --chown=65532:65532 /worker-work /var/lib/postpilot-media/work
+COPY --from=builder /media-health /media-health
+COPY --from=builder /media-health-license /usr/share/postpilot-health/LICENSE
+COPY backend/build/HEALTH.md /usr/share/postpilot-health/README.md
 ENV MEDIA_ACCEL=cpu CLIP_WORK_ROOT=/var/lib/postpilot-media/work
-HEALTHCHECK --interval=30s --timeout=30s --start-period=30s --retries=3 CMD ["/media-worker", "health"]
+HEALTHCHECK --interval=30s --timeout=30s --start-period=30s --retries=3 CMD ["/media-health"]
 ENTRYPOINT ["/media-worker"]
 
 FROM media-worker-runtime AS media-worker-tooling
@@ -142,11 +153,13 @@ ENTRYPOINT ["/media.test", "-test.run=^Test(WorkerExecutionParity|WorkerCommandH
 
 # Disposable multi-process gate; fixture endpoints exist only in this test binary.
 FROM release-smoke AS media-release-api
+COPY --from=release-builder /media-resource /media-resource
 ENV MEDIA_RELEASE_SMOKE=1
 ENTRYPOINT ["/clip-release.test", "-test.run=^TestMediaRelease$", "-test.v", "-test.timeout=30m"]
 
 FROM media-worker-deployable AS media-release-worker
 COPY --from=release-builder /clip-release.test /clip-release.test
+COPY --from=release-builder /media-resource /media-resource
 
 # Candidate NVIDIA packaging is independent of the CPU deploy critical path.
 FROM debian:bookworm-slim@sha256:3783cc01769c7b2b1b83a5c5ad96c815348e28ed7da68e2e3687004faa906251 AS nvidia-build
@@ -164,8 +177,12 @@ LABEL org.opencontainers.image.revision=$SOURCE_REVISION \
       org.postpilot.media.protocol="3" org.postpilot.media.renderer="cpu-v4" \
       org.postpilot.media.assets="assets-v3" org.postpilot.media.asset-input-sha256=$MEDIA_ASSET_DIGEST \
       org.postpilot.media.gpu-candidate="nvenc-candidate-v1" \
-      org.postpilot.media.gpu-production-approved="false"
+      org.postpilot.media.gpu-production-approved="false" \
+      org.postpilot.media.health.gofips140="v1.0.0-c2097c7c" \
+      org.postpilot.media.health.crypto-archive-sha256="daf3614e0406f67ae6323c902db3f953a1effb199142362a039e7526dfb9368b"
 COPY --from=media-worker-deployable /media-worker /media-worker
+COPY --from=media-worker-deployable /media-health /media-health
+COPY --from=media-worker-deployable /usr/share/postpilot-health/ /usr/share/postpilot-health/
 COPY --from=media-runtime /usr/local/bin/ /usr/local/bin/
 COPY --from=media-runtime /usr/share/postpilot-fonts/ /usr/share/postpilot-fonts/
 COPY --from=media-runtime /usr/share/postpilot-media/ /usr/share/postpilot-media/
@@ -179,6 +196,7 @@ ENV MEDIA_ACCEL=cpu CLIP_WORK_ROOT=/var/lib/postpilot-media/work \
     NVIDIA_DRIVER_CAPABILITIES=compute,video,utility \
     LD_LIBRARY_PATH=/usr/local/nvidia/lib:/usr/local/nvidia/lib64
 USER 65532:65532
+HEALTHCHECK --interval=30s --timeout=30s --start-period=30s --retries=3 CMD ["/media-health"]
 ENTRYPOINT ["/media-worker"]
 
 FROM media-worker-nvidia-runtime AS media-worker-nvidia-candidate

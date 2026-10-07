@@ -12,6 +12,46 @@ spec.loader.exec_module(fixture)
 
 
 class ReleaseBudget(unittest.TestCase):
+    def test_resource_probe_retains_exact_kernel_counters_without_api_test_boot(self):
+        report = {'memory_peak': 268435456, 'disk_bytes': 12345}
+        with patch.object(fixture, 'run', return_value='RESOURCE_REPORT ' + fixture.json.dumps(report)) as docker:
+            self.assertEqual(fixture.resource_snapshot('release-api'), report)
+            docker.assert_called_once_with('exec', 'release-api', '/media-resource')
+
+    def test_failed_resource_probe_is_not_counted_as_a_successful_sample(self):
+        with patch.object(fixture, 'run', side_effect=RuntimeError('probe unavailable')):
+            with self.assertRaisesRegex(RuntimeError, 'probe unavailable'):
+                fixture.resource_snapshot('release-api')
+
+        for report in ({}, {'memory_peak': 0, 'disk_bytes': 0},
+                       {'memory_peak': True, 'disk_bytes': 0},
+                       {'memory_peak': 123, 'disk_bytes': -1}):
+            with self.subTest(report=report), patch.object(fixture, 'run', return_value='RESOURCE_REPORT ' + fixture.json.dumps(report)):
+                with self.assertRaisesRegex(RuntimeError, 'invalid resource evidence'):
+                    fixture.resource_snapshot('release-api')
+        with patch.object(fixture, 'run', return_value='no kernel evidence'):
+            with self.assertRaisesRegex(RuntimeError, 'resource evidence missing'):
+                fixture.resource_snapshot('release-api')
+
+    def test_clean_exit_between_state_check_and_probe_does_not_invent_a_sample(self):
+        state = {'Running': False, 'ExitCode': 0, 'OOMKilled': False}
+        for message in ('container is not running', ''):
+            with self.subTest(message=message), patch.object(fixture, 'run', side_effect=[
+                    RuntimeError(message), fixture.json.dumps([{'State': state}])]) as docker:
+                self.assertIsNone(fixture.resource_snapshot('release-api'))
+                self.assertEqual(docker.call_args_list, [call('exec', 'release-api', '/media-resource'),
+                                                        call('inspect', 'release-api')])
+
+    def test_stopped_oom_failed_or_running_container_does_not_hide_probe_failure(self):
+        for state in ({'Running': False, 'ExitCode': 137, 'OOMKilled': True},
+                      {'Running': False, 'ExitCode': 1, 'OOMKilled': False},
+                      {'Running': True, 'ExitCode': 0, 'OOMKilled': False}):
+            for message in ('container is not running', ''):
+                with self.subTest(state=state, message=message), patch.object(fixture, 'run', side_effect=[
+                        RuntimeError(message), fixture.json.dumps([{'State': state}])]):
+                    with self.assertRaises(RuntimeError):
+                        fixture.resource_snapshot('release-api')
+
     def test_insufficient_memory_or_cpu_creates_no_resources(self):
         for override in ({'envelope_mib': 1023}, {'envelope_cpus': 1.9}):
             values = dict(api_mib=256, worker_mib=512, reserve_mib=256, envelope_mib=1024,

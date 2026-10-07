@@ -144,14 +144,17 @@ func TestTheOverlayGraphReadsASequenceWithImage2AndLoopsAStaticPlate(t *testing.
 	if !strings.Contains(graph, "[2:v:0]format=rgba,loop=loop=299:size=1:start=0,fade=t=in") {
 		t.Fatalf("the static plate lost its loop: %s", graph)
 	}
-	// image2 at the output frame rate, with decoder threads bounded exactly as
-	// they are on a single-frame input.
+	// A sequence and source footage retain the configured decoding parallelism;
+	// a static plate has one PNG, with no parallel frames to decode.
 	args := r.layerInput(nil, layers[0], window)
 	if strings.Join(args, " ") != fmt.Sprintf("-threads %d -framerate 30 -f image2 -start_number 1 -i /w/seq-0000/%%05d.png", r.media.cfg.DecodeThreads) {
 		t.Fatalf("%v", args)
 	}
-	if got := strings.Join(r.layerInput(nil, layers[1], window), " "); !strings.HasSuffix(got, "-framerate 30 -i /w/declared-0001.png") {
+	if got := strings.Join(r.layerInput(nil, layers[1], window), " "); got != "-threads 1 -framerate 30 -i /w/declared-0001.png" {
 		t.Fatalf("%v", got)
+	}
+	if got := strings.Join(r.inputArgs(nil, "/w/footage.mp4"), " "); got != fmt.Sprintf("-threads %d -protocol_whitelist file,pipe -i /w/footage.mp4", r.media.cfg.DecodeThreads) {
+		t.Fatalf("static plate tuning changed source video decoding: %s", got)
 	}
 	// A window that opens after the caption did resumes at the frame it reaches,
 	// rather than replaying the entrance the owner already saw.

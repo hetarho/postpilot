@@ -34,6 +34,31 @@ def request(port, method='GET'):
     with urllib.request.urlopen(req, timeout=3) as response:
         return json.load(response)
 
+def resource_snapshot(name):
+    # Sampling must not initialize the full API test executable inside a
+    # container that is already spending its fixed execution budget.
+    try:
+        output = run('exec', name, '/media-resource')
+    except RuntimeError as error:
+        # A successful fixture can exit between the driver's Running check and
+        # this exec. Its final report and prior positive samples remain required.
+        # Docker can return empty output when the successful container exit
+        # terminates an exec that already started, rather than rejecting it.
+        if str(error).strip() and 'is not running' not in str(error):
+            raise
+        state = json.loads(run('inspect', name))[0]['State']
+        if not state['Running'] and state['ExitCode'] == 0 and not state['OOMKilled']:
+            return None
+        raise
+    match = re.search(r'RESOURCE_REPORT (\{.*\})', output)
+    if not match:
+        raise RuntimeError('resource evidence missing: ' + name)
+    report = json.loads(match[1])
+    if (type(report.get('memory_peak')) is not int or report['memory_peak'] <= 0 or
+            type(report.get('disk_bytes')) is not int or report['disk_bytes'] < 0):
+        raise RuntimeError('invalid resource evidence: ' + name)
+    return report
+
 def fixture(layout, args):
     prefix = 'postpilot-release-' + secrets.token_hex(5)
     api, worker, store, relay = [prefix+'-'+x for x in ('api','worker','storage','relay')]
@@ -48,10 +73,11 @@ def fixture(layout, args):
         containers.append(name)
         return run('run','-d','--name',name,'--label','postpilot.disposable-media-release='+prefix,*options,image,*command)
     def snapshot(name):
-        output=run('exec','-e','MEDIA_RELEASE_RESOURCE=1',name,'/clip-release.test','-test.run=^TestMediaReleaseResources$','-test.v',check=False)
-        match=re.search(r'RESOURCE_REPORT (\{.*\})',output)
-        if match:
-            for key,value in json.loads(match[1]).items(): samples[name][key]=max(samples[name][key],value)
+        report = resource_snapshot(name)
+        if report is None:
+            return
+        for key, value in report.items():
+            samples[name][key] = max(samples[name][key], value)
     try:
         for net in (private, remote) if layout=='remote' else (private,):
             run('network','create',*(['--internal'] if net==remote else []),net);networks.append(net)

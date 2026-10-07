@@ -20,7 +20,7 @@ services:
     networks:
       - media
     healthcheck:
-      test: ["CMD", "/media-worker", "health"]
+      test: ["CMD", "/media-health"]
       interval: 15s
       timeout: 30s
       start_period: 30s
