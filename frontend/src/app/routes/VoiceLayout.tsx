@@ -45,17 +45,26 @@ export function VoiceLayout() {
   const learningPath = `/voices/${voiceId}/materials`
 
   return (
-    <div className={pageStyles({ width: 'wide' })}>
-      <Link
-        to="/voices"
-        className={typographyStyles({
-          variant: 'label',
-          className:
-            'text-link-fg hover:text-link-fg-hover inline-flex min-h-11 items-center underline',
-        })}
-      >
-        {t('voice.backToList', { ns: 'nav' })}
-      </Link>
+    <div className={pageStyles({ width: 'wide', className: 'py-3 sm:py-8' })}>
+      <div className="flex items-start gap-3">
+        <Link
+          to="/voices"
+          className={typographyStyles({
+            variant: 'label',
+            className:
+              'text-link-fg hover:text-link-fg-hover inline-flex min-h-11 shrink-0 items-center underline',
+          })}
+        >
+          {t('voice.backToList', { ns: 'nav' })}
+        </Link>
+        {voice && !isPending && !profilePending && (
+          <RenameVoiceField ownerId={ownerId} voice={voice} className="min-w-0 flex-1">
+            <Typography variant="title" as="h1" className="min-w-0 break-words">
+              {voice.name}
+            </Typography>
+          </RenameVoiceField>
+        )}
+      </div>
       {isError ? (
         <Notice tone="danger" role="alert" className="mt-4">
           <span>{t('voiceLoadFailed', { ns: 'voices' })}</span>
@@ -84,26 +93,6 @@ export function VoiceLayout() {
         <Navigate to="/voices/$voiceId/materials" params={{ voiceId }} replace />
       ) : (
         <>
-          {/* The title row carries every lifecycle action of the voice (VOICE-54): the rename,
-              then 기본으로 설정 or 기본 해제 on a made voice, then 삭제 — a directory row is one
-              target that leads here, and this is the screen that shows what they act on. */}
-          <div className="mt-4 flex flex-wrap items-start gap-x-3 gap-y-2">
-            <RenameVoiceField ownerId={ownerId} voice={voice} className="min-w-0 flex-1">
-              <Typography
-                variant={pathname === learningPath ? 'title' : 'display'}
-                as="h1"
-                className="min-w-0 break-words"
-              >
-                {voice.name}
-              </Typography>
-            </RenameVoiceField>
-            {!voice.deleted && (
-              <div className="flex shrink-0 flex-wrap items-center gap-2">
-                <SetDefaultVoiceButton ownerId={ownerId} voice={voice} />
-                <DeleteVoiceButton ownerId={ownerId} voice={voice} />
-              </div>
-            )}
-          </div>
           {voice.deleted && (
             <Notice tone="warning" role="status" className="mt-4">
               <span className="w-full min-w-0">{t('deletedWarning', { ns: 'voices' })}</span>
@@ -124,8 +113,16 @@ export function VoiceLayout() {
                 params: { voiceId },
               }))}
               ariaLabel={t('voice.settings', { ns: 'nav' })}
-              className="mt-4"
+              className="mt-2 sm:mt-4"
             />
+          )}
+          <Outlet />
+          {/* Management and test actions remain named, after the current reading/learning task. */}
+          {!voice.deleted && (
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <SetDefaultVoiceButton ownerId={ownerId} voice={voice} />
+              <DeleteVoiceButton ownerId={ownerId} voice={voice} />
+            </div>
           )}
           {made && (
             <div className="mt-4 flex flex-wrap gap-2">
@@ -147,7 +144,6 @@ export function VoiceLayout() {
               </Link>
             </div>
           )}
-          <Outlet />
         </>
       )}
     </div>

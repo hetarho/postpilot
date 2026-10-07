@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { screen, waitFor, within } from '@testing-library/react'
+import { act, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { initializeI18n } from '@/app/providers/i18n'
 import { renderAppAt } from '@/test/app'
@@ -44,8 +44,12 @@ const ANALYSIS = {
 }
 
 const DEFAULT = '/voices/voice-default'
+const initialViewport = window.innerWidth
 
-afterEach(() => initializeI18n('ko'))
+afterEach(() => {
+  Object.defineProperty(window, 'innerWidth', { configurable: true, value: initialViewport })
+  initializeI18n('ko')
+})
 
 describe('the 말투 분석 tab', () => {
   // VOICE-63: counted habits in eight rows without a visible title, then
@@ -205,6 +209,39 @@ describe('the voice title row', () => {
     { id: 'voice-review', name: '리뷰' },
     { id: 'voice-new', name: '새 말투', made: false },
   ]
+
+  it('keeps the named return and rename near the content, with management and tests after it', async () => {
+    const user = userEvent.setup()
+    const calls: string[] = []
+    renderAppAt(DEFAULT, { user: { id: 'alice' }, calls, voice: { voices: VOICES } })
+    const title = await screen.findByRole('heading', { level: 1, name: '기본 말투' })
+    expect(screen.getByRole('link', { name: '← 말투 목록' })).toHaveAttribute('href', '/voices')
+    const content = screen.getByRole('region', { name: '분석 항목' })
+    const management = screen.getByRole('button', { name: '기본 해제' })
+    const tests = screen.getByRole('link', { name: '글쓰기 테스트' })
+    expect(title.compareDocumentPosition(content) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(
+      content.compareDocumentPosition(management) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+    expect(content.compareDocumentPosition(tests) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    const writes = calls.filter((call) => /^(SetDefault|Delete|Rename|Analyze)/.test(call))
+    await user.click(screen.getByRole('button', { name: '기본 말투 이름 바꾸기' }))
+    const input = screen.getByRole('textbox', { name: '말투 이름' }) as HTMLInputElement
+    await user.clear(input)
+    await user.type(input, '아직 저장하지 않은 이름')
+    input.setSelectionRange(3, 7)
+    for (const width of [320, 1440, 390]) {
+      await act(async () => {
+        Object.defineProperty(window, 'innerWidth', { configurable: true, value: width })
+        window.dispatchEvent(new Event('resize'))
+      })
+      expect(screen.getByRole('textbox', { name: '말투 이름' })).toBe(input)
+      expect(input).toHaveValue('아직 저장하지 않은 이름')
+      expect([input.selectionStart, input.selectionEnd]).toEqual([3, 7])
+      expect(input).toHaveFocus()
+    }
+    expect(calls.filter((call) => /^(SetDefault|Delete|Rename|Analyze)/.test(call))).toEqual(writes)
+  })
 
   it('makes a made voice the 기본 and clears it again', async () => {
     const user = userEvent.setup()

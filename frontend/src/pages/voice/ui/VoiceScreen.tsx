@@ -8,6 +8,7 @@ import {
   type VoiceProfile,
   useVoiceProfile,
   VoiceMaterialFreshness,
+  voiceMaterialFreshness,
 } from '@/entities/voice'
 import { Typography, typographyStyles } from '@/shared/ui'
 
@@ -58,9 +59,10 @@ export function VoiceScreen({
     )
   }
   const context = { profile, voice: profile.voice, ownerId, voiceId }
+  const hasFreshness = !['current', 'unmade'].includes(voiceMaterialFreshness(profile))
   return (
-    <main className="mt-6 pb-12">
-      <Typography variant="title">
+    <main className="mt-4 pb-4 sm:mt-6 sm:pb-12">
+      <Typography variant="title" className={profile.made ? 'sr-only sm:not-sr-only' : undefined}>
         {typeof title === 'function' ? title(context) : title}
       </Typography>
       {description && (
@@ -68,10 +70,14 @@ export function VoiceScreen({
           {description}
         </Typography>
       )}
-      <div className="mt-6">
-        <VoiceMaterialFreshness profile={profile} />
+      {hasFreshness && (
+        <div className="sm:mt-6">
+          <VoiceMaterialFreshness profile={profile} />
+        </div>
+      )}
+      <div className={hasFreshness || !profile.made ? 'mt-4 sm:mt-8' : 'sm:mt-8'}>
+        {children(context)}
       </div>
-      <div className="mt-8">{children(context)}</div>
     </main>
   )
 }

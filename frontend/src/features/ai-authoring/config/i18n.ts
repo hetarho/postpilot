@@ -11,6 +11,9 @@ export const i18n = {
     scopeRequired: '저장하기 전에 직접 편집에서 적용 범위를 선택해 주세요.',
     directViews: '편집과 미리 보기',
     directInput: '편집',
+    previewView: '미리 보기',
+    refiningViews: '다듬기와 미리 보기',
+    previousConversation: '이전 대화 보기 · {{count}}개',
     namedSetting: '{{kind}} · {{name}}',
     freshNamed: '“{{name}}” 새 대화 시작하기',
     freshHelp:
@@ -233,6 +236,9 @@ export const i18n = {
     scopeRequired: 'Choose an application scope through direct editing before saving.',
     directViews: 'Editing and preview',
     directInput: 'Edit',
+    previewView: 'Preview',
+    refiningViews: 'Refinement and preview',
+    previousConversation: 'Previous conversation · {{count}} exchanges',
     namedSetting: '{{kind}} · {{name}}',
     freshNamed: 'Start a fresh conversation for “{{name}}”',
     freshHelp:

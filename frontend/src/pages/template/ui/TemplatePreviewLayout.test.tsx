@@ -34,7 +34,7 @@ describe('live shared template preview', () => {
     await user.type(name, '보관할 이름')
     const tabs = screen.getByRole('tablist', { name: '편집과 미리 보기' })
     expect(tabs).toHaveClass('lg:hidden')
-    await user.click(within(tabs).getByRole('tab', { name: '이렇게 사용할 수 있어요' }))
+    await user.click(within(tabs).getByRole('tab', { name: '미리 보기' }))
     expect(name).toHaveValue('보관할 이름')
     expect(name.closest('form')).toHaveClass('hidden', 'lg:block')
     await user.click(within(tabs).getByRole('tab', { name: '편집' }))

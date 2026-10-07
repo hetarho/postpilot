@@ -20,6 +20,7 @@ import {
   Button,
   Checkbox,
   ChoiceButton,
+  Disclosure,
   SegmentedControl,
   Dialog,
   FieldMessage,
@@ -166,7 +167,7 @@ function ScopedEditor({
     send,
   ])
   const [directPane, setDirectPane] = useState<'input' | 'preview'>('input')
-  const templateKind = kind === 'post-template' || kind === 'video-template'
+  const [refiningPane, setRefiningPane] = useState<'input' | 'preview'>('input')
   const guidelineKind = kind === 'post-guideline' || kind === 'video-guideline'
   const id = useId()
   const heading = useRef<HTMLDivElement>(null)
@@ -327,12 +328,12 @@ function ScopedEditor({
     <section aria-labelledby={id + '-title'} className={'@container min-w-0 ' + (className ?? '')}>
       <div ref={heading}>
         {canGoBack && !onNavigationChange && (
-          <Button variant="ghost" className="mb-6" onClick={() => event('BACK')}>
+          <Button variant="ghost" className="mb-2 sm:mb-6" onClick={() => event('BACK')}>
             <ArrowLeft aria-hidden="true" className="size-4" />
             {t('back')}
           </Button>
         )}
-        <Typography variant="meta" className="text-content-secondary mb-3 block">
+        <Typography variant="meta" className="text-content-secondary mb-2 block sm:mb-3">
           {t('namedSetting', named)}
         </Typography>
         <Typography
@@ -349,7 +350,7 @@ function ScopedEditor({
               : t(`steps.${view}`)}
         </Typography>
         {view !== 'working' && view !== 'restoring' && view !== 'confirmed' && (
-          <Typography variant="body" className="text-content-secondary max-w-measure mt-3">
+          <Typography variant="body" className="text-content-secondary max-w-measure mt-2 sm:mt-3">
             {t(`stepHelp.${view}`)}
           </Typography>
         )}
@@ -547,23 +548,21 @@ function ScopedEditor({
         </div>
       )}
       {view === 'direct' && source && (
-        <div className="mt-8">
-          {templateKind && (
-            <SegmentedControl
-              value={directPane}
-              onChange={setDirectPane}
-              ariaLabel={t('directViews')}
-              options={[
-                { value: 'input', label: t('directInput') },
-                { value: 'preview', label: t('preview') },
-              ]}
-              className="mb-6 lg:hidden"
-            />
-          )}
+        <div className="mt-4 sm:mt-8">
+          <SegmentedControl
+            value={directPane}
+            onChange={setDirectPane}
+            ariaLabel={t('directViews')}
+            options={[
+              { value: 'input', label: t('directInput') },
+              { value: 'preview', label: t('previewView') },
+            ]}
+            className="mb-4 lg:hidden"
+          />
           <div className="grid gap-8 lg:grid-cols-2 lg:items-start lg:gap-12">
             <aside
               className={
-                templateKind && directPane === 'input'
+                directPane === 'input'
                   ? 'lg:top-chrome hidden lg:sticky lg:block'
                   : 'lg:top-chrome lg:sticky'
               }
@@ -571,9 +570,10 @@ function ScopedEditor({
               {preview}
             </aside>
             <form
+              onFocusCapture={() => setDirectPane('input')}
               className={
-                'min-w-0 space-y-6 ' +
-                (templateKind && directPane === 'preview' ? 'hidden lg:block' : '')
+                'min-w-0 space-y-4 sm:space-y-6 ' +
+                (directPane === 'preview' ? 'hidden lg:block' : '')
               }
               onSubmit={(e) => {
                 e.preventDefault()
@@ -655,111 +655,133 @@ function ScopedEditor({
         </div>
       )}
       {view === 'refining' && (selected || source) && (
-        <div className="mt-8 grid gap-8 @3xl:grid-cols-2 @3xl:items-start @3xl:gap-12">
-          {preview}
-          <div className="min-w-0">
-            <div className="mb-6 flex flex-wrap gap-4">
-              <Button variant="ghost" onClick={() => event('OPEN_DIRECT')}>
-                {t('directNamed', named)}
-              </Button>
-              <Button variant="ghost" onClick={() => event('FRESH')}>
-                {t('freshNamed', named)}
-              </Button>
-              {state.session?.savedBaseline && (
-                <Button variant="ghost" onClick={() => event('ASK_RESET')}>
-                  {t('resetNamed', named)}
-                </Button>
-              )}
-            </div>
-            <Typography variant="body" className="text-content-secondary mb-6">
-              {t('freshHelp', named)}
-            </Typography>
-            {state.session?.turns.length ? (
-              <ol aria-label={t('chat')} className="mb-6 space-y-6">
-                {state.session.turns.map((turn) => (
-                  <li key={turn.id} className="min-w-0 space-y-3">
-                    <Typography variant="body" className="break-words whitespace-pre-wrap">
-                      {turn.request}
-                    </Typography>
-                    {turn.status === 'done' && turn.reply && (
-                      <Typography
-                        variant="body"
-                        className="text-content-secondary break-words whitespace-pre-wrap"
-                      >
-                        {readableAuthoringProse(turn.reply) ? turn.reply : t('replyReady')}
-                      </Typography>
-                    )}
-                  </li>
-                ))}
-              </ol>
-            ) : null}
-            {historyFull ? (
-              <div className="space-y-6">
-                <Typography variant="body">{t('historyFull')}</Typography>
-                <Button
-                  variant="cta"
-                  onClick={() => event(selected ? 'FINISH_REFINEMENT' : 'OPEN_DIRECT')}
-                >
-                  {t(selected ? 'finishRefinement' : 'directNamed', named)}
-                </Button>
-              </div>
-            ) : (
-              <form
-                onSubmit={(submit) => {
-                  submit.preventDefault()
-                  event('REFINE')
-                }}
-              >
-                <Textarea
-                  aria-labelledby={id + '-title'}
-                  aria-describedby={flow.context.problem ? id + '-error' : undefined}
-                  aria-invalid={!!flow.context.problem}
-                  rows={4}
-                  autoGrow
-                  value={state.text}
-                  onChange={(change) =>
-                    send({ type: 'CHAT_CHANGED', scopeKey, text: change.target.value })
-                  }
-                  disabled={blocked || frozenPublication}
-                  placeholder={t(`refineExamples.${kind}`)}
-                  className="max-h-field"
-                />
-                {characters > 0 && (
-                  <Typography variant="meta" className="mt-3 block">
-                    {t('limit', { count: characters })}
-                  </Typography>
-                )}
-                {inputFeedback}
-                <Button
-                  variant="ghost"
-                  className="mt-3"
-                  disabled={blocked}
-                  onClick={() =>
-                    send({ type: 'CHAT_CHANGED', scopeKey, text: t(`refineExamples.${kind}`) })
-                  }
-                >
-                  {t('useExample')}
-                </Button>
-                {aiAvailability}
-                {hasFailure ? (
-                  retry
-                ) : ai === 'ready' ? (
-                  <Button type="submit" variant="cta" className="mt-8 w-full sm:w-auto">
-                    <SendHorizontal aria-hidden="true" className="size-4" />
-                    {t('send')}
-                  </Button>
-                ) : null}
-                <div className="mt-4">
+        <div className="mt-4 sm:mt-8">
+          <SegmentedControl
+            value={refiningPane}
+            onChange={setRefiningPane}
+            ariaLabel={t('refiningViews')}
+            options={[
+              { value: 'input', label: t('chat') },
+              { value: 'preview', label: t('previewView') },
+            ]}
+            className="mb-4 @3xl:hidden"
+          />
+          <div className="grid gap-8 @3xl:grid-cols-2 @3xl:items-start @3xl:gap-12">
+            <aside className={refiningPane === 'input' ? 'hidden @3xl:block' : ''}>{preview}</aside>
+            <div
+              onFocusCapture={() => setRefiningPane('input')}
+              className={'min-w-0 ' + (refiningPane === 'preview' ? 'hidden @3xl:block' : '')}
+            >
+              {historyFull ? (
+                <div className="space-y-6">
+                  <Typography variant="body">{t('historyFull')}</Typography>
                   <Button
-                    variant="ghost"
-                    disabled={blocked}
+                    variant="cta"
                     onClick={() => event(selected ? 'FINISH_REFINEMENT' : 'OPEN_DIRECT')}
                   >
                     {t(selected ? 'finishRefinement' : 'directNamed', named)}
                   </Button>
                 </div>
-              </form>
-            )}
+              ) : (
+                <form
+                  onSubmit={(submit) => {
+                    submit.preventDefault()
+                    event('REFINE')
+                  }}
+                >
+                  <Textarea
+                    aria-labelledby={id + '-title'}
+                    aria-describedby={flow.context.problem ? id + '-error' : undefined}
+                    aria-invalid={!!flow.context.problem}
+                    rows={4}
+                    autoGrow
+                    value={state.text}
+                    onChange={(change) =>
+                      send({ type: 'CHAT_CHANGED', scopeKey, text: change.target.value })
+                    }
+                    disabled={blocked || frozenPublication}
+                    placeholder={t(`refineExamples.${kind}`)}
+                    className="max-h-field"
+                  />
+                  {characters > 0 && (
+                    <Typography variant="meta" className="mt-3 block">
+                      {t('limit', { count: characters })}
+                    </Typography>
+                  )}
+                  {inputFeedback}
+                  <Button
+                    variant="ghost"
+                    className="mt-3"
+                    disabled={blocked}
+                    onClick={() =>
+                      send({ type: 'CHAT_CHANGED', scopeKey, text: t(`refineExamples.${kind}`) })
+                    }
+                  >
+                    {t('useExample')}
+                  </Button>
+                  {aiAvailability}
+                  {hasFailure ? (
+                    retry
+                  ) : ai === 'ready' ? (
+                    <Button type="submit" variant="cta" className="mt-4 w-full sm:mt-8 sm:w-auto">
+                      <SendHorizontal aria-hidden="true" className="size-4" />
+                      {t('send')}
+                    </Button>
+                  ) : null}
+                  <div className="mt-4">
+                    <Button
+                      variant="ghost"
+                      disabled={blocked}
+                      onClick={() => event(selected ? 'FINISH_REFINEMENT' : 'OPEN_DIRECT')}
+                    >
+                      {t(selected ? 'finishRefinement' : 'directNamed', named)}
+                    </Button>
+                  </div>
+                </form>
+              )}
+              {state.session?.turns.length ? (
+                <Disclosure
+                  title={t('previousConversation', { count: state.session.turns.length })}
+                  headingLevel={3}
+                  size="row"
+                  className="mt-4"
+                >
+                  <ol aria-label={t('chat')} className="mt-3 space-y-6">
+                    {state.session.turns.map((turn) => (
+                      <li key={turn.id} className="min-w-0 space-y-3">
+                        <Typography variant="body" className="break-words whitespace-pre-wrap">
+                          {turn.request}
+                        </Typography>
+                        {turn.status === 'done' && turn.reply && (
+                          <Typography
+                            variant="body"
+                            className="text-content-secondary break-words whitespace-pre-wrap"
+                          >
+                            {readableAuthoringProse(turn.reply) ? turn.reply : t('replyReady')}
+                          </Typography>
+                        )}
+                      </li>
+                    ))}
+                  </ol>
+                </Disclosure>
+              ) : null}
+              <div className="mt-4 flex flex-wrap gap-2 sm:mt-6 sm:gap-4">
+                <Button variant="ghost" onClick={() => event('OPEN_DIRECT')}>
+                  {t('directNamed', named)}
+                </Button>
+                <Button variant="ghost" onClick={() => event('FRESH')}>
+                  {t('freshNamed', named)}
+                </Button>
+                {state.session?.savedBaseline && (
+                  <Button variant="ghost" onClick={() => event('ASK_RESET')}>
+                    {t('resetNamed', named)}
+                  </Button>
+                )}
+              </div>
+              <Typography variant="body" className="text-content-secondary mt-3">
+                {t('freshHelp', named)}
+              </Typography>
+            </div>
           </div>
         </div>
       )}

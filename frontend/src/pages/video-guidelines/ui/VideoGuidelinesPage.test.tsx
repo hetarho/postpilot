@@ -111,7 +111,8 @@ describe('/video-guidelines', () => {
     const form = await openCreateSheet(user)
 
     // 전역 or 특정 영상 템플릿: a 영상 지침 has no 분야 (GUIDE-5).
-    expect(form.getAllByRole('tab').map((tab) => tab.textContent)).toEqual([
+    const scope = within(form.getByRole('tablist', { name: '적용 범위' }))
+    expect(scope.getAllByRole('tab').map((tab) => tab.textContent)).toEqual([
       '전역',
       '특정 영상 템플릿',
     ])
