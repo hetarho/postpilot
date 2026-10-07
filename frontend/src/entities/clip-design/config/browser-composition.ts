@@ -16,6 +16,10 @@ export const CLIP_BROWSER_COMPOSITION = {
     readiness.finalRender.fonts === 'bundled-clip-fonts-v1' &&
     readiness.finalRender.assets ===
       'clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3' &&
+    readiness.finalRender.wasmVersion === '2.6.2' &&
+    readiness.finalRender.wasmSHA256 ===
+      '22bf6e9f9a100d972da0411a69c5ba504367fc1fa87b3b64e3f35e53926d2d70' &&
+    readiness.distributionApproved &&
     readiness.finalRender.qualified &&
     readiness.finalRender.enabled &&
     readiness.finalRender.missingGates.length === 0,
