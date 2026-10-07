@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderAppAt } from '@/test/app'
+import { publishAuthoringDraft } from '@/test/authoring-ui'
 import type { FakeClipsOptions } from '@/test/clips'
 
 const template = {
@@ -50,25 +51,23 @@ describe('video template workflow', () => {
     const { router } = mount('/video-templates')
     const region = within(await screen.findByRole('region', { name: '저장된 영상 템플릿' }))
     await user.click(await region.findByRole('link', { name: /여행/ }))
-    await user.click(await screen.findByRole('button', { name: '직접 편집' }))
+    await user.click(await screen.findByRole('button', { name: /직접 편집하기$/ }))
     expect(await screen.findByLabelText('템플릿 이름')).toHaveValue('여행')
     expect(router.state.location.pathname).toBe('/video-templates/owned')
-    expect(
-      screen.getByRole('img', { name: '예시 영상의 안전 영역과 현재 문구 구성' }),
-    ).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: '구성 편집' })).toBeInTheDocument()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
   it('keeps edits after a localized server refusal', async () => {
     const user = userEvent.setup()
     mount('/video-templates/owned', { saveFails: true })
-    await user.click(await screen.findByRole('button', { name: '직접 편집' }))
+    await user.click(await screen.findByRole('button', { name: /직접 편집하기$/ }))
     const name = await screen.findByLabelText('템플릿 이름')
     await user.clear(name)
     await user.type(name, '실패해도 보존')
-    await user.click(screen.getByRole('button', { name: '저장' }))
+    await publishAuthoringDraft(user)
     expect(await screen.findByText('같은 이름의 영상 템플릿이 이미 있어요.')).toBeInTheDocument()
-    expect(name).toHaveValue('실패해도 보존')
+    expect(screen.queryByRole('button', { name: /변경사항 저장하기$/ })).not.toBeInTheDocument()
   })
   it.each(['unknown', 'foreign'])(
     'keeps %s indistinguishable from a missing template',

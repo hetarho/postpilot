@@ -422,6 +422,32 @@ func (s *Service) validTitle(value string) (string, error) {
 //
 // A clip guideline's templates are video templates, and it has no 분야 scope (GUIDE-5).
 func (s *Service) validScope(ctx context.Context, userID string, kind Kind, patch ScopePatch) (ScopePatch, error) {
+	valid, err := validScopeShape(kind, patch)
+	if err != nil {
+		return ScopePatch{}, err
+	}
+	if valid.Scope == ScopeTemplates {
+		names, err := s.directory(ctx, userID, kind)
+		if err != nil {
+			return ScopePatch{}, err
+		}
+		for _, id := range valid.TemplateIDs {
+			if _, ok := names[id]; !ok {
+				return ScopePatch{}, ErrTemplateNotFound
+			}
+		}
+	}
+	if valid.Scope == ScopeFields {
+		if err := s.knownFields(valid.Fields); err != nil {
+			return ScopePatch{}, err
+		}
+	}
+	return valid, nil
+}
+
+// validScopeShape normalizes a requested whole scope without reading ownership.
+// Directory membership remains part of validScope at canonical publication.
+func validScopeShape(kind Kind, patch ScopePatch) (ScopePatch, error) {
 	if !patch.Scope.Valid() || (kind == KindClip && patch.Scope == ScopeFields) {
 		return ScopePatch{}, ErrScopeShape
 	}
@@ -443,22 +469,10 @@ func (s *Service) validScope(ctx context.Context, userID string, kind Kind, patc
 		if len(fields) > 0 || len(templates) == 0 {
 			return ScopePatch{}, ErrScopeShape
 		}
-		names, err := s.directory(ctx, userID, kind)
-		if err != nil {
-			return ScopePatch{}, err
-		}
-		for _, id := range templates {
-			if _, ok := names[id]; !ok {
-				return ScopePatch{}, ErrTemplateNotFound
-			}
-		}
 		return ScopePatch{Scope: ScopeTemplates, TemplateIDs: templates}, nil
 	default: // ScopeFields: Valid admits no fourth kind.
 		if len(templates) > 0 || len(fields) == 0 {
 			return ScopePatch{}, ErrScopeShape
-		}
-		if err := s.knownFields(fields); err != nil {
-			return ScopePatch{}, err
 		}
 		return ScopePatch{Scope: ScopeFields, Fields: fields}, nil
 	}

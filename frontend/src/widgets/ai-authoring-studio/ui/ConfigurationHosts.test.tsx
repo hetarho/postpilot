@@ -9,12 +9,14 @@ describe('configuration authoring entrypoints', () => {
       route: '/templates/new',
       title: '새 템플릿',
       manual: true,
+      choice: 'AI와 템플릿 만들기',
       goal: '글을 어떤 순서로 풀어 쓰고 싶으세요?',
     },
     {
       route: '/video-templates/new',
       title: '새 영상 템플릿',
       manual: true,
+      choice: 'AI와 영상 템플릿 만들기',
       goal: '영상이 어떤 순서로 이어지면 좋을까요?',
     },
     {
@@ -49,12 +51,15 @@ describe('configuration authoring entrypoints', () => {
       const dialog = await screen.findByRole('dialog')
       expect(await within(dialog).findByRole('heading', { name: entry.goal })).toBeVisible()
     } else {
+      if (entry.choice) await user.click(await screen.findByRole('button', { name: entry.choice }))
       expect(await screen.findByRole('heading', { name: entry.goal })).toBeVisible()
-      expect(screen.getByRole('button', { name: '직접 편집' })).toBeEnabled()
+      expect(screen.queryByLabelText('템플릿 이름')).not.toBeInTheDocument()
       expect(screen.queryByLabelText('이름')).not.toBeInTheDocument()
       expect(screen.queryByLabelText('템플릿 이름')).not.toBeInTheDocument()
     }
-    await waitFor(() => expect(calls).toContain('GetLatestAuthoringSession'))
+    if (entry.route === '/voices')
+      await waitFor(() => expect(calls).toContain('GetLatestAuthoringSession'))
+    else await waitFor(() => expect(calls).toContain('ListAuthoringSummaries'))
     expect(
       calls.filter((name) => /^(Start|Generate|Analyze|Adopt|Create|SaveAuthoring)/.test(name)),
     ).toEqual([])

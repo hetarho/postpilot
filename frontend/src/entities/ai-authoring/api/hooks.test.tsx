@@ -12,6 +12,7 @@ import {
   useAuthoringSession,
   useAuthoringSummaries,
 } from './hooks'
+import { POLL_INTERVAL_MS } from '@/shared/config'
 import type { AuthoringScope } from '../model/types'
 
 afterEach(cleanup)
@@ -161,4 +162,40 @@ it('reads one paged owner/kind summary batch without reading any conversation, a
   })
   await waitFor(() => expect(foreign.result.current.isError).toBe(true))
   expect(foreign.result.current.data).toBeUndefined()
+})
+
+it('refreshes one summary batch while AI is active and stops after terminal state', async () => {
+  let reads = 0
+  const transport = createRouterTransport(({ rpc }) => {
+    rpc(Service.method.listAuthoringSummaries, () => {
+      reads++
+      return create(Service.method.listAuthoringSummaries.output, {
+        summaries: [
+          {
+            sessionId: 'background',
+            kind: ProtoConfigurationKind.POST_TEMPLATE,
+            targetId: 'owned',
+            revision: reads,
+            savedAvailable: true,
+            hasUnpublishedChanges: true,
+            activeJobId: reads === 1 ? 'active-job' : '',
+            updatedAt: '2026-10-07T01:00:00Z',
+          },
+        ],
+      })
+    })
+  })
+  const hook = renderHook(() => useAuthoringSummaries(scope), {
+    wrapper: withProviders(transport, createTestQueryClient()),
+  })
+  await waitFor(() => expect(hook.result.current.data?.[0].activeJobId).toBe('active-job'))
+  await waitFor(() => expect(hook.result.current.data?.[0].activeJobId).toBe(''), {
+    timeout: POLL_INTERVAL_MS * 3,
+  })
+  const settled = reads
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS + 100))
+  })
+  expect(reads).toBe(settled)
+  expect(reads).toBeGreaterThan(1)
 })

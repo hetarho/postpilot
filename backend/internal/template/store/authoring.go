@@ -95,6 +95,11 @@ func (s *Store) PublishAuthoring(ctx context.Context, user string, in template.A
 			}
 		}
 	}
+	if in.Numbers != nil {
+		if _, err := q.UpdateTemplateNumbers(ctx, sqlc.UpdateTemplateNumbersParams{ID: id, UserID: user, TargetLength: nullNumber(in.Numbers.TargetLength), TagCount: nullNumber(in.Numbers.TagCount), UpdatedAt: stamp}); err != nil {
+			return template.Template{}, err
+		}
+	}
 	if err := q.InsertAuthoringPublication(ctx, sqlc.InsertAuthoringPublicationParams{UserID: user, SessionID: in.Key.SessionID, Revision: int64(in.Key.Revision), PublicationKey: in.Key.Key, TargetID: id, CreatedAt: stamp}); err != nil {
 		return template.Template{}, fmt.Errorf("record template publication: %w", err)
 	}

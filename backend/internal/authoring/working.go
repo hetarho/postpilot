@@ -3,6 +3,8 @@ package authoring
 import (
 	"context"
 	"errors"
+	"slices"
+	"strconv"
 	"strings"
 	"unicode/utf8"
 )
@@ -37,6 +39,9 @@ func (s *Service) PatchDraft(ctx context.Context, in DraftMutation) (Session, er
 		return Session{}, ErrInvalid
 	}
 	a := in.WorkingSource
+	if err := validDirectMetadata(a); err != nil {
+		return Session{}, err
+	}
 	if !utf8.ValidString(a.Name+a.Description+a.Body+a.TitleArea) || utf8.RuneCountInString(a.Name+a.Description+a.Body+a.TitleArea) > MaxDocumentChars || utf8.RuneCountInString(a.Name) > 200 || utf8.RuneCountInString(a.Description) > 200 {
 		return Session{}, ErrInvalid
 	}
@@ -87,11 +92,70 @@ func (s *Service) ListSummaries(ctx context.Context, in SummaryQuery) ([]Summary
 	if !in.Kind.Valid() {
 		return nil, "", ErrInvalidKind
 	}
+	defer s.lock(in.UserID)()
 	store, err := s.drafts()
 	if err != nil {
 		return nil, "", err
 	}
-	return store.ListSummaries(ctx, in)
+	rows, next, err := store.ListSummaries(ctx, in)
+	if err != nil {
+		return nil, "", err
+	}
+	active := false
+	for i, row := range rows {
+		if row.ActiveJobID == "" {
+			continue
+		}
+		// Reconciliation reads only already-admitted work. It neither issues a
+		// provider request nor publishes a setting when a directory is opened.
+		state, err := s.get(ctx, in.UserID, row.SessionID)
+		if err != nil {
+			return nil, "", err
+		}
+		if in.PageToken != "" {
+			// Terminal reconciliation moves UpdatedAt ahead of the supplied cursor.
+			// Retain this page's selected identities and original next cursor while
+			// projecting the newly settled aggregate rather than filtering it away.
+			// Read the committed record for its actual persistence timestamp.
+			state, err = s.store.Get(ctx, in.UserID, row.SessionID)
+			if err != nil {
+				return nil, "", err
+			}
+			rows[i].Revision, rows[i].UpdatedAt = state.Revision, state.UpdatedAt
+			rows[i].SavedAvailable, rows[i].HasUnpublishedChanges = state.SavedAvailable, state.HasUnpublishedChanges
+			rows[i].ActiveJobID, rows[i].DraftState = state.ActiveJobID, state.DraftState
+			rows[i].PublicationPending = state.Phase == "saving"
+			rows[i].TargetConflict = state.FailureReason == "AUTHORING_SAVE_CONFLICT"
+			rows[i].LastPublication = state.Saved
+			rows[i].DisplayName = ""
+			if state.WorkingSource != nil && strings.TrimSpace(state.WorkingSource.Name) != "" {
+				rows[i].DisplayName = state.WorkingSource.Name
+			} else {
+				for _, a := range []*Artifact{state.SavedBaseline, state.Selected, state.WorkingSource} {
+					if a == nil {
+						continue
+					}
+					if strings.TrimSpace(a.Name) != "" {
+						rows[i].DisplayName = a.Name
+						break
+					}
+					summary := []rune(strings.Join(strings.Fields(a.Body), " "))
+					if len(summary) > DisplaySummaryMaxChars {
+						summary = summary[:DisplaySummaryMaxChars]
+					}
+					if len(summary) > 0 {
+						rows[i].DisplayName = string(summary)
+						break
+					}
+				}
+			}
+		}
+		active = true
+	}
+	if active && in.PageToken == "" {
+		return store.ListSummaries(ctx, in)
+	}
+	return rows, next, nil
 }
 func (s *Service) SelectWithKey(ctx context.Context, in ResetMutation, candidateID string) (Session, error) {
 	if in.OperationKey == "" {
@@ -185,6 +249,10 @@ var _ WorkingDrafts = (*Service)(nil)
 var _ TestCandidates = (*Service)(nil)
 
 func (s *Service) finalizePublication(ctx context.Context, user, id string, p Publication, ref SavedRef) (Session, error) {
+	ref.Outcome = "updated"
+	if p.TargetID == "" || p.Kind == WritingVoice {
+		ref.Outcome = "created"
+	}
 	if store, ok := s.store.(interface {
 		FinalizeSaveVersion(context.Context, string, string, string, SavedRef, string) (Session, error)
 	}); ok {
@@ -219,5 +287,65 @@ func samePublishedContent(kind Kind, a, b Artifact) bool {
 			return false
 		}
 	}
-	return kind != PostTemplate || strings.TrimSpace(a.TitleArea) == strings.TrimSpace(b.TitleArea)
+	if kind == PostTemplate {
+		if strings.TrimSpace(a.TitleArea) != strings.TrimSpace(b.TitleArea) {
+			return false
+		}
+		if b.TargetLength != nil && !sameOptionalNumber(a.TargetLength, b.TargetLength) || b.TagCount != nil && !sameOptionalNumber(a.TagCount, b.TagCount) {
+			return false
+		}
+	}
+	if (kind == PostGuideline || kind == VideoGuideline) && b.Scope != nil {
+		if !sameOptionalString(a.Scope, b.Scope) || !sameScopeIDs(a.TemplateIDs, b.TemplateIDs) || !sameScopeIDs(a.Fields, b.Fields) {
+			return false
+		}
+	}
+	return true
+}
+
+// Direct-only metadata is private working state. It cannot enlarge model input or cross kinds.
+func validDirectMetadata(a Artifact) error {
+	text := a.BuilderState
+	for _, p := range []*string{a.TargetLength, a.TagCount, a.Scope} {
+		if p != nil {
+			text += *p
+		}
+	}
+	for _, ids := range [][]string{a.TemplateIDs, a.Fields} {
+		for _, value := range ids {
+			text += value
+		}
+	}
+	if !utf8.ValidString(text) || utf8.RuneCountInString(text) > MaxDocumentChars {
+		return ErrInvalid
+	}
+	return nil
+}
+func sameOptionalString(a, b *string) bool {
+	return a == nil && b == nil || a != nil && b != nil && *a == *b
+}
+
+func sameScopeIDs(a, b []string) bool {
+	left, right := slices.Clone(a), slices.Clone(b)
+	for i := range left {
+		left[i] = strings.TrimSpace(left[i])
+	}
+	for i := range right {
+		right[i] = strings.TrimSpace(right[i])
+	}
+	slices.Sort(left)
+	slices.Sort(right)
+	return slices.Equal(slices.Compact(left), slices.Compact(right))
+}
+
+func sameOptionalNumber(a, b *string) bool {
+	if sameOptionalString(a, b) {
+		return true
+	}
+	if a == nil || b == nil || *a == "" || *b == "" {
+		return false
+	}
+	left, le := strconv.Atoi(*a)
+	right, re := strconv.Atoi(*b)
+	return le == nil && re == nil && left == right
 }

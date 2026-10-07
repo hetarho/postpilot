@@ -35,12 +35,18 @@ const (
 func (m Mode) Valid() bool { return m == Recommend || m == Refine }
 
 type Artifact struct {
-	Revision    uint32
-	ID          string
-	Name        string
-	Description string
-	Body        string
-	TitleArea   string
+	TargetLength *string
+	TagCount     *string
+	Scope        *string
+	TemplateIDs  []string
+	Fields       []string
+	BuilderState string
+	Revision     uint32
+	ID           string
+	Name         string
+	Description  string
+	Body         string
+	TitleArea    string
 }
 type Turn struct {
 	ID      string
@@ -50,9 +56,10 @@ type Turn struct {
 	Status  string
 }
 type SavedRef struct {
-	Kind Kind
-	ID   string
-	Name string
+	Outcome string
+	Kind    Kind
+	ID      string
+	Name    string
 }
 type Session struct {
 	WorkingSource           *Artifact
@@ -76,6 +83,7 @@ type Session struct {
 	FailureReason           string
 	PendingRequest          string
 	ForkVoice               bool
+	ReferencePost           string
 	SourceContext           string
 	Purpose                 string
 	WriteModel              string
@@ -85,6 +93,7 @@ type Session struct {
 	UpdatedAt               time.Time
 }
 type Seed struct {
+	WorkingSource *Artifact
 	Artifact      *Artifact
 	TargetVersion string
 	ForkVoice     bool

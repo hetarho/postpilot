@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"reflect"
 	"strings"
 	"time"
 
@@ -46,7 +47,10 @@ func sameContent(a, b *authoring.Artifact) bool {
 	if a == nil || b == nil {
 		return a == b
 	}
-	return a.Name == b.Name && a.Description == b.Description && a.Body == b.Body && a.TitleArea == b.TitleArea
+	left, right := *a, *b
+	left.ID, right.ID = "", ""
+	left.Revision, right.Revision = 0, 0
+	return reflect.DeepEqual(left, right)
 }
 func displayName(s authoring.Session) string {
 	if s.WorkingSource != nil && strings.TrimSpace(s.WorkingSource.Name) != "" {
@@ -284,7 +288,7 @@ func (s *Store) ListSummaries(ctx context.Context, in authoring.SummaryQuery) ([
 			return nil, "", err
 		}
 		if saved != nil {
-			summary.LastPublication = &authoring.SavedRef{Kind: authoring.Kind(saved.Kind), ID: saved.ID, Name: saved.Name}
+			summary.LastPublication = &authoring.SavedRef{Kind: authoring.Kind(saved.Kind), ID: saved.ID, Name: saved.Name, Outcome: saved.Outcome}
 		}
 		out = append(out, summary)
 	}

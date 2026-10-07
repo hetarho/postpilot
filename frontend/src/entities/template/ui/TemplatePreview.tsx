@@ -21,6 +21,8 @@ interface TemplatePreviewProps {
   titleArea: string
   body: string
   className?: string
+  lastValidTitleArea?: string
+  lastValidBody?: string
 }
 
 /** The post a template makes, drawn the way a post's reading view draws one, from placeholder
@@ -30,10 +32,16 @@ interface TemplatePreviewProps {
  *  syntax and neither generation number. While an area does not parse it keeps showing that
  *  area's last parsable state, with the failure noted, so a half-typed tag in 원문 does not make
  *  the post the author is shaping disappear. */
-export function TemplatePreview({ titleArea, body, className }: TemplatePreviewProps) {
+export function TemplatePreview({
+  titleArea,
+  body,
+  className,
+  lastValidTitleArea,
+  lastValidBody,
+}: TemplatePreviewProps) {
   const { t } = useTranslation('templates')
-  const title = useLastParsed(titleArea, true)
-  const nodes = useLastParsed(body, false)
+  const title = useLastParsed(titleArea, true, lastValidTitleArea)
+  const nodes = useLastParsed(body, false, lastValidBody)
   const whole = parseTemplate(titleArea, body, TEMPLATE_PARSE_OPTIONS)
   const failure = whole.ok ? null : whole.failure
   const empty = (title ?? []).length === 0 && !hasContent(nodes ?? [])
@@ -72,8 +80,12 @@ export function TemplatePreview({ titleArea, body, className }: TemplatePreviewP
 /** The last nodes an area parsed to, or null before it ever has. Kept as state updated while
  *  rendering — React's own pattern for a value derived from the previous render — so nothing
  *  outside this component has to remember it. */
-function useLastParsed(text: string, titleArea: boolean): TemplateNode[] | null {
-  const [last, setLast] = useState<{ text: string; nodes: TemplateNode[] } | null>(null)
+function useLastParsed(text: string, titleArea: boolean, fallback?: string): TemplateNode[] | null {
+  const [last, setLast] = useState<{ text: string; nodes: TemplateNode[] } | null>(() => {
+    if (fallback === undefined) return null
+    const parsed = parse(fallback, { ...TEMPLATE_PARSE_OPTIONS, titleArea })
+    return parsed.ok ? { text: fallback, nodes: parsed.nodes } : null
+  })
   const result = parse(text, { ...TEMPLATE_PARSE_OPTIONS, titleArea })
   if (result.ok && last?.text !== text) {
     setLast({ text, nodes: result.nodes })

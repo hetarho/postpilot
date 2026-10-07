@@ -84,6 +84,59 @@ it('saves an active model only after a model change, separately from comparison 
   expect(main.queryByRole('button', { name: '비교 시작' })).not.toBeInTheDocument()
 })
 
+it('offers named common test entries and optional A/B settings without changing active models or retained legacy extras', async () => {
+  const user = userEvent.setup()
+  const calls: string[] = []
+  renderAppAt('/ai-models', {
+    user: { id: 'alice' },
+    providers: {
+      calls,
+      models: [
+        { providerId: 'openrouter', modelId: 'a', label: 'Model A', vision: true },
+        { providerId: 'openrouter', modelId: 'b', label: 'Model B', vision: true },
+        { providerId: 'openrouter', modelId: 'legacy-c', label: 'Retained C', vision: true },
+      ],
+      comparisonPairs: [
+        {
+          stage: Stage.WRITE,
+          candidateA: { providerId: 'openrouter', modelId: 'a' },
+          candidateB: { providerId: 'openrouter', modelId: 'b' },
+          extraCandidates: [{ providerId: 'openrouter', modelId: 'legacy-c' }],
+        },
+      ],
+    },
+  })
+  const main = within(await screen.findByRole('main'))
+  for (const [name, stage] of [
+    ['글 작성 모델로 테스트하기', 'write'],
+    ['관찰 모델로 테스트하기', 'observe'],
+  ] as const) {
+    const link = main.getByRole('link', { name })
+    const url = new URL(link.getAttribute('href')!, 'https://postpilot.test')
+    expect(url.pathname).toBe('/tests')
+    expect(Object.fromEntries(url.searchParams)).toMatchObject({
+      factor: 'model',
+      stage,
+      count: '2',
+      entry: '/ai-models',
+    })
+  }
+  expect(main.getByRole('link', { name: '내 테스트 기록 보기' })).toHaveAttribute(
+    'href',
+    '/tests/history?entry=%2Fai-models',
+  )
+  expect(main.getAllByRole('combobox')).toHaveLength(3)
+  await user.click(main.getByRole('button', { name: '두 모델 테스트의 기본 후보 (선택)' }))
+  const pair = within(await main.findByRole('region', { name: '글 작성 두 모델 후보' }))
+  await waitFor(() =>
+    expect(pair.getByRole('combobox', { name: /^후보 A(?:\s|$)/ })).toHaveTextContent('Model A'),
+  )
+  expect(pair.getByRole('combobox', { name: /^후보 B(?:\s|$)/ })).toHaveTextContent('Model B')
+  expect(main.queryByRole('combobox', { name: '후보 C' })).toBeNull()
+  expect(main.queryByRole('link', { name: /리더보드/ })).toBeNull()
+  expect(calls.filter((name) => /^(Save|Start|Estimate|Adopt|Apply)/.test(name))).toEqual([])
+})
+
 // QUOTA-66, MODEL-27: the selected model's line says what it can hold, never a supplier price.
 it('describes a chosen model without any price', async () => {
   renderAppAt('/ai-models', {

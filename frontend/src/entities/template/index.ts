@@ -51,3 +51,8 @@ export {
 export { TemplateComposition } from './ui/TemplateComposition'
 export { TemplateSource } from './ui/TemplateSource'
 export { TemplatePreview } from './ui/TemplatePreview'
+export {
+  readCompositionWorkingState,
+  toWorkingBody,
+  type CompositionWorkingState,
+} from './model/blocks'

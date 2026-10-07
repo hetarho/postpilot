@@ -1,6 +1,7 @@
 export {
   useClipTemplates,
   useClipTemplateMutations,
+  useClipTemplateDesignMutation,
   clipTemplatesKey,
   toClipTemplate,
 } from './api/clip-template'

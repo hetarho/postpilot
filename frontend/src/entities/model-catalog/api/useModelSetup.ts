@@ -17,12 +17,15 @@ import {
   toComparisonPair,
 } from './catalog-mappers'
 
-export function useModelSetup() {
-  const pairs = useQuery(ProviderService.method.getComparisonPairs, {})
+export function useModelSetup(enabled = true) {
+  const pairs = useQuery(ProviderService.method.getComparisonPairs, {}, { enabled })
   return {
     pairs: pairs.data?.pairs.flatMap((pair) => toComparisonPair(pair) ?? []) ?? [],
     isPending: pairs.isPending,
     isError: pairs.isError,
+    refetch: () => {
+      void pairs.refetch()
+    },
   }
 }
 

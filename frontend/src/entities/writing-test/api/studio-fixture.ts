@@ -38,6 +38,12 @@ export function createWritingTestStudioFixture(
     readableTest?: boolean
     generationGate?: Promise<void>
     estimateFailure?: boolean
+    comparisonPairs?: Array<{
+      stage: Stage
+      candidateA: { providerId: string; modelId: string }
+      candidateB: { providerId: string; modelId: string }
+      extraCandidates?: Array<{ providerId: string; modelId: string }>
+    }>
   } = {},
 ) {
   const count = options.count ?? 2
@@ -122,6 +128,17 @@ export function createWritingTestStudioFixture(
         selections: [Stage.WRITE, Stage.OBSERVE].map((stage) => ({
           stage,
           ref: { providerId: 'openrouter', modelId: 'model-0' },
+        })),
+      })
+    })
+    rpc(ProviderService.method.getComparisonPairs, () => {
+      calls.push('GetComparisonPairs')
+      return create(ProviderService.method.getComparisonPairs.output, {
+        pairs: (options.comparisonPairs ?? []).map((pair) => ({
+          stage: pair.stage,
+          candidateA: { stage: pair.stage, ref: pair.candidateA },
+          candidateB: { stage: pair.stage, ref: pair.candidateB },
+          extraCandidates: pair.extraCandidates?.map((ref) => ({ stage: pair.stage, ref })),
         })),
       })
     })

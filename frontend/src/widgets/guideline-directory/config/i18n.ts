@@ -5,6 +5,19 @@ import type { I18nFragment } from '@/shared/lib'
 export const i18n = {
   namespace: 'guidelines',
   ko: {
+    authoringState: {
+      checking: '저장하지 않은 지침 작업을 확인하고 있어요.',
+      failed: '지침 편집 상태를 확인하지 못했어요. 저장된 지침은 계속 적용됩니다.',
+      active: '{{kind}} “{{name}}”의 AI 작업이 진행 중이에요.',
+      pending: '{{kind}} “{{name}}”의 저장 결과를 확인해야 해요.',
+      conflict: '{{kind}} “{{name}}”이 다른 곳에서 바뀌었어요. 편집 내용은 유지됩니다.',
+      unsavedHeading: '아직 저장하지 않은 새 지침',
+      unsaved: '저장하기 전에는 글이나 영상에 적용되지 않아요.',
+      createDirect: '새 지침 직접 쓰기',
+      createVideoDirect: '새 영상 지침 직접 쓰기',
+      savedAvailable: '저장되어 사용할 수 있어요',
+      lastPublication: '마지막으로 확인한 저장: {{result}}',
+    },
     page: {
       title: '지침',
       description:
@@ -31,6 +44,19 @@ export const i18n = {
     },
   },
   en: {
+    authoringState: {
+      checking: 'Checking unpublished guideline work.',
+      failed: 'Could not check guideline editing status. Saved guidelines still apply.',
+      active: 'AI is working on {{kind}} “{{name}}”.',
+      pending: 'Confirm the save result for {{kind}} “{{name}}”.',
+      conflict: '{{kind}} “{{name}}” changed elsewhere. Your editing is retained.',
+      unsavedHeading: 'New guidelines not yet saved',
+      unsaved: 'These do not apply to posts or videos until saved.',
+      createDirect: 'Write a new guideline directly',
+      createVideoDirect: 'Write a new video guideline directly',
+      savedAvailable: 'Saved and available',
+      lastPublication: 'Last confirmed save: {{result}}',
+    },
     page: {
       title: 'Guidelines',
       description:

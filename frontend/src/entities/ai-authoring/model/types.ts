@@ -26,6 +26,12 @@ export const AUTHORING_CANDIDATE_COUNTS = [2, 4, 8, 16] as const
 export type AuthoringCandidateCount = (typeof AUTHORING_CANDIDATE_COUNTS)[number]
 export type AuthoringDraftState = 'valid' | 'incomplete' | 'invalid'
 export interface AuthoringArtifact {
+  targetLength?: string
+  tagCount?: string
+  scope?: string
+  templateIds?: string[]
+  fields?: string[]
+  builderState?: string
   revision?: number
   id: string
   name: string
@@ -41,6 +47,7 @@ export interface AuthoringTurn {
   status: string
 }
 export interface AuthoringSavedRef {
+  outcome?: 'created' | 'updated'
   kind: AuthoringKind
   id: string
   name: string
@@ -83,6 +90,8 @@ export interface AuthoringStart {
   prompt: string
   writeModel: AuthoringModelRef
 }
+export const AUTHORING_REFERENCE_POST_MAX_CHARS = 12000
+export const AUTHORING_BUILDER_STATE_MAX_CHARS = 40000
 export const AUTHORING_NAME_SUMMARY_MAX_CHARS = 80
 export const AUTHORING_SUGGESTION_COUNT = 8
 export const AUTHORING_MESSAGE_MAX_CHARS = 2000

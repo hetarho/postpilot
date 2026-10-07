@@ -12,6 +12,7 @@ import {
   parseClipTemplate,
   recipeOf,
   useClipTemplateMutations,
+  useClipTemplateDesignMutation,
   validateClipRecipe,
   type ClipComposition,
   type ClipRecipe,
@@ -47,9 +48,13 @@ function authoredRecipe(stored?: ClipTemplate): ClipRecipe {
 export function ClipTemplateEditor({
   ownerId,
   stored,
+  designOnly = false,
+  onClose,
 }: {
   ownerId: string
   stored?: ClipTemplate
+  designOnly?: boolean
+  onClose?: () => void
 }) {
   const { t } = useTranslation('clips')
   const navigate = useNavigate()
@@ -59,10 +64,13 @@ export function ClipTemplateEditor({
   )
   const [mode, setMode] = useState<'builder' | 'source'>('builder')
   const [saved, setSaved] = useState(false)
+  const [closing, setClosing] = useState(false)
   const [copyStatus, setCopyStatus] = useState('')
   const [guide, setGuide] = useState<string | null>(null)
   const sourceField = useRef<HTMLTextAreaElement>(null)
-  const { save: saveMutation } = useClipTemplateMutations(ownerId)
+  const { save: recipeMutation } = useClipTemplateMutations(ownerId)
+  const designMutation = useClipTemplateDesignMutation(ownerId)
+  const saveMutation = designOnly ? designMutation : recipeMutation
   const capabilities = useClipCapabilities(ownerId)
   const submitting = useRef(false),
     leaving = useRef(false)
@@ -91,7 +99,10 @@ export function ClipTemplateEditor({
     if (!dirty || !errors.valid || pending || submitting.current) return
     submitting.current = true
     try {
-      const result = await saveMutation.mutateAsync({ id: stored?.id, recipe: draft })
+      const result =
+        designOnly && stored
+          ? await designMutation.mutateAsync({ id: stored.id, recipe: draft })
+          : await recipeMutation.mutateAsync({ id: stored?.id, recipe: draft })
       const next = authoredRecipe(result)
       setDraft(next)
       setBaseline(JSON.stringify(normalizeRecipe(next)))
@@ -128,6 +139,19 @@ export function ClipTemplateEditor({
   }
   return (
     <>
+      {onClose && (
+        <Button
+          variant="ghost"
+          disabled={pending}
+          className="mt-4 self-start"
+          onClick={() => {
+            if (dirty) setClosing(true)
+            else onClose()
+          }}
+        >
+          {t('editor.closeDesign', { name: stored?.name ?? t('editor.create') })}
+        </Button>
+      )}
       <div role="status" aria-live="polite" className="mt-4">
         <Typography variant="meta">{saved ? t('editor.saved') : copyStatus}</Typography>
       </div>
@@ -140,21 +164,23 @@ export function ClipTemplateEditor({
         }}
       >
         <fieldset disabled={pending} className="min-w-0 space-y-6">
-          <div>
-            <FieldLabel htmlFor="clip-template-name">{t('editor.name')}</FieldLabel>
-            <TextField
-              id="clip-template-name"
-              value={draft.name}
-              autoComplete="off"
-              onChange={(e) => change({ name: e.target.value })}
-              aria-invalid={!!errors.name}
-            />
-            {errors.name && (
-              <FieldMessage>
-                {t(`validation.${errors.name}`, { max: CLIP_TEMPLATE_LIMITS.name })}
-              </FieldMessage>
-            )}
-          </div>
+          {!designOnly && (
+            <div>
+              <FieldLabel htmlFor="clip-template-name">{t('editor.name')}</FieldLabel>
+              <TextField
+                id="clip-template-name"
+                value={draft.name}
+                autoComplete="off"
+                onChange={(e) => change({ name: e.target.value })}
+                aria-invalid={!!errors.name}
+              />
+              {errors.name && (
+                <FieldMessage>
+                  {t(`validation.${errors.name}`, { max: CLIP_TEMPLATE_LIMITS.name })}
+                </FieldMessage>
+              )}
+            </div>
+          )}
           {capabilities.data &&
             (capabilities.data.compositionVersion !== 1 ||
               capabilities.data.compositionPlanVersion < 5) && (
@@ -163,66 +189,70 @@ export function ClipTemplateEditor({
               </Typography>
             )}
           <>
-            <SegmentedControl
-              value={mode}
-              onChange={setMode}
-              ariaLabel={t('composition.mode')}
-              controls="clip-composition-panel"
-              options={[
-                { value: 'builder', label: t('composition.builder') },
-                { value: 'source', label: t('composition.source') },
-              ]}
-            />
-            <div className="flex flex-wrap gap-2">
-              <Button variant="ghost" onClick={() => void copy(false)}>
-                {t('composition.copySource')}
-              </Button>
-              <Button variant="ghost" onClick={() => void copy(true)}>
-                {t('composition.copyGuide')}
-              </Button>
-            </div>
-            {problem && (
-              <div>
-                <FieldMessage>
-                  {t('composition.invalid', {
-                    line: problem.line,
-                    element: problem.elementId || 'clip',
-                  })}{' '}
-                  {t(`composition.errors.${problem.reason}`, {
-                    element: problem.elementId,
-                    defaultValue: t('composition.repairSource'),
-                  })}
-                </FieldMessage>
-              </div>
-            )}
-            <div
-              id="clip-composition-panel"
-              role="tabpanel"
-              aria-label={t(mode === 'source' ? 'composition.source' : 'composition.builder')}
-              className="min-w-0"
-            >
-              {mode === 'source' ? (
-                <>
-                  <FieldLabel htmlFor="clip-composition-source">
-                    {t('composition.source')}
-                  </FieldLabel>
-                  <Textarea
-                    ref={sourceField}
-                    id="clip-composition-source"
-                    value={body}
-                    onChange={(e) => change({ compositionBody: e.target.value })}
-                    rows={16}
-                    spellCheck={false}
-                    aria-invalid={!!problem}
-                  />
-                </>
-              ) : (
-                <CompositionBuilder
-                  source={body}
-                  onChange={(compositionBody) => change({ compositionBody })}
+            {!designOnly && (
+              <>
+                <SegmentedControl
+                  value={mode}
+                  onChange={setMode}
+                  ariaLabel={t('composition.mode')}
+                  controls="clip-composition-panel"
+                  options={[
+                    { value: 'builder', label: t('composition.builder') },
+                    { value: 'source', label: t('composition.source') },
+                  ]}
                 />
-              )}
-            </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button variant="ghost" onClick={() => void copy(false)}>
+                    {t('composition.copySource')}
+                  </Button>
+                  <Button variant="ghost" onClick={() => void copy(true)}>
+                    {t('composition.copyGuide')}
+                  </Button>
+                </div>
+                {problem && (
+                  <div>
+                    <FieldMessage>
+                      {t('composition.invalid', {
+                        line: problem.line,
+                        element: problem.elementId || 'clip',
+                      })}{' '}
+                      {t(`composition.errors.${problem.reason}`, {
+                        element: problem.elementId,
+                        defaultValue: t('composition.repairSource'),
+                      })}
+                    </FieldMessage>
+                  </div>
+                )}
+                <div
+                  id="clip-composition-panel"
+                  role="tabpanel"
+                  aria-label={t(mode === 'source' ? 'composition.source' : 'composition.builder')}
+                  className="min-w-0"
+                >
+                  {mode === 'source' ? (
+                    <>
+                      <FieldLabel htmlFor="clip-composition-source">
+                        {t('composition.source')}
+                      </FieldLabel>
+                      <Textarea
+                        ref={sourceField}
+                        id="clip-composition-source"
+                        value={body}
+                        onChange={(e) => change({ compositionBody: e.target.value })}
+                        rows={16}
+                        spellCheck={false}
+                        aria-invalid={!!problem}
+                      />
+                    </>
+                  ) : (
+                    <CompositionBuilder
+                      source={body}
+                      onChange={(compositionBody) => change({ compositionBody })}
+                    />
+                  )}
+                </div>
+              </>
+            )}
             {document && (
               <CompositionPreview
                 document={document}
@@ -283,6 +313,18 @@ export function ClipTemplateEditor({
         confirmLabel={t('editor.leave')}
         onClose={() => blocker.reset?.()}
         onConfirm={() => blocker.proceed?.()}
+      >
+        {t('editor.leaveBody')}
+      </Dialog>
+      <Dialog
+        open={closing}
+        title={t('editor.leaveTitle')}
+        confirmLabel={t('editor.leave')}
+        onClose={() => setClosing(false)}
+        onConfirm={() => {
+          leaving.current = true
+          onClose?.()
+        }}
       >
         {t('editor.leaveBody')}
       </Dialog>

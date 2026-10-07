@@ -29,22 +29,36 @@ SELECT * FROM configuration_authoring_mutations WHERE user_id=? AND operation_ke
 -- name: InsertAuthoringMutation :exec
 INSERT INTO configuration_authoring_mutations(user_id,session_id,operation_key,action,expected_revision,fingerprint,response,created_at) VALUES(?,?,?,?,?,?,?,?);
 -- name: ListAuthoringSummaries :many
+-- A fresh saved baseline must not conceal an existing meaningful private session.
+-- Within that work class, preserve the newest current work; unsaved creations keep
+-- their independent identities and ordinary summary pagination/order.
+WITH candidates AS (
+ SELECT c.*,
+ CAST(CASE WHEN c.kind<>'writing_voice' AND c.target_id='' THEN COALESCE(json_extract(c.snapshot,'$.saved.id'),'') ELSE c.target_id END AS TEXT) AS summary_target_id,
+ CASE WHEN c.has_unpublished_changes=1 OR c.publication_pending=1 OR c.target_conflict=1
+  OR COALESCE(json_extract(c.snapshot,'$.active_job_id'),'')<>''
+  OR COALESCE(json_extract(c.snapshot,'$.active_request_id'),'')<>''
+  OR COALESCE(json_extract(c.snapshot,'$.pending_request'),'')<>''
+  OR (c.phase<>'saved' AND COALESCE(json_array_length(c.snapshot,'$.candidates'),0)>0)
+ THEN 1 ELSE 0 END AS meaningful_work
+ FROM configuration_authoring_sessions AS c
+ WHERE c.user_id=sqlc.arg(user_id) AND c.kind=sqlc.arg(kind)
+), ranked AS (
+ SELECT c.*,ROW_NUMBER() OVER (
+  PARTITION BY c.summary_target_id,CASE WHEN c.summary_target_id='' THEN c.id ELSE '' END
+  ORDER BY c.meaningful_work DESC,c.updated_at DESC,c.id DESC
+ ) AS target_position
+ FROM candidates AS c
+)
 SELECT c.id,c.kind,
-CAST(CASE WHEN c.kind<>'writing_voice' AND c.target_id='' THEN COALESCE(json_extract(c.snapshot,'$.saved.id'),'') ELSE c.target_id END AS TEXT) AS target_id,
+CAST(c.summary_target_id AS TEXT) AS target_id,
 c.revision,c.saved_available,c.has_unpublished_changes,
 CAST(COALESCE(json_extract(c.snapshot,'$.active_job_id'),'') AS TEXT) AS active_job_id,
 c.publication_pending,c.target_conflict,c.display_name,c.draft_state,c.updated_at,
 CAST(COALESCE(json_extract(c.snapshot,'$.saved'),'null') AS TEXT) AS last_publication
-FROM configuration_authoring_sessions AS c
-WHERE c.user_id=sqlc.arg(user_id) AND c.kind=sqlc.arg(kind)
+FROM ranked AS c
+WHERE c.target_position=1
 AND (CAST(sqlc.arg(unsaved_only) AS INTEGER)=0 OR (c.target_id='' AND c.saved_available=0))
-AND (CAST(CASE WHEN c.kind<>'writing_voice' AND c.target_id='' THEN COALESCE(json_extract(c.snapshot,'$.saved.id'),'') ELSE c.target_id END AS TEXT)='' OR NOT EXISTS (
- SELECT 1 FROM configuration_authoring_sessions AS newer
- WHERE newer.user_id=c.user_id AND newer.kind=c.kind
- AND CAST(CASE WHEN newer.kind<>'writing_voice' AND newer.target_id='' THEN COALESCE(json_extract(newer.snapshot,'$.saved.id'),'') ELSE newer.target_id END AS TEXT)
- = CAST(CASE WHEN c.kind<>'writing_voice' AND c.target_id='' THEN COALESCE(json_extract(c.snapshot,'$.saved.id'),'') ELSE c.target_id END AS TEXT)
- AND (newer.updated_at>c.updated_at OR (newer.updated_at=c.updated_at AND newer.id>c.id))
-))
 AND (CAST(sqlc.arg(cursor_time) AS TEXT)='' OR c.updated_at<sqlc.arg(cursor_time) OR (c.updated_at=sqlc.arg(cursor_time) AND c.id<sqlc.arg(cursor_id)))
 ORDER BY c.updated_at DESC,c.id DESC LIMIT sqlc.arg(page_limit);
 -- name: ConfirmAuthoringSaveMutations :exec

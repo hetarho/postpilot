@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"reflect"
 	"testing"
 	"time"
 
@@ -76,7 +77,8 @@ func (d *domainTargets) Publish(ctx context.Context, p authoring.Publication) (a
 		id, name = value.ID, value.Name
 	} else {
 		var value guideline.Guideline
-		value, err = d.guides.Publish(ctx, p.UserID, guideline.AuthoringPublication{Key: guideline.AuthoringKey{Key: p.Key, SessionID: p.SessionID, Revision: p.Revision}, Kind: guideKind(p.Kind), TargetID: p.TargetID, TargetVersion: p.TargetVersion, Draft: guideline.AuthoringDraft{Name: p.Artifact.Name, Body: p.Artifact.Body}})
+		scope := &guideline.ScopePatch{Scope: guideline.ScopeGlobal}
+		value, err = d.guides.Publish(ctx, p.UserID, guideline.AuthoringPublication{Scope: scope, Key: guideline.AuthoringKey{Key: p.Key, SessionID: p.SessionID, Revision: p.Revision}, Kind: guideKind(p.Kind), TargetID: p.TargetID, TargetVersion: p.TargetVersion, Draft: guideline.AuthoringDraft{Name: p.Artifact.Name, Body: p.Artifact.Body}})
 		id, name = value.ID, value.Title
 	}
 	if errors.Is(err, clip.ErrAuthoringConflict) || errors.Is(err, guideline.ErrAuthoringConflict) {
@@ -186,7 +188,7 @@ func TestRealDomainPublicationRefreshesOnlyItsOwnVersionAndContinuesAfterConflic
 				}
 				p := *reopened.Publication
 				continued := patch(t, h, reopened, "continue-conflict", body)
-				if continued.Phase != "editing" || continued.Publication == nil || *continued.Publication != p || continued.Saved == nil || *continued.Saved != *saved.Saved {
+				if continued.Phase != "editing" || continued.Publication == nil || !reflect.DeepEqual(*continued.Publication, p) || continued.Saved == nil || *continued.Saved != *saved.Saved {
 					t.Fatal("continuation lost current work or publication receipts")
 				}
 				if _, err = h.svc.SaveWithKey(ctx, save, false); !errors.Is(err, authoring.ErrTargetConflict) {
@@ -197,7 +199,7 @@ func TestRealDomainPublicationRefreshesOnlyItsOwnVersionAndContinuesAfterConflic
 					t.Fatal("receipt replay rewound continued editing")
 				}
 				final, _ := domains.Seed(ctx, "alice", kind, ref.ID)
-				if *final.Artifact != *seed.Artifact || final.TargetVersion != seed.TargetVersion {
+				if !reflect.DeepEqual(*final.Artifact, *seed.Artifact) || final.TargetVersion != seed.TargetVersion {
 					t.Fatal("conflict recovery changed the external edit")
 				}
 			})
@@ -262,7 +264,7 @@ func TestNewPublishedSettingRecoversContinuationByTargetWithoutChangingReceipts(
 				t.Fatal("published-id recovery crossed owners", err)
 			}
 			replay, err := h.svc.SaveWithKey(ctx, save, false)
-			if err != nil || *replay.Publication != published || replay.TargetID != "" || replay.Saved.ID != saved.Saved.ID {
+			if err != nil || !reflect.DeepEqual(*replay.Publication, published) || replay.TargetID != "" || replay.Saved.ID != saved.Saved.ID {
 				t.Fatal("creation receipt changed after target-based recovery", err)
 			}
 			current, _ := h.svc.Get(ctx, "alice", saved.ID)

@@ -182,13 +182,21 @@ func (AuthoringDraftState) EnumDescriptor() ([]byte, []int) {
 }
 
 type AuthoringArtifact struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Description   string                 `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
-	Body          string                 `protobuf:"bytes,4,opt,name=body,proto3" json:"body,omitempty"`
-	TitleArea     string                 `protobuf:"bytes,5,opt,name=title_area,json=titleArea,proto3" json:"title_area,omitempty"`
-	Revision      uint32                 `protobuf:"varint,6,opt,name=revision,proto3" json:"revision,omitempty"`
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	Id          string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name        string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Description string                 `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
+	Body        string                 `protobuf:"bytes,4,opt,name=body,proto3" json:"body,omitempty"`
+	TitleArea   string                 `protobuf:"bytes,5,opt,name=title_area,json=titleArea,proto3" json:"title_area,omitempty"`
+	Revision    uint32                 `protobuf:"varint,6,opt,name=revision,proto3" json:"revision,omitempty"`
+	// Direct owner input only. Empty numbers select domain defaults; absence preserves legacy values.
+	TargetLength *string  `protobuf:"bytes,7,opt,name=target_length,json=targetLength,proto3,oneof" json:"target_length,omitempty"`
+	TagCount     *string  `protobuf:"bytes,8,opt,name=tag_count,json=tagCount,proto3,oneof" json:"tag_count,omitempty"`
+	Scope        *string  `protobuf:"bytes,9,opt,name=scope,proto3,oneof" json:"scope,omitempty"`
+	TemplateIds  []string `protobuf:"bytes,10,rep,name=template_ids,json=templateIds,proto3" json:"template_ids,omitempty"`
+	Fields       []string `protobuf:"bytes,11,rep,name=fields,proto3" json:"fields,omitempty"`
+	// Private editor continuity only; excluded from model prompts and target publication.
+	BuilderState  string `protobuf:"bytes,12,opt,name=builder_state,json=builderState,proto3" json:"builder_state,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -263,6 +271,48 @@ func (x *AuthoringArtifact) GetRevision() uint32 {
 		return x.Revision
 	}
 	return 0
+}
+
+func (x *AuthoringArtifact) GetTargetLength() string {
+	if x != nil && x.TargetLength != nil {
+		return *x.TargetLength
+	}
+	return ""
+}
+
+func (x *AuthoringArtifact) GetTagCount() string {
+	if x != nil && x.TagCount != nil {
+		return *x.TagCount
+	}
+	return ""
+}
+
+func (x *AuthoringArtifact) GetScope() string {
+	if x != nil && x.Scope != nil {
+		return *x.Scope
+	}
+	return ""
+}
+
+func (x *AuthoringArtifact) GetTemplateIds() []string {
+	if x != nil {
+		return x.TemplateIds
+	}
+	return nil
+}
+
+func (x *AuthoringArtifact) GetFields() []string {
+	if x != nil {
+		return x.Fields
+	}
+	return nil
+}
+
+func (x *AuthoringArtifact) GetBuilderState() string {
+	if x != nil {
+		return x.BuilderState
+	}
+	return ""
 }
 
 type AuthoringTurn struct {
@@ -342,10 +392,12 @@ func (x *AuthoringTurn) GetStatus() string {
 }
 
 type AuthoringSavedRef struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Kind          ConfigurationKind      `protobuf:"varint,1,opt,name=kind,proto3,enum=postpilot.v1.ConfigurationKind" json:"kind,omitempty"`
-	Id            string                 `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty"`
-	Name          string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Confirmed target-domain publication outcome; empty means unavailable historical metadata.
+	Outcome       string            `protobuf:"bytes,4,opt,name=outcome,proto3" json:"outcome,omitempty"`
+	Kind          ConfigurationKind `protobuf:"varint,1,opt,name=kind,proto3,enum=postpilot.v1.ConfigurationKind" json:"kind,omitempty"`
+	Id            string            `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty"`
+	Name          string            `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -378,6 +430,13 @@ func (x *AuthoringSavedRef) ProtoReflect() protoreflect.Message {
 // Deprecated: Use AuthoringSavedRef.ProtoReflect.Descriptor instead.
 func (*AuthoringSavedRef) Descriptor() ([]byte, []int) {
 	return file_postpilot_v1_configuration_authoring_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *AuthoringSavedRef) GetOutcome() string {
+	if x != nil {
+		return x.Outcome
+	}
+	return ""
 }
 
 func (x *AuthoringSavedRef) GetKind() ConfigurationKind {
@@ -590,10 +649,12 @@ func (x *AuthoringSession) GetSavedAvailable() bool {
 }
 
 type CreateAuthoringSessionRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Kind          ConfigurationKind      `protobuf:"varint,1,opt,name=kind,proto3,enum=postpilot.v1.ConfigurationKind" json:"kind,omitempty"`
-	TargetId      string                 `protobuf:"bytes,2,opt,name=target_id,json=targetId,proto3" json:"target_id,omitempty"`
-	RequestId     string                 `protobuf:"bytes,3,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	Kind      ConfigurationKind      `protobuf:"varint,1,opt,name=kind,proto3,enum=postpilot.v1.ConfigurationKind" json:"kind,omitempty"`
+	TargetId  string                 `protobuf:"bytes,2,opt,name=target_id,json=targetId,proto3" json:"target_id,omitempty"`
+	RequestId string                 `protobuf:"bytes,3,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	// Explicit owner-supplied template form reference, at most 12000 Unicode characters.
+	ReferencePost string `protobuf:"bytes,4,opt,name=reference_post,json=referencePost,proto3" json:"reference_post,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -645,6 +706,13 @@ func (x *CreateAuthoringSessionRequest) GetTargetId() string {
 func (x *CreateAuthoringSessionRequest) GetRequestId() string {
 	if x != nil {
 		return x.RequestId
+	}
+	return ""
+}
+
+func (x *CreateAuthoringSessionRequest) GetReferencePost() string {
+	if x != nil {
+		return x.ReferencePost
 	}
 	return ""
 }
@@ -1704,7 +1772,7 @@ var File_postpilot_v1_configuration_authoring_proto protoreflect.FileDescriptor
 
 const file_postpilot_v1_configuration_authoring_proto_rawDesc = "" +
 	"\n" +
-	"*postpilot/v1/configuration_authoring.proto\x12\fpostpilot.v1\x1a\x1bpostpilot/v1/provider.proto\"\xa8\x01\n" +
+	"*postpilot/v1/configuration_authoring.proto\x12\fpostpilot.v1\x1a\x1bpostpilot/v1/provider.proto\"\x99\x03\n" +
 	"\x11AuthoringArtifact\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12 \n" +
@@ -1712,14 +1780,26 @@ const file_postpilot_v1_configuration_authoring_proto_rawDesc = "" +
 	"\x04body\x18\x04 \x01(\tR\x04body\x12\x1d\n" +
 	"\n" +
 	"title_area\x18\x05 \x01(\tR\ttitleArea\x12\x1a\n" +
-	"\brevision\x18\x06 \x01(\rR\brevision\"~\n" +
+	"\brevision\x18\x06 \x01(\rR\brevision\x12(\n" +
+	"\rtarget_length\x18\a \x01(\tH\x00R\ftargetLength\x88\x01\x01\x12 \n" +
+	"\ttag_count\x18\b \x01(\tH\x01R\btagCount\x88\x01\x01\x12\x19\n" +
+	"\x05scope\x18\t \x01(\tH\x02R\x05scope\x88\x01\x01\x12!\n" +
+	"\ftemplate_ids\x18\n" +
+	" \x03(\tR\vtemplateIds\x12\x16\n" +
+	"\x06fields\x18\v \x03(\tR\x06fields\x12#\n" +
+	"\rbuilder_state\x18\f \x01(\tR\fbuilderStateB\x10\n" +
+	"\x0e_target_lengthB\f\n" +
+	"\n" +
+	"_tag_countB\b\n" +
+	"\x06_scope\"~\n" +
 	"\rAuthoringTurn\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x18\n" +
 	"\arequest\x18\x02 \x01(\tR\arequest\x12\x14\n" +
 	"\x05reply\x18\x03 \x01(\tR\x05reply\x12\x15\n" +
 	"\x06job_id\x18\x04 \x01(\tR\x05jobId\x12\x16\n" +
-	"\x06status\x18\x05 \x01(\tR\x06status\"l\n" +
-	"\x11AuthoringSavedRef\x123\n" +
+	"\x06status\x18\x05 \x01(\tR\x06status\"\x86\x01\n" +
+	"\x11AuthoringSavedRef\x12\x18\n" +
+	"\aoutcome\x18\x04 \x01(\tR\aoutcome\x123\n" +
 	"\x04kind\x18\x01 \x01(\x0e2\x1f.postpilot.v1.ConfigurationKindR\x04kind\x12\x0e\n" +
 	"\x02id\x18\x02 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x03 \x01(\tR\x04name\"\x87\a\n" +
@@ -1746,12 +1826,13 @@ const file_postpilot_v1_configuration_authoring_proto_rawDesc = "" +
 	"\x0esaved_baseline\x18\x10 \x01(\v2\x1f.postpilot.v1.AuthoringArtifactR\rsavedBaseline\x126\n" +
 	"\x17has_unpublished_changes\x18\x11 \x01(\bR\x15hasUnpublishedChanges\x12'\n" +
 	"\x0fcandidate_count\x18\x12 \x01(\x05R\x0ecandidateCount\x12'\n" +
-	"\x0fsaved_available\x18\x13 \x01(\bR\x0esavedAvailable\"\x90\x01\n" +
+	"\x0fsaved_available\x18\x13 \x01(\bR\x0esavedAvailable\"\xb7\x01\n" +
 	"\x1dCreateAuthoringSessionRequest\x123\n" +
 	"\x04kind\x18\x01 \x01(\x0e2\x1f.postpilot.v1.ConfigurationKindR\x04kind\x12\x1b\n" +
 	"\ttarget_id\x18\x02 \x01(\tR\btargetId\x12\x1d\n" +
 	"\n" +
-	"request_id\x18\x03 \x01(\tR\trequestId\";\n" +
+	"request_id\x18\x03 \x01(\tR\trequestId\x12%\n" +
+	"\x0ereference_post\x18\x04 \x01(\tR\rreferencePost\";\n" +
 	"\x1aGetAuthoringSessionRequest\x12\x1d\n" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\"t\n" +
@@ -1979,6 +2060,7 @@ func file_postpilot_v1_configuration_authoring_proto_init() {
 		return
 	}
 	file_postpilot_v1_provider_proto_init()
+	file_postpilot_v1_configuration_authoring_proto_msgTypes[0].OneofWrappers = []any{}
 	file_postpilot_v1_configuration_authoring_proto_msgTypes[9].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{

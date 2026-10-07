@@ -73,7 +73,6 @@
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
 | T627 | Prepare frozen single-factor inputs and one complete post per test entrant | ARCH GEN MODEL TMPL GUIDE LANG VIDEO QUOTA | T622 T625 T626 T630 | todo |
 | T628 | Run private binary tournaments with exact metering and explicit winner publication | ARCH MODEL QUOTA GEN LANG | T622 T624 T625 T626 T627 T630 | todo |
-| T630 | Show named setting states and integrate direct AI editing and real-writing tests | ARCH EDIT THEME TMPL GUIDE MODEL | T622 T625 | todo |
 | T631 | Complete UX wiring and qualify creation settings and sixteen-entry tests | ARCH THEME POST CLIP EDIT VOICE MODEL QUOTA | T622 T623 T624 T625 T626 T627 T628 T629 T630 | todo |
 | T633 | Preserve template material roles and declared stock-rule stages | ARCH TMPL GUIDE GEN | T632 T631 | todo |
 | T634 | Align post stage contracts and grounded maximum-tag behavior | ARCH GEN GUIDE POST LANG | T633 | todo |
@@ -91,14 +90,19 @@
 | T646 | Qualify origin-aware writing inspection and clean publication handoff | ARCH GEN POST MODEL THEME EXPORT MKT LANG | T636 T637 T639 T641 T642 T643 T644 T645 T631 | todo |
 
 ## next
-- T635 is dependency-ready after T632 but overlaps claimed T630 authoring request assembly; resume after T630 commits. Editorial follow-up: doc-review ARCH.
-- T632 contracts are complete; runtime origin production, storage and request capture remain assigned to their dependent tasks.
-- T603/T604 real semantic/hardware/release qualification stays blocked; no renderer, analysis, voice or distribution activation is authorized by this merge.
+- T627 is dependency-ready; continue one verified main commit per task through T646.
+- Editorial follow-up: doc-review ARCH; preserve blocked independent media/voice qualification.
 
 ## log
+- 261007 T630 done on main: named durable setting editing, private reference/metadata continuity, terminal paginated summaries and atomic domain receipts; full FE4077, owning Go/wiring, builds/lint/codegen and real viewport checks pass
+- 261007 T630 final freshness: committed T647 supplies THEME30 routing delta; named setting policies50/53/60 remain unchanged, T630 base refreshed and current route consumers verified
+- 261007 local API diagnostic: frontend2564 responds but API7678 health resets; Docker Desktop engine _ping times out without bytes and compose startup/status/log reads hang; GetMe502 propagates through the existing root error boundary, with no routing code change
 - 261007 T647 done on main: sibling destinations, canonical retained test records and validated named returns; full FE4108/4109 plus corrected owning11, lint/build and Chromium14 contexts/112 geometry checks pass; preserve unrelated T630 edits
+- 261007 T630 resume on main after8da67a15: external T632 is committed; exclusive sequential implementation continues through T646 with per-task verification and commits
 - 261007 T632 done on main: additive semantic origins and safe request projections; shared38 fixtures, FE223 and owning Go suites/build/type/codegen pass; T635 waits for overlapping claimed T630 request assembly
+- 261007 T630 freshness: EDIT4/THEME29/TMPL25/GUIDE17/MODEL35 add origin/prompt/tag work assigned to T632-T645; referenced setting policies remain unchanged, bases refreshed
 - 261007 T632 start on main: additive semantic-origin and safe inspection contracts; independent of claimed T630 settings/publication work; preserve unrelated edits and commit only this task before selecting another
+- 261007 T630 start on main: named settings, shared durable AI/direct editing, domain publication and atomic model adoption; sequential task completion and commits resume
 - 261007 final frontend correction: deterministic polling/notification clock from mount replaces the mixed real/fake timer fixture; queued and running history/picker feeds automatically refresh, retain terminal failures and stop requests; owning usePostList/usePosts/useJob11 tests, CI-mode4, ESLint/format and TypeScript build pass, with no production source change
 - 261007 remote backend verification at6a944d1f: full Go tests, format, vet, build and deployment recovery checks pass — https://github.com/hetarho/postpilot/actions/runs/37603125798/job/112732066963
 - 261007 remote deployment at6a944d1f: build and actual rollout/health/browser-CORS/R2-GET steps all pass, none skipped — https://github.com/hetarho/postpilot/actions/runs/37603126041
@@ -110,9 +114,3 @@
 - 261007 post-push frontend verification: full suite3992/4004 passed; the12 breadcrumb selector failures are corrected and owning suites pass (Admin26, Templates7); ESLint, format, FSD, style, retirement and production build pass; backend/media verification continues
 - 261007 post-push corrections: preserve normalized voice test factor and safe filtered paid-history return; canonical consumers64, Admin catalog26, parser10 and migration compatibility11 cases pass; full FE/BE/media verification remains active
 - 261007 main pushed normally through5edb107a after user requested push-first ordering; origin/local synchronized, deployment workflow success observed, initial CI FE/BE test failures retained for reproduction and correction
-- 261007 main merge corrections complete: published browser148/wait149 preserved, local creation/writing schemas moved to150/151 with recognized legacy-schema reconciliation; full verification deferred until after push by user request
-- 261007 user push-order override: stop pre-push tests, finish critical merge corrections and push first; run remaining verification afterward, preserving known failed legacy consumer checks for correction
-- 261007 main merge reconciled: both UX and browser-media contributions retained, completed T590-T602 archived, T603/T604 remain blocked; resolve overlapping unpublished migration numbers before push
-- 261007 main synchronization start: merge published origin/main browser-media history with local completed UX history, preserve both commit graphs and stopped task scope, run final-candidate pre-push checks before ordinary push
-- 261007 T626 done on main: editable private sources and accepted snapshots, explicit estimated reanalysis, exact binary style batches and safe publication; owning/consumer tests, builds, codegen and lint checks pass; stopped as requested without starting another task
-- 261007 user scope limited to current T626: finish implementation, verification and main commit, then stop without starting a next task

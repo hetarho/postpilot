@@ -53,3 +53,8 @@ func (a *Authoring) Publish(ctx context.Context, user string, in clip.AuthoringP
 	in.Recipe = recipe
 	return a.store.PublishAuthoringTemplate(ctx, user, in, newID(), a.service.now())
 }
+
+// NewDraft supplies an empty outline, with no generated entries or stored template.
+func (a *Authoring) NewDraft() clip.Recipe {
+	return clip.Recipe{CompositionBody: `<clip version="1"/>`}
+}

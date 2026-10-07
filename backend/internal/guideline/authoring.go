@@ -21,6 +21,8 @@ type AuthoringPublication struct {
 	Kind                    Kind
 	TargetID, TargetVersion string
 	Draft                   AuthoringDraft
+	// Nil retains the saved scope. A present scope is an explicit owner choice.
+	Scope *ScopePatch
 }
 type AuthoringStore interface {
 	CountAuthoringTargets(context.Context, string, Kind) (int, error)
@@ -38,14 +40,18 @@ func NewAuthoring(service *Service, store AuthoringStore) *Authoring {
 	return &Authoring{service: service, store: store}
 }
 func (a *Authoring) Seed(ctx context.Context, user string, kind Kind, id string) (AuthoringDraft, string, error) {
+	draft, _, version, err := a.SeedWithScope(ctx, user, kind, id)
+	return draft, version, err
+}
+func (a *Authoring) SeedWithScope(ctx context.Context, user string, kind Kind, id string) (AuthoringDraft, ScopePatch, string, error) {
 	current, err := a.service.store.Get(ctx, user, id)
 	if err != nil {
-		return AuthoringDraft{}, "", err
+		return AuthoringDraft{}, ScopePatch{}, "", err
 	}
 	if current.Kind != kind {
-		return AuthoringDraft{}, "", ErrNotFound
+		return AuthoringDraft{}, ScopePatch{}, "", ErrNotFound
 	}
-	return AuthoringDraft{Name: current.Title, Body: current.Text}, AuthoringVersion(current), nil
+	return AuthoringDraft{Name: current.Title, Body: current.Text}, ScopePatch{Scope: current.Scope, TemplateIDs: current.TemplateIDs, Fields: current.Fields}, AuthoringVersion(current), nil
 }
 func (a *Authoring) CanStart(ctx context.Context, user string, kind Kind, id string) error {
 	if !kind.Valid() {
@@ -75,22 +81,42 @@ func (a *Authoring) Validate(draft AuthoringDraft) (AuthoringDraft, error) {
 	}
 	return AuthoringDraft{Name: name, Body: body}, nil
 }
+
+// ValidateScopeShape checks direct input without reading any account data. Publish
+// also checks every normalized link against the owning account's directory.
+func (a *Authoring) ValidateScopeShape(kind Kind, patch ScopePatch) error {
+	if !kind.Valid() {
+		return ErrScopeShape
+	}
+	_, err := validScopeShape(kind, patch)
+	return err
+}
 func (a *Authoring) Guide(kind Kind) string {
 	topic := "글"
 	if kind == KindClip {
 		topic = "영상"
 	}
-	return fmt.Sprintf("%s 작성의 방향을알려주는쉬운지침입니다. name은알아보기쉬운제목(%d자이하),body는구체적인작성지침(%d자이하)으로작성하세요. 템플릿XML/JSON/구조나말투의학습자료를만들지마세요. 기본지침을고치지마세요. 기존지침의종류,적용범위,템플릿및분야연결을바꾸지마세요. 새지침은명시적저장시전역범위로저장됩니다.", topic, a.service.limits.TitleMaxChars, a.service.limits.TextMaxChars)
+	return fmt.Sprintf("%s 작성의 방향을알려주는쉬운지침입니다. name은알아보기쉬운제목(%d자이하),body는구체적인작성지침(%d자이하)으로작성하세요. 템플릿XML/JSON/구조나말투의학습자료를만들지마세요. 기본지침을고치지마세요. 기존지침의종류,적용범위,템플릿및분야연결을바꾸지마세요. 적용범위는사용자가명시적으로선택해저장합니다.", topic, a.service.limits.TitleMaxChars, a.service.limits.TextMaxChars)
 }
 func (a *Authoring) Publish(ctx context.Context, user string, in AuthoringPublication) (Guideline, error) {
 	if !in.Kind.Valid() {
 		return Guideline{}, ErrNotFound
+	}
+	if in.TargetID == "" && in.Scope == nil {
+		return Guideline{}, ErrScopeShape
 	}
 	draft, err := a.Validate(in.Draft)
 	if err != nil {
 		return Guideline{}, err
 	}
 	in.Draft = draft
+	if in.Scope != nil {
+		scope, err := a.service.validScope(ctx, user, in.Kind, *in.Scope)
+		if err != nil {
+			return Guideline{}, err
+		}
+		in.Scope = &scope
+	}
 	return a.store.PublishAuthoring(ctx, user, in, a.service.newID(), a.service.now(), a.service.limits.MaxPerAccount)
 }
 func AuthoringVersion(g Guideline) string {

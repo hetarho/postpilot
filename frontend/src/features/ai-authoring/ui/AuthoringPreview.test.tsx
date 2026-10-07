@@ -33,6 +33,66 @@ it('shows actual video stages and plain caption entries without interactive spec
   expect(screen.queryByRole('slider')).toBeNull()
   expect(screen.queryByRole('combobox')).toBeNull()
 })
+it('opens restored unfinished video source with its valid selection and keeps the latest valid direct preview', () => {
+  const previous = artifact(CLIP_COMPOSITION_EXAMPLE)
+  const changed = CLIP_COMPOSITION_EXAMPLE.replace('가게 앞', '산책 입구').replace(
+    '간판과 외관',
+    '입구 풍경',
+  )
+  const { rerender, container } = render(
+    <AuthoringPreview
+      kind="video-template"
+      artifact={artifact('<clip version="1"><stage')}
+      fallbackArtifact={previous}
+    />,
+  )
+  expect(screen.getByText('가게 앞')).toBeInTheDocument()
+  expect(screen.getByText('간판과 외관')).toBeInTheDocument()
+  rerender(
+    <AuthoringPreview
+      kind="video-template"
+      artifact={artifact(changed)}
+      fallbackArtifact={previous}
+    />,
+  )
+  expect(screen.getByText('산책 입구')).toBeInTheDocument()
+  expect(screen.getByText('입구 풍경')).toBeInTheDocument()
+  expect(screen.queryByText('가게 앞')).toBeNull()
+  rerender(
+    <AuthoringPreview
+      kind="video-template"
+      artifact={artifact('<clip>unfinished latest')}
+      fallbackArtifact={previous}
+    />,
+  )
+  expect(screen.getByText('산책 입구')).toBeInTheDocument()
+  expect(screen.getByText('입구 풍경')).toBeInTheDocument()
+  expect(screen.queryByText('가게 앞')).toBeNull()
+  expect(container).not.toHaveTextContent('<clip>')
+  expect(container).not.toHaveTextContent('unfinished latest')
+})
+it('retains a valid video preview while newly typed source becomes invalid without a saved fallback', () => {
+  const { rerender } = render(
+    <AuthoringPreview kind="video-template" artifact={artifact(CLIP_COMPOSITION_EXAMPLE)} />,
+  )
+  rerender(<AuthoringPreview kind="video-template" artifact={artifact('<clip version="1">')} />)
+  expect(screen.getByText('가게 앞')).toBeInTheDocument()
+  expect(screen.getByText('첫 한 입의 인상')).toBeInTheDocument()
+})
+it('shows an unavailable preview when current and fallback video source are both invalid', () => {
+  const { container } = render(
+    <AuthoringPreview
+      kind="video-template"
+      artifact={artifact('<clip>unfinished')}
+      fallbackArtifact={artifact('<clip>also unfinished')}
+    />,
+  )
+  expect(
+    screen.getByText('읽을 수 있는 초안을 준비하지 못했어요. 이전 제안으로 다시 준비해 주세요.'),
+  ).toBeInTheDocument()
+  expect(screen.queryByRole('list')).toBeNull()
+  expect(container).not.toHaveTextContent('<clip>')
+})
 it.each(['post-guideline', 'video-guideline', 'writing-voice'] satisfies AuthoringKind[])(
   'keeps %s readable and refuses unexpected compiled payloads',
   (kind) => {
@@ -48,3 +108,33 @@ it.each(['post-guideline', 'video-guideline', 'writing-voice'] satisfies Authori
     expect(container).not.toHaveTextContent('hidden')
   },
 )
+
+it('opens restored invalid template input with its last valid preview and updates that preview on valid direct changes', () => {
+  const last = artifact('확인한 본문')
+  last.titleArea = '확인한 제목'
+  const { rerender } = render(
+    <AuthoringPreview
+      kind="post-template"
+      artifact={{ ...artifact('<write>unfinished'), titleArea: '<write>unfinished title' }}
+      fallbackArtifact={last}
+    />,
+  )
+  expect(screen.getByText('확인한 본문')).toBeInTheDocument()
+  expect(screen.getByRole('heading', { name: '확인한 제목' })).toBeInTheDocument()
+  rerender(
+    <AuthoringPreview
+      kind="post-template"
+      artifact={artifact('직접 수정한 본문')}
+      fallbackArtifact={last}
+    />,
+  )
+  expect(screen.getByText('직접 수정한 본문')).toBeInTheDocument()
+  rerender(
+    <AuthoringPreview
+      kind="post-template"
+      artifact={artifact('<write>still unfinished')}
+      fallbackArtifact={last}
+    />,
+  )
+  expect(screen.getByText('직접 수정한 본문')).toBeInTheDocument()
+})

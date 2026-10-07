@@ -379,6 +379,10 @@ func (s *Store) Reconcile(ctx context.Context, user, opID, status, reason string
 				state.Candidates = append([]authoring.Artifact(nil), result.Candidates...)
 				for i := range state.Candidates {
 					state.Candidates[i].Revision = state.Revision
+					if source := state.WorkingSource; source != nil {
+						state.Candidates[i].TargetLength, state.Candidates[i].TagCount, state.Candidates[i].Scope = source.TargetLength, source.TagCount, source.Scope
+						state.Candidates[i].TemplateIDs, state.Candidates[i].Fields = append([]string(nil), source.TemplateIDs...), append([]string(nil), source.Fields...)
+					}
 				}
 				state.Purpose = result.Purpose
 				state.Phase = "choosing"
@@ -387,6 +391,12 @@ func (s *Store) Reconcile(ctx context.Context, user, opID, status, reason string
 					return authoring.ErrOutput
 				}
 				a := *result.Selected
+				// The model owns content only. Retain explicit owner numbers and scope from the admitted source.
+				if source := state.WorkingSource; source != nil {
+					a.TargetLength, a.TagCount, a.Scope = source.TargetLength, source.TagCount, source.Scope
+					a.TemplateIDs, a.Fields = append([]string(nil), source.TemplateIDs...), append([]string(nil), source.Fields...)
+					a.BuilderState = source.BuilderState
+				}
 				a.Revision = state.Revision
 				state.Selected = &a
 				state.WorkingSource = &a

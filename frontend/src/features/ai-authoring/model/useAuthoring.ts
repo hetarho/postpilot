@@ -31,9 +31,11 @@ export function useAuthoring(
   scope: AuthoringScope,
   callbacks: { onSaved?: (ref: AuthoringSavedRef) => void; onBusyChange?: (busy: boolean) => void },
   initialSessionId = '',
+  referencePost = '',
+  startFromSaved = false,
 ) {
   const scopeKey = authoringScopeKey(scope)
-  const latest = useLatestAuthoringSession(scope, !initialSessionId)
+  const latest = useLatestAuthoringSession(scope, !initialSessionId && !startFromSaved)
   const api = useAuthoringAPI(scope)
   const callbackRef = useRef(callbacks)
   useEffect(() => {
@@ -64,7 +66,7 @@ export function useAuthoring(
           let command = input.command
           if (!command) throw new Error('Authoring confirmed command unavailable')
           if (!command.sessionId) {
-            session = await api.create(command.createRequestId)
+            session = await api.create(command.createRequestId, referencePost)
             // A confirmed create may finish after the view closes. Never continue its paid start.
             if (signal.aborted) throw new DOMException('Authoring view closed', 'AbortError')
             input.created(session)
@@ -75,7 +77,7 @@ export function useAuthoring(
         } else {
           const retry = input.retry
           if (!retry) throw new Error('Authoring explicit operation unavailable')
-          if (retry.type === 'edit') session = await api.create(retry.requestId)
+          if (retry.type === 'edit') session = await api.create(retry.requestId, referencePost)
           else if (retry.type === 'select')
             session = await api.select(
               retry.sessionId,
@@ -155,6 +157,10 @@ export function useAuthoring(
   const job = useJob(state.session?.activeJobId ?? '', [sessionQuery.queryKey])
   useEffect(() => {
     if (actorRef.getSnapshot().value !== 'checking') return
+    if (startFromSaved && !initialSessionId) {
+      if (scope.ownerId) send({ type: 'hydrate', scopeKey, session: null })
+      return
+    }
     if (restoreQuery.isError)
       send({
         type: 'failed',
@@ -165,6 +171,9 @@ export function useAuthoring(
     else if (restoreQuery.data !== undefined)
       send({ type: 'hydrate', scopeKey, session: restoreQuery.data })
   }, [
+    scope.ownerId,
+    startFromSaved,
+    initialSessionId,
     restoreQuery.data,
     restoreQuery.error,
     restoreQuery.isError,

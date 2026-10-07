@@ -16,6 +16,7 @@ import {
   authoringSessionBusy,
   type AuthoringScope,
   type AuthoringSession,
+  type AuthoringSummary,
   type AuthoringMode,
   type AuthoringModelRef,
   type AuthoringStart,
@@ -73,13 +74,14 @@ export function useAuthoringAPI(scope: AuthoringScope) {
       return session
     }
     return {
-      create: async (requestId: string) =>
+      create: async (requestId: string, referencePost = '') =>
         publish(
           (
             await client.createAuthoringSession({
               kind: authoringKindToProto(ownedScope.kind),
               targetId: ownedScope.targetId ?? '',
               requestId,
+              referencePost,
             })
           ).session,
         ),
@@ -235,7 +237,7 @@ export function useAuthoringSession(scope: AuthoringScope, id: string) {
 export function useAuthoringSummaries(scope: AuthoringScope, unsavedOnly = false) {
   const transport = useTransport()
   const client = useMemo(() => createClient(Service, transport), [transport])
-  return useQuery({
+  return useQuery<AuthoringSummary[]>({
     queryKey: [
       'authoring-summaries',
       scope.ownerId,
@@ -250,6 +252,10 @@ export function useAuthoringSummaries(scope: AuthoringScope, unsavedOnly = false
     enabled: !!scope.ownerId,
     retry: false,
     refetchOnWindowFocus: false,
+    refetchInterval: (query) =>
+      query.state.data?.some((summary) => summary.activeJobId || summary.publicationPending)
+        ? POLL_INTERVAL_MS
+        : false,
     queryFn: async ({ signal }) => {
       const summaries = []
       let pageToken = ''

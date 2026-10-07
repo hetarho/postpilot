@@ -37,6 +37,14 @@ message AuthoringArtifact {
   string body = 4;
   string title_area = 5;
   uint32 revision = 6;
+  // Direct owner input only. Empty numbers select domain defaults; absence preserves legacy values.
+  optional string target_length = 7;
+  optional string tag_count = 8;
+  optional string scope = 9;
+  repeated string template_ids = 10;
+  repeated string fields = 11;
+  // Private editor continuity only; excluded from model prompts and target publication.
+  string builder_state = 12;
 }
 message AuthoringTurn {
   string id = 1;
@@ -46,6 +54,8 @@ message AuthoringTurn {
   string status = 5;
 }
 message AuthoringSavedRef {
+  // Confirmed target-domain publication outcome; empty means unavailable historical metadata.
+  string outcome = 4;
   ConfigurationKind kind = 1;
   string id = 2;
   string name = 3;
@@ -75,6 +85,8 @@ message CreateAuthoringSessionRequest {
   ConfigurationKind kind = 1;
   string target_id = 2;
   string request_id = 3;
+  // Explicit owner-supplied template form reference, at most 12000 Unicode characters.
+  string reference_post = 4;
 }
 message GetAuthoringSessionRequest { string session_id = 1; }
 message GetLatestAuthoringSessionRequest {

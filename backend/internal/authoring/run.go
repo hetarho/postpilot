@@ -37,24 +37,45 @@ type historyWire struct {
 	Request string `json:"request"`
 	Reply   string `json:"reply"`
 }
+type directMetadataWire struct {
+	TargetLength *string  `json:"target_length,omitempty"`
+	TagCount     *string  `json:"tag_count,omitempty"`
+	Scope        *string  `json:"scope,omitempty"`
+	TemplateIDs  []string `json:"template_ids,omitempty"`
+	Fields       []string `json:"fields,omitempty"`
+}
+
+func metadataFor(a Artifact) *directMetadataWire {
+	return &directMetadataWire{a.TargetLength, a.TagCount, a.Scope, a.TemplateIDs, a.Fields}
+}
+func withMetadata(a Artifact, m *directMetadataWire) Artifact {
+	if m != nil {
+		a.TargetLength, a.TagCount, a.Scope = m.TargetLength, m.TagCount, m.Scope
+		a.TemplateIDs, a.Fields = m.TemplateIDs, m.Fields
+	}
+	return a
+}
+
 type operationInput struct {
-	TargetID         string        `json:"target_id"`
-	TargetVersion    string        `json:"target_version"`
-	CandidateCount   int           `json:"candidate_count"`
-	Version          int           `json:"version"`
-	SessionID        string        `json:"session_id"`
-	OperationID      string        `json:"operation_id"`
-	BaseRevision     uint32        `json:"base_revision"`
-	Kind             Kind          `json:"kind"`
-	Mode             Mode          `json:"mode"`
-	Guide            string        `json:"guide"`
-	Purpose          string        `json:"purpose"`
-	Prompt           string        `json:"prompt"`
-	SourceContext    string        `json:"source_context"`
-	Selected         *artifactWire `json:"selected,omitempty"`
-	History          []historyWire `json:"history"`
-	CompletionTokens int           `json:"completion_tokens"`
-	PromptTokens     int           `json:"prompt_tokens"`
+	Metadata         *directMetadataWire `json:"owner_fields,omitempty"`
+	ReferencePost    string              `json:"reference_post,omitempty"`
+	TargetID         string              `json:"target_id"`
+	TargetVersion    string              `json:"target_version"`
+	CandidateCount   int                 `json:"candidate_count"`
+	Version          int                 `json:"version"`
+	SessionID        string              `json:"session_id"`
+	OperationID      string              `json:"operation_id"`
+	BaseRevision     uint32              `json:"base_revision"`
+	Kind             Kind                `json:"kind"`
+	Mode             Mode                `json:"mode"`
+	Guide            string              `json:"guide"`
+	Purpose          string              `json:"purpose"`
+	Prompt           string              `json:"prompt"`
+	SourceContext    string              `json:"source_context"`
+	Selected         *artifactWire       `json:"selected,omitempty"`
+	History          []historyWire       `json:"history"`
+	CompletionTokens int                 `json:"completion_tokens"`
+	PromptTokens     int                 `json:"prompt_tokens"`
 }
 type operationOutput struct {
 	Version      int            `json:"version"`
@@ -74,10 +95,11 @@ const authoringSystem = `작성 설정을 만드는 비공개 초안 도우미�
 수정은 선택한 초안 전체를 다시 내되, 요청한 부분만 바꾸고 나머지는 유지하세요. reply는 어떤 부분을 바꿨는지 친절한 일반 문장으로 600자 이내에 설명하고 XML/JSON/공급자/구현 세부를 보여주지 마세요. 모델 출력에 id 필드는 없습니다. 답은 지정된 JSON 객체 하나만 반환하세요.`
 
 func (s *Service) freezeInput(state Session, op Operation, start Start, info llm.ModelInfo) (operationInput, error) {
-	in := operationInput{Version: 1, SessionID: state.ID, OperationID: op.ID, BaseRevision: state.Revision, Kind: state.Kind, Mode: start.Mode, CandidateCount: normalizedCount(start.RequestedCandidateCount), TargetID: state.TargetID, TargetVersion: state.TargetVersion, Guide: s.targets.Guide(state.Kind), Purpose: state.Purpose, Prompt: start.Prompt, SourceContext: state.SourceContext}
+	in := operationInput{Version: 1, SessionID: state.ID, OperationID: op.ID, BaseRevision: state.Revision, Kind: state.Kind, Mode: start.Mode, CandidateCount: normalizedCount(start.RequestedCandidateCount), TargetID: state.TargetID, TargetVersion: state.TargetVersion, Guide: s.targets.Guide(state.Kind), Purpose: state.Purpose, Prompt: start.Prompt, SourceContext: state.SourceContext, ReferencePost: state.ReferencePost}
 	chars := 0
 	if current := currentSource(state); current != nil {
 		a := artifactToWire(*current)
+		in.Metadata = metadataFor(*current)
 		in.Selected = &a
 		chars = utf8.RuneCountInString(a.Name + a.Description + a.Body + a.TitleArea)
 		if chars > MaxDocumentChars {
@@ -166,16 +188,17 @@ func modelMessage(in operationInput) string {
 		selected = &a
 	}
 	data := struct {
-		Count   int           `json:"candidate_count"`
-		Kind    Kind          `json:"kind"`
-		Mode    Mode          `json:"mode"`
-		Guide   string        `json:"guide"`
-		Purpose string        `json:"purpose"`
-		Request string        `json:"request"`
-		Source  string        `json:"source_style"`
-		Draft   *artifactWire `json:"draft,omitempty"`
-		History []historyWire `json:"recent_conversation"`
-	}{normalizedCount(in.CandidateCount), in.Kind, in.Mode, in.Guide, in.Purpose, in.Prompt, in.SourceContext, selected, in.History}
+		Count     int           `json:"candidate_count"`
+		Kind      Kind          `json:"kind"`
+		Mode      Mode          `json:"mode"`
+		Guide     string        `json:"guide"`
+		Purpose   string        `json:"purpose"`
+		Request   string        `json:"request"`
+		Source    string        `json:"source_style"`
+		Reference string        `json:"reference_post,omitempty"`
+		Draft     *artifactWire `json:"draft,omitempty"`
+		History   []historyWire `json:"recent_conversation"`
+	}{normalizedCount(in.CandidateCount), in.Kind, in.Mode, in.Guide, in.Purpose, in.Prompt, in.SourceContext, in.ReferencePost, selected, in.History}
 	var b bytes.Buffer
 	encoder := json.NewEncoder(&b)
 	encoder.SetEscapeHTML(false)
@@ -315,7 +338,7 @@ func (s *Service) parseResponse(in operationInput, text string) (operationOutput
 			names[a.Name] = true
 			bodies[a.Body] = true
 			a.ID = fmt.Sprintf("%s-%d", in.OperationID, i)
-			if e := s.validArtifact(in.Kind, artifactFromWire(a)); e != nil {
+			if e := s.validArtifact(in.Kind, withMetadata(artifactFromWire(a), in.Metadata)); e != nil {
 				return out, e
 			}
 			out.Candidates = append(out.Candidates, a)
@@ -336,7 +359,7 @@ func (s *Service) parseResponse(in operationInput, text string) (operationOutput
 		if !validReply(reply) {
 			return out, ErrOutput
 		}
-		if e := s.validArtifact(in.Kind, artifactFromWire(a)); e != nil {
+		if e := s.validArtifact(in.Kind, withMetadata(artifactFromWire(a), in.Metadata)); e != nil {
 			return out, e
 		}
 		out.Selected = &a
@@ -376,7 +399,7 @@ func (s *Service) readResult(kind Kind, op Operation, found Job) (OperationResul
 				return result, ErrOutput
 			}
 			seenNames[a.Name], seenBodies[a.Body] = true, true
-			artifact := artifactFromWire(a)
+			artifact := withMetadata(artifactFromWire(a), in.Metadata)
 			if e := s.validArtifact(kind, artifact); e != nil {
 				return result, e
 			}
@@ -386,7 +409,7 @@ func (s *Service) readResult(kind Kind, op Operation, found Job) (OperationResul
 		if out.Selected == nil || in.Selected == nil || out.Selected.ID != in.Selected.ID || len(out.Candidates) != 0 || !validReply(out.Reply) {
 			return result, ErrOutput
 		}
-		a := artifactFromWire(*out.Selected)
+		a := withMetadata(artifactFromWire(*out.Selected), in.Metadata)
 		if e := s.validArtifact(kind, a); e != nil {
 			return result, e
 		}

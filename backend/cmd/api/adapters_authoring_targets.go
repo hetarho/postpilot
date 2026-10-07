@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 	"unicode/utf8"
 
 	"github.com/postpilot/backend/internal/authoring"
@@ -30,6 +31,10 @@ func (a authoringTargets) Seed(ctx context.Context, user string, kind authoring.
 		return authoring.Seed{}, authoring.ErrInvalidKind
 	}
 	if id == "" {
+		if kind == authoring.VideoTemplate {
+			draft := a.videoTemplates.NewDraft()
+			return authoring.Seed{WorkingSource: &authoring.Artifact{Body: draft.CompositionBody}}, nil
+		}
 		return authoring.Seed{}, nil
 	}
 	var out authoring.Seed
@@ -37,16 +42,19 @@ func (a authoringTargets) Seed(ctx context.Context, user string, kind authoring.
 	switch kind {
 	case authoring.PostTemplate:
 		var value template.Draft
-		value, out.TargetVersion, err = a.postTemplates.Seed(ctx, user, id)
-		out.Artifact = &authoring.Artifact{ID: id, Name: value.Name, Description: value.Description, Body: value.Body, TitleArea: value.TitleArea}
+		var numbers template.Numbers
+		value, numbers, out.TargetVersion, err = a.postTemplates.SeedWithNumbers(ctx, user, id)
+		out.Artifact = &authoring.Artifact{ID: id, Name: value.Name, Description: value.Description, Body: value.Body, TitleArea: value.TitleArea, TargetLength: authoringNumberString(numbers.TargetLength), TagCount: authoringNumberString(numbers.TagCount)}
 	case authoring.VideoTemplate:
 		var value clip.Recipe
 		value, out.TargetVersion, err = a.videoTemplates.Seed(ctx, user, id)
 		out.Artifact = &authoring.Artifact{ID: id, Name: value.Name, Body: value.CompositionBody}
 	case authoring.PostGuideline, authoring.VideoGuideline:
 		var value guideline.AuthoringDraft
-		value, out.TargetVersion, err = a.guidelines.Seed(ctx, user, guidelineKind(kind), id)
-		out.Artifact = &authoring.Artifact{ID: id, Name: value.Name, Body: value.Body}
+		var scope guideline.ScopePatch
+		value, scope, out.TargetVersion, err = a.guidelines.SeedWithScope(ctx, user, guidelineKind(kind), id)
+		scopeName := string(scope.Scope)
+		out.Artifact = &authoring.Artifact{ID: id, Name: value.Name, Body: value.Body, Scope: &scopeName, TemplateIDs: scope.TemplateIDs, Fields: scope.Fields}
 	case authoring.WritingVoice:
 		var value voice.WritingStyleDraft
 		value, out.TargetVersion, out.SourceContext, err = a.voices.Seed(ctx, user, id)
@@ -81,13 +89,31 @@ func (a authoringTargets) Validate(kind authoring.Kind, value authoring.Artifact
 	if utf8.RuneCountInString(value.Description) > 200 || kind != authoring.PostTemplate && value.TitleArea != "" {
 		return authoring.ErrOutput
 	}
+	if kind != authoring.PostTemplate && (value.TargetLength != nil || value.TagCount != nil || value.BuilderState != "") {
+		return authoring.ErrOutput
+	}
+	if kind != authoring.PostGuideline && kind != authoring.VideoGuideline && (value.Scope != nil || len(value.TemplateIDs) > 0 || len(value.Fields) > 0) {
+		return authoring.ErrOutput
+	}
 	var err error
 	switch kind {
 	case authoring.PostTemplate:
+		numbers, e := authoringNumbers(value)
+		if e != nil {
+			return e
+		}
+		if numbers != nil {
+			if e = a.postTemplates.ValidateNumbers(*numbers); e != nil {
+				return e
+			}
+		}
 		_, err = a.postTemplates.Validate(template.Draft{Name: value.Name, Description: value.Description, Body: value.Body, TitleArea: value.TitleArea})
 	case authoring.VideoTemplate:
 		_, err = a.videoTemplates.Validate(clip.Recipe{Name: value.Name, CompositionBody: value.Body})
 	case authoring.PostGuideline, authoring.VideoGuideline:
+		if _, e := a.scope(value, kind); e != nil {
+			return e
+		}
 		_, err = a.guidelines.Validate(guideline.AuthoringDraft{Name: value.Name, Body: value.Body})
 	case authoring.WritingVoice:
 		_, err = a.voices.Validate(voice.WritingStyleDraft{Name: value.Name, Description: value.Description, Sample: value.Body})
@@ -113,16 +139,27 @@ func (a authoringTargets) Publish(ctx context.Context, in authoring.Publication)
 	var err error
 	switch in.Kind {
 	case authoring.PostTemplate:
+		numbers, e := authoringNumbers(in.Artifact)
+		if e != nil {
+			return authoring.SavedRef{}, e
+		}
 		var value template.Template
-		value, err = a.postTemplates.Publish(ctx, in.UserID, template.AuthoringPublication{Key: template.AuthoringKey{Key: in.Key, SessionID: in.SessionID, Revision: in.Revision}, TargetID: in.TargetID, TargetVersion: in.TargetVersion, Draft: template.Draft{Name: in.Artifact.Name, Description: in.Artifact.Description, Body: in.Artifact.Body, TitleArea: in.Artifact.TitleArea}})
+		value, err = a.postTemplates.Publish(ctx, in.UserID, template.AuthoringPublication{Key: template.AuthoringKey{Key: in.Key, SessionID: in.SessionID, Revision: in.Revision}, TargetID: in.TargetID, TargetVersion: in.TargetVersion, Draft: template.Draft{Name: in.Artifact.Name, Description: in.Artifact.Description, Body: in.Artifact.Body, TitleArea: in.Artifact.TitleArea}, Numbers: numbers})
 		id, name = value.ID, value.Name
 	case authoring.VideoTemplate:
 		var value clip.VideoTemplate
 		value, err = a.videoTemplates.Publish(ctx, in.UserID, clip.AuthoringPublication{Key: clip.AuthoringKey{Key: in.Key, SessionID: in.SessionID, Revision: in.Revision}, TargetID: in.TargetID, TargetVersion: in.TargetVersion, Recipe: clip.Recipe{Name: in.Artifact.Name, CompositionBody: in.Artifact.Body}})
 		id, name = value.ID, value.Name
 	case authoring.PostGuideline, authoring.VideoGuideline:
+		scope, e := a.scope(in.Artifact, in.Kind)
+		if e != nil {
+			return authoring.SavedRef{}, e
+		}
+		if in.TargetID == "" && scope == nil {
+			return authoring.SavedRef{}, authoring.ErrDraftInvalid
+		}
 		var value guideline.Guideline
-		value, err = a.guidelines.Publish(ctx, in.UserID, guideline.AuthoringPublication{Key: guideline.AuthoringKey{Key: in.Key, SessionID: in.SessionID, Revision: in.Revision}, Kind: guidelineKind(in.Kind), TargetID: in.TargetID, TargetVersion: in.TargetVersion, Draft: guideline.AuthoringDraft{Name: in.Artifact.Name, Body: in.Artifact.Body}})
+		value, err = a.guidelines.Publish(ctx, in.UserID, guideline.AuthoringPublication{Key: guideline.AuthoringKey{Key: in.Key, SessionID: in.SessionID, Revision: in.Revision}, Kind: guidelineKind(in.Kind), TargetID: in.TargetID, TargetVersion: in.TargetVersion, Draft: guideline.AuthoringDraft{Name: in.Artifact.Name, Body: in.Artifact.Body}, Scope: scope})
 		id, name = value.ID, value.Title
 	case authoring.WritingVoice:
 		var value voice.Voice
@@ -189,3 +226,55 @@ func (e *authoringTargetFailure) Params() map[string]string { return e.params }
 var _ rpcserver.AppFailure = (*authoringTargetFailure)(nil)
 
 var _ authoring.Targets = authoringTargets{}
+
+func authoringNumberString(value *int) *string {
+	out := ""
+	if value != nil {
+		out = strconv.Itoa(*value)
+	}
+	return &out
+}
+func authoringNumbers(a authoring.Artifact) (*template.Numbers, error) {
+	if a.TargetLength == nil && a.TagCount == nil {
+		return nil, nil
+	}
+	if a.TargetLength == nil || a.TagCount == nil {
+		return nil, authoring.ErrDraftInvalid
+	}
+	parse := func(raw *string) (*int, error) {
+		if *raw == "" {
+			return nil, nil
+		}
+		if strings.TrimSpace(*raw) != *raw {
+			return nil, authoring.ErrDraftInvalid
+		}
+		n, e := strconv.Atoi(*raw)
+		if e != nil {
+			return nil, authoring.ErrDraftInvalid
+		}
+		return &n, nil
+	}
+	length, e := parse(a.TargetLength)
+	if e != nil {
+		return nil, e
+	}
+	tags, e := parse(a.TagCount)
+	if e != nil {
+		return nil, e
+	}
+	return &template.Numbers{TargetLength: length, TagCount: tags}, nil
+}
+func (targets authoringTargets) scope(a authoring.Artifact, kind authoring.Kind) (*guideline.ScopePatch, error) {
+	if a.Scope == nil {
+		if len(a.TemplateIDs) > 0 || len(a.Fields) > 0 {
+			return nil, authoring.ErrDraftInvalid
+		}
+		return nil, nil
+	}
+	p := guideline.ScopePatch{Scope: guideline.Scope(*a.Scope), TemplateIDs: a.TemplateIDs, Fields: a.Fields}
+	if err := targets.guidelines.ValidateScopeShape(guidelineKind(kind), p); err != nil {
+		return nil, authoring.ErrDraftInvalid
+	}
+
+	return &p, nil
+}

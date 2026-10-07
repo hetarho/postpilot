@@ -47,6 +47,15 @@ func newID() string {
 }
 func requestKey(k string) bool { return strings.TrimSpace(k) != "" && utf8.RuneCountInString(k) <= 128 }
 func (s *Service) Create(ctx context.Context, owner string, kind Kind, targetID, requestID string) (Session, error) {
+	return s.CreateWithReference(ctx, owner, kind, targetID, requestID, "")
+}
+
+const MaxReferencePostChars = 12000
+
+func (s *Service) CreateWithReference(ctx context.Context, owner string, kind Kind, targetID, requestID, reference string) (Session, error) {
+	if !utf8.ValidString(reference) || utf8.RuneCountInString(reference) > MaxReferencePostChars || (reference != "" && (kind != PostTemplate || targetID != "")) {
+		return Session{}, ErrInvalid
+	}
 	if owner == "" {
 		return Session{}, ErrNotFound
 	}
@@ -62,7 +71,7 @@ func (s *Service) Create(ctx context.Context, owner string, kind Kind, targetID,
 		return Session{}, e
 	}
 	if prior != nil {
-		if prior.Kind != kind || prior.TargetID != targetID {
+		if prior.Kind != kind || prior.TargetID != targetID || prior.ReferencePost != reference {
 			return Session{}, ErrStale
 		}
 		return s.get(ctx, owner, prior.ID)
@@ -72,7 +81,24 @@ func (s *Service) Create(ctx context.Context, owner string, kind Kind, targetID,
 		return Session{}, e
 	}
 	now := s.now().UTC()
-	state := Session{ID: newID(), UserID: owner, Kind: kind, Phase: "choosing", TargetID: targetID, TargetVersion: seed.TargetVersion, Selected: seed.Artifact, SavedBaseline: seed.Artifact, WorkingSource: seed.Artifact, SavedAvailable: targetID != "", DraftState: DraftValid, RequestedCandidateCount: CandidateCount, ForkVoice: seed.ForkVoice, SourceContext: seed.SourceContext, Candidates: []Artifact{}, Turns: []Turn{}, CreatedAt: now, UpdatedAt: now}
+	state := Session{ID: newID(), UserID: owner, Kind: kind, Phase: "choosing", TargetID: targetID, TargetVersion: seed.TargetVersion, Selected: seed.Artifact, SavedBaseline: seed.Artifact, WorkingSource: seed.Artifact, SavedAvailable: targetID != "", DraftState: DraftValid, RequestedCandidateCount: CandidateCount, ForkVoice: seed.ForkVoice, SourceContext: seed.SourceContext, ReferencePost: reference, Candidates: []Artifact{}, Turns: []Turn{}, CreatedAt: now, UpdatedAt: now}
+	if seed.Artifact == nil {
+		source := Artifact{ID: state.ID + "-manual"}
+		if seed.WorkingSource != nil {
+			source = *seed.WorkingSource
+			source.ID = state.ID + "-manual"
+		}
+		if kind == PostTemplate {
+			empty := ""
+			source.TargetLength, source.TagCount = &empty, &empty
+		}
+		if kind == PostGuideline || kind == VideoGuideline {
+			global := "global"
+			source.Scope = &global
+		}
+		state.WorkingSource = &source
+		state.DraftState = DraftIncomplete
+	}
 	if seed.Artifact != nil {
 		state.Phase = "editing"
 		if strings.TrimSpace(seed.Artifact.Body) == "" {
@@ -209,6 +235,7 @@ func (s *Service) EstimateCount(ctx context.Context, owner string, kind Kind, mo
 		}
 		in.Purpose = state.Purpose
 		in.SourceContext = state.SourceContext
+		in.ReferencePost = state.ReferencePost
 		if current := currentSource(state); current != nil {
 			a := artifactToWire(*current)
 			in.Selected = &a

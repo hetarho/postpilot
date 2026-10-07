@@ -68,7 +68,7 @@ describe('the template grammar is visible in 원문 and nowhere else', () => {
       templates: { templates: [EVERY_CONSTRUCT] },
     })
 
-    await userEvent.setup().click(await screen.findByRole('button', { name: '직접 편집' }))
+    await userEvent.setup().click(await screen.findByRole('button', { name: /직접 편집하기$/ }))
     await screen.findByLabelText('이름')
     expectNoGrammar()
 
@@ -80,7 +80,7 @@ describe('the template grammar is visible in 원문 and nowhere else', () => {
     // Both areas' rows are here: the title's three and the body's.
     expect(
       toggles.filter((control) =>
-        control.closest('section[aria-labelledby="template-title-area-heading"]'),
+        control.closest('section')?.querySelector('h3')?.textContent?.includes('제목 형식'),
       ),
     ).toHaveLength(3)
     for (const control of toggles) {
@@ -97,10 +97,10 @@ describe('the template grammar is visible in 원문 and nowhere else', () => {
       user: USER,
       templates: { templates: [EVERY_CONSTRUCT] },
     })
-    await userEvent.setup().click(await screen.findByRole('button', { name: '직접 편집' }))
+    await userEvent.setup().click(await screen.findByRole('button', { name: /직접 편집하기$/ }))
     await screen.findByLabelText('이름')
 
-    await user.click(screen.getByRole('tab', { name: '미리보기' }))
+    await user.click(screen.getByRole('tab', { name: '이렇게 사용할 수 있어요' }))
     const preview = within(screen.getByRole('article', { name: '미리보기' }))
     expect(preview.getAllByText('사진 그룹마다 반복').length).toBeGreaterThan(0)
     expect(preview.getAllByText('네이버 지도').length).toBeGreaterThan(0)
@@ -122,7 +122,7 @@ describe('the template grammar is visible in 원문 and nowhere else', () => {
       },
     })
 
-    await userEvent.setup().click(await screen.findByRole('button', { name: '직접 편집' }))
+    await userEvent.setup().click(await screen.findByRole('button', { name: /직접 편집하기$/ }))
     expect(await screen.findByText(/구성을 읽을 수 없어요/)).toBeInTheDocument()
     expect(screen.getByText(/제목 형식을 읽을 수 없어요/)).toBeInTheDocument()
     // The state that OFFERS the source view still shows none of it.
@@ -137,7 +137,7 @@ describe('the template grammar is visible in 원문 and nowhere else', () => {
       user: USER,
       templates: { templates: [EVERY_CONSTRUCT] },
     })
-    await userEvent.setup().click(await screen.findByRole('button', { name: '직접 편집' }))
+    await userEvent.setup().click(await screen.findByRole('button', { name: /직접 편집하기$/ }))
     await screen.findByLabelText('이름')
 
     expect(screen.getByRole('tablist', { name: '구성 편집 방식' })).toBeInTheDocument()

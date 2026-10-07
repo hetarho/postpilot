@@ -85,6 +85,7 @@ export function GuidelineScopeField({
               ]
         }
         onChange={setKind}
+        disabled={disabled}
         ariaLabel={t('scope.label')}
         className="mt-2"
       />

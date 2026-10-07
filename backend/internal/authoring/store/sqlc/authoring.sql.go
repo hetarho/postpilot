@@ -376,33 +376,44 @@ func (q *Queries) LatestAuthoringSession(ctx context.Context, arg LatestAuthorin
 }
 
 const listAuthoringSummaries = `-- name: ListAuthoringSummaries :many
+WITH candidates AS (
+ SELECT c.id, c.user_id, c.kind, c.target_id, c.request_id, c.revision, c.phase, c.snapshot, c.created_at, c.updated_at, c.saved_baseline, c.working_source, c.draft_state, c.has_unpublished_changes, c.saved_available, c.publication_pending, c.target_conflict, c.display_name, c.candidate_count,
+ CAST(CASE WHEN c.kind<>'writing_voice' AND c.target_id='' THEN COALESCE(json_extract(c.snapshot,'$.saved.id'),'') ELSE c.target_id END AS TEXT) AS summary_target_id,
+ CASE WHEN c.has_unpublished_changes=1 OR c.publication_pending=1 OR c.target_conflict=1
+  OR COALESCE(json_extract(c.snapshot,'$.active_job_id'),'')<>''
+  OR COALESCE(json_extract(c.snapshot,'$.active_request_id'),'')<>''
+  OR COALESCE(json_extract(c.snapshot,'$.pending_request'),'')<>''
+  OR (c.phase<>'saved' AND COALESCE(json_array_length(c.snapshot,'$.candidates'),0)>0)
+ THEN 1 ELSE 0 END AS meaningful_work
+ FROM configuration_authoring_sessions AS c
+ WHERE c.user_id=?5 AND c.kind=?6
+), ranked AS (
+ SELECT c.id, c.user_id, c.kind, c.target_id, c.request_id, c.revision, c.phase, c.snapshot, c.created_at, c.updated_at, c.saved_baseline, c.working_source, c.draft_state, c.has_unpublished_changes, c.saved_available, c.publication_pending, c.target_conflict, c.display_name, c.candidate_count, c.summary_target_id, c.meaningful_work,ROW_NUMBER() OVER (
+  PARTITION BY c.summary_target_id,CASE WHEN c.summary_target_id='' THEN c.id ELSE '' END
+  ORDER BY c.meaningful_work DESC,c.updated_at DESC,c.id DESC
+ ) AS target_position
+ FROM candidates AS c
+)
 SELECT c.id,c.kind,
-CAST(CASE WHEN c.kind<>'writing_voice' AND c.target_id='' THEN COALESCE(json_extract(c.snapshot,'$.saved.id'),'') ELSE c.target_id END AS TEXT) AS target_id,
+CAST(c.summary_target_id AS TEXT) AS target_id,
 c.revision,c.saved_available,c.has_unpublished_changes,
 CAST(COALESCE(json_extract(c.snapshot,'$.active_job_id'),'') AS TEXT) AS active_job_id,
 c.publication_pending,c.target_conflict,c.display_name,c.draft_state,c.updated_at,
 CAST(COALESCE(json_extract(c.snapshot,'$.saved'),'null') AS TEXT) AS last_publication
-FROM configuration_authoring_sessions AS c
-WHERE c.user_id=?1 AND c.kind=?2
-AND (CAST(?3 AS INTEGER)=0 OR (c.target_id='' AND c.saved_available=0))
-AND (CAST(CASE WHEN c.kind<>'writing_voice' AND c.target_id='' THEN COALESCE(json_extract(c.snapshot,'$.saved.id'),'') ELSE c.target_id END AS TEXT)='' OR NOT EXISTS (
- SELECT 1 FROM configuration_authoring_sessions AS newer
- WHERE newer.user_id=c.user_id AND newer.kind=c.kind
- AND CAST(CASE WHEN newer.kind<>'writing_voice' AND newer.target_id='' THEN COALESCE(json_extract(newer.snapshot,'$.saved.id'),'') ELSE newer.target_id END AS TEXT)
- = CAST(CASE WHEN c.kind<>'writing_voice' AND c.target_id='' THEN COALESCE(json_extract(c.snapshot,'$.saved.id'),'') ELSE c.target_id END AS TEXT)
- AND (newer.updated_at>c.updated_at OR (newer.updated_at=c.updated_at AND newer.id>c.id))
-))
-AND (CAST(?4 AS TEXT)='' OR c.updated_at<?4 OR (c.updated_at=?4 AND c.id<?5))
-ORDER BY c.updated_at DESC,c.id DESC LIMIT ?6
+FROM ranked AS c
+WHERE c.target_position=1
+AND (CAST(?1 AS INTEGER)=0 OR (c.target_id='' AND c.saved_available=0))
+AND (CAST(?2 AS TEXT)='' OR c.updated_at<?2 OR (c.updated_at=?2 AND c.id<?3))
+ORDER BY c.updated_at DESC,c.id DESC LIMIT ?4
 `
 
 type ListAuthoringSummariesParams struct {
-	UserID      string
-	Kind        string
 	UnsavedOnly int64
 	CursorTime  string
 	CursorID    string
 	PageLimit   int64
+	UserID      string
+	Kind        string
 }
 
 type ListAuthoringSummariesRow struct {
@@ -421,14 +432,17 @@ type ListAuthoringSummariesRow struct {
 	LastPublication       string
 }
 
+// A fresh saved baseline must not conceal an existing meaningful private session.
+// Within that work class, preserve the newest current work; unsaved creations keep
+// their independent identities and ordinary summary pagination/order.
 func (q *Queries) ListAuthoringSummaries(ctx context.Context, arg ListAuthoringSummariesParams) ([]ListAuthoringSummariesRow, error) {
 	rows, err := q.db.QueryContext(ctx, listAuthoringSummaries,
-		arg.UserID,
-		arg.Kind,
 		arg.UnsavedOnly,
 		arg.CursorTime,
 		arg.CursorID,
 		arg.PageLimit,
+		arg.UserID,
+		arg.Kind,
 	)
 	if err != nil {
 		return nil, err

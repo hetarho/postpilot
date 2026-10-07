@@ -17,12 +17,14 @@ import {
   repeatPhotoCount,
   reorder,
   toValidBody,
+  toWorkingBody,
   TITLE_AREA_PALETTE,
   type AskableBlock,
   type BodyRead,
   type BuilderBlock,
   type PaletteKind,
   type Position,
+  type CompositionWorkingState,
 } from '../model/blocks'
 import { remainingChars, TEMPLATE_LIMITS, TEMPLATE_PARSE_OPTIONS } from '../model/types'
 import { TEMPLATE_ASK_MAX_PER_BODY, TEMPLATE_PHOTO_ROW_MAX } from '../config'
@@ -65,6 +67,8 @@ export function TemplateComposition({
   area = 'body',
   takenAskTitles = NO_TITLES,
   failure = null,
+  workingState,
+  onWorkingChange,
 }: {
   value: string
   onChange: (body: string) => void
@@ -88,9 +92,11 @@ export function TemplateComposition({
   /** A failure the screen found across BOTH areas that names this one — `too_many_asks` counting
    *  the title and the body together — which no single area's rows can see. */
   failure?: ParseFailure | null
+  workingState?: CompositionWorkingState
+  onWorkingChange?: (state: CompositionWorkingState) => void
 }) {
   const { t } = useTranslation('templates')
-  return readBody(value, t, area).ok ? (
+  return workingState || readBody(value, t, area).ok ? (
     <Composition
       value={value}
       onChange={onChange}
@@ -100,6 +106,8 @@ export function TemplateComposition({
       area={area}
       taken={takenAskTitles}
       failure={failure}
+      workingState={workingState}
+      onWorkingChange={onWorkingChange}
     />
   ) : (
     <Unreadable
@@ -165,6 +173,8 @@ function Composition({
   area,
   taken,
   failure,
+  workingState,
+  onWorkingChange,
 }: {
   value: string
   onChange: (body: string) => void
@@ -174,6 +184,8 @@ function Composition({
   area: TemplateArea
   taken: ReadonlySet<string>
   failure: ParseFailure | null
+  workingState?: CompositionWorkingState
+  onWorkingChange?: (state: CompositionWorkingState) => void
 }) {
   const { t } = useTranslation('templates')
   const id = useId()
@@ -184,13 +196,15 @@ function Composition({
   //
   // `emitted` closes the loop: a value that is not what this editor last produced came from
   // outside (a refetch, the unreadable state's clear), and only then are the rows reseeded.
-  const [blocks, setBlocks] = useState<BuilderBlock[]>(() => readBlocks(value, t, area))
+  const [blocks, setBlocks] = useState<BuilderBlock[]>(
+    () => workingState?.blocks ?? readBlocks(value, t, area),
+  )
   const emitted = useRef(value)
   useEffect(() => {
     if (value === emitted.current) return
     emitted.current = value
-    setBlocks(readBlocks(value, t, area))
-  }, [value, t, area])
+    setBlocks(workingState?.blocks ?? readBlocks(value, t, area))
+  }, [value, t, area, workingState])
   // A row the other area's title collided with is out of the emitted body, so when that title is
   // let go the row has to come back in — or it would stay out of the saved template with nothing
   // on screen saying so (TMPL-44). Keyed on the LABELS, not the set's identity, and acting only
@@ -199,13 +213,14 @@ function Composition({
   const takenKey = [...taken].sort().join('\u0000')
   const takenSeen = useRef(takenKey)
   useEffect(() => {
+    if (onWorkingChange) return
     if (takenSeen.current === takenKey) return
     takenSeen.current = takenKey
     const body = toValidBody(blocks, area, taken)
     if (body === emitted.current) return
     emitted.current = body
     onChange(body)
-  }, [takenKey, blocks, area, taken, onChange])
+  }, [takenKey, blocks, area, taken, onChange, onWorkingChange])
   // The two pieces of view state, both keyed by BLOCK ID rather than by index so an insertion or
   // a reorder above them cannot silently move either.
   //
@@ -222,9 +237,10 @@ function Composition({
 
   const push = (next: BuilderBlock[]) => {
     setBlocks(next)
-    const body = toValidBody(next, area, taken)
+    const body = onWorkingChange ? toWorkingBody(next, area) : toValidBody(next, area, taken)
     emitted.current = body
-    onChange(body)
+    if (onWorkingChange) onWorkingChange({ source: body, blocks: next })
+    else onChange(body)
   }
 
   const add = (kind: PaletteKind) => {

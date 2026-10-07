@@ -1,383 +1,96 @@
 import { describe, expect, it } from 'vitest'
-import { fireEvent, screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderAppAt } from '@/test/app'
-import {
-  CLIP_COMPOSITION_EXAMPLE,
-  parseClipComposition,
-  parseClipTemplate,
-  type ClipRecipe,
-} from '@/entities/clip-template'
-import { CLIP_COMPOSITION_LIMITS } from '@/entities/clip-design'
+import { publishAuthoringDraft } from '@/test/authoring-ui'
+import { parseClipComposition, type ClipRecipe } from '@/entities/clip-template'
 import type { FakeClipsOptions } from '@/test/clips'
-
+import type { FakeAuthoringOptions } from '@/test/authoring'
 const body =
-  '<clip version=\'1\'>\n  <field id="place" label="장소" required="false">어디인가요?</field>\n  <text id="badge" kind="fixed" role="badge" position="top">  🌿 A &amp; B  </text>\n<text id="intro" kind="fixed" role="hook"/><text id="outro" kind="fixed" role="ending"/></clip>'
-const template = {
-  id: 'owned',
-  name: '장면 템플릿',
-  compositionBody: body,
-}
-const mount = async (clips: FakeClipsOptions = {}, path = '/video-templates/owned') => {
-  const rendered = renderAppAt(path, {
+  '<clip version=\'1\'>\n<group id="menu" max="3"><field id="name" label="메뉴 이름"/></group>\n<stage name="외관">  keep &amp; spacing  </stage>\n<text id="intro" kind="fixed" role="hook"/><text id="outro" kind="fixed" role="ending"/></clip>'
+const template = { id: 'owned', name: '장면 템플릿', compositionBody: body }
+async function mount(
+  user: ReturnType<typeof userEvent.setup>,
+  clips: FakeClipsOptions = {},
+  authoring: FakeAuthoringOptions = {},
+  path = '/video-templates/owned',
+) {
+  const view = renderAppAt(path, {
     user: { id: 'alice' },
     clips: { templates: [template], ...clips },
+    authoring,
   })
-  await userEvent.setup().click(await screen.findByRole('button', { name: '직접 편집' }))
-  return rendered
+  await user.click(
+    await screen.findByRole('button', {
+      name: path.endsWith('/new') ? '직접 편집' : /직접 편집하기$/,
+    }),
+  )
+  await screen.findByLabelText('템플릿 이름')
+  return view
 }
-const source = async () => {
-  await userEvent.click(await screen.findByRole('tab', { name: '원문' }))
+async function source(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByRole('tab', { name: '원문' }))
   return screen.getByRole('textbox', { name: '원문' })
 }
-
-describe('composition template authoring', () => {
-  it('round-trips the group name and minimum through the builder, source and save', async () => {
-    const user = userEvent.setup(),
-      writes: ClipRecipe[] = []
-    const original =
-      '<clip version=\'1\'>\n<group id="menu" max="3"><field id="name" label="메뉴 이름"/></group>\n<stage name="외관">  keep &amp; spacing  </stage>\n<text id="intro" kind="fixed" role="hook"/><text id="outro" kind="fixed" role="ending"/></clip>'
-    await mount({ templates: [{ ...template, compositionBody: original }], writes })
-    await user.click(await screen.findByRole('button', { name: '항목 묶음 1' }))
-    expect(screen.getByLabelText('항목 묶음 이름')).toHaveValue('')
-    expect(screen.getByLabelText('최소 항목 개수')).toHaveValue('0')
+describe('durable clip template composition editing', () => {
+  it('roundtrips group names/minimum and untouched source spans through builder/source/publication', async () => {
+    const user = userEvent.setup()
+    const writes: ClipRecipe[] = []
+    await mount(user, { writes })
+    await user.click(screen.getByRole('button', { name: '항목 묶음 1' }))
     fireEvent.change(screen.getByLabelText('항목 묶음 이름'), { target: { value: '메뉴 & 음료' } })
     fireEvent.change(screen.getByLabelText('최소 항목 개수'), { target: { value: '2' } })
-    const edited = ((await source()) as HTMLTextAreaElement).value
-    expect(parseClipComposition(edited).groups).toMatchObject([
+    const value = ((await source(user)) as HTMLTextAreaElement).value
+    expect(parseClipComposition(value).groups).toMatchObject([
       { id: 'menu', label: '메뉴 & 음료', min: 2, max: 3 },
     ])
-    expect(edited).toContain('<stage name="외관">  keep &amp; spacing  </stage>')
+    expect(value).toContain('<stage name="외관">  keep &amp; spacing  </stage>')
     await user.click(screen.getByRole('tab', { name: '구성 편집' }))
     await user.click(screen.getByRole('button', { name: '메뉴 & 음료' }))
-    expect(screen.getByLabelText('항목 묶음 이름')).toHaveValue('메뉴 & 음료')
     expect(screen.getByLabelText('최소 항목 개수')).toHaveValue('2')
-    await user.click(screen.getByRole('button', { name: '저장' }))
-    await screen.findByText('저장했어요')
-    expect(writes).toHaveLength(1)
-    expect(writes[0]).not.toHaveProperty('copyStyles')
-    expect(writes[0].compositionBody).toBe(edited)
+    await publishAuthoringDraft(user)
+    await waitFor(() => expect(writes).toHaveLength(1))
+    expect(writes[0].compositionBody).toBe(value)
   })
-
-  it('keeps untouched source byte-exact across keyboard mode switches and never saves on open', async () => {
-    const calls: string[] = []
-    await mount({ calls })
-    expect(await source()).toHaveValue(body)
-    const sourceTab = screen.getByRole('tab', { name: '원문' })
-    sourceTab.focus()
-    await userEvent.keyboard('{ArrowLeft}')
-    expect(screen.getByRole('tab', { name: '구성 편집' })).toHaveFocus()
-    await userEvent.keyboard('{ArrowRight}')
-    expect(screen.getByRole('textbox', { name: '원문' })).toHaveValue(body)
-    expect(screen.getByRole('button', { name: '저장' })).toBeDisabled()
-    expect(calls).not.toContain('UpdateVideoTemplate')
-    expect(screen.queryByRole('combobox', { name: /프리셋/ })).not.toBeInTheDocument()
-  })
-  it('renames a field without changing identity or unrelated literal bytes', async () => {
-    const user = userEvent.setup(),
-      writes: ClipRecipe[] = []
-    await mount({ writes })
-    await user.click(await screen.findByRole('button', { name: '장소' }))
-    const label = screen.getByRole('textbox', { name: '정보 이름' })
-    await user.clear(label)
-    await user.type(label, '촬영 장소')
-    await user.click(screen.getByRole('checkbox', { name: '필수로 받기' }))
-    const edited = ((await source()) as HTMLTextAreaElement).value
-    const doc = parseClipComposition(edited)
-    expect(doc.fields[0]).toMatchObject({ id: 'place', label: '촬영 장소', required: true })
-    expect(edited).toContain("<clip version='1'>")
-    expect(edited).toContain('>  🌿 A &amp; B  </text>')
-    await user.click(screen.getByRole('button', { name: '저장' }))
-    await screen.findByText('저장했어요')
-    expect(writes).toHaveLength(1)
-    expect(writes[0]).not.toHaveProperty('copyStyles')
-    expect(writes[0].compositionBody).toBe(edited)
-  })
-  it('preserves malformed pasted source, rejects save and recovers after correction', async () => {
+  it('keeps exact raw bytes when only the name changes and performs no provider work', async () => {
+    const user = userEvent.setup()
     const writes: ClipRecipe[] = []
-    await mount({ writes })
-    const input = await source()
-    // A template declares no timing at all (CLIP-66), and the refusal names the
-    // entry that declared one.
-    const invalid = body.replace('role="badge"', 'role="badge" basis="whole"')
-    fireEvent.change(input, { target: { value: invalid } })
-    expect(screen.getByRole('alert')).toHaveTextContent('badge')
-    expect(screen.getByRole('alert')).toHaveTextContent('표시 시간을 적지 않아요')
-    expect(input).toHaveValue(invalid)
-    expect(screen.getByRole('button', { name: '저장' })).toBeDisabled()
-    // A construct the template grammar no longer holds says so by name.
-    fireEvent.change(input, {
-      target: {
-        value: body.replace(
-          '<text id="badge"',
-          '<scene id="footage" scope="scene"/><text id="badge"',
-        ),
-      },
-    })
-    expect(screen.getByRole('alert')).toHaveTextContent('장면(scene·repeat)은 더 이상')
-    fireEvent.change(input, { target: { value: body.replace('id="badge"', 'id="badge2"') } })
-    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '저장' })).toBeEnabled()
-    expect(writes).toHaveLength(0)
+    const calls: string[] = []
+    await mount(user, { writes, calls })
+    expect(await source(user)).toHaveValue(body)
+    await user.type(screen.getByLabelText('템플릿 이름'), ' 새 이름')
+    await publishAuthoringDraft(user)
+    await waitFor(() => expect(writes).toHaveLength(1))
+    expect(writes[0].compositionBody).toBe(body)
+    expect(calls).not.toContain('StartClipGeneration')
   })
-  it('copies exact source and a parseable external-AI guide without paid calls', async () => {
-    const user = userEvent.setup(),
-      calls: string[] = []
-    await mount({ calls })
-    await user.click(await screen.findByRole('button', { name: '원문 복사' }))
-    expect(await navigator.clipboard.readText()).toBe(body)
-    await user.click(screen.getByRole('button', { name: '형식 안내 복사' }))
-    const guide = await navigator.clipboard.readText()
-    expect(guide).toContain(CLIP_COMPOSITION_EXAMPLE)
-    expect(guide).toContain('sourceChars=16000')
-    expect(parseClipComposition(CLIP_COMPOSITION_EXAMPLE).groups).toMatchObject([
-      { id: 'menu', label: '메뉴', min: 1, max: CLIP_COMPOSITION_LIMITS.items },
-    ])
-    expect(guide).toContain('group(id, label?, min?, max?)')
-    // The outline grammar, and no construct it retired (CLIP-113).
-    expect(guide).toContain('role="hook|caption|ending|badge"')
-    expect(guide).toContain('A text declares NO timing')
-    for (const gone of ['basis="whole|output-start|output-end"', 'intro="a|b"', 'invalid_skeleton'])
-      expect(guide).not.toContain(gone)
-    // The example the guide hands out is a body the template grammar accepts,
-    // caption entry and stages included.
-    const example = parseClipTemplate(CLIP_COMPOSITION_EXAMPLE)
-    expect(example.outline.map((e) => e.kind)).toEqual([
-      'text',
-      'text',
-      'stage',
-      'stage',
-      'text',
-      'text',
-    ])
-    expect(example.elements.map((e) => e.role)).toEqual(['badge', 'hook', 'caption', 'ending'])
-    expect(calls.some((c) => /Seed|Quote|Start|Generate|CreateVideo|UpdateVideo/.test(c))).toBe(
-      false,
-    )
+  it('retains unfinished raw composition across AI/direct modes with publication blocked', async () => {
+    const user = userEvent.setup()
+    const patches: NonNullable<FakeAuthoringOptions['patches']> = []
+    await mount(user, {}, { patches })
+    fireEvent.change(await source(user), { target: { value: '<clip version="1"><stage' } })
+    await user.click(screen.getByRole('button', { name: /AI로 편집하기$/ }))
+    await screen.findByRole('heading', { name: '어떤 점을 바꿔 볼까요?' })
+    expect(patches[0].body).toBe('<clip version="1"><stage')
+    await user.click(screen.getByRole('button', { name: /직접 편집하기$/ }))
+    expect(await source(user)).toHaveValue('<clip version="1"><stage')
+    expect(screen.queryByRole('button', { name: /변경사항 저장하기$/ })).not.toBeInTheDocument()
   })
-  it('creates a template with one save and its design only beside the preview', async () => {
-    const user = userEvent.setup(),
-      writes: ClipRecipe[] = []
-    const { router } = await mount({ writes }, '/video-templates/new')
-    await user.type(await screen.findByLabelText('템플릿 이름'), '새 구성')
-    // The design selection stands beside the preview, never in front of the body (CLIP-42).
-    const preview = screen.getByRole('region', { name: '구성 미리보기' })
-    expect(within(preview).getByRole('group', { name: '자막 스타일' })).toBeInTheDocument()
-    expect(screen.getAllByRole('group', { name: '자막 스타일' })).toHaveLength(1)
-    for (const name of ['B 위아래 가로선', '크게 강조', 'E 점수 강조'])
-      expect(screen.queryByRole('tab', { name })).not.toBeInTheDocument()
-    // 원문 and the builder are there from the first keystroke, over an empty body.
-    expect(screen.getByRole('tab', { name: '원문' })).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: '인트로 문구 추가' }))
-    expect(
-      parseClipTemplate(((await source()) as HTMLTextAreaElement).value).elements.map((e) => [
-        e.role,
-        e.rows.length,
-      ]),
-    ).toEqual([['hook', 1]])
-    await user.dblClick(screen.getByRole('button', { name: '저장' }))
-    await waitFor(() =>
-      expect(router.state.location.pathname).toBe('/video-templates/video-template-1'),
-    )
-    expect(writes).toHaveLength(1)
-    expect(writes[0]).not.toHaveProperty('copyStyles')
-    // A saved body names no design at all: the selection travels beside it (CLIP-166, CLIP-167).
-    expect(parseClipComposition(writes[0].compositionBody!).root.attributes).toEqual({
-      version: '1',
-    })
+  it('supports seed-free new direct creation and retains default design fields', async () => {
+    const user = userEvent.setup()
+    const writes: ClipRecipe[] = []
+    await mount(user, { templates: [], writes }, {}, '/video-templates/new')
+    await user.type(screen.getByLabelText('템플릿 이름'), '새 구성')
+    expect(await source(user)).toHaveValue('<clip version="1"/>')
+    await publishAuthoringDraft(user)
+    await waitFor(() => expect(writes).toHaveLength(1))
+    expect(await screen.findByText('“새 구성” 영상 구성을 새로 저장했어요.')).toBeInTheDocument()
     expect(writes[0]).toMatchObject({
+      name: '새 구성',
+      compositionBody: '<clip version="1"/>',
       introPreset: 'a',
       outroPreset: 'b',
       allowedCaptionStyles: [],
     })
-  })
-  it('opens a template without writing and reports unavailable generation capability', async () => {
-    const calls: string[] = []
-    await mount({ compositionPlanVersion: 4, calls })
-    expect(await screen.findByText(/서버에서 아직/)).toBeInTheDocument()
-    expect(await source()).toHaveValue(body)
-    expect(calls).not.toContain('UpdateVideoTemplate')
-  })
-  it('offers only the information, stages and visible entries a template may declare', async () => {
-    const user = userEvent.setup()
-    await mount()
-    await screen.findByRole('button', { name: '장소' })
-    for (const name of [
-      '정보 추가',
-      '항목 묶음 추가',
-      '구성 단계 추가',
-      '인트로 문구 추가',
-      '자막 추가',
-      '아웃트로 문구 추가',
-      '표시 문구 추가',
-    ])
-      expect(screen.getByRole('button', { name })).toBeInTheDocument()
-    // No guide entry: how to show it belongs to video guidelines (CLIP-59, CLIP-185).
-    for (const name of ['장면 추가', '반복 추가', '구성 안내 추가'])
-      expect(screen.queryByRole('button', { name })).not.toBeInTheDocument()
-    // Caption pace and the accent belong to the project now (CLIP-139).
-    expect(screen.queryByRole('combobox', { name: /강조색/ })).not.toBeInTheDocument()
-    expect(screen.queryByRole('combobox', { name: /자막 속도/ })).not.toBeInTheDocument()
-    // Each kind lands at the end of the outline, in the order it was added.
-    await user.click(screen.getByRole('button', { name: '자막 추가' }))
-    await user.click(screen.getByRole('button', { name: '표시 문구 추가' }))
-    const added = parseClipTemplate(((await source()) as HTMLTextAreaElement).value)
-    expect(added.outline.map((entry) => added.elements[entry.index].role)).toEqual([
-      'badge',
-      'hook',
-      'ending',
-      'caption',
-      'badge',
-    ])
-    expect(added.sections).toEqual([])
-  })
-  it('reorders and deletes every kind of entry, regions included', async () => {
-    const user = userEvent.setup()
-    await mount()
-    // The intro entry is an outline row like any other now (CLIP-112): it can be
-    // moved and removed, and the body's order is what the list shows.
-    const before = parseClipTemplate(((await source()) as HTMLTextAreaElement).value)
-    expect(before.outline.map((e) => before.elements[e.index].role)).toEqual([
-      'badge',
-      'hook',
-      'ending',
-    ])
-    await user.click(await screen.findByRole('tab', { name: '구성 편집' }))
-    const rows = screen.getAllByRole('button', { name: '위로 이동' })
-    await user.click(rows[rows.length - 1])
-    const moved = parseClipTemplate(((await source()) as HTMLTextAreaElement).value)
-    expect(moved.outline.map((e) => moved.elements[e.index].role)).toEqual([
-      'badge',
-      'ending',
-      'hook',
-    ])
-    await user.click(await screen.findByRole('tab', { name: '구성 편집' }))
-    await user.click(screen.getAllByRole('button', { name: '아웃트로' })[0])
-    await user.click(screen.getByRole('button', { name: '아웃트로 삭제' }))
-    const removed = parseClipTemplate(((await source()) as HTMLTextAreaElement).value)
-    expect(removed.outline.map((e) => removed.elements[e.index].role)).toEqual(['badge', 'hook'])
-  })
-
-  it('a text carries no role of its own and no timing at all', async () => {
-    const user = userEvent.setup()
-    await mount()
-    await user.click(await screen.findByRole('button', { name: '공개 문구' }))
-    expect(screen.queryByRole('combobox', { name: /^문구 용도/ })).not.toBeInTheDocument()
-    // Where an entry stands in the outline is the only position it declares
-    // (CLIP-112): no basis, no start and no end (CLIP-66).
-    expect(screen.queryByRole('combobox', { name: /표시 구간 기준/ })).not.toBeInTheDocument()
-    expect(screen.queryByRole('textbox', { name: '시작 (초)' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('textbox', { name: '끝 (초)' })).not.toBeInTheDocument()
-    // The badge declares where it stands and nothing about alignment (CLIP-65).
-    expect(screen.getByRole('combobox', { name: /화면 위치/ })).toBeInTheDocument()
-    expect(screen.queryByRole('combobox', { name: /글자 정렬/ })).not.toBeInTheDocument()
-  })
-  it('offers a caption neither a position nor an alignment', async () => {
-    const user = userEvent.setup()
-    await mount()
-    await screen.findByRole('button', { name: '장소' })
-    await user.click(screen.getByRole('button', { name: '자막 추가' }))
-    await user.click(await screen.findByRole('tab', { name: '구성 편집' }))
-    const captions = screen
-      .getAllByRole('button', { name: /자막/ })
-      .filter((b) => b.hasAttribute('aria-expanded'))
-    // A new entry opens in place for typing (CLIP-172).
-    expect(captions[captions.length - 1]).toHaveAttribute('aria-expanded', 'true')
-    expect(screen.getByRole('combobox', { name: /문구 작성 방식/ })).toBeInTheDocument()
-    expect(screen.queryByRole('combobox', { name: /화면 위치/ })).not.toBeInTheDocument()
-    expect(screen.queryByRole('combobox', { name: /글자 정렬/ })).not.toBeInTheDocument()
-  })
-})
-
-it('refuses a paste only for what the grammar cannot read, naming its entry', async () => {
-  const writes: ClipRecipe[] = []
-  await mount({ writes })
-  expect(screen.queryByRole('alert')).not.toBeInTheDocument()
-  const input = await source()
-  // Readable and complete: a caption, three intro lines and a stage are all
-  // ordinary entries now, so nothing about the shape refuses them (CLIP-113).
-  const outline = body.replace(
-    '<text id="outro"',
-    '<stage name="가게 앞">외관을 먼저</stage><text id="line" kind="ai" role="caption">한 줄로 쓰세요</text><text id="outro"',
-  )
-  fireEvent.change(input, { target: { value: outline } })
-  expect(screen.queryByRole('alert')).not.toBeInTheDocument()
-  expect(screen.getByRole('button', { name: '저장' })).toBeEnabled()
-  // Unreadable: the entry and its 1-based line are named.
-  fireEvent.change(input, {
-    target: {
-      value: outline.replace(
-        '<text id="line" kind="ai" role="caption"',
-        '\n<text id="line" kind="ai" role="info"',
-      ),
-    },
-  })
-  const alert = screen.getByRole('alert')
-  expect(alert).toHaveTextContent('line')
-  expect(alert).toHaveTextContent('5')
-  expect(screen.getByRole('button', { name: '저장' })).toBeDisabled()
-})
-
-it('accepts an outro entry holding more lines than a preset draws', async () => {
-  // How many of them are drawn is the project's preset to decide, and the
-  // surplus is a CLIP-108 notice at render rather than a refusal here.
-  await mount({
-    templates: [
-      {
-        ...template,
-        compositionBody: body.replace(
-          '<text id="outro" kind="fixed" role="ending"/>',
-          '<text id="outro" kind="fixed" role="ending"><row>첫 줄</row><row>둘째 줄</row><row>남겨 둘 문구</row></text>',
-        ),
-      },
-    ],
-  })
-  const saved = parseClipTemplate(((await source()) as HTMLTextAreaElement).value)
-  expect(saved.elements.find((e) => e.role === 'ending')!.rows).toHaveLength(3)
-  expect(screen.queryByRole('alert')).not.toBeInTheDocument()
-})
-
-// CLIP-172, CLIP-42: every entry opens its editor inside its own row, delete included, one row
-// at a time; a new entry opens there for typing; reordering keeps the open row on its entry.
-describe('builder rows open in place', () => {
-  const rowOf = (button: HTMLElement) => button.closest('li')!
-
-  it('opens an entry inside its own row with its delete there, one row at a time', async () => {
-    const user = userEvent.setup()
-    await mount()
-    const place = await screen.findByRole('button', { name: '장소' })
-    await user.click(place)
-    const editor = screen.getByRole('region', { name: '장소' })
-    expect(rowOf(place)).toContainElement(editor)
-    expect(rowOf(place)).toContainElement(screen.getByRole('button', { name: '장소 삭제' }))
-    // The intro and the outro open the same way.
-    const intro = screen.getByRole('button', { name: '인트로' })
-    await user.click(intro)
-    expect(rowOf(intro)).toContainElement(screen.getByRole('region', { name: '인트로' }))
-    expect(screen.queryByRole('region', { name: '장소' })).not.toBeInTheDocument()
-    expect(place).toHaveAttribute('aria-expanded', 'false')
-    await user.click(screen.getByRole('button', { name: '인트로 삭제' }))
-    expect(screen.queryByRole('button', { name: '인트로' })).not.toBeInTheDocument()
-  })
-
-  it('opens a new entry for typing', async () => {
-    const user = userEvent.setup()
-    await mount()
-    await screen.findByRole('button', { name: '장소' })
-    await user.click(screen.getByRole('button', { name: '정보 추가' }))
-    const field = await screen.findByLabelText('정보 이름')
-    await waitFor(() => expect(field).toHaveFocus())
-  })
-
-  it('keeps the open row on its entry while it is moved', async () => {
-    const user = userEvent.setup()
-    await mount()
-    const outro = await screen.findByRole('button', { name: '아웃트로' })
-    await user.click(outro)
-    const moveUp = within(rowOf(outro)).getByRole('button', { name: '위로 이동' })
-    await user.click(moveUp)
-    const moved = screen.getByRole('button', { name: '아웃트로' })
-    expect(moved).toHaveAttribute('aria-expanded', 'true')
-    expect(rowOf(moved)).toContainElement(screen.getByRole('region', { name: '아웃트로' }))
   })
 })

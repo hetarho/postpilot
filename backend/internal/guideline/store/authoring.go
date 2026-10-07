@@ -80,6 +80,11 @@ func (s *Store) PublishAuthoring(ctx context.Context, user string, in guideline.
 			return guideline.Guideline{}, err
 		}
 	}
+	if in.Scope != nil {
+		if err := replaceAuthoringScope(ctx, q, user, in.Kind, id, *in.Scope, stamp); err != nil {
+			return guideline.Guideline{}, err
+		}
+	}
 	if err := approve(ctx, q, user, in.Kind, guideline.CandidateApproval{Text: in.Draft.Body}); err != nil {
 		return guideline.Guideline{}, err
 	}
@@ -97,3 +102,22 @@ func (s *Store) PublishAuthoring(ctx context.Context, user string, in guideline.
 }
 
 var _ guideline.AuthoringStore = (*Store)(nil)
+
+func replaceAuthoringScope(ctx context.Context, q *sqlc.Queries, user string, kind guideline.Kind, id string, scope guideline.ScopePatch, at string) error {
+	if _, err := q.UpdateGuidelineScope(ctx, sqlc.UpdateGuidelineScopeParams{ID: id, UserID: user, Scope: string(scope.Scope), UpdatedAt: at}); err != nil {
+		return err
+	}
+	if err := q.DeleteGuidelineScope(ctx, sqlc.DeleteGuidelineScopeParams{GuidelineID: id, UserID: user}); err != nil {
+		return err
+	}
+	if err := q.DeleteGuidelineVideoTemplates(ctx, sqlc.DeleteGuidelineVideoTemplatesParams{GuidelineID: id, UserID: user}); err != nil {
+		return err
+	}
+	if err := q.DeleteGuidelineFieldLinks(ctx, sqlc.DeleteGuidelineFieldLinksParams{GuidelineID: id, UserID: user}); err != nil {
+		return err
+	}
+	if err := insertScope(ctx, q, user, kind, id, scope.TemplateIDs); err != nil {
+		return err
+	}
+	return insertFields(ctx, q, user, id, scope.Fields)
+}

@@ -2,14 +2,12 @@ import type { TFunction } from 'i18next'
 import { useTranslation } from 'react-i18next'
 import { Link } from '@tanstack/react-router'
 import { useState, type ReactNode } from 'react'
-import { Pencil } from 'lucide-react'
 import {
   DefaultGuidelineDetail,
   GuidelineScopeBadge,
   GuidelineScopeBadges,
   useGuidelineCandidates,
   useGuidelines,
-  useUpdateGuidelineCall,
   type BulkReviewOutcome,
   type DefaultGuideline,
   type Guideline,
@@ -17,10 +15,14 @@ import {
   type GuidelineKind,
 } from '@/entities/guideline'
 import { useSession } from '@/entities/session'
-import { CreateGuidelineSheet } from '@/features/create-guideline'
 import { AuthoringSheet } from '@/features/ai-authoring'
 import { DeleteGuidelineButton } from '@/features/delete-guideline'
-import { GuidelineEditForm } from '@/features/edit-guideline'
+import { GuidelineDirectEditor } from '@/features/edit-guideline'
+import {
+  useAuthoringSummaries,
+  type AuthoringSummary,
+  type AuthoringSavedRef,
+} from '@/entities/ai-authoring'
 import {
   ApproveGuidelineCandidateButton,
   BulkGuidelineCandidateActions,
@@ -76,6 +78,16 @@ export function GuidelineDirectory({
   // pressed on has already left the list when the refusal arrives (GUIDE-43).
   const [stopRefusal, setStopRefusal] = useState('')
   const [authoringOpen, setAuthoringOpen] = useState(createOpen)
+  const [createMethod, setCreateMethod] = useState<'ai' | 'direct'>('ai')
+  const [creationSession, setCreationSession] = useState<string>()
+  const [savedOutcome, setSavedOutcome] = useState<{
+    ownerId: string
+    ref: AuthoringSavedRef
+  }>()
+  const summaries = useAuthoringSummaries({
+    ownerId,
+    kind: kind === 'clip' ? 'video-guideline' : 'post-guideline',
+  })
   const { t: authoringText } = useTranslation('authoring')
 
   return (
@@ -106,8 +118,32 @@ export function GuidelineDirectory({
 
       {!isError && !isPending && (
         <>
+          {summaries.isPending && (
+            <Typography variant="body" role="status" className="mt-6">
+              {t('authoringState.checking', { ns: 'guidelines' })}
+            </Typography>
+          )}
+          {summaries.isError && (
+            <Notice tone="danger" role="alert" className="mt-6">
+              {t('authoringState.failed', { ns: 'guidelines' })}
+              <Button variant="ghost" onClick={() => void summaries.refetch()}>
+                {t('action.retry', { ns: 'common' })}
+              </Button>
+            </Notice>
+          )}
           <div role="status" className="mt-6 empty:hidden">
             {stopRefusal && <FieldMessage>{stopRefusal}</FieldMessage>}
+            {savedOutcome?.ownerId === ownerId && savedOutcome.ref.outcome && (
+              <Typography variant="body">
+                {authoringText(
+                  savedOutcome.ref.outcome === 'created' ? 'confirmedCreate' : 'confirmedUpdate',
+                  {
+                    kind: authoringText(`kinds.${savedOutcome.ref.kind}`),
+                    name: savedOutcome.ref.name,
+                  },
+                )}
+              </Typography>
+            )}
           </div>
           {inUse.length === 0 && guidelines.length === 0 ? (
             <EmptyState kind={kind} />
@@ -131,13 +167,58 @@ export function GuidelineDirectory({
                     key={guideline.id}
                     ownerId={ownerId}
                     guideline={guideline}
-                    onPublished={refetch}
+                    summary={summaries.data?.find(
+                      (row) =>
+                        row.targetId === guideline.id || row.lastPublication?.id === guideline.id,
+                    )}
+                    onPublished={(saved) => {
+                      void refetch()
+                      setSavedOutcome({ ownerId, ref: saved })
+                    }}
                   />
                 ))}
               </ul>
             </section>
           )}
 
+          {summaries.data?.some((row) => !row.targetId && !row.lastPublication) && (
+            <section className="mt-8" aria-labelledby="guideline-unsaved-heading">
+              <Typography variant="title" as="h2" id="guideline-unsaved-heading">
+                {t('authoringState.unsavedHeading', { ns: 'guidelines' })}
+              </Typography>
+              <ul className="mt-3 space-y-3">
+                {summaries.data
+                  .filter((row) => !row.targetId && !row.lastPublication)
+                  .map((row) => (
+                    <li key={row.sessionId}>
+                      <Button
+                        variant="ghost"
+                        onClick={() => {
+                          setCreationSession(row.sessionId)
+                          setCreateMethod('ai')
+                          setAuthoringOpen(true)
+                        }}
+                      >
+                        {authoringText('continueNamed', {
+                          kind: authoringText(
+                            `kinds.${kind === 'clip' ? 'video-guideline' : 'post-guideline'}`,
+                          ),
+                          name:
+                            row.displayName ||
+                            t(kind === 'clip' ? 'create.openClip' : 'create.open', {
+                              ns: 'guidelines',
+                            }),
+                        })}
+                      </Button>
+                      <Typography variant="body" className="text-content-secondary">
+                        {t('authoringState.unsaved', { ns: 'guidelines' })}
+                      </Typography>
+                      <EditingStatus summary={row} />
+                    </li>
+                  ))}
+              </ul>
+            </section>
+          )}
           <CandidateSection ownerId={ownerId} kind={kind} />
 
           {/* The page is the list; authoring happens behind these triggers, the shape every
@@ -149,8 +230,30 @@ export function GuidelineDirectory({
             className="mt-auto flex gap-2"
           >
             <DefaultGuidelineSheet ownerId={ownerId} kind={kind} />
-            <Button variant="cta" onClick={() => setAuthoringOpen(true)}>
+            <Button
+              variant="cta"
+              onClick={() => {
+                setCreationSession(undefined)
+                setCreateMethod('ai')
+                setAuthoringOpen(true)
+              }}
+            >
               {authoringText(kind === 'clip' ? 'host.createVideoGuide' : 'host.createGuide')}
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setCreationSession(undefined)
+                setCreateMethod('direct')
+                setAuthoringOpen(true)
+              }}
+            >
+              {t(
+                kind === 'clip'
+                  ? 'authoringState.createVideoDirect'
+                  : 'authoringState.createDirect',
+                { ns: 'guidelines' },
+              )}
             </Button>
             <AuthoringSheet
               open={authoringOpen}
@@ -160,17 +263,18 @@ export function GuidelineDirectory({
               }}
               ownerId={ownerId}
               kind={kind === 'clip' ? 'video-guideline' : 'post-guideline'}
-              onSaved={() => {
+              sessionId={creationSession}
+              startFromSaved={!creationSession}
+              initialMethod={createMethod}
+              renderDirectEditor={(props) => (
+                <GuidelineDirectEditor ownerId={ownerId} kind={kind} {...props} />
+              )}
+              onSaved={(saved) => {
+                setSavedOutcome({ ownerId, ref: saved })
                 refetch()
                 setAuthoringOpen(false)
                 onCreateClosed?.()
               }}
-            />
-            <CreateGuidelineSheet
-              ownerId={ownerId}
-              kind={kind}
-              initialOpen={false}
-              onClosed={onCreateClosed}
             />
           </ActionBar>
         </>
@@ -241,95 +345,127 @@ function GuidelineRow({
   ownerId,
   guideline,
   onPublished,
+  summary,
 }: {
   ownerId: string
   guideline: Guideline
-  onPublished: () => void
+  onPublished: (ref: AuthoringSavedRef) => void
+  summary?: AuthoringSummary
 }) {
-  const { t } = useTranslation(['guidelines', 'common'])
-  const update = useUpdateGuidelineCall(ownerId, guideline.id, guideline.kind)
-  const [editing, setEditing] = useState(false)
-  const [authoringOpen, setAuthoringOpen] = useState(false)
+  const { t } = useTranslation('guidelines')
   const { t: authoringText } = useTranslation('authoring')
+  const [method, setMethod] = useState<'ai' | 'direct'>('ai')
+  const [authoringOpen, setAuthoringOpen] = useState(false)
+  const [sessionId, setSessionId] = useState<string>()
+  const kind = guideline.kind === 'clip' ? 'video-guideline' : 'post-guideline'
+  const named = { kind: authoringText(`kinds.${kind}`), name: guideline.title || guideline.text }
+  const open = (method: 'ai' | 'direct', session?: string) => {
+    setMethod(method)
+    setSessionId(session)
+    setAuthoringOpen(true)
+  }
   return (
     <li>
       <Disclosure
         size="row"
         headingLevel={3}
-        // Closing a row leaves its form: the next opening reads the saved rule first.
-        onOpenChange={(open) => {
-          if (!open) setEditing(false)
-        }}
         title={
-          <RowTitle
-            label={guideline.title || guideline.text}
-            badge={<GuidelineScopeBadge guideline={guideline} />}
-          />
+          <RowTitle label={named.name} badge={<GuidelineScopeBadge guideline={guideline} />} />
         }
       >
         <div className="pb-3 pl-6">
-          {editing ? (
-            <GuidelineEditForm
-              ownerId={ownerId}
-              guideline={guideline}
-              save={update.save}
-              errorMessage={update.errorMessage}
-              pending={update.isPending}
-              onDone={() => setEditing(false)}
-            />
-          ) : (
-            <>
-              <div className="flex flex-wrap items-start gap-1">
-                <Typography
-                  variant="body"
-                  className="text-content-primary min-w-0 flex-1 pt-2 whitespace-pre-wrap"
-                >
-                  {guideline.text}
-                </Typography>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  aria-label={t('action.editNamed', {
-                    ns: 'common',
-                    name: t('edit.text', { ns: 'guidelines' }),
-                  })}
-                  onClick={() => setEditing(true)}
-                  className="shrink-0"
-                >
-                  <Pencil className="size-4" aria-hidden />
+          <Typography variant="body" className="text-content-primary whitespace-pre-wrap">
+            {guideline.text}
+          </Typography>
+          <Typography variant="body" className="text-content-secondary mt-3">
+            {authoringText('savedUsable', named)}
+          </Typography>
+          <GuidelineScopeBadges guideline={guideline} />
+          <div className="mt-4 flex flex-wrap gap-3">
+            <Button variant="secondary" onClick={() => open('ai')}>
+              {authoringText('aiNamed', named)}
+            </Button>
+            <Button variant="secondary" onClick={() => open('direct')}>
+              {authoringText('directNamed', named)}
+            </Button>
+            {summary &&
+              (summary.hasUnpublishedChanges ||
+                summary.activeJobId ||
+                summary.publicationPending ||
+                summary.targetConflict) && (
+                <Button variant="ghost" onClick={() => open('ai', summary.sessionId)}>
+                  {authoringText('continueNamed', named)}
                 </Button>
-                <DeleteGuidelineButton
-                  ownerId={ownerId}
-                  kind={guideline.kind}
-                  guidelineId={guideline.id}
-                />
-              </div>
-              {/* 전역 is already the closed line's whole story; a narrower scope names its members
-                  here, and a scope that reaches nothing says what to do about it. */}
-              {guideline.scope !== 'global' && (
-                <div className="mt-1">
-                  <GuidelineScopeBadges guideline={guideline} />
-                </div>
               )}
-              <Button variant="secondary" className="mt-3" onClick={() => setAuthoringOpen(true)}>
-                {authoringText('host.refine')}
-              </Button>
-              <AuthoringSheet
-                open={authoringOpen}
-                onOpenChange={setAuthoringOpen}
-                ownerId={ownerId}
-                kind={guideline.kind === 'clip' ? 'video-guideline' : 'post-guideline'}
-                targetId={guideline.id}
-                onSaved={() => {
-                  onPublished()
-                  setAuthoringOpen(false)
-                }}
-              />
-            </>
-          )}
+            <DeleteGuidelineButton
+              ownerId={ownerId}
+              kind={guideline.kind}
+              guidelineId={guideline.id}
+            />
+          </div>
+          <AuthoringSheet
+            open={authoringOpen}
+            onOpenChange={setAuthoringOpen}
+            ownerId={ownerId}
+            kind={kind}
+            targetId={guideline.id}
+            targetName={named.name}
+            sessionId={sessionId}
+            startFromSaved={!sessionId}
+            initialMethod={method}
+            renderDirectEditor={(props) => (
+              <GuidelineDirectEditor ownerId={ownerId} kind={guideline.kind} {...props} />
+            )}
+            onSaved={(saved) => {
+              onPublished(saved)
+              setAuthoringOpen(false)
+            }}
+          />
         </div>
       </Disclosure>
+      <div className="pb-3 pl-6">
+        <Typography variant="body" className="text-content-secondary">
+          {t('authoringState.savedAvailable')}
+        </Typography>
+        <EditingStatus summary={summary} />
+      </div>
     </li>
+  )
+}
+
+function EditingStatus({ summary }: { summary?: AuthoringSummary }) {
+  const { t } = useTranslation('guidelines')
+  const { t: authoringText } = useTranslation('authoring')
+  if (!summary) return null
+  const named = {
+    kind: authoringText(`kinds.${summary.kind}`),
+    name: summary.displayName || authoringText(`kinds.${summary.kind}`),
+  }
+  return (
+    <div role="status" className="mt-2 space-y-2">
+      {summary.lastPublication?.outcome && (
+        <Typography variant="body">
+          {t('authoringState.lastPublication', {
+            result: authoringText(
+              summary.lastPublication.outcome === 'created' ? 'confirmedCreate' : 'confirmedUpdate',
+              { kind: named.kind, name: summary.lastPublication.name },
+            ),
+          })}
+        </Typography>
+      )}
+      {summary.hasUnpublishedChanges && (
+        <Typography variant="body">{authoringText('unpublished', named)}</Typography>
+      )}
+      {summary.activeJobId && (
+        <Typography variant="body">{t('authoringState.active', named)}</Typography>
+      )}
+      {summary.publicationPending && (
+        <Typography variant="body">{t('authoringState.pending', named)}</Typography>
+      )}
+      {summary.targetConflict && (
+        <Typography variant="body">{t('authoringState.conflict', named)}</Typography>
+      )}
+    </div>
   )
 }
 

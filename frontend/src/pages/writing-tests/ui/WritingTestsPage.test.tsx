@@ -11,10 +11,11 @@ import {
 import i18next from 'i18next'
 import { afterEach, beforeEach, expect, it } from 'vitest'
 import { initializeI18n } from '@/app/providers/i18n'
-import { contentLanguageToProto } from '@/shared/api'
+import { contentLanguageToProto, Stage } from '@/shared/api'
 import { writingTestI18n } from '@/features/writing-test'
 import { createWritingTestStudioFixture } from '@/entities/writing-test/api/studio-fixture'
 import { createTestQueryClient, withProviders } from '@/test/session'
+import { chooseOption } from '@/test/listbox'
 import { WritingTestHistoryPage, WritingTestPage, WritingTestsPage } from './WritingTestsPage'
 
 beforeEach(() => {
@@ -49,6 +50,94 @@ function mount(path: string, fixture: ReturnType<typeof createWritingTestStudioF
   })
   return router
 }
+function savedPair(stage: Stage, a = 'model-0', b = 'model-1') {
+  return {
+    stage,
+    candidateA: { providerId: 'openrouter', modelId: a },
+    candidateB: { providerId: 'openrouter', modelId: b },
+    extraCandidates: [{ providerId: 'openrouter', modelId: 'model-15' }],
+  }
+}
+it.each([
+  ['write', Stage.WRITE],
+  ['observe', Stage.OBSERVE],
+] as const)(
+  'prefills exactly the eligible saved A/B pair for a new two-model %s test without spending',
+  async (stage, wireStage) => {
+    const fixture = createWritingTestStudioFixture({ comparisonPairs: [savedPair(wireStage)] })
+    mount(`/tests?stage=${stage}`, fixture)
+    await screen.findByRole('heading', { name: '글쓰기 테스트', level: 1 })
+    await userEvent.click(screen.getByRole('button', { name: 'AI 모델' }))
+    expect(screen.getByRole('combobox', { name: /^후보 1/ })).toHaveTextContent('Model 1')
+    expect(screen.getByRole('combobox', { name: /^후보 2/ })).toHaveTextContent('Model 2')
+    expect(screen.queryByRole('combobox', { name: /^후보 3/ })).toBeNull()
+    expect(fixture.calls).toContain('GetComparisonPairs')
+    expect(fixture.estimates).toHaveLength(0)
+    expect(fixture.admissions).toHaveLength(0)
+    expect(fixture.publications).toHaveLength(0)
+  },
+)
+it('keeps an owner/entry recovered test draft ahead of a newly changed saved pair', async () => {
+  const options = { comparisonPairs: [savedPair(Stage.WRITE)] }
+  const fixture = createWritingTestStudioFixture(options)
+  const user = userEvent.setup()
+  mount('/tests?draft=retained-work', fixture)
+  await screen.findByRole('heading', { name: '글쓰기 테스트', level: 1 })
+  await user.click(screen.getByRole('button', { name: 'AI 모델' }))
+  await chooseOption(user, screen.getByRole('combobox', { name: /^후보 1/ }), 'Model 3')
+  await chooseOption(user, screen.getByRole('combobox', { name: /^후보 2/ }), 'Model 4')
+  cleanup()
+  options.comparisonPairs = [savedPair(Stage.WRITE, 'model-4', 'model-5')]
+  mount('/tests?draft=retained-work', fixture)
+  await screen.findByRole('heading', { name: '글쓰기 테스트', level: 1 })
+  expect(await screen.findByRole('combobox', { name: /^후보 1/ })).toHaveTextContent('Model 3')
+  expect(screen.getByRole('combobox', { name: /^후보 2/ })).toHaveTextContent('Model 4')
+  expect(fixture.estimates).toHaveLength(0)
+  expect(fixture.admissions).toHaveLength(0)
+})
+it.each([4, 8, 16] as const)(
+  'does not load or prefill stored pair/extras in a new %i-entry test',
+  async (count) => {
+    const fixture = createWritingTestStudioFixture({
+      count,
+      comparisonPairs: [savedPair(Stage.WRITE)],
+    })
+    mount(`/tests?count=${count}`, fixture)
+    await screen.findByRole('heading', { name: '글쓰기 테스트', level: 1 })
+    await userEvent.click(screen.getByRole('button', { name: 'AI 모델' }))
+    for (let index = 1; index <= count; index++)
+      expect(
+        screen.getByRole('combobox', { name: new RegExp(`^후보 ${index}(?:\\s|$)`) }),
+      ).toHaveTextContent('선택해 주세요')
+    expect(fixture.calls).not.toContain('GetComparisonPairs')
+    expect(fixture.estimates).toHaveLength(0)
+    expect(fixture.admissions).toHaveLength(0)
+  },
+)
+it.each([
+  ['voice', '말투'],
+  ['template', '글 템플릿'],
+  ['guideline', '글 지침'],
+] as const)(
+  'keeps saved model pairs outside a two-entry %s setting test',
+  async (factor, label) => {
+    const fixture = createWritingTestStudioFixture({
+      factor,
+      comparisonPairs: [savedPair(Stage.WRITE)],
+    })
+    mount(`/tests?factor=${factor}`, fixture)
+    await screen.findByRole('heading', { name: '글쓰기 테스트', level: 1 })
+    await userEvent.click(screen.getByRole('button', { name: label }))
+    expect(await screen.findByRole('combobox', { name: /^후보 1/ })).toHaveTextContent(
+      '선택해 주세요',
+    )
+    expect(screen.getByRole('combobox', { name: /^후보 2/ })).toHaveTextContent('선택해 주세요')
+    expect(fixture.calls).not.toContain('GetComparisonPairs')
+    expect(fixture.estimates).toHaveLength(0)
+    expect(fixture.admissions).toHaveLength(0)
+    expect(fixture.preparations).toHaveLength(0)
+  },
+)
 it('preloads the actual source context before authoring and quotes its real revisions and language without auto generation', async () => {
   const fixture = createWritingTestStudioFixture({ count: 4, source: true })
   mount('/tests?count=4&source=owned-source', fixture)

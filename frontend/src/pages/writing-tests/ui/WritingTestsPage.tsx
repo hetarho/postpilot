@@ -2,6 +2,7 @@ import { useWritingTestTranslation } from '@/features/writing-test'
 import { useMemo } from 'react'
 import { useSearch, useParams } from '@tanstack/react-router'
 import { useSession } from '@/entities/session'
+import { eligibleTestPair, useModels, useModelSetup } from '@/entities/model-catalog'
 import {
   useWritingTestSource,
   type WritingTestPlan,
@@ -50,12 +51,19 @@ export function WritingTestsPage() {
 function OwnedNewPage({ ownerId, seed }: { ownerId: string; seed: WritingTestSearch }) {
   const { t } = useWritingTestTranslation()
   const source = useWritingTestSource(ownerId, seed.source ?? '')
+  const binaryModel = seed.factor === 'model' && seed.count === 2
+  const pairs = useModelSetup(binaryModel && !!ownerId)
+  const models = useModels()
   const context = useMemo(() => source.data?.context ?? initialContext(seed), [source.data, seed])
+  const pair =
+    binaryModel && !pairs.isError && !models.isError
+      ? eligibleTestPair(pairs.pairs, models.models, seed.stage)
+      : undefined
   const initialPlan: WritingTestPlan = {
     factor: seed.factor,
     modelStage: seed.stage,
     count: seed.count,
-    entrants: [],
+    entrants: pair?.map((model) => ({ type: 'model' as const, model })) ?? [],
     context,
   }
   if (seed.source && (source.isPending || source.isError))
@@ -69,6 +77,19 @@ function OwnedNewPage({ ownerId, seed }: { ownerId: string; seed: WritingTestSea
             {t('refresh')}
           </Button>
         )}
+      </main>
+    )
+  // Resolve this optional seed before the actor mounts. Its owner/entry recovery takes
+  // precedence over initialPlan, so a later recommendation never replaces retained work.
+  if (
+    !ownerId ||
+    (binaryModel && !pairs.isError && !models.isError && (pairs.isPending || models.isPending))
+  )
+    return (
+      <main className={pageStyles({ width: 'workspace' })}>
+        <Typography variant="body" role="status">
+          {t('loading')}
+        </Typography>
       </main>
     )
   return (

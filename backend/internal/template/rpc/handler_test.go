@@ -321,7 +321,7 @@ func startRequest(text string) *connect.Request[postpilotv1.StartTemplateRequest
 
 func TestStartTemplateRequest(t *testing.T) {
 	resp, err := requestHandler(writer(), rpcSamples{}, rpcJobs{}).StartTemplateRequest(signedIn(t), startRequest("맛집 리뷰"))
-	if err != nil || resp.Msg.GetJobId() != "job-1" {
+	if resp != nil || connect.CodeOf(err) != connect.CodeFailedPrecondition || detail(t, err).GetReason() != postpilotv1.FailureReason_AUTHORING_FEATURE_UNAVAILABLE.String() || detail(t, err).GetParams()["destination"] != "/templates/new" {
 		t.Fatalf("start = %v, %v", resp, err)
 	}
 }
@@ -344,7 +344,7 @@ func TestStartTemplateRequestRefusals(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			_, err := tc.handler.StartTemplateRequest(signedIn(t), tc.req)
-			if connect.CodeOf(err) != tc.code || detail(t, err).GetReason() != tc.reason.String() {
+			if connect.CodeOf(err) != connect.CodeFailedPrecondition || detail(t, err).GetReason() != postpilotv1.FailureReason_AUTHORING_FEATURE_UNAVAILABLE.String() {
 				t.Fatalf("err = %v", err)
 			}
 		})
@@ -354,7 +354,7 @@ func TestStartTemplateRequestRefusals(t *testing.T) {
 	slug := "gone"
 	sample.Msg.SamplePostSlug = &slug
 	_, err := requestHandler(writer(), rpcSamples{err: template.ErrSampleUnavailable}, rpcJobs{}).StartTemplateRequest(signedIn(t), sample)
-	if detail(t, err).GetReason() != postpilotv1.FailureReason_TEMPLATE_SAMPLE_UNAVAILABLE.String() {
+	if detail(t, err).GetReason() != postpilotv1.FailureReason_AUTHORING_FEATURE_UNAVAILABLE.String() {
 		t.Fatalf("sample: err = %v", err)
 	}
 }

@@ -5,6 +5,7 @@ export const i18n = {
   namespace: 'clips',
   ko: {
     editor: {
+      closeDesign: '저장된 영상 템플릿 “{{name}}” 보기',
       accentHelp: '강조색은 자막의 한 단어에만 적용돼요.',
       create: '새 영상 템플릿',
       edit: '영상 템플릿 편집',
@@ -33,6 +34,7 @@ export const i18n = {
   },
   en: {
     editor: {
+      closeDesign: 'View saved video template “{{name}}”',
       accentHelp: 'The accent colours one caption word only.',
       create: 'New video template',
       edit: 'Edit video template',

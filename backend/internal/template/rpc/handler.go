@@ -107,30 +107,13 @@ func (h *Handler) GetFormatGuide(ctx context.Context, req *connect.Request[postp
 	return connect.NewResponse(&postpilotv1.GetFormatGuideResponse{Text: text}), nil
 }
 
-// StartTemplateRequest enqueues a template request on the write model the client names
-// (TMPL-58). Every refusal it can state — the box, the draft, the template, the cap, the model,
-// the sample — comes before the credit hold; plan and credit refusals come from the hold.
-func (h *Handler) StartTemplateRequest(ctx context.Context, req *connect.Request[postpilotv1.StartTemplateRequestRequest]) (*connect.Response[postpilotv1.StartTemplateRequestResponse], error) {
-	userID, err := actingUser(ctx)
-	if err != nil {
+// New requests use the shared durable authoring flow. Historical jobs retain their
+// cancellation, execution and readable results without admitting another paid helper.
+func (h *Handler) StartTemplateRequest(ctx context.Context, _ *connect.Request[postpilotv1.StartTemplateRequestRequest]) (*connect.Response[postpilotv1.StartTemplateRequestResponse], error) {
+	if _, err := actingUser(ctx); err != nil {
 		return nil, err
 	}
-	language, err := guideLanguage(req.Msg.GetLanguage())
-	if err != nil {
-		return nil, err
-	}
-	draft := req.Msg.GetDraft()
-	jobID, err := h.service.StartRequest(ctx, userID, template.StartRequest{
-		WriteModel: modelRefValue(req.Msg.GetWriteModel()), Language: language, Text: req.Msg.GetText(),
-		Draft: template.Draft{
-			Name: draft.GetName(), Description: draft.GetDescription(), TitleArea: draft.GetTitleArea(), Body: draft.GetBody(),
-		},
-		TemplateID: req.Msg.GetTemplateId(), SamplePostSlug: req.Msg.GetSamplePostSlug(),
-	})
-	if err != nil {
-		return nil, toConnectError("start template request", err)
-	}
-	return connect.NewResponse(&postpilotv1.StartTemplateRequestResponse{JobId: jobID}), nil
+	return nil, rpcserver.NewAppError(connect.CodeFailedPrecondition, "use template AI editing", postpilotv1.FailureReason_AUTHORING_FEATURE_UNAVAILABLE, map[string]string{"destination": "/templates/new"})
 }
 
 // CancelTemplateRequest stops the owner's queued or running request (TMPL-63); a finished one

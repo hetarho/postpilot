@@ -18,6 +18,8 @@ type AuthoringPublication struct {
 	Key                     AuthoringKey
 	TargetID, TargetVersion string
 	Draft                   Draft
+	// Nil retains captured generation defaults; a present pair is an explicit owner edit.
+	Numbers *Numbers
 }
 type AuthoringStore interface {
 	CountAuthoringTargets(context.Context, string) (int, error)
@@ -38,11 +40,15 @@ func NewAuthoring(service *Service, store AuthoringStore) *Authoring {
 	return &Authoring{service: service, store: store}
 }
 func (a *Authoring) Seed(ctx context.Context, user, id string) (Draft, string, error) {
+	draft, _, version, err := a.SeedWithNumbers(ctx, user, id)
+	return draft, version, err
+}
+func (a *Authoring) SeedWithNumbers(ctx context.Context, user, id string) (Draft, Numbers, string, error) {
 	current, err := a.service.store.Get(ctx, user, id)
 	if err != nil {
-		return Draft{}, "", err
+		return Draft{}, Numbers{}, "", err
 	}
-	return Draft{Name: current.Name, Description: current.Description, Body: current.Body, TitleArea: current.TitleArea}, AuthoringVersion(current), nil
+	return Draft{Name: current.Name, Description: current.Description, Body: current.Body, TitleArea: current.TitleArea}, Numbers{TargetLength: current.TargetLength, TagCount: current.TagCount}, AuthoringVersion(current), nil
 }
 func (a *Authoring) CanStart(ctx context.Context, user, id string) error {
 	if id != "" {
@@ -58,7 +64,25 @@ func (a *Authoring) CanStart(ctx context.Context, user, id string) error {
 	}
 	return nil
 }
-func (a *Authoring) Validate(draft Draft) (Draft, error) { return a.service.validDraft(draft) }
+func (a *Authoring) Validate(draft Draft) (Draft, error)   { return a.service.validDraft(draft) }
+func (a *Authoring) ValidateNumbers(numbers Numbers) error { return a.service.validNumbers(numbers) }
+
+// RenderedForNewWrite validates a private contender through the same grammar and
+// required-answer gate as a saved template, before a test may admit paid writing.
+func (a *Authoring) RenderedForNewWrite(draft Draft, hasPhotos bool, answers []Answer) (Rendered, error) {
+	draft, err := a.Validate(draft)
+	if err != nil {
+		return Rendered{}, err
+	}
+	title, body, err := ParseTemplate(draft.TitleArea, draft.Body, a.service.parseOptions())
+	if err != nil {
+		return Rendered{}, err
+	}
+	if err := a.service.validateRequiredAnswers(title, body, answers); err != nil {
+		return Rendered{}, err
+	}
+	return RenderTemplate(draft.Name, title, body, hasPhotos, answers), nil
+}
 func (a *Authoring) Guide() string {
 	guide, err := FormatGuide(LanguageKorean, a.service.limits)
 	if err != nil {
@@ -72,6 +96,11 @@ func (a *Authoring) Publish(ctx context.Context, user string, in AuthoringPublic
 		return Template{}, err
 	}
 	in.Draft = draft
+	if in.Numbers != nil {
+		if err := a.service.validNumbers(*in.Numbers); err != nil {
+			return Template{}, err
+		}
+	}
 	return a.store.PublishAuthoring(ctx, user, in, a.service.newID(), a.service.now(), a.service.limits.MaxPerAccount)
 }
 func AuthoringVersion(t Template) string {

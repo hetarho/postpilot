@@ -11,7 +11,9 @@ export function AIAuthoringStudio(props: AIAuthoringStudioProps) {
   return (
     <AuthoringEditor
       {...props}
-      renderPreview={(artifact) => <AuthoringPreview kind={props.kind} artifact={artifact} />}
+      renderPreview={(artifact, lastValid) => (
+        <AuthoringPreview kind={props.kind} artifact={artifact} fallbackArtifact={lastValid} />
+      )}
     />
   )
 }
@@ -19,7 +21,9 @@ export function AIAuthoringSheet(props: AIAuthoringSheetProps) {
   return (
     <AuthoringSheet
       {...props}
-      renderPreview={(artifact) => <AuthoringPreview kind={props.kind} artifact={artifact} />}
+      renderPreview={(artifact, lastValid) => (
+        <AuthoringPreview kind={props.kind} artifact={artifact} fallbackArtifact={lastValid} />
+      )}
     />
   )
 }

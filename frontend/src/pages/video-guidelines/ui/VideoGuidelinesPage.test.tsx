@@ -3,6 +3,7 @@ import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ProtoGuidelineKind, ProtoGuidelineScope } from '@/shared/api'
 import { renderAppAt } from '@/test/app'
+import { publishAuthoringDraft } from '@/test/authoring-ui'
 import type { FakeGuidelineRow, FakeGuidelinesOptions } from '@/test/guidelines'
 
 const USER = { id: 'alice' }
@@ -38,8 +39,10 @@ function renderVideoGuidelines(guidelines: FakeGuidelinesOptions = {}, calls: st
 const section = async (name: string) => within(await screen.findByRole('region', { name }))
 
 async function openCreateSheet(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(await screen.findByRole('button', { name: '새 영상 지침' }))
-  return within(await screen.findByRole('dialog'))
+  await user.click(await screen.findByRole('button', { name: '새 영상 지침 직접 쓰기' }))
+  const dialog = within(await screen.findByRole('dialog'))
+  await dialog.findByLabelText('지침')
+  return dialog
 }
 
 describe('/video-guidelines', () => {
@@ -77,6 +80,7 @@ describe('/video-guidelines', () => {
       'GetMyPlan',
       'ListGuidelines',
       'ListGuidelineCandidates',
+      'ListAuthoringSummaries',
     ]
     expect(calls.filter((call) => !allowed.includes(call))).toEqual([])
   })
@@ -112,7 +116,7 @@ describe('/video-guidelines', () => {
       '특정 영상 템플릿',
     ])
     await user.type(form.getByLabelText('지침'), '자막은 두 줄까지')
-    await user.click(form.getByRole('button', { name: '지침 만들기' }))
+    await publishAuthoringDraft(user)
 
     await waitFor(() => expect(creates).toHaveLength(1))
     expect(creates[0]).toEqual({
@@ -156,9 +160,12 @@ describe('/video-guidelines', () => {
 
     await user.type(form.getByLabelText('지침'), '메뉴판을 먼저')
     await user.click(form.getByRole('tab', { name: '특정 영상 템플릿' }))
-    expect(form.getByRole('button', { name: '지침 만들기' })).toBeDisabled()
+    expect(form.getByRole('tab', { name: '특정 영상 템플릿' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    )
     await user.click(await form.findByLabelText('메뉴 소개'))
-    await user.click(form.getByRole('button', { name: '지침 만들기' }))
+    await publishAuthoringDraft(user)
 
     await waitFor(() => expect(creates).toHaveLength(1))
     expect(creates[0]).toEqual({

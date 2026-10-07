@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useRef, type ReactNode } from 'react'
+import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { useMachine } from '@xstate/react'
 import { Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
@@ -20,6 +20,7 @@ import {
   Button,
   Checkbox,
   ChoiceButton,
+  SegmentedControl,
   Dialog,
   FieldMessage,
   Notice,
@@ -36,13 +37,22 @@ import {
 } from '../model/studio-flow-machine'
 import { AuthoringPreview } from './AuthoringPreview'
 
+export interface AuthoringDirectEditorProps {
+  source: AuthoringArtifact
+  onChange: (source: AuthoringArtifact) => void
+  disabled: boolean
+}
 export interface AuthoringEditorProps extends AuthoringScope {
   sessionId?: string
+  initialMethod?: 'ai' | 'direct'
+  startFromSaved?: boolean
+  referencePost?: string
+  renderDirectEditor?: (props: AuthoringDirectEditorProps) => ReactNode
   targetName?: string
   candidateCount?: AuthoringCandidateCount
   onSaved?: (ref: AuthoringSavedRef) => void
   onBusyChange?: (busy: boolean) => void
-  renderPreview?: (artifact: AuthoringArtifact) => ReactNode
+  renderPreview?: (artifact: AuthoringArtifact, lastValid?: AuthoringArtifact) => ReactNode
   className?: string
   initialMakeDefault?: boolean
   active?: boolean
@@ -65,6 +75,10 @@ function ScopedEditor({
   kind,
   targetId,
   sessionId,
+  initialMethod,
+  startFromSaved,
+  referencePost,
+  renderDirectEditor,
   targetName,
   candidateCount = 8,
   onSaved,
@@ -79,7 +93,13 @@ function ScopedEditor({
   const scope = { ownerId, kind, targetId }
   const scopeKey = authoringScopeKey(scope)
   // Navigation never mounts a second operation consumer, poller or save queue.
-  const controller = useAuthoring(scope, { onSaved, onBusyChange }, sessionId)
+  const controller = useAuthoring(
+    scope,
+    { onSaved, onBusyChange },
+    sessionId,
+    referencePost,
+    startFromSaved,
+  )
   const { state, busy } = controller
   const write = useStageSelection('write')
   const defaults = useInitializeDefaultSelections(ownerId)
@@ -117,6 +137,37 @@ function ScopedEditor({
     send({ type: 'OBSERVE', scopeKey, operation: state, ai })
   }, [state, ai, scopeKey, send])
   const view = studioFlowView(flow)
+  const methodStarted = useRef(false)
+  useEffect(() => {
+    if (
+      !ownerId ||
+      !initialMethod ||
+      methodStarted.current ||
+      !active ||
+      state.phase === 'checking' ||
+      busy ||
+      controller.readFailure
+    )
+      return
+    if (view === 'existing' || view === 'purpose' || view === 'review' || view === 'confirmed') {
+      methodStarted.current = true
+      if (view !== 'purpose' || initialMethod === 'direct')
+        send({ type: initialMethod === 'direct' ? 'OPEN_DIRECT' : 'OPEN_REFINEMENT', scopeKey })
+    }
+  }, [
+    ownerId,
+    initialMethod,
+    active,
+    state.phase,
+    busy,
+    controller.readFailure,
+    view,
+    scopeKey,
+    send,
+  ])
+  const [directPane, setDirectPane] = useState<'input' | 'preview'>('input')
+  const templateKind = kind === 'post-template' || kind === 'video-template'
+  const guidelineKind = kind === 'post-guideline' || kind === 'video-guideline'
   const id = useId()
   const heading = useRef<HTMLDivElement>(null)
   const previousView = useRef(view)
@@ -135,7 +186,21 @@ function ScopedEditor({
   }, [canGoBack, goBack, onNavigationChange])
   useEffect(() => () => onNavigationChange?.(undefined), [onNavigationChange])
   const selected = state.session?.selected
-  const source = state.directSource ?? state.session?.workingSource ?? selected
+  const source =
+    state.directSource ??
+    state.session?.workingSource ??
+    selected ??
+    (state.session
+      ? {
+          id: '',
+          name: '',
+          description: '',
+          body: '',
+          titleArea: '',
+          ...(kind === 'post-template' ? { targetLength: '', tagCount: '' } : {}),
+          ...(kind === 'post-guideline' || kind === 'video-guideline' ? { scope: 'global' } : {}),
+        }
+      : undefined)
   const summarySource = state.session?.savedBaseline ?? source ?? selected
   const summaryName =
     summarySource && readableAuthoringProse(summarySource.body)
@@ -200,21 +265,26 @@ function ScopedEditor({
     )
       send({ type, scopeKey })
   }
-  const preview = selected && (
+  const previewArtifact = view === 'direct' ? source : selected
+  const preview = previewArtifact && (
     <div className="min-w-0">
       <Typography variant="fieldTitle" as="h3" className="break-words">
-        {selected.name || name}
+        {previewArtifact.name || name}
       </Typography>
-      {selected.description && (
+      {previewArtifact.description && (
         <Typography variant="body" className="text-content-secondary mt-3 break-words">
-          {selected.description}
+          {previewArtifact.description}
         </Typography>
       )}
       <div className="mt-6">
         {renderPreview ? (
-          renderPreview(selected)
+          renderPreview(previewArtifact, view === 'direct' ? selected : undefined)
         ) : (
-          <AuthoringPreview kind={kind} artifact={selected} />
+          <AuthoringPreview
+            kind={kind}
+            artifact={previewArtifact}
+            fallbackArtifact={view === 'direct' ? selected : undefined}
+          />
         )}
       </div>
     </div>
@@ -289,10 +359,19 @@ function ScopedEditor({
             : view === 'restoring'
               ? t('checking')
               : view === 'confirmed'
-                ? t(targetId && kind !== 'writing-voice' ? 'confirmedUpdate' : 'confirmedCreate', {
-                    kind: t(`kinds.${kind}`),
-                    name: state.session?.saved?.name || name,
-                  })
+                ? t(
+                    state.session?.saved?.outcome === 'created'
+                      ? 'confirmedCreate'
+                      : state.session?.saved?.outcome === 'updated'
+                        ? 'confirmedUpdate'
+                        : targetId && kind !== 'writing-voice'
+                          ? 'confirmedUpdate'
+                          : 'confirmedCreate',
+                    {
+                      kind: t(`kinds.${kind}`),
+                      name: state.session?.saved?.name || name,
+                    },
+                  )
                 : ''}
         </Typography>
       </div>
@@ -355,6 +434,11 @@ function ScopedEditor({
           <Typography variant="body" id={id + '-hint'} className="text-content-secondary mt-3">
             {t(`purposeHints.${kind}`)}
           </Typography>
+          {guidelineKind && !targetId && (
+            <Typography variant="body" className="text-content-secondary mt-3">
+              {t('newGlobalScope')}
+            </Typography>
+          )}
           {characters > 0 && (
             <Typography variant="meta" className="mt-3 block">
               {t('limit', { count: characters })}
@@ -463,80 +547,111 @@ function ScopedEditor({
         </div>
       )}
       {view === 'direct' && source && (
-        <div className="mt-8 grid gap-8 @3xl:grid-cols-2 @3xl:items-start @3xl:gap-12">
-          {preview}
-          <form
-            className="min-w-0 space-y-6"
-            onSubmit={(e) => {
-              e.preventDefault()
-              event('FINISH_DIRECT')
-            }}
-          >
-            <label className="block">
-              <Typography variant="fieldTitle" as="span">
-                {t('fields.name')}
+        <div className="mt-8">
+          {templateKind && (
+            <SegmentedControl
+              value={directPane}
+              onChange={setDirectPane}
+              ariaLabel={t('directViews')}
+              options={[
+                { value: 'input', label: t('directInput') },
+                { value: 'preview', label: t('preview') },
+              ]}
+              className="mb-6 lg:hidden"
+            />
+          )}
+          <div className="grid gap-8 lg:grid-cols-2 lg:items-start lg:gap-12">
+            <aside
+              className={
+                templateKind && directPane === 'input'
+                  ? 'lg:top-chrome hidden lg:sticky lg:block'
+                  : 'lg:top-chrome lg:sticky'
+              }
+            >
+              {preview}
+            </aside>
+            <form
+              className={
+                'min-w-0 space-y-6 ' +
+                (templateKind && directPane === 'preview' ? 'hidden lg:block' : '')
+              }
+              onSubmit={(e) => {
+                e.preventDefault()
+                event('FINISH_DIRECT')
+              }}
+            >
+              {renderDirectEditor ? (
+                renderDirectEditor({ source, onChange: controller.setSource, disabled: blocked })
+              ) : (
+                <>
+                  <label className="block">
+                    <Typography variant="fieldTitle" as="span">
+                      {t('fields.name')}
+                    </Typography>
+                    <TextField
+                      value={source.name}
+                      onChange={(e) => changeSource('name', e.target.value)}
+                      maxLength={200}
+                      className="mt-3"
+                    />
+                  </label>
+                  <label className="block">
+                    <Typography variant="fieldTitle" as="span">
+                      {t('fields.description')}
+                    </Typography>
+                    <TextField
+                      value={source.description}
+                      onChange={(e) => changeSource('description', e.target.value)}
+                      maxLength={200}
+                      className="mt-3"
+                    />
+                  </label>
+                  <label className="block">
+                    <Typography variant="fieldTitle" as="span">
+                      {t('fields.body')}
+                    </Typography>
+                    <Textarea
+                      value={source.body}
+                      onChange={(e) => changeSource('body', e.target.value)}
+                      rows={10}
+                      autoGrow
+                      className="max-h-field mt-3"
+                    />
+                  </label>
+                  {kind === 'post-template' && (
+                    <label className="block">
+                      <Typography variant="fieldTitle" as="span">
+                        {t('fields.titleArea')}
+                      </Typography>
+                      <Textarea
+                        value={source.titleArea}
+                        onChange={(e) => changeSource('titleArea', e.target.value)}
+                        rows={3}
+                        autoGrow
+                        className="mt-3"
+                      />
+                    </label>
+                  )}
+                </>
+              )}
+              <Typography variant="body" className="text-content-secondary">
+                {t('directHelp')}
               </Typography>
-              <TextField
-                value={source.name}
-                onChange={(e) => changeSource('name', e.target.value)}
-                maxLength={200}
-                className="mt-3"
-              />
-            </label>
-            <label className="block">
-              <Typography variant="fieldTitle" as="span">
-                {t('fields.description')}
-              </Typography>
-              <TextField
-                value={source.description}
-                onChange={(e) => changeSource('description', e.target.value)}
-                maxLength={200}
-                className="mt-3"
-              />
-            </label>
-            <label className="block">
-              <Typography variant="fieldTitle" as="span">
-                {t('fields.body')}
-              </Typography>
-              <Textarea
-                value={source.body}
-                onChange={(e) => changeSource('body', e.target.value)}
-                rows={10}
-                autoGrow
-                className="max-h-field mt-3"
-              />
-            </label>
-            {kind === 'post-template' && (
-              <label className="block">
-                <Typography variant="fieldTitle" as="span">
-                  {t('fields.titleArea')}
-                </Typography>
-                <Textarea
-                  value={source.titleArea}
-                  onChange={(e) => changeSource('titleArea', e.target.value)}
-                  rows={3}
-                  autoGrow
-                  className="mt-3"
-                />
-              </label>
-            )}
-            <Typography variant="body" className="text-content-secondary">
-              {t('directHelp')}
-            </Typography>
-            <div className="flex flex-wrap gap-4">
-              <Button variant="cta" type="submit">
-                {t('keepDirect')}
-              </Button>
-              <Button variant="ghost" onClick={() => event('OPEN_REFINEMENT')}>
-                {t('aiNamed', named)}
-              </Button>
-            </div>
-            {state.session?.savedBaseline && (
-              <Button variant="ghost" onClick={() => event('ASK_RESET')}>
-                {t('resetNamed', named)}
-              </Button>
-            )}
-          </form>
+              <div className="flex flex-wrap gap-4">
+                <Button variant="cta" type="submit">
+                  {t('keepDirect')}
+                </Button>
+                <Button variant="ghost" onClick={() => event('OPEN_REFINEMENT')}>
+                  {t('aiNamed', named)}
+                </Button>
+              </div>
+              {state.session?.savedBaseline && (
+                <Button variant="ghost" onClick={() => event('ASK_RESET')}>
+                  {t('resetNamed', named)}
+                </Button>
+              )}
+            </form>
+          </div>
         </div>
       )}
       {view === 'refining' && (selected || source) && (
@@ -548,7 +663,7 @@ function ScopedEditor({
                 {t('directNamed', named)}
               </Button>
               <Button variant="ghost" onClick={() => event('FRESH')}>
-                {t('fresh')}
+                {t('freshNamed', named)}
               </Button>
               {state.session?.savedBaseline && (
                 <Button variant="ghost" onClick={() => event('ASK_RESET')}>
@@ -556,6 +671,9 @@ function ScopedEditor({
                 </Button>
               )}
             </div>
+            <Typography variant="body" className="text-content-secondary mb-6">
+              {t('freshHelp', named)}
+            </Typography>
             {state.session?.turns.length ? (
               <ol aria-label={t('chat')} className="mb-6 space-y-6">
                 {state.session.turns.map((turn) => (
@@ -659,6 +777,27 @@ function ScopedEditor({
                   : `publicationCreates.${kind}`,
             )}
           </Typography>
+          {guidelineKind && (
+            <Typography variant="body" className="mt-4">
+              {t(
+                selected.scope === 'global'
+                  ? 'scopeGlobal'
+                  : selected.scope === 'templates'
+                    ? 'scopeTemplates'
+                    : selected.scope === 'fields'
+                      ? 'scopeFields'
+                      : targetId
+                        ? 'scopeRetained'
+                        : 'scopeRequired',
+                {
+                  count:
+                    selected.scope === 'templates'
+                      ? (selected.templateIds?.length ?? 0)
+                      : (selected.fields?.length ?? 0),
+                },
+              )}
+            </Typography>
+          )}
           {kind === 'writing-voice' && !recoveredSave && (
             <label className="mt-6 flex min-h-11 cursor-pointer items-center gap-4 py-3">
               <Checkbox
@@ -687,8 +826,9 @@ function ScopedEditor({
                   : kind === 'writing-voice'
                     ? 'saveVoice'
                     : targetId
-                      ? 'apply'
-                      : 'save',
+                      ? 'saveChangesNamed'
+                      : 'saveNewNamed',
+                named,
               )}
             </Button>
           )}

@@ -154,8 +154,11 @@ export const studioFlowMachine = setup({
       studioBusy(context.operation) &&
       !(context.operation.session?.phase === 'saving' && !context.operation.session.activeJobId),
     restoring: ({ context }) => context.operation.phase === 'checking',
+    directResult: ({ context }) =>
+      context.intent === 'edit' && context.resume === 'direct' && !!context.operation.session,
     refineResult: ({ context }) =>
-      context.intent === 'refine' &&
+      (context.intent === 'refine' ||
+        (context.intent === 'edit' && context.resume === 'refining')) &&
       !!(context.operation.session?.workingSource ?? context.operation.session?.selected),
     publishResult: ({ context }) =>
       (context.intent === 'save' || context.operation.session?.phase === 'saving') &&
@@ -240,11 +243,13 @@ export const studioFlowMachine = setup({
     refining: assign({ intent: 'refine', resume: 'refining', problem: undefined }),
     selecting: assign({ intent: 'select', problem: undefined }),
     editing: assign({ intent: 'edit', problem: undefined }),
+    editingDirect: assign({ intent: 'edit', resume: 'direct', problem: undefined }),
+    editingAI: assign({ intent: 'edit', resume: 'refining', problem: undefined }),
     publishing: assign({ intent: 'save', problem: undefined }),
     cancelling: assign({ intent: 'cancel' }),
     showReset: assign({ resetOpen: true }),
     hideReset: assign({ resetOpen: false }),
-    keepingDirect: assign({ intent: 'edit', problem: undefined }),
+    keepingDirect: assign({ intent: 'edit', resume: 'review', problem: undefined }),
     reset: assign(({ context }) => ({
       purpose: '',
       intent: undefined,
@@ -308,6 +313,7 @@ export const studioFlowMachine = setup({
         { guard: 'saved', target: 'confirmed' },
         { guard: 'restoring', target: 'restoring' },
         { guard: 'working', target: 'working' },
+        { guard: 'directResult', target: 'direct' },
         { guard: 'refineResult', target: 'refining' },
         { guard: 'publishResult', target: 'publication' },
         { guard: 'recommended', target: 'choices' },
@@ -333,6 +339,11 @@ export const studioFlowMachine = setup({
     restoring: {},
     purpose: {
       on: {
+        OPEN_DIRECT: {
+          guard: 'available',
+          target: 'working',
+          actions: ['editingDirect', 'loadExisting'],
+        },
         PURPOSE_CHANGED: { guard: 'available', actions: 'purposeChanged' },
         RECOMMEND: [
           {
@@ -346,6 +357,14 @@ export const studioFlowMachine = setup({
     },
     existing: {
       on: {
+        OPEN_DIRECT: [
+          { guard: 'hasSource', target: 'direct' },
+          { guard: 'available', target: 'working', actions: ['editingDirect', 'loadExisting'] },
+        ],
+        OPEN_REFINEMENT: [
+          { guard: 'canRefinement', target: 'refining' },
+          { guard: 'available', target: 'working', actions: ['editingAI', 'loadExisting'] },
+        ],
         LOAD_EXISTING: [
           { guard: 'canReview', target: 'review' },
           { guard: 'available', target: 'working', actions: ['editing', 'loadExisting'] },
@@ -434,7 +453,20 @@ export const studioFlowMachine = setup({
         },
       },
     },
-    confirmed: {},
+    confirmed: {
+      on: {
+        OPEN_DIRECT: {
+          guard: 'canContinue',
+          target: 'working',
+          actions: ['editingDirect', 'continueEditing'],
+        },
+        OPEN_REFINEMENT: {
+          guard: 'canContinue',
+          target: 'working',
+          actions: ['editingAI', 'continueEditing'],
+        },
+      },
+    },
   },
 })
 

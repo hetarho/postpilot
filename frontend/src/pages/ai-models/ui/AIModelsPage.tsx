@@ -1,9 +1,10 @@
 import { useTranslation } from 'react-i18next'
+import { Link } from '@tanstack/react-router'
 import { useRecommendationSets } from '@/entities/model-catalog'
 import { ApplyRecommendation } from '@/features/apply-model-recommendation'
-import { ActiveModelForm } from '@/features/configure-model-pair'
+import { ActiveModelForm, OptionalTestPair } from '@/features/configure-model-pair'
 import { PostCreditEstimate } from '@/features/select-model'
-import { Notice, Typography, pageStyles } from '@/shared/ui'
+import { Notice, Typography, buttonStyles, pageStyles } from '@/shared/ui'
 import { ModelPageHeader } from './ModelPageHeader'
 
 export function AIModelsPage() {
@@ -18,6 +19,40 @@ export function AIModelsPage() {
         <ActiveModelForm stage="write" />
       </div>
       <PostCreditEstimate className="mt-6" />
+      <section className="mt-10" aria-labelledby="writing-test-heading">
+        <Typography variant="title" as="h2" id="writing-test-heading">
+          {t('page.writingTests')}
+        </Typography>
+        <Typography variant="body" className="text-content-secondary mt-3">
+          {t('page.writingTestsHelp')}
+        </Typography>
+        <div className="mt-6 flex flex-wrap gap-4">
+          <Link
+            to="/tests"
+            search={{ factor: 'model', stage: 'write', count: 2, entry: '/ai-models' }}
+            className={buttonStyles({ variant: 'secondary' })}
+          >
+            {t('page.testWriteModels')}
+          </Link>
+          <Link
+            to="/tests"
+            search={{ factor: 'model', stage: 'observe', count: 2, entry: '/ai-models' }}
+            className={buttonStyles({ variant: 'ghost' })}
+          >
+            {t('page.testObserveModels')}
+          </Link>
+          <Link
+            to="/tests/history"
+            search={{ entry: '/ai-models' }}
+            className={buttonStyles({ variant: 'ghost' })}
+          >
+            {t('page.testHistory')}
+          </Link>
+        </div>
+        <div className="mt-6">
+          <OptionalTestPair />
+        </div>
+      </section>
       <section className="mt-10" aria-labelledby="recommendation-heading">
         <Typography variant="title" id="recommendation-heading">
           {t('page.recommendation')}

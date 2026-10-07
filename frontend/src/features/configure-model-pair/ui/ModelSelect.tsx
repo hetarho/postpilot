@@ -23,6 +23,8 @@ export function ModelSelect({
   error,
   notice,
   savedIssue,
+  disabled = false,
+  status,
 }: {
   label: string
   /** Which stage's grade to show: a model is graded per stage, not once (MODEL-57). */
@@ -38,6 +40,8 @@ export function ModelSelect({
   /** Why the last change of this field wrote nothing (MODEL-65). */
   notice?: string
   savedIssue?: string
+  disabled?: boolean
+  status?: string
 }) {
   const { t } = useTranslation('models')
   const id = useId()
@@ -68,7 +72,7 @@ export function ModelSelect({
         ]}
         // Disabled only while a save is in flight: on 3G the round trip is seconds long and a
         // second tap would fire a second SaveSelection against the first one's result.
-        disabled={saving}
+        disabled={saving || disabled}
         aria-invalid={error || notice ? true : undefined}
         aria-describedby={error || notice ? errorId : undefined}
         onChange={onChange}
@@ -82,9 +86,9 @@ export function ModelSelect({
         variant="body"
         as="p"
         role="status"
-        className="text-content-tertiary mt-1 empty:hidden"
+        className="text-content-tertiary mt-1 break-words empty:hidden"
       >
-        {saving ? t('pair.saving') : null}
+        {status ?? (saving ? t('pair.saving') : null)}
       </Typography>
       {(error || notice) && (
         <Typography

@@ -79,3 +79,25 @@ export function useClipTemplateMutations(ownerId: string) {
   })
   return { save, remove }
 }
+
+/** Starting-design updates never reapply a captured name or composition. */
+export function useClipTemplateDesignMutation(ownerId: string) {
+  const transport = useTransport()
+  const cache = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, recipe }: { id: string; recipe: ClipRecipe }) => {
+      const result = await createClient(ClipTemplateService, transport).updateVideoTemplate({
+        id,
+        introPreset: recipe.introPreset,
+        outroPreset: recipe.outroPreset,
+        allowedCaptionStyles: { values: recipe.allowedCaptionStyles },
+      })
+      if (!result.template?.id) throw new Error('Missing saved video template')
+      return toClipTemplate(result.template)
+    },
+    onSuccess: () => {
+      void cache.invalidateQueries({ queryKey: clipTemplatesKey(transport, ownerId) })
+      void cache.invalidateQueries({ queryKey: ['clip-projects', transport, ownerId] })
+    },
+  })
+}

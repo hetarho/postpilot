@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/postpilot/backend/internal/authoring"
 	"github.com/postpilot/backend/internal/llm"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -23,7 +24,7 @@ func TestRefineCompletesNewIncompleteOrInvalidSourceWithoutASelectedPreview(t *t
 				t.Fatal("fixture did not retain unfinished new work", err)
 			}
 			reloaded, err := h.svc.Get(ctx, "alice", s.ID)
-			if err != nil || *reloaded.WorkingSource != *s.WorkingSource {
+			if err != nil || !reflect.DeepEqual(*reloaded.WorkingSource, *s.WorkingSource) {
 				t.Fatal("unfinished source was not durable", err)
 			}
 			id, active, err := h.svc.Start(ctx, "alice", authoring.Start{SessionID: s.ID, ExpectedRevision: s.Revision, RequestID: "finish-source", Mode: authoring.Refine, Prompt: "Complete my current structure", WriteModel: llm.ModelRef{ProviderID: "p", ModelID: "m"}})
@@ -102,7 +103,7 @@ func TestWorkingSourceInvalidPersistenceOwnerCASAndReceipts(t *testing.T) {
 	baseline := *s.SavedBaseline
 	original := s
 	invalid := patch(t, h, s, "patch-once", "invalid-source")
-	if invalid.DraftState != authoring.DraftInvalid || *invalid.Selected != baseline || !invalid.HasUnpublishedChanges || !invalid.SavedAvailable {
+	if invalid.DraftState != authoring.DraftInvalid || !reflect.DeepEqual(*invalid.Selected, baseline) || !invalid.HasUnpublishedChanges || !invalid.SavedAvailable {
 		t.Fatal("invalid source lost usable baseline or last-valid preview")
 	}
 	reloaded, err := secondService(t, h).Get(ctx, "alice", s.ID)
@@ -488,7 +489,7 @@ func TestChangedBatchCountRetainsPriorVisibleBatchDuringCancellationAndInvalidOu
 				h.jobs.status(id, "failed")
 			}
 			current, err := h.svc.Get(ctx, "alice", s.ID)
-			if err != nil || current.RequestedCandidateCount != 8 || len(current.Candidates) != 8 || current.Candidates[0] != first {
+			if err != nil || current.RequestedCandidateCount != 8 || len(current.Candidates) != 8 || !reflect.DeepEqual(current.Candidates[0], first) {
 				t.Fatal("failed/cancelled preparation lost the prior batch", err)
 			}
 		})

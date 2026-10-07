@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/postpilot/backend/internal/authoring"
+	authorstore "github.com/postpilot/backend/internal/authoring/store"
 	"github.com/postpilot/backend/internal/clip"
 	clipapp "github.com/postpilot/backend/internal/clip/app"
 	clipstore "github.com/postpilot/backend/internal/clip/store"
@@ -66,9 +67,9 @@ func publicationArtifact(kind authoring.Kind) authoring.Artifact {
 	case authoring.VideoTemplate:
 		return authoring.Artifact{Name: "짧은 방문 기록", Description: "방문 장면의 자연스러운 흐름", Body: `<clip version="1"><stage name="방문">도착과 분위기</stage><text id="hook" kind="ai" role="hook"><row kind="ai">소개 시작</row></text><text id="ending" kind="ai" role="ending"><row kind="ai">마무리</row></text></clip>`}
 	case authoring.PostGuideline:
-		return authoring.Artifact{Name: "사실과 느낌", Body: "확인한 사실과 자신의 느낌을 구분해서 설명해 주세요."}
+		return authoring.Artifact{Scope: publicationString("global"), Name: "사실과 느낌", Body: "확인한 사실과 자신의 느낌을 구분해서 설명해 주세요."}
 	case authoring.VideoGuideline:
-		return authoring.Artifact{Name: "간단한 영상 설명", Body: "장면에 보이는 내용 위주로 설명하고 같은 내용을 반복하지 마세요."}
+		return authoring.Artifact{Scope: publicationString("global"), Name: "간단한 영상 설명", Body: "장면에 보이는 내용 위주로 설명하고 같은 내용을 반복하지 마세요."}
 	case authoring.WritingVoice:
 		return authoring.Artifact{Name: "편안한 이야기", Description: "조용하고 편안하게 이야기하는 말투예요.", Body: strings.Repeat("산책하다 가상의 작은 가게에 들러 따뜻한 차를 마셨어요. 창가에서 잠깐 쉬니 마음이 편안했어요. ", 5)}
 	default:
@@ -216,6 +217,8 @@ func TestAuthoringTemplateAndGuidelineUpdatesKeepProtectedFieldsAndDetectDrift(t
 		}
 		input := publicationInput(entry.kind)
 		input.TargetID, input.TargetVersion = entry.id, seed.TargetVersion
+		// Historical AI publications omit protected owner fields and retain scope.
+		input.Artifact.Scope = nil
 		if _, err := h.targets.Publish(ctx, input); err != nil {
 			t.Fatal(err)
 		}
@@ -246,6 +249,120 @@ func TestAuthoringTemplateAndGuidelineUpdatesKeepProtectedFieldsAndDetectDrift(t
 		if _, err := h.targets.Publish(ctx, input); !errors.Is(err, authoring.ErrTargetConflict) {
 			t.Fatalf("stale %s applied: %v", entry.kind, err)
 		}
+	}
+}
+
+type publicationIdleAuthoringJobs struct{ authoring.Jobs }
+type publicationIdleAuthoringBudget struct{ authoring.Budget }
+type publicationIdleAuthoringEstimator struct{ authoring.Estimator }
+
+func (h *publicationHarness) authoringService() *authoring.Service {
+	return authoring.NewService(authorstore.New(h.d.Writer, h.d.Reader), h.models, publicationIdleAuthoringJobs{}, h.targets, publicationIdleAuthoringBudget{}, publicationIdleAuthoringEstimator{})
+}
+
+func TestAuthoringCanonicalMetadataKeepsSavedVersionAndAllowsTheNextEdit(t *testing.T) {
+	for _, kind := range []authoring.Kind{authoring.PostTemplate, authoring.PostGuideline} {
+		t.Run(string(kind), func(t *testing.T) {
+			h := newPublicationHarness(t)
+			ctx := context.Background()
+			target, err := h.templates.Create(ctx, "alice", template.Authored{Name: "Number baseline", Body: "<write>Baseline</write>"})
+			if err != nil {
+				t.Fatal(err)
+			}
+			id := target.ID
+			var scopeIDs []string
+			if kind == authoring.PostGuideline {
+				second, err := h.templates.Create(ctx, "alice", template.Authored{Name: "Second scope", Body: "<write>Second</write>"})
+				if err != nil {
+					t.Fatal(err)
+				}
+				guide, err := h.guides.Create(ctx, "alice", guideline.KindPost, "Scope baseline", "Preserve this direction", guideline.ScopePatch{Scope: guideline.ScopeGlobal}, "")
+				if err != nil {
+					t.Fatal(err)
+				}
+				id = guide.ID
+				scopeIDs = []string{" " + second.ID + " ", target.ID, second.ID}
+			}
+			svc := h.authoringService()
+			state, err := svc.Create(ctx, "alice", kind, id, "metadata-session")
+			if err != nil || state.WorkingSource == nil {
+				t.Fatalf("create=%+v %v", state, err)
+			}
+			source := *state.WorkingSource
+			if kind == authoring.PostTemplate {
+				source.TargetLength, source.TagCount = publicationString("+001200"), publicationString("007")
+			} else {
+				source.Scope = publicationString("templates")
+				source.TemplateIDs = scopeIDs
+				source.Fields = []string{}
+			}
+			state, err = svc.PatchDraft(ctx, authoring.DraftMutation{UserID: "alice", SessionID: state.ID, ExpectedRevision: state.Revision, OperationKey: "metadata-patch", WorkingSource: source})
+			if err != nil || state.DraftState != authoring.DraftValid {
+				t.Fatalf("patch=%+v %v", state, err)
+			}
+			state, err = svc.SaveWithKey(ctx, authoring.ResetMutation{UserID: "alice", SessionID: state.ID, ExpectedRevision: state.Revision, OperationKey: "metadata-save"}, false)
+			seed, seedErr := h.targets.Seed(ctx, "alice", kind, id)
+			if err != nil || seedErr != nil || state.TargetVersion == "" || state.TargetVersion != seed.TargetVersion || state.HasUnpublishedChanges {
+				t.Fatalf("canonical metadata lost saved version: state=%+v seed=%+v err=%v seedErr=%v", state, seed, err, seedErr)
+			}
+			// The saved version must authorize the owner's next edit. Empty and nil
+			// scope links are the same shape once the chosen scope becomes global.
+			source = *state.WorkingSource
+			if kind == authoring.PostGuideline {
+				source.Scope = publicationString("global")
+				source.TemplateIDs, source.Fields = []string{}, []string{}
+			} else {
+				source.Body = "<write>Next owner edit</write>"
+			}
+			state, err = svc.PatchDraft(ctx, authoring.DraftMutation{UserID: "alice", SessionID: state.ID, ExpectedRevision: state.Revision, OperationKey: "next-patch", WorkingSource: source})
+			if err != nil {
+				t.Fatal(err)
+			}
+			state, err = svc.SaveWithKey(ctx, authoring.ResetMutation{UserID: "alice", SessionID: state.ID, ExpectedRevision: state.Revision, OperationKey: "next-save"}, false)
+			seed, seedErr = h.targets.Seed(ctx, "alice", kind, id)
+			if err != nil || seedErr != nil || state.TargetVersion == "" || state.TargetVersion != seed.TargetVersion {
+				t.Fatalf("next edit lost saved version: state=%+v err=%v seedErr=%v", state, err, seedErr)
+			}
+			if h.models.calls != 0 || len(h.admit.holds) != 0 {
+				t.Fatal("manual save called or charged AI")
+			}
+		})
+	}
+}
+
+func TestAuthoringVideoTemplateUpdatePreservesExistingProjectCompositionAndDesign(t *testing.T) {
+	h := newPublicationHarness(t)
+	ctx := context.Background()
+	artifact := publicationArtifact(authoring.VideoTemplate)
+	saved, err := h.clipService.CreateTemplate(ctx, "alice", clip.Recipe{Name: artifact.Name, CompositionBody: artifact.Body}, clip.TemplateDesign{IntroPreset: "b", OutroPreset: "e", CaptionStyles: []string{"bold"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	project, err := h.clipService.CreateProject(ctx, "alice", clip.ProjectInput{Language: "ko", Title: "Existing project", VideoTemplateID: saved.ID, Ratio: "vertical", TargetDurationMS: 15000})
+	if err != nil || project.Composition == nil {
+		t.Fatalf("create project=%+v err=%v", project, err)
+	}
+	seed, err := h.targets.Seed(ctx, "alice", authoring.VideoTemplate, saved.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	input := publicationInput(authoring.VideoTemplate)
+	input.TargetID, input.TargetVersion = saved.ID, seed.TargetVersion
+	input.Artifact = *seed.Artifact
+	input.Artifact.Body = strings.Replace(input.Artifact.Body, "도착과 분위기", "요청한 새 구성", 1)
+	if _, err := h.targets.Publish(ctx, input); err != nil {
+		t.Fatal(err)
+	}
+	current, err := h.clipService.GetProject(ctx, "alice", project.ID)
+	if err != nil || !reflect.DeepEqual(current.Composition, project.Composition) || current.IntroPreset != project.IntroPreset || current.OutroPreset != project.OutroPreset || !reflect.DeepEqual(current.CaptionStyles, project.CaptionStyles) {
+		t.Fatalf("authoring changed an existing project=%+v err=%v", current, err)
+	}
+	stored, err := clipstore.New(h.d.Writer, h.d.Reader).GetTemplate(ctx, "alice", saved.ID)
+	if err != nil || stored.CompositionBody != input.Artifact.Body || !reflect.DeepEqual(stored.Design, saved.Design) {
+		t.Fatalf("template structure/design=%+v err=%v", stored, err)
+	}
+	if h.models.calls != 0 || len(h.admit.holds) != 0 {
+		t.Fatal("manual publication started or charged AI")
 	}
 }
 
@@ -377,5 +494,71 @@ func TestAuthoringPreflightCapsAndValidationAreDomainOwned(t *testing.T) {
 	}
 	if h.models.calls != 0 {
 		t.Fatal("preflight/validation called provider")
+	}
+}
+
+func publicationString(v string) *string { return &v }
+func TestAuthoringDirectNumbersAndScopeAreDomainValidatedAndCASPublished(t *testing.T) {
+	h := newPublicationHarness(t)
+	ctx := context.Background()
+	post, e := h.templates.Create(ctx, "alice", template.Authored{Name: "Number baseline", Body: "<write>Baseline</write>"})
+	if e != nil {
+		t.Fatal(e)
+	}
+	seed, e := h.targets.Seed(ctx, "alice", authoring.PostTemplate, post.ID)
+	if e != nil {
+		t.Fatal(e)
+	}
+	source := *seed.Artifact
+	source.TargetLength, source.TagCount = publicationString("1200"), publicationString("7")
+	if e = h.targets.Validate(authoring.PostTemplate, source); e != nil {
+		t.Fatal(e)
+	}
+	p := authoring.Publication{UserID: "alice", Key: "numbers-once", SessionID: "numbers", Kind: authoring.PostTemplate, Revision: 1, TargetID: post.ID, TargetVersion: seed.TargetVersion, Artifact: source}
+	if _, e = h.targets.Publish(ctx, p); e != nil {
+		t.Fatal(e)
+	}
+	_, current, _, e := h.targets.postTemplates.SeedWithNumbers(ctx, "alice", post.ID)
+	if e != nil || current.TargetLength == nil || *current.TargetLength != 1200 || current.TagCount == nil || *current.TagCount != 7 {
+		t.Fatal("owner numbers lost", e)
+	}
+	for _, bad := range []string{" ", "-1", "1200.5", "12000000000"} {
+		source.TargetLength = publicationString(bad)
+		if e = h.targets.Validate(authoring.PostTemplate, source); e == nil {
+			t.Fatal("invalid owner number accepted", bad)
+		}
+	}
+	guide, e := h.guides.Create(ctx, "alice", guideline.KindPost, "Scope baseline", "Keep it clear", guideline.ScopePatch{Scope: guideline.ScopeGlobal}, "")
+	if e != nil {
+		t.Fatal(e)
+	}
+	seed, e = h.targets.Seed(ctx, "alice", authoring.PostGuideline, guide.ID)
+	if e != nil {
+		t.Fatal(e)
+	}
+	source = *seed.Artifact
+	source.Scope = publicationString("templates")
+	source.TemplateIDs = []string{post.ID}
+	p = authoring.Publication{UserID: "alice", Key: "scope-once", SessionID: "scope", Kind: authoring.PostGuideline, Revision: 1, TargetID: guide.ID, TargetVersion: seed.TargetVersion, Artifact: source}
+	if _, e = h.targets.Publish(ctx, p); e != nil {
+		t.Fatal(e)
+	}
+	rows, e := h.guideStore.List(ctx, "alice", guideline.KindPost)
+	if e != nil {
+		t.Fatal(e)
+	}
+	if len(rows) != 1 || rows[0].Scope != guideline.ScopeTemplates || !reflect.DeepEqual(rows[0].TemplateIDs, []string{post.ID}) {
+		t.Fatal("explicit scope lost", rows)
+	}
+	source.Scope = publicationString("global")
+	if e = h.targets.Validate(authoring.PostGuideline, source); e == nil {
+		t.Fatal("contradictory scope shape accepted")
+	}
+	source.Scope = publicationString("templates")
+	source.TemplateIDs = []string{"foreign"}
+	p.Key = "scope-foreign"
+	p.Artifact = source
+	if _, e = h.targets.Publish(ctx, p); e == nil {
+		t.Fatal("foreign scope accepted")
 	}
 }

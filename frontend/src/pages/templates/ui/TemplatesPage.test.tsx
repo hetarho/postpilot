@@ -62,7 +62,13 @@ describe('the template directory', () => {
     )
 
     // A12: the shell prepares model defaults; the list calls no AI and enqueues nothing ([I5]).
-    const allowed = ['InitializeDefaultSelections', 'GetMe', 'GetMyPlan', 'ListTemplates']
+    const allowed = [
+      'InitializeDefaultSelections',
+      'GetMe',
+      'GetMyPlan',
+      'ListTemplates',
+      'ListAuthoringSummaries',
+    ]
     expect(calls.filter((call) => !allowed.includes(call))).toEqual([])
   })
 

@@ -1,25 +1,17 @@
 import { describe, expect, it } from 'vitest'
-import { screen, within } from '@testing-library/react'
+import { fireEvent, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderAppAt } from '@/test/app'
-
-const USER = { id: 'alice' }
-
 const preview = () => within(screen.getByRole('article', { name: '미리보기' }))
-
-// TMPL-65, TMPL-67: the preview follows the one draft, beside the composition at lg and one tap
-// away below it. jsdom has no media queries, so the breakpoint is read off the classes that
-// decide it.
-describe('the template preview on the template screen', () => {
-  it('redraws on every edit of the draft', async () => {
+async function mount(user: ReturnType<typeof userEvent.setup>) {
+  renderAppAt('/templates/new', { user: { id: 'alice' }, templates: { templates: [] } })
+  await user.click(await screen.findByRole('button', { name: '직접 편집' }))
+  await screen.findByLabelText('이름')
+}
+describe('live shared template preview', () => {
+  it('redraws builder/source edits and retains its last valid parse while source is incomplete', async () => {
     const user = userEvent.setup()
-    renderAppAt('/templates/new', { user: USER, templates: { templates: [] } })
-    await userEvent.setup().click(await screen.findByRole('button', { name: '직접 편집' }))
-    await screen.findByLabelText('이름')
-    expect(
-      preview().getByText('구성에 블록을 추가하면 여기에 미리보기가 보여요.'),
-    ).toBeInTheDocument()
-
+    await mount(user)
     await user.click(
       within(screen.getByRole('group', { name: '블록 추가' })).getByRole('button', {
         name: /^AI가 쓰는 글/,
@@ -27,40 +19,26 @@ describe('the template preview on the template screen', () => {
     )
     await user.type(screen.getByLabelText('이 자리에 오는 것'), '메뉴 소개')
     expect(preview().getByText('메뉴 소개')).toBeInTheDocument()
-
-    // 원문 as typed, too.
     await user.click(screen.getByRole('tab', { name: '원문' }))
-    await user.type(screen.getByLabelText('원문'), '\n안녕하세요')
+    fireEvent.change(screen.getByLabelText('원문'), {
+      target: { value: '<write>메뉴 소개</write>\n안녕하세요' },
+    })
+    expect(preview().getByText('안녕하세요')).toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText('원문'), { target: { value: '<write>unfinished' } })
     expect(preview().getByText('안녕하세요')).toBeInTheDocument()
   })
-
-  it('switches between the composition and the preview below lg', async () => {
+  it('has phone input/preview tabs and keeps the same controlled editor mounted across panes', async () => {
     const user = userEvent.setup()
-    renderAppAt('/templates/new', { user: USER, templates: { templates: [] } })
-    await userEvent.setup().click(await screen.findByRole('button', { name: '직접 편집' }))
-    await screen.findByLabelText('이름')
-
-    const views = screen.getByRole('tablist', { name: '구성과 미리보기' })
-    expect(views).toHaveClass('lg:hidden')
-    const editPanel = document.getElementById('template-edit-panel')
-    const previewPanel = document.getElementById('template-preview-panel')
-    expect(editPanel).not.toHaveClass('hidden')
-    expect(previewPanel).toHaveClass('hidden', 'lg:block')
-    expect(within(views).getByRole('tab', { name: '구성' })).toHaveAttribute(
-      'aria-controls',
-      'template-edit-panel',
-    )
-
-    await user.click(within(views).getByRole('tab', { name: '미리보기' }))
-    expect(editPanel).toHaveClass('hidden', 'lg:block')
-    expect(previewPanel).not.toHaveClass('hidden')
-    expect(within(views).getByRole('tab', { name: '미리보기' })).toHaveAttribute(
-      'aria-controls',
-      'template-preview-panel',
-    )
-    // The fields stay above the switch in either view.
-    expect(screen.getByLabelText('이름')).toBeVisible()
-    // And it never makes the draft dirty.
-    expect(screen.getByRole('button', { name: '저장' })).toBeDisabled()
+    await mount(user)
+    const name = screen.getByLabelText('이름')
+    await user.type(name, '보관할 이름')
+    const tabs = screen.getByRole('tablist', { name: '편집과 미리 보기' })
+    expect(tabs).toHaveClass('lg:hidden')
+    await user.click(within(tabs).getByRole('tab', { name: '이렇게 사용할 수 있어요' }))
+    expect(name).toHaveValue('보관할 이름')
+    expect(name.closest('form')).toHaveClass('hidden', 'lg:block')
+    await user.click(within(tabs).getByRole('tab', { name: '편집' }))
+    expect(screen.getByLabelText('이름')).toBe(name)
+    expect(name.closest('form')).not.toHaveClass('hidden')
   })
 })

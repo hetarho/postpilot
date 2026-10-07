@@ -55,12 +55,10 @@ export type BuilderBlockKind = PaletteKind
  *  able to ask. A photo or a repeat has no place in a post's title. */
 export const TITLE_AREA_PALETTE: readonly PaletteKind[] = ['write', 'text']
 
-let sequence = 0
 /** Local identity for React keys and for the reorder calls. It never reaches the body: two
  *  identical blocks must still be two rows, and the body has no place to keep an id. */
 export function nextBlockId(): string {
-  sequence += 1
-  return `b${sequence}`
+  return crypto.randomUUID()
 }
 
 export function newBlock(kind: BuilderBlockKind): BuilderBlock {
@@ -119,6 +117,79 @@ function blockSource(block: BuilderBlock): string {
  *  newline join would put line breaks into the post's title. */
 export function toBody(blocks: readonly BuilderBlock[], area: TemplateArea = 'body'): string {
   return blocks.map(blockSource).join(area === 'title_area' ? ' ' : '\n')
+}
+
+/** Unpublished source keeps incomplete rows instead of silently omitting them. The invalid
+ * serialization deliberately fails the domain parser until the owner finishes that row. */
+export function toWorkingBody(
+  blocks: readonly BuilderBlock[],
+  area: TemplateArea = 'body',
+): string {
+  const source = (block: BuilderBlock): string => {
+    if (block.kind === 'repeat')
+      return `<repeat each="photo">\n${block.children.map(source).join('\n')}\n</repeat>`
+    if (asksForData(block) && (block.kind === 'write' || block.kind === 'text')) {
+      const required = block.required ? ' required="true"' : ''
+      return block.kind === 'write'
+        ? `<ask label="${encode(askTitle(block))}"${required}>${encode(block.text)}</ask>`
+        : `<ask label="${encode(askTitle(block))}"${required}/>`
+    }
+    if (block.kind === 'text' && block.text.trim() === '') return '<write></write>'
+    return blockSource(block)
+  }
+  return blocks.map(source).join(area === 'title_area' ? ' ' : '\n')
+}
+
+export interface CompositionWorkingState {
+  source: string
+  blocks: BuilderBlock[]
+}
+
+/** Metadata only restores the controlled input for its exact source. It never changes parsing,
+ * preview or publication, and arbitrary raw edits invalidate it. */
+export function readCompositionWorkingState(
+  value: unknown,
+  source: string,
+): CompositionWorkingState | undefined {
+  if (
+    !value ||
+    typeof value !== 'object' ||
+    !('source' in value) ||
+    value.source !== source ||
+    !('blocks' in value)
+  )
+    return
+  const valid = (blocks: unknown, nested = false): blocks is BuilderBlock[] =>
+    Array.isArray(blocks) &&
+    blocks.every((block: unknown) => {
+      if (
+        !block ||
+        typeof block !== 'object' ||
+        !('id' in block) ||
+        typeof block.id !== 'string' ||
+        !('kind' in block)
+      )
+        return false
+      if (block.kind === 'repeat')
+        return !nested && 'children' in block && valid(block.children, true)
+      if (block.kind === 'photo')
+        return 'count' in block && Number.isInteger(block.count) && Number(block.count) >= 1
+      return (
+        (block.kind === 'write' || block.kind === 'text') &&
+        'text' in block &&
+        typeof block.text === 'string' &&
+        (!('ask' in block) || block.ask === undefined || typeof block.ask === 'string') &&
+        (!('required' in block) ||
+          block.required === undefined ||
+          typeof block.required === 'boolean')
+      )
+    })
+  if (
+    !valid(value.blocks) ||
+    (toWorkingBody(value.blocks) !== source && toWorkingBody(value.blocks, 'title_area') !== source)
+  )
+    return
+  return { source, blocks: value.blocks }
 }
 
 function stripOneNewline(value: string): string {

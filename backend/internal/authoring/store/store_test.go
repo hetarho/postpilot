@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"sync"
 	"testing"
@@ -64,18 +65,20 @@ func database(t *testing.T) *db.DB {
 }
 
 type models struct {
-	mu    sync.Mutex
-	text  string
-	calls int
-	after func()
+	mu       sync.Mutex
+	text     string
+	calls    int
+	requests []llm.Request
+	after    func()
 }
 
 func (m *models) Resolve(ref llm.ModelRef) (llm.ModelInfo, bool) {
 	return llm.ModelInfo{Ref: ref, Stages: []string{"write"}, Levels: map[string]string{"write": "free"}, InputUSDPerMillion: "0", OutputUSDPerMillion: "0", ContextTokens: 131072, StructuredOutput: true}, true
 }
-func (m *models) Complete(context.Context, llm.ModelRef, llm.Request) (llm.Response, error) {
+func (m *models) Complete(_ context.Context, _ llm.ModelRef, request llm.Request) (llm.Response, error) {
 	m.mu.Lock()
 	m.calls++
+	m.requests = append(m.requests, request)
 	text, after := m.text, m.after
 	m.mu.Unlock()
 	if after != nil {
@@ -370,11 +373,11 @@ func TestStagedResultCancellationAndInvalidReplacementPreserveDraft(t *testing.T
 		t.Fatal(e)
 	}
 	before, e := h.svc.Get(ctx, "alice", s.ID)
-	if e != nil || before.Revision != running.Revision || *before.Selected != prior {
+	if e != nil || before.Revision != running.Revision || !reflect.DeepEqual(*before.Selected, prior) {
 		t.Fatal("staged output was prematurely applied")
 	}
 	after, e := h.svc.Cancel(ctx, "alice", s.ID, id)
-	if e != nil || after.Phase != "failed" || *after.Selected != prior || len(after.Candidates) != 8 {
+	if e != nil || after.Phase != "failed" || !reflect.DeepEqual(*after.Selected, prior) || len(after.Candidates) != 8 {
 		t.Fatalf("cancel retention %+v %v", after, e)
 	}
 	id, _, e = h.svc.Start(ctx, "alice", authoring.Start{SessionID: s.ID, ExpectedRevision: after.Revision, RequestID: "invalid", Mode: authoring.Recommend, Prompt: "失敗", WriteModel: llm.ModelRef{ProviderID: "p", ModelID: "writer"}})
@@ -383,7 +386,7 @@ func TestStagedResultCancellationAndInvalidReplacementPreserveDraft(t *testing.T
 	}
 	h.jobs.status(id, "done")
 	after, e = h.svc.Get(ctx, "alice", s.ID)
-	if e != nil || after.FailureReason != "AUTHORING_OUTPUT_INVALID" || *after.Selected != prior {
+	if e != nil || after.FailureReason != "AUTHORING_OUTPUT_INVALID" || !reflect.DeepEqual(*after.Selected, prior) {
 		t.Fatal("invalid result replaced the draft")
 	}
 }
@@ -452,7 +455,7 @@ func TestHistoryBoundAndCompletedChatOnlyUpdatesSelected(t *testing.T) {
 			t.Fatal(e)
 		}
 	}
-	if len(s.Turns) != 20 || s.Candidates[0] != original || s.Selected.Body == original.Body {
+	if len(s.Turns) != 20 || !reflect.DeepEqual(s.Candidates[0], original) || s.Selected.Body == original.Body {
 		t.Fatal("chat history or original options changed")
 	}
 	before := h.jobs.enqueues
@@ -666,7 +669,7 @@ func TestCancellationAfterProviderCannotStageLateResult(t *testing.T) {
 		t.Fatal("late response ignored cancellation", e)
 	}
 	after, e := h.svc.Get(ctx, "alice", s.ID)
-	if e != nil || *after.Selected != prior || after.Phase != "failed" || after.Turns[len(after.Turns)-1].Status != "cancelled" {
+	if e != nil || !reflect.DeepEqual(*after.Selected, prior) || after.Phase != "failed" || after.Turns[len(after.Turns)-1].Status != "cancelled" {
 		t.Fatal("cancelled response changed durable draft", e)
 	}
 	jobAfter, _ := h.jobs.Get(ctx, "alice", id)

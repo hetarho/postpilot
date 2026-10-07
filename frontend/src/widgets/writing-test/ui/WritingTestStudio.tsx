@@ -589,23 +589,24 @@ function OwnedStudio({
                 description={t('factorHelp')}
                 selected={factor === plan.factor}
                 onClick={() => {
-                  draft({
-                    ...plan,
-                    factor,
-                    modelStage: factor === 'model' ? plan.modelStage : 'write',
-                    entrants: [],
-                    context: {
-                      ...plan.context,
-                      voiceId: factor === 'voice' ? '' : plan.context.voiceId,
-                      templateId: factor === 'template' ? '' : plan.context.templateId,
-                      guidelineSlotId:
-                        factor === 'guideline' ? WRITING_TEST_NEW_GUIDELINE_SLOT : '',
-                      writeModel:
-                        factor === 'model' && plan.modelStage === 'write'
-                          ? undefined
-                          : (writer.selected ?? undefined),
-                    },
-                  })
+                  if (factor !== plan.factor)
+                    draft({
+                      ...plan,
+                      factor,
+                      modelStage: factor === 'model' ? plan.modelStage : 'write',
+                      entrants: [],
+                      context: {
+                        ...plan.context,
+                        voiceId: factor === 'voice' ? '' : plan.context.voiceId,
+                        templateId: factor === 'template' ? '' : plan.context.templateId,
+                        guidelineSlotId:
+                          factor === 'guideline' ? WRITING_TEST_NEW_GUIDELINE_SLOT : '',
+                        writeModel:
+                          factor === 'model' && plan.modelStage === 'write'
+                            ? undefined
+                            : (writer.selected ?? undefined),
+                      },
+                    })
                   flow.sendPresentation({ type: 'NEXT' })
                   setAttempted(false)
                 }}

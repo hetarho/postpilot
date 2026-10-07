@@ -28,7 +28,7 @@ func (h *Handler) PatchAuthoringDraft(ctx context.Context, r *connect.Request[v1
 	if a == nil {
 		return nil, toError(authoring.ErrInvalid)
 	}
-	state, err := h.service.PatchDraft(ctx, authoring.DraftMutation{UserID: user, SessionID: r.Msg.GetSessionId(), ExpectedRevision: r.Msg.GetExpectedRevision(), OperationKey: r.Msg.GetOperationKey(), WorkingSource: authoring.Artifact{Name: a.GetName(), Description: a.GetDescription(), Body: a.GetBody(), TitleArea: a.GetTitleArea()}})
+	state, err := h.service.PatchDraft(ctx, authoring.DraftMutation{UserID: user, SessionID: r.Msg.GetSessionId(), ExpectedRevision: r.Msg.GetExpectedRevision(), OperationKey: r.Msg.GetOperationKey(), WorkingSource: authoring.Artifact{Name: a.GetName(), Description: a.GetDescription(), Body: a.GetBody(), TitleArea: a.GetTitleArea(), TargetLength: a.TargetLength, TagCount: a.TagCount, Scope: a.Scope, TemplateIDs: a.GetTemplateIds(), Fields: a.GetFields(), BuilderState: a.GetBuilderState()}})
 	return respond(state, err)
 }
 func (h *Handler) ResetAuthoringChat(ctx context.Context, r *connect.Request[v1.ResetAuthoringChatRequest]) (*connect.Response[v1.AuthoringSessionResponse], error) {
@@ -60,7 +60,7 @@ func (h *Handler) ListAuthoringSummaries(ctx context.Context, r *connect.Request
 	for _, s := range summaries {
 		row := &v1.AuthoringSummary{SessionId: s.SessionID, Kind: kindProto(s.Kind), TargetId: s.TargetID, DisplayName: s.DisplayName, Revision: s.Revision, SavedAvailable: s.SavedAvailable, HasUnpublishedChanges: s.HasUnpublishedChanges, ActiveJobId: s.ActiveJobID, PublicationPending: s.PublicationPending, TargetConflict: s.TargetConflict, DraftState: draftState(s.DraftState), UpdatedAt: s.UpdatedAt.Format(time.RFC3339Nano)}
 		if s.LastPublication != nil {
-			row.LastPublication = &v1.AuthoringSavedRef{Kind: kindProto(s.LastPublication.Kind), Id: s.LastPublication.ID, Name: s.LastPublication.Name}
+			row.LastPublication = &v1.AuthoringSavedRef{Kind: kindProto(s.LastPublication.Kind), Id: s.LastPublication.ID, Name: s.LastPublication.Name, Outcome: s.LastPublication.Outcome}
 		}
 		out.Summaries = append(out.Summaries, row)
 	}

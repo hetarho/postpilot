@@ -111,15 +111,7 @@ export function mapAuthoringSession(wire: WireSession, scope: AuthoringScope): A
     targetId,
     targetVersion: wire.targetVersion,
     candidates,
-    selected: wire.selected
-      ? {
-          id: wire.selected.id,
-          name: wire.selected.name,
-          description: wire.selected.description,
-          body: wire.selected.body,
-          titleArea: wire.selected.titleArea,
-        }
-      : undefined,
+    selected: wire.selected ? mapArtifact(wire.selected) : undefined,
     turns: wire.turns.map(({ id, request, reply, jobId, status }) => ({
       id,
       request,
@@ -128,7 +120,9 @@ export function mapAuthoringSession(wire: WireSession, scope: AuthoringScope): A
       status,
     })),
     activeJobId: wire.activeJobId,
-    saved: wire.saved ? { kind, id: wire.saved.id, name: wire.saved.name } : undefined,
+    saved: wire.saved
+      ? { kind, id: wire.saved.id, name: wire.saved.name, outcome: mapOutcome(wire.saved.outcome) }
+      : undefined,
     failureReason: wire.failureReason,
     pendingRequest: wire.pendingRequest,
   }
@@ -152,6 +146,12 @@ function mapArtifact(a: NonNullable<WireSession['selected']>) {
     description: a.description,
     body: a.body,
     titleArea: a.titleArea,
+    targetLength: a.targetLength,
+    tagCount: a.tagCount,
+    scope: a.scope,
+    templateIds: a.templateIds,
+    fields: a.fields,
+    builderState: a.builderState,
   }
 }
 export function authoringDraftStateFromProto(value: ProtoAuthoringDraftState): AuthoringDraftState {
@@ -196,7 +196,18 @@ export function mapAuthoringSummary(wire: WireSummary, kind: AuthoringKind): Aut
     draftState: authoringDraftStateFromProto(wire.draftState),
     updatedAt: wire.updatedAt,
     lastPublication: wire.lastPublication
-      ? { kind, id: wire.lastPublication.id, name: wire.lastPublication.name }
+      ? {
+          kind,
+          id: wire.lastPublication.id,
+          name: wire.lastPublication.name,
+          outcome: mapOutcome(wire.lastPublication.outcome),
+        }
       : undefined,
   }
+}
+
+function mapOutcome(value: string): 'created' | 'updated' | undefined {
+  if (!value) return undefined
+  if (value === 'created' || value === 'updated') return value
+  throw new Error('Authoring publication outcome unavailable')
 }

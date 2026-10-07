@@ -45,6 +45,7 @@ export {
   orderModelsForStage,
 } from './model/level'
 export { modelChoiceIssue, savedChoiceIssue, freeProviderNote } from './model/access'
+export { eligibleTestPair } from './model/test-pair'
 export { pairPostFigure, postCreditLabel, stagePostFigure } from './model/post-credits'
 export { useInvalidateModelAccess } from './api/model-access-cache'
 export {

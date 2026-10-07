@@ -62,6 +62,7 @@ function server(
     candidateCount: number
   }> = []
   const estimates: Array<{ sessionId: string; model: string }> = []
+  const references: string[] = []
   const defaults: boolean[] = []
   const patches: Array<{ expectedRevision: number; body: string }> = []
   const accepted = new Map<string, Wire>()
@@ -125,6 +126,7 @@ function server(
     })
     rpc(Service.method.createAuthoringSession, (request) => {
       calls.push('Create')
+      references.push(request.referencePost)
       current =
         current ??
         makeSession({
@@ -298,6 +300,7 @@ function server(
     get current() {
       return current
     },
+    references,
     get latestCalls() {
       return latestCalls
     },
@@ -374,7 +377,7 @@ describe('conversational authoring', () => {
     expect(fake.calls).not.toContain('Save')
     expect(saved).not.toHaveBeenCalled()
     await publication(user)
-    await user.dblClick(screen.getByRole('button', { name: '이걸로 저장하기' }))
+    await user.dblClick(screen.getByRole('button', { name: /새 .*저장하기/ }))
     await waitFor(() => expect(saved).toHaveBeenCalledOnce())
     expect(fake.calls.filter((call) => call === 'Save')).toHaveLength(1)
   })
@@ -443,7 +446,7 @@ describe('conversational authoring', () => {
     )
     await user.click(screen.getByRole('button', { name: '결과 확인으로 돌아가기' }))
     await publication(user)
-    await user.click(screen.getByRole('button', { name: '이걸로 저장하기' }))
+    await user.click(screen.getByRole('button', { name: /새 .*저장하기/ }))
     expect(await screen.findByText(/설정이 다른 곳에서 바뀌었어요/)).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: '돌아가기' }))
     await user.click(screen.getByRole('button', { name: /AI로 편집하기$/ }))
@@ -488,7 +491,7 @@ describe('conversational authoring', () => {
     const { unmount, saved } = mount(fake)
     const user = userEvent.setup()
     await publication(user)
-    await user.click(await screen.findByRole('button', { name: '이걸로 저장하기' }))
+    await user.click(await screen.findByRole('button', { name: /새 .*저장하기/ }))
     unmount()
     await act(async () => release())
     expect(saved).not.toHaveBeenCalled()
@@ -542,7 +545,7 @@ describe('conversational authoring', () => {
     const user = userEvent.setup()
     await screen.findByText('Alice의 개인 초안')
     await publication(user)
-    await user.click(screen.getByRole('button', { name: '이걸로 저장하기' }))
+    await user.click(screen.getByRole('button', { name: /새 .*저장하기/ }))
     await waitFor(() => expect(fake.calls).toContain('Save'))
     fake.setSession(
       makeSession({
@@ -579,7 +582,7 @@ describe('conversational authoring', () => {
     const { saved, cache } = mount(fake)
     const user = userEvent.setup()
     await publication(user)
-    await user.click(await screen.findByRole('button', { name: '이걸로 저장하기' }))
+    await user.click(await screen.findByRole('button', { name: /새 .*저장하기/ }))
     await screen.findByRole('button', { name: '저장 결과 다시 확인하기' })
     expect(saved).not.toHaveBeenCalled()
     await cache.invalidateQueries({
@@ -792,7 +795,7 @@ describe('one named AI and direct working draft', () => {
       expect(fake.current?.workingSource?.body).toBe('<invalid')
       expect(fake.current?.selected?.body).toBe(baseline.body)
       expect(screen.getByText(/미완성 또는 올바르지 않은 입력을 보관했어요/)).toBeInTheDocument()
-      await user.click(screen.getByRole('button', { name: '새 대화 시작하기' }))
+      await user.click(screen.getByRole('button', { name: /새 대화 시작하기/ }))
       await waitFor(() => expect(fake.calls).toContain('ResetChat'))
       expect(fake.current?.workingSource?.body).toBe('<invalid')
       expect(fake.current?.turns).toHaveLength(0)
@@ -863,7 +866,7 @@ it('opens an untitled saved guideline with its readable content identity and con
     }),
   ).toBeInTheDocument()
   await publication(user)
-  await user.click(screen.getByRole('button', { name: '변경사항 적용하기' }))
+  await user.click(screen.getByRole('button', { name: /변경사항 저장하기/ }))
   expect(
     await screen.findByText(
       '“짧고 읽기 쉬운 문장으로 써 주세요.” 작문 지침의 변경사항을 저장했어요.',
@@ -1049,7 +1052,7 @@ it('saves, reopens and continues editing with retained conversation and keeps un
   const user = userEvent.setup()
   await screen.findByRole('button', { name: '저장할 내용 확인하기' })
   await publication(user)
-  await user.click(screen.getByRole('button', { name: '이걸로 저장하기' }))
+  await user.click(screen.getByRole('button', { name: /새 .*저장하기/ }))
   await screen.findByRole('button', { name: '“대화할 지침” 이어서 편집하기' })
   first.unmount()
   mount(fake, { sessionId: 'session' })
@@ -1063,7 +1066,7 @@ it('saves, reopens and continues editing with retained conversation and keeps un
   )
   await user.click(screen.getByRole('button', { name: '결과 확인으로 돌아가기' }))
   await publication(user)
-  await user.click(screen.getByRole('button', { name: '이걸로 저장하기' }))
+  await user.click(screen.getByRole('button', { name: /새 .*저장하기/ }))
   await user.click(await screen.findByRole('button', { name: '“대화할 지침” 이어서 편집하기' }))
   await user.click(await screen.findByRole('button', { name: '“대화할 지침” AI로 편집하기' }))
   expect(screen.getByRole('textbox', { name: '어떤 점을 바꿔 볼까요?' })).toHaveValue(
@@ -1149,4 +1152,59 @@ it('reopens a newly published setting by its saved target id and retains its con
   expect(fake.calls).not.toContain('Create')
   expect(fake.calls).not.toContain('Save')
   expect(fake.starts).toHaveLength(0)
+})
+
+it('enters the explicit direct method without reading another unfinished session, and switching to AI issues no paid request', async () => {
+  const fake = server()
+  mount(fake, {
+    targetId: 'owned-guide',
+    targetName: '저장한 지침',
+    initialMethod: 'direct',
+    startFromSaved: true,
+  })
+  const user = userEvent.setup()
+  await screen.findByRole('heading', { name: '직접 내용을 편집해 주세요' })
+  expect(fake.latestCalls).toBe(0)
+  expect(fake.calls.filter((call) => call === 'Create')).toHaveLength(1)
+  expect(screen.getByRole('textbox', { name: '내용' })).toHaveValue(
+    '현재 지침을 초안으로 불러왔어요.',
+  )
+  fireEvent.change(screen.getByRole('textbox', { name: '내용' }), {
+    target: { value: '같은 초안의 직접 수정' },
+  })
+  await user.click(screen.getByRole('button', { name: '편집 내용 보관하고 확인하기' }))
+  await screen.findByRole('heading', { name: /저장한 .*지침.*확인하기/ })
+  expect(fake.current?.selected?.body).toBe('같은 초안의 직접 수정')
+  await user.click(screen.getByRole('button', { name: '“저장한 지침” AI로 편집하기' }))
+  await screen.findByRole('heading', { name: '어떤 점을 바꿔 볼까요?' })
+  expect(
+    fake.calls.filter((call) => ['Estimate', 'Start', 'Save', 'ResetBaseline'].includes(call)),
+  ).toEqual([])
+})
+it('passes only the explicitly supplied form reference when direct seed-free creation is opened', async () => {
+  const fake = server()
+  mount(fake, {
+    kind: 'post-template',
+    initialMethod: 'direct',
+    startFromSaved: true,
+    referencePost: '소유자가 선택한 제목\n[사진 위치]\n본문 순서',
+  })
+  await screen.findByRole('heading', { name: '직접 내용을 편집해 주세요' })
+  expect(fake.references).toEqual(['소유자가 선택한 제목\n[사진 위치]\n본문 순서'])
+  expect(fake.latestCalls).toBe(0)
+  expect(fake.calls.filter((call) => ['Estimate', 'Start', 'Save'].includes(call))).toEqual([])
+})
+
+it('waits for the authenticated owner before opening an explicit saved baseline', async () => {
+  const fake = server()
+  mount(fake, {
+    ownerId: '',
+    targetId: 'owned-guide',
+    initialMethod: 'direct',
+    startFromSaved: true,
+  })
+  await screen.findByRole('heading', { name: '준비한 내용을 확인할게요' })
+  await act(async () => {})
+  expect(fake.calls).not.toContain('Create')
+  expect(fake.latestCalls).toBe(0)
 })

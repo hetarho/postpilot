@@ -1,4 +1,5 @@
-import { ConfigurationAuthoringService, WritingVoiceCandidateService } from '@/shared/api'
+import { WritingVoiceCandidateService } from '@/shared/api'
+import { registerAuthoringService, type FakeAuthoringOptions } from './authoring'
 import { seedCompletedSetup } from './setup-progress'
 // Shared harness for tests that need a fake AuthService.
 //
@@ -42,6 +43,7 @@ import { type FakeVoucherOptions, registerVoucherService } from './vouchers'
 import { connectAppError } from './app-error'
 
 export interface FakeAuthOptions {
+  authoring?: FakeAuthoringOptions
   /** Existing-account fixtures have acknowledged setup; opt in to a truly first-use browser. */
   firstUseSetup?: boolean
   /** Only the real-route harness seeds historical browser metadata. */
@@ -142,10 +144,6 @@ export function createFakeAuthBackend(options: FakeAuthOptions = {}): FakeAuthBa
 
   const transport = createRouterTransport((router) => {
     const { rpc } = router
-    rpc(ConfigurationAuthoringService.method.getLatestAuthoringSession, () => {
-      calls?.push('GetLatestAuthoringSession')
-      return create(ConfigurationAuthoringService.method.getLatestAuthoringSession.output, {})
-    })
     rpc(WritingVoiceCandidateService.method.getLatestWritingVoiceCandidates, () =>
       create(WritingVoiceCandidateService.method.getLatestWritingVoiceCandidates.output, {}),
     )
@@ -294,6 +292,7 @@ export function createFakeAuthBackend(options: FakeAuthOptions = {}): FakeAuthBa
     registerVoiceService(router, { calls, ...options.voice })
     registerExperimentService(router, { calls, ...options.experiments })
     registerTemplateService(router, { calls, ...options.templates })
+    registerAuthoringService(router, { calls, ...options.authoring }, () => transport)
     registerClipService(router, {
       calls,
       ownerId: options.user?.id,

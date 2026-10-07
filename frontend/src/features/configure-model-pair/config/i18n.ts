@@ -4,6 +4,23 @@ import type { I18nFragment } from '@/shared/lib'
 export const i18n = {
   namespace: 'models',
   ko: {
+    testPair: {
+      title: '두 모델 테스트의 기본 후보 (선택)',
+      help: '저장한 A/B 조합은 두 모델 글쓰기 테스트의 시작 후보로만 사용해요. 실제 사용할 모델과 4·8·16개 테스트 후보는 바꾸지 않아요.',
+      stage: '{{stage}} 두 모델 후보',
+      loading: '저장한 두 모델 후보를 확인하고 있어요.',
+      failed: '저장한 후보를 불러오지 못했어요. 기존 선택은 그대로 남아 있어요.',
+    },
+    activeState: {
+      loading: '{{stage}} 모델 설정을 확인하고 있어요.',
+      failed: '{{stage}} 모델 설정을 불러오지 못했어요. 저장한 선택이 없는 상태와는 달라요.',
+      retry: '모델 설정 다시 확인하기',
+      usable: '{{stage}}에 “{{name}}” 모델을 사용하고 있어요.',
+      empty: '{{stage}}에 사용할 모델을 아직 선택하지 않았어요.',
+      unavailable: '저장한 {{stage}} 모델 “{{name}}”은 지금 사용할 수 없어요. {{reason}}',
+      saving: '{{stage}} 모델을 “{{name}}”으로 저장하고 있어요.',
+      saved: '{{stage}} 모델을 “{{name}}”으로 저장했어요.',
+    },
     select: '모델을 선택하세요',
     candidateA: '후보 A',
     candidateB: '후보 B',
@@ -27,6 +44,24 @@ export const i18n = {
     },
   },
   en: {
+    testPair: {
+      title: 'Default candidates for two-model tests (optional)',
+      help: 'Saved A/B pairs only prefill new two-model writing tests. They do not change your active models or the candidates in four-, eight-, or sixteen-entry tests.',
+      stage: '{{stage}} model pair',
+      loading: 'Checking your saved model pairs.',
+      failed: 'Could not load the saved pairs. Your existing choices are retained.',
+    },
+    activeState: {
+      loading: 'Checking the {{stage}} model setting.',
+      failed:
+        'Could not load the {{stage}} model setting. This does not mean there is no saved choice.',
+      retry: 'Check model settings again',
+      usable: 'Using “{{name}}” for {{stage}}.',
+      empty: 'No model has been selected for {{stage}} yet.',
+      unavailable: 'Your saved {{stage}} model “{{name}}” is currently unavailable. {{reason}}',
+      saving: 'Saving “{{name}}” for {{stage}}.',
+      saved: 'Saved “{{name}}” for {{stage}}.',
+    },
     select: 'Select a model',
     candidateA: 'Candidate A',
     candidateB: 'Candidate B',

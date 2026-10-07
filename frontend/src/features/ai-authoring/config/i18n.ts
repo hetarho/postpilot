@@ -2,7 +2,21 @@ import type { I18nFragment } from '@/shared/lib'
 export const i18n = {
   namespace: 'authoring',
   ko: {
+    newGlobalScope:
+      '새 지침은 전체 글에 적용해요. 저장하기 전에 직접 편집에서 적용 범위를 선택할 수 있어요.',
+    scopeGlobal: '적용 범위: 전체',
+    scopeTemplates: '적용 범위: 선택한 구성 {{count}}개',
+    scopeFields: '적용 범위: 선택한 분야 {{count}}개',
+    scopeRetained: '적용 범위: 저장한 범위 유지',
+    scopeRequired: '저장하기 전에 직접 편집에서 적용 범위를 선택해 주세요.',
+    directViews: '편집과 미리 보기',
+    directInput: '편집',
     namedSetting: '{{kind}} · {{name}}',
+    freshNamed: '“{{name}}” 새 대화 시작하기',
+    freshHelp:
+      '새 대화를 시작하면 이전 대화만 비우고 “{{name}}”의 현재 초안은 유지해요. 저장한 내용으로 되돌리기는 별도로 선택해요.',
+    saveChangesNamed: '“{{name}}” {{kind}} 변경사항 저장하기',
+    saveNewNamed: '“{{name}}” 새 {{kind}} 저장하기',
     reviewNamed: '“{{name}}” {{kind}} 확인하기',
     aiNamed: '“{{name}}” AI로 편집하기',
     directNamed: '“{{name}}” 직접 편집하기',
@@ -71,10 +85,13 @@ export const i18n = {
       'writing-voice': '친구에게 이야기하듯 다정하고 편한 문장으로 바꿔 줘',
     },
     publicationPreserves: {
-      'post-template': '글의 구성만 바뀌어요. 저장한 글 분량과 태그 수는 그대로예요.',
+      'post-template':
+        '현재 초안의 글 구성과 직접 선택한 글 분량·태그 수를 저장해요. AI 편집은 숫자를 바꾸지 않아요.',
       'video-template': '영상의 구성만 바뀌어요. 저장한 디자인은 그대로예요.',
-      'post-guideline': '지침 내용만 바뀌어요. 적용 범위와 연결한 구성은 그대로예요.',
-      'video-guideline': '영상 지침 내용만 바뀌어요. 적용 범위와 연결한 구성은 그대로예요.',
+      'post-guideline':
+        '현재 초안의 지침과 직접 선택한 적용 범위를 저장해요. AI 편집은 적용 범위를 바꾸지 않아요.',
+      'video-guideline':
+        '영상 현재 초안의 지침과 직접 선택한 적용 범위를 저장해요. AI 편집은 적용 범위를 바꾸지 않아요.',
     },
     publicationCreates: {
       'post-template': '새 글 구성으로 저장해요.',
@@ -207,7 +224,21 @@ export const i18n = {
     previewUnavailable: '읽을 수 있는 초안을 준비하지 못했어요. 이전 제안으로 다시 준비해 주세요.',
   },
   en: {
+    newGlobalScope:
+      'The new guideline applies globally. Choose its scope through direct editing before saving.',
+    scopeGlobal: 'Scope: global',
+    scopeTemplates: 'Scope: {{count}} selected structures',
+    scopeFields: 'Scope: {{count}} selected topics',
+    scopeRetained: 'Scope: retain the saved scope',
+    scopeRequired: 'Choose an application scope through direct editing before saving.',
+    directViews: 'Editing and preview',
+    directInput: 'Edit',
     namedSetting: '{{kind}} · {{name}}',
+    freshNamed: 'Start a fresh conversation for “{{name}}”',
+    freshHelp:
+      'Starting a fresh conversation clears prior exchanges and keeps the current “{{name}}” draft. Resetting to the saved content is a separate choice.',
+    saveChangesNamed: 'Save changes to “{{name}}” {{kind}}',
+    saveNewNamed: 'Save “{{name}}” as a new {{kind}}',
     reviewNamed: 'Review “{{name}}” {{kind}}',
     aiNamed: 'Edit “{{name}}” with AI',
     directNamed: 'Edit “{{name}}” directly',
@@ -278,11 +309,13 @@ export const i18n = {
       'writing-voice': 'Use warm, relaxed sentences, as if talking to a friend',
     },
     publicationPreserves: {
-      'post-template': 'Update the post structure. Your saved length and tag count stay the same.',
+      'post-template':
+        'Save the draft structure and explicitly chosen length and tag count. AI editing preserves the numbers.',
       'video-template': 'Update the video structure. Your saved design stays the same.',
-      'post-guideline': 'Update the guideline text. Its scope and linked structures stay the same.',
+      'post-guideline':
+        'Save the draft text and explicitly chosen scope. AI editing preserves the scope.',
       'video-guideline':
-        'Update the video guideline text. Its scope and linked structures stay the same.',
+        'Save the draft video text and explicitly chosen scope. AI editing preserves the scope.',
     },
     publicationCreates: {
       'post-template': 'Save as a new post structure.',

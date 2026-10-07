@@ -75,7 +75,7 @@ func ref(v *v1.ModelRef) llm.ModelRef {
 	return llm.ModelRef{ProviderID: v.GetProviderId(), ModelID: v.GetModelId()}
 }
 func artifact(a authoring.Artifact) *v1.AuthoringArtifact {
-	return &v1.AuthoringArtifact{Id: a.ID, Name: a.Name, Description: a.Description, Body: a.Body, TitleArea: a.TitleArea, Revision: a.Revision}
+	return &v1.AuthoringArtifact{Id: a.ID, Name: a.Name, Description: a.Description, Body: a.Body, TitleArea: a.TitleArea, Revision: a.Revision, TargetLength: a.TargetLength, TagCount: a.TagCount, Scope: a.Scope, TemplateIds: a.TemplateIDs, Fields: a.Fields, BuilderState: a.BuilderState}
 }
 func session(s *authoring.Session) *v1.AuthoringSession {
 	if s == nil {
@@ -100,7 +100,7 @@ func session(s *authoring.Session) *v1.AuthoringSession {
 		out.Turns = append(out.Turns, &v1.AuthoringTurn{Id: t.ID, Request: t.Request, Reply: t.Reply, JobId: t.JobID, Status: t.Status})
 	}
 	if s.Saved != nil {
-		out.Saved = &v1.AuthoringSavedRef{Kind: kindProto(s.Saved.Kind), Id: s.Saved.ID, Name: s.Saved.Name}
+		out.Saved = &v1.AuthoringSavedRef{Kind: kindProto(s.Saved.Kind), Id: s.Saved.ID, Name: s.Saved.Name, Outcome: s.Saved.Outcome}
 	}
 	return out
 }
@@ -115,7 +115,7 @@ func (h *Handler) CreateAuthoringSession(ctx context.Context, r *connect.Request
 	if e != nil {
 		return nil, e
 	}
-	s, e := h.service.Create(ctx, u, kind(r.Msg.GetKind()), r.Msg.GetTargetId(), r.Msg.GetRequestId())
+	s, e := h.service.CreateWithReference(ctx, u, kind(r.Msg.GetKind()), r.Msg.GetTargetId(), r.Msg.GetRequestId(), r.Msg.GetReferencePost())
 	return respond(s, e)
 }
 func (h *Handler) GetAuthoringSession(ctx context.Context, r *connect.Request[v1.GetAuthoringSessionRequest]) (*connect.Response[v1.AuthoringSessionResponse], error) {
