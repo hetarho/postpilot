@@ -3,6 +3,7 @@ syntax = "proto3";
 package postpilot.v1;
 
 import "google/protobuf/timestamp.proto";
+import "postpilot/v1/configuration_authoring.proto";
 import "postpilot/v1/provider.proto";
 import "postpilot/v1/semantic_origin.proto";
 
@@ -141,10 +142,20 @@ message GetWritingTestRequestInspectionRequest {
   string stage = 3;
   InspectionStatus status = 4;
 }
-message GetWritingTestRequestInspectionResponse { RequestInspection inspection = 1; }
+message GetWritingTestRequestInspectionResponse {
+  RequestInspection inspection = 1;
+  repeated RequestInspection inspections = 2;
+}
 message GetAuthoringRequestInspectionRequest {
   string draft_id = 1;
   string stage = 2;
   InspectionStatus status = 3;
+  string session_id = 4;
+  ConfigurationKind kind = 5;
+  uint32 revision = 6;
+  AuthoringMode mode = 7;
+  string prompt = 8;
+  ModelRef model = 9;
+  uint32 candidate_count = 10;
 }
 message GetAuthoringRequestInspectionResponse { RequestInspection inspection = 1; }

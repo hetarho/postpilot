@@ -160,6 +160,7 @@ func (f *WritingTestFactory) RunWritingTestCandidate(ctx context.Context, snapsh
 	result.Checkpoint = checkpoint
 	progress := writingTestProgress(options.Progress)
 	progress("write", 0, 1)
+	ctx = withWritingTestRequestCapture(ctx, &checkpoint, options.SaveCheckpoint)
 	post.Images = observedImages(post.Images, checkpoint.Observations)
 	// Every test entrant returns its direct-path storyline; it never follows or updates a
 	// source post's existing storyline.
@@ -192,6 +193,7 @@ func (f *WritingTestFactory) WriteTestEntrant(ctx context.Context, snapshot Writ
 
 func runWritingTestObservation(ctx context.Context, worker *Service, post PostInput, batches [][]Image, checkpoint WritingTestCheckpoint, options WritingTestRunOptions) (WritingTestRunResult, error) {
 	result := WritingTestRunResult{Checkpoint: checkpoint}
+	ctx = withWritingTestRequestCapture(ctx, &checkpoint, options.SaveCheckpoint)
 	progress := writingTestProgress(options.Progress)
 	total, done := 0, 0
 	for index, batch := range batches {
@@ -279,6 +281,12 @@ func acceptWritingTestCheckpoint(expected, stored WritingTestCheckpoint, batches
 	left.InFlightStage, right.InFlightStage = "", ""
 	left.FailedStage, right.FailedStage = "", ""
 	left.Answer, right.Answer = nil, nil
+	left.RequestInspections, right.RequestInspections = nil, nil
+	for _, inspection := range stored.RequestInspections {
+		if inspection.Validate() != nil || (inspection.Status != llm.InspectionCaptured && inspection.Status != llm.InspectionUnavailable) {
+			return WritingTestCheckpoint{}, ErrWritingTestCheckpointInvalid
+		}
+	}
 	if !reflect.DeepEqual(left, right) || stored.CompletedObserveCalls < 0 || stored.CompletedObserveCalls > len(batches) || (stored.Prepared && stored.CompletedObserveCalls != len(batches)) || (stored.Answer != nil && (!stored.Prepared || stored.Index < 0 || stored.InFlightStage != "" || stored.FailedStage != "")) {
 		return WritingTestCheckpoint{}, ErrWritingTestCheckpointInvalid
 	}
@@ -355,6 +363,7 @@ func cloneWritingTestAnswer(answer WriteAnswer) WriteAnswer {
 }
 
 func cloneWritingTestCheckpoint(value WritingTestCheckpoint) WritingTestCheckpoint {
+	value.RequestInspections = mapSlice(value.RequestInspections, llm.CloneRequestInspection)
 	value.Observations = mapSlice(value.Observations, func(o Observation) Observation { return fromSnapshotObservation(toSnapshotObservation(o)) })
 	if value.Answer != nil {
 		answer := cloneWritingTestAnswer(*value.Answer)

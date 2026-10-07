@@ -294,6 +294,22 @@ func TestModelAdoptionUsesOnlyItsFrozenStageAndDomainRechecksLiveEligibility(t *
 }
 func TestSourceApplicationUsesFrozenCompleteWinnerAndSameMachineBaseline(t *testing.T) {
 	p, store, _, target, in := publicationFixture(t, experiment.FactorModel)
+	for i := range store.test.Candidates {
+		if store.test.Candidates[i].ID != in.WinnerID {
+			continue
+		}
+		output, err := experiment.DecodeTestOutput(store.test.Candidates[i].Output)
+		if err != nil {
+			t.Fatal(err)
+		}
+		content, story := postOutput(output)
+		output.Origins = &post.OriginReview{Version: 1, Result: post.ContentOriginIdentity(content, 0), Sources: []post.OriginSource{{ID: "frozen-owner", Kind: post.OriginSourceMemo, Text: "original owner material", Available: true}}}
+		output.Storyline.Origins = &post.PlanOriginReview{Version: 1, Result: post.PlanOriginIdentity(story.Paragraphs), Sources: []post.OriginSource{{ID: "frozen-plan", Kind: post.OriginSourceAIProposal, Text: "original plan evidence", Available: true}}}
+		store.test.Candidates[i].Output, err = experiment.EncodeTestOutput(output)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
 	request := experiment.OutputApplication{TestMutation: in.TestMutation, WinnerID: in.WinnerID, InputRevision: 6, ContentRevision: 7, Output: []byte("client replacement forbidden"), PostSlug: "foreign", AssignmentsHash: "client fake"}
 	_, _, err := p.ApplyOutput(context.Background(), request)
 	if err != nil {
@@ -302,6 +318,9 @@ func TestSourceApplicationUsesFrozenCompleteWinnerAndSameMachineBaseline(t *test
 	applied := target.post
 	if applied.PostSlug != "source" || applied.AssignmentsHash != "assignments" || applied.Content.Title != "paid winner" || !reflect.DeepEqual(applied.Content, applied.Baseline) || applied.ContentLanguage != post.LanguageEnglish || applied.Storyline.Paragraphs[0].Text != "complete storyline" || !reflect.DeepEqual(applied.Nouns, []string{"winner"}) {
 		t.Fatalf("source application=%+v", applied)
+	}
+	if applied.Origins == nil || applied.Origins.Sources[0].Text != "original owner material" || applied.Storyline.Origins == nil || applied.Storyline.Origins.Sources[0].Text != "original plan evidence" || applied.PrivatePayloadFence == nil || *applied.PrivatePayloadFence != 0 {
+		t.Fatal("matching private origins or transactional purge fence lost")
 	}
 	store.test.PurgeFence = 1
 	store.test.CommonSnapshot = nil

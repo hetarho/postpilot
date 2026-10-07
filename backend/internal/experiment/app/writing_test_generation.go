@@ -273,12 +273,12 @@ func (a *WritingTestGeneration) RunTestCandidate(ctx context.Context, work exper
 	if runErr != nil || err != nil {
 		return out, errors.Join(runErr, err)
 	}
-	value := experiment.TestOutput{ContentLanguage: string(result.ContentLanguage), Nouns: result.Answer.Nouns, Content: experiment.TestOutputContent{Title: result.Answer.Content.Title, Summary: result.Answer.Content.Summary, Tags: result.Answer.Content.Tags}}
+	value := experiment.TestOutput{ContentLanguage: string(result.ContentLanguage), Nouns: result.Answer.Nouns, Origins: result.Answer.Origins, RequestInspections: result.Checkpoint.RequestInspections, Content: experiment.TestOutputContent{Title: result.Answer.Content.Title, Summary: result.Answer.Content.Summary, Tags: result.Answer.Content.Tags}}
 	for _, b := range result.Answer.Content.Blocks {
 		value.Content.Blocks = append(value.Content.Blocks, experiment.TestOutputBlock{Type: string(b.Type), Content: b.Content, Level: b.Level, File: b.File, Alt: b.Alt, Caption: b.Caption, Items: b.Items, Files: b.Files, Layout: b.Layout})
 	}
 	if result.Answer.Storyline != nil {
-		value.Storyline = &experiment.TestOutputStoryline{MadeWith: result.Answer.Storyline.MadeWith}
+		value.Storyline = &experiment.TestOutputStoryline{MadeWith: result.Answer.Storyline.MadeWith, Origins: result.Answer.Storyline.Origins}
 		for _, p := range result.Answer.Storyline.Paragraphs {
 			value.Storyline.Paragraphs = append(value.Storyline.Paragraphs, experiment.TestOutputParagraph{Text: p.Text, Files: p.Files})
 		}

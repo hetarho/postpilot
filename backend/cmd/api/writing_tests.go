@@ -6,6 +6,7 @@ import (
 
 	"github.com/postpilot/backend/internal/experiment"
 	experimentapp "github.com/postpilot/backend/internal/experiment/app"
+	experimentstore "github.com/postpilot/backend/internal/experiment/store"
 	"github.com/postpilot/backend/internal/generation"
 	"github.com/postpilot/backend/internal/guideline"
 	guidelinestore "github.com/postpilot/backend/internal/guideline/store"
@@ -38,9 +39,11 @@ func wireWritingTests(ctx context.Context, c *contexts) error {
 	c.writingTestJobs = experimentapp.NewWritingTestJobs(c.jobs, runner, c.experimentStore, usage.NewSettledCharges(usagestore.New(database.Writer, database.Reader)))
 	c.writingTests = experiment.NewWritingTestService(experiment.WritingTestDependencies{Store: c.experimentStore, Variants: resolvers, Preparation: preparation, FailedPreparation: preparation, Pricing: experimentapp.NewWritingTestPricing(c.auth, c.ledger), Queue: c.writingTestJobs}, experiment.WritingTestConfig{Retention: cfg.ExperimentContentRetention})
 	guard := experimentapp.NewPostTestJobGuard(func(tx *sql.Tx) experimentapp.OrdinaryWriteJobs { return jobstore.NewTx(tx, jobKinds()) }, ordinaryPostWriteKinds())
-	posts := post.NewTestResultService(poststore.NewTestResultStore(database.Writer, database.Reader, guard))
+	payloadGuard := experimentapp.NewTestPayloadGuard(func(tx *sql.Tx) experimentapp.TestPayloadAvailability { return experimentstore.NewTx(tx) })
+	posts := post.NewTestResultService(poststore.NewFencedTestResultStore(database.Writer, database.Reader, guard, payloadGuard))
 	c.writingTestPublications = experimentapp.NewPublications(experimentapp.PublicationDependencies{Store: c.experimentStore, Snapshots: experimentapp.GenerationPublicationSnapshots{}, Models: provider.NewTestModelAdoptions(c.provider, providerstore.New(database.Writer, database.Reader)), Templates: template.NewTestedSettings(c.template, templatestore.New(database.Writer, database.Reader)), Guidelines: guideline.NewTestedSettings(c.guideline, guidelinestore.New(database.Writer, database.Reader)), Voices: voice.NewTestStylePublisher(voicestore.New(database.Writer, database.Reader)), Posts: posts})
 	c.writingTestLifecycle = experimentapp.NewWritingTestLifecycle(c.experimentStore, c.experimentStore, c.writingTestJobs)
+	c.writingTestInspection = experimentapp.NewWritingTestInspection(c.experimentStore)
 	// Deferred jobs must fail before the orphan/terminal hold sweep, including
 	// starts whose aggregate bind did not complete before a previous process died.
 	if _, err := c.jobs.SweepUnactivated(ctx); err != nil {

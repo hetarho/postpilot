@@ -3,6 +3,8 @@ package provider
 import (
 	"context"
 	"fmt"
+
+	"github.com/postpilot/backend/internal/llm"
 )
 
 // SelectionForInspection reads the saved active identity and its current
@@ -46,4 +48,28 @@ func (s *Service) SelectionForInspection(ctx context.Context, userID string, sta
 		return selection, true, nil
 	}
 	return Selection{}, false, nil
+}
+
+// ModelForInspection evaluates an explicit frozen authoring model without
+// changing the active selection or checking a live endpoint. A preview may name
+// the admitted operation's model even when the owner has since selected another.
+func (s *Service) ModelForInspection(ctx context.Context, userID string, stage Stage, ref llm.ModelRef) (llm.ModelInfo, bool, error) {
+	if err := ctx.Err(); err != nil {
+		return llm.ModelInfo{}, false, err
+	}
+	if _, err := ParseStage(string(stage)); err != nil {
+		return llm.ModelInfo{}, false, err
+	}
+	tier, err := s.tier(ctx, userID)
+	if err != nil {
+		return llm.ModelInfo{}, false, err
+	}
+	info, found := s.catalog.Lookup(ref)
+	if !found || !Suitable(stage, info) || info.Disabled {
+		return info, false, nil
+	}
+	if s.modelGrades && modelAccess(tier, stage, info).UnavailableReason != "" {
+		return info, false, nil
+	}
+	return info, true, nil
 }

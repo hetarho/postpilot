@@ -306,15 +306,17 @@ func (s *Service) Run(ctx context.Context, run Run, progress func(string, int, i
 		return ErrModel
 	}
 	ref := llm.ModelRef{ProviderID: provider, ModelID: model}
-	request := llm.Request{Composition: authoringComposition(in), System: systemMessage(in), Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(modelMessage(in))}}}, Stage: llm.StageNameWrite, Reasoning: llm.ReasoningLow, MaxTokens: in.CompletionTokens}
-	if info, ok := s.models.Resolve(ref); ok && info.StructuredOutput {
-		request.JSONSchema = kindResponseSchema(in.Kind, in.Mode, in.CandidateCount)
+	info, found := s.models.Resolve(ref)
+	if !found {
+		info.StructuredOutput = false
 	}
+	request := prepareAuthoringRequest(in, info)
 	if e = ctx.Err(); e != nil {
 		return e
 	}
 	progress("write", 0, 1)
 	response, e := s.models.Complete(ctx, ref, request)
+	s.captureAuthoringRequest(ctx, run, in, response, e)
 	if e != nil {
 		return e
 	}

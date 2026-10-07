@@ -94,11 +94,12 @@ func (s writingIntegrationModels) Lookup(id string) (llm.SourceModel, bool) {
 }
 
 type writingIntegrationHarness struct {
-	app      *contexts
-	platform *platform
-	provider *writingIntegrationProvider
-	client   postpilotv1connect.WritingTestServiceClient
-	cookie   string
+	app        *contexts
+	platform   *platform
+	provider   *writingIntegrationProvider
+	client     postpilotv1connect.WritingTestServiceClient
+	inspection postpilotv1connect.WritingInspectionServiceClient
+	cookie     string
 }
 
 func newWritingIntegrationHarness(t *testing.T, configure ...func(*platform)) *writingIntegrationHarness {
@@ -144,7 +145,7 @@ func newWritingIntegrationHarness(t *testing.T, configure ...func(*platform)) *w
 	finished := make(chan struct{})
 	go func() { defer close(finished); app.jobs.Run(ctx) }()
 	t.Cleanup(func() { cancel(); <-finished })
-	return &writingIntegrationHarness{app: app, platform: p, provider: modelProvider, client: postpilotv1connect.NewWritingTestServiceClient(httpServer.Client(), httpServer.URL), cookie: auth.SessionCookieName + "=alice-authenticated-session"}
+	return &writingIntegrationHarness{app: app, platform: p, provider: modelProvider, client: postpilotv1connect.NewWritingTestServiceClient(httpServer.Client(), httpServer.URL), inspection: postpilotv1connect.NewWritingInspectionServiceClient(httpServer.Client(), httpServer.URL), cookie: auth.SessionCookieName + "=alice-authenticated-session"}
 }
 
 func writingRPCRequest[T any](h *writingIntegrationHarness, msg *T) *connect.Request[T] {

@@ -102,6 +102,10 @@ func TestMigration0152PreservesAuthoringAndPaidEvidence(t *testing.T) {
 	if err := Migrate(t.Context(), h.Writer); err != nil {
 		t.Fatal("forward-only creation replay failed", err)
 	}
+	var uncaptured int
+	if err := h.Reader.QueryRow(`SELECT count(*) FROM configuration_authoring_operations WHERE request_capture IS NULL AND capture_revision IS NULL AND capture_purged=0`).Scan(&uncaptured); err != nil || uncaptured != len(before["configuration_authoring_operations"]) {
+		t.Fatal("upgrade fabricated or purged historical authoring request evidence", uncaptured, err)
+	}
 	for _, table := range tables {
 		if !reflect.DeepEqual(before[table], creationRows(t, h, table)) {
 			t.Fatal("rollback/replay changed retained evidence", table)

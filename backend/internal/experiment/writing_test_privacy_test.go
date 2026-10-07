@@ -1,18 +1,27 @@
 package experiment
 
 import (
+	"bytes"
 	"reflect"
 	"testing"
+
+	"github.com/postpilot/backend/internal/llm"
+	"github.com/postpilot/backend/internal/post"
 )
 
 func TestWritingTestProjectionBlindsEveryNonrevealedStateAndAlwaysOmitsSupplierCost(t *testing.T) {
 	for _, factor := range []TestFactor{FactorModel, FactorVoice, FactorTemplate, FactorGuideline} {
 		for _, status := range []TestStatus{TestQueued, TestRunning, TestPartial, TestReview, TestFailed, TestCompleted, TestCancelled} {
 			t.Run(string(factor)+"/"+string(status), func(t *testing.T) {
+				answer, err := EncodeTestOutput(TestOutput{ContentLanguage: "en", Content: TestOutputContent{Title: "readable complete answer", Blocks: []TestOutputBlock{{Type: "TEXT", Content: "complete paragraph"}}}, Origins: &post.OriginReview{Sources: []post.OriginSource{{ID: "private-source", Kind: post.OriginSourceMemo, Text: "private model source"}}}, RequestInspections: []llm.RequestInspection{privateInspectionFixture()}})
+				if err != nil {
+					t.Fatal(err)
+				}
+				publicAnswer := PublicTestOutput(answer)
 				ref := TestEntrantRef{SourceKind: "setting", SettingKind: string(factor), SettingID: "private-source", SettingRevision: "private-version"}
 				original := WritingTest{ID: "test", UserID: "owner", Factor: factor, Status: status, SourcePostSlug: "source", CommonSnapshot: []byte("private instructions"), Input: TestInput{TargetLanguage: "en", Fictional: true, Material: "private material", VoiceID: "private-voice", TemplateID: "private-template"}, ConfirmedCredits: 4, ReservedCredits: 9,
 					Failure:      &Failure{Reason: "MODEL_RATE_LIMITED", TechnicalDetail: "private provider", Params: map[string]string{"private": "secret"}},
-					Candidates:   []TestCandidate{{ID: "candidate", SeedPosition: 7, SnapshotIndex: 3, Ref: ref, SourceRevision: "private-version", SemanticKey: "private-semantics", FrozenVariant: []byte("private setting"), Output: []byte("readable complete answer"), Accounting: []byte("private cost"), Identity: &TestCandidateIdentity{Label: "Private setting", Ref: ref, Synthetic: true}, Usage: &Usage{PromptTokens: 10, CompletionTokens: 20, LatencyMS: 30, CostMicrousd: 123, CostSource: CostReported}, Failure: &Failure{Reason: "MODEL_RATE_LIMITED", TechnicalDetail: "private model", Params: map[string]string{"model": "private"}}}},
+					Candidates:   []TestCandidate{{ID: "candidate", SeedPosition: 7, SnapshotIndex: 3, Ref: ref, SourceRevision: "private-version", SemanticKey: "private-semantics", FrozenVariant: []byte("private setting"), Output: answer, Accounting: []byte("private cost"), Identity: &TestCandidateIdentity{Label: "Private setting", Ref: ref, Synthetic: true}, Usage: &Usage{PromptTokens: 10, CompletionTokens: 20, LatencyMS: 30, CostMicrousd: 123, CostSource: CostReported}, Failure: &Failure{Reason: "MODEL_RATE_LIMITED", TechnicalDetail: "private model", Params: map[string]string{"model": "private"}}}},
 					Publications: []TestPublication{{ID: "publication", Fingerprint: "private digest"}},
 				}
 				got := ProjectWritingTest(original)
@@ -26,7 +35,7 @@ func TestWritingTestProjectionBlindsEveryNonrevealedStateAndAlwaysOmitsSupplierC
 				if c.Ref != (TestEntrantRef{}) || c.SeedPosition != 0 || c.SnapshotIndex != 0 || c.SourceRevision != "" || c.SemanticKey != "" || len(c.FrozenVariant) != 0 || len(c.Accounting) != 0 {
 					t.Fatalf("private candidate snapshot leaked: %#v", c)
 				}
-				if c.Failure.TechnicalDetail != "" || len(c.Failure.Params) != 0 || string(c.Output) != "readable complete answer" {
+				if c.Failure.TechnicalDetail != "" || len(c.Failure.Params) != 0 || !bytes.Equal(c.Output, publicAnswer) || bytes.Contains(c.Output, []byte("private")) {
 					t.Fatal("projection changed output or leaked diagnostic")
 				}
 				revealed := status == TestCompleted || status == TestCancelled
@@ -49,10 +58,14 @@ func TestWritingTestProjectionBlindsEveryNonrevealedStateAndAlwaysOmitsSupplierC
 				if original.Publications[0].ID != "publication" || original.Publications[0].Fingerprint != "private digest" || original.Candidates[0].SeedPosition != 7 || original.Candidates[0].SnapshotIndex != 3 {
 					t.Fatal("private execution metadata changed")
 				}
-				if string(original.Candidates[0].Output) != "readable complete answer" || !reflect.DeepEqual(original.Candidates[0].Identity.Ref, ref) || original.Candidates[0].Identity.Label != "Private setting" || original.Candidates[0].Failure.Reason != "MODEL_RATE_LIMITED" {
+				if !bytes.Equal(original.Candidates[0].Output, answer) || !reflect.DeepEqual(original.Candidates[0].Identity.Ref, ref) || original.Candidates[0].Identity.Label != "Private setting" || original.Candidates[0].Failure.Reason != "MODEL_RATE_LIMITED" {
 					t.Fatal("projection aliases stored private state")
 				}
 			})
 		}
 	}
+}
+
+func privateInspectionFixture() llm.RequestInspection {
+	return llm.RequestInspection{Version: 1, Status: llm.InspectionCaptured, Stage: "write", Mode: "post-writing", PromptVersion: "v1", SchemaVersion: "v1", Output: llm.OutputContractInspection{Name: "post", Version: "v1"}, Conditions: &llm.EffectiveRequestConditions{Model: &llm.ModelRef{ProviderID: "private-provider", ModelID: "private-model"}}, Fragments: []llm.RequestFragment{{ID: "private-model-fragment", Role: llm.InspectionRoleUser, Authorship: llm.FragmentAuthorshipAccount, MaterialRole: "private-setting", Text: "private model instructions", SourceRefs: []string{"private-source"}, SourceFiles: []string{"private-source-file"}}}, SourceFiles: []string{"private-setting-source"}, Omissions: []llm.RequestOmission{{ID: "private-model-option", Reason: "private model disabled"}}}
 }

@@ -24,6 +24,25 @@ UPDATE configuration_authoring_operations SET job_id=?,status=?,failure_reason=?
 -- name: ActiveAuthoringOperation :one
 SELECT * FROM configuration_authoring_operations WHERE user_id=? AND session_id=? AND status IN ('pending','admitted') LIMIT 1;
 
+-- name: GetAuthoringRequestCapture :one
+SELECT request_capture FROM configuration_authoring_operations
+WHERE user_id=sqlc.arg(user_id) AND session_id=sqlc.arg(session_id)
+ AND capture_revision=sqlc.arg(revision) AND mode=sqlc.arg(mode)
+ AND capture_purged=0 AND request_capture IS NOT NULL
+ORDER BY created_at DESC,id DESC LIMIT 1;
+-- name: WriteAuthoringRequestCapture :execrows
+UPDATE configuration_authoring_operations SET request_capture=sqlc.arg(request_capture),capture_revision=sqlc.arg(revision)
+WHERE user_id=sqlc.arg(user_id) AND session_id=sqlc.arg(session_id) AND id=sqlc.arg(operation_id)
+ AND base_revision=sqlc.arg(base_revision) AND capture_purged=0 AND request_capture IS NULL
+ AND status IN ('pending','admitted') AND (job_id='' OR job_id=sqlc.arg(job_id));
+-- name: BindAuthoringRequestCaptureRevision :exec
+UPDATE configuration_authoring_operations SET capture_revision=sqlc.arg(revision)
+WHERE user_id=sqlc.arg(user_id) AND id=sqlc.arg(operation_id)
+ AND capture_purged=0 AND request_capture IS NOT NULL;
+-- name: PurgeAuthoringRequestCaptures :exec
+UPDATE configuration_authoring_operations SET request_capture=NULL,capture_revision=NULL,capture_purged=1
+WHERE user_id=? AND session_id=?;
+
 -- name: GetAuthoringMutation :one
 SELECT * FROM configuration_authoring_mutations WHERE user_id=? AND operation_key=?;
 -- name: InsertAuthoringMutation :exec

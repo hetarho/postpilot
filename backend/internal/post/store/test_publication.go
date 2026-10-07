@@ -23,9 +23,23 @@ type TestPublicationGuard interface {
 	HasOrdinaryWrite(context.Context, *sql.Tx, string, string) (bool, error)
 }
 
+type TestPublicationPayloadGuard interface {
+	TestPayloadAvailable(context.Context, *sql.Tx, string, string, string, uint64) (bool, error)
+}
+
 type TestResultStore struct {
-	store *Store
-	jobs  TestPublicationGuard
+	store   *Store
+	jobs    TestPublicationGuard
+	payload TestPublicationPayloadGuard
+}
+
+func NewFencedTestResultStore(writer, reader *sql.DB, jobs TestPublicationGuard, payload TestPublicationPayloadGuard) *TestResultStore {
+	if payload == nil {
+		panic("post: transactional private test payload guard is required")
+	}
+	store := NewTestResultStore(writer, reader, jobs)
+	store.payload = payload
+	return store
 }
 
 func NewTestResultStore(writer, reader *sql.DB, jobs TestPublicationGuard) *TestResultStore {
@@ -72,6 +86,18 @@ func (s *TestResultStore) ApplyTestResult(ctx context.Context, in post.TestOutpu
 	}
 	if len(replays) > 0 {
 		return empty, nil
+	}
+	if in.PrivatePayloadFence != nil {
+		if s.payload == nil {
+			return empty, post.ErrTestPublicationConflict
+		}
+		available, err := s.payload.TestPayloadAvailable(ctx, tx, in.UserID, in.TestID, in.WinnerID, *in.PrivatePayloadFence)
+		if err != nil {
+			return empty, fmt.Errorf("guard private test payload: %w", err)
+		}
+		if !available {
+			return empty, post.ErrTestPublicationConflict
+		}
 	}
 	row, err := q.GetPost(ctx, in.PostSlug)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -235,7 +261,8 @@ func testPublicationFingerprint(in post.TestOutputPublication) ([]byte, error) {
 		Storyline                                      *plan
 		Nouns                                          []string
 		Origins                                        *originReviewJSON `json:"Origins,omitempty"`
-	}{in.UserID, in.TestID, in.WinnerID, in.RequestKey, in.PostSlug, in.AssignmentsHash, in.InputRevision, in.ContentRevision, in.Content, in.Baseline, in.ContentLanguage, storyline, in.Nouns, encodeOriginReview(in.Origins)})
+		PrivatePayloadFence                            *uint64           `json:"PrivatePayloadFence,omitempty"`
+	}{in.UserID, in.TestID, in.WinnerID, in.RequestKey, in.PostSlug, in.AssignmentsHash, in.InputRevision, in.ContentRevision, in.Content, in.Baseline, in.ContentLanguage, storyline, in.Nouns, encodeOriginReview(in.Origins), in.PrivatePayloadFence})
 }
 func attachmentNames(images []post.Image) []string {
 	names := make([]string, len(images))

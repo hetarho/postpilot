@@ -23,6 +23,9 @@ type TestOutputPublication struct {
 	ContentLanguage                                Language
 	Storyline                                      *Storyline
 	Nouns                                          []string
+	// Present for private experiments. The target transaction rechecks this
+	// experiment-owned purge/retention fence before accepting the frozen payload.
+	PrivatePayloadFence *uint64
 }
 
 // TestOutputReceipt is durable provenance and proof of one committed publication.

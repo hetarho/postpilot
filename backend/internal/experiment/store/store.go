@@ -18,12 +18,13 @@ const writeLayout = "2006-01-02T15:04:05.000000000Z07:00"
 
 type Store struct {
 	writer *sql.DB
+	reader *sql.DB
 	write  *sqlc.Queries
 	read   *sqlc.Queries
 }
 
 func New(writer, reader *sql.DB) *Store {
-	return &Store{writer: writer, write: sqlc.New(writer), read: sqlc.New(reader)}
+	return &Store{writer: writer, reader: reader, write: sqlc.New(writer), read: sqlc.New(reader)}
 }
 
 func (s *Store) Create(ctx context.Context, found experiment.Experiment) error {

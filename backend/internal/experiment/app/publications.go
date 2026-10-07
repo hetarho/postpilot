@@ -274,7 +274,7 @@ func (p *Publications) commitTarget(ctx context.Context, t experiment.WritingTes
 			return result, experiment.ErrTestOutputIncompatible
 		}
 		content, story := postOutput(output)
-		r, err := p.dependencies.Posts.ApplyTestResult(ctx, post.TestOutputPublication{UserID: in.UserID, TestID: in.TestID, WinnerID: in.WinnerID, RequestKey: pub.RequestKey, PostSlug: d.SourcePostSlug, AssignmentsHash: d.AssignmentsHash, InputRevision: d.InputRevision, ContentRevision: d.ContentRevision, Content: content, Baseline: content, ContentLanguage: post.Language(output.ContentLanguage), Storyline: story, Nouns: output.Nouns})
+		r, err := p.dependencies.Posts.ApplyTestResult(ctx, post.TestOutputPublication{UserID: in.UserID, TestID: in.TestID, WinnerID: in.WinnerID, RequestKey: pub.RequestKey, PostSlug: d.SourcePostSlug, AssignmentsHash: d.AssignmentsHash, InputRevision: d.InputRevision, ContentRevision: d.ContentRevision, Content: content, Baseline: content, Origins: output.Origins, ContentLanguage: post.Language(output.ContentLanguage), Storyline: story, Nouns: output.Nouns, PrivatePayloadFence: &t.PurgeFence})
 		result.TargetID = r.TargetID
 		result.RequestKey = r.RequestKey
 		result.ResultingRevision = r.ResultingRevision
@@ -312,7 +312,7 @@ func postOutput(value experiment.TestOutput) (post.PostContent, *post.Storyline)
 	}
 	var story *post.Storyline
 	if value.Storyline != nil {
-		story = &post.Storyline{MadeWith: value.Storyline.MadeWith}
+		story = &post.Storyline{MadeWith: value.Storyline.MadeWith, Origins: value.Storyline.Origins}
 		for _, item := range value.Storyline.Paragraphs {
 			story.Paragraphs = append(story.Paragraphs, post.StorylineParagraph{Text: item.Text, Files: item.Files})
 		}

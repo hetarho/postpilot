@@ -171,7 +171,11 @@ func handlers(c *contexts) []rpcserver.Registrar {
 			return postpilotv1connect.NewPostServiceHandler(postrpc.NewHandler(c.post), opts...)
 		},
 		func(opts ...connect.HandlerOption) (string, http.Handler) {
-			return postpilotv1connect.NewWritingInspectionServiceHandler(postrpc.NewInspectionHandler(postRequestInspectionReader{service: c.generation}, c.post, poststore.New(c.platform.db.Writer, c.platform.db.Reader)), opts...)
+			return postpilotv1connect.NewWritingInspectionServiceHandler(writingInspectionHandler{
+				InspectionHandler: postrpc.NewInspectionHandler(postRequestInspectionReader{service: c.generation}, c.post, poststore.New(c.platform.db.Writer, c.platform.db.Reader)),
+				tests:             experimentrpc.NewRequestInspectionHandler(c.writingTestInspection),
+				authoring:         authoringrpc.NewHandler(c.authoring),
+			}, opts...)
 		},
 		func(opts ...connect.HandlerOption) (string, http.Handler) {
 			return postpilotv1connect.NewProviderServiceHandler(providerrpc.NewHandler(c.provider), opts...)

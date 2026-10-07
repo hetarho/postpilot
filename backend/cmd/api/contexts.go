@@ -103,6 +103,7 @@ type contexts struct {
 	writingTestJobs         *experimentapp.WritingTestJobs
 	writingTestPublications *experimentapp.Publications
 	writingTestLifecycle    *experimentapp.WritingTestLifecycle
+	writingTestInspection   *experimentapp.WritingTestInspection
 }
 
 type unavailableRateSource struct{}
@@ -350,7 +351,7 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 		voiceCandidateJobs{queue: c.jobs}, voicestore.New(handle.Writer, handle.Reader),
 		cfg.LLMCompletionBudget, voiceCandidateEstimates{rates: c.ledger},
 	)
-	c.authoring = authoring.NewService(
+	c.authoring = authoring.NewInspectedService(authoring.NewService(
 		authoringstore.New(handle.Writer, handle.Reader),
 		authoringModels{registry: c.metered, dispatch: jobstore.New(handle.Writer, handle.Reader, jobKinds())},
 		authoringJobs{queue: c.jobs},
@@ -361,7 +362,11 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 			voices:         voice.NewAuthoring(c.voice, voicestore.New(handle.Writer, handle.Reader)),
 		},
 		authoringBudget{config: cfg.LLMCompletionBudget}, authoringEstimates{rates: c.ledger},
-	)
+	), authoring.RequestInspectionDependencies{
+		Captures:   authoringstore.New(handle.Writer, handle.Reader),
+		Models:     authoringInspectionModels{registry: registry, models: c.provider},
+		Selections: generationInspectionSelections{service: c.provider},
+	})
 	c.voice.ConfigurePhotos(voiceObjects{bucket: p.bucket}, voice.PhotoLimits{
 		PutTTL: cfg.PresignPutTTL, GetTTL: cfg.PresignGetTTL, MaxBytes: cfg.MaxImageBytes,
 	})

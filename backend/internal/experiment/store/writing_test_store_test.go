@@ -13,6 +13,8 @@ import (
 
 	"github.com/postpilot/backend/internal/experiment"
 	experimentstore "github.com/postpilot/backend/internal/experiment/store"
+	"github.com/postpilot/backend/internal/llm"
+	"github.com/postpilot/backend/internal/post"
 )
 
 func writingRequest(factor experiment.TestFactor, stage experiment.Stage, count int, key string) (experiment.TestStart, experiment.TestPlan) {
@@ -63,7 +65,8 @@ func beginWriting(t *testing.T, store *experimentstore.Store, found experiment.W
 }
 func testWritingOutput(t *testing.T, id string) []byte {
 	t.Helper()
-	raw, err := experiment.EncodeTestOutput(experiment.TestOutput{ContentLanguage: "ko", Content: experiment.TestOutputContent{Title: "Complete " + id, Summary: "Summary", Tags: []string{"tag"}, Blocks: []experiment.TestOutputBlock{{Type: "TEXT", Content: "A complete generated post."}}}, Storyline: &experiment.TestOutputStoryline{Paragraphs: []experiment.TestOutputParagraph{{Text: "A complete generated post."}}}, Nouns: []string{"post"}})
+	content := post.PostContent{Title: "Complete " + id, Summary: "Summary", Tags: []string{"tag"}, Blocks: []post.Block{{Type: post.BlockText, Content: "A complete generated post."}}}
+	raw, err := experiment.EncodeTestOutput(experiment.TestOutput{ContentLanguage: "ko", Content: experiment.TestOutputContent{Title: content.Title, Summary: content.Summary, Tags: content.Tags, Blocks: []experiment.TestOutputBlock{{Type: "TEXT", Content: "A complete generated post."}}}, Storyline: &experiment.TestOutputStoryline{Paragraphs: []experiment.TestOutputParagraph{{Text: "A complete generated post."}}, Origins: &post.PlanOriginReview{Version: 1, Result: post.PlanOriginIdentity([]post.StorylineParagraph{{Text: "A complete generated post."}}), Sources: []post.OriginSource{{ID: "plan", Kind: post.OriginSourceAIProposal, Text: "Private plan evidence", Available: true}}}}, Nouns: []string{"post"}, Origins: &post.OriginReview{Version: 1, Result: post.ContentOriginIdentity(content, 0), Sources: []post.OriginSource{{ID: "memo", Kind: post.OriginSourceMemo, Text: "Private original owner material", Available: true}}}, RequestInspections: []llm.RequestInspection{{Version: 1, Status: llm.InspectionCaptured, Stage: "write", Mode: "post-writing", PromptVersion: "v1", SchemaVersion: "v1", CallID: id, Output: llm.OutputContractInspection{Name: "post", Version: "v1"}, Conditions: &llm.EffectiveRequestConditions{Model: &llm.ModelRef{ProviderID: "private-provider", ModelID: "private-model"}}, Fragments: []llm.RequestFragment{{ID: "private-setting", Role: llm.InspectionRoleUser, Authorship: llm.FragmentAuthorshipAccount, MaterialRole: "private-material", Text: "Private issued prompt"}}}}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -109,6 +112,16 @@ func TestWritingTestEveryFormatAndFactorRequiresExactlyNMinusOneDecisions(t *tes
 				found := completeWriting(t, store, work)
 				if found.Status != experiment.TestReview || len(found.Matches) != count/2 {
 					t.Fatalf("barrier %+v", found)
+				}
+				for _, candidate := range found.Candidates {
+					value, err := experiment.DecodeTestOutput(candidate.Output)
+					if err != nil || value.Origins == nil || value.Storyline.Origins == nil || len(value.RequestInspections) != 1 || value.RequestInspections[0].CallID != candidate.ID {
+						t.Fatalf("%s/%d lost matching private evidence: %v %#v", axis.factor, count, err, value)
+					}
+					public, err := experiment.DecodeTestOutput(candidate.Project(false, "blind").Output)
+					if err != nil || public.Origins != nil || public.Storyline.Origins != nil || len(public.RequestInspections) != 0 {
+						t.Fatalf("%s/%d leaked private evidence: %v %#v", axis.factor, count, err, public)
+					}
 				}
 				initialMatches := slices.Clone(found.Matches)
 				reloaded, err := store.GetTest(ctx, "alice", found.ID)

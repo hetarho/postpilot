@@ -681,7 +681,7 @@ type BlindCandidate struct {
 }
 
 func (c TestCandidate) Project(revealed bool, label string) BlindCandidate {
-	out := BlindCandidate{ID: c.ID, DisplayLabel: label, Status: c.Status, Output: append([]byte(nil), c.Output...)}
+	out := BlindCandidate{ID: c.ID, DisplayLabel: label, Status: c.Status, Output: PublicTestOutput(c.Output)}
 	// Technical detail can reveal the model, so it never enters a blind projection.
 	if c.Failure != nil {
 		out.Failure = &Failure{Reason: c.Failure.Reason}

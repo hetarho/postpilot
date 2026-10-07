@@ -62,10 +62,10 @@ func seedCreationPreservation(t *testing.T, h *DB, writing bool) {
 func creationRows(t *testing.T, h *DB, table string) [][]string {
 	t.Helper()
 	projection := "*"
-	if table == "posts" {
+	if table == "posts" || table == "configuration_authoring_operations" {
 		// Compare every historical field even when an additive migration appends
 		// result sidecars. Their required NULL upgrade state is asserted separately.
-		columns, err := h.Reader.Query("SELECT name FROM pragma_table_info('posts') WHERE name NOT IN ('content_origins','storyline_origins') ORDER BY cid")
+		columns, err := h.Reader.Query("SELECT name FROM pragma_table_info(?) WHERE name NOT IN ('content_origins','storyline_origins','request_capture','capture_revision','capture_purged') ORDER BY cid", table)
 		if err != nil {
 			t.Fatal(err)
 		}

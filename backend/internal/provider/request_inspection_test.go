@@ -87,6 +87,36 @@ func assertSelectionInspectionOnlyReads(t *testing.T, store *inspectionSelection
 	}
 }
 
+func TestExplicitModelForInspectionPreservesTheActiveChoiceAndNeverAdmitsWork(t *testing.T) {
+	info := defaultInfo("frozen-writer", "free", provider.StageWrite)
+	store := &inspectionSelectionStore{selections: []provider.Selection{{Stage: provider.StageWrite, Ref: llm.ModelRef{ProviderID: "p", ModelID: "new-active"}}}}
+	catalog := &inspectionSelectionCatalog{models: map[llm.ModelRef]llm.ModelInfo{info.Ref: info}}
+	credits := &inspectionSelectionCredits{tier: plan.Free}
+	service := provider.NewService(store, catalog, credits).WithModelGrades()
+	got, eligible, err := service.ModelForInspection(t.Context(), "alice", provider.StageWrite, info.Ref)
+	if err != nil || !eligible || got.Ref != info.Ref || len(store.users) != 0 {
+		t.Fatalf("explicit frozen selection changed: %+v %v %v", got, eligible, err)
+	}
+	assertSelectionInspectionOnlyReads(t, store, catalog)
+	info.Levels["write"] = "top"
+	catalog.models[info.Ref] = info
+	if _, eligible, err := service.ModelForInspection(t.Context(), "alice", provider.StageWrite, info.Ref); err != nil || eligible {
+		t.Fatal("unentitled model prepared", err)
+	}
+	if _, eligible, err := service.ModelForInspection(t.Context(), "alice", provider.StageAnalyze, info.Ref); err != nil || eligible {
+		t.Fatal("wrong purpose prepared", err)
+	}
+	if _, eligible, err := service.ModelForInspection(t.Context(), "alice", provider.StageWrite, llm.ModelRef{}); err != nil || eligible {
+		t.Fatal("missing model prepared", err)
+	}
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+	if _, _, err := service.ModelForInspection(ctx, "alice", provider.StageWrite, info.Ref); !errors.Is(err, context.Canceled) {
+		t.Fatal("cancellation ignored", err)
+	}
+	assertSelectionInspectionOnlyReads(t, store, catalog)
+}
+
 func TestSelectionForInspectionNeverQualifiesFreeEndpointsOrInitializesDefaults(t *testing.T) {
 	for _, stage := range provider.Stages {
 		t.Run(string(stage), func(t *testing.T) {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/postpilot/backend/internal/authoring"
 	"github.com/postpilot/backend/internal/generation"
 	"github.com/postpilot/backend/internal/llm"
 	"github.com/postpilot/backend/internal/post"
@@ -68,3 +69,23 @@ func (a generationInspectionSelections) ModelForInspection(ctx context.Context, 
 var _ generation.RequestInspectionSelections = generationInspectionSelections{}
 var _ generation.RequestInspectionModels = generationInspectionModels{}
 var _ post.RequestInspectionReader = postRequestInspectionReader{}
+
+type authoringInspectionModels struct {
+	registry *llm.Registry
+	models   *provider.Service
+}
+
+func (a authoringInspectionModels) PrepareAuthoringRequest(ctx context.Context, userID string, ref llm.ModelRef, request llm.Request) (llm.RequestInspection, error) {
+	info, eligible, err := a.models.ModelForInspection(ctx, userID, provider.StageWrite, ref)
+	if err != nil {
+		return llm.RequestInspection{}, err
+	}
+	if !eligible || request.Stage != llm.StageNameWrite {
+		return llm.RequestInspection{}, llm.ErrModelUnavailable
+	}
+	ctx = llm.WithAdmittedCalls(ctx, []llm.AdmittedCall{{Ref: ref, Stage: request.Stage, Grade: info.Levels[request.Stage]}})
+	return a.registry.Prepare(ctx, ref, request)
+}
+
+var _ authoring.RequestInspectionModels = authoringInspectionModels{}
+var _ authoring.RequestInspectionSelections = generationInspectionSelections{}

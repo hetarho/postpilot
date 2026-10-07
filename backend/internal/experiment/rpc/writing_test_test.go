@@ -262,6 +262,9 @@ func TestWritingTestEveryEndpointAuthenticatesBeforePrivateAccess(t *testing.T) 
 }
 func TestWritingTestBlindWireRetainsCompleteOutputAndOnlyRevealsIdentityAndTokensAtBoundary(t *testing.T) {
 	output := experiment.TestOutput{ContentLanguage: "en", Content: experiment.TestOutputContent{Title: "Complete title", Summary: "Summary", Tags: []string{"tag"}, Blocks: []experiment.TestOutputBlock{{Type: "TEXT", Content: "full paragraph"}, {Type: "HEADING", Content: "heading", Level: 2}, {Type: "IMAGE", File: "a.jpg", Alt: "alt", Caption: "caption"}, {Type: "QUOTE", Content: "quote"}, {Type: "LIST", Items: []string{"one", "two"}}, {Type: "VIDEO", File: "clip.mp4"}, {Type: "GALLERY", Files: []string{"a.jpg", "b.jpg"}, Layout: "COLLAGE", Alt: "group"}, {Type: "GALLERY", Files: []string{"c.jpg", "d.jpg"}, Layout: "SLIDE"}}}, Storyline: &experiment.TestOutputStoryline{Paragraphs: []experiment.TestOutputParagraph{{Text: "complete plan", Files: []string{"a.jpg"}}}, MadeWith: []string{"a.jpg"}}}
+	output.Origins = &post.OriginReview{Version: 1, Sources: []post.OriginSource{{ID: "private-model-source", Kind: post.OriginSourceMemo, Text: "private model original source"}}}
+	output.Storyline.Origins = &post.PlanOriginReview{Version: 1, Sources: []post.OriginSource{{ID: "private-model-plan-source", Kind: post.OriginSourceAIProposal, Text: "private model plan evidence"}}}
+	output.RequestInspections = []llm.RequestInspection{{Version: 1, Status: llm.InspectionCaptured, Stage: "write", Mode: "post-writing", PromptVersion: "private-model-version", SchemaVersion: "private-schema", Output: llm.OutputContractInspection{Name: "post", Version: "v1"}, Conditions: &llm.EffectiveRequestConditions{Model: &llm.ModelRef{ProviderID: "private-provider", ModelID: "private-model"}}, Fragments: []llm.RequestFragment{{ID: "private-model-fragment", Role: llm.InspectionRoleUser, Authorship: llm.FragmentAuthorshipAccount, MaterialRole: "private-model-material", Text: "private model prompt", SourceFiles: []string{"private-model-source-file"}}}}}
 	raw, err := experiment.EncodeTestOutput(output)
 	if err != nil {
 		t.Fatal(err)
@@ -285,7 +288,7 @@ func TestWritingTestBlindWireRetainsCompleteOutputAndOnlyRevealsIdentityAndToken
 			t.Fatalf("complete output lost %s", candidate)
 		}
 		encoded, _ := protojson.Marshal(wire)
-		for _, secret := range []string{"private common", "private variant", "suppliercost", "999", "private diagnostic", "private-model"} {
+		for _, secret := range []string{"private common", "private variant", "suppliercost", "999", "private diagnostic", "private-model", "private-model-source", "private-model-fragment", "private model prompt", "private model original source", "private model plan evidence", "private-schema"} {
 			if secret == "private-model" && revealed {
 				continue
 			}

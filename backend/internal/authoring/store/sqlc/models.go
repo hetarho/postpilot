@@ -20,18 +20,21 @@ type ConfigurationAuthoringMutation struct {
 }
 
 type ConfigurationAuthoringOperation struct {
-	ID            string
-	UserID        string
-	SessionID     string
-	RequestID     string
-	Fingerprint   string
-	BaseRevision  int64
-	Mode          string
-	Payload       []byte
-	JobID         string
-	Status        string
-	FailureReason string
-	CreatedAt     string
+	ID              string
+	UserID          string
+	SessionID       string
+	RequestID       string
+	Fingerprint     string
+	BaseRevision    int64
+	Mode            string
+	Payload         []byte
+	JobID           string
+	Status          string
+	FailureReason   string
+	CreatedAt       string
+	RequestCapture  sql.NullString
+	CaptureRevision sql.NullInt64
+	CapturePurged   int64
 }
 
 type ConfigurationAuthoringSession struct {

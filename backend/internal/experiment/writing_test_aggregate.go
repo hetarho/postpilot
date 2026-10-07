@@ -146,6 +146,7 @@ func ProjectWritingTest(test WritingTest) WritingTest {
 	revealed := test.Status == TestCompleted || test.Status == TestCancelled
 	out := test
 	out.CommonSnapshot = nil
+	out.CommonHash, out.PromptVersion = "", ""
 	out.Input = TestInput{TargetLanguage: test.Input.TargetLanguage, Fictional: test.Input.Fictional}
 	if !revealed {
 		out.SourcePostSlug = ""
@@ -167,7 +168,7 @@ func ProjectWritingTest(test WritingTest) WritingTest {
 		if projection.Usage != nil {
 			out.Candidates[index].Usage = &Usage{PromptTokens: projection.Usage.PromptTokens, CompletionTokens: projection.Usage.CompletionTokens, LatencyMS: projection.Usage.LatencyMS}
 		}
-		out.Candidates[index].Output = append([]byte(nil), candidate.Output...)
+		out.Candidates[index].Output = projection.Output
 	}
 	out.Publications = slices.Clone(test.Publications)
 	for index := range out.Publications {

@@ -18,12 +18,13 @@ const stampLayout = "2006-01-02T15:04:05.000000000Z07:00"
 
 type Store struct {
 	writer      *sql.DB
+	reader      *sql.DB
 	read, write *sqlc.Queries
 	now         func() time.Time
 }
 
 func New(writer, reader *sql.DB) *Store {
-	return &Store{writer: writer, read: sqlc.New(reader), write: sqlc.New(writer), now: time.Now}
+	return &Store{writer: writer, reader: reader, read: sqlc.New(reader), write: sqlc.New(writer), now: time.Now}
 }
 func missing(err error) error {
 	if errors.Is(err, sql.ErrNoRows) {
@@ -296,6 +297,11 @@ func (s *Store) operationMutation(ctx context.Context, user, opID string, apply 
 	}
 	if _, e = q.SetAuthoringOperation(ctx, sqlc.SetAuthoringOperationParams{UserID: user, ID: op.ID, JobID: op.JobID, Status: op.Status, FailureReason: op.FailureReason}); e != nil {
 		return state, e
+	}
+	if old == op.BaseRevision+1 && state.Revision == old+1 && (op.Status == "done" || op.Status == "failed" || op.Status == "cancelled") {
+		if e = q.BindAuthoringRequestCaptureRevision(ctx, sqlc.BindAuthoringRequestCaptureRevisionParams{UserID: user, OperationID: op.ID, Revision: sql.NullInt64{Int64: int64(state.Revision), Valid: true}}); e != nil {
+			return state, e
+		}
 	}
 	if e = s.writeSession(ctx, q, state, old); e != nil {
 		return state, e

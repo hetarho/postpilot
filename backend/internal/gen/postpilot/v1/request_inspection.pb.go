@@ -1226,6 +1226,7 @@ func (x *GetWritingTestRequestInspectionRequest) GetStatus() InspectionStatus {
 type GetWritingTestRequestInspectionResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Inspection    *RequestInspection     `protobuf:"bytes,1,opt,name=inspection,proto3" json:"inspection,omitempty"`
+	Inspections   []*RequestInspection   `protobuf:"bytes,2,rep,name=inspections,proto3" json:"inspections,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1267,13 +1268,27 @@ func (x *GetWritingTestRequestInspectionResponse) GetInspection() *RequestInspec
 	return nil
 }
 
+func (x *GetWritingTestRequestInspectionResponse) GetInspections() []*RequestInspection {
+	if x != nil {
+		return x.Inspections
+	}
+	return nil
+}
+
 type GetAuthoringRequestInspectionRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	DraftId       string                 `protobuf:"bytes,1,opt,name=draft_id,json=draftId,proto3" json:"draft_id,omitempty"`
-	Stage         string                 `protobuf:"bytes,2,opt,name=stage,proto3" json:"stage,omitempty"`
-	Status        InspectionStatus       `protobuf:"varint,3,opt,name=status,proto3,enum=postpilot.v1.InspectionStatus" json:"status,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	DraftId        string                 `protobuf:"bytes,1,opt,name=draft_id,json=draftId,proto3" json:"draft_id,omitempty"`
+	Stage          string                 `protobuf:"bytes,2,opt,name=stage,proto3" json:"stage,omitempty"`
+	Status         InspectionStatus       `protobuf:"varint,3,opt,name=status,proto3,enum=postpilot.v1.InspectionStatus" json:"status,omitempty"`
+	SessionId      string                 `protobuf:"bytes,4,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	Kind           ConfigurationKind      `protobuf:"varint,5,opt,name=kind,proto3,enum=postpilot.v1.ConfigurationKind" json:"kind,omitempty"`
+	Revision       uint32                 `protobuf:"varint,6,opt,name=revision,proto3" json:"revision,omitempty"`
+	Mode           AuthoringMode          `protobuf:"varint,7,opt,name=mode,proto3,enum=postpilot.v1.AuthoringMode" json:"mode,omitempty"`
+	Prompt         string                 `protobuf:"bytes,8,opt,name=prompt,proto3" json:"prompt,omitempty"`
+	Model          *ModelRef              `protobuf:"bytes,9,opt,name=model,proto3" json:"model,omitempty"`
+	CandidateCount uint32                 `protobuf:"varint,10,opt,name=candidate_count,json=candidateCount,proto3" json:"candidate_count,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *GetAuthoringRequestInspectionRequest) Reset() {
@@ -1327,6 +1342,55 @@ func (x *GetAuthoringRequestInspectionRequest) GetStatus() InspectionStatus {
 	return InspectionStatus_INSPECTION_STATUS_UNSPECIFIED
 }
 
+func (x *GetAuthoringRequestInspectionRequest) GetSessionId() string {
+	if x != nil {
+		return x.SessionId
+	}
+	return ""
+}
+
+func (x *GetAuthoringRequestInspectionRequest) GetKind() ConfigurationKind {
+	if x != nil {
+		return x.Kind
+	}
+	return ConfigurationKind_CONFIGURATION_KIND_UNSPECIFIED
+}
+
+func (x *GetAuthoringRequestInspectionRequest) GetRevision() uint32 {
+	if x != nil {
+		return x.Revision
+	}
+	return 0
+}
+
+func (x *GetAuthoringRequestInspectionRequest) GetMode() AuthoringMode {
+	if x != nil {
+		return x.Mode
+	}
+	return AuthoringMode_AUTHORING_MODE_UNSPECIFIED
+}
+
+func (x *GetAuthoringRequestInspectionRequest) GetPrompt() string {
+	if x != nil {
+		return x.Prompt
+	}
+	return ""
+}
+
+func (x *GetAuthoringRequestInspectionRequest) GetModel() *ModelRef {
+	if x != nil {
+		return x.Model
+	}
+	return nil
+}
+
+func (x *GetAuthoringRequestInspectionRequest) GetCandidateCount() uint32 {
+	if x != nil {
+		return x.CandidateCount
+	}
+	return 0
+}
+
 type GetAuthoringRequestInspectionResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Inspection    *RequestInspection     `protobuf:"bytes,1,opt,name=inspection,proto3" json:"inspection,omitempty"`
@@ -1375,7 +1439,7 @@ var File_postpilot_v1_request_inspection_proto protoreflect.FileDescriptor
 
 const file_postpilot_v1_request_inspection_proto_rawDesc = "" +
 	"\n" +
-	"%postpilot/v1/request_inspection.proto\x12\fpostpilot.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1bpostpilot/v1/provider.proto\x1a\"postpilot/v1/semantic_origin.proto\"\xb2\x02\n" +
+	"%postpilot/v1/request_inspection.proto\x12\fpostpilot.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a*postpilot/v1/configuration_authoring.proto\x1a\x1bpostpilot/v1/provider.proto\x1a\"postpilot/v1/semantic_origin.proto\"\xb2\x02\n" +
 	"\x0fRequestFragment\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x120\n" +
 	"\x04role\x18\x02 \x01(\x0e2\x1c.postpilot.v1.InspectionRoleR\x04role\x12@\n" +
@@ -1497,15 +1561,25 @@ const file_postpilot_v1_request_inspection_proto_rawDesc = "" +
 	"\atest_id\x18\x01 \x01(\tR\x06testId\x12!\n" +
 	"\fcandidate_id\x18\x02 \x01(\tR\vcandidateId\x12\x14\n" +
 	"\x05stage\x18\x03 \x01(\tR\x05stage\x126\n" +
-	"\x06status\x18\x04 \x01(\x0e2\x1e.postpilot.v1.InspectionStatusR\x06status\"j\n" +
+	"\x06status\x18\x04 \x01(\x0e2\x1e.postpilot.v1.InspectionStatusR\x06status\"\xad\x01\n" +
 	"'GetWritingTestRequestInspectionResponse\x12?\n" +
 	"\n" +
 	"inspection\x18\x01 \x01(\v2\x1f.postpilot.v1.RequestInspectionR\n" +
-	"inspection\"\x8f\x01\n" +
+	"inspection\x12A\n" +
+	"\vinspections\x18\x02 \x03(\v2\x1f.postpilot.v1.RequestInspectionR\vinspections\"\x9f\x03\n" +
 	"$GetAuthoringRequestInspectionRequest\x12\x19\n" +
 	"\bdraft_id\x18\x01 \x01(\tR\adraftId\x12\x14\n" +
 	"\x05stage\x18\x02 \x01(\tR\x05stage\x126\n" +
-	"\x06status\x18\x03 \x01(\x0e2\x1e.postpilot.v1.InspectionStatusR\x06status\"h\n" +
+	"\x06status\x18\x03 \x01(\x0e2\x1e.postpilot.v1.InspectionStatusR\x06status\x12\x1d\n" +
+	"\n" +
+	"session_id\x18\x04 \x01(\tR\tsessionId\x123\n" +
+	"\x04kind\x18\x05 \x01(\x0e2\x1f.postpilot.v1.ConfigurationKindR\x04kind\x12\x1a\n" +
+	"\brevision\x18\x06 \x01(\rR\brevision\x12/\n" +
+	"\x04mode\x18\a \x01(\x0e2\x1b.postpilot.v1.AuthoringModeR\x04mode\x12\x16\n" +
+	"\x06prompt\x18\b \x01(\tR\x06prompt\x12,\n" +
+	"\x05model\x18\t \x01(\v2\x16.postpilot.v1.ModelRefR\x05model\x12'\n" +
+	"\x0fcandidate_count\x18\n" +
+	" \x01(\rR\x0ecandidateCount\"h\n" +
 	"%GetAuthoringRequestInspectionResponse\x12?\n" +
 	"\n" +
 	"inspection\x18\x01 \x01(\v2\x1f.postpilot.v1.RequestInspectionR\n" +
@@ -1568,6 +1642,8 @@ var file_postpilot_v1_request_inspection_proto_goTypes = []any{
 	(*ModelRef)(nil),                                // 19: postpilot.v1.ModelRef
 	(*timestamppb.Timestamp)(nil),                   // 20: google.protobuf.Timestamp
 	(*OriginReview)(nil),                            // 21: postpilot.v1.OriginReview
+	(ConfigurationKind)(0),                          // 22: postpilot.v1.ConfigurationKind
+	(AuthoringMode)(0),                              // 23: postpilot.v1.AuthoringMode
 }
 var file_postpilot_v1_request_inspection_proto_depIdxs = []int32{
 	1,  // 0: postpilot.v1.RequestFragment.role:type_name -> postpilot.v1.InspectionRole
@@ -1589,21 +1665,25 @@ var file_postpilot_v1_request_inspection_proto_depIdxs = []int32{
 	10, // 16: postpilot.v1.GetPostRequestInspectionResponse.inspections:type_name -> postpilot.v1.RequestInspection
 	0,  // 17: postpilot.v1.GetWritingTestRequestInspectionRequest.status:type_name -> postpilot.v1.InspectionStatus
 	10, // 18: postpilot.v1.GetWritingTestRequestInspectionResponse.inspection:type_name -> postpilot.v1.RequestInspection
-	0,  // 19: postpilot.v1.GetAuthoringRequestInspectionRequest.status:type_name -> postpilot.v1.InspectionStatus
-	10, // 20: postpilot.v1.GetAuthoringRequestInspectionResponse.inspection:type_name -> postpilot.v1.RequestInspection
-	11, // 21: postpilot.v1.WritingInspectionService.GetPostOriginReview:input_type -> postpilot.v1.GetPostOriginReviewRequest
-	13, // 22: postpilot.v1.WritingInspectionService.GetPostRequestInspection:input_type -> postpilot.v1.GetPostRequestInspectionRequest
-	15, // 23: postpilot.v1.WritingInspectionService.GetWritingTestRequestInspection:input_type -> postpilot.v1.GetWritingTestRequestInspectionRequest
-	17, // 24: postpilot.v1.WritingInspectionService.GetAuthoringRequestInspection:input_type -> postpilot.v1.GetAuthoringRequestInspectionRequest
-	12, // 25: postpilot.v1.WritingInspectionService.GetPostOriginReview:output_type -> postpilot.v1.GetPostOriginReviewResponse
-	14, // 26: postpilot.v1.WritingInspectionService.GetPostRequestInspection:output_type -> postpilot.v1.GetPostRequestInspectionResponse
-	16, // 27: postpilot.v1.WritingInspectionService.GetWritingTestRequestInspection:output_type -> postpilot.v1.GetWritingTestRequestInspectionResponse
-	18, // 28: postpilot.v1.WritingInspectionService.GetAuthoringRequestInspection:output_type -> postpilot.v1.GetAuthoringRequestInspectionResponse
-	25, // [25:29] is the sub-list for method output_type
-	21, // [21:25] is the sub-list for method input_type
-	21, // [21:21] is the sub-list for extension type_name
-	21, // [21:21] is the sub-list for extension extendee
-	0,  // [0:21] is the sub-list for field type_name
+	10, // 19: postpilot.v1.GetWritingTestRequestInspectionResponse.inspections:type_name -> postpilot.v1.RequestInspection
+	0,  // 20: postpilot.v1.GetAuthoringRequestInspectionRequest.status:type_name -> postpilot.v1.InspectionStatus
+	22, // 21: postpilot.v1.GetAuthoringRequestInspectionRequest.kind:type_name -> postpilot.v1.ConfigurationKind
+	23, // 22: postpilot.v1.GetAuthoringRequestInspectionRequest.mode:type_name -> postpilot.v1.AuthoringMode
+	19, // 23: postpilot.v1.GetAuthoringRequestInspectionRequest.model:type_name -> postpilot.v1.ModelRef
+	10, // 24: postpilot.v1.GetAuthoringRequestInspectionResponse.inspection:type_name -> postpilot.v1.RequestInspection
+	11, // 25: postpilot.v1.WritingInspectionService.GetPostOriginReview:input_type -> postpilot.v1.GetPostOriginReviewRequest
+	13, // 26: postpilot.v1.WritingInspectionService.GetPostRequestInspection:input_type -> postpilot.v1.GetPostRequestInspectionRequest
+	15, // 27: postpilot.v1.WritingInspectionService.GetWritingTestRequestInspection:input_type -> postpilot.v1.GetWritingTestRequestInspectionRequest
+	17, // 28: postpilot.v1.WritingInspectionService.GetAuthoringRequestInspection:input_type -> postpilot.v1.GetAuthoringRequestInspectionRequest
+	12, // 29: postpilot.v1.WritingInspectionService.GetPostOriginReview:output_type -> postpilot.v1.GetPostOriginReviewResponse
+	14, // 30: postpilot.v1.WritingInspectionService.GetPostRequestInspection:output_type -> postpilot.v1.GetPostRequestInspectionResponse
+	16, // 31: postpilot.v1.WritingInspectionService.GetWritingTestRequestInspection:output_type -> postpilot.v1.GetWritingTestRequestInspectionResponse
+	18, // 32: postpilot.v1.WritingInspectionService.GetAuthoringRequestInspection:output_type -> postpilot.v1.GetAuthoringRequestInspectionResponse
+	29, // [29:33] is the sub-list for method output_type
+	25, // [25:29] is the sub-list for method input_type
+	25, // [25:25] is the sub-list for extension type_name
+	25, // [25:25] is the sub-list for extension extendee
+	0,  // [0:25] is the sub-list for field type_name
 }
 
 func init() { file_postpilot_v1_request_inspection_proto_init() }
@@ -1611,6 +1691,7 @@ func file_postpilot_v1_request_inspection_proto_init() {
 	if File_postpilot_v1_request_inspection_proto != nil {
 		return
 	}
+	file_postpilot_v1_configuration_authoring_proto_init()
 	file_postpilot_v1_provider_proto_init()
 	file_postpilot_v1_semantic_origin_proto_init()
 	file_postpilot_v1_request_inspection_proto_msgTypes[5].OneofWrappers = []any{}

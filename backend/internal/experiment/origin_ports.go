@@ -23,3 +23,13 @@ type OriginTestPostPublication interface {
 type TestRequestInspection interface {
 	ReadTestRequestInspection(context.Context, string, string, string, string, llm.InspectionStatus) (llm.RequestInspection, error)
 }
+
+type TestRequestInspections interface {
+	ReadTestRequestInspections(context.Context, string, string, string, string, llm.InspectionStatus) ([]llm.RequestInspection, error)
+}
+
+// One consistent private aggregate/checkpoint snapshot, obtained through the
+// experiment owner's read behavior rather than post-owned capture storage.
+type TestInspectionStorage interface {
+	ReadTestInspectionWork(context.Context, string, string) (TestExecutionWork, error)
+}

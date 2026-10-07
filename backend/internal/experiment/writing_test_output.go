@@ -5,15 +5,20 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+
+	"github.com/postpilot/backend/internal/llm"
+	"github.com/postpilot/backend/internal/post"
 )
 
-// TestOutput is a complete candidate answer. These plain domain types retain the
-// same canonical block fields as an ordinary post, without importing its context.
+// TestOutput is a complete candidate answer with its private result-local origin
+// and request evidence. Public projections keep only the canonical block fields.
 type TestOutput struct {
-	Content         TestOutputContent
-	Storyline       *TestOutputStoryline
-	Nouns           []string
-	ContentLanguage string
+	Content            TestOutputContent
+	Storyline          *TestOutputStoryline
+	Nouns              []string
+	ContentLanguage    string
+	Origins            *post.OriginReview
+	RequestInspections []llm.RequestInspection
 }
 
 type TestOutputContent struct {
@@ -33,6 +38,7 @@ type TestOutputBlock struct {
 type TestOutputStoryline struct {
 	Paragraphs []TestOutputParagraph
 	MadeWith   []string
+	Origins    *post.PlanOriginReview
 }
 
 type TestOutputParagraph struct {
@@ -40,14 +46,16 @@ type TestOutputParagraph struct {
 	Files []string
 }
 
-// The private storage edge has an explicit version. It contains no model
-// identity, accounting, provider diagnostics or supplier cost.
+// The private storage edge has an explicit version. Its optional evidence uses
+// only the bounded product projections, never accounting or supplier payloads.
 type testOutputWire struct {
-	Version         int                      `json:"version"`
-	Content         testOutputContentWire    `json:"content"`
-	Storyline       *testOutputStorylineWire `json:"storyline"`
-	Nouns           []string                 `json:"nouns"`
-	ContentLanguage string                   `json:"content_language"`
+	Version            int                      `json:"version"`
+	Content            testOutputContentWire    `json:"content"`
+	Storyline          *testOutputStorylineWire `json:"storyline"`
+	Nouns              []string                 `json:"nouns"`
+	ContentLanguage    string                   `json:"content_language"`
+	Origins            json.RawMessage          `json:"origins,omitempty"`
+	RequestInspections json.RawMessage          `json:"request_inspections,omitempty"`
 }
 
 type testOutputContentWire struct {
@@ -72,6 +80,7 @@ type testOutputBlockWire struct {
 type testOutputStorylineWire struct {
 	Paragraphs []testOutputParagraphWire `json:"paragraphs"`
 	MadeWith   []string                  `json:"made_with"`
+	Origins    json.RawMessage           `json:"origins,omitempty"`
 }
 
 type testOutputParagraphWire struct {
@@ -83,6 +92,13 @@ const maxTestOutputBytes = 4 << 20
 
 func EncodeTestOutput(value TestOutput) ([]byte, error) {
 	wire := testOutputWire{Version: 1, ContentLanguage: value.ContentLanguage, Nouns: value.Nouns}
+	wire.Origins, _ = json.Marshal(value.Origins)
+	if value.Origins == nil {
+		wire.Origins = nil
+	}
+	if len(value.RequestInspections) > 0 {
+		wire.RequestInspections, _ = json.Marshal(validTestInspections(value.RequestInspections))
+	}
 	wire.Content = testOutputContentWire{Title: value.Content.Title, Summary: value.Content.Summary, Tags: value.Content.Tags}
 	if value.Content.Blocks != nil {
 		wire.Content.Blocks = make([]testOutputBlockWire, len(value.Content.Blocks))
@@ -95,6 +111,9 @@ func EncodeTestOutput(value TestOutput) ([]byte, error) {
 	}
 	if value.Storyline != nil {
 		wire.Storyline = &testOutputStorylineWire{MadeWith: value.Storyline.MadeWith}
+		if value.Storyline.Origins != nil {
+			wire.Storyline.Origins, _ = json.Marshal(value.Storyline.Origins)
+		}
 		if value.Storyline.Paragraphs != nil {
 			wire.Storyline.Paragraphs = make([]testOutputParagraphWire, len(value.Storyline.Paragraphs))
 		}
@@ -132,6 +151,10 @@ func DecodeTestOutput(raw []byte) (TestOutput, error) {
 		return TestOutput{}, err
 	}
 	value := TestOutput{ContentLanguage: wire.ContentLanguage, Nouns: wire.Nouns}
+	value.Origins = decodeOptionalTestEvidence[post.OriginReview](wire.Origins)
+	if requests := decodeOptionalTestEvidence[[]llm.RequestInspection](wire.RequestInspections); requests != nil {
+		value.RequestInspections = validTestInspections(*requests)
+	}
 	value.Content = TestOutputContent{Title: wire.Content.Title, Summary: wire.Content.Summary, Tags: wire.Content.Tags}
 	if wire.Content.Blocks != nil {
 		value.Content.Blocks = make([]TestOutputBlock, len(wire.Content.Blocks))
@@ -144,6 +167,7 @@ func DecodeTestOutput(raw []byte) (TestOutput, error) {
 	}
 	if wire.Storyline != nil {
 		value.Storyline = &TestOutputStoryline{MadeWith: wire.Storyline.MadeWith}
+		value.Storyline.Origins = decodeOptionalTestEvidence[post.PlanOriginReview](wire.Storyline.Origins)
 		if wire.Storyline.Paragraphs != nil {
 			value.Storyline.Paragraphs = make([]TestOutputParagraph, len(wire.Storyline.Paragraphs))
 		}
@@ -152,6 +176,51 @@ func DecodeTestOutput(raw []byte) (TestOutput, error) {
 		}
 	}
 	return value, nil
+}
+
+// Optional private evidence never makes an otherwise usable canonical answer fail.
+// Unknown fields, malformed metadata and unissued previews are discarded rather
+// than being returned as captured execution or interpreted as an origin category.
+func decodeOptionalTestEvidence[T any](raw []byte) *T {
+	if len(raw) == 0 || bytes.Equal(raw, []byte("null")) {
+		return nil
+	}
+	d := json.NewDecoder(bytes.NewReader(raw))
+	d.DisallowUnknownFields()
+	var value T
+	if d.Decode(&value) != nil || d.Decode(new(any)) != io.EOF {
+		return nil
+	}
+	return &value
+}
+
+func validTestInspections(values []llm.RequestInspection) []llm.RequestInspection {
+	var out []llm.RequestInspection
+	for _, value := range values {
+		if value.Status == llm.InspectionCaptured && value.Validate() == nil {
+			out = append(out, value)
+		}
+	}
+	return out
+}
+
+// PublicTestOutput retains only the complete post/plan. Frozen source evidence
+// and issued prompts have a separate owner/reveal-scoped read, even after reveal.
+// Invalid stored output is absent instead of forwarding an opaque JSON payload.
+func PublicTestOutput(raw []byte) []byte {
+	value, err := DecodeTestOutput(raw)
+	if err != nil {
+		return nil
+	}
+	value.Origins, value.RequestInspections = nil, nil
+	if value.Storyline != nil {
+		value.Storyline.Origins = nil
+	}
+	out, err := EncodeTestOutput(value)
+	if err != nil {
+		return nil
+	}
+	return out
 }
 
 func validateTestOutputWire(value testOutputWire) error {

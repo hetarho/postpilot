@@ -146,6 +146,12 @@ func stripProviderInspectionError(err error) error {
 	return &providerInspectionBoundary{cause: err}
 }
 
+// CloneRequestInspection gives private payload owners an independent safe
+// projection. It grants no authority to turn prepared data into issued history.
+func CloneRequestInspection(in RequestInspection) RequestInspection {
+	return cloneRequestInspection(in)
+}
+
 func cloneRequestInspection(in RequestInspection) RequestInspection {
 	copy := in
 	copy.Attachments = append([]InspectionAttachment(nil), in.Attachments...)

@@ -49,6 +49,8 @@ func (p *inspectionProvider) Complete(_ context.Context, request llm.Request) (l
 	p.mu.Unlock()
 	answer := `{"title":"검증 글","summary":"입력 확인","tags":[],"blocks":[{"type":"TEXT","content":"소유자가 알려준 방문"}],"nouns":[]}`
 	switch request.Composition.Mode {
+	case "post_guideline/recommend":
+		answer = `{"candidates":[{"name":"근거 있는 기록","body":"사용자가 제공한 사실과 감상을 구분해 주세요."}]}`
 	case "storyline-create", "storyline-rewrite":
 		answer = `{"storyline":[{"text":"소유자가 알려준 방문","files":[]}]}`
 	case "direct":

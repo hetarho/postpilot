@@ -11,7 +11,7 @@ import (
 )
 
 const activeAuthoringOperation = `-- name: ActiveAuthoringOperation :one
-SELECT id, user_id, session_id, request_id, fingerprint, base_revision, mode, payload, job_id, status, failure_reason, created_at FROM configuration_authoring_operations WHERE user_id=? AND session_id=? AND status IN ('pending','admitted') LIMIT 1
+SELECT id, user_id, session_id, request_id, fingerprint, base_revision, mode, payload, job_id, status, failure_reason, created_at, request_capture, capture_revision, capture_purged FROM configuration_authoring_operations WHERE user_id=? AND session_id=? AND status IN ('pending','admitted') LIMIT 1
 `
 
 type ActiveAuthoringOperationParams struct {
@@ -35,8 +35,28 @@ func (q *Queries) ActiveAuthoringOperation(ctx context.Context, arg ActiveAuthor
 		&i.Status,
 		&i.FailureReason,
 		&i.CreatedAt,
+		&i.RequestCapture,
+		&i.CaptureRevision,
+		&i.CapturePurged,
 	)
 	return i, err
+}
+
+const bindAuthoringRequestCaptureRevision = `-- name: BindAuthoringRequestCaptureRevision :exec
+UPDATE configuration_authoring_operations SET capture_revision=?1
+WHERE user_id=?2 AND id=?3
+ AND capture_purged=0 AND request_capture IS NOT NULL
+`
+
+type BindAuthoringRequestCaptureRevisionParams struct {
+	Revision    sql.NullInt64
+	UserID      string
+	OperationID string
+}
+
+func (q *Queries) BindAuthoringRequestCaptureRevision(ctx context.Context, arg BindAuthoringRequestCaptureRevisionParams) error {
+	_, err := q.db.ExecContext(ctx, bindAuthoringRequestCaptureRevision, arg.Revision, arg.UserID, arg.OperationID)
+	return err
 }
 
 const confirmAuthoringSaveMutations = `-- name: ConfirmAuthoringSaveMutations :exec
@@ -86,7 +106,7 @@ func (q *Queries) GetAuthoringMutation(ctx context.Context, arg GetAuthoringMuta
 }
 
 const getAuthoringOperation = `-- name: GetAuthoringOperation :one
-SELECT id, user_id, session_id, request_id, fingerprint, base_revision, mode, payload, job_id, status, failure_reason, created_at FROM configuration_authoring_operations WHERE user_id=? AND session_id=? AND request_id=?
+SELECT id, user_id, session_id, request_id, fingerprint, base_revision, mode, payload, job_id, status, failure_reason, created_at, request_capture, capture_revision, capture_purged FROM configuration_authoring_operations WHERE user_id=? AND session_id=? AND request_id=?
 `
 
 type GetAuthoringOperationParams struct {
@@ -111,12 +131,15 @@ func (q *Queries) GetAuthoringOperation(ctx context.Context, arg GetAuthoringOpe
 		&i.Status,
 		&i.FailureReason,
 		&i.CreatedAt,
+		&i.RequestCapture,
+		&i.CaptureRevision,
+		&i.CapturePurged,
 	)
 	return i, err
 }
 
 const getAuthoringOperationByID = `-- name: GetAuthoringOperationByID :one
-SELECT id, user_id, session_id, request_id, fingerprint, base_revision, mode, payload, job_id, status, failure_reason, created_at FROM configuration_authoring_operations WHERE user_id=? AND id=?
+SELECT id, user_id, session_id, request_id, fingerprint, base_revision, mode, payload, job_id, status, failure_reason, created_at, request_capture, capture_revision, capture_purged FROM configuration_authoring_operations WHERE user_id=? AND id=?
 `
 
 type GetAuthoringOperationByIDParams struct {
@@ -140,8 +163,38 @@ func (q *Queries) GetAuthoringOperationByID(ctx context.Context, arg GetAuthorin
 		&i.Status,
 		&i.FailureReason,
 		&i.CreatedAt,
+		&i.RequestCapture,
+		&i.CaptureRevision,
+		&i.CapturePurged,
 	)
 	return i, err
+}
+
+const getAuthoringRequestCapture = `-- name: GetAuthoringRequestCapture :one
+SELECT request_capture FROM configuration_authoring_operations
+WHERE user_id=?1 AND session_id=?2
+ AND capture_revision=?3 AND mode=?4
+ AND capture_purged=0 AND request_capture IS NOT NULL
+ORDER BY created_at DESC,id DESC LIMIT 1
+`
+
+type GetAuthoringRequestCaptureParams struct {
+	UserID    string
+	SessionID string
+	Revision  sql.NullInt64
+	Mode      string
+}
+
+func (q *Queries) GetAuthoringRequestCapture(ctx context.Context, arg GetAuthoringRequestCaptureParams) (sql.NullString, error) {
+	row := q.db.QueryRowContext(ctx, getAuthoringRequestCapture,
+		arg.UserID,
+		arg.SessionID,
+		arg.Revision,
+		arg.Mode,
+	)
+	var request_capture sql.NullString
+	err := row.Scan(&request_capture)
+	return request_capture, err
 }
 
 const getAuthoringSession = `-- name: GetAuthoringSession :one
@@ -479,6 +532,21 @@ func (q *Queries) ListAuthoringSummaries(ctx context.Context, arg ListAuthoringS
 	return items, nil
 }
 
+const purgeAuthoringRequestCaptures = `-- name: PurgeAuthoringRequestCaptures :exec
+UPDATE configuration_authoring_operations SET request_capture=NULL,capture_revision=NULL,capture_purged=1
+WHERE user_id=? AND session_id=?
+`
+
+type PurgeAuthoringRequestCapturesParams struct {
+	UserID    string
+	SessionID string
+}
+
+func (q *Queries) PurgeAuthoringRequestCaptures(ctx context.Context, arg PurgeAuthoringRequestCapturesParams) error {
+	_, err := q.db.ExecContext(ctx, purgeAuthoringRequestCaptures, arg.UserID, arg.SessionID)
+	return err
+}
+
 const setAuthoringOperation = `-- name: SetAuthoringOperation :execrows
 UPDATE configuration_authoring_operations SET job_id=?,status=?,failure_reason=? WHERE user_id=? AND id=?
 `
@@ -546,6 +614,39 @@ func (q *Queries) UpdateAuthoringSession(ctx context.Context, arg UpdateAuthorin
 		arg.UserID,
 		arg.ID,
 		arg.Revision_2,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const writeAuthoringRequestCapture = `-- name: WriteAuthoringRequestCapture :execrows
+UPDATE configuration_authoring_operations SET request_capture=?1,capture_revision=?2
+WHERE user_id=?3 AND session_id=?4 AND id=?5
+ AND base_revision=?6 AND capture_purged=0 AND request_capture IS NULL
+ AND status IN ('pending','admitted') AND (job_id='' OR job_id=?7)
+`
+
+type WriteAuthoringRequestCaptureParams struct {
+	RequestCapture sql.NullString
+	Revision       sql.NullInt64
+	UserID         string
+	SessionID      string
+	OperationID    string
+	BaseRevision   int64
+	JobID          string
+}
+
+func (q *Queries) WriteAuthoringRequestCapture(ctx context.Context, arg WriteAuthoringRequestCaptureParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, writeAuthoringRequestCapture,
+		arg.RequestCapture,
+		arg.Revision,
+		arg.UserID,
+		arg.SessionID,
+		arg.OperationID,
+		arg.BaseRevision,
+		arg.JobID,
 	)
 	if err != nil {
 		return 0, err

@@ -24,6 +24,7 @@ type Service struct {
 	estimates  Estimator
 	now        func() time.Time
 	ownerLocks sync.Map
+	inspection *RequestInspectionDependencies
 }
 
 func NewService(store Store, models Models, jobs Jobs, targets Targets, budget Budget, estimates Estimator) *Service {

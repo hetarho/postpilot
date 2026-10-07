@@ -30,6 +30,7 @@ type WritingTestCheckpoint struct {
 	Prepared                                                                                          bool
 	InFlightStage, FailedStage                                                                        string
 	Answer                                                                                            *WriteAnswer
+	RequestInspections                                                                                []llm.RequestInspection
 }
 
 // SaveWritingTestCheckpoint must commit the test's ownership/revision/purge/cancellation fence

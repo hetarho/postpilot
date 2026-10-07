@@ -71,17 +71,19 @@ func TestBuildContextsWiresEveryRequiredCollaborator(t *testing.T) {
 	}
 	public := rpcserver.New(cfg, "test", rpcserver.Options{Handlers: got, Interceptors: []connect.Interceptor{authrpc.NewInterceptor(app.auth, app.throttle, cfg.ClientIPHeader)}})
 	for path, want := range map[string]int{
-		"/postpilot.v1.ClipMediaWorkerService/GetMediaRuntimeStatus":      http.StatusNotFound,
-		"/postpilot.v1.WritingTestService/StartWritingTest":               http.StatusUnauthorized,
-		"/postpilot.v1.WritingTestService/ListWritingTests":               http.StatusUnauthorized,
-		"/postpilot.v1.PostService/ListPosts":                             http.StatusUnauthorized,
-		"/postpilot.v1.WritingInspectionService/GetPostRequestInspection": http.StatusUnauthorized,
-		"/postpilot.v1.WritingInspectionService/GetPostOriginReview":      http.StatusUnauthorized,
-		"/postpilot.v1.VoiceService/UpdateVoiceSample":                    http.StatusUnauthorized,
-		"/postpilot.v1.VoiceService/EstimateVoiceAnalysis":                http.StatusUnauthorized,
-		"/postpilot.v1.SpeechProfileService/ListSpeechProfiles":           http.StatusUnauthorized,
-		"/postpilot.v1.SpokenVoiceService/ListSpokenDrafts":               http.StatusUnauthorized,
-		"/postpilot.v1.SpokenVoiceGenerationService/QuoteVoiceCandidates": http.StatusUnauthorized,
+		"/postpilot.v1.ClipMediaWorkerService/GetMediaRuntimeStatus":             http.StatusNotFound,
+		"/postpilot.v1.WritingTestService/StartWritingTest":                      http.StatusUnauthorized,
+		"/postpilot.v1.WritingTestService/ListWritingTests":                      http.StatusUnauthorized,
+		"/postpilot.v1.PostService/ListPosts":                                    http.StatusUnauthorized,
+		"/postpilot.v1.WritingInspectionService/GetPostRequestInspection":        http.StatusUnauthorized,
+		"/postpilot.v1.WritingInspectionService/GetWritingTestRequestInspection": http.StatusUnauthorized,
+		"/postpilot.v1.WritingInspectionService/GetAuthoringRequestInspection":   http.StatusUnauthorized,
+		"/postpilot.v1.WritingInspectionService/GetPostOriginReview":             http.StatusUnauthorized,
+		"/postpilot.v1.VoiceService/UpdateVoiceSample":                           http.StatusUnauthorized,
+		"/postpilot.v1.VoiceService/EstimateVoiceAnalysis":                       http.StatusUnauthorized,
+		"/postpilot.v1.SpeechProfileService/ListSpeechProfiles":                  http.StatusUnauthorized,
+		"/postpilot.v1.SpokenVoiceService/ListSpokenDrafts":                      http.StatusUnauthorized,
+		"/postpilot.v1.SpokenVoiceGenerationService/QuoteVoiceCandidates":        http.StatusUnauthorized,
 	} {
 		r := httptest.NewRequest(http.MethodPost, path, strings.NewReader("{}"))
 		r.Header.Set("X-Media-Worker-ID", "prod-worker")

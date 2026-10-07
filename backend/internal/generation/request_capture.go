@@ -2,6 +2,7 @@ package generation
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"reflect"
@@ -83,6 +84,12 @@ func (s *Service) bindPublishedRequestCapturePlan(ctx context.Context, userID, s
 // history. Capture failures cannot discard canonical output or retry a paid call.
 func (s *Service) completePostRequest(ctx context.Context, model llm.ModelRef, request llm.Request, attachments []Image) (llm.Response, error) {
 	response, err := s.models.Complete(ctx, model, request)
+	if capture, ok := ctx.Value(writingTestRequestCaptureKey{}).(writingTestRequestCapture); ok {
+		if captureErr := capture(ctx, request, attachments, response, err); captureErr != nil {
+			return response, errors.Join(err, captureErr)
+		}
+		return response, err
+	}
 	state, ok := ctx.Value(requestCaptureContextKey{}).(*requestCaptureContext)
 	if !ok || s.inspection == nil {
 		return response, err

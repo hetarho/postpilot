@@ -71,7 +71,6 @@
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
-| T641 | Extend test and authoring private evidence with origin-safe inspection | ARCH MODEL EDIT GEN POST MEM | T638 T640 T628 | todo |
 | T642 | Render accessible phrase origins and preserve editor continuity | ARCH POST THEME EXPORT GEN | T637 | todo |
 | T643 | Show safe current prepared and captured requests in named technical views | ARCH POST MODEL EDIT TMPL THEME | T640 T641 | todo |
 | T644 | Present maximum tags and clean owner-controlled writing copy | ARCH POST TMPL GEN EXPORT MKT QUAL THEME | T634 T642 T643 | todo |
@@ -79,10 +78,13 @@
 | T646 | Qualify origin-aware writing inspection and clean publication handoff | ARCH GEN POST MODEL THEME EXPORT MKT LANG | T636 T637 T639 T641 T642 T643 T644 T645 T631 | todo |
 
 ## next
-- T641 next for sequential implementation through T646 after the T640 commit.
+- T642 next for sequential implementation through T646 after the T641 commit.
 - Editorial follow-up: doc-review ARCH; preserve independent review and blocked qualification.
 
 ## log
+- 261008 T641 done on main: private test origin/request evidence, atomic purge-fenced champion publication and owner/kind/revision authoring inspections; owning/consumer/RPC/race/generator/build/spec checks pass
+- 261008 T641 start on main at80f7fd8f: origin/request private test evidence and owner-scoped authoring inspection; preserve independent review changes
+- 261008 T641 freshness: MODEL36 and EDIT5 only change missing-slot mapping and exact integer1..16 preparation counts; retain integrated privacy/count contracts, bases refreshed
 - 261008 T640 done on main: private actual post call captures, exact source/result/plan fences and provider-free configured previews; owning/consumer/RPC/race/generator/build/spec checks pass
 - 261008 T640 start on main at3cbcccf0: persist safe actual post request witnesses and owner read-only previews; preserve independent review changes
 - 261008 T640 freshness: MODEL36 only changes missing-slot setting preparation under MODEL92; post inspection policies unchanged, base refreshed
@@ -100,6 +102,3 @@
 - 261008 T653 done: ff9 source pushed; full CI, actual deployment/health/CORS/R2 and three native media jobs pass; archive task and source-bound QA proof, preserve unrelated main work
 - 261008 T653 health packaging repair: kernel proves remote512Mi OOM with Go1.26 SHA-linked32Mi entropy BSS under Rosetta; helper-only official v1.0.0-c2097c7c snapshot/checksum retains SHA/protocol and lowers measured RSS42,876→10,072KiB; no API/worker setting or budget change, final gates pending
 - 261008 T653 release memory follow-up: live-owner authenticated Unix health probe and single-frame PNG decode remove unnecessary concurrent work; owning/race/deployment/bitwise-output checks pass, exact default256/512Mi release remains required
-- 261008 T653 bounded-memory fix candidate: lightweight exact cgroup/disk observer, active owner-generation/runtime-bound worker health, and explicit probe filter thread limit; keep API256Mi/worker512Mi and all codecs/presets/CRF/decoder/default budgets, rerun affected final gates
-- 261008 T653 final candidate refresh: include committed T631 at935b47e0 plus canonical-path CI repair; rerun invalidated frontend/backend/generated/image checks, preserve uncommitted T633/review work
-- 261008 T653 start: repair removed Alpine zlib-r0 media build pins using official3.24 r1 packages, retain exact real-image gates and existing CI fixes; preserve active T631 changes

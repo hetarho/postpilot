@@ -127,13 +127,21 @@ func TestOrdinaryAuthoringCountDefaultIsBackwardCompatible(t *testing.T) {
 	}
 }
 func TestBlindWritingTestProjectionCannotExposePrivateCandidateData(t *testing.T) {
-	c := experiment.TestCandidate{ID: "opaque", UserID: "alice", SourceRevision: "private", SeedPosition: 7, Ref: experiment.TestEntrantRef{SourceKind: "model", Model: experiment.ModelRef{ModelID: "secret"}}, FrozenVariant: []byte("private prose"), Accounting: []byte("supplier cost"), Usage: &experiment.Usage{PromptTokens: 120, CompletionTokens: 45, LatencyMS: 678, CostMicrousd: 999, CostSource: experiment.CostReported}, Output: []byte("readable post"), Identity: &experiment.TestCandidateIdentity{Label: "secret model"}, Failure: &experiment.Failure{Reason: "UNKNOWN_FAILURE", Params: map[string]string{"model": "secret"}, TechnicalDetail: "provider secret"}}
+	answer, err := experiment.EncodeTestOutput(experiment.TestOutput{ContentLanguage: "en", Content: experiment.TestOutputContent{Title: "readable post", Blocks: []experiment.TestOutputBlock{{Type: "TEXT", Content: "Complete candidate output"}}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	c := experiment.TestCandidate{ID: "opaque", UserID: "alice", SourceRevision: "private", SeedPosition: 7, Ref: experiment.TestEntrantRef{SourceKind: "model", Model: experiment.ModelRef{ModelID: "secret"}}, FrozenVariant: []byte("private prose"), Accounting: []byte("supplier cost"), Usage: &experiment.Usage{PromptTokens: 120, CompletionTokens: 45, LatencyMS: 678, CostMicrousd: 999, CostSource: experiment.CostReported}, Output: answer, Identity: &experiment.TestCandidateIdentity{Label: "secret model"}, Failure: &experiment.Failure{Reason: "UNKNOWN_FAILURE", Params: map[string]string{"model": "secret"}, TechnicalDetail: "provider secret"}}
 	blind := c.Project(false, "A")
 	if blind.Identity != nil || blind.Usage != nil || len(blind.Failure.Params) != 0 || blind.Failure.TechnicalDetail != "" {
 		t.Fatal("blind result exposed identity or usage")
 	}
+	canonical, err := experiment.DecodeTestOutput(blind.Output)
+	if err != nil || canonical.Content.Title != "readable post" || len(canonical.Content.Blocks) != 1 {
+		t.Fatal("blind projection lost complete canonical output", err)
+	}
 	blind.Output[0] = 'x'
-	if string(c.Output) != "readable post" {
+	if string(c.Output) != string(answer) {
 		t.Fatal("projection shares mutable output")
 	}
 	if c.Project(true, "A").Identity.Label != "secret model" {
