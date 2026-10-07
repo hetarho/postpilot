@@ -135,16 +135,19 @@ async function render(request: { id: number; epoch: number } & BrowserPreviewFra
   }
   check()
   let measured = background
-  if (!request.flow) {
-    backgroundPending ??= measureBrowserBackground(
-      current,
-      local,
-      access,
-      frameOwner!.signal,
-    ).catch((error) => {
-      if (current === snapshot) backgroundPending = undefined
-      throw error
-    })
+  if (!request.flow && !measured) {
+    if (!backgroundPending) {
+      const operation: Promise<BrowserBackgroundEvidence> = measureBrowserBackground(
+        current,
+        local,
+        access,
+        frameOwner!.signal,
+      ).catch((error) => {
+        if (current === snapshot && backgroundPending === operation) backgroundPending = undefined
+        throw error
+      })
+      backgroundPending = operation
+    }
     measured = await backgroundPending
     check()
     background = measured
@@ -300,6 +303,7 @@ self.onmessage = (event: MessageEvent<BrowserPreviewWorkerInput>) => {
     void footage?.dispose()
     footage = undefined
     pending = undefined
+    backgroundPending = undefined
     return
   }
   if (message.type === 'frame') {

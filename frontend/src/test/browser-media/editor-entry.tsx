@@ -1,4 +1,7 @@
 import {
+  frameParity,
+  mountFinalizedEditor,
+  blankPresetSlots,
   mountEditor,
   editorState,
   seekEditor,
@@ -34,6 +37,9 @@ declare global {
   interface Window {
     browserEditorFixture: {
       layout: (fixture: NativeLayoutFixture) => Promise<unknown>
+      finalized: typeof mountFinalizedEditor
+      blank: typeof blankPresetSlots
+      parity: typeof frameParity
       mount: typeof mountEditor
       state: typeof editorState
       seek: typeof seekEditor
@@ -45,6 +51,9 @@ declare global {
   }
 }
 window.browserEditorFixture = {
+  finalized: mountFinalizedEditor,
+  blank: blankPresetSlots,
+  parity: frameParity,
   mount: mountEditor,
   state: editorState,
   seek: seekEditor,

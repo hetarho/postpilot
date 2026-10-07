@@ -1,3 +1,8 @@
+import { ThemeProvider, bootstrapTheme } from '@/app/providers/theme'
+import { createRouter, createMemoryHistory, RouterProvider } from '@tanstack/react-router'
+import { routeTree } from '@/app/routes/router'
+import { createFakeAuthTransport } from '@/test/session'
+import { drawMeasuredBrowserComponents } from '@/entities/clip-preview/model/background-paint'
 import { EditorMountedSurface } from './EditorMountedSurface'
 import { createRoot, type Root } from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -20,7 +25,20 @@ import { toClipProject, type ClipProject } from '@/entities/clip-project'
 import { clipPlanToProto, type ClipEditPlan } from '@/entities/clip-plan'
 import type { useClipCorrection } from '@/features/correct-clip'
 import { openOriginalVideo, createAudioRangeReader } from '@/shared/lib'
-import { CLIP_VIDEO_DECODING, CLIP_AUDIO_PROCESSING } from '@/entities/clip-preview'
+import {
+  projectBrowserComposition,
+  freezeBrowserComposition,
+  freezeBrowserPreviewComposition,
+  evaluateBrowserFrame,
+  BrowserLocalComponents,
+  BrowserFootageResources,
+  BrowserPreviewWorker,
+  measureBrowserBackground,
+  compositeBrowserFrame,
+  BrowserCompositionPlayback,
+  CLIP_VIDEO_DECODING,
+  CLIP_AUDIO_PROCESSING,
+} from '@/entities/clip-preview'
 import { localComponentSamples } from '@/entities/clip-preview/model/component-samples'
 import { type ClipRatioId } from '@/entities/clip-design'
 import '@/app/styles/index.css'
@@ -29,6 +47,9 @@ export interface MountedEditorInput {
   url: string
   fingerprint: string
   ratio?: ClipRatioId
+  rapid?: boolean
+  sourceDelay?: number
+  speechDelay?: number
   audioMode?: 'silent' | 'source' | 'narration' | 'mixed' | 'missing' | 'stale'
   speech: {
     audioHash: string
@@ -54,6 +75,8 @@ const telemetry = {
   stoppedNodes: 0,
   liveNodes: 0,
   contexts: 0,
+  clockStarts: 0,
+  pendingPlays: 0,
   nodes: [] as {
     when: number
     offset: number
@@ -62,6 +85,17 @@ const telemetry = {
     samples: number
     playbackRate: number
   }[],
+}
+const nativePlay = BrowserCompositionPlayback.prototype.play
+BrowserCompositionPlayback.prototype.play = async function (...args) {
+  telemetry.pendingPlays++
+  try {
+    const started = await nativePlay.apply(this, args)
+    if (started) telemetry.clockStarts++
+    return started
+  } finally {
+    telemetry.pendingPlays--
+  }
 }
 const nativeAudioContextConstructor = AudioContext
 window.AudioContext = new Proxy(nativeAudioContextConstructor, {
@@ -118,8 +152,8 @@ export async function mountEditor(input: MountedEditorInput) {
   root?.unmount()
   current = undefined
   project = undefined
-  sourceDelay = 0
-  speechDelay = 0
+  sourceDelay = input.sourceDelay ?? 0
+  speechDelay = input.speechDelay ?? 0
   missing = false
   originalUrl = input.url
   sourceAccessCalls = 0
@@ -185,7 +219,15 @@ export async function mountEditor(input: MountedEditorInput) {
         cutId: '',
         kind: 'fixed',
         role: 'caption',
-        text: '현재 장면',
+        text: input.rapid ? '첫 문구 다음 문구' : '현재 장면',
+        ...(input.rapid
+          ? {
+              phrases: [
+                { text: '첫 문구', startMs: 1000, endMs: 3000 },
+                { text: '다음 문구', startMs: 3000, endMs: 8000 },
+              ],
+            }
+          : {}),
         rows: [],
         style: 'bold',
         position: 'auto',
@@ -195,7 +237,7 @@ export async function mountEditor(input: MountedEditorInput) {
         endMs: 8000,
         resolvedStartMs: 1000,
         resolvedEndMs: 8000,
-        pace: 'steady',
+        pace: input.rapid ? 'rapid' : 'steady',
         accent: '',
         keyword: '',
         groupId: '',
@@ -371,4 +413,256 @@ export async function unmountEditor() {
   fileUrl = undefined
   await wait(50)
   return editorState()
+}
+
+/** Full export-purpose one-frame draw versus the actual reduced preview Worker at explicit frames. */
+export async function frameParity(frame: number) {
+  if (!current || !project) throw new Error('No mounted editor')
+  const input = projectBrowserComposition({
+    ownerId: 'synthetic-editor-owner',
+    projectId: project.id,
+    projectRevision: project.editPlanRevision,
+    planRevision: current.revision,
+    ratio: project.ratio,
+    plan: current.previewPlan,
+    sources: project.editing!.sources,
+    design: {
+      captionStyles: project.allowedCaptionStyles,
+      captionPace: project.captionPace,
+      accent: project.accent,
+      introPreset: project.introPreset,
+      outroPreset: project.outroPreset,
+      hideDisclosure: true,
+    },
+  })
+  const full = await freezeBrowserComposition(input),
+    preview = await freezeBrowserPreviewComposition(input),
+    signal = new AbortController().signal
+  if (
+    JSON.stringify(evaluateBrowserFrame(full, frame)) !==
+    JSON.stringify(evaluateBrowserFrame(preview, frame))
+  )
+    throw new Error('Preview/export frame evaluator mismatch')
+  const access = async () => ({ kind: 'url' as const, url: originalUrl }),
+    components = new BrowserLocalComponents(full),
+    footage = new BrowserFootageResources(full, access, signal),
+    worker = new BrowserPreviewWorker(access)
+  const size = {
+      width: full.ratio === 'horizontal' ? 1920 : 1080,
+      height: full.ratio === 'vertical' ? 1920 : 1080,
+    },
+    canvas = new OffscreenCanvas(size.width, size.height),
+    context = canvas.getContext('2d')!
+  try {
+    await components.resolveLayout(signal)
+    const evidence = await measureBrowserBackground(full, components, access, signal)
+    await compositeBrowserFrame(
+      { snapshot: full, plan: full.plan as ClipEditPlan, ratio: full.ratio, assets: [] },
+      {
+        context,
+        footage,
+        local: async (state) => {
+          const resources = await components.prepare(state, signal, (id) => ({
+            accentWhite: evidence.measurements.some(
+              (m) =>
+                m.instanceId === id &&
+                m.phraseIndex ===
+                  (state.components.find((value) => value.component.instanceId === id)
+                    ?.phraseIndex ?? 0) &&
+                m.accentWhite,
+            ),
+          }))
+          try {
+            drawMeasuredBrowserComponents(context, full, state, resources, evidence)
+          } finally {
+            resources.forEach((resource) => resource.close())
+          }
+        },
+        source: async () => {
+          throw new Error('Unexpected legacy source')
+        },
+        asset: async () => {
+          throw new Error('Unexpected server raster')
+        },
+        captionFrame: async () => {
+          throw new Error('Unexpected server frame')
+        },
+        releaseAssets: () => {},
+      },
+      frame,
+    )
+    await worker.initialize(preview, signal)
+    const result = await worker.render({ frame, flow: false }, signal),
+      small = new OffscreenCanvas(result.bitmap.width, result.bitmap.height),
+      reference = new OffscreenCanvas(result.bitmap.width, result.bitmap.height),
+      ctx = small.getContext('2d')!,
+      ref = reference.getContext('2d')!
+    try {
+      ctx.drawImage(result.bitmap, 0, 0)
+      ref.drawImage(canvas, 0, 0, reference.width, reference.height)
+      const actual = ctx.getImageData(0, 0, small.width, small.height).data,
+        expected = ref.getImageData(0, 0, reference.width, reference.height).data
+      let difference = 0,
+        changed = 0
+      for (let index = 0; index < actual.length; index++) {
+        const delta = Math.abs(actual[index]! - expected[index]!)
+        difference += delta
+        if (delta > 16) changed++
+      }
+      const meanAbsoluteDifference = difference / actual.length,
+        materiallyDifferent = changed / actual.length
+      if (
+        meanAbsoluteDifference > 2 ||
+        materiallyDifferent > 0.02 ||
+        result.resources.liveFrames !== 0
+      )
+        throw new Error(
+          'Reduced preview/export drawing differs:' +
+            JSON.stringify({
+              meanAbsoluteDifference,
+              materiallyDifferent,
+              resources: result.resources,
+            }),
+        )
+      return {
+        frame,
+        evaluatorEqual: true,
+        fullPurpose: full.purpose,
+        previewPurpose: preview.purpose,
+        meanAbsoluteDifference,
+        materiallyDifferent,
+        resources: result.resources,
+        fullSnapshotFingerprint: full.snapshotFingerprint,
+        previewSnapshotFingerprint: preview.snapshotFingerprint,
+      }
+    } finally {
+      result.bitmap.close()
+      small.width = 0
+      small.height = 0
+      reference.width = 0
+      reference.height = 0
+    }
+  } finally {
+    worker.dispose()
+    await footage.dispose()
+    components.destroy()
+    canvas.width = 0
+    canvas.height = 0
+  }
+}
+
+/** Actual production finalized workspace, with a saved-file fixture and no draft source resolver. */
+export async function mountFinalizedEditor() {
+  if (!project) throw new Error('No fixture project')
+  root?.unmount()
+  current = undefined
+  rpcCalls = []
+  sourceAccessCalls = 0
+  const finalized = {
+    ...project,
+    finalized: {
+      at: '2026-10-07T00:00:00Z',
+      planRevision: project.editPlanRevision,
+      resultId: 'saved-fixture',
+    },
+    renderedPlanRevision: project.editPlanRevision,
+    result: {
+      id: 'saved-fixture',
+      contentType: 'video/mp4',
+      bytes: 5,
+      durationMs: 15000,
+      createdAt: '2026-10-07T00:00:00Z',
+      viewUrl: originalUrl.replace('/source', '/saved-result'),
+      downloadUrl: originalUrl.replace('/source', '/saved-result'),
+    },
+  }
+  const transport = createFakeAuthTransport({
+      user: { id: 'synthetic-editor-owner' },
+      clips: { projects: [finalized], calls: rpcCalls },
+    }),
+    queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    }),
+    router = createRouter({
+      routeTree,
+      context: { queryClient, transport },
+      history: createMemoryHistory({ initialEntries: ['/clips/' + finalized.id] }),
+    })
+  root = createRoot(document.getElementById('editor')!)
+  root.render(
+    <ThemeProvider initialSnapshot={bootstrapTheme()}>
+      <TransportProvider transport={transport}>
+        <QueryClientProvider client={queryClient}>
+          <RouterProvider router={router} />
+        </QueryClientProvider>
+      </TransportProvider>
+    </ThemeProvider>,
+  )
+  return { resultUrl: finalized.result.viewUrl }
+}
+export async function blankPresetSlots() {
+  if (!current || !project) throw new Error('No mounted editor')
+  const plan = structuredClone(current.previewPlan)
+  const base = plan.elements![0]!
+  plan.elements = [
+    {
+      ...base,
+      instanceId: 'blank-hook',
+      elementId: 'blank-hook',
+      role: 'hook',
+      text: '',
+      rows: [],
+      phrases: [],
+      pace: 'steady',
+      ownerStyle: undefined,
+    },
+    {
+      ...base,
+      instanceId: 'blank-ending',
+      elementId: 'blank-ending',
+      role: 'ending',
+      text: '',
+      rows: [],
+      phrases: [],
+      pace: 'steady',
+      ownerStyle: undefined,
+    },
+  ]
+  const snapshot = await freezeBrowserPreviewComposition(
+      projectBrowserComposition({
+        ownerId: 'synthetic-editor-owner',
+        projectId: project.id,
+        projectRevision: 1,
+        planRevision: 1,
+        ratio: project.ratio,
+        plan,
+        sources: project.editing!.sources,
+        design: {
+          captionStyles: ['bold'],
+          captionPace: 'steady',
+          introPreset: 'cover',
+          outroPreset: 'stamp',
+          hideDisclosure: true,
+        },
+      }),
+    ),
+    local = new BrowserLocalComponents(snapshot)
+  try {
+    await local.resolveLayout()
+    const state = evaluateBrowserFrame(snapshot, 45),
+      resources = await local.prepare(state, new AbortController().signal)
+    try {
+      if (state.components.length || resources.length)
+        throw new Error('Blank preset slots invented visible text')
+      return {
+        components: state.components.length,
+        drawnResources: resources.length,
+        purpose: snapshot.purpose,
+      }
+    } finally {
+      resources.forEach((value) => value.close())
+    }
+  } finally {
+    local.destroy()
+  }
 }

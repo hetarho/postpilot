@@ -173,6 +173,7 @@ export function ClipBrowserDraftPreview(props: ClipBrowserDraftPreviewProps) {
         })
         .catch((failure: unknown) => {
           if (!signal.aborted && own === drawEpoch.current) {
+            lastRequested.current = ''
             setError(failure instanceof Error ? failure.message : 'CLIP_PREVIEW_FAILED')
             const context = surface.current?.getContext('2d')
             if (context && surface.current)
@@ -334,17 +335,22 @@ export function ClipBrowserDraftPreview(props: ClipBrowserDraftPreviewProps) {
       raf = requestAnimationFrame(tick)
     }
     raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [playing, flow, suspended, duration, changeTime, stop])
+  useEffect(() => {
     const hidden = () => {
       if (document.hidden) stop()
     }
     document.addEventListener('visibilitychange', hidden)
-    return () => {
-      cancelAnimationFrame(raf)
-      document.removeEventListener('visibilitychange', hidden)
-    }
-  }, [playing, flow, suspended, duration, changeTime, stop])
+    if (document.hidden) queueMicrotask(hidden)
+    return () => document.removeEventListener('visibilitychange', hidden)
+  }, [stop])
   const atEnd = timeMs >= duration - CLIP_DRAFT_PREVIEW.frameToleranceMs
   const toggle = () => {
+    if (document.hidden) {
+      stop()
+      return
+    }
     if (playing || preparing) {
       stop()
       setPreparing(false)

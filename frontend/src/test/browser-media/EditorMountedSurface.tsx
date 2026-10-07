@@ -26,12 +26,6 @@ function Editor({
   useLayoutEffect(() => {
     inspect(correction)
   })
-  if (initial.finalized)
-    return (
-      <div data-finalized-reading>
-        Confirmed synthetic result remains a saved-file reading. No draft original is opened.
-      </div>
-    )
   return (
     <>
       <ClipCorrectionWorkspace

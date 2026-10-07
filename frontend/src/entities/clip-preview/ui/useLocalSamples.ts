@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, useCallback } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import type { ClipRatioId } from '@/entities/clip-design/@x/clip-preview'
 import { CLIP_BROWSER_COMPOSITION } from '@/entities/clip-design/@x/clip-preview'
@@ -50,7 +50,18 @@ export function useClipLocalCaptionPreview(
   selectedId?: string,
 ) {
   const [retry, setRetry] = useState(0),
-    key = enabled && input ? JSON.stringify([input, selectedId, retry]) : ''
+    key =
+      enabled && input
+        ? JSON.stringify([
+            { ...input, projectRevision: undefined, planRevision: undefined },
+            selectedId,
+            retry,
+          ])
+        : ''
+  const latest = useRef(input)
+  useLayoutEffect(() => {
+    latest.current = input
+  }, [input])
   const renderer = useRef<{ owner: string; local: BrowserLocalComponents } | undefined>(undefined)
   const [state, setState] = useState<{ key: string; data?: ClipCaptionPreview; error?: unknown }>({
     key: '',
@@ -62,7 +73,13 @@ export function useClipLocalCaptionPreview(
       BrowserProjectCompositionInput,
       string | undefined,
     ]
-    void freezeBrowserPreviewComposition(projectBrowserComposition(value))
+    void freezeBrowserPreviewComposition(
+      projectBrowserComposition({
+        ...value,
+        projectRevision: latest.current!.projectRevision,
+        planRevision: latest.current!.planRevision,
+      }),
+    )
       .then(async (snapshot) => {
         controller.signal.throwIfAborted()
         const owner = JSON.stringify([snapshot.ownerId, snapshot.projectId, snapshot.versions])
