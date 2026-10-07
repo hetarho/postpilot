@@ -52,7 +52,10 @@ export function useCandidatePreparation(input: {
     }
   })
   const actorRef = useActorRef(candidatePreparationMachine, { input: { ...input, recovery } })
-  const previousParameters = useRef({ kind: input.draft.kind, count: input.draft.count })
+  const previousParameters = useRef({
+    kind: input.draft.kind,
+    count: input.draft.testCount ?? input.draft.count,
+  })
   const snapshot = useSelector(actorRef, (value) => value)
   const phase = snapshot.value as PreparationPhase
   const send = useCallback(
@@ -76,8 +79,11 @@ export function useCandidatePreparation(input: {
   useEffect(() => {
     const changed =
       previousParameters.current.kind !== input.draft.kind ||
-      previousParameters.current.count !== input.draft.count
-    previousParameters.current = { kind: input.draft.kind, count: input.draft.count }
+      previousParameters.current.count !== (input.draft.testCount ?? input.draft.count)
+    previousParameters.current = {
+      kind: input.draft.kind,
+      count: input.draft.testCount ?? input.draft.count,
+    }
     if (!changed) return
     const current = actorRef.getSnapshot().context
     if (
@@ -85,7 +91,9 @@ export function useCandidatePreparation(input: {
       current.uncertain ||
       current.pending ||
       !['idle', 'quoted', 'ready', 'failed'].includes(phase) ||
-      (current.draft.kind === input.draft.kind && current.draft.count === input.draft.count)
+      (current.draft.kind === input.draft.kind &&
+        (current.draft.testCount ?? current.draft.count) ===
+          (input.draft.testCount ?? input.draft.count))
     )
       return
     send({
@@ -98,6 +106,19 @@ export function useCandidatePreparation(input: {
     })
   }, [actorRef, scopeKey, input.draft, phase, send])
   useEffect(() => {
+    const current = actorRef.getSnapshot().context
+    if (
+      current.scopeKey !== scopeKey ||
+      current.draft.kind !== input.draft.kind ||
+      current.pending ||
+      current.uncertain ||
+      input.draft.retainedRefs === undefined ||
+      JSON.stringify(current.draft.retainedRefs) === JSON.stringify(input.draft.retainedRefs)
+    )
+      return
+    send({ type: 'RETAIN', refs: input.draft.retainedRefs })
+  }, [actorRef, scopeKey, input.draft, phase, send])
+  useEffect(() => {
     const persist = () => {
       const context = actorRef.getSnapshot().context
       if (context.suspended || context.scopeKey !== scopeKey) return
@@ -107,11 +128,13 @@ export function useCandidatePreparation(input: {
           JSON.stringify({
             scopeKey,
             recovery: {
+              ownerId: context.ownerId,
               draft: context.draft,
               command: context.command,
               session: context.session,
               pending: context.pending,
               estimate: context.estimate,
+              artifacts: context.artifacts,
             },
           }),
         )

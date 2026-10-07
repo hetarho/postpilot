@@ -58,13 +58,17 @@ func TestDraftStateMappingPinsEveryFrozenEnumAndSessionFacts(t *testing.T) {
 func TestInvalidCountsAndMissingExplicitStartNeverReachService(t *testing.T) {
 	h := NewHandler(nil)
 	ctx := auth.WithUser(context.Background(), "alice")
-	for _, count := range []int32{1, 3, 17} {
+	for _, count := range []int32{-1, 17} {
 		_, err := h.StartAuthoringOperation(ctx, connect.NewRequest(&v1.StartAuthoringOperationRequest{CandidateCount: count}))
 		if errorDetail(t, err).Reason != "AUTHORING_CANDIDATE_COUNT_INVALID" {
 			t.Fatal("invalid count admitted")
 		}
+		_, err = h.EstimateAuthoringOperation(ctx, connect.NewRequest(&v1.EstimateAuthoringOperationRequest{CandidateCount: count}))
+		if errorDetail(t, err).Reason != "AUTHORING_CANDIDATE_COUNT_INVALID" {
+			t.Fatal("invalid count reached estimation")
+		}
 	}
-	for _, count := range []int32{2, 4, 8, 16} {
+	for count := int32(0); count <= authoring.MaxCandidateCount; count++ {
 		_, err := h.StartAuthoringOperation(ctx, connect.NewRequest(&v1.StartAuthoringOperationRequest{CandidateCount: count}))
 		if connect.CodeOf(err) != connect.CodeInvalidArgument {
 			t.Fatal("missing explicit request admitted", err)

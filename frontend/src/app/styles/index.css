@@ -344,7 +344,7 @@
   /* A compact committing dock lets the page remain visible beneath it. The solid role also
      supplies the fallback on browsers that cannot blur the background. */
   --action-dock-solid: var(--surface-highest);
-  --action-dock-bg: color-mix(in oklab, var(--surface-highest) 82%, transparent);
+  --action-dock-bg: color-mix(in oklab, var(--surface-highest) 42%, transparent);
 
   /* fields */
   --field-bg: var(--surface-recessed);
@@ -856,8 +856,8 @@
   @supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
     [data-action-bar='always'] {
       background-color: var(--color-action-dock-bg);
-      -webkit-backdrop-filter: blur(var(--blur-lg));
-      backdrop-filter: blur(var(--blur-lg));
+      -webkit-backdrop-filter: blur(var(--blur-md));
+      backdrop-filter: blur(var(--blur-md));
     }
   }
 

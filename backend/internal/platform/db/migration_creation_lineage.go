@@ -122,7 +122,7 @@ func creationSchemaPresent(ctx context.Context, tx *sql.Tx, up string) (bool, er
 			continue
 		}
 		any = true
-		if !strings.Contains(creationSQLTokens(definition), creationSQLTokens(addition[2]+" "+addition[3])) {
+		if !creationColumnCompatible(definition, addition[1], addition[2], addition[3]) {
 			return false, fmt.Errorf("incompatible creation column %s.%s", addition[1], addition[2])
 		}
 	}
@@ -149,6 +149,20 @@ func creationSchemaPresent(ctx context.Context, tx *sql.Tx, up string) (bool, er
 		return false, fmt.Errorf("partial creation schema; owned additions must be all present or all absent")
 	}
 	return any, nil
+}
+
+func creationColumnCompatible(tableDefinition, table, column, columnDefinition string) bool {
+	actual := creationSQLTokens(tableDefinition)
+	expected := creationSQLTokens(column + " " + columnDefinition)
+	if strings.Contains(actual, expected) {
+		return true
+	}
+	// Forward-only0152 widens exactly this canonical CHECK. A rollback/replay
+	// must recognize the successor without accepting a changed type or default.
+	const previous = "candidate_count INTEGER NOT NULL DEFAULT 8 CHECK(candidate_count IN (2,4,8,16))"
+	const successor = "candidate_count INTEGER NOT NULL DEFAULT 8 CHECK(candidate_count IN (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16))"
+	return table == "configuration_authoring_sessions" && column == "candidate_count" &&
+		expected == creationSQLTokens(previous) && strings.Contains(actual, creationSQLTokens(successor))
 }
 
 func applyCreationSchema(ctx context.Context, tx *sql.Tx, fsys fs.FS, name string) error {

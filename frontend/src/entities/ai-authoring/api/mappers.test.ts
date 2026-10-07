@@ -229,3 +229,26 @@ it('recovers a new published setting under its saved id without changing receipt
     mapAuthoringSession(incoming, { ...scope, kind: 'writing-voice', targetId: 'published' }),
   ).toThrow()
 })
+
+it.each([1, 3, 15])(
+  'retains exact %i suggestion metadata for partial writing-test batches',
+  (count) => {
+    const candidates = Array.from({ length: count }, (_, index) => ({
+      id: `partial-${index}`,
+      name: `Template ${index}`,
+      body: '<write/>',
+      revision: 1,
+    })) as WireSession['candidates']
+    const mapped = mapAuthoringSession(wire({ candidateCount: count, candidates }), scope)
+    expect(mapped.candidateCount).toBe(count)
+    expect(mapped.candidates).toHaveLength(count)
+  },
+)
+it.each([-1, 17, 1.5])('rejects unsupported authoring count metadata %s', (count) => {
+  expect(() => mapAuthoringSession(wire({ candidateCount: count }), scope)).toThrow(
+    'Authoring candidate count unavailable',
+  )
+})
+it('keeps the ordinary eight-suggestion default when legacy count metadata is absent', () => {
+  expect(mapAuthoringSession(wire(), scope).candidateCount).toBe(8)
+})

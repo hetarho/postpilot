@@ -178,7 +178,7 @@ func TestLateAISettlesWithoutReplacingNewerManualWork(t *testing.T) {
 	}
 }
 func TestCountedCandidatesStayPrivateAndFreezeByOwnerAndRevision(t *testing.T) {
-	for _, count := range []int{2, 4, 8, 16} {
+	for count := 1; count <= authoring.MaxCandidateCount; count++ {
 		t.Run(fmt.Sprint(count), func(t *testing.T) {
 			h := fixture(t)
 			ctx := context.Background()

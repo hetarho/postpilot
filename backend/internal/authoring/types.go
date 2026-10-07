@@ -10,15 +10,16 @@ import (
 type Kind string
 
 const (
-	PostTemplate   Kind = "post_template"
-	VideoTemplate  Kind = "video_template"
-	PostGuideline  Kind = "post_guideline"
-	VideoGuideline Kind = "video_guideline"
-	WritingVoice   Kind = "writing_voice"
-	JobKind             = "configuration_authoring"
-	CandidateCount      = 8
-	MaxTurns            = 20
-	MaxPromptChars      = 2000
+	PostTemplate      Kind = "post_template"
+	VideoTemplate     Kind = "video_template"
+	PostGuideline     Kind = "post_guideline"
+	VideoGuideline    Kind = "video_guideline"
+	WritingVoice      Kind = "writing_voice"
+	JobKind                = "configuration_authoring"
+	CandidateCount         = 8
+	MaxCandidateCount      = 16
+	MaxTurns               = 20
+	MaxPromptChars         = 2000
 )
 
 func (k Kind) Valid() bool {
@@ -163,14 +164,13 @@ func NormalizeCandidateCount(count int) (int, error) {
 	if count == 0 {
 		return CandidateCount, nil
 	}
-	switch count {
-	case 2, 4, 8, 16:
+	if count >= 1 && count <= MaxCandidateCount {
 		return count, nil
 	}
 	return 0, ErrCandidateCount
 }
 
-var ErrCandidateCount = errors.New("authoring requires two, four, eight or sixteen candidates")
+var ErrCandidateCount = errors.New("authoring requires between one and sixteen candidates")
 
 type DraftState string
 

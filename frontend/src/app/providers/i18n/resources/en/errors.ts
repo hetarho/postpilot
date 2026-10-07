@@ -1,7 +1,7 @@
 import type { AppFailureReason } from '@/shared/api'
 
 export const errors = {
-  AUTHORING_CANDIDATE_COUNT_INVALID: 'Choose exactly 2, 4, 8 or 16 candidates.',
+  AUTHORING_CANDIDATE_COUNT_INVALID: 'Choose a whole number of candidates from 1 to 16.',
   AUTHORING_DRAFT_INVALID:
     'Your current changes need review before saving. Your input is preserved.',
   AUTHORING_FEATURE_UNAVAILABLE: 'This editing option is not ready yet.',

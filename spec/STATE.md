@@ -29,9 +29,9 @@
 | AUTH | 15 | 15 | - | 0 |
 | QUOTA | 38 | 38 | - | 0 |
 | POST | 36 | 36 | - | 0 |
-| VOICE | 15 | 15 | - | 0 |
+| VOICE | 16 | 16 | - | 0 |
 | GEN | 26 | 26 | - | 0 |
-| MODEL | 35 | 35 | - | 0 |
+| MODEL | 36 | 36 | - | 0 |
 | TMPL | 25 | 25 | - | 0 |
 | GUIDE | 17 | 17 | - | 0 |
 | EXPORT | 11 | 11 | - | 0 |
@@ -46,7 +46,7 @@
 | QUAL | 8 | 8 | - | 0 |
 | GIFT | 3 | 3 | - | 0 |
 | DUB | 3 | 3 | - | 0 |
-| EDIT | 4 | 4 | - | 0 |
+| EDIT | 5 | 5 | - | 0 |
 | INFRA | 2 | 0 | all | 1 |
 
 ## review
@@ -89,10 +89,12 @@
 | T646 | Qualify origin-aware writing inspection and clean publication handoff | ARCH GEN POST MODEL THEME EXPORT MKT LANG | T636 T637 T639 T641 T642 T643 T644 T645 T631 | todo |
 
 ## next
+- T649 is complete; preserve independently owned backend/mobile work before selecting another task.
 - T628 is dependency-ready; continue verified task commits on main through T646.
 - Editorial follow-up: doc-review ARCH; preserve blocked independent media/voice qualification.
 
 ## log
+- 261008 T649 done on main: saved-or-AI slots prepare exact missing1/3/15 counts with retained refs/template inputs; FE598 plus final33/11, owning Go/count/migration, lint/build, browser52 and42-percent glass checks pass
 - 261007 T648 done on main: compact translucent docks, bounded composers and48px actions across the app; consumer608 plus final55, build/lint and Chromium196 routes/308 geometry/70 continuity checks pass
 - 261007 T627 done on main: immutable single-factor factories and private complete outputs, exact checkpoint/retry plans and current direct/refined references; owning/domain/wiring tests, builds/vet and FE124 consumers pass
 - 261007 Docker Desktop termination complete: 9 app processes received SIGTERM; 4 remaining or respawned processes required SIGKILL; independent scans confirmed no Docker.app processes or port 7678 listener; separate Colima/Lima and persistent data files retained
@@ -112,4 +114,3 @@
 - 261007 remote CI frontend failure at6a944d1f: usePostList retained-terminal polling test expected failed but saw running in picker; diagnose real observer/timer ordering before correcting it, preserve both-list refresh and stopped-poll assertions; remote deployment/release/worker gates pass and image/backend checks continue
 - 261007 final remote verification start at6a944d1f: user requests remaining CI/deployment/media checks to finish before final verification record commit/push; no further implementation task is started
 - 261007 post-push verification complete: whole Go run passed every package except the corrected rpcserver reason scan; rpcserver/authoring/authoring-rpc full owning suites, vet/build and format pass after genuine missing-capability/private-reason fixes; whole frontend failures corrected with owning-suite passes, generated-code drift/spec checks and production build pass; deployment recovery62 and all production/worker/both-layout media gates pass
-- 261007 final backend correction scope: unsupported durable authoring adapter returns typed existing unavailable314 after authentication; reason scanner recognizes actual private failure fields without enum exemptions; media/worker execution paths unchanged and real release API adapter implements durable drafts, so compatible runtime gate evidence is retained and final deployable image metadata is rebuilt for pushed HEAD
