@@ -202,7 +202,13 @@ message StartWritingTestRequest {
   string quote_key = 3;
 }
 message GetWritingTestRequest { string test_id = 1; }
-message ListWritingTestsRequest { int32 page_size = 1; string page_token = 2; }
+message ListWritingTestsRequest {
+  int32 page_size = 1;
+  string page_token = 2;
+  // Authenticated owner-side filters do not reveal blind contestant mappings.
+  string source_post_slug = 3;
+  string voice_id = 4;
+}
 message ListWritingTestsResponse { repeated WritingTest tests = 1; string next_page_token = 2; }
 message WritingTestResponse { WritingTest test = 1; }
 message RetryFailedTestCandidatesRequest {

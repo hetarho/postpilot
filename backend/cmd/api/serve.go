@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	authoringrpc "github.com/postpilot/backend/internal/authoring/rpc"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -12,6 +11,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/postpilot/backend/internal/auth"
 	authrpc "github.com/postpilot/backend/internal/auth/rpc"
+	authoringrpc "github.com/postpilot/backend/internal/authoring/rpc"
 	"github.com/postpilot/backend/internal/billing"
 	billingrpc "github.com/postpilot/backend/internal/billing/rpc"
 	"github.com/postpilot/backend/internal/clip"
@@ -84,7 +84,7 @@ func serve(ctx context.Context, c *contexts) error {
 	go c.clipAnalysis.RunOrphans(ctx, cfg.OrphanSweepInterval)
 	go c.clipMediaRecovery.RunOrphans(ctx, cfg.OrphanSweepInterval)
 	go c.clipGeneration.RunSweep(ctx, cfg.ClipSourceSweepInterval)
-	go experiment.NewSweeper(c.experimentStore).Run(ctx, cfg.ExperimentSweepInterval)
+	go experiment.NewSweeper(c.writingTestLifecycle).Run(ctx, cfg.ExperimentSweepInterval)
 	go func() {
 		ticker := time.NewTicker(config.ThrottleSweepInterval)
 		defer ticker.Stop()
@@ -232,6 +232,9 @@ func handlers(c *contexts) []rpcserver.Registrar {
 		},
 		func(opts ...connect.HandlerOption) (string, http.Handler) {
 			return postpilotv1connect.NewModelExperimentServiceHandler(experimentrpc.NewHandler(c.experiment), opts...)
+		},
+		func(opts ...connect.HandlerOption) (string, http.Handler) {
+			return postpilotv1connect.NewWritingTestServiceHandler(experimentrpc.NewWritingTestHandler(c.writingTests, c.writingTestPublications), opts...)
 		},
 	}
 }

@@ -35,7 +35,17 @@ export interface WritingTestHistoryProps {
 }
 
 export function WritingTestHistory(props: WritingTestHistoryProps) {
-  return <OwnedHistory key={props.ownerId} {...props} />
+  return (
+    <OwnedHistory
+      key={JSON.stringify([
+        props.ownerId,
+        props.sourcePostSlug ?? '',
+        props.voiceId ?? '',
+        props.stage ?? '',
+      ])}
+      {...props}
+    />
+  )
 }
 
 function mergeTests(previous: WritingTest[], incoming: WritingTest[]) {
@@ -59,7 +69,12 @@ function OwnedHistory({
 }: WritingTestHistoryProps) {
   const { t } = useWritingTestTranslation()
   const [cursor, setCursor] = useState('')
-  const query = useWritingTests(ownerId, { pageSize: 20, pageToken: cursor })
+  const query = useWritingTests(ownerId, {
+    pageSize: 20,
+    pageToken: cursor,
+    sourcePostSlug,
+    voiceId,
+  })
   const [loaded, setLoaded] = useState<{
     lastData?: TestList
     tests: WritingTest[]
@@ -73,19 +88,10 @@ function OwnedHistory({
       tokens: loaded.tokens.includes(cursor) ? loaded.tokens : [...loaded.tokens, cursor],
     })
   const next = query.data?.nextPageToken
+  // The authenticated server selects source/style membership without exposing
+  // blind contestant refs. Filtering hidden identities here would drop active work.
   const tests = loaded.tests.filter(
-    (test) =>
-      (!stage || (stage === 'voice' ? test.factor === 'voice' : test.modelStage === stage)) &&
-      (!sourcePostSlug || test.sourcePostSlug === sourcePostSlug) &&
-      (!voiceId ||
-        test.candidates.some((candidate) => {
-          const source = candidate.identity?.source
-          return (
-            source?.type === 'setting' &&
-            source.setting.kind === 'writing-voice' &&
-            source.setting.id === voiceId
-          )
-        })),
+    (test) => !stage || (stage === 'voice' ? test.factor === 'voice' : test.modelStage === stage),
   )
   const historySearch = new URLSearchParams()
   if (stage) historySearch.set('stage', stage)
@@ -207,7 +213,11 @@ function TestRecord({ test, href }: { test: WritingTest; href: string }) {
           {kind} · {t(`formatLabel.${test.count}`)}
         </Typography>
         <div className="mt-2 flex flex-wrap items-center gap-3">
-          <Badge tone={tones[test.status]}>{t(labels[test.status], { kind })}</Badge>
+          <Badge tone={tones[test.status]}>
+            {t(test.status === 'completed' ? `winnerTitle.${test.factor}` : labels[test.status], {
+              kind,
+            })}
+          </Badge>
           {(test.createdAt || test.updatedAt) && (
             <Typography variant="meta" as="time" dateTime={test.createdAt || test.updatedAt}>
               {formatDateTime(test.createdAt || test.updatedAt)}

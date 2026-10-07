@@ -249,7 +249,7 @@ func (s *Store) ActiveFor(ctx context.Context, subject job.Subject, filter job.F
 	case dimensionPost:
 		switch {
 		case filter.Kind != "":
-			return nil, fmt.Errorf("active for post: kind filter unsupported")
+			row, err = s.read.ActiveForPostKind(ctx, sqlc.ActiveForPostKindParams{PostSlug: nullString(subject.ID), Kind: filter.Kind, UserID: filter.UserID})
 		case filter.UserID != "":
 			row, err = s.read.ActiveForPostUser(ctx, sqlc.ActiveForPostUserParams{PostSlug: nullString(subject.ID), UserID: filter.UserID})
 		default:

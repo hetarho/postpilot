@@ -90,9 +90,21 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function 
   useLayoutEffect(() => {
     const node = inner.current
     if (!node || !grow || typeof ResizeObserver === 'undefined') return
-    const observer = new ResizeObserver(resize)
+    // Measuring changes this same element's height. Defer observer-triggered
+    // writes to the next frame so resizing cannot re-enter the current delivery.
+    let frame: number | undefined
+    const observer = new ResizeObserver(() => {
+      if (frame !== undefined) return
+      frame = window.requestAnimationFrame(() => {
+        frame = undefined
+        resize()
+      })
+    })
     observer.observe(node)
-    return () => observer.disconnect()
+    return () => {
+      observer.disconnect()
+      if (frame !== undefined) window.cancelAnimationFrame(frame)
+    }
   }, [grow, resize])
 
   useLayoutEffect(() => {

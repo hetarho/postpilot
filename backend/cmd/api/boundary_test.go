@@ -87,7 +87,7 @@ func TestOnlyTheOwnerHandlerWritesGuidelines(t *testing.T) {
 			inWiring := strings.HasPrefix(rel, "cmd/api/")
 			// Test publication consumes only the published guideline API. Its app
 			// coordinates domain-owned transactions; its RPC maps typed refusals.
-			publishedTestConsumer := rel == "internal/experiment/app/publications.go" || rel == "internal/experiment/rpc/writing_target_errors.go"
+			publishedTestConsumer := rel == "internal/experiment/app/publications.go" || rel == "internal/experiment/rpc/writing_target_errors.go" || rel == "internal/experiment/app/writing_test_resolvers.go" || rel == "internal/experiment/app/writing_test_resolvers_settings.go"
 			local := ""
 			for _, imported := range file.Imports {
 				target := strings.Trim(imported.Path.Value, `"`)

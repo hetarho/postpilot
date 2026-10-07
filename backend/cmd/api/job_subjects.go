@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/postpilot/backend/internal/authoring"
 	"github.com/postpilot/backend/internal/clip"
+	experimentapp "github.com/postpilot/backend/internal/experiment/app"
 	"github.com/postpilot/backend/internal/job"
 	jobstore "github.com/postpilot/backend/internal/job/store"
 	"github.com/postpilot/backend/internal/post"
@@ -21,12 +22,13 @@ import (
 // other kind starts in `observe`. The store is given the lists, so its SQL names no product.
 func jobKinds() jobstore.Kinds {
 	return jobstore.Kinds{
-		Deferred:    []string{clip.JobKindSpeech, clip.JobKindGenerate, clip.JobKindRender, clip.JobKindSampleBrowserRender, clip.JobKindRevise, clip.JobKindStoryline, clip.JobKindReviseStoryline},
-		Cancellable: []string{clip.JobKindSpeech, clip.JobKindGenerate, clip.JobKindRender, clip.JobKindSampleBrowserRender, clip.JobKindRevise, clip.JobKindStoryline, clip.JobKindReviseStoryline, job.KindTemplateRequest, job.KindWritingVoiceCandidates, authoring.JobKind, spoken.JobKindDesign, spoken.JobKindConfirm, spoken.JobKindProbe},
-		Authorized:  []string{clip.JobKindSpeech, clip.JobKindGenerate, clip.JobKindRevise, clip.JobKindStoryline, clip.JobKindReviseStoryline, spoken.JobKindDesign, spoken.JobKindConfirm, spoken.JobKindProbe, job.KindWritingVoiceCandidates, authoring.JobKind},
+		Deferred:    []string{experimentapp.WritingTestJobKind, clip.JobKindSpeech, clip.JobKindGenerate, clip.JobKindRender, clip.JobKindSampleBrowserRender, clip.JobKindRevise, clip.JobKindStoryline, clip.JobKindReviseStoryline},
+		Cancellable: []string{experimentapp.WritingTestJobKind, clip.JobKindSpeech, clip.JobKindGenerate, clip.JobKindRender, clip.JobKindSampleBrowserRender, clip.JobKindRevise, clip.JobKindStoryline, clip.JobKindReviseStoryline, job.KindTemplateRequest, job.KindWritingVoiceCandidates, authoring.JobKind, spoken.JobKindDesign, spoken.JobKindConfirm, spoken.JobKindProbe},
+		Authorized:  []string{experimentapp.WritingTestJobKind, clip.JobKindSpeech, clip.JobKindGenerate, clip.JobKindRevise, clip.JobKindStoryline, clip.JobKindReviseStoryline, spoken.JobKindDesign, spoken.JobKindConfirm, spoken.JobKindProbe, job.KindWritingVoiceCandidates, authoring.JobKind},
 		FirstStages: map[string]string{
-			clip.JobKindSpeech:   "speech",
-			spoken.JobKindDesign: spoken.JobKindDesign, spoken.JobKindConfirm: spoken.JobKindConfirm, spoken.JobKindProbe: spoken.JobKindProbe,
+			experimentapp.WritingTestJobKind: "writing_test",
+			clip.JobKindSpeech:               "speech",
+			spoken.JobKindDesign:             spoken.JobKindDesign, spoken.JobKindConfirm: spoken.JobKindConfirm, spoken.JobKindProbe: spoken.JobKindProbe,
 			clip.JobKindGenerate: "prepare", clip.JobKindRevise: "prepare", clip.JobKindStoryline: "prepare", clip.JobKindReviseStoryline: "prepare",
 			job.KindAnalyzeVoice: "analyze", job.KindCheckVoice: "write", job.KindRevise: "write", job.KindWritingVoiceCandidates: "write", authoring.JobKind: "write",
 		},
@@ -43,7 +45,7 @@ func approvedCeilingKinds() []string {
 // ownerCancellableKinds is work admitted without an approved ceiling that its owner may still
 // stop: the template request (TMPL-63). Its settlement charges confirmed usage only (QUOTA-49).
 func ownerCancellableKinds() []string {
-	return []string{job.KindTemplateRequest, job.KindWritingVoiceCandidates, authoring.JobKind}
+	return []string{experimentapp.WritingTestJobKind, job.KindTemplateRequest, job.KindWritingVoiceCandidates, authoring.JobKind}
 }
 
 // jobCancellation is the one rule the queue asks before it accepts a stop: the clip work below,
@@ -52,14 +54,14 @@ func ownerCancellableKinds() []string {
 type jobCancellation struct{ clip clipCancellation }
 
 func (c jobCancellation) Kind(kind string) bool {
-	return kind == job.KindTemplateRequest || kind == job.KindWritingVoiceCandidates || kind == authoring.JobKind || spoken.IsJobKind(kind) || c.clip.Kind(kind)
+	return kind == experimentapp.WritingTestJobKind || kind == job.KindTemplateRequest || kind == job.KindWritingVoiceCandidates || kind == authoring.JobKind || spoken.IsJobKind(kind) || c.clip.Kind(kind)
 }
 
 func (c jobCancellation) Allowed(kind string, cancellationPolicyVersion int) bool {
 	if spoken.IsJobKind(kind) {
 		return cancellationPolicyVersion == 1
 	}
-	if kind == job.KindTemplateRequest || kind == job.KindWritingVoiceCandidates || kind == authoring.JobKind {
+	if kind == experimentapp.WritingTestJobKind || kind == job.KindTemplateRequest || kind == job.KindWritingVoiceCandidates || kind == authoring.JobKind {
 		return cancellationPolicyVersion == templateRequestCancellationPolicy
 	}
 	return c.clip.Allowed(kind, cancellationPolicyVersion)
@@ -131,4 +133,11 @@ func postVoiceWork(kind, userID, postSlug, voiceID string) ([]job.Subject, []job
 		}
 	}
 	return subjects, guards
+}
+
+func ordinaryPostWriteKinds() []string {
+	return []string{job.KindGenerate, job.KindRevise, job.KindStoryline, job.KindReviseStoryline}
+}
+func postContentKinds() []string {
+	return []string{job.KindGenerate, job.KindRevise, job.KindModelExperiment}
 }

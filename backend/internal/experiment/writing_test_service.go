@@ -313,7 +313,10 @@ func (s *WritingTestService) Get(ctx context.Context, user, id string) (WritingT
 	return ProjectWritingTest(found), nil
 }
 func (s *WritingTestService) List(ctx context.Context, user string, limit int, cursor string) ([]WritingTest, string, error) {
-	found, next, err := s.deps.Store.ListTests(ctx, user, limit, cursor)
+	return s.ListFiltered(ctx, TestListQuery{UserID: user, PageSize: limit, PageToken: cursor})
+}
+func (s *WritingTestService) ListFiltered(ctx context.Context, query TestListQuery) ([]WritingTest, string, error) {
+	found, next, err := s.deps.Store.ListTests(ctx, query)
 	for i := range found {
 		found[i] = ProjectWritingTest(found[i])
 	}

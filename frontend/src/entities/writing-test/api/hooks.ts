@@ -33,7 +33,12 @@ export function writingTestsQueryKey(
   return [
     ...createConnectQueryKey({
       schema: Service.method.listWritingTests,
-      input: { pageSize: input.pageSize ?? 20, pageToken: input.pageToken ?? '' },
+      input: {
+        pageSize: input.pageSize ?? 20,
+        pageToken: input.pageToken ?? '',
+        sourcePostSlug: input.sourcePostSlug ?? '',
+        voiceId: input.voiceId ?? '',
+      },
       transport,
       cardinality: 'finite',
     }),

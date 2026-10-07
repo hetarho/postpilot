@@ -72,7 +72,6 @@
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
-| T631 | Complete UX wiring and qualify creation settings and sixteen-entry tests | ARCH THEME POST CLIP EDIT VOICE MODEL QUOTA | T622 T623 T624 T625 T626 T627 T628 T629 T630 | todo |
 | T633 | Preserve template material roles and declared stock-rule stages | ARCH TMPL GUIDE GEN | T632 T631 | todo |
 | T634 | Align post stage contracts and grounded maximum-tag behavior | ARCH GEN GUIDE POST LANG | T633 | todo |
 | T635 | Expose real prompt composition and effective request snapshots | ARCH MODEL GEN | T632 | todo |
@@ -89,12 +88,15 @@
 | T646 | Qualify origin-aware writing inspection and clean publication handoff | ARCH GEN POST MODEL THEME EXPORT MKT LANG | T636 T637 T639 T641 T642 T643 T644 T645 T631 | todo |
 
 ## next
+- T633 next: preserve template/rule stage meaning, then continue through T646.
 - Mobile T650–T652 are verified and complete; continue current domain tasks with their freshness and verification gates.
 - Editorial follow-up: doc-review ARCH; full pre-push/deployment verification stays separate.
 
 ## log
+- 261008 T653 final candidate refresh: include committed T631 at935b47e0 plus canonical-path CI repair; rerun invalidated frontend/backend/generated/image checks, preserve uncommitted T633/review work
 - 261008 T653 start: repair removed Alpine zlib-r0 media build pins using official3.24 r1 packages, retain exact real-image gates and existing CI fixes; preserve active T631 changes
 - 261008 CI repair and push start: inspect exact failed051bb0e5 workflow/jobs, preserve active T631 edits, verify final committed push candidate with full CI and applicable deploy/media gates, then inspect every triggered remote workflow
+- 261008 T631 done on main: production graph/receipts/private recovery and real16-entry tests; full Go, FE4141, current-main browser70, generation/tooling and task-candidate spec pass
 - 261008 T650 T651 T652 done on main: phone answer777→371px, header120→64px; all57 routes/580 combined browser cases, FE522 files/4133 tests and lint/build pass; preserve concurrent domain work
 - 261008 mobile manual integration: package integrator rejects inherited spec FORMAT/editorial warnings; independent reviews and exact production hashes retain final24ecfce6 source verification
 - 261008 T628 done on main: durable exact-metered binary tournaments, zero-call recovery, private retention and receipt-first publication; full product Go, actual factory/SQLite/race, FE164, codegen/build/vet and spec checks pass
@@ -114,4 +116,3 @@
 - 261007 final frontend correction: deterministic polling/notification clock from mount replaces the mixed real/fake timer fixture; queued and running history/picker feeds automatically refresh, retain terminal failures and stop requests; owning usePostList/usePosts/useJob11 tests, CI-mode4, ESLint/format and TypeScript build pass, with no production source change
 - 261007 remote backend verification at6a944d1f: full Go tests, format, vet, build and deployment recovery checks pass — https://github.com/hetarho/postpilot/actions/runs/37603125798/job/112732066963
 - 261007 remote deployment at6a944d1f: build and actual rollout/health/browser-CORS/R2-GET steps all pass, none skipped — https://github.com/hetarho/postpilot/actions/runs/37603126041
-- 261007 remote media verification at6a944d1f: image, worker and both-layout release jobs all pass — https://github.com/hetarho/postpilot/actions/runs/37603618318

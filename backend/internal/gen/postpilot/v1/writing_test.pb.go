@@ -1760,11 +1760,14 @@ func (x *GetWritingTestRequest) GetTestId() string {
 }
 
 type ListWritingTestsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	PageSize      int32                  `protobuf:"varint,1,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
-	PageToken     string                 `protobuf:"bytes,2,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	PageSize  int32                  `protobuf:"varint,1,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	PageToken string                 `protobuf:"bytes,2,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	// Authenticated owner-side filters do not reveal blind contestant mappings.
+	SourcePostSlug string `protobuf:"bytes,3,opt,name=source_post_slug,json=sourcePostSlug,proto3" json:"source_post_slug,omitempty"`
+	VoiceId        string `protobuf:"bytes,4,opt,name=voice_id,json=voiceId,proto3" json:"voice_id,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *ListWritingTestsRequest) Reset() {
@@ -1807,6 +1810,20 @@ func (x *ListWritingTestsRequest) GetPageSize() int32 {
 func (x *ListWritingTestsRequest) GetPageToken() string {
 	if x != nil {
 		return x.PageToken
+	}
+	return ""
+}
+
+func (x *ListWritingTestsRequest) GetSourcePostSlug() string {
+	if x != nil {
+		return x.SourcePostSlug
+	}
+	return ""
+}
+
+func (x *ListWritingTestsRequest) GetVoiceId() string {
+	if x != nil {
+		return x.VoiceId
 	}
 	return ""
 }
@@ -2497,11 +2514,13 @@ const file_postpilot_v1_writing_test_proto_rawDesc = "" +
 	"requestKey\x12\x1b\n" +
 	"\tquote_key\x18\x03 \x01(\tR\bquoteKey\"0\n" +
 	"\x15GetWritingTestRequest\x12\x17\n" +
-	"\atest_id\x18\x01 \x01(\tR\x06testId\"U\n" +
+	"\atest_id\x18\x01 \x01(\tR\x06testId\"\x9a\x01\n" +
 	"\x17ListWritingTestsRequest\x12\x1b\n" +
 	"\tpage_size\x18\x01 \x01(\x05R\bpageSize\x12\x1d\n" +
 	"\n" +
-	"page_token\x18\x02 \x01(\tR\tpageToken\"s\n" +
+	"page_token\x18\x02 \x01(\tR\tpageToken\x12(\n" +
+	"\x10source_post_slug\x18\x03 \x01(\tR\x0esourcePostSlug\x12\x19\n" +
+	"\bvoice_id\x18\x04 \x01(\tR\avoiceId\"s\n" +
 	"\x18ListWritingTestsResponse\x12/\n" +
 	"\x05tests\x18\x01 \x03(\v2\x19.postpilot.v1.WritingTestR\x05tests\x12&\n" +
 	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"D\n" +

@@ -3,14 +3,14 @@ package main
 import (
 	"context"
 	"errors"
-	"github.com/postpilot/backend/internal/authoring"
 	"strings"
 	"time"
 
+	"github.com/postpilot/backend/internal/authoring"
 	"github.com/postpilot/backend/internal/clip"
 	clipapp "github.com/postpilot/backend/internal/clip/app"
-
 	"github.com/postpilot/backend/internal/experiment"
+	experimentapp "github.com/postpilot/backend/internal/experiment/app"
 	"github.com/postpilot/backend/internal/generation"
 	"github.com/postpilot/backend/internal/job"
 	"github.com/postpilot/backend/internal/memory"
@@ -117,6 +117,8 @@ func registerJobs(c *contexts) {
 	q.Register(authoring.JobKind, metered(func(ctx context.Context, found job.Job, progress job.Progress) error {
 		return c.authoring.Run(ctx, authoring.Run{ID: found.ID, UserID: found.UserID, WriteModel: found.WriteModel, Payload: found.Payload}, func(stage string, done, total int) { progress(stage, done, total) })
 	}))
+	q.Register(experimentapp.WritingTestJobKind, c.writingTestJobs.Handler)
+	q.OnTerminal(experimentapp.WritingTestJobKind, c.writingTestJobs.Terminal)
 	registerClipJobs(q, c.clipGeneration, c.clipSources)
 	q.Register(clip.JobKindSpeech, metered(c.clipSpeech.Run))
 	q.OnTerminal(clip.JobKindSpeech, func(ctx context.Context, j job.Job, _ time.Time) error { return c.clipSpeech.OnTerminal(ctx, j) })

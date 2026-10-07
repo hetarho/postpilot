@@ -212,6 +212,9 @@ type OwnedCandidateRef struct {
 	Revision               uint32
 }
 type FrozenCandidate struct {
+	// ReferenceAt is the immutable session creation time. It is a projection
+	// reference time, and makes no provider issuance or completion claim.
+	ReferenceAt             time.Time
 	Kind                    Kind
 	Artifact                Artifact
 	TargetID, TargetVersion string

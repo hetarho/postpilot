@@ -322,7 +322,7 @@ func TestActualFactoryAdapterRefusesIssuedUnconfirmedCheckpointWithoutReplayOrFr
 		}
 	}
 	request := experiment.TestRetryQuoteRequest{UserID: "alice", TestID: s.work.Test.ID, ExpectedRevision: 5, CandidateIDs: []string{candidate.ID}}
-	if _, err := a.PrepareFailedTestCandidates(context.Background(), request); !errors.Is(err, generation.ErrWritingTestExecutionUncertain) {
+	if _, err := a.PrepareFailedTestCandidates(context.Background(), request); !errors.Is(err, experiment.ErrTestStateInvalid) {
 		t.Fatalf("uncertain call admitted fresh quote=%v", err)
 	}
 	if _, err := a.RunTestCandidate(context.Background(), s.work, candidate.ID, shared, saveAdapterCheckpoint(s, candidate.ID), nil); !errors.Is(err, generation.ErrWritingTestExecutionUncertain) {

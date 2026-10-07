@@ -81,8 +81,8 @@ func (p *writingTestPorts) ActivateWritingTestJob(ctx context.Context, user, job
 }
 func (p *writingTestPorts) testID(ctx context.Context, user, jobID string) string {
 	list, _, _ := p.store.(interface {
-		ListTests(context.Context, string, int, string) ([]experiment.WritingTest, string, error)
-	}).ListTests(ctx, user, 100, "")
+		ListTests(context.Context, experiment.TestListQuery) ([]experiment.WritingTest, string, error)
+	}).ListTests(ctx, experiment.TestListQuery{UserID: user, PageSize: 100})
 	for _, test := range list {
 		if test.JobID == jobID {
 			return test.ID

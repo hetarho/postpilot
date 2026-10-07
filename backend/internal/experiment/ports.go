@@ -153,7 +153,7 @@ type TestSettingPublication interface {
 type TestStore interface {
 	AdmitTest(context.Context, TestStart, TestPlan) (WritingTest, bool, error)
 	GetTest(context.Context, string, string) (WritingTest, error)
-	ListTests(context.Context, string, int, string) ([]WritingTest, string, error)
+	ListTests(context.Context, TestListQuery) ([]WritingTest, string, error)
 	DecideMatch(context.Context, MatchDecision) (WritingTest, error)
 	CancelTest(context.Context, TestMutation) (WritingTest, error)
 	BeginPublication(context.Context, WinnerPublication) (TestPublication, error)

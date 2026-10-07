@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import { Textarea } from './Textarea'
 
 describe('textarea writing allocation', () => {
@@ -74,4 +74,55 @@ describe('textarea writing allocation', () => {
     expect(field.style.height).toBe('1800px')
     expect(field.style.overflowY).toBe('hidden')
   })
+})
+
+it('defers observer-induced height writes, coalesces notifications and cancels them on unmount', () => {
+  let deliver!: ResizeObserverCallback
+  const disconnect = vi.fn(),
+    frames = new Map<number, FrameRequestCallback>()
+  let next = 0
+  vi.stubGlobal(
+    'ResizeObserver',
+    class {
+      constructor(callback: ResizeObserverCallback) {
+        deliver = callback
+      }
+      observe() {}
+      disconnect() {
+        disconnect()
+      }
+    },
+  )
+  const request = vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {
+    const id = ++next
+    frames.set(id, callback)
+    return id
+  })
+  const cancel = vi.spyOn(window, 'cancelAnimationFrame').mockImplementation((id) => {
+    frames.delete(id)
+  })
+  const view = render(<Textarea aria-label="Writing" autoGrow defaultValue="Text" />),
+    field = screen.getByRole('textbox')
+  Object.defineProperty(field, 'scrollHeight', { configurable: true, value: 240 })
+  const before = field.style.height
+  act(() => {
+    deliver([], {} as ResizeObserver)
+    deliver([], {} as ResizeObserver)
+  })
+  expect(field.style.height).toBe(before)
+  expect(request).toHaveBeenCalledTimes(1)
+  act(() => {
+    const callback = frames.get(1)!
+    frames.delete(1)
+    callback(0)
+  })
+  expect(field.style.height).toBe('240px')
+  act(() => deliver([], {} as ResizeObserver))
+  view.unmount()
+  expect(cancel).toHaveBeenCalledWith(2)
+  expect(frames.size).toBe(0)
+  expect(disconnect).toHaveBeenCalledTimes(1)
+  request.mockRestore()
+  cancel.mockRestore()
+  vi.unstubAllGlobals()
 })

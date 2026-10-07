@@ -57,7 +57,7 @@ func TestBuildContextsWiresEveryRequiredCollaborator(t *testing.T) {
 	}
 	registerJobs(app)
 	got := handlers(app)
-	if len(got) != 27 {
+	if len(got) != 28 {
 		t.Fatalf("handlers = %d, want every Connect service", len(got))
 	}
 	for _, register := range got {
@@ -72,6 +72,8 @@ func TestBuildContextsWiresEveryRequiredCollaborator(t *testing.T) {
 	public := rpcserver.New(cfg, "test", rpcserver.Options{Handlers: got, Interceptors: []connect.Interceptor{authrpc.NewInterceptor(app.auth, app.throttle, cfg.ClientIPHeader)}})
 	for path, want := range map[string]int{
 		"/postpilot.v1.ClipMediaWorkerService/GetMediaRuntimeStatus":      http.StatusNotFound,
+		"/postpilot.v1.WritingTestService/StartWritingTest":               http.StatusUnauthorized,
+		"/postpilot.v1.WritingTestService/ListWritingTests":               http.StatusUnauthorized,
 		"/postpilot.v1.PostService/ListPosts":                             http.StatusUnauthorized,
 		"/postpilot.v1.VoiceService/UpdateVoiceSample":                    http.StatusUnauthorized,
 		"/postpilot.v1.VoiceService/EstimateVoiceAnalysis":                http.StatusUnauthorized,

@@ -33,7 +33,8 @@ func NewWritingTestGeneration(factory *generation.WritingTestFactory, store inte
 	return &WritingTestGeneration{factory: factory, store: store}
 }
 
-func (a *WritingTestGeneration) PrepareWritingTest(ctx context.Context, r experiment.TestStart, variants []experiment.FrozenTestVariant) (experiment.TestPlan, error) {
+func (a *WritingTestGeneration) PrepareWritingTest(ctx context.Context, r experiment.TestStart, variants []experiment.FrozenTestVariant) (result experiment.TestPlan, err error) {
+	defer func() { err = WritingTestPreparationError(err) }()
 	if err := experiment.ValidateTestShape(r); err != nil {
 		return experiment.TestPlan{}, err
 	}
@@ -90,7 +91,8 @@ func (a *WritingTestGeneration) PrepareWritingTest(ctx context.Context, r experi
 	return plan, nil
 }
 
-func (a *WritingTestGeneration) PrepareFailedTestCandidates(ctx context.Context, r experiment.TestRetryQuoteRequest) (experiment.TestPlan, error) {
+func (a *WritingTestGeneration) PrepareFailedTestCandidates(ctx context.Context, r experiment.TestRetryQuoteRequest) (result experiment.TestPlan, err error) {
+	defer func() { err = WritingTestPreparationError(err) }()
 	if err := experiment.ValidateRetryQuoteShape(r); err != nil {
 		return experiment.TestPlan{}, err
 	}

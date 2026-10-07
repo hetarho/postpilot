@@ -327,10 +327,23 @@ export function createWritingTestStudioFixture(
       if (!ledger || ledgerOwnerId !== ownerId) throw new ConnectError('not found', Code.NotFound)
       return create(Service.method.getWritingTest.output, { test: ledger })
     })
-    rpc(Service.method.listWritingTests, () => {
+    rpc(Service.method.listWritingTests, (request) => {
       calls.push('ListWritingTests')
       return create(Service.method.listWritingTests.output, {
-        tests: ledger && ledgerOwnerId === ownerId ? [ledger] : [],
+        tests:
+          ledger &&
+          ledgerOwnerId === ownerId &&
+          (!request.sourcePostSlug || request.sourcePostSlug === ledger.sourcePostSlug) &&
+          (!request.voiceId ||
+            admittedPlan?.context?.voiceId === request.voiceId ||
+            admittedPlan?.entrants.some(
+              (entrant) =>
+                entrant.source.case === 'setting' &&
+                entrant.source.value.kind === ProtoConfigurationKind.WRITING_VOICE &&
+                entrant.source.value.id === request.voiceId,
+            ))
+            ? [ledger]
+            : [],
       })
     })
     rpc(Service.method.decideTestMatch, (request) => {
@@ -450,6 +463,12 @@ export function createWritingTestStudioFixture(
     plan,
     setOwner: (id: string) => {
       ownerId = id
+    },
+    /** Browser qualification restores the fixture's server record, independently of actor recovery. */
+    restoreTest: (test: WireTest, plan?: WirePlan) => {
+      ledger = test
+      ledgerOwnerId = ownerId
+      admittedPlan = plan
     },
     getTest: () => ledger,
     failNextEstimate: () => {

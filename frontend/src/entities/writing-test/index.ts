@@ -17,3 +17,5 @@ export {
   writingTestQueryKey,
   writingTestsQueryKey,
 } from './api/hooks'
+
+export { useWritingTestOwnerRefresh } from './api/useWritingTestOwners'

@@ -251,7 +251,7 @@ it('applies source and stage to real records across pages and passes matching le
     rpc(Service.method.listWritingTests, (request) => {
       pages.push(request.pageToken)
       return create(Service.method.listWritingTests.output, {
-        tests: request.pageToken
+        tests: (request.pageToken
           ? [
               {
                 ...test('match', 1, 'Matching source', '2026-10-06T00:00:00Z'),
@@ -269,7 +269,10 @@ it('applies source and stage to real records across pages and passes matching le
                 modelStage: WritingTestStage.OBSERVE,
                 sourcePostSlug: 'different-source',
               },
-            ],
+            ]
+        ).filter(
+          (record) => !request.sourcePostSlug || record.sourcePostSlug === request.sourcePostSlug,
+        ),
         nextPageToken: request.pageToken ? '' : 'next',
       })
     })
@@ -322,7 +325,7 @@ it('applies source and stage to real records across pages and passes matching le
   )
 })
 
-it('filters one voice only from revealed identities and never infers a blind candidate voice', async () => {
+it('trusts server-filtered style membership while keeping active contestant identities blind', async () => {
   const voiceRecord = (id: string, voiceId: string) => {
     const record = test(id, 1, id, '2026-10-07T00:00:00Z')
     return {
@@ -349,16 +352,20 @@ it('filters one voice only from revealed identities and never infers a blind can
   const voiceReads: string[] = []
   const legacyReads: Array<{ stage: Stage; source: ExperimentSource }> = []
   const transport = createRouterTransport(({ rpc }) => {
-    rpc(Service.method.listWritingTests, () => {
+    rpc(Service.method.listWritingTests, (request) => {
+      expect(request.voiceId).toBe('chosen')
       const blind = voiceRecord('blind', 'chosen')
       return create(Service.method.listWritingTests.output, {
         tests: [
           voiceRecord('match', 'chosen'),
-          voiceRecord('other', 'another'),
           {
             ...blind,
             status: WritingTestStatus.REVIEW,
             revealed: false,
+            candidates: blind.candidates.map((candidate) => ({
+              ...candidate,
+              identity: undefined,
+            })),
             winnerCandidateId: '',
             matches: blind.matches.map((match) => ({ ...match, winnerCandidateId: '' })),
           },
@@ -402,7 +409,55 @@ it('filters one voice only from revealed identities and never infers a blind can
   expect(await screen.findByText('Chosen paid voice')).toBeVisible()
   expect(screen.queryByText('other left')).not.toBeInTheDocument()
   expect(screen.queryByText('Other paid voice')).not.toBeInTheDocument()
-  expect(screen.getAllByRole('link', { name: '테스트 이어보기' })).toHaveLength(1)
+  expect(screen.getAllByRole('link', { name: '테스트 이어보기' })).toHaveLength(2)
   expect(legacyReads).toEqual([{ stage: Stage.WRITE, source: ExperimentSource.VOICE }])
   await waitFor(() => expect(voiceReads).toEqual(['chosen']))
+})
+
+it('requests owned source/style filters and retains blind active records without revealing contestant membership', async () => {
+  const requests: unknown[] = []
+  const transport = createRouterTransport(({ rpc }) => {
+    registerEmptyLegacy(rpc)
+    rpc(Service.method.listWritingTests, (request) => {
+      requests.push(request)
+      const record = test('working', 2, 'Secret voice', '2026-10-08T00:00:00Z')
+      return create(Service.method.listWritingTests.output, {
+        tests: [
+          {
+            ...record,
+            factor: WritingTestFactor.VOICE,
+            status: WritingTestStatus.RUNNING,
+            revealed: false,
+            winnerCandidateId: '',
+            matches: [],
+            sourcePostSlug: '',
+            candidates: record.candidates.map((candidate) => ({
+              ...candidate,
+              status: WritingTestCandidateStatus.PENDING,
+              output: undefined,
+              identity: undefined,
+            })),
+          },
+        ],
+      })
+    })
+  })
+  render(
+    <WritingTestHistory
+      ownerId="alice"
+      sourcePostSlug="owned-source"
+      voiceId="owned-voice"
+      stage="voice"
+    />,
+    { wrapper: withProviders(transport, createTestQueryClient()) },
+  )
+  expect(await screen.findByText('0 / 2편 준비')).toBeVisible()
+  expect(screen.getByRole('link', { name: '테스트 이어보기' })).toHaveAttribute(
+    'href',
+    '/tests/working?entry=%2Ftests%2Fhistory%3Fstage%3Dvoice%26source%3Downed-source%26voiceId%3Downed-voice',
+  )
+  expect(requests).toEqual([
+    expect.objectContaining({ sourcePostSlug: 'owned-source', voiceId: 'owned-voice' }),
+  ])
+  expect(screen.queryByText(/Secret voice/)).not.toBeInTheDocument()
 })

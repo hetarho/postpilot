@@ -37,6 +37,18 @@ func (s *Service) PromptProfileForTopic(ctx context.Context, userID, voiceID, re
 	if analysis == nil {
 		return PromptProfile{}, ErrVoiceNotMade
 	}
+	var samples []Sample
+	if target == LanguageKorean && NormalizedOrigin(analysis.Origin) != OriginSynthetic {
+		samples, err = s.samples.ListSampleBodies(ctx, userID, voiceID)
+		if err != nil {
+			return PromptProfile{}, fmt.Errorf("list excerpts: %w", err)
+		}
+	}
+	return projectAcceptedProfile(*analysis, samples, retrievalText, target, excludeMaterialID)
+}
+
+// projectAcceptedProfile is shared by ordinary writing and immutable tests.
+func projectAcceptedProfile(analysis Analysis, samples []Sample, retrievalText string, target Language, excludeMaterialID string) (PromptProfile, error) {
 	if target != LanguageKorean {
 		text := portableSection(analysis.Counted)
 		if voiceOrigin := NormalizedOrigin(analysis.Origin); voiceOrigin == OriginSynthetic {
@@ -45,14 +57,10 @@ func (s *Service) PromptProfileForTopic(ctx context.Context, userID, voiceID, re
 		return PromptProfile{Text: text, Portable: true}, nil
 	}
 	if NormalizedOrigin(analysis.Origin) == OriginSynthetic {
-		return PromptProfile{Text: koreanSection(*analysis) + "\n[AI가 만든 가상의 말투 예시]\n" + analysis.SyntheticSample, Excerpts: []string{}}, nil
+		return PromptProfile{Text: koreanSection(analysis) + "\n[AI가 만든 가상의 말투 예시]\n" + analysis.SyntheticSample, Excerpts: []string{}}, nil
 	}
-	samples, err := s.samples.ListSampleBodies(ctx, userID, voiceID)
-	if err != nil {
-		return PromptProfile{}, fmt.Errorf("list excerpts: %w", err)
-	}
-	visible := withoutDeletedExamples(*analysis, samplePresence(samples))
-	excerpts, sources := excerptsWithSources(acceptedSamples(*analysis, samples), retrievalText, excludeMaterialID)
+	visible := withoutDeletedExamples(analysis, samplePresence(samples))
+	excerpts, sources := excerptsWithSources(acceptedSamples(analysis, samples), retrievalText, excludeMaterialID)
 	// Examples are part of the accepted profile even when the excerpt window
 	// chooses another material. Keep their withdrawal fence in the frozen input.
 	needed := make(map[string]bool)

@@ -192,7 +192,7 @@ func TestWritingTestOwnerQuoteAndRequestIsolation(t *testing.T) {
 	if _, _, err := store.AdmitTest(ctx, foreign, plan); !errors.Is(err, experiment.ErrTestQuoteRequired) {
 		t.Fatalf("foreignquote=%v", err)
 	}
-	list, next, err := store.ListTests(ctx, "alice", 1, "")
+	list, next, err := store.ListTests(ctx, experiment.TestListQuery{UserID: "alice", PageSize: 1})
 	if err != nil || len(list) != 1 || next != "" || len(list[0].Candidates) != 4 || list[0].CommonSnapshot != nil {
 		t.Fatalf("history=%+v %q %v", list, next, err)
 	}
@@ -714,5 +714,40 @@ func TestWritingTestFailedAndPartialExpiryRetainsBlindMetadataWithoutAbandonment
 				t.Fatal(err)
 			}
 		})
+	}
+}
+
+func TestWritingTestLifecycleProviderCancellationReadsOnlyOwnedSourceExecutions(t *testing.T) {
+	store, _ := testStore(t)
+	ctx := context.Background()
+	request, plan := writingRequest(experiment.FactorModel, experiment.StageWrite, 2, "start")
+	work := beginWriting(t, store, admitWriting(t, store, request, plan))
+	owned, err := store.WritingTestExecutionsForPost(ctx, "alice", "post-a")
+	if err != nil || len(owned) != 1 || owned[0] != work.Fence {
+		t.Fatalf("ownedsource=%+v %v", owned, err)
+	}
+	for _, user := range []string{"bob", "unknown"} {
+		other, err := store.WritingTestExecutionsForPost(ctx, user, "post-a")
+		if err != nil || len(other) != 0 {
+			t.Fatalf("foreignsource=%+v %v", other, err)
+		}
+	}
+	if err = store.PurgeWritingTestPost(ctx, "alice", "post-a"); err != nil {
+		t.Fatal(err)
+	}
+	after, err := store.WritingTestExecutionsForPost(ctx, "alice", "post-a")
+	if err != nil || len(after) != 0 {
+		t.Fatal("sourceexecution references retainedafterpurge", err)
+	}
+	cancelled, err := store.ListCancelledUnsettledTestExecutions(ctx)
+	if err != nil || len(cancelled) != 1 || cancelled[0] != work.Fence {
+		t.Fatalf("cancelrecovery=%+v %v", cancelled, err)
+	}
+	if err = store.ConfirmTestSettlement(ctx, work.Fence, 3); err != nil {
+		t.Fatal(err)
+	}
+	cancelled, err = store.ListCancelledUnsettledTestExecutions(ctx)
+	if err != nil || len(cancelled) != 0 {
+		t.Fatal("settledcancel stillpending", err)
 	}
 }

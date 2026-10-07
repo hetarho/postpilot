@@ -3,9 +3,17 @@ SELECT * FROM writing_tests WHERE user_id=? AND id=?;
 -- name: GetWritingTestByRequest :one
 SELECT * FROM writing_tests WHERE user_id=? AND operation_key=?;
 -- name: ListWritingTests :many
-SELECT * FROM writing_tests WHERE user_id=sqlc.arg(user_id)
-AND (CAST(sqlc.arg(cursor_time) AS TEXT)='' OR created_at<sqlc.arg(cursor_time) OR (created_at=sqlc.arg(cursor_time) AND id<sqlc.arg(cursor_id)))
-ORDER BY created_at DESC,id DESC LIMIT sqlc.arg(page_limit);
+SELECT * FROM writing_tests WHERE writing_tests.user_id=sqlc.arg(user_id)
+AND (CAST(sqlc.arg(source_post_slug) AS TEXT)='' OR writing_tests.source_post_slug=sqlc.arg(source_post_slug))
+AND (CAST(sqlc.arg(voice_id) AS TEXT)=''
+ OR json_extract(writing_tests.context,'$.Input.VoiceID')=sqlc.arg(voice_id)
+ OR EXISTS(SELECT 1 FROM writing_test_candidates c
+   WHERE c.user_id=writing_tests.user_id AND c.test_id=writing_tests.id
+   AND json_extract(c.source_id,'$.Ref.SourceKind')='setting'
+   AND json_extract(c.source_id,'$.Ref.SettingKind')='voice'
+   AND json_extract(c.source_id,'$.Ref.SettingID')=sqlc.arg(voice_id)))
+AND (CAST(sqlc.arg(cursor_time) AS TEXT)='' OR writing_tests.created_at<sqlc.arg(cursor_time) OR (writing_tests.created_at=sqlc.arg(cursor_time) AND writing_tests.id<sqlc.arg(cursor_id)))
+ORDER BY writing_tests.created_at DESC,writing_tests.id DESC LIMIT sqlc.arg(page_limit);
 -- name: InsertWritingTest :exec
 INSERT INTO writing_tests(id,user_id,operation_key,fingerprint,kind,factor,model_stage,count,status,revision,source_post_slug,context,common_snapshot,common_hash,prompt_version,purge_fence,job_id,winner_candidate_id,confirmed_credits,reserved_credits,failure_reason,created_at,updated_at,content_expires_at)
 VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);
@@ -77,3 +85,8 @@ UPDATE writing_test_quotes SET request='{}',plan=NULL WHERE expires_at<=? AND co
 UPDATE writing_test_quotes SET request='{}',plan=NULL WHERE user_id=? AND (test_id=? OR consumed_test_id=?);
 -- name: ListUnsettledWritingTestAttempts :many
 SELECT * FROM writing_test_attempts WHERE settled=0 ORDER BY created_at,id;
+-- name: ListWritingTestExecutionsForPost :many
+SELECT a.* FROM writing_test_attempts a JOIN writing_tests t ON t.user_id=a.user_id AND t.id=a.test_id
+WHERE t.user_id=? AND t.source_post_slug=? AND a.status IN ('prepared','queued','running') ORDER BY a.created_at,a.id;
+-- name: ListCancelledUnsettledWritingTestExecutions :many
+SELECT * FROM writing_test_attempts WHERE status='cancelled' AND settled=0 ORDER BY created_at,id;

@@ -76,8 +76,13 @@ func (a *WritingTestJobs) StartWritingTestJob(ctx context.Context, work experime
 	for i, c := range work.Plan.Calls {
 		calls[i] = job.PlannedCall{Ref: c.Ref.String(), Stage: string(c.Stage), Count: c.Count, PromptTokens: c.PromptTokens, CompletionTokens: c.CompletionTokens}
 	}
-	return a.queue.EnqueueWithID(ctx, work.Fence.JobID, job.NewJob{Kind: WritingTestJobKind, UserID: work.Fence.UserID, TargetLanguage: work.Test.Input.TargetLanguage,
+	id, enqueueErr := a.queue.EnqueueWithID(ctx, work.Fence.JobID, job.NewJob{Kind: WritingTestJobKind, UserID: work.Fence.UserID, TargetLanguage: work.Test.Input.TargetLanguage,
 		CancellationPolicyVersion: 1, NonMetered: work.Fence.NonMetered, Payload: payload, PricingCalls: calls})
+	var busy *job.ErrAlreadyInProgress
+	if errors.As(enqueueErr, &busy) {
+		return "", &experiment.JobAlreadyInProgressError{ActiveID: busy.ActiveID}
+	}
+	return id, enqueueErr
 }
 func (a *WritingTestJobs) ActivateWritingTestJob(ctx context.Context, user, id string) error {
 	if err := a.queue.Activate(ctx, user, id); err != nil {
@@ -169,10 +174,32 @@ func (a *WritingTestJobs) RecoverSettlements(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	return a.recoverFences(ctx, pending, true)
+}
+
+// ReconcileTerminalSettlements may run while admissions are active. A prepared
+// attempt still between its hold and durable row is left for its request/boot.
+func (a *WritingTestJobs) ReconcileTerminalSettlements(ctx context.Context) error {
+	pending, err := a.runtime.PendingTestSettlements(ctx)
+	if err != nil {
+		return err
+	}
+	return a.recoverFences(ctx, pending, false)
+}
+
+// ReconcileCancelledSettlements receives only already-closed purge/cancel
+// epochs from the owned lifecycle store. A missing job cannot activate later.
+func (a *WritingTestJobs) ReconcileCancelledSettlements(ctx context.Context, pending []experiment.TestExecutionFence) error {
+	return a.recoverFences(ctx, pending, true)
+}
+func (a *WritingTestJobs) recoverFences(ctx context.Context, pending []experiment.TestExecutionFence, closeMissing bool) error {
 	var failures []error
 	for _, fence := range pending {
 		found, err := a.queue.Result(ctx, fence.UserID, fence.JobID)
 		if errors.Is(err, job.ErrNotFound) {
+			if !closeMissing {
+				continue
+			}
 			// No durable job means no handler could issue work. The boot hold
 			// sweep has abandoned/released any pre-insert admission already.
 			if err := a.runtime.EndTestExecution(ctx, fence, experiment.TestExecutionFailed, &experiment.Failure{Reason: experiment.FailureReasonInterrupted}); err != nil {

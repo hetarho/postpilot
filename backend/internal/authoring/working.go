@@ -242,7 +242,7 @@ func (s *Service) FreezeCandidate(ctx context.Context, user string, ref OwnedCan
 			value := *candidate.Scope
 			candidate.Scope = &value
 		}
-		return FrozenCandidate{Kind: state.Kind, Artifact: candidate, TargetID: target, TargetVersion: version, Synthetic: true}
+		return FrozenCandidate{ReferenceAt: state.CreatedAt, Kind: state.Kind, Artifact: candidate, TargetID: target, TargetVersion: version, Synthetic: true}
 	}
 	// Explicit historical recommendations retain their admitted target context,
 	// even after the selected working source or canonical target changes.
