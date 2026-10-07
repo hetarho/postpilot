@@ -40,13 +40,16 @@ export function SettingsPage() {
       <Typography variant="body" className="text-content-secondary mt-3">
         {t('settings.description')}
       </Typography>
-      <div className="mt-10 grid gap-10 md:grid-cols-3">
+      <div className="mt-6 grid gap-6 md:mt-10 md:grid-cols-3 md:gap-10">
         {GROUPS.map((group) => (
           <section key={group.key} aria-labelledby={`settings-${group.key}`} className="min-w-0">
-            <Typography variant="title" id={`settings-${group.key}`} className="mb-4">
+            <Typography variant="title" id={`settings-${group.key}`} className="mb-2 md:mb-4">
               {t(`settings.${group.key}`)}
             </Typography>
-            <nav aria-label={t(`settings.${group.key}`)} className="flex flex-col gap-1">
+            <nav
+              aria-label={t(`settings.${group.key}`)}
+              className="grid grid-cols-2 gap-1 md:grid-cols-1"
+            >
               {group.links.map(([to, key]) => (
                 <Link
                   to={to}
@@ -54,7 +57,7 @@ export function SettingsPage() {
                   className={typographyStyles({
                     variant: 'body',
                     className:
-                      'hover:bg-row-bg-hover active:bg-row-bg-active flex min-h-11 items-center justify-between gap-3 rounded-md px-4 py-3',
+                      'hover:bg-row-bg-hover active:bg-row-bg-active flex min-h-11 items-center justify-between gap-2 rounded-md px-2 py-2 md:gap-3 md:px-4 md:py-3',
                   })}
                 >
                   {t(`settings.${key}`)}
@@ -71,7 +74,7 @@ export function SettingsPage() {
         className={typographyStyles({
           variant: 'body',
           className:
-            'text-link-fg hover:text-link-fg-hover mt-10 inline-flex min-h-11 items-center px-4',
+            'text-link-fg hover:text-link-fg-hover mt-6 inline-flex min-h-11 items-center px-4 md:mt-10',
         })}
       >
         {t('setup.restart')}
@@ -82,7 +85,7 @@ export function SettingsPage() {
           className={typographyStyles({
             variant: 'body',
             className:
-              'text-link-fg hover:text-link-fg-hover mt-10 inline-flex min-h-11 items-center px-4',
+              'text-link-fg hover:text-link-fg-hover mt-6 inline-flex min-h-11 items-center px-4 md:mt-10',
           })}
         >
           {t('settings.admin')}

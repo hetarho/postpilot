@@ -84,7 +84,9 @@ describe('AdminVouchersPage', () => {
     const issueRequests: FakeVoucherIssue[] = []
     renderTab({ issueRequests })
 
-    await user.click(await screen.findByRole('tab', { name: 'pro · 1070 크레딧 · 30일' }))
+    await user.click(await screen.findByRole('combobox', { name: '내용' }))
+    expect(screen.getAllByRole('option')).toHaveLength(5)
+    await user.click(screen.getByRole('option', { name: 'pro · 1070 크레딧 · 30일' }))
     await user.type(screen.getByLabelText('받은 금액(원)'), '14900')
     expect(screen.getByLabelText('받은 금액(원)')).toHaveValue('14,900')
     await user.type(screen.getByLabelText('입금자'), '김민수')
@@ -115,7 +117,8 @@ describe('AdminVouchersPage', () => {
     const issueRequests: FakeVoucherIssue[] = []
     renderTab({ issueRequests })
 
-    await user.click(await screen.findByRole('tab', { name: '직접 입력' }))
+    await user.click(await screen.findByRole('combobox', { name: '내용' }))
+    await user.click(screen.getByRole('option', { name: '직접 입력' }))
     await user.type(screen.getByLabelText('크레딧'), '500')
     await user.type(screen.getByLabelText('사용 기간(일)'), '14')
     await user.click(screen.getByRole('tab', { name: '선물' }))

@@ -152,6 +152,7 @@ export function WritingTestHistoryPage() {
         {t('newTest')}
       </Button>
       <WritingTestHistory
+        showHeading={false}
         ownerId={user?.id ?? ''}
         voiceId={search.voiceId}
         stage={search.stage}

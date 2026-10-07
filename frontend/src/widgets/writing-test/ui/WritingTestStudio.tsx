@@ -634,7 +634,7 @@ function OwnedStudio({
         id={headingId}
         as="h2"
         tabIndex={-1}
-        className="mt-6 break-words"
+        className="mt-3 break-words sm:mt-6"
       >
         {title}
       </Typography>
@@ -654,16 +654,16 @@ function OwnedStudio({
         </Notice>
       )}
       {flow.view === 'factor' && (
-        <section className="mt-5 space-y-6">
-          <Typography variant="body" className="max-w-measure">
+        <section className="mt-4 space-y-4 sm:mt-5 sm:space-y-6">
+          <Typography variant="body" id={`${headingId}-help`} className="max-w-measure">
             {t('factorHelp')}
           </Typography>
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-2 gap-3">
             {(['model', 'voice', 'template', 'guideline'] as const).map((factor) => (
               <ChoiceButton
                 key={factor}
                 title={t(`factor.${factor}`)}
-                description={t('factorHelp')}
+                aria-describedby={`${headingId}-help`}
                 selected={factor === plan.factor}
                 onClick={() => {
                   if (factor !== plan.factor)

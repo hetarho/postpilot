@@ -34,6 +34,9 @@ import {
   Button,
   Checkbox,
   Dialog,
+  Disclosure,
+  useMediaQuery,
+  MD_MEDIA_QUERY,
   FieldCount,
   FieldLabel,
   FieldMessage,
@@ -82,6 +85,8 @@ export function ClipProjectForm({
   refusal?: ReactNode
 }) {
   const { t } = useTranslation('clips')
+  const wide = useMediaQuery(MD_MEDIA_QUERY)
+  const [designExpanded, setDesignExpanded] = useState({ phone: false, desktop: true })
   const navigate = useNavigate()
   const templates = useClipTemplates(ownerId)
   // A draft the queue still owes the server outranks what the server last reported: it is what
@@ -359,66 +364,6 @@ export function ClipProjectForm({
               />
             </div>
           )}
-          {/* How this clip's captions are paced and which colour one word takes.
-              Both belong to the project, not to the template it was made from,
-              and changing either re-renders the same clip (CLIP-139). */}
-          {!creating && (
-            <div className="space-y-3">
-              <Typography variant="fieldTitle" as="p">
-                {t('pace.label')}
-              </Typography>
-              <SegmentedControl
-                ariaLabel={t('pace.label')}
-                value={draft.captionPace || 'steady'}
-                options={[
-                  { value: 'steady' as const, label: t('pace.steady') },
-                  { value: 'rapid' as const, label: t('pace.rapid') },
-                ]}
-                onChange={(captionPace) => change('captionPace', captionPace)}
-              />
-              <Typography variant="body" className="text-content-secondary">
-                {t('pace.help')}
-              </Typography>
-              <Typography variant="fieldTitle" as="p">
-                {t('project.accent')}
-              </Typography>
-              <div
-                role="radiogroup"
-                aria-label={t('project.accent')}
-                className="flex flex-wrap gap-2"
-              >
-                {CLIP_ACCENTS.map((value) => (
-                  <Button
-                    key={value || 'none'}
-                    variant={(draft.accent ?? '') === value ? 'secondary' : 'ghost'}
-                    role="radio"
-                    aria-checked={(draft.accent ?? '') === value}
-                    onClick={() => change('accent', value)}
-                  >
-                    <span className="flex items-center gap-2">
-                      {value && (
-                        <span
-                          aria-hidden="true"
-                          className="size-4 rounded-full"
-                          style={{ backgroundColor: CLIP_DESIGN.accent[value] }}
-                        />
-                      )}
-                      {t(`accent.${value || 'none'}`)}
-                    </span>
-                  </Button>
-                ))}
-              </div>
-              <Typography variant="body" className="text-content-secondary">
-                {t('project.accentHelp')}
-              </Typography>
-              <ClipDesignSelection
-                projectId={stored.id}
-                draft={draft}
-                onChange={patch}
-                regions={regions}
-              />
-            </div>
-          )}
           <div>
             {stored ? (
               <>
@@ -478,6 +423,99 @@ export function ClipProjectForm({
                 {t('project.durationHelp')}
               </Typography>
             </div>
+          )}
+          {/* Appearance choices stay after duration; phones open them explicitly.
+              The project draft and other inputs remain mounted above this view. */}
+          {!creating && (
+            <Disclosure
+              title={t('project.designChoices')}
+              size="row"
+              open={wide ? designExpanded.desktop : designExpanded.phone}
+              onOpenChange={(open) =>
+                setDesignExpanded((current) => ({
+                  ...current,
+                  [wide ? 'desktop' : 'phone']: open,
+                }))
+              }
+              lead={
+                <Typography variant="body" as="p" className="text-content-secondary break-words">
+                  {t('project.designSummary', {
+                    intro:
+                      regions && !regions.enabled.intro
+                        ? t('project.regionOff')
+                        : t(
+                            `composition.design.intro_${draft.introPreset || CLIP_DEFAULT_REGION_PRESETS.intro}`,
+                          ),
+                    outro:
+                      regions && !regions.enabled.outro
+                        ? t('project.regionOff')
+                        : t(
+                            `composition.design.outro_${draft.outroPreset || CLIP_DEFAULT_REGION_PRESETS.outro}`,
+                          ),
+                    pace: t(`pace.${draft.captionPace || 'steady'}`),
+                    accent: t(`accent.${draft.accent || 'none'}`),
+                    count: draft.allowedCaptionStyles?.length || 1,
+                  })}
+                </Typography>
+              }
+            >
+              <div className="space-y-3">
+                <Typography variant="fieldTitle" as="p">
+                  {t('pace.label')}
+                </Typography>
+                <SegmentedControl
+                  ariaLabel={t('pace.label')}
+                  value={draft.captionPace || 'steady'}
+                  options={[
+                    { value: 'steady' as const, label: t('pace.steady') },
+                    { value: 'rapid' as const, label: t('pace.rapid') },
+                  ]}
+                  onChange={(captionPace) => change('captionPace', captionPace)}
+                />
+                <Typography variant="body" className="text-content-secondary">
+                  {t('pace.help')}
+                </Typography>
+                <Typography variant="fieldTitle" as="p">
+                  {t('project.accent')}
+                </Typography>
+                <div
+                  role="radiogroup"
+                  aria-label={t('project.accent')}
+                  className="flex flex-wrap gap-2"
+                >
+                  {CLIP_ACCENTS.map((value) => (
+                    <Button
+                      key={value || 'none'}
+                      variant={(draft.accent ?? '') === value ? 'secondary' : 'ghost'}
+                      role="radio"
+                      aria-checked={(draft.accent ?? '') === value}
+                      onClick={() => change('accent', value)}
+                    >
+                      <span className="flex items-center gap-2">
+                        {value && (
+                          <span
+                            aria-hidden="true"
+                            className="size-4 rounded-full"
+                            style={{ backgroundColor: CLIP_DESIGN.accent[value] }}
+                          />
+                        )}
+                        {t(`accent.${value || 'none'}`)}
+                      </span>
+                    </Button>
+                  ))}
+                </div>
+                <Typography variant="body" className="text-content-secondary">
+                  {t('project.accentHelp')}
+                </Typography>
+
+                <ClipDesignSelection
+                  projectId={stored.id}
+                  draft={draft}
+                  onChange={patch}
+                  regions={regions}
+                />
+              </div>
+            </Disclosure>
           )}
         </fieldset>
       </form>

@@ -670,7 +670,7 @@ describe('theme preferences in the real route tree', () => {
     window.dispatchEvent(new Event('resize'))
   })
 
-  it('pins login preferences top-right while centring the credential form at every breakpoint', async () => {
+  it('pins login preferences top-right while keeping phone credentials near the top', async () => {
     renderAppAt('/login')
 
     expect(await screen.findByRole('button', { name: '로그인' })).toBeInTheDocument()
@@ -679,7 +679,7 @@ describe('theme preferences in the real route tree', () => {
     const main = preferences.closest('main')
     const form = screen.getByRole('button', { name: '로그인' }).closest('form')
 
-    expect(main).toHaveClass('relative', 'items-center', 'justify-center')
+    expect(main).toHaveClass('relative', 'items-start', 'sm:items-center', 'justify-center')
     expect(preferencesAnchor).toHaveClass('absolute', 'top-4', 'right-4', 'sm:top-6', 'sm:right-6')
     expect(preferences.querySelector('svg')).toHaveClass('size-4')
     expect(form).toHaveClass('w-full')

@@ -30,6 +30,7 @@ describe("the clip's own caption pace and accent", () => {
       user: { id: 'alice' },
       clips: { templates: [template], projects: [project], projectWrites: writes },
     })
+    await user.click(await screen.findByRole('button', { name: '디자인과 자막 스타일' }))
     const pace = await screen.findByRole('tablist', { name: '자막 흐름' })
     expect(within(pace).getByRole('tab', { name: '문장형' })).toHaveAttribute(
       'aria-selected',

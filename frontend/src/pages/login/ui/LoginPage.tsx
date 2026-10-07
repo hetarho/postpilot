@@ -28,7 +28,7 @@ export function LoginPage() {
   }, [navigate, passwordChanged, redirect])
 
   return (
-    <main className="bg-surface-base text-content-primary relative flex min-h-full items-center justify-center px-4 py-10 sm:px-6">
+    <main className="bg-surface-base text-content-primary relative flex min-h-full items-start justify-center px-4 pt-20 pb-6 sm:items-center sm:px-6 sm:py-10">
       {/* Preferences are page chrome, not part of the credential form. Pinning them to the page
           edge keeps the same top-right location at every breakpoint and leaves the form itself
           truly centred. */}

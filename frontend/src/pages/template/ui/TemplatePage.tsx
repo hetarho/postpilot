@@ -100,9 +100,11 @@ function TemplateAuthoringPage({
     name: stored?.name ?? t('page.new', { ns: 'templates' }),
   }
   return (
-    <main className={pageStyles({ width: 'board', className: 'flex flex-1 flex-col py-8' })}>
+    <main
+      className={pageStyles({ width: 'board', className: 'flex flex-1 flex-col py-4 sm:py-8' })}
+    >
       <BackLink />
-      <Typography variant="title" as="h1" className="text-content-secondary mt-6">
+      <Typography variant="title" as="h1" className="text-content-secondary mt-3 sm:mt-6">
         {named.name}
       </Typography>
       {publication?.outcome && (
@@ -115,17 +117,30 @@ function TemplateAuthoringPage({
         </Typography>
       )}
       {method === null ? (
-        <section className="mt-8">
+        <section className="mt-4 flex flex-col sm:mt-8">
           <Typography variant="stepTitle" as="h2">
-            {t(stored ? 'reviewNamed' : 'screen.chooseCreation', {
-              ns: stored ? 'authoring' : 'templates',
-              ...named,
-            })}
+            {stored ? (
+              <>
+                <span className="sm:hidden">{t('screen.reviewKind', { ns: 'templates' })}</span>
+                <span className="hidden sm:inline">
+                  {t('reviewNamed', { ns: 'authoring', ...named })}
+                </span>
+              </>
+            ) : (
+              t('screen.chooseCreation', { ns: 'templates' })
+            )}
           </Typography>
-          <Typography variant="body" className="text-content-secondary mt-4">
-            {stored
-              ? t('savedUsable', { ns: 'authoring', ...named })
-              : t('screen.unsaved', { ns: 'templates' })}
+          <Typography variant="body" className="text-content-secondary mt-2 sm:mt-4">
+            {stored ? (
+              <>
+                <span className="sm:hidden">{t('screen.savedAvailable', { ns: 'templates' })}</span>
+                <span className="hidden sm:inline">
+                  {t('savedUsable', { ns: 'authoring', ...named })}
+                </span>
+              </>
+            ) : (
+              t('screen.unsaved', { ns: 'templates' })
+            )}
           </Typography>
           {summaries.isPending && (
             <Typography variant="body" role="status" className="mt-4">
@@ -165,7 +180,7 @@ function TemplateAuthoringPage({
             </div>
           )}
           {stored && (
-            <div className="mt-6">
+            <div className="order-2 mt-4 sm:order-none sm:mt-6">
               <TemplatePreview titleArea={stored.titleArea} body={stored.body} />
             </div>
           )}
@@ -193,8 +208,9 @@ function TemplateAuthoringPage({
               </Button>
             </div>
           )}
-          <div className="mt-8 flex flex-wrap gap-4">
+          <div className="order-1 mt-4 flex flex-wrap gap-2 sm:order-none sm:mt-8 sm:gap-4">
             <Button
+              aria-label={stored ? t('aiNamed', { ns: 'authoring', ...named }) : undefined}
               variant="secondary"
               disabled={!!sample && (!reference || tooLong)}
               onClick={() => {
@@ -202,11 +218,19 @@ function TemplateAuthoringPage({
                 setMethod('ai')
               }}
             >
-              {stored
-                ? t('aiNamed', { ns: 'authoring', ...named })
-                : t('screen.createAI', { ns: 'templates' })}
+              {stored ? (
+                <>
+                  <span className="sm:hidden">{t('screen.editAI', { ns: 'templates' })}</span>
+                  <span className="hidden sm:inline">
+                    {t('aiNamed', { ns: 'authoring', ...named })}
+                  </span>
+                </>
+              ) : (
+                t('screen.createAI', { ns: 'templates' })
+              )}
             </Button>
             <Button
+              aria-label={stored ? t('directNamed', { ns: 'authoring', ...named }) : undefined}
               variant="secondary"
               disabled={!!sample && (!reference || tooLong)}
               onClick={() => {
@@ -214,9 +238,16 @@ function TemplateAuthoringPage({
                 setMethod('direct')
               }}
             >
-              {stored
-                ? t('directNamed', { ns: 'authoring', ...named })
-                : t('host.manual', { ns: 'authoring' })}
+              {stored ? (
+                <>
+                  <span className="sm:hidden">{t('screen.editDirect', { ns: 'templates' })}</span>
+                  <span className="hidden sm:inline">
+                    {t('directNamed', { ns: 'authoring', ...named })}
+                  </span>
+                </>
+              ) : (
+                t('host.manual', { ns: 'authoring' })
+              )}
             </Button>
             {summary &&
               (summary.hasUnpublishedChanges ||

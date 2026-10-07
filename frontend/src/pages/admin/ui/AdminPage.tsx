@@ -20,13 +20,13 @@ export function AdminPage() {
   const { user } = useSession()
 
   return (
-    <section className="mt-8">
+    <section className="mt-6 sm:mt-8">
       <Typography variant="body" className="text-content-secondary max-w-measure">
         {t('admin.description')}
       </Typography>
 
       {isError && (
-        <Notice tone="danger" role="alert" className="mt-8">
+        <Notice tone="danger" role="alert" className="mt-6 sm:mt-8">
           {t('admin.loadFailed')}
         </Notice>
       )}
@@ -42,7 +42,7 @@ export function AdminPage() {
       )}
 
       {!isError && !isPending && accounts.length > 0 && (
-        <ul className="mt-8 grid gap-4">
+        <ul className="mt-6 grid gap-4 sm:mt-8">
           {accounts.map((account) => (
             // A row per account rather than a table: at 320px a three-column table would either
             // scroll sideways or crush the id, and each row is one unit anyway (THEME-13).

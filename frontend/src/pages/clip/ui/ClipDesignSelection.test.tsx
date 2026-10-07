@@ -61,6 +61,9 @@ describe('① chooses the design, the caption styles and an optional template', 
       user: { id: 'alice' },
       clips: { templates: [template], projects: [project], regionSampleLabels: labels },
     })
+    await userEvent
+      .setup()
+      .click(await screen.findByRole('button', { name: '디자인과 자막 스타일' }))
     const intro = await screen.findByRole('radiogroup', { name: '인트로 디자인' })
     const outro = screen.getByRole('radiogroup', { name: '아웃트로 디자인' })
     // Every preset of each region is offered (CLIP-111, CDS-70).
@@ -100,6 +103,9 @@ describe('① chooses the design, the caption styles and an optional template', 
         regionSamplesFail: true,
       },
     })
+    await userEvent
+      .setup()
+      .click(await screen.findByRole('button', { name: '디자인과 자막 스타일' }))
     const intro = await screen.findByRole('radiogroup', { name: '인트로 디자인' })
     expect(intro.querySelector('svg')).not.toBeInTheDocument()
     await user.click(within(intro).getByRole('radio', { name: '매거진 커버' }))
@@ -118,6 +124,9 @@ describe('① chooses the design, the caption styles and an optional template', 
         sequenceStyles: ['word-pop'],
       },
     })
+    await userEvent
+      .setup()
+      .click(await screen.findByRole('button', { name: '디자인과 자막 스타일' }))
     const styles = await screen.findByRole('group', { name: '자막 스타일' })
     // An empty selection is not "unset": it reads as the default style alone.
     expect(screen.getByText('아무것도 고르지 않으면 크게 강조 하나만 써요.')).toBeInTheDocument()
@@ -141,6 +150,9 @@ describe('① chooses the design, the caption styles and an optional template', 
       user: { id: 'alice' },
       clips: { templates: [template], projects: [project], projectWrites: writes },
     })
+    await userEvent
+      .setup()
+      .click(await screen.findByRole('button', { name: '디자인과 자막 스타일' }))
     const intro = await screen.findByRole('radiogroup', { name: '인트로 디자인' })
     await user.click(within(intro).getByRole('radio', { name: 'A 크기만' }))
     await waitFor(() => expect(writes.at(-1)?.introPreset).toBe('a'), { timeout: 4000 })
@@ -180,6 +192,9 @@ describe('① chooses the design, the caption styles and an optional template', 
       user: { id: 'alice' },
       clips: { templates: [designed], projects: [project], projectWrites: writes },
     })
+    await userEvent
+      .setup()
+      .click(await screen.findByRole('button', { name: '디자인과 자막 스타일' }))
     const outro = await screen.findByRole('radiogroup', { name: '아웃트로 디자인' })
     await user.click(within(outro).getByRole('radio', { name: '원형 도장' }))
     await waitFor(() => expect(writes.at(-1)?.outroPreset).toBe('stamp'), { timeout: 4000 })
@@ -242,3 +257,45 @@ describe('① chooses the design, the caption styles and an optional template', 
 })
 
 vi.mock('@/entities/clip-preview/ui/useLocalSamples', () => localSamplesForControls)
+
+it('opens the phone gallery explicitly and retains the selected design and current request when closed', async () => {
+  const user = userEvent.setup()
+  const writes: ClipProjectDraft[] = []
+  const calls: string[] = []
+  renderAppAt('/clips/project', {
+    user: { id: 'alice' },
+    calls,
+    clips: { templates: [template], projects: [project], projectWrites: writes, calls },
+  })
+  const toggle = await screen.findByRole('button', { name: '디자인과 자막 스타일' })
+  expect(toggle).toHaveAttribute('aria-expanded', 'false')
+  expect(screen.queryByRole('radiogroup', { name: '인트로 디자인' })).not.toBeInTheDocument()
+  expect(
+    screen.getByText(/인트로 B 위아래 가로선.*아웃트로 E 점수 강조.*자막 스타일 1종/),
+  ).toBeInTheDocument()
+  const request = screen.getByLabelText('클립에 담고 싶은 내용 (선택)')
+  await user.type(request, '모바일에서 입력하던 요청')
+  await user.click(toggle)
+  await user.click(
+    within(screen.getByRole('radiogroup', { name: '인트로 디자인' })).getByRole('radio', {
+      name: 'A 크기만',
+    }),
+  )
+  await user.click(toggle)
+  expect(request).toHaveValue('모바일에서 입력하던 요청')
+  expect(screen.getByText(/인트로 A 크기만.*아웃트로 E 점수 강조/)).toBeInTheDocument()
+  await user.click(toggle)
+  expect(
+    within(screen.getByRole('radiogroup', { name: '인트로 디자인' })).getByRole('radio', {
+      name: 'A 크기만',
+    }),
+  ).toHaveAttribute('aria-checked', 'true')
+  await waitFor(() =>
+    expect(
+      writes.some(
+        (write) => write.introPreset === 'a' && write.instruction === '모바일에서 입력하던 요청',
+      ),
+    ).toBe(true),
+  )
+  expect(calls.some((name) => name.startsWith('Start'))).toBe(false)
+})

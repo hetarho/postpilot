@@ -112,11 +112,8 @@ export function ModelCatalogManager({
   }
 
   return (
-    <section className="mt-8">
+    <section className="mt-4 sm:mt-8">
       <Typography variant="title">{t('catalog.title')}</Typography>
-      <Typography variant="body" className="text-content-secondary max-w-measure mt-2">
-        {t('catalog.description')}
-      </Typography>
       {/* Stated once, before anything is pressed, rather than repeated on every row: unchecking a
           model clears it out of the selections of everyone who had chosen it. */}
       <Typography variant="body" className="text-content-tertiary max-w-measure mt-1">
@@ -143,7 +140,7 @@ export function ModelCatalogManager({
         onChange={chooseTab}
         ariaLabel={t('catalog.purposeAria')}
         controls={panelId}
-        className="mt-6"
+        className="mt-4 sm:mt-6"
       />
 
       {tab === 'speech' ? (
@@ -154,7 +151,7 @@ export function ModelCatalogManager({
         // The sets are not a purpose: no capability gate, no search or filters, no provider
         // refresh. What they share with the purposes is the one 일괄 편집 document.
         <div id={panelId} role="tabpanel">
-          <div className="mt-6">
+          <div className="mt-4 sm:mt-6">
             <Button variant="secondary" onClick={openDocument}>
               {t('document.title')}
             </Button>
@@ -251,6 +248,10 @@ export function ModelCatalogManager({
               ))}
             </div>
           </div>
+
+          <Typography variant="body" className="text-content-secondary max-w-measure mt-3">
+            {t('catalog.description')}
+          </Typography>
 
           <div className="mt-6 flex flex-wrap items-center gap-3">
             <Button variant="secondary" onClick={refresh.refresh} pending={refresh.isPending}>

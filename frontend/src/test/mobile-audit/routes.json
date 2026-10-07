@@ -1,0 +1,798 @@
+{
+  "/login": {
+    "heading": "로그인",
+    "expectedPath": "/login",
+    "expectedLeaf": "/login",
+    "sourceReview": {
+      "source": "frontend/src/pages/login/ui/LoginPage.tsx",
+      "status": "changed",
+      "finding": "Phone form starts at top; Google and email actions remain named.",
+      "inspectedStates": ["input", "loading", "failure"]
+    }
+  },
+  "/signup": {
+    "heading": "회원가입",
+    "expectedPath": "/signup",
+    "expectedLeaf": "/signup",
+    "sourceReview": {
+      "source": "frontend/src/pages/signup/ui/SignupPage.tsx",
+      "status": "changed",
+      "finding": "Phone form starts at top; password hints and consent remain in flow.",
+      "inspectedStates": ["input", "loading", "failure"]
+    }
+  },
+  "/login/google/callback": {
+    "heading": "Google 로그인을 완료하지 못했어요",
+    "expectedPath": "/login/google/callback",
+    "expectedLeaf": "/login/google/callback",
+    "sourceReview": {
+      "source": "frontend/src/pages/google-sign-in-callback/ui/GoogleSignInCallbackPage.tsx",
+      "status": "checked",
+      "finding": "Expected rejected callback shows named error and login return; provider exchange is fixture only.",
+      "inspectedStates": ["populated", "loading", "failure"]
+    }
+  },
+  "/verify-email": {
+    "heading": "이메일 인증 완료",
+    "expectedPath": "/verify-email",
+    "expectedLeaf": "/verify-email",
+    "sourceReview": {
+      "source": "frontend/src/pages/verify-email/ui/VerifyEmailPage.tsx",
+      "status": "changed",
+      "finding": "Top anchor keeps recovery email input ahead of unused vertical centering.",
+      "inspectedStates": ["populated", "loading", "failure"]
+    }
+  },
+  "/forgot-password": {
+    "heading": "비밀번호 찾기",
+    "expectedPath": "/forgot-password",
+    "expectedLeaf": "/forgot-password",
+    "sourceReview": {
+      "source": "frontend/src/pages/forgot-password/ui/ForgotPasswordPage.tsx",
+      "status": "changed",
+      "finding": "Phone reset request is top anchored and retains confirmation state.",
+      "inspectedStates": ["input", "loading", "failure"]
+    }
+  },
+  "/reset-password": {
+    "heading": "새 비밀번호 설정",
+    "expectedPath": "/reset-password",
+    "expectedLeaf": "/reset-password",
+    "sourceReview": {
+      "source": "frontend/src/pages/reset-password/ui/ResetPasswordPage.tsx",
+      "status": "changed",
+      "finding": "Top anchored password form; valid token and invalid-link retry are distinct states.",
+      "inspectedStates": ["input", "loading", "failure"]
+    }
+  },
+  "/gift/gift": {
+    "heading": "1150 크레딧",
+    "expectedPath": "/gift/gift",
+    "expectedLeaf": "/gift/$token",
+    "sourceReview": {
+      "source": "frontend/src/pages/gift/ui/GiftPage.tsx",
+      "status": "checked",
+      "finding": "A short centered gift confirmation has no authoring input; validity and credit amount stay visible.",
+      "inspectedStates": ["populated", "loading", "failure"]
+    }
+  },
+  "/about": {
+    "heading": "사진과 메모를 내 말투의 블로그 초안으로",
+    "expectedPath": "/about",
+    "expectedLeaf": "/about",
+    "sourceReview": {
+      "source": "frontend/src/pages/about/ui/AboutPage.tsx",
+      "status": "checked",
+      "finding": "Long marketing text and plan comparison are intentionally readable content, not a pre-input stack.",
+      "inspectedStates": ["populated", "loading", "failure"]
+    }
+  },
+  "/": {
+    "heading": "당신의 이야기를,새로운 작품으로.",
+    "expectedPath": "/",
+    "expectedLeaf": "/authenticated/",
+    "sourceReview": {
+      "source": "frontend/src/pages/home/ui/HomePage.tsx",
+      "status": "changed",
+      "finding": "Phone choices are shorter rows with horizontal icons; retain both post and clip destinations.",
+      "inspectedStates": ["populated", "loading", "failure"]
+    }
+  },
+  "/library": {
+    "heading": "작업 내역",
+    "expectedPath": "/library",
+    "expectedLeaf": "/authenticated/library",
+    "sourceReview": {
+      "source": "frontend/src/pages/library/ui/LibraryPage.tsx",
+      "status": "checked",
+      "finding": "Two existing horizontal destination rows are already compact.",
+      "inspectedStates": ["populated", "loading", "failure"]
+    }
+  },
+  "/settings": {
+    "heading": "설정",
+    "expectedPath": "/settings",
+    "expectedLeaf": "/authenticated/settings",
+    "sourceReview": {
+      "source": "frontend/src/pages/settings/ui/SettingsPage.tsx",
+      "status": "changed",
+      "finding": "Group links use two columns on phones, single-column groups on desktop; every destination retained.",
+      "inspectedStates": ["populated", "loading", "failure"]
+    }
+  },
+  "/setup": {
+    "heading": "처음 한 번, 나답게 준비해요.",
+    "expectedPath": "/setup",
+    "expectedLeaf": "/authenticated/setup",
+    "sourceReview": {
+      "source": "frontend/src/pages/setup/ui/SetupPage.tsx",
+      "status": "checked",
+      "finding": "Shell/question compression belongs to T650; this fixture checks the initial setup only.",
+      "inspectedStates": ["populated", "loading", "failure"]
+    }
+  },
+  "/tests": {
+    "heading": "글쓰기 테스트",
+    "expectedPath": "/tests",
+    "expectedLeaf": "/authenticated/tests",
+    "sourceReview": {
+      "source": "frontend/src/pages/writing-tests/ui/WritingTestsPage.tsx",
+      "status": "changed",
+      "finding": "Factor peers use2x2 compact choices with one help paragraph. Prior T649 candidate baseline2/4/8/16 measured800/850/1202/1906px at390:16 selectors remain one phone column (44px each), while48px Next dock remains732px; handoff asks coordinator to compact current T649 slot presentation without touching behavior.",
+      "inspectedStates": ["populated", "loading", "failure"]
+    }
+  },
+  "/tests/history": {
+    "heading": "테스트 기록",
+    "expectedPath": "/tests/history",
+    "expectedLeaf": "/authenticated/tests/history",
+    "sourceReview": {
+      "source": "frontend/src/pages/writing-tests/ui/WritingTestsPage.tsx",
+      "status": "changed",
+      "finding": "Page heading is shown once; history remains terminal/paginated and row based.",
+      "inspectedStates": [
+        "populated",
+        "loading",
+        "failure",
+        "empty",
+        "list",
+        "working",
+        "terminal-result"
+      ]
+    }
+  },
+  "/tests/records/record": {
+    "heading": "이전 유료 비교 기록",
+    "expectedPath": "/tests/records/record",
+    "expectedLeaf": "/authenticated/tests/records/$id",
+    "sourceReview": {
+      "source": "frontend/src/pages/model-experiment/ui/WritingTestRecordPage.tsx",
+      "status": "checked",
+      "finding": "Legacy result keeps contextual return and one comparison surface.",
+      "inspectedStates": ["populated", "loading", "failure"]
+    }
+  },
+  "/tests/test": {
+    "heading": "글쓰기 테스트",
+    "expectedPath": "/tests/test",
+    "expectedLeaf": "/authenticated/tests/$testId",
+    "sourceReview": {
+      "source": "frontend/src/pages/writing-tests/ui/WritingTestsPage.tsx",
+      "status": "changed",
+      "finding": "One complete candidate panel is required context for a comparison; current test operation and failure states checked.",
+      "inspectedStates": ["populated", "loading", "failure"]
+    }
+  },
+  "/posts": {
+    "heading": "글 작업 내역",
+    "expectedPath": "/posts",
+    "expectedLeaf": "/authenticated/writing/posts",
+    "sourceReview": {
+      "source": "frontend/src/pages/posts/ui/PostsPage.tsx",
+      "status": "checked",
+      "finding": "Search precedes row list; pending/failed job chips remain named and full-width text wraps.",
+      "inspectedStates": [
+        "populated",
+        "loading",
+        "failure",
+        "empty",
+        "list",
+        "working",
+        "terminal-result"
+      ]
+    }
+  },
+  "/posts/new": {
+    "heading": "제목",
+    "expectedPath": "/posts/new",
+    "expectedLeaf": "/authenticated/writing/posts/new",
+    "sourceReview": {
+      "source": "frontend/src/pages/editor/ui/EditorPage.tsx",
+      "status": "changed",
+      "finding": "Draft title is available before optional generation fields; no duplicated create page title.",
+      "inspectedStates": ["input", "loading", "failure"]
+    }
+  },
+  "/posts/experiments/record": {
+    "heading": "이전 유료 비교 기록",
+    "expectedPath": "/tests/records/record",
+    "expectedLeaf": "/authenticated/tests/records/$id",
+    "sourceReview": {
+      "source": "frontend/src/pages/model-experiment/ui/WritingTestRecordPage.tsx",
+      "status": "checked",
+      "finding": "Legacy result keeps contextual return and one comparison surface.",
+      "inspectedStates": ["populated", "loading", "failure"],
+      "redirect": "/tests/records/record"
+    }
+  },
+  "/posts/review": {
+    "heading": "글 다듬기",
+    "expectedPath": "/posts/review",
+    "expectedLeaf": "/authenticated/writing/posts/$slug",
+    "sourceReview": {
+      "source": "frontend/src/pages/editor/ui/EditorPage.tsx",
+      "status": "changed",
+      "finding": "Measurement values use a phone two-column grid and editing gaps shrink; missing-photo error remains required.",
+      "inspectedStates": ["populated", "loading", "failure"]
+    }
+  },
+  "/voices": {
+    "heading": "말투",
+    "expectedPath": "/voices",
+    "expectedLeaf": "/authenticated/writing/voices",
+    "sourceReview": {
+      "source": "frontend/src/pages/voices/ui/VoicesPage.tsx",
+      "status": "checked",
+      "finding": "Rows have name/meta and lifecycle actions in one dock; deleted entries are closed by default.",
+      "inspectedStates": [
+        "populated",
+        "loading",
+        "failure",
+        "empty",
+        "list",
+        "working",
+        "terminal-result"
+      ]
+    }
+  },
+  "/templates": {
+    "heading": "템플릿",
+    "expectedPath": "/templates",
+    "expectedLeaf": "/authenticated/writing/templates",
+    "sourceReview": {
+      "source": "frontend/src/pages/templates/ui/TemplatesPage.tsx",
+      "status": "checked",
+      "finding": "Saved rows and unfinished work are separated; dock makes creation available without a tall card stack.",
+      "inspectedStates": [
+        "populated",
+        "loading",
+        "failure",
+        "empty",
+        "list",
+        "working",
+        "terminal-result"
+      ]
+    }
+  },
+  "/templates/new": {
+    "heading": "새 템플릿",
+    "expectedPath": "/templates/new",
+    "expectedLeaf": "/authenticated/writing/templates/new",
+    "sourceReview": {
+      "source": "frontend/src/pages/template/ui/TemplatePage.tsx",
+      "status": "changed",
+      "finding": "Phone heading/method gaps shrink while unsaved usability and reference constraints remain visible.",
+      "inspectedStates": [
+        "input",
+        "loading",
+        "failure",
+        "method-choice",
+        "saved-usable",
+        "unpublished",
+        "AI-working",
+        "publication-pending",
+        "conflict",
+        "direct-editor"
+      ]
+    }
+  },
+  "/templates/template": {
+    "heading": "산책과 일상 경험을 차분하게 정리하는 아주 긴 한국어 구성 이름",
+    "expectedPath": "/templates/template",
+    "expectedLeaf": "/authenticated/writing/templates/$templateId",
+    "sourceReview": {
+      "source": "frontend/src/pages/template/ui/TemplatePage.tsx",
+      "status": "changed",
+      "finding": "Phone name appears once visually; specific kind/usability remain and methods precede stored preview; accessible actions keep exact record name.",
+      "inspectedStates": [
+        "populated",
+        "loading",
+        "failure",
+        "method-choice",
+        "saved-usable",
+        "unpublished",
+        "AI-working",
+        "publication-pending",
+        "conflict",
+        "direct-editor"
+      ]
+    }
+  },
+  "/guidelines": {
+    "heading": "지침",
+    "expectedPath": "/guidelines",
+    "expectedLeaf": "/authenticated/writing/guidelines",
+    "sourceReview": {
+      "source": "frontend/src/pages/guidelines/ui/GuidelinesPage.tsx",
+      "status": "checked",
+      "finding": "Long saved text is in explicitly opened rows; direct/AI methods open a current form.",
+      "inspectedStates": [
+        "populated",
+        "loading",
+        "failure",
+        "empty",
+        "list",
+        "working",
+        "terminal-result"
+      ]
+    }
+  },
+  "/memories": {
+    "heading": "기억",
+    "expectedPath": "/memories",
+    "expectedLeaf": "/authenticated/writing/memories",
+    "sourceReview": {
+      "source": "frontend/src/pages/memories/ui/MemoriesPage.tsx",
+      "status": "checked",
+      "finding": "Create uses a separate sheet with text first; expanded memory retains kind/tags and errors.",
+      "inspectedStates": [
+        "populated",
+        "loading",
+        "failure",
+        "empty",
+        "list",
+        "working",
+        "terminal-result"
+      ]
+    }
+  },
+  "/voices/voice-default": {
+    "heading": "나의 말투",
+    "expectedPath": "/voices/voice-default",
+    "expectedLeaf": "/authenticated/writing/voices/$voiceId/",
+    "sourceReview": {
+      "source": "frontend/src/pages/voice/ui/VoiceAnalysisPage.tsx",
+      "status": "checked",
+      "finding": "Saved analysis and current AI editing presentation belong to T651; baseline saved profile is populated.",
+      "inspectedStates": ["populated", "loading", "failure"]
+    }
+  },
+  "/voices/voice-default/materials": {
+    "heading": "나의 말투",
+    "expectedPath": "/voices/voice-default/materials",
+    "expectedLeaf": "/authenticated/writing/voices/$voiceId/materials",
+    "sourceReview": {
+      "source": "frontend/src/pages/voice/ui/VoiceMaterialsPage.tsx",
+      "status": "checked",
+      "finding": "Samples/count actions are row based; current voice heading shell belongs to T651.",
+      "inspectedStates": ["populated", "loading", "failure"]
+    }
+  },
+  "/clips": {
+    "heading": "클립 작업 내역",
+    "expectedPath": "/clips",
+    "expectedLeaf": "/authenticated/video/clips",
+    "sourceReview": {
+      "source": "frontend/src/pages/clips/ui/ClipsPage.tsx",
+      "status": "checked",
+      "finding": "Search precedes row list; running/failed project indicators are distinct from saved result.",
+      "inspectedStates": [
+        "populated",
+        "loading",
+        "failure",
+        "empty",
+        "list",
+        "working",
+        "terminal-result"
+      ]
+    }
+  },
+  "/voices/voice-default/checks": {
+    "heading": "테스트 기록",
+    "expectedPath": "/tests/history",
+    "expectedLeaf": "/authenticated/tests/history",
+    "sourceReview": {
+      "source": "frontend/src/pages/writing-tests/ui/WritingTestsPage.tsx",
+      "status": "changed",
+      "finding": "Page heading is shown once; history remains terminal/paginated and row based.",
+      "inspectedStates": [
+        "populated",
+        "loading",
+        "failure",
+        "empty",
+        "list",
+        "working",
+        "terminal-result"
+      ],
+      "redirect": "/tests/history"
+    }
+  },
+  "/spoken-voices": {
+    "heading": "내 목소리",
+    "expectedPath": "/spoken-voices",
+    "expectedLeaf": "/authenticated/video/spoken-voices",
+    "sourceReview": {
+      "source": "frontend/src/pages/spoken-voices/ui/SpokenVoicesPage.tsx",
+      "status": "checked",
+      "finding": "Confirmed voice metadata/actions and draft returns are row based; audio retrieval remains private fixture unavailable.",
+      "inspectedStates": [
+        "populated",
+        "loading",
+        "failure",
+        "empty",
+        "list",
+        "working",
+        "terminal-result"
+      ]
+    }
+  },
+  "/spoken-voices/new": {
+    "heading": "목소리 만들기",
+    "expectedPath": "/spoken-voices/new",
+    "expectedLeaf": "/authenticated/video/spoken-voices/new",
+    "sourceReview": {
+      "source": "frontend/src/pages/spoken-voices/ui/NewSpokenVoicePage.tsx",
+      "status": "checked",
+      "finding": "Voice creation names profile/description/current work; generated candidate/confirmation capabilities are fixture only.",
+      "inspectedStates": ["input", "loading", "failure"]
+    }
+  },
+  "/clips/review": {
+    "expectedPath": "/clips/review",
+    "expectedLeaf": "/authenticated/video/clips/$clipId",
+    "sourceReview": {
+      "source": "frontend/src/pages/clip/ui/ClipPage.tsx",
+      "status": "checked",
+      "finding": "Phone design gallery was6467px open; explicit design/styles disclosure retains the visible selected-setting summary, desktop starts expanded and can close independently; preserved title/caret/design at keyboard and desktop widths. Final saved result, active/failed jobs and private-video capability limits are distinct.",
+      "inspectedStates": ["populated", "loading", "failure"]
+    },
+    "body": "공원과 카페를 방문한 산책 하루의 아주 긴 한국어 영상 제목",
+    "control": {
+      "role": "tab",
+      "name": "수정"
+    }
+  },
+  "/video-templates/new": {
+    "heading": "새 영상 템플릿",
+    "expectedPath": "/video-templates/new",
+    "expectedLeaf": "/authenticated/video/video-templates/new",
+    "sourceReview": {
+      "source": "frontend/src/pages/video-template/ui/VideoTemplatePage.tsx",
+      "status": "changed",
+      "finding": "Compact phone method selection retains video-template kind and unsaved usability.",
+      "inspectedStates": [
+        "input",
+        "loading",
+        "failure",
+        "method-choice",
+        "saved-usable",
+        "unpublished",
+        "AI-working",
+        "publication-pending",
+        "conflict",
+        "direct-editor"
+      ]
+    }
+  },
+  "/video-templates": {
+    "heading": "영상 템플릿",
+    "expectedPath": "/video-templates",
+    "expectedLeaf": "/authenticated/video/video-templates",
+    "sourceReview": {
+      "source": "frontend/src/pages/video-templates/ui/VideoTemplatesPage.tsx",
+      "status": "checked",
+      "finding": "Saved/draft rows and one creation dock match post template directory.",
+      "inspectedStates": [
+        "populated",
+        "loading",
+        "failure",
+        "empty",
+        "list",
+        "working",
+        "terminal-result"
+      ]
+    }
+  },
+  "/video-templates/video-template": {
+    "heading": "영상 구성",
+    "expectedPath": "/video-templates/video-template",
+    "expectedLeaf": "/authenticated/video/video-templates/$templateId",
+    "sourceReview": {
+      "source": "frontend/src/pages/video-template/ui/VideoTemplatePage.tsx",
+      "status": "changed",
+      "finding": "Phone exact name is shown once; editing methods precede preview with named accessible actions; design editing stays reachable.",
+      "inspectedStates": [
+        "populated",
+        "loading",
+        "failure",
+        "method-choice",
+        "saved-usable",
+        "unpublished",
+        "AI-working",
+        "publication-pending",
+        "conflict",
+        "direct-editor"
+      ]
+    }
+  },
+  "/video-guidelines": {
+    "heading": "영상 지침",
+    "expectedPath": "/video-guidelines",
+    "expectedLeaf": "/authenticated/video/video-guidelines",
+    "sourceReview": {
+      "source": "frontend/src/pages/video-guidelines/ui/VideoGuidelinesPage.tsx",
+      "status": "checked",
+      "finding": "Same disclosure-based directory composition as post guidelines; scopes preserved.",
+      "inspectedStates": [
+        "populated",
+        "loading",
+        "failure",
+        "empty",
+        "list",
+        "working",
+        "terminal-result"
+      ]
+    }
+  },
+  "/publishing-agents": {
+    "heading": "글 작업 내역",
+    "expectedPath": "/posts",
+    "expectedLeaf": "/authenticated/writing/posts",
+    "sourceReview": {
+      "source": "frontend/src/pages/posts/ui/PostsPage.tsx",
+      "status": "checked",
+      "finding": "Search precedes row list; pending/failed job chips remain named and full-width text wraps.",
+      "inspectedStates": [
+        "populated",
+        "loading",
+        "failure",
+        "empty",
+        "list",
+        "working",
+        "terminal-result"
+      ],
+      "redirect": "/posts"
+    }
+  },
+  "/admin": {
+    "heading": "운영 관리",
+    "expectedPath": "/admin",
+    "expectedLeaf": "/authenticated/admin/",
+    "sourceReview": {
+      "source": "frontend/src/pages/admin/ui/AdminPage.tsx",
+      "status": "changed",
+      "finding": "Shorter phone section gaps retain account rows, self-assignment constraint and refund review.",
+      "inspectedStates": ["populated", "loading", "failure"]
+    }
+  },
+  "/admin/models": {
+    "heading": "운영 관리",
+    "expectedPath": "/admin/models",
+    "expectedLeaf": "/authenticated/admin/models",
+    "sourceReview": {
+      "source": "frontend/src/pages/admin/ui/AdminModelsPage.tsx",
+      "status": "changed",
+      "finding": "Search/filter group precedes long catalog intro; disabling consequence remains before controls; catalog document gaps compact.",
+      "inspectedStates": ["populated", "loading", "failure"]
+    }
+  },
+  "/admin/estimator": {
+    "heading": "운영 관리",
+    "expectedPath": "/admin/estimator",
+    "expectedLeaf": "/authenticated/admin/estimator",
+    "sourceReview": {
+      "source": "frontend/src/pages/admin/ui/AdminEstimatorPage.tsx",
+      "status": "changed",
+      "finding": "Each tier pairs observer/writer selectors horizontally even at320px; labels/half-selection constraints retained.",
+      "inspectedStates": ["populated", "loading", "failure"]
+    }
+  },
+  "/admin/vouchers": {
+    "heading": "운영 관리",
+    "expectedPath": "/admin/vouchers",
+    "expectedLeaf": "/authenticated/admin/vouchers",
+    "sourceReview": {
+      "source": "frontend/src/pages/admin/ui/AdminVouchersPage.tsx",
+      "status": "changed",
+      "finding": "Five named presets plus custom mode use one listbox, custom quantities pair into two columns, all issue validation retained.",
+      "inspectedStates": ["populated", "loading", "failure"]
+    }
+  },
+  "/admin/costs": {
+    "heading": "운영 관리",
+    "expectedPath": "/admin/costs",
+    "expectedLeaf": "/authenticated/admin/costs",
+    "sourceReview": {
+      "source": "frontend/src/pages/admin/ui/AdminCostsPage.tsx",
+      "status": "changed",
+      "finding": "Smaller phone section gaps retain exchange-rate and measured/unavailable cost quality.",
+      "inspectedStates": ["populated", "loading", "failure"]
+    }
+  },
+  "/billing": {
+    "heading": "결제 관리",
+    "expectedPath": "/billing",
+    "expectedLeaf": "/authenticated/billing",
+    "sourceReview": {
+      "source": "frontend/src/pages/billing/ui/BillingPage.tsx",
+      "status": "changed",
+      "finding": "Smaller phone section gaps; subscription/payment/history still precede optional purchase/refund forms by financial context.",
+      "inspectedStates": ["populated", "loading", "failure"]
+    }
+  },
+  "/plans": {
+    "heading": "기록은 더 많이.가능성은 더 넓게.",
+    "expectedPath": "/plans",
+    "expectedLeaf": "/authenticated/plans",
+    "sourceReview": {
+      "source": "frontend/src/pages/plans/ui/PlansPage.tsx",
+      "status": "checked",
+      "finding": "Pricing ladder/comparison is required long content; responsive promo dimensions and compact phone heading already exist.",
+      "inspectedStates": ["populated", "loading", "failure"]
+    }
+  },
+  "/billing/checkout": {
+    "heading": "구독 시작",
+    "expectedPath": "/billing/checkout",
+    "expectedLeaf": "/authenticated/billing/checkout",
+    "sourceReview": {
+      "source": "frontend/src/pages/billing-checkout/ui/BillingCheckoutPage.tsx",
+      "status": "changed",
+      "finding": "Shorter phone gaps retain tier, term, server quote and committing action; absent/invalid tier is separate from valid quote.",
+      "inspectedStates": ["populated", "loading", "failure"]
+    }
+  },
+  "/billing/method/success": {
+    "heading": "카드 등록",
+    "expectedPath": "/billing/method/success",
+    "expectedLeaf": "/authenticated/billing/method/success",
+    "sourceReview": {
+      "source": "frontend/src/pages/billing-method-success/ui/BillingMethodSuccessPage.tsx",
+      "status": "checked",
+      "finding": "Absent provider keys intentionally render registration error/return; valid fixture mutation redirects to billing.",
+      "inspectedStates": ["populated", "loading", "failure"]
+    }
+  },
+  "/billing/method/fail": {
+    "heading": "카드 등록",
+    "expectedPath": "/billing/method/fail",
+    "expectedLeaf": "/authenticated/billing/method/fail",
+    "sourceReview": {
+      "source": "frontend/src/pages/billing-method-fail/ui/BillingMethodFailPage.tsx",
+      "status": "checked",
+      "finding": "Named provider failure/technical detail and valid internal return remain readable.",
+      "inspectedStates": ["populated", "loading", "failure"]
+    }
+  },
+  "/account": {
+    "heading": "계정 설정",
+    "expectedPath": "/account",
+    "expectedLeaf": "/authenticated/account",
+    "sourceReview": {
+      "source": "frontend/src/pages/account/ui/AccountPage.tsx",
+      "status": "changed",
+      "finding": "Smaller phone section gaps keep account facts and current/new password form together.",
+      "inspectedStates": ["input", "loading", "failure"]
+    }
+  },
+  "/voice": {
+    "heading": "나의 말투",
+    "expectedPath": "/voices/voice-default",
+    "expectedLeaf": "/authenticated/writing/voices/$voiceId/",
+    "sourceReview": {
+      "source": "frontend/src/pages/voice/ui/VoiceAnalysisPage.tsx",
+      "status": "checked",
+      "finding": "Saved analysis and current AI editing presentation belong to T651; baseline saved profile is populated.",
+      "inspectedStates": ["populated", "loading", "failure"],
+      "redirect": "/voices/voice-default"
+    }
+  },
+  "/voice/materials": {
+    "heading": "나의 말투",
+    "expectedPath": "/voices/voice-default/materials",
+    "expectedLeaf": "/authenticated/writing/voices/$voiceId/materials",
+    "sourceReview": {
+      "source": "frontend/src/pages/voice/ui/VoiceMaterialsPage.tsx",
+      "status": "checked",
+      "finding": "Samples/count actions are row based; current voice heading shell belongs to T651.",
+      "inspectedStates": ["populated", "loading", "failure"],
+      "redirect": "/voices/voice-default/materials"
+    }
+  },
+  "/ai-models/compare": {
+    "heading": "글쓰기 테스트",
+    "expectedPath": "/tests",
+    "expectedLeaf": "/authenticated/tests",
+    "sourceReview": {
+      "source": "frontend/src/pages/writing-tests/ui/WritingTestsPage.tsx",
+      "status": "changed",
+      "finding": "Factor peers use 2x2 compact choices with one shared help paragraph; actors and entrants retained.",
+      "inspectedStates": ["populated", "loading", "failure"],
+      "redirect": "/tests"
+    }
+  },
+  "/ai-models": {
+    "heading": "모델 변경",
+    "expectedPath": "/ai-models",
+    "expectedLeaf": "/authenticated/models/ai-models",
+    "sourceReview": {
+      "source": "frontend/src/pages/ai-models/ui/AIModelsPage.tsx",
+      "status": "changed",
+      "finding": "Smaller phone secondary-section gaps retain three active-stage forms and explicit comparison destinations.",
+      "inspectedStates": ["populated", "loading", "failure"]
+    }
+  },
+  "/ai-models/leaderboard": {
+    "heading": "테스트 기록",
+    "expectedPath": "/tests/history",
+    "expectedLeaf": "/authenticated/tests/history",
+    "sourceReview": {
+      "source": "frontend/src/pages/writing-tests/ui/WritingTestsPage.tsx",
+      "status": "changed",
+      "finding": "Page heading is shown once; history remains terminal/paginated and row based.",
+      "inspectedStates": [
+        "populated",
+        "loading",
+        "failure",
+        "empty",
+        "list",
+        "working",
+        "terminal-result"
+      ],
+      "redirect": "/tests/history"
+    }
+  },
+  "/ai-models/experiments": {
+    "heading": "테스트 기록",
+    "expectedPath": "/tests/history",
+    "expectedLeaf": "/authenticated/tests/history",
+    "sourceReview": {
+      "source": "frontend/src/pages/writing-tests/ui/WritingTestsPage.tsx",
+      "status": "changed",
+      "finding": "Page heading is shown once; history remains terminal/paginated and row based.",
+      "inspectedStates": [
+        "populated",
+        "loading",
+        "failure",
+        "empty",
+        "list",
+        "working",
+        "terminal-result"
+      ],
+      "redirect": "/tests/history"
+    }
+  },
+  "/ai-models/experiments/record": {
+    "heading": "이전 유료 비교 기록",
+    "expectedPath": "/tests/records/record",
+    "expectedLeaf": "/authenticated/tests/records/$id",
+    "sourceReview": {
+      "source": "frontend/src/pages/model-experiment/ui/WritingTestRecordPage.tsx",
+      "status": "checked",
+      "finding": "Legacy result keeps contextual return and one comparison surface.",
+      "inspectedStates": ["populated", "loading", "failure"],
+      "redirect": "/tests/records/record"
+    }
+  },
+  "/clips/new": {
+    "body": "클립 제목",
+    "expectedPath": "/clips/new",
+    "expectedLeaf": "/authenticated/video/clips/new",
+    "sourceReview": {
+      "source": "frontend/src/pages/clip/ui/ClipPage.tsx",
+      "status": "checked",
+      "finding": "Title is first named form field; ratio choice and creation dock remain explicit.",
+      "inspectedStates": ["input", "loading", "failure"]
+    }
+  }
+}
