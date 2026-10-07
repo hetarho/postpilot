@@ -1,9 +1,9 @@
 # EDIT conversational configuration authoring
-> r4 | Private bounded reusable-setting authoring with kind/mode-specific composition, one draft and explicit publication.
+> r5 | Private bounded reusable-setting authoring with kind/mode-specific composition, one draft and explicit publication.
 
 ## decisions
 - EDIT-1 [o] the authoring kinds are post templates, video templates, post guidelines, video guidelines and writing styles; each session fixes one kind and belongs to one authenticated account.
-- EDIT-2 [o] an explicit recommendation request produces the requested2/4/8/16 different valid suggestions from one bounded write-model call; ordinary setting creation defaults to eight and unified tests request their exact entrant count. Freeze the prepared eligible write ref and the count/budgets at admission; never silently reduce a batch.
+- EDIT-2 [o] an explicit recommendation request produces the requested integer count1..16 of different valid suggestions from one bounded write-model call; ordinary setting creation defaults to eight and unified tests request exactly their unassigned setting slots. Freeze the eligible write ref and count/budgets at admission; never silently reduce or round up a batch.
 - EDIT-3 [o] post-template suggestions cover familiar blog structures such as a visit review, travel journal, product review, everyday diary, practical guide, curated list, comparison and information summary; suggestions may adapt these structures to the owner's plain-language request without copying a real blog or inventing owner facts.
 - EDIT-4 [o] choosing a suggestion changes the session's draft only; reading, selecting, previewing, opening and closing create no model work or saved setting.
 - EDIT-5 [o] a sent chat message is one explicit bounded model job using the selected current draft, the session purpose and a bounded recent conversation; its validated response updates the draft and adds a plain-language reply, while the canonical saved setting changes only on explicit Save.
@@ -59,7 +59,7 @@
 - recover: reopen → owner/kind/target session read → pending job progress | prior valid suggestions/draft → continue without automatic model work
 
 ## constraints
-- counts: recommendation count2/4/8/16; user message ≤2000 Unicode characters; twenty completed exchanges; recent model context is bounded independently of stored conversation
+- counts: recommendation count1..16; user message ≤2000 Unicode characters; twenty completed exchanges; recent model context is bounded independently of stored conversation
 - the target domain owns content limits, parsing, account caps, scope, uniqueness, defaulting and lifecycle guards
 - publication must tolerate an interruption between a target-domain commit and its authoring receipt without duplicate settings or later-state reversal
 

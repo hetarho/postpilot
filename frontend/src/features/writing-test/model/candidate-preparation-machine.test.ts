@@ -3,7 +3,8 @@ import { expect, it, vi } from 'vitest'
 import type {
   CandidatePreparationClient,
   PreparedCandidates,
-  TestCount,
+  PreparationCount,
+  TestSettingKind,
 } from '@/entities/writing-test'
 import {
   candidatePreparationMachine,
@@ -20,7 +21,7 @@ const draft: PreparationDraft = {
   writeModel: { providerId: 'p', modelId: 'writer' },
 }
 function session(
-  count: TestCount = 16,
+  count: PreparationCount = 16,
   status: PreparedCandidates['status'] = 'idle',
   changes: Partial<PreparedCandidates> = {},
 ): PreparedCandidates {
@@ -49,7 +50,7 @@ function session(
     ...changes,
   }
 }
-function client(count: TestCount = 16): CandidatePreparationClient {
+function client(count: PreparationCount = 16): CandidatePreparationClient {
   return {
     estimate: vi.fn(async () => ({ free: false, credits: 64 })),
     create: vi.fn(async () => session(count)),
@@ -60,15 +61,20 @@ function client(count: TestCount = 16): CandidatePreparationClient {
 }
 function actor(
   api: CandidatePreparationClient,
-  options: { count?: TestCount; recovery?: PreparationRecovery } = {},
+  options: {
+    count?: PreparationCount
+    recovery?: PreparationRecovery
+    draft?: Partial<PreparationDraft>
+    ownerId?: string
+  } = {},
 ): ActorRefFrom<typeof candidatePreparationMachine> {
   let key = 0
   return createActor(candidatePreparationMachine, {
     input: {
-      ownerId: 'alice',
+      ownerId: options.ownerId ?? 'alice',
       seedKey: 'prepare',
       client: api,
-      draft: { ...draft, count: options.count ?? 16 },
+      draft: { ...draft, count: options.count ?? 16, ...options.draft },
       requestKey: () => `request-${++key}`,
       recovery: options.recovery,
     },
@@ -77,11 +83,13 @@ function actor(
 function recovery(ref: ReturnType<typeof actor>): PreparationRecovery {
   const context = ref.getSnapshot().context
   return {
+    ownerId: context.ownerId,
     draft: context.draft,
     command: context.command,
     pending: context.pending,
     session: context.session,
     estimate: context.estimate,
+    artifacts: context.artifacts,
   }
 }
 async function confirm(ref: ReturnType<typeof actor>) {
@@ -91,7 +99,7 @@ async function confirm(ref: ReturnType<typeof actor>) {
   ref.send({ type: 'CONFIRM', scopeKey })
   ref.send({ type: 'CONFIRM', scopeKey })
 }
-it.each([2, 4, 8, 16] as const)(
+it.each([1, 2, 3, 4, 8, 15, 16] as const)(
   'prepares exactly %i unsaved candidates using separate explicit estimate/confirm and preserves each artifact version',
   async (count) => {
     const api = client(count)
@@ -326,4 +334,199 @@ it('a definite generation refusal permits correcting the unchanged direction/mod
   expect(api.create).toHaveBeenCalledTimes(1)
   expect(api.start).toHaveBeenCalledTimes(1)
   ref.stop()
+})
+
+function readyBatch(
+  count: PreparationCount,
+  sessionId: string,
+  kind: TestSettingKind = 'post-template',
+): PreparedCandidates {
+  const result = session(count, 'ready', { sessionId, kind })
+  result.candidates = result.candidates.map((candidate) => ({
+    ...candidate,
+    body: '<write><ask label="방문 장소" required="true" /></write>',
+    source: { type: 'authoring', authoring: { ...candidate.source.authoring, sessionId } },
+  }))
+  return result
+}
+it('freezes the exact missing-slot mapping and full format, then locks assignments while work is running', async () => {
+  const api = client(3)
+  const partial: PreparationDraft = {
+    ...draft,
+    count: 3,
+    testCount: 4,
+    slotIndices: [1, 2, 3],
+    retainedRefs: [],
+  }
+  const ref = actor(api, { draft: partial })
+  await confirm(ref)
+  await waitFor(ref, (snapshot) => snapshot.matches('running'))
+  expect(ref.getSnapshot().context.command).toMatchObject({
+    count: 3,
+    testCount: 4,
+    slotIndices: [1, 2, 3],
+  })
+  ref.send({ type: 'EDIT', scopeKey, draft: { ...partial, count: 1, slotIndices: [3] } })
+  expect(ref.getSnapshot().context.draft.slotIndices).toEqual([1, 2, 3])
+  ref.send({ type: 'REFRESH', scopeKey })
+  await waitFor(ref, (snapshot) => snapshot.matches('ready'))
+  expect(ref.getSnapshot().context.draft).toMatchObject({
+    count: 3,
+    testCount: 4,
+    slotIndices: [1, 2, 3],
+  })
+  expect(ref.getSnapshot().context.artifacts).toHaveLength(3)
+  ref.stop()
+})
+it('retains referenced template metadata across a changed format, another batch, and read-only recovery', async () => {
+  const first = readyBatch(1, 'first')
+  const existing = first.candidates[0]!
+  const retainedRefs = [existing.source]
+  const initial: PreparationDraft = {
+    ...draft,
+    kind: 'post-template',
+    count: 1,
+    testCount: 2,
+    slotIndices: [1],
+    retainedRefs,
+  }
+  const api = client(3)
+  const next = readyBatch(3, 'second')
+  vi.mocked(api.create).mockResolvedValue({ ...next, status: 'idle', candidates: [], revision: 1 })
+  vi.mocked(api.start).mockResolvedValue({
+    ...next,
+    status: 'running',
+    candidates: [],
+    activeJobId: 'new-job',
+  })
+  vi.mocked(api.get).mockResolvedValue(next)
+  const ref = actor(api, {
+    draft: initial,
+    recovery: { ownerId: 'alice', draft: initial, artifacts: [existing] },
+  })
+  expect(ref.getSnapshot().context.artifacts[0]?.body).toContain('방문 장소')
+  ref.send({
+    type: 'EDIT',
+    scopeKey,
+    draft: { ...initial, count: 3, testCount: 4, slotIndices: [1, 2, 3] },
+  })
+  await confirm(ref)
+  await waitFor(ref, (snapshot) => snapshot.matches('running'))
+  ref.send({ type: 'REFRESH', scopeKey })
+  await waitFor(ref, (snapshot) => snapshot.matches('ready'))
+  expect(ref.getSnapshot().context.artifacts).toHaveLength(4)
+  const allRefs = [existing.source, ...next.candidates.map((candidate) => candidate.source)]
+  ref.send({ type: 'RETAIN', scopeKey, refs: allRefs })
+  const saved = recovery(ref)
+  ref.stop()
+  const resumed = actor(api, {
+    draft: { ...initial, count: 4, testCount: 4, retainedRefs: allRefs, slotIndices: undefined },
+    recovery: saved,
+  })
+  await waitFor(resumed, (snapshot) => snapshot.matches('ready'))
+  expect(resumed.getSnapshot().context.artifacts).toHaveLength(4)
+  expect(
+    resumed
+      .getSnapshot()
+      .context.artifacts.find((candidate) => candidate.source.authoring.sessionId === 'first')
+      ?.body,
+  ).toContain('방문 장소')
+  expect(api.create).toHaveBeenCalledTimes(1)
+  expect(api.start).toHaveBeenCalledTimes(1)
+  resumed.send({
+    type: 'EDIT',
+    scopeKey,
+    draft: {
+      ...initial,
+      count: 1,
+      testCount: 4,
+      slotIndices: [0],
+      retainedRefs: [next.candidates[2]!.source],
+    },
+  })
+  expect(resumed.getSnapshot().context.artifacts).toEqual([next.candidates[2]])
+  resumed.send({
+    type: 'EDIT',
+    scopeKey,
+    draft: { ...draft, count: 1, retainedRefs: [next.candidates[2]!.source] },
+  })
+  expect(resumed.getSnapshot().context.artifacts).toEqual([])
+  resumed.stop()
+})
+it('invalidates a quote when missing slots change and rejects malformed or substituted retained recovery', async () => {
+  const api = client(1)
+  const partial: PreparationDraft = { ...draft, count: 1, testCount: 4, slotIndices: [3] }
+  const ref = actor(api, { draft: partial })
+  ref.send({ type: 'ESTIMATE', scopeKey })
+  await waitFor(ref, (snapshot) => snapshot.matches('quoted'))
+  ref.send({ type: 'EDIT', scopeKey, draft: { ...partial, slotIndices: [1] } })
+  expect(ref.getSnapshot().matches('idle')).toBe(true)
+  expect(ref.getSnapshot().context.estimate).toBeUndefined()
+  ref.send({ type: 'CONFIRM', scopeKey })
+  expect(api.create).not.toHaveBeenCalled()
+  ref.send({ type: 'ESTIMATE', scopeKey })
+  await waitFor(ref, (snapshot) => snapshot.matches('quoted'))
+  ref.send({ type: 'RETAIN', scopeKey, refs: [session(1, 'ready').candidates[0]!.source] })
+  expect(ref.getSnapshot().matches('idle')).toBe(true)
+  expect(ref.getSnapshot().context.estimate).toBeUndefined()
+  ref.stop()
+  for (const invalid of [
+    { ...partial, count: 0 },
+    { ...partial, count: 17 },
+    { ...partial, count: 1.5 },
+    { ...partial, slotIndices: [4] },
+    { ...partial, slotIndices: [-1] },
+    { ...partial, count: 2, slotIndices: [1, 1] },
+    { ...partial, testCount: 3 },
+  ])
+    expect(preparationRecovery({ draft: invalid })).toBeUndefined()
+  const candidate = readyBatch(1, 'retained').candidates[0]!
+  const readyDraft = {
+    ...partial,
+    kind: 'post-template' as const,
+    retainedRefs: [candidate.source],
+  }
+  const valid = { ownerId: 'alice', draft: readyDraft, artifacts: [candidate] }
+  expect(preparationRecovery(valid)?.artifacts).toEqual([candidate])
+  expect(
+    preparationRecovery({
+      ...valid,
+      command: { ...readyDraft, slotIndices: [0], createKey: 'create', startKey: 'start' },
+    }),
+  ).toBeUndefined()
+  expect(
+    preparationRecovery({
+      ...valid,
+      artifacts: [{ ...candidate, revision: candidate.revision + 1 }],
+    }),
+  ).toBeUndefined()
+  expect(
+    preparationRecovery({ ...valid, artifacts: Array.from({ length: 17 }, () => candidate) }),
+  ).toBeUndefined()
+  const substituted = actor(api, { ownerId: 'bob', draft: readyDraft, recovery: valid })
+  expect(substituted.getSnapshot().context.artifacts).toEqual([])
+  expect(substituted.getSnapshot().context.session).toBeUndefined()
+  substituted.stop()
+  const changedKind = actor(api, { draft: partial, recovery: valid })
+  expect(changedKind.getSnapshot().context.artifacts).toEqual([])
+  expect(changedKind.getSnapshot().context.draft.kind).toBe('writing-voice')
+  changedKind.stop()
+  const changedVersion = actor(api, {
+    draft: readyDraft,
+    recovery: {
+      ...valid,
+      artifacts: [
+        {
+          ...candidate,
+          revision: 2,
+          source: {
+            ...candidate.source,
+            authoring: { ...candidate.source.authoring, revision: 2 },
+          },
+        },
+      ],
+    },
+  })
+  expect(changedVersion.getSnapshot().context.artifacts).toEqual([])
+  changedVersion.stop()
 })

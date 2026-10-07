@@ -147,7 +147,7 @@ func (s *Service) freezeInput(state Session, op Operation, start Start, info llm
 }
 func (s *Service) completionCap(in operationInput, chars int, info llm.ModelInfo) int {
 	count := normalizedCount(in.CandidateCount)
-	if in.Mode == Recommend && count == 16 && info.ContextTokens <= 0 {
+	if in.Mode == Recommend && count > CandidateCount && info.ContextTokens <= 0 {
 		return 0
 	}
 	cap := 0
@@ -171,7 +171,7 @@ func (s *Service) completionCap(in operationInput, chars int, info llm.ModelInfo
 			cap = room
 		}
 	}
-	if in.Mode == Recommend && count == 16 && cap < planned {
+	if in.Mode == Recommend && count > CandidateCount && cap < planned {
 		return 0
 	}
 	if cap < 1024 || (in.Mode == Recommend && cap < 512*count) {

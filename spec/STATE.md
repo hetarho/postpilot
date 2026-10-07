@@ -29,9 +29,9 @@
 | AUTH | 15 | 15 | - | 0 |
 | QUOTA | 38 | 38 | - | 0 |
 | POST | 36 | 36 | - | 0 |
-| VOICE | 15 | 15 | - | 0 |
+| VOICE | 16 | 16 | - | 0 |
 | GEN | 26 | 26 | - | 0 |
-| MODEL | 35 | 35 | - | 0 |
+| MODEL | 36 | 36 | - | 0 |
 | TMPL | 25 | 25 | - | 0 |
 | GUIDE | 17 | 17 | - | 0 |
 | EXPORT | 11 | 11 | - | 0 |
@@ -46,7 +46,7 @@
 | QUAL | 8 | 8 | - | 0 |
 | GIFT | 3 | 3 | - | 0 |
 | DUB | 3 | 3 | - | 0 |
-| EDIT | 4 | 4 | - | 0 |
+| EDIT | 5 | 5 | - | 0 |
 | INFRA | 2 | 0 | all | 1 |
 
 ## review
@@ -96,6 +96,7 @@
 - Integrate verified mobile results independently of active main T649/T628; preserve all unrelated edits.
 
 ## log
+- 261008 mobile integration refreshes committed main T649 at051bb0e5; exact-slot preparation remains intact, current THEME32/ARCH20 mobile contracts unchanged, reviews rebind to the updated parent
 - 261007 create-task THEME r32 consumed into T650–T652; explicit parallel authorization overrides sequential execution for this isolated mobile group
 - 261007 update-ssot THEME r32: compact focused setup and phone header location plus app-wide height-aware composition; T648 dock48px contract and active T649/T628 behavior preserved
 - 261007 update-ssot THEME start: mobile height and focused first-use location contracts, parallel work explicitly authorized for this request
@@ -115,4 +116,3 @@
 - 261007 remote backend verification at6a944d1f: full Go tests, format, vet, build and deployment recovery checks pass — https://github.com/hetarho/postpilot/actions/runs/37603125798/job/112732066963
 - 261007 remote deployment at6a944d1f: build and actual rollout/health/browser-CORS/R2-GET steps all pass, none skipped — https://github.com/hetarho/postpilot/actions/runs/37603126041
 - 261007 remote media verification at6a944d1f: image, worker and both-layout release jobs all pass — https://github.com/hetarho/postpilot/actions/runs/37603618318
-- 261007 remote CI frontend failure at6a944d1f: usePostList retained-terminal polling test expected failed but saw running in picker; diagnose real observer/timer ordering before correcting it, preserve both-list refresh and stopped-poll assertions; remote deployment/release/worker gates pass and image/backend checks continue

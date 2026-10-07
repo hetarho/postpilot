@@ -7,13 +7,21 @@ import type {
   TestSettingKind,
   CandidatePreparationStartInput,
   CandidatePreparationReadInput,
+  CandidatePreparationScope,
+  PreparedCandidate,
+  PreparedCandidateRef,
 } from '@/entities/writing-test'
+import { PREPARATION_COUNTS, TEST_COUNTS } from '@/entities/writing-test'
 import { appFailureFromConnect, appFailureSpecs, type AppFailure } from '@/shared/api'
 import { WRITING_TEST_DIRECTION_MAX_CHARS } from '../config'
 
 export interface PreparationDraft {
   kind: TestSettingKind
-  count: TestCount
+  count: CandidatePreparationScope['count']
+  /** Full tournament format, separate from this exact missing-slot batch. */
+  testCount?: TestCount
+  slotIndices?: number[]
+  retainedRefs?: PreparedCandidateRef[]
   prompt: string
   writeModel?: TestModelRef
 }
@@ -25,16 +33,18 @@ export interface PreparationCommand extends PreparationDraft {
   expectedRevision?: number
 }
 export type PendingPreparationCommand =
-  | { kind: 'create'; input: { kind: TestSettingKind; count: TestCount; requestKey: string } }
+  | { kind: 'create'; input: CandidatePreparationScope & { requestKey: string } }
   | { kind: 'start'; input: CandidatePreparationStartInput }
   | { kind: 'cancel'; input: CandidatePreparationReadInput & { jobId: string } }
   | { kind: 'read'; input: CandidatePreparationReadInput }
 export interface PreparationRecovery {
+  ownerId?: string
   draft?: PreparationDraft
   command?: PreparationCommand
   session?: PreparedCandidates
   pending?: PendingPreparationCommand
   estimate?: { free: boolean; credits: number }
+  artifacts?: PreparedCandidate[]
 }
 interface Input {
   ownerId: string
@@ -52,6 +62,8 @@ export interface PreparationContext {
   command?: PreparationCommand
   pending?: PendingPreparationCommand
   session?: PreparedCandidates
+  /** Only artifacts referenced by this kind's current plan, plus its newly ready batch. */
+  artifacts: PreparedCandidate[]
   estimate?: { free: boolean; credits: number }
   failure?: AppFailure
   requestKey: () => string
@@ -63,6 +75,7 @@ export interface PreparationContext {
 }
 export type PreparationEvent = { scopeKey: string } & (
   | { type: 'EDIT'; draft: PreparationDraft }
+  | { type: 'RETAIN'; refs: PreparedCandidateRef[] }
   | { type: 'ESTIMATE' | 'CONFIRM' | 'BACK' | 'REFRESH' | 'RETRY' | 'CANCEL' | 'SUSPEND' }
   | { type: 'HYDRATE'; operation: number; session: PreparedCandidates }
 )
@@ -86,13 +99,13 @@ function record(value: unknown): value is Record<string, unknown> {
 function revision(value: unknown): value is number {
   return typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= 0xffffffff
 }
-function scopeShape(value: unknown): value is { kind: TestSettingKind; count: TestCount } {
+function scopeShape(value: unknown): value is CandidatePreparationScope {
   return (
     record(value) &&
     typeof value.kind === 'string' &&
     ['writing-voice', 'post-template', 'post-guideline'].includes(value.kind) &&
     typeof value.count === 'number' &&
-    [2, 4, 8, 16].includes(value.count)
+    PREPARATION_COUNTS.includes(value.count as CandidatePreparationScope['count'])
   )
 }
 function modelShape(value: unknown): value is TestModelRef {
@@ -103,8 +116,85 @@ function draftShape(value: unknown): value is PreparationDraft {
     scopeShape(value) &&
     'prompt' in value &&
     typeof value.prompt === 'string' &&
+    (!('testCount' in value) ||
+      value.testCount === undefined ||
+      TEST_COUNTS.includes(value.testCount as TestCount)) &&
+    (!('testCount' in value) ||
+      value.testCount === undefined ||
+      value.count <= Number(value.testCount)) &&
+    (!('slotIndices' in value) ||
+      value.slotIndices === undefined ||
+      (Array.isArray(value.slotIndices) &&
+        value.slotIndices.length === value.count &&
+        new Set(value.slotIndices).size === value.count &&
+        value.slotIndices.every(
+          (index) =>
+            Number.isInteger(index) &&
+            index >= 0 &&
+            index < Number(('testCount' in value && value.testCount) || value.count),
+        ))) &&
+    (!('retainedRefs' in value) ||
+      value.retainedRefs === undefined ||
+      refsShape(value.retainedRefs)) &&
     (!('writeModel' in value) || value.writeModel === undefined || modelShape(value.writeModel))
   )
+}
+function refShape(value: unknown): value is PreparedCandidateRef {
+  return (
+    record(value) &&
+    value.type === 'authoring' &&
+    record(value.authoring) &&
+    typeof value.authoring.sessionId === 'string' &&
+    !!value.authoring.sessionId &&
+    typeof value.authoring.candidateId === 'string' &&
+    !!value.authoring.candidateId &&
+    revision(value.authoring.revision) &&
+    value.authoring.revision > 0
+  )
+}
+function refKey(value: PreparedCandidateRef): string {
+  const ref = value.authoring
+  return JSON.stringify([ref.sessionId, ref.candidateId, ref.revision])
+}
+function refsShape(value: unknown): value is PreparedCandidateRef[] {
+  return (
+    Array.isArray(value) &&
+    value.length <= 16 &&
+    value.every(refShape) &&
+    new Set(value.map(refKey)).size === value.length
+  )
+}
+function artifactShape(value: unknown): value is PreparedCandidate {
+  return (
+    record(value) &&
+    typeof value.id === 'string' &&
+    !!value.id &&
+    ['name', 'description', 'body', 'titleArea'].every((key) => typeof value[key] === 'string') &&
+    !!String(value.name).trim() &&
+    !!String(value.body).trim() &&
+    revision(value.revision) &&
+    value.revision > 0 &&
+    refShape(value.source) &&
+    value.source.authoring.candidateId === value.id &&
+    value.source.authoring.revision === value.revision
+  )
+}
+function retainArtifacts(
+  artifacts: PreparedCandidate[],
+  refs: PreparedCandidateRef[] = [],
+): PreparedCandidate[] {
+  const keys = new Set(refs.map(refKey))
+  return artifacts.filter((artifact) => keys.has(refKey(artifact.source)))
+}
+function mergeArtifacts(
+  context: PreparationContext,
+  session: PreparedCandidates,
+): PreparedCandidate[] {
+  const kept = retainArtifacts(context.artifacts, context.draft.retainedRefs)
+  if (session.status !== 'ready') return kept
+  const merged = new Map(kept.map((artifact) => [refKey(artifact.source), artifact]))
+  for (const artifact of session.candidates) merged.set(refKey(artifact.source), artifact)
+  return [...merged.values()].slice(-16)
 }
 function commandShape(value: unknown): value is PreparationCommand {
   if (!draftShape(value)) return false
@@ -157,33 +247,14 @@ export function preparedCandidatesShape(value: unknown): value is PreparedCandid
         !Object.values(session.failure.params).every((value) => typeof value === 'string')))
   )
     return false
-  const ids = new Set<string>()
-  return session.candidates.every((candidate) => {
-    if (
-      !record(candidate) ||
-      typeof candidate.id !== 'string' ||
-      !candidate.id ||
-      ids.has(candidate.id) ||
-      !['name', 'description', 'body', 'titleArea'].every(
-        (key) => typeof candidate[key] === 'string',
-      ) ||
-      !String(candidate.name).trim() ||
-      !String(candidate.body).trim() ||
-      !revision(candidate.revision) ||
-      candidate.revision === 0 ||
-      !record(candidate.source) ||
-      candidate.source.type !== 'authoring' ||
-      !record(candidate.source.authoring)
+  return (
+    new Set(session.candidates.map((candidate) => (record(candidate) ? candidate.id : undefined)))
+      .size === session.candidates.length &&
+    session.candidates.every(
+      (candidate) =>
+        artifactShape(candidate) && candidate.source.authoring.sessionId === session.sessionId,
     )
-      return false
-    ids.add(candidate.id)
-    const source = candidate.source.authoring
-    return (
-      source.sessionId === session.sessionId &&
-      source.candidateId === candidate.id &&
-      source.revision === candidate.revision
-    )
-  })
+  )
 }
 function estimateShape(value: unknown): value is { free: boolean; credits: number } {
   return (
@@ -202,7 +273,15 @@ export function preparationRecovery(value: unknown): PreparationRecovery | undef
     (value.command !== undefined && !commandShape(value.command)) ||
     (value.pending !== undefined && !pendingShape(value.pending)) ||
     (value.session !== undefined && !preparedCandidatesShape(value.session)) ||
-    (value.estimate !== undefined && !estimateShape(value.estimate))
+    (value.estimate !== undefined && !estimateShape(value.estimate)) ||
+    (value.ownerId !== undefined && (typeof value.ownerId !== 'string' || !value.ownerId)) ||
+    (value.artifacts !== undefined &&
+      (!Array.isArray(value.artifacts) ||
+        value.artifacts.length > 16 ||
+        (value.artifacts.length > 0 && !value.ownerId) ||
+        !value.artifacts.every(artifactShape) ||
+        new Set(value.artifacts.map((artifact) => refKey(artifact.source))).size !==
+          value.artifacts.length))
   )
     return undefined
   const recovery = value as unknown as PreparationRecovery
@@ -210,7 +289,10 @@ export function preparationRecovery(value: unknown): PreparationRecovery | undef
   if (
     (recovery.command &&
       (recovery.command.kind !== recovery.draft!.kind ||
-        recovery.command.count !== recovery.draft!.count)) ||
+        recovery.command.count !== recovery.draft!.count ||
+        recovery.command.testCount !== recovery.draft!.testCount ||
+        JSON.stringify(recovery.command.slotIndices) !==
+          JSON.stringify(recovery.draft!.slotIndices))) ||
     (recovery.session &&
       (recovery.session.kind !== draft.kind ||
         recovery.session.count !== draft.count ||
@@ -374,6 +456,12 @@ export const candidatePreparationMachine = setup({
       draftShape(event.draft) &&
       !context.uncertain &&
       !context.pending,
+    canRetain: ({ context, event }) =>
+      owns(context, event) &&
+      event.type === 'RETAIN' &&
+      !context.pending &&
+      !context.uncertain &&
+      refsShape(event.refs),
     canEstimate: ({ context, event }) =>
       owns(context, event) && !context.uncertain && !context.pending && !problem(context.draft),
     hasSession: ({ context }) => !!(context.session?.sessionId ?? context.command?.sessionId),
@@ -425,16 +513,28 @@ export const candidatePreparationMachine = setup({
       owns(context, event) && context.uncertain && context.pending?.kind === 'read',
   },
   actions: {
-    edit: assign(({ event }) =>
+    edit: assign(({ context, event }) =>
       event.type === 'EDIT'
         ? {
             draft: structuredClone(event.draft),
+            artifacts:
+              event.draft.kind === context.draft.kind
+                ? retainArtifacts(context.artifacts, event.draft.retainedRefs)
+                : [],
             estimate: undefined,
             failure: undefined,
             command: undefined,
             session: undefined,
             pending: undefined,
             uncertain: false,
+          }
+        : {},
+    ),
+    retain: assign(({ context, event }) =>
+      event.type === 'RETAIN'
+        ? {
+            draft: { ...context.draft, retainedRefs: structuredClone(event.refs) },
+            artifacts: retainArtifacts(context.artifacts, event.refs),
           }
         : {},
     ),
@@ -500,6 +600,7 @@ export const candidatePreparationMachine = setup({
       const wasCreate = context.pending?.kind === 'create'
       return {
         session,
+        artifacts: mergeArtifacts(context, session),
         failure: session.failure,
         uncertain: false,
         pending: undefined,
@@ -517,6 +618,7 @@ export const candidatePreparationMachine = setup({
       const settles = readSettles(context, session)
       return {
         session,
+        artifacts: mergeArtifacts(context, session),
         failure: session.failure,
         pending: settles ? undefined : context.pending,
         uncertain: !settles,
@@ -563,6 +665,7 @@ export const candidatePreparationMachine = setup({
     }),
     suspend: assign(({ context }) => ({
       suspended: true,
+      artifacts: [],
       operation: context.operation + 1,
       continueAfterCreate: false,
     })),
@@ -571,7 +674,12 @@ export const candidatePreparationMachine = setup({
   id: 'candidatePreparation',
   initial: 'restore',
   context: ({ input }) => {
-    const recovery = preparationRecovery(input.recovery)
+    const restored = preparationRecovery(input.recovery)
+    const recovery =
+      (restored?.ownerId && restored.ownerId !== input.ownerId) ||
+      (restored?.draft && restored.draft.kind !== input.draft.kind)
+        ? undefined
+        : restored
     const command = recovery?.command
     const pending =
       recovery?.pending ??
@@ -591,6 +699,10 @@ export const candidatePreparationMachine = setup({
       command,
       pending,
       session: recovery?.session,
+      artifacts:
+        recovery?.draft?.kind === input.draft.kind
+          ? retainArtifacts(recovery.artifacts ?? [], input.draft.retainedRefs)
+          : [],
       estimate: recovery?.estimate,
       requestKey: input.requestKey ?? (() => crypto.randomUUID()),
       suspended: false,
@@ -599,7 +711,9 @@ export const candidatePreparationMachine = setup({
       continueAfterCreate: false,
     }
   },
-  on: { SUSPEND: { guard: 'scoped', target: '.suspended', actions: 'suspend' } },
+  on: {
+    SUSPEND: { guard: 'scoped', target: '.suspended', actions: 'suspend' },
+  },
   states: {
     restore: {
       always: [
@@ -610,6 +724,7 @@ export const candidatePreparationMachine = setup({
     },
     idle: {
       on: {
+        RETAIN: { guard: 'canRetain', actions: 'retain' },
         EDIT: { guard: 'canEdit', actions: 'edit' },
         ESTIMATE: { guard: 'canEstimate', target: 'quoting', actions: 'quoting' },
       },
@@ -627,6 +742,7 @@ export const candidatePreparationMachine = setup({
     },
     quoted: {
       on: {
+        RETAIN: { guard: 'canRetain', target: 'idle', actions: ['retain', 'clearEstimate'] },
         CONFIRM: { guard: 'canConfirm', target: 'creating', actions: 'freeze' },
         BACK: { guard: 'scoped', target: 'idle', actions: 'clearEstimate' },
         EDIT: { guard: 'canEdit', target: 'idle', actions: 'edit' },
@@ -673,12 +789,14 @@ export const candidatePreparationMachine = setup({
     cancelling: { invoke: invokeWork },
     ready: {
       on: {
+        RETAIN: { guard: 'canRetain', actions: 'retain' },
         EDIT: { guard: 'canEdit', target: 'idle', actions: 'edit' },
         REFRESH: { guard: 'canRefresh', target: 'reading', actions: 'beginRead' },
       },
     },
     failed: {
       on: {
+        RETAIN: { guard: 'canRetain', actions: 'retain' },
         EDIT: { guard: 'canEdit', target: 'idle', actions: 'edit' },
         ESTIMATE: { guard: 'canEstimate', target: 'quoting', actions: 'quoting' },
         REFRESH: { guard: 'canRefresh', target: 'reading', actions: 'beginRead' },

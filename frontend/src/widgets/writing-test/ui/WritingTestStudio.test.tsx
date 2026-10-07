@@ -187,26 +187,22 @@ it.each([
     const fixture = createWritingTestStudioFixture({ count, factor })
     mount(fixture)
     await userEvent.click(await screen.findByRole('button', { name: label }))
-    await userEvent.click(screen.getByRole('tab', { name: 'AI와 새 후보 만들기' }))
     await userEvent.type(
-      screen.getByRole('textbox', { name: '원하는 방향' }),
+      screen.getByRole('textbox', { name: '후보의 방향 (선택)' }),
       'Distinct approaches to the same shared scenario',
     )
-    await waitFor(() =>
-      expect(screen.getByRole('button', { name: '후보 준비 비용 확인' })).toBeEnabled(),
-    )
+    await waitFor(() => expect(screen.getByRole('button', { name: '다음' })).toBeEnabled())
     expect(fixture.preparations).toHaveLength(0)
-    await userEvent.click(screen.getByRole('button', { name: '후보 준비 비용 확인' }))
-    await screen.findByRole('button', { name: `후보 ${count}개 준비하기` })
+    await userEvent.click(screen.getByRole('button', { name: '다음' }))
+    await screen.findByRole('button', { name: `AI로 ${count}칸 채우고 계속` })
     expect(fixture.preparationEstimates).toEqual([{ kind, count }])
     expect(fixture.calls).not.toContain('CreateAuthoringSession')
     expect(fixture.admissions).toHaveLength(0)
-    await userEvent.click(screen.getByRole('button', { name: `후보 ${count}개 준비하기` }))
+    await userEvent.click(screen.getByRole('button', { name: `AI로 ${count}칸 채우고 계속` }))
     await screen.findByText(`${count}개 후보가 준비됐어요`)
     expect(fixture.preparations).toHaveLength(1)
     expect(fixture.preparations[0]).toMatchObject({ kind, count })
     expect(fixture.admissions).toHaveLength(0)
-    await userEvent.click(screen.getByRole('button', { name: '다음' }))
     await userEvent.click(
       await screen.findByRole('button', { name: `글 ${count}편 생성 비용 확인` }),
     )
@@ -246,18 +242,14 @@ it('saves a synthetic style only after an explicit valid name and default choice
   const fixture = createWritingTestStudioFixture({ factor: 'voice' })
   mount(fixture)
   await userEvent.click(await screen.findByRole('button', { name: '말투' }))
-  await userEvent.click(screen.getByRole('tab', { name: 'AI와 새 후보 만들기' }))
   await userEvent.type(
-    screen.getByRole('textbox', { name: '원하는 방향' }),
+    screen.getByRole('textbox', { name: '후보의 방향 (선택)' }),
     'Two distinct reusable styles',
   )
-  await waitFor(() =>
-    expect(screen.getByRole('button', { name: '후보 준비 비용 확인' })).toBeEnabled(),
-  )
-  await userEvent.click(screen.getByRole('button', { name: '후보 준비 비용 확인' }))
-  await userEvent.click(await screen.findByRole('button', { name: '후보 2개 준비하기' }))
-  await screen.findByText('2개 후보가 준비됐어요')
+  await waitFor(() => expect(screen.getByRole('button', { name: '다음' })).toBeEnabled())
   await userEvent.click(screen.getByRole('button', { name: '다음' }))
+  await userEvent.click(await screen.findByRole('button', { name: 'AI로 2칸 채우고 계속' }))
+  await screen.findByText('2개 후보가 준비됐어요')
   await generate(fixture)
   await decideAll(fixture)
   expect(fixture.publications).toHaveLength(0)

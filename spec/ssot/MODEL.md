@@ -1,5 +1,5 @@
 # MODEL providers, model catalog, experiments
-> r35 | Explicit eligible models, private single-factor writing tests and safe versioned request composition/inspection.
+> r36 | Explicit eligible models, private single-factor writing tests and safe versioned request composition/inspection.
 
 ## decisions
 - MODEL-1 [o] `backend/internal/llm` is the only way a model is called: no adapter package or provider SDK is imported anywhere except under `internal/llm/…` and in `cmd/api`, enforced by `internal/llm/boundary_test.go` over `go list -deps`; every completion, voice-design, voice-confirmation and speech operation carries an explicit admitted model/profile reference through a provider-neutral port with no default (→ARCH-9 →MODEL-77)
@@ -252,7 +252,13 @@
   - personal-voice winners use only their still-active owned accepted profile; changed/deleted personal sources remain historical results until explicit restore/reanalysis/retest, never transferring personal materials/analyses to a new voice
   - default/assignment choices are explicit; lost-response retries return the same confirmed setting and never repeat defaulting or undo a later edit
 - MODEL-91 [o] explicit cancellation/abandonment names the test and its confirmed usage consequence; stop remaining planned work where possible, settle issued usage once and fence late results. Closing/navigating only preserves recoverable work and never cancels or spends.
-- MODEL-92 [o] seed-free preparation uses EDIT/VOICE bounded2/4/8/16 private candidates and is a separate estimated explicit action from generating actual test posts. The winner can become an owned reusable seed; nonwinning candidates are not automatically saved.
+- MODEL-92 [o] setting-test contestants choose one saved item per slot; an unassigned slot is visibly allocated to AI preparation by default, with no separate saved-versus-AI method.
+  - saved and prepared references may coexist; preserve assigned entries and fill only unassigned indices, including a single slot
+  - preparation uses EDIT's exact bounded1..16 count, with optional direction and a useful kind-specific default; all-saved tests skip preparation entirely
+  - Continue obtains a preparation estimate when slots remain unassigned; only explicit cost confirmation starts AI, and actual test-post generation keeps its separate estimate/approval
+  - freeze and retain the slot mapping, settings references and prepared template metadata across reload/format changes; stale/uncertain work never overwrites a later assignment or automatically repeats paid calls
+  - tournament formats remain2/4/8/16 under MODEL-75; model entrants remain eligible registered refs rather than generated models
+  - the winner may become an owned reusable seed; nonwinning candidates are not automatically saved
 
 - MODEL-93 [o] every model-request stage and mode has one discoverable prompt inventory covering observation, planning, writing/revision, voice/style work, setting authoring, memory extraction and existing video work.
   - identify owning source files/composing functions, stable fragments, roles, activation conditions, input boundaries, precedence, output schema/parser/consumer and prompt/schema version

@@ -26,6 +26,7 @@ import {
   useWritingTestSource,
   useWritingTestSources,
   type TestCount,
+  type PreparationCount,
   type TestEntrant,
   type TestFactor,
   type TestStage,
@@ -53,7 +54,6 @@ import {
   FieldMessage,
   Listbox,
   Notice,
-  SegmentedControl,
   Textarea,
   TextField,
   Typography,
@@ -83,6 +83,21 @@ interface SettingChoice {
   body?: string
   titleArea?: string
 }
+const emptySlot = (entrant: TestEntrant | undefined) =>
+  !entrant ||
+  (entrant.type === 'setting'
+    ? !entrant.setting.id
+    : entrant.type === 'authoring'
+      ? !entrant.authoring.sessionId && !entrant.authoring.candidateId
+      : !entrant.model.providerId && !entrant.model.modelId)
+
+const choiceKey = (entrant: TestEntrant) =>
+  entrant.type === 'model'
+    ? refKey(entrant.model)
+    : entrant.type === 'setting'
+      ? entrant.setting.id
+      : `ai:${entrant.authoring.sessionId}:${entrant.authoring.candidateId}:${entrant.authoring.revision}`
+
 export interface WritingTestStudioProps {
   ownerId: string
   seedKey: string
@@ -126,15 +141,22 @@ function OwnedStudio({
     ownerId,
     seedKey,
     client: preparationClient,
-    draft: { kind, count: plan.count, prompt: '', writeModel: writer.selected ?? undefined },
+    draft: {
+      kind,
+      count: plan.count,
+      testCount: plan.count,
+      retainedRefs: plan.entrants.filter(
+        (entrant): entrant is Extract<TestEntrant, { type: 'authoring' }> =>
+          entrant.type === 'authoring',
+      ),
+      prompt: '',
+      writeModel: writer.selected ?? undefined,
+    },
   })
   const source = useWritingTestSource(ownerId, plan.context.sourcePostSlug)
   const appliedSource = useRef(initialPlan.context.sourcePostSlug)
   const appliedPreparation = useRef('')
   const refreshedPublication = useRef('')
-  const [candidateMethod, setCandidateMethod] = useState<'owned' | 'generate'>(() =>
-    plan.entrants.some((entrant) => entrant.type === 'authoring') ? 'generate' : 'owned',
-  )
   const [attempted, setAttempted] = useState(false)
   const [confirmCancel, setConfirmCancel] = useState<'test' | 'preparation' | null>(null)
   const headingId = useId()
@@ -147,8 +169,7 @@ function OwnedStudio({
   const prepBusy = ['quoting', 'creating', 'starting', 'reading', 'running', 'cancelling'].includes(
     preparation.phase,
   )
-  const prepLocked =
-    prepBusy || preparation.phase === 'uncertain' || preparation.phase === 'created'
+  const prepLocked = prepBusy || ['quoted', 'uncertain', 'created'].includes(preparation.phase)
   const operationBusy = writingTestOperationBusy(flow.phase)
   const choices: SettingChoice[] = useMemo(() => {
     if (plan.factor === 'voice')
@@ -214,20 +235,20 @@ function OwnedStudio({
         (model) =>
           refKey(model.ref) === refKey(plan.context.observeModel!) && !modelIssue(model, 'observe'),
       ))
-  const placeholder = (): TestEntrant =>
-    plan.factor === 'model'
-      ? { type: 'model', model: { providerId: '', modelId: '' } }
-      : { type: 'setting', setting: { kind, id: '', revision: '' } }
+  const placeholder = useCallback(
+    (): TestEntrant =>
+      plan.factor === 'model'
+        ? { type: 'model', model: { providerId: '', modelId: '' } }
+        : { type: 'setting', setting: { kind, id: '', revision: '' } },
+    [plan.factor, kind],
+  )
 
-  const choiceKey = (entrant: TestEntrant) =>
-    entrant.type === 'model'
-      ? refKey(entrant.model)
-      : entrant.type === 'setting'
-        ? entrant.setting.id
-        : entrant.authoring.candidateId
   const choose = (position: number, value: string) => {
+    if (prepLocked) return
     let entrant: TestEntrant | undefined
-    if (plan.factor === 'model') {
+    const current = plan.entrants[position]
+    if (current?.type === 'authoring' && choiceKey(current) === value) entrant = current
+    else if (plan.factor === 'model') {
       const model = filterForStage(models.models, plan.modelStage).find(
         (m) => refKey(m.ref) === value,
       )
@@ -245,21 +266,31 @@ function OwnedStudio({
     selected[position] = entrant ?? placeholder()
     draft({ ...plan, entrants: selected })
   }
-  const candidateProblem =
-    plan.entrants.length !== plan.count ||
-    plan.entrants.some(
-      (entrant) =>
-        !entrant ||
-        (entrant.type === 'model'
-          ? !entrant.model.providerId || !entrant.model.modelId
-          : entrant.type === 'setting'
-            ? !entrant.setting.id || !entrant.setting.revision
-            : !entrant.authoring.sessionId ||
-              !entrant.authoring.candidateId ||
-              entrant.authoring.revision <= 0),
+  const missingSlots = Array.from({ length: plan.count }, (_, index) => index).filter((index) =>
+    emptySlot(plan.entrants[index]),
+  )
+  const assigned = plan.entrants.filter((entrant) => !emptySlot(entrant))
+  const assignedProblem =
+    assigned.some((entrant) =>
+      entrant.type === 'model'
+        ? !entrant.model.providerId || !entrant.model.modelId
+        : entrant.type === 'setting'
+          ? !entrant.setting.revision || entrant.setting.kind !== kind
+          : !entrant.authoring.sessionId ||
+            !entrant.authoring.candidateId ||
+            entrant.authoring.revision <= 0,
     ) ||
-    new Set(plan.entrants.map(choiceKey)).size !== plan.count ||
+    new Set(assigned.map(choiceKey)).size !== assigned.length ||
     modelEligibilityProblem
+  const candidateProblem =
+    missingSlots.length > 0 || plan.entrants.length !== plan.count || assignedProblem
+  const preparedMetadata = useCallback(
+    (entrant: Extract<TestEntrant, { type: 'authoring' }>) =>
+      [...preparation.context.artifacts, ...(preparation.context.session?.candidates ?? [])].find(
+        (candidate) => choiceKey(candidate.source) === choiceKey(entrant),
+      ),
+    [preparation.context.artifacts, preparation.context.session],
+  )
   const asks = useMemo(() => {
     const entries =
       plan.factor === 'template'
@@ -267,11 +298,7 @@ function OwnedStudio({
             if (entrant.type === 'setting')
               return choices.filter((c) => c.id === entrant.setting.id)
             if (entrant.type === 'authoring')
-              return (
-                preparation.context.session?.candidates.filter(
-                  (c) => c.id === entrant.authoring.candidateId,
-                ) ?? []
-              )
+              return preparedMetadata(entrant) ? [preparedMetadata(entrant)!] : []
             return []
           })
         : templates.templates.filter((item) => item.id === plan.context.templateId)
@@ -292,7 +319,7 @@ function OwnedStudio({
     plan.context.templateId,
     choices,
     templates.templates,
-    preparation.context.session,
+    preparedMetadata,
   ])
   const missingFacts = asks.some(
     (ask) =>
@@ -355,16 +382,43 @@ function OwnedStudio({
       !session ||
       plan.factor === 'model' ||
       session.kind !== SETTING_KIND[plan.factor] ||
-      session.count !== plan.count ||
+      (preparation.context.draft.testCount ?? session.count) !== plan.count ||
       flow.phase !== 'editing'
     )
       return
     const key = JSON.stringify([session.sessionId, session.revision])
     if (key === appliedPreparation.current) return
     appliedPreparation.current = key
-    draft({ ...plan, entrants: session.candidates.map((c) => c.source) })
-    setCandidateMethod('generate')
-  }, [preparation.phase, preparation.context.session, plan, flow.phase, draft])
+    const indices =
+      preparation.context.draft.slotIndices ??
+      Array.from({ length: session.count }, (_, index) => index)
+    if (indices.length !== session.count || indices.some((index) => index >= plan.count)) return
+    const entrants = Array.from(
+      { length: plan.count },
+      (_, index) => plan.entrants[index] ?? placeholder(),
+    )
+    let changed = false
+    indices.forEach((position, index) => {
+      if (emptySlot(entrants[position])) {
+        entrants[position] = session.candidates[index].source
+        changed = true
+      }
+    })
+    if (changed) {
+      draft({ ...plan, entrants })
+      if (flow.view === 'candidates' && entrants.every((entrant) => !emptySlot(entrant))) {
+        flow.sendPresentation({ type: 'NEXT' })
+      }
+    }
+  }, [
+    preparation.phase,
+    preparation.context.session,
+    preparation.context.draft,
+    plan,
+    flow,
+    draft,
+    placeholder,
+  ])
   useEffect(() => {
     if (previousView.current !== flow.view) {
       previousView.current = flow.view
@@ -442,7 +496,30 @@ function OwnedStudio({
                       )
   const next = () => {
     setAttempted(true)
-    if (flow.view === 'candidates' && candidateProblem) return
+    if (flow.view === 'candidates') {
+      if (plan.factor === 'model' ? candidateProblem : assignedProblem) return
+      if (plan.factor !== 'model' && missingSlots.length) {
+        if (prepLocked || !writer.selected) return
+        setAttempted(false)
+        preparation.send({
+          type: 'EDIT',
+          draft: {
+            kind,
+            count: missingSlots.length as PreparationCount,
+            testCount: plan.count,
+            slotIndices: missingSlots,
+            retainedRefs: plan.entrants.filter(
+              (entrant): entrant is Extract<TestEntrant, { type: 'authoring' }> =>
+                entrant.type === 'authoring',
+            ),
+            prompt: preparation.context.draft.prompt.trim() || t(`defaultDirection.${plan.factor}`),
+            writeModel: writer.selected,
+          },
+        })
+        preparation.send({ type: 'ESTIMATE' })
+        return
+      }
+    }
     flow.sendPresentation({ type: 'NEXT' })
     setAttempted(false)
   }
@@ -642,11 +719,15 @@ function OwnedStudio({
               label: t(`formatLabel.${count}`),
             }))}
             onChange={(value) => {
-              draft({ ...plan, count: Number(value) as TestCount, entrants: [] })
+              draft({
+                ...plan,
+                count: Number(value) as TestCount,
+                entrants: plan.entrants.slice(0, Number(value)),
+              })
               appliedPreparation.current = ''
             }}
           />
-          {plan.factor === 'model' ? (
+          {plan.factor === 'model' && (
             <WritingSelect
               label={t('modelStage')}
               disabled={prepLocked}
@@ -669,33 +750,9 @@ function OwnedStudio({
                 })
               }
             />
-          ) : (
-            <SegmentedControl
-              disabled={prepLocked}
-              ariaLabel={t('candidatesTitle')}
-              value={candidateMethod}
-              options={[
-                { value: 'owned', label: t('owned') },
-                { value: 'generate', label: t('generate') },
-              ]}
-              onChange={(value) => {
-                if (!prepLocked) {
-                  setCandidateMethod(value)
-                  const session = preparation.context.session
-                  const entrants =
-                    value === 'generate' &&
-                    preparation.phase === 'ready' &&
-                    session?.kind === kind &&
-                    session.count === plan.count
-                      ? session.candidates.map((candidate) => candidate.source)
-                      : []
-                  draft({ ...plan, entrants })
-                  setAttempted(false)
-                }
-              }}
-            />
           )}
-          {(plan.factor === 'model' || candidateMethod === 'owned') && (
+          {plan.factor !== 'model' && <Typography variant="body">{t('slotHelp')}</Typography>}
+          {
             <>
               {(plan.factor === 'model'
                 ? models.isError
@@ -725,11 +782,20 @@ function OwnedStudio({
                     label={t('contender', { number: index + 1 })}
                     value={plan.entrants[index] ? choiceKey(plan.entrants[index]) : ''}
                     options={[
-                      { value: '', label: t('choose') },
+                      { value: '', label: t(plan.factor === 'model' ? 'choose' : 'autoAI') },
+                      ...(plan.entrants[index]?.type === 'authoring'
+                        ? [
+                            {
+                              value: choiceKey(plan.entrants[index]),
+                              label: `${t('generatedCandidate')} · ${preparedMetadata(plan.entrants[index])?.name ?? t('preparedSlot')}`,
+                            },
+                          ]
+                        : []),
                       ...(plan.factor === 'model'
                         ? modelOptions(plan.modelStage)
                         : choices.map((c) => ({ value: c.id, label: c.name }))),
                     ]}
+                    disabled={prepLocked}
                     onChange={(value) => choose(index, value)}
                   />
                 ))}
@@ -746,151 +812,125 @@ function OwnedStudio({
                 </Typography>
               )}
             </>
-          )}
-          {plan.factor !== 'model' && candidateMethod === 'generate' && (
-            <section className="space-y-4">
-              <Typography variant="body">{t('preparationHelp')}</Typography>
-              <FieldLabel htmlFor="test-candidate-direction">{t('direction')}</FieldLabel>
-              <Textarea
-                id="test-candidate-direction"
-                autoGrow
-                rows={4}
-                value={preparation.context.draft.prompt}
-                maxLength={WRITING_TEST_DIRECTION_MAX_CHARS}
-                placeholder={t('directionHint')}
-                disabled={prepLocked}
-                onChange={(e) =>
-                  preparation.send({
-                    type: 'EDIT',
-                    draft: {
-                      kind,
-                      count: plan.count,
-                      writeModel: writer.selected ?? undefined,
-                      prompt: e.target.value,
-                    },
-                  })
-                }
-              />
-              {!preparation.context.draft.prompt.trim() && (
-                <Typography variant="label">{t('requiredDirection')}</Typography>
-              )}
-              {preparation.context.failure && (
-                <Notice tone="danger" role="alert">
-                  <AppFailureMessage failure={preparation.context.failure} />
-                </Notice>
-              )}
-              {['idle', 'failed'].includes(preparation.phase) && (
-                <Button
-                  variant="secondary"
-                  onClick={() => {
+          }
+          {plan.factor !== 'model' &&
+            (missingSlots.length > 0 || prepLocked || preparation.phase === 'failed') && (
+              <section className="space-y-4">
+                <Typography variant="body" role="status">
+                  {t('aiSlots', { count: missingSlots.length })}
+                </Typography>
+                <Typography variant="body">{t('preparationHelp')}</Typography>
+                <FieldLabel htmlFor="test-candidate-direction">{t('direction')}</FieldLabel>
+                <Textarea
+                  id="test-candidate-direction"
+                  autoGrow
+                  rows={2}
+                  value={preparation.context.draft.prompt}
+                  maxLength={WRITING_TEST_DIRECTION_MAX_CHARS}
+                  placeholder={t('directionHint')}
+                  disabled={prepLocked}
+                  onChange={(event) =>
                     preparation.send({
                       type: 'EDIT',
                       draft: {
-                        ...preparation.context.draft,
+                        kind,
+                        count: (missingSlots.length || plan.count) as PreparationCount,
+                        testCount: plan.count,
+                        retainedRefs: plan.entrants.filter(
+                          (entrant): entrant is Extract<TestEntrant, { type: 'authoring' }> =>
+                            entrant.type === 'authoring',
+                        ),
                         writeModel: writer.selected ?? undefined,
+                        prompt: event.target.value,
                       },
                     })
-                    preparation.send({ type: 'ESTIMATE' })
-                  }}
-                  disabled={!writer.selected || !preparation.context.draft.prompt.trim()}
-                >
-                  {t('estimatePreparation')}
-                </Button>
-              )}
-              {!writer.selected && (
-                <Typography variant="body">
-                  {t('requiredWriter')}{' '}
-                  <a href="/ai-models" className={buttonStyles({ variant: 'ghost' })}>
-                    {t('settings')}
-                  </a>
-                </Typography>
-              )}
-              {preparation.phase === 'quoted' && (
-                <>
+                  }
+                />
+                {preparation.context.failure && (
+                  <Notice tone="danger" role="alert">
+                    <AppFailureMessage failure={preparation.context.failure} />
+                  </Notice>
+                )}
+                {!writer.selected && (
                   <Typography variant="body">
-                    {t('preparationTitle', { kind: t(`factor.${plan.factor}`), count: plan.count })}{' '}
+                    {t('requiredWriter')}{' '}
+                    <a href="/ai-models" className={buttonStyles({ variant: 'ghost' })}>
+                      {t('settings')}
+                    </a>
+                  </Typography>
+                )}
+                {preparation.phase === 'quoted' && (
+                  <Typography variant="body">
+                    {t('preparationTitle', {
+                      kind: t(`factor.${plan.factor}`),
+                      count: preparation.context.draft.count,
+                    })}{' '}
                     {preparation.context.estimate?.free
                       ? t('free')
                       : t('credits', { count: preparation.context.estimate?.credits ?? 0 })}
                   </Typography>
-                  <Button variant="cta" onClick={() => preparation.send({ type: 'CONFIRM' })}>
-                    {t('prepare', { count: plan.count })}
-                  </Button>
-                  <Button variant="ghost" onClick={() => preparation.send({ type: 'BACK' })}>
-                    {t('back')}
-                  </Button>
-                </>
-              )}
-              {preparation.phase === 'created' && (
-                <Button variant="cta" onClick={() => preparation.send({ type: 'CONFIRM' })}>
-                  {t('prepare', { count: plan.count })}
-                </Button>
-              )}
-              {prepBusy && (
-                <Typography variant="body" role="status">
-                  {t('preparing')}
-                </Typography>
-              )}
-              {preparation.phase === 'uncertain' && (
-                <>
-                  <Typography variant="body">{t('uncertainHelp')}</Typography>
-                  <Button variant="secondary" onClick={() => preparation.send({ type: 'RETRY' })}>
-                    {t('resumeRequest')}
-                  </Button>
-                </>
-              )}
-              {preparation.context.session && (
-                <Button
-                  variant="ghost"
-                  onClick={() => preparation.send({ type: 'REFRESH' })}
-                  disabled={prepBusy}
-                >
-                  {t('refresh')}
-                </Button>
-              )}
-              {preparation.phase === 'running' && (
-                <Button variant="ghost" onClick={() => setConfirmCancel('preparation')}>
-                  {t('cancelPreparation')}
-                </Button>
-              )}
-              {preparation.phase === 'ready' && (
-                <>
+                )}
+                {prepBusy && (
                   <Typography variant="body" role="status">
-                    {t('prepared', { count: plan.count })}
+                    {t('preparing')}
                   </Typography>
-                  <ul className="grid gap-4 sm:grid-cols-2">
-                    {preparation.context.session?.candidates.map((c) => (
-                      <li key={c.id}>
-                        <Typography variant="fieldTitle" as="h3">
-                          {c.name}
-                        </Typography>
-                        <Typography variant="body" className="mt-2 break-words">
-                          {c.description}
-                        </Typography>
-                        <Typography variant="label">{t('generatedCandidate')}</Typography>
-                      </li>
-                    ))}
-                  </ul>
-                </>
-              )}
-            </section>
-          )}
-          {attempted && candidateProblem && (
+                )}
+                {preparation.phase === 'uncertain' && (
+                  <>
+                    <Typography variant="body">{t('uncertainHelp')}</Typography>
+                    <Button variant="secondary" onClick={() => preparation.send({ type: 'RETRY' })}>
+                      {t('resumeRequest')}
+                    </Button>
+                  </>
+                )}
+                {preparation.context.session && (
+                  <Button
+                    variant="ghost"
+                    onClick={() => preparation.send({ type: 'REFRESH' })}
+                    disabled={prepBusy}
+                  >
+                    {t('refresh')}
+                  </Button>
+                )}
+                {preparation.phase === 'running' && (
+                  <Button variant="ghost" onClick={() => setConfirmCancel('preparation')}>
+                    {t('cancelPreparation')}
+                  </Button>
+                )}
+              </section>
+            )}
+          {attempted && (plan.factor === 'model' ? candidateProblem : assignedProblem) && (
             <FieldMessage>{t('requiredChoices', { count: plan.count })}</FieldMessage>
           )}
           <ActionBar ariaLabel={title}>
             <div className="flex flex-wrap items-center justify-center gap-3">
               <Button
                 variant="ghost"
-                onClick={() => flow.sendPresentation({ type: 'BACK' })}
-                disabled={prepLocked}
+                disabled={prepBusy || ['uncertain', 'created'].includes(preparation.phase)}
+                onClick={() =>
+                  preparation.phase === 'quoted'
+                    ? preparation.send({ type: 'BACK' })
+                    : flow.sendPresentation({ type: 'BACK' })
+                }
               >
                 {t('back')}
               </Button>
-              {!(candidateMethod === 'generate' && prepLocked) && (
-                <Button variant="cta" onClick={next}>
-                  {t('next')}
+              {['quoted', 'created'].includes(preparation.phase) && plan.factor !== 'model' ? (
+                <Button variant="cta" onClick={() => preparation.send({ type: 'CONFIRM' })}>
+                  {t('prepare', { count: preparation.context.draft.count })}
                 </Button>
+              ) : (
+                !prepLocked && (
+                  <Button
+                    variant="cta"
+                    onClick={next}
+                    disabled={
+                      plan.factor !== 'model' && missingSlots.length > 0 && !writer.selected
+                    }
+                  >
+                    {t('next')}
+                  </Button>
+                )
               )}
             </div>
           </ActionBar>
@@ -898,6 +938,17 @@ function OwnedStudio({
       )}
       {flow.view === 'material' && (
         <section className="mt-5 space-y-5">
+          {preparation.phase === 'ready' &&
+            preparation.context.session &&
+            plan.entrants.some(
+              (entrant) =>
+                entrant.type === 'authoring' &&
+                entrant.authoring.sessionId === preparation.context.session?.sessionId,
+            ) && (
+              <Typography variant="body" role="status">
+                {t('prepared', { count: preparation.context.session.count })}
+              </Typography>
+            )}
           {sourceName && (
             <Typography variant="body">{t('source', { name: sourceName })}</Typography>
           )}

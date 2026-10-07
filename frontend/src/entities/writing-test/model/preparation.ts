@@ -1,9 +1,14 @@
 import type { AppFailure } from '@/shared/api'
-import type { TestCount, TestEntrant, TestModelRef, TestSettingKind } from './types'
+import type { TestEntrant, TestModelRef, TestSettingKind } from './types'
+
+/** Missing setting slots are independent of the tournament's binary format. */
+export const PREPARATION_COUNTS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16] as const
+export type PreparationCount = (typeof PREPARATION_COUNTS)[number]
+export type PreparedCandidateRef = Extract<TestEntrant, { type: 'authoring' }>
 
 export interface CandidatePreparationScope {
   kind: TestSettingKind
-  count: TestCount
+  count: PreparationCount
 }
 export interface PreparedCandidate {
   id: string
