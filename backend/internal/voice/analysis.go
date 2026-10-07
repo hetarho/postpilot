@@ -102,7 +102,9 @@ func DecodeAnalysisSnapshot(raw []byte) ([]string, error) {
 }
 
 type snapshotJSON struct {
-	MaterialIDs []string `json:"material_ids"`
+	MaterialIDs       []string           `json:"material_ids"`
+	AcceptedSources   []AcceptedSource   `json:"accepted_sources,omitempty"`
+	AcceptedMaterials []AcceptedMaterial `json:"accepted_materials,omitempty"`
 }
 
 // completeAnalysis makes the one analysis call and reads its AI part. It attaches the embedded

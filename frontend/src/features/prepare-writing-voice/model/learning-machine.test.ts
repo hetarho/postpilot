@@ -24,6 +24,7 @@ function start(options: Partial<LearningServices> = {}) {
   const runtime = {
     current: {
       create: vi.fn(async () => voice),
+      estimate: vi.fn(async () => ({ free: false, credits: 3 })),
       analyze: vi.fn(async () => 'current-job'),
       confirm: vi.fn(async () => ({ ...voice, made: true, isDefault: true })),
       read: vi.fn(async () => profile()),
@@ -61,6 +62,9 @@ describe('personal learning actor', () => {
       type: 'ANALYZE' as const,
       model: { providerId: 'stub', modelId: 'model' },
     }
+    actor.send({ ...event, type: 'ESTIMATE' })
+    await waitFor(actor, (s) => s.matches({ personal: 'quoted' }))
+    expect(runtime.current.analyze).not.toHaveBeenCalled()
     actor.send(event)
     actor.send(event)
     await waitFor(actor, (s) => s.matches({ personal: { analyzing: 'watching' } }))
@@ -71,6 +75,39 @@ describe('personal learning actor', () => {
     expect(actor.getSnapshot().matches('failure')).toBe(true)
     actor.stop()
   })
+  it('requires a new quote after source content changes, while label-only edits keep the prepared quote', async () => {
+    const { actor, runtime } = start()
+    const model = { providerId: 'stub', modelId: 'model' }
+    const sample = {
+      id: 'source',
+      kind: 'post' as const,
+      label: '제목',
+      promptKey: '',
+      hasPhoto: false,
+      chars: 200,
+      createdAt: '',
+      contentRevision: 1n,
+    }
+    actor.send({ ownerId: 'alice', type: 'PROFILE', profile: profile({ samples: [sample] }) })
+    actor.send({ ownerId: 'alice', type: 'ESTIMATE', model })
+    await waitFor(actor, (s) => s.matches({ personal: 'quoted' }))
+    actor.send({
+      ownerId: 'alice',
+      type: 'PROFILE',
+      profile: profile({ samples: [{ ...sample, label: '새 제목' }] }),
+    })
+    expect(actor.getSnapshot().matches({ personal: 'quoted' })).toBe(true)
+    actor.send({
+      ownerId: 'alice',
+      type: 'PROFILE',
+      profile: profile({ samples: [{ ...sample, contentRevision: 2n }] }),
+    })
+    actor.send({ ownerId: 'alice', type: 'ANALYZE', model })
+    expect(actor.getSnapshot().matches({ personal: 'review' })).toBe(true)
+    expect(runtime.current.analyze).not.toHaveBeenCalled()
+    expect(runtime.current.estimate).toHaveBeenCalledOnce()
+    actor.stop()
+  })
   it.each(['RETRY', 'BACK'] as const)(
     'reconciles an uncertain analysis through %s without replaying it',
     async (action) => {
@@ -79,11 +116,10 @@ describe('personal learning actor', () => {
         throw new Error('unknown delivery')
       })
       const { actor } = start({ read, analyze })
-      actor.send({
-        ownerId: 'alice',
-        type: 'ANALYZE',
-        model: { providerId: 'stub', modelId: 'model' },
-      })
+      const model = { providerId: 'stub', modelId: 'model' }
+      actor.send({ ownerId: 'alice', type: 'ESTIMATE', model })
+      await waitFor(actor, (s) => s.matches({ personal: 'quoted' }))
+      actor.send({ ownerId: 'alice', type: 'ANALYZE', model })
       await waitFor(actor, (s) => s.matches('failure'))
       actor.send({ ownerId: 'alice', type: action })
       await waitFor(actor, (s) => s.matches({ personal: 'confirmed' }))
@@ -97,11 +133,10 @@ describe('personal learning actor', () => {
       throw new Error('unknown delivery')
     })
     const { actor } = start({ analyze })
-    actor.send({
-      ownerId: 'alice',
-      type: 'ANALYZE',
-      model: { providerId: 'stub', modelId: 'model' },
-    })
+    const model = { providerId: 'stub', modelId: 'model' }
+    actor.send({ ownerId: 'alice', type: 'ESTIMATE', model })
+    await waitFor(actor, (s) => s.matches({ personal: 'quoted' }))
+    actor.send({ ownerId: 'alice', type: 'ANALYZE', model })
     await waitFor(actor, (s) => s.matches('failure'))
     actor.send({
       ownerId: 'alice',

@@ -70,6 +70,7 @@ export function toVoiceSample(sample: ProtoVoiceSample): VoiceSample {
     hasPhoto: sample.hasPhoto,
     chars: sample.chars,
     createdAt: sample.createdAt,
+    contentRevision: sample.contentRevision,
   }
 }
 export function toReadiness(readiness: ProtoVoiceReadiness | undefined): VoiceReadiness {
@@ -167,6 +168,11 @@ export function toVoiceAnalysis(analysis: ProtoVoiceAnalysis): VoiceAnalysis {
   return {
     origin: requireVoiceOrigin(analysis.origin),
     syntheticSample: analysis.syntheticSample,
+    sourceVersionsKnown: analysis.sourceVersionsKnown,
+    acceptedSources: analysis.acceptedSources.map((source) => ({
+      sampleId: source.sampleId,
+      contentRevision: source.contentRevision,
+    })),
     counted: toFingerprint(analysis.counted),
     ai: {
       impression: analysis.ai?.impression ?? '',

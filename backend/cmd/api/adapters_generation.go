@@ -174,7 +174,19 @@ func (a generationProfiles) ProfileForPrompt(ctx context.Context, userID, voiceI
 func (a generationProfiles) ProfileForPromptForTopic(ctx context.Context, userID, voiceID string, target generation.Language, topic string, tags []string) (generation.Profile, error) {
 	retrieval := strings.TrimSpace(topic + " " + strings.Join(tags, " "))
 	profile, err := a.service.PromptProfileForTopic(ctx, userID, voiceID, retrieval, voice.Language(target), "")
-	return generation.Profile{Text: profile.Text, Excerpts: profile.Excerpts, Portable: profile.Portable}, generationVoiceError(err)
+	sources := make([]generation.ProfileSource, 0, len(profile.AcceptedSources))
+	for _, source := range profile.AcceptedSources {
+		sources = append(sources, generation.ProfileSource{SampleID: source.SampleID, ContentRevision: source.ContentRevision})
+	}
+	return generation.Profile{Text: profile.Text, Excerpts: profile.Excerpts, Portable: profile.Portable, Sources: sources}, generationVoiceError(err)
+}
+
+func (a generationProfiles) ValidateProfileSources(ctx context.Context, userID, voiceID string, sources []generation.ProfileSource) error {
+	accepted := make([]voice.AcceptedSource, 0, len(sources))
+	for _, source := range sources {
+		accepted = append(accepted, voice.AcceptedSource{SampleID: source.SampleID, ContentRevision: source.ContentRevision})
+	}
+	return generationVoiceError(a.service.ValidateAcceptedSources(ctx, userID, voiceID, accepted))
 }
 
 func generationVoiceError(err error) error {

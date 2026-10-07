@@ -1,9 +1,17 @@
-import { create } from '@bufbuild/protobuf'
+import { clone, create } from '@bufbuild/protobuf'
 import type { Transport } from '@connectrpc/connect'
 import type { QueryClient } from '@tanstack/react-query'
-import { ListVoicesResponseSchema, type ListVoicesResponse, type ProtoVoice } from '@/shared/api'
+import {
+  ListVoicesResponseSchema,
+  VoiceProfileSchema,
+  VoiceNoticeSchema,
+  VoiceNoticeKind,
+  type ListVoicesResponse,
+  type ProtoVoice,
+  type ProtoVoiceProfile,
+} from '@/shared/api'
 import { sortVoices } from '../model/types'
-import { voiceAnalysisQueryKey, voicesQueryKey } from './voice-queries'
+import { voiceAnalysisQueryKey, voiceSampleQueryKey, voicesQueryKey } from './voice-queries'
 
 /** Installs a whole directory the server just returned — SetDefaultVoice answers with every voice,
  *  because the previous default changed too. */
@@ -65,7 +73,52 @@ export function invalidateVoiceMaterials(
   for (const queryKey of [
     voiceAnalysisQueryKey(transport, ownerId, voiceId),
     voicesQueryKey(transport, ownerId),
+    voiceSampleQueryKey(transport, ownerId, voiceId, '').slice(0, 4),
   ]) {
     void queryClient.invalidateQueries({ queryKey })
   }
+}
+
+/** A successful deletion withdraws known examples from the visible accepted profile immediately. */
+export function withdrawCachedVoiceMaterial(
+  queryClient: QueryClient,
+  transport: Transport,
+  ownerId: string,
+  voiceId: string,
+  sampleId: string,
+): void {
+  const key = voiceAnalysisQueryKey(transport, ownerId, voiceId)
+  const current = queryClient.getQueryData<{ profile?: ProtoVoiceProfile }>(key)
+  if (current?.profile) {
+    const profile = clone(VoiceProfileSchema, current.profile)
+    profile.samples = profile.samples.filter((sample) => sample.id !== sampleId)
+    if (profile.voice) profile.voice.materialCount = profile.samples.length
+    if (profile.made) profile.notice = create(VoiceNoticeSchema, { kind: VoiceNoticeKind.CHANGED })
+    if (profile.analysis) {
+      if (profile.analysis.ai)
+        profile.analysis.ai.examples = profile.analysis.ai.examples.filter(
+          (example) => example.materialId !== sampleId,
+        )
+      const counted = profile.analysis.counted
+      if (counted)
+        for (const item of [
+          'endings',
+          'marks',
+          'emoji',
+          'shape',
+          'openings',
+          'adverbs',
+          'person',
+          'headings',
+        ] as const) {
+          const value = counted[item]
+          if (value?.example?.materialId === sampleId) value.example = undefined
+        }
+    }
+    queryClient.setQueryData(key, { ...current, profile })
+  }
+  queryClient.removeQueries({
+    queryKey: voiceSampleQueryKey(transport, ownerId, voiceId, sampleId),
+    exact: true,
+  })
 }

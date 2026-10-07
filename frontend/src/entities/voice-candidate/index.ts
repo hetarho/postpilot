@@ -1,7 +1,12 @@
 export { i18n } from './config/i18n'
-export { WRITING_VOICE_CANDIDATE_COUNT, completeCandidateBatch } from './model/types'
+export {
+  WRITING_VOICE_CANDIDATE_COUNT,
+  WRITING_VOICE_CANDIDATE_COUNTS,
+  completeCandidateBatch,
+} from './model/types'
 export type {
   WritingVoiceCandidate,
+  WritingVoiceCandidateCount,
   WritingVoiceCandidateBatch,
   WritingVoiceCandidateEstimate,
 } from './model/types'

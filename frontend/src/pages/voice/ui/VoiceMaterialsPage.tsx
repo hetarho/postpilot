@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { VoiceReadinessMeter } from '@/entities/voice'
 import { AnswerPromptsSheet } from '@/features/answer-voice-prompt'
 import { MakeVoiceButton } from '@/features/make-voice'
+import { EditVoiceMaterial } from '@/features/edit-voice-material'
 import { SampleList } from '@/features/manage-voice-samples'
 import { PasteMaterialSheet } from '@/features/paste-voice-material'
 import { PersonalVoiceLearning } from './PersonalVoiceLearning'
@@ -87,6 +88,7 @@ function MaterialsPanel({ ownerId, voiceId, voice, profile }: VoiceScreenContext
           voiceId={voiceId}
           samples={profile.samples}
           blocked={voice.deleted}
+          renderEditor={(props) => <EditVoiceMaterial {...props} />}
         />
       </div>
     </>

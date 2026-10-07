@@ -49,6 +49,7 @@ export interface WritingTestHistorySearch {
   stage?: TestStage | 'voice'
   source?: string
   voiceId?: string
+  entry?: string
 }
 export function writingTestHistorySearchSchema(
   raw: Record<string, unknown>,
@@ -64,5 +65,6 @@ export function writingTestHistorySearchSchema(
         : undefined,
     source: text('source') ?? text('sourcePost') ?? text('sourcePostSlug') ?? text('postSlug'),
     voiceId: text('voiceId'),
+    ...(text('entry') && safeInternalPath(text('entry')!) ? { entry: text('entry') } : {}),
   }
 }

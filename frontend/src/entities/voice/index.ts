@@ -44,12 +44,7 @@ export { loadVoices, useVoices, voiceDirectoryQuery } from './api/useVoices'
 export { useVoiceProfile } from './api/useVoiceProfile'
 export { usePostFingerprint } from './api/usePostFingerprint'
 export type { VoiceCheck, VoiceCheckStatus } from './model/check'
-export {
-  useRetryVoiceCheck,
-  useStartVoiceCheck,
-  useVoiceChecks,
-  useVoiceChecksQueryKey,
-} from './api/voice-checks'
+export { useVoiceChecks, useVoiceChecksQueryKey } from './api/voice-checks'
 export { toComparisons } from './api/fingerprint-comparison'
 export { useAddVoiceSample } from './api/useAddVoiceSample'
 export type { CreateVoiceInput } from './api/voice-mutations'
@@ -87,3 +82,8 @@ export {
 } from './api/voice-queries'
 export { VoiceRefLabel } from './ui/VoiceRefLabel'
 export { VoiceReadinessMeter } from './ui/VoiceReadinessMeter'
+
+export { useVoiceMaterialEditor, useVoiceAnalysisEstimator } from './api/voice-source-edit'
+export { voiceMaterialFreshness, voiceMaterialVersionKey } from './model/types'
+export type { VoiceAnalysisEstimate, VoiceMaterialUpdate } from './model/types'
+export { VoiceMaterialFreshness } from './ui/VoiceMaterialFreshness'

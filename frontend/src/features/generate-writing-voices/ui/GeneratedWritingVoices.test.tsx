@@ -23,8 +23,8 @@ beforeEach(() => {
   i18next.addResourceBundle('ko', 'voices', candidateI18n.ko, true, true)
   i18next.addResourceBundle('ko', 'voices', flowI18n.ko, true, true)
 })
-const rows = (prefix = '스타일') =>
-  Array.from({ length: 8 }, (_, n) => ({
+const rows = (prefix = '스타일', count = 8) =>
+  Array.from({ length: count }, (_, n) => ({
     id: `style-${n}`,
     name: `${prefix} ${n + 1}`,
     description: '편안하게 말을 건네는 느낌이에요.',
@@ -53,6 +53,8 @@ function fixture({
   fastComplete?: boolean
 } = {}) {
   const calls: string[] = []
+  const startCounts: number[] = []
+  const estimateCounts: number[] = []
   const starts: Array<{ providerId: string; modelId: string } | undefined> = []
   const estimates: Array<{ providerId: string; modelId: string } | undefined> = []
   const adoptions: Array<{ jobId: string; candidateId: string; makeDefault: boolean }> = []
@@ -95,6 +97,7 @@ function fixture({
     )
     rpc(Candidates.method.estimateWritingVoiceCandidates, (request) => {
       calls.push('Estimate')
+      estimateCounts.push(request.candidateCount)
       estimates.push(
         request.writeModel
           ? { providerId: request.writeModel.providerId, modelId: request.writeModel.modelId }
@@ -107,6 +110,7 @@ function fixture({
     })
     rpc(Candidates.method.startWritingVoiceCandidates, async (request) => {
       calls.push('Start')
+      startCounts.push(request.candidateCount)
       starts.push(
         request.writeModel
           ? { providerId: request.writeModel.providerId, modelId: request.writeModel.modelId }
@@ -123,7 +127,7 @@ function fixture({
         latest = create(Candidates.method.getLatestWritingVoiceCandidates.output, {
           jobId: 'new-job',
           resultJobId: 'new-job',
-          candidates: rows('새 스타일'),
+          candidates: rows('새 스타일', request.candidateCount || 8),
         })
         status = 'done'
       }
@@ -167,6 +171,8 @@ function fixture({
   return {
     calls,
     starts,
+    startCounts,
+    estimateCounts,
     estimates,
     adoptions,
     transport,
@@ -177,7 +183,7 @@ function fixture({
       latest = create(Candidates.method.getLatestWritingVoiceCandidates.output, {
         jobId: 'new-job',
         resultJobId: 'new-job',
-        candidates: rows('새 스타일'),
+        candidates: rows('새 스타일', startCounts.at(-1) || 8),
       })
       await cache.invalidateQueries()
     },
@@ -348,4 +354,29 @@ it('shows a free quote before an explicit start and recovers a batch completed b
   await waitFor(() => expect(busy).toHaveBeenLastCalledWith(false))
   expect(backend.starts).toHaveLength(1)
   expect(screen.getAllByRole('article')).toHaveLength(8)
+})
+
+it('quotes and confirms a selected sixteen-style format without an implicit start or shrinking the returned batch', async () => {
+  const user = userEvent.setup()
+  const fx = fixture({ fastComplete: true })
+  const onAdopted = vi.fn()
+  render(<GeneratedWritingVoices ownerId="alice" onAdopted={onAdopted} />, { wrapper: fx.wrapper })
+  const sixteen = await screen.findByRole('tab', { name: '16개' })
+  await waitFor(() =>
+    expect(screen.getByRole('button', { name: '스타일 8개 만들어 보기' })).toBeEnabled(),
+  )
+  await user.click(sixteen)
+  expect(fx.startCounts).toEqual([])
+  await user.click(screen.getByRole('button', { name: '스타일 16개 만들어 보기' }))
+  const dialog = await screen.findByRole('dialog', { name: '새로운 스타일 16개를 만들까요?' })
+  const confirm = within(dialog).getByRole('button', { name: '16개 만들기' })
+  await waitFor(() => expect(confirm).toBeEnabled())
+  expect(fx.estimateCounts).toEqual([16])
+  expect(fx.startCounts).toEqual([])
+  await user.click(confirm)
+  await waitFor(() =>
+    expect(screen.getAllByRole('button', { name: '이 스타일 고르기' })).toHaveLength(16),
+  )
+  expect(fx.startCounts).toEqual([16])
+  expect(onAdopted).not.toHaveBeenCalled()
 })

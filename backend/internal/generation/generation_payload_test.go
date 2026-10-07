@@ -14,6 +14,7 @@ func filledGenerationOptions() generationOptions {
 	target := 1500
 	files := []string{"IMG_1.jpg"}
 	return generationOptions{
+		Profile:        &Profile{Text: "Accepted habits", Excerpts: []string{"Accepted prose"}, Portable: true, Sources: []ProfileSource{{SampleID: "sample", ContentRevision: 1}}},
 		TargetLanguage: LanguageEnglish,
 		TargetLength:   &target,
 		TagCount:       7,
@@ -66,7 +67,11 @@ func requireNoZero(t *testing.T, path string, v reflect.Value) {
 // Every frozen member survives the job row: what Start encodes is what Generate decodes.
 func TestEveryGenerationOptionRoundTrips(t *testing.T) {
 	fixture := filledGenerationOptions()
-	requireNoZero(t, "options", reflect.ValueOf(fixture))
+	probe := fixture
+	profile := *fixture.Profile
+	profile.NoVoice = true // Absence is separately pinned; a real profile keeps this false.
+	probe.Profile = &profile
+	requireNoZero(t, "options", reflect.ValueOf(probe))
 	raw, err := encodeGenerationPayload(fixture)
 	if err != nil {
 		t.Fatal(err)
@@ -98,7 +103,7 @@ func TestEveryFrozenOptionReachesTheRun(t *testing.T) {
 	// not a post member, its five fields are.
 	for _, field := range reflect.VisibleFields(options.Type()) {
 		name := field.Name
-		if field.Anonymous || name == "ObserveFiles" || name == "Observations" {
+		if field.Anonymous || name == "ObserveFiles" || name == "Observations" || name == "Profile" {
 			continue
 		}
 		member := got.FieldByName(name)
@@ -141,7 +146,7 @@ func TestStartFreezesEveryOption(t *testing.T) {
 	deps.Memories = &recordingMemories{texts: testMemories()}
 	deps.QualityRules = &recordingRules{answer: []string{"제목에 같은 말을 되풀이하지 않는다"}}
 	jobs := &fakeJobs{id: "job"}
-	svc := NewService(posts, fakeProfiles{}, models, fakeImages{}, jobs, 4, testReasoningPolicy, testBudget, deps)
+	svc := NewService(posts, fakeProfiles{profile: *filledGenerationOptions().Profile}, models, fakeImages{}, jobs, 4, testReasoningPolicy, testBudget, deps)
 
 	target := 1500
 	if _, err := svc.Start(context.Background(), StartRequest{
@@ -150,7 +155,9 @@ func TestStartFreezesEveryOption(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	requireNoZero(t, "frozen", reflect.ValueOf(jobs.frozen(t, 0)))
+	frozen := jobs.frozen(t, 0)
+	frozen.Profile.NoVoice = true // A supplied profile cannot also mean absence.
+	requireNoZero(t, "frozen", reflect.ValueOf(frozen))
 }
 
 // Decode owns the legacy language rules the handler used to repeat: no language is Korean, and a

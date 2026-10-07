@@ -169,6 +169,7 @@ func TestEveryWriteSnapshotMemberRoundTrips(t *testing.T) {
 		Items: []string{"하나"}, Files: []string{"IMG_1.jpg", "IMG_2.jpg"}, Layout: GallerySlide,
 	}}
 	fixture.post.Voice.Made = true
+	fixture.profile.Sources = []ProfileSource{{SampleID: "accepted-sample", ContentRevision: 3}}
 	snapshot := fixture.snapshot()
 	// NoVoice is frozen as the absence of the whole profile, which the 말투 없음 golden pins;
 	// a snapshot with a profile cannot also set it.

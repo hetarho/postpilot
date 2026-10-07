@@ -101,7 +101,7 @@ func (q *Queries) DeleteSample(ctx context.Context, arg DeleteSampleParams) (sql
 }
 
 const getAnalysis = `-- name: GetAnalysis :one
-SELECT snapshot, material_ids, analyze_model, created_at
+SELECT snapshot, material_ids, analyze_model, created_at, source_versions_known, accepted_sources, accepted_material_snapshot
 FROM voice_analyses
 WHERE voice_id = ? AND user_id = ? AND slot = ?
 `
@@ -113,10 +113,13 @@ type GetAnalysisParams struct {
 }
 
 type GetAnalysisRow struct {
-	Snapshot     string
-	MaterialIds  string
-	AnalyzeModel string
-	CreatedAt    string
+	Snapshot                 string
+	MaterialIds              string
+	AnalyzeModel             string
+	CreatedAt                string
+	SourceVersionsKnown      int64
+	AcceptedSources          string
+	AcceptedMaterialSnapshot string
 }
 
 func (q *Queries) GetAnalysis(ctx context.Context, arg GetAnalysisParams) (GetAnalysisRow, error) {
@@ -127,6 +130,9 @@ func (q *Queries) GetAnalysis(ctx context.Context, arg GetAnalysisParams) (GetAn
 		&i.MaterialIds,
 		&i.AnalyzeModel,
 		&i.CreatedAt,
+		&i.SourceVersionsKnown,
+		&i.AcceptedSources,
+		&i.AcceptedMaterialSnapshot,
 	)
 	return i, err
 }
@@ -159,7 +165,7 @@ func (q *Queries) GetPhotoUpload(ctx context.Context, arg GetPhotoUploadParams) 
 }
 
 const getPromptAnswer = `-- name: GetPromptAnswer :one
-SELECT id, kind, prompt_key, label, body, photo_key, photo_width, photo_height, created_at
+SELECT id, kind, prompt_key, label, body, photo_key, photo_width, photo_height, created_at, content_revision
 FROM voice_samples
 WHERE voice_id = ? AND user_id = ? AND prompt_key = ? AND kind = 'answer'
 `
@@ -171,15 +177,16 @@ type GetPromptAnswerParams struct {
 }
 
 type GetPromptAnswerRow struct {
-	ID          string
-	Kind        string
-	PromptKey   sql.NullString
-	Label       string
-	Body        string
-	PhotoKey    sql.NullString
-	PhotoWidth  sql.NullInt64
-	PhotoHeight sql.NullInt64
-	CreatedAt   string
+	ID              string
+	Kind            string
+	PromptKey       sql.NullString
+	Label           string
+	Body            string
+	PhotoKey        sql.NullString
+	PhotoWidth      sql.NullInt64
+	PhotoHeight     sql.NullInt64
+	CreatedAt       string
+	ContentRevision int64
 }
 
 // The one answer a prompt holds in a voice (voice_samples_voice_prompt).
@@ -196,12 +203,13 @@ func (q *Queries) GetPromptAnswer(ctx context.Context, arg GetPromptAnswerParams
 		&i.PhotoWidth,
 		&i.PhotoHeight,
 		&i.CreatedAt,
+		&i.ContentRevision,
 	)
 	return i, err
 }
 
 const getSampleBody = `-- name: GetSampleBody :one
-SELECT id, kind, prompt_key, label, body, photo_key, photo_width, photo_height, created_at
+SELECT id, kind, prompt_key, label, body, photo_key, photo_width, photo_height, created_at, content_revision
 FROM voice_samples
 WHERE id = ? AND voice_id = ? AND user_id = ?
 `
@@ -213,15 +221,16 @@ type GetSampleBodyParams struct {
 }
 
 type GetSampleBodyRow struct {
-	ID          string
-	Kind        string
-	PromptKey   sql.NullString
-	Label       string
-	Body        string
-	PhotoKey    sql.NullString
-	PhotoWidth  sql.NullInt64
-	PhotoHeight sql.NullInt64
-	CreatedAt   string
+	ID              string
+	Kind            string
+	PromptKey       sql.NullString
+	Label           string
+	Body            string
+	PhotoKey        sql.NullString
+	PhotoWidth      sql.NullInt64
+	PhotoHeight     sql.NullInt64
+	CreatedAt       string
+	ContentRevision int64
 }
 
 func (q *Queries) GetSampleBody(ctx context.Context, arg GetSampleBodyParams) (GetSampleBodyRow, error) {
@@ -237,6 +246,7 @@ func (q *Queries) GetSampleBody(ctx context.Context, arg GetSampleBodyParams) (G
 		&i.PhotoWidth,
 		&i.PhotoHeight,
 		&i.CreatedAt,
+		&i.ContentRevision,
 	)
 	return i, err
 }
@@ -297,18 +307,47 @@ func (q *Queries) GetVoice(ctx context.Context, arg GetVoiceParams) (GetVoiceRow
 	return i, err
 }
 
+const getVoiceSampleMutation = `-- name: GetVoiceSampleMutation :one
+SELECT user_id, voice_id, sample_id, operation_key, expected_content_revision, resulting_content_revision, fingerprint, response, created_at FROM voice_sample_mutations WHERE user_id=? AND operation_key=?
+`
+
+type GetVoiceSampleMutationParams struct {
+	UserID       string
+	OperationKey string
+}
+
+func (q *Queries) GetVoiceSampleMutation(ctx context.Context, arg GetVoiceSampleMutationParams) (VoiceSampleMutation, error) {
+	row := q.db.QueryRowContext(ctx, getVoiceSampleMutation, arg.UserID, arg.OperationKey)
+	var i VoiceSampleMutation
+	err := row.Scan(
+		&i.UserID,
+		&i.VoiceID,
+		&i.SampleID,
+		&i.OperationKey,
+		&i.ExpectedContentRevision,
+		&i.ResultingContentRevision,
+		&i.Fingerprint,
+		&i.Response,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const insertCurrentAnalysis = `-- name: InsertCurrentAnalysis :exec
-INSERT INTO voice_analyses (voice_id, user_id, slot, snapshot, material_ids, analyze_model, created_at)
-VALUES (?, ?, 'current', ?, ?, ?, ?)
+INSERT INTO voice_analyses (voice_id, user_id, slot, snapshot, material_ids, analyze_model, created_at, source_versions_known, accepted_sources, accepted_material_snapshot)
+VALUES (?, ?, 'current', ?, ?, ?, ?, ?, ?, ?)
 `
 
 type InsertCurrentAnalysisParams struct {
-	VoiceID      string
-	UserID       string
-	Snapshot     string
-	MaterialIds  string
-	AnalyzeModel string
-	CreatedAt    string
+	VoiceID                  string
+	UserID                   string
+	Snapshot                 string
+	MaterialIds              string
+	AnalyzeModel             string
+	CreatedAt                string
+	SourceVersionsKnown      int64
+	AcceptedSources          string
+	AcceptedMaterialSnapshot string
 }
 
 func (q *Queries) InsertCurrentAnalysis(ctx context.Context, arg InsertCurrentAnalysisParams) error {
@@ -319,6 +358,9 @@ func (q *Queries) InsertCurrentAnalysis(ctx context.Context, arg InsertCurrentAn
 		arg.MaterialIds,
 		arg.AnalyzeModel,
 		arg.CreatedAt,
+		arg.SourceVersionsKnown,
+		arg.AcceptedSources,
+		arg.AcceptedMaterialSnapshot,
 	)
 	return err
 }
@@ -419,6 +461,37 @@ func (q *Queries) InsertVoice(ctx context.Context, arg InsertVoiceParams) error 
 	return err
 }
 
+const insertVoiceSampleMutation = `-- name: InsertVoiceSampleMutation :exec
+INSERT INTO voice_sample_mutations(user_id,voice_id,sample_id,operation_key,expected_content_revision,resulting_content_revision,fingerprint,response,created_at) VALUES(?,?,?,?,?,?,?,?,?)
+`
+
+type InsertVoiceSampleMutationParams struct {
+	UserID                   string
+	VoiceID                  string
+	SampleID                 string
+	OperationKey             string
+	ExpectedContentRevision  int64
+	ResultingContentRevision int64
+	Fingerprint              string
+	Response                 string
+	CreatedAt                string
+}
+
+func (q *Queries) InsertVoiceSampleMutation(ctx context.Context, arg InsertVoiceSampleMutationParams) error {
+	_, err := q.db.ExecContext(ctx, insertVoiceSampleMutation,
+		arg.UserID,
+		arg.VoiceID,
+		arg.SampleID,
+		arg.OperationKey,
+		arg.ExpectedContentRevision,
+		arg.ResultingContentRevision,
+		arg.Fingerprint,
+		arg.Response,
+		arg.CreatedAt,
+	)
+	return err
+}
+
 const listPhotoUploadKeys = `-- name: ListPhotoUploadKeys :many
 SELECT object_key FROM voice_photo_uploads
 `
@@ -484,7 +557,7 @@ func (q *Queries) ListPhotoUploadsExpiredBefore(ctx context.Context, expiresAt s
 }
 
 const listSampleBodies = `-- name: ListSampleBodies :many
-SELECT id, kind, prompt_key, label, body, photo_key, photo_width, photo_height, created_at
+SELECT id, kind, prompt_key, label, body, photo_key, photo_width, photo_height, created_at, content_revision
 FROM voice_samples
 WHERE voice_id = ? AND user_id = ?
 ORDER BY created_at DESC, id DESC
@@ -496,15 +569,16 @@ type ListSampleBodiesParams struct {
 }
 
 type ListSampleBodiesRow struct {
-	ID          string
-	Kind        string
-	PromptKey   sql.NullString
-	Label       string
-	Body        string
-	PhotoKey    sql.NullString
-	PhotoWidth  sql.NullInt64
-	PhotoHeight sql.NullInt64
-	CreatedAt   string
+	ID              string
+	Kind            string
+	PromptKey       sql.NullString
+	Label           string
+	Body            string
+	PhotoKey        sql.NullString
+	PhotoWidth      sql.NullInt64
+	PhotoHeight     sql.NullInt64
+	CreatedAt       string
+	ContentRevision int64
 }
 
 func (q *Queries) ListSampleBodies(ctx context.Context, arg ListSampleBodiesParams) ([]ListSampleBodiesRow, error) {
@@ -526,6 +600,7 @@ func (q *Queries) ListSampleBodies(ctx context.Context, arg ListSampleBodiesPara
 			&i.PhotoWidth,
 			&i.PhotoHeight,
 			&i.CreatedAt,
+			&i.ContentRevision,
 		); err != nil {
 			return nil, err
 		}
@@ -541,7 +616,7 @@ func (q *Queries) ListSampleBodies(ctx context.Context, arg ListSampleBodiesPara
 }
 
 const listSampleBodiesForVoices = `-- name: ListSampleBodiesForVoices :many
-SELECT voice_id, id, kind, prompt_key, label, body, photo_key, photo_width, photo_height, created_at
+SELECT voice_id, id, kind, prompt_key, label, body, photo_key, photo_width, photo_height, created_at, content_revision
 FROM voice_samples
 WHERE user_id = ?1 AND voice_id IN (SELECT value FROM json_each(?2))
 ORDER BY voice_id, created_at DESC, id DESC
@@ -553,16 +628,17 @@ type ListSampleBodiesForVoicesParams struct {
 }
 
 type ListSampleBodiesForVoicesRow struct {
-	VoiceID     string
-	ID          string
-	Kind        string
-	PromptKey   sql.NullString
-	Label       string
-	Body        string
-	PhotoKey    sql.NullString
-	PhotoWidth  sql.NullInt64
-	PhotoHeight sql.NullInt64
-	CreatedAt   string
+	VoiceID         string
+	ID              string
+	Kind            string
+	PromptKey       sql.NullString
+	Label           string
+	Body            string
+	PhotoKey        sql.NullString
+	PhotoWidth      sql.NullInt64
+	PhotoHeight     sql.NullInt64
+	CreatedAt       string
+	ContentRevision int64
 }
 
 // Every listed voice's samples with their bodies in one read, for the directory's readiness.
@@ -587,6 +663,7 @@ func (q *Queries) ListSampleBodiesForVoices(ctx context.Context, arg ListSampleB
 			&i.PhotoWidth,
 			&i.PhotoHeight,
 			&i.CreatedAt,
+			&i.ContentRevision,
 		); err != nil {
 			return nil, err
 		}
@@ -817,6 +894,44 @@ func (q *Queries) SoftDeleteVoice(ctx context.Context, arg SoftDeleteVoiceParams
 		arg.UpdatedAt,
 		arg.ID,
 		arg.UserID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const updateOwnedVoiceSample = `-- name: UpdateOwnedVoiceSample :execrows
+UPDATE voice_samples SET label=?,body=?,photo_key=?,photo_width=?,photo_height=?,content_revision=?
+WHERE voice_samples.user_id=? AND voice_samples.voice_id=? AND voice_samples.id=? AND voice_samples.content_revision=?
+AND EXISTS(SELECT 1 FROM voices WHERE voices.id=voice_samples.voice_id AND voices.user_id=voice_samples.user_id AND voices.deleted_at IS NULL)
+`
+
+type UpdateOwnedVoiceSampleParams struct {
+	Label             string
+	Body              string
+	PhotoKey          sql.NullString
+	PhotoWidth        sql.NullInt64
+	PhotoHeight       sql.NullInt64
+	ContentRevision   int64
+	UserID            string
+	VoiceID           string
+	ID                string
+	ContentRevision_2 int64
+}
+
+func (q *Queries) UpdateOwnedVoiceSample(ctx context.Context, arg UpdateOwnedVoiceSampleParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, updateOwnedVoiceSample,
+		arg.Label,
+		arg.Body,
+		arg.PhotoKey,
+		arg.PhotoWidth,
+		arg.PhotoHeight,
+		arg.ContentRevision,
+		arg.UserID,
+		arg.VoiceID,
+		arg.ID,
+		arg.ContentRevision_2,
 	)
 	if err != nil {
 		return 0, err

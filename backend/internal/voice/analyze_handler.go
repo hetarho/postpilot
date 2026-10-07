@@ -24,13 +24,12 @@ func (s *Service) Analyze(ctx context.Context, found AnalysisJob, progress Progr
 	if _, err := s.activeVoice(ctx, found.UserID, found.VoiceID); err != nil {
 		return voiceUnavailableError(err)
 	}
-	listed, err := s.samples.ListSampleBodies(ctx, found.UserID, found.VoiceID)
+	newestFirst, err := analysisJobSamples(found)
 	if err != nil {
-		return fmt.Errorf("학습 글을 불러오지 못했어요: %w", err)
+		return err
 	}
-	newestFirst := frozenSamples(listed, found.MaterialIDs)
-	if len(newestFirst) == 0 {
-		return fmt.Errorf("분석할 학습 글이 없어요")
+	if err := s.validateMaterialPresence(ctx, found.UserID, found.VoiceID, found.AcceptedSources); err != nil {
+		return err
 	}
 	counted, oldestFirst, ids := analysisSnapshot(newestFirst)
 	progress("analyze", 0, 1)
@@ -39,7 +38,8 @@ func (s *Service) Analyze(ctx context.Context, found AnalysisJob, progress Progr
 		return err
 	}
 	if err := s.analyses.PublishAnalysis(ctx, found.UserID, found.VoiceID, Analysis{
-		Counted: counted, AI: ai, MaterialIDs: ids, AnalyzeModel: ref.String(), CreatedAt: s.now(),
+		Origin: OriginPersonal, Counted: counted, AI: ai, MaterialIDs: ids, AnalyzeModel: ref.String(), CreatedAt: s.now(),
+		SourceVersionsKnown: true, AcceptedSources: found.AcceptedSources, AcceptedMaterials: found.AcceptedMaterials,
 	}); err != nil {
 		return fmt.Errorf("말투 분석 결과를 저장하지 못했어요: %w", err)
 	}

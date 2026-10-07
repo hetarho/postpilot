@@ -6,6 +6,7 @@ export const i18n = {
   ko: {
     samples: {
       title: '학습 글',
+      edit: '수정',
       empty: '아직 학습 글이 없어요.',
       post: '붙여 넣은 글',
       answer: '문항 답',
@@ -19,6 +20,7 @@ export const i18n = {
   en: {
     samples: {
       title: 'Writing',
+      edit: 'Edit',
       empty: 'No writing yet.',
       post: 'Pasted post',
       answer: 'Prompt answer',

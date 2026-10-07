@@ -1,7 +1,12 @@
 import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
-import { fingerprintRows, type VoiceAiField, type VoiceAnalysis } from '@/entities/voice'
+import {
+  fingerprintRows,
+  voiceMaterialFreshness,
+  type VoiceAiField,
+  type VoiceAnalysis,
+} from '@/entities/voice'
 import { MakeVoiceButton } from '@/features/make-voice'
 import { RestorePreviousAnalysisButton } from '@/features/restore-voice-analysis'
 import { AIAuthoringSheet } from '@/widgets/ai-authoring-studio'
@@ -41,12 +46,7 @@ function AnalysisPanel({ ownerId, voiceId, voice, profile }: VoiceScreenContext)
         onComplete={() => setGuided(false)}
       />
     )
-  const notice =
-    profile.notice.kind === 'added'
-      ? t('analysis.noticeAdded', { count: profile.notice.count })
-      : profile.notice.kind === 'changed'
-        ? t('analysis.noticeChanged')
-        : ''
+  const pendingMaterials = ['pending', 'unknown'].includes(voiceMaterialFreshness(profile))
   return (
     <>
       {!voice.deleted && (
@@ -72,18 +72,17 @@ function AnalysisPanel({ ownerId, voiceId, voice, profile }: VoiceScreenContext)
           {t('origin.syntheticHelp')}
         </Notice>
       )}
-      {!voice.deleted && (notice || profile.hasPrevious) && (
+      {!voice.deleted && (pendingMaterials || profile.hasPrevious) && (
         <div className="flex flex-col gap-3">
-          {notice && (
-            <Notice tone="info" role="status">
-              <span className="w-full min-w-0">{notice}</span>
+          {pendingMaterials && (
+            <div>
               <MakeVoiceButton
                 ownerId={ownerId}
                 voiceId={voiceId}
                 profile={profile}
                 onStarted={setStartedJobId}
               />
-            </Notice>
+            </div>
           )}
           {profile.hasPrevious && (
             <div>

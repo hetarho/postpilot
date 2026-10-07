@@ -57,8 +57,9 @@ Each block uses the type, content, level, file, files, layout, alt, caption, and
 // A payload written while 규칙으로 저장 existed still carries `save_as_rule`; it decodes
 // because encoding/json ignores a key the struct no longer names.
 type revisionPayloadJSON struct {
-	Instruction     string   `json:"instruction"`
-	ContentLanguage Language `json:"content_language,omitempty"`
+	Profile         *profilePayload `json:"voice_profile,omitempty"`
+	Instruction     string          `json:"instruction"`
+	ContentLanguage Language        `json:"content_language,omitempty"`
 	// Frozen at enqueue exactly as the generate payload freezes it. A payload written
 	// before templates existed decodes with this absent, which is "no template".
 	Template *templatePayload `json:"template,omitempty"`
@@ -76,11 +77,16 @@ func encodeRevisionPayload(instruction string, template *TemplateBrief, guidelin
 	return encodeRevisionPayloadForLanguage(instruction, LanguageKorean, template, FrozenGuidelines{Owner: guidelines}, post.TagCountRange.Default, false)
 }
 
-func encodeRevisionPayloadForLanguage(instruction string, language Language, template *TemplateBrief, guidelines FrozenGuidelines, tagCount int, nativeEffort bool) ([]byte, error) {
+func encodeRevisionPayloadForLanguage(instruction string, language Language, template *TemplateBrief, guidelines FrozenGuidelines, tagCount int, nativeEffort bool, frozen ...Profile) ([]byte, error) {
 	if !language.Valid() {
 		return nil, ErrContentLanguageRequired
 	}
+	var profile *profilePayload
+	if len(frozen) > 0 {
+		profile = encodeProfile(&frozen[0])
+	}
 	return json.Marshal(revisionPayloadJSON{
+		Profile:     profile,
 		Instruction: instruction, ContentLanguage: language,
 		Template: encodeTemplate(template), Guidelines: cloneTexts(guidelines.Owner),
 		DefaultGuidelines: cloneTexts(guidelines.Defaults),

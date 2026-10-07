@@ -84,7 +84,6 @@
 | T602 | Authorize and verify browser-prepared analysis artifacts | ARCH CLIP QUOTA | T591 | todo |
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | todo |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | todo |
-| T626 | Edit learning materials while preserving accepted voice profiles and test provenance | ARCH VOICE MODEL QUOTA | T622 T625 | todo |
 | T627 | Prepare frozen single-factor inputs and one complete post per test entrant | ARCH GEN MODEL TMPL GUIDE LANG VIDEO QUOTA | T622 T625 T626 T630 | todo |
 | T628 | Run private binary tournaments with exact metering and explicit winner publication | ARCH MODEL QUOTA GEN LANG | T622 T624 T625 T626 T627 T630 | todo |
 | T630 | Show named setting states and integrate direct AI editing and real-writing tests | ARCH EDIT THEME TMPL GUIDE MODEL | T622 T625 | todo |
@@ -106,11 +105,14 @@
 | T646 | Qualify origin-aware writing inspection and clean publication handoff | ARCH GEN POST MODEL THEME EXPORT MKT LANG | T636 T637 T639 T641 T642 T643 T644 T645 T631 | todo |
 
 ## next
-- implement-task T626 on main, then complete the remaining dependency-ready UX tasks one at a time under ARCH-70; T622/T623/T624/T625/T629 are complete.
-- After T623 completes, the T632→T635 foundation batch uses completed T622/T624/T625 seams; later behavior/source consumers retain their real prerequisites and T631 integration guard.
+- Stopped after completing and committing T626 as requested; do not start another task until the user resumes.
+- Remaining UX tasks are T630, T627, T628 and T631 in dependency order; prompt-engineering tasks retain their recorded prerequisites.
 - Existing browser-media tasks and blocked qualifications retain their scope; THEME-61 visual decisions remain open.
 
 ## log
+- 261007 T626 done on main: editable private sources and accepted snapshots, explicit estimated reanalysis, exact binary style batches and safe publication; owning/consumer tests, builds, codegen and lint checks pass; stopped as requested without starting another task
+- 261007 user scope limited to current T626: finish implementation, verification and main commit, then stop without starting a next task
+- 261007 T626 start on main after0d49753b: editable materials, accepted revision/source snapshots, explicit reanalysis and binary style preparation; VOICE@15/MODEL@35 prompt-inspection additions remain in T632/T638/T641
 - 261007 T623 done on main: visible desktop/phone hierarchy and contextual creation/settings/test return;330 impact-selected tests, final40tests, browser matrix/caret/mint and build/lint checks pass
 - 261007 T623 start on main: visible section/parent/navigation, contextual creation return and test routes; preserve unrelated planning changes
 - 261007 create-task foundation batch done: T632 depends on completed T622/T624/T625, T635 reports current helper availability; later consumers retain explicit profile/factory/tournament/integration gates; implementation waits for current T623 ownership to end
@@ -128,6 +130,3 @@
 - 261007 ideation prompt-engineering owner-control round recorded: scope corrected; three semantic sources, expressive assistance and photo-order chronology explored with an interactive synthetic mockup; granularity/addition policy pending, SSOT/tasks unchanged
 - 261007 ideation prompt-engineering owner-control round start: correct scope to context efficiency/maintainability plus writing/tag quality; explore three-source text review, AI-assisted expression and photo-order-independent storytelling before SSOT/task conversion
 - 261007 ideation prompt-engineering deep review recorded: thirty-one audit candidates and twenty primary-source links; twelve existing checks plus five synthetic diagnostics, reference-token measurements and independent reviews; language choice remains open, tag default ownership confirmed
-- 261007 ideation prompt-engineering deep review start: audit prompt structure, length and contradictions across stages; research Korean versus English instructions with Korean output and separate evidence from hypotheses
-- 261007 ideation prompt-engineering round recorded: current prompt map and 995bcee9 tag path traced; thirteen existing tests pass; both inspection audiences and up-to-N grounded tags chosen, refactor scope remains open
-- 261007 ideation prompt-engineering start: improve writing quality before owner-observed view trials; trace actual prompt composition and the recent tag change, then explore a comprehensive prompt refactor

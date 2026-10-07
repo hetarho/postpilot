@@ -99,57 +99,15 @@ type CheckStore interface {
 	FailCheck(ctx context.Context, userID, checkID string, failure Failure, now time.Time) (bool, error)
 }
 
-// StartVoiceCheck is 검증하기 (VOICE-43): on a made, active voice and an answered prompt, it
-// freezes the projection with that answer withheld, the prompt and the analysis it read, and
-// enqueues one check_voice job holding one write call. A photo prompt needs a write model that
-// reads images.
-func (s *Service) StartVoiceCheck(ctx context.Context, userID, voiceID, promptKey string, model llm.ModelRef) (CheckView, string, error) {
-	input, err := s.prepareCheck(ctx, userID, voiceID, promptKey)
-	if err != nil {
-		return CheckView{}, "", err
-	}
-	analysis, prompt, answer := input.analysis, input.prompt, input.answer
-	info, found := s.models.Resolve(model)
-	if model.ProviderID == "" || model.ModelID == "" || !found || info.Disabled || !info.ServesStage(llm.StageNameWrite) {
-		return CheckView{}, "", ErrWriteModelRequired
-	}
-	// The registry refuses an image to a model without vision; the start refuses first, so a
-	// check that could only fail is never paid for.
-	if prompt.Photo && !info.Vision {
-		return CheckView{}, "", ErrCheckPhotoUnsupported
-	}
-	now := s.now()
-	check := Check{
-		ID: s.newID(), UserID: userID, VoiceID: voiceID, PromptKey: promptKey, MaterialID: answer.ID,
-		AnalysisCreatedAt: analysis.CreatedAt, Projection: input.projection, WriteModel: model.String(),
-		Status: CheckQueued, CreatedAt: now, UpdatedAt: now,
-	}
-	if err := s.checks.InsertCheck(ctx, check); err != nil {
-		return CheckView{}, "", fmt.Errorf("insert check: %w", err)
-	}
-	id, err := s.jobs.EnqueueCheck(ctx, CheckJobRequest{UserID: userID, VoiceID: voiceID, CheckID: check.ID, WriteModel: check.WriteModel})
-	if err != nil {
-		// A failed enqueue leaves no result and blocks nothing (VOICE-44).
-		if cleanup := s.checks.DeleteCheck(context.WithoutCancel(ctx), userID, check.ID); cleanup != nil {
-			err = errors.Join(err, fmt.Errorf("delete unqueued check: %w", cleanup))
-		}
-		var active *JobAlreadyInProgressError
-		if errors.As(err, &active) {
-			return CheckView{}, "", ErrVoiceBusy
-		}
-		return CheckView{}, "", err
-	}
-	return CheckView{Check: check, Prompt: prompt, Answer: answer.Body}, id, nil
+// StartVoiceCheck retains its public identity for existing clients. New tests use
+// complete writings and human decisions through the unified test service.
+func (s *Service) StartVoiceCheck(context.Context, string, string, string, llm.ModelRef) (CheckView, string, error) {
+	return CheckView{}, "", ErrCheckRetired
 }
 
-// RetryVoiceCheck starts a new check on the same prompt against the voice's current analysis
-// (VOICE-44); the old result stays listed.
-func (s *Service) RetryVoiceCheck(ctx context.Context, userID, checkID string, model llm.ModelRef) (CheckView, string, error) {
-	found, err := s.checks.GetCheck(ctx, userID, checkID)
-	if err != nil {
-		return CheckView{}, "", err
-	}
-	return s.StartVoiceCheck(ctx, userID, found.VoiceID, found.PromptKey, model)
+// RetryVoiceCheck never creates new standalone check work; paid history remains readable.
+func (s *Service) RetryVoiceCheck(context.Context, string, string, llm.ModelRef) (CheckView, string, error) {
+	return CheckView{}, "", ErrCheckRetired
 }
 
 // ListVoiceChecks is the 검증 tab (VOICE-43): the voice's checks newest first, readable on a

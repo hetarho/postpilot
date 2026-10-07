@@ -158,3 +158,65 @@ it('rejects partial batches and obsolete job completion', () => {
     }),
   ).toBe(next)
 })
+
+it.each([2, 4, 8, 16] as const)(
+  'freezes %i requested styles and rejects a silently smaller result',
+  (count) => {
+    let state = candidateTransition(initialCandidateState('alice'), {
+      type: 'choose-count',
+      ownerId: 'alice',
+      count,
+    })
+    expect(state.count).toBe(count)
+    state = candidateTransition(state, { type: 'confirm', ownerId: 'alice', model })
+    expect(state.frozenCount).toBe(count)
+    expect(candidateTransition(state, { type: 'choose-count', ownerId: 'alice', count: 2 })).toBe(
+      state,
+    )
+    state = send(state, { type: 'start' })
+    state = candidateTransition(state, {
+      type: 'started',
+      ownerId: 'alice',
+      operation: state.operation,
+      jobId: 'requested',
+    })
+    const exact = {
+      jobId: 'requested',
+      resultJobId: 'requested',
+      candidates: Array.from({ length: count }, (_, i) => ({
+        id: String(i),
+        name: `style${i}`,
+        description: 'Style',
+        sample: 'Fictional sample',
+      })),
+    }
+    expect(
+      candidateTransition(state, { type: 'latest', ownerId: 'alice', batch: exact }).phase,
+    ).toBe('ready')
+    const smaller = { ...exact, candidates: exact.candidates.slice(0, count === 2 ? 1 : count / 2) }
+    const refused = candidateTransition(state, { type: 'latest', ownerId: 'alice', batch: smaller })
+    expect(refused.phase).toBe('failed')
+    expect(refused.failure?.reason).toBe('WRITING_VOICE_CANDIDATE_OUTPUT_INVALID')
+    expect(refused.candidates).toEqual([])
+  },
+)
+it('recovers a server-confirmed sixteen-style result without assuming the default eight', () => {
+  const result = {
+    jobId: 'recovered',
+    resultJobId: 'recovered',
+    candidates: Array.from({ length: 16 }, (_, i) => ({
+      id: String(i),
+      name: `style${i}`,
+      description: 'Style',
+      sample: 'Fictional sample',
+    })),
+  }
+  const state = candidateTransition(initialCandidateState('alice'), {
+    type: 'latest',
+    ownerId: 'alice',
+    batch: result,
+  })
+  expect(state.phase).toBe('ready')
+  expect(state.candidates).toHaveLength(16)
+  expect(state.failure).toBeUndefined()
+})

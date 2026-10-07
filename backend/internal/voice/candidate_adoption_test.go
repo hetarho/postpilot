@@ -148,7 +148,7 @@ func TestSyntheticAnalysisCanBecomePersonalAndRestoreOriginalProvenance(t *testi
 	}
 	requests := h.jobs.calls()
 	last := requests[len(requests)-1]
-	if err := h.svc.Analyze(ctx, voice.AnalysisJob{UserID: "alice", VoiceID: adopted.ID, WriteModel: analyzeRef.String(), MaterialIDs: last.MaterialIDs}, func(string, int, int) {}); err != nil {
+	if err := h.svc.Analyze(ctx, voice.AnalysisJob{UserID: "alice", VoiceID: adopted.ID, WriteModel: analyzeRef.String(), MaterialIDs: last.MaterialIDs, AcceptedSources: last.AcceptedSources, AcceptedMaterials: last.AcceptedMaterials}, func(string, int, int) {}); err != nil {
 		t.Fatal(err)
 	}
 	personal, err := h.svc.Get(ctx, "alice", adopted.ID)

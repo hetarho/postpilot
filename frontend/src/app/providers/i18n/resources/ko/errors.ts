@@ -7,6 +7,8 @@ export const errors = {
   VOICE_SAMPLE_REVISION_CONFLICT:
     '학습 글이 변경됐어요. 입력 내용은 보존됐으니 최신 글을 확인해 주세요.',
   VOICE_SAMPLE_UPDATE_INVALID: '학습 글의 내용과 사진을 확인한 뒤 저장해 주세요.',
+  VOICE_ACCEPTED_SOURCE_WITHDRAWN:
+    '분석 당시의 학습 글을 확인할 수 없어요. 현재 학습 데이터를 확인하고 다시 분석하거나 테스트를 새로 시작해 주세요.',
   WRITING_TEST_NOT_FOUND: '이 글쓰기 테스트를 찾을 수 없어요.',
   WRITING_TEST_COUNT_INVALID: '참가 수는 2개, 4개, 8개, 16개 중에서 선택해 주세요.',
   WRITING_TEST_FACTOR_INVALID: '비교할 설정 하나 또는 모델 단계 하나를 선택해 주세요.',

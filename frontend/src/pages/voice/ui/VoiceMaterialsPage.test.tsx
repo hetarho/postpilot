@@ -123,6 +123,9 @@ describe('the 학습 데이터 screen', () => {
 
     expect(await screen.findByText('이제 말투를 만들 수 있어요')).toBeInTheDocument()
     await user.click(await screen.findByRole('button', { name: '이 자료로 내 말투 만들기' }))
+    expect(await screen.findByRole('dialog')).toHaveTextContent('예상 3 크레딧')
+    expect(calls).not.toContain('AnalyzeVoice')
+    await user.click(screen.getByRole('button', { name: '분석 시작' }))
     await waitFor(() =>
       expect(analyses).toEqual([{ voiceId: 'voice-default', model: 'stub/analyze' }]),
     )
@@ -131,7 +134,7 @@ describe('the 학습 데이터 screen', () => {
     ).toBeInTheDocument()
   })
 
-  it('reveals the three tabs when the first analysis publishes', async () => {
+  it('reveals the two local tabs and common writing test entry when the first analysis publishes', async () => {
     const user = userEvent.setup()
     const calls: string[] = []
     renderMaterials(
@@ -158,6 +161,9 @@ describe('the 학습 데이터 screen', () => {
     expect(await screen.findByRole('heading', { level: 2, name: '말투 학습' })).toBeInTheDocument()
     expect(screen.queryByRole('navigation', { name: '말투 설정' })).not.toBeInTheDocument()
     await user.click(await screen.findByRole('button', { name: '이 자료로 내 말투 만들기' }))
+    expect(await screen.findByRole('dialog')).toHaveTextContent('예상 3 크레딧')
+    expect(calls).not.toContain('AnalyzeVoice')
+    await user.click(screen.getByRole('button', { name: '분석 시작' }))
     const use = await screen.findByRole('button', { name: '이 말투를 내 글에 사용하기' })
     expect(calls).not.toContain('SetDefaultVoice')
     await user.click(use)
@@ -165,11 +171,7 @@ describe('the 학습 데이터 screen', () => {
     const tabs = within(await screen.findByRole('navigation', { name: '말투 설정' })).getAllByRole(
       'link',
     )
-    expect(tabs.map((tab) => tab.getAttribute('aria-label'))).toEqual([
-      '말투 분석',
-      '학습 데이터',
-      '검증',
-    ])
+    expect(tabs.map((tab) => tab.getAttribute('aria-label'))).toEqual(['말투 분석', '학습 데이터'])
   })
 
   it('says a model is needed, with the way to choose one, when there is none', async () => {

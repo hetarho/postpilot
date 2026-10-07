@@ -435,6 +435,12 @@ it('saves ten short answers through setup and waits for an explicit analysis act
     expect(screen.getByRole('button', { name: '이 자료로 내 말투 만들기' })).toBeEnabled(),
   )
   await user.click(screen.getByRole('button', { name: '이 자료로 내 말투 만들기' }))
+  expect(analyses).toEqual([])
+  const quote = await screen.findByRole('dialog', { name: '이 자료로 말투를 분석할까요?' })
+  await within(quote).findByText(/예상 .*크레딧/)
+  const confirm = within(quote).getByRole('button', { name: '분석 시작' })
+  await waitFor(() => expect(confirm).toBeEnabled())
+  await user.click(confirm)
   await waitFor(() =>
     expect(analyses).toEqual([{ voiceId: 'voice-default', model: 'stub/recommended' }]),
   )

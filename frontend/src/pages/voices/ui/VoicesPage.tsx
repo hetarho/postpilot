@@ -2,7 +2,13 @@ import { useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { useSession } from '@/entities/session'
-import { useVoices, voiceAnalysisDate, type Voice } from '@/entities/voice'
+import {
+  useVoices,
+  useVoiceProfile,
+  VoiceMaterialFreshness,
+  voiceAnalysisDate,
+  type Voice,
+} from '@/entities/voice'
 import { CreateVoiceSheet } from '@/features/create-voice'
 import { GeneratedWritingVoicesSheet } from '@/features/generate-writing-voices'
 import { AIAuthoringSheet } from '@/widgets/ai-authoring-studio'
@@ -79,7 +85,7 @@ export function VoicesPage() {
               {active.map((voice) => (
                 <li key={voice.id}>
                   <Link to="/voices/$voiceId" params={{ voiceId: voice.id }} className={rowClass}>
-                    <VoiceRowContent voice={voice} />
+                    <VoiceRowContent ownerId={ownerId} voice={voice} />
                   </Link>
                 </li>
               ))}
@@ -144,7 +150,7 @@ export function VoicesPage() {
 
 /** A row's two lines: the name, then the 기본 badge and the meta line — `만드는 중` until the voice
  *  is made, then how many 학습 글 it holds and the day its analysis was published. */
-function VoiceRowContent({ voice }: { voice: Voice }) {
+function VoiceRowContent({ voice, ownerId }: { voice: Voice; ownerId: string }) {
   const { t } = useTranslation(['voices', 'common'])
   return (
     <>
@@ -156,6 +162,7 @@ function VoiceRowContent({ voice }: { voice: Voice }) {
         {voice.origin === 'synthetic' && <Badge tone="neutral">{t('origin.synthetic')}</Badge>}
       </Typography>
       <span className="flex w-full min-w-0 items-center gap-2 lg:w-auto lg:shrink-0 lg:justify-end">
+        {voice.made && <DirectoryFreshness ownerId={ownerId} voiceId={voice.id} />}
         {voice.isDefault && <Badge tone="accent">{t('state.default', { ns: 'common' })}</Badge>}
         <span className={typographyStyles({ variant: 'meta', className: 'truncate' })}>
           {voice.made
@@ -192,4 +199,9 @@ function DeletedVoiceRow({ ownerId, voice }: { ownerId: string; voice: Voice }) 
       </div>
     </li>
   )
+}
+
+function DirectoryFreshness({ ownerId, voiceId }: { ownerId: string; voiceId: string }) {
+  const { profile } = useVoiceProfile(ownerId, voiceId)
+  return profile ? <VoiceMaterialFreshness profile={profile} compact /> : null
 }

@@ -42,8 +42,9 @@ type observationPayload struct {
 }
 
 type generationPayload struct {
-	TargetLanguage string `json:"target_language"`
-	TargetLength   *int   `json:"target_length,omitempty"`
+	Profile        *profilePayload `json:"voice_profile,omitempty"`
+	TargetLanguage string          `json:"target_language"`
+	TargetLength   *int            `json:"target_length,omitempty"`
 	// Omitted when zero so a payload frozen before the member existed decodes unchanged;
 	// the decoder resolves 0 to the default (GEN-46).
 	TagCount int              `json:"tag_count,omitempty"`
@@ -84,6 +85,7 @@ type generationPayload struct {
 // bytes, and Generate reads it back. A member retyped by hand anywhere in between is how a
 // frozen option used to go missing on the way to the run.
 type generationOptions struct {
+	Profile        *Profile
 	TargetLanguage Language
 	TargetLength   *int
 	TagCount       int
@@ -105,6 +107,7 @@ func encodeGenerationPayload(options generationOptions) ([]byte, error) {
 		return nil, ErrLanguageRequired
 	}
 	return json.Marshal(generationPayload{
+		Profile:           encodeProfile(options.Profile),
 		TargetLanguage:    options.TargetLanguage.String(),
 		TargetLength:      cloneOptionalInt(options.TargetLength),
 		TagCount:          options.TagCount,
@@ -153,6 +156,7 @@ func decodeGenerationPayload(raw []byte) (generationOptions, error) {
 		}
 	}
 	return generationOptions{
+		Profile:        decodeProfile(payload.Profile),
 		TargetLanguage: language,
 		TargetLength:   cloneOptionalInt(payload.TargetLength),
 		TagCount:       resolveTagCount(payload.TagCount),

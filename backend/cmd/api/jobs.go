@@ -29,14 +29,12 @@ func registerJobs(c *contexts) {
 	voiceSvc, generationSvc, experimentSvc := c.voice, c.generation, c.experiment
 	// The payload is the snapshot of 학습 글 the start froze (VOICE-22).
 	q.Register(job.KindAnalyzeVoice, metered(func(ctx context.Context, found job.Job, progress job.Progress) error {
-		materialIDs, err := voice.DecodeAnalysisSnapshot(found.Payload)
+		snapshot, err := voice.DecodeAcceptedAnalysisSnapshot(found.Payload)
 		if err != nil {
 			return err
 		}
-		return voiceSvc.Analyze(ctx, voice.AnalysisJob{
-			UserID: found.UserID, VoiceID: found.Subject(voice.JobSubject), WriteModel: found.WriteModel,
-			MaterialIDs: materialIDs,
-		}, voice.Progress(progress))
+		snapshot.UserID, snapshot.VoiceID, snapshot.WriteModel = found.UserID, found.Subject(voice.JobSubject), found.WriteModel
+		return voiceSvc.Analyze(ctx, snapshot, voice.Progress(progress))
 	}))
 	// 검증 (VOICE-43): the payload names the check the job writes back to.
 	q.Register(job.KindCheckVoice, metered(func(ctx context.Context, found job.Job, progress job.Progress) error {

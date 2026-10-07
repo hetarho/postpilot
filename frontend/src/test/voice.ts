@@ -2,6 +2,7 @@ import { Code, createRouterTransport } from '@connectrpc/connect'
 import { create, type MessageInitShape } from '@bufbuild/protobuf'
 import {
   AddVoiceSampleResponseSchema,
+  UpdateVoiceSampleResponseSchema,
   CreateVoiceResponseSchema,
   DeleteVoiceResponseSchema,
   DeleteVoiceSampleResponseSchema,
@@ -53,6 +54,7 @@ export interface FakeVoiceSampleRow {
   /** The full text; omitted, a 200-character body. */
   body?: string
   hasPhoto?: boolean
+  contentRevision?: bigint
 }
 
 /** The shared prompt set as the fake serves it: a subset with every part and a photo prompt,
@@ -2107,6 +2109,20 @@ export interface FakeVoiceOptions {
   addError?: string
   deleteFails?: boolean
   addGate?: Promise<void>
+  updateGate?: Promise<void>
+  updateRefusal?: AppFailureReason
+  updateLosesFirstResponse?: boolean
+  updates?: Array<{
+    voiceId: string
+    sampleId: string
+    expectedContentRevision: bigint
+    operationKey: string
+    body?: string
+    label?: string
+    photoUploadId?: string
+  }>
+  analysisEstimate?: { free?: boolean; credits?: number }
+  analysisEstimates?: Array<{ voiceId: string; model: string }>
   calls?: string[]
   /** The account's voice directory. Omitted, it holds only `DEFAULT_FAKE_VOICE`. */
   voices?: FakeVoiceRow[]
@@ -2221,6 +2237,9 @@ export function registerVoiceService(router: ConnectRouter, options: FakeVoiceOp
   const { rpc } = router
   let sequence = options.samples?.length ?? 0
   let profileReads = 0
+  let hasAnalysisAdmission = !!options.activeJobId
+  let acceptedAtAdmission: Array<{ sampleId: string; contentRevision: bigint }> = []
+  let initialNotice = options.notice
 
   const voices = new Map<string, VoiceRow>(
     (options.voices ?? [DEFAULT_FAKE_VOICE]).map((row) => [
@@ -2306,6 +2325,7 @@ export function registerVoiceService(router: ConnectRouter, options: FakeVoiceOp
           kind: toSampleKind(row.kind),
           promptKey: row.promptKey ?? '',
           hasPhoto: row.hasPhoto ?? false,
+          contentRevision: row.contentRevision ?? 1n,
         }),
         body: row.body ?? '가'.repeat(row.chars ?? 200),
       })),
@@ -2364,13 +2384,25 @@ export function registerVoiceService(router: ConnectRouter, options: FakeVoiceOp
   const setProfile = (voiceId: string, profile: ProtoVoiceProfile) => profiles.set(voiceId, profile)
   const withVoice = (voiceId: string, profile: ProtoVoiceProfile) => {
     const row = owned(voiceId)
+    const analysis = analysisOf(row)
+    const currentVersions = new Map(
+      materialsOf(voiceId).map((material) => [material.sample.id, material.sample.contentRevision]),
+    )
+    const versionChanges =
+      analysis?.sourceVersionsKnown &&
+      (analysis.acceptedSources.length !== currentVersions.size ||
+        analysis.acceptedSources.some(
+          (source) => currentVersions.get(source.sampleId) !== source.contentRevision,
+        ))
     const notice =
-      voiceId === defaultId && options.notice
+      voiceId === defaultId && initialNotice
         ? create(VoiceNoticeSchema, {
-            kind: options.notice.kind === 'added' ? VoiceNoticeKind.ADDED : VoiceNoticeKind.CHANGED,
-            count: options.notice.count ?? 0,
+            kind: initialNotice.kind === 'added' ? VoiceNoticeKind.ADDED : VoiceNoticeKind.CHANGED,
+            count: initialNotice.count ?? 0,
           })
-        : undefined
+        : versionChanges
+          ? create(VoiceNoticeSchema, { kind: VoiceNoticeKind.CHANGED })
+          : undefined
     return create(VoiceProfileSchema, {
       ...profile,
       voice: toProtoVoice(row),
@@ -2464,17 +2496,23 @@ export function registerVoiceService(router: ConnectRouter, options: FakeVoiceOp
     options.calls?.push('GetVoiceProfile')
     let profile = profileOf(request.voiceId)
     if (request.voiceId === defaultId) {
-      if (profileReads > 0 && options.analysisAfterAnalysis) {
+      if (profileReads > 0 && options.analysisAfterAnalysis && hasAnalysisAdmission) {
         profile = create(VoiceProfileSchema, { ...profile, activeJobId: '' })
         setProfile(defaultId, profile)
+        const prior = current.get(defaultId)
+        if (prior) previous.set(defaultId, prior)
         current.set(
           defaultId,
           create(VoiceAnalysisSchema, {
             counted: {},
             ai: { impression: options.analysisAfterAnalysis },
+            sourceVersionsKnown: true,
+            acceptedSources: acceptedAtAdmission,
           }),
         )
         owned(defaultId).made = true
+        hasAnalysisAdmission = false
+        initialNotice = undefined
       }
       profileReads += 1
     }
@@ -2594,6 +2632,7 @@ export function registerVoiceService(router: ConnectRouter, options: FakeVoiceOp
     const sample = create(VoiceSampleSchema, {
       id: `sample-${sequence}`,
       kind: VoiceSampleKind.POST,
+      contentRevision: 1n,
       label: request.label.trim() || body.slice(0, 20),
       chars,
       createdAt: NOW,
@@ -2683,6 +2722,7 @@ export function registerVoiceService(router: ConnectRouter, options: FakeVoiceOp
     const sample = create(VoiceSampleSchema, {
       id: `sample-${sequence}`,
       kind: VoiceSampleKind.ANSWER,
+      contentRevision: (previous?.sample.contentRevision ?? 0n) + 1n,
       promptKey: prompt.key,
       hasPhoto: prompt.photo,
       chars: Array.from(body).length,
@@ -2692,6 +2732,106 @@ export function registerVoiceService(router: ConnectRouter, options: FakeVoiceOp
     return create(AnswerVoicePromptResponseSchema, { sample })
   })
 
+  const updateReceipts = new Map<string, { signature: string; sample: ProtoVoiceSample }>()
+  let updateLost = false
+  rpc(VoiceService.method.updateVoiceSample, async (request) => {
+    options.calls?.push('UpdateVoiceSample')
+    active(request.voiceId)
+    options.updates?.push({
+      voiceId: request.voiceId,
+      sampleId: request.sampleId,
+      expectedContentRevision: request.expectedContentRevision,
+      operationKey: request.operationKey,
+      body: request.body,
+      label: request.label,
+      photoUploadId: request.photoUploadId,
+    })
+    const signature = JSON.stringify([
+      request.sampleId,
+      String(request.expectedContentRevision),
+      request.label,
+      request.body,
+      request.photoUploadId,
+      request.photoWidth,
+      request.photoHeight,
+    ])
+    const key = JSON.stringify([request.voiceId, request.sampleId, request.operationKey])
+    const oldReceipt = updateReceipts.get(key)
+    if (oldReceipt) {
+      if (oldReceipt.signature !== signature)
+        throw connectAppError('VOICE_SAMPLE_UPDATE_INVALID', Code.InvalidArgument)
+      return create(UpdateVoiceSampleResponseSchema, { sample: oldReceipt.sample })
+    }
+    if (options.updateGate) await options.updateGate
+    if (options.updateRefusal) throw connectAppError(options.updateRefusal, Code.Aborted)
+    const row = materialsOf(request.voiceId).find((item) => item.sample.id === request.sampleId)
+    if (!row) throw connectAppError('VOICE_SAMPLE_NOT_FOUND', Code.NotFound)
+    if (request.expectedContentRevision !== row.sample.contentRevision)
+      throw connectAppError('VOICE_SAMPLE_REVISION_CONFLICT', Code.Aborted)
+    if (!request.operationKey)
+      throw connectAppError('VOICE_SAMPLE_UPDATE_INVALID', Code.InvalidArgument)
+    const body = request.body === undefined ? row.body : request.body.trim()
+    const chars = Array.from(body).length
+    if (row.sample.kind === VoiceSampleKind.POST && chars < 200)
+      throw connectAppError('VOICE_SAMPLE_TOO_SHORT', Code.InvalidArgument, {
+        actual: String(chars),
+        min: '200',
+      })
+    if (row.sample.kind === VoiceSampleKind.ANSWER && !body)
+      throw connectAppError('VOICE_ANSWER_REQUIRED', Code.InvalidArgument)
+    const prompt = promptBank.find((item) => item.key === row.sample.promptKey)
+    let hasPhoto = row.sample.hasPhoto
+    if (request.photoUploadId !== undefined) {
+      if (!request.photoUploadId) hasPhoto = false
+      else {
+        if (
+          !prompt?.photo ||
+          pendingUploads.get(request.photoUploadId) !== row.sample.promptKey ||
+          (request.photoWidth ?? 0) <= 0 ||
+          (request.photoHeight ?? 0) <= 0
+        )
+          throw connectAppError('VOICE_SAMPLE_UPDATE_INVALID', Code.InvalidArgument)
+        hasPhoto = true
+      }
+    }
+    if (prompt?.photo && !hasPhoto)
+      throw connectAppError('VOICE_PHOTO_REQUIRED', Code.FailedPrecondition)
+    const semanticChange =
+      body !== row.body || hasPhoto !== row.sample.hasPhoto || !!request.photoUploadId
+    row.body = body
+    if (request.label !== undefined)
+      row.sample.label = request.label.trim() || Array.from(body).slice(0, 20).join('')
+    row.sample.chars = chars
+    row.sample.hasPhoto = hasPhoto
+    if (semanticChange) {
+      row.sample.contentRevision++
+      if (request.voiceId === defaultId) initialNotice = { kind: 'changed' }
+    }
+    if (request.photoUploadId) pendingUploads.delete(request.photoUploadId)
+    const receipt = create(VoiceSampleSchema, row.sample)
+    updateReceipts.set(key, { signature, sample: receipt })
+    if (options.updateLosesFirstResponse && !updateLost) {
+      updateLost = true
+      throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
+    }
+    return create(UpdateVoiceSampleResponseSchema, { sample: receipt })
+  })
+  rpc(VoiceService.method.estimateVoiceAnalysis, (request) => {
+    options.calls?.push('EstimateVoiceAnalysis')
+    active(request.voiceId)
+    if (!request.model?.providerId || !request.model.modelId)
+      throw connectAppError('VOICE_ANALYZE_MODEL_REQUIRED', Code.FailedPrecondition)
+    if (fakeReadiness(materialsOf(request.voiceId), promptBank).percent < 100)
+      throw connectAppError('VOICE_NOT_READY', Code.FailedPrecondition)
+    options.analysisEstimates?.push({
+      voiceId: request.voiceId,
+      model: `${request.model.providerId}/${request.model.modelId}`,
+    })
+    return create(VoiceService.method.estimateVoiceAnalysis.output, {
+      free: options.analysisEstimate?.free ?? false,
+      credits: options.analysisEstimate?.credits ?? 3,
+    })
+  })
   rpc(VoiceService.method.analyzeVoice, (request) => {
     options.calls?.push('AnalyzeVoice')
     active(request.voiceId)
@@ -2701,6 +2841,11 @@ export function registerVoiceService(router: ConnectRouter, options: FakeVoiceOp
     if (fakeReadiness(materialsOf(request.voiceId), promptBank).percent < 100) {
       throw connectAppError('VOICE_NOT_READY', Code.FailedPrecondition)
     }
+    hasAnalysisAdmission = true
+    acceptedAtAdmission = materialsOf(request.voiceId).map((material) => ({
+      sampleId: material.sample.id,
+      contentRevision: material.sample.contentRevision,
+    }))
     options.analyses?.push({
       voiceId: request.voiceId,
       model: `${request.model.providerId}/${request.model.modelId}`,

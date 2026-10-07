@@ -29,6 +29,7 @@ service VoiceService {
   rpc CreateVoicePhotoUpload(CreateVoicePhotoUploadRequest) returns (CreateVoicePhotoUploadResponse) {}
   rpc AnswerVoicePrompt(AnswerVoicePromptRequest) returns (AnswerVoicePromptResponse) {}
   // 말투 만들기 and 다시 분석: one analyze_voice job at 100% (VOICE-23).
+  rpc EstimateVoiceAnalysis(EstimateVoiceAnalysisRequest) returns (EstimateVoiceAnalysisResponse) {}
   rpc AnalyzeVoice(AnalyzeVoiceRequest) returns (AnalyzeVoiceResponse) {}
   // 이전 분석으로 되돌리기: the previous analysis becomes current, the replaced one is discarded,
   // and there is no redo (VOICE-30).
@@ -388,6 +389,8 @@ message AnswerVoicePromptRequest {
 message AnswerVoicePromptResponse { VoiceSample sample = 1; }
 
 // The model is named explicitly, like every start RPC (MODEL-23).
+message EstimateVoiceAnalysisRequest { string voice_id = 1; ModelRef model = 2; }
+message EstimateVoiceAnalysisResponse { optional int32 credits = 1; bool free = 2; }
 message AnalyzeVoiceRequest { string voice_id = 1; ModelRef model = 2; }
 message AnalyzeVoiceResponse { string job_id = 1; }
 

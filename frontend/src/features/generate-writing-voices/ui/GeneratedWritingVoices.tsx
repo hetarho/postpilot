@@ -17,6 +17,7 @@ import {
   useStartWritingVoiceCandidates,
   useCancelWritingVoiceCandidates,
   useAdoptWritingVoiceCandidate,
+  WRITING_VOICE_CANDIDATE_COUNTS,
 } from '@/entities/voice-candidate'
 import {
   AppFailureMessage,
@@ -26,6 +27,7 @@ import {
   Sheet,
   Typography,
   typographyStyles,
+  SegmentedControl,
 } from '@/shared/ui'
 import {
   candidateMachine,
@@ -61,7 +63,7 @@ function AccountCandidates({ ownerId, onAdopted, onBusyChange }: GeneratedWritin
         perform: fromPromise<CandidateResult, CandidateWork>(async ({ input }) => {
           if (input.kind === 'start') {
             if (!input.model) throw new Error('Generated writing model unavailable')
-            const result = await start.start(input.model)
+            const result = await start.start({ ...input.model, candidateCount: input.count })
             return { ownerId: input.ownerId, operation: input.operation, jobId: result.jobId }
           }
           if (input.kind === 'cancel') {
@@ -103,6 +105,7 @@ function AccountCandidates({ ownerId, onAdopted, onBusyChange }: GeneratedWritin
   const quote = useEstimateWritingVoiceCandidates(
     ownerId,
     state.phase === 'confirming' ? state.frozenModel : undefined,
+    state.frozenCount,
   )
   const terminalKeys = useMemo(() => [latest.queryKey], [latest.queryKey])
   const progress = useJob(state.jobId, terminalKeys)
@@ -173,8 +176,21 @@ function AccountCandidates({ ownerId, onAdopted, onBusyChange }: GeneratedWritin
       <div className="flex flex-col gap-3">
         <Typography variant="title">{t('candidateFlow.title')}</Typography>
         <Typography variant="body" className="text-content-secondary">
-          {t('candidateFlow.intro')}
+          {t('candidateFlow.intro', { count: state.count })}
         </Typography>
+        <SegmentedControl
+          ariaLabel={t('candidateFlow.count')}
+          value={String(state.count)}
+          options={WRITING_VOICE_CANDIDATE_COUNTS.map((count) => ({
+            value: String(count),
+            label: t('candidateFlow.countOption', { count }),
+          }))}
+          disabled={busy || state.phase === 'confirming'}
+          onChange={(value) => {
+            const count = WRITING_VOICE_CANDIDATE_COUNTS.find((count) => String(count) === value)
+            if (count) send({ type: 'choose-count', ownerId, count })
+          }}
+        />
       </div>
       {latest.isPending && (
         <Typography variant="body" role="status">
@@ -230,7 +246,10 @@ function AccountCandidates({ ownerId, onAdopted, onBusyChange }: GeneratedWritin
         state.phase === 'starting') && (
         <Notice tone="info" role="status">
           <Typography variant="body">
-            {t(state.phase === 'cancelling' ? 'candidateFlow.cancelling' : 'candidateFlow.running')}
+            {t(
+              state.phase === 'cancelling' ? 'candidateFlow.cancelling' : 'candidateFlow.running',
+              { count: state.frozenCount },
+            )}
           </Typography>
           {state.candidates.length > 0 && (
             <Typography variant="meta">{t('candidateFlow.retained')}</Typography>
@@ -262,7 +281,7 @@ function AccountCandidates({ ownerId, onAdopted, onBusyChange }: GeneratedWritin
       {state.candidates.length > 0 && (
         <>
           <Typography variant="body" className="text-content-secondary">
-            {t('candidateFlow.ready')}
+            {t('candidateFlow.ready', { count: state.candidates.length })}
           </Typography>
           <ul className="grid min-w-0 grid-cols-1 gap-4 @lg:grid-cols-2 @6xl:grid-cols-4">
             {state.candidates.map((candidate) => (
@@ -319,7 +338,7 @@ function AccountCandidates({ ownerId, onAdopted, onBusyChange }: GeneratedWritin
               {t('candidateFlow.adopt')}
             </Button>
             <Button variant="secondary" disabled={!canGenerate} onClick={openConfirmation}>
-              {t('candidateFlow.reroll')}
+              {t('candidateFlow.reroll', { count: state.count })}
             </Button>
             {!state.selectedId && (
               <Typography variant="meta" role="status">
@@ -336,7 +355,7 @@ function AccountCandidates({ ownerId, onAdopted, onBusyChange }: GeneratedWritin
           disabled={!canGenerate}
           onClick={openConfirmation}
         >
-          {t('candidateFlow.generate')}
+          {t('candidateFlow.generate', { count: state.count })}
         </Button>
       )}
       <Sheet
@@ -345,7 +364,7 @@ function AccountCandidates({ ownerId, onAdopted, onBusyChange }: GeneratedWritin
         onClose={() => send({ type: 'dismiss-confirm', ownerId })}
         header={
           <Typography variant="title" id={confirmTitle}>
-            {t('candidateFlow.confirming')}
+            {t('candidateFlow.confirming', { count: state.frozenCount })}
           </Typography>
         }
         footer={
@@ -363,7 +382,7 @@ function AccountCandidates({ ownerId, onAdopted, onBusyChange }: GeneratedWritin
               pending={state.phase === 'starting'}
               onClick={() => void run()}
             >
-              {t('candidateFlow.confirm')}
+              {t('candidateFlow.confirm', { count: state.frozenCount })}
             </Button>
           </div>
         }

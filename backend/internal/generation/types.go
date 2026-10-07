@@ -267,6 +267,12 @@ type Profile struct {
 	Text     string
 	Excerpts []string
 	Portable bool
+	Sources  []ProfileSource
+}
+
+type ProfileSource struct {
+	SampleID        string
+	ContentRevision int64
 }
 
 // StartRequest.VoiceID is filled by the service from the owned post and frozen into the

@@ -1,7 +1,9 @@
-import { useId, useState } from 'react'
+import { useId, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   type VoiceSample,
+  type VoiceSampleDetail,
+  type VoicePrompt,
   useDeleteVoiceSample,
   useVoicePrompts,
   useVoiceSample,
@@ -11,17 +13,33 @@ import { Badge, Button, Dialog, FieldMessage, Sheet, Typography } from '@/shared
 
 /** The voice's 학습 글, newest first (VOICE-64): a pasted post by its label, an answer by its
  *  prompt, each opening to its full text and photo with `삭제`. */
-export function SampleList({
-  ownerId,
-  voiceId,
-  samples,
-  blocked = false,
-}: {
+export interface SampleEditorProps {
+  ownerId: string
+  voiceId: string
+  detail: VoiceSampleDetail
+  prompt?: VoicePrompt
+  blocked: boolean
+  onSaved: () => void
+  onCancel: () => void
+  onBusyChange: (busy: boolean) => void
+}
+interface SampleListProps {
   ownerId: string
   voiceId: string
   samples: readonly VoiceSample[]
   blocked?: boolean
-}) {
+  renderEditor?: (props: SampleEditorProps) => ReactNode
+}
+export function SampleList(props: SampleListProps) {
+  return <OwnedSampleList key={JSON.stringify([props.ownerId, props.voiceId])} {...props} />
+}
+function OwnedSampleList({
+  ownerId,
+  voiceId,
+  samples,
+  blocked = false,
+  renderEditor,
+}: SampleListProps) {
   const { t } = useTranslation('voices')
   const { prompts } = useVoicePrompts()
   const [opened, setOpened] = useState<VoiceSample | null>(null)
@@ -68,6 +86,8 @@ export function SampleList({
           sample={opened}
           title={titleOf(opened)}
           blocked={blocked}
+          prompt={prompts.find((prompt) => prompt.key === opened.promptKey)}
+          renderEditor={renderEditor}
           onClose={() => setOpened(null)}
         />
       )}
@@ -81,6 +101,8 @@ function SampleSheet({
   sample,
   title,
   blocked,
+  prompt,
+  renderEditor,
   onClose,
 }: {
   ownerId: string
@@ -88,13 +110,17 @@ function SampleSheet({
   sample: VoiceSample
   title: string
   blocked: boolean
+  prompt?: VoicePrompt
+  renderEditor?: (props: SampleEditorProps) => ReactNode
   onClose: () => void
 }) {
   const { t } = useTranslation(['voices', 'common'])
   const titleId = useId()
-  const { detail, isError } = useVoiceSample(ownerId, voiceId, sample.id)
+  const { detail, isError, refetch } = useVoiceSample(ownerId, voiceId, sample.id)
   const remove = useDeleteVoiceSample(ownerId, voiceId)
   const [confirming, setConfirming] = useState(false)
+  const [editing, setEditing] = useState(false)
+  const [editBusy, setEditBusy] = useState(false)
 
   const confirm = async () => {
     try {
@@ -108,45 +134,80 @@ function SampleSheet({
   }
 
   return (
-    <Sheet open labelledBy={titleId} onClose={onClose}>
+    <Sheet
+      open
+      labelledBy={titleId}
+      onClose={() => {
+        if (!editBusy) onClose()
+      }}
+    >
       <Typography variant="title" as="h2" id={titleId} className="break-words">
-        {title}
+        {detail?.sample.kind === 'post' ? detail.sample.label : title}
       </Typography>
-      {isError ? (
-        <FieldMessage className="mt-4">{t('samples.loadFailed', { ns: 'voices' })}</FieldMessage>
-      ) : detail ? (
-        <>
-          {detail.photoUrl && (
-            <img
-              src={detail.photoUrl}
-              width={detail.photoWidth}
-              height={detail.photoHeight}
-              alt={t('samples.photoAlt', { ns: 'voices' })}
-              className="max-h-field mt-4 h-auto w-full rounded-md object-contain"
-            />
-          )}
-          <Typography variant="body" as="p" className="mt-4 break-words whitespace-pre-line">
-            {detail.body}
-          </Typography>
-        </>
+      {editing && detail && renderEditor ? (
+        renderEditor({
+          ownerId,
+          voiceId,
+          detail,
+          prompt,
+          blocked,
+          onSaved: () => {
+            setEditing(false)
+            refetch()
+          },
+          onCancel: () => setEditing(false),
+          onBusyChange: setEditBusy,
+        })
       ) : (
-        <Typography variant="body" role="status" className="text-content-tertiary mt-4">
-          {t('state.loading', { ns: 'common' })}
-        </Typography>
+        <>
+          {isError ? (
+            <FieldMessage className="mt-4">
+              {t('samples.loadFailed', { ns: 'voices' })}
+            </FieldMessage>
+          ) : detail ? (
+            <>
+              {detail.photoUrl && (
+                <img
+                  src={detail.photoUrl}
+                  width={detail.photoWidth}
+                  height={detail.photoHeight}
+                  alt={t('samples.photoAlt', { ns: 'voices' })}
+                  className="max-h-field mt-4 h-auto w-full rounded-md object-contain"
+                />
+              )}
+              <Typography variant="body" as="p" className="mt-4 break-words whitespace-pre-line">
+                {detail.body}
+              </Typography>
+            </>
+          ) : (
+            <Typography variant="body" role="status" className="text-content-tertiary mt-4">
+              {t('state.loading', { ns: 'common' })}
+            </Typography>
+          )}
+          {remove.isError && <FieldMessage className="mt-3">{remove.errorMessage}</FieldMessage>}
+          <div className="mt-6 flex flex-wrap justify-end gap-2">
+            <Button variant="ghost" onClick={onClose}>
+              {t('action.close', { ns: 'common' })}
+            </Button>
+            {renderEditor && (
+              <Button
+                variant="secondary"
+                disabled={blocked || !detail || remove.isPending}
+                onClick={() => setEditing(true)}
+              >
+                {t('samples.edit', { ns: 'voices' })}
+              </Button>
+            )}
+            <Button
+              variant="danger"
+              disabled={blocked || remove.isPending}
+              onClick={() => setConfirming(true)}
+            >
+              {t('action.delete', { ns: 'common' })}
+            </Button>
+          </div>
+        </>
       )}
-      {remove.isError && <FieldMessage className="mt-3">{remove.errorMessage}</FieldMessage>}
-      <div className="mt-6 flex flex-wrap justify-end gap-2">
-        <Button variant="ghost" onClick={onClose}>
-          {t('action.close', { ns: 'common' })}
-        </Button>
-        <Button
-          variant="danger"
-          disabled={blocked || remove.isPending}
-          onClick={() => setConfirming(true)}
-        >
-          {t('action.delete', { ns: 'common' })}
-        </Button>
-      </div>
       <Dialog
         open={confirming}
         title={t('samples.deleteTitle', { ns: 'voices' })}

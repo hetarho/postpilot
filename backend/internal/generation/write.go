@@ -20,6 +20,9 @@ func (s *Service) write(ctx context.Context, post PostInput, observations []Obse
 }
 
 func (s *Service) writeCandidate(ctx context.Context, post PostInput, profile Profile, observations []Observation, model llm.ModelRef) (WriteAnswer, llm.Usage, error) {
+	if err := s.validateFrozenProfile(ctx, post.UserID, post.Voice.ID, &profile); err != nil {
+		return WriteAnswer{}, llm.Usage{}, err
+	}
 	photos, videos := AttachmentNames(post.Images)
 	// A snapshot frozen before the member existed carries 0 here; the prompt and the parser
 	// must agree on one number, so it is resolved once.

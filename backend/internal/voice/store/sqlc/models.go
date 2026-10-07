@@ -13,3 +13,15 @@ type VoicePhotoUpload struct {
 	ExpiresAt string
 	CreatedAt string
 }
+
+type VoiceSampleMutation struct {
+	UserID                   string
+	VoiceID                  string
+	SampleID                 string
+	OperationKey             string
+	ExpectedContentRevision  int64
+	ResultingContentRevision int64
+	Fingerprint              string
+	Response                 string
+	CreatedAt                string
+}

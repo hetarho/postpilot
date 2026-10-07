@@ -74,6 +74,9 @@ const (
 	// VoiceServiceAnswerVoicePromptProcedure is the fully-qualified name of the VoiceService's
 	// AnswerVoicePrompt RPC.
 	VoiceServiceAnswerVoicePromptProcedure = "/postpilot.v1.VoiceService/AnswerVoicePrompt"
+	// VoiceServiceEstimateVoiceAnalysisProcedure is the fully-qualified name of the VoiceService's
+	// EstimateVoiceAnalysis RPC.
+	VoiceServiceEstimateVoiceAnalysisProcedure = "/postpilot.v1.VoiceService/EstimateVoiceAnalysis"
 	// VoiceServiceAnalyzeVoiceProcedure is the fully-qualified name of the VoiceService's AnalyzeVoice
 	// RPC.
 	VoiceServiceAnalyzeVoiceProcedure = "/postpilot.v1.VoiceService/AnalyzeVoice"
@@ -115,6 +118,7 @@ type VoiceServiceClient interface {
 	CreateVoicePhotoUpload(context.Context, *connect.Request[v1.CreateVoicePhotoUploadRequest]) (*connect.Response[v1.CreateVoicePhotoUploadResponse], error)
 	AnswerVoicePrompt(context.Context, *connect.Request[v1.AnswerVoicePromptRequest]) (*connect.Response[v1.AnswerVoicePromptResponse], error)
 	// 말투 만들기 and 다시 분석: one analyze_voice job at 100% (VOICE-23).
+	EstimateVoiceAnalysis(context.Context, *connect.Request[v1.EstimateVoiceAnalysisRequest]) (*connect.Response[v1.EstimateVoiceAnalysisResponse], error)
 	AnalyzeVoice(context.Context, *connect.Request[v1.AnalyzeVoiceRequest]) (*connect.Response[v1.AnalyzeVoiceResponse], error)
 	// 이전 분석으로 되돌리기: the previous analysis becomes current, the replaced one is discarded,
 	// and there is no redo (VOICE-30).
@@ -224,6 +228,12 @@ func NewVoiceServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(voiceServiceMethods.ByName("AnswerVoicePrompt")),
 			connect.WithClientOptions(opts...),
 		),
+		estimateVoiceAnalysis: connect.NewClient[v1.EstimateVoiceAnalysisRequest, v1.EstimateVoiceAnalysisResponse](
+			httpClient,
+			baseURL+VoiceServiceEstimateVoiceAnalysisProcedure,
+			connect.WithSchema(voiceServiceMethods.ByName("EstimateVoiceAnalysis")),
+			connect.WithClientOptions(opts...),
+		),
 		analyzeVoice: connect.NewClient[v1.AnalyzeVoiceRequest, v1.AnalyzeVoiceResponse](
 			httpClient,
 			baseURL+VoiceServiceAnalyzeVoiceProcedure,
@@ -279,6 +289,7 @@ type voiceServiceClient struct {
 	listVoicePrompts             *connect.Client[v1.ListVoicePromptsRequest, v1.ListVoicePromptsResponse]
 	createVoicePhotoUpload       *connect.Client[v1.CreateVoicePhotoUploadRequest, v1.CreateVoicePhotoUploadResponse]
 	answerVoicePrompt            *connect.Client[v1.AnswerVoicePromptRequest, v1.AnswerVoicePromptResponse]
+	estimateVoiceAnalysis        *connect.Client[v1.EstimateVoiceAnalysisRequest, v1.EstimateVoiceAnalysisResponse]
 	analyzeVoice                 *connect.Client[v1.AnalyzeVoiceRequest, v1.AnalyzeVoiceResponse]
 	restorePreviousVoiceAnalysis *connect.Client[v1.RestorePreviousVoiceAnalysisRequest, v1.RestorePreviousVoiceAnalysisResponse]
 	getPostFingerprint           *connect.Client[v1.GetPostFingerprintRequest, v1.GetPostFingerprintResponse]
@@ -357,6 +368,11 @@ func (c *voiceServiceClient) AnswerVoicePrompt(ctx context.Context, req *connect
 	return c.answerVoicePrompt.CallUnary(ctx, req)
 }
 
+// EstimateVoiceAnalysis calls postpilot.v1.VoiceService.EstimateVoiceAnalysis.
+func (c *voiceServiceClient) EstimateVoiceAnalysis(ctx context.Context, req *connect.Request[v1.EstimateVoiceAnalysisRequest]) (*connect.Response[v1.EstimateVoiceAnalysisResponse], error) {
+	return c.estimateVoiceAnalysis.CallUnary(ctx, req)
+}
+
 // AnalyzeVoice calls postpilot.v1.VoiceService.AnalyzeVoice.
 func (c *voiceServiceClient) AnalyzeVoice(ctx context.Context, req *connect.Request[v1.AnalyzeVoiceRequest]) (*connect.Response[v1.AnalyzeVoiceResponse], error) {
 	return c.analyzeVoice.CallUnary(ctx, req)
@@ -408,6 +424,7 @@ type VoiceServiceHandler interface {
 	CreateVoicePhotoUpload(context.Context, *connect.Request[v1.CreateVoicePhotoUploadRequest]) (*connect.Response[v1.CreateVoicePhotoUploadResponse], error)
 	AnswerVoicePrompt(context.Context, *connect.Request[v1.AnswerVoicePromptRequest]) (*connect.Response[v1.AnswerVoicePromptResponse], error)
 	// 말투 만들기 and 다시 분석: one analyze_voice job at 100% (VOICE-23).
+	EstimateVoiceAnalysis(context.Context, *connect.Request[v1.EstimateVoiceAnalysisRequest]) (*connect.Response[v1.EstimateVoiceAnalysisResponse], error)
 	AnalyzeVoice(context.Context, *connect.Request[v1.AnalyzeVoiceRequest]) (*connect.Response[v1.AnalyzeVoiceResponse], error)
 	// 이전 분석으로 되돌리기: the previous analysis becomes current, the replaced one is discarded,
 	// and there is no redo (VOICE-30).
@@ -513,6 +530,12 @@ func NewVoiceServiceHandler(svc VoiceServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(voiceServiceMethods.ByName("AnswerVoicePrompt")),
 		connect.WithHandlerOptions(opts...),
 	)
+	voiceServiceEstimateVoiceAnalysisHandler := connect.NewUnaryHandler(
+		VoiceServiceEstimateVoiceAnalysisProcedure,
+		svc.EstimateVoiceAnalysis,
+		connect.WithSchema(voiceServiceMethods.ByName("EstimateVoiceAnalysis")),
+		connect.WithHandlerOptions(opts...),
+	)
 	voiceServiceAnalyzeVoiceHandler := connect.NewUnaryHandler(
 		VoiceServiceAnalyzeVoiceProcedure,
 		svc.AnalyzeVoice,
@@ -579,6 +602,8 @@ func NewVoiceServiceHandler(svc VoiceServiceHandler, opts ...connect.HandlerOpti
 			voiceServiceCreateVoicePhotoUploadHandler.ServeHTTP(w, r)
 		case VoiceServiceAnswerVoicePromptProcedure:
 			voiceServiceAnswerVoicePromptHandler.ServeHTTP(w, r)
+		case VoiceServiceEstimateVoiceAnalysisProcedure:
+			voiceServiceEstimateVoiceAnalysisHandler.ServeHTTP(w, r)
 		case VoiceServiceAnalyzeVoiceProcedure:
 			voiceServiceAnalyzeVoiceHandler.ServeHTTP(w, r)
 		case VoiceServiceRestorePreviousVoiceAnalysisProcedure:
@@ -654,6 +679,10 @@ func (UnimplementedVoiceServiceHandler) CreateVoicePhotoUpload(context.Context, 
 
 func (UnimplementedVoiceServiceHandler) AnswerVoicePrompt(context.Context, *connect.Request[v1.AnswerVoicePromptRequest]) (*connect.Response[v1.AnswerVoicePromptResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.VoiceService.AnswerVoicePrompt is not implemented"))
+}
+
+func (UnimplementedVoiceServiceHandler) EstimateVoiceAnalysis(context.Context, *connect.Request[v1.EstimateVoiceAnalysisRequest]) (*connect.Response[v1.EstimateVoiceAnalysisResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.VoiceService.EstimateVoiceAnalysis is not implemented"))
 }
 
 func (UnimplementedVoiceServiceHandler) AnalyzeVoice(context.Context, *connect.Request[v1.AnalyzeVoiceRequest]) (*connect.Response[v1.AnalyzeVoiceResponse], error) {

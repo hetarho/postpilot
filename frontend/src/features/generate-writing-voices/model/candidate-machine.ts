@@ -7,7 +7,13 @@ import {
   type SnapshotFrom,
 } from 'xstate'
 import type { Voice } from '@/entities/voice'
-import { completeCandidateBatch, type WritingVoiceCandidateBatch } from '@/entities/voice-candidate'
+import {
+  completeCandidateBatch,
+  WRITING_VOICE_CANDIDATE_COUNT,
+  WRITING_VOICE_CANDIDATE_COUNTS,
+  type WritingVoiceCandidateBatch,
+  type WritingVoiceCandidateCount,
+} from '@/entities/voice-candidate'
 import { appFailureFromConnect, type AppFailure } from '@/shared/api'
 
 export type CandidatePhase =
@@ -19,6 +25,9 @@ export interface CandidateState extends WritingVoiceCandidateBatch {
   selectedId: string
   operation: number
   frozenModel?: { providerId: string; modelId: string }
+  count: WritingVoiceCandidateCount
+  frozenCount: WritingVoiceCandidateCount
+  countJobId: string
   failure?: AppFailure
   cancelDialog: boolean
   settledJobId: string
@@ -34,10 +43,14 @@ const initialCandidateData = (ownerId: string): CandidateContext => ({
   operation: 0,
   settledJobId: '',
   settledStatus: '',
+  count: WRITING_VOICE_CANDIDATE_COUNT,
+  frozenCount: WRITING_VOICE_CANDIDATE_COUNT,
+  countJobId: '',
 })
 export type CandidateEvent = { ownerId: string } & (
   | { type: 'latest'; batch: WritingVoiceCandidateBatch }
   | { type: 'confirm'; model: { providerId: string; modelId: string } }
+  | { type: 'choose-count'; count: WritingVoiceCandidateCount }
   | { type: 'dismiss-confirm' }
   | { type: 'start' }
   | { type: 'started'; operation: number; jobId: string }
@@ -63,6 +76,7 @@ export interface CandidateWork {
   jobId: string
   resultJobId: string
   selectedId: string
+  count?: WritingVoiceCandidateCount
 }
 export interface CandidateResult {
   ownerId: string
@@ -87,6 +101,7 @@ const workInput =
     jobId: context.jobId,
     resultJobId: context.resultJobId,
     selectedId: context.selectedId,
+    count: context.frozenCount,
   })
 function owns(context: CandidateContext, event: CandidateEvent) {
   return !!context.ownerId && context.ownerId === event.ownerId
@@ -103,7 +118,9 @@ function latestPhase(
     event.batch.jobId !== context.jobId
   )
     return undefined
-  const valid = !!event.batch.resultJobId && completeCandidateBatch(event.batch.candidates)
+  const valid = !!event.batch.resultJobId && validBatch(context, event.batch)
+  if (event.batch.resultJobId && event.batch.resultJobId === context.countJobId && !valid)
+    return 'failed'
   if (phase === 'confirming') return 'confirming'
   if (phase === 'cancelling')
     return valid && event.batch.resultJobId === context.jobId && context.settledStatus === 'done'
@@ -116,6 +133,12 @@ function latestPhase(
   if (event.batch.jobId && event.batch.jobId !== event.batch.resultJobId)
     return phase === 'failed' && context.jobId === event.batch.jobId ? 'failed' : 'running'
   return valid ? 'ready' : 'idle'
+}
+function validBatch(context: CandidateContext, batch: WritingVoiceCandidateBatch) {
+  return completeCandidateBatch(
+    batch.candidates,
+    batch.resultJobId === context.countJobId ? context.frozenCount : undefined,
+  )
 }
 const latestTransitions = (from: CandidatePhase) =>
   (['idle', 'confirming', 'running', 'ready', 'failed', 'cancelling'] as const).map((to) => ({
@@ -131,6 +154,7 @@ const terminalTransitions = [
   { guard: 'terminalDone', actions: 'settled' },
 ] as const
 const selectable = {
+  'choose-count': { guard: 'validCount', actions: 'chooseCount' },
   confirm: { guard: 'model', target: 'confirming', actions: 'confirm' },
   select: { guard: 'candidate', actions: 'select' },
   adopt: { guard: 'adoptable', target: 'adopting', actions: ['begin', 'clearFailure'] },
@@ -150,6 +174,10 @@ export const candidateMachine = setup({
     }),
   },
   guards: {
+    validCount: ({ context, event }) =>
+      owns(context, event) &&
+      event.type === 'choose-count' &&
+      WRITING_VOICE_CANDIDATE_COUNTS.includes(event.count),
     startedResult: ({ context, event }) =>
       currentResult(context, event) && !!resultOf(event)?.jobId,
     adoptedResult: ({ context, event }) =>
@@ -214,9 +242,12 @@ export const candidateMachine = setup({
       completeCandidateBatch(context.candidates),
   },
   actions: {
+    chooseCount: assign(({ event }) =>
+      event.type === 'choose-count' ? { count: event.count } : {},
+    ),
     latest: assign(({ context, event }, params: { from: CandidatePhase }) => {
       if (event.type !== 'latest') return {}
-      const valid = !!event.batch.resultJobId && completeCandidateBatch(event.batch.candidates)
+      const valid = !!event.batch.resultJobId && validBatch(context, event.batch)
       const retainJob =
         params.from === 'confirming' ||
         params.from === 'cancelling' ||
@@ -224,6 +255,9 @@ export const candidateMachine = setup({
           ['failed', 'cancelled'].includes(context.settledStatus))
       return {
         hydrated: true,
+        ...(event.batch.resultJobId && event.batch.resultJobId === context.countJobId && !valid
+          ? { failure: { reason: 'WRITING_VOICE_CANDIDATE_OUTPUT_INVALID' as const, params: {} } }
+          : {}),
         ...(valid
           ? {
               resultJobId: event.batch.resultJobId,
@@ -234,13 +268,20 @@ export const candidateMachine = setup({
         ...(!retainJob ? { jobId: event.batch.jobId } : {}),
       }
     }),
-    confirm: assign(({ event }) =>
-      event.type === 'confirm' ? { frozenModel: { ...event.model }, failure: undefined } : {},
+    confirm: assign(({ context, event }) =>
+      event.type === 'confirm'
+        ? { frozenModel: { ...event.model }, frozenCount: context.count, failure: undefined }
+        : {},
     ),
     dismiss: assign({ frozenModel: undefined }),
     begin: assign(({ context }) => ({ operation: context.operation + 1 })),
-    started: assign(({ event }) => (event.type === 'started' ? { jobId: event.jobId } : {})),
-    startedResult: assign(({ event }) => ({ jobId: resultOf(event)!.jobId! })),
+    started: assign(({ event }) =>
+      event.type === 'started' ? { jobId: event.jobId, countJobId: event.jobId } : {},
+    ),
+    startedResult: assign(({ event }) => ({
+      jobId: resultOf(event)!.jobId!,
+      countJobId: resultOf(event)!.jobId!,
+    })),
     select: assign(({ event }) =>
       event.type === 'select' ? { selectedId: event.candidateId } : {},
     ),
@@ -265,7 +306,13 @@ export const candidateMachine = setup({
   initial: 'idle',
   context: ({ input }) => initialCandidateData(input.ownerId),
   states: {
-    idle: { on: { latest: latestTransitions('idle'), confirm: selectable.confirm } },
+    idle: {
+      on: {
+        latest: latestTransitions('idle'),
+        confirm: selectable.confirm,
+        'choose-count': selectable['choose-count'],
+      },
+    },
     confirming: {
       on: {
         latest: latestTransitions('confirming'),

@@ -83,7 +83,7 @@ func (s *Store) PublishAuthoring(ctx context.Context, user string, in voice.Auth
 	if err != nil {
 		return voice.Voice{}, err
 	}
-	if err := q.InsertCurrentAnalysis(ctx, sqlc.InsertCurrentAnalysisParams{VoiceID: v.ID, UserID: user, Snapshot: string(snapshot), MaterialIds: "[]", AnalyzeModel: analysis.AnalyzeModel, CreatedAt: stamp}); err != nil {
+	if err := q.InsertCurrentAnalysis(ctx, sqlc.InsertCurrentAnalysisParams{VoiceID: v.ID, UserID: user, Snapshot: string(snapshot), MaterialIds: "[]", AnalyzeModel: analysis.AnalyzeModel, CreatedAt: stamp, SourceVersionsKnown: boolInt(analysis.SourceVersionsKnown), AcceptedSources: "[]", AcceptedMaterialSnapshot: "[]"}); err != nil {
 		return voice.Voice{}, err
 	}
 	if in.MakeDefault {

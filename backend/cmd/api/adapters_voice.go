@@ -32,7 +32,7 @@ type voiceJobs struct {
 // freezes the 학습 글 it reads (VOICE-22), and its one analyze call is priced at the prompt the
 // voice context sized over them, at the completion budget the call is sent (QUOTA-14).
 func (a voiceJobs) Enqueue(ctx context.Context, request voice.AnalysisJobRequest) (string, error) {
-	payload, err := voice.EncodeAnalysisSnapshot(request.MaterialIDs)
+	payload, err := voice.EncodeAcceptedAnalysisSnapshot(request.AcceptedSources, request.AcceptedMaterials)
 	if err != nil {
 		return "", err
 	}

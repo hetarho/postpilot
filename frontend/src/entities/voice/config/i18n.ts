@@ -4,6 +4,15 @@ import type { I18nFragment } from '@/shared/lib'
 export const i18n = {
   namespace: 'voices',
   ko: {
+    freshness: {
+      pending: '학습 자료의 변경 내용이 아직 분석에 반영되지 않았어요.',
+      unknown: '이 분석에 사용한 자료의 버전을 확인할 수 없어요.',
+      previous:
+        '다시 분석을 직접 시작하고 완료하기 전까지는 이전에 받아 둔 말투 분석으로 글을 써요.',
+      concurrent: '분석을 시작한 뒤 바뀐 자료는 다음 분석에 반영할 수 있어요.',
+      pendingRow: '자료 변경 대기 · 이전 분석 사용',
+      unknownRow: '자료 버전 확인 필요 · 기존 분석 사용',
+    },
     origin: {
       synthetic: 'AI가 만든 스타일',
       personal: '내 글에서 배운 말투',
@@ -73,6 +82,15 @@ export const i18n = {
     },
   },
   en: {
+    freshness: {
+      pending: 'Learning-material changes have not yet been analyzed.',
+      unknown: 'The accepted material versions for this analysis are unknown.',
+      previous:
+        'Writing keeps using the previously accepted analysis until you explicitly reanalyze and the new analysis completes.',
+      concurrent: 'Material changed after analysis started can be included in the next analysis.',
+      pendingRow: 'Material changes pending · Previous analysis in use',
+      unknownRow: 'Material versions unknown · Existing analysis in use',
+    },
     origin: {
       synthetic: 'AI-created style',
       personal: 'Learned from my writing',

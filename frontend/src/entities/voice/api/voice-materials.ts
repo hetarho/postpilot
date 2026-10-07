@@ -79,6 +79,19 @@ export function useVoiceSample(ownerId: string, voiceId: string, sampleId: strin
     isPending: query.isPending,
     isError: query.isError,
     refetch: () => void query.refetch(),
+    refresh: async (): Promise<VoiceSampleDetail> => {
+      const result = await query.refetch({ throwOnError: true })
+      const value = result.data
+      if (!value?.sample || value.sample.id !== sampleId)
+        throw new Error('The material read was not confirmed')
+      return {
+        sample: toVoiceSample(value.sample),
+        body: value.body,
+        photoUrl: value.photoUrl,
+        photoWidth: value.photoWidth,
+        photoHeight: value.photoHeight,
+      }
+    },
   }
 }
 

@@ -8,6 +8,8 @@ export const errors = {
   VOICE_SAMPLE_REVISION_CONFLICT:
     'This material changed. Your input is preserved; check the latest material.',
   VOICE_SAMPLE_UPDATE_INVALID: 'Check the material text and photo before saving.',
+  VOICE_ACCEPTED_SOURCE_WITHDRAWN:
+    'The accepted learning source is no longer available. Review your material and explicitly analyze again or start a new test.',
   WRITING_TEST_NOT_FOUND: 'This writing test is unavailable.',
   WRITING_TEST_COUNT_INVALID: 'Choose exactly 2, 4, 8 or 16 entrants.',
   WRITING_TEST_FACTOR_INVALID: 'Choose one setting or one model stage to compare.',

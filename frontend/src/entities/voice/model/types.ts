@@ -15,6 +15,8 @@ export interface VoiceSample {
   hasPhoto: boolean
   chars: number
   createdAt: string
+  /** Stable semantic revision; absence is an older client fixture, not a writable revision. */
+  contentRevision?: bigint
 }
 
 /** One 학습 글 opened: its full text and, for a photo answer, a view URL minted on that read. */
@@ -143,6 +145,8 @@ export interface VoiceAiPart {
 export interface VoiceAnalysis {
   origin?: WritingVoiceOrigin
   syntheticSample?: string
+  sourceVersionsKnown?: boolean
+  acceptedSources?: Array<{ sampleId: string; contentRevision: bigint }>
   counted: VoiceFingerprint
   ai: VoiceAiPart
   materialCount: number
@@ -295,3 +299,49 @@ export function sortVoices<T extends Pick<Voice, 'id' | 'name' | 'isDefault' | '
 }
 
 const compare = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0)
+
+export interface VoiceAnalysisEstimate {
+  free: boolean
+  credits?: number
+}
+
+export interface VoiceMaterialUpdate {
+  sampleId: string
+  expectedContentRevision: bigint
+  operationKey: string
+  label?: string
+  body?: string
+  /** Omitted keeps the photo; empty explicitly removes it. */
+  photo?: { uploadId: string; width: number; height: number }
+}
+
+/** Freshness compares semantic revisions, never mutable labels or updated_at. */
+export function voiceMaterialFreshness(
+  profile: VoiceProfile,
+): 'unmade' | 'current' | 'pending' | 'unknown' {
+  if (!profile.made || !profile.analysis) return 'unmade'
+  if (profile.analysis.origin === 'synthetic')
+    return profile.notice.kind === 'none' ? 'current' : 'pending'
+  if (profile.notice.kind !== 'none') return 'pending'
+  if (!profile.analysis.sourceVersionsKnown) return 'unknown'
+  const accepted = profile.analysis.acceptedSources ?? []
+  if (
+    accepted.some((source) => source.contentRevision <= 0n) ||
+    profile.samples.some((sample) => !sample.contentRevision || sample.contentRevision <= 0n)
+  )
+    return 'unknown'
+  const current = new Map(profile.samples.map((sample) => [sample.id, sample.contentRevision]))
+  return accepted.length === current.size &&
+    accepted.every((source) => current.get(source.sampleId) === source.contentRevision)
+    ? 'current'
+    : 'pending'
+}
+
+/** Identity of the current material set for an explicit estimate confirmation. */
+export function voiceMaterialVersionKey(profile: Pick<VoiceProfile, 'samples'>): string {
+  return JSON.stringify(
+    profile.samples
+      .map((sample) => [sample.id, String(sample.contentRevision ?? 0n)])
+      .sort((left, right) => left[0]!.localeCompare(right[0]!)),
+  )
+}

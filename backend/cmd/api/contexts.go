@@ -333,7 +333,7 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 		voicestore.New(handle.Writer, handle.Reader),
 		voiceModels{registry: c.metered},
 		voiceJobs{queue: c.jobs, budget: cfg.LLMCompletionBudget},
-	)
+	).WithAnalysisEstimates(voiceCandidateEstimates{rates: c.ledger}, int64(cfg.LLMCompletionBudget.WriteFloor))
 	c.voiceCandidates = voice.NewCandidateService(
 		voiceCandidateModels{registry: c.metered, dispatch: jobstore.New(handle.Writer, handle.Reader, jobKinds())},
 		voiceCandidateJobs{queue: c.jobs}, voicestore.New(handle.Writer, handle.Reader),

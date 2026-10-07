@@ -3,6 +3,7 @@ package voice_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"reflect"
 	"strings"
 	"testing"
@@ -41,44 +42,41 @@ func checkHarness(t *testing.T) (*voiceHarness, string) {
 	return h, alice
 }
 
-// VOICE-43, VOICE-15: 검증 needs an active, made voice, an answered prompt, a write model and,
-// for a photo prompt, a model that reads images; each refusal enqueues nothing.
-func TestStartVoiceCheckRefusals(t *testing.T) {
-	h, alice := checkHarness(t)
-	ctx := context.Background()
-	unmade, err := h.svc.CreateVoice(ctx, "alice", "아직")
-	if err != nil {
-		t.Fatal(err)
-	}
-	for name, tc := range map[string]struct {
-		voiceID, prompt string
-		model           llm.ModelRef
-		want            error
-	}{
-		"not made":        {unmade.ID, "opening_greeting", writeOnlyRef, voice.ErrVoiceNotMade},
-		"unknown prompt":  {alice, "no_such_prompt", writeOnlyRef, voice.ErrPromptNotFound},
-		"unanswered":      {alice, "closing_greeting", writeOnlyRef, voice.ErrCheckPromptUnanswered},
-		"not a writer":    {alice, "opening_greeting", analyzeRef, voice.ErrWriteModelRequired},
-		"unknown model":   {alice, "opening_greeting", llm.ModelRef{ProviderID: "stub", ModelID: "nope"}, voice.ErrWriteModelRequired},
-		"photo, no image": {alice, "photo_food", writeOnlyRef, voice.ErrCheckPhotoUnsupported},
-	} {
-		if _, _, err := h.svc.StartVoiceCheck(ctx, "alice", tc.voiceID, tc.prompt, tc.model); !errors.Is(err, tc.want) {
-			t.Fatalf("%s: err = %v, want %v", name, err, tc.want)
+// New check calls refuse before accessing stores, models, queue or owner data.
+func TestVoiceCheckAdmissionIsRetired(t *testing.T) {
+	var service voice.Service
+	for _, owner := range []string{"alice", "bob"} {
+		if _, id, err := service.StartVoiceCheck(context.Background(), owner, "unknown", "unknown", writeOnlyRef); !errors.Is(err, voice.ErrCheckRetired) || id != "" {
+			t.Fatalf("start: id=%q err=%v", id, err)
+		}
+		if _, id, err := service.RetryVoiceCheck(context.Background(), owner, "unknown", writeOnlyRef); !errors.Is(err, voice.ErrCheckRetired) || id != "" {
+			t.Fatalf("retry: id=%q err=%v", id, err)
 		}
 	}
-	if _, err := h.svc.DeleteVoice(ctx, "alice", alice); err != nil {
-		t.Fatal(err)
+}
+
+// Insert historical admitted work directly; the removed admission API cannot build fixtures.
+func seedHistoricalCheck(ctx context.Context, h *voiceHarness, user, voiceID, promptKey string, ref llm.ModelRef) (voice.CheckView, string, error) {
+	rows, err := h.store.ListChecks(ctx, user, voiceID)
+	if err != nil {
+		return voice.CheckView{}, "", err
 	}
-	if _, _, err := h.svc.StartVoiceCheck(ctx, "alice", alice, "opening_greeting", writeOnlyRef); !errors.Is(err, voice.ErrVoiceDeleted) {
-		t.Fatalf("a tombstone's 검증 = %v", err)
+	analysis, err := h.store.CurrentAnalysis(ctx, user, voiceID)
+	if err != nil {
+		return voice.CheckView{}, "", err
 	}
-	if len(h.jobs.checkCalls) != 0 {
-		t.Fatalf("a refused 검증 enqueued %d jobs", len(h.jobs.checkCalls))
+	answer, err := h.store.GetPromptAnswer(ctx, user, voiceID, promptKey)
+	if err != nil {
+		return voice.CheckView{}, "", err
 	}
-	checks, _, err := h.svc.ListVoiceChecks(ctx, "alice", alice)
-	if err != nil || len(checks) != 0 {
-		t.Fatalf("a refused 검증 left %d results: %v", len(checks), err)
+	prompt, _ := voice.PromptByKey(promptKey)
+	stamp := time.Now().Add(time.Duration(len(rows)) * time.Second)
+	row := voice.Check{ID: fmt.Sprintf("historical-%d", len(rows)), UserID: user, VoiceID: voiceID, PromptKey: promptKey,
+		MaterialID: answer.ID, AnalysisCreatedAt: analysis.CreatedAt, Projection: "[말투]\n국물이 정말 진했어요!", WriteModel: ref.String(), Status: voice.CheckQueued, CreatedAt: stamp, UpdatedAt: stamp}
+	if err := h.store.InsertCheck(ctx, row); err != nil {
+		return voice.CheckView{}, "", err
 	}
+	return voice.CheckView{Check: row, Prompt: prompt, Answer: answer.Body}, "admitted-" + row.ID, nil
 }
 
 // VOICE-43: the start freezes the projection with the answer withheld and enqueues one job;
@@ -86,7 +84,7 @@ func TestStartVoiceCheckRefusals(t *testing.T) {
 func TestAVoiceCheckWritesOnceWithTheAnswerWithheld(t *testing.T) {
 	h, alice := checkHarness(t)
 	ctx := context.Background()
-	started, jobID, err := h.svc.StartVoiceCheck(ctx, "alice", alice, "opening_greeting", writeOnlyRef)
+	started, jobID, err := seedHistoricalCheck(ctx, h, "alice", alice, "opening_greeting", writeOnlyRef)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -98,9 +96,6 @@ func TestAVoiceCheckWritesOnceWithTheAnswerWithheld(t *testing.T) {
 	}
 	if strings.Contains(started.Projection, "동네 빵집") {
 		t.Fatal("the checked answer reached the projection")
-	}
-	if calls := h.jobs.checkCalls; len(calls) != 1 || calls[0].CheckID != started.ID || calls[0].WriteModel != writeOnlyRef.String() {
-		t.Fatalf("enqueued %+v", calls)
 	}
 
 	h.models.completeCalls = 0
@@ -197,7 +192,7 @@ func TestVoiceCheckUsesDurablyAdmittedWriteStage(t *testing.T) {
 		t.Fatalf("provider called before admitted check: %d", provider.calls)
 	}
 	h.svc = voice.NewService(h.store, admittedCheckModels{registry}, h.jobs)
-	started, _, err := h.svc.StartVoiceCheck(ctx, "alice", alice, "opening_greeting", ref)
+	started, _, err := seedHistoricalCheck(ctx, h, "alice", alice, "opening_greeting", ref)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -214,7 +209,7 @@ func TestVoiceCheckUsesDurablyAdmittedWriteStage(t *testing.T) {
 func TestAPhotoCheckSendsTheAnswersPhoto(t *testing.T) {
 	h, alice := checkHarness(t)
 	ctx := context.Background()
-	started, _, err := h.svc.StartVoiceCheck(ctx, "alice", alice, "photo_food", visionRef)
+	started, _, err := seedHistoricalCheck(ctx, h, "alice", alice, "photo_food", visionRef)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -231,23 +226,14 @@ func TestAPhotoCheckSendsTheAnswersPhoto(t *testing.T) {
 // VOICE-44, VOICE-45: a failed call stores its failure and is not repeated, an empty answer is
 // MODEL_OUTPUT_INVALID, a failed enqueue leaves no result, an interrupted check reads as
 // JOB_INTERRUPTED, and a retry is a new check on the same prompt.
-func TestAFailedCheckKeepsItsFailureAndRetries(t *testing.T) {
+func TestAdmittedCheckKeepsFailureAndRefusesNewRetry(t *testing.T) {
 	h, alice := checkHarness(t)
 	ctx := context.Background()
 	run := func(checkID string) error {
 		return h.svc.CheckVoice(ctx, voice.CheckJob{UserID: "alice", VoiceID: alice, CheckID: checkID, WriteModel: writeOnlyRef.String()}, func(string, int, int) {})
 	}
 
-	h.jobs.checkErr = errors.New("queue down")
-	if _, _, err := h.svc.StartVoiceCheck(ctx, "alice", alice, "opening_greeting", writeOnlyRef); err == nil {
-		t.Fatal("a failed enqueue started a check")
-	}
-	if checks, _, _ := h.svc.ListVoiceChecks(ctx, "alice", alice); len(checks) != 0 {
-		t.Fatalf("a failed enqueue left %d results", len(checks))
-	}
-	h.jobs.checkErr = nil
-
-	failed, _, err := h.svc.StartVoiceCheck(ctx, "alice", alice, "opening_greeting", writeOnlyRef)
+	failed, _, err := seedHistoricalCheck(ctx, h, "alice", alice, "opening_greeting", writeOnlyRef)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -257,14 +243,14 @@ func TestAFailedCheckKeepsItsFailureAndRetries(t *testing.T) {
 		t.Fatalf("a rate-limited check = %v after %d calls", err, h.models.completeCalls)
 	}
 	h.models.err, h.models.response = nil, "   "
-	empty, _, err := h.svc.StartVoiceCheck(ctx, "alice", alice, "opening_greeting", writeOnlyRef)
+	empty, _, err := seedHistoricalCheck(ctx, h, "alice", alice, "opening_greeting", writeOnlyRef)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if err := run(empty.ID); err == nil {
 		t.Fatal("an empty piece was stored")
 	}
-	interrupted, _, err := h.svc.StartVoiceCheck(ctx, "alice", alice, "opening_greeting", writeOnlyRef)
+	interrupted, _, err := seedHistoricalCheck(ctx, h, "alice", alice, "opening_greeting", writeOnlyRef)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -290,13 +276,10 @@ func TestAFailedCheckKeepsItsFailureAndRetries(t *testing.T) {
 	}
 	delete(h.jobs.activeChecks, alice)
 
-	retried, jobID, err := h.svc.RetryVoiceCheck(ctx, "alice", failed.ID, writeOnlyRef)
-	if err != nil || jobID == "" || retried.ID == failed.ID || retried.PromptKey != failed.PromptKey || retried.Status != voice.CheckQueued {
-		t.Fatalf("retry = %+v job=%q err=%v", retried, jobID, err)
+	if _, id, err := h.svc.RetryVoiceCheck(ctx, "alice", failed.ID, writeOnlyRef); !errors.Is(err, voice.ErrCheckRetired) || id != "" {
+		t.Fatalf("historical retry admitted: id=%q err=%v", id, err)
 	}
-	if _, _, err := h.svc.RetryVoiceCheck(ctx, "bob", failed.ID, writeOnlyRef); !errors.Is(err, voice.ErrCheckNotFound) {
-		t.Fatalf("another account's retry = %v", err)
-	}
+
 }
 
 // VOICE-43: a result written before the current analysis is marked, and a deleted answer reads
@@ -304,7 +287,7 @@ func TestAFailedCheckKeepsItsFailureAndRetries(t *testing.T) {
 func TestAnOlderCheckIsMarkedAndKeepsItsPiece(t *testing.T) {
 	h, alice := checkHarness(t)
 	ctx := context.Background()
-	started, _, err := h.svc.StartVoiceCheck(ctx, "alice", alice, "opening_greeting", writeOnlyRef)
+	started, _, err := seedHistoricalCheck(ctx, h, "alice", alice, "opening_greeting", writeOnlyRef)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -332,7 +315,7 @@ func TestAnOlderCheckIsMarkedAndKeepsItsPiece(t *testing.T) {
 func TestTheCheckListReadsNoProjection(t *testing.T) {
 	h, alice := checkHarness(t)
 	ctx := context.Background()
-	started, _, err := h.svc.StartVoiceCheck(ctx, "alice", alice, "opening_greeting", writeOnlyRef)
+	started, _, err := seedHistoricalCheck(ctx, h, "alice", alice, "opening_greeting", writeOnlyRef)
 	if err != nil {
 		t.Fatal(err)
 	}

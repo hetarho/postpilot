@@ -1,4 +1,5 @@
 import { writingTestI18n } from '@/features/writing-test/config/i18n'
+import { voiceMaterialEditI18n } from '@/features/edit-voice-material/config/i18n'
 import { navigationI18n } from '@/app/routes/navigation-i18n'
 import { i18n as authoringI18n } from '@/features/ai-authoring/config/i18n'
 import { i18n as voicePreparationI18n } from '@/features/prepare-writing-voice/config/i18n'
@@ -64,7 +65,6 @@ import { i18n as billingI18n } from '@/pages/billing/config/i18n'
 import { i18n as blogFieldI18n } from '@/entities/blog-field/config/i18n'
 import { i18n as candidateComparisonI18n } from '@/widgets/candidate-comparison/config/i18n'
 import { i18n as voiceFingerprintI18n } from '@/widgets/voice-fingerprint/config/i18n'
-import { i18n as checkVoiceI18n } from '@/features/check-voice/config/i18n'
 import { i18n as configureModelPairI18n } from '@/features/configure-model-pair/config/i18n'
 import { i18n as contactSheetI18n } from '@/widgets/contact-sheet/config/i18n'
 import { i18n as createVoiceI18n } from '@/features/create-voice/config/i18n'
@@ -147,6 +147,7 @@ export const RESOURCE_NAMESPACES = [
   'auth',
   'nav',
   'writingTests',
+  'voiceMaterialEdit',
   'posts',
   'voices',
   'templates',
@@ -172,6 +173,7 @@ import { i18n as clipDubbingI18n } from '@/features/regenerate-clip-speech/confi
 export const FRAGMENTS: readonly I18nFragment[] = [
   navigationI18n,
   writingTestI18n,
+  voiceMaterialEditI18n,
   voicePreparationI18n,
   authoringI18n,
   writingCandidatesI18n,
@@ -275,7 +277,6 @@ export const FRAGMENTS: readonly I18nFragment[] = [
   deleteVoiceI18n,
   restoreVoiceAnalysisI18n,
   voiceFingerprintI18n,
-  checkVoiceI18n,
   manageVoiceSamplesI18n,
   pasteVoiceMaterialI18n,
   answerVoicePromptI18n,
@@ -302,6 +303,7 @@ export const resources = {
     auth: { ...koAuth, ...logInI18n.ko },
     nav: { ...koNav, ...navigationI18n.ko },
     writingTests: writingTestI18n.ko,
+    voiceMaterialEdit: voiceMaterialEditI18n.ko,
     posts: {
       ...blogFieldI18n.ko,
       ...candidateComparisonI18n.ko,
@@ -329,7 +331,6 @@ export const resources = {
       ...deleteVoiceI18n.ko,
       ...restoreVoiceAnalysisI18n.ko,
       ...voiceFingerprintI18n.ko,
-      ...checkVoiceI18n.ko,
       ...manageVoiceSamplesI18n.ko,
       ...pasteVoiceMaterialI18n.ko,
       ...answerVoicePromptI18n.ko,
@@ -438,6 +439,7 @@ export const resources = {
     auth: { ...enAuth, ...logInI18n.en },
     nav: { ...enNav, ...navigationI18n.en },
     writingTests: writingTestI18n.en,
+    voiceMaterialEdit: voiceMaterialEditI18n.en,
     posts: {
       ...blogFieldI18n.en,
       ...candidateComparisonI18n.en,
@@ -465,7 +467,6 @@ export const resources = {
       ...deleteVoiceI18n.en,
       ...restoreVoiceAnalysisI18n.en,
       ...voiceFingerprintI18n.en,
-      ...checkVoiceI18n.en,
       ...manageVoiceSamplesI18n.en,
       ...pasteVoiceMaterialI18n.en,
       ...answerVoicePromptI18n.en,

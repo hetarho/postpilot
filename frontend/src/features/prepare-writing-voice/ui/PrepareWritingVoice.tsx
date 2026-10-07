@@ -6,6 +6,7 @@ import { FileText, MessageCircle, Sparkles } from 'lucide-react'
 import {
   useCreateVoice,
   useAnalyzeVoice,
+  useVoiceAnalysisEstimator,
   useSetDefaultVoice,
   useVoiceProfile,
   useVoiceAnalysisQueryKey,
@@ -21,6 +22,7 @@ import {
   AppFailureMessage,
   Button,
   ChoiceButton,
+  Dialog,
   Notice,
   Typography,
   buttonStyles,
@@ -121,6 +123,7 @@ function ScopedPreparation(props: PrepareWritingVoiceProps) {
   const context = snapshot.context
   const query = useVoiceProfile(ownerId, context.voiceId)
   const analyze = useAnalyzeVoice(ownerId, context.voiceId)
+  const estimator = useVoiceAnalysisEstimator(ownerId, context.voiceId)
   const defaults = useSetDefaultVoice(ownerId)
   const refreshProfile = query.refresh
   const modelDefaults = useInitializeDefaultSelections(ownerId)
@@ -132,6 +135,10 @@ function ScopedPreparation(props: PrepareWritingVoiceProps) {
         const result = await create.create({ name })
         if (!result.voice) throw new Error('Unconfirmed writing voice')
         return toVoice(result.voice)
+      },
+      estimate: async (requested, selected, signal) => {
+        if (requested !== voiceId) throw new Error('Obsolete voice estimate')
+        return estimator.estimate(selected, signal)
       },
       analyze: async (requested, selected) => {
         if (requested !== voiceId) throw new Error('Obsolete voice analysis')
@@ -151,7 +158,7 @@ function ScopedPreparation(props: PrepareWritingVoiceProps) {
         return toVoice(found)
       },
     }
-  }, [create, analyze, defaults, refreshProfile, context.voiceId])
+  }, [create, analyze, estimator, defaults, refreshProfile, context.voiceId])
   const send = useCallback(
     (event: Omit<LearningEvent, 'ownerId'>) => actor.send({ ...event, ownerId } as LearningEvent),
     [actor, ownerId],
@@ -274,7 +281,9 @@ function ScopedPreparation(props: PrepareWritingVoiceProps) {
         ? 'paste'
         : snapshot.matches({ personal: { collecting: 'questions' } })
           ? 'questions'
-          : snapshot.matches({ personal: 'review' })
+          : snapshot.matches({ personal: 'review' }) ||
+              snapshot.matches({ personal: 'quoted' }) ||
+              snapshot.matches({ personal: 'estimating' })
             ? 'review'
             : snapshot.matches({ personal: 'analyzing' })
               ? 'analyzing'
@@ -438,6 +447,32 @@ function ScopedPreparation(props: PrepareWritingVoiceProps) {
           })}
         </div>
       )}
+      <Dialog
+        open={snapshot.matches({ personal: 'quoted' })}
+        title={t('analysisConfirm')}
+        confirmLabel={t('analysisStart')}
+        onClose={() => send({ type: 'BACK' })}
+        onConfirm={() => {
+          if (context.model)
+            send({ type: 'ANALYZE', model: { ...context.model } } as Omit<LearningEvent, 'ownerId'>)
+        }}
+      >
+        <Typography variant="label" as="p" className="mb-2 break-words">
+          {t('analysisModel', {
+            model: `${context.model?.providerId ?? ''}/${context.model?.modelId ?? ''}`,
+          })}
+        </Typography>
+        <Typography variant="body" as="p">
+          {context.quote?.free
+            ? t('analysisFree')
+            : context.quote?.credits !== undefined
+              ? t('analysisCredits', { credits: context.quote.credits })
+              : t('analysisEstimateFailed')}
+        </Typography>
+        <Typography variant="body" as="p" className="mt-2">
+          {t('analysisPrevious')}
+        </Typography>
+      </Dialog>
       {view === 'review' && profile && (
         <div className="mt-4 space-y-5">
           <Typography variant="body" className="text-content-secondary">
@@ -451,8 +486,10 @@ function ScopedPreparation(props: PrepareWritingVoiceProps) {
             model.selected && !model.isPending && !modelDefaults.isPending ? (
               <Button
                 variant="cta"
+                disabled={busy}
+                pending={snapshot.matches({ personal: 'estimating' })}
                 onClick={() =>
-                  send({ type: 'ANALYZE', model: { ...model.selected! } } as Omit<
+                  send({ type: 'ESTIMATE', model: { ...model.selected! } } as Omit<
                     LearningEvent,
                     'ownerId'
                   >)

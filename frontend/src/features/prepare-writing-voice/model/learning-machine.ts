@@ -1,5 +1,10 @@
 import { assign, fromPromise, setup } from 'xstate'
-import type { Voice, VoiceProfile } from '@/entities/voice'
+import {
+  voiceMaterialVersionKey,
+  type VoiceAnalysisEstimate,
+  type Voice,
+  type VoiceProfile,
+} from '@/entities/voice'
 import type { ModelRef } from '@/entities/generation-job'
 import type { AppFailure } from '@/shared/api'
 import { appFailureFromConnect } from '@/shared/api'
@@ -7,6 +12,11 @@ import { appFailureFromConnect } from '@/shared/api'
 export type LearningMethod = 'choose' | 'paste' | 'questions' | 'ai' | 'legacy'
 export interface LearningServices {
   create: (name: string) => Promise<Voice>
+  estimate?: (
+    voiceId: string,
+    model: ModelRef,
+    signal: AbortSignal,
+  ) => Promise<VoiceAnalysisEstimate>
   analyze: (voiceId: string, model: ModelRef) => Promise<string>
   confirm: (voiceId: string) => Promise<Voice>
   read: (voiceId: string) => Promise<VoiceProfile>
@@ -26,8 +36,10 @@ interface LearningContext extends LearningInput {
   childBusy: boolean
   pasteDraft: { label: string; body: string }
   model?: ModelRef
+  quote?: VoiceAnalysisEstimate
+  estimatedVersion?: string
   failure?: AppFailure
-  failureStep: 'create' | 'analysis' | 'confirm' | 'load'
+  failureStep: 'create' | 'analysis' | 'confirm' | 'load' | 'quote'
   confirmed?: Voice
   visitedQuestions: boolean
   visitedPaste: boolean
@@ -43,7 +55,7 @@ export type LearningEvent = Scope &
     | { type: 'CHILD_BUSY'; busy: boolean }
     | { type: 'PASTE_DRAFT'; label: string; body: string }
     | { type: 'REVIEW' | 'BACK' | 'ADD_MORE' | 'USE' | 'RETRY' }
-    | { type: 'ANALYZE'; model: ModelRef }
+    | { type: 'ANALYZE' | 'ESTIMATE'; model: ModelRef }
     | { type: 'JOB_FAILED'; failure?: AppFailure; jobId: string }
     | { type: 'JOB_COMPLETED'; jobId: string }
     | { type: 'RECHECK' }
@@ -74,6 +86,15 @@ export const learningMachine = setup({
         if (signal.aborted) throw new Error('Obsolete voice preparation')
         if (!voice.id || voice.deleted) throw new Error('Unconfirmed personal writing voice')
         return voice
+      },
+    ),
+    estimate: fromPromise(
+      async ({ input, signal }: { input: LearningContext; signal: AbortSignal }) => {
+        if (!input.model || !input.runtime.current.estimate)
+          throw new Error('Analysis estimate unavailable')
+        const quote = await input.runtime.current.estimate(input.voiceId, input.model, signal)
+        if (signal.aborted) throw new Error('Obsolete analysis estimate')
+        return quote
       },
     ),
     analyze: fromPromise(
@@ -297,7 +318,7 @@ export const learningMachine = setup({
         },
         review: {
           on: {
-            ANALYZE: {
+            ESTIMATE: {
               guard: ({ context, event }) =>
                 scoped({ context, event }) &&
                 !context.childBusy &&
@@ -306,11 +327,76 @@ export const learningMachine = setup({
                 (context.profile?.readiness.percent ?? 0) >= 100 &&
                 !context.profile?.voice.deleted &&
                 !context.profile?.activeJobId,
-              target: 'analyzing.admitting',
-              actions: assign({ model: ({ event }) => ({ ...event.model }), failure: undefined }),
+              target: 'estimating',
+              actions: assign(({ context, event }) => ({
+                model: { ...event.model },
+                failure: undefined,
+                quote: undefined,
+                estimatedVersion: context.profile ? voiceMaterialVersionKey(context.profile) : '',
+              })),
             },
             BACK: { guard: 'available', target: 'collecting' },
             ADD_MORE: { guard: 'available', target: 'collecting' },
+          },
+        },
+        estimating: {
+          tags: ['busy'],
+          invoke: {
+            src: 'estimate',
+            input: ({ context }) => context,
+            onDone: [
+              {
+                guard: ({ context }) =>
+                  !!context.profile &&
+                  context.estimatedVersion === voiceMaterialVersionKey(context.profile) &&
+                  !context.profile.activeJobId &&
+                  !context.profile.voice.deleted &&
+                  context.profile.readiness.percent >= 100,
+                target: 'quoted',
+                actions: assign({ quote: ({ event }) => event.output }),
+              },
+              { target: 'review', actions: assign({ quote: undefined }) },
+            ],
+            onError: {
+              target: '#voiceLearning.failure',
+              actions: assign({
+                failure: ({ event }) => appFailureFromConnect(event.error),
+                failureStep: 'quote',
+              }),
+            },
+          },
+          on: { BACK: { guard: 'scoped', target: 'review' } },
+        },
+        quoted: {
+          on: {
+            ANALYZE: {
+              guard: ({ context, event }) =>
+                scoped({ context, event }) &&
+                !!context.quote &&
+                !!context.profile &&
+                context.profile.readiness.percent >= 100 &&
+                !context.profile.voice.deleted &&
+                !context.profile.activeJobId &&
+                context.estimatedVersion === voiceMaterialVersionKey(context.profile) &&
+                event.model.providerId === context.model?.providerId &&
+                event.model.modelId === context.model?.modelId,
+              target: 'analyzing.admitting',
+              actions: assign({ failure: undefined }),
+            },
+            BACK: { guard: 'scoped', target: 'review', actions: assign({ quote: undefined }) },
+            PROFILE: [
+              {
+                guard: ({ context, event }) =>
+                  scoped({ context, event }) &&
+                  profileMatches(context, event.profile) &&
+                  (voiceMaterialVersionKey(event.profile) !== context.estimatedVersion ||
+                    event.profile.voice.deleted ||
+                    !!event.profile.activeJobId),
+                target: 'review',
+                actions: ['takeProfile', assign({ quote: undefined })],
+              },
+              { guard: 'scoped', actions: 'takeProfile' },
+            ],
           },
         },
         analyzing: {
@@ -478,6 +564,11 @@ export const learningMachine = setup({
         BACK: [
           {
             guard: ({ context, event }) =>
+              scoped({ context, event }) && context.failureStep === 'quote',
+            target: 'personal.review',
+          },
+          {
+            guard: ({ context, event }) =>
               scoped({ context, event }) && context.failureStep === 'confirm',
             target: 'personal.confirmed',
           },
@@ -489,6 +580,11 @@ export const learningMachine = setup({
           { guard: 'available', target: 'choose' },
         ],
         RETRY: [
+          {
+            guard: ({ context, event }) =>
+              scoped({ context, event }) && context.failureStep === 'quote',
+            target: 'personal.review',
+          },
           {
             guard: ({ context, event }) =>
               scoped({ context, event }) && context.failureStep === 'create',

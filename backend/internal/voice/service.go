@@ -16,23 +16,27 @@ import (
 )
 
 type Service struct {
-	directory    VoiceDirectoryStore
-	analyses     AnalysisStore
-	samples      SampleStore
-	photoUploads PhotoUploadStore
-	checks       CheckStore
-	models       Models
-	jobs         Jobs
-	now          func() time.Time
-	newID        func() string
-	directoryMu  sync.Mutex
-	objects      ObjectStore
-	photos       PhotoLimits
-	posts        PostContents
+	directory               VoiceDirectoryStore
+	analyses                AnalysisStore
+	samples                 SampleStore
+	photoUploads            PhotoUploadStore
+	checks                  CheckStore
+	models                  Models
+	jobs                    Jobs
+	now                     func() time.Time
+	newID                   func() string
+	directoryMu             sync.Mutex
+	objects                 ObjectStore
+	photos                  PhotoLimits
+	posts                   PostContents
+	edits                   MaterialEdits
+	materialReceipts        MaterialMutationReceipts
+	analysisEstimates       AnalysisEstimates
+	analysisCompletionFloor int64
 }
 
 func NewService(store Storage, models Models, jobs Jobs) *Service {
-	return &Service{directory: store, analyses: store, samples: store, photoUploads: store, checks: store, models: models, jobs: jobs, now: time.Now, newID: newID}
+	return &Service{directory: store, analyses: store, samples: store, photoUploads: store, checks: store, edits: store, materialReceipts: store, models: models, jobs: jobs, now: time.Now, newID: newID}
 }
 
 // ConfigurePhotos wires the private bucket a photo prompt's photo is stored in (VOICE-60).
@@ -278,13 +282,10 @@ func (s *Service) Get(ctx context.Context, userID, voiceID string) (Profile, err
 	}
 	if current != nil {
 		profile.Voice.Origin = NormalizedOrigin(current.Origin)
-		present := make(map[string]bool, len(samples))
-		for _, sample := range samples {
-			present[sample.ID] = true
-		}
+		present := samplePresence(bodies)
 		visible := withoutDeletedExamples(*current, present)
 		profile.Analysis = &visible
-		profile.Notice = noticeOf(current.MaterialIDs, present)
+		profile.Notice = sourceNotice(*current, bodies)
 		if profile.HasPrevious, err = s.analyses.HasPreviousAnalysis(ctx, userID, voiceID); err != nil {
 			return Profile{}, fmt.Errorf("previous analysis: %w", err)
 		}
@@ -375,7 +376,7 @@ func (s *Service) AddSample(ctx context.Context, userID, voiceID, label, body st
 		label = firstRunes(body, LabelFallbackChars)
 	}
 	sample := Sample{
-		ID: s.newID(), UserID: userID, VoiceID: voiceID, Kind: SampleKindPost, Label: label, Body: body, Chars: chars, CreatedAt: s.now(),
+		ID: s.newID(), UserID: userID, VoiceID: voiceID, Kind: SampleKindPost, Label: label, Body: body, Chars: chars, ContentRevision: 1, CreatedAt: s.now(),
 	}
 	if err := s.samples.InsertSample(ctx, sample); err != nil {
 		return Sample{}, fmt.Errorf("insert sample: %w", err)
@@ -473,7 +474,7 @@ func (s *Service) AnswerPrompt(ctx context.Context, userID, voiceID string, answ
 	}
 	sample := Sample{
 		ID: s.newID(), UserID: userID, VoiceID: voiceID, Kind: SampleKindAnswer, PromptKey: prompt.Key,
-		Body: body, Chars: utf8.RuneCountInString(body), CreatedAt: s.now(),
+		Body: body, Chars: utf8.RuneCountInString(body), ContentRevision: 1, CreatedAt: s.now(),
 	}
 	uploadID := ""
 	if prompt.Photo && answer.UploadID == "" && previous != nil && previous.HasPhoto() {
@@ -557,24 +558,16 @@ func (s *Service) GetSample(ctx context.Context, userID, voiceID, sampleID strin
 // per-(voice, kind) guard. The job freezes the 학습 글 it will read (VOICE-22) and declares the
 // prompt it will send over them, so its hold covers a large corpus (QUOTA-14).
 func (s *Service) AnalyzeVoice(ctx context.Context, userID, voiceID string, model llm.ModelRef) (string, error) {
-	if _, err := s.activeVoice(ctx, userID, voiceID); err != nil {
+	_, samples, err := s.prepareAnalysis(ctx, userID, voiceID, model)
+	if err != nil {
 		return "", err
 	}
-	info, found := s.models.Resolve(model)
-	if model.ProviderID == "" || model.ModelID == "" || !found || info.Disabled || !info.ServesStage(llm.StageNameAnalyze) {
-		return "", ErrAnalyzeModelRequired
-	}
-	samples, err := s.samples.ListSampleBodies(ctx, userID, voiceID)
-	if err != nil {
-		return "", fmt.Errorf("list samples: %w", err)
-	}
-	if !ReadinessOf(samples).Ready() {
-		return "", ErrVoiceNotReady
-	}
 	counted, oldestFirst, ids := analysisSnapshot(samples)
+	sources, materials := acceptMaterials(samples)
 	id, err := s.jobs.Enqueue(ctx, AnalysisJobRequest{
 		UserID: userID, VoiceID: voiceID, WriteModel: model.String(),
 		MaterialIDs: ids, PromptTokens: promptTokens(analysisRequest(counted, oldestFirst)),
+		AcceptedSources: sources, AcceptedMaterials: materials,
 	})
 	if err != nil {
 		var active *JobAlreadyInProgressError

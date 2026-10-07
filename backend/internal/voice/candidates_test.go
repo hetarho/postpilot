@@ -11,13 +11,115 @@ import (
 	"github.com/postpilot/backend/internal/llm"
 )
 
-func candidateFixture() string {
+func candidateFixture(counts ...int) string {
+	count := CandidateCount
+	if len(counts) > 0 {
+		count = counts[0]
+	}
 	var values []WritingCandidate
-	for i := 1; i <= CandidateCount; i++ {
+	for i := 1; i <= count; i++ {
 		values = append(values, WritingCandidate{Name: fmt.Sprintf("편안한 말투 %d", i), Description: fmt.Sprintf("소소한 기분을 자연스럽게 전하는 말투예요 %d", i), Sample: strings.Repeat(fmt.Sprintf("산책하다 작은 가게에 들러 따뜻한 차를 마셨어요 %d. 창가에서 쉬니 마음이 편안해졌어요. ", i), 5)})
 	}
 	raw, _ := json.Marshal(candidateResult{Candidates: values})
 	return string(raw)
+}
+
+func TestWritingStylePreparationSupportsOnlyExactBinaryCountsAndFrozenBudgets(t *testing.T) {
+	for _, count := range []int{2, 4, 8, 16} {
+		t.Run(fmt.Sprint(count), func(t *testing.T) {
+			ctx := context.Background()
+			models := &candidateModelFake{text: candidateFixture(count), info: llm.ModelInfo{Stages: []string{llm.StageNameWrite}, StructuredOutput: true}}
+			jobs := &candidateJobsFake{}
+			estimates := &candidateEstimatorFake{}
+			service := NewCandidateService(models, jobs, &candidateStoreFake{}, candidateBudgetFake{}, estimates)
+			shuffles := 0
+			service.shuffle = func([]string) error { shuffles++; return nil }
+			ref := llm.ModelRef{ProviderID: "test", ModelID: "write"}
+			if _, err := service.Estimate(ctx, ref, count); err != nil {
+				t.Fatal(err)
+			}
+			if estimates.tokens != [2]int64{int64(750 * count), int64(8192 * count / 8)} {
+				t.Fatalf("estimate %v", estimates.tokens)
+			}
+			if _, err := service.Start(ctx, "alice", ref, count); err != nil {
+				t.Fatal(err)
+			}
+			var input candidateInput
+			if err := json.Unmarshal(jobs.request.Payload, &input); err != nil {
+				t.Fatal(err)
+			}
+			if input.Count != count || len(input.Directions) != count || input.CompletionTokens != 8192*count/8 || shuffles != 1 || models.calls != 0 {
+				t.Fatalf("input=%+v shuffles=%d calls=%d", input, shuffles, models.calls)
+			}
+			if err := service.Run(ctx, CandidateRun{ID: "batch", UserID: "alice", WriteModel: "test/write", Payload: jobs.request.Payload}, func(string, int, int) {}); err != nil {
+				t.Fatal(err)
+			}
+			if models.calls != 1 || models.req.MaxTokens != input.CompletionTokens || !strings.Contains(models.req.System, fmt.Sprintf("정확히 %d개", count)) {
+				t.Fatalf("request=%+v calls=%d", models.req, models.calls)
+			}
+			var schema map[string]any
+			if err := json.Unmarshal(models.req.JSONSchema, &schema); err != nil {
+				t.Fatal(err)
+			}
+			array := schema["properties"].(map[string]any)["candidates"].(map[string]any)
+			if array["minItems"] != float64(count) || array["maxItems"] != float64(count) {
+				t.Fatalf("schema=%s", models.req.JSONSchema)
+			}
+			jobs.found = CandidateJob{ID: "batch", Status: "done", WriteModel: "test/write", Payload: jobs.save}
+			batch, err := service.Get(ctx, "alice", "batch")
+			if err != nil || batch.Count != count || len(batch.Candidates) != count {
+				t.Fatalf("batch=%+v err=%v", batch, err)
+			}
+			if _, err := service.Adopt(ctx, "alice", "batch", fmt.Sprintf("style-%d", count), false); err != nil {
+				t.Fatal(err)
+			}
+			if models.calls != 1 {
+				t.Fatal("adoption regenerated work")
+			}
+		})
+	}
+	for _, count := range []int{-1, 1, 3, 5, 7, 9, 15, 17, 32} {
+		service := NewCandidateService(&candidateModelFake{}, &candidateJobsFake{}, &candidateStoreFake{}, candidateBudgetFake{}, &candidateEstimatorFake{})
+		if _, err := service.Estimate(context.Background(), llm.ModelRef{}, count); !errors.Is(err, ErrCandidateCount) {
+			t.Fatalf("count %d estimate=%v", count, err)
+		}
+		if _, err := service.Start(context.Background(), "alice", llm.ModelRef{}, count); !errors.Is(err, ErrCandidateCount) {
+			t.Fatalf("count %d start=%v", count, err)
+		}
+		if WritingCandidateSchema(count) != nil {
+			t.Fatalf("invalid schema count %d", count)
+		}
+	}
+}
+
+func TestBinaryCandidateBatchesRejectIncompleteDuplicateMalformedAndUnreadyResults(t *testing.T) {
+	for _, count := range []int{2, 4, 8, 16} {
+		if _, err := parseCandidates(candidateFixture(count-1), count); err == nil {
+			t.Fatalf("shrunk %d accepted", count)
+		}
+		if _, err := parseCandidates(strings.Repeat(" ", candidateResponseBytesPerStyle*count+1), count); err == nil {
+			t.Fatalf("unbounded %d accepted", count)
+		}
+		values, err := parseCandidates(candidateFixture(count), count)
+		if err != nil {
+			t.Fatal(err)
+		}
+		values[1].Sample = values[0].Sample
+		payload, _ := json.Marshal(candidateResult{Count: count, Candidates: values})
+		jobs := &candidateJobsFake{found: CandidateJob{ID: "batch", Status: "done", Payload: payload}}
+		service := NewCandidateService(&candidateModelFake{}, jobs, &candidateStoreFake{}, candidateBudgetFake{}, &candidateEstimatorFake{})
+		if _, err := service.Get(context.Background(), "alice", "batch"); !errors.Is(err, ErrCandidatesNotReady) {
+			t.Fatalf("duplicate %d err=%v", count, err)
+		}
+		values, _ = parseCandidates(candidateFixture(count), count)
+		payload, _ = json.Marshal(candidateResult{Count: count, Candidates: values})
+		for _, status := range []string{"queued", "running", "failed", "cancelled"} {
+			jobs.found = CandidateJob{ID: "batch", Status: status, Payload: payload}
+			if _, err := service.Adopt(context.Background(), "alice", "batch", "style-1", true); !errors.Is(err, ErrCandidatesNotReady) {
+				t.Fatalf("%s adopted: %v", status, err)
+			}
+		}
+	}
 }
 
 func TestCandidateOutputIsExactlyEightBoundedDistinctKoreanStyles(t *testing.T) {

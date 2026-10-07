@@ -4,7 +4,12 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useMemo } from 'react'
 import { toVoice, voicesQueryKey } from '@/entities/voice/@x/voice-candidate'
 import { appFailureFromConnect, WritingVoiceCandidateService } from '@/shared/api'
-import { completeCandidateBatch, type WritingVoiceCandidateBatch } from '../model/types'
+import {
+  completeCandidateBatch,
+  WRITING_VOICE_CANDIDATE_COUNT,
+  type WritingVoiceCandidateBatch,
+  type WritingVoiceCandidateCount,
+} from '../model/types'
 
 interface CandidateModelRef {
   providerId: string
@@ -104,6 +109,7 @@ export function useWritingVoiceCandidates(ownerId: string, jobId: string) {
 export function useEstimateWritingVoiceCandidates(
   ownerId: string,
   model: CandidateModelRef | undefined,
+  candidateCount: WritingVoiceCandidateCount = WRITING_VOICE_CANDIDATE_COUNT,
 ) {
   const client = useCandidateClient()
   const transport = useTransport()
@@ -111,14 +117,14 @@ export function useEstimateWritingVoiceCandidates(
     queryKey: [
       ...createConnectQueryKey({
         schema: WritingVoiceCandidateService.method.estimateWritingVoiceCandidates,
-        input: { writeModel: model },
+        input: { writeModel: model, candidateCount },
         transport,
         cardinality: 'finite',
       }),
       ownerId,
     ],
     queryFn: ({ signal }) =>
-      client.estimateWritingVoiceCandidates({ writeModel: model }, { signal }),
+      client.estimateWritingVoiceCandidates({ writeModel: model, candidateCount }, { signal }),
     enabled: !!ownerId && !!model,
     staleTime: 0,
   })
@@ -136,8 +142,13 @@ export function useStartWritingVoiceCandidates(ownerId: string) {
   const transport = useTransport()
   const cache = useQueryClient()
   const mutation = useMutation({
-    mutationFn: async (model: CandidateModelRef) => {
-      const response = await client.startWritingVoiceCandidates({ writeModel: model })
+    mutationFn: async (
+      model: CandidateModelRef & { candidateCount?: WritingVoiceCandidateCount },
+    ) => {
+      const response = await client.startWritingVoiceCandidates({
+        writeModel: model,
+        candidateCount: model.candidateCount ?? WRITING_VOICE_CANDIDATE_COUNT,
+      })
       if (!response.jobId) throw new Error('writing candidate job unavailable')
       return { jobId: response.jobId }
     },

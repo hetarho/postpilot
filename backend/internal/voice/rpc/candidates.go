@@ -25,11 +25,7 @@ func (h *CandidateHandler) EstimateWritingVoiceCandidates(ctx context.Context, r
 	if countErr != nil {
 		return nil, rpcserver.NewAppError(connect.CodeInvalidArgument, "invalid candidate count", postpilotv1.FailureReason_AUTHORING_CANDIDATE_COUNT_INVALID, nil)
 	}
-	if count != voice.CandidateCount {
-		return nil, rpcserver.NewAppError(connect.CodeUnimplemented, "writing style preparation is not integrated", postpilotv1.FailureReason_AUTHORING_FEATURE_UNAVAILABLE, nil)
-	}
-
-	estimate, err := h.service.Estimate(ctx, fromProtoRef(req.Msg.GetWriteModel()))
+	estimate, err := h.service.Estimate(ctx, fromProtoRef(req.Msg.GetWriteModel()), count)
 	if err != nil {
 		return nil, candidateConnectError("estimate writing styles", err)
 	}
@@ -49,11 +45,7 @@ func (h *CandidateHandler) StartWritingVoiceCandidates(ctx context.Context, req 
 	if countErr != nil {
 		return nil, rpcserver.NewAppError(connect.CodeInvalidArgument, "invalid candidate count", postpilotv1.FailureReason_AUTHORING_CANDIDATE_COUNT_INVALID, nil)
 	}
-	if count != voice.CandidateCount {
-		return nil, rpcserver.NewAppError(connect.CodeUnimplemented, "writing style preparation is not integrated", postpilotv1.FailureReason_AUTHORING_FEATURE_UNAVAILABLE, nil)
-	}
-
-	id, err := h.service.Start(ctx, user, fromProtoRef(req.Msg.GetWriteModel()))
+	id, err := h.service.Start(ctx, user, fromProtoRef(req.Msg.GetWriteModel()), count)
 	if err != nil {
 		return nil, candidateConnectError("start writing styles", err)
 	}
@@ -112,6 +104,8 @@ func protoWritingCandidates(values []voice.WritingCandidate) []*postpilotv1.Writ
 func candidateConnectError(op string, err error) error {
 	var running *voice.CandidatesRunningError
 	switch {
+	case errors.Is(err, voice.ErrCandidateCount):
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "invalid candidate count", postpilotv1.FailureReason_AUTHORING_CANDIDATE_COUNT_INVALID, nil)
 	case errors.Is(err, voice.ErrCandidateNotFound):
 		return rpcserver.NewAppError(connect.CodeNotFound, "writing style not found", postpilotv1.FailureReason_WRITING_VOICE_CANDIDATE_NOT_FOUND, nil)
 	case errors.Is(err, voice.ErrCandidatesNotReady):

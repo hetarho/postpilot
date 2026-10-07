@@ -13,9 +13,10 @@ import (
 // PromptProfile is a voice projected for one target (VOICE-46): the section text as the writer
 // receives it, and the excerpts from the 학습 글 a Korean target also gets.
 type PromptProfile struct {
-	Text     string
-	Excerpts []string
-	Portable bool
+	Text            string
+	Excerpts        []string
+	Portable        bool
+	AcceptedSources []AcceptedSource
 }
 
 // PromptProfileForTopic projects one made voice's current analysis (VOICE-46, VOICE-47). A Korean
@@ -50,7 +51,32 @@ func (s *Service) PromptProfileForTopic(ctx context.Context, userID, voiceID, re
 	if err != nil {
 		return PromptProfile{}, fmt.Errorf("list excerpts: %w", err)
 	}
-	return PromptProfile{Text: koreanSection(*analysis), Excerpts: excerptsFor(samples, retrievalText, excludeMaterialID)}, nil
+	visible := withoutDeletedExamples(*analysis, samplePresence(samples))
+	excerpts, sources := excerptsWithSources(acceptedSamples(*analysis, samples), retrievalText, excludeMaterialID)
+	// Examples are part of the accepted profile even when the excerpt window
+	// chooses another material. Keep their withdrawal fence in the frozen input.
+	needed := make(map[string]bool)
+	for _, example := range []Example{visible.Counted.Endings.Example, visible.Counted.Marks.Example, visible.Counted.Emoji.Example, visible.Counted.Shape.Example, visible.Counted.OpenClose.Example, visible.Counted.Adverbs.Example, visible.Counted.Person.Example, visible.Counted.Headings.Example} {
+		if example.MaterialID != "" {
+			needed[example.MaterialID] = true
+		}
+	}
+	for _, example := range visible.AI.Examples {
+		needed[example.MaterialID] = true
+	}
+	seen := make(map[string]bool, len(sources))
+	for _, source := range sources {
+		seen[source.SampleID] = true
+	}
+	if analysis.SourceVersionsKnown {
+		for _, source := range analysis.AcceptedSources {
+			if needed[source.SampleID] && !seen[source.SampleID] {
+				sources = append(sources, source)
+				seen[source.SampleID] = true
+			}
+		}
+	}
+	return PromptProfile{Text: koreanSection(visible), Excerpts: excerpts, AcceptedSources: sources}, nil
 }
 
 // koreanSection is the `[말투]` section: every known item as a sentence with its value, then the
@@ -193,6 +219,11 @@ func portableSection(f Fingerprint) string {
 // excerptsFor picks up to FewShotMax excerpts from the 학습 글's prose: those whose text, label or
 // prompt holds a topic token first, then the newest (VOICE-46).
 func excerptsFor(newestFirst []Sample, retrievalText, excludeMaterialID string) []string {
+	excerpts, _ := excerptsWithSources(newestFirst, retrievalText, excludeMaterialID)
+	return excerpts
+}
+
+func excerptsWithSources(newestFirst []Sample, retrievalText, excludeMaterialID string) ([]string, []AcceptedSource) {
 	tokens := topicTokens(retrievalText)
 	type candidate struct {
 		sample  Sample
@@ -221,6 +252,7 @@ func excerptsFor(newestFirst []Sample, retrievalText, excludeMaterialID string) 
 		return candidates[i].order < candidates[j].order
 	})
 	excerpts := make([]string, 0, FewShotMax)
+	sources := make([]AcceptedSource, 0, FewShotMax)
 	for _, found := range candidates {
 		if len(excerpts) == FewShotMax {
 			break
@@ -232,9 +264,10 @@ func excerptsFor(newestFirst []Sample, retrievalText, excludeMaterialID string) 
 		excerpt := excerptAroundTarget(prose, FewShotExcerptTargetChars, FewShotExcerptMaxChars)
 		if !containsString(excerpts, excerpt) {
 			excerpts = append(excerpts, excerpt)
+			sources = append(sources, AcceptedSource{SampleID: found.sample.ID, ContentRevision: found.sample.ContentRevision})
 		}
 	}
-	return excerpts
+	return excerpts, sources
 }
 
 // topicTokens are the retrieval text's words of two or more characters, punctuation stripped.

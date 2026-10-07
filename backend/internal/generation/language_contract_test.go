@@ -77,7 +77,7 @@ func TestOrdinaryGenerationUsesFrozenTargetAndWritesMatchingProvenance(t *testin
 		PostSlug:   request.PostSlug,
 		VoiceID:    request.VoiceID,
 		WriteModel: request.WriteModel,
-		Payload:    mustGeneratePayload(t, generationOptions{TargetLanguage: request.TargetLanguage}),
+		Payload:    jobs.generatePayloads[0],
 	}, func(string, int, int) {})
 	if err != nil {
 		t.Fatal(err)
@@ -268,12 +268,12 @@ func TestRevisionFreezesContentLanguageAcrossTargetChangeAndFivePasses(t *testin
 			t.Fatalf("pass %d: %v", pass+1, err)
 		}
 	}
-	if len(profiles.targets) != 5 || len(posts.contentLanguages) != 5 {
+	if len(profiles.targets) != 1 || profiles.targets[0] != LanguageEnglish || len(posts.contentLanguages) != 5 {
 		t.Fatalf("profile targets/content writes = %v / %v", profiles.targets, posts.contentLanguages)
 	}
 	for pass := range posts.contentLanguages {
-		if profiles.targets[pass] != LanguageEnglish || posts.contentLanguages[pass] != LanguageEnglish {
-			t.Fatalf("pass %d target/provenance = %q/%q", pass+1, profiles.targets[pass], posts.contentLanguages[pass])
+		if posts.contentLanguages[pass] != LanguageEnglish {
+			t.Fatalf("pass %d provenance = %q", pass+1, posts.contentLanguages[pass])
 		}
 	}
 	if posts.input.TargetLanguage != LanguageKorean || posts.input.ContentLanguage == nil || *posts.input.ContentLanguage != LanguageEnglish {

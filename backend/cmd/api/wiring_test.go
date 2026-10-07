@@ -73,6 +73,8 @@ func TestBuildContextsWiresEveryRequiredCollaborator(t *testing.T) {
 	for path, want := range map[string]int{
 		"/postpilot.v1.ClipMediaWorkerService/GetMediaRuntimeStatus":      http.StatusNotFound,
 		"/postpilot.v1.PostService/ListPosts":                             http.StatusUnauthorized,
+		"/postpilot.v1.VoiceService/UpdateVoiceSample":                    http.StatusUnauthorized,
+		"/postpilot.v1.VoiceService/EstimateVoiceAnalysis":                http.StatusUnauthorized,
 		"/postpilot.v1.SpeechProfileService/ListSpeechProfiles":           http.StatusUnauthorized,
 		"/postpilot.v1.SpokenVoiceService/ListSpokenDrafts":               http.StatusUnauthorized,
 		"/postpilot.v1.SpokenVoiceGenerationService/QuoteVoiceCandidates": http.StatusUnauthorized,

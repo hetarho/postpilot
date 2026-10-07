@@ -30,9 +30,17 @@ func (s *Service) Revise(ctx context.Context, job RevisionJob, progress Progress
 	if err != nil {
 		return err
 	}
-	profile, err := s.profileForTopic(ctx, job.UserID, voiceID, payload.ContentLanguage, post.Title+" "+post.Memo, contentTags(post.Content))
-	if err != nil {
-		return fmt.Errorf("load voice profile: %w", err)
+	var profile Profile
+	if frozen := decodeProfile(payload.Profile); frozen != nil {
+		if err := s.validateFrozenProfile(ctx, job.UserID, voiceID, frozen); err != nil {
+			return err
+		}
+		profile = *frozen
+	} else {
+		profile, err = s.profileForTopic(ctx, job.UserID, voiceID, payload.ContentLanguage, post.Title+" "+post.Memo, contentTags(post.Content))
+		if err != nil {
+			return fmt.Errorf("load voice profile: %w", err)
+		}
 	}
 	model, ok := parseModelRef(job.WriteModel)
 	if !ok {

@@ -39,6 +39,11 @@ type TopicProfiles interface {
 	ProfileForPromptForTopic(ctx context.Context, userID, voiceID string, target Language, topic string, tags []string) (Profile, error)
 }
 
+// FrozenProfileSources checks withdrawal without replacing an admitted projection.
+type FrozenProfileSources interface {
+	ValidateProfileSources(ctx context.Context, userID, voiceID string, sources []ProfileSource) error
+}
+
 type LLM interface {
 	Resolve(ref llm.ModelRef) (llm.ModelInfo, bool)
 	Complete(ctx context.Context, ref llm.ModelRef, request llm.Request) (llm.Response, error)

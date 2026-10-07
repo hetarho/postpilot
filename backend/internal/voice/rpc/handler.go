@@ -6,12 +6,14 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"math"
 
 	"connectrpc.com/connect"
 
 	"github.com/postpilot/backend/internal/auth"
 	postpilotv1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/gen/postpilot/v1/postpilotv1connect"
+	"github.com/postpilot/backend/internal/llm"
 	"github.com/postpilot/backend/internal/plan"
 	"github.com/postpilot/backend/internal/platform/rpcserver"
 	"github.com/postpilot/backend/internal/usage"
@@ -136,6 +138,54 @@ func (h *Handler) DeleteVoiceSample(ctx context.Context, req *connect.Request[po
 	return connect.NewResponse(&postpilotv1.DeleteVoiceSampleResponse{}), nil
 }
 
+func (h *Handler) UpdateVoiceSample(ctx context.Context, req *connect.Request[postpilotv1.UpdateVoiceSampleRequest]) (*connect.Response[postpilotv1.UpdateVoiceSampleResponse], error) {
+	userID, err := actingUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if req.Msg.VoiceId == "" || req.Msg.SampleId == "" || req.Msg.OperationKey == "" || req.Msg.ExpectedContentRevision <= 0 {
+		return nil, toConnectError("update voice sample", voice.ErrSampleUpdateInvalid)
+	}
+	width, height := optionalInt(req.Msg.PhotoWidth), optionalInt(req.Msg.PhotoHeight)
+	sample, err := h.service.UpdateVoiceSample(ctx, voice.SampleMutation{UserID: userID, VoiceID: req.Msg.VoiceId, SampleID: req.Msg.SampleId, ExpectedContentRevision: req.Msg.ExpectedContentRevision, OperationKey: req.Msg.OperationKey, Label: req.Msg.Label, Body: req.Msg.Body, PhotoUploadID: req.Msg.PhotoUploadId, PhotoWidth: width, PhotoHeight: height})
+	if err != nil {
+		return nil, toConnectError("update voice sample", err)
+	}
+	return connect.NewResponse(&postpilotv1.UpdateVoiceSampleResponse{Sample: toProtoSample(sample)}), nil
+}
+
+func optionalInt(value *int32) *int {
+	if value == nil {
+		return nil
+	}
+	converted := int(*value)
+	return &converted
+}
+
+func (h *Handler) EstimateVoiceAnalysis(ctx context.Context, req *connect.Request[postpilotv1.EstimateVoiceAnalysisRequest]) (*connect.Response[postpilotv1.EstimateVoiceAnalysisResponse], error) {
+	userID, err := actingUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if req.Msg.VoiceId == "" {
+		return nil, toConnectError("estimate voice analysis", voice.ErrVoiceRequired)
+	}
+	model := llm.ModelRef{ProviderID: req.Msg.GetModel().GetProviderId(), ModelID: req.Msg.GetModel().GetModelId()}
+	if model.ProviderID == "" || model.ModelID == "" {
+		return nil, toConnectError("estimate voice analysis", voice.ErrAnalyzeModelRequired)
+	}
+	estimate, err := h.service.EstimateAnalysis(ctx, userID, req.Msg.VoiceId, model)
+	if err != nil {
+		return nil, toConnectError("estimate voice analysis", err)
+	}
+	response := &postpilotv1.EstimateVoiceAnalysisResponse{Free: estimate.Free}
+	if estimate.Available && estimate.Credits <= math.MaxInt32 {
+		credits := int32(estimate.Credits)
+		response.Credits = &credits
+	}
+	return connect.NewResponse(response), nil
+}
+
 func (h *Handler) GetVoiceSample(ctx context.Context, req *connect.Request[postpilotv1.GetVoiceSampleRequest]) (*connect.Response[postpilotv1.GetVoiceSampleResponse], error) {
 	userID, err := actingUser(ctx)
 	if err != nil {
@@ -228,6 +278,17 @@ func actingUser(ctx context.Context) (string, error) {
 // like an unknown one; a tombstone and every lifecycle refusal are FailedPrecondition so the
 // client can offer the restore/reassign path instead of retrying.
 func toConnectError(op string, err error) error {
+	var material *voice.MaterialRefusal
+	if errors.As(err, &material) {
+		code := connect.CodeFailedPrecondition
+		if errors.Is(err, voice.ErrSampleRevisionConflict) {
+			code = connect.CodeAborted
+		}
+		if errors.Is(err, voice.ErrSampleUpdateInvalid) {
+			code = connect.CodeInvalidArgument
+		}
+		return rpcserver.AppErrorFrom(code, material)
+	}
 	if access, ok := usage.ModelAccessFailure(err); ok {
 		return rpcserver.AppErrorFrom(connect.CodeFailedPrecondition, access)
 	}
@@ -363,14 +424,19 @@ func toProtoAnalysis(analysis voice.Analysis) *postpilotv1.VoiceAnalysis {
 	for _, example := range analysis.AI.Examples {
 		ai.Examples = append(ai.Examples, &postpilotv1.VoiceAiExample{Field: toProtoAIField(example.Field), Sentence: example.Sentence, MaterialId: example.MaterialID})
 	}
-	return &postpilotv1.VoiceAnalysis{
+	out := &postpilotv1.VoiceAnalysis{
 		Origin: toProtoOrigin(analysis.Origin), SyntheticSample: analysis.SyntheticSample,
-		Counted:       ToProtoFingerprint(analysis.Counted),
-		Ai:            ai,
-		MaterialCount: int32(len(analysis.MaterialIDs)),
-		AnalyzeModel:  analysis.AnalyzeModel,
-		CreatedAt:     analysis.CreatedAt.UTC().Format(timeLayout),
+		Counted:             ToProtoFingerprint(analysis.Counted),
+		Ai:                  ai,
+		MaterialCount:       int32(len(analysis.MaterialIDs)),
+		AnalyzeModel:        analysis.AnalyzeModel,
+		CreatedAt:           analysis.CreatedAt.UTC().Format(timeLayout),
+		SourceVersionsKnown: analysis.SourceVersionsKnown,
 	}
+	for _, source := range analysis.AcceptedSources {
+		out.AcceptedSources = append(out.AcceptedSources, &postpilotv1.VoiceAcceptedSource{SampleId: source.SampleID, ContentRevision: source.ContentRevision})
+	}
+	return out
 }
 
 // toProtoAIField maps the three fields the domain has, pinned by a test that walks the
@@ -438,6 +504,7 @@ func toProtoSample(sample voice.Sample) *postpilotv1.VoiceSample {
 		Id: sample.ID, Label: sample.Label, Chars: int32(sample.Chars),
 		CreatedAt: sample.CreatedAt.UTC().Format(timeLayout),
 		Kind:      kind, PromptKey: sample.PromptKey, HasPhoto: sample.HasPhoto(),
+		ContentRevision: sample.ContentRevision,
 	}
 }
 

@@ -116,6 +116,8 @@ type Storage interface {
 	SampleStore
 	PhotoUploadStore
 	CheckStore
+	MaterialEdits
+	MaterialMutationReceipts
 }
 
 // PostContents is how the voice context reads one of the caller's posts to count it (VOICE-62,
@@ -151,6 +153,14 @@ type Progress func(stage string, done, total int)
 // its operation receipt atomically with content CAS. Label-only changes keep content revision.
 type MaterialEdits interface {
 	UpdateVoiceSample(context.Context, SampleMutation) (Sample, error)
+}
+
+type MaterialMutationReceipts interface {
+	VoiceSampleMutationReceipt(context.Context, SampleMutation) (*Sample, error)
+}
+
+type AnalysisEstimates interface {
+	CallCredits(context.Context, llm.ModelInfo, int64, int64) (int, bool)
 }
 
 // AcceptedProfiles resolves exactly the owned accepted snapshot, excluding withdrawn excerpts.

@@ -453,9 +453,8 @@ func TestGetPostFingerprintOverTheWire(t *testing.T) {
 	}
 }
 
-// VOICE-43: 검증 over the wire — the start answers the queued check with its prompt and answer
-// and the job, the list carries it with the active job, a retry is a new check, and the
-// refusals arrive as their reasons.
+// Paid standalone checks remain readable; new starts and retries are retired
+// before any provider work, while every historical read keeps ownership guards.
 func TestVoiceChecksOverTheWire(t *testing.T) {
 	handle := openVoiceTestDB(t)
 	store := voicestore.New(handle.Writer, handle.Reader)
@@ -468,56 +467,44 @@ func TestVoiceChecksOverTheWire(t *testing.T) {
 	if err := store.InsertSample(ctx, voice.Sample{ID: "answer", UserID: "alice", VoiceID: created.ID, Kind: voice.SampleKindAnswer, PromptKey: "opening_greeting", Body: "안녕하세요, 동네 빵집이에요.", CreatedAt: time.Now()}); err != nil {
 		t.Fatal(err)
 	}
-	if err := store.PublishAnalysis(ctx, "alice", created.ID, voice.Analysis{AnalyzeModel: "stub/analyze", CreatedAt: time.Now()}); err != nil {
+	stamp := time.Now()
+	if err := store.PublishAnalysis(ctx, "alice", created.ID, voice.Analysis{AnalyzeModel: "stub/analyze", CreatedAt: stamp}); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.InsertCheck(ctx, voice.Check{ID: "paid-check", UserID: "alice", VoiceID: created.ID, PromptKey: "opening_greeting", MaterialID: "answer", AnalysisCreatedAt: stamp, WriteModel: "stub/write", Status: voice.CheckQueued, CreatedAt: stamp, UpdatedAt: stamp}); err != nil {
 		t.Fatal(err)
 	}
 	handler := voicerpc.NewHandler(service)
 	write := &postpilotv1.ModelRef{ProviderId: "stub", ModelId: "write"}
-
-	started, err := handler.StartVoiceCheck(ctx, connect.NewRequest(&postpilotv1.StartVoiceCheckRequest{VoiceId: created.ID, PromptKey: "opening_greeting", Model: write}))
-	if err != nil {
-		t.Fatal(err)
-	}
-	check := started.Msg.GetCheck()
-	if started.Msg.GetJobId() != "job-check" || check.GetStatus() != postpilotv1.VoiceCheckStatus_VOICE_CHECK_STATUS_QUEUED ||
-		check.GetPrompt().GetKey() != "opening_greeting" || check.GetAnswer() != "안녕하세요, 동네 빵집이에요." || check.GetWriteModel().GetModelId() != "write" {
-		t.Fatalf("started = %+v", started.Msg)
-	}
 	listed, err := handler.ListVoiceChecks(ctx, connect.NewRequest(&postpilotv1.ListVoiceChecksRequest{VoiceId: created.ID}))
-	if err != nil || len(listed.Msg.GetChecks()) != 1 || listed.Msg.GetChecks()[0].GetId() != check.GetId() {
-		t.Fatalf("listed = %+v err=%v", listed, err)
+	if err != nil || len(listed.Msg.GetChecks()) != 1 || listed.Msg.GetChecks()[0].GetId() != "paid-check" || listed.Msg.GetChecks()[0].GetAnswer() != "안녕하세요, 동네 빵집이에요." {
+		t.Fatal("paid history lost", err)
 	}
-	// The fake queue holds no job, so the waiting check reads as interrupted.
 	if failure := listed.Msg.GetChecks()[0].GetFailure(); failure.GetReason() != "JOB_INTERRUPTED" {
-		t.Fatalf("a check with no job = %+v", listed.Msg.GetChecks()[0])
+		t.Fatal("missing historical job not reported")
 	}
-	retried, err := handler.RetryVoiceCheck(ctx, connect.NewRequest(&postpilotv1.RetryVoiceCheckRequest{CheckId: check.GetId(), Model: write}))
-	if err != nil || retried.Msg.GetCheck().GetId() == check.GetId() {
-		t.Fatalf("retried = %+v err=%v", retried, err)
-	}
-	for name, tc := range map[string]struct {
-		call func() error
-		code connect.Code
-	}{
-		"unanswered": {func() error {
-			_, err := handler.StartVoiceCheck(ctx, connect.NewRequest(&postpilotv1.StartVoiceCheckRequest{VoiceId: created.ID, PromptKey: "closing_greeting", Model: write}))
+	for _, call := range []func() error{
+		func() error {
+			_, err := handler.StartVoiceCheck(ctx, connect.NewRequest(&postpilotv1.StartVoiceCheckRequest{VoiceId: created.ID, PromptKey: "opening_greeting", Model: write}))
 			return err
-		}, connect.CodeFailedPrecondition},
-		"not a writer": {func() error {
-			_, err := handler.StartVoiceCheck(ctx, connect.NewRequest(&postpilotv1.StartVoiceCheckRequest{VoiceId: created.ID, PromptKey: "opening_greeting", Model: &postpilotv1.ModelRef{ProviderId: "stub", ModelId: "analyze"}}))
+		},
+		func() error {
+			_, err := handler.RetryVoiceCheck(ctx, connect.NewRequest(&postpilotv1.RetryVoiceCheckRequest{CheckId: "paid-check", Model: write}))
 			return err
-		}, connect.CodeFailedPrecondition},
-		"foreign check": {func() error {
-			_, err := handler.RetryVoiceCheck(auth.WithUser(context.Background(), "bob"), connect.NewRequest(&postpilotv1.RetryVoiceCheckRequest{CheckId: check.GetId(), Model: write}))
+		},
+		func() error {
+			_, err := handler.RetryVoiceCheck(auth.WithUser(context.Background(), "bob"), connect.NewRequest(&postpilotv1.RetryVoiceCheckRequest{CheckId: "paid-check", Model: write}))
 			return err
-		}, connect.CodeNotFound},
-		"foreign voice": {func() error {
-			_, err := handler.ListVoiceChecks(auth.WithUser(context.Background(), "bob"), connect.NewRequest(&postpilotv1.ListVoiceChecksRequest{VoiceId: created.ID}))
-			return err
-		}, connect.CodeNotFound},
+		},
 	} {
-		if err := tc.call(); connect.CodeOf(err) != tc.code {
-			t.Fatalf("%s = %v, want %v", name, err, tc.code)
+		if err := call(); connect.CodeOf(err) != connect.CodeFailedPrecondition || voiceReason(t, err) != "VOICE_CHECK_RETIRED" {
+			t.Fatal("retirement reason was not exposed", err)
 		}
+	}
+	if _, err := handler.ListVoiceChecks(auth.WithUser(context.Background(), "bob"), connect.NewRequest(&postpilotv1.ListVoiceChecksRequest{VoiceId: created.ID})); connect.CodeOf(err) != connect.CodeNotFound {
+		t.Fatal("foreign paid history exposed", err)
+	}
+	if _, err := handler.StartVoiceCheck(context.Background(), connect.NewRequest(&postpilotv1.StartVoiceCheckRequest{VoiceId: created.ID, Model: write})); connect.CodeOf(err) != connect.CodeUnauthenticated {
+		t.Fatal("retirement bypassed authentication", err)
 	}
 }

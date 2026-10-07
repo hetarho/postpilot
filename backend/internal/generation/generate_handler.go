@@ -34,6 +34,9 @@ func (s *Service) Generate(ctx context.Context, job GenerateJob, progress Progre
 	// change the prompt of work that is already waiting in the queue, and none of them is ever
 	// resolved afresh here (GEN-5, GEN-30, MEM-19, GEN-51).
 	post = options.onto(post)
+	if err := s.validateFrozenProfile(ctx, job.UserID, voiceID, options.Profile); err != nil {
+		return err
+	}
 	post, observations, err := s.observeForRun(ctx, post, job.ObserveModel, options.ObserveFiles, options.Observations, progress)
 	if err != nil {
 		return err
@@ -49,7 +52,12 @@ func (s *Service) Generate(ctx context.Context, job GenerateJob, progress Progre
 		return ErrWriteModelRequired
 	}
 	progress("write", 0, 1)
-	answer, err := s.write(ctx, post, observations, writeModel)
+	var answer WriteAnswer
+	if options.Profile != nil {
+		answer, _, err = s.writeCandidate(ctx, post, *options.Profile, observations, writeModel)
+	} else {
+		answer, err = s.write(ctx, post, observations, writeModel)
+	}
 	if err != nil {
 		return err
 	}

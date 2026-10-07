@@ -19,6 +19,8 @@ const CandidateCount = 8
 const CandidateDescriptionMaxChars = 200
 const CandidateSampleMinChars = 200
 const CandidateSampleMaxChars = 700
+const candidatePromptTokensPerStyle = 750
+const candidateResponseBytesPerStyle = 8 * 1024
 
 var (
 	ErrCandidateNotFound      = errors.New("writing voice candidate not found")
@@ -51,6 +53,7 @@ type WritingCandidate struct {
 
 type CandidateBatch struct {
 	JobID      string
+	Count      int
 	Candidates []WritingCandidate
 }
 
@@ -121,9 +124,9 @@ func NewCandidateService(models Models, jobs CandidateJobs, store CandidateStore
 	return &CandidateService{models: models, jobs: jobs, store: store, budget: budget, estimates: estimates, now: time.Now, newID: newID, shuffle: shuffleDirections}
 }
 
-// Fixed, fictional, ordinary scenario makes the eight previews directly comparable.
+// One fictional scene makes every chosen format directly comparable.
 const candidateScene = "가상의 상황: 주말 오후, 산책하다 작은 가게에 들렀어요. 따뜻한 차와 간식을 먹으며 창가에서 잠깐 쉬었어요. 실제 장소나 사용자 경험이 아닌 같은 짧은 장면을 모든 후보가 각자의 말투로 이야기해 주세요."
-const candidateSystem = `사용자가 고를 한국어 글쓰기 말투 여덟 가지를 만드세요. 이는 사용자의 실제 말투를 추정한 분석이 아니라 AI가 만든 가상 스타일입니다. 주어진 여덟 방향을 각각 한 번씩 사용하고, 모든 후보는 동일한 가상 장면을 이야기하세요. 문장 길이, 끝맺음, 감정 표현, 문단 모양이 다른 여덟 스타일이어야 합니다. 이름은 서로 다른 자연스러운 한국어 1~50자, 설명은 쉬운 한국어 1~200자, 예시는 각각 한국어 200~700자로 쓰세요. 예시에 브랜드, 실제 장소, 인물, 사용자 개인정보나 사실을 넣지 마세요. 보통 8~12문장으로 시작과 마무리를 넣고 글쓴이의 느낌이 드러나게 써 주세요. directions와 같은 순서의 candidates 배열만 있는 JSON 객체 하나로 답하세요. 정확히 8개여야 합니다. 각 원소는 name, description, sample 필드만 갖습니다.`
+const candidateSystem = `사용자가 고를 한국어 글쓰기 말투 %d가지를 만드세요. 이는 사용자의 실제 말투를 추정한 분석이 아니라 AI가 만든 가상 스타일입니다. 주어진 %d개 방향을 각각 한 번씩 사용하고, 모든 후보는 동일한 가상 장면을 이야기하세요. 문장 길이, 끝맺음, 감정 표현, 문단 모양이 다른 %d개 스타일이어야 합니다. 이름은 서로 다른 자연스러운 한국어 1~50자, 설명은 쉬운 한국어 1~200자, 예시는 각각 한국어 200~700자로 쓰세요. 예시에 브랜드, 실제 장소, 인물, 사용자 개인정보나 사실을 넣지 마세요. 보통 8~12문장으로 시작과 마무리를 넣고 글쓴이의 느낌이 드러나게 써 주세요. directions와 같은 순서의 candidates 배열만 있는 JSON 객체 하나로 답하세요. 정확히 %d개여야 합니다. 각 원소는 name, description, sample 필드만 갖습니다.`
 
 var candidateDirections = []string{
 	"담백하게 짧은 문장으로 핵심만 말하는 말투",
@@ -145,12 +148,14 @@ var candidateDirections = []string{
 }
 
 type candidateInput struct {
+	Count            int      `json:"count,omitempty"`
 	Directions       []string `json:"directions"`
 	Scene            string   `json:"scene"`
 	CompletionTokens int      `json:"completion_tokens"`
 }
 
 type candidateResult struct {
+	Count      int                `json:"count,omitempty"`
 	Candidates []WritingCandidate `json:"candidates"`
 }
 
@@ -174,15 +179,40 @@ func (s *CandidateService) eligible(ref llm.ModelRef) (llm.ModelInfo, error) {
 }
 
 func candidateRequest(input candidateInput) llm.Request {
+	count, _ := NormalizeCandidateCount(input.Count)
 	raw, _ := json.Marshal(struct {
 		Directions []string `json:"directions"`
 		Scene      string   `json:"scene"`
 	}{input.Directions, input.Scene})
-	return llm.Request{System: candidateSystem, Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(string(raw))}}}, Stage: llm.StageNameWrite, Reasoning: llm.ReasoningLow, MaxTokens: input.CompletionTokens}
+	return llm.Request{System: fmt.Sprintf(candidateSystem, count, count, count, count), Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(string(raw))}}}, Stage: llm.StageNameWrite, Reasoning: llm.ReasoningLow, MaxTokens: input.CompletionTokens}
 }
 
-func (s *CandidateService) Estimate(ctx context.Context, ref llm.ModelRef) (CandidateEstimate, error) {
+func requestedCandidateCount(counts []int) (int, error) {
+	if len(counts) > 1 {
+		return 0, ErrCandidateCount
+	}
+	if len(counts) == 0 {
+		return CandidateCount, nil
+	}
+	return NormalizeCandidateCount(counts[0])
+}
+func candidateCompletionTokens(base, count int) (int, error) {
+	if base <= 0 || base > (int(^uint(0)>>1)-CandidateCount)/count {
+		return 0, errors.New("writing voice candidate completion budget is invalid")
+	}
+	return (base*count + CandidateCount - 1) / CandidateCount, nil
+}
+
+func (s *CandidateService) Estimate(ctx context.Context, ref llm.ModelRef, counts ...int) (CandidateEstimate, error) {
+	count, err := requestedCandidateCount(counts)
+	if err != nil {
+		return CandidateEstimate{}, err
+	}
 	info, err := s.eligible(ref)
+	if err != nil {
+		return CandidateEstimate{}, err
+	}
+	completion, err := candidateCompletionTokens(s.budget.Short(info.ReasoningNativeEffort), count)
 	if err != nil {
 		return CandidateEstimate{}, err
 	}
@@ -191,11 +221,15 @@ func (s *CandidateService) Estimate(ctx context.Context, ref llm.ModelRef) (Cand
 	}
 	// Every possible direction subset fits this input allowance; the estimate adapter
 	// applies the shared admission prompt reservation bound.
-	credits, ok := s.estimates.CallCredits(ctx, info, 6000, int64(s.budget.Short(info.ReasoningNativeEffort)))
+	credits, ok := s.estimates.CallCredits(ctx, info, int64(candidatePromptTokensPerStyle*count), int64(completion))
 	return CandidateEstimate{Credits: credits, Available: ok}, nil
 }
 
-func (s *CandidateService) Start(ctx context.Context, userID string, ref llm.ModelRef) (string, error) {
+func (s *CandidateService) Start(ctx context.Context, userID string, ref llm.ModelRef, counts ...int) (string, error) {
+	count, err := requestedCandidateCount(counts)
+	if err != nil {
+		return "", err
+	}
 	info, err := s.eligible(ref)
 	if err != nil {
 		return "", err
@@ -204,10 +238,11 @@ func (s *CandidateService) Start(ctx context.Context, userID string, ref llm.Mod
 	if err := s.shuffle(directions); err != nil {
 		return "", fmt.Errorf("randomize candidate directions: %w", err)
 	}
-	input := candidateInput{Directions: directions[:CandidateCount], Scene: candidateScene, CompletionTokens: s.budget.Short(info.ReasoningNativeEffort)}
-	if input.CompletionTokens <= 0 {
-		return "", errors.New("writing voice candidate completion budget is invalid")
+	completion, err := candidateCompletionTokens(s.budget.Short(info.ReasoningNativeEffort), count)
+	if err != nil {
+		return "", err
 	}
+	input := candidateInput{Count: count, Directions: directions[:count], Scene: candidateScene, CompletionTokens: completion}
 	payload, err := json.Marshal(input)
 	if err != nil {
 		return "", err
@@ -220,8 +255,24 @@ func (s *CandidateService) Run(ctx context.Context, run CandidateRun, progress P
 	if err := json.Unmarshal(run.Payload, &input); err != nil {
 		return fmt.Errorf("decode candidate input: %w", err)
 	}
-	if len(input.Directions) != CandidateCount || input.Scene != candidateScene || input.CompletionTokens <= 0 {
+	count, err := NormalizeCandidateCount(input.Count)
+	if err != nil || len(input.Directions) != count || input.Scene != candidateScene || input.CompletionTokens <= 0 {
 		return errors.New("writing voice candidate input is invalid")
+	}
+	input.Count = count
+	seen := map[string]bool{}
+	for _, direction := range input.Directions {
+		allowed := false
+		for _, known := range candidateDirections {
+			if direction == known {
+				allowed = true
+				break
+			}
+		}
+		if !allowed || seen[direction] {
+			return errors.New("writing voice candidate directions are invalid")
+		}
+		seen[direction] = true
 	}
 	ref, err := parseModelRef(run.WriteModel)
 	if err != nil {
@@ -229,7 +280,10 @@ func (s *CandidateService) Run(ctx context.Context, run CandidateRun, progress P
 	}
 	request := candidateRequest(input)
 	if info, ok := s.models.Resolve(ref); ok && info.StructuredOutput {
-		request.JSONSchema = WritingCandidateSchema()
+		request.JSONSchema = WritingCandidateSchema(count)
+		if len(request.JSONSchema) == 0 {
+			return errors.New("writing voice candidate schema is invalid")
+		}
 	}
 	if err := ctx.Err(); err != nil {
 		return err
@@ -239,7 +293,7 @@ func (s *CandidateService) Run(ctx context.Context, run CandidateRun, progress P
 	if err != nil {
 		return err
 	}
-	candidates, err := parseCandidates(response.Text)
+	candidates, err := parseCandidates(response.Text, count)
 	if err != nil {
 		if response.FinishReason == "length" {
 			return llm.ResponseParseError(response, err)
@@ -249,7 +303,7 @@ func (s *CandidateService) Run(ctx context.Context, run CandidateRun, progress P
 	if err := ctx.Err(); err != nil {
 		return err
 	}
-	payload, err := json.Marshal(candidateResult{Candidates: candidates})
+	payload, err := json.Marshal(candidateResult{Count: count, Candidates: candidates})
 	if err != nil {
 		return err
 	}
@@ -260,9 +314,13 @@ func (s *CandidateService) Run(ctx context.Context, run CandidateRun, progress P
 	return nil
 }
 
-func parseCandidates(text string) ([]WritingCandidate, error) {
-	// Eight fully Unicode-escaped maximum-size fields fit under this response bound.
-	if len(text) > 64*1024 {
+func parseCandidates(text string, counts ...int) ([]WritingCandidate, error) {
+	count, err := requestedCandidateCount(counts)
+	if err != nil {
+		return nil, err
+	}
+	// Fully Unicode-escaped maximum-size fields fit under this count-specific bound.
+	if len(text) > candidateResponseBytesPerStyle*count {
 		return nil, errors.New("candidate output exceeds the response bound")
 	}
 	candidate, ok := llm.JSONCandidate(text)
@@ -273,8 +331,8 @@ func parseCandidates(text string) ([]WritingCandidate, error) {
 	if err := json.Unmarshal([]byte(candidate), &result); err != nil {
 		return nil, err
 	}
-	if len(result.Candidates) != CandidateCount {
-		return nil, errors.New("exactly eight candidates are required")
+	if len(result.Candidates) != count {
+		return nil, fmt.Errorf("exactly %d candidates are required", count)
 	}
 	names, samples := map[string]bool{}, map[string]bool{}
 	for i := range result.Candidates {
@@ -306,10 +364,24 @@ func (s *CandidateService) Get(ctx context.Context, userID, jobID string) (Candi
 	if err := json.Unmarshal(found.Payload, &result); err != nil {
 		return CandidateBatch{}, fmt.Errorf("decode saved writing candidates: %w", err)
 	}
-	if len(result.Candidates) != CandidateCount {
+	count, err := NormalizeCandidateCount(result.Count)
+	if err != nil || len(result.Candidates) != count {
 		return CandidateBatch{}, ErrCandidatesNotReady
 	}
-	return CandidateBatch{JobID: found.ID, Candidates: result.Candidates}, nil
+	raw, err := json.Marshal(result)
+	if err != nil {
+		return CandidateBatch{}, ErrCandidatesNotReady
+	}
+	validated, err := parseCandidates(string(raw), count)
+	if err != nil {
+		return CandidateBatch{}, ErrCandidatesNotReady
+	}
+	for i := range validated {
+		if result.Candidates[i].ID != validated[i].ID {
+			return CandidateBatch{}, ErrCandidatesNotReady
+		}
+	}
+	return CandidateBatch{JobID: found.ID, Count: count, Candidates: validated}, nil
 }
 
 func (s *CandidateService) Latest(ctx context.Context, userID string) (LatestCandidates, error) {

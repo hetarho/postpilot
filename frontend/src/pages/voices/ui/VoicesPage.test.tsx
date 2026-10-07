@@ -25,7 +25,7 @@ function renderDirectory(voice: FakeVoiceOptions = {}, calls: string[] = []) {
 }
 
 /** The active list is the first list on the page, rendered once the directory answered. */
-const activeRows = async () => (await screen.findAllByRole('list'))[0]!
+const activeRows = async () => (await within(screen.getByRole('main')).findAllByRole('list'))[0]!
 const deletedGroup = async () =>
   within((await screen.findByText(/삭제된 말투 \d+개/)).closest('details')!)
 
@@ -81,6 +81,7 @@ describe('the voice directory', () => {
             'GetMe',
             'GetMyPlan',
             'ListVoices',
+            'GetVoiceProfile',
             'ListModels',
             'GetSelections',
             'InitializeDefaultSelections',

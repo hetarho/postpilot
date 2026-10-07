@@ -154,9 +154,10 @@ type snapshotBlock struct {
 // snapshotProfile freezes the projection text itself (MODEL-31): a comparison writes from the
 // voice as it was, whatever the voice becomes.
 type snapshotProfile struct {
-	Text     string   `json:"Text"`
-	Excerpts []string `json:"Excerpts"`
-	Portable bool     `json:"Portable"`
+	Text     string                 `json:"Text"`
+	Excerpts []string               `json:"Excerpts"`
+	Portable bool                   `json:"Portable"`
+	Sources  []profileSourcePayload `json:"sources,omitempty"`
 }
 
 // observeExperimentSnapshot is intentionally narrower than PostInput. Target/content
@@ -408,7 +409,8 @@ func toSnapshotProfile(profile Profile) *snapshotProfile {
 	if profile.NoVoice {
 		return nil
 	}
-	return &snapshotProfile{Text: profile.Text, Excerpts: copyTexts(profile.Excerpts), Portable: profile.Portable}
+	encoded := encodeProfile(&profile)
+	return &snapshotProfile{Text: profile.Text, Excerpts: copyTexts(profile.Excerpts), Portable: profile.Portable, Sources: encoded.Sources}
 }
 
 // fromSnapshotProfile reads a frozen projection back; an absent one is 말투 없음. Every
@@ -417,5 +419,5 @@ func fromSnapshotProfile(wire *snapshotProfile) Profile {
 	if wire == nil {
 		return Profile{NoVoice: true}
 	}
-	return Profile{Text: wire.Text, Excerpts: copyTexts(wire.Excerpts), Portable: wire.Portable}
+	return *decodeProfile(&profilePayload{Text: wire.Text, Excerpts: copyTexts(wire.Excerpts), Portable: wire.Portable, Sources: wire.Sources})
 }

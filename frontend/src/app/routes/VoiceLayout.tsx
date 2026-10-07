@@ -1,5 +1,5 @@
 import { Link, Navigate, Outlet, useParams, useRouterState } from '@tanstack/react-router'
-import { ClipboardCheck, FileText, IdCard } from 'lucide-react'
+import { FileText, IdCard } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useSession } from '@/entities/session'
 import { useVoiceProfile, useVoices } from '@/entities/voice'
@@ -15,6 +15,7 @@ import {
   typographyStyles,
   type TabLink,
   pageStyles,
+  buttonStyles,
 } from '@/shared/ui'
 
 /** The three tabs of one voice, in one list so the row and the routes cannot drift — the same
@@ -22,18 +23,17 @@ import {
  *  not destinations of their own. Every tab carries an icon and a short caption so the row can
  *  compact itself instead of horizontally scrolling on a phone (TabLinks' container mode). */
 const VOICE_TABS: readonly (Omit<TabLink, 'params' | 'label' | 'shortLabel'> & {
-  labelKey: 'analysis' | 'materials' | 'checks'
+  labelKey: 'analysis' | 'materials'
 })[] = [
   { to: '/voices/$voiceId', labelKey: 'analysis', icon: IdCard },
   { to: '/voices/$voiceId/materials', labelKey: 'materials', icon: FileText },
-  { to: '/voices/$voiceId/checks', labelKey: 'checks', icon: ClipboardCheck },
 ]
 
 /** The frame of `/voices/$voiceId`: which voice this is, its state, and the tab row. The voice
  *  comes from the directory rather than from the profile so an unknown or foreign id can say so
  *  before any tab asks for a profile that does not exist. */
 export function VoiceLayout() {
-  const { t } = useTranslation(['nav', 'voices', 'common'])
+  const { t } = useTranslation(['nav', 'voices', 'common', 'writingTests'])
   const { voiceId = '' } = useParams({ strict: false })
   const { user } = useSession()
   const ownerId = user?.id ?? ''
@@ -126,6 +126,26 @@ export function VoiceLayout() {
               ariaLabel={t('voice.settings', { ns: 'nav' })}
               className="mt-4"
             />
+          )}
+          {made && (
+            <div className="mt-4 flex flex-wrap gap-2">
+              {!voice.deleted && (
+                <Link
+                  to="/tests"
+                  search={{ factor: 'voice', stage: 'write', count: 2, voiceId, entry: '/voices' }}
+                  className={buttonStyles({ variant: 'secondary' })}
+                >
+                  {t('title', { ns: 'writingTests' })}
+                </Link>
+              )}
+              <Link
+                to="/tests/history"
+                search={{ stage: 'voice', voiceId, entry: '/voices' }}
+                className={buttonStyles({ variant: 'ghost' })}
+              >
+                {t('history', { ns: 'writingTests' })}
+              </Link>
+            </div>
           )}
           <Outlet />
         </>

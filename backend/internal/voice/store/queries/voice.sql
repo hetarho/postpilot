@@ -71,7 +71,7 @@ INSERT INTO voice_samples (id, voice_id, user_id, kind, prompt_key, label, body,
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 -- name: ListSampleBodies :many
-SELECT id, kind, prompt_key, label, body, photo_key, photo_width, photo_height, created_at
+SELECT id, kind, prompt_key, label, body, photo_key, photo_width, photo_height, created_at, content_revision
 FROM voice_samples
 WHERE voice_id = ? AND user_id = ?
 ORDER BY created_at DESC, id DESC;
@@ -79,19 +79,19 @@ ORDER BY created_at DESC, id DESC;
 -- name: ListSampleBodiesForVoices :many
 -- Every listed voice's samples with their bodies in one read, for the directory's readiness.
 -- voice_ids is a JSON array of voice ids.
-SELECT voice_id, id, kind, prompt_key, label, body, photo_key, photo_width, photo_height, created_at
+SELECT voice_id, id, kind, prompt_key, label, body, photo_key, photo_width, photo_height, created_at, content_revision
 FROM voice_samples
 WHERE user_id = sqlc.arg(user_id) AND voice_id IN (SELECT value FROM json_each(sqlc.arg(voice_ids)))
 ORDER BY voice_id, created_at DESC, id DESC;
 
 -- name: GetSampleBody :one
-SELECT id, kind, prompt_key, label, body, photo_key, photo_width, photo_height, created_at
+SELECT id, kind, prompt_key, label, body, photo_key, photo_width, photo_height, created_at, content_revision
 FROM voice_samples
 WHERE id = ? AND voice_id = ? AND user_id = ?;
 
 -- name: GetPromptAnswer :one
 -- The one answer a prompt holds in a voice (voice_samples_voice_prompt).
-SELECT id, kind, prompt_key, label, body, photo_key, photo_width, photo_height, created_at
+SELECT id, kind, prompt_key, label, body, photo_key, photo_width, photo_height, created_at, content_revision
 FROM voice_samples
 WHERE voice_id = ? AND user_id = ? AND prompt_key = ? AND kind = 'answer';
 
@@ -130,7 +130,7 @@ SELECT photo_key FROM voice_samples WHERE photo_key IS NOT NULL;
 SELECT object_key FROM voice_photo_uploads;
 
 -- name: GetAnalysis :one
-SELECT snapshot, material_ids, analyze_model, created_at
+SELECT snapshot, material_ids, analyze_model, created_at, source_versions_known, accepted_sources, accepted_material_snapshot
 FROM voice_analyses
 WHERE voice_id = ? AND user_id = ? AND slot = ?;
 
@@ -145,5 +145,16 @@ UPDATE voice_analyses SET slot = sqlc.arg(to_slot)
 WHERE voice_id = sqlc.arg(voice_id) AND user_id = sqlc.arg(user_id) AND slot = sqlc.arg(from_slot);
 
 -- name: InsertCurrentAnalysis :exec
-INSERT INTO voice_analyses (voice_id, user_id, slot, snapshot, material_ids, analyze_model, created_at)
-VALUES (?, ?, 'current', ?, ?, ?, ?);
+INSERT INTO voice_analyses (voice_id, user_id, slot, snapshot, material_ids, analyze_model, created_at, source_versions_known, accepted_sources, accepted_material_snapshot)
+VALUES (?, ?, 'current', ?, ?, ?, ?, ?, ?, ?);
+
+-- name: GetVoiceSampleMutation :one
+SELECT * FROM voice_sample_mutations WHERE user_id=? AND operation_key=?;
+
+-- name: InsertVoiceSampleMutation :exec
+INSERT INTO voice_sample_mutations(user_id,voice_id,sample_id,operation_key,expected_content_revision,resulting_content_revision,fingerprint,response,created_at) VALUES(?,?,?,?,?,?,?,?,?);
+
+-- name: UpdateOwnedVoiceSample :execrows
+UPDATE voice_samples SET label=?,body=?,photo_key=?,photo_width=?,photo_height=?,content_revision=?
+WHERE voice_samples.user_id=? AND voice_samples.voice_id=? AND voice_samples.id=? AND voice_samples.content_revision=?
+AND EXISTS(SELECT 1 FROM voices WHERE voices.id=voice_samples.voice_id AND voices.user_id=voice_samples.user_id AND voices.deleted_at IS NULL);

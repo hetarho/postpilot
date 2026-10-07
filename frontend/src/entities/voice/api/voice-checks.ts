@@ -1,22 +1,12 @@
 import { useMemo } from 'react'
 import { createClient } from '@connectrpc/connect'
-import { useMutation, useTransport } from '@connectrpc/connect-query'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { create } from '@bufbuild/protobuf'
-import {
-  appFailureFromConnect,
-  appFailureFromProto,
-  ModelRefSchema,
-  type ProtoVoiceCheck,
-  VoiceService,
-} from '@/shared/api'
-import { formatAppFailure } from '@/shared/lib'
+import { useTransport } from '@connectrpc/connect-query'
+import { useQuery } from '@tanstack/react-query'
+import { appFailureFromProto, type ProtoVoiceCheck, VoiceService } from '@/shared/api'
 import type { VoiceCheck } from '../model/check'
 import { toComparisons } from './fingerprint-comparison'
 import { requireCheckStatus, requirePromptPart } from './voice-enums'
 import { voiceChecksQueryKey } from './voice-queries'
-
-type ModelRefInput = { providerId: string; modelId: string }
 
 export function toVoiceCheck(check: ProtoVoiceCheck): VoiceCheck {
   return {
@@ -73,51 +63,4 @@ export function useVoiceChecksQueryKey(ownerId: string, voiceId: string) {
     () => voiceChecksQueryKey(transport, ownerId, voiceId),
     [ownerId, transport, voiceId],
   )
-}
-
-/** 검증하기 on one prompt with the account's write selection (VOICE-43). */
-export function useStartVoiceCheck(ownerId: string, voiceId: string) {
-  const transport = useTransport()
-  const queryClient = useQueryClient()
-  const mutation = useMutation(VoiceService.method.startVoiceCheck, {
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: voiceChecksQueryKey(transport, ownerId, voiceId) }),
-  })
-  const failure = mutation.error ? appFailureFromConnect(mutation.error) : undefined
-  return {
-    isPending: mutation.isPending,
-    isError: mutation.isError,
-    failure,
-    errorMessage: failure ? formatAppFailure(failure) : '',
-    reset: mutation.reset,
-    start: async (promptKey: string, model: ModelRefInput) => {
-      const response = await mutation.mutateAsync({
-        voiceId,
-        promptKey,
-        model: create(ModelRefSchema, model),
-      })
-      return { jobId: response.jobId }
-    },
-  }
-}
-
-/** A failed 검증's retry: a new check on the same prompt (VOICE-44). */
-export function useRetryVoiceCheck(ownerId: string, voiceId: string) {
-  const transport = useTransport()
-  const queryClient = useQueryClient()
-  const mutation = useMutation(VoiceService.method.retryVoiceCheck, {
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: voiceChecksQueryKey(transport, ownerId, voiceId) }),
-  })
-  const failure = mutation.error ? appFailureFromConnect(mutation.error) : undefined
-  return {
-    isPending: mutation.isPending,
-    isError: mutation.isError,
-    failure,
-    errorMessage: failure ? formatAppFailure(failure) : '',
-    retry: async (checkId: string, model: ModelRefInput) => {
-      const response = await mutation.mutateAsync({ checkId, model: create(ModelRefSchema, model) })
-      return { jobId: response.jobId }
-    },
-  }
 }

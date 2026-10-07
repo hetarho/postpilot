@@ -157,7 +157,11 @@ func (s *Service) StartRevision(ctx context.Context, request StartRevisionReques
 		return "", err
 	}
 	request.Guidelines, request.DefaultGuidelines = guidelines.Owner, guidelines.Defaults
-	payload, err := encodeRevisionPayloadForLanguage(request.Instruction, request.ContentLanguage, brief, guidelines, request.TagCount, request.WriteNativeEffort)
+	profile, err := s.profileForTopic(ctx, request.UserID, in.voiceID, in.language, post.Title+" "+post.Memo, contentTags(post.Content))
+	if err != nil {
+		return "", fmt.Errorf("freeze revision voice: %w", err)
+	}
+	payload, err := encodeRevisionPayloadForLanguage(request.Instruction, request.ContentLanguage, brief, guidelines, request.TagCount, request.WriteNativeEffort, profile)
 	if err != nil {
 		return "", fmt.Errorf("encode revision payload: %w", err)
 	}
@@ -198,7 +202,12 @@ func (s *Service) Start(ctx context.Context, request StartRequest) (string, erro
 	request.WriteNativeEffort = in.write.ReasoningNativeEffort
 	request.ObserveModel = in.observe.model
 	request.ObserveCalls = in.observe.calls
+	profile, err := s.profileForTopic(ctx, request.UserID, in.voiceID, in.language, post.Title+" "+post.Memo, contentTags(post.Content))
+	if err != nil {
+		return "", fmt.Errorf("freeze writing voice: %w", err)
+	}
 	options := generationOptions{
+		Profile:        &profile,
 		TargetLanguage: in.language,
 		TargetLength:   cloneOptionalInt(request.TargetLength),
 		// From the post, never from the request: there is no per-run override to carry (GEN-46).

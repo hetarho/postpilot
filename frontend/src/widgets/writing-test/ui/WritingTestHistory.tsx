@@ -1,7 +1,8 @@
 import { useWritingTestTranslation } from '@/features/writing-test'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useExperiments } from '@/entities/model-experiment'
-import { useVoiceChecks } from '@/entities/voice'
+import { useVoiceChecks, useVoiceChecksQueryKey } from '@/entities/voice'
+import { ProgressLine, FailureNotice, isTerminal, useJob } from '@/entities/generation-job'
 import { useWritingTests, type TestList, type WritingTest } from '@/entities/writing-test'
 import { formatDateTime } from '@/shared/lib'
 import { Badge, Button, Notice, Typography, buttonStyles, type BadgeTone } from '@/shared/ui'
@@ -331,6 +332,9 @@ function LegacyRecords({
 function LegacyVoiceChecks({ ownerId, voiceId }: { ownerId: string; voiceId: string }) {
   const { t } = useWritingTestTranslation()
   const query = useVoiceChecks(ownerId, voiceId)
+  const checksKey = useVoiceChecksQueryKey(ownerId, voiceId)
+  const refresh = useMemo(() => [checksKey], [checksKey])
+  const job = useJob(query.activeJobId, refresh)
   return (
     <section aria-labelledby="legacy-voice-check-title" className="min-w-0">
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -344,6 +348,15 @@ function LegacyVoiceChecks({ ownerId, voiceId }: { ownerId: string; voiceId: str
       <Typography variant="body" className="text-content-secondary mt-2">
         {t('legacyReadOnly')}
       </Typography>
+      {query.activeJobId && (
+        <div className="mt-4">
+          {job.isError ? (
+            <FailureNotice message={t('failed')} onRetry={job.refetch} />
+          ) : job.job && !isTerminal(job.job) ? (
+            <ProgressLine job={job.job} />
+          ) : null}
+        </div>
+      )}
       {query.isPending && (
         <Notice tone="info" role="status" className="mt-4">
           {t('loading')}
@@ -379,6 +392,17 @@ function LegacyVoiceChecks({ ownerId, voiceId }: { ownerId: string; voiceId: str
                   {formatDateTime(check.createdAt)}
                 </Typography>
               )}
+              {check.stale && <Badge className="mt-2">{t('legacyOldAnalysis')}</Badge>}
+              {(check.answer || check.answerDeleted) && (
+                <section className="mt-3" aria-label={t('legacyAnswer')}>
+                  <Typography variant="label" as="h4">
+                    {t('legacyAnswer')}
+                  </Typography>
+                  <Typography variant="body" className="mt-1 break-words whitespace-pre-wrap">
+                    {check.answerDeleted ? t('legacyAnswerWithdrawn') : check.answer}
+                  </Typography>
+                </section>
+              )}
               {check.piece && (
                 <Typography
                   variant="body"
@@ -389,9 +413,12 @@ function LegacyVoiceChecks({ ownerId, voiceId }: { ownerId: string; voiceId: str
                 </Typography>
               )}
               {check.status === 'failed' && (
-                <Typography variant="body" className="mt-2">
-                  {t('failed')}
-                </Typography>
+                <div className="mt-2">
+                  <FailureNotice
+                    failure={check.failure}
+                    message={!check.failure ? t('failed') : undefined}
+                  />
+                </div>
               )}
             </li>
           ))}

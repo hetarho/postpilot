@@ -1,1 +1,1 @@
-export { SampleList } from './ui/SampleList'
+export { SampleList, type SampleEditorProps } from './ui/SampleList'

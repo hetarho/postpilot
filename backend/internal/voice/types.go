@@ -280,12 +280,26 @@ type AcceptedMaterial struct {
 	Source                  AcceptedSource
 	Body, PhotoKey          string
 	PhotoWidth, PhotoHeight int
+	Kind                    SampleKind
+	PromptKey, Label        string
+	CreatedAt               time.Time
 }
 type SampleMutation struct {
 	UserID, VoiceID, SampleID, OperationKey string
 	ExpectedContentRevision                 int64
 	Label, Body, PhotoUploadID              *string
 	PhotoWidth, PhotoHeight                 *int
+	// Only the service supplies these validated values; receipt identity uses the
+	// original optional request fields, never this derived copy.
+	Validated         *Sample
+	ValidatedUploadID string
+}
+
+var ErrAcceptedSourceWithdrawn = &MaterialRefusal{reason: "VOICE_ACCEPTED_SOURCE_WITHDRAWN", message: "accepted voice source is no longer available"}
+
+type AnalysisEstimate struct {
+	Credits         int
+	Free, Available bool
 }
 
 var ErrSampleRevisionConflict = &MaterialRefusal{reason: FailureReasonSampleRevisionConflict, message: "voice material revision changed"}

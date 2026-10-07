@@ -72,7 +72,7 @@ func (s *Store) AdoptCandidate(ctx context.Context, adoption voice.CandidateAdop
 	if err != nil {
 		return voice.Voice{}, err
 	}
-	if err := q.InsertCurrentAnalysis(ctx, sqlc.InsertCurrentAnalysisParams{VoiceID: v.ID, UserID: v.UserID, Snapshot: string(snapshot), MaterialIds: "[]", AnalyzeModel: adoption.Analysis.AnalyzeModel, CreatedAt: stamp}); err != nil {
+	if err := q.InsertCurrentAnalysis(ctx, sqlc.InsertCurrentAnalysisParams{VoiceID: v.ID, UserID: v.UserID, Snapshot: string(snapshot), MaterialIds: "[]", AnalyzeModel: adoption.Analysis.AnalyzeModel, CreatedAt: stamp, SourceVersionsKnown: boolInt(adoption.Analysis.SourceVersionsKnown), AcceptedSources: "[]", AcceptedMaterialSnapshot: "[]"}); err != nil {
 		return voice.Voice{}, fmt.Errorf("insert candidate snapshot: %w", err)
 	}
 	if adoption.MakeDefault {

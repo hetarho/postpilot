@@ -2,6 +2,13 @@ import type { I18nFragment } from '@/shared/lib'
 export const i18n = {
   namespace: 'voicePreparation',
   ko: {
+    analysisConfirm: '이 자료로 말투를 분석할까요?',
+    analysisStart: '분석 시작',
+    analysisModel: '분석 AI: {{model}}',
+    analysisFree: '무료로 분석할 수 있어요.',
+    analysisEstimateFailed: '분석 예상 비용을 확인하지 못했어요. 다시 확인해 주세요.',
+    analysisCredits: '예상 {{credits}} 크레딧',
+    analysisPrevious: '분석이 완료되기 전까지 이전 말투가 유지돼요.',
     choose: '내 말투, 어떻게 알려 줄까요?',
     chooseHelp: '편한 방법 하나를 골라 주세요. 지금 글이 없어도 괜찮아요.',
     questions: '질문 10개로 내 말투 찾기',
@@ -44,6 +51,13 @@ export const i18n = {
     loadFailed: '저장한 자료를 확인하지 못했어요. 다시 확인해 주세요.',
   },
   en: {
+    analysisConfirm: 'Analyze this material?',
+    analysisStart: 'Start analysis',
+    analysisModel: 'Analysis AI: {{model}}',
+    analysisFree: 'This analysis is free.',
+    analysisEstimateFailed: 'The analysis estimate is unavailable. Check again.',
+    analysisCredits: 'Estimated {{credits}} credits',
+    analysisPrevious: 'The previous writing style remains in use until analysis completes.',
     choose: 'How would you like to share your writing style?',
     chooseHelp: 'Choose whichever feels comfortable. You do not need an existing post.',
     questions: 'Find my style with ten questions',

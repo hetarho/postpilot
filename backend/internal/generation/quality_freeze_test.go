@@ -86,7 +86,7 @@ func TestNoTicksLeaveThePayloadAndPromptByteIdentical(t *testing.T) {
 	raw := jobs.generatePayloads[0]
 	// Exactly what the enqueue wrote before quality rules: its language, its resolved tag count
 	// and no observation decision.
-	if string(raw) != `{"target_language":"ko","tag_count":4,"observe_files":null}` {
+	if string(raw) != `{"voice_profile":{},"target_language":"ko","tag_count":4,"observe_files":null}` {
 		t.Fatalf("payload = %s", raw)
 	}
 	decoded, err := decodeGenerationPayload(raw)

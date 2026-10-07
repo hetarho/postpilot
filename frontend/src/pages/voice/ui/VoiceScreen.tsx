@@ -3,7 +3,12 @@ import { useParams } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { FailureNotice } from '@/entities/generation-job'
 import { useSession } from '@/entities/session'
-import { type Voice, type VoiceProfile, useVoiceProfile } from '@/entities/voice'
+import {
+  type Voice,
+  type VoiceProfile,
+  useVoiceProfile,
+  VoiceMaterialFreshness,
+} from '@/entities/voice'
 import { Typography, typographyStyles } from '@/shared/ui'
 
 export interface VoiceScreenContext {
@@ -15,7 +20,7 @@ export interface VoiceScreenContext {
 }
 
 /** The frame every voice tab shares: THIS voice's profile query, its two non-content states, and
- *  the tab's own heading. The profile is the one read all three tabs need, so it stays shared here;
+ *  the tab's own heading. Both local panels read the profile, so it stays shared here;
  *  every other list is fetched by the tab that renders it. The page's `h1` is the voice's name in
  *  the layout, so a tab's title is an `h2`. */
 export function VoiceScreen({
@@ -63,6 +68,9 @@ export function VoiceScreen({
           {description}
         </Typography>
       )}
+      <div className="mt-6">
+        <VoiceMaterialFreshness profile={profile} />
+      </div>
       <div className="mt-8">{children(context)}</div>
     </main>
   )

@@ -1,6 +1,7 @@
 import { useNavigate } from '@tanstack/react-router'
 import { PrepareWritingVoice, LearningMaterials } from '@/features/prepare-writing-voice'
 import { VoiceQuestionnaire } from '@/features/answer-voice-prompt'
+import { EditVoiceMaterial } from '@/features/edit-voice-material'
 import { PasteMaterialForm } from '@/features/paste-voice-material'
 import { AuthoringEditor, AuthoringPreview } from '@/features/ai-authoring'
 export function PersonalVoiceLearning({
@@ -63,6 +64,9 @@ export function PersonalVoiceLearning({
           ownerId={props.ownerId}
           voiceId={props.voiceId}
           samples={props.profile.samples}
+          blocked={props.profile.voice.deleted}
+          onBusyChange={props.onBusyChange}
+          renderEditor={(editor) => <EditVoiceMaterial {...editor} />}
         />
       )}
     />

@@ -96,24 +96,20 @@ describe('the 말투 분석 tab', () => {
     expect(screen.queryByRole('region', { name: '분석 항목' })).not.toBeInTheDocument()
   })
 
-  it('redirects an unmade voice checks link to the learning screen', async () => {
-    const { router } = renderAppAt(`${DEFAULT}/checks`, {
-      user: { id: 'alice' },
-      voice: { voices: [{ id: 'voice-default', name: '기본 말투', made: false }] },
-    })
-
-    expect(await screen.findByRole('heading', { level: 2, name: '말투 학습' })).toBeInTheDocument()
-    expect(router.state.location.pathname).toBe(`${DEFAULT}/materials`)
-    expect(screen.queryByRole('navigation', { name: '말투 설정' })).not.toBeInTheDocument()
-  })
-
   // VOICE-21: the notice sits above the groups with 다시 분석.
   it('says the 학습 글 changed, with 다시 분석, above the groups', async () => {
     renderAppAt(DEFAULT, {
       user: { id: 'alice' },
       voice: { analysis: ANALYSIS, notice: { kind: 'added', count: 2 } },
     })
-    expect(await screen.findByText('새 학습 글 2편')).toBeInTheDocument()
+    expect(
+      await screen.findByText('학습 자료의 변경 내용이 아직 분석에 반영되지 않았어요.'),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        '다시 분석을 직접 시작하고 완료하기 전까지는 이전에 받아 둔 말투 분석으로 글을 써요.',
+      ),
+    ).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '다시 분석' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '이전 분석으로 되돌리기' })).not.toBeInTheDocument()
   })
@@ -168,12 +164,8 @@ describe('the voice tab row', () => {
     const tabs = within(await screen.findByRole('navigation', { name: '말투 설정' })).getAllByRole(
       'link',
     )
-    // Three tabs: 말투 분석 · 학습 데이터 · 검증 (VOICE-54).
-    expect(tabs.map((tab) => tab.getAttribute('href'))).toEqual([
-      DEFAULT,
-      `${DEFAULT}/materials`,
-      `${DEFAULT}/checks`,
-    ])
+    // Local analysis and source panels remain under this voice; tests use common history.
+    expect(tabs.map((tab) => tab.getAttribute('href'))).toEqual([DEFAULT, `${DEFAULT}/materials`])
     expect(tabs[0]).toHaveAttribute('aria-current', 'page')
     // THEME-29, the mechanical half: the row scrolls instead of wrapping or crushing its Korean
     // labels, and every tab keeps the 44px floor.
@@ -193,16 +185,16 @@ describe('the voice tab row', () => {
     await waitFor(() => expect(router.state.location.pathname).toBe(DEFAULT))
   })
 
-  it.each([
-    [`${DEFAULT}/materials`, '학습 데이터'],
-    [`${DEFAULT}/checks`, '검증'],
-  ])('renders %s as its own screen on reload', async (path, heading) => {
-    const { router } = renderAppAt(path, { user: { id: 'alice' } })
+  it.each([[`${DEFAULT}/materials`, '학습 데이터']])(
+    'renders %s as its own screen on reload',
+    async (path, heading) => {
+      const { router } = renderAppAt(path, { user: { id: 'alice' } })
 
-    expect(await screen.findByRole('heading', { level: 2, name: heading })).toBeInTheDocument()
-    expect(router.state.location.pathname).toBe(path)
-    expect(screen.queryByRole('region', { name: '분석 항목' })).not.toBeInTheDocument()
-  })
+      expect(await screen.findByRole('heading', { level: 2, name: heading })).toBeInTheDocument()
+      expect(router.state.location.pathname).toBe(path)
+      expect(screen.queryByRole('region', { name: '분석 항목' })).not.toBeInTheDocument()
+    },
+  )
 })
 
 // VOICE-12, VOICE-13, VOICE-54: the title row carries the rename, 기본으로 설정 or 기본 해제 on
