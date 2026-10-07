@@ -157,3 +157,14 @@ type MaterialEdits interface {
 type AcceptedProfiles interface {
 	AcceptedProfile(context.Context, string, string, string) (Analysis, error)
 }
+
+// The exact frozen tested synthetic analysis is published, never regenerated or personalised.
+// Personal winners require the still-active owned accepted profile and cannot create a copy.
+type TestedStyles interface {
+	PublishTestWinner(context.Context, TestStylePublication) (TestStyleReceipt, error)
+}
+
+// Preparation validates fictional style material and makes no provider call or canonical write.
+type StyleFactory interface {
+	PrepareWritingStyle(WritingStyleDraft, string, time.Time) (Analysis, error)
+}

@@ -289,3 +289,29 @@ type SampleMutation struct {
 }
 
 var ErrSampleRevisionConflict = errors.New("voice material revision changed")
+
+// Ordinary legacy factories default to eight; unified preparation explicitly chooses a format.
+func NormalizeCandidateCount(count int) (int, error) {
+	if count == 0 {
+		return CandidateCount, nil
+	}
+	switch count {
+	case 2, 4, 8, 16:
+		return count, nil
+	}
+	return 0, ErrCandidateCount
+}
+
+type FrozenWritingStyle struct {
+	Draft    WritingStyleDraft
+	Analysis Analysis
+	Revision string
+}
+type TestStylePublication struct {
+	UserID, TestID, WinnerID, Action, RequestKey, Fingerprint, SourceVoiceID, AcceptedRevision, Name string
+	Analysis                                                                                         Analysis
+	MakeDefault                                                                                      bool
+}
+type TestStyleReceipt struct{ VoiceID, RequestKey string }
+
+var ErrCandidateCount = errors.New("writing style candidate count is invalid")

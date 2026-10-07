@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/postpilot/backend/internal/auth"
 	authoringrpc "github.com/postpilot/backend/internal/authoring/rpc"
+	voicerpc "github.com/postpilot/backend/internal/voice/rpc"
 	"strings"
 	"testing"
 
@@ -154,5 +155,22 @@ func TestUnintegratedCountsNeverReachBaselineProviderWork(t *testing.T) {
 	_, err := handler.StartAuthoringOperation(context.Background(), connect.NewRequest(&v1.StartAuthoringOperationRequest{CandidateCount: 3}))
 	if connect.CodeOf(err) != connect.CodeUnauthenticated {
 		t.Fatal("count gate bypassed authentication")
+	}
+}
+
+func TestUnintegratedStyleCountsNeverReachBaselineProviderWork(t *testing.T) {
+	handler := voicerpc.NewCandidateHandler(nil)
+	for _, count := range []int32{1, 3, 5, 17, 2, 4, 16} {
+		_, err := handler.StartWritingVoiceCandidates(auth.WithUser(context.Background(), "alice"), connect.NewRequest(&v1.StartWritingVoiceCandidatesRequest{CandidateCount: count}))
+		if err == nil {
+			t.Fatalf("count %d started baseline work", count)
+		}
+		if count == 2 || count == 4 || count == 16 {
+			if connect.CodeOf(err) != connect.CodeUnimplemented {
+				t.Fatalf("count %d: %v", count, err)
+			}
+		} else if connect.CodeOf(err) != connect.CodeInvalidArgument {
+			t.Fatalf("count %d: %v", count, err)
+		}
 	}
 }
