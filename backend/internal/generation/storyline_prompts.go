@@ -22,6 +22,8 @@ var (
 )
 
 const storylineAnswerShape = `{"storyline":[{"text":"...","files":[]}]}`
+const koreanStorylineFormat = "출력은 설명이나 마크다운 없이 " + storylineAnswerShape + " 형태의 JSON 객체 하나여야 합니다."
+const englishStorylineFormat = "Return exactly one JSON object shaped as " + storylineAnswerShape + " with no explanation or Markdown."
 
 const koreanStorylineLanguage = "출력 언어는 한국어입니다. storyline의 text를 한국어로 작성하세요. 템플릿, 메모, 가제의 언어 지시가 충돌해도 이 출력 언어를 우선하세요."
 
@@ -72,7 +74,7 @@ func BuildStorylinePromptForLanguage(input StorylinePromptInput) (string, string
 	case LanguageKorean:
 		stable.WriteString(koreanStorylineTask)
 		stable.WriteString("\n" + koreanStorylineParagraphRule)
-		stable.WriteString("\n출력은 설명이나 마크다운 없이 " + storylineAnswerShape + " 형태의 JSON 객체 하나여야 합니다.")
+		stable.WriteString("\n" + koreanStorylineFormat)
 		stable.WriteString("\n" + koreanStorylineLanguage)
 		stable.WriteString("\n" + koreanPlanMeaningContract)
 		if revising {
@@ -81,7 +83,7 @@ func BuildStorylinePromptForLanguage(input StorylinePromptInput) (string, string
 	case LanguageEnglish:
 		stable.WriteString(englishStorylineTask)
 		stable.WriteString("\n" + englishStorylineParagraphRule)
-		stable.WriteString("\nReturn exactly one JSON object shaped as " + storylineAnswerShape + " with no explanation or Markdown.")
+		stable.WriteString("\n" + englishStorylineFormat)
 		stable.WriteString("\n" + englishStorylineLanguage)
 		stable.WriteString("\n" + englishPlanMeaningContract)
 		if revising {

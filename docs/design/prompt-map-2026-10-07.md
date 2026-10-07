@@ -1,6 +1,6 @@
 # Product model-request inventory
 
-This inventory describes the current application request composers after T630, T626–T628, T631, T633–T637 and T649. It is a developer map of code and synthetic fixtures. It grants no access to customer requests and makes no claim about a historical provider call. The owning composer remains the authority for prompt text, ordering, optional material, output grammar and precedence.
+This inventory describes the integrated application request composers, including the current origin-aware writing protocol, retained admitted contracts, scoped authoring/style/memory work and typed video/speech operations. It is a maintained developer map of code and synthetic fixtures; the dated research audits retain their original source versions. The owning composer remains the authority for prompt text, ordering, optional material, output grammar and precedence.
 
 From the repository root, enumerate the registered descriptors without starting the API, reading configuration or opening account storage:
 
@@ -9,7 +9,9 @@ cd backend
 go run ./cmd/api prompt-inventory
 ```
 
-The JSON declares `kind: "code"`, `material: "synthetic"` and `source_root: "backend"`. Every entry identifies its stage/mode, composer, repository-relative source files, activation, prompt/schema versions, parser, consumer and output contract. The aggregate lives in [cmd/api/prompt_inventory.go](../../backend/cmd/api/prompt_inventory.go); each context exports `RequestCompositions()` using the descriptor that also seeds its real request assembler. Dynamic fragments belong to those assemblers, rather than a second global prompt registry. Generation entries include synthetic assembled fragments, and `RequestCompositionFixtures()` exposes those same requests for all ten post modes.
+The JSON declares code-owned synthetic evidence rooted at `backend`. Every entry identifies its stage/mode, actual composer/source/schema/parser/consumer links, activation, prompt/schema versions and a final prepared request projection. Source/composition/schema hashes bind the evidence to exact versions. The aggregate lives in [cmd/api/prompt_inventory.go](../../backend/cmd/api/prompt_inventory.go); contexts supply descriptors through their actual request assemblers. Dynamic fragments belong to those assemblers, rather than a second global prompt registry. Post inventory fixtures cover both the current origin protocol and retained admitted protocol; the original ten bare-composer fixtures remain available for their pinned composition regressions.
+
+Run `go run ./cmd/api prompt-evaluation` from `backend` for the fixed synthetic writing contract and instruction-language comparison. The [evaluation runbook](../research/prompt-evaluation-runbook.md) distinguishes deterministic checks, reference estimates, unknown runtime usage, origin coverage and human semantic/prose review. This developer condition changes common task/format instructions only; Korean material, output, policies, voice and schema remain fixed. The command is offline and refuses live execution.
 
 ## Inspection and execution
 
@@ -26,7 +28,7 @@ Preparation and dispatch share the registry's effective-option resolver. Ordinar
 
 Capture means the adapter was invoked; it does not assert network acceptance. Refused entitlement/capability checks, cancellation before dispatch and unsupported models cannot produce an issued witness. Adapter errors preserve their error chain and return a captured witness only when invocation occurred. A missing or malformed optional manifest leaves paid execution behavior intact with unavailable inspection, rather than inventing historical evidence.
 
-The registry returns evidence to the caller. There is no LLM account-data store, general prompt log or new inspection RPC here. Durable owner result storage and customer read projections are later work (T640/T641). Captured text inherits the owning result's authentication, blind-comparison boundary, cache partition, deletion and purge policy. A crash or persistence failure may lose the witness; recovery never reconstructs it or repeats an uncertain paid call to restore inspection.
+The registry returns evidence to the caller. The post and authoring/full-test owners persist private witnesses through their result stores and expose named owner-fenced read RPCs. Optional [technical request inspection](../../frontend/src/features/inspect-writing-request/ui/InspectWritingRequestAction.tsx) distinguishes current, prepared and captured stages; blind full-test results deny technical identity until reveal. Captured text inherits the owning result's authentication, blind-comparison boundary, cache partition, deletion and purge policy. A crash or persistence failure may lose the witness; recovery never reconstructs it or repeats an uncertain paid call to restore inspection.
 
 ## Roles, authorship and measures
 
@@ -138,4 +140,4 @@ Initial parent-generation synthesis and changed-segment synthesis use the same a
 
 Generation regression tests verify exact prompt-text reconstruction from ordered fragments, adversarial owner material equal to headings/delimiters, typed literal/topic/fact separation, NoVoice omission, ordered media redaction, real source-file references and frozen queued settings after live edits with no extra writer call. Registry tests verify effective ordinary overrides/defaults/disable, strict frozen execution, free admission, cancellation/refusal and captured/error evidence. Domain composer tests cover the existing authoring/style/memory/video/speech paths. The aggregate command has no account arguments and is exercised before platform boot.
 
-This task exposes metadata and caller-returned dispatch evidence. It does not persist request history, create customer inspection RPCs, add provider calls, reconstruct old actual requests, add origin response fields or activate future sensory permissions. T636–T642 build those separately on the retained contracts.
+Current ordinary generation, revision and full tests use validated origin sidecars with atomic owner-result publication. [Phrase-origin review](../../frontend/src/features/review-writing-origins) presents owner material, visual interpretation and AI-linked meaning independently of QUAL scores. Canonical text remains authoritative for editing and all four publication exports; neither private source details nor technical request chrome is exported. Developer inventory/evaluation performs no provider calls, account reads or dispatch-history reconstruction. Offline structure checks do not certify semantic accuracy, Korean prose quality, production speech readiness or search performance.

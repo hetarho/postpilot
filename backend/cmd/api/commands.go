@@ -95,6 +95,12 @@ func runCommand(args []string) bool {
 		}
 		return true
 	}
+	if args[0] == "prompt-evaluation" {
+		if err := runPromptEvaluation(args[1:], os.Stdout); err != nil {
+			fatal("prompt-evaluation", err)
+		}
+		return true
+	}
 	if args[0] == "analysis-quality" {
 		if err := runAnalysisQuality(ctx, args[1:], os.Stdout); err != nil {
 			fatal("analysis-quality", err)

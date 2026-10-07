@@ -23,12 +23,20 @@ import (
 func productRequestCompositions() []llm.RequestComposition {
 	var result []llm.RequestComposition
 	for _, compositions := range [][]llm.RequestComposition{
-		generation.RequestCompositions(), authoring.RequestCompositions(authoringInventoryGuides()),
+		generationInventoryCompositions(), authoring.RequestCompositions(authoringInventoryGuides()),
 		voice.RequestCompositions(), memory.RequestCompositions(),
 		template.RequestCompositions(), clipai.RequestCompositions(),
 		spokenapp.RequestCompositions(), clipapp.RequestCompositions(),
 	} {
 		result = append(result, compositions...)
+	}
+	return result
+}
+
+func generationInventoryCompositions() []llm.RequestComposition {
+	var result []llm.RequestComposition
+	for _, fixture := range generation.PromptInventoryFixtures() {
+		result = append(result, *fixture.Request.Composition)
 	}
 	return result
 }
@@ -51,13 +59,10 @@ func runPromptInventory(args []string, output io.Writer) error {
 	if len(args) != 0 {
 		return fmt.Errorf("usage: api prompt-inventory")
 	}
-	inventory := struct {
-		Version      int                      `json:"version"`
-		Kind         string                   `json:"kind"`
-		Material     string                   `json:"material"`
-		SourceRoot   string                   `json:"source_root"`
-		Compositions []llm.RequestComposition `json:"compositions"`
-	}{Version: 1, Kind: "code", Material: "synthetic", SourceRoot: "backend", Compositions: productRequestCompositions()}
+	inventory, err := buildPromptInventory(productRequestCompositions())
+	if err != nil {
+		return err
+	}
 	encoder := json.NewEncoder(output)
 	encoder.SetIndent("", "  ")
 	return encoder.Encode(inventory)

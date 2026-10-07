@@ -71,14 +71,16 @@
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
-| T645 | Build reproducible prompt inspection and controlled writing evaluation | ARCH GEN MODEL LANG QUAL | T638 T639 T641 | todo |
 | T646 | Qualify origin-aware writing inspection and clean publication handoff | ARCH GEN POST MODEL THEME EXPORT MKT LANG | T636 T637 T639 T641 T642 T643 T644 T645 T631 | todo |
 
 ## next
-- T645 next for sequential implementation through T646 after the T644 commit.
+- T646 next for standalone integrated writing qualification after the T645 commit.
 - Editorial follow-up: doc-review ARCH; preserve independent review and blocked qualification.
 
 ## log
+- 261008 T645 done on main: source-bound current/retained/native inventory, zero-call instruction-only evaluation and 440 structural checks; owning/API-consumer/vet/build/format/spec checks pass
+- 261008 T645 start on main atc01b5169: reproducible actual-composer evaluation and instruction-only language fixtures; preserve independent review changes
+- 261008 T645 freshness: MODEL36 changes missing-slot setting preparation under MODEL92 only; evaluation/inventory/language contracts retained, base refreshed
 - 261008 T644 done on main: maximum-tag copy preserves option/seed contracts; clean owner-wording exports/fallbacks, product-owned bands and shipped public owner-control claims pass affected checks
 - 261008 T644 start on main ataa5e27b1: maximum-tag presentation, clean canonical exports and shipped owner-control copy; preserve independent review changes
 - 261008 T644 freshness: THEME30–32 change navigation/docks/mobile density only, retaining THEME62 origin/export contracts; base refreshed
@@ -96,6 +98,3 @@
 - 261008 T640 freshness: MODEL36 only changes missing-slot setting preparation under MODEL92; post inspection policies unchanged, base refreshed
 - 261008 T639 done on main: explicit video target/data roles, consumed frozen-story/speech schemas, declared stock applicability and actual native call metadata; owning/consumer/race/build/spec checks pass
 - 261008 T639 start on main at52fe1ef5: admitted video/speech stage responsibilities and explicit material/target contracts; preserve independent review changes
-- 261008 T639 freshness: MODEL36 only updates missing-slot setting preparation under MODEL92; video/speech inventory policies unchanged, base refreshed
-- 261008 T638 done on main: kind/mode-scoped authoring fields and shared grammar, single style example sets and fenced approval-only memory proposals; owning/consumer/race/build/spec checks pass
-- 261008 T638 freshness: exactT649 changes only missing-slot candidate admission/counts; retain integrated1..16 behavior and scoped composer contracts, bases refreshed
