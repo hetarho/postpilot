@@ -25,7 +25,11 @@ RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /api ./cmd/a
 RUN CGO_ENABLED=0 GOOS=linux go test -c -o /media.test ./internal/clip/media
 
 RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /media-worker ./cmd/media-worker
-RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /media-health ./cmd/media-health
+# The small health process uses the pinned stdlib snapshot without Go 1.26's
+# 32 MiB entropy scratch BSS. API and worker cryptography keep their defaults.
+RUN printf '%s  %s\n' 'daf3614e0406f67ae6323c902db3f953a1effb199142362a039e7526dfb9368b' "$(go env GOROOT)/lib/fips140/v1.0.0-c2097c7c.zip" | sha256sum -c - \
+    && GOFIPS140=v1.0.0-c2097c7c CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /media-health ./cmd/media-health \
+    && cp "$(go env GOMODCACHE)/golang.org/fips140@v1.0.0-c2097c7c/LICENSE" /media-health-license
 RUN mkdir -p /worker-work
 RUN CGO_ENABLED=0 GOOS=linux go test -c -o /diagnostic.test ./internal/clip/diagnostic
 
@@ -123,10 +127,14 @@ COPY --from=media-tooling /usr/local/bin/ffmpeg /usr/local/bin/ffmpeg
 # Execution-only runtime: no API binary, registry config, database or provider env.
 FROM media-runtime AS media-worker-runtime
 LABEL org.opencontainers.image.title="Postpilot CPU media worker" \
-      org.postpilot.media.manifest-command="/media-worker manifest"
+      org.postpilot.media.manifest-command="/media-worker manifest" \
+      org.postpilot.media.health.gofips140="v1.0.0-c2097c7c" \
+      org.postpilot.media.health.crypto-archive-sha256="daf3614e0406f67ae6323c902db3f953a1effb199142362a039e7526dfb9368b"
 COPY --from=builder /media-worker /media-worker
 COPY --from=builder --chown=65532:65532 /worker-work /var/lib/postpilot-media/work
 COPY --from=builder /media-health /media-health
+COPY --from=builder /media-health-license /usr/share/postpilot-health/LICENSE
+COPY backend/build/HEALTH.md /usr/share/postpilot-health/README.md
 ENV MEDIA_ACCEL=cpu CLIP_WORK_ROOT=/var/lib/postpilot-media/work
 HEALTHCHECK --interval=30s --timeout=30s --start-period=30s --retries=3 CMD ["/media-health"]
 ENTRYPOINT ["/media-worker"]
@@ -169,9 +177,12 @@ LABEL org.opencontainers.image.revision=$SOURCE_REVISION \
       org.postpilot.media.protocol="3" org.postpilot.media.renderer="cpu-v4" \
       org.postpilot.media.assets="assets-v3" org.postpilot.media.asset-input-sha256=$MEDIA_ASSET_DIGEST \
       org.postpilot.media.gpu-candidate="nvenc-candidate-v1" \
-      org.postpilot.media.gpu-production-approved="false"
+      org.postpilot.media.gpu-production-approved="false" \
+      org.postpilot.media.health.gofips140="v1.0.0-c2097c7c" \
+      org.postpilot.media.health.crypto-archive-sha256="daf3614e0406f67ae6323c902db3f953a1effb199142362a039e7526dfb9368b"
 COPY --from=media-worker-deployable /media-worker /media-worker
 COPY --from=media-worker-deployable /media-health /media-health
+COPY --from=media-worker-deployable /usr/share/postpilot-health/ /usr/share/postpilot-health/
 COPY --from=media-runtime /usr/local/bin/ /usr/local/bin/
 COPY --from=media-runtime /usr/share/postpilot-fonts/ /usr/share/postpilot-fonts/
 COPY --from=media-runtime /usr/share/postpilot-media/ /usr/share/postpilot-media/

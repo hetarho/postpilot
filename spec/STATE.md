@@ -93,6 +93,7 @@
 - Editorial follow-up: doc-review ARCH; full pre-push/deployment verification stays separate.
 
 ## log
+- 261008 T653 health packaging repair: kernel proves remote512Mi OOM with Go1.26 SHA-linked32Mi entropy BSS under Rosetta; helper-only official v1.0.0-c2097c7c snapshot/checksum retains SHA/protocol and lowers measured RSS42,876→10,072KiB; no API/worker setting or budget change, final gates pending
 - 261008 T653 release memory follow-up: live-owner authenticated Unix health probe and single-frame PNG decode remove unnecessary concurrent work; owning/race/deployment/bitwise-output checks pass, exact default256/512Mi release remains required
 - 261008 T653 bounded-memory fix candidate: lightweight exact cgroup/disk observer, active owner-generation/runtime-bound worker health, and explicit probe filter thread limit; keep API256Mi/worker512Mi and all codecs/presets/CRF/decoder/default budgets, rerun affected final gates
 - 261008 T653 final candidate refresh: include committed T631 at935b47e0 plus canonical-path CI repair; rerun invalidated frontend/backend/generated/image checks, preserve uncommitted T633/review work
