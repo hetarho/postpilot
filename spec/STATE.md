@@ -13,7 +13,7 @@
 | clip-source-observation-visibility | converted@260912 |
 | clip-template-as-preset | converted@260917 |
 | post-quality-and-related-links | converted@260923 |
-| searchable-details | open@260926 |
+| searchable-details | open@261007 |
 | creation-and-comparison-ux | open@261007 |
 | storyline-first | converted@260927 |
 | voice-tidy | converted@260929 |
@@ -97,6 +97,7 @@
 ## next
 - Implement T622 first, then atomically claim an eligible T622–T631 session bundle using docs/work/creation-and-comparison-ux.md; final visual arrangement remains THEME-61 open.
 - Existing browser-media tasks/blocked qualifications retain their scope; shared touches must respect any active ownership.
+- ideation searchable-details continues: choose the first user benefit and acceptable input effort, then validate source coverage and personal-versus-pooled learning.
 
 ## log
 - 261007 create-task creation/comparison UX done: T622–T631 form ten atomic session bundles with touches/dependency ownership; thirteen SSOT deltas consumed and visual decision THEME-61 remains open
@@ -106,6 +107,8 @@
 - 261007 update-ssot THEME POST CLIP AUTH EDIT VOICE TMPL GUIDE MODEL GEN QUOTA start: review contextual navigation, operational history, understandable setting drafts, editable learning material and unified binary tournaments; unresolved product choices stay open
 - 261007 review-code desktop-ux-policy-261007 done: all-width menu policy, Sheet modal contract, prose-frame exception and missing writing-height/desktop checks traced;54 tests/style61 pass and six Chromium width/theme reproductions recorded
 - 261007 review-code desktop-ux-policy-261007 start: trace navigation overlays, desktop composition and writing-area sizing against policy and acceptance checks
+- 261007 ideation searchable-details round recorded: distinct demand/inflow evidence, Creator Advisor capabilities, progressive monthly input and reopened personal-versus-pooled guidance; choices remain open
+- 261007 ideation searchable-details start
 - 261007 media-release fixture fix done: Max support assignment passes colocated182.53s/remote159.11s CPU releases, BE80, deploy61, Go vet/build/gofmt and spec lint with existing warnings; verified default release image tags refreshed
 - 261007 T621 done: typography b152f586 and final voice-context 4d634b14;3468 FE tests,145 browser measurements and all available unchanged-source/tooling gates pass
 - 261007 create-task THEME r27 done; T621 start: shared type scale, focused role assignment and browser hierarchy verification
@@ -117,5 +120,3 @@
 - 261007 T617 done: four real XState workflow authorities with invoked async fencing and frozen retries;60 actor/live-consumer tests pass
 - 261007 task commits: T61799c13926, T618122ad5ac, T6191dd7a065, T620c3fd6d58; independent source commits plus final linked verification records
 - 261007 T617-T620 start: root owns documentation/dependencies/commits; actor, personal-learning and authoring proposals have isolated file ownership
-- 261007 create-task focused UX done: T617 XState authority, T618 personal funnel, T619 staged AI workspace, T620 shared design/integration
-- 261007 ARCH r10..r16 allocation reconciled to existing T380/T386/T388 and T591-T604; scoped ARCH-69 allocated to T617/T620 without existing task rewrites
