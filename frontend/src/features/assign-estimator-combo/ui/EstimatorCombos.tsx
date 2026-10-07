@@ -44,7 +44,7 @@ export function EstimatorCombos() {
 
   return (
     // Named so the section is a landmark an operator jumping by region can reach directly.
-    <section aria-labelledby={titleId} className="mt-8 grid gap-4">
+    <section aria-labelledby={titleId} className="mt-6 grid gap-4 sm:mt-8">
       <div className="grid gap-1">
         <Typography variant="title" as="h2" id={titleId}>
           {t('combos.title')}
@@ -138,7 +138,7 @@ function ComboRow({
       <Typography variant="fieldTitle" as="h3" id={headingId}>
         {t(`level.${combo}`)}
       </Typography>
-      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+      <div className="mt-3 grid grid-cols-2 gap-3">
         <ComboPicker
           id={`${id}-observe`}
           label={t('combos.observe')}
@@ -194,7 +194,7 @@ function ComboPicker({
   }
 
   return (
-    <div>
+    <div className="min-w-0">
       <FieldLabel id={labelId} htmlFor={id}>
         {label}
       </FieldLabel>

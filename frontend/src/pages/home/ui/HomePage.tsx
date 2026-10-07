@@ -15,17 +15,20 @@ export function HomePage() {
       <main
         className={pageStyles({
           width: 'board',
-          className: 'flex flex-1 flex-col justify-center py-12 sm:py-16 lg:py-20',
+          className: 'flex flex-1 flex-col py-6 sm:justify-center sm:py-16 lg:py-20',
         })}
       >
-        <div className="grid w-full gap-10 sm:gap-12 lg:grid-cols-2 lg:items-center lg:gap-16">
+        <div className="grid w-full gap-6 sm:gap-12 lg:grid-cols-2 lg:items-center lg:gap-16">
           <div className="min-w-0">
             <Typography variant="launch" className="break-words">
               {t('home.heading')}
               <br />
               <span className="text-link-fg-current">{t('home.emphasis')}</span>
             </Typography>
-            <Typography variant="body" className="text-content-secondary max-w-measure mt-6">
+            <Typography
+              variant="body"
+              className="text-content-secondary max-w-measure mt-3 sm:mt-6"
+            >
               {t('home.intro')}
             </Typography>
           </div>
@@ -46,14 +49,14 @@ export function HomePage() {
               aria-labelledby="home-post-label"
               aria-describedby="home-post-description"
               className={choiceStyles(
-                'min-h-40 justify-between lg:min-h-44 lg:flex-row lg:items-center',
+                'min-h-24 flex-row items-center gap-4 p-4 sm:min-h-40 sm:flex-col sm:items-stretch sm:gap-6 sm:p-8 lg:min-h-44 lg:flex-row lg:items-center',
               )}
             >
-              <div className="flex items-center justify-between lg:contents">
+              <div className="flex shrink-0 items-center justify-between sm:contents">
                 <PenLine aria-hidden="true" className="text-link-fg-current size-8 shrink-0" />
                 <ArrowUpRight
                   aria-hidden="true"
-                  className="text-content-tertiary size-5 shrink-0 lg:order-last"
+                  className="text-content-tertiary hidden size-5 shrink-0 sm:block lg:order-last"
                 />
               </div>
               <div className="min-w-0 lg:flex-1">
@@ -64,7 +67,7 @@ export function HomePage() {
                   variant="body"
                   as="span"
                   id="home-post-description"
-                  className="text-content-secondary mt-2 block"
+                  className="text-content-secondary mt-1 block sm:mt-2"
                 >
                   {t('home.postDescription')}
                 </Typography>
@@ -83,14 +86,14 @@ export function HomePage() {
               aria-labelledby="home-clip-label"
               aria-describedby="home-clip-description"
               className={choiceStyles(
-                'min-h-40 justify-between lg:min-h-44 lg:flex-row lg:items-center',
+                'min-h-24 flex-row items-center gap-4 p-4 sm:min-h-40 sm:flex-col sm:items-stretch sm:gap-6 sm:p-8 lg:min-h-44 lg:flex-row lg:items-center',
               )}
             >
-              <div className="flex items-center justify-between lg:contents">
+              <div className="flex shrink-0 items-center justify-between sm:contents">
                 <Clapperboard aria-hidden="true" className="text-link-fg-current size-8 shrink-0" />
                 <ArrowUpRight
                   aria-hidden="true"
-                  className="text-content-tertiary size-5 shrink-0 lg:order-last"
+                  className="text-content-tertiary hidden size-5 shrink-0 sm:block lg:order-last"
                 />
               </div>
               <div className="min-w-0 lg:flex-1">
@@ -101,7 +104,7 @@ export function HomePage() {
                   variant="body"
                   as="span"
                   id="home-clip-description"
-                  className="text-content-secondary mt-2 block"
+                  className="text-content-secondary mt-1 block sm:mt-2"
                 >
                   {t('home.clipDescription')}
                 </Typography>

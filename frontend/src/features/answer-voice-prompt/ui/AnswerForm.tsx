@@ -142,7 +142,7 @@ export function AnswerForm({
   }
 
   return (
-    <form onSubmit={(event) => void submit(event)} className="mt-4 space-y-4">
+    <form onSubmit={(event) => void submit(event)} className="mt-3 space-y-3 md:mt-4 md:space-y-4">
       <Typography variant="title" as="h3" className="break-words">
         {prompt.text}
       </Typography>
@@ -244,13 +244,7 @@ export function AnswerForm({
           </Button>
         )}
         {secondaryActions}
-        <Button
-          type="submit"
-          variant="cta"
-          className="w-full sm:w-auto"
-          disabled={disabled}
-          pending={pending}
-        >
+        <Button type="submit" variant="cta" disabled={disabled} pending={pending}>
           {rewrite ? t('prompts.rewrite', { ns: 'voices' }) : t('prompts.submit', { ns: 'voices' })}
         </Button>
       </div>

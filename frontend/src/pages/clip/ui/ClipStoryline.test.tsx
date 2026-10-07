@@ -432,6 +432,7 @@ it('writes the slots on ② before any template, storyline or plan', async () =>
 it('turns a region off and on from ①, keeping its slots', async () => {
   const regionWrites: NonNullable<FakeClipsOptions['regionWrites']> = []
   await mount(bare(), { regionWrites }, {}, 'tab')
+  await userEvent.setup().click(await screen.findByRole('button', { name: '디자인과 자막 스타일' }))
   const intro = await screen.findByRole('radiogroup', { name: '인트로 디자인' })
   const outro = screen.getByRole('radiogroup', { name: '아웃트로 디자인' })
   expect(within(intro).getByRole('radio', { name: 'A 크기만' })).toHaveAttribute(
@@ -473,6 +474,7 @@ it('shows the server’s seed when ① chooses a template, the owner’s words k
     {},
     'tab',
   )
+  await userEvent.setup().click(await screen.findByRole('button', { name: '디자인과 자막 스타일' }))
   const intro = await screen.findByRole('radiogroup', { name: '인트로 디자인' })
   expect(within(intro).getByRole('radio', { name: '사용 안 함' })).toHaveAttribute(
     'aria-checked',
@@ -563,6 +565,7 @@ it('keeps unused words, moves them into a slot and restores them with room', asy
 
   // A preset with three slots draws the third again.
   await user.click(screen.getByRole('tab', { name: '생성' }))
+  await userEvent.setup().click(await screen.findByRole('button', { name: '디자인과 자막 스타일' }))
   const intro = await screen.findByRole('radiogroup', { name: '인트로 디자인' })
   await user.click(within(intro).getByRole('radio', { name: '매거진 커버' }))
   await user.click(screen.getByRole('tab', { name: '수정' }))

@@ -36,7 +36,7 @@
 | GUIDE | 17 | 17 | - | 0 |
 | EXPORT | 11 | 11 | - | 0 |
 | LANG | 9 | 9 | - | 0 |
-| THEME | 31 | 31 | - | 1 |
+| THEME | 32 | 32 | - | 1 |
 | MKT | 10 | 10 | - | 0 |
 | VIDEO | 7 | 7 | - | 0 |
 | CLIP | 59 | 59 | - | 2 |
@@ -88,11 +88,12 @@
 | T646 | Qualify origin-aware writing inspection and clean publication handoff | ARCH GEN POST MODEL THEME EXPORT MKT LANG | T636 T637 T639 T641 T642 T643 T644 T645 T631 | todo |
 
 ## next
-- T649 is complete; preserve independently owned backend/mobile work before selecting another task.
-- T631 next: complete service wiring and qualify the creation/test milestone, then continue through T646.
-- Editorial follow-up: doc-review ARCH; preserve blocked independent media/voice qualification.
+- Mobile T650–T652 are verified and complete; continue current domain tasks with their freshness and verification gates.
+- Editorial follow-up: doc-review ARCH; full pre-push/deployment verification stays separate.
 
 ## log
+- 261008 T650 T651 T652 done on main: phone answer777→371px, header120→64px; all57 routes/580 combined browser cases, FE522 files/4133 tests and lint/build pass; preserve concurrent domain work
+- 261008 mobile manual integration: package integrator rejects inherited spec FORMAT/editorial warnings; independent reviews and exact production hashes retain final24ecfce6 source verification
 - 261008 T628 done on main: durable exact-metered binary tournaments, zero-call recovery, private retention and receipt-first publication; full product Go, actual factory/SQLite/race, FE164, codegen/build/vet and spec checks pass
 - 261008 T649 done on main: saved-or-AI slots prepare exact missing1/3/15 counts with retained refs/template inputs; FE598 plus final33/11, owning Go/count/migration, lint/build, browser52 and42-percent glass checks pass
 - 261007 T648 done on main: compact translucent docks, bounded composers and48px actions across the app; consumer608 plus final55, build/lint and Chromium196 routes/308 geometry/70 continuity checks pass
@@ -111,5 +112,3 @@
 - 261007 remote backend verification at6a944d1f: full Go tests, format, vet, build and deployment recovery checks pass — https://github.com/hetarho/postpilot/actions/runs/37603125798/job/112732066963
 - 261007 remote deployment at6a944d1f: build and actual rollout/health/browser-CORS/R2-GET steps all pass, none skipped — https://github.com/hetarho/postpilot/actions/runs/37603126041
 - 261007 remote media verification at6a944d1f: image, worker and both-layout release jobs all pass — https://github.com/hetarho/postpilot/actions/runs/37603618318
-- 261007 remote CI frontend failure at6a944d1f: usePostList retained-terminal polling test expected failed but saw running in picker; diagnose real observer/timer ordering before correcting it, preserve both-list refresh and stopped-poll assertions; remote deployment/release/worker gates pass and image/backend checks continue
-- 261007 final remote verification start at6a944d1f: user requests remaining CI/deployment/media checks to finish before final verification record commit/push; no further implementation task is started

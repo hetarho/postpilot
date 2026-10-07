@@ -5,6 +5,9 @@ export const i18n = {
   namespace: 'clips',
   ko: {
     directory: {
+      reviewKind: '영상 템플릿 확인',
+      editAI: 'AI로 편집',
+      editDirect: '직접 편집',
       chooseCreation: '영상 템플릿 만드는 방법을 골라 주세요',
       createAI: 'AI와 영상 템플릿 만들기',
       unsaved: '저장하기 전에는 영상에 사용할 수 없어요.',
@@ -37,6 +40,9 @@ export const i18n = {
   },
   en: {
     directory: {
+      reviewKind: 'Review video template',
+      editAI: 'Edit with AI',
+      editDirect: 'Edit directly',
       chooseCreation: 'Choose how to create your video template',
       createAI: 'Create a video template with AI',
       unsaved: 'Available for videos after you save it.',

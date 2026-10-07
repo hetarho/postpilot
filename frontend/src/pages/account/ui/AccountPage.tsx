@@ -42,7 +42,7 @@ export function AccountPage() {
         </div>
       </section>
       {!user?.emailVerified && (
-        <section className="mt-8 grid gap-4" aria-labelledby="register-email-heading">
+        <section className="mt-6 grid gap-4 sm:mt-8" aria-labelledby="register-email-heading">
           <Typography variant="title" as="h2" id="register-email-heading">
             {t('registerEmail.heading')}
           </Typography>
@@ -53,7 +53,7 @@ export function AccountPage() {
         </section>
       )}
       {user && (
-        <section className="mt-8 grid gap-4" aria-labelledby="change-password-heading">
+        <section className="mt-6 grid gap-4 sm:mt-8" aria-labelledby="change-password-heading">
           <Typography variant="title" as="h2" id="change-password-heading">
             {t('changePassword.heading')}
           </Typography>

@@ -26,6 +26,8 @@ function HistoryLink(props: NavigationLinkProps) {
 
 export interface WritingTestHistoryProps {
   ownerId: string
+  /** The route may already display the same history heading and guidance. */
+  showHeading?: boolean
   voiceId?: string
   stage?: WritingTest['modelStage'] | 'voice'
   sourcePostSlug?: string
@@ -49,6 +51,7 @@ function mergeTests(previous: WritingTest[], incoming: WritingTest[]) {
 }
 function OwnedHistory({
   ownerId,
+  showHeading = true,
   voiceId,
   stage,
   sourcePostSlug,
@@ -94,7 +97,7 @@ function OwnedHistory({
     <div className="grid gap-8">
       <section aria-labelledby="writing-test-history-title" className="min-w-0">
         <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="min-w-0">
+          <div className={showHeading ? 'min-w-0' : 'sr-only'}>
             <Typography variant="title" id="writing-test-history-title">
               {t('history')}
             </Typography>

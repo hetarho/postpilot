@@ -1,5 +1,5 @@
 # THEME theme preference and design language
-> r31 | Shared accessible visual contracts for creation, authoring, comparisons and semantic-origin review.
+> r32 | Shared accessible visual contracts for creation, authoring, comparisons and semantic-origin review.
 
 ## decisions
 - THEME-1 [o] three browser-owned preferences: `system` (the default, follows `prefers-color-scheme`), `light` → the `day` semantic map, `dark` → the `night` map; the effective theme is always exactly `day|night`; components consume semantic or functional tokens and never branch on a preference, an effective theme or a palette step
@@ -255,6 +255,8 @@
   - sizes, line height, readable measure and group spacing are defined by shared roles, not per-screen raw font utilities; zoom/reflow preserves content and actor lifetime
 
 - THEME-58 [o] every authenticated route has visible location; child routes have a deterministic parent or contextual return.
+  - first-use setup is a focused process without structural breadcrumbs; its current step and progress communicate location
+  - on phones, the current location occupies the center of the main header row; structural ancestors remain accessible through a named disclosure rather than an additional persistent breadcrumb row
   - top-level destinations have no implicit return; moving between sibling destinations does not establish a parent or overwrite a child origin
   - child breadcrumbs show structural ancestry; a contextual return names its actual destination and never changes that ancestry
   - automatic return context comes only from structural ancestors; explicit workflow origins may cross destinations when validated, including an owned source post
@@ -278,6 +280,13 @@
 - THEME-63 [o] optional technical prompt inspection and ordinary source-of-meaning review have separately named entries.
   - show stage and actual capture/preview/unavailable status truthfully; specialist fields stay within the opened technical view (→POST-115)
   - preserve owner and blind-test identity boundaries (→MODEL-32/95); no technical panel silently publishes, starts AI or reveals another contestant's identity
+
+- THEME-64 [o] mobile layouts minimize the height before the current input or action.
+  - contextual headings and guidance are not repeated above a focused question or form; compact progress, grouped controls and reduced phone spacing retain the active task and required context
+  - long previews and previous conversations use explicitly opened views on phones, with the current input available first; view changes preserve mounted drafts, caret and operation actors
+  - short peer choices and secondary actions share rows or compact grids when their labels fit; long required content wraps naturally without clipping
+  - input text retains the16px floor, controls retain THEME-23 targets, and required errors, current operation state and contextual return remain reachable
+  - every route and its distinct working states is included in a mobile audit; actual320/360/390/430px browser checks cover both themes, input position and document height as well as overflow, with desktop and keyboard-height continuity checks for changed workflows
 
 ## flow
 - bootstrap: read `postpilot.theme` → resolve(`system` → matchMedia | `light` → `day` | `dark` → `night`) → set `data-theme`, `color-scheme`, `theme-color` before React → provider from the snapshot → menu selection → apply + persist | remove key

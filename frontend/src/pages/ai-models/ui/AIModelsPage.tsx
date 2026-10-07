@@ -19,7 +19,7 @@ export function AIModelsPage() {
         <ActiveModelForm stage="write" />
       </div>
       <PostCreditEstimate className="mt-6" />
-      <section className="mt-10" aria-labelledby="writing-test-heading">
+      <section className="mt-6 sm:mt-10" aria-labelledby="writing-test-heading">
         <Typography variant="title" as="h2" id="writing-test-heading">
           {t('page.writingTests')}
         </Typography>
@@ -53,7 +53,7 @@ export function AIModelsPage() {
           <OptionalTestPair />
         </div>
       </section>
-      <section className="mt-10" aria-labelledby="recommendation-heading">
+      <section className="mt-6 sm:mt-10" aria-labelledby="recommendation-heading">
         <Typography variant="title" id="recommendation-heading">
           {t('page.recommendation')}
         </Typography>

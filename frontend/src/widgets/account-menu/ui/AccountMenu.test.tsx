@@ -1,11 +1,24 @@
-import { describe, expect, it } from 'vitest'
-import { act, screen, within } from '@testing-library/react'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { act, cleanup, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { myPlanQueryKey } from '@/entities/plan'
 import { ProtoPlan } from '@/shared/api'
 import { renderAppAt } from '@/test/app'
 
 const USER = { id: 'alice' }
+
+function mockDesktopMedia() {
+  const matchMedia = window.matchMedia
+  vi.spyOn(window, 'matchMedia').mockImplementation((query) => ({
+    ...matchMedia(query),
+    matches: /\(min-width:\s*(?:40|48|64)rem\)/.test(query) || matchMedia(query).matches,
+  }))
+}
+
+afterEach(() => {
+  cleanup()
+  vi.restoreAllMocks()
+})
 
 async function openAccountPopover(user: ReturnType<typeof userEvent.setup>) {
   await user.click(await screen.findByRole('button', { name: '내 계정' }))
@@ -62,6 +75,7 @@ describe('AccountMenu', () => {
   // QUOTA-8, QUOTA-27: the shell shows the tier, and every number behind it comes from
   // GetMyPlan — nothing about a grant is known to the client until the server says it.
   it('renders the lots behind the balance the shell already read', async () => {
+    mockDesktopMedia()
     const user = userEvent.setup()
     const calls: string[] = []
     renderAppAt('/posts', {
@@ -153,6 +167,7 @@ describe('AccountMenu', () => {
   })
 
   it('uses the next server read when a daily reset overlaps outstanding usage', async () => {
+    mockDesktopMedia()
     const plans = {
       plan: ProtoPlan.PRO,
       balance: {

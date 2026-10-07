@@ -352,7 +352,13 @@ function ScopedPreparation(props: PrepareWritingVoiceProps) {
   return (
     <section aria-labelledby={titleId} className="min-w-0" ref={heading}>
       {!['ai', 'legacy'].includes(view) && (
-        <Typography variant="stepTitle" as="h2" id={titleId} tabIndex={-1}>
+        <Typography
+          variant="stepTitle"
+          as="h2"
+          id={titleId}
+          tabIndex={-1}
+          className={view === 'questions' ? 'sr-only md:not-sr-only' : undefined}
+        >
           {title}
         </Typography>
       )}
@@ -397,7 +403,7 @@ function ScopedPreparation(props: PrepareWritingVoiceProps) {
         </Typography>
       )}
       {view === 'questions' && (
-        <Typography variant="body" className="text-content-secondary mt-3">
+        <Typography variant="body" className="text-content-secondary mt-3 hidden md:block">
           {t('collectingQuestionsHelp')}
         </Typography>
       )}
@@ -419,7 +425,7 @@ function ScopedPreparation(props: PrepareWritingVoiceProps) {
         </div>
       )}
       {common && context.visitedQuestions && (
-        <div hidden={view !== 'questions'} className="mt-6">
+        <div hidden={view !== 'questions'} className="md:mt-6">
           {props.renderQuestions({
             ...common,
             active: view === 'questions',

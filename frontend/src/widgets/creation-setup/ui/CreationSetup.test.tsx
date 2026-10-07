@@ -59,6 +59,7 @@ it('offers setup after missing settings were read without creating content or pa
   })
   await screen.findByRole('heading', { name: '처음 한 번, 나답게 준비해요.' })
   expect(router.state.location.pathname).toBe('/setup')
+  expect(screen.queryByRole('navigation', { name: '현재 위치' })).not.toBeInTheDocument()
   expect(calls).toContain('ListVoices')
   expect(calls).toContain('ListTemplates')
   expect(calls).toContain('ListVideoTemplates')
@@ -414,6 +415,7 @@ it('saves ten short answers through setup and waits for an explicit analysis act
   })
   const user = userEvent.setup()
   await screen.findByLabelText('답')
+  expect(screen.queryByRole('navigation', { name: '현재 위치' })).not.toBeInTheDocument()
   for (let index = 0; index < 10; index++) {
     await user.type(screen.getByLabelText('답'), '친구에게 평소처럼 편하게 이야기했어요.')
     await user.click(screen.getByRole('button', { name: '답하기' }))

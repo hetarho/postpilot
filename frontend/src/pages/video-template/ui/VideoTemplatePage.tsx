@@ -87,9 +87,11 @@ function VideoTemplateHost({
     name: stored?.name ?? t('directory.create', { ns: 'clips' }),
   }
   return (
-    <main className={pageStyles({ width: 'board', className: 'flex flex-1 flex-col py-8' })}>
+    <main
+      className={pageStyles({ width: 'board', className: 'flex flex-1 flex-col py-4 sm:py-8' })}
+    >
       <BackLink />
-      <Typography variant="title" as="h1" className="text-content-secondary mt-6">
+      <Typography variant="title" as="h1" className="text-content-secondary mt-3 sm:mt-6">
         {named.name}
       </Typography>
       {publication?.outcome && (
@@ -102,16 +104,30 @@ function VideoTemplateHost({
         </Typography>
       )}
       {method === null ? (
-        <section className="mt-8">
+        <section className="mt-4 flex flex-col sm:mt-8">
           <Typography variant="stepTitle" as="h2">
-            {stored
-              ? t('reviewNamed', { ns: 'authoring', ...named })
-              : t('directory.chooseCreation', { ns: 'clips' })}
+            {stored ? (
+              <>
+                <span className="sm:hidden">{t('directory.reviewKind', { ns: 'clips' })}</span>
+                <span className="hidden sm:inline">
+                  {t('reviewNamed', { ns: 'authoring', ...named })}
+                </span>
+              </>
+            ) : (
+              t('directory.chooseCreation', { ns: 'clips' })
+            )}
           </Typography>
-          <Typography variant="body" className="text-content-secondary mt-4">
-            {stored
-              ? t('savedUsable', { ns: 'authoring', ...named })
-              : t('directory.unsaved', { ns: 'clips' })}
+          <Typography variant="body" className="text-content-secondary mt-2 sm:mt-4">
+            {stored ? (
+              <>
+                <span className="sm:hidden">{t('directory.savedAvailable', { ns: 'clips' })}</span>
+                <span className="hidden sm:inline">
+                  {t('savedUsable', { ns: 'authoring', ...named })}
+                </span>
+              </>
+            ) : (
+              t('directory.unsaved', { ns: 'clips' })
+            )}
           </Typography>
           {summaries.isPending && (
             <Typography variant="body" role="status" className="mt-4">
@@ -151,7 +167,7 @@ function VideoTemplateHost({
             </div>
           )}
           {stored && (
-            <div className="mt-6">
+            <div className="order-2 mt-4 sm:order-none sm:mt-6">
               <AuthoringPreview
                 kind="video-template"
                 artifact={{
@@ -164,28 +180,44 @@ function VideoTemplateHost({
               />
             </div>
           )}
-          <div className="mt-8 flex flex-wrap gap-4">
+          <div className="order-1 mt-4 flex flex-wrap gap-2 sm:order-none sm:mt-8 sm:gap-4">
             <Button
+              aria-label={stored ? t('aiNamed', { ns: 'authoring', ...named }) : undefined}
               variant="secondary"
               onClick={() => {
                 setActiveSession(undefined)
                 setMethod('ai')
               }}
             >
-              {stored
-                ? t('aiNamed', { ns: 'authoring', ...named })
-                : t('directory.createAI', { ns: 'clips' })}
+              {stored ? (
+                <>
+                  <span className="sm:hidden">{t('directory.editAI', { ns: 'clips' })}</span>
+                  <span className="hidden sm:inline">
+                    {t('aiNamed', { ns: 'authoring', ...named })}
+                  </span>
+                </>
+              ) : (
+                t('directory.createAI', { ns: 'clips' })
+              )}
             </Button>
             <Button
+              aria-label={stored ? t('directNamed', { ns: 'authoring', ...named }) : undefined}
               variant="secondary"
               onClick={() => {
                 setActiveSession(undefined)
                 setMethod('direct')
               }}
             >
-              {stored
-                ? t('directNamed', { ns: 'authoring', ...named })
-                : t('host.manual', { ns: 'authoring' })}
+              {stored ? (
+                <>
+                  <span className="sm:hidden">{t('directory.editDirect', { ns: 'clips' })}</span>
+                  <span className="hidden sm:inline">
+                    {t('directNamed', { ns: 'authoring', ...named })}
+                  </span>
+                </>
+              ) : (
+                t('host.manual', { ns: 'authoring' })
+              )}
             </Button>
             {summary &&
               (summary.hasUnpublishedChanges ||

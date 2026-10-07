@@ -109,7 +109,7 @@ export const BlockEditor = forwardRef<
   }
 
   return (
-    <section aria-labelledby="content-editor-heading" className="mt-10">
+    <section aria-labelledby="content-editor-heading" className="mt-6 sm:mt-10">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <Typography variant="title" id="content-editor-heading">
           {t('edit.refine')}
@@ -374,7 +374,7 @@ function HeaderFields({
   // revert block edits made while the header happened to be open — the two editors are independent.
   const opened = useRef({ title: content.title, summary: content.summary, tags: [...content.tags] })
   return (
-    <div className="bg-surface-raised mt-12 grid gap-4 rounded-lg p-4">
+    <div className="bg-surface-raised mt-6 grid gap-4 rounded-lg p-4 sm:mt-12">
       <div>
         <FieldLabel htmlFor="generated-title">{t('edit.bodyTitle', { ns: 'posts' })}</FieldLabel>
         <TextField

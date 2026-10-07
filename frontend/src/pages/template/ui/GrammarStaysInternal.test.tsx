@@ -100,7 +100,7 @@ describe('the template grammar is visible in 원문 and nowhere else', () => {
     await userEvent.setup().click(await screen.findByRole('button', { name: /직접 편집하기$/ }))
     await screen.findByLabelText('이름')
 
-    await user.click(screen.getByRole('tab', { name: '이렇게 사용할 수 있어요' }))
+    await user.click(screen.getByRole('tab', { name: '미리 보기' }))
     const preview = within(screen.getByRole('article', { name: '미리보기' }))
     expect(preview.getAllByText('사진 그룹마다 반복').length).toBeGreaterThan(0)
     expect(preview.getAllByText('네이버 지도').length).toBeGreaterThan(0)

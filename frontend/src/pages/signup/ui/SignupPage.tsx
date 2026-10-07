@@ -38,7 +38,7 @@ export function SignupPage() {
   }
 
   return (
-    <main className="bg-surface-base text-content-primary relative flex min-h-full items-center justify-center px-4 py-10 sm:px-6">
+    <main className="bg-surface-base text-content-primary relative flex min-h-full items-start justify-center px-4 pt-20 pb-6 sm:items-center sm:px-6 sm:py-10">
       <div className="absolute top-4 right-4 z-10 sm:top-6 sm:right-6">
         <InterfacePreferences />
       </div>

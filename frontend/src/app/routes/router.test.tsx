@@ -612,40 +612,65 @@ describe('theme preferences in the real route tree', () => {
     expect(calls).toEqual(callsBeforeSelection)
   })
 
-  it('keeps the 320px authenticated header to the balance and three icon controls, account at the shell edge', async () => {
+  it('centers the phone location with accessible ancestry and keeps account and balance access at the shell edge', async () => {
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: 320 })
     window.dispatchEvent(new Event('resize'))
     const user = userEvent.setup()
-    renderAppAt('/posts', { user: { id: 'alice' } })
+    const calls: string[] = []
+    renderAppAt('/posts', { user: { id: 'alice' }, calls })
 
     expect(await screen.findByRole('heading', { name: '글 작업 내역' })).toBeInTheDocument()
     const header = screen.getByRole('banner')
-    const credits = within(header).getByRole('link', { name: /플랜/ })
+    const location = within(header).getByRole('navigation', { name: '현재 위치' })
+    const disclosure = within(location).getByRole('button', { name: '현재 위치: 글 작업 내역' })
     const account = screen.getByRole('button', { name: '내 계정' })
     const navigation = screen.getByRole('button', { name: '이동 메뉴' })
-    expect(credits.compareDocumentPosition(navigation) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(
-      0,
-    )
+    expect(
+      location.compareDocumentPosition(navigation) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).not.toBe(0)
     expect(navigation.compareDocumentPosition(account) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(
       0,
     )
-    expect(credits).toHaveClass('min-h-11', 'px-2')
+    expect(within(header).queryByRole('link', { name: /플랜/ })).toBeNull()
     expect(within(header).queryByRole('navigation', { name: '주요' })).toBeNull()
-    const cluster = credits.parentElement as HTMLElement
-    expect(within(cluster).getAllByRole('link')).toHaveLength(1)
+    const cluster = navigation.parentElement?.parentElement as HTMLElement
+    expect(within(cluster).queryAllByRole('link')).toHaveLength(0)
     expect(within(cluster).getAllByRole('button')).toHaveLength(2)
+    await user.click(disclosure)
+    const hierarchy = screen.getByRole('dialog', { name: '현재 위치: 글 작업 내역' })
+    expect(within(hierarchy).getByRole('link', { name: '작업 내역' })).toHaveAttribute(
+      'href',
+      '/library',
+    )
+    await user.keyboard('{Escape}')
+    expect(disclosure).toHaveFocus()
+    await user.click(disclosure)
+    await user.click(
+      within(screen.getByRole('dialog', { name: '현재 위치: 글 작업 내역' })).getByRole('link', {
+        name: '작업 내역',
+      }),
+    )
+    await screen.findByRole('heading', { name: '작업 내역', level: 1 })
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(within(header).getByRole('navigation', { name: '현재 위치' })).toHaveTextContent(
+      '작업 내역',
+    )
     await user.click(account)
     const menu = screen.getByRole('dialog', { name: '내 계정' })
     expect(menu).toHaveClass('right-0', 'w-72')
     expect(within(menu).getByRole('tablist', { name: '테마' })).toBeInTheDocument()
     expect(within(menu).getByRole('tablist', { name: '언어' })).toBeInTheDocument()
+    expect(await within(menu).findByText('남은 크레딧')).toBeInTheDocument()
+    expect(within(menu).getByRole('link', { name: '플랜 보기' })).toHaveAttribute('href', '/plans')
+    expect(calls).toContain('GetMyPlan')
+    expect(calls.filter((call) => /^(Start|Analyze|Generate)/u.test(call))).toEqual([])
     await user.keyboard('{Escape}')
 
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1024 })
     window.dispatchEvent(new Event('resize'))
   })
 
-  it('pins login preferences top-right while centring the credential form at every breakpoint', async () => {
+  it('pins login preferences top-right while keeping phone credentials near the top', async () => {
     renderAppAt('/login')
 
     expect(await screen.findByRole('button', { name: '로그인' })).toBeInTheDocument()
@@ -654,7 +679,7 @@ describe('theme preferences in the real route tree', () => {
     const main = preferences.closest('main')
     const form = screen.getByRole('button', { name: '로그인' }).closest('form')
 
-    expect(main).toHaveClass('relative', 'items-center', 'justify-center')
+    expect(main).toHaveClass('relative', 'items-start', 'sm:items-center', 'justify-center')
     expect(preferencesAnchor).toHaveClass('absolute', 'top-4', 'right-4', 'sm:top-6', 'sm:right-6')
     expect(preferences.querySelector('svg')).toHaveClass('size-4')
     expect(form).toHaveClass('w-full')

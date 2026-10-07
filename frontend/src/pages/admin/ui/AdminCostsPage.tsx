@@ -14,7 +14,7 @@ import { Badge, Button, Notice, SegmentedControl, Typography, typographyStyles }
  *  of MODEL-39 joins below the rate as a sibling rather than a rearrangement. */
 export function AdminCostsPage() {
   return (
-    <div className="mt-8 grid gap-10">
+    <div className="mt-6 grid gap-6 sm:mt-8 sm:gap-10">
       <ExchangeRateSection />
       <ComparisonCostsSection />
     </div>

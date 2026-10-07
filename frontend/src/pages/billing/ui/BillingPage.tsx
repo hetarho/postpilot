@@ -66,7 +66,7 @@ export function BillingPage() {
       )}
 
       {isError && (
-        <Notice tone="danger" role="alert" className="mt-8">
+        <Notice tone="danger" role="alert" className="mt-6 sm:mt-8">
           {t('loadFailed', { ns: 'billing' })}
         </Notice>
       )}
@@ -76,7 +76,7 @@ export function BillingPage() {
         </Typography>
       )}
       {myBilling && (
-        <div className="mt-10 grid gap-10">
+        <div className="mt-6 grid gap-6 sm:mt-10 sm:gap-10">
           {myPlan && (
             <BenefitsSummary
               plan={myPlan}

@@ -134,9 +134,14 @@ export function PostMeasurementRow({
       </Typography>
       {measurement ? (
         <>
-          <dl className="mt-2 grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <dl className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
             {measurement.readings.filter(isPostMetric).map((reading) => (
-              <div key={reading.metric}>
+              <div
+                key={reading.metric}
+                className={
+                  reading.metric === 'composition' ? 'col-span-2 min-w-0 sm:col-span-1' : 'min-w-0'
+                }
+              >
                 <dt
                   className={typographyStyles({
                     variant: 'body',
