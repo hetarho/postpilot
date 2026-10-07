@@ -13,6 +13,7 @@ import {
   FieldMessage,
   Notice,
   SegmentedControl,
+  Listbox,
   TextField,
   Typography,
 } from '@/shared/ui'
@@ -84,7 +85,10 @@ export function IssueVoucherForm({ presets }: { presets: readonly VoucherPreset[
   }
 
   return (
-    <section className="bg-surface-raised mt-8 rounded-md p-4" aria-labelledby={`${id}-heading`}>
+    <section
+      className="bg-surface-raised mt-4 rounded-md p-4 sm:mt-8"
+      aria-labelledby={`${id}-heading`}
+    >
       <Typography variant="title" as="h2" id={`${id}-heading`}>
         {t('issueVoucher.heading')}
       </Typography>
@@ -93,16 +97,15 @@ export function IssueVoucherForm({ presets }: { presets: readonly VoucherPreset[
           <Typography variant="label" as="p">
             {t('issueVoucher.contents')}
           </Typography>
-          <SegmentedControl
+          <Listbox
             value={draft.mode}
             options={modes}
             onChange={(mode) => set({ mode })}
-            ariaLabel={t('issueVoucher.contents')}
-            className="flex-wrap"
+            aria-label={t('issueVoucher.contents')}
           />
         </div>
         {draft.mode === 'custom' && (
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-2 gap-3 sm:gap-4">
             <div className="grid gap-2">
               <FieldLabel htmlFor={`${id}-credits`}>{t('issueVoucher.credits')}</FieldLabel>
               <TextField
@@ -142,7 +145,7 @@ export function IssueVoucherForm({ presets }: { presets: readonly VoucherPreset[
           />
         </div>
         {draft.kind === 'sold' && (
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-2 gap-3 sm:gap-4">
             <div className="grid gap-2">
               <FieldLabel htmlFor={`${id}-amount`}>{t('issueVoucher.amount')}</FieldLabel>
               <TextField

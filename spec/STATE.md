@@ -67,9 +67,6 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T650 | Compact first-use setup and header location | ARCH THEME | T648 | todo |
-| T651 | Keep mobile authoring inputs ahead of previews and history | ARCH THEME | T648 | todo |
-| T652 | Audit every mobile route and compact remaining screen layouts | ARCH THEME | T648 | todo |
 | T539 | Qualify the complete Korean voice-creation milestone | ARCH DUB MODEL CDS THEME | T538 | blocked@261005 |
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
@@ -92,10 +89,11 @@
 | T646 | Qualify origin-aware writing inspection and clean publication handoff | ARCH GEN POST MODEL THEME EXPORT MKT LANG | T636 T637 T639 T641 T642 T643 T644 T645 T631 | todo |
 
 ## next
-- Parallel mobile work: T650 shell/setup, T651 authoring/voice, T652 exhaustive route audit and remaining density corrections.
-- Integrate verified mobile results independently of active main T649/T628; preserve all unrelated edits.
+- Deliver verified mobile T650–T652 on main, preserving unrelated concurrent work and current committed domain changes.
+- Editorial follow-up: doc-review ARCH; pre-push gates remain separate from this local presentation verification.
 
 ## log
+- 261008 T650 T651 T652 done: combined522/4133 FE and64-entry/57-route/580 browser checks plus lint/build pass; manually integrated because package integration treats inherited FORMAT/lint warnings as fatal
 - 261008 mobile integration refreshes committed main T649 at051bb0e5; exact-slot preparation remains intact, current THEME32/ARCH20 mobile contracts unchanged, reviews rebind to the updated parent
 - 261007 create-task THEME r32 consumed into T650–T652; explicit parallel authorization overrides sequential execution for this isolated mobile group
 - 261007 update-ssot THEME r32: compact focused setup and phone header location plus app-wide height-aware composition; T648 dock48px contract and active T649/T628 behavior preserved
@@ -115,4 +113,3 @@
 - 261007 final frontend correction: deterministic polling/notification clock from mount replaces the mixed real/fake timer fixture; queued and running history/picker feeds automatically refresh, retain terminal failures and stop requests; owning usePostList/usePosts/useJob11 tests, CI-mode4, ESLint/format and TypeScript build pass, with no production source change
 - 261007 remote backend verification at6a944d1f: full Go tests, format, vet, build and deployment recovery checks pass — https://github.com/hetarho/postpilot/actions/runs/37603125798/job/112732066963
 - 261007 remote deployment at6a944d1f: build and actual rollout/health/browser-CORS/R2-GET steps all pass, none skipped — https://github.com/hetarho/postpilot/actions/runs/37603126041
-- 261007 remote media verification at6a944d1f: image, worker and both-layout release jobs all pass — https://github.com/hetarho/postpilot/actions/runs/37603618318

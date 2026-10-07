@@ -114,7 +114,7 @@ export function CatalogDocumentPanel({ open, onClose }: CatalogDocumentPanelProp
         {t('document.syncWarning')} {t('document.setsWarning')}
       </Notice>
 
-      <section className="mt-6">
+      <section className="mt-4 sm:mt-6">
         <Typography variant="label" id={currentId} className="block">
           {t('document.currentTitle')}
         </Typography>
@@ -134,7 +134,7 @@ export function CatalogDocumentPanel({ open, onClose }: CatalogDocumentPanelProp
         )}
       </section>
 
-      <section className="mt-6">
+      <section className="mt-4 sm:mt-6">
         <FieldLabel htmlFor={fieldId}>{t('document.pasteLabel')}</FieldLabel>
         <Textarea
           id={fieldId}
@@ -194,7 +194,7 @@ export function CatalogDocumentPanel({ open, onClose }: CatalogDocumentPanelProp
       )}
 
       {plan && plan.issues.length === 0 && plan.fetchError === '' && (
-        <section className="mt-6">
+        <section className="mt-4 sm:mt-6">
           <Typography variant="label" className="block">
             {t('document.diffTitle')}
           </Typography>

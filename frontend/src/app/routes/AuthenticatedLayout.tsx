@@ -129,6 +129,7 @@ export function AuthenticatedLayout() {
         : undefined
   const immersive = pathname === '/plans'
   const quiet = pathname === '/' || pathname === '/setup'
+  const setup = pathname === '/setup'
 
   useEffect(() => {
     const token = takePendingGift()
@@ -259,7 +260,12 @@ export function AuthenticatedLayout() {
             immersive ? 'bg-surface-raised/70 backdrop-blur-xl' : 'bg-surface-base',
           )}
         >
-          <div className="h-header mx-auto flex w-full max-w-7xl items-center gap-2 px-4 sm:px-6 lg:px-8">
+          <div
+            className={clsx(
+              'h-header mx-auto w-full max-w-7xl items-center gap-2 px-4 sm:px-6 lg:px-8',
+              setup ? 'flex' : 'grid grid-cols-3 lg:flex',
+            )}
+          >
             <Link
               to="/"
               aria-label={t('home')}
@@ -267,6 +273,13 @@ export function AuthenticatedLayout() {
             >
               <Logo className="h-6 max-w-full" />
             </Link>
+            {!wide && !setup && (
+              <Breadcrumb
+                key={`${ownerId}:${location.href}`}
+                ariaLabel={t('locationLabel')}
+                compact
+              />
+            )}
             {wide && (
               <nav aria-label={t('primary')} className="ml-4 flex min-w-0 items-center gap-1">
                 {DESTINATIONS.map(({ to, labelKey }) => (
@@ -288,8 +301,8 @@ export function AuthenticatedLayout() {
                 ))}
               </nav>
             )}
-            <div className="ml-auto flex min-w-0 items-center gap-2">
-              {!quiet && <CreditBadge />}
+            <div className="ml-auto flex min-w-0 items-center gap-0 lg:gap-2">
+              {!quiet && wide && <CreditBadge />}
               {!wide && (
                 <Popover
                   key={ownerId + pathname}
@@ -352,7 +365,7 @@ export function AuthenticatedLayout() {
               />
             </div>
           </div>
-          {pathname !== '/' && (
+          {wide && pathname !== '/' && !setup && (
             <div className="mx-auto w-full max-w-7xl px-4 pb-3 sm:px-6 lg:px-8">
               <Breadcrumb ariaLabel={t('locationLabel')} />
               {origin &&

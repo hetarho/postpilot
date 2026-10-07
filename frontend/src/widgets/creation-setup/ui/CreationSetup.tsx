@@ -70,9 +70,9 @@ function AccountSetup({ ownerId, restart }: { ownerId: string; restart: boolean 
     )
   return (
     <main
-      className={pageStyles({ width: 'board', className: 'flex flex-1 flex-col py-10 sm:py-16' })}
+      className={pageStyles({ width: 'board', className: 'flex flex-1 flex-col py-4 sm:py-16' })}
     >
-      <div className="grid w-full gap-10 md:grid-cols-2 md:items-start md:gap-12 xl:grid-cols-3">
+      <div className="grid w-full gap-4 md:grid-cols-2 md:items-start md:gap-12 xl:grid-cols-3">
         <section
           ref={heading}
           className={clsx(
@@ -95,22 +95,31 @@ function AccountSetup({ ownerId, restart }: { ownerId: string; restart: boolean 
             label={t('setup.progress')}
             done={index}
             total={Math.max(1, state.plan.length)}
-            className="mt-3"
+            className="mt-2 md:mt-3"
           />
           <Typography
             variant={introStep ? 'display' : 'title'}
             as="h1"
             tabIndex={-1}
-            className="mt-10 focus:outline-none"
+            className={clsx(
+              'focus:outline-none',
+              introStep ? 'mt-6 md:mt-10' : 'sr-only md:not-sr-only md:mt-10',
+            )}
           >
             {t(`setup.${state.step}.title`)}
           </Typography>
-          <Typography variant="body" className="text-content-secondary max-w-measure mt-4">
+          <Typography
+            variant="body"
+            className={clsx(
+              'text-content-secondary max-w-measure mt-4',
+              !introStep && 'hidden md:block',
+            )}
+          >
             {t(`setup.${state.step}.description`)}
           </Typography>
           {introStep && (
             <>
-              <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+              <div className="mt-6 flex flex-wrap gap-2 md:mt-8 md:gap-3">
                 {state.step === 'welcome' ? (
                   <>
                     <Button variant="cta" onClick={() => controller.next()}>
@@ -150,7 +159,7 @@ function AccountSetup({ ownerId, restart }: { ownerId: string; restart: boolean 
             {introStep && state.plan.length > 0 && (
               <ol
                 aria-label={t('setup.overview.label')}
-                className="grid gap-8 sm:grid-cols-2 xl:grid-cols-3"
+                className="grid gap-4 sm:grid-cols-2 md:gap-8 xl:grid-cols-3"
               >
                 {state.plan.map((form, position) => (
                   <li key={form} className="min-w-0 space-y-3">
@@ -186,7 +195,7 @@ function AccountSetup({ ownerId, restart }: { ownerId: string; restart: boolean 
             )}
           </div>
           {state.step !== 'welcome' && state.step !== 'ready' && (
-            <div className="mt-8 flex flex-wrap justify-between gap-3">
+            <div className="mt-4 flex flex-wrap justify-between gap-3 md:mt-8">
               <Button
                 variant="ghost"
                 disabled={busy}
@@ -203,7 +212,7 @@ function AccountSetup({ ownerId, restart }: { ownerId: string; restart: boolean 
             </div>
           )}
           {!introStep && (
-            <Typography variant="meta" className="mt-8 block">
+            <Typography variant="meta" className="mt-4 block md:mt-8">
               {t('setup.optional')}
             </Typography>
           )}

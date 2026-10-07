@@ -26,7 +26,7 @@ export function ResetPasswordPage() {
   }
 
   return (
-    <main className="bg-surface-base text-content-primary flex min-h-full items-center justify-center px-4 py-10 sm:px-6">
+    <main className="bg-surface-base text-content-primary flex min-h-full items-start justify-center px-4 pt-6 pb-6 sm:items-center sm:px-6 sm:py-10">
       <section className="w-full max-w-sm" aria-labelledby="reset-password-heading">
         <Typography variant="display" as="h1" id="reset-password-heading" className="text-center">
           {changed ? t('resetPassword.successHeading') : t('resetPassword.heading')}

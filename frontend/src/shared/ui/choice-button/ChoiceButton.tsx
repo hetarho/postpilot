@@ -11,7 +11,7 @@ export interface ChoiceButtonProps extends Omit<
   'children' | 'title' | 'variant' | 'size'
 > {
   title: ReactNode
-  description: ReactNode
+  description?: ReactNode
   icon?: ReactNode
   trailing?: ReactNode
   selected?: boolean
@@ -42,7 +42,7 @@ export const ChoiceButton = forwardRef<HTMLButtonElement, ChoiceButtonProps>(fun
       aria-busy={pending || undefined}
       aria-pressed={selected}
       aria-labelledby={`${id}-title`}
-      aria-describedby={`${id}-description`}
+      aria-describedby={description ? `${id}-description` : undefined}
       className={buttonStyles({
         variant: 'secondary',
         className: clsx(
@@ -54,7 +54,8 @@ export const ChoiceButton = forwardRef<HTMLButtonElement, ChoiceButtonProps>(fun
     >
       <span
         className={clsx(
-          'flex w-full min-w-0 items-center gap-4 p-4 @md:p-6',
+          'flex w-full min-w-0 items-center gap-4',
+          description ? 'p-4 @md:p-6' : 'gap-2 p-3 @md:p-4',
           pending && 'opacity-0',
         )}
       >
@@ -64,7 +65,7 @@ export const ChoiceButton = forwardRef<HTMLButtonElement, ChoiceButtonProps>(fun
           </span>
         )}
         <span className="min-w-0 flex-1">
-          {selected && (
+          {selected && description && (
             <span aria-hidden="true" className="text-content-secondary mb-2 block @md:hidden">
               <Check className="size-5" />
             </span>
@@ -77,16 +78,21 @@ export const ChoiceButton = forwardRef<HTMLButtonElement, ChoiceButtonProps>(fun
           >
             {title}
           </Typography>
-          <Typography
-            as="span"
-            variant="body"
-            id={`${id}-description`}
-            className="text-content-secondary mt-2 block break-words"
-          >
-            {description}
-          </Typography>
+          {description && (
+            <Typography
+              as="span"
+              variant="body"
+              id={`${id}-description`}
+              className="text-content-secondary mt-2 block break-words"
+            >
+              {description}
+            </Typography>
+          )}
         </span>
-        <span aria-hidden="true" className="text-content-secondary hidden shrink-0 @md:block">
+        <span
+          aria-hidden="true"
+          className={clsx('text-content-secondary shrink-0', description && 'hidden @md:block')}
+        >
           {trailing ??
             (selected ? <Check className="size-5" /> : <ChevronRight className="size-5" />)}
         </span>

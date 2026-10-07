@@ -68,11 +68,18 @@ it.each(
   const breadcrumb = screen.getByRole('navigation', {
     name: locale === 'ko' ? '현재 위치' : 'Current location',
   })
+  expect(within(breadcrumb).queryByRole('link')).not.toBeInTheDocument()
+  await user.click(within(breadcrumb).getByRole('button'))
+  const location = await screen.findByRole('dialog', {
+    name: locale === 'ko' ? /^현재 위치:/ : /^Current location:/,
+  })
   expect(
-    within(breadcrumb)
+    within(within(location).getByRole('list'))
       .getAllByRole('link')
       .map((item) => item.getAttribute('href')),
   ).toEqual(['/tests', '/tests/history'])
+  await user.keyboard('{Escape}')
+  expect(location).not.toBeInTheDocument()
   if (back.startsWith('/posts')) {
     await user.click(link)
     await waitFor(() => expect(router.state.location.href).toBe(back))

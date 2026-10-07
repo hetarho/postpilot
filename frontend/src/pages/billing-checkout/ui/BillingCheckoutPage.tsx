@@ -100,17 +100,17 @@ export function BillingCheckoutPage() {
       </Typography>
 
       {paymentPending && (
-        <Notice tone="info" role="status" className="mt-8">
+        <Notice tone="info" role="status" className="mt-6 sm:mt-8">
           {t('checkout.paymentPending', { ns: 'billing' })}
         </Notice>
       )}
       {invalid && !paymentPending && (
-        <Notice tone="danger" role="alert" className="mt-8">
+        <Notice tone="danger" role="alert" className="mt-6 sm:mt-8">
           {t('checkout.invalid', { ns: 'billing' })}
         </Notice>
       )}
       {(planError || billingError || quoteError) && !invalid && (
-        <Notice tone="danger" role="alert" className="mt-8">
+        <Notice tone="danger" role="alert" className="mt-6 sm:mt-8">
           {t('checkout.loadFailed', { ns: 'billing' })}
         </Notice>
       )}
@@ -121,7 +121,7 @@ export function BillingCheckoutPage() {
       )}
 
       {!invalid && offer && myBilling && (
-        <div className="mt-8 grid gap-8">
+        <div className="mt-6 grid gap-5 sm:mt-8 sm:gap-8">
           <section className="grid gap-2">
             <Typography variant="title" as="h2">
               {planLabel(offer.plan)}

@@ -73,7 +73,7 @@ function AnalysisPanel({ ownerId, voiceId, voice, profile }: VoiceScreenContext)
         </Notice>
       )}
       {!voice.deleted && (pendingMaterials || profile.hasPrevious) && (
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-wrap gap-3">
           {pendingMaterials && (
             <div>
               <MakeVoiceButton
@@ -110,7 +110,7 @@ function Quote({ sentence }: { sentence?: string }) {
 function CountedHabits({ analysis }: { analysis: VoiceAnalysis }) {
   const { t } = useTranslation('voices')
   return (
-    <section aria-label={t('analysis.counted')} className="mt-8">
+    <section aria-label={t('analysis.counted')} className="mt-4 sm:mt-8">
       <ul className="divide-divider mt-3 divide-y">
         {fingerprintRows(analysis.counted).map((row) => (
           <li key={row.item} className="py-3">

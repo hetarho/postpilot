@@ -25,6 +25,9 @@ export const i18n = {
       range: '{{min}}에서 {{max}} 사이로 적어 주세요.',
     },
     screen: {
+      reviewKind: '글 구성 확인',
+      editAI: 'AI로 편집',
+      editDirect: '직접 편집',
       chooseCreation: '템플릿 만드는 방법을 골라 주세요',
       unsaved: '새 템플릿은 저장하기 전까지 글에 사용할 수 없어요.',
       createAI: 'AI와 템플릿 만들기',
@@ -96,6 +99,9 @@ export const i18n = {
       range: 'Enter a number between {{min}} and {{max}}.',
     },
     screen: {
+      reviewKind: 'Review post template',
+      editAI: 'Edit with AI',
+      editDirect: 'Edit directly',
       chooseCreation: 'Choose how to create your template',
       unsaved: 'A new template becomes available to posts after you save it.',
       createAI: 'Create a template with AI',

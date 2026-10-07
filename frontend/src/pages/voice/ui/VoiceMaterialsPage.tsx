@@ -43,7 +43,7 @@ function MaterialsPanel({ ownerId, voiceId, voice, profile }: VoiceScreenContext
   return (
     <>
       {!profile.made && <VoiceReadinessMeter readiness={profile.readiness} />}
-      <div className="mt-4">
+      <div className={!profile.made ? 'mt-4' : undefined}>
         <MakeVoiceButton
           ownerId={ownerId}
           voiceId={voiceId}
@@ -61,7 +61,7 @@ function MaterialsPanel({ ownerId, voiceId, voice, profile }: VoiceScreenContext
           {t('screens.materialsBlocked')}
         </Notice>
       )}
-      <div className="mt-8 flex flex-wrap gap-2">
+      <div className="mt-4 flex flex-wrap gap-2 sm:mt-8">
         <PasteMaterialSheet ownerId={ownerId} voiceId={voiceId} disabled={voice.deleted} />
         <AnswerPromptsSheet
           ownerId={ownerId}
@@ -82,7 +82,7 @@ function MaterialsPanel({ ownerId, voiceId, voice, profile }: VoiceScreenContext
           disabled={voice.deleted}
         />
       </div>
-      <div className="mt-8">
+      <div className="mt-4 sm:mt-8">
         <SampleList
           ownerId={ownerId}
           voiceId={voiceId}

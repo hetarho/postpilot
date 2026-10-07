@@ -243,7 +243,7 @@ describe('the post measurement row', () => {
         .map((term) => term.firstChild?.textContent),
     ).toEqual([M2, M3, M4])
     expect(within(region).queryByText('제목 도배율')).toBeNull()
-    expect(region.querySelector('dl')).toHaveClass('grid-cols-1', 'sm:grid-cols-3')
+    expect(region.querySelector('dl')).toHaveClass('grid-cols-2', 'sm:grid-cols-3')
     expect(within(region).getByText('배지 기준은 PostPilot이 정한 값이에요.')).toBeInTheDocument()
   })
 

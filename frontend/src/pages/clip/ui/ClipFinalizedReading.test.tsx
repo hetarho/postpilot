@@ -104,3 +104,28 @@ it('plays the confirmed result in ② and opens a caption as values', async () =
     }),
   ).toBeVisible()
 })
+
+it('opens phone appearance details on a finalized clip while retaining disabled editing controls and no writes', async () => {
+  const user = userEvent.setup()
+  const calls: string[] = []
+  mount({ calls })
+  await user.click(await screen.findByRole('tab', { name: '생성' }))
+  const toggle = await screen.findByRole('button', { name: '디자인과 자막 스타일' })
+  expect(toggle).toBeEnabled()
+  expect(toggle).toHaveAttribute('aria-expanded', 'false')
+  await user.click(toggle)
+  const intro = screen.getByRole('radiogroup', { name: '인트로 디자인' })
+  for (const control of within(intro).getAllByRole('radio')) expect(control).toBeDisabled()
+  for (const control of within(screen.getByRole('tablist', { name: '자막 흐름' })).getAllByRole(
+    'tab',
+  ))
+    expect(control).toBeDisabled()
+  const selected = within(intro).getByRole('radio', { checked: true })
+  await user.click(within(intro).getByRole('radio', { name: 'B 위아래 가로선' }))
+  expect(selected).toHaveAttribute('aria-checked', 'true')
+  await user.click(toggle)
+  expect(screen.getByLabelText('클립 제목')).toBeDisabled()
+  expect(calls.filter((name) => /^(Update|Save|Start|Finalize|Confirm|Cancel)/.test(name))).toEqual(
+    [],
+  )
+})

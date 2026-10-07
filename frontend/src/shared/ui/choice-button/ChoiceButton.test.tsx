@@ -44,3 +44,22 @@ describe('ChoiceButton', () => {
     expect(screen.getByRole('button', { name: '편안한 말투', pressed: true })).toBeInTheDocument()
   })
 })
+
+it('shares peer guidance once without creating a dangling description or changing keyboard activation', async () => {
+  const choose = vi.fn()
+  const user = userEvent.setup()
+  render(
+    <>
+      <p id="factor-guidance">한 가지 조건만 바꾸어 비교합니다.</p>
+      <ChoiceButton title="말투" selected aria-describedby="factor-guidance" onClick={choose} />
+      <ChoiceButton title="구성" />
+    </>,
+  )
+  const voice = screen.getByRole('button', { name: '말투', pressed: true })
+  expect(voice).toHaveAccessibleDescription('한 가지 조건만 바꾸어 비교합니다.')
+  expect(screen.getByRole('button', { name: '구성' })).not.toHaveAttribute('aria-describedby')
+  expect(screen.getAllByText('한 가지 조건만 바꾸어 비교합니다.')).toHaveLength(1)
+  voice.focus()
+  await user.keyboard('{Enter}')
+  expect(choose).toHaveBeenCalledTimes(1)
+})

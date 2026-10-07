@@ -23,14 +23,14 @@ export function AdminVouchersPage() {
   const { vouchers, presets, isPending, isError } = useVouchers()
 
   return (
-    <section className="mt-8">
+    <section className="mt-6 sm:mt-8">
       <Typography variant="body" className="text-content-secondary max-w-measure">
         {t('adminVouchers.description')}
       </Typography>
 
       {!isError && !isPending && <IssueVoucherForm presets={presets} />}
 
-      <Typography variant="title" as="h2" className="mt-10">
+      <Typography variant="title" as="h2" className="mt-6 sm:mt-10">
         {t('adminVouchers.heading')}
       </Typography>
       {isError && (

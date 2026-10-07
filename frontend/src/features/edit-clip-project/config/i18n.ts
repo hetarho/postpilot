@@ -10,6 +10,9 @@ export const i18n = {
       square: '정방형 피드와 블로그 본문에 어울려요.',
     },
     project: {
+      designChoices: '디자인과 자막 스타일',
+      designSummary:
+        '{{pace}} · 강조색 {{accent}} · 인트로 {{intro}} · 아웃트로 {{outro}} · 자막 스타일 {{count}}종',
       accent: '강조 색상',
       accentHelp: '자막에서 한 낱말에만 쓰는 색이에요. 클립마다 다르게 고를 수 있어요.',
       search: '클립 검색',
@@ -115,6 +118,9 @@ export const i18n = {
       square: 'Suits square feeds and blog bodies.',
     },
     project: {
+      designChoices: 'Design and caption styles',
+      designSummary:
+        '{{pace}} · Accent {{accent}} · Intro {{intro}} · Outro {{outro}} · {{count}} caption styles',
       accent: 'Accent colour',
       accentHelp: 'The colour one word of a caption takes. Chosen per clip.',
       search: 'Search clips',
