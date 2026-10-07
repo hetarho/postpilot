@@ -67,7 +67,6 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T653 | Restore current pinned media image builds and qualify CI delivery | ARCH | - | doing@261008.ci |
 | T539 | Qualify the complete Korean voice-creation milestone | ARCH DUB MODEL CDS THEME | T538 | blocked@261005 |
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
@@ -93,6 +92,7 @@
 - Editorial follow-up: doc-review ARCH; full pre-push/deployment verification stays separate.
 
 ## log
+- 261008 T653 done: ff9 source pushed; full CI, actual deployment/health/CORS/R2 and three native media jobs pass; archive task and source-bound QA proof, preserve unrelated main work
 - 261008 T653 health packaging repair: kernel proves remote512Mi OOM with Go1.26 SHA-linked32Mi entropy BSS under Rosetta; helper-only official v1.0.0-c2097c7c snapshot/checksum retains SHA/protocol and lowers measured RSS42,876→10,072KiB; no API/worker setting or budget change, final gates pending
 - 261008 T653 release memory follow-up: live-owner authenticated Unix health probe and single-frame PNG decode remove unnecessary concurrent work; owning/race/deployment/bitwise-output checks pass, exact default256/512Mi release remains required
 - 261008 T653 bounded-memory fix candidate: lightweight exact cgroup/disk observer, active owner-generation/runtime-bound worker health, and explicit probe filter thread limit; keep API256Mi/worker512Mi and all codecs/presets/CRF/decoder/default budgets, rerun affected final gates
