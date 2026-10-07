@@ -1,0 +1,73 @@
+{
+  "version": 1,
+  "scope": "Four bounded synthetic complete-output diagnostic cases, not the release device/style matrix",
+  "source": {
+    "path": "docs/design/fixtures/browser-render-comparison/source-with-audio.mp4",
+    "bytes": 2462901,
+    "sha256": "54c1d4c59f1474b09a2751a593de354d82e534c9182389f6c65bbafe24c353b0",
+    "durationMs": 30000,
+    "width": 320,
+    "height": 180,
+    "hasAudio": true,
+    "provenance": "browser_client"
+  },
+  "speech": {
+    "path": "docs/design/fixtures/browser-render-comparison/synthetic-speech.wav",
+    "bytes": 176478,
+    "sha256": "1a29cafa914a8b89787c83f06600dad19f697afbba0a6c3577d1f835a787de70",
+    "samples": 44100,
+    "sampleRate": 44100,
+    "channels": 2,
+    "qualification": false,
+    "kind": "synthetic tone, not a voice qualification case"
+  },
+  "cases": [
+    {
+      "id": "vertical-blur-in-source",
+      "ratio": "vertical",
+      "style": "blur-in",
+      "narrated": false
+    },
+    {
+      "id": "horizontal-neon-source",
+      "ratio": "horizontal",
+      "style": "neon",
+      "narrated": false
+    },
+    {
+      "id": "square-glitch-source",
+      "ratio": "square",
+      "style": "glitch",
+      "narrated": false
+    },
+    {
+      "id": "vertical-ember-mixed-synthetic",
+      "ratio": "vertical",
+      "style": "ember",
+      "narrated": true
+    }
+  ],
+  "sampleFrames": [
+    0,
+    30,
+    35,
+    59,
+    89,
+    177,
+    195,
+    254,
+    303,
+    345,
+    349,
+    434,
+    449
+  ],
+  "limits": {
+    "outputBytes": 134217728,
+    "samplePngBytes": 33554432,
+    "artifactChunkBytes": 1048576,
+    "sampleCount": 16,
+    "runTimeoutMs": 300000
+  },
+  "qualification": false
+}

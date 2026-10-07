@@ -1,0 +1,434 @@
+{
+  "version": 1,
+  "technicalSourceCommit": "d029abeafd26828f0a7ed91b64c25b9880a4cd92",
+  "technicalWorkDelivered": true,
+  "releaseAcceptanceComplete": false,
+  "intendedRuntimeStatus": "blocked",
+  "taskSubmissionReady": false,
+  "qualified": false,
+  "distributionApproved": false,
+  "analysisQualified": false,
+  "realVoiceQualified": false,
+  "liveDeploymentExecuted": false,
+  "providerCalls": false,
+  "sourceBridge": {
+    "version": 1,
+    "checkedHead": "d029abeafd26828f0a7ed91b64c25b9880a4cd92",
+    "passed": true,
+    "frontendMeasuredSource": "26fce813664fda12008b77b72857c6d1c66b1161",
+    "frontendFiles": 1805,
+    "frontendKnownDifferences": {
+      ".github/workflows/deploy-backend.yml": "343812011747fa489270c8cb71c85a7753b90ebc37132a28d68b5f39aa45090f",
+      "scripts/browser-static-deployment-check.mjs": "bc0d1483a86d9f680b19b7aab1befc240a74f1aa3e7a3ee2c088d4c181c3ac3a"
+    },
+    "backendMeasuredSource": "88b8bafee9cb77625c1d228d586eb4b7b2de77eb",
+    "backendProductionFilesUnchanged": 1950,
+    "backendKnownDifferences": {
+      "deploy/r2-cors.json": "5e4b19491204aa6e7f3ba2f7e5f01e85e4557cb8c657805af388ae7d5e16c598"
+    },
+    "newGatedNativeFixture": {
+      "file": "backend/internal/clip/media/browser_layout_fixture_test.go",
+      "sha256": "b0361a3176152daa359272aefd7f155ab66187dbf5cd886d9b4cab58f460867f",
+      "cases": 126,
+      "compiledIntoPriorImage": false
+    },
+    "generatorInputs": 218,
+    "generatorOutputs": 152,
+    "matchingProductionImage": "sha256:dc7f948ba1a97dcc6e9c661b92b40ec29d59489ba12b6dc96272baae9a780c08",
+    "emittedChunksVerified": 126,
+    "httpsChecks": 13,
+    "historicalPairedRuns": 16,
+    "portableCurrentRuns": 4,
+    "references": {
+      "postpilot-t604-frontend-ci.json": {
+        "path": "/private/tmp/postpilot-t604-frontend-ci.json",
+        "sha256": "2a447d7272602f4d9fc279ef53b3772e37e694961d20919ef0c4430b0ebb514e"
+      },
+      "postpilot-t604-final-local-checks.json": {
+        "path": "/private/tmp/postpilot-t604-final-local-checks.json",
+        "sha256": "bbb6e19cad7088649060d90f960865d6bd2bea717d219a6e14a9e54929bcaf3e"
+      },
+      "postpilot-t604-current-deploy-python-timeout.json": {
+        "path": "/private/tmp/postpilot-t604-current-deploy-python-timeout.json",
+        "sha256": "f553b40b22fe3cd090583accead085f0e2bef1f5b3045008d426dc5107cb4cdb"
+      },
+      "postpilot-t599-current-ci.json": {
+        "path": "/private/tmp/postpilot-t599-current-ci.json",
+        "sha256": "610c63d42e8d1e06d92789dbc96d05748eead57671ee0af450a02815a84b3fbd"
+      },
+      "postpilot-t599-current-ci-continuation.json": {
+        "path": "/private/tmp/postpilot-t599-current-ci-continuation.json",
+        "sha256": "d8e3ae5c917a17e26ca5b4167c1b9bf1ae9e2be04e91c586ca0cdbdd71caa544"
+      },
+      "postpilot-t599-current-whole-go-retry.json": {
+        "path": "/private/tmp/postpilot-t599-current-whole-go-retry.json",
+        "sha256": "57057bb7ed25ca405c6c2e3a779720d517ad9e98163b990105eaa2b35a125df1"
+      },
+      "postpilot-t599-current-generator-proof.json": {
+        "path": "/private/tmp/postpilot-t599-current-generator-proof.json",
+        "sha256": "d19c3a51c6a1588fce8dd612dc73af14cdd5075beb10bd12e750f2816ba53136"
+      },
+      "postpilot-t599-current-image-receipt.json": {
+        "path": "/private/tmp/postpilot-t599-current-image-receipt.json",
+        "sha256": "464498373e5624d35ef76b5864ccaaf8a95e2bc8c0355a98d9256a14f12bcb4d"
+      },
+      "postpilot-t600-native-layout-extended-export.json": {
+        "path": "/private/tmp/postpilot-t600-native-layout-extended-export.json",
+        "sha256": "131c32c01bc566d96b0715e026142f5f0c34f36f7cf080db0f20b16ae825e51b"
+      },
+      "postpilot-t604-configured-static-https/report.json": {
+        "path": "/private/tmp/postpilot-t604-configured-static-https/report.json",
+        "sha256": "a52eff485fd737af64ec530b805c1abb08dcbdedcf554ef725e0484c5c5ce854"
+      },
+      "postpilot-t604-benchmark-four-fixed-26/report.json": {
+        "path": "/private/tmp/postpilot-t604-benchmark-four-fixed-26/report.json",
+        "sha256": "f16299dc5ae69977331b627d37c329d26261152ca10eff1db7c369778f615ba7"
+      },
+      "postpilot-t604-portable-single-d029/report.json": {
+        "path": "/private/tmp/postpilot-t604-portable-single-d029/report.json",
+        "sha256": "90c6025e5d963364b026f77d68d5a69bd17a92b7a2c29db6d22891844e1a596f"
+      },
+      "postpilot-t604-portable-single-d029-exec.json": {
+        "path": "/private/tmp/postpilot-t604-portable-single-d029-exec.json",
+        "sha256": "6d6ea7680dc901d993a2442dcd392ee76f303e26b371b2ab09cd27912751e34a"
+      }
+    },
+    "qualification": false,
+    "releaseAcceptanceComplete": false,
+    "scope": "Exact byte reuse of passed affected production checks plus separately executed packaging/harness/portable checks. Prior timeout/full-Go/Worker failures are retained; no external qualification is inferred."
+  },
+  "sourceBridgeLog": {
+    "path": "/private/tmp/postpilot-t604-current-source-bridge.log",
+    "sha256": "0305944d55092caceab6fcae1b740362478f105ddb1ee4abff4142185a87804a"
+  },
+  "currentLocalChecks": {
+    "sourceCommit": "d029abeafd26828f0a7ed91b64c25b9880a4cd92",
+    "passed": true,
+    "sourceUnchanged": true,
+    "checks": [
+      {
+        "name": "deploy-python",
+        "command": [
+          "/private/tmp/postpilot-t590-python/bin/python",
+          "-m",
+          "unittest",
+          "discover",
+          "-s",
+          "deploy",
+          "-p",
+          "*_test.py",
+          "-v"
+        ],
+        "exit": 0,
+        "timedOut": false,
+        "elapsedSeconds": 81.776,
+        "log": "/private/tmp/postpilot-t604-final-deploy-python.log",
+        "logSHA256": "0aa694bd806040dc2a5b4f738c24ab093b414e90835f8cee1264055d0d64c6b6"
+      },
+      {
+        "name": "dev",
+        "command": [
+          "pnpm",
+          "test:dev"
+        ],
+        "exit": 0,
+        "timedOut": false,
+        "elapsedSeconds": 0.642,
+        "log": "/private/tmp/postpilot-t604-final-dev.log",
+        "logSHA256": "510c68111a42303ffe68be3aa1e87c0a222c7a080166ad53059a68561f44c6d9"
+      }
+    ],
+    "dockerHost": "unix:///private/tmp/postpilot-t604-unavailable-docker.sock",
+    "actualServicesInvoked": false,
+    "realDockerDelegation": "compose config only, as implemented by deploy/backend_rollout_test.py COMMAND; pull/run/up/stop/images/curl are fixtures"
+  },
+  "frontendCI": {
+    "sourceCommit": "26fce813664fda12008b77b72857c6d1c66b1161",
+    "passed": true,
+    "files": 442,
+    "tests": 3569,
+    "checks": [
+      {
+        "name": "frontend",
+        "command": [
+          "pnpm",
+          "--filter",
+          "./frontend",
+          "test"
+        ],
+        "exit": 0,
+        "startedAt": 1791344313.480196,
+        "finishedAt": 1791344442.756598,
+        "log": "/private/tmp/postpilot-t604-frontend-ci-frontend.log",
+        "logSHA256": "bb3f0d8067c26f2efa6e8558c78e3f28a25fbd42639a4a0ecc8ae7b5c3d67c91"
+      },
+      {
+        "name": "dev",
+        "command": [
+          "pnpm",
+          "test:dev"
+        ],
+        "exit": 0,
+        "startedAt": 1791344442.759434,
+        "finishedAt": 1791344443.274307,
+        "log": "/private/tmp/postpilot-t604-frontend-ci-dev.log",
+        "logSHA256": "352005e0ad458932ebcda0a8ed70da56dd7f93f7a49f07f714852214d1855575"
+      },
+      {
+        "name": "lint",
+        "command": [
+          "pnpm",
+          "lint"
+        ],
+        "exit": 0,
+        "startedAt": 1791344443.276355,
+        "finishedAt": 1791344474.3776882,
+        "log": "/private/tmp/postpilot-t604-frontend-ci-lint.log",
+        "logSHA256": "e8a5f452104644dcbef2637f51e7ef69895b6c570290b98640476887d6d4c440"
+      },
+      {
+        "name": "fsd",
+        "command": [
+          "pnpm",
+          "lint:fsd"
+        ],
+        "exit": 0,
+        "startedAt": 1791344474.379881,
+        "finishedAt": 1791344480.469068,
+        "log": "/private/tmp/postpilot-t604-frontend-ci-fsd.log",
+        "logSHA256": "364ab233be9282c071a0509e27b876f6b30660d528eced375b2e11e55310aec9"
+      },
+      {
+        "name": "style-probe",
+        "command": [
+          "pnpm",
+          "lint:style:probe"
+        ],
+        "exit": 0,
+        "startedAt": 1791344480.4713721,
+        "finishedAt": 1791344480.888886,
+        "log": "/private/tmp/postpilot-t604-frontend-ci-style-probe.log",
+        "logSHA256": "869f0a727496a342022932d484fda14d93089f0ed14340eeb7123d3d76e680e8"
+      },
+      {
+        "name": "style",
+        "command": [
+          "pnpm",
+          "lint:style"
+        ],
+        "exit": 0,
+        "startedAt": 1791344480.89078,
+        "finishedAt": 1791344481.776913,
+        "log": "/private/tmp/postpilot-t604-frontend-ci-style.log",
+        "logSHA256": "9456dfd461bf940394546b9e41d25c79e7dab302323e45d395407418df4ea831"
+      },
+      {
+        "name": "retirement",
+        "command": [
+          "pnpm",
+          "lint:retirement"
+        ],
+        "exit": 0,
+        "startedAt": 1791344481.779024,
+        "finishedAt": 1791344482.6073432,
+        "log": "/private/tmp/postpilot-t604-frontend-ci-retirement.log",
+        "logSHA256": "f560c930aff97412233f892513d409a0637ae8fea89c2508b9b2f8df92c64bf9"
+      },
+      {
+        "name": "skills",
+        "command": [
+          "pnpm",
+          "exec",
+          "haeram-spec-creator",
+          "check"
+        ],
+        "exit": 0,
+        "startedAt": 1791344482.609401,
+        "finishedAt": 1791344483.435159,
+        "log": "/private/tmp/postpilot-t604-frontend-ci-skills.log",
+        "logSHA256": "9ecad11f9759114d56531c877c95876c67f57f5fa5db366d1477a4cf550d3162"
+      },
+      {
+        "name": "spec",
+        "command": [
+          "node",
+          "/private/tmp/postpilot-browser-media-tools/haeram-spec-creator/bin/haeram-spec-creator.mjs",
+          "lint"
+        ],
+        "exit": 0,
+        "startedAt": 1791344483.436991,
+        "finishedAt": 1791344483.623154,
+        "log": "/private/tmp/postpilot-t604-frontend-ci-spec.log",
+        "logSHA256": "519a179020493cc1d5751e5db67c1253e60bf93bcb6de88117fea219cdc477b5"
+      }
+    ],
+    "reuse": "Current frontend/public/config/package/lock bytes remain identical. Only deploy workflow and the independently re-executed HTTPS harness differ from this measured scope."
+  },
+  "builtArtifact": {
+    "inventory": "docs/qa/browser-static-emitted-bundle.json",
+    "inventorySHA256": "9ea92f90ff28ebf1ee20cb2fa5daa15dc8fc3f62be61878a7d3a36d8429bb550",
+    "sourceCommit": "ce298916e78ea8f853f107467a1a1796d19edccc",
+    "writtenChunkHashesVerified": true,
+    "scope": "Actual final-written Vite module/Worker chunk inventory and current built body hashes; frontend build at26fce813 also completed with exit0, session23131. No live Cloudflare deployment."
+  },
+  "staticHTTPS": {
+    "report": "docs/qa/browser-static-https-checks.json",
+    "reportSHA256": "667cd02493d7052f45f115f3270d91d9017c23e0ebfa8f6d5a437cfd01cf8ed3",
+    "sourceCommit": "50374b84a3bb31ac198280969e3680671c23ea88",
+    "passed": true,
+    "checks": 13,
+    "scope": "Self-signed loopback secure-context exercise, actual built module Workers/WASM/fonts/notices and configured-policy CORS mock including OPTIONS/206 negatives; not live private R2."
+  },
+  "pairedMacDiagnostic": {
+    "report": "docs/design/browser-render-comparison-current.json",
+    "sourceCommit": "26fce813664fda12008b77b72857c6d1c66b1161",
+    "completedRuns": 16,
+    "pairedComparisons": 8,
+    "sourceAndAdapterUnchanged": true,
+    "humanReviewed": false,
+    "pixelAcceptanceThreshold": null,
+    "productionDefaultChanged": false
+  },
+  "portableRecipeSmoke": {
+    "sourceCommit": "d029abeafd26828f0a7ed91b64c25b9880a4cd92",
+    "actualExecution": true,
+    "exit": 0,
+    "logSHA256": "b011b6c932483eb308629d81b55e6fa7ad4c1aa1fdbd3a13f2b75e1a9ebac1ed",
+    "rawReportSHA256": "90c6025e5d963364b026f77d68d5a69bd17a92b7a2c29db6d22891844e1a596f",
+    "fixture": "vertical-blur-in-source",
+    "completedRuns": 4,
+    "comparisons": [
+      {
+        "fixture": "vertical-blur-in-source",
+        "temperature": "cold",
+        "status": "observed",
+        "contractComparisonPassed": true,
+        "audioEncodedIdentityEqual": true,
+        "normalizedPcmIdentityEqual": true,
+        "pixelAcceptanceThreshold": null,
+        "humanReviewed": false,
+        "qualification": false
+      },
+      {
+        "fixture": "vertical-blur-in-source",
+        "temperature": "warm",
+        "status": "observed",
+        "contractComparisonPassed": true,
+        "audioEncodedIdentityEqual": true,
+        "normalizedPcmIdentityEqual": true,
+        "pixelAcceptanceThreshold": null,
+        "humanReviewed": false,
+        "qualification": false
+      }
+    ],
+    "sourceUnchanged": true,
+    "adapterUnchanged": true,
+    "fixturesUnchanged": true,
+    "sessionsCleanup": [
+      {
+        "fixture": "vertical-blur-in-source",
+        "arm": "canvas2d-shared",
+        "cleanup": {
+          "runtime": false,
+          "local": {
+            "entries": 0,
+            "bytes": 0,
+            "peakBytes": 869232,
+            "rasters": 2,
+            "leases": 0,
+            "canvas": {
+              "groupBytes": 0,
+              "effectBytes": 0,
+              "tintBytes": 0
+            }
+          },
+          "canvasPixels": 0,
+          "temporaryNames": []
+        },
+        "browserErrors": []
+      },
+      {
+        "fixture": "vertical-blur-in-source",
+        "arm": "pixi-scene-canvas2d-hybrid",
+        "cleanup": {
+          "runtime": false,
+          "local": {
+            "entries": 0,
+            "bytes": 0,
+            "peakBytes": 869232,
+            "rasters": 2,
+            "leases": 0,
+            "canvas": {
+              "groupBytes": 0,
+              "effectBytes": 0,
+              "tintBytes": 0
+            }
+          },
+          "scene": {
+            "nodes": 0,
+            "dynamicShapes": 0,
+            "geometryBytes": 0,
+            "shapeUniformBytes": 0,
+            "managedTextureBytes": 3145732,
+            "filterScratchBytes": 3145728,
+            "effectBytes": 0,
+            "filters": 0,
+            "groupBytes": 0
+          },
+          "canvasPixels": 0,
+          "temporaryNames": []
+        },
+        "browserErrors": []
+      }
+    ],
+    "adapterHashes": {
+      "runner.mjs": "49ef3c818d1da1f03c7b5c4e1ddda73414e5d67f2b108d7968ea8cfa6abc846e",
+      "static-check.mjs": "e3b60eb2fefa5c9a8e1918b7fef3979a8c7950d760cdaf8afbb8a191815a6d80",
+      "entry.ts": "7d8c5fd8fa8331ebb6222a015752624fe6d9fe021a26d8eee44d4fc8ba7863de",
+      "audio-observer.ts": "b2984f3d1a76230cf4b10a26285f3c64a7673ccb6be939b332cebe4b5ba5e6b0",
+      "worker.ts": "c0096c9ecd1ce0b4d59759275f916dd53e2c199dba995f7f685fa91f50a5f76a",
+      "contract.ts": "3dcc3e813873100947fc9ff98376227add89437d41f6f1fdc4f8f79bfc7f596d",
+      "fixtures.json": "354b15f190e587608860f419938d094b31796db19edf1864d11abaedede0a0d7",
+      "README.md": "531beb22c125c93cdda66e77b34ab30ee3f17cb92433b88dcb5a509bff59067a"
+    },
+    "qualification": false
+  },
+  "preservedFailures": [
+    {
+      "receipt": "/private/tmp/postpilot-t604-current-deploy-python-timeout.json",
+      "sha256": "f553b40b22fe3cd090583accead085f0e2bef1f5b3045008d426dc5107cb4cdb",
+      "outcome": "300-second outer TimeoutExpired, no completed unittest verdict; isolated62 retry passed; timeout cause unproved."
+    },
+    "Initial HTTPS malformed-version fixture assertion failures are retained outside the repository; product Worker guard unchanged.",
+    "Initial Pixi Worker document environment failure and unexecuted warm arm are recorded in the design report; official WebWorkerAdapter correction is external/diagnostic.",
+    "Original current full-Go failure and affected/whole unchanged-source passes remain distinct in the sourceBridge references."
+  ],
+  "openReleaseGates": [
+    "Complete original npm resvg2.6.2 Rust source/license graph; candidate remains unapplied.",
+    "Identified Windows integrated-GPU Chrome/Edge and lower-resource device execution.",
+    "Complete style/pace/transition/rate/qualified-voice release-output review and human blur/neon/glitch/ember appearance/listening review.",
+    "Uninstrumented production/default complete-composition performance qualification; current paired arms are Canvas2D and a Pixi-to-Canvas hybrid diagnostic.",
+    "Live Cloudflare/private-storage deployment verification, if separately authorized; current HTTPS/CORS proof is local."
+  ],
+  "independentAnalysisAndVoiceGates": "T603 six real corpus/truth/current-provider/route/accounting/spend/human gates, T539/T550 real voice gates remain closed independently.",
+  "limits": [
+    "No physical driver/process/private codec/DSP peak or hardware codec execution is inferred from managed counters.",
+    "Current successful diagnostics do not complete T604 release acceptance or open final-render/analysis/voice/distribution activation.",
+    "Source-only technical preservation is independent of formal task READY/DONE."
+  ],
+  "specLint": {
+    "command": [
+      "/Users/ihaelam/.npm/_npx/4aa47c519def57bc/node_modules/node/bin/node",
+      "/private/tmp/postpilot-browser-media-tools/haeram-spec-creator/bin/haeram-spec-creator.mjs",
+      "lint"
+    ],
+    "exit": 0,
+    "sourceHead": "d029abeafd26828f0a7ed91b64c25b9880a4cd92",
+    "metadataDirtyExplicit": true,
+    "log": "/private/tmp/postpilot-t604-final-spec-lint.log",
+    "logSHA256": "519a179020493cc1d5751e5db67c1253e60bf93bcb6de88117fea219cdc477b5",
+    "inheritedWarnings": 46,
+    "newWarnings": 0,
+    "structuralErrors": 0
+  }
+}

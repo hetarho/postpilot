@@ -22,20 +22,7 @@
       "packagedNotices": [],
       "obligation": "Preserve notices and provide access to the covered source, including modifications, for distributed JS/WASM.",
       "topLevel": true,
-      "coveredSourceEvidence": {
-        "url": "https://raw.githubusercontent.com/thx/resvg-js/v2.6.2/LICENSE",
-        "sha256": "4b89d4518bd135ab4ee154a7bce722246b57a98c3d7efc1a09409898160c2bd1",
-        "versionPinned": true
-      },
-      "wasmSourceDeclaration": {
-        "url": "https://raw.githubusercontent.com/thx/resvg-js/v2.6.2/Cargo.toml",
-        "sha256": "72880b4d3e64bd62caf033579a21057c97ed069002bdef67a0029b7fc6e340a9",
-        "declaredResvgVersion": "0.34.0",
-        "patchedResvgRevision": "3495d870",
-        "nativeReferenceVersion": "0.48.1",
-        "binaryDependencyGraphVerified": false,
-        "limit": "Published WASM binary provenance and patched Rust dependency licenses still require release review; native/WASM renderer versions are not assumed equivalent."
-      }
+      "coveredSourceEvidence": null
     },
     {
       "name": "@soundtouchjs/core",
@@ -51,12 +38,7 @@
       ],
       "obligation": "Preserve notices and provide access to the covered source, including modifications, for distributed JS/WASM.",
       "topLevel": true,
-      "coveredSourceEvidence": {
-        "url": "https://raw.githubusercontent.com/cutterbl/SoundTouchJS/d9e39a7ddcf74c7a145bbba45856f30068c82b79/packages/core/LICENSE",
-        "sha256": "753801acf995db0807e9dab615775310b1f74696e7776ee246bf9b31714cdaf9",
-        "versionPinned": true
-      },
-      "sourceRevision": "d9e39a7ddcf74c7a145bbba45856f30068c82b79"
+      "coveredSourceEvidence": null
     },
     {
       "name": "@soundtouchjs/interpolation-strategy-lanczos",
@@ -264,11 +246,7 @@
       ],
       "obligation": "Preserve notices and provide access to the covered source, including modifications, for distributed JS/WASM.",
       "topLevel": true,
-      "coveredSourceEvidence": {
-        "url": "https://raw.githubusercontent.com/Vanilagy/mediabunny/v1.58.0/LICENSE",
-        "sha256": "3f3d9e0024b1921b067d6f7f88deb4a60cbe7a78e76c64e3f1d7fc3b779b9d04",
-        "versionPinned": true
-      }
+      "coveredSourceEvidence": null
     },
     {
       "name": "parse-svg-path",
@@ -358,19 +336,11 @@
       "sha256": "8eb1c1019fe7fe6d0b6e7d7bbbba1d9cbdd969d8c5f26455708f6cfb8a77284c"
     }
   ],
-  "sourceAccessVerified": true,
-  "distributionApproved": false,
-  "limits": [
-    "Dependency metadata is an inventory, not a substitute for actual bundled-license review.",
-    "resvg-wasm embeds Rust dependencies whose versioned source/licenses require build-provenance review.",
-    "The production FFmpeg libx264 build is GPL-enabled; this browser inventory does not redistribute it.",
-    "Remotion is an optional comparison under its own license; it is not installed in the production bundle."
-  ],
   "inkFonts": {
     "generator": "fonttools-4.60.2",
     "sourceVersion": "1.0.3",
     "manifestSHA256": "51ad5c795ede98d22e4dfea750946889af3717c04dee3642b87e3419c835970c",
-    "assetVersion": "clip-design-assets-v1-ink-658bc158aacde853089103085afc23d3923c18e2e605072e51e0dcf08c2dc196",
+    "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3",
     "sources": {
       "wantedsans": {
         "file": "WantedSansVariable.ttf",
@@ -485,5 +455,13 @@
     ],
     "modificationNotice": "frontend/public/fonts/clip/INK-NOTICE.txt",
     "generatorSource": "scripts/build-clip-ink-fonts.py"
-  }
+  },
+  "sourceAccessVerified": false,
+  "distributionApproved": false,
+  "limits": [
+    "Dependency metadata is an inventory, not a substitute for actual bundled-license review.",
+    "resvg-wasm embeds Rust dependencies whose versioned source/licenses require build-provenance review.",
+    "The production FFmpeg libx264 build is GPL-enabled; this browser inventory does not redistribute it.",
+    "Remotion is an optional comparison under its own license; it is not installed in the production bundle."
+  ]
 }

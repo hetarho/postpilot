@@ -1,0 +1,1306 @@
+{
+  "version": 1,
+  "sourceRevision": "50374b84a3bb31ac198280969e3680671c23ea88",
+  "sourceRangeSHA256": "be02047486c9f79ca115dd76fc3e297bb47cdcdeee7791b29cd47c8af763b1cd",
+  "diagnosticBundleModules": [
+    {
+      "file": "node_modules/.pnpm/mediabunny@1.58.0/node_modules/mediabunny/dist/modules/src/hls/hls-segmented-input.js",
+      "sha256": "947e3c73c127d01964964ae3974d410f0a6ec923b2c4bc9f4b60673ef1fadd3c"
+    },
+    {
+      "file": "node_modules/.pnpm/mediabunny@1.58.0/node_modules/mediabunny/dist/modules/src/matroska/ebml.js",
+      "sha256": "47beb4eaa3edc9a65e4047d61cd923a067d30196f2e6a21444a499d13f449488"
+    },
+    {
+      "file": "node_modules/.pnpm/mediabunny@1.58.0/node_modules/mediabunny/dist/modules/src/isobmff/isobmff-reader.js",
+      "sha256": "0d572b70f0a71a0057548990d645b4404f913791ce89b65118b149d9ef8addee"
+    },
+    {
+      "file": "node_modules/.pnpm/mediabunny@1.58.0/node_modules/mediabunny/dist/modules/src/flac/flac-misc.js",
+      "sha256": "3879c8a4016b9c2cc82d5e7ccbe99e2a8bb13b3b62de66360e7c9ccea76172b4"
+    },
+    {
+      "file": "node_modules/.pnpm/mediabunny@1.58.0/node_modules/mediabunny/dist/modules/src/logging.js",
+      "sha256": "8ea04ec2708ae6458e758feeac5434a15f695e71f516ab7129e2047e444aa044"
+    },
+    {
+      "file": "node_modules/.pnpm/mediabunny@1.58.0/node_modules/mediabunny/dist/modules/src/mpeg-ts/mpeg-ts-demuxer.js",
+      "sha256": "11a3eab26a88a8a8145791da66b7fda61add96e68dc51b94e45f7cf2798a1f5a"
+    },
+    {
+      "file": "node_modules/.pnpm/mediabunny@1.58.0/node_modules/mediabunny/dist/modules/src/writer.js",
+      "sha256": "c3a226a40875d81f5e782707816429aa3bad5a877947444efa85b7064dfd0178"
+    },
+    {
+      "file": "node_modules/.pnpm/mediabunny@1.58.0/node_modules/mediabunny/dist/modules/shared/aac-misc.js",
+      "sha256": "c8dac38aee86b0950475da4a1e195a215a4828c2080268d22573babb581e60b2"
+    },
+    {
+      "file": "node_modules/.pnpm/mediabunny@1.58.0/node_modules/mediabunny/dist/modules/src/metadata.js",
+      "sha256": "86434da3d58b1e0c306fd09ecfeb8a6e45aab1ca6cd2a0b073b8fb5500de2ca5"
+    },
+    {
+      "file": "node_modules/.pnpm/mediabunny@1.58.0/node_modules/mediabunny/dist/modules/src/segmented-input.js",
+      "sha256": "dc7309ab41ab5181367b8873b5c431d8e2240132b2412fba2f5836beaf9d6eca"
+    },
+    {
+      "file": "node_modules/.pnpm/mediabunny@1.58.0/node_modules/mediabunny/dist/modules/src/adts/adts-muxer.js",
+      "sha256": "f3e6e2806d85e22c15f9caa148ec7af2d860c21489dfd04dd4d0c76637587948"
+    },
+    {
+      "file": "node_modules/.pnpm/mediabunny@1.58.0/node_modules/mediabunny/dist/modules/src/codec-data.js",
+      "sha256": "5077d79f422a4563e1207a74f1156035bd5184aaf6c186a85e6c226d9afcdc39"
+    },
+    {
+      "file": "node_modules/.pnpm/mediabunny@1.58.0/node_modules/mediabunny/dist/modules/src/id3.js",
+      "sha256": "1a87e9df019505966607014eb0fc8df52571eaee716bf41e8816a3e12daefccc"
+    },
+    {
+      "file": "node_modules/.pnpm/mediabunny@1.58.0/node_modules/mediabunny/dist/modules/src/ogg/ogg-demuxer.js",
+      "sha256": "001399ef72fc7e2f2170a3d015aaa3d1310fcfb80d7e5d611654c172a2d0483d"
+    },
+    {
+      "file": "node_modules/.pnpm/mediabunny@1.58.0/node_modules/mediabunny/dist/modules/src/output-format.js",
+      "sha256": "b38fefd6c8b809d5b57ad6ac4802a54add8131fb17d379451d02fd2793b7c5c3"
+    },
+    {
+      "file": "node_modules/.pnpm/mediabunny@1.58.0/node_modules/mediabunny/dist/modules/shared/ac3-misc.js",
+      "sha256": "222083675bd08e11a52fd8215a0bd3af995dd62d3e6a7313d496dd0903ab2cb3"
+    },
+    {
+      "file": "node_modules/.pnpm/mediabunny@1.58.0/node_modules/mediabunny/dist/modules/src/adts/adts-demuxer.js",
+      "sha256": "93801ff68ab9121f01e58fa6fa25a06af17d1bf6f0c27d8bc7973402c3c7c111"
+    },
+    {
+      "file": "node_modules/.pnpm/mediabunny@1.58.0/node_modules/mediabunny/dist/modules/src/index.js",
+      "sha256": "9236aa229772332a4f5ed04e453d8794a84311468012a9dd0de78e35301d39c0"
+    },
+    {
+      "file": "node_modules/.pnpm/mediabunny@1.58.0/node_modules/mediabunny/dist/modules/shared/mp3-misc.js",
+      "sha256": "abc88be5cd537073963e10be92e6355819220360d756b482c7c851d778e472c0"
+    },
+    {
+      "file": "node_modules/.pnpm/mediabunny@1.58.0/node_modules/mediabunny/dist/modules/src/hls/hls-muxer.js",
+      "sha256": "f2fcd22ddc16d6d084598bd4d5deb23bd6452ae29a7882cd342a8181a5563a19"
+    },
+    {
+      "file": "node_modules/.pnpm/mediabunny@1.58.0/node_modules/mediabunny/dist/modules/src/wave/riff-writer.js",
+      "sha256": "083589206c6cb71b88cfbf907dd13cae7efc2ec9c60f0add021e5b98e88bd7bc"
+    },
+    {
+      "file": "node_modules/.pnpm/mediabunny@1.58.0/node_modules/mediabunny/dist/modules/src/ogg/ogg-misc.js",
+      "sha256": "ddf9c571f42b41a664b75002e4e15c536f93594ad16d74fad707bb6434b3a88a"
+    },
+    {
+      "file": "node_modules/.pnpm/mediabunny@1.58.0/node_modules/mediabunny/dist/modules/src/resample.js",
+      "sha256": "5cb8f0d2e3518447cba5b1074f4226dd48bbd2cb8007ad0fa61e8856ea34ec3e"
+    },
+    {
+      "file": "node_modules/.pnpm/mediabunny@1.58.0/node_modules/mediabunny/dist/modules/src/mp3/mp3-demuxer.js",
+      "sha256": "fbf57f9a05d7cc74e5a62bcd4d3884122fde6b8802c2eb57054b7fabf662e665"
+    },
+    {
+      "file": "node_modules/.pnpm/mediabunny@1.58.0/node_modules/mediabunny/dist/modules/src/target.js",
+      "sha256": "015ce14056dded3717115663216760d1c840fcb9cef19d61aa8c34e98a3a7fa8"
+    },
+    {
+      "file": "node_modules/.pnpm/mediabunny@1.58.0/node_modules/mediabunny/dist/modules/src/adts/adts-reader.js",
+      "sha256": "ea8df3aa2fe41c9afc14a6c98f56d473c010c4db6ed4e0889962ee1129fba031"
+    },
+    {
+      "file": "node_modules/.pnpm/mediabunny@1.58.0/node_modules/mediabunny/dist/modules/src/conversion.js",
+      "sha256": "0c343aff7a112b69e69e95adeaeab8e4ee9c5020e72b0673f6d44a051281e8d9"
+    },
+    {
+      "file": "node_modules/.pnpm/mediabunny@1.58.0/node_modules/mediabunny/dist/modules/src/isobmff/isobmff-boxes.js",
+      "sha256": "bc3bfc81450ba0e5aec404bb5ee9d2bd47235e2658f1138274a5c8d8e6b514b3"
+    },
+    {
+      "file": "node_modules/.pnpm/mediabunny@1.58.0/node_modules/mediabunny/dist/modules/src/input.js",
+      "sha256": "06d8747512f394356d8480b0a18507ff5798c9d282771d1212b79e341dff9833"
+    },
+    {
+      "file": "node_modules/.pnpm/mediabunny@1.58.0/node_modules/mediabunny/dist/modules/src/media-source.js",
+      "sha256": "6494db7dba9ff7c5fade9e376a117aa7fa66dd25efd16ce806de0631976ac17b"
+    },
+    {
+      "file": "node_modules/.pnpm/mediabunny@1.58.0/node_modules/mediabunny/dist/modules/src/misc.js",
+      "sha256": "74444d5c27576bc58b580568b8a03fc8603d7449f9fb24dd27b05919eb7c4961"
+    },
+    {
+      "file": "node_modules/.pnpm/mediabunny@1.58.0/node_modules/mediabunny/dist/modules/src/mp3/mp3-muxer.js",
+      "sha256": "0a704ad4c8927a4f1521f630276c8b6f56977290ffb1c47736642d01cab74118"
+    },
+    {
+      "file": "node_modules/.pnpm/mediabunny@1.58.0/node_modules/mediabunny/dist/modules/src/wave/wave-muxer.js",
+      "sha256": "e424b4c7132eb11fbf89a3931bbdd6f6065568889ad0661f7a015d65473d7c25"
+    },
+    {
+      "file": "node_modules/.pnpm/mediabunny@1.58.0/node_modules/mediabunny/dist/modules/src/flac/flac-muxer.js",
+      "sha256": "15e779e7c271bdc633b00d0f2a7a7b37a51f8168b3d1584b9d8e7efc62963f58"
+    },
+    {
+      "file": "node_modules/.pnpm/mediabunny@1.58.0/node_modules/mediabunny/dist/modules/src/source.js",
+      "sha256": "4c5422c559e783c1252e6bd4b9b9ce739cedd242a7fc9966ce8ebb70ef972e1e"
+    },
+    {
+      "file": "frontend/src/shared/lib/media/video/range-source.ts",
+      "sha256": "be02047486c9f79ca115dd76fc3e297bb47cdcdeee7791b29cd47c8af763b1cd"
+    },
+    {
+      "file": "node_modules/.pnpm/mediabunny@1.58.0/node_modules/mediabunny/dist/modules/src/hls/hls-misc.js",
+      "sha256": "32d1050c5d8037a7e2ebe00256030d191454630a1fafafb3b70808ea221ef995"
+    },
+    {
+      "file": "node_modules/.pnpm/mediabunny@1.58.0/node_modules/mediabunny/dist/modules/src/matroska/matroska-demuxer.js",
+      "sha256": "cf8d11a1f59c89662c0a5673a9c23566af281500e63c7ef96493190b366175c8"
+    },
+    {
+      "file": "node_modules/.pnpm/mediabunny@1.58.0/node_modules/mediabunny/dist/modules/src/isobmff/isobmff-misc.js",
+      "sha256": "b18147ea5ecd7a6eff5ee35c912a818d0fce67eb0cd43fe18eb1ac2f9bb870bd"
+    },
+    {
+      "file": "node_modules/.pnpm/mediabunny@1.58.0/node_modules/mediabunny/dist/modules/src/decode.js",
+      "sha256": "3d8e3b581be4d8bf0ecde649db8f2e0b9cc2a09e346b28fe30b93bd3d2d5b05b"
+    },
+    {
+      "file": "node_modules/.pnpm/mediabunny@1.58.0/node_modules/mediabunny/dist/modules/src/codec.js",
+      "sha256": "9c2a80a7b8310f886fbb8bb45b4479a18b920a77f95089e7c24f62b076d7e279"
+    },
+    {
+      "file": "node_modules/.pnpm/mediabunny@1.58.0/node_modules/mediabunny/dist/modules/src/isobmff/isobmff-demuxer.js",
+      "sha256": "53c562700b29075293fd67abf89e9415c51c902cc592aa27116cdbba1bde0dc1"
+    },
+    {
+      "file": "node_modules/.pnpm/mediabunny@1.58.0/node_modules/mediabunny/dist/modules/src/sample.js",
+      "sha256": "df04c19a4ffae916c65dcd82b6555b37d0d2ff31218082fa5778904ccb66ea97"
+    },
+    {
+      "file": "node_modules/.pnpm/mediabunny@1.58.0/node_modules/mediabunny/dist/modules/src/mpeg-ts/mpeg-ts-muxer.js",
+      "sha256": "5f8f4d18a5b885e71cfb4824f8beae79152fb32b31e9a9219da8ceb5ef4df559"
+    },
+    {
+      "file": "node_modules/.pnpm/mediabunny@1.58.0/node_modules/mediabunny/dist/modules/src/packet.js",
+      "sha256": "3f8a7af5289a4ef053b6b2172e7e576f9e62b5114b236a2bdc8dfac69529edce"
+    },
+    {
+      "file": "node_modules/.pnpm/mediabunny@1.58.0/node_modules/mediabunny/dist/modules/src/hls/hls-demuxer.js",
+      "sha256": "1f0524378547dacbeb6e8627f085fb71e7faf1d2402b4e2f3ab805bd2522ce9a"
+    },
+    {
+      "file": "node_modules/.pnpm/mediabunny@1.58.0/node_modules/mediabunny/dist/modules/src/muxer.js",
+      "sha256": "3129f18d22c7044abfb53ae61068d0b232fdbca1e31d7133110a172b5acc9e35"
+    },
+    {
+      "file": "node_modules/.pnpm/mediabunny@1.58.0/node_modules/mediabunny/dist/modules/src/matroska/matroska-misc.js",
+      "sha256": "0e97b7d06659a3b81c62a858e06be1457b99ed971ae6c741762b8c83617fd533"
+    },
+    {
+      "file": "node_modules/.pnpm/mediabunny@1.58.0/node_modules/mediabunny/dist/modules/src/demuxer.js",
+      "sha256": "74c71b6e4a540ffc2229e85bd331571547a390e657285a7e556c338e5ac96988"
+    },
+    {
+      "file": "node_modules/.pnpm/mediabunny@1.58.0/node_modules/mediabunny/dist/modules/src/mpeg-ts/mpeg-ts-misc.js",
+      "sha256": "62b41afc052c43ace7a08b0b6e2c13e6dfd50b3e65d6ab5f393b5f7b1762e97f"
+    },
+    {
+      "file": "node_modules/.pnpm/mediabunny@1.58.0/node_modules/mediabunny/dist/modules/src/mp3/mp3-reader.js",
+      "sha256": "3ccee5ef547029e94ba00cf1cce1e8523eac2f1cd0bdc061949caef4f319303a"
+    },
+    {
+      "file": "node_modules/.pnpm/mediabunny@1.58.0/node_modules/mediabunny/dist/modules/src/pcm.js",
+      "sha256": "91a203e36a4f5907fdde5d312d2c5dd677677c1afc9f41bf5b5b630a1dd265ac"
+    },
+    {
+      "file": "node_modules/.pnpm/mediabunny@1.58.0/node_modules/mediabunny/dist/modules/src/input-format.js",
+      "sha256": "e3d0b9592c384d4c8fdd4316607509feea88fef9b5abd86d499561e3464368ee"
+    },
+    {
+      "file": "node_modules/.pnpm/mediabunny@1.58.0/node_modules/mediabunny/dist/modules/src/reader.js",
+      "sha256": "ca1c5fe8169c6355545191c6c0183135759f248c1ce1de5c51821545c7bea445"
+    },
+    {
+      "file": "node_modules/.pnpm/mediabunny@1.58.0/node_modules/mediabunny/dist/modules/shared/bitstream.js",
+      "sha256": "527ec409647a07c8d3a9ccd945c61db1dceedfe3533f1256bdab9371055780f1"
+    },
+    {
+      "file": "node_modules/.pnpm/mediabunny@1.58.0/node_modules/mediabunny/dist/modules/src/aes.js",
+      "sha256": "334bcda96bff65ff9b0247cec04522cc1dc80b583d052ab07a4a799b5ab03ed0"
+    },
+    {
+      "file": "node_modules/.pnpm/mediabunny@1.58.0/node_modules/mediabunny/dist/modules/src/ogg/ogg-muxer.js",
+      "sha256": "6e7ece2baf37dc91f898076a95259612486ab845de4b4f8966920ca5d4922640"
+    },
+    {
+      "file": "node_modules/.pnpm/mediabunny@1.58.0/node_modules/mediabunny/dist/modules/src/custom-coder.js",
+      "sha256": "03dc7a8cf76b5d2f9e8704d0d33cd714eed08dbc9957ff9f4e722cdd0a5c5377"
+    },
+    {
+      "file": "node_modules/.pnpm/mediabunny@1.58.0/node_modules/mediabunny/dist/modules/src/flac/flac-demuxer.js",
+      "sha256": "758bd553c986037d59b4139f8bdbc990762995ee06d36310154e79c44ff763ee"
+    },
+    {
+      "file": "node_modules/.pnpm/mediabunny@1.58.0/node_modules/mediabunny/dist/modules/src/mp3/mp3-writer.js",
+      "sha256": "af1622b39d2c69a3e638e47d704f0d74fa43154731949783b8eec73f451b6164"
+    },
+    {
+      "file": "node_modules/.pnpm/mediabunny@1.58.0/node_modules/mediabunny/dist/modules/src/ogg/ogg-reader.js",
+      "sha256": "d8b7f641eeff339d2310e61c9ff3379e6817b0d1831399b4ebb75d91be9ad26d"
+    },
+    {
+      "file": "node_modules/.pnpm/mediabunny@1.58.0/node_modules/mediabunny/dist/modules/src/matroska/matroska-muxer.js",
+      "sha256": "72114b68a8ccad695165df513b8e1d9e94160255a8449cc53481b4b2694449c9"
+    },
+    {
+      "file": "node_modules/.pnpm/mediabunny@1.58.0/node_modules/mediabunny/dist/modules/src/isobmff/isobmff-muxer.js",
+      "sha256": "f6dd74e749ad8bf84745ad85022ae7759755a3c869638042ceb277ccbdfa5186"
+    },
+    {
+      "file": "node_modules/.pnpm/mediabunny@1.58.0/node_modules/mediabunny/dist/modules/src/output.js",
+      "sha256": "b5da1e68c37544e6b20cab8c98db44091d2c4ba913c71db1648b3656ee705d30"
+    },
+    {
+      "file": "node_modules/.pnpm/mediabunny@1.58.0/node_modules/mediabunny/dist/modules/src/input-track.js",
+      "sha256": "80d3625a4b19784fe0cacb07e984bf95892e8a91e845033b19dc5e1c083c2190"
+    },
+    {
+      "file": "node_modules/.pnpm/mediabunny@1.58.0/node_modules/mediabunny/dist/modules/src/subtitles.js",
+      "sha256": "4131d7d5a16d7d9c1cea4b31eebb13b795928a810bf9106f0ec468e4f6cba2ee"
+    },
+    {
+      "file": "node_modules/.pnpm/mediabunny@1.58.0/node_modules/mediabunny/dist/modules/src/encode.js",
+      "sha256": "1720841c25a557039aa8e9235c619d525ba219cc518d544ea0edb6ffbbd2d73b"
+    },
+    {
+      "file": "node_modules/.pnpm/mediabunny@1.58.0/node_modules/mediabunny/dist/modules/src/wave/wave-demuxer.js",
+      "sha256": "908863c6b29f9d5976b4dd62f287f872bde3c6d807b3f0e1612e66379b37c80e"
+    },
+    {
+      "file": "node_modules/.pnpm/mediabunny@1.58.0/node_modules/mediabunny/dist/modules/src/media-sink.js",
+      "sha256": "a0a7282e3eeeedb65ff9fbfa96411988c9af9ea49debba0c62dea07501575cff"
+    }
+  ],
+  "preparedCORS_SHA256": "5e4b19491204aa6e7f3ba2f7e5f01e85e4557cb8c657805af388ae7d5e16c598",
+  "preparedHeadersSHA256": "b5146ed9958e333e9945fa1aa5df8b864784a7790d8c883151c9fb547339624f",
+  "syntheticOnly": true,
+  "qualified": false,
+  "distributionApproved": false,
+  "providerCalls": 0,
+  "liveDeploymentExecuted": false,
+  "publicDomainTLSVerified": false,
+  "headersAppliedBy": "Isolated loopback static server interprets prepared _headers; actual Cloudflare deployment remains unexecuted.",
+  "privateFixtureDigest": "a4439dd8607684d920bf329cca3eea0ff8089e7ec49419ab7237a64d18aa80b4",
+  "checks": [
+    {
+      "kind": "cross-origin-actual-range-adapter",
+      "mode": "correct",
+      "result": {
+        "size": 1833655,
+        "bytes": [
+          0,
+          0,
+          0,
+          32,
+          102,
+          116,
+          121,
+          112,
+          105,
+          115,
+          111,
+          109,
+          0,
+          0,
+          2,
+          0,
+          105,
+          115,
+          111,
+          109,
+          105,
+          115,
+          111,
+          50,
+          97,
+          118,
+          99,
+          49,
+          109,
+          112,
+          52,
+          49
+        ],
+        "measurements": {
+          "reads": 1,
+          "bytesRead": 32,
+          "largestReadBytes": 32,
+          "sizeBytes": 1833655
+        }
+      }
+    },
+    {
+      "kind": "cross-origin-actual-range-adapter",
+      "mode": "hidden",
+      "result": {
+        "error": "CLIP_SOURCE_RANGE_INVALID"
+      }
+    },
+    {
+      "kind": "cross-origin-actual-range-adapter",
+      "mode": "wrong-offset",
+      "result": {
+        "error": "CLIP_SOURCE_RANGE_INVALID"
+      }
+    },
+    {
+      "kind": "cross-origin-actual-range-adapter",
+      "mode": "whole",
+      "result": {
+        "error": "CLIP_SOURCE_RANGE_UNSUPPORTED"
+      }
+    },
+    {
+      "kind": "actual-configured-policy-matrix",
+      "mapping": {
+        "loopbackOrigin": "https://127.0.0.1:59487",
+        "configuredOrigin": "https://postpilot.<domain>",
+        "foreignOriginsUnmapped": true
+      },
+      "policies": [
+        {
+          "policy": "correct",
+          "acceptedForRelease": true,
+          "issues": [],
+          "preflightStatus": 204,
+          "rangeResult": {
+            "size": 1833655,
+            "bytes": [
+              0,
+              0,
+              0,
+              32,
+              102,
+              116,
+              121,
+              112,
+              105,
+              115,
+              111,
+              109,
+              0,
+              0,
+              2,
+              0,
+              105,
+              115,
+              111,
+              109,
+              105,
+              115,
+              111,
+              50,
+              97,
+              118,
+              99,
+              49,
+              109,
+              112,
+              52,
+              49
+            ],
+            "measurements": {
+              "reads": 1,
+              "bytesRead": 32,
+              "largestReadBytes": 32,
+              "sizeBytes": 1833655
+            }
+          }
+        },
+        {
+          "policy": "wildcard",
+          "acceptedForRelease": false,
+          "issues": [
+            "wildcard_origin",
+            "configured_origin_missing",
+            "required_method_missing",
+            "required_header_missing",
+            "required_exposed_header_missing"
+          ],
+          "preflightStatus": 204,
+          "rangeResult": {
+            "size": 1833655,
+            "bytes": [
+              0,
+              0,
+              0,
+              32,
+              102,
+              116,
+              121,
+              112,
+              105,
+              115,
+              111,
+              109,
+              0,
+              0,
+              2,
+              0,
+              105,
+              115,
+              111,
+              109,
+              105,
+              115,
+              111,
+              50,
+              97,
+              118,
+              99,
+              49,
+              109,
+              112,
+              52,
+              49
+            ],
+            "measurements": {
+              "reads": 1,
+              "bytesRead": 32,
+              "largestReadBytes": 32,
+              "sizeBytes": 1833655
+            }
+          }
+        },
+        {
+          "policy": "foreignOnly",
+          "acceptedForRelease": false,
+          "issues": [
+            "configured_origin_missing",
+            "required_method_missing",
+            "required_header_missing",
+            "required_exposed_header_missing"
+          ],
+          "preflightStatus": 403,
+          "rangeResult": {
+            "error": "TypeError"
+          }
+        },
+        {
+          "policy": "missingExpose",
+          "acceptedForRelease": false,
+          "issues": [
+            "required_exposed_header_missing"
+          ],
+          "preflightStatus": 204,
+          "rangeResult": {
+            "error": "CLIP_SOURCE_RANGE_INVALID"
+          }
+        },
+        {
+          "policy": "missingGet",
+          "acceptedForRelease": false,
+          "issues": [
+            "required_method_missing"
+          ],
+          "preflightStatus": 403,
+          "rangeResult": {
+            "error": "TypeError"
+          }
+        },
+        {
+          "policy": "missingRangeHeader",
+          "acceptedForRelease": false,
+          "issues": [
+            "required_header_missing"
+          ],
+          "preflightStatus": 403,
+          "rangeResult": {
+            "size": 1833655,
+            "bytes": [
+              0,
+              0,
+              0,
+              32,
+              102,
+              116,
+              121,
+              112,
+              105,
+              115,
+              111,
+              109,
+              0,
+              0,
+              2,
+              0,
+              105,
+              115,
+              111,
+              109,
+              105,
+              115,
+              111,
+              50,
+              97,
+              118,
+              99,
+              49,
+              109,
+              112,
+              52,
+              49
+            ],
+            "measurements": {
+              "reads": 1,
+              "bytesRead": 32,
+              "largestReadBytes": 32,
+              "sizeBytes": 1833655
+            }
+          }
+        }
+      ],
+      "scope": "Wildcard may permit a credentialless browser request, but strict private-origin release validation rejects it; single-range GET is CORS-safelisted while explicit Range preflight validates AllowedHeaders."
+    },
+    {
+      "kind": "origin-scope-negative",
+      "result": {
+        "error": "TypeError"
+      }
+    },
+    {
+      "kind": "actual-built-wasm-compile",
+      "asset": "index_bg-Blvrv-U2.wasm",
+      "result": {
+        "status": 200,
+        "mime": "application/wasm",
+        "sha256": "22bf6e9f9a100d972da0411a69c5ba504367fc1fa87b3b64e3f35e53926d2d70"
+      }
+    },
+    {
+      "kind": "actual-built-module-worker-execution",
+      "asset": "video.worker-C6ShvmUB.js",
+      "result": {
+        "type": "error",
+        "error": "CLIP_SNAPSHOT_EXPORT_PURPOSE_REQUIRED"
+      },
+      "scope": "Known bounded wrong-purpose rejection, not a final-render or performance run."
+    },
+    {
+      "kind": "actual-built-preview-module-worker-execution",
+      "asset": "preview.worker-BfjCv9Hx.js",
+      "result": {
+        "type": "failed",
+        "id": 1,
+        "error": "CLIP_SNAPSHOT_INCOMPATIBLE_VERSION:schema"
+      },
+      "scope": "Known malformed version rejection, separate from actual mounted-frame/codec evidence."
+    },
+    {
+      "kind": "actual-https-emitted-media-notice-source-association",
+      "inventorySourceCommit": "ce298916e78ea8f853f107467a1a1796d19edccc",
+      "files": [
+        {
+          "file": "assets/processing.worker-CGohWWjD.js",
+          "sha256": "667a57e14e67fd3c8b934403413c5d1664ebe0d319d2ae9918ee1568a54d614a",
+          "link": "</licenses/browser-media/index.html>; rel=\"license\", </licenses/browser-media/source-access.json>; rel=\"describedby\"",
+          "mime": "text/javascript"
+        },
+        {
+          "file": "assets/range-audio.worker-D77r8Ui9.js",
+          "sha256": "6e322dd7f941aefd7550e7a7d4c739450f1e432f537a2b1ad4ec9dcb98fdd25d",
+          "link": "</licenses/browser-media/index.html>; rel=\"license\", </licenses/browser-media/source-access.json>; rel=\"describedby\"",
+          "mime": "text/javascript"
+        },
+        {
+          "file": "assets/analysis.worker-DprB9FVt.js",
+          "sha256": "d4bdaa0ba86d90739616a792718c33698a0bb8a395be61c99d47a05eebf5515a",
+          "link": "</licenses/browser-media/index.html>; rel=\"license\", </licenses/browser-media/source-access.json>; rel=\"describedby\"",
+          "mime": "text/javascript"
+        },
+        {
+          "file": "assets/preview.worker-BfjCv9Hx.js",
+          "sha256": "494b243f380b414d76e9678363b3f467920bcf7750f8817075fb111921881459",
+          "link": "</licenses/browser-media/index.html>; rel=\"license\", </licenses/browser-media/source-access.json>; rel=\"describedby\"",
+          "mime": "text/javascript"
+        },
+        {
+          "file": "assets/video.worker-C6ShvmUB.js",
+          "sha256": "dd07f02a9b47f5bafd7af24e0660bdd029ffb7349e012181c0a851020cbea7a5",
+          "link": "</licenses/browser-media/index.html>; rel=\"license\", </licenses/browser-media/source-access.json>; rel=\"describedby\"",
+          "mime": "text/javascript"
+        },
+        {
+          "file": "assets/browserAll-BxJrA7ld.js",
+          "sha256": "b8a54174a3125ef61133ba00e1e2a7afa0b6b81e65698a340e690d4b06483d3f",
+          "link": "</licenses/browser-media/index.html>; rel=\"license\", </licenses/browser-media/source-access.json>; rel=\"describedby\"",
+          "mime": "text/javascript"
+        },
+        {
+          "file": "assets/clip-CdIrDRpe.js",
+          "sha256": "33db9231cb709ff1a22312bcaf1722163327d5b5f6b55a2c9fc86bdbbb747ea0",
+          "link": "</licenses/browser-media/index.html>; rel=\"license\", </licenses/browser-media/source-access.json>; rel=\"describedby\"",
+          "mime": "text/javascript"
+        },
+        {
+          "file": "assets/init-DDUMoYKO.js",
+          "sha256": "b6529bffb9dda346002f37816ac0d96656d38514cb7f859ec236341799755def",
+          "link": "</licenses/browser-media/index.html>; rel=\"license\", </licenses/browser-media/source-access.json>; rel=\"describedby\"",
+          "mime": "text/javascript"
+        },
+        {
+          "file": "assets/src-lvwRYlX2.js",
+          "sha256": "ad8ff995bf33197cceb3f28293d253efa97f683197fc4d94201f2dcd87c6e80a",
+          "link": "</licenses/browser-media/index.html>; rel=\"license\", </licenses/browser-media/source-access.json>; rel=\"describedby\"",
+          "mime": "text/javascript"
+        },
+        {
+          "file": "assets/webworkerAll-CHEN1kkJ.js",
+          "sha256": "fb4de24c64043e4bd47c6830968084fdc1570d15a426c575f51c3f26e4cff938",
+          "link": "</licenses/browser-media/index.html>; rel=\"license\", </licenses/browser-media/source-access.json>; rel=\"describedby\"",
+          "mime": "text/javascript"
+        },
+        {
+          "file": "assets/index_bg-Blvrv-U2.wasm",
+          "sha256": "22bf6e9f9a100d972da0411a69c5ba504367fc1fa87b3b64e3f35e53926d2d70",
+          "link": "</licenses/browser-media/index.html>; rel=\"license\", </licenses/browser-media/source-access.json>; rel=\"describedby\"",
+          "mime": "application/wasm"
+        }
+      ]
+    },
+    {
+      "kind": "actual-https-font-bytes-and-FontFace-load",
+      "fonts": [
+        {
+          "file": "PostpilotWantedInk-400.ttf",
+          "bytes": 2778592,
+          "sha256": "7a38e0fdf56a7a2cad934393751e3f12dcaf81067bddec4e87f4dd787037aae6",
+          "status": "loaded"
+        },
+        {
+          "file": "PostpilotWantedInk-600.ttf",
+          "bytes": 2774092,
+          "sha256": "567d4c7d67baa092e74f6c982dcc76b340f10c9d1f78eff6d60897d083e703a0",
+          "status": "loaded"
+        },
+        {
+          "file": "PostpilotWantedInk-700.ttf",
+          "bytes": 2809620,
+          "sha256": "0ca0e18d8409fc34520d6fb872d381bc563049ca9d75272ee6b9fab8ef4e63b0",
+          "status": "loaded"
+        },
+        {
+          "file": "PostpilotWantedInk-800.ttf",
+          "bytes": 2842088,
+          "sha256": "9b3b38d8892521e4da5b24290cecf4be35da946f1905364f69fe4695ffabddd8",
+          "status": "loaded"
+        },
+        {
+          "file": "Paperlogy-8ExtraBold.ttf",
+          "bytes": 1304560,
+          "sha256": "fb0324f8ac057e50f4f4632331617e347bfe5a04184f7b0db514be682fb6b25c",
+          "status": "loaded"
+        },
+        {
+          "file": "Jua-Regular.ttf",
+          "bytes": 2119352,
+          "sha256": "769677aef240bfc3b9965f2b50748075bff885e6c6992fc591a3fb268279f898",
+          "status": "loaded"
+        },
+        {
+          "file": "NanumMyeongjo-Regular.ttf",
+          "bytes": 3058408,
+          "sha256": "7ed9e8653a8ed04285d51dc343ffea6eb3d9c73afc27383ea8929ee4ffd03205",
+          "status": "loaded"
+        },
+        {
+          "file": "NanumMyeongjo-ExtraBold.ttf",
+          "bytes": 3180888,
+          "sha256": "60c0077fce069ba90ae97c0a3679f6eb3712e0ca637bdd0c15b72d335ec46db7",
+          "status": "loaded"
+        }
+      ],
+      "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+    },
+    {
+      "kind": "actual-https-notice-and-source-manifest-access",
+      "files": [
+        {
+          "file": "index.html",
+          "bytes": 5035,
+          "sha256": "c99bd0dc94052c136bfa928afddde62d5d7c32bc5a331c43b4098578425d9386"
+        },
+        {
+          "file": "source-access.json",
+          "bytes": 13548,
+          "sha256": "f5c11421641864342ae65aa6ca3b480eef5333856b180ca7913d331b46aaad12"
+        },
+        {
+          "file": "THIRD-PARTY.txt",
+          "bytes": 54313,
+          "sha256": "4c790d7d8f88b0996eef6f1aca1cb7a7d667151d1db2856e375bccaf39909b9a"
+        },
+        {
+          "file": "pixi-colord2.9.6-LICENSE",
+          "bytes": 1083,
+          "sha256": "7613d4594ee8b6163926af3435dae61c9e3d5a27cd137bd76a543ba40002d8fc"
+        },
+        {
+          "file": "resvg-resvg-wasm2.6.2-LICENSE",
+          "bytes": 16724,
+          "sha256": "4b89d4518bd135ab4ee154a7bce722246b57a98c3d7efc1a09409898160c2bd1"
+        },
+        {
+          "file": "soundtouchjs-core2.1.1-LICENSE",
+          "bytes": 284,
+          "sha256": "753801acf995db0807e9dab615775310b1f74696e7776ee246bf9b31714cdaf9"
+        },
+        {
+          "file": "soundtouchjs-interpolation-strategy-lanczos2.1.1-LICENSE",
+          "bytes": 284,
+          "sha256": "753801acf995db0807e9dab615775310b1f74696e7776ee246bf9b31714cdaf9"
+        },
+        {
+          "file": "types-dom-mediacapture-transform0.1.12-LICENSE",
+          "bytes": 1141,
+          "sha256": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383"
+        },
+        {
+          "file": "types-dom-webcodecs0.1.13-LICENSE",
+          "bytes": 1141,
+          "sha256": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383"
+        },
+        {
+          "file": "types-earcut3.0.0-LICENSE",
+          "bytes": 1141,
+          "sha256": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383"
+        },
+        {
+          "file": "types-gradient-parser0.1.5-LICENSE",
+          "bytes": 1141,
+          "sha256": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383"
+        },
+        {
+          "file": "webgpu-types0.1.74-LICENSE",
+          "bytes": 1500,
+          "sha256": "ad88400fc55c2871ba2ed33930dc13001ef01907c2ddcbfa3caa8656e9142f05"
+        },
+        {
+          "file": "xmldom-xmldom0.8.15-LICENSE",
+          "bytes": 1298,
+          "sha256": "4da724fc305d81606b245b324d4d2586916b9d248b23d82183df753ace0fdf71"
+        },
+        {
+          "file": "earcut3.2.4-LICENSE",
+          "bytes": 738,
+          "sha256": "0b348fff56384b43dbb37593906904e56d0f9deb51eae590d4dc6d427fbf1808"
+        },
+        {
+          "file": "eventemitter35.0.4-LICENSE",
+          "bytes": 1082,
+          "sha256": "3aecc12b1cb28832b5f65ab64291de96568c3f236a74d646281b4491f7bcadbf"
+        },
+        {
+          "file": "gifuct-js2.1.2-LICENSE",
+          "bytes": 1098,
+          "sha256": "8633cda68d7b47e98e3e563a2833e63792edeecdb24cab02bfb15f25c1b37072"
+        },
+        {
+          "file": "ismobilejs1.1.1-LICENSE",
+          "bytes": 1067,
+          "sha256": "57c43c929cbc20653cb0e62620a413a8bc456888c1874ebc25d08e0122cd953e"
+        },
+        {
+          "file": "js-binary-schema-parser2.0.3-LICENSE",
+          "bytes": 1098,
+          "sha256": "8633cda68d7b47e98e3e563a2833e63792edeecdb24cab02bfb15f25c1b37072"
+        },
+        {
+          "file": "mediabunny1.58.0-LICENSE",
+          "bytes": 16726,
+          "sha256": "3f3d9e0024b1921b067d6f7f88deb4a60cbe7a78e76c64e3f1d7fc3b779b9d04"
+        },
+        {
+          "file": "parse-svg-path0.2.0-LICENSE",
+          "bytes": 1093,
+          "sha256": "2d5ffdfe09268750ba687a149db8392038772e7f156db3a98b615a7de0cab76e"
+        },
+        {
+          "file": "pixi-filters6.1.5-LICENSE",
+          "bytes": 1092,
+          "sha256": "d554721b2cd409d9bc075d743bb34f960e05ba55de1818a62fa60caf21ca6188"
+        },
+        {
+          "file": "pixi.js8.22.0-LICENSE",
+          "bytes": 1092,
+          "sha256": "5ce7447bc57f7349ffc48338782fbcabe613696e00712b20d66bc58e780f9473"
+        },
+        {
+          "file": "tiny-lru11.4.7-LICENSE",
+          "bytes": 1480,
+          "sha256": "8106f20bacca3558946439afb5e4854333f0a9944eee1c60488aa7ac7fc8f52b"
+        }
+      ],
+      "sourceAccessVerified": false,
+      "binaryDependencyGraphVerified": false
+    },
+    {
+      "kind": "actual-https-original-OFL-and-ink-notice-bodies",
+      "files": [
+        {
+          "file": "LICENSE",
+          "bytes": 4394,
+          "sha256": "db345ad0216d0b73ba5dd3a540507281da6695f234e0a4e70cf2e1a8f30d4331"
+        },
+        {
+          "file": "LICENSE-Paperlogy",
+          "bytes": 4379,
+          "sha256": "a5a9b6832b5d91b5389e258b82f788791493fb786979eb80b5e142b5664ba22a"
+        },
+        {
+          "file": "LICENSE-Jua",
+          "bytes": 4342,
+          "sha256": "44a7c6e4c5572392ae122d3b1d8c6ba6fd640a7797e675384585d947f2773e3c"
+        },
+        {
+          "file": "LICENSE-NanumMyeongjo",
+          "bytes": 4497,
+          "sha256": "8eb1c1019fe7fe6d0b6e7d7bbbba1d9cbdd969d8c5f26455708f6cfb8a77284c"
+        },
+        {
+          "file": "INK-NOTICE.txt",
+          "bytes": 1391,
+          "sha256": "cbe15fed5303860cc562798ae90aedc7a44c4f25c89543a53ae9ff53311e8b6a"
+        }
+      ]
+    }
+  ],
+  "passed": true,
+  "browser": "154.0.8037.98",
+  "node": "v24.18.0",
+  "secureContext": {
+    "secureContext": true,
+    "opfs": true,
+    "videoEncoder": true,
+    "offscreenCanvas": true
+  },
+  "previewProtocolResult": {
+    "type": "failed",
+    "id": 1,
+    "error": "CLIP_SNAPSHOT_INCOMPATIBLE_VERSION:schema"
+  },
+  "requests": [
+    {
+      "mode": "correct",
+      "method": "GET",
+      "originAllowed": true,
+      "rangeHeader": "bytes=0-0",
+      "start": 0,
+      "end": 0,
+      "totalBytes": 1833655
+    },
+    {
+      "mode": "correct",
+      "method": "GET",
+      "originAllowed": true,
+      "rangeHeader": "bytes=0-31",
+      "start": 0,
+      "end": 31,
+      "totalBytes": 1833655
+    },
+    {
+      "mode": "hidden",
+      "method": "GET",
+      "originAllowed": true,
+      "rangeHeader": "bytes=0-0",
+      "start": 0,
+      "end": 0,
+      "totalBytes": 1833655
+    },
+    {
+      "mode": "wrong-offset",
+      "method": "GET",
+      "originAllowed": true,
+      "rangeHeader": "bytes=0-0",
+      "start": 0,
+      "end": 0,
+      "totalBytes": 1833655
+    },
+    {
+      "mode": "whole",
+      "method": "GET",
+      "originAllowed": true,
+      "rangeHeader": "bytes=0-0",
+      "start": 0,
+      "end": 0,
+      "totalBytes": 1833655
+    },
+    {
+      "mode": "correct",
+      "method": "GET",
+      "originAllowed": true,
+      "rangeHeader": "bytes=0-0",
+      "start": 0,
+      "end": 0,
+      "totalBytes": 1833655
+    },
+    {
+      "mode": "correct",
+      "method": "GET",
+      "originAllowed": true,
+      "rangeHeader": "bytes=0-31",
+      "start": 0,
+      "end": 31,
+      "totalBytes": 1833655
+    },
+    {
+      "mode": "correct",
+      "method": "GET",
+      "originAllowed": true,
+      "rangeHeader": "bytes=0-0",
+      "start": 0,
+      "end": 0,
+      "totalBytes": 1833655
+    },
+    {
+      "mode": "correct",
+      "method": "GET",
+      "originAllowed": true,
+      "rangeHeader": "bytes=0-31",
+      "start": 0,
+      "end": 31,
+      "totalBytes": 1833655
+    },
+    {
+      "mode": "correct",
+      "method": "GET",
+      "originAllowed": false,
+      "rangeHeader": "bytes=0-0",
+      "start": 0,
+      "end": 0,
+      "totalBytes": 1833655
+    },
+    {
+      "mode": "correct",
+      "method": "GET",
+      "originAllowed": true,
+      "rangeHeader": "bytes=0-0",
+      "start": 0,
+      "end": 0,
+      "totalBytes": 1833655
+    },
+    {
+      "mode": "correct",
+      "method": "GET",
+      "originAllowed": false,
+      "rangeHeader": "bytes=0-0",
+      "start": 0,
+      "end": 0,
+      "totalBytes": 1833655
+    },
+    {
+      "mode": "correct",
+      "method": "GET",
+      "originAllowed": true,
+      "rangeHeader": "bytes=0-0",
+      "start": 0,
+      "end": 0,
+      "totalBytes": 1833655
+    },
+    {
+      "mode": "correct",
+      "method": "GET",
+      "originAllowed": true,
+      "rangeHeader": "bytes=0-31",
+      "start": 0,
+      "end": 31,
+      "totalBytes": 1833655
+    },
+    {
+      "mode": "correct",
+      "method": "GET",
+      "originAllowed": false,
+      "rangeHeader": "bytes=0-0",
+      "start": 0,
+      "end": 0,
+      "totalBytes": 1833655
+    }
+  ],
+  "staticBodies": [
+    {
+      "path": "/__probe__/range-adapter.js",
+      "bytes": 36716,
+      "sha256": "8c08e2bb023473cb43f4574120c50034bf3e69930b7534aa87b79cc0a6d83b57"
+    },
+    {
+      "path": "/favicon.ico",
+      "bytes": 4202,
+      "sha256": "621c5c3d222749dc0193b3961ede6d736adabbe6af61c30a633a883c09ef5249"
+    },
+    {
+      "path": "/__probe__/range-adapter.js",
+      "bytes": 36716,
+      "sha256": "8c08e2bb023473cb43f4574120c50034bf3e69930b7534aa87b79cc0a6d83b57"
+    },
+    {
+      "path": "/favicon.ico",
+      "bytes": 4202,
+      "sha256": "621c5c3d222749dc0193b3961ede6d736adabbe6af61c30a633a883c09ef5249"
+    },
+    {
+      "path": "/assets/index_bg-Blvrv-U2.wasm",
+      "bytes": 2478606,
+      "sha256": "22bf6e9f9a100d972da0411a69c5ba504367fc1fa87b3b64e3f35e53926d2d70"
+    },
+    {
+      "path": "/assets/video.worker-C6ShvmUB.js",
+      "bytes": 746134,
+      "sha256": "dd07f02a9b47f5bafd7af24e0660bdd029ffb7349e012181c0a851020cbea7a5"
+    },
+    {
+      "path": "/assets/preview.worker-BfjCv9Hx.js",
+      "bytes": 740882,
+      "sha256": "494b243f380b414d76e9678363b3f467920bcf7750f8817075fb111921881459"
+    },
+    {
+      "path": "/assets/processing.worker-CGohWWjD.js",
+      "bytes": 20144,
+      "sha256": "667a57e14e67fd3c8b934403413c5d1664ebe0d319d2ae9918ee1568a54d614a"
+    },
+    {
+      "path": "/assets/range-audio.worker-D77r8Ui9.js",
+      "bytes": 217847,
+      "sha256": "6e322dd7f941aefd7550e7a7d4c739450f1e432f537a2b1ad4ec9dcb98fdd25d"
+    },
+    {
+      "path": "/assets/analysis.worker-DprB9FVt.js",
+      "bytes": 456284,
+      "sha256": "d4bdaa0ba86d90739616a792718c33698a0bb8a395be61c99d47a05eebf5515a"
+    },
+    {
+      "path": "/assets/preview.worker-BfjCv9Hx.js",
+      "bytes": 740882,
+      "sha256": "494b243f380b414d76e9678363b3f467920bcf7750f8817075fb111921881459"
+    },
+    {
+      "path": "/assets/video.worker-C6ShvmUB.js",
+      "bytes": 746134,
+      "sha256": "dd07f02a9b47f5bafd7af24e0660bdd029ffb7349e012181c0a851020cbea7a5"
+    },
+    {
+      "path": "/assets/browserAll-BxJrA7ld.js",
+      "bytes": 43453,
+      "sha256": "b8a54174a3125ef61133ba00e1e2a7afa0b6b81e65698a340e690d4b06483d3f"
+    },
+    {
+      "path": "/assets/clip-CdIrDRpe.js",
+      "bytes": 637652,
+      "sha256": "33db9231cb709ff1a22312bcaf1722163327d5b5f6b55a2c9fc86bdbbb747ea0"
+    },
+    {
+      "path": "/assets/init-DDUMoYKO.js",
+      "bytes": 45352,
+      "sha256": "b6529bffb9dda346002f37816ac0d96656d38514cb7f859ec236341799755def"
+    },
+    {
+      "path": "/assets/src-lvwRYlX2.js",
+      "bytes": 251716,
+      "sha256": "ad8ff995bf33197cceb3f28293d253efa97f683197fc4d94201f2dcd87c6e80a"
+    },
+    {
+      "path": "/assets/webworkerAll-CHEN1kkJ.js",
+      "bytes": 54,
+      "sha256": "fb4de24c64043e4bd47c6830968084fdc1570d15a426c575f51c3f26e4cff938"
+    },
+    {
+      "path": "/assets/index_bg-Blvrv-U2.wasm",
+      "bytes": 2478606,
+      "sha256": "22bf6e9f9a100d972da0411a69c5ba504367fc1fa87b3b64e3f35e53926d2d70"
+    },
+    {
+      "path": "/fonts/clip/PostpilotWantedInk-400.ttf",
+      "bytes": 2778592,
+      "sha256": "7a38e0fdf56a7a2cad934393751e3f12dcaf81067bddec4e87f4dd787037aae6"
+    },
+    {
+      "path": "/fonts/clip/PostpilotWantedInk-600.ttf",
+      "bytes": 2774092,
+      "sha256": "567d4c7d67baa092e74f6c982dcc76b340f10c9d1f78eff6d60897d083e703a0"
+    },
+    {
+      "path": "/fonts/clip/PostpilotWantedInk-700.ttf",
+      "bytes": 2809620,
+      "sha256": "0ca0e18d8409fc34520d6fb872d381bc563049ca9d75272ee6b9fab8ef4e63b0"
+    },
+    {
+      "path": "/fonts/clip/PostpilotWantedInk-800.ttf",
+      "bytes": 2842088,
+      "sha256": "9b3b38d8892521e4da5b24290cecf4be35da946f1905364f69fe4695ffabddd8"
+    },
+    {
+      "path": "/fonts/clip/Paperlogy-8ExtraBold.ttf",
+      "bytes": 1304560,
+      "sha256": "fb0324f8ac057e50f4f4632331617e347bfe5a04184f7b0db514be682fb6b25c"
+    },
+    {
+      "path": "/fonts/clip/Jua-Regular.ttf",
+      "bytes": 2119352,
+      "sha256": "769677aef240bfc3b9965f2b50748075bff885e6c6992fc591a3fb268279f898"
+    },
+    {
+      "path": "/fonts/clip/NanumMyeongjo-Regular.ttf",
+      "bytes": 3058408,
+      "sha256": "7ed9e8653a8ed04285d51dc343ffea6eb3d9c73afc27383ea8929ee4ffd03205"
+    },
+    {
+      "path": "/fonts/clip/NanumMyeongjo-ExtraBold.ttf",
+      "bytes": 3180888,
+      "sha256": "60c0077fce069ba90ae97c0a3679f6eb3712e0ca637bdd0c15b72d335ec46db7"
+    },
+    {
+      "path": "/licenses/browser-media/index.html",
+      "bytes": 5035,
+      "sha256": "c99bd0dc94052c136bfa928afddde62d5d7c32bc5a331c43b4098578425d9386"
+    },
+    {
+      "path": "/licenses/browser-media/source-access.json",
+      "bytes": 13548,
+      "sha256": "f5c11421641864342ae65aa6ca3b480eef5333856b180ca7913d331b46aaad12"
+    },
+    {
+      "path": "/licenses/browser-media/THIRD-PARTY.txt",
+      "bytes": 54313,
+      "sha256": "4c790d7d8f88b0996eef6f1aca1cb7a7d667151d1db2856e375bccaf39909b9a"
+    },
+    {
+      "path": "/licenses/browser-media/pixi-colord2.9.6-LICENSE",
+      "bytes": 1083,
+      "sha256": "7613d4594ee8b6163926af3435dae61c9e3d5a27cd137bd76a543ba40002d8fc"
+    },
+    {
+      "path": "/licenses/browser-media/resvg-resvg-wasm2.6.2-LICENSE",
+      "bytes": 16724,
+      "sha256": "4b89d4518bd135ab4ee154a7bce722246b57a98c3d7efc1a09409898160c2bd1"
+    },
+    {
+      "path": "/licenses/browser-media/soundtouchjs-core2.1.1-LICENSE",
+      "bytes": 284,
+      "sha256": "753801acf995db0807e9dab615775310b1f74696e7776ee246bf9b31714cdaf9"
+    },
+    {
+      "path": "/licenses/browser-media/soundtouchjs-interpolation-strategy-lanczos2.1.1-LICENSE",
+      "bytes": 284,
+      "sha256": "753801acf995db0807e9dab615775310b1f74696e7776ee246bf9b31714cdaf9"
+    },
+    {
+      "path": "/licenses/browser-media/types-dom-mediacapture-transform0.1.12-LICENSE",
+      "bytes": 1141,
+      "sha256": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383"
+    },
+    {
+      "path": "/licenses/browser-media/types-dom-webcodecs0.1.13-LICENSE",
+      "bytes": 1141,
+      "sha256": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383"
+    },
+    {
+      "path": "/licenses/browser-media/types-earcut3.0.0-LICENSE",
+      "bytes": 1141,
+      "sha256": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383"
+    },
+    {
+      "path": "/licenses/browser-media/types-gradient-parser0.1.5-LICENSE",
+      "bytes": 1141,
+      "sha256": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383"
+    },
+    {
+      "path": "/licenses/browser-media/webgpu-types0.1.74-LICENSE",
+      "bytes": 1500,
+      "sha256": "ad88400fc55c2871ba2ed33930dc13001ef01907c2ddcbfa3caa8656e9142f05"
+    },
+    {
+      "path": "/licenses/browser-media/xmldom-xmldom0.8.15-LICENSE",
+      "bytes": 1298,
+      "sha256": "4da724fc305d81606b245b324d4d2586916b9d248b23d82183df753ace0fdf71"
+    },
+    {
+      "path": "/licenses/browser-media/earcut3.2.4-LICENSE",
+      "bytes": 738,
+      "sha256": "0b348fff56384b43dbb37593906904e56d0f9deb51eae590d4dc6d427fbf1808"
+    },
+    {
+      "path": "/licenses/browser-media/eventemitter35.0.4-LICENSE",
+      "bytes": 1082,
+      "sha256": "3aecc12b1cb28832b5f65ab64291de96568c3f236a74d646281b4491f7bcadbf"
+    },
+    {
+      "path": "/licenses/browser-media/gifuct-js2.1.2-LICENSE",
+      "bytes": 1098,
+      "sha256": "8633cda68d7b47e98e3e563a2833e63792edeecdb24cab02bfb15f25c1b37072"
+    },
+    {
+      "path": "/licenses/browser-media/ismobilejs1.1.1-LICENSE",
+      "bytes": 1067,
+      "sha256": "57c43c929cbc20653cb0e62620a413a8bc456888c1874ebc25d08e0122cd953e"
+    },
+    {
+      "path": "/licenses/browser-media/js-binary-schema-parser2.0.3-LICENSE",
+      "bytes": 1098,
+      "sha256": "8633cda68d7b47e98e3e563a2833e63792edeecdb24cab02bfb15f25c1b37072"
+    },
+    {
+      "path": "/licenses/browser-media/mediabunny1.58.0-LICENSE",
+      "bytes": 16726,
+      "sha256": "3f3d9e0024b1921b067d6f7f88deb4a60cbe7a78e76c64e3f1d7fc3b779b9d04"
+    },
+    {
+      "path": "/licenses/browser-media/parse-svg-path0.2.0-LICENSE",
+      "bytes": 1093,
+      "sha256": "2d5ffdfe09268750ba687a149db8392038772e7f156db3a98b615a7de0cab76e"
+    },
+    {
+      "path": "/licenses/browser-media/pixi-filters6.1.5-LICENSE",
+      "bytes": 1092,
+      "sha256": "d554721b2cd409d9bc075d743bb34f960e05ba55de1818a62fa60caf21ca6188"
+    },
+    {
+      "path": "/licenses/browser-media/pixi.js8.22.0-LICENSE",
+      "bytes": 1092,
+      "sha256": "5ce7447bc57f7349ffc48338782fbcabe613696e00712b20d66bc58e780f9473"
+    },
+    {
+      "path": "/licenses/browser-media/tiny-lru11.4.7-LICENSE",
+      "bytes": 1480,
+      "sha256": "8106f20bacca3558946439afb5e4854333f0a9944eee1c60488aa7ac7fc8f52b"
+    },
+    {
+      "path": "/fonts/clip/LICENSE",
+      "bytes": 4394,
+      "sha256": "db345ad0216d0b73ba5dd3a540507281da6695f234e0a4e70cf2e1a8f30d4331"
+    },
+    {
+      "path": "/fonts/clip/LICENSE-Paperlogy",
+      "bytes": 4379,
+      "sha256": "a5a9b6832b5d91b5389e258b82f788791493fb786979eb80b5e142b5664ba22a"
+    },
+    {
+      "path": "/fonts/clip/LICENSE-Jua",
+      "bytes": 4342,
+      "sha256": "44a7c6e4c5572392ae122d3b1d8c6ba6fd640a7797e675384585d947f2773e3c"
+    },
+    {
+      "path": "/fonts/clip/LICENSE-NanumMyeongjo",
+      "bytes": 4497,
+      "sha256": "8eb1c1019fe7fe6d0b6e7d7bbbba1d9cbdd969d8c5f26455708f6cfb8a77284c"
+    },
+    {
+      "path": "/fonts/clip/INK-NOTICE.txt",
+      "bytes": 1391,
+      "sha256": "cbe15fed5303860cc562798ae90aedc7a44c4f25c89543a53ae9ff53311e8b6a"
+    }
+  ],
+  "limits": [
+    "Loopback self-signed HTTPS with browser ignoreHTTPSErrors does not certify a public domain or live Cloudflare/R2 configuration.",
+    "The production module Worker proves built URL/execution and wrong-purpose refusal only; previously source-bound media runs remain separate.",
+    "Hardware acceleration, semantic preservation, real voice and human output review remain unqualified.",
+    "The original npm WASM complete Rust source/license graph remains unresolved."
+  ]
+}

@@ -1,0 +1,16 @@
+# Fingerprinted Vite JS, module Workers and WASM keep their content identity.
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+  X-Content-Type-Options: nosniff
+  Link: </licenses/browser-media/index.html>; rel="license", </licenses/browser-media/source-access.json>; rel="describedby"
+
+/assets/*.wasm
+  Content-Type: application/wasm
+
+# Font filenames are stable; the manifest checks exact versioned bytes.
+/fonts/clip/*
+  Cache-Control: public, max-age=0, must-revalidate
+  X-Content-Type-Options: nosniff
+
+/licenses/*
+  Cache-Control: public, max-age=0, must-revalidate
