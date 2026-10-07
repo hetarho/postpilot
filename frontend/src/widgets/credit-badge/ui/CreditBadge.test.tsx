@@ -1,10 +1,23 @@
-import { describe, expect, it } from 'vitest'
-import { screen, within } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { cleanup, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ProtoPlan } from '@/shared/api'
 import { renderAppAt } from '@/test/app'
 
 const USER = { id: 'alice' }
+
+// These tests own the desktop header badge; phone balances live in the account panel.
+beforeEach(() => {
+  const matchMedia = window.matchMedia
+  vi.spyOn(window, 'matchMedia').mockImplementation((query) => ({
+    ...matchMedia(query),
+    matches: /\(min-width:\s*(?:40|48|64)rem\)/.test(query) || matchMedia(query).matches,
+  }))
+})
+afterEach(() => {
+  cleanup()
+  vi.restoreAllMocks()
+})
 
 describe('CreditBadge', () => {
   // QUOTA-27: the balance used to be two taps deep and `/plans` had no other entry, so the
