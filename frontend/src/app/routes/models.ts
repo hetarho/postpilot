@@ -59,7 +59,7 @@ export const modelExperimentRoute = createRoute({
 export function legacyModelComparisonSearchSchema(raw: Record<string, unknown>): WritingTestSearch {
   return writingTestSearchSchema({
     ...raw,
-    factor: raw.stage === 'voice' ? 'voice' : 'model',
+    factor: raw.stage === 'voice' || raw.factor === 'voice' ? 'voice' : 'model',
     stage: raw.stage === 'observe' ? 'observe' : 'write',
     count: 2,
   })

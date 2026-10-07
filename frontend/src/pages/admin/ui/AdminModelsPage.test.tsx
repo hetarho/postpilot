@@ -6,6 +6,7 @@ import { renderAppAt } from '@/test/app'
 import { chooseOption } from '@/test/listbox'
 
 const MASTER = { id: 'root', plan: ProtoPlan.MASTER }
+const modelCatalogView = () => within(screen.getByRole('main'))
 
 /** A catalog with one model from each of three vendors: two featured (openai, anthropic) and one
  *  that is not, so the ordering rule is observable. */
@@ -31,7 +32,9 @@ const CATALOG = [
 ]
 
 function modelNames() {
-  return screen.getAllByRole('listitem').map((row) => within(row).getByText(/\//).textContent ?? '')
+  return modelCatalogView()
+    .getAllByRole('listitem')
+    .map((row) => within(row).getByText(/\//).textContent ?? '')
 }
 
 describe('the model catalog tab', () => {
@@ -43,7 +46,7 @@ describe('the model catalog tab', () => {
 
     await screen.findByRole('heading', { name: '모델 관리' })
     await user.click(await screen.findByRole('tab', { name: '글 작성' }))
-    await waitFor(() => expect(screen.getAllByRole('listitem')).toHaveLength(4))
+    await waitFor(() => expect(modelCatalogView().getAllByRole('listitem')).toHaveLength(4))
     expect(modelNames()).toEqual([
       'openai/gpt-new',
       'openai/gpt-old',
@@ -61,18 +64,18 @@ describe('the model catalog tab', () => {
 
     // The photo-analysis tab is first: only the two vision models are even listed.
     await screen.findByRole('heading', { name: '모델 관리' })
-    await waitFor(() => expect(screen.getAllByRole('listitem')).toHaveLength(2))
+    await waitFor(() => expect(modelCatalogView().getAllByRole('listitem')).toHaveLength(2))
     expect(modelNames()).toEqual(['openai/gpt-old', 'anthropic/claude-x'])
 
-    const row = screen.getAllByRole('listitem')[0]
+    const row = modelCatalogView().getAllByRole('listitem')[0]
     await user.click(within(row).getByRole('checkbox', { name: '이 용도에 사용' }))
     expect(calls).toContain('SetModelPurpose:photo-analysis:register:openai/gpt-old')
 
     // The same model on the writing tab: listed (no gate), but the box reflects THAT purpose,
     // which was never registered.
     await user.click(screen.getByRole('tab', { name: '글 작성' }))
-    await waitFor(() => expect(screen.getAllByRole('listitem')).toHaveLength(4))
-    const writingRow = screen
+    await waitFor(() => expect(modelCatalogView().getAllByRole('listitem')).toHaveLength(4))
+    const writingRow = modelCatalogView()
       .getAllByRole('listitem')
       .find((item) => within(item).queryByText('openai/gpt-old'))
     expect(writingRow).toBeDefined()
@@ -103,7 +106,7 @@ describe('the model catalog tab', () => {
     })
 
     // The photo-analysis tab is first; the entry fails its gate but is registered to it.
-    const row = await screen.findByRole('listitem')
+    const row = await within(await screen.findByRole('main')).findByRole('listitem')
     expect(within(row).getByRole('checkbox', { name: '이 용도에 사용' })).toBeChecked()
   })
 
@@ -136,7 +139,7 @@ describe('the model catalog tab', () => {
 
     await screen.findByRole('heading', { name: '모델 관리' })
     await user.click(await screen.findByRole('tab', { name: '비디오 생성' }))
-    const row = await screen.findByRole('listitem')
+    const row = await within(await screen.findByRole('main')).findByRole('listitem')
     expect(within(row).getByText('google/veo-x')).toBeInTheDocument()
     expect(within(row).getByText('비디오 생성')).toBeInTheDocument()
     // No token price is published for a video model, and $0 would read as free.
@@ -161,12 +164,14 @@ describe('the model catalog tab', () => {
     // The count line reports the whole catalog, so the list is complete even though the DOM
     // holds a fraction of it.
     expect(await screen.findByText('400개 중 400개를 보여 주고 있어요.')).toBeInTheDocument()
-    await waitFor(() => expect(screen.getAllByRole('listitem').length).toBeGreaterThan(0))
-    expect(screen.getAllByRole('listitem').length).toBeLessThan(60)
+    await waitFor(() =>
+      expect(modelCatalogView().getAllByRole('listitem').length).toBeGreaterThan(0),
+    )
+    expect(modelCatalogView().getAllByRole('listitem').length).toBeLessThan(60)
 
     // Filtering reaches models that were never mounted.
     await user.type(screen.getByRole('searchbox', { name: '검색' }), 'model-399')
-    await waitFor(() => expect(screen.getAllByRole('listitem')).toHaveLength(1))
+    await waitFor(() => expect(modelCatalogView().getAllByRole('listitem')).toHaveLength(1))
     expect(screen.getByText('vendor39/model-399')).toBeInTheDocument()
   })
 
@@ -178,7 +183,7 @@ describe('the model catalog tab', () => {
 
     await screen.findByRole('heading', { name: '모델 관리' })
     await user.click(await screen.findByRole('tab', { name: '글 작성' }))
-    await waitFor(() => expect(screen.getAllByRole('listitem')).toHaveLength(4))
+    await waitFor(() => expect(modelCatalogView().getAllByRole('listitem')).toHaveLength(4))
     const before = calls.filter((call) => call.startsWith('ListCatalog')).length
 
     await user.type(screen.getByRole('searchbox', { name: '검색' }), 'gpt')
@@ -364,7 +369,7 @@ describe('the model catalog tab', () => {
     )
     // The cross-purpose registration is still visible without switching tabs — read off the
     // row itself, not off the tab strip that also carries the purpose's name.
-    const row = screen.getByRole('listitem')
+    const row = modelCatalogView().getByRole('listitem')
     expect(within(row).getByText(/사진 해석/)).toBeInTheDocument()
   })
 
@@ -388,7 +393,7 @@ describe('the model catalog tab', () => {
       },
     })
 
-    const row = await screen.findByRole('listitem')
+    const row = await within(await screen.findByRole('main')).findByRole('listitem')
     expect(within(row).queryByText('제공 종료')).not.toBeInTheDocument()
     expect(screen.queryByText(/더 이상 제공하지 않아요/)).not.toBeInTheDocument()
   })
@@ -429,7 +434,7 @@ describe('the model catalog tab', () => {
 
     await screen.findByRole('heading', { name: '모델 관리' })
     await user.click(await screen.findByRole('tab', { name: '글 작성' }))
-    await waitFor(() => expect(screen.getAllByRole('listitem')).toHaveLength(4))
+    await waitFor(() => expect(modelCatalogView().getAllByRole('listitem')).toHaveLength(4))
     // Default: featured vendor first, newest first within it, then the rest.
     expect(modelNames()).toEqual(['openai/dear', 'openai/cheap', 'nobody/video', 'nobody/mid'])
 
@@ -470,7 +475,7 @@ describe('the model catalog tab', () => {
     expect(
       await screen.findByText(/제공사의 모델 목록을 읽지 못해서, 이미 등록해 둔 모델만/),
     ).toBeInTheDocument()
-    expect(await screen.findByRole('listitem')).toBeInTheDocument()
+    expect(await within(await screen.findByRole('main')).findByRole('listitem')).toBeInTheDocument()
   })
 
   // The refresh is the one action that bypasses the server's cache, so it must ask with the flag.
@@ -543,7 +548,7 @@ describe('the model catalog tab', () => {
     })
 
     await user.click(await screen.findByRole('tab', { name: '글 작성' }))
-    const rows = await screen.findAllByRole('listitem')
+    const rows = await within(await screen.findByRole('main')).findAllByRole('listitem')
     const mandatory = rows.find((row) => within(row).queryByText(/gemini/) !== null)
     const listless = rows.find((row) => within(row).queryByText(/no-list/) !== null)
     if (!mandatory || !listless) throw new Error('a row is missing')
@@ -614,7 +619,7 @@ describe('the model catalog tab', () => {
     })
 
     await user.click(await screen.findByRole('tab', { name: '글 작성' }))
-    const row = within((await screen.findAllByRole('listitem'))[0])
+    const row = within((await within(await screen.findByRole('main')).findAllByRole('listitem'))[0])
     expect(row.getByRole('checkbox', { name: '이 용도에 사용' })).toBeChecked()
     expect(row.queryByRole('combobox', { name: /추론 강도/ })).not.toBeInTheDocument()
   })

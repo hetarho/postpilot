@@ -1,163 +1,111 @@
 import { act, screen, waitFor, within } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
-import { expect, it } from 'vitest'
+import { beforeEach, expect, it } from 'vitest'
+import { LeaderboardEntrySchema, ProtoPlan, Stage } from '@/shared/api'
 import { create } from '@bufbuild/protobuf'
-import {
-  LeaderboardEntrySchema,
-  LeaderboardScope,
-  LeaderboardWindow,
-  ProtoPlan,
-  Stage,
-} from '@/shared/api'
-import { renderAppAt } from '@/test/app'
 import type { FakeExperimentsOptions } from '@/test/experiments'
+import { paidActions, renderLegacyModelRoute } from '@/test/legacy-model-routes'
 
-function readsCollector() {
-  const reads: NonNullable<FakeExperimentsOptions['reads']> = []
-  return reads
-}
+beforeEach(() => sessionStorage.clear())
 
-it('offers common tests and retained paid history to a master without restoring Elo evidence or supplier cost', async () => {
-  const calls: string[] = []
-  renderAppAt('/ai-models/leaderboard?scope=all', {
-    user: { id: 'root', plan: ProtoPlan.MASTER },
-    plans: { plan: ProtoPlan.MASTER },
-    experiments: {
-      calls,
-      leaderboardEntries: [
-        create(LeaderboardEntrySchema, {
-          rank: 1,
-          model: { providerId: 'p', modelId: 'model' },
-          modelLabel: 'Model',
-          rating: 1516,
-          matches: 1,
-          wins: 1,
-          evaluatedComparisons: 1,
-          successfulCalls: 1,
-          promptTokens: 10n,
-          completionTokens: 20n,
-        }),
-      ],
+it('resolves master/global rank links to read-only paid history without Elo or supplier costs', async () => {
+  const { router, procedures } = renderLegacyModelRoute(
+    '/ai-models/leaderboard?scope=all&window=day&stage=write',
+    {
+      user: { id: 'root', plan: ProtoPlan.MASTER },
+      experiments: {
+        leaderboardEntries: [
+          create(LeaderboardEntrySchema, {
+            rank: 1,
+            modelLabel: 'Model',
+            rating: 1516,
+            promptTokens: 10n,
+            completionTokens: 20n,
+          }),
+        ],
+        history: [{ id: 'paid', stage: Stage.WRITE, postSlug: 'source' }],
+      },
     },
-  })
-  expect(await screen.findByRole('link', { name: '글쓰기 테스트 시작하기' })).toHaveAttribute(
-    'href',
-    '/tests',
   )
-  expect(screen.getByRole('link', { name: '글쓰기 테스트 기록' })).toHaveAttribute(
-    'href',
-    '/tests/history',
-  )
-  expect(screen.queryByText(/Elo 1516|1회 평가 · 상대별/)).not.toBeInTheDocument()
-  expect(screen.queryByRole('button', { name: /순위|승자|비교 시작/ })).not.toBeInTheDocument()
-  expect(screen.queryByText(/\$/)).not.toBeInTheDocument()
-  expect(calls.filter((call) => !call.startsWith('Get') && !call.startsWith('List'))).toEqual([])
-})
-
-// A board is named by three controls at once, so the address has to carry all three. Opening
-// the page with none of them stated asks for 주간 · 나 (MODEL-44).
-it('defaults an unstated address to the weekly board of my own verdicts', async () => {
-  const reads = readsCollector()
-  renderAppAt('/ai-models/leaderboard', { user: { id: 'alice' }, experiments: { reads } })
-  expect(await screen.findByRole('tab', { name: '주간' })).toHaveAttribute('aria-selected', 'true')
-  expect(screen.getByRole('tab', { name: '나' })).toHaveAttribute('aria-selected', 'true')
-  expect(screen.getByRole('heading', { name: '내 관찰 리더보드' })).toBeInTheDocument()
-  expect(screen.getByText('최근 7일')).toBeInTheDocument()
-  await waitFor(() =>
-    expect(reads).toContainEqual({
-      kind: 'leaderboard',
-      stage: Stage.OBSERVE,
-      window: LeaderboardWindow.WEEK,
-      scope: LeaderboardScope.ME,
-    }),
-  )
-})
-
-// A value the address cannot mean is dropped rather than corrected, so a shared link with a
-// typo still opens a readable board.
-it('falls back to the default board when the address names a window or scope it cannot', async () => {
-  const reads = readsCollector()
-  renderAppAt('/ai-models/leaderboard?window=all-time&scope=friends', {
-    user: { id: 'alice' },
-    experiments: { reads },
-  })
-  expect(await screen.findByRole('tab', { name: '주간' })).toHaveAttribute('aria-selected', 'true')
-  await waitFor(() =>
-    expect(reads).toContainEqual(
-      expect.objectContaining({
-        kind: 'leaderboard',
-        window: LeaderboardWindow.WEEK,
-        scope: LeaderboardScope.ME,
-      }),
-    ),
-  )
-})
-
-// The three filters are independent: changing one keeps the other two, and the browser's
-// back button returns to the board that was being read.
-it('keeps the other two filters when one changes, through reload and back', async () => {
-  const user = userEvent.setup()
-  const reads = readsCollector()
-  const { router } = renderAppAt('/ai-models/leaderboard?stage=write', {
-    user: { id: 'alice' },
-    experiments: { reads },
-  })
-  await user.click(await screen.findByRole('tab', { name: '일간' }))
-  await waitFor(() => expect(router.state.location.search.window).toBe('day'))
+  await screen.findByRole('heading', { name: '테스트 기록', level: 1 })
+  expect(router.state.location.pathname).toBe('/tests/history')
   expect(router.state.location.search.stage).toBe('write')
-
-  await user.click(screen.getByRole('tab', { name: '전체' }))
-  await waitFor(() => expect(router.state.location.search.scope).toBe('all'))
-  expect(router.state.location.search.window).toBe('day')
-  expect(router.state.location.search.stage).toBe('write')
-  expect(screen.getByRole('heading', { name: '전체 글 작성 리더보드' })).toBeInTheDocument()
-
-  await user.click(screen.getByRole('tab', { name: '관찰' }))
-  await waitFor(() => expect(router.state.location.search.stage).toBe('observe'))
-  expect(router.state.location.search.window).toBe('day')
-  expect(router.state.location.search.scope).toBe('all')
-  await waitFor(() =>
-    expect(reads).toContainEqual({
-      kind: 'leaderboard',
-      stage: Stage.OBSERVE,
-      window: LeaderboardWindow.DAY,
-      scope: LeaderboardScope.ALL,
-    }),
+  expect(router.state.location.search).not.toHaveProperty('scope')
+  expect(router.state.location.search).not.toHaveProperty('window')
+  const legacy = within(screen.getByRole('region', { name: '이전 유료 비교 기록' }))
+  expect(await legacy.findByRole('link', { name: '계속 보기' })).toHaveAttribute(
+    'href',
+    expect.stringContaining('/paid?entry='),
   )
-
-  await act(async () => router.history.back())
-  await waitFor(() => expect(router.state.location.search.stage).toBe('write'))
-  expect(router.state.location.search.window).toBe('day')
-  expect(router.state.location.search.scope).toBe('all')
+  expect(screen.queryByText(/Elo|1516|\$/)).toBeNull()
+  expect(screen.queryByRole('tab', { name: '주간' })).toBeNull()
+  expect(procedures).not.toContain('GetLeaderboard')
+  expect(paidActions(procedures)).toEqual([])
 })
 
-// Every window the switch offers is bounded; none of them asks for the whole history.
-it('offers three bounded periods and no all-time board', async () => {
-  renderAppAt('/ai-models/leaderboard', { user: { id: 'alice' } })
-  const periods = await screen.findAllByRole('tab', { name: /^(일간|주간|월간)$/ })
-  expect(periods).toHaveLength(3)
-  expect(screen.queryByRole('tab', { name: '전체 기간' })).not.toBeInTheDocument()
+it.each(['', '?window=all-time&scope=friends', '?stage=analyze&window=day'])(
+  'drops retired rank filters at %s and reads owner history without analysis comparisons',
+  async (search) => {
+    const reads: NonNullable<FakeExperimentsOptions['reads']> = []
+    const { router, procedures } = renderLegacyModelRoute(`/ai-models/leaderboard${search}`, {
+      user: { id: 'alice' },
+      experiments: { reads },
+    })
+    await screen.findByRole('heading', { name: '테스트 기록', level: 1 })
+    expect(router.state.location.pathname).toBe('/tests/history')
+    expect(router.state.location.search).not.toHaveProperty('window')
+    expect(router.state.location.search).not.toHaveProperty('scope')
+    expect(router.state.location.search.stage).toBeUndefined()
+    await waitFor(() =>
+      expect(reads).toContainEqual(
+        expect.objectContaining({ kind: 'history', stage: Stage.UNSPECIFIED }),
+      ),
+    )
+    expect(reads.some((read) => read.kind === 'leaderboard' || read.stage === Stage.ANALYZE)).toBe(
+      false,
+    )
+    expect(paidActions(procedures)).toEqual([])
+  },
+)
+
+it('retains canonical stage/source through navigation and browser Back instead of changing historical rank controls', async () => {
+  const { router, procedures } = renderLegacyModelRoute(
+    '/ai-models/leaderboard?stage=observe&source=source-a',
+    { user: { id: 'alice' } },
+  )
+  await screen.findByRole('heading', { name: '테스트 기록', level: 1 })
+  expect(router.state.location.search).toMatchObject({ stage: 'observe', source: 'source-a' })
+  await act(() =>
+    router.navigate({ to: '/tests/history', search: { stage: 'write', source: 'source-b' } }),
+  )
+  await waitFor(() =>
+    expect(router.state.location.search).toMatchObject({ stage: 'write', source: 'source-b' }),
+  )
+  await act(() => router.history.back())
+  await waitFor(() =>
+    expect(router.state.location.search).toMatchObject({ stage: 'observe', source: 'source-a' }),
+  )
+  expect(procedures).not.toContain('GetLeaderboard')
+  expect(paidActions(procedures)).toEqual([])
 })
 
-// MODEL-44: the boards are observe and write. Analyze is never compared, so it has no board,
-// and an address that still names it opens the observe board instead of asking for one.
-it('retains observe/write URL context and reads an address naming analyze as observe', async () => {
-  const reads = readsCollector()
-  renderAppAt('/ai-models/leaderboard?stage=analyze&window=day', {
-    user: { id: 'alice' },
-    experiments: { reads },
-  })
-  const stages = within(await screen.findByRole('tablist', { name: 'AI 단계' }))
-  expect(stages.getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['관찰', '글 작성'])
-  expect(stages.getByRole('tab', { name: '관찰' })).toHaveAttribute('aria-selected', 'true')
-  expect(screen.getByRole('tab', { name: '일간' })).toHaveAttribute('aria-selected', 'true')
-  await waitFor(() =>
-    expect(reads).toContainEqual({
-      kind: 'leaderboard',
-      stage: Stage.OBSERVE,
-      window: LeaderboardWindow.DAY,
-      scope: LeaderboardScope.ME,
-    }),
+it('does not expose Alice private test history to another signed-in owner', async () => {
+  const alice = renderLegacyModelRoute(
+    '/ai-models/leaderboard',
+    { user: { id: 'alice' } },
+    { readableTest: true },
   )
-  expect(reads.map((read) => read.stage)).not.toContain(Stage.ANALYZE)
+  expect(await screen.findByRole('link', { name: '테스트 이어보기' })).toBeVisible()
+  expect(alice.fixture.admissions).toEqual([])
+  alice.unmount()
+  const bob = renderLegacyModelRoute(
+    '/ai-models/leaderboard',
+    { user: { id: 'bob' } },
+    { readableTest: true },
+  )
+  await screen.findByRole('heading', { name: '테스트 기록', level: 1 })
+  await waitFor(() => expect(bob.procedures).toContain('ListWritingTests'))
+  await waitFor(() => expect(screen.getAllByText('아직 테스트 기록이 없어요.')).toHaveLength(2))
+  expect(screen.queryByRole('link', { name: '테스트 이어보기' })).toBeNull()
+  expect(bob.fixture.votes).toEqual([])
+  expect(paidActions(bob.procedures)).toEqual([])
 })

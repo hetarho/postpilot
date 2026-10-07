@@ -1,63 +1,55 @@
 import { act, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, expect, it } from 'vitest'
+import { afterEach, beforeEach, expect, it } from 'vitest'
 import { initializeI18n } from '@/app/providers/i18n'
 import { ExperimentSource, PostCreditsBasis, ProtoPlan, Stage } from '@/shared/api'
 import { renderAppAt } from '@/test/app'
 import type { FakeExperimentsOptions } from '@/test/experiments'
 import { chooseOption } from '@/test/listbox'
+import { paidActions, renderLegacyModelRoute } from '@/test/legacy-model-routes'
+
+beforeEach(() => sessionStorage.clear())
 
 afterEach(() => initializeI18n('ko'))
 
 const destinations = [
-  ['/ai-models', '모델 변경', 'Change models'],
-  ['/ai-models/compare', '모델 비교', 'Compare models'],
-  ['/ai-models/experiments', '최근 관찰 비교', 'Recent observation comparisons'],
-  ['/ai-models/leaderboard', '리더보드', 'Leaderboard'],
+  ['/ai-models', '/ai-models', '모델 변경', 'Change models'],
+  ['/ai-models/compare', '/tests', '글쓰기 테스트', 'Writing tests'],
+  ['/ai-models/experiments', '/tests/history', '테스트 기록', 'Test history'],
+  ['/ai-models/leaderboard', '/tests/history', '테스트 기록', 'Test history'],
 ] as const
 
 it.each(['ko', 'en'] as const)(
-  'separates four destinations without starting work in %s',
+  'keeps model settings separate and resolves retired entries into canonical tests without paid work in %s',
   async (locale) => {
     initializeI18n(locale)
-    const calls: string[] = []
-    const starts: string[] = []
-    const reads: NonNullable<FakeExperimentsOptions['reads']> = []
-    const { router } = renderAppAt('/ai-models', {
+    const { router, procedures } = renderLegacyModelRoute('/ai-models', {
       user: { id: 'alice', plan: ProtoPlan.FREE },
-      providers: { calls },
-      experiments: { calls: starts, reads },
     })
-    await screen.findByRole('main')
-    expect(document.querySelector('aside')).toBeNull()
-    // 모델 변경 keeps all three active selections: analyze is never compared, but 말투 만들기
-    // and memory extraction still read its one active model (MODEL-23).
-    expect(within(screen.getByRole('main')).getAllByRole('combobox')).toHaveLength(3)
+    const main = within(await screen.findByRole('main'))
+    expect(main.getAllByRole('combobox')).toHaveLength(3)
     expect(
-      within(screen.getByRole('main')).getByRole('combobox', {
+      main.getByRole('combobox', {
         name: locale === 'ko' ? /문체 분석 모델/ : /Analyze voice model/,
       }),
-    ).toBeInTheDocument()
-    expect(reads).toEqual([])
-    for (const [path, ko, en] of destinations) {
-      await act(async () => router.navigate({ to: path }))
-      await waitFor(() => expect(router.state.location.pathname).toBe(path))
-      const main = within(screen.getByRole('main'))
+    ).toBeVisible()
+    expect(procedures).not.toContain('ListWritingTests')
+    for (const [oldPath, canonical, ko, en] of destinations) {
+      await act(() => router.navigate({ to: oldPath }))
+      await waitFor(() => expect(router.state.location.pathname).toBe(canonical))
+      await screen.findByRole('heading', { level: 1, name: locale === 'ko' ? ko : en })
       expect(
-        main.getByRole('heading', { level: 1, name: locale === 'ko' ? ko : en }),
-      ).toBeInTheDocument()
+        screen.queryByRole('button', { name: locale === 'ko' ? '비교 시작' : 'Start comparison' }),
+      ).toBeNull()
       expect(
-        main.queryByRole('button', { name: locale === 'ko' ? '비교 시작' : 'Start comparison' }) !==
-          null,
-      ).toBe(path === '/ai-models/compare')
-      expect(
-        main.queryByRole('heading', {
+        screen.queryByRole('heading', {
           name: locale === 'ko' ? '추천 조합' : 'Recommended sets',
         }) !== null,
-      ).toBe(path === '/ai-models')
+      ).toBe(canonical === '/ai-models')
     }
-    expect(calls.filter((call) => /Save|Apply/.test(call))).toEqual([])
-    expect(starts).toEqual([])
+    expect(
+      paidActions(procedures).filter((name) => name !== 'InitializeDefaultSelections'),
+    ).toEqual([])
   },
 )
 
@@ -174,111 +166,139 @@ it('shows the operator the per-post figure without a posts count', async () => {
   expect(main.queryByText(/남은 크레딧으로/)).not.toBeInTheDocument()
 })
 
-it('preserves the explicit stage through navigation, browser history, and read-only paid records with a common-history exit', async () => {
-  const user = userEvent.setup()
-  const { router } = renderAppAt('/ai-models/experiments?stage=write', {
-    user: { id: 'alice' },
-    experiments: {
-      history: [{ id: 'writing-1', stage: Stage.WRITE, postSlug: 'first-post' }],
-    },
-  })
-  const record = await screen.findByRole('link', { name: /first-post/ })
-  expect(record).toHaveAttribute('href', '/ai-models/experiments/writing-1?stage=write')
-  await act(async () =>
-    router.navigate({ to: '/ai-models/leaderboard', search: { stage: 'write' } }),
-  )
-  await waitFor(() => expect(router.state.location.pathname).toBe('/ai-models/leaderboard'))
-  expect(screen.getByRole('tab', { name: '글 작성' })).toHaveAttribute('aria-selected', 'true')
-  await user.click(screen.getByRole('tab', { name: '관찰' }))
-  await waitFor(() => expect(router.state.location.search.stage).toBe('observe'))
-  await act(async () => router.history.back())
-  await waitFor(() => expect(router.state.location.search.stage).toBe('write'))
-  await act(async () => router.history.back())
-  await waitFor(() => expect(router.state.location.pathname).toBe('/ai-models/experiments'))
-  await user.click(await screen.findByRole('link', { name: /first-post/ }))
-  await waitFor(() => expect(router.state.location.search.stage).toBe('write'))
-  expect(router.state.location.pathname).toBe('/ai-models/experiments/writing-1')
-  const back = await screen.findByRole('link', { name: '← 글쓰기 테스트 기록' })
-  expect(back).toHaveAttribute('href', '/tests/history')
-  // The common destination is registered by T623; browser history still recovers this
-  // retained paid record's original stage and source context without a new comparison.
-  await act(async () => router.history.back())
-  await waitFor(() => expect(router.state.location.pathname).toBe('/ai-models/experiments'))
-  expect(router.state.location.search.stage).toBe('write')
-  expect(await screen.findByRole('link', { name: /first-post/ })).toBeInTheDocument()
-})
-
-// An address naming analyze — a stage the lab no longer compares (MODEL-30) — is read as a
-// typo would be: the history and the board open on observe and never ask for analyze.
-it.each([
-  ['/ai-models/experiments?stage=invalid', 'history'],
-  ['/ai-models/leaderboard?stage=invalid', 'leaderboard'],
-  ['/ai-models/experiments?stage=analyze', 'history'],
-  ['/ai-models/leaderboard?stage=analyze', 'leaderboard'],
-] as const)('defaults invalid stages to observe on direct load at %s', async (path, kind) => {
+it('preserves stage/source in canonical history, browser Back and retained paid detail without a new comparison', async () => {
   const reads: NonNullable<FakeExperimentsOptions['reads']> = []
-  renderAppAt(path, { user: { id: 'alice' }, experiments: { reads } })
-  expect(await screen.findByRole('tab', { name: '관찰' })).toHaveAttribute('aria-selected', 'true')
-  expect(screen.getAllByRole('tab', { name: /^(관찰|글 작성|문체 분석)$/ })).toHaveLength(2)
-  await waitFor(() =>
-    expect(reads).toContainEqual(expect.objectContaining({ kind, stage: Stage.OBSERVE })),
+  const { router, procedures } = renderLegacyModelRoute(
+    '/ai-models/experiments?stage=write&source=first-post',
+    {
+      user: { id: 'alice' },
+      experiments: {
+        reads,
+        history: [{ id: 'writing-1', stage: Stage.WRITE, postSlug: 'first-post' }],
+      },
+    },
   )
-  expect(reads.map((read) => read.stage)).not.toContain(Stage.ANALYZE)
+  await screen.findByRole('heading', { level: 1, name: '테스트 기록' })
+  expect(router.state.location.pathname).toBe('/tests/history')
+  expect(router.state.location.search).toMatchObject({ stage: 'write', source: 'first-post' })
+  const legacy = within(screen.getByRole('region', { name: '이전 유료 비교 기록' }))
+  const href = (await legacy.findByRole('link', { name: '계속 보기' })).getAttribute('href')!
+  const url = new URL(href, 'http://localhost')
+  expect(url.pathname).toBe('/ai-models/experiments/writing-1')
+  expect(url.searchParams.get('entry')).toBe('/tests/history?stage=write&source=first-post')
+  await act(() => router.navigate({ href }))
+  expect(
+    await within(screen.getByRole('main')).findByRole('link', { name: '돌아가기' }),
+  ).toHaveAttribute('href', '/tests/history?stage=write&source=first-post')
+  await act(() => router.history.back())
+  await screen.findByRole('heading', { level: 1, name: '테스트 기록' })
+  expect(router.state.location.search).toMatchObject({ stage: 'write', source: 'first-post' })
+  expect(reads).toContainEqual(
+    expect.objectContaining({ kind: 'history', stage: Stage.WRITE, source: ExperimentSource.POST }),
+  )
+  expect(paidActions(procedures)).toEqual([])
 })
 
 it.each([
-  ['/ai-models/experiments', 'listFails', '아직 비교가 없어요.'],
-  ['/ai-models/leaderboard', 'leaderboardFails', '최근 7일 안에는 비교 결과가 없어요.'],
-] as const)(
-  'does not turn loading or failed reads into an empty history at %s',
-  async (path, failureKey, empty) => {
+  '/ai-models/experiments?stage=invalid',
+  '/ai-models/leaderboard?stage=invalid',
+  '/ai-models/experiments?stage=analyze',
+  '/ai-models/leaderboard?stage=analyze',
+])(
+  'drops unsupported history stages at %s without querying the retired analysis comparison',
+  async (path) => {
+    const reads: NonNullable<FakeExperimentsOptions['reads']> = []
+    const { router, procedures } = renderLegacyModelRoute(path, {
+      user: { id: 'alice' },
+      experiments: { reads },
+    })
+    await screen.findByRole('heading', { level: 1, name: '테스트 기록' })
+    expect(router.state.location.pathname).toBe('/tests/history')
+    expect(router.state.location.search.stage).toBeUndefined()
+    await waitFor(() =>
+      expect(reads).toContainEqual(
+        expect.objectContaining({ kind: 'history', stage: Stage.UNSPECIFIED }),
+      ),
+    )
+    expect(reads.map((read) => read.stage)).not.toContain(Stage.ANALYZE)
+    expect(procedures).not.toContain('GetLeaderboard')
+    expect(paidActions(procedures)).toEqual([])
+  },
+)
+
+it.each(['/ai-models/experiments', '/ai-models/leaderboard'])(
+  'keeps loading and failed paid reads distinct from empty canonical history at %s',
+  async (path) => {
     let release!: () => void
     const readGate = new Promise<void>((resolve) => {
       release = resolve
     })
-    renderAppAt(path, { user: { id: 'alice' }, experiments: { readGate, [failureKey]: true } })
-    expect(await screen.findByRole('status')).toHaveTextContent('불러오는 중')
-    expect(screen.queryByText(empty)).not.toBeInTheDocument()
+    const { procedures } = renderLegacyModelRoute(
+      path,
+      {
+        user: { id: 'alice' },
+        experiments: { readGate, listFails: true },
+      },
+      { readGate, listFails: true },
+    )
+    expect(await screen.findAllByRole('status')).not.toHaveLength(0)
+    expect(
+      screen
+        .getAllByRole('status')
+        .some((node) => node.textContent?.includes('내용을 확인하고 있어요')),
+    ).toBe(true)
+    expect(screen.queryByText('아직 테스트 기록이 없어요.')).toBeNull()
     await act(async () => release())
-    expect(await screen.findByRole('alert')).toHaveTextContent('비교 정보를 불러오지 못했어요.')
-    expect(screen.getByRole('button', { name: '다시 시도' })).toBeInTheDocument()
-    expect(screen.queryByText(empty)).not.toBeInTheDocument()
+    await waitFor(() => expect(screen.getAllByRole('alert')).toHaveLength(2))
+    screen
+      .getAllByRole('alert')
+      .forEach((node) => expect(node).toHaveTextContent('요청을 완료하지 못했어요'))
+    expect(screen.queryByText('아직 테스트 기록이 없어요.')).toBeNull()
+    expect(screen.getAllByRole('button', { name: '현재 결과 확인' })).toHaveLength(2)
+    expect(paidActions(procedures)).toEqual([])
   },
 )
 
-it.each(destinations)('guards direct access to %s', async (path) => {
-  const { router } = renderAppAt(path)
-  await waitFor(() => expect(router.state.location.pathname).toBe('/login'))
-  expect(router.state.location.search.redirect).toBe(path)
-})
+it.each(destinations)(
+  'guards direct access to %s before canonical data or paid work is requested',
+  async (path) => {
+    const { router, procedures } = renderLegacyModelRoute(path)
+    await waitFor(() => expect(router.state.location.pathname).toBe('/login'))
+    const redirect = new URL(String(router.state.location.search.redirect), 'http://localhost')
+    expect(redirect.pathname).toBe(path)
+    expect(procedures).not.toContain('ListWritingTests')
+    expect(procedures).not.toContain('ListExperiments')
+    expect(paidActions(procedures)).toEqual([])
+  },
+)
 
-// MODEL-44, MODEL-67: the history's 말투 반영 tab lists voice-sourced write comparisons naming the
-// voice and the prompt; 글쓰기 lists post-sourced ones only.
-it('lists voice-sourced comparisons on 말투 반영 and post-sourced ones on 글쓰기', async () => {
-  const user = userEvent.setup()
+it('filters legacy voice and post sources in canonical history, keeping owner reads and browser Back', async () => {
   const reads: NonNullable<FakeExperimentsOptions['reads']> = []
-  renderAppAt('/ai-models/experiments?stage=voice', {
-    user: { id: 'alice' },
-    voice: { voices: [{ id: 'voice-default', name: '기본 말투', isDefault: true }] },
-    experiments: {
-      reads,
-      history: [
-        { id: 'writing-1', stage: Stage.WRITE, postSlug: 'first-post' },
-        {
-          id: 'reflection-1',
-          stage: Stage.WRITE,
-          voiceId: 'voice-default',
-          source: ExperimentSource.VOICE,
-          voicePromptText: '첫인사를 써 보세요.',
-        },
-      ],
+  const { router, procedures } = renderLegacyModelRoute(
+    '/ai-models/experiments?stage=voice&voiceId=voice-default',
+    {
+      user: { id: 'alice' },
+      experiments: {
+        reads,
+        history: [
+          { id: 'writing-1', stage: Stage.WRITE, postSlug: 'first-post' },
+          {
+            id: 'reflection-1',
+            stage: Stage.WRITE,
+            voiceId: 'voice-default',
+            source: ExperimentSource.VOICE,
+          },
+        ],
+      },
     },
-  })
-
-  const record = await screen.findByRole('link', { name: /기본 말투 · 첫인사를 써 보세요\./ })
-  expect(record).toHaveAttribute('href', '/ai-models/experiments/reflection-1?stage=voice')
-  expect(screen.queryByRole('link', { name: /first-post/ })).not.toBeInTheDocument()
-  expect(screen.getByRole('tab', { name: '말투 반영' })).toHaveAttribute('aria-selected', 'true')
+  )
+  await screen.findByRole('heading', { level: 1, name: '테스트 기록' })
+  const legacy = within(screen.getByRole('region', { name: '이전 유료 비교 기록' }))
+  await waitFor(() => expect(legacy.getAllByRole('link', { name: '계속 보기' })).toHaveLength(1))
+  expect(legacy.getByRole('link', { name: '계속 보기' })).toHaveAttribute(
+    'href',
+    expect.stringContaining('/reflection-1?entry='),
+  )
   expect(reads).toContainEqual(
     expect.objectContaining({
       kind: 'history',
@@ -286,33 +306,56 @@ it('lists voice-sourced comparisons on 말투 반영 and post-sourced ones on �
       source: ExperimentSource.VOICE,
     }),
   )
-
-  await user.click(screen.getByRole('tab', { name: '글 작성' }))
-  expect(await screen.findByRole('link', { name: /first-post/ })).toBeInTheDocument()
-  expect(screen.queryByRole('link', { name: /첫인사를 써 보세요/ })).not.toBeInTheDocument()
+  await act(() =>
+    router.navigate({ to: '/tests/history', search: { stage: 'write', source: 'first-post' } }),
+  )
+  await waitFor(() =>
+    expect(
+      within(screen.getByRole('region', { name: '이전 유료 비교 기록' })).getByRole('link', {
+        name: '계속 보기',
+      }),
+    ).toHaveAttribute('href', expect.stringContaining('/writing-1?entry=')),
+  )
   expect(reads).toContainEqual(
     expect.objectContaining({ kind: 'history', stage: Stage.WRITE, source: ExperimentSource.POST }),
   )
+  await act(() => router.history.back())
+  await waitFor(() =>
+    expect(router.state.location.search).toMatchObject({
+      stage: 'voice',
+      voiceId: 'voice-default',
+    }),
+  )
+  await waitFor(() =>
+    expect(
+      within(screen.getByRole('region', { name: '이전 유료 비교 기록' })).getByRole('link', {
+        name: '계속 보기',
+      }),
+    ).toHaveAttribute('href', expect.stringContaining('/reflection-1?entry=')),
+  )
+  expect(paidActions(procedures)).toEqual([])
 })
 
-// MODEL-67: a 말투 반영 verdict counts on the write board, and the board keeps its two stages.
-it('reads 말투 반영 as the write board on the leaderboard', async () => {
+it('keeps a voice-context leaderboard alias in voice-filtered paid history rather than requesting ranks', async () => {
   const reads: NonNullable<FakeExperimentsOptions['reads']> = []
-  renderAppAt('/ai-models/leaderboard?stage=voice', {
+  const { router, procedures } = renderLegacyModelRoute('/ai-models/leaderboard?stage=voice', {
     user: { id: 'alice' },
     experiments: { reads },
   })
-
-  expect(await screen.findByRole('tab', { name: '글 작성' })).toHaveAttribute(
-    'aria-selected',
-    'true',
-  )
-  expect(screen.queryByRole('tab', { name: '말투 반영' })).not.toBeInTheDocument()
+  await screen.findByRole('heading', { level: 1, name: '테스트 기록' })
+  expect(router.state.location.search.stage).toBe('voice')
   await waitFor(() =>
     expect(reads).toContainEqual(
-      expect.objectContaining({ kind: 'leaderboard', stage: Stage.WRITE }),
+      expect.objectContaining({
+        kind: 'history',
+        stage: Stage.WRITE,
+        source: ExperimentSource.VOICE,
+      }),
     ),
   )
+  expect(procedures).not.toContain('GetLeaderboard')
+  expect(screen.queryByRole('tab', { name: '주간' })).toBeNull()
+  expect(paidActions(procedures)).toEqual([])
 })
 
 // MODEL-71: every set the operator curated is offered, in their order, each with its own apply

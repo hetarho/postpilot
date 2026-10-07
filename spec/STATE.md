@@ -92,11 +92,13 @@
 | T646 | Qualify origin-aware writing inspection and clean publication handoff | ARCH GEN POST MODEL THEME EXPORT MKT LANG | T636 T637 T639 T641 T642 T643 T644 T645 T631 | todo |
 
 ## next
-- Finish the critical merge/migration collision corrections and push normally first, then run local and remote checks as explicitly requested by the user.
+- Main histories are merged and pushed; finish post-push verification and inspect the corrected revision workflows. Implementation tasks remain stopped after T626.
 - Implementation remains stopped after T626; remaining UX and prompt-engineering tasks keep their recorded prerequisites.
 - T603/T604 real semantic/hardware/release qualification stays blocked; no renderer, analysis, voice or distribution activation is authorized by this merge.
 
 ## log
+- 261007 post-push corrections: preserve normalized voice test factor and safe filtered paid-history return; canonical consumers64, Admin catalog26, parser10 and migration compatibility11 cases pass; full FE/BE/media verification remains active
+- 261007 main pushed normally through5edb107a after user requested push-first ordering; origin/local synchronized, deployment workflow success observed, initial CI FE/BE test failures retained for reproduction and correction
 - 261007 main merge corrections complete: published browser148/wait149 preserved, local creation/writing schemas moved to150/151 with recognized legacy-schema reconciliation; full verification deferred until after push by user request
 - 261007 user push-order override: stop pre-push tests, finish critical merge corrections and push first; run remaining verification afterward, preserving known failed legacy consumer checks for correction
 - 261007 main merge reconciled: both UX and browser-media contributions retained, completed T590-T602 archived, T603/T604 remain blocked; resolve overlapping unpublished migration numbers before push
@@ -115,5 +117,3 @@
 - 261007 create-task prompt-engineering start: decompose committed requirements without duplicating existing UX implementation
 - 261007 T624 T625 T629 done on main: merged completed implementations, corrected baseline/CAS/saved-draft recovery, aligned retired consumer tests and completed combined verification
 - 261007 main sequential workflow active: dependencies and task completion records govern the next task; completed execution bookkeeping retired
-- 261007 ARCH r19..r20 workflow/verification documentation consumed: main task execution and commit policy requires no runtime task
-- 261007 create-architecture ARCH r20 done: one dependency-ready task implemented, verified, recorded and committed on main

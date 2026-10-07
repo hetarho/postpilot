@@ -4,6 +4,7 @@ import { afterEach, expect, it } from 'vitest'
 import { initializeI18n } from '@/app/providers/i18n'
 import { Stage } from '@/shared/api'
 import { renderAppAt } from '@/test/app'
+import { paidActions, renderLegacyModelRoute } from '@/test/legacy-model-routes'
 
 const history = [{ id: 'review-1', stage: Stage.WRITE, postSlug: 'draft-1' }]
 const posts = [
@@ -15,17 +16,17 @@ afterEach(() => initializeI18n('ko'))
 const entries = [
   {
     path: '/ai-models/experiments/review-1?stage=write&from=compare',
-    back: '/tests',
-    ko: '← 글쓰기 테스트로 돌아가기',
-    en: '← Back to writing tests',
+    back: '/tests/history',
+    ko: '테스트 기록',
+    en: 'Test history',
     primary: '/ai-models',
     group: '/ai-models/compare',
   },
   {
     path: '/ai-models/experiments/review-1?stage=write',
     back: '/tests/history',
-    ko: '← 글쓰기 테스트 기록',
-    en: '← Writing test history',
+    ko: '테스트 기록',
+    en: 'Test history',
     primary: '/ai-models',
     group: '/ai-models/experiments',
   },
@@ -60,7 +61,9 @@ it.each(
   await screen.findByRole('heading', {
     name: locale === 'ko' ? '이전 유료 비교 기록' : 'Earlier paid comparison',
   })
-  const link = screen.getByRole('link', { name: locale === 'ko' ? ko : en })
+  const link = within(screen.getByRole('main')).getByRole('link', {
+    name: locale === 'ko' ? ko : en,
+  })
   expect(link).toHaveAttribute('href', back)
   expect(document.querySelector('aside')).toBeNull()
   if (back.startsWith('/posts')) {
@@ -77,26 +80,31 @@ it.each(['', '?from=https://example.com', '?from=posts&stage=invalid'])(
       experiments: { history },
     })
     await screen.findByRole('heading', { name: '이전 유료 비교 기록' })
-    expect(screen.getByRole('link', { name: '← 글쓰기 테스트 기록' })).toHaveAttribute(
-      'href',
-      '/tests/history',
-    )
+    expect(
+      within(screen.getByRole('main')).getByRole('link', { name: '테스트 기록' }),
+    ).toHaveAttribute('href', '/tests/history')
     expect(screen.queryByRole('link', { name: '← 글로 돌아가기' })).not.toBeInTheDocument()
   },
 )
 
-it('opens a post-backed history record and returns to the same history stage', async () => {
+it('opens a retained paid record from canonical history and returns to the same owner stage/source', async () => {
   const user = userEvent.setup()
-  const { router } = renderAppAt('/ai-models/experiments?stage=write', {
-    user: { id: 'alice' },
-    experiments: { history },
-  })
-  await user.click(await screen.findByRole('link', { name: /draft-1/ }))
-  expect(await screen.findByRole('link', { name: '← 글쓰기 테스트 기록' })).toHaveAttribute(
-    'href',
-    '/tests/history',
+  const { router, procedures } = renderLegacyModelRoute(
+    '/ai-models/experiments?stage=write&source=draft-1',
+    { user: { id: 'alice' }, experiments: { history } },
   )
-  expect(router.state.location.pathname).toBe('/ai-models/experiments/review-1')
+  await screen.findByRole('heading', { name: '테스트 기록', level: 1 })
+  const record = await within(
+    screen.getByRole('region', { name: '이전 유료 비교 기록' }),
+  ).findByRole('link', { name: '계속 보기' })
+  await act(() => router.navigate({ href: record.getAttribute('href')! }))
+  await screen.findByRole('heading', { name: '이전 유료 비교 기록' })
+  const back = within(screen.getByRole('main')).getByRole('link', { name: '돌아가기' })
+  expect(back).toHaveAttribute('href', '/tests/history?stage=write&source=draft-1')
+  await user.click(back)
+  await waitFor(() => expect(router.state.location.pathname).toBe('/tests/history'))
+  expect(router.state.location.search).toMatchObject({ stage: 'write', source: 'draft-1' })
+  expect(paidActions(procedures)).toEqual([])
 })
 
 it('carries the narrowed post list through a pending result and back', async () => {
@@ -142,11 +150,7 @@ it.each(['', '?from=compare', '?from=https://example.com'])(
 )
 
 it.each([
-  [
-    '/ai-models/experiments/review-1?from=compare&stage=write',
-    '← 글쓰기 테스트로 돌아가기',
-    '/tests',
-  ],
+  ['/ai-models/experiments/review-1?from=compare&stage=write', '테스트 기록', '/tests/history'],
   ['/posts/experiments/review-1?from=posts&q=Draft', '← 내 글 목록으로 돌아가기', '/posts?q=Draft'],
 ])('retains an exit through loading and failed reads at %s', async (path, name, href) => {
   let release!: () => void

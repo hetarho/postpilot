@@ -35,6 +35,7 @@ it.each(['observe', 'write', 'voice', 'analyze', undefined])(
       entry: '/settings?tab=models',
     })
     const result = redirected(() => redirectLegacyModelComparison(search))
+    expect(legacyModelComparisonSearchSchema({ ...search })).toEqual(search)
     expect(result).toMatchObject({
       to: '/tests',
       replace: true,
