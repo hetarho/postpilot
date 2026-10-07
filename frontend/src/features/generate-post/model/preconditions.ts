@@ -1,5 +1,5 @@
 import i18next from 'i18next'
-import type { GenerationJob } from '@/entities/generation-job'
+import { isTerminal, type GenerationJob } from '@/entities/generation-job'
 import type { PostImage } from '@/entities/image'
 import type { ModelRef } from '@/entities/model-catalog'
 import { voiceAIRefusal, type VoiceRef } from '@/entities/voice'
@@ -29,26 +29,20 @@ export type GenerationBlocker =
   | 'pair'
   | 'different'
 
-/** The blockers a route out of this screen can fix. `observe` · `vision` · `write` are the active
- *  selections and `pair` · `different` are the A/B candidates; all five are set in the writing
- *  brief. Everything else resolves on its own or belongs to another surface. */
+/** The writing brief fixes ordinary model setup. Test entrants are configured in their own flow. */
 const SETUP_BLOCKERS = new Set<GenerationBlocker>([
   'observe',
   'vision',
   'videoModel',
   'videoUrl',
   'write',
-  'pair',
-  'different',
 ])
 
 export function isSetupBlocker(blocker: GenerationBlocker | undefined): boolean {
   return blocker !== undefined && SETUP_BLOCKERS.has(blocker)
 }
 
-/** Where the user has to go to clear a setup blocker. One destination since the A/B candidates
- *  joined the brief: sending someone off to the AI 모델 page for a pair they can now set two taps
- *  away, without leaving the draft, is a longer road to the same two dropdowns. */
+/** Ordinary setup refusals point to the active model fields in the brief. */
 export function setupBlockerTarget(blocker: GenerationBlocker | undefined): 'brief' | undefined {
   return isSetupBlocker(blocker) ? 'brief' : undefined
 }
@@ -90,7 +84,7 @@ function sharedPreconditions({
     }
   const voiceRefusal = voiceAIRefusal(voice)
   if (voiceRefusal) return { ok: false, reason: voiceRefusal, blocker: 'voiceUnavailable' }
-  if (activeJob && activeJob.status !== 'done' && activeJob.status !== 'failed') {
+  if (activeJob && !isTerminal(activeJob)) {
     return {
       ok: false,
       reason: i18next.t('generation.blocked.active', { ns: 'posts' }),
@@ -188,11 +182,11 @@ function pairPreconditions(
   return { ok: true, reason: '' }
 }
 
-/** The two runs 글 생성 starts. */
-export type GenerationMode = 'generation' | 'comparison'
+/** Ordinary writing and storyline preparation share one brief. */
+export type GenerationMode = 'generation'
 
 /** A field of the writing brief a run can be waiting on. */
-export type BriefField = 'observe' | 'write' | 'pair'
+export type BriefField = 'observe' | 'write'
 
 /** What each brief field still needs before a run of one mode can start, in that field's own
  *  words; a field with nothing missing is absent. */
@@ -208,17 +202,11 @@ export function briefIssues(
   videoCount: number,
   observeSelection: GenerationModelSelection | undefined,
   writeSelection: GenerationModelSelection | undefined,
-  writeSelectionA: GenerationModelSelection | undefined,
-  writeSelectionB: GenerationModelSelection | undefined,
 ): BriefIssues {
   const issues: BriefIssues = {}
   const observe = observePreconditions(photoCount, videoCount, observeSelection)
   if (!observe.ok) issues.observe = observe.reason
-  if (mode === 'generation') {
-    if (!writeSelection) issues.write = i18next.t('generation.blocked.write', { ns: 'posts' })
-  } else {
-    const pair = pairPreconditions(writeSelectionA, writeSelectionB)
-    if (!pair.ok) issues.pair = pair.reason
-  }
+  if (mode === 'generation' && !writeSelection)
+    issues.write = i18next.t('generation.blocked.write', { ns: 'posts' })
   return issues
 }

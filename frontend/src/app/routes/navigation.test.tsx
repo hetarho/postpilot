@@ -27,7 +27,7 @@ it.each([
 it('keeps navigation out of the canvas and opens one accessible menu on request', async () => {
   const user = userEvent.setup()
   renderAppAt('/posts', { user: { id: 'alice', plan: ProtoPlan.FREE } })
-  await screen.findByRole('heading', { name: '내 글' })
+  await screen.findByRole('heading', { name: '글 작업 내역' })
   expect(screen.queryByRole('navigation', { name: '주요' })).toBeNull()
   expect(document.querySelector('aside')).toBeNull()
   expect(document.querySelector('nav.fixed')).toBeNull()
@@ -75,8 +75,11 @@ it('closes the menu after navigation and makes every configuration accessible fr
     ).toBe(true)
   expect(within(main).queryByRole('link', { name: '관리자' })).toBeNull()
   await router.navigate({ to: '/library' })
-  expect(await screen.findByRole('link', { name: /내 글/ })).toHaveAttribute('href', '/posts')
-  expect(screen.getByRole('link', { name: /내 클립/ })).toHaveAttribute('href', '/clips')
+  expect(await screen.findByRole('link', { name: /글 작업 내역/ })).toHaveAttribute(
+    'href',
+    '/posts',
+  )
+  expect(screen.getByRole('link', { name: /클립 작업 내역/ })).toHaveAttribute('href', '/clips')
   await waitFor(() => expect(router.state.status).toBe('idle'))
 })
 

@@ -23,7 +23,11 @@ export function usePosts(): {
     {},
     {
       refetchInterval: (state) =>
-        state.state.data?.posts.some((post) => post.activeJob) ? POLL_INTERVAL_MS : false,
+        state.state.data?.posts.some(
+          (post) => post.activeJob?.status === 'queued' || post.activeJob?.status === 'running',
+        )
+          ? POLL_INTERVAL_MS
+          : false,
     },
   )
   const posts = useMemo(() => data?.posts.map(toPostListItem) ?? [], [data])

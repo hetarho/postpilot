@@ -1,8 +1,7 @@
 import { forwardRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Settings } from 'lucide-react'
-import type { ContentLanguage } from '@/shared/api'
-import { CandidatePairSelect } from '@/features/configure-model-pair'
+import { appFailureFromConnect, type AppFailure, type ContentLanguage } from '@/shared/api'
 import type { GenerationOptionsSet } from '@/entities/post'
 import { QualityRuleChoices } from '@/features/choose-quality-rules'
 import {
@@ -15,11 +14,18 @@ import { PostCreditEstimate, StageModelSelect } from '@/features/select-model'
 import { PostFieldSelect } from '@/features/select-post-field'
 import { PostLanguageSelect } from '@/features/select-post-language'
 import { UseMemoriesField } from '@/features/use-post-memories'
-import { Popover, Typography, type PopoverHandle } from '@/shared/ui'
+import {
+  AppFailureMessage,
+  Notice,
+  Popover,
+  Typography,
+  buttonStyles,
+  type PopoverHandle,
+} from '@/shared/ui'
 
 /** The brief's model fields in the order they are drawn, which is the order focus looks for the
  *  first one a refused press is waiting on. */
-const BRIEF_FIELDS: readonly BriefField[] = ['observe', 'write', 'pair']
+const BRIEF_FIELDS: readonly BriefField[] = ['observe', 'write']
 
 interface GenerationBriefProps {
   targetLanguage: ContentLanguage
@@ -30,7 +36,7 @@ interface GenerationBriefProps {
   photoCount: number
   /** With `photoCount`, what the observe model has to be able to watch. */
   videoCount?: number
-  /** The run a press of 생성 or A/B 비교 was refused for, whose missing fields this marks: a red
+  /** The ordinary run a press was refused for, whose missing fields this marks: a red
    *  message under each and one shake, with focus on the first. `count` grows with every refused
    *  press, so pressing again shakes again. */
   refusal?: { mode: GenerationMode; count: number }
@@ -39,6 +45,13 @@ interface GenerationBriefProps {
   /** A published post (POST-86): the post's own 글 언어 and options are shown and not changed.
    *  The model selects stay usable — they are the account's settings, not the post's. */
   locked?: boolean
+  /** Common test entry. The page awaits its material queue, resolves a newly minted slug and
+   *  retains the source/return context before navigating. Opening this link starts no AI. */
+  writingTest?: {
+    href: string
+    onOpen: () => Promise<void> | void
+    disabled?: boolean
+  }
   /** The run-options form. Absent for a draft with no post yet: the form has no slug to save
    *  against, and appears after the draft's first save (POST-89). */
   options?: {
@@ -52,7 +65,7 @@ interface GenerationBriefProps {
 }
 
 /** Everything the next AI run is given that is a SETTING rather than a per-draft decision:
- *  관찰 모델 · 작성 모델 · 작성 A/B 후보 · 글 언어, each saving on its own, then the run options —
+ *  관찰 모델 · 작성 모델 · 글 언어, each saving on its own, then the run options —
  *  목표 분량 · 태그 개수 · 발행 글 점검 · 분야 · 기억 사용 — as ONE form saved by its 저장, and
  *  discarded by any close without it (POST-89).
  *
@@ -78,6 +91,7 @@ export const GenerationBrief = forwardRef<PopoverHandle, GenerationBriefProps>(
       refusal,
       onClose,
       locked = false,
+      writingTest,
       options,
     },
     ref,
@@ -87,6 +101,8 @@ export const GenerationBrief = forwardRef<PopoverHandle, GenerationBriefProps>(
     // close, so a change the brief closed without is gone, including a reopen during a phone
     // sheet's exit, while the sheet keeps its content mounted.
     const [opening, setOpening] = useState(0)
+    const [openingTest, setOpeningTest] = useState(false)
+    const [testFailure, setTestFailure] = useState<AppFailure>()
     const label = t('generation.brief.title', { ns: 'posts' })
     // Read live: a field the user fixes here stops being marked the moment its save lands.
     const issues = useBriefIssues(refusal?.mode, photoCount, videoCount)
@@ -150,10 +166,34 @@ export const GenerationBrief = forwardRef<PopoverHandle, GenerationBriefProps>(
             {/* What one post costs on the pair just chosen, and how many the balance covers
                 (QUOTA-64): the observe part counts only when this post has a photo. */}
             <PostCreditEstimate className="mt-2" photoCount={photoCount} />
-            {/* Directly under the model the ordinary run uses, because that is the comparison the
-                A/B pair is: the same step, run twice. The link to the AI 모델 page this replaced
-                asked the user to leave the draft to make a two-dropdown choice. */}
-            {marked('pair', <CandidatePairSelect stage="write" error={issues.pair} />)}
+            {writingTest && (
+              <div>
+                <a
+                  href={writingTest.href}
+                  className={buttonStyles({ variant: 'ghost', className: 'w-full' })}
+                  aria-disabled={writingTest.disabled || openingTest || undefined}
+                  aria-busy={openingTest || undefined}
+                  onClick={(event) => {
+                    event.preventDefault()
+                    if (writingTest.disabled || openingTest) return
+                    setOpeningTest(true)
+                    setTestFailure(undefined)
+                    void Promise.resolve()
+                      .then(() => writingTest.onOpen())
+                      .then(close)
+                      .catch((cause: unknown) => setTestFailure(appFailureFromConnect(cause)))
+                      .finally(() => setOpeningTest(false))
+                  }}
+                >
+                  {t('writingTestEntry.label', { ns: 'posts' })}
+                </a>
+                {testFailure && (
+                  <Notice tone="danger" role="alert" className="mt-2">
+                    <AppFailureMessage failure={testFailure} />
+                  </Notice>
+                )}
+              </div>
+            )}
             <PostLanguageSelect
               value={targetLanguage}
               contentLanguage={contentLanguage}

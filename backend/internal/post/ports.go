@@ -49,10 +49,23 @@ type ObjectStore interface {
 	List(ctx context.Context, prefix string) ([]Object, error)
 }
 
-// ActiveJobFinder is the one published behavior post reads from the job context. The
-// post store never reaches across the context boundary to generation_jobs.
+// ActiveJobFinder retains the broad active-job read needed by source deletion's
+// privacy fence. The post store never reads job-owned tables.
 type ActiveJobFinder interface {
 	ActiveForPost(ctx context.Context, slug string) (*ActiveJob, error)
+}
+
+// OrdinaryJobFinder narrows by owner and ordinary writing kinds before selecting
+// an active job. A newer test must not mask an older ordinary writer. Composition
+// adapters implement it beside the broad privacy read when independent jobs coexist.
+type OrdinaryJobFinder interface {
+	ActiveOrdinaryForPost(context.Context, string, string) (*ActiveJob, error)
+}
+
+// JobHistoryFinder selects the latest relevant ordinary job before projecting failure.
+// Tests and older failed jobs cannot mask a later ordinary success.
+type JobHistoryFinder interface {
+	LatestOrdinaryForPosts(context.Context, string, []string) (map[string]ActiveJob, error)
 }
 
 type PendingExperimentFinder interface {

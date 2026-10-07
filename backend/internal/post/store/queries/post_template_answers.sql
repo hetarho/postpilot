@@ -13,11 +13,12 @@
 
 -- Upsert, never delete: clearing an answer is an empty `answer`, which the freeze reads the
 -- same way it reads a switched-off field.
--- name: UpsertPostTemplateAnswer :exec
+-- name: UpsertPostTemplateAnswer :execrows
 INSERT INTO post_template_answers (post_slug, label, answer, enabled, updated_at)
 VALUES (?, ?, ?, ?, ?)
 ON CONFLICT (post_slug, label) DO UPDATE SET
-    answer = excluded.answer, enabled = excluded.enabled, updated_at = excluded.updated_at;
+    answer = excluded.answer, enabled = excluded.enabled, updated_at = excluded.updated_at
+WHERE answer IS NOT excluded.answer OR enabled IS NOT excluded.enabled;
 
 -- Ordered by label so a read is stable; the write screen renders them in the TEMPLATE's body
 -- order, which is the template's business and not this table's.

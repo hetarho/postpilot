@@ -209,12 +209,18 @@ func TestSavePublishedURLIsBusyOnlyForContentWritingJobs(t *testing.T) {
 		t.Fatalf("a learning job blocked the save: %+v, %v", published, err)
 	}
 	// Replacing and clearing wait for a writer too.
-	svc.jobs = fakeActiveJobs{finalized.Slug: {ID: "job-3", Kind: "model_experiment", WritesContent: true}}
+	svc.jobs = fakeActiveJobs{finalized.Slug: {ID: "job-3", Kind: "revise", WritesContent: true}}
 	if _, err := svc.SavePublishedURL(ctx, alice, finalized.Slug, secondAddress); !errors.Is(err, ErrPostBusy) {
 		t.Fatalf("replacing under a writer = %v", err)
 	}
 	if _, err := svc.SavePublishedURL(ctx, alice, finalized.Slug, ""); !errors.Is(err, ErrPostBusy) {
 		t.Fatalf("clearing under a writer = %v", err)
+	}
+	for _, kind := range []string{"model_experiment", "writing_test"} {
+		svc.jobs = fakeActiveJobs{finalized.Slug: {ID: "test-job", Kind: kind, WritesContent: true}}
+		if _, err := svc.SavePublishedURL(ctx, alice, finalized.Slug, secondAddress); err != nil {
+			t.Fatalf("queued %s blocked publication settings: %v", kind, err)
+		}
 	}
 }
 

@@ -188,9 +188,50 @@ describe('clip directory', () => {
     expect(await screen.findByText('아직 저장된 클립이 없어요')).toBeInTheDocument()
   })
 
-  it('docks exactly one 새 클립', async () => {
+  it('offers separate continuation and retained download actions without a creation dock or preview', async () => {
+    const calls: string[] = []
+    mount('/clips', { calls })
+    const directory = await screen.findByRole('list', { name: '저장된 클립' })
+    const finished = (await within(directory).findByRole('link', { name: /JEJU 다시/ })).closest(
+      'li',
+    )!
+    const continueAction = within(finished).getByRole('link', { name: '작업 확인' })
+    const download = within(finished).getByRole('link', { name: '영상 내보내기' })
+    expect(continueAction).toHaveAttribute('href', '/clips/finished')
+    expect(download).toHaveAttribute('href', '/clips/finished')
+    expect(download.parentElement?.closest('a')).toBeNull()
+    const draft = within(directory)
+      .getByRole('link', { name: /제주 여행/ })
+      .closest('li')!
+    expect(within(draft).getByRole('link', { name: '이어서 편집' })).toBeInTheDocument()
+    expect(within(draft).queryByRole('link', { name: '영상 다운로드' })).not.toBeInTheDocument()
+    expect(within(draft).queryByRole('link', { name: '영상 내보내기' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: '새 클립' })).not.toBeInTheDocument()
+    expect(directory.querySelector('video')).toBeNull()
+    expect(calls.filter((call) => call === 'GetClipProject')).toHaveLength(0)
+  })
+
+  it('links an existing signed download separately when the summary supplies one', async () => {
+    mount('/clips', {
+      projects: [
+        { ...projects[2], result: { ...result, downloadUrl: 'https://private.test/download.mp4' } },
+      ],
+    })
+    const directory = await screen.findByRole('list', { name: '저장된 클립' })
+    const download = await within(directory).findByRole('link', { name: '영상 다운로드' })
+    expect(download).toHaveAttribute('href', 'https://private.test/download.mp4')
+    expect(download.parentElement?.closest('a')).toBeNull()
+    expect(within(directory).queryByRole('link', { name: '영상 내보내기' })).not.toBeInTheDocument()
+  })
+
+  it('uses a readable fallback for an untitled work item', async () => {
+    mount('/clips', { projects: [{ ...base, id: 'untitled', title: '   ' }] })
+    expect(await row(/제목 없는 클립/)).toHaveAttribute('href', '/clips/untitled')
+  })
+
+  it('keeps the secondary history free of a docked new-clip action', async () => {
     mount()
     await screen.findByRole('list', { name: '저장된 클립' })
-    expect(screen.getAllByRole('link', { name: '새 클립' })).toHaveLength(1)
+    expect(screen.queryByRole('link', { name: '새 클립' })).not.toBeInTheDocument()
   })
 })

@@ -251,6 +251,7 @@ type Post struct {
 	CreatedAt               time.Time
 	UpdatedAt               time.Time
 	Content                 *PostContent
+	InputRevision           int64
 	ContentRevision         int64
 	MachineBaselineRevision int64
 	TargetLength            *int
@@ -529,7 +530,12 @@ type Summary struct {
 	Tags []string
 	// Cursor is the row's position in the list order as the store holds it. It becomes the
 	// next page token and is never shown (POST-90).
-	Cursor ListCursor
+	ContentReady                   bool
+	ExportReady                    bool
+	PublishedURL                   string
+	LatestOrdinaryFailure          *ActiveJob
+	InputRevision, ContentRevision int64
+	Cursor                         ListCursor
 }
 
 // ActiveJob is the snapshot the post context publishes on read models. It is owned by

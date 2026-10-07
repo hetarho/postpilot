@@ -2,6 +2,7 @@ package store_test
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"os"
 	"path/filepath"
@@ -13,6 +14,7 @@ import (
 
 	"github.com/postpilot/backend/internal/post"
 	"github.com/postpilot/backend/internal/post/store"
+	"github.com/postpilot/backend/internal/post/store/sqlc"
 )
 
 // publishedRow seeds a post with an answer, a confirmed photo and clip, and a pending photo and
@@ -169,12 +171,46 @@ var transactionGuarded = map[string]func(*store.Store) error{
 
 // publishedLockExemptStatements are the writes the lock deliberately lets through, with why.
 var publishedLockExemptStatements = map[string]string{
-	"CreatePost":               "the create: no post exists to be locked",
-	"PublishPost":              "records or replaces the address (POST-73, POST-75)",
-	"UnpublishPost":            "clears the address",
-	"DeletePost":               "POST-74 lets a published post be deleted",
-	"DeleteUpload":             "a pending upload is the sweep's ledger, not the post: confirm runs it inside its guarded transaction, and the sweep and a retry run it by design",
-	"SetObservedImageRotation": "runs only inside UpdateObservations' transaction, after UpdatePostObservations' published predicate matched a row (GEN-79)",
+	"CreatePostTestPublication": "durable receipt only, inserted after the owned publication guard in the same transaction",
+	"CreatePost":                "the create: no post exists to be locked",
+	"PublishPost":               "records or replaces the address (POST-73, POST-75)",
+	"UnpublishPost":             "clears the address",
+	"DeletePost":                "POST-74 lets a published post be deleted",
+	"DeleteUpload":              "a pending upload is the sweep's ledger, not the post: confirm runs it inside its guarded transaction, and the sweep and a retry run it by design",
+	"SetObservedImageRotation":  "runs only inside UpdateObservations' transaction, after UpdatePostObservations' published predicate matched a row (GEN-79)",
+}
+
+// Internal revision and publication statements are checked directly because neither
+// belongs to the ordinary draft store's public API.
+var publicationPredicateGuarded = map[string]func(*sqlc.Queries, post.Post) (int64, error){
+	"AdvancePostInputRevision": func(q *sqlc.Queries, p post.Post) (int64, error) {
+		return q.AdvancePostInputRevision(context.Background(), sqlc.AdvancePostInputRevisionParams{Slug: p.Slug, UpdatedAt: lockLater.Format(time.RFC3339Nano)})
+	},
+	"ApplyPostTestOutput": func(q *sqlc.Queries, p post.Post) (int64, error) {
+		return q.ApplyPostTestOutput(context.Background(), sqlc.ApplyPostTestOutputParams{Slug: p.Slug, UserID: p.UserID,
+			ExpectedInputRevision: p.InputRevision, ExpectedContentRevision: p.ContentRevision,
+			Content:         sql.NullString{String: `{"blocks":[{"type":"TEXT","content":"new"}]}`, Valid: true},
+			MachineBaseline: sql.NullString{String: `{"blocks":[{"type":"TEXT","content":"new"}]}`, Valid: true},
+			ContentLanguage: sql.NullString{String: "ko", Valid: true}, UpdatedAt: lockLater.Format(time.RFC3339Nano)})
+	},
+}
+
+func TestPublicationBookkeepingStatementsRefusePublishedPosts(t *testing.T) {
+	s, handle := newStoreWithHandle(t)
+	seedPost(t, s, "p", "alice", testNow)
+	if _, err := handle.Writer.Exec("UPDATE posts SET status='published' WHERE slug='p'"); err != nil {
+		t.Fatal(err)
+	}
+	before, _ := s.GetPost(context.Background(), "p")
+	for name, mutate := range publicationPredicateGuarded {
+		if n, err := mutate(sqlc.New(handle.Writer), before); err != nil || n != 0 {
+			t.Fatalf("%s matched %d: %v", name, n, err)
+		}
+	}
+	after, _ := s.GetPost(context.Background(), "p")
+	if !reflect.DeepEqual(before, after) {
+		t.Fatal("published bookkeeping changed the post")
+	}
 }
 
 // namedStatement is one `-- name:` statement from the queries directory.
@@ -235,6 +271,8 @@ func TestEveryPostWriteStatementIsClassifiedForThePublishedLock(t *testing.T) {
 			continue
 		}
 		_, predicate := predicateGuarded[st.name]
+		_, publication := publicationPredicateGuarded[st.name]
+		predicate = predicate || publication
 		_, transaction := transactionGuarded[st.name]
 		_, exempt := publishedLockExemptStatements[st.name]
 		switch n := boolCount(predicate, transaction, exempt); {
@@ -247,7 +285,7 @@ func TestEveryPostWriteStatementIsClassifiedForThePublishedLock(t *testing.T) {
 			t.Errorf("%s is predicate-guarded but its body carries no status <> 'published':\n%s", st.name, st.body)
 		}
 	}
-	for _, table := range []map[string]bool{keys(predicateGuarded), keys(transactionGuarded), keys(publishedLockExemptStatements)} {
+	for _, table := range []map[string]bool{keys(predicateGuarded), keys(publicationPredicateGuarded), keys(transactionGuarded), keys(publishedLockExemptStatements)} {
 		for name := range table {
 			if !seen[name] {
 				t.Errorf("%s is classified for the published lock but no longer exists", name)

@@ -158,10 +158,12 @@ export interface FakePostRow {
   images?: FakeImageRow[]
   videos?: FakeVideoRow[]
   activeJob?: FakeGenerationJobRow
+  latestOrdinaryFailure?: FakeGenerationJobRow
   content?: PostContent
   observations?: Observation[]
   pendingExperimentId?: string
   contentRevision?: bigint
+  inputRevision?: bigint
   machineBaselineRevision?: bigint
   canFinalize?: boolean
   targetLength?: number
@@ -243,6 +245,8 @@ export interface FakePostsOptions {
   templates?: FakePostTemplate[]
   /** Records every SavePostDraft's slug and assignment presence. */
   draftSaves?: FakeDraftSave[]
+  /** Exact material carried by each request, for newest-material flush assertions. */
+  draftMaterials?: Array<{ slug: string; title: string; memo: string }>
   /** Holds SavePostContent in flight until a test releases it. */
   contentSaveGate?: Promise<void>
   /** Every SavePostContent as it arrived: slug, the revision it expected and the content. */
@@ -308,10 +312,12 @@ type Row = {
   images: Image[]
   videos: Video[]
   activeJob?: ProtoGenerationJob
+  latestOrdinaryFailure?: ProtoGenerationJob
   content?: PostContent
   observations: Observation[]
   pendingExperimentId: string
   contentRevision: bigint
+  inputRevision: bigint
   machineBaselineRevision: bigint
   canFinalize: boolean
   targetLength?: number
@@ -483,6 +489,9 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
         }),
       ),
       activeJob: row.activeJob ? toFakeProto(row.activeJob) : undefined,
+      latestOrdinaryFailure: row.latestOrdinaryFailure
+        ? toFakeProto(row.latestOrdinaryFailure)
+        : undefined,
       content:
         row.content ??
         (row.tags
@@ -491,6 +500,7 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
       observations: row.observations ?? [],
       pendingExperimentId: row.pendingExperimentId ?? '',
       contentRevision: row.contentRevision ?? 0n,
+      inputRevision: row.inputRevision ?? 0n,
       machineBaselineRevision: row.machineBaselineRevision ?? 0n,
       canFinalize:
         row.canFinalize ?? Boolean(row.content && (row.machineBaselineRevision ?? 0n) > 0n),
@@ -538,13 +548,19 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
   }
 
   function toProto(row: Row) {
-    return create(PostSchema, row)
+    return create(PostSchema, { ...row, activeJob: ordinaryJob(row.activeJob) })
+  }
+
+  /** Post reads expose ordinary work; independent tests are read from their own records. */
+  function ordinaryJob(job: ProtoGenerationJob | undefined) {
+    return job && job.kind !== 'model_experiment' && job.kind !== 'writing_test' ? job : undefined
   }
 
   /** Like the server, GetPost mints a view URL for every photo, fresh each time. */
   function withViewUrls(row: Row) {
     return create(PostSchema, {
       ...row,
+      activeJob: ordinaryJob(row.activeJob),
       images: row.images.map((image) =>
         create(ImageSchema, {
           ...image,
@@ -602,7 +618,13 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
       // The summary's tags are the content's, read out of the content the way the server
       // reads them rather than out of a column of their own (POST-65).
       posts: page.map((row) =>
-        create(PostSummarySchema, { ...row, tags: row.content?.tags ?? [] }),
+        create(PostSummarySchema, {
+          ...row,
+          activeJob: ordinaryJob(row.activeJob),
+          tags: row.content?.tags ?? [],
+          contentReady: Boolean(row.content?.blocks.length),
+          exportReady: Boolean(row.content?.blocks.length),
+        }),
       ),
       nextPageToken: more ? (page.at(-1)?.slug ?? '') : '',
     })
@@ -622,8 +644,21 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
     return create(GetPostResponseSchema, { post: withViewUrls(row) })
   })
 
+  rpc(PostService.method.deletePost, (req) => {
+    calls?.push('DeletePost')
+    if (foreign.includes(req.slug)) throw connectAppError('POST_FORBIDDEN', Code.PermissionDenied)
+    const row = rows.get(req.slug)
+    if (!row) throw connectAppError('POST_NOT_FOUND', Code.NotFound)
+    if (row.activeJob && !['done', 'failed', 'cancelled'].includes(row.activeJob.status)) {
+      throw connectAppError('POST_BUSY', Code.FailedPrecondition)
+    }
+    rows.delete(req.slug)
+    return {}
+  })
+
   rpc(PostService.method.savePostDraft, (req) => {
     calls?.push('SavePostDraft')
+    options.draftMaterials?.push({ slug: req.slug, title: req.title, memo: req.memo })
     options.draftSaves?.push({
       slug: req.slug,
       voiceId: req.voiceId,
@@ -666,8 +701,8 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
       throw connectAppError('POST_TARGET_LANGUAGE_UNSUPPORTED', Code.InvalidArgument)
     // The server's assignment rules (POST-23, POST-24): a create takes the voice it names, or
     // 말투 없음 when it names none; an edit that omits it preserves it, '' clears it and a
-    // different present value reassigns — refused while a job or an undecided A/B result could
-    // still write a baseline for the old voice.
+    // different present value reassigns — refused while an ordinary writing job runs. Frozen
+    // tests and retained comparison results carry independent assignments for their own work.
     // Validated before anything else is applied, like the server: a bad 템플릿 must leave the
     // title and memo exactly as they were.
     let template = existing?.template
@@ -696,11 +731,12 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
       voice = assignable(req.voiceId ?? '')
     } else if (req.voiceId !== undefined && req.voiceId !== (voice?.id ?? '')) {
       const next = assignable(req.voiceId)
+      const active = existing?.activeJob
       const busy =
-        (existing?.activeJob &&
-          existing.activeJob.status !== 'done' &&
-          existing.activeJob.status !== 'failed') ||
-        Boolean(existing?.pendingExperimentId)
+        active &&
+        !['done', 'failed', 'cancelled'].includes(active.status) &&
+        active.kind !== 'model_experiment' &&
+        active.kind !== 'writing_test'
       if (busy) throw connectAppError('POST_BUSY', Code.FailedPrecondition)
       voice = next
     }
@@ -725,6 +761,8 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
       observations: existing?.observations ?? [],
       pendingExperimentId: existing?.pendingExperimentId ?? '',
       contentRevision: existing?.contentRevision ?? 0n,
+      inputRevision: existing?.inputRevision ?? 0n,
+      latestOrdinaryFailure: existing?.latestOrdinaryFailure,
       // A reassignment changes the voice alone (POST-24): the baseline and finalizability stay.
       machineBaselineRevision: existing?.machineBaselineRevision ?? 0n,
       canFinalize: existing?.canFinalize ?? false,

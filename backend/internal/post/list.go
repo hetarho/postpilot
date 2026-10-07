@@ -96,11 +96,30 @@ func (s *Service) List(ctx context.Context, userID string, q ListQuery) (ListPag
 // undecided comparison, the voice and the template — for the rows being answered only.
 func (s *Service) decorateSummaries(ctx context.Context, userID string, summaries []Summary) error {
 	var err error
+	if history, ok := s.jobs.(JobHistoryFinder); ok && len(summaries) > 0 {
+		slugs := make([]string, len(summaries))
+		for i := range summaries {
+			slugs[i] = summaries[i].Slug
+		}
+		latest, err := history.LatestOrdinaryForPosts(ctx, userID, slugs)
+		if err != nil {
+			return fmt.Errorf("load ordinary job history: %w", err)
+		}
+		for i := range summaries {
+			if row, found := latest[summaries[i].Slug]; found && row.Status == "failed" {
+				job := row
+				summaries[i].LatestOrdinaryFailure = &job
+			}
+		}
+	}
 	if s.jobs != nil {
 		for i := range summaries {
-			summaries[i].ActiveJob, err = s.jobs.ActiveForPost(ctx, summaries[i].Slug)
+			summaries[i].ActiveJob, err = s.ordinaryForPost(ctx, userID, summaries[i].Slug)
 			if err != nil {
 				return fmt.Errorf("load active job for %s: %w", summaries[i].Slug, err)
+			}
+			if !blocksFutureSettings(summaries[i].ActiveJob) {
+				summaries[i].ActiveJob = nil
 			}
 		}
 	}

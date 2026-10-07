@@ -115,7 +115,7 @@ describe('clip directory and setup', () => {
     expect(link).toHaveTextContent('초안')
     expect(link).toHaveTextContent('세로 9:16')
     await waitFor(() => expect(link).toHaveTextContent('여행'))
-    expect(screen.getAllByRole('link', { name: '새 클립' })).toHaveLength(1)
+    expect(screen.queryByRole('link', { name: '새 클립' })).not.toBeInTheDocument()
     await user.click(link)
     expect(await screen.findByLabelText('클립 제목')).toHaveValue('제주 여행')
     expect(screen.queryByRole('combobox', { name: /^화면 비율/ })).not.toBeInTheDocument()

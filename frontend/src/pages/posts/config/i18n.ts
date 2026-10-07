@@ -6,11 +6,20 @@ export const i18n = {
   ko: {
     new: '새 글',
     list: {
-      mine: '내 글',
+      mine: '글 작업 내역',
       loadFailed: '목록을 불러오지 못했어요.',
-      empty: '아직 글이 없어요. "새 글"로 시작해 보세요.',
+      empty: '아직 글이 없어요. 홈에서 새 글을 시작할 수 있어요.',
       writingAria: '글 작성',
       state: { generating: 'AI 생성 중', failed: 'AI 결과 오류', review: 'AI 결과 확인' },
+      history: {
+        directory: '글 작업 내역',
+        continue: '이어서 작성',
+        open: '작업 확인',
+        export: '내보내기',
+        exportReady: '내보내기 가능',
+        published: '발행한 글',
+        result: '이전 AI 결과 확인',
+      },
       search: '검색',
       searchPlaceholder: '제목 또는 태그',
       filter: {
@@ -34,11 +43,20 @@ export const i18n = {
   en: {
     new: 'New post',
     list: {
-      mine: 'My posts',
+      mine: 'Writing history',
       loadFailed: 'Could not load the post list.',
-      empty: 'There are no posts yet. Start with "New post".',
+      empty: 'There are no posts yet. Start a new post from Home.',
       writingAria: 'Write a post',
       state: { generating: 'AI generation', failed: 'AI result error', review: 'Review AI result' },
+      history: {
+        directory: 'Writing history',
+        continue: 'Continue writing',
+        open: 'View work',
+        export: 'Export',
+        exportReady: 'Ready to export',
+        published: 'Published post',
+        result: 'Review previous AI result',
+      },
       search: 'Search',
       searchPlaceholder: 'Title or tag',
       filter: {

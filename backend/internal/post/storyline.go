@@ -69,11 +69,11 @@ func (e StorylineEdit) validShape() error {
 // nothing — an identical save is no edit and sets no mark.
 func (s *Service) checkStorylineEdit(ctx context.Context, found Post, edit StorylineEdit) (*Storyline, error) {
 	if s.jobs != nil {
-		active, err := s.jobs.ActiveForPost(ctx, found.Slug)
+		active, err := s.ordinaryForPost(ctx, found.UserID, found.Slug)
 		if err != nil {
 			return nil, fmt.Errorf("check active job before a storyline edit: %w", err)
 		}
-		if active != nil {
+		if blocksFutureSettings(active) {
 			return nil, ErrPostBusy
 		}
 	}

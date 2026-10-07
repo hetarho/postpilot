@@ -1,4 +1,4 @@
-import { sameRef, useModelSetup, useStageSelection } from '@/entities/model-catalog'
+import { sameRef, useStageSelection } from '@/entities/model-catalog'
 import {
   briefIssues,
   type BriefIssues,
@@ -6,19 +6,14 @@ import {
   type GenerationModelSelection,
 } from './preconditions'
 
-/** The selections 글 생성's two runs are given: the active observe and write models and the write
- *  A/B pair, each resolved against the catalog so its capabilities can be checked. */
+/** Both ordinary actions read the active observer and writer; tests own their entrants. */
 export function useGenerationSelections() {
   const observe = useStageSelection('observe')
   const write = useStageSelection('write')
-  const setup = useModelSetup()
-  const pair = setup.pairs.find((value) => value.stage === 'write')
   return {
     observe: resolveSelection(observe.models, observe.selected),
     write: resolveSelection(write.models, write.selected),
-    writeA: resolveSelection(write.models, pair?.candidateA?.ref ?? null),
-    writeB: resolveSelection(write.models, pair?.candidateB?.ref ?? null),
-    isPending: observe.isPending || write.isPending || setup.isPending,
+    isPending: observe.isPending || write.isPending,
   }
 }
 
@@ -33,15 +28,7 @@ export function useBriefIssues(
 ): BriefIssues {
   const selections = useGenerationSelections()
   if (!mode || selections.isPending) return {}
-  return briefIssues(
-    mode,
-    photoCount,
-    videoCount,
-    selections.observe,
-    selections.write,
-    selections.writeA,
-    selections.writeB,
-  )
+  return briefIssues(mode, photoCount, videoCount, selections.observe, selections.write)
 }
 
 function resolveSelection(

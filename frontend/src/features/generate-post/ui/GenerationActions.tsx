@@ -5,12 +5,10 @@ import {
   useStartStoryline,
   type GenerationJob,
 } from '@/entities/generation-job'
-import { useStartWriteExperiment } from '@/entities/model-experiment'
 import { isPublished, type PostDraft } from '@/entities/post'
 import { useSelectionSavePending } from '@/entities/model-catalog'
 import { appFailureFromConnect, type AppFailure } from '@/shared/api'
 import {
-  ActionMenu,
   AppFailureMessage,
   Button,
   Dialog,
@@ -21,7 +19,6 @@ import {
 } from '@/shared/ui'
 import { needsPicker } from '../model/reobserve'
 import {
-  comparisonGenerationPreconditions,
   isSetupBlocker,
   ordinaryGenerationPreconditions,
   type GenerationMode,
@@ -33,14 +30,12 @@ import { ReobservePicker } from './ReobservePicker'
 export interface GenerationActionsHandle {
   /** 바로 글 쓰기 — the name the retry path has always called. */
   startGeneration: () => void
-  startComparison: () => void
   /** 스토리라인 먼저, and the retry of a storyline job started from ①. */
   startStoryline: () => void
 }
 
-/** The three things ① starts. 스토리라인 먼저 and 바로 글 쓰기 share the ordinary checks (the write
- *  model and the shared ones); A/B 비교 has the pair's. */
-type ActionMode = 'generation' | 'comparison' | 'storyline'
+/** Ordinary creation actions use the active observer and writer independently of tests. */
+type ActionMode = 'generation' | 'storyline'
 
 export const GenerationActions = forwardRef<
   GenerationActionsHandle,
@@ -56,9 +51,11 @@ export const GenerationActions = forwardRef<
     jobPending?: boolean
     onStarted: (jobId: string) => void
     beforeStart?: () => Promise<void>
+    /** The page flushes both material/content queues before opening the retained paid result. */
+    onReviewResult?: () => Promise<void> | void
     /** Returns false after pointing the author to missing required template answers. */
     checkRequiredAnswers?: () => boolean
-    /** Opens the writing brief — where the 관찰/작성 모델 and the A/B pair are chosen — for a press
+    /** Opens the writing brief — where the active 관찰/작성 models are chosen — for a press
      *  of `mode` that its setup refused, so the brief can mark what that run is missing. Supplied
      *  by `pages/editor`, which owns the brief's open state — a feature may not import the widget
      *  that composes its siblings (ARCH-13). */
@@ -72,6 +69,7 @@ export const GenerationActions = forwardRef<
     jobPending = false,
     onStarted,
     beforeStart,
+    onReviewResult,
     checkRequiredAnswers,
     onOpenBrief,
   },
@@ -82,16 +80,16 @@ export const GenerationActions = forwardRef<
   const selectionSaving = useSelectionSavePending()
   const generation = useStartGeneration()
   const storyline = useStartStoryline()
-  const comparison = useStartWriteExperiment()
   const [preparing, setPreparing] = useState<ActionMode | ''>('')
   const [prepareFailure, setPrepareFailure] = useState<AppFailure>()
+  const [reviewingResult, setReviewingResult] = useState(false)
   // The mode a confirmed picker will start. Non-empty IS the picker's open state: there is one
   // picker for both actions, and the answer only means something together with the action.
   const [picking, setPicking] = useState<ActionMode | ''>('')
   // The mode waiting on the no-photo confirmation; non-empty is that dialog's open state.
   const [confirmingEmpty, setConfirmingEmpty] = useState<ActionMode | ''>('')
 
-  const { observe: observeSelection, write: writeSelection, writeA, writeB } = selections
+  const { observe: observeSelection, write: writeSelection } = selections
   const published = isPublished(post)
   const ordinary = ordinaryGenerationPreconditions({
     images: post.images,
@@ -102,17 +100,6 @@ export const GenerationActions = forwardRef<
     observe: observeSelection,
     write: writeSelection,
   })
-  const ab = comparisonGenerationPreconditions({
-    images: post.images,
-    videos: post.videos,
-    published,
-    activeJob,
-    voice: post.voice,
-    observe: observeSelection,
-    writeA,
-    writeB,
-  })
-  const pendingExperiment = Boolean(post.pendingExperimentId)
   // `modelPending` is load-bearing: `useStageSelection` reports `selected: null` for the whole
   // fetch, so without it every visit to 글 생성 would treat an unanswered catalog as a missing
   // model and send the press to the brief.
@@ -122,8 +109,8 @@ export const GenerationActions = forwardRef<
     Boolean(preparing) ||
     generation.isPending ||
     storyline.isPending ||
-    comparison.isPending
-  const sharedDisabled = modelPending || busy || pendingExperiment
+    reviewingResult
+  const sharedDisabled = modelPending || busy
 
   // `reobserveFiles` undefined is a start with no re-observation decision (no picker was
   // shown), which observes every attached photo. An empty array is the picker's answer to reuse
@@ -131,13 +118,10 @@ export const GenerationActions = forwardRef<
   const enqueue = useCallback(
     async (mode: ActionMode, reobserveFiles?: readonly string[]) => {
       // The WHOLE guard, re-checked here and not only in `start`: the picker can sit open long
-      // enough for a catalog refetch to disable the observe model, for a job or an A/B result to
+      // enough for a catalog refetch to disable the observe model, for an ordinary job to
       // appear, or for the voice to be deleted. Confirming a dialog that went stale must not
       // force a draft save and fire an RPC the server is going to refuse.
-      const precondition = mode === 'comparison' ? ab : ordinary
-      if (sharedDisabled || !precondition.ok) return
-      if (mode !== 'comparison' && !writeSelection) return
-      if (mode === 'comparison' && (!writeA || !writeB)) return
+      if (sharedDisabled || !ordinary.ok || !writeSelection) return
       if (checkRequiredAnswers?.() === false) return
       setPreparing(mode)
       setPrepareFailure(undefined)
@@ -158,21 +142,11 @@ export const GenerationActions = forwardRef<
             ? await generation.start(
                 post.slug,
                 observeRef,
-                writeSelection!.ref,
+                writeSelection.ref,
                 targetLength,
                 reobserveFiles,
               )
-            : mode === 'storyline'
-              ? await storyline.start(post.slug, observeRef, writeSelection!.ref, reobserveFiles)
-              : await comparison.start(
-                  post.slug,
-                  'editor',
-                  observeRef,
-                  writeA!.ref,
-                  writeB!.ref,
-                  targetLength,
-                  reobserveFiles,
-                )
+            : await storyline.start(post.slug, observeRef, writeSelection.ref, reobserveFiles)
         onStarted(response.jobId)
       } catch {
         // The mode-specific mutation renders its transport error below the actions.
@@ -181,10 +155,8 @@ export const GenerationActions = forwardRef<
       }
     },
     [
-      ab,
       beforeStart,
       checkRequiredAnswers,
-      comparison,
       generation,
       observeSelection,
       onStarted,
@@ -195,26 +167,21 @@ export const GenerationActions = forwardRef<
       sharedDisabled,
       storyline,
       targetLength,
-      writeA,
-      writeB,
       writeSelection,
     ],
   )
 
   const start = useCallback(
     async (mode: ActionMode) => {
-      const precondition = mode === 'comparison' ? ab : ordinary
       if (sharedDisabled) return
       // A model the run needs is not chosen, or cannot watch this post's media. The press is not
       // refused in place: it opens the brief with that field marked, which is where the fix is
       // (owner decision 2026-09-25). 스토리라인 먼저 needs what 바로 글 쓰기 needs.
-      if (refusedForSetup(precondition)) {
-        onOpenBrief(briefMode(mode))
+      if (refusedForSetup(ordinary)) {
+        onOpenBrief('generation')
         return
       }
-      if (!precondition.ok) return
-      if (mode !== 'comparison' && !writeSelection) return
-      if (mode === 'comparison' && (!writeA || !writeB)) return
+      if (!ordinary.ok || !writeSelection) return
       if (checkRequiredAnswers?.() === false) return
       // A run with nothing attached writes from the text alone, and a forgotten upload is the
       // likelier story, so it asks once before spending the run (POST-108).
@@ -231,7 +198,6 @@ export const GenerationActions = forwardRef<
       await enqueue(mode)
     },
     [
-      ab,
       checkRequiredAnswers,
       enqueue,
       onOpenBrief,
@@ -240,8 +206,6 @@ export const GenerationActions = forwardRef<
       post.observations,
       post.videos,
       sharedDisabled,
-      writeA,
-      writeB,
       writeSelection,
     ],
   )
@@ -250,7 +214,6 @@ export const GenerationActions = forwardRef<
     ref,
     () => ({
       startGeneration: () => void start('generation'),
-      startComparison: () => void start('comparison'),
       startStoryline: () => void start('storyline'),
     }),
     [start],
@@ -265,16 +228,11 @@ export const GenerationActions = forwardRef<
           {ordinary.reason}
         </Typography>
       )}
-      {/* ONE row on a phone, 3 : 7: 스토리라인 먼저 left, 바로 글 쓰기 — the committing action — right
-          with the ▾ that holds A/B 비교 beside it, which is both the THEME-22 emphasis order and the
-          side the thumb of a right-handed one-handed grip reaches first. Not halves: writing the
-          post is what this step is FOR, a storyline first is the careful path, and an A/B
-          comparison is the occasional second opinion kept one press further in. From `sm:` up the
-          row right-aligns at its natural width. */}
+      {/* Storyline first is the secondary path; writing now remains the committing action. */}
       <div className="grid grid-cols-[3fr_7fr] gap-3 sm:flex sm:flex-wrap sm:items-center sm:justify-end">
         {/* A refusal for the SETUP leaves an action live: pressing it is how the user is taken to
             the brief with the missing field marked, and nothing is written under the row. Every
-            other refusal — a job running, a deleted or not-yet-made voice, a pending A/B result,
+            other refusal — a job running, a deleted or not-yet-made voice,
             a published post — keeps it disabled, because no field fixes those. */}
         <Button
           variant="secondary"
@@ -284,43 +242,50 @@ export const GenerationActions = forwardRef<
         >
           {t('generation.storylineFirst')}
         </Button>
-        <div className="flex min-w-0 gap-2">
-          <Button
-            variant="cta"
-            className="min-w-0 flex-1 sm:flex-none"
-            disabled={sharedDisabled || (!ordinary.ok && !refusedForSetup(ordinary))}
-            pending={preparing === 'generation' || generation.isPending}
-            onClick={() => void start('generation')}
-          >
-            {t('generation.writeNow')}
-          </Button>
-          <ActionMenu
-            label={t('generation.otherWays')}
-            // The menu holds A/B 비교 alone, so it is held exactly as that button was: by a job, a
-            // pending A/B result, a save in flight, or any refusal no brief field fixes. A setup
-            // refusal keeps it live — choosing it opens the brief on the pair.
-            disabled={sharedDisabled || (!ab.ok && !refusedForSetup(ab))}
-            items={[
-              {
-                id: 'compare',
-                label: t('generation.compare'),
-                onSelect: () => void start('comparison'),
-              },
-            ]}
-          />
-        </div>
+        <Button
+          variant="cta"
+          className="min-w-0"
+          disabled={sharedDisabled || (!ordinary.ok && !refusedForSetup(ordinary))}
+          pending={preparing === 'generation' || generation.isPending}
+          onClick={() => void start('generation')}
+        >
+          {t('generation.writeNow')}
+        </Button>
       </div>
-      {pendingExperiment && (
+      {post.pendingExperimentId && (
         <a
           href={`/posts/experiments/${encodeURIComponent(post.pendingExperimentId)}`}
-          className={buttonStyles({ variant: 'secondary', className: 'mt-2 w-full sm:w-auto' })}
+          className={buttonStyles({ variant: 'ghost', className: 'mt-2 w-full sm:w-auto' })}
+          aria-disabled={reviewingResult || undefined}
+          aria-busy={reviewingResult || undefined}
+          onClick={(event) => {
+            if (
+              !onReviewResult ||
+              event.button !== 0 ||
+              event.metaKey ||
+              event.ctrlKey ||
+              event.altKey ||
+              event.shiftKey
+            )
+              return
+            event.preventDefault()
+            if (reviewingResult) return
+            setReviewingResult(true)
+            void Promise.resolve()
+              .then(onReviewResult)
+              .catch(() => {
+                // The page's autosave status exposes a refused flush; the retained result
+                // remains available and no default document navigation may bypass that refusal.
+              })
+              .finally(() => setReviewingResult(false))
+          }}
         >
           {t('generation.reviewResult')}
         </a>
       )}
-      {(generation.isError || storyline.isError || comparison.isError) && (
+      {(generation.isError || storyline.isError) && (
         <FieldMessage className="mt-2">
-          {generation.errorMessage || storyline.errorMessage || comparison.errorMessage}
+          {generation.errorMessage || storyline.errorMessage}
         </FieldMessage>
       )}
       {prepareFailure && (
@@ -359,12 +324,6 @@ export const GenerationActions = forwardRef<
     </div>
   )
 })
-
-/** The brief marks the fields of the run a press was refused for; 스토리라인 먼저 waits on
- *  바로 글 쓰기's. */
-function briefMode(mode: ActionMode): GenerationMode {
-  return mode === 'comparison' ? 'comparison' : 'generation'
-}
 
 /** Refused only because a brief field is missing or cannot serve this post. */
 function refusedForSetup(precondition: GenerationPreconditions): boolean {

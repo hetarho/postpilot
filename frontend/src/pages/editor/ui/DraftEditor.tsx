@@ -1,13 +1,26 @@
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link, useNavigate } from '@tanstack/react-router'
-import { clsx } from 'clsx'
+import { useNavigate } from '@tanstack/react-router'
 import { ArrowLeft } from 'lucide-react'
-import { isPublished, type PostDraft, type PostTemplateAnswer } from '@/entities/post'
+import {
+  hasContent,
+  isPublished,
+  postReturnDestination,
+  readPostReturnContext,
+  rememberPostEntry,
+  retainMintedPostEntry,
+  markPostHistoryReturn,
+  type PostDraft,
+  type PostTemplateAnswer,
+} from '@/entities/post'
 import { useSession } from '@/entities/session'
 import { useTemplates } from '@/entities/template'
 import type { Voice } from '@/entities/voice'
-import { discardContentQueue, useCaretHandoff } from '@/features/edit-post-content'
+import {
+  discardContentQueue,
+  flushContentQueue,
+  useCaretHandoff,
+} from '@/features/edit-post-content'
 import { DeletePostButton } from '@/features/delete-post'
 import { discardDraftQueue, useAutosave } from '@/features/save-draft'
 import { useBriefMirror, type GenerationMode } from '@/features/generate-post'
@@ -19,7 +32,15 @@ import {
   toAnswerPatch,
   withAnswer,
 } from '@/features/fill-template-answers'
-import { SegmentedControl, typographyStyles, type PopoverHandle, pageStyles } from '@/shared/ui'
+import {
+  SegmentedControl,
+  typographyStyles,
+  type PopoverHandle,
+  pageStyles,
+  proseStyles,
+  Typography,
+} from '@/shared/ui'
+import { editorNavigationCopy } from '../config/i18n'
 import { editorSteps } from '../model/steps'
 import { useDraftAssignments } from '../model/useDraftAssignments'
 import { useDraftSteps } from '../model/useDraftSteps'
@@ -52,10 +73,23 @@ interface DraftEditorProps {
  *  the component and strand a queued save (tech/draft-autosave). Title, memo, photos and the mint
  *  plumbing therefore stay outside the panels — they are the post's identity, not one step's work. */
 export function DraftEditor({ post, defaultVoice }: DraftEditorProps) {
-  const { t } = useTranslation('posts')
+  const { t, i18n } = useTranslation('posts')
   const navigate = useNavigate()
   const { user } = useSession()
   const ownerId = user?.id ?? ''
+  const copy = editorNavigationCopy[i18n.resolvedLanguage?.startsWith('ko') ? 'ko' : 'en']
+  const returnTo = useMemo(() => postReturnDestination(ownerId, post?.slug), [ownerId, post?.slug])
+  const entry = useMemo(() => readPostReturnContext(ownerId, post?.slug), [ownerId, post?.slug])
+  useLayoutEffect(() => {
+    if (!post)
+      rememberPostEntry(ownerId, {
+        path: '/',
+        section: 'creation',
+        filters: {},
+        scrollY: 0,
+        targetId: 'new',
+      })
+  }, [ownerId, post])
   // Both fields are textareas: a Korean title fits ~14 characters across a 360px screen at the
   // display size, and a single-line input would scroll the rest of it out of a field that has no
   // well to show it scrolled (THEME-8 — the title is one of the largest things on the
@@ -86,8 +120,8 @@ export function DraftEditor({ post, defaultVoice }: DraftEditorProps) {
     targetLanguage,
     onMinted: (slug) => {
       caret.stash(slug)
-      // `replace`, so the back button goes to the list rather than to /posts/new — which
-      // would open a second empty draft.
+      retainMintedPostEntry(ownerId, slug)
+      // Replace the unminted address without changing its creation/history context.
       void navigate({ to: '/posts/$slug', params: { slug }, replace: true })
     },
   })
@@ -104,7 +138,11 @@ export function DraftEditor({ post, defaultVoice }: DraftEditorProps) {
 
   // The step lives here, above the fields, because the bar that switches it is the first thing
   // on the screen — the post's lifecycle is what you navigate before you read anything else.
-  const { step, select: setStep } = useDraftSteps(post?.status ?? '', Boolean(post?.storyline))
+  const { step, select: setStep } = useDraftSteps(
+    post?.status ?? '',
+    Boolean(post?.storyline),
+    post && hasContent(post) && entry?.filters.intent === 'export' ? 'finish' : undefined,
+  )
   const previousStep = useRef(step)
   useLayoutEffect(() => {
     if (previousStep.current !== 'finish' && step === 'finish') window.scrollTo(0, 0)
@@ -182,14 +220,20 @@ export function DraftEditor({ post, defaultVoice }: DraftEditorProps) {
       }}
       refusal={briefRefusal}
       onBriefClosed={() => setBriefRefusal(undefined)}
+      writingTest={{
+        href: post ? `/tests?sourcePost=${encodeURIComponent(post.slug)}` : '/tests',
+        onOpen: async () => {
+          await autosave.flush()
+          const slug = await autosave.ensureSlug()
+          await flushContentQueue(slug)
+          await navigate({ href: `/tests?sourcePost=${encodeURIComponent(slug)}` })
+        },
+      }}
     />
   )
 
-  // `flex-1 flex-col` here plus `mt-auto` on the dock is what puts the bar at the BOTTOM of a
-  // short draft: `sticky` can only pull an element up toward the scrollport edge, never push one
-  // down, so without it a new draft renders its dock mid-page with dead space beneath.
   return (
-    <main className={pageStyles({ className: 'flex flex-1 flex-col' })}>
+    <main className={pageStyles({ width: 'workspace', className: 'flex flex-1 flex-col' })}>
       {/* First child of the flow on template: a sticky box can only be pinned by the box it sits
           in, and this one has to hold the page's top edge while a draft thousands of pixels tall
           scrolls past it. It adds no layout height. */}
@@ -206,22 +250,44 @@ export function DraftEditor({ post, defaultVoice }: DraftEditorProps) {
             holds the step bar and the delete, so the glyph stands for the word there, as it does
             in the clip workspace; the name stays the word at every width. `/posts/new` has neither
             neighbour and keeps the word. */}
-        <Link
-          to="/posts"
-          aria-label={t('editor.backToList')}
+        <a
+          href={returnTo.href}
+          aria-label={returnTo.path === '/' ? copy.home : copy.history}
+          onClick={(event) => {
+            if (
+              event.button !== 0 ||
+              event.metaKey ||
+              event.ctrlKey ||
+              event.shiftKey ||
+              event.altKey
+            )
+              return
+            event.preventDefault()
+            void autosave
+              .flush()
+              .then(async () => {
+                if (post) markPostHistoryReturn(ownerId, post.slug)
+                await navigate({ href: returnTo.href })
+                window.requestAnimationFrame(() => window.scrollTo(0, returnTo.scrollY))
+              })
+              .catch(() => {
+                /* The autosave's status region exposes the refusal. */
+              })
+          }}
           className={typographyStyles({
             variant: 'label',
-            className: clsx(
+            className:
               'text-link-fg hover:text-link-fg-hover inline-flex min-h-11 min-w-11 shrink-0 items-center gap-1',
-              post && 'justify-center sm:justify-start',
-            ),
           })}
         >
           <ArrowLeft aria-hidden="true" className="size-5" />
-          <span className={post ? 'hidden underline sm:inline' : 'underline'}>
-            {t('editor.backToList')}
+          <span className={post ? 'sr-only underline sm:not-sr-only' : 'underline'}>
+            {returnTo.path === '/' ? copy.home : copy.history}
           </span>
-        </Link>
+        </a>
+        <Typography variant="label" as="span">
+          {copy.location}
+        </Typography>
 
         {/* A post with a lifecycle navigates it first. `/posts/new` has none, so it shows no bar.
             Drawn as stations — 글 생성 › 글 다듬기 › 글 완성, the current one told by colour — rather
@@ -249,9 +315,11 @@ export function DraftEditor({ post, defaultVoice }: DraftEditorProps) {
                 editor, and only for this slug. */}
             <DeletePostButton
               post={post}
+              returnTo={returnTo}
               onDeleted={() => {
                 discardDraftQueue(post.slug)
                 discardContentQueue(post.slug)
+                markPostHistoryReturn(ownerId, post.slug)
               }}
             />
           </div>
@@ -298,10 +366,12 @@ export function DraftEditor({ post, defaultVoice }: DraftEditorProps) {
       ) : (
         <>
           {/* No lifecycle yet, so no step bar — just the step ① surfaces that work without a post. */}
-          {titleField}
-          {answerFieldsPanel}
-          {memoField}
-          <EditorPhotos post={post} ensureSlug={autosave.ensureSlug} />
+          <div className={proseStyles()}>
+            {titleField}
+            {answerFieldsPanel}
+            {memoField}
+            <EditorPhotos post={post} ensureSlug={autosave.ensureSlug} />
+          </div>
           {/* No voice warning here: a draft can hold only 말투 없음 or a made, active voice, so
               there is nothing to warn about before the post exists. */}
           {/* A draft with no post yet has no committing action, but its 말투 and the rest of the

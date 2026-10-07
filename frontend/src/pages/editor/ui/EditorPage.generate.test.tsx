@@ -3,7 +3,7 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { ExperimentOrigin, Stage } from '@/shared/api'
+import { Stage } from '@/shared/api'
 import { renderAppAt } from '@/test/app'
 import {
   BRIEF_TRIGGER,
@@ -19,7 +19,6 @@ import {
   OBSERVATIONS_FIXTURE,
   POST_IMAGES_FIXTURE,
 } from '@/test/fixtures/postContent'
-import type { FakeWriteExperimentStart } from '@/test/experiments'
 import type { FakeGenerationStart } from '@/test/jobs'
 import type { FakeDraftSave, FakeOptionsSave } from '@/test/posts'
 import { clearCaret } from '@/features/edit-post-content/model/caret-handoff'
@@ -215,7 +214,8 @@ describe('opening a post', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: '바로 글 쓰기' })).toBeEnabled())
     // Neither voice refusal — deleted or not yet made — has anything to say.
     expect(screen.queryByText(/말투예요/)).not.toBeInTheDocument()
-    expect(screen.getByLabelText('글 작업').previousElementSibling).toHaveClass('mt-auto', 'h-6')
+    expect(screen.getByLabelText('글 작업').previousElementSibling).toHaveClass('h-6')
+    expect(screen.getByLabelText('글 작업').previousElementSibling).not.toHaveClass('mt-auto')
 
     const brief = await openBrief(user)
     expect(within(brief).getByText('사진이 없어 관찰 모델은 필요하지 않아요.')).toBeInTheDocument()
@@ -414,57 +414,23 @@ describe('opening a post', () => {
     expect(calls.indexOf('SavePostDraft')).toBeLessThan(calls.indexOf('StartGeneration'))
   })
 
-  it('starts an explicit A/B comparison with the configured pair and optional target', async () => {
-    const starts: FakeWriteExperimentStart[] = []
+  it('flushes the newest material before opening the common writing test without starting paid work', async () => {
     const calls: string[] = []
+    const draftMaterials: Array<{ slug: string; title: string; memo: string }> = []
     const user = userEvent.setup()
-    renderAppAt('/posts/20260820-memo', {
+    const { router } = renderAppAt('/posts/20260820-memo', {
       user: USER,
       calls,
-      posts: { posts: [{ slug: '20260820-memo' }] },
-      experiments: { starts },
-      providers: {
-        models: [
-          { providerId: 'openrouter', modelId: 'active' },
-          { providerId: 'openrouter', modelId: 'candidate-a' },
-          { providerId: 'openrouter', modelId: 'candidate-b' },
-        ],
-        selections: [{ stage: Stage.WRITE, providerId: 'openrouter', modelId: 'active' }],
-        comparisonPairs: [
-          {
-            stage: Stage.WRITE,
-            candidateA: { providerId: 'openrouter', modelId: 'candidate-a' },
-            candidateB: { providerId: 'openrouter', modelId: 'candidate-b' },
-          },
-        ],
-      },
+      posts: { posts: [{ slug: '20260820-memo' }], draftMaterials },
     })
+    await user.type(await screen.findByLabelText('메모'), '방금 입력한 경험')
     const brief = await openBrief(user)
-    await user.click(within(brief).getByRole('checkbox', { name: '목표 글자 수 사용' }))
-    // The box arrives with the default already in it, so this is a replacement, not an entry.
-    await user.clear(within(brief).getByLabelText('목표 글자 수'))
-    await user.type(within(brief).getByLabelText('목표 글자 수'), '750')
-    await user.click(within(brief).getByRole('button', { name: '저장' }))
-    await waitFor(() => expect(calls).toContain('SavePostGenerationOptions'))
-    const other = screen.getByRole('button', { name: '다른 방법으로 쓰기' })
-    await waitFor(() => expect(other).toBeEnabled())
-    await user.click(other)
-    await user.click(
-      within(await screen.findByRole('menu')).getByRole('menuitem', { name: 'A/B 비교' }),
-    )
-    await confirmNoPhotos(user)
-    await waitFor(() => expect(calls).toContain('StartWriteExperiment'))
-    expect(starts).toEqual([
-      {
-        postSlug: '20260820-memo',
-        // Started from the editor, so its verdict will apply the winner to this very post.
-        origin: ExperimentOrigin.EDITOR,
-        observeModel: undefined,
-        modelA: { providerId: 'openrouter', modelId: 'candidate-a' },
-        modelB: { providerId: 'openrouter', modelId: 'candidate-b' },
-        targetLength: 750,
-      },
-    ])
+    await user.click(within(brief).getByRole('link', { name: '글 설정 비교 테스트' }))
+    await waitFor(() => expect(router.state.location.pathname).toBe('/tests'))
+    expect(router.state.location.search).toMatchObject({ sourcePost: '20260820-memo' })
+    expect(draftMaterials.at(-1)?.memo).toBe('방금 입력한 경험')
+    expect(calls).toContain('SavePostDraft')
+    expect(calls).not.toContain('StartWriteExperiment')
     expect(calls).not.toContain('StartGeneration')
   })
 })
