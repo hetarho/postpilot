@@ -183,7 +183,13 @@ function AccountQuestionnaire({
   }
   return (
     <section ref={heading} aria-labelledby={titleId} className="min-w-0">
-      <Typography variant="fieldTitle" as="h2" id={titleId} tabIndex={-1}>
+      <Typography
+        variant="fieldTitle"
+        as="h2"
+        id={titleId}
+        tabIndex={-1}
+        className={prompt && state.phase !== 'complete' ? 'sr-only md:not-sr-only' : undefined}
+      >
         {state.reviewing ? t('prompts.reviewing') : t('prompts.sessionTitle')}
       </Typography>
       {!prompt?.hint && state.phase !== 'complete' && (
@@ -191,7 +197,7 @@ function AccountQuestionnaire({
           {t('prompts.sessionHelp')}
         </Typography>
       )}
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-2 md:mt-4 md:gap-3">
         <Typography variant="label">
           {t('prompts.count', { current: count, total: QUESTIONNAIRE_BATCH_SIZE })}
         </Typography>
@@ -203,7 +209,7 @@ function AccountQuestionnaire({
         label={t('prompts.progress')}
         done={count}
         total={QUESTIONNAIRE_BATCH_SIZE}
-        className="mt-3"
+        className="mt-2 md:mt-3"
       />
       {state.phase === 'complete' && !profile.made && profile.readiness.percent < 100 && (
         <div className="mt-6">
