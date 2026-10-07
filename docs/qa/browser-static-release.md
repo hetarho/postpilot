@@ -27,13 +27,13 @@ The original npm resvg2.6.2 WASM still lacks a verified complete original Rust d
 
 ## Paired Mac observations
 
-`docs/design/browser-render-comparison-current.json` records Apple M1 Max, MacBookPro18,2,32GiB, macOS26.5.2/build25F84 and Chrome154. Four synthetic fifteen-second,450-frame cases cover blur-in/neon/glitch/ember, three ratios, three cut rates, dissolve/fadeblack, source sound and one mixed synthetic tone. Sixteen cold/warm runs completed, with eight matching frozen/source-clock/component/background contracts, normalized pre-encode PCM hashes and AAC packet identities. Output bounds and OPFS/Worker cleanup passed.
+`docs/design/browser-render-comparison-current.json` records Apple M1 Max, MacBookPro18,2, 32GiB, macOS26.5.2/build25F84 and Chrome154. Four synthetic fifteen-second,450-frame cases cover blur-in/neon/glitch/ember, three ratios, three cut rates, dissolve/fadeblack, source sound and one mixed synthetic tone. Sixteen cold/warm runs completed, with eight matching frozen/source-clock/component/background contracts, normalized pre-encode PCM hashes and AAC packet identities. Output bounds and OPFS/Worker cleanup passed.
 
 The arms are the shared Canvas2D composition and Pixi caption scenes copied into that Canvas2D composition. This is a hybrid diagnostic with equal full final-Canvas readback, not a complete GPU compositor or the production video.worker path. Prepare/draw/copy/completion, audio, encoder, packet/spool and managed allocation phases are retained; physical driver/process/private codec/DSP peaks and hardware codec execution remain unknown. Upload is unexecuted/null. Timing instrumentation and diagnostic copies are not ordinary production throughput.
 
-Sampled pixels have measured residuals; byte identity and a human acceptance threshold are not asserted. Decoded maximum mean-channel residuals on0–255 are about0.0507blur,0.2096neon,0.3153glitch and0.1233ember. No default changed on these observations. Historical reports remain distinct from current measurements.
+Sampled pixels have measured residuals; byte identity and a human acceptance threshold are not asserted. Decoded maximum mean-channel residuals on0–255 are about 0.0507 blur, 0.2096 neon, 0.3153 glitch and 0.1233 ember. No default changed on these observations. Historical reports remain distinct from current measurements.
 
-The checked-in diagnostic/fixtures are runnable:
+The checked-in diagnostic/fixtures are runnable. Its actual portable single-case smoke at d029abea completed all four cold/warm arm runs with unchanged source/adapter/fixture bytes and clean output disposal; this is separate from the sixteen-run historical26fce813 report:
 
 ```sh
 node scripts/browser-render-comparison/static-check.mjs
@@ -48,3 +48,5 @@ After a successful single case, omit `--case` for the bounded four-case matrix. 
 The versioned readiness record binds renderer/component/font/asset/WASM identity, empty missing gates, explicit enablement and distribution approval. Analysis preparation has its own disabled record and hardfalse backend gate; final rendering cannot authorize analysis or real voice.
 
 Still absent: a reviewed complete original WASM source/license graph, physical Windows integrated-GPU/Edge and lower-resource runs, full release-output/style/pace/extreme human review, uninstrumented production/default performance qualification, actual semantic corpus/current-provider comparison with approved spend and human truth, and real voice qualification. T539/T550 and T603 remain closed independently. Missing evidence keeps release acceptance open.
+
+`browser-static-release-checks.json` binds current local checks and exact-source reuse. The final deploy Python62 and dev11 checks passed; an earlier300-second outer timeout remains a separate failure. Native production bytes and generator inputs/outputs retain the actual full-Go, nonroot-image and bounded-operation proofs; new gated126-layout fixtures and current CORS/workflow/harness checks are separately executed.

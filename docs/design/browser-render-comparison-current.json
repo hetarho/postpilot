@@ -23126,6 +23126,19 @@
     "path": "scripts/browser-render-comparison",
     "workersAndAudioObserverByteIdenticalToExecutedAdapter": true,
     "runnerAndFixturePathsAdaptedForRepository": true,
-    "packagingNotClaimedAsAlreadyExecuted": true
+    "packagingNotClaimedAsAlreadyExecuted": true,
+    "actualSingleCaseSmoke": {
+      "sourceCommit": "d029abeafd26828f0a7ed91b64c25b9880a4cd92",
+      "actualExecution": true,
+      "exit": 0,
+      "logSHA256": "b011b6c932483eb308629d81b55e6fa7ad4c1aa1fdbd3a13f2b75e1a9ebac1ed",
+      "rawReportSHA256": "90c6025e5d963364b026f77d68d5a69bd17a92b7a2c29db6d22891844e1a596f",
+      "fixture": "vertical-blur-in-source",
+      "completedRuns": 4,
+      "sourceUnchanged": true,
+      "adapterUnchanged": true,
+      "fixturesUnchanged": true,
+      "qualification": false
+    }
   }
 }
