@@ -71,3 +71,29 @@ func TestInvalidCountsAndMissingExplicitStartNeverReachService(t *testing.T) {
 		}
 	}
 }
+
+// A baseline-only adapter may serve older durable reads but cannot accept the
+// working-draft contract. This is server capability, not an invalid owner input.
+type baselineOnlyStore struct{ authoring.Store }
+
+type unavailableBoundaryPorts struct {
+	authoring.Models
+	authoring.Jobs
+	authoring.Targets
+	authoring.Budget
+	authoring.Estimator
+}
+
+func TestUnavailableDurableDraftBoundaryPreservesAuthenticationAndDoesNoWork(t *testing.T) {
+	ports := unavailableBoundaryPorts{}
+	h := NewHandler(authoring.NewService(baselineOnlyStore{}, ports, ports, ports, ports, ports))
+	request := connect.NewRequest(&v1.ListAuthoringSummariesRequest{Kind: v1.ConfigurationKind_CONFIGURATION_KIND_POST_TEMPLATE})
+	_, err := h.ListAuthoringSummaries(context.Background(), request)
+	if connect.CodeOf(err) != connect.CodeUnauthenticated || errorDetail(t, err).Reason != "AUTH_REQUIRED" {
+		t.Fatal("capability refusal preceded authentication", err)
+	}
+	_, err = h.ListAuthoringSummaries(auth.WithUser(context.Background(), "alice"), request)
+	if connect.CodeOf(err) != connect.CodeUnimplemented || errorDetail(t, err).Reason != "AUTHORING_FEATURE_UNAVAILABLE" {
+		t.Fatal("missing server capability blamed user input", err)
+	}
+}

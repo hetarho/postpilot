@@ -225,6 +225,8 @@ func toError(e error) error {
 		code, reason = connect.CodeInvalidArgument, v1.FailureReason_AUTHORING_CANDIDATE_COUNT_INVALID
 	case errors.Is(e, authoring.ErrInvalid):
 		code, reason = connect.CodeInvalidArgument, v1.FailureReason_AUTHORING_MESSAGE_INVALID
+	case errors.Is(e, authoring.ErrFeatureUnavailable):
+		code, reason = connect.CodeUnimplemented, v1.FailureReason_AUTHORING_FEATURE_UNAVAILABLE
 	case errors.Is(e, authoring.ErrHistoryFull):
 		reason = v1.FailureReason_AUTHORING_HISTORY_FULL
 	case errors.Is(e, authoring.ErrTargetConflict):

@@ -28,7 +28,7 @@ func currentSource(s Session) *Artifact {
 func (s *Service) drafts() (durableDrafts, error) {
 	store, ok := s.store.(durableDrafts)
 	if !ok {
-		return nil, ErrInvalid
+		return nil, ErrFeatureUnavailable
 	}
 	return store, nil
 }

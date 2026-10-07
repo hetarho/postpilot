@@ -86,6 +86,7 @@ func TestAuthoringRefusalsHaveStableReasonsAndNoPrivateText(t *testing.T) {
 		{authoring.ErrOutput, connect.CodeFailedPrecondition, "AUTHORING_OUTPUT_INVALID"},
 		{authoring.ErrNoSelection, connect.CodeFailedPrecondition, "AUTHORING_NOT_READY"},
 		{authoring.ErrInvalid, connect.CodeInvalidArgument, "AUTHORING_MESSAGE_INVALID"},
+		{authoring.ErrFeatureUnavailable, connect.CodeUnimplemented, "AUTHORING_FEATURE_UNAVAILABLE"},
 		{authoring.ErrHistoryFull, connect.CodeFailedPrecondition, "AUTHORING_HISTORY_FULL"},
 		{authoring.ErrTargetConflict, connect.CodeAborted, "AUTHORING_SAVE_CONFLICT"},
 		{authoring.ErrInvalidKind, connect.CodeInvalidArgument, "AUTHORING_KIND_INVALID"},

@@ -92,11 +92,13 @@
 | T646 | Qualify origin-aware writing inspection and clean publication handoff | ARCH GEN POST MODEL THEME EXPORT MKT LANG | T636 T637 T639 T641 T642 T643 T644 T645 T631 | todo |
 
 ## next
-- Main histories are merged and pushed; finish post-push verification and inspect the corrected revision workflows. Implementation tasks remain stopped after T626.
+- Main histories are merged; post-push local verification is complete with failed cases corrected. Inspect the latest pushed revision workflows.
 - Implementation remains stopped after T626; remaining UX and prompt-engineering tasks keep their recorded prerequisites.
 - T603/T604 real semantic/hardware/release qualification stays blocked; no renderer, analysis, voice or distribution activation is authorized by this merge.
 
 ## log
+- 261007 post-push verification complete: whole Go run passed every package except the corrected rpcserver reason scan; rpcserver/authoring/authoring-rpc full owning suites, vet/build and format pass after genuine missing-capability/private-reason fixes; whole frontend failures corrected with owning-suite passes, generated-code drift/spec checks and production build pass; deployment recovery62 and all production/worker/both-layout media gates pass
+- 261007 final backend correction scope: unsupported durable authoring adapter returns typed existing unavailable314 after authentication; reason scanner recognizes actual private failure fields without enum exemptions; media/worker execution paths unchanged and real release API adapter implements durable drafts, so compatible runtime gate evidence is retained and final deployable image metadata is rebuilt for pushed HEAD
 - 261007 post-push frontend verification: full suite3992/4004 passed; the12 breadcrumb selector failures are corrected and owning suites pass (Admin26, Templates7); ESLint, format, FSD, style, retirement and production build pass; backend/media verification continues
 - 261007 post-push corrections: preserve normalized voice test factor and safe filtered paid-history return; canonical consumers64, Admin catalog26, parser10 and migration compatibility11 cases pass; full FE/BE/media verification remains active
 - 261007 main pushed normally through5edb107a after user requested push-first ordering; origin/local synchronized, deployment workflow success observed, initial CI FE/BE test failures retained for reproduction and correction

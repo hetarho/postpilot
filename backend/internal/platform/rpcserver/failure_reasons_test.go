@@ -186,13 +186,8 @@ func scanFailureReasons(t *testing.T) (reasons []string, unresolved []string) {
 					// A durable failure written as a struct field: `Failure{Reason: "X"}`. The
 					// browser renders these from the job record rather than from a status, and
 					// they are values of the same enum, so they count as emitted.
-					if key, ok := current.Key.(*ast.Ident); ok && key.Name == "Reason" {
-						if literal, ok := current.Value.(*ast.BasicLit); ok && literal.Kind == token.STRING {
-							value, _ := strconv.Unquote(literal.Value)
-							if reasonShape.MatchString(value) {
-								found[value] = true
-							}
-						}
+					if key, ok := current.Key.(*ast.Ident); ok {
+						collectReasonField(found, key.Name, current.Value)
 					}
 				case *ast.ValueSpec:
 					for index, name := range current.Names {
@@ -220,6 +215,27 @@ func scanFailureReasons(t *testing.T) (reasons []string, unresolved []string) {
 	}
 	sort.Strings(reasons)
 	return reasons, unresolved
+}
+
+func collectReasonField(into map[string]bool, name string, value ast.Expr) {
+	if strings.EqualFold(name, "Reason") {
+		collectReason(into, name, value)
+	}
+}
+
+func TestReasonFieldScanRecognizesPrivateDomainReasonsWithoutGenericFields(t *testing.T) {
+	for _, tc := range []struct {
+		field, literal string
+		found          bool
+	}{{"Reason", "VOICE_ACCEPTED_SOURCE_WITHDRAWN", true}, {"reason", "VOICE_ACCEPTED_SOURCE_WITHDRAWN", true}, {"reason", "not a public reason", false}, {"Message", "VOICE_ACCEPTED_SOURCE_WITHDRAWN", false}, {"reasonText", "VOICE_ACCEPTED_SOURCE_WITHDRAWN", false}} {
+		t.Run(tc.field+"/"+tc.literal, func(t *testing.T) {
+			found := map[string]bool{}
+			collectReasonField(found, tc.field, &ast.BasicLit{Kind: token.STRING, Value: strconv.Quote(tc.literal)})
+			if found[tc.literal] != tc.found {
+				t.Fatal("reason field scan changed emission coverage")
+			}
+		})
+	}
 }
 
 func collectReason(into map[string]bool, name string, value ast.Expr) {

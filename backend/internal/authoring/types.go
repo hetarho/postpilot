@@ -135,17 +135,18 @@ type Estimate struct {
 }
 
 var (
-	ErrNotFound       = errors.New("authoring session not found")
-	ErrInvalidKind    = errors.New("authoring kind is invalid")
-	ErrInvalid        = errors.New("authoring request is invalid")
-	ErrStale          = errors.New("authoring revision changed")
-	ErrBusy           = errors.New("authoring operation is active")
-	ErrNoSelection    = errors.New("authoring draft not selected")
-	ErrHistoryFull    = errors.New("authoring conversation is full")
-	ErrOutput         = errors.New("authoring output is invalid")
-	ErrModel          = errors.New("authoring writing model is unavailable")
-	ErrTargetConflict = errors.New("authoring target changed")
-	ErrPublication    = errors.New("authoring publication is unconfirmed")
+	ErrNotFound           = errors.New("authoring session not found")
+	ErrInvalidKind        = errors.New("authoring kind is invalid")
+	ErrInvalid            = errors.New("authoring request is invalid")
+	ErrFeatureUnavailable = errors.New("durable authoring is unavailable")
+	ErrStale              = errors.New("authoring revision changed")
+	ErrBusy               = errors.New("authoring operation is active")
+	ErrNoSelection        = errors.New("authoring draft not selected")
+	ErrHistoryFull        = errors.New("authoring conversation is full")
+	ErrOutput             = errors.New("authoring output is invalid")
+	ErrModel              = errors.New("authoring writing model is unavailable")
+	ErrTargetConflict     = errors.New("authoring target changed")
+	ErrPublication        = errors.New("authoring publication is unconfirmed")
 )
 
 // Zero preserves the ordinary authoring default; tests must supply an exact count.
