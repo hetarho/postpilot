@@ -87,6 +87,7 @@
 - Existing blocked qualification and render-capacity work remain separate.
 
 ## log
+- 261007 media-release fixture fix done: Max support assignment passes colocated182.53s/remote159.11s CPU releases, BE80, deploy61, Go vet/build/gofmt and spec lint with existing warnings; verified default release image tags refreshed
 - 261007 T621 done: typography b152f586 and final voice-context 4d634b14;3468 FE tests,145 browser measurements and all available unchanged-source/tooling gates pass
 - 261007 create-task THEME r27 done; T621 start: shared type scale, focused role assignment and browser hierarchy verification
 - 261007 update-ssot THEME r27 done: coherent responsive title/body scale and active-stage hierarchy
@@ -106,4 +107,3 @@
 - 261007 T614 done: domain-owned atomic receipt publication, CAS/protected fields, concurrent replay/tombstones and synthetic-only voice forks pass
 - 261007 T613 done: durable five-kind sessions, request replay, frozen bounded calls, revision/account fences and interrupted-save recovery pass24 core/RPC/SQLite tests
 - 261007 task commits: T613 e8335bb1, T614 199dd222, T615 d98cca13, T616 4b9e6f5a; existing render-capacity source bytes preserved
-- 261007 T616 start: root integrates default AI template/guideline/voice entrypoints while isolated backend and Studio proposals proceed

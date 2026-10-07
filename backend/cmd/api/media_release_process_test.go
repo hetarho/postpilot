@@ -61,9 +61,9 @@ func TestMediaReleaseAPIProcess(t *testing.T) {
 		t.Fatal(err)
 	}
 	registerJobs(c)
-	// A paid model needs a paid offer, and a server render needs that offer's
-	// export window, so the account is assigned the way `api setplan` assigns it.
-	tier, _ := plan.ModelGradeRequired(releaseGrade)
+	// This fixture exercises both paid models and Max-only server exports.
+	// Assign Max through `api setplan`'s path to open real coverage and allowances.
+	tier := plan.Max
 	mux := http.NewServeMux()
 	mux.HandleFunc("/seed", func(w http.ResponseWriter, r *http.Request) {
 		// Unique disposable database only. The fixture account is never a production user.
