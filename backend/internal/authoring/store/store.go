@@ -218,7 +218,7 @@ func (s *Store) Reserve(ctx context.Context, user, id string, revision uint32, o
 		return state, op, false, authoring.ErrBusy
 	}
 	if op.Mode == authoring.Refine {
-		if state.Selected == nil {
+		if state.WorkingSource == nil && state.Selected == nil {
 			return state, op, false, authoring.ErrNoSelection
 		}
 		done := 0

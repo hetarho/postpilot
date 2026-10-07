@@ -106,6 +106,7 @@ function ScopedEditor({
         retry: () => void controller.retryOperation(),
         fresh: controller.fresh,
         keepDirect: () => controller.patch(),
+        continueEditing: () => controller.patch(),
         resetBaseline: () => controller.resetBaseline(),
         cancel: controller.cancel,
       },
@@ -223,9 +224,9 @@ function ScopedEditor({
       <Button variant="cta" onClick={() => event('RETRY')}>
         {t(frozenPublication ? 'saveRetry' : 'retry')}
       </Button>
-      {conflict && (
-        <Button variant="ghost" onClick={() => event('FRESH')}>
-          {t('fresh')}
+      {conflict && flow.can({ type: 'CONTINUE', scopeKey }) && (
+        <Button variant="ghost" onClick={() => event('CONTINUE')}>
+          {t('continueNamed', named)}
         </Button>
       )}
     </div>
@@ -718,7 +719,7 @@ function ScopedEditor({
               {state.session.saved.name || name}
             </Typography>
           )}
-          <Button variant="cta" className="mt-8" onClick={() => event('FRESH')}>
+          <Button variant="cta" className="mt-8" onClick={() => event('CONTINUE')}>
             {t('continueNamed', named)}
           </Button>
         </div>

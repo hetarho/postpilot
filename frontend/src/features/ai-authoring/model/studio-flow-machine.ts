@@ -65,6 +65,7 @@ export type StudioFlowEvent = Scoped &
           | 'CHANGE_SELECTION'
           | 'BACK'
           | 'RETRY'
+          | 'CONTINUE'
           | 'FRESH'
           | 'ASK_CANCEL'
           | 'DISMISS_CANCEL'
@@ -154,7 +155,8 @@ export const studioFlowMachine = setup({
       !(context.operation.session?.phase === 'saving' && !context.operation.session.activeJobId),
     restoring: ({ context }) => context.operation.phase === 'checking',
     refineResult: ({ context }) =>
-      context.intent === 'refine' && !!context.operation.session?.selected,
+      context.intent === 'refine' &&
+      !!(context.operation.session?.workingSource ?? context.operation.session?.selected),
     publishResult: ({ context }) =>
       (context.intent === 'save' || context.operation.session?.phase === 'saving') &&
       !!context.operation.session?.selected,
@@ -204,7 +206,16 @@ export const studioFlowMachine = setup({
     canChangeSelection: ({ context, event }) =>
       navigable(context, event) && !!context.operation.session?.candidates.length,
     canRetry: ({ context, event }) =>
-      accepted(context, event) && context.operation.phase === 'failed',
+      accepted(context, event) &&
+      (context.operation.phase === 'failed' || recoveredPublication(context.operation)),
+    canContinue: ({ context, event }) =>
+      accepted(context, event) &&
+      !context.operation.command &&
+      !!(context.operation.session?.workingSource ?? context.operation.session?.selected) &&
+      (context.operation.phase === 'saved' ||
+        ((context.operation.phase === 'failed' || recoveredPublication(context.operation)) &&
+          (context.operation.failure?.reason === 'AUTHORING_SAVE_CONFLICT' ||
+            context.operation.session?.failureReason === 'AUTHORING_SAVE_CONFLICT'))),
     canFresh: ({ context, event }) => accepted(context, event) && !studioBusy(context.operation),
     canCancel: ({ context, event }) =>
       accepted(context, event) &&
@@ -252,6 +263,7 @@ export const studioFlowMachine = setup({
     fresh: () => {},
     cancel: () => {},
     keepDirect: () => {},
+    continueEditing: () => {},
     resetBaseline: () => {},
   },
 }).createMachine({
@@ -276,6 +288,11 @@ export const studioFlowMachine = setup({
       { guard: 'accepted', actions: 'observe' },
     ],
     RETRY: { guard: 'canRetry', target: '.working', actions: 'retry' },
+    CONTINUE: {
+      guard: 'canContinue',
+      target: '.working',
+      actions: ['keepingDirect', 'continueEditing'],
+    },
     FRESH: { guard: 'canFresh', target: '.working', actions: ['refining', 'fresh'] },
     ASK_RESET: { guard: 'canReset', actions: 'showReset' },
     DISMISS_RESET: { guard: 'accepted', actions: 'hideReset' },
@@ -401,6 +418,7 @@ export const studioFlowMachine = setup({
       },
     },
     working: {
+      on: { RETRY: {}, CONTINUE: {} },
       initial: 'running',
       states: {
         running: { on: { ASK_CANCEL: { guard: 'canCancel', target: 'confirmingCancellation' } } },

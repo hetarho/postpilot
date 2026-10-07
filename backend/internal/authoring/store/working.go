@@ -121,7 +121,10 @@ func (s *Store) mutate(ctx context.Context, in authoring.ResetMutation, action s
 		return state, authoring.ErrStale
 	}
 	recoveringSave := action == "save" && state.Phase == "saving" && state.Publication != nil
-	if state.Phase == "saving" && !recoveringSave {
+	// A confirmed target conflict did not publish this attempt. Explicit manual
+	// continuation may release it, retaining its frozen receipt and target fence.
+	continuingConflict := action == "patch" && state.Phase == "saving" && state.FailureReason == "AUTHORING_SAVE_CONFLICT" && state.ActiveRequestID == ""
+	if state.Phase == "saving" && !recoveringSave && !continuingConflict {
 		return state, authoring.ErrBusy
 	}
 	if err = apply(&state); err != nil {
@@ -165,7 +168,9 @@ func (s *Store) PatchDraftState(ctx context.Context, in authoring.DraftMutation,
 			state.Selected = &copy
 		}
 		state.HasUnpublishedChanges = !sameContent(state.WorkingSource, state.SavedBaseline)
-		state.Publication = nil
+		if state.FailureReason != "AUTHORING_SAVE_CONFLICT" {
+			state.Publication = nil
+		}
 		state.FailureReason = ""
 		if state.ActiveRequestID == "" {
 			state.Phase = "editing"

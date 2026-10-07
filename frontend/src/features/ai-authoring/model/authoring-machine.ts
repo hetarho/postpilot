@@ -384,6 +384,14 @@ export const authoringMachine = setup({
       !context.session.activeJobId &&
       !!context.session.selected &&
       !context.command,
+    conflictPatch: ({ context, event }) =>
+      owns(context, event) &&
+      event.type === 'begin' &&
+      event.phase === 'patching' &&
+      context.session?.phase === 'saving' &&
+      context.session.failureReason === 'AUTHORING_SAVE_CONFLICT' &&
+      !context.session.activeJobId &&
+      !context.command,
     cancelAllowed: ({ context, event }) =>
       owns(context, event) &&
       event.type === 'begin' &&
@@ -608,6 +616,7 @@ export const authoringMachine = setup({
         hydrate: hydrateTransitions,
         begin: [
           { guard: 'recoveredSave', target: 'saving', actions: 'begin' },
+          { guard: 'conflictPatch', target: 'patching', actions: 'begin' },
           { guard: 'cancelAllowed', target: 'cancelling', actions: 'begin' },
         ],
       },

@@ -38,7 +38,11 @@ function actor(initial = operation()) {
     refine = vi.fn(),
     publish = vi.fn(),
     cancel = vi.fn(),
-    load = vi.fn()
+    load = vi.fn(),
+    patch = vi.fn(),
+    continueEditing = vi.fn(),
+    retry = vi.fn(),
+    fresh = vi.fn()
   const value = createActor(
     studioFlowMachine.provide({
       actions: {
@@ -48,6 +52,10 @@ function actor(initial = operation()) {
         publish,
         cancel,
         loadExisting: load,
+        keepDirect: patch,
+        continueEditing,
+        retry,
+        fresh,
       },
     }),
     { input: { scope, operation: initial, ai: 'ready' } },
@@ -66,11 +74,95 @@ function actor(initial = operation()) {
     publish,
     cancel,
     load,
+    patch,
+    continueEditing,
+    retry,
+    fresh,
     view: () => studioFlowView(value.getSnapshot()),
   }
 }
 
 describe('scoped studio presentation actor', () => {
+  it('enters AI editing after persisting changed unfinished source with no valid preview', () => {
+    const source = { ...candidates[0]!, body: '' }
+    const initial = operation({
+      phase: 'idle',
+      session: session({
+        phase: 'editing',
+        candidates: [],
+        workingSource: source,
+        draftState: 'incomplete',
+      }),
+    })
+    const h = actor(initial)
+    expect(h.view()).toBe('direct')
+    h.observe({
+      ...initial,
+      directSource: { ...source, name: 'Changed unfinished source' },
+      sourceDirty: true,
+    })
+    h.send({ type: 'OPEN_REFINEMENT' })
+    h.send({ type: 'OPEN_REFINEMENT' })
+    expect(h.patch).toHaveBeenCalledOnce()
+    expect(h.view()).toBe('working')
+    h.observe({ ...initial, phase: 'patching', operation: 1 })
+    h.observe({
+      ...initial,
+      operation: 1,
+      session: {
+        ...initial.session!,
+        revision: 2,
+        workingSource: { ...source, name: 'Changed unfinished source' },
+      },
+    })
+    expect(h.view()).toBe('refining')
+    expect(h.value.getSnapshot().context.operation.session?.workingSource?.name).toBe(
+      'Changed unfinished source',
+    )
+    expect(h.refine).not.toHaveBeenCalled()
+    expect(h.publish).not.toHaveBeenCalled()
+  })
+  it('continues a confirmed save through a distinct action without resetting chat', () => {
+    const initial = operation({
+      phase: 'saved',
+      session: session({ phase: 'saved', selected: candidates[0] }),
+    })
+    const h = actor(initial)
+    expect(h.view()).toBe('confirmed')
+    h.send({ type: 'CONTINUE' })
+    h.send({ type: 'CONTINUE' })
+    expect(h.continueEditing).toHaveBeenCalledOnce()
+    expect(h.fresh).not.toHaveBeenCalled()
+    h.observe({ ...initial, phase: 'patching', operation: 1 })
+    h.observe({
+      ...initial,
+      phase: 'editing',
+      operation: 1,
+      session: { ...initial.session!, phase: 'editing', revision: 2 },
+    })
+    expect(h.view()).toBe('review')
+  })
+  it('admits persisted conflict confirmation and continuation explicitly', () => {
+    const initial = operation({
+      phase: 'active',
+      session: session({
+        phase: 'saving',
+        failureReason: 'AUTHORING_SAVE_CONFLICT',
+        selected: candidates[0],
+      }),
+    })
+    const h = actor(initial)
+    expect(h.view()).toBe('publication')
+    h.send({ type: 'RETRY' })
+    h.send({ type: 'RETRY' })
+    expect(h.retry).toHaveBeenCalledOnce()
+    const continuation = actor(initial)
+    continuation.send({ type: 'CONTINUE' })
+    continuation.send({ type: 'CONTINUE' })
+    expect(continuation.continueEditing).toHaveBeenCalledOnce()
+    expect(continuation.fresh).not.toHaveBeenCalled()
+    expect(continuation.publish).not.toHaveBeenCalled()
+  })
   it('allows an empty optional purpose and admits a repeated recommendation only once', () => {
     const h = actor()
     expect(h.view()).toBe('purpose')

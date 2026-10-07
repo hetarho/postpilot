@@ -191,7 +191,7 @@ func (s *Service) finalizePublication(ctx context.Context, user, id string, p Pu
 		seed, err := s.targets.Seed(ctx, user, ref.Kind, ref.ID)
 		// Publication is already confirmed even if the target was deleted immediately.
 		version := ""
-		if err == nil && seed.Artifact != nil && samePublishedContent(*seed.Artifact, p.Artifact) {
+		if err == nil && seed.Artifact != nil && samePublishedContent(p.Kind, *seed.Artifact, p.Artifact) {
 			version = seed.TargetVersion
 		}
 		return store.FinalizeSaveVersion(ctx, user, id, p.Key, ref, version)
@@ -208,6 +208,16 @@ func (s *Service) validatePublication(kind Kind, a Artifact) error {
 
 // A read after publication may already see a later owner edit. That version must
 // not authorize writing the old draft over the newer saved content.
-func samePublishedContent(a, b Artifact) bool {
-	return strings.TrimSpace(a.Name) == strings.TrimSpace(b.Name) && strings.TrimSpace(a.Description) == strings.TrimSpace(b.Description) && strings.TrimSpace(a.Body) == strings.TrimSpace(b.Body) && strings.TrimSpace(a.TitleArea) == strings.TrimSpace(b.TitleArea)
+func samePublishedContent(kind Kind, a, b Artifact) bool {
+	if strings.TrimSpace(a.Name) != strings.TrimSpace(b.Name) || strings.TrimSpace(a.Body) != strings.TrimSpace(b.Body) {
+		return false
+	}
+	// Guidelines and video recipes preserve name/body only. Descriptions are
+	// authoring presentation metadata and are absent from their domain seeds.
+	if kind == PostTemplate || kind == WritingVoice {
+		if strings.TrimSpace(a.Description) != strings.TrimSpace(b.Description) {
+			return false
+		}
+	}
+	return kind != PostTemplate || strings.TrimSpace(a.TitleArea) == strings.TrimSpace(b.TitleArea)
 }

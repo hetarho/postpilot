@@ -2,6 +2,7 @@ package store_test
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/postpilot/backend/internal/authoring"
@@ -9,6 +10,68 @@ import (
 	"strings"
 	"testing"
 )
+
+func TestRefineCompletesNewIncompleteOrInvalidSourceWithoutASelectedPreview(t *testing.T) {
+	for _, body := range []string{"", "invalid-source"} {
+		t.Run(body, func(t *testing.T) {
+			h := fixture(t)
+			ctx := context.Background()
+			h.svc = authoring.NewService(h.store, h.models, h.jobs, realTargets(h), budget{}, estimates{})
+			s := create(t, h, authoring.VideoTemplate)
+			s, err := h.svc.PatchDraft(ctx, authoring.DraftMutation{UserID: "alice", SessionID: s.ID, ExpectedRevision: s.Revision, OperationKey: "incomplete", WorkingSource: authoring.Artifact{Name: "Unfinished", Body: body}})
+			if err != nil || s.Selected != nil || s.WorkingSource == nil || s.DraftState == authoring.DraftValid {
+				t.Fatal("fixture did not retain unfinished new work", err)
+			}
+			reloaded, err := h.svc.Get(ctx, "alice", s.ID)
+			if err != nil || *reloaded.WorkingSource != *s.WorkingSource {
+				t.Fatal("unfinished source was not durable", err)
+			}
+			id, active, err := h.svc.Start(ctx, "alice", authoring.Start{SessionID: s.ID, ExpectedRevision: s.Revision, RequestID: "finish-source", Mode: authoring.Refine, Prompt: "Complete my current structure", WriteModel: llm.ModelRef{ProviderID: "p", ModelID: "m"}})
+			if err != nil || active.Phase != "refining" || h.jobs.enqueues != 1 {
+				t.Fatal("stored source was rejected at admission", err)
+			}
+			job, _ := h.jobs.Get(ctx, "alice", id)
+			var input struct {
+				Selected struct{ Name, Body string }
+			}
+			if err = json.Unmarshal(job.Payload, &input); err != nil || input.Selected.Body != body || input.Selected.Name != "Unfinished" {
+				t.Fatal("admission did not freeze the raw current source", err)
+			}
+			completedBody := videoBody("Complete structure")
+			output, err := json.Marshal(map[string]any{"artifact": map[string]string{"name": "Completed", "description": "", "body": completedBody, "title_area": ""}, "reply": "구성을 완성했어요."})
+			if err != nil {
+				t.Fatal(err)
+			}
+			h.models.text = string(output)
+			if err = h.svc.Run(ctx, authoring.Run{ID: id, UserID: "alice", WriteModel: job.WriteModel, Payload: job.Payload}, func(string, int, int) {}); err != nil {
+				t.Fatal("explicit refinement failed", err)
+			}
+			h.jobs.status(id, "done")
+			completed, err := h.svc.Get(ctx, "alice", s.ID)
+			if err != nil || completed.Selected == nil || completed.WorkingSource.Body != completedBody || completed.DraftState != authoring.DraftValid || len(completed.Turns) != 1 || completed.Turns[0].Status != "done" {
+				t.Fatal("validated completion did not replace the unfinished work", err)
+			}
+			if h.models.calls != 1 || h.targets.creates != 0 || completed.Saved != nil {
+				t.Fatal("refinement retried or published implicitly")
+			}
+			saved, err := h.svc.SaveWithKey(ctx, authoring.ResetMutation{UserID: "alice", SessionID: s.ID, ExpectedRevision: completed.Revision, OperationKey: "save-completed"}, false)
+			if err != nil {
+				t.Fatal(err)
+			}
+			reopened, err := h.svc.Get(ctx, "alice", saved.ID)
+			if err != nil {
+				t.Fatal(err)
+			}
+			continued := patch(t, h, reopened, "continue-completed", completedBody)
+			if continued.Phase != "editing" || len(continued.Turns) != 1 || continued.Turns[0] != completed.Turns[0] || continued.Saved == nil || *continued.Saved != *saved.Saved {
+				t.Fatal("save/reopen/continuation reset the conversation or confirmed receipt")
+			}
+			if h.models.calls != 1 || h.jobs.enqueues != 1 {
+				t.Fatal("continuation performed model work")
+			}
+		})
+	}
+}
 
 type strictTargets struct{ *targets }
 

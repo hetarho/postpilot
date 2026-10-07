@@ -201,6 +201,7 @@ function server(
             : ProtoAuthoringDraftState.INCOMPLETE,
         hasUnpublishedChanges: true,
         selected: valid ? { ...source, id: current!.selected?.id ?? 'manual' } : current!.selected,
+        failureReason: '',
       })
       return create(Service.method.patchAuthoringDraft.output, { session: current })
     })
@@ -244,7 +245,14 @@ function server(
       defaults.push(request.makeDefault)
       calls.push('Save')
       if (options.saveGate) await options.saveGate
-      if (options.saveConflict) throw connectAppError('AUTHORING_SAVE_CONFLICT', Code.Aborted)
+      if (options.saveConflict) {
+        current = makeSession({
+          ...captured,
+          phase: 'saving',
+          failureReason: 'AUTHORING_SAVE_CONFLICT',
+        })
+        throw connectAppError('AUTHORING_SAVE_CONFLICT', Code.Aborted)
+      }
       current = makeSession({
         ...captured,
         revision: captured.revision + 1,
@@ -931,7 +939,7 @@ it('keeps an eight-entry preview while preparing two new choices and opens the c
   expect(fake.calls).not.toContain('Save')
 })
 
-it('restores a persisted target conflict as a conflict instead of presenting an ordinary uncertain save', async () => {
+it('reopens a persisted conflict and explicitly confirms or continues while retaining draft, receipt and conversation', async () => {
   const baseline = {
     id: 'draft',
     name: '저장 지침',
@@ -940,6 +948,7 @@ it('restores a persisted target conflict as a conflict instead of presenting an 
     titleArea: '',
   }
   const fake = server({
+    saveConflict: true,
     initial: makeSession({
       phase: 'saving',
       targetId: 'owned-guide',
@@ -948,12 +957,33 @@ it('restores a persisted target conflict as a conflict instead of presenting an 
       savedBaseline: baseline,
       workingSource: baseline,
       selected: baseline,
+      saved: {
+        id: 'owned-guide',
+        kind: ProtoConfigurationKind.POST_GUIDELINE,
+        name: baseline.name,
+      },
+      turns: [
+        { id: 'previous', request: '이 대화를 보존해 주세요', reply: '보존했어요', status: 'done' },
+      ],
     }),
   })
   mount(fake, { targetId: 'owned-guide' })
   expect(await screen.findByRole('alert')).toHaveTextContent('설정이 다른 곳에서 바뀌었어요')
   expect(screen.getByRole('button', { name: '저장 결과 다시 확인하기' })).toBeInTheDocument()
   expect(fake.calls).not.toContain('Save')
+  expect(fake.starts).toHaveLength(0)
+  const user = userEvent.setup()
+  await user.click(screen.getByRole('button', { name: '저장 결과 다시 확인하기' }))
+  await waitFor(() => expect(fake.calls.filter((call) => call === 'Save')).toHaveLength(1))
+  await user.click(await screen.findByRole('button', { name: '“저장 지침” 이어서 편집하기' }))
+  await screen.findByRole('button', { name: '“저장 지침” 직접 편집하기' })
+  expect(fake.current?.workingSource?.body).toBe(baseline.body)
+  expect(fake.current?.saved?.id).toBe('owned-guide')
+  expect(fake.current?.turns[0]?.request).toBe('이 대화를 보존해 주세요')
+  expect(fake.calls).toContain('Patch')
+  expect(fake.calls).not.toContain('ResetChat')
+  await user.click(screen.getByRole('button', { name: '“저장 지침” AI로 편집하기' }))
+  expect(screen.getByText('이 대화를 보존해 주세요')).toBeInTheDocument()
   expect(fake.starts).toHaveLength(0)
 })
 
@@ -973,10 +1003,67 @@ it('recovers unfinished new manual work with no valid preview and can switch to 
   const user = userEvent.setup()
   expect(await screen.findByRole('textbox', { name: '이름' })).toHaveValue(source.name)
   expect(screen.getByRole('textbox', { name: '내용' })).toHaveValue('')
-  await user.click(screen.getByRole('button', { name: '“준비 중인 구성” AI로 편집하기' }))
-  expect(screen.getByRole('textbox', { name: '어떤 점을 바꿔 볼까요?' })).toBeInTheDocument()
-  expect(fake.current?.workingSource?.name).toBe(source.name)
+  await user.clear(screen.getByRole('textbox', { name: '이름' }))
+  await user.type(screen.getByRole('textbox', { name: '이름' }), '수정한 미완성 구성')
+  await user.click(screen.getByRole('button', { name: '“수정한 미완성 구성” AI로 편집하기' }))
+  expect(await screen.findByRole('textbox', { name: '어떤 점을 바꿔 볼까요?' })).toBeInTheDocument()
+  expect(fake.current?.workingSource?.name).toBe('수정한 미완성 구성')
+  expect(fake.calls.filter((call) => call === 'Patch')).toHaveLength(1)
   expect(fake.current?.selected).toBeUndefined()
   expect(fake.starts).toHaveLength(0)
   expect(fake.calls).not.toContain('Save')
+})
+
+it('saves, reopens and continues editing with retained conversation and keeps unsent input on the next continuation', async () => {
+  const selected = {
+    id: 'draft',
+    name: '대화할 지침',
+    description: '',
+    body: '보존할 지침',
+    titleArea: '',
+  }
+  const fake = server({
+    initial: makeSession({
+      phase: 'editing',
+      selected,
+      workingSource: selected,
+      draftState: ProtoAuthoringDraftState.VALID,
+      turns: [
+        {
+          id: 'prior',
+          request: '따뜻한 방향으로 써 주세요',
+          reply: '따뜻한 방향으로 바꿨어요',
+          status: 'done',
+        },
+      ],
+    }),
+  })
+  const first = mount(fake)
+  const user = userEvent.setup()
+  await screen.findByRole('button', { name: '저장할 내용 확인하기' })
+  await publication(user)
+  await user.click(screen.getByRole('button', { name: '이걸로 저장하기' }))
+  await screen.findByRole('button', { name: '“대화할 지침” 이어서 편집하기' })
+  first.unmount()
+  mount(fake, { sessionId: 'session' })
+  await user.click(await screen.findByRole('button', { name: '“대화할 지침” 이어서 편집하기' }))
+  await user.click(await screen.findByRole('button', { name: '“대화할 지침” AI로 편집하기' }))
+  expect(screen.getByText('따뜻한 방향으로 써 주세요')).toBeInTheDocument()
+  expect(screen.getByText('따뜻한 방향으로 바꿨어요')).toBeInTheDocument()
+  await user.type(
+    screen.getByRole('textbox', { name: '어떤 점을 바꿔 볼까요?' }),
+    '아직 보내지 않은 요청',
+  )
+  await user.click(screen.getByRole('button', { name: '결과 확인으로 돌아가기' }))
+  await publication(user)
+  await user.click(screen.getByRole('button', { name: '이걸로 저장하기' }))
+  await user.click(await screen.findByRole('button', { name: '“대화할 지침” 이어서 편집하기' }))
+  await user.click(await screen.findByRole('button', { name: '“대화할 지침” AI로 편집하기' }))
+  expect(screen.getByRole('textbox', { name: '어떤 점을 바꿔 볼까요?' })).toHaveValue(
+    '아직 보내지 않은 요청',
+  )
+  expect(fake.current?.turns).toHaveLength(1)
+  expect(fake.calls).not.toContain('ResetChat')
+  expect(fake.starts).toHaveLength(0)
+  expect(fake.calls.filter((call) => call === 'Save')).toHaveLength(2)
 })

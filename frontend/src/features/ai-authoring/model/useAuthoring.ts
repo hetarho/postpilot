@@ -228,6 +228,17 @@ export function useAuthoring(
       run(context.retry)
       return
     }
+    if (context.session?.phase === 'saving' && !context.session.activeJobId) {
+      run({
+        type: 'save',
+        sessionId: context.session.id,
+        revision: context.session.revision,
+        // The server retains the pending publication's admitted default choice.
+        makeDefault: false,
+        operationKey: crypto.randomUUID(),
+      })
+      return
+    }
     send({ type: 'retry-load', scopeKey })
     const result = await restoreQuery.refetch()
     if (result.data !== undefined) send({ type: 'hydrate', scopeKey, session: result.data })
