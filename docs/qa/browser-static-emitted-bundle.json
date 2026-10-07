@@ -1,0 +1,3008 @@
+{
+  "version": 1,
+  "sourceCommit": "ce298916e78ea8f853f107467a1a1796d19edccc",
+  "lockfileSHA256": "d07c4a1bd3aeab4df41155c2d63d85e6a487959534ed7b27b4710315d7a07319",
+  "node": "v24.18.0",
+  "chunks": [
+    {
+      "environment": "worker",
+      "file": "assets/processing.worker-CGohWWjD.js",
+      "generatedCodeSHA256": "667a57e14e67fd3c8b934403413c5d1664ebe0d319d2ae9918ee1568a54d614a",
+      "moduleCount": 9,
+      "packages": [
+        {
+          "name": "@soundtouchjs/core",
+          "version": "2.1.1",
+          "declaredLicense": "MPL-2.0",
+          "metadataSHA256": "b6624f855f7ad9007c78d2afb25a5477caa5c3fd4347c8732d81f95b73994139"
+        }
+      ],
+      "sourceModules": [
+        "frontend/src/shared/lib/media/audio/codec-queue.ts",
+        "frontend/src/shared/lib/media/audio/encoder-delay.ts",
+        "frontend/src/shared/lib/media/audio/loudness.ts",
+        "frontend/src/shared/lib/media/audio/processing.worker.ts",
+        "frontend/src/shared/lib/media/audio/stretch.ts",
+        "frontend/src/shared/lib/media/audio/verify-encoded.ts"
+      ],
+      "codeSHA256": "667a57e14e67fd3c8b934403413c5d1664ebe0d319d2ae9918ee1568a54d614a"
+    },
+    {
+      "environment": "worker",
+      "file": "assets/heif-worker-D9Ws7trK.js",
+      "generatedCodeSHA256": "f296a2e44387521f18b14108d3d5bcc9eaaa81376c6173074cd710664bdafff8",
+      "moduleCount": 2,
+      "packages": [
+        {
+          "name": "libheif-js",
+          "version": "1.19.8",
+          "declaredLicense": "LGPL-3.0",
+          "metadataSHA256": "d0f77d41626e23135505d130b3c5c9b3398a600ca32ff024c2f720054a4c2153"
+        }
+      ],
+      "sourceModules": [
+        "frontend/src/shared/lib/image/heif-worker.ts"
+      ],
+      "codeSHA256": "f296a2e44387521f18b14108d3d5bcc9eaaa81376c6173074cd710664bdafff8"
+    },
+    {
+      "environment": "worker",
+      "file": "assets/range-audio.worker-D77r8Ui9.js",
+      "generatedCodeSHA256": "6e322dd7f941aefd7550e7a7d4c739450f1e432f537a2b1ad4ec9dcb98fdd25d",
+      "moduleCount": 31,
+      "packages": [
+        {
+          "name": "mediabunny",
+          "version": "1.58.0",
+          "declaredLicense": "MPL-2.0",
+          "metadataSHA256": "b15865a5e3cc0d5e755fff6ae4113aa547cc19a2eb22bdff1c44fea3cf81b4e3"
+        }
+      ],
+      "sourceModules": [
+        "frontend/src/shared/lib/media/audio/range-audio.ts",
+        "frontend/src/shared/lib/media/audio/range-audio.worker.ts",
+        "frontend/src/shared/lib/media/video/range-source.ts"
+      ],
+      "codeSHA256": "6e322dd7f941aefd7550e7a7d4c739450f1e432f537a2b1ad4ec9dcb98fdd25d"
+    },
+    {
+      "environment": "worker",
+      "file": "assets/processing.worker-CGohWWjD.js",
+      "generatedCodeSHA256": "667a57e14e67fd3c8b934403413c5d1664ebe0d319d2ae9918ee1568a54d614a",
+      "moduleCount": 9,
+      "packages": [
+        {
+          "name": "@soundtouchjs/core",
+          "version": "2.1.1",
+          "declaredLicense": "MPL-2.0",
+          "metadataSHA256": "b6624f855f7ad9007c78d2afb25a5477caa5c3fd4347c8732d81f95b73994139"
+        }
+      ],
+      "sourceModules": [
+        "frontend/src/shared/lib/media/audio/codec-queue.ts",
+        "frontend/src/shared/lib/media/audio/encoder-delay.ts",
+        "frontend/src/shared/lib/media/audio/loudness.ts",
+        "frontend/src/shared/lib/media/audio/processing.worker.ts",
+        "frontend/src/shared/lib/media/audio/stretch.ts",
+        "frontend/src/shared/lib/media/audio/verify-encoded.ts"
+      ],
+      "codeSHA256": "667a57e14e67fd3c8b934403413c5d1664ebe0d319d2ae9918ee1568a54d614a"
+    },
+    {
+      "environment": "worker",
+      "file": "assets/processing.worker-CGohWWjD.js",
+      "generatedCodeSHA256": "667a57e14e67fd3c8b934403413c5d1664ebe0d319d2ae9918ee1568a54d614a",
+      "moduleCount": 9,
+      "packages": [
+        {
+          "name": "@soundtouchjs/core",
+          "version": "2.1.1",
+          "declaredLicense": "MPL-2.0",
+          "metadataSHA256": "b6624f855f7ad9007c78d2afb25a5477caa5c3fd4347c8732d81f95b73994139"
+        }
+      ],
+      "sourceModules": [
+        "frontend/src/shared/lib/media/audio/codec-queue.ts",
+        "frontend/src/shared/lib/media/audio/encoder-delay.ts",
+        "frontend/src/shared/lib/media/audio/loudness.ts",
+        "frontend/src/shared/lib/media/audio/processing.worker.ts",
+        "frontend/src/shared/lib/media/audio/stretch.ts",
+        "frontend/src/shared/lib/media/audio/verify-encoded.ts"
+      ],
+      "codeSHA256": "667a57e14e67fd3c8b934403413c5d1664ebe0d319d2ae9918ee1568a54d614a"
+    },
+    {
+      "environment": "worker",
+      "file": "assets/processing.worker-CGohWWjD.js",
+      "generatedCodeSHA256": "667a57e14e67fd3c8b934403413c5d1664ebe0d319d2ae9918ee1568a54d614a",
+      "moduleCount": 9,
+      "packages": [
+        {
+          "name": "@soundtouchjs/core",
+          "version": "2.1.1",
+          "declaredLicense": "MPL-2.0",
+          "metadataSHA256": "b6624f855f7ad9007c78d2afb25a5477caa5c3fd4347c8732d81f95b73994139"
+        }
+      ],
+      "sourceModules": [
+        "frontend/src/shared/lib/media/audio/codec-queue.ts",
+        "frontend/src/shared/lib/media/audio/encoder-delay.ts",
+        "frontend/src/shared/lib/media/audio/loudness.ts",
+        "frontend/src/shared/lib/media/audio/processing.worker.ts",
+        "frontend/src/shared/lib/media/audio/stretch.ts",
+        "frontend/src/shared/lib/media/audio/verify-encoded.ts"
+      ],
+      "codeSHA256": "667a57e14e67fd3c8b934403413c5d1664ebe0d319d2ae9918ee1568a54d614a"
+    },
+    {
+      "environment": "worker",
+      "file": "assets/heif-worker-D9Ws7trK.js",
+      "generatedCodeSHA256": "f296a2e44387521f18b14108d3d5bcc9eaaa81376c6173074cd710664bdafff8",
+      "moduleCount": 2,
+      "packages": [
+        {
+          "name": "libheif-js",
+          "version": "1.19.8",
+          "declaredLicense": "LGPL-3.0",
+          "metadataSHA256": "d0f77d41626e23135505d130b3c5c9b3398a600ca32ff024c2f720054a4c2153"
+        }
+      ],
+      "sourceModules": [
+        "frontend/src/shared/lib/image/heif-worker.ts"
+      ],
+      "codeSHA256": "f296a2e44387521f18b14108d3d5bcc9eaaa81376c6173074cd710664bdafff8"
+    },
+    {
+      "environment": "worker",
+      "file": "assets/heif-worker-D9Ws7trK.js",
+      "generatedCodeSHA256": "f296a2e44387521f18b14108d3d5bcc9eaaa81376c6173074cd710664bdafff8",
+      "moduleCount": 2,
+      "packages": [
+        {
+          "name": "libheif-js",
+          "version": "1.19.8",
+          "declaredLicense": "LGPL-3.0",
+          "metadataSHA256": "d0f77d41626e23135505d130b3c5c9b3398a600ca32ff024c2f720054a4c2153"
+        }
+      ],
+      "sourceModules": [
+        "frontend/src/shared/lib/image/heif-worker.ts"
+      ],
+      "codeSHA256": "f296a2e44387521f18b14108d3d5bcc9eaaa81376c6173074cd710664bdafff8"
+    },
+    {
+      "environment": "worker",
+      "file": "assets/range-audio.worker-D77r8Ui9.js",
+      "generatedCodeSHA256": "6e322dd7f941aefd7550e7a7d4c739450f1e432f537a2b1ad4ec9dcb98fdd25d",
+      "moduleCount": 31,
+      "packages": [
+        {
+          "name": "mediabunny",
+          "version": "1.58.0",
+          "declaredLicense": "MPL-2.0",
+          "metadataSHA256": "b15865a5e3cc0d5e755fff6ae4113aa547cc19a2eb22bdff1c44fea3cf81b4e3"
+        }
+      ],
+      "sourceModules": [
+        "frontend/src/shared/lib/media/audio/range-audio.ts",
+        "frontend/src/shared/lib/media/audio/range-audio.worker.ts",
+        "frontend/src/shared/lib/media/video/range-source.ts"
+      ],
+      "codeSHA256": "6e322dd7f941aefd7550e7a7d4c739450f1e432f537a2b1ad4ec9dcb98fdd25d"
+    },
+    {
+      "environment": "worker",
+      "file": "assets/range-audio.worker-D77r8Ui9.js",
+      "generatedCodeSHA256": "6e322dd7f941aefd7550e7a7d4c739450f1e432f537a2b1ad4ec9dcb98fdd25d",
+      "moduleCount": 31,
+      "packages": [
+        {
+          "name": "mediabunny",
+          "version": "1.58.0",
+          "declaredLicense": "MPL-2.0",
+          "metadataSHA256": "b15865a5e3cc0d5e755fff6ae4113aa547cc19a2eb22bdff1c44fea3cf81b4e3"
+        }
+      ],
+      "sourceModules": [
+        "frontend/src/shared/lib/media/audio/range-audio.ts",
+        "frontend/src/shared/lib/media/audio/range-audio.worker.ts",
+        "frontend/src/shared/lib/media/video/range-source.ts"
+      ],
+      "codeSHA256": "6e322dd7f941aefd7550e7a7d4c739450f1e432f537a2b1ad4ec9dcb98fdd25d"
+    },
+    {
+      "environment": "worker",
+      "file": "assets/range-audio.worker-D77r8Ui9.js",
+      "generatedCodeSHA256": "6e322dd7f941aefd7550e7a7d4c739450f1e432f537a2b1ad4ec9dcb98fdd25d",
+      "moduleCount": 31,
+      "packages": [
+        {
+          "name": "mediabunny",
+          "version": "1.58.0",
+          "declaredLicense": "MPL-2.0",
+          "metadataSHA256": "b15865a5e3cc0d5e755fff6ae4113aa547cc19a2eb22bdff1c44fea3cf81b4e3"
+        }
+      ],
+      "sourceModules": [
+        "frontend/src/shared/lib/media/audio/range-audio.ts",
+        "frontend/src/shared/lib/media/audio/range-audio.worker.ts",
+        "frontend/src/shared/lib/media/video/range-source.ts"
+      ],
+      "codeSHA256": "6e322dd7f941aefd7550e7a7d4c739450f1e432f537a2b1ad4ec9dcb98fdd25d"
+    },
+    {
+      "environment": "worker",
+      "file": "assets/heif-worker-D9Ws7trK.js",
+      "generatedCodeSHA256": "f296a2e44387521f18b14108d3d5bcc9eaaa81376c6173074cd710664bdafff8",
+      "moduleCount": 2,
+      "packages": [
+        {
+          "name": "libheif-js",
+          "version": "1.19.8",
+          "declaredLicense": "LGPL-3.0",
+          "metadataSHA256": "d0f77d41626e23135505d130b3c5c9b3398a600ca32ff024c2f720054a4c2153"
+        }
+      ],
+      "sourceModules": [
+        "frontend/src/shared/lib/image/heif-worker.ts"
+      ],
+      "codeSHA256": "f296a2e44387521f18b14108d3d5bcc9eaaa81376c6173074cd710664bdafff8"
+    },
+    {
+      "environment": "worker",
+      "file": "assets/analysis.worker-DprB9FVt.js",
+      "generatedCodeSHA256": "d4bdaa0ba86d90739616a792718c33698a0bb8a395be61c99d47a05eebf5515a",
+      "moduleCount": 51,
+      "packages": [
+        {
+          "name": "mediabunny",
+          "version": "1.58.0",
+          "declaredLicense": "MPL-2.0",
+          "metadataSHA256": "b15865a5e3cc0d5e755fff6ae4113aa547cc19a2eb22bdff1c44fea3cf81b4e3"
+        }
+      ],
+      "sourceModules": [
+        "frontend/src/features/prepare-clip-browser/config/limits.ts",
+        "frontend/src/features/prepare-clip-browser/lib/analysis-media.ts",
+        "frontend/src/features/prepare-clip-browser/lib/analysis.worker.ts",
+        "frontend/src/features/prepare-clip-browser/model/coverage.ts",
+        "frontend/src/shared/lib/media/analysis-copy.ts",
+        "frontend/src/shared/lib/media/square-pixel-mp4.ts",
+        "frontend/src/shared/lib/media/video/range-source.ts",
+        "frontend/src/shared/lib/media/video/range-video.ts",
+        "frontend/src/shared/lib/media/video/source-color.ts"
+      ],
+      "codeSHA256": "d4bdaa0ba86d90739616a792718c33698a0bb8a395be61c99d47a05eebf5515a"
+    },
+    {
+      "environment": "worker",
+      "file": "assets/preview.worker-BfjCv9Hx.js",
+      "generatedCodeSHA256": "494b243f380b414d76e9678363b3f467920bcf7750f8817075fb111921881459",
+      "moduleCount": 227,
+      "packages": [
+        {
+          "name": "@pixi/colord",
+          "version": "2.9.6",
+          "declaredLicense": "MIT",
+          "metadataSHA256": "d92aec39b7b030ebb6419b8ca4da12fd1a9b7bbd12d2979ab019308b417507e8"
+        },
+        {
+          "name": "@resvg/resvg-wasm",
+          "version": "2.6.2",
+          "declaredLicense": "MPL-2.0",
+          "metadataSHA256": "4a9efcb54b2670726ccf9b91086413676c3de0fae607cce3b8a5a0d25abaff48"
+        },
+        {
+          "name": "eventemitter3",
+          "version": "5.0.4",
+          "declaredLicense": "MIT",
+          "metadataSHA256": "0dd9bc32a77be8238fad41d58aa5b24ccdfee79d8bcf4cbee85f16e3d15c1658"
+        },
+        {
+          "name": "ismobilejs",
+          "version": "1.1.1",
+          "declaredLicense": "MIT",
+          "metadataSHA256": "fa75a337970c3796eb19f60340a13f301a1a2ead018161753accf7c8de582afd"
+        },
+        {
+          "name": "mediabunny",
+          "version": "1.58.0",
+          "declaredLicense": "MPL-2.0",
+          "metadataSHA256": "b15865a5e3cc0d5e755fff6ae4113aa547cc19a2eb22bdff1c44fea3cf81b4e3"
+        },
+        {
+          "name": "pixi.js",
+          "version": "8.22.0",
+          "declaredLicense": "MIT",
+          "metadataSHA256": "2bb6b7570ca5f4a062609b34fd16fecfa2a76e8c3599c67a5b996a276eabaa32"
+        }
+      ],
+      "sourceModules": [
+        "frontend/src/entities/clip-design/config/browser-composition.ts",
+        "frontend/src/entities/clip-design/config/browser-readiness.json",
+        "frontend/src/entities/clip-design/config/clip-browser-render.ts",
+        "frontend/src/entities/clip-design/config/clip-caption-ink.json",
+        "frontend/src/entities/clip-design/config/clip-composition.ts",
+        "frontend/src/entities/clip-design/config/clip-design.json",
+        "frontend/src/entities/clip-design/config/clip-design.ts",
+        "frontend/src/entities/clip-design/config/clip-ink-fonts.json",
+        "frontend/src/entities/clip-design/config/clip-ink-identity.json",
+        "frontend/src/entities/clip-design/config/clip-ink.ts",
+        "frontend/src/entities/clip-design/config/clip-metrics.json",
+        "frontend/src/entities/clip-design/model/region-layout.ts",
+        "frontend/src/entities/clip-plan/model/caption-pace.ts",
+        "frontend/src/entities/clip-plan/model/edit-plan.ts",
+        "frontend/src/entities/clip-plan/model/spoken.ts",
+        "frontend/src/entities/clip-plan/model/timeline.ts",
+        "frontend/src/entities/clip-preview/config/composition-placement.ts",
+        "frontend/src/entities/clip-preview/config/local-preview.ts",
+        "frontend/src/entities/clip-preview/config/video-decoding.ts",
+        "frontend/src/entities/clip-preview/lib/preview.worker.ts",
+        "frontend/src/entities/clip-preview/model/background-math.ts",
+        "frontend/src/entities/clip-preview/model/background-paint.ts",
+        "frontend/src/entities/clip-preview/model/background-sampling.ts",
+        "frontend/src/entities/clip-preview/model/browser-composition.ts",
+        "frontend/src/entities/clip-preview/model/browser-footage.ts",
+        "frontend/src/entities/clip-preview/model/browser-render-capability.ts",
+        "frontend/src/entities/clip-preview/model/composite-video.ts",
+        "frontend/src/entities/clip-preview/model/composition-placement.ts",
+        "frontend/src/entities/clip-preview/model/draft-preview.ts",
+        "frontend/src/entities/clip-preview/model/ink-cache.ts",
+        "frontend/src/entities/clip-preview/model/ink-caption-draw.ts",
+        "frontend/src/entities/clip-preview/model/ink-caption-effects.ts",
+        "frontend/src/entities/clip-preview/model/ink-caption-ember.ts",
+        "frontend/src/entities/clip-preview/model/ink-caption-scene.ts",
+        "frontend/src/entities/clip-preview/model/ink-layout.ts",
+        "frontend/src/entities/clip-preview/model/ink-raster.ts",
+        "frontend/src/entities/clip-preview/model/ink-static.ts",
+        "frontend/src/entities/clip-preview/model/ink-typography.ts",
+        "frontend/src/entities/clip-preview/model/local-components.ts",
+        "frontend/src/entities/clip-preview/model/native-fadeblack.ts",
+        "frontend/src/entities/clip-preview/model/speech-fingerprint.ts",
+        "frontend/src/shared/lib/media/video/frame-budget.ts",
+        "frontend/src/shared/lib/media/video/range-source.ts",
+        "frontend/src/shared/lib/media/video/range-video.ts",
+        "frontend/src/shared/lib/media/video/source-color.ts"
+      ],
+      "codeSHA256": "494b243f380b414d76e9678363b3f467920bcf7750f8817075fb111921881459"
+    },
+    {
+      "environment": "worker",
+      "file": "assets/video.worker-C6ShvmUB.js",
+      "generatedCodeSHA256": "dd07f02a9b47f5bafd7af24e0660bdd029ffb7349e012181c0a851020cbea7a5",
+      "moduleCount": 230,
+      "packages": [
+        {
+          "name": "@pixi/colord",
+          "version": "2.9.6",
+          "declaredLicense": "MIT",
+          "metadataSHA256": "d92aec39b7b030ebb6419b8ca4da12fd1a9b7bbd12d2979ab019308b417507e8"
+        },
+        {
+          "name": "@resvg/resvg-wasm",
+          "version": "2.6.2",
+          "declaredLicense": "MPL-2.0",
+          "metadataSHA256": "4a9efcb54b2670726ccf9b91086413676c3de0fae607cce3b8a5a0d25abaff48"
+        },
+        {
+          "name": "eventemitter3",
+          "version": "5.0.4",
+          "declaredLicense": "MIT",
+          "metadataSHA256": "0dd9bc32a77be8238fad41d58aa5b24ccdfee79d8bcf4cbee85f16e3d15c1658"
+        },
+        {
+          "name": "ismobilejs",
+          "version": "1.1.1",
+          "declaredLicense": "MIT",
+          "metadataSHA256": "fa75a337970c3796eb19f60340a13f301a1a2ead018161753accf7c8de582afd"
+        },
+        {
+          "name": "mediabunny",
+          "version": "1.58.0",
+          "declaredLicense": "MPL-2.0",
+          "metadataSHA256": "b15865a5e3cc0d5e755fff6ae4113aa547cc19a2eb22bdff1c44fea3cf81b4e3"
+        },
+        {
+          "name": "pixi.js",
+          "version": "8.22.0",
+          "declaredLicense": "MIT",
+          "metadataSHA256": "2bb6b7570ca5f4a062609b34fd16fecfa2a76e8c3599c67a5b996a276eabaa32"
+        }
+      ],
+      "sourceModules": [
+        "frontend/src/entities/clip-design/config/browser-composition.ts",
+        "frontend/src/entities/clip-design/config/browser-readiness.json",
+        "frontend/src/entities/clip-design/config/clip-browser-render.ts",
+        "frontend/src/entities/clip-design/config/clip-caption-ink.json",
+        "frontend/src/entities/clip-design/config/clip-composition.ts",
+        "frontend/src/entities/clip-design/config/clip-design.json",
+        "frontend/src/entities/clip-design/config/clip-design.ts",
+        "frontend/src/entities/clip-design/config/clip-ink-fonts.json",
+        "frontend/src/entities/clip-design/config/clip-ink-identity.json",
+        "frontend/src/entities/clip-design/config/clip-ink.ts",
+        "frontend/src/entities/clip-design/config/clip-metrics.json",
+        "frontend/src/entities/clip-design/model/region-layout.ts",
+        "frontend/src/entities/clip-plan/model/caption-pace.ts",
+        "frontend/src/entities/clip-plan/model/edit-plan.ts",
+        "frontend/src/entities/clip-plan/model/spoken.ts",
+        "frontend/src/entities/clip-plan/model/timeline.ts",
+        "frontend/src/entities/clip-preview/config/composition-placement.ts",
+        "frontend/src/entities/clip-preview/config/render-measurements.ts",
+        "frontend/src/entities/clip-preview/config/video-decoding.ts",
+        "frontend/src/entities/clip-preview/lib/video.worker.ts",
+        "frontend/src/entities/clip-preview/model/background-math.ts",
+        "frontend/src/entities/clip-preview/model/background-paint.ts",
+        "frontend/src/entities/clip-preview/model/background-sampling.ts",
+        "frontend/src/entities/clip-preview/model/browser-composition.ts",
+        "frontend/src/entities/clip-preview/model/browser-footage.ts",
+        "frontend/src/entities/clip-preview/model/browser-render-capability.ts",
+        "frontend/src/entities/clip-preview/model/composite-video.ts",
+        "frontend/src/entities/clip-preview/model/composition-placement.ts",
+        "frontend/src/entities/clip-preview/model/draft-preview.ts",
+        "frontend/src/entities/clip-preview/model/ink-cache.ts",
+        "frontend/src/entities/clip-preview/model/ink-caption-draw.ts",
+        "frontend/src/entities/clip-preview/model/ink-caption-effects.ts",
+        "frontend/src/entities/clip-preview/model/ink-caption-ember.ts",
+        "frontend/src/entities/clip-preview/model/ink-caption-scene.ts",
+        "frontend/src/entities/clip-preview/model/ink-layout.ts",
+        "frontend/src/entities/clip-preview/model/ink-raster.ts",
+        "frontend/src/entities/clip-preview/model/ink-static.ts",
+        "frontend/src/entities/clip-preview/model/ink-typography.ts",
+        "frontend/src/entities/clip-preview/model/local-components.ts",
+        "frontend/src/entities/clip-preview/model/native-fadeblack.ts",
+        "frontend/src/entities/clip-preview/model/render-raster-cache.ts",
+        "frontend/src/entities/clip-preview/model/speech-fingerprint.ts",
+        "frontend/src/shared/lib/media/packet-window.ts",
+        "frontend/src/shared/lib/media/phase-metrics.ts",
+        "frontend/src/shared/lib/media/video/frame-budget.ts",
+        "frontend/src/shared/lib/media/video/range-source.ts",
+        "frontend/src/shared/lib/media/video/range-video.ts",
+        "frontend/src/shared/lib/media/video/source-color.ts"
+      ],
+      "codeSHA256": "dd07f02a9b47f5bafd7af24e0660bdd029ffb7349e012181c0a851020cbea7a5"
+    },
+    {
+      "environment": "main",
+      "file": "assets/index-BzvDy660.js",
+      "generatedCodeSHA256": "552f903d2b73683bf70828225924484496cf84fe332de03693ea4fa354a3cf4d",
+      "moduleCount": 541,
+      "packages": [
+        {
+          "name": "@bufbuild/protobuf",
+          "version": "2.14.0",
+          "declaredLicense": "(Apache-2.0 AND BSD-3-Clause)",
+          "metadataSHA256": "420500cc1d62e2d57b0ef53ce8b74ba843a61e94380823303e77490ef694069a"
+        },
+        {
+          "name": "@connectrpc/connect",
+          "version": "2.1.2",
+          "declaredLicense": "Apache-2.0",
+          "metadataSHA256": "2a6a26b2ed4811a12883d1d86503fdff9fdfee180bddb802b13f8c0e48e5ab02"
+        },
+        {
+          "name": "@connectrpc/connect-query",
+          "version": "2.3.1",
+          "declaredLicense": "Apache-2.0",
+          "metadataSHA256": "3fd4935368bd54b46f80f4ea8cf608c26522b60986d2d44b3cf99d95f157ff99"
+        },
+        {
+          "name": "@connectrpc/connect-query-core",
+          "version": "2.3.1",
+          "declaredLicense": "Apache-2.0",
+          "metadataSHA256": "564557b09c48bee87621f16b48aecba0b331ea31f3eb633585d2ee18e9259776"
+        },
+        {
+          "name": "@connectrpc/connect-web",
+          "version": "2.1.2",
+          "declaredLicense": "Apache-2.0",
+          "metadataSHA256": "d8f270db734f49c4ee6cad2cb432e65871eac889680d5d1fd8552464c8368f3d"
+        },
+        {
+          "name": "@tanstack/history",
+          "version": "1.162.1",
+          "declaredLicense": "MIT",
+          "metadataSHA256": "2c9937dc16a767ad1ea76a6c3a3622af143fe2c4ed02bcc9d869ae1e62afa06c"
+        },
+        {
+          "name": "@tanstack/query-core",
+          "version": "5.102.4",
+          "declaredLicense": "MIT",
+          "metadataSHA256": "d808e7bca908bd1f423cc4cdd43d9733aa094525dcd3a72b738f0172f3d949a4"
+        },
+        {
+          "name": "@tanstack/react-query",
+          "version": "5.102.4",
+          "declaredLicense": "MIT",
+          "metadataSHA256": "ea3572977e210ef8e42d1028bf2c3ac75c89e2035f21d8cf3f1228bbaf4e756b"
+        },
+        {
+          "name": "@tanstack/react-router",
+          "version": "1.170.32",
+          "declaredLicense": "MIT",
+          "metadataSHA256": "76c00e5f2e220b5d1125eef47eb039b984ca069658ebc54c53626e5c44f266f0"
+        },
+        {
+          "name": "@tanstack/router-core",
+          "version": "1.171.27",
+          "declaredLicense": "MIT",
+          "metadataSHA256": "e8d0e294b528d955ce49ea7be70a4f976eb359f6bb141f1aa252282c209c55b3"
+        },
+        {
+          "name": "@tanstack/store",
+          "version": "0.9.3",
+          "declaredLicense": "MIT",
+          "metadataSHA256": "b67df16df254918206acd7fd98313c4918137a80cfc09263c4c72764943fbbbd"
+        },
+        {
+          "name": "html-parse-stringify",
+          "version": "4.0.1",
+          "declaredLicense": "MIT",
+          "metadataSHA256": "dccf7c4711fe55612e33d798868f5f06d34f4ea56cabe30e6e77dfc9378eb227"
+        },
+        {
+          "name": "lucide-react",
+          "version": "1.34.0",
+          "declaredLicense": "ISC",
+          "metadataSHA256": "1e6c1fcbdab853d9cbf044e61949db51908e45773bb896d1350935383819bebe"
+        },
+        {
+          "name": "react-dom",
+          "version": "19.2.8",
+          "declaredLicense": "MIT",
+          "metadataSHA256": "7c82f0967114d4b5d38b1f07e543af87c9919e8d3243f9604004819319cb2200"
+        },
+        {
+          "name": "react-i18next",
+          "version": "17.0.12",
+          "declaredLicense": "MIT",
+          "metadataSHA256": "71f79a33761de99c0dff96c165b7d2aaee7a350d5d9a730555a905bb157f2963"
+        },
+        {
+          "name": "scheduler",
+          "version": "0.27.0",
+          "declaredLicense": "MIT",
+          "metadataSHA256": "393bb96b7e481bf50189a1a02c7e0e7f4d01acba5abc6fbe7d214638624462fc"
+        }
+      ],
+      "sourceModules": [
+        "frontend/src/app/App.tsx",
+        "frontend/src/app/model/end-session.ts",
+        "frontend/src/app/providers/auth-redirect.ts",
+        "frontend/src/app/providers/i18n/index.ts",
+        "frontend/src/app/providers/i18n/locale.ts",
+        "frontend/src/app/providers/i18n/metadata.ts",
+        "frontend/src/app/providers/i18n/resources/en/auth.ts",
+        "frontend/src/app/providers/i18n/resources/en/common.ts",
+        "frontend/src/app/providers/i18n/resources/en/errors.ts",
+        "frontend/src/app/providers/i18n/resources/en/marketing.ts",
+        "frontend/src/app/providers/i18n/resources/en/nav.ts",
+        "frontend/src/app/providers/i18n/resources/index.ts",
+        "frontend/src/app/providers/i18n/resources/ko/auth.ts",
+        "frontend/src/app/providers/i18n/resources/ko/common.ts",
+        "frontend/src/app/providers/i18n/resources/ko/errors.ts",
+        "frontend/src/app/providers/i18n/resources/ko/marketing.ts",
+        "frontend/src/app/providers/i18n/resources/ko/nav.ts",
+        "frontend/src/app/providers/query-client.ts",
+        "frontend/src/app/providers/theme/ThemeProvider.tsx",
+        "frontend/src/app/providers/theme/bootstrap.ts",
+        "frontend/src/app/providers/theme/document-theme.ts",
+        "frontend/src/app/routes/AuthenticatedLayout.tsx",
+        "frontend/src/app/routes/ContentGroupLayout.tsx",
+        "frontend/src/app/routes/NavLinks.tsx",
+        "frontend/src/app/routes/RailNav.tsx",
+        "frontend/src/app/routes/RootLayout.tsx",
+        "frontend/src/app/routes/RouteError.tsx",
+        "frontend/src/app/routes/RoutePending.tsx",
+        "frontend/src/app/routes/account.ts",
+        "frontend/src/app/routes/admin.ts",
+        "frontend/src/app/routes/auth.ts",
+        "frontend/src/app/routes/billing.ts",
+        "frontend/src/app/routes/clips.ts",
+        "frontend/src/app/routes/gift.ts",
+        "frontend/src/app/routes/marketing.ts",
+        "frontend/src/app/routes/models.ts",
+        "frontend/src/app/routes/navigation.ts",
+        "frontend/src/app/routes/posts.ts",
+        "frontend/src/app/routes/publicGuard.ts",
+        "frontend/src/app/routes/publishing.ts",
+        "frontend/src/app/routes/router.tsx",
+        "frontend/src/app/routes/scroll-restoration.ts",
+        "frontend/src/app/routes/templates.ts",
+        "frontend/src/app/routes/tree.ts",
+        "frontend/src/app/routes/voices.ts",
+        "frontend/src/app/styles/index.css",
+        "frontend/src/entities/blog-field/config/i18n.ts",
+        "frontend/src/entities/clip-design/config/i18n.ts",
+        "frontend/src/entities/clip-preview/config/i18n.ts",
+        "frontend/src/entities/clip-project/config/i18n.ts",
+        "frontend/src/entities/clip-project/lib/write-lane.ts",
+        "frontend/src/entities/clip-template/config/i18n.ts",
+        "frontend/src/entities/generation-job/api/useJob.ts",
+        "frontend/src/entities/generation-job/api/useStartGeneration.ts",
+        "frontend/src/entities/generation-job/api/useStartRevision.ts",
+        "frontend/src/entities/generation-job/api/useStartStoryline.ts",
+        "frontend/src/entities/generation-job/api/useStartStorylineRevision.ts",
+        "frontend/src/entities/generation-job/ui/FailureNotice.tsx",
+        "frontend/src/entities/guideline/api/guideline-errors.ts",
+        "frontend/src/entities/guideline/api/guideline-mutations.ts",
+        "frontend/src/entities/guideline/config/i18n.ts",
+        "frontend/src/entities/guideline/config/index.ts",
+        "frontend/src/entities/guideline/model/types.ts",
+        "frontend/src/entities/guideline/ui/GuidelineTitleField.tsx",
+        "frontend/src/entities/image/api/upload-handshake.ts",
+        "frontend/src/entities/image/api/useDeleteImage.ts",
+        "frontend/src/entities/image/api/useRotateImage.ts",
+        "frontend/src/entities/image/model/types.ts",
+        "frontend/src/entities/image/ui/Thumbnail.tsx",
+        "frontend/src/entities/memory/api/memory-cache.ts",
+        "frontend/src/entities/memory/api/memory-errors.ts",
+        "frontend/src/entities/memory/api/memory-extraction.ts",
+        "frontend/src/entities/memory/api/memory-queries.ts",
+        "frontend/src/entities/memory/config/i18n.ts",
+        "frontend/src/entities/model-catalog/api/useModelSetup.ts",
+        "frontend/src/entities/model-catalog/api/useModels.ts",
+        "frontend/src/entities/model-catalog/api/useSelections.ts",
+        "frontend/src/entities/model-catalog/config/i18n.ts",
+        "frontend/src/entities/model-catalog/model/access.ts",
+        "frontend/src/entities/model-catalog/model/availability.ts",
+        "frontend/src/entities/model-catalog/model/post-credits.ts",
+        "frontend/src/entities/model-experiment/api/experiment-mappers.ts",
+        "frontend/src/entities/model-experiment/api/useExperiments.ts",
+        "frontend/src/entities/model-experiment/api/useStartWriteExperiment.ts",
+        "frontend/src/entities/model-experiment/config/i18n.ts",
+        "frontend/src/entities/model-experiment/model/types.ts",
+        "frontend/src/entities/plan/config/i18n.ts",
+        "frontend/src/entities/post/api/useDeletePost.ts",
+        "frontend/src/entities/post/api/useFinalizePost.ts",
+        "frontend/src/entities/post/api/useGenerationOptions.ts",
+        "frontend/src/entities/post/api/usePost.ts",
+        "frontend/src/entities/post/api/usePostImagesCache.ts",
+        "frontend/src/entities/post/api/usePostList.ts",
+        "frontend/src/entities/post/api/useRefreshPostImages.ts",
+        "frontend/src/entities/post/api/useSavePostContent.ts",
+        "frontend/src/entities/post/api/useSavePostDraft.ts",
+        "frontend/src/entities/post/api/useSavePublishedUrl.ts",
+        "frontend/src/entities/post/config/i18n.ts",
+        "frontend/src/entities/post/model/content.ts",
+        "frontend/src/entities/post/model/published-url.ts",
+        "frontend/src/entities/post/model/types.ts",
+        "frontend/src/entities/post/ui/BlockList.tsx",
+        "frontend/src/entities/post/ui/PhotoGroup.tsx",
+        "frontend/src/entities/quality/api/quality-cache.ts",
+        "frontend/src/entities/quality/api/quality-queries.ts",
+        "frontend/src/entities/quality/api/useAccountQuality.ts",
+        "frontend/src/entities/quality/api/usePostMeasurement.ts",
+        "frontend/src/entities/quality/config/i18n.ts",
+        "frontend/src/entities/quality/model/format.ts",
+        "frontend/src/entities/quality/model/types.ts",
+        "frontend/src/entities/quality/ui/PostMeasurementRow.tsx",
+        "frontend/src/entities/session/api/useLogin.ts",
+        "frontend/src/entities/session/api/useLogout.ts",
+        "frontend/src/entities/session/api/useSession.ts",
+        "frontend/src/entities/spoken-voice/config/i18n.ts",
+        "frontend/src/entities/subscription/config/i18n.ts",
+        "frontend/src/entities/template/api/useTemplates.ts",
+        "frontend/src/entities/template/config/i18n.ts",
+        "frontend/src/entities/template/lib/grammar.ts",
+        "frontend/src/entities/template/ui/TemplateRefLabel.tsx",
+        "frontend/src/entities/video/api/useDeleteVideo.ts",
+        "frontend/src/entities/video/ui/VideoTile.tsx",
+        "frontend/src/entities/voice/api/fingerprint-comparison.ts",
+        "frontend/src/entities/voice/api/usePostFingerprint.ts",
+        "frontend/src/entities/voice/api/useVoices.ts",
+        "frontend/src/entities/voice/config/i18n.ts",
+        "frontend/src/entities/voice/ui/VoiceRefLabel.tsx",
+        "frontend/src/entities/voucher/config/i18n.ts",
+        "frontend/src/features/answer-voice-prompt/config/i18n.ts",
+        "frontend/src/features/apply-model-recommendation/config/i18n.ts",
+        "frontend/src/features/assign-estimator-combo/config/i18n.ts",
+        "frontend/src/features/cancel-clip/config/i18n.ts",
+        "frontend/src/features/change-locale/model/changeLocale.ts",
+        "frontend/src/features/change-locale/ui/LocaleMenu.tsx",
+        "frontend/src/features/change-locale/ui/LocaleSegments.tsx",
+        "frontend/src/features/change-theme/model/theme-controller.ts",
+        "frontend/src/features/change-theme/ui/ThemeMenu.tsx",
+        "frontend/src/features/change-theme/ui/ThemeSegments.tsx",
+        "frontend/src/features/check-voice/config/i18n.ts",
+        "frontend/src/features/choose-quality-rules/config/i18n.ts",
+        "frontend/src/features/choose-quality-rules/ui/QualityRuleChoices.tsx",
+        "frontend/src/features/configure-model-pair/config/i18n.ts",
+        "frontend/src/features/configure-model-pair/ui/CandidatePairSelect.tsx",
+        "frontend/src/features/correct-clip/config/i18n.ts",
+        "frontend/src/features/create-memory/config/i18n.ts",
+        "frontend/src/features/create-spoken-voice/config/i18n.ts",
+        "frontend/src/features/create-voice/config/i18n.ts",
+        "frontend/src/features/create-voice/ui/CreateVoiceSheet.tsx",
+        "frontend/src/features/delete-clip-template/config/i18n.ts",
+        "frontend/src/features/delete-guideline/config/i18n.ts",
+        "frontend/src/features/delete-memory/config/i18n.ts",
+        "frontend/src/features/delete-post/ui/DeletePostButton.tsx",
+        "frontend/src/features/delete-template/config/i18n.ts",
+        "frontend/src/features/delete-voice/config/i18n.ts",
+        "frontend/src/features/edit-clip-project/config/i18n.ts",
+        "frontend/src/features/edit-clip-project/model/clip-draft-queue.ts",
+        "frontend/src/features/edit-clip-regions/config/i18n.ts",
+        "frontend/src/features/edit-clip-storyline/config/i18n.ts",
+        "frontend/src/features/edit-clip-storyline/model/storyline-queue.ts",
+        "frontend/src/features/edit-clip-template/config/i18n.ts",
+        "frontend/src/features/edit-guideline/config/i18n.ts",
+        "frontend/src/features/edit-memory/config/i18n.ts",
+        "frontend/src/features/edit-post-content/config/index.ts",
+        "frontend/src/features/edit-post-content/model/caret-handoff.ts",
+        "frontend/src/features/edit-post-content/model/content-queue.ts",
+        "frontend/src/features/edit-post-content/model/useContentAutosave.ts",
+        "frontend/src/features/edit-post-content/ui/BlockEditor.tsx",
+        "frontend/src/features/edit-storyline/config/i18n.ts",
+        "frontend/src/features/edit-storyline/model/attachments.ts",
+        "frontend/src/features/edit-storyline/model/storyline-edits.ts",
+        "frontend/src/features/edit-storyline/model/view-order.ts",
+        "frontend/src/features/edit-storyline/ui/StorylineAttachmentViewer.tsx",
+        "frontend/src/features/edit-storyline/ui/StorylineParagraphEditor.tsx",
+        "frontend/src/features/edit-storyline/ui/TakenOutFiles.tsx",
+        "frontend/src/features/edit-with-ai/config/i18n.ts",
+        "frontend/src/features/edit-with-ai/ui/ReviseForm.tsx",
+        "frontend/src/features/edit-with-ai/ui/SaveAsGuidelineButton.tsx",
+        "frontend/src/features/export-markdown/model/convert.ts",
+        "frontend/src/features/export-naver/model/convert.ts",
+        "frontend/src/features/export-site/config/template.ts",
+        "frontend/src/features/export-site/model/convert.ts",
+        "frontend/src/features/export-tistory/model/convert.ts",
+        "frontend/src/features/extract-memories/config/i18n.ts",
+        "frontend/src/features/extract-memories/ui/ExtractMemoriesButton.tsx",
+        "frontend/src/features/extract-memories/ui/MemoryCandidateSheet.tsx",
+        "frontend/src/features/fill-template-answers/model/answers.ts",
+        "frontend/src/features/fill-template-answers/ui/TemplateAnswerFields.tsx",
+        "frontend/src/features/filter-posts/model/narrow.ts",
+        "frontend/src/features/filter-posts/ui/PostListControls.tsx",
+        "frontend/src/features/finalize-clip/config/i18n.ts",
+        "frontend/src/features/finalize-post/config/i18n.ts",
+        "frontend/src/features/finalize-post/ui/FinalizeActions.tsx",
+        "frontend/src/features/generate-clip/config/i18n.ts",
+        "frontend/src/features/generate-post/config/i18n.ts",
+        "frontend/src/features/generate-post/model/preconditions.ts",
+        "frontend/src/features/generate-post/model/reobserve.ts",
+        "frontend/src/features/generate-post/model/run-options-form.ts",
+        "frontend/src/features/generate-post/model/useBriefIssues.ts",
+        "frontend/src/features/generate-post/model/useBriefMirror.ts",
+        "frontend/src/features/generate-post/ui/GenerationActions.tsx",
+        "frontend/src/features/generate-post/ui/GenerationOptions.tsx",
+        "frontend/src/features/generate-post/ui/ReobservePicker.tsx",
+        "frontend/src/features/generate-post/ui/StorylineActions.tsx",
+        "frontend/src/features/inspect-clip-observations/config/i18n.ts",
+        "frontend/src/features/issue-voucher/config/i18n.ts",
+        "frontend/src/features/log-in/config/i18n.ts",
+        "frontend/src/features/log-in/config/storage.ts",
+        "frontend/src/features/log-in/lib/saved-login-id.ts",
+        "frontend/src/features/log-in/ui/LoginForm.tsx",
+        "frontend/src/features/make-voice/config/i18n.ts",
+        "frontend/src/features/manage-model-catalog/config/i18n.ts",
+        "frontend/src/features/manage-recommendation-set/config/i18n.ts",
+        "frontend/src/features/manage-spoken-voice/config/i18n.ts",
+        "frontend/src/features/manage-subscription/config/i18n.ts",
+        "frontend/src/features/manage-voice-samples/config/i18n.ts",
+        "frontend/src/features/paste-voice-material/config/i18n.ts",
+        "frontend/src/features/prepare-clip-browser/config/i18n.ts",
+        "frontend/src/features/purchase-credits/config/i18n.ts",
+        "frontend/src/features/record-published-url/config/i18n.ts",
+        "frontend/src/features/record-published-url/ui/PublishedUrlField.tsx",
+        "frontend/src/features/redeem-voucher/config/i18n.ts",
+        "frontend/src/features/redeem-voucher/config/storage.ts",
+        "frontend/src/features/redeem-voucher/lib/pending-gift.ts",
+        "frontend/src/features/regenerate-clip-speech/config/i18n.ts",
+        "frontend/src/features/rename-voice/config/i18n.ts",
+        "frontend/src/features/render-clip-browser/config/i18n.ts",
+        "frontend/src/features/request-clip-storyline/config/i18n.ts",
+        "frontend/src/features/request-template/config/i18n.ts",
+        "frontend/src/features/restore-voice-analysis/config/i18n.ts",
+        "frontend/src/features/restore-voice/ui/RestoreVoiceButton.tsx",
+        "frontend/src/features/review-guideline-candidate/config/i18n.ts",
+        "frontend/src/features/review-model-experiment/config/i18n.ts",
+        "frontend/src/features/revise-clip/config/i18n.ts",
+        "frontend/src/features/revoke-voucher/config/i18n.ts",
+        "frontend/src/features/save-draft/model/draft-queue.ts",
+        "frontend/src/features/save-draft/model/useAutosave.ts",
+        "frontend/src/features/save-draft/model/useSaveStatus.ts",
+        "frontend/src/features/select-model/config/i18n.ts",
+        "frontend/src/features/select-model/ui/PostCreditEstimate.tsx",
+        "frontend/src/features/select-model/ui/StageModelSelect.tsx",
+        "frontend/src/features/select-post-field/config/i18n.ts",
+        "frontend/src/features/select-post-field/ui/PostFieldSelect.tsx",
+        "frontend/src/features/select-post-language/ui/PostLanguageSelect.tsx",
+        "frontend/src/features/select-post-template/config/i18n.ts",
+        "frontend/src/features/select-post-template/model/assignment.ts",
+        "frontend/src/features/select-post-template/ui/PostTemplateSelect.tsx",
+        "frontend/src/features/select-post-voice/config/i18n.ts",
+        "frontend/src/features/select-post-voice/model/reassignment.ts",
+        "frontend/src/features/select-post-voice/ui/PostVoiceSelect.tsx",
+        "frontend/src/features/set-default-voice/config/i18n.ts",
+        "frontend/src/features/sign-in-with-google/lib/google-sign-in.ts",
+        "frontend/src/features/sign-in-with-google/ui/GoogleSignInButton.tsx",
+        "frontend/src/features/upload-clip-sources/config/i18n.ts",
+        "frontend/src/features/upload-clip-sources/model/session.ts",
+        "frontend/src/features/upload-photos/api/upload-pipeline.ts",
+        "frontend/src/features/upload-photos/config/i18n.ts",
+        "frontend/src/features/upload-photos/config/index.ts",
+        "frontend/src/features/upload-photos/model/filter.ts",
+        "frontend/src/features/upload-photos/model/upload-batch.ts",
+        "frontend/src/features/upload-photos/model/useDeletePhoto.ts",
+        "frontend/src/features/upload-photos/model/useRotatePhoto.ts",
+        "frontend/src/features/upload-photos/model/useUploadPhotos.ts",
+        "frontend/src/features/upload-photos/ui/PhotoDropZone.tsx",
+        "frontend/src/features/upload-photos/ui/PhotoPicker.tsx",
+        "frontend/src/features/upload-photos/ui/PhotoStrip.tsx",
+        "frontend/src/features/upload-photos/ui/SkippedList.tsx",
+        "frontend/src/features/upload-photos/ui/UploadProgress.tsx",
+        "frontend/src/features/use-post-memories/config/i18n.ts",
+        "frontend/src/features/use-post-memories/ui/UseMemoriesField.tsx",
+        "frontend/src/main.tsx",
+        "frontend/src/pages/about/model/search.ts",
+        "frontend/src/pages/admin/config/i18n.ts",
+        "frontend/src/pages/ai-models/config/i18n.ts",
+        "frontend/src/pages/ai-models/model/search.ts",
+        "frontend/src/pages/billing-checkout/config/i18n.ts",
+        "frontend/src/pages/billing-checkout/model/search.ts",
+        "frontend/src/pages/billing-method-fail/model/search.ts",
+        "frontend/src/pages/billing-method-success/model/search.ts",
+        "frontend/src/pages/billing/config/i18n.ts",
+        "frontend/src/pages/clips/model/search.ts",
+        "frontend/src/pages/editor/model/steps.ts",
+        "frontend/src/pages/editor/model/useDraftAssignments.ts",
+        "frontend/src/pages/editor/model/useDraftSteps.ts",
+        "frontend/src/pages/editor/model/useEditorJob.ts",
+        "frontend/src/pages/editor/ui/DraftEditor.tsx",
+        "frontend/src/pages/editor/ui/EditorDock.tsx",
+        "frontend/src/pages/editor/ui/EditorDockHeader.tsx",
+        "frontend/src/pages/editor/ui/EditorFinishPanel.tsx",
+        "frontend/src/pages/editor/ui/EditorGeneratePanel.tsx",
+        "frontend/src/pages/editor/ui/EditorJobNotice.tsx",
+        "frontend/src/pages/editor/ui/EditorPage.tsx",
+        "frontend/src/pages/editor/ui/EditorPhotos.tsx",
+        "frontend/src/pages/editor/ui/EditorRefinePanel.tsx",
+        "frontend/src/pages/editor/ui/EditorStatus.tsx",
+        "frontend/src/pages/editor/ui/EditorStepDock.tsx",
+        "frontend/src/pages/editor/ui/EditorVoiceWarning.tsx",
+        "frontend/src/pages/editor/ui/EmptyStep.tsx",
+        "frontend/src/pages/editor/ui/LifecycleSteps.tsx",
+        "frontend/src/pages/editor/ui/MemoField.tsx",
+        "frontend/src/pages/editor/ui/TitleField.tsx",
+        "frontend/src/pages/forgot-password/model/search.ts",
+        "frontend/src/pages/gift/config/i18n.ts",
+        "frontend/src/pages/google-sign-in-callback/model/search.ts",
+        "frontend/src/pages/guidelines/model/search.ts",
+        "frontend/src/pages/login/model/search.ts",
+        "frontend/src/pages/login/ui/LoginPage.tsx",
+        "frontend/src/pages/memories/config/i18n.ts",
+        "frontend/src/pages/model-experiment/config/i18n.ts",
+        "frontend/src/pages/model-experiment/model/search.ts",
+        "frontend/src/pages/plans/config/i18n.ts",
+        "frontend/src/pages/posts/config/i18n.ts",
+        "frontend/src/pages/posts/model/search.ts",
+        "frontend/src/pages/posts/model/useSettledValue.ts",
+        "frontend/src/pages/posts/ui/PostsPage.tsx",
+        "frontend/src/pages/reset-password/model/search.ts",
+        "frontend/src/pages/signup/model/search.ts",
+        "frontend/src/pages/spoken-voices/config/i18n.ts",
+        "frontend/src/pages/spoken-voices/model/search.ts",
+        "frontend/src/pages/template/config/i18n.ts",
+        "frontend/src/pages/template/model/search.ts",
+        "frontend/src/pages/templates/config/i18n.ts",
+        "frontend/src/pages/verify-email/model/search.ts",
+        "frontend/src/pages/video-templates/config/i18n.ts",
+        "frontend/src/pages/voice/config/i18n.ts",
+        "frontend/src/pages/voices/config/i18n.ts",
+        "frontend/src/shared/api/auth-events.ts",
+        "frontend/src/shared/api/gen/postpilot/v1/billing_pb.ts",
+        "frontend/src/shared/api/gen/postpilot/v1/health_pb.ts",
+        "frontend/src/shared/api/gen/postpilot/v1/memory_pb.ts",
+        "frontend/src/shared/api/gen/postpilot/v1/model_catalog_pb.ts",
+        "frontend/src/shared/api/transport.ts",
+        "frontend/src/shared/lib/autosave/queue.ts",
+        "frontend/src/shared/lib/autosave/save-state.ts",
+        "frontend/src/shared/lib/blocks/escape.ts",
+        "frontend/src/shared/lib/blocks/walk.ts",
+        "frontend/src/shared/lib/clipboard/copyImage.ts",
+        "frontend/src/shared/lib/clipboard/copyText.ts",
+        "frontend/src/shared/lib/document-metadata.ts",
+        "frontend/src/shared/lib/image/decode-error.ts",
+        "frontend/src/shared/lib/image/decode.ts",
+        "frontend/src/shared/lib/image/filename.ts",
+        "frontend/src/shared/lib/image/resize.ts",
+        "frontend/src/shared/lib/image/rotation.ts",
+        "frontend/src/shared/lib/localization/format.ts",
+        "frontend/src/shared/lib/motion.ts",
+        "frontend/src/shared/lib/presign.ts",
+        "frontend/src/shared/lib/redirect.ts",
+        "frontend/src/shared/lib/theme/browser.ts",
+        "frontend/src/shared/lib/theme/contract.ts",
+        "frontend/src/shared/lib/upload/put.ts",
+        "frontend/src/shared/ui/action-bar/ActionBar.tsx",
+        "frontend/src/shared/ui/action-menu/ActionMenu.tsx",
+        "frontend/src/shared/ui/anchored-panel/config.ts",
+        "frontend/src/shared/ui/anchored-panel/useAnchoredContentPanel.ts",
+        "frontend/src/shared/ui/anchored-panel/useAnchoredDisclosure.ts",
+        "frontend/src/shared/ui/app-failure/AppFailureMessage.tsx",
+        "frontend/src/shared/ui/badge/Badge.tsx",
+        "frontend/src/shared/ui/brand/Logo.tsx",
+        "frontend/src/shared/ui/checkbox/Checkbox.tsx",
+        "frontend/src/shared/ui/chip-toggle/ChipToggle.tsx",
+        "frontend/src/shared/ui/dialog/Dialog.tsx",
+        "frontend/src/shared/ui/editable/Editable.tsx",
+        "frontend/src/shared/ui/field/FieldCount.tsx",
+        "frontend/src/shared/ui/field/Textarea.tsx",
+        "frontend/src/shared/ui/list-controls/ListControls.tsx",
+        "frontend/src/shared/ui/media-query/useMediaQuery.ts",
+        "frontend/src/shared/ui/menu/Menu.tsx",
+        "frontend/src/shared/ui/meter/Meter.tsx",
+        "frontend/src/shared/ui/notice/Notice.tsx",
+        "frontend/src/shared/ui/page/pageStyles.ts",
+        "frontend/src/shared/ui/popover/Popover.tsx",
+        "frontend/src/shared/ui/progress-bar/ProgressBar.tsx",
+        "frontend/src/shared/ui/promo-stage/PromoStage.tsx",
+        "frontend/src/shared/ui/promo-stage/aurora.ts",
+        "frontend/src/shared/ui/promo-stage/config.ts",
+        "frontend/src/shared/ui/rail/CollapsibleRail.tsx",
+        "frontend/src/shared/ui/rail/useRailToggle.ts",
+        "frontend/src/shared/ui/rotated-image/RotatedImage.tsx",
+        "frontend/src/shared/ui/sortable-list/SortableList.tsx",
+        "frontend/src/shared/ui/switch/Switch.tsx",
+        "frontend/src/shared/ui/toggletip/Toggletip.tsx",
+        "frontend/src/shared/ui/viewport/useNearViewport.ts",
+        "frontend/src/widgets/account-menu/config/i18n.ts",
+        "frontend/src/widgets/account-menu/ui/AccountMenu.tsx",
+        "frontend/src/widgets/candidate-comparison/config/i18n.ts",
+        "frontend/src/widgets/clip-workspace/config/i18n.ts",
+        "frontend/src/widgets/contact-sheet/config/i18n.ts",
+        "frontend/src/widgets/contact-sheet/ui/ContactSheet.tsx",
+        "frontend/src/widgets/credit-badge/config/i18n.ts",
+        "frontend/src/widgets/credit-badge/ui/CreditBadge.tsx",
+        "frontend/src/widgets/export-panel/config/guidance.ts",
+        "frontend/src/widgets/export-panel/config/i18n.ts",
+        "frontend/src/widgets/export-panel/lib/hashtags.ts",
+        "frontend/src/widgets/export-panel/model/copy-status.ts",
+        "frontend/src/widgets/export-panel/model/copy-target.ts",
+        "frontend/src/widgets/export-panel/model/useCaptionReveal.ts",
+        "frontend/src/widgets/export-panel/model/useCopyFeedback.ts",
+        "frontend/src/widgets/export-panel/model/useExportPanel.ts",
+        "frontend/src/widgets/export-panel/ui/CaptionCopy.tsx",
+        "frontend/src/widgets/export-panel/ui/ExportPanel.tsx",
+        "frontend/src/widgets/export-panel/ui/PhotoCopy.tsx",
+        "frontend/src/widgets/export-panel/ui/PreviewPhoto.tsx",
+        "frontend/src/widgets/generation-brief/ui/GenerationBrief.tsx",
+        "frontend/src/widgets/guideline-directory/config/i18n.ts",
+        "frontend/src/widgets/interface-preferences/ui/InterfacePreferences.tsx",
+        "frontend/src/widgets/model-leaderboard/config/i18n.ts",
+        "frontend/src/widgets/refine-dock/ui/RefineDock.tsx",
+        "frontend/src/widgets/spoken-voice-creation/config/i18n.ts",
+        "frontend/src/widgets/storyline-space/config/i18n.ts",
+        "frontend/src/widgets/storyline-space/ui/StorylineSpace.tsx",
+        "frontend/src/widgets/voice-fingerprint/config/i18n.ts",
+        "frontend/src/widgets/voice-fingerprint/ui/FingerprintComparison.tsx",
+        "frontend/src/widgets/voice-fingerprint/ui/PostFingerprintRow.tsx",
+        "frontend/src/widgets/voice-warning/ui/DeletedVoiceWarning.tsx",
+        "frontend/src/widgets/voice-warning/ui/UnmadeVoiceWarning.tsx"
+      ],
+      "codeSHA256": "6f3282c09f93e4d97f451ddda26c1c5d1d0a1fed9b46ab85353d5313df0da18f"
+    },
+    {
+      "environment": "main",
+      "file": "assets/AdminLayout-xN-UthT8.js",
+      "generatedCodeSHA256": "50658107d38f804de7850a086466843c120d445a26db187920c5e70920e41b2c",
+      "moduleCount": 5,
+      "packages": [
+        {
+          "name": "lucide-react",
+          "version": "1.34.0",
+          "declaredLicense": "ISC",
+          "metadataSHA256": "1e6c1fcbdab853d9cbf044e61949db51908e45773bb896d1350935383819bebe"
+        }
+      ],
+      "sourceModules": [
+        "frontend/src/app/routes/AdminLayout.tsx"
+      ],
+      "codeSHA256": "50658107d38f804de7850a086466843c120d445a26db187920c5e70920e41b2c"
+    },
+    {
+      "environment": "main",
+      "file": "assets/Button-CGhlQ8U8.js",
+      "generatedCodeSHA256": "e4025280f28b55e08392765fa22ab555ed4f0c4df13199d58020ca67a1971b1e",
+      "moduleCount": 2,
+      "packages": [],
+      "sourceModules": [
+        "frontend/src/shared/ui/button/Button.tsx",
+        "frontend/src/shared/ui/button/buttonStyles.ts"
+      ],
+      "codeSHA256": "e4025280f28b55e08392765fa22ab555ed4f0c4df13199d58020ca67a1971b1e"
+    },
+    {
+      "environment": "main",
+      "file": "assets/Disclosure-DYztMmq0.js",
+      "generatedCodeSHA256": "e11b7dbfa7702259ddf55123b473a35d51e9f7c915373b4f110ad30f58c22b36",
+      "moduleCount": 1,
+      "packages": [],
+      "sourceModules": [
+        "frontend/src/shared/ui/disclosure/Disclosure.tsx"
+      ],
+      "codeSHA256": "e11b7dbfa7702259ddf55123b473a35d51e9f7c915373b4f110ad30f58c22b36"
+    },
+    {
+      "environment": "main",
+      "file": "assets/FieldLabel-BN4R6flM.js",
+      "generatedCodeSHA256": "20722fbe5d5e25638e3992d4e181da91865838d46bbaf904101da3162cf93bbd",
+      "moduleCount": 1,
+      "packages": [],
+      "sourceModules": [
+        "frontend/src/shared/ui/field/FieldLabel.tsx"
+      ],
+      "codeSHA256": "20722fbe5d5e25638e3992d4e181da91865838d46bbaf904101da3162cf93bbd"
+    },
+    {
+      "environment": "main",
+      "file": "assets/FieldMessage-L6He6wwy.js",
+      "generatedCodeSHA256": "ea03ba1346dbd47aca14ba4b01e25e6b08dc9203e1cf7747243d01650f64b26a",
+      "moduleCount": 1,
+      "packages": [],
+      "sourceModules": [
+        "frontend/src/shared/ui/field/FieldMessage.tsx"
+      ],
+      "codeSHA256": "ea03ba1346dbd47aca14ba4b01e25e6b08dc9203e1cf7747243d01650f64b26a"
+    },
+    {
+      "environment": "main",
+      "file": "assets/GuidelineDirectory-DHfVRclV.js",
+      "generatedCodeSHA256": "8862850560d1b8a0c27c5d2dbeeda91567488c56baa8c4e8bd9248fbfdc90886",
+      "moduleCount": 16,
+      "packages": [],
+      "sourceModules": [
+        "frontend/src/entities/guideline/api/useGuidelineCandidates.ts",
+        "frontend/src/entities/guideline/api/useGuidelines.ts",
+        "frontend/src/entities/guideline/api/useSetDefaultGuidelineEnabled.ts",
+        "frontend/src/entities/guideline/ui/DefaultGuidelineDetail.tsx",
+        "frontend/src/entities/guideline/ui/GuidelineFieldPicker.tsx",
+        "frontend/src/entities/guideline/ui/GuidelineScopeBadges.tsx",
+        "frontend/src/entities/guideline/ui/GuidelineScopeField.tsx",
+        "frontend/src/features/create-guideline/ui/CreateGuidelineSheet.tsx",
+        "frontend/src/features/delete-guideline/ui/DeleteGuidelineButton.tsx",
+        "frontend/src/features/edit-guideline/ui/GuidelineEditForm.tsx",
+        "frontend/src/features/review-guideline-candidate/ui/ApproveGuidelineCandidateButton.tsx",
+        "frontend/src/features/review-guideline-candidate/ui/BulkGuidelineCandidateActions.tsx",
+        "frontend/src/features/review-guideline-candidate/ui/DismissGuidelineCandidateButton.tsx",
+        "frontend/src/features/toggle-default-guideline/ui/DefaultGuidelineSheet.tsx",
+        "frontend/src/features/toggle-default-guideline/ui/StopDefaultGuidelineButton.tsx",
+        "frontend/src/widgets/guideline-directory/ui/GuidelineDirectory.tsx"
+      ],
+      "codeSHA256": "8862850560d1b8a0c27c5d2dbeeda91567488c56baa8c4e8bd9248fbfdc90886"
+    },
+    {
+      "environment": "main",
+      "file": "assets/Listbox-DTFdtmKH.js",
+      "generatedCodeSHA256": "524a62d66404bf34e7318bddc15c5932e7e906832aa91b726718aae3a4e2db87",
+      "moduleCount": 3,
+      "packages": [],
+      "sourceModules": [
+        "frontend/src/shared/ui/anchored-panel/useAnchoredPanel.ts",
+        "frontend/src/shared/ui/listbox/Listbox.tsx",
+        "frontend/src/shared/ui/listbox/config.ts"
+      ],
+      "codeSHA256": "524a62d66404bf34e7318bddc15c5932e7e906832aa91b726718aae3a4e2db87"
+    },
+    {
+      "environment": "main",
+      "file": "assets/ManageSubscription-f9uLTGne.js",
+      "generatedCodeSHA256": "01eda6512f8a7732da15a0acdb7f11384f61215b691b9405deead8e8843b1ec0",
+      "moduleCount": 1,
+      "packages": [],
+      "sourceModules": [
+        "frontend/src/features/manage-subscription/ui/ManageSubscription.tsx"
+      ],
+      "codeSHA256": "01eda6512f8a7732da15a0acdb7f11384f61215b691b9405deead8e8843b1ec0"
+    },
+    {
+      "environment": "main",
+      "file": "assets/PlanLadder-HWIwFu2e.js",
+      "generatedCodeSHA256": "b73f326393c369046363e3d6432f6a6876e34906551fed6b4161f168ab4b717f",
+      "moduleCount": 7,
+      "packages": [
+        {
+          "name": "lucide-react",
+          "version": "1.34.0",
+          "declaredLicense": "ISC",
+          "metadataSHA256": "1e6c1fcbdab853d9cbf044e61949db51908e45773bb896d1350935383819bebe"
+        }
+      ],
+      "sourceModules": [
+        "frontend/src/shared/ui/promo-frame/PromoFrame.tsx",
+        "frontend/src/shared/ui/promo-text/PromoText.tsx",
+        "frontend/src/widgets/plan-ladder/ui/PlanLadder.tsx"
+      ],
+      "codeSHA256": "b73f326393c369046363e3d6432f6a6876e34906551fed6b4161f168ab4b717f"
+    },
+    {
+      "environment": "main",
+      "file": "assets/RegisterPaymentMethodButton-BQgJtMy_.js",
+      "generatedCodeSHA256": "69667a51bd9ddc05d2362fd3d66e1afb6ca1a44d086f5f60db02cc7529a9c087",
+      "moduleCount": 3,
+      "packages": [],
+      "sourceModules": [
+        "frontend/src/features/register-payment-method/lib/toss.ts",
+        "frontend/src/features/register-payment-method/ui/RegisterPaymentMethodButton.tsx",
+        "frontend/src/shared/lib/script/loadScript.ts"
+      ],
+      "codeSHA256": "69667a51bd9ddc05d2362fd3d66e1afb6ca1a44d086f5f60db02cc7529a9c087"
+    },
+    {
+      "environment": "main",
+      "file": "assets/SegmentedControl-C9uUkiwO.js",
+      "generatedCodeSHA256": "750e36120e380d560b8ae2992f944d92b489cfb2309090a09c82f119241eaba3",
+      "moduleCount": 263,
+      "packages": [
+        {
+          "name": "framer-motion",
+          "version": "13.4.0",
+          "declaredLicense": "MIT",
+          "metadataSHA256": "7912c65f59d621d4096390fa9e5256f8d9af4f0059267af299c3e5a46c0a6e80"
+        },
+        {
+          "name": "lucide-react",
+          "version": "1.34.0",
+          "declaredLicense": "ISC",
+          "metadataSHA256": "1e6c1fcbdab853d9cbf044e61949db51908e45773bb896d1350935383819bebe"
+        },
+        {
+          "name": "motion",
+          "version": "13.4.0",
+          "declaredLicense": "MIT",
+          "metadataSHA256": "a5a10b5e1917e5f7d7436b1d39a753df3bfeafae8e0ade7eac71505171b4ebd6"
+        },
+        {
+          "name": "motion-dom",
+          "version": "13.3.0",
+          "declaredLicense": "MIT",
+          "metadataSHA256": "5cb6b109c56268d17fdf0a3b8c80b13bd30dff21afb0869e5532b007df3a0831"
+        },
+        {
+          "name": "motion-utils",
+          "version": "13.3.0",
+          "declaredLicense": "MIT",
+          "metadataSHA256": "49c9d84b3e5a007e6978e6f96bd7e61d12fc692834fbc19277cd27d30fa16957"
+        }
+      ],
+      "sourceModules": [
+        "frontend/src/shared/ui/segmented-control/SegmentedControl.tsx"
+      ],
+      "codeSHA256": "750e36120e380d560b8ae2992f944d92b489cfb2309090a09c82f119241eaba3"
+    },
+    {
+      "environment": "main",
+      "file": "assets/Sheet-DT9wa5wE.js",
+      "generatedCodeSHA256": "58c99673a598960a62f20bd8f149197bf762aa3cbfabe0bb0d38b034059514dc",
+      "moduleCount": 2,
+      "packages": [],
+      "sourceModules": [
+        "frontend/src/shared/ui/focus/focusable.ts",
+        "frontend/src/shared/ui/sheet/Sheet.tsx"
+      ],
+      "codeSHA256": "58c99673a598960a62f20bd8f149197bf762aa3cbfabe0bb0d38b034059514dc"
+    },
+    {
+      "environment": "main",
+      "file": "assets/Slider-DQdVBtPs.js",
+      "generatedCodeSHA256": "9480fa729c8b14f34b3f42a36fdaa612ea1c12fbbaafceb9e0f0f50760427624",
+      "moduleCount": 1,
+      "packages": [],
+      "sourceModules": [
+        "frontend/src/shared/ui/slider/Slider.tsx"
+      ],
+      "codeSHA256": "9480fa729c8b14f34b3f42a36fdaa612ea1c12fbbaafceb9e0f0f50760427624"
+    },
+    {
+      "environment": "main",
+      "file": "assets/Spinner-DSDk_QBh.js",
+      "generatedCodeSHA256": "2f17b4e834ce565f226368c20fa3e13ed5b49ecdde15f2dc333d178c6c887149",
+      "moduleCount": 2,
+      "packages": [
+        {
+          "name": "i18next",
+          "version": "26.4.0",
+          "declaredLicense": "MIT",
+          "metadataSHA256": "e233e2e376d13b359a7b20d75daced46fb4b126e8ab7dbfa79a597d5c077b4a6"
+        }
+      ],
+      "sourceModules": [
+        "frontend/src/shared/ui/spinner/Spinner.tsx"
+      ],
+      "codeSHA256": "2f17b4e834ce565f226368c20fa3e13ed5b49ecdde15f2dc333d178c6c887149"
+    },
+    {
+      "environment": "main",
+      "file": "assets/SpokenSamplePlayer-C_pcNLhi.js",
+      "generatedCodeSHA256": "4c5f6268521c2067d1b190aa658d4239328d577a14e5c47fcd846dc7697ec97b",
+      "moduleCount": 5,
+      "packages": [],
+      "sourceModules": [
+        "frontend/src/entities/spoken-voice/api/hooks.ts",
+        "frontend/src/entities/spoken-voice/api/mappers.ts",
+        "frontend/src/entities/spoken-voice/config/limits.ts",
+        "frontend/src/entities/spoken-voice/ui/SpokenSamplePlayer.tsx",
+        "frontend/src/shared/api/gen/postpilot/v1/spoken_voice_pb.ts"
+      ],
+      "codeSHA256": "4c5f6268521c2067d1b190aa658d4239328d577a14e5c47fcd846dc7697ec97b"
+    },
+    {
+      "environment": "main",
+      "file": "assets/TabLinks-DcH2vG16.js",
+      "generatedCodeSHA256": "088ba216c4c0ee54301bd84fdb1b1025b0e8e1771eca637f5d70a0602118357e",
+      "moduleCount": 1,
+      "packages": [],
+      "sourceModules": [
+        "frontend/src/shared/ui/tab-links/TabLinks.tsx"
+      ],
+      "codeSHA256": "088ba216c4c0ee54301bd84fdb1b1025b0e8e1771eca637f5d70a0602118357e"
+    },
+    {
+      "environment": "main",
+      "file": "assets/TechnicalDetail-C9cTsY7m.js",
+      "generatedCodeSHA256": "fa487426c99392eaea4aebdfab4227c2b090fd3389c1f31f926bd4c0eebce62a",
+      "moduleCount": 1,
+      "packages": [],
+      "sourceModules": [
+        "frontend/src/shared/ui/technical-detail/TechnicalDetail.tsx"
+      ],
+      "codeSHA256": "fa487426c99392eaea4aebdfab4227c2b090fd3389c1f31f926bd4c0eebce62a"
+    },
+    {
+      "environment": "main",
+      "file": "assets/TextField-LrUBeuoS.js",
+      "generatedCodeSHA256": "08c0e3115ffb578c638906d18df53425b8d4970065c17709101ea503d5bd270b",
+      "moduleCount": 1,
+      "packages": [],
+      "sourceModules": [
+        "frontend/src/shared/ui/field/TextField.tsx"
+      ],
+      "codeSHA256": "08c0e3115ffb578c638906d18df53425b8d4970065c17709101ea503d5bd270b"
+    },
+    {
+      "environment": "main",
+      "file": "assets/Typography-C4Qkiday.js",
+      "generatedCodeSHA256": "50b1c39fabc08b48739de49026eebce588c4d847f44f576de844299064171266",
+      "moduleCount": 16,
+      "packages": [
+        {
+          "name": "clsx",
+          "version": "2.1.1",
+          "declaredLicense": "MIT",
+          "metadataSHA256": "a5e616b9883177fb47c1fca22b6a4ab42be1c3ed6ffae8595a5c7d88630eeec2"
+        },
+        {
+          "name": "react",
+          "version": "19.2.8",
+          "declaredLicense": "MIT",
+          "metadataSHA256": "e40c3ed9b633c9ecf188e09a4be309780a1ea0a9c068278a30ff6a27e7b2dbb6"
+        },
+        {
+          "name": "react-i18next",
+          "version": "17.0.12",
+          "declaredLicense": "MIT",
+          "metadataSHA256": "71f79a33761de99c0dff96c165b7d2aaee7a350d5d9a730555a905bb157f2963"
+        },
+        {
+          "name": "tailwind-merge",
+          "version": "3.6.0",
+          "declaredLicense": "MIT",
+          "metadataSHA256": "dd8a34386cdd58744a48027a30fc75103d8bf246cbbb4aa90f0b2333b25818b6"
+        },
+        {
+          "name": "use-sync-external-store",
+          "version": "1.6.0",
+          "declaredLicense": "MIT",
+          "metadataSHA256": "dfdead719ce161e1c5edbf0fca0ce0e7d70ba87c8a8f249856c0afde81595f24"
+        }
+      ],
+      "sourceModules": [
+        "frontend/src/shared/ui/typography/Typography.tsx",
+        "frontend/src/shared/ui/typography/typographyStyles.ts"
+      ],
+      "codeSHA256": "50b1c39fabc08b48739de49026eebce588c4d847f44f576de844299064171266"
+    },
+    {
+      "environment": "main",
+      "file": "assets/VoiceLayout-C3QRdoOm.js",
+      "generatedCodeSHA256": "7b5d38569d3752e55e172d264387d4b28da26793e98bf42bcaeb4dbfcc57c1f7",
+      "moduleCount": 6,
+      "packages": [
+        {
+          "name": "lucide-react",
+          "version": "1.34.0",
+          "declaredLicense": "ISC",
+          "metadataSHA256": "1e6c1fcbdab853d9cbf044e61949db51908e45773bb896d1350935383819bebe"
+        }
+      ],
+      "sourceModules": [
+        "frontend/src/app/routes/VoiceLayout.tsx",
+        "frontend/src/features/delete-voice/ui/DeleteVoiceButton.tsx",
+        "frontend/src/features/rename-voice/ui/RenameVoiceField.tsx",
+        "frontend/src/features/set-default-voice/ui/SetDefaultVoiceButton.tsx"
+      ],
+      "codeSHA256": "7b5d38569d3752e55e172d264387d4b28da26793e98bf42bcaeb4dbfcc57c1f7"
+    },
+    {
+      "environment": "main",
+      "file": "assets/about-S_L_lVrq.js",
+      "generatedCodeSHA256": "98d7bd1ed92808b9e35913b12a6463aaf307c34e7d23146e00798b24eb49d284",
+      "moduleCount": 8,
+      "packages": [
+        {
+          "name": "lucide-react",
+          "version": "1.34.0",
+          "declaredLicense": "ISC",
+          "metadataSHA256": "1e6c1fcbdab853d9cbf044e61949db51908e45773bb896d1350935383819bebe"
+        }
+      ],
+      "sourceModules": [
+        "frontend/src/pages/about/index.ts",
+        "frontend/src/pages/about/model/ladder.ts",
+        "frontend/src/pages/about/model/useAboutMetadata.ts",
+        "frontend/src/pages/about/ui/AboutHeader.tsx",
+        "frontend/src/pages/about/ui/AboutPage.tsx"
+      ],
+      "codeSHA256": "98d7bd1ed92808b9e35913b12a6463aaf307c34e7d23146e00798b24eb49d284"
+    },
+    {
+      "environment": "main",
+      "file": "assets/account-CMDOE9lt.js",
+      "generatedCodeSHA256": "e9d19b6b9575603ca6bfefd33cc5e2476d3d16b23d26278ea97c15d69a88e85c",
+      "moduleCount": 4,
+      "packages": [],
+      "sourceModules": [
+        "frontend/src/features/change-password/ui/ChangePasswordForm.tsx",
+        "frontend/src/features/register-email/ui/RegisterEmailForm.tsx",
+        "frontend/src/pages/account/index.ts",
+        "frontend/src/pages/account/ui/AccountPage.tsx"
+      ],
+      "codeSHA256": "e9d19b6b9575603ca6bfefd33cc5e2476d3d16b23d26278ea97c15d69a88e85c"
+    },
+    {
+      "environment": "main",
+      "file": "assets/admin-BHTy2r-e.js",
+      "generatedCodeSHA256": "6ec9e93448403fcc375bdc19d481870acb46e484bfd0c1fe0813f84d9d5548f0",
+      "moduleCount": 42,
+      "packages": [
+        {
+          "name": "@tanstack/react-virtual",
+          "version": "3.14.10",
+          "declaredLicense": "MIT",
+          "metadataSHA256": "31cb20984bfe37520cf8926d16136cb3d6bd5e4d959ccb69999c840523039d25"
+        },
+        {
+          "name": "@tanstack/virtual-core",
+          "version": "3.17.8",
+          "declaredLicense": "MIT",
+          "metadataSHA256": "fbae301342385d66db721db46f080153498cd15c942b067f5c68fba397ce1870"
+        },
+        {
+          "name": "lucide-react",
+          "version": "1.34.0",
+          "declaredLicense": "ISC",
+          "metadataSHA256": "1e6c1fcbdab853d9cbf044e61949db51908e45773bb896d1350935383819bebe"
+        }
+      ],
+      "sourceModules": [
+        "frontend/src/entities/model-catalog/api/useAdminCatalog.ts",
+        "frontend/src/entities/model-catalog/api/useAssignEstimatorCombo.ts",
+        "frontend/src/entities/model-catalog/api/useCatalogDocument.ts",
+        "frontend/src/entities/model-experiment/api/useComparisonCosts.ts",
+        "frontend/src/entities/plan/api/useAccounts.ts",
+        "frontend/src/entities/plan/api/useExchangeRate.ts",
+        "frontend/src/entities/voucher/api/useVouchers.ts",
+        "frontend/src/entities/voucher/model/gift-link.ts",
+        "frontend/src/entities/voucher/model/types.ts",
+        "frontend/src/entities/voucher/ui/CopyGiftLink.tsx",
+        "frontend/src/features/assign-estimator-combo/ui/EstimatorCombos.tsx",
+        "frontend/src/features/issue-voucher/model/issue-form.ts",
+        "frontend/src/features/issue-voucher/ui/IssueVoucherForm.tsx",
+        "frontend/src/features/manage-model-catalog/config/index.ts",
+        "frontend/src/features/manage-model-catalog/config/speech.ts",
+        "frontend/src/features/manage-model-catalog/lib/speech-pricing.ts",
+        "frontend/src/features/manage-model-catalog/model/catalog-view.ts",
+        "frontend/src/features/manage-model-catalog/model/document-view.ts",
+        "frontend/src/features/manage-model-catalog/ui/CatalogDocumentPanel.tsx",
+        "frontend/src/features/manage-model-catalog/ui/CatalogModelList.tsx",
+        "frontend/src/features/manage-model-catalog/ui/CatalogModelRow.tsx",
+        "frontend/src/features/manage-model-catalog/ui/ModelCatalogManager.tsx",
+        "frontend/src/features/manage-model-catalog/ui/SpeechCatalogManager.tsx",
+        "frontend/src/features/manage-model-catalog/ui/SpeechCombinationRow.tsx",
+        "frontend/src/features/manage-model-catalog/ui/SpeechCostSummary.tsx",
+        "frontend/src/features/manage-model-catalog/ui/SpeechTariffEditor.tsx",
+        "frontend/src/features/manage-recommendation-set/ui/RecommendationSetEditor.tsx",
+        "frontend/src/features/manage-recommendation-set/ui/RecommendationSetManager.tsx",
+        "frontend/src/features/manage-users/ui/UserPlanSelect.tsx",
+        "frontend/src/features/review-refunds/ui/RefundReviewSection.tsx",
+        "frontend/src/features/revoke-voucher/ui/RevokeVoucherButton.tsx",
+        "frontend/src/pages/admin/index.ts",
+        "frontend/src/pages/admin/ui/AdminCostsPage.tsx",
+        "frontend/src/pages/admin/ui/AdminEstimatorPage.tsx",
+        "frontend/src/pages/admin/ui/AdminModelsPage.tsx",
+        "frontend/src/pages/admin/ui/AdminPage.tsx",
+        "frontend/src/pages/admin/ui/AdminVouchersPage.tsx"
+      ],
+      "codeSHA256": "6ec9e93448403fcc375bdc19d481870acb46e484bfd0c1fe0813f84d9d5548f0"
+    },
+    {
+      "environment": "main",
+      "file": "assets/ai-models-DgqH44dY.js",
+      "generatedCodeSHA256": "8030adc765d1acacfae4e0edd8253496a39792f4dc8564de44877e656087a9fd",
+      "moduleCount": 21,
+      "packages": [],
+      "sourceModules": [
+        "frontend/src/entities/model-experiment/api/useStartModelExperiment.ts",
+        "frontend/src/entities/model-experiment/api/useStartVoiceReflection.ts",
+        "frontend/src/entities/post/api/usePosts.ts",
+        "frontend/src/features/apply-model-recommendation/ui/ApplyRecommendation.tsx",
+        "frontend/src/features/configure-model-pair/model/lab-candidates.ts",
+        "frontend/src/features/configure-model-pair/ui/ActiveModelForm.tsx",
+        "frontend/src/features/configure-model-pair/ui/LabExtraCandidates.tsx",
+        "frontend/src/features/configure-model-pair/ui/ModelPairForm.tsx",
+        "frontend/src/features/configure-model-pair/ui/ModelSelect.tsx",
+        "frontend/src/pages/ai-models/index.ts",
+        "frontend/src/pages/ai-models/model/useModelStage.ts",
+        "frontend/src/pages/ai-models/ui/AIModelsPage.tsx",
+        "frontend/src/pages/ai-models/ui/LeaderboardFilters.tsx",
+        "frontend/src/pages/ai-models/ui/ModelComparisonPage.tsx",
+        "frontend/src/pages/ai-models/ui/ModelHistoryPage.tsx",
+        "frontend/src/pages/ai-models/ui/ModelLeaderboardPage.tsx",
+        "frontend/src/pages/ai-models/ui/ModelPageHeader.tsx",
+        "frontend/src/pages/ai-models/ui/ModelResultsState.tsx",
+        "frontend/src/pages/ai-models/ui/ModelStageTabs.tsx",
+        "frontend/src/pages/ai-models/ui/VoiceReflectionStart.tsx",
+        "frontend/src/widgets/model-leaderboard/ui/ModelLeaderboard.tsx"
+      ],
+      "codeSHA256": "8030adc765d1acacfae4e0edd8253496a39792f4dc8564de44877e656087a9fd"
+    },
+    {
+      "environment": "main",
+      "file": "assets/app-failure-X7oCAdSh.js",
+      "generatedCodeSHA256": "f7a9c2535472e1fb3d712f2ebd08bd06fce876ea50b518f2933f48483b932237",
+      "moduleCount": 52,
+      "packages": [
+        {
+          "name": "@bufbuild/protobuf",
+          "version": "2.14.0",
+          "declaredLicense": "(Apache-2.0 AND BSD-3-Clause)",
+          "metadataSHA256": "420500cc1d62e2d57b0ef53ce8b74ba843a61e94380823303e77490ef694069a"
+        },
+        {
+          "name": "@connectrpc/connect",
+          "version": "2.1.2",
+          "declaredLicense": "Apache-2.0",
+          "metadataSHA256": "2a6a26b2ed4811a12883d1d86503fdff9fdfee180bddb802b13f8c0e48e5ab02"
+        },
+        {
+          "name": "@connectrpc/connect-query",
+          "version": "2.3.1",
+          "declaredLicense": "Apache-2.0",
+          "metadataSHA256": "3fd4935368bd54b46f80f4ea8cf608c26522b60986d2d44b3cf99d95f157ff99"
+        },
+        {
+          "name": "@connectrpc/connect-query-core",
+          "version": "2.3.1",
+          "declaredLicense": "Apache-2.0",
+          "metadataSHA256": "564557b09c48bee87621f16b48aecba0b331ea31f3eb633585d2ee18e9259776"
+        },
+        {
+          "name": "@tanstack/query-core",
+          "version": "5.102.4",
+          "declaredLicense": "MIT",
+          "metadataSHA256": "d808e7bca908bd1f423cc4cdd43d9733aa094525dcd3a72b738f0172f3d949a4"
+        },
+        {
+          "name": "@tanstack/react-query",
+          "version": "5.102.4",
+          "declaredLicense": "MIT",
+          "metadataSHA256": "ea3572977e210ef8e42d1028bf2c3ac75c89e2035f21d8cf3f1228bbaf4e756b"
+        }
+      ],
+      "sourceModules": [
+        "frontend/src/shared/api/app-failure.ts",
+        "frontend/src/shared/api/gen/postpilot/v1/error_pb.ts",
+        "frontend/src/shared/api/gen/postpilot/v1/language_pb.ts",
+        "frontend/src/shared/api/gen/postpilot/v1/model_experiment_pb.ts",
+        "frontend/src/shared/api/gen/postpilot/v1/plan_pb.ts",
+        "frontend/src/shared/api/gen/postpilot/v1/post_pb.ts",
+        "frontend/src/shared/api/gen/postpilot/v1/provider_pb.ts",
+        "frontend/src/shared/api/gen/postpilot/v1/quality_pb.ts",
+        "frontend/src/shared/api/gen/postpilot/v1/template_pb.ts",
+        "frontend/src/shared/api/gen/postpilot/v1/voice_pb.ts"
+      ],
+      "codeSHA256": "f7a9c2535472e1fb3d712f2ebd08bd06fce876ea50b518f2933f48483b932237"
+    },
+    {
+      "environment": "main",
+      "file": "assets/auth_pb-C9i8JzTz.js",
+      "generatedCodeSHA256": "313608237c68b937f5cc0e301a704eb158f4745f87f358bc92e4243adc38257c",
+      "moduleCount": 1,
+      "packages": [],
+      "sourceModules": [
+        "frontend/src/shared/api/gen/postpilot/v1/auth_pb.ts"
+      ],
+      "codeSHA256": "313608237c68b937f5cc0e301a704eb158f4745f87f358bc92e4243adc38257c"
+    },
+    {
+      "environment": "main",
+      "file": "assets/badges-D8q2r_u7.js",
+      "generatedCodeSHA256": "97f3166dced666e83f689069b3daff8cf4ffa3d01d60442be803f59cf120f989",
+      "moduleCount": 1,
+      "packages": [],
+      "sourceModules": [
+        "frontend/src/entities/model-experiment/model/badges.ts"
+      ],
+      "codeSHA256": "97f3166dced666e83f689069b3daff8cf4ffa3d01d60442be803f59cf120f989"
+    },
+    {
+      "environment": "main",
+      "file": "assets/billing-DpYDJjlj.js",
+      "generatedCodeSHA256": "35b6df625b9f93ebf495a823c6247a7dbf61783cfe604de8a921786e8763d775",
+      "moduleCount": 6,
+      "packages": [],
+      "sourceModules": [
+        "frontend/src/entities/subscription/api/useCreditPurchases.ts",
+        "frontend/src/features/purchase-credits/ui/CreditPurchaseSection.tsx",
+        "frontend/src/features/remove-payment-method/ui/RemovePaymentMethodButton.tsx",
+        "frontend/src/features/request-refund/ui/RefundRequestSection.tsx",
+        "frontend/src/pages/billing/index.ts",
+        "frontend/src/pages/billing/ui/BillingPage.tsx"
+      ],
+      "codeSHA256": "35b6df625b9f93ebf495a823c6247a7dbf61783cfe604de8a921786e8763d775"
+    },
+    {
+      "environment": "main",
+      "file": "assets/billing-checkout-njBTMeiC.js",
+      "generatedCodeSHA256": "8d6306a6fc20c66dd3505a29dd094821bde4873991319d99aa2e320a3b551961",
+      "moduleCount": 4,
+      "packages": [],
+      "sourceModules": [
+        "frontend/src/entities/subscription/api/useQuote.ts",
+        "frontend/src/entities/subscription/api/useSubscribe.ts",
+        "frontend/src/pages/billing-checkout/index.ts",
+        "frontend/src/pages/billing-checkout/ui/BillingCheckoutPage.tsx"
+      ],
+      "codeSHA256": "8d6306a6fc20c66dd3505a29dd094821bde4873991319d99aa2e320a3b551961"
+    },
+    {
+      "environment": "main",
+      "file": "assets/billing-method-fail-DXbTrN8H.js",
+      "generatedCodeSHA256": "77a576437386d924c36939f524aeec9412fe604c505caf1343de7c015410149e",
+      "moduleCount": 2,
+      "packages": [],
+      "sourceModules": [
+        "frontend/src/pages/billing-method-fail/index.ts",
+        "frontend/src/pages/billing-method-fail/ui/BillingMethodFailPage.tsx"
+      ],
+      "codeSHA256": "77a576437386d924c36939f524aeec9412fe604c505caf1343de7c015410149e"
+    },
+    {
+      "environment": "main",
+      "file": "assets/billing-method-success-CwJ2tlS6.js",
+      "generatedCodeSHA256": "b904058e1204cb790ac38932b1f10108a4939f417a6249ad26a4f84fe6a47f86",
+      "moduleCount": 2,
+      "packages": [],
+      "sourceModules": [
+        "frontend/src/pages/billing-method-success/index.ts",
+        "frontend/src/pages/billing-method-success/ui/BillingMethodSuccessPage.tsx"
+      ],
+      "codeSHA256": "b904058e1204cb790ac38932b1f10108a4939f417a6249ad26a4f84fe6a47f86"
+    },
+    {
+      "environment": "main",
+      "file": "assets/blog-field-mappers-CYZMFWPC.js",
+      "generatedCodeSHA256": "136a44bbd810697f7e654d83b62a58acf927518837d13c6cc8f0b402824fd035",
+      "moduleCount": 2,
+      "packages": [],
+      "sourceModules": [
+        "frontend/src/entities/blog-field/api/blog-field-mappers.ts",
+        "frontend/src/entities/blog-field/model/blog-field.ts"
+      ],
+      "codeSHA256": "136a44bbd810697f7e654d83b62a58acf927518837d13c6cc8f0b402824fd035"
+    },
+    {
+      "environment": "main",
+      "file": "assets/bounded-output-Bg2TvT1V.js",
+      "generatedCodeSHA256": "276d4da901d012f94b6fada71f4b06d452fde65365024710476ad2fc0cffcec4",
+      "moduleCount": 0,
+      "packages": [],
+      "sourceModules": [],
+      "codeSHA256": "276d4da901d012f94b6fada71f4b06d452fde65365024710476ad2fc0cffcec4"
+    },
+    {
+      "environment": "main",
+      "file": "assets/browserAll-BxJrA7ld.js",
+      "generatedCodeSHA256": "b8a54174a3125ef61133ba00e1e2a7afa0b6b81e65698a340e690d4b06483d3f",
+      "moduleCount": 18,
+      "packages": [
+        {
+          "name": "ismobilejs",
+          "version": "1.1.1",
+          "declaredLicense": "MIT",
+          "metadataSHA256": "fa75a337970c3796eb19f60340a13f301a1a2ead018161753accf7c8de582afd"
+        },
+        {
+          "name": "pixi.js",
+          "version": "8.22.0",
+          "declaredLicense": "MIT",
+          "metadataSHA256": "2bb6b7570ca5f4a062609b34fd16fecfa2a76e8c3599c67a5b996a276eabaa32"
+        }
+      ],
+      "sourceModules": [],
+      "codeSHA256": "b8a54174a3125ef61133ba00e1e2a7afa0b6b81e65698a340e690d4b06483d3f"
+    },
+    {
+      "environment": "main",
+      "file": "assets/catalog-mappers-B4xfRMX6.js",
+      "generatedCodeSHA256": "c2a209753e0e8a9d2712fcb659fc0dc4be760bed58ffafc0bd8f2f4556075873",
+      "moduleCount": 3,
+      "packages": [],
+      "sourceModules": [
+        "frontend/src/entities/model-catalog/api/catalog-mappers.ts",
+        "frontend/src/entities/model-catalog/config/index.ts",
+        "frontend/src/entities/model-catalog/model/types.ts"
+      ],
+      "codeSHA256": "c2a209753e0e8a9d2712fcb659fc0dc4be760bed58ffafc0bd8f2f4556075873"
+    },
+    {
+      "environment": "main",
+      "file": "assets/check-Dsq9y3qU.js",
+      "generatedCodeSHA256": "b71a7fd6196a639fc926964386c1ac1beabaedf5908a86330cf8cbe4358479d6",
+      "moduleCount": 1,
+      "packages": [
+        {
+          "name": "lucide-react",
+          "version": "1.34.0",
+          "declaredLicense": "ISC",
+          "metadataSHA256": "1e6c1fcbdab853d9cbf044e61949db51908e45773bb896d1350935383819bebe"
+        }
+      ],
+      "sourceModules": [],
+      "codeSHA256": "b71a7fd6196a639fc926964386c1ac1beabaedf5908a86330cf8cbe4358479d6"
+    },
+    {
+      "environment": "main",
+      "file": "assets/chevron-down-C6OgHXky.js",
+      "generatedCodeSHA256": "88bbd1d5fbe09c704fad18f9e7eeb9a3ebc2806cb5d61ece9c398969ac6357f0",
+      "moduleCount": 1,
+      "packages": [
+        {
+          "name": "lucide-react",
+          "version": "1.34.0",
+          "declaredLicense": "ISC",
+          "metadataSHA256": "1e6c1fcbdab853d9cbf044e61949db51908e45773bb896d1350935383819bebe"
+        }
+      ],
+      "sourceModules": [],
+      "codeSHA256": "88bbd1d5fbe09c704fad18f9e7eeb9a3ebc2806cb5d61ece9c398969ac6357f0"
+    },
+    {
+      "environment": "main",
+      "file": "assets/clip-CdIrDRpe.js",
+      "generatedCodeSHA256": "e7659b1cfc5b6ceee93315d728509f3906687b6f404c92000c105a2e92914fbf",
+      "moduleCount": 281,
+      "packages": [
+        {
+          "name": "@pixi/colord",
+          "version": "2.9.6",
+          "declaredLicense": "MIT",
+          "metadataSHA256": "d92aec39b7b030ebb6419b8ca4da12fd1a9b7bbd12d2979ab019308b417507e8"
+        },
+        {
+          "name": "@resvg/resvg-wasm",
+          "version": "2.6.2",
+          "declaredLicense": "MPL-2.0",
+          "metadataSHA256": "4a9efcb54b2670726ccf9b91086413676c3de0fae607cce3b8a5a0d25abaff48"
+        },
+        {
+          "name": "eventemitter3",
+          "version": "5.0.4",
+          "declaredLicense": "MIT",
+          "metadataSHA256": "0dd9bc32a77be8238fad41d58aa5b24ccdfee79d8bcf4cbee85f16e3d15c1658"
+        },
+        {
+          "name": "lucide-react",
+          "version": "1.34.0",
+          "declaredLicense": "ISC",
+          "metadataSHA256": "1e6c1fcbdab853d9cbf044e61949db51908e45773bb896d1350935383819bebe"
+        },
+        {
+          "name": "pixi.js",
+          "version": "8.22.0",
+          "declaredLicense": "MIT",
+          "metadataSHA256": "2bb6b7570ca5f4a062609b34fd16fecfa2a76e8c3599c67a5b996a276eabaa32"
+        }
+      ],
+      "sourceModules": [
+        "frontend/src/entities/clip-design/config/browser-composition.ts",
+        "frontend/src/entities/clip-design/config/browser-readiness.json",
+        "frontend/src/entities/clip-design/config/clip-browser-render.ts",
+        "frontend/src/entities/clip-design/config/clip-caption-ink.json",
+        "frontend/src/entities/clip-design/config/clip-ink-fonts.json",
+        "frontend/src/entities/clip-design/config/clip-ink-identity.json",
+        "frontend/src/entities/clip-design/config/clip-ink.ts",
+        "frontend/src/entities/clip-design/config/sources.ts",
+        "frontend/src/entities/clip-observation/model/observations.ts",
+        "frontend/src/entities/clip-plan/api/calls.ts",
+        "frontend/src/entities/clip-plan/api/speech.ts",
+        "frontend/src/entities/clip-plan/model/caption-refresh.ts",
+        "frontend/src/entities/clip-plan/model/caption-style.ts",
+        "frontend/src/entities/clip-plan/model/draft-key.ts",
+        "frontend/src/entities/clip-plan/model/region-rebase.ts",
+        "frontend/src/entities/clip-plan/model/spoken-retiming.ts",
+        "frontend/src/entities/clip-plan/model/timeline.ts",
+        "frontend/src/entities/clip-plan/ui/ClipCaptionStyleSample.tsx",
+        "frontend/src/entities/clip-plan/ui/ClipSpeechPlayer.tsx",
+        "frontend/src/entities/clip-preview/api/preview.ts",
+        "frontend/src/entities/clip-preview/api/render.ts",
+        "frontend/src/entities/clip-preview/api/useClipBrowserRenderCapability.ts",
+        "frontend/src/entities/clip-preview/config/audio-processing.ts",
+        "frontend/src/entities/clip-preview/config/composition-placement.ts",
+        "frontend/src/entities/clip-preview/config/local-preview.ts",
+        "frontend/src/entities/clip-preview/config/speech-playback.ts",
+        "frontend/src/entities/clip-preview/config/video-decoding.ts",
+        "frontend/src/entities/clip-preview/lib/create-preview-worker.ts",
+        "frontend/src/entities/clip-preview/lib/create-video-worker.ts",
+        "frontend/src/entities/clip-preview/model/background-math.ts",
+        "frontend/src/entities/clip-preview/model/browser-audio-plan.ts",
+        "frontend/src/entities/clip-preview/model/browser-composition.ts",
+        "frontend/src/entities/clip-preview/model/browser-render-capability.ts",
+        "frontend/src/entities/clip-preview/model/caption-sheets.ts",
+        "frontend/src/entities/clip-preview/model/component-samples.ts",
+        "frontend/src/entities/clip-preview/model/composition-audio.ts",
+        "frontend/src/entities/clip-preview/model/composition-originals.ts",
+        "frontend/src/entities/clip-preview/model/composition-placement.ts",
+        "frontend/src/entities/clip-preview/model/composition-playback.ts",
+        "frontend/src/entities/clip-preview/model/draft-preview.ts",
+        "frontend/src/entities/clip-preview/model/ink-cache.ts",
+        "frontend/src/entities/clip-preview/model/ink-caption-draw.ts",
+        "frontend/src/entities/clip-preview/model/ink-caption-effects.ts",
+        "frontend/src/entities/clip-preview/model/ink-caption-ember.ts",
+        "frontend/src/entities/clip-preview/model/ink-caption-scene.ts",
+        "frontend/src/entities/clip-preview/model/ink-layout.ts",
+        "frontend/src/entities/clip-preview/model/ink-raster.ts",
+        "frontend/src/entities/clip-preview/model/ink-static.ts",
+        "frontend/src/entities/clip-preview/model/ink-typography.ts",
+        "frontend/src/entities/clip-preview/model/local-components.ts",
+        "frontend/src/entities/clip-preview/model/preview-assets.ts",
+        "frontend/src/entities/clip-preview/model/project-composition.ts",
+        "frontend/src/entities/clip-preview/model/speech-fingerprint.ts",
+        "frontend/src/entities/clip-preview/model/speech-playback.ts",
+        "frontend/src/entities/clip-preview/ui/ClipBrowserDraftPreview.tsx",
+        "frontend/src/entities/clip-preview/ui/ClipDraftPreview.tsx",
+        "frontend/src/entities/clip-preview/ui/ClipFlowFrame.tsx",
+        "frontend/src/entities/clip-preview/ui/useLocalSamples.ts",
+        "frontend/src/entities/clip-project/api/analysis-preparation.ts",
+        "frontend/src/entities/clip-project/api/calls.ts",
+        "frontend/src/entities/clip-project/api/eligibility.ts",
+        "frontend/src/entities/clip-project/api/lifecycle.ts",
+        "frontend/src/entities/clip-project/api/sources.ts",
+        "frontend/src/entities/clip-project/config/network.ts",
+        "frontend/src/entities/clip-project/model/analysis-preparation.ts",
+        "frontend/src/entities/clip-project/model/eligibility.ts",
+        "frontend/src/entities/clip-project/model/notices.ts",
+        "frontend/src/entities/clip-project/model/render-kind.ts",
+        "frontend/src/entities/clip-project/model/source-order.ts",
+        "frontend/src/entities/clip-project/ui/ClipCompositionInputs.tsx",
+        "frontend/src/entities/clip-project/ui/ClipFailureNotice.tsx",
+        "frontend/src/entities/clip-project/ui/ClipNoticeList.tsx",
+        "frontend/src/entities/clip-project/ui/ClipQuoteApproval.tsx",
+        "frontend/src/entities/clip-project/ui/ClipRequestRecord.tsx",
+        "frontend/src/entities/clip-project/ui/ClipSourceStrip.tsx",
+        "frontend/src/entities/clip-template/lib/composition-field-maximum.ts",
+        "frontend/src/entities/generation-job/api/job-calls.ts",
+        "frontend/src/features/bind-clip-source-item/model/useClipSourceBinding.ts",
+        "frontend/src/features/cancel-clip/model/useCancelClip.ts",
+        "frontend/src/features/cancel-clip/ui/CancelClipAction.tsx",
+        "frontend/src/features/correct-clip/model/timeline-gesture.ts",
+        "frontend/src/features/correct-clip/model/useClipCorrection.ts",
+        "frontend/src/features/correct-clip/model/useTimelineGesture.ts",
+        "frontend/src/features/correct-clip/ui/ClipCaptionStage.tsx",
+        "frontend/src/features/correct-clip/ui/ClipCaptionStylePicker.tsx",
+        "frontend/src/features/correct-clip/ui/ClipCorrectionWorkspace.tsx",
+        "frontend/src/features/correct-clip/ui/ClipCutAssemblyControls.tsx",
+        "frontend/src/features/correct-clip/ui/ClipCutSourceFrame.tsx",
+        "frontend/src/features/correct-clip/ui/ClipItemProperties.tsx",
+        "frontend/src/features/correct-clip/ui/ClipItemReading.tsx",
+        "frontend/src/features/correct-clip/ui/ClipRenderAction.tsx",
+        "frontend/src/features/correct-clip/ui/ClipTextControls.tsx",
+        "frontend/src/features/correct-clip/ui/ClipTimeField.tsx",
+        "frontend/src/features/correct-clip/ui/ClipTimeline.tsx",
+        "frontend/src/features/delete-clip-project/ui/DeleteClipProjectButton.tsx",
+        "frontend/src/features/edit-clip-project/model/useClipDraftSave.ts",
+        "frontend/src/features/edit-clip-project/ui/ClipDesignSelection.tsx",
+        "frontend/src/features/edit-clip-project/ui/ClipProjectForm.tsx",
+        "frontend/src/features/edit-clip-regions/model/region-draft.ts",
+        "frontend/src/features/edit-clip-regions/model/region-queue.ts",
+        "frontend/src/features/edit-clip-regions/model/useClipRegionsEditor.ts",
+        "frontend/src/features/edit-clip-regions/ui/ClipRegionBlock.tsx",
+        "frontend/src/features/edit-clip-regions/ui/ClipRegionEditor.tsx",
+        "frontend/src/features/edit-clip-storyline/model/storyline-edits.ts",
+        "frontend/src/features/edit-clip-storyline/model/useClipStorylineQueue.ts",
+        "frontend/src/features/edit-clip-storyline/ui/ClipSceneFrame.tsx",
+        "frontend/src/features/edit-clip-storyline/ui/ClipStorylineParagraphEditor.tsx",
+        "frontend/src/features/edit-clip-storyline/ui/ClipStorylineSpace.tsx",
+        "frontend/src/features/finalize-clip/model/finalization-refusal.ts",
+        "frontend/src/features/finalize-clip/model/useFinalizeClip.ts",
+        "frontend/src/features/finalize-clip/ui/FinalizeClipAction.tsx",
+        "frontend/src/features/generate-clip/api/useClipQuote.ts",
+        "frontend/src/features/generate-clip/api/useGenerateClip.ts",
+        "frontend/src/features/generate-clip/model/preconditions.ts",
+        "frontend/src/features/generate-clip/ui/ClipCreditSettlement.tsx",
+        "frontend/src/features/generate-clip/ui/ClipGenerationActions.tsx",
+        "frontend/src/features/generate-clip/ui/ClipResult.tsx",
+        "frontend/src/features/inspect-clip-observations/ui/AddObservedCut.tsx",
+        "frontend/src/features/inspect-clip-observations/ui/ClipAttemptInspection.tsx",
+        "frontend/src/features/inspect-clip-observations/ui/ClipObservationViewer.tsx",
+        "frontend/src/features/prepare-clip-browser/config/limits.ts",
+        "frontend/src/features/prepare-clip-browser/lib/encoder.ts",
+        "frontend/src/features/prepare-clip-browser/model/coverage.ts",
+        "frontend/src/features/prepare-clip-browser/model/mono.ts",
+        "frontend/src/features/prepare-clip-browser/model/prepare.ts",
+        "frontend/src/features/prepare-clip-browser/ui/ClipBrowserPreparationStatus.tsx",
+        "frontend/src/features/prepare-clip-browser/ui/usePrepareClipBrowser.ts",
+        "frontend/src/features/preview-clip-draft/model/useClipDraftPreview.ts",
+        "frontend/src/features/preview-clip-draft/ui/ClipDraftPreviewPanel.tsx",
+        "frontend/src/features/regenerate-clip-speech/ui/ClipDubbingEditor.tsx",
+        "frontend/src/features/regenerate-clip-speech/ui/ClipSpokenProperties.tsx",
+        "frontend/src/features/regenerate-clip-speech/ui/ClipSpokenRecoveryEditor.tsx",
+        "frontend/src/features/regenerate-clip-speech/ui/ClipVoiceChoice.tsx",
+        "frontend/src/features/render-clip-browser/api/prepare-assets.ts",
+        "frontend/src/features/render-clip-browser/api/render-audio.ts",
+        "frontend/src/features/render-clip-browser/api/render-video.ts",
+        "frontend/src/features/render-clip-browser/api/run-local-render.ts",
+        "frontend/src/features/render-clip-browser/api/run-render.ts",
+        "frontend/src/features/render-clip-browser/api/store-result.ts",
+        "frontend/src/features/render-clip-browser/api/useBrowserRender.ts",
+        "frontend/src/features/render-clip-browser/lib/originals.ts",
+        "frontend/src/features/render-clip-browser/lib/source-frames.ts",
+        "frontend/src/features/render-clip-browser/model/audio-preflight.ts",
+        "frontend/src/features/render-clip-browser/model/verdict.ts",
+        "frontend/src/features/render-clip-browser/ui/ClipBrowserRenderStatus.tsx",
+        "frontend/src/features/request-clip-storyline/api/useClipStorylineRequest.ts",
+        "frontend/src/features/request-clip-storyline/ui/ClipStorylineRequest.tsx",
+        "frontend/src/features/revise-clip/api/useClipRevision.ts",
+        "frontend/src/features/revise-clip/ui/ClipRevisionRequest.tsx",
+        "frontend/src/features/revise-clip/ui/SaveAsVideoGuidelineButton.tsx",
+        "frontend/src/features/upload-clip-sources/api/pipeline.ts",
+        "frontend/src/features/upload-clip-sources/model/manifest.ts",
+        "frontend/src/features/upload-clip-sources/model/reselection.ts",
+        "frontend/src/features/upload-clip-sources/model/useClipSourceUpload.ts",
+        "frontend/src/features/upload-clip-sources/ui/ClipSourcePicker.tsx",
+        "frontend/src/pages/clip/index.ts",
+        "frontend/src/pages/clip/ui/ClipPage.tsx",
+        "frontend/src/shared/api/gen/postpilot/v1/clip_plan_pb.ts",
+        "frontend/src/shared/api/gen/postpilot/v1/clip_render_pb.ts",
+        "frontend/src/shared/api/gen/postpilot/v1/clip_source_pb.ts",
+        "frontend/src/shared/api/gen/postpilot/v1/clip_speech_pb.ts",
+        "frontend/src/shared/lib/media/audio/loudness.ts",
+        "frontend/src/shared/lib/media/audio/processing.ts",
+        "frontend/src/shared/lib/media/audio/range-reader.ts",
+        "frontend/src/shared/lib/media/audio/selected-pcm.ts",
+        "frontend/src/shared/lib/media/bounded-output.ts",
+        "frontend/src/shared/lib/media/measure-mp4.ts",
+        "frontend/src/shared/lib/media/mux-mp4.ts",
+        "frontend/src/shared/lib/media/stream-mp4.ts",
+        "frontend/src/shared/lib/media/verify-mp4-audio.ts",
+        "frontend/src/shared/lib/media/video/encoder-support.ts",
+        "frontend/src/shared/lib/time/delay.ts",
+        "frontend/src/shared/ui/slider/RangeSlider.tsx",
+        "frontend/src/shared/ui/viewport/useVisualViewport.ts",
+        "frontend/src/widgets/clip-workspace/model/lifecycle.ts",
+        "frontend/src/widgets/clip-workspace/model/rules.ts",
+        "frontend/src/widgets/clip-workspace/model/steps.ts",
+        "frontend/src/widgets/clip-workspace/model/useClipWorkspace.ts",
+        "frontend/src/widgets/clip-workspace/ui/ClipStatus.tsx",
+        "frontend/src/widgets/clip-workspace/ui/ClipTopRow.tsx",
+        "frontend/src/widgets/clip-workspace/ui/ClipWorkspace.tsx"
+      ],
+      "codeSHA256": "33db9231cb709ff1a22312bcaf1722163327d5b5f6b55a2c9fc86bdbbb747ea0"
+    },
+    {
+      "environment": "main",
+      "file": "assets/clip-template-C2x7yXuO.js",
+      "generatedCodeSHA256": "8d57bb3b91a489dc9e069eafc26afdf34cc44cb2026835830250a4ec54d621d3",
+      "moduleCount": 4,
+      "packages": [],
+      "sourceModules": [
+        "frontend/src/entities/clip-template/api/clip-template.ts",
+        "frontend/src/entities/clip-template/model/types.ts",
+        "frontend/src/shared/api/gen/postpilot/v1/clip_pb.ts",
+        "frontend/src/shared/api/gen/postpilot/v1/clip_template_pb.ts"
+      ],
+      "codeSHA256": "8d57bb3b91a489dc9e069eafc26afdf34cc44cb2026835830250a4ec54d621d3"
+    },
+    {
+      "environment": "main",
+      "file": "assets/clips-DENl38WN.js",
+      "generatedCodeSHA256": "389adf19f93212acc000af5c3c5cbe33d8dfc5cd6d157ac1f0945a4fb03183b9",
+      "moduleCount": 4,
+      "packages": [],
+      "sourceModules": [
+        "frontend/src/features/filter-clips/model/narrow.ts",
+        "frontend/src/features/filter-clips/ui/ClipListControls.tsx",
+        "frontend/src/pages/clips/index.ts",
+        "frontend/src/pages/clips/ui/ClipsPage.tsx"
+      ],
+      "codeSHA256": "389adf19f93212acc000af5c3c5cbe33d8dfc5cd6d157ac1f0945a4fb03183b9"
+    },
+    {
+      "environment": "main",
+      "file": "assets/composition-BEfcmF4j.js",
+      "generatedCodeSHA256": "4a10d61d85391478cef2968cd4aff62cf38cf9fd11277ae4d4470f5a32c23f5e",
+      "moduleCount": 1,
+      "packages": [],
+      "sourceModules": [
+        "frontend/src/entities/clip-project/api/composition.ts"
+      ],
+      "codeSHA256": "4a10d61d85391478cef2968cd4aff62cf38cf9fd11277ae4d4470f5a32c23f5e"
+    },
+    {
+      "environment": "main",
+      "file": "assets/composition-parse-C69pXO3Y.js",
+      "generatedCodeSHA256": "d036451bfc06f089e06fae5d9007849cfcdea2a3437964589a54ab97cbd53c2a",
+      "moduleCount": 6,
+      "packages": [],
+      "sourceModules": [
+        "frontend/src/entities/clip-design/config/clip-composition.ts",
+        "frontend/src/entities/clip-design/config/clip-design.json",
+        "frontend/src/entities/clip-design/config/clip-design.ts",
+        "frontend/src/entities/clip-template/lib/composition-parse.ts",
+        "frontend/src/entities/clip-template/lib/composition-xml.ts",
+        "frontend/src/entities/clip-template/model/composition.ts"
+      ],
+      "codeSHA256": "d036451bfc06f089e06fae5d9007849cfcdea2a3437964589a54ab97cbd53c2a"
+    },
+    {
+      "environment": "main",
+      "file": "assets/config-w_6cqBqx.js",
+      "generatedCodeSHA256": "76930ac4091f6e2930843ea419fd7eab44f21ed4ba076768274862a9c1cdc05d",
+      "moduleCount": 1,
+      "packages": [],
+      "sourceModules": [
+        "frontend/src/shared/config/index.ts"
+      ],
+      "codeSHA256": "76930ac4091f6e2930843ea419fd7eab44f21ed4ba076768274862a9c1cdc05d"
+    },
+    {
+      "environment": "main",
+      "file": "assets/createLucideIcon-CvMN7j79.js",
+      "generatedCodeSHA256": "06bcd43580173cfa9e47142377b289a6d9bd98a35640ca572b64aafd6542ec16",
+      "moduleCount": 9,
+      "packages": [
+        {
+          "name": "lucide-react",
+          "version": "1.34.0",
+          "declaredLicense": "ISC",
+          "metadataSHA256": "1e6c1fcbdab853d9cbf044e61949db51908e45773bb896d1350935383819bebe"
+        }
+      ],
+      "sourceModules": [],
+      "codeSHA256": "06bcd43580173cfa9e47142377b289a6d9bd98a35640ca572b64aafd6542ec16"
+    },
+    {
+      "environment": "main",
+      "file": "assets/failure-oqODucQX.js",
+      "generatedCodeSHA256": "a70e80e2fce52eb77a6373351a649eae84a1f446dcaad5d45b701b6e916810ad",
+      "moduleCount": 1,
+      "packages": [],
+      "sourceModules": [
+        "frontend/src/shared/lib/localization/failure.ts"
+      ],
+      "codeSHA256": "a70e80e2fce52eb77a6373351a649eae84a1f446dcaad5d45b701b6e916810ad"
+    },
+    {
+      "environment": "main",
+      "file": "assets/forgot-password-CSX9TAJ0.js",
+      "generatedCodeSHA256": "1bbcdf96602635e4575190f11a13eb3eda1190ca1aa8fb99d828d72ab49cb9be",
+      "moduleCount": 2,
+      "packages": [],
+      "sourceModules": [
+        "frontend/src/pages/forgot-password/index.ts",
+        "frontend/src/pages/forgot-password/ui/ForgotPasswordPage.tsx"
+      ],
+      "codeSHA256": "1bbcdf96602635e4575190f11a13eb3eda1190ca1aa8fb99d828d72ab49cb9be"
+    },
+    {
+      "environment": "main",
+      "file": "assets/gift-20Vv-CL5.js",
+      "generatedCodeSHA256": "2896fd25e8c2a2e3c08699eb8607b3b4505da60a9b0ab6631d9e8b70d7ce834e",
+      "moduleCount": 5,
+      "packages": [],
+      "sourceModules": [
+        "frontend/src/entities/voucher/api/useGift.ts",
+        "frontend/src/entities/voucher/api/useRedeemVoucher.ts",
+        "frontend/src/features/redeem-voucher/ui/RedeemVoucher.tsx",
+        "frontend/src/pages/gift/index.ts",
+        "frontend/src/pages/gift/ui/GiftPage.tsx"
+      ],
+      "codeSHA256": "2896fd25e8c2a2e3c08699eb8607b3b4505da60a9b0ab6631d9e8b70d7ce834e"
+    },
+    {
+      "environment": "main",
+      "file": "assets/gift-DTmd5k7e.js",
+      "generatedCodeSHA256": "bc07f114d3e7584ea310790a1258434775057ef4325b80227861f397a8298d98",
+      "moduleCount": 1,
+      "packages": [
+        {
+          "name": "lucide-react",
+          "version": "1.34.0",
+          "declaredLicense": "ISC",
+          "metadataSHA256": "1e6c1fcbdab853d9cbf044e61949db51908e45773bb896d1350935383819bebe"
+        }
+      ],
+      "sourceModules": [],
+      "codeSHA256": "bc07f114d3e7584ea310790a1258434775057ef4325b80227861f397a8298d98"
+    },
+    {
+      "environment": "main",
+      "file": "assets/google-sign-in-callback-D-tPWGxw.js",
+      "generatedCodeSHA256": "ea6a72e55f130c61c09cfa5d6749e774527d0c6cc9f7aeb6aaf7d5004d83268b",
+      "moduleCount": 3,
+      "packages": [],
+      "sourceModules": [
+        "frontend/src/entities/session/api/useSignInWithGoogle.ts",
+        "frontend/src/pages/google-sign-in-callback/index.ts",
+        "frontend/src/pages/google-sign-in-callback/ui/GoogleSignInCallbackPage.tsx"
+      ],
+      "codeSHA256": "ea6a72e55f130c61c09cfa5d6749e774527d0c6cc9f7aeb6aaf7d5004d83268b"
+    },
+    {
+      "environment": "main",
+      "file": "assets/guideline-cache-yJ4f5FyQ.js",
+      "generatedCodeSHA256": "af95579143237804705264bc52ebd219c95493ed7d2b6f88077e6935c6dbf808",
+      "moduleCount": 3,
+      "packages": [],
+      "sourceModules": [
+        "frontend/src/entities/guideline/api/guideline-cache.ts",
+        "frontend/src/entities/guideline/api/guideline-queries.ts",
+        "frontend/src/shared/api/gen/postpilot/v1/guideline_pb.ts"
+      ],
+      "codeSHA256": "af95579143237804705264bc52ebd219c95493ed7d2b6f88077e6935c6dbf808"
+    },
+    {
+      "environment": "main",
+      "file": "assets/guidelines-BzzH8GQG.js",
+      "generatedCodeSHA256": "528b384d56cdf6fe3340093cfa10fb0ed1505ba2fa129869e7840a6fd1042a13",
+      "moduleCount": 2,
+      "packages": [],
+      "sourceModules": [
+        "frontend/src/pages/guidelines/index.ts",
+        "frontend/src/pages/guidelines/ui/GuidelinesPage.tsx"
+      ],
+      "codeSHA256": "528b384d56cdf6fe3340093cfa10fb0ed1505ba2fa129869e7840a6fd1042a13"
+    },
+    {
+      "environment": "main",
+      "file": "assets/heif-D6VOBrp6.js",
+      "generatedCodeSHA256": "9ff35d0bcd507c4ff67b9a3b9884b57d1c930e50a82dc1138c03a933a21e9b07",
+      "moduleCount": 2,
+      "packages": [],
+      "sourceModules": [
+        "frontend/src/shared/lib/image/config.ts",
+        "frontend/src/shared/lib/image/heif.ts"
+      ],
+      "codeSHA256": "9ff35d0bcd507c4ff67b9a3b9884b57d1c930e50a82dc1138c03a933a21e9b07"
+    },
+    {
+      "environment": "main",
+      "file": "assets/init-DDUMoYKO.js",
+      "generatedCodeSHA256": "b6529bffb9dda346002f37816ac0d96656d38514cb7f859ec236341799755def",
+      "moduleCount": 44,
+      "packages": [
+        {
+          "name": "pixi.js",
+          "version": "8.22.0",
+          "declaredLicense": "MIT",
+          "metadataSHA256": "2bb6b7570ca5f4a062609b34fd16fecfa2a76e8c3599c67a5b996a276eabaa32"
+        }
+      ],
+      "sourceModules": [],
+      "codeSHA256": "b6529bffb9dda346002f37816ac0d96656d38514cb7f859ec236341799755def"
+    },
+    {
+      "environment": "main",
+      "file": "assets/job-mappers-C68acMpp.js",
+      "generatedCodeSHA256": "52a8fbad836fc11057c1a20c13f3fac0f8412811b1e0b6e1db1035813c998d48",
+      "moduleCount": 2,
+      "packages": [],
+      "sourceModules": [
+        "frontend/src/entities/generation-job/api/job-mappers.ts",
+        "frontend/src/shared/api/language.ts"
+      ],
+      "codeSHA256": "52a8fbad836fc11057c1a20c13f3fac0f8412811b1e0b6e1db1035813c998d48"
+    },
+    {
+      "environment": "main",
+      "file": "assets/link-B8C2Itkx.js",
+      "generatedCodeSHA256": "208b32bb647ec09da621c40c8db192ef9c96fd03b4b44ad9846895d4c1982674",
+      "moduleCount": 11,
+      "packages": [
+        {
+          "name": "@tanstack/react-router",
+          "version": "1.170.32",
+          "declaredLicense": "MIT",
+          "metadataSHA256": "76c00e5f2e220b5d1125eef47eb039b984ca069658ebc54c53626e5c44f266f0"
+        },
+        {
+          "name": "@tanstack/react-store",
+          "version": "0.9.3",
+          "declaredLicense": "MIT",
+          "metadataSHA256": "c1a3e8924fe089803d67827c43594cdadd613b36c77d95d40bb74516ce30f96f"
+        },
+        {
+          "name": "@tanstack/router-core",
+          "version": "1.171.27",
+          "declaredLicense": "MIT",
+          "metadataSHA256": "e8d0e294b528d955ce49ea7be70a4f976eb359f6bb141f1aa252282c209c55b3"
+        },
+        {
+          "name": "use-sync-external-store",
+          "version": "1.6.0",
+          "declaredLicense": "MIT",
+          "metadataSHA256": "dfdead719ce161e1c5edbf0fca0ce0e7d70ba87c8a8f249856c0afde81595f24"
+        }
+      ],
+      "sourceModules": [],
+      "codeSHA256": "208b32bb647ec09da621c40c8db192ef9c96fd03b4b44ad9846895d4c1982674"
+    },
+    {
+      "environment": "main",
+      "file": "assets/locale-B8SF0Izi.js",
+      "generatedCodeSHA256": "e3044f6fb49bb143ab9ac3618f5141040c1beab9d5a2877ac0ace0709c31a4ef",
+      "moduleCount": 1,
+      "packages": [],
+      "sourceModules": [
+        "frontend/src/shared/lib/localization/locale.ts"
+      ],
+      "codeSHA256": "e3044f6fb49bb143ab9ac3618f5141040c1beab9d5a2877ac0ace0709c31a4ef"
+    },
+    {
+      "environment": "main",
+      "file": "assets/matchContext-BmFDKQmA.js",
+      "generatedCodeSHA256": "f26ecfe301c0e06b8654d522072dcc1bd5d564b6b19391d661486e23adc40749",
+      "moduleCount": 1,
+      "packages": [
+        {
+          "name": "@tanstack/react-router",
+          "version": "1.170.32",
+          "declaredLicense": "MIT",
+          "metadataSHA256": "76c00e5f2e220b5d1125eef47eb039b984ca069658ebc54c53626e5c44f266f0"
+        }
+      ],
+      "sourceModules": [],
+      "codeSHA256": "f26ecfe301c0e06b8654d522072dcc1bd5d564b6b19391d661486e23adc40749"
+    },
+    {
+      "environment": "main",
+      "file": "assets/memories-Pt9cpTf7.js",
+      "generatedCodeSHA256": "f194d50ad797f5f0647cc81c4e87eaede3b3ce23a71243231425b8cc2c66a134",
+      "moduleCount": 11,
+      "packages": [],
+      "sourceModules": [
+        "frontend/src/entities/memory/api/memory-mutations.ts",
+        "frontend/src/entities/memory/api/useMemories.ts",
+        "frontend/src/entities/memory/config/index.ts",
+        "frontend/src/entities/memory/model/types.ts",
+        "frontend/src/entities/memory/ui/MemoryKindField.tsx",
+        "frontend/src/entities/memory/ui/MemoryTagsField.tsx",
+        "frontend/src/features/create-memory/ui/CreateMemorySheet.tsx",
+        "frontend/src/features/delete-memory/ui/DeleteMemoryButton.tsx",
+        "frontend/src/features/edit-memory/ui/MemoryEditForm.tsx",
+        "frontend/src/pages/memories/index.ts",
+        "frontend/src/pages/memories/ui/MemoriesPage.tsx"
+      ],
+      "codeSHA256": "f194d50ad797f5f0647cc81c4e87eaede3b3ce23a71243231425b8cc2c66a134"
+    },
+    {
+      "environment": "main",
+      "file": "assets/model-access-cache-M7mmdrVR.js",
+      "generatedCodeSHA256": "ec24455b24cdb42a2854d0c7c27904ba2755ff80ec9470db822025d42ad0c954",
+      "moduleCount": 1,
+      "packages": [],
+      "sourceModules": [
+        "frontend/src/entities/model-catalog/api/model-access-cache.ts"
+      ],
+      "codeSHA256": "ec24455b24cdb42a2854d0c7c27904ba2755ff80ec9470db822025d42ad0c954"
+    },
+    {
+      "environment": "main",
+      "file": "assets/model-experiment-JCTcJ71i.js",
+      "generatedCodeSHA256": "ee7781b78ebecf449b6ec73baeb8e677b0e22b5384cf2bd5ced6ed61e09fcdd1",
+      "moduleCount": 13,
+      "packages": [],
+      "sourceModules": [
+        "frontend/src/entities/model-experiment/api/useExperimentActions.ts",
+        "frontend/src/entities/model-experiment/api/useExperimentOwners.ts",
+        "frontend/src/entities/model-experiment/model/sides.ts",
+        "frontend/src/features/review-model-experiment/model/experiment-actions.ts",
+        "frontend/src/features/review-model-experiment/model/ranking-review.ts",
+        "frontend/src/features/review-model-experiment/ui/ExperimentActions.tsx",
+        "frontend/src/features/review-model-experiment/ui/RankedReviewSheet.tsx",
+        "frontend/src/features/review-model-experiment/ui/VerdictSheet.tsx",
+        "frontend/src/pages/model-experiment/index.ts",
+        "frontend/src/pages/model-experiment/ui/ExperimentReview.tsx",
+        "frontend/src/pages/model-experiment/ui/ModelExperimentPage.tsx",
+        "frontend/src/pages/model-experiment/ui/PostExperimentPage.tsx",
+        "frontend/src/widgets/candidate-comparison/ui/CandidateComparison.tsx"
+      ],
+      "codeSHA256": "ee7781b78ebecf449b6ec73baeb8e677b0e22b5384cf2bd5ced6ed61e09fcdd1"
+    },
+    {
+      "environment": "main",
+      "file": "assets/pencil-DQFeWbbm.js",
+      "generatedCodeSHA256": "46514dd8276d3aab1d71073370cdd8e4ecac3d3238633c929391c6da98613757",
+      "moduleCount": 1,
+      "packages": [
+        {
+          "name": "lucide-react",
+          "version": "1.34.0",
+          "declaredLicense": "ISC",
+          "metadataSHA256": "1e6c1fcbdab853d9cbf044e61949db51908e45773bb896d1350935383819bebe"
+        }
+      ],
+      "sourceModules": [],
+      "codeSHA256": "46514dd8276d3aab1d71073370cdd8e4ecac3d3238633c929391c6da98613757"
+    },
+    {
+      "environment": "main",
+      "file": "assets/plan-mappers-DVvr_rqg.js",
+      "generatedCodeSHA256": "c0a24bd621ea0c39c7f4e937e5430d3fa22839aee0998afff9383f4647236a50",
+      "moduleCount": 16,
+      "packages": [
+        {
+          "name": "@bufbuild/protobuf",
+          "version": "2.14.0",
+          "declaredLicense": "(Apache-2.0 AND BSD-3-Clause)",
+          "metadataSHA256": "420500cc1d62e2d57b0ef53ce8b74ba843a61e94380823303e77490ef694069a"
+        },
+        {
+          "name": "@connectrpc/connect-query-core",
+          "version": "2.3.1",
+          "declaredLicense": "Apache-2.0",
+          "metadataSHA256": "564557b09c48bee87621f16b48aecba0b331ea31f3eb633585d2ee18e9259776"
+        }
+      ],
+      "sourceModules": [
+        "frontend/src/entities/plan/api/plan-mappers.ts",
+        "frontend/src/shared/api/post-credits.ts"
+      ],
+      "codeSHA256": "c0a24bd621ea0c39c7f4e937e5430d3fa22839aee0998afff9383f4647236a50"
+    },
+    {
+      "environment": "main",
+      "file": "assets/plans-DZ9m70VL.js",
+      "generatedCodeSHA256": "6d78960961b350aef6f7ce1b6d36e429901a41cb21c389be88a7dc898327c971",
+      "moduleCount": 7,
+      "packages": [],
+      "sourceModules": [
+        "frontend/src/pages/plans/config/index.ts",
+        "frontend/src/pages/plans/index.ts",
+        "frontend/src/pages/plans/model/estimate-input.ts",
+        "frontend/src/pages/plans/ui/PlanEstimator.tsx",
+        "frontend/src/pages/plans/ui/PlansPage.tsx",
+        "frontend/src/widgets/plan-ladder/model/useCountUp.ts",
+        "frontend/src/widgets/plan-ladder/ui/PlanComparison.tsx"
+      ],
+      "codeSHA256": "6d78960961b350aef6f7ce1b6d36e429901a41cb21c389be88a7dc898327c971"
+    },
+    {
+      "environment": "main",
+      "file": "assets/post-dependencies-CktMbLGV.js",
+      "generatedCodeSHA256": "8e0d9fef70c4422501a8abaddf2d2696a69380990e503671d3028df750a2c7b7",
+      "moduleCount": 1,
+      "packages": [],
+      "sourceModules": [
+        "frontend/src/entities/post/api/post-dependencies.ts"
+      ],
+      "codeSHA256": "8e0d9fef70c4422501a8abaddf2d2696a69380990e503671d3028df750a2c7b7"
+    },
+    {
+      "environment": "main",
+      "file": "assets/post-queries-YSZzTggh.js",
+      "generatedCodeSHA256": "4c46e4bb4cdef00bb2952a7e57da8efced13abd4eeb84a72334439a49676bef3",
+      "moduleCount": 8,
+      "packages": [],
+      "sourceModules": [
+        "frontend/src/entities/image/api/image-mappers.ts",
+        "frontend/src/entities/post/api/post-queries.ts",
+        "frontend/src/entities/post/config/index.ts",
+        "frontend/src/entities/quality/api/quality-mappers.ts",
+        "frontend/src/entities/video/api/video-mappers.ts",
+        "frontend/src/entities/voice/api/voice-enums.ts",
+        "frontend/src/entities/voice/api/voice-queries.ts",
+        "frontend/src/entities/voice/model/types.ts"
+      ],
+      "codeSHA256": "4c46e4bb4cdef00bb2952a7e57da8efced13abd4eeb84a72334439a49676bef3"
+    },
+    {
+      "environment": "main",
+      "file": "assets/promise-client-B1i4AxL3.js",
+      "generatedCodeSHA256": "738fecd7bc4766c12e106d48acf4a5a7629d1b45eba1c448e7ae67fd96eca9fb",
+      "moduleCount": 3,
+      "packages": [
+        {
+          "name": "@connectrpc/connect",
+          "version": "2.1.2",
+          "declaredLicense": "Apache-2.0",
+          "metadataSHA256": "2a6a26b2ed4811a12883d1d86503fdff9fdfee180bddb802b13f8c0e48e5ab02"
+        }
+      ],
+      "sourceModules": [],
+      "codeSHA256": "738fecd7bc4766c12e106d48acf4a5a7629d1b45eba1c448e7ae67fd96eca9fb"
+    },
+    {
+      "environment": "main",
+      "file": "assets/react-dom-BKpl0jPo.js",
+      "generatedCodeSHA256": "95f57045b1671011fd3e25afdb7f18cc23d3a484e1471f393b0e01740bebe1fd",
+      "moduleCount": 2,
+      "packages": [
+        {
+          "name": "react-dom",
+          "version": "19.2.8",
+          "declaredLicense": "MIT",
+          "metadataSHA256": "7c82f0967114d4b5d38b1f07e543af87c9919e8d3243f9604004819319cb2200"
+        }
+      ],
+      "sourceModules": [],
+      "codeSHA256": "95f57045b1671011fd3e25afdb7f18cc23d3a484e1471f393b0e01740bebe1fd"
+    },
+    {
+      "environment": "main",
+      "file": "assets/region-layout-DrWzEjaB.js",
+      "generatedCodeSHA256": "af8d1dcc2e145fd90e0e69c22c3e6dd2316b6adc6133e2a9f1e0561fd2b4e0d6",
+      "moduleCount": 2,
+      "packages": [],
+      "sourceModules": [
+        "frontend/src/entities/clip-design/config/clip-metrics.json",
+        "frontend/src/entities/clip-design/model/region-layout.ts"
+      ],
+      "codeSHA256": "af8d1dcc2e145fd90e0e69c22c3e6dd2316b6adc6133e2a9f1e0561fd2b4e0d6"
+    },
+    {
+      "environment": "main",
+      "file": "assets/reset-password-BBzmHL0w.js",
+      "generatedCodeSHA256": "c78db000c08cd00bd872cc09fe67655682fc3d8e400e0347358412a0b3b3767c",
+      "moduleCount": 2,
+      "packages": [],
+      "sourceModules": [
+        "frontend/src/pages/reset-password/index.ts",
+        "frontend/src/pages/reset-password/ui/ResetPasswordPage.tsx"
+      ],
+      "codeSHA256": "c78db000c08cd00bd872cc09fe67655682fc3d8e400e0347358412a0b3b3767c"
+    },
+    {
+      "environment": "main",
+      "file": "assets/rolldown-runtime-hePW80VL.js",
+      "generatedCodeSHA256": "580ad8c58061a4dde99bde0a56905e382f0568516ee2f5b84dbfb52085709021",
+      "moduleCount": 1,
+      "packages": [],
+      "sourceModules": [],
+      "codeSHA256": "580ad8c58061a4dde99bde0a56905e382f0568516ee2f5b84dbfb52085709021"
+    },
+    {
+      "environment": "main",
+      "file": "assets/session-mutations-CFwwzxwg.js",
+      "generatedCodeSHA256": "3defa42af25b84ad09d0bd786a1cd44a2251c4a727990d4088d91d84312c423b",
+      "moduleCount": 1,
+      "packages": [],
+      "sourceModules": [
+        "frontend/src/entities/session/api/session-mutations.ts"
+      ],
+      "codeSHA256": "3defa42af25b84ad09d0bd786a1cd44a2251c4a727990d4088d91d84312c423b"
+    },
+    {
+      "environment": "main",
+      "file": "assets/session-queries-Bn7o3nmH.js",
+      "generatedCodeSHA256": "7c501cc8fec82019247bbdb6a77d55a371b3dc69e2e64d704106dff21d671f2c",
+      "moduleCount": 2,
+      "packages": [],
+      "sourceModules": [
+        "frontend/src/entities/session/api/session-queries.ts",
+        "frontend/src/entities/session/config/index.ts"
+      ],
+      "codeSHA256": "7c501cc8fec82019247bbdb6a77d55a371b3dc69e2e64d704106dff21d671f2c"
+    },
+    {
+      "environment": "main",
+      "file": "assets/signup-DUCzLCt_.js",
+      "generatedCodeSHA256": "e067a7f3155bff74837ce9ff146e5518992d00df46247a6dadb6815b0d146c16",
+      "moduleCount": 2,
+      "packages": [],
+      "sourceModules": [
+        "frontend/src/pages/signup/index.ts",
+        "frontend/src/pages/signup/ui/SignupPage.tsx"
+      ],
+      "codeSHA256": "e067a7f3155bff74837ce9ff146e5518992d00df46247a6dadb6815b0d146c16"
+    },
+    {
+      "environment": "main",
+      "file": "assets/spoken-voices-8z5TAiur.js",
+      "generatedCodeSHA256": "57d7cd6eced5b2bb94edd08eb9369442ea5347e0bd06cbc1932cb298a9088e91",
+      "moduleCount": 12,
+      "packages": [],
+      "sourceModules": [
+        "frontend/src/entities/model-catalog/ui/SpeechProfilePicker.tsx",
+        "frontend/src/entities/spoken-voice/api/work.ts",
+        "frontend/src/entities/spoken-voice/model/types.ts",
+        "frontend/src/features/create-spoken-voice/model/useVoiceCreation.ts",
+        "frontend/src/features/create-spoken-voice/ui/VoiceDefinition.tsx",
+        "frontend/src/features/manage-spoken-voice/ui/SpokenVoiceActions.tsx",
+        "frontend/src/pages/spoken-voices/index.ts",
+        "frontend/src/pages/spoken-voices/ui/NewSpokenVoicePage.tsx",
+        "frontend/src/pages/spoken-voices/ui/SpokenVoicesPage.tsx",
+        "frontend/src/shared/api/gen/postpilot/v1/spoken_voice_generation_pb.ts",
+        "frontend/src/shared/ui/radio-group/RadioGroup.tsx",
+        "frontend/src/widgets/spoken-voice-creation/ui/SpokenVoiceCreation.tsx"
+      ],
+      "codeSHA256": "57d7cd6eced5b2bb94edd08eb9369442ea5347e0bd06cbc1932cb298a9088e91"
+    },
+    {
+      "environment": "main",
+      "file": "assets/src-lvwRYlX2.js",
+      "generatedCodeSHA256": "ad8ff995bf33197cceb3f28293d253efa97f683197fc4d94201f2dcd87c6e80a",
+      "moduleCount": 35,
+      "packages": [
+        {
+          "name": "mediabunny",
+          "version": "1.58.0",
+          "declaredLicense": "MPL-2.0",
+          "metadataSHA256": "b15865a5e3cc0d5e755fff6ae4113aa547cc19a2eb22bdff1c44fea3cf81b4e3"
+        }
+      ],
+      "sourceModules": [],
+      "codeSHA256": "ad8ff995bf33197cceb3f28293d253efa97f683197fc4d94201f2dcd87c6e80a"
+    },
+    {
+      "environment": "main",
+      "file": "assets/state-BH92byEb.js",
+      "generatedCodeSHA256": "5b5707a76d2c12ac3d2cdea88faac992f875f7e7bfcc7974f0b274732492d617",
+      "moduleCount": 12,
+      "packages": [],
+      "sourceModules": [
+        "frontend/src/entities/clip-observation/api/attempt-inspection.ts",
+        "frontend/src/entities/clip-observation/api/observations.ts",
+        "frontend/src/entities/clip-plan/api/edit-plan.ts",
+        "frontend/src/entities/clip-plan/api/spoken.ts",
+        "frontend/src/entities/clip-plan/model/caption-pace.ts",
+        "frontend/src/entities/clip-plan/model/edit-plan.ts",
+        "frontend/src/entities/clip-plan/model/revision.ts",
+        "frontend/src/entities/clip-plan/model/spoken.ts",
+        "frontend/src/entities/clip-project/api/clip-project.ts",
+        "frontend/src/entities/clip-project/api/credits.ts",
+        "frontend/src/entities/clip-project/model/state.ts",
+        "frontend/src/shared/api/gen/postpilot/v1/clip_generation_pb.ts"
+      ],
+      "codeSHA256": "5b5707a76d2c12ac3d2cdea88faac992f875f7e7bfcc7974f0b274732492d617"
+    },
+    {
+      "environment": "main",
+      "file": "assets/stream-mp4-D6iG2E2J.js",
+      "generatedCodeSHA256": "035b358982b121a57c9a44f153501bbfde7c6fc78c538b96adfb2a5703304d9c",
+      "moduleCount": 0,
+      "packages": [],
+      "sourceModules": [],
+      "codeSHA256": "035b358982b121a57c9a44f153501bbfde7c6fc78c538b96adfb2a5703304d9c"
+    },
+    {
+      "environment": "main",
+      "file": "assets/template-BVmiSchl.js",
+      "generatedCodeSHA256": "5c247b9e2353f428669bee85dfbf9eb2d5e83fef70a60336e6966e890a0294c6",
+      "moduleCount": 17,
+      "packages": [
+        {
+          "name": "lucide-react",
+          "version": "1.34.0",
+          "declaredLicense": "ISC",
+          "metadataSHA256": "1e6c1fcbdab853d9cbf044e61949db51908e45773bb896d1350935383819bebe"
+        }
+      ],
+      "sourceModules": [
+        "frontend/src/entities/template/api/useCreateTemplate.ts",
+        "frontend/src/entities/template/api/useFormatGuide.ts",
+        "frontend/src/entities/template/api/useTemplateRequest.ts",
+        "frontend/src/entities/template/api/useUpdateTemplate.ts",
+        "frontend/src/entities/template/model/blocks.ts",
+        "frontend/src/entities/template/ui/TemplateComposition.tsx",
+        "frontend/src/entities/template/ui/TemplatePreview.tsx",
+        "frontend/src/entities/template/ui/TemplateSource.tsx",
+        "frontend/src/features/edit-template/model/useTemplateDraft.ts",
+        "frontend/src/features/edit-template/model/useTemplateSave.ts",
+        "frontend/src/features/request-template/model/useTemplateRequest.ts",
+        "frontend/src/features/request-template/ui/TemplateRequestBox.tsx",
+        "frontend/src/pages/template/index.ts",
+        "frontend/src/pages/template/ui/TemplatePage.tsx",
+        "frontend/src/shared/ui/stepper/Stepper.tsx"
+      ],
+      "codeSHA256": "5c247b9e2353f428669bee85dfbf9eb2d5e83fef70a60336e6966e890a0294c6"
+    },
+    {
+      "environment": "main",
+      "file": "assets/template-errors-CQ3mhBf3.js",
+      "generatedCodeSHA256": "e5513bdab3f8bc329bb6077eba86d3bf92c6df055834ae19423ac738e84f5942",
+      "moduleCount": 2,
+      "packages": [],
+      "sourceModules": [
+        "frontend/src/entities/template/api/template-cache.ts",
+        "frontend/src/entities/template/api/template-errors.ts"
+      ],
+      "codeSHA256": "e5513bdab3f8bc329bb6077eba86d3bf92c6df055834ae19423ac738e84f5942"
+    },
+    {
+      "environment": "main",
+      "file": "assets/template-queries-DHwA5ttw.js",
+      "generatedCodeSHA256": "6a9e09247ae358110ec35db048534c4daf10520c86bf69554283ffc4dc1c0c5b",
+      "moduleCount": 3,
+      "packages": [],
+      "sourceModules": [
+        "frontend/src/entities/template/api/template-queries.ts",
+        "frontend/src/entities/template/config/index.ts",
+        "frontend/src/entities/template/model/types.ts"
+      ],
+      "codeSHA256": "6a9e09247ae358110ec35db048534c4daf10520c86bf69554283ffc4dc1c0c5b"
+    },
+    {
+      "environment": "main",
+      "file": "assets/templates-BJAIUNdD.js",
+      "generatedCodeSHA256": "83db47cda4d913989c2467358bf85280fe5f28e327367b13c662ec597629a09d",
+      "moduleCount": 4,
+      "packages": [],
+      "sourceModules": [
+        "frontend/src/entities/template/api/useDeleteTemplate.ts",
+        "frontend/src/features/delete-template/ui/DeleteTemplateButton.tsx",
+        "frontend/src/pages/templates/index.ts",
+        "frontend/src/pages/templates/ui/TemplatesPage.tsx"
+      ],
+      "codeSHA256": "83db47cda4d913989c2467358bf85280fe5f28e327367b13c662ec597629a09d"
+    },
+    {
+      "environment": "main",
+      "file": "assets/types-BVPzbGRH.js",
+      "generatedCodeSHA256": "8cb1b351ec141e9a40151d243637c0745fcf430e9f453ae36ca9a88b0e860e60",
+      "moduleCount": 3,
+      "packages": [],
+      "sourceModules": [
+        "frontend/src/entities/clip-project/lib/bounded-text.ts",
+        "frontend/src/entities/clip-project/model/composition-inputs.ts",
+        "frontend/src/entities/clip-project/model/types.ts"
+      ],
+      "codeSHA256": "8cb1b351ec141e9a40151d243637c0745fcf430e9f453ae36ca9a88b0e860e60"
+    },
+    {
+      "environment": "main",
+      "file": "assets/types-DWQVuDni.js",
+      "generatedCodeSHA256": "a755597a6e2a9eef1fb95fd99cba038656b0604ce035651f21b53f9ce776ed32",
+      "moduleCount": 2,
+      "packages": [],
+      "sourceModules": [
+        "frontend/src/entities/model-catalog/model/level.ts",
+        "frontend/src/entities/plan/model/types.ts"
+      ],
+      "codeSHA256": "a755597a6e2a9eef1fb95fd99cba038656b0604ce035651f21b53f9ce776ed32"
+    },
+    {
+      "environment": "main",
+      "file": "assets/types-DyvoZB7a.js",
+      "generatedCodeSHA256": "23652f9fe3526870d54a00dc04ac7b0be56ab1c39302a5d91a02d9417dd45045",
+      "moduleCount": 1,
+      "packages": [],
+      "sourceModules": [
+        "frontend/src/entities/generation-job/model/types.ts"
+      ],
+      "codeSHA256": "23652f9fe3526870d54a00dc04ac7b0be56ab1c39302a5d91a02d9417dd45045"
+    },
+    {
+      "environment": "main",
+      "file": "assets/use-mutation-Co_oo_xm.js",
+      "generatedCodeSHA256": "9974293fb33f87e3c1fb25a269a57467e3055e780408a61b8d2394a51f4498e0",
+      "moduleCount": 1,
+      "packages": [
+        {
+          "name": "@connectrpc/connect-query",
+          "version": "2.3.1",
+          "declaredLicense": "Apache-2.0",
+          "metadataSHA256": "3fd4935368bd54b46f80f4ea8cf608c26522b60986d2d44b3cf99d95f157ff99"
+        }
+      ],
+      "sourceModules": [],
+      "codeSHA256": "9974293fb33f87e3c1fb25a269a57467e3055e780408a61b8d2394a51f4498e0"
+    },
+    {
+      "environment": "main",
+      "file": "assets/use-query-CODUxnNn.js",
+      "generatedCodeSHA256": "651cd7408680568ec1972e377256e9ab0ab2997d6501f7c5a59e49c3b073c1a8",
+      "moduleCount": 10,
+      "packages": [
+        {
+          "name": "@connectrpc/connect-query",
+          "version": "2.3.1",
+          "declaredLicense": "Apache-2.0",
+          "metadataSHA256": "3fd4935368bd54b46f80f4ea8cf608c26522b60986d2d44b3cf99d95f157ff99"
+        },
+        {
+          "name": "@tanstack/query-core",
+          "version": "5.102.4",
+          "declaredLicense": "MIT",
+          "metadataSHA256": "d808e7bca908bd1f423cc4cdd43d9733aa094525dcd3a72b738f0172f3d949a4"
+        },
+        {
+          "name": "@tanstack/react-query",
+          "version": "5.102.4",
+          "declaredLicense": "MIT",
+          "metadataSHA256": "ea3572977e210ef8e42d1028bf2c3ac75c89e2035f21d8cf3f1228bbaf4e756b"
+        }
+      ],
+      "sourceModules": [],
+      "codeSHA256": "651cd7408680568ec1972e377256e9ab0ab2997d6501f7c5a59e49c3b073c1a8"
+    },
+    {
+      "environment": "main",
+      "file": "assets/useBlocker-CrI_jfJe.js",
+      "generatedCodeSHA256": "2d68feb93662b24c3ad670e98aa9f48c22f73ec79a00243ee57734bd28685c49",
+      "moduleCount": 1,
+      "packages": [
+        {
+          "name": "@tanstack/react-router",
+          "version": "1.170.32",
+          "declaredLicense": "MIT",
+          "metadataSHA256": "76c00e5f2e220b5d1125eef47eb039b984ca069658ebc54c53626e5c44f266f0"
+        }
+      ],
+      "sourceModules": [],
+      "codeSHA256": "2d68feb93662b24c3ad670e98aa9f48c22f73ec79a00243ee57734bd28685c49"
+    },
+    {
+      "environment": "main",
+      "file": "assets/useMatch-BjU2RwZm.js",
+      "generatedCodeSHA256": "91fb6cf5a57c2c73e90324fb0975aca465b800b94e688165b5b5835e50324f78",
+      "moduleCount": 1,
+      "packages": [
+        {
+          "name": "@tanstack/react-router",
+          "version": "1.170.32",
+          "declaredLicense": "MIT",
+          "metadataSHA256": "76c00e5f2e220b5d1125eef47eb039b984ca069658ebc54c53626e5c44f266f0"
+        }
+      ],
+      "sourceModules": [],
+      "codeSHA256": "91fb6cf5a57c2c73e90324fb0975aca465b800b94e688165b5b5835e50324f78"
+    },
+    {
+      "environment": "main",
+      "file": "assets/useMyBilling-Dbm0gpZm.js",
+      "generatedCodeSHA256": "fa6c360874804da5cae741b4cfc2f7345d5657d340ad0db4a43b70a9a3523b5d",
+      "moduleCount": 2,
+      "packages": [],
+      "sourceModules": [
+        "frontend/src/entities/subscription/api/billing-mappers.ts",
+        "frontend/src/entities/subscription/api/useMyBilling.ts"
+      ],
+      "codeSHA256": "fa6c360874804da5cae741b4cfc2f7345d5657d340ad0db4a43b70a9a3523b5d"
+    },
+    {
+      "environment": "main",
+      "file": "assets/useMyPlan-Cds7kfS1.js",
+      "generatedCodeSHA256": "9402d46dddf89c8426e7cc7de9ea6a7db767dd96b374bd6adf6ed14e47540c3c",
+      "moduleCount": 2,
+      "packages": [],
+      "sourceModules": [
+        "frontend/src/entities/plan/api/useMyPlan.ts",
+        "frontend/src/entities/plan/config/index.ts"
+      ],
+      "codeSHA256": "9402d46dddf89c8426e7cc7de9ea6a7db767dd96b374bd6adf6ed14e47540c3c"
+    },
+    {
+      "environment": "main",
+      "file": "assets/useNavigate-D_bARfOl.js",
+      "generatedCodeSHA256": "e0d8ed1e4dac448f7ae482050c46d0036c662b154b5a2a9d9ed7d2a132512837",
+      "moduleCount": 1,
+      "packages": [
+        {
+          "name": "@tanstack/react-router",
+          "version": "1.170.32",
+          "declaredLicense": "MIT",
+          "metadataSHA256": "76c00e5f2e220b5d1125eef47eb039b984ca069658ebc54c53626e5c44f266f0"
+        }
+      ],
+      "sourceModules": [],
+      "codeSHA256": "e0d8ed1e4dac448f7ae482050c46d0036c662b154b5a2a9d9ed7d2a132512837"
+    },
+    {
+      "environment": "main",
+      "file": "assets/usePaymentMethod-By4IiBZr.js",
+      "generatedCodeSHA256": "6545f59988862440f951e2f1f95e2b7965a52270269005fd53c8ae60110a1869",
+      "moduleCount": 1,
+      "packages": [],
+      "sourceModules": [
+        "frontend/src/entities/subscription/api/usePaymentMethod.ts"
+      ],
+      "codeSHA256": "6545f59988862440f951e2f1f95e2b7965a52270269005fd53c8ae60110a1869"
+    },
+    {
+      "environment": "main",
+      "file": "assets/useRecommendationSets-Ctds2CAS.js",
+      "generatedCodeSHA256": "0c53f2d5253dca86335250be950a5049a2bfaca87a6212442bbb8b58069bdf9b",
+      "moduleCount": 1,
+      "packages": [],
+      "sourceModules": [
+        "frontend/src/entities/model-catalog/api/useRecommendationSets.ts"
+      ],
+      "codeSHA256": "0c53f2d5253dca86335250be950a5049a2bfaca87a6212442bbb8b58069bdf9b"
+    },
+    {
+      "environment": "main",
+      "file": "assets/useRefunds-N_CYWGIk.js",
+      "generatedCodeSHA256": "7c7f49f489dae8ed3d594c431c8d8202bdb1388aa9fd791d4c84c5aeffeaf03d",
+      "moduleCount": 1,
+      "packages": [],
+      "sourceModules": [
+        "frontend/src/entities/subscription/api/useRefunds.ts"
+      ],
+      "codeSHA256": "7c7f49f489dae8ed3d594c431c8d8202bdb1388aa9fd791d4c84c5aeffeaf03d"
+    },
+    {
+      "environment": "main",
+      "file": "assets/useRouter-C0NmUsSD.js",
+      "generatedCodeSHA256": "f1f5f21bb5421cd7e502b5ecddf696ff0f2b9aaf5c202031b769baea0820ea39",
+      "moduleCount": 3,
+      "packages": [
+        {
+          "name": "@tanstack/react-router",
+          "version": "1.170.32",
+          "declaredLicense": "MIT",
+          "metadataSHA256": "76c00e5f2e220b5d1125eef47eb039b984ca069658ebc54c53626e5c44f266f0"
+        }
+      ],
+      "sourceModules": [],
+      "codeSHA256": "f1f5f21bb5421cd7e502b5ecddf696ff0f2b9aaf5c202031b769baea0820ea39"
+    },
+    {
+      "environment": "main",
+      "file": "assets/useSaveSelection-D2KT1b_D.js",
+      "generatedCodeSHA256": "b46578ffb0480648e5c858294fc685174378e7d9a68748456009c1d410fe6849",
+      "moduleCount": 4,
+      "packages": [
+        {
+          "name": "@bufbuild/protobuf",
+          "version": "2.14.0",
+          "declaredLicense": "(Apache-2.0 AND BSD-3-Clause)",
+          "metadataSHA256": "420500cc1d62e2d57b0ef53ce8b74ba843a61e94380823303e77490ef694069a"
+        },
+        {
+          "name": "@tanstack/react-query",
+          "version": "5.102.4",
+          "declaredLicense": "MIT",
+          "metadataSHA256": "ea3572977e210ef8e42d1028bf2c3ac75c89e2035f21d8cf3f1228bbaf4e756b"
+        }
+      ],
+      "sourceModules": [
+        "frontend/src/entities/model-catalog/api/useSaveSelection.ts",
+        "frontend/src/shared/lib/media/video/metadata.ts"
+      ],
+      "codeSHA256": "b46578ffb0480648e5c858294fc685174378e7d9a68748456009c1d410fe6849"
+    },
+    {
+      "environment": "main",
+      "file": "assets/useSpeechProfiles-BjXqWLrd.js",
+      "generatedCodeSHA256": "ca9bde7c6fadd38c985dc97d08d8a09313c8a0933055edc2d20161f6d32f2d44",
+      "moduleCount": 3,
+      "packages": [],
+      "sourceModules": [
+        "frontend/src/entities/model-catalog/api/speech-mappers.ts",
+        "frontend/src/entities/model-catalog/api/useSpeechProfiles.ts",
+        "frontend/src/shared/api/gen/postpilot/v1/speech_profile_pb.ts"
+      ],
+      "codeSHA256": "ca9bde7c6fadd38c985dc97d08d8a09313c8a0933055edc2d20161f6d32f2d44"
+    },
+    {
+      "environment": "main",
+      "file": "assets/useSubscriptionChanges-CC5ZQohC.js",
+      "generatedCodeSHA256": "4887bf07fead9fe79b01970f710b5751d9dd65e9d2b6eb84d67513548ddaff30",
+      "moduleCount": 1,
+      "packages": [],
+      "sourceModules": [
+        "frontend/src/entities/subscription/api/useSubscriptionChanges.ts"
+      ],
+      "codeSHA256": "4887bf07fead9fe79b01970f710b5751d9dd65e9d2b6eb84d67513548ddaff30"
+    },
+    {
+      "environment": "main",
+      "file": "assets/useVoiceProfile-Dbq91yTe.js",
+      "generatedCodeSHA256": "e478c4cc4252b6e7d82554c2ae06d1e6b4172fa9adc10dd848ef67f1ccde9e20",
+      "moduleCount": 1,
+      "packages": [],
+      "sourceModules": [
+        "frontend/src/entities/voice/api/useVoiceProfile.ts"
+      ],
+      "codeSHA256": "e478c4cc4252b6e7d82554c2ae06d1e6b4172fa9adc10dd848ef67f1ccde9e20"
+    },
+    {
+      "environment": "main",
+      "file": "assets/verify-email-B17BzoxY.js",
+      "generatedCodeSHA256": "299ea6d66d72229d4f1f8d0dbb8739c847a6d0d374ac33c4f096b348303d959f",
+      "moduleCount": 2,
+      "packages": [],
+      "sourceModules": [
+        "frontend/src/pages/verify-email/index.ts",
+        "frontend/src/pages/verify-email/ui/VerifyEmailPage.tsx"
+      ],
+      "codeSHA256": "299ea6d66d72229d4f1f8d0dbb8739c847a6d0d374ac33c4f096b348303d959f"
+    },
+    {
+      "environment": "main",
+      "file": "assets/video-guidelines-BVNCQe7M.js",
+      "generatedCodeSHA256": "1abcc217cd30676dbb631745b7b423e78acffab5683bac5257fd83725ea75aa8",
+      "moduleCount": 2,
+      "packages": [],
+      "sourceModules": [
+        "frontend/src/pages/video-guidelines/index.ts",
+        "frontend/src/pages/video-guidelines/ui/VideoGuidelinesPage.tsx"
+      ],
+      "codeSHA256": "1abcc217cd30676dbb631745b7b423e78acffab5683bac5257fd83725ea75aa8"
+    },
+    {
+      "environment": "main",
+      "file": "assets/video-template-IW2lPY2O.js",
+      "generatedCodeSHA256": "e6326ae3ab43e63fcb96ea5519c64346f0d6cd94a078cdada44cf6a7de584297",
+      "moduleCount": 12,
+      "packages": [],
+      "sourceModules": [
+        "frontend/src/entities/clip-template/lib/composition-author.ts",
+        "frontend/src/entities/clip-template/lib/composition-resolve.ts",
+        "frontend/src/entities/clip-template/lib/composition-sample.ts",
+        "frontend/src/entities/clip-template/model/composition-guide.ts",
+        "frontend/src/entities/clip-template/ui/CompositionBuilder.tsx",
+        "frontend/src/entities/clip-template/ui/CompositionDesignFrame.tsx",
+        "frontend/src/entities/clip-template/ui/CompositionFields.tsx",
+        "frontend/src/entities/clip-template/ui/CompositionPreview.tsx",
+        "frontend/src/entities/clip-template/ui/CompositionTextControls.tsx",
+        "frontend/src/features/edit-clip-template/ui/ClipTemplateEditor.tsx",
+        "frontend/src/pages/video-template/index.ts",
+        "frontend/src/pages/video-template/ui/VideoTemplatePage.tsx"
+      ],
+      "codeSHA256": "e6326ae3ab43e63fcb96ea5519c64346f0d6cd94a078cdada44cf6a7de584297"
+    },
+    {
+      "environment": "main",
+      "file": "assets/video-templates-C2j57DI9.js",
+      "generatedCodeSHA256": "8a0a5161ca46d57dac39cb6a682bd27e1a4be976e5b14f8c8094e4647a2cccf7",
+      "moduleCount": 3,
+      "packages": [],
+      "sourceModules": [
+        "frontend/src/features/delete-clip-template/ui/DeleteClipTemplateButton.tsx",
+        "frontend/src/pages/video-templates/index.ts",
+        "frontend/src/pages/video-templates/ui/VideoTemplatesPage.tsx"
+      ],
+      "codeSHA256": "8a0a5161ca46d57dac39cb6a682bd27e1a4be976e5b14f8c8094e4647a2cccf7"
+    },
+    {
+      "environment": "main",
+      "file": "assets/voice-DKFT94BZ.js",
+      "generatedCodeSHA256": "3311c049348a37f9a5792ee5771d6477d4c58488df77a10a3154bc46dca5f151",
+      "moduleCount": 22,
+      "packages": [],
+      "sourceModules": [
+        "frontend/src/entities/generation-job/ui/ProgressLine.tsx",
+        "frontend/src/entities/voice/api/useAddVoiceSample.ts",
+        "frontend/src/entities/voice/api/useDeleteVoiceSample.ts",
+        "frontend/src/entities/voice/api/voice-checks.ts",
+        "frontend/src/entities/voice/model/fingerprint.ts",
+        "frontend/src/entities/voice/ui/VoiceReadinessMeter.tsx",
+        "frontend/src/features/answer-voice-prompt/api/photo.ts",
+        "frontend/src/features/answer-voice-prompt/config/index.ts",
+        "frontend/src/features/answer-voice-prompt/ui/AnswerPromptsSheet.tsx",
+        "frontend/src/features/check-voice/model/useWriteSelection.ts",
+        "frontend/src/features/check-voice/ui/RetryCheckButton.tsx",
+        "frontend/src/features/check-voice/ui/StartCheckSheet.tsx",
+        "frontend/src/features/make-voice/ui/MakeVoiceButton.tsx",
+        "frontend/src/features/manage-voice-samples/ui/SampleList.tsx",
+        "frontend/src/features/paste-voice-material/ui/PasteMaterialSheet.tsx",
+        "frontend/src/features/restore-voice-analysis/ui/RestorePreviousAnalysisButton.tsx",
+        "frontend/src/pages/voice/index.ts",
+        "frontend/src/pages/voice/ui/VoiceAnalysisPage.tsx",
+        "frontend/src/pages/voice/ui/VoiceChecksPage.tsx",
+        "frontend/src/pages/voice/ui/VoiceMaterialsPage.tsx",
+        "frontend/src/pages/voice/ui/VoiceRunStatus.tsx",
+        "frontend/src/pages/voice/ui/VoiceScreen.tsx"
+      ],
+      "codeSHA256": "3311c049348a37f9a5792ee5771d6477d4c58488df77a10a3154bc46dca5f151"
+    },
+    {
+      "environment": "main",
+      "file": "assets/voice-directory-cache-CwGV2sxs.js",
+      "generatedCodeSHA256": "e42ae9f1937046e8c8a383cd97605aa2ab3ff956a7d130efe6ab100ea3c6a637",
+      "moduleCount": 1,
+      "packages": [],
+      "sourceModules": [
+        "frontend/src/entities/voice/api/voice-directory-cache.ts"
+      ],
+      "codeSHA256": "e42ae9f1937046e8c8a383cd97605aa2ab3ff956a7d130efe6ab100ea3c6a637"
+    },
+    {
+      "environment": "main",
+      "file": "assets/voice-materials-DVrB_Be_.js",
+      "generatedCodeSHA256": "e4af0e2f79ed1ad855cf0bfd25f136cdb53199b67b3995cd28c829a7a5975143",
+      "moduleCount": 1,
+      "packages": [],
+      "sourceModules": [
+        "frontend/src/entities/voice/api/voice-materials.ts"
+      ],
+      "codeSHA256": "e4af0e2f79ed1ad855cf0bfd25f136cdb53199b67b3995cd28c829a7a5975143"
+    },
+    {
+      "environment": "main",
+      "file": "assets/voice-mutations-bRpAmusZ.js",
+      "generatedCodeSHA256": "8f7cee316d0caf353a4514e07171241dfbf88718eec85df87e08e7847325dd9f",
+      "moduleCount": 1,
+      "packages": [],
+      "sourceModules": [
+        "frontend/src/entities/voice/api/voice-mutations.ts"
+      ],
+      "codeSHA256": "8f7cee316d0caf353a4514e07171241dfbf88718eec85df87e08e7847325dd9f"
+    },
+    {
+      "environment": "main",
+      "file": "assets/voices-re6WMiMt.js",
+      "generatedCodeSHA256": "2e71d4bb049849105b9a700502358019e157129d96114b952591e525ea614665",
+      "moduleCount": 2,
+      "packages": [],
+      "sourceModules": [
+        "frontend/src/pages/voices/index.ts",
+        "frontend/src/pages/voices/ui/VoicesPage.tsx"
+      ],
+      "codeSHA256": "2e71d4bb049849105b9a700502358019e157129d96114b952591e525ea614665"
+    },
+    {
+      "environment": "main",
+      "file": "assets/voucher-mappers-erWkCyeC.js",
+      "generatedCodeSHA256": "c61ee8fd1e71b2d7bfe17f382e930d555e10b42932ef707dfecaa713e8a5aba6",
+      "moduleCount": 2,
+      "packages": [],
+      "sourceModules": [
+        "frontend/src/entities/voucher/api/voucher-mappers.ts",
+        "frontend/src/shared/api/gen/postpilot/v1/voucher_pb.ts"
+      ],
+      "codeSHA256": "c61ee8fd1e71b2d7bfe17f382e930d555e10b42932ef707dfecaa713e8a5aba6"
+    },
+    {
+      "environment": "main",
+      "file": "assets/webworkerAll-CHEN1kkJ.js",
+      "generatedCodeSHA256": "fb4de24c64043e4bd47c6830968084fdc1570d15a426c575f51c3f26e4cff938",
+      "moduleCount": 1,
+      "packages": [
+        {
+          "name": "pixi.js",
+          "version": "8.22.0",
+          "declaredLicense": "MIT",
+          "metadataSHA256": "2bb6b7570ca5f4a062609b34fd16fecfa2a76e8c3599c67a5b996a276eabaa32"
+        }
+      ],
+      "sourceModules": [],
+      "codeSHA256": "fb4de24c64043e4bd47c6830968084fdc1570d15a426c575f51c3f26e4cff938"
+    }
+  ],
+  "mediaChunks": [
+    "assets/processing.worker-CGohWWjD.js",
+    "assets/range-audio.worker-D77r8Ui9.js",
+    "assets/processing.worker-CGohWWjD.js",
+    "assets/processing.worker-CGohWWjD.js",
+    "assets/processing.worker-CGohWWjD.js",
+    "assets/range-audio.worker-D77r8Ui9.js",
+    "assets/range-audio.worker-D77r8Ui9.js",
+    "assets/range-audio.worker-D77r8Ui9.js",
+    "assets/analysis.worker-DprB9FVt.js",
+    "assets/preview.worker-BfjCv9Hx.js",
+    "assets/video.worker-C6ShvmUB.js",
+    "assets/browserAll-BxJrA7ld.js",
+    "assets/clip-CdIrDRpe.js",
+    "assets/init-DDUMoYKO.js",
+    "assets/src-lvwRYlX2.js",
+    "assets/webworkerAll-CHEN1kkJ.js"
+  ],
+  "scope": "Actual Vite main and module Worker emitted JavaScript graph. Native dependencies inside the original WASM remain independently unverified; type-only installed packages are not inferred as emitted runtime code.",
+  "originalWasmDependencyGraphVerified": false,
+  "distributionApproved": false,
+  "qualification": false
+}
