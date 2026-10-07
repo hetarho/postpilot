@@ -2,11 +2,24 @@
   "rules": [
     {
       "allowed": {
-        "origins": ["https://postpilot.<domain>"],
-        "methods": ["GET", "PUT", "HEAD"],
-        "headers": ["content-type", "if-none-match"]
+        "origins": [
+          "https://postpilot.<domain>"
+        ],
+        "methods": [
+          "GET",
+          "PUT",
+          "HEAD"
+        ],
+        "headers": [
+          "content-type",
+          "if-none-match",
+          "range"
+        ]
       },
-      "exposeHeaders": ["etag"],
+      "exposeHeaders": [
+        "etag",
+        "content-range"
+      ],
       "maxAgeSeconds": 3600
     }
   ]

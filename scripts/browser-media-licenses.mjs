@@ -288,9 +288,12 @@ async function verifyCoveredSources(inventory) {
       };
     }
   }
-  inventory.sourceAccessVerified = inventory.packages
+  inventory.upstreamLicenseEvidenceVerified = inventory.packages
     .filter((value) => value.topLevel && value.declaredLicense === "MPL-2.0")
     .every((value) => value.coveredSourceEvidence?.versionPinned);
+  // A fetched license is not recipient access to complete covered sources,
+  // including the original executable's embedded Rust graph and modifications.
+  inventory.sourceAccessVerified = false;
 }
 
 if (
