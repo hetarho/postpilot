@@ -1,0 +1,877 @@
+{
+  "schema": "postpilot-ci-delivery/v1",
+  "source_revision": "ff9ff3f15eca9e085a4f992902bb791bec8e3869",
+  "mobile": {
+    "registered_routes": 64,
+    "concrete_paths": 57,
+    "route_cases": 580,
+    "setup_cases": 48,
+    "actual_question_cases": 8,
+    "findings": 0,
+    "unavailable": 0,
+    "widths": [
+      320,
+      360,
+      390,
+      430
+    ],
+    "themes": [
+      "light",
+      "dark"
+    ],
+    "answer_measurements": {
+      "360": {
+        "input_y": 371,
+        "input_height": 112,
+        "header_height": 64,
+        "font_size": "16px",
+        "draft_caret_focus_node_continuity": true
+      },
+      "320": {
+        "input_y": 371,
+        "input_height": 112,
+        "header_height": 64,
+        "font_size": "16px",
+        "draft_caret_focus_node_continuity": true
+      },
+      "390": {
+        "input_y": 371,
+        "input_height": 112,
+        "header_height": 64,
+        "font_size": "16px",
+        "draft_caret_focus_node_continuity": true
+      },
+      "430": {
+        "input_y": 345,
+        "input_height": 112,
+        "header_height": 64,
+        "font_size": "16px",
+        "draft_caret_focus_node_continuity": true
+      }
+    },
+    "before_input_y": {
+      "320": 777,
+      "360": 777,
+      "390": 777,
+      "430": 725
+    },
+    "verified_frontend_source_revision": "f889473f6b4c704bbdc57863fab93c8ab47ebe17",
+    "final_source_inputs_identical": true,
+    "source_sha256": "0f570162e5efcaea24553f578a3bfbbeacb2c63480b89757c710d4e3854594c2"
+  },
+  "original_ci_failure": {
+    "revision": "051bb0e53aba330b4d3d90b1d64496442770f261",
+    "url": "https://github.com/hetarho/postpilot/actions/runs/37648155102",
+    "step": "backend: go test -timeout 30m ./...",
+    "failures": [
+      "ordinary authoring missing-slot count assertions were stale after1..16 preparation support",
+      "direct candidate freeze returned a timestamp different from the persisted canonical row"
+    ],
+    "fixed_in": "b051307a6f8864bf5c9d620c0352fcca2304e6a8",
+    "assertions_retained": true,
+    "tests": [
+      "TestOrdinaryAuthoringCountDefaultIsBackwardCompatible",
+      "TestCurrentDirectCandidateFreezesExactOwnedRevisionWithoutModelOrPublicationWork"
+    ]
+  },
+  "frontend": {
+    "node": "24.18.0",
+    "test_files": 524,
+    "tests": 4141,
+    "checks": [
+      {
+        "command": "pnpm test:dev",
+        "exit": 0
+      },
+      {
+        "command": "pnpm gen:proto && git diff --exit-code -- backend/internal/gen frontend/src/shared/api/gen",
+        "exit": 0
+      },
+      {
+        "command": "pnpm gen:sql && git diff --exit-code -- backend",
+        "exit": 0
+      },
+      {
+        "command": "pnpm lint",
+        "exit": 0
+      },
+      {
+        "command": "pnpm lint:fsd",
+        "exit": 0
+      },
+      {
+        "command": "pnpm lint:retirement",
+        "exit": 0
+      },
+      {
+        "command": "pnpm lint:style:probe",
+        "exit": 0
+      },
+      {
+        "command": "pnpm lint:style",
+        "exit": 0
+      },
+      {
+        "command": "pnpm exec haeram-spec-creator check",
+        "exit": 0
+      },
+      {
+        "command": "pnpm --filter ./frontend exec vitest run --maxWorkers=4",
+        "exit": 0
+      },
+      {
+        "command": "pnpm build:web",
+        "exit": 0
+      }
+    ],
+    "refreshed_checks": [
+      {
+        "command": [
+          "pnpm",
+          "test:dev"
+        ],
+        "exit": 0
+      },
+      {
+        "command": [
+          "pnpm",
+          "exec",
+          "haeram-spec-creator",
+          "check"
+        ],
+        "exit": 0
+      }
+    ],
+    "unchanged_inputs": {
+      "frontend": {
+        "sha256": "0f570162e5efcaea24553f578a3bfbbeacb2c63480b89757c710d4e3854594c2",
+        "count": 1967,
+        "allEntriesUnchanged": true
+      },
+      "node-dev": {
+        "sha256": "73b963261d32cca69374af1b80a9c8713802c479fdc44770cd66f9ae1709f3a8",
+        "count": 36,
+        "allEntriesUnchanged": true
+      },
+      "generation": {
+        "sha256": "c11ffef67ad757c1d4d2cdc4f0935fdd8954dd705819d288b4ca5bb62fc7a4ef",
+        "count": 439,
+        "allEntriesUnchanged": true
+      }
+    },
+    "reuse_rationale": "Full successful524files4141tests and580route/48setup checks reused with all1967FE/36Node-dev/439generation hashes unchanged; final ff9 is helper-onlycrypto packaging/docs/deploymentguard, no web/source/lock/generated contract changes. Dockerfile-reading dev11 refreshed; spec synchronization refreshed. Full affected deployment/image/media checks qualify this exact committed candidate separately."
+  },
+  "backend": {
+    "go_version": "go version go1.26.4 darwin/arm64",
+    "go_run_candidate": "8ddff6972d84fa1674dd998783a3bdd11b4ca08b",
+    "go_counts": {
+      "test_bearing_packages_passed": 86,
+      "no_test_packages": 24,
+      "failed_packages": 0,
+      "expected_packages": 110
+    },
+    "deployment_counts": {
+      "tests": 67,
+      "duration_seconds": 144.62,
+      "skipped_lines": 0,
+      "passed": true
+    },
+    "selection_rationale": "Full110 Go format/vet/build/test from8dd is reused for unchanged Go/media/runtime/consumedFE inputs; only twoDockerfiles and unreadhealthdocs excluded with exact-mode helper full tests/vet/build and Docker-label Go consumer refreshed. Actual newimage API/worker/codec executables match8dd byte-for-byte. Full67 deployment suite runs fresh on frozenff9; Compose inputs equal8dd and three renders reused. No budgets/filters weakened; actual media/remote workflow proof remains separate."
+  },
+  "backend_commands": [
+    {
+      "command": [
+        "sh",
+        "-c",
+        "test -z \"$(gofmt -l .)\""
+      ],
+      "exit_code": 0
+    },
+    {
+      "command": [
+        "go",
+        "vet",
+        "./..."
+      ],
+      "exit_code": 0
+    },
+    {
+      "command": [
+        "go",
+        "build",
+        "./..."
+      ],
+      "exit_code": 0
+    },
+    {
+      "command": [
+        "go",
+        "test",
+        "-timeout",
+        "30m",
+        "./..."
+      ],
+      "exit_code": 0
+    }
+  ],
+  "deployment_commands": [
+    {
+      "command": [
+        "python3",
+        "-m",
+        "venv",
+        "/tmp/postpilot-deploy-checks"
+      ],
+      "exit_code": 0
+    },
+    {
+      "command": [
+        "/tmp/postpilot-deploy-checks/bin/pip",
+        "install",
+        "-r",
+        "deploy/requirements-test.txt"
+      ],
+      "exit_code": 0
+    },
+    {
+      "command": [
+        "/tmp/postpilot-deploy-checks/bin/python",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "deploy",
+        "-p",
+        "*_test.py",
+        "-v"
+      ],
+      "exit_code": 0
+    }
+  ],
+  "media": {
+    "platform": "linux/amd64",
+    "local_host": "Docker linux/arm64 under Rosetta; no native performance claim",
+    "input_sha256": "aa0fbd890cd17be6b3bd032f4ace8aed1c61d7b380c2991f543c11de5282423a",
+    "backend_image_context_sha256": "97f94901dff0b31907516f9fa48daca03106af1858b85c3bf61bc0741ed7d03c",
+    "gates": {
+      "image": "passed",
+      "worker": "passed",
+      "release_colocated": "passed",
+      "release_remote": "passed",
+      "whole_release_driver": "passed"
+    },
+    "commands": [
+      {
+        "command": [
+          "docker",
+          "build",
+          "--platform",
+          "linux/amd64",
+          "--target",
+          "production",
+          "-t",
+          "postpilot:gate",
+          "-f",
+          "backend/Dockerfile",
+          "."
+        ],
+        "elapsed_seconds": 293.057,
+        "exit_code": 0
+      },
+      {
+        "command": [
+          "docker",
+          "build",
+          "--platform",
+          "linux/amd64",
+          "--target",
+          "media-worker-smoke",
+          "-t",
+          "postpilot-worker-smoke:ci",
+          "-f",
+          "backend/Dockerfile",
+          "."
+        ],
+        "elapsed_seconds": 212.091,
+        "exit_code": 0
+      },
+      {
+        "command": [
+          "docker",
+          "run",
+          "--rm",
+          "--cpus=2",
+          "--memory=1g",
+          "postpilot-worker-smoke:ci"
+        ],
+        "elapsed_seconds": 728.466,
+        "exit_code": 0
+      },
+      {
+        "command": [
+          "docker",
+          "build",
+          "--platform",
+          "linux/amd64",
+          "--target",
+          "media-storage",
+          "-t",
+          "postpilot:gate-media-storage",
+          "-f",
+          "deploy/media/fixture.Dockerfile",
+          "."
+        ],
+        "elapsed_seconds": 1.835,
+        "exit_code": 0
+      },
+      {
+        "command": [
+          "docker",
+          "build",
+          "--platform",
+          "linux/amd64",
+          "--target",
+          "media-release-api",
+          "-t",
+          "postpilot:gate-media-release",
+          "-f",
+          "backend/Dockerfile",
+          "."
+        ],
+        "elapsed_seconds": 291.122,
+        "exit_code": 0
+      },
+      {
+        "command": [
+          "docker",
+          "build",
+          "--platform",
+          "linux/amd64",
+          "--target",
+          "media-release-worker",
+          "-t",
+          "postpilot:gate-media-release-worker",
+          "-f",
+          "backend/Dockerfile",
+          "."
+        ],
+        "elapsed_seconds": 5.63,
+        "exit_code": 0
+      },
+      {
+        "command": [
+          "python3",
+          "-u",
+          "scripts/media-release.py",
+          "--skip-build",
+          "--skip-storage-build"
+        ],
+        "elapsed_seconds": 392.125,
+        "exit_code": 0
+      }
+    ],
+    "resource_reports": [
+      {
+        "layout": "colocated",
+        "scope": "synthetic execution envelope; host identity and available production capacity are not inferred",
+        "limits_mib": {
+          "api": 256,
+          "worker": 512,
+          "cohost_reserve": 256,
+          "envelope": 1024
+        },
+        "limits_cpus": {
+          "api": 1,
+          "worker": 1,
+          "envelope": 2
+        },
+        "execution": {
+          "postpilot-release-b81efbeea0-api": {
+            "memory_peak": 268435456,
+            "disk_bytes": 6426287
+          },
+          "postpilot-release-b81efbeea0-worker": {
+            "memory_peak": 524931072,
+            "disk_bytes": 10837990
+          }
+        },
+        "combined_peak_upper_bound_bytes": 793366528,
+        "infra": "private MinIO 256MiB/.5CPU and remote relay 64MiB/.25CPU, outside execution envelope (external R2 analog)"
+      },
+      {
+        "layout": "remote",
+        "scope": "synthetic execution envelope; host identity and available production capacity are not inferred",
+        "limits_mib": {
+          "api": 256,
+          "worker": 512,
+          "cohost_reserve": 256,
+          "envelope": 1024
+        },
+        "limits_cpus": {
+          "api": 1,
+          "worker": 1,
+          "envelope": 2
+        },
+        "execution": {
+          "postpilot-release-d7c45f5ede-api": {
+            "memory_peak": 268435456,
+            "disk_bytes": 6426287
+          },
+          "postpilot-release-d7c45f5ede-worker": {
+            "memory_peak": 524460032,
+            "disk_bytes": 11886566
+          }
+        },
+        "combined_peak_upper_bound_bytes": 792895488,
+        "infra": "private MinIO 256MiB/.5CPU and remote relay 64MiB/.25CPU, outside execution envelope (external R2 analog)"
+      }
+    ],
+    "same_host_output_identity": [
+      [
+        "86d268c3a331793d3770349af573ed7e4dfc9595d001060b5f5136b79c02fcf2",
+        "16",
+        "583802"
+      ],
+      [
+        "ff487abb65dfc75b5ca9aa898ea60ede33962f0d057a4be5d6a7cd7af51f799e",
+        "16",
+        "731215"
+      ],
+      [
+        "fe45d7d2fe6dd0f7fcf10ded6222c0d3c29e3516707effcdaa70293d5d65a1d4",
+        "16",
+        "655189"
+      ],
+      [
+        "bde5eacc4c30c0638464dbb912854b8c7bf5d68731842f099b8350671af82cc9",
+        "16",
+        "743304"
+      ]
+    ],
+    "all_owned_resources_cleaned": {
+      "containers": [],
+      "networks": [],
+      "volumes": []
+    },
+    "optional_identity_limit": "Inherited host-specific staticgolden failure preserved atattempt-127; exactsame-host4casefullMP4 identity proved, decoderthread andsingle-original preparation checks passed; no golden mutation.",
+    "images": {
+      "postpilot:gate": {
+        "id": "sha256:32a01c22fefda8ef71badd56db9eea0a27a29dea923479b3323b1b6d6eb9c54e",
+        "os": "linux",
+        "architecture": "amd64",
+        "user": "nonroot:nonroot",
+        "labels": {
+          "org.opencontainers.image.architecture": "amd64",
+          "org.opencontainers.image.revision": "local",
+          "org.opencontainers.image.title": "Postpilot API",
+          "org.postpilot.media.asset-input-sha256": "3496ae816cd2b3b9c10af0e78ec78dc39235f9740b16c6a8803d1c9f94786b5a",
+          "org.postpilot.media.assets": "assets-v3",
+          "org.postpilot.media.protocol": "3",
+          "org.postpilot.media.renderer": "cpu-v4",
+          "org.postpilot.media.rollback-safe": "1"
+        },
+        "healthcheck": null
+      },
+      "postpilot-worker-smoke:ci": {
+        "id": "sha256:67f1595bd690602fa08849a8ff339dc8db3ea8e4ed16ac39e18df84e39a24d20",
+        "os": "linux",
+        "architecture": "amd64",
+        "user": "nonroot:nonroot",
+        "labels": {
+          "org.opencontainers.image.architecture": "amd64",
+          "org.opencontainers.image.revision": "local",
+          "org.opencontainers.image.title": "Postpilot CPU media worker",
+          "org.postpilot.media.asset-input-sha256": "3496ae816cd2b3b9c10af0e78ec78dc39235f9740b16c6a8803d1c9f94786b5a",
+          "org.postpilot.media.assets": "assets-v3",
+          "org.postpilot.media.health.crypto-archive-sha256": "daf3614e0406f67ae6323c902db3f953a1effb199142362a039e7526dfb9368b",
+          "org.postpilot.media.health.gofips140": "v1.0.0-c2097c7c",
+          "org.postpilot.media.manifest-command": "/media-worker manifest",
+          "org.postpilot.media.protocol": "3",
+          "org.postpilot.media.renderer": "cpu-v4"
+        },
+        "healthcheck": {
+          "Test": [
+            "CMD",
+            "/media-health"
+          ],
+          "Interval": 30000000000,
+          "Timeout": 30000000000,
+          "StartPeriod": 30000000000,
+          "Retries": 3
+        }
+      },
+      "postpilot:gate-media-storage": {
+        "id": "sha256:02b3a154e24bccc2d2b5a83af8198fa27361d19cd6ec18e5c6ff63afa889b235",
+        "os": "linux",
+        "architecture": "amd64",
+        "user": "",
+        "labels": {
+          "org.opencontainers.image.licenses": "AGPL-3.0-only",
+          "org.opencontainers.image.title": "Disposable Postpilot media release storage",
+          "org.postpilot.fixture.mc.source": "https://github.com/minio/mc/tree/7394ce0dd2a80935aded936b09fa12cbb3cb8096",
+          "org.postpilot.fixture.minio.source": "https://github.com/minio/minio/tree/07c3a429bfed433e49018cb0f78a52145d4bedeb"
+        },
+        "healthcheck": null
+      },
+      "postpilot:gate-media-release": {
+        "id": "sha256:d99006c66e847072ed80cd2a3dd56679a650b6198e90fdd7cabc7c5e2405a3f6",
+        "os": "linux",
+        "architecture": "amd64",
+        "user": "nonroot:nonroot",
+        "labels": {
+          "org.opencontainers.image.architecture": "amd64",
+          "org.opencontainers.image.revision": "local",
+          "org.opencontainers.image.title": "Postpilot API",
+          "org.postpilot.media.asset-input-sha256": "3496ae816cd2b3b9c10af0e78ec78dc39235f9740b16c6a8803d1c9f94786b5a",
+          "org.postpilot.media.assets": "assets-v3",
+          "org.postpilot.media.protocol": "3",
+          "org.postpilot.media.renderer": "cpu-v4",
+          "org.postpilot.media.rollback-safe": "1"
+        },
+        "healthcheck": null
+      },
+      "postpilot:gate-media-release-worker": {
+        "id": "sha256:cd8e4b6ea9b5e443b0d61f1cf75aa1e780ede5c4d6b16dd8671e8033a1a9eefb",
+        "os": "linux",
+        "architecture": "amd64",
+        "user": "nonroot:nonroot",
+        "labels": {
+          "org.opencontainers.image.architecture": "amd64",
+          "org.opencontainers.image.revision": "local",
+          "org.opencontainers.image.title": "Postpilot CPU media worker",
+          "org.postpilot.media.asset-input-sha256": "3496ae816cd2b3b9c10af0e78ec78dc39235f9740b16c6a8803d1c9f94786b5a",
+          "org.postpilot.media.assets": "assets-v3",
+          "org.postpilot.media.health.crypto-archive-sha256": "daf3614e0406f67ae6323c902db3f953a1effb199142362a039e7526dfb9368b",
+          "org.postpilot.media.health.gofips140": "v1.0.0-c2097c7c",
+          "org.postpilot.media.manifest-command": "/media-worker manifest",
+          "org.postpilot.media.protocol": "3",
+          "org.postpilot.media.renderer": "cpu-v4"
+        },
+        "healthcheck": {
+          "Test": [
+            "CMD",
+            "/media-health"
+          ],
+          "Interval": 30000000000,
+          "Timeout": 30000000000,
+          "StartPeriod": 30000000000,
+          "Retries": 3
+        }
+      }
+    }
+  },
+  "health_repair": {
+    "cause": "Go1.26 SHA import retains32MiB entropy scratch BSS; its physical backing under Rosetta caused actual worker512MiB OOM when readiness overlapped rendering",
+    "helper_only_gofips140": "v1.0.0-c2097c7c",
+    "official_archive_sha256": "daf3614e0406f67ae6323c902db3f953a1effb199142362a039e7526dfb9368b",
+    "rss_kib_before": 42876,
+    "rss_kib_after": 10072,
+    "worker_api_codec_binary_bytes_unchanged": true,
+    "mode_default": "FIPS-on only in health helper; no application/image certification claim",
+    "protocol_and_authentication_unchanged": true,
+    "budgets_quality_and_goldens_unchanged": true
+  },
+  "preservation": {
+    "local_integration_revision": "93ce0904fa95d3a9ed641bd6eef11ae23738ea06",
+    "preserved_dirty_untracked_count": 132,
+    "unrelated_changes_committed": false,
+    "staged_paths": [],
+    "guard": "owned-file scope + privateindex lock + expected-main CAS + byte-identical nonT653 STATE overlay"
+  },
+  "remote": {
+    "ci": {
+      "sourceSHA": "ff9ff3f15eca9e085a4f992902bb791bec8e3869",
+      "runId": 37681127246,
+      "runURL": "https://github.com/hetarho/postpilot/actions/runs/37681127246",
+      "status": "completed",
+      "conclusion": "success",
+      "frontend": {
+        "job": "https://github.com/hetarho/postpilot/actions/runs/37681127246/job/112997141210",
+        "files": 524,
+        "tests": 4141,
+        "lintFormatBuild": "allsuccess",
+        "receipt": "/tmp/postpilot-ci-remote-ff9/frontend-complete.json",
+        "logSHA256": "d3eb7876eb8a6fdab9e269711c7dff6a289d607f52069aafd42e0f7681d04c6d"
+      },
+      "backend": {
+        "job": "https://github.com/hetarho/postpilot/actions/runs/37681127246/job/112997140910",
+        "packages": 110,
+        "testedPackages": 86,
+        "noTestPackages": 24,
+        "vetBuildFormatterDeploymentTests": "allsuccess",
+        "receipt": "/tmp/postpilot-ci-remote-ff9/backend-complete.json",
+        "logSHA256": "9d156d861a5a5b91594375fd2d17a830767f0b8942b496e83f91a799f7a41895"
+      },
+      "failedJobs": [],
+      "scope": "Actual pushedff9 CI only. Laterlocalmain/unrelatedtasks notpartofthisrevision; Deploy/VerifyMedia receipts ownedbyotherwatcher."
+    },
+    "deploy": {
+      "source_revision": "ff9ff3f15eca9e085a4f992902bb791bec8e3869",
+      "run_id": 37681127255,
+      "run_url": "https://github.com/hetarho/postpilot/actions/runs/37681127255",
+      "conclusion": "success",
+      "actual_deployment_proven": true,
+      "jobs": {
+        "build": {
+          "id": 112997141584,
+          "url": "https://github.com/hetarho/postpilot/actions/runs/37681127255/job/112997141584",
+          "required_steps": {
+            "Validate production Compose": "success",
+            "Log in to GHCR": "success",
+            "Build image (push to GHCR only when deploy is enabled)": "success",
+            "Build independent CPU worker image": "success"
+          }
+        },
+        "rollout": {
+          "id": 113001632860,
+          "url": "https://github.com/hetarho/postpilot/actions/runs/37681127255/job/113001632860",
+          "required_steps": {
+            "Skip a superseded deployment while holding the rollout lock": "success",
+            "Sync production Compose to VPS": "success",
+            "Pull → swap → health gate → roll back on failure": "success",
+            "Verify CORS preflight for the browser origin": "success",
+            "Verify the R2 bucket allows a browser GET": "success"
+          }
+        }
+      },
+      "required_steps_skipped": false,
+      "runtime_topology": "colocated",
+      "archive_verification_in_native_build_log": true,
+      "limitations": [
+        "Public /health version is0.0.1 and does not itself expose commit; revision binding uses actualff9 checkout/pull/swap/health logs and registry labels",
+        "R2 checks establish GET/PUT/Range preflight admission; not readable private206 transfers",
+        "No direct SSH inspection or repository-secret access performed; Variables API read403, origins obtained from actual masked workflow logs"
+      ]
+    },
+    "media": {
+      "source_sha": "ff9ff3f15eca9e085a4f992902bb791bec8e3869",
+      "workflow_run_id": 37682588127,
+      "workflow_event": "workflow_run",
+      "workflow_url": "https://github.com/hetarho/postpilot/actions/runs/37682588127",
+      "overall_conclusion": "success",
+      "jobs": [
+        {
+          "id": 113002156652,
+          "name": "Media release",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/hetarho/postpilot/actions/runs/37682588127/job/113002156652",
+          "runner_labels": [
+            "ubuntu-latest"
+          ],
+          "actual_git_checkout_sha": "ff9ff3f15eca9e085a4f992902bb791bec8e3869",
+          "owning_required_steps": {
+            "Build disposable storage from pinned upstream source": "success",
+            "Build the release API using the production build cache": "success",
+            "Build the release worker in the same builder": "success",
+            "Run separate-process CPU release in both private layouts": "success"
+          },
+          "full_log": "release-job113002156652.log"
+        },
+        {
+          "id": 113002157149,
+          "name": "Media worker",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/hetarho/postpilot/actions/runs/37682588127/job/113002157149",
+          "runner_labels": [
+            "ubuntu-latest"
+          ],
+          "actual_git_checkout_sha": "ff9ff3f15eca9e085a4f992902bb791bec8e3869",
+          "owning_required_steps": {
+            "Build the CPU worker execution smoke": "success",
+            "Run CPU worker parity, isolation and health": "success"
+          },
+          "full_log": "worker-job113002157149.log"
+        },
+        {
+          "id": 113002157294,
+          "name": "Media image",
+          "status": "completed",
+          "conclusion": "success",
+          "url": "https://github.com/hetarho/postpilot/actions/runs/37682588127/job/113002157294",
+          "runner_labels": [
+            "ubuntu-latest"
+          ],
+          "actual_git_checkout_sha": "ff9ff3f15eca9e085a4f992902bb791bec8e3869",
+          "owning_required_steps": {
+            "Run the image smoke gates": "success"
+          },
+          "full_log": "image-job113002157294.log"
+        }
+      ],
+      "native_release": {
+        "run_id": 37682588127,
+        "job_id": 113002156652,
+        "source_sha": "ff9ff3f15eca9e085a4f992902bb791bec8e3869",
+        "conclusion": "success",
+        "job_url": "https://github.com/hetarho/postpilot/actions/runs/37682588127/job/113002156652",
+        "source_sha_present_in_checkout_log": true,
+        "resource_reports": [
+          {
+            "layout": "colocated",
+            "scope": "synthetic execution envelope; host identity and available production capacity are not inferred",
+            "limits_mib": {
+              "api": 256,
+              "worker": 512,
+              "cohost_reserve": 256,
+              "envelope": 1024
+            },
+            "limits_cpus": {
+              "api": 1,
+              "worker": 1,
+              "envelope": 2
+            },
+            "execution": {
+              "postpilot-release-0295ab9e0d-api": {
+                "memory_peak": 180068352,
+                "disk_bytes": 6426287
+              },
+              "postpilot-release-0295ab9e0d-worker": {
+                "memory_peak": 456818688,
+                "disk_bytes": 10051558
+              }
+            },
+            "combined_peak_upper_bound_bytes": 636887040,
+            "infra": "private MinIO 256MiB/.5CPU and remote relay 64MiB/.25CPU, outside execution envelope (external R2 analog)"
+          },
+          {
+            "layout": "remote",
+            "scope": "synthetic execution envelope; host identity and available production capacity are not inferred",
+            "limits_mib": {
+              "api": 256,
+              "worker": 512,
+              "cohost_reserve": 256,
+              "envelope": 1024
+            },
+            "limits_cpus": {
+              "api": 1,
+              "worker": 1,
+              "envelope": 2
+            },
+            "execution": {
+              "postpilot-release-c4518246df-api": {
+                "memory_peak": 176803840,
+                "disk_bytes": 6426287
+              },
+              "postpilot-release-c4518246df-worker": {
+                "memory_peak": 454393856,
+                "disk_bytes": 10575846
+              }
+            },
+            "combined_peak_upper_bound_bytes": 631197696,
+            "infra": "private MinIO 256MiB/.5CPU and remote relay 64MiB/.25CPU, outside execution envelope (external R2 analog)"
+          }
+        ],
+        "log": "release-job113002156652.log",
+        "actual_git_log_checkout_sha": "ff9ff3f15eca9e085a4f992902bb791bec8e3869",
+        "runner_os": "Ubuntu24.04.5 LTS/Linux",
+        "default_release_command_present": true,
+        "fixture_targets_evaluated": [
+          "media-storage",
+          "media-release-api",
+          "media-release-worker"
+        ]
+      },
+      "no_dispatch_or_retry": true
+    }
+  },
+  "deployable_images": {
+    "api": {
+      "source_revision": "ff9ff3f15eca9e085a4f992902bb791bec8e3869",
+      "image": {
+        "id": "sha256:56fb525d5c1712560056a7b6477be76bbe93930c47c6bbb9dc099f0aa7688f20",
+        "os": "linux",
+        "architecture": "amd64",
+        "user": "nonroot:nonroot",
+        "labels": {
+          "org.opencontainers.image.architecture": "amd64",
+          "org.opencontainers.image.revision": "ff9ff3f15eca9e085a4f992902bb791bec8e3869",
+          "org.opencontainers.image.title": "Postpilot API",
+          "org.postpilot.media.asset-input-sha256": "3496ae816cd2b3b9c10af0e78ec78dc39235f9740b16c6a8803d1c9f94786b5a",
+          "org.postpilot.media.assets": "assets-v3",
+          "org.postpilot.media.protocol": "3",
+          "org.postpilot.media.renderer": "cpu-v4",
+          "org.postpilot.media.rollback-safe": "1"
+        },
+        "expected_media_asset_digest": "3496ae816cd2b3b9c10af0e78ec78dc39235f9740b16c6a8803d1c9f94786b5a"
+      },
+      "checks": {
+        "os_linux": true,
+        "architecture_amd64": true,
+        "user_nonroot": true,
+        "exact_revision": true,
+        "architecture_label_amd64": true,
+        "media_protocol_3": true,
+        "media_renderer_cpu_v4": true,
+        "media_assets_v3": true,
+        "media_asset_digest": true,
+        "build_source_bytes_unchanged": true
+      },
+      "passed": true
+    },
+    "worker": {
+      "source_revision": "ff9ff3f15eca9e085a4f992902bb791bec8e3869",
+      "image": {
+        "id": "sha256:fa00f4a42fe878f13242ee8a6ef28096d67124f5a38a6d52d33df6fb592a394b",
+        "os": "linux",
+        "architecture": "amd64",
+        "user": "nonroot:nonroot",
+        "labels": {
+          "org.opencontainers.image.architecture": "amd64",
+          "org.opencontainers.image.revision": "ff9ff3f15eca9e085a4f992902bb791bec8e3869",
+          "org.opencontainers.image.title": "Postpilot CPU media worker",
+          "org.postpilot.media.asset-input-sha256": "3496ae816cd2b3b9c10af0e78ec78dc39235f9740b16c6a8803d1c9f94786b5a",
+          "org.postpilot.media.assets": "assets-v3",
+          "org.postpilot.media.health.crypto-archive-sha256": "daf3614e0406f67ae6323c902db3f953a1effb199142362a039e7526dfb9368b",
+          "org.postpilot.media.health.gofips140": "v1.0.0-c2097c7c",
+          "org.postpilot.media.manifest-command": "/media-worker manifest",
+          "org.postpilot.media.protocol": "3",
+          "org.postpilot.media.renderer": "cpu-v4"
+        },
+        "expected_media_asset_digest": "3496ae816cd2b3b9c10af0e78ec78dc39235f9740b16c6a8803d1c9f94786b5a",
+        "healthcheck": {
+          "Test": [
+            "CMD",
+            "/media-health"
+          ],
+          "Interval": 30000000000,
+          "Timeout": 30000000000,
+          "StartPeriod": 30000000000,
+          "Retries": 3
+        },
+        "helper_buildinfo": "/tmp/postpilot-ci-prepush/health-crypto-pin/ff9-image-media-health: go1.26.8\n\tpath\tgithub.com/postpilot/backend/cmd/media-health\n\tmod\tgithub.com/postpilot/backend\t(devel)\t\n\tbuild\t-buildmode=exe\n\tbuild\t-compiler=gc\n\tbuild\t-tags=fips140v1.0\n\tbuild\t-trimpath=true\n\tbuild\tDefaultGODEBUG=fips140=on\n\tbuild\tCGO_ENABLED=0\n\tbuild\tGOARCH=amd64\n\tbuild\tGOFIPS140=v1.0.0-c2097c7c\n\tbuild\tGOOS=linux\n\tbuild\tGOAMD64=v1\n",
+        "execution_bytes_equal_8dd": {
+          "/media-worker": true,
+          "/usr/local/bin/ffmpeg": true,
+          "/usr/local/bin/ffprobe": true,
+          "/usr/local/bin/resvg": true
+        }
+      },
+      "checks": {
+        "os_linux": true,
+        "architecture_amd64": true,
+        "user_nonroot": true,
+        "exact_revision": true,
+        "architecture_label_amd64": true,
+        "media_protocol_3": true,
+        "media_renderer_cpu_v4": true,
+        "media_assets_v3": true,
+        "media_asset_digest": true,
+        "build_source_bytes_unchanged": true,
+        "snapshot_label_exact": true,
+        "archive_label_exact": true,
+        "compiled_snapshot_exact": true,
+        "default_fips_on": true,
+        "linux_amd64_binary": true,
+        "upstream_license_exact": true,
+        "readme_exact": true,
+        "light_health_command": true,
+        "worker_entrypoint": true,
+        "no_global_fips_env": true
+      },
+      "passed": true
+    }
+  },
+  "completion_record": "This artifact records sourceff9 qualification; its completion commit changes only QA, STATE and task archival. The completion push automatically runs CI and is inspected separately."
+}
