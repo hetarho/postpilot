@@ -8,25 +8,29 @@ import (
 )
 
 func voiceDescriptor(mode string) llm.RequestComposition {
-	c := llm.RequestComposition{Stage: "writing-style", Mode: mode, PromptVersion: "writing-style-" + mode + "-v1", SchemaVersion: "writing-style-" + mode + "-v1", SourceFiles: []string{"internal/voice/analysis.go", "internal/voice/candidates.go", "internal/voice/check_handler.go"}}
+	c := llm.RequestComposition{Stage: "writing-style", Mode: mode, PromptVersion: "writing-style-" + mode + "-v1", SchemaVersion: "writing-style-" + mode + "-v1"}
 	switch mode {
 	case "analyze":
 		c.Composer = "voice.analysisRequest/analysisInput"
 		c.Parser = "voice.parseAIPart"
-		c.Consumer = "private accepted-corpus analysis and explicit style revision"
-		c.Activation = "admitted analysis of frozen accepted writing samples; counted habits precede prose"
+		c.Consumer = "private accepted personal impression, tics, signature phrases and verified quotations; measured habits remain product-owned"
+		c.Activation = "explicit admitted analysis of frozen owner-authored writing revisions; generated examples and posts excluded"
+		c.SourceFiles = []string{"internal/voice/analysis.go", "internal/voice/corpus.go", "internal/voice/request_composition.go", "internal/voice/schemas.go"}
 		c.Output = llm.OutputContractInspection{Name: "voice-analysis", Version: c.SchemaVersion, Schema: string(VoiceAnalysisSchema())}
 	case "recommend":
 		c.Composer = "voice.candidateRequest"
 		c.Parser = "voice.parseCandidates"
 		c.Consumer = "unpublished synthetic writing-style candidates"
 		c.Activation = "explicit admitted recommendation of 2, 4, 8 or 16 candidates over code-owned fictional scene"
+		c.SourceFiles = []string{"internal/voice/candidates.go", "internal/voice/candidate_schema.go", "internal/voice/request_composition.go"}
 		c.Output = llm.OutputContractInspection{Name: "writing-candidates", Version: c.SchemaVersion}
 	case "legacy-check":
 		c.Composer = "voice.Service.writePiece"
 		c.Parser = "voice.Service.writePiece nonempty text"
 		c.Consumer = "legacy admitted check/reflection comparison pieces"
-		c.Activation = "admitted-only old check_voice job; new helper admission retired"
+		c.Activation = "admitted-only old check_voice or frozen reflection work; new standalone helper admission retired"
+		c.SourceFiles = []string{"internal/voice/check.go", "internal/voice/check_handler.go", "internal/voice/reflection.go", "internal/voice/request_composition.go"}
+		c.Omissions = []llm.RequestOmission{{ID: "new-check-admission", Reason: "standalone voice checks and reflection starts are retired", Activation: "retained admitted work only", SourceFiles: []string{"internal/voice/check.go"}}}
 		c.Output = llm.OutputContractInspection{Name: "writing-piece", Version: c.SchemaVersion}
 	}
 	return c
@@ -75,7 +79,7 @@ func checkComposition(projection string, prompt Prompt) *llm.RequestComposition 
 	if prompt.Key != "" {
 		refs = []string{prompt.Key}
 	}
-	c.Fragments = []llm.RequestFragment{{ID: "frozen-style", Role: llm.InspectionRoleSystem, Authorship: llm.FragmentAuthorshipAccount, MaterialRole: "frozen-writing-style-context", Text: projection}, {ID: "catalog-task", Role: llm.InspectionRoleUser, Authorship: llm.FragmentAuthorshipCode, MaterialRole: "catalog-example-task-not-owner-experience", Text: "[상황]\n" + prompt.Scene + "\n[문항]\n" + prompt.Text + "\n[요청]\n" + checkRequest, SourceRefs: refs, SourceFiles: []string{"internal/voice/prompts.go", "internal/voice/check_handler.go"}}}
+	c.Fragments = []llm.RequestFragment{{ID: "frozen-style", Role: llm.InspectionRoleSystem, Authorship: llm.FragmentAuthorshipAccount, MaterialRole: "frozen-style-only-context-not-post-facts", Text: projection}, {ID: "catalog-task", Role: llm.InspectionRoleUser, Authorship: llm.FragmentAuthorshipCode, MaterialRole: "catalog-example-task-not-owner-experience", Text: "[상황]\n" + prompt.Scene + "\n[문항]\n" + prompt.Text + "\n[요청]\n" + checkRequest, SourceRefs: refs, SourceFiles: []string{"internal/voice/prompts.go", "internal/voice/check_handler.go"}}}
 	if prompt.Photo {
 		c.Fragments = append(c.Fragments, llm.RequestFragment{ID: "photo", Role: llm.InspectionRoleUser, Authorship: llm.FragmentAuthorshipAccount, MaterialRole: "attached-photo", SourceRefs: refs, Activation: "catalog question requires an owned private photo"})
 	}

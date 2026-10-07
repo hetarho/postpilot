@@ -10,7 +10,7 @@ import (
 
 // Versions identify the owning composer, independently of the private full-test
 // snapshot protocol. Inspection does not change that protocol or its schema bytes.
-const postPromptCompositionVersion = "post-stage-contracts-v1"
+const postPromptCompositionVersion = "post-stage-contracts-v2"
 
 func schemaInspection(name string, schema []byte) llm.OutputContractInspection {
 	version := fmt.Sprintf("sha256:%x", sha256.Sum256(schema))
@@ -165,6 +165,7 @@ func profileComposition(out *llm.RequestComposition, language Language, profile 
 		if !profile.Portable {
 			offset += len("\n\n[글 예시 발췌]")
 			for i, excerpt := range profile.Excerpts {
+				excerpt = marshalPromptJSON(excerpt)
 				offset += len(fmt.Sprintf("\n%d. ", i+1))
 				materials = append(materials, materialAt(fmt.Sprintf("example.%d", i), "style-example-not-post-facts", excerpt, offset))
 				offset += len(excerpt)

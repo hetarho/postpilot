@@ -67,7 +67,19 @@ func (a *Authoring) Seed(ctx context.Context, user, id string) (WritingStyleDraf
 	// to create one; never pass personal samples or fabricate an AI-created preview.
 	draft := WritingStyleDraft{Name: found.Name, Description: firstRunes(analysis.AI.Impression, CandidateDescriptionMaxChars), Sample: analysis.SyntheticSample}
 	version := fmt.Sprintf("voice:%x", sha256.Sum256([]byte(fmt.Sprintf("%q", []string{found.ID, found.UpdatedAt.UTC().Format(time.RFC3339Nano), analysis.CreatedAt.UTC().Format(time.RFC3339Nano)}))))
-	return draft, version, koreanSection(*analysis), nil
+	// The current draft owns description and fictional sample. The captured source
+	// context supplies only the other accepted habits, so a later description edit
+	// cannot compete with a repeated stale impression or example.
+	contextAnalysis := *analysis
+	contextAnalysis.AI.Impression = ""
+	contextAnalysis.SyntheticSample = ""
+	sourceContext := koreanSection(contextAnalysis)
+	if rest := strings.TrimPrefix(analysis.AI.Impression, draft.Description); rest != "" {
+		// Personal analysis descriptions are sentence-bounded, not character-bounded.
+		// Keep useful text beyond the editable draft field without repeating its prefix.
+		sourceContext += "\n[원본 분석 인상의 추가 설명: 문체 참고 자료]\n최신 초안의 description을 우선하고, 다음은 이전 분석의 보충 인상으로만 참고하세요: " + styleData(rest)
+	}
+	return draft, version, sourceContext, nil
 }
 func (a *Authoring) CanStart(ctx context.Context, user, id string) error {
 	if id == "" {
@@ -80,7 +92,13 @@ func (a *Authoring) Validate(value WritingStyleDraft) (WritingStyleDraft, error)
 	return NormalizeWritingStyleDraft(value)
 }
 func (a *Authoring) Guide() string {
-	return fmt.Sprintf("한국어글쓰기의말투를표현하세요. name은1~%d자의짧은이름,description은1~%d자의자연스러운인상,body는%d~%d자의AI가만든가상예시입니다. 예시는산책하다작은가게에서차와간식을먹고쉬었다는같은가상상황을사용하세요. 실제사용자경험이나장소·개인정보를만들거나기존문장을복사하지마세요. 개인자료의문장이나fingerprint수치를고치지마세요. body의문장끝맺음·문단·감정표현으로선택한스타일을보여주세요. 모든저장은새synthetic말투를만듭니다.", VoiceNameMaxChars, CandidateDescriptionMaxChars, CandidateSampleMinChars, CandidateSampleMaxChars)
+	return WritingStyleAuthoringGuide()
+}
+
+// WritingStyleAuthoringGuide is the code-owned guide shared by execution and private
+// composition inventory. Reading it requires no owned profile or provider work.
+func WritingStyleAuthoringGuide() string {
+	return fmt.Sprintf("한국어 글쓰기의 말투를 표현하세요. name은 1~%d자의 짧은 이름, description은 1~%d자의 자연스러운 문체 인상, body는 %d~%d자의 AI가 만든 가상 예시입니다. 산책하다 작은 가게에서 차와 간식을 먹고 쉬었다는 같은 가상 상황을 사용하세요. 개인 학습 글과 AI 인상은 문체만 참고하는 자료입니다. 예시의 방문·가격·맛·행동은 사용자의 실제 경험이나 입력 사실이 아니며, 실제 장소·개인정보를 만들거나 기존 문장을 복사하지 마세요. 개인 자료의 문장이나 fingerprint 수치를 고치지 마세요. body의 문장 끝맺음·문단·감정 표현으로 선택한 스타일을 보여 주세요. 모든 저장은 새 synthetic 말투를 만듭니다.", VoiceNameMaxChars, CandidateDescriptionMaxChars, CandidateSampleMinChars, CandidateSampleMaxChars)
 }
 func (a *Authoring) Publish(ctx context.Context, user string, in AuthoringPublication) (Voice, error) {
 	value, err := a.Validate(in.Draft)

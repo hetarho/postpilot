@@ -71,7 +71,6 @@
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
-| T638 | Scope setting style and memory composers to their consumed outputs | ARCH EDIT VOICE MEM GUIDE TMPL GEN MODEL | T633 T635 T626 T630 | todo |
 | T639 | Align existing video and speech prompt-stage responsibilities | ARCH GEN MODEL GUIDE LANG CLIP | T633 T635 | todo |
 | T640 | Capture and inspect the owner post effective product requests | ARCH POST MODEL GEN | T635 T637 | todo |
 | T641 | Extend test and authoring private evidence with origin-safe inspection | ARCH MODEL EDIT GEN POST MEM | T638 T640 T628 | todo |
@@ -82,10 +81,13 @@
 | T646 | Qualify origin-aware writing inspection and clean publication handoff | ARCH GEN POST MODEL THEME EXPORT MKT LANG | T636 T637 T639 T641 T642 T643 T644 T645 T631 | todo |
 
 ## next
-- T638 next for sequential implementation through T646 after the T637 commit.
+- T639 next for sequential implementation through T646 after the T638 commit.
 - Editorial follow-up: doc-review ARCH; preserve independent release/review and blocked qualification.
 
 ## log
+- 261008 T638 done on main: kind/mode-scoped authoring fields and shared grammar, single style example sets and fenced approval-only memory proposals; owning/consumer/race/build/spec checks pass
+- 261008 T638 freshness: exactT649 changes only missing-slot candidate admission/counts; retain integrated1..16 behavior and scoped composer contracts, bases refreshed
+- 261008 T638 start on main at376709cd: selected authoring/style/memory composition and explicit material boundaries; preserve independent release/review changes
 - 261008 T637 done on main: atomic current-result origins, conservative manual alignment and immutable attachment/plan fences; full product Go, impacted FE2870, current race, generators/build/spec pass
 - 261008 T636 done on main: bounded semantic-origin calls, strict canonical-tail salvage, validated current sources and structural revision retention; full owning/consumer/API/race/build/spec checks pass
 - 261008 T635 done on main: 50 actual-composer synthetic inventory modes, shared effective registry resolution and safe captured response/error/native evidence; full83 Go packages, final boundaries/races/API/build/spec pass
@@ -103,7 +105,3 @@
 - 261008 mobile manual integration: package integrator rejects inherited spec FORMAT/editorial warnings; independent reviews and exact production hashes retain final24ecfce6 source verification
 - 261008 T628 done on main: durable exact-metered binary tournaments, zero-call recovery, private retention and receipt-first publication; full product Go, actual factory/SQLite/race, FE164, codegen/build/vet and spec checks pass
 - 261008 T649 done on main: saved-or-AI slots prepare exact missing1/3/15 counts with retained refs/template inputs; FE598 plus final33/11, owning Go/count/migration, lint/build, browser52 and42-percent glass checks pass
-- 261007 T648 done on main: compact translucent docks, bounded composers and48px actions across the app; consumer608 plus final55, build/lint and Chromium196 routes/308 geometry/70 continuity checks pass
-- 261007 T627 done on main: immutable single-factor factories and private complete outputs, exact checkpoint/retry plans and current direct/refined references; owning/domain/wiring tests, builds/vet and FE124 consumers pass
-- 261007 Docker Desktop termination complete: 9 app processes received SIGTERM; 4 remaining or respawned processes required SIGKILL; independent scans confirmed no Docker.app processes or port 7678 listener; separate Colima/Lima and persistent data files retained
-- 261007 T630 done on main: named durable setting editing, private reference/metadata continuity, terminal paginated summaries and atomic domain receipts; full FE4077, owning Go/wiring, builds/lint/codegen and real viewport checks pass

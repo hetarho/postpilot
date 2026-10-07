@@ -6,9 +6,11 @@ import (
 	"io"
 
 	"github.com/postpilot/backend/internal/authoring"
+	"github.com/postpilot/backend/internal/clip"
 	clipai "github.com/postpilot/backend/internal/clip/ai"
 	clipapp "github.com/postpilot/backend/internal/clip/app"
 	"github.com/postpilot/backend/internal/generation"
+	"github.com/postpilot/backend/internal/guideline"
 	"github.com/postpilot/backend/internal/llm"
 	"github.com/postpilot/backend/internal/memory"
 	"github.com/postpilot/backend/internal/template"
@@ -21,7 +23,7 @@ import (
 func productRequestCompositions() []llm.RequestComposition {
 	var result []llm.RequestComposition
 	for _, compositions := range [][]llm.RequestComposition{
-		generation.RequestCompositions(), authoring.RequestCompositions(),
+		generation.RequestCompositions(), authoring.RequestCompositions(authoringInventoryGuides()),
 		voice.RequestCompositions(), memory.RequestCompositions(),
 		template.RequestCompositions(), clipai.RequestCompositions(),
 		spokenapp.RequestCompositions(), clipapp.RequestCompositions(),
@@ -29,6 +31,20 @@ func productRequestCompositions() []llm.RequestComposition {
 		result = append(result, compositions...)
 	}
 	return result
+}
+
+// Synthetic ceilings are fixture values, not a claim about current deployment.
+// Each owning composer remains the single source of grammar and field rules.
+func authoringInventoryGuides() map[authoring.Kind]string {
+	templateLimits := template.Limits{NameMaxChars: 100, DescriptionMaxChars: 200, BodyMaxChars: 5000, TitleAreaMaxChars: 500, MaxPerAccount: 20, PhotoRowMax: 3, AskLabelMaxChars: 100, AskMaxPerBody: 20, TargetLengthMin: 100, TargetLengthMax: 10000, TagCountMin: 1, TagCountMax: 10}
+	guidelineLimits := guideline.Limits{TitleMaxChars: 100, TextMaxChars: 2000, MaxPerAccount: 20}
+	return map[authoring.Kind]string{
+		authoring.PostTemplate:   template.AuthoringGuide(templateLimits),
+		authoring.VideoTemplate:  clipapp.AuthoringGuide(clip.DefaultLimits()),
+		authoring.PostGuideline:  guideline.AuthoringGuide(guideline.KindPost, guidelineLimits),
+		authoring.VideoGuideline: guideline.AuthoringGuide(guideline.KindClip, guidelineLimits),
+		authoring.WritingVoice:   voice.WritingStyleAuthoringGuide(),
+	}
 }
 
 func runPromptInventory(args []string, output io.Writer) error {

@@ -151,3 +151,27 @@ func TestFormatGuideRefusesAnUnsupportedLanguage(t *testing.T) {
 		t.Fatalf("err = %v, want ErrUnsupportedLanguage", err)
 	}
 }
+
+func TestAuthoringGrammarPreservesPublicMeaningWithoutBodyOnlyOutput(t *testing.T) {
+	for _, language := range []Language{LanguageKorean, LanguageEnglish} {
+		public, err := FormatGuide(language, productLimits())
+		if err != nil {
+			t.Fatal(err)
+		}
+		grammar, err := GrammarGuide(language, productLimits())
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !strings.Contains(public, grammar) || !strings.Contains(grammar, GuideExampleBody) {
+			t.Fatal("authoring grammar changed public meaning")
+		}
+		for _, text := range []string{"[답변 방식]", "[How to answer]", "Send the body only", "설명이나 코드 블록 없이 본문만"} {
+			if strings.Contains(grammar, text) {
+				t.Fatal("external response instruction reached authoring")
+			}
+		}
+	}
+	if _, err := GrammarGuide("ja", productLimits()); !errors.Is(err, ErrUnsupportedLanguage) {
+		t.Fatal("unsupported grammar language accepted")
+	}
+}

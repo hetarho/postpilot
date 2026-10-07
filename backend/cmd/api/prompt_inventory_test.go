@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/postpilot/backend/internal/authoring"
 	"github.com/postpilot/backend/internal/llm"
 )
 
@@ -72,5 +73,53 @@ func TestPromptInventoryRunsBeforePlatformBoot(t *testing.T) {
 	output, err := command.CombinedOutput()
 	if err != nil || !bytes.Contains(output, []byte(`"kind": "code"`)) || bytes.Contains(output, []byte("migration applied")) {
 		t.Fatalf("code inspection depended on platform/customer boot: %s %v", output, err)
+	}
+}
+
+func TestAuthoringInventoryUsesActualKindGrammarAndModeOutput(t *testing.T) {
+	guides := authoringInventoryGuides()
+	seen := 0
+	for _, c := range productRequestCompositions() {
+		if c.Stage != "setting-authoring" {
+			continue
+		}
+		seen++
+		kind, mode, _ := strings.Cut(c.Mode, "/")
+		var guide, user, system string
+		for _, f := range c.Fragments {
+			if f.ID == "guide" {
+				guide = f.Text
+			}
+			if f.Role == llm.InspectionRoleUser {
+				user += f.Text
+			} else {
+				system += f.Text
+			}
+		}
+		var decoded string
+		if err := json.Unmarshal([]byte(guide), &decoded); err != nil {
+			t.Fatal(err)
+		}
+		if decoded != guides[authoring.Kind(kind)] || strings.Contains(decoded, "Synthetic kind") {
+			t.Fatal("inventory missed real owning grammar", kind)
+		}
+		if mode == "refine" && (strings.Contains(user, "candidate_count") || strings.Contains(system, "candidate_count")) {
+			t.Fatal("batch rule reached refinement")
+		}
+		if strings.Contains(kind, "guideline") && (strings.Contains(c.Output.Schema, "description") || strings.Contains(c.Output.Schema, "title_area")) {
+			t.Fatal("unconsumed guideline fields requested")
+		}
+		if kind == "post_template" && (!strings.Contains(decoded, "&lt;") || !strings.Contains(decoded, "ask") || strings.Contains(decoded, "[답변 방식]")) {
+			t.Fatal("post role grammar drifted")
+		}
+		if kind == "video_template" && !strings.Contains(decoded, `<clip version="1">`) {
+			t.Fatal("video grammar absent")
+		}
+		if kind == "writing_voice" && !strings.Contains(decoded, "사용자의 실제 경험이나 입력 사실이 아니며") {
+			t.Fatal("fictional style role absent")
+		}
+	}
+	if seen != 10 {
+		t.Fatal("kind/mode inventory incomplete", seen)
 	}
 }

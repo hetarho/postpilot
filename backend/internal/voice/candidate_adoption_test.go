@@ -49,7 +49,7 @@ func TestCandidateAdoptionIsAtomicIdempotentAndPreservesLaterEdits(t *testing.T)
 		t.Fatalf("profile=%+v err=%v", profile, err)
 	}
 	ko, err := h.svc.PromptProfileForTopic(ctx, "alice", found.ID, "주말", voice.LanguageKorean, "")
-	if err != nil || len(ko.Excerpts) != 0 || !strings.Contains(ko.Text, "가상 예시") || !strings.Contains(ko.Text, "실제 경험이 아닙니다") || strings.Contains(ko.Text, "이 글쓴이가 직접 쓴 글") {
+	if err != nil || len(ko.Excerpts) != 1 || ko.Excerpts[0] != strings.TrimSpace(profile.Analysis.SyntheticSample) || strings.Contains(ko.Text, profile.Analysis.SyntheticSample) || !strings.Contains(ko.Text, "가상 예시") || !strings.Contains(ko.Text, "실제 경험이 아닙니다") || strings.Contains(ko.Text, "이 글쓴이가 직접 쓴 글") {
 		t.Fatalf("projection=%+v err=%v", ko, err)
 	}
 	en, err := h.svc.PromptProfileForTopic(ctx, "alice", found.ID, "weekend", voice.LanguageEnglish, "")
@@ -160,7 +160,7 @@ func TestSyntheticAnalysisCanBecomePersonalAndRestoreOriginalProvenance(t *testi
 		t.Fatalf("restored=%+v err=%v", restored, err)
 	}
 	ko, err := h.svc.PromptProfileForTopic(ctx, "alice", adopted.ID, "산책", voice.LanguageKorean, "")
-	if err != nil || len(ko.Excerpts) != 0 {
+	if err != nil || len(ko.Excerpts) != 1 || ko.Excerpts[0] != strings.TrimSpace(restored.Analysis.SyntheticSample) {
 		t.Fatalf("synthetic projection retrieved personal excerpts=%+v err=%v", ko, err)
 	}
 }

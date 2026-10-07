@@ -131,6 +131,20 @@ func FormatGuide(language Language, limits Limits) (string, error) {
 	).Replace(prose), nil
 }
 
+// GrammarGuide shares the public grammar, excluding the external task and
+// body-only response instruction. Its consumer owns the response contract.
+func GrammarGuide(language Language, limits Limits) (string, error) {
+	guide, err := FormatGuide(language, limits)
+	if err != nil {
+		return "", err
+	}
+	_, guide, _ = strings.Cut(guide, "\n\n")
+	for _, heading := range []string{"\n\n[답변 방식]", "\n\n[How to answer]"} {
+		guide, _, _ = strings.Cut(guide, heading)
+	}
+	return guide, nil
+}
+
 // FormatGuide is the guide under this process's own limits: the numbers it states are the
 // ones a save is held to.
 func (s *Service) FormatGuide(language Language) (string, error) {

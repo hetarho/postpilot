@@ -2,6 +2,7 @@ package voice
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/postpilot/backend/internal/llm"
 	"strings"
 	"testing"
@@ -53,5 +54,25 @@ func TestWritingStyleComposersKeepAuthorshipSeparateFromMessageRole(t *testing.T
 	}
 	if len(RequestCompositions()) != 3 {
 		t.Fatal("style inventory incomplete")
+	}
+}
+
+func TestStyleInventoryMatchesAllAdmittedCandidateCountsAndRetainedWorkOnly(t *testing.T) {
+	for _, count := range []int{2, 4, 8, 16} {
+		t.Run(fmt.Sprint(count), func(t *testing.T) {
+			directions := make([]string, count)
+			for i := range directions {
+				directions[i] = fmt.Sprintf("fictional style %d", i+1)
+			}
+			request := candidateRequest(candidateInput{Count: count, Directions: directions, Scene: "fictional scene"})
+			inspection, err := llm.PreparedRequestInspection(request)
+			if err != nil || inspection.Output.Schema != string(WritingCandidateSchema(count)) || inspection.Fragments[0].Text != request.System || inspection.Fragments[1].Text != request.Messages[0].Parts[0].Text || !strings.Contains(inspection.Activation, "2, 4, 8 or 16") {
+				t.Fatalf("admitted count composition differs from execution: %+v, %v", inspection, err)
+			}
+		})
+	}
+	legacy, err := llm.PreparedCompositionInspection(checkComposition("captured old style", Prompt{Key: "old-key"}))
+	if err != nil || legacy.Fragments[0].MaterialRole != "frozen-style-only-context-not-post-facts" || !strings.Contains(legacy.Activation, "admitted-only") || !strings.Contains(legacy.Activation, "retired") || len(legacy.Omissions) != 1 || legacy.Omissions[0].ID != "new-check-admission" {
+		t.Fatalf("retained work descriptor resurrected helper admission: %+v, %v", legacy, err)
 	}
 }

@@ -91,12 +91,15 @@ func (a *Authoring) ValidateScopeShape(kind Kind, patch ScopePatch) error {
 	_, err := validScopeShape(kind, patch)
 	return err
 }
-func (a *Authoring) Guide(kind Kind) string {
+func (a *Authoring) Guide(kind Kind) string { return AuthoringGuide(kind, a.service.limits) }
+
+// AuthoringGuide describes only direction fields consumed by this context.
+func AuthoringGuide(kind Kind, limits Limits) string {
 	topic := "글"
 	if kind == KindClip {
 		topic = "영상"
 	}
-	return fmt.Sprintf("%s 작성의 방향을알려주는쉬운지침입니다. name은알아보기쉬운제목(%d자이하),body는구체적인작성지침(%d자이하)으로작성하세요. 템플릿XML/JSON/구조나말투의학습자료를만들지마세요. 기본지침을고치지마세요. 기존지침의종류,적용범위,템플릿및분야연결을바꾸지마세요. 적용범위는사용자가명시적으로선택해저장합니다.", topic, a.service.limits.TitleMaxChars, a.service.limits.TextMaxChars)
+	return fmt.Sprintf("%s 작성의 방향을알려주는쉬운지침입니다. name은알아보기쉬운제목(%d자이하),body는구체적인작성지침(%d자이하)으로작성하세요. 템플릿XML/JSON/구조나말투의학습자료를만들지마세요. 기본지침을고치지마세요. 기존지침의종류,적용범위,템플릿및분야연결을바꾸지마세요. 적용범위는사용자가명시적으로선택해저장합니다.", topic, limits.TitleMaxChars, limits.TextMaxChars)
 }
 func (a *Authoring) Publish(ctx context.Context, user string, in AuthoringPublication) (Guideline, error) {
 	if !in.Kind.Valid() {
