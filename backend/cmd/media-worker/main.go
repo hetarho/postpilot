@@ -61,13 +61,31 @@ func run() error {
 	}
 	runningRoot := worker.WorkRoot(cfg.WorkRoot, cfg.ID)
 	cfg.WorkRoot = runningRoot
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+	if command == "health" || command == "status" && worker.CheckWorkRootActive(runningRoot) == nil {
+		if err := worker.CheckWorkRootActive(runningRoot); err != nil {
+			return err
+		}
+		binding, err := profileBinding(cfg)
+		if err != nil {
+			return err
+		}
+		profile, err := worker.ActiveProfile(runningRoot, binding)
+		if err == nil {
+			return reportStatus(ctx, cfg, profile)
+		}
+		if command == "health" {
+			return err
+		}
+		// Status also supports an offline candidate. Preserve its full runtime
+		// validation when no current compatible owner snapshot can be reused.
+	}
 	if command != "run" {
 		// A command namespace cannot alias another deployment worker identity.
 		// Startup recovery only collects direct media workspaces, not .checks.
 		cfg.WorkRoot = filepath.Join(runningRoot, ".checks", command)
 	}
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	defer stop()
 	mcfg := clip.DefaultMediaConfig(environment(cfg))
 	if cfg.Role == clip.AnalysisVerificationRole {
 		mcfg, err = media.AnalysisVerificationConfig(mcfg)
@@ -79,13 +97,7 @@ func run() error {
 	if err != nil {
 		return fmt.Errorf("worker media settings: %w", err)
 	}
-	var renderer *media.Rendering
-	if cfg.Role == clip.NativeWorkerRole {
-		renderer, err = media.NewRenderer(adapter, clip.DefaultRenderConfig(environment(cfg)))
-		if err != nil {
-			return fmt.Errorf("worker renderer settings: %w", err)
-		}
-	}
+	var validatedBinding worker.ProfileBinding
 	if command == "run" {
 		releaseRoot, err := worker.LockWorkRoot(cfg.WorkRoot)
 		if err != nil {
@@ -94,6 +106,17 @@ func run() error {
 		defer releaseRoot()
 		if err = adapter.CleanupAbandoned(ctx); err != nil {
 			return errors.New("media workspace recovery failed")
+		}
+		validatedBinding, err = profileBinding(cfg)
+		if err != nil {
+			return err
+		}
+	}
+	var renderer *media.Rendering
+	if cfg.Role == clip.NativeWorkerRole {
+		renderer, err = media.NewRenderer(adapter, clip.DefaultRenderConfig(environment(cfg)))
+		if err != nil {
+			return fmt.Errorf("worker renderer settings: %w", err)
 		}
 	}
 	var profile clip.MediaWorkerProfile
@@ -114,29 +137,12 @@ func run() error {
 		return nil
 	}
 	profile.WorkerID = cfg.ID
-	if command == "health" {
-		if err := worker.CheckWorkRootActive(runningRoot); err != nil {
-			return err
-		}
-	}
 	client := workerclient.New(cfg.APIURL, cfg.ID, cfg.Token)
 	if command != "run" {
-		check, cancel := context.WithTimeout(ctx, clip.MediaUnaryTimeout)
-		defer cancel()
-		status, err := client.StatusForProfile(check, profile)
-		if err != nil {
-			return err
-		}
-		raw, err := json.Marshal(struct {
-			Ready                      bool
-			Profile                    string
-			Waiting, Active, OwnActive int64
-		}{true, profile.Profile, status.Waiting, status.Active, status.OwnActive})
-		if err != nil {
-			return err
-		}
-		fmt.Println(string(raw))
-		return nil
+		return reportStatus(ctx, cfg, profile)
+	}
+	if err = publishValidatedProfile(cfg, validatedBinding, profile); err != nil {
+		return err
 	}
 	// The adapter tracks active workspaces, so the cleanup cannot reap live work.
 	go func() {

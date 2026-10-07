@@ -31,7 +31,16 @@ func LockWorkRoot(root string) (func(), error) {
 		_ = f.Close()
 		return nil, errors.New("media worker identity already owns this workspace")
 	}
-	return func() { _ = unix.Flock(fd, unix.LOCK_UN); _ = f.Close() }, nil
+	if err = startRootOwner(root, f); err != nil {
+		_ = unix.Flock(fd, unix.LOCK_UN)
+		_ = f.Close()
+		return nil, errors.New("media worker owner initialization failed")
+	}
+	return func() {
+		_ = os.Remove(filepath.Join(root, profileFile))
+		_ = unix.Flock(fd, unix.LOCK_UN)
+		_ = f.Close()
+	}, nil
 }
 
 // Air remains alive after its child exits. Health must observe the running

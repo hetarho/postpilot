@@ -30,6 +30,7 @@ RUN CGO_ENABLED=0 GOOS=linux go test -c -o /diagnostic.test ./internal/clip/diag
 
 FROM builder AS release-builder
 RUN CGO_ENABLED=0 GOOS=linux go test -c -o /clip-release.test ./cmd/api
+RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /media-resource ./cmd/media-resource
 
 FROM gcr.io/distroless/static-debian12:nonroot@sha256:afa5c872c891853ca7fcf1f12c3edb23f7eeef36189728842dd51042ff57f7ab AS media-runtime
 # Both independently versioned images declare the same contract and asset inputs.
@@ -142,11 +143,13 @@ ENTRYPOINT ["/media.test", "-test.run=^Test(WorkerExecutionParity|WorkerCommandH
 
 # Disposable multi-process gate; fixture endpoints exist only in this test binary.
 FROM release-smoke AS media-release-api
+COPY --from=release-builder /media-resource /media-resource
 ENV MEDIA_RELEASE_SMOKE=1
 ENTRYPOINT ["/clip-release.test", "-test.run=^TestMediaRelease$", "-test.v", "-test.timeout=30m"]
 
 FROM media-worker-deployable AS media-release-worker
 COPY --from=release-builder /clip-release.test /clip-release.test
+COPY --from=release-builder /media-resource /media-resource
 
 # Candidate NVIDIA packaging is independent of the CPU deploy critical path.
 FROM debian:bookworm-slim@sha256:3783cc01769c7b2b1b83a5c5ad96c815348e28ed7da68e2e3687004faa906251 AS nvidia-build

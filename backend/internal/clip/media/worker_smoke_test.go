@@ -16,6 +16,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 
@@ -343,35 +344,63 @@ func TestWorkerCommandHealth(t *testing.T) {
 	for _, mode := range []string{"cpu", "auto", "nvenc"} {
 		ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
 		base := filepath.Join(t.TempDir(), "health")
-		root := worker.WorkRoot(base, "smoke-cpu")
-		if err := os.MkdirAll(root, 0700); err != nil {
-			t.Fatal(err)
-		}
-		release, err := worker.LockWorkRoot(root)
-		if err != nil {
-			t.Fatal(err)
-		}
 		command := exec.CommandContext(ctx, "/media-worker", "health")
 		command.Env = []string{"MEDIA_API_URL=" + api.URL, "MEDIA_WORKER_ID=smoke-cpu", "MEDIA_WORKER_TOKEN=" + token, "MEDIA_ACCEL=" + mode, "CLIP_WORK_ROOT=" + base, "DATABASE_PATH=/unwritable/no-database", "PROVIDERS_CONFIG=/no-providers"}
-		out, err := command.CombinedOutput()
-		release()
 		t.Cleanup(cancel)
 		if mode == "nvenc" {
+			out, err := command.CombinedOutput()
 			if err == nil || !strings.Contains(string(out), "not approved") {
 				t.Fatalf("nvenc readiness: %v %s", err, out)
 			}
 			continue
 		}
-		if err != nil || !strings.Contains(string(out), `"Profile":"cpu"`) || !strings.Contains(string(out), `"Ready":true`) {
+		// A real worker must validate its capabilities and publish its own
+		// readiness. Fabricating the root lock alone must not admit health.
+		running := exec.CommandContext(ctx, "/media-worker")
+		running.Env = command.Env
+		if err := running.Start(); err != nil {
+			t.Fatal(err)
+		}
+		stoppedWorker := false
+		t.Cleanup(func() {
+			if !stoppedWorker {
+				_ = running.Process.Kill()
+				_ = running.Wait()
+			}
+		})
+		var out []byte
+		var err error
+		for ctx.Err() == nil {
+			health := exec.CommandContext(ctx, "/media-worker", "health")
+			health.Env = command.Env
+			out, err = health.CombinedOutput()
+			if err == nil {
+				break
+			}
+			time.Sleep(100 * time.Millisecond)
+		}
+		if err != nil || !strings.Contains(string(out), "\"Profile\":\"cpu\"") || !strings.Contains(string(out), "\"Ready\":true") {
 			t.Fatalf("standalone %s boot: %v %s", mode, err, out)
 		}
 		if _, err := os.Stat(worker.WorkRoot(base, "smoke-cpu-health")); !os.IsNotExist(err) {
 			t.Fatal("health workspace aliased another worker identity")
 		}
+		if err = running.Process.Signal(syscall.SIGTERM); err != nil {
+			t.Fatal(err)
+		}
+		if err = running.Wait(); err != nil {
+			t.Fatal("running worker did not drain", err)
+		}
+		stoppedWorker = true
 		stopped := exec.CommandContext(ctx, "/media-worker", "health")
 		stopped.Env = command.Env
 		if out, err = stopped.CombinedOutput(); err == nil || !strings.Contains(string(out), "not running") {
 			t.Fatalf("health ignored stopped worker: %v %s", err, out)
+		}
+		offline := exec.CommandContext(ctx, "/media-worker", "status")
+		offline.Env = command.Env
+		if out, err = offline.CombinedOutput(); err != nil || !strings.Contains(string(out), "\"Ready\":true") {
+			t.Fatalf("offline status lost real capability validation: %v %s", err, out)
 		}
 	}
 }
