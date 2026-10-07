@@ -3,10 +3,10 @@ import { createHash, randomUUID } from 'node:crypto'
 import { createReadStream, createWriteStream, readFileSync, writeFileSync, statSync, mkdirSync } from 'node:fs'
 import { execFileSync } from 'node:child_process'
 import { resolve, dirname, basename } from 'node:path'
-import { pathToFileURL } from 'node:url'
+import { pathToFileURL, fileURLToPath } from 'node:url'
 import { once } from 'node:events'
 
-const candidate = dirname(new URL(import.meta.url).pathname)
+const candidate = dirname(fileURLToPath(import.meta.url))
 const args = process.argv.slice(2)
 const option = (name, fallback) => args.includes(name) ? args[args.indexOf(name) + 1] : fallback
 const sourceRoot = resolve(option('--source-root',resolve(candidate,'../..')))
