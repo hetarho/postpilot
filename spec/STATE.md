@@ -75,7 +75,6 @@
 | T628 | Run private binary tournaments with exact metering and explicit winner publication | ARCH MODEL QUOTA GEN LANG | T622 T624 T625 T626 T627 T630 | todo |
 | T630 | Show named setting states and integrate direct AI editing and real-writing tests | ARCH EDIT THEME TMPL GUIDE MODEL | T622 T625 | todo |
 | T631 | Complete UX wiring and qualify creation settings and sixteen-entry tests | ARCH THEME POST CLIP EDIT VOICE MODEL QUOTA | T622 T623 T624 T625 T626 T627 T628 T629 T630 | todo |
-| T632 | Publish additive semantic-origin and safe inspection contracts | ARCH GEN POST MODEL | T622 T624 T625 | todo |
 | T633 | Preserve template material roles and declared stock-rule stages | ARCH TMPL GUIDE GEN | T632 T631 | todo |
 | T634 | Align post stage contracts and grounded maximum-tag behavior | ARCH GEN GUIDE POST LANG | T633 | todo |
 | T635 | Expose real prompt composition and effective request snapshots | ARCH MODEL GEN | T632 | todo |
@@ -92,11 +91,13 @@
 | T646 | Qualify origin-aware writing inspection and clean publication handoff | ARCH GEN POST MODEL THEME EXPORT MKT LANG | T636 T637 T639 T641 T642 T643 T644 T645 T631 | todo |
 
 ## next
-- Main integration and local verification are complete; the deployed backend and all remote media gates pass. Verification results are recorded below.
-- Implementation remains stopped after T626; remaining UX and prompt-engineering tasks keep their recorded prerequisites.
+- T635 is dependency-ready after T632 but overlaps claimed T630 authoring request assembly; resume after T630 commits. Editorial follow-up: doc-review ARCH.
+- T632 contracts are complete; runtime origin production, storage and request capture remain assigned to their dependent tasks.
 - T603/T604 real semantic/hardware/release qualification stays blocked; no renderer, analysis, voice or distribution activation is authorized by this merge.
 
 ## log
+- 261007 T632 done on main: additive semantic origins and safe request projections; shared38 fixtures, FE223 and owning Go suites/build/type/codegen pass; T635 waits for overlapping claimed T630 request assembly
+- 261007 T632 start on main: additive semantic-origin and safe inspection contracts; independent of claimed T630 settings/publication work; preserve unrelated edits and commit only this task before selecting another
 - 261007 final frontend correction: deterministic polling/notification clock from mount replaces the mixed real/fake timer fixture; queued and running history/picker feeds automatically refresh, retain terminal failures and stop requests; owning usePostList/usePosts/useJob11 tests, CI-mode4, ESLint/format and TypeScript build pass, with no production source change
 - 261007 remote backend verification at6a944d1f: full Go tests, format, vet, build and deployment recovery checks pass — https://github.com/hetarho/postpilot/actions/runs/37603125798/job/112732066963
 - 261007 remote deployment at6a944d1f: build and actual rollout/health/browser-CORS/R2-GET steps all pass, none skipped — https://github.com/hetarho/postpilot/actions/runs/37603126041
@@ -115,14 +116,3 @@
 - 261007 T626 done on main: editable private sources and accepted snapshots, explicit estimated reanalysis, exact binary style batches and safe publication; owning/consumer tests, builds, codegen and lint checks pass; stopped as requested without starting another task
 - 261007 user scope limited to current T626: finish implementation, verification and main commit, then stop without starting a next task
 - 261007 T626 start on main after0d49753b: editable materials, accepted revision/source snapshots, explicit reanalysis and binary style preparation; VOICE@15/MODEL@35 prompt-inspection additions remain in T632/T638/T641
-- 261007 main integration verified at033d7824: FE470/3714, whole Go and all19 local gates pass; forward149 and deployed-main features retained, original58 T590 draft files preserved separately
-- 261007 T603/T604 blocked qualification persisted in task headers and STATE for remote delivery; technical contributions retained without completing real semantic/release acceptance
-- 261007 main merge candidate ready: current origin/main authoring/XState/typography preserved; forward149 upgrades and legacy144 preservation pass, actual phone/desktop sticky preview checks pass; full CI and authorized main push pending
-- 261007 T623 done on main: visible desktop/phone hierarchy and contextual creation/settings/test return;330 impact-selected tests, final40tests, browser matrix/caret/mint and build/lint checks pass
-- 261007 T623 start on main: visible section/parent/navigation, contextual creation return and test routes; preserve unrelated planning changes
-- 261007 create-task foundation batch done: T632 depends on completed T622/T624/T625, T635 reports current helper availability; later consumers retain explicit profile/factory/tournament/integration gates; implementation waits for current T623 ownership to end
-- 261007 create-task prompt-engineering verified: T632–T646 cover all51 committed decisions; current ARCH@20 bases, STATE/dependency DAG/references/IDs/links and diff checks pass; spec lint exit0 with136 history/freshness warnings and13 editorial hints; no implementation/provider execution
-- 261007 create-task prompt-engineering done: T632–T646 cover thirteen committed SSOT deltas with bounded contracts/roles, semantic-origin production/storage/editor, safe private request inspection, tag/export/copy and controlled evaluation; this conversion did not modify preexisting task contracts, and new tasks follow concurrently updated ARCH@20
-- 261007 create-task prompt-engineering start: decompose committed requirements without duplicating existing UX implementation
-- 261007 T624 T625 T629 done on main: merged completed implementations, corrected baseline/CAS/saved-draft recovery, aligned retired consumer tests and completed combined verification
-- 261007 main sequential workflow active: dependencies and task completion records govern the next task; completed execution bookkeeping retired

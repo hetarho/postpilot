@@ -528,3 +528,14 @@ export {
 export type { ClipAnalysisPreparationResponse } from './gen/postpilot/v1/clip_source_pb'
 
 export { ClipAnalysisPreparationResponseSchema } from './gen/postpilot/v1/clip_source_pb'
+
+// Origin/request inspection contracts; reads are registered by their owning tasks.
+export * from './gen/postpilot/v1/semantic_origin_pb'
+export * from './gen/postpilot/v1/request_inspection_pb'
+export {
+  semanticOriginCategoryFromProto,
+  originReviewStateFromProto,
+  originFieldKindFromProto,
+} from './semantic-origin'
+export { requestInspectionFromProto } from './request-inspection'
+export type { RequestInspectionView, RequestInspectionStatus } from './request-inspection'

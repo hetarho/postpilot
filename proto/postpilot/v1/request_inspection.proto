@@ -1,0 +1,108 @@
+syntax = "proto3";
+
+package postpilot.v1;
+
+import "google/protobuf/timestamp.proto";
+import "postpilot/v1/provider.proto";
+import "postpilot/v1/semantic_origin.proto";
+
+option go_package = "github.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1";
+
+// Contract only: owning domains register reads after persistence/privacy fences.
+// Existing generated services gain no unimplemented methods.
+service WritingInspectionService {
+  rpc GetPostOriginReview(GetPostOriginReviewRequest) returns (GetPostOriginReviewResponse);
+  rpc GetPostRequestInspection(GetPostRequestInspectionRequest) returns (GetPostRequestInspectionResponse);
+  rpc GetWritingTestRequestInspection(GetWritingTestRequestInspectionRequest) returns (GetWritingTestRequestInspectionResponse);
+  rpc GetAuthoringRequestInspection(GetAuthoringRequestInspectionRequest) returns (GetAuthoringRequestInspectionResponse);
+}
+
+enum InspectionStatus {
+  INSPECTION_STATUS_UNSPECIFIED = 0;
+  INSPECTION_STATUS_CURRENT = 1;
+  INSPECTION_STATUS_PREPARED = 2;
+  INSPECTION_STATUS_CAPTURED = 3;
+  INSPECTION_STATUS_UNAVAILABLE = 4;
+}
+
+enum InspectionRole {
+  INSPECTION_ROLE_UNSPECIFIED = 0;
+  INSPECTION_ROLE_SYSTEM = 1;
+  INSPECTION_ROLE_USER = 2;
+  INSPECTION_ROLE_ASSISTANT = 3;
+}
+
+enum FragmentAuthorship {
+  FRAGMENT_AUTHORSHIP_UNSPECIFIED = 0;
+  FRAGMENT_AUTHORSHIP_CODE = 1;
+  FRAGMENT_AUTHORSHIP_ACCOUNT = 2;
+}
+
+message RequestFragment {
+  string id = 1;
+  InspectionRole role = 2;
+  FragmentAuthorship authorship = 3;
+  string material_role = 4;
+  string text = 5;
+  repeated string source_refs = 6;
+}
+
+message OutputContractInspection {
+  string name = 1;
+  string version = 2;
+  string schema = 3;
+}
+
+message EffectiveRequestConditions {
+  ModelRef model = 1;
+  optional int64 max_completion_tokens = 2;
+  optional string reasoning_effort = 3;
+  optional bool structured_output = 4;
+}
+
+message InspectionMeasures {
+  optional int64 characters = 1;
+  optional int64 utf8_bytes = 2;
+  optional int64 reference_token_estimate = 3;
+  optional int64 provider_prompt_tokens = 4;
+  optional int64 provider_completion_tokens = 5;
+  optional int64 provider_reasoning_tokens = 6;
+}
+
+// Safe application projection: no SDK payload, credentials, media or cost field.
+message RequestInspection {
+  uint32 version = 1;
+  InspectionStatus status = 2;
+  string stage = 3;
+  string mode = 4;
+  string prompt_version = 5;
+  string schema_version = 6;
+  repeated RequestFragment fragments = 7;
+  repeated string selected_rule_ids = 8;
+  OutputContractInspection output = 9;
+  EffectiveRequestConditions conditions = 10;
+  InspectionMeasures measures = 11;
+  google.protobuf.Timestamp issued_at = 12;
+}
+
+message GetPostOriginReviewRequest { string post_slug = 1; }
+message GetPostOriginReviewResponse { OriginReview review = 1; }
+message GetPostRequestInspectionRequest {
+  string post_slug = 1;
+  string stage = 2;
+  InspectionStatus status = 3;
+}
+message GetPostRequestInspectionResponse { RequestInspection inspection = 1; }
+message GetWritingTestRequestInspectionRequest {
+  string test_id = 1;
+  string candidate_id = 2;
+  string stage = 3;
+  InspectionStatus status = 4;
+}
+message GetWritingTestRequestInspectionResponse { RequestInspection inspection = 1; }
+message GetAuthoringRequestInspectionRequest {
+  string draft_id = 1;
+  string stage = 2;
+  InspectionStatus status = 3;
+}
+message GetAuthoringRequestInspectionResponse { RequestInspection inspection = 1; }

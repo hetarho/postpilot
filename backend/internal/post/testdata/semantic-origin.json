@@ -1,0 +1,2658 @@
+{
+  "version": 1,
+  "current": {
+    "contentRevision": 7,
+    "contentHash": "fixture-current-hash"
+  },
+  "cases": [
+    {
+      "name": "all human-readable fields",
+      "content": {
+        "title": "Cafe 😀 한글",
+        "summary": "owner meaning",
+        "tags": [
+          "tag one",
+          "tag two"
+        ],
+        "blocks": [
+          {
+            "type": "TEXT",
+            "content": "owner visual added"
+          },
+          {
+            "type": "HEADING",
+            "content": "Heading",
+            "level": 2
+          },
+          {
+            "type": "QUOTE",
+            "content": "A quote"
+          },
+          {
+            "type": "LIST",
+            "items": [
+              "first item",
+              "second item"
+            ]
+          },
+          {
+            "type": "IMAGE",
+            "file": "photo.jpg",
+            "alt": "Image alt",
+            "caption": "Image caption"
+          },
+          {
+            "type": "GALLERY",
+            "files": [
+              "a.jpg",
+              "b.jpg"
+            ],
+            "layout": "COLLAGE",
+            "alt": "Gallery alt",
+            "caption": "Gallery caption"
+          },
+          {
+            "type": "VIDEO",
+            "file": "video.mp4",
+            "alt": "Video alt",
+            "caption": "Video caption"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "id": "memo-1",
+          "kind": "memo",
+          "text": "owner meaning",
+          "available": true
+        },
+        {
+          "id": "visual-1",
+          "kind": "visual_observation",
+          "text": "visual scene",
+          "attachmentFilename": "photo.jpg",
+          "available": true
+        },
+        {
+          "id": "proposal-1",
+          "kind": "ai_proposal",
+          "text": "additional meaning",
+          "available": true
+        }
+      ],
+      "expectedSpans": [
+        {
+          "field": {
+            "kind": "title"
+          },
+          "quote": "😀",
+          "category": "owner_input",
+          "sourceRefs": [
+            "memo-1"
+          ],
+          "start": 5,
+          "end": 6,
+          "reviewState": "unreviewed"
+        },
+        {
+          "field": {
+            "kind": "summary"
+          },
+          "quote": "owner meaning",
+          "category": "owner_input",
+          "sourceRefs": [
+            "memo-1"
+          ],
+          "start": 0,
+          "end": 13,
+          "reviewState": "unreviewed"
+        },
+        {
+          "field": {
+            "kind": "tag",
+            "tagIndex": 0
+          },
+          "quote": "tag one",
+          "category": "owner_input",
+          "sourceRefs": [
+            "memo-1"
+          ],
+          "start": 0,
+          "end": 7,
+          "reviewState": "unreviewed"
+        },
+        {
+          "field": {
+            "kind": "tag",
+            "tagIndex": 1
+          },
+          "quote": "tag two",
+          "category": "owner_input",
+          "sourceRefs": [
+            "memo-1"
+          ],
+          "start": 0,
+          "end": 7,
+          "reviewState": "unreviewed"
+        },
+        {
+          "field": {
+            "kind": "block_content",
+            "blockIndex": 0
+          },
+          "quote": "owner visual added",
+          "category": "owner_input",
+          "sourceRefs": [
+            "memo-1"
+          ],
+          "start": 0,
+          "end": 18,
+          "reviewState": "unreviewed"
+        },
+        {
+          "field": {
+            "kind": "block_content",
+            "blockIndex": 1
+          },
+          "quote": "Heading",
+          "category": "owner_input",
+          "sourceRefs": [
+            "memo-1"
+          ],
+          "start": 0,
+          "end": 7,
+          "reviewState": "unreviewed"
+        },
+        {
+          "field": {
+            "kind": "block_content",
+            "blockIndex": 2
+          },
+          "quote": "A quote",
+          "category": "owner_input",
+          "sourceRefs": [
+            "memo-1"
+          ],
+          "start": 0,
+          "end": 7,
+          "reviewState": "unreviewed"
+        },
+        {
+          "field": {
+            "kind": "block_item",
+            "blockIndex": 3,
+            "itemIndex": 0
+          },
+          "quote": "first item",
+          "category": "owner_input",
+          "sourceRefs": [
+            "memo-1"
+          ],
+          "start": 0,
+          "end": 10,
+          "reviewState": "unreviewed"
+        },
+        {
+          "field": {
+            "kind": "block_item",
+            "blockIndex": 3,
+            "itemIndex": 1
+          },
+          "quote": "second item",
+          "category": "owner_input",
+          "sourceRefs": [
+            "memo-1"
+          ],
+          "start": 0,
+          "end": 11,
+          "reviewState": "unreviewed"
+        },
+        {
+          "field": {
+            "kind": "block_alt",
+            "blockIndex": 4
+          },
+          "quote": "Image alt",
+          "category": "owner_input",
+          "sourceRefs": [
+            "memo-1"
+          ],
+          "start": 0,
+          "end": 9,
+          "reviewState": "unreviewed"
+        },
+        {
+          "field": {
+            "kind": "block_caption",
+            "blockIndex": 4
+          },
+          "quote": "Image caption",
+          "category": "owner_input",
+          "sourceRefs": [
+            "memo-1"
+          ],
+          "start": 0,
+          "end": 13,
+          "reviewState": "unreviewed"
+        },
+        {
+          "field": {
+            "kind": "block_alt",
+            "blockIndex": 5
+          },
+          "quote": "Gallery alt",
+          "category": "owner_input",
+          "sourceRefs": [
+            "memo-1"
+          ],
+          "start": 0,
+          "end": 11,
+          "reviewState": "unreviewed"
+        },
+        {
+          "field": {
+            "kind": "block_caption",
+            "blockIndex": 5
+          },
+          "quote": "Gallery caption",
+          "category": "owner_input",
+          "sourceRefs": [
+            "memo-1"
+          ],
+          "start": 0,
+          "end": 15,
+          "reviewState": "unreviewed"
+        },
+        {
+          "field": {
+            "kind": "block_alt",
+            "blockIndex": 6
+          },
+          "quote": "Video alt",
+          "category": "owner_input",
+          "sourceRefs": [
+            "memo-1"
+          ],
+          "start": 0,
+          "end": 9,
+          "reviewState": "unreviewed"
+        },
+        {
+          "field": {
+            "kind": "block_caption",
+            "blockIndex": 6
+          },
+          "quote": "Video caption",
+          "category": "owner_input",
+          "sourceRefs": [
+            "memo-1"
+          ],
+          "start": 0,
+          "end": 13,
+          "reviewState": "unreviewed"
+        }
+      ],
+      "expectedIssueCodes": [],
+      "candidates": [
+        {
+          "field": {
+            "kind": "title"
+          },
+          "quote": "😀",
+          "category": "owner_input",
+          "sourceRefs": [
+            "memo-1"
+          ]
+        },
+        {
+          "field": {
+            "kind": "summary"
+          },
+          "quote": "owner meaning",
+          "category": "owner_input",
+          "sourceRefs": [
+            "memo-1"
+          ]
+        },
+        {
+          "field": {
+            "kind": "tag",
+            "tagIndex": 0
+          },
+          "quote": "tag one",
+          "category": "owner_input",
+          "sourceRefs": [
+            "memo-1"
+          ]
+        },
+        {
+          "field": {
+            "kind": "tag",
+            "tagIndex": 1
+          },
+          "quote": "tag two",
+          "category": "owner_input",
+          "sourceRefs": [
+            "memo-1"
+          ]
+        },
+        {
+          "field": {
+            "kind": "block_content",
+            "blockIndex": 0
+          },
+          "quote": "owner visual added",
+          "category": "owner_input",
+          "sourceRefs": [
+            "memo-1"
+          ]
+        },
+        {
+          "field": {
+            "kind": "block_content",
+            "blockIndex": 1
+          },
+          "quote": "Heading",
+          "category": "owner_input",
+          "sourceRefs": [
+            "memo-1"
+          ]
+        },
+        {
+          "field": {
+            "kind": "block_content",
+            "blockIndex": 2
+          },
+          "quote": "A quote",
+          "category": "owner_input",
+          "sourceRefs": [
+            "memo-1"
+          ]
+        },
+        {
+          "field": {
+            "kind": "block_item",
+            "blockIndex": 3,
+            "itemIndex": 0
+          },
+          "quote": "first item",
+          "category": "owner_input",
+          "sourceRefs": [
+            "memo-1"
+          ]
+        },
+        {
+          "field": {
+            "kind": "block_item",
+            "blockIndex": 3,
+            "itemIndex": 1
+          },
+          "quote": "second item",
+          "category": "owner_input",
+          "sourceRefs": [
+            "memo-1"
+          ]
+        },
+        {
+          "field": {
+            "kind": "block_alt",
+            "blockIndex": 4
+          },
+          "quote": "Image alt",
+          "category": "owner_input",
+          "sourceRefs": [
+            "memo-1"
+          ]
+        },
+        {
+          "field": {
+            "kind": "block_caption",
+            "blockIndex": 4
+          },
+          "quote": "Image caption",
+          "category": "owner_input",
+          "sourceRefs": [
+            "memo-1"
+          ]
+        },
+        {
+          "field": {
+            "kind": "block_alt",
+            "blockIndex": 5
+          },
+          "quote": "Gallery alt",
+          "category": "owner_input",
+          "sourceRefs": [
+            "memo-1"
+          ]
+        },
+        {
+          "field": {
+            "kind": "block_caption",
+            "blockIndex": 5
+          },
+          "quote": "Gallery caption",
+          "category": "owner_input",
+          "sourceRefs": [
+            "memo-1"
+          ]
+        },
+        {
+          "field": {
+            "kind": "block_alt",
+            "blockIndex": 6
+          },
+          "quote": "Video alt",
+          "category": "owner_input",
+          "sourceRefs": [
+            "memo-1"
+          ]
+        },
+        {
+          "field": {
+            "kind": "block_caption",
+            "blockIndex": 6
+          },
+          "quote": "Video caption",
+          "category": "owner_input",
+          "sourceRefs": [
+            "memo-1"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "astral combining and CRLF are scalar exact",
+      "content": {
+        "title": "A😀é\r\nZ",
+        "summary": "",
+        "tags": [],
+        "blocks": [
+          {
+            "type": "TEXT",
+            "content": "body"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "id": "memo-1",
+          "kind": "memo",
+          "text": "owner meaning",
+          "available": true
+        },
+        {
+          "id": "visual-1",
+          "kind": "visual_observation",
+          "text": "visual scene",
+          "attachmentFilename": "photo.jpg",
+          "available": true
+        },
+        {
+          "id": "proposal-1",
+          "kind": "ai_proposal",
+          "text": "additional meaning",
+          "available": true
+        }
+      ],
+      "expectedSpans": [
+        {
+          "field": {
+            "kind": "title"
+          },
+          "quote": "😀é\r\n",
+          "category": "owner_input",
+          "sourceRefs": [
+            "memo-1"
+          ],
+          "start": 1,
+          "end": 6,
+          "reviewState": "unreviewed"
+        }
+      ],
+      "expectedIssueCodes": [],
+      "candidates": [
+        {
+          "field": {
+            "kind": "title"
+          },
+          "quote": "😀é\r\n",
+          "category": "owner_input",
+          "sourceRefs": [
+            "memo-1"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "omitted repeated occurrence is ambiguous",
+      "content": {
+        "title": "abc abc abc",
+        "summary": "",
+        "tags": [],
+        "blocks": [
+          {
+            "type": "TEXT",
+            "content": "body"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "id": "memo-1",
+          "kind": "memo",
+          "text": "owner meaning",
+          "available": true
+        },
+        {
+          "id": "visual-1",
+          "kind": "visual_observation",
+          "text": "visual scene",
+          "attachmentFilename": "photo.jpg",
+          "available": true
+        },
+        {
+          "id": "proposal-1",
+          "kind": "ai_proposal",
+          "text": "additional meaning",
+          "available": true
+        }
+      ],
+      "expectedSpans": [],
+      "expectedIssueCodes": [
+        "ambiguous_quote"
+      ],
+      "candidates": [
+        {
+          "field": {
+            "kind": "title"
+          },
+          "quote": "abc",
+          "category": "owner_input",
+          "sourceRefs": [
+            "memo-1"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "explicit repeated occurrence",
+      "content": {
+        "title": "abc abc abc",
+        "summary": "",
+        "tags": [],
+        "blocks": [
+          {
+            "type": "TEXT",
+            "content": "body"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "id": "memo-1",
+          "kind": "memo",
+          "text": "owner meaning",
+          "available": true
+        },
+        {
+          "id": "visual-1",
+          "kind": "visual_observation",
+          "text": "visual scene",
+          "attachmentFilename": "photo.jpg",
+          "available": true
+        },
+        {
+          "id": "proposal-1",
+          "kind": "ai_proposal",
+          "text": "additional meaning",
+          "available": true
+        }
+      ],
+      "expectedSpans": [
+        {
+          "field": {
+            "kind": "title"
+          },
+          "quote": "abc",
+          "category": "owner_input",
+          "sourceRefs": [
+            "memo-1"
+          ],
+          "start": 4,
+          "end": 7,
+          "reviewState": "unreviewed"
+        }
+      ],
+      "expectedIssueCodes": [],
+      "candidates": [
+        {
+          "field": {
+            "kind": "title"
+          },
+          "quote": "abc",
+          "category": "owner_input",
+          "sourceRefs": [
+            "memo-1"
+          ],
+          "occurrence": 1
+        }
+      ]
+    },
+    {
+      "name": "occurrences use nonoverlapping matches",
+      "content": {
+        "title": "aaaaa",
+        "summary": "",
+        "tags": [],
+        "blocks": [
+          {
+            "type": "TEXT",
+            "content": "body"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "id": "memo-1",
+          "kind": "memo",
+          "text": "owner meaning",
+          "available": true
+        },
+        {
+          "id": "visual-1",
+          "kind": "visual_observation",
+          "text": "visual scene",
+          "attachmentFilename": "photo.jpg",
+          "available": true
+        },
+        {
+          "id": "proposal-1",
+          "kind": "ai_proposal",
+          "text": "additional meaning",
+          "available": true
+        }
+      ],
+      "expectedSpans": [
+        {
+          "field": {
+            "kind": "title"
+          },
+          "quote": "aa",
+          "category": "owner_input",
+          "sourceRefs": [
+            "memo-1"
+          ],
+          "start": 2,
+          "end": 4,
+          "reviewState": "unreviewed"
+        }
+      ],
+      "expectedIssueCodes": [],
+      "candidates": [
+        {
+          "field": {
+            "kind": "title"
+          },
+          "quote": "aa",
+          "category": "owner_input",
+          "sourceRefs": [
+            "memo-1"
+          ],
+          "occurrence": 1
+        }
+      ]
+    },
+    {
+      "name": "matching is case sensitive",
+      "content": {
+        "title": "cafe",
+        "summary": "",
+        "tags": [],
+        "blocks": [
+          {
+            "type": "TEXT",
+            "content": "body"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "id": "memo-1",
+          "kind": "memo",
+          "text": "owner meaning",
+          "available": true
+        },
+        {
+          "id": "visual-1",
+          "kind": "visual_observation",
+          "text": "visual scene",
+          "attachmentFilename": "photo.jpg",
+          "available": true
+        },
+        {
+          "id": "proposal-1",
+          "kind": "ai_proposal",
+          "text": "additional meaning",
+          "available": true
+        }
+      ],
+      "expectedSpans": [],
+      "expectedIssueCodes": [
+        "quote_mismatch"
+      ],
+      "candidates": [
+        {
+          "field": {
+            "kind": "title"
+          },
+          "quote": "Cafe",
+          "category": "owner_input",
+          "sourceRefs": [
+            "memo-1"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "matching does not trim whitespace",
+      "content": {
+        "title": "a  b",
+        "summary": "",
+        "tags": [],
+        "blocks": [
+          {
+            "type": "TEXT",
+            "content": "body"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "id": "memo-1",
+          "kind": "memo",
+          "text": "owner meaning",
+          "available": true
+        },
+        {
+          "id": "visual-1",
+          "kind": "visual_observation",
+          "text": "visual scene",
+          "attachmentFilename": "photo.jpg",
+          "available": true
+        },
+        {
+          "id": "proposal-1",
+          "kind": "ai_proposal",
+          "text": "additional meaning",
+          "available": true
+        }
+      ],
+      "expectedSpans": [],
+      "expectedIssueCodes": [
+        "quote_mismatch"
+      ],
+      "candidates": [
+        {
+          "field": {
+            "kind": "title"
+          },
+          "quote": "a b",
+          "category": "owner_input",
+          "sourceRefs": [
+            "memo-1"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "matching does not normalize combining text",
+      "content": {
+        "title": "é",
+        "summary": "",
+        "tags": [],
+        "blocks": [
+          {
+            "type": "TEXT",
+            "content": "body"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "id": "memo-1",
+          "kind": "memo",
+          "text": "owner meaning",
+          "available": true
+        },
+        {
+          "id": "visual-1",
+          "kind": "visual_observation",
+          "text": "visual scene",
+          "attachmentFilename": "photo.jpg",
+          "available": true
+        },
+        {
+          "id": "proposal-1",
+          "kind": "ai_proposal",
+          "text": "additional meaning",
+          "available": true
+        }
+      ],
+      "expectedSpans": [],
+      "expectedIssueCodes": [
+        "quote_mismatch"
+      ],
+      "candidates": [
+        {
+          "field": {
+            "kind": "title"
+          },
+          "quote": "é",
+          "category": "owner_input",
+          "sourceRefs": [
+            "memo-1"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "invalid occurrence -1",
+      "content": {
+        "title": "abc abc abc",
+        "summary": "",
+        "tags": [],
+        "blocks": [
+          {
+            "type": "TEXT",
+            "content": "body"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "id": "memo-1",
+          "kind": "memo",
+          "text": "owner meaning",
+          "available": true
+        },
+        {
+          "id": "visual-1",
+          "kind": "visual_observation",
+          "text": "visual scene",
+          "attachmentFilename": "photo.jpg",
+          "available": true
+        },
+        {
+          "id": "proposal-1",
+          "kind": "ai_proposal",
+          "text": "additional meaning",
+          "available": true
+        }
+      ],
+      "expectedSpans": [],
+      "expectedIssueCodes": [
+        "invalid_occurrence"
+      ],
+      "candidates": [
+        {
+          "field": {
+            "kind": "title"
+          },
+          "quote": "abc",
+          "category": "owner_input",
+          "sourceRefs": [
+            "memo-1"
+          ],
+          "occurrence": -1
+        }
+      ]
+    },
+    {
+      "name": "invalid occurrence 3",
+      "content": {
+        "title": "abc abc abc",
+        "summary": "",
+        "tags": [],
+        "blocks": [
+          {
+            "type": "TEXT",
+            "content": "body"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "id": "memo-1",
+          "kind": "memo",
+          "text": "owner meaning",
+          "available": true
+        },
+        {
+          "id": "visual-1",
+          "kind": "visual_observation",
+          "text": "visual scene",
+          "attachmentFilename": "photo.jpg",
+          "available": true
+        },
+        {
+          "id": "proposal-1",
+          "kind": "ai_proposal",
+          "text": "additional meaning",
+          "available": true
+        }
+      ],
+      "expectedSpans": [],
+      "expectedIssueCodes": [
+        "invalid_occurrence"
+      ],
+      "candidates": [
+        {
+          "field": {
+            "kind": "title"
+          },
+          "quote": "abc",
+          "category": "owner_input",
+          "sourceRefs": [
+            "memo-1"
+          ],
+          "occurrence": 3
+        }
+      ]
+    },
+    {
+      "name": "empty quote",
+      "content": {
+        "title": "abc",
+        "summary": "",
+        "tags": [],
+        "blocks": [
+          {
+            "type": "TEXT",
+            "content": "body"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "id": "memo-1",
+          "kind": "memo",
+          "text": "owner meaning",
+          "available": true
+        },
+        {
+          "id": "visual-1",
+          "kind": "visual_observation",
+          "text": "visual scene",
+          "attachmentFilename": "photo.jpg",
+          "available": true
+        },
+        {
+          "id": "proposal-1",
+          "kind": "ai_proposal",
+          "text": "additional meaning",
+          "available": true
+        }
+      ],
+      "expectedSpans": [],
+      "expectedIssueCodes": [
+        "empty_quote"
+      ],
+      "candidates": [
+        {
+          "field": {
+            "kind": "title"
+          },
+          "quote": "",
+          "category": "owner_input",
+          "sourceRefs": [
+            "memo-1"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "unsupported category",
+      "content": {
+        "title": "abc",
+        "summary": "",
+        "tags": [],
+        "blocks": [
+          {
+            "type": "TEXT",
+            "content": "body"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "id": "memo-1",
+          "kind": "memo",
+          "text": "owner meaning",
+          "available": true
+        },
+        {
+          "id": "visual-1",
+          "kind": "visual_observation",
+          "text": "visual scene",
+          "attachmentFilename": "photo.jpg",
+          "available": true
+        },
+        {
+          "id": "proposal-1",
+          "kind": "ai_proposal",
+          "text": "additional meaning",
+          "available": true
+        }
+      ],
+      "expectedSpans": [],
+      "expectedIssueCodes": [
+        "unsupported_category"
+      ],
+      "candidates": [
+        {
+          "field": {
+            "kind": "title"
+          },
+          "quote": "abc",
+          "category": "certified",
+          "sourceRefs": [
+            "memo-1"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "unknown source",
+      "content": {
+        "title": "abc",
+        "summary": "",
+        "tags": [],
+        "blocks": [
+          {
+            "type": "TEXT",
+            "content": "body"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "id": "memo-1",
+          "kind": "memo",
+          "text": "owner meaning",
+          "available": true
+        },
+        {
+          "id": "visual-1",
+          "kind": "visual_observation",
+          "text": "visual scene",
+          "attachmentFilename": "photo.jpg",
+          "available": true
+        },
+        {
+          "id": "proposal-1",
+          "kind": "ai_proposal",
+          "text": "additional meaning",
+          "available": true
+        }
+      ],
+      "expectedSpans": [],
+      "expectedIssueCodes": [
+        "unknown_source"
+      ],
+      "candidates": [
+        {
+          "field": {
+            "kind": "title"
+          },
+          "quote": "abc",
+          "category": "owner_input",
+          "sourceRefs": [
+            "unknown"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "duplicate source references",
+      "content": {
+        "title": "abc",
+        "summary": "",
+        "tags": [],
+        "blocks": [
+          {
+            "type": "TEXT",
+            "content": "body"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "id": "memo-1",
+          "kind": "memo",
+          "text": "owner meaning",
+          "available": true
+        },
+        {
+          "id": "visual-1",
+          "kind": "visual_observation",
+          "text": "visual scene",
+          "attachmentFilename": "photo.jpg",
+          "available": true
+        },
+        {
+          "id": "proposal-1",
+          "kind": "ai_proposal",
+          "text": "additional meaning",
+          "available": true
+        }
+      ],
+      "expectedSpans": [],
+      "expectedIssueCodes": [
+        "unknown_source"
+      ],
+      "candidates": [
+        {
+          "field": {
+            "kind": "title"
+          },
+          "quote": "abc",
+          "category": "owner_input",
+          "sourceRefs": [
+            "memo-1",
+            "memo-1"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "owner category requires source reference",
+      "content": {
+        "title": "abc",
+        "summary": "",
+        "tags": [],
+        "blocks": [
+          {
+            "type": "TEXT",
+            "content": "body"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "id": "memo-1",
+          "kind": "memo",
+          "text": "owner meaning",
+          "available": true
+        },
+        {
+          "id": "visual-1",
+          "kind": "visual_observation",
+          "text": "visual scene",
+          "attachmentFilename": "photo.jpg",
+          "available": true
+        },
+        {
+          "id": "proposal-1",
+          "kind": "ai_proposal",
+          "text": "additional meaning",
+          "available": true
+        }
+      ],
+      "expectedSpans": [],
+      "expectedIssueCodes": [
+        "unknown_source"
+      ],
+      "candidates": [
+        {
+          "field": {
+            "kind": "title"
+          },
+          "quote": "abc",
+          "category": "owner_input",
+          "sourceRefs": []
+        }
+      ]
+    },
+    {
+      "name": "withdrawn source is unavailable",
+      "content": {
+        "title": "abc",
+        "summary": "",
+        "tags": [],
+        "blocks": [
+          {
+            "type": "TEXT",
+            "content": "body"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "id": "memo-1",
+          "kind": "memo",
+          "text": "owner meaning",
+          "available": false
+        }
+      ],
+      "expectedSpans": [],
+      "expectedIssueCodes": [
+        "unavailable_source"
+      ],
+      "candidates": [
+        {
+          "field": {
+            "kind": "title"
+          },
+          "quote": "abc",
+          "category": "owner_input",
+          "sourceRefs": [
+            "memo-1"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "mixed meanings in one field",
+      "content": {
+        "title": "owner visual added",
+        "summary": "",
+        "tags": [],
+        "blocks": [
+          {
+            "type": "TEXT",
+            "content": "body"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "id": "memo-1",
+          "kind": "memo",
+          "text": "owner meaning",
+          "available": true
+        },
+        {
+          "id": "visual-1",
+          "kind": "visual_observation",
+          "text": "visual scene",
+          "attachmentFilename": "photo.jpg",
+          "available": true
+        },
+        {
+          "id": "proposal-1",
+          "kind": "ai_proposal",
+          "text": "additional meaning",
+          "available": true
+        }
+      ],
+      "expectedSpans": [
+        {
+          "field": {
+            "kind": "title"
+          },
+          "quote": "owner",
+          "category": "owner_input",
+          "sourceRefs": [
+            "memo-1"
+          ],
+          "start": 0,
+          "end": 5,
+          "reviewState": "unreviewed"
+        },
+        {
+          "field": {
+            "kind": "title"
+          },
+          "quote": "visual",
+          "category": "photo_interpretation",
+          "sourceRefs": [
+            "visual-1"
+          ],
+          "start": 6,
+          "end": 12,
+          "reviewState": "unreviewed"
+        },
+        {
+          "field": {
+            "kind": "title"
+          },
+          "quote": "added",
+          "category": "ai_added",
+          "sourceRefs": [],
+          "start": 13,
+          "end": 18,
+          "reviewState": "unreviewed"
+        }
+      ],
+      "expectedIssueCodes": [],
+      "candidates": [
+        {
+          "field": {
+            "kind": "title"
+          },
+          "quote": "owner",
+          "category": "owner_input",
+          "sourceRefs": [
+            "memo-1"
+          ]
+        },
+        {
+          "field": {
+            "kind": "title"
+          },
+          "quote": "visual",
+          "category": "photo_interpretation",
+          "sourceRefs": [
+            "visual-1"
+          ]
+        },
+        {
+          "field": {
+            "kind": "title"
+          },
+          "quote": "added",
+          "category": "ai_added",
+          "sourceRefs": []
+        }
+      ]
+    },
+    {
+      "name": "conflicting spans all remain unconfirmed",
+      "content": {
+        "title": "abc",
+        "summary": "",
+        "tags": [],
+        "blocks": [
+          {
+            "type": "TEXT",
+            "content": "body"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "id": "memo-1",
+          "kind": "memo",
+          "text": "owner meaning",
+          "available": true
+        },
+        {
+          "id": "visual-1",
+          "kind": "visual_observation",
+          "text": "visual scene",
+          "attachmentFilename": "photo.jpg",
+          "available": true
+        },
+        {
+          "id": "proposal-1",
+          "kind": "ai_proposal",
+          "text": "additional meaning",
+          "available": true
+        }
+      ],
+      "expectedSpans": [],
+      "expectedIssueCodes": [
+        "overlapping_span",
+        "overlapping_span"
+      ],
+      "candidates": [
+        {
+          "field": {
+            "kind": "title"
+          },
+          "quote": "abc",
+          "category": "owner_input",
+          "sourceRefs": [
+            "memo-1"
+          ]
+        },
+        {
+          "field": {
+            "kind": "title"
+          },
+          "quote": "bc",
+          "category": "ai_added",
+          "sourceRefs": []
+        }
+      ]
+    },
+    {
+      "name": "adjacent spans do not conflict",
+      "content": {
+        "title": "ab",
+        "summary": "",
+        "tags": [],
+        "blocks": [
+          {
+            "type": "TEXT",
+            "content": "body"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "id": "memo-1",
+          "kind": "memo",
+          "text": "owner meaning",
+          "available": true
+        },
+        {
+          "id": "visual-1",
+          "kind": "visual_observation",
+          "text": "visual scene",
+          "attachmentFilename": "photo.jpg",
+          "available": true
+        },
+        {
+          "id": "proposal-1",
+          "kind": "ai_proposal",
+          "text": "additional meaning",
+          "available": true
+        }
+      ],
+      "expectedSpans": [
+        {
+          "field": {
+            "kind": "title"
+          },
+          "quote": "a",
+          "category": "owner_input",
+          "sourceRefs": [
+            "memo-1"
+          ],
+          "start": 0,
+          "end": 1,
+          "reviewState": "unreviewed"
+        },
+        {
+          "field": {
+            "kind": "title"
+          },
+          "quote": "b",
+          "category": "ai_added",
+          "sourceRefs": [],
+          "start": 1,
+          "end": 2,
+          "reviewState": "unreviewed"
+        }
+      ],
+      "expectedIssueCodes": [],
+      "candidates": [
+        {
+          "field": {
+            "kind": "title"
+          },
+          "quote": "a",
+          "category": "owner_input",
+          "sourceRefs": [
+            "memo-1"
+          ]
+        },
+        {
+          "field": {
+            "kind": "title"
+          },
+          "quote": "b",
+          "category": "ai_added",
+          "sourceRefs": []
+        }
+      ]
+    },
+    {
+      "name": "filename is not human-readable field",
+      "content": {
+        "title": "Cafe 😀 한글",
+        "summary": "owner meaning",
+        "tags": [
+          "tag one",
+          "tag two"
+        ],
+        "blocks": [
+          {
+            "type": "TEXT",
+            "content": "owner visual added"
+          },
+          {
+            "type": "HEADING",
+            "content": "Heading",
+            "level": 2
+          },
+          {
+            "type": "QUOTE",
+            "content": "A quote"
+          },
+          {
+            "type": "LIST",
+            "items": [
+              "first item",
+              "second item"
+            ]
+          },
+          {
+            "type": "IMAGE",
+            "file": "photo.jpg",
+            "alt": "Image alt",
+            "caption": "Image caption"
+          },
+          {
+            "type": "GALLERY",
+            "files": [
+              "a.jpg",
+              "b.jpg"
+            ],
+            "layout": "COLLAGE",
+            "alt": "Gallery alt",
+            "caption": "Gallery caption"
+          },
+          {
+            "type": "VIDEO",
+            "file": "video.mp4",
+            "alt": "Video alt",
+            "caption": "Video caption"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "id": "memo-1",
+          "kind": "memo",
+          "text": "owner meaning",
+          "available": true
+        },
+        {
+          "id": "visual-1",
+          "kind": "visual_observation",
+          "text": "visual scene",
+          "attachmentFilename": "photo.jpg",
+          "available": true
+        },
+        {
+          "id": "proposal-1",
+          "kind": "ai_proposal",
+          "text": "additional meaning",
+          "available": true
+        }
+      ],
+      "expectedSpans": [],
+      "expectedIssueCodes": [
+        "invalid_locator"
+      ],
+      "candidates": [
+        {
+          "field": {
+            "kind": "filename",
+            "blockIndex": 4
+          },
+          "quote": "photo.jpg",
+          "category": "owner_input",
+          "sourceRefs": [
+            "memo-1"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "block content not allowed on media",
+      "content": {
+        "title": "Cafe 😀 한글",
+        "summary": "owner meaning",
+        "tags": [
+          "tag one",
+          "tag two"
+        ],
+        "blocks": [
+          {
+            "type": "TEXT",
+            "content": "owner visual added"
+          },
+          {
+            "type": "HEADING",
+            "content": "Heading",
+            "level": 2
+          },
+          {
+            "type": "QUOTE",
+            "content": "A quote"
+          },
+          {
+            "type": "LIST",
+            "items": [
+              "first item",
+              "second item"
+            ]
+          },
+          {
+            "type": "IMAGE",
+            "file": "photo.jpg",
+            "alt": "Image alt",
+            "caption": "Image caption"
+          },
+          {
+            "type": "GALLERY",
+            "files": [
+              "a.jpg",
+              "b.jpg"
+            ],
+            "layout": "COLLAGE",
+            "alt": "Gallery alt",
+            "caption": "Gallery caption"
+          },
+          {
+            "type": "VIDEO",
+            "file": "video.mp4",
+            "alt": "Video alt",
+            "caption": "Video caption"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "id": "memo-1",
+          "kind": "memo",
+          "text": "owner meaning",
+          "available": true
+        },
+        {
+          "id": "visual-1",
+          "kind": "visual_observation",
+          "text": "visual scene",
+          "attachmentFilename": "photo.jpg",
+          "available": true
+        },
+        {
+          "id": "proposal-1",
+          "kind": "ai_proposal",
+          "text": "additional meaning",
+          "available": true
+        }
+      ],
+      "expectedSpans": [],
+      "expectedIssueCodes": [
+        "invalid_locator"
+      ],
+      "candidates": [
+        {
+          "field": {
+            "kind": "block_content",
+            "blockIndex": 4
+          },
+          "quote": "Image alt",
+          "category": "owner_input",
+          "sourceRefs": [
+            "memo-1"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "extraneous locator members rejected",
+      "content": {
+        "title": "abc",
+        "summary": "",
+        "tags": [],
+        "blocks": [
+          {
+            "type": "TEXT",
+            "content": "body"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "id": "memo-1",
+          "kind": "memo",
+          "text": "owner meaning",
+          "available": true
+        },
+        {
+          "id": "visual-1",
+          "kind": "visual_observation",
+          "text": "visual scene",
+          "attachmentFilename": "photo.jpg",
+          "available": true
+        },
+        {
+          "id": "proposal-1",
+          "kind": "ai_proposal",
+          "text": "additional meaning",
+          "available": true
+        }
+      ],
+      "expectedSpans": [],
+      "expectedIssueCodes": [
+        "invalid_locator"
+      ],
+      "candidates": [
+        {
+          "field": {
+            "kind": "title",
+            "blockIndex": 0
+          },
+          "quote": "abc",
+          "category": "owner_input",
+          "sourceRefs": [
+            "memo-1"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "negative locator index",
+      "content": {
+        "title": "Cafe 😀 한글",
+        "summary": "owner meaning",
+        "tags": [
+          "tag one",
+          "tag two"
+        ],
+        "blocks": [
+          {
+            "type": "TEXT",
+            "content": "owner visual added"
+          },
+          {
+            "type": "HEADING",
+            "content": "Heading",
+            "level": 2
+          },
+          {
+            "type": "QUOTE",
+            "content": "A quote"
+          },
+          {
+            "type": "LIST",
+            "items": [
+              "first item",
+              "second item"
+            ]
+          },
+          {
+            "type": "IMAGE",
+            "file": "photo.jpg",
+            "alt": "Image alt",
+            "caption": "Image caption"
+          },
+          {
+            "type": "GALLERY",
+            "files": [
+              "a.jpg",
+              "b.jpg"
+            ],
+            "layout": "COLLAGE",
+            "alt": "Gallery alt",
+            "caption": "Gallery caption"
+          },
+          {
+            "type": "VIDEO",
+            "file": "video.mp4",
+            "alt": "Video alt",
+            "caption": "Video caption"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "id": "memo-1",
+          "kind": "memo",
+          "text": "owner meaning",
+          "available": true
+        },
+        {
+          "id": "visual-1",
+          "kind": "visual_observation",
+          "text": "visual scene",
+          "attachmentFilename": "photo.jpg",
+          "available": true
+        },
+        {
+          "id": "proposal-1",
+          "kind": "ai_proposal",
+          "text": "additional meaning",
+          "available": true
+        }
+      ],
+      "expectedSpans": [],
+      "expectedIssueCodes": [
+        "invalid_locator"
+      ],
+      "candidates": [
+        {
+          "field": {
+            "kind": "tag",
+            "tagIndex": -1
+          },
+          "quote": "tag one",
+          "category": "owner_input",
+          "sourceRefs": [
+            "memo-1"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "invalid Unicode cannot validate",
+      "content": {
+        "title": "broken",
+        "summary": "",
+        "tags": [],
+        "blocks": [
+          {
+            "type": "TEXT",
+            "content": "body"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "id": "memo-1",
+          "kind": "memo",
+          "text": "owner meaning",
+          "available": true
+        },
+        {
+          "id": "visual-1",
+          "kind": "visual_observation",
+          "text": "visual scene",
+          "attachmentFilename": "photo.jpg",
+          "available": true
+        },
+        {
+          "id": "proposal-1",
+          "kind": "ai_proposal",
+          "text": "additional meaning",
+          "available": true
+        }
+      ],
+      "expectedSpans": [],
+      "expectedIssueCodes": [
+        "invalid_text"
+      ],
+      "invalidUnicode": true,
+      "candidates": [
+        {
+          "field": {
+            "kind": "title"
+          },
+          "quote": "broken",
+          "category": "owner_input",
+          "sourceRefs": [
+            "memo-1"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "persisted scalar ranges retain independent confirmed state",
+      "content": {
+        "title": "A😀B",
+        "summary": "",
+        "tags": [],
+        "blocks": [
+          {
+            "type": "TEXT",
+            "content": "body"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "id": "memo-1",
+          "kind": "memo",
+          "text": "owner meaning",
+          "available": true
+        },
+        {
+          "id": "visual-1",
+          "kind": "visual_observation",
+          "text": "visual scene",
+          "attachmentFilename": "photo.jpg",
+          "available": true
+        },
+        {
+          "id": "proposal-1",
+          "kind": "ai_proposal",
+          "text": "additional meaning",
+          "available": true
+        }
+      ],
+      "expectedSpans": [
+        {
+          "field": {
+            "kind": "title"
+          },
+          "quote": "😀",
+          "category": "owner_input",
+          "sourceRefs": [
+            "memo-1"
+          ],
+          "start": 1,
+          "end": 2,
+          "reviewState": "confirmed"
+        }
+      ],
+      "expectedIssueCodes": [],
+      "spans": [
+        {
+          "field": {
+            "kind": "title"
+          },
+          "quote": "😀",
+          "category": "owner_input",
+          "sourceRefs": [
+            "memo-1"
+          ],
+          "start": 1,
+          "end": 2,
+          "reviewState": "confirmed"
+        }
+      ]
+    },
+    {
+      "name": "unconfirmed review state is independent of AI category",
+      "content": {
+        "title": "abc",
+        "summary": "",
+        "tags": [],
+        "blocks": [
+          {
+            "type": "TEXT",
+            "content": "body"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "id": "memo-1",
+          "kind": "memo",
+          "text": "owner meaning",
+          "available": true
+        },
+        {
+          "id": "visual-1",
+          "kind": "visual_observation",
+          "text": "visual scene",
+          "attachmentFilename": "photo.jpg",
+          "available": true
+        },
+        {
+          "id": "proposal-1",
+          "kind": "ai_proposal",
+          "text": "additional meaning",
+          "available": true
+        }
+      ],
+      "expectedSpans": [
+        {
+          "field": {
+            "kind": "title"
+          },
+          "quote": "abc",
+          "category": "ai_added",
+          "sourceRefs": [],
+          "start": 0,
+          "end": 3,
+          "reviewState": "unconfirmed"
+        }
+      ],
+      "expectedIssueCodes": [],
+      "spans": [
+        {
+          "field": {
+            "kind": "title"
+          },
+          "quote": "abc",
+          "category": "ai_added",
+          "sourceRefs": [],
+          "start": 0,
+          "end": 3,
+          "reviewState": "unconfirmed"
+        }
+      ]
+    },
+    {
+      "name": "negative persisted start",
+      "content": {
+        "title": "A😀B",
+        "summary": "",
+        "tags": [],
+        "blocks": [
+          {
+            "type": "TEXT",
+            "content": "body"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "id": "memo-1",
+          "kind": "memo",
+          "text": "owner meaning",
+          "available": true
+        },
+        {
+          "id": "visual-1",
+          "kind": "visual_observation",
+          "text": "visual scene",
+          "attachmentFilename": "photo.jpg",
+          "available": true
+        },
+        {
+          "id": "proposal-1",
+          "kind": "ai_proposal",
+          "text": "additional meaning",
+          "available": true
+        }
+      ],
+      "expectedSpans": [],
+      "expectedIssueCodes": [
+        "invalid_range"
+      ],
+      "spans": [
+        {
+          "field": {
+            "kind": "title"
+          },
+          "quote": "😀",
+          "category": "owner_input",
+          "sourceRefs": [
+            "memo-1"
+          ],
+          "start": -1,
+          "end": 1,
+          "reviewState": "unreviewed"
+        }
+      ]
+    },
+    {
+      "name": "end outside current field",
+      "content": {
+        "title": "A😀B",
+        "summary": "",
+        "tags": [],
+        "blocks": [
+          {
+            "type": "TEXT",
+            "content": "body"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "id": "memo-1",
+          "kind": "memo",
+          "text": "owner meaning",
+          "available": true
+        },
+        {
+          "id": "visual-1",
+          "kind": "visual_observation",
+          "text": "visual scene",
+          "attachmentFilename": "photo.jpg",
+          "available": true
+        },
+        {
+          "id": "proposal-1",
+          "kind": "ai_proposal",
+          "text": "additional meaning",
+          "available": true
+        }
+      ],
+      "expectedSpans": [],
+      "expectedIssueCodes": [
+        "invalid_range"
+      ],
+      "spans": [
+        {
+          "field": {
+            "kind": "title"
+          },
+          "quote": "😀",
+          "category": "owner_input",
+          "sourceRefs": [
+            "memo-1"
+          ],
+          "start": 1,
+          "end": 4,
+          "reviewState": "unreviewed"
+        }
+      ]
+    },
+    {
+      "name": "reversed persisted range",
+      "content": {
+        "title": "A😀B",
+        "summary": "",
+        "tags": [],
+        "blocks": [
+          {
+            "type": "TEXT",
+            "content": "body"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "id": "memo-1",
+          "kind": "memo",
+          "text": "owner meaning",
+          "available": true
+        },
+        {
+          "id": "visual-1",
+          "kind": "visual_observation",
+          "text": "visual scene",
+          "attachmentFilename": "photo.jpg",
+          "available": true
+        },
+        {
+          "id": "proposal-1",
+          "kind": "ai_proposal",
+          "text": "additional meaning",
+          "available": true
+        }
+      ],
+      "expectedSpans": [],
+      "expectedIssueCodes": [
+        "invalid_range"
+      ],
+      "spans": [
+        {
+          "field": {
+            "kind": "title"
+          },
+          "quote": "😀",
+          "category": "owner_input",
+          "sourceRefs": [
+            "memo-1"
+          ],
+          "start": 2,
+          "end": 1,
+          "reviewState": "unreviewed"
+        }
+      ]
+    },
+    {
+      "name": "zero-width persisted range",
+      "content": {
+        "title": "A😀B",
+        "summary": "",
+        "tags": [],
+        "blocks": [
+          {
+            "type": "TEXT",
+            "content": "body"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "id": "memo-1",
+          "kind": "memo",
+          "text": "owner meaning",
+          "available": true
+        },
+        {
+          "id": "visual-1",
+          "kind": "visual_observation",
+          "text": "visual scene",
+          "attachmentFilename": "photo.jpg",
+          "available": true
+        },
+        {
+          "id": "proposal-1",
+          "kind": "ai_proposal",
+          "text": "additional meaning",
+          "available": true
+        }
+      ],
+      "expectedSpans": [],
+      "expectedIssueCodes": [
+        "invalid_range"
+      ],
+      "spans": [
+        {
+          "field": {
+            "kind": "title"
+          },
+          "quote": "😀",
+          "category": "owner_input",
+          "sourceRefs": [
+            "memo-1"
+          ],
+          "start": 1,
+          "end": 1,
+          "reviewState": "unreviewed"
+        }
+      ]
+    },
+    {
+      "name": "UTF16 endpoint is not scalar endpoint",
+      "content": {
+        "title": "A😀B",
+        "summary": "",
+        "tags": [],
+        "blocks": [
+          {
+            "type": "TEXT",
+            "content": "body"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "id": "memo-1",
+          "kind": "memo",
+          "text": "owner meaning",
+          "available": true
+        },
+        {
+          "id": "visual-1",
+          "kind": "visual_observation",
+          "text": "visual scene",
+          "attachmentFilename": "photo.jpg",
+          "available": true
+        },
+        {
+          "id": "proposal-1",
+          "kind": "ai_proposal",
+          "text": "additional meaning",
+          "available": true
+        }
+      ],
+      "expectedSpans": [],
+      "expectedIssueCodes": [
+        "quote_mismatch"
+      ],
+      "spans": [
+        {
+          "field": {
+            "kind": "title"
+          },
+          "quote": "😀",
+          "category": "owner_input",
+          "sourceRefs": [
+            "memo-1"
+          ],
+          "start": 1,
+          "end": 3,
+          "reviewState": "unreviewed"
+        }
+      ]
+    },
+    {
+      "name": "persisted exact quote mismatch",
+      "content": {
+        "title": "A😀B",
+        "summary": "",
+        "tags": [],
+        "blocks": [
+          {
+            "type": "TEXT",
+            "content": "body"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "id": "memo-1",
+          "kind": "memo",
+          "text": "owner meaning",
+          "available": true
+        },
+        {
+          "id": "visual-1",
+          "kind": "visual_observation",
+          "text": "visual scene",
+          "attachmentFilename": "photo.jpg",
+          "available": true
+        },
+        {
+          "id": "proposal-1",
+          "kind": "ai_proposal",
+          "text": "additional meaning",
+          "available": true
+        }
+      ],
+      "expectedSpans": [],
+      "expectedIssueCodes": [
+        "quote_mismatch"
+      ],
+      "spans": [
+        {
+          "field": {
+            "kind": "title"
+          },
+          "quote": "😀",
+          "category": "owner_input",
+          "sourceRefs": [
+            "memo-1"
+          ],
+          "start": 0,
+          "end": 1,
+          "reviewState": "unreviewed"
+        }
+      ]
+    },
+    {
+      "name": "unknown review state",
+      "content": {
+        "title": "A😀B",
+        "summary": "",
+        "tags": [],
+        "blocks": [
+          {
+            "type": "TEXT",
+            "content": "body"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "id": "memo-1",
+          "kind": "memo",
+          "text": "owner meaning",
+          "available": true
+        },
+        {
+          "id": "visual-1",
+          "kind": "visual_observation",
+          "text": "visual scene",
+          "attachmentFilename": "photo.jpg",
+          "available": true
+        },
+        {
+          "id": "proposal-1",
+          "kind": "ai_proposal",
+          "text": "additional meaning",
+          "available": true
+        }
+      ],
+      "expectedSpans": [],
+      "expectedIssueCodes": [
+        "invalid_review_state"
+      ],
+      "spans": [
+        {
+          "field": {
+            "kind": "title"
+          },
+          "quote": "😀",
+          "category": "owner_input",
+          "sourceRefs": [
+            "memo-1"
+          ],
+          "start": 1,
+          "end": 2,
+          "reviewState": "guessed"
+        }
+      ]
+    },
+    {
+      "name": "stale content revision",
+      "content": {
+        "title": "A😀B",
+        "summary": "",
+        "tags": [],
+        "blocks": [
+          {
+            "type": "TEXT",
+            "content": "body"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "id": "memo-1",
+          "kind": "memo",
+          "text": "owner meaning",
+          "available": true
+        },
+        {
+          "id": "visual-1",
+          "kind": "visual_observation",
+          "text": "visual scene",
+          "attachmentFilename": "photo.jpg",
+          "available": true
+        },
+        {
+          "id": "proposal-1",
+          "kind": "ai_proposal",
+          "text": "additional meaning",
+          "available": true
+        }
+      ],
+      "expectedSpans": [],
+      "expectedIssueCodes": [
+        "stale_result"
+      ],
+      "result": {
+        "contentRevision": 6,
+        "contentHash": "fixture-current-hash"
+      },
+      "spans": [
+        {
+          "field": {
+            "kind": "title"
+          },
+          "quote": "😀",
+          "category": "owner_input",
+          "sourceRefs": [
+            "memo-1"
+          ],
+          "start": 1,
+          "end": 2,
+          "reviewState": "unreviewed"
+        }
+      ]
+    },
+    {
+      "name": "stale content hash",
+      "content": {
+        "title": "A😀B",
+        "summary": "",
+        "tags": [],
+        "blocks": [
+          {
+            "type": "TEXT",
+            "content": "body"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "id": "memo-1",
+          "kind": "memo",
+          "text": "owner meaning",
+          "available": true
+        },
+        {
+          "id": "visual-1",
+          "kind": "visual_observation",
+          "text": "visual scene",
+          "attachmentFilename": "photo.jpg",
+          "available": true
+        },
+        {
+          "id": "proposal-1",
+          "kind": "ai_proposal",
+          "text": "additional meaning",
+          "available": true
+        }
+      ],
+      "expectedSpans": [],
+      "expectedIssueCodes": [
+        "stale_result"
+      ],
+      "result": {
+        "contentRevision": 7,
+        "contentHash": "old-hash"
+      },
+      "spans": [
+        {
+          "field": {
+            "kind": "title"
+          },
+          "quote": "😀",
+          "category": "owner_input",
+          "sourceRefs": [
+            "memo-1"
+          ],
+          "start": 1,
+          "end": 2,
+          "reviewState": "unreviewed"
+        }
+      ]
+    },
+    {
+      "name": "unsupported review version",
+      "content": {
+        "title": "A😀B",
+        "summary": "",
+        "tags": [],
+        "blocks": [
+          {
+            "type": "TEXT",
+            "content": "body"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "id": "memo-1",
+          "kind": "memo",
+          "text": "owner meaning",
+          "available": true
+        },
+        {
+          "id": "visual-1",
+          "kind": "visual_observation",
+          "text": "visual scene",
+          "attachmentFilename": "photo.jpg",
+          "available": true
+        },
+        {
+          "id": "proposal-1",
+          "kind": "ai_proposal",
+          "text": "additional meaning",
+          "available": true
+        }
+      ],
+      "expectedSpans": [],
+      "expectedIssueCodes": [
+        "unsupported_version"
+      ],
+      "version": 2,
+      "spans": [
+        {
+          "field": {
+            "kind": "title"
+          },
+          "quote": "😀",
+          "category": "owner_input",
+          "sourceRefs": [
+            "memo-1"
+          ],
+          "start": 1,
+          "end": 2,
+          "reviewState": "unreviewed"
+        }
+      ]
+    },
+    {
+      "name": "duplicate frozen source IDs reject annotation catalog",
+      "content": {
+        "title": "abc",
+        "summary": "",
+        "tags": [],
+        "blocks": [
+          {
+            "type": "TEXT",
+            "content": "body"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "id": "memo-1",
+          "kind": "memo",
+          "text": "owner meaning",
+          "available": true
+        },
+        {
+          "id": "visual-1",
+          "kind": "visual_observation",
+          "text": "visual scene",
+          "attachmentFilename": "photo.jpg",
+          "available": true
+        },
+        {
+          "id": "proposal-1",
+          "kind": "ai_proposal",
+          "text": "additional meaning",
+          "available": true
+        },
+        {
+          "id": "memo-1",
+          "kind": "memo",
+          "text": "owner meaning",
+          "available": true
+        }
+      ],
+      "expectedSpans": [],
+      "expectedIssueCodes": [
+        "invalid_source_catalog"
+      ],
+      "candidates": [
+        {
+          "field": {
+            "kind": "title"
+          },
+          "quote": "abc",
+          "category": "owner_input",
+          "sourceRefs": [
+            "memo-1"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "unknown source kind rejects annotation catalog",
+      "content": {
+        "title": "abc",
+        "summary": "",
+        "tags": [],
+        "blocks": [
+          {
+            "type": "TEXT",
+            "content": "body"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "id": "memo-1",
+          "kind": "guideline",
+          "text": "owner meaning",
+          "available": true
+        }
+      ],
+      "expectedSpans": [],
+      "expectedIssueCodes": [
+        "invalid_source_catalog"
+      ],
+      "candidates": [
+        {
+          "field": {
+            "kind": "title"
+          },
+          "quote": "abc",
+          "category": "owner_input",
+          "sourceRefs": [
+            "memo-1"
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,81 @@
+syntax = "proto3";
+
+package postpilot.v1;
+
+option go_package = "github.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1";
+
+// Categories describe the source of meaning, independently of owner review.
+enum SemanticOriginCategory {
+  SEMANTIC_ORIGIN_CATEGORY_UNSPECIFIED = 0;
+  SEMANTIC_ORIGIN_CATEGORY_OWNER_INPUT = 1;
+  SEMANTIC_ORIGIN_CATEGORY_PHOTO_INTERPRETATION = 2;
+  SEMANTIC_ORIGIN_CATEGORY_AI_ADDED = 3;
+}
+
+enum OriginReviewState {
+  ORIGIN_REVIEW_STATE_UNSPECIFIED = 0;
+  ORIGIN_REVIEW_STATE_UNCONFIRMED = 1;
+  ORIGIN_REVIEW_STATE_UNREVIEWED = 2;
+  ORIGIN_REVIEW_STATE_CONFIRMED = 3;
+}
+
+enum OriginFieldKind {
+  ORIGIN_FIELD_KIND_UNSPECIFIED = 0;
+  ORIGIN_FIELD_KIND_TITLE = 1;
+  ORIGIN_FIELD_KIND_SUMMARY = 2;
+  ORIGIN_FIELD_KIND_TAG = 3;
+  ORIGIN_FIELD_KIND_BLOCK_CONTENT = 4;
+  ORIGIN_FIELD_KIND_BLOCK_ITEM = 5;
+  ORIGIN_FIELD_KIND_BLOCK_ALT = 6;
+  ORIGIN_FIELD_KIND_BLOCK_CAPTION = 7;
+}
+
+// Array indices locate current flat content; they are not persistent block IDs.
+message OriginFieldLocator {
+  OriginFieldKind kind = 1;
+  optional uint32 tag_index = 2;
+  optional uint32 block_index = 3;
+  optional uint32 item_index = 4;
+}
+
+message OriginResultIdentity {
+  int64 content_revision = 1;
+  string content_hash = 2;
+}
+
+// A result-local frozen catalog entry, never a live setting lookup or signed URL.
+message OriginSource {
+  string id = 1;
+  string kind = 2;
+  string text = 3;
+  string attachment_filename = 4;
+  bool available = 5;
+}
+
+message OriginSpan {
+  OriginFieldLocator field = 1;
+  // Half-open Unicode-scalar offsets in the named final field.
+  uint32 start = 2;
+  uint32 end = 3;
+  string quote = 4;
+  SemanticOriginCategory category = 5;
+  repeated string source_refs = 6;
+  OriginReviewState review_state = 7;
+}
+
+// Model-facing annotations resolve exact quotes in code, never guessed offsets.
+message OriginCandidate {
+  OriginFieldLocator field = 1;
+  string quote = 2;
+  optional int32 occurrence = 3;
+  SemanticOriginCategory category = 4;
+  repeated string source_refs = 5;
+}
+
+// Separate from PostContent; absent/stale information cannot invalidate content.
+message OriginReview {
+  uint32 version = 1;
+  OriginResultIdentity result = 2;
+  repeated OriginSource sources = 3;
+  repeated OriginSpan spans = 4;
+}

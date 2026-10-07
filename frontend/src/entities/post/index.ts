@@ -66,3 +66,6 @@ export {
   useListPostsQueryKey,
   usePostQueryKey,
 } from './api/post-queries'
+
+export * from './model/semantic-origin'
+export { originReviewFromProto, validateOriginReviewFromProto } from './api/semantic-origin'
