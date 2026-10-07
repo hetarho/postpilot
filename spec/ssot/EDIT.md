@@ -1,5 +1,5 @@
 # EDIT conversational configuration authoring
-> r3 | Private AI-assisted drafting of reusable writing and video settings through explicit bounded suggestions, one selected draft, conversational refinement and explicit publication.
+> r4 | Private bounded reusable-setting authoring with kind/mode-specific composition, one draft and explicit publication.
 
 ## decisions
 - EDIT-1 [o] the authoring kinds are post templates, video templates, post guidelines, video guidelines and writing styles; each session fixes one kind and belongs to one authenticated account.
@@ -48,6 +48,11 @@
 - EDIT-22 [o] owner-scoped directory summaries expose saved availability, unpublished-work state, active job and last confirmed publication without per-row conversation/content fetches; new unsaved creations are separately recoverable and are never silently mixed into the saved directory.
 - EDIT-23 [o] unified tests may consume a frozen unpublished candidate revision after domain validation without publishing it; explicit winner adoption publishes exactly the tested setting snapshot under MODEL-90, never regenerating or labeling synthetic writing as personal evidence.
 
+- EDIT-24 [o] setting authoring composes only the selected kind/mode's material, domain grammar and consumed response fields (→EDIT-1/10/16 →MODEL-93).
+  - literal/fact/instruction boundaries and template grammar meaning match ordinary composition (→TMPL-70); irrelevant kind examples and discarded output instructions do not consume context
+  - selected draft/latest request are authoritative current material; bounded recent history cannot silently undo newer direct edits
+  - optional technical inspection uses MODEL-94/95, separately from setting publication provenance and ordinary natural-language replies; it creates no call or saved setting
+
 ## flow
 - create: choose setting kind → explicit candidate suggestions with estimate → durable generation → select one → readable draft + chat → optional explicit refinement → Save → confirmed setting
 - refine: named saved item → AI editing | direct editing → one retained private draft → explicit named Save → version-matched template/guideline update | new synthetic voice copy
@@ -59,4 +64,4 @@
 - publication must tolerate an interruption between a target-domain commit and its authoring receipt without duplicate settings or later-state reversal
 
 ## chg
--
+- r4 261007 EDIT-24+ kind/mode-specific request boundaries and safe technical inspection added

@@ -1,5 +1,5 @@
 # POST posts, drafts, photos
-> r35 | A post is a slug-identified, account-owned aggregate: autosaved title + memo + the answers its template's data fields ask for, browser-converted photos and as-picked short videos in private object storage, a storyline the owner can change, block-array canonical content with an immutable machine baseline, a draft → review → finalized → published lifecycle whose last step is an owner-pasted Naver URL, and the editor that presents it.
+> r36 | Owner-controlled canonical writing with phrase-level semantic-origin review, explicit lifecycle and private effective-request inspection.
 
 ## decisions
 - POST-1 [o] a post is identified by a slug minted once on the first save and never changed ← it is the primary key and part of every photo object key, so renaming would orphan the photos
@@ -99,7 +99,12 @@
   - an answer is keyed by the label it was typed under, so assigning, changing, clearing or deleting a template touches no answer and one whose label the current template does not carry is kept and never shown ← a rename or a swap back must not destroy typed facts
   - only the current template's labels are offered and each value is ≤ `TEMPLATE_ASK_VALUE_MAX_CHARS` (→TMPL-43 →TMPL-45)
   - a required field is marked 필수, has no off switch and stays editable even when its stored answer was switched off; an optional field retains the switch and its off-state behavior (→TMPL-68)
-- POST-63 [o] `tag_count` is a per-post option beside `target_length`: an integer from `POST_TAG_COUNT_MIN` (1) to `POST_TAG_COUNT_MAX` (10), saved through the same options call and form, always shown as a number field with no enabling tick, stored nullable with NULL read as `POST_TAG_COUNT_DEFAULT` (4) so existing posts need no backfill; a value outside the range is `InvalidArgument`; generation, revision and write comparisons freeze it (→GEN-46); option changes advance no revision and demote nothing ← unlike length, a tag list has no "natural" count worth preserving: a platform tag box wants a number, and one fewer state is one fewer thing to explain
+- POST-63 [o] a draft's `tag_count` is the upper bound requested for generated tags, an integer from `POST_TAG_COUNT_MIN` (1) through `POST_TAG_COUNT_MAX` (10), default `POST_TAG_COUNT_DEFAULT` (4).
+  - show and seed it as 최대 태그 수; fewer grounded tags, including none, are valid (→GEN-46 →GEN-50)
+  - use the same options call/form beside `target_length`, as a required number field with no enabling tick; nullable storage resolves to the default without backfilling legacy posts, and an out-of-range value is InvalidArgument
+  - generation, requested tag revision and writing tests freeze the post's bound (→GEN-46); saving an option does not rewrite existing tags
+  - saving it changes no status, content revision, baseline, learning eligibility or existing tags; input revision follows POST-111 for generation-setting changes ← the option caps output rather than requiring padding
+
 - POST-64 [o] writing history shows readable work name/title fallback and update time with actual running/failed/unfinished/exportable state and the relevant continuation/export/result action. It has no docked primary New post action or article preview; new writing is reached through home/common creation navigation.
 - POST-65 [o] one search field narrows the list by title and tags: a trimmed, case-insensitive, whitespace-collapsed substring match with a leading `#` on the query ignored, and the tags that matched are named on the row, only while they matched ← a row kept by a word its title never contains otherwise looks arbitrary, while tags on every row at all times would double the list's height; the list answer carries each post's current tags (`PostSummary.tags`, the newest content revision's) so a post with no content yet is matched by its title alone
 - POST-66 [o] one status filter beside the search, on the search's own row — 전체 · 초안 · 검토 · 확정 · 발행됨, single choice, a `Listbox` labelled 상태 (→THEME-29) ← a `SegmentedControl` under the search read as a row of buttons rather than as a filter and took a row of its own on a phone
@@ -166,7 +171,29 @@
 - POST-110 [o] completed history retains generated output, manual export and any owner-entered published URL, while active/failed work offers recovery. Reduced browsing emphasis changes neither ownership, lifecycle, retention nor canonical content.
 - POST-111 [o] source-post test application is an explicit owner-scoped idempotent publication that atomically checks expected input/content revisions, compatible frozen assignments, draft/review state and absence of a conflicting ordinary job before replacing content/storyline/baseline/provenance. Material or generation-setting changes advance input revision; failure preserves both the post and champion, and a committed publication receipt prevents retry from undoing later edits.
 
+- POST-112 [o] ② makes semantic origins inspectable by meaningful phrase, including mixed origins within one sentence (→GEN-80).
+  - cover title, summary, tags and all human-readable block text, headings, list items, quotes and media alt/captions; exclude filenames, JSON keys and format enums
+  - name the three categories directly: 직접 입력 기반, 사진에서 추론, AI가 보탠 내용; selection shows relevant supplied text, visual observation or AI proposal basis
+  - origin means source of meaning, not author identity, factual certification, quality score or the machine-edit baseline
+
+- POST-113 [o] manual edits, AI revision, regeneration and compatible test application keep current text and its origin review information aligned.
+  - unchanged meaning retains its original basis; new explicit owner facts may reference their new input
+  - punctuation, style edits, moving a photo, approving a plan or finalizing the post never promote untouched AI meaning to owner input
+  - confirmation state, when shown, is distinct from original origin; ordinary save/finalize and published locks retain their existing semantics
+
+- POST-114 [o] missing, stale or unverifiable origin information is an unconfirmed review state, not a fourth origin category.
+  - legacy content and failed annotations remain readable/editable/exportable under normal lifecycle rules; never infer historical origins from the current memo or edited sources
+  - show only evidence actually tied to that result; source changes/removal cannot silently retarget a phrase to newer or unrelated material
+  - known withdrawn/deleted attachments are unavailable evidence and follow existing deletion rules; owner/post/account deletion removes associated private origin/request data
+  - preserve only result-related frozen evidence within existing owner privacy/retention contracts, not general source version history
+
+- POST-115 [o] a named optional technical inspection shows the owner's effective writing inputs and request composition under MODEL-94/95.
+  - show applicable and excluded rules with reasons, ordered material/instructions, output contract and effective model conditions for the selected stage
+  - distinguish current configuration, a prepared preview and an actually issued captured request; absent old records are unavailable, never reconstructed as actual execution
+  - opening/reading inspection changes no content, setting, revision or job and costs no credit
+
 ## flow
+- origin review: current canonical content + matching result evidence → phrase highlights/legend → select meaning → source detail | unconfirmed explanation → optional manual/AI refinement under existing action gates
 - new post: `/posts/new` (voice picker seeded with the 기본, or 말투 없음) → type or pick photos → `mint()` → slug → `/posts/<slug>` (replace) → autosave 1 s after each pause
 - photo · video: select(gate) → (photo: decode → resize/encode | video: read metadata) → CreateUpload → PUT to storage → ConfirmUpload → cache patch → next GetPost supplies the presigned view URL
 - lifecycle: draft →(storyline job) draft holding a storyline, on ② →(machine result) review →(FinalizePost) finalized →(changed content save | machine result) review | →(paste Naver URL) published →(clear URL) finalized
@@ -184,4 +211,4 @@
 - ops: the production bucket needs a CORS rule allowing PUT/GET/HEAD from the FE origin (DEPLOY.md); MinIO in `docker-compose.yml` serves local development
 
 ## chg
--
+- r36 261007 POST-63✎ POST-112+ POST-113+ POST-114+ POST-115+ requested tag number→maximum tag number; unspecified option revision→unchanged content revision with POST-111 input revision; phrase origins and source lifecycle added

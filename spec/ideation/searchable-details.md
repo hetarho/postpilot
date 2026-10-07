@@ -2,6 +2,8 @@
 > st:open@261007 | Help an owner's posts attract search readers by relating search demand to observed inflow, with repeatable low-effort input and a writing policy beyond tag selection
 
 ## vision
+- [o] Next priority on 261007: improve post quality first; the owner will publish and observe views, then revisit search/traffic hypotheses after the trial
+- [o] Expand the current exploration into [prompt engineering](prompt-engineering.md), including prompt visibility, composition, quality-oriented changes and later empirical evaluation
 - [o] Core value: more readers arriving at the owner's posts from search; two separate questions matter: how much a query is searched, and whether that query brings readers to the owner's posts
 - [o] The owner's observed queries join a place or shop to a branch, dish, price or other specific detail (구리 양촌리, 스시메이진 구리, 양촌리오리가격, 이디야 아침 메뉴); broad 분야 phrases did not describe these arrivals
 - [o] Available owner data: daily, weekly and monthly inflow queries and search-channel shares, including post-level statistics; the earlier blog-wide-only assumption is superseded
@@ -50,7 +52,7 @@
 - [?] reopen reading the owner's own statistics through a browser extension on their login, which 블덱스 ships (extension updated 2026-07-05, about 3,000 users: 유입 검색어 and 유입 경로 ranks, popular posts, an AI monthly report with next month's posts and a 4-week publishing plan; free shows the latest report only, premium is KRW 47,000 per 30 days; the extension came after 블덱스, once the most-used 블로그 지수 site, ended its index service on 2025-12-04 because it could no longer read the values from Naver, so the extension is new and unproven) ← dropped above for PUB-47 and Naver's terms on automated access; a competitor shipping it changes neither
 - [?] 크리에이터 어드바이저's trend screen (popular 유입 검색어 within the blog's 주제) handed over the same way, so a new post has material beyond the blog's own past; its own terms still to check
 - [?] the post's own material (template answers, memo) states the searched-for details (name, branch, area, menu, price) plainly and early
-- [?] Naver's published ranking principles (C-Rank topic consistency, D.I.A.+ first-hand experience and completeness) as code-owned rules beside GEN-49
+- [?] Naver's published principles as common writing guidance beside GEN-49: topic-specific source trust and document-level intent, experience and information quality; the current official help describes C-Rank and D.I.A., while D.I.A.+ is also covered by historical technical material
 - [?] Owner-provided Creator Advisor screens as richer evidence, without server-side search crawling
   - official [query statistics](https://help.naver.com/service/23038/contents/14625?lang=ko&osType=MOBILE) describes exposure, inflow, their ratio, average exposure position, overall search-count trends and the owner's reached posts
   - official [post statistics](https://help.naver.com/service/23038/contents/14605?lang=ko&osType=MOBILE) describes per-post exposure/inflow, average exposure position and query-specific trends
@@ -72,7 +74,7 @@
   - link to the actual published text/revision when available; the product's generated draft may differ from the published post
 - [?] Ratios retain their source denominator; never calculate search inflows as blog views multiplied by an inflow share
   - [Blog inflow analysis](https://help.naver.com/service/5593/contents/15330?lang=ko&osType=COMMONOS) defines path shares over total inflows
-  - [Blog views](https://help.naver.com/service/5593/contents/15323?lang=ko&osType=PC) include non-post pages, so blog views need not equal the sum of post views
+  - [Blog views](https://help.naver.com/service/5593/contents/15323?lang=ko&osType=COMMONOS) include non-post pages, so blog views need not equal the sum of post views
   - derive a count only from a compatible reported total and denominator, and label a rounded-share result as an estimate
 - [?] Compare consistent periods, scope and search channels; daily/weekly/monthly observations are alternative views of overlapping events, not additive input
   - repeated uploads of the same observation must not create additional inflows
@@ -133,11 +135,33 @@
   - evaluate guidance on repeated comparable published posts, with publication age, topic, demand and channel context; use search arrivals as the main outcome when actual compatible counts exist
   - observed before/after changes do not establish that a prompt, title or tag caused them; require stronger repeated/comparative evidence before promoting a common writing rule
   - keep the existing monthly contribution-credit idea separate from whether the owner receives useful feedback; rewards can distort what gets submitted
+- [?] Research refresh on 261007: [source review and product hypotheses](../../docs/research/naver-blog-seo-2026-10-07.md); findings are evidence for the next product choice, not adoption of new writing or data-use policies
+  - current [ranking help](https://help.naver.com/service/5626/contents/22925?lang=ko&osType=COMMONOS) and [D.I.A. help](https://help.naver.com/service/5626/contents/22926?lang=ko&osType=COMMONOS) describe changing, multi-factor source/document evaluation; they do not publish repeat-count, length, image-count or frequency formulas
+  - the primary [260526 content guide](https://m.blog.naver.com/naver_search/224296857688) and [260604 practical guide](https://m.blog.naver.com/naver_search/224305800678) were read from public mobile article bodies; emphasis is actual experience, sustained topic expertise, transparency, usable structure and current information
+  - the practical guide supports collecting the reader's situation, experienced process, alternatives/choice reasons, actual results and relevant media before writing; this strengthens material collection as a product candidate
+  - the content guide's AI FAQ rejects an automatic penalty solely for tool use and recommends creator review/experience; [blog restrictions](https://help.naver.com/service/5626/contents/22928?lang=ko&osType=COMMONOS) still cover mass generation, keyword abuse and fabricated firsthand reviews
+  - absence of an automatic penalty solely for AI-assisted authoring is not an exposure guarantee or authorization to reuse platform data; [AI media labels](https://help.naver.com/service/30016/contents/24136?lang=ko&osType=COMMONOS) also do not certify content quality
+  - historical official image-count advice and current feature input limits do not establish a current SEO quota; title front-loading remains a readability/truncation hypothesis rather than a proven ranking multiplier
+  - practitioner evidence includes single-post observations, simultaneous multi-factor changes and illustrative numbers; no reviewed study establishes universal numeric rules, and this does not prove those factors have no effect
+  - [SNS Office's comparison](https://sns-office.com/blog/naver-automation-seo-experiment) explicitly labels its figures illustrative; [Naver Analytics installation help](https://help.naver.com/service/9864/contents/15303?lang=ko&osType=PC) conflicts with unexplained hosted-blog analytics methods in another purported study
+  - [hosted-blog guidance](https://help.naver.com/service/30010/contents/17597?lang=ko&osType=PC) says Webmaster Tools linkage is unnecessary; external-site HTML, sitemap and collection-request procedures must not become a hosted-blog owner workflow
+  - [251124 mixed-source ranking notice](https://m.blog.naver.com/naver_search/224083616020) announces an A/B test; later private-tool samples do not establish a universal rollout, and historical SmartBlock advice is not a fixed current search layout
+  - [260406 related-query notice](https://m.blog.naver.com/naver_search/224242858950) announces termination after 260430; older discovery instructions using that surface need rechecking
+  - organic search exposure, AI Briefing citation, app Homefeed recommendation and actual arrivals have different meanings; the official guide links good organic results with citation likelihood but does not equate citation with clicks
+  - current Creator Advisor help supports examining demand trend, owner exposure and owner inflow separately; unavailable rows, normalized trends and average service-specific positions retain their documented limits
+- [?] Three first-benefit candidates after the research refresh
+  | candidate | owner benefit | evidence/input boundary |
+  |---|---|---|
+  | Material and writing help before statistics | Gather supported details and align title/body/tags with a reader's question | Common editorial guidance; does not require traffic data or predict rank |
+  | Personal observations for the next write | Turn observed price/menu/access intent into relevant questions and conditional guidance | Needs comparable owner evidence; past queries do not supply current facts |
+  | Existing-post diagnosis | Separate demand, visibility and click/arrival changes, then suggest a bounded action | Needs compatible detailed statistics; published-post editing remains a separate choice |
 
 ## shape
+- [o] Immediate sequence: inspect and improve writing prompts → owner publishes and observes views → revisit the search-growth proposal; statistics ingestion is not the first step of this trial
 - [o] Current foundation: the phrase pipeline and consumers are retired; grounded tag selection remains under GEN-50
 - [?] Proposed core flow: owner provides a completed monthly overview → source/period/scope and uncertain values confirmed → observed queries and intents summarized → one actionable finding → optional query/post detail → preview relevant guidance for the next write → later comparable observation checks the outcome
-- [?] Proposed first benefit: choose better title/content/tag emphasis for the next post, with a small evidence report; existing-post diagnosis is an alternative priority awaiting the owner
+- [o] Near-term first benefit on 261007: improve title/content/tag quality through prompt engineering before requiring new statistics input; the owner will publish and observe views before revisiting diagnosis/personalization
+- [?] Research-backed alternative: common material/writing help before any statistics upload, followed by optional personal evidence; choose its priority against the existing statistics-first proposal
 - [?] Proposed v1 includes partial screenshots, explicit missing evidence, exact attribution when supplied and conditional account guidance; demand information appears only when a suitable source is supplied/adopted
 - [?] Broader collection, automatic ingestion, pooled common-rule promotion, contribution payout changes and published-post editing remain unselected; do not require them to deliver initial owner value
 
@@ -158,7 +182,7 @@
 - what the owner consents to when handing 유입 검색어 over for pooling
 - learning how writing leads to inflow needs each keyword tied to the post it reached; whether a blog-wide screenshot is enough or a per-post one is needed
 - whether an owner will keep feeding 유입 검색어, and what makes it low-effort enough to keep happening
-- first user benefit: next-post guidance, existing-post diagnosis or equal priority; an optional question was sent on 261007 and remains unanswered
+- which concrete writing-quality problems and representative material should enter the first prompt-engineering trial; quality-first publication/observation is selected on 261007
 - acceptable input habit: monthly one/two screens, weekly selected details or automatic-only; an optional question was sent on 261007 and remains unanswered
 - inspect an actual owner statistics flow to establish screenshot coverage, selectable text, per-post identity and count/share/trend units; official help does not establish capture effort
 - whether Creator Advisor gives enough demand context for v1, or monthly search-count evidence is essential; excluded search-demand policy remains current until updated
@@ -168,3 +192,5 @@
 - whether automatic ingestion is a hard adoption requirement; no integration or technical mechanism is chosen here
 - intended use conditions for each external data source, and account-local versus cross-account reuse consent, deletion and screenshot retention
 - how to test improvement in comparable posts without mistaking seasonality, publishing frequency, blog reputation or search-layout changes for a writing-policy effect
+- whether v1 starts with grounded material/writing help even without statistics, or requires personal observations to deliver its first useful result
+- which common editorial checks belong beside the current GEN-49/GEN-50 policies; the research proposes no new numeric SEO thresholds or exposure score

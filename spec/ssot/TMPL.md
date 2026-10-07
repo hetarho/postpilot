@@ -1,5 +1,5 @@
 # TMPL post templates (템플릿)
-> r24 | A reusable, account-owned document that decides the shape of a post — its optional title form, fixed text, photo positions (one photo or a suggested group), what repeats per photo group, where prose goes and what each place is about — written in a small tag grammar the builder hides and `원문` shows, authorable by hand, by the builder, by an outside AI handed the format guide or by the 글 작성 모델 on the owner's request, previewed live beside the composition, resolved at enqueue with the facts its author-facing fields ask the post's author for and frozen there, its photo places left for the writer to fill along the storyline, holding the post's form alone, and never learned from.
+> r25 | Owner-scoped post forms with explicit literal, instruction and supplied-fact boundaries and maximum tag seeds.
 
 ## decisions
 - TMPL-1 [o] a template decides the form of a post; three authored axes stand beside each other and each owns one question — the voice decides how sentences sound (VOICE), the template what form the post has and what each of its places is about, a guideline what kind of writing is wanted (GUIDE); a post combines at most one voice and at most one template ← prose about shape must be re-derived by the model every run, cannot require a literal line, and cannot bind output to the attachments
@@ -56,16 +56,20 @@
   - the rendered body marks each place with its `count` as a suggested group size, and the writer chooses which attached photos stand there, and whether alone, as one group or as several, from the storyline it follows (→GEN-67 →GEN-70), by what the section around the place is about
   - a `<repeat each="photo">` renders once, marked as a part the writer repeats once per photo group its storyline gives there
   - zero photos drops every repeat block whole including its literals
-  - rendering keeps literals and `write` tags as written
+  - rendering preserves literal text and writing-instruction meaning in distinguishable roles (→TMPL-70)
   - nothing expands per photo, so no expansion bound exists
+  - photo placement follows section meaning and GEN-82; upload/capture order establishes no visit or event chronology
+
 - TMPL-22 [o] a run's output is taken as the model wrote it: its single photos and photo groups pass the attachment filter like any other block (→GEN-2 →GEN-78), and literal fidelity, section order and whether every photo token came back are neither verified nor repaired — no deviation fails, retries or discards a usable generation
 - TMPL-24 [o] /templates is the named writing-settings directory with shared one-target rows showing name, description, saved usability and EDIT-22 unpublished/job state; post count is operational metadata rather than draft status. Creation starts explicitly without shipped seed templates, and unified tests can prepare/adopt template candidates.
 - TMPL-25 [o] saved template detail first shows the named saved structure and state, then offers AI editing or direct editing against one captured baseline under EDIT-14/21. New creation and explicit Save retain the domain name/description/composition and number/link rules; unsaved changes are retained or explicitly discarded, and confirmed publication supplies the new clean baseline.
 - TMPL-26 [o] the composition is authored through one control in two modes over the same `body` string: the block builder (default) and `원문`, a plain text view of the stored body with the title area as its own field above it, the 형식 안내 staying body-only (→TMPL-41)
-  - both edit the one draft behind the one 저장, switching is lossless because neither holds a second representation (→TMPL-2), and grammar syntax is rendered to the user inside `원문` only — nowhere else in the product ← the builder is the way a person authors a shape, but the grammar is also the format an outside AI can be told to write (→TMPL-41), and such a body needs a place to go
+  - both edit the one draft behind the one 저장, switching is lossless because neither holds a second representation (→TMPL-2); ordinary composition shows grammar only inside `원문`, with the explicit technical-inspection exception below ← the builder supports ordinary authoring while stored grammar also accepts outside-AI output (→TMPL-41)
   - one row is one block, collapsed to its kind name (→TMPL-36) and a one-line summary of its own text so the rows read as the outline of the post
   - a `repeat`'s children are a nested list beneath it, always visible
   - the title area and the body are two compositions, each with at most one row expanded at a time, whose fields and delete edit in place
+  - explicitly opened technical inspection under MODEL-94/95 may display grammar for post requests and setting authoring (→POST-115 →EDIT-24); ordinary authoring replies and prose previews remain free of raw syntax
+
 - TMPL-27 [o] each of the two compositions carries its own always-visible add toolbar, which inserts at that composition's current position — after the row last touched, and inside a `repeat` when that is where the position is — with that position drawn in the list before the click
   - an aim whose block is gone resolves to the end, where the marker is drawn too ← one toolbar serves every position only while the position it inserts at is visible
   - only the body's toolbar is sticky to the top ← two sticky bars would stack under the header, and a title area is a line or two long
@@ -125,10 +129,14 @@
   - a field with a value renders the verbatim flavor as literal text and the AI가 쓰는 글 flavor as what the position is about with the value beside it as that position's facts
   - the frozen copy rules apply as to the body, so editing an answer after a start cannot reach the run (→TMPL-11 →TMPL-14)
 - TMPL-47 [o] a template carries two optional generation numbers beside its shape, `target_length` and `tag_count`, each saying what the posts this template shapes usually want and each meaning 의견 없음 when left unset; they are seeds for the post's own options and nothing else — no prompt, payload, freeze, snapshot or experiment hash reads a template's number, and a run freezes the post's values (→GEN-5 →GEN-46) ← the two numbers belong to the shape that decides them, but a second place a prompt could read a length from would give one run two answers to one question
+  - tag_count seeds the maximum from POST-63, not an exact output count; quality selection stays under GEN-50
+
 - TMPL-48 [o] assigning a template to a post copies each number the template has set onto the post's own option in the same save, overwriting whatever stood there; a number the template leaves unset is not copied and the post keeps its own; clearing the template to 없음, renaming, editing or deleting the template copies nothing and the post keeps the values it last received; a value edited afterwards is an ordinary option edit and the template is never consulted again until it is assigned once more ← assigning is an explicit act whose effect must be visible at once, and remembering per post which number the author had touched would be invisible state no screen could explain (→POST-26 →POST-70)
-- TMPL-49 [o] the two numbers are edited on the template screen above the composition beside 이름 and 설명, each behind its own 사용 tick that clears the value when it is off (목표 글자 수 seeding `POST_TARGET_LENGTH_DEFAULT` and 태그 수 `POST_TAG_COUNT_DEFAULT` when ticked with nothing typed this session, →POST-20) ← a template's count has a real 의견 없음 the post's never has
+- TMPL-49 [o] the two numbers are edited on the template screen above the composition beside 이름 and 설명, each behind its own 사용 tick that clears the value when it is off (목표 글자 수 seeding `POST_TARGET_LENGTH_DEFAULT` and 최대 태그 수 `POST_TAG_COUNT_DEFAULT` when ticked with nothing typed this session, →POST-20) ← a template's count has a real 의견 없음 the post's never has
   - they belong to the one draft behind the one 저장 (→TMPL-25) and make it dirty like any other field
   - each accepts only the range the server enforces (100 … 10,000 characters, `POST_TAG_COUNT_MIN` … `POST_TAG_COUNT_MAX` tags →TMPL-6), while the builder, `원문`, the format guide and the parser neither show nor carry them (they are not `body` →TMPL-2 →TMPL-41)
+  - the tag option is labeled as an upper bound; fewer tags do not invalidate a generated post
+
 - TMPL-46 [o] a typed value is authored fact, never an instruction: it is fenced as data inside the rendered body and cannot override the template's own instruction or the target language (→TMPL-13), and it joins the material the writer is allowed to state facts from (→GEN-16); nothing about a value is learned, suggested or model-written and the observe stage never receives one (TMPL-16 stands)
 - TMPL-50 [o] a template carries an optional title area written in the same grammar as the body, admitting literal text, `<write>` and `<ask>` only, parsed and refused by the same rules (→TMPL-7 →TMPL-20) ← a photo position or a repeat has no meaning in a title, and the three that remain already express every title form asked for
 - TMPL-51 [o] the title area freezes at enqueue with the body and travels the revise path the same way, where it binds only a request that asks to change the title and every other revision keeps the title as it stands; it adds no picker, no second entity and no second freeze ← one template is then the complete design of one post, and a title the owner edited away from the form stays theirs until they ask
@@ -156,7 +164,13 @@
   - template-factor tests validate every frozen candidate's required fields against the same explicitly supplied facts; reject missing material before test admission and never invent an answer or skip a contender
   - revision of existing content keeps its existing exemption; an admitted job freezes the rendered answer and later template edits do not alter it
 - TMPL-69 [o] post templates share EDIT's named creation/editing/state recovery and explicit publication. Actual-writing tests can compare owned templates or2/4/8/16 validated unsaved candidates; a champion is saved explicitly with existing template number/scope constraints and no generation on read/mode switch.
+- TMPL-70 [o] literal prose, writing instructions and supplied facts remain distinguishable after template rendering and prompt composition.
+  - authored escaped markup stays literal; text inside a supplied answer cannot close its material boundary or become an instruction
+  - generated examples and empty fields supply no owner experience; explicit field values are facts only within their own scope (→TMPL-46 →GEN-80)
+  - inspection preserves known source/role without changing saved grammar, field bounds or required-answer gates; no paid literal-fidelity repair is introduced
+
 ## flow
+- render evidence: authored literal/write/ask roles → explicit answers → role-preserving frozen brief → stage composition → current-result source review without treating template shape as visit facts
 - author: `/templates` → `새 템플릿` → `/templates/new`(toolbar names: AI가 쓰는 글 · 고정 문구 · 사진(n장) · 사진마다 반복 → rows(데이터 받기 → 제목) → complete blocks → body) → 저장(parse ok → row | TEMPLATE_PARSE_FAILED line + reason)
 - import: `/templates/new` → `원문` → `형식 안내 복사` → outside AI writes a body → paste(parse ok → outline in builder | error line + reason, 저장 disabled) → 저장 → same run/delete paths as any body
 - assign: post picks template → each set number copied onto the post's option in the assigning save(unset → post's own value kept) → 없음 or a later template edit copies nothing
@@ -174,4 +188,4 @@
 - contract: `proto/postpilot/v1/template.proto`
 
 ## chg
--
+- r25 261007 TMPL-21✎ TMPL-26✎ TMPL-47✎ TMPL-49✎ TMPL-70+ unchanged literal/write rendering→role-preserving rendering; unbound photo placement→explicit chronology prohibition; ordinary-only raw grammar view→named technical-inspection exception; tag count seeds/labels→maximum tag seeds/labels

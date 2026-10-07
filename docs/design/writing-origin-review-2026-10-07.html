@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>출처가 보이는 글 다듬기 — 아이디에이션 예시</title>
+  <style>
+    @font-face { font-family:"Prototype Wanted"; src:url("../../frontend/public/fonts/clip/WantedSansVariable.ttf") format("truetype"); font-weight:100 900; font-display:block; }
+    :root { color-scheme: light; --ink:#25312d; --muted:#606e66; --line:#d9e1d9; --input:#e7f0ff; --input-ink:#174b93; --photo:#e3f3ed; --photo-ink:#21644e; --added:#fff0d5; --added-ink:#815414; }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:"Prototype Wanted","Noto Sans CJK KR","Noto Sans KR",sans-serif; background:#f5f7f2; color:var(--ink); }
+    main { max-width:1180px; margin:auto; padding:44px 40px; }
+    .eyebrow { font-size:13px; color:var(--muted); letter-spacing:.03em; }
+    h1 { font-size:30px; font-weight:650; letter-spacing:-.04em; margin:12px 0 10px; }
+    .intro { color:var(--muted); margin:0; line-height:1.7; font-size:15px; }
+    .toolbar { display:flex; align-items:center; flex-wrap:wrap; gap:12px; margin:26px 0 20px; }
+    .legend { display:flex; flex-wrap:wrap; gap:10px; }
+    .pill { padding:8px 12px; border-radius:20px; font-size:13px; font-weight:600; }
+    .input { background:var(--input); color:var(--input-ink); }
+    .photo { background:var(--photo); color:var(--photo-ink); }
+    .added { background:var(--added); color:var(--added-ink); }
+    .toggle { margin-left:auto; display:flex; align-items:center; gap:8px; font-size:14px; cursor:pointer; }
+    input { width:17px; height:17px; accent-color:#426654; }
+    .workspace { display:grid; grid-template-columns:minmax(0,1.8fr) minmax(0,1fr); background:white; border-radius:16px; overflow:hidden; }
+    article { padding:36px 36px 32px; }
+    h2 { font-size:23px; letter-spacing:-.035em; margin:0 0 26px; font-weight:650; }
+    .prose { font-size:20px; line-height:2.1; letter-spacing:-.018em; margin:0; }
+    .piece { appearance:none; border:0; border-radius:4px; padding:2px 4px; font:inherit; line-height:inherit; cursor:pointer; box-decoration-break:clone; -webkit-box-decoration-break:clone; text-align:left; }
+    .piece:focus-visible { outline:3px solid #293f34; outline-offset:3px; }
+    .piece[aria-pressed="true"] { box-shadow:inset 0 -2px currentColor; }
+    .hint { margin-top:26px; font-size:13px; color:var(--muted); line-height:1.7; }
+    aside { border-left:1px solid var(--line); background:#fafbf8; padding:34px 26px; }
+    .detail-label { font-size:13px; margin-bottom:14px; }
+    .detail-text { font-size:18px; line-height:1.8; margin:12px 0 16px; font-weight:600; }
+    .detail-body { font-size:14px; color:var(--muted); line-height:1.85; white-space:pre-line; }
+    .source { border-top:1px solid var(--line); margin-top:24px; padding-top:20px; }
+    .source h3 { font-size:13px; font-weight:600; margin:0 0 9px; }
+    .source p { font-size:14px; line-height:1.8; margin:0; }
+    .order { margin-top:24px; padding:22px 0; border-top:1px solid var(--line); display:grid; grid-template-columns:1.15fr 1fr; gap:28px; }
+    .order h3 { margin:0 0 10px; font-size:14px; }
+    .sequence { font-size:15px; line-height:1.9; }
+    .order p { margin:0; font-size:14px; line-height:1.9; color:var(--muted); }
+    footer { font-size:12px; color:var(--muted); line-height:1.8; margin-top:14px; }
+    .hide-origins .piece { background:transparent; color:var(--ink); box-shadow:none; }
+    @media(max-width:760px) { main { padding:26px 18px; } h1 { font-size:25px; } .workspace { grid-template-columns:1fr; } article { padding:28px 22px; } aside { border-left:0; border-top:1px solid var(--line); padding:25px 22px; } .prose { font-size:18px; } .toggle { margin-left:0; } .order { grid-template-columns:1fr; gap:18px; } }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="eyebrow">POSTPILOT · 아이디에이션용 예시 · 실제 모델 결과가 아닙니다</div>
+    <h1>AI는 속도를, 글의 주도권은 나에게.</h1>
+    <p class="intro">무엇을 바탕으로 쓴 내용인지 보면서 내 글을 다듬는 방식입니다.<br>색은 근거의 출처를 나타냅니다. 사진의 해석과 AI가 보탠 내용은 살펴볼 수 있습니다.</p>
+    <div class="toolbar">
+      <div class="legend" aria-label="출처 범례">
+        <span class="pill input">① 직접 입력 기반</span>
+        <span class="pill photo">② 사진에서 추론</span>
+        <span class="pill added">③ AI가 보탠 내용</span>
+      </div>
+      <label class="toggle"><input id="origin-toggle" type="checkbox" checked>출처 보기</label>
+    </div>
+    <div class="workspace">
+      <article aria-label="출처 표시 원고 예시">
+        <h2>딸기 디저트 후기</h2>
+        <p class="prose"><button class="piece photo" data-piece="photo" aria-pressed="false">붉은 토핑이 올라간</button> <button class="piece input" data-piece="input" aria-pressed="false">딸기 디저트를 먹었어요. 맛있었어요.</button> <button class="piece added" data-piece="added" aria-pressed="true">달콤한 딸기향이 입안에 오래 맴돌았어요.</button></p>
+        <p class="hint">같은 문장 안에서도 근거가 다른 부분을 구분하는 예시입니다.<br>표현을 누르거나 키보드로 선택하면 오른쪽에서 근거를 볼 수 있습니다.</p>
+      </article>
+      <aside aria-label="선택한 표현의 근거">
+        <div id="detail-label" class="detail-label"><span class="pill added">③ AI가 보탠 내용</span></div>
+        <p id="detail-text" class="detail-text">달콤한 딸기향이 입안에 오래 맴돌았어요.</p>
+        <div id="detail-body" class="detail-body" aria-live="polite">입력에는 ‘맛있었다’만 있습니다.
+단맛·딸기향·지속되는 느낌은 AI가 더한 표현의 예입니다. 실제 느낌과 맞는지 살펴보고 쓸 수 있습니다.</div>
+        <div class="source"><h3>이 예시의 사용자 입력</h3><p>“딸기 디저트를 먹었고 맛있었다.”</p></div>
+      </aside>
+    </div>
+    <div class="order">
+      <div><h3>사진 업로드 순서</h3><div class="sequence">실내 × 3 → 음식 × 3 → 실내 × 1</div></div>
+      <div><h3>이 순서로 사건을 만들지 않기</h3><p>마지막 실내 사진만으로 ‘식사 후 자리를 옮겼다’고 쓰지 않습니다. 사건의 순서·장소 이동은 사용자가 알려준 정보에서 확인하는 방향입니다.</p></div>
+    </div>
+    <footer>구절 표시와 상세 근거 보기의 검토용 목업입니다. 색·문구·상호작용·확정 절차는 구현된 제품 기능이 아닙니다.</footer>
+  </main>
+  <script>
+    const pieces = {
+      input:{label:'① 직접 입력 기반',kind:'input',text:'딸기 디저트를 먹었어요. 맛있었어요.',body:'사용자 입력의 음식과 긍정적인 감상을 다시 표현한 예입니다. 문장을 AI가 다듬었더라도 내용의 근거는 사용자에게 있습니다.'},
+      photo:{label:'② 사진에서 추론',kind:'photo',text:'붉은 토핑이 올라간',body:'디저트 사진에서 붉은 토핑처럼 보이는 내용을 표현한 가상 예입니다. 무엇인지 확실하지 않다면 특정 재료나 맛으로 단정하지 않습니다.'},
+      added:{label:'③ AI가 보탠 내용',kind:'added',text:'달콤한 딸기향이 입안에 오래 맴돌았어요.',body:'입력에는 ‘맛있었다’만 있습니다.\n단맛·딸기향·지속되는 느낌은 AI가 더한 표현의 예입니다. 실제 느낌과 맞는지 살펴보고 쓸 수 있습니다.'}
+    };
+    document.querySelectorAll('[data-piece]').forEach(button=>button.addEventListener('click',()=>{
+      const item=pieces[button.dataset.piece];
+      document.querySelectorAll('[data-piece]').forEach(other=>other.setAttribute('aria-pressed',String(other===button)));
+      const label=document.createElement('span');label.className='pill '+item.kind;label.textContent=item.label;
+      document.querySelector('#detail-label').replaceChildren(label);
+      document.querySelector('#detail-text').textContent=item.text;
+      document.querySelector('#detail-body').textContent=item.body;
+    }));
+    document.querySelector('#origin-toggle').addEventListener('change',event=>document.body.classList.toggle('hide-origins',!event.target.checked));
+  </script>
+</body>
+</html>

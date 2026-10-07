@@ -1,5 +1,5 @@
 # THEME theme preference and design language
-> r28 | Browser-owned themes and a shared responsive creation language with visible location, operational history, usable workspaces and explicit setting states.
+> r29 | Shared accessible visual contracts for creation, authoring, comparisons and semantic-origin review.
 
 ## decisions
 - THEME-1 [o] three browser-owned preferences: `system` (the default, follows `prefers-color-scheme`), `light` → the `day` semantic map, `dark` → the `night` map; the effective theme is always exactly `day|night`; components consume semantic or functional tokens and never branch on a preference, an effective theme or a palette step
@@ -261,6 +261,16 @@
 - THEME-60 [o] saved reusable settings visibly distinguish usability, unpublished editing, active AI work, uncertain publication and conflicts using EDIT-18 summaries. Current actions and named completion feedback remain in the current reading/working flow rather than appearing without an identified trigger.
 - THEME-61 [?] the final desktop navigation arrangement, operational-history presentation/name and exact visual dimensions remain open; functional location/return/workspace contracts and route-specific acceptance apply independently of a final visual design.
 
+- THEME-62 [o] origin review is visible by default in post refinement, with a named 출처 보기 toggle, three-category legend and selectable phrase/source explanation (→POST-112).
+  - register dedicated semantic foreground/highlight roles for the three origins and unconfirmed state in both themes; color never supplies meaning alone
+  - touch and keyboard can reach source details without hover; use labels, visible focus and body-sized explanations
+  - preserve prose readability, selection/copy, caret/autosave, one document scroller,320px reflow and200% zoom; a highlight is not a separate committing action
+  - origin colors are functional evidence roles, distinct from action accent and promotional roles (→THEME-15/18)
+
+- THEME-63 [o] optional technical prompt inspection and ordinary source-of-meaning review have separately named entries.
+  - show stage and actual capture/preview/unavailable status truthfully; specialist fields stay within the opened technical view (→POST-115)
+  - preserve owner and blind-test identity boundaries (→MODEL-32/95); no technical panel silently publishes, starts AI or reveals another contestant's identity
+
 ## flow
 - bootstrap: read `postpilot.theme` → resolve(`system` → matchMedia | `light` → `day` | `dark` → `night`) → set `data-theme`, `color-scheme`, `theme-color` before React → provider from the snapshot → menu selection → apply + persist | remove key
 - shipping a screen: author unprefixed for 360 → tokens and `shared/ui` primitives only → `pnpm lint:style` → the THEME-34 checklist → both themes
@@ -271,4 +281,4 @@
 - gates: `pnpm lint:style` and `pnpm lint:style:probe` (→ARCH-25); review at360/390/430px,320px reflow,1440x900/1920x1080 desktop,200% zoom, contextual return, keyboard and screen reader, both themes
 
 ## chg
--
+- r29 261007 THEME-62+ THEME-63+ phrase origin highlighting and separate technical inspection added

@@ -1,8 +1,11 @@
 # GUIDE writing guidelines (작문 지침)
-> r16 | Account-owned writing direction — what kind of writing is wanted — for posts (지침) and for clips (영상 지침): the product's recommended 기본 지침, on until the owner switches one off, beside the owner's own rules applied to every run or scoped to templates or 분야, frozen at enqueue, capturable from the revision flow, accrued verbatim as candidates from completed revisions, and never learned.
+> r17 | Switchable writing direction with stage-applicable rules, one authoritative tag guideline and stable evidence contracts.
 
 ## decisions
-- GUIDE-1 [o] a guideline is the direction layer: it says what kind of writing is wanted — what a post or a clip states and leaves out, the order it tells things in and how its sentences are written beyond their register — beside the voice (how sentences sound, VOICE), the template (the form, TMPL) and the system prompt, which holds the input and output format alone (→GEN-14); a guideline outranks the template on content while leaving register to the voice ← a rule about what may be written, fixed in the system prompt, would forbid every kind of writing that needs its opposite
+- GUIDE-1 [o] guidelines own writing direction beside VOICE expression, TMPL form and the stable request contracts (→GEN-14).
+  - guidelines outrank template content direction while leaving register to the voice; specific tag selection remains the switchable tags 기본 지침 (→GEN-50)
+  - material boundaries, honest semantic origins and photo-order interpretation are request contracts, not optional taste rules (→GEN-80–84) ← owner preferences must not silently redefine what supplied evidence means
+
 - GUIDE-2 [o] an account owns zero or more guidelines (`guidelines`), each of one kind for good — for posts, the user-facing noun 지침, or for clips, 영상 지침 (→GUIDE-44); a guideline has two authored fields, `text` and an optional `title` (→GUIDE-46), plus its kind, a scope and timestamps; every store query and RPC is scoped by the authenticated user; a foreign guideline id, or a foreign template id named in a scope, is `NotFound`
 - GUIDE-3 [o] nothing references a guideline: posts, jobs and experiments carry frozen texts, never ids, so deleting one detaches nothing and leaves every enqueued run readable
 - GUIDE-4 [o] nothing seeds `guidelines`, `guideline_templates` or `guideline_candidates`: an account starts with zero of each
@@ -40,11 +43,14 @@
   - a run missing a template or a 분야 receives only the groups it has
   - a `templates` guideline whose every template was deleted (적용 대상 없음) reaches no prompt until it is rescoped
   - injection order is the 기본 지침 in the product's order, then the global group, then the template group, then the 분야 group, each owner group by `created_at, id` ascending, and each management screen lists its guidelines in exactly that order ← what the user sees is what the writer is given
-- GUIDE-15 [o] the write, revise and storyline prompts render one `[작문 지침]` section at one position — after the `[글 템플릿]` section when the post has a template, otherwise directly after the voice projection, or after the static rules for a post with 말투 없음 and in the storyline prompt, which carries no voice (→GEN-68), always before `[이번 글]` — as hyphen-bulleted verbatim lines closed by a fixed precedence sentence: a guideline outranks the template where they conflict, register stays with the voice (a clause absent for 말투 없음, →GEN-74), and the owner's own line outranks a conflicting 기본 지침 (→GUIDE-37)
-  - the heading and the sentence stay Korean for every target language and the target language outranks a conflicting language instruction inside a guideline's text (LANG)
-  - with no enabled 기본 지침 and no applicable guideline there is no section
-  - the voice prefix and the template section are byte-identical with and without guidelines
-  - a clip's writing calls carry its 영상 지침 the same way (→CLIP-183)
+- GUIDE-15 [o] applicable enabled guidelines render in one `[작문 지침]` section at the defined position, after template or voice when present, before per-post material.
+  - preserve GUIDE-14 source order as verbatim hyphen-bulleted lines; close with explicit guideline-over-template, voice-register and owner-over-stock precedence, omitting absent voice clauses
+  - section heading and precedence sentence remain Korean for every target; localized stock text follows the output target, owned text is not translated, and the frozen target outranks conflicting language instructions
+  - for no voice/template, place the section after static contracts; keep voice/template sections byte-identical with and without guidelines
+  - code-owned stock rules use declared stage applicability; storyline omits stock final title/tag/prose-only directions (→GEN-68 →GEN-85)
+  - scope-resolved owner lines remain verbatim in their frozen order; never infer stage exclusion from arbitrary owner text, split it, translate it or ask a paid classifier to filter it
+  - no enabled applicable rules means no section; observe receives none; clip writing carries applicable 영상 지침 under CLIP-183, preserving its own stage semantics
+
 - GUIDE-16 [o] the product ships 기본 지침 for each kind — code constants, never rows or config: each carries a fixed name and text, is marked (추천), reaches every account with zero setup until its owner switches it off, and is never edited, rewritten, learned or model-written; the 지침 set is →GUIDE-41 and the 영상 지침 set →GUIDE-42 ← a rule about what may be written is the product's recommendation rather than its format, so the owner may turn one off where the writing they want needs its opposite
 - GUIDE-17 [o] freezing: StartGeneration, StartRevision and the storyline jobs resolve the post's current `template_id` and 분야 once — the same value the template brief is resolved from — and write the enabled 기본 지침 and applicable ordered texts into the payload beside target length/template; unified tests freeze this ordered set, with only the selected guideline slot varying and no scope recalculation when templates vary
   - tests keep nonvaried guideline texts byte-identical, changing only the designated guideline slot when selected; the complete variant set affects the snapshot hash
@@ -76,17 +82,19 @@
   - neither action is offered while the list is empty and both re-read the candidate list, a create additionally invalidating the saved list
 - GUIDE-35 [o] vocabulary carries its own precedence, stated in the prompt: a guideline's substitution beats a template's, a template's beats the voice profile, and 문체 and 종결어미 stay with the voice either way ← otherwise the voice profile's vocabulary would overrule every substitution
 - GUIDE-36 [o] only a concrete substitution carries that authority: a guideline or a template may say to write B where the source already says A, while an abstract instruction about better words carries none ← a vague vocabulary instruction cannot be checked against the source, which is what the grounding constraint requires
-- GUIDE-37 [o] inside the guideline section the owner's own line outranks a conflicting 기본 지침, and of two lines from the same source the earlier wins ← a recommendation the owner contradicts in their own words has to yield
+- GUIDE-37 [o] the owner's own guideline outranks a conflicting 기본 지침; within the same source the earlier applicable line wins.
+  - this preference precedence cannot override evidence boundaries, semantic-origin honesty or the photo chronology contract (→GEN-80–84)
+
 - GUIDE-41 [o] the 지침 kind's 기본 지침, in this order:
   | 기본 지침 | rule |
   |---|---|
   | 재료에 있는 사실만 | →GEN-16 |
-  | 감상은 내가 쓴 것만 | →GEN-16 |
+  | 내 감상을 지키고 AI 제안 구분 | →GEN-16 →GEN-83 |
   | 기억을 통한 감상 추가, only in a prompt carrying `[기억]` | →GEN-73 |
   | 메모의 이름으로 | →GEN-44 |
-  | 일어난 순서대로 | told in the order it happened, inside each template place when the post has a template |
+  | 알려준 사건 순서대로 | follow event order explicitly supplied by the owner inside template places; otherwise propose subject arrangement, never infer chronology from photo order (→GEN-82) |
   | 첫머리에 이유와 기대 | opening with why the owner went or what they expected, when the memo says so |
-  | 사진은 이야기의 한 장면 | a photo stands between the sentences about its moment, no paragraph opens as a description of a photo and each paragraph picks up from the last |
+  | 사진은 이야기의 한 장면 | a photo stands between related sentences, no paragraph opens as a photo description and paragraphs connect without inventing actions or chronology (→GEN-82) |
   | 비슷한 사진은 한 묶음으로 | consecutive photos of one moment or subject — one dish from several angles, one room from several sides — stand as one photo group under one caption, 콜라주 to see them side by side and 슬라이드 to follow them in order, while a photo that needs words of its own stands alone (→GEN-77) |
   | 끝에서 한 번 정리 | closing by drawing the day together, a verdict or a will to return only as the owner gave one |
   | 관찰을 나열하지 않기 | →GEN-47 |
@@ -125,6 +133,11 @@
   - one in use reads `적용 중` and carries no control; taking one out of use happens on its row, never in the sheet
 
 - GUIDE-49 [o] owned post/video guidelines share EDIT named saved-item state, AI/direct editing and explicit publication. Creation displays the chosen scope; AI changes retain captured scope/version, while an explicit owner direct edit may change permitted scope under the same version fence and conflicts preserve drafts. Post-guideline tests vary one rule slot under MODEL-30 and publish a champion only with explicit scope; generated drafts never enter the completed-revision candidate queue.
+- GUIDE-50 [o] code-owned rule applicability is declared by stage and output responsibility, while its text and preference authority remain with its owning guideline.
+  - arbitrary owned rules retain GUIDE-14/17 scope, order and verbatim freezing; stage contracts determine the current output without silently selecting or editing those lines (→GUIDE-19)
+  - do not duplicate stock tag quality in a static format contract or erase useful long rules merely for their length
+  - one inspection can identify included/omitted rules and reasons from the same effective composition (→MODEL-93/94); origin validation is distinct from automatically judging compliance with guidelines (→GUIDE-18)
+
 ## flow
 - author: `/guidelines` | `/video-guidelines` → 새 지침 | 새 영상 지침 → title(optional) + text + scope(전역 | templates | 분야, posts only) → CreateGuideline(bound, cap, dedupe within the kind → row; approves a matching candidate)
 - 기본 지침: dock 기본 지침 → sheet(every 기본 지침; in use | 추가) → 추가 → in use, in the list at its product position → open row → 적용 안함 → out of use, offered in the sheet only → the next run's frozen set
@@ -140,4 +153,4 @@
 - contract: `proto/postpilot/v1/guideline.proto`
 
 ## chg
--
+- r17 261007 GUIDE-1✎ GUIDE-15✎ GUIDE-37✎ GUIDE-41✎ GUIDE-50+ format-only system boundary→evidence-aware request boundary; all-stage rules→stage-applicable rules; unconstrained preference precedence→preference precedence within evidence contracts; owner-only impressions and assumed event order→visible AI proposals and explicitly supplied event order

@@ -1,5 +1,5 @@
 # QUAL published-post measurement
-> r7 | Measure what code can count about a post while it can still be changed and across the account's published Naver posts, and offer one rule per finding.
+> r8 | Product-owned published-post measurements, distinct from origin review and empirical traffic observations.
 
 ## decisions
 - QUAL-1 [o] QUAL owns the one observation the product makes outside a single post: how an account's published posts look next to each other
@@ -7,7 +7,8 @@
 - QUAL-3 [o] a post's own measurement is computed for its current content revision and recomputed when that revision changes; the aggregate is recomputed when a URL is pasted or cleared (→POST-73 →POST-75)
 - QUAL-4 [o] a post's self-only numbers (M3, M4) are stored against the revision they describe, computed on first read of that revision; M2, which also depends on the published window, is computed at read against the current window; the aggregate is derived at read from 발행됨 posts ← nothing then goes stale when another post is published, and no post write has to call into QUAL
 - QUAL-5 [o] four metrics ship, each a pass/warn badge with its own minimum published count, never a weighted score ← no published weighting exists for any of them
-- QUAL-6 [o] every band is the product's own and every screen carrying one says so ← the only quantitative rule Naver publishes is that a keyword repeated twice or more in a title risks a penalty
+- QUAL-6 [o] every band is the product's own and every screen carrying one says so; no band or title-repeat limit is represented as an official numeric Naver penalty or expected exposure gain.
+
 - QUAL-7 [o] M1 제목 도배율 is an account metric with no per-post value: over the content titles of the account's last 100 발행됨 posts, the share containing the account's most frequent noun, where the candidate nouns are those the write pass returned for those posts (→GEN-55), a Korean title contains a noun when one of its 어절 starts with it, an English one when a word equals it case-insensitively, and the most frequent noun is the one contained in the most titles; minimum 10 published posts ← a saturation over one title is not a quantity, and matching against the text keeps a hand-edited title measurable
 - QUAL-8 [o] M2 글 간 고정 문구: per post, the share of its characters standing inside a run of 8 or more consecutive 어절 that also appears verbatim in one of the account's 20 most recent 발행됨 posts other than itself; the account value is the median over the account's last 20 발행됨 posts; minimum 3
 - QUAL-9 [o] M3 글 안 반복과 제목 관련성: per post, the share of body noun occurrences taken by its most frequent noun, counting the post's returned nouns by the containment rule of QUAL-7, and the share of those nouns still contained in the title that the body also contains; a post with no returned nouns has no M3 (→QUAL-40); the account value is each median over the last 20; minimum 1
@@ -51,6 +52,10 @@
 - QUAL-44 [o] M4's rule text tells the writer to build the body from at least three distinct block types, mixing in whichever of HEADING, LIST and QUOTE the material fits, and to invent nothing the source lacks to fill one
 - QUAL-45 [o] every rule text yields to natural writing: it asks for no synonym, cut or block that would read forced ← a rule that makes the post read unnatural costs more than the band it chases
 
+- QUAL-48 [o] semantic-origin labels are writing-review aids, not QUAL scores, accuracy certificates or search-performance measurements.
+  - preserve existing metrics, bands, minimums and zero-provider-cost reads; add no automated source judge, correction pass, search-demand API or view prediction (→QUAL-16/28/29/34/47)
+  - prompt quality and owner-run publication observations remain separate validation under GEN-86
+
 ## flow
 - measure (post): content revision changes → that post's own metrics computed and stored → ② renders them
 - measure (account): URL pasted or cleared → the set of 발행됨 posts changes → aggregate recomputed from their stored rows
@@ -64,4 +69,4 @@
 - config: the M2 run length (8 어절), M1's window (100 titles), M2/M3/M4's window (20 posts), the per-metric minimums and the bands are product-owned settings, not per-account options
 
 ## chg
--
+- r8 261007 QUAL-6✎ QUAL-48+ claimed official numeric title penalty→product-owned limits; origin review distinguished from scores and truth

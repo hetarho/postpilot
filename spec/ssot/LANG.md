@@ -1,5 +1,5 @@
 # LANG languages, locale, stable failures
-> r8 | Exactly Korean and English. Three independent language values — the browser UI locale, a post's target language, a post's content-language provenance — beside voices that are Korean, with no detection and no translation, plus the stable localized failure contract every surface renders from.
+> r9 | Independent UI/output languages with a Korean instruction baseline and controlled instruction-language evaluation.
 
 ## decisions
 - LANG-1 [o] the product supports exactly `ko` and `en`; the proto enum is `UNSPECIFIED = 0`, `KOREAN = 1`, `ENGLISH = 2`; owning contexts persist only checked `ko|en` tags; `UNSPECIFIED` represents absence at a wire boundary and is never a business fallback — valid only for `content_language` and stage projections where language is inapplicable, invalid for post creation, generation and write snapshots; proto ↔ domain ↔ SQL mappers are the only conversion sites
@@ -51,6 +51,11 @@
 - LANG-27 [o] the supported set, the fallback, the storage key `postpilot.locale`, translation keys, prompt text, the proto and DB schema and the portable field set are code and product contracts — no environment value, network service, language-only job kind, detector or translation provider exists
 - LANG-28 [x] more languages or regional translations, locale-prefixed routes or query parameters or redirects, account-synced locale, machine translation of any authored or generated text, language detection, translating model names or provider diagnostics, revision as a translation operation, target-dependent observation, SSR or backend-rendered copy — out of scope
 
+- LANG-29 [o] Korean instruction text remains the baseline for Korean post writing; instruction language and requested output language are distinct.
+  - evaluate English common-task/format instructions with Korean material, names, numbers, voice, endings, examples, policies, output target, schema identity and model conditions held fixed
+  - full material translation/back-translation is not part of that comparison; adopt a different instruction baseline only with task-specific writing/source evidence
+  - add no user language selector, supported output language, language-only job or new MODEL-30 test factor; target selection is not an instruction-only experiment
+
 ## flow
 - locale: storage → `navigator.languages` → `ko` → init i18next + `<html lang>` + metadata + Intl before paint → menu(한국어 | English) → persist, no navigation
 - post language: create(target = UI locale, sent explicitly) → generation freezes target → success writes `content_language = target` → revision preserves `content_language` → a later target change → mismatch hint until the next full generation
@@ -62,4 +67,4 @@
 - tests that pin it: locale precedence including malformed and denied storage · primary-subtag matching and URL/session stability · pre-paint `lang` and metadata · catalog key and placeholder parity · enum ↔ tag ↔ SQL round trips rejecting unknown values · target changes preserving content byte-for-byte · observation request equality across targets · exact Korean and portable projection snapshots · every reason mapping to both catalogs · unknown or reason-less failures never rendering raw detail as the sole message · UI locale choosing defaults only for a new post
 
 ## chg
--
+- r9 261007 LANG-29+ instruction-language baseline and fixed-output comparison added

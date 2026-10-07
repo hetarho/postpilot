@@ -1,5 +1,5 @@
 # MEM memories
-> r6 | An account owns short atomic facts about its author's world, approved by hand from what a finished post yielded, retrieved by tag and injected as the write prompt's fourth grounding source only when the draft opts in
+> r7 | Explicitly approved owner memories, opted-in frozen evidence and separately identified AI-derived meaning.
 
 ## decisions
 - MEM-1 [o] a memory (the user-facing noun 기억) is ONE atomic fact about the author's world, authored by the user approving an extracted candidate or by writing it by hand; an account owns zero or more, and an account with none produces prompts byte-identical to the ones it would produce without this domain
@@ -30,7 +30,7 @@
 - MEM-19 [o] the selected memories are resolved once at enqueue — before that run observes anything, so a post's first generation is keyed without observation terms (→MEM-7) — and frozen as text into the generation payload beside the template brief and the guideline texts (→GEN-15) and into a write comparison's snapshot (→GEN-18); handlers never re-read the rows, so editing or deleting a memory after the start changes nothing in flight, across restart-resume or retry
 - MEM-20 [o] the frozen memories render as ONE `[기억]` section in the per-post half of the write prompt, beside the memo and the observations, never in the stable prefix ← the selected set differs per post, and the prefix is what the provider's cache and every prompt golden rest on
 - MEM-21 [o] the section closes with its own line naming the memories as legitimate material for this post, appended only when the section exists (→GEN-16 →GUIDE-16), so a post with the option off carries no memory bytes and no mention of a source it has none of (→TMPL-46's conditional legend)
-- MEM-22 [o] memories reach the write pass only; the revise pass receives none ← revise holds neither memo nor observations, and material it cannot check against would license rewriting sentences the request never touched
+- MEM-22 [o] opted-in frozen memories reach post writing and storyline creation/rewrite; the prose revision pass receives no memory texts (→GEN-68/69/73) ← revision must not widen its supplied evidence or rewrite unrelated meaning.
 - MEM-23 [o] nothing is learned without the user: no model creates, approves, edits, ranks, retires or deletes a memory, no threshold promotes a candidate, and no memory reaches any prompt except through `use_memory` ← recording what the user checked is not learning about them
 - MEM-24 [o] `기억` is a writing settings destination (→THEME-38, following 지침 →GUIDE-26), listing the account's memories (→MEM-30); the page carries no standing form — one docked `새 기억` opens the shared `Sheet` (→THEME-24)
 - MEM-25 [o] a memory may be written by hand on that screen with the same field rules ← a fact the author knows on day one should not require generating a post first
@@ -42,6 +42,11 @@
 - MEM-27 [?] whether a memory's language is recorded, and whether a Korean memory may be injected into an English post or is filtered out of it (→LANG)
 - MEM-28 [?] whether the management screen surfaces memories retrieval has never selected, so a fact nothing matches can be retagged rather than sitting unread
 - MEM-29 [x] voice scoping, template scoping, per-memory enable/disable, manual ordering, version history, import/export, sharing between accounts, seeded memories, similarity deduplication, auto-approval, embeddings, a relationship or entity graph, memories in the revise pass, memories in clip generation — out of scope
+
+- MEM-31 [o] approved memory text may support owner-input meaning only through the opted-in frozen selection; new meaning inferred from it remains AI-added (→GEN-73 →GEN-80).
+  - origin review uses the exact result-related frozen text, not a later edited row; current memory/source deletion and post/account retention rules remain unchanged
+  - extraction and partial wording edits never approve an AI proposal as a memory; explicit candidate approval or direct fact entry alone supplies that authority (→MEM-15/23)
+  - approving a memory is a new explicit fact assertion, not a retroactive change to the source post's original semantic origin
 
 ## flow
 - capture: ③ `기억으로 저장` → credit gate → extraction job → candidate list in a sheet → user checks → approved rows created(new|link added to an identical row)
@@ -55,4 +60,4 @@
 - a post with `use_memory` off produces a prompt byte-identical to the one it produces without this domain
 
 ## chg
--
+- r7 261007 MEM-22✎ MEM-31+ write-only memory stage claim→writing and storyline, revision excluded; approved memory facts and newly inferred meaning distinguished

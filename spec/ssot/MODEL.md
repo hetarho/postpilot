@@ -1,5 +1,5 @@
 # MODEL providers, model catalog, experiments
-> r34 | Explicit eligible models and unified private actual-writing knockout tests of one model, style, template or guideline factor.
+> r35 | Explicit eligible models, private single-factor writing tests and safe versioned request composition/inspection.
 
 ## decisions
 - MODEL-1 [o] `backend/internal/llm` is the only way a model is called: no adapter package or provider SDK is imported anywhere except under `internal/llm/…` and in `cmd/api`, enforced by `internal/llm/boundary_test.go` over `go list -deps`; every completion, voice-design, voice-confirmation and speech operation carries an explicit admitted model/profile reference through a provider-neutral port with no default (→ARCH-9 →MODEL-77)
@@ -7,7 +7,10 @@
 - MODEL-2 [o] errors normalize to `ErrModelUnavailable` `ErrProviderDisabled` `ErrRateLimited` `ErrUnsupported` `ErrBadOutput` `ErrOutputTruncated`, plus a `ProviderError` that keeps provider prose as diagnostic detail while supporting `errors.Is`; `llm.Failure` is the one stable mapper to `MODEL_UNAVAILABLE` `MODEL_RATE_LIMITED` `MODEL_UNSUPPORTED` `MODEL_OUTPUT_INVALID` `MODEL_OUTPUT_TRUNCATED` `UNKNOWN_FAILURE`; provider text is never primary UI copy or an interpolated param
 - MODEL-3 [o] output ending `finish_reason: length` with no usable content, including partial JSON a caller parser rejects, maps to the truncated reason; when the provider reported a reasoning token count, `TruncatedError`'s technical detail names the reasoning/visible split ← the remedies are opposite: a body that filled its budget wants a larger one, a body the model never wrote because it reasoned through the budget wants a lower effort for that purpose or another model; the user-facing string is the same for both
 - MODEL-4 [o] `ErrRateLimited` means the provider refused for rate reasons — the caller's quota, the account's, or the gateway's upstream pool — attributes nothing to a tier, and may arrive as an HTTP 429 or as an upstream `code: 429` inside an HTTP 200
-- MODEL-5 [o] capability checks run before any network call: an image part on a model without `vision`, a video part on one without `video_input` (→VIDEO-11), or a JSON schema on one without `structured_output`, is `ErrUnsupported` immediately; a caller wanting a plain-text fallback checks the flag and omits the schema; structured output is requested whenever the model declares it (`response_format: json_schema`, without `strict` — the schemas belong to the callers) and callers keep a parser fallback
+- MODEL-5 [o] check capabilities before network work: unsupported vision, video input or structured output returns ErrUnsupported; a plain-text path checks the flag and omits unsupported schema.
+  - request structured output when declared, retaining the existing json_schema request without strict and caller parser fallback; schema ownership stays with callers
+  - schema conformance is not semantic-origin accuracy; missing origin information follows GEN-84 without changing canonical-output failure handling
+
 - MODEL-6 [o] every call runs under `LLM_STAGE_TIMEOUT` (5 min); the `openai_compatible` adapter requests a stream and joins it server-side so a long draft does not idle out an intermediary, and the stream never leaves the process; a stream ending without `[DONE]` or a finish reason is a truncated answer failing as `ErrBadOutput`; a 404 means "model gone" only when the body says so; `Usage` and `FinishReason` are preserved beside an error so a failed candidate keeps billable evidence
 - MODEL-7 [o] `ReasoningEffort` accepts `none minimal low medium high xhigh max`; empty means no decision; `unset` is an internal/yaml sentinel that omits the whole wire key; resolution is the operator's `reasoning_effort` override for the purpose the call is made for → the request/stage value → nothing sent ← the override is a property of a registration, not of a model: one model may observe at one strength and write at another in a single run, whereas one blanket value silently changes photo observation whenever writing is tuned
 - MODEL-8 [o] the nested `reasoning: {effort}` wire object is an OpenRouter dialect enabled only when the provider declares `reasoning_format: openrouter`; other OpenAI-compatible endpoints omit it even when an effort was supplied; an unknown format stops boot; `none` is sent explicitly; `reasoning.exclude` is forbidden ← excluding the returned trace stops neither generation nor billing of reasoning tokens; reasoning and visible output share the completion budget
@@ -86,7 +89,7 @@
   - observer tests require attachments and compatible models; every contestant produces a complete post, not isolated observation output or a short verification sample
   - a creation editor may enter the common two-contestant model format with retained material/context; larger formats use the same common test workflow
 - MODEL-32 [o] candidate identities are blind on the wire until champion confirmation or explicit abandonment; persist opaque contestant IDs and one cryptographically shuffled initial bracket, stable through reload/viewport changes.
-  - predecision responses include complete outputs and bracket positions, omitting model/setting identity, accounting and identity-bearing errors
+  - predecision responses include complete outputs and bracket positions, omitting model/setting identity, accounting, identity-bearing errors and identity-revealing prompt/source details; inspect only identity-safe shared material until the existing reveal boundary
   - later rounds reuse the same stored outputs and seeded progression; completed history reveals frozen identities/timing/tokens while supplier cost remains master-only
 - MODEL-33 [o] tests accept up to sixteen entrants but run at most five candidate pipelines concurrently; queue/progress are bounded and durable, provider work runs outside database transactions, and a round decision never issues a provider call.
 - MODEL-34 [o] a test progresses from queued/running generation to ready matches, then completed champion or explicit abandonment; partial/failed generation is recoverable under MODEL-35.
@@ -99,13 +102,17 @@
   - a setting champion may be saved/used under MODEL-90; readable test outputs support manual copy/export
   - source-post output application is available only for a compatible model-factor test with an owned draft/review source, expected input/content revisions and unchanged frozen writing assignments; other setting-factor results are exported or used through a newly chosen setting
   - a publication retry resumes its existing receipt, never rerunning votes/generation or overwriting later explicit changes
-- MODEL-37 [o] explicit compatible source-post application replaces validated content and the matching storyline, establishes the machine baseline, moves to review and preserves frozen content-language provenance without changing a newer target; never finalize implicitly. A stale/deleted/finalized/published source preserves the champion and offers export rather than overwrite.
+- MODEL-37 [o] explicit compatible source-post application atomically replaces validated content, matching storyline and their semantic-origin review information, establishes the machine baseline and moves to review.
+  - preserve frozen content-language provenance without changing a newer target; never finalize implicitly
+  - retain usable output with unconfirmed origin information under GEN-84/POST-114
+  - stale, deleted, finalized or published sources preserve the champion and offer export rather than overwrite
+
 - MODEL-39 [o] every actual candidate/provider call records usage and latency and retains billable failure evidence; supplier cost is authoritative when reported and otherwise explicitly estimated/unavailable under QUOTA.
   - customer test/history reads omit supplier price/cost for every tier; master-only admin cost reads may aggregate by stage and24h/7d/30d windows
   - logs include IDs/stage/accounting and normalized failure, never material, prompts, examples or output
 - MODEL-40 [o] frozen model/setting names and versions remain understandable after catalog/source changes; new start/retry/model adoption rechecks entitlement, availability and capability. Source changes do not mutate stored contestant output or silently replace a contender.
 - MODEL-41 [o] every test/candidate/match/receipt/history read/action derives the owner from authentication, with foreign/unknown owned references indistinguishable. No public/global model quality ranking is offered; private material never becomes a shared ranking dataset.
-- MODEL-42 [o] finished/abandoned tests retain private inputs and outputs for thirty days under the existing content sweep; durable factor/format/bracket/champion/usage metadata remains readable without private payload.
+- MODEL-42 [o] finished/abandoned tests retain private inputs, outputs, result-related origin evidence and captured product requests for thirty days under the existing content sweep; durable factor/format/bracket/champion/usage metadata remains readable without private payload.
   - an explicitly adopted setting is independently owned and survives test payload expiry
   - source-post deletion purges associated private test payload before detaching history metadata; account deletion cascades tests and their private data
   - deletion/expiry marks a durable payload-purge fence; queued/in-flight/late callbacks cannot restore purged private data or publish a result from it
@@ -247,6 +254,24 @@
 - MODEL-91 [o] explicit cancellation/abandonment names the test and its confirmed usage consequence; stop remaining planned work where possible, settle issued usage once and fence late results. Closing/navigating only preserves recoverable work and never cancels or spends.
 - MODEL-92 [o] seed-free preparation uses EDIT/VOICE bounded2/4/8/16 private candidates and is a separate estimated explicit action from generating actual test posts. The winner can become an owned reusable seed; nonwinning candidates are not automatically saved.
 
+- MODEL-93 [o] every model-request stage and mode has one discoverable prompt inventory covering observation, planning, writing/revision, voice/style work, setting authoring, memory extraction and existing video work.
+  - identify owning source files/composing functions, stable fragments, roles, activation conditions, input boundaries, precedence, output schema/parser/consumer and prompt/schema version
+  - each instruction has one authoritative owner; shared composition preserves its stage meaning and language rather than copying independently maintained rules
+  - request System/User roles and code/account authorship are separate inventory fields; a wire role alone does not identify the content owner or semantic source
+  - inspect the final application request from the same composition used for execution; useful long instructions remain, while duplicate or irrelevant context is removed under GEN-85
+  - developer/operator inspection of code/configuration and synthetic material grants no new access to another account's private requests
+
+- MODEL-94 [o] optional owner-scoped request inspection shows a safe product-level projection of ordered prompts/material roles, selected rules, output contract and effective model/budget/effort conditions.
+  - distinguish current configuration, prepared request preview and captured issued request; capture uses the effective application request at execution and records its prompt/schema versions
+  - prepared previews make no execution claim; missing historical capture is unavailable, never reconstructed as the past request
+  - label character counts, UTF-8 bytes, reference-token estimates and actual provider usage separately; unavailable runtime measures remain unknown
+  - inspection uses no provider call, hold, fallback or canonical mutation, and preserves existing owner/source retention policies
+
+- MODEL-95 [o] private request/origin inspection inherits authenticated ownership, cache partitioning, deletion and payload-purge fences.
+  - never expose credentials, SDK/network payloads, base URLs, signed media links or supplier costs through customer inspection (→MODEL-27 →QUOTA-66)
+  - prompts, material and output do not enter ordinary logs (→MODEL-39); capture is private result-related payload, not permanent accounting metadata
+  - blind comparisons retain MODEL-32 identity boundaries across prompt text, setting metadata and source details; purge/expiry never triggers regeneration or restoration of private payload
+
 ## flow
 - call: caller(stage, ref, request) → Registry.Complete(admitted entitlement + stage membership + capability/price checks → effort resolution(override → stage → none) → budget → adapter stream → normalized usage / error)
 - curate: 모델 관리 tab → ListCatalog(live read ∪ DB rows | DB rows + fetch_error) → SetModelPurpose | SetModelReasoning | SetModelLevel → the next Complete sees it
@@ -266,4 +291,4 @@
 - known gap: `MODEL_PURPOSE_NOT_REGISTERED` and `MODEL_PURPOSE_INELIGIBLE` have no entry in the frontend's normalized reason catalog and render as the generic failure (LANG owns that catalog)
 
 ## chg
--
+- r35 261007 MODEL-5✎ MODEL-32✎ MODEL-37✎ MODEL-42✎ MODEL-93+ MODEL-94+ MODEL-95+ capability-only schema boundary→syntax and semantic accuracy distinguished; unrestricted blind details→identity-safe inspection; content-only application→matching origin review; input/output expiry→origin/request expiry

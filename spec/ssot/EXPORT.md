@@ -1,5 +1,5 @@
 # EXPORT platform export
-> r10 | Four copy-ready formats derived in the browser from the canonical block array — Naver plain text with numbered, captioned photo and photo-group markers (and per-photo image and caption copy), a Tistory HTML fragment, a standalone fixed-template HTML page, Markdown with front matter — never stored, never served, never publishing.
+> r11 | Pure current-canonical copy/export with review-only origin and request metadata excluded.
 
 ## decisions
 - EXPORT-1 [o] Naver, Tistory, standalone site HTML and Markdown are pure synchronous conversions `(PostContent, attachments) → string` of the same block array (I2), computed in the browser; switching formats makes no request; no derived format is stored or served by the API; the export surface never publishes and the copy-ready path is the blog handoff (I1) ← SmartEditor ONE has no HTML input and discards pasted markup, so the Naver output must be plain text the user drags photos into
@@ -47,6 +47,10 @@
   - on the Naver tab each photo of a group stays its own copy control (→EXPORT-12) and the group's caption is one caption control (→EXPORT-24)
   - the Naver, Tistory and Markdown outputs are byte-identical for a post with no photo group, while the site's fixed stylesheet carries the group rules for every post (→EXPORT-7)
 
+- EXPORT-27 [o] origin highlights, category labels, review controls, source explanations and technical prompt metadata are review-only.
+  - keep them out of canonical prose and every copy/export representation; export the latest canonical wording under EXPORT-21
+  - unavailable origin information does not prevent export; required content-language provenance remains independently enforced under EXPORT-2
+
 ## flow
 - open panel(content exists) → tab(naver rendered | tistory · site · markdown raw) → copy(text | photo | caption) → 복사됨 1500 ms | fallback(select field, hint) — no request, no state change
 - photo copy: painted CORS `<img>` → bitmap → PNG promise → one `ClipboardItem` → ok | failure named on the photo(unsupported · refused · blocked · unreadable · missing)
@@ -57,4 +61,4 @@
 - ops: the production bucket's CORS rule must allow browser `GET` (and PUT/HEAD for uploads) from the FE origin; the deploy asserts the preflight (DEPLOY.md §5)
 
 ## chg
--
+- r11 261007 EXPORT-27+ review-only origin/inspection metadata excluded from all outputs

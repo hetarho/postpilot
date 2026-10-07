@@ -1,5 +1,5 @@
 # VOICE voices
-> r14 | Private personal/synthetic writing styles with editable revision-aware learning materials, accepted-profile reuse and explicit actual-writing test adoption.
+> r15 | Private accepted personal/synthetic expression profiles with source-preserving style-only projections.
 
 ## decisions
 - VOICE-1 [o] account-owned writing voices are isolated and labelled personal or synthetic; each owns its materials and current/previous analysis. Personal voices learn only owner prose; generated styles and test winners follow VOICE-68/69 and are never personal-habit evidence.
@@ -122,6 +122,10 @@
 - VOICE-73 [o] unified actual-writing tests compare owned made personal/synthetic voices or validated generated drafts under MODEL; generated champion adoption preserves its tested synthetic profile and never inserts AI posts/examples into personal readiness or materials.
 - VOICE-74 [o] an analysis without provable accepted source revisions retains its stored usable profile with unknown source freshness; never reconstruct historical excerpts from current edited material or claim verified freshness. Explicit reanalysis establishes a new accepted snapshot, while existing deletion filters still withdraw known source examples.
 
+- VOICE-75 [o] personal excerpts, AI descriptions and fictional synthetic examples supply expression style only, never facts about the current post.
+  - keep each source's style-only role visible in composition/inspection and avoid duplicated projections (→MODEL-93)
+  - using a voice example cannot classify an invented visit, flavor, price or action as owner-input meaning (→GEN-80); accepted-profile privacy and deletion filters remain authoritative
+
 ## flow
 - personal start: choose ten questions | paste own writing → explicitly create/resume one personal voice → save owner answers in a ten-question session → ten valid answers with every part or sixty owner sentences → explicit analysis → made personal voice → optional default → creation
 - further learning: choose another ten unanswered situations | paste → save private materials → keep existing analysis → explicit reanalysis → current personal snapshot with previous retained
@@ -138,4 +142,4 @@
 - contracts: `voice.proto`, plus `VoiceRef` in `post.proto` and `voice_id` in `model_experiment.proto`
 
 ## chg
--
+- r15 261007 VOICE-75+ style examples cannot supply current-post facts or owner-input origins

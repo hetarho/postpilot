@@ -1,0 +1,411 @@
+{
+  "date": "2026-10-07",
+  "at": "95da3ad4",
+  "tiktoken": "0.14.0",
+  "limits": "Plain text only. Encodings are reference vocabularies, not identified production models. Excludes chat role/boundary wrappers, response_format schemas, media and provider-specific tokenization. Fixtures are not owner requests. Existing English copy targets English and changes examples; diagnostic translated copy keeps Korean examples but has not been model-evaluated.",
+  "comparison_text": {
+    "ko": "tags는 이 글을 찾는 사람이 검색할 법한 구체적인 이름과 자연스러운 조합으로 고르세요.\n글에서 다루고 재료로 확인되는 상호·장소·브랜드·제품명을 우선하고, 지역명+메뉴·업종·활동 또는 대상명+핵심 주제 조합을 이어서 고르세요. 관련성이 높은 순서로 적고, 같은 태그나 띄어쓰기만 바꾼 태그는 반복하지 마세요.\n예를 들어 글이 '답십리역 부근 진아분식에서 떡볶이를 먹었다'는 내용이면 '진아분식', '답십리떡볶이', '답십리분식'을 우선하세요. 이 예시의 이름을 다른 글에 그대로 쓰지는 마세요.\n'내돈내산', '일상', '맛집', '떡볶이'만 쓴 태그처럼 범용적인 태그는 구체적인 태그보다 후순위로 두고, 태그 수를 채우려고 덧붙이지 마세요.\n확인되지 않은 지역·상호·메뉴·구매 여부·평가를 만들어 태그에 넣지 마세요. 역 이름으로 확인되는 같은 지역의 이름은 써도 되지만, 지역을 모르면 상호나 주제만으로 고르세요. 태그에 맞추려고 본문에 어색한 단어를 넣거나 내용을 바꾸지 마세요.\n글 수정에서는 태그 변경을 요청받았을 때만 이 기준으로 태그를 다시 고르세요.",
+    "existing_en": "Choose specific names and natural combinations someone looking for this post might search for as tags.\nPrioritize business, place, brand and product names covered by the post and supported by its material, then area + menu, business category or activity, or entity + core topic. Order tags by relevance; do not repeat a tag or a variant that differs only in spacing.\nFor example, if the post describes eating tteokbokki at Jinabunsik near Dapsimni Station, prefer Jinabunsik, DapsimniTteokbokki and DapsimniBunsik. Never copy these example names into an unrelated post.\nBroad labels such as PaidForItMyself, DailyLife, Foodie or Tteokbokki alone rank after specific tags; do not add them just to fill the requested count.\nNever invent an area, business, menu item, payment claim or endorsement for a tag. You may use the same area's name from a stated station name; when the area is unknown, use the supported entity or topic alone. Do not insert awkward words into the prose or change its content to justify a tag.\nFor a revision, reselect tags by this rule only when the request asks to change tags.",
+    "diagnostic_en_with_ko_examples": "Choose specific names and natural combinations someone looking for this post might search for as tags.\nPrioritize business, place, brand and product names covered by the post and supported by its material, then area + menu, business category or activity, or entity + core topic. Order tags by relevance; do not repeat a tag or a variant that differs only in spacing.\nFor example, if the post describes eating 떡볶이 at 진아분식 near 답십리역, prefer 진아분식, 답십리떡볶이 and 답십리분식. Never copy these example names into an unrelated post.\nBroad labels such as 내돈내산, 일상, 맛집 or 떡볶이 alone rank after specific tags; do not add them just to fill the requested count.\nNever invent an area, business, menu item, payment claim or endorsement for a tag. You may use the same area's name from a stated station name; when the area is unknown, use the supported entity or topic alone. Do not insert awkward words into the prose or change its content to justify a tag.\nFor a revision, reselect tags by this rule only when the request asks to change tags."
+  },
+  "measurements": [
+    {
+      "name": "current tags Korean",
+      "source": "backend/internal/guideline/defaults.go:147",
+      "role": null,
+      "characters": 541,
+      "utf8_bytes": 1304,
+      "sha256": "f608478b8f8acad69ddd9470e0b667f45b1877de9f484434379c3ca4874ede67",
+      "cl100k_base": 518,
+      "o200k_base": 349
+    },
+    {
+      "name": "existing tags English for English target",
+      "source": "backend/internal/guideline/defaults.go:154",
+      "role": null,
+      "characters": 1101,
+      "utf8_bytes": 1101,
+      "sha256": "1924eae7b094a05a6a23e0b711febe2f7010d6c27ebc0d3a0648b15c94bf181a",
+      "cl100k_base": 254,
+      "o200k_base": 250
+    },
+    {
+      "name": "English instructions retaining Korean tag examples",
+      "source": "diagnostic translation; not production or quality-tested",
+      "role": null,
+      "characters": 1020,
+      "utf8_bytes": 1094,
+      "sha256": "eadd0440d851a8540074f4b1db2a4aa24bbd899f9e58de90146f2a3a50f43183",
+      "cl100k_base": 261,
+      "o200k_base": 245
+    },
+    {
+      "name": "write_prompt_no_voice.golden",
+      "source": "backend/internal/generation/testdata/write_prompt_no_voice.golden",
+      "role": "system",
+      "characters": 4849,
+      "utf8_bytes": 10616,
+      "sha256": "d2300793fdec3f7d17d58da36e8bada1fae498fd8c95db1c1667567ce46985c2",
+      "cl100k_base": 4046,
+      "o200k_base": 2692
+    },
+    {
+      "name": "write_prompt_no_voice.golden",
+      "source": "backend/internal/generation/testdata/write_prompt_no_voice.golden",
+      "role": "user",
+      "characters": 186,
+      "utf8_bytes": 256,
+      "sha256": "bdeeda12a46322c9447eca3ec65abfa7aedd785ac5c190043e10d0ae062b00d9",
+      "cl100k_base": 94,
+      "o200k_base": 80
+    },
+    {
+      "name": "revise_prompt_no_voice.golden",
+      "source": "backend/internal/generation/testdata/revise_prompt_no_voice.golden",
+      "role": "system",
+      "characters": 4770,
+      "utf8_bytes": 10689,
+      "sha256": "85b9204bd3446121ef740dd419a3f98cce2b3e1c9ebbddfd89559fbbd089e1ce",
+      "cl100k_base": 4086,
+      "o200k_base": 2692
+    },
+    {
+      "name": "revise_prompt_no_voice.golden",
+      "source": "backend/internal/generation/testdata/revise_prompt_no_voice.golden",
+      "role": "user",
+      "characters": 341,
+      "utf8_bytes": 383,
+      "sha256": "354640f4da4e14c1dd53bc98bef8b111e46c348d39b583a6b4f4c4d0ecdc6b45",
+      "cl100k_base": 108,
+      "o200k_base": 103
+    },
+    {
+      "name": "write_prompt_along_storyline.golden",
+      "source": "backend/internal/generation/testdata/write_prompt_along_storyline.golden",
+      "role": "system",
+      "characters": 1252,
+      "utf8_bytes": 2438,
+      "sha256": "1f490b66282bb74d18f20c6979bf0d202a05066bcd6e8411e7a464fe3e5db99a",
+      "cl100k_base": 891,
+      "o200k_base": 620
+    },
+    {
+      "name": "write_prompt_along_storyline.golden",
+      "source": "backend/internal/generation/testdata/write_prompt_along_storyline.golden",
+      "role": "user",
+      "characters": 225,
+      "utf8_bytes": 337,
+      "sha256": "fbf1dc4f3ac28f868e619a5dbd1249bee5c5e970f917884a5e513ff6ca91d7ca",
+      "cl100k_base": 128,
+      "o200k_base": 106
+    },
+    {
+      "name": "storyline_prompt.golden",
+      "source": "backend/internal/generation/testdata/storyline_prompt.golden",
+      "role": "system",
+      "characters": 1176,
+      "utf8_bytes": 2521,
+      "sha256": "6d504edaa8167205d57d1e6afab9b791a3c196c3af0e1e0f9d4e2df7e0d28c06",
+      "cl100k_base": 928,
+      "o200k_base": 634
+    },
+    {
+      "name": "storyline_prompt.golden",
+      "source": "backend/internal/generation/testdata/storyline_prompt.golden",
+      "role": "user",
+      "characters": 266,
+      "utf8_bytes": 456,
+      "sha256": "303e992fd4bc9e48b82249882f207bc3aa5be3c31298b33c89abc37c2ac26360",
+      "cl100k_base": 174,
+      "o200k_base": 128
+    },
+    {
+      "name": "storyline_prompt_english.golden",
+      "source": "backend/internal/generation/testdata/storyline_prompt_english.golden",
+      "role": "system",
+      "characters": 1535,
+      "utf8_bytes": 2356,
+      "sha256": "a71b51df49a5d8e479ffe7ba1f16ca524c7d5c2585433a32dfe3872a7bcf0d55",
+      "cl100k_base": 731,
+      "o200k_base": 549
+    },
+    {
+      "name": "storyline_prompt_english.golden",
+      "source": "backend/internal/generation/testdata/storyline_prompt_english.golden",
+      "role": "user",
+      "characters": 266,
+      "utf8_bytes": 456,
+      "sha256": "303e992fd4bc9e48b82249882f207bc3aa5be3c31298b33c89abc37c2ac26360",
+      "cl100k_base": 174,
+      "o200k_base": 128
+    },
+    {
+      "name": "write_prompt_no_template.golden",
+      "source": "backend/internal/generation/testdata/write_prompt_no_template.golden",
+      "role": "system",
+      "characters": 1383,
+      "utf8_bytes": 2631,
+      "sha256": "210a4572fd111edd2947fc585859afa34f7aa7cefc29500b4930a241dabf8486",
+      "cl100k_base": 954,
+      "o200k_base": 665
+    },
+    {
+      "name": "write_prompt_no_template.golden",
+      "source": "backend/internal/generation/testdata/write_prompt_no_template.golden",
+      "role": "user",
+      "characters": 186,
+      "utf8_bytes": 256,
+      "sha256": "bdeeda12a46322c9447eca3ec65abfa7aedd785ac5c190043e10d0ae062b00d9",
+      "cl100k_base": 94,
+      "o200k_base": 80
+    },
+    {
+      "name": "write_prompt_memories.golden",
+      "source": "backend/internal/generation/testdata/write_prompt_memories.golden",
+      "role": "system",
+      "characters": 1383,
+      "utf8_bytes": 2631,
+      "sha256": "210a4572fd111edd2947fc585859afa34f7aa7cefc29500b4930a241dabf8486",
+      "cl100k_base": 954,
+      "o200k_base": 665
+    },
+    {
+      "name": "write_prompt_memories.golden",
+      "source": "backend/internal/generation/testdata/write_prompt_memories.golden",
+      "role": "user",
+      "characters": 290,
+      "utf8_bytes": 496,
+      "sha256": "a993fa1d0b315c8194f7c621e83ac36864984212111176c265d96b96ac0b811d",
+      "cl100k_base": 191,
+      "o200k_base": 143
+    },
+    {
+      "name": "no-voice system with only tag guideline translated",
+      "source": "diagnostic substitution into write_prompt_no_voice.golden; no model execution",
+      "role": "system",
+      "characters": 5328,
+      "utf8_bytes": 10406,
+      "sha256": "2f288df2d31ac9ba9bb24de0975842efbfe33d4fb9da440e9e9758e40f691688",
+      "cl100k_base": 3789,
+      "o200k_base": 2589
+    },
+    {
+      "name": "naturalKorean",
+      "source": "backend/internal/guideline/defaults.go:95",
+      "role": "default-guideline",
+      "characters": 640,
+      "utf8_bytes": 1525,
+      "sha256": "d1ef68031f8dcbb70b0b640df2fed201d7dcc38e2b31849f09060a80d8e6c765",
+      "cl100k_base": 574,
+      "o200k_base": 397
+    }
+  ],
+  "clip_synthetic": {
+    "fixture": "one source; one 15-second observed segment; global Place value; fixed and generated declared captions; no owner guidelines; no media bytes",
+    "synthetic": true,
+    "provider_calls": 0,
+    "language_toggle": {
+      "flow": {
+        "system_identical": true,
+        "user_identical": true
+      },
+      "storyline": {
+        "system_identical": true,
+        "user_identical": true
+      },
+      "caption": {
+        "system_identical": true,
+        "user_identical": true
+      },
+      "spoken": {
+        "system_identical": true,
+        "user_identical": true
+      }
+    },
+    "measurements": [
+      {
+        "name": "flow structured=false",
+        "schema_utf8": 0,
+        "system_chars": 6532,
+        "system_utf8": 6547,
+        "user_chars": 993,
+        "user_utf8": 995,
+        "system_sha256": "ac9a66f52748288beb30d86affe740f4cf1b9b440c7dcd827d3aa8a132eddb13",
+        "system_cl100k_base": 1423,
+        "system_o200k_base": 1438,
+        "user_sha256": "f78f2cc8ff6047a8c11ae0027126858c854017272130e2545f4570a3fca09af8",
+        "user_cl100k_base": 260,
+        "user_o200k_base": 263,
+        "schema_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "schema_cl100k_base": 0,
+        "schema_o200k_base": 0
+      },
+      {
+        "name": "storyline structured=false",
+        "schema_utf8": 0,
+        "system_chars": 2581,
+        "system_utf8": 2587,
+        "user_chars": 929,
+        "user_utf8": 931,
+        "system_sha256": "316c686773c64a0fbc231b112f0022052e6b6727f444fc7880b4e45957bd44c8",
+        "system_cl100k_base": 537,
+        "system_o200k_base": 546,
+        "user_sha256": "c8774ba9557b94514969c28f5dcce50ced43b51c7d03bbd21b78fa318649166e",
+        "user_cl100k_base": 244,
+        "user_o200k_base": 247,
+        "schema_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "schema_cl100k_base": 0,
+        "schema_o200k_base": 0
+      },
+      {
+        "name": "caption structured=false",
+        "schema_utf8": 0,
+        "system_chars": 4649,
+        "system_utf8": 4652,
+        "user_chars": 1480,
+        "user_utf8": 1490,
+        "system_sha256": "07f8e75ab2504d45d945372f2d9fe8dbfc41d9568b73636269cd225b52e4f060",
+        "system_cl100k_base": 1017,
+        "system_o200k_base": 1033,
+        "user_sha256": "535f5941fcccc088b8f1df632929d523b3aa2be4dd0fee977beda269bf487edf",
+        "user_cl100k_base": 396,
+        "user_o200k_base": 401,
+        "schema_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "schema_cl100k_base": 0,
+        "schema_o200k_base": 0
+      },
+      {
+        "name": "spoken structured=false",
+        "schema_utf8": 0,
+        "system_chars": 3169,
+        "system_utf8": 3175,
+        "user_chars": 929,
+        "user_utf8": 931,
+        "system_sha256": "58ed69dcfac709e10e1b4e43cdbf08a00f7ab0ea7b7da9a404122cf0b3b5fc03",
+        "system_cl100k_base": 670,
+        "system_o200k_base": 679,
+        "user_sha256": "c8774ba9557b94514969c28f5dcce50ced43b51c7d03bbd21b78fa318649166e",
+        "user_cl100k_base": 244,
+        "user_o200k_base": 247,
+        "schema_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "schema_cl100k_base": 0,
+        "schema_o200k_base": 0
+      },
+      {
+        "name": "flow structured=true",
+        "schema_utf8": 1249,
+        "system_chars": 5307,
+        "system_utf8": 5322,
+        "user_chars": 993,
+        "user_utf8": 995,
+        "system_sha256": "7c1e905f53d5068be7fe3e9472c8bdcbb04d612ea6d9a006e5d24bd8301cf644",
+        "system_cl100k_base": 1118,
+        "system_o200k_base": 1117,
+        "user_sha256": "f78f2cc8ff6047a8c11ae0027126858c854017272130e2545f4570a3fca09af8",
+        "user_cl100k_base": 260,
+        "user_o200k_base": 263,
+        "schema_sha256": "9d60ff278ec2abd4b35245edd775c96292596e1c847d75bb61d40474f2be37e1",
+        "schema_cl100k_base": 284,
+        "schema_o200k_base": 302
+      },
+      {
+        "name": "storyline structured=true",
+        "schema_utf8": 553,
+        "system_chars": 2125,
+        "system_utf8": 2131,
+        "user_chars": 929,
+        "user_utf8": 931,
+        "system_sha256": "dfa83742229cea477b39a36672f0e47657163a01d782f6ac2a109d859c784099",
+        "system_cl100k_base": 432,
+        "system_o200k_base": 432,
+        "user_sha256": "c8774ba9557b94514969c28f5dcce50ced43b51c7d03bbd21b78fa318649166e",
+        "user_cl100k_base": 244,
+        "user_o200k_base": 247,
+        "schema_sha256": "60c4e6197689c249734226504c540bd9860638f5354a54e868f576e279ae382e",
+        "schema_cl100k_base": 121,
+        "schema_o200k_base": 128
+      },
+      {
+        "name": "caption structured=true",
+        "schema_utf8": 1082,
+        "system_chars": 3469,
+        "system_utf8": 3472,
+        "user_chars": 1480,
+        "user_utf8": 1490,
+        "system_sha256": "0e0c0400ab8172f9ed754b0f88ee6e3c150284e25047ae13ee9c425becddb607",
+        "system_cl100k_base": 731,
+        "system_o200k_base": 731,
+        "user_sha256": "535f5941fcccc088b8f1df632929d523b3aa2be4dd0fee977beda269bf487edf",
+        "user_cl100k_base": 396,
+        "user_o200k_base": 401,
+        "schema_sha256": "a2118423960916f3a81dbdcc44b6ed395c0e1fd59fe7b1b1e5b7229e003e0324",
+        "schema_cl100k_base": 250,
+        "schema_o200k_base": 270
+      },
+      {
+        "name": "spoken structured=true",
+        "schema_utf8": 626,
+        "system_chars": 3169,
+        "system_utf8": 3175,
+        "user_chars": 929,
+        "user_utf8": 931,
+        "schema_note": "Replicated structuralSchema projection of the checked-in schema, matching service.go and spoken_script.go:74; not a provider capture.",
+        "system_sha256": "58ed69dcfac709e10e1b4e43cdbf08a00f7ab0ea7b7da9a404122cf0b3b5fc03",
+        "system_cl100k_base": 670,
+        "system_o200k_base": 679,
+        "user_sha256": "c8774ba9557b94514969c28f5dcce50ced43b51c7d03bbd21b78fa318649166e",
+        "user_cl100k_base": 244,
+        "user_o200k_base": 247,
+        "schema_sha256": "3443a12a958a4629088fa511d0f3bb075f629b1c2dfe62fde82360e4f2921fd6",
+        "schema_cl100k_base": 137,
+        "schema_o200k_base": 145
+      },
+      {
+        "name": "observe structured=true",
+        "schema_utf8": 1518,
+        "system_chars": 4822,
+        "system_utf8": 4822,
+        "user_chars": 129,
+        "user_utf8": 129,
+        "system_sha256": "00a115c19f7a5ec6d57493b1f2d962f9403b478646b782b7ab593f61acbba181",
+        "system_cl100k_base": 1113,
+        "system_o200k_base": 1122,
+        "user_sha256": "73cd856cec477b4eb349e89f4e58f175b90d2c779a009ad8de70219bce046238",
+        "user_cl100k_base": 36,
+        "user_o200k_base": 36,
+        "schema_sha256": "df7f140c060c7cf6db0093789e1b44006a370700c8e7892572bb2d0564607d23",
+        "schema_cl100k_base": 356,
+        "schema_o200k_base": 374
+      },
+      {
+        "name": "memory",
+        "schema_utf8": 606,
+        "system_chars": 401,
+        "system_utf8": 797,
+        "user_chars": 0,
+        "user_utf8": 0,
+        "note": "System and attached schema only; user empty is a measurement placeholder, not an actual extraction request.",
+        "system_sha256": "c1739c45277a9417fb57ccff06c45fab74e25ff21353015ccbac821c4cd4a9a0",
+        "system_cl100k_base": 274,
+        "system_o200k_base": 199,
+        "user_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "user_cl100k_base": 0,
+        "user_o200k_base": 0,
+        "schema_sha256": "a44bb3ec72a11d94b04d2ace4204a9e6f5b20224d1fddac696ab1d82f77e986c",
+        "schema_cl100k_base": 153,
+        "schema_o200k_base": 155
+      }
+    ],
+    "limits": "Schema text token counts do not include provider wrappers or prove actual schema billing. Spoken structured schema is a separately reproduced projection, not captured provider traffic."
+  },
+  "clip_metadata_allowance_fixture": {
+    "name": "TestObservePromptFitsTheInlineInputAllowance",
+    "pass": true,
+    "json_encoded_bytes": 7226,
+    "allowance_bytes": 7952,
+    "system_utf8": 4821,
+    "user_utf8": 424,
+    "schema_utf8": 1518,
+    "note": "This is the existing maximum-name observe fixture, different from the one-source synthetic builders above. No media bytes or provider tokens in this JSON measure."
+  }
+}

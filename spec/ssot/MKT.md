@@ -1,5 +1,5 @@
 # MKT the public /about page
-> r9 | A localized public read-only /about page explaining shipped behavior and the same fixed-KRW five-plan offer as /plans, with Get started as its only CTA.
+> r10 | Shipped-feature marketing centered on AI-assisted speed and owner control, without accuracy or exposure guarantees.
 
 ## decisions
 - MKT-1 [o] `/about` is a direct child of the root route beside `/login` and deliberately not a child of the authenticated pathless layout ← being public is structural, not a check someone has to remember; it has no `beforeLoad`, loader, session branch or query, and mounting it issues no Connect call at all — not even GetMe — because the page exists for a visitor with no account; it is refreshable and deep-linkable through the Cloudflare `single-page-application` fallback with no SSR, prerender, marketing deployment or metadata worker
@@ -44,6 +44,10 @@
 - MKT-16 [o] every sentence about how a person gets an account states the path that exists — self-signup with email verification (→AUTH-1, →AUTH-34) — and the hero's access sentence, the header CTA and the plans assignment sentence (→MKT-15) all move in the change that alters that path ← a sentence denying the path the Get started button offers is a claim violation, not a stale string
 - MKT-14 [x] signup or contact flows, price tags beyond the shipped figures, purchase, upgrade or checkout actions, testimonials, screenshots or generated hero art, analytics or tracking, SSR, SSG or prerendering, a blog, docs portal, changelog, legal or privacy-policy authoring, a sitemap or SEO tooling, backend, proto or database changes, a public marketing API, locale-prefixed URLs or redirects — out of scope
 - MKT-15 [o] copy identifies subscriber checkout as the way to choose a paid plan (→BILL-1), keeps /about and /plans names/prices/benefits synchronized, and describes the 60-second output limit plus separate supported browser exports. Never imply that a credit pack unlocks model grades or server counts; product claims remain subject to MKT-4.
+- MKT-17 [o] the product positioning is AI는 속도를, 글의 주도권은 나에게.
+  - describe AI assistance in phrasing/arrangement with visible owner-input, visual-inference and AI-added meaning, followed by owner editing and manual publication
+  - advertise origin-review behavior only when shipped (→MKT-4); claim no quantified speed gain, guaranteed truth, AI-free writing, search-rank gain or automatic Naver publication
+
 ## flow
 - visit `/about` in any session state → static SPA fallback → the page renders from the `marketing` and `plans` namespaces with no request → Get started → `/signup` | the hero's Login link (with `redirect` handed through) → `/login`
 
@@ -52,4 +56,4 @@
 - no environment value, tuning value, Connect contract, server package, migration or job; the canonical origin is derived from the current document origin
 
 ## chg
--
+- r10 261007 MKT-17+ owner-control positioning and shipped-only origin-review claims added

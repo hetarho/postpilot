@@ -14,6 +14,7 @@
 | clip-template-as-preset | converted@260917 |
 | post-quality-and-related-links | converted@260923 |
 | searchable-details | open@261007 |
+| prompt-engineering | converted@261007 |
 | creation-and-comparison-ux | open@261007 |
 | storyline-first | converted@260927 |
 | voice-tidy | converted@260929 |
@@ -27,25 +28,25 @@
 | ARCH | 19 | 18 | ARCH-24✎ ARCH-25✎ ARCH-26✎ ARCH-31✎ ARCH-37✎ | 0 |
 | AUTH | 15 | 15 | - | 0 |
 | QUOTA | 38 | 38 | - | 0 |
-| POST | 35 | 35 | - | 0 |
-| VOICE | 14 | 14 | - | 0 |
-| GEN | 25 | 25 | - | 0 |
-| MODEL | 34 | 34 | - | 0 |
-| TMPL | 24 | 24 | - | 0 |
-| GUIDE | 16 | 16 | - | 0 |
-| EXPORT | 10 | 10 | - | 0 |
-| LANG | 8 | 8 | - | 0 |
-| THEME | 28 | 28 | - | 1 |
-| MKT | 9 | 9 | - | 0 |
+| POST | 36 | 35 | POST-63✎ POST-112+ POST-113+ POST-114+ POST-115+ | 0 |
+| VOICE | 15 | 14 | VOICE-75+ | 0 |
+| GEN | 26 | 25 | GEN-14✎ GEN-16✎ GEN-40✎ GEN-41✎ GEN-46✎ GEN-49✎ GEN-50✎ GEN-68✎ GEN-70✎ GEN-73✎ GEN-77✎ GEN-80+ GEN-81+ GEN-82+ GEN-83+ GEN-84+ GEN-85+ GEN-86+ | 0 |
+| MODEL | 35 | 34 | MODEL-5✎ MODEL-32✎ MODEL-37✎ MODEL-42✎ MODEL-93+ MODEL-94+ MODEL-95+ | 0 |
+| TMPL | 25 | 24 | TMPL-21✎ TMPL-26✎ TMPL-47✎ TMPL-49✎ TMPL-70+ | 0 |
+| GUIDE | 17 | 16 | GUIDE-1✎ GUIDE-15✎ GUIDE-37✎ GUIDE-41✎ GUIDE-50+ | 0 |
+| EXPORT | 11 | 10 | EXPORT-27+ | 0 |
+| LANG | 9 | 8 | LANG-29+ | 0 |
+| THEME | 29 | 28 | THEME-62+ THEME-63+ | 1 |
+| MKT | 10 | 9 | MKT-17+ | 0 |
 | VIDEO | 7 | 7 | - | 0 |
 | CLIP | 59 | 59 | - | 2 |
 | CDS | 33 | 33 | - | 1 |
 | BILL | 9 | 9 | - | 0 |
-| MEM | 6 | 6 | - | 2 |
-| QUAL | 7 | 7 | - | 0 |
+| MEM | 7 | 6 | MEM-22✎ MEM-31+ | 2 |
+| QUAL | 8 | 7 | QUAL-6✎ QUAL-48+ | 0 |
 | GIFT | 3 | 3 | - | 0 |
 | DUB | 3 | 3 | - | 0 |
-| EDIT | 3 | 3 | - | 0 |
+| EDIT | 4 | 3 | EDIT-24+ | 0 |
 | INFRA | 2 | 0 | all | 1 |
 
 ## review
@@ -97,9 +98,21 @@
 ## next
 - create-task ARCH; active creation-comparison-ux attempts must sync ARCH@19 verification stages before continuing the T622–T631 plan in docs/work/creation-and-comparison-ux.md; final visual arrangement remains THEME-61 open.
 - Existing browser-media tasks/blocked qualifications retain their scope; shared touches must respect any active ownership.
-- ideation searchable-details continues: choose the first user benefit and acceptable input effort, then validate source coverage and personal-versus-pooled learning.
+- create-task GEN POST GUIDE TMPL THEME EXPORT MKT LANG VOICE MEM QUAL MODEL EDIT: consume the prompt-engineering deltas with existing T624–T631 ownership; see docs/work/prompt-engineering-ssot-2026-10-07.md. Instruction-language and live-model quality comparisons are validation, not open product policy.
 
 ## log
+- 261007 update-ssot prompt-engineering verified: spec lint exit0 with124 history/freshness warnings and13 editorial hints; thirteen revisions and51 decision deltas match STATE/chg, historical IDs/references/links/log checks and diff check pass; tasks/product code unchanged
+- 261007 update-ssot prompt-engineering affects active creation-comparison-ux attempts T624/17671fdd changes_requested, T625/2182ddca changes_requested and T629/7c124aa5 ready: synchronize/reassess affected deltas before submission/integration; existing checks do not verify new semantic-origin behavior
+- 261007 update-ssot prompt-engineering done: thirteen domains revised; phrase origins, visible AI expression, no photo-order chronology, maximum grounded tags and safe prompt inspection fixed; converted ideation has no open product decisions, existing unrelated open items retained
+- 261007 update-ssot GEN POST GUIDE TMPL THEME EXPORT MKT LANG VOICE MODEL QUAL MEM EDIT start: convert prompt efficiency and owner-controlled writing decisions; reconcile three-source review, visible AI expression and photo chronology with current policies
+- 261007 ideation prompt-engineering owner-control round recorded: scope corrected; three semantic sources, expressive assistance and photo-order chronology explored with an interactive synthetic mockup; granularity/addition policy pending, SSOT/tasks unchanged
+- 261007 ideation prompt-engineering owner-control round start: correct scope to context efficiency/maintainability plus writing/tag quality; explore three-source text review, AI-assisted expression and photo-order-independent storytelling before SSOT/task conversion
+- 261007 ideation prompt-engineering deep review recorded: thirty-one audit candidates and twenty primary-source links; twelve existing checks plus five synthetic diagnostics, reference-token measurements and independent reviews; language choice remains open, tag default ownership confirmed
+- 261007 ideation prompt-engineering deep review start: audit prompt structure, length and contradictions across stages; research Korean versus English instructions with Korean output and separate evidence from hypotheses
+- 261007 ideation prompt-engineering round recorded: current prompt map and 995bcee9 tag path traced; thirteen existing tests pass; both inspection audiences and up-to-N grounded tags chosen, refactor scope remains open
+- 261007 ideation prompt-engineering start: improve writing quality before owner-observed view trials; trace actual prompt composition and the recent tag change, then explore a comprehensive prompt refactor
+- 261007 ideation searchable-details research round recorded: 64 linked sources, official 2026 content guides and search changes checked; numeric SEO claims assessed, three first-benefit candidates remain open
+- 261007 ideation searchable-details research start: recheck Naver Blog search principles, recent search changes and practitioner SEO claims; product choices remain open
 - 261007 create-architecture ARCH r19 done: task-impact checks at completion, full CI and applicable backend/media gates before push; local agent instructions and runnable parity runbook added, remote failure logs unavailable
 - 261007 ARCH r19 affects active creation-comparison-ux/T622 attempt and pending ARCH tasks: sync/reassess the verification policy before further submission or integration; no worker workspace changed
 - 261007 create-architecture ARCH start: separate task impact verification from pre-push CI/CD checks and inspect backend/media workflow failures
@@ -108,15 +121,3 @@
 - 261007 update-ssot creation/comparison UX done: thirteen domains revised, human winners and once-per-entrant generation fixed; final visual arrangement stays THEME-61 open
 - 261007 create-task ARCH THEME POST CLIP EDIT VOICE TMPL GUIDE MODEL GEN QUOTA LANG VIDEO start: ten atomically claimable session bundles with isolated touches and explicit integration gates
 - 261007 update-ssot THEME POST CLIP AUTH EDIT VOICE TMPL GUIDE MODEL GEN QUOTA start: review contextual navigation, operational history, understandable setting drafts, editable learning material and unified binary tournaments; unresolved product choices stay open
-- 261007 review-code desktop-ux-policy-261007 done: all-width menu policy, Sheet modal contract, prose-frame exception and missing writing-height/desktop checks traced;54 tests/style61 pass and six Chromium width/theme reproductions recorded
-- 261007 review-code desktop-ux-policy-261007 start: trace navigation overlays, desktop composition and writing-area sizing against policy and acceptance checks
-- 261007 ideation searchable-details round recorded: distinct demand/inflow evidence, Creator Advisor capabilities, progressive monthly input and reopened personal-versus-pooled guidance; choices remain open
-- 261007 ideation searchable-details start
-- 261007 media-release fixture fix done: Max support assignment passes colocated182.53s/remote159.11s CPU releases, BE80, deploy61, Go vet/build/gofmt and spec lint with existing warnings; verified default release image tags refreshed
-- 261007 T621 done: typography b152f586 and final voice-context 4d634b14;3468 FE tests,145 browser measurements and all available unchanged-source/tooling gates pass
-- 261007 create-task THEME r27 done; T621 start: shared type scale, focused role assignment and browser hierarchy verification
-- 261007 update-ssot THEME r27 done: coherent responsive title/body scale and active-stage hierarchy
-- 261007 update-ssot THEME start: responsive typography scale, active-step hierarchy and readable supporting copy
-- 261007 T620 done: FE3468/430 files, clean258, backend80/deploy62/tooling/generator gates, twenty AI and four personal browser sessions pass;58 existing dirty files preserved
-- 261007 T619 done: focused five-kind purpose/choice/review/optional-chat/publication actors;37 tests and112 day/night/mobile/desktop layout checks pass
-- 261007 T618 done: method-specific personal learning, explicit analysis/use and readonly uncertain-job recovery; actor/API9 and host regressions77 pass
