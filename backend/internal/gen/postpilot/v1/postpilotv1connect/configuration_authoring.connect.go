@@ -55,6 +55,18 @@ const (
 	// ConfigurationAuthoringServiceCancelAuthoringOperationProcedure is the fully-qualified name of the
 	// ConfigurationAuthoringService's CancelAuthoringOperation RPC.
 	ConfigurationAuthoringServiceCancelAuthoringOperationProcedure = "/postpilot.v1.ConfigurationAuthoringService/CancelAuthoringOperation"
+	// ConfigurationAuthoringServiceListAuthoringSummariesProcedure is the fully-qualified name of the
+	// ConfigurationAuthoringService's ListAuthoringSummaries RPC.
+	ConfigurationAuthoringServiceListAuthoringSummariesProcedure = "/postpilot.v1.ConfigurationAuthoringService/ListAuthoringSummaries"
+	// ConfigurationAuthoringServicePatchAuthoringDraftProcedure is the fully-qualified name of the
+	// ConfigurationAuthoringService's PatchAuthoringDraft RPC.
+	ConfigurationAuthoringServicePatchAuthoringDraftProcedure = "/postpilot.v1.ConfigurationAuthoringService/PatchAuthoringDraft"
+	// ConfigurationAuthoringServiceResetAuthoringChatProcedure is the fully-qualified name of the
+	// ConfigurationAuthoringService's ResetAuthoringChat RPC.
+	ConfigurationAuthoringServiceResetAuthoringChatProcedure = "/postpilot.v1.ConfigurationAuthoringService/ResetAuthoringChat"
+	// ConfigurationAuthoringServiceResetAuthoringBaselineProcedure is the fully-qualified name of the
+	// ConfigurationAuthoringService's ResetAuthoringBaseline RPC.
+	ConfigurationAuthoringServiceResetAuthoringBaselineProcedure = "/postpilot.v1.ConfigurationAuthoringService/ResetAuthoringBaseline"
 	// ConfigurationAuthoringServiceSaveAuthoringSessionProcedure is the fully-qualified name of the
 	// ConfigurationAuthoringService's SaveAuthoringSession RPC.
 	ConfigurationAuthoringServiceSaveAuthoringSessionProcedure = "/postpilot.v1.ConfigurationAuthoringService/SaveAuthoringSession"
@@ -70,6 +82,10 @@ type ConfigurationAuthoringServiceClient interface {
 	StartAuthoringOperation(context.Context, *connect.Request[v1.StartAuthoringOperationRequest]) (*connect.Response[v1.StartAuthoringOperationResponse], error)
 	SelectAuthoringCandidate(context.Context, *connect.Request[v1.SelectAuthoringCandidateRequest]) (*connect.Response[v1.AuthoringSessionResponse], error)
 	CancelAuthoringOperation(context.Context, *connect.Request[v1.CancelAuthoringOperationRequest]) (*connect.Response[v1.AuthoringSessionResponse], error)
+	ListAuthoringSummaries(context.Context, *connect.Request[v1.ListAuthoringSummariesRequest]) (*connect.Response[v1.ListAuthoringSummariesResponse], error)
+	PatchAuthoringDraft(context.Context, *connect.Request[v1.PatchAuthoringDraftRequest]) (*connect.Response[v1.AuthoringSessionResponse], error)
+	ResetAuthoringChat(context.Context, *connect.Request[v1.ResetAuthoringChatRequest]) (*connect.Response[v1.AuthoringSessionResponse], error)
+	ResetAuthoringBaseline(context.Context, *connect.Request[v1.ResetAuthoringBaselineRequest]) (*connect.Response[v1.AuthoringSessionResponse], error)
 	SaveAuthoringSession(context.Context, *connect.Request[v1.SaveAuthoringSessionRequest]) (*connect.Response[v1.AuthoringSessionResponse], error)
 }
 
@@ -126,6 +142,30 @@ func NewConfigurationAuthoringServiceClient(httpClient connect.HTTPClient, baseU
 			connect.WithSchema(configurationAuthoringServiceMethods.ByName("CancelAuthoringOperation")),
 			connect.WithClientOptions(opts...),
 		),
+		listAuthoringSummaries: connect.NewClient[v1.ListAuthoringSummariesRequest, v1.ListAuthoringSummariesResponse](
+			httpClient,
+			baseURL+ConfigurationAuthoringServiceListAuthoringSummariesProcedure,
+			connect.WithSchema(configurationAuthoringServiceMethods.ByName("ListAuthoringSummaries")),
+			connect.WithClientOptions(opts...),
+		),
+		patchAuthoringDraft: connect.NewClient[v1.PatchAuthoringDraftRequest, v1.AuthoringSessionResponse](
+			httpClient,
+			baseURL+ConfigurationAuthoringServicePatchAuthoringDraftProcedure,
+			connect.WithSchema(configurationAuthoringServiceMethods.ByName("PatchAuthoringDraft")),
+			connect.WithClientOptions(opts...),
+		),
+		resetAuthoringChat: connect.NewClient[v1.ResetAuthoringChatRequest, v1.AuthoringSessionResponse](
+			httpClient,
+			baseURL+ConfigurationAuthoringServiceResetAuthoringChatProcedure,
+			connect.WithSchema(configurationAuthoringServiceMethods.ByName("ResetAuthoringChat")),
+			connect.WithClientOptions(opts...),
+		),
+		resetAuthoringBaseline: connect.NewClient[v1.ResetAuthoringBaselineRequest, v1.AuthoringSessionResponse](
+			httpClient,
+			baseURL+ConfigurationAuthoringServiceResetAuthoringBaselineProcedure,
+			connect.WithSchema(configurationAuthoringServiceMethods.ByName("ResetAuthoringBaseline")),
+			connect.WithClientOptions(opts...),
+		),
 		saveAuthoringSession: connect.NewClient[v1.SaveAuthoringSessionRequest, v1.AuthoringSessionResponse](
 			httpClient,
 			baseURL+ConfigurationAuthoringServiceSaveAuthoringSessionProcedure,
@@ -144,6 +184,10 @@ type configurationAuthoringServiceClient struct {
 	startAuthoringOperation    *connect.Client[v1.StartAuthoringOperationRequest, v1.StartAuthoringOperationResponse]
 	selectAuthoringCandidate   *connect.Client[v1.SelectAuthoringCandidateRequest, v1.AuthoringSessionResponse]
 	cancelAuthoringOperation   *connect.Client[v1.CancelAuthoringOperationRequest, v1.AuthoringSessionResponse]
+	listAuthoringSummaries     *connect.Client[v1.ListAuthoringSummariesRequest, v1.ListAuthoringSummariesResponse]
+	patchAuthoringDraft        *connect.Client[v1.PatchAuthoringDraftRequest, v1.AuthoringSessionResponse]
+	resetAuthoringChat         *connect.Client[v1.ResetAuthoringChatRequest, v1.AuthoringSessionResponse]
+	resetAuthoringBaseline     *connect.Client[v1.ResetAuthoringBaselineRequest, v1.AuthoringSessionResponse]
 	saveAuthoringSession       *connect.Client[v1.SaveAuthoringSessionRequest, v1.AuthoringSessionResponse]
 }
 
@@ -186,6 +230,26 @@ func (c *configurationAuthoringServiceClient) CancelAuthoringOperation(ctx conte
 	return c.cancelAuthoringOperation.CallUnary(ctx, req)
 }
 
+// ListAuthoringSummaries calls postpilot.v1.ConfigurationAuthoringService.ListAuthoringSummaries.
+func (c *configurationAuthoringServiceClient) ListAuthoringSummaries(ctx context.Context, req *connect.Request[v1.ListAuthoringSummariesRequest]) (*connect.Response[v1.ListAuthoringSummariesResponse], error) {
+	return c.listAuthoringSummaries.CallUnary(ctx, req)
+}
+
+// PatchAuthoringDraft calls postpilot.v1.ConfigurationAuthoringService.PatchAuthoringDraft.
+func (c *configurationAuthoringServiceClient) PatchAuthoringDraft(ctx context.Context, req *connect.Request[v1.PatchAuthoringDraftRequest]) (*connect.Response[v1.AuthoringSessionResponse], error) {
+	return c.patchAuthoringDraft.CallUnary(ctx, req)
+}
+
+// ResetAuthoringChat calls postpilot.v1.ConfigurationAuthoringService.ResetAuthoringChat.
+func (c *configurationAuthoringServiceClient) ResetAuthoringChat(ctx context.Context, req *connect.Request[v1.ResetAuthoringChatRequest]) (*connect.Response[v1.AuthoringSessionResponse], error) {
+	return c.resetAuthoringChat.CallUnary(ctx, req)
+}
+
+// ResetAuthoringBaseline calls postpilot.v1.ConfigurationAuthoringService.ResetAuthoringBaseline.
+func (c *configurationAuthoringServiceClient) ResetAuthoringBaseline(ctx context.Context, req *connect.Request[v1.ResetAuthoringBaselineRequest]) (*connect.Response[v1.AuthoringSessionResponse], error) {
+	return c.resetAuthoringBaseline.CallUnary(ctx, req)
+}
+
 // SaveAuthoringSession calls postpilot.v1.ConfigurationAuthoringService.SaveAuthoringSession.
 func (c *configurationAuthoringServiceClient) SaveAuthoringSession(ctx context.Context, req *connect.Request[v1.SaveAuthoringSessionRequest]) (*connect.Response[v1.AuthoringSessionResponse], error) {
 	return c.saveAuthoringSession.CallUnary(ctx, req)
@@ -201,6 +265,10 @@ type ConfigurationAuthoringServiceHandler interface {
 	StartAuthoringOperation(context.Context, *connect.Request[v1.StartAuthoringOperationRequest]) (*connect.Response[v1.StartAuthoringOperationResponse], error)
 	SelectAuthoringCandidate(context.Context, *connect.Request[v1.SelectAuthoringCandidateRequest]) (*connect.Response[v1.AuthoringSessionResponse], error)
 	CancelAuthoringOperation(context.Context, *connect.Request[v1.CancelAuthoringOperationRequest]) (*connect.Response[v1.AuthoringSessionResponse], error)
+	ListAuthoringSummaries(context.Context, *connect.Request[v1.ListAuthoringSummariesRequest]) (*connect.Response[v1.ListAuthoringSummariesResponse], error)
+	PatchAuthoringDraft(context.Context, *connect.Request[v1.PatchAuthoringDraftRequest]) (*connect.Response[v1.AuthoringSessionResponse], error)
+	ResetAuthoringChat(context.Context, *connect.Request[v1.ResetAuthoringChatRequest]) (*connect.Response[v1.AuthoringSessionResponse], error)
+	ResetAuthoringBaseline(context.Context, *connect.Request[v1.ResetAuthoringBaselineRequest]) (*connect.Response[v1.AuthoringSessionResponse], error)
 	SaveAuthoringSession(context.Context, *connect.Request[v1.SaveAuthoringSessionRequest]) (*connect.Response[v1.AuthoringSessionResponse], error)
 }
 
@@ -253,6 +321,30 @@ func NewConfigurationAuthoringServiceHandler(svc ConfigurationAuthoringServiceHa
 		connect.WithSchema(configurationAuthoringServiceMethods.ByName("CancelAuthoringOperation")),
 		connect.WithHandlerOptions(opts...),
 	)
+	configurationAuthoringServiceListAuthoringSummariesHandler := connect.NewUnaryHandler(
+		ConfigurationAuthoringServiceListAuthoringSummariesProcedure,
+		svc.ListAuthoringSummaries,
+		connect.WithSchema(configurationAuthoringServiceMethods.ByName("ListAuthoringSummaries")),
+		connect.WithHandlerOptions(opts...),
+	)
+	configurationAuthoringServicePatchAuthoringDraftHandler := connect.NewUnaryHandler(
+		ConfigurationAuthoringServicePatchAuthoringDraftProcedure,
+		svc.PatchAuthoringDraft,
+		connect.WithSchema(configurationAuthoringServiceMethods.ByName("PatchAuthoringDraft")),
+		connect.WithHandlerOptions(opts...),
+	)
+	configurationAuthoringServiceResetAuthoringChatHandler := connect.NewUnaryHandler(
+		ConfigurationAuthoringServiceResetAuthoringChatProcedure,
+		svc.ResetAuthoringChat,
+		connect.WithSchema(configurationAuthoringServiceMethods.ByName("ResetAuthoringChat")),
+		connect.WithHandlerOptions(opts...),
+	)
+	configurationAuthoringServiceResetAuthoringBaselineHandler := connect.NewUnaryHandler(
+		ConfigurationAuthoringServiceResetAuthoringBaselineProcedure,
+		svc.ResetAuthoringBaseline,
+		connect.WithSchema(configurationAuthoringServiceMethods.ByName("ResetAuthoringBaseline")),
+		connect.WithHandlerOptions(opts...),
+	)
 	configurationAuthoringServiceSaveAuthoringSessionHandler := connect.NewUnaryHandler(
 		ConfigurationAuthoringServiceSaveAuthoringSessionProcedure,
 		svc.SaveAuthoringSession,
@@ -275,6 +367,14 @@ func NewConfigurationAuthoringServiceHandler(svc ConfigurationAuthoringServiceHa
 			configurationAuthoringServiceSelectAuthoringCandidateHandler.ServeHTTP(w, r)
 		case ConfigurationAuthoringServiceCancelAuthoringOperationProcedure:
 			configurationAuthoringServiceCancelAuthoringOperationHandler.ServeHTTP(w, r)
+		case ConfigurationAuthoringServiceListAuthoringSummariesProcedure:
+			configurationAuthoringServiceListAuthoringSummariesHandler.ServeHTTP(w, r)
+		case ConfigurationAuthoringServicePatchAuthoringDraftProcedure:
+			configurationAuthoringServicePatchAuthoringDraftHandler.ServeHTTP(w, r)
+		case ConfigurationAuthoringServiceResetAuthoringChatProcedure:
+			configurationAuthoringServiceResetAuthoringChatHandler.ServeHTTP(w, r)
+		case ConfigurationAuthoringServiceResetAuthoringBaselineProcedure:
+			configurationAuthoringServiceResetAuthoringBaselineHandler.ServeHTTP(w, r)
 		case ConfigurationAuthoringServiceSaveAuthoringSessionProcedure:
 			configurationAuthoringServiceSaveAuthoringSessionHandler.ServeHTTP(w, r)
 		default:
@@ -312,6 +412,22 @@ func (UnimplementedConfigurationAuthoringServiceHandler) SelectAuthoringCandidat
 
 func (UnimplementedConfigurationAuthoringServiceHandler) CancelAuthoringOperation(context.Context, *connect.Request[v1.CancelAuthoringOperationRequest]) (*connect.Response[v1.AuthoringSessionResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ConfigurationAuthoringService.CancelAuthoringOperation is not implemented"))
+}
+
+func (UnimplementedConfigurationAuthoringServiceHandler) ListAuthoringSummaries(context.Context, *connect.Request[v1.ListAuthoringSummariesRequest]) (*connect.Response[v1.ListAuthoringSummariesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ConfigurationAuthoringService.ListAuthoringSummaries is not implemented"))
+}
+
+func (UnimplementedConfigurationAuthoringServiceHandler) PatchAuthoringDraft(context.Context, *connect.Request[v1.PatchAuthoringDraftRequest]) (*connect.Response[v1.AuthoringSessionResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ConfigurationAuthoringService.PatchAuthoringDraft is not implemented"))
+}
+
+func (UnimplementedConfigurationAuthoringServiceHandler) ResetAuthoringChat(context.Context, *connect.Request[v1.ResetAuthoringChatRequest]) (*connect.Response[v1.AuthoringSessionResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ConfigurationAuthoringService.ResetAuthoringChat is not implemented"))
+}
+
+func (UnimplementedConfigurationAuthoringServiceHandler) ResetAuthoringBaseline(context.Context, *connect.Request[v1.ResetAuthoringBaselineRequest]) (*connect.Response[v1.AuthoringSessionResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ConfigurationAuthoringService.ResetAuthoringBaseline is not implemented"))
 }
 
 func (UnimplementedConfigurationAuthoringServiceHandler) SaveAuthoringSession(context.Context, *connect.Request[v1.SaveAuthoringSessionRequest]) (*connect.Response[v1.AuthoringSessionResponse], error) {

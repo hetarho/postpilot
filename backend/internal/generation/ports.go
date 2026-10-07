@@ -123,3 +123,23 @@ type Progress func(stage string, done, total int)
 type QualityRulesForPrompt interface {
 	RulesFor(ctx context.Context, userID, slug string, ticked []string, language Language) ([]string, error)
 }
+
+// WritingTestSnapshots freeze every nonvaried input once. Variant data is server-resolved.
+// Observe variants execute independent observation; other factors share missing observations.
+type WritingTestSnapshotRequest struct {
+	UserID, SourcePostSlug, Factor, ModelStage string
+	InputRevision, ContentRevision             int64
+	CommonMaterial                             []byte
+	Variants                                   [][]byte
+	Count                                      int
+}
+type WritingTestSnapshot struct {
+	Common                               []byte
+	Variants                             [][]byte
+	Hash, PromptVersion, AssignmentsHash string
+	ObserveCalls                         int
+}
+type WritingTestSnapshots interface {
+	FreezeWritingTest(context.Context, WritingTestSnapshotRequest) (WritingTestSnapshot, error)
+	WriteTestEntrant(context.Context, WritingTestSnapshot, int, Progress) (WriteAnswer, error)
+}

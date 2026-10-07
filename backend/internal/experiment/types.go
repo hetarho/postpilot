@@ -474,3 +474,361 @@ var (
 	ErrPromptUnanswered = errors.New("the prompt has no answer to compare against")
 	ErrPhotoUnsupported = errors.New("a photo prompt needs both candidates to read images")
 )
+
+// Writing tests coexist with retained paid comparisons; their mutations never reuse a ranking.
+type TestFactor string
+
+const (
+	FactorModel     TestFactor = "model"
+	FactorVoice     TestFactor = "voice"
+	FactorTemplate  TestFactor = "template"
+	FactorGuideline TestFactor = "guideline"
+)
+
+func (f TestFactor) Valid() bool {
+	return f == FactorModel || f == FactorVoice || f == FactorTemplate || f == FactorGuideline
+}
+
+type TestStatus string
+
+const (
+	TestQueued    TestStatus = "queued"
+	TestRunning   TestStatus = "running"
+	TestPartial   TestStatus = "partial"
+	TestReview    TestStatus = "review"
+	TestCompleted TestStatus = "completed"
+	TestCancelled TestStatus = "cancelled"
+	TestFailed    TestStatus = "failed"
+)
+
+func (s TestStatus) Valid() bool {
+	switch s {
+	case TestQueued, TestRunning, TestPartial, TestReview, TestCompleted, TestCancelled, TestFailed:
+		return true
+	}
+	return false
+}
+func ValidTestCount(n int) bool { return n == 2 || n == 4 || n == 8 || n == 16 }
+
+type TestCandidateStatus string
+
+const (
+	TestCandidatePending   TestCandidateStatus = "pending"
+	TestCandidateRunning   TestCandidateStatus = "running"
+	TestCandidateSucceeded TestCandidateStatus = "succeeded"
+	TestCandidateFailed    TestCandidateStatus = "failed"
+	TestCandidateCancelled TestCandidateStatus = "cancelled"
+)
+
+func (s TestCandidateStatus) Valid() bool {
+	switch s {
+	case TestCandidatePending, TestCandidateRunning, TestCandidateSucceeded, TestCandidateFailed, TestCandidateCancelled:
+		return true
+	}
+	return false
+}
+
+type TestPublicationAction string
+
+const (
+	TestSaveSetting TestPublicationAction = "save_setting"
+	TestUseSetting  TestPublicationAction = "use_setting"
+	TestAdoptModel  TestPublicationAction = "adopt_model"
+	TestApplyOutput TestPublicationAction = "apply_output"
+)
+
+func (a TestPublicationAction) Valid() bool {
+	return a == TestSaveSetting || a == TestUseSetting || a == TestAdoptModel || a == TestApplyOutput
+}
+
+type TestPublicationStatus string
+
+const (
+	TestPublicationPending   TestPublicationStatus = "pending"
+	TestPublicationConfirmed TestPublicationStatus = "confirmed"
+	TestPublicationConflict  TestPublicationStatus = "conflict"
+)
+
+func (s TestPublicationStatus) Valid() bool {
+	return s == TestPublicationPending || s == TestPublicationConfirmed || s == TestPublicationConflict
+}
+
+type TestEntrantRef struct {
+	SourceKind                               string
+	Model                                    ModelRef
+	SettingKind, SettingID, SettingRevision  string
+	AuthoringSessionID, AuthoringCandidateID string
+	AuthoringRevision                        uint32
+}
+type TestInput struct {
+	SourcePostSlug                       string
+	InputRevision, ContentRevision       int64
+	Material                             string
+	Fictional                            bool
+	AttachmentIDs                        []string
+	TemplateAnswers                      []TestAnswer
+	ObserveModel, WriteModel             ModelRef
+	VoiceID, TemplateID, GuidelineSlotID string
+	TargetLanguage                       string
+	TargetLength, TagCount               int
+	UseMemory                            bool
+	QualityRules                         []string
+}
+type TestAnswer struct {
+	Label, Answer string
+	Enabled       bool
+}
+type TestStart struct {
+	UserID, RequestKey, QuoteKey string
+	Factor                       TestFactor
+	ModelStage                   Stage
+	Count                        int
+	Entrants                     []TestEntrantRef
+	Input                        TestInput
+}
+
+var (
+	ErrTestCount     = &TestRefusal{reason: FailureReasonTestCount, message: "writing test entrant count is invalid"}
+	ErrTestFactor    = &TestRefusal{reason: FailureReasonTestFactor, message: "writing test factor is invalid"}
+	ErrTestEntrant   = &TestRefusal{reason: FailureReasonTestEntrant, message: "writing test entrant is invalid"}
+	ErrTestDuplicate = &TestRefusal{reason: FailureReasonTestDuplicate, message: "writing test entrants repeat"}
+	ErrTestOperation = &TestRefusal{reason: FailureReasonTestOperation, message: "writing test operation key is invalid"}
+)
+
+// ValidateTestShape runs before resolution, job/hold creation or any provider work.
+// Eligibility, semantic snapshot uniqueness and domain revisions are checked by owned ports.
+func ValidateTestShape(r TestStart) error {
+	if !ValidTestCount(r.Count) || len(r.Entrants) != r.Count {
+		return ErrTestCount
+	}
+	if !r.Factor.Valid() || (r.Factor == FactorModel && r.ModelStage != StageObserve && r.ModelStage != StageWrite) || (r.Factor != FactorModel && r.ModelStage != "") {
+		return ErrTestFactor
+	}
+	if r.UserID == "" || r.RequestKey == "" {
+		return ErrTestOperation
+	}
+	seen := map[string]bool{}
+	for _, e := range r.Entrants {
+		var key string
+		switch e.SourceKind {
+		case "model":
+			if r.Factor != FactorModel || e.Model.ProviderID == "" || e.Model.ModelID == "" || e.SettingID != "" || e.AuthoringSessionID != "" {
+				return ErrTestEntrant
+			}
+			key = "model:" + e.Model.String()
+		case "setting":
+			if r.Factor == FactorModel || e.SettingID == "" || e.SettingRevision == "" || e.SettingKind != string(r.Factor) || e.Model.ProviderID != "" || e.Model.ModelID != "" || e.AuthoringSessionID != "" {
+				return ErrTestEntrant
+			}
+			key = "setting:" + e.SettingKind + ":" + e.SettingID
+		case "authoring_candidate":
+			if r.Factor == FactorModel || e.AuthoringSessionID == "" || e.AuthoringCandidateID == "" || e.Model.ProviderID != "" || e.Model.ModelID != "" || e.SettingID != "" {
+				return ErrTestEntrant
+			}
+			key = "authoring:" + e.AuthoringSessionID + ":" + e.AuthoringCandidateID
+		default:
+			return ErrTestEntrant
+		}
+		if seen[key] {
+			return ErrTestDuplicate
+		}
+		seen[key] = true
+	}
+	return nil
+}
+
+type TestMutation struct {
+	UserID, TestID, RequestKey string
+	ExpectedRevision           uint32
+}
+type MatchDecision struct {
+	TestMutation
+	MatchID, WinnerCandidateID string
+}
+type TestCandidateIdentity struct {
+	Label     string
+	Ref       TestEntrantRef
+	Synthetic bool
+}
+type TestCandidate struct {
+	ID, TestID, UserID                string
+	SeedPosition                      int
+	Ref                               TestEntrantRef
+	SourceRevision, SemanticKey       string
+	FrozenVariant, Output, Accounting []byte
+	Status                            string
+	Failure                           *Failure
+	Identity                          *TestCandidateIdentity
+	// Decoded by the store edge from private accounting; nil means no recorded call usage.
+	Usage *Usage
+}
+
+// TestCandidateUsage carries only customer-visible timing/tokens, never supplier costs.
+type TestCandidateUsage struct {
+	PromptTokens, CompletionTokens, LatencyMS int64
+}
+
+// BlindCandidate intentionally excludes source refs/revisions, seed positions, frozen values
+// and private accounting. Identity and public usage are present only after reveal.
+// A UI must use this projection rather than marshal the private store record.
+type BlindCandidate struct {
+	ID, DisplayLabel, Status string
+	Output                   []byte
+	Failure                  *Failure
+	Identity                 *TestCandidateIdentity
+	Usage                    *TestCandidateUsage
+}
+
+func (c TestCandidate) Project(revealed bool, label string) BlindCandidate {
+	out := BlindCandidate{ID: c.ID, DisplayLabel: label, Status: c.Status, Output: append([]byte(nil), c.Output...)}
+	// Technical detail can reveal the model, so it never enters a blind projection.
+	if c.Failure != nil {
+		out.Failure = &Failure{Reason: c.Failure.Reason}
+	}
+	if revealed && c.Identity != nil {
+		identity := *c.Identity
+		out.Identity = &identity
+	}
+	if revealed && c.Usage != nil {
+		out.Usage = &TestCandidateUsage{
+			PromptTokens: c.Usage.PromptTokens, CompletionTokens: c.Usage.CompletionTokens,
+			LatencyMS: c.Usage.LatencyMS,
+		}
+	}
+	return out
+}
+
+type TestMatch struct {
+	ID                                     string
+	Round, Index                           int
+	LeftID, RightID, WinnerID, DecisionKey string
+}
+type TestPublication struct{ ID, UserID, TestID, WinnerID, Action, RequestKey, TargetID, Status, Fingerprint string }
+type WritingTest struct {
+	ID, UserID, Kind, SourcePostSlug, JobID, CommonHash, PromptVersion, WinnerID string
+	Factor                                                                       TestFactor
+	ModelStage                                                                   Stage
+	Count                                                                        int
+	Status                                                                       TestStatus
+	Revision                                                                     uint32
+	Input                                                                        TestInput
+	CommonSnapshot                                                               []byte
+	PurgeFence                                                                   uint64
+	Candidates                                                                   []TestCandidate
+	Matches                                                                      []TestMatch
+	Publications                                                                 []TestPublication
+	CreatedAt, UpdatedAt                                                         time.Time
+}
+type FrozenTestVariant struct {
+	Reference             TestEntrantRef
+	Content               []byte
+	SemanticKey, Revision string
+	Synthetic             bool
+}
+type TestSnapshot struct {
+	Common                               []byte
+	Hash, PromptVersion, AssignmentsHash string
+	Variants                             []FrozenTestVariant
+}
+type TestCall struct {
+	Ref                                   ModelRef
+	Stage                                 Stage
+	Count, PromptTokens, CompletionTokens int
+}
+type TestPlan struct {
+	Snapshot        TestSnapshot
+	Calls           []TestCall
+	EstimateCredits int
+	Free            bool
+}
+type OutputApplication struct {
+	Nouns []string
+	TestMutation
+	WinnerID, PostSlug, AssignmentsHash string
+	InputRevision, ContentRevision      int64
+	Output, Storyline, Baseline         []byte
+	ContentLanguage                     string
+}
+type ModelAdoption struct {
+	TestMutation
+	WinnerID string
+	Stage    Stage
+	Model    ModelRef
+}
+type WinnerPublication struct {
+	TestMutation
+	WinnerID, Action, Name, Scope string
+	ScopeIDs                      []string
+	MakeDefault                   bool
+	Variant                       FrozenTestVariant
+}
+type PublicationReceipt struct {
+	UserID, TestID, WinnerID, Action, RequestKey, TargetID string
+	ResultingRevision                                      int64
+}
+
+// Consumer-owned typed failures expose safe reasons without transport imports.
+const (
+	FailureReasonTestCount               = "WRITING_TEST_COUNT_INVALID"
+	FailureReasonTestFactor              = "WRITING_TEST_FACTOR_INVALID"
+	FailureReasonTestEntrant             = "WRITING_TEST_ENTRANT_INVALID"
+	FailureReasonTestDuplicate           = "WRITING_TEST_ENTRANTS_DUPLICATE"
+	FailureReasonTestOperation           = "WRITING_TEST_OPERATION_INVALID"
+	FailureReasonTestNotFound            = "WRITING_TEST_NOT_FOUND"
+	FailureReasonTestRevisionConflict    = "WRITING_TEST_REVISION_CONFLICT"
+	FailureReasonTestMatchInvalid        = "WRITING_TEST_MATCH_INVALID"
+	FailureReasonTestDecisionConflict    = "WRITING_TEST_DECISION_CONFLICT"
+	FailureReasonTestStateInvalid        = "WRITING_TEST_STATE_INVALID"
+	FailureReasonTestPublicationConflict = "WRITING_TEST_PUBLICATION_CONFLICT"
+	FailureReasonTestOutputIncompatible  = "WRITING_TEST_OUTPUT_INCOMPATIBLE"
+	FailureReasonTestQuoteRequired       = "WRITING_TEST_QUOTE_REQUIRED"
+	FailureReasonTestRunning             = "WRITING_TEST_RUNNING"
+	FailureReasonTestMaterialInvalid     = "WRITING_TEST_MATERIAL_INVALID"
+	FailureReasonTestLegacyReadOnly      = "WRITING_TEST_LEGACY_READ_ONLY"
+)
+
+type TestRefusal struct{ reason, message string }
+
+func (e *TestRefusal) Error() string             { return e.message }
+func (e *TestRefusal) Reason() string            { return e.reason }
+func (e *TestRefusal) Params() map[string]string { return nil }
+
+var (
+	ErrTestNotFound            = &TestRefusal{reason: FailureReasonTestNotFound, message: "writing test is not found"}
+	ErrTestRevisionConflict    = &TestRefusal{reason: FailureReasonTestRevisionConflict, message: "writing test revision changed"}
+	ErrTestMatchInvalid        = &TestRefusal{reason: FailureReasonTestMatchInvalid, message: "writing test match is invalid"}
+	ErrTestDecisionConflict    = &TestRefusal{reason: FailureReasonTestDecisionConflict, message: "writing test decision already exists"}
+	ErrTestStateInvalid        = &TestRefusal{reason: FailureReasonTestStateInvalid, message: "writing test action is not available"}
+	ErrTestPublicationConflict = &TestRefusal{reason: FailureReasonTestPublicationConflict, message: "writing test publication target changed"}
+	ErrTestOutputIncompatible  = &TestRefusal{reason: FailureReasonTestOutputIncompatible, message: "writing test output cannot apply to this source"}
+	ErrTestQuoteRequired       = &TestRefusal{reason: FailureReasonTestQuoteRequired, message: "writing test requires an approved quote"}
+	ErrTestRunning             = &TestRefusal{reason: FailureReasonTestRunning, message: "writing test preparation is active"}
+	ErrTestMaterialInvalid     = &TestRefusal{reason: FailureReasonTestMaterialInvalid, message: "writing test common material is invalid"}
+	ErrTestLegacyReadOnly      = &TestRefusal{reason: FailureReasonTestLegacyReadOnly, message: "earlier comparison is read only"}
+)
+
+const MaxTestEntrants = 16
+
+// A retry quote refers only to a stored test and failed candidates, keeping its original format.
+type TestRetryQuoteRequest struct {
+	UserID, TestID   string
+	ExpectedRevision uint32
+	CandidateIDs     []string
+}
+
+func ValidateRetryQuoteShape(request TestRetryQuoteRequest) error {
+	if request.UserID == "" || request.TestID == "" || len(request.CandidateIDs) == 0 || len(request.CandidateIDs) > MaxTestEntrants {
+		return ErrTestOperation
+	}
+	seen := map[string]bool{}
+	for _, id := range request.CandidateIDs {
+		if id == "" {
+			return ErrTestEntrant
+		}
+		if seen[id] {
+			return ErrTestDuplicate
+		}
+		seen[id] = true
+	}
+	return nil
+}

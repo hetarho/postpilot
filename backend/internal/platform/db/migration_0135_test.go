@@ -51,7 +51,7 @@ func TestMigration0135LeavesWritingVoicesAndProjectionsIntact(t *testing.T) {
 	if len(before) == 0 {
 		t.Fatal("missing legacy voice schema")
 	}
-	if _, err := p.Up(t.Context()); err != nil {
+	if _, err := p.UpTo(t.Context(), 135); err != nil {
 		t.Fatal(err)
 	}
 	for name, definition := range before {

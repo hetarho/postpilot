@@ -19,12 +19,12 @@ message WritingVoiceCandidate {
   string description = 3;
   string sample = 4;
 }
-message EstimateWritingVoiceCandidatesRequest { ModelRef write_model = 1; }
+message EstimateWritingVoiceCandidatesRequest { ModelRef write_model = 1; int32 candidate_count = 2; }
 message EstimateWritingVoiceCandidatesResponse {
   optional int32 credits = 1;
   bool free = 2;
 }
-message StartWritingVoiceCandidatesRequest { ModelRef write_model = 1; }
+message StartWritingVoiceCandidatesRequest { ModelRef write_model = 1; int32 candidate_count = 2; }
 message StartWritingVoiceCandidatesResponse { string job_id = 1; }
 message GetWritingVoiceCandidatesRequest { string job_id = 1; }
 message GetWritingVoiceCandidatesResponse {

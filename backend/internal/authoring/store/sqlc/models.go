@@ -4,6 +4,10 @@
 
 package sqlc
 
+import (
+	"database/sql"
+)
+
 type ConfigurationAuthoringOperation struct {
 	ID            string
 	UserID        string
@@ -20,14 +24,23 @@ type ConfigurationAuthoringOperation struct {
 }
 
 type ConfigurationAuthoringSession struct {
-	ID        string
-	UserID    string
-	Kind      string
-	TargetID  string
-	RequestID string
-	Revision  int64
-	Phase     string
-	Snapshot  string
-	CreatedAt string
-	UpdatedAt string
+	ID                    string
+	UserID                string
+	Kind                  string
+	TargetID              string
+	RequestID             string
+	Revision              int64
+	Phase                 string
+	Snapshot              string
+	CreatedAt             string
+	UpdatedAt             string
+	SavedBaseline         sql.NullString
+	WorkingSource         sql.NullString
+	DraftState            string
+	HasUnpublishedChanges int64
+	SavedAvailable        int64
+	PublicationPending    int64
+	TargetConflict        int64
+	DisplayName           string
+	CandidateCount        int64
 }

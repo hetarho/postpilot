@@ -510,3 +510,18 @@ export {
   ConfigurationKind as ProtoConfigurationKind,
   AuthoringMode as ProtoAuthoringMode,
 } from './gen/postpilot/v1/configuration_authoring_pb'
+
+// Frozen writing-test transport contracts. Domain UI imports these only through entity adapters.
+export * from './gen/postpilot/v1/writing_test_pb'
+export {
+  AuthoringDraftState as ProtoAuthoringDraftState,
+  PatchAuthoringDraftRequestSchema,
+  ResetAuthoringChatRequestSchema,
+  ResetAuthoringBaselineRequestSchema,
+  ListAuthoringSummariesRequestSchema,
+  ListAuthoringSummariesResponseSchema,
+} from './gen/postpilot/v1/configuration_authoring_pb'
+export {
+  UpdateVoiceSampleRequestSchema,
+  UpdateVoiceSampleResponseSchema,
+} from './gen/postpilot/v1/voice_pb'

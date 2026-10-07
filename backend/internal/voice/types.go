@@ -130,18 +130,19 @@ const (
 // photo it was written on (VOICE-60); a post has neither. Label is empty for an answer: its
 // prompt text is product copy, never a row.
 type Sample struct {
-	ID          string
-	UserID      string
-	VoiceID     string
-	Kind        SampleKind
-	PromptKey   string
-	Label       string
-	Body        string
-	Chars       int
-	PhotoKey    string
-	PhotoWidth  int
-	PhotoHeight int
-	CreatedAt   time.Time
+	ContentRevision int64
+	ID              string
+	UserID          string
+	VoiceID         string
+	Kind            SampleKind
+	PromptKey       string
+	Label           string
+	Body            string
+	Chars           int
+	PhotoKey        string
+	PhotoWidth      int
+	PhotoHeight     int
+	CreatedAt       time.Time
 }
 
 // HasPhoto reports an answer written on a photo.
@@ -226,33 +227,40 @@ type AIPart struct {
 // Analysis is one immutable snapshot (VOICE-26): the counted fingerprint, the AI part, the 학습
 // 글 it read and when.
 type Analysis struct {
-	Origin          Origin
-	SyntheticSample string
-	Counted         Fingerprint
-	AI              AIPart
-	MaterialIDs     []string
-	AnalyzeModel    string
-	CreatedAt       time.Time
+	AcceptedSources     []AcceptedSource
+	SourceVersionsKnown bool
+	AcceptedMaterials   []AcceptedMaterial
+	Origin              Origin
+	SyntheticSample     string
+	Counted             Fingerprint
+	AI                  AIPart
+	MaterialIDs         []string
+	AnalyzeModel        string
+	CreatedAt           time.Time
 }
 
 // AnalysisJob is one queued analysis. MaterialIDs is the snapshot frozen at its start
 // (VOICE-22): the run reads those 학습 글 that still exist and nothing added since.
 type AnalysisJob struct {
-	UserID      string
-	VoiceID     string
-	WriteModel  string
-	MaterialIDs []string
+	AcceptedSources   []AcceptedSource
+	AcceptedMaterials []AcceptedMaterial
+	UserID            string
+	VoiceID           string
+	WriteModel        string
+	MaterialIDs       []string
 }
 
 // AnalysisJobRequest starts one analysis over the snapshot its start read. PromptTokens is the
 // size of the prompt the run will send over that snapshot, at one token per Unicode character,
 // which the hold prices (QUOTA-14).
 type AnalysisJobRequest struct {
-	UserID       string
-	VoiceID      string
-	WriteModel   string
-	MaterialIDs  []string
-	PromptTokens int
+	AcceptedSources   []AcceptedSource
+	AcceptedMaterials []AcceptedMaterial
+	UserID            string
+	VoiceID           string
+	WriteModel        string
+	MaterialIDs       []string
+	PromptTokens      int
 }
 
 type ActiveJob struct{ ID string }
@@ -262,3 +270,63 @@ type JobAlreadyInProgressError struct{ ActiveID string }
 func (e *JobAlreadyInProgressError) Error() string {
 	return fmt.Sprintf("analysis job %s is already in progress", e.ActiveID)
 }
+
+// Historical unknown snapshots stay unknown until an explicit analysis accepts versions.
+type AcceptedSource struct {
+	SampleID        string
+	ContentRevision int64
+}
+type AcceptedMaterial struct {
+	Source                  AcceptedSource
+	Body, PhotoKey          string
+	PhotoWidth, PhotoHeight int
+}
+type SampleMutation struct {
+	UserID, VoiceID, SampleID, OperationKey string
+	ExpectedContentRevision                 int64
+	Label, Body, PhotoUploadID              *string
+	PhotoWidth, PhotoHeight                 *int
+}
+
+var ErrSampleRevisionConflict = &MaterialRefusal{reason: FailureReasonSampleRevisionConflict, message: "voice material revision changed"}
+
+// Ordinary legacy factories default to eight; unified preparation explicitly chooses a format.
+func NormalizeCandidateCount(count int) (int, error) {
+	if count == 0 {
+		return CandidateCount, nil
+	}
+	switch count {
+	case 2, 4, 8, 16:
+		return count, nil
+	}
+	return 0, ErrCandidateCount
+}
+
+type FrozenWritingStyle struct {
+	Draft    WritingStyleDraft
+	Analysis Analysis
+	Revision string
+}
+type TestStylePublication struct {
+	UserID, TestID, WinnerID, Action, RequestKey, Fingerprint, SourceVoiceID, AcceptedRevision, Name string
+	Analysis                                                                                         Analysis
+	MakeDefault                                                                                      bool
+}
+type TestStyleReceipt struct{ VoiceID, RequestKey string }
+
+var ErrCandidateCount = errors.New("writing style candidate count is invalid")
+
+const (
+	FailureReasonSampleRevisionConflict = "VOICE_SAMPLE_REVISION_CONFLICT"
+	FailureReasonSampleUpdateInvalid    = "VOICE_SAMPLE_UPDATE_INVALID"
+	FailureReasonCheckRetired           = "VOICE_CHECK_RETIRED"
+)
+
+type MaterialRefusal struct{ reason, message string }
+
+func (e *MaterialRefusal) Error() string             { return e.message }
+func (e *MaterialRefusal) Reason() string            { return e.reason }
+func (e *MaterialRefusal) Params() map[string]string { return nil }
+
+var ErrSampleUpdateInvalid = &MaterialRefusal{reason: FailureReasonSampleUpdateInvalid, message: "voice material update is invalid"}
+var ErrCheckRetired = &MaterialRefusal{reason: FailureReasonCheckRetired, message: "voice check admission is retired"}

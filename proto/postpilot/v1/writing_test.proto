@@ -1,0 +1,247 @@
+syntax = "proto3";
+package postpilot.v1;
+
+import "postpilot/v1/provider.proto";
+import "postpilot/v1/configuration_authoring.proto";
+import "postpilot/v1/post.proto";
+import "postpilot/v1/error.proto";
+import "postpilot/v1/language.proto";
+import "postpilot/v1/quality.proto";
+
+option go_package = "github.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1";
+
+// Owner comes exclusively from authentication. This service is wired after domain integration.
+service WritingTestService {
+  rpc EstimateWritingTest(EstimateWritingTestRequest) returns (EstimateWritingTestResponse) {}
+  rpc EstimateFailedTestCandidates(EstimateFailedTestCandidatesRequest) returns (EstimateWritingTestResponse) {}
+  rpc StartWritingTest(StartWritingTestRequest) returns (WritingTestResponse) {}
+  rpc GetWritingTest(GetWritingTestRequest) returns (WritingTestResponse) {}
+  rpc ListWritingTests(ListWritingTestsRequest) returns (ListWritingTestsResponse) {}
+  rpc RetryFailedTestCandidates(RetryFailedTestCandidatesRequest) returns (WritingTestResponse) {}
+  rpc DecideTestMatch(DecideTestMatchRequest) returns (WritingTestResponse) {}
+  rpc CancelWritingTest(CancelWritingTestRequest) returns (WritingTestResponse) {}
+  rpc SaveWritingTestWinner(SaveWritingTestWinnerRequest) returns (WritingTestPublicationResponse) {}
+  rpc ApplyWritingTestOutput(ApplyWritingTestOutputRequest) returns (WritingTestPublicationResponse) {}
+}
+enum WritingTestFactor {
+  WRITING_TEST_FACTOR_UNSPECIFIED = 0;
+  WRITING_TEST_FACTOR_MODEL = 1;
+  WRITING_TEST_FACTOR_VOICE = 2;
+  WRITING_TEST_FACTOR_TEMPLATE = 3;
+  WRITING_TEST_FACTOR_GUIDELINE = 4;
+}
+enum WritingTestStage {
+  WRITING_TEST_STAGE_UNSPECIFIED = 0;
+  WRITING_TEST_STAGE_OBSERVE = 1;
+  WRITING_TEST_STAGE_WRITE = 2;
+}
+enum WritingTestStatus {
+  WRITING_TEST_STATUS_UNSPECIFIED = 0;
+  WRITING_TEST_STATUS_QUEUED = 1;
+  WRITING_TEST_STATUS_RUNNING = 2;
+  WRITING_TEST_STATUS_PARTIAL = 3;
+  WRITING_TEST_STATUS_REVIEW = 4;
+  WRITING_TEST_STATUS_COMPLETED = 5;
+  WRITING_TEST_STATUS_CANCELLED = 6;
+  WRITING_TEST_STATUS_FAILED = 7;
+}
+enum WritingTestCandidateStatus {
+  WRITING_TEST_CANDIDATE_STATUS_UNSPECIFIED = 0;
+  WRITING_TEST_CANDIDATE_STATUS_PENDING = 1;
+  WRITING_TEST_CANDIDATE_STATUS_RUNNING = 2;
+  WRITING_TEST_CANDIDATE_STATUS_SUCCEEDED = 3;
+  WRITING_TEST_CANDIDATE_STATUS_FAILED = 4;
+  WRITING_TEST_CANDIDATE_STATUS_CANCELLED = 5;
+}
+enum WritingTestPublicationAction {
+  WRITING_TEST_PUBLICATION_ACTION_UNSPECIFIED = 0;
+  WRITING_TEST_PUBLICATION_ACTION_SAVE_SETTING = 1;
+  WRITING_TEST_PUBLICATION_ACTION_USE_SETTING = 2;
+  WRITING_TEST_PUBLICATION_ACTION_ADOPT_MODEL = 3;
+  WRITING_TEST_PUBLICATION_ACTION_APPLY_OUTPUT = 4;
+}
+enum WritingTestPublicationStatus {
+  WRITING_TEST_PUBLICATION_STATUS_UNSPECIFIED = 0;
+  WRITING_TEST_PUBLICATION_STATUS_PENDING = 1;
+  WRITING_TEST_PUBLICATION_STATUS_CONFIRMED = 2;
+  WRITING_TEST_PUBLICATION_STATUS_CONFLICT = 3;
+}
+message WritingTestSettingRef {
+  ConfigurationKind kind = 1;
+  string id = 2;
+  string revision = 3;
+}
+message WritingTestAuthoringRef {
+  string session_id = 1;
+  string candidate_id = 2;
+  uint32 revision = 3;
+}
+// References, never user-supplied variant content. Ownership and revisions resolve on the server.
+message WritingTestEntrant {
+  oneof source {
+    ModelRef model = 1;
+    WritingTestSettingRef setting = 2;
+    WritingTestAuthoringRef authoring_candidate = 3;
+  }
+}
+message WritingTestMaterial {
+  string text = 1;
+  bool fictional = 2;
+  repeated string attachment_ids = 3;
+  repeated TemplateAnswer template_answers = 4;
+}
+message WritingTestContext {
+  string source_post_slug = 1;
+  int64 expected_input_revision = 2;
+  int64 expected_content_revision = 3;
+  WritingTestMaterial material = 4;
+  ModelRef observe_model = 5;
+  ModelRef write_model = 6;
+  string voice_id = 7;
+  string template_id = 8;
+  // One designated slot in the server-resolved ordered rules; never rescope other rules.
+  string guideline_slot_id = 9;
+  ContentLanguage target_language = 10;
+  int32 target_length = 11;
+  int32 tag_count = 12;
+  bool use_memory = 13;
+  repeated QualityMetric quality_rules = 14;
+}
+message WritingTestPlan {
+  WritingTestFactor factor = 1;
+  WritingTestStage model_stage = 2;
+  // Exactly 2/4/8/16, and equal to entrants.size. There is no default or silent reduction.
+  int32 count = 3;
+  repeated WritingTestEntrant entrants = 4;
+  WritingTestContext context = 5;
+}
+message WritingTestIdentity {
+  string label = 1;
+  WritingTestEntrant source = 2;
+  bool synthetic = 3;
+}
+// Public usage after reveal. Supplier prices/costs and provider metadata never enter this message.
+message WritingTestUsage {
+  int64 prompt_tokens = 1;
+  int64 completion_tokens = 2;
+  int64 latency_ms = 3;
+}
+message WritingTestCandidate {
+  string id = 1;
+  WritingTestCandidateStatus status = 2;
+  PostContent output = 3;
+  Failure failure = 4;
+  // Absent while blind, including identity-bearing failure projections.
+  WritingTestIdentity identity = 5;
+  string display_label = 6;
+  Storyline storyline = 7;
+  // Absent while blind; preserved for completed or explicitly abandoned tests, including failed calls.
+  WritingTestUsage usage = 8;
+}
+message WritingTestMatch {
+  string id = 1;
+  int32 round = 2;
+  int32 index = 3;
+  string left_candidate_id = 4;
+  string right_candidate_id = 5;
+  string winner_candidate_id = 6;
+}
+message WritingTestPublication {
+  string id = 1;
+  string test_id = 2;
+  string winner_candidate_id = 3;
+  WritingTestPublicationAction action = 4;
+  WritingTestPublicationStatus status = 5;
+  string request_key = 6;
+  string target_id = 7;
+  Failure failure = 8;
+}
+message WritingTest {
+  string id = 1;
+  uint32 revision = 2;
+  WritingTestFactor factor = 3;
+  WritingTestStage model_stage = 4;
+  int32 count = 5;
+  WritingTestStatus status = 6;
+  string source_post_slug = 7;
+  string job_id = 8;
+  repeated WritingTestCandidate candidates = 9;
+  repeated WritingTestMatch matches = 10;
+  string winner_candidate_id = 11;
+  repeated WritingTestPublication publications = 12;
+  bool revealed = 13;
+  string created_at = 14;
+  string updated_at = 15;
+  string content_expires_at = 16;
+  bool fictional = 17;
+  int64 confirmed_credits = 18;
+  int64 reserved_credits = 19;
+  Failure failure = 20;
+  // Stored admission target and every output's content-language provenance, also on history reads.
+  // Never substitute the current UI locale or a source post's later target language for export.
+  ContentLanguage target_language = 21;
+}
+message EstimateWritingTestRequest { WritingTestPlan plan = 1; }
+// Requote only the selected failed work of the stored immutable test after reload/expiry.
+// This request never supplies a replacement plan or regenerates successful candidates.
+message EstimateFailedTestCandidatesRequest {
+  string test_id = 1;
+  uint32 expected_revision = 2;
+  repeated string candidate_ids = 3;
+}
+message EstimateWritingTestResponse {
+  optional int64 credits = 1;
+  bool free = 2;
+  string quote_key = 3;
+  string expires_at = 4;
+}
+message StartWritingTestRequest {
+  WritingTestPlan plan = 1;
+  string request_key = 2;
+  // Server-owned bounded quote; confirmation never authorizes a client-supplied ceiling.
+  string quote_key = 3;
+}
+message GetWritingTestRequest { string test_id = 1; }
+message ListWritingTestsRequest { int32 page_size = 1; string page_token = 2; }
+message ListWritingTestsResponse { repeated WritingTest tests = 1; string next_page_token = 2; }
+message WritingTestResponse { WritingTest test = 1; }
+message RetryFailedTestCandidatesRequest {
+  string test_id = 1;
+  uint32 expected_revision = 2;
+  string request_key = 3;
+  repeated string candidate_ids = 4;
+  string quote_key = 5;
+}
+message DecideTestMatchRequest {
+  string test_id = 1;
+  uint32 expected_revision = 2;
+  string request_key = 3;
+  string match_id = 4;
+  string winner_candidate_id = 5;
+}
+message CancelWritingTestRequest {
+  string test_id = 1;
+  uint32 expected_revision = 2;
+  string request_key = 3;
+}
+message SaveWritingTestWinnerRequest {
+  string test_id = 1;
+  uint32 expected_revision = 2;
+  string request_key = 3;
+  string winner_candidate_id = 4;
+  WritingTestPublicationAction action = 5;
+  bool make_default = 6;
+  // Explicit new-copy name and guideline scope, validated by the target domain.
+  string name = 7;
+  string scope = 8;
+  repeated string scope_ids = 9;
+}
+message ApplyWritingTestOutputRequest {
+  string test_id = 1;
+  uint32 expected_revision = 2;
+  string request_key = 3;
+  string winner_candidate_id = 4;
+  int64 expected_input_revision = 5;
+  int64 expected_content_revision = 6;
+}
+message WritingTestPublicationResponse { WritingTestPublication publication = 1; WritingTest test = 2; }

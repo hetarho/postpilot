@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file postpilot/v1/configuration_authoring.proto.
  */
 export const file_postpilot_v1_configuration_authoring: GenFile = /*@__PURE__*/
-  fileDesc("Cipwb3N0cGlsb3QvdjEvY29uZmlndXJhdGlvbl9hdXRob3JpbmcucHJvdG8SDHBvc3RwaWxvdC52MSJkChFBdXRob3JpbmdBcnRpZmFjdBIKCgJpZBgBIAEoCRIMCgRuYW1lGAIgASgJEhMKC2Rlc2NyaXB0aW9uGAMgASgJEgwKBGJvZHkYBCABKAkSEgoKdGl0bGVfYXJlYRgFIAEoCSJbCg1BdXRob3JpbmdUdXJuEgoKAmlkGAEgASgJEg8KB3JlcXVlc3QYAiABKAkSDQoFcmVwbHkYAyABKAkSDgoGam9iX2lkGAQgASgJEg4KBnN0YXR1cxgFIAEoCSJcChFBdXRob3JpbmdTYXZlZFJlZhItCgRraW5kGAEgASgOMh8ucG9zdHBpbG90LnYxLkNvbmZpZ3VyYXRpb25LaW5kEgoKAmlkGAIgASgJEgwKBG5hbWUYAyABKAkipQMKEEF1dGhvcmluZ1Nlc3Npb24SCgoCaWQYASABKAkSLQoEa2luZBgCIAEoDjIfLnBvc3RwaWxvdC52MS5Db25maWd1cmF0aW9uS2luZBIQCghyZXZpc2lvbhgDIAEoDRINCgVwaGFzZRgEIAEoCRIzCgpjYW5kaWRhdGVzGAUgAygLMh8ucG9zdHBpbG90LnYxLkF1dGhvcmluZ0FydGlmYWN0EjEKCHNlbGVjdGVkGAYgASgLMh8ucG9zdHBpbG90LnYxLkF1dGhvcmluZ0FydGlmYWN0EioKBXR1cm5zGAcgAygLMhsucG9zdHBpbG90LnYxLkF1dGhvcmluZ1R1cm4SFQoNYWN0aXZlX2pvYl9pZBgIIAEoCRIuCgVzYXZlZBgJIAEoCzIfLnBvc3RwaWxvdC52MS5BdXRob3JpbmdTYXZlZFJlZhIRCgl0YXJnZXRfaWQYCiABKAkSFgoOdGFyZ2V0X3ZlcnNpb24YCyABKAkSFgoOZmFpbHVyZV9yZWFzb24YDCABKAkSFwoPcGVuZGluZ19yZXF1ZXN0GA0gASgJInUKHUNyZWF0ZUF1dGhvcmluZ1Nlc3Npb25SZXF1ZXN0Ei0KBGtpbmQYASABKA4yHy5wb3N0cGlsb3QudjEuQ29uZmlndXJhdGlvbktpbmQSEQoJdGFyZ2V0X2lkGAIgASgJEhIKCnJlcXVlc3RfaWQYAyABKAkiMAoaR2V0QXV0aG9yaW5nU2Vzc2lvblJlcXVlc3QSEgoKc2Vzc2lvbl9pZBgBIAEoCSJkCiBHZXRMYXRlc3RBdXRob3JpbmdTZXNzaW9uUmVxdWVzdBItCgRraW5kGAEgASgOMh8ucG9zdHBpbG90LnYxLkNvbmZpZ3VyYXRpb25LaW5kEhEKCXRhcmdldF9pZBgCIAEoCSJLChhBdXRob3JpbmdTZXNzaW9uUmVzcG9uc2USLwoHc2Vzc2lvbhgBIAEoCzIeLnBvc3RwaWxvdC52MS5BdXRob3JpbmdTZXNzaW9uIr4BCiFFc3RpbWF0ZUF1dGhvcmluZ09wZXJhdGlvblJlcXVlc3QSLQoEa2luZBgBIAEoDjIfLnBvc3RwaWxvdC52MS5Db25maWd1cmF0aW9uS2luZBIpCgRtb2RlGAIgASgOMhsucG9zdHBpbG90LnYxLkF1dGhvcmluZ01vZGUSKwoLd3JpdGVfbW9kZWwYAyABKAsyFi5wb3N0cGlsb3QudjEuTW9kZWxSZWYSEgoKc2Vzc2lvbl9pZBgEIAEoCSJUCiJFc3RpbWF0ZUF1dGhvcmluZ09wZXJhdGlvblJlc3BvbnNlEhQKB2NyZWRpdHMYASABKANIAIgBARIMCgRmcmVlGAIgASgIQgoKCF9jcmVkaXRzIssBCh5TdGFydEF1dGhvcmluZ09wZXJhdGlvblJlcXVlc3QSEgoKc2Vzc2lvbl9pZBgBIAEoCRIZChFleHBlY3RlZF9yZXZpc2lvbhgCIAEoDRISCgpyZXF1ZXN0X2lkGAMgASgJEikKBG1vZGUYBCABKA4yGy5wb3N0cGlsb3QudjEuQXV0aG9yaW5nTW9kZRIOCgZwcm9tcHQYBSABKAkSKwoLd3JpdGVfbW9kZWwYBiABKAsyFi5wb3N0cGlsb3QudjEuTW9kZWxSZWYiYgofU3RhcnRBdXRob3JpbmdPcGVyYXRpb25SZXNwb25zZRIOCgZqb2JfaWQYASABKAkSLwoHc2Vzc2lvbhgCIAEoCzIeLnBvc3RwaWxvdC52MS5BdXRob3JpbmdTZXNzaW9uImYKH1NlbGVjdEF1dGhvcmluZ0NhbmRpZGF0ZVJlcXVlc3QSEgoKc2Vzc2lvbl9pZBgBIAEoCRIZChFleHBlY3RlZF9yZXZpc2lvbhgCIAEoDRIUCgxjYW5kaWRhdGVfaWQYAyABKAkiRQofQ2FuY2VsQXV0aG9yaW5nT3BlcmF0aW9uUmVxdWVzdBISCgpzZXNzaW9uX2lkGAEgASgJEg4KBmpvYl9pZBgCIAEoCSJiChtTYXZlQXV0aG9yaW5nU2Vzc2lvblJlcXVlc3QSEgoKc2Vzc2lvbl9pZBgBIAEoCRIZChFleHBlY3RlZF9yZXZpc2lvbhgCIAEoDRIUCgxtYWtlX2RlZmF1bHQYAyABKAgq+QEKEUNvbmZpZ3VyYXRpb25LaW5kEiIKHkNPTkZJR1VSQVRJT05fS0lORF9VTlNQRUNJRklFRBAAEiQKIENPTkZJR1VSQVRJT05fS0lORF9QT1NUX1RFTVBMQVRFEAESJQohQ09ORklHVVJBVElPTl9LSU5EX1ZJREVPX1RFTVBMQVRFEAISJQohQ09ORklHVVJBVElPTl9LSU5EX1BPU1RfR1VJREVMSU5FEAMSJgoiQ09ORklHVVJBVElPTl9LSU5EX1ZJREVPX0dVSURFTElORRAEEiQKIENPTkZJR1VSQVRJT05fS0lORF9XUklUSU5HX1ZPSUNFEAUqaAoNQXV0aG9yaW5nTW9kZRIeChpBVVRIT1JJTkdfTU9ERV9VTlNQRUNJRklFRBAAEhwKGEFVVEhPUklOR19NT0RFX1JFQ09NTUVORBABEhkKFUFVVEhPUklOR19NT0RFX1JFRklORRACMscHCh1Db25maWd1cmF0aW9uQXV0aG9yaW5nU2VydmljZRJvChZDcmVhdGVBdXRob3JpbmdTZXNzaW9uEisucG9zdHBpbG90LnYxLkNyZWF0ZUF1dGhvcmluZ1Nlc3Npb25SZXF1ZXN0GiYucG9zdHBpbG90LnYxLkF1dGhvcmluZ1Nlc3Npb25SZXNwb25zZSIAEmkKE0dldEF1dGhvcmluZ1Nlc3Npb24SKC5wb3N0cGlsb3QudjEuR2V0QXV0aG9yaW5nU2Vzc2lvblJlcXVlc3QaJi5wb3N0cGlsb3QudjEuQXV0aG9yaW5nU2Vzc2lvblJlc3BvbnNlIgASdQoZR2V0TGF0ZXN0QXV0aG9yaW5nU2Vzc2lvbhIuLnBvc3RwaWxvdC52MS5HZXRMYXRlc3RBdXRob3JpbmdTZXNzaW9uUmVxdWVzdBomLnBvc3RwaWxvdC52MS5BdXRob3JpbmdTZXNzaW9uUmVzcG9uc2UiABKBAQoaRXN0aW1hdGVBdXRob3JpbmdPcGVyYXRpb24SLy5wb3N0cGlsb3QudjEuRXN0aW1hdGVBdXRob3JpbmdPcGVyYXRpb25SZXF1ZXN0GjAucG9zdHBpbG90LnYxLkVzdGltYXRlQXV0aG9yaW5nT3BlcmF0aW9uUmVzcG9uc2UiABJ4ChdTdGFydEF1dGhvcmluZ09wZXJhdGlvbhIsLnBvc3RwaWxvdC52MS5TdGFydEF1dGhvcmluZ09wZXJhdGlvblJlcXVlc3QaLS5wb3N0cGlsb3QudjEuU3RhcnRBdXRob3JpbmdPcGVyYXRpb25SZXNwb25zZSIAEnMKGFNlbGVjdEF1dGhvcmluZ0NhbmRpZGF0ZRItLnBvc3RwaWxvdC52MS5TZWxlY3RBdXRob3JpbmdDYW5kaWRhdGVSZXF1ZXN0GiYucG9zdHBpbG90LnYxLkF1dGhvcmluZ1Nlc3Npb25SZXNwb25zZSIAEnMKGENhbmNlbEF1dGhvcmluZ09wZXJhdGlvbhItLnBvc3RwaWxvdC52MS5DYW5jZWxBdXRob3JpbmdPcGVyYXRpb25SZXF1ZXN0GiYucG9zdHBpbG90LnYxLkF1dGhvcmluZ1Nlc3Npb25SZXNwb25zZSIAEmsKFFNhdmVBdXRob3JpbmdTZXNzaW9uEikucG9zdHBpbG90LnYxLlNhdmVBdXRob3JpbmdTZXNzaW9uUmVxdWVzdBomLnBvc3RwaWxvdC52MS5BdXRob3JpbmdTZXNzaW9uUmVzcG9uc2UiAEJEWkJnaXRodWIuY29tL3Bvc3RwaWxvdC9iYWNrZW5kL2ludGVybmFsL2dlbi9wb3N0cGlsb3QvdjE7cG9zdHBpbG90djFiBnByb3RvMw", [file_postpilot_v1_provider]);
+  fileDesc("Cipwb3N0cGlsb3QvdjEvY29uZmlndXJhdGlvbl9hdXRob3JpbmcucHJvdG8SDHBvc3RwaWxvdC52MSJ2ChFBdXRob3JpbmdBcnRpZmFjdBIKCgJpZBgBIAEoCRIMCgRuYW1lGAIgASgJEhMKC2Rlc2NyaXB0aW9uGAMgASgJEgwKBGJvZHkYBCABKAkSEgoKdGl0bGVfYXJlYRgFIAEoCRIQCghyZXZpc2lvbhgGIAEoDSJbCg1BdXRob3JpbmdUdXJuEgoKAmlkGAEgASgJEg8KB3JlcXVlc3QYAiABKAkSDQoFcmVwbHkYAyABKAkSDgoGam9iX2lkGAQgASgJEg4KBnN0YXR1cxgFIAEoCSJcChFBdXRob3JpbmdTYXZlZFJlZhItCgRraW5kGAEgASgOMh8ucG9zdHBpbG90LnYxLkNvbmZpZ3VyYXRpb25LaW5kEgoKAmlkGAIgASgJEgwKBG5hbWUYAyABKAkiogUKEEF1dGhvcmluZ1Nlc3Npb24SCgoCaWQYASABKAkSLQoEa2luZBgCIAEoDjIfLnBvc3RwaWxvdC52MS5Db25maWd1cmF0aW9uS2luZBIQCghyZXZpc2lvbhgDIAEoDRINCgVwaGFzZRgEIAEoCRIzCgpjYW5kaWRhdGVzGAUgAygLMh8ucG9zdHBpbG90LnYxLkF1dGhvcmluZ0FydGlmYWN0EjEKCHNlbGVjdGVkGAYgASgLMh8ucG9zdHBpbG90LnYxLkF1dGhvcmluZ0FydGlmYWN0EioKBXR1cm5zGAcgAygLMhsucG9zdHBpbG90LnYxLkF1dGhvcmluZ1R1cm4SFQoNYWN0aXZlX2pvYl9pZBgIIAEoCRIuCgVzYXZlZBgJIAEoCzIfLnBvc3RwaWxvdC52MS5BdXRob3JpbmdTYXZlZFJlZhIRCgl0YXJnZXRfaWQYCiABKAkSFgoOdGFyZ2V0X3ZlcnNpb24YCyABKAkSFgoOZmFpbHVyZV9yZWFzb24YDCABKAkSFwoPcGVuZGluZ19yZXF1ZXN0GA0gASgJEjcKDndvcmtpbmdfc291cmNlGA4gASgLMh8ucG9zdHBpbG90LnYxLkF1dGhvcmluZ0FydGlmYWN0EjYKC2RyYWZ0X3N0YXRlGA8gASgOMiEucG9zdHBpbG90LnYxLkF1dGhvcmluZ0RyYWZ0U3RhdGUSNwoOc2F2ZWRfYmFzZWxpbmUYECABKAsyHy5wb3N0cGlsb3QudjEuQXV0aG9yaW5nQXJ0aWZhY3QSHwoXaGFzX3VucHVibGlzaGVkX2NoYW5nZXMYESABKAgSFwoPY2FuZGlkYXRlX2NvdW50GBIgASgFEhcKD3NhdmVkX2F2YWlsYWJsZRgTIAEoCCJ1Ch1DcmVhdGVBdXRob3JpbmdTZXNzaW9uUmVxdWVzdBItCgRraW5kGAEgASgOMh8ucG9zdHBpbG90LnYxLkNvbmZpZ3VyYXRpb25LaW5kEhEKCXRhcmdldF9pZBgCIAEoCRISCgpyZXF1ZXN0X2lkGAMgASgJIjAKGkdldEF1dGhvcmluZ1Nlc3Npb25SZXF1ZXN0EhIKCnNlc3Npb25faWQYASABKAkiZAogR2V0TGF0ZXN0QXV0aG9yaW5nU2Vzc2lvblJlcXVlc3QSLQoEa2luZBgBIAEoDjIfLnBvc3RwaWxvdC52MS5Db25maWd1cmF0aW9uS2luZBIRCgl0YXJnZXRfaWQYAiABKAkiSwoYQXV0aG9yaW5nU2Vzc2lvblJlc3BvbnNlEi8KB3Nlc3Npb24YASABKAsyHi5wb3N0cGlsb3QudjEuQXV0aG9yaW5nU2Vzc2lvbiLXAQohRXN0aW1hdGVBdXRob3JpbmdPcGVyYXRpb25SZXF1ZXN0Ei0KBGtpbmQYASABKA4yHy5wb3N0cGlsb3QudjEuQ29uZmlndXJhdGlvbktpbmQSKQoEbW9kZRgCIAEoDjIbLnBvc3RwaWxvdC52MS5BdXRob3JpbmdNb2RlEisKC3dyaXRlX21vZGVsGAMgASgLMhYucG9zdHBpbG90LnYxLk1vZGVsUmVmEhIKCnNlc3Npb25faWQYBCABKAkSFwoPY2FuZGlkYXRlX2NvdW50GAUgASgFIlQKIkVzdGltYXRlQXV0aG9yaW5nT3BlcmF0aW9uUmVzcG9uc2USFAoHY3JlZGl0cxgBIAEoA0gAiAEBEgwKBGZyZWUYAiABKAhCCgoIX2NyZWRpdHMi5AEKHlN0YXJ0QXV0aG9yaW5nT3BlcmF0aW9uUmVxdWVzdBISCgpzZXNzaW9uX2lkGAEgASgJEhkKEWV4cGVjdGVkX3JldmlzaW9uGAIgASgNEhIKCnJlcXVlc3RfaWQYAyABKAkSKQoEbW9kZRgEIAEoDjIbLnBvc3RwaWxvdC52MS5BdXRob3JpbmdNb2RlEg4KBnByb21wdBgFIAEoCRIrCgt3cml0ZV9tb2RlbBgGIAEoCzIWLnBvc3RwaWxvdC52MS5Nb2RlbFJlZhIXCg9jYW5kaWRhdGVfY291bnQYByABKAUiYgofU3RhcnRBdXRob3JpbmdPcGVyYXRpb25SZXNwb25zZRIOCgZqb2JfaWQYASABKAkSLwoHc2Vzc2lvbhgCIAEoCzIeLnBvc3RwaWxvdC52MS5BdXRob3JpbmdTZXNzaW9uIn0KH1NlbGVjdEF1dGhvcmluZ0NhbmRpZGF0ZVJlcXVlc3QSEgoKc2Vzc2lvbl9pZBgBIAEoCRIZChFleHBlY3RlZF9yZXZpc2lvbhgCIAEoDRIUCgxjYW5kaWRhdGVfaWQYAyABKAkSFQoNb3BlcmF0aW9uX2tleRgEIAEoCSJFCh9DYW5jZWxBdXRob3JpbmdPcGVyYXRpb25SZXF1ZXN0EhIKCnNlc3Npb25faWQYASABKAkSDgoGam9iX2lkGAIgASgJInkKG1NhdmVBdXRob3JpbmdTZXNzaW9uUmVxdWVzdBISCgpzZXNzaW9uX2lkGAEgASgJEhkKEWV4cGVjdGVkX3JldmlzaW9uGAIgASgNEhQKDG1ha2VfZGVmYXVsdBgDIAEoCBIVCg1vcGVyYXRpb25fa2V5GAQgASgJIp4DChBBdXRob3JpbmdTdW1tYXJ5EhIKCnNlc3Npb25faWQYASABKAkSLQoEa2luZBgCIAEoDjIfLnBvc3RwaWxvdC52MS5Db25maWd1cmF0aW9uS2luZBIRCgl0YXJnZXRfaWQYAyABKAkSFAoMZGlzcGxheV9uYW1lGAQgASgJEhAKCHJldmlzaW9uGAUgASgNEhcKD3NhdmVkX2F2YWlsYWJsZRgGIAEoCBIfChdoYXNfdW5wdWJsaXNoZWRfY2hhbmdlcxgHIAEoCBIVCg1hY3RpdmVfam9iX2lkGAggASgJEhsKE3B1YmxpY2F0aW9uX3BlbmRpbmcYCSABKAgSFwoPdGFyZ2V0X2NvbmZsaWN0GAogASgIEjkKEGxhc3RfcHVibGljYXRpb24YCyABKAsyHy5wb3N0cGlsb3QudjEuQXV0aG9yaW5nU2F2ZWRSZWYSEgoKdXBkYXRlZF9hdBgMIAEoCRI2CgtkcmFmdF9zdGF0ZRgNIAEoDjIhLnBvc3RwaWxvdC52MS5BdXRob3JpbmdEcmFmdFN0YXRlIosBCh1MaXN0QXV0aG9yaW5nU3VtbWFyaWVzUmVxdWVzdBItCgRraW5kGAEgASgOMh8ucG9zdHBpbG90LnYxLkNvbmZpZ3VyYXRpb25LaW5kEhQKDHVuc2F2ZWRfb25seRgCIAEoCBIRCglwYWdlX3NpemUYAyABKAUSEgoKcGFnZV90b2tlbhgEIAEoCSJsCh5MaXN0QXV0aG9yaW5nU3VtbWFyaWVzUmVzcG9uc2USMQoJc3VtbWFyaWVzGAEgAygLMh4ucG9zdHBpbG90LnYxLkF1dGhvcmluZ1N1bW1hcnkSFwoPbmV4dF9wYWdlX3Rva2VuGAIgASgJIpsBChpQYXRjaEF1dGhvcmluZ0RyYWZ0UmVxdWVzdBISCgpzZXNzaW9uX2lkGAEgASgJEhkKEWV4cGVjdGVkX3JldmlzaW9uGAIgASgNEhUKDW9wZXJhdGlvbl9rZXkYAyABKAkSNwoOd29ya2luZ19zb3VyY2UYBCABKAsyHy5wb3N0cGlsb3QudjEuQXV0aG9yaW5nQXJ0aWZhY3QiYQoZUmVzZXRBdXRob3JpbmdDaGF0UmVxdWVzdBISCgpzZXNzaW9uX2lkGAEgASgJEhkKEWV4cGVjdGVkX3JldmlzaW9uGAIgASgNEhUKDW9wZXJhdGlvbl9rZXkYAyABKAkiZQodUmVzZXRBdXRob3JpbmdCYXNlbGluZVJlcXVlc3QSEgoKc2Vzc2lvbl9pZBgBIAEoCRIZChFleHBlY3RlZF9yZXZpc2lvbhgCIAEoDRIVCg1vcGVyYXRpb25fa2V5GAMgASgJKvkBChFDb25maWd1cmF0aW9uS2luZBIiCh5DT05GSUdVUkFUSU9OX0tJTkRfVU5TUEVDSUZJRUQQABIkCiBDT05GSUdVUkFUSU9OX0tJTkRfUE9TVF9URU1QTEFURRABEiUKIUNPTkZJR1VSQVRJT05fS0lORF9WSURFT19URU1QTEFURRACEiUKIUNPTkZJR1VSQVRJT05fS0lORF9QT1NUX0dVSURFTElORRADEiYKIkNPTkZJR1VSQVRJT05fS0lORF9WSURFT19HVUlERUxJTkUQBBIkCiBDT05GSUdVUkFUSU9OX0tJTkRfV1JJVElOR19WT0lDRRAFKmgKDUF1dGhvcmluZ01vZGUSHgoaQVVUSE9SSU5HX01PREVfVU5TUEVDSUZJRUQQABIcChhBVVRIT1JJTkdfTU9ERV9SRUNPTU1FTkQQARIZChVBVVRIT1JJTkdfTU9ERV9SRUZJTkUQAiqmAQoTQXV0aG9yaW5nRHJhZnRTdGF0ZRIlCiFBVVRIT1JJTkdfRFJBRlRfU1RBVEVfVU5TUEVDSUZJRUQQABIfChtBVVRIT1JJTkdfRFJBRlRfU1RBVEVfVkFMSUQQARIkCiBBVVRIT1JJTkdfRFJBRlRfU1RBVEVfSU5DT01QTEVURRACEiEKHUFVVEhPUklOR19EUkFGVF9TVEFURV9JTlZBTElEEAMygwsKHUNvbmZpZ3VyYXRpb25BdXRob3JpbmdTZXJ2aWNlEm8KFkNyZWF0ZUF1dGhvcmluZ1Nlc3Npb24SKy5wb3N0cGlsb3QudjEuQ3JlYXRlQXV0aG9yaW5nU2Vzc2lvblJlcXVlc3QaJi5wb3N0cGlsb3QudjEuQXV0aG9yaW5nU2Vzc2lvblJlc3BvbnNlIgASaQoTR2V0QXV0aG9yaW5nU2Vzc2lvbhIoLnBvc3RwaWxvdC52MS5HZXRBdXRob3JpbmdTZXNzaW9uUmVxdWVzdBomLnBvc3RwaWxvdC52MS5BdXRob3JpbmdTZXNzaW9uUmVzcG9uc2UiABJ1ChlHZXRMYXRlc3RBdXRob3JpbmdTZXNzaW9uEi4ucG9zdHBpbG90LnYxLkdldExhdGVzdEF1dGhvcmluZ1Nlc3Npb25SZXF1ZXN0GiYucG9zdHBpbG90LnYxLkF1dGhvcmluZ1Nlc3Npb25SZXNwb25zZSIAEoEBChpFc3RpbWF0ZUF1dGhvcmluZ09wZXJhdGlvbhIvLnBvc3RwaWxvdC52MS5Fc3RpbWF0ZUF1dGhvcmluZ09wZXJhdGlvblJlcXVlc3QaMC5wb3N0cGlsb3QudjEuRXN0aW1hdGVBdXRob3JpbmdPcGVyYXRpb25SZXNwb25zZSIAEngKF1N0YXJ0QXV0aG9yaW5nT3BlcmF0aW9uEiwucG9zdHBpbG90LnYxLlN0YXJ0QXV0aG9yaW5nT3BlcmF0aW9uUmVxdWVzdBotLnBvc3RwaWxvdC52MS5TdGFydEF1dGhvcmluZ09wZXJhdGlvblJlc3BvbnNlIgAScwoYU2VsZWN0QXV0aG9yaW5nQ2FuZGlkYXRlEi0ucG9zdHBpbG90LnYxLlNlbGVjdEF1dGhvcmluZ0NhbmRpZGF0ZVJlcXVlc3QaJi5wb3N0cGlsb3QudjEuQXV0aG9yaW5nU2Vzc2lvblJlc3BvbnNlIgAScwoYQ2FuY2VsQXV0aG9yaW5nT3BlcmF0aW9uEi0ucG9zdHBpbG90LnYxLkNhbmNlbEF1dGhvcmluZ09wZXJhdGlvblJlcXVlc3QaJi5wb3N0cGlsb3QudjEuQXV0aG9yaW5nU2Vzc2lvblJlc3BvbnNlIgASdQoWTGlzdEF1dGhvcmluZ1N1bW1hcmllcxIrLnBvc3RwaWxvdC52MS5MaXN0QXV0aG9yaW5nU3VtbWFyaWVzUmVxdWVzdBosLnBvc3RwaWxvdC52MS5MaXN0QXV0aG9yaW5nU3VtbWFyaWVzUmVzcG9uc2UiABJpChNQYXRjaEF1dGhvcmluZ0RyYWZ0EigucG9zdHBpbG90LnYxLlBhdGNoQXV0aG9yaW5nRHJhZnRSZXF1ZXN0GiYucG9zdHBpbG90LnYxLkF1dGhvcmluZ1Nlc3Npb25SZXNwb25zZSIAEmcKElJlc2V0QXV0aG9yaW5nQ2hhdBInLnBvc3RwaWxvdC52MS5SZXNldEF1dGhvcmluZ0NoYXRSZXF1ZXN0GiYucG9zdHBpbG90LnYxLkF1dGhvcmluZ1Nlc3Npb25SZXNwb25zZSIAEm8KFlJlc2V0QXV0aG9yaW5nQmFzZWxpbmUSKy5wb3N0cGlsb3QudjEuUmVzZXRBdXRob3JpbmdCYXNlbGluZVJlcXVlc3QaJi5wb3N0cGlsb3QudjEuQXV0aG9yaW5nU2Vzc2lvblJlc3BvbnNlIgASawoUU2F2ZUF1dGhvcmluZ1Nlc3Npb24SKS5wb3N0cGlsb3QudjEuU2F2ZUF1dGhvcmluZ1Nlc3Npb25SZXF1ZXN0GiYucG9zdHBpbG90LnYxLkF1dGhvcmluZ1Nlc3Npb25SZXNwb25zZSIAQkRaQmdpdGh1Yi5jb20vcG9zdHBpbG90L2JhY2tlbmQvaW50ZXJuYWwvZ2VuL3Bvc3RwaWxvdC92MTtwb3N0cGlsb3R2MWIGcHJvdG8z", [file_postpilot_v1_provider]);
 
 /**
  * @generated from message postpilot.v1.AuthoringArtifact
@@ -42,6 +42,11 @@ export type AuthoringArtifact = Message<"postpilot.v1.AuthoringArtifact"> & {
    * @generated from field: string title_area = 5;
    */
   titleArea: string;
+
+  /**
+   * @generated from field: uint32 revision = 6;
+   */
+  revision: number;
 };
 
 /**
@@ -183,6 +188,36 @@ export type AuthoringSession = Message<"postpilot.v1.AuthoringSession"> & {
    * @generated from field: string pending_request = 13;
    */
   pendingRequest: string;
+
+  /**
+   * @generated from field: postpilot.v1.AuthoringArtifact working_source = 14;
+   */
+  workingSource?: AuthoringArtifact | undefined;
+
+  /**
+   * @generated from field: postpilot.v1.AuthoringDraftState draft_state = 15;
+   */
+  draftState: AuthoringDraftState;
+
+  /**
+   * @generated from field: postpilot.v1.AuthoringArtifact saved_baseline = 16;
+   */
+  savedBaseline?: AuthoringArtifact | undefined;
+
+  /**
+   * @generated from field: bool has_unpublished_changes = 17;
+   */
+  hasUnpublishedChanges: boolean;
+
+  /**
+   * @generated from field: int32 candidate_count = 18;
+   */
+  candidateCount: number;
+
+  /**
+   * @generated from field: bool saved_available = 19;
+   */
+  savedAvailable: boolean;
 };
 
 /**
@@ -300,6 +335,13 @@ export type EstimateAuthoringOperationRequest = Message<"postpilot.v1.EstimateAu
    * @generated from field: string session_id = 4;
    */
   sessionId: string;
+
+  /**
+   * Zero preserves the ordinary eight-candidate default. Explicit values: 2/4/8/16.
+   *
+   * @generated from field: int32 candidate_count = 5;
+   */
+  candidateCount: number;
 };
 
 /**
@@ -364,6 +406,11 @@ export type StartAuthoringOperationRequest = Message<"postpilot.v1.StartAuthorin
    * @generated from field: postpilot.v1.ModelRef write_model = 6;
    */
   writeModel?: ModelRef | undefined;
+
+  /**
+   * @generated from field: int32 candidate_count = 7;
+   */
+  candidateCount: number;
 };
 
 /**
@@ -413,6 +460,11 @@ export type SelectAuthoringCandidateRequest = Message<"postpilot.v1.SelectAuthor
    * @generated from field: string candidate_id = 3;
    */
   candidateId: string;
+
+  /**
+   * @generated from field: string operation_key = 4;
+   */
+  operationKey: string;
 };
 
 /**
@@ -462,6 +514,11 @@ export type SaveAuthoringSessionRequest = Message<"postpilot.v1.SaveAuthoringSes
    * @generated from field: bool make_default = 3;
    */
   makeDefault: boolean;
+
+  /**
+   * @generated from field: string operation_key = 4;
+   */
+  operationKey: string;
 };
 
 /**
@@ -470,6 +527,225 @@ export type SaveAuthoringSessionRequest = Message<"postpilot.v1.SaveAuthoringSes
  */
 export const SaveAuthoringSessionRequestSchema: GenMessage<SaveAuthoringSessionRequest> = /*@__PURE__*/
   messageDesc(file_postpilot_v1_configuration_authoring, 14);
+
+/**
+ * @generated from message postpilot.v1.AuthoringSummary
+ */
+export type AuthoringSummary = Message<"postpilot.v1.AuthoringSummary"> & {
+  /**
+   * @generated from field: string session_id = 1;
+   */
+  sessionId: string;
+
+  /**
+   * @generated from field: postpilot.v1.ConfigurationKind kind = 2;
+   */
+  kind: ConfigurationKind;
+
+  /**
+   * @generated from field: string target_id = 3;
+   */
+  targetId: string;
+
+  /**
+   * @generated from field: string display_name = 4;
+   */
+  displayName: string;
+
+  /**
+   * @generated from field: uint32 revision = 5;
+   */
+  revision: number;
+
+  /**
+   * @generated from field: bool saved_available = 6;
+   */
+  savedAvailable: boolean;
+
+  /**
+   * @generated from field: bool has_unpublished_changes = 7;
+   */
+  hasUnpublishedChanges: boolean;
+
+  /**
+   * @generated from field: string active_job_id = 8;
+   */
+  activeJobId: string;
+
+  /**
+   * @generated from field: bool publication_pending = 9;
+   */
+  publicationPending: boolean;
+
+  /**
+   * @generated from field: bool target_conflict = 10;
+   */
+  targetConflict: boolean;
+
+  /**
+   * @generated from field: postpilot.v1.AuthoringSavedRef last_publication = 11;
+   */
+  lastPublication?: AuthoringSavedRef | undefined;
+
+  /**
+   * @generated from field: string updated_at = 12;
+   */
+  updatedAt: string;
+
+  /**
+   * @generated from field: postpilot.v1.AuthoringDraftState draft_state = 13;
+   */
+  draftState: AuthoringDraftState;
+};
+
+/**
+ * Describes the message postpilot.v1.AuthoringSummary.
+ * Use `create(AuthoringSummarySchema)` to create a new message.
+ */
+export const AuthoringSummarySchema: GenMessage<AuthoringSummary> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_configuration_authoring, 15);
+
+/**
+ * @generated from message postpilot.v1.ListAuthoringSummariesRequest
+ */
+export type ListAuthoringSummariesRequest = Message<"postpilot.v1.ListAuthoringSummariesRequest"> & {
+  /**
+   * @generated from field: postpilot.v1.ConfigurationKind kind = 1;
+   */
+  kind: ConfigurationKind;
+
+  /**
+   * @generated from field: bool unsaved_only = 2;
+   */
+  unsavedOnly: boolean;
+
+  /**
+   * @generated from field: int32 page_size = 3;
+   */
+  pageSize: number;
+
+  /**
+   * @generated from field: string page_token = 4;
+   */
+  pageToken: string;
+};
+
+/**
+ * Describes the message postpilot.v1.ListAuthoringSummariesRequest.
+ * Use `create(ListAuthoringSummariesRequestSchema)` to create a new message.
+ */
+export const ListAuthoringSummariesRequestSchema: GenMessage<ListAuthoringSummariesRequest> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_configuration_authoring, 16);
+
+/**
+ * @generated from message postpilot.v1.ListAuthoringSummariesResponse
+ */
+export type ListAuthoringSummariesResponse = Message<"postpilot.v1.ListAuthoringSummariesResponse"> & {
+  /**
+   * @generated from field: repeated postpilot.v1.AuthoringSummary summaries = 1;
+   */
+  summaries: AuthoringSummary[];
+
+  /**
+   * @generated from field: string next_page_token = 2;
+   */
+  nextPageToken: string;
+};
+
+/**
+ * Describes the message postpilot.v1.ListAuthoringSummariesResponse.
+ * Use `create(ListAuthoringSummariesResponseSchema)` to create a new message.
+ */
+export const ListAuthoringSummariesResponseSchema: GenMessage<ListAuthoringSummariesResponse> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_configuration_authoring, 17);
+
+/**
+ * @generated from message postpilot.v1.PatchAuthoringDraftRequest
+ */
+export type PatchAuthoringDraftRequest = Message<"postpilot.v1.PatchAuthoringDraftRequest"> & {
+  /**
+   * @generated from field: string session_id = 1;
+   */
+  sessionId: string;
+
+  /**
+   * @generated from field: uint32 expected_revision = 2;
+   */
+  expectedRevision: number;
+
+  /**
+   * @generated from field: string operation_key = 3;
+   */
+  operationKey: string;
+
+  /**
+   * Raw bounded permitted fields only; the server determines validity and protected scope.
+   *
+   * @generated from field: postpilot.v1.AuthoringArtifact working_source = 4;
+   */
+  workingSource?: AuthoringArtifact | undefined;
+};
+
+/**
+ * Describes the message postpilot.v1.PatchAuthoringDraftRequest.
+ * Use `create(PatchAuthoringDraftRequestSchema)` to create a new message.
+ */
+export const PatchAuthoringDraftRequestSchema: GenMessage<PatchAuthoringDraftRequest> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_configuration_authoring, 18);
+
+/**
+ * @generated from message postpilot.v1.ResetAuthoringChatRequest
+ */
+export type ResetAuthoringChatRequest = Message<"postpilot.v1.ResetAuthoringChatRequest"> & {
+  /**
+   * @generated from field: string session_id = 1;
+   */
+  sessionId: string;
+
+  /**
+   * @generated from field: uint32 expected_revision = 2;
+   */
+  expectedRevision: number;
+
+  /**
+   * @generated from field: string operation_key = 3;
+   */
+  operationKey: string;
+};
+
+/**
+ * Describes the message postpilot.v1.ResetAuthoringChatRequest.
+ * Use `create(ResetAuthoringChatRequestSchema)` to create a new message.
+ */
+export const ResetAuthoringChatRequestSchema: GenMessage<ResetAuthoringChatRequest> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_configuration_authoring, 19);
+
+/**
+ * @generated from message postpilot.v1.ResetAuthoringBaselineRequest
+ */
+export type ResetAuthoringBaselineRequest = Message<"postpilot.v1.ResetAuthoringBaselineRequest"> & {
+  /**
+   * @generated from field: string session_id = 1;
+   */
+  sessionId: string;
+
+  /**
+   * @generated from field: uint32 expected_revision = 2;
+   */
+  expectedRevision: number;
+
+  /**
+   * @generated from field: string operation_key = 3;
+   */
+  operationKey: string;
+};
+
+/**
+ * Describes the message postpilot.v1.ResetAuthoringBaselineRequest.
+ * Use `create(ResetAuthoringBaselineRequestSchema)` to create a new message.
+ */
+export const ResetAuthoringBaselineRequestSchema: GenMessage<ResetAuthoringBaselineRequest> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_configuration_authoring, 20);
 
 /**
  * @generated from enum postpilot.v1.ConfigurationKind
@@ -539,6 +815,39 @@ export const AuthoringModeSchema: GenEnum<AuthoringMode> = /*@__PURE__*/
   enumDesc(file_postpilot_v1_configuration_authoring, 1);
 
 /**
+ * Selected is the last valid preview; working_source retains incomplete direct input.
+ *
+ * @generated from enum postpilot.v1.AuthoringDraftState
+ */
+export enum AuthoringDraftState {
+  /**
+   * @generated from enum value: AUTHORING_DRAFT_STATE_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: AUTHORING_DRAFT_STATE_VALID = 1;
+   */
+  VALID = 1,
+
+  /**
+   * @generated from enum value: AUTHORING_DRAFT_STATE_INCOMPLETE = 2;
+   */
+  INCOMPLETE = 2,
+
+  /**
+   * @generated from enum value: AUTHORING_DRAFT_STATE_INVALID = 3;
+   */
+  INVALID = 3,
+}
+
+/**
+ * Describes the enum postpilot.v1.AuthoringDraftState.
+ */
+export const AuthoringDraftStateSchema: GenEnum<AuthoringDraftState> = /*@__PURE__*/
+  enumDesc(file_postpilot_v1_configuration_authoring, 2);
+
+/**
  * @generated from service postpilot.v1.ConfigurationAuthoringService
  */
 export const ConfigurationAuthoringService: GenService<{
@@ -596,6 +905,38 @@ export const ConfigurationAuthoringService: GenService<{
   cancelAuthoringOperation: {
     methodKind: "unary";
     input: typeof CancelAuthoringOperationRequestSchema;
+    output: typeof AuthoringSessionResponseSchema;
+  },
+  /**
+   * @generated from rpc postpilot.v1.ConfigurationAuthoringService.ListAuthoringSummaries
+   */
+  listAuthoringSummaries: {
+    methodKind: "unary";
+    input: typeof ListAuthoringSummariesRequestSchema;
+    output: typeof ListAuthoringSummariesResponseSchema;
+  },
+  /**
+   * @generated from rpc postpilot.v1.ConfigurationAuthoringService.PatchAuthoringDraft
+   */
+  patchAuthoringDraft: {
+    methodKind: "unary";
+    input: typeof PatchAuthoringDraftRequestSchema;
+    output: typeof AuthoringSessionResponseSchema;
+  },
+  /**
+   * @generated from rpc postpilot.v1.ConfigurationAuthoringService.ResetAuthoringChat
+   */
+  resetAuthoringChat: {
+    methodKind: "unary";
+    input: typeof ResetAuthoringChatRequestSchema;
+    output: typeof AuthoringSessionResponseSchema;
+  },
+  /**
+   * @generated from rpc postpilot.v1.ConfigurationAuthoringService.ResetAuthoringBaseline
+   */
+  resetAuthoringBaseline: {
+    methodKind: "unary";
+    input: typeof ResetAuthoringBaselineRequestSchema;
     output: typeof AuthoringSessionResponseSchema;
   },
   /**

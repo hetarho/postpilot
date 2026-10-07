@@ -11,6 +11,10 @@ service ConfigurationAuthoringService {
   rpc StartAuthoringOperation(StartAuthoringOperationRequest) returns (StartAuthoringOperationResponse) {}
   rpc SelectAuthoringCandidate(SelectAuthoringCandidateRequest) returns (AuthoringSessionResponse) {}
   rpc CancelAuthoringOperation(CancelAuthoringOperationRequest) returns (AuthoringSessionResponse) {}
+  rpc ListAuthoringSummaries(ListAuthoringSummariesRequest) returns (ListAuthoringSummariesResponse) {}
+  rpc PatchAuthoringDraft(PatchAuthoringDraftRequest) returns (AuthoringSessionResponse) {}
+  rpc ResetAuthoringChat(ResetAuthoringChatRequest) returns (AuthoringSessionResponse) {}
+  rpc ResetAuthoringBaseline(ResetAuthoringBaselineRequest) returns (AuthoringSessionResponse) {}
   rpc SaveAuthoringSession(SaveAuthoringSessionRequest) returns (AuthoringSessionResponse) {}
 }
 enum ConfigurationKind {
@@ -32,6 +36,7 @@ message AuthoringArtifact {
   string description = 3;
   string body = 4;
   string title_area = 5;
+  uint32 revision = 6;
 }
 message AuthoringTurn {
   string id = 1;
@@ -59,6 +64,12 @@ message AuthoringSession {
   string target_version = 11;
   string failure_reason = 12;
   string pending_request = 13;
+  AuthoringArtifact working_source = 14;
+  AuthoringDraftState draft_state = 15;
+  AuthoringArtifact saved_baseline = 16;
+  bool has_unpublished_changes = 17;
+  int32 candidate_count = 18;
+  bool saved_available = 19;
 }
 message CreateAuthoringSessionRequest {
   ConfigurationKind kind = 1;
@@ -77,6 +88,8 @@ message EstimateAuthoringOperationRequest {
   ModelRef write_model = 3;
   // Existing drafts use their actual bounded size for the same frozen output cap.
   string session_id = 4;
+  // Zero preserves the ordinary eight-candidate default. Explicit values: 2/4/8/16.
+  int32 candidate_count = 5;
 }
 message EstimateAuthoringOperationResponse {
   optional int64 credits = 1;
@@ -89,6 +102,7 @@ message StartAuthoringOperationRequest {
   AuthoringMode mode = 4;
   string prompt = 5;
   ModelRef write_model = 6;
+  int32 candidate_count = 7;
 }
 message StartAuthoringOperationResponse {
   string job_id = 1;
@@ -98,6 +112,7 @@ message SelectAuthoringCandidateRequest {
   string session_id = 1;
   uint32 expected_revision = 2;
   string candidate_id = 3;
+  string operation_key = 4;
 }
 message CancelAuthoringOperationRequest {
   string session_id = 1;
@@ -107,4 +122,55 @@ message SaveAuthoringSessionRequest {
   string session_id = 1;
   uint32 expected_revision = 2;
   bool make_default = 3;
+  string operation_key = 4;
+}
+
+// Selected is the last valid preview; working_source retains incomplete direct input.
+enum AuthoringDraftState {
+  AUTHORING_DRAFT_STATE_UNSPECIFIED = 0;
+  AUTHORING_DRAFT_STATE_VALID = 1;
+  AUTHORING_DRAFT_STATE_INCOMPLETE = 2;
+  AUTHORING_DRAFT_STATE_INVALID = 3;
+}
+message AuthoringSummary {
+  string session_id = 1;
+  ConfigurationKind kind = 2;
+  string target_id = 3;
+  string display_name = 4;
+  uint32 revision = 5;
+  bool saved_available = 6;
+  bool has_unpublished_changes = 7;
+  string active_job_id = 8;
+  bool publication_pending = 9;
+  bool target_conflict = 10;
+  AuthoringSavedRef last_publication = 11;
+  string updated_at = 12;
+  AuthoringDraftState draft_state = 13;
+}
+message ListAuthoringSummariesRequest {
+  ConfigurationKind kind = 1;
+  bool unsaved_only = 2;
+  int32 page_size = 3;
+  string page_token = 4;
+}
+message ListAuthoringSummariesResponse {
+  repeated AuthoringSummary summaries = 1;
+  string next_page_token = 2;
+}
+message PatchAuthoringDraftRequest {
+  string session_id = 1;
+  uint32 expected_revision = 2;
+  string operation_key = 3;
+  // Raw bounded permitted fields only; the server determines validity and protected scope.
+  AuthoringArtifact working_source = 4;
+}
+message ResetAuthoringChatRequest {
+  string session_id = 1;
+  uint32 expected_revision = 2;
+  string operation_key = 3;
+}
+message ResetAuthoringBaselineRequest {
+  string session_id = 1;
+  uint32 expected_revision = 2;
+  string operation_key = 3;
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { pageStyles } from './pageStyles'
+import { proseStyles, pageStyles } from './pageStyles'
 
 describe('pageStyles', () => {
   it('caps nothing on a phone: every width and gutter it sets is prefixed or full-bleed', () => {
@@ -48,4 +48,10 @@ describe('pageStyles', () => {
     expect(tokens).not.toContain('py-6')
     expect(tokens).toContain('flex-1')
   })
+})
+
+it('keeps a broad creation frame independent of its nested prose measure', () => {
+  expect(pageStyles({ width: 'workspace' })).toContain('lg:max-w-7xl')
+  expect(proseStyles()).toContain('lg:max-w-3xl')
+  expect(proseStyles()).not.toContain('overflow')
 })

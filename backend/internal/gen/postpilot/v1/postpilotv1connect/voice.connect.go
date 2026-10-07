@@ -56,6 +56,9 @@ const (
 	// VoiceServiceAddVoiceSampleProcedure is the fully-qualified name of the VoiceService's
 	// AddVoiceSample RPC.
 	VoiceServiceAddVoiceSampleProcedure = "/postpilot.v1.VoiceService/AddVoiceSample"
+	// VoiceServiceUpdateVoiceSampleProcedure is the fully-qualified name of the VoiceService's
+	// UpdateVoiceSample RPC.
+	VoiceServiceUpdateVoiceSampleProcedure = "/postpilot.v1.VoiceService/UpdateVoiceSample"
 	// VoiceServiceDeleteVoiceSampleProcedure is the fully-qualified name of the VoiceService's
 	// DeleteVoiceSample RPC.
 	VoiceServiceDeleteVoiceSampleProcedure = "/postpilot.v1.VoiceService/DeleteVoiceSample"
@@ -105,6 +108,7 @@ type VoiceServiceClient interface {
 	// 학습 글 (VOICE-59): a pasted post, or an answer to one of the shared prompts. Gathering
 	// calls no model and enqueues nothing (VOICE-16).
 	AddVoiceSample(context.Context, *connect.Request[v1.AddVoiceSampleRequest]) (*connect.Response[v1.AddVoiceSampleResponse], error)
+	UpdateVoiceSample(context.Context, *connect.Request[v1.UpdateVoiceSampleRequest]) (*connect.Response[v1.UpdateVoiceSampleResponse], error)
 	DeleteVoiceSample(context.Context, *connect.Request[v1.DeleteVoiceSampleRequest]) (*connect.Response[v1.DeleteVoiceSampleResponse], error)
 	GetVoiceSample(context.Context, *connect.Request[v1.GetVoiceSampleRequest]) (*connect.Response[v1.GetVoiceSampleResponse], error)
 	ListVoicePrompts(context.Context, *connect.Request[v1.ListVoicePromptsRequest]) (*connect.Response[v1.ListVoicePromptsResponse], error)
@@ -182,6 +186,12 @@ func NewVoiceServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			httpClient,
 			baseURL+VoiceServiceAddVoiceSampleProcedure,
 			connect.WithSchema(voiceServiceMethods.ByName("AddVoiceSample")),
+			connect.WithClientOptions(opts...),
+		),
+		updateVoiceSample: connect.NewClient[v1.UpdateVoiceSampleRequest, v1.UpdateVoiceSampleResponse](
+			httpClient,
+			baseURL+VoiceServiceUpdateVoiceSampleProcedure,
+			connect.WithSchema(voiceServiceMethods.ByName("UpdateVoiceSample")),
 			connect.WithClientOptions(opts...),
 		),
 		deleteVoiceSample: connect.NewClient[v1.DeleteVoiceSampleRequest, v1.DeleteVoiceSampleResponse](
@@ -263,6 +273,7 @@ type voiceServiceClient struct {
 	restoreVoice                 *connect.Client[v1.RestoreVoiceRequest, v1.RestoreVoiceResponse]
 	getVoiceProfile              *connect.Client[v1.GetVoiceProfileRequest, v1.GetVoiceProfileResponse]
 	addVoiceSample               *connect.Client[v1.AddVoiceSampleRequest, v1.AddVoiceSampleResponse]
+	updateVoiceSample            *connect.Client[v1.UpdateVoiceSampleRequest, v1.UpdateVoiceSampleResponse]
 	deleteVoiceSample            *connect.Client[v1.DeleteVoiceSampleRequest, v1.DeleteVoiceSampleResponse]
 	getVoiceSample               *connect.Client[v1.GetVoiceSampleRequest, v1.GetVoiceSampleResponse]
 	listVoicePrompts             *connect.Client[v1.ListVoicePromptsRequest, v1.ListVoicePromptsResponse]
@@ -314,6 +325,11 @@ func (c *voiceServiceClient) GetVoiceProfile(ctx context.Context, req *connect.R
 // AddVoiceSample calls postpilot.v1.VoiceService.AddVoiceSample.
 func (c *voiceServiceClient) AddVoiceSample(ctx context.Context, req *connect.Request[v1.AddVoiceSampleRequest]) (*connect.Response[v1.AddVoiceSampleResponse], error) {
 	return c.addVoiceSample.CallUnary(ctx, req)
+}
+
+// UpdateVoiceSample calls postpilot.v1.VoiceService.UpdateVoiceSample.
+func (c *voiceServiceClient) UpdateVoiceSample(ctx context.Context, req *connect.Request[v1.UpdateVoiceSampleRequest]) (*connect.Response[v1.UpdateVoiceSampleResponse], error) {
+	return c.updateVoiceSample.CallUnary(ctx, req)
 }
 
 // DeleteVoiceSample calls postpilot.v1.VoiceService.DeleteVoiceSample.
@@ -385,6 +401,7 @@ type VoiceServiceHandler interface {
 	// 학습 글 (VOICE-59): a pasted post, or an answer to one of the shared prompts. Gathering
 	// calls no model and enqueues nothing (VOICE-16).
 	AddVoiceSample(context.Context, *connect.Request[v1.AddVoiceSampleRequest]) (*connect.Response[v1.AddVoiceSampleResponse], error)
+	UpdateVoiceSample(context.Context, *connect.Request[v1.UpdateVoiceSampleRequest]) (*connect.Response[v1.UpdateVoiceSampleResponse], error)
 	DeleteVoiceSample(context.Context, *connect.Request[v1.DeleteVoiceSampleRequest]) (*connect.Response[v1.DeleteVoiceSampleResponse], error)
 	GetVoiceSample(context.Context, *connect.Request[v1.GetVoiceSampleRequest]) (*connect.Response[v1.GetVoiceSampleResponse], error)
 	ListVoicePrompts(context.Context, *connect.Request[v1.ListVoicePromptsRequest]) (*connect.Response[v1.ListVoicePromptsResponse], error)
@@ -458,6 +475,12 @@ func NewVoiceServiceHandler(svc VoiceServiceHandler, opts ...connect.HandlerOpti
 		VoiceServiceAddVoiceSampleProcedure,
 		svc.AddVoiceSample,
 		connect.WithSchema(voiceServiceMethods.ByName("AddVoiceSample")),
+		connect.WithHandlerOptions(opts...),
+	)
+	voiceServiceUpdateVoiceSampleHandler := connect.NewUnaryHandler(
+		VoiceServiceUpdateVoiceSampleProcedure,
+		svc.UpdateVoiceSample,
+		connect.WithSchema(voiceServiceMethods.ByName("UpdateVoiceSample")),
 		connect.WithHandlerOptions(opts...),
 	)
 	voiceServiceDeleteVoiceSampleHandler := connect.NewUnaryHandler(
@@ -544,6 +567,8 @@ func NewVoiceServiceHandler(svc VoiceServiceHandler, opts ...connect.HandlerOpti
 			voiceServiceGetVoiceProfileHandler.ServeHTTP(w, r)
 		case VoiceServiceAddVoiceSampleProcedure:
 			voiceServiceAddVoiceSampleHandler.ServeHTTP(w, r)
+		case VoiceServiceUpdateVoiceSampleProcedure:
+			voiceServiceUpdateVoiceSampleHandler.ServeHTTP(w, r)
 		case VoiceServiceDeleteVoiceSampleProcedure:
 			voiceServiceDeleteVoiceSampleHandler.ServeHTTP(w, r)
 		case VoiceServiceGetVoiceSampleProcedure:
@@ -605,6 +630,10 @@ func (UnimplementedVoiceServiceHandler) GetVoiceProfile(context.Context, *connec
 
 func (UnimplementedVoiceServiceHandler) AddVoiceSample(context.Context, *connect.Request[v1.AddVoiceSampleRequest]) (*connect.Response[v1.AddVoiceSampleResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.VoiceService.AddVoiceSample is not implemented"))
+}
+
+func (UnimplementedVoiceServiceHandler) UpdateVoiceSample(context.Context, *connect.Request[v1.UpdateVoiceSampleRequest]) (*connect.Response[v1.UpdateVoiceSampleResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.VoiceService.UpdateVoiceSample is not implemented"))
 }
 
 func (UnimplementedVoiceServiceHandler) DeleteVoiceSample(context.Context, *connect.Request[v1.DeleteVoiceSampleRequest]) (*connect.Response[v1.DeleteVoiceSampleResponse], error) {

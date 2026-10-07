@@ -83,7 +83,6 @@
 | T602 | Authorize and verify browser-prepared analysis artifacts | ARCH CLIP QUOTA | T591 | todo |
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | todo |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | todo |
-| T622 | Freeze shared navigation authoring material and writing-test contracts | ARCH THEME POST EDIT VOICE MODEL QUOTA LANG | - | todo |
 | T623 | Expose current location parent access and contextual creation return | ARCH THEME CLIP MODEL | T622 T629 | todo |
 | T624 | Make writing spacious and replace archive browsing with operational history | ARCH THEME POST CLIP GEN | T622 | todo |
 | T625 | Unify named AI and direct editing with bounded seed-free candidate preparation | ARCH EDIT THEME MODEL QUOTA | T622 | todo |
@@ -100,6 +99,7 @@
 - ideation searchable-details continues: choose the first user benefit and acceptable input effort, then validate source coverage and personal-versus-pooled learning.
 
 ## log
+- 261007 T622 integrated; main rebase preserves the independently approved code and completion record
 - 261007 manage-work creation-comparison-ux start: isolated planning workspace; T590 file status aligned with its existing blocked STATE record before atomic UX claims
 - 261007 create-architecture ARCH r19 done: task-impact checks at completion, full CI and applicable backend/media gates before push; local agent instructions and runnable parity runbook added, remote failure logs unavailable
 - 261007 ARCH r19 affects active creation-comparison-ux/T622 attempt and pending ARCH tasks: sync/reassess the verification policy before further submission or integration; no worker workspace changed
@@ -119,4 +119,3 @@
 - 261007 update-ssot THEME r27 done: coherent responsive title/body scale and active-stage hierarchy
 - 261007 update-ssot THEME start: responsive typography scale, active-step hierarchy and readable supporting copy
 - 261007 T620 done: FE3468/430 files, clean258, backend80/deploy62/tooling/generator gates, twenty AI and four personal browser sessions pass;58 existing dirty files preserved
-- 261007 T619 done: focused five-kind purpose/choice/review/optional-chat/publication actors;37 tests and112 day/night/mobile/desktop layout checks pass

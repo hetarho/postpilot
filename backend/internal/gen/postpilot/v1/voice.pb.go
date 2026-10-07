@@ -1627,9 +1627,12 @@ type VoiceAnalysis struct {
 	// Missing origin is personal for existing saved snapshots.
 	Origin VoiceOrigin `protobuf:"varint,6,opt,name=origin,proto3,enum=postpilot.v1.VoiceOrigin" json:"origin,omitempty"`
 	// AI-created fictional illustration, never a personal learning material.
-	SyntheticSample string `protobuf:"bytes,7,opt,name=synthetic_sample,json=syntheticSample,proto3" json:"synthetic_sample,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	SyntheticSample string                 `protobuf:"bytes,7,opt,name=synthetic_sample,json=syntheticSample,proto3" json:"synthetic_sample,omitempty"`
+	AcceptedSources []*VoiceAcceptedSource `protobuf:"bytes,8,rep,name=accepted_sources,json=acceptedSources,proto3" json:"accepted_sources,omitempty"`
+	// False for legacy analyses: never infer an accepted snapshot from current material.
+	SourceVersionsKnown bool `protobuf:"varint,9,opt,name=source_versions_known,json=sourceVersionsKnown,proto3" json:"source_versions_known,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *VoiceAnalysis) Reset() {
@@ -1709,6 +1712,20 @@ func (x *VoiceAnalysis) GetSyntheticSample() string {
 		return x.SyntheticSample
 	}
 	return ""
+}
+
+func (x *VoiceAnalysis) GetAcceptedSources() []*VoiceAcceptedSource {
+	if x != nil {
+		return x.AcceptedSources
+	}
+	return nil
+}
+
+func (x *VoiceAnalysis) GetSourceVersionsKnown() bool {
+	if x != nil {
+		return x.SourceVersionsKnown
+	}
+	return false
 }
 
 type VoiceNotice struct {
@@ -1959,14 +1976,15 @@ type VoiceSample struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	// Empty for an answer, whose prompt text is product copy.
-	Label         string          `protobuf:"bytes,2,opt,name=label,proto3" json:"label,omitempty"`
-	Chars         int32           `protobuf:"varint,3,opt,name=chars,proto3" json:"chars,omitempty"`
-	CreatedAt     string          `protobuf:"bytes,4,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	Kind          VoiceSampleKind `protobuf:"varint,5,opt,name=kind,proto3,enum=postpilot.v1.VoiceSampleKind" json:"kind,omitempty"`
-	PromptKey     string          `protobuf:"bytes,6,opt,name=prompt_key,json=promptKey,proto3" json:"prompt_key,omitempty"`
-	HasPhoto      bool            `protobuf:"varint,7,opt,name=has_photo,json=hasPhoto,proto3" json:"has_photo,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Label           string          `protobuf:"bytes,2,opt,name=label,proto3" json:"label,omitempty"`
+	Chars           int32           `protobuf:"varint,3,opt,name=chars,proto3" json:"chars,omitempty"`
+	CreatedAt       string          `protobuf:"bytes,4,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	Kind            VoiceSampleKind `protobuf:"varint,5,opt,name=kind,proto3,enum=postpilot.v1.VoiceSampleKind" json:"kind,omitempty"`
+	PromptKey       string          `protobuf:"bytes,6,opt,name=prompt_key,json=promptKey,proto3" json:"prompt_key,omitempty"`
+	HasPhoto        bool            `protobuf:"varint,7,opt,name=has_photo,json=hasPhoto,proto3" json:"has_photo,omitempty"`
+	ContentRevision int64           `protobuf:"varint,8,opt,name=content_revision,json=contentRevision,proto3" json:"content_revision,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *VoiceSample) Reset() {
@@ -2046,6 +2064,13 @@ func (x *VoiceSample) GetHasPhoto() bool {
 		return x.HasPhoto
 	}
 	return false
+}
+
+func (x *VoiceSample) GetContentRevision() int64 {
+	if x != nil {
+		return x.ContentRevision
+	}
+	return 0
 }
 
 // One of the shared prompts every voice answers (VOICE-60). Its text is product copy, Korean in
@@ -4566,6 +4591,211 @@ func (x *RetryVoiceCheckResponse) GetJobId() string {
 	return ""
 }
 
+type VoiceAcceptedSource struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	SampleId        string                 `protobuf:"bytes,1,opt,name=sample_id,json=sampleId,proto3" json:"sample_id,omitempty"`
+	ContentRevision int64                  `protobuf:"varint,2,opt,name=content_revision,json=contentRevision,proto3" json:"content_revision,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *VoiceAcceptedSource) Reset() {
+	*x = VoiceAcceptedSource{}
+	mi := &file_postpilot_v1_voice_proto_msgTypes[65]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *VoiceAcceptedSource) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*VoiceAcceptedSource) ProtoMessage() {}
+
+func (x *VoiceAcceptedSource) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_voice_proto_msgTypes[65]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use VoiceAcceptedSource.ProtoReflect.Descriptor instead.
+func (*VoiceAcceptedSource) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_voice_proto_rawDescGZIP(), []int{65}
+}
+
+func (x *VoiceAcceptedSource) GetSampleId() string {
+	if x != nil {
+		return x.SampleId
+	}
+	return ""
+}
+
+func (x *VoiceAcceptedSource) GetContentRevision() int64 {
+	if x != nil {
+		return x.ContentRevision
+	}
+	return 0
+}
+
+// Presence means an edit, including an explicit empty label. Kind and prompt key cannot change.
+type UpdateVoiceSampleRequest struct {
+	state                   protoimpl.MessageState `protogen:"open.v1"`
+	VoiceId                 string                 `protobuf:"bytes,1,opt,name=voice_id,json=voiceId,proto3" json:"voice_id,omitempty"`
+	SampleId                string                 `protobuf:"bytes,2,opt,name=sample_id,json=sampleId,proto3" json:"sample_id,omitempty"`
+	ExpectedContentRevision int64                  `protobuf:"varint,3,opt,name=expected_content_revision,json=expectedContentRevision,proto3" json:"expected_content_revision,omitempty"`
+	OperationKey            string                 `protobuf:"bytes,4,opt,name=operation_key,json=operationKey,proto3" json:"operation_key,omitempty"`
+	Label                   *string                `protobuf:"bytes,5,opt,name=label,proto3,oneof" json:"label,omitempty"`
+	Body                    *string                `protobuf:"bytes,6,opt,name=body,proto3,oneof" json:"body,omitempty"`
+	PhotoUploadId           *string                `protobuf:"bytes,7,opt,name=photo_upload_id,json=photoUploadId,proto3,oneof" json:"photo_upload_id,omitempty"`
+	PhotoWidth              *int32                 `protobuf:"varint,8,opt,name=photo_width,json=photoWidth,proto3,oneof" json:"photo_width,omitempty"`
+	PhotoHeight             *int32                 `protobuf:"varint,9,opt,name=photo_height,json=photoHeight,proto3,oneof" json:"photo_height,omitempty"`
+	unknownFields           protoimpl.UnknownFields
+	sizeCache               protoimpl.SizeCache
+}
+
+func (x *UpdateVoiceSampleRequest) Reset() {
+	*x = UpdateVoiceSampleRequest{}
+	mi := &file_postpilot_v1_voice_proto_msgTypes[66]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateVoiceSampleRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateVoiceSampleRequest) ProtoMessage() {}
+
+func (x *UpdateVoiceSampleRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_voice_proto_msgTypes[66]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateVoiceSampleRequest.ProtoReflect.Descriptor instead.
+func (*UpdateVoiceSampleRequest) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_voice_proto_rawDescGZIP(), []int{66}
+}
+
+func (x *UpdateVoiceSampleRequest) GetVoiceId() string {
+	if x != nil {
+		return x.VoiceId
+	}
+	return ""
+}
+
+func (x *UpdateVoiceSampleRequest) GetSampleId() string {
+	if x != nil {
+		return x.SampleId
+	}
+	return ""
+}
+
+func (x *UpdateVoiceSampleRequest) GetExpectedContentRevision() int64 {
+	if x != nil {
+		return x.ExpectedContentRevision
+	}
+	return 0
+}
+
+func (x *UpdateVoiceSampleRequest) GetOperationKey() string {
+	if x != nil {
+		return x.OperationKey
+	}
+	return ""
+}
+
+func (x *UpdateVoiceSampleRequest) GetLabel() string {
+	if x != nil && x.Label != nil {
+		return *x.Label
+	}
+	return ""
+}
+
+func (x *UpdateVoiceSampleRequest) GetBody() string {
+	if x != nil && x.Body != nil {
+		return *x.Body
+	}
+	return ""
+}
+
+func (x *UpdateVoiceSampleRequest) GetPhotoUploadId() string {
+	if x != nil && x.PhotoUploadId != nil {
+		return *x.PhotoUploadId
+	}
+	return ""
+}
+
+func (x *UpdateVoiceSampleRequest) GetPhotoWidth() int32 {
+	if x != nil && x.PhotoWidth != nil {
+		return *x.PhotoWidth
+	}
+	return 0
+}
+
+func (x *UpdateVoiceSampleRequest) GetPhotoHeight() int32 {
+	if x != nil && x.PhotoHeight != nil {
+		return *x.PhotoHeight
+	}
+	return 0
+}
+
+type UpdateVoiceSampleResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Sample        *VoiceSample           `protobuf:"bytes,1,opt,name=sample,proto3" json:"sample,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateVoiceSampleResponse) Reset() {
+	*x = UpdateVoiceSampleResponse{}
+	mi := &file_postpilot_v1_voice_proto_msgTypes[67]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateVoiceSampleResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateVoiceSampleResponse) ProtoMessage() {}
+
+func (x *UpdateVoiceSampleResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_voice_proto_msgTypes[67]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateVoiceSampleResponse.ProtoReflect.Descriptor instead.
+func (*UpdateVoiceSampleResponse) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_voice_proto_rawDescGZIP(), []int{67}
+}
+
+func (x *UpdateVoiceSampleResponse) GetSample() *VoiceSample {
+	if x != nil {
+		return x.Sample
+	}
+	return nil
+}
+
 var File_postpilot_v1_voice_proto protoreflect.FileDescriptor
 
 const file_postpilot_v1_voice_proto_rawDesc = "" +
@@ -4668,7 +4898,7 @@ const file_postpilot_v1_voice_proto_rawDesc = "" +
 	"impression\x12*\n" +
 	"\x04tics\x18\x02 \x03(\v2\x16.postpilot.v1.VoiceTicR\x04tics\x12+\n" +
 	"\x11signature_phrases\x18\x03 \x03(\tR\x10signaturePhrases\x128\n" +
-	"\bexamples\x18\x04 \x03(\v2\x1c.postpilot.v1.VoiceAiExampleR\bexamples\"\xbd\x02\n" +
+	"\bexamples\x18\x04 \x03(\v2\x1c.postpilot.v1.VoiceAiExampleR\bexamples\"\xbf\x03\n" +
 	"\rVoiceAnalysis\x128\n" +
 	"\acounted\x18\x01 \x01(\v2\x1e.postpilot.v1.VoiceFingerprintR\acounted\x12)\n" +
 	"\x02ai\x18\x02 \x01(\v2\x19.postpilot.v1.VoiceAiPartR\x02ai\x12%\n" +
@@ -4677,7 +4907,9 @@ const file_postpilot_v1_voice_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x05 \x01(\tR\tcreatedAt\x121\n" +
 	"\x06origin\x18\x06 \x01(\x0e2\x19.postpilot.v1.VoiceOriginR\x06origin\x12)\n" +
-	"\x10synthetic_sample\x18\a \x01(\tR\x0fsyntheticSample\"V\n" +
+	"\x10synthetic_sample\x18\a \x01(\tR\x0fsyntheticSample\x12L\n" +
+	"\x10accepted_sources\x18\b \x03(\v2!.postpilot.v1.VoiceAcceptedSourceR\x0facceptedSources\x122\n" +
+	"\x15source_versions_known\x18\t \x01(\bR\x13sourceVersionsKnown\"V\n" +
 	"\vVoiceNotice\x121\n" +
 	"\x04kind\x18\x01 \x01(\x0e2\x1d.postpilot.v1.VoiceNoticeKindR\x04kind\x12\x14\n" +
 	"\x05count\x18\x02 \x01(\x05R\x05count\"\x82\x02\n" +
@@ -4700,7 +4932,7 @@ const file_postpilot_v1_voice_proto_rawDesc = "" +
 	"\ractive_job_id\x18\x05 \x01(\tR\vactiveJobIdJ\x04\b\x01\x10\x02J\x04\b\x02\x10\x03J\x04\b\x03\x10\x04J\x04\b\x06\x10\aJ\x04\b\a\x10\bJ\x04\b\b\x10\tJ\x04\b\t\x10\n" +
 	"J\x04\b\v\x10\fR\n" +
 	"updated_atR\n" +
-	"structuredR\x16finalized_source_countR\fcan_validateR\fseed_failure\"\xd7\x01\n" +
+	"structuredR\x16finalized_source_countR\fcan_validateR\fseed_failure\"\x82\x02\n" +
 	"\vVoiceSample\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05label\x18\x02 \x01(\tR\x05label\x12\x14\n" +
@@ -4710,7 +4942,8 @@ const file_postpilot_v1_voice_proto_rawDesc = "" +
 	"\x04kind\x18\x05 \x01(\x0e2\x1d.postpilot.v1.VoiceSampleKindR\x04kind\x12\x1d\n" +
 	"\n" +
 	"prompt_key\x18\x06 \x01(\tR\tpromptKey\x12\x1b\n" +
-	"\thas_photo\x18\a \x01(\bR\bhasPhoto\"\xc0\x01\n" +
+	"\thas_photo\x18\a \x01(\bR\bhasPhoto\x12)\n" +
+	"\x10content_revision\x18\b \x01(\x03R\x0fcontentRevision\"\xc0\x01\n" +
 	"\vVoicePrompt\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x121\n" +
 	"\x04part\x18\x02 \x01(\x0e2\x1d.postpilot.v1.VoicePromptPartR\x04part\x12\x14\n" +
@@ -4880,7 +5113,28 @@ const file_postpilot_v1_voice_proto_rawDesc = "" +
 	"\x05model\x18\x02 \x01(\v2\x16.postpilot.v1.ModelRefR\x05model\"`\n" +
 	"\x17RetryVoiceCheckResponse\x12.\n" +
 	"\x05check\x18\x01 \x01(\v2\x18.postpilot.v1.VoiceCheckR\x05check\x12\x15\n" +
-	"\x06job_id\x18\x02 \x01(\tR\x05jobId*\x8c\x01\n" +
+	"\x06job_id\x18\x02 \x01(\tR\x05jobId\"]\n" +
+	"\x13VoiceAcceptedSource\x12\x1b\n" +
+	"\tsample_id\x18\x01 \x01(\tR\bsampleId\x12)\n" +
+	"\x10content_revision\x18\x02 \x01(\x03R\x0fcontentRevision\"\xaa\x03\n" +
+	"\x18UpdateVoiceSampleRequest\x12\x19\n" +
+	"\bvoice_id\x18\x01 \x01(\tR\avoiceId\x12\x1b\n" +
+	"\tsample_id\x18\x02 \x01(\tR\bsampleId\x12:\n" +
+	"\x19expected_content_revision\x18\x03 \x01(\x03R\x17expectedContentRevision\x12#\n" +
+	"\roperation_key\x18\x04 \x01(\tR\foperationKey\x12\x19\n" +
+	"\x05label\x18\x05 \x01(\tH\x00R\x05label\x88\x01\x01\x12\x17\n" +
+	"\x04body\x18\x06 \x01(\tH\x01R\x04body\x88\x01\x01\x12+\n" +
+	"\x0fphoto_upload_id\x18\a \x01(\tH\x02R\rphotoUploadId\x88\x01\x01\x12$\n" +
+	"\vphoto_width\x18\b \x01(\x05H\x03R\n" +
+	"photoWidth\x88\x01\x01\x12&\n" +
+	"\fphoto_height\x18\t \x01(\x05H\x04R\vphotoHeight\x88\x01\x01B\b\n" +
+	"\x06_labelB\a\n" +
+	"\x05_bodyB\x12\n" +
+	"\x10_photo_upload_idB\x0e\n" +
+	"\f_photo_widthB\x0f\n" +
+	"\r_photo_height\"N\n" +
+	"\x19UpdateVoiceSampleResponse\x121\n" +
+	"\x06sample\x18\x01 \x01(\v2\x19.postpilot.v1.VoiceSampleR\x06sample*\x8c\x01\n" +
 	"\fVoiceAiField\x12\x1e\n" +
 	"\x1aVOICE_AI_FIELD_UNSPECIFIED\x10\x00\x12\x1d\n" +
 	"\x19VOICE_AI_FIELD_IMPRESSION\x10\x01\x12\x17\n" +
@@ -4925,7 +5179,7 @@ const file_postpilot_v1_voice_proto_rawDesc = "" +
 	"\x19VOICE_CHECK_STATUS_QUEUED\x10\x01\x12\x1e\n" +
 	"\x1aVOICE_CHECK_STATUS_RUNNING\x10\x02\x12\x1b\n" +
 	"\x17VOICE_CHECK_STATUS_DONE\x10\x03\x12\x1d\n" +
-	"\x19VOICE_CHECK_STATUS_FAILED\x10\x042\xde\x0e\n" +
+	"\x19VOICE_CHECK_STATUS_FAILED\x10\x042\xc6\x0f\n" +
 	"\fVoiceService\x12Q\n" +
 	"\n" +
 	"ListVoices\x12\x1f.postpilot.v1.ListVoicesRequest\x1a .postpilot.v1.ListVoicesResponse\"\x00\x12T\n" +
@@ -4936,6 +5190,7 @@ const file_postpilot_v1_voice_proto_rawDesc = "" +
 	"\fRestoreVoice\x12!.postpilot.v1.RestoreVoiceRequest\x1a\".postpilot.v1.RestoreVoiceResponse\"\x00\x12`\n" +
 	"\x0fGetVoiceProfile\x12$.postpilot.v1.GetVoiceProfileRequest\x1a%.postpilot.v1.GetVoiceProfileResponse\"\x00\x12]\n" +
 	"\x0eAddVoiceSample\x12#.postpilot.v1.AddVoiceSampleRequest\x1a$.postpilot.v1.AddVoiceSampleResponse\"\x00\x12f\n" +
+	"\x11UpdateVoiceSample\x12&.postpilot.v1.UpdateVoiceSampleRequest\x1a'.postpilot.v1.UpdateVoiceSampleResponse\"\x00\x12f\n" +
 	"\x11DeleteVoiceSample\x12&.postpilot.v1.DeleteVoiceSampleRequest\x1a'.postpilot.v1.DeleteVoiceSampleResponse\"\x00\x12]\n" +
 	"\x0eGetVoiceSample\x12#.postpilot.v1.GetVoiceSampleRequest\x1a$.postpilot.v1.GetVoiceSampleResponse\"\x00\x12c\n" +
 	"\x10ListVoicePrompts\x12%.postpilot.v1.ListVoicePromptsRequest\x1a&.postpilot.v1.ListVoicePromptsResponse\"\x00\x12u\n" +
@@ -4961,7 +5216,7 @@ func file_postpilot_v1_voice_proto_rawDescGZIP() []byte {
 }
 
 var file_postpilot_v1_voice_proto_enumTypes = make([]protoimpl.EnumInfo, 8)
-var file_postpilot_v1_voice_proto_msgTypes = make([]protoimpl.MessageInfo, 65)
+var file_postpilot_v1_voice_proto_msgTypes = make([]protoimpl.MessageInfo, 68)
 var file_postpilot_v1_voice_proto_goTypes = []any{
 	(VoiceAiField)(0),                            // 0: postpilot.v1.VoiceAiField
 	(VoiceOrigin)(0),                             // 1: postpilot.v1.VoiceOrigin
@@ -5036,8 +5291,11 @@ var file_postpilot_v1_voice_proto_goTypes = []any{
 	(*ListVoiceChecksResponse)(nil),              // 70: postpilot.v1.ListVoiceChecksResponse
 	(*RetryVoiceCheckRequest)(nil),               // 71: postpilot.v1.RetryVoiceCheckRequest
 	(*RetryVoiceCheckResponse)(nil),              // 72: postpilot.v1.RetryVoiceCheckResponse
-	(*ModelRef)(nil),                             // 73: postpilot.v1.ModelRef
-	(*Failure)(nil),                              // 74: postpilot.v1.Failure
+	(*VoiceAcceptedSource)(nil),                  // 73: postpilot.v1.VoiceAcceptedSource
+	(*UpdateVoiceSampleRequest)(nil),             // 74: postpilot.v1.UpdateVoiceSampleRequest
+	(*UpdateVoiceSampleResponse)(nil),            // 75: postpilot.v1.UpdateVoiceSampleResponse
+	(*ModelRef)(nil),                             // 76: postpilot.v1.ModelRef
+	(*Failure)(nil),                              // 77: postpilot.v1.Failure
 }
 var file_postpilot_v1_voice_proto_depIdxs = []int32{
 	9,  // 0: postpilot.v1.VoiceEndingsItem.suffixes:type_name -> postpilot.v1.VoiceSuffix
@@ -5064,89 +5322,93 @@ var file_postpilot_v1_voice_proto_depIdxs = []int32{
 	19, // 21: postpilot.v1.VoiceAnalysis.counted:type_name -> postpilot.v1.VoiceFingerprint
 	22, // 22: postpilot.v1.VoiceAnalysis.ai:type_name -> postpilot.v1.VoiceAiPart
 	1,  // 23: postpilot.v1.VoiceAnalysis.origin:type_name -> postpilot.v1.VoiceOrigin
-	2,  // 24: postpilot.v1.VoiceNotice.kind:type_name -> postpilot.v1.VoiceNoticeKind
-	3,  // 25: postpilot.v1.VoiceReadiness.missing_parts:type_name -> postpilot.v1.VoicePromptPart
-	29, // 26: postpilot.v1.VoiceProfile.voice:type_name -> postpilot.v1.Voice
-	25, // 27: postpilot.v1.VoiceProfile.readiness:type_name -> postpilot.v1.VoiceReadiness
-	23, // 28: postpilot.v1.VoiceProfile.analysis:type_name -> postpilot.v1.VoiceAnalysis
-	24, // 29: postpilot.v1.VoiceProfile.notice:type_name -> postpilot.v1.VoiceNotice
-	27, // 30: postpilot.v1.VoiceProfile.samples:type_name -> postpilot.v1.VoiceSample
-	4,  // 31: postpilot.v1.VoiceSample.kind:type_name -> postpilot.v1.VoiceSampleKind
-	3,  // 32: postpilot.v1.VoicePrompt.part:type_name -> postpilot.v1.VoicePromptPart
-	1,  // 33: postpilot.v1.Voice.origin:type_name -> postpilot.v1.VoiceOrigin
-	29, // 34: postpilot.v1.ListVoicesResponse.voices:type_name -> postpilot.v1.Voice
-	29, // 35: postpilot.v1.CreateVoiceResponse.voice:type_name -> postpilot.v1.Voice
-	29, // 36: postpilot.v1.RenameVoiceResponse.voice:type_name -> postpilot.v1.Voice
-	29, // 37: postpilot.v1.SetDefaultVoiceResponse.voices:type_name -> postpilot.v1.Voice
-	29, // 38: postpilot.v1.DeleteVoiceResponse.voice:type_name -> postpilot.v1.Voice
-	29, // 39: postpilot.v1.RestoreVoiceResponse.voice:type_name -> postpilot.v1.Voice
-	26, // 40: postpilot.v1.GetVoiceProfileResponse.profile:type_name -> postpilot.v1.VoiceProfile
-	27, // 41: postpilot.v1.AddVoiceSampleResponse.sample:type_name -> postpilot.v1.VoiceSample
-	27, // 42: postpilot.v1.GetVoiceSampleResponse.sample:type_name -> postpilot.v1.VoiceSample
-	28, // 43: postpilot.v1.ListVoicePromptsResponse.prompts:type_name -> postpilot.v1.VoicePrompt
-	27, // 44: postpilot.v1.AnswerVoicePromptResponse.sample:type_name -> postpilot.v1.VoiceSample
-	73, // 45: postpilot.v1.AnalyzeVoiceRequest.model:type_name -> postpilot.v1.ModelRef
-	26, // 46: postpilot.v1.RestorePreviousVoiceAnalysisResponse.profile:type_name -> postpilot.v1.VoiceProfile
-	60, // 47: postpilot.v1.FingerprintFacetValue.terms:type_name -> postpilot.v1.FingerprintTerms
-	6,  // 48: postpilot.v1.FingerprintFacet.unit:type_name -> postpilot.v1.FingerprintFacetUnit
-	61, // 49: postpilot.v1.FingerprintFacet.voice:type_name -> postpilot.v1.FingerprintFacetValue
-	61, // 50: postpilot.v1.FingerprintFacet.text:type_name -> postpilot.v1.FingerprintFacetValue
-	5,  // 51: postpilot.v1.FingerprintItemComparison.item:type_name -> postpilot.v1.FingerprintItem
-	62, // 52: postpilot.v1.FingerprintItemComparison.facets:type_name -> postpilot.v1.FingerprintFacet
-	63, // 53: postpilot.v1.GetPostFingerprintResponse.items:type_name -> postpilot.v1.FingerprintItemComparison
-	28, // 54: postpilot.v1.VoiceCheck.prompt:type_name -> postpilot.v1.VoicePrompt
-	7,  // 55: postpilot.v1.VoiceCheck.status:type_name -> postpilot.v1.VoiceCheckStatus
-	74, // 56: postpilot.v1.VoiceCheck.failure:type_name -> postpilot.v1.Failure
-	63, // 57: postpilot.v1.VoiceCheck.comparison:type_name -> postpilot.v1.FingerprintItemComparison
-	73, // 58: postpilot.v1.VoiceCheck.write_model:type_name -> postpilot.v1.ModelRef
-	73, // 59: postpilot.v1.StartVoiceCheckRequest.model:type_name -> postpilot.v1.ModelRef
-	66, // 60: postpilot.v1.StartVoiceCheckResponse.check:type_name -> postpilot.v1.VoiceCheck
-	66, // 61: postpilot.v1.ListVoiceChecksResponse.checks:type_name -> postpilot.v1.VoiceCheck
-	73, // 62: postpilot.v1.RetryVoiceCheckRequest.model:type_name -> postpilot.v1.ModelRef
-	66, // 63: postpilot.v1.RetryVoiceCheckResponse.check:type_name -> postpilot.v1.VoiceCheck
-	30, // 64: postpilot.v1.VoiceService.ListVoices:input_type -> postpilot.v1.ListVoicesRequest
-	32, // 65: postpilot.v1.VoiceService.CreateVoice:input_type -> postpilot.v1.CreateVoiceRequest
-	34, // 66: postpilot.v1.VoiceService.RenameVoice:input_type -> postpilot.v1.RenameVoiceRequest
-	36, // 67: postpilot.v1.VoiceService.SetDefaultVoice:input_type -> postpilot.v1.SetDefaultVoiceRequest
-	38, // 68: postpilot.v1.VoiceService.DeleteVoice:input_type -> postpilot.v1.DeleteVoiceRequest
-	40, // 69: postpilot.v1.VoiceService.RestoreVoice:input_type -> postpilot.v1.RestoreVoiceRequest
-	42, // 70: postpilot.v1.VoiceService.GetVoiceProfile:input_type -> postpilot.v1.GetVoiceProfileRequest
-	44, // 71: postpilot.v1.VoiceService.AddVoiceSample:input_type -> postpilot.v1.AddVoiceSampleRequest
-	46, // 72: postpilot.v1.VoiceService.DeleteVoiceSample:input_type -> postpilot.v1.DeleteVoiceSampleRequest
-	48, // 73: postpilot.v1.VoiceService.GetVoiceSample:input_type -> postpilot.v1.GetVoiceSampleRequest
-	50, // 74: postpilot.v1.VoiceService.ListVoicePrompts:input_type -> postpilot.v1.ListVoicePromptsRequest
-	52, // 75: postpilot.v1.VoiceService.CreateVoicePhotoUpload:input_type -> postpilot.v1.CreateVoicePhotoUploadRequest
-	54, // 76: postpilot.v1.VoiceService.AnswerVoicePrompt:input_type -> postpilot.v1.AnswerVoicePromptRequest
-	56, // 77: postpilot.v1.VoiceService.AnalyzeVoice:input_type -> postpilot.v1.AnalyzeVoiceRequest
-	58, // 78: postpilot.v1.VoiceService.RestorePreviousVoiceAnalysis:input_type -> postpilot.v1.RestorePreviousVoiceAnalysisRequest
-	64, // 79: postpilot.v1.VoiceService.GetPostFingerprint:input_type -> postpilot.v1.GetPostFingerprintRequest
-	67, // 80: postpilot.v1.VoiceService.StartVoiceCheck:input_type -> postpilot.v1.StartVoiceCheckRequest
-	69, // 81: postpilot.v1.VoiceService.ListVoiceChecks:input_type -> postpilot.v1.ListVoiceChecksRequest
-	71, // 82: postpilot.v1.VoiceService.RetryVoiceCheck:input_type -> postpilot.v1.RetryVoiceCheckRequest
-	31, // 83: postpilot.v1.VoiceService.ListVoices:output_type -> postpilot.v1.ListVoicesResponse
-	33, // 84: postpilot.v1.VoiceService.CreateVoice:output_type -> postpilot.v1.CreateVoiceResponse
-	35, // 85: postpilot.v1.VoiceService.RenameVoice:output_type -> postpilot.v1.RenameVoiceResponse
-	37, // 86: postpilot.v1.VoiceService.SetDefaultVoice:output_type -> postpilot.v1.SetDefaultVoiceResponse
-	39, // 87: postpilot.v1.VoiceService.DeleteVoice:output_type -> postpilot.v1.DeleteVoiceResponse
-	41, // 88: postpilot.v1.VoiceService.RestoreVoice:output_type -> postpilot.v1.RestoreVoiceResponse
-	43, // 89: postpilot.v1.VoiceService.GetVoiceProfile:output_type -> postpilot.v1.GetVoiceProfileResponse
-	45, // 90: postpilot.v1.VoiceService.AddVoiceSample:output_type -> postpilot.v1.AddVoiceSampleResponse
-	47, // 91: postpilot.v1.VoiceService.DeleteVoiceSample:output_type -> postpilot.v1.DeleteVoiceSampleResponse
-	49, // 92: postpilot.v1.VoiceService.GetVoiceSample:output_type -> postpilot.v1.GetVoiceSampleResponse
-	51, // 93: postpilot.v1.VoiceService.ListVoicePrompts:output_type -> postpilot.v1.ListVoicePromptsResponse
-	53, // 94: postpilot.v1.VoiceService.CreateVoicePhotoUpload:output_type -> postpilot.v1.CreateVoicePhotoUploadResponse
-	55, // 95: postpilot.v1.VoiceService.AnswerVoicePrompt:output_type -> postpilot.v1.AnswerVoicePromptResponse
-	57, // 96: postpilot.v1.VoiceService.AnalyzeVoice:output_type -> postpilot.v1.AnalyzeVoiceResponse
-	59, // 97: postpilot.v1.VoiceService.RestorePreviousVoiceAnalysis:output_type -> postpilot.v1.RestorePreviousVoiceAnalysisResponse
-	65, // 98: postpilot.v1.VoiceService.GetPostFingerprint:output_type -> postpilot.v1.GetPostFingerprintResponse
-	68, // 99: postpilot.v1.VoiceService.StartVoiceCheck:output_type -> postpilot.v1.StartVoiceCheckResponse
-	70, // 100: postpilot.v1.VoiceService.ListVoiceChecks:output_type -> postpilot.v1.ListVoiceChecksResponse
-	72, // 101: postpilot.v1.VoiceService.RetryVoiceCheck:output_type -> postpilot.v1.RetryVoiceCheckResponse
-	83, // [83:102] is the sub-list for method output_type
-	64, // [64:83] is the sub-list for method input_type
-	64, // [64:64] is the sub-list for extension type_name
-	64, // [64:64] is the sub-list for extension extendee
-	0,  // [0:64] is the sub-list for field type_name
+	73, // 24: postpilot.v1.VoiceAnalysis.accepted_sources:type_name -> postpilot.v1.VoiceAcceptedSource
+	2,  // 25: postpilot.v1.VoiceNotice.kind:type_name -> postpilot.v1.VoiceNoticeKind
+	3,  // 26: postpilot.v1.VoiceReadiness.missing_parts:type_name -> postpilot.v1.VoicePromptPart
+	29, // 27: postpilot.v1.VoiceProfile.voice:type_name -> postpilot.v1.Voice
+	25, // 28: postpilot.v1.VoiceProfile.readiness:type_name -> postpilot.v1.VoiceReadiness
+	23, // 29: postpilot.v1.VoiceProfile.analysis:type_name -> postpilot.v1.VoiceAnalysis
+	24, // 30: postpilot.v1.VoiceProfile.notice:type_name -> postpilot.v1.VoiceNotice
+	27, // 31: postpilot.v1.VoiceProfile.samples:type_name -> postpilot.v1.VoiceSample
+	4,  // 32: postpilot.v1.VoiceSample.kind:type_name -> postpilot.v1.VoiceSampleKind
+	3,  // 33: postpilot.v1.VoicePrompt.part:type_name -> postpilot.v1.VoicePromptPart
+	1,  // 34: postpilot.v1.Voice.origin:type_name -> postpilot.v1.VoiceOrigin
+	29, // 35: postpilot.v1.ListVoicesResponse.voices:type_name -> postpilot.v1.Voice
+	29, // 36: postpilot.v1.CreateVoiceResponse.voice:type_name -> postpilot.v1.Voice
+	29, // 37: postpilot.v1.RenameVoiceResponse.voice:type_name -> postpilot.v1.Voice
+	29, // 38: postpilot.v1.SetDefaultVoiceResponse.voices:type_name -> postpilot.v1.Voice
+	29, // 39: postpilot.v1.DeleteVoiceResponse.voice:type_name -> postpilot.v1.Voice
+	29, // 40: postpilot.v1.RestoreVoiceResponse.voice:type_name -> postpilot.v1.Voice
+	26, // 41: postpilot.v1.GetVoiceProfileResponse.profile:type_name -> postpilot.v1.VoiceProfile
+	27, // 42: postpilot.v1.AddVoiceSampleResponse.sample:type_name -> postpilot.v1.VoiceSample
+	27, // 43: postpilot.v1.GetVoiceSampleResponse.sample:type_name -> postpilot.v1.VoiceSample
+	28, // 44: postpilot.v1.ListVoicePromptsResponse.prompts:type_name -> postpilot.v1.VoicePrompt
+	27, // 45: postpilot.v1.AnswerVoicePromptResponse.sample:type_name -> postpilot.v1.VoiceSample
+	76, // 46: postpilot.v1.AnalyzeVoiceRequest.model:type_name -> postpilot.v1.ModelRef
+	26, // 47: postpilot.v1.RestorePreviousVoiceAnalysisResponse.profile:type_name -> postpilot.v1.VoiceProfile
+	60, // 48: postpilot.v1.FingerprintFacetValue.terms:type_name -> postpilot.v1.FingerprintTerms
+	6,  // 49: postpilot.v1.FingerprintFacet.unit:type_name -> postpilot.v1.FingerprintFacetUnit
+	61, // 50: postpilot.v1.FingerprintFacet.voice:type_name -> postpilot.v1.FingerprintFacetValue
+	61, // 51: postpilot.v1.FingerprintFacet.text:type_name -> postpilot.v1.FingerprintFacetValue
+	5,  // 52: postpilot.v1.FingerprintItemComparison.item:type_name -> postpilot.v1.FingerprintItem
+	62, // 53: postpilot.v1.FingerprintItemComparison.facets:type_name -> postpilot.v1.FingerprintFacet
+	63, // 54: postpilot.v1.GetPostFingerprintResponse.items:type_name -> postpilot.v1.FingerprintItemComparison
+	28, // 55: postpilot.v1.VoiceCheck.prompt:type_name -> postpilot.v1.VoicePrompt
+	7,  // 56: postpilot.v1.VoiceCheck.status:type_name -> postpilot.v1.VoiceCheckStatus
+	77, // 57: postpilot.v1.VoiceCheck.failure:type_name -> postpilot.v1.Failure
+	63, // 58: postpilot.v1.VoiceCheck.comparison:type_name -> postpilot.v1.FingerprintItemComparison
+	76, // 59: postpilot.v1.VoiceCheck.write_model:type_name -> postpilot.v1.ModelRef
+	76, // 60: postpilot.v1.StartVoiceCheckRequest.model:type_name -> postpilot.v1.ModelRef
+	66, // 61: postpilot.v1.StartVoiceCheckResponse.check:type_name -> postpilot.v1.VoiceCheck
+	66, // 62: postpilot.v1.ListVoiceChecksResponse.checks:type_name -> postpilot.v1.VoiceCheck
+	76, // 63: postpilot.v1.RetryVoiceCheckRequest.model:type_name -> postpilot.v1.ModelRef
+	66, // 64: postpilot.v1.RetryVoiceCheckResponse.check:type_name -> postpilot.v1.VoiceCheck
+	27, // 65: postpilot.v1.UpdateVoiceSampleResponse.sample:type_name -> postpilot.v1.VoiceSample
+	30, // 66: postpilot.v1.VoiceService.ListVoices:input_type -> postpilot.v1.ListVoicesRequest
+	32, // 67: postpilot.v1.VoiceService.CreateVoice:input_type -> postpilot.v1.CreateVoiceRequest
+	34, // 68: postpilot.v1.VoiceService.RenameVoice:input_type -> postpilot.v1.RenameVoiceRequest
+	36, // 69: postpilot.v1.VoiceService.SetDefaultVoice:input_type -> postpilot.v1.SetDefaultVoiceRequest
+	38, // 70: postpilot.v1.VoiceService.DeleteVoice:input_type -> postpilot.v1.DeleteVoiceRequest
+	40, // 71: postpilot.v1.VoiceService.RestoreVoice:input_type -> postpilot.v1.RestoreVoiceRequest
+	42, // 72: postpilot.v1.VoiceService.GetVoiceProfile:input_type -> postpilot.v1.GetVoiceProfileRequest
+	44, // 73: postpilot.v1.VoiceService.AddVoiceSample:input_type -> postpilot.v1.AddVoiceSampleRequest
+	74, // 74: postpilot.v1.VoiceService.UpdateVoiceSample:input_type -> postpilot.v1.UpdateVoiceSampleRequest
+	46, // 75: postpilot.v1.VoiceService.DeleteVoiceSample:input_type -> postpilot.v1.DeleteVoiceSampleRequest
+	48, // 76: postpilot.v1.VoiceService.GetVoiceSample:input_type -> postpilot.v1.GetVoiceSampleRequest
+	50, // 77: postpilot.v1.VoiceService.ListVoicePrompts:input_type -> postpilot.v1.ListVoicePromptsRequest
+	52, // 78: postpilot.v1.VoiceService.CreateVoicePhotoUpload:input_type -> postpilot.v1.CreateVoicePhotoUploadRequest
+	54, // 79: postpilot.v1.VoiceService.AnswerVoicePrompt:input_type -> postpilot.v1.AnswerVoicePromptRequest
+	56, // 80: postpilot.v1.VoiceService.AnalyzeVoice:input_type -> postpilot.v1.AnalyzeVoiceRequest
+	58, // 81: postpilot.v1.VoiceService.RestorePreviousVoiceAnalysis:input_type -> postpilot.v1.RestorePreviousVoiceAnalysisRequest
+	64, // 82: postpilot.v1.VoiceService.GetPostFingerprint:input_type -> postpilot.v1.GetPostFingerprintRequest
+	67, // 83: postpilot.v1.VoiceService.StartVoiceCheck:input_type -> postpilot.v1.StartVoiceCheckRequest
+	69, // 84: postpilot.v1.VoiceService.ListVoiceChecks:input_type -> postpilot.v1.ListVoiceChecksRequest
+	71, // 85: postpilot.v1.VoiceService.RetryVoiceCheck:input_type -> postpilot.v1.RetryVoiceCheckRequest
+	31, // 86: postpilot.v1.VoiceService.ListVoices:output_type -> postpilot.v1.ListVoicesResponse
+	33, // 87: postpilot.v1.VoiceService.CreateVoice:output_type -> postpilot.v1.CreateVoiceResponse
+	35, // 88: postpilot.v1.VoiceService.RenameVoice:output_type -> postpilot.v1.RenameVoiceResponse
+	37, // 89: postpilot.v1.VoiceService.SetDefaultVoice:output_type -> postpilot.v1.SetDefaultVoiceResponse
+	39, // 90: postpilot.v1.VoiceService.DeleteVoice:output_type -> postpilot.v1.DeleteVoiceResponse
+	41, // 91: postpilot.v1.VoiceService.RestoreVoice:output_type -> postpilot.v1.RestoreVoiceResponse
+	43, // 92: postpilot.v1.VoiceService.GetVoiceProfile:output_type -> postpilot.v1.GetVoiceProfileResponse
+	45, // 93: postpilot.v1.VoiceService.AddVoiceSample:output_type -> postpilot.v1.AddVoiceSampleResponse
+	75, // 94: postpilot.v1.VoiceService.UpdateVoiceSample:output_type -> postpilot.v1.UpdateVoiceSampleResponse
+	47, // 95: postpilot.v1.VoiceService.DeleteVoiceSample:output_type -> postpilot.v1.DeleteVoiceSampleResponse
+	49, // 96: postpilot.v1.VoiceService.GetVoiceSample:output_type -> postpilot.v1.GetVoiceSampleResponse
+	51, // 97: postpilot.v1.VoiceService.ListVoicePrompts:output_type -> postpilot.v1.ListVoicePromptsResponse
+	53, // 98: postpilot.v1.VoiceService.CreateVoicePhotoUpload:output_type -> postpilot.v1.CreateVoicePhotoUploadResponse
+	55, // 99: postpilot.v1.VoiceService.AnswerVoicePrompt:output_type -> postpilot.v1.AnswerVoicePromptResponse
+	57, // 100: postpilot.v1.VoiceService.AnalyzeVoice:output_type -> postpilot.v1.AnalyzeVoiceResponse
+	59, // 101: postpilot.v1.VoiceService.RestorePreviousVoiceAnalysis:output_type -> postpilot.v1.RestorePreviousVoiceAnalysisResponse
+	65, // 102: postpilot.v1.VoiceService.GetPostFingerprint:output_type -> postpilot.v1.GetPostFingerprintResponse
+	68, // 103: postpilot.v1.VoiceService.StartVoiceCheck:output_type -> postpilot.v1.StartVoiceCheckResponse
+	70, // 104: postpilot.v1.VoiceService.ListVoiceChecks:output_type -> postpilot.v1.ListVoiceChecksResponse
+	72, // 105: postpilot.v1.VoiceService.RetryVoiceCheck:output_type -> postpilot.v1.RetryVoiceCheckResponse
+	86, // [86:106] is the sub-list for method output_type
+	66, // [66:86] is the sub-list for method input_type
+	66, // [66:66] is the sub-list for extension type_name
+	66, // [66:66] is the sub-list for extension extendee
+	0,  // [0:66] is the sub-list for field type_name
 }
 
 func init() { file_postpilot_v1_voice_proto_init() }
@@ -5160,13 +5422,14 @@ func file_postpilot_v1_voice_proto_init() {
 		(*FingerprintFacetValue_Number)(nil),
 		(*FingerprintFacetValue_Terms)(nil),
 	}
+	file_postpilot_v1_voice_proto_msgTypes[66].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_postpilot_v1_voice_proto_rawDesc), len(file_postpilot_v1_voice_proto_rawDesc)),
 			NumEnums:      8,
-			NumMessages:   65,
+			NumMessages:   68,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

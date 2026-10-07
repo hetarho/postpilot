@@ -98,7 +98,7 @@ func (q *Queries) GetAuthoringOperationByID(ctx context.Context, arg GetAuthorin
 }
 
 const getAuthoringSession = `-- name: GetAuthoringSession :one
-SELECT id, user_id, kind, target_id, request_id, revision, phase, snapshot, created_at, updated_at FROM configuration_authoring_sessions WHERE user_id=? AND id=?
+SELECT id, user_id, kind, target_id, request_id, revision, phase, snapshot, created_at, updated_at, saved_baseline, working_source, draft_state, has_unpublished_changes, saved_available, publication_pending, target_conflict, display_name, candidate_count FROM configuration_authoring_sessions WHERE user_id=? AND id=?
 `
 
 type GetAuthoringSessionParams struct {
@@ -120,12 +120,21 @@ func (q *Queries) GetAuthoringSession(ctx context.Context, arg GetAuthoringSessi
 		&i.Snapshot,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.SavedBaseline,
+		&i.WorkingSource,
+		&i.DraftState,
+		&i.HasUnpublishedChanges,
+		&i.SavedAvailable,
+		&i.PublicationPending,
+		&i.TargetConflict,
+		&i.DisplayName,
+		&i.CandidateCount,
 	)
 	return i, err
 }
 
 const getAuthoringSessionByRequest = `-- name: GetAuthoringSessionByRequest :one
-SELECT id, user_id, kind, target_id, request_id, revision, phase, snapshot, created_at, updated_at FROM configuration_authoring_sessions WHERE user_id=? AND request_id=?
+SELECT id, user_id, kind, target_id, request_id, revision, phase, snapshot, created_at, updated_at, saved_baseline, working_source, draft_state, has_unpublished_changes, saved_available, publication_pending, target_conflict, display_name, candidate_count FROM configuration_authoring_sessions WHERE user_id=? AND request_id=?
 `
 
 type GetAuthoringSessionByRequestParams struct {
@@ -147,6 +156,15 @@ func (q *Queries) GetAuthoringSessionByRequest(ctx context.Context, arg GetAutho
 		&i.Snapshot,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.SavedBaseline,
+		&i.WorkingSource,
+		&i.DraftState,
+		&i.HasUnpublishedChanges,
+		&i.SavedAvailable,
+		&i.PublicationPending,
+		&i.TargetConflict,
+		&i.DisplayName,
+		&i.CandidateCount,
 	)
 	return i, err
 }
@@ -224,7 +242,7 @@ func (q *Queries) InsertAuthoringSession(ctx context.Context, arg InsertAuthorin
 }
 
 const latestAuthoringSession = `-- name: LatestAuthoringSession :one
-SELECT id, user_id, kind, target_id, request_id, revision, phase, snapshot, created_at, updated_at FROM configuration_authoring_sessions WHERE user_id=? AND kind=? AND target_id=? ORDER BY updated_at DESC,id DESC LIMIT 1
+SELECT id, user_id, kind, target_id, request_id, revision, phase, snapshot, created_at, updated_at, saved_baseline, working_source, draft_state, has_unpublished_changes, saved_available, publication_pending, target_conflict, display_name, candidate_count FROM configuration_authoring_sessions WHERE user_id=? AND kind=? AND target_id=? ORDER BY updated_at DESC,id DESC LIMIT 1
 `
 
 type LatestAuthoringSessionParams struct {
@@ -247,6 +265,15 @@ func (q *Queries) LatestAuthoringSession(ctx context.Context, arg LatestAuthorin
 		&i.Snapshot,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.SavedBaseline,
+		&i.WorkingSource,
+		&i.DraftState,
+		&i.HasUnpublishedChanges,
+		&i.SavedAvailable,
+		&i.PublicationPending,
+		&i.TargetConflict,
+		&i.DisplayName,
+		&i.CandidateCount,
 	)
 	return i, err
 }
