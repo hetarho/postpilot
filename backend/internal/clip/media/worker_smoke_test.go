@@ -175,7 +175,7 @@ func TestWorkerExecutionParity(t *testing.T) {
 				return nil
 			})
 			if err == nil && !reflect.DeepEqual(result.Sources[0].Info, actual) {
-				t.Fatal("original measurement changed")
+				t.Fatalf("original measurement changed: worker=%+v embedded=%+v", result.Sources[0].Info, actual)
 			}
 			return err
 		})
