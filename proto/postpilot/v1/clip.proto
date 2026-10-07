@@ -187,6 +187,17 @@ message ClipObservedSegment {
   string usability = 10;
   // Server-projected focal/default used when adding footage from this scene.
   ClipFocal focal = 11;
+  // Read-only source-space observation, never correction or editorial input.
+  string scene = 12;
+  bool readable_text = 13;
+  ClipNormalizedSourceBox subject = 14;
+  repeated ClipNormalizedSourceBox caption_safe = 15;
+}
+message ClipNormalizedSourceBox {
+  double x = 1;
+  double y = 2;
+  double width = 3;
+  double height = 4;
 }
 message ClipAttempt {
   string job_id = 1;
@@ -417,6 +428,9 @@ message ClipEditableText {
   // from the saved plan and ignores this value when accepting a correction.
   bool owner_edited = 33;
   ClipDerivedCaption derived_caption = 34;
+  // Chosen anchor from the stored automatic placement. Read-only: correction
+  // requests cannot change it; owner_position/position retain their contracts.
+  string effective_position = 35;
 }
 // An absolute caption position in whole canvas pixels, never a fraction: the
 // layout resolves everything to canvas pixels and the preview places the served
@@ -507,6 +521,10 @@ message ClipRetainedSource {
   // its verified original cadence. A slow rate is absent when the source cannot
   // reach the output cadence without invented frames.
   repeated int32 allowed_rate_permille = 7;
+  // Absence from older reads is unknown, rather than evidence of silence.
+  optional bool has_audio = 8;
+  // Empty preserves native retained records; browser_client is explicit.
+  string original_measurement_provenance = 9;
 }
 message ClipEditingState {
   reserved 3;
@@ -520,6 +538,9 @@ message ClipEditingState {
   int32 max_copy_runes = 6;
   int32 min_duration_ms = 7;
   int32 max_duration_ms = 8;
+  // Exactly the stored Portable.Observations used by native layout, distinct
+  // from the latest successful/failed attempt inspection observations.
+  ClipObservations layout_observations = 9;
 }
 message ClipRenderMeasurements {
   int32 width = 1;
@@ -537,6 +558,14 @@ message ClipRenderMeasurements {
   // Fingerprint of the immutable speech actually decoded and mixed by this producer.
   string speech_fingerprint = 13;
   optional double true_peak_dbtp = 14;
+  string composition_version = 15;
+  string snapshot_fingerprint = 16;
+  string background_version = 17;
+  string background_snapshot_fingerprint = 18;
+  string background_digest = 19;
+  bool background_complete = 20;
+  int32 background_sample_count = 21;
+  repeated ClipNotice background_notices = 22;
 }
 
 message ClipCompositionItem {

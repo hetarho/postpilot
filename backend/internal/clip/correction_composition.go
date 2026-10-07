@@ -13,8 +13,10 @@ import (
 // Editable values reference a saved identity. Evidence, binding ownership and
 // the template source remain server-owned even when text is corrected.
 type CorrectionText struct {
-	Derived                                  *DerivedCaption
-	EffectiveStartMS, EffectiveEndMS         *int
+	Derived                          *DerivedCaption
+	EffectiveStartMS, EffectiveEndMS *int
+	// Existing automatic placement anchor; a read projection, never a correction input.
+	EffectivePosition                        string
 	Phrases                                  []EditablePhrase
 	StaleEvidence, EvidenceReviewed          bool
 	Evidence                                 []SourceEvidence
@@ -60,6 +62,7 @@ func correctionText(t PortableText) CorrectionText {
 	if t.Placement != nil {
 		a, b := t.Placement.StartMS, t.Placement.EndMS
 		result.EffectiveStartMS, result.EffectiveEndMS = &a, &b
+		result.EffectivePosition = t.Placement.Position
 	}
 	return result
 }
@@ -300,6 +303,7 @@ func applyTextEdit(t PortableText, edit CorrectionText, changed []SourceAssociat
 	edit.Derived = before.Derived
 	edit.Evidence, edit.FallbackReason, edit.StaleEvidence = before.Evidence, before.FallbackReason, before.StaleEvidence
 	edit.EffectiveStartMS, edit.EffectiveEndMS = before.EffectiveStartMS, before.EffectiveEndMS
+	edit.EffectivePosition = before.EffectivePosition
 	reviewed := edit.EvidenceReviewed
 	edit.EvidenceReviewed = false
 	// Derived intervals are output only and never make a content edit.

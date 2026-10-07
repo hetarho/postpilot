@@ -22,8 +22,8 @@ export function useClipLifecycleApi(ownerId: string, projectId: string) {
   }
   return {
     refresh,
-    cancel: async (jobId: string) => {
-      const response = await client.cancelClipJob({ projectId, jobId })
+    cancel: async (jobId: string, signal?: AbortSignal) => {
+      const response = await client.cancelClipJob({ projectId, jobId }, { signal })
       if (!response.job) throw new Error('Missing cancelled clip job')
       return toGenerationJob(response.job)
     },

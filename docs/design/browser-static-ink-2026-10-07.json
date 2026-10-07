@@ -1,0 +1,1373 @@
+{
+  "version": 1,
+  "productionQualified": false,
+  "competingWork": true,
+  "nativeProfile": "resvg0.48.1-host",
+  "environment": {
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/154.0.0.0 Safari/537.36",
+    "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Max, Unspecified Version)",
+    "crossOriginIsolated": true,
+    "hardwareConcurrency": 10
+  },
+  "results": [
+    {
+      "id": "vertical-bold-steady",
+      "changedBytes": 9,
+      "relevantPixels": 82156,
+      "normalizedError": 7.398645713702005e-7,
+      "glyphs": [
+        {
+          "text": "정확한 자막 갂 ",
+          "x": 332.48663999999997,
+          "y": 1260.40016,
+          "width": 415.02672,
+          "height": 87.76728
+        },
+        {
+          "text": "AV 12,500원",
+          "x": 324.51984,
+          "y": 1362.5674399999998,
+          "width": 430.96032,
+          "height": 84.80016
+        }
+      ],
+      "resources": {
+        "entries": 1,
+        "bytes": 567728,
+        "peakBytes": 567728,
+        "rasters": 1,
+        "leases": 0
+      },
+      "elapsedMs": 870.2850003242493,
+      "cleanupVerified": true
+    },
+    {
+      "id": "vertical-bold-rapid",
+      "changedBytes": 14,
+      "relevantPixels": 33601,
+      "normalizedError": 0.0000032678765979770675,
+      "glyphs": [
+        {
+          "text": "진짜 좋아요",
+          "x": 377.28,
+          "y": 1362.40016,
+          "width": 325.44,
+          "height": 84.80016
+        }
+      ],
+      "resources": {
+        "entries": 1,
+        "bytes": 284144,
+        "peakBytes": 284144,
+        "rasters": 1,
+        "leases": 0
+      },
+      "elapsedMs": 196.25500011444092,
+      "cleanupVerified": true
+    },
+    {
+      "id": "vertical-keynote-steady",
+      "changedBytes": 0,
+      "relevantPixels": 121141,
+      "normalizedError": 0,
+      "glyphs": [
+        {
+          "text": "정확한 자막 갂",
+          "x": 308.8509,
+          "y": 1245.9806,
+          "width": 462.2982,
+          "height": 100.24224
+        },
+        {
+          "text": " AV 12,500원",
+          "x": 309.70727999999997,
+          "y": 1358.82284,
+          "width": 460.58544,
+          "height": 100.24224
+        }
+      ],
+      "resources": {
+        "entries": 1,
+        "bytes": 641920,
+        "peakBytes": 641920,
+        "rasters": 1,
+        "leases": 0
+      },
+      "elapsedMs": 555.7149996757507,
+      "cleanupVerified": true
+    },
+    {
+      "id": "vertical-keynote-rapid",
+      "changedBytes": 0,
+      "relevantPixels": 54088,
+      "normalizedError": 0,
+      "glyphs": [
+        {
+          "text": "진짜 좋아요",
+          "x": 353.46582,
+          "y": 1358.9806,
+          "width": 373.06836,
+          "height": 100.24224
+        }
+      ],
+      "resources": {
+        "entries": 1,
+        "bytes": 331240,
+        "peakBytes": 331240,
+        "rasters": 1,
+        "leases": 0
+      },
+      "elapsedMs": 86.15500020980835,
+      "cleanupVerified": true
+    },
+    {
+      "id": "vertical-film-steady",
+      "changedBytes": 0,
+      "relevantPixels": 63959,
+      "normalizedError": 0,
+      "glyphs": [
+        {
+          "text": "정확한 자막 갂",
+          "x": 313.3062,
+          "y": 1278.5855999999999,
+          "width": 453.3876,
+          "height": 72
+        },
+        {
+          "text": " AV 12,500원",
+          "x": 329.10876,
+          "y": 1364.9856,
+          "width": 421.78247999999996,
+          "height": 72
+        }
+      ],
+      "resources": {
+        "entries": 1,
+        "bytes": 513600,
+        "peakBytes": 513600,
+        "rasters": 1,
+        "leases": 0
+      },
+      "elapsedMs": 320.5,
+      "cleanupVerified": true
+    },
+    {
+      "id": "vertical-film-rapid",
+      "changedBytes": 0,
+      "relevantPixels": 26948,
+      "normalizedError": 0,
+      "glyphs": [
+        {
+          "text": "진짜 좋아요",
+          "x": 357.86124,
+          "y": 1365.5855999999999,
+          "width": 364.27752,
+          "height": 72
+        }
+      ],
+      "resources": {
+        "entries": 1,
+        "bytes": 272952,
+        "peakBytes": 272952,
+        "rasters": 1,
+        "leases": 0
+      },
+      "elapsedMs": 232.7350001335144,
+      "cleanupVerified": true
+    },
+    {
+      "id": "vertical-intro-a",
+      "changedBytes": 120,
+      "relevantPixels": 65787,
+      "normalizedError": 0.000006765744588074943,
+      "glyphs": [],
+      "resources": {
+        "entries": 1,
+        "bytes": 783020,
+        "peakBytes": 783020,
+        "rasters": 1,
+        "leases": 0
+      },
+      "elapsedMs": 256.3949999809265,
+      "cleanupVerified": true
+    },
+    {
+      "id": "vertical-intro-b",
+      "changedBytes": 18,
+      "relevantPixels": 54503,
+      "normalizedError": 0.0000010432956919442822,
+      "glyphs": [],
+      "resources": {
+        "entries": 1,
+        "bytes": 1127736,
+        "peakBytes": 1127736,
+        "rasters": 1,
+        "leases": 0
+      },
+      "elapsedMs": 95.95499992370605,
+      "cleanupVerified": true
+    },
+    {
+      "id": "vertical-intro-cover",
+      "changedBytes": 0,
+      "relevantPixels": 148570,
+      "normalizedError": 0,
+      "glyphs": [],
+      "resources": {
+        "entries": 1,
+        "bytes": 1743456,
+        "peakBytes": 1743456,
+        "rasters": 1,
+        "leases": 0
+      },
+      "elapsedMs": 177.41499996185303,
+      "cleanupVerified": true
+    },
+    {
+      "id": "vertical-intro-serif",
+      "changedBytes": 561,
+      "relevantPixels": 121234,
+      "normalizedError": 0.00005693898721868938,
+      "glyphs": [],
+      "resources": {
+        "entries": 1,
+        "bytes": 1460800,
+        "peakBytes": 1460800,
+        "rasters": 1,
+        "leases": 0
+      },
+      "elapsedMs": 165.57000017166138,
+      "cleanupVerified": true
+    },
+    {
+      "id": "vertical-intro-frame",
+      "changedBytes": 0,
+      "relevantPixels": 105428,
+      "normalizedError": 0,
+      "glyphs": [],
+      "resources": {
+        "entries": 1,
+        "bytes": 1010000,
+        "peakBytes": 1010000,
+        "rasters": 1,
+        "leases": 0
+      },
+      "elapsedMs": 149.30500030517578,
+      "cleanupVerified": true
+    },
+    {
+      "id": "vertical-intro-outline",
+      "changedBytes": 201,
+      "relevantPixels": 185297,
+      "normalizedError": 0.0000035396274788106473,
+      "glyphs": [],
+      "resources": {
+        "entries": 1,
+        "bytes": 1834560,
+        "peakBytes": 1834560,
+        "rasters": 1,
+        "leases": 0
+      },
+      "elapsedMs": 220.375,
+      "cleanupVerified": true
+    },
+    {
+      "id": "vertical-intro-lower",
+      "changedBytes": 99,
+      "relevantPixels": 97135,
+      "normalizedError": 0.00000313895054083815,
+      "glyphs": [],
+      "resources": {
+        "entries": 1,
+        "bytes": 1205900,
+        "peakBytes": 1205900,
+        "rasters": 1,
+        "leases": 0
+      },
+      "elapsedMs": 125.78000020980835,
+      "cleanupVerified": true
+    },
+    {
+      "id": "vertical-intro-sticker",
+      "changedBytes": 37,
+      "relevantPixels": 79830,
+      "normalizedError": 0.000005354515600553136,
+      "glyphs": [],
+      "resources": {
+        "entries": 1,
+        "bytes": 1319424,
+        "peakBytes": 1319424,
+        "rasters": 1,
+        "leases": 0
+      },
+      "elapsedMs": 117.90000009536743,
+      "cleanupVerified": true
+    },
+    {
+      "id": "vertical-outro-b",
+      "changedBytes": 10,
+      "relevantPixels": 78208,
+      "normalizedError": 4.0114245370816085e-7,
+      "glyphs": [],
+      "resources": {
+        "entries": 1,
+        "bytes": 1037844,
+        "peakBytes": 1037844,
+        "rasters": 1,
+        "leases": 0
+      },
+      "elapsedMs": 119.23999977111816,
+      "cleanupVerified": true
+    },
+    {
+      "id": "vertical-outro-e",
+      "changedBytes": 5,
+      "relevantPixels": 66981,
+      "normalizedError": 1.7564243415823803e-7,
+      "glyphs": [],
+      "resources": {
+        "entries": 1,
+        "bytes": 946200,
+        "peakBytes": 946200,
+        "rasters": 1,
+        "leases": 0
+      },
+      "elapsedMs": 104.61500024795532,
+      "cleanupVerified": true
+    },
+    {
+      "id": "vertical-outro-credits",
+      "changedBytes": 8,
+      "relevantPixels": 91467,
+      "normalizedError": 1.822150793911101e-7,
+      "glyphs": [],
+      "resources": {
+        "entries": 1,
+        "bytes": 1102452,
+        "peakBytes": 1102452,
+        "rasters": 1,
+        "leases": 0
+      },
+      "elapsedMs": 125.96000003814697,
+      "cleanupVerified": true
+    },
+    {
+      "id": "vertical-outro-sidebar",
+      "changedBytes": 113,
+      "relevantPixels": 97384,
+      "normalizedError": 0.000005396062968027924,
+      "glyphs": [],
+      "resources": {
+        "entries": 1,
+        "bytes": 1063236,
+        "peakBytes": 1063236,
+        "rasters": 1,
+        "leases": 0
+      },
+      "elapsedMs": 123.71500015258789,
+      "cleanupVerified": true
+    },
+    {
+      "id": "vertical-outro-chips",
+      "changedBytes": 104,
+      "relevantPixels": 107044,
+      "normalizedError": 0.0000013829753716815003,
+      "glyphs": [],
+      "resources": {
+        "entries": 1,
+        "bytes": 1330840,
+        "peakBytes": 1330840,
+        "rasters": 1,
+        "leases": 0
+      },
+      "elapsedMs": 268.6150002479553,
+      "cleanupVerified": true
+    },
+    {
+      "id": "vertical-outro-list",
+      "changedBytes": 0,
+      "relevantPixels": 130071,
+      "normalizedError": 0,
+      "glyphs": [],
+      "resources": {
+        "entries": 1,
+        "bytes": 1230684,
+        "peakBytes": 1230684,
+        "rasters": 1,
+        "leases": 0
+      },
+      "elapsedMs": 151.71000003814697,
+      "cleanupVerified": true
+    },
+    {
+      "id": "vertical-outro-stamp",
+      "changedBytes": 384,
+      "relevantPixels": 255676,
+      "normalizedError": 0.000009762662241948986,
+      "glyphs": [],
+      "resources": {
+        "entries": 1,
+        "bytes": 2025304,
+        "peakBytes": 2025304,
+        "rasters": 1,
+        "leases": 0
+      },
+      "elapsedMs": 479.7749996185303,
+      "cleanupVerified": true
+    },
+    {
+      "id": "vertical-badge",
+      "changedBytes": 22,
+      "relevantPixels": 12964,
+      "normalizedError": 0.000019889165169307463,
+      "glyphs": [],
+      "resources": {
+        "entries": 1,
+        "bytes": 53268,
+        "peakBytes": 53268,
+        "rasters": 1,
+        "leases": 0
+      },
+      "elapsedMs": 48.36999988555908,
+      "cleanupVerified": true
+    },
+    {
+      "id": "vertical-header-info",
+      "changedBytes": 22,
+      "relevantPixels": 44403,
+      "normalizedError": 0.0000058068855089724105,
+      "glyphs": [],
+      "resources": {
+        "entries": 2,
+        "bytes": 339680,
+        "peakBytes": 339680,
+        "rasters": 2,
+        "leases": 0
+      },
+      "elapsedMs": 126.15999984741211,
+      "cleanupVerified": true
+    },
+    {
+      "id": "vertical-blank-slots",
+      "changedBytes": 0,
+      "relevantPixels": 20836,
+      "normalizedError": 0,
+      "glyphs": [],
+      "resources": {
+        "entries": 1,
+        "bytes": 469152,
+        "peakBytes": 469152,
+        "rasters": 1,
+        "leases": 0
+      },
+      "elapsedMs": 74.30499982833862,
+      "cleanupVerified": true
+    },
+    {
+      "id": "horizontal-bold-steady",
+      "changedBytes": 15,
+      "relevantPixels": 82156,
+      "normalizedError": 8.949974653671781e-7,
+      "glyphs": [
+        {
+          "text": "정확한 자막 갂 ",
+          "x": 752.48664,
+          "y": 848.40016,
+          "width": 415.02672,
+          "height": 87.76728
+        },
+        {
+          "text": "AV 12,500원",
+          "x": 744.5198399999999,
+          "y": 950.56744,
+          "width": 430.96032,
+          "height": 84.80016
+        }
+      ],
+      "resources": {
+        "entries": 1,
+        "bytes": 567728,
+        "peakBytes": 567728,
+        "rasters": 1,
+        "leases": 0
+      },
+      "elapsedMs": 121.15000009536743,
+      "cleanupVerified": true
+    },
+    {
+      "id": "horizontal-bold-rapid",
+      "changedBytes": 148,
+      "relevantPixels": 33601,
+      "normalizedError": 0.00001485133203902078,
+      "glyphs": [
+        {
+          "text": "진짜 좋아요",
+          "x": 797.28,
+          "y": 950.40016,
+          "width": 325.44,
+          "height": 84.80016
+        }
+      ],
+      "resources": {
+        "entries": 1,
+        "bytes": 284144,
+        "peakBytes": 284144,
+        "rasters": 1,
+        "leases": 0
+      },
+      "elapsedMs": 82.125,
+      "cleanupVerified": true
+    },
+    {
+      "id": "horizontal-keynote-steady",
+      "changedBytes": 0,
+      "relevantPixels": 121141,
+      "normalizedError": 0,
+      "glyphs": [
+        {
+          "text": "정확한 자막 갂",
+          "x": 728.8509,
+          "y": 833.9806,
+          "width": 462.2982,
+          "height": 100.24224
+        },
+        {
+          "text": " AV 12,500원",
+          "x": 729.70728,
+          "y": 946.8228399999999,
+          "width": 460.58544,
+          "height": 100.24224
+        }
+      ],
+      "resources": {
+        "entries": 1,
+        "bytes": 641920,
+        "peakBytes": 641920,
+        "rasters": 1,
+        "leases": 0
+      },
+      "elapsedMs": 122.29499959945679,
+      "cleanupVerified": true
+    },
+    {
+      "id": "horizontal-keynote-rapid",
+      "changedBytes": 0,
+      "relevantPixels": 54088,
+      "normalizedError": 0,
+      "glyphs": [
+        {
+          "text": "진짜 좋아요",
+          "x": 773.46582,
+          "y": 946.9806,
+          "width": 373.06836,
+          "height": 100.24224
+        }
+      ],
+      "resources": {
+        "entries": 1,
+        "bytes": 331240,
+        "peakBytes": 331240,
+        "rasters": 1,
+        "leases": 0
+      },
+      "elapsedMs": 75.30000019073486,
+      "cleanupVerified": true
+    },
+    {
+      "id": "horizontal-film-steady",
+      "changedBytes": 0,
+      "relevantPixels": 63959,
+      "normalizedError": 0,
+      "glyphs": [
+        {
+          "text": "정확한 자막 갂",
+          "x": 733.3062,
+          "y": 866.5856,
+          "width": 453.3876,
+          "height": 72
+        },
+        {
+          "text": " AV 12,500원",
+          "x": 749.1087600000001,
+          "y": 952.9856,
+          "width": 421.78247999999996,
+          "height": 72
+        }
+      ],
+      "resources": {
+        "entries": 1,
+        "bytes": 513600,
+        "peakBytes": 513600,
+        "rasters": 1,
+        "leases": 0
+      },
+      "elapsedMs": 132.79000043869019,
+      "cleanupVerified": true
+    },
+    {
+      "id": "horizontal-film-rapid",
+      "changedBytes": 0,
+      "relevantPixels": 26948,
+      "normalizedError": 0,
+      "glyphs": [
+        {
+          "text": "진짜 좋아요",
+          "x": 777.86124,
+          "y": 953.5856,
+          "width": 364.27752,
+          "height": 72
+        }
+      ],
+      "resources": {
+        "entries": 1,
+        "bytes": 272952,
+        "peakBytes": 272952,
+        "rasters": 1,
+        "leases": 0
+      },
+      "elapsedMs": 127.375,
+      "cleanupVerified": true
+    },
+    {
+      "id": "horizontal-intro-a",
+      "changedBytes": 211,
+      "relevantPixels": 65657,
+      "normalizedError": 0.00005002229351767818,
+      "glyphs": [],
+      "resources": {
+        "entries": 1,
+        "bytes": 783020,
+        "peakBytes": 783020,
+        "rasters": 1,
+        "leases": 0
+      },
+      "elapsedMs": 127.44999980926514,
+      "cleanupVerified": true
+    },
+    {
+      "id": "horizontal-intro-b",
+      "changedBytes": 0,
+      "relevantPixels": 46465,
+      "normalizedError": 0,
+      "glyphs": [],
+      "resources": {
+        "entries": 1,
+        "bytes": 1097772,
+        "peakBytes": 1097772,
+        "rasters": 1,
+        "leases": 0
+      },
+      "elapsedMs": 88.90999984741211,
+      "cleanupVerified": true
+    },
+    {
+      "id": "horizontal-intro-cover",
+      "changedBytes": 4,
+      "relevantPixels": 159275,
+      "normalizedError": 8.001945088190668e-8,
+      "glyphs": [],
+      "resources": {
+        "entries": 1,
+        "bytes": 1856580,
+        "peakBytes": 1856580,
+        "rasters": 1,
+        "leases": 0
+      },
+      "elapsedMs": 178.9099998474121,
+      "cleanupVerified": true
+    },
+    {
+      "id": "horizontal-intro-serif",
+      "changedBytes": 582,
+      "relevantPixels": 121234,
+      "normalizedError": 0.00005740802020529412,
+      "glyphs": [],
+      "resources": {
+        "entries": 1,
+        "bytes": 1460800,
+        "peakBytes": 1460800,
+        "rasters": 1,
+        "leases": 0
+      },
+      "elapsedMs": 170.5349998474121,
+      "cleanupVerified": true
+    },
+    {
+      "id": "horizontal-intro-frame",
+      "changedBytes": 12,
+      "relevantPixels": 105428,
+      "normalizedError": 1.8598326001873223e-7,
+      "glyphs": [],
+      "resources": {
+        "entries": 1,
+        "bytes": 1007500,
+        "peakBytes": 1007500,
+        "rasters": 1,
+        "leases": 0
+      },
+      "elapsedMs": 146.2200002670288,
+      "cleanupVerified": true
+    },
+    {
+      "id": "horizontal-intro-outline",
+      "changedBytes": 199,
+      "relevantPixels": 184908,
+      "normalizedError": 0.000005545948234140391,
+      "glyphs": [],
+      "resources": {
+        "entries": 1,
+        "bytes": 1834560,
+        "peakBytes": 1834560,
+        "rasters": 1,
+        "leases": 0
+      },
+      "elapsedMs": 192.13000011444092,
+      "cleanupVerified": true
+    },
+    {
+      "id": "horizontal-intro-lower",
+      "changedBytes": 0,
+      "relevantPixels": 83118,
+      "normalizedError": 0,
+      "glyphs": [],
+      "resources": {
+        "entries": 1,
+        "bytes": 1038744,
+        "peakBytes": 1038744,
+        "rasters": 1,
+        "leases": 0
+      },
+      "elapsedMs": 106.53999996185303,
+      "cleanupVerified": true
+    },
+    {
+      "id": "horizontal-intro-sticker",
+      "changedBytes": 17,
+      "relevantPixels": 79830,
+      "normalizedError": 0.0000019281168561624825,
+      "glyphs": [],
+      "resources": {
+        "entries": 1,
+        "bytes": 1319424,
+        "peakBytes": 1319424,
+        "rasters": 1,
+        "leases": 0
+      },
+      "elapsedMs": 78.41499996185303,
+      "cleanupVerified": true
+    },
+    {
+      "id": "horizontal-outro-b",
+      "changedBytes": 1,
+      "relevantPixels": 69792,
+      "normalizedError": 1.1237874333594052e-7,
+      "glyphs": [],
+      "resources": {
+        "entries": 1,
+        "bytes": 1007880,
+        "peakBytes": 1007880,
+        "rasters": 1,
+        "leases": 0
+      },
+      "elapsedMs": 137.62999963760376,
+      "cleanupVerified": true
+    },
+    {
+      "id": "horizontal-outro-e",
+      "changedBytes": 14,
+      "relevantPixels": 67017,
+      "normalizedError": 6.436763045490067e-7,
+      "glyphs": [],
+      "resources": {
+        "entries": 1,
+        "bytes": 946200,
+        "peakBytes": 946200,
+        "rasters": 1,
+        "leases": 0
+      },
+      "elapsedMs": 105.4249997138977,
+      "cleanupVerified": true
+    },
+    {
+      "id": "horizontal-outro-credits",
+      "changedBytes": 8,
+      "relevantPixels": 91467,
+      "normalizedError": 1.822150793911101e-7,
+      "glyphs": [],
+      "resources": {
+        "entries": 1,
+        "bytes": 1102452,
+        "peakBytes": 1102452,
+        "rasters": 1,
+        "leases": 0
+      },
+      "elapsedMs": 161.125,
+      "cleanupVerified": true
+    },
+    {
+      "id": "horizontal-outro-sidebar",
+      "changedBytes": 113,
+      "relevantPixels": 84647,
+      "normalizedError": 0.0000062080191392303495,
+      "glyphs": [],
+      "resources": {
+        "entries": 1,
+        "bytes": 922032,
+        "peakBytes": 922032,
+        "rasters": 1,
+        "leases": 0
+      },
+      "elapsedMs": 157.375,
+      "cleanupVerified": true
+    },
+    {
+      "id": "horizontal-outro-chips",
+      "changedBytes": 128,
+      "relevantPixels": 92896,
+      "normalizedError": 0.0000023323573314961536,
+      "glyphs": [],
+      "resources": {
+        "entries": 1,
+        "bytes": 1288160,
+        "peakBytes": 1288160,
+        "rasters": 1,
+        "leases": 0
+      },
+      "elapsedMs": 108.20499992370605,
+      "cleanupVerified": true
+    },
+    {
+      "id": "horizontal-outro-list",
+      "changedBytes": 4,
+      "relevantPixels": 121655,
+      "normalizedError": 4.1905710539527965e-7,
+      "glyphs": [],
+      "resources": {
+        "entries": 1,
+        "bytes": 1202656,
+        "peakBytes": 1202656,
+        "rasters": 1,
+        "leases": 0
+      },
+      "elapsedMs": 160.95499992370605,
+      "cleanupVerified": true
+    },
+    {
+      "id": "horizontal-outro-stamp",
+      "changedBytes": 264,
+      "relevantPixels": 255887,
+      "normalizedError": 0.000007950047190713854,
+      "glyphs": [],
+      "resources": {
+        "entries": 1,
+        "bytes": 2025304,
+        "peakBytes": 2025304,
+        "rasters": 1,
+        "leases": 0
+      },
+      "elapsedMs": 503.625,
+      "cleanupVerified": true
+    },
+    {
+      "id": "horizontal-badge",
+      "changedBytes": 22,
+      "relevantPixels": 12964,
+      "normalizedError": 0.000019889165169307463,
+      "glyphs": [],
+      "resources": {
+        "entries": 1,
+        "bytes": 53268,
+        "peakBytes": 53268,
+        "rasters": 1,
+        "leases": 0
+      },
+      "elapsedMs": 48.545000076293945,
+      "cleanupVerified": true
+    },
+    {
+      "id": "horizontal-header-info",
+      "changedBytes": 22,
+      "relevantPixels": 44403,
+      "normalizedError": 0.0000058068855089724105,
+      "glyphs": [],
+      "resources": {
+        "entries": 2,
+        "bytes": 339680,
+        "peakBytes": 339680,
+        "rasters": 2,
+        "leases": 0
+      },
+      "elapsedMs": 88.16499996185303,
+      "cleanupVerified": true
+    },
+    {
+      "id": "horizontal-blank-slots",
+      "changedBytes": 3,
+      "relevantPixels": 20622,
+      "normalizedError": 5.704929629693018e-7,
+      "glyphs": [],
+      "resources": {
+        "entries": 1,
+        "bytes": 469152,
+        "peakBytes": 469152,
+        "rasters": 1,
+        "leases": 0
+      },
+      "elapsedMs": 75.875,
+      "cleanupVerified": true
+    },
+    {
+      "id": "square-bold-steady",
+      "changedBytes": 9,
+      "relevantPixels": 82156,
+      "normalizedError": 7.398645713702005e-7,
+      "glyphs": [
+        {
+          "text": "정확한 자막 갂 ",
+          "x": 332.48663999999997,
+          "y": 848.40016,
+          "width": 415.02672,
+          "height": 87.76728
+        },
+        {
+          "text": "AV 12,500원",
+          "x": 324.51984,
+          "y": 950.56744,
+          "width": 430.96032,
+          "height": 84.80016
+        }
+      ],
+      "resources": {
+        "entries": 1,
+        "bytes": 567728,
+        "peakBytes": 567728,
+        "rasters": 1,
+        "leases": 0
+      },
+      "elapsedMs": 115.15999984741211,
+      "cleanupVerified": true
+    },
+    {
+      "id": "square-bold-rapid",
+      "changedBytes": 144,
+      "relevantPixels": 33601,
+      "normalizedError": 0.000014326137585774467,
+      "glyphs": [
+        {
+          "text": "진짜 좋아요",
+          "x": 377.28,
+          "y": 950.40016,
+          "width": 325.44,
+          "height": 84.80016
+        }
+      ],
+      "resources": {
+        "entries": 1,
+        "bytes": 284144,
+        "peakBytes": 284144,
+        "rasters": 1,
+        "leases": 0
+      },
+      "elapsedMs": 70.20499992370605,
+      "cleanupVerified": true
+    },
+    {
+      "id": "square-keynote-steady",
+      "changedBytes": 0,
+      "relevantPixels": 121141,
+      "normalizedError": 0,
+      "glyphs": [
+        {
+          "text": "정확한 자막 갂",
+          "x": 308.8509,
+          "y": 833.9806,
+          "width": 462.2982,
+          "height": 100.24224
+        },
+        {
+          "text": " AV 12,500원",
+          "x": 309.70727999999997,
+          "y": 946.8228399999999,
+          "width": 460.58544,
+          "height": 100.24224
+        }
+      ],
+      "resources": {
+        "entries": 1,
+        "bytes": 641920,
+        "peakBytes": 641920,
+        "rasters": 1,
+        "leases": 0
+      },
+      "elapsedMs": 133.21000003814697,
+      "cleanupVerified": true
+    },
+    {
+      "id": "square-keynote-rapid",
+      "changedBytes": 0,
+      "relevantPixels": 54088,
+      "normalizedError": 0,
+      "glyphs": [
+        {
+          "text": "진짜 좋아요",
+          "x": 353.46582,
+          "y": 946.9806,
+          "width": 373.06836,
+          "height": 100.24224
+        }
+      ],
+      "resources": {
+        "entries": 1,
+        "bytes": 331240,
+        "peakBytes": 331240,
+        "rasters": 1,
+        "leases": 0
+      },
+      "elapsedMs": 147.07999992370605,
+      "cleanupVerified": true
+    },
+    {
+      "id": "square-film-steady",
+      "changedBytes": 0,
+      "relevantPixels": 63959,
+      "normalizedError": 0,
+      "glyphs": [
+        {
+          "text": "정확한 자막 갂",
+          "x": 313.3062,
+          "y": 866.5856,
+          "width": 453.3876,
+          "height": 72
+        },
+        {
+          "text": " AV 12,500원",
+          "x": 329.10876,
+          "y": 952.9856,
+          "width": 421.78247999999996,
+          "height": 72
+        }
+      ],
+      "resources": {
+        "entries": 1,
+        "bytes": 513600,
+        "peakBytes": 513600,
+        "rasters": 1,
+        "leases": 0
+      },
+      "elapsedMs": 114.19999980926514,
+      "cleanupVerified": true
+    },
+    {
+      "id": "square-film-rapid",
+      "changedBytes": 0,
+      "relevantPixels": 26948,
+      "normalizedError": 0,
+      "glyphs": [
+        {
+          "text": "진짜 좋아요",
+          "x": 357.86124,
+          "y": 953.5856,
+          "width": 364.27752,
+          "height": 72
+        }
+      ],
+      "resources": {
+        "entries": 1,
+        "bytes": 272952,
+        "peakBytes": 272952,
+        "rasters": 1,
+        "leases": 0
+      },
+      "elapsedMs": 146.92500019073486,
+      "cleanupVerified": true
+    },
+    {
+      "id": "square-intro-a",
+      "changedBytes": 218,
+      "relevantPixels": 65657,
+      "normalizedError": 0.000046632723180808643,
+      "glyphs": [],
+      "resources": {
+        "entries": 1,
+        "bytes": 783020,
+        "peakBytes": 783020,
+        "rasters": 1,
+        "leases": 0
+      },
+      "elapsedMs": 81.21999979019165,
+      "cleanupVerified": true
+    },
+    {
+      "id": "square-intro-b",
+      "changedBytes": 10,
+      "relevantPixels": 49010,
+      "normalizedError": 9.401842761181191e-7,
+      "glyphs": [],
+      "resources": {
+        "entries": 1,
+        "bytes": 1105944,
+        "peakBytes": 1105944,
+        "rasters": 1,
+        "leases": 0
+      },
+      "elapsedMs": 70.63000011444092,
+      "cleanupVerified": true
+    },
+    {
+      "id": "square-intro-cover",
+      "changedBytes": 0,
+      "relevantPixels": 159275,
+      "normalizedError": 0,
+      "glyphs": [],
+      "resources": {
+        "entries": 1,
+        "bytes": 1856580,
+        "peakBytes": 1856580,
+        "rasters": 1,
+        "leases": 0
+      },
+      "elapsedMs": 156.82000017166138,
+      "cleanupVerified": true
+    },
+    {
+      "id": "square-intro-serif",
+      "changedBytes": 560,
+      "relevantPixels": 121234,
+      "normalizedError": 0.00005697133432121385,
+      "glyphs": [],
+      "resources": {
+        "entries": 1,
+        "bytes": 1460800,
+        "peakBytes": 1460800,
+        "rasters": 1,
+        "leases": 0
+      },
+      "elapsedMs": 128.59999990463257,
+      "cleanupVerified": true
+    },
+    {
+      "id": "square-intro-frame",
+      "changedBytes": 3,
+      "relevantPixels": 105428,
+      "normalizedError": 1.3018828201311256e-7,
+      "glyphs": [],
+      "resources": {
+        "entries": 1,
+        "bytes": 1007500,
+        "peakBytes": 1007500,
+        "rasters": 1,
+        "leases": 0
+      },
+      "elapsedMs": 131.3600001335144,
+      "cleanupVerified": true
+    },
+    {
+      "id": "square-intro-outline",
+      "changedBytes": 79,
+      "relevantPixels": 184908,
+      "normalizedError": 0.0000024283406225968443,
+      "glyphs": [],
+      "resources": {
+        "entries": 1,
+        "bytes": 1834560,
+        "peakBytes": 1834560,
+        "rasters": 1,
+        "leases": 0
+      },
+      "elapsedMs": 163.0600004196167,
+      "cleanupVerified": true
+    },
+    {
+      "id": "square-intro-lower",
+      "changedBytes": 19,
+      "relevantPixels": 87579,
+      "normalizedError": 3.3583124614213856e-7,
+      "glyphs": [],
+      "resources": {
+        "entries": 1,
+        "bytes": 1091184,
+        "peakBytes": 1091184,
+        "rasters": 1,
+        "leases": 0
+      },
+      "elapsedMs": 116.01500034332275,
+      "cleanupVerified": true
+    },
+    {
+      "id": "square-intro-sticker",
+      "changedBytes": 17,
+      "relevantPixels": 79830,
+      "normalizedError": 0.0000025298858112705186,
+      "glyphs": [],
+      "resources": {
+        "entries": 1,
+        "bytes": 1319424,
+        "peakBytes": 1319424,
+        "rasters": 1,
+        "leases": 0
+      },
+      "elapsedMs": 75.28499984741211,
+      "cleanupVerified": true
+    },
+    {
+      "id": "square-outro-b",
+      "changedBytes": 0,
+      "relevantPixels": 72470,
+      "normalizedError": 0,
+      "glyphs": [],
+      "resources": {
+        "entries": 1,
+        "bytes": 1018776,
+        "peakBytes": 1018776,
+        "rasters": 1,
+        "leases": 0
+      },
+      "elapsedMs": 93.94999980926514,
+      "cleanupVerified": true
+    },
+    {
+      "id": "square-outro-e",
+      "changedBytes": 14,
+      "relevantPixels": 67017,
+      "normalizedError": 6.436763045490067e-7,
+      "glyphs": [],
+      "resources": {
+        "entries": 1,
+        "bytes": 946200,
+        "peakBytes": 946200,
+        "rasters": 1,
+        "leases": 0
+      },
+      "elapsedMs": 89.45499992370605,
+      "cleanupVerified": true
+    },
+    {
+      "id": "square-outro-credits",
+      "changedBytes": 8,
+      "relevantPixels": 91467,
+      "normalizedError": 1.822150793911101e-7,
+      "glyphs": [],
+      "resources": {
+        "entries": 1,
+        "bytes": 1102452,
+        "peakBytes": 1102452,
+        "rasters": 1,
+        "leases": 0
+      },
+      "elapsedMs": 108.69999980926514,
+      "cleanupVerified": true
+    },
+    {
+      "id": "square-outro-sidebar",
+      "changedBytes": 113,
+      "relevantPixels": 88650,
+      "normalizedError": 0.000005927695387235548,
+      "glyphs": [],
+      "resources": {
+        "entries": 1,
+        "bytes": 966000,
+        "peakBytes": 966000,
+        "rasters": 1,
+        "leases": 0
+      },
+      "elapsedMs": 147.88000011444092,
+      "cleanupVerified": true
+    },
+    {
+      "id": "square-outro-chips",
+      "changedBytes": 101,
+      "relevantPixels": 97308,
+      "normalizedError": 0.000001662398835474503,
+      "glyphs": [],
+      "resources": {
+        "entries": 1,
+        "bytes": 1299800,
+        "peakBytes": 1299800,
+        "rasters": 1,
+        "leases": 0
+      },
+      "elapsedMs": 106.18499994277954,
+      "cleanupVerified": true
+    },
+    {
+      "id": "square-outro-list",
+      "changedBytes": 29,
+      "relevantPixels": 124257,
+      "normalizedError": 6.706530282666838e-7,
+      "glyphs": [],
+      "resources": {
+        "entries": 1,
+        "bytes": 1210300,
+        "peakBytes": 1210300,
+        "rasters": 1,
+        "leases": 0
+      },
+      "elapsedMs": 149.75,
+      "cleanupVerified": true
+    },
+    {
+      "id": "square-outro-stamp",
+      "changedBytes": 203,
+      "relevantPixels": 255887,
+      "normalizedError": 0.00000698454748369704,
+      "glyphs": [],
+      "resources": {
+        "entries": 1,
+        "bytes": 2025304,
+        "peakBytes": 2025304,
+        "rasters": 1,
+        "leases": 0
+      },
+      "elapsedMs": 458.289999961853,
+      "cleanupVerified": true
+    },
+    {
+      "id": "square-badge",
+      "changedBytes": 22,
+      "relevantPixels": 12964,
+      "normalizedError": 0.000019889165169307463,
+      "glyphs": [],
+      "resources": {
+        "entries": 1,
+        "bytes": 53268,
+        "peakBytes": 53268,
+        "rasters": 1,
+        "leases": 0
+      },
+      "elapsedMs": 40.13499975204468,
+      "cleanupVerified": true
+    },
+    {
+      "id": "square-header-info",
+      "changedBytes": 22,
+      "relevantPixels": 44403,
+      "normalizedError": 0.0000058068855089724105,
+      "glyphs": [],
+      "resources": {
+        "entries": 2,
+        "bytes": 339680,
+        "peakBytes": 339680,
+        "rasters": 2,
+        "leases": 0
+      },
+      "elapsedMs": 75.34499979019165,
+      "cleanupVerified": true
+    },
+    {
+      "id": "square-blank-slots",
+      "changedBytes": 3,
+      "relevantPixels": 20622,
+      "normalizedError": 5.704929629693018e-7,
+      "glyphs": [],
+      "resources": {
+        "entries": 1,
+        "bytes": 469152,
+        "peakBytes": 469152,
+        "rasters": 1,
+        "leases": 0
+      },
+      "elapsedMs": 139.98999977111816,
+      "cleanupVerified": true
+    }
+  ]
+}

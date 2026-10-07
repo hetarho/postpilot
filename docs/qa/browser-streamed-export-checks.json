@@ -1,0 +1,2159 @@
+{
+  "version": 1,
+  "sourceHashes": {
+    "backend/internal/clip/browser_render.go": "1a187a26bc8ebcc693c5eab24a944d2d0670b7a000ca217f7017236fedd3257f",
+    "frontend/src/entities/clip-design/config/browser-composition.ts": "da6ee09c7c28604c59fd4518471e9914019a1046e8814f4c0613c5c633b7fd5a",
+    "frontend/src/entities/clip-design/config/clip-browser-render.ts": "d931972a571c7f98c803fc75033ff7c405a4eca8e4a411d60fce4d50c8451ebe",
+    "frontend/src/entities/clip-design/config/clip-caption-ink.json": "40974ae1035547a9b2fa8198e722b536b719e7a03bd03ef3b075b85d17a4f54d",
+    "frontend/src/entities/clip-design/config/clip-composition.ts": "e587fd7c81c9edf7675383ced9cdf9259fe897140788213eea19a9bf13ca2e6e",
+    "frontend/src/entities/clip-design/config/clip-design.json": "87c04a8b98ca3b14ce15e3d3e96a6a49a15dba8c18ea6d279a1e7eee9493286e",
+    "frontend/src/entities/clip-design/config/clip-design.ts": "caf9490a5a14edd875fdaf243ba935c7336a35f934d3cae1682a60bcc0261994",
+    "frontend/src/entities/clip-design/config/clip-ink-fonts.json": "a97b35dbc340edd63f5c36322f4486a96bcbcc7a2c2b2fce8ea8cfdf02fe7e20",
+    "frontend/src/entities/clip-design/config/clip-ink-identity.json": "bc0f52cdb85a513b33aeb732b2fc5e6514b5cf290d78820b1cf0c27118bfb1d7",
+    "frontend/src/entities/clip-design/config/clip-ink.ts": "4bda6f28505f0409ae7286c90cf5ba06db15b0b09d5f89f5613c078461ab4ef7",
+    "frontend/src/entities/clip-design/config/clip-metrics.json": "e73debd3ca910b8e37cdfe651e63d79eff3730ac34fa1f2f49e507fe74f9515d",
+    "frontend/src/entities/clip-design/config/i18n.ts": "6851496b4fc27a629fe01e05be32a89fb6afc66f8f50ea5f7366fc6580f030a8",
+    "frontend/src/entities/clip-design/config/index.ts": "32fe3227ed86db3c24132cbcbdc07877cb1ec4d095f2063597cfd5240a8f77bd",
+    "frontend/src/entities/clip-design/config/sources.ts": "d70e4ab08fad06759a5d74ee2886b953e85190879e03c24d252a79d9242de9f0",
+    "frontend/src/entities/clip-plan/model/caption-pace.ts": "e3bc028ecfa384e994945a4172381d4883aa2269042ccaa089b3b5410eb6cfe5",
+    "frontend/src/entities/clip-plan/model/caption-refresh.ts": "41a9e6c39e2b0bc417b53806a65b6b638924f995f39c01ee5232ea98268c865f",
+    "frontend/src/entities/clip-plan/model/caption-style.ts": "1ee5f07ed0c849d3a8ff7949399109073e826b55c2ad20aa74f276c482433747",
+    "frontend/src/entities/clip-plan/model/draft-key.ts": "7a9e1f1cc913393656e7dd8534306256b214de3148d79c6008ab754f0d30917e",
+    "frontend/src/entities/clip-plan/model/edit-plan.ts": "ba6f122d654ed8216a2f540aa2dad82921f09822eddb13a4c23207eb9ebda741",
+    "frontend/src/entities/clip-plan/model/region-rebase.ts": "ee5ede47e07626c1bcc799ea007756d824c1edf07ddc41ece9de030c50de6388",
+    "frontend/src/entities/clip-plan/model/revision.ts": "b9295daea01babc4aa23f35c52d2ccb0e3468b8181e46c4c832fe99f120b0a27",
+    "frontend/src/entities/clip-plan/model/spoken-retiming.ts": "570f31c34da8963a958a13d3f033ab76170cf4a601c34e15abcfe110533c6ab7",
+    "frontend/src/entities/clip-plan/model/spoken.ts": "71ebbac9b18610fd1160ac2efa9a48fe1490e1543e5be4aced26507734c4fd71",
+    "frontend/src/entities/clip-plan/model/timeline.ts": "de36f7178783ec15b28d1d9ebbb536f6705685f7df8522c6ac49b7c52c0657a0",
+    "frontend/src/entities/clip-preview/api/preview.ts": "bf17d0dab47eaade648a736f61527b50d20a9b9e9c93f51ff1be2dc4d47692cd",
+    "frontend/src/entities/clip-preview/api/render.ts": "23f4e081ebee45728360c3bf517d737ab7b166b157636417e859a5f8efa4a47a",
+    "frontend/src/entities/clip-preview/api/useClipBrowserRenderCapability.ts": "c2fd1fb4d3d42c5453171cf2c9bf70f8faa3fcbaf4d0326967531e2bf491f801",
+    "frontend/src/entities/clip-preview/config/audio-processing.ts": "dea486d37fb02b1f383d65fdaba45c052c9ba818ac2b0d9ad5bf1f01314dc363",
+    "frontend/src/entities/clip-preview/config/composition-placement.ts": "52201c37f3f77c0a1d668e9230073d30c1b7ac68842d31ca3941a9dff05aed35",
+    "frontend/src/entities/clip-preview/config/i18n.ts": "6e8a0df69abe712594d41344f6821062f0165ba5b9a2637acd643669373dfa55",
+    "frontend/src/entities/clip-preview/config/local-preview.ts": "54733866aa6fadc3f2bc6e5ec65057cf328aba4e537e5f60926edfdcb0179f74",
+    "frontend/src/entities/clip-preview/config/render-measurements.ts": "a2a0d313e824c7a489342add1ef6c68ac636e2f1a28ddf1415b44ea3655c27bc",
+    "frontend/src/entities/clip-preview/config/speech-playback.ts": "a8920c694a60a512f7049ce9ac1c2136658ebd088f4969c559b6fd9867210194",
+    "frontend/src/entities/clip-preview/config/video-decoding.ts": "44122ba2028ea9102ab729a332d5e3c011c28da199fed85dab3f5b32eafb6a2d",
+    "frontend/src/entities/clip-preview/index.ts": "dc815f122c20a72534ca8cce6339a9596822d019c1f99a03dc339e95db700a21",
+    "frontend/src/entities/clip-preview/lib/create-video-worker.ts": "f758cf34eca47eb55c21961be850960d9013e4c99c7978f53236884d4a89495a",
+    "frontend/src/entities/clip-preview/lib/preview.worker.ts": "2fb893b30abb41d74d6864421665084c2de508c4ea38210ab8c8a0e1fdad7802",
+    "frontend/src/entities/clip-preview/lib/video.worker.ts": "c497d46fc302efdab902b048b98d62dd61f22db59dae46c7b37a7d3ab0679fd0",
+    "frontend/src/entities/clip-preview/model/background-math.ts": "ae1a3983cd3a42da406169a27961c9e92d544cde476ea9427dfa89a57aa2ec98",
+    "frontend/src/entities/clip-preview/model/background-paint.ts": "22b89e39f0ced59d65de6c898b717cda18fb381424c019ea9935848c6b3daf9c",
+    "frontend/src/entities/clip-preview/model/background-sampling.ts": "734a6e8b2029f1ca69c0811021077919bfad7292a3ac41bcf5b0f8e879a39567",
+    "frontend/src/entities/clip-preview/model/browser-audio-plan.ts": "1449ebe745abcd5f1cee79b9b64e7e67f40bb0efcc0f721c66963eb6dec71859",
+    "frontend/src/entities/clip-preview/model/browser-composition.ts": "090b5f20ad36007864b35b600772f57e21787aae5126396486be3e77f238a620",
+    "frontend/src/entities/clip-preview/model/browser-footage.ts": "a62b810aca5c021ae35a4cd21f98ea0bbcb24585cb988ad611a63cfa465c984d",
+    "frontend/src/entities/clip-preview/model/browser-render-capability.ts": "56a019ce72662ba629f0d663dacb824efe0ceacbcef7563b2930323272c044ce",
+    "frontend/src/entities/clip-preview/model/browser-video.ts": "930f21d53e70e0d978f8f4a94e34843aead0ca57687eff95a8e2a383de11adf7",
+    "frontend/src/entities/clip-preview/model/caption-sheets.ts": "ce914084590dc43f162c57dbd73d7fc433a1db704a0997c8ac4fecb379215a47",
+    "frontend/src/entities/clip-preview/model/composite-video.ts": "151794d65bee3abb2adaf3884eff362b12bea476b0fdc734844443347292c72f",
+    "frontend/src/entities/clip-preview/model/composition-audio.ts": "be59122d404a55cc150e39243fa3b2a49ea9ff17f3b901493ae0b96ea5fddc88",
+    "frontend/src/entities/clip-preview/model/composition-originals.ts": "dba91ced4999e464ab4c92bdb72f4b6cca5ffcea4cba97fb68a5accb6b738a70",
+    "frontend/src/entities/clip-preview/model/composition-placement.ts": "becaf3203a11f993c5ec3df20dd6020ec2a000121699c51583ac81d089065788",
+    "frontend/src/entities/clip-preview/model/composition-playback.ts": "c3fb60856faa5313a8a6e1b20206e404e1d62b274e7547d5e6cf1a185d10e213",
+    "frontend/src/entities/clip-preview/model/cut-timeline.fixture.json": "660c240d6a9a7ccbae51c8dddf2ed85c94ed29991122d6739ed7005e654c3866",
+    "frontend/src/entities/clip-preview/model/draft-preview.ts": "ac8cc419a01d950698fccefe5af56a9a5be96a4f466015f479aebe15a5cb8af9",
+    "frontend/src/entities/clip-preview/model/ink-cache.ts": "44fc6c878440d1d870db0e15fb0e9bd3fc13d630b25d1d876cdd520d372ae272",
+    "frontend/src/entities/clip-preview/model/ink-caption-draw.ts": "138f4b37659dfbca8bd16321f8dcbb9fd2a67791536ff66a563e3ee72178794f",
+    "frontend/src/entities/clip-preview/model/ink-caption-effects.ts": "a2633b1e51c23f8e9882b527a33ccec9c188acaeb2683ea948adcba7ba5a310b",
+    "frontend/src/entities/clip-preview/model/ink-caption-ember-pixi.ts": "22109b4f60d5d74654ae6899d21b70b872e43170c669949f8164470aef010b0b",
+    "frontend/src/entities/clip-preview/model/ink-caption-ember.ts": "e4bb41e6db3c278230539a5482e6fde35f26587cf5f6ad29b9a7fff291fc0479",
+    "frontend/src/entities/clip-preview/model/ink-caption-filter-pixi.ts": "0b13ee759196c59ea7c084e7f4c1bbdea8b27e32196f2cc4124250f4fb045f32",
+    "frontend/src/entities/clip-preview/model/ink-caption-pixi.ts": "099765cae9854564ec694adc740e8d7f2d63896086f6bfae4f187269b8559c89",
+    "frontend/src/entities/clip-preview/model/ink-caption-scene.ts": "00b6f5684f084fd1affeef52e5500dff404dfc7a7ef73663c0949c1829e0f10c",
+    "frontend/src/entities/clip-preview/model/ink-layout.ts": "b6183a1838dc3c2b8cb48f9c322882f6d54f4b3a834d3d63a1796ff32bcd1c46",
+    "frontend/src/entities/clip-preview/model/ink-raster.ts": "26a35af0791f1ac836cf7fba70762baf8f19563c1b44acc5815b1916a88fdc45",
+    "frontend/src/entities/clip-preview/model/ink-static.ts": "e2c608b81cc8ff2aff7bffb711e596fa085362725e3dfe6e57f6f7fbb65dde19",
+    "frontend/src/entities/clip-preview/model/ink-typography.ts": "ddd2af288cc6f5708c0930b47681e02f491c4012e4476b696602ff0ddd447147",
+    "frontend/src/entities/clip-preview/model/local-components.ts": "61d18c7c52314aa77d33676c447c9f9ae6a5cf7171222d9eb8bbb6d521c3edb1",
+    "frontend/src/entities/clip-preview/model/native-fadeblack.ts": "0355503df09d68a9ec286cd2c6525bd7cea083381fa88deb2441cb0c58d82883",
+    "frontend/src/entities/clip-preview/model/preview-assets.ts": "7db983023931018625457f277f9cf00d7bc819317045592a6dba353aaca63a8c",
+    "frontend/src/entities/clip-preview/model/preview-worker-protocol.ts": "d6f5b4d34c92c8694462c608f58be5fbe6e2dd0c3e4bbb46310b09c6fed734d7",
+    "frontend/src/entities/clip-preview/model/project-composition.ts": "260d1f54586588e74935c79d586a1497feac7615d54ceb715cef1dc1f1900ed8",
+    "frontend/src/entities/clip-preview/model/render-raster-cache.ts": "2b051ce1c1622e6f1d2dfc06aa5343fb2d63dc0ca9f99a71f8bc1078abea8484",
+    "frontend/src/entities/clip-preview/model/speech-fingerprint.ts": "c1c5e6becb370ac9974c16e3b88374c5717fbabb3046f99e7398a55dedacc9f4",
+    "frontend/src/entities/clip-preview/model/speech-playback.ts": "706edf1152fc2d9e229509ea26bc655e0c75b14a850e75fa86382d37316576b3",
+    "frontend/src/entities/clip-preview/model/video-worker-protocol.ts": "86ae08b540c308dee1bb9cf5ad3a100dda8ebfecceeddacf1c57697d69f86802",
+    "frontend/src/entities/clip-preview/ui/ClipDraftPreview.tsx": "f546f347da5324b817f09e8a04421c038d70d806284f2cbc05ac948d7c239698",
+    "frontend/src/entities/clip-preview/ui/ClipFlowFrame.tsx": "b51fabb5d121960ead5b92f64dd46d20faacccb4a6ac438a5027e90e6fab0e57",
+    "frontend/src/features/render-clip-browser/api/prepare-assets.ts": "0181cc657cf5ce95d05fee6a08dcf45457ed5f78607b3da5283619c8c7fc2b48",
+    "frontend/src/features/render-clip-browser/api/render-audio.ts": "c0d44ac79832cc407175ed7167418cc2a8570e712662985b3aecdde19d2d88ed",
+    "frontend/src/features/render-clip-browser/api/render-video.ts": "c09136764aa43a01ee310027edaff1784ce23a8dc258cfd88f787a1d2503de22",
+    "frontend/src/features/render-clip-browser/api/run-local-render.ts": "9c34e7a8325f7a0f41a18fc24804e3ab7c9feb127b8c957b66a23c541da19e77",
+    "frontend/src/features/render-clip-browser/api/run-render.ts": "f584970cb6d553368c734f6e3caf5f62ca96ba83d03bd2901ea4ceca479d02c9",
+    "frontend/src/features/render-clip-browser/api/store-result.ts": "dfcb1ddaa552dc6ea62a570e551d8afc479989d85aab9c38c683e1533a821a01",
+    "frontend/src/features/render-clip-browser/api/useBrowserRender.ts": "4143d2a6277bdcc50d96487c2a946e2cb37949d3766d83cf9cfff50c6d7e36dc",
+    "frontend/src/features/render-clip-browser/config/i18n.ts": "5c0ee5226e7b660eb3af4c55f94828ec97f5cfe00aaeade8e90c1a4e6a864558",
+    "frontend/src/features/render-clip-browser/index.ts": "53ba462a028f4ecc47a394181f2a36e566d24b530ca2aecb10522bf662c8d082",
+    "frontend/src/features/render-clip-browser/lib/originals.ts": "45683beb6e83776fa8d9d799b53467822dfda14f546f5198a17274d247e336b6",
+    "frontend/src/features/render-clip-browser/lib/source-frames.ts": "8f375b1289c0ba5c5c8008e1b60d903a07bb44e78813c122a2d40805fd4b01fc",
+    "frontend/src/features/render-clip-browser/model/audio-preflight.ts": "1ec5814d865fe45a7ba86097e87a69ed747cd38d6c3ce007e1c6747afa37b786",
+    "frontend/src/features/render-clip-browser/model/verdict.ts": "3720590dcd9dcced760a933a1343b9ad580bab6f1e738c28507f30d8f320bab3",
+    "frontend/src/features/render-clip-browser/ui/ClipBrowserRenderStatus.tsx": "c9f02411a8eef034e1fa48a3c5a42482b5ad91f2413c673678b65fd59675103f",
+    "frontend/src/shared/lib/media/analysis-copy.ts": "a702f8503a341e764223e30cfc25a4695ce5cda0d4d2ea5ed6a08de08bed765a",
+    "frontend/src/shared/lib/media/audio/codec-queue.ts": "f97eeeb2acad7865c8abb8944deeb6cfa9164b3d6b68743bac6f0f954d509253",
+    "frontend/src/shared/lib/media/audio/encoder-delay.ts": "8a10463edadd1eb0902e6a1f87a9a583d2e2057c5e073bac5c42fb89d8c5a525",
+    "frontend/src/shared/lib/media/audio/loudness.ts": "0ac465fa58437c02dddd5fd0377c566ff41bfe7f118fd5dfef6e15fe8ffd49c6",
+    "frontend/src/shared/lib/media/audio/processing-types.ts": "d65f803557f6860492596a26b344d8e3abb639a4efc7503b73bc7e7884cd246f",
+    "frontend/src/shared/lib/media/audio/processing.ts": "2d92fd8a5661d806bcea5373dca1500dabdfe3156709ef32424bbceb361d4fe8",
+    "frontend/src/shared/lib/media/audio/processing.worker.ts": "f4f0d6b5a7b0551abf73cbdae8465a6a770511c8878185bd0149e9fd04b2ea92",
+    "frontend/src/shared/lib/media/audio/range-audio.ts": "92352ced8dd3c71761645b0a9007535c6fa2869fe9b0a6786948fcd16eb3112b",
+    "frontend/src/shared/lib/media/audio/range-audio.worker.ts": "a5d4ab59d9061078ae840abdd5db2ef08d2b755838c264aa3014dcaf03c6e61f",
+    "frontend/src/shared/lib/media/audio/range-reader.ts": "c88c96476ccf6fd4f0eb076cb45a1479ccfb9f8310e1fff8a12ee74cf19d2614",
+    "frontend/src/shared/lib/media/audio/selected-pcm.ts": "d8014b4b153ea6db540ca60bd3148a0fe4fc01c9f493ef8b5519d9d90941c037",
+    "frontend/src/shared/lib/media/audio/stretch.ts": "d8e4a07cd4c2dd5ca3a8bc7d5536c3ed38172d8fe9dcc22fc8977a2964345c33",
+    "frontend/src/shared/lib/media/audio/verify-encoded.ts": "bc3991eef8688c3d8b653f75195ec7b9ed719fabed6df1a7ce84f992f681e627",
+    "frontend/src/shared/lib/media/bounded-output.ts": "917db96fc4917c1b447bf9ab48716903b1980fa3e5afb86dbe8cd6bbad2a9e84",
+    "frontend/src/shared/lib/media/index.ts": "bf8a098006478ca1b920b8980eaf79bd8941b23cb7333ff15a1358372cc4b0c9",
+    "frontend/src/shared/lib/media/measure-mp4.ts": "7232799a2ea3812407d5da9288198cfdbcb47ea4fcc54e3dfabd4295c3101b7f",
+    "frontend/src/shared/lib/media/mux-mp4.ts": "01006dd6b198b3178d45b0f38362c19d3edbd466353d915bfaba3a06150d6174",
+    "frontend/src/shared/lib/media/packet-window.ts": "7326685da6179f5d626ac86ee47283aebbb55d666ab482843080ae2f2f4671be",
+    "frontend/src/shared/lib/media/phase-metrics.ts": "e17d0077d906ed8e0d7364f0a53d80ab49182aa1c202bb1aee80249dd6711a4f",
+    "frontend/src/shared/lib/media/square-pixel-mp4.ts": "9ee0643267361f228d5f1270d1d958f4af1c5d01759bd910396f47e2616cbf41",
+    "frontend/src/shared/lib/media/stream-mp4.ts": "213e1117350861b8db7468313ec865c90dd19ed84f8a5b30d16d39c54b3cb8c3",
+    "frontend/src/shared/lib/media/testdata/analysis-silent.mp4": "e064d5ee9e86a4dd9388c55892f63a042aea74ede452c447d6db8b04ecd3d3d4",
+    "frontend/src/shared/lib/media/verify-mp4-audio.ts": "dee047225204fbf8aabb642f55749c12eeb648855848389a4090fd599263ae80",
+    "frontend/src/shared/lib/media/video/encoder-support.ts": "da4b25de3f5e345c74f820ecfeafc02c9020da5fa0e2b60960d40faf42b4ee5d",
+    "frontend/src/shared/lib/media/video/frame-budget.ts": "e72dc5f7f6f4ccedcaf546dbc974ca3d8930af63b5f61a59f93ec77f1409be6f",
+    "frontend/src/shared/lib/media/video/index.ts": "f99b2da5f535366f4b3e2de8f1ff27eeb7dd9a237230a9672c26aa5da0bd957c",
+    "frontend/src/shared/lib/media/video/metadata.ts": "d35c7d754514135d4bf52c113e7afb825d1d0f00ced9a36cda2c5a888c99ab4c",
+    "frontend/src/shared/lib/media/video/mp4-audio.ts": "77e1f567170dc345669e7c9ed1a054951ce83a402f3dc76cc1288d56dfeb6c0d",
+    "frontend/src/shared/lib/media/video/range-source.ts": "be02047486c9f79ca115dd76fc3e297bb47cdcdeee7791b29cd47c8af763b1cd",
+    "frontend/src/shared/lib/media/video/range-video.ts": "fd370a8ae189812dc21967cd5fd9b382bc15b807cca57a470dd1a240b8b9db51",
+    "frontend/src/shared/lib/media/video/source-color.ts": "aa12d392caebc6afb3d095ed409a2a1e6f646fb8c5a6b089c3c4412f55eff4e9",
+    "frontend/src/test/browser-media/export-entry.ts": "69dce99a0ed67e1c9f69c5b8d74c33ef0f7a343f2455da1c1bced8082aef216b",
+    "pnpm-lock.yaml": "d07c4a1bd3aeab4df41155c2d63d85e6a487959534ed7b27b4710315d7a07319",
+    "scripts/browser-export-check.mjs": "44184161cd1bae5f184ff3664989d78e1dc54707d745078fe1d168c5a467a025"
+  },
+  "nativeLayout": {
+    "manifestSHA256": "c42108757c824334b1850ccfd02312be5f50ec981cf89d8593003dedcd282871",
+    "expectedCases": 114,
+    "results": [
+      {
+        "id": "vertical-bold-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "vertical-bold-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "vertical-keynote-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "vertical-keynote-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "vertical-film-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "vertical-film-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "vertical-word-pop-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "vertical-word-pop-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "vertical-blur-in-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "vertical-blur-in-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "vertical-ambient-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "vertical-ambient-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "vertical-neon-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "vertical-neon-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "vertical-iridescent-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "vertical-iridescent-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "vertical-glitch-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "vertical-glitch-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "vertical-ember-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "vertical-ember-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "vertical-stack-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "vertical-stack-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "vertical-outline-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "vertical-outline-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "vertical-pop-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "vertical-pop-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "vertical-sticker-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "vertical-sticker-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "vertical-bubble-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "vertical-bubble-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "vertical-serif-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "vertical-serif-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "vertical-safe",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "vertical-subject",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "vertical-readable",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "vertical-crop",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "vertical-header",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "vertical-owner",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "horizontal-bold-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "horizontal-bold-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "horizontal-keynote-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "horizontal-keynote-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "horizontal-film-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "horizontal-film-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "horizontal-word-pop-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "horizontal-word-pop-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "horizontal-blur-in-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "horizontal-blur-in-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "horizontal-ambient-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "horizontal-ambient-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "horizontal-neon-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "horizontal-neon-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "horizontal-iridescent-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "horizontal-iridescent-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "horizontal-glitch-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "horizontal-glitch-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "horizontal-ember-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "horizontal-ember-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "horizontal-stack-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "horizontal-stack-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "horizontal-outline-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "horizontal-outline-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "horizontal-pop-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "horizontal-pop-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "horizontal-sticker-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "horizontal-sticker-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "horizontal-bubble-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "horizontal-bubble-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "horizontal-serif-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "horizontal-serif-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "horizontal-safe",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "horizontal-subject",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "horizontal-readable",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "horizontal-crop",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "horizontal-header",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "horizontal-owner",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "square-bold-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "square-bold-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "square-keynote-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "square-keynote-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "square-film-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "square-film-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "square-word-pop-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "square-word-pop-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "square-blur-in-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "square-blur-in-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "square-ambient-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "square-ambient-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "square-neon-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "square-neon-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "square-iridescent-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "square-iridescent-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "square-glitch-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "square-glitch-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "square-ember-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "square-ember-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "square-stack-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "square-stack-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "square-outline-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "square-outline-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "square-pop-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "square-pop-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "square-sticker-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "square-sticker-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "square-bubble-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "square-bubble-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "square-serif-steady",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "square-serif-rapid",
+        "purpose": "export",
+        "expectedElements": 2,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "square-safe",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "square-subject",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "square-readable",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "square-crop",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "square-header",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      },
+      {
+        "id": "square-owner",
+        "purpose": "export",
+        "expectedElements": 1,
+        "passed": true,
+        "componentVersion": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+        "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+      }
+    ],
+    "qualification": false,
+    "scope": "Independent native declarations compared through strict export freeze and the exact resolveLayout method called by the export Worker."
+  },
+  "sourceHashScope": "Exact bytes recorded before and checked after actual execution.",
+  "qualification": false,
+  "scope": "Actual Chrome production Worker, codecs, standard seekable MP4, synthetic requested audio and origin-output ownership. No hardware, real-voice, native full-composition or release qualification.",
+  "browser": "154.0.8037.98",
+  "executablePath": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+  "node": "v24.18.0",
+  "fixtures": {
+    "silent": {
+      "bytes": 1833655,
+      "sha256": "a4439dd8607684d920bf329cca3eea0ff8089e7ec49419ab7237a64d18aa80b4"
+    },
+    "source": {
+      "bytes": 75080,
+      "sha256": "aeeffdeb534b69553c49d2dbfede42e344da42b2517042ce95ed2bbd81d7a5bc"
+    },
+    "speech": {
+      "bytes": 176478,
+      "sha256": "1a29cafa914a8b89787c83f06600dad19f697afbba0a6c3577d1f835a787de70"
+    }
+  },
+  "storage": {
+    "kind": "opfs",
+    "bytes": [
+      1,
+      2,
+      3,
+      13,
+      14,
+      15,
+      0,
+      0,
+      8,
+      9,
+      10,
+      11
+    ],
+    "liveNames": [
+      "live-owner-a.mp4"
+    ],
+    "remaining": [],
+    "overflow": "MEDIA_OUTPUT_SIZE_LIMIT",
+    "afterCancel": []
+  },
+  "liveRecovery": {
+    "before": [
+      "abandoned-owner-a.mp4"
+    ],
+    "after": [
+      "abandoned-owner-a.mp4"
+    ]
+  },
+  "recovery": {
+    "before": [
+      "abandoned-owner-a.mp4"
+    ],
+    "after": []
+  },
+  "cases": [
+    {
+      "mode": "silent",
+      "backgroundSamples": 0,
+      "ratio": "vertical",
+      "verdict": {
+        "measurements": {
+          "compositionVersion": "clip-browser-composition-v1",
+          "snapshotFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "backgroundVersion": "clip-browser-background-v1",
+          "backgroundSnapshotFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "backgroundDigest": "26cd0c7f97a4d2415df3396d927ea37068c2a8093e07ce5cdeae46823fcfe3d0",
+          "backgroundComplete": true,
+          "backgroundSampleCount": 0,
+          "backgroundNotices": [],
+          "width": 1080,
+          "height": 1920,
+          "frameRateNumerator": 30,
+          "frameRateDenominator": 1,
+          "videoFrames": 450,
+          "videoCodec": "h264",
+          "videoProfile": "High",
+          "hasAudio": false,
+          "audioCodec": "",
+          "audioRate": 0,
+          "silent": false,
+          "speechFingerprint": ""
+        },
+        "passed": true
+      },
+      "fileBytes": 14259425,
+      "kind": "opfs",
+      "storedBytes": {
+        "bytes": 14259425,
+        "writes": 33,
+        "allocatedBytes": 0
+      },
+      "packetResources": {
+        "peakPackets": 7,
+        "peakBytes": 296304
+      },
+      "output": {
+        "width": 1080,
+        "height": 1920,
+        "codec": "avc1.640028",
+        "videoFrames": 450,
+        "videoDurationUs": 15000000,
+        "presentationValid": true,
+        "hasAudio": false,
+        "audioCodec": "",
+        "audioRate": 0
+      },
+      "frameCount": 450,
+      "retainedVideoPackets": 0,
+      "sourceResources": {
+        "sourceReads": 1263,
+        "sourceBytes": 1296077,
+        "sourceReadMs": 1288.0500111579895,
+        "decodeMs": 28.805011749267578,
+        "openMs": 14.095000267028809,
+        "peakActiveCuts": 1,
+        "activeCuts": 0,
+        "peakDecoderReservedBytes": 11059200,
+        "decoderReservedBytes": 0,
+        "presentation": {
+          "liveFrames": 0,
+          "liveBytes": 0,
+          "peakFrames": 1,
+          "peakBytes": 230400,
+          "queued": 0
+        },
+        "frameExports": 450,
+        "bitmapCopies": 0,
+        "physicalPeakBytes": null,
+        "originals": [
+          {
+            "provenance": "browser_client",
+            "codedWidth": 320,
+            "codedHeight": 180,
+            "displayWidth": 320,
+            "displayHeight": 180,
+            "timeResolution": 15360,
+            "firstTimestamp": 0,
+            "durationFromMetadata": 30,
+            "rotation": 0,
+            "flip": false,
+            "codec": "avc",
+            "streamNumber": 1,
+            "colorVersion": "native-source-color-v1",
+            "colorSpace": {
+              "matrix": "smpte170m",
+              "primaries": "bt709",
+              "transfer": "bt709",
+              "fullRange": false
+            }
+          }
+        ]
+      },
+      "seeks": [
+        0.1,
+        7.5,
+        14.9
+      ],
+      "completed": 450,
+      "qualification": false
+    },
+    {
+      "mode": "silent",
+      "backgroundSamples": 0,
+      "ratio": "horizontal",
+      "verdict": {
+        "measurements": {
+          "compositionVersion": "clip-browser-composition-v1",
+          "snapshotFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "backgroundVersion": "clip-browser-background-v1",
+          "backgroundSnapshotFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "backgroundDigest": "bf50cf303d4fbd0f434ddd286d1ad389ea88d710915d1f4823b8c7390f21ed10",
+          "backgroundComplete": true,
+          "backgroundSampleCount": 0,
+          "backgroundNotices": [],
+          "width": 1920,
+          "height": 1080,
+          "frameRateNumerator": 30,
+          "frameRateDenominator": 1,
+          "videoFrames": 450,
+          "videoCodec": "h264",
+          "videoProfile": "High",
+          "hasAudio": false,
+          "audioCodec": "",
+          "audioRate": 0,
+          "silent": false,
+          "speechFingerprint": ""
+        },
+        "passed": true
+      },
+      "fileBytes": 14889450,
+      "kind": "opfs",
+      "storedBytes": {
+        "bytes": 14889450,
+        "writes": 33,
+        "allocatedBytes": 0
+      },
+      "packetResources": {
+        "peakPackets": 2,
+        "peakBytes": 110282
+      },
+      "output": {
+        "width": 1920,
+        "height": 1080,
+        "codec": "avc1.640028",
+        "videoFrames": 450,
+        "videoDurationUs": 15000000,
+        "presentationValid": true,
+        "hasAudio": false,
+        "audioCodec": "",
+        "audioRate": 0
+      },
+      "frameCount": 450,
+      "retainedVideoPackets": 0,
+      "sourceResources": {
+        "sourceReads": 1352,
+        "sourceBytes": 1383721,
+        "sourceReadMs": 1317.0000095367432,
+        "decodeMs": 33.459996700286865,
+        "openMs": 13.195000171661377,
+        "peakActiveCuts": 1,
+        "activeCuts": 0,
+        "peakDecoderReservedBytes": 11059200,
+        "decoderReservedBytes": 0,
+        "presentation": {
+          "liveFrames": 0,
+          "liveBytes": 0,
+          "peakFrames": 1,
+          "peakBytes": 230400,
+          "queued": 0
+        },
+        "frameExports": 450,
+        "bitmapCopies": 0,
+        "physicalPeakBytes": null,
+        "originals": [
+          {
+            "provenance": "browser_client",
+            "codedWidth": 320,
+            "codedHeight": 180,
+            "displayWidth": 320,
+            "displayHeight": 180,
+            "timeResolution": 15360,
+            "firstTimestamp": 0,
+            "durationFromMetadata": 30,
+            "rotation": 0,
+            "flip": false,
+            "codec": "avc",
+            "streamNumber": 1,
+            "colorVersion": "native-source-color-v1",
+            "colorSpace": {
+              "matrix": "smpte170m",
+              "primaries": "bt709",
+              "transfer": "bt709",
+              "fullRange": false
+            }
+          }
+        ]
+      },
+      "seeks": [
+        0.1,
+        7.5,
+        14.9
+      ],
+      "completed": 450,
+      "qualification": false
+    },
+    {
+      "mode": "silent",
+      "backgroundSamples": 0,
+      "ratio": "square",
+      "verdict": {
+        "measurements": {
+          "compositionVersion": "clip-browser-composition-v1",
+          "snapshotFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "backgroundVersion": "clip-browser-background-v1",
+          "backgroundSnapshotFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "backgroundDigest": "b75ec25aa76d5a50bf11aa31cce09a2fb04e48537ceb6d3f65600aba0a2cbc4e",
+          "backgroundComplete": true,
+          "backgroundSampleCount": 0,
+          "backgroundNotices": [],
+          "width": 1080,
+          "height": 1080,
+          "frameRateNumerator": 30,
+          "frameRateDenominator": 1,
+          "videoFrames": 450,
+          "videoCodec": "h264",
+          "videoProfile": "High",
+          "hasAudio": false,
+          "audioCodec": "",
+          "audioRate": 0,
+          "silent": false,
+          "speechFingerprint": ""
+        },
+        "passed": true
+      },
+      "fileBytes": 14947521,
+      "kind": "opfs",
+      "storedBytes": {
+        "bytes": 14947521,
+        "writes": 33,
+        "allocatedBytes": 0
+      },
+      "packetResources": {
+        "peakPackets": 2,
+        "peakBytes": 90988
+      },
+      "output": {
+        "width": 1080,
+        "height": 1080,
+        "codec": "avc1.640020",
+        "videoFrames": 450,
+        "videoDurationUs": 15000000,
+        "presentationValid": true,
+        "hasAudio": false,
+        "audioCodec": "",
+        "audioRate": 0
+      },
+      "frameCount": 450,
+      "retainedVideoPackets": 0,
+      "sourceResources": {
+        "sourceReads": 1286,
+        "sourceBytes": 1318050,
+        "sourceReadMs": 1427.1400065422058,
+        "decodeMs": 34.809996604919434,
+        "openMs": 10.78499984741211,
+        "peakActiveCuts": 1,
+        "activeCuts": 0,
+        "peakDecoderReservedBytes": 11059200,
+        "decoderReservedBytes": 0,
+        "presentation": {
+          "liveFrames": 0,
+          "liveBytes": 0,
+          "peakFrames": 1,
+          "peakBytes": 230400,
+          "queued": 0
+        },
+        "frameExports": 450,
+        "bitmapCopies": 0,
+        "physicalPeakBytes": null,
+        "originals": [
+          {
+            "provenance": "browser_client",
+            "codedWidth": 320,
+            "codedHeight": 180,
+            "displayWidth": 320,
+            "displayHeight": 180,
+            "timeResolution": 15360,
+            "firstTimestamp": 0,
+            "durationFromMetadata": 30,
+            "rotation": 0,
+            "flip": false,
+            "codec": "avc",
+            "streamNumber": 1,
+            "colorVersion": "native-source-color-v1",
+            "colorSpace": {
+              "matrix": "smpte170m",
+              "primaries": "bt709",
+              "transfer": "bt709",
+              "fullRange": false
+            }
+          }
+        ]
+      },
+      "seeks": [
+        0.1,
+        7.5,
+        14.9
+      ],
+      "completed": 450,
+      "qualification": false
+    },
+    {
+      "mode": "source",
+      "backgroundSamples": 0,
+      "ratio": "square",
+      "decodedAudio": {
+        "sampleFrames": 720000,
+        "decodedFrames": 722944,
+        "firstSample": -2112,
+        "lastSample": 720832,
+        "loudnessLUFS": -16.000633541923268,
+        "truePeakDBTP": -14.885241837526717,
+        "silent": false
+      },
+      "verdict": {
+        "measurements": {
+          "compositionVersion": "clip-browser-composition-v1",
+          "snapshotFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "backgroundVersion": "clip-browser-background-v1",
+          "backgroundSnapshotFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "backgroundDigest": "c699909c7f65eb6a751968c85c6a800fbb1e5cd13b62e3cd64cfef8b2d2d6677",
+          "backgroundComplete": true,
+          "backgroundSampleCount": 0,
+          "backgroundNotices": [],
+          "width": 1080,
+          "height": 1080,
+          "frameRateNumerator": 30,
+          "frameRateDenominator": 1,
+          "videoFrames": 450,
+          "videoCodec": "h264",
+          "videoProfile": "High",
+          "hasAudio": true,
+          "audioCodec": "aac",
+          "audioRate": 48000,
+          "loudnessLufs": -16.000633541923268,
+          "silent": false,
+          "truePeakDbtp": -14.885241837526717,
+          "speechFingerprint": ""
+        },
+        "passed": true
+      },
+      "fileBytes": 272298,
+      "kind": "opfs",
+      "storedBytes": {
+        "bytes": 272298,
+        "writes": 63,
+        "allocatedBytes": 0
+      },
+      "packetResources": {
+        "peakPackets": 2,
+        "peakBytes": 325
+      },
+      "output": {
+        "width": 1080,
+        "height": 1080,
+        "codec": "avc1.640020",
+        "videoFrames": 450,
+        "videoDurationUs": 15000000,
+        "presentationValid": true,
+        "hasAudio": true,
+        "audioCodec": "mp4a.40.2",
+        "audioRate": 48000
+      },
+      "frameCount": 450,
+      "retainedVideoPackets": 0,
+      "sourceResources": {
+        "sourceReads": 1070,
+        "sourceBytes": 366965,
+        "sourceReadMs": 865.7099981307983,
+        "decodeMs": 361.85499334335327,
+        "openMs": 34.204999923706055,
+        "peakActiveCuts": 1,
+        "activeCuts": 0,
+        "peakDecoderReservedBytes": 393216,
+        "decoderReservedBytes": 0,
+        "presentation": {
+          "liveFrames": 0,
+          "liveBytes": 0,
+          "peakFrames": 1,
+          "peakBytes": 8192,
+          "queued": 0
+        },
+        "frameExports": 450,
+        "bitmapCopies": 0,
+        "physicalPeakBytes": null,
+        "originals": [
+          {
+            "provenance": "browser_client",
+            "codedWidth": 64,
+            "codedHeight": 32,
+            "displayWidth": 64,
+            "displayHeight": 32,
+            "timeResolution": 15360,
+            "firstTimestamp": 0,
+            "durationFromMetadata": 7,
+            "rotation": 0,
+            "flip": false,
+            "codec": "avc",
+            "streamNumber": 1,
+            "colorVersion": "native-source-color-v1",
+            "colorSpace": {
+              "matrix": "smpte170m",
+              "primaries": "bt709",
+              "transfer": "bt709",
+              "fullRange": false
+            }
+          }
+        ]
+      },
+      "audioSamples": 720000,
+      "primingFrames": 2112,
+      "speechFingerprint": "",
+      "seeks": [
+        0.1,
+        7.5,
+        14.9
+      ],
+      "completed": 450,
+      "qualification": false
+    },
+    {
+      "mode": "narration",
+      "backgroundSamples": 0,
+      "ratio": "vertical",
+      "decodedAudio": {
+        "sampleFrames": 720000,
+        "decodedFrames": 722944,
+        "firstSample": -2112,
+        "lastSample": 720832,
+        "loudnessLUFS": -16.000033013980026,
+        "truePeakDBTP": -14.313746274943549,
+        "silent": false
+      },
+      "verdict": {
+        "measurements": {
+          "compositionVersion": "clip-browser-composition-v1",
+          "snapshotFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "backgroundVersion": "clip-browser-background-v1",
+          "backgroundSnapshotFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "backgroundDigest": "03da49b58e306d5335e5bdef14760f4ed6ef894b0058606303c17518cb7a84d7",
+          "backgroundComplete": true,
+          "backgroundSampleCount": 0,
+          "backgroundNotices": [],
+          "width": 1080,
+          "height": 1920,
+          "frameRateNumerator": 30,
+          "frameRateDenominator": 1,
+          "videoFrames": 450,
+          "videoCodec": "h264",
+          "videoProfile": "High",
+          "hasAudio": true,
+          "audioCodec": "aac",
+          "audioRate": 48000,
+          "loudnessLufs": -16.000033013980026,
+          "silent": false,
+          "truePeakDbtp": -14.313746274943549,
+          "speechFingerprint": "dbdf9ce49d3b58edf74612a6740d543fc96ce651b64e062e2148ff8ce070709f"
+        },
+        "passed": true
+      },
+      "fileBytes": 14274983,
+      "kind": "opfs",
+      "storedBytes": {
+        "bytes": 14274983,
+        "writes": 63,
+        "allocatedBytes": 0
+      },
+      "packetResources": {
+        "peakPackets": 3,
+        "peakBytes": 86161
+      },
+      "output": {
+        "width": 1080,
+        "height": 1920,
+        "codec": "avc1.640028",
+        "videoFrames": 450,
+        "videoDurationUs": 15000000,
+        "presentationValid": true,
+        "hasAudio": true,
+        "audioCodec": "mp4a.40.2",
+        "audioRate": 48000
+      },
+      "frameCount": 450,
+      "retainedVideoPackets": 0,
+      "sourceResources": {
+        "sourceReads": 1264,
+        "sourceBytes": 1297404,
+        "sourceReadMs": 1383.0200090408325,
+        "decodeMs": 38.820019245147705,
+        "openMs": 14.78499984741211,
+        "peakActiveCuts": 1,
+        "activeCuts": 0,
+        "peakDecoderReservedBytes": 11059200,
+        "decoderReservedBytes": 0,
+        "presentation": {
+          "liveFrames": 0,
+          "liveBytes": 0,
+          "peakFrames": 1,
+          "peakBytes": 230400,
+          "queued": 0
+        },
+        "frameExports": 450,
+        "bitmapCopies": 0,
+        "physicalPeakBytes": null,
+        "originals": [
+          {
+            "provenance": "browser_client",
+            "codedWidth": 320,
+            "codedHeight": 180,
+            "displayWidth": 320,
+            "displayHeight": 180,
+            "timeResolution": 15360,
+            "firstTimestamp": 0,
+            "durationFromMetadata": 30,
+            "rotation": 0,
+            "flip": false,
+            "codec": "avc",
+            "streamNumber": 1,
+            "colorVersion": "native-source-color-v1",
+            "colorSpace": {
+              "matrix": "smpte170m",
+              "primaries": "bt709",
+              "transfer": "bt709",
+              "fullRange": false
+            }
+          }
+        ]
+      },
+      "audioSamples": 720000,
+      "primingFrames": 2112,
+      "speechFingerprint": "dbdf9ce49d3b58edf74612a6740d543fc96ce651b64e062e2148ff8ce070709f",
+      "seeks": [
+        0.1,
+        7.5,
+        14.9
+      ],
+      "completed": 450,
+      "qualification": false
+    },
+    {
+      "mode": "mixed",
+      "backgroundSamples": 0,
+      "ratio": "square",
+      "decodedAudio": {
+        "sampleFrames": 720000,
+        "decodedFrames": 722944,
+        "firstSample": -2112,
+        "lastSample": 720832,
+        "loudnessLUFS": -16.000934731815157,
+        "truePeakDBTP": -10.681807983107543,
+        "silent": false
+      },
+      "verdict": {
+        "measurements": {
+          "compositionVersion": "clip-browser-composition-v1",
+          "snapshotFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "backgroundVersion": "clip-browser-background-v1",
+          "backgroundSnapshotFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "backgroundDigest": "358eaa3ffdf2f3f81fcada3c1be3c4e3c67d04e5ac0013c6d71ff4d6f40db748",
+          "backgroundComplete": true,
+          "backgroundSampleCount": 0,
+          "backgroundNotices": [],
+          "width": 1080,
+          "height": 1080,
+          "frameRateNumerator": 30,
+          "frameRateDenominator": 1,
+          "videoFrames": 450,
+          "videoCodec": "h264",
+          "videoProfile": "High",
+          "hasAudio": true,
+          "audioCodec": "aac",
+          "audioRate": 48000,
+          "loudnessLufs": -16.000934731815157,
+          "silent": false,
+          "truePeakDbtp": -10.681807983107543,
+          "speechFingerprint": "dbdf9ce49d3b58edf74612a6740d543fc96ce651b64e062e2148ff8ce070709f"
+        },
+        "passed": true
+      },
+      "fileBytes": 275311,
+      "kind": "opfs",
+      "storedBytes": {
+        "bytes": 275311,
+        "writes": 63,
+        "allocatedBytes": 0
+      },
+      "packetResources": {
+        "peakPackets": 2,
+        "peakBytes": 325
+      },
+      "output": {
+        "width": 1080,
+        "height": 1080,
+        "codec": "avc1.640020",
+        "videoFrames": 450,
+        "videoDurationUs": 15000000,
+        "presentationValid": true,
+        "hasAudio": true,
+        "audioCodec": "mp4a.40.2",
+        "audioRate": 48000
+      },
+      "frameCount": 450,
+      "retainedVideoPackets": 0,
+      "sourceResources": {
+        "sourceReads": 1070,
+        "sourceBytes": 366965,
+        "sourceReadMs": 884.3950061798096,
+        "decodeMs": 380.5800004005432,
+        "openMs": 35.265000343322754,
+        "peakActiveCuts": 1,
+        "activeCuts": 0,
+        "peakDecoderReservedBytes": 393216,
+        "decoderReservedBytes": 0,
+        "presentation": {
+          "liveFrames": 0,
+          "liveBytes": 0,
+          "peakFrames": 1,
+          "peakBytes": 8192,
+          "queued": 0
+        },
+        "frameExports": 450,
+        "bitmapCopies": 0,
+        "physicalPeakBytes": null,
+        "originals": [
+          {
+            "provenance": "browser_client",
+            "codedWidth": 64,
+            "codedHeight": 32,
+            "displayWidth": 64,
+            "displayHeight": 32,
+            "timeResolution": 15360,
+            "firstTimestamp": 0,
+            "durationFromMetadata": 7,
+            "rotation": 0,
+            "flip": false,
+            "codec": "avc",
+            "streamNumber": 1,
+            "colorVersion": "native-source-color-v1",
+            "colorSpace": {
+              "matrix": "smpte170m",
+              "primaries": "bt709",
+              "transfer": "bt709",
+              "fullRange": false
+            }
+          }
+        ]
+      },
+      "audioSamples": 720000,
+      "primingFrames": 2112,
+      "speechFingerprint": "dbdf9ce49d3b58edf74612a6740d543fc96ce651b64e062e2148ff8ce070709f",
+      "seeks": [
+        0.1,
+        7.5,
+        14.9
+      ],
+      "completed": 450,
+      "qualification": false
+    },
+    {
+      "mode": "silent",
+      "backgroundSamples": 0,
+      "ratio": "square",
+      "verdict": {
+        "measurements": {
+          "compositionVersion": "clip-browser-composition-v1",
+          "snapshotFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "backgroundVersion": "clip-browser-background-v1",
+          "backgroundSnapshotFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "backgroundDigest": "b75ec25aa76d5a50bf11aa31cce09a2fb04e48537ceb6d3f65600aba0a2cbc4e",
+          "backgroundComplete": true,
+          "backgroundSampleCount": 0,
+          "backgroundNotices": [],
+          "width": 1080,
+          "height": 1080,
+          "frameRateNumerator": 30,
+          "frameRateDenominator": 1,
+          "videoFrames": 450,
+          "videoCodec": "h264",
+          "videoProfile": "High",
+          "hasAudio": false,
+          "audioCodec": "",
+          "audioRate": 0,
+          "silent": false,
+          "speechFingerprint": ""
+        },
+        "passed": true
+      },
+      "fileBytes": 14947521,
+      "kind": "blob",
+      "storedBytes": {
+        "bytes": 14947521,
+        "writes": 33,
+        "allocatedBytes": 0
+      },
+      "packetResources": {
+        "peakPackets": 3,
+        "peakBytes": 90988
+      },
+      "output": {
+        "width": 1080,
+        "height": 1080,
+        "codec": "avc1.640020",
+        "videoFrames": 450,
+        "videoDurationUs": 15000000,
+        "presentationValid": true,
+        "hasAudio": false,
+        "audioCodec": "",
+        "audioRate": 0
+      },
+      "frameCount": 450,
+      "retainedVideoPackets": 0,
+      "sourceResources": {
+        "sourceReads": 1431,
+        "sourceBytes": 1460373,
+        "sourceReadMs": 1316.5499949455261,
+        "decodeMs": 31.94999599456787,
+        "openMs": 10.21500015258789,
+        "peakActiveCuts": 1,
+        "activeCuts": 0,
+        "peakDecoderReservedBytes": 11059200,
+        "decoderReservedBytes": 0,
+        "presentation": {
+          "liveFrames": 0,
+          "liveBytes": 0,
+          "peakFrames": 1,
+          "peakBytes": 230400,
+          "queued": 0
+        },
+        "frameExports": 450,
+        "bitmapCopies": 0,
+        "physicalPeakBytes": null,
+        "originals": [
+          {
+            "provenance": "browser_client",
+            "codedWidth": 320,
+            "codedHeight": 180,
+            "displayWidth": 320,
+            "displayHeight": 180,
+            "timeResolution": 15360,
+            "firstTimestamp": 0,
+            "durationFromMetadata": 30,
+            "rotation": 0,
+            "flip": false,
+            "codec": "avc",
+            "streamNumber": 1,
+            "colorVersion": "native-source-color-v1",
+            "colorSpace": {
+              "matrix": "smpte170m",
+              "primaries": "bt709",
+              "transfer": "bt709",
+              "fullRange": false
+            }
+          }
+        ]
+      },
+      "seeks": [
+        0.1,
+        7.5,
+        14.9
+      ],
+      "completed": 450,
+      "qualification": false
+    },
+    {
+      "mode": "silent",
+      "captionStyle": "bold",
+      "backgroundSamples": 3,
+      "ratio": "vertical",
+      "verdict": {
+        "measurements": {
+          "compositionVersion": "clip-browser-composition-v1",
+          "snapshotFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "backgroundVersion": "clip-browser-background-v1",
+          "backgroundSnapshotFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "backgroundDigest": "9f14dd9f7075c01e995411d1e7b442481a5fcb4bbca708b9f6b7c53420917972",
+          "backgroundComplete": true,
+          "backgroundSampleCount": 3,
+          "backgroundNotices": [],
+          "width": 1080,
+          "height": 1920,
+          "frameRateNumerator": 30,
+          "frameRateDenominator": 1,
+          "videoFrames": 450,
+          "videoCodec": "h264",
+          "videoProfile": "High",
+          "hasAudio": false,
+          "audioCodec": "",
+          "audioRate": 0,
+          "silent": false,
+          "speechFingerprint": ""
+        },
+        "passed": true
+      },
+      "fileBytes": 14834561,
+      "kind": "opfs",
+      "storedBytes": {
+        "bytes": 14834561,
+        "writes": 33,
+        "allocatedBytes": 0
+      },
+      "packetResources": {
+        "peakPackets": 7,
+        "peakBytes": 323618
+      },
+      "output": {
+        "width": 1080,
+        "height": 1920,
+        "codec": "avc1.640028",
+        "videoFrames": 450,
+        "videoDurationUs": 15000000,
+        "presentationValid": true,
+        "hasAudio": false,
+        "audioCodec": "",
+        "audioRate": 0
+      },
+      "frameCount": 450,
+      "retainedVideoPackets": 0,
+      "sourceResources": {
+        "sourceReads": 1256,
+        "sourceBytes": 1290249,
+        "sourceReadMs": 1204.9250102043152,
+        "decodeMs": 23.250001907348633,
+        "openMs": 6.225000381469727,
+        "peakActiveCuts": 1,
+        "activeCuts": 0,
+        "peakDecoderReservedBytes": 11059200,
+        "decoderReservedBytes": 0,
+        "presentation": {
+          "liveFrames": 0,
+          "liveBytes": 0,
+          "peakFrames": 1,
+          "peakBytes": 230400,
+          "queued": 0
+        },
+        "frameExports": 450,
+        "bitmapCopies": 0,
+        "physicalPeakBytes": null,
+        "originals": [
+          {
+            "provenance": "browser_client",
+            "codedWidth": 320,
+            "codedHeight": 180,
+            "displayWidth": 320,
+            "displayHeight": 180,
+            "timeResolution": 15360,
+            "firstTimestamp": 0,
+            "durationFromMetadata": 30,
+            "rotation": 0,
+            "flip": false,
+            "codec": "avc",
+            "streamNumber": 1,
+            "colorVersion": "native-source-color-v1",
+            "colorSpace": {
+              "matrix": "smpte170m",
+              "primaries": "bt709",
+              "transfer": "bt709",
+              "fullRange": false
+            }
+          }
+        ]
+      },
+      "seeks": [
+        0.1,
+        7.5,
+        14.9
+      ],
+      "completed": 450,
+      "qualification": false
+    },
+    {
+      "mode": "narration",
+      "captionStyle": "ember",
+      "backgroundSamples": 3,
+      "ratio": "square",
+      "decodedAudio": {
+        "sampleFrames": 720000,
+        "decodedFrames": 722944,
+        "firstSample": -2112,
+        "lastSample": 720832,
+        "loudnessLUFS": -16.000033013980026,
+        "truePeakDBTP": -14.313746274943549,
+        "silent": false
+      },
+      "verdict": {
+        "measurements": {
+          "compositionVersion": "clip-browser-composition-v1",
+          "snapshotFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "backgroundVersion": "clip-browser-background-v1",
+          "backgroundSnapshotFingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "backgroundDigest": "def099f88c175d22218df6f8e53996ed2b265f8fa09716405ccc2fce1f787167",
+          "backgroundComplete": true,
+          "backgroundSampleCount": 3,
+          "backgroundNotices": [
+            {
+              "code": "composition_contrast",
+              "action": "shortfall",
+              "elementId": "caption",
+              "cutId": ""
+            }
+          ],
+          "width": 1080,
+          "height": 1080,
+          "frameRateNumerator": 30,
+          "frameRateDenominator": 1,
+          "videoFrames": 450,
+          "videoCodec": "h264",
+          "videoProfile": "High",
+          "hasAudio": true,
+          "audioCodec": "aac",
+          "audioRate": 48000,
+          "loudnessLufs": -16.000033013980026,
+          "silent": false,
+          "truePeakDbtp": -14.313746274943549,
+          "speechFingerprint": "dbdf9ce49d3b58edf74612a6740d543fc96ce651b64e062e2148ff8ce070709f"
+        },
+        "passed": true
+      },
+      "fileBytes": 15004087,
+      "kind": "opfs",
+      "storedBytes": {
+        "bytes": 15004087,
+        "writes": 63,
+        "allocatedBytes": 0
+      },
+      "packetResources": {
+        "peakPackets": 2,
+        "peakBytes": 116930
+      },
+      "output": {
+        "width": 1080,
+        "height": 1080,
+        "codec": "avc1.640020",
+        "videoFrames": 450,
+        "videoDurationUs": 15000000,
+        "presentationValid": true,
+        "hasAudio": true,
+        "audioCodec": "mp4a.40.2",
+        "audioRate": 48000
+      },
+      "frameCount": 450,
+      "retainedVideoPackets": 0,
+      "sourceResources": {
+        "sourceReads": 1471,
+        "sourceBytes": 1501121,
+        "sourceReadMs": 1759.4700107574463,
+        "decodeMs": 23.090001583099365,
+        "openMs": 6.909999847412109,
+        "peakActiveCuts": 1,
+        "activeCuts": 0,
+        "peakDecoderReservedBytes": 11059200,
+        "decoderReservedBytes": 0,
+        "presentation": {
+          "liveFrames": 0,
+          "liveBytes": 0,
+          "peakFrames": 1,
+          "peakBytes": 230400,
+          "queued": 0
+        },
+        "frameExports": 450,
+        "bitmapCopies": 0,
+        "physicalPeakBytes": null,
+        "originals": [
+          {
+            "provenance": "browser_client",
+            "codedWidth": 320,
+            "codedHeight": 180,
+            "displayWidth": 320,
+            "displayHeight": 180,
+            "timeResolution": 15360,
+            "firstTimestamp": 0,
+            "durationFromMetadata": 30,
+            "rotation": 0,
+            "flip": false,
+            "codec": "avc",
+            "streamNumber": 1,
+            "colorVersion": "native-source-color-v1",
+            "colorSpace": {
+              "matrix": "smpte170m",
+              "primaries": "bt709",
+              "transfer": "bt709",
+              "fullRange": false
+            }
+          }
+        ]
+      },
+      "audioSamples": 720000,
+      "primingFrames": 2112,
+      "speechFingerprint": "dbdf9ce49d3b58edf74612a6740d543fc96ce651b64e062e2148ff8ce070709f",
+      "seeks": [
+        0.1,
+        7.5,
+        14.9
+      ],
+      "completed": 450,
+      "qualification": false
+    }
+  ],
+  "cancelled": {
+    "error": "Render cancelled",
+    "name": "AbortError",
+    "completed": 1,
+    "qualification": false
+  },
+  "afterCancel": {
+    "before": [],
+    "after": []
+  },
+  "corrections": [
+    {
+      "before": "Slow5ms actual Chrome sink refused MEDIA_PACKET_WINDOW_LIMIT at frame202 despite checking encodeQueueSize and pending packet capacity.",
+      "after": "Each submitted frame reserves one of8 credits until its output packet is accepted; all450frames complete, observed peak7packets/296304bytes.",
+      "cause": "WebCodecs control queue removal precedes delivery of asynchronous encoded callbacks."
+    },
+    {
+      "before": "Actual cancellation storage check still found cancelled-owner-b.mp4 after a second dispose returned.",
+      "after": "Idempotent disposal returns the same in-flight cleanup promise; actual cancelled/abandoned recovery checks leave zero files.",
+      "cause": "The first asynchronous abort cleanup had set stopped before delete completed."
+    },
+    {
+      "before": "Cancelling an active private upload with a local artifact cleared its UI owner before the completion-won(false) refresh could settle; retry cancellation also assumed cancellation won.",
+      "after": "Active first upload retains its run owner through authoritative completion-won handling. Retained-artifact and retry cancellation settle the authoritative bool; false refreshes the accepted result and reports durable success.",
+      "verification": "Mounted active-first-upload and retry completion-won regressions pass; publication fences remain server-authoritative."
+    }
+  ],
+  "postRunHookFence": {
+    "scope": "Hook-only post-fetch controller/mount fence; prior actual Chrome sourceHashes remain unchanged and are not presented as a rerun of this new hook. Renderer, media, layout, proto and codec bytes are unchanged.",
+    "sourcePath": "frontend/src/features/render-clip-browser/api/useBrowserRender.ts",
+    "actualChromeSourceSHA256": "4143d2a6277bdcc50d96487c2a946e2cb37949d3766d83cf9cfff50c6d7e36dc",
+    "correctedHookSHA256": "13178a47e05edef1b302ba363e2f24aca9f6b603bdf645538e8ea877d0475575",
+    "changedActualChromeSourcePaths": [
+      "frontend/src/features/render-clip-browser/api/useBrowserRender.ts"
+    ],
+    "beforeFenceRegressionExit": 1,
+    "beforeFenceLogSHA256": "eb5fd8ac4f57e9215dfbfb361909ac954250ca6729ca549f1ddcfde9a5b24850",
+    "afterFenceRegression": "8 mounted provisional-render tests pass, including deferred completion-won fetch during owner replacement and a new pending run.",
+    "qualification": false
+  }
+}

@@ -1,0 +1,870 @@
+{
+  "version": 1,
+  "origin": "synthetic_mock",
+  "verifierOrigin": "synthetic_stub",
+  "summary": {
+    "version": 1,
+    "mode": "replay",
+    "status": "replayed_offline",
+    "inputs": 3,
+    "attempts": 3,
+    "providerCallsSent": 0,
+    "qualified": false,
+    "profileEnabled": false,
+    "missingGates": [
+      "current_live_semantic_comparison",
+      "explicit_cumulative_live_approval",
+      "trusted_live_admission_accounting",
+      "actual_provider_internal_controls",
+      "human_review_of_actual_comparison"
+    ]
+  },
+  "analysisContract": "clip-observation-v2",
+  "profile": "clip-browser-analysis-v1",
+  "prompts": {
+    "browser": {
+      "systemSha256": "d4bf8e692627ad6b824c68eef5f6ce0f4c57fa2093237046330453a468b7bbc1",
+      "userSha256": "aeba4f469dabccd75fc201221fa8e771cf16786282d9b1369c03e7cee789a561",
+      "schemaSha256": "df7f140c060c7cf6db0093789e1b44006a370700c8e7892572bb2d0564607d23",
+      "replayKey": "4ebc458a4a6d0cabf18b7792f7ce6ae7b92a1cba46f2344a4717b7e5d01b79e8"
+    },
+    "native": {
+      "systemSha256": "d4bf8e692627ad6b824c68eef5f6ce0f4c57fa2093237046330453a468b7bbc1",
+      "userSha256": "aeba4f469dabccd75fc201221fa8e771cf16786282d9b1369c03e7cee789a561",
+      "schemaSha256": "df7f140c060c7cf6db0093789e1b44006a370700c8e7892572bb2d0564607d23",
+      "replayKey": "14d2dbfad0cfd774fa1263c44b249037f8c968011068103a3011ab73725e6b5a"
+    },
+    "reference": {
+      "systemSha256": "d4bf8e692627ad6b824c68eef5f6ce0f4c57fa2093237046330453a468b7bbc1",
+      "userSha256": "aeba4f469dabccd75fc201221fa8e771cf16786282d9b1369c03e7cee789a561",
+      "schemaSha256": "df7f140c060c7cf6db0093789e1b44006a370700c8e7892572bb2d0564607d23",
+      "replayKey": "6e7ccecc2e9d1e015cce8d8c34153ddf77be51425bef75896de40d73a23600eb"
+    }
+  },
+  "metrics": [
+    {
+      "inputId": "reference",
+      "replicate": 0,
+      "families": {
+        "event": {
+          "known": 1,
+          "required": 1,
+          "correct": 1,
+          "incorrect": 0,
+          "omitted": 0,
+          "unknown": 0,
+          "truthUnknown": 0,
+          "invented": 0,
+          "unreviewed": 0,
+          "notApplicable": 0,
+          "rawExact": 0,
+          "normalizedExact": 0,
+          "speechEdits": 0,
+          "speechReferenceRunes": 0,
+          "speechUnscoredReferenceRunes": 0,
+          "silenceCorrect": 0,
+          "silenceHallucination": 0
+        },
+        "fact": {
+          "known": 0,
+          "required": 0,
+          "correct": 0,
+          "incorrect": 0,
+          "omitted": 0,
+          "unknown": 0,
+          "truthUnknown": 0,
+          "invented": 0,
+          "unreviewed": 0,
+          "notApplicable": 0,
+          "rawExact": 0,
+          "normalizedExact": 0,
+          "speechEdits": 0,
+          "speechReferenceRunes": 0,
+          "speechUnscoredReferenceRunes": 0,
+          "silenceCorrect": 0,
+          "silenceHallucination": 0
+        },
+        "number": {
+          "known": 1,
+          "required": 1,
+          "correct": 1,
+          "incorrect": 0,
+          "omitted": 0,
+          "unknown": 0,
+          "truthUnknown": 0,
+          "invented": 0,
+          "unreviewed": 0,
+          "notApplicable": 0,
+          "rawExact": 1,
+          "normalizedExact": 1,
+          "speechEdits": 0,
+          "speechReferenceRunes": 0,
+          "speechUnscoredReferenceRunes": 0,
+          "silenceCorrect": 0,
+          "silenceHallucination": 0
+        },
+        "quality": {
+          "known": 1,
+          "required": 0,
+          "correct": 1,
+          "incorrect": 0,
+          "omitted": 0,
+          "unknown": 0,
+          "truthUnknown": 0,
+          "invented": 0,
+          "unreviewed": 0,
+          "notApplicable": 0,
+          "rawExact": 0,
+          "normalizedExact": 0,
+          "speechEdits": 0,
+          "speechReferenceRunes": 0,
+          "speechUnscoredReferenceRunes": 0,
+          "silenceCorrect": 0,
+          "silenceHallucination": 0
+        },
+        "scene": {
+          "known": 1,
+          "required": 1,
+          "correct": 0,
+          "incorrect": 0,
+          "omitted": 1,
+          "unknown": 0,
+          "truthUnknown": 0,
+          "invented": 0,
+          "unreviewed": 0,
+          "notApplicable": 0,
+          "rawExact": 0,
+          "normalizedExact": 0,
+          "speechEdits": 0,
+          "speechReferenceRunes": 0,
+          "speechUnscoredReferenceRunes": 0,
+          "silenceCorrect": 0,
+          "silenceHallucination": 0
+        },
+        "speech": {
+          "known": 1,
+          "required": 1,
+          "correct": 1,
+          "incorrect": 0,
+          "omitted": 0,
+          "unknown": 0,
+          "truthUnknown": 0,
+          "invented": 0,
+          "unreviewed": 0,
+          "notApplicable": 0,
+          "rawExact": 1,
+          "normalizedExact": 1,
+          "speechEdits": 0,
+          "speechReferenceRunes": 0,
+          "speechUnscoredReferenceRunes": 0,
+          "silenceCorrect": 1,
+          "silenceHallucination": 0
+        },
+        "text": {
+          "known": 0,
+          "required": 1,
+          "correct": 0,
+          "incorrect": 0,
+          "omitted": 0,
+          "unknown": 1,
+          "truthUnknown": 1,
+          "invented": 0,
+          "unreviewed": 0,
+          "notApplicable": 0,
+          "rawExact": 0,
+          "normalizedExact": 0,
+          "speechEdits": 0,
+          "speechReferenceRunes": 0,
+          "speechUnscoredReferenceRunes": 0,
+          "silenceCorrect": 0,
+          "silenceHallucination": 0
+        },
+        "usability": {
+          "known": 1,
+          "required": 1,
+          "correct": 0,
+          "incorrect": 1,
+          "omitted": 0,
+          "unknown": 0,
+          "truthUnknown": 0,
+          "invented": 0,
+          "unreviewed": 0,
+          "notApplicable": 0,
+          "rawExact": 0,
+          "normalizedExact": 0,
+          "speechEdits": 0,
+          "speechReferenceRunes": 0,
+          "speechUnscoredReferenceRunes": 0,
+          "silenceCorrect": 0,
+          "silenceHallucination": 0
+        }
+      },
+      "boundaries": [
+        {
+          "labelId": "action",
+          "startSignedMs": 0,
+          "endSignedMs": 900,
+          "startAbsoluteMs": 0,
+          "endAbsoluteMs": 900,
+          "toleranceMs": 10,
+          "outsideTolerance": true
+        },
+        {
+          "labelId": "silence",
+          "startSignedMs": 0,
+          "endSignedMs": 0,
+          "startAbsoluteMs": 0,
+          "endAbsoluteMs": 0,
+          "toleranceMs": 0,
+          "outsideTolerance": false
+        }
+      ],
+      "unknownBoundaries": 1,
+      "criticalFailures": [
+        "use"
+      ],
+      "labelStatuses": {
+        "action": "correct",
+        "focus": "correct",
+        "missing": "omitted",
+        "price": "correct",
+        "sign": "unknown",
+        "silence": "correct",
+        "use": "incorrect"
+      }
+    },
+    {
+      "inputId": "native",
+      "replicate": 0,
+      "families": {
+        "event": {
+          "known": 1,
+          "required": 1,
+          "correct": 1,
+          "incorrect": 0,
+          "omitted": 0,
+          "unknown": 0,
+          "truthUnknown": 0,
+          "invented": 0,
+          "unreviewed": 0,
+          "notApplicable": 0,
+          "rawExact": 0,
+          "normalizedExact": 0,
+          "speechEdits": 0,
+          "speechReferenceRunes": 0,
+          "speechUnscoredReferenceRunes": 0,
+          "silenceCorrect": 0,
+          "silenceHallucination": 0
+        },
+        "fact": {
+          "known": 0,
+          "required": 0,
+          "correct": 0,
+          "incorrect": 0,
+          "omitted": 0,
+          "unknown": 0,
+          "truthUnknown": 0,
+          "invented": 0,
+          "unreviewed": 0,
+          "notApplicable": 0,
+          "rawExact": 0,
+          "normalizedExact": 0,
+          "speechEdits": 0,
+          "speechReferenceRunes": 0,
+          "speechUnscoredReferenceRunes": 0,
+          "silenceCorrect": 0,
+          "silenceHallucination": 0
+        },
+        "number": {
+          "known": 1,
+          "required": 1,
+          "correct": 1,
+          "incorrect": 0,
+          "omitted": 0,
+          "unknown": 0,
+          "truthUnknown": 0,
+          "invented": 0,
+          "unreviewed": 0,
+          "notApplicable": 0,
+          "rawExact": 1,
+          "normalizedExact": 1,
+          "speechEdits": 0,
+          "speechReferenceRunes": 0,
+          "speechUnscoredReferenceRunes": 0,
+          "silenceCorrect": 0,
+          "silenceHallucination": 0
+        },
+        "quality": {
+          "known": 1,
+          "required": 0,
+          "correct": 1,
+          "incorrect": 0,
+          "omitted": 0,
+          "unknown": 0,
+          "truthUnknown": 0,
+          "invented": 0,
+          "unreviewed": 0,
+          "notApplicable": 0,
+          "rawExact": 0,
+          "normalizedExact": 0,
+          "speechEdits": 0,
+          "speechReferenceRunes": 0,
+          "speechUnscoredReferenceRunes": 0,
+          "silenceCorrect": 0,
+          "silenceHallucination": 0
+        },
+        "scene": {
+          "known": 1,
+          "required": 1,
+          "correct": 0,
+          "incorrect": 0,
+          "omitted": 1,
+          "unknown": 0,
+          "truthUnknown": 0,
+          "invented": 0,
+          "unreviewed": 0,
+          "notApplicable": 0,
+          "rawExact": 0,
+          "normalizedExact": 0,
+          "speechEdits": 0,
+          "speechReferenceRunes": 0,
+          "speechUnscoredReferenceRunes": 0,
+          "silenceCorrect": 0,
+          "silenceHallucination": 0
+        },
+        "speech": {
+          "known": 1,
+          "required": 1,
+          "correct": 1,
+          "incorrect": 0,
+          "omitted": 0,
+          "unknown": 0,
+          "truthUnknown": 0,
+          "invented": 0,
+          "unreviewed": 0,
+          "notApplicable": 0,
+          "rawExact": 1,
+          "normalizedExact": 1,
+          "speechEdits": 0,
+          "speechReferenceRunes": 0,
+          "speechUnscoredReferenceRunes": 0,
+          "silenceCorrect": 1,
+          "silenceHallucination": 0
+        },
+        "text": {
+          "known": 0,
+          "required": 1,
+          "correct": 0,
+          "incorrect": 0,
+          "omitted": 0,
+          "unknown": 1,
+          "truthUnknown": 1,
+          "invented": 0,
+          "unreviewed": 0,
+          "notApplicable": 0,
+          "rawExact": 0,
+          "normalizedExact": 0,
+          "speechEdits": 0,
+          "speechReferenceRunes": 0,
+          "speechUnscoredReferenceRunes": 0,
+          "silenceCorrect": 0,
+          "silenceHallucination": 0
+        },
+        "usability": {
+          "known": 1,
+          "required": 1,
+          "correct": 0,
+          "incorrect": 1,
+          "omitted": 0,
+          "unknown": 0,
+          "truthUnknown": 0,
+          "invented": 0,
+          "unreviewed": 0,
+          "notApplicable": 0,
+          "rawExact": 0,
+          "normalizedExact": 0,
+          "speechEdits": 0,
+          "speechReferenceRunes": 0,
+          "speechUnscoredReferenceRunes": 0,
+          "silenceCorrect": 0,
+          "silenceHallucination": 0
+        }
+      },
+      "boundaries": [
+        {
+          "labelId": "action",
+          "startSignedMs": 0,
+          "endSignedMs": 900,
+          "startAbsoluteMs": 0,
+          "endAbsoluteMs": 900,
+          "toleranceMs": 10,
+          "outsideTolerance": true
+        },
+        {
+          "labelId": "silence",
+          "startSignedMs": 0,
+          "endSignedMs": 0,
+          "startAbsoluteMs": 0,
+          "endAbsoluteMs": 0,
+          "toleranceMs": 0,
+          "outsideTolerance": false
+        }
+      ],
+      "unknownBoundaries": 1,
+      "criticalFailures": [
+        "use"
+      ],
+      "labelStatuses": {
+        "action": "correct",
+        "focus": "correct",
+        "missing": "omitted",
+        "price": "correct",
+        "sign": "unknown",
+        "silence": "correct",
+        "use": "incorrect"
+      }
+    },
+    {
+      "inputId": "browser",
+      "replicate": 0,
+      "families": {
+        "event": {
+          "known": 1,
+          "required": 1,
+          "correct": 1,
+          "incorrect": 0,
+          "omitted": 0,
+          "unknown": 0,
+          "truthUnknown": 0,
+          "invented": 0,
+          "unreviewed": 0,
+          "notApplicable": 0,
+          "rawExact": 0,
+          "normalizedExact": 0,
+          "speechEdits": 0,
+          "speechReferenceRunes": 0,
+          "speechUnscoredReferenceRunes": 0,
+          "silenceCorrect": 0,
+          "silenceHallucination": 0
+        },
+        "fact": {
+          "known": 0,
+          "required": 0,
+          "correct": 0,
+          "incorrect": 0,
+          "omitted": 0,
+          "unknown": 0,
+          "truthUnknown": 0,
+          "invented": 0,
+          "unreviewed": 0,
+          "notApplicable": 0,
+          "rawExact": 0,
+          "normalizedExact": 0,
+          "speechEdits": 0,
+          "speechReferenceRunes": 0,
+          "speechUnscoredReferenceRunes": 0,
+          "silenceCorrect": 0,
+          "silenceHallucination": 0
+        },
+        "number": {
+          "known": 1,
+          "required": 1,
+          "correct": 0,
+          "incorrect": 1,
+          "omitted": 0,
+          "unknown": 0,
+          "truthUnknown": 0,
+          "invented": 0,
+          "unreviewed": 0,
+          "notApplicable": 0,
+          "rawExact": 0,
+          "normalizedExact": 0,
+          "speechEdits": 0,
+          "speechReferenceRunes": 0,
+          "speechUnscoredReferenceRunes": 0,
+          "silenceCorrect": 0,
+          "silenceHallucination": 0
+        },
+        "quality": {
+          "known": 1,
+          "required": 0,
+          "correct": 1,
+          "incorrect": 0,
+          "omitted": 0,
+          "unknown": 0,
+          "truthUnknown": 0,
+          "invented": 0,
+          "unreviewed": 0,
+          "notApplicable": 0,
+          "rawExact": 0,
+          "normalizedExact": 0,
+          "speechEdits": 0,
+          "speechReferenceRunes": 0,
+          "speechUnscoredReferenceRunes": 0,
+          "silenceCorrect": 0,
+          "silenceHallucination": 0
+        },
+        "scene": {
+          "known": 1,
+          "required": 1,
+          "correct": 0,
+          "incorrect": 0,
+          "omitted": 1,
+          "unknown": 0,
+          "truthUnknown": 0,
+          "invented": 0,
+          "unreviewed": 0,
+          "notApplicable": 0,
+          "rawExact": 0,
+          "normalizedExact": 0,
+          "speechEdits": 0,
+          "speechReferenceRunes": 0,
+          "speechUnscoredReferenceRunes": 0,
+          "silenceCorrect": 0,
+          "silenceHallucination": 0
+        },
+        "speech": {
+          "known": 1,
+          "required": 1,
+          "correct": 0,
+          "incorrect": 0,
+          "omitted": 0,
+          "unknown": 0,
+          "truthUnknown": 0,
+          "invented": 1,
+          "unreviewed": 0,
+          "notApplicable": 0,
+          "rawExact": 0,
+          "normalizedExact": 0,
+          "speechEdits": 0,
+          "speechReferenceRunes": 0,
+          "speechUnscoredReferenceRunes": 0,
+          "silenceCorrect": 0,
+          "silenceHallucination": 1
+        },
+        "text": {
+          "known": 0,
+          "required": 1,
+          "correct": 0,
+          "incorrect": 0,
+          "omitted": 0,
+          "unknown": 1,
+          "truthUnknown": 1,
+          "invented": 0,
+          "unreviewed": 0,
+          "notApplicable": 0,
+          "rawExact": 0,
+          "normalizedExact": 0,
+          "speechEdits": 0,
+          "speechReferenceRunes": 0,
+          "speechUnscoredReferenceRunes": 0,
+          "silenceCorrect": 0,
+          "silenceHallucination": 0
+        },
+        "usability": {
+          "known": 1,
+          "required": 1,
+          "correct": 0,
+          "incorrect": 1,
+          "omitted": 0,
+          "unknown": 0,
+          "truthUnknown": 0,
+          "invented": 0,
+          "unreviewed": 0,
+          "notApplicable": 0,
+          "rawExact": 0,
+          "normalizedExact": 0,
+          "speechEdits": 0,
+          "speechReferenceRunes": 0,
+          "speechUnscoredReferenceRunes": 0,
+          "silenceCorrect": 0,
+          "silenceHallucination": 0
+        }
+      },
+      "boundaries": [
+        {
+          "labelId": "action",
+          "startSignedMs": 0,
+          "endSignedMs": 900,
+          "startAbsoluteMs": 0,
+          "endAbsoluteMs": 900,
+          "toleranceMs": 10,
+          "outsideTolerance": true
+        },
+        {
+          "labelId": "silence",
+          "startSignedMs": 0,
+          "endSignedMs": 0,
+          "startAbsoluteMs": 0,
+          "endAbsoluteMs": 0,
+          "toleranceMs": 0,
+          "outsideTolerance": false
+        }
+      ],
+      "unknownBoundaries": 1,
+      "criticalFailures": [
+        "price",
+        "silence",
+        "use"
+      ],
+      "labelStatuses": {
+        "action": "correct",
+        "focus": "correct",
+        "missing": "omitted",
+        "price": "incorrect",
+        "sign": "unknown",
+        "silence": "invented",
+        "use": "incorrect"
+      }
+    }
+  ],
+  "pairs": [
+    {
+      "caseId": "case",
+      "index": 0,
+      "replicate": 0,
+      "from": "reference",
+      "to": "native",
+      "missing": true,
+      "regressions": null
+    },
+    {
+      "caseId": "case",
+      "index": 0,
+      "replicate": 0,
+      "from": "reference",
+      "to": "browser",
+      "missing": true,
+      "regressions": null
+    },
+    {
+      "caseId": "case",
+      "index": 0,
+      "replicate": 0,
+      "from": "native",
+      "to": "browser",
+      "missing": true,
+      "regressions": null
+    },
+    {
+      "caseId": "case",
+      "index": 1,
+      "replicate": 0,
+      "from": "reference",
+      "to": "native",
+      "missing": false,
+      "regressions": null
+    },
+    {
+      "caseId": "case",
+      "index": 1,
+      "replicate": 0,
+      "from": "reference",
+      "to": "browser",
+      "missing": false,
+      "regressions": [
+        "price",
+        "silence"
+      ]
+    },
+    {
+      "caseId": "case",
+      "index": 1,
+      "replicate": 0,
+      "from": "native",
+      "to": "browser",
+      "missing": false,
+      "regressions": [
+        "price",
+        "silence"
+      ]
+    }
+  ],
+  "variance": [
+    {
+      "inputId": "reference",
+      "planned": 1,
+      "completed": 1,
+      "failures": 0,
+      "unrun": 0,
+      "status": "unmeasured",
+      "labelDistributions": {
+        "action": {
+          "correct": 1
+        },
+        "focus": {
+          "correct": 1
+        },
+        "missing": {
+          "omitted": 1
+        },
+        "price": {
+          "correct": 1
+        },
+        "sign": {
+          "unknown": 1
+        },
+        "silence": {
+          "correct": 1
+        },
+        "use": {
+          "incorrect": 1
+        }
+      },
+      "disagreements": null,
+      "maxStartSpreadMs": 0,
+      "maxEndSpreadMs": 0
+    },
+    {
+      "inputId": "native",
+      "planned": 1,
+      "completed": 1,
+      "failures": 0,
+      "unrun": 0,
+      "status": "unmeasured",
+      "labelDistributions": {
+        "action": {
+          "correct": 1
+        },
+        "focus": {
+          "correct": 1
+        },
+        "missing": {
+          "omitted": 1
+        },
+        "price": {
+          "correct": 1
+        },
+        "sign": {
+          "unknown": 1
+        },
+        "silence": {
+          "correct": 1
+        },
+        "use": {
+          "incorrect": 1
+        }
+      },
+      "disagreements": null,
+      "maxStartSpreadMs": 0,
+      "maxEndSpreadMs": 0
+    },
+    {
+      "inputId": "browser",
+      "planned": 1,
+      "completed": 1,
+      "failures": 0,
+      "unrun": 0,
+      "status": "unmeasured",
+      "labelDistributions": {
+        "action": {
+          "correct": 1
+        },
+        "focus": {
+          "correct": 1
+        },
+        "missing": {
+          "omitted": 1
+        },
+        "price": {
+          "incorrect": 1
+        },
+        "sign": {
+          "unknown": 1
+        },
+        "silence": {
+          "invented": 1
+        },
+        "use": {
+          "incorrect": 1
+        }
+      },
+      "disagreements": null,
+      "maxStartSpreadMs": 0,
+      "maxEndSpreadMs": 0
+    }
+  ],
+  "qualification": {
+    "semanticEvidence": false,
+    "qualified": false,
+    "profileEnabled": false,
+    "missingGates": [
+      "current_live_semantic_comparison",
+      "explicit_cumulative_live_approval",
+      "trusted_live_admission_accounting",
+      "actual_provider_internal_controls",
+      "human_review_of_actual_comparison"
+    ],
+    "criticalRegressions": [
+      "browser/0/action/time",
+      "browser/0/price",
+      "browser/0/silence",
+      "browser/0/use",
+      "case/native/browser/price",
+      "case/native/browser/silence",
+      "case/reference/browser/price",
+      "case/reference/browser/silence",
+      "native/0/action/time",
+      "native/0/use",
+      "reference/0/action/time",
+      "reference/0/use"
+    ]
+  },
+  "limits": [
+    "Offline replay proves contract/scoring structure only, not current semantic accuracy.",
+    "Original metadata and encoder telemetry have manifest-declared provenance; originals are hashed, not independently decoded by this runner.",
+    "All current arms use production copy bounds; a higher-resolution reference needs a separately reviewed bounded validator and admission.",
+    "Semantic matching and quality classification require human span-grounded annotations; no automatic judge is supplied.",
+    "Budget primitive tests use stubs; live model registration, account admission and accounting are not wired.",
+    "Small corpus/repetition counts establish no population-level statistical guarantee."
+  ],
+  "verification": {
+    "codeCommit": "3ab2a2f26e570b9eeefcab417199111f8a86388b",
+    "command": "POSTPILOT_ANALYSIS_TEST_EVIDENCE=<new-private-file> GOCACHE=<existing-task-cache> GOMAXPROCS=2 go test -p 2 -timeout 5m ./internal/clip/diagnostic/analysisquality -run ^TestProductionReplaySeparateMetricsUnknownsAndCriticalFailures$ -count=1",
+    "sourceSha256": {
+      "backend/cmd/api/analysis_quality.go": "c76f6338b601c8aaac2cbf107565b027a46065114836426938ebd30de4c457ef",
+      "backend/cmd/api/analysis_quality_test.go": "d82ac1dceb82b098322c9b14d07a3d3ce77f86a4ca051129c4bee1589f8f2033",
+      "backend/cmd/api/commands.go": "4d15962c04d86182923d9eb77d125201ccb4ae77f6fafd9a55de821007569eac",
+      "backend/internal/clip/ai/config.go": "75d35c9d36d67d0e7d10325f44685046229989115bdfba38dccb010c66cd34b0",
+      "backend/internal/clip/ai/parse.go": "a50b4fc9bc775c0b1cc9afcfd5fccc72bf6f3945b8ea96865e2f2d0c68b4eaef",
+      "backend/internal/clip/ai/prompts.go": "c06875b06814b4b8ded60e52549096258dc66a82c9cb30763314e2bb8777afd5",
+      "backend/internal/clip/ai/response_correction.go": "e6b02fb553b397656b37d608c0609df4071d3fee6b2351bc6ac2cdd71e4242cd",
+      "backend/internal/clip/ai/schemas.go": "473b650b4c6138613a4a290ead02782146e7eccd9546a31a91f966a6cb97d400",
+      "backend/internal/clip/ai/service.go": "08a653eeace6888b26bd8c58fe9b19598e7ca2c5ccd56b2be47c1f0d30a7ffd8",
+      "backend/internal/clip/analysis.go": "a5532939294c1e9f46046eb4ee65f1945327cd0c435884d996dc25cd19bfe6f2",
+      "backend/internal/clip/analysis_preparation.go": "455b1a6865f19da78858691cfb9cd2de6085fc09affc73125e11934fb715a76d",
+      "backend/internal/clip/diagnostic/analysisquality/budget.go": "c523105b3c87266599e92166dae847a0257b5909ecafc7ca53241ce3f01e7cb7",
+      "backend/internal/clip/diagnostic/analysisquality/budget_test.go": "760b87ee0c1f88517dd917001a4e1d7c17dc7cd638dfdd5822c35e668971df93",
+      "backend/internal/clip/diagnostic/analysisquality/io.go": "b91e8bb1c279839950e8bae9b71adf0b0c295c76fbc58815c4cea8734d2e4870",
+      "backend/internal/clip/diagnostic/analysisquality/media_smoke_test.go": "88c0449addbc56f73b14d03b6e359dfd9bb7e327192a5ae8ee5452ec49cab189",
+      "backend/internal/clip/diagnostic/analysisquality/preflight.go": "d7718a7b6f0eef578772a30db7bbb8ef3a4f1e2854110ea7e8a3888507dacec4",
+      "backend/internal/clip/diagnostic/analysisquality/replay.go": "6eda3a525a7d8309b1092ef6ba96502605d625850b67a4db80b57830df7d79c0",
+      "backend/internal/clip/diagnostic/analysisquality/replay_test.go": "27336ded1d864bfb1bf122395ce4241cad8c5aeaf9f5a2ca91e1191bf060cc5c",
+      "backend/internal/clip/diagnostic/analysisquality/score.go": "9497c959ab588ad1ab409a3d86a14af680e771f115d65491c15a28ba07ebeb14",
+      "backend/internal/clip/diagnostic/analysisquality/types.go": "05c958a32bd7f6c19a78afa32d962ac0ae89f0ba8e9745a915933fc26b28ca2b",
+      "backend/internal/clip/limits.go": "64b5ad460228231180bf9e92927e818fb203e820800ec7adec907114fd748ecf",
+      "backend/internal/clip/media/analysis_verify.go": "f38475c10a5364b83d66bf5d915f3bbf2c2ab0c6d0290b760d918eaa58a1a5c4",
+      "backend/internal/clip/media/analysis_verify_aac_test.go": "64fea2c0cd6c00a179875d9278c8ff05bae0955620029031b416904ac583b636",
+      "backend/internal/clip/media/testdata/analysis-aac-browser-frames.json": "5e77efbae78ba4472a85ecbd9e1cdbd3aad0e152dfbc6907c8a1fe85f6ba0f0b",
+      "backend/internal/clip/media/testdata/analysis-aac-browser-packets.json": "5c74c51ab21a021b30d410bbcbcbc5eb2da852caca9d08b070323d5e7844e8d4",
+      "backend/internal/clip/media/testdata/analysis-aac-browser.md": "4071e8fbec104ebbfb8868c324d8f7e6d9c8e18c1387097ee79fcac77812be7e",
+      "backend/internal/clip/recovery.go": "02695a35ffafd1489b5a4c48de3ce1261cd20eaa98675cb352faa0096888621a",
+      "backend/internal/llm/call_policy.go": "269fe09a33479fa15e75e2475385af6cd16a4399618b72f5161750445d40f32b",
+      "backend/internal/llm/call_pricing.go": "c03b3b6b470bc2e13a67902edc3dc04a7454f018184b4b613a0e35b75f60fd57",
+      "backend/internal/llm/execution.go": "154ae004efbc0eacd2972ce20d9a9d1e50f7ace5984301836255140a66c4d8df",
+      "backend/internal/llm/provider.go": "3002cab0fd35636540218ccc26e57987a9ad198a65eeb55344ae65052f5c6b70"
+    },
+    "actualSemanticEvidence": false,
+    "actualHumanReview": false,
+    "actualProviderCalls": 0,
+    "historicalFullGoCommit": "a49d82ba41d05cc8d2e79d43e61d49e4291b3234",
+    "historicalFullGoScope": "pre-AAC-fix complete102-package suite; current changed scope is verified separately",
+    "correctedAACCommit": "96af4ff348f1599e08e39b662b9c23981c740e96",
+    "planningMerge": "29e06742918699282fe6211b7fe98903608265b6",
+    "postMergeFocusedTests": "design/catalog/version, analysis/media/diagnostic, clip/app/API guards passed; no new semantic or provider evidence",
+    "pinnedCurrentCodeCommit": "e5ba9590a4d2098b7de1623a479b6b7eead74e7e",
+    "pinnedCurrentExecutionRecord": "browser-analysis-quality-pinned-verifier.json",
+    "pinnedCurrentExecutionScope": "Actual existing-copy LocalVerifier structural smoke; UID501 nonroot, not production role or semantic qualification",
+    "allRealAcceptanceChecksRemainOpen": true
+  }
+}

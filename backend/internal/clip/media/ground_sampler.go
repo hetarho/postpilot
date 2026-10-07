@@ -48,6 +48,9 @@ func (r *Rendering) newGroundSampler(canvas clip.Canvas, timeline cutTimeline, v
 	duration := timeline.total * 1000 / r.cfg.FPS
 	s := groundSampler{canvas: canvas}
 	for i := range visuals {
+		if visuals[i].manifest.Role == "caption" && visuals[i].caption.plated() {
+			continue
+		}
 		switch visuals[i].manifest.Role {
 		case "caption", "info", "hook", "ending":
 		default:

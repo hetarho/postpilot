@@ -365,6 +365,9 @@ enum FailureReason {
   CLIP_SPOKEN_CONFLICT = 292;
   // A new native export requires current Max rights, independently of old counts.
   CLIP_SERVER_EXPORT_PLAN_REQUIRED = 293;
+  CLIP_SERVER_RENDER_OVERLOADED = 294;
+  CLIP_SERVER_RENDER_ACCOUNT_BUSY = 295;
+  CLIP_MEDIA_WAIT_EXPIRED = 296;
   // Account-owned generated writing-style batches.
   WRITING_VOICE_CANDIDATE_NOT_FOUND = 297;
   WRITING_VOICE_CANDIDATES_NOT_READY = 298;

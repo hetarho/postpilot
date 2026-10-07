@@ -30,6 +30,10 @@ func loadMediaListener(c *Config) error {
 		return errors.New("MEDIA_INTERNAL_ADDR has invalid port")
 	}
 	c.MediaWorkerCredentials, err = ParseMediaWorkerCredentials(os.Getenv("MEDIA_WORKER_CREDENTIALS"))
+	if err != nil {
+		return err
+	}
+	c.MediaWorkerRoles, err = ParseMediaWorkerRoles(os.Getenv("MEDIA_WORKER_ROLES"), c.MediaWorkerCredentials)
 	return err
 }
 
@@ -110,6 +114,7 @@ func LoadMediaWorker() (MediaWorker, error) {
 
 // WorkerConfig contains no database, provider, storage credentials or user auth.
 type WorkerConfig struct {
+	Role string
 	MediaWorker
 	Accel                                                    string
 	Concurrency                                              int
@@ -131,7 +136,10 @@ func LoadWorkerConfig() (WorkerConfig, error) {
 
 // LoadWorkerRuntime permits offline image inspection without deployment secrets.
 func LoadWorkerRuntime() (WorkerConfig, error) {
-	c := WorkerConfig{Accel: getenv("MEDIA_ACCEL", "cpu")}
+	c := WorkerConfig{Accel: getenv("MEDIA_ACCEL", "cpu"), Role: getenv("MEDIA_WORKER_ROLE", "native")}
+	if c.Role != "native" && c.Role != "analysis-verification" {
+		return c, errors.New("MEDIA_WORKER_ROLE must be native or analysis-verification")
+	}
 	var err error
 	if c.Accel != "cpu" && c.Accel != "auto" && c.Accel != "nvenc" {
 		return c, errors.New("MEDIA_ACCEL must be cpu, auto or nvenc")

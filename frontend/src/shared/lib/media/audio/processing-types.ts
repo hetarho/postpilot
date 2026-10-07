@@ -1,4 +1,13 @@
 export type PcmChannels = Float32Array<ArrayBuffer>[]
+export interface AudioProcessorLimits {
+  maxPcmBytes: number
+  maxEncodedBytes: number
+  maxEncodedPackets: number
+  maxPacketBytes: number
+  maxPrimingFrames: number
+  operationTimeoutMs: number
+  cleanupTimeoutMs: number
+}
 export interface EncodedAudioTrack {
   config: AudioEncoderConfig
   decoderConfig: AudioDecoderConfig
@@ -12,12 +21,14 @@ export interface EncodedAudioTrack {
   durationUs: number
   primingFrames: number
   loudnessLUFS?: number
+  loudnessRangeLU?: number
   truePeakDBTP: number
   silent: boolean
 }
 export interface AudioNormalization {
   channels: PcmChannels
   loudnessLUFS?: number
+  loudnessRangeLU?: number
   truePeakDBTP: number
   silent: boolean
   gain: number
@@ -31,7 +42,13 @@ export type AudioOperation =
       frames: number
       gain: number
     }
-  | { kind: 'normalize'; channels: PcmChannels; target: number; ceiling: number }
+  | {
+      kind: 'normalize'
+      channels: PcmChannels
+      target: number
+      ceiling: number
+      rangeCeiling: number
+    }
   | {
       kind: 'encode'
       channels: PcmChannels
@@ -39,8 +56,9 @@ export type AudioOperation =
       batchFrames: number
       queueSize: number
     }
-export type AudioWorkerRequest = AudioOperation & { id: number }
+export type AudioWorkerRequest = AudioOperation & { id: number; limits: AudioProcessorLimits }
 export type AudioWorkerResponse =
   | { id: number; kind: 'result'; result: PcmChannels | AudioNormalization | EncodedAudioTrack }
   | { id: number; kind: 'error'; error: string }
   | { id: number; kind: 'progress'; completedFrames: number; totalFrames: number }
+  | { kind: 'cancelled' }

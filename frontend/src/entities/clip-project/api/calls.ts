@@ -3,6 +3,7 @@ import { createClient, type Transport } from '@connectrpc/connect'
 import { useTransport } from '@connectrpc/connect-query'
 import { useQueryClient } from '@tanstack/react-query'
 import { ClipGenerationService, ClipSourceService } from '@/shared/api'
+import { CLIP_START_RPC_TIMEOUT_MS } from '../config/network'
 import { clipProjectsKey, toClipProject } from './clip-project'
 import type { ClipProject } from '../model/types'
 import {
@@ -29,6 +30,7 @@ export interface ClipProjectCalls {
 }
 
 export interface ClipStartInput {
+  analysisPreparationId?: string
   projectId: string
   batchId: string
   observeModel: { providerId: string; modelId: string }
@@ -47,12 +49,16 @@ export function clipProjectCalls(transport: Transport): ClipProjectCalls {
       return toClipProject(response.project)
     },
     async startGeneration(input) {
-      const response = await client.startClipGeneration(input)
+      const response = await client.startClipGeneration(input, {
+        timeoutMs: CLIP_START_RPC_TIMEOUT_MS,
+      })
       if (!response.jobId) throw new Error('Missing durable clip job')
       return { jobId: response.jobId }
     },
     async startStoryline(input) {
-      const response = await client.startClipStoryline(input)
+      const response = await client.startClipStoryline(input, {
+        timeoutMs: CLIP_START_RPC_TIMEOUT_MS,
+      })
       if (!response.jobId) throw new Error('Missing durable clip job')
       return { jobId: response.jobId }
     },

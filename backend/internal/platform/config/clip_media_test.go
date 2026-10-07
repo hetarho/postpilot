@@ -29,6 +29,33 @@ func TestMediaStageEnvironmentOverrides(t *testing.T) {
 	}
 }
 
+func TestNativeRenderCapacityEnvironmentOverrides(t *testing.T) {
+	for key, values := range map[string][]string{
+		"CLIP_SERVER_RENDER_ACTIVE":      {"0", "-1", "NaN"},
+		"CLIP_SERVER_RENDER_WAITING":     {"-1", "NaN"},
+		"CLIP_SERVER_RENDER_PER_ACCOUNT": {"0", "-1", "NaN"},
+	} {
+		for _, value := range values {
+			t.Run(key+value, func(t *testing.T) {
+				t.Setenv(key, value)
+				if loadMediaStageOverrides(&Config{}) == nil {
+					t.Fatal("accepted invalid override")
+				}
+			})
+		}
+	}
+	t.Setenv("CLIP_SERVER_RENDER_ACTIVE", "2")
+	t.Setenv("CLIP_SERVER_RENDER_WAITING", "0")
+	t.Setenv("CLIP_SERVER_RENDER_PER_ACCOUNT", "2")
+	var cfg Config
+	if err := loadMediaStageOverrides(&cfg); err != nil {
+		t.Fatal(err)
+	}
+	if cfg.ClipServerRenderActive != 2 || cfg.ClipServerRenderWaiting == nil || *cfg.ClipServerRenderWaiting != 0 || cfg.ClipServerRenderPerAccount != 2 {
+		t.Fatal("override lost")
+	}
+}
+
 // The product shape these paths feed is pinned in internal/clip (limits_test.go).
 // What belongs here is only that the environment is parsed and validated.
 func TestClipMediaEnvironmentIsValidated(t *testing.T) {

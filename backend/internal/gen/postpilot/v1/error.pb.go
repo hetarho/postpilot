@@ -347,6 +347,9 @@ const (
 	FailureReason_CLIP_SPOKEN_CONFLICT        FailureReason = 292
 	// A new native export requires current Max rights, independently of old counts.
 	FailureReason_CLIP_SERVER_EXPORT_PLAN_REQUIRED FailureReason = 293
+	FailureReason_CLIP_SERVER_RENDER_OVERLOADED    FailureReason = 294
+	FailureReason_CLIP_SERVER_RENDER_ACCOUNT_BUSY  FailureReason = 295
+	FailureReason_CLIP_MEDIA_WAIT_EXPIRED          FailureReason = 296
 	// Account-owned generated writing-style batches.
 	FailureReason_WRITING_VOICE_CANDIDATE_NOT_FOUND      FailureReason = 297
 	FailureReason_WRITING_VOICE_CANDIDATES_NOT_READY     FailureReason = 298
@@ -620,6 +623,9 @@ var (
 		291: "POST_IMAGE_ROTATION_INVALID",
 		292: "CLIP_SPOKEN_CONFLICT",
 		293: "CLIP_SERVER_EXPORT_PLAN_REQUIRED",
+		294: "CLIP_SERVER_RENDER_OVERLOADED",
+		295: "CLIP_SERVER_RENDER_ACCOUNT_BUSY",
+		296: "CLIP_MEDIA_WAIT_EXPIRED",
 		297: "WRITING_VOICE_CANDIDATE_NOT_FOUND",
 		298: "WRITING_VOICE_CANDIDATES_NOT_READY",
 		299: "WRITING_VOICE_CANDIDATES_RUNNING",
@@ -888,6 +894,9 @@ var (
 		"POST_IMAGE_ROTATION_INVALID":                291,
 		"CLIP_SPOKEN_CONFLICT":                       292,
 		"CLIP_SERVER_EXPORT_PLAN_REQUIRED":           293,
+		"CLIP_SERVER_RENDER_OVERLOADED":              294,
+		"CLIP_SERVER_RENDER_ACCOUNT_BUSY":            295,
+		"CLIP_MEDIA_WAIT_EXPIRED":                    296,
 		"WRITING_VOICE_CANDIDATE_NOT_FOUND":          297,
 		"WRITING_VOICE_CANDIDATES_NOT_READY":         298,
 		"WRITING_VOICE_CANDIDATES_RUNNING":           299,
@@ -1073,7 +1082,7 @@ const file_postpilot_v1_error_proto_rawDesc = "" +
 	"\x10technical_detail\x18\x03 \x01(\tR\x0ftechnicalDetail\x1a9\n" +
 	"\vParamsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01*\xfaD\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01*\xe2E\n" +
 	"\rFailureReason\x12\x13\n" +
 	"\x0fUNKNOWN_FAILURE\x10\x00\x12\x11\n" +
 	"\rAUTH_REQUIRED\x10\x01\x12\x1d\n" +
@@ -1327,7 +1336,10 @@ const file_postpilot_v1_error_proto_rawDesc = "" +
 	" TEMPLATE_REQUIRED_ANSWER_MISSING\x10\xa2\x02\x12 \n" +
 	"\x1bPOST_IMAGE_ROTATION_INVALID\x10\xa3\x02\x12\x19\n" +
 	"\x14CLIP_SPOKEN_CONFLICT\x10\xa4\x02\x12%\n" +
-	" CLIP_SERVER_EXPORT_PLAN_REQUIRED\x10\xa5\x02\x12&\n" +
+	" CLIP_SERVER_EXPORT_PLAN_REQUIRED\x10\xa5\x02\x12\"\n" +
+	"\x1dCLIP_SERVER_RENDER_OVERLOADED\x10\xa6\x02\x12$\n" +
+	"\x1fCLIP_SERVER_RENDER_ACCOUNT_BUSY\x10\xa7\x02\x12\x1c\n" +
+	"\x17CLIP_MEDIA_WAIT_EXPIRED\x10\xa8\x02\x12&\n" +
 	"!WRITING_VOICE_CANDIDATE_NOT_FOUND\x10\xa9\x02\x12'\n" +
 	"\"WRITING_VOICE_CANDIDATES_NOT_READY\x10\xaa\x02\x12%\n" +
 	" WRITING_VOICE_CANDIDATES_RUNNING\x10\xab\x02\x12+\n" +

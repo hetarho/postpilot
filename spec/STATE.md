@@ -66,27 +66,37 @@
 |---|---|---|---|---|
 | T539 | Qualify the complete Korean voice-creation milestone | ARCH DUB MODEL CDS THEME | T538 | blocked@261005 |
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
-| T590 | Bound Max server-render admission and waiting | ARCH CLIP INFRA | T589 | blocked@261006 |
-| T591 | Freeze one browser composition and time contract | ARCH CLIP CDS | T588 | todo |
-| T592 | Decode selected video ranges in a bounded browser pipeline | ARCH CLIP CDS | T591 | todo |
-| T593 | Bound selected audio and immutable narration processing | ARCH CLIP CDS DUB | T591 | todo |
-| T594 | Draw bundled typography and static components locally | ARCH CLIP CDS | T591 | todo |
-| T595 | Animate caption transforms and masks from output time | ARCH CLIP CDS | T594 | todo |
-| T596 | Port caption blur, light, colour and glitch effects | ARCH CLIP CDS | T595 | todo |
-| T597 | Render ember caption geometry and particles locally | ARCH CLIP CDS | T596 | todo |
-| T598 | Measure caption backgrounds from local original frames | ARCH CLIP CDS | T592 T594 | todo |
-| T599 | Stream browser output and promote the verified private result | ARCH CLIP CDS | T592 T593 T595 T596 T597 T598 | todo |
-| T600 | Use the browser composition engine throughout editing previews | ARCH CLIP CDS | T592 T593 T594 T595 T596 T597 T598 | todo |
-| T601 | Prepare bounded AI analysis copies in the browser | ARCH CLIP CDS | T592 T602 | todo |
-| T602 | Authorize and verify browser-prepared analysis artifacts | ARCH CLIP QUOTA | T591 | todo |
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | todo |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | todo |
 
 ## next
-- Check the existing browser-media work-group board before claiming another remaining task.
-- Existing blocked qualification and render-capacity work remain separate.
+- T603 and T604 remain runtime blocked; use the work board and their result/open gates before resuming qualification.
+- Technical delivery through T604 is preserved on work/browser-media-604-plan; independent analysis, real voice and release activation stay disabled.
 
 ## log
+- 261007 main merge candidate ready: current origin/main authoring/XState/typography preserved; forward149 upgrades and legacy144 preservation pass, actual phone/desktop sticky preview checks pass; full CI and authorized main push pending
+- 261007 T604 source-only delivery preserved: independently reviewed2b5d5915 merged normally; local HTTPS13, paired Mac16 and portable4 checks pass, six release acceptances remain open and runtime blocked
+- 261007 browser-media-604 local technical work closed through T604: task commits and scoped receipts preserved; T603 real semantic qualification and T604 source/hardware/human/performance release gates remain blocked, no live deployment or activation
+- 261007 T600 integrated
+- 261007 T599 integrated
+- 261007 T603 source-only integration start: reviewed technical harness/AAC guard and actual pinned verifier proof; all six real qualification checks remain open and runtime blocked
+- 261006 T597 integrated
+- 261006 T601 integrated
+- 261006 T596 integrated
+- 261006 T598 integrated
+- 261006 T602 integrated
+- 261006 T595 integrated
+- 261006 T590 integrated
+- 261007 T590 resumed: isolated Colima CPU images and actual Docker generators recovered without interrupting Desktop/dev; independent audit reproduced pre-park accepted-output race for owned correction
+- 261006 T593 integrated
+- 261006 T594 integrated
+- 261006 T592 integrated
+- 261007 create-task native parity hints done: T593 source clock/preroll and T600 automatic geometry notes refined from existing native contracts; goals, acceptance, dependencies and SSOT remain unchanged
+- 261007 create-task native parity hints start: unassigned T593/T600 require cumulative frame-aligned source audio and automatic caption geometry after edits; current worker contracts remain unchanged
+- 261007 external checkout isolation: separate novice-UX work owns main changes and migration0145; analysis worker owns new migration0146, preserving both scopes without copying dirty main
+- 261006 T591 integrated
+- 261007 manage-work integration compatibility: temporary CLI preserves only46 inherited FORMAT/history warnings; structural errors and new warnings still reject; actual baseline/candidate conformance passed, installed package/skills/runtime JSON unchanged
+- 261007 T591 independent native comparison correction: global pace/accent, declared disclosure only and exact-ms visibility require correction before integration; parent remains unchanged and prior approval invalidated
 - 261007 main integration start: preserve the existing T590 draft separately; merge reviewed browser-media task commits with current origin/main, verify, and push under explicit user authorization
 - 261007 media-release fixture fix done: Max support assignment passes colocated182.53s/remote159.11s CPU releases, BE80, deploy61, Go vet/build/gofmt and spec lint with existing warnings; verified default release image tags refreshed
 - 261007 T621 done: typography b152f586 and final voice-context 4d634b14;3468 FE tests,145 browser measurements and all available unchanged-source/tooling gates pass

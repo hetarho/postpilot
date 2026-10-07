@@ -1,0 +1,51 @@
+{
+  "kind": "same-host actual final-image bytes",
+  "baseImage": "sha256:76e2da809164bb4e7ab0c3c453d136da18acd6a78151deffe24d4ea296051202",
+  "baseSource": "57deafaee51ad252cf7c66b4041c39419fbdead3",
+  "currentImage": "sha256:0c804452bcc5df66f7fa4c2ba75b5d583e9269cd9ca00df7d621cb0143f92f2e",
+  "currentSource": "ccb263f9a858d36c07c126ad8137b45afd22083d",
+  "digest": "e2d120be4476e9f761d86306ec2565d80956ba5e7e8d545edc1a301c03b24c59",
+  "actualCurrentFingerprint": {
+    "digest": "e2d120be4476e9f761d86306ec2565d80956ba5e7e8d545edc1a301c03b24c59",
+    "properties": {
+      "audio.channels": "2",
+      "audio.codec": "aac",
+      "audio.frames": "742",
+      "audio.sample_rate": "48000",
+      "container": "mov,mp4,m4a,3gp,3g2,mj2",
+      "duration": "15.800000",
+      "video.codec": "h264",
+      "video.frame_rate": "30/1",
+      "video.frames": "474",
+      "video.pixel_format": "yuv420p",
+      "video.profile": "High",
+      "video.size": "1080x1920"
+    },
+    "frames": [
+      "498c8e4a3c1ec42730b68bde2729835d6b9290d9800c2bf935258d79d622bbb5",
+      "2bafed9ff6f1cc14a4cbee513d18206c336f2a242ba31f3e6d323befdb8f1a10",
+      "2e4ec0f2eef33d43ff95e3b392bb1392e47e108ad85d9a1b03561e0d6e0890c6",
+      "38b370fab00f3dd89b9dc523a7a6367b47433a66c0070c46b7feebb70cd2c7b5",
+      "e722e793b2e37ffa16bc3398638b83f1a6e069207073ba8536a96f6aba7091a4",
+      "babc5d13b337749634cc1ce341741ad5edae1b7f76ea21ac98012c2a92e1cb9d",
+      "f98fc2964bfe45201a764c61a650bab12c4c4710a77ebd7f5c5f57e03dc2c443",
+      "316fa12e7985f8cea72fae2fbc812ebe3808b89c0c786524ce25d914a28026e2",
+      "28c3129913666f60320b5accf480896a1f57e2dfbd4ff14ba253761c7b5a4e8f",
+      "7cd899698ff2e545b80787e5212626f9d7370c520152ed131e91c83fa16ff7dd",
+      "ec03733cfd4bd30a6a04d9c4ac595826fff96bac6c2eb42df07c721f4db0157a",
+      "a53b7b6175aa9ed85044e5c53c52f82b7645784c108f8b22f60e92c1c29a3104",
+      "9b0886905b811dd92d778ce295ec9b1a5f08d72bc3f352e9b49a7ac7b4e7d3dc",
+      "c2fd591a9bb0221e41201a9324e3b2d8ea34a5b5a70052165571656da4126b74",
+      "b96f6278af31590e502cb530d4284b0a4b04a14dad1d6fb1b1aaceb919434172",
+      "5b1b2079c28e50d7cb43f088eeead5b52676e5c6220697999f77bf89faa8aa94"
+    ]
+  },
+  "baseFullLogSHA256": "bd8eeeb9af6299dceb0eb7a449110d63181afacc78c5bfc92886dfbf10fddfce",
+  "currentDiagnosticLogSHA256": "c531e26dc30965813047e5ec20054f632cd100658441c6c24baf58341b32530c",
+  "historicalCrossHostBaselineUpdated": false,
+  "diagnosticFailuresPreserved": [
+    "API manifest needs API target; worker image intentionally omits API",
+    "repository-relative unit fonts are not container smoke paths",
+    "historical baseline is explicitly host dependent; current repeated renders and same-host bytes match"
+  ]
+}

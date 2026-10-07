@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"embed"
+	"errors"
 	"fmt"
 	"io/fs"
 	"log/slog"
@@ -36,8 +37,16 @@ func Migrate(ctx context.Context, writer *sql.DB) error {
 // migrate is the testable core: it takes the FS so a test can hand it a broken
 // migration and assert the error propagates.
 func migrate(ctx context.Context, writer *sql.DB, fsys fs.FS) error {
-	provider, err := goose.NewProvider(goose.DialectSQLite3, writer, fsys,
-		goose.WithLogger(goose.NopLogger()))
+	options := []goose.ProviderOption{goose.WithLogger(goose.NopLogger())}
+	if _, err := fs.Stat(fsys, waitExpiryMigrationFile); err == nil {
+		// SQL remains available to schema generation. Runtime uses the narrow
+		// transactional guard so an already-applied local144 keeps its values.
+		options = append(options, goose.WithExcludeNames([]string{waitExpiryMigrationFile}),
+			goose.WithGoMigrations(waitExpiryMigration()))
+	} else if !errors.Is(err, fs.ErrNotExist) {
+		return fmt.Errorf("read wait expiry migration: %w", err)
+	}
+	provider, err := goose.NewProvider(goose.DialectSQLite3, writer, fsys, options...)
 	if err != nil {
 		return fmt.Errorf("init migrations: %w", err)
 	}

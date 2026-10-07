@@ -42,6 +42,13 @@ func TestRenderKindRefusedBeforeWork(t *testing.T) {
 	}
 }
 
+func TestBrowserIncompatibleVersionRefusesExplicitly(t *testing.T) {
+	err := toConnectError(clip.ErrBrowserCompositionVersion)
+	if connect.CodeOf(err) != connect.CodeFailedPrecondition || !errors.Is(err, clip.ErrBrowserCompositionVersion) {
+		t.Fatal(err)
+	}
+}
+
 func TestProjectLastRenderKindComesOnlyFromItsResult(t *testing.T) {
 	if p := projectProto(clip.Project{}); p.LastRenderKind != nil || p.Result != nil {
 		t.Fatal("unrendered project acquired a kind", p)
@@ -57,6 +64,27 @@ func TestProjectLastRenderKindComesOnlyFromItsResult(t *testing.T) {
 		p := projectProto(clip.Project{Result: &clip.Result{Kind: tc.kind}, EditPlanRevision: 3, RenderedPlanRevision: 2})
 		if p.LastRenderKind == nil || *p.LastRenderKind != tc.want || p.Result.RenderKind != tc.want {
 			t.Fatalf("kind %q: %v", tc.kind, p)
+		}
+	}
+}
+
+func TestNativeCapacityRefusalsAreDistinctProductFailures(t *testing.T) {
+	for _, tc := range []struct {
+		cause  error
+		reason string
+	}{
+		{clip.ErrRenderOverloaded, "CLIP_SERVER_RENDER_OVERLOADED"},
+		{clip.ErrRenderAccountBusy, "CLIP_SERVER_RENDER_ACCOUNT_BUSY"},
+	} {
+		err := toConnectError(tc.cause)
+		var rpc *connect.Error
+		if !errors.As(err, &rpc) || rpc.Code() != connect.CodeResourceExhausted || len(rpc.Details()) != 1 {
+			t.Fatal(err)
+		}
+		value, e := rpc.Details()[0].Value()
+		detail, ok := value.(*v1.AppErrorDetail)
+		if e != nil || !ok || detail.Reason != tc.reason {
+			t.Fatal(value, e)
 		}
 	}
 }

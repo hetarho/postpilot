@@ -28,6 +28,15 @@ func samplingSetup(t *testing.T) (*remoteRender, string, string) {
 	if err := g.h.sources.ReleaseAttempt(t.Context(), "alice", g.jobID, time.Now()); err != nil {
 		t.Fatal(err)
 	}
+	// Native admission now owns its stage before API dispatch. Fence the
+	// ended fixture's stage as production media reconciliation does.
+	stage, err := g.h.store.MediaStageForJob(t.Context(), g.jobID, clip.MediaRender)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := g.h.store.SetMediaRecoveryState(t.Context(), stage.ID, clip.MediaCancelled, "", time.Time{}); err != nil {
+		t.Fatal(err)
+	}
 	render, sampling, err := g.h.service.StartBrowserRender(t.Context(), "alice", g.before.ID, g.batch.ID, g.before.EditPlanRevision)
 	if err != nil {
 		t.Fatal(err)

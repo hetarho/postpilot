@@ -2,6 +2,10 @@ package clip
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"errors"
+	"fmt"
 	"math"
 	"net/url"
 	"time"
@@ -9,10 +13,93 @@ import (
 	"github.com/postpilot/backend/internal/clip/design"
 )
 
+// BrowserCompositionVersion identifies product-bundled drawing/time rules.
+// It never certifies output quality or authorizes a client-supplied plan.
+const BrowserCompositionVersion = "clip-browser-composition-v1"
+const BrowserComponentVersion = "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1"
+const BrowserFontVersion = "bundled-clip-fonts-v1"
+const BrowserAssetVersion = "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+const BrowserBackgroundVersion = "clip-browser-background-v1"
+
+func validBrowserSHA256(value string) bool {
+	b, e := hex.DecodeString(value)
+	return e == nil && len(b) == sha256.Size && hex.EncodeToString(b) == value
+}
+
+var ErrBrowserCompositionVersion = errors.New("browser composition version is incompatible")
+
+type BrowserCompositionContract struct {
+	// SnapshotFingerprint is server-authored admission identity. It is not a
+	// client snapshot hash and never proves the bytes the browser rendered.
+	Version, SnapshotFingerprint string
+	Components, Fonts, Assets    string
+}
+
+// BrowserCompositionIdentity binds all authoritative material without laying
+// out, decoding or rasterizing frames. Length framing preserves exact copy and
+// avoids delimiter ambiguity. Browser callers receive this opaque identity.
+func BrowserCompositionIdentity(p Project, plan EditPlan, sources []RenderSource) string {
+	h := sha256.New()
+	field := func(value any) {
+		text := fmt.Sprint(value)
+		fmt.Fprintf(h, "%d:%s", len([]byte(text)), text)
+	}
+	for _, value := range []any{BrowserCompositionVersion, BrowserComponentVersion, BrowserFontVersion, BrowserAssetVersion,
+		p.UserID, p.ID, p.EditPlanRevision, p.EditPlan, p.Ratio, p.Disclosure, p.HideDisclosure,
+		p.IntroPreset, p.OutroPreset, p.CaptionPace, p.Accent, len(p.CaptionStyles), SpeechFingerprint(RequestedSpeech(plan))} {
+		field(value)
+	}
+	for _, style := range p.CaptionStyles {
+		field(style)
+	}
+	field(len(plan.Cuts))
+	for _, cut := range plan.Cuts {
+		field(cut.ID)
+		field(cut.SourceID)
+		field(cut.Fingerprint)
+		field(plan.RetainsOriginalAudio(cut))
+		for _, source := range sources {
+			if source.ID == cut.SourceID && source.Fingerprint == cut.Fingerprint {
+				for _, value := range []any{source.Info.DurationMS, source.Info.Width, source.Info.Height,
+					source.Info.HasAudio, source.Info.FrameRateNumerator, source.Info.FrameRateDenominator} {
+					field(value)
+				}
+			}
+		}
+	}
+	return hex.EncodeToString(h.Sum(nil))
+}
+
+func (c BrowserCompositionContract) Validate(qualified bool) error {
+	if c.Components != BrowserComponentVersion || c.Fonts != BrowserFontVersion || c.Assets != BrowserAssetVersion {
+		return ErrBrowserCompositionVersion
+	}
+	if len(c.SnapshotFingerprint) != 64 {
+		return ErrInvalid
+	}
+	for _, v := range c.SnapshotFingerprint {
+		if !(v >= '0' && v <= '9' || v >= 'a' && v <= 'f') {
+			return ErrInvalid
+		}
+	}
+	return CheckBrowserCompositionVersion(c.Version, qualified)
+}
+
+func CheckBrowserCompositionVersion(version string, qualified bool) error {
+	if version != BrowserCompositionVersion {
+		return ErrBrowserCompositionVersion
+	}
+	if !qualified {
+		return ErrRenderUnavailable
+	}
+	return nil
+}
+
 // A browser render has an identity but is not a queued server job. Its verdict
 // is retained independently of the latest stored result; reporting measurements
 // alone must never replace the file the owner can already download (CLIP-158).
 type BrowserRender struct {
+	Composition           *BrowserCompositionContract
 	Speech                []SpeechPlacement
 	ID, UserID, ProjectID string
 	Revision              int
@@ -38,6 +125,11 @@ func (r BrowserRender) ResultKey() string {
 }
 
 type RenderMeasurements struct {
+	CompositionVersion, SnapshotFingerprint                              string
+	BackgroundVersion, BackgroundSnapshotFingerprint, BackgroundDigest   string       `json:",omitempty"`
+	BackgroundComplete                                                   bool         `json:",omitempty"`
+	BackgroundSampleCount                                                int          `json:",omitempty"`
+	BackgroundNotices                                                    []PlanNotice `json:",omitempty"`
 	TruePeakDBTP                                                         *float64
 	SpeechFingerprint                                                    string
 	Width, Height, FrameRateNumerator, FrameRateDenominator, VideoFrames int
@@ -70,6 +162,22 @@ type BrowserSamplingStore interface {
 }
 
 func CheckRenderMeasurements(cfg RenderConfig, r BrowserRender, m RenderMeasurements) (RenderVerdict, error) {
+	if r.Composition != nil {
+		if err := r.Composition.Validate(true); err != nil {
+			return RenderVerdict{}, err
+		}
+		if m.CompositionVersion != r.Composition.Version || m.SnapshotFingerprint != r.Composition.SnapshotFingerprint {
+			return RenderVerdict{}, ErrInvalidMedia
+		}
+		if m.BackgroundVersion != BrowserBackgroundVersion || m.BackgroundSnapshotFingerprint != r.Composition.SnapshotFingerprint || !m.BackgroundComplete || !validBrowserSHA256(m.BackgroundDigest) || m.BackgroundSampleCount < 0 || m.BackgroundSampleCount > 2400 || m.BackgroundSampleCount%3 != 0 || len(m.BackgroundNotices) > 200 {
+			return RenderVerdict{}, ErrInvalidMedia
+		}
+	} else if m.CompositionVersion != "" || m.SnapshotFingerprint != "" {
+		return RenderVerdict{}, ErrInvalidMedia
+	}
+	if r.Composition == nil && (m.BackgroundVersion != "" || m.BackgroundSnapshotFingerprint != "" || m.BackgroundDigest != "" || m.BackgroundComplete || m.BackgroundSampleCount != 0 || len(m.BackgroundNotices) != 0) {
+		return RenderVerdict{}, ErrInvalidMedia
+	}
 	if m.TruePeakDBTP != nil && (math.IsNaN(*m.TruePeakDBTP) || math.IsInf(*m.TruePeakDBTP, 0)) || len(m.SpeechFingerprint) > 64 || m.Width <= 0 || m.Height <= 0 || m.FrameRateNumerator <= 0 || m.FrameRateDenominator <= 0 || m.VideoFrames <= 0 ||
 		m.Width > 16384 || m.Height > 16384 || m.FrameRateNumerator > 1000000 || m.FrameRateDenominator > 1000000 || m.VideoFrames > 1000000 ||
 		len(m.VideoCodec) > 64 || len(m.VideoProfile) > 64 || len(m.AudioCodec) > 64 || m.AudioRate < 0 || m.AudioRate > 1000000 ||
@@ -81,6 +189,12 @@ func CheckRenderMeasurements(cfg RenderConfig, r BrowserRender, m RenderMeasurem
 		return RenderVerdict{}, err
 	}
 	v := RenderVerdict{Measurements: m, Passed: true}
+	for _, n := range m.BackgroundNotices {
+		if n.Reason != "composition_contrast" || n.Action != "shortfall" || n.ElementID == "" || len(n.ElementID) > 256 || len(n.CutID) > 256 {
+			return RenderVerdict{}, ErrInvalid
+		}
+		v.Notices = append(v.Notices, n)
+	}
 	notice := func(check string) {
 		v.Passed = false
 		v.Notices = append(v.Notices, PlanNotice{CopyFallback: CopyFallback{Reason: check}, Action: "shortfall"})

@@ -80,6 +80,8 @@ func serve(ctx context.Context, c *contexts) error {
 	// A photo prompt's photos, on the post sweep's interval and rules (VOICE-60).
 	go voice.NewPhotoSweeper(voicestore.New(handle.Writer, handle.Reader), voiceObjects{bucket: p.bucket}, cfg.OrphanMinAge).Run(ctx, cfg.OrphanSweepInterval)
 	go c.clipMediaRecovery.Run(ctx)
+	go c.clipAnalysis.Run(ctx)
+	go c.clipAnalysis.RunOrphans(ctx, cfg.OrphanSweepInterval)
 	go c.clipMediaRecovery.RunOrphans(ctx, cfg.OrphanSweepInterval)
 	go c.clipGeneration.RunSweep(ctx, cfg.ClipSourceSweepInterval)
 	go experiment.NewSweeper(c.experimentStore).Run(ctx, cfg.ExperimentSweepInterval)
@@ -104,7 +106,7 @@ func serve(ctx context.Context, c *contexts) error {
 	servers := []*http.Server{server}
 	if cfg.MediaInternalAddr != "" {
 		artifacts := clipapp.NewMediaArtifacts(handle.Writer, c.clipPorts, p.bucket, clip.DefaultMediaConfig(clipEnvironment(cfg)), nil)
-		private := cliprpc.NewMediaWorkerServer(cfg.MediaInternalAddr, cfg.MediaWorkerCredentials, clipapp.NewMediaWorker(clipapp.NewMediaControl(handle.Writer, c.clipPorts, c.clipStore), artifacts, nil))
+		private := cliprpc.NewMediaWorkerServerWithRoles(cfg.MediaInternalAddr, cfg.MediaWorkerCredentials, cfg.MediaWorkerRoles, clipapp.NewMediaWorkerRouter(clipapp.NewMediaWorker(clipapp.NewMediaControl(handle.Writer, c.clipPorts, c.clipStore, clip.DefaultRenderCapacity(clipEnvironment(cfg))), artifacts, nil), c.clipAnalysis))
 		handler := private.Handler
 		private.Handler = http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			if ctx.Err() != nil {
@@ -282,5 +284,5 @@ func runBillingPasses(ctx context.Context, interval time.Duration, pass func(tim
 
 // clipHandler builds the clip context's Connect edge. It answers for all five clip services.
 func clipHandler(c *contexts) *cliprpc.Handler {
-	return cliprpc.NewHandler(c.clip).WithSources(c.clipSources).WithGeneration(c.clipGeneration, c.jobs).WithSpeech(c.clipSpeech)
+	return cliprpc.NewHandler(c.clip).WithSources(c.clipSources).WithGeneration(c.clipGeneration, c.jobs).WithSpeech(c.clipSpeech).WithAnalysisPreparations(c.clipAnalysis)
 }

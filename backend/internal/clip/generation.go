@@ -25,8 +25,12 @@ var ErrBusy = errors.New("clip busy")
 // freezes the storyline 이 스토리로 만들기 builds along. Version 8 freezes the project's
 // intro/outro slots; an accepted version-3..7 job drafts no slot and saves the slots as they are.
 const GenerationPayloadVersion = 9
+const BrowserAnalysisGenerationPayloadVersion = 10
 
 type GenerationPayload struct {
+	// Only versioned browser preparation uses this reference. Signed access and
+	// client original claims remain in its separately versioned owned session.
+	AnalysisPreparationID            string         `json:",omitempty"`
 	Dubbing                          DubbingOptions `json:",omitzero"`
 	Language                         string
 	Recovery                         *RecoveryState
@@ -96,7 +100,7 @@ func (e *StageFailure) Failure() llm.Failure {
 		reason := "CLIP_PROCESSING_FAILED"
 		switch media.Code {
 		case MediaFailureWaitExpired:
-			reason = "CLIP_MEDIA_UNAVAILABLE"
+			reason = "CLIP_MEDIA_WAIT_EXPIRED"
 		case MediaFailureAttemptsExhausted:
 			reason = "CLIP_MEDIA_RETRY_EXHAUSTED"
 		case MediaFailureDeadlineExceeded:

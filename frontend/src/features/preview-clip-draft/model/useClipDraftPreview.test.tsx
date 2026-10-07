@@ -1,168 +1,130 @@
 import { webcrypto } from 'node:crypto'
-import type { ReactNode } from 'react'
-import { create } from '@bufbuild/protobuf'
-import { Code, createRouterTransport } from '@connectrpc/connect'
-import { TransportProvider } from '@connectrpc/connect-query'
 import { act, cleanup, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
-import { ClipRenderService, PrepareClipPreviewResponseSchema } from '@/shared/api'
-import { connectAppError } from '@/test/app-error'
 import type { ClipEditPlan } from '@/entities/clip-plan'
-import { useClipDraftPreview } from './useClipDraftPreview'
+import { useClipDraftPreview, type ClipDraftPreviewInput } from './useClipDraftPreview'
 
-const plan: ClipEditPlan = {
-  durationMs: 10000,
+const plan = (): ClipEditPlan => ({
+  nativeComposition: true,
+  durationMs: 15000,
   cuts: [
     {
-      id: 'a',
-      sourceId: 'a',
-      fingerprint: 'a',
+      id: 'cut',
+      sourceId: 'source',
+      fingerprint: 'a'.repeat(64),
       startMs: 0,
-      endMs: 10000,
+      endMs: 15000,
       transitionMs: 0,
       copies: [],
       volumePermille: 1000,
       playbackRatePermille: 1000,
     },
   ],
-  elements: [{ instanceId: 'fixed', kind: 'caption', startMs: 0, endMs: 10000, text: '자막' }],
-} as unknown as ClipEditPlan
-
-function harness(
-  prepare = vi.fn(async (hash: string) =>
-    create(PrepareClipPreviewResponseSchema, {
-      draftHash: hash,
-      canvasWidth: 1080,
-      canvasHeight: 1920,
-      nextOffset: -1,
-      assets: [
-        {
-          key: 'glyph',
-          instanceId: 'fixed',
-          png: new Uint8Array([1]),
-          width: 1,
-          height: 1,
-          startMs: 0,
-          endMs: 10000,
-        },
-      ],
-    }),
-  ),
-) {
-  const transport = createRouterTransport((router) =>
-    router.service(ClipRenderService, { prepareClipPreview: (req) => prepare(req.draftHash) }),
-  )
-  const wrapper = ({ children }: { children: ReactNode }) => (
-    <TransportProvider transport={transport}>{children}</TransportProvider>
-  )
-  const view = renderHook(
-    (props: { revision: number }) =>
-      useClipDraftPreview({ projectId: 'project', revision: props.revision, plan, timeMs: 0 }),
-    { wrapper, initialProps: { revision: 1 } },
-  )
-  return { ...view, prepare }
-}
-
-beforeEach(() => {
-  vi.stubGlobal('crypto', webcrypto)
-  vi.stubGlobal(
-    'URL',
-    class extends URL {
-      static createObjectURL = vi.fn(() => 'blob:glyph')
-      static revokeObjectURL = vi.fn()
+  elements: [
+    {
+      instanceId: 'caption',
+      elementId: 'caption',
+      cutId: '',
+      kind: 'fixed',
+      role: 'caption',
+      text: '현재 장면',
+      rows: [],
+      style: 'bold',
+      position: 'auto',
+      align: 'center',
+      basis: 'output-start',
+      startMs: 1000,
+      endMs: 6000,
+      resolvedStartMs: 1000,
+      resolvedEndMs: 6000,
+      pace: 'steady',
+      accent: '',
+      keyword: '',
+      groupId: '',
+      itemId: '',
     },
-  )
-  vi.useFakeTimers({ shouldAdvanceTime: true })
+  ],
 })
+const input = (): ClipDraftPreviewInput => ({
+  ownerId: 'owner',
+  projectId: 'project',
+  revision: 1,
+  ratio: 'vertical',
+  plan: plan(),
+  sources: [
+    {
+      id: 'source',
+      fingerprint: 'a'.repeat(64),
+      filename: 'source.mp4',
+      durationMs: 15000,
+      width: 1920,
+      height: 1080,
+      hasAudio: false,
+      allowedRatePermille: [1000],
+    },
+  ],
+  resolvePlayback: vi.fn(async () => 'https://owned.test/source'),
+  design: { hideDisclosure: true },
+})
+beforeEach(() => vi.stubGlobal('crypto', webcrypto))
 afterEach(() => {
-  vi.useRealTimers()
   cleanup()
   vi.restoreAllMocks()
   vi.unstubAllGlobals()
 })
-
-it('prepares the elements on screen and reports the overlay as ready', async () => {
-  const view = harness()
-  await waitFor(() => expect(view.prepare).toHaveBeenCalledTimes(1))
+it('freezes current editing locally without raster or original access', async () => {
+  const data = input(),
+    view = renderHook(() => useClipDraftPreview(data))
   await waitFor(() => expect(view.result.current.ready).toBe(true))
-  expect(view.result.current.updating).toBe(false)
-  expect(view.result.current.assets).toEqual([
-    expect.objectContaining({ instanceId: 'fixed', url: 'blob:glyph' }),
-  ])
-  expect(view.result.current.failure).toBeUndefined()
+  expect(view.result.current.local!.snapshot.purpose).toBe('preview')
+  expect(Object.isFrozen(view.result.current.local!.snapshot.plan)).toBe(true)
+  expect(view.result.current.assets).toEqual([])
+  expect(data.resolvePlayback).not.toHaveBeenCalled()
 })
-
-it('reports a refused preparation as a failure and retries it on demand', async () => {
-  const view = harness(
-    vi.fn(async () => {
-      throw connectAppError('CLIP_PREVIEW_UNAVAILABLE', Code.FailedPrecondition)
-    }),
-  )
-  await waitFor(() => expect(view.result.current.failure?.reason).toBe('CLIP_PREVIEW_UNAVAILABLE'))
-  expect(view.result.current.ready).toBe(false)
-  act(() => {
-    view.result.current.onRetry()
-  })
-  await waitFor(() => expect(view.prepare).toHaveBeenCalledTimes(2))
-})
-
-it('cancels the preparation in flight when the plan it was for is gone', async () => {
-  const view = harness()
+it('keeps its renderer identity through playhead changes and fences the old revision immediately', async () => {
+  const data = input(),
+    view = renderHook((props) => useClipDraftPreview(props), { initialProps: data })
   await waitFor(() => expect(view.result.current.ready).toBe(true))
-  // A newer revision supersedes the answered request: the overlay is no longer the one on
-  // screen, so nothing of the old preparation is shown while the new one is asked for.
-  view.rerender({ revision: 2 })
+  const first = view.result.current.local
+  view.rerender({ ...data, timeMs: 5000 })
+  expect(view.result.current.local).toBe(first)
+  view.rerender({ ...data, revision: 2 })
   expect(view.result.current.ready).toBe(false)
-  await waitFor(() => expect(view.prepare).toHaveBeenCalledTimes(2))
-  view.unmount()
-  expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:glyph')
+  expect(view.result.current.local).toBeUndefined()
+  await waitFor(() => expect(view.result.current.local!.snapshot.planRevision).toBe(2))
 })
-
-// CLIP-56, CLIP-191: the preview draws a caption in the owner's own style — one outside the AI
-// set, static or sequence-rendered alike — and a new style asks again rather than leaving the
-// earlier drawing on screen.
-it('prepares the owner’s style and asks again when it changes', async () => {
-  const styles: string[] = []
-  const transport = createRouterTransport((router) =>
-    router.service(ClipRenderService, {
-      prepareClipPreview: async (req) => {
-        styles.push(req.plan?.elements?.[0]?.ownerStyle ?? '')
-        return create(PrepareClipPreviewResponseSchema, {
-          draftHash: req.draftHash,
-          canvasWidth: 1080,
-          canvasHeight: 1920,
-          nextOffset: -1,
-          assets: [
-            {
-              key: `glyph-${styles.length}`,
-              instanceId: 'fixed',
-              png: new Uint8Array([1]),
-              width: 1,
-              height: 1,
-              startMs: 0,
-              endMs: 10000,
-            },
-          ],
-        })
+it('preserves missing requested speech and an owner style outside the AI set', async () => {
+  const data = input()
+  data.plan.elements![0]!.ownerStyle = 'ember'
+  data.plan.narration = {
+    enabled: true,
+    confirmedVoiceId: 'voice',
+    bindingDigest: 'binding',
+    volumePermille: 1000,
+    segments: [
+      {
+        id: 'speech',
+        text: '현재 장면',
+        textRevision: 1,
+        inputHash: 'input',
+        startMs: 1000,
+        endMs: 3000,
       },
-    }),
-  )
-  const wrapper = ({ children }: { children: ReactNode }) => (
-    <TransportProvider transport={transport}>{children}</TransportProvider>
-  )
-  const styled = (ownerStyle: string) =>
-    ({
-      ...plan,
-      elements: plan.elements!.map((element) => ({ ...element, ownerStyle })),
-    }) as ClipEditPlan
-  const view = renderHook(
-    (props: { plan: ClipEditPlan }) =>
-      useClipDraftPreview({ projectId: 'project', revision: 1, plan: props.plan, timeMs: 0 }),
-    { wrapper, initialProps: { plan: styled('film') } },
-  )
+    ],
+  }
+  const view = renderHook(() => useClipDraftPreview(data))
   await waitFor(() => expect(view.result.current.ready).toBe(true))
-  view.rerender({ plan: styled('word-pop') })
+  expect(view.result.current.local!.snapshot.components[0]!.componentId).toBe('caption/ember')
+  expect(view.result.current.local!.snapshot.plan.narration!.segments[0]!.speech).toBeUndefined()
+  expect(view.result.current.local!.snapshot.speechFingerprint).toBe('')
+})
+it('names an incompatible original and retries only on explicit refresh', async () => {
+  const data = input()
+  data.sources[0]!.fingerprint = 'b'.repeat(64)
+  const view = renderHook(() => useClipDraftPreview(data))
+  await waitFor(() => expect(view.result.current.failure).toBeDefined())
   expect(view.result.current.ready).toBe(false)
-  await waitFor(() => expect(view.result.current.ready).toBe(true))
-  expect(styles).toEqual(['film', 'word-pop'])
+  act(() => view.result.current.onRetry())
+  await waitFor(() => expect(view.result.current.failure).toBeDefined())
+  expect(data.resolvePlayback).not.toHaveBeenCalled()
 })

@@ -245,6 +245,7 @@ type Config struct {
 	MediaInternalAddr      string
 	MediaStorageEndpoint   string
 	MediaWorkerCredentials map[string]string
+	MediaWorkerRoles       map[string]string
 	// Port the HTTP server listens on.
 	Port string
 	// CORSOrigin is the single browser origin allowed to call the API. In production
@@ -296,11 +297,15 @@ type Config struct {
 	ClipWorkRoot, ClipFFmpegPath, ClipFFprobePath string
 	ClipResvgPath                                 string
 	// Every bundled font file CDS-17 names, keyed as RenderConfig.FontPaths is.
-	ClipFontPaths                                                  map[string]string
-	ClipOverlayDir                                                 string
-	ClipWorkStaleAge, ClipMediaTimeout                             time.Duration
-	ClipMediaLeaseTTL, ClipMediaWaitTimeout, ClipMediaStageTimeout time.Duration
-	ClipMediaMaxAttempts                                           int
+	ClipFontPaths                                                      map[string]string
+	ClipOverlayDir                                                     string
+	ClipWorkStaleAge, ClipMediaTimeout                                 time.Duration
+	ClipMediaLeaseTTL, ClipMediaWaitTimeout, ClipMediaStageTimeout     time.Duration
+	ClipAnalysisVerificationActive, ClipAnalysisVerificationPerAccount int
+	ClipAnalysisVerificationWaiting                                    *int
+	ClipServerRenderActive, ClipServerRenderPerAccount                 int
+	ClipServerRenderWaiting                                            *int
+	ClipMediaMaxAttempts                                               int
 	// How many threads one ffmpeg may take. libx264 above one thread is not
 	// bit-exact, so raising the encoder moves delivered bytes (CLIP-124,
 	// CLIP-125) — production leaves these at 1 and 2. They are settings because a

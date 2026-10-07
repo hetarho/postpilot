@@ -44,6 +44,7 @@ type StartInput =
       quote: ClipQuote
       observe: ModelRef
       write: ModelRef
+      analysisPreparationId?: string
     }
   | { kind: 'render'; batchId: string; revision: number; reuseExisting: boolean }
 const DEFINITE_REFUSALS = new Set([
@@ -65,6 +66,8 @@ const DEFINITE_REFUSALS = new Set([
   'CLIP_BUSY',
   'CLIP_SERVER_EXPORT_PLAN_REQUIRED',
   'CLIP_SERVER_EXPORT_EXHAUSTED',
+  'CLIP_SERVER_RENDER_OVERLOADED',
+  'CLIP_SERVER_RENDER_ACCOUNT_BUSY',
   'CLIP_PLAN_CONFLICT',
   'MODEL_VIDEO_UNSUPPORTED',
   'MODEL_UNAVAILABLE',
@@ -72,7 +75,18 @@ const DEFINITE_REFUSALS = new Set([
   'INSUFFICIENT_CREDITS',
 ])
 
-export function useGenerateClip(ownerId: string, project: ClipProject, ownedJobId?: string) {
+interface BrowserPreparation {
+  run(
+    input: { projectId: string; revision: number; batch: ReadyClipBatch; quote: ClipQuote },
+    startParent: (id: string) => Promise<{ jobId: string }>,
+  ): Promise<{ jobId: string }>
+}
+export function useGenerateClip(
+  ownerId: string,
+  project: ClipProject,
+  ownedJobId?: string,
+  browserPreparation?: BrowserPreparation,
+) {
   const planKey = useMyPlanQueryKey()
   const calls = useClipProjectCalls()
   const renders = useClipRenderCalls()
@@ -119,6 +133,7 @@ export function useGenerateClip(ownerId: string, project: ClipProject, ownedJobI
   }>()
   const unresolved = useRef<typeof uncertain>(undefined)
   const starting = useRef(false)
+  const [submitting, setSubmitting] = useState(false)
   const active = useRef(true)
   const consumed = useRef(new Set<string>())
   const usedQuotes = useRef(new Set<string>())
@@ -146,6 +161,7 @@ export function useGenerateClip(ownerId: string, project: ClipProject, ownedJobI
                 batchId: input.batchId,
                 observeModel: input.observe,
                 writeModel: input.write,
+                analysisPreparationId: input.analysisPreparationId,
                 quoteId: input.quote.quoteId,
                 approvedMaxCredits: input.quote.maxCredits,
                 cancellationPolicyVersion: input.quote.cancellationPolicy?.version,
@@ -155,6 +171,7 @@ export function useGenerateClip(ownerId: string, project: ClipProject, ownedJobI
                 batchId: input.batchId,
                 observeModel: input.observe,
                 writeModel: input.write,
+                analysisPreparationId: input.analysisPreparationId,
                 quoteId: input.quote.quoteId,
                 approvedMaxCredits: input.quote.maxCredits,
                 cancellationPolicyVersion: input.quote.cancellationPolicy?.version,
@@ -191,6 +208,7 @@ export function useGenerateClip(ownerId: string, project: ClipProject, ownedJobI
       consumed.current.delete(started.batchId)
   }, [started, job])
   const busy =
+    submitting ||
     mutation.isPending ||
     !!uncertain ||
     (!!id && (!job || !isTerminal(job))) ||
@@ -244,13 +262,39 @@ export function useGenerateClip(ownerId: string, project: ClipProject, ownedJobI
     if (exportTransition) void cache.invalidateQueries({ queryKey: planKey })
   }, [exportTransition, cache, planKey])
 
-  async function submit(input: StartInput, ownership: Ownership) {
+  async function submit(input: StartInput, ownership: Ownership, batch?: ReadyClipBatch) {
     if (!ownership.begin(input.batchId)) return
     starting.current = true
+    setSubmitting(true)
     consumed.current.add(input.batchId)
     setLocalFailure(undefined)
+    let accepted = false
+    let parentAttempted = false
+    const own = (response: { jobId: string }) => {
+      accepted = true
+      ownership.owned(input.batchId, response.jobId)
+      if (active.current)
+        setStarted({ id: response.jobId, previous: project.latestJob?.id, batchId: input.batchId })
+      void cache.invalidateQueries({ queryKey: projectsKey })
+    }
     try {
-      const response = await mutation.mutateAsync(input)
+      const response =
+        input.kind === 'generate' && batch && browserPreparation
+          ? await browserPreparation.run(
+              {
+                projectId: project.id,
+                revision: project.editPlanRevision,
+                batch,
+                quote: input.quote,
+              },
+              async (analysisPreparationId) => {
+                parentAttempted = true
+                const response = await mutation.mutateAsync({ ...input, analysisPreparationId })
+                own(response)
+                return response
+              },
+            )
+          : await mutation.mutateAsync(input)
       if (!active.current) return
       if (input.kind === 'render' && 'reusedResult' in response && response.reusedResult) {
         consumed.current.delete(input.batchId)
@@ -258,14 +302,26 @@ export function useGenerateClip(ownerId: string, project: ClipProject, ownedJobI
         void cache.invalidateQueries({ queryKey: projectsKey })
         return
       }
-      ownership.owned(input.batchId, response.jobId)
-      setStarted({ id: response.jobId, previous: project.latestJob?.id, batchId: input.batchId })
-      void cache.invalidateQueries({ queryKey: projectsKey })
+      if (!accepted) own(response)
     } catch (error) {
       if (!active.current) return
-      const failure = appFailureFromConnect(error)
-      setLocalFailure(failure)
-      if (DEFINITE_REFUSALS.has(failure.reason)) {
+      const remoteFailure = appFailureFromConnect(error)
+      const failure: AppFailure =
+        remoteFailure.reason === 'UNKNOWN_FAILURE' &&
+        error instanceof Error &&
+        error.message.startsWith('CLIP_')
+          ? { reason: 'CLIP_PROCESSING_FAILED', params: {}, technicalDetail: error.message }
+          : remoteFailure
+      setLocalFailure(
+        error instanceof DOMException && error.name === 'AbortError' ? undefined : failure,
+      )
+      if (accepted) {
+        // The durable parent already owns this attempt; local preparation
+        // cancels/fences it on failure without replaying a paid start.
+      } else if (
+        DEFINITE_REFUSALS.has(failure.reason) ||
+        (input.kind === 'generate' && !!browserPreparation && !parentAttempted)
+      ) {
         consumed.current.delete(input.batchId)
         ownership.rejected(input.batchId)
       } else {
@@ -280,6 +336,7 @@ export function useGenerateClip(ownerId: string, project: ClipProject, ownedJobI
       void cache.invalidateQueries({ queryKey: projectsKey })
     } finally {
       starting.current = false
+      if (active.current) setSubmitting(false)
     }
   }
   async function start(
@@ -293,6 +350,7 @@ export function useGenerateClip(ownerId: string, project: ClipProject, ownedJobI
       starting.current ||
       busy ||
       !settingsReady ||
+      !browserPreparation ||
       !!project.finalized ||
       (!modelsReady && !quote.recovery?.renderOnly) ||
       !batch ||
@@ -325,6 +383,7 @@ export function useGenerateClip(ownerId: string, project: ClipProject, ownedJobI
         write: write.selected,
       },
       ownership,
+      batch,
     )
   }
   async function render(
@@ -375,7 +434,7 @@ export function useGenerateClip(ownerId: string, project: ClipProject, ownedJobI
     observeRef: observe.selected,
     writeRef: write.selected,
     failure: localFailure ?? (job?.status === 'failed' ? job.failure : undefined),
-    starting: mutation.isPending,
+    starting: submitting || mutation.isPending,
     uncertain: !!uncertain,
     pollFailed: poll.isError || (!!uncertain && resolution.isError),
     checkAgain: () => {

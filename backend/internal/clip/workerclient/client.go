@@ -6,6 +6,7 @@ import (
 	"errors"
 	"math/rand/v2"
 	"net/http"
+	"slices"
 	"time"
 
 	"connectrpc.com/connect"
@@ -121,12 +122,23 @@ func (c *Client) Fail(ctx context.Context, a clip.MediaLeaseCredentials, code cl
 	return failure(err)
 }
 func (c *Client) Status(ctx context.Context) (clip.MediaRuntimeStatus, error) {
+	return c.StatusForProfile(ctx, clip.MediaWorkerProfile{Operation: clip.MediaRender, ContractVersion: clip.MediaContractVersion, RendererVersion: clip.MediaRendererVersion, AssetVersion: clip.MediaAssetVersion, Profile: clip.MediaCPUProfile})
+}
+
+func (c *Client) StatusForProfile(ctx context.Context, profile clip.MediaWorkerProfile) (clip.MediaRuntimeStatus, error) {
+	if !profile.Compatible() {
+		return clip.MediaRuntimeStatus{}, clip.ErrMediaIncompatible
+	}
 	r, err := c.rpc.GetMediaRuntimeStatus(ctx, request(c, &pb.GetMediaRuntimeStatusRequest{}))
 	if err != nil {
 		return clip.MediaRuntimeStatus{}, failure(err)
 	}
 	s := r.Msg
-	if s.ContractVersion != clip.MediaContractVersion || s.RendererVersion != clip.MediaRendererVersion || s.AssetVersion != clip.MediaAssetVersion {
+	// Native v3 status already identified its single CPU profile through the
+	// version tuple, and older peers may omit the optional profile list. New
+	// verification readiness requires its explicit advertised profile.
+	profileRequired := profile.Operation == clip.MediaVerifyAnalysis || len(s.Profiles) > 0
+	if s.ContractVersion != int32(profile.ContractVersion) || s.RendererVersion != profile.RendererVersion || s.AssetVersion != profile.AssetVersion || profileRequired && !slices.Contains(s.Profiles, profile.Profile) || s.Waiting < 0 || s.Active < 0 || s.OwnActive < 0 || s.OwnActive > s.Active {
 		return clip.MediaRuntimeStatus{}, clip.ErrMediaIncompatible
 	}
 	if !s.Ready {

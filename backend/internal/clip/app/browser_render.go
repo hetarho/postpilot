@@ -6,12 +6,19 @@ import (
 	"github.com/postpilot/backend/internal/clip"
 )
 
-func (s *GenerationService) beginBrowserRender(ctx context.Context, p clip.Project, plan clip.EditPlan, sources []clip.RenderSource) (string, error) {
+func (s *GenerationService) beginBrowserRender(ctx context.Context, p clip.Project, plan clip.EditPlan, sources []clip.RenderSource, contract ...clip.BrowserCompositionContract) (string, error) {
 	store, ok := s.store.(clip.BrowserRenderStore)
 	if !ok {
 		return "", clip.ErrRenderUnavailable
 	}
 	r := clip.BrowserRender{Speech: clip.RequestedSpeech(plan), Audio: plan.Narration != nil && plan.Narration.Enabled, ID: newID(), UserID: p.UserID, ProjectID: p.ID, Revision: p.EditPlanRevision, Ratio: plan.Ratio, DurationMS: plan.DurationMS, CreatedAt: s.now()}
+	if len(contract) != 0 {
+		frozen := contract[0]
+		if err := frozen.Validate(s.cfg.BrowserCompositionQualified); err != nil {
+			return "", err
+		}
+		r.Composition = &frozen
+	}
 	for _, cut := range plan.Cuts {
 		for _, source := range sources {
 			if source.ID == cut.SourceID && source.Info.HasAudio && plan.RetainsOriginalAudio(cut) {

@@ -1,3 +1,7 @@
+import {
+  failLocalPresetSamplesForControls,
+  localSamplesForControls,
+} from '@/test/clip-local-samples'
 import { afterEach, describe, expect, it } from 'vitest'
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -26,7 +30,10 @@ const project = {
   outroPreset: 'e' as const,
   allowedCaptionStyles: [] as string[],
 }
-afterEach(() => discardClipDraftQueues())
+afterEach(() => {
+  discardClipDraftQueues()
+  failLocalPresetSamplesForControls(false)
+})
 
 describe('① chooses the design, the caption styles and an optional template', () => {
   it('mints without a template, with 없음 selected', async () => {
@@ -77,10 +84,11 @@ describe('① chooses the design, the caption styles and an optional template', 
       expect(intro.querySelector('svg [data-preset="intro-sticker"]')).toBeInTheDocument(),
     )
     expect(outro.querySelector('svg [data-preset="outro-stamp"]')).toHaveTextContent('슬롯 1')
-    expect(labels).toContain('슬롯 {n}')
+    expect(labels).toEqual([])
   })
 
-  it('still lets the owner choose when the drawings fail', async () => {
+  it('still lets the owner choose when the local drawings fail', async () => {
+    failLocalPresetSamplesForControls(true)
     const user = userEvent.setup()
     const writes: ClipProjectDraft[] = []
     renderAppAt('/clips/project', {
@@ -119,7 +127,7 @@ describe('① chooses the design, the caption styles and an optional template', 
     await waitFor(() =>
       expect(styles.querySelector('svg [data-style="word-pop"]')).toBeInTheDocument(),
     )
-    expect(within(styles).getByText(/프레임마다 그림/)).toBeInTheDocument()
+    expect(within(styles).getAllByText(/프레임마다 그림/).length).toBeGreaterThan(0)
     await user.click(within(styles).getByRole('checkbox', { name: /키노트/ }))
     await waitFor(() => expect(writes.at(-1)?.allowedCaptionStyles).toEqual(['keynote']), {
       timeout: 4000,
@@ -232,3 +240,5 @@ describe('① chooses the design, the caption styles and an optional template', 
     expect(writes[0].outroPreset).toBe('chips')
   })
 })
+
+vi.mock('@/entities/clip-preview/ui/useLocalSamples', () => localSamplesForControls)

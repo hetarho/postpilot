@@ -1,0 +1,44 @@
+{
+  "manifestVersion": 1,
+  "inkVersion": "clip-ink-v2-resvg-2.6.2",
+  "transformInkScale": 2,
+  "transformInkStyles": ["word-pop", "pop", "stack", "sticker", "bubble"],
+  "fontsManifestSHA256": "51ad5c795ede98d22e4dfea750946889af3717c04dee3642b87e3419c835970c",
+  "catalogSHA256": "a20712c2a7985c78fde3f316be1d7b0918ccdd1cc91ae19b4b4bc8ee197e6883",
+  "wasmSHA256": "22bf6e9f9a100d972da0411a69c5ba504367fc1fa87b3b64e3f35e53926d2d70",
+  "fontAssets": [
+    {
+      "id": "wantedsans:400",
+      "sha256": "7a38e0fdf56a7a2cad934393751e3f12dcaf81067bddec4e87f4dd787037aae6"
+    },
+    {
+      "id": "wantedsans:600",
+      "sha256": "567d4c7d67baa092e74f6c982dcc76b340f10c9d1f78eff6d60897d083e703a0"
+    },
+    {
+      "id": "wantedsans:700",
+      "sha256": "0ca0e18d8409fc34520d6fb872d381bc563049ca9d75272ee6b9fab8ef4e63b0"
+    },
+    {
+      "id": "wantedsans:800",
+      "sha256": "9b3b38d8892521e4da5b24290cecf4be35da946f1905364f69fe4695ffabddd8"
+    },
+    {
+      "id": "paperlogy:800",
+      "sha256": "fb0324f8ac057e50f4f4632331617e347bfe5a04184f7b0db514be682fb6b25c"
+    },
+    {
+      "id": "jua:400",
+      "sha256": "769677aef240bfc3b9965f2b50748075bff885e6c6992fc591a3fb268279f898"
+    },
+    {
+      "id": "nanummyeongjo:400",
+      "sha256": "7ed9e8653a8ed04285d51dc343ffea6eb3d9c73afc27383ea8929ee4ffd03205"
+    },
+    {
+      "id": "nanummyeongjo:800",
+      "sha256": "60c0077fce069ba90ae97c0a3679f6eb3712e0ca637bdd0c15b72d335ec46db7"
+    }
+  ],
+  "assetVersion": "clip-design-assets-v1-ink-84ac571b3a2fcbef245feef64fe30011dd53561fb8b3b36b172c828c838cc4b3"
+}

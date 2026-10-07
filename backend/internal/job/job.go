@@ -191,6 +191,7 @@ func normalizePlannedCalls(input []PlannedCall) []PlannedCall {
 
 // Job is the worker-facing record, including the kind-specific payload.
 type Job struct {
+	WaitExpiresAt *time.Time
 	// Resume is attached only to an atomically claimed durable continuation.
 	// It is internal execution context, not a new public status or payload.
 	Resume                    *Continuation
@@ -218,6 +219,7 @@ type Job struct {
 
 // JobSummary is the public view returned to other contexts and the RPC edge.
 type JobSummary struct {
+	WaitExpiresAt *time.Time
 	// CanCancel is the queue's own answer, not the client's to infer: the cancellation
 	// rule lives at the composition root and the summary is where it becomes visible.
 	CanCancel                 bool
@@ -242,6 +244,7 @@ type JobSummary struct {
 
 func (q *Queue) summarize(found Job) *JobSummary {
 	return &JobSummary{
+		WaitExpiresAt:     found.WaitExpiresAt,
 		CanCancel:         q.canCancel(found),
 		CancelRequestedAt: found.CancelRequestedAt, CancellationPolicyVersion: found.CancellationPolicyVersion,
 		ID: found.ID, Kind: found.Kind, UserID: found.UserID, Subjects: cloneSubjects(found.Subjects),

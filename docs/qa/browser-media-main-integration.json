@@ -1,0 +1,28 @@
+{
+  "kind": "main-integration-compatibility",
+  "originMain": "de99511409d6aba0125f5f89633bee654023f30c",
+  "reviewedMedia": "29ff743d968dd35edf15a463c858908a84919387",
+  "preservedWorkingDraftCommit": "676cee4d",
+  "scope": "Normal merge retains both histories. Current main authoring/XState/typography and reviewed media pipelines coexist; migration149 and sticky chrome clearance are focused compatibility fixes.",
+  "database": {
+    "forwardMigration": 149,
+    "focusedTestsPassed": true,
+    "schemaGuard": "Nullable TEXT, preserve legacy144 values/history, refuse missing deployed migrations without blanket out-of-order allowance."
+  },
+  "browser": {
+    "reportSHA256": "d92b65b45972ac702f36c9bc55e99511cfdd592216b91b89797ce9c61c787388",
+    "scrollCases": 6,
+    "occludedCases": 0,
+    "frontendSourceHashCount": 1835,
+    "keyboardAutosaveAndStillFlowPassed": true,
+    "initialFailurePreserved": true
+  },
+  "currentLockfileSHA256": "4bf52d68dba2d2b5492cacdeeb92b12337bde6694001350640f5ad1693a3c152",
+  "mediaPackageVersionSourceAndNoticeCount": 20,
+  "historicalReportsAreHistorical": true,
+  "releaseQualification": false,
+  "analysisQualification": false,
+  "voiceQualification": false,
+  "fullCI": "pending",
+  "remotePush": "pending"
+}

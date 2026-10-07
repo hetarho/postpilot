@@ -80,6 +80,7 @@ type contexts struct {
 	clipGuard         clipapp.Guard
 	clip              *clipapp.Service
 	clipSources       *clipapp.SourceService
+	clipAnalysis      *clipapp.AnalysisPreparations
 	clipSpeech        *clipapp.SpeechService
 	clipGeneration    *clipapp.GenerationService
 	clipMediaRecovery *clipapp.MediaReconciler
@@ -207,7 +208,7 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 	c.clipPorts = clipTxPorts(c.ledger, registry, c.auth)
 	// The guard checks model access on the non-transaction ledger before its hold's
 	// writer transaction opens; the hold inside reuses that answer.
-	c.clipGuard = clipapp.NewGuard(handle.Writer, c.clipPorts, jobstore.New(handle.Writer, handle.Writer, jobKinds()),
+	c.clipGuard = clipapp.NewGuard(handle.Writer, c.clipPorts, clipapp.NewAnalysisDispatchAuthorizer(handle.Writer, c.clipPorts, jobstore.New(handle.Writer, handle.Writer, jobKinds())),
 		clipAdmission{jobAdmission{ledger: c.ledger, registry: registry, plans: c.auth}})
 
 	// Post reads voice, guideline and experiment through adapters that resolve their
@@ -241,6 +242,7 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 	})
 	c.clipStore = clipstore.New(handle.Writer, handle.Reader)
 	c.clipSources = clipapp.NewSourceService(c.clipStore, p.bucket, clip.DefaultSourceLimits(clipEnvironment(cfg)))
+	c.clipAnalysis = clipapp.NewAnalysisPreparations(handle.Writer, c.clipPorts, c.clipStore, p.bucket, clipapp.NewAnalysisJobs(c.jobs), clip.DefaultMediaConfig(clipEnvironment(cfg)), clip.DefaultAnalysisPreparationLimits(clipEnvironment(cfg)), nil)
 	c.clip = clipapp.NewService(c.clipStore, clip.DefaultLimits(), c.clipSources, clipapp.NewFinalizer(handle.Writer, c.clipPorts, c.clipStore, clip.DefaultRenderConfig(clipEnvironment(cfg)), nil))
 	c.clipMediaRecovery = clipapp.NewMediaReconciler(handle.Writer, c.clipPorts, c.clipStore, jobstore.New(handle.Writer, handle.Reader, jobKinds()), c.jobs, p.bucket, cfg.OrphanMinAge, nil)
 	c.clipSpeech = newClipSpeech(c)
@@ -251,8 +253,11 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 	if err := c.spokenGeneration.Recover(ctx); err != nil {
 		return nil, fmt.Errorf("spoken operation recovery: %w", err)
 	}
+	if err := c.clipAnalysis.ReconcileStartup(ctx); err != nil {
+		return nil, fmt.Errorf("browser analysis recovery: %w", err)
+	}
 	// External handoffs are reconciled before interruption/hold/source cleanup.
-	if err := c.clipMediaRecovery.Reconcile(ctx); err != nil {
+	if err := c.clipMediaRecovery.ReconcileStartup(ctx); err != nil {
 		return nil, fmt.Errorf("media handoff recovery: %w", err)
 	}
 	if n, err := c.jobs.SweepRunning(ctx); err != nil {
@@ -284,7 +289,7 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 		guideline.Limits{TextMaxChars: cfg.GuidelineTextMaxChars, TitleMaxChars: cfg.GuidelineTitleMaxChars, MaxPerAccount: cfg.GuidelineMaxPerAccount},
 		cfg.GuidelineCandidateMaxPending,
 	)
-	c.clipGeneration, err = newClipGeneration(ctx, cfg, c.clipStore, c.clip, c.clipSources, p.bucket, clipMedia, c.metered, c.auth, c.jobs, c.clipGuard, handle.Writer, c.clipPorts, clipGuidelineCandidates{service: c.guideline}, clipSpokenVoices{library: c.spoken}, c.clipSpeech)
+	c.clipGeneration, err = newClipGeneration(ctx, cfg, c.clipStore, c.clip, c.clipSources, p.bucket, clipMedia, c.metered, c.auth, c.jobs, c.clipGuard, handle.Writer, c.clipPorts, clipGuidelineCandidates{service: c.guideline}, clipSpokenVoices{library: c.spoken}, c.clipAnalysis, c.clipSpeech)
 	if err != nil {
 		return nil, fmt.Errorf("clip generation initialization: %w", err)
 	}

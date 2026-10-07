@@ -8,6 +8,68 @@ import (
 	"database/sql"
 )
 
+type ClipAnalysisCopy struct {
+	PreparationID     string
+	Slot              string
+	SourceID          string
+	SourceFingerprint string
+	Ordinal           int64
+	OffsetMs          int64
+	DurationMs        int64
+	Width             int64
+	Height            int64
+	HasAudio          int64
+	ObjectKey         sql.NullString
+	ExactBytes        int64
+	Sha256            string
+	State             string
+	PutExpiresAt      sql.NullString
+	VerificationJson  sql.NullString
+}
+
+type ClipAnalysisCopyDeletion struct {
+	ObjectKey   string
+	DeleteAfter string
+}
+
+type ClipAnalysisPreparation struct {
+	ID               string
+	UserID           string
+	ProjectID        string
+	BatchID          string
+	QuoteID          string
+	ProfileVersion   string
+	ExpectedRevision int64
+	MetadataJson     string
+	ManifestDigest   string
+	State            string
+	ParentJobID      sql.NullString
+	CurrentAttemptID sql.NullString
+	AttemptCount     int64
+	Progress         int64
+	CreatedAt        string
+	ExpiresAt        string
+	QueueDeadlineAt  string
+	DeadlineAt       string
+	AcceptedResult   sql.NullString
+	Failure          sql.NullString
+	CleanupAt        sql.NullString
+	ReconciledAt     sql.NullString
+}
+
+type ClipAnalysisVerificationAttempt struct {
+	ID              string
+	PreparationID   string
+	Ordinal         int64
+	WorkerID        string
+	TokenHash       string
+	LeaseExpiresAt  string
+	StartedAt       string
+	Outcome         sql.NullString
+	FinishedAt      sql.NullString
+	RuntimeManifest string
+}
+
 type ClipAttemptResult struct {
 	JobID             string
 	UserID            string

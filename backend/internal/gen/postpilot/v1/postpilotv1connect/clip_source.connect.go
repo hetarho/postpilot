@@ -33,6 +33,18 @@ const (
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
+	// ClipSourceServiceBeginClipAnalysisPreparationProcedure is the fully-qualified name of the
+	// ClipSourceService's BeginClipAnalysisPreparation RPC.
+	ClipSourceServiceBeginClipAnalysisPreparationProcedure = "/postpilot.v1.ClipSourceService/BeginClipAnalysisPreparation"
+	// ClipSourceServiceReserveClipAnalysisCopyProcedure is the fully-qualified name of the
+	// ClipSourceService's ReserveClipAnalysisCopy RPC.
+	ClipSourceServiceReserveClipAnalysisCopyProcedure = "/postpilot.v1.ClipSourceService/ReserveClipAnalysisCopy"
+	// ClipSourceServiceCompleteClipAnalysisPreparationProcedure is the fully-qualified name of the
+	// ClipSourceService's CompleteClipAnalysisPreparation RPC.
+	ClipSourceServiceCompleteClipAnalysisPreparationProcedure = "/postpilot.v1.ClipSourceService/CompleteClipAnalysisPreparation"
+	// ClipSourceServiceCancelClipAnalysisPreparationProcedure is the fully-qualified name of the
+	// ClipSourceService's CancelClipAnalysisPreparation RPC.
+	ClipSourceServiceCancelClipAnalysisPreparationProcedure = "/postpilot.v1.ClipSourceService/CancelClipAnalysisPreparation"
 	// ClipSourceServiceCreateClipSourceBatchProcedure is the fully-qualified name of the
 	// ClipSourceService's CreateClipSourceBatch RPC.
 	ClipSourceServiceCreateClipSourceBatchProcedure = "/postpilot.v1.ClipSourceService/CreateClipSourceBatch"
@@ -58,6 +70,10 @@ const (
 
 // ClipSourceServiceClient is a client for the postpilot.v1.ClipSourceService service.
 type ClipSourceServiceClient interface {
+	BeginClipAnalysisPreparation(context.Context, *connect.Request[v1.BeginClipAnalysisPreparationRequest]) (*connect.Response[v1.ClipAnalysisPreparationResponse], error)
+	ReserveClipAnalysisCopy(context.Context, *connect.Request[v1.ReserveClipAnalysisCopyRequest]) (*connect.Response[v1.ReserveClipAnalysisCopyResponse], error)
+	CompleteClipAnalysisPreparation(context.Context, *connect.Request[v1.CompleteClipAnalysisPreparationRequest]) (*connect.Response[v1.ClipAnalysisPreparationResponse], error)
+	CancelClipAnalysisPreparation(context.Context, *connect.Request[v1.CancelClipAnalysisPreparationRequest]) (*connect.Response[v1.ClipAnalysisPreparationResponse], error)
 	CreateClipSourceBatch(context.Context, *connect.Request[v1.CreateClipSourceBatchRequest]) (*connect.Response[v1.CreateClipSourceBatchResponse], error)
 	ConfirmClipSource(context.Context, *connect.Request[v1.ConfirmClipSourceRequest]) (*connect.Response[v1.ConfirmClipSourceResponse], error)
 	DiscardClipSourceBatch(context.Context, *connect.Request[v1.DiscardClipSourceBatchRequest]) (*connect.Response[v1.DiscardClipSourceBatchResponse], error)
@@ -82,6 +98,30 @@ func NewClipSourceServiceClient(httpClient connect.HTTPClient, baseURL string, o
 	baseURL = strings.TrimRight(baseURL, "/")
 	clipSourceServiceMethods := v1.File_postpilot_v1_clip_source_proto.Services().ByName("ClipSourceService").Methods()
 	return &clipSourceServiceClient{
+		beginClipAnalysisPreparation: connect.NewClient[v1.BeginClipAnalysisPreparationRequest, v1.ClipAnalysisPreparationResponse](
+			httpClient,
+			baseURL+ClipSourceServiceBeginClipAnalysisPreparationProcedure,
+			connect.WithSchema(clipSourceServiceMethods.ByName("BeginClipAnalysisPreparation")),
+			connect.WithClientOptions(opts...),
+		),
+		reserveClipAnalysisCopy: connect.NewClient[v1.ReserveClipAnalysisCopyRequest, v1.ReserveClipAnalysisCopyResponse](
+			httpClient,
+			baseURL+ClipSourceServiceReserveClipAnalysisCopyProcedure,
+			connect.WithSchema(clipSourceServiceMethods.ByName("ReserveClipAnalysisCopy")),
+			connect.WithClientOptions(opts...),
+		),
+		completeClipAnalysisPreparation: connect.NewClient[v1.CompleteClipAnalysisPreparationRequest, v1.ClipAnalysisPreparationResponse](
+			httpClient,
+			baseURL+ClipSourceServiceCompleteClipAnalysisPreparationProcedure,
+			connect.WithSchema(clipSourceServiceMethods.ByName("CompleteClipAnalysisPreparation")),
+			connect.WithClientOptions(opts...),
+		),
+		cancelClipAnalysisPreparation: connect.NewClient[v1.CancelClipAnalysisPreparationRequest, v1.ClipAnalysisPreparationResponse](
+			httpClient,
+			baseURL+ClipSourceServiceCancelClipAnalysisPreparationProcedure,
+			connect.WithSchema(clipSourceServiceMethods.ByName("CancelClipAnalysisPreparation")),
+			connect.WithClientOptions(opts...),
+		),
 		createClipSourceBatch: connect.NewClient[v1.CreateClipSourceBatchRequest, v1.CreateClipSourceBatchResponse](
 			httpClient,
 			baseURL+ClipSourceServiceCreateClipSourceBatchProcedure,
@@ -129,13 +169,38 @@ func NewClipSourceServiceClient(httpClient connect.HTTPClient, baseURL string, o
 
 // clipSourceServiceClient implements ClipSourceServiceClient.
 type clipSourceServiceClient struct {
-	createClipSourceBatch      *connect.Client[v1.CreateClipSourceBatchRequest, v1.CreateClipSourceBatchResponse]
-	confirmClipSource          *connect.Client[v1.ConfirmClipSourceRequest, v1.ConfirmClipSourceResponse]
-	discardClipSourceBatch     *connect.Client[v1.DiscardClipSourceBatchRequest, v1.DiscardClipSourceBatchResponse]
-	getClipSources             *connect.Client[v1.GetClipSourcesRequest, v1.GetClipSourcesResponse]
-	getClipSourcePlayback      *connect.Client[v1.GetClipSourcePlaybackRequest, v1.GetClipSourcePlaybackResponse]
-	setClipSourceOriginalSound *connect.Client[v1.SetClipSourceOriginalSoundRequest, v1.SetClipSourceOriginalSoundResponse]
-	reorderClipSources         *connect.Client[v1.ReorderClipSourcesRequest, v1.ReorderClipSourcesResponse]
+	beginClipAnalysisPreparation    *connect.Client[v1.BeginClipAnalysisPreparationRequest, v1.ClipAnalysisPreparationResponse]
+	reserveClipAnalysisCopy         *connect.Client[v1.ReserveClipAnalysisCopyRequest, v1.ReserveClipAnalysisCopyResponse]
+	completeClipAnalysisPreparation *connect.Client[v1.CompleteClipAnalysisPreparationRequest, v1.ClipAnalysisPreparationResponse]
+	cancelClipAnalysisPreparation   *connect.Client[v1.CancelClipAnalysisPreparationRequest, v1.ClipAnalysisPreparationResponse]
+	createClipSourceBatch           *connect.Client[v1.CreateClipSourceBatchRequest, v1.CreateClipSourceBatchResponse]
+	confirmClipSource               *connect.Client[v1.ConfirmClipSourceRequest, v1.ConfirmClipSourceResponse]
+	discardClipSourceBatch          *connect.Client[v1.DiscardClipSourceBatchRequest, v1.DiscardClipSourceBatchResponse]
+	getClipSources                  *connect.Client[v1.GetClipSourcesRequest, v1.GetClipSourcesResponse]
+	getClipSourcePlayback           *connect.Client[v1.GetClipSourcePlaybackRequest, v1.GetClipSourcePlaybackResponse]
+	setClipSourceOriginalSound      *connect.Client[v1.SetClipSourceOriginalSoundRequest, v1.SetClipSourceOriginalSoundResponse]
+	reorderClipSources              *connect.Client[v1.ReorderClipSourcesRequest, v1.ReorderClipSourcesResponse]
+}
+
+// BeginClipAnalysisPreparation calls postpilot.v1.ClipSourceService.BeginClipAnalysisPreparation.
+func (c *clipSourceServiceClient) BeginClipAnalysisPreparation(ctx context.Context, req *connect.Request[v1.BeginClipAnalysisPreparationRequest]) (*connect.Response[v1.ClipAnalysisPreparationResponse], error) {
+	return c.beginClipAnalysisPreparation.CallUnary(ctx, req)
+}
+
+// ReserveClipAnalysisCopy calls postpilot.v1.ClipSourceService.ReserveClipAnalysisCopy.
+func (c *clipSourceServiceClient) ReserveClipAnalysisCopy(ctx context.Context, req *connect.Request[v1.ReserveClipAnalysisCopyRequest]) (*connect.Response[v1.ReserveClipAnalysisCopyResponse], error) {
+	return c.reserveClipAnalysisCopy.CallUnary(ctx, req)
+}
+
+// CompleteClipAnalysisPreparation calls
+// postpilot.v1.ClipSourceService.CompleteClipAnalysisPreparation.
+func (c *clipSourceServiceClient) CompleteClipAnalysisPreparation(ctx context.Context, req *connect.Request[v1.CompleteClipAnalysisPreparationRequest]) (*connect.Response[v1.ClipAnalysisPreparationResponse], error) {
+	return c.completeClipAnalysisPreparation.CallUnary(ctx, req)
+}
+
+// CancelClipAnalysisPreparation calls postpilot.v1.ClipSourceService.CancelClipAnalysisPreparation.
+func (c *clipSourceServiceClient) CancelClipAnalysisPreparation(ctx context.Context, req *connect.Request[v1.CancelClipAnalysisPreparationRequest]) (*connect.Response[v1.ClipAnalysisPreparationResponse], error) {
+	return c.cancelClipAnalysisPreparation.CallUnary(ctx, req)
 }
 
 // CreateClipSourceBatch calls postpilot.v1.ClipSourceService.CreateClipSourceBatch.
@@ -175,6 +240,10 @@ func (c *clipSourceServiceClient) ReorderClipSources(ctx context.Context, req *c
 
 // ClipSourceServiceHandler is an implementation of the postpilot.v1.ClipSourceService service.
 type ClipSourceServiceHandler interface {
+	BeginClipAnalysisPreparation(context.Context, *connect.Request[v1.BeginClipAnalysisPreparationRequest]) (*connect.Response[v1.ClipAnalysisPreparationResponse], error)
+	ReserveClipAnalysisCopy(context.Context, *connect.Request[v1.ReserveClipAnalysisCopyRequest]) (*connect.Response[v1.ReserveClipAnalysisCopyResponse], error)
+	CompleteClipAnalysisPreparation(context.Context, *connect.Request[v1.CompleteClipAnalysisPreparationRequest]) (*connect.Response[v1.ClipAnalysisPreparationResponse], error)
+	CancelClipAnalysisPreparation(context.Context, *connect.Request[v1.CancelClipAnalysisPreparationRequest]) (*connect.Response[v1.ClipAnalysisPreparationResponse], error)
 	CreateClipSourceBatch(context.Context, *connect.Request[v1.CreateClipSourceBatchRequest]) (*connect.Response[v1.CreateClipSourceBatchResponse], error)
 	ConfirmClipSource(context.Context, *connect.Request[v1.ConfirmClipSourceRequest]) (*connect.Response[v1.ConfirmClipSourceResponse], error)
 	DiscardClipSourceBatch(context.Context, *connect.Request[v1.DiscardClipSourceBatchRequest]) (*connect.Response[v1.DiscardClipSourceBatchResponse], error)
@@ -195,6 +264,30 @@ type ClipSourceServiceHandler interface {
 // and JSON codecs. They also support gzip compression.
 func NewClipSourceServiceHandler(svc ClipSourceServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
 	clipSourceServiceMethods := v1.File_postpilot_v1_clip_source_proto.Services().ByName("ClipSourceService").Methods()
+	clipSourceServiceBeginClipAnalysisPreparationHandler := connect.NewUnaryHandler(
+		ClipSourceServiceBeginClipAnalysisPreparationProcedure,
+		svc.BeginClipAnalysisPreparation,
+		connect.WithSchema(clipSourceServiceMethods.ByName("BeginClipAnalysisPreparation")),
+		connect.WithHandlerOptions(opts...),
+	)
+	clipSourceServiceReserveClipAnalysisCopyHandler := connect.NewUnaryHandler(
+		ClipSourceServiceReserveClipAnalysisCopyProcedure,
+		svc.ReserveClipAnalysisCopy,
+		connect.WithSchema(clipSourceServiceMethods.ByName("ReserveClipAnalysisCopy")),
+		connect.WithHandlerOptions(opts...),
+	)
+	clipSourceServiceCompleteClipAnalysisPreparationHandler := connect.NewUnaryHandler(
+		ClipSourceServiceCompleteClipAnalysisPreparationProcedure,
+		svc.CompleteClipAnalysisPreparation,
+		connect.WithSchema(clipSourceServiceMethods.ByName("CompleteClipAnalysisPreparation")),
+		connect.WithHandlerOptions(opts...),
+	)
+	clipSourceServiceCancelClipAnalysisPreparationHandler := connect.NewUnaryHandler(
+		ClipSourceServiceCancelClipAnalysisPreparationProcedure,
+		svc.CancelClipAnalysisPreparation,
+		connect.WithSchema(clipSourceServiceMethods.ByName("CancelClipAnalysisPreparation")),
+		connect.WithHandlerOptions(opts...),
+	)
 	clipSourceServiceCreateClipSourceBatchHandler := connect.NewUnaryHandler(
 		ClipSourceServiceCreateClipSourceBatchProcedure,
 		svc.CreateClipSourceBatch,
@@ -239,6 +332,14 @@ func NewClipSourceServiceHandler(svc ClipSourceServiceHandler, opts ...connect.H
 	)
 	return "/postpilot.v1.ClipSourceService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
+		case ClipSourceServiceBeginClipAnalysisPreparationProcedure:
+			clipSourceServiceBeginClipAnalysisPreparationHandler.ServeHTTP(w, r)
+		case ClipSourceServiceReserveClipAnalysisCopyProcedure:
+			clipSourceServiceReserveClipAnalysisCopyHandler.ServeHTTP(w, r)
+		case ClipSourceServiceCompleteClipAnalysisPreparationProcedure:
+			clipSourceServiceCompleteClipAnalysisPreparationHandler.ServeHTTP(w, r)
+		case ClipSourceServiceCancelClipAnalysisPreparationProcedure:
+			clipSourceServiceCancelClipAnalysisPreparationHandler.ServeHTTP(w, r)
 		case ClipSourceServiceCreateClipSourceBatchProcedure:
 			clipSourceServiceCreateClipSourceBatchHandler.ServeHTTP(w, r)
 		case ClipSourceServiceConfirmClipSourceProcedure:
@@ -261,6 +362,22 @@ func NewClipSourceServiceHandler(svc ClipSourceServiceHandler, opts ...connect.H
 
 // UnimplementedClipSourceServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedClipSourceServiceHandler struct{}
+
+func (UnimplementedClipSourceServiceHandler) BeginClipAnalysisPreparation(context.Context, *connect.Request[v1.BeginClipAnalysisPreparationRequest]) (*connect.Response[v1.ClipAnalysisPreparationResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ClipSourceService.BeginClipAnalysisPreparation is not implemented"))
+}
+
+func (UnimplementedClipSourceServiceHandler) ReserveClipAnalysisCopy(context.Context, *connect.Request[v1.ReserveClipAnalysisCopyRequest]) (*connect.Response[v1.ReserveClipAnalysisCopyResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ClipSourceService.ReserveClipAnalysisCopy is not implemented"))
+}
+
+func (UnimplementedClipSourceServiceHandler) CompleteClipAnalysisPreparation(context.Context, *connect.Request[v1.CompleteClipAnalysisPreparationRequest]) (*connect.Response[v1.ClipAnalysisPreparationResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ClipSourceService.CompleteClipAnalysisPreparation is not implemented"))
+}
+
+func (UnimplementedClipSourceServiceHandler) CancelClipAnalysisPreparation(context.Context, *connect.Request[v1.CancelClipAnalysisPreparationRequest]) (*connect.Response[v1.ClipAnalysisPreparationResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ClipSourceService.CancelClipAnalysisPreparation is not implemented"))
+}
 
 func (UnimplementedClipSourceServiceHandler) CreateClipSourceBatch(context.Context, *connect.Request[v1.CreateClipSourceBatchRequest]) (*connect.Response[v1.CreateClipSourceBatchResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ClipSourceService.CreateClipSourceBatch is not implemented"))

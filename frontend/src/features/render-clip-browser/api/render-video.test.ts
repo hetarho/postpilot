@@ -1,6 +1,6 @@
 import { beforeEach, expect, it, vi } from 'vitest'
 import { clipTimelineFixture } from '@/test/clip-editing'
-import type { CaptionFrameLoader } from '@/entities/clip-preview'
+import type { CaptionFrameLoader, BrowserCompositionSnapshot } from '@/entities/clip-preview'
 import { renderBrowserVideo } from './render-video'
 
 const { worker, sources, sheets } = vi.hoisted(() => ({
@@ -15,6 +15,7 @@ const { worker, sources, sheets } = vi.hoisted(() => ({
   sheets: { dispose: vi.fn() },
 }))
 vi.mock('@/entities/clip-preview', () => ({
+  CLIP_VIDEO_DECODING: { workerCleanupMs: 1000 },
   createClipVideoWorker: () => worker,
   CaptionSheets: class {
     constructor(private load: (id: string, frame: number, signal: AbortSignal) => unknown) {}
@@ -104,4 +105,92 @@ it('refuses the render when no frame source was handed over', async () => {
   message({ type: 'frames', requestId: 1, instanceId: 'caption', frame: 0 })
   await result
   expect(worker.terminate).toHaveBeenCalledOnce()
+})
+it('answers owner-bound source access once per original without any per-frame DOM requests', async () => {
+  const frozen = { ...input(), snapshot: {} as BrowserCompositionSnapshot }
+  const file = new File(['original'], 'source.mp4')
+  const resolve = vi.fn(async () => 'fresh-private-access')
+  const handle = renderBrowserVideo(
+    frozen,
+    [{ fingerprint: 'local', url: 'blob:file', file }],
+    resolve,
+  )
+  message({ type: 'sourceAccess', requestId: 1, sourceId: 'local', fingerprint: 'local' })
+  message({ type: 'sourceAccess', requestId: 2, sourceId: 'remote', fingerprint: 'remote' })
+  message({ type: 'sourceAccess', requestId: 3, sourceId: 'remote', fingerprint: 'remote' })
+  await vi.waitFor(() => expect(worker.postMessage).toHaveBeenCalledTimes(4))
+  expect(resolve).toHaveBeenCalledOnce()
+  expect(sources.frame).not.toHaveBeenCalled()
+  expect(worker.postMessage).toHaveBeenCalledWith(
+    { type: 'sourceAccess', requestId: 1, access: { kind: 'blob', blob: file } },
+    [],
+  )
+  handle.cancel()
+  await expect(handle.result).rejects.toMatchObject({ name: 'AbortError' })
+  expect(worker.postMessage).toHaveBeenLastCalledWith({ type: 'cancel' }, [])
+  message({ type: 'cancelled' })
+  expect(worker.terminate).toHaveBeenCalledOnce()
+})
+it('cannot publish a resolved access descriptor into a cancelled frozen run', async () => {
+  let finish!: (url: string) => void
+  const handle = renderBrowserVideo(
+    { ...input(), snapshot: {} as BrowserCompositionSnapshot },
+    [],
+    () =>
+      new Promise<string>((resolve) => {
+        finish = resolve
+      }),
+  )
+  message({ type: 'sourceAccess', requestId: 1, sourceId: 'remote', fingerprint: 'remote' })
+  handle.cancel()
+  finish('late-private-access')
+  await expect(handle.result).rejects.toMatchObject({ name: 'AbortError' })
+  await Promise.resolve()
+  expect(worker.postMessage).toHaveBeenCalledTimes(2)
+  message({ type: 'cancelled' })
+})
+
+it('acknowledges streamed packets only after ordered asynchronous mux admission', async () => {
+  let accept!: () => void
+  const sink = vi
+    .fn()
+    .mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          accept = resolve
+        }),
+    )
+    .mockResolvedValue(undefined)
+  const handle = renderBrowserVideo(input(), [], vi.fn(), undefined, undefined, undefined, sink)
+  const packet = { type: 'key', timestamp: 0, duration: 33333, data: new Uint8Array([1]) }
+  message({ type: 'packet', requestId: 1, packet })
+  message({ type: 'packet', requestId: 2, packet: { ...packet, timestamp: 33333 } })
+  await vi.waitFor(() => expect(sink).toHaveBeenCalledTimes(1))
+  expect(worker.postMessage).toHaveBeenCalledTimes(1)
+  accept()
+  await vi.waitFor(() => expect(sink).toHaveBeenCalledTimes(2))
+  expect(worker.postMessage.mock.calls.slice(1).map(([value]) => value)).toEqual([
+    { type: 'packetAck', requestId: 1 },
+    { type: 'packetAck', requestId: 2 },
+  ])
+  handle.cancel()
+  await expect(handle.result).rejects.toMatchObject({ name: 'AbortError' })
+})
+it('stops the Worker after a delayed mux failure and never acknowledges a late cancelled write', async () => {
+  const sink = vi.fn(async () => {
+    throw new Error('quota exhausted')
+  })
+  const handle = renderBrowserVideo(input(), [], vi.fn(), undefined, undefined, undefined, sink)
+  const failure = expect(handle.result).rejects.toThrow('quota exhausted')
+  message({
+    type: 'packet',
+    requestId: 1,
+    packet: { type: 'key', timestamp: 0, duration: 33333, data: new Uint8Array([1]) },
+  })
+  await failure
+  expect(worker.terminate).toHaveBeenCalledOnce()
+  expect(worker.postMessage).toHaveBeenCalledWith(
+    { type: 'packetAck', requestId: 1, error: 'quota exhausted' },
+    [],
+  )
 })

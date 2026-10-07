@@ -1,3 +1,4 @@
+import { localSamplesForControls } from '@/test/clip-local-samples'
 import { afterEach, expect, it, vi } from 'vitest'
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -862,3 +863,5 @@ it('never confirms an earlier render for a plan a slot edit moved', async () => 
   )
   expect(screen.getByText('렌더하기로 현재 편집안을 출력한 뒤 확정해 주세요.')).toBeInTheDocument()
 })
+
+vi.mock('@/entities/clip-preview/ui/useLocalSamples', () => localSamplesForControls)

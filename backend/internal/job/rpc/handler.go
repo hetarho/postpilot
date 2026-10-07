@@ -56,10 +56,15 @@ func ToProto(found *job.JobSummary) *postpilotv1.GenerationJob {
 	}
 	postSlug := found.Subject(subjectPost)
 	requested := ""
+	waitExpiry := ""
+	if found.WaitExpiresAt != nil {
+		waitExpiry = found.WaitExpiresAt.UTC().Format(time.RFC3339Nano)
+	}
 	if found.CancelRequestedAt != nil {
 		requested = found.CancelRequestedAt.UTC().Format(time.RFC3339Nano)
 	}
 	return &postpilotv1.GenerationJob{
+		WaitExpiresAt:     waitExpiry,
 		CancelRequestedAt: requested, CancellationPolicyVersion: int32(found.CancellationPolicyVersion), CanCancel: found.CanCancel,
 		Id: found.ID, Kind: found.Kind, Status: found.Status, Stage: found.Stage,
 		ProgressDone: int32(found.ProgressDone), ProgressTotal: int32(found.ProgressTotal),

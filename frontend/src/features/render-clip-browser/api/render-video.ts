@@ -1,5 +1,5 @@
 import { createBrowserSourceFrames } from '../lib/source-frames'
-import type { BrowserOriginals } from '../lib/originals'
+import { BrowserOriginals } from '../lib/originals'
 import {
   CaptionSheets,
   createClipVideoWorker,
@@ -10,24 +10,30 @@ import {
   type BrowserVideoTrack,
   type VideoWorkerInput,
   type VideoWorkerOutput,
+  type BrowserSourceAccess,
+  CLIP_VIDEO_DECODING,
 } from '@/entities/clip-preview'
 
 /** Heavy composition/encoding lives in the worker; DOM video supplies transferable snapshots. */
 export function renderBrowserVideo(
   input: BrowserVideoInput,
-  localSources: readonly { fingerprint: string; url: string }[],
+  localSources: readonly { fingerprint: string; url: string; file?: File }[],
   resolvePlayback: (fingerprint: string) => Promise<string>,
   signal?: AbortSignal,
   originals?: BrowserOriginals,
   captionFrames?: CaptionFrameLoader,
+  packetSink?: (
+    packet: BrowserVideoTrack['chunks'][number],
+    decoderConfig?: VideoDecoderConfig,
+  ) => Promise<void>,
+  sourceAccess?: BrowserSourceAccess,
 ): BrowserVideoRender {
   const controller = new AbortController()
-  const sources = createBrowserSourceFrames(
-    localSources,
-    resolvePlayback,
-    controller.signal,
-    originals,
-  )
+  const sources = input.snapshot
+    ? undefined
+    : createBrowserSourceFrames(localSources, resolvePlayback, controller.signal, originals)
+  const localOriginals =
+    originals ?? new BrowserOriginals(localSources, resolvePlayback, controller.signal)
   const worker = createClipVideoWorker()
   // The sheets a sequence caption is drawn from stay on THIS side: the worker asks
   // for the frame it is drawing, and the page holds one run per caption (CLIP-159).
@@ -35,6 +41,8 @@ export function renderBrowserVideo(
   const send = (message: VideoWorkerInput, transfer: Transferable[] = []) =>
     worker.postMessage(message, transfer)
   let stopped = false
+  let sinkChain = Promise.resolve()
+  let cleanupTimer: ReturnType<typeof setTimeout> | undefined
   let latest: BrowserVideoProgress | undefined
   let wake: (() => void) | undefined
   let resolve!: (track: BrowserVideoTrack) => void
@@ -43,11 +51,23 @@ export function renderBrowserVideo(
     resolve = yes
     reject = no
   })
-  const stop = () => {
+  const terminate = () => {
+    clearTimeout(cleanupTimer)
+    worker.terminate()
+  }
+  const stop = (completed = false) => {
     stopped = true
     controller.abort()
-    worker.terminate()
-    sources.dispose()
+    if (input.snapshot && !completed) {
+      try {
+        send({ type: 'cancel' })
+      } catch {
+        terminate()
+      }
+      cleanupTimer = setTimeout(terminate, CLIP_VIDEO_DECODING.workerCleanupMs)
+    } else terminate()
+    sources?.dispose()
+    if (!originals) localOriginals.dispose()
     sheets?.dispose()
     signal?.removeEventListener('abort', cancel)
     wake?.()
@@ -60,9 +80,57 @@ export function renderBrowserVideo(
   }
   const cancel = () => fail(new DOMException('Render cancelled', 'AbortError'))
   worker.onmessage = (event: MessageEvent<VideoWorkerOutput>) => {
-    if (stopped) return
     const message = event.data
-    if (message.type === 'source') {
+    if (stopped) {
+      if (message.type === 'cancelled') terminate()
+      return
+    }
+    if (message.type === 'packet') {
+      if (!packetSink) {
+        fail(new Error('CLIP_PACKET_SINK_UNAVAILABLE'))
+        return
+      }
+      sinkChain = sinkChain
+        .then(async () => {
+          if (stopped) return
+          await packetSink(message.packet, message.decoderConfig)
+          if (!stopped) send({ type: 'packetAck', requestId: message.requestId })
+        })
+        .catch((error: unknown) => {
+          if (!stopped) {
+            send({
+              type: 'packetAck',
+              requestId: message.requestId,
+              error: error instanceof Error ? error.message : 'CLIP_PACKET_SINK_FAILED',
+            })
+            fail(error)
+          }
+        })
+    } else if (message.type === 'sourceAccess') {
+      void (
+        sourceAccess
+          ? sourceAccess(message.sourceId, message.fingerprint, controller.signal)
+          : localOriginals.source(message.fingerprint)
+      )
+        .then(
+          (access) => {
+            if (!stopped) send({ type: 'sourceAccess', requestId: message.requestId, access })
+          },
+          (error: unknown) => {
+            if (!stopped)
+              send({
+                type: 'sourceAccess',
+                requestId: message.requestId,
+                error: error instanceof Error ? error.message : 'CLIP_SOURCE_UNAVAILABLE',
+              })
+          },
+        )
+        .catch(fail)
+    } else if (message.type === 'source') {
+      if (!sources) {
+        fail(new Error('CLIP_SOURCE_DOM_PATH_REFUSED'))
+        return
+      }
       void sources.frame(message.fingerprint, message.timeMs).then((bitmap) => {
         if (stopped) bitmap.close()
         else {
@@ -106,8 +174,8 @@ export function renderBrowserVideo(
       wake?.()
     } else if (message.type === 'error')
       fail(Object.assign(new Error(message.error), { measurements: message.measurements }))
-    else {
-      stop()
+    else if (message.type === 'done') {
+      stop(true)
       resolve(message.track)
     }
   }
@@ -120,7 +188,7 @@ export function renderBrowserVideo(
   if (signal?.aborted) cancel()
   else {
     try {
-      send({ type: 'start', input })
+      send({ type: 'start', input: { ...input, ...(packetSink ? { streamPackets: true } : {}) } })
     } catch (error) {
       fail(error)
     }

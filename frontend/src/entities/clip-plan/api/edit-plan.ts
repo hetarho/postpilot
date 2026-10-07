@@ -1,3 +1,4 @@
+import { toClipObservations } from '@/entities/clip-observation/@x/clip-plan'
 import { narrationFromProto, narrationToProto } from './spoken'
 import { CLIP_ACCENTS, type ClipAccent } from '@/entities/clip-template/@x/clip-plan'
 import { CLIP_PLAYBACK, CLIP_RATES } from '@/entities/clip-design/@x/clip-plan'
@@ -31,8 +32,20 @@ export function toClipEditingState(value: ProtoClipEditingState): ClipEditingSta
                 endMs: a.endMs,
               })) ?? [],
             elements: value.plan.elements.map(
-              ({ $typeName, rows, phrases, evidence, ownerPosition, derivedCaption, ...text }) => {
+              ({
+                $typeName,
+                rows,
+                phrases,
+                evidence,
+                ownerPosition,
+                ownerSizePx,
+                ownerStyle,
+                derivedCaption,
+                creation,
+                ...text
+              }) => {
                 void $typeName
+                void creation // Request-only data is never a saved-domain read field.
                 return {
                   ...text,
                   ...(derivedCaption
@@ -50,7 +63,10 @@ export function toClipEditingState(value: ProtoClipEditingState): ClipEditingSta
                   ownerPosition: ownerPosition
                     ? { x: ownerPosition.x, y: ownerPosition.y }
                     : undefined,
+                  ownerSizePx: ownerSizePx > 0 ? ownerSizePx : undefined,
+                  ownerStyle: ownerStyle || undefined,
                   narration: text.narration,
+                  effectivePosition: text.effectivePosition || undefined,
                   phrases: phrases.map((p) => ({
                     text: p.text,
                     startMs: p.startMs,
@@ -139,6 +155,9 @@ export function toClipEditingState(value: ProtoClipEditingState): ClipEditingSta
         }
       }),
     },
+    ...(value.layoutObservations
+      ? { layoutObservations: toClipObservations(value.layoutObservations) }
+      : {}),
     sources: value.sources.map((s) => ({
       id: s.id,
       fingerprint: s.fingerprint,
@@ -146,6 +165,10 @@ export function toClipEditingState(value: ProtoClipEditingState): ClipEditingSta
       durationMs: s.durationMs,
       width: s.width,
       height: s.height,
+      ...(s.hasAudio !== undefined ? { hasAudio: s.hasAudio } : {}),
+      ...(s.originalMeasurementProvenance
+        ? { originalMeasurementProvenance: s.originalMeasurementProvenance }
+        : {}),
       // A server that predates the rate set offers 1x and faster only, which is
       // exactly what an unverified cadence earns.
       allowedRatePermille:

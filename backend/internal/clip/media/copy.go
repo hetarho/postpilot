@@ -422,6 +422,9 @@ func (r *Rendering) measureValues(ctx context.Context, ws clip.MediaWorkspace, v
 // whole element occupies (plate for a plated style, stroke-inflated text block
 // for an unplated one) and where its keyword sits on its own line.
 type copyLayout struct {
+	// Sampling affects paint only; geometry remains the approved frozen layout.
+	Ground      Luminance
+	GroundScrim *design.CaptionScrim
 	// The approved style this caption was laid out in: the face it is set in,
 	// the colour it is painted and the motion it declares all come from here
 	// (CDS-80), and Style is the same style's layout contract.
@@ -440,6 +443,8 @@ type copyLayout struct {
 	// when the face draws every one of them.
 	Substitute map[rune]bool
 }
+
+func (l copyLayout) plated() bool { return l.Style.Plate != "" || l.Caption.Paint.Plate != "" }
 
 // One measured word on its line, for the styles that light words one at a time.
 type wordSpan struct {
@@ -569,7 +574,7 @@ func fitCopy(canvas clip.Canvas, c clip.Copy, candidates [][]string, bounds map[
 						words = append(words, wordsOn(line, bounds, factor))
 					}
 				}
-				best = copyLayout{caption, style, role, lines, scaled, region, size, keywordOn(lines, c.Keyword, bounds, factor), words, nil}
+				best = copyLayout{Caption: caption, Style: style, Role: role, Lines: lines, Bounds: scaled, Region: region, FontSize: size, Keyword: keywordOn(lines, c.Keyword, bounds, factor), Words: words}
 				bestWidth, bestClean = width, clean
 			}
 			// Prefer a single line whenever it fits at the current size.
@@ -628,6 +633,9 @@ func (l copyLayout) Elements(cut, copy int, c clip.Copy, startMS, endMS int) cli
 			add("highlight", clip.Region{X: x + l.Keyword.Offset - u.Extend, Y: top + (1-u.RaiseEM-u.HeightEM)*l.FontSize, Width: l.Keyword.Width + 2*u.Extend, Height: u.HeightEM * l.FontSize}, 0, accent, "")
 		}
 		background := design.Color[s.Plate].Hex
+		if l.Caption.Paint.Plate != "" {
+			background = l.Caption.Paint.Plate
+		}
 		if s.Stroke != "" && l.Caption.DarkStroke() {
 			stroke := design.Color["stroke_dark"]
 			background, _ = design.Over(stroke.Hex, stroke.Alpha, "#FFFFFF")

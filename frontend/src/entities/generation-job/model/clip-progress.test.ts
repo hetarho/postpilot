@@ -6,6 +6,30 @@ import { toGenerationJob } from '../api/job-mappers'
 import { CLIP_STAGES, progressLabel, progressRatio } from './types'
 
 afterEach(() => initializeI18n('ko'))
+it.each(['ko', 'en'] as const)(
+  'shows the server-owned wait expiry only while initially waiting in %s',
+  (locale) => {
+    initializeI18n(locale)
+    const job = toGenerationJob(
+      create(GenerationJobSchema, {
+        kind: 'render_clip',
+        stage: 'render_wait',
+        status: 'queued',
+        canCancel: true,
+        waitExpiresAt: '2026-10-06T14:30:00Z',
+      }),
+    )
+    expect(job.waitExpiresAt).toBe('2026-10-06T14:30:00Z')
+    expect(progressLabel(job)).toContain(locale === 'ko' ? '대기 만료' : 'wait expires')
+    expect(progressLabel({ ...job, stage: 'render' })).not.toContain(
+      locale === 'ko' ? '대기 만료' : 'wait expires',
+    )
+    expect(progressLabel({ ...job, waitExpiresAt: 'invalid' })).not.toContain('Invalid')
+    expect(progressLabel({ ...job, cancelRequestedAt: '2026-10-06T14:10:00Z' })).toBe(
+      locale === 'ko' ? '취소 중' : 'Cancelling',
+    )
+  },
+)
 it.each(['ko', 'en'] as const)('shows the bounded correction attempt in %s', (locale) => {
   initializeI18n(locale)
   for (const stage of ['analyze_retry', 'flow_retry', 'narrate_retry']) {

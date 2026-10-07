@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"database/sql"
+	"log/slog"
 	"time"
 
 	"github.com/postpilot/backend/internal/clip"
@@ -10,7 +11,7 @@ import (
 )
 
 type MediaControlTx interface {
-	ClaimMediaStage(context.Context, clip.MediaWorkerProfile, time.Time) (*clip.MediaLease, error)
+	ClaimMediaStageBounded(context.Context, clip.MediaWorkerProfile, int, time.Time) (*clip.MediaLease, error)
 	RenewMediaLease(context.Context, clip.MediaLeaseCredentials, int, time.Time) (time.Time, error)
 	FailMediaStage(context.Context, clip.MediaLeaseCredentials, clip.MediaFailure, time.Time) error
 	AcknowledgeMediaStop(context.Context, clip.MediaLeaseCredentials, time.Time) error
@@ -20,17 +21,21 @@ type MediaControlTx interface {
 // The store alone cannot authorize another context's parent job.
 type MediaControl struct {
 	MediaWorkerStore
-	writer *sql.DB
-	bind   Binder
+	writer   *sql.DB
+	bind     Binder
+	capacity clip.RenderCapacity
 }
 
-func NewMediaControl(writer *sql.DB, bind Binder, store MediaWorkerStore) *MediaControl {
-	return &MediaControl{MediaWorkerStore: store, writer: writer, bind: bind}
+func NewMediaControl(writer *sql.DB, bind Binder, store MediaWorkerStore, capacity clip.RenderCapacity) *MediaControl {
+	if err := capacity.Validate(); err != nil {
+		panic(err)
+	}
+	return &MediaControl{MediaWorkerStore: store, writer: writer, bind: bind, capacity: capacity}
 }
 func (m *MediaControl) ClaimMediaStage(ctx context.Context, profile clip.MediaWorkerProfile, now time.Time) (lease *clip.MediaLease, err error) {
 	err = WriteTx(ctx, m.writer, m.bind, func(p Ports) error {
 		var err error
-		lease, err = p.Control.ClaimMediaStage(ctx, profile, now)
+		lease, err = p.Control.ClaimMediaStageBounded(ctx, profile, m.capacity.Active, now)
 		if err != nil || lease == nil {
 			return err
 		}
@@ -45,6 +50,9 @@ func (m *MediaControl) ClaimMediaStage(ctx context.Context, profile clip.MediaWo
 	})
 	if err != nil {
 		return nil, err
+	}
+	if lease != nil && profile.Operation == clip.MediaRender && lease.Stage.AttemptCount == 1 {
+		slog.Info("clip native claim", "queue_ms", max(now.Sub(lease.Stage.CreatedAt).Milliseconds(), 0), "attempt", lease.Stage.AttemptCount)
 	}
 	return lease, nil
 }

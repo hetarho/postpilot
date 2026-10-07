@@ -87,14 +87,13 @@ it('states what the frame-by-frame captions add to the render, without gating on
       },
     },
   })
-  expect(screen.getByText('프레임마다 그리는 자막 3개 · 렌더링에 약 5초 더 걸려요')).toBeVisible()
+  expect(screen.getByText(/^효과 자막 3개.*서버 예상 추가 시간 약 5초/)).toBeVisible()
   expect(screen.getByRole('button', { name: '최대 20 크레딧 · 승인하고 생성' })).toBeEnabled()
 })
 
-// The caption count is unknown before narration, but the longest case is
-// already known from the target. It remains visible with details collapsed.
+// The selected styles bound work categories, never device-independent duration.
 it.each(['ko', 'en'] as const)(
-  'quotes the longest render in seconds before narration (%s)',
+  'states reusable drawing and device-dependent effects before narration (%s)',
   async (language) => {
     initializeI18n(language)
     const onApprove = vi.fn()
@@ -114,8 +113,8 @@ it.each(['ko', 'en'] as const)(
     expect(
       screen.getByText(
         language === 'ko'
-          ? '모든 자막을 프레임마다 그리면 렌더링에 최대 약 14초 더 걸려요'
-          : 'If every caption is drawn frame by frame, rendering may take up to about 14s longer',
+          ? /^선택한 스타일의 가장 복잡한 효과 기준.*서버 예상 추가 시간 약 14초.*기기와 효과/
+          : /^Most demanding selected effects.*about 14s.*depends on the device/,
       ),
     ).toBeVisible()
     await userEvent.click(screen.getByRole('button', { name: '최대 20 크레딧 · 승인하고 생성' }))
@@ -123,14 +122,14 @@ it.each(['ko', 'en'] as const)(
   },
 )
 
-it.each([false, true])('states zero extra time for static captions (fromPlan=%s)', (fromPlan) => {
+it.each([false, true])('states reusable drawing for static captions (fromPlan=%s)', (fromPlan) => {
   approval({
     quote: {
       ...quote,
       sequenceCaptions: { fromPlan, captions: 0, frames: 0, addedRenderMs: 0, selectedStyles: 0 },
     },
   })
-  expect(screen.getByText('프레임마다 그리는 자막 없음 · 추가 렌더링 시간 0초')).toBeVisible()
+  expect(screen.getByText('자막 그림 재사용 · 복잡한 프레임 효과 없음')).toBeVisible()
   expect(screen.getByRole('button', { name: '최대 20 크레딧 · 승인하고 생성' })).toBeEnabled()
 })
 
@@ -149,9 +148,7 @@ it('keeps approval available for a large sequence estimate', async () => {
       },
     },
   })
-  expect(
-    screen.getByText('프레임마다 그리는 자막 100개 · 렌더링에 약 108초 더 걸려요'),
-  ).toBeVisible()
+  expect(screen.getByText(/^효과 자막 100개.*서버 예상 추가 시간 약 108초/)).toBeVisible()
   await userEvent.click(screen.getByRole('button', { name: '최대 20 크레딧 · 승인하고 생성' }))
   expect(onApprove).toHaveBeenCalledOnce()
 })

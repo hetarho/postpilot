@@ -39,6 +39,36 @@ it('fades each side of a hard cut without consuming output time', () => {
   expect(schedule.sampleFrames).toBe(20 * 48000)
 })
 
+it('uses native cumulative frame/sample joins and integer-ms hard fades for fractional rate spans', () => {
+  const plan = clipTimelineFixture().plan
+  plan.cuts = [
+    {
+      ...plan.cuts[0],
+      id: 'first',
+      startMs: 0,
+      endMs: 1234,
+      transitionMs: 0,
+      playbackRatePermille: 1000,
+    },
+    {
+      ...plan.cuts[0],
+      id: 'second',
+      startMs: 2000,
+      endMs: 3234,
+      transitionMs: 0,
+      playbackRatePermille: 750,
+    },
+  ]
+  const schedule = browserAudioPlan(plan)
+  expect(schedule.cuts.map((c) => [c.startSample, c.frames])).toEqual([
+    [0, 59200],
+    [59200, 78400],
+  ])
+  expect(schedule.sampleFrames).toBe(137600)
+  expect(schedule.cuts[0].fadeOutStart).toBe(1.173)
+  expect(schedule.cuts[1].sourceStart).toBe(96000)
+})
+
 it('dips only visible intro text on its declared output interval', () => {
   const plan = clipTimelineFixture().plan
   const hook = {

@@ -24,6 +24,40 @@ export interface BrowserResultStore {
   ): Promise<{ passed: boolean; notices: { code: string; action: string }[] }>
   complete(renderId: string, signal: AbortSignal): Promise<ClipProject>
 }
+export interface VerifiedBrowserResult {
+  renderId: string
+  file: Blob
+  verdict: BrowserRenderVerdict
+  uploadPhase?: 'uploaded' | 'reported'
+  dispose(): Promise<void>
+}
+/** Retry consumes exactly the same verified bytes and identity. Server completion
+ * remains authoritative; local playback and successful PUT do not publish a result. */
+export async function storeVerifiedBrowserResult(
+  result: VerifiedBrowserResult,
+  store: BrowserResultStore,
+  signal: AbortSignal,
+  progress: (percent: number) => void = () => {},
+): Promise<ClipProject> {
+  signal.throwIfAborted()
+  if (!result.verdict.passed) throw new BrowserRenderVerdictError([])
+  if (!result.uploadPhase) {
+    const upload = await store.prepare(result.renderId, result.file.size, signal)
+    signal.throwIfAborted()
+    await store.put(upload.putUrl, upload.headers, result.file, progress, signal)
+    signal.throwIfAborted()
+    result.uploadPhase = 'uploaded'
+  }
+  if (result.uploadPhase !== 'reported') {
+    const report = await store.report(result.renderId, result.verdict, signal)
+    signal.throwIfAborted()
+    if (!report.passed) throw new BrowserRenderVerdictError(report.notices)
+    result.uploadPhase = 'reported'
+  }
+  const project = await store.complete(result.renderId, signal)
+  signal.throwIfAborted()
+  return project
+}
 export function createBrowserResultStore(calls: ClipRenderCalls): BrowserResultStore {
   return {
     prepare: (renderId, bytes, signal) => calls.prepareUpload(renderId, bytes, signal),

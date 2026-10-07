@@ -741,6 +741,843 @@ func (x *ReorderClipSourcesResponse) GetBatch() *ClipSourceBatch {
 	return nil
 }
 
+// Client measurements bind coverage; they are never native original proof.
+type ClipAnalysisOriginalMeasurement struct {
+	state                protoimpl.MessageState `protogen:"open.v1"`
+	SourceId             string                 `protobuf:"bytes,1,opt,name=source_id,json=sourceId,proto3" json:"source_id,omitempty"`
+	Fingerprint          string                 `protobuf:"bytes,2,opt,name=fingerprint,proto3" json:"fingerprint,omitempty"`
+	DurationMs           int32                  `protobuf:"varint,3,opt,name=duration_ms,json=durationMs,proto3" json:"duration_ms,omitempty"`
+	Width                int32                  `protobuf:"varint,4,opt,name=width,proto3" json:"width,omitempty"`
+	Height               int32                  `protobuf:"varint,5,opt,name=height,proto3" json:"height,omitempty"`
+	FrameRateNumerator   int32                  `protobuf:"varint,6,opt,name=frame_rate_numerator,json=frameRateNumerator,proto3" json:"frame_rate_numerator,omitempty"`
+	FrameRateDenominator int32                  `protobuf:"varint,7,opt,name=frame_rate_denominator,json=frameRateDenominator,proto3" json:"frame_rate_denominator,omitempty"`
+	CadenceVerified      bool                   `protobuf:"varint,8,opt,name=cadence_verified,json=cadenceVerified,proto3" json:"cadence_verified,omitempty"`
+	DecodedFrames        int32                  `protobuf:"varint,9,opt,name=decoded_frames,json=decodedFrames,proto3" json:"decoded_frames,omitempty"`
+	HasAudio             bool                   `protobuf:"varint,10,opt,name=has_audio,json=hasAudio,proto3" json:"has_audio,omitempty"`
+	AudioRate            int32                  `protobuf:"varint,11,opt,name=audio_rate,json=audioRate,proto3" json:"audio_rate,omitempty"`
+	AudioChannels        int32                  `protobuf:"varint,12,opt,name=audio_channels,json=audioChannels,proto3" json:"audio_channels,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
+}
+
+func (x *ClipAnalysisOriginalMeasurement) Reset() {
+	*x = ClipAnalysisOriginalMeasurement{}
+	mi := &file_postpilot_v1_clip_source_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ClipAnalysisOriginalMeasurement) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ClipAnalysisOriginalMeasurement) ProtoMessage() {}
+
+func (x *ClipAnalysisOriginalMeasurement) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_clip_source_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ClipAnalysisOriginalMeasurement.ProtoReflect.Descriptor instead.
+func (*ClipAnalysisOriginalMeasurement) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_clip_source_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *ClipAnalysisOriginalMeasurement) GetSourceId() string {
+	if x != nil {
+		return x.SourceId
+	}
+	return ""
+}
+
+func (x *ClipAnalysisOriginalMeasurement) GetFingerprint() string {
+	if x != nil {
+		return x.Fingerprint
+	}
+	return ""
+}
+
+func (x *ClipAnalysisOriginalMeasurement) GetDurationMs() int32 {
+	if x != nil {
+		return x.DurationMs
+	}
+	return 0
+}
+
+func (x *ClipAnalysisOriginalMeasurement) GetWidth() int32 {
+	if x != nil {
+		return x.Width
+	}
+	return 0
+}
+
+func (x *ClipAnalysisOriginalMeasurement) GetHeight() int32 {
+	if x != nil {
+		return x.Height
+	}
+	return 0
+}
+
+func (x *ClipAnalysisOriginalMeasurement) GetFrameRateNumerator() int32 {
+	if x != nil {
+		return x.FrameRateNumerator
+	}
+	return 0
+}
+
+func (x *ClipAnalysisOriginalMeasurement) GetFrameRateDenominator() int32 {
+	if x != nil {
+		return x.FrameRateDenominator
+	}
+	return 0
+}
+
+func (x *ClipAnalysisOriginalMeasurement) GetCadenceVerified() bool {
+	if x != nil {
+		return x.CadenceVerified
+	}
+	return false
+}
+
+func (x *ClipAnalysisOriginalMeasurement) GetDecodedFrames() int32 {
+	if x != nil {
+		return x.DecodedFrames
+	}
+	return 0
+}
+
+func (x *ClipAnalysisOriginalMeasurement) GetHasAudio() bool {
+	if x != nil {
+		return x.HasAudio
+	}
+	return false
+}
+
+func (x *ClipAnalysisOriginalMeasurement) GetAudioRate() int32 {
+	if x != nil {
+		return x.AudioRate
+	}
+	return 0
+}
+
+func (x *ClipAnalysisOriginalMeasurement) GetAudioChannels() int32 {
+	if x != nil {
+		return x.AudioChannels
+	}
+	return 0
+}
+
+type BeginClipAnalysisPreparationRequest struct {
+	state            protoimpl.MessageState             `protogen:"open.v1"`
+	ProjectId        string                             `protobuf:"bytes,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	BatchId          string                             `protobuf:"bytes,2,opt,name=batch_id,json=batchId,proto3" json:"batch_id,omitempty"`
+	ExpectedRevision int32                              `protobuf:"varint,3,opt,name=expected_revision,json=expectedRevision,proto3" json:"expected_revision,omitempty"`
+	QuoteId          string                             `protobuf:"bytes,4,opt,name=quote_id,json=quoteId,proto3" json:"quote_id,omitempty"`
+	ProfileVersion   string                             `protobuf:"bytes,5,opt,name=profile_version,json=profileVersion,proto3" json:"profile_version,omitempty"`
+	Originals        []*ClipAnalysisOriginalMeasurement `protobuf:"bytes,6,rep,name=originals,proto3" json:"originals,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *BeginClipAnalysisPreparationRequest) Reset() {
+	*x = BeginClipAnalysisPreparationRequest{}
+	mi := &file_postpilot_v1_clip_source_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BeginClipAnalysisPreparationRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BeginClipAnalysisPreparationRequest) ProtoMessage() {}
+
+func (x *BeginClipAnalysisPreparationRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_clip_source_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BeginClipAnalysisPreparationRequest.ProtoReflect.Descriptor instead.
+func (*BeginClipAnalysisPreparationRequest) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_clip_source_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *BeginClipAnalysisPreparationRequest) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
+func (x *BeginClipAnalysisPreparationRequest) GetBatchId() string {
+	if x != nil {
+		return x.BatchId
+	}
+	return ""
+}
+
+func (x *BeginClipAnalysisPreparationRequest) GetExpectedRevision() int32 {
+	if x != nil {
+		return x.ExpectedRevision
+	}
+	return 0
+}
+
+func (x *BeginClipAnalysisPreparationRequest) GetQuoteId() string {
+	if x != nil {
+		return x.QuoteId
+	}
+	return ""
+}
+
+func (x *BeginClipAnalysisPreparationRequest) GetProfileVersion() string {
+	if x != nil {
+		return x.ProfileVersion
+	}
+	return ""
+}
+
+func (x *BeginClipAnalysisPreparationRequest) GetOriginals() []*ClipAnalysisOriginalMeasurement {
+	if x != nil {
+		return x.Originals
+	}
+	return nil
+}
+
+type ClipAnalysisProfile struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Version         string                 `protobuf:"bytes,1,opt,name=version,proto3" json:"version,omitempty"`
+	IntervalMs      int32                  `protobuf:"varint,2,opt,name=interval_ms,json=intervalMs,proto3" json:"interval_ms,omitempty"`
+	LongEdge        int32                  `protobuf:"varint,3,opt,name=long_edge,json=longEdge,proto3" json:"long_edge,omitempty"`
+	FramesPerSecond int32                  `protobuf:"varint,4,opt,name=frames_per_second,json=framesPerSecond,proto3" json:"frames_per_second,omitempty"`
+	MaxCopyBytes    int64                  `protobuf:"varint,5,opt,name=max_copy_bytes,json=maxCopyBytes,proto3" json:"max_copy_bytes,omitempty"`
+	VideoCodec      string                 `protobuf:"bytes,6,opt,name=video_codec,json=videoCodec,proto3" json:"video_codec,omitempty"`
+	PixelFormat     string                 `protobuf:"bytes,7,opt,name=pixel_format,json=pixelFormat,proto3" json:"pixel_format,omitempty"`
+	AudioCodec      string                 `protobuf:"bytes,8,opt,name=audio_codec,json=audioCodec,proto3" json:"audio_codec,omitempty"`
+	AudioRate       int32                  `protobuf:"varint,9,opt,name=audio_rate,json=audioRate,proto3" json:"audio_rate,omitempty"`
+	AudioChannels   int32                  `protobuf:"varint,10,opt,name=audio_channels,json=audioChannels,proto3" json:"audio_channels,omitempty"`
+	AudioBitrate    int32                  `protobuf:"varint,11,opt,name=audio_bitrate,json=audioBitrate,proto3" json:"audio_bitrate,omitempty"`
+	Qualified       bool                   `protobuf:"varint,12,opt,name=qualified,proto3" json:"qualified,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *ClipAnalysisProfile) Reset() {
+	*x = ClipAnalysisProfile{}
+	mi := &file_postpilot_v1_clip_source_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ClipAnalysisProfile) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ClipAnalysisProfile) ProtoMessage() {}
+
+func (x *ClipAnalysisProfile) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_clip_source_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ClipAnalysisProfile.ProtoReflect.Descriptor instead.
+func (*ClipAnalysisProfile) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_clip_source_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *ClipAnalysisProfile) GetVersion() string {
+	if x != nil {
+		return x.Version
+	}
+	return ""
+}
+
+func (x *ClipAnalysisProfile) GetIntervalMs() int32 {
+	if x != nil {
+		return x.IntervalMs
+	}
+	return 0
+}
+
+func (x *ClipAnalysisProfile) GetLongEdge() int32 {
+	if x != nil {
+		return x.LongEdge
+	}
+	return 0
+}
+
+func (x *ClipAnalysisProfile) GetFramesPerSecond() int32 {
+	if x != nil {
+		return x.FramesPerSecond
+	}
+	return 0
+}
+
+func (x *ClipAnalysisProfile) GetMaxCopyBytes() int64 {
+	if x != nil {
+		return x.MaxCopyBytes
+	}
+	return 0
+}
+
+func (x *ClipAnalysisProfile) GetVideoCodec() string {
+	if x != nil {
+		return x.VideoCodec
+	}
+	return ""
+}
+
+func (x *ClipAnalysisProfile) GetPixelFormat() string {
+	if x != nil {
+		return x.PixelFormat
+	}
+	return ""
+}
+
+func (x *ClipAnalysisProfile) GetAudioCodec() string {
+	if x != nil {
+		return x.AudioCodec
+	}
+	return ""
+}
+
+func (x *ClipAnalysisProfile) GetAudioRate() int32 {
+	if x != nil {
+		return x.AudioRate
+	}
+	return 0
+}
+
+func (x *ClipAnalysisProfile) GetAudioChannels() int32 {
+	if x != nil {
+		return x.AudioChannels
+	}
+	return 0
+}
+
+func (x *ClipAnalysisProfile) GetAudioBitrate() int32 {
+	if x != nil {
+		return x.AudioBitrate
+	}
+	return 0
+}
+
+func (x *ClipAnalysisProfile) GetQualified() bool {
+	if x != nil {
+		return x.Qualified
+	}
+	return false
+}
+
+type ClipAnalysisCopySlot struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Slot          string                 `protobuf:"bytes,1,opt,name=slot,proto3" json:"slot,omitempty"`
+	SourceId      string                 `protobuf:"bytes,2,opt,name=source_id,json=sourceId,proto3" json:"source_id,omitempty"`
+	Fingerprint   string                 `protobuf:"bytes,3,opt,name=fingerprint,proto3" json:"fingerprint,omitempty"`
+	Ordinal       int32                  `protobuf:"varint,4,opt,name=ordinal,proto3" json:"ordinal,omitempty"`
+	OffsetMs      int32                  `protobuf:"varint,5,opt,name=offset_ms,json=offsetMs,proto3" json:"offset_ms,omitempty"`
+	DurationMs    int32                  `protobuf:"varint,6,opt,name=duration_ms,json=durationMs,proto3" json:"duration_ms,omitempty"`
+	Width         int32                  `protobuf:"varint,7,opt,name=width,proto3" json:"width,omitempty"`
+	Height        int32                  `protobuf:"varint,8,opt,name=height,proto3" json:"height,omitempty"`
+	HasAudio      bool                   `protobuf:"varint,9,opt,name=has_audio,json=hasAudio,proto3" json:"has_audio,omitempty"`
+	State         string                 `protobuf:"bytes,10,opt,name=state,proto3" json:"state,omitempty"`
+	Bytes         int64                  `protobuf:"varint,11,opt,name=bytes,proto3" json:"bytes,omitempty"`
+	Sha256        string                 `protobuf:"bytes,12,opt,name=sha256,proto3" json:"sha256,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ClipAnalysisCopySlot) Reset() {
+	*x = ClipAnalysisCopySlot{}
+	mi := &file_postpilot_v1_clip_source_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ClipAnalysisCopySlot) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ClipAnalysisCopySlot) ProtoMessage() {}
+
+func (x *ClipAnalysisCopySlot) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_clip_source_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ClipAnalysisCopySlot.ProtoReflect.Descriptor instead.
+func (*ClipAnalysisCopySlot) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_clip_source_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *ClipAnalysisCopySlot) GetSlot() string {
+	if x != nil {
+		return x.Slot
+	}
+	return ""
+}
+
+func (x *ClipAnalysisCopySlot) GetSourceId() string {
+	if x != nil {
+		return x.SourceId
+	}
+	return ""
+}
+
+func (x *ClipAnalysisCopySlot) GetFingerprint() string {
+	if x != nil {
+		return x.Fingerprint
+	}
+	return ""
+}
+
+func (x *ClipAnalysisCopySlot) GetOrdinal() int32 {
+	if x != nil {
+		return x.Ordinal
+	}
+	return 0
+}
+
+func (x *ClipAnalysisCopySlot) GetOffsetMs() int32 {
+	if x != nil {
+		return x.OffsetMs
+	}
+	return 0
+}
+
+func (x *ClipAnalysisCopySlot) GetDurationMs() int32 {
+	if x != nil {
+		return x.DurationMs
+	}
+	return 0
+}
+
+func (x *ClipAnalysisCopySlot) GetWidth() int32 {
+	if x != nil {
+		return x.Width
+	}
+	return 0
+}
+
+func (x *ClipAnalysisCopySlot) GetHeight() int32 {
+	if x != nil {
+		return x.Height
+	}
+	return 0
+}
+
+func (x *ClipAnalysisCopySlot) GetHasAudio() bool {
+	if x != nil {
+		return x.HasAudio
+	}
+	return false
+}
+
+func (x *ClipAnalysisCopySlot) GetState() string {
+	if x != nil {
+		return x.State
+	}
+	return ""
+}
+
+func (x *ClipAnalysisCopySlot) GetBytes() int64 {
+	if x != nil {
+		return x.Bytes
+	}
+	return 0
+}
+
+func (x *ClipAnalysisCopySlot) GetSha256() string {
+	if x != nil {
+		return x.Sha256
+	}
+	return ""
+}
+
+type ClipAnalysisPreparationResponse struct {
+	state                         protoimpl.MessageState  `protogen:"open.v1"`
+	PreparationId                 string                  `protobuf:"bytes,1,opt,name=preparation_id,json=preparationId,proto3" json:"preparation_id,omitempty"`
+	ProjectId                     string                  `protobuf:"bytes,2,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	BatchId                       string                  `protobuf:"bytes,3,opt,name=batch_id,json=batchId,proto3" json:"batch_id,omitempty"`
+	ExpectedRevision              int32                   `protobuf:"varint,4,opt,name=expected_revision,json=expectedRevision,proto3" json:"expected_revision,omitempty"`
+	State                         string                  `protobuf:"bytes,5,opt,name=state,proto3" json:"state,omitempty"`
+	ExpiresAt                     string                  `protobuf:"bytes,6,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`
+	Profile                       *ClipAnalysisProfile    `protobuf:"bytes,7,opt,name=profile,proto3" json:"profile,omitempty"`
+	Copies                        []*ClipAnalysisCopySlot `protobuf:"bytes,8,rep,name=copies,proto3" json:"copies,omitempty"`
+	OriginalMeasurementProvenance string                  `protobuf:"bytes,9,opt,name=original_measurement_provenance,json=originalMeasurementProvenance,proto3" json:"original_measurement_provenance,omitempty"`
+	Progress                      int32                   `protobuf:"varint,10,opt,name=progress,proto3" json:"progress,omitempty"`
+	Failure                       string                  `protobuf:"bytes,11,opt,name=failure,proto3" json:"failure,omitempty"`
+	JobId                         string                  `protobuf:"bytes,12,opt,name=job_id,json=jobId,proto3" json:"job_id,omitempty"`
+	unknownFields                 protoimpl.UnknownFields
+	sizeCache                     protoimpl.SizeCache
+}
+
+func (x *ClipAnalysisPreparationResponse) Reset() {
+	*x = ClipAnalysisPreparationResponse{}
+	mi := &file_postpilot_v1_clip_source_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ClipAnalysisPreparationResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ClipAnalysisPreparationResponse) ProtoMessage() {}
+
+func (x *ClipAnalysisPreparationResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_clip_source_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ClipAnalysisPreparationResponse.ProtoReflect.Descriptor instead.
+func (*ClipAnalysisPreparationResponse) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_clip_source_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *ClipAnalysisPreparationResponse) GetPreparationId() string {
+	if x != nil {
+		return x.PreparationId
+	}
+	return ""
+}
+
+func (x *ClipAnalysisPreparationResponse) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
+func (x *ClipAnalysisPreparationResponse) GetBatchId() string {
+	if x != nil {
+		return x.BatchId
+	}
+	return ""
+}
+
+func (x *ClipAnalysisPreparationResponse) GetExpectedRevision() int32 {
+	if x != nil {
+		return x.ExpectedRevision
+	}
+	return 0
+}
+
+func (x *ClipAnalysisPreparationResponse) GetState() string {
+	if x != nil {
+		return x.State
+	}
+	return ""
+}
+
+func (x *ClipAnalysisPreparationResponse) GetExpiresAt() string {
+	if x != nil {
+		return x.ExpiresAt
+	}
+	return ""
+}
+
+func (x *ClipAnalysisPreparationResponse) GetProfile() *ClipAnalysisProfile {
+	if x != nil {
+		return x.Profile
+	}
+	return nil
+}
+
+func (x *ClipAnalysisPreparationResponse) GetCopies() []*ClipAnalysisCopySlot {
+	if x != nil {
+		return x.Copies
+	}
+	return nil
+}
+
+func (x *ClipAnalysisPreparationResponse) GetOriginalMeasurementProvenance() string {
+	if x != nil {
+		return x.OriginalMeasurementProvenance
+	}
+	return ""
+}
+
+func (x *ClipAnalysisPreparationResponse) GetProgress() int32 {
+	if x != nil {
+		return x.Progress
+	}
+	return 0
+}
+
+func (x *ClipAnalysisPreparationResponse) GetFailure() string {
+	if x != nil {
+		return x.Failure
+	}
+	return ""
+}
+
+func (x *ClipAnalysisPreparationResponse) GetJobId() string {
+	if x != nil {
+		return x.JobId
+	}
+	return ""
+}
+
+type ReserveClipAnalysisCopyRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	PreparationId string                 `protobuf:"bytes,1,opt,name=preparation_id,json=preparationId,proto3" json:"preparation_id,omitempty"`
+	Slot          string                 `protobuf:"bytes,2,opt,name=slot,proto3" json:"slot,omitempty"`
+	Bytes         int64                  `protobuf:"varint,3,opt,name=bytes,proto3" json:"bytes,omitempty"`
+	Sha256        string                 `protobuf:"bytes,4,opt,name=sha256,proto3" json:"sha256,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReserveClipAnalysisCopyRequest) Reset() {
+	*x = ReserveClipAnalysisCopyRequest{}
+	mi := &file_postpilot_v1_clip_source_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReserveClipAnalysisCopyRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReserveClipAnalysisCopyRequest) ProtoMessage() {}
+
+func (x *ReserveClipAnalysisCopyRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_clip_source_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReserveClipAnalysisCopyRequest.ProtoReflect.Descriptor instead.
+func (*ReserveClipAnalysisCopyRequest) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_clip_source_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *ReserveClipAnalysisCopyRequest) GetPreparationId() string {
+	if x != nil {
+		return x.PreparationId
+	}
+	return ""
+}
+
+func (x *ReserveClipAnalysisCopyRequest) GetSlot() string {
+	if x != nil {
+		return x.Slot
+	}
+	return ""
+}
+
+func (x *ReserveClipAnalysisCopyRequest) GetBytes() int64 {
+	if x != nil {
+		return x.Bytes
+	}
+	return 0
+}
+
+func (x *ReserveClipAnalysisCopyRequest) GetSha256() string {
+	if x != nil {
+		return x.Sha256
+	}
+	return ""
+}
+
+type ReserveClipAnalysisCopyResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Slot          string                 `protobuf:"bytes,1,opt,name=slot,proto3" json:"slot,omitempty"`
+	PutUrl        string                 `protobuf:"bytes,2,opt,name=put_url,json=putUrl,proto3" json:"put_url,omitempty"`
+	Headers       map[string]string      `protobuf:"bytes,3,rep,name=headers,proto3" json:"headers,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	ExpiresAt     string                 `protobuf:"bytes,4,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReserveClipAnalysisCopyResponse) Reset() {
+	*x = ReserveClipAnalysisCopyResponse{}
+	mi := &file_postpilot_v1_clip_source_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReserveClipAnalysisCopyResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReserveClipAnalysisCopyResponse) ProtoMessage() {}
+
+func (x *ReserveClipAnalysisCopyResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_clip_source_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReserveClipAnalysisCopyResponse.ProtoReflect.Descriptor instead.
+func (*ReserveClipAnalysisCopyResponse) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_clip_source_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *ReserveClipAnalysisCopyResponse) GetSlot() string {
+	if x != nil {
+		return x.Slot
+	}
+	return ""
+}
+
+func (x *ReserveClipAnalysisCopyResponse) GetPutUrl() string {
+	if x != nil {
+		return x.PutUrl
+	}
+	return ""
+}
+
+func (x *ReserveClipAnalysisCopyResponse) GetHeaders() map[string]string {
+	if x != nil {
+		return x.Headers
+	}
+	return nil
+}
+
+func (x *ReserveClipAnalysisCopyResponse) GetExpiresAt() string {
+	if x != nil {
+		return x.ExpiresAt
+	}
+	return ""
+}
+
+type CompleteClipAnalysisPreparationRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	PreparationId string                 `protobuf:"bytes,1,opt,name=preparation_id,json=preparationId,proto3" json:"preparation_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CompleteClipAnalysisPreparationRequest) Reset() {
+	*x = CompleteClipAnalysisPreparationRequest{}
+	mi := &file_postpilot_v1_clip_source_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CompleteClipAnalysisPreparationRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CompleteClipAnalysisPreparationRequest) ProtoMessage() {}
+
+func (x *CompleteClipAnalysisPreparationRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_clip_source_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CompleteClipAnalysisPreparationRequest.ProtoReflect.Descriptor instead.
+func (*CompleteClipAnalysisPreparationRequest) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_clip_source_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *CompleteClipAnalysisPreparationRequest) GetPreparationId() string {
+	if x != nil {
+		return x.PreparationId
+	}
+	return ""
+}
+
+type CancelClipAnalysisPreparationRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	PreparationId string                 `protobuf:"bytes,1,opt,name=preparation_id,json=preparationId,proto3" json:"preparation_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CancelClipAnalysisPreparationRequest) Reset() {
+	*x = CancelClipAnalysisPreparationRequest{}
+	mi := &file_postpilot_v1_clip_source_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CancelClipAnalysisPreparationRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CancelClipAnalysisPreparationRequest) ProtoMessage() {}
+
+func (x *CancelClipAnalysisPreparationRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_clip_source_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CancelClipAnalysisPreparationRequest.ProtoReflect.Descriptor instead.
+func (*CancelClipAnalysisPreparationRequest) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_clip_source_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *CancelClipAnalysisPreparationRequest) GetPreparationId() string {
+	if x != nil {
+		return x.PreparationId
+	}
+	return ""
+}
+
 var File_postpilot_v1_clip_source_proto protoreflect.FileDescriptor
 
 const file_postpilot_v1_clip_source_proto_rawDesc = "" +
@@ -793,8 +1630,104 @@ const file_postpilot_v1_clip_source_proto_rawDesc = "" +
 	"\n" +
 	"source_ids\x18\x03 \x03(\tR\tsourceIds\"Q\n" +
 	"\x1aReorderClipSourcesResponse\x123\n" +
-	"\x05batch\x18\x01 \x01(\v2\x1d.postpilot.v1.ClipSourceBatchR\x05batch2\xa8\x06\n" +
-	"\x11ClipSourceService\x12r\n" +
+	"\x05batch\x18\x01 \x01(\v2\x1d.postpilot.v1.ClipSourceBatchR\x05batch\"\xcc\x03\n" +
+	"\x1fClipAnalysisOriginalMeasurement\x12\x1b\n" +
+	"\tsource_id\x18\x01 \x01(\tR\bsourceId\x12 \n" +
+	"\vfingerprint\x18\x02 \x01(\tR\vfingerprint\x12\x1f\n" +
+	"\vduration_ms\x18\x03 \x01(\x05R\n" +
+	"durationMs\x12\x14\n" +
+	"\x05width\x18\x04 \x01(\x05R\x05width\x12\x16\n" +
+	"\x06height\x18\x05 \x01(\x05R\x06height\x120\n" +
+	"\x14frame_rate_numerator\x18\x06 \x01(\x05R\x12frameRateNumerator\x124\n" +
+	"\x16frame_rate_denominator\x18\a \x01(\x05R\x14frameRateDenominator\x12)\n" +
+	"\x10cadence_verified\x18\b \x01(\bR\x0fcadenceVerified\x12%\n" +
+	"\x0edecoded_frames\x18\t \x01(\x05R\rdecodedFrames\x12\x1b\n" +
+	"\thas_audio\x18\n" +
+	" \x01(\bR\bhasAudio\x12\x1d\n" +
+	"\n" +
+	"audio_rate\x18\v \x01(\x05R\taudioRate\x12%\n" +
+	"\x0eaudio_channels\x18\f \x01(\x05R\raudioChannels\"\x9d\x02\n" +
+	"#BeginClipAnalysisPreparationRequest\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\x01 \x01(\tR\tprojectId\x12\x19\n" +
+	"\bbatch_id\x18\x02 \x01(\tR\abatchId\x12+\n" +
+	"\x11expected_revision\x18\x03 \x01(\x05R\x10expectedRevision\x12\x19\n" +
+	"\bquote_id\x18\x04 \x01(\tR\aquoteId\x12'\n" +
+	"\x0fprofile_version\x18\x05 \x01(\tR\x0eprofileVersion\x12K\n" +
+	"\toriginals\x18\x06 \x03(\v2-.postpilot.v1.ClipAnalysisOriginalMeasurementR\toriginals\"\xad\x03\n" +
+	"\x13ClipAnalysisProfile\x12\x18\n" +
+	"\aversion\x18\x01 \x01(\tR\aversion\x12\x1f\n" +
+	"\vinterval_ms\x18\x02 \x01(\x05R\n" +
+	"intervalMs\x12\x1b\n" +
+	"\tlong_edge\x18\x03 \x01(\x05R\blongEdge\x12*\n" +
+	"\x11frames_per_second\x18\x04 \x01(\x05R\x0fframesPerSecond\x12$\n" +
+	"\x0emax_copy_bytes\x18\x05 \x01(\x03R\fmaxCopyBytes\x12\x1f\n" +
+	"\vvideo_codec\x18\x06 \x01(\tR\n" +
+	"videoCodec\x12!\n" +
+	"\fpixel_format\x18\a \x01(\tR\vpixelFormat\x12\x1f\n" +
+	"\vaudio_codec\x18\b \x01(\tR\n" +
+	"audioCodec\x12\x1d\n" +
+	"\n" +
+	"audio_rate\x18\t \x01(\x05R\taudioRate\x12%\n" +
+	"\x0eaudio_channels\x18\n" +
+	" \x01(\x05R\raudioChannels\x12#\n" +
+	"\raudio_bitrate\x18\v \x01(\x05R\faudioBitrate\x12\x1c\n" +
+	"\tqualified\x18\f \x01(\bR\tqualified\"\xd0\x02\n" +
+	"\x14ClipAnalysisCopySlot\x12\x12\n" +
+	"\x04slot\x18\x01 \x01(\tR\x04slot\x12\x1b\n" +
+	"\tsource_id\x18\x02 \x01(\tR\bsourceId\x12 \n" +
+	"\vfingerprint\x18\x03 \x01(\tR\vfingerprint\x12\x18\n" +
+	"\aordinal\x18\x04 \x01(\x05R\aordinal\x12\x1b\n" +
+	"\toffset_ms\x18\x05 \x01(\x05R\boffsetMs\x12\x1f\n" +
+	"\vduration_ms\x18\x06 \x01(\x05R\n" +
+	"durationMs\x12\x14\n" +
+	"\x05width\x18\a \x01(\x05R\x05width\x12\x16\n" +
+	"\x06height\x18\b \x01(\x05R\x06height\x12\x1b\n" +
+	"\thas_audio\x18\t \x01(\bR\bhasAudio\x12\x14\n" +
+	"\x05state\x18\n" +
+	" \x01(\tR\x05state\x12\x14\n" +
+	"\x05bytes\x18\v \x01(\x03R\x05bytes\x12\x16\n" +
+	"\x06sha256\x18\f \x01(\tR\x06sha256\"\xf2\x03\n" +
+	"\x1fClipAnalysisPreparationResponse\x12%\n" +
+	"\x0epreparation_id\x18\x01 \x01(\tR\rpreparationId\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\x02 \x01(\tR\tprojectId\x12\x19\n" +
+	"\bbatch_id\x18\x03 \x01(\tR\abatchId\x12+\n" +
+	"\x11expected_revision\x18\x04 \x01(\x05R\x10expectedRevision\x12\x14\n" +
+	"\x05state\x18\x05 \x01(\tR\x05state\x12\x1d\n" +
+	"\n" +
+	"expires_at\x18\x06 \x01(\tR\texpiresAt\x12;\n" +
+	"\aprofile\x18\a \x01(\v2!.postpilot.v1.ClipAnalysisProfileR\aprofile\x12:\n" +
+	"\x06copies\x18\b \x03(\v2\".postpilot.v1.ClipAnalysisCopySlotR\x06copies\x12F\n" +
+	"\x1foriginal_measurement_provenance\x18\t \x01(\tR\x1doriginalMeasurementProvenance\x12\x1a\n" +
+	"\bprogress\x18\n" +
+	" \x01(\x05R\bprogress\x12\x18\n" +
+	"\afailure\x18\v \x01(\tR\afailure\x12\x15\n" +
+	"\x06job_id\x18\f \x01(\tR\x05jobId\"\x89\x01\n" +
+	"\x1eReserveClipAnalysisCopyRequest\x12%\n" +
+	"\x0epreparation_id\x18\x01 \x01(\tR\rpreparationId\x12\x12\n" +
+	"\x04slot\x18\x02 \x01(\tR\x04slot\x12\x14\n" +
+	"\x05bytes\x18\x03 \x01(\x03R\x05bytes\x12\x16\n" +
+	"\x06sha256\x18\x04 \x01(\tR\x06sha256\"\xff\x01\n" +
+	"\x1fReserveClipAnalysisCopyResponse\x12\x12\n" +
+	"\x04slot\x18\x01 \x01(\tR\x04slot\x12\x17\n" +
+	"\aput_url\x18\x02 \x01(\tR\x06putUrl\x12T\n" +
+	"\aheaders\x18\x03 \x03(\v2:.postpilot.v1.ReserveClipAnalysisCopyResponse.HeadersEntryR\aheaders\x12\x1d\n" +
+	"\n" +
+	"expires_at\x18\x04 \x01(\tR\texpiresAt\x1a:\n" +
+	"\fHeadersEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"O\n" +
+	"&CompleteClipAnalysisPreparationRequest\x12%\n" +
+	"\x0epreparation_id\x18\x01 \x01(\tR\rpreparationId\"M\n" +
+	"$CancelClipAnalysisPreparationRequest\x12%\n" +
+	"\x0epreparation_id\x18\x01 \x01(\tR\rpreparationId2\xb9\n" +
+	"\n" +
+	"\x11ClipSourceService\x12\x82\x01\n" +
+	"\x1cBeginClipAnalysisPreparation\x121.postpilot.v1.BeginClipAnalysisPreparationRequest\x1a-.postpilot.v1.ClipAnalysisPreparationResponse\"\x00\x12x\n" +
+	"\x17ReserveClipAnalysisCopy\x12,.postpilot.v1.ReserveClipAnalysisCopyRequest\x1a-.postpilot.v1.ReserveClipAnalysisCopyResponse\"\x00\x12\x88\x01\n" +
+	"\x1fCompleteClipAnalysisPreparation\x124.postpilot.v1.CompleteClipAnalysisPreparationRequest\x1a-.postpilot.v1.ClipAnalysisPreparationResponse\"\x00\x12\x84\x01\n" +
+	"\x1dCancelClipAnalysisPreparation\x122.postpilot.v1.CancelClipAnalysisPreparationRequest\x1a-.postpilot.v1.ClipAnalysisPreparationResponse\"\x00\x12r\n" +
 	"\x15CreateClipSourceBatch\x12*.postpilot.v1.CreateClipSourceBatchRequest\x1a+.postpilot.v1.CreateClipSourceBatchResponse\"\x00\x12f\n" +
 	"\x11ConfirmClipSource\x12&.postpilot.v1.ConfirmClipSourceRequest\x1a'.postpilot.v1.ConfirmClipSourceResponse\"\x00\x12u\n" +
 	"\x16DiscardClipSourceBatch\x12+.postpilot.v1.DiscardClipSourceBatchRequest\x1a,.postpilot.v1.DiscardClipSourceBatchResponse\"\x00\x12]\n" +
@@ -815,55 +1748,77 @@ func file_postpilot_v1_clip_source_proto_rawDescGZIP() []byte {
 	return file_postpilot_v1_clip_source_proto_rawDescData
 }
 
-var file_postpilot_v1_clip_source_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
+var file_postpilot_v1_clip_source_proto_msgTypes = make([]protoimpl.MessageInfo, 24)
 var file_postpilot_v1_clip_source_proto_goTypes = []any{
-	(*CreateClipSourceBatchRequest)(nil),       // 0: postpilot.v1.CreateClipSourceBatchRequest
-	(*CreateClipSourceBatchResponse)(nil),      // 1: postpilot.v1.CreateClipSourceBatchResponse
-	(*ConfirmClipSourceRequest)(nil),           // 2: postpilot.v1.ConfirmClipSourceRequest
-	(*ConfirmClipSourceResponse)(nil),          // 3: postpilot.v1.ConfirmClipSourceResponse
-	(*DiscardClipSourceBatchRequest)(nil),      // 4: postpilot.v1.DiscardClipSourceBatchRequest
-	(*DiscardClipSourceBatchResponse)(nil),     // 5: postpilot.v1.DiscardClipSourceBatchResponse
-	(*GetClipSourcesRequest)(nil),              // 6: postpilot.v1.GetClipSourcesRequest
-	(*GetClipSourcesResponse)(nil),             // 7: postpilot.v1.GetClipSourcesResponse
-	(*GetClipSourcePlaybackRequest)(nil),       // 8: postpilot.v1.GetClipSourcePlaybackRequest
-	(*GetClipSourcePlaybackResponse)(nil),      // 9: postpilot.v1.GetClipSourcePlaybackResponse
-	(*SetClipSourceOriginalSoundRequest)(nil),  // 10: postpilot.v1.SetClipSourceOriginalSoundRequest
-	(*SetClipSourceOriginalSoundResponse)(nil), // 11: postpilot.v1.SetClipSourceOriginalSoundResponse
-	(*ReorderClipSourcesRequest)(nil),          // 12: postpilot.v1.ReorderClipSourcesRequest
-	(*ReorderClipSourcesResponse)(nil),         // 13: postpilot.v1.ReorderClipSourcesResponse
-	(*ClipSourceMetadata)(nil),                 // 14: postpilot.v1.ClipSourceMetadata
-	(*ClipSourceBatch)(nil),                    // 15: postpilot.v1.ClipSourceBatch
-	(*ClipSourceUpload)(nil),                   // 16: postpilot.v1.ClipSourceUpload
-	(*ClipProject)(nil),                        // 17: postpilot.v1.ClipProject
+	(*CreateClipSourceBatchRequest)(nil),           // 0: postpilot.v1.CreateClipSourceBatchRequest
+	(*CreateClipSourceBatchResponse)(nil),          // 1: postpilot.v1.CreateClipSourceBatchResponse
+	(*ConfirmClipSourceRequest)(nil),               // 2: postpilot.v1.ConfirmClipSourceRequest
+	(*ConfirmClipSourceResponse)(nil),              // 3: postpilot.v1.ConfirmClipSourceResponse
+	(*DiscardClipSourceBatchRequest)(nil),          // 4: postpilot.v1.DiscardClipSourceBatchRequest
+	(*DiscardClipSourceBatchResponse)(nil),         // 5: postpilot.v1.DiscardClipSourceBatchResponse
+	(*GetClipSourcesRequest)(nil),                  // 6: postpilot.v1.GetClipSourcesRequest
+	(*GetClipSourcesResponse)(nil),                 // 7: postpilot.v1.GetClipSourcesResponse
+	(*GetClipSourcePlaybackRequest)(nil),           // 8: postpilot.v1.GetClipSourcePlaybackRequest
+	(*GetClipSourcePlaybackResponse)(nil),          // 9: postpilot.v1.GetClipSourcePlaybackResponse
+	(*SetClipSourceOriginalSoundRequest)(nil),      // 10: postpilot.v1.SetClipSourceOriginalSoundRequest
+	(*SetClipSourceOriginalSoundResponse)(nil),     // 11: postpilot.v1.SetClipSourceOriginalSoundResponse
+	(*ReorderClipSourcesRequest)(nil),              // 12: postpilot.v1.ReorderClipSourcesRequest
+	(*ReorderClipSourcesResponse)(nil),             // 13: postpilot.v1.ReorderClipSourcesResponse
+	(*ClipAnalysisOriginalMeasurement)(nil),        // 14: postpilot.v1.ClipAnalysisOriginalMeasurement
+	(*BeginClipAnalysisPreparationRequest)(nil),    // 15: postpilot.v1.BeginClipAnalysisPreparationRequest
+	(*ClipAnalysisProfile)(nil),                    // 16: postpilot.v1.ClipAnalysisProfile
+	(*ClipAnalysisCopySlot)(nil),                   // 17: postpilot.v1.ClipAnalysisCopySlot
+	(*ClipAnalysisPreparationResponse)(nil),        // 18: postpilot.v1.ClipAnalysisPreparationResponse
+	(*ReserveClipAnalysisCopyRequest)(nil),         // 19: postpilot.v1.ReserveClipAnalysisCopyRequest
+	(*ReserveClipAnalysisCopyResponse)(nil),        // 20: postpilot.v1.ReserveClipAnalysisCopyResponse
+	(*CompleteClipAnalysisPreparationRequest)(nil), // 21: postpilot.v1.CompleteClipAnalysisPreparationRequest
+	(*CancelClipAnalysisPreparationRequest)(nil),   // 22: postpilot.v1.CancelClipAnalysisPreparationRequest
+	nil,                        // 23: postpilot.v1.ReserveClipAnalysisCopyResponse.HeadersEntry
+	(*ClipSourceMetadata)(nil), // 24: postpilot.v1.ClipSourceMetadata
+	(*ClipSourceBatch)(nil),    // 25: postpilot.v1.ClipSourceBatch
+	(*ClipSourceUpload)(nil),   // 26: postpilot.v1.ClipSourceUpload
+	(*ClipProject)(nil),        // 27: postpilot.v1.ClipProject
 }
 var file_postpilot_v1_clip_source_proto_depIdxs = []int32{
-	14, // 0: postpilot.v1.CreateClipSourceBatchRequest.sources:type_name -> postpilot.v1.ClipSourceMetadata
-	15, // 1: postpilot.v1.CreateClipSourceBatchResponse.batch:type_name -> postpilot.v1.ClipSourceBatch
-	16, // 2: postpilot.v1.CreateClipSourceBatchResponse.uploads:type_name -> postpilot.v1.ClipSourceUpload
-	15, // 3: postpilot.v1.ConfirmClipSourceResponse.batch:type_name -> postpilot.v1.ClipSourceBatch
-	15, // 4: postpilot.v1.GetClipSourcesResponse.batches:type_name -> postpilot.v1.ClipSourceBatch
-	15, // 5: postpilot.v1.SetClipSourceOriginalSoundResponse.batch:type_name -> postpilot.v1.ClipSourceBatch
-	17, // 6: postpilot.v1.SetClipSourceOriginalSoundResponse.project:type_name -> postpilot.v1.ClipProject
-	15, // 7: postpilot.v1.ReorderClipSourcesResponse.batch:type_name -> postpilot.v1.ClipSourceBatch
-	0,  // 8: postpilot.v1.ClipSourceService.CreateClipSourceBatch:input_type -> postpilot.v1.CreateClipSourceBatchRequest
-	2,  // 9: postpilot.v1.ClipSourceService.ConfirmClipSource:input_type -> postpilot.v1.ConfirmClipSourceRequest
-	4,  // 10: postpilot.v1.ClipSourceService.DiscardClipSourceBatch:input_type -> postpilot.v1.DiscardClipSourceBatchRequest
-	6,  // 11: postpilot.v1.ClipSourceService.GetClipSources:input_type -> postpilot.v1.GetClipSourcesRequest
-	8,  // 12: postpilot.v1.ClipSourceService.GetClipSourcePlayback:input_type -> postpilot.v1.GetClipSourcePlaybackRequest
-	10, // 13: postpilot.v1.ClipSourceService.SetClipSourceOriginalSound:input_type -> postpilot.v1.SetClipSourceOriginalSoundRequest
-	12, // 14: postpilot.v1.ClipSourceService.ReorderClipSources:input_type -> postpilot.v1.ReorderClipSourcesRequest
-	1,  // 15: postpilot.v1.ClipSourceService.CreateClipSourceBatch:output_type -> postpilot.v1.CreateClipSourceBatchResponse
-	3,  // 16: postpilot.v1.ClipSourceService.ConfirmClipSource:output_type -> postpilot.v1.ConfirmClipSourceResponse
-	5,  // 17: postpilot.v1.ClipSourceService.DiscardClipSourceBatch:output_type -> postpilot.v1.DiscardClipSourceBatchResponse
-	7,  // 18: postpilot.v1.ClipSourceService.GetClipSources:output_type -> postpilot.v1.GetClipSourcesResponse
-	9,  // 19: postpilot.v1.ClipSourceService.GetClipSourcePlayback:output_type -> postpilot.v1.GetClipSourcePlaybackResponse
-	11, // 20: postpilot.v1.ClipSourceService.SetClipSourceOriginalSound:output_type -> postpilot.v1.SetClipSourceOriginalSoundResponse
-	13, // 21: postpilot.v1.ClipSourceService.ReorderClipSources:output_type -> postpilot.v1.ReorderClipSourcesResponse
-	15, // [15:22] is the sub-list for method output_type
-	8,  // [8:15] is the sub-list for method input_type
-	8,  // [8:8] is the sub-list for extension type_name
-	8,  // [8:8] is the sub-list for extension extendee
-	0,  // [0:8] is the sub-list for field type_name
+	24, // 0: postpilot.v1.CreateClipSourceBatchRequest.sources:type_name -> postpilot.v1.ClipSourceMetadata
+	25, // 1: postpilot.v1.CreateClipSourceBatchResponse.batch:type_name -> postpilot.v1.ClipSourceBatch
+	26, // 2: postpilot.v1.CreateClipSourceBatchResponse.uploads:type_name -> postpilot.v1.ClipSourceUpload
+	25, // 3: postpilot.v1.ConfirmClipSourceResponse.batch:type_name -> postpilot.v1.ClipSourceBatch
+	25, // 4: postpilot.v1.GetClipSourcesResponse.batches:type_name -> postpilot.v1.ClipSourceBatch
+	25, // 5: postpilot.v1.SetClipSourceOriginalSoundResponse.batch:type_name -> postpilot.v1.ClipSourceBatch
+	27, // 6: postpilot.v1.SetClipSourceOriginalSoundResponse.project:type_name -> postpilot.v1.ClipProject
+	25, // 7: postpilot.v1.ReorderClipSourcesResponse.batch:type_name -> postpilot.v1.ClipSourceBatch
+	14, // 8: postpilot.v1.BeginClipAnalysisPreparationRequest.originals:type_name -> postpilot.v1.ClipAnalysisOriginalMeasurement
+	16, // 9: postpilot.v1.ClipAnalysisPreparationResponse.profile:type_name -> postpilot.v1.ClipAnalysisProfile
+	17, // 10: postpilot.v1.ClipAnalysisPreparationResponse.copies:type_name -> postpilot.v1.ClipAnalysisCopySlot
+	23, // 11: postpilot.v1.ReserveClipAnalysisCopyResponse.headers:type_name -> postpilot.v1.ReserveClipAnalysisCopyResponse.HeadersEntry
+	15, // 12: postpilot.v1.ClipSourceService.BeginClipAnalysisPreparation:input_type -> postpilot.v1.BeginClipAnalysisPreparationRequest
+	19, // 13: postpilot.v1.ClipSourceService.ReserveClipAnalysisCopy:input_type -> postpilot.v1.ReserveClipAnalysisCopyRequest
+	21, // 14: postpilot.v1.ClipSourceService.CompleteClipAnalysisPreparation:input_type -> postpilot.v1.CompleteClipAnalysisPreparationRequest
+	22, // 15: postpilot.v1.ClipSourceService.CancelClipAnalysisPreparation:input_type -> postpilot.v1.CancelClipAnalysisPreparationRequest
+	0,  // 16: postpilot.v1.ClipSourceService.CreateClipSourceBatch:input_type -> postpilot.v1.CreateClipSourceBatchRequest
+	2,  // 17: postpilot.v1.ClipSourceService.ConfirmClipSource:input_type -> postpilot.v1.ConfirmClipSourceRequest
+	4,  // 18: postpilot.v1.ClipSourceService.DiscardClipSourceBatch:input_type -> postpilot.v1.DiscardClipSourceBatchRequest
+	6,  // 19: postpilot.v1.ClipSourceService.GetClipSources:input_type -> postpilot.v1.GetClipSourcesRequest
+	8,  // 20: postpilot.v1.ClipSourceService.GetClipSourcePlayback:input_type -> postpilot.v1.GetClipSourcePlaybackRequest
+	10, // 21: postpilot.v1.ClipSourceService.SetClipSourceOriginalSound:input_type -> postpilot.v1.SetClipSourceOriginalSoundRequest
+	12, // 22: postpilot.v1.ClipSourceService.ReorderClipSources:input_type -> postpilot.v1.ReorderClipSourcesRequest
+	18, // 23: postpilot.v1.ClipSourceService.BeginClipAnalysisPreparation:output_type -> postpilot.v1.ClipAnalysisPreparationResponse
+	20, // 24: postpilot.v1.ClipSourceService.ReserveClipAnalysisCopy:output_type -> postpilot.v1.ReserveClipAnalysisCopyResponse
+	18, // 25: postpilot.v1.ClipSourceService.CompleteClipAnalysisPreparation:output_type -> postpilot.v1.ClipAnalysisPreparationResponse
+	18, // 26: postpilot.v1.ClipSourceService.CancelClipAnalysisPreparation:output_type -> postpilot.v1.ClipAnalysisPreparationResponse
+	1,  // 27: postpilot.v1.ClipSourceService.CreateClipSourceBatch:output_type -> postpilot.v1.CreateClipSourceBatchResponse
+	3,  // 28: postpilot.v1.ClipSourceService.ConfirmClipSource:output_type -> postpilot.v1.ConfirmClipSourceResponse
+	5,  // 29: postpilot.v1.ClipSourceService.DiscardClipSourceBatch:output_type -> postpilot.v1.DiscardClipSourceBatchResponse
+	7,  // 30: postpilot.v1.ClipSourceService.GetClipSources:output_type -> postpilot.v1.GetClipSourcesResponse
+	9,  // 31: postpilot.v1.ClipSourceService.GetClipSourcePlayback:output_type -> postpilot.v1.GetClipSourcePlaybackResponse
+	11, // 32: postpilot.v1.ClipSourceService.SetClipSourceOriginalSound:output_type -> postpilot.v1.SetClipSourceOriginalSoundResponse
+	13, // 33: postpilot.v1.ClipSourceService.ReorderClipSources:output_type -> postpilot.v1.ReorderClipSourcesResponse
+	23, // [23:34] is the sub-list for method output_type
+	12, // [12:23] is the sub-list for method input_type
+	12, // [12:12] is the sub-list for extension type_name
+	12, // [12:12] is the sub-list for extension extendee
+	0,  // [0:12] is the sub-list for field type_name
 }
 
 func init() { file_postpilot_v1_clip_source_proto_init() }
@@ -878,7 +1833,7 @@ func file_postpilot_v1_clip_source_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_postpilot_v1_clip_source_proto_rawDesc), len(file_postpilot_v1_clip_source_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   14,
+			NumMessages:   24,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

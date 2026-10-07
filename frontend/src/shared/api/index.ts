@@ -510,3 +510,7 @@ export {
   ConfigurationKind as ProtoConfigurationKind,
   AuthoringMode as ProtoAuthoringMode,
 } from './gen/postpilot/v1/configuration_authoring_pb'
+
+export type { ClipAnalysisPreparationResponse } from './gen/postpilot/v1/clip_source_pb'
+
+export { ClipAnalysisPreparationResponseSchema } from './gen/postpilot/v1/clip_source_pb'

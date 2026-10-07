@@ -113,6 +113,13 @@ func mediaLeaseEnd(stage clip.MediaStage, now time.Time) time.Time {
 }
 
 func (s *Store) ClaimMediaStage(ctx context.Context, profile clip.MediaWorkerProfile, now time.Time) (*clip.MediaLease, error) {
+	return s.ClaimMediaStageBounded(ctx, profile, clip.ServerRenderActive, now)
+}
+
+func (s *Store) ClaimMediaStageBounded(ctx context.Context, profile clip.MediaWorkerProfile, activeLimit int, now time.Time) (*clip.MediaLease, error) {
+	if activeLimit < 1 || activeLimit > clip.ServerRenderActiveMax {
+		return nil, clip.ErrInvalid
+	}
 	if err := profile.Validate(); err != nil {
 		return nil, err
 	}
@@ -121,7 +128,7 @@ func (s *Store) ClaimMediaStage(ctx context.Context, profile clip.MediaWorkerPro
 	}
 	return transact(ctx, s, func(q *sqlc.Queries) (*clip.MediaLease, error) {
 		attempt, token := rand.Text(), rand.Text()
-		r, err := q.ClaimMediaStage(ctx, sqlc.ClaimMediaStageParams{AttemptID: nullable(attempt), Operation: string(profile.Operation), ContractVersion: int64(profile.ContractVersion), RendererVersion: profile.RendererVersion, AssetVersion: profile.AssetVersion, Now: stamp(now)})
+		r, err := q.ClaimMediaStage(ctx, sqlc.ClaimMediaStageParams{RenderActiveLimit: int64(activeLimit), AttemptID: nullable(attempt), Operation: string(profile.Operation), ContractVersion: int64(profile.ContractVersion), RendererVersion: profile.RendererVersion, AssetVersion: profile.AssetVersion, Now: stamp(now)})
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
 		}
