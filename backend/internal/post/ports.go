@@ -140,9 +140,9 @@ type DraftWriter interface {
 	UpdateObservations(ctx context.Context, slug, userID string, observations []Observation, updatedAt time.Time) (bool, error)
 	// UpdateStoryline replaces the storyline alone, nil for none (GEN-68, GEN-69).
 	UpdateStoryline(ctx context.Context, slug, userID string, storyline *Storyline, updatedAt time.Time) (bool, error)
-	// UpdateAttachmentTraces writes the observations and the storyline (nil for none) together:
-	// what a deleted attachment leaves behind goes in one statement (POST-18).
-	UpdateAttachmentTraces(ctx context.Context, slug, userID string, observations []Observation, storyline *Storyline, updatedAt time.Time) (bool, error)
+	// UpdateAttachmentTraces removes a deleted filename from the current observations and
+	// storyline in one transaction, preserving any plan edited since the deletion began.
+	UpdateAttachmentTraces(ctx context.Context, slug, userID, removedFilename, removedAttachmentID string, updatedAt time.Time) (bool, error)
 	// UpdateGeneratedContent receives the annotations already resolved: the service decides what
 	// a nil means, so the store writes exactly what it is given, NULL for none.
 	UpdateGeneratedContent(ctx context.Context, slug, userID string, content PostContent, language Language, annotations WriteAnnotations, updatedAt time.Time) (bool, error)

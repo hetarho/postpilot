@@ -19,6 +19,7 @@ type TestOutputPublication struct {
 	AssignmentsHash                                string
 	InputRevision, ContentRevision                 int64
 	Content, Baseline                              PostContent
+	Origins                                        *OriginReview
 	ContentLanguage                                Language
 	Storyline                                      *Storyline
 	Nouns                                          []string

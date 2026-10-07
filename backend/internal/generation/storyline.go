@@ -15,12 +15,14 @@ import (
 // VoiceID, ObserveCalls and WriteNativeEffort are resolved by StartStoryline; the enqueue adapter
 // reads them for the row and the hold.
 type StartStorylineRequest struct {
-	OriginProtocolVersion int
-	CompletionTokens      int
-	UserID                string
-	PostSlug              string
-	ObserveModel          string
-	WriteModel            string
+	ExpectedPlanFingerprint *string
+	ExpectedInputRevision   *int64
+	OriginProtocolVersion   int
+	CompletionTokens        int
+	UserID                  string
+	PostSlug                string
+	ObserveModel            string
+	WriteModel              string
 	// ObserveFiles is the re-observation picker's answer, with StartRequest's presence rules.
 	ObserveFiles   *[]string
 	TargetLanguage Language
@@ -43,15 +45,17 @@ type StorylineJob struct {
 // StartStorylineRevisionRequest is the storyline space's AI request on the way in (GEN-69).
 // WriteNativeEffort is frozen at enqueue as StartStorylineRequest's is.
 type StartStorylineRevisionRequest struct {
-	OriginProtocolVersion int
-	CompletionTokens      int
-	UserID                string
-	PostSlug              string
-	Request               string
-	WriteModel            string
-	TargetLanguage        Language
-	VoiceID               string
-	WriteNativeEffort     bool
+	ExpectedPlanFingerprint *string
+	ExpectedInputRevision   *int64
+	OriginProtocolVersion   int
+	CompletionTokens        int
+	UserID                  string
+	PostSlug                string
+	Request                 string
+	WriteModel              string
+	TargetLanguage          Language
+	VoiceID                 string
+	WriteNativeEffort       bool
 }
 
 // StorylineRevisionJob is one queued storyline request as the worker hands it over.
@@ -76,6 +80,11 @@ func (s *Service) StartStoryline(ctx context.Context, request StartStorylineRequ
 	}
 	request.OriginProtocolVersion = s.originProtocol
 	if s.originProtocol == OriginProtocolVersion {
+		inputRevision := in.post.InputRevision
+		request.ExpectedInputRevision = &inputRevision
+		request.ExpectedPlanFingerprint = originExpectedPlanFingerprint(in.post)
+	}
+	if s.originProtocol == OriginProtocolVersion {
 		request.CompletionTokens = s.budget.Storyline(in.write.ReasoningNativeEffort)
 	}
 	request.TargetLanguage = in.language
@@ -88,7 +97,9 @@ func (s *Service) StartStoryline(ctx context.Context, request StartStorylineRequ
 		return "", err
 	}
 	payload, err := encodeStorylinePayload(storylineOptions{
-		OriginProtocolVersion: s.originProtocol, CompletionTokens: request.CompletionTokens,
+		ExpectedPlanFingerprint: request.ExpectedPlanFingerprint,
+		ExpectedInputRevision:   request.ExpectedInputRevision,
+		OriginProtocolVersion:   s.originProtocol, CompletionTokens: request.CompletionTokens,
 		TargetLanguage: in.language, storylineMaterial: material, WriteNativeEffort: request.WriteNativeEffort,
 		ObserveFiles: in.observe.files, Observations: in.observe.observations,
 	})
@@ -121,6 +132,11 @@ func (s *Service) StartStorylineRevision(ctx context.Context, request StartStory
 	}
 	request.OriginProtocolVersion = s.originProtocol
 	if s.originProtocol == OriginProtocolVersion {
+		inputRevision := in.post.InputRevision
+		request.ExpectedInputRevision = &inputRevision
+		request.ExpectedPlanFingerprint = originExpectedPlanFingerprint(in.post)
+	}
+	if s.originProtocol == OriginProtocolVersion {
 		request.CompletionTokens = s.budget.Storyline(in.write.ReasoningNativeEffort)
 	}
 	request.TargetLanguage = in.language
@@ -131,7 +147,9 @@ func (s *Service) StartStorylineRevision(ctx context.Context, request StartStory
 		return "", err
 	}
 	payload, err := encodeStorylineRevisionPayload(storylineRevisionOptions{
-		OriginProtocolVersion: s.originProtocol, CompletionTokens: request.CompletionTokens, PlanOrigins: clonePlanOrigins(in.post.Storyline.Origins),
+		ExpectedPlanFingerprint: request.ExpectedPlanFingerprint,
+		ExpectedInputRevision:   request.ExpectedInputRevision,
+		OriginProtocolVersion:   s.originProtocol, CompletionTokens: request.CompletionTokens, PlanOrigins: clonePlanOrigins(in.post.Storyline.Origins),
 		TargetLanguage: in.language, Request: request.Request,
 		Storyline: in.storyline, storylineMaterial: material,
 		Observations: in.observe.observations, WriteNativeEffort: request.WriteNativeEffort,
@@ -178,7 +196,7 @@ func (s *Service) WriteStoryline(ctx context.Context, job StorylineJob, progress
 	request := ComposeStorylineRequest(input)
 	var sources []postdomain.OriginSource
 	if options.OriginProtocolVersion == OriginProtocolVersion {
-		sources = WritingOriginSources(WritePromptInput{Title: input.Title, Memo: input.Memo, Template: input.Template, Memories: input.Memories, Photos: photos, Videos: videos, Observations: observations}, false)
+		sources = WritingOriginSources(WritePromptInput{Title: input.Title, Memo: input.Memo, Template: input.Template, Memories: input.Memories, Photos: photos, Videos: videos, Observations: observations}, false, originAttachmentIDs(post.Images))
 		request = appendOriginRequest(request, sources, nil)
 		request.MaxTokens = options.CompletionTokens
 	}
@@ -191,7 +209,7 @@ func (s *Service) WriteStoryline(ctx context.Context, job StorylineJob, progress
 	result.MadeWith = shown
 	var publishErr error
 	if options.OriginProtocolVersion == OriginProtocolVersion {
-		publishErr = s.originPlans.PublishStorylineResult(ctx, post.UserID, post.Slug, OriginStorylineCompletion{Storyline: result, ExpectedContentRevision: post.ContentRevision})
+		publishErr = s.originPlans.PublishStorylineResult(ctx, post.UserID, post.Slug, OriginStorylineCompletion{Storyline: result, ExpectedContentRevision: post.ContentRevision, ExpectedInputRevision: options.ExpectedInputRevision, ExpectedPlanFingerprint: options.ExpectedPlanFingerprint})
 	} else {
 		publishErr = s.posts.SetStoryline(ctx, post.UserID, post.Slug, result)
 	}
@@ -232,7 +250,7 @@ func (s *Service) ReviseStoryline(ctx context.Context, job StorylineRevisionJob,
 	request := ComposeStorylineRequest(input)
 	var sources []postdomain.OriginSource
 	if options.OriginProtocolVersion == OriginProtocolVersion {
-		sources = WritingOriginSources(WritePromptInput{Title: input.Title, Memo: input.Memo, Template: input.Template, Memories: input.Memories, Photos: photos, Videos: videos, Observations: input.Observations}, false)
+		sources = WritingOriginSources(WritePromptInput{Title: input.Title, Memo: input.Memo, Template: input.Template, Memories: input.Memories, Photos: photos, Videos: videos, Observations: input.Observations}, false, originAttachmentIDs(post.Images))
 		prior := ValidateStoredPlanOrigins(options.Storyline, options.PlanOrigins)
 		sources = catalogWithPriorPlan(sources, options.Storyline, prior, photos, videos)
 		catalog := originCatalog{sources: sources}
@@ -257,7 +275,7 @@ func (s *Service) ReviseStoryline(ctx context.Context, job StorylineRevisionJob,
 	var publishErr error
 	if options.OriginProtocolVersion == OriginProtocolVersion {
 		result.Origins = PreservePlanOrigins(options.Storyline, options.PlanOrigins, result.Paragraphs, sources, result.OriginCandidates)
-		publishErr = s.originPlans.PublishStorylineResult(ctx, post.UserID, post.Slug, OriginStorylineCompletion{Storyline: result, ExpectedContentRevision: post.ContentRevision})
+		publishErr = s.originPlans.PublishStorylineResult(ctx, post.UserID, post.Slug, OriginStorylineCompletion{Storyline: result, ExpectedContentRevision: post.ContentRevision, ExpectedInputRevision: options.ExpectedInputRevision, ExpectedPlanFingerprint: options.ExpectedPlanFingerprint})
 	} else {
 		publishErr = s.posts.SetStoryline(ctx, post.UserID, post.Slug, result)
 	}
@@ -337,9 +355,11 @@ func (s *Service) freezeStorylineMaterial(ctx context.Context, post PostInput) (
 
 // storylineOptions is what a storyline job froze at enqueue.
 type storylineOptions struct {
-	OriginProtocolVersion int
-	CompletionTokens      int
-	TargetLanguage        Language
+	ExpectedPlanFingerprint *string
+	ExpectedInputRevision   *int64
+	OriginProtocolVersion   int
+	CompletionTokens        int
+	TargetLanguage          Language
 	storylineMaterial
 	// ObserveFiles and Observations are the frozen selection and snapshot, with the generate
 	// payload's presence rules.
@@ -363,45 +383,51 @@ func (o storylineOptions) onto(post PostInput) PostInput {
 
 // storylineRevisionOptions is what a storyline request froze at enqueue.
 type storylineRevisionOptions struct {
-	OriginProtocolVersion int
-	CompletionTokens      int
-	PlanOrigins           *PlanOriginReview
-	TargetLanguage        Language
-	Request               string
-	Storyline             []StorylineParagraph
+	ExpectedPlanFingerprint *string
+	ExpectedInputRevision   *int64
+	OriginProtocolVersion   int
+	CompletionTokens        int
+	PlanOrigins             *PlanOriginReview
+	TargetLanguage          Language
+	Request                 string
+	Storyline               []StorylineParagraph
 	storylineMaterial
 	Observations      []Observation
 	WriteNativeEffort bool
 }
 
 type storylinePayload struct {
-	OriginProtocolVersion int                   `json:"origin_protocol_version,omitempty"`
-	CompletionTokens      int                   `json:"completion_tokens,omitempty"`
-	TargetLanguage        string                `json:"target_language"`
-	Template              *templatePayload      `json:"template,omitempty"`
-	Guidelines            []string              `json:"guidelines,omitempty"`
-	StockGuidelines       *[]stockGuidelineJSON `json:"stock_guidelines,omitempty"`
-	DefaultGuidelines     []string              `json:"default_guidelines,omitempty"`
-	Memories              []string              `json:"memories,omitempty"`
-	ObserveFiles          *[]string             `json:"observe_files"`
-	Observations          []observationPayload  `json:"observations,omitempty"`
-	WriteNativeEffort     bool                  `json:"write_native_effort,omitempty"`
+	ExpectedPlanFingerprint *string               `json:"expected_plan_fingerprint,omitempty"`
+	ExpectedInputRevision   *int64                `json:"expected_input_revision,omitempty"`
+	OriginProtocolVersion   int                   `json:"origin_protocol_version,omitempty"`
+	CompletionTokens        int                   `json:"completion_tokens,omitempty"`
+	TargetLanguage          string                `json:"target_language"`
+	Template                *templatePayload      `json:"template,omitempty"`
+	Guidelines              []string              `json:"guidelines,omitempty"`
+	StockGuidelines         *[]stockGuidelineJSON `json:"stock_guidelines,omitempty"`
+	DefaultGuidelines       []string              `json:"default_guidelines,omitempty"`
+	Memories                []string              `json:"memories,omitempty"`
+	ObserveFiles            *[]string             `json:"observe_files"`
+	Observations            []observationPayload  `json:"observations,omitempty"`
+	WriteNativeEffort       bool                  `json:"write_native_effort,omitempty"`
 }
 
 type storylineRevisionPayload struct {
-	OriginProtocolVersion int                      `json:"origin_protocol_version,omitempty"`
-	CompletionTokens      int                      `json:"completion_tokens,omitempty"`
-	PlanOrigins           *planOriginReviewJSON    `json:"plan_origins,omitempty"`
-	TargetLanguage        string                   `json:"target_language"`
-	Request               string                   `json:"request"`
-	Storyline             []storylineParagraphJSON `json:"storyline"`
-	Template              *templatePayload         `json:"template,omitempty"`
-	Guidelines            []string                 `json:"guidelines,omitempty"`
-	StockGuidelines       *[]stockGuidelineJSON    `json:"stock_guidelines,omitempty"`
-	DefaultGuidelines     []string                 `json:"default_guidelines,omitempty"`
-	Memories              []string                 `json:"memories,omitempty"`
-	Observations          []observationPayload     `json:"observations,omitempty"`
-	WriteNativeEffort     bool                     `json:"write_native_effort,omitempty"`
+	ExpectedPlanFingerprint *string                  `json:"expected_plan_fingerprint,omitempty"`
+	ExpectedInputRevision   *int64                   `json:"expected_input_revision,omitempty"`
+	OriginProtocolVersion   int                      `json:"origin_protocol_version,omitempty"`
+	CompletionTokens        int                      `json:"completion_tokens,omitempty"`
+	PlanOrigins             *planOriginReviewJSON    `json:"plan_origins,omitempty"`
+	TargetLanguage          string                   `json:"target_language"`
+	Request                 string                   `json:"request"`
+	Storyline               []storylineParagraphJSON `json:"storyline"`
+	Template                *templatePayload         `json:"template,omitempty"`
+	Guidelines              []string                 `json:"guidelines,omitempty"`
+	StockGuidelines         *[]stockGuidelineJSON    `json:"stock_guidelines,omitempty"`
+	DefaultGuidelines       []string                 `json:"default_guidelines,omitempty"`
+	Memories                []string                 `json:"memories,omitempty"`
+	Observations            []observationPayload     `json:"observations,omitempty"`
+	WriteNativeEffort       bool                     `json:"write_native_effort,omitempty"`
 }
 
 func encodeStorylinePayload(options storylineOptions) ([]byte, error) {
@@ -409,7 +435,9 @@ func encodeStorylinePayload(options storylineOptions) ([]byte, error) {
 		return nil, ErrLanguageRequired
 	}
 	return json.Marshal(storylinePayload{
-		OriginProtocolVersion: options.OriginProtocolVersion, CompletionTokens: options.CompletionTokens,
+		ExpectedPlanFingerprint: options.ExpectedPlanFingerprint,
+		ExpectedInputRevision:   options.ExpectedInputRevision,
+		OriginProtocolVersion:   options.OriginProtocolVersion, CompletionTokens: options.CompletionTokens,
 		TargetLanguage:    options.TargetLanguage.String(),
 		Template:          encodeTemplate(options.Template),
 		Guidelines:        cloneTexts(options.Guidelines),
@@ -434,7 +462,9 @@ func decodeStorylinePayload(raw []byte) (storylineOptions, error) {
 		return storylineOptions{}, fmt.Errorf("decode storyline payload: %w", err)
 	}
 	return storylineOptions{
-		OriginProtocolVersion: payload.OriginProtocolVersion, CompletionTokens: payload.CompletionTokens,
+		ExpectedPlanFingerprint: payload.ExpectedPlanFingerprint,
+		ExpectedInputRevision:   payload.ExpectedInputRevision,
+		OriginProtocolVersion:   payload.OriginProtocolVersion, CompletionTokens: payload.CompletionTokens,
 		TargetLanguage: language,
 		storylineMaterial: storylineMaterial{
 			Template:          decodeTemplate(payload.Template),
@@ -453,7 +483,9 @@ func encodeStorylineRevisionPayload(options storylineRevisionOptions) ([]byte, e
 		return nil, ErrLanguageRequired
 	}
 	return json.Marshal(storylineRevisionPayload{
-		OriginProtocolVersion: options.OriginProtocolVersion, CompletionTokens: options.CompletionTokens, PlanOrigins: encodePlanOrigins(options.PlanOrigins),
+		ExpectedPlanFingerprint: options.ExpectedPlanFingerprint,
+		ExpectedInputRevision:   options.ExpectedInputRevision,
+		OriginProtocolVersion:   options.OriginProtocolVersion, CompletionTokens: options.CompletionTokens, PlanOrigins: encodePlanOrigins(options.PlanOrigins),
 		TargetLanguage:    options.TargetLanguage.String(),
 		Request:           options.Request,
 		Storyline:         storylineForPrompt(options.Storyline)["storyline"],
@@ -483,7 +515,9 @@ func decodeStorylineRevisionPayload(raw []byte) (storylineRevisionOptions, error
 		paragraphs = append(paragraphs, StorylineParagraph{Text: paragraph.Text, Files: cloneTexts(paragraph.Files)})
 	}
 	return storylineRevisionOptions{
-		OriginProtocolVersion: payload.OriginProtocolVersion, CompletionTokens: payload.CompletionTokens, PlanOrigins: decodePlanOrigins(payload.PlanOrigins),
+		ExpectedPlanFingerprint: payload.ExpectedPlanFingerprint,
+		ExpectedInputRevision:   payload.ExpectedInputRevision,
+		OriginProtocolVersion:   payload.OriginProtocolVersion, CompletionTokens: payload.CompletionTokens, PlanOrigins: decodePlanOrigins(payload.PlanOrigins),
 		TargetLanguage: language,
 		Request:        payload.Request,
 		Storyline:      paragraphs,

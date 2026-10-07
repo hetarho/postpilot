@@ -38,7 +38,7 @@ func (s *Service) writeCandidate(ctx context.Context, post PostInput, profile Pr
 	request := ComposeWriteRequest(input)
 	var sources []postdomain.OriginSource
 	if post.OriginProtocolVersion == OriginProtocolVersion {
-		sources = WritingOriginSources(input, post.OriginFictional)
+		sources = WritingOriginSources(input, post.OriginFictional, originAttachmentIDs(post.Images))
 		prior := ValidateStoredPlanOrigins(post.FollowStoryline, post.FollowStorylineOrigins)
 		sources = catalogWithPriorPlan(sources, post.FollowStoryline, prior, photos, videos)
 		request = appendOriginRequest(request, sources, priorPlanProjection(prior))

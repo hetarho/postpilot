@@ -367,7 +367,8 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 	})
 	c.voice.ConfigurePosts(voicePosts{service: c.post})
 
-	c.generation = generation.NewService(
+	generationOrigins := generationOriginPublisher{service: post.NewOriginResultService(poststore.New(handle.Writer, handle.Reader))}
+	c.generation = generation.NewOriginService(generation.NewService(
 		generationPosts{service: c.post},
 		generationProfiles{service: c.voice},
 		generationModels{registry: c.metered},
@@ -400,7 +401,7 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 			// as a browser view URL does — the bytes never enter this process (VIDEO-10).
 			Videos: p.bucket, VideoURLTTL: cfg.PresignGetTTL,
 		},
-	)
+	), generationOrigins, generationOrigins)
 
 	c.experimentStore = experimentstore.New(handle.Writer, handle.Reader)
 	c.experiment = experiment.NewService(

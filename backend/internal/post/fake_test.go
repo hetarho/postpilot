@@ -131,7 +131,7 @@ func (f *fakeStore) UpdateStoryline(_ context.Context, slug, userID string, stor
 	return true, nil
 }
 
-func (f *fakeStore) UpdateAttachmentTraces(_ context.Context, slug, userID string, observations []Observation, storyline *Storyline, updatedAt time.Time) (bool, error) {
+func (f *fakeStore) UpdateAttachmentTraces(_ context.Context, slug, userID, removedFilename, removedAttachmentID string, updatedAt time.Time) (bool, error) {
 	f.guarded(slug)
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -139,8 +139,36 @@ func (f *fakeStore) UpdateAttachmentTraces(_ context.Context, slug, userID strin
 	if !ok || existing.UserID != userID || f.publishedLocked(slug) {
 		return false, nil
 	}
-	existing.Observations = append([]Observation(nil), observations...)
-	existing.Storyline = storyline
+	var currentID string
+	for _, image := range f.images {
+		if image.PostSlug == slug && image.Filename == removedFilename {
+			currentID = image.ID
+		}
+	}
+	for _, video := range f.videos {
+		if video.PostSlug == slug && video.Filename == removedFilename {
+			currentID = video.ID
+		}
+	}
+	kept := make([]Observation, 0, len(existing.Observations))
+	for _, observation := range existing.Observations {
+		current := false
+		if currentID != "" && currentID != removedAttachmentID && observation.Origins != nil && observation.Origins.Result == ObservationOriginIdentity(observation) {
+			for _, source := range observation.Origins.Sources {
+				if source.Kind == OriginSourceVisualObservation && source.Available && source.AttachmentFilename == observation.File && source.AttachmentID == currentID {
+					current = true
+				}
+			}
+		}
+		if observation.File != removedFilename || current {
+			kept = append(kept, observation)
+		}
+	}
+	existing.Observations = kept
+	if existing.Storyline != nil && currentID == "" {
+		without := existing.Storyline.WithoutFile(removedFilename)
+		existing.Storyline = &without
+	}
 	existing.UpdatedAt = updatedAt
 	f.posts[slug] = existing
 	return true, nil

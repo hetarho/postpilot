@@ -113,7 +113,7 @@ var predicateGuarded = map[string]func(*store.Store) (bool, error){
 		return s.UpdateStoryline(context.Background(), "p", "alice", &post.Storyline{Paragraphs: []post.StorylineParagraph{{Text: "가게 앞"}}}, lockLater)
 	},
 	"UpdatePostAttachmentTraces": func(s *store.Store) (bool, error) {
-		return s.UpdateAttachmentTraces(context.Background(), "p", "alice", nil, &post.Storyline{Paragraphs: []post.StorylineParagraph{{Text: "가게 앞"}}}, lockLater)
+		return s.UpdateAttachmentTraces(context.Background(), "p", "alice", "a.jpg", "old-photo", lockLater)
 	},
 	"UpdateGeneratedContent": func(s *store.Store) (bool, error) {
 		return s.UpdateGeneratedContent(context.Background(), "p", "alice", lockContent, post.LanguageKorean, post.WriteAnnotations{}, lockLater)
@@ -183,6 +183,15 @@ var publishedLockExemptStatements = map[string]string{
 // Internal revision and publication statements are checked directly because neither
 // belongs to the ordinary draft store's public API.
 var publicationPredicateGuarded = map[string]func(*sqlc.Queries, post.Post) (int64, error){
+	"PublishPostOriginContent": func(q *sqlc.Queries, p post.Post) (int64, error) {
+		return q.PublishPostOriginContent(context.Background(), sqlc.PublishPostOriginContentParams{Slug: p.Slug, UserID: p.UserID, ExpectedContentRevision: p.ContentRevision, Content: sql.NullString{String: "{}", Valid: true}, UpdatedAt: lockLater.Format(time.RFC3339Nano)})
+	},
+	"PublishPostOriginStoryline": func(q *sqlc.Queries, p post.Post) (int64, error) {
+		return q.PublishPostOriginStoryline(context.Background(), sqlc.PublishPostOriginStorylineParams{Slug: p.Slug, UserID: p.UserID, ExpectedContentRevision: p.ContentRevision, ExpectedInputRevision: p.InputRevision, Storyline: sql.NullString{String: "{}", Valid: true}, UpdatedAt: lockLater.Format(time.RFC3339Nano)})
+	},
+	"SetPostOriginAvailability": func(q *sqlc.Queries, p post.Post) (int64, error) {
+		return q.SetPostOriginAvailability(context.Background(), sqlc.SetPostOriginAvailabilityParams{Slug: p.Slug, UserID: p.UserID, ContentOrigins: sql.NullString{String: "{}", Valid: true}})
+	},
 	"AdvancePostInputRevision": func(q *sqlc.Queries, p post.Post) (int64, error) {
 		return q.AdvancePostInputRevision(context.Background(), sqlc.AdvancePostInputRevisionParams{Slug: p.Slug, UpdatedAt: lockLater.Format(time.RFC3339Nano)})
 	},

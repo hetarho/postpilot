@@ -319,8 +319,10 @@ type OriginSource struct {
 	Text               string                 `protobuf:"bytes,3,opt,name=text,proto3" json:"text,omitempty"`
 	AttachmentFilename string                 `protobuf:"bytes,4,opt,name=attachment_filename,json=attachmentFilename,proto3" json:"attachment_filename,omitempty"`
 	Available          bool                   `protobuf:"varint,5,opt,name=available,proto3" json:"available,omitempty"`
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
+	// Frozen owner product attachment identity; not a storage key or live reference.
+	AttachmentId  string `protobuf:"bytes,6,opt,name=attachment_id,json=attachmentId,proto3" json:"attachment_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *OriginSource) Reset() {
@@ -386,6 +388,13 @@ func (x *OriginSource) GetAvailable() bool {
 		return x.Available
 	}
 	return false
+}
+
+func (x *OriginSource) GetAttachmentId() string {
+	if x != nil {
+		return x.AttachmentId
+	}
+	return ""
 }
 
 type OriginSpan struct {
@@ -645,13 +654,14 @@ const file_postpilot_v1_semantic_origin_proto_rawDesc = "" +
 	"\v_item_index\"d\n" +
 	"\x14OriginResultIdentity\x12)\n" +
 	"\x10content_revision\x18\x01 \x01(\x03R\x0fcontentRevision\x12!\n" +
-	"\fcontent_hash\x18\x02 \x01(\tR\vcontentHash\"\x95\x01\n" +
+	"\fcontent_hash\x18\x02 \x01(\tR\vcontentHash\"\xba\x01\n" +
 	"\fOriginSource\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04kind\x18\x02 \x01(\tR\x04kind\x12\x12\n" +
 	"\x04text\x18\x03 \x01(\tR\x04text\x12/\n" +
 	"\x13attachment_filename\x18\x04 \x01(\tR\x12attachmentFilename\x12\x1c\n" +
-	"\tavailable\x18\x05 \x01(\bR\tavailable\"\xa9\x02\n" +
+	"\tavailable\x18\x05 \x01(\bR\tavailable\x12#\n" +
+	"\rattachment_id\x18\x06 \x01(\tR\fattachmentId\"\xa9\x02\n" +
 	"\n" +
 	"OriginSpan\x126\n" +
 	"\x05field\x18\x01 \x01(\v2 .postpilot.v1.OriginFieldLocatorR\x05field\x12\x14\n" +

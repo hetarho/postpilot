@@ -834,7 +834,7 @@ func (s *Service) SetGeneratedContent(ctx context.Context, userID, slug string, 
 // identical content with different nouns is a new write. nil and empty compare equal, since
 // both mean none.
 func generatedAlready(p Post, content PostContent, language Language, annotations WriteAnnotations) bool {
-	return p.Status == StatusReview && p.MachineBaselineRevision == p.ContentRevision &&
+	return p.ContentOrigins == nil && p.Status == StatusReview && p.MachineBaselineRevision == p.ContentRevision &&
 		p.Content != nil && p.ContentLanguage != nil && *p.ContentLanguage == language &&
 		reflect.DeepEqual(*p.Content, content) &&
 		slices.Equal(p.ContentNouns, annotations.Nouns) &&
@@ -1499,7 +1499,7 @@ func (s *Service) DeleteImage(ctx context.Context, userID, imageID string) error
 	// alone, and a filename is only taken while its photo is attached — so a leftover entry
 	// would become reusable eyesight for whatever different photo is uploaded under that name
 	// next. Nothing shows a stale entry today; a generation would silently write from it.
-	if err := s.dropAttachmentTraces(ctx, found, image.Filename); err != nil {
+	if err := s.dropAttachmentTraces(ctx, found, image.Filename, image.ID); err != nil {
 		return err
 	}
 	return nil
@@ -1567,7 +1567,7 @@ func (s *Service) DeleteVideo(ctx context.Context, userID, videoID string) error
 	} else if err := s.blobs.Delete(ctx, video.Key); err != nil {
 		slog.WarnContext(ctx, "could not delete a removed clip's object; the stray-object sweep reclaims it", "key", video.Key, "err", err)
 	}
-	if err := s.dropAttachmentTraces(ctx, found, video.Filename); err != nil {
+	if err := s.dropAttachmentTraces(ctx, found, video.Filename, video.ID); err != nil {
 		return err
 	}
 	return nil
@@ -1576,22 +1576,8 @@ func (s *Service) DeleteVideo(ctx context.Context, userID, videoID string) error
 // dropAttachmentTraces removes what the post still says about one deleted attachment: its
 // observation entry and its name in the storyline's paragraphs and MadeWith (POST-18), in one
 // statement. A post that says nothing about it has nothing to drop, the ordinary case.
-func (s *Service) dropAttachmentTraces(ctx context.Context, found Post, filename string) error {
-	kept := make([]Observation, 0, len(found.Observations))
-	for _, observation := range found.Observations {
-		if observation.File != filename {
-			kept = append(kept, observation)
-		}
-	}
-	storyline := found.Storyline
-	if storyline != nil {
-		without := storyline.WithoutFile(filename)
-		storyline = &without
-	}
-	if len(kept) == len(found.Observations) && reflect.DeepEqual(storyline, found.Storyline) {
-		return nil
-	}
-	if _, err := s.drafts.UpdateAttachmentTraces(ctx, found.Slug, found.UserID, kept, storyline, s.now()); err != nil {
+func (s *Service) dropAttachmentTraces(ctx context.Context, found Post, filename, attachmentID string) error {
+	if _, err := s.drafts.UpdateAttachmentTraces(ctx, found.Slug, found.UserID, filename, attachmentID, s.now()); err != nil {
 		return fmt.Errorf("drop the deleted attachment's observation and storyline name: %w", err)
 	}
 	return nil

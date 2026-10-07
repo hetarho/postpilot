@@ -33,14 +33,14 @@ WHERE slug = ? AND user_id = ? AND status <> 'published';
 -- A storyline job's answer replaces the post's storyline and nothing else: the content, the
 -- machine baseline, the status and the revisions stay (GEN-68, GEN-69). NULL is none.
 UPDATE posts SET input_revision = input_revision + CASE WHEN storyline IS NOT sqlc.narg(storyline) THEN 1 ELSE 0 END,
-    storyline = sqlc.narg(storyline), updated_at = sqlc.arg(updated_at)
+    storyline = sqlc.narg(storyline), storyline_origins = sqlc.narg(storyline_origins), updated_at = sqlc.arg(updated_at)
 WHERE slug = sqlc.arg(slug) AND user_id = sqlc.arg(user_id) AND status <> 'published';
 
 -- name: UpdatePostAttachmentTraces :execrows
 -- What a deleted attachment leaves behind, the observations and the storyline, in one statement
 -- (POST-18). NULL storyline is none.
 UPDATE posts SET input_revision = input_revision + CASE WHEN storyline IS NOT sqlc.narg(storyline) THEN 1 ELSE 0 END,
-    observations = sqlc.arg(observations), storyline = sqlc.narg(storyline), updated_at = sqlc.arg(updated_at)
+    observations = sqlc.arg(observations), storyline = sqlc.narg(storyline), storyline_origins = sqlc.narg(storyline_origins), content_origins = sqlc.narg(content_origins), updated_at = sqlc.arg(updated_at)
 WHERE slug = sqlc.arg(slug) AND user_id = sqlc.arg(user_id) AND status <> 'published';
 
 -- name: UpdateGeneratedContent :execrows
@@ -48,10 +48,11 @@ WHERE slug = sqlc.arg(slug) AND user_id = sqlc.arg(user_id) AND status <> 'publi
 -- it (GEN-55, GEN-67). The service resolves them first, so NULL here always means none, and an
 -- identical content with different ones is a new machine write.
 UPDATE posts SET input_revision = input_revision + CASE WHEN storyline IS NOT sqlc.narg(storyline) THEN 1 ELSE 0 END,
+    content_origins = NULL,
     content = sqlc.arg(content), machine_baseline = sqlc.arg(machine_baseline),
     content_language = sqlc.arg(content_language),
     content_nouns = sqlc.narg(content_nouns),
-    storyline = sqlc.narg(storyline),
+    storyline = sqlc.narg(storyline), storyline_origins = sqlc.narg(storyline_origins),
     content_revision = content_revision + 1,
     machine_baseline_revision = content_revision + 1,
     status = 'review', finalized_revision = NULL, finalized_at = NULL, updated_at = sqlc.arg(updated_at)
@@ -60,10 +61,10 @@ WHERE slug = sqlc.arg(slug) AND user_id = sqlc.arg(user_id) AND status <> 'publi
        OR machine_baseline_revision <> content_revision
        OR content_language IS NULL OR content_language <> sqlc.arg(content_language)
        OR content_nouns IS NOT sqlc.narg(content_nouns)
-       OR storyline IS NOT sqlc.narg(storyline));
+       OR storyline IS NOT sqlc.narg(storyline) OR content_origins IS NOT NULL);
 
 -- name: SavePostContent :execrows
-UPDATE posts SET content = sqlc.arg(content), content_revision = content_revision + 1,
+UPDATE posts SET content = sqlc.arg(content), content_origins = sqlc.narg(content_origins), content_revision = content_revision + 1,
     status = 'review', finalized_revision = NULL, finalized_at = NULL, updated_at = sqlc.arg(updated_at)
 WHERE slug = sqlc.arg(slug) AND user_id = sqlc.arg(user_id) AND content_revision = sqlc.arg(content_revision)
   AND status <> 'published';
@@ -94,7 +95,7 @@ WHERE slug = sqlc.arg(slug) AND user_id = sqlc.arg(user_id) AND content_revision
 SELECT slug, user_id, voice_id, title, memo, observations, content, status, created_at, updated_at,
        content_revision, machine_baseline, machine_baseline_revision,
        target_length, finalized_revision, finalized_at, template_id, target_language, content_language,
-       tag_count, use_memory, published_url, published_at, field, content_nouns, quality_rules, storyline, input_revision
+       tag_count, use_memory, published_url, published_at, field, content_nouns, quality_rules, storyline, input_revision, content_origins, storyline_origins
 FROM posts WHERE slug = ?;
 
 -- name: PublishPost :execrows

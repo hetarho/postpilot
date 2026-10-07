@@ -61,7 +61,29 @@ func seedCreationPreservation(t *testing.T, h *DB, writing bool) {
 
 func creationRows(t *testing.T, h *DB, table string) [][]string {
 	t.Helper()
-	rows, err := h.Reader.Query("SELECT * FROM " + table + " ORDER BY rowid")
+	projection := "*"
+	if table == "posts" {
+		// Compare every historical field even when an additive migration appends
+		// result sidecars. Their required NULL upgrade state is asserted separately.
+		columns, err := h.Reader.Query("SELECT name FROM pragma_table_info('posts') WHERE name NOT IN ('content_origins','storyline_origins') ORDER BY cid")
+		if err != nil {
+			t.Fatal(err)
+		}
+		var names []string
+		for columns.Next() {
+			var name string
+			if err := columns.Scan(&name); err != nil {
+				t.Fatal(err)
+			}
+			names = append(names, `"`+strings.ReplaceAll(name, `"`, `""`)+`"`)
+		}
+		if err := columns.Err(); err != nil {
+			t.Fatal(err)
+		}
+		columns.Close()
+		projection = strings.Join(names, ",")
+	}
+	rows, err := h.Reader.Query("SELECT " + projection + " FROM " + table + " ORDER BY rowid")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -177,6 +199,10 @@ func TestCreationLineageUpgradesBothPublishedAndDivergentDatabases(t *testing.T)
 				if got := creationRows(t, h, table); !reflect.DeepEqual(rows, got) {
 					t.Fatal("migration changed private data or receipt", table)
 				}
+			}
+			var inferredOrigins int
+			if err := h.Reader.QueryRow("SELECT count(*) FROM posts WHERE content_origins IS NOT NULL OR storyline_origins IS NOT NULL").Scan(&inferredOrigins); err != nil || inferredOrigins != 0 {
+				t.Fatal("migration inferred private origin evidence for historical posts", inferredOrigins, err)
 			}
 			for _, old := range oldLedger {
 				var version int64

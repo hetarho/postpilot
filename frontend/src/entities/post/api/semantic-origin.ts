@@ -29,6 +29,7 @@ export function originReviewFromProto(value?: ProtoOriginReview): OriginReview |
       kind: source.kind as OriginSourceKind,
       text: source.text,
       attachmentFilename: source.attachmentFilename,
+      ...(source.attachmentId ? { attachmentId: source.attachmentId } : {}),
       available: source.available,
     })),
     spans: value.spans.map((span) => ({
@@ -54,4 +55,17 @@ export function validateOriginReviewFromProto(
   value?: ProtoOriginReview,
 ) {
   return validateOriginReview(content, current, originReviewFromProto(value))
+}
+
+/** Discard another result's metadata while preserving usable canonical content. */
+export function alignedOriginReviewFromProto(
+  content: OriginContent | undefined,
+  current: OriginResultIdentity,
+  value?: ProtoOriginReview,
+): OriginReview | undefined {
+  const review = originReviewFromProto(value)
+  if (!content || !review) return undefined
+  const validated = validateOriginReview(content, current, review)
+  if (validated.issues.some((issue) => issue.index === -1)) return undefined
+  return { ...review, spans: validated.spans }
 }

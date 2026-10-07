@@ -14,8 +14,10 @@ import (
 func filledGenerationOptions() generationOptions {
 	target := 1500
 	files := []string{"IMG_1.jpg"}
+	fingerprint := "fixture-plan"
 	result := generationOptions{
-		OriginProtocolVersion: OriginProtocolVersion, CompletionTokens: 16384, FollowStorylineOrigins: originFixturePlan([]StorylineParagraph{{Text: "골목을 보여줍니다.", Files: []string{"IMG_1.jpg"}}}),
+		ExpectedPlanFingerprint: &fingerprint,
+		OriginProtocolVersion:   OriginProtocolVersion, CompletionTokens: 16384, FollowStorylineOrigins: originFixturePlan([]StorylineParagraph{{Text: "골목을 보여줍니다.", Files: []string{"IMG_1.jpg"}}}),
 		Profile:        &Profile{Text: "Accepted habits", Excerpts: []string{"Accepted prose"}, Portable: true, Sources: []ProfileSource{{SampleID: "sample", ContentRevision: 1}}},
 		TargetLanguage: LanguageEnglish,
 		TargetLength:   &target,
@@ -74,7 +76,7 @@ func requireNoZero(t *testing.T, path string, v reflect.Value) {
 			if v.Type().Field(i).Name == "OriginCandidates" {
 				continue
 			}
-			if v.Type() == reflect.TypeOf(post.OriginSource{}) && v.Type().Field(i).Name == "AttachmentFilename" && v.Field(i).String() == "" {
+			if v.Type() == reflect.TypeOf(post.OriginSource{}) && (v.Type().Field(i).Name == "AttachmentFilename" || v.Type().Field(i).Name == "AttachmentID") && v.Field(i).String() == "" {
 				continue
 			}
 			requireNoZero(t, path+"."+v.Type().Field(i).Name, v.Field(i))
@@ -133,7 +135,8 @@ func TestEveryFrozenOptionReachesTheRun(t *testing.T) {
 	// not a post member, its five fields are.
 	for _, field := range reflect.VisibleFields(options.Type()) {
 		name := field.Name
-		if field.Anonymous || name == "ObserveFiles" || name == "Observations" || name == "Profile" {
+		// The expected plan fingerprint fences publication directly; it is not writer material.
+		if field.Anonymous || name == "ObserveFiles" || name == "Observations" || name == "Profile" || name == "ExpectedPlanFingerprint" {
 			continue
 		}
 		memberName := name
@@ -184,6 +187,7 @@ func TestStartFreezesEveryOption(t *testing.T) {
 
 	posts.input.Observations[0].Origins = originFixtureObservation(posts.input.Observations[0])
 	posts.input.Storyline.Origins = originFixturePlan(posts.input.Storyline.Paragraphs)
+	posts.input.StorylineFingerprint = "fixture-plan"
 	pub := &originFixturePublisher{}
 	svc = NewOriginService(svc, pub, pub)
 	target := 1500

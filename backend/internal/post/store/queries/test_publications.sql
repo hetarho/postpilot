@@ -6,9 +6,10 @@ WHERE user_id = sqlc.arg(user_id)
        OR request_key = sqlc.arg(request_key));
 
 -- name: ApplyPostTestOutput :execrows
-UPDATE posts SET content = sqlc.arg(content), machine_baseline = sqlc.arg(machine_baseline),
+UPDATE posts SET content_origins = sqlc.narg(content_origins),
+    content = sqlc.arg(content), machine_baseline = sqlc.arg(machine_baseline),
     content_language = sqlc.arg(content_language), content_nouns = sqlc.narg(content_nouns),
-    storyline = sqlc.narg(storyline),
+    storyline = sqlc.narg(storyline), storyline_origins = sqlc.narg(storyline_origins),
     input_revision = input_revision + CASE WHEN storyline IS NOT sqlc.narg(storyline) THEN 1 ELSE 0 END,
     content_revision = content_revision + 1, machine_baseline_revision = content_revision + 1,
     status = 'review', finalized_revision = NULL, finalized_at = NULL, updated_at = sqlc.arg(updated_at)

@@ -247,7 +247,9 @@ func (a generationPosts) AttachedImages(ctx context.Context, userID, slug string
 		return generation.PostInput{}, generationPostError(err)
 	}
 	input := generation.PostInput{
-		Slug: found.Slug, UserID: found.UserID, Title: found.Title, Memo: found.Memo,
+		StorylineFingerprint: post.StorylineFingerprint(found.Storyline),
+		InputRevision:        found.InputRevision,
+		Slug:                 found.Slug, UserID: found.UserID, Title: found.Title, Memo: found.Memo,
 		ContentRevision: found.ContentRevision,
 		Voice:           generation.VoiceRef{ID: found.Voice.ID, Name: found.Voice.Name, Deleted: found.Voice.Deleted, Made: found.Voice.Made},
 		TargetLanguage:  generation.Language(found.TargetLanguage),
@@ -296,12 +298,18 @@ func (a generationPosts) AttachedImages(ctx context.Context, userID, slug string
 			})
 		}
 		input.Content = &content
+		input.ContentOrigins = found.ContentOrigins
+		if found.ContentOrigins != nil {
+			identity := post.ContentOriginIdentity(*found.Content, found.ContentRevision)
+			input.ContentOriginIdentity = &identity
+		}
 	}
 	// Photos first, then videos, each already ordered by created_at: one list, because
 	// every selection, freeze and merge function iterates attachments by filename and a
 	// second slice would mean maintaining that reasoning twice.
 	for _, image := range found.Images {
 		input.Images = append(input.Images, generation.Image{
+			ID:       image.ID,
 			Filename: image.Filename, Key: image.Key, Kind: generation.AttachmentPhoto,
 			ContentType: "image/jpeg", Width: image.Width, Height: image.Height,
 			Rotation: image.Rotation, RotationByOwner: image.RotationByOwner,
@@ -309,6 +317,7 @@ func (a generationPosts) AttachedImages(ctx context.Context, userID, slug string
 	}
 	for _, video := range found.Videos {
 		input.Images = append(input.Images, generation.Image{
+			ID:       video.ID,
 			Filename: video.Filename, Key: video.Key, Kind: generation.AttachmentVideo,
 			ContentType: video.ContentType, DurationMs: video.DurationMs,
 		})
@@ -319,6 +328,7 @@ func (a generationPosts) AttachedImages(ctx context.Context, userID, slug string
 			VisibleText: observation.VisibleText, Objects: observation.Objects,
 			PeoplePresent: observation.PeoplePresent, Model: observation.Model,
 			Events: observation.Events, Speech: observation.Speech, Rotation: observation.Rotation,
+			Origins: observation.Origins,
 		})
 	}
 	if found.Storyline != nil {
@@ -330,7 +340,7 @@ func (a generationPosts) AttachedImages(ctx context.Context, userID, slug string
 // generationStoryline hands generation the stored storyline's paragraphs and what it was made
 // with; whether the owner edited it is the post's own business.
 func generationStoryline(storyline post.Storyline) *generation.Storyline {
-	out := &generation.Storyline{MadeWith: append([]string(nil), storyline.MadeWith...)}
+	out := &generation.Storyline{MadeWith: append([]string(nil), storyline.MadeWith...), Origins: storyline.Origins}
 	for _, paragraph := range storyline.Paragraphs {
 		out.Paragraphs = append(out.Paragraphs, generation.StorylineParagraph{
 			Text: paragraph.Text, Files: append([]string(nil), paragraph.Files...),
@@ -341,7 +351,7 @@ func generationStoryline(storyline post.Storyline) *generation.Storyline {
 
 // postStoryline is the other direction, for a write's or a storyline job's answer.
 func postStoryline(storyline generation.Storyline) post.Storyline {
-	out := post.Storyline{MadeWith: append([]string(nil), storyline.MadeWith...)}
+	out := post.Storyline{MadeWith: append([]string(nil), storyline.MadeWith...), Origins: storyline.Origins}
 	for _, paragraph := range storyline.Paragraphs {
 		out.Paragraphs = append(out.Paragraphs, post.StorylineParagraph{
 			Text: paragraph.Text, Files: append([]string(nil), paragraph.Files...),
@@ -362,12 +372,17 @@ func (a generationPosts) SetObservations(ctx context.Context, userID, slug strin
 			VisibleText: observation.VisibleText, Objects: observation.Objects,
 			PeoplePresent: observation.PeoplePresent, Model: observation.Model,
 			Events: observation.Events, Speech: observation.Speech, Rotation: observation.Rotation,
+			Origins: observation.Origins,
 		})
 	}
 	return generationPostError(a.service.SetObservations(ctx, userID, slug, values))
 }
 
 func (a generationPosts) SetGeneratedContent(ctx context.Context, userID, slug string, content generation.PostContent, language generation.Language, annotations *generation.WriteAnnotations) error {
+	return generationPostError(a.service.SetGeneratedContent(ctx, userID, slug, generationPostContent(content), post.Language(language), postAnnotations(annotations)))
+}
+
+func generationPostContent(content generation.PostContent) post.PostContent {
 	value := post.PostContent{Title: content.Title, Summary: content.Summary, Tags: content.Tags}
 	for _, block := range content.Blocks {
 		value.Blocks = append(value.Blocks, post.Block{
@@ -376,7 +391,25 @@ func (a generationPosts) SetGeneratedContent(ctx context.Context, userID, slug s
 			Files: block.Files, Layout: post.GalleryLayout(block.Layout),
 		})
 	}
-	return generationPostError(a.service.SetGeneratedContent(ctx, userID, slug, value, post.Language(language), postAnnotations(annotations)))
+	return value
+}
+
+type generationOriginPublisher struct{ service *post.OriginResultService }
+
+func (a generationOriginPublisher) PublishGeneratedResult(ctx context.Context, userID, slug string, result generation.OriginPostCompletion) (post.OriginResultIdentity, error) {
+	identity, err := a.service.PublishGeneratedResult(ctx, userID, slug, post.GeneratedOriginResult{
+		Content: generationPostContent(result.Content), Language: post.Language(result.Language),
+		Annotations: postAnnotations(result.Annotations), Origins: result.Origins,
+		ExpectedContentRevision: result.ExpectedContentRevision,
+		ExpectedPlanFingerprint: result.ExpectedPlanFingerprint,
+	})
+	return identity, generationPostError(err)
+}
+
+func (a generationOriginPublisher) PublishStorylineResult(ctx context.Context, userID, slug string, result generation.OriginStorylineCompletion) error {
+	return generationPostError(a.service.PublishStorylineResult(ctx, userID, slug, post.StorylineOriginResult{
+		Storyline: postStoryline(result.Storyline), ExpectedContentRevision: result.ExpectedContentRevision, ExpectedInputRevision: result.ExpectedInputRevision, ExpectedPlanFingerprint: result.ExpectedPlanFingerprint,
+	}))
 }
 
 // postAnnotations hands the post a write's nouns. nil stays nil, which keeps what the post

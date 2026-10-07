@@ -50,6 +50,8 @@ message OriginSource {
   string text = 3;
   string attachment_filename = 4;
   bool available = 5;
+  // Frozen owner product attachment identity; not a storage key or live reference.
+  string attachment_id = 6;
 }
 
 message OriginSpan {

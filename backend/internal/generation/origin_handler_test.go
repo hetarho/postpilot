@@ -252,7 +252,7 @@ func originFixturePlan(paragraphs []StorylineParagraph) *PlanOriginReview {
 
 func originFixtureObservation(observation Observation) *ObservationOriginReview {
 	observation.OriginCandidates = []ObservationOriginCandidate{{Field: "scene", Quote: observation.Scene, Category: post.OriginPhotoInterpretation, SourceRefs: []string{"media.0"}}}
-	return ValidateObservationOrigins(observation, observationSources([]string{observation.File}, false))
+	return ValidateObservationOrigins(observation, observationSources([]string{observation.File}, false, map[string]string{observation.File: "fixture-attachment"}))
 }
 
 func originFixtureContent(content PostContent) *post.OriginReview {

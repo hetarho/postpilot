@@ -19,6 +19,7 @@ import {
   type ProtoQualityMetric,
 } from '@/shared/api'
 import type { PostDraft, PostListItem } from '../model/types'
+import { alignedOriginReviewFromProto } from './semantic-origin'
 
 function requireQualityRule(value: ProtoQualityMetric): QualityMetricId {
   const id = qualityMetricFromProto(value)
@@ -52,6 +53,12 @@ export function toPostDraft(post: Post): PostDraft {
     observations: post.observations,
     pendingExperimentId: post.pendingExperimentId,
     contentRevision: post.contentRevision,
+    contentHash: post.contentHash,
+    contentOrigins: alignedOriginReviewFromProto(
+      post.content,
+      { contentRevision: post.contentRevision, contentHash: post.contentHash },
+      post.contentOrigins,
+    ),
     inputRevision: post.inputRevision,
     machineBaselineRevision: post.machineBaselineRevision,
     canFinalize: post.canFinalize,

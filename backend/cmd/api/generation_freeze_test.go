@@ -149,18 +149,26 @@ type recordingModels struct {
 	// nativeEffort is what every model resolves with as ReasoningNativeEffort.
 	nativeEffort bool
 	// answer replaces the post answer every call returns, when set.
-	answer       string
-	finishReason string
+	answer        string
+	finishReason  string
+	observeAnswer string
 }
 
 func (m *recordingModels) Resolve(ref llm.ModelRef) (llm.ModelInfo, bool) {
-	return llm.ModelInfo{Ref: ref, StructuredOutput: true, Stages: []string{llm.StageNameWrite}, ReasoningNativeEffort: m.nativeEffort}, true
+	stages := []string{llm.StageNameWrite}
+	if m.observeAnswer != "" {
+		stages = append(stages, llm.StageNameObserve)
+	}
+	return llm.ModelInfo{Ref: ref, StructuredOutput: true, Vision: m.observeAnswer != "", Stages: stages, ReasoningNativeEffort: m.nativeEffort}, true
 }
 
 func (m *recordingModels) Complete(_ context.Context, _ llm.ModelRef, request llm.Request) (llm.Response, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.requests = append(m.requests, request)
+	if request.Stage == llm.StageNameObserve && m.observeAnswer != "" {
+		return llm.Response{Text: m.observeAnswer}, nil
+	}
 	if m.answer != "" {
 		return llm.Response{Text: m.answer, FinishReason: m.finishReason}, nil
 	}
@@ -188,7 +196,7 @@ type drainHarness struct {
 	waitDone func(id string)
 }
 
-func newDrainHarness(t *testing.T, models *recordingModels, configure ...func(*generation.Service, *post.Service) *generation.Service) *drainHarness {
+func newDrainHarness(t *testing.T, models *recordingModels, configure ...func(*generation.Service, *post.Service, *db.DB) *generation.Service) *drainHarness {
 	t.Helper()
 	handle, err := db.Open(filepath.Join(t.TempDir(), "drain.db"))
 	if err != nil {
@@ -223,7 +231,7 @@ func newDrainHarness(t *testing.T, models *recordingModels, configure ...func(*g
 	admitter := &stubAdmitter{}
 	queue.Admit(admitter)
 	generationSvc := generation.NewService(
-		generationPosts{service: postSvc}, freezeProfiles{}, models, freezeImages{},
+		generationPosts{service: postSvc}, freezeProfiles{}, models, drainImageReader{enabled: models.observeAnswer != ""},
 		generationJobs{queue: queue, budget: testCompletionBudget()}, 4, generation.DefaultReasoningPolicy(), generationBudget{testCompletionBudget()},
 		generation.Deps{
 			Templates:  generationTemplates{service: templateSvc},
@@ -233,7 +241,7 @@ func newDrainHarness(t *testing.T, models *recordingModels, configure ...func(*g
 		},
 	)
 	for _, customize := range configure {
-		generationSvc = customize(generationSvc, postSvc)
+		generationSvc = customize(generationSvc, postSvc, handle)
 	}
 	// The worker's own handlers, not a copy (review F17): a mapping change in registerJobs is what
 	// this harness runs. Only the generate and revise kinds are ever enqueued here, so the other
@@ -266,6 +274,15 @@ func newDrainHarness(t *testing.T, models *recordingModels, configure ...func(*g
 		ctx: ctx, handle: handle, posts: postSvc, guidelines: guidelineSvc, generation: generationSvc,
 		admitter: admitter, voiceID: defaultVoice.ID, waitDone: waitDone,
 	}
+}
+
+type drainImageReader struct{ enabled bool }
+
+func (r drainImageReader) Read(ctx context.Context, key string) ([]byte, error) {
+	if !r.enabled {
+		return freezeImages{}.Read(ctx, key)
+	}
+	return []byte{0xff, 0xd8, 0xff, 0xd9}, nil
 }
 
 // draft saves a Korean draft on the default voice, optionally in a 분야.

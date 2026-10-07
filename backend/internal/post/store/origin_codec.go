@@ -1,11 +1,20 @@
-package generation
+package store
 
 import (
+	"database/sql"
 	"encoding/json"
 	"unicode/utf8"
 
 	"github.com/postpilot/backend/internal/post"
 )
+
+type originFieldJSON struct {
+	Kind           string `json:"kind"`
+	TagIndex       *int   `json:"tag_index,omitempty"`
+	BlockIndex     *int   `json:"block_index,omitempty"`
+	ItemIndex      *int   `json:"item_index,omitempty"`
+	ParagraphIndex *int   `json:"paragraph_index,omitempty"`
+}
 
 type originResultJSON struct {
 	ContentRevision int64  `json:"content_revision"`
@@ -126,7 +135,7 @@ func decodeOriginSources(sources []originSourceJSON) []post.OriginSource {
 	result := make([]post.OriginSource, len(sources))
 	seen := make(map[string]bool, len(sources))
 	for i, source := range sources {
-		if source.ID == "" || !utf8.ValidString(source.ID) || !utf8.ValidString(source.AttachmentID) || utf8.RuneCountInString(source.AttachmentID) > post.OriginMaxSourceIDChars || utf8.RuneCountInString(source.ID) > post.OriginMaxSourceIDChars || !source.Kind.Valid() || !utf8.ValidString(source.Text) || utf8.RuneCountInString(source.Text) > post.OriginMaxSourceTextChars || seen[source.ID] {
+		if source.ID == "" || !utf8.ValidString(source.ID) || utf8.RuneCountInString(source.ID) > post.OriginMaxSourceIDChars || !source.Kind.Valid() || !utf8.ValidString(source.Text) || utf8.RuneCountInString(source.Text) > post.OriginMaxSourceTextChars || seen[source.ID] {
 			return nil
 		}
 		seen[source.ID] = true
@@ -170,7 +179,7 @@ func decodeOriginReview(wire *originReviewJSON) *post.OriginReview {
 	return result
 }
 
-func encodePlanOrigins(review *PlanOriginReview) *planOriginReviewJSON {
+func encodePlanOrigins(review *post.PlanOriginReview) *planOriginReviewJSON {
 	if review == nil {
 		return nil
 	}
@@ -184,7 +193,7 @@ func encodePlanOrigins(review *PlanOriginReview) *planOriginReviewJSON {
 	return result
 }
 
-func decodePlanOrigins(wire *planOriginReviewJSON) *PlanOriginReview {
+func decodePlanOrigins(wire *planOriginReviewJSON) *post.PlanOriginReview {
 	if wire == nil || wire.Version != post.OriginVersion || wire.Result.ContentHash == "" || wire.Result.ContentRevision < 0 {
 		return nil
 	}
@@ -192,15 +201,15 @@ func decodePlanOrigins(wire *planOriginReviewJSON) *PlanOriginReview {
 	if len(wire.Sources) != len(sources) {
 		return nil
 	}
-	result := &PlanOriginReview{Version: wire.Version, Result: post.OriginResultIdentity{ContentRevision: wire.Result.ContentRevision, ContentHash: wire.Result.ContentHash}, Sources: sources}
+	result := &post.PlanOriginReview{Version: wire.Version, Result: post.OriginResultIdentity{ContentRevision: wire.Result.ContentRevision, ContentHash: wire.Result.ContentHash}, Sources: sources}
 	if wire.Spans != nil {
-		result.Spans = make([]PlanOriginSpan, len(wire.Spans))
+		result.Spans = make([]post.PlanOriginSpan, len(wire.Spans))
 	}
 	for i, span := range wire.Spans {
 		if span.ParagraphIndex < 0 || !originSpanShape(span.Start, span.End, span.Quote, span.Category, span.SourceRefs, span.ReviewState) {
 			return nil
 		}
-		result.Spans[i] = PlanOriginSpan{ParagraphIndex: span.ParagraphIndex, Start: span.Start, End: span.End, Quote: span.Quote, Category: span.Category, SourceRefs: append([]string(nil), span.SourceRefs...), ReviewState: span.ReviewState}
+		result.Spans[i] = post.PlanOriginSpan{ParagraphIndex: span.ParagraphIndex, Start: span.Start, End: span.End, Quote: span.Quote, Category: span.Category, SourceRefs: append([]string(nil), span.SourceRefs...), ReviewState: span.ReviewState}
 	}
 	return result
 }
@@ -209,7 +218,7 @@ func originSpanShape(start, end int, quote string, category post.OriginCategory,
 	return start >= 0 && end > start && quote != "" && utf8.ValidString(quote) && category.Valid() && review.Valid() && len(refs) <= post.OriginMaxRefsPerSpan
 }
 
-func encodeObservationOrigins(review *ObservationOriginReview) *observationOriginReviewJSON {
+func encodeObservationOrigins(review *post.ObservationOriginReview) *observationOriginReviewJSON {
 	if review == nil {
 		return nil
 	}
@@ -223,7 +232,7 @@ func encodeObservationOrigins(review *ObservationOriginReview) *observationOrigi
 	return result
 }
 
-func decodeObservationOrigins(wire *observationOriginReviewJSON) *ObservationOriginReview {
+func decodeObservationOrigins(wire *observationOriginReviewJSON) *post.ObservationOriginReview {
 	if wire == nil || wire.Version != post.OriginVersion || wire.Result.ContentHash == "" || wire.Result.ContentRevision < 0 {
 		return nil
 	}
@@ -231,15 +240,15 @@ func decodeObservationOrigins(wire *observationOriginReviewJSON) *ObservationOri
 	if len(wire.Sources) != len(sources) {
 		return nil
 	}
-	result := &ObservationOriginReview{Version: wire.Version, Result: post.OriginResultIdentity{ContentRevision: wire.Result.ContentRevision, ContentHash: wire.Result.ContentHash}, Sources: sources}
+	result := &post.ObservationOriginReview{Version: wire.Version, Result: post.OriginResultIdentity{ContentRevision: wire.Result.ContentRevision, ContentHash: wire.Result.ContentHash}, Sources: sources}
 	if wire.Spans != nil {
-		result.Spans = make([]ObservationOriginSpan, len(wire.Spans))
+		result.Spans = make([]post.ObservationOriginSpan, len(wire.Spans))
 	}
 	for i, span := range wire.Spans {
 		if span.Field == "" || !originSpanShape(span.Start, span.End, span.Quote, span.Category, span.SourceRefs, span.ReviewState) {
 			return nil
 		}
-		result.Spans[i] = ObservationOriginSpan{Field: span.Field, ItemIndex: copyOriginIndex(span.ItemIndex), Start: span.Start, End: span.End, Quote: span.Quote, Category: span.Category, SourceRefs: append([]string(nil), span.SourceRefs...), ReviewState: span.ReviewState}
+		result.Spans[i] = post.ObservationOriginSpan{Field: span.Field, ItemIndex: copyOriginIndex(span.ItemIndex), Start: span.Start, End: span.End, Quote: span.Quote, Category: span.Category, SourceRefs: append([]string(nil), span.SourceRefs...), ReviewState: span.ReviewState}
 	}
 	return result
 }
@@ -274,29 +283,78 @@ func cloneOriginReview(review *post.OriginReview) *post.OriginReview {
 	return &copy
 }
 
-func clonePlanOrigins(review *PlanOriginReview) *PlanOriginReview {
+func clonePlanOrigins(review *post.PlanOriginReview) *post.PlanOriginReview {
 	if review == nil {
 		return nil
 	}
 	copy := *review
 	copy.Sources = append([]post.OriginSource(nil), review.Sources...)
-	copy.Spans = append([]PlanOriginSpan(nil), review.Spans...)
+	copy.Spans = append([]post.PlanOriginSpan(nil), review.Spans...)
 	for i, span := range copy.Spans {
 		copy.Spans[i].SourceRefs = append([]string(nil), span.SourceRefs...)
 	}
 	return &copy
 }
 
-func cloneObservationOrigins(review *ObservationOriginReview) *ObservationOriginReview {
+func cloneObservationOrigins(review *post.ObservationOriginReview) *post.ObservationOriginReview {
 	if review == nil {
 		return nil
 	}
 	copy := *review
 	copy.Sources = append([]post.OriginSource(nil), review.Sources...)
-	copy.Spans = append([]ObservationOriginSpan(nil), review.Spans...)
+	copy.Spans = append([]post.ObservationOriginSpan(nil), review.Spans...)
 	for i, span := range copy.Spans {
 		copy.Spans[i].ItemIndex = copyOriginIndex(span.ItemIndex)
 		copy.Spans[i].SourceRefs = append([]string(nil), span.SourceRefs...)
 	}
 	return &copy
+}
+
+func marshalOriginReview(review *post.OriginReview) sql.NullString {
+	if review == nil {
+		return sql.NullString{}
+	}
+	raw, err := json.Marshal(encodeOriginReview(review))
+	if err != nil {
+		return sql.NullString{}
+	}
+	return sql.NullString{String: string(raw), Valid: true}
+}
+func unmarshalOriginReview(value sql.NullString) *post.OriginReview {
+	if !value.Valid {
+		return nil
+	}
+	var wire originReviewJSON
+	if json.Unmarshal([]byte(value.String), &wire) != nil {
+		return nil
+	}
+	return decodeOriginReview(&wire)
+}
+func marshalPlanOrigins(review *post.PlanOriginReview) sql.NullString {
+	if review == nil {
+		return sql.NullString{}
+	}
+	raw, err := json.Marshal(encodePlanOrigins(review))
+	if err != nil {
+		return sql.NullString{}
+	}
+	return sql.NullString{String: string(raw), Valid: true}
+}
+func unmarshalPlanOrigins(value sql.NullString) *post.PlanOriginReview {
+	if !value.Valid {
+		return nil
+	}
+	var wire planOriginReviewJSON
+	if json.Unmarshal([]byte(value.String), &wire) != nil {
+		return nil
+	}
+	return decodePlanOrigins(&wire)
+}
+
+func unmarshalPlanSources(value sql.NullString) []post.OriginSource {
+	review := unmarshalPlanOrigins(value)
+	if review == nil {
+		return nil
+	}
+	return review.Sources
 }

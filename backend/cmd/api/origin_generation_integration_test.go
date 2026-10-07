@@ -8,6 +8,7 @@ import (
 
 	"github.com/postpilot/backend/internal/generation"
 	"github.com/postpilot/backend/internal/llm"
+	"github.com/postpilot/backend/internal/platform/db"
 	"github.com/postpilot/backend/internal/post"
 	"github.com/postpilot/backend/internal/usage"
 )
@@ -47,7 +48,7 @@ func TestOriginGenerationPublishesValidCanonicalOutputAndIndependentSidecarWithO
 		t.Run(tc.name, func(t *testing.T) {
 			models := &recordingModels{answer: tc.answer, finishReason: tc.finish}
 			var consumer *originResultConsumer
-			h := newDrainHarness(t, models, func(service *generation.Service, posts *post.Service) *generation.Service {
+			h := newDrainHarness(t, models, func(service *generation.Service, posts *post.Service, _ *db.DB) *generation.Service {
 				consumer = &originResultConsumer{posts: posts}
 				return generation.NewOriginService(service, consumer, consumer)
 			})

@@ -11,24 +11,27 @@ import (
 )
 
 const applyPostTestOutput = `-- name: ApplyPostTestOutput :execrows
-UPDATE posts SET content = ?1, machine_baseline = ?2,
-    content_language = ?3, content_nouns = ?4,
-    storyline = ?5,
-    input_revision = input_revision + CASE WHEN storyline IS NOT ?5 THEN 1 ELSE 0 END,
+UPDATE posts SET content_origins = ?1,
+    content = ?2, machine_baseline = ?3,
+    content_language = ?4, content_nouns = ?5,
+    storyline = ?6, storyline_origins = ?7,
+    input_revision = input_revision + CASE WHEN storyline IS NOT ?6 THEN 1 ELSE 0 END,
     content_revision = content_revision + 1, machine_baseline_revision = content_revision + 1,
-    status = 'review', finalized_revision = NULL, finalized_at = NULL, updated_at = ?6
-WHERE slug = ?7 AND user_id = ?8
-  AND input_revision = ?9
-  AND content_revision = ?10
+    status = 'review', finalized_revision = NULL, finalized_at = NULL, updated_at = ?8
+WHERE slug = ?9 AND user_id = ?10
+  AND input_revision = ?11
+  AND content_revision = ?12
   AND status IN ('draft', 'review') AND status <> 'published'
 `
 
 type ApplyPostTestOutputParams struct {
+	ContentOrigins          sql.NullString
 	Content                 sql.NullString
 	MachineBaseline         sql.NullString
 	ContentLanguage         sql.NullString
 	ContentNouns            sql.NullString
 	Storyline               sql.NullString
+	StorylineOrigins        sql.NullString
 	UpdatedAt               string
 	Slug                    string
 	UserID                  string
@@ -38,11 +41,13 @@ type ApplyPostTestOutputParams struct {
 
 func (q *Queries) ApplyPostTestOutput(ctx context.Context, arg ApplyPostTestOutputParams) (int64, error) {
 	result, err := q.db.ExecContext(ctx, applyPostTestOutput,
+		arg.ContentOrigins,
 		arg.Content,
 		arg.MachineBaseline,
 		arg.ContentLanguage,
 		arg.ContentNouns,
 		arg.Storyline,
+		arg.StorylineOrigins,
 		arg.UpdatedAt,
 		arg.Slug,
 		arg.UserID,

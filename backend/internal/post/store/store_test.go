@@ -862,7 +862,7 @@ func TestStorylineRoundTripsBesideTheContent(t *testing.T) {
 	}
 
 	taken := &post.Storyline{Paragraphs: []post.StorylineParagraph{{Text: "가게 앞을 보여줍니다."}, {Text: "마무리"}}, MadeWith: []string{"b.jpg"}}
-	if updated, err := s.UpdateAttachmentTraces(ctx, p.Slug, p.UserID, nil, taken, testNow); err != nil || !updated {
+	if updated, err := s.UpdateAttachmentTraces(ctx, p.Slug, p.UserID, "a.jpg", "old-photo", testNow); err != nil || !updated {
 		t.Fatalf("attachment traces: updated=%v err=%v", updated, err)
 	}
 	after, err := s.GetPost(ctx, p.Slug)
@@ -882,7 +882,7 @@ func TestOnlyTheStorylineWritersWriteTheColumn(t *testing.T) {
 		}
 	}
 	sort.Strings(writers)
-	if want := []string{"ApplyPostTestOutput", "UpdateGeneratedContent", "UpdatePostAttachmentTraces", "UpdatePostStoryline"}; !reflect.DeepEqual(writers, want) {
+	if want := []string{"ApplyPostTestOutput", "PublishPostOriginContent", "PublishPostOriginStoryline", "UpdateGeneratedContent", "UpdatePostAttachmentTraces", "UpdatePostStoryline"}; !reflect.DeepEqual(writers, want) {
 		t.Fatalf("storyline writers = %v, want %v", writers, want)
 	}
 }

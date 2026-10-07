@@ -107,8 +107,15 @@ func ObservationOriginIdentity(observation Observation) post.OriginResultIdentit
 		File, Scene, Mood, VisibleText, Speech string
 		Objects, Events                        []string
 		PeoplePresent                          bool
-	}{observation.File, observation.Scene, observation.Mood, observation.VisibleText, observation.Speech, observation.Objects, observation.Events, observation.PeoplePresent}
+	}{observation.File, observation.Scene, observation.Mood, observation.VisibleText, observation.Speech, normalizedObservationTexts(observation.Objects), normalizedObservationTexts(observation.Events), observation.PeoplePresent}
 	return post.OriginResultIdentity{ContentHash: originHash(identity)}
+}
+
+func normalizedObservationTexts(values []string) []string {
+	if len(values) == 0 {
+		return nil
+	}
+	return values
 }
 
 // ValidateStoredObservationOrigins verifies an actually captured result before

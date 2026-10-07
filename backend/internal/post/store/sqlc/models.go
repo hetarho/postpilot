@@ -50,6 +50,8 @@ type Post struct {
 	QualityRules            sql.NullString
 	Storyline               sql.NullString
 	InputRevision           int64
+	ContentOrigins          sql.NullString
+	StorylineOrigins        sql.NullString
 }
 
 type Upload struct {

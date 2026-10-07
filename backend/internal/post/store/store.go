@@ -276,22 +276,97 @@ func (s *Store) UpdateObservations(ctx context.Context, slug, userID string, obs
 
 // UpdateStoryline replaces the post's storyline, nil for none (GEN-68, GEN-69).
 func (s *Store) UpdateStoryline(ctx context.Context, slug, userID string, storyline *post.Storyline, updatedAt time.Time) (bool, error) {
-	story, err := marshalStoryline(storyline)
+	encoded, err := marshalStoryline(storyline)
 	if err != nil {
 		return false, err
 	}
-	n, err := s.write.UpdatePostStoryline(ctx, sqlc.UpdatePostStorylineParams{
-		Storyline: story, UpdatedAt: formatTime(updatedAt), Slug: slug, UserID: userID,
-	})
+	tx, err := s.writer.BeginTx(ctx, nil)
 	if err != nil {
-		return false, fmt.Errorf("update storyline: %w", err)
+		return false, err
+	}
+	defer tx.Rollback()
+	q := s.write.WithTx(tx)
+	found, err := ownedOriginPost(ctx, q, userID, slug)
+	if errors.Is(err, post.ErrNotFound) || errors.Is(err, post.ErrForbidden) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	if found.Status == post.StatusPublished {
+		return false, nil
+	}
+	var origins *post.PlanOriginReview
+	if storyline != nil && storyline.EditedByHand {
+		_, _, names, err := originAttachments(ctx, q, slug)
+		if err != nil {
+			return false, err
+		}
+		var before []post.StorylineParagraph
+		var prior *post.PlanOriginReview
+		if found.Storyline != nil {
+			before = found.Storyline.Paragraphs
+			prior = found.Storyline.Origins
+		}
+		origins = post.AlignManualPlanOrigins(before, storyline.Paragraphs, prior, post.PlanOriginIdentity(before), post.PlanOriginIdentity(storyline.Paragraphs), fmt.Sprintf("manual-plan-%d", found.InputRevision+1), names)
+	}
+	n, err := q.UpdatePostStoryline(ctx, sqlc.UpdatePostStorylineParams{Storyline: encoded, StorylineOrigins: marshalPlanOrigins(origins), UpdatedAt: formatTime(updatedAt), Slug: slug, UserID: userID})
+	if err != nil {
+		return false, err
+	}
+	if err := tx.Commit(); err != nil {
+		return false, err
 	}
 	return n > 0, nil
 }
 
 // UpdateAttachmentTraces writes a deleted attachment's leftovers away, the observations and the
 // storyline together (POST-18).
-func (s *Store) UpdateAttachmentTraces(ctx context.Context, slug, userID string, observations []post.Observation, storyline *post.Storyline, updatedAt time.Time) (bool, error) {
+func (s *Store) UpdateAttachmentTraces(ctx context.Context, slug, userID, removedFilename, removedAttachmentID string, updatedAt time.Time) (bool, error) {
+	tx, err := s.writer.BeginTx(ctx, nil)
+	if err != nil {
+		return false, fmt.Errorf("begin attachment traces: %w", err)
+	}
+	defer tx.Rollback()
+	q := s.write.WithTx(tx)
+	found, err := ownedOriginPost(ctx, q, userID, slug)
+	if errors.Is(err, post.ErrNotFound) || errors.Is(err, post.ErrForbidden) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	if found.Status == post.StatusPublished {
+		return false, nil
+	}
+	photos, videos, names, err := originAttachments(ctx, q, slug)
+	if err != nil {
+		return false, err
+	}
+	// A filename reused before cleanup belongs to its new attachment. Only
+	// observation evidence actually captured for that incarnation can survive.
+	var currentID string
+	for _, photo := range photos {
+		if photo.Filename == removedFilename {
+			currentID = photo.ID
+		}
+	}
+	for _, video := range videos {
+		if video.Filename == removedFilename {
+			currentID = video.ID
+		}
+	}
+	observations := make([]post.Observation, 0, len(found.Observations))
+	for _, observation := range found.Observations {
+		if observation.File != removedFilename || observationMatchesIncarnation(observation, currentID, removedAttachmentID) {
+			observations = append(observations, observation)
+		}
+	}
+	storyline := found.Storyline
+	if storyline != nil && currentID == "" {
+		without := storyline.WithoutFile(removedFilename)
+		storyline = &without
+	}
 	encoded, err := marshalObservations(observations)
 	if err != nil {
 		return false, fmt.Errorf("encode observations: %w", err)
@@ -300,12 +375,36 @@ func (s *Store) UpdateAttachmentTraces(ctx context.Context, slug, userID string,
 	if err != nil {
 		return false, err
 	}
-	n, err := s.write.UpdatePostAttachmentTraces(ctx, sqlc.UpdatePostAttachmentTracesParams{
-		Observations: sql.NullString{String: encoded, Valid: true}, Storyline: story,
+	var contentOrigins *post.OriginReview
+	if found.Content != nil {
+		contentOrigins = cloneOriginReview(found.ContentOrigins)
+		if contentOrigins != nil {
+			contentOrigins.Sources = originSourcesWithIncarnations(contentOrigins.Sources, photos, videos)
+		}
+		contentOrigins = validatedStoredOrigins(*found.Content, post.ContentOriginIdentity(*found.Content, found.ContentRevision), contentOrigins, names)
+	}
+	var planOrigins *post.PlanOriginReview
+	if storyline != nil {
+		planOrigins = clonePlanOrigins(storyline.Origins)
+		if planOrigins != nil {
+			// Cleanup changes filenames, not any paragraph text or position. Keep
+			// the exact proven text correspondence while rebinding its plan hash.
+			if found.Storyline.Origins.Result == post.PlanOriginIdentity(found.Storyline.Paragraphs) {
+				planOrigins.Result = post.PlanOriginIdentity(storyline.Paragraphs)
+			}
+			planOrigins.Sources = originSourcesWithIncarnations(planOrigins.Sources, photos, videos)
+		}
+		planOrigins = publishablePlanOrigins(storyline.Paragraphs, planOrigins, names)
+	}
+	n, err := q.UpdatePostAttachmentTraces(ctx, sqlc.UpdatePostAttachmentTracesParams{
+		Observations: sql.NullString{String: encoded, Valid: true}, Storyline: story, ContentOrigins: marshalOriginReview(contentOrigins), StorylineOrigins: marshalPlanOrigins(planOrigins),
 		UpdatedAt: formatTime(updatedAt), Slug: slug, UserID: userID,
 	})
 	if err != nil {
 		return false, fmt.Errorf("update attachment traces: %w", err)
+	}
+	if err := tx.Commit(); err != nil {
+		return false, fmt.Errorf("commit attachment traces: %w", err)
 	}
 	return n > 0, nil
 }
@@ -329,7 +428,12 @@ func (s *Store) UpdateGeneratedContent(ctx context.Context, slug, userID string,
 	n, err := s.write.UpdateGeneratedContent(ctx, sqlc.UpdateGeneratedContentParams{
 		Content: sql.NullString{String: encoded, Valid: true}, MachineBaseline: sql.NullString{String: encoded, Valid: true},
 		ContentLanguage: sql.NullString{String: string(language), Valid: true},
-		ContentNouns:    nouns, Storyline: storyline, UpdatedAt: formatTime(updatedAt),
+		ContentNouns:    nouns, Storyline: storyline, StorylineOrigins: marshalPlanOrigins(func() *post.PlanOriginReview {
+			if annotations.Storyline != nil {
+				return annotations.Storyline.Origins
+			}
+			return nil
+		}()), UpdatedAt: formatTime(updatedAt),
 		Slug: slug, UserID: userID,
 	})
 	if err != nil {
@@ -343,14 +447,55 @@ func (s *Store) SaveContent(ctx context.Context, slug, userID string, content po
 	if err != nil {
 		return false, fmt.Errorf("encode content: %w", err)
 	}
-	n, err := s.write.SavePostContent(ctx, sqlc.SavePostContentParams{
-		Content: sql.NullString{String: encoded, Valid: true}, UpdatedAt: formatTime(updatedAt),
-		Slug: slug, UserID: userID, ContentRevision: expectedRevision,
-	})
+	tx, err := s.writer.BeginTx(ctx, nil)
+	if err != nil {
+		return false, err
+	}
+	defer tx.Rollback()
+	q := s.write.WithTx(tx)
+	found, err := ownedOriginPost(ctx, q, userID, slug)
+	if errors.Is(err, post.ErrNotFound) || errors.Is(err, post.ErrForbidden) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	if found.ContentRevision != expectedRevision || found.Status == post.StatusPublished {
+		return false, nil
+	}
+	photos, videos, names, err := originAttachments(ctx, q, slug)
+	if err != nil {
+		return false, err
+	}
+	if err := post.ValidateContent(content, photos, videos); err != nil {
+		return false, err
+	}
+	canonical, err := unmarshalContent(encoded)
+	if err != nil {
+		return false, err
+	}
+	before := post.PostContent{}
+	if found.Content != nil {
+		before = *found.Content
+	}
+	current := post.ContentOriginIdentity(before, found.ContentRevision)
+	next := post.ContentOriginIdentity(*canonical, found.ContentRevision+1)
+	aligned := post.AlignManualOriginReview(before, *canonical, found.ContentOrigins, current, next, fmt.Sprintf("manual-%d", next.ContentRevision), names)
+	var origins *post.OriginReview
+	if len(aligned.Review.Sources) > 0 || len(aligned.Review.Spans) > 0 {
+		origins = &aligned.Review
+	}
+	n, err := q.SavePostContent(ctx, sqlc.SavePostContentParams{Content: sql.NullString{String: encoded, Valid: true}, ContentOrigins: marshalOriginReview(origins), UpdatedAt: formatTime(updatedAt), Slug: slug, UserID: userID, ContentRevision: expectedRevision})
 	if err != nil {
 		return false, fmt.Errorf("save content: %w", err)
 	}
-	return n == 1, nil
+	if n != 1 {
+		return false, nil
+	}
+	if err := tx.Commit(); err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 func (s *Store) SaveGenerationOptions(ctx context.Context, slug, userID string, set post.GenerationOptionsSet, updatedAt time.Time) (bool, error) {
@@ -452,7 +597,25 @@ func (s *Store) GetPost(ctx context.Context, slug string) (post.Post, error) {
 		}
 		return post.Post{}, fmt.Errorf("select post: %w", err)
 	}
-	return toPost(row)
+	found, err := toPost(row)
+	if err != nil {
+		return post.Post{}, err
+	}
+	if found.ContentOrigins != nil || (found.Storyline != nil && found.Storyline.Origins != nil) {
+		photos, videos, names, err := originAttachments(ctx, s.read, slug)
+		if err != nil {
+			return post.Post{}, err
+		}
+		if found.ContentOrigins != nil && found.Content != nil {
+			found.ContentOrigins.Sources = originSourcesWithIncarnations(found.ContentOrigins.Sources, photos, videos)
+			found.ContentOrigins = validatedStoredOrigins(*found.Content, post.ContentOriginIdentity(*found.Content, found.ContentRevision), found.ContentOrigins, names)
+		}
+		if found.Storyline != nil && found.Storyline.Origins != nil {
+			found.Storyline.Origins.Sources = originSourcesWithIncarnations(found.Storyline.Origins.Sources, photos, videos)
+			found.Storyline.Origins = publishablePlanOrigins(found.Storyline.Paragraphs, found.Storyline.Origins, names)
+		}
+	}
+	return found, nil
 }
 
 func (s *Store) SlugExists(ctx context.Context, slug string) (bool, error) {
@@ -615,8 +778,11 @@ func (s *Store) SetImageRotation(ctx context.Context, id string, rotation int32)
 }
 
 func (s *Store) DeleteImage(ctx context.Context, id string) (bool, error) {
-	return s.changeImage(ctx, id, func(q *sqlc.Queries, _ sqlc.Image) (bool, bool, error) {
+	return s.changeImage(ctx, id, func(q *sqlc.Queries, image sqlc.Image) (bool, bool, error) {
 		n, err := q.DeleteImage(ctx, id)
+		if err == nil && n > 0 {
+			err = withdrawOriginIncarnation(ctx, q, image.PostSlug, image.ID)
+		}
 		return n > 0, n > 0, err
 	})
 }
@@ -735,6 +901,9 @@ func (s *Store) DeleteVideo(ctx context.Context, id string) (bool, error) {
 		return false, err
 	}
 	if n > 0 {
+		if err := withdrawOriginIncarnation(ctx, q, video.PostSlug, video.ID); err != nil {
+			return false, err
+		}
 		if _, err := q.AdvancePostInputRevision(ctx, sqlc.AdvancePostInputRevisionParams{Slug: video.PostSlug, UpdatedAt: formatTime(time.Now())}); err != nil {
 			return false, err
 		}
@@ -1043,6 +1212,26 @@ func toPost(row sqlc.Post) (post.Post, error) {
 	if err != nil {
 		return post.Post{}, fmt.Errorf("post %s: %w", row.Slug, err)
 	}
+	var origins *post.OriginReview
+	if content != nil {
+		loaded := unmarshalOriginReview(row.ContentOrigins)
+		identity := post.ContentOriginIdentity(*content, row.ContentRevision)
+		if loaded != nil && loaded.Result == identity {
+			valid := post.ValidateResultOriginReview(*content, identity, loaded).Review
+			origins = &valid
+		}
+	}
+	if storyline != nil {
+		storyline.Origins = publishablePlanOrigins(storyline.Paragraphs, unmarshalPlanOrigins(row.StorylineOrigins), func() []string {
+			var names []string
+			for _, source := range unmarshalPlanSources(row.StorylineOrigins) {
+				if source.Available {
+					names = append(names, source.AttachmentFilename)
+				}
+			}
+			return names
+		}())
+	}
 	targetLanguage, err := post.ParseLanguage(row.TargetLanguage)
 	if err != nil {
 		return post.Post{}, fmt.Errorf("post %s target language: %w", row.Slug, err)
@@ -1077,6 +1266,7 @@ func toPost(row sqlc.Post) (post.Post, error) {
 		PublishedURL:            row.PublishedUrl.String,
 		PublishedAt:             publishedAt,
 		ContentNouns:            nouns,
+		ContentOrigins:          origins,
 		Field:                   row.Field.String,
 		QualityRules:            qualityRules,
 		Observations:            observations,

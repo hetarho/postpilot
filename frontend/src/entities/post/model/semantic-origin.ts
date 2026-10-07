@@ -44,6 +44,8 @@ export interface OriginResultIdentity {
 
 /** Frozen evidence belongs to this result, rather than a live setting or attachment lookup. */
 export interface OriginSource {
+  /** Frozen owner product attachment identity, never a storage key. */
+  attachmentId?: string
   id: string
   kind: OriginSourceKind
   text: string

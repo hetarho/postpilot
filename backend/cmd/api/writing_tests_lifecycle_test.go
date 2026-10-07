@@ -19,7 +19,8 @@ import (
 func admitLifecycleFixture(t *testing.T, c *contexts, key, slug string) experiment.TestExecutionWork {
 	t.Helper()
 	start := experiment.TestStart{UserID: "alice", RequestKey: key, QuoteKey: "quote-" + key, Factor: experiment.FactorModel, ModelStage: experiment.StageWrite, Count: 2, Input: experiment.TestInput{SourcePostSlug: slug, Material: "explicit owned material", TargetLanguage: "ko", TagCount: 4}}
-	plan := experiment.TestPlan{Free: true, Snapshot: experiment.TestSnapshot{Common: []byte("private full source"), Hash: "frozen-hash", PromptVersion: "frozen-version"}, Calls: []experiment.TestCall{{Ref: experiment.ModelRef{ProviderID: "p", ModelID: "writer"}, Stage: experiment.StageWrite, Count: 2, PromptTokens: 30000, CompletionTokens: 8192}}}
+	privateSource := []byte(`{"material":"private full source","origins":{"version":1,"sources":[{"id":"frozen-memory","kind":"memory","text":"private approved origin evidence","available":true}]}}`)
+	plan := experiment.TestPlan{Free: true, Snapshot: experiment.TestSnapshot{Common: privateSource, Hash: "frozen-hash", PromptVersion: "frozen-version"}, Calls: []experiment.TestCall{{Ref: experiment.ModelRef{ProviderID: "p", ModelID: "writer"}, Stage: experiment.StageWrite, Count: 2, PromptTokens: 30000, CompletionTokens: 8192}}}
 	for _, model := range []string{"one", "two"} {
 		ref := experiment.TestEntrantRef{SourceKind: "model", Model: experiment.ModelRef{ProviderID: "p", ModelID: model}}
 		start.Entrants = append(start.Entrants, ref)
@@ -75,6 +76,12 @@ func TestWritingTestSourceDeleteFencesPrivatePayloadAndCancelsUnattachedJob(t *t
 		t.Fatal(err)
 	}
 	if _, err := c.experimentStore.BindTestJob(t.Context(), work.Fence, work.Fence.JobID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := c.experimentStore.BeginTestExecution(t.Context(), work.Fence); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.experimentStore.SaveTestCheckpoint(t.Context(), work.Fence, "shared", []byte(`{"answer":{"origins":{"version":1,"sources":[{"id":"private-result","text":"private captured origin evidence"}]}}}`)); err != nil {
 		t.Fatal(err)
 	}
 	registerJobs(c)

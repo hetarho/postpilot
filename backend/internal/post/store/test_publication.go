@@ -44,7 +44,7 @@ func (s *TestResultStore) ApplyTestResult(ctx context.Context, in post.TestOutpu
 	// champion returns the original domain receipt even if the caller lost its key.
 	identity := in
 	identity.RequestKey = ""
-	raw, err := json.Marshal(identity)
+	raw, err := testPublicationFingerprint(identity)
 	if err != nil {
 		return empty, err
 	}
@@ -154,10 +154,23 @@ func (s *TestResultStore) ApplyTestResult(ctx context.Context, in post.TestOutpu
 	if err != nil {
 		return empty, err
 	}
+	incomingOrigins := cloneOriginReview(in.Origins)
+	if incomingOrigins != nil {
+		incomingOrigins.Sources = originSourcesWithIncarnations(incomingOrigins.Sources, photos, clips)
+	}
+	origins := publishableOrigins(in.Content, incomingOrigins, in.ContentRevision+1, append(attachmentNames(photos), videoNames(clips)...))
+	var planOrigins *post.PlanOriginReview
+	if in.Storyline != nil {
+		incomingPlan := clonePlanOrigins(in.Storyline.Origins)
+		if incomingPlan != nil {
+			incomingPlan.Sources = originSourcesWithIncarnations(incomingPlan.Sources, photos, clips)
+		}
+		planOrigins = publishablePlanOrigins(in.Storyline.Paragraphs, incomingPlan, append(attachmentNames(photos), videoNames(clips)...))
+	}
 	changed, err := q.ApplyPostTestOutput(ctx, sqlc.ApplyPostTestOutputParams{
 		Content: sql.NullString{String: content, Valid: true}, MachineBaseline: sql.NullString{String: baseline, Valid: true},
 		ContentLanguage: sql.NullString{String: string(in.ContentLanguage), Valid: true}, ContentNouns: nouns,
-		Storyline: storyline, UpdatedAt: formatTime(now), Slug: in.PostSlug, UserID: in.UserID,
+		Storyline: storyline, StorylineOrigins: marshalPlanOrigins(planOrigins), ContentOrigins: marshalOriginReview(origins), UpdatedAt: formatTime(now), Slug: in.PostSlug, UserID: in.UserID,
 		ExpectedInputRevision: in.InputRevision, ExpectedContentRevision: in.ContentRevision,
 	})
 	if err != nil {
@@ -198,4 +211,43 @@ func (s *TestResultStore) ReadTestPublicationReceipt(ctx context.Context, userID
 		return result, false, err
 	}
 	return result, true, nil
+}
+
+// Keep the exact pre-sidecar operation fingerprint for legacy receipts. Optional
+// origin payload changes identify new operations; nil adds no new JSON member.
+func testPublicationFingerprint(in post.TestOutputPublication) ([]byte, error) {
+	type plan struct {
+		Paragraphs   []post.StorylineParagraph
+		EditedByHand bool
+		MadeWith     []string
+		Origins      *planOriginReviewJSON `json:"Origins,omitempty"`
+	}
+	var storyline *plan
+	if in.Storyline != nil {
+		storyline = &plan{in.Storyline.Paragraphs, in.Storyline.EditedByHand, in.Storyline.MadeWith, encodePlanOrigins(in.Storyline.Origins)}
+	}
+	return json.Marshal(struct {
+		UserID, TestID, WinnerID, RequestKey, PostSlug string
+		AssignmentsHash                                string
+		InputRevision, ContentRevision                 int64
+		Content, Baseline                              post.PostContent
+		ContentLanguage                                post.Language
+		Storyline                                      *plan
+		Nouns                                          []string
+		Origins                                        *originReviewJSON `json:"Origins,omitempty"`
+	}{in.UserID, in.TestID, in.WinnerID, in.RequestKey, in.PostSlug, in.AssignmentsHash, in.InputRevision, in.ContentRevision, in.Content, in.Baseline, in.ContentLanguage, storyline, in.Nouns, encodeOriginReview(in.Origins)})
+}
+func attachmentNames(images []post.Image) []string {
+	names := make([]string, len(images))
+	for i, image := range images {
+		names[i] = image.Filename
+	}
+	return names
+}
+func videoNames(videos []post.Video) []string {
+	names := make([]string, len(videos))
+	for i, video := range videos {
+		names[i] = video.Filename
+	}
+	return names
 }

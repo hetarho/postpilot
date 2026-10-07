@@ -78,7 +78,7 @@ func (s *Service) Generate(ctx context.Context, job GenerateJob, progress Progre
 	// clear the ones the last generation stored (GEN-55).
 	var publishErr error
 	if options.OriginProtocolVersion == OriginProtocolVersion {
-		_, publishErr = s.originPosts.PublishGeneratedResult(ctx, post.UserID, post.Slug, OriginPostCompletion{Content: answer.Content, Language: options.TargetLanguage, Annotations: answer.Annotations(), Origins: answer.Origins, ExpectedContentRevision: post.ContentRevision})
+		_, publishErr = s.originPosts.PublishGeneratedResult(ctx, post.UserID, post.Slug, OriginPostCompletion{Content: answer.Content, Language: options.TargetLanguage, Annotations: answer.Annotations(), Origins: answer.Origins, ExpectedPlanFingerprint: options.ExpectedPlanFingerprint, ExpectedContentRevision: post.ContentRevision})
 	} else {
 		publishErr = s.posts.SetGeneratedContent(ctx, post.UserID, post.Slug, answer.Content, options.TargetLanguage, answer.Annotations())
 	}

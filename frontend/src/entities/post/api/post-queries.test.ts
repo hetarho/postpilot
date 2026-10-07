@@ -8,6 +8,10 @@ import {
   ProtoQualityMetric,
   VoiceRefSchema,
   ProtoBlogField,
+  OriginReviewSchema,
+  OriginFieldKind,
+  OriginReviewState,
+  SemanticOriginCategory,
 } from '@/shared/api'
 import { toPostDraft, toPostListItem } from './post-queries'
 
@@ -63,6 +67,52 @@ const voice = create(VoiceRefSchema, {
 })
 
 describe('toPostDraft', () => {
+  it('maps current authoritative origin identity and discards a stale review without changing prose', () => {
+    const wire = create(PostSchema, {
+      slug: 'current-origin',
+      targetLanguage: contentLanguageToProto('ko'),
+      contentRevision: 7n,
+      contentHash: 'server-current-hash',
+      content: { title: '가😀끝', summary: '', tags: [], blocks: [] },
+      contentOrigins: create(OriginReviewSchema, {
+        version: 1,
+        result: { contentRevision: 7n, contentHash: 'server-current-hash' },
+        spans: [
+          {
+            field: { kind: OriginFieldKind.TITLE },
+            start: 1,
+            end: 2,
+            quote: '😀',
+            category: SemanticOriginCategory.AI_ADDED,
+            reviewState: OriginReviewState.CONFIRMED,
+          },
+        ],
+      }),
+    })
+    const current = toPostDraft(wire)
+    expect(current.contentRevision).toBe(7n)
+    expect(current.contentHash).toBe('server-current-hash')
+    expect(current.contentOrigins?.result).toEqual({
+      contentRevision: 7n,
+      contentHash: 'server-current-hash',
+    })
+    expect(current.contentOrigins?.spans[0]).toMatchObject({
+      quote: '😀',
+      start: 1,
+      end: 2,
+      category: 'ai_added',
+      reviewState: 'confirmed',
+    })
+    wire.contentOrigins!.result!.contentRevision = 6n
+    const stale = toPostDraft(wire)
+    expect(stale.contentOrigins).toBeUndefined()
+    expect(stale.contentRevision).toBe(7n)
+    expect(stale.contentHash).toBe('server-current-hash')
+    expect(stale.content?.title).toBe('가😀끝')
+    wire.contentOrigins = undefined
+    expect(toPostDraft(wire).contentOrigins).toBeUndefined()
+  })
+
   it('carries where and when the post was published', () => {
     const draft = toPostDraft(
       create(PostSchema, {

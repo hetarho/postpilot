@@ -84,20 +84,8 @@ type PlanOriginCandidate struct {
 	SourceRefs     []string
 }
 
-type PlanOriginSpan struct {
-	ParagraphIndex, Start, End int
-	Quote                      string
-	Category                   post.OriginCategory
-	SourceRefs                 []string
-	ReviewState                post.OriginReviewState
-}
-
-type PlanOriginReview struct {
-	Version int
-	Result  post.OriginResultIdentity
-	Sources []post.OriginSource
-	Spans   []PlanOriginSpan
-}
+type PlanOriginSpan = post.PlanOriginSpan
+type PlanOriginReview = post.PlanOriginReview
 
 // StorylineParagraph is one part of the storyline: a short plan of what it shows and says, and
 // the attachment names it uses.
@@ -150,22 +138,8 @@ type ObservationOriginCandidate struct {
 	SourceRefs []string
 }
 
-type ObservationOriginSpan struct {
-	ReviewState post.OriginReviewState
-	Field       string
-	ItemIndex   *int
-	Start, End  int
-	Quote       string
-	Category    post.OriginCategory
-	SourceRefs  []string
-}
-
-type ObservationOriginReview struct {
-	Version int
-	Result  post.OriginResultIdentity
-	Sources []post.OriginSource
-	Spans   []ObservationOriginSpan
-}
+type ObservationOriginSpan = post.ObservationOriginSpan
+type ObservationOriginReview = post.ObservationOriginReview
 
 // AttachmentKind is which kind of attachment an Image entry describes. The generation
 // context speaks of one attachment list — the selection, freezing and merge functions all
@@ -181,6 +155,7 @@ const (
 // three fields a photo has no use for. An empty Kind reads as a photo, which is what every
 // entry built before videos existed is.
 type Image struct {
+	ID       string
 	Filename string
 	Key      string
 	Kind     AttachmentKind
@@ -270,9 +245,11 @@ type TemplateAnswer struct {
 }
 
 type PostInput struct {
-	Slug   string
-	UserID string
-	Voice  VoiceRef
+	StorylineFingerprint string
+	InputRevision        int64
+	Slug                 string
+	UserID               string
+	Voice                VoiceRef
 	// TemplateID is what the post currently points at, read only at enqueue time. Handlers
 	// never resolve it: they use Template, which the job payload froze.
 	TemplateID string

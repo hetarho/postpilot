@@ -11,6 +11,7 @@ import (
 // annotations. A missing or invalid Origins never licenses rejecting valid content.
 // Publication assigns the result revision/hash atomically in the post context.
 type OriginPostCompletion struct {
+	ExpectedPlanFingerprint *string
 	Content                 PostContent
 	Language                Language
 	Annotations             *WriteAnnotations
@@ -25,6 +26,8 @@ type OriginPostPublisher interface {
 }
 
 type OriginStorylineCompletion struct {
+	ExpectedPlanFingerprint *string
+	ExpectedInputRevision   *int64
 	Storyline               Storyline
 	ExpectedContentRevision int64
 }

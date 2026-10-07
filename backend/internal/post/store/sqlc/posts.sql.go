@@ -227,7 +227,7 @@ const getPost = `-- name: GetPost :one
 SELECT slug, user_id, voice_id, title, memo, observations, content, status, created_at, updated_at,
        content_revision, machine_baseline, machine_baseline_revision,
        target_length, finalized_revision, finalized_at, template_id, target_language, content_language,
-       tag_count, use_memory, published_url, published_at, field, content_nouns, quality_rules, storyline, input_revision
+       tag_count, use_memory, published_url, published_at, field, content_nouns, quality_rules, storyline, input_revision, content_origins, storyline_origins
 FROM posts WHERE slug = ?
 `
 
@@ -263,6 +263,8 @@ func (q *Queries) GetPost(ctx context.Context, slug string) (Post, error) {
 		&i.QualityRules,
 		&i.Storyline,
 		&i.InputRevision,
+		&i.ContentOrigins,
+		&i.StorylineOrigins,
 	)
 	return i, err
 }
@@ -495,14 +497,15 @@ func (q *Queries) ReassignPostVoice(ctx context.Context, arg ReassignPostVoicePa
 }
 
 const savePostContent = `-- name: SavePostContent :execrows
-UPDATE posts SET content = ?1, content_revision = content_revision + 1,
-    status = 'review', finalized_revision = NULL, finalized_at = NULL, updated_at = ?2
-WHERE slug = ?3 AND user_id = ?4 AND content_revision = ?5
+UPDATE posts SET content = ?1, content_origins = ?2, content_revision = content_revision + 1,
+    status = 'review', finalized_revision = NULL, finalized_at = NULL, updated_at = ?3
+WHERE slug = ?4 AND user_id = ?5 AND content_revision = ?6
   AND status <> 'published'
 `
 
 type SavePostContentParams struct {
 	Content         sql.NullString
+	ContentOrigins  sql.NullString
 	UpdatedAt       string
 	Slug            string
 	UserID          string
@@ -512,6 +515,7 @@ type SavePostContentParams struct {
 func (q *Queries) SavePostContent(ctx context.Context, arg SavePostContentParams) (int64, error) {
 	result, err := q.db.ExecContext(ctx, savePostContent,
 		arg.Content,
+		arg.ContentOrigins,
 		arg.UpdatedAt,
 		arg.Slug,
 		arg.UserID,
@@ -585,30 +589,32 @@ func (q *Queries) UnpublishPost(ctx context.Context, arg UnpublishPostParams) (i
 
 const updateGeneratedContent = `-- name: UpdateGeneratedContent :execrows
 UPDATE posts SET input_revision = input_revision + CASE WHEN storyline IS NOT ?1 THEN 1 ELSE 0 END,
+    content_origins = NULL,
     content = ?2, machine_baseline = ?3,
     content_language = ?4,
     content_nouns = ?5,
-    storyline = ?1,
+    storyline = ?1, storyline_origins = ?6,
     content_revision = content_revision + 1,
     machine_baseline_revision = content_revision + 1,
-    status = 'review', finalized_revision = NULL, finalized_at = NULL, updated_at = ?6
-WHERE slug = ?7 AND user_id = ?8 AND status <> 'published'
+    status = 'review', finalized_revision = NULL, finalized_at = NULL, updated_at = ?7
+WHERE slug = ?8 AND user_id = ?9 AND status <> 'published'
   AND (content IS NULL OR content <> ?2 OR status <> 'review'
        OR machine_baseline_revision <> content_revision
        OR content_language IS NULL OR content_language <> ?4
        OR content_nouns IS NOT ?5
-       OR storyline IS NOT ?1)
+       OR storyline IS NOT ?1 OR content_origins IS NOT NULL)
 `
 
 type UpdateGeneratedContentParams struct {
-	Storyline       sql.NullString
-	Content         sql.NullString
-	MachineBaseline sql.NullString
-	ContentLanguage sql.NullString
-	ContentNouns    sql.NullString
-	UpdatedAt       string
-	Slug            string
-	UserID          string
+	Storyline        sql.NullString
+	Content          sql.NullString
+	MachineBaseline  sql.NullString
+	ContentLanguage  sql.NullString
+	ContentNouns     sql.NullString
+	StorylineOrigins sql.NullString
+	UpdatedAt        string
+	Slug             string
+	UserID           string
 }
 
 // The write's nouns and storyline ride the same statement, beside the content and never inside
@@ -621,6 +627,7 @@ func (q *Queries) UpdateGeneratedContent(ctx context.Context, arg UpdateGenerate
 		arg.MachineBaseline,
 		arg.ContentLanguage,
 		arg.ContentNouns,
+		arg.StorylineOrigins,
 		arg.UpdatedAt,
 		arg.Slug,
 		arg.UserID,
@@ -633,16 +640,18 @@ func (q *Queries) UpdateGeneratedContent(ctx context.Context, arg UpdateGenerate
 
 const updatePostAttachmentTraces = `-- name: UpdatePostAttachmentTraces :execrows
 UPDATE posts SET input_revision = input_revision + CASE WHEN storyline IS NOT ?1 THEN 1 ELSE 0 END,
-    observations = ?2, storyline = ?1, updated_at = ?3
-WHERE slug = ?4 AND user_id = ?5 AND status <> 'published'
+    observations = ?2, storyline = ?1, storyline_origins = ?3, content_origins = ?4, updated_at = ?5
+WHERE slug = ?6 AND user_id = ?7 AND status <> 'published'
 `
 
 type UpdatePostAttachmentTracesParams struct {
-	Storyline    sql.NullString
-	Observations sql.NullString
-	UpdatedAt    string
-	Slug         string
-	UserID       string
+	Storyline        sql.NullString
+	Observations     sql.NullString
+	StorylineOrigins sql.NullString
+	ContentOrigins   sql.NullString
+	UpdatedAt        string
+	Slug             string
+	UserID           string
 }
 
 // What a deleted attachment leaves behind, the observations and the storyline, in one statement
@@ -651,6 +660,8 @@ func (q *Queries) UpdatePostAttachmentTraces(ctx context.Context, arg UpdatePost
 	result, err := q.db.ExecContext(ctx, updatePostAttachmentTraces,
 		arg.Storyline,
 		arg.Observations,
+		arg.StorylineOrigins,
+		arg.ContentOrigins,
 		arg.UpdatedAt,
 		arg.Slug,
 		arg.UserID,
@@ -722,15 +733,16 @@ func (q *Queries) UpdatePostObservations(ctx context.Context, arg UpdatePostObse
 
 const updatePostStoryline = `-- name: UpdatePostStoryline :execrows
 UPDATE posts SET input_revision = input_revision + CASE WHEN storyline IS NOT ?1 THEN 1 ELSE 0 END,
-    storyline = ?1, updated_at = ?2
-WHERE slug = ?3 AND user_id = ?4 AND status <> 'published'
+    storyline = ?1, storyline_origins = ?2, updated_at = ?3
+WHERE slug = ?4 AND user_id = ?5 AND status <> 'published'
 `
 
 type UpdatePostStorylineParams struct {
-	Storyline sql.NullString
-	UpdatedAt string
-	Slug      string
-	UserID    string
+	Storyline        sql.NullString
+	StorylineOrigins sql.NullString
+	UpdatedAt        string
+	Slug             string
+	UserID           string
 }
 
 // A storyline job's answer replaces the post's storyline and nothing else: the content, the
@@ -738,6 +750,7 @@ type UpdatePostStorylineParams struct {
 func (q *Queries) UpdatePostStoryline(ctx context.Context, arg UpdatePostStorylineParams) (int64, error) {
 	result, err := q.db.ExecContext(ctx, updatePostStoryline,
 		arg.Storyline,
+		arg.StorylineOrigins,
 		arg.UpdatedAt,
 		arg.Slug,
 		arg.UserID,

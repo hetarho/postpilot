@@ -14,7 +14,11 @@ import {
   type OriginContent,
   type OriginResultIdentity,
 } from '../model/semantic-origin'
-import { originReviewFromProto, validateOriginReviewFromProto } from './semantic-origin'
+import {
+  alignedOriginReviewFromProto,
+  originReviewFromProto,
+  validateOriginReviewFromProto,
+} from './semantic-origin'
 
 const content: OriginContent = {
   title: '가😀끝',
@@ -52,6 +56,28 @@ function annotated(): ProtoOriginReview {
 }
 
 describe('semantic origin API boundary', () => {
+  it('returns only the current result review and retains validated scalar spans', () => {
+    const review = alignedOriginReviewFromProto(content, current, annotated())
+    expect(review?.result).toEqual(current)
+    expect(review?.spans[0]?.quote).toBe('😀')
+    expect(review?.spans[0]?.reviewState).toBe('confirmed')
+    const stale = annotated()
+    stale.result!.contentRevision++
+    expect(alignedOriginReviewFromProto(content, current, stale)).toBeUndefined()
+    expect(alignedOriginReviewFromProto(content, current)).toBeUndefined()
+    expect(alignedOriginReviewFromProto(undefined, current, annotated())).toBeUndefined()
+  })
+
+  it('drops invalid annotations without discarding valid current content evidence', () => {
+    const malformed = annotated()
+    malformed.spans[0]!.quote = 'another result'
+    const review = alignedOriginReviewFromProto(content, current, malformed)
+    expect(review?.result).toEqual(current)
+    expect(review?.spans).toEqual([])
+    malformed.sources[0]!.kind = 'voice_example'
+    expect(alignedOriginReviewFromProto(content, current, malformed)).toBeUndefined()
+  })
+
   it('pins every canonical block kind used by the pure field locator against the generated enum', () => {
     const known = Object.fromEntries(
       Object.entries(BlockType)

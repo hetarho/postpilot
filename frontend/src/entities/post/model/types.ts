@@ -7,6 +7,7 @@ import type { QualityMetricId } from '@/entities/quality/@x/post'
 import type { TemplateRef } from '@/entities/template/@x/post'
 import type { VoiceRef } from '@/entities/voice/@x/post'
 import type { ContentLanguage, Observation, PostContent } from '@/shared/api'
+import type { OriginReview } from './semantic-origin'
 
 /** A post as the app talks about it.
  *
@@ -89,6 +90,9 @@ export interface PostDraft {
   observations: Observation[]
   pendingExperimentId: string
   contentRevision: bigint
+  /** Server identity and optional evidence for exactly the current canonical result. */
+  contentHash?: string
+  contentOrigins?: OriginReview
   /** Material/settings changes fence frozen writing-test publication. */
   inputRevision: bigint
   machineBaselineRevision: bigint

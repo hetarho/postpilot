@@ -229,6 +229,12 @@ func (s *Service) Start(ctx context.Context, request StartRequest) (string, erro
 		request.CompletionTokens = s.budget.Write(OriginBudgetTarget(request.TargetLength), request.WriteNativeEffort)
 	}
 	options := generationOptions{
+		ExpectedPlanFingerprint: func() *string {
+			if s.originProtocol == OriginProtocolVersion {
+				return originExpectedPlanFingerprint(post)
+			}
+			return nil
+		}(),
 		OriginProtocolVersion: s.originProtocol, CompletionTokens: request.CompletionTokens,
 		Profile:        &profile,
 		TargetLanguage: in.language,

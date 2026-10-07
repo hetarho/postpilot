@@ -101,7 +101,9 @@ type OriginSource struct {
 	Kind               OriginSourceKind
 	Text               string
 	AttachmentFilename string
-	Available          bool
+	// Opaque frozen media incarnation; never a storage key or live foreign key.
+	AttachmentID string
+	Available    bool
 }
 
 // OriginSpan uses half-open Unicode scalar offsets into exactly one final field.

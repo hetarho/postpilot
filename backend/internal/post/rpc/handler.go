@@ -457,6 +457,24 @@ func toProtoTemplateAnswers(answers []post.TemplateAnswer) []*postpilotv1.Templa
 }
 
 func toProtoPost(p post.Post) *postpilotv1.Post {
+	var origins *postpilotv1.OriginReview
+	contentHash := ""
+	if p.Content != nil {
+		identity := post.ContentOriginIdentity(*p.Content, p.ContentRevision)
+		contentHash = identity.ContentHash
+		if p.ContentOrigins != nil {
+			validated := post.ValidateResultOriginReview(*p.Content, identity, p.ContentOrigins)
+			globalIssue := false
+			for _, issue := range validated.Issues {
+				if issue.Index == -1 {
+					globalIssue = true
+				}
+			}
+			if !globalIssue {
+				origins, _ = OriginReviewToProto(&validated.Review)
+			}
+		}
+	}
 	images := make([]*postpilotv1.Image, 0, len(p.Images))
 	for _, img := range p.Images {
 		images = append(images, toProtoImage(img))
@@ -484,6 +502,8 @@ func toProtoPost(p post.Post) *postpilotv1.Post {
 		PendingExperimentId:     p.PendingExperimentID,
 		InputRevision:           p.InputRevision,
 		ContentRevision:         p.ContentRevision,
+		ContentHash:             contentHash,
+		ContentOrigins:          origins,
 		MachineBaselineRevision: p.MachineBaselineRevision,
 		// A published post is already past finalization: its way back is clearing the address.
 		CanFinalize:       p.Content != nil && p.Status != post.StatusPublished,

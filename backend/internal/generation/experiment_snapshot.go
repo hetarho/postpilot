@@ -52,6 +52,8 @@ type experimentSnapshot struct {
 // snapshotPost is PostInput as a snapshot has always carried it. Field, QualityRuleIDs and
 // Published are inputs to resolve and never frozen, so they have no member at all.
 type snapshotPost struct {
+	StorylineFingerprint   string `json:"storyline_fingerprint,omitempty"`
+	InputRevision          int64  `json:"input_revision,omitempty"`
 	OriginProtocolVersion  int    `json:"origin_protocol_version,omitempty"`
 	OriginCompletionTokens int    `json:"origin_completion_tokens,omitempty"`
 	OriginFictional        bool   `json:"origin_fictional,omitempty"`
@@ -107,6 +109,7 @@ type snapshotAnswer struct {
 }
 
 type snapshotImage struct {
+	ID          string `json:"id,omitempty"`
 	Filename    string `json:"Filename"`
 	Key         string `json:"Key"`
 	Kind        string `json:"Kind"`
@@ -282,6 +285,8 @@ func toSnapshotPost(post PostInput) snapshotPost {
 		contentLanguage = &value
 	}
 	return snapshotPost{
+		StorylineFingerprint:  post.StorylineFingerprint,
+		InputRevision:         post.InputRevision,
 		OriginProtocolVersion: post.OriginProtocolVersion, OriginCompletionTokens: post.OriginCompletionTokens, OriginFictional: post.OriginFictional,
 		Slug: post.Slug, UserID: post.UserID,
 		Voice:      toSnapshotVoice(post.Voice),
@@ -312,6 +317,8 @@ func fromSnapshotPost(wire snapshotPost) PostInput {
 		contentLanguage = &value
 	}
 	return PostInput{
+		StorylineFingerprint:  wire.StorylineFingerprint,
+		InputRevision:         wire.InputRevision,
 		OriginProtocolVersion: wire.OriginProtocolVersion, OriginCompletionTokens: wire.OriginCompletionTokens, OriginFictional: wire.OriginFictional,
 		Slug: wire.Slug, UserID: wire.UserID,
 		Voice:      fromSnapshotVoice(wire.Voice),
@@ -361,11 +368,11 @@ func fromSnapshotTemplate(wire *snapshotTemplate) *TemplateBrief {
 }
 
 func toSnapshotImage(image Image) snapshotImage {
-	return snapshotImage{Filename: image.Filename, Key: image.Key, Kind: string(image.Kind), ContentType: image.ContentType, DurationMs: image.DurationMs, Width: image.Width, Height: image.Height, Rotation: image.Rotation, RotationByOwner: image.RotationByOwner}
+	return snapshotImage{ID: image.ID, Filename: image.Filename, Key: image.Key, Kind: string(image.Kind), ContentType: image.ContentType, DurationMs: image.DurationMs, Width: image.Width, Height: image.Height, Rotation: image.Rotation, RotationByOwner: image.RotationByOwner}
 }
 
 func fromSnapshotImage(wire snapshotImage) Image {
-	return Image{Filename: wire.Filename, Key: wire.Key, Kind: AttachmentKind(wire.Kind), ContentType: wire.ContentType, DurationMs: wire.DurationMs, Width: wire.Width, Height: wire.Height, Rotation: wire.Rotation, RotationByOwner: wire.RotationByOwner}
+	return Image{ID: wire.ID, Filename: wire.Filename, Key: wire.Key, Kind: AttachmentKind(wire.Kind), ContentType: wire.ContentType, DurationMs: wire.DurationMs, Width: wire.Width, Height: wire.Height, Rotation: wire.Rotation, RotationByOwner: wire.RotationByOwner}
 }
 
 func toSnapshotObservation(o Observation) snapshotObservation {

@@ -7,6 +7,7 @@ import "postpilot/v1/template.proto";
 import "postpilot/v1/error.proto";
 import "postpilot/v1/language.proto";
 import "postpilot/v1/quality.proto";
+import "postpilot/v1/semantic_origin.proto";
 
 option go_package = "github.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1";
 
@@ -223,6 +224,11 @@ message Post {
   // The storyline the write answered first, unset when the post has none (POST-99).
   Storyline storyline = 32;
   int64 input_revision = 33;
+  // Optional review information for this exact current canonical result.
+  // Missing or invalid historical evidence never prevents ordinary content use.
+  OriginReview content_origins = 34;
+  // The server's identity for current canonical content, separate from the baseline.
+  string content_hash = 35;
 }
 
 // One part of a storyline: what it shows and says, and the attachment names it uses.

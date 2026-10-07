@@ -32,18 +32,26 @@ type originCatalog struct {
 	chars   int
 }
 
-func (c *originCatalog) add(id string, kind post.OriginSourceKind, text, filename string, available bool) {
+func (c *originCatalog) add(id string, kind post.OriginSourceKind, text, filename string, available bool, attachmentIDs ...string) {
+	attachmentID := ""
+	if len(attachmentIDs) == 1 {
+		attachmentID = attachmentIDs[0]
+	}
 	chars := utf8.RuneCountInString(text)
-	if !utf8.ValidString(text) || !utf8.ValidString(id) || strings.TrimSpace(text) == "" || len(c.sources) >= post.OriginMaxSources || utf8.RuneCountInString(id) > post.OriginMaxSourceIDChars || c.chars+chars > post.OriginMaxSourceTextChars {
+	if !utf8.ValidString(text) || !utf8.ValidString(id) || !utf8.ValidString(attachmentID) || utf8.RuneCountInString(attachmentID) > post.OriginMaxSourceIDChars || strings.TrimSpace(text) == "" || len(c.sources) >= post.OriginMaxSources || utf8.RuneCountInString(id) > post.OriginMaxSourceIDChars || c.chars+chars > post.OriginMaxSourceTextChars {
 		return
 	}
-	c.sources = append(c.sources, post.OriginSource{ID: id, Kind: kind, Text: text, AttachmentFilename: filename, Available: available})
+	c.sources = append(c.sources, post.OriginSource{ID: id, Kind: kind, Text: text, AttachmentFilename: filename, AttachmentID: attachmentID, Available: available})
 	c.chars += chars
 }
 
 // WritingOriginSources describes material actually present in this request. It
 // does not reread sources, classify arbitrary prose or treat style/form as facts.
-func WritingOriginSources(input WritePromptInput, fictional bool) []post.OriginSource {
+func WritingOriginSources(input WritePromptInput, fictional bool, attachmentIDs ...map[string]string) []post.OriginSource {
+	currentIDs := map[string]string{}
+	if len(attachmentIDs) == 1 {
+		currentIDs = attachmentIDs[0]
+	}
 	var catalog originCatalog
 	kind := post.OriginSourceMemo
 	if fictional {
@@ -91,12 +99,21 @@ func WritingOriginSources(input WritePromptInput, fictional bool) []post.OriginS
 			}
 		}
 		validated := ValidateStoredObservationOrigins(observation, observation.Origins, kind)
+		byID := map[string]post.OriginSource{}
+		for _, source := range validated.Sources {
+			byID[source.ID] = source
+		}
 		for j, span := range validated.Spans {
 			sourceKind := post.OriginSourceAIProposal
 			if span.Category == post.OriginPhotoInterpretation {
 				sourceKind = post.OriginSourceVisualObservation
 			}
-			catalog.add(fmt.Sprintf("current.visual.%d.%d", i, j), sourceKind, span.Quote, observation.File, true)
+			attachmentID := inheritedOriginAttachmentID(span.SourceRefs, byID)
+			available := true
+			if currentID := currentIDs[observation.File]; currentID != "" && currentID != attachmentID {
+				available = false
+			}
+			catalog.add(fmt.Sprintf("current.visual.%d.%d", i, j), sourceKind, span.Quote, observation.File, available, attachmentID)
 		}
 	}
 	return catalog.sources
@@ -165,14 +182,18 @@ func setOriginOutput(request *llm.Request, name string, schema []byte, protocol 
 	}
 }
 
-func observationSources(filenames []string, video bool) []post.OriginSource {
+func observationSources(filenames []string, video bool, attachmentIDs ...map[string]string) []post.OriginSource {
 	var catalog originCatalog
 	label := "Supplied photo media"
 	if video {
 		label = "Supplied video media; source time is visual evidence"
 	}
 	for i, file := range filenames {
-		catalog.add(fmt.Sprintf("media.%d", i), post.OriginSourceVisualObservation, label, file, true)
+		id := ""
+		if len(attachmentIDs) == 1 {
+			id = attachmentIDs[0][file]
+		}
+		catalog.add(fmt.Sprintf("media.%d", i), post.OriginSourceVisualObservation, label, file, true, id)
 	}
 	return catalog.sources
 }
@@ -248,7 +269,7 @@ func catalogWithPriorPlan(sources []post.OriginSource, paragraphs []StorylinePar
 			continue
 		}
 		kind, filename, available := inheritedOriginSource(span.Category, span.SourceRefs, byID)
-		catalog.add(fmt.Sprintf("prior.plan.%d", i), kind, span.Quote, filename, available)
+		catalog.add(fmt.Sprintf("prior.plan.%d", i), kind, span.Quote, filename, available, inheritedOriginAttachmentID(span.SourceRefs, byID))
 	}
 	return catalog.sources
 }
@@ -268,7 +289,7 @@ func catalogWithPriorContent(sources []post.OriginSource, content PostContent, p
 	}
 	for i, span := range validated.Spans {
 		kind, filename, available := inheritedOriginSource(span.Category, span.SourceRefs, byID)
-		catalog.add(fmt.Sprintf("prior.content.%d", i), kind, span.Quote, filename, available)
+		catalog.add(fmt.Sprintf("prior.content.%d", i), kind, span.Quote, filename, available, inheritedOriginAttachmentID(span.SourceRefs, byID))
 	}
 	return catalog.sources
 }
@@ -308,11 +329,44 @@ func inheritedOriginSource(category post.OriginCategory, refs []string, catalog 
 		return post.OriginSourceAIProposal, "", false
 	}
 	if category == post.OriginAIAdded {
-		return post.OriginSourceAIProposal, "", true
+		filename := ""
+		if len(refs) > 0 {
+			filename = catalog[refs[0]].AttachmentFilename
+		}
+		return post.OriginSourceAIProposal, filename, true
 	}
 	if len(refs) == 0 {
 		return post.OriginSourceAIProposal, "", false
 	}
 	source := catalog[refs[0]]
 	return source.Kind, source.AttachmentFilename, source.Available
+}
+
+func inheritedOriginAttachmentID(refs []string, catalog map[string]post.OriginSource) string {
+	id := ""
+	for i, ref := range refs {
+		value := catalog[ref].AttachmentID
+		if i == 0 {
+			id = value
+		} else if id != value {
+			return ""
+		}
+	}
+	return id
+}
+
+func originAttachmentIDs(images []Image) map[string]string {
+	ids := make(map[string]string, len(images))
+	for _, image := range images {
+		ids[image.Filename] = image.ID
+	}
+	return ids
+}
+
+func originExpectedPlanFingerprint(input PostInput) *string {
+	if input.StorylineFingerprint == "" {
+		return nil
+	}
+	fingerprint := input.StorylineFingerprint
+	return &fingerprint
 }

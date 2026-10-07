@@ -251,6 +251,7 @@ type Post struct {
 	CreatedAt               time.Time
 	UpdatedAt               time.Time
 	Content                 *PostContent
+	ContentOrigins          *OriginReview
 	InputRevision           int64
 	ContentRevision         int64
 	MachineBaselineRevision int64
@@ -314,6 +315,7 @@ type WriteAnnotations struct {
 // since the write; MadeWith is the attachment names the writing stage was shown (GEN-12), so an
 // attachment confirmed later reads as added.
 type Storyline struct {
+	Origins      *PlanOriginReview
 	Paragraphs   []StorylineParagraph
 	EditedByHand bool
 	MadeWith     []string
@@ -333,6 +335,18 @@ func (s Storyline) WithoutFile(name string) Storyline {
 	out := Storyline{EditedByHand: s.EditedByHand, MadeWith: withoutName(s.MadeWith, name)}
 	for _, paragraph := range s.Paragraphs {
 		out.Paragraphs = append(out.Paragraphs, StorylineParagraph{Text: paragraph.Text, Files: withoutName(paragraph.Files, name)})
+	}
+	if s.Origins != nil {
+		copy := *s.Origins
+		copy.Sources = slices.Clone(s.Origins.Sources)
+		copy.Spans = slices.Clone(s.Origins.Spans)
+		for i := range copy.Sources {
+			if copy.Sources[i].Kind == OriginSourceVisualObservation && copy.Sources[i].AttachmentFilename == name {
+				copy.Sources[i].Available = false
+			}
+		}
+		copy.Result = PlanOriginIdentity(out.Paragraphs)
+		out.Origins = &copy
 	}
 	return out
 }
@@ -490,6 +504,7 @@ type PostContent struct {
 }
 
 type Observation struct {
+	Origins       *ObservationOriginReview
 	File          string
 	Scene         string
 	Mood          string

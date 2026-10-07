@@ -163,6 +163,8 @@ func TestEveryWriteSnapshotMemberRoundTrips(t *testing.T) {
 	fixture.post.Memories = []string{"매운 음식을 못 먹는다"}
 	fixture.post.Observations = fixture.observations
 	fixture.post.WriteNativeEffort = true
+	fixture.post.InputRevision = 3
+	fixture.post.StorylineFingerprint = "fixture-plan"
 	fixture.post.OriginProtocolVersion, fixture.post.OriginCompletionTokens, fixture.post.OriginFictional, fixture.post.ContentRevision = OriginProtocolVersion, 16384, true, 2
 	for i := range fixture.observations {
 		fixture.observations[i].Origins = originFixtureObservation(fixture.observations[i])
@@ -174,7 +176,7 @@ func TestEveryWriteSnapshotMemberRoundTrips(t *testing.T) {
 	fixture.post.Storyline = &Storyline{Paragraphs: []StorylineParagraph{{Text: "가게 앞", Files: []string{"IMG_1.jpg"}}}, MadeWith: []string{"IMG_1.jpg"}}
 	fixture.post.FollowStoryline = []StorylineParagraph{{Text: "가게 앞", Files: []string{"IMG_1.jpg"}}}
 	// One of each, with every member set, so requireNoZero can prove each member is walked.
-	fixture.post.Images = []Image{{Filename: "clip.mp4", Key: "key-2", Kind: AttachmentVideo, ContentType: "video/mp4", DurationMs: 4200, Width: 1080, Height: 1920, Rotation: 180, RotationByOwner: true}}
+	fixture.post.Images = []Image{{ID: "fixture-video", Filename: "clip.mp4", Key: "key-2", Kind: AttachmentVideo, ContentType: "video/mp4", DurationMs: 4200, Width: 1080, Height: 1920, Rotation: 180, RotationByOwner: true}}
 	fixture.post.Content.Blocks = []Block{{
 		Type: BlockText, Content: "본문", Level: 2, File: "IMG_1.jpg", Alt: "간판", Caption: "골목 간판",
 		Items: []string{"하나"}, Files: []string{"IMG_1.jpg", "IMG_2.jpg"}, Layout: GallerySlide,

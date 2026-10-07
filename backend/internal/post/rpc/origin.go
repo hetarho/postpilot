@@ -45,7 +45,7 @@ func OriginReviewFromProto(value *postpilotv1.OriginReview) *post.OriginReview {
 	}}
 	for _, source := range value.Sources {
 		review.Sources = append(review.Sources, post.OriginSource{ID: source.GetId(), Kind: post.OriginSourceKind(source.GetKind()),
-			Text: source.GetText(), AttachmentFilename: source.GetAttachmentFilename(), Available: source.GetAvailable()})
+			Text: source.GetText(), AttachmentFilename: source.GetAttachmentFilename(), AttachmentID: source.GetAttachmentId(), Available: source.GetAvailable()})
 	}
 	for _, span := range value.Spans {
 		review.Spans = append(review.Spans, post.OriginSpan{Field: originFieldFromProto(span.GetField()),
@@ -109,7 +109,7 @@ func OriginReviewToProto(review *post.OriginReview) (*postpilotv1.OriginReview, 
 	}}
 	for _, source := range review.Sources {
 		value.Sources = append(value.Sources, &postpilotv1.OriginSource{Id: source.ID, Kind: string(source.Kind),
-			Text: source.Text, AttachmentFilename: source.AttachmentFilename, Available: source.Available})
+			Text: source.Text, AttachmentFilename: source.AttachmentFilename, AttachmentId: source.AttachmentID, Available: source.Available})
 	}
 	for _, span := range review.Spans {
 		category, categoryOK := originWire(originCategories, span.Category)

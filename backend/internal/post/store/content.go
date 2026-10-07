@@ -32,12 +32,13 @@ type contentJSON struct {
 }
 
 type observationJSON struct {
-	File          string   `json:"file,omitempty"`
-	Scene         string   `json:"scene,omitempty"`
-	Mood          string   `json:"mood,omitempty"`
-	VisibleText   string   `json:"visibleText,omitempty"`
-	Objects       []string `json:"objects,omitempty"`
-	PeoplePresent bool     `json:"peoplePresent,omitempty"`
+	Origins       *observationOriginReviewJSON `json:"origins,omitempty"`
+	File          string                       `json:"file,omitempty"`
+	Scene         string                       `json:"scene,omitempty"`
+	Mood          string                       `json:"mood,omitempty"`
+	VisibleText   string                       `json:"visibleText,omitempty"`
+	Objects       []string                     `json:"objects,omitempty"`
+	PeoplePresent bool                         `json:"peoplePresent,omitempty"`
 	// A row written before provenance existed decodes with this empty — unknown, not an
 	// error. No migration: the column is a JSON document the post context owns.
 	Model string `json:"model,omitempty"`
@@ -85,7 +86,8 @@ func marshalObservations(observations []post.Observation) (string, error) {
 	wire := make([]observationJSON, 0, len(observations))
 	for _, observation := range observations {
 		wire = append(wire, observationJSON{
-			File: observation.File, Scene: observation.Scene, Mood: observation.Mood,
+			Origins: encodeObservationOrigins(observation.Origins),
+			File:    observation.File, Scene: observation.Scene, Mood: observation.Mood,
 			VisibleText: observation.VisibleText, Objects: observation.Objects,
 			PeoplePresent: observation.PeoplePresent, Model: observation.Model,
 			Events: observation.Events, Speech: observation.Speech, Rotation: observation.Rotation,
@@ -106,7 +108,8 @@ func unmarshalObservations(data string) ([]post.Observation, error) {
 	out := make([]post.Observation, 0, len(wire))
 	for _, observation := range wire {
 		out = append(out, post.Observation{
-			File: observation.File, Scene: observation.Scene, Mood: observation.Mood,
+			Origins: decodeObservationOrigins(observation.Origins),
+			File:    observation.File, Scene: observation.Scene, Mood: observation.Mood,
 			VisibleText: observation.VisibleText, Objects: observation.Objects,
 			PeoplePresent: observation.PeoplePresent, Model: observation.Model,
 			Events: observation.Events, Speech: observation.Speech, Rotation: observation.Rotation,

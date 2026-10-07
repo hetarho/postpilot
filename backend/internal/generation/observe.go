@@ -87,7 +87,7 @@ func (s *Service) observeCandidate(ctx context.Context, post PostInput, targets 
 		request := composePhotoObservationRequest(parts, filenames, s.fullWritingTest)
 		var sources []postdomain.OriginSource
 		if post.OriginProtocolVersion == OriginProtocolVersion {
-			sources = observationSources(filenames, false)
+			sources = observationSources(filenames, false, originAttachmentIDs(batch))
 			request = appendOriginContract(request, sources, nil, observationOriginContract)
 		}
 		request.Reasoning = s.reasoning.Observe
@@ -173,7 +173,7 @@ func (s *Service) observeVideo(ctx context.Context, video Image, model llm.Model
 	request := composeVideoObservationRequest(url, contentType, video.Filename, s.fullWritingTest)
 	var sources []postdomain.OriginSource
 	if protocol == OriginProtocolVersion {
-		sources = observationSources([]string{video.Filename}, true)
+		sources = observationSources([]string{video.Filename}, true, originAttachmentIDs([]Image{video}))
 		request = appendOriginContract(request, sources, nil, observationOriginContract)
 	}
 	request.Reasoning = s.reasoning.Observe
