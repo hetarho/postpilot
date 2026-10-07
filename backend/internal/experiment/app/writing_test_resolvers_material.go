@@ -94,7 +94,7 @@ func (r *WritingTestResolvers) ResolveWritingTestSource(ctx context.Context, use
 		}
 		for _, o := range source.Observations {
 			if names[o.File] {
-				value.Post.Observations = append(value.Post.Observations, generation.Observation{File: o.File, Scene: o.Scene, Mood: o.Mood, VisibleText: o.VisibleText, Objects: slices.Clone(o.Objects), PeoplePresent: o.PeoplePresent, Model: o.Model, Events: slices.Clone(o.Events), Speech: o.Speech, Rotation: o.Rotation})
+				value.Post.Observations = append(value.Post.Observations, generation.Observation{File: o.File, Scene: o.Scene, Mood: o.Mood, VisibleText: o.VisibleText, Objects: slices.Clone(o.Objects), PeoplePresent: o.PeoplePresent, Model: o.Model, Events: slices.Clone(o.Events), Speech: o.Speech, Rotation: o.Rotation, Origins: o.Origins})
 			}
 		}
 	}
@@ -108,7 +108,7 @@ func (r *WritingTestResolvers) ResolveWritingTestSource(ctx context.Context, use
 		if a.Kind == post.AttachmentVideo {
 			kind = generation.AttachmentVideo
 		}
-		image := generation.Image{Filename: a.Filename, Key: a.Key, Kind: kind, ContentType: a.ContentType, DurationMs: a.DurationMs, Width: int32(a.Width), Height: int32(a.Height), Rotation: int32(a.Rotation), RotationByOwner: a.RotationByOwner}
+		image := generation.Image{ID: a.ID, Filename: a.Filename, Key: a.Key, Kind: kind, ContentType: a.ContentType, DurationMs: a.DurationMs, Width: int32(a.Width), Height: int32(a.Height), Rotation: int32(a.Rotation), RotationByOwner: a.RotationByOwner}
 		value.Post.Images = append(value.Post.Images, image)
 		value.Attachments = append(value.Attachments, generation.WritingTestAttachment{ID: a.ID, Fingerprint: a.Fingerprint, Image: image})
 	}

@@ -2,6 +2,7 @@ package store_test
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"reflect"
 	"testing"
@@ -10,6 +11,76 @@ import (
 	"github.com/postpilot/backend/internal/post"
 	"github.com/postpilot/backend/internal/post/store"
 )
+
+type admittedCaptureJobs struct {
+	ids   []string
+	err   error
+	calls int
+}
+
+func (p *admittedCaptureJobs) ActivePostRequestCaptureJobs(_ context.Context, tx *sql.Tx, user, slug string) ([]string, error) {
+	if tx == nil || user != "alice" || slug != "p" {
+		return nil, errors.New("purge read escaped its owner transaction")
+	}
+	p.calls++
+	return p.ids, p.err
+}
+
+func TestRequestCapturePurgeFencesAdmittedFirstCallAndAllowsFutureRun(t *testing.T) {
+	s, handle := newStoreWithHandle(t)
+	ctx := context.Background()
+	seedPost(t, s, "p", "alice", testNow)
+	run := requestRun(t, s, "p", "issued-without-capture")
+	jobs := &admittedCaptureJobs{ids: []string{run.JobID}}
+	captures := store.NewRequestCaptureStore(handle.Writer, handle.Reader, jobs)
+	for range 2 {
+		if err := captures.PurgePostRequestCaptures(ctx, "alice", "p"); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := captures.WritePostRequestCapture(ctx, run, post.RequestCaptureCall{ID: "first-late", Sequence: 1}, requestCaptureFixture()); !errors.Is(err, llm.ErrInvalidInspection) {
+		t.Fatal("in-flight first witness restored after purge", err)
+	}
+	if err := captures.FinishPostRequestCapture(ctx, run, &post.RequestCaptureCompletion{UnavailableStages: []string{"post-writing"}, UnavailableReason: "late failure"}); !errors.Is(err, llm.ErrInvalidInspection) {
+		t.Fatal("in-flight completion restored unavailable marker", err)
+	}
+	if got := capturedPost(t, s, "p"); got.Status != llm.InspectionUnavailable {
+		t.Fatal("purged first call reconstructed")
+	}
+	future := requestRun(t, s, "p", "future-owner-run")
+	if err := captures.WritePostRequestCapture(ctx, future, post.RequestCaptureCall{ID: "new-call", Sequence: 1}, requestCaptureFixture()); err != nil {
+		t.Fatal("erasure blocked an explicit future run", err)
+	}
+	before := jobs.calls
+	if err := captures.PurgePostRequestCaptures(ctx, "bob", "p"); !errors.Is(err, post.ErrForbidden) || jobs.calls != before {
+		t.Fatal("foreign purge reached private job identity", err)
+	}
+	jobs.err = errors.New("job snapshot failed")
+	if err := captures.PurgePostRequestCaptures(ctx, "alice", "p"); !errors.Is(err, jobs.err) {
+		t.Fatal("failed transaction read was ignored", err)
+	}
+	if got := capturedPost(t, s, "p"); got.Status != llm.InspectionCaptured || got.CallID != "new-call" {
+		t.Fatal("failed purge partially erased retained evidence")
+	}
+	jobs.err, jobs.ids = nil, []string{future.JobID}
+	if _, err := handle.Writer.Exec(`UPDATE posts SET status='published' WHERE slug='p'`); err != nil {
+		t.Fatal(err)
+	}
+	beforePublished, err := s.GetPost(ctx, "p")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := captures.PurgePostRequestCaptures(ctx, "alice", "p"); err != nil {
+		t.Fatal("published lock blocked private erasure", err)
+	}
+	afterPublished, err := s.GetPost(ctx, "p")
+	if err != nil || !reflect.DeepEqual(beforePublished, afterPublished) {
+		t.Fatal("purge changed published canonical data", err)
+	}
+	if err := captures.WritePostRequestCapture(ctx, future, post.RequestCaptureCall{ID: "published-late", Sequence: 2}, requestCaptureFixture()); !errors.Is(err, llm.ErrInvalidInspection) {
+		t.Fatal("published late capture lost durable erasure fence", err)
+	}
+}
 
 func requestCaptureFixture() llm.RequestInspection {
 	issued := testNow

@@ -407,7 +407,7 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 			Videos: p.bucket, VideoURLTTL: cfg.PresignGetTTL,
 		},
 	), generationOrigins, generationOrigins), generation.RequestInspectionDependencies{
-		Captures:   poststore.New(handle.Writer, handle.Reader),
+		Captures:   poststore.NewRequestCaptureStore(handle.Writer, handle.Reader, postRequestCaptureJobs{}),
 		Models:     generationInspectionModels{registry: c.metered.Registry, selections: generationInspectionSelections{service: c.provider}},
 		Selections: generationInspectionSelections{service: c.provider},
 	})

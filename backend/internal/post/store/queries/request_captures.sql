@@ -28,6 +28,10 @@ INSERT INTO post_request_capture_purges(post_slug, user_id, job_id)
 SELECT c.post_slug, c.user_id, c.job_id FROM post_request_captures c WHERE c.post_slug = ? AND c.user_id = ?
 ON CONFLICT(post_slug, job_id) DO NOTHING;
 
+-- name: FencePostRequestCaptureRunPurge :exec
+INSERT INTO post_request_capture_purges(post_slug, user_id, job_id) VALUES(?, ?, ?)
+ON CONFLICT(post_slug, job_id) DO NOTHING;
+
 -- name: PostRequestCapturePurged :one
 SELECT EXISTS(SELECT 1 FROM post_request_capture_purges WHERE post_slug = ? AND user_id = ? AND job_id = ?);
 

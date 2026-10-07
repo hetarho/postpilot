@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   BlockList,
   copyPostContent,
@@ -164,6 +164,27 @@ function phrase(text: string, category: string) {
 }
 
 describe('WritingOriginReview', () => {
+  it('writes both native clipboard flavors from canonical selection without review styles or source data', () => {
+    const value = post()
+    const before = copyPostContent(value.content!)
+    render(<Review value={value} />)
+    const first = phrase('주인 말', '직접 입력 기반')
+    const last = phrase('AI 제안', 'AI가 보탠 내용')
+    const range = document.createRange()
+    range.setStart(first.firstChild!, 0)
+    range.setEnd(last.firstChild!, last.textContent!.length)
+    const selection = window.getSelection()!
+    selection.removeAllRanges()
+    selection.addRange(range)
+    const setData = vi.fn()
+    fireEvent.copy(first, { clipboardData: { setData } })
+    expect(setData).toHaveBeenCalledWith('text/plain', '주인 말 · 사진 관찰 · AI 제안')
+    expect(setData).toHaveBeenCalledWith('text/html', '주인 말 · 사진 관찰 · AI 제안')
+    expect(value.content).toEqual(before)
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(selection.toString()).toBe('주인 말 · 사진 관찰 · AI 제안')
+  })
+
   it('shows the named toggle by default and exactly three categories with a separate unconfirmed explanation', () => {
     render(<Review />)
     expect(screen.getByRole('checkbox', { name: '출처 보기' })).toBeChecked()

@@ -16,6 +16,28 @@ import (
 // tags and the payload accepts only the validated safe product projection.
 type storedRequestInspection llm.RequestInspection
 
+// RequestCaptureJobs reads admitted runs from the job owner in the same purge
+// transaction. A first issued call has no retained capture row yet.
+type RequestCaptureJobs interface {
+	ActivePostRequestCaptureJobs(context.Context, *sql.Tx, string, string) ([]string, error)
+}
+
+type RequestCaptureStore struct {
+	*Store
+	jobs RequestCaptureJobs
+}
+
+func NewRequestCaptureStore(writer, reader *sql.DB, jobs RequestCaptureJobs) *RequestCaptureStore {
+	if jobs == nil {
+		panic("post: transactional request capture jobs are required")
+	}
+	return &RequestCaptureStore{Store: New(writer, reader), jobs: jobs}
+}
+
+func (s *RequestCaptureStore) PurgePostRequestCaptures(ctx context.Context, userID, slug string) error {
+	return s.Store.purgePostRequestCaptures(ctx, userID, slug, s.jobs)
+}
+
 func encodeRequestInspection(value llm.RequestInspection) (string, error) {
 	if err := value.Validate(); err != nil {
 		return "", err
@@ -276,6 +298,10 @@ func (s *Store) ReadPostRequestInspection(ctx context.Context, userID, slug, sta
 }
 
 func (s *Store) PurgePostRequestCaptures(ctx context.Context, userID, slug string) error {
+	return s.purgePostRequestCaptures(ctx, userID, slug, nil)
+}
+
+func (s *Store) purgePostRequestCaptures(ctx context.Context, userID, slug string, jobs RequestCaptureJobs) error {
 	tx, err := s.writer.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -287,6 +313,20 @@ func (s *Store) PurgePostRequestCaptures(ctx context.Context, userID, slug strin
 	}
 	if err := q.FencePostRequestCapturePurge(ctx, sqlc.FencePostRequestCapturePurgeParams{PostSlug: slug, UserID: userID}); err != nil {
 		return err
+	}
+	if jobs != nil {
+		runs, err := jobs.ActivePostRequestCaptureJobs(ctx, tx, userID, slug)
+		if err != nil {
+			return err
+		}
+		for _, id := range runs {
+			if strings.TrimSpace(id) == "" {
+				return fmt.Errorf("%w: admitted capture run is absent", llm.ErrInvalidInspection)
+			}
+			if err := q.FencePostRequestCaptureRunPurge(ctx, sqlc.FencePostRequestCaptureRunPurgeParams{PostSlug: slug, UserID: userID, JobID: id}); err != nil {
+				return err
+			}
+		}
 	}
 	if err := q.PurgePostRequestCaptures(ctx, sqlc.PurgePostRequestCapturesParams{PostSlug: slug, UserID: userID}); err != nil {
 		return err

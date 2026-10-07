@@ -198,6 +198,38 @@ func (h *resolverHarness) seedSource(t *testing.T, user, slug string) {
 
 type resolverPostGuard struct{}
 
+func TestWritingTestSourceRetainsOwnedAttachmentIncarnationAndObservationOrigins(t *testing.T) {
+	h := actualResolverHarness(t)
+	h.seedSource(t, "alice", "source")
+	ctx := context.Background()
+	observation := post.Observation{File: "alice.jpg", Scene: "A blue cup", Model: "approved/observer"}
+	observation.Origins = &post.ObservationOriginReview{Version: post.OriginVersion, Result: post.ObservationOriginIdentity(observation), Sources: []post.OriginSource{{ID: "media.0", Kind: post.OriginSourceVisualObservation, Text: "identified supplied photo", AttachmentFilename: "alice.jpg", AttachmentID: "image-alice", Available: true}}, Spans: []post.ObservationOriginSpan{{Field: "scene", Start: 0, End: 10, Quote: "A blue cup", Category: post.OriginPhotoInterpretation, SourceRefs: []string{"media.0"}, ReviewState: post.OriginUnreviewed}}}
+	if _, err := h.posts.UpdateObservations(ctx, "source", "alice", []post.Observation{observation}, h.at); err != nil {
+		t.Fatal(err)
+	}
+	stored, err := h.posts.GetPost(ctx, "source")
+	if err != nil {
+		t.Fatal(err)
+	}
+	material := generation.WritingTestMaterialRequest{Material: "Owner supplied taste", TargetLanguage: generation.LanguageKorean, TagCount: 4, AttachmentIDs: []string{"image-alice"}}
+	for _, slug := range []string{"", "source"} {
+		var input, content int64
+		if slug != "" {
+			input, content = stored.InputRevision, stored.ContentRevision
+		}
+		resolved, err := h.resolver.ResolveWritingTestSource(ctx, "alice", slug, input, content, material)
+		if err != nil || len(resolved.Post.Images) != 1 || resolved.Post.Images[0].ID != "image-alice" || len(resolved.Attachments) != 1 || resolved.Attachments[0].Image.ID != "image-alice" {
+			t.Fatalf("selected media lost its immutable owner identity: %+v %v", resolved, err)
+		}
+		if slug == "source" && (len(resolved.Post.Observations) != 1 || !reflect.DeepEqual(resolved.Post.Observations[0].Origins, stored.Observations[0].Origins)) {
+			t.Fatal("reused observation lost result-local source evidence")
+		}
+		if slug == "" && len(resolved.Post.Observations) != 0 {
+			t.Fatal("neutral material reconstructed source observation history")
+		}
+	}
+}
+
 func (resolverPostGuard) HasOrdinaryWrite(context.Context, *sql.Tx, string, string) (bool, error) {
 	return false, nil
 }

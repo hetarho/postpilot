@@ -16,6 +16,7 @@ import {
 } from '@/entities/post'
 import type { PostContent } from '@/shared/api'
 import { Button, Checkbox, SelectableText, Sheet, Typography } from '@/shared/ui'
+import { copyOriginSelection } from '../lib/copy-origin-selection'
 
 const CATEGORY_STYLES: Record<SemanticOriginCategory, string> = {
   owner_input: 'text-origin-owner-foreground bg-origin-owner-highlight decoration-solid',
@@ -112,6 +113,7 @@ function PostOriginReview({ post, content, pending, children }: WritingOriginRev
       return (
         <SelectableText
           key={`${segment.start}:${segment.end}`}
+          data-writing-origin-phrase
           className={`underline underline-offset-4 ${
             segment.state === 'supported' && segment.category
               ? CATEGORY_STYLES[segment.category]
@@ -134,7 +136,7 @@ function PostOriginReview({ post, content, pending, children }: WritingOriginRev
   const renderAltField: OriginTextRenderer = (field, text) =>
     text ? (
       <div role="group" aria-label={t('originReview.alt', { ns: 'posts' })} className="mt-2">
-        <Typography variant="label" as="p">
+        <Typography variant="label" as="p" data-writing-origin-review-ui>
           {t('originReview.alt', { ns: 'posts' })}
         </Typography>
         <Typography variant="body" as="p" className="mt-1 break-words whitespace-pre-wrap">
@@ -192,10 +194,12 @@ function PostOriginReview({ post, content, pending, children }: WritingOriginRev
           </>
         )}
       </div>
-      {children({
-        renderTextField: visible ? renderTextField : undefined,
-        renderAltField: visible ? renderAltField : undefined,
-      })}
+      <div className="contents" onCopy={copyOriginSelection}>
+        {children({
+          renderTextField: visible ? renderTextField : undefined,
+          renderAltField: visible ? renderAltField : undefined,
+        })}
+      </div>
       {(selected || pickerOpen) && (
         <Sheet
           open

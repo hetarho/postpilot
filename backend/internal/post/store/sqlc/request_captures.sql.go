@@ -91,6 +91,22 @@ func (q *Queries) FencePostRequestCapturePurge(ctx context.Context, arg FencePos
 	return err
 }
 
+const fencePostRequestCaptureRunPurge = `-- name: FencePostRequestCaptureRunPurge :exec
+INSERT INTO post_request_capture_purges(post_slug, user_id, job_id) VALUES(?, ?, ?)
+ON CONFLICT(post_slug, job_id) DO NOTHING
+`
+
+type FencePostRequestCaptureRunPurgeParams struct {
+	PostSlug string
+	UserID   string
+	JobID    string
+}
+
+func (q *Queries) FencePostRequestCaptureRunPurge(ctx context.Context, arg FencePostRequestCaptureRunPurgeParams) error {
+	_, err := q.db.ExecContext(ctx, fencePostRequestCaptureRunPurge, arg.PostSlug, arg.UserID, arg.JobID)
+	return err
+}
+
 const listPostRequestCaptures = `-- name: ListPostRequestCaptures :many
 SELECT post_slug, user_id, job_id, call_id, call_sequence, attachment_id, stage, input_revision, content_revision, source_fingerprint, source_plan_fingerprint, result_revision, result_hash, plan_fingerprint, payload FROM post_request_captures WHERE post_slug = ? AND user_id = ? AND stage = ? ORDER BY call_sequence, call_id
 `

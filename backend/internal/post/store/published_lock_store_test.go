@@ -214,6 +214,7 @@ func finishPublishedRequestCapture(s *store.Store) error {
 var publishedLockExemptStatements = map[string]string{
 	"PurgePostRequestCaptures":          "privacy erasure removes private request payload even when canonical published content is locked",
 	"FencePostRequestCapturePurge":      "private purge tombstone prevents restoring erased payload; it changes no canonical content or input",
+	"FencePostRequestCaptureRunPurge":   "privacy erasure fences an admitted first call even without captured payload; preserves the published canonical result",
 	"PurgeWithdrawnPostRequestCaptures": "privacy erasure within guarded attachment deletion; preserves the published canonical result",
 	"CreatePostTestPublication":         "durable receipt only, inserted after the owned publication guard in the same transaction",
 	"CreatePost":                        "the create: no post exists to be locked",
