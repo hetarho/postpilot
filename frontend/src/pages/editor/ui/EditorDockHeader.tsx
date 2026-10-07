@@ -38,6 +38,7 @@ export const EditorDockHeader = forwardRef<
      *  grows with every refused press. */
     refusal?: { mode: GenerationMode; count: number }
     onBriefClosed?: () => void
+    writingTest?: { href: string; onOpen: () => Promise<void> | void; disabled?: boolean }
   }
 >(function EditorDockHeader(
   {
@@ -54,6 +55,7 @@ export const EditorDockHeader = forwardRef<
     onBriefSaved,
     refusal,
     onBriefClosed,
+    writingTest,
   },
   briefRef,
 ) {
@@ -87,6 +89,7 @@ export const EditorDockHeader = forwardRef<
       refusal={refusal}
       onClose={onBriefClosed}
       locked={published}
+      writingTest={writingTest}
       // The run options, one form saved by the brief's 저장 (POST-89), only for a saved post: a
       // draft has no slug to save against. The two numbers come from the brief's mirror, which is
       // also what 생성 sends; the other three from the post. A running job holds the numbers and

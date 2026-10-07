@@ -158,12 +158,20 @@ func TestReassignmentTargetsAndBusyPostsAreRefused(t *testing.T) {
 		t.Fatalf("reassign during a job = %v", err)
 	}
 	svc.jobs = fakeActiveJobs{}
-	svc.experiments = fakePendingExperiments{created.Slug: "experiment-1"}
-	if _, err := svc.SaveDraft(ctx, alice, DraftSave{Slug: created.Slug, Title: "Jeju", VoiceID: &review}); !errors.Is(err, ErrPostBusy) {
-		t.Fatalf("reassign during an undecided experiment = %v", err)
+	for _, kind := range []string{"model_experiment", "writing_test"} {
+		svc.jobs = fakeActiveJobs{created.Slug: {ID: "test-job", Kind: kind, Status: "queued"}}
+		if _, err := svc.SaveDraft(ctx, alice, DraftSave{Slug: created.Slug, Title: "Jeju", VoiceID: &review}); err != nil {
+			t.Fatalf("queued %s blocked future settings: %v", kind, err)
+		}
+		original := aliceVoice
+		if _, err := svc.SaveDraft(ctx, alice, DraftSave{Slug: created.Slug, Title: "Jeju", VoiceID: &original}); err != nil {
+			t.Fatal(err)
+		}
 	}
-	if store.posts[created.Slug].VoiceID != aliceVoice {
-		t.Fatal("a refused reassignment moved the post")
+	svc.jobs = fakeActiveJobs{}
+	svc.experiments = fakePendingExperiments{created.Slug: "experiment-1"}
+	if moved, err := svc.SaveDraft(ctx, alice, DraftSave{Slug: created.Slug, Title: "Jeju", VoiceID: &review}); err != nil || moved.VoiceID != aliceReview {
+		t.Fatalf("retained experiment blocked future settings: %+v err=%v", moved, err)
 	}
 	svc.experiments = fakePendingExperiments{}
 	if moved, err := svc.SaveDraft(ctx, alice, DraftSave{Slug: created.Slug, Title: "Jeju", VoiceID: &review}); err != nil || moved.VoiceID != aliceReview {

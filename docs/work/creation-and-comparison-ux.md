@@ -1,12 +1,12 @@
 # Creation and comparison UX session bundles
 
-The planning source is [creation-and-comparison-ux](../../spec/ideation/creation-and-comparison-ux.md); current behavior contracts are the linked SSOTs in each task. Functional requirements are taskable, while final navigation arrangement, history naming/placement and visual dimensions remain open under THEME-61. No implementation or worktree is started by this plan.
+The planning source is [creation-and-comparison-ux](../../spec/ideation/creation-and-comparison-ux.md); current behavior contracts are the linked SSOTs in each task. Functional requirements are taskable, while final navigation arrangement, history naming/placement and visual dimensions remain open under THEME-61. T622 is integrated. Remaining bundles use ARCH@19 after rebasing the group onto current main; the interrupted T625 attempt was released with its partial SQL work preserved for reassignment. Continue one implementation bundle at a time, with independent review and local integration before the next claim.
 
 Each bundle is exactly one T task and one atomic CLI claim. Its acceptance and implementation notes contain its internal milestones. This avoids claiming a fictitious range of tasks when the installed CLI only reserves one task at a time.
 
 | Bundle | Task | Ownership | Integrated prerequisites |
 |---|---|---|---|
-| B01 | [T622](../../spec/tasks/T622.ux-test-contract-foundation.md) | Shared proto/migrations/contracts/generated API, common navigation/workspace primitives and baseline port accommodations | None |
+| B01 | [T622](../../spec/tasks/done/T622.ux-test-contract-foundation.md) | Shared proto/migrations/contracts/generated API, common navigation/workspace primitives and baseline port accommodations | None |
 | B02 | [T623](../../spec/tasks/T623.contextual-navigation-and-clip-return.md) | Shell/routes/location/parent/return and clip creation chrome | T622 T629 |
 | B03 | [T624](../../spec/tasks/T624.roomy-writing-and-operational-history.md) | Post domain/history projection, spacious editor, compact post/clip history and post deletion return | T622 |
 | B04 | [T625](../../spec/tasks/T625.durable-shared-authoring-and-candidates.md) | Authoring backend/entity/core UI, shared AI/direct draft and seed-free candidates | T622 |
@@ -45,10 +45,10 @@ Read the current board:
 npx haeram-spec-creator work board --work creation-comparison-ux --json
 ```
 
-The first eligible bundle is T622. An explicit example with a unique owner label is:
+T622 is already integrated. Select an eligible remaining bundle from the live board; for example, claim T625 only when the board shows no active assignment:
 
 ```sh
-npx haeram-spec-creator work claim T622 --work creation-comparison-ux --owner session-01 --workspace new --json
+npx haeram-spec-creator work claim T625 --work creation-comparison-ux --owner session-01 --workspace new --json
 ```
 
 After T622 is integrated, other sessions use the same command with their chosen eligible T number and own label. The CLI performs the final atomic duplicate/dependency/touches checks. Move to the returned `workspace`; the task remains todo in planning STATE until reviewed integration, while the runtime board records doing/blocked/ready.
@@ -75,8 +75,10 @@ Release/recovery occurs only after the original worker has stopped, preserving i
 
 ## Consumed policy revisions
 
-ARCH@18, CLIP@59, EDIT@3, GEN@25, GUIDE@16, LANG@8, MODEL@34, POST@35, QUOTA@38, THEME@28, TMPL@24, VIDEO@7, VOICE@14. Current SSOT change logs are cleared after task allocation under FORMAT; decisions and their per-task references remain authoritative. Unrelated INFRA pending work is not consumed.
+ARCH@19, CLIP@59, EDIT@3, GEN@25, GUIDE@16, LANG@8, MODEL@34, POST@35, QUOTA@38, THEME@28, TMPL@24, VIDEO@7, VOICE@14. Current SSOT change logs are cleared after task allocation under FORMAT; decisions and their per-task references remain authoritative. Unrelated INFRA pending work is not consumed.
 
 ARCH-5 is consumed as documentation alignment with the already-present authoring context (no standalone code change). THEME-61 remains an open visual review, not an implementation decision. Removed ranking/check/template-helper policies are represented by the current compatibility/retirement contracts in T626/T628/T630.
 
 Post test-output publication is T624-owned, provider model-adoption publication is T630-owned, and T628 depends on both. Each target domain commits its mutation and action receipt atomically; the experiment receipt is recoverable from that committed receipt, including after a later manual change.
+
+ARCH@19 changes verification stages only. Remaining todo bundles reference impact-selected completion checks and record their selection rationale; final qualification retains its explicit integrated coverage. T622 keeps its original reviewed verification record, and the rebase preserves its code tree. Full CI and applicable deployment/media gates run before an authorized push.

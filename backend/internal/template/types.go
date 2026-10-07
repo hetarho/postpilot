@@ -211,3 +211,13 @@ type Rendered struct {
 	// (TMPL-45).
 	Facts []Fact
 }
+
+// TestedPublication publishes an already validated frozen setting, without model work.
+type TestedPublication struct {
+	UserID, TestID, WinnerID, Action, RequestKey, Fingerprint string
+	Name, Scope                                               string
+	ScopeIDs                                                  []string
+	FrozenContent                                             []byte
+	MakeDefault                                               bool
+}
+type TestedPublicationReceipt struct{ TargetID, RequestKey string }

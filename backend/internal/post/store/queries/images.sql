@@ -19,10 +19,10 @@ FROM images WHERE id = ?;
 UPDATE images SET rotation = ?, rotation_by_owner = 1
 WHERE id = ? AND EXISTS (SELECT 1 FROM posts WHERE posts.slug = images.post_slug AND posts.status <> 'published');
 
--- name: SetObservedImageRotation :exec
+-- name: SetObservedImageRotation :execrows
 -- An observation turns its photo only while the owner never has (GEN-79).
-UPDATE images SET rotation = ?
-WHERE post_slug = ? AND filename = ? AND rotation_by_owner = 0;
+UPDATE images SET rotation = sqlc.arg(rotation)
+WHERE post_slug = sqlc.arg(post_slug) AND filename = sqlc.arg(filename) AND rotation_by_owner = 0 AND rotation <> sqlc.arg(rotation);
 
 -- name: DeleteImage :execrows
 -- A published post's photos are locked with it (POST-74): zero rows is a row already gone or

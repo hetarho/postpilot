@@ -17,12 +17,14 @@ import { Button, Dialog, FieldMessage } from '@/shared/ui'
 export function DeletePostButton({
   post,
   onDeleted,
+  returnTo,
 }: {
   post: Pick<PostDraft, 'slug' | 'title'>
   /** Run after the server confirms the delete and BEFORE the navigation unmounts this. The
    *  autosave queues are what has to be stopped here, and they belong to sibling feature
    *  slices this one may not import (ARCH-13), so the page supplies the call. */
   onDeleted?: () => void
+  returnTo?: { href: string; scrollY: number }
 }) {
   const { t } = useTranslation(['posts', 'common'])
   const navigate = useNavigate()
@@ -43,7 +45,10 @@ export function DeletePostButton({
     }
     setConfirming(false)
     onDeleted?.()
-    await navigate({ to: '/posts' })
+    if (returnTo) {
+      await navigate({ href: returnTo.href })
+      window.requestAnimationFrame(() => window.scrollTo(0, returnTo.scrollY))
+    } else await navigate({ to: '/posts' })
   }
 
   return (

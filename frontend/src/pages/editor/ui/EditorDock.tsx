@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ActionBar } from '@/shared/ui'
+import { ActionBar, proseStyles } from '@/shared/ui'
 
 /** The editor's docked bar. It holds the one thing a phone could not otherwise reach — the step's
  *  committing action, which sat in normal flow roughly 1,000px down a 4,000px page (THEME-24) — the
@@ -26,11 +26,9 @@ export function EditorDock({
   if (!children && !header) return null
   return (
     <>
-      {/* `mt-auto` alone can resolve to zero when the page is taller than the viewport. Keep a
-          real 24px spacer as well, so the step panel never touches the dock card. */}
-      <div aria-hidden className="mt-auto h-6 shrink-0" />
+      <div aria-hidden className="h-6 shrink-0" />
       <ActionBar ariaLabel={t('editor.actionAria')} className="mt-0">
-        <div className="flex flex-col gap-2">
+        <div className={proseStyles('flex flex-col gap-2')}>
           {header}
           {children}
         </div>

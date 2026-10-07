@@ -16,6 +16,8 @@ export type PageWidth =
   /** A data screen that is genuinely two-dimensional — leaderboards, experiment results, a
    *  side-by-side comparison. The only kind that earns the whole desk. */
   | 'board'
+  /** Outer creation frame, independently of its nested readable prose measure. */
+  | 'workspace'
 
 /** Unprefixed is the phone, and it carries NO cap — 360px is narrower than the smallest of these,
  *  so a cap there is a number that can only ever be wrong later (THEME-14: delete every prefixed class
@@ -26,6 +28,7 @@ const WIDTH_STYLES: Record<PageWidth, string> = {
   prose: 'sm:max-w-2xl lg:max-w-3xl',
   wide: 'sm:max-w-2xl lg:max-w-5xl',
   board: 'sm:max-w-4xl lg:max-w-7xl',
+  workspace: 'sm:max-w-4xl lg:max-w-7xl',
 }
 
 /** The one place a screen's outer column exists. Every `main` in `pages/` wears this instead of
@@ -57,4 +60,9 @@ export function pageStyles({
       className,
     ),
   )
+}
+
+/** A nested text measure adds no new document scroller or outer workspace gutter. */
+export function proseStyles(className?: string) {
+  return twMerge('w-full sm:max-w-2xl lg:max-w-3xl', className)
 }

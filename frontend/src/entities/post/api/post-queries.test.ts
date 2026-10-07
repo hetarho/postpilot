@@ -3,11 +3,59 @@ import { describe, expect, it } from 'vitest'
 import {
   contentLanguageToProto,
   PostSchema,
+  PostSummarySchema,
+  GenerationJobSchema,
   ProtoQualityMetric,
   VoiceRefSchema,
   ProtoBlogField,
 } from '@/shared/api'
-import { toPostDraft } from './post-queries'
+import { toPostDraft, toPostListItem } from './post-queries'
+
+describe('toPostListItem', () => {
+  it('projects canonical readiness, published address, revisions and the ordinary failure snapshot', () => {
+    const row = toPostListItem(
+      create(PostSummarySchema, {
+        slug: 'post',
+        status: 'review',
+        targetLanguage: contentLanguageToProto('ko'),
+        contentReady: true,
+        exportReady: true,
+        publishedUrl: 'https://blog.naver.com/alice/1',
+        inputRevision: 8n,
+        contentRevision: 3n,
+        latestOrdinaryFailure: create(GenerationJobSchema, {
+          id: 'ordinary-failure',
+          kind: 'generate_post',
+          status: 'failed',
+          stage: 'write',
+        }),
+      }),
+    )
+    expect(row.contentReady).toBe(true)
+    expect(row.exportReady).toBe(true)
+    expect(row.publishedUrl).toBe('https://blog.naver.com/alice/1')
+    expect(row.inputRevision).toBe(8n)
+    expect(row.contentRevision).toBe(3n)
+    expect(row.latestOrdinaryFailure).toMatchObject({
+      id: 'ordinary-failure',
+      status: 'failed',
+      stage: 'write',
+    })
+  })
+
+  it('does not infer canonical content or export readiness from a finalized status', () => {
+    const row = toPostListItem(
+      create(PostSummarySchema, {
+        slug: 'empty-finalized',
+        status: 'finalized',
+        targetLanguage: contentLanguageToProto('ko'),
+      }),
+    )
+    expect(row.contentReady).toBe(false)
+    expect(row.exportReady).toBe(false)
+    expect(row.latestOrdinaryFailure).toBeUndefined()
+  })
+})
 
 const voice = create(VoiceRefSchema, {
   id: 'voice-a',

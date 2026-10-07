@@ -7,6 +7,7 @@ package sqlc
 
 import (
 	"context"
+	"database/sql"
 )
 
 const activeAuthoringOperation = `-- name: ActiveAuthoringOperation :one
@@ -33,6 +34,52 @@ func (q *Queries) ActiveAuthoringOperation(ctx context.Context, arg ActiveAuthor
 		&i.JobID,
 		&i.Status,
 		&i.FailureReason,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const confirmAuthoringSaveMutations = `-- name: ConfirmAuthoringSaveMutations :exec
+UPDATE configuration_authoring_mutations SET response=? WHERE user_id=? AND session_id=? AND action='save' AND expected_revision=?
+`
+
+type ConfirmAuthoringSaveMutationsParams struct {
+	Response         string
+	UserID           string
+	SessionID        string
+	ExpectedRevision int64
+}
+
+func (q *Queries) ConfirmAuthoringSaveMutations(ctx context.Context, arg ConfirmAuthoringSaveMutationsParams) error {
+	_, err := q.db.ExecContext(ctx, confirmAuthoringSaveMutations,
+		arg.Response,
+		arg.UserID,
+		arg.SessionID,
+		arg.ExpectedRevision,
+	)
+	return err
+}
+
+const getAuthoringMutation = `-- name: GetAuthoringMutation :one
+SELECT user_id, session_id, operation_key, "action", expected_revision, fingerprint, response, created_at FROM configuration_authoring_mutations WHERE user_id=? AND operation_key=?
+`
+
+type GetAuthoringMutationParams struct {
+	UserID       string
+	OperationKey string
+}
+
+func (q *Queries) GetAuthoringMutation(ctx context.Context, arg GetAuthoringMutationParams) (ConfigurationAuthoringMutation, error) {
+	row := q.db.QueryRowContext(ctx, getAuthoringMutation, arg.UserID, arg.OperationKey)
+	var i ConfigurationAuthoringMutation
+	err := row.Scan(
+		&i.UserID,
+		&i.SessionID,
+		&i.OperationKey,
+		&i.Action,
+		&i.ExpectedRevision,
+		&i.Fingerprint,
+		&i.Response,
 		&i.CreatedAt,
 	)
 	return i, err
@@ -98,7 +145,7 @@ func (q *Queries) GetAuthoringOperationByID(ctx context.Context, arg GetAuthorin
 }
 
 const getAuthoringSession = `-- name: GetAuthoringSession :one
-SELECT id, user_id, kind, target_id, request_id, revision, phase, snapshot, created_at, updated_at FROM configuration_authoring_sessions WHERE user_id=? AND id=?
+SELECT id, user_id, kind, target_id, request_id, revision, phase, snapshot, created_at, updated_at, saved_baseline, working_source, draft_state, has_unpublished_changes, saved_available, publication_pending, target_conflict, display_name, candidate_count FROM configuration_authoring_sessions WHERE user_id=? AND id=?
 `
 
 type GetAuthoringSessionParams struct {
@@ -120,12 +167,21 @@ func (q *Queries) GetAuthoringSession(ctx context.Context, arg GetAuthoringSessi
 		&i.Snapshot,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.SavedBaseline,
+		&i.WorkingSource,
+		&i.DraftState,
+		&i.HasUnpublishedChanges,
+		&i.SavedAvailable,
+		&i.PublicationPending,
+		&i.TargetConflict,
+		&i.DisplayName,
+		&i.CandidateCount,
 	)
 	return i, err
 }
 
 const getAuthoringSessionByRequest = `-- name: GetAuthoringSessionByRequest :one
-SELECT id, user_id, kind, target_id, request_id, revision, phase, snapshot, created_at, updated_at FROM configuration_authoring_sessions WHERE user_id=? AND request_id=?
+SELECT id, user_id, kind, target_id, request_id, revision, phase, snapshot, created_at, updated_at, saved_baseline, working_source, draft_state, has_unpublished_changes, saved_available, publication_pending, target_conflict, display_name, candidate_count FROM configuration_authoring_sessions WHERE user_id=? AND request_id=?
 `
 
 type GetAuthoringSessionByRequestParams struct {
@@ -147,8 +203,46 @@ func (q *Queries) GetAuthoringSessionByRequest(ctx context.Context, arg GetAutho
 		&i.Snapshot,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.SavedBaseline,
+		&i.WorkingSource,
+		&i.DraftState,
+		&i.HasUnpublishedChanges,
+		&i.SavedAvailable,
+		&i.PublicationPending,
+		&i.TargetConflict,
+		&i.DisplayName,
+		&i.CandidateCount,
 	)
 	return i, err
+}
+
+const insertAuthoringMutation = `-- name: InsertAuthoringMutation :exec
+INSERT INTO configuration_authoring_mutations(user_id,session_id,operation_key,action,expected_revision,fingerprint,response,created_at) VALUES(?,?,?,?,?,?,?,?)
+`
+
+type InsertAuthoringMutationParams struct {
+	UserID           string
+	SessionID        string
+	OperationKey     string
+	Action           string
+	ExpectedRevision int64
+	Fingerprint      string
+	Response         string
+	CreatedAt        string
+}
+
+func (q *Queries) InsertAuthoringMutation(ctx context.Context, arg InsertAuthoringMutationParams) error {
+	_, err := q.db.ExecContext(ctx, insertAuthoringMutation,
+		arg.UserID,
+		arg.SessionID,
+		arg.OperationKey,
+		arg.Action,
+		arg.ExpectedRevision,
+		arg.Fingerprint,
+		arg.Response,
+		arg.CreatedAt,
+	)
+	return err
 }
 
 const insertAuthoringOperation = `-- name: InsertAuthoringOperation :exec
@@ -190,21 +284,30 @@ func (q *Queries) InsertAuthoringOperation(ctx context.Context, arg InsertAuthor
 }
 
 const insertAuthoringSession = `-- name: InsertAuthoringSession :exec
-INSERT INTO configuration_authoring_sessions(id,user_id,kind,target_id,request_id,revision,phase,snapshot,created_at,updated_at)
-VALUES(?,?,?,?,?,?,?,?,?,?)
+INSERT INTO configuration_authoring_sessions(id,user_id,kind,target_id,request_id,revision,phase,snapshot,created_at,updated_at,saved_baseline,working_source,draft_state,has_unpublished_changes,saved_available,publication_pending,target_conflict,display_name,candidate_count)
+VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
 `
 
 type InsertAuthoringSessionParams struct {
-	ID        string
-	UserID    string
-	Kind      string
-	TargetID  string
-	RequestID string
-	Revision  int64
-	Phase     string
-	Snapshot  string
-	CreatedAt string
-	UpdatedAt string
+	ID                    string
+	UserID                string
+	Kind                  string
+	TargetID              string
+	RequestID             string
+	Revision              int64
+	Phase                 string
+	Snapshot              string
+	CreatedAt             string
+	UpdatedAt             string
+	SavedBaseline         sql.NullString
+	WorkingSource         sql.NullString
+	DraftState            string
+	HasUnpublishedChanges int64
+	SavedAvailable        int64
+	PublicationPending    int64
+	TargetConflict        int64
+	DisplayName           string
+	CandidateCount        int64
 }
 
 func (q *Queries) InsertAuthoringSession(ctx context.Context, arg InsertAuthoringSessionParams) error {
@@ -219,12 +322,24 @@ func (q *Queries) InsertAuthoringSession(ctx context.Context, arg InsertAuthorin
 		arg.Snapshot,
 		arg.CreatedAt,
 		arg.UpdatedAt,
+		arg.SavedBaseline,
+		arg.WorkingSource,
+		arg.DraftState,
+		arg.HasUnpublishedChanges,
+		arg.SavedAvailable,
+		arg.PublicationPending,
+		arg.TargetConflict,
+		arg.DisplayName,
+		arg.CandidateCount,
 	)
 	return err
 }
 
 const latestAuthoringSession = `-- name: LatestAuthoringSession :one
-SELECT id, user_id, kind, target_id, request_id, revision, phase, snapshot, created_at, updated_at FROM configuration_authoring_sessions WHERE user_id=? AND kind=? AND target_id=? ORDER BY updated_at DESC,id DESC LIMIT 1
+SELECT id, user_id, kind, target_id, request_id, revision, phase, snapshot, created_at, updated_at, saved_baseline, working_source, draft_state, has_unpublished_changes, saved_available, publication_pending, target_conflict, display_name, candidate_count FROM configuration_authoring_sessions
+WHERE user_id=?1 AND kind=?2
+AND (target_id=?3 OR (kind<>'writing_voice' AND target_id='' AND CAST(COALESCE(json_extract(snapshot,'$.saved.id'),'') AS TEXT)=?3))
+ORDER BY updated_at DESC,id DESC LIMIT 1
 `
 
 type LatestAuthoringSessionParams struct {
@@ -247,8 +362,107 @@ func (q *Queries) LatestAuthoringSession(ctx context.Context, arg LatestAuthorin
 		&i.Snapshot,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.SavedBaseline,
+		&i.WorkingSource,
+		&i.DraftState,
+		&i.HasUnpublishedChanges,
+		&i.SavedAvailable,
+		&i.PublicationPending,
+		&i.TargetConflict,
+		&i.DisplayName,
+		&i.CandidateCount,
 	)
 	return i, err
+}
+
+const listAuthoringSummaries = `-- name: ListAuthoringSummaries :many
+SELECT c.id,c.kind,
+CAST(CASE WHEN c.kind<>'writing_voice' AND c.target_id='' THEN COALESCE(json_extract(c.snapshot,'$.saved.id'),'') ELSE c.target_id END AS TEXT) AS target_id,
+c.revision,c.saved_available,c.has_unpublished_changes,
+CAST(COALESCE(json_extract(c.snapshot,'$.active_job_id'),'') AS TEXT) AS active_job_id,
+c.publication_pending,c.target_conflict,c.display_name,c.draft_state,c.updated_at,
+CAST(COALESCE(json_extract(c.snapshot,'$.saved'),'null') AS TEXT) AS last_publication
+FROM configuration_authoring_sessions AS c
+WHERE c.user_id=?1 AND c.kind=?2
+AND (CAST(?3 AS INTEGER)=0 OR (c.target_id='' AND c.saved_available=0))
+AND (CAST(CASE WHEN c.kind<>'writing_voice' AND c.target_id='' THEN COALESCE(json_extract(c.snapshot,'$.saved.id'),'') ELSE c.target_id END AS TEXT)='' OR NOT EXISTS (
+ SELECT 1 FROM configuration_authoring_sessions AS newer
+ WHERE newer.user_id=c.user_id AND newer.kind=c.kind
+ AND CAST(CASE WHEN newer.kind<>'writing_voice' AND newer.target_id='' THEN COALESCE(json_extract(newer.snapshot,'$.saved.id'),'') ELSE newer.target_id END AS TEXT)
+ = CAST(CASE WHEN c.kind<>'writing_voice' AND c.target_id='' THEN COALESCE(json_extract(c.snapshot,'$.saved.id'),'') ELSE c.target_id END AS TEXT)
+ AND (newer.updated_at>c.updated_at OR (newer.updated_at=c.updated_at AND newer.id>c.id))
+))
+AND (CAST(?4 AS TEXT)='' OR c.updated_at<?4 OR (c.updated_at=?4 AND c.id<?5))
+ORDER BY c.updated_at DESC,c.id DESC LIMIT ?6
+`
+
+type ListAuthoringSummariesParams struct {
+	UserID      string
+	Kind        string
+	UnsavedOnly int64
+	CursorTime  string
+	CursorID    string
+	PageLimit   int64
+}
+
+type ListAuthoringSummariesRow struct {
+	ID                    string
+	Kind                  string
+	TargetID              string
+	Revision              int64
+	SavedAvailable        int64
+	HasUnpublishedChanges int64
+	ActiveJobID           string
+	PublicationPending    int64
+	TargetConflict        int64
+	DisplayName           string
+	DraftState            string
+	UpdatedAt             string
+	LastPublication       string
+}
+
+func (q *Queries) ListAuthoringSummaries(ctx context.Context, arg ListAuthoringSummariesParams) ([]ListAuthoringSummariesRow, error) {
+	rows, err := q.db.QueryContext(ctx, listAuthoringSummaries,
+		arg.UserID,
+		arg.Kind,
+		arg.UnsavedOnly,
+		arg.CursorTime,
+		arg.CursorID,
+		arg.PageLimit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListAuthoringSummariesRow
+	for rows.Next() {
+		var i ListAuthoringSummariesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Kind,
+			&i.TargetID,
+			&i.Revision,
+			&i.SavedAvailable,
+			&i.HasUnpublishedChanges,
+			&i.ActiveJobID,
+			&i.PublicationPending,
+			&i.TargetConflict,
+			&i.DisplayName,
+			&i.DraftState,
+			&i.UpdatedAt,
+			&i.LastPublication,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const setAuthoringOperation = `-- name: SetAuthoringOperation :execrows
@@ -278,17 +492,26 @@ func (q *Queries) SetAuthoringOperation(ctx context.Context, arg SetAuthoringOpe
 }
 
 const updateAuthoringSession = `-- name: UpdateAuthoringSession :execrows
-UPDATE configuration_authoring_sessions SET revision=?,phase=?,snapshot=?,updated_at=? WHERE user_id=? AND id=? AND revision=?
+UPDATE configuration_authoring_sessions SET revision=?,phase=?,snapshot=?,updated_at=?,saved_baseline=?,working_source=?,draft_state=?,has_unpublished_changes=?,saved_available=?,publication_pending=?,target_conflict=?,display_name=?,candidate_count=? WHERE user_id=? AND id=? AND revision=?
 `
 
 type UpdateAuthoringSessionParams struct {
-	Revision   int64
-	Phase      string
-	Snapshot   string
-	UpdatedAt  string
-	UserID     string
-	ID         string
-	Revision_2 int64
+	Revision              int64
+	Phase                 string
+	Snapshot              string
+	UpdatedAt             string
+	SavedBaseline         sql.NullString
+	WorkingSource         sql.NullString
+	DraftState            string
+	HasUnpublishedChanges int64
+	SavedAvailable        int64
+	PublicationPending    int64
+	TargetConflict        int64
+	DisplayName           string
+	CandidateCount        int64
+	UserID                string
+	ID                    string
+	Revision_2            int64
 }
 
 func (q *Queries) UpdateAuthoringSession(ctx context.Context, arg UpdateAuthoringSessionParams) (int64, error) {
@@ -297,6 +520,15 @@ func (q *Queries) UpdateAuthoringSession(ctx context.Context, arg UpdateAuthorin
 		arg.Phase,
 		arg.Snapshot,
 		arg.UpdatedAt,
+		arg.SavedBaseline,
+		arg.WorkingSource,
+		arg.DraftState,
+		arg.HasUnpublishedChanges,
+		arg.SavedAvailable,
+		arg.PublicationPending,
+		arg.TargetConflict,
+		arg.DisplayName,
+		arg.CandidateCount,
 		arg.UserID,
 		arg.ID,
 		arg.Revision_2,

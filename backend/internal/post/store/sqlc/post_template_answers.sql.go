@@ -45,12 +45,13 @@ func (q *Queries) ListPostTemplateAnswers(ctx context.Context, postSlug string) 
 	return items, nil
 }
 
-const upsertPostTemplateAnswer = `-- name: UpsertPostTemplateAnswer :exec
+const upsertPostTemplateAnswer = `-- name: UpsertPostTemplateAnswer :execrows
 
 INSERT INTO post_template_answers (post_slug, label, answer, enabled, updated_at)
 VALUES (?, ?, ?, ?, ?)
 ON CONFLICT (post_slug, label) DO UPDATE SET
     answer = excluded.answer, enabled = excluded.enabled, updated_at = excluded.updated_at
+WHERE answer IS NOT excluded.answer OR enabled IS NOT excluded.enabled
 `
 
 type UpsertPostTemplateAnswerParams struct {
@@ -75,13 +76,16 @@ type UpsertPostTemplateAnswerParams struct {
 // anywhere in the file shifts every constant it generates from it.
 // Upsert, never delete: clearing an answer is an empty `answer`, which the freeze reads the
 // same way it reads a switched-off field.
-func (q *Queries) UpsertPostTemplateAnswer(ctx context.Context, arg UpsertPostTemplateAnswerParams) error {
-	_, err := q.db.ExecContext(ctx, upsertPostTemplateAnswer,
+func (q *Queries) UpsertPostTemplateAnswer(ctx context.Context, arg UpsertPostTemplateAnswerParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, upsertPostTemplateAnswer,
 		arg.PostSlug,
 		arg.Label,
 		arg.Answer,
 		arg.Enabled,
 		arg.UpdatedAt,
 	)
-	return err
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }

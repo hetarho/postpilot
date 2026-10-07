@@ -1,6 +1,33 @@
 import type { AppFailureReason } from '@/shared/api'
 
 export const errors = {
+  AUTHORING_CANDIDATE_COUNT_INVALID: 'Choose exactly 2, 4, 8 or 16 candidates.',
+  AUTHORING_DRAFT_INVALID:
+    'Your current changes need review before saving. Your input is preserved.',
+  AUTHORING_FEATURE_UNAVAILABLE: 'This editing option is not ready yet.',
+  VOICE_SAMPLE_REVISION_CONFLICT:
+    'This material changed. Your input is preserved; check the latest material.',
+  VOICE_SAMPLE_UPDATE_INVALID: 'Check the material text and photo before saving.',
+  WRITING_TEST_NOT_FOUND: 'This writing test is unavailable.',
+  WRITING_TEST_COUNT_INVALID: 'Choose exactly 2, 4, 8 or 16 entrants.',
+  WRITING_TEST_FACTOR_INVALID: 'Choose one setting or one model stage to compare.',
+  WRITING_TEST_ENTRANT_INVALID: 'A candidate changed or is unavailable. Review the candidates.',
+  WRITING_TEST_ENTRANTS_DUPLICATE: 'Choose different candidates for every slot.',
+  WRITING_TEST_REVISION_CONFLICT: 'This test changed. Check the latest result before continuing.',
+  WRITING_TEST_MATCH_INVALID: 'Choose one of the two candidates in the current match.',
+  WRITING_TEST_DECISION_CONFLICT: 'This match already has a confirmed decision. Check its result.',
+  WRITING_TEST_STATE_INVALID: 'This action is unavailable at the current test stage.',
+  WRITING_TEST_PUBLICATION_CONFLICT: 'The saved target changed. Your test result is preserved.',
+  WRITING_TEST_OUTPUT_INCOMPATIBLE:
+    'This result cannot be applied to the source post. You can copy the output.',
+  WRITING_TEST_QUOTE_REQUIRED: 'Review the current estimate before starting this test.',
+  WRITING_TEST_RUNNING: 'A writing test is already being prepared. Check its progress.',
+  WRITING_TEST_MATERIAL_INVALID: 'Review the common writing material before starting.',
+  WRITING_TEST_OPERATION_INVALID: 'Reopen this test and retry the action.',
+  WRITING_TEST_LEGACY_READ_ONLY:
+    'This earlier comparison is read only. Start a writing test to compare again.',
+  VOICE_CHECK_RETIRED: 'This saved check is read only. Use writing tests for a new comparison.',
+
   AUTHORING_SESSION_NOT_FOUND: 'This draft is unavailable. Start a new one.',
   AUTHORING_REVISION_CONFLICT: 'This draft changed in another view. Check the latest version.',
   AUTHORING_RUNNING: 'AI is already working on a draft. Check its progress.',

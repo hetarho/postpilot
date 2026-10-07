@@ -1,6 +1,7 @@
 import type { RefObject } from 'react'
 import { useTranslation } from 'react-i18next'
 import { FieldLabel, Textarea } from '@/shared/ui'
+import { MEMO_WORKSPACE_RESERVED_BOTTOM_PX } from '../config/workspace'
 
 /** The memo is the post's own words, and it is what 글 생성 works from — so it is rendered by
  *  that step while its value and its autosave stay in `DraftEditor`. Unmounting the field on
@@ -33,6 +34,7 @@ export function MemoField({
         appearance="well"
         rows={6}
         autoGrow
+        viewportAllocation={{ reservedBottom: MEMO_WORKSPACE_RESERVED_BOTTOM_PX }}
         value={value}
         readOnly={readOnly}
         onChange={(event) => onChange(event.target.value)}

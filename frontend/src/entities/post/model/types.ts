@@ -89,6 +89,8 @@ export interface PostDraft {
   observations: Observation[]
   pendingExperimentId: string
   contentRevision: bigint
+  /** Material/settings changes fence frozen writing-test publication. */
+  inputRevision: bigint
   machineBaselineRevision: bigint
   canFinalize: boolean
   targetLength?: number
@@ -148,6 +150,14 @@ export interface PostListItem {
   voice?: VoiceRef
   template: TemplateRef
   activeJob: GenerationJob | undefined
+  /** Canonical content presence, independent of the post's lifecycle status. */
+  contentReady: boolean
+  exportReady: boolean
+  publishedUrl: string
+  /** Latest relevant failed ordinary writing attempt, never a test's job. */
+  latestOrdinaryFailure: GenerationJob | undefined
+  inputRevision: bigint
+  contentRevision: bigint
   pendingExperimentId: string
   targetLanguage: ContentLanguage
   contentLanguage: ContentLanguage | undefined

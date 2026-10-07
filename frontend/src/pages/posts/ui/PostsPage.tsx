@@ -5,18 +5,20 @@ import {
   displayTitle,
   isPostStatus,
   postStatusLabel,
+  rememberPostEntry,
   usePostList,
   type PostListItem,
   type PostStatus,
 } from '@/entities/post'
 import { useExperiments, type ModelExperiment } from '@/entities/model-experiment'
+import { isTerminal, progressLabel } from '@/entities/generation-job'
+import { useSession } from '@/entities/session'
 import { matchedTags, PostListControls, type PostNarrowing } from '@/features/filter-posts'
 import { TemplateRefLabel } from '@/entities/template'
 import { VoiceRefLabel } from '@/entities/voice'
 import { POSTS_SEARCH_DEBOUNCE_MS } from '@/shared/config'
-import { formatRelativeTime } from '@/shared/lib'
+import { formatAppFailure, formatRelativeTime } from '@/shared/lib'
 import {
-  ActionBar,
   Badge,
   Button,
   Notice,
@@ -28,6 +30,7 @@ import {
   useNearViewport,
 } from '@/shared/ui'
 import { useSettledValue } from '../model/useSettledValue'
+import { useHistoryScrollReturn } from '../model/useHistoryScrollReturn'
 
 /** The one status chip a row carries. Colour never travels alone (THEME-18): the tone
  *  only reinforces the label, so the label is chosen first and the tone follows it. */
@@ -36,7 +39,10 @@ function rowStatus(
   pending: ModelExperiment | undefined,
   t: TFunction<'posts'>,
 ): { label: string; tone: BadgeTone } {
-  if (post.activeJob) return { label: t('list.state.generating'), tone: 'info' }
+  if (post.activeJob && !isTerminal(post.activeJob))
+    return { label: t('list.state.generating'), tone: 'info' }
+  if (post.latestOrdinaryFailure || post.activeJob?.status === 'failed')
+    return { label: t('list.state.failed'), tone: 'danger' }
   if (pending?.status === 'failed' || pending?.status === 'partial')
     return { label: t('list.state.failed'), tone: 'danger' }
   if (post.pendingExperimentId) return { label: t('list.state.review'), tone: 'warning' }
@@ -66,11 +72,13 @@ function postStatusTone(status: string): BadgeTone {
  *  (POST-67). */
 export function PostsPage() {
   const { t } = useTranslation(['posts', 'common'])
+  const { user } = useSession()
   const narrowing: PostNarrowing = useSearch({ strict: false })
   // The URL follows every keystroke; the request waits for the typing to stop. The status is one
   // choice, not typing, so it is sent at once.
   const settledQ = useSettledValue(narrowing.q ?? '', POSTS_SEARCH_DEBOUNCE_MS)
   const list = usePostList({ q: settledQ, status: narrowing.status })
+  useHistoryScrollReturn(user?.id ?? '', narrowing, settledQ, list)
   const { posts, isPending, isFetching, refetch } = list
   const { experiments } = useExperiments()
   const byId = new Map(experiments.map((experiment) => [experiment.id, experiment]))
@@ -100,6 +108,20 @@ export function PostsPage() {
     list.hasNextPage && !list.isFetchingNextPage && !list.isFetchNextPageError,
   )
   const statusLabel = narrowing.status ? t(`list.filter.${narrowing.status}`, { ns: 'posts' }) : ''
+  const remember = (post: PostListItem, intent?: 'export') => {
+    if (!user?.id) return
+    rememberPostEntry(user.id, {
+      path: '/posts',
+      section: 'posts',
+      filters: {
+        ...(narrowing.q ? { q: narrowing.q } : {}),
+        ...(narrowing.status ? { status: narrowing.status } : {}),
+      },
+      scrollY: window.scrollY,
+      targetId: post.slug,
+      intent,
+    })
+  }
   const noMatchText = narrowing.q?.trim()
     ? narrowing.status
       ? t('list.noMatch.both', { ns: 'posts', q: narrowing.q.trim(), status: statusLabel })
@@ -176,7 +198,10 @@ export function PostsPage() {
         </div>
       )}
 
-      <ul className="divide-divider mt-4 shrink-0 divide-y">
+      <ul
+        aria-label={t('list.history.directory', { ns: 'posts' })}
+        className="divide-divider mt-4 shrink-0 divide-y"
+      >
         {narrowed.map(({ post, matchedTags }) => {
           const status = rowStatus(
             post,
@@ -198,8 +223,13 @@ export function PostsPage() {
               >
                 {displayTitle(post)}
               </Typography>
-              <span className="flex w-full min-w-0 items-center gap-2 lg:w-auto lg:shrink-0 lg:justify-end">
+              <span className="flex w-full min-w-0 flex-wrap items-center gap-2 lg:w-auto lg:shrink-0 lg:justify-end">
                 <Badge tone={status.tone}>{status.label}</Badge>
+                {post.exportReady && (
+                  <span className={typographyStyles({ variant: 'meta', className: 'shrink-0' })}>
+                    {t('list.history.exportReady', { ns: 'posts' })}
+                  </span>
+                )}
                 {post.voice && (
                   <VoiceRefLabel
                     voice={post.voice}
@@ -237,23 +267,99 @@ export function PostsPage() {
           // layout centred on a desk. The title takes the free space and the metadata settles
           // against the right edge, so status, voice and time line up down the list.
           const rowClass =
-            'hover:bg-row-bg-hover active:bg-row-bg-active flex min-h-11 flex-col items-start justify-center gap-1 px-4 py-3 sm:px-6 lg:flex-row lg:items-center lg:gap-4 lg:px-8'
+            'hover:bg-row-bg-hover active:bg-row-bg-active flex min-h-11 min-w-0 flex-1 flex-col items-start justify-center gap-1 px-4 py-3 sm:px-6 lg:flex-row lg:items-center lg:gap-4 lg:px-8'
+          const runningJob =
+            post.activeJob && !isTerminal(post.activeJob) ? post.activeJob : undefined
+          const failedJob =
+            post.latestOrdinaryFailure ??
+            (post.activeJob?.status === 'failed' ? post.activeJob : undefined)
+          const failure = failedJob?.failure
           return (
-            <li key={post.slug}>
-              {post.pendingExperimentId && !post.activeJob ? (
+            <li
+              key={post.slug}
+              data-post-slug={post.slug}
+              className={
+                runningJob || failure
+                  ? 'flex flex-col'
+                  : 'flex flex-col lg:flex-row lg:items-center'
+              }
+            >
+              {post.pendingExperimentId && !runningJob && !failedJob ? (
                 <Link
                   to="/posts/experiments/$id"
                   params={{ id: post.pendingExperimentId }}
                   search={{ from: 'posts', q: narrowing.q, status: narrowing.status }}
                   className={rowClass}
+                  onClick={() => remember(post)}
                 >
                   {content}
                 </Link>
               ) : (
-                <Link to="/posts/$slug" params={{ slug: post.slug }} className={rowClass}>
+                <Link
+                  to="/posts/$slug"
+                  params={{ slug: post.slug }}
+                  className={rowClass}
+                  onClick={() => remember(post)}
+                >
                   {content}
                 </Link>
               )}
+              {/* Each recovery/export target is a sibling of the work link. A canonical
+                  draft remains exportable, and a lifecycle label alone proves no content. */}
+              <div className="flex shrink-0 flex-wrap items-center gap-x-2 gap-y-1 px-4 pb-2 sm:px-6 lg:px-8 lg:py-2">
+                {(runningJob || failure) && (
+                  <Typography
+                    variant={runningJob ? 'meta' : 'body'}
+                    className="text-content-secondary w-full"
+                  >
+                    {runningJob ? progressLabel(runningJob) : failure && formatAppFailure(failure)}
+                  </Typography>
+                )}
+                <Link
+                  to="/posts/$slug"
+                  params={{ slug: post.slug }}
+                  onClick={() => remember(post)}
+                  className={buttonStyles({ variant: 'ghost', className: '-ml-3' })}
+                >
+                  {t(
+                    post.status === 'published' || post.status === 'finalized' || runningJob
+                      ? 'list.history.open'
+                      : 'list.history.continue',
+                    { ns: 'posts' },
+                  )}
+                </Link>
+                {post.exportReady && (
+                  <Link
+                    to="/posts/$slug"
+                    params={{ slug: post.slug }}
+                    onClick={() => remember(post, 'export')}
+                    className={buttonStyles({ variant: 'ghost' })}
+                  >
+                    {t('list.history.export', { ns: 'posts' })}
+                  </Link>
+                )}
+                {post.pendingExperimentId && (runningJob || failedJob) && (
+                  <Link
+                    to="/posts/experiments/$id"
+                    params={{ id: post.pendingExperimentId }}
+                    search={{ from: 'posts', q: narrowing.q, status: narrowing.status }}
+                    onClick={() => remember(post)}
+                    className={buttonStyles({ variant: 'ghost' })}
+                  >
+                    {t('list.history.result', { ns: 'posts' })}
+                  </Link>
+                )}
+                {post.publishedUrl && (
+                  <a
+                    href={post.publishedUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className={buttonStyles({ variant: 'ghost' })}
+                  >
+                    {t('list.history.published', { ns: 'posts' })}
+                  </a>
+                )}
+              </div>
             </li>
           )
         })}
@@ -283,26 +389,6 @@ export function PostsPage() {
           )}
         </div>
       )}
-
-      {/* ONE 새 글, in the same place the voice directory puts its own add action. It used to be
-          two — a docked bar on the phone and a second copy beside the heading from `sm:` up — which
-          is two links to the same route in the DOM and two things to keep in step for a button
-          that is never ambiguous about what it does. It docks in the thumb's band on a phone: in
-          the top-right corner it was ~820px above the bottom edge of a 430x932 phone, a re-grip
-          away from the one action this screen exists for (THEME-24), and above the empty state that
-          points at it. `mt-auto` puts it at the bottom of a SHORT list; `sticky` keeps it there
-          once the list is long enough to scroll — at EVERY width, because a desk list scrolls too
-          and the button went with it (THEME-24). Above the phone it shrinks to the width of the
-          button and settles against the right edge. */}
-      <ActionBar
-        dock="list"
-        ariaLabel={t('list.writingAria', { ns: 'posts' })}
-        className="mt-auto mr-4 sm:mr-6 lg:mr-8"
-      >
-        <Link to="/posts/new" className={buttonStyles({ variant: 'cta' })}>
-          {t('new', { ns: 'posts' })}
-        </Link>
-      </ActionBar>
     </main>
   )
 }

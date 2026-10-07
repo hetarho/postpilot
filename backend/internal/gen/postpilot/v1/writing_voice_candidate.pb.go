@@ -90,10 +90,11 @@ func (x *WritingVoiceCandidate) GetSample() string {
 }
 
 type EstimateWritingVoiceCandidatesRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	WriteModel    *ModelRef              `protobuf:"bytes,1,opt,name=write_model,json=writeModel,proto3" json:"write_model,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	WriteModel     *ModelRef              `protobuf:"bytes,1,opt,name=write_model,json=writeModel,proto3" json:"write_model,omitempty"`
+	CandidateCount int32                  `protobuf:"varint,2,opt,name=candidate_count,json=candidateCount,proto3" json:"candidate_count,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *EstimateWritingVoiceCandidatesRequest) Reset() {
@@ -131,6 +132,13 @@ func (x *EstimateWritingVoiceCandidatesRequest) GetWriteModel() *ModelRef {
 		return x.WriteModel
 	}
 	return nil
+}
+
+func (x *EstimateWritingVoiceCandidatesRequest) GetCandidateCount() int32 {
+	if x != nil {
+		return x.CandidateCount
+	}
+	return 0
 }
 
 type EstimateWritingVoiceCandidatesResponse struct {
@@ -186,10 +194,11 @@ func (x *EstimateWritingVoiceCandidatesResponse) GetFree() bool {
 }
 
 type StartWritingVoiceCandidatesRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	WriteModel    *ModelRef              `protobuf:"bytes,1,opt,name=write_model,json=writeModel,proto3" json:"write_model,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	WriteModel     *ModelRef              `protobuf:"bytes,1,opt,name=write_model,json=writeModel,proto3" json:"write_model,omitempty"`
+	CandidateCount int32                  `protobuf:"varint,2,opt,name=candidate_count,json=candidateCount,proto3" json:"candidate_count,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *StartWritingVoiceCandidatesRequest) Reset() {
@@ -227,6 +236,13 @@ func (x *StartWritingVoiceCandidatesRequest) GetWriteModel() *ModelRef {
 		return x.WriteModel
 	}
 	return nil
+}
+
+func (x *StartWritingVoiceCandidatesRequest) GetCandidateCount() int32 {
+	if x != nil {
+		return x.CandidateCount
+	}
+	return 0
 }
 
 type StartWritingVoiceCandidatesResponse struct {
@@ -661,18 +677,20 @@ const file_postpilot_v1_writing_voice_candidate_proto_rawDesc = "" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12 \n" +
 	"\vdescription\x18\x03 \x01(\tR\vdescription\x12\x16\n" +
-	"\x06sample\x18\x04 \x01(\tR\x06sample\"`\n" +
+	"\x06sample\x18\x04 \x01(\tR\x06sample\"\x89\x01\n" +
 	"%EstimateWritingVoiceCandidatesRequest\x127\n" +
 	"\vwrite_model\x18\x01 \x01(\v2\x16.postpilot.v1.ModelRefR\n" +
-	"writeModel\"g\n" +
+	"writeModel\x12'\n" +
+	"\x0fcandidate_count\x18\x02 \x01(\x05R\x0ecandidateCount\"g\n" +
 	"&EstimateWritingVoiceCandidatesResponse\x12\x1d\n" +
 	"\acredits\x18\x01 \x01(\x05H\x00R\acredits\x88\x01\x01\x12\x12\n" +
 	"\x04free\x18\x02 \x01(\bR\x04freeB\n" +
 	"\n" +
-	"\b_credits\"]\n" +
+	"\b_credits\"\x86\x01\n" +
 	"\"StartWritingVoiceCandidatesRequest\x127\n" +
 	"\vwrite_model\x18\x01 \x01(\v2\x16.postpilot.v1.ModelRefR\n" +
-	"writeModel\"<\n" +
+	"writeModel\x12'\n" +
+	"\x0fcandidate_count\x18\x02 \x01(\x05R\x0ecandidateCount\"<\n" +
 	"#StartWritingVoiceCandidatesResponse\x12\x15\n" +
 	"\x06job_id\x18\x01 \x01(\tR\x05jobId\"9\n" +
 	" GetWritingVoiceCandidatesRequest\x12\x15\n" +

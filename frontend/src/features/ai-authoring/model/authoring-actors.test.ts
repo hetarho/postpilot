@@ -101,3 +101,111 @@ it('restores durable running state without invoking a model command and rejects 
   expect(execute).not.toHaveBeenCalled()
   actor.stop()
 })
+
+it('admits one manual CAS, retains invalid source separately from preview, and ignores late/foreign responses', async () => {
+  let finish!: (value: AuthoringResult) => void
+  const execute = vi.fn((input: AuthoringWork) => {
+    expect(input.retry?.type).toBe('patch')
+    return new Promise<AuthoringResult>((resolve) => {
+      finish = resolve
+    })
+  })
+  const actor = createActor(
+    authoringMachine.provide({
+      actors: {
+        execute: fromPromise<AuthoringResult, AuthoringWork>(({ input }) => execute(input)),
+      },
+    }),
+    { input: scope },
+  ).start()
+  const scopeKey = actor.getSnapshot().context.scopeKey
+  actor.send({ type: 'hydrate', scopeKey, session })
+  const source = { ...session.selected!, body: '<unfinished' }
+  actor.send({ type: 'source', scopeKey, source })
+  expect(authoringStateOf(actor.getSnapshot()).sourceDirty).toBe(true)
+  actor.send({
+    type: 'begin',
+    scopeKey,
+    phase: 'saving',
+    retry: { type: 'save', sessionId: session.id, revision: 3, makeDefault: false },
+  })
+  expect(execute).not.toHaveBeenCalled()
+  const retry = {
+    type: 'patch' as const,
+    sessionId: session.id,
+    revision: 3,
+    operationKey: 'one-patch',
+    source,
+  }
+  actor.send({ type: 'begin', scopeKey, phase: 'patching', retry })
+  actor.send({ type: 'begin', scopeKey, phase: 'patching', retry })
+  expect(execute).toHaveBeenCalledTimes(1)
+  const input = execute.mock.calls[0][0]
+  actor.send({
+    type: 'response',
+    scopeKey: 'foreign',
+    operation: input.operation,
+    session: { ...session, revision: 100 },
+  })
+  actor.send({
+    type: 'response',
+    scopeKey,
+    operation: input.operation - 1,
+    session: { ...session, revision: 100 },
+  })
+  expect(actor.getSnapshot().matches('patching')).toBe(true)
+  finish({
+    scopeKey,
+    operation: input.operation,
+    session: {
+      ...session,
+      revision: 4,
+      workingSource: source,
+      draftState: 'invalid',
+      hasUnpublishedChanges: true,
+    },
+  })
+  await waitFor(actor, (s) => s.matches('editing'))
+  const state = authoringStateOf(actor.getSnapshot())
+  expect(state.directSource?.body).toBe('<unfinished')
+  expect(state.session?.selected?.body).toBe(session.selected!.body)
+  expect(state.sourceDirty).toBe(false)
+  actor.send({
+    type: 'begin',
+    scopeKey,
+    phase: 'saving',
+    retry: { type: 'save', sessionId: session.id, revision: 4, makeDefault: false },
+  })
+  expect(execute).toHaveBeenCalledTimes(1)
+  actor.send({ type: 'hydrate', scopeKey, session })
+  expect(authoringStateOf(actor.getSnapshot()).session?.revision).toBe(4)
+  actor.stop()
+})
+
+it('keeps the direct input baseline and reports a conflict when a newer read arrives', () => {
+  const actor = createActor(authoringMachine, { input: scope }).start()
+  const scopeKey = actor.getSnapshot().context.scopeKey
+  actor.send({ type: 'hydrate', scopeKey, session })
+  const source = { ...session.selected!, body: 'My unfinished local edit' }
+  actor.send({ type: 'source', scopeKey, source })
+  actor.send({
+    type: 'hydrate',
+    scopeKey,
+    session: {
+      ...session,
+      revision: 4,
+      workingSource: { ...source, body: 'Other tab edit' },
+      selected: { ...source, body: 'Other tab edit' },
+    },
+  })
+  let state = authoringStateOf(actor.getSnapshot())
+  expect(state.session?.revision).toBe(4)
+  expect(state.directSource?.body).toBe(source.body)
+  expect(state.sourceRevision).toBe(3)
+  expect(state.failure?.reason).toBe('AUTHORING_REVISION_CONFLICT')
+  actor.send({ type: 'source', scopeKey, source: { ...source, name: 'Keep my new name' } })
+  state = authoringStateOf(actor.getSnapshot())
+  expect(state.sourceRevision).toBe(3)
+  expect(state.directSource?.name).toBe('Keep my new name')
+  actor.stop()
+})

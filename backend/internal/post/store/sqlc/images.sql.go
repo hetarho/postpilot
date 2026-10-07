@@ -194,9 +194,9 @@ func (q *Queries) SetImageRotation(ctx context.Context, arg SetImageRotationPara
 	return result.RowsAffected()
 }
 
-const setObservedImageRotation = `-- name: SetObservedImageRotation :exec
-UPDATE images SET rotation = ?
-WHERE post_slug = ? AND filename = ? AND rotation_by_owner = 0
+const setObservedImageRotation = `-- name: SetObservedImageRotation :execrows
+UPDATE images SET rotation = ?1
+WHERE post_slug = ?2 AND filename = ?3 AND rotation_by_owner = 0 AND rotation <> ?1
 `
 
 type SetObservedImageRotationParams struct {
@@ -206,7 +206,10 @@ type SetObservedImageRotationParams struct {
 }
 
 // An observation turns its photo only while the owner never has (GEN-79).
-func (q *Queries) SetObservedImageRotation(ctx context.Context, arg SetObservedImageRotationParams) error {
-	_, err := q.db.ExecContext(ctx, setObservedImageRotation, arg.Rotation, arg.PostSlug, arg.Filename)
-	return err
+func (q *Queries) SetObservedImageRotation(ctx context.Context, arg SetObservedImageRotationParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, setObservedImageRotation, arg.Rotation, arg.PostSlug, arg.Filename)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }

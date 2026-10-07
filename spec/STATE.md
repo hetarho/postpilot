@@ -84,7 +84,6 @@
 | T602 | Authorize and verify browser-prepared analysis artifacts | ARCH CLIP QUOTA | T591 | todo |
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | todo |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | todo |
-| T622 | Freeze shared navigation authoring material and writing-test contracts | ARCH THEME POST EDIT VOICE MODEL QUOTA LANG | - | todo |
 | T623 | Expose current location parent access and contextual creation return | ARCH THEME CLIP MODEL | T622 T629 | todo |
 | T624 | Make writing spacious and replace archive browsing with operational history | ARCH THEME POST CLIP GEN | T622 | todo |
 | T625 | Unify named AI and direct editing with bounded seed-free candidate preparation | ARCH EDIT THEME MODEL QUOTA | T622 | todo |
@@ -101,6 +100,7 @@
 - create-task GEN POST GUIDE TMPL THEME EXPORT MKT LANG VOICE MEM QUAL MODEL EDIT: consume the prompt-engineering deltas with existing T624–T631 ownership; see docs/work/prompt-engineering-ssot-2026-10-07.md. Instruction-language and live-model quality comparisons are validation, not open product policy.
 
 ## log
+- 261007 main integration start: combine completed T624/T625/T629 with baseline/CAS/recovery corrections; preserve pending prompt-engineering requirements and validate the combined code
 - 261007 update-ssot prompt-engineering verified: spec lint exit0 with124 history/freshness warnings and13 editorial hints; thirteen revisions and51 decision deltas match STATE/chg, historical IDs/references/links/log checks and diff check pass; tasks/product code unchanged
 - 261007 update-ssot prompt-engineering affects active creation-comparison-ux attempts T624/17671fdd changes_requested, T625/2182ddca changes_requested and T629/7c124aa5 ready: synchronize/reassess affected deltas before submission/integration; existing checks do not verify new semantic-origin behavior
 - 261007 update-ssot prompt-engineering done: thirteen domains revised; phrase origins, visible AI expression, no photo-order chronology, maximum grounded tags and safe prompt inspection fixed; converted ideation has no open product decisions, existing unrelated open items retained

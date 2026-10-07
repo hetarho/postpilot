@@ -28,7 +28,7 @@ function renderSelect(
   const onSelect = vi.fn<(voiceId: string) => Promise<void>>(async () => {})
   const onCreateVoice = vi.fn()
   const transport = createFakeAuthTransport({ user: { id: 'alice' }, voice: { voices } })
-  render(
+  const field = (next: Partial<Parameters<typeof PostVoiceSelect>[0]> = {}) => (
     <PostVoiceSelect
       ownerId="alice"
       value="voice-default"
@@ -37,10 +37,15 @@ function renderSelect(
       onSelect={onSelect}
       onCreateVoice={onCreateVoice}
       {...props}
-    />,
-    { wrapper: withProviders(transport, createTestQueryClient()) },
+      {...next}
+    />
   )
-  return { onSelect, onCreateVoice }
+  const view = render(field(), { wrapper: withProviders(transport, createTestQueryClient()) })
+  return {
+    onSelect,
+    onCreateVoice,
+    rerender: (next: Partial<Parameters<typeof PostVoiceSelect>[0]>) => view.rerender(field(next)),
+  }
 }
 
 const picker = () => screen.findByRole('combobox', { name: /말투/ })
@@ -179,6 +184,25 @@ it('blocks reassignment while a job is active and says why', async () => {
   expect(screen.getByText('AI 작업이 끝나면 말투를 바꿀 수 있어요.')).toBeInTheDocument()
 })
 
+it('reassigns future writing while an independent test awaits review', async () => {
+  const user = userEvent.setup()
+  const { onSelect } = renderSelect({
+    blocked: reassignmentBlocker({ activeJob: undefined, pendingExperimentId: 'frozen-test' }),
+  })
+  await user.click(within(await pickReview(user)).getByRole('button', { name: '말투 변경' }))
+  expect(onSelect).toHaveBeenCalledWith('voice-review')
+})
+
+it('keeps published assignments disabled', async () => {
+  const user = userEvent.setup()
+  const { onSelect } = renderSelect({ disabled: true })
+  const field = await picker()
+  expect(field).toBeDisabled()
+  await user.click(field)
+  expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
+  expect(onSelect).not.toHaveBeenCalled()
+})
+
 // The directory is stale: the post service does not know the voice, and answers NotFound rather
 // than guessing.
 it('reports a refused reassignment under the field and keeps the old voice', async () => {
@@ -193,4 +217,19 @@ it('reports a refused reassignment under the field and keeps the old voice', asy
   const field = await picker()
   expect(field).toHaveTextContent('기본 말투')
   await waitFor(() => expect(field).toBeEnabled())
+})
+
+it.each([
+  { disabled: true },
+  {
+    blocked: reassignmentBlocker({ activeJob: { status: 'running' }, pendingExperimentId: 'test' }),
+  },
+])('rechecks a confirmation after the assignment becomes guarded', async (guard) => {
+  const user = userEvent.setup()
+  const { onSelect, rerender } = renderSelect()
+  const dialog = await pickReview(user)
+  rerender(guard)
+  await user.click(within(dialog).getByRole('button', { name: '말투 변경' }))
+  expect(onSelect).not.toHaveBeenCalled()
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
 })

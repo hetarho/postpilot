@@ -199,6 +199,9 @@ func toProtoSummary(s post.Summary) *postpilotv1.PostSummary {
 		TargetLanguage:      languageToProto(s.TargetLanguage),
 		ContentLanguage:     optionalLanguageToProto(s.ContentLanguage),
 		Tags:                s.Tags,
+		ContentReady:        s.ContentReady, ExportReady: s.ExportReady, PublishedUrl: s.PublishedURL,
+		LatestOrdinaryFailure: toProtoActiveJob(s.LatestOrdinaryFailure),
+		InputRevision:         s.InputRevision, ContentRevision: s.ContentRevision,
 	}
 }
 
@@ -479,6 +482,7 @@ func toProtoPost(p post.Post) *postpilotv1.Post {
 		Content:                 toProtoContent(p.Content),
 		Observations:            observations,
 		PendingExperimentId:     p.PendingExperimentID,
+		InputRevision:           p.InputRevision,
 		ContentRevision:         p.ContentRevision,
 		MachineBaselineRevision: p.MachineBaselineRevision,
 		// A published post is already past finalization: its way back is clearing the address.

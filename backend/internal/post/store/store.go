@@ -169,19 +169,27 @@ func (s *Store) UpsertTemplateAnswers(ctx context.Context, slug string, answers 
 		return err
 	}
 	stamp := formatTime(updatedAt)
+	changed := false
 	for _, answer := range answers {
 		enabled := int64(0)
 		if answer.Enabled {
 			enabled = 1
 		}
-		if err := q.UpsertPostTemplateAnswer(ctx, sqlc.UpsertPostTemplateAnswerParams{
+		n, err := q.UpsertPostTemplateAnswer(ctx, sqlc.UpsertPostTemplateAnswerParams{
 			PostSlug:  slug,
 			Label:     answer.Label,
 			Answer:    answer.Text,
 			Enabled:   enabled,
 			UpdatedAt: stamp,
-		}); err != nil {
+		})
+		if err != nil {
 			return fmt.Errorf("upsert template answer: %w", err)
+		}
+		changed = changed || n > 0
+	}
+	if changed {
+		if _, err := q.AdvancePostInputRevision(ctx, sqlc.AdvancePostInputRevisionParams{Slug: slug, UpdatedAt: stamp}); err != nil {
+			return err
 		}
 	}
 	if err := tx.Commit(); err != nil {
@@ -245,11 +253,19 @@ func (s *Store) UpdateObservations(ctx context.Context, slug, userID string, obs
 	}
 	// Each observed photo takes its entry's turn unless its owner turned it (GEN-79); a video's
 	// filename names no image row, so its entry turns nothing.
+	turned := false
 	for _, observation := range observations {
-		if err := q.SetObservedImageRotation(ctx, sqlc.SetObservedImageRotationParams{
+		n, err := q.SetObservedImageRotation(ctx, sqlc.SetObservedImageRotationParams{
 			Rotation: int64(observation.Rotation), PostSlug: slug, Filename: observation.File,
-		}); err != nil {
+		})
+		if err != nil {
 			return false, fmt.Errorf("turn observed photo: %w", err)
+		}
+		turned = turned || n > 0
+	}
+	if turned {
+		if _, err := q.AdvancePostInputRevision(ctx, sqlc.AdvancePostInputRevisionParams{Slug: slug, UpdatedAt: formatTime(updatedAt)}); err != nil {
+			return false, err
 		}
 	}
 	if err := tx.Commit(); err != nil {
@@ -490,7 +506,10 @@ func (s *Store) ListPosts(ctx context.Context, userID string, filter post.ListFi
 			TargetLanguage:  post.Language(row.TargetLanguage),
 			ContentLanguage: nullableLanguage(row.ContentLanguage),
 			Tags:            tags,
-			Cursor:          post.ListCursor{UpdatedAt: row.UpdatedAt, Slug: row.Slug},
+			ContentReady:    row.ContentReady != 0,
+			ExportReady:     row.ContentReady != 0 && row.ContentLanguage.Valid,
+			PublishedURL:    row.PublishedUrl.String, InputRevision: row.InputRevision, ContentRevision: row.ContentRevision,
+			Cursor: post.ListCursor{UpdatedAt: row.UpdatedAt, Slug: row.Slug},
 		})
 	}
 	return summaries, nil
@@ -589,21 +608,46 @@ func (s *Store) GetImage(ctx context.Context, id string) (post.Image, error) {
 // SetImageRotation records the owner's turn; false is a photo already gone or a published post
 // (POST-74), which the caller tells apart by re-reading the post.
 func (s *Store) SetImageRotation(ctx context.Context, id string, rotation int32) (bool, error) {
-	n, err := s.write.SetImageRotation(ctx, sqlc.SetImageRotationParams{Rotation: int64(rotation), ID: id})
-	if err != nil {
-		return false, fmt.Errorf("rotate image: %w", err)
-	}
-	return n > 0, nil
+	return s.changeImage(ctx, id, func(q *sqlc.Queries, image sqlc.Image) (bool, bool, error) {
+		n, err := q.SetImageRotation(ctx, sqlc.SetImageRotationParams{Rotation: int64(rotation), ID: id})
+		return n > 0, n > 0 && image.Rotation != int64(rotation), err
+	})
 }
 
-// DeleteImage reports false for a photo already gone or one whose post is published: the
-// statement refuses the second (POST-74), and the caller re-reads the post to tell them apart.
 func (s *Store) DeleteImage(ctx context.Context, id string) (bool, error) {
-	n, err := s.write.DeleteImage(ctx, id)
+	return s.changeImage(ctx, id, func(q *sqlc.Queries, _ sqlc.Image) (bool, bool, error) {
+		n, err := q.DeleteImage(ctx, id)
+		return n > 0, n > 0, err
+	})
+}
+
+func (s *Store) changeImage(ctx context.Context, id string, change func(*sqlc.Queries, sqlc.Image) (bool, bool, error)) (bool, error) {
+	tx, err := s.writer.BeginTx(ctx, nil)
 	if err != nil {
-		return false, fmt.Errorf("delete image: %w", err)
+		return false, err
 	}
-	return n > 0, nil
+	defer tx.Rollback()
+	q := s.write.WithTx(tx)
+	image, err := q.GetImage(ctx, id)
+	if errors.Is(err, sql.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	matched, changed, err := change(q, image)
+	if err != nil {
+		return false, err
+	}
+	if changed {
+		if _, err := q.AdvancePostInputRevision(ctx, sqlc.AdvancePostInputRevisionParams{Slug: image.PostSlug, UpdatedAt: formatTime(time.Now())}); err != nil {
+			return false, err
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		return false, err
+	}
+	return matched, nil
 }
 
 // ImageFilenameTaken reports a CONFIRMED photo with this name. A pending upload is
@@ -673,9 +717,30 @@ func (s *Store) GetVideo(ctx context.Context, id string) (post.Video, error) {
 // DeleteVideo reports false for a clip already gone or one whose post is published, as
 // DeleteImage does.
 func (s *Store) DeleteVideo(ctx context.Context, id string) (bool, error) {
-	n, err := s.write.DeleteVideo(ctx, id)
+	tx, err := s.writer.BeginTx(ctx, nil)
 	if err != nil {
-		return false, fmt.Errorf("delete video: %w", err)
+		return false, err
+	}
+	defer tx.Rollback()
+	q := s.write.WithTx(tx)
+	video, err := q.GetVideo(ctx, id)
+	if errors.Is(err, sql.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	n, err := q.DeleteVideo(ctx, id)
+	if err != nil {
+		return false, err
+	}
+	if n > 0 {
+		if _, err := q.AdvancePostInputRevision(ctx, sqlc.AdvancePostInputRevisionParams{Slug: video.PostSlug, UpdatedAt: formatTime(time.Now())}); err != nil {
+			return false, err
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		return false, err
 	}
 	return n > 0, nil
 }
@@ -835,6 +900,9 @@ func (s *Store) ConfirmUpload(ctx context.Context, img post.Image, uploadID stri
 	if err := q.DeleteUpload(ctx, uploadID); err != nil {
 		return fmt.Errorf("delete upload: %w", err)
 	}
+	if _, err := q.AdvancePostInputRevision(ctx, sqlc.AdvancePostInputRevisionParams{Slug: img.PostSlug, UpdatedAt: formatTime(img.CreatedAt)}); err != nil {
+		return err
+	}
 
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("commit confirm: %w", err)
@@ -864,6 +932,9 @@ func (s *Store) ConfirmVideoUpload(ctx context.Context, video post.Video, upload
 	}
 	if err := q.DeleteUpload(ctx, uploadID); err != nil {
 		return fmt.Errorf("delete upload: %w", err)
+	}
+	if _, err := q.AdvancePostInputRevision(ctx, sqlc.AdvancePostInputRevisionParams{Slug: video.PostSlug, UpdatedAt: formatTime(video.CreatedAt)}); err != nil {
+		return err
 	}
 
 	if err := tx.Commit(); err != nil {
@@ -995,6 +1066,7 @@ func toPost(row sqlc.Post) (post.Post, error) {
 		CreatedAt:               createdAt,
 		UpdatedAt:               updatedAt,
 		Content:                 content,
+		InputRevision:           row.InputRevision,
 		ContentRevision:         row.ContentRevision,
 		MachineBaselineRevision: row.MachineBaselineRevision,
 		TargetLength:            optionalInt(row.TargetLength),

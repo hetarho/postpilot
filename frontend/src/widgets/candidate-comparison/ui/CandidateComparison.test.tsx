@@ -300,3 +300,114 @@ it('lists a photo group as one line naming its layout, files and caption', () =>
   // An unspecified layout reads as a collage, as the writer's filter makes it (GEN-78).
   expect(screen.getAllByText('사진 묶음(콜라주) · c.jpg, d.jpg')).toHaveLength(2)
 })
+
+it('distinguishes an expired successful payload from a still-running original candidate', () => {
+  const experiment = {
+    ...base,
+    candidates: base.candidates.map((candidate) => ({
+      ...candidate,
+      output: undefined,
+      status: candidate.id === 'left' ? ('succeeded' as const) : ('running' as const),
+    })),
+  }
+  render(<CandidateComparison experiment={experiment} activeCandidateId="left" />)
+  expect(
+    within(screen.getByRole('article', { name: '후보 A' })).getByText(
+      '보관 기간이 지나 이 결과는 지워졌어요.',
+    ),
+  ).toBeInTheDocument()
+  expect(
+    within(screen.getByRole('article', { name: '후보 A' })).queryByText('결과를 기다리는 중…'),
+  ).not.toBeInTheDocument()
+  expect(
+    within(screen.getByRole('article', { name: '후보 B' })).getByText('결과를 기다리는 중…'),
+  ).toBeInTheDocument()
+})
+
+it('retains every stored video observation event and the complete speech text without exposing its hidden model', () => {
+  render(
+    <CandidateComparison
+      experiment={{
+        ...base,
+        stage: 'observe',
+        candidates: base.candidates.map((candidate) => ({
+          ...candidate,
+          output: {
+            kind: 'observe',
+            observations: [
+              create(ObservationSchema, {
+                file: 'original.mp4',
+                scene: 'Original scene',
+                events: ['First stored event', 'Last stored event'],
+                speech: 'Stored speech\nStored sound',
+                model: 'hidden-provider/model',
+              }),
+            ],
+          },
+        })),
+      }}
+      activeCandidateId="left"
+    />,
+  )
+  const first = within(screen.getByRole('article', { name: '후보 A' }))
+  expect(first.getByText('First stored event')).toBeInTheDocument()
+  expect(first.getByText('Last stored event')).toBeInTheDocument()
+  expect(first.getByText(/Stored speech/)).toHaveTextContent('Stored sound')
+  expect(screen.queryByText(/hidden-provider/)).not.toBeInTheDocument()
+})
+
+it('presents original ranks as historical metadata and never shows ranking or skip controls', () => {
+  const experiment: ModelExperiment = {
+    ...base,
+    status: 'completed',
+    revealed: true,
+    reviewMode: 'candidate_ranking',
+    candidates: base.candidates.map((candidate) => ({ ...candidate, rank: 1 })),
+  }
+  const view = render(<CandidateComparison experiment={experiment} activeCandidateId="left" />)
+  expect(screen.getAllByText('저장된 순위 · 1위 · 같은 순위')).toHaveLength(2)
+  expect(screen.queryByRole('button')).not.toBeInTheDocument()
+  expect(screen.queryByText(/Elo|순위 정하기|순위 건너뛰기/)).not.toBeInTheDocument()
+  view.rerender(
+    <CandidateComparison
+      experiment={{
+        ...experiment,
+        candidates: experiment.candidates.map((candidate) => ({ ...candidate, rank: undefined })),
+      }}
+      activeCandidateId="left"
+    />,
+  )
+  expect(screen.getByText('저장된 순위가 없는 이전 기록이에요.')).toBeInTheDocument()
+  expect(screen.queryByText('순위를 남기지 않고 비교를 마쳤어요.')).not.toBeInTheDocument()
+})
+
+it('keeps stored video captions, quotes and tags readable in legacy complete posts', () => {
+  const content = create(PostContentSchema, {
+    title: 'Retained full output',
+    tags: ['retained'],
+    blocks: [
+      create(BlockSchema, {
+        type: BlockType.VIDEO,
+        file: 'original.mp4',
+        caption: 'Original clip caption',
+      }),
+      create(BlockSchema, { type: BlockType.QUOTE, content: 'Original quoted text' }),
+    ],
+  })
+  render(
+    <CandidateComparison
+      experiment={{
+        ...base,
+        candidates: base.candidates.map((candidate) => ({
+          ...candidate,
+          output: { kind: 'write', content },
+        })),
+      }}
+      activeCandidateId="left"
+    />,
+  )
+  const first = within(screen.getByRole('article', { name: '후보 A' }))
+  expect(first.getByText('동영상 · original.mp4: Original clip caption')).toBeInTheDocument()
+  expect(first.getByText('Original quoted text').closest('blockquote')).not.toBeNull()
+  expect(first.getByRole('list', { name: '태그' })).toHaveTextContent('#retained')
+})

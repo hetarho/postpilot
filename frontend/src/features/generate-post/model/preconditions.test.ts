@@ -101,6 +101,23 @@ describe('generationPreconditions', () => {
     ).toBe(true)
   })
 
+  it.each(['done', 'failed', 'cancelled'] as const)(
+    'permits ordinary writing after a job becomes %s',
+    (status) => {
+      expect(
+        ordinaryGenerationPreconditions({
+          images: [],
+          videos: [],
+          published: false,
+          activeJob: { status },
+          voice: undefined,
+          observe: undefined,
+          write: text,
+        }).ok,
+      ).toBe(true)
+    },
+  )
+
   // GEN-25: a deleted or not-yet-made voice refuses every machine result, whatever the models,
   // with the one shared message; a post with 말투 없음 writes with no voice and refuses nothing.
   it.each([
@@ -224,8 +241,7 @@ describe('setup blockers', () => {
     expect(isSetupBlocker(missingWrite.blocker)).toBe(true)
     expect(setupBlockerTarget(missingWrite.blocker)).toBe('brief')
 
-    // The A/B candidates moved into the brief with the active selections, so every fixable
-    // blocker now names the one surface — nobody is sent to the AI 모델 page mid-draft.
+    // Legacy comparisons own their entrants; the ordinary brief no longer edits a pair.
     const missingPair = comparisonGenerationPreconditions({
       images: [],
       videos: [],
@@ -236,7 +252,7 @@ describe('setup blockers', () => {
       writeA: text,
       writeB: undefined,
     })
-    expect(setupBlockerTarget(missingPair.blocker)).toBe('brief')
+    expect(setupBlockerTarget(missingPair.blocker)).toBeUndefined()
     expect(
       setupBlockerTarget(
         comparisonGenerationPreconditions({
@@ -250,7 +266,7 @@ describe('setup blockers', () => {
           writeB: text,
         }).blocker,
       ),
-    ).toBe('brief')
+    ).toBeUndefined()
 
     const missingObserve = ordinaryGenerationPreconditions({
       images: [image],
@@ -559,30 +575,21 @@ describe('a published post', () => {
 // words, so one visit fixes them all.
 describe('briefIssues', () => {
   it('marks every field 생성 is missing, and nothing of the pair', () => {
-    expect(briefIssues('generation', 1, 0, undefined, undefined, undefined, undefined)).toEqual({
+    expect(briefIssues('generation', 1, 0, undefined, undefined)).toEqual({
       observe: '관찰 모델을 선택하세요.',
       write: '활성 작성 모델을 선택하세요.',
     })
   })
 
-  it('marks the pair for A/B 비교, and nothing of the active writer', () => {
-    expect(briefIssues('comparison', 0, 0, undefined, undefined, text, undefined)).toEqual({
-      pair: '작성 A/B 모델 두 개를 선택하세요.',
-    })
-    expect(briefIssues('comparison', 0, 0, undefined, undefined, text, text)).toEqual({
-      pair: '서로 다른 작성 모델을 선택하세요.',
-    })
-  })
-
   it('asks nothing of the observe model for a post with no media', () => {
-    expect(briefIssues('generation', 0, 0, undefined, text, undefined, undefined)).toEqual({})
+    expect(briefIssues('generation', 0, 0, undefined, text)).toEqual({})
   })
 
   it('marks an observe model that cannot see the photos', () => {
-    expect(briefIssues('generation', 1, 0, text, text, undefined, undefined)).toEqual({
+    expect(briefIssues('generation', 1, 0, text, text)).toEqual({
       observe: '사진을 볼 수 있는 관찰 모델을 선택하세요.',
     })
-    expect(briefIssues('generation', 1, 0, vision, text, undefined, undefined)).toEqual({})
+    expect(briefIssues('generation', 1, 0, vision, text)).toEqual({})
   })
 })
 

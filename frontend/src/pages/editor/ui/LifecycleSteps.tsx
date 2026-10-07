@@ -16,6 +16,7 @@ import type {
 } from '@/features/generate-post'
 import type { BlockEditorHandle } from '@/features/edit-post-content'
 import { type ReviseFormHandle } from '@/features/edit-with-ai'
+import { proseStyles } from '@/shared/ui'
 import type { SaveState } from '@/features/save-draft'
 import { StorylineSpace } from '@/widgets/storyline-space'
 import { editorStepLabel, type EditorStep } from '../model/steps'
@@ -179,7 +180,12 @@ export function LifecycleSteps({
 
   return (
     <>
-      <div id={STEP_PANEL_ID} role="tabpanel" aria-label={editorStepLabel(step)}>
+      <div
+        id={STEP_PANEL_ID}
+        role="tabpanel"
+        aria-label={editorStepLabel(step)}
+        className={step === 'generate' ? undefined : proseStyles()}
+      >
         {step === 'generate' ? generatePanel : step === 'refine' ? refinePanel : finishPanel}
       </div>
 

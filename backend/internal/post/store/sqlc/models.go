@@ -49,6 +49,7 @@ type Post struct {
 	ContentNouns            sql.NullString
 	QualityRules            sql.NullString
 	Storyline               sql.NullString
+	InputRevision           int64
 }
 
 type Upload struct {

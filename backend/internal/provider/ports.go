@@ -67,3 +67,9 @@ type Credits interface {
 	// balance entirely (the operator tier).
 	Balance(ctx context.Context, userID string) (credits int, unlimited bool, err error)
 }
+
+// TestedModelAdoptions rechecks current execution rights, then commits selection and receipt
+// atomically. Existing receipts are replayed before live checks and never undo later edits.
+type TestedModelAdoptions interface {
+	AdoptTestModel(context.Context, TestModelAdoption) (TestModelReceipt, error)
+}

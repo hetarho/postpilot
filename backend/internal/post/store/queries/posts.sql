@@ -17,7 +17,10 @@ INSERT INTO posts (slug, user_id, voice_id, template_id, field, title, memo, tar
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?);
 
 -- name: UpdatePostDraft :execrows
-UPDATE posts SET title = sqlc.arg(title), memo = sqlc.arg(memo),
+UPDATE posts SET input_revision = input_revision + CASE WHEN title IS NOT sqlc.arg(title)
+        OR memo IS NOT sqlc.arg(memo)
+        OR target_language IS NOT COALESCE(sqlc.narg(target_language), target_language) THEN 1 ELSE 0 END,
+    title = sqlc.arg(title), memo = sqlc.arg(memo),
     target_language = COALESCE(sqlc.narg(target_language), target_language),
     updated_at = sqlc.arg(updated_at)
 WHERE slug = sqlc.arg(slug) AND user_id = sqlc.arg(user_id) AND status <> 'published';
@@ -29,20 +32,23 @@ WHERE slug = ? AND user_id = ? AND status <> 'published';
 -- name: UpdatePostStoryline :execrows
 -- A storyline job's answer replaces the post's storyline and nothing else: the content, the
 -- machine baseline, the status and the revisions stay (GEN-68, GEN-69). NULL is none.
-UPDATE posts SET storyline = sqlc.narg(storyline), updated_at = sqlc.arg(updated_at)
+UPDATE posts SET input_revision = input_revision + CASE WHEN storyline IS NOT sqlc.narg(storyline) THEN 1 ELSE 0 END,
+    storyline = sqlc.narg(storyline), updated_at = sqlc.arg(updated_at)
 WHERE slug = sqlc.arg(slug) AND user_id = sqlc.arg(user_id) AND status <> 'published';
 
 -- name: UpdatePostAttachmentTraces :execrows
 -- What a deleted attachment leaves behind, the observations and the storyline, in one statement
 -- (POST-18). NULL storyline is none.
-UPDATE posts SET observations = sqlc.arg(observations), storyline = sqlc.narg(storyline), updated_at = sqlc.arg(updated_at)
+UPDATE posts SET input_revision = input_revision + CASE WHEN storyline IS NOT sqlc.narg(storyline) THEN 1 ELSE 0 END,
+    observations = sqlc.arg(observations), storyline = sqlc.narg(storyline), updated_at = sqlc.arg(updated_at)
 WHERE slug = sqlc.arg(slug) AND user_id = sqlc.arg(user_id) AND status <> 'published';
 
 -- name: UpdateGeneratedContent :execrows
 -- The write's nouns and storyline ride the same statement, beside the content and never inside
 -- it (GEN-55, GEN-67). The service resolves them first, so NULL here always means none, and an
 -- identical content with different ones is a new machine write.
-UPDATE posts SET content = sqlc.arg(content), machine_baseline = sqlc.arg(machine_baseline),
+UPDATE posts SET input_revision = input_revision + CASE WHEN storyline IS NOT sqlc.narg(storyline) THEN 1 ELSE 0 END,
+    content = sqlc.arg(content), machine_baseline = sqlc.arg(machine_baseline),
     content_language = sqlc.arg(content_language),
     content_nouns = sqlc.narg(content_nouns),
     storyline = sqlc.narg(storyline),
@@ -66,8 +72,12 @@ WHERE slug = sqlc.arg(slug) AND user_id = sqlc.arg(user_id) AND content_revision
 -- The writing brief's run options, written as one set (POST-89): every column is the next value.
 -- They are options of the RUN, so they change no status, revision or baseline (MEM-18, POST-82).
 -- quality_rules is JSON, NULL for none; field is the blog field, NULL for none.
-UPDATE posts SET target_length = ?, tag_count = ?, use_memory = ?, quality_rules = ?, field = ?, updated_at = ?
-WHERE slug = ? AND user_id = ? AND status <> 'published';
+UPDATE posts SET input_revision = input_revision + CASE WHEN target_length IS NOT sqlc.narg(target_length)
+        OR COALESCE(tag_count, 4) IS NOT sqlc.narg(tag_count) OR use_memory IS NOT sqlc.arg(use_memory)
+        OR quality_rules IS NOT sqlc.narg(quality_rules) OR field IS NOT sqlc.narg(field) THEN 1 ELSE 0 END,
+    target_length = sqlc.narg(target_length), tag_count = sqlc.narg(tag_count), use_memory = sqlc.arg(use_memory),
+    quality_rules = sqlc.narg(quality_rules), field = sqlc.narg(field), updated_at = sqlc.arg(updated_at)
+WHERE slug = sqlc.arg(slug) AND user_id = sqlc.arg(user_id) AND status <> 'published';
 
 -- Finalizing also copies the confirmed AI title into posts.title (POST-17). ONE
 -- statement, still guarded by the exact revision, so the copy is atomic with the finalization and
@@ -75,15 +85,16 @@ WHERE slug = ? AND user_id = ? AND status <> 'published';
 -- empty content title leaves the user's working title in place. The slug is never re-minted.
 -- name: FinalizePost :execrows
 UPDATE posts SET status = 'finalized', finalized_revision = content_revision,
-    title = ?, finalized_at = ?, updated_at = ?
-WHERE slug = ? AND user_id = ? AND content_revision = ?
+    input_revision = input_revision + CASE WHEN title IS NOT sqlc.arg(title) THEN 1 ELSE 0 END,
+    title = sqlc.arg(title), finalized_at = sqlc.narg(finalized_at), updated_at = sqlc.arg(updated_at)
+WHERE slug = sqlc.arg(slug) AND user_id = sqlc.arg(user_id) AND content_revision = sqlc.arg(content_revision)
   AND content IS NOT NULL AND status <> 'published';
 
 -- name: GetPost :one
 SELECT slug, user_id, voice_id, title, memo, observations, content, status, created_at, updated_at,
        content_revision, machine_baseline, machine_baseline_revision,
        target_length, finalized_revision, finalized_at, template_id, target_language, content_language,
-       tag_count, use_memory, published_url, published_at, field, content_nouns, quality_rules, storyline
+       tag_count, use_memory, published_url, published_at, field, content_nouns, quality_rules, storyline, input_revision
 FROM posts WHERE slug = ?;
 
 -- name: PublishPost :execrows
@@ -121,6 +132,8 @@ SELECT EXISTS (SELECT 1 FROM posts WHERE slug = ? AND status = 'published');
 -- way the ORDER BY compares them, so a walk never repeats or skips a row. A row_limit of -1 is
 -- SQLite's "no limit", which the search asks for because its match runs in Go.
 SELECT slug, title, status, updated_at, voice_id, template_id, target_language, content_language,
+    input_revision, content_revision, published_url,
+    CAST(content IS NOT NULL AND content <> 'null' AND COALESCE(json_array_length(content, '$.blocks'), 0) > 0 AS INTEGER) AS content_ready,
     json_extract(content, '$.title') AS content_title,
     json_extract(content, '$.tags') AS content_tags
 FROM posts
@@ -137,7 +150,7 @@ LIMIT sqlc.arg(row_limit);
 -- learned from a post any more, and the hand-edit confirmation (POST-98) still reads the
 -- baseline after a reassignment. NULL is no voice (POST-23), and IS NOT is SQLite's
 -- NULL-safe inequality, so clearing to none and setting from none both count as a change.
-UPDATE posts SET voice_id = sqlc.narg(voice_id), updated_at = sqlc.arg(updated_at)
+UPDATE posts SET input_revision = input_revision + 1, voice_id = sqlc.narg(voice_id), updated_at = sqlc.arg(updated_at)
 WHERE slug = sqlc.arg(slug) AND user_id = sqlc.arg(user_id) AND status <> 'published'
   AND voice_id IS NOT sqlc.narg(voice_id);
 
@@ -151,7 +164,10 @@ WHERE slug = sqlc.arg(slug) AND user_id = sqlc.arg(user_id) AND status <> 'publi
 -- COALESCE says exactly "overwrite when the template has an opinion, keep the post's own
 -- otherwise", in this one statement, so a post can never be left seeded by an assignment
 -- that did not land. Clearing the assignment passes no seed at all.
-UPDATE posts SET template_id = sqlc.narg(template_id),
+UPDATE posts SET input_revision = input_revision + CASE WHEN template_id IS NOT sqlc.narg(template_id)
+        OR target_length IS NOT COALESCE(sqlc.narg(seed_target_length), target_length)
+        OR COALESCE(tag_count, 4) IS NOT COALESCE(sqlc.narg(seed_tag_count), tag_count, 4) THEN 1 ELSE 0 END,
+    template_id = sqlc.narg(template_id),
     target_length = COALESCE(sqlc.narg(seed_target_length), target_length),
     tag_count = COALESCE(sqlc.narg(seed_tag_count), tag_count),
     updated_at = sqlc.arg(updated_at)
@@ -161,7 +177,7 @@ WHERE slug = sqlc.arg(slug) AND user_id = sqlc.arg(user_id) AND status <> 'publi
 -- The blog field, NULL for none. Like the template it touches no status, revision, baseline or
 -- finalization column (POST-82). An equal value matches no row: IS NOT is SQLite's NULL-safe
 -- inequality, so clearing a field that is already none writes nothing either.
-UPDATE posts SET field = sqlc.narg(field), updated_at = sqlc.arg(updated_at)
+UPDATE posts SET input_revision = input_revision + 1, field = sqlc.narg(field), updated_at = sqlc.arg(updated_at)
 WHERE slug = sqlc.arg(slug) AND user_id = sqlc.arg(user_id) AND status <> 'published'
   AND field IS NOT sqlc.narg(field);
 
@@ -170,3 +186,8 @@ SELECT count(*) FROM posts WHERE voice_id = ? AND user_id = ?;
 
 -- name: DeletePost :execrows
 DELETE FROM posts WHERE slug = ? AND user_id = ?;
+
+-- name: AdvancePostInputRevision :execrows
+-- Runs in the same transaction as a changed answer, attachment or orientation.
+UPDATE posts SET input_revision = input_revision + 1, updated_at = sqlc.arg(updated_at)
+WHERE slug = sqlc.arg(slug) AND status <> 'published';

@@ -207,6 +207,7 @@ func TestTargetChangePreservesPostStateAndFrozenMachineWriteKeepsItsOwnLanguage(
 	}
 	want := before
 	want.TargetLanguage = post.LanguageEnglish
+	want.InputRevision++
 	want.UpdatedAt = changedAt
 	if !reflect.DeepEqual(after, want) {
 		t.Fatalf("target update changed unrelated state\n got: %#v\nwant: %#v", after, want)
@@ -881,7 +882,7 @@ func TestOnlyTheStorylineWritersWriteTheColumn(t *testing.T) {
 		}
 	}
 	sort.Strings(writers)
-	if want := []string{"UpdateGeneratedContent", "UpdatePostAttachmentTraces", "UpdatePostStoryline"}; !reflect.DeepEqual(writers, want) {
+	if want := []string{"ApplyPostTestOutput", "UpdateGeneratedContent", "UpdatePostAttachmentTraces", "UpdatePostStoryline"}; !reflect.DeepEqual(writers, want) {
 		t.Fatalf("storyline writers = %v, want %v", writers, want)
 	}
 }

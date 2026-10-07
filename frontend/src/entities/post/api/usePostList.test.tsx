@@ -1,6 +1,15 @@
-import { expect, it } from 'vitest'
+import { expect, it, vi } from 'vitest'
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { createRouterTransport } from '@connectrpc/connect'
+import { create } from '@bufbuild/protobuf'
+import {
+  contentLanguageToProto,
+  GenerationJobSchema,
+  ListPostsResponseSchema,
+  PostService,
+  PostSummarySchema,
+} from '@/shared/api'
+import { POLL_INTERVAL_MS } from '@/shared/config'
 import { registerPostService, type FakeListRequest } from '@/test/posts'
 import { createTestQueryClient, withProviders } from '@/test/session'
 import { listPostsQueryKey } from './post-queries'
@@ -55,4 +64,48 @@ it('answers each narrowing from its own pages, newest first and without repeats'
   view.rerender({ q: '제주' })
   await waitFor(() => expect(view.result.current.posts.map((post) => post.slug)).toEqual(['jeju']))
   expect(view.result.current.hasNextPage).toBe(false)
+})
+
+it('refreshes both history and picker while an ordinary job runs, then stops on a retained terminal snapshot', async () => {
+  let failed = false
+  let reads = 0
+  const transport = createRouterTransport((router) => {
+    router.rpc(PostService.method.listPosts, () => {
+      reads += 1
+      return create(ListPostsResponseSchema, {
+        posts: [
+          create(PostSummarySchema, {
+            slug: 'running',
+            targetLanguage: contentLanguageToProto('ko'),
+            activeJob: create(GenerationJobSchema, {
+              id: 'job',
+              status: failed ? 'failed' : 'running',
+              stage: 'write',
+            }),
+          }),
+        ],
+      })
+    })
+  })
+  const queryClient = createTestQueryClient()
+  const view = renderHook(() => ({ pages: usePostList({}), whole: usePosts() }), {
+    wrapper: withProviders(transport, queryClient),
+  })
+  try {
+    await waitFor(() => expect(view.result.current.pages.posts).toHaveLength(1))
+    await waitFor(() => expect(view.result.current.whole.posts).toHaveLength(1))
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] })
+    // Recreate polling intervals under the controlled clock after initial notifications.
+    await act(() => queryClient.refetchQueries())
+    failed = true
+    await act(() => vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS + 100))
+    await waitFor(() => expect(view.result.current.pages.posts[0].activeJob?.status).toBe('failed'))
+    await waitFor(() => expect(view.result.current.whole.posts[0].activeJob?.status).toBe('failed'))
+    const terminalReads = reads
+    await act(() => vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS * 3))
+    expect(reads).toBe(terminalReads)
+  } finally {
+    view.unmount()
+    vi.useRealTimers()
+  }
 })

@@ -1,4 +1,4 @@
-export { isInAppPath, SIGNED_IN_HOME } from './redirect'
+export { isInAppPath, SIGNED_IN_HOME } from './navigation'
 export { createAudioProcessor } from './media'
 export { MediaPhaseRecorder } from './media'
 export type { MediaPhaseMeasurement, MediaPhaseSnapshot } from './media'

@@ -331,8 +331,8 @@ func (s *Service) validTemplateAnswers(answers []TemplateAnswer) ([]TemplateAnsw
 }
 
 // reassignVoice moves an idle post to another active, made, owned voice, or clears it to
-// 말투 없음 when voiceID is empty. It is refused while a job or an undecided write experiment
-// could still apply output written for the old assignment; otherwise the store's single
+// 말투 없음 when voiceID is empty. An active ordinary job refuses reassignment;
+// queued tests and retained results never block future settings; otherwise the store's single
 // UPDATE changes voice_id and updated_at alone (POST-24).
 func (s *Service) reassignVoice(ctx context.Context, found Post, voiceID string) error {
 	target, err := s.assignableVoice(ctx, found.UserID, voiceID)
@@ -340,20 +340,11 @@ func (s *Service) reassignVoice(ctx context.Context, found Post, voiceID string)
 		return err
 	}
 	if s.jobs != nil {
-		active, err := s.jobs.ActiveForPost(ctx, found.Slug)
+		active, err := s.ordinaryForPost(ctx, found.UserID, found.Slug)
 		if err != nil {
 			return fmt.Errorf("check active job before reassignment: %w", err)
 		}
-		if active != nil {
-			return ErrPostBusy
-		}
-	}
-	if s.experiments != nil {
-		pending, err := s.experiments.PendingForPost(ctx, found.UserID, found.Slug)
-		if err != nil {
-			return fmt.Errorf("check pending experiment before reassignment: %w", err)
-		}
-		if pending != "" {
+		if blocksFutureSettings(active) {
 			return ErrPostBusy
 		}
 	}
@@ -372,6 +363,28 @@ func (s *Service) reassignVoice(ctx context.Context, found Post, voiceID string)
 		}
 	}
 	return nil
+}
+
+// Tests retain their frozen assignments and publish only through revision-checked
+// application. Their queue or review state never fences the next ordinary run.
+func blocksFutureSettings(active *ActiveJob) bool {
+	return active != nil && active.Kind != "model_experiment" && active.Kind != "writing_test"
+}
+
+func (s *Service) ordinaryForPost(ctx context.Context, userID, slug string) (*ActiveJob, error) {
+	if s.jobs == nil {
+		return nil, nil
+	}
+	if ordinary, ok := s.jobs.(OrdinaryJobFinder); ok {
+		return ordinary.ActiveOrdinaryForPost(ctx, userID, slug)
+	}
+	// The legacy job schema permits at most one active job per post. Until the
+	// filtered public read is wired, that single row can be classified safely.
+	active, err := s.jobs.ActiveForPost(ctx, slug)
+	if !blocksFutureSettings(active) {
+		active = nil
+	}
+	return active, err
 }
 
 // assignableVoice resolves the voice a post may be created in or moved to through the
@@ -600,9 +613,12 @@ func (s *Service) Get(ctx context.Context, userID, slug string) (Post, error) {
 	found.Videos = videos
 	found.TemplateAnswers = answers
 	if s.jobs != nil {
-		found.ActiveJob, err = s.jobs.ActiveForPost(ctx, slug)
+		found.ActiveJob, err = s.ordinaryForPost(ctx, userID, slug)
 		if err != nil {
 			return Post{}, fmt.Errorf("load active job: %w", err)
+		}
+		if !blocksFutureSettings(found.ActiveJob) {
+			found.ActiveJob = nil
 		}
 	}
 	if s.experiments != nil {
@@ -1042,11 +1058,11 @@ func (s *Service) SavePublishedURL(ctx context.Context, userID, slug, raw string
 		// content write carries the lock's predicate.
 		return Post{}, ErrPostNotFinalized
 	}
-	active, err := s.jobs.ActiveForPost(ctx, slug)
+	active, err := s.ordinaryForPost(ctx, userID, slug)
 	if err != nil {
 		return Post{}, fmt.Errorf("check active job before saving the published address: %w", err)
 	}
-	if active != nil && active.WritesContent {
+	if blocksFutureSettings(active) && active.WritesContent {
 		return Post{}, ErrPostBusy
 	}
 	if address == "" {

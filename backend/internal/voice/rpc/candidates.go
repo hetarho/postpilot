@@ -21,6 +21,14 @@ func (h *CandidateHandler) EstimateWritingVoiceCandidates(ctx context.Context, r
 	if _, err := actingUser(ctx); err != nil {
 		return nil, err
 	}
+	count, countErr := voice.NormalizeCandidateCount(int(req.Msg.GetCandidateCount()))
+	if countErr != nil {
+		return nil, rpcserver.NewAppError(connect.CodeInvalidArgument, "invalid candidate count", postpilotv1.FailureReason_AUTHORING_CANDIDATE_COUNT_INVALID, nil)
+	}
+	if count != voice.CandidateCount {
+		return nil, rpcserver.NewAppError(connect.CodeUnimplemented, "writing style preparation is not integrated", postpilotv1.FailureReason_AUTHORING_FEATURE_UNAVAILABLE, nil)
+	}
+
 	estimate, err := h.service.Estimate(ctx, fromProtoRef(req.Msg.GetWriteModel()))
 	if err != nil {
 		return nil, candidateConnectError("estimate writing styles", err)
@@ -37,6 +45,14 @@ func (h *CandidateHandler) StartWritingVoiceCandidates(ctx context.Context, req 
 	if err != nil {
 		return nil, err
 	}
+	count, countErr := voice.NormalizeCandidateCount(int(req.Msg.GetCandidateCount()))
+	if countErr != nil {
+		return nil, rpcserver.NewAppError(connect.CodeInvalidArgument, "invalid candidate count", postpilotv1.FailureReason_AUTHORING_CANDIDATE_COUNT_INVALID, nil)
+	}
+	if count != voice.CandidateCount {
+		return nil, rpcserver.NewAppError(connect.CodeUnimplemented, "writing style preparation is not integrated", postpilotv1.FailureReason_AUTHORING_FEATURE_UNAVAILABLE, nil)
+	}
+
 	id, err := h.service.Start(ctx, user, fromProtoRef(req.Msg.GetWriteModel()))
 	if err != nil {
 		return nil, candidateConnectError("start writing styles", err)

@@ -1,6 +1,32 @@
 import type { AppFailureReason } from '@/shared/api'
 
 export const errors = {
+  AUTHORING_CANDIDATE_COUNT_INVALID: '후보 수는 2개, 4개, 8개, 16개 중에서 선택해 주세요.',
+  AUTHORING_DRAFT_INVALID: '현재 수정한 내용을 확인한 뒤 저장해 주세요. 입력한 내용은 보존됐어요.',
+  AUTHORING_FEATURE_UNAVAILABLE: '이 편집 기능은 아직 준비 중이에요.',
+  VOICE_SAMPLE_REVISION_CONFLICT:
+    '학습 글이 변경됐어요. 입력 내용은 보존됐으니 최신 글을 확인해 주세요.',
+  VOICE_SAMPLE_UPDATE_INVALID: '학습 글의 내용과 사진을 확인한 뒤 저장해 주세요.',
+  WRITING_TEST_NOT_FOUND: '이 글쓰기 테스트를 찾을 수 없어요.',
+  WRITING_TEST_COUNT_INVALID: '참가 수는 2개, 4개, 8개, 16개 중에서 선택해 주세요.',
+  WRITING_TEST_FACTOR_INVALID: '비교할 설정 하나 또는 모델 단계 하나를 선택해 주세요.',
+  WRITING_TEST_ENTRANT_INVALID: '후보가 변경되었거나 사용할 수 없어요. 후보를 확인해 주세요.',
+  WRITING_TEST_ENTRANTS_DUPLICATE: '각 자리에 서로 다른 후보를 선택해 주세요.',
+  WRITING_TEST_REVISION_CONFLICT: '테스트가 변경됐어요. 최신 결과를 확인한 뒤 계속해 주세요.',
+  WRITING_TEST_MATCH_INVALID: '현재 대결의 두 후보 중 하나를 선택해 주세요.',
+  WRITING_TEST_DECISION_CONFLICT: '이미 선택이 확정된 대결이에요. 결과를 확인해 주세요.',
+  WRITING_TEST_STATE_INVALID: '현재 테스트 단계에서는 이 작업을 할 수 없어요.',
+  WRITING_TEST_PUBLICATION_CONFLICT: '저장할 대상이 변경됐어요. 테스트 결과는 보존됐어요.',
+  WRITING_TEST_OUTPUT_INCOMPATIBLE:
+    '이 결과는 원본 글에 적용할 수 없어요. 결과를 복사해서 사용할 수 있어요.',
+  WRITING_TEST_QUOTE_REQUIRED: '테스트를 시작하기 전에 현재 예상 사용량을 확인해 주세요.',
+  WRITING_TEST_RUNNING: '글쓰기 테스트를 준비하고 있어요. 진행 상태를 확인해 주세요.',
+  WRITING_TEST_MATERIAL_INVALID: '시작하기 전에 공통 글쓰기 재료를 확인해 주세요.',
+  WRITING_TEST_OPERATION_INVALID: '테스트를 다시 열고 작업을 재시도해 주세요.',
+  WRITING_TEST_LEGACY_READ_ONLY:
+    '이전 비교 결과는 읽기만 가능해요. 다시 비교하려면 글쓰기 테스트를 시작해 주세요.',
+  VOICE_CHECK_RETIRED: '저장된 검증은 읽기만 가능해요. 새 비교는 글쓰기 테스트를 이용해 주세요.',
+
   AUTHORING_SESSION_NOT_FOUND: '이 초안을 찾을 수 없어요. 새로 시작해 주세요.',
   AUTHORING_REVISION_CONFLICT: '다른 화면에서 초안이 바뀌었어요. 최신 내용을 확인해 주세요.',
   AUTHORING_RUNNING: '이미 AI가 초안을 만들고 있어요. 진행 상황을 확인해 주세요.',

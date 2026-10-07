@@ -18,7 +18,10 @@ import (
 	"github.com/postpilot/backend/internal/voice"
 )
 
-type Handler struct{ service *voice.Service }
+type Handler struct {
+	postpilotv1connect.UnimplementedVoiceServiceHandler
+	service *voice.Service
+}
 
 func NewHandler(service *voice.Service) *Handler { return &Handler{service: service} }
 

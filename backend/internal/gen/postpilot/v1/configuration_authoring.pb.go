@@ -128,6 +128,59 @@ func (AuthoringMode) EnumDescriptor() ([]byte, []int) {
 	return file_postpilot_v1_configuration_authoring_proto_rawDescGZIP(), []int{1}
 }
 
+// Selected is the last valid preview; working_source retains incomplete direct input.
+type AuthoringDraftState int32
+
+const (
+	AuthoringDraftState_AUTHORING_DRAFT_STATE_UNSPECIFIED AuthoringDraftState = 0
+	AuthoringDraftState_AUTHORING_DRAFT_STATE_VALID       AuthoringDraftState = 1
+	AuthoringDraftState_AUTHORING_DRAFT_STATE_INCOMPLETE  AuthoringDraftState = 2
+	AuthoringDraftState_AUTHORING_DRAFT_STATE_INVALID     AuthoringDraftState = 3
+)
+
+// Enum value maps for AuthoringDraftState.
+var (
+	AuthoringDraftState_name = map[int32]string{
+		0: "AUTHORING_DRAFT_STATE_UNSPECIFIED",
+		1: "AUTHORING_DRAFT_STATE_VALID",
+		2: "AUTHORING_DRAFT_STATE_INCOMPLETE",
+		3: "AUTHORING_DRAFT_STATE_INVALID",
+	}
+	AuthoringDraftState_value = map[string]int32{
+		"AUTHORING_DRAFT_STATE_UNSPECIFIED": 0,
+		"AUTHORING_DRAFT_STATE_VALID":       1,
+		"AUTHORING_DRAFT_STATE_INCOMPLETE":  2,
+		"AUTHORING_DRAFT_STATE_INVALID":     3,
+	}
+)
+
+func (x AuthoringDraftState) Enum() *AuthoringDraftState {
+	p := new(AuthoringDraftState)
+	*p = x
+	return p
+}
+
+func (x AuthoringDraftState) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (AuthoringDraftState) Descriptor() protoreflect.EnumDescriptor {
+	return file_postpilot_v1_configuration_authoring_proto_enumTypes[2].Descriptor()
+}
+
+func (AuthoringDraftState) Type() protoreflect.EnumType {
+	return &file_postpilot_v1_configuration_authoring_proto_enumTypes[2]
+}
+
+func (x AuthoringDraftState) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use AuthoringDraftState.Descriptor instead.
+func (AuthoringDraftState) EnumDescriptor() ([]byte, []int) {
+	return file_postpilot_v1_configuration_authoring_proto_rawDescGZIP(), []int{2}
+}
+
 type AuthoringArtifact struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -135,6 +188,7 @@ type AuthoringArtifact struct {
 	Description   string                 `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
 	Body          string                 `protobuf:"bytes,4,opt,name=body,proto3" json:"body,omitempty"`
 	TitleArea     string                 `protobuf:"bytes,5,opt,name=title_area,json=titleArea,proto3" json:"title_area,omitempty"`
+	Revision      uint32                 `protobuf:"varint,6,opt,name=revision,proto3" json:"revision,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -202,6 +256,13 @@ func (x *AuthoringArtifact) GetTitleArea() string {
 		return x.TitleArea
 	}
 	return ""
+}
+
+func (x *AuthoringArtifact) GetRevision() uint32 {
+	if x != nil {
+		return x.Revision
+	}
+	return 0
 }
 
 type AuthoringTurn struct {
@@ -341,22 +402,28 @@ func (x *AuthoringSavedRef) GetName() string {
 }
 
 type AuthoringSession struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	Id             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Kind           ConfigurationKind      `protobuf:"varint,2,opt,name=kind,proto3,enum=postpilot.v1.ConfigurationKind" json:"kind,omitempty"`
-	Revision       uint32                 `protobuf:"varint,3,opt,name=revision,proto3" json:"revision,omitempty"`
-	Phase          string                 `protobuf:"bytes,4,opt,name=phase,proto3" json:"phase,omitempty"`
-	Candidates     []*AuthoringArtifact   `protobuf:"bytes,5,rep,name=candidates,proto3" json:"candidates,omitempty"`
-	Selected       *AuthoringArtifact     `protobuf:"bytes,6,opt,name=selected,proto3" json:"selected,omitempty"`
-	Turns          []*AuthoringTurn       `protobuf:"bytes,7,rep,name=turns,proto3" json:"turns,omitempty"`
-	ActiveJobId    string                 `protobuf:"bytes,8,opt,name=active_job_id,json=activeJobId,proto3" json:"active_job_id,omitempty"`
-	Saved          *AuthoringSavedRef     `protobuf:"bytes,9,opt,name=saved,proto3" json:"saved,omitempty"`
-	TargetId       string                 `protobuf:"bytes,10,opt,name=target_id,json=targetId,proto3" json:"target_id,omitempty"`
-	TargetVersion  string                 `protobuf:"bytes,11,opt,name=target_version,json=targetVersion,proto3" json:"target_version,omitempty"`
-	FailureReason  string                 `protobuf:"bytes,12,opt,name=failure_reason,json=failureReason,proto3" json:"failure_reason,omitempty"`
-	PendingRequest string                 `protobuf:"bytes,13,opt,name=pending_request,json=pendingRequest,proto3" json:"pending_request,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	state                 protoimpl.MessageState `protogen:"open.v1"`
+	Id                    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Kind                  ConfigurationKind      `protobuf:"varint,2,opt,name=kind,proto3,enum=postpilot.v1.ConfigurationKind" json:"kind,omitempty"`
+	Revision              uint32                 `protobuf:"varint,3,opt,name=revision,proto3" json:"revision,omitempty"`
+	Phase                 string                 `protobuf:"bytes,4,opt,name=phase,proto3" json:"phase,omitempty"`
+	Candidates            []*AuthoringArtifact   `protobuf:"bytes,5,rep,name=candidates,proto3" json:"candidates,omitempty"`
+	Selected              *AuthoringArtifact     `protobuf:"bytes,6,opt,name=selected,proto3" json:"selected,omitempty"`
+	Turns                 []*AuthoringTurn       `protobuf:"bytes,7,rep,name=turns,proto3" json:"turns,omitempty"`
+	ActiveJobId           string                 `protobuf:"bytes,8,opt,name=active_job_id,json=activeJobId,proto3" json:"active_job_id,omitempty"`
+	Saved                 *AuthoringSavedRef     `protobuf:"bytes,9,opt,name=saved,proto3" json:"saved,omitempty"`
+	TargetId              string                 `protobuf:"bytes,10,opt,name=target_id,json=targetId,proto3" json:"target_id,omitempty"`
+	TargetVersion         string                 `protobuf:"bytes,11,opt,name=target_version,json=targetVersion,proto3" json:"target_version,omitempty"`
+	FailureReason         string                 `protobuf:"bytes,12,opt,name=failure_reason,json=failureReason,proto3" json:"failure_reason,omitempty"`
+	PendingRequest        string                 `protobuf:"bytes,13,opt,name=pending_request,json=pendingRequest,proto3" json:"pending_request,omitempty"`
+	WorkingSource         *AuthoringArtifact     `protobuf:"bytes,14,opt,name=working_source,json=workingSource,proto3" json:"working_source,omitempty"`
+	DraftState            AuthoringDraftState    `protobuf:"varint,15,opt,name=draft_state,json=draftState,proto3,enum=postpilot.v1.AuthoringDraftState" json:"draft_state,omitempty"`
+	SavedBaseline         *AuthoringArtifact     `protobuf:"bytes,16,opt,name=saved_baseline,json=savedBaseline,proto3" json:"saved_baseline,omitempty"`
+	HasUnpublishedChanges bool                   `protobuf:"varint,17,opt,name=has_unpublished_changes,json=hasUnpublishedChanges,proto3" json:"has_unpublished_changes,omitempty"`
+	CandidateCount        int32                  `protobuf:"varint,18,opt,name=candidate_count,json=candidateCount,proto3" json:"candidate_count,omitempty"`
+	SavedAvailable        bool                   `protobuf:"varint,19,opt,name=saved_available,json=savedAvailable,proto3" json:"saved_available,omitempty"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
 }
 
 func (x *AuthoringSession) Reset() {
@@ -478,6 +545,48 @@ func (x *AuthoringSession) GetPendingRequest() string {
 		return x.PendingRequest
 	}
 	return ""
+}
+
+func (x *AuthoringSession) GetWorkingSource() *AuthoringArtifact {
+	if x != nil {
+		return x.WorkingSource
+	}
+	return nil
+}
+
+func (x *AuthoringSession) GetDraftState() AuthoringDraftState {
+	if x != nil {
+		return x.DraftState
+	}
+	return AuthoringDraftState_AUTHORING_DRAFT_STATE_UNSPECIFIED
+}
+
+func (x *AuthoringSession) GetSavedBaseline() *AuthoringArtifact {
+	if x != nil {
+		return x.SavedBaseline
+	}
+	return nil
+}
+
+func (x *AuthoringSession) GetHasUnpublishedChanges() bool {
+	if x != nil {
+		return x.HasUnpublishedChanges
+	}
+	return false
+}
+
+func (x *AuthoringSession) GetCandidateCount() int32 {
+	if x != nil {
+		return x.CandidateCount
+	}
+	return 0
+}
+
+func (x *AuthoringSession) GetSavedAvailable() bool {
+	if x != nil {
+		return x.SavedAvailable
+	}
+	return false
 }
 
 type CreateAuthoringSessionRequest struct {
@@ -686,9 +795,11 @@ type EstimateAuthoringOperationRequest struct {
 	Mode       AuthoringMode          `protobuf:"varint,2,opt,name=mode,proto3,enum=postpilot.v1.AuthoringMode" json:"mode,omitempty"`
 	WriteModel *ModelRef              `protobuf:"bytes,3,opt,name=write_model,json=writeModel,proto3" json:"write_model,omitempty"`
 	// Existing drafts use their actual bounded size for the same frozen output cap.
-	SessionId     string `protobuf:"bytes,4,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	SessionId string `protobuf:"bytes,4,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	// Zero preserves the ordinary eight-candidate default. Explicit values: 2/4/8/16.
+	CandidateCount int32 `protobuf:"varint,5,opt,name=candidate_count,json=candidateCount,proto3" json:"candidate_count,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *EstimateAuthoringOperationRequest) Reset() {
@@ -747,6 +858,13 @@ func (x *EstimateAuthoringOperationRequest) GetSessionId() string {
 		return x.SessionId
 	}
 	return ""
+}
+
+func (x *EstimateAuthoringOperationRequest) GetCandidateCount() int32 {
+	if x != nil {
+		return x.CandidateCount
+	}
+	return 0
 }
 
 type EstimateAuthoringOperationResponse struct {
@@ -809,6 +927,7 @@ type StartAuthoringOperationRequest struct {
 	Mode             AuthoringMode          `protobuf:"varint,4,opt,name=mode,proto3,enum=postpilot.v1.AuthoringMode" json:"mode,omitempty"`
 	Prompt           string                 `protobuf:"bytes,5,opt,name=prompt,proto3" json:"prompt,omitempty"`
 	WriteModel       *ModelRef              `protobuf:"bytes,6,opt,name=write_model,json=writeModel,proto3" json:"write_model,omitempty"`
+	CandidateCount   int32                  `protobuf:"varint,7,opt,name=candidate_count,json=candidateCount,proto3" json:"candidate_count,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -885,6 +1004,13 @@ func (x *StartAuthoringOperationRequest) GetWriteModel() *ModelRef {
 	return nil
 }
 
+func (x *StartAuthoringOperationRequest) GetCandidateCount() int32 {
+	if x != nil {
+		return x.CandidateCount
+	}
+	return 0
+}
+
 type StartAuthoringOperationResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	JobId         string                 `protobuf:"bytes,1,opt,name=job_id,json=jobId,proto3" json:"job_id,omitempty"`
@@ -942,6 +1068,7 @@ type SelectAuthoringCandidateRequest struct {
 	SessionId        string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
 	ExpectedRevision uint32                 `protobuf:"varint,2,opt,name=expected_revision,json=expectedRevision,proto3" json:"expected_revision,omitempty"`
 	CandidateId      string                 `protobuf:"bytes,3,opt,name=candidate_id,json=candidateId,proto3" json:"candidate_id,omitempty"`
+	OperationKey     string                 `protobuf:"bytes,4,opt,name=operation_key,json=operationKey,proto3" json:"operation_key,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -993,6 +1120,13 @@ func (x *SelectAuthoringCandidateRequest) GetExpectedRevision() uint32 {
 func (x *SelectAuthoringCandidateRequest) GetCandidateId() string {
 	if x != nil {
 		return x.CandidateId
+	}
+	return ""
+}
+
+func (x *SelectAuthoringCandidateRequest) GetOperationKey() string {
+	if x != nil {
+		return x.OperationKey
 	}
 	return ""
 }
@@ -1054,6 +1188,7 @@ type SaveAuthoringSessionRequest struct {
 	SessionId        string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
 	ExpectedRevision uint32                 `protobuf:"varint,2,opt,name=expected_revision,json=expectedRevision,proto3" json:"expected_revision,omitempty"`
 	MakeDefault      bool                   `protobuf:"varint,3,opt,name=make_default,json=makeDefault,proto3" json:"make_default,omitempty"`
+	OperationKey     string                 `protobuf:"bytes,4,opt,name=operation_key,json=operationKey,proto3" json:"operation_key,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -1109,18 +1244,475 @@ func (x *SaveAuthoringSessionRequest) GetMakeDefault() bool {
 	return false
 }
 
+func (x *SaveAuthoringSessionRequest) GetOperationKey() string {
+	if x != nil {
+		return x.OperationKey
+	}
+	return ""
+}
+
+type AuthoringSummary struct {
+	state                 protoimpl.MessageState `protogen:"open.v1"`
+	SessionId             string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	Kind                  ConfigurationKind      `protobuf:"varint,2,opt,name=kind,proto3,enum=postpilot.v1.ConfigurationKind" json:"kind,omitempty"`
+	TargetId              string                 `protobuf:"bytes,3,opt,name=target_id,json=targetId,proto3" json:"target_id,omitempty"`
+	DisplayName           string                 `protobuf:"bytes,4,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	Revision              uint32                 `protobuf:"varint,5,opt,name=revision,proto3" json:"revision,omitempty"`
+	SavedAvailable        bool                   `protobuf:"varint,6,opt,name=saved_available,json=savedAvailable,proto3" json:"saved_available,omitempty"`
+	HasUnpublishedChanges bool                   `protobuf:"varint,7,opt,name=has_unpublished_changes,json=hasUnpublishedChanges,proto3" json:"has_unpublished_changes,omitempty"`
+	ActiveJobId           string                 `protobuf:"bytes,8,opt,name=active_job_id,json=activeJobId,proto3" json:"active_job_id,omitempty"`
+	PublicationPending    bool                   `protobuf:"varint,9,opt,name=publication_pending,json=publicationPending,proto3" json:"publication_pending,omitempty"`
+	TargetConflict        bool                   `protobuf:"varint,10,opt,name=target_conflict,json=targetConflict,proto3" json:"target_conflict,omitempty"`
+	LastPublication       *AuthoringSavedRef     `protobuf:"bytes,11,opt,name=last_publication,json=lastPublication,proto3" json:"last_publication,omitempty"`
+	UpdatedAt             string                 `protobuf:"bytes,12,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	DraftState            AuthoringDraftState    `protobuf:"varint,13,opt,name=draft_state,json=draftState,proto3,enum=postpilot.v1.AuthoringDraftState" json:"draft_state,omitempty"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
+}
+
+func (x *AuthoringSummary) Reset() {
+	*x = AuthoringSummary{}
+	mi := &file_postpilot_v1_configuration_authoring_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AuthoringSummary) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AuthoringSummary) ProtoMessage() {}
+
+func (x *AuthoringSummary) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_configuration_authoring_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AuthoringSummary.ProtoReflect.Descriptor instead.
+func (*AuthoringSummary) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_configuration_authoring_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *AuthoringSummary) GetSessionId() string {
+	if x != nil {
+		return x.SessionId
+	}
+	return ""
+}
+
+func (x *AuthoringSummary) GetKind() ConfigurationKind {
+	if x != nil {
+		return x.Kind
+	}
+	return ConfigurationKind_CONFIGURATION_KIND_UNSPECIFIED
+}
+
+func (x *AuthoringSummary) GetTargetId() string {
+	if x != nil {
+		return x.TargetId
+	}
+	return ""
+}
+
+func (x *AuthoringSummary) GetDisplayName() string {
+	if x != nil {
+		return x.DisplayName
+	}
+	return ""
+}
+
+func (x *AuthoringSummary) GetRevision() uint32 {
+	if x != nil {
+		return x.Revision
+	}
+	return 0
+}
+
+func (x *AuthoringSummary) GetSavedAvailable() bool {
+	if x != nil {
+		return x.SavedAvailable
+	}
+	return false
+}
+
+func (x *AuthoringSummary) GetHasUnpublishedChanges() bool {
+	if x != nil {
+		return x.HasUnpublishedChanges
+	}
+	return false
+}
+
+func (x *AuthoringSummary) GetActiveJobId() string {
+	if x != nil {
+		return x.ActiveJobId
+	}
+	return ""
+}
+
+func (x *AuthoringSummary) GetPublicationPending() bool {
+	if x != nil {
+		return x.PublicationPending
+	}
+	return false
+}
+
+func (x *AuthoringSummary) GetTargetConflict() bool {
+	if x != nil {
+		return x.TargetConflict
+	}
+	return false
+}
+
+func (x *AuthoringSummary) GetLastPublication() *AuthoringSavedRef {
+	if x != nil {
+		return x.LastPublication
+	}
+	return nil
+}
+
+func (x *AuthoringSummary) GetUpdatedAt() string {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return ""
+}
+
+func (x *AuthoringSummary) GetDraftState() AuthoringDraftState {
+	if x != nil {
+		return x.DraftState
+	}
+	return AuthoringDraftState_AUTHORING_DRAFT_STATE_UNSPECIFIED
+}
+
+type ListAuthoringSummariesRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Kind          ConfigurationKind      `protobuf:"varint,1,opt,name=kind,proto3,enum=postpilot.v1.ConfigurationKind" json:"kind,omitempty"`
+	UnsavedOnly   bool                   `protobuf:"varint,2,opt,name=unsaved_only,json=unsavedOnly,proto3" json:"unsaved_only,omitempty"`
+	PageSize      int32                  `protobuf:"varint,3,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	PageToken     string                 `protobuf:"bytes,4,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListAuthoringSummariesRequest) Reset() {
+	*x = ListAuthoringSummariesRequest{}
+	mi := &file_postpilot_v1_configuration_authoring_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListAuthoringSummariesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListAuthoringSummariesRequest) ProtoMessage() {}
+
+func (x *ListAuthoringSummariesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_configuration_authoring_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListAuthoringSummariesRequest.ProtoReflect.Descriptor instead.
+func (*ListAuthoringSummariesRequest) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_configuration_authoring_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *ListAuthoringSummariesRequest) GetKind() ConfigurationKind {
+	if x != nil {
+		return x.Kind
+	}
+	return ConfigurationKind_CONFIGURATION_KIND_UNSPECIFIED
+}
+
+func (x *ListAuthoringSummariesRequest) GetUnsavedOnly() bool {
+	if x != nil {
+		return x.UnsavedOnly
+	}
+	return false
+}
+
+func (x *ListAuthoringSummariesRequest) GetPageSize() int32 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
+func (x *ListAuthoringSummariesRequest) GetPageToken() string {
+	if x != nil {
+		return x.PageToken
+	}
+	return ""
+}
+
+type ListAuthoringSummariesResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Summaries     []*AuthoringSummary    `protobuf:"bytes,1,rep,name=summaries,proto3" json:"summaries,omitempty"`
+	NextPageToken string                 `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListAuthoringSummariesResponse) Reset() {
+	*x = ListAuthoringSummariesResponse{}
+	mi := &file_postpilot_v1_configuration_authoring_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListAuthoringSummariesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListAuthoringSummariesResponse) ProtoMessage() {}
+
+func (x *ListAuthoringSummariesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_configuration_authoring_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListAuthoringSummariesResponse.ProtoReflect.Descriptor instead.
+func (*ListAuthoringSummariesResponse) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_configuration_authoring_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *ListAuthoringSummariesResponse) GetSummaries() []*AuthoringSummary {
+	if x != nil {
+		return x.Summaries
+	}
+	return nil
+}
+
+func (x *ListAuthoringSummariesResponse) GetNextPageToken() string {
+	if x != nil {
+		return x.NextPageToken
+	}
+	return ""
+}
+
+type PatchAuthoringDraftRequest struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	SessionId        string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	ExpectedRevision uint32                 `protobuf:"varint,2,opt,name=expected_revision,json=expectedRevision,proto3" json:"expected_revision,omitempty"`
+	OperationKey     string                 `protobuf:"bytes,3,opt,name=operation_key,json=operationKey,proto3" json:"operation_key,omitempty"`
+	// Raw bounded permitted fields only; the server determines validity and protected scope.
+	WorkingSource *AuthoringArtifact `protobuf:"bytes,4,opt,name=working_source,json=workingSource,proto3" json:"working_source,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PatchAuthoringDraftRequest) Reset() {
+	*x = PatchAuthoringDraftRequest{}
+	mi := &file_postpilot_v1_configuration_authoring_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PatchAuthoringDraftRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PatchAuthoringDraftRequest) ProtoMessage() {}
+
+func (x *PatchAuthoringDraftRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_configuration_authoring_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PatchAuthoringDraftRequest.ProtoReflect.Descriptor instead.
+func (*PatchAuthoringDraftRequest) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_configuration_authoring_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *PatchAuthoringDraftRequest) GetSessionId() string {
+	if x != nil {
+		return x.SessionId
+	}
+	return ""
+}
+
+func (x *PatchAuthoringDraftRequest) GetExpectedRevision() uint32 {
+	if x != nil {
+		return x.ExpectedRevision
+	}
+	return 0
+}
+
+func (x *PatchAuthoringDraftRequest) GetOperationKey() string {
+	if x != nil {
+		return x.OperationKey
+	}
+	return ""
+}
+
+func (x *PatchAuthoringDraftRequest) GetWorkingSource() *AuthoringArtifact {
+	if x != nil {
+		return x.WorkingSource
+	}
+	return nil
+}
+
+type ResetAuthoringChatRequest struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	SessionId        string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	ExpectedRevision uint32                 `protobuf:"varint,2,opt,name=expected_revision,json=expectedRevision,proto3" json:"expected_revision,omitempty"`
+	OperationKey     string                 `protobuf:"bytes,3,opt,name=operation_key,json=operationKey,proto3" json:"operation_key,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *ResetAuthoringChatRequest) Reset() {
+	*x = ResetAuthoringChatRequest{}
+	mi := &file_postpilot_v1_configuration_authoring_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ResetAuthoringChatRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ResetAuthoringChatRequest) ProtoMessage() {}
+
+func (x *ResetAuthoringChatRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_configuration_authoring_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ResetAuthoringChatRequest.ProtoReflect.Descriptor instead.
+func (*ResetAuthoringChatRequest) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_configuration_authoring_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *ResetAuthoringChatRequest) GetSessionId() string {
+	if x != nil {
+		return x.SessionId
+	}
+	return ""
+}
+
+func (x *ResetAuthoringChatRequest) GetExpectedRevision() uint32 {
+	if x != nil {
+		return x.ExpectedRevision
+	}
+	return 0
+}
+
+func (x *ResetAuthoringChatRequest) GetOperationKey() string {
+	if x != nil {
+		return x.OperationKey
+	}
+	return ""
+}
+
+type ResetAuthoringBaselineRequest struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	SessionId        string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	ExpectedRevision uint32                 `protobuf:"varint,2,opt,name=expected_revision,json=expectedRevision,proto3" json:"expected_revision,omitempty"`
+	OperationKey     string                 `protobuf:"bytes,3,opt,name=operation_key,json=operationKey,proto3" json:"operation_key,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *ResetAuthoringBaselineRequest) Reset() {
+	*x = ResetAuthoringBaselineRequest{}
+	mi := &file_postpilot_v1_configuration_authoring_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ResetAuthoringBaselineRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ResetAuthoringBaselineRequest) ProtoMessage() {}
+
+func (x *ResetAuthoringBaselineRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_configuration_authoring_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ResetAuthoringBaselineRequest.ProtoReflect.Descriptor instead.
+func (*ResetAuthoringBaselineRequest) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_configuration_authoring_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *ResetAuthoringBaselineRequest) GetSessionId() string {
+	if x != nil {
+		return x.SessionId
+	}
+	return ""
+}
+
+func (x *ResetAuthoringBaselineRequest) GetExpectedRevision() uint32 {
+	if x != nil {
+		return x.ExpectedRevision
+	}
+	return 0
+}
+
+func (x *ResetAuthoringBaselineRequest) GetOperationKey() string {
+	if x != nil {
+		return x.OperationKey
+	}
+	return ""
+}
+
 var File_postpilot_v1_configuration_authoring_proto protoreflect.FileDescriptor
 
 const file_postpilot_v1_configuration_authoring_proto_rawDesc = "" +
 	"\n" +
-	"*postpilot/v1/configuration_authoring.proto\x12\fpostpilot.v1\x1a\x1bpostpilot/v1/provider.proto\"\x8c\x01\n" +
+	"*postpilot/v1/configuration_authoring.proto\x12\fpostpilot.v1\x1a\x1bpostpilot/v1/provider.proto\"\xa8\x01\n" +
 	"\x11AuthoringArtifact\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12 \n" +
 	"\vdescription\x18\x03 \x01(\tR\vdescription\x12\x12\n" +
 	"\x04body\x18\x04 \x01(\tR\x04body\x12\x1d\n" +
 	"\n" +
-	"title_area\x18\x05 \x01(\tR\ttitleArea\"~\n" +
+	"title_area\x18\x05 \x01(\tR\ttitleArea\x12\x1a\n" +
+	"\brevision\x18\x06 \x01(\rR\brevision\"~\n" +
 	"\rAuthoringTurn\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x18\n" +
 	"\arequest\x18\x02 \x01(\tR\arequest\x12\x14\n" +
@@ -1130,7 +1722,7 @@ const file_postpilot_v1_configuration_authoring_proto_rawDesc = "" +
 	"\x11AuthoringSavedRef\x123\n" +
 	"\x04kind\x18\x01 \x01(\x0e2\x1f.postpilot.v1.ConfigurationKindR\x04kind\x12\x0e\n" +
 	"\x02id\x18\x02 \x01(\tR\x02id\x12\x12\n" +
-	"\x04name\x18\x03 \x01(\tR\x04name\"\xa9\x04\n" +
+	"\x04name\x18\x03 \x01(\tR\x04name\"\x87\a\n" +
 	"\x10AuthoringSession\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x123\n" +
 	"\x04kind\x18\x02 \x01(\x0e2\x1f.postpilot.v1.ConfigurationKindR\x04kind\x12\x1a\n" +
@@ -1147,7 +1739,14 @@ const file_postpilot_v1_configuration_authoring_proto_rawDesc = "" +
 	" \x01(\tR\btargetId\x12%\n" +
 	"\x0etarget_version\x18\v \x01(\tR\rtargetVersion\x12%\n" +
 	"\x0efailure_reason\x18\f \x01(\tR\rfailureReason\x12'\n" +
-	"\x0fpending_request\x18\r \x01(\tR\x0ependingRequest\"\x90\x01\n" +
+	"\x0fpending_request\x18\r \x01(\tR\x0ependingRequest\x12F\n" +
+	"\x0eworking_source\x18\x0e \x01(\v2\x1f.postpilot.v1.AuthoringArtifactR\rworkingSource\x12B\n" +
+	"\vdraft_state\x18\x0f \x01(\x0e2!.postpilot.v1.AuthoringDraftStateR\n" +
+	"draftState\x12F\n" +
+	"\x0esaved_baseline\x18\x10 \x01(\v2\x1f.postpilot.v1.AuthoringArtifactR\rsavedBaseline\x126\n" +
+	"\x17has_unpublished_changes\x18\x11 \x01(\bR\x15hasUnpublishedChanges\x12'\n" +
+	"\x0fcandidate_count\x18\x12 \x01(\x05R\x0ecandidateCount\x12'\n" +
+	"\x0fsaved_available\x18\x13 \x01(\bR\x0esavedAvailable\"\x90\x01\n" +
 	"\x1dCreateAuthoringSessionRequest\x123\n" +
 	"\x04kind\x18\x01 \x01(\x0e2\x1f.postpilot.v1.ConfigurationKindR\x04kind\x12\x1b\n" +
 	"\ttarget_id\x18\x02 \x01(\tR\btargetId\x12\x1d\n" +
@@ -1160,19 +1759,20 @@ const file_postpilot_v1_configuration_authoring_proto_rawDesc = "" +
 	"\x04kind\x18\x01 \x01(\x0e2\x1f.postpilot.v1.ConfigurationKindR\x04kind\x12\x1b\n" +
 	"\ttarget_id\x18\x02 \x01(\tR\btargetId\"T\n" +
 	"\x18AuthoringSessionResponse\x128\n" +
-	"\asession\x18\x01 \x01(\v2\x1e.postpilot.v1.AuthoringSessionR\asession\"\xe1\x01\n" +
+	"\asession\x18\x01 \x01(\v2\x1e.postpilot.v1.AuthoringSessionR\asession\"\x8a\x02\n" +
 	"!EstimateAuthoringOperationRequest\x123\n" +
 	"\x04kind\x18\x01 \x01(\x0e2\x1f.postpilot.v1.ConfigurationKindR\x04kind\x12/\n" +
 	"\x04mode\x18\x02 \x01(\x0e2\x1b.postpilot.v1.AuthoringModeR\x04mode\x127\n" +
 	"\vwrite_model\x18\x03 \x01(\v2\x16.postpilot.v1.ModelRefR\n" +
 	"writeModel\x12\x1d\n" +
 	"\n" +
-	"session_id\x18\x04 \x01(\tR\tsessionId\"c\n" +
+	"session_id\x18\x04 \x01(\tR\tsessionId\x12'\n" +
+	"\x0fcandidate_count\x18\x05 \x01(\x05R\x0ecandidateCount\"c\n" +
 	"\"EstimateAuthoringOperationResponse\x12\x1d\n" +
 	"\acredits\x18\x01 \x01(\x03H\x00R\acredits\x88\x01\x01\x12\x12\n" +
 	"\x04free\x18\x02 \x01(\bR\x04freeB\n" +
 	"\n" +
-	"\b_credits\"\x8d\x02\n" +
+	"\b_credits\"\xb6\x02\n" +
 	"\x1eStartAuthoringOperationRequest\x12\x1d\n" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\x12+\n" +
@@ -1182,24 +1782,70 @@ const file_postpilot_v1_configuration_authoring_proto_rawDesc = "" +
 	"\x04mode\x18\x04 \x01(\x0e2\x1b.postpilot.v1.AuthoringModeR\x04mode\x12\x16\n" +
 	"\x06prompt\x18\x05 \x01(\tR\x06prompt\x127\n" +
 	"\vwrite_model\x18\x06 \x01(\v2\x16.postpilot.v1.ModelRefR\n" +
-	"writeModel\"r\n" +
+	"writeModel\x12'\n" +
+	"\x0fcandidate_count\x18\a \x01(\x05R\x0ecandidateCount\"r\n" +
 	"\x1fStartAuthoringOperationResponse\x12\x15\n" +
 	"\x06job_id\x18\x01 \x01(\tR\x05jobId\x128\n" +
-	"\asession\x18\x02 \x01(\v2\x1e.postpilot.v1.AuthoringSessionR\asession\"\x90\x01\n" +
+	"\asession\x18\x02 \x01(\v2\x1e.postpilot.v1.AuthoringSessionR\asession\"\xb5\x01\n" +
 	"\x1fSelectAuthoringCandidateRequest\x12\x1d\n" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\x12+\n" +
 	"\x11expected_revision\x18\x02 \x01(\rR\x10expectedRevision\x12!\n" +
-	"\fcandidate_id\x18\x03 \x01(\tR\vcandidateId\"W\n" +
+	"\fcandidate_id\x18\x03 \x01(\tR\vcandidateId\x12#\n" +
+	"\roperation_key\x18\x04 \x01(\tR\foperationKey\"W\n" +
 	"\x1fCancelAuthoringOperationRequest\x12\x1d\n" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\x12\x15\n" +
-	"\x06job_id\x18\x02 \x01(\tR\x05jobId\"\x8c\x01\n" +
+	"\x06job_id\x18\x02 \x01(\tR\x05jobId\"\xb1\x01\n" +
 	"\x1bSaveAuthoringSessionRequest\x12\x1d\n" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\x12+\n" +
 	"\x11expected_revision\x18\x02 \x01(\rR\x10expectedRevision\x12!\n" +
-	"\fmake_default\x18\x03 \x01(\bR\vmakeDefault*\xf9\x01\n" +
+	"\fmake_default\x18\x03 \x01(\bR\vmakeDefault\x12#\n" +
+	"\roperation_key\x18\x04 \x01(\tR\foperationKey\"\xd0\x04\n" +
+	"\x10AuthoringSummary\x12\x1d\n" +
+	"\n" +
+	"session_id\x18\x01 \x01(\tR\tsessionId\x123\n" +
+	"\x04kind\x18\x02 \x01(\x0e2\x1f.postpilot.v1.ConfigurationKindR\x04kind\x12\x1b\n" +
+	"\ttarget_id\x18\x03 \x01(\tR\btargetId\x12!\n" +
+	"\fdisplay_name\x18\x04 \x01(\tR\vdisplayName\x12\x1a\n" +
+	"\brevision\x18\x05 \x01(\rR\brevision\x12'\n" +
+	"\x0fsaved_available\x18\x06 \x01(\bR\x0esavedAvailable\x126\n" +
+	"\x17has_unpublished_changes\x18\a \x01(\bR\x15hasUnpublishedChanges\x12\"\n" +
+	"\ractive_job_id\x18\b \x01(\tR\vactiveJobId\x12/\n" +
+	"\x13publication_pending\x18\t \x01(\bR\x12publicationPending\x12'\n" +
+	"\x0ftarget_conflict\x18\n" +
+	" \x01(\bR\x0etargetConflict\x12J\n" +
+	"\x10last_publication\x18\v \x01(\v2\x1f.postpilot.v1.AuthoringSavedRefR\x0flastPublication\x12\x1d\n" +
+	"\n" +
+	"updated_at\x18\f \x01(\tR\tupdatedAt\x12B\n" +
+	"\vdraft_state\x18\r \x01(\x0e2!.postpilot.v1.AuthoringDraftStateR\n" +
+	"draftState\"\xb3\x01\n" +
+	"\x1dListAuthoringSummariesRequest\x123\n" +
+	"\x04kind\x18\x01 \x01(\x0e2\x1f.postpilot.v1.ConfigurationKindR\x04kind\x12!\n" +
+	"\funsaved_only\x18\x02 \x01(\bR\vunsavedOnly\x12\x1b\n" +
+	"\tpage_size\x18\x03 \x01(\x05R\bpageSize\x12\x1d\n" +
+	"\n" +
+	"page_token\x18\x04 \x01(\tR\tpageToken\"\x86\x01\n" +
+	"\x1eListAuthoringSummariesResponse\x12<\n" +
+	"\tsummaries\x18\x01 \x03(\v2\x1e.postpilot.v1.AuthoringSummaryR\tsummaries\x12&\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"\xd5\x01\n" +
+	"\x1aPatchAuthoringDraftRequest\x12\x1d\n" +
+	"\n" +
+	"session_id\x18\x01 \x01(\tR\tsessionId\x12+\n" +
+	"\x11expected_revision\x18\x02 \x01(\rR\x10expectedRevision\x12#\n" +
+	"\roperation_key\x18\x03 \x01(\tR\foperationKey\x12F\n" +
+	"\x0eworking_source\x18\x04 \x01(\v2\x1f.postpilot.v1.AuthoringArtifactR\rworkingSource\"\x8c\x01\n" +
+	"\x19ResetAuthoringChatRequest\x12\x1d\n" +
+	"\n" +
+	"session_id\x18\x01 \x01(\tR\tsessionId\x12+\n" +
+	"\x11expected_revision\x18\x02 \x01(\rR\x10expectedRevision\x12#\n" +
+	"\roperation_key\x18\x03 \x01(\tR\foperationKey\"\x90\x01\n" +
+	"\x1dResetAuthoringBaselineRequest\x12\x1d\n" +
+	"\n" +
+	"session_id\x18\x01 \x01(\tR\tsessionId\x12+\n" +
+	"\x11expected_revision\x18\x02 \x01(\rR\x10expectedRevision\x12#\n" +
+	"\roperation_key\x18\x03 \x01(\tR\foperationKey*\xf9\x01\n" +
 	"\x11ConfigurationKind\x12\"\n" +
 	"\x1eCONFIGURATION_KIND_UNSPECIFIED\x10\x00\x12$\n" +
 	" CONFIGURATION_KIND_POST_TEMPLATE\x10\x01\x12%\n" +
@@ -1210,7 +1856,12 @@ const file_postpilot_v1_configuration_authoring_proto_rawDesc = "" +
 	"\rAuthoringMode\x12\x1e\n" +
 	"\x1aAUTHORING_MODE_UNSPECIFIED\x10\x00\x12\x1c\n" +
 	"\x18AUTHORING_MODE_RECOMMEND\x10\x01\x12\x19\n" +
-	"\x15AUTHORING_MODE_REFINE\x10\x022\xc7\a\n" +
+	"\x15AUTHORING_MODE_REFINE\x10\x02*\xa6\x01\n" +
+	"\x13AuthoringDraftState\x12%\n" +
+	"!AUTHORING_DRAFT_STATE_UNSPECIFIED\x10\x00\x12\x1f\n" +
+	"\x1bAUTHORING_DRAFT_STATE_VALID\x10\x01\x12$\n" +
+	" AUTHORING_DRAFT_STATE_INCOMPLETE\x10\x02\x12!\n" +
+	"\x1dAUTHORING_DRAFT_STATE_INVALID\x10\x032\x83\v\n" +
 	"\x1dConfigurationAuthoringService\x12o\n" +
 	"\x16CreateAuthoringSession\x12+.postpilot.v1.CreateAuthoringSessionRequest\x1a&.postpilot.v1.AuthoringSessionResponse\"\x00\x12i\n" +
 	"\x13GetAuthoringSession\x12(.postpilot.v1.GetAuthoringSessionRequest\x1a&.postpilot.v1.AuthoringSessionResponse\"\x00\x12u\n" +
@@ -1218,7 +1869,11 @@ const file_postpilot_v1_configuration_authoring_proto_rawDesc = "" +
 	"\x1aEstimateAuthoringOperation\x12/.postpilot.v1.EstimateAuthoringOperationRequest\x1a0.postpilot.v1.EstimateAuthoringOperationResponse\"\x00\x12x\n" +
 	"\x17StartAuthoringOperation\x12,.postpilot.v1.StartAuthoringOperationRequest\x1a-.postpilot.v1.StartAuthoringOperationResponse\"\x00\x12s\n" +
 	"\x18SelectAuthoringCandidate\x12-.postpilot.v1.SelectAuthoringCandidateRequest\x1a&.postpilot.v1.AuthoringSessionResponse\"\x00\x12s\n" +
-	"\x18CancelAuthoringOperation\x12-.postpilot.v1.CancelAuthoringOperationRequest\x1a&.postpilot.v1.AuthoringSessionResponse\"\x00\x12k\n" +
+	"\x18CancelAuthoringOperation\x12-.postpilot.v1.CancelAuthoringOperationRequest\x1a&.postpilot.v1.AuthoringSessionResponse\"\x00\x12u\n" +
+	"\x16ListAuthoringSummaries\x12+.postpilot.v1.ListAuthoringSummariesRequest\x1a,.postpilot.v1.ListAuthoringSummariesResponse\"\x00\x12i\n" +
+	"\x13PatchAuthoringDraft\x12(.postpilot.v1.PatchAuthoringDraftRequest\x1a&.postpilot.v1.AuthoringSessionResponse\"\x00\x12g\n" +
+	"\x12ResetAuthoringChat\x12'.postpilot.v1.ResetAuthoringChatRequest\x1a&.postpilot.v1.AuthoringSessionResponse\"\x00\x12o\n" +
+	"\x16ResetAuthoringBaseline\x12+.postpilot.v1.ResetAuthoringBaselineRequest\x1a&.postpilot.v1.AuthoringSessionResponse\"\x00\x12k\n" +
 	"\x14SaveAuthoringSession\x12).postpilot.v1.SaveAuthoringSessionRequest\x1a&.postpilot.v1.AuthoringSessionResponse\"\x00BDZBgithub.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1b\x06proto3"
 
 var (
@@ -1233,65 +1888,89 @@ func file_postpilot_v1_configuration_authoring_proto_rawDescGZIP() []byte {
 	return file_postpilot_v1_configuration_authoring_proto_rawDescData
 }
 
-var file_postpilot_v1_configuration_authoring_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_postpilot_v1_configuration_authoring_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
+var file_postpilot_v1_configuration_authoring_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
+var file_postpilot_v1_configuration_authoring_proto_msgTypes = make([]protoimpl.MessageInfo, 21)
 var file_postpilot_v1_configuration_authoring_proto_goTypes = []any{
 	(ConfigurationKind)(0),                     // 0: postpilot.v1.ConfigurationKind
 	(AuthoringMode)(0),                         // 1: postpilot.v1.AuthoringMode
-	(*AuthoringArtifact)(nil),                  // 2: postpilot.v1.AuthoringArtifact
-	(*AuthoringTurn)(nil),                      // 3: postpilot.v1.AuthoringTurn
-	(*AuthoringSavedRef)(nil),                  // 4: postpilot.v1.AuthoringSavedRef
-	(*AuthoringSession)(nil),                   // 5: postpilot.v1.AuthoringSession
-	(*CreateAuthoringSessionRequest)(nil),      // 6: postpilot.v1.CreateAuthoringSessionRequest
-	(*GetAuthoringSessionRequest)(nil),         // 7: postpilot.v1.GetAuthoringSessionRequest
-	(*GetLatestAuthoringSessionRequest)(nil),   // 8: postpilot.v1.GetLatestAuthoringSessionRequest
-	(*AuthoringSessionResponse)(nil),           // 9: postpilot.v1.AuthoringSessionResponse
-	(*EstimateAuthoringOperationRequest)(nil),  // 10: postpilot.v1.EstimateAuthoringOperationRequest
-	(*EstimateAuthoringOperationResponse)(nil), // 11: postpilot.v1.EstimateAuthoringOperationResponse
-	(*StartAuthoringOperationRequest)(nil),     // 12: postpilot.v1.StartAuthoringOperationRequest
-	(*StartAuthoringOperationResponse)(nil),    // 13: postpilot.v1.StartAuthoringOperationResponse
-	(*SelectAuthoringCandidateRequest)(nil),    // 14: postpilot.v1.SelectAuthoringCandidateRequest
-	(*CancelAuthoringOperationRequest)(nil),    // 15: postpilot.v1.CancelAuthoringOperationRequest
-	(*SaveAuthoringSessionRequest)(nil),        // 16: postpilot.v1.SaveAuthoringSessionRequest
-	(*ModelRef)(nil),                           // 17: postpilot.v1.ModelRef
+	(AuthoringDraftState)(0),                   // 2: postpilot.v1.AuthoringDraftState
+	(*AuthoringArtifact)(nil),                  // 3: postpilot.v1.AuthoringArtifact
+	(*AuthoringTurn)(nil),                      // 4: postpilot.v1.AuthoringTurn
+	(*AuthoringSavedRef)(nil),                  // 5: postpilot.v1.AuthoringSavedRef
+	(*AuthoringSession)(nil),                   // 6: postpilot.v1.AuthoringSession
+	(*CreateAuthoringSessionRequest)(nil),      // 7: postpilot.v1.CreateAuthoringSessionRequest
+	(*GetAuthoringSessionRequest)(nil),         // 8: postpilot.v1.GetAuthoringSessionRequest
+	(*GetLatestAuthoringSessionRequest)(nil),   // 9: postpilot.v1.GetLatestAuthoringSessionRequest
+	(*AuthoringSessionResponse)(nil),           // 10: postpilot.v1.AuthoringSessionResponse
+	(*EstimateAuthoringOperationRequest)(nil),  // 11: postpilot.v1.EstimateAuthoringOperationRequest
+	(*EstimateAuthoringOperationResponse)(nil), // 12: postpilot.v1.EstimateAuthoringOperationResponse
+	(*StartAuthoringOperationRequest)(nil),     // 13: postpilot.v1.StartAuthoringOperationRequest
+	(*StartAuthoringOperationResponse)(nil),    // 14: postpilot.v1.StartAuthoringOperationResponse
+	(*SelectAuthoringCandidateRequest)(nil),    // 15: postpilot.v1.SelectAuthoringCandidateRequest
+	(*CancelAuthoringOperationRequest)(nil),    // 16: postpilot.v1.CancelAuthoringOperationRequest
+	(*SaveAuthoringSessionRequest)(nil),        // 17: postpilot.v1.SaveAuthoringSessionRequest
+	(*AuthoringSummary)(nil),                   // 18: postpilot.v1.AuthoringSummary
+	(*ListAuthoringSummariesRequest)(nil),      // 19: postpilot.v1.ListAuthoringSummariesRequest
+	(*ListAuthoringSummariesResponse)(nil),     // 20: postpilot.v1.ListAuthoringSummariesResponse
+	(*PatchAuthoringDraftRequest)(nil),         // 21: postpilot.v1.PatchAuthoringDraftRequest
+	(*ResetAuthoringChatRequest)(nil),          // 22: postpilot.v1.ResetAuthoringChatRequest
+	(*ResetAuthoringBaselineRequest)(nil),      // 23: postpilot.v1.ResetAuthoringBaselineRequest
+	(*ModelRef)(nil),                           // 24: postpilot.v1.ModelRef
 }
 var file_postpilot_v1_configuration_authoring_proto_depIdxs = []int32{
 	0,  // 0: postpilot.v1.AuthoringSavedRef.kind:type_name -> postpilot.v1.ConfigurationKind
 	0,  // 1: postpilot.v1.AuthoringSession.kind:type_name -> postpilot.v1.ConfigurationKind
-	2,  // 2: postpilot.v1.AuthoringSession.candidates:type_name -> postpilot.v1.AuthoringArtifact
-	2,  // 3: postpilot.v1.AuthoringSession.selected:type_name -> postpilot.v1.AuthoringArtifact
-	3,  // 4: postpilot.v1.AuthoringSession.turns:type_name -> postpilot.v1.AuthoringTurn
-	4,  // 5: postpilot.v1.AuthoringSession.saved:type_name -> postpilot.v1.AuthoringSavedRef
-	0,  // 6: postpilot.v1.CreateAuthoringSessionRequest.kind:type_name -> postpilot.v1.ConfigurationKind
-	0,  // 7: postpilot.v1.GetLatestAuthoringSessionRequest.kind:type_name -> postpilot.v1.ConfigurationKind
-	5,  // 8: postpilot.v1.AuthoringSessionResponse.session:type_name -> postpilot.v1.AuthoringSession
-	0,  // 9: postpilot.v1.EstimateAuthoringOperationRequest.kind:type_name -> postpilot.v1.ConfigurationKind
-	1,  // 10: postpilot.v1.EstimateAuthoringOperationRequest.mode:type_name -> postpilot.v1.AuthoringMode
-	17, // 11: postpilot.v1.EstimateAuthoringOperationRequest.write_model:type_name -> postpilot.v1.ModelRef
-	1,  // 12: postpilot.v1.StartAuthoringOperationRequest.mode:type_name -> postpilot.v1.AuthoringMode
-	17, // 13: postpilot.v1.StartAuthoringOperationRequest.write_model:type_name -> postpilot.v1.ModelRef
-	5,  // 14: postpilot.v1.StartAuthoringOperationResponse.session:type_name -> postpilot.v1.AuthoringSession
-	6,  // 15: postpilot.v1.ConfigurationAuthoringService.CreateAuthoringSession:input_type -> postpilot.v1.CreateAuthoringSessionRequest
-	7,  // 16: postpilot.v1.ConfigurationAuthoringService.GetAuthoringSession:input_type -> postpilot.v1.GetAuthoringSessionRequest
-	8,  // 17: postpilot.v1.ConfigurationAuthoringService.GetLatestAuthoringSession:input_type -> postpilot.v1.GetLatestAuthoringSessionRequest
-	10, // 18: postpilot.v1.ConfigurationAuthoringService.EstimateAuthoringOperation:input_type -> postpilot.v1.EstimateAuthoringOperationRequest
-	12, // 19: postpilot.v1.ConfigurationAuthoringService.StartAuthoringOperation:input_type -> postpilot.v1.StartAuthoringOperationRequest
-	14, // 20: postpilot.v1.ConfigurationAuthoringService.SelectAuthoringCandidate:input_type -> postpilot.v1.SelectAuthoringCandidateRequest
-	15, // 21: postpilot.v1.ConfigurationAuthoringService.CancelAuthoringOperation:input_type -> postpilot.v1.CancelAuthoringOperationRequest
-	16, // 22: postpilot.v1.ConfigurationAuthoringService.SaveAuthoringSession:input_type -> postpilot.v1.SaveAuthoringSessionRequest
-	9,  // 23: postpilot.v1.ConfigurationAuthoringService.CreateAuthoringSession:output_type -> postpilot.v1.AuthoringSessionResponse
-	9,  // 24: postpilot.v1.ConfigurationAuthoringService.GetAuthoringSession:output_type -> postpilot.v1.AuthoringSessionResponse
-	9,  // 25: postpilot.v1.ConfigurationAuthoringService.GetLatestAuthoringSession:output_type -> postpilot.v1.AuthoringSessionResponse
-	11, // 26: postpilot.v1.ConfigurationAuthoringService.EstimateAuthoringOperation:output_type -> postpilot.v1.EstimateAuthoringOperationResponse
-	13, // 27: postpilot.v1.ConfigurationAuthoringService.StartAuthoringOperation:output_type -> postpilot.v1.StartAuthoringOperationResponse
-	9,  // 28: postpilot.v1.ConfigurationAuthoringService.SelectAuthoringCandidate:output_type -> postpilot.v1.AuthoringSessionResponse
-	9,  // 29: postpilot.v1.ConfigurationAuthoringService.CancelAuthoringOperation:output_type -> postpilot.v1.AuthoringSessionResponse
-	9,  // 30: postpilot.v1.ConfigurationAuthoringService.SaveAuthoringSession:output_type -> postpilot.v1.AuthoringSessionResponse
-	23, // [23:31] is the sub-list for method output_type
-	15, // [15:23] is the sub-list for method input_type
-	15, // [15:15] is the sub-list for extension type_name
-	15, // [15:15] is the sub-list for extension extendee
-	0,  // [0:15] is the sub-list for field type_name
+	3,  // 2: postpilot.v1.AuthoringSession.candidates:type_name -> postpilot.v1.AuthoringArtifact
+	3,  // 3: postpilot.v1.AuthoringSession.selected:type_name -> postpilot.v1.AuthoringArtifact
+	4,  // 4: postpilot.v1.AuthoringSession.turns:type_name -> postpilot.v1.AuthoringTurn
+	5,  // 5: postpilot.v1.AuthoringSession.saved:type_name -> postpilot.v1.AuthoringSavedRef
+	3,  // 6: postpilot.v1.AuthoringSession.working_source:type_name -> postpilot.v1.AuthoringArtifact
+	2,  // 7: postpilot.v1.AuthoringSession.draft_state:type_name -> postpilot.v1.AuthoringDraftState
+	3,  // 8: postpilot.v1.AuthoringSession.saved_baseline:type_name -> postpilot.v1.AuthoringArtifact
+	0,  // 9: postpilot.v1.CreateAuthoringSessionRequest.kind:type_name -> postpilot.v1.ConfigurationKind
+	0,  // 10: postpilot.v1.GetLatestAuthoringSessionRequest.kind:type_name -> postpilot.v1.ConfigurationKind
+	6,  // 11: postpilot.v1.AuthoringSessionResponse.session:type_name -> postpilot.v1.AuthoringSession
+	0,  // 12: postpilot.v1.EstimateAuthoringOperationRequest.kind:type_name -> postpilot.v1.ConfigurationKind
+	1,  // 13: postpilot.v1.EstimateAuthoringOperationRequest.mode:type_name -> postpilot.v1.AuthoringMode
+	24, // 14: postpilot.v1.EstimateAuthoringOperationRequest.write_model:type_name -> postpilot.v1.ModelRef
+	1,  // 15: postpilot.v1.StartAuthoringOperationRequest.mode:type_name -> postpilot.v1.AuthoringMode
+	24, // 16: postpilot.v1.StartAuthoringOperationRequest.write_model:type_name -> postpilot.v1.ModelRef
+	6,  // 17: postpilot.v1.StartAuthoringOperationResponse.session:type_name -> postpilot.v1.AuthoringSession
+	0,  // 18: postpilot.v1.AuthoringSummary.kind:type_name -> postpilot.v1.ConfigurationKind
+	5,  // 19: postpilot.v1.AuthoringSummary.last_publication:type_name -> postpilot.v1.AuthoringSavedRef
+	2,  // 20: postpilot.v1.AuthoringSummary.draft_state:type_name -> postpilot.v1.AuthoringDraftState
+	0,  // 21: postpilot.v1.ListAuthoringSummariesRequest.kind:type_name -> postpilot.v1.ConfigurationKind
+	18, // 22: postpilot.v1.ListAuthoringSummariesResponse.summaries:type_name -> postpilot.v1.AuthoringSummary
+	3,  // 23: postpilot.v1.PatchAuthoringDraftRequest.working_source:type_name -> postpilot.v1.AuthoringArtifact
+	7,  // 24: postpilot.v1.ConfigurationAuthoringService.CreateAuthoringSession:input_type -> postpilot.v1.CreateAuthoringSessionRequest
+	8,  // 25: postpilot.v1.ConfigurationAuthoringService.GetAuthoringSession:input_type -> postpilot.v1.GetAuthoringSessionRequest
+	9,  // 26: postpilot.v1.ConfigurationAuthoringService.GetLatestAuthoringSession:input_type -> postpilot.v1.GetLatestAuthoringSessionRequest
+	11, // 27: postpilot.v1.ConfigurationAuthoringService.EstimateAuthoringOperation:input_type -> postpilot.v1.EstimateAuthoringOperationRequest
+	13, // 28: postpilot.v1.ConfigurationAuthoringService.StartAuthoringOperation:input_type -> postpilot.v1.StartAuthoringOperationRequest
+	15, // 29: postpilot.v1.ConfigurationAuthoringService.SelectAuthoringCandidate:input_type -> postpilot.v1.SelectAuthoringCandidateRequest
+	16, // 30: postpilot.v1.ConfigurationAuthoringService.CancelAuthoringOperation:input_type -> postpilot.v1.CancelAuthoringOperationRequest
+	19, // 31: postpilot.v1.ConfigurationAuthoringService.ListAuthoringSummaries:input_type -> postpilot.v1.ListAuthoringSummariesRequest
+	21, // 32: postpilot.v1.ConfigurationAuthoringService.PatchAuthoringDraft:input_type -> postpilot.v1.PatchAuthoringDraftRequest
+	22, // 33: postpilot.v1.ConfigurationAuthoringService.ResetAuthoringChat:input_type -> postpilot.v1.ResetAuthoringChatRequest
+	23, // 34: postpilot.v1.ConfigurationAuthoringService.ResetAuthoringBaseline:input_type -> postpilot.v1.ResetAuthoringBaselineRequest
+	17, // 35: postpilot.v1.ConfigurationAuthoringService.SaveAuthoringSession:input_type -> postpilot.v1.SaveAuthoringSessionRequest
+	10, // 36: postpilot.v1.ConfigurationAuthoringService.CreateAuthoringSession:output_type -> postpilot.v1.AuthoringSessionResponse
+	10, // 37: postpilot.v1.ConfigurationAuthoringService.GetAuthoringSession:output_type -> postpilot.v1.AuthoringSessionResponse
+	10, // 38: postpilot.v1.ConfigurationAuthoringService.GetLatestAuthoringSession:output_type -> postpilot.v1.AuthoringSessionResponse
+	12, // 39: postpilot.v1.ConfigurationAuthoringService.EstimateAuthoringOperation:output_type -> postpilot.v1.EstimateAuthoringOperationResponse
+	14, // 40: postpilot.v1.ConfigurationAuthoringService.StartAuthoringOperation:output_type -> postpilot.v1.StartAuthoringOperationResponse
+	10, // 41: postpilot.v1.ConfigurationAuthoringService.SelectAuthoringCandidate:output_type -> postpilot.v1.AuthoringSessionResponse
+	10, // 42: postpilot.v1.ConfigurationAuthoringService.CancelAuthoringOperation:output_type -> postpilot.v1.AuthoringSessionResponse
+	20, // 43: postpilot.v1.ConfigurationAuthoringService.ListAuthoringSummaries:output_type -> postpilot.v1.ListAuthoringSummariesResponse
+	10, // 44: postpilot.v1.ConfigurationAuthoringService.PatchAuthoringDraft:output_type -> postpilot.v1.AuthoringSessionResponse
+	10, // 45: postpilot.v1.ConfigurationAuthoringService.ResetAuthoringChat:output_type -> postpilot.v1.AuthoringSessionResponse
+	10, // 46: postpilot.v1.ConfigurationAuthoringService.ResetAuthoringBaseline:output_type -> postpilot.v1.AuthoringSessionResponse
+	10, // 47: postpilot.v1.ConfigurationAuthoringService.SaveAuthoringSession:output_type -> postpilot.v1.AuthoringSessionResponse
+	36, // [36:48] is the sub-list for method output_type
+	24, // [24:36] is the sub-list for method input_type
+	24, // [24:24] is the sub-list for extension type_name
+	24, // [24:24] is the sub-list for extension extendee
+	0,  // [0:24] is the sub-list for field type_name
 }
 
 func init() { file_postpilot_v1_configuration_authoring_proto_init() }
@@ -1306,8 +1985,8 @@ func file_postpilot_v1_configuration_authoring_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_postpilot_v1_configuration_authoring_proto_rawDesc), len(file_postpilot_v1_configuration_authoring_proto_rawDesc)),
-			NumEnums:      2,
-			NumMessages:   15,
+			NumEnums:      3,
+			NumMessages:   21,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

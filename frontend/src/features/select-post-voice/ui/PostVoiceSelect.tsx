@@ -82,6 +82,17 @@ export function PostVoiceSelect({
   const makingLabel = (name: string, percent: number) => t('picker.making', { name, percent })
 
   const apply = async (voiceId: string) => {
+    // A confirmation can outlive a job/status or directory update. Check the current props
+    // again before applying rather than submitting the assignment the old field allowed.
+    if (disabled) {
+      setTarget(undefined)
+      return
+    }
+    if (voiceId !== NO_VOICE_VALUE && !active.some((voice) => voice.id === voiceId && voice.made)) {
+      setError(t('assignment.notFound'))
+      setTarget(undefined)
+      return
+    }
     setApplying(true)
     setError('')
     try {
@@ -97,6 +108,7 @@ export function PostVoiceSelect({
   }
 
   const onChange = (next: string) => {
+    if (disabled) return
     // Not a choice: the sheet opens over the field, and the listbox, which is controlled, keeps
     // showing the assignment the post still has.
     if (next === CREATE_VOICE_VALUE) {

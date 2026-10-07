@@ -9,13 +9,20 @@ describe('reassignmentBlocker', () => {
     expect(reassignmentBlocker({ activeJob: { status: 'done' }, pendingExperimentId: '' })).toBe('')
   })
 
-  it('blocks while a job runs or an A/B result waits', () => {
+  it.each(['', 'queued-test', 'frozen-test', 'retained-legacy-result'])(
+    'allows future reassignment independently of %s',
+    (pendingExperimentId) => {
+      for (const status of ['done', 'failed', 'cancelled'] as const)
+        expect(reassignmentBlocker({ activeJob: { status }, pendingExperimentId })).toBe('')
+      expect(reassignmentBlocker({ activeJob: undefined, pendingExperimentId })).toBe('')
+    },
+  )
+
+  it('blocks ordinary work while a job runs', () => {
     expect(
       reassignmentBlocker({ activeJob: { status: 'running' }, pendingExperimentId: '' }),
     ).toMatch(/AI 작업/)
-    expect(reassignmentBlocker({ activeJob: undefined, pendingExperimentId: 'exp' })).toMatch(
-      /A\/B/,
-    )
+    expect(reassignmentBlocker({ activeJob: undefined, pendingExperimentId: 'exp' })).toBe('')
   })
 })
 

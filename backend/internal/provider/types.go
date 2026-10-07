@@ -479,3 +479,15 @@ func NewRecommendationID() string {
 func Suitable(stage Stage, info llm.ModelInfo) bool {
 	return info.ServesStage(string(stage))
 }
+
+// TestModelAdoption is a separate explicit action from deciding a champion.
+type TestModelAdoption struct {
+	UserID, TestID, WinnerID, RequestKey, Fingerprint string
+	Stage                                             Stage
+	Ref                                               llm.ModelRef
+}
+type TestModelReceipt struct {
+	RequestKey string
+	Stage      Stage
+	Ref        llm.ModelRef
+}
