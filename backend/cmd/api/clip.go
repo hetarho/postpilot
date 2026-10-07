@@ -28,7 +28,7 @@ func clipTxPorts(ledger *usage.Service, registry *llm.Registry, plans *auth.Serv
 	return func(tx *sql.Tx) clipapp.Ports {
 		jobs := jobstore.NewTx(tx, jobKinds())
 		clips := clipstore.NewTx(tx)
-		ports := clipapp.Ports{Jobs: jobs, Waits: jobs, Clips: clips, Media: clips, Stages: clips, Publication: clips, Recovery: clips, Control: clips, Exports: clips}
+		ports := clipapp.Ports{Analysis: clips, Starts: jobs, RenderSources: clips, Jobs: jobs, Waits: jobs, Clips: clips, Media: clips, Stages: clips, Publication: clips, Recovery: clips, Control: clips, Exports: clips}
 		if ledger != nil {
 			ports.Admission = clipAdmission{jobAdmission{ledger: ledger.WithStore(usagestore.NewTx(tx)), registry: registry, plans: plans}}
 		}
@@ -41,6 +41,8 @@ func clipTxPorts(ledger *usage.Service, registry *llm.Registry, plans *auth.Serv
 // package owns the product rules, and this is the one merge point.
 func clipEnvironment(cfg *config.Config) clip.Environment {
 	return clip.Environment{
+		AnalysisVerificationActive: cfg.ClipAnalysisVerificationActive, AnalysisVerificationWaiting: cfg.ClipAnalysisVerificationWaiting, AnalysisVerificationPerAccount: cfg.ClipAnalysisVerificationPerAccount,
+		ServerRenderActive: cfg.ClipServerRenderActive, ServerRenderWaiting: cfg.ClipServerRenderWaiting, ServerRenderPerAccount: cfg.ClipServerRenderPerAccount,
 		MediaLeaseTTL: cfg.ClipMediaLeaseTTL, MediaWaitTimeout: cfg.ClipMediaWaitTimeout,
 		MediaStageTimeout: cfg.ClipMediaStageTimeout, MediaMaxAttempts: cfg.ClipMediaMaxAttempts,
 		WorkRoot: cfg.ClipWorkRoot, FFmpegPath: cfg.ClipFFmpegPath, FFprobePath: cfg.ClipFFprobePath,
@@ -56,7 +58,7 @@ func clipBudgets(cfg clipai.Config) clipapp.Budgets {
 	return clipapp.Budgets{ObserveCompletionTokens: cfg.ObserveCompletionTokens, FlowCompletionTokens: cfg.FlowCompletionTokens, NarrationCompletionTokens: cfg.NarrationCompletionTokens, ObserveReasoning: cfg.ObserveReasoning, PlanReasoning: cfg.PlanReasoning}
 }
 
-func newClipGeneration(ctx context.Context, cfg *config.Config, store *clipstore.Store, projects *clipapp.Service, sources *clipapp.SourceService, bucket *storage.Bucket, media *clipmedia.Adapter, models meteredRegistry, plans *auth.Service, queue *job.Queue, guard clipapp.Reserver, writer *sql.DB, bind clipapp.Binder, candidates clipGuidelineCandidates, voices clip.SpokenVoiceResolver, speech ...*clipapp.SpeechService) (*clipapp.GenerationService, error) {
+func newClipGeneration(ctx context.Context, cfg *config.Config, store *clipstore.Store, projects *clipapp.Service, sources *clipapp.SourceService, bucket *storage.Bucket, media *clipmedia.Adapter, models meteredRegistry, plans *auth.Service, queue *job.Queue, guard clipapp.Reserver, writer *sql.DB, bind clipapp.Binder, candidates clipGuidelineCandidates, voices clip.SpokenVoiceResolver, analysis *clipapp.AnalysisPreparations, speech ...*clipapp.SpeechService) (*clipapp.GenerationService, error) {
 	renderer, err := clipmedia.NewRenderer(media, clip.DefaultRenderConfig(clipEnvironment(cfg)))
 	if err != nil {
 		return nil, err
@@ -73,14 +75,19 @@ func newClipGeneration(ctx context.Context, cfg *config.Config, store *clipstore
 	if err != nil {
 		return nil, err
 	}
+	nativeAdmission, err := clipapp.NewRenderAdmission(writer, bind, clip.DefaultRenderCapacity(clipEnvironment(cfg)), clip.DefaultMediaStageLimits(clipEnvironment(cfg)), nil)
+	if err != nil {
+		return nil, err
+	}
 	var narration *clipapp.SpeechService
 	if len(speech) > 0 {
 		narration = speech[0]
 	}
 	service := clipapp.NewGenerationService(store, projects, sources, bucket, media, planner, renderer, clipapp.NewJobs(queue, guard), clip.DefaultGenerationConfig(clipEnvironment(cfg)), clipapp.GenerationDeps{
-		Voices: voices, Speech: narration,
-		RemoteMedia: remote,
-		Finisher:    finisher,
+		Voices: voices, Speech: narration, AnalysisPreparations: analysis,
+		RemoteMedia:     remote,
+		NativeAdmission: nativeAdmission,
+		Finisher:        finisher,
 		Pricing: clipapp.NewPricing(models.Registry, clipBudgets(aiConfig), models.ledger).WithQuoteAccess(
 			func(ctx context.Context, user string, calls []usage.PlannedCall) error {
 				tier, err := plans.PlanOf(ctx, user)

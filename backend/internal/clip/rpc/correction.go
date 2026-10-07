@@ -119,6 +119,7 @@ func correctionTextProto(t clip.CorrectionText) *v1.ClipEditableText {
 	// Creation is request-only: the projection hands a caption back as an
 	// ordinary one, so a resave corrects it rather than creating it again.
 	out.StaleEvidence, out.EvidenceReviewed, out.FallbackReason, out.Narration, out.OwnerEdited = t.StaleEvidence, t.EvidenceReviewed, t.FallbackReason, t.Narration, t.OwnerEdited
+	out.EffectivePosition = t.EffectivePosition
 	out.DerivedCaption = derivedProto(t.Derived)
 	out.OwnerSizePx, out.OwnerStyle = int32(t.Owner.Size), t.Owner.Style
 	if at := t.Owner.Position; at != nil {
@@ -156,6 +157,7 @@ func editingProto(s *clip.CorrectionState) *v1.ClipEditingState {
 		return nil
 	}
 	out := &v1.ClipEditingState{Plan: &v1.ClipEditPlan{DurationMs: int32(s.Plan.DurationMS), NativeComposition: s.Plan.NativeComposition}, FadeMs: int32(s.FadeMS), MaxCuts: int32(s.MaxCuts), MaxCopyRunes: int32(s.MaxCopyRunes), MinDurationMs: int32(s.MinDurationMS), MaxDurationMs: int32(s.MaxDurationMS)}
+	out.LayoutObservations = analysisObservationsProto(s.LayoutObservations)
 	out.Plan.Narration = narrationProto(s.Plan.Narration)
 	if s.Plan.SourceVolumePermille != nil {
 		gain := int32(*s.Plan.SourceVolumePermille)
@@ -264,7 +266,14 @@ func (h *Handler) ReportClipRenderVerdict(ctx context.Context, req *connect.Requ
 		return nil, toConnectError(clip.ErrRenderUnavailable)
 	}
 	m := req.Msg.Measurements
-	v, err := h.generation.ReportRenderVerdict(ctx, user, req.Msg.RenderId, clip.RenderMeasurements{SpeechFingerprint: m.SpeechFingerprint, TruePeakDBTP: m.TruePeakDbtp, Width: int(m.Width), Height: int(m.Height), FrameRateNumerator: int(m.FrameRateNumerator), FrameRateDenominator: int(m.FrameRateDenominator), VideoFrames: int(m.VideoFrames), VideoCodec: m.VideoCodec, VideoProfile: m.VideoProfile, HasAudio: m.HasAudio, AudioCodec: m.AudioCodec, AudioRate: int(m.AudioRate), LoudnessLUFS: m.LoudnessLufs, Silent: m.Silent}, req.Msg.Passed)
+	measured := clip.RenderMeasurements{CompositionVersion: m.CompositionVersion, SnapshotFingerprint: m.SnapshotFingerprint, BackgroundVersion: m.BackgroundVersion, BackgroundSnapshotFingerprint: m.BackgroundSnapshotFingerprint, BackgroundDigest: m.BackgroundDigest, BackgroundComplete: m.BackgroundComplete, BackgroundSampleCount: int(m.BackgroundSampleCount), SpeechFingerprint: m.SpeechFingerprint, TruePeakDBTP: m.TruePeakDbtp, Width: int(m.Width), Height: int(m.Height), FrameRateNumerator: int(m.FrameRateNumerator), FrameRateDenominator: int(m.FrameRateDenominator), VideoFrames: int(m.VideoFrames), VideoCodec: m.VideoCodec, VideoProfile: m.VideoProfile, HasAudio: m.HasAudio, AudioCodec: m.AudioCodec, AudioRate: int(m.AudioRate), LoudnessLUFS: m.LoudnessLufs, Silent: m.Silent}
+	for _, n := range m.BackgroundNotices {
+		if n == nil {
+			return nil, toConnectError(clip.ErrInvalid)
+		}
+		measured.BackgroundNotices = append(measured.BackgroundNotices, clip.PlanNotice{CopyFallback: clip.CopyFallback{ElementID: n.ElementId, CutID: n.CutId, Reason: n.Code}, Action: n.Action})
+	}
+	v, err := h.generation.ReportRenderVerdict(ctx, user, req.Msg.RenderId, measured, req.Msg.Passed)
 	if err != nil {
 		return nil, toConnectError(err)
 	}

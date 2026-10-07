@@ -40,6 +40,7 @@ import { i18n as editClipStorylineClipsI18n } from '@/features/edit-clip-storyli
 import { i18n as editClipRegionsClipsI18n } from '@/features/edit-clip-regions/config/i18n'
 import { i18n as requestClipStorylineClipsI18n } from '@/features/request-clip-storyline/config/i18n'
 import { i18n as finalizeClipClipsI18n } from '@/features/finalize-clip/config/i18n'
+import { i18n as prepareClipBrowserI18n } from '@/features/prepare-clip-browser/config/i18n'
 import { i18n as generateClipClipsI18n } from '@/features/generate-clip/config/i18n'
 import { i18n as inspectClipObservationsClipsI18n } from '@/features/inspect-clip-observations/config/i18n'
 import { i18n as renderClipBrowserClipsI18n } from '@/features/render-clip-browser/config/i18n'
@@ -211,6 +212,7 @@ export const FRAGMENTS: readonly I18nFragment[] = [
   requestClipStorylineClipsI18n,
   finalizeClipClipsI18n,
   generateClipClipsI18n,
+  prepareClipBrowserI18n,
   inspectClipObservationsClipsI18n,
   renderClipBrowserClipsI18n,
   reviseClipClipsI18n,
@@ -416,6 +418,7 @@ export const resources = {
       ...editClipTemplateClipsI18n.ko,
       ...finalizeClipClipsI18n.ko,
       ...generateClipClipsI18n.ko,
+      ...prepareClipBrowserI18n.ko,
       ...inspectClipObservationsClipsI18n.ko,
       ...renderClipBrowserClipsI18n.ko,
       ...reviseClipClipsI18n.ko,
@@ -552,6 +555,7 @@ export const resources = {
       ...editClipTemplateClipsI18n.en,
       ...finalizeClipClipsI18n.en,
       ...generateClipClipsI18n.en,
+      ...prepareClipBrowserI18n.en,
       ...inspectClipObservationsClipsI18n.en,
       ...renderClipBrowserClipsI18n.en,
       ...reviseClipClipsI18n.en,

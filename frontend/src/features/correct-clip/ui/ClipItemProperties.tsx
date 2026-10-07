@@ -1,3 +1,4 @@
+import type { useClipLocalCaptionPreview, useClipLocalStyleSamples } from '@/entities/clip-preview'
 import { useTranslation } from 'react-i18next'
 import { ClipNoticeList, type ClipNotice } from '@/entities/clip-project'
 import {
@@ -7,8 +8,6 @@ import {
   snapClipTime,
   timelineCuts,
   captionStartCut,
-  useClipCaptionPreview,
-  useClipCaptionStyleSamples,
   type ClipEditingState,
   type ClipEditCut,
   type ClipEditableText,
@@ -24,7 +23,7 @@ import { ClipCutAssemblyControls } from './ClipCutAssemblyControls'
 import { ClipCutReading, ClipTextReading } from './ClipItemReading'
 
 type Correction = ReturnType<typeof useClipCorrection>
-type CaptionQuery = ReturnType<typeof useClipCaptionPreview>
+type CaptionQuery = ReturnType<typeof useClipLocalCaptionPreview>
 export interface ClipItemPropertiesProps {
   project: {
     state: ClipEditingState
@@ -50,7 +49,7 @@ export interface ClipItemPropertiesProps {
   captions: {
     captionPreview: CaptionQuery
     fragment?: NonNullable<CaptionQuery['data']>['captions'][number]
-    styleSamples: ReturnType<typeof useClipCaptionStyleSamples>
+    styleSamples: ReturnType<typeof useClipLocalStyleSamples>
   }
   status: { readOnly: boolean; disabled: boolean }
 }

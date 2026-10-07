@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file postpilot/v1/clip_render.proto.
  */
 export const file_postpilot_v1_clip_render: GenFile = /*@__PURE__*/
-  fileDesc("Ch5wb3N0cGlsb3QvdjEvY2xpcF9yZW5kZXIucHJvdG8SDHBvc3RwaWxvdC52MSLGAQoZUHJlcGFyZUNsaXBQcmV2aWV3UmVxdWVzdBISCgpwcm9qZWN0X2lkGAEgASgJEhkKEWV4cGVjdGVkX3JldmlzaW9uGAIgASgFEhIKCmRyYWZ0X2hhc2gYAyABKAkSKAoEcGxhbhgEIAEoCzIaLnBvc3RwaWxvdC52MS5DbGlwRWRpdFBsYW4SEwoLZWxlbWVudF9pZHMYBSADKAkSFAoMYXNzZXRfb2Zmc2V0GAYgASgFEhEKCXJlbmRlcl9pZBgHIAEoCSLTAQoaUHJlcGFyZUNsaXBQcmV2aWV3UmVzcG9uc2USEgoKZHJhZnRfaGFzaBgBIAEoCRIUCgxjYW52YXNfd2lkdGgYAiABKAUSFQoNY2FudmFzX2hlaWdodBgDIAEoBRIuCgZhc3NldHMYBCADKAsyHi5wb3N0cGlsb3QudjEuQ2xpcFByZXZpZXdBc3NldBITCgtuZXh0X29mZnNldBgFIAEoBRIvCgZwYXJpdHkYBiADKA4yHy5wb3N0cGlsb3QudjEuQ2xpcFByZXZpZXdQYXJpdHkizAEKH1ByZXBhcmVDbGlwQ2FwdGlvbkZyYW1lc1JlcXVlc3QSEgoKcHJvamVjdF9pZBgBIAEoCRIZChFleHBlY3RlZF9yZXZpc2lvbhgCIAEoBRISCgpkcmFmdF9oYXNoGAMgASgJEigKBHBsYW4YBCABKAsyGi5wb3N0cGlsb3QudjEuQ2xpcEVkaXRQbGFuEhMKC2luc3RhbmNlX2lkGAUgASgJEhQKDGZyYW1lX29mZnNldBgGIAEoBRIRCglyZW5kZXJfaWQYByABKAki5AEKIFByZXBhcmVDbGlwQ2FwdGlvbkZyYW1lc1Jlc3BvbnNlEhIKCmRyYWZ0X2hhc2gYASABKAkSDQoFc2hlZXQYAiABKAwSEgoKY2VsbF93aWR0aBgDIAEoBRITCgtjZWxsX2hlaWdodBgEIAEoBRIPCgdjb2x1bW5zGAUgASgFEg0KBWNlbGxzGAYgASgFEgkKAXgYByABKAUSCQoBeRgIIAEoBRITCgtmaXJzdF9mcmFtZRgJIAEoBRIUCgxmcmFtZV9vZmZzZXQYCiABKAUSEwoLbmV4dF9vZmZzZXQYCyABKAUipAEKFlN0YXJ0Q2xpcFJlbmRlclJlcXVlc3QSEgoKcHJvamVjdF9pZBgBIAEoCRIZChFleHBlY3RlZF9yZXZpc2lvbhgCIAEoBRIQCghiYXRjaF9pZBgDIAEoCRIxCgtyZW5kZXJfa2luZBgEIAEoDjIcLnBvc3RwaWxvdC52MS5DbGlwUmVuZGVyS2luZBIWCg5yZXVzZV9leGlzdGluZxgFIAEoCCJTChdTdGFydENsaXBSZW5kZXJSZXNwb25zZRIOCgZqb2JfaWQYASABKAkSEQoJcmVuZGVyX2lkGAIgASgJEhUKDXJldXNlZF9yZXN1bHQYAyABKAgifwoeUmVwb3J0Q2xpcFJlbmRlclZlcmRpY3RSZXF1ZXN0EhEKCXJlbmRlcl9pZBgBIAEoCRI6CgxtZWFzdXJlbWVudHMYAiABKAsyJC5wb3N0cGlsb3QudjEuQ2xpcFJlbmRlck1lYXN1cmVtZW50cxIOCgZwYXNzZWQYAyABKAgiXAofUmVwb3J0Q2xpcFJlbmRlclZlcmRpY3RSZXNwb25zZRIOCgZwYXNzZWQYASABKAgSKQoHbm90aWNlcxgCIAMoCzIYLnBvc3RwaWxvdC52MS5DbGlwTm90aWNlIkIKHlByZXBhcmVDbGlwUmVuZGVyVXBsb2FkUmVxdWVzdBIRCglyZW5kZXJfaWQYASABKAkSDQoFYnl0ZXMYAiABKAMirwEKH1ByZXBhcmVDbGlwUmVuZGVyVXBsb2FkUmVzcG9uc2USDwoHcHV0X3VybBgBIAEoCRJLCgdoZWFkZXJzGAIgAygLMjoucG9zdHBpbG90LnYxLlByZXBhcmVDbGlwUmVuZGVyVXBsb2FkUmVzcG9uc2UuSGVhZGVyc0VudHJ5Gi4KDEhlYWRlcnNFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBIjQKH0NvbXBsZXRlQ2xpcFJlbmRlclVwbG9hZFJlcXVlc3QSEQoJcmVuZGVyX2lkGAEgASgJIk4KIENvbXBsZXRlQ2xpcFJlbmRlclVwbG9hZFJlc3BvbnNlEioKB3Byb2plY3QYASABKAsyGS5wb3N0cGlsb3QudjEuQ2xpcFByb2plY3QiMwoeQ2FuY2VsQ2xpcEJyb3dzZXJSZW5kZXJSZXF1ZXN0EhEKCXJlbmRlcl9pZBgBIAEoCSI0Ch9DYW5jZWxDbGlwQnJvd3NlclJlbmRlclJlc3BvbnNlEhEKCWNhbmNlbGxlZBgBIAEoCDLIBgoRQ2xpcFJlbmRlclNlcnZpY2USaQoSUHJlcGFyZUNsaXBQcmV2aWV3EicucG9zdHBpbG90LnYxLlByZXBhcmVDbGlwUHJldmlld1JlcXVlc3QaKC5wb3N0cGlsb3QudjEuUHJlcGFyZUNsaXBQcmV2aWV3UmVzcG9uc2UiABJ7ChhQcmVwYXJlQ2xpcENhcHRpb25GcmFtZXMSLS5wb3N0cGlsb3QudjEuUHJlcGFyZUNsaXBDYXB0aW9uRnJhbWVzUmVxdWVzdBouLnBvc3RwaWxvdC52MS5QcmVwYXJlQ2xpcENhcHRpb25GcmFtZXNSZXNwb25zZSIAEmAKD1N0YXJ0Q2xpcFJlbmRlchIkLnBvc3RwaWxvdC52MS5TdGFydENsaXBSZW5kZXJSZXF1ZXN0GiUucG9zdHBpbG90LnYxLlN0YXJ0Q2xpcFJlbmRlclJlc3BvbnNlIgASeAoXUmVwb3J0Q2xpcFJlbmRlclZlcmRpY3QSLC5wb3N0cGlsb3QudjEuUmVwb3J0Q2xpcFJlbmRlclZlcmRpY3RSZXF1ZXN0Gi0ucG9zdHBpbG90LnYxLlJlcG9ydENsaXBSZW5kZXJWZXJkaWN0UmVzcG9uc2UiABJ4ChdQcmVwYXJlQ2xpcFJlbmRlclVwbG9hZBIsLnBvc3RwaWxvdC52MS5QcmVwYXJlQ2xpcFJlbmRlclVwbG9hZFJlcXVlc3QaLS5wb3N0cGlsb3QudjEuUHJlcGFyZUNsaXBSZW5kZXJVcGxvYWRSZXNwb25zZSIAEnsKGENvbXBsZXRlQ2xpcFJlbmRlclVwbG9hZBItLnBvc3RwaWxvdC52MS5Db21wbGV0ZUNsaXBSZW5kZXJVcGxvYWRSZXF1ZXN0Gi4ucG9zdHBpbG90LnYxLkNvbXBsZXRlQ2xpcFJlbmRlclVwbG9hZFJlc3BvbnNlIgASeAoXQ2FuY2VsQ2xpcEJyb3dzZXJSZW5kZXISLC5wb3N0cGlsb3QudjEuQ2FuY2VsQ2xpcEJyb3dzZXJSZW5kZXJSZXF1ZXN0Gi0ucG9zdHBpbG90LnYxLkNhbmNlbENsaXBCcm93c2VyUmVuZGVyUmVzcG9uc2UiAEJEWkJnaXRodWIuY29tL3Bvc3RwaWxvdC9iYWNrZW5kL2ludGVybmFsL2dlbi9wb3N0cGlsb3QvdjE7cG9zdHBpbG90djFiBnByb3RvMw", [file_postpilot_v1_clip]);
+  fileDesc("Ch5wb3N0cGlsb3QvdjEvY2xpcF9yZW5kZXIucHJvdG8SDHBvc3RwaWxvdC52MSLGAQoZUHJlcGFyZUNsaXBQcmV2aWV3UmVxdWVzdBISCgpwcm9qZWN0X2lkGAEgASgJEhkKEWV4cGVjdGVkX3JldmlzaW9uGAIgASgFEhIKCmRyYWZ0X2hhc2gYAyABKAkSKAoEcGxhbhgEIAEoCzIaLnBvc3RwaWxvdC52MS5DbGlwRWRpdFBsYW4SEwoLZWxlbWVudF9pZHMYBSADKAkSFAoMYXNzZXRfb2Zmc2V0GAYgASgFEhEKCXJlbmRlcl9pZBgHIAEoCSLTAQoaUHJlcGFyZUNsaXBQcmV2aWV3UmVzcG9uc2USEgoKZHJhZnRfaGFzaBgBIAEoCRIUCgxjYW52YXNfd2lkdGgYAiABKAUSFQoNY2FudmFzX2hlaWdodBgDIAEoBRIuCgZhc3NldHMYBCADKAsyHi5wb3N0cGlsb3QudjEuQ2xpcFByZXZpZXdBc3NldBITCgtuZXh0X29mZnNldBgFIAEoBRIvCgZwYXJpdHkYBiADKA4yHy5wb3N0cGlsb3QudjEuQ2xpcFByZXZpZXdQYXJpdHkizAEKH1ByZXBhcmVDbGlwQ2FwdGlvbkZyYW1lc1JlcXVlc3QSEgoKcHJvamVjdF9pZBgBIAEoCRIZChFleHBlY3RlZF9yZXZpc2lvbhgCIAEoBRISCgpkcmFmdF9oYXNoGAMgASgJEigKBHBsYW4YBCABKAsyGi5wb3N0cGlsb3QudjEuQ2xpcEVkaXRQbGFuEhMKC2luc3RhbmNlX2lkGAUgASgJEhQKDGZyYW1lX29mZnNldBgGIAEoBRIRCglyZW5kZXJfaWQYByABKAki5AEKIFByZXBhcmVDbGlwQ2FwdGlvbkZyYW1lc1Jlc3BvbnNlEhIKCmRyYWZ0X2hhc2gYASABKAkSDQoFc2hlZXQYAiABKAwSEgoKY2VsbF93aWR0aBgDIAEoBRITCgtjZWxsX2hlaWdodBgEIAEoBRIPCgdjb2x1bW5zGAUgASgFEg0KBWNlbGxzGAYgASgFEgkKAXgYByABKAUSCQoBeRgIIAEoBRITCgtmaXJzdF9mcmFtZRgJIAEoBRIUCgxmcmFtZV9vZmZzZXQYCiABKAUSEwoLbmV4dF9vZmZzZXQYCyABKAUipAEKFlN0YXJ0Q2xpcFJlbmRlclJlcXVlc3QSEgoKcHJvamVjdF9pZBgBIAEoCRIZChFleHBlY3RlZF9yZXZpc2lvbhgCIAEoBRIQCghiYXRjaF9pZBgDIAEoCRIxCgtyZW5kZXJfa2luZBgEIAEoDjIcLnBvc3RwaWxvdC52MS5DbGlwUmVuZGVyS2luZBIWCg5yZXVzZV9leGlzdGluZxgFIAEoCCJTChdTdGFydENsaXBSZW5kZXJSZXNwb25zZRIOCgZqb2JfaWQYASABKAkSEQoJcmVuZGVyX2lkGAIgASgJEhUKDXJldXNlZF9yZXN1bHQYAyABKAgiiAEKKFN0YXJ0Q2xpcEJyb3dzZXJDb21wb3NpdGlvblJlbmRlclJlcXVlc3QSEgoKcHJvamVjdF9pZBgBIAEoCRIZChFleHBlY3RlZF9yZXZpc2lvbhgCIAEoBRIQCghiYXRjaF9pZBgDIAEoCRIbChNjb21wb3NpdGlvbl92ZXJzaW9uGAQgASgJIsEBCilTdGFydENsaXBCcm93c2VyQ29tcG9zaXRpb25SZW5kZXJSZXNwb25zZRIRCglyZW5kZXJfaWQYASABKAkSGwoTY29tcG9zaXRpb25fdmVyc2lvbhgCIAEoCRIcChRzbmFwc2hvdF9maW5nZXJwcmludBgDIAEoCRIZChFjb21wb25lbnRfdmVyc2lvbhgEIAEoCRIUCgxmb250X3ZlcnNpb24YBSABKAkSFQoNYXNzZXRfdmVyc2lvbhgGIAEoCSJ/Ch5SZXBvcnRDbGlwUmVuZGVyVmVyZGljdFJlcXVlc3QSEQoJcmVuZGVyX2lkGAEgASgJEjoKDG1lYXN1cmVtZW50cxgCIAEoCzIkLnBvc3RwaWxvdC52MS5DbGlwUmVuZGVyTWVhc3VyZW1lbnRzEg4KBnBhc3NlZBgDIAEoCCJcCh9SZXBvcnRDbGlwUmVuZGVyVmVyZGljdFJlc3BvbnNlEg4KBnBhc3NlZBgBIAEoCBIpCgdub3RpY2VzGAIgAygLMhgucG9zdHBpbG90LnYxLkNsaXBOb3RpY2UiQgoeUHJlcGFyZUNsaXBSZW5kZXJVcGxvYWRSZXF1ZXN0EhEKCXJlbmRlcl9pZBgBIAEoCRINCgVieXRlcxgCIAEoAyKvAQofUHJlcGFyZUNsaXBSZW5kZXJVcGxvYWRSZXNwb25zZRIPCgdwdXRfdXJsGAEgASgJEksKB2hlYWRlcnMYAiADKAsyOi5wb3N0cGlsb3QudjEuUHJlcGFyZUNsaXBSZW5kZXJVcGxvYWRSZXNwb25zZS5IZWFkZXJzRW50cnkaLgoMSGVhZGVyc0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEiNAofQ29tcGxldGVDbGlwUmVuZGVyVXBsb2FkUmVxdWVzdBIRCglyZW5kZXJfaWQYASABKAkiTgogQ29tcGxldGVDbGlwUmVuZGVyVXBsb2FkUmVzcG9uc2USKgoHcHJvamVjdBgBIAEoCzIZLnBvc3RwaWxvdC52MS5DbGlwUHJvamVjdCIzCh5DYW5jZWxDbGlwQnJvd3NlclJlbmRlclJlcXVlc3QSEQoJcmVuZGVyX2lkGAEgASgJIjQKH0NhbmNlbENsaXBCcm93c2VyUmVuZGVyUmVzcG9uc2USEQoJY2FuY2VsbGVkGAEgASgIMuEHChFDbGlwUmVuZGVyU2VydmljZRJpChJQcmVwYXJlQ2xpcFByZXZpZXcSJy5wb3N0cGlsb3QudjEuUHJlcGFyZUNsaXBQcmV2aWV3UmVxdWVzdBooLnBvc3RwaWxvdC52MS5QcmVwYXJlQ2xpcFByZXZpZXdSZXNwb25zZSIAEnsKGFByZXBhcmVDbGlwQ2FwdGlvbkZyYW1lcxItLnBvc3RwaWxvdC52MS5QcmVwYXJlQ2xpcENhcHRpb25GcmFtZXNSZXF1ZXN0Gi4ucG9zdHBpbG90LnYxLlByZXBhcmVDbGlwQ2FwdGlvbkZyYW1lc1Jlc3BvbnNlIgASYAoPU3RhcnRDbGlwUmVuZGVyEiQucG9zdHBpbG90LnYxLlN0YXJ0Q2xpcFJlbmRlclJlcXVlc3QaJS5wb3N0cGlsb3QudjEuU3RhcnRDbGlwUmVuZGVyUmVzcG9uc2UiABKWAQohU3RhcnRDbGlwQnJvd3NlckNvbXBvc2l0aW9uUmVuZGVyEjYucG9zdHBpbG90LnYxLlN0YXJ0Q2xpcEJyb3dzZXJDb21wb3NpdGlvblJlbmRlclJlcXVlc3QaNy5wb3N0cGlsb3QudjEuU3RhcnRDbGlwQnJvd3NlckNvbXBvc2l0aW9uUmVuZGVyUmVzcG9uc2UiABJ4ChdSZXBvcnRDbGlwUmVuZGVyVmVyZGljdBIsLnBvc3RwaWxvdC52MS5SZXBvcnRDbGlwUmVuZGVyVmVyZGljdFJlcXVlc3QaLS5wb3N0cGlsb3QudjEuUmVwb3J0Q2xpcFJlbmRlclZlcmRpY3RSZXNwb25zZSIAEngKF1ByZXBhcmVDbGlwUmVuZGVyVXBsb2FkEiwucG9zdHBpbG90LnYxLlByZXBhcmVDbGlwUmVuZGVyVXBsb2FkUmVxdWVzdBotLnBvc3RwaWxvdC52MS5QcmVwYXJlQ2xpcFJlbmRlclVwbG9hZFJlc3BvbnNlIgASewoYQ29tcGxldGVDbGlwUmVuZGVyVXBsb2FkEi0ucG9zdHBpbG90LnYxLkNvbXBsZXRlQ2xpcFJlbmRlclVwbG9hZFJlcXVlc3QaLi5wb3N0cGlsb3QudjEuQ29tcGxldGVDbGlwUmVuZGVyVXBsb2FkUmVzcG9uc2UiABJ4ChdDYW5jZWxDbGlwQnJvd3NlclJlbmRlchIsLnBvc3RwaWxvdC52MS5DYW5jZWxDbGlwQnJvd3NlclJlbmRlclJlcXVlc3QaLS5wb3N0cGlsb3QudjEuQ2FuY2VsQ2xpcEJyb3dzZXJSZW5kZXJSZXNwb25zZSIAQkRaQmdpdGh1Yi5jb20vcG9zdHBpbG90L2JhY2tlbmQvaW50ZXJuYWwvZ2VuL3Bvc3RwaWxvdC92MTtwb3N0cGlsb3R2MWIGcHJvdG8z", [file_postpilot_v1_clip]);
 
 /**
  * @generated from message postpilot.v1.PrepareClipPreviewRequest
@@ -314,6 +314,80 @@ export const StartClipRenderResponseSchema: GenMessage<StartClipRenderResponse> 
   messageDesc(file_postpilot_v1_clip_render, 5);
 
 /**
+ * @generated from message postpilot.v1.StartClipBrowserCompositionRenderRequest
+ */
+export type StartClipBrowserCompositionRenderRequest = Message<"postpilot.v1.StartClipBrowserCompositionRenderRequest"> & {
+  /**
+   * @generated from field: string project_id = 1;
+   */
+  projectId: string;
+
+  /**
+   * @generated from field: int32 expected_revision = 2;
+   */
+  expectedRevision: number;
+
+  /**
+   * @generated from field: string batch_id = 3;
+   */
+  batchId: string;
+
+  /**
+   * @generated from field: string composition_version = 4;
+   */
+  compositionVersion: string;
+};
+
+/**
+ * Describes the message postpilot.v1.StartClipBrowserCompositionRenderRequest.
+ * Use `create(StartClipBrowserCompositionRenderRequestSchema)` to create a new message.
+ */
+export const StartClipBrowserCompositionRenderRequestSchema: GenMessage<StartClipBrowserCompositionRenderRequest> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_clip_render, 6);
+
+/**
+ * @generated from message postpilot.v1.StartClipBrowserCompositionRenderResponse
+ */
+export type StartClipBrowserCompositionRenderResponse = Message<"postpilot.v1.StartClipBrowserCompositionRenderResponse"> & {
+  /**
+   * @generated from field: string render_id = 1;
+   */
+  renderId: string;
+
+  /**
+   * @generated from field: string composition_version = 2;
+   */
+  compositionVersion: string;
+
+  /**
+   * @generated from field: string snapshot_fingerprint = 3;
+   */
+  snapshotFingerprint: string;
+
+  /**
+   * @generated from field: string component_version = 4;
+   */
+  componentVersion: string;
+
+  /**
+   * @generated from field: string font_version = 5;
+   */
+  fontVersion: string;
+
+  /**
+   * @generated from field: string asset_version = 6;
+   */
+  assetVersion: string;
+};
+
+/**
+ * Describes the message postpilot.v1.StartClipBrowserCompositionRenderResponse.
+ * Use `create(StartClipBrowserCompositionRenderResponseSchema)` to create a new message.
+ */
+export const StartClipBrowserCompositionRenderResponseSchema: GenMessage<StartClipBrowserCompositionRenderResponse> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_clip_render, 7);
+
+/**
  * @generated from message postpilot.v1.ReportClipRenderVerdictRequest
  */
 export type ReportClipRenderVerdictRequest = Message<"postpilot.v1.ReportClipRenderVerdictRequest"> & {
@@ -338,7 +412,7 @@ export type ReportClipRenderVerdictRequest = Message<"postpilot.v1.ReportClipRen
  * Use `create(ReportClipRenderVerdictRequestSchema)` to create a new message.
  */
 export const ReportClipRenderVerdictRequestSchema: GenMessage<ReportClipRenderVerdictRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip_render, 6);
+  messageDesc(file_postpilot_v1_clip_render, 8);
 
 /**
  * The verdict is recorded; it never makes an unstored local file a result.
@@ -362,7 +436,7 @@ export type ReportClipRenderVerdictResponse = Message<"postpilot.v1.ReportClipRe
  * Use `create(ReportClipRenderVerdictResponseSchema)` to create a new message.
  */
 export const ReportClipRenderVerdictResponseSchema: GenMessage<ReportClipRenderVerdictResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip_render, 7);
+  messageDesc(file_postpilot_v1_clip_render, 9);
 
 /**
  * The admitted render determines the immutable object key; no media enters RPC.
@@ -386,7 +460,7 @@ export type PrepareClipRenderUploadRequest = Message<"postpilot.v1.PrepareClipRe
  * Use `create(PrepareClipRenderUploadRequestSchema)` to create a new message.
  */
 export const PrepareClipRenderUploadRequestSchema: GenMessage<PrepareClipRenderUploadRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip_render, 8);
+  messageDesc(file_postpilot_v1_clip_render, 10);
 
 /**
  * @generated from message postpilot.v1.PrepareClipRenderUploadResponse
@@ -408,7 +482,7 @@ export type PrepareClipRenderUploadResponse = Message<"postpilot.v1.PrepareClipR
  * Use `create(PrepareClipRenderUploadResponseSchema)` to create a new message.
  */
 export const PrepareClipRenderUploadResponseSchema: GenMessage<PrepareClipRenderUploadResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip_render, 9);
+  messageDesc(file_postpilot_v1_clip_render, 11);
 
 /**
  * @generated from message postpilot.v1.CompleteClipRenderUploadRequest
@@ -425,7 +499,7 @@ export type CompleteClipRenderUploadRequest = Message<"postpilot.v1.CompleteClip
  * Use `create(CompleteClipRenderUploadRequestSchema)` to create a new message.
  */
 export const CompleteClipRenderUploadRequestSchema: GenMessage<CompleteClipRenderUploadRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip_render, 10);
+  messageDesc(file_postpilot_v1_clip_render, 12);
 
 /**
  * @generated from message postpilot.v1.CompleteClipRenderUploadResponse
@@ -442,7 +516,7 @@ export type CompleteClipRenderUploadResponse = Message<"postpilot.v1.CompleteCli
  * Use `create(CompleteClipRenderUploadResponseSchema)` to create a new message.
  */
 export const CompleteClipRenderUploadResponseSchema: GenMessage<CompleteClipRenderUploadResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip_render, 11);
+  messageDesc(file_postpilot_v1_clip_render, 13);
 
 /**
  * @generated from message postpilot.v1.CancelClipBrowserRenderRequest
@@ -459,7 +533,7 @@ export type CancelClipBrowserRenderRequest = Message<"postpilot.v1.CancelClipBro
  * Use `create(CancelClipBrowserRenderRequestSchema)` to create a new message.
  */
 export const CancelClipBrowserRenderRequestSchema: GenMessage<CancelClipBrowserRenderRequest> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip_render, 12);
+  messageDesc(file_postpilot_v1_clip_render, 14);
 
 /**
  * False means completion already won; a stored result is never undone.
@@ -478,7 +552,7 @@ export type CancelClipBrowserRenderResponse = Message<"postpilot.v1.CancelClipBr
  * Use `create(CancelClipBrowserRenderResponseSchema)` to create a new message.
  */
 export const CancelClipBrowserRenderResponseSchema: GenMessage<CancelClipBrowserRenderResponse> = /*@__PURE__*/
-  messageDesc(file_postpilot_v1_clip_render, 13);
+  messageDesc(file_postpilot_v1_clip_render, 15);
 
 /**
  * Everything that turns a plan into a file: the draft preview's assets, the server render,
@@ -510,6 +584,14 @@ export const ClipRenderService: GenService<{
     methodKind: "unary";
     input: typeof StartClipRenderRequestSchema;
     output: typeof StartClipRenderResponseSchema;
+  },
+  /**
+   * @generated from rpc postpilot.v1.ClipRenderService.StartClipBrowserCompositionRender
+   */
+  startClipBrowserCompositionRender: {
+    methodKind: "unary";
+    input: typeof StartClipBrowserCompositionRenderRequestSchema;
+    output: typeof StartClipBrowserCompositionRenderResponseSchema;
   },
   /**
    * @generated from rpc postpilot.v1.ClipRenderService.ReportClipRenderVerdict

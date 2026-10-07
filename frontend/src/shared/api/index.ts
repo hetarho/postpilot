@@ -525,3 +525,6 @@ export {
   UpdateVoiceSampleRequestSchema,
   UpdateVoiceSampleResponseSchema,
 } from './gen/postpilot/v1/voice_pb'
+export type { ClipAnalysisPreparationResponse } from './gen/postpilot/v1/clip_source_pb'
+
+export { ClipAnalysisPreparationResponseSchema } from './gen/postpilot/v1/clip_source_pb'

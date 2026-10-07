@@ -29,7 +29,7 @@ func copyView(canvas clip.Canvas, c clip.Copy, l copyLayout, ground Luminance) o
 	if !l.Caption.Paint.Accent {
 		accent = ""
 	}
-	if s.Plate == "" && l.Caption.Paint.Scrim && ground.Scrim() {
+	if s.Plate == "" && ground.Scrim() {
 		if scrim, ok := scrimFor(canvas, c.Anchor); ok {
 			paint := design.Scrim[scrim.Edge]
 			v.Scrim = &overlay.Scrim{Box: overlayBox(scrim.Region, 0, paint.Hex, ""), From: trimmed(paint.From), To: trimmed(paint.To)}

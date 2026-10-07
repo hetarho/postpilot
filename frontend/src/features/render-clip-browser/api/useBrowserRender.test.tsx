@@ -72,9 +72,8 @@ it('renders no revision older than the one the server holds', async () => {
   expect(started).not.toHaveBeenCalled()
 })
 
-// CLIP-192, CLIP-155: the render waits on its sampling job; a job that failed refuses the
-// browser kind by that one reason, names the refusal, and withdraws the render.
-it('refuses the browser render when its sampling job failed', async () => {
+// Unknown legacy source audio metadata must not start a native sampling fallback.
+it('refuses unknown source identity before legacy admission or native sampling', async () => {
   const editing = clipTimelineFixture()
   const cancelled = vi.fn(() => ({ cancelled: true }))
   const transport = createRouterTransport((router) => {
@@ -119,8 +118,7 @@ it('refuses the browser render when its sampling job failed', async () => {
   )
   expect(view.result.current.state).toMatchObject({
     phase: 'failed',
-    refusal: 'sampling',
-    failure: { reason: 'CLIP_SOURCE_UNAVAILABLE' },
+    failure: { reason: 'CLIP_PROCESSING_FAILED' },
   })
-  expect(cancelled).toHaveBeenCalledOnce()
+  expect(cancelled).not.toHaveBeenCalled()
 })

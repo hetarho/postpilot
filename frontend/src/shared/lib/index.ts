@@ -1,6 +1,17 @@
 export { isInAppPath, SIGNED_IN_HOME } from './navigation'
 export { createAudioProcessor } from './media'
+export { createAudioRangeReader, audioGuardWindow, decodeOriginalAudioRange } from './media'
+export { canonicalSelectedAudio } from './media'
+export { loudnessRange48k } from './media'
+export type {
+  AudioRangeLimits,
+  AudioSourceRange,
+  OriginalAudioMetadata,
+  SelectedAudioRange,
+} from './media'
 export { MediaPhaseRecorder } from './media'
+export { MediaPacketWindow } from './media'
+export type { Mp4TrackMeasurements } from './media'
 export type { MediaPhaseMeasurement, MediaPhaseSnapshot } from './media'
 export { integratedLoudness48k, normalizeLoudness48k, truePeak48k } from './media'
 export { mp4HasAudio, mp4AudioDecodedBytes } from './media'
@@ -86,3 +97,28 @@ export {
 export type { I18nFragment } from './localization'
 export { createAutosaveQueue } from './autosave'
 export type { AutosaveOptions, AutosaveQueue, AutosaveSend } from './autosave'
+export {
+  createFiniteMediaSource,
+  MediaRangeError,
+  VideoFrameBudget,
+  openOriginalVideo,
+  OriginalVideoCursor,
+  nativeOutputFrame,
+  NATIVE_SOURCE_COLOR_VERSION,
+  nativeSourceColorSpace,
+  bindNativeSourceColor,
+} from './media'
+export type {
+  BrowserMediaSourceAccess,
+  MediaRangeLimits,
+  MediaRangeMeasurements,
+  MediaRangePorts,
+  OriginalVideoInput,
+  OriginalVideoMetadata,
+  OriginalVideoPorts,
+  VideoRangeSample,
+  DecodedVideoResource,
+  VideoDrawRect,
+} from './media'
+
+export { measureOriginalMedia, transcodeMediaInterval } from './media'

@@ -66,7 +66,7 @@ func newRecovery(t *testing.T) *recoveryHarness {
 	}
 	h.restart()
 	artifacts := clipapp.NewMediaArtifacts(g.h.db.Writer, h.bind, g.objects, g.h.cfg.Media, func() time.Time { return h.now })
-	control := clipapp.NewMediaControl(g.h.db.Writer, h.bind, g.h.store)
+	control := clipapp.NewMediaControl(g.h.db.Writer, h.bind, g.h.store, clip.DefaultRenderCapacity(clip.Environment{}))
 	api := httptest.NewServer(cliprpc.NewMediaWorkerServer("", map[string]string{"render-one": "one", "render-two": "two"}, clipapp.NewMediaWorker(control, artifacts, func() time.Time { return h.now })).Handler)
 	t.Cleanup(api.Close)
 	g.clients = [2]*workerclient.Client{workerclient.New(api.URL, "render-one", "one"), workerclient.New(api.URL, "render-two", "two")}
@@ -152,6 +152,7 @@ func TestMediaRecoveryWaitDeadlineAndTotalBudget(t *testing.T) {
 			s := h.stage(t)
 			want := "CLIP_MEDIA_UNAVAILABLE"
 			if mode == "offline" {
+				want = "CLIP_MEDIA_WAIT_EXPIRED"
 				h.now = s.QueueDeadlineAt.Add(time.Second)
 			} else {
 				c, w := h.claim(t)

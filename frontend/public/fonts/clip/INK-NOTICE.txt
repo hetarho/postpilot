@@ -1,0 +1,24 @@
+Postpilot bundled ink resources
+
+Wanted Sans Variable 1.0.3 is the declared source face. The unmodified source
+WantedSansVariable.ttf and its copyright/OFL notice in LICENSE remain bundled.
+
+PostpilotWantedInk-400.ttf, -600.ttf, -700.ttf and -800.ttf are fixed wght
+instances of that same source, generated with fontTools 4.60.2. Their internal
+families are Postpilot Wanted Ink W400/W600/W700/W800. The instances preserve
+the corresponding source outlines, shaping, metrics and character coverage;
+the names identify internal raster resources and are not owner font choices.
+Only the wght instancing and internal name records are modified. No font file
+is supplied by a project or user. The derivatives remain under OFL-1.1.
+
+Reproducible generator: scripts/build-clip-ink-fonts.py in the Postpilot source.
+Resource/source checksums and outline coverage are recorded in
+frontend/src/entities/clip-design/config/clip-ink-fonts.json. Frozen ink
+identity is frontend/src/entities/clip-design/config/clip-ink-identity.json.
+
+Paperlogy, Jua and NanumMyeongjo resources remain unmodified, with their original
+OFL notices in LICENSE-Paperlogy, LICENSE-Jua and LICENSE-NanumMyeongjo.
+
+The compatible raster adapter is @resvg/resvg-wasm 2.6.2. Its binary dependency
+source graph is a separate release qualification gate; these font proofs do
+not approve distribution or activate a browser renderer.

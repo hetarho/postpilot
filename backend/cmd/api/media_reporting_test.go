@@ -17,7 +17,7 @@ func TestMediaStagesAndFailuresUseTheOwnedReportingVocabulary(t *testing.T) {
 		t.Fatal(got)
 	}
 	for code, reason := range map[clip.MediaFailure]string{
-		clip.MediaFailureWaitExpired:       "CLIP_MEDIA_UNAVAILABLE",
+		clip.MediaFailureWaitExpired:       "CLIP_MEDIA_WAIT_EXPIRED",
 		clip.MediaFailureAttemptsExhausted: "CLIP_MEDIA_RETRY_EXHAUSTED",
 		clip.MediaFailureDeadlineExceeded:  "CLIP_MEDIA_TIMEOUT",
 	} {

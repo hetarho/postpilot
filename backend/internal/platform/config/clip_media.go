@@ -68,6 +68,37 @@ func loadClipTools(cfg *Config) error {
 func loadMediaStageOverrides(cfg *Config) error {
 	for _, field := range []struct {
 		name   string
+		target *int
+	}{
+		{"CLIP_SERVER_RENDER_ACTIVE", &cfg.ClipServerRenderActive},
+		{"CLIP_ANALYSIS_VERIFY_ACTIVE", &cfg.ClipAnalysisVerificationActive},
+		{"CLIP_ANALYSIS_VERIFY_PER_ACCOUNT", &cfg.ClipAnalysisVerificationPerAccount},
+		{"CLIP_SERVER_RENDER_PER_ACCOUNT", &cfg.ClipServerRenderPerAccount},
+	} {
+		if value := getenv(field.name, ""); value != "" {
+			n, err := strconv.Atoi(value)
+			if err != nil || n <= 0 {
+				return fmt.Errorf("%s must be a positive integer", field.name)
+			}
+			*field.target = n
+		}
+	}
+	if value := getenv("CLIP_ANALYSIS_VERIFY_WAITING", ""); value != "" {
+		n, err := strconv.Atoi(value)
+		if err != nil || n < 0 {
+			return fmt.Errorf("CLIP_ANALYSIS_VERIFY_WAITING must be nonnegative")
+		}
+		cfg.ClipAnalysisVerificationWaiting = &n
+	}
+	if value := getenv("CLIP_SERVER_RENDER_WAITING", ""); value != "" {
+		n, err := strconv.Atoi(value)
+		if err != nil || n < 0 {
+			return fmt.Errorf("CLIP_SERVER_RENDER_WAITING must be a nonnegative integer")
+		}
+		cfg.ClipServerRenderWaiting = &n
+	}
+	for _, field := range []struct {
+		name   string
 		target *time.Duration
 	}{
 		{"CLIP_MEDIA_LEASE_TTL", &cfg.ClipMediaLeaseTTL},

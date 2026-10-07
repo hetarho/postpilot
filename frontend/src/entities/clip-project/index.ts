@@ -97,3 +97,20 @@ export {
   useClipStorylineRevisionQuote,
   type ClipQuoteMode,
 } from './api/credits'
+
+export {
+  clipAnalysisPreparationCalls,
+  useClipAnalysisPreparationCalls,
+  beginClipAnalysisPreparation,
+  reserveClipAnalysisCopy,
+  completeClipAnalysisPreparation,
+  cancelClipAnalysisPreparation,
+  toClipAnalysisPreparation,
+} from './api/analysis-preparation'
+export { CLIP_BROWSER_ANALYSIS_PROFILE } from './model/analysis-preparation'
+export type {
+  ClipAnalysisPreparation,
+  ClipAnalysisPreparationInput,
+  ClipAnalysisOriginalMeasurement,
+  ClipAnalysisPreparationState,
+} from './model/analysis-preparation'

@@ -7,9 +7,51 @@ export {
   type EncoderSupport,
 } from './video'
 export { createAudioProcessor } from './audio/processing'
+export { createAudioRangeReader } from './audio/range-reader'
+export { canonicalSelectedAudio } from './audio/selected-pcm'
+export { audioGuardWindow, decodeOriginalAudioRange } from './audio/range-audio'
+export type {
+  AudioRangeLimits,
+  AudioSourceRange,
+  OriginalAudioMetadata,
+  SelectedAudioRange,
+} from './audio/range-audio'
 export { integratedLoudness48k, normalizeLoudness48k, truePeak48k } from './audio/loudness'
+export { loudnessRange48k } from './audio/loudness'
 export { mp4HasAudio, mp4AudioDecodedBytes } from './video/mp4-audio'
 export type { AudioNormalization, EncodedAudioTrack, PcmChannels } from './audio/processing-types'
 export { muxMp4 } from './mux-mp4'
+export { createBoundedMediaOutput, reclaimMediaOutputs } from './bounded-output'
+export type { BoundedMediaOutput, MediaPositionWrite } from './bounded-output'
+export { createMp4PacketMux } from './stream-mp4'
+export type { MediaEncodedVideoPacket } from './stream-mp4'
+export { MediaPacketWindow } from './packet-window'
+export { measureMp4Output } from './measure-mp4'
+export type { Mp4TrackMeasurements } from './measure-mp4'
+export { verifyMp4Audio } from './verify-mp4-audio'
 export { MediaPhaseRecorder } from './phase-metrics'
 export type { MediaPhaseMeasurement, MediaPhaseSnapshot } from './phase-metrics'
+export { createFiniteMediaSource, MediaRangeError } from './video/range-source'
+export type {
+  BrowserMediaSourceAccess,
+  MediaRangeLimits,
+  MediaRangeMeasurements,
+  MediaRangePorts,
+} from './video/range-source'
+export { VideoFrameBudget } from './video/frame-budget'
+export { openOriginalVideo, OriginalVideoCursor, nativeOutputFrame } from './video/range-video'
+export {
+  NATIVE_SOURCE_COLOR_VERSION,
+  nativeSourceColorSpace,
+  bindNativeSourceColor,
+} from './video/source-color'
+export type {
+  OriginalVideoInput,
+  OriginalVideoMetadata,
+  OriginalVideoPorts,
+  VideoRangeSample,
+  DecodedVideoResource,
+  VideoDrawRect,
+} from './video/range-video'
+
+export { measureOriginalMedia, transcodeMediaInterval } from './analysis-copy'

@@ -1,3 +1,4 @@
+import type { ClipLayoutObservations } from '@/entities/clip-observation/@x/clip-plan'
 import { cloneNarration, type ClipNarration, type ClipDerivedCaption } from './spoken'
 import {
   CLIP_COPY,
@@ -144,6 +145,8 @@ export interface ClipEditableText {
   creation?: { kind: string }
   effectiveStartMs?: number
   effectiveEndMs?: number
+  /** Existing server-chosen automatic anchor; a read projection, never an owner edit. */
+  effectivePosition?: string
   phrases?: { text: string; startMs: number; endMs: number }[]
   staleEvidence?: boolean
   evidenceReviewed?: boolean
@@ -192,6 +195,8 @@ export interface ClipEditPlan {
   cuts: ClipEditCut[]
 }
 export interface RetainedClipSource {
+  hasAudio?: boolean
+  originalMeasurementProvenance?: string
   id: string
   fingerprint: string
   filename: string
@@ -204,6 +209,7 @@ export interface RetainedClipSource {
   allowedRatePermille: number[]
 }
 export interface ClipEditingState {
+  layoutObservations?: ClipLayoutObservations
   plan: ClipEditPlan
   sources: RetainedClipSource[]
 

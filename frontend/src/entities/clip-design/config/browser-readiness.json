@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "finalRender": {
+    "renderer": "clip-browser-composition-v1",
+    "components": "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1",
+    "fonts": "bundled-clip-fonts-v1",
+    "assets": "clip-design-assets-v1-ink-8f58a59b925711cb5ae8b8b3159b116c5d2200f4774315f8d7a42811c30bf7c2",
+    "wasmSHA256": "22bf6e9f9a100d972da0411a69c5ba504367fc1fa87b3b64e3f35e53926d2d70",
+    "wasmVersion": "2.6.2",
+    "qualified": false,
+    "enabled": false,
+    "missingGates": [
+      "current_paired_complete_composition_performance",
+      "physical_windows_integrated_gpu",
+      "lower_resource_device",
+      "human_output_review",
+      "complete_original_wasm_source_license_graph"
+    ],
+    "technicalEvidence": [
+      "docs/qa/browser-streamed-export-checks.json",
+      "docs/qa/browser-editor-preview-proof.json"
+    ]
+  },
+  "analysisPreparation": {
+    "profile": "clip-browser-analysis-v1",
+    "qualified": false,
+    "enabled": false,
+    "missingGates": [
+      "authorized_corpus_and_source_time_truth",
+      "current_provider_matched_repetitions",
+      "actual_route_sampling_controls",
+      "trusted_live_admission_accounting",
+      "explicit_cumulative_spend_approval",
+      "human_semantic_review"
+    ],
+    "technicalEvidence": [
+      "docs/qa/browser-analysis-quality-offline.json",
+      "docs/qa/browser-analysis-quality-pinned-verifier.json"
+    ]
+  },
+  "realVoiceQualification": false,
+  "distributionApproved": false,
+  "nativeMaxCapacityChanged": false
+}

@@ -35,6 +35,7 @@ type GenerationJob struct {
 	CancelRequestedAt         sql.NullString
 	CancellationPolicyVersion int64
 	ExperimentID              sql.NullString
+	WaitExpiresAt             sql.NullString
 }
 
 type JobContinuation struct {

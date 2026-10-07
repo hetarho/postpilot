@@ -40,6 +40,11 @@ class MediaComposeTest(unittest.TestCase):
                             self.assertEqual(set(cfg['services']), {'api'})
                         else:
                             self.assertFalse(ports)
+                            self.assertEqual(float(api['cpus']), 1)
+                            self.assertEqual(api['cpu_shares'], 1024)
+                            self.assertEqual(int(api['mem_limit']), 256 << 20)
+                            self.assertEqual(api['memswap_limit'], api['mem_limit'])
+                            self.assertEqual(api['mem_reservation'], api['mem_limit'])
                     if topology != 'remote':
                         w = cfg['services']['media-worker']
                         self.assertFalse(w.get('ports'))

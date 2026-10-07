@@ -1,0 +1,36 @@
+{
+  "at": "ff048f4c388e11b659bba5fee999159ca74f49d9",
+  "testedAt": "47320560ebdfb356a65fb988d174f152d2c5c68a",
+  "engines": {
+    "pixi": {
+      "frames": 8,
+      "pngByteIdentical": true,
+      "hashes": {
+        "vertical-ember-steady-99.png": "a39e75b2fa295921f3ba3da34efacaeead1e55174d9141399daab891cd4a8dd4",
+        "vertical-ember-two-steady-32.png": "25b273839b5fde562f1527f68a90c6cb4e363c07831f2ca02d668d15e89d6b4d",
+        "vertical-ember-long-steady-115.png": "8db8a5e7414c7098453ae549c914325034b264a3f229ffc2d0245640dd3d66cc",
+        "vertical-ember-two-rapid-cue1-41.png": "29f2aae38f50caf13710d5bdf31566f92a7617c3f8889e224b7b636a420eb423",
+        "horizontal-ember-long-steady-99.png": "cec3d8df5d2a5cbb24b2980e5262dc6a97a48c6e626807556cafaafc0c46fc92",
+        "horizontal-ember-two-steady-dark-119.png": "59ae4a0b436f0d4bb7e720c493c54b64175ca21004af96ee5145c59b7cd9574a",
+        "square-ember-two-steady-99.png": "da221b2ee359c5e82606a9d574c9ad277b7d9311994a97660f3bb88097277515",
+        "square-ember-two-steady-bright-32.png": "a60a5d0195da7dffd757e1ab2c63f68463eb947dd423d440a3b816924dee4cb3"
+      },
+      "reportSHA256": "1a577e09a46a433e64f6250a4fd3ab3600c5439c86694c3849c2c399f43da947"
+    },
+    "canvas": {
+      "frames": 8,
+      "pngByteIdentical": true,
+      "hashes": {
+        "vertical-ember-steady-99.png": "acafda00c08cbd6705f40c66ea934041b7bd0e2888a6f79613cb13b603382fd0",
+        "vertical-ember-two-steady-32.png": "10b1c15f9a852eaa3d0bf1ee6b6b5d654df1b78dba233b63f03aa55ef370ca26",
+        "vertical-ember-long-steady-115.png": "fd4805a378c1b508b62ed74fcaf60905a47dc4389f7d510001f0596501e170e7",
+        "vertical-ember-two-rapid-cue1-41.png": "543fcc1eaa3b343d5a768a0bbe2f8499b2de1b4d14c33eb18b0bd6d9fb59c5c7",
+        "horizontal-ember-long-steady-99.png": "e9dd88aa17151ae6d3de521d44c3998213722109e9ca8e23b68a14af3b7dff41",
+        "horizontal-ember-two-steady-dark-119.png": "adc184e6a5b100c077b1b5b5a653fa3075b674de093d676531305cb50fb2d2d8",
+        "square-ember-two-steady-99.png": "fbaff5ac3cffcfcca6343d0508b6c4ca244bbed8eb22e1d2d9e8e1915f738c0c",
+        "square-ember-two-steady-bright-32.png": "b1d097518d51b5082ffa180fe5d8c9f0967e505a6c455b49a4dcee266c79d0f1"
+      },
+      "reportSHA256": "9d8408c5dda237111f38184c0b2bf507324634a3ec48c2795db2acd59e04c2d4"
+    }
+  }
+}

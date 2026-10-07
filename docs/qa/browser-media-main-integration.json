@@ -1,0 +1,331 @@
+{
+  "kind": "main-integration-compatibility",
+  "originMain": "de99511409d6aba0125f5f89633bee654023f30c",
+  "reviewedMedia": "29ff743d968dd35edf15a463c858908a84919387",
+  "preservedWorkingDraftCommit": "676cee4d",
+  "scope": "Normal merge retains both histories. Current main authoring/XState/typography and reviewed media pipelines coexist; migration149 and sticky chrome clearance are focused compatibility fixes.",
+  "database": {
+    "forwardMigration": 149,
+    "focusedTestsPassed": true,
+    "schemaGuard": "Nullable TEXT, preserve legacy144 values/history, refuse missing deployed migrations without blanket out-of-order allowance."
+  },
+  "browser": {
+    "reportSHA256": "d92b65b45972ac702f36c9bc55e99511cfdd592216b91b89797ce9c61c787388",
+    "scrollCases": 6,
+    "occludedCases": 0,
+    "frontendSourceHashCount": 1835,
+    "keyboardAutosaveAndStillFlowPassed": true,
+    "initialFailurePreserved": true
+  },
+  "currentLockfileSHA256": "4bf52d68dba2d2b5492cacdeeb92b12337bde6694001350640f5ad1693a3c152",
+  "mediaPackageVersionSourceAndNoticeCount": 20,
+  "historicalReportsAreHistorical": true,
+  "releaseQualification": false,
+  "analysisQualification": false,
+  "voiceQualification": false,
+  "fullCI": {
+    "passed": true,
+    "sourceCommit": "033d78249c307026d93adda96c727930eb5eb90e",
+    "startedAtUTC": "2026-10-07T04:57:39.958070+00:00",
+    "completedAtUTC": "2026-10-07T05:07:11.310204+00:00",
+    "receiptSHA256": "c9ca6bd3d70a05105d4e51391238b8879695ae56d2f8f5121cb1556f14869c7d",
+    "checks": [
+      {
+        "name": "dev",
+        "argv": [
+          "pnpm",
+          "test:dev"
+        ],
+        "cwd": "/private/tmp/postpilot-main-push-integration",
+        "exitCode": 0,
+        "elapsedSeconds": 0.505,
+        "log": "/private/tmp/postpilot-main-push-ci-final/dev.log",
+        "logSHA256": "171148b4419e9601b08efadf2265dd2fd96385f2269ade9eda7594d7ff4b7cc3",
+        "reusedAtSourceHead": "948baf2345f2637fad695b4ba00bfff3f8e88632",
+        "reuseScope": "Only generated JSON whitespace changed; validated prefix inputs and JSON values are unchanged."
+      },
+      {
+        "name": "proto",
+        "argv": [
+          "pnpm",
+          "gen:proto"
+        ],
+        "cwd": "/private/tmp/postpilot-main-push-integration",
+        "exitCode": 0,
+        "elapsedSeconds": 2.668,
+        "log": "/private/tmp/postpilot-main-push-ci-final/proto.log",
+        "logSHA256": "828782f248e780c518c6401e9004207b112f08fe0d213f9adaf2dc058250dc38",
+        "reusedAtSourceHead": "948baf2345f2637fad695b4ba00bfff3f8e88632",
+        "reuseScope": "Only generated JSON whitespace changed; validated prefix inputs and JSON values are unchanged."
+      },
+      {
+        "name": "proto-diff",
+        "argv": [
+          "git",
+          "diff",
+          "--exit-code",
+          "--",
+          "backend/internal/gen",
+          "frontend/src/shared/api/gen"
+        ],
+        "cwd": "/private/tmp/postpilot-main-push-integration",
+        "exitCode": 0,
+        "elapsedSeconds": 0.027,
+        "log": "/private/tmp/postpilot-main-push-ci-final/proto-diff.log",
+        "logSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "reusedAtSourceHead": "948baf2345f2637fad695b4ba00bfff3f8e88632",
+        "reuseScope": "Only generated JSON whitespace changed; validated prefix inputs and JSON values are unchanged."
+      },
+      {
+        "name": "sql",
+        "argv": [
+          "pnpm",
+          "gen:sql"
+        ],
+        "cwd": "/private/tmp/postpilot-main-push-integration",
+        "exitCode": 0,
+        "elapsedSeconds": 36.251,
+        "log": "/private/tmp/postpilot-main-push-ci-final/sql.log",
+        "logSHA256": "5a9b3903939a7ec648d88a6143cfbbcc021db4bb3a049712631f3db9acc3dffb",
+        "reusedAtSourceHead": "948baf2345f2637fad695b4ba00bfff3f8e88632",
+        "reuseScope": "Only generated JSON whitespace changed; validated prefix inputs and JSON values are unchanged."
+      },
+      {
+        "name": "sql-diff",
+        "argv": [
+          "git",
+          "diff",
+          "--exit-code",
+          "--",
+          "backend"
+        ],
+        "cwd": "/private/tmp/postpilot-main-push-integration",
+        "exitCode": 0,
+        "elapsedSeconds": 0.047,
+        "log": "/private/tmp/postpilot-main-push-ci-final/sql-diff.log",
+        "logSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "reusedAtSourceHead": "948baf2345f2637fad695b4ba00bfff3f8e88632",
+        "reuseScope": "Only generated JSON whitespace changed; validated prefix inputs and JSON values are unchanged."
+      },
+      {
+        "name": "lint",
+        "argv": [
+          "pnpm",
+          "--filter",
+          "./frontend",
+          "lint"
+        ],
+        "cwd": "/private/tmp/postpilot-main-push-integration",
+        "exitCode": 0,
+        "elapsedSeconds": 22.578,
+        "log": "/private/tmp/postpilot-main-push-ci-final/lint.log",
+        "logSHA256": "9547805ae9ea4b38ecd222318b562d2d1cab2c40b88b2bf92199576427b6f506",
+        "reusedAtSourceHead": "948baf2345f2637fad695b4ba00bfff3f8e88632",
+        "reuseScope": "Only generated JSON whitespace changed; validated prefix inputs and JSON values are unchanged."
+      },
+      {
+        "name": "format",
+        "argv": [
+          "pnpm",
+          "--filter",
+          "./frontend",
+          "format:check"
+        ],
+        "cwd": "/private/tmp/postpilot-main-push-integration",
+        "exitCode": 0,
+        "elapsedSeconds": 9.645,
+        "log": "/private/tmp/postpilot-main-push-ci-complete/format.log",
+        "logSHA256": "beafc2b04cf1a736fba336cfcd2edea5355fc251146faea72141262601a1cbef"
+      },
+      {
+        "name": "fsd",
+        "argv": [
+          "pnpm",
+          "--filter",
+          "./frontend",
+          "lint:fsd"
+        ],
+        "cwd": "/private/tmp/postpilot-main-push-integration",
+        "exitCode": 0,
+        "elapsedSeconds": 5.936,
+        "log": "/private/tmp/postpilot-main-push-ci-complete/fsd.log",
+        "logSHA256": "30a310cacb6c8bfa092f9fb648e8d4996fa36550329b8ed0d9f56feaaaec8cc0"
+      },
+      {
+        "name": "retirement",
+        "argv": [
+          "pnpm",
+          "lint:retirement"
+        ],
+        "cwd": "/private/tmp/postpilot-main-push-integration",
+        "exitCode": 0,
+        "elapsedSeconds": 0.822,
+        "log": "/private/tmp/postpilot-main-push-ci-complete/retirement.log",
+        "logSHA256": "aed026f5378fa4e13c945e0b6000d48a098f8267e24aca32136f72dfd937f16d"
+      },
+      {
+        "name": "style-probe",
+        "argv": [
+          "pnpm",
+          "lint:style:probe"
+        ],
+        "cwd": "/private/tmp/postpilot-main-push-integration",
+        "exitCode": 0,
+        "elapsedSeconds": 0.375,
+        "log": "/private/tmp/postpilot-main-push-ci-complete/style-probe.log",
+        "logSHA256": "8044c8eff67e0e3fac88139c27586d3eb236aca21124912cda323000e21356b4"
+      },
+      {
+        "name": "style",
+        "argv": [
+          "pnpm",
+          "lint:style"
+        ],
+        "cwd": "/private/tmp/postpilot-main-push-integration",
+        "exitCode": 0,
+        "elapsedSeconds": 0.918,
+        "log": "/private/tmp/postpilot-main-push-ci-complete/style.log",
+        "logSHA256": "435b3dc55cf9d8f2fd224b5004cebdc0794e8231ec1dc4d1ed93f5d174379b35"
+      },
+      {
+        "name": "skills",
+        "argv": [
+          "pnpm",
+          "exec",
+          "haeram-spec-creator",
+          "check"
+        ],
+        "cwd": "/private/tmp/postpilot-main-push-integration",
+        "exitCode": 0,
+        "elapsedSeconds": 0.443,
+        "log": "/private/tmp/postpilot-main-push-ci-complete/skills.log",
+        "logSHA256": "9ecad11f9759114d56531c877c95876c67f57f5fa5db366d1477a4cf550d3162"
+      },
+      {
+        "name": "frontend",
+        "argv": [
+          "pnpm",
+          "--filter",
+          "./frontend",
+          "test"
+        ],
+        "cwd": "/private/tmp/postpilot-main-push-integration",
+        "exitCode": 0,
+        "elapsedSeconds": 136.817,
+        "log": "/private/tmp/postpilot-main-push-ci-complete/frontend.log",
+        "logSHA256": "8aad35cf00d5ad9ffcb0782064c5692694447f5db925dfd6b12316adb947b74e"
+      },
+      {
+        "name": "build",
+        "argv": [
+          "pnpm",
+          "build:web"
+        ],
+        "cwd": "/private/tmp/postpilot-main-push-integration",
+        "exitCode": 0,
+        "elapsedSeconds": 21.543,
+        "log": "/private/tmp/postpilot-main-push-ci-complete/build.log",
+        "logSHA256": "977605f93059f6e3cc501d1aba6b3ab3d5fae8167a1113ba721ad39cefdc26df"
+      },
+      {
+        "name": "gofmt",
+        "argv": [
+          "gofmt",
+          "-l",
+          "."
+        ],
+        "cwd": "/private/tmp/postpilot-main-push-integration/backend",
+        "exitCode": 0,
+        "elapsedSeconds": 0.205,
+        "log": "/private/tmp/postpilot-main-push-ci-complete/gofmt.log",
+        "logSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "name": "go-vet",
+        "argv": [
+          "go",
+          "vet",
+          "./..."
+        ],
+        "cwd": "/private/tmp/postpilot-main-push-integration/backend",
+        "exitCode": 0,
+        "elapsedSeconds": 2.822,
+        "log": "/private/tmp/postpilot-main-push-ci-complete/go-vet.log",
+        "logSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "name": "go-build",
+        "argv": [
+          "go",
+          "build",
+          "./..."
+        ],
+        "cwd": "/private/tmp/postpilot-main-push-integration/backend",
+        "exitCode": 0,
+        "elapsedSeconds": 2.85,
+        "log": "/private/tmp/postpilot-main-push-ci-complete/go-build.log",
+        "logSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "name": "go-test",
+        "argv": [
+          "go",
+          "test",
+          "-timeout",
+          "30m",
+          "./..."
+        ],
+        "cwd": "/private/tmp/postpilot-main-push-integration/backend",
+        "exitCode": 0,
+        "elapsedSeconds": 308.837,
+        "log": "/private/tmp/postpilot-main-push-ci-complete/go-test.log",
+        "logSHA256": "2e4a9c344a5b9652d3d75dc46b76b782c86d9f105ce6c45c4afdbce2117eff55"
+      },
+      {
+        "name": "deploy-python",
+        "argv": [
+          "/private/tmp/postpilot-t590-python/bin/python",
+          "-m",
+          "unittest",
+          "discover",
+          "-s",
+          "deploy",
+          "-p",
+          "*_test.py",
+          "-v"
+        ],
+        "cwd": "/private/tmp/postpilot-main-push-integration",
+        "exitCode": 0,
+        "elapsedSeconds": 80.029,
+        "log": "/private/tmp/postpilot-main-push-ci-complete/deploy-python.log",
+        "logSHA256": "0c4562936440deb399bf609dba4d2718b12ed503397cd74d0ddb00654ba41ffa"
+      }
+    ],
+    "prefixReuseProof": {
+      "oldHead": "948baf2345f2637fad695b4ba00bfff3f8e88632",
+      "onlyChangedFile": "frontend/src/entities/clip-design/config/clip-ink-identity.json",
+      "jsonSemanticEqual": true
+    },
+    "frontendFiles": 470,
+    "frontendTests": 3714,
+    "deployPythonTests": 62,
+    "sourceFingerprintSHA256": "78dadae01efcc8816160e04844148a6b53d11671f72fdaf4fd0c27d8ba6f52dd",
+    "sourceFileCount": 3996,
+    "preservedFailures": [
+      "Initial merged-source stale lock fingerprint/default-config environment failures are retained in /private/tmp/postpilot-main-push-ci/report.json.",
+      "Generated JSON formatting failure is retained in /private/tmp/postpilot-main-push-ci-final/report.json; parsed data were unchanged by the033d7824 formatting correction."
+    ]
+  },
+  "remotePush": {
+    "authorized": true,
+    "statusAtReceiptCreation": "not-executed",
+    "evidenceLocation": "Git origin/main HEAD and GitHub Actions commit checks are collected after promotion/push separately from this local-CI receipt."
+  },
+  "currentAssetVersion": "clip-design-assets-v1-ink-8f58a59b925711cb5ae8b8b3159b116c5d2200f4774315f8d7a42811c30bf7c2",
+  "catalogRegenerationScope": "Only effectImplementation.sources/pnpm-lock.yaml changed; native catalog styles/paint and all font/WASM bytes are unchanged.",
+  "distributionApproved": false,
+  "sourceOnlyTaskStatus": {
+    "T603": "blocked",
+    "T604": "blocked"
+  }
+}

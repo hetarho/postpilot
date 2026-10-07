@@ -110,7 +110,7 @@ func remoteRenderSetup(t *testing.T, legacy bool) *remoteRender {
 	bind := func(tx *sql.Tx) clipapp.Ports {
 		c := store.NewTx(tx)
 		j := jobstore.NewTx(tx, jobKindsForTest())
-		return clipapp.Ports{Clips: renderApplyFault{c, &g.fault}, Jobs: renderFinishFault{j, &g.fault}, Stages: c, Media: c, Waits: j, Publication: renderPublicationFault{c, &g.fault}}
+		return clipapp.Ports{Starts: j, RenderSources: c, Exports: c, Clips: renderApplyFault{c, &g.fault}, Jobs: renderFinishFault{j, &g.fault}, Stages: c, Media: c, Waits: j, Publication: renderPublicationFault{c, &g.fault}}
 	}
 	dispatch, err := clipapp.NewMediaDispatch(h.db.Writer, bind, clip.DefaultMediaStageLimits(clip.Environment{}), h.cfg.Media, nil)
 	if err != nil {
@@ -119,6 +119,10 @@ func remoteRenderSetup(t *testing.T, legacy bool) *remoteRender {
 	g.finisher = clipapp.NewFinisher(h.db.Writer, bind, h.jobs, h.store, nil)
 	deps := generationDeps(g.finisher, &quotePricing{}, nil)
 	deps.RemoteMedia = dispatch
+	deps.NativeAdmission, err = clipapp.NewRenderAdmission(h.db.Writer, bind, clip.DefaultRenderCapacity(clip.Environment{}), clip.DefaultMediaStageLimits(clip.Environment{}), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
 	h.service = clipapp.NewGenerationService(h.store, h.projects, h.sources, g.objects, h.media, h.planner, h.renderer, clipapp.NewJobs(h.queue, clipapp.NewGuard(h.db.Writer, bind, h.jobs, admitAccess{})), h.cfg, deps)
 	artifacts := clipapp.NewMediaArtifacts(h.db.Writer, bind, g.objects, h.cfg.Media, nil)
 	api := httptest.NewServer(cliprpc.NewMediaWorkerServer("", map[string]string{"render-one": "one", "render-two": "two"}, clipapp.NewMediaWorker(h.store, artifacts, nil)).Handler)
@@ -399,7 +403,7 @@ func TestRemoteRenderModeLeavesBrowserOutOfTheMediaQueue(t *testing.T) {
 		t.Fatal(err)
 	}
 	var stages int
-	if err = g.h.db.Reader.QueryRow(`SELECT COUNT(*) FROM clip_media_stages`).Scan(&stages); err != nil || stages != 0 {
+	if err = g.h.db.Reader.QueryRow(`SELECT COUNT(*) FROM clip_media_stages WHERE parent_job_id!=?`, g.jobID).Scan(&stages); err != nil || stages != 0 {
 		t.Fatal("browser acquired media stage", stages, err)
 	}
 	var payload map[string]json.RawMessage

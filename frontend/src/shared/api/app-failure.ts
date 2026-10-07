@@ -159,6 +159,8 @@ export const appFailureSpecs = {
   CLIP_ANALYSIS_TOO_LARGE: {},
   CLIP_WORKSPACE_LIMIT: {},
   CLIP_SERVER_EXPORT_PLAN_REQUIRED: {},
+  CLIP_SERVER_RENDER_OVERLOADED: {},
+  CLIP_SERVER_RENDER_ACCOUNT_BUSY: {},
   CLIP_SERVER_EXPORT_EXHAUSTED: {
     required: ['allowance', 'used', 'reserved', 'remaining'],
     optional: ['renews_at'],
@@ -166,6 +168,7 @@ export const appFailureSpecs = {
   CLIP_MODEL_INPUT_UNSUPPORTED: {},
   CLIP_PROCESSING_FAILED: {},
   CLIP_MEDIA_UNAVAILABLE: {},
+  CLIP_MEDIA_WAIT_EXPIRED: {},
   CLIP_MEDIA_RETRY_EXHAUSTED: {},
   CLIP_MEDIA_TIMEOUT: {},
   CLIP_QUOTE_REQUIRED: {},

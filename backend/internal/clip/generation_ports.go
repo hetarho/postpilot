@@ -154,6 +154,9 @@ type ProcessingObjects interface {
 	ListResults(context.Context) ([]StoredObject, error)
 }
 type GenerationConfig struct {
+	// Activation is separate from version negotiation and remains closed until
+	// real component/output qualification (ARCH-68).
+	BrowserCompositionQualified           bool
 	Preview                               PreviewConfig
 	Render                                RenderConfig
 	Media                                 MediaConfig

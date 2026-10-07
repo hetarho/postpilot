@@ -320,6 +320,7 @@ message GenerationJob {
   string cancel_requested_at = 16;
   int32 cancellation_policy_version = 17;
   bool can_cancel = 18;
+  string wait_expires_at = 19;
 }
 
 message GetGenerationRequest {

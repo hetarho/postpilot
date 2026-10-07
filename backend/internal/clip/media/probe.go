@@ -76,6 +76,10 @@ func (a *Adapter) ProbeContainer(ctx context.Context, ws clip.MediaWorkspace, pa
 }
 
 func (a *Adapter) probeContainer(ctx context.Context, ws clip.MediaWorkspace, path string) (clip.MediaInfo, error) {
+	return a.probeContainerWithOptions(ctx, ws, path, nil)
+}
+
+func (a *Adapter) probeContainerWithOptions(ctx context.Context, ws clip.MediaWorkspace, path string, options []string) (clip.MediaInfo, error) {
 	if err := a.sourcePath(ws, path); err != nil {
 		return clip.MediaInfo{}, err
 	}
@@ -83,7 +87,9 @@ func (a *Adapter) probeContainer(ctx context.Context, ws clip.MediaWorkspace, pa
 	if _, ok := a.cfg.Sources.Containers[ext]; !ok {
 		return clip.MediaInfo{}, clip.ErrInvalidMedia
 	}
-	data, err := a.run(ctx, ws, a.cfg.FFprobePath, "-v", "error", "-protocol_whitelist", "file,pipe", "-show_streams", "-show_format", "-of", "json", path)
+	args := append([]string{"-v", "error"}, options...)
+	args = append(args, "-protocol_whitelist", "file,pipe", "-show_streams", "-show_format", "-of", "json", path)
+	data, err := a.runCommand(ctx, ws, Command{Binary: a.cfg.FFprobePath, Dir: ws.Path, Args: args, RejectStderr: len(options) > 0}, "", 0, nil)
 	if err != nil {
 		return clip.MediaInfo{}, errors.Join(clip.ErrInvalidMedia, err)
 	}

@@ -5,6 +5,18 @@ INSERT INTO generation_jobs (
     started_at, finished_at
 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'queued', NULL, 0, 0, NULL, ?, ?, ?, ?, ?, ?, NULL, NULL);
 
+-- name: LockAdmission :exec
+UPDATE generation_jobs SET status=status WHERE 0;
+
+-- name: ActiveCount :one
+SELECT COUNT(*) FROM generation_jobs
+WHERE status IN ('queued','running') AND kind=sqlc.arg(kind)
+AND (sqlc.arg(user_id)='' OR user_id=sqlc.arg(user_id));
+
+-- name: SetWaitExpiry :execrows
+UPDATE generation_jobs SET wait_expires_at=sqlc.arg(expires_at),stage=sqlc.arg(stage)
+WHERE id=sqlc.arg(id) AND status='queued' AND dispatch_ready=0;
+
 -- name: PickNextQueued :one
 -- Each kind's first stage is the composition root's answer, passed in as a JSON object of
 -- kind to stage, so the queue's SQL names no product; a kind it does not name starts in

@@ -1,0 +1,981 @@
+{
+  "effectImplementation": {
+    "alpha": "premultiplied-alpha",
+    "colorSpace": "sRGB",
+    "kernel": 15,
+    "pixi": "8.22.0",
+    "quality": 4,
+    "sources": {
+      "frontend/src/entities/clip-preview/config/composition-placement.ts": "52201c37f3f77c0a1d668e9230073d30c1b7ac68842d31ca3941a9dff05aed35",
+      "frontend/src/entities/clip-preview/model/composition-placement.ts": "becaf3203a11f993c5ec3df20dd6020ec2a000121699c51583ac81d089065788",
+      "frontend/src/entities/clip-preview/model/ink-caption-draw.ts": "138f4b37659dfbca8bd16321f8dcbb9fd2a67791536ff66a563e3ee72178794f",
+      "frontend/src/entities/clip-preview/model/ink-caption-effects.ts": "a2633b1e51c23f8e9882b527a33ccec9c188acaeb2683ea948adcba7ba5a310b",
+      "frontend/src/entities/clip-preview/model/ink-caption-ember-pixi.ts": "22109b4f60d5d74654ae6899d21b70b872e43170c669949f8164470aef010b0b",
+      "frontend/src/entities/clip-preview/model/ink-caption-ember.ts": "e4bb41e6db3c278230539a5482e6fde35f26587cf5f6ad29b9a7fff291fc0479",
+      "frontend/src/entities/clip-preview/model/ink-caption-filter-pixi.ts": "0b13ee759196c59ea7c084e7f4c1bbdea8b27e32196f2cc4124250f4fb045f32",
+      "frontend/src/entities/clip-preview/model/ink-caption-pixi.ts": "099765cae9854564ec694adc740e8d7f2d63896086f6bfae4f187269b8559c89",
+      "frontend/src/entities/clip-preview/model/ink-caption-scene.ts": "00b6f5684f084fd1affeef52e5500dff404dfc7a7ef73663c0949c1829e0f10c",
+      "frontend/src/entities/clip-preview/model/local-components.ts": "61d18c7c52314aa77d33676c447c9f9ae6a5cf7171222d9eb8bbb6d521c3edb1",
+      "pnpm-lock.yaml": "4bf52d68dba2d2b5492cacdeeb92b12337bde6694001350640f5ad1693a3c152"
+    },
+    "version": "caption-filters-v1-ember-v2-retained"
+  },
+  "effectPaint": {
+    "ambient": {
+      "a": [
+        {
+          "alpha": 0.95,
+          "at": 0,
+          "hex": "#8B5CF6"
+        },
+        {
+          "alpha": 0.42,
+          "at": 0.55,
+          "hex": "#6D3BF5"
+        },
+        {
+          "alpha": 0,
+          "at": 1,
+          "hex": "#4C1D95"
+        }
+      ],
+      "b": [
+        {
+          "alpha": 0.9,
+          "at": 0,
+          "hex": "#4AD9E8"
+        },
+        {
+          "alpha": 0.34,
+          "at": 0.5,
+          "hex": "#22B8CF"
+        },
+        {
+          "alpha": 0,
+          "at": 1,
+          "hex": "#0E7490"
+        }
+      ]
+    },
+    "ember": {
+      "spark": "#FFC978",
+      "stops": [
+        {
+          "alpha": 1,
+          "at": 0,
+          "hex": "#FFF6DC"
+        },
+        {
+          "alpha": 1,
+          "at": 0.28,
+          "hex": "#FFB443"
+        },
+        {
+          "alpha": 0.85,
+          "at": 0.62,
+          "hex": "#FF6A2B"
+        },
+        {
+          "alpha": 0,
+          "at": 1,
+          "hex": "#E0431B"
+        }
+      ],
+      "tight": "#FFB443",
+      "wide": "#FF5A1F"
+    },
+    "glitch": {
+      "cyan": "#00E5FF",
+      "red": "#FF2D55"
+    },
+    "iridescent": {
+      "glow": "#7C3AED",
+      "stops": [
+        {
+          "at": -0.45,
+          "hex": "#5EEAD4"
+        },
+        {
+          "at": -0.18,
+          "hex": "#818CF8"
+        },
+        {
+          "at": 0.1,
+          "hex": "#F472B6"
+        },
+        {
+          "at": 0.38,
+          "hex": "#FDBA74"
+        },
+        {
+          "at": 0.66,
+          "hex": "#5EEAD4"
+        },
+        {
+          "at": 0.95,
+          "hex": "#818CF8"
+        }
+      ]
+    },
+    "neon": {
+      "tight": "#7DF9FF",
+      "wide": "#22D3EE"
+    },
+    "version": "caption-filters-v1-ember-v1"
+  },
+  "nativePainterSources": {
+    "caption_draw.go": "5aa87f5c4e47bb649c7e501a3717ec9c857e6f5623f37a263deb22ff5bddbd73",
+    "caption_effect.go": "860b65521b8e2ce9434d7d7462136b754fc21bc5b69f503b78ee47e07a34d68c",
+    "caption_frame.go": "1ec1922b88b81ddba77015a8e65ef13a6b26568ad7bf529da86486ca6b08abfe",
+    "caption_transform.go": "ad99b6d63b6f35e8de553791ea60145e9e9c44369e5bacee572ed52e32da232a"
+  },
+  "styles": {
+    "ambient": {
+      "bleed": 180,
+      "face": "wantedsans",
+      "id": "ambient",
+      "motion": {
+        "dy": 12,
+        "inMs": 180,
+        "outMs": 120
+      },
+      "paint": {
+        "accent": false,
+        "fill": "#FFFFFF",
+        "plate": "",
+        "scrim": false,
+        "shadow": {
+          "alpha": 0.55,
+          "blur": 14,
+          "dx": 0,
+          "dy": 0,
+          "hex": "#0A0C10"
+        },
+        "stroke": ""
+      },
+      "perWord": false,
+      "rendering": "sequence",
+      "role": {
+        "lineHeight": 1.2,
+        "min": 64,
+        "size": 72,
+        "tracking": -0.011
+      },
+      "rule": {
+        "type": "title",
+        "plate": "",
+        "lines": 2,
+        "chars": 11,
+        "anchor": "upper_mid",
+        "anchor_alt": "lower_mid",
+        "align": "center",
+        "padding": {
+          "v": 0,
+          "h": 0
+        },
+        "pad_left": 0,
+        "bar": false,
+        "dot": false,
+        "stroke": "",
+        "shadow": "text",
+        "highlight": false
+      },
+      "weight": 700
+    },
+    "blur-in": {
+      "bleed": 40,
+      "face": "wantedsans",
+      "id": "blur-in",
+      "motion": {
+        "dy": 0,
+        "inMs": 360,
+        "outMs": 200
+      },
+      "paint": {
+        "accent": false,
+        "fill": "#FFFFFF",
+        "plate": "",
+        "scrim": true,
+        "shadow": {
+          "alpha": 0.55,
+          "blur": 12,
+          "dx": 0,
+          "dy": 4,
+          "hex": "#000000"
+        },
+        "stroke": ""
+      },
+      "perWord": false,
+      "rendering": "sequence",
+      "role": {
+        "lineHeight": 1.15,
+        "min": 72,
+        "size": 84,
+        "tracking": -0.016
+      },
+      "rule": {
+        "type": "hook",
+        "plate": "",
+        "lines": 2,
+        "chars": 9,
+        "anchor": "upper_mid",
+        "anchor_alt": "lower_mid",
+        "align": "center",
+        "padding": {
+          "v": 0,
+          "h": 0
+        },
+        "pad_left": 0,
+        "bar": false,
+        "dot": false,
+        "stroke": "",
+        "shadow": "text",
+        "highlight": false
+      },
+      "weight": 700
+    },
+    "bold": {
+      "bleed": 40,
+      "face": "paperlogy",
+      "id": "bold",
+      "motion": {
+        "dy": 12,
+        "inMs": 180,
+        "outMs": 120
+      },
+      "paint": {
+        "accent": true,
+        "fill": "#FFFFFF",
+        "plate": "",
+        "scrim": true,
+        "shadow": {
+          "alpha": 0.55,
+          "blur": 12,
+          "dx": 0,
+          "dy": 4,
+          "hex": "#000000"
+        },
+        "stroke": "#0B0B0B"
+      },
+      "perWord": false,
+      "rendering": "static",
+      "role": {
+        "lineHeight": 1.2,
+        "min": 64,
+        "size": 72,
+        "tracking": -0.02
+      },
+      "rule": {
+        "type": "title",
+        "plate": "",
+        "lines": 2,
+        "chars": 11,
+        "anchor": "upper_mid",
+        "anchor_alt": "lower_mid",
+        "align": "center",
+        "padding": {
+          "v": 0,
+          "h": 0
+        },
+        "pad_left": 0,
+        "bar": false,
+        "dot": false,
+        "stroke": "text",
+        "shadow": "text",
+        "highlight": false
+      },
+      "weight": 800
+    },
+    "bubble": {
+      "bleed": 80,
+      "face": "jua",
+      "id": "bubble",
+      "motion": {
+        "dy": 34,
+        "inMs": 280,
+        "outMs": 120
+      },
+      "paint": {
+        "accent": false,
+        "fill": "#10130A",
+        "plate": "#FFFFFF",
+        "scrim": false,
+        "shadow": {
+          "alpha": 0,
+          "blur": 0,
+          "dx": 0,
+          "dy": 0,
+          "hex": ""
+        },
+        "stroke": ""
+      },
+      "perWord": false,
+      "rendering": "sequence",
+      "role": {
+        "lineHeight": 1.2,
+        "min": 64,
+        "size": 72,
+        "tracking": -0.02
+      },
+      "rule": {
+        "type": "title",
+        "plate": "",
+        "lines": 2,
+        "chars": 11,
+        "anchor": "upper_mid",
+        "anchor_alt": "lower_mid",
+        "align": "center",
+        "padding": {
+          "v": 0,
+          "h": 0
+        },
+        "pad_left": 0,
+        "bar": false,
+        "dot": false,
+        "stroke": "",
+        "shadow": "",
+        "highlight": false
+      },
+      "weight": 400
+    },
+    "ember": {
+      "bleed": 420,
+      "face": "paperlogy",
+      "id": "ember",
+      "motion": {
+        "dy": 12,
+        "inMs": 180,
+        "outMs": 120
+      },
+      "paint": {
+        "accent": false,
+        "fill": "#FFF8EC",
+        "plate": "",
+        "scrim": false,
+        "shadow": {
+          "alpha": 0,
+          "blur": 0,
+          "dx": 0,
+          "dy": 0,
+          "hex": ""
+        },
+        "stroke": "#7A2400"
+      },
+      "perWord": false,
+      "rendering": "sequence",
+      "role": {
+        "lineHeight": 1.15,
+        "min": 72,
+        "size": 84,
+        "tracking": -0.02
+      },
+      "rule": {
+        "type": "hook",
+        "plate": "",
+        "lines": 2,
+        "chars": 9,
+        "anchor": "upper_mid",
+        "anchor_alt": "lower_mid",
+        "align": "center",
+        "padding": {
+          "v": 0,
+          "h": 0
+        },
+        "pad_left": 0,
+        "bar": false,
+        "dot": false,
+        "stroke": "text",
+        "shadow": "",
+        "highlight": false
+      },
+      "weight": 800
+    },
+    "film": {
+      "bleed": 40,
+      "face": "nanummyeongjo",
+      "id": "film",
+      "motion": {
+        "dy": 0,
+        "inMs": 200,
+        "outMs": 280
+      },
+      "paint": {
+        "accent": false,
+        "fill": "#F2F2EE",
+        "plate": "",
+        "scrim": false,
+        "shadow": {
+          "alpha": 0.92,
+          "blur": 10,
+          "dx": 0,
+          "dy": 2,
+          "hex": "#000000"
+        },
+        "stroke": ""
+      },
+      "perWord": false,
+      "rendering": "static",
+      "role": {
+        "lineHeight": 1.2,
+        "min": 64,
+        "size": 72,
+        "tracking": 0.007
+      },
+      "rule": {
+        "type": "title",
+        "plate": "",
+        "lines": 2,
+        "chars": 11,
+        "anchor": "upper_mid",
+        "anchor_alt": "lower_mid",
+        "align": "center",
+        "padding": {
+          "v": 0,
+          "h": 0
+        },
+        "pad_left": 0,
+        "bar": false,
+        "dot": false,
+        "stroke": "",
+        "shadow": "text",
+        "highlight": false
+      },
+      "weight": 800
+    },
+    "glitch": {
+      "bleed": 60,
+      "face": "paperlogy",
+      "id": "glitch",
+      "motion": {
+        "dy": 0,
+        "inMs": 80,
+        "outMs": 120
+      },
+      "paint": {
+        "accent": false,
+        "fill": "#FFFFFF",
+        "plate": "",
+        "scrim": false,
+        "shadow": {
+          "alpha": 0,
+          "blur": 0,
+          "dx": 0,
+          "dy": 0,
+          "hex": ""
+        },
+        "stroke": ""
+      },
+      "perWord": false,
+      "rendering": "sequence",
+      "role": {
+        "lineHeight": 1.15,
+        "min": 72,
+        "size": 84,
+        "tracking": -0.02
+      },
+      "rule": {
+        "type": "hook",
+        "plate": "",
+        "lines": 2,
+        "chars": 9,
+        "anchor": "upper_mid",
+        "anchor_alt": "lower_mid",
+        "align": "center",
+        "padding": {
+          "v": 0,
+          "h": 0
+        },
+        "pad_left": 0,
+        "bar": false,
+        "dot": false,
+        "stroke": "",
+        "shadow": "",
+        "highlight": false
+      },
+      "weight": 800
+    },
+    "iridescent": {
+      "bleed": 60,
+      "face": "paperlogy",
+      "id": "iridescent",
+      "motion": {
+        "dy": 12,
+        "inMs": 180,
+        "outMs": 120
+      },
+      "paint": {
+        "accent": false,
+        "fill": "#FFFFFF",
+        "plate": "",
+        "scrim": false,
+        "shadow": {
+          "alpha": 0,
+          "blur": 0,
+          "dx": 0,
+          "dy": 0,
+          "hex": ""
+        },
+        "stroke": "#FFFFFF"
+      },
+      "perWord": false,
+      "rendering": "sequence",
+      "role": {
+        "lineHeight": 1.15,
+        "min": 72,
+        "size": 84,
+        "tracking": -0.02
+      },
+      "rule": {
+        "type": "hook",
+        "plate": "",
+        "lines": 2,
+        "chars": 9,
+        "anchor": "upper_mid",
+        "anchor_alt": "lower_mid",
+        "align": "center",
+        "padding": {
+          "v": 0,
+          "h": 0
+        },
+        "pad_left": 0,
+        "bar": false,
+        "dot": false,
+        "stroke": "small",
+        "shadow": "",
+        "highlight": false
+      },
+      "weight": 800
+    },
+    "keynote": {
+      "bleed": 40,
+      "face": "wantedsans",
+      "id": "keynote",
+      "motion": {
+        "dy": 10,
+        "inMs": 320,
+        "outMs": 200
+      },
+      "paint": {
+        "accent": false,
+        "fill": "#FFFFFF",
+        "plate": "",
+        "scrim": true,
+        "shadow": {
+          "alpha": 0.5,
+          "blur": 28,
+          "dx": 0,
+          "dy": 2,
+          "hex": "#000000"
+        },
+        "stroke": ""
+      },
+      "perWord": false,
+      "rendering": "static",
+      "role": {
+        "lineHeight": 1.15,
+        "min": 72,
+        "size": 84,
+        "tracking": -0.026
+      },
+      "rule": {
+        "type": "hook",
+        "plate": "",
+        "lines": 2,
+        "chars": 9,
+        "anchor": "upper_mid",
+        "anchor_alt": "lower_mid",
+        "align": "center",
+        "padding": {
+          "v": 0,
+          "h": 0
+        },
+        "pad_left": 0,
+        "bar": false,
+        "dot": false,
+        "stroke": "",
+        "shadow": "text",
+        "highlight": false
+      },
+      "weight": 400
+    },
+    "neon": {
+      "bleed": 180,
+      "face": "wantedsans",
+      "id": "neon",
+      "motion": {
+        "dy": 12,
+        "inMs": 180,
+        "outMs": 120
+      },
+      "paint": {
+        "accent": false,
+        "fill": "#EAFEFF",
+        "plate": "",
+        "scrim": false,
+        "shadow": {
+          "alpha": 0,
+          "blur": 0,
+          "dx": 0,
+          "dy": 0,
+          "hex": ""
+        },
+        "stroke": ""
+      },
+      "perWord": false,
+      "rendering": "sequence",
+      "role": {
+        "lineHeight": 1.15,
+        "min": 72,
+        "size": 84,
+        "tracking": -0.01
+      },
+      "rule": {
+        "type": "hook",
+        "plate": "",
+        "lines": 2,
+        "chars": 9,
+        "anchor": "upper_mid",
+        "anchor_alt": "lower_mid",
+        "align": "center",
+        "padding": {
+          "v": 0,
+          "h": 0
+        },
+        "pad_left": 0,
+        "bar": false,
+        "dot": false,
+        "stroke": "",
+        "shadow": "",
+        "highlight": false
+      },
+      "weight": 800
+    },
+    "outline": {
+      "bleed": 40,
+      "face": "paperlogy",
+      "id": "outline",
+      "motion": {
+        "dy": 8,
+        "inMs": 180,
+        "outMs": 120
+      },
+      "paint": {
+        "accent": true,
+        "fill": "",
+        "plate": "",
+        "scrim": false,
+        "shadow": {
+          "alpha": 0,
+          "blur": 0,
+          "dx": 0,
+          "dy": 0,
+          "hex": ""
+        },
+        "stroke": "#FFFFFF"
+      },
+      "perWord": false,
+      "rendering": "sequence",
+      "role": {
+        "lineHeight": 1.15,
+        "min": 72,
+        "size": 84,
+        "tracking": -0.02
+      },
+      "rule": {
+        "type": "hook",
+        "plate": "",
+        "lines": 2,
+        "chars": 9,
+        "anchor": "upper_mid",
+        "anchor_alt": "lower_mid",
+        "align": "center",
+        "padding": {
+          "v": 0,
+          "h": 0
+        },
+        "pad_left": 0,
+        "bar": false,
+        "dot": false,
+        "stroke": "small",
+        "shadow": "",
+        "highlight": false
+      },
+      "weight": 800
+    },
+    "pop": {
+      "bleed": 48,
+      "face": "jua",
+      "id": "pop",
+      "motion": {
+        "dy": 0,
+        "inMs": 300,
+        "outMs": 120
+      },
+      "paint": {
+        "accent": false,
+        "fill": "#FFFFFF",
+        "plate": "",
+        "scrim": false,
+        "shadow": {
+          "alpha": 0,
+          "blur": 0,
+          "dx": 0,
+          "dy": 0,
+          "hex": ""
+        },
+        "stroke": "#FF3B6B"
+      },
+      "perWord": true,
+      "rendering": "sequence",
+      "role": {
+        "lineHeight": 1.15,
+        "min": 72,
+        "size": 84,
+        "tracking": -0.02
+      },
+      "rule": {
+        "type": "hook",
+        "plate": "",
+        "lines": 2,
+        "chars": 9,
+        "anchor": "upper_mid",
+        "anchor_alt": "lower_mid",
+        "align": "center",
+        "padding": {
+          "v": 0,
+          "h": 0
+        },
+        "pad_left": 0,
+        "bar": false,
+        "dot": false,
+        "stroke": "text",
+        "shadow": "",
+        "highlight": false
+      },
+      "weight": 400
+    },
+    "serif": {
+      "bleed": 80,
+      "face": "nanummyeongjo",
+      "id": "serif",
+      "motion": {
+        "dy": 16,
+        "inMs": 300,
+        "outMs": 200
+      },
+      "paint": {
+        "accent": false,
+        "fill": "#F7F3EA",
+        "plate": "",
+        "scrim": false,
+        "shadow": {
+          "alpha": 0.72,
+          "blur": 18,
+          "dx": 0,
+          "dy": 2,
+          "hex": "#000000"
+        },
+        "stroke": ""
+      },
+      "perWord": false,
+      "rendering": "sequence",
+      "role": {
+        "lineHeight": 1.15,
+        "min": 72,
+        "size": 84,
+        "tracking": 0.06
+      },
+      "rule": {
+        "type": "hook",
+        "plate": "",
+        "lines": 2,
+        "chars": 9,
+        "anchor": "upper_mid",
+        "anchor_alt": "lower_mid",
+        "align": "center",
+        "padding": {
+          "v": 0,
+          "h": 0
+        },
+        "pad_left": 0,
+        "bar": false,
+        "dot": false,
+        "stroke": "",
+        "shadow": "text",
+        "highlight": false
+      },
+      "weight": 400
+    },
+    "stack": {
+      "bleed": 80,
+      "face": "paperlogy",
+      "id": "stack",
+      "motion": {
+        "dy": 0,
+        "inMs": 340,
+        "outMs": 120
+      },
+      "paint": {
+        "accent": true,
+        "fill": "#FFFFFF",
+        "plate": "#0A0C10",
+        "scrim": false,
+        "shadow": {
+          "alpha": 0,
+          "blur": 0,
+          "dx": 0,
+          "dy": 0,
+          "hex": ""
+        },
+        "stroke": ""
+      },
+      "perWord": false,
+      "rendering": "sequence",
+      "role": {
+        "lineHeight": 1.2,
+        "min": 64,
+        "size": 72,
+        "tracking": -0.02
+      },
+      "rule": {
+        "type": "title",
+        "plate": "",
+        "lines": 2,
+        "chars": 11,
+        "anchor": "upper_mid",
+        "anchor_alt": "lower_mid",
+        "align": "center",
+        "padding": {
+          "v": 0,
+          "h": 0
+        },
+        "pad_left": 0,
+        "bar": false,
+        "dot": false,
+        "stroke": "",
+        "shadow": "",
+        "highlight": false
+      },
+      "weight": 800
+    },
+    "sticker": {
+      "bleed": 80,
+      "face": "jua",
+      "id": "sticker",
+      "motion": {
+        "dy": 0,
+        "inMs": 260,
+        "outMs": 120
+      },
+      "paint": {
+        "accent": false,
+        "fill": "#1A1C22",
+        "plate": "#FFFFFF",
+        "scrim": false,
+        "shadow": {
+          "alpha": 0,
+          "blur": 0,
+          "dx": 0,
+          "dy": 0,
+          "hex": ""
+        },
+        "stroke": ""
+      },
+      "perWord": false,
+      "rendering": "sequence",
+      "role": {
+        "lineHeight": 1.2,
+        "min": 64,
+        "size": 72,
+        "tracking": -0.02
+      },
+      "rule": {
+        "type": "title",
+        "plate": "",
+        "lines": 2,
+        "chars": 11,
+        "anchor": "upper_mid",
+        "anchor_alt": "lower_mid",
+        "align": "center",
+        "padding": {
+          "v": 0,
+          "h": 0
+        },
+        "pad_left": 0,
+        "bar": false,
+        "dot": false,
+        "stroke": "",
+        "shadow": "",
+        "highlight": false
+      },
+      "weight": 400
+    },
+    "word-pop": {
+      "bleed": 40,
+      "face": "wantedsans",
+      "id": "word-pop",
+      "motion": {
+        "dy": 0,
+        "inMs": 80,
+        "outMs": 120
+      },
+      "paint": {
+        "accent": true,
+        "fill": "#FFFFFF",
+        "plate": "",
+        "scrim": false,
+        "shadow": {
+          "alpha": 0,
+          "blur": 0,
+          "dx": 0,
+          "dy": 0,
+          "hex": ""
+        },
+        "stroke": "#0A0C10"
+      },
+      "perWord": true,
+      "rendering": "sequence",
+      "role": {
+        "lineHeight": 1.2,
+        "min": 64,
+        "size": 72,
+        "tracking": -0.02
+      },
+      "rule": {
+        "type": "title",
+        "plate": "",
+        "lines": 2,
+        "chars": 11,
+        "anchor": "upper_mid",
+        "anchor_alt": "lower_mid",
+        "align": "center",
+        "padding": {
+          "v": 0,
+          "h": 0
+        },
+        "pad_left": 0,
+        "bar": false,
+        "dot": false,
+        "stroke": "text",
+        "shadow": "",
+        "highlight": false
+      },
+      "weight": 800
+    }
+  },
+  "transformPaint": {
+    "black": "#000000",
+    "pop": {
+      "envelopeWords": 4,
+      "onset": 0.05,
+      "rise": 0.3,
+      "stagger": 0.13
+    },
+    "serifRule": "#E9E3D6",
+    "stackInk": "#10130A",
+    "stickerEdge": "#FF3B6B",
+    "version": "pop-exposure-v2",
+    "white": "#FFFFFF"
+  },
+  "version": 3
+}

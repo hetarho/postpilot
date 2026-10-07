@@ -14,6 +14,7 @@ export const i18n = {
         cancelled: '브라우저 렌더를 취소했어요.',
         done: '브라우저 렌더를 저장했어요.',
         failed: '브라우저 렌더를 완료하지 못했어요.',
+        upload_pending: '이 기기의 영상은 준비됐어요. 비공개 저장을 다시 시도해 주세요.',
         cancel: '브라우저 렌더 취소',
       },
       refusal: {
@@ -22,10 +23,16 @@ export const i18n = {
           '이 브라우저에서 더빙 음성을 읽거나 해독하지 못했어요. 지원하는 브라우저·기기를 이용해 주세요.',
         capability: '이 브라우저는 필요한 영상·음성 인코딩을 지원하지 않아요.',
         memory: '이 기기의 메모리가 브라우저 렌더에 부족해요.',
+        output:
+          '이 기기의 출력 메모리·저장 공간 한도에 도달했어요. 공간을 확보하거나 지원하는 다른 기기를 이용해 주세요.',
         sampling:
           '브라우저 렌더에 필요한 영상 밝기 확인을 마치지 못했어요. 원본을 확인하고 다시 시도해 주세요.',
       },
       choose: '어디서 렌더할까요?',
+      localReady: '이 기기에서 검증한 영상이에요. 비공개 저장 완료 후 확정할 수 있어요.',
+      localPreview: '이 기기의 검증된 영상',
+      localDownload: '이 기기의 영상 다운로드',
+      retryUpload: '비공개 저장 다시 시도',
       kind: { browser: '브라우저에서 렌더', server: '서버에서 렌더' },
       kindHelp: {
         browser: '이 기기에서 바로 만들어요. 이 화면을 떠나면 멈춰요.',
@@ -53,6 +60,7 @@ export const i18n = {
         cancelled: 'Browser render cancelled.',
         done: 'Browser render stored.',
         failed: 'Browser render could not finish.',
+        upload_pending: 'The video is ready on this device. Retry private storage.',
         cancel: 'Cancel browser render',
       },
       refusal: {
@@ -61,10 +69,17 @@ export const i18n = {
           'This browser could not read or decode the narration. Try a supported browser/device.',
         capability: 'This browser does not support the required video or audio encoding.',
         memory: 'This device reports too little memory for browser rendering.',
+        output:
+          'This device reached its output memory or storage limit. Free space or use another supported device.',
         sampling:
           'The footage check a browser render needs did not finish. Check the originals and retry.',
       },
       choose: 'Where should this render run?',
+      localReady:
+        'Verified on this device. Finalization becomes available after private storage completes.',
+      localPreview: 'Verified video on this device',
+      localDownload: 'Download local video',
+      retryUpload: 'Retry private storage',
       kind: { browser: 'Render in this browser', server: 'Render on the server' },
       kindHelp: {
         browser: 'Made right here on this device. Leaving this screen stops it.',

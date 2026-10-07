@@ -13,6 +13,9 @@ UPDATE clip_media_stages SET state='running',current_attempt_id=sqlc.arg(attempt
 WHERE id=(SELECT s.id FROM clip_media_stages s LEFT JOIN clip_media_attempts a ON a.id=s.current_attempt_id
  WHERE s.operation=sqlc.arg(operation) AND s.contract_version=sqlc.arg(contract_version)
  AND s.renderer_version=sqlc.arg(renderer_version) AND s.asset_version=sqlc.arg(asset_version)
+ AND (s.operation!='render' OR (SELECT COUNT(*) FROM clip_media_stages occupied
+   JOIN clip_media_attempts lease ON lease.id=occupied.current_attempt_id
+   WHERE occupied.operation='render' AND lease.outcome IS NULL AND lease.lease_expires_at>sqlc.arg(now)) < CAST(sqlc.arg(render_active_limit) AS INTEGER))
  AND s.deadline_at>sqlc.arg(now) AND s.attempt_count<s.attempt_limit
  AND (s.attempt_count>0 OR s.queue_deadline_at>sqlc.arg(now))
  AND (s.retry_not_before IS NULL OR s.retry_not_before<=sqlc.arg(now))

@@ -4,6 +4,36 @@ export type { ClipPreviewRequest } from './api/preview'
 export { useClipBrowserRenderCapability } from './api/useClipBrowserRenderCapability'
 export { createClipVideoWorker } from './lib/create-video-worker'
 export { browserAudioPlan } from './model/browser-audio-plan'
+export { BrowserFootageResources } from './model/browser-footage'
+export type {
+  BrowserPreparedFootage,
+  BrowserSourceAccess,
+  BrowserFootagePorts,
+} from './model/browser-footage'
+export { CLIP_VIDEO_DECODING } from './config/video-decoding'
+export { CLIP_AUDIO_PROCESSING } from './config/audio-processing'
+export {
+  BrowserCompositionError,
+  BrowserSnapshotEpoch,
+  evaluateBrowserFrame,
+  evaluateBrowserFlow,
+  freezeBrowserComposition,
+  freezeBrowserPreviewComposition,
+  readBrowserCompositionSnapshot,
+} from './model/browser-composition'
+export type {
+  BrowserCompositionSnapshot,
+  BrowserCompositionInput,
+  BrowserLayoutObservation,
+  BrowserCompositionVersions,
+  BrowserCompositionDesign,
+  BrowserCompositionComponent,
+  BrowserSourceIdentity,
+  BrowserEvaluatedFrame,
+  BrowserMediaResolver,
+  BrowserSnapshotToken,
+  BrowserFrozen,
+} from './model/browser-composition'
 export type { SpeechAudioLoader } from './model/speech-playback'
 export { canonicalSpeechBuffer, speechDecodeKey, SpeechDecodeCache } from './model/speech-playback'
 export { speechRenderFingerprint } from './model/speech-fingerprint'
@@ -27,3 +57,57 @@ export { ClipDraftPreview } from './ui/ClipDraftPreview'
 export type { ClipDisplayedFrame } from './ui/ClipDraftPreview'
 export { useClipRenderCalls } from './api/render'
 export type { ClipRenderCalls, ClipRenderMachine, ClipRenderVerdict } from './api/render'
+export { BrowserLocalComponents } from './model/local-components'
+export type { BrowserLocalComponent } from './model/local-components'
+export { BrowserInkCache } from './model/ink-cache'
+export type { BrowserInkLease } from './model/ink-cache'
+export { ResvgBrowserInk } from './model/ink-raster'
+export type { BrowserInkRasterizer, InkDocument } from './model/ink-raster'
+export { inkLayoutCaption } from './model/ink-layout'
+export type {
+  InkCaptionInput,
+  InkCaptionLayout,
+  InkCaptionLine,
+  InkCaptionWord,
+} from './model/ink-layout'
+export {
+  inkStaticCaption,
+  inkStaticRegion,
+  inkStaticBadge,
+  inkStaticInfo,
+} from './model/ink-static'
+export type { InkPaint, InkRegionPart } from './model/ink-static'
+export { ClipInkError } from './model/ink-typography'
+export { measureBrowserBackground, CLIP_BACKGROUND_LIMITS } from './model/background-sampling'
+export type {
+  BrowserBackgroundMeasurement,
+  BrowserBackgroundEvidence,
+  BrowserBackgroundDiagnostics,
+} from './model/background-sampling'
+export type { BrowserBackgroundGeometry } from './model/local-components'
+export { inkCaptionScene, inkPopProgress } from './model/ink-caption-scene'
+export type { InkCaptionScene, InkCaptionPose, InkMatrix } from './model/ink-caption-scene'
+export { BrowserCaptionScenePixi } from './model/ink-caption-pixi'
+export type { BrowserCaptionPreparedScene, BrowserCaptionSceneNode } from './model/ink-caption-draw'
+export { BrowserCaptionSceneCanvas } from './model/ink-caption-draw'
+
+export { projectBrowserComposition } from './model/project-composition'
+export type { BrowserProjectCompositionInput } from './model/project-composition'
+export { compositeBrowserFrame } from './model/composite-video'
+export type { CompositeFramePorts } from './model/composite-video'
+export { BrowserCompositionOriginals } from './model/composition-originals'
+export type { BrowserLocalOriginal } from './model/composition-originals'
+export {
+  prepareBrowserAudioSources,
+  loadVerifiedSpeechBuffer,
+  BrowserAudioCompositionError,
+} from './model/composition-audio'
+export type { BrowserPreparedAudioSources } from './model/composition-audio'
+export { BrowserCompositionPlayback } from './model/composition-playback'
+export type { ClipLocalCompositionRuntime } from './model/local-preview'
+export { BrowserPreviewWorker } from './lib/create-preview-worker'
+export {
+  useClipLocalStyleSamples,
+  useClipLocalPresetSamples,
+  useClipLocalCaptionPreview,
+} from './ui/useLocalSamples'

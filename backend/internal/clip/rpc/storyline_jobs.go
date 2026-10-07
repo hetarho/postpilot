@@ -66,7 +66,9 @@ func (h *Handler) StartClipStoryline(ctx context.Context, req *connect.Request[v
 		return nil, toConnectError(errors.New("clip generation unavailable"))
 	}
 	observe, write := modelRefs(req.Msg.GetObserveModel(), req.Msg.GetWriteModel())
-	id, err := h.generation.StartStoryline(ctx, user, req.Msg.ProjectId, req.Msg.BatchId, observe, write, approval(req.Msg.CancellationPolicyVersion, req.Msg.QuoteId, req.Msg.ApprovedMaxCredits))
+	approved := approval(req.Msg.CancellationPolicyVersion, req.Msg.QuoteId, req.Msg.ApprovedMaxCredits)
+	approved.AnalysisPreparationID = req.Msg.AnalysisPreparationId
+	id, err := h.generation.StartStoryline(ctx, user, req.Msg.ProjectId, req.Msg.BatchId, observe, write, approved)
 	if err != nil {
 		return nil, generationError(err, observe)
 	}

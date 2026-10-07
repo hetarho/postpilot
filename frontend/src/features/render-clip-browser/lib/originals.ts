@@ -1,8 +1,9 @@
 /** A render's video and audio paths share one in-memory read of each original. */
 export class BrowserOriginals {
   private blobs = new Map<string, Promise<Blob>>()
+  private accesses = new Map<string, Promise<BrowserMediaSourceAccess>>()
   constructor(
-    private local: readonly { fingerprint: string; url: string }[],
+    private local: readonly { fingerprint: string; url: string; file?: File }[],
     private resolvePlayback: (fingerprint: string) => Promise<string>,
     private signal: AbortSignal,
     private load: (url: string, signal: AbortSignal) => Promise<Blob> = async (url, signal) => {
@@ -11,6 +12,24 @@ export class BrowserOriginals {
       return response.blob()
     },
   ) {}
+  /** Only access is resolved; the worker reads needed ranges from this descriptor. */
+  source = (fingerprint: string): Promise<BrowserMediaSourceAccess> => {
+    this.signal.throwIfAborted()
+    let access = this.accesses.get(fingerprint)
+    if (!access) {
+      access = (async () => {
+        const local = this.local.find((source) => source.fingerprint === fingerprint)
+        if (local?.file) return { kind: 'blob' as const, blob: local.file }
+        const url = local?.url.startsWith('blob:')
+          ? local.url
+          : await this.resolvePlayback(fingerprint)
+        this.signal.throwIfAborted()
+        return { kind: 'url' as const, url }
+      })()
+      this.accesses.set(fingerprint, access)
+    }
+    return access
+  }
   get = (fingerprint: string) => {
     this.signal.throwIfAborted()
     let blob = this.blobs.get(fingerprint)
@@ -31,5 +50,7 @@ export class BrowserOriginals {
   }
   dispose() {
     this.blobs.clear()
+    this.accesses.clear()
   }
 }
+import type { BrowserMediaSourceAccess } from '@/shared/lib'

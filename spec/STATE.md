@@ -69,21 +69,8 @@
 |---|---|---|---|---|
 | T539 | Qualify the complete Korean voice-creation milestone | ARCH DUB MODEL CDS THEME | T538 | blocked@261005 |
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
-| T590 | Bound Max server-render admission and waiting | ARCH CLIP INFRA | T589 | blocked@261006 |
-| T591 | Freeze one browser composition and time contract | ARCH CLIP CDS | T588 | todo |
-| T592 | Decode selected video ranges in a bounded browser pipeline | ARCH CLIP CDS | T591 | todo |
-| T593 | Bound selected audio and immutable narration processing | ARCH CLIP CDS DUB | T591 | todo |
-| T594 | Draw bundled typography and static components locally | ARCH CLIP CDS | T591 | todo |
-| T595 | Animate caption transforms and masks from output time | ARCH CLIP CDS | T594 | todo |
-| T596 | Port caption blur, light, colour and glitch effects | ARCH CLIP CDS | T595 | todo |
-| T597 | Render ember caption geometry and particles locally | ARCH CLIP CDS | T596 | todo |
-| T598 | Measure caption backgrounds from local original frames | ARCH CLIP CDS | T592 T594 | todo |
-| T599 | Stream browser output and promote the verified private result | ARCH CLIP CDS | T592 T593 T595 T596 T597 T598 | todo |
-| T600 | Use the browser composition engine throughout editing previews | ARCH CLIP CDS | T592 T593 T594 T595 T596 T597 T598 | todo |
-| T601 | Prepare bounded AI analysis copies in the browser | ARCH CLIP CDS | T592 T602 | todo |
-| T602 | Authorize and verify browser-prepared analysis artifacts | ARCH CLIP QUOTA | T591 | todo |
-| T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | todo |
-| T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | todo |
+| T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
+| T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
 | T627 | Prepare frozen single-factor inputs and one complete post per test entrant | ARCH GEN MODEL TMPL GUIDE LANG VIDEO QUOTA | T622 T625 T626 T630 | todo |
 | T628 | Run private binary tournaments with exact metering and explicit winner publication | ARCH MODEL QUOTA GEN LANG | T622 T624 T625 T626 T627 T630 | todo |
 | T630 | Show named setting states and integrate direct AI editing and real-writing tests | ARCH EDIT THEME TMPL GUIDE MODEL | T622 T625 | todo |
@@ -105,15 +92,21 @@
 | T646 | Qualify origin-aware writing inspection and clean publication handoff | ARCH GEN POST MODEL THEME EXPORT MKT LANG | T636 T637 T639 T641 T642 T643 T644 T645 T631 | todo |
 
 ## next
-- Stopped after completing and committing T626 as requested; do not start another task until the user resumes.
-- Remaining UX tasks are T630, T627, T628 and T631 in dependency order; prompt-engineering tasks retain their recorded prerequisites.
-- Existing browser-media tasks and blocked qualifications retain their scope; THEME-61 visual decisions remain open.
+- Finish the critical merge/migration collision corrections and push normally first, then run local and remote checks as explicitly requested by the user.
+- Implementation remains stopped after T626; remaining UX and prompt-engineering tasks keep their recorded prerequisites.
+- T603/T604 real semantic/hardware/release qualification stays blocked; no renderer, analysis, voice or distribution activation is authorized by this merge.
 
 ## log
+- 261007 main merge corrections complete: published browser148/wait149 preserved, local creation/writing schemas moved to150/151 with recognized legacy-schema reconciliation; full verification deferred until after push by user request
+- 261007 user push-order override: stop pre-push tests, finish critical merge corrections and push first; run remaining verification afterward, preserving known failed legacy consumer checks for correction
+- 261007 main merge reconciled: both UX and browser-media contributions retained, completed T590-T602 archived, T603/T604 remain blocked; resolve overlapping unpublished migration numbers before push
 - 261007 main synchronization start: merge published origin/main browser-media history with local completed UX history, preserve both commit graphs and stopped task scope, run final-candidate pre-push checks before ordinary push
 - 261007 T626 done on main: editable private sources and accepted snapshots, explicit estimated reanalysis, exact binary style batches and safe publication; owning/consumer tests, builds, codegen and lint checks pass; stopped as requested without starting another task
 - 261007 user scope limited to current T626: finish implementation, verification and main commit, then stop without starting a next task
 - 261007 T626 start on main after0d49753b: editable materials, accepted revision/source snapshots, explicit reanalysis and binary style preparation; VOICE@15/MODEL@35 prompt-inspection additions remain in T632/T638/T641
+- 261007 main integration verified at033d7824: FE470/3714, whole Go and all19 local gates pass; forward149 and deployed-main features retained, original58 T590 draft files preserved separately
+- 261007 T603/T604 blocked qualification persisted in task headers and STATE for remote delivery; technical contributions retained without completing real semantic/release acceptance
+- 261007 main merge candidate ready: current origin/main authoring/XState/typography preserved; forward149 upgrades and legacy144 preservation pass, actual phone/desktop sticky preview checks pass; full CI and authorized main push pending
 - 261007 T623 done on main: visible desktop/phone hierarchy and contextual creation/settings/test return;330 impact-selected tests, final40tests, browser matrix/caret/mint and build/lint checks pass
 - 261007 T623 start on main: visible section/parent/navigation, contextual creation return and test routes; preserve unrelated planning changes
 - 261007 create-task foundation batch done: T632 depends on completed T622/T624/T625, T635 reports current helper availability; later consumers retain explicit profile/factory/tournament/integration gates; implementation waits for current T623 ownership to end
@@ -124,9 +117,3 @@
 - 261007 main sequential workflow active: dependencies and task completion records govern the next task; completed execution bookkeeping retired
 - 261007 ARCH r19..r20 workflow/verification documentation consumed: main task execution and commit policy requires no runtime task
 - 261007 create-architecture ARCH r20 done: one dependency-ready task implemented, verified, recorded and committed on main
-- 261007 main integration start: combine completed T624/T625/T629 with baseline/CAS/recovery corrections; preserve pending prompt-engineering requirements and validate the combined code
-- 261007 update-ssot prompt-engineering verified: spec lint exit0 with124 history/freshness warnings and13 editorial hints; thirteen revisions and51 decision deltas match STATE/chg, historical IDs/references/links/log checks and diff check pass; tasks/product code unchanged
-- 261007 update-ssot prompt-engineering done: thirteen domains revised; phrase origins, visible AI expression, no photo-order chronology, maximum grounded tags and safe prompt inspection fixed; converted ideation has no open product decisions, existing unrelated open items retained
-- 261007 update-ssot GEN POST GUIDE TMPL THEME EXPORT MKT LANG VOICE MODEL QUAL MEM EDIT start: convert prompt efficiency and owner-controlled writing decisions; reconcile three-source review, visible AI expression and photo chronology with current policies
-- 261007 ideation prompt-engineering owner-control round recorded: scope corrected; three semantic sources, expressive assistance and photo-order chronology explored with an interactive synthetic mockup; granularity/addition policy pending, SSOT/tasks unchanged
-- 261007 ideation prompt-engineering owner-control round start: correct scope to context efficiency/maintainability plus writing/tag quality; explore three-source text review, AI-assisted expression and photo-order-independent storytelling before SSOT/task conversion

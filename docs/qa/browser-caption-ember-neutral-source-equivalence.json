@@ -1,0 +1,19 @@
+{
+  "at": "ff048f4c388e11b659bba5fee999159ca74f49d9",
+  "testedAt": "47320560ebdfb356a65fb988d174f152d2c5c68a",
+  "change": "Only scoped helper identifier color→colorVector and formatter whitespace, plus source-catalog/asset identity metadata. Adds prepared-resource adapter source hash; paint/time/geometry/shader/texture logic unchanged.",
+  "scopedIdentifierNormalizationExplicit": true,
+  "normalizedEmittedJSASTExactlyEqual": true,
+  "GLSLStringsByteIdentical": true,
+  "normalizedEmittedJSASTSHA256": "bd17035dc197d8edd586a3384b29d129f991b1b23c9f5b2e6d455f13958a9be8",
+  "GLSLHashes": {
+    "vertex": "e01e743860c582fe269eda86166e06ecf1c1f411524f92f4f1336046c572f81a",
+    "flameFragment": "ce12f108b03dd3e6a9681089bb6ae4ea0591b71a8b6e3c60b2549831711f49e3",
+    "sparkFragment": "a1b26a1e31205f3a5dea36c4532e0a62415f969aca617f3de2c3d605d89a00c3"
+  },
+  "backendChangedFiles": [
+    "backend/internal/clip/browser_render.go",
+    "backend/internal/clip/design/browser_ink_catalog_test.go"
+  ],
+  "wholeBackendClosureUnchanged": false
+}

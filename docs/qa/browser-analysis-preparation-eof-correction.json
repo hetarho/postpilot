@@ -1,0 +1,552 @@
+{
+  "at": "b3ec132cb4c8053cdb9e6c20b6ad2230a7331ccc",
+  "fixtures": {
+    "version": 1,
+    "synthetic": true,
+    "mediabunny": "1.58.0",
+    "outputs": {
+      "sparse-short": {
+        "bytes": 2014,
+        "sha256": "16d4d6d45fa5d2599149eaa3abdfedbffe27864538bc999f23c0f7fa547f511c",
+        "timestamps": [0, 62],
+        "durationHeader": 1
+      },
+      "sparse-missing": {
+        "bytes": 2014,
+        "sha256": "4b4f382a927a2b03aa709c206e1f653b087c6acd7c3dc54e528f445853ab0290",
+        "timestamps": [0, 62],
+        "durationHeader": null
+      },
+      "gapped-vfr": {
+        "bytes": 2857,
+        "sha256": "a2a4d5c265f1c6ea0a4796837f4a36102a1d389eade63e154b936e28d81ab1ff",
+        "timestamps": [0, 2, 5],
+        "durationHeader": 6
+      }
+    }
+  },
+  "actualSparseEOF": {
+    "version": 1,
+    "qualification": false,
+    "browser": "154.0.8037.98",
+    "executablePath": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+    "hardwareUsage": "unmeasured; default installed Chrome",
+    "node": "v24.18.0",
+    "mediabunny": "1.58.0",
+    "lockfileSHA256": "d07c4a1bd3aeab4df41155c2d63d85e6a487959534ed7b27b4710315d7a07319",
+    "fixtures": {
+      "span-short": {
+        "bytes": 2014,
+        "sha256": "16d4d6d45fa5d2599149eaa3abdfedbffe27864538bc999f23c0f7fa547f511c"
+      },
+      "span-missing": {
+        "bytes": 2014,
+        "sha256": "4b4f382a927a2b03aa709c206e1f653b087c6acd7c3dc54e528f445853ab0290"
+      },
+      "span-valid": {
+        "bytes": 2857,
+        "sha256": "a2a4d5c265f1c6ea0a4796837f4a36102a1d389eade63e154b936e28d81ab1ff"
+      },
+      "long": {
+        "bytes": 1075076,
+        "sha256": "3f68bdfe9cd88ac3e47ccbba1f628c55fa7484dd54875a0b904b84de57765bc9"
+      },
+      "rotated": {
+        "bytes": 3430,
+        "sha256": "17147728243d9d5b6c2d34ac87dff3e5882df739d5678d3f0898d6d648d851bc"
+      },
+      "silent": {
+        "bytes": 3311,
+        "sha256": "cab2ec45c87c98601874146e692ac4d2474ee29b3116cf37d86bed8d3726699b"
+      },
+      "large": {
+        "bytes": 4826,
+        "sha256": "aedc09508965f961d0953c4b40ca160168efe9b9e11d16c59982414e5092d685"
+      },
+      "stereo": {
+        "bytes": 37723,
+        "sha256": "19a25ddbc17dc4930864fe6376ebd7211e364b6a49131fb820ed7e9bded1e6c8"
+      },
+      "vfr": {
+        "bytes": 386453,
+        "sha256": "491b630c7cb211a8ef71b99c05a493fc3440a07b4ab44fbc3daccecf5d57aaa4"
+      },
+      "first-track": {
+        "bytes": 6501,
+        "sha256": "22dd47008232ce2ab597dfff50d9e85fe00b4d3c7f014daa33245390032b5bf7"
+      },
+      "delayed-audio": {
+        "bytes": 75080,
+        "sha256": "aeeffdeb534b69553c49d2dbfede42e344da42b2517042ce95ed2bbd81d7a5bc"
+      },
+      "color": {
+        "bytes": 4720,
+        "sha256": "bfe9165aaad1bac12bdf02504678cfb2f59c99e7ca2f77239631f4f977e7d32b"
+      }
+    },
+    "results": [
+      {
+        "id": "span-short",
+        "error": "CLIP_INPUT_TOO_LARGE",
+        "name": "Error",
+        "qualification": false
+      },
+      {
+        "id": "span-missing",
+        "error": "CLIP_INPUT_TOO_LARGE",
+        "name": "Error",
+        "qualification": false
+      },
+      {
+        "id": "span-valid",
+        "original": {
+          "sourceId": "synthetic",
+          "fingerprint": "a2a4d5c265f1c6ea0a4796837f4a36102a1d389eade63e154b936e28d81ab1ff",
+          "provenance": "browser_client",
+          "durationMs": 6000,
+          "width": 160,
+          "height": 90,
+          "frameRateNumerator": 1,
+          "frameRateDenominator": 2,
+          "cadenceVerified": false,
+          "decodedFrames": 3,
+          "hasAudio": false,
+          "audioRate": 0,
+          "audioChannels": 0,
+          "resources": {
+            "peakDecodedFrames": 1,
+            "liveDecodedFrames": 0,
+            "peakAudioData": 0,
+            "liveAudioData": 0
+          }
+        },
+        "measuredMs": 119.25,
+        "resourceEvents": [
+          {
+            "module": "http://127.0.0.1:61346/src/features/prepare-clip-browser/lib/analysis.worker.ts?worker_file&type=module",
+            "resources": {
+              "peakDecodedFrames": 1,
+              "liveDecodedFrames": 0,
+              "peakAudioData": 0,
+              "liveAudioData": 0
+            }
+          }
+        ],
+        "qualification": false
+      }
+    ]
+  },
+  "actualNormalOriginalEOF": {
+    "version": 1,
+    "qualification": false,
+    "browser": "154.0.8037.98",
+    "executablePath": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+    "hardwareUsage": "unmeasured; default installed Chrome",
+    "node": "v24.18.0",
+    "mediabunny": "1.58.0",
+    "lockfileSHA256": "d07c4a1bd3aeab4df41155c2d63d85e6a487959534ed7b27b4710315d7a07319",
+    "fixtures": {
+      "span-short": {
+        "bytes": 2014,
+        "sha256": "16d4d6d45fa5d2599149eaa3abdfedbffe27864538bc999f23c0f7fa547f511c"
+      },
+      "span-missing": {
+        "bytes": 2014,
+        "sha256": "4b4f382a927a2b03aa709c206e1f653b087c6acd7c3dc54e528f445853ab0290"
+      },
+      "span-valid": {
+        "bytes": 2857,
+        "sha256": "a2a4d5c265f1c6ea0a4796837f4a36102a1d389eade63e154b936e28d81ab1ff"
+      },
+      "long": {
+        "bytes": 1075076,
+        "sha256": "3f68bdfe9cd88ac3e47ccbba1f628c55fa7484dd54875a0b904b84de57765bc9"
+      },
+      "rotated": {
+        "bytes": 3430,
+        "sha256": "17147728243d9d5b6c2d34ac87dff3e5882df739d5678d3f0898d6d648d851bc"
+      },
+      "silent": {
+        "bytes": 3311,
+        "sha256": "cab2ec45c87c98601874146e692ac4d2474ee29b3116cf37d86bed8d3726699b"
+      },
+      "large": {
+        "bytes": 4826,
+        "sha256": "aedc09508965f961d0953c4b40ca160168efe9b9e11d16c59982414e5092d685"
+      },
+      "stereo": {
+        "bytes": 37723,
+        "sha256": "19a25ddbc17dc4930864fe6376ebd7211e364b6a49131fb820ed7e9bded1e6c8"
+      },
+      "vfr": {
+        "bytes": 386453,
+        "sha256": "491b630c7cb211a8ef71b99c05a493fc3440a07b4ab44fbc3daccecf5d57aaa4"
+      },
+      "first-track": {
+        "bytes": 6501,
+        "sha256": "22dd47008232ce2ab597dfff50d9e85fe00b4d3c7f014daa33245390032b5bf7"
+      },
+      "delayed-audio": {
+        "bytes": 75080,
+        "sha256": "aeeffdeb534b69553c49d2dbfede42e344da42b2517042ce95ed2bbd81d7a5bc"
+      },
+      "color": {
+        "bytes": 4720,
+        "sha256": "bfe9165aaad1bac12bdf02504678cfb2f59c99e7ca2f77239631f4f977e7d32b"
+      }
+    },
+    "results": [
+      {
+        "id": "long",
+        "original": {
+          "sourceId": "synthetic",
+          "fingerprint": "3f68bdfe9cd88ac3e47ccbba1f628c55fa7484dd54875a0b904b84de57765bc9",
+          "provenance": "browser_client",
+          "durationMs": 61000,
+          "width": 160,
+          "height": 90,
+          "frameRateNumerator": 30,
+          "frameRateDenominator": 1,
+          "cadenceVerified": true,
+          "decodedFrames": 1830,
+          "hasAudio": true,
+          "audioRate": 44100,
+          "audioChannels": 1,
+          "resources": {
+            "peakDecodedFrames": 1,
+            "liveDecodedFrames": 0,
+            "peakAudioData": 0,
+            "liveAudioData": 0
+          }
+        },
+        "measuredMs": 1678.1799998283386,
+        "resourceEvents": [
+          {
+            "module": "http://127.0.0.1:61790/src/features/prepare-clip-browser/lib/analysis.worker.ts?worker_file&type=module",
+            "resources": {
+              "peakDecodedFrames": 1,
+              "liveDecodedFrames": 0,
+              "peakAudioData": 0,
+              "liveAudioData": 0
+            }
+          }
+        ],
+        "qualification": false
+      },
+      {
+        "id": "rotated",
+        "original": {
+          "sourceId": "synthetic",
+          "fingerprint": "17147728243d9d5b6c2d34ac87dff3e5882df739d5678d3f0898d6d648d851bc",
+          "provenance": "browser_client",
+          "durationMs": 2000,
+          "width": 180,
+          "height": 320,
+          "frameRateNumerator": 30,
+          "frameRateDenominator": 1,
+          "cadenceVerified": true,
+          "decodedFrames": 60,
+          "hasAudio": false,
+          "audioRate": 0,
+          "audioChannels": 0,
+          "resources": {
+            "peakDecodedFrames": 1,
+            "liveDecodedFrames": 0,
+            "peakAudioData": 0,
+            "liveAudioData": 0
+          }
+        },
+        "measuredMs": 110.93499994277954,
+        "resourceEvents": [
+          {
+            "module": "http://127.0.0.1:61790/src/features/prepare-clip-browser/lib/analysis.worker.ts?worker_file&type=module",
+            "resources": {
+              "peakDecodedFrames": 1,
+              "liveDecodedFrames": 0,
+              "peakAudioData": 0,
+              "liveAudioData": 0
+            }
+          }
+        ],
+        "qualification": false
+      },
+      {
+        "id": "silent",
+        "original": {
+          "sourceId": "synthetic",
+          "fingerprint": "cab2ec45c87c98601874146e692ac4d2474ee29b3116cf37d86bed8d3726699b",
+          "provenance": "browser_client",
+          "durationMs": 2167,
+          "width": 160,
+          "height": 90,
+          "frameRateNumerator": 372,
+          "frameRateDenominator": 13,
+          "cadenceVerified": false,
+          "decodedFrames": 62,
+          "hasAudio": false,
+          "audioRate": 0,
+          "audioChannels": 0,
+          "resources": {
+            "peakDecodedFrames": 1,
+            "liveDecodedFrames": 0,
+            "peakAudioData": 0,
+            "liveAudioData": 0
+          }
+        },
+        "measuredMs": 108.40999984741211,
+        "resourceEvents": [
+          {
+            "module": "http://127.0.0.1:61790/src/features/prepare-clip-browser/lib/analysis.worker.ts?worker_file&type=module",
+            "resources": {
+              "peakDecodedFrames": 1,
+              "liveDecodedFrames": 0,
+              "peakAudioData": 0,
+              "liveAudioData": 0
+            }
+          }
+        ],
+        "qualification": false
+      },
+      {
+        "id": "large",
+        "original": {
+          "sourceId": "synthetic",
+          "fingerprint": "aedc09508965f961d0953c4b40ca160168efe9b9e11d16c59982414e5092d685",
+          "provenance": "browser_client",
+          "durationMs": 2000,
+          "width": 1280,
+          "height": 720,
+          "frameRateNumerator": 30,
+          "frameRateDenominator": 1,
+          "cadenceVerified": true,
+          "decodedFrames": 60,
+          "hasAudio": false,
+          "audioRate": 0,
+          "audioChannels": 0,
+          "resources": {
+            "peakDecodedFrames": 1,
+            "liveDecodedFrames": 0,
+            "peakAudioData": 0,
+            "liveAudioData": 0
+          }
+        },
+        "measuredMs": 177.375,
+        "resourceEvents": [
+          {
+            "module": "http://127.0.0.1:61790/src/features/prepare-clip-browser/lib/analysis.worker.ts?worker_file&type=module",
+            "resources": {
+              "peakDecodedFrames": 1,
+              "liveDecodedFrames": 0,
+              "peakAudioData": 0,
+              "liveAudioData": 0
+            }
+          }
+        ],
+        "qualification": false
+      },
+      {
+        "id": "stereo",
+        "original": {
+          "sourceId": "synthetic",
+          "fingerprint": "19a25ddbc17dc4930864fe6376ebd7211e364b6a49131fb820ed7e9bded1e6c8",
+          "provenance": "browser_client",
+          "durationMs": 2000,
+          "width": 320,
+          "height": 180,
+          "frameRateNumerator": 30,
+          "frameRateDenominator": 1,
+          "cadenceVerified": true,
+          "decodedFrames": 60,
+          "hasAudio": true,
+          "audioRate": 48000,
+          "audioChannels": 2,
+          "resources": {
+            "peakDecodedFrames": 1,
+            "liveDecodedFrames": 0,
+            "peakAudioData": 0,
+            "liveAudioData": 0
+          }
+        },
+        "measuredMs": 139.99500036239624,
+        "resourceEvents": [
+          {
+            "module": "http://127.0.0.1:61790/src/features/prepare-clip-browser/lib/analysis.worker.ts?worker_file&type=module",
+            "resources": {
+              "peakDecodedFrames": 1,
+              "liveDecodedFrames": 0,
+              "peakAudioData": 0,
+              "liveAudioData": 0
+            }
+          }
+        ],
+        "qualification": false
+      },
+      {
+        "id": "vfr",
+        "original": {
+          "sourceId": "synthetic",
+          "fingerprint": "491b630c7cb211a8ef71b99c05a493fc3440a07b4ab44fbc3daccecf5d57aaa4",
+          "provenance": "browser_client",
+          "durationMs": 8000,
+          "width": 320,
+          "height": 180,
+          "frameRateNumerator": 19200,
+          "frameRateDenominator": 481,
+          "cadenceVerified": false,
+          "decodedFrames": 320,
+          "hasAudio": false,
+          "audioRate": 0,
+          "audioChannels": 0,
+          "resources": {
+            "peakDecodedFrames": 1,
+            "liveDecodedFrames": 0,
+            "peakAudioData": 0,
+            "liveAudioData": 0
+          }
+        },
+        "measuredMs": 343.92000007629395,
+        "resourceEvents": [
+          {
+            "module": "http://127.0.0.1:61790/src/features/prepare-clip-browser/lib/analysis.worker.ts?worker_file&type=module",
+            "resources": {
+              "peakDecodedFrames": 1,
+              "liveDecodedFrames": 0,
+              "peakAudioData": 0,
+              "liveAudioData": 0
+            }
+          }
+        ],
+        "qualification": false
+      },
+      {
+        "id": "first-track",
+        "original": {
+          "sourceId": "synthetic",
+          "fingerprint": "22dd47008232ce2ab597dfff50d9e85fe00b4d3c7f014daa33245390032b5bf7",
+          "provenance": "browser_client",
+          "durationMs": 2000,
+          "width": 64,
+          "height": 32,
+          "frameRateNumerator": 30,
+          "frameRateDenominator": 1,
+          "cadenceVerified": true,
+          "decodedFrames": 60,
+          "hasAudio": false,
+          "audioRate": 0,
+          "audioChannels": 0,
+          "resources": {
+            "peakDecodedFrames": 1,
+            "liveDecodedFrames": 0,
+            "peakAudioData": 0,
+            "liveAudioData": 0
+          }
+        },
+        "measuredMs": 144.43499994277954,
+        "resourceEvents": [
+          {
+            "module": "http://127.0.0.1:61790/src/features/prepare-clip-browser/lib/analysis.worker.ts?worker_file&type=module",
+            "resources": {
+              "peakDecodedFrames": 1,
+              "liveDecodedFrames": 0,
+              "peakAudioData": 0,
+              "liveAudioData": 0
+            }
+          }
+        ],
+        "qualification": false
+      },
+      {
+        "id": "delayed-audio",
+        "original": {
+          "sourceId": "synthetic",
+          "fingerprint": "aeeffdeb534b69553c49d2dbfede42e344da42b2517042ce95ed2bbd81d7a5bc",
+          "provenance": "browser_client",
+          "durationMs": 7000,
+          "width": 64,
+          "height": 32,
+          "frameRateNumerator": 30,
+          "frameRateDenominator": 1,
+          "cadenceVerified": true,
+          "decodedFrames": 210,
+          "hasAudio": true,
+          "audioRate": 48000,
+          "audioChannels": 2,
+          "resources": {
+            "peakDecodedFrames": 1,
+            "liveDecodedFrames": 0,
+            "peakAudioData": 0,
+            "liveAudioData": 0
+          }
+        },
+        "measuredMs": 248.63499975204468,
+        "resourceEvents": [
+          {
+            "module": "http://127.0.0.1:61790/src/features/prepare-clip-browser/lib/analysis.worker.ts?worker_file&type=module",
+            "resources": {
+              "peakDecodedFrames": 1,
+              "liveDecodedFrames": 0,
+              "peakAudioData": 0,
+              "liveAudioData": 0
+            }
+          }
+        ],
+        "qualification": false
+      },
+      {
+        "id": "color",
+        "original": {
+          "sourceId": "synthetic",
+          "fingerprint": "bfe9165aaad1bac12bdf02504678cfb2f59c99e7ca2f77239631f4f977e7d32b",
+          "provenance": "browser_client",
+          "durationMs": 2000,
+          "width": 64,
+          "height": 32,
+          "frameRateNumerator": 60,
+          "frameRateDenominator": 1,
+          "cadenceVerified": true,
+          "decodedFrames": 120,
+          "hasAudio": false,
+          "audioRate": 0,
+          "audioChannels": 0,
+          "resources": {
+            "peakDecodedFrames": 1,
+            "liveDecodedFrames": 0,
+            "peakAudioData": 0,
+            "liveAudioData": 0
+          }
+        },
+        "measuredMs": 192.04500007629395,
+        "resourceEvents": [
+          {
+            "module": "http://127.0.0.1:61790/src/features/prepare-clip-browser/lib/analysis.worker.ts?worker_file&type=module",
+            "resources": {
+              "peakDecodedFrames": 1,
+              "liveDecodedFrames": 0,
+              "peakAudioData": 0,
+              "liveAudioData": 0
+            }
+          }
+        ],
+        "qualification": false
+      }
+    ]
+  },
+  "nativeReuse": {
+    "marker": "/** A finite random-access mux target.",
+    "unchangedEncodingMuxInspectionAndRetrySuffixSHA256": "066edee51e42744919abff017f18546240e849b1a8be3fea68f2d970da4d24b3",
+    "previousSuffixExactlyEqual": true,
+    "actualNativeCommands": 47,
+    "actualNativeArtifacts": 10,
+    "scope": "Only original EOF measurement and UI selection identity changed. Exact valid-original measurements and encoding/mux/inspection/retry bytes unchanged; original artifact SHA and all native safety/PCM proofs retained."
+  },
+  "semanticQualified": false,
+  "sourceSHA256": {
+    "frontend/src/shared/lib/media/analysis-copy.ts": "a702f8503a341e764223e30cfc25a4695ce5cda0d4d2ea5ed6a08de08bed765a",
+    "frontend/src/shared/lib/media/analysis-original.test.ts": "b196350501a3f58b3b2ec3c6436826e5c22702fefda24166c116178ba0f27bb1",
+    "frontend/src/test/browser-media/analysis-entry.ts": "b99d486e77871862c3b62bf05c80741af7e566cccd0b40f96d4842a5c6069b05",
+    "frontend/src/widgets/clip-workspace/model/analysis-ownership.test.tsx": "1bf0fa6799f7547de44d527c1b0dfc6666239b466f1ce1f0818da94105c697e2",
+    "frontend/src/widgets/clip-workspace/model/useClipWorkspace.ts": "7fe1fe51be2f14a7d8176cd33d04ecee8b21ff1f337cc2ca26aa592d0831e986",
+    "scripts/browser-analysis-copy-check.mjs": "c399eb9f776b058b34b5261b87d28f0c24f656f23e2c0eb759020328ddec0b32",
+    "scripts/browser-analysis-span-fixtures.mjs": "5a3556b2d5df3bc1cf2e6f557ef155863033382b8db5ec4b4e10886bd3eec773"
+  }
+}

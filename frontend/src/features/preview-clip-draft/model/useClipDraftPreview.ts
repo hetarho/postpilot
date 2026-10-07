@@ -1,132 +1,121 @@
-import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react'
-import { appFailureFromConnect, normalizeAppFailure } from '@/shared/api'
-import type { ClipEditPlan } from '@/entities/clip-plan'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { normalizeAppFailure } from '@/shared/api'
+import type { ClipEditPlan, RetainedClipSource } from '@/entities/clip-plan'
 import {
-  PreviewAssetCache,
-  PreviewPreparation,
-  previewElementIDs,
-  previewTimeline,
-  useClipPreviewRequest,
+  BrowserCompositionOriginals,
+  freezeBrowserPreviewComposition,
+  projectBrowserComposition,
+  type BrowserCompositionDesign,
+  type BrowserLocalOriginal,
+  type ClipLocalCompositionRuntime,
   type ClipPreviewOverlay,
-  type ClipPreviewRequest,
 } from '@/entities/clip-preview'
+import type { ClipLayoutObservations } from '@/entities/clip-observation'
+import { CLIP_DESIGN, type ClipRatioId } from '@/entities/clip-design'
 
-interface PreviewRequestState {
-  /** The (project, revision, plan, retry) this answer belongs to; a pending state carries none. */
-  token: string
-  request?: ClipPreviewRequest
-  error?: unknown
+export interface ClipDraftPreviewInput {
+  ownerId: string
+  projectId: string
+  projectRevision?: number
+  revision: number
+  plan: ClipEditPlan
+  ratio: ClipRatioId
+  sources: readonly RetainedClipSource[]
+  layoutObservations?: ClipLayoutObservations
+  design?: Partial<BrowserCompositionDesign>
+  localSources?: readonly BrowserLocalOriginal[]
+  resolvePlayback: (fingerprint: string, refresh?: boolean) => Promise<string>
+  timeMs?: number
 }
-
-/** The transport half. One request per (project, revision, plan): the element ids the preview
- *  later asks for follow the play position and must NOT re-issue it. While a new plan's request
- *  is in flight the state is pending, so the preparation is never handed a stale draft hash. */
-export function usePreviewRequest(
-  projectId: string,
-  revision: number,
-  planJSON: string,
-  retry: number,
-): PreviewRequestState {
-  const request = useClipPreviewRequest()
-  const token = JSON.stringify([projectId, revision, planJSON, retry])
-  const [state, setState] = useState<PreviewRequestState>({ token: '' })
+/** Page ownership around the shared local engine. Scrubbing never requests a server raster. */
+export function useClipDraftPreview(
+  input: ClipDraftPreviewInput,
+): ClipPreviewOverlay & { local?: ClipLocalCompositionRuntime } {
+  const [retry, setRetry] = useState(0)
+  const key = JSON.stringify([
+    input.ownerId,
+    input.projectId,
+    input.projectRevision ?? input.revision,
+    input.revision,
+    input.plan,
+    input.ratio,
+    input.sources,
+    input.layoutObservations,
+    input.design,
+    (input.localSources ?? []).map((source) => [
+      source.sourceId,
+      source.fingerprint,
+      source.url,
+      !!source.file,
+    ]),
+    retry,
+  ])
+  const [state, setState] = useState<{
+    key: string
+    local?: ClipLocalCompositionRuntime
+    error?: unknown
+  }>({ key: '' })
+  const latest = useRef(input)
+  useLayoutEffect(() => {
+    latest.current = input
+  }, [input])
   useEffect(() => {
-    let active = true
-    void request(projectId, revision, JSON.parse(planJSON) as ClipEditPlan).then(
-      (value) => {
-        if (active) setState({ token, request: value })
+    const data = latest.current
+    const controller = new AbortController()
+    let originals: BrowserCompositionOriginals | undefined
+    void freezeBrowserPreviewComposition(
+      projectBrowserComposition({
+        ownerId: data.ownerId,
+        projectId: data.projectId,
+        projectRevision: data.projectRevision ?? data.revision,
+        planRevision: data.revision,
+        plan: data.plan,
+        ratio: data.ratio,
+        sources: data.sources,
+        layoutObservations: data.layoutObservations,
+        design: data.design,
+      }),
+    ).then(
+      (snapshot) => {
+        if (controller.signal.aborted) return
+        originals = new BrowserCompositionOriginals(
+          snapshot,
+          data.localSources ?? [],
+          (fingerprint, refresh) => data.resolvePlayback(fingerprint, refresh || retry > 0),
+          controller.signal,
+        )
+        setState({
+          key,
+          local: { snapshot, source: originals.source, audioSource: originals.audioSource },
+        })
       },
       (error: unknown) => {
-        if (active) setState({ token, error })
+        if (!controller.signal.aborted) setState({ key, error })
       },
     )
     return () => {
-      active = false
+      controller.abort()
+      originals?.dispose()
     }
-  }, [request, projectId, revision, planJSON, token])
-  return state.token === token ? state : { token: '' }
-}
-
-/** The assets half. Owns the per-mount preparation (and the object URLs it hands out), and asks
- *  it for exactly the elements on screen whenever the position or the answered request changes. */
-export function usePreviewPreparation(
-  key: string,
-  contentKey: string,
-  idsJSON: string,
-  result: PreviewRequestState,
-) {
-  const [preparation] = useState(
-    () =>
-      new PreviewPreparation(
-        new PreviewAssetCache({
-          create: (bytes) =>
-            URL.createObjectURL(new Blob([new Uint8Array(bytes)], { type: 'image/png' })),
-          revoke: (url) => URL.revokeObjectURL(url),
-        }),
-      ),
-  )
-  const snapshot = useSyncExternalStore(preparation.subscribe, preparation.getSnapshot)
-  useEffect(() => {
-    if (result.request)
-      preparation.update(
-        key,
-        result.request.hash,
-        JSON.parse(idsJSON) as string[],
-        result.request.load,
-        contentKey,
-      )
-    else if (result.token)
-      preparation.update(key, '', [], () => Promise.reject(result.error), contentKey)
-    return () => {
-      preparation.stop()
-    }
-  }, [preparation, result, key, contentKey, idsJSON])
-  useEffect(
-    () => () => {
-      preparation.dispose()
-    },
-    [preparation],
-  )
-  return snapshot
-}
-
-/** Everything `ClipDraftPreview` needs but may not do itself (ARCH-14): the preview request for
- *  the plan being edited, the overlay prepared for the position on screen, and the way back from
- *  a failure. The entity component renders the result and owns no transport. */
-export function useClipDraftPreview({
-  projectId,
-  revision,
-  plan,
-  timeMs,
-}: {
-  projectId: string
-  revision: number
-  plan: ClipEditPlan
-  timeMs: number
-}): ClipPreviewOverlay {
-  const [retry, setRetry] = useState(0)
-  const planJSON = JSON.stringify(plan)
-  const timeline = useMemo(() => previewTimeline(JSON.parse(planJSON) as ClipEditPlan), [planJSON])
-  const idsJSON = JSON.stringify(previewElementIDs(plan, timeline, timeMs))
-  const contentKey = JSON.stringify([projectId, revision, planJSON])
-  const key = JSON.stringify([contentKey, idsJSON, retry])
-  const result = usePreviewRequest(projectId, revision, planJSON, retry)
-  const snapshot = usePreviewPreparation(key, contentKey, idsJSON, result)
-  const failed = snapshot.key === key && snapshot.status === 'failed'
+    // `key` is the detached content/runtime identity; output playhead changes preserve it.
+  }, [key, retry])
+  const current = state.key === key ? state : undefined,
+    canvas = CLIP_DESIGN.ratios[input.ratio].canvas
   return {
-    assets: snapshot.assets,
-    canvasWidth: snapshot.canvasWidth,
-    canvasHeight: snapshot.canvasHeight,
-    ready:
-      snapshot.contentKey === contentKey &&
-      snapshot.canvasWidth > 0 &&
-      snapshot.status !== 'failed',
-    updating: snapshot.status === 'updating',
-    // A refusal the browser never sent is ours, not the server's: it carries no Connect code.
-    failure: failed
-      ? snapshot.error instanceof Error && snapshot.error.message === 'CLIP_PREVIEW_TOO_LARGE'
-        ? normalizeAppFailure({ reason: snapshot.error.message, params: {} })
-        : appFailureFromConnect(snapshot.error)
+    local: current?.local,
+    assets: [],
+    canvasWidth: canvas.width,
+    canvasHeight: canvas.height,
+    ready: !!current?.local,
+    updating: !current,
+    failure: current?.error
+      ? normalizeAppFailure({
+          reason:
+            current.error instanceof Error
+              ? current.error.message.split(':')[0]!
+              : 'CLIP_PREVIEW_UNAVAILABLE',
+          params: {},
+        })
       : undefined,
     onRetry: useCallback(() => setRetry((value) => value + 1), []),
   }

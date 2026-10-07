@@ -32,3 +32,4 @@ export {
   CLIP_SOURCE_MAX_FILENAME_CHARS,
   CLIP_SOURCE_MAX_FILE_BYTES,
 } from './config/index'
+export type { ClipRatioId } from './config/clip-design'

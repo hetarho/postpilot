@@ -1471,6 +1471,7 @@ type GenerationJob struct {
 	CancelRequestedAt         string          `protobuf:"bytes,16,opt,name=cancel_requested_at,json=cancelRequestedAt,proto3" json:"cancel_requested_at,omitempty"`
 	CancellationPolicyVersion int32           `protobuf:"varint,17,opt,name=cancellation_policy_version,json=cancellationPolicyVersion,proto3" json:"cancellation_policy_version,omitempty"`
 	CanCancel                 bool            `protobuf:"varint,18,opt,name=can_cancel,json=canCancel,proto3" json:"can_cancel,omitempty"`
+	WaitExpiresAt             string          `protobuf:"bytes,19,opt,name=wait_expires_at,json=waitExpiresAt,proto3" json:"wait_expires_at,omitempty"`
 	unknownFields             protoimpl.UnknownFields
 	sizeCache                 protoimpl.SizeCache
 }
@@ -1630,6 +1631,13 @@ func (x *GenerationJob) GetCanCancel() bool {
 		return x.CanCancel
 	}
 	return false
+}
+
+func (x *GenerationJob) GetWaitExpiresAt() string {
+	if x != nil {
+		return x.WaitExpiresAt
+	}
+	return ""
 }
 
 type GetGenerationRequest struct {
@@ -3928,7 +3936,7 @@ const file_postpilot_v1_post_proto_rawDesc = "" +
 	"\rpublished_url\x18\x0e \x01(\tR\fpublishedUrl\x12S\n" +
 	"\x17latest_ordinary_failure\x18\x0f \x01(\v2\x1b.postpilot.v1.GenerationJobR\x15latestOrdinaryFailure\x12%\n" +
 	"\x0einput_revision\x18\x10 \x01(\x03R\rinputRevision\x12)\n" +
-	"\x10content_revision\x18\x11 \x01(\x03R\x0fcontentRevision\"\xc8\x05\n" +
+	"\x10content_revision\x18\x11 \x01(\x03R\x0fcontentRevision\"\xf0\x05\n" +
 	"\rGenerationJob\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04kind\x18\x02 \x01(\tR\x04kind\x12\x16\n" +
@@ -3952,7 +3960,8 @@ const file_postpilot_v1_post_proto_rawDesc = "" +
 	"\x13cancel_requested_at\x18\x10 \x01(\tR\x11cancelRequestedAt\x12>\n" +
 	"\x1bcancellation_policy_version\x18\x11 \x01(\x05R\x19cancellationPolicyVersion\x12\x1d\n" +
 	"\n" +
-	"can_cancel\x18\x12 \x01(\bR\tcanCancel\"&\n" +
+	"can_cancel\x18\x12 \x01(\bR\tcanCancel\x12&\n" +
+	"\x0fwait_expires_at\x18\x13 \x01(\tR\rwaitExpiresAt\"&\n" +
 	"\x14GetGenerationRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"F\n" +
 	"\x15GetGenerationResponse\x12-\n" +

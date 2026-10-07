@@ -71,6 +71,9 @@ UPDATE clip_media_stages SET state='running',current_attempt_id=?1,attempt_count
 WHERE id=(SELECT s.id FROM clip_media_stages s LEFT JOIN clip_media_attempts a ON a.id=s.current_attempt_id
  WHERE s.operation=?2 AND s.contract_version=?3
  AND s.renderer_version=?4 AND s.asset_version=?5
+ AND (s.operation!='render' OR (SELECT COUNT(*) FROM clip_media_stages occupied
+   JOIN clip_media_attempts lease ON lease.id=occupied.current_attempt_id
+   WHERE occupied.operation='render' AND lease.outcome IS NULL AND lease.lease_expires_at>?6) < CAST(?7 AS INTEGER))
  AND s.deadline_at>?6 AND s.attempt_count<s.attempt_limit
  AND (s.attempt_count>0 OR s.queue_deadline_at>?6)
  AND (s.retry_not_before IS NULL OR s.retry_not_before<=?6)
@@ -80,12 +83,13 @@ RETURNING id, parent_job_id, user_id, project_id, expected_revision, stage_key, 
 `
 
 type ClaimMediaStageParams struct {
-	AttemptID       sql.NullString
-	Operation       string
-	ContractVersion int64
-	RendererVersion string
-	AssetVersion    string
-	Now             string
+	AttemptID         sql.NullString
+	Operation         string
+	ContractVersion   int64
+	RendererVersion   string
+	AssetVersion      string
+	Now               string
+	RenderActiveLimit int64
 }
 
 func (q *Queries) ClaimMediaStage(ctx context.Context, arg ClaimMediaStageParams) (ClipMediaStage, error) {
@@ -96,6 +100,7 @@ func (q *Queries) ClaimMediaStage(ctx context.Context, arg ClaimMediaStageParams
 		arg.RendererVersion,
 		arg.AssetVersion,
 		arg.Now,
+		arg.RenderActiveLimit,
 	)
 	var i ClipMediaStage
 	err := row.Scan(

@@ -1,0 +1,352 @@
+{
+  "version": 1,
+  "lockfileSHA256": "4bf52d68dba2d2b5492cacdeeb92b12337bde6694001350640f5ad1693a3c152",
+  "assetVersion": "clip-design-assets-v1-ink-8f58a59b925711cb5ae8b8b3159b116c5d2200f4774315f8d7a42811c30bf7c2",
+  "dependencyGraphScope": "Installed browser media dependency graph, including type-only dependencies; emitted bundle inclusion is separately unverified.",
+  "packages": [
+    {
+      "name": "@pixi/colord",
+      "version": "2.9.6",
+      "declaredLicense": "MIT",
+      "packageMetadataSHA256": "d92aec39b7b030ebb6419b8ca4da12fd1a9b7bbd12d2979ab019308b417507e8",
+      "notices": [
+        {
+          "file": "pixi-colord2.9.6-LICENSE",
+          "sha256": "7613d4594ee8b6163926af3435dae61c9e3d5a27cd137bd76a543ba40002d8fc",
+          "provenance": {
+            "url": "https://raw.githubusercontent.com/omgovich/colord/5344fbf77b736f81cd33c21050021bc09bc9dd1d/LICENSE.md",
+            "kind": "Exact npm gitHead upstream notice, absent in npm package"
+          }
+        }
+      ]
+    },
+    {
+      "name": "@resvg/resvg-wasm",
+      "version": "2.6.2",
+      "declaredLicense": "MPL-2.0",
+      "packageMetadataSHA256": "4a9efcb54b2670726ccf9b91086413676c3de0fae607cce3b8a5a0d25abaff48",
+      "notices": [
+        {
+          "file": "resvg-resvg-wasm2.6.2-LICENSE",
+          "sha256": "4b89d4518bd135ab4ee154a7bce722246b57a98c3d7efc1a09409898160c2bd1",
+          "provenance": {
+            "url": "https://raw.githubusercontent.com/thx/resvg-js/9ca058462ac529120c8cc84ddcd6fef644cc5406/LICENSE",
+            "kind": "Exact source wrapper license; not full embedded Rust graph"
+          }
+        }
+      ]
+    },
+    {
+      "name": "@soundtouchjs/core",
+      "version": "2.1.1",
+      "declaredLicense": "MPL-2.0",
+      "packageMetadataSHA256": "b6624f855f7ad9007c78d2afb25a5477caa5c3fd4347c8732d81f95b73994139",
+      "notices": [
+        {
+          "file": "soundtouchjs-core2.1.1-LICENSE",
+          "sha256": "753801acf995db0807e9dab615775310b1f74696e7776ee246bf9b31714cdaf9",
+          "provenance": "Unmodified packaged notice"
+        }
+      ]
+    },
+    {
+      "name": "@soundtouchjs/interpolation-strategy-lanczos",
+      "version": "2.1.1",
+      "declaredLicense": "MPL-2.0",
+      "packageMetadataSHA256": "b2b022a08d6000020e6d4484c67648d2f3e73a1fd871bfc7ff95cddb2959c61f",
+      "notices": [
+        {
+          "file": "soundtouchjs-interpolation-strategy-lanczos2.1.1-LICENSE",
+          "sha256": "753801acf995db0807e9dab615775310b1f74696e7776ee246bf9b31714cdaf9",
+          "provenance": "Unmodified packaged notice"
+        }
+      ]
+    },
+    {
+      "name": "@types/dom-mediacapture-transform",
+      "version": "0.1.12",
+      "declaredLicense": "MIT",
+      "packageMetadataSHA256": "0d4a78731fdf4dab2333dd750b530d3dcfe367069c49376720a39e03a9bba0b7",
+      "notices": [
+        {
+          "file": "types-dom-mediacapture-transform0.1.12-LICENSE",
+          "sha256": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383",
+          "provenance": "Unmodified packaged notice"
+        }
+      ]
+    },
+    {
+      "name": "@types/dom-webcodecs",
+      "version": "0.1.13",
+      "declaredLicense": "MIT",
+      "packageMetadataSHA256": "962672d1b0e1ed92d8a46060685fcc634c691bcb59f38a787472ac2126df884c",
+      "notices": [
+        {
+          "file": "types-dom-webcodecs0.1.13-LICENSE",
+          "sha256": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383",
+          "provenance": "Unmodified packaged notice"
+        }
+      ]
+    },
+    {
+      "name": "@types/earcut",
+      "version": "3.0.0",
+      "declaredLicense": "MIT",
+      "packageMetadataSHA256": "2fe143a9a24ed33c08964698dd39d7bc08e2f3b587b88b7177197a8a378fbee3",
+      "notices": [
+        {
+          "file": "types-earcut3.0.0-LICENSE",
+          "sha256": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383",
+          "provenance": "Unmodified packaged notice"
+        }
+      ]
+    },
+    {
+      "name": "@types/gradient-parser",
+      "version": "0.1.5",
+      "declaredLicense": "MIT",
+      "packageMetadataSHA256": "5e46f588723c9c092a0f6fa26556367d5ff677431b5be4c36014ee089468c81e",
+      "notices": [
+        {
+          "file": "types-gradient-parser0.1.5-LICENSE",
+          "sha256": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383",
+          "provenance": "Unmodified packaged notice"
+        }
+      ]
+    },
+    {
+      "name": "@webgpu/types",
+      "version": "0.1.74",
+      "declaredLicense": "BSD-3-Clause",
+      "packageMetadataSHA256": "c58597e365f42b61a165210e49e90a864730ee4716473de67d36dfa42519ec99",
+      "notices": [
+        {
+          "file": "webgpu-types0.1.74-LICENSE",
+          "sha256": "ad88400fc55c2871ba2ed33930dc13001ef01907c2ddcbfa3caa8656e9142f05",
+          "provenance": "Unmodified packaged notice"
+        }
+      ]
+    },
+    {
+      "name": "@xmldom/xmldom",
+      "version": "0.8.15",
+      "declaredLicense": "MIT",
+      "packageMetadataSHA256": "35aecb16da42bf3843ed197db638dff79d178fc23783bfae77070fcfa4d0ae94",
+      "notices": [
+        {
+          "file": "xmldom-xmldom0.8.15-LICENSE",
+          "sha256": "4da724fc305d81606b245b324d4d2586916b9d248b23d82183df753ace0fdf71",
+          "provenance": "Unmodified packaged notice"
+        }
+      ]
+    },
+    {
+      "name": "earcut",
+      "version": "3.2.4",
+      "declaredLicense": "ISC",
+      "packageMetadataSHA256": "c48653ade72118ac2dd1c05bdfe4608e6ad9ae19b4b1c218b62af3fb272c81e4",
+      "notices": [
+        {
+          "file": "earcut3.2.4-LICENSE",
+          "sha256": "0b348fff56384b43dbb37593906904e56d0f9deb51eae590d4dc6d427fbf1808",
+          "provenance": "Unmodified packaged notice"
+        }
+      ]
+    },
+    {
+      "name": "eventemitter3",
+      "version": "5.0.4",
+      "declaredLicense": "MIT",
+      "packageMetadataSHA256": "0dd9bc32a77be8238fad41d58aa5b24ccdfee79d8bcf4cbee85f16e3d15c1658",
+      "notices": [
+        {
+          "file": "eventemitter35.0.4-LICENSE",
+          "sha256": "3aecc12b1cb28832b5f65ab64291de96568c3f236a74d646281b4491f7bcadbf",
+          "provenance": "Unmodified packaged notice"
+        }
+      ]
+    },
+    {
+      "name": "gifuct-js",
+      "version": "2.1.2",
+      "declaredLicense": "MIT",
+      "packageMetadataSHA256": "1e7ef2e860e4e37fb1c41ae146fcd456cda76d4d9e80f6dd73ecb93c79ae0772",
+      "notices": [
+        {
+          "file": "gifuct-js2.1.2-LICENSE",
+          "sha256": "8633cda68d7b47e98e3e563a2833e63792edeecdb24cab02bfb15f25c1b37072",
+          "provenance": "Unmodified packaged notice"
+        }
+      ]
+    },
+    {
+      "name": "ismobilejs",
+      "version": "1.1.1",
+      "declaredLicense": "MIT",
+      "packageMetadataSHA256": "fa75a337970c3796eb19f60340a13f301a1a2ead018161753accf7c8de582afd",
+      "notices": [
+        {
+          "file": "ismobilejs1.1.1-LICENSE",
+          "sha256": "57c43c929cbc20653cb0e62620a413a8bc456888c1874ebc25d08e0122cd953e",
+          "provenance": "Unmodified packaged notice"
+        }
+      ]
+    },
+    {
+      "name": "js-binary-schema-parser",
+      "version": "2.0.3",
+      "declaredLicense": "MIT",
+      "packageMetadataSHA256": "30f7493f5e528d41b190c8aca110f78cb6ab73ab13df384e94f92d409ad809ad",
+      "notices": [
+        {
+          "file": "js-binary-schema-parser2.0.3-LICENSE",
+          "sha256": "8633cda68d7b47e98e3e563a2833e63792edeecdb24cab02bfb15f25c1b37072",
+          "provenance": "Unmodified packaged notice"
+        }
+      ]
+    },
+    {
+      "name": "mediabunny",
+      "version": "1.58.0",
+      "declaredLicense": "MPL-2.0",
+      "packageMetadataSHA256": "b15865a5e3cc0d5e755fff6ae4113aa547cc19a2eb22bdff1c44fea3cf81b4e3",
+      "notices": [
+        {
+          "file": "mediabunny1.58.0-LICENSE",
+          "sha256": "3f3d9e0024b1921b067d6f7f88deb4a60cbe7a78e76c64e3f1d7fc3b779b9d04",
+          "provenance": "Unmodified packaged notice"
+        }
+      ]
+    },
+    {
+      "name": "parse-svg-path",
+      "version": "0.2.0",
+      "declaredLicense": "MIT",
+      "packageMetadataSHA256": "d11ae2ae076b9395f94e0729214501f51ac3771a635f0997304376cfcef63a42",
+      "notices": [
+        {
+          "file": "parse-svg-path0.2.0-LICENSE",
+          "sha256": "2d5ffdfe09268750ba687a149db8392038772e7f156db3a98b615a7de0cab76e",
+          "provenance": "Unmodified packaged notice"
+        }
+      ]
+    },
+    {
+      "name": "pixi-filters",
+      "version": "6.1.5",
+      "declaredLicense": "MIT",
+      "packageMetadataSHA256": "c995c8ce3eed91e1ed83c8adecdb12b5c55e82f7055fddd8db11eb27a0457e59",
+      "notices": [
+        {
+          "file": "pixi-filters6.1.5-LICENSE",
+          "sha256": "d554721b2cd409d9bc075d743bb34f960e05ba55de1818a62fa60caf21ca6188",
+          "provenance": "Unmodified packaged notice"
+        }
+      ]
+    },
+    {
+      "name": "pixi.js",
+      "version": "8.22.0",
+      "declaredLicense": "MIT",
+      "packageMetadataSHA256": "2bb6b7570ca5f4a062609b34fd16fecfa2a76e8c3599c67a5b996a276eabaa32",
+      "notices": [
+        {
+          "file": "pixi.js8.22.0-LICENSE",
+          "sha256": "5ce7447bc57f7349ffc48338782fbcabe613696e00712b20d66bc58e780f9473",
+          "provenance": "Unmodified packaged notice"
+        }
+      ]
+    },
+    {
+      "name": "tiny-lru",
+      "version": "11.4.7",
+      "declaredLicense": "BSD-3-Clause",
+      "packageMetadataSHA256": "58a0d04d3958c8a4ce25b93ea1d48d5cd4eef2b0e7835c88a1baf7758575cce6",
+      "notices": [
+        {
+          "file": "tiny-lru11.4.7-LICENSE",
+          "sha256": "8106f20bacca3558946439afb5e4854333f0a9944eee1c60488aa7ac7fc8f52b",
+          "provenance": "Unmodified packaged notice"
+        }
+      ]
+    }
+  ],
+  "fonts": [
+    {
+      "file": "frontend/public/fonts/clip/LICENSE",
+      "license": "OFL-1.1",
+      "sha256": "db345ad0216d0b73ba5dd3a540507281da6695f234e0a4e70cf2e1a8f30d4331"
+    },
+    {
+      "file": "frontend/public/fonts/clip/LICENSE-Paperlogy",
+      "license": "OFL-1.1",
+      "sha256": "a5a9b6832b5d91b5389e258b82f788791493fb786979eb80b5e142b5664ba22a"
+    },
+    {
+      "file": "frontend/public/fonts/clip/LICENSE-Jua",
+      "license": "OFL-1.1",
+      "sha256": "44a7c6e4c5572392ae122d3b1d8c6ba6fd640a7797e675384585d947f2773e3c"
+    },
+    {
+      "file": "frontend/public/fonts/clip/LICENSE-NanumMyeongjo",
+      "license": "OFL-1.1",
+      "sha256": "8eb1c1019fe7fe6d0b6e7d7bbbba1d9cbdd969d8c5f26455708f6cfb8a77284c"
+    }
+  ],
+  "coveredSources": [
+    {
+      "name": "mediabunny",
+      "version": "1.58.0",
+      "sourceURL": "https://registry.npmjs.org/mediabunny/-/mediabunny-1.58.0.tgz",
+      "sourceArchiveSHA256": "15dc5b43638894812eb5801edd453a1d28febb260a7df957844d91912b55785c",
+      "preferredSourceURL": "https://registry.npmjs.org/mediabunny/-/mediabunny-1.58.0.tgz",
+      "preferredSourceSHA256": "15dc5b43638894812eb5801edd453a1d28febb260a7df957844d91912b55785c",
+      "publisherSourceCommit": "20e959577920dbba8db649f768b2618f255a5d8a",
+      "packagedPreferredTSFiles": 65,
+      "modified": false,
+      "publisherProvenanceSignatureIndependentlyVerified": false
+    },
+    {
+      "name": "@soundtouchjs/core",
+      "version": "2.1.1",
+      "sourceURL": "https://registry.npmjs.org/@soundtouchjs/core/-/core-2.1.1.tgz",
+      "sourceArchiveSHA256": "f44203ae6fcaf494962b44d8f4740cfbd3ed872da2b269516080dc8c03b503ad",
+      "preferredSourceURL": "https://codeload.github.com/cutterbl/SoundTouchJS/tar.gz/8d19a91524c578f9ac414c7e7db2a5a1a605ff12",
+      "preferredSourceSHA256": "59e810124bbee4fcabb60be4af8f48451cf7e5f70b19a921b222ba37e93de7a7",
+      "publisherSourceCommit": "8d19a91524c578f9ac414c7e7db2a5a1a605ff12",
+      "packagedPreferredTSFiles": 0,
+      "modified": false,
+      "publisherProvenanceSignatureIndependentlyVerified": false
+    },
+    {
+      "name": "@soundtouchjs/interpolation-strategy-lanczos",
+      "version": "2.1.1",
+      "sourceURL": "https://registry.npmjs.org/@soundtouchjs/interpolation-strategy-lanczos/-/interpolation-strategy-lanczos-2.1.1.tgz",
+      "sourceArchiveSHA256": "bb75ae21f3489781c75b872d5457f562bfd871d3e8a461fa49920efc0b14714b",
+      "preferredSourceURL": "https://registry.npmjs.org/@soundtouchjs/interpolation-strategy-lanczos/-/interpolation-strategy-lanczos-2.1.1.tgz",
+      "preferredSourceSHA256": "bb75ae21f3489781c75b872d5457f562bfd871d3e8a461fa49920efc0b14714b",
+      "publisherSourceCommit": "8d19a91524c578f9ac414c7e7db2a5a1a605ff12",
+      "packagedPreferredTSFiles": 2,
+      "modified": false,
+      "publisherProvenanceSignatureIndependentlyVerified": false
+    },
+    {
+      "name": "@resvg/resvg-wasm",
+      "version": "2.6.2",
+      "wrapperSourceURL": "https://codeload.github.com/thx/resvg-js/tar.gz/9ca058462ac529120c8cc84ddcd6fef644cc5406",
+      "wrapperSourceArchiveSHA256": "7ce8697451237577d473361aa688917a48cba00c4a8f3302a833455c9c2013fa",
+      "patchedResvgSourceURL": "https://codeload.github.com/zimond/resvg/tar.gz/3495d8705b302d6d266748516973606ca9657906",
+      "completeOriginalBinaryGraphVerified": false,
+      "limit": "Known wrapper/core sources do not reconstruct the original npm WASM dependency graph."
+    }
+  ],
+  "sourceAccessVerified": false,
+  "binaryDependencyGraphVerified": false,
+  "distributionApproved": false,
+  "renderQualified": false,
+  "analysisQualified": false,
+  "limits": [
+    "Original npm resvg WASM complete Rust graph is unresolved. The separately rebuilt candidate is not installed or claimed as the source of this binary.",
+    "This local prepared notice tree is not a deployed HTTPS/source-access proof."
+  ]
+}

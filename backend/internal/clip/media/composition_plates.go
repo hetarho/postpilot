@@ -194,6 +194,18 @@ func applyDeclaredGround(canvas clip.Canvas, visual *declaredVisual) {
 	if !visual.ground.Sampled() {
 		return
 	}
+	if visual.manifest.Role == "caption" {
+		if visual.caption.plated() {
+			return
+		}
+		visual.caption.Ground = visual.ground
+		visual.caption.GroundScrim = nil
+		if visual.ground.Scrim() {
+			if band, ok := scrimFor(canvas, visual.copy.Anchor); ok {
+				visual.caption.GroundScrim = &design.CaptionScrim{Region: design.Bounds(band.Region), Paint: design.Scrim[band.Edge]}
+			}
+		}
+	}
 	if visual.block != nil {
 		applyRegionGround(canvas, visual)
 		return

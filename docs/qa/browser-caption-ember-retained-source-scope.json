@@ -1,0 +1,32 @@
+{
+  "at": "31674c3cd386fce8317968dad29cdcb4d11f2b0a",
+  "previous": "8c8bf52120b5d45341348dc399dd81f800ebdf1a",
+  "newSemanticChanges": [
+    "Restores active scene-node paint order after replacing/removing ink",
+    "Dynamic retained RenderTexture propagates resize events to presentation Sprite"
+  ],
+  "untouchedOwnSourceHashes": {
+    "backend/internal/clip/design/caption_effect.go": "860b65521b8e2ce9434d7d7462136b754fc21bc5b69f503b78ee47e07a34d68c",
+    "backend/internal/clip/design/caption_effect_test.go": "d0681254c5486ca4c1e696fcfe4dd3b4925bcfee764ff91b35c6cb526dfa69a6",
+    "backend/internal/clip/media/browser_caption_ember_fixture_test.go": "8544162c80b21aaa74a9c8e2a5639afceee7224c9aeff94dc63d465a0b8ddd9d",
+    "frontend/src/entities/clip-preview/model/ink-caption-draw.ts": "138f4b37659dfbca8bd16321f8dcbb9fd2a67791536ff66a563e3ee72178794f",
+    "frontend/src/entities/clip-preview/model/ink-caption-effects.ts": "a2633b1e51c23f8e9882b527a33ccec9c188acaeb2683ea948adcba7ba5a310b",
+    "frontend/src/entities/clip-preview/model/ink-caption-ember-pixi.ts": "22109b4f60d5d74654ae6899d21b70b872e43170c669949f8164470aef010b0b",
+    "frontend/src/entities/clip-preview/model/ink-caption-ember.test.ts": "f0f7c29ce233c9dafb262082c659bc1c0a8b50966c57bea041bb403e59f6ee09",
+    "frontend/src/entities/clip-preview/model/ink-caption-ember.ts": "e4bb41e6db3c278230539a5482e6fde35f26587cf5f6ad29b9a7fff291fc0479",
+    "frontend/src/entities/clip-preview/model/ink-caption-scene.ts": "00b6f5684f084fd1affeef52e5500dff404dfc7a7ef73663c0949c1829e0f10c",
+    "frontend/src/entities/clip-preview/model/local-components.ts": "b7182116a7f63cac835ac806e63c3d17e0bccb9b741ab1b46b9ec10c3a91bc33",
+    "frontend/src/test/browser-media/ink-entry.ts": "2c51bcadd29d5e880606d8dcdc32c3c2bf0472a990aef18c60184fe435d95f67",
+    "frontend/src/test/browser-media/ink-stress.ts": "2eb84a3df6d5d312862f10bd6183aaaddeb276cec7b73ab4f4573f44a29ab863",
+    "pnpm-lock.yaml": "d07c4a1bd3aeab4df41155c2d63d85e6a487959534ed7b27b4710315d7a07319",
+    ".node-version": "55075b5ec4e8b31936cbbc282b8829116d1fd48f2f2f1856dee592a6650700ce",
+    ".github/workflows/ci.yml": "e7aba46a17aaf81171063f75d79affc06764e8c6fbf60df2b0e766bdbf10f906",
+    "backend/Dockerfile": "a937e3451c9456b0216589a5a4f42a60c0b670dc04fce6f49174e2f2cf81fda4",
+    "backend/go.mod": "b3b8890ade060863f6790b8bb5f8c43202a0ad0721c388df8f16f80156b7fe99",
+    "backend/go.sum": "9b9a9269db3199dc26847f382f3c8335c96e5ca3a59e47f9d89f5e4ba191210a"
+  },
+  "nativeRendererAndPaletteAndFixturesUnchanged": true,
+  "historicalNeutralProofDoesNotCoverTheseRendererChanges": true,
+  "T601MergeChangesNoCaptionOrBackendFiles": true,
+  "firstCreationCorpusRetentionScope": "Geometry/palette/ink/shader/native inputs unchanged; new behavior specifically affects retained transitions, separately compared with fresh output."
+}

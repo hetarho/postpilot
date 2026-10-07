@@ -1,12 +1,8 @@
+import { useClipLocalStyleSamples, useClipLocalPresetSamples } from '@/entities/clip-preview'
 import clsx from 'clsx'
 import { useId } from 'react'
 import { useTranslation } from 'react-i18next'
-import {
-  ClipCaptionStyleSample,
-  type ClipRegionPresetSample,
-  useClipCaptionStyleSamples,
-  useClipRegionPresetSamples,
-} from '@/entities/clip-plan'
+import { ClipCaptionStyleSample, type ClipRegionPresetSample } from '@/entities/clip-plan'
 import { type ClipProjectDraft } from '@/entities/clip-project'
 import {
   CLIP_CAPTION_STYLES,
@@ -134,7 +130,6 @@ export interface ClipRegionSwitches {
  *  nothing here asks for approval. 사용 안 함 keeps the region's slots; choosing a preset turns
  *  it back on even where the template has no entry for it. */
 export function ClipDesignSelection({
-  projectId,
   draft,
   onChange,
   regions,
@@ -145,8 +140,8 @@ export function ClipDesignSelection({
   regions?: ClipRegionSwitches
 }) {
   const { t } = useTranslation('clips')
-  const samples = useClipCaptionStyleSamples(projectId, true)
-  const drawings = useClipRegionPresetSamples(projectId, t('composition.design.slotLabel'))
+  const samples = useClipLocalStyleSamples(draft.ratio, true, draft.captionPace)
+  const drawings = useClipLocalPresetSamples(draft.ratio, t('composition.design.slotLabel'))
   const canvas = CLIP_DESIGN.ratios[draft.ratio].canvas
   const intro = draft.introPreset || CLIP_DEFAULT_REGION_PRESETS.intro
   const outro = draft.outroPreset || CLIP_DEFAULT_REGION_PRESETS.outro
