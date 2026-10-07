@@ -69,9 +69,12 @@
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | todo |
 
 ## next
-- inspect work board for remaining tasks
+- T603 and T604 remain runtime blocked; use the work board and their result/open gates before resuming qualification.
+- Technical delivery through T604 is preserved on work/browser-media-604-plan; independent analysis, real voice and release activation stay disabled.
 
 ## log
+- 261007 T604 source-only delivery preserved: independently reviewed2b5d5915 merged normally; local HTTPS13, paired Mac16 and portable4 checks pass, six release acceptances remain open and runtime blocked
+- 261007 browser-media-604 local technical work closed through T604: task commits and scoped receipts preserved; T603 real semantic qualification and T604 source/hardware/human/performance release gates remain blocked, no live deployment or activation
 - 261007 T600 integrated
 - 261007 T599 integrated
 - 261007 T603 source-only integration start: reviewed technical harness/AAC guard and actual pinned verifier proof; all six real qualification checks remain open and runtime blocked
