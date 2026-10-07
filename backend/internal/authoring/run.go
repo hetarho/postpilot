@@ -252,7 +252,7 @@ func (s *Service) Run(ctx context.Context, run Run, progress func(string, int, i
 		return ErrModel
 	}
 	ref := llm.ModelRef{ProviderID: provider, ModelID: model}
-	request := llm.Request{System: authoringSystem, Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(modelMessage(in))}}}, Stage: llm.StageNameWrite, Reasoning: llm.ReasoningLow, MaxTokens: in.CompletionTokens}
+	request := llm.Request{Composition: authoringComposition(in), System: authoringSystem, Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(modelMessage(in))}}}, Stage: llm.StageNameWrite, Reasoning: llm.ReasoningLow, MaxTokens: in.CompletionTokens}
 	if info, ok := s.models.Resolve(ref); ok && info.StructuredOutput {
 		request.JSONSchema = responseSchema(in.Mode, in.CandidateCount)
 	}

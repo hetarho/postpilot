@@ -122,9 +122,10 @@ func (s *Service) Extract(ctx context.Context, found ExtractionJob, progress fun
 	}
 	progress("extract", 0, 1)
 	request := llm.Request{
-		System:   ExtractionPrompt,
-		Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(extractionInput(found.Source))}}},
-		Stage:    llm.StageNameAnalyze,
+		Composition: memoryComposition(found.Source),
+		System:      ExtractionPrompt,
+		Messages:    []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(extractionInput(found.Source))}}},
+		Stage:       llm.StageNameAnalyze,
 	}
 	// Attach-or-fall-back, exactly as the voice analysis does (VOICE-27): a model that does
 	// not declare structured output still answers the prompt, which already states the shape.

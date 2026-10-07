@@ -12,21 +12,23 @@ import (
 )
 
 type Service struct {
-	posts        Posts
-	profiles     Profiles
-	models       LLM
-	images       ImageReader
-	jobs         Jobs
-	templates    TemplateBriefs
-	guidelines   GuidelinesForPrompt
-	memories     MemoriesForPrompt
-	candidates   GuidelineCandidates
-	batchSize    int
-	videos       VideoLinker
-	videoURLTTL  time.Duration
-	qualityRules QualityRulesForPrompt
-	reasoning    ReasoningPolicy
-	budget       CompletionBudget
+	// Private workers label the same real composer without changing its prompt.
+	fullWritingTest bool
+	posts           Posts
+	profiles        Profiles
+	models          LLM
+	images          ImageReader
+	jobs            Jobs
+	templates       TemplateBriefs
+	guidelines      GuidelinesForPrompt
+	memories        MemoriesForPrompt
+	candidates      GuidelineCandidates
+	batchSize       int
+	videos          VideoLinker
+	videoURLTTL     time.Duration
+	qualityRules    QualityRulesForPrompt
+	reasoning       ReasoningPolicy
+	budget          CompletionBudget
 }
 
 type ReasoningPolicy struct {

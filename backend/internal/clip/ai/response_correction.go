@@ -38,6 +38,7 @@ func completeValidated[T any](ctx context.Context, s *Service, model llm.ModelRe
 	var usage llm.Usage
 	usage.CostReported = true
 	base := request.System
+	baseComposition := request.Composition
 	for attempt := 0; attempt <= policy.ResponseRetries; attempt++ {
 		if err := ctx.Err(); err != nil {
 			return zero, usage, err
@@ -76,7 +77,9 @@ func completeValidated[T any](ctx context.Context, s *Service, model llm.ModelRe
 		// The error category and numeric facts are owned/allowlisted. Raw output is
 		// deliberately excluded: it cannot become a new instruction or enlarge input.
 		feedback := promptJSON(map[string]any{"check": clip.SafeAttemptCheck(d.Check), "phase": clip.SafeAttemptPhase(d.Phase), "measurements": clip.SafeAttemptValues(d.Values)})
-		request.System = base + "\nThe previous candidate failed validation. Produce a fresh complete response correcting this validation feedback, while preserving the original contract and factual input:\n" + feedback
+		correction := "\nThe previous candidate failed validation. Produce a fresh complete response correcting this validation feedback, while preserving the original contract and factual input:\n" + feedback
+		request.System = base + correction
+		request.Composition = correctedClipComposition(baseComposition, correction)
 	}
 	return zero, usage, llm.ErrBadOutput
 }

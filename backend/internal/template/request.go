@@ -281,7 +281,7 @@ func (s *Service) RunRequest(ctx context.Context, run RequestRun, progress func(
 	for attempt := 0; ; attempt++ {
 		progress("write", attempt, calls)
 		request := llm.Request{
-			System: system, Messages: messages,
+			System: system, Messages: messages, Composition: templateRequestComposition(input, system, messages),
 			Stage: llm.StageNameWrite, Reasoning: llm.ReasoningLow, MaxTokens: maxTokens,
 		}
 		if info, found := r.models.Resolve(ref); found && info.StructuredOutput {

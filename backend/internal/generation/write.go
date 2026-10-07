@@ -27,19 +27,17 @@ func (s *Service) writeCandidate(ctx context.Context, post PostInput, profile Pr
 	// A snapshot frozen before the member existed carries 0 here; the prompt and the parser
 	// must agree on one number, so it is resolved once.
 	tagCount := resolveTagCount(post.TagCount)
-	system, user := BuildWritePromptForLanguage(WritePromptInput{
+	request := ComposeWriteRequest(WritePromptInput{
 		Language: post.TargetLanguage, Profile: profile, Observations: observations,
 		Memo: post.Memo, Title: post.Title, Photos: photos, Videos: videos,
 		TargetLength: post.TargetLength, TagCount: tagCount, Template: post.Template,
 		DefaultGuidelines: post.DefaultGuidelines, StockGuidelines: post.StockGuidelines, Guidelines: post.Guidelines, Memories: post.Memories, QualityRules: post.QualityRules,
 		FollowStoryline: post.FollowStoryline, Portraits: PhotoPortraits(post.Images, observations),
 	})
-	request := llm.Request{
-		System:    system,
-		Messages:  []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(user)}}},
-		Reasoning: s.reasoning.Write,
-		Stage:     llm.StageNameWrite,
-		MaxTokens: s.budget.Write(post.TargetLength, post.WriteNativeEffort),
+	request.Reasoning = s.reasoning.Write
+	request.MaxTokens = s.budget.Write(post.TargetLength, post.WriteNativeEffort)
+	if s.fullWritingTest {
+		request.Composition.Mode = "full-test-direct"
 	}
 	following := len(post.FollowStoryline) > 0
 	if info, ok := s.models.Resolve(model); ok && info.StructuredOutput {

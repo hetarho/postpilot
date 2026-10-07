@@ -66,7 +66,7 @@ func (s *Service) SpokenScript(ctx context.Context, model llm.ModelRef, in clip.
 		return clip.SpokenDraft{}, llm.Usage{}, err
 	}
 	system, user := BuildSpokenScriptPrompt(in, compositionLimits(s.cfg, in))
-	request := llm.Request{System: system, Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(user)}}}, Stage: llm.StageNameWrite, Reasoning: input.Policy.Reasoning, DisableReasoning: input.Policy.DisableReasoning, MaxTokens: input.Policy.CompletionTokens, Execution: execution}
+	request := llm.Request{Composition: clipComposition("spoken-script", system, user, in.Guidelines, planningSourceRefs(in)), System: system, Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(user)}}}, Stage: llm.StageNameWrite, Reasoning: input.Policy.Reasoning, DisableReasoning: input.Policy.DisableReasoning, MaxTokens: input.Policy.CompletionTokens, Execution: execution}
 	if execution.Call.StructuredOutput {
 		if !info.StructuredOutput {
 			return clip.SpokenDraft{}, llm.Usage{}, clip.ErrPricingUnavailable

@@ -41,8 +41,9 @@ func analysisInput(counted Fingerprint, samples []Sample) string {
 // start sizes the hold from it (QUOTA-14).
 func analysisRequest(counted Fingerprint, samples []Sample) llm.Request {
 	return llm.Request{
-		System:   analysisPrompt,
-		Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(analysisInput(counted, samples))}}},
+		System:      analysisPrompt,
+		Composition: analysisComposition(counted, samples),
+		Messages:    []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(analysisInput(counted, samples))}}},
 		// Named so the registry can resolve the operator's analysis override. No Reasoning is
 		// set: analysis sends no `reasoning` key by default.
 		Stage: llm.StageNameAnalyze,

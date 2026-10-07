@@ -388,6 +388,7 @@ func (p writingTestFrozenProfiles) ValidateProfileSources(ctx context.Context, u
 
 func (f *WritingTestFactory) writingTestWorker(common writingTestCommon, variant *writingTestVariant) *Service {
 	worker := *f.service
+	worker.fullWritingTest = true
 	budget := writingTestFrozenBudget{CompletionBudget: worker.budget, observe: common.ObserveCompletionTokens}
 	if variant != nil {
 		budget.observe, budget.write = variant.ObserveCompletionTokens, variant.WriteCompletionTokens

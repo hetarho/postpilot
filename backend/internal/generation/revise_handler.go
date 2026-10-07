@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 	"unicode/utf8"
-
-	"github.com/postpilot/backend/internal/llm"
 )
 
 // Revise handles one durable revise job. It reloads both the current content and the
@@ -54,17 +52,9 @@ func (s *Service) Revise(ctx context.Context, job RevisionJob, progress Progress
 	// live rows, exactly as the generate handler does it.
 	tagCount := resolveTagCount(payload.TagCount)
 	photos, _ := AttachmentNames(post.Images)
-	system, user := buildRevisePrompt(payload.ContentLanguage, profile, *post.Content, filenames, photos, PhotoPortraits(post.Images, post.Observations), payload.Instruction, post.TargetLength, tagCount, decodeTemplate(payload.Template), FrozenGuidelines{Defaults: payload.DefaultGuidelines, Stock: decodeStockGuidelines(payload.StockGuidelines), Owner: payload.Guidelines})
-	request := llm.Request{
-		System:    system,
-		Messages:  []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(user)}}},
-		Reasoning: s.reasoning.Write,
-		// A revision emits a whole PostContent, so it is the writing stage in every respect
-		// the port cares about: the writing override, and the writer's budget — sized by the
-		// content it has to re-emit, not only by what was asked for.
-		Stage:     llm.StageNameWrite,
-		MaxTokens: s.budget.Revise(contentChars(post.Content), post.TargetLength, payload.WriteNativeEffort),
-	}
+	request := composeRevisionRequest(payload.ContentLanguage, profile, *post.Content, filenames, photos, PhotoPortraits(post.Images, post.Observations), payload.Instruction, post.TargetLength, tagCount, decodeTemplate(payload.Template), FrozenGuidelines{Defaults: payload.DefaultGuidelines, Stock: decodeStockGuidelines(payload.StockGuidelines), Owner: payload.Guidelines})
+	request.Reasoning = s.reasoning.Write
+	request.MaxTokens = s.budget.Revise(contentChars(post.Content), post.TargetLength, payload.WriteNativeEffort)
 	if info, found := s.models.Resolve(model); found && info.StructuredOutput {
 		request.JSONSchema = PostContentSchema()
 	}

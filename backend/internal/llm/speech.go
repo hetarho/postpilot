@@ -78,6 +78,7 @@ type VoiceDesignRequest struct {
 	Model       ModelRef
 	Description string
 	PreviewText string
+	Composition *RequestComposition
 }
 
 type VoiceCandidate struct {
@@ -91,6 +92,7 @@ type VoiceDesignResponse struct {
 	Candidates  []VoiceCandidate
 	PreviewText string
 	Evidence    SpeechEvidence
+	Inspection  *RequestInspection
 }
 
 type VoiceConfirmationRequest struct {
@@ -98,11 +100,13 @@ type VoiceConfirmationRequest struct {
 	Candidate   CandidateHandle
 	Name        string
 	Description string
+	Composition *RequestComposition
 }
 
 type VoiceConfirmationResponse struct {
-	Voice    VoiceHandle
-	Evidence SpeechEvidence
+	Voice      VoiceHandle
+	Evidence   SpeechEvidence
+	Inspection *RequestInspection
 }
 
 // Settings are explicit so the immutable profile can reproduce the auditioned
@@ -128,10 +132,11 @@ func (s SpeechSettings) Validate() error {
 }
 
 type SpeechRequest struct {
-	Model    ModelRef
-	Voice    VoiceHandle
-	Text     string
-	Settings SpeechSettings
+	Model       ModelRef
+	Voice       VoiceHandle
+	Text        string
+	Settings    SpeechSettings
+	Composition *RequestComposition
 }
 
 type CharacterTiming struct {
@@ -145,6 +150,7 @@ type SpeechResponse struct {
 	Alignment           []CharacterTiming
 	NormalizedAlignment []CharacterTiming
 	Evidence            SpeechEvidence
+	Inspection          *RequestInspection
 }
 
 type VoiceDesigner interface {
@@ -216,37 +222,52 @@ func (r *Registry) resolveSpeech(providerID string) error {
 }
 
 func (r *Registry) DesignVoice(ctx context.Context, req VoiceDesignRequest) (VoiceDesignResponse, error) {
-	if err := r.resolveSpeech(req.Model.ProviderID); err != nil {
-		return VoiceDesignResponse{}, err
-	}
-	if err := req.Validate(); err != nil {
+	prepared, err := speechExecutionPreparation(r.PrepareVoiceDesign(ctx, req))
+	if err != nil {
 		return VoiceDesignResponse{}, err
 	}
 	ctx, cancel := context.WithTimeout(ctx, SpeechProviderTimeout)
 	defer cancel()
-	return r.speech.DesignVoice(ctx, req)
+	if err := ctx.Err(); err != nil {
+		return VoiceDesignResponse{}, err
+	}
+	invokedAt := time.Now().UTC()
+	response, err := r.speech.DesignVoice(ctx, req)
+	err = stripProviderInspectionError(err)
+	response.Inspection = capturedSpeechInspection(prepared, invokedAt)
+	return response, inspectedSpeechError(err, response.Inspection)
 }
 
 func (r *Registry) ConfirmVoice(ctx context.Context, req VoiceConfirmationRequest) (VoiceConfirmationResponse, error) {
-	if err := r.resolveSpeech(req.DesignModel.ProviderID); err != nil {
-		return VoiceConfirmationResponse{}, err
-	}
-	if err := req.Validate(); err != nil {
+	prepared, err := speechExecutionPreparation(r.PrepareVoiceConfirmation(ctx, req))
+	if err != nil {
 		return VoiceConfirmationResponse{}, err
 	}
 	ctx, cancel := context.WithTimeout(ctx, SpeechProviderTimeout)
 	defer cancel()
-	return r.speech.ConfirmVoice(ctx, req)
+	if err := ctx.Err(); err != nil {
+		return VoiceConfirmationResponse{}, err
+	}
+	invokedAt := time.Now().UTC()
+	response, err := r.speech.ConfirmVoice(ctx, req)
+	err = stripProviderInspectionError(err)
+	response.Inspection = capturedSpeechInspection(prepared, invokedAt)
+	return response, inspectedSpeechError(err, response.Inspection)
 }
 
 func (r *Registry) SynthesizeSpeech(ctx context.Context, req SpeechRequest) (SpeechResponse, error) {
-	if err := r.resolveSpeech(req.Model.ProviderID); err != nil {
-		return SpeechResponse{}, err
-	}
-	if err := req.Validate(); err != nil {
+	prepared, err := speechExecutionPreparation(r.PrepareSpeech(ctx, req))
+	if err != nil {
 		return SpeechResponse{}, err
 	}
 	ctx, cancel := context.WithTimeout(ctx, SpeechProviderTimeout)
 	defer cancel()
-	return r.speech.SynthesizeSpeech(ctx, req)
+	if err := ctx.Err(); err != nil {
+		return SpeechResponse{}, err
+	}
+	invokedAt := time.Now().UTC()
+	response, err := r.speech.SynthesizeSpeech(ctx, req)
+	err = stripProviderInspectionError(err)
+	response.Inspection = capturedSpeechInspection(prepared, invokedAt)
+	return response, inspectedSpeechError(err, response.Inspection)
 }

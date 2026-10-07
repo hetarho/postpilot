@@ -218,13 +218,13 @@ func (s *GenerationService) prepare(ctx context.Context, owner string, tier plan
 	return p, nil
 }
 func designRequest(o spoken.Operation) llm.VoiceDesignRequest {
-	return llm.VoiceDesignRequest{Model: o.Profile.Design, Description: o.Description, PreviewText: o.PreviewText}
+	return llm.VoiceDesignRequest{Composition: spokenComposition("design", o, 0), Model: o.Profile.Design, Description: o.Description, PreviewText: o.PreviewText}
 }
 func confirmRequest(o spoken.Operation) llm.VoiceConfirmationRequest {
-	return llm.VoiceConfirmationRequest{DesignModel: o.Profile.Design, Candidate: o.CandidateHandle, Name: o.Name, Description: o.Description}
+	return llm.VoiceConfirmationRequest{Composition: spokenComposition("confirm", o, 0), DesignModel: o.Profile.Design, Candidate: o.CandidateHandle, Name: o.Name, Description: o.Description}
 }
 func speechRequest(o spoken.Operation, index int) llm.SpeechRequest {
-	return llm.SpeechRequest{Model: o.Profile.Synthesis, Voice: o.VoiceHandle, Text: o.Texts[index], Settings: o.Profile.Settings}
+	return llm.SpeechRequest{Composition: spokenComposition("speech", o, index), Model: o.Profile.Synthesis, Voice: o.VoiceHandle, Text: o.Texts[index], Settings: o.Profile.Settings}
 }
 func (s *GenerationService) Quote(ctx context.Context, owner string, tier plan.Plan, in GenerationInput) (Quote, error) {
 	p, err := s.prepare(ctx, owner, tier, in)

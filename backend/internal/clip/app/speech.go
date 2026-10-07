@@ -161,7 +161,7 @@ func (s *SpeechService) prepare(ctx context.Context, owner, project string, revi
 	parts := []string{"clip-speech-v1", owner, project, strconv.Itoa(revision), n.BindingDigest}
 	for i := range r.Calls {
 		c := &r.Calls[i]
-		c.Request = llm.SpeechRequest{Model: v.Model, Voice: v.Handle, Text: c.Text, Settings: v.Settings}
+		c.Request = segmentSpeechRequest(v.Model, v.Handle, c.Text, v.Settings, c.SegmentID)
 		in, e := c.Request.Input()
 		if e != nil {
 			return r, tier, e

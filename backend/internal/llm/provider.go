@@ -86,9 +86,12 @@ type Message struct {
 // Request is one completion call. `Model` is filled in by the registry from the ref the
 // caller resolved; callers set everything else.
 type Request struct {
-	Model    string
-	System   string
-	Messages []Message
+	// Composition is product-owned, media-safe metadata emitted by the same
+	// assembler as this request. It never grants admission or claims dispatch.
+	Composition *RequestComposition
+	Model       string
+	System      string
+	Messages    []Message
 	// JSONSchema, when non-nil, asks for structured output conforming to it. The registry
 	// refuses it for a model that does not declare `structured_output`, before any network
 	// call, so a caller that wants a plain-text fallback checks the model's flag first.
@@ -162,6 +165,9 @@ type Response struct {
 	Text         string
 	Usage        Usage
 	FinishReason string
+	// Inspection is an observable adapter-invocation witness. A nil value means
+	// unavailable capture, never a reason to reconstruct or repeat the call.
+	Inspection *RequestInspection
 }
 
 // Provider is one registered vendor endpoint. Implementations live in sub-packages and

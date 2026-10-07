@@ -439,54 +439,109 @@ func (r *Registry) resolve(ref ModelRef, req Request) (SourceModel, error) {
 	return found, nil
 }
 
-// Complete resolves the ref, fills in the model and the default cap, and runs the call
-// under the stage timeout. This is the one way the contexts above call a model.
-func (r *Registry) Complete(ctx context.Context, ref ModelRef, req Request) (Response, error) {
+// resolveRequest is the shared pure preparation path. It reads registration and
+// trusted admission context, but calls no adapter, endpoint qualifier or ledger.
+func (r *Registry) resolveRequest(ctx context.Context, ref ModelRef, req Request) (Request, EffectiveRequestConditions, error) {
+	var conditions EffectiveRequestConditions
+	if err := ctx.Err(); err != nil {
+		return Request{}, conditions, err
+	}
 	if r.modelGrades {
 		grade, found := admittedGrade(ctx, ref, req.Stage)
 		if !found {
-			return Response{}, ErrModelUnavailable
+			return Request{}, conditions, ErrModelUnavailable
 		}
 		switch grade {
 		case "free", "value", "balanced", "premium", "top":
 		default:
-			return Response{}, ErrModelUnavailable
+			return Request{}, conditions, ErrModelUnavailable
 		}
 		req.FreeCall = grade == "free"
 	}
 	resolved, err := r.resolve(ref, req)
 	if err != nil {
-		return Response{}, err
+		return Request{}, conditions, err
 	}
 	req.Model = ref.ModelID
-	if req.Execution != nil {
+	frozen := req.Execution != nil
+	defaultBudget := false
+	if frozen {
 		if !req.Execution.Matches(ref, req) || !r.modelGrades && !slices.Contains(resolved.Stages, req.Stage) {
-			return Response{}, ErrUnsupported
+			return Request{}, conditions, ErrUnsupported
 		}
-		// The route itself was qualified when the policy was frozen and is rechecked
-		// by the adapter before the call; the registry only holds the raw modality.
 		if req.Execution.Delivery == ExecutionInlineStatic && !resolved.VideoInput {
-			return Response{}, ErrVideoInputAbsent
+			return Request{}, conditions, ErrVideoInputAbsent
 		}
-		ctx, cancel := context.WithTimeout(ctx, r.opts.Timeout)
-		defer cancel()
-		return r.provider.Complete(ctx, req)
+	} else {
+		if override, ok := resolved.Reasoning[req.Stage]; ok && override != ReasoningUnspecified {
+			req.Reasoning = override
+		}
+		if !req.Reasoning.Valid() {
+			return Request{}, conditions, fmt.Errorf("invalid reasoning effort %q", req.Reasoning)
+		}
+		req.DisableReasoning = req.Reasoning == ReasoningNone && !slices.Contains(resolved.ReasoningEfforts, ReasoningNone)
+		if req.MaxTokens <= 0 {
+			req.MaxTokens = r.opts.MaxTokens
+			defaultBudget = true
+		}
 	}
-	// This stage's override → the stage value the caller set → nothing sent. The order is
-	// unchanged in shape; the override half is what gained the stage dimension.
-	if override, ok := resolved.Reasoning[req.Stage]; ok && override != ReasoningUnspecified {
-		req.Reasoning = override
+	if err := ctx.Err(); err != nil {
+		return Request{}, conditions, err
 	}
-	if !req.Reasoning.Valid() {
-		return Response{}, fmt.Errorf("invalid reasoning effort %q", req.Reasoning)
+	budget := int64(req.MaxTokens)
+	effort := req.Reasoning
+	structured := req.JSONSchema != nil
+	disable, free := req.DisableReasoning, req.FreeCall
+	omitted := effort == ReasoningUnspecified || effort == ReasoningUnset || disable
+	conditions = EffectiveRequestConditions{Model: &ref, MaxCompletionTokens: &budget, ReasoningEffort: &effort, StructuredOutput: &structured, DisableReasoning: &disable, FreeCall: &free, DefaultBudget: &defaultBudget, FrozenExecution: &frozen, ReasoningOmitted: &omitted}
+	return req, conditions, nil
+}
+
+// Prepare observes current effective product conditions without invoking an
+// adapter. A model-grade registry requires the same trusted admission as Complete.
+func (r *Registry) Prepare(ctx context.Context, ref ModelRef, req Request) (RequestInspection, error) {
+	effective, conditions, err := r.resolveRequest(ctx, ref, req)
+	if err != nil {
+		return RequestInspection{}, err
 	}
-	req.DisableReasoning = req.Reasoning == ReasoningNone && !slices.Contains(resolved.ReasoningEfforts, ReasoningNone)
-	// Zero and negative both mean "no cap of my own": a caller computing a budget must
-	// not send a negative number to the provider and learn about it as a 400.
-	if req.MaxTokens <= 0 {
-		req.MaxTokens = r.opts.MaxTokens
+	inspection, err := PreparedRequestInspection(effective)
+	if err != nil {
+		return RequestInspection{}, err
 	}
-	ctx, cancel := context.WithTimeout(ctx, r.opts.Timeout)
+	if inspection.Status == InspectionUnavailable {
+		return inspection, nil
+	}
+	inspection.Conditions = &conditions
+	return inspection, inspection.Validate()
+}
+
+// Complete uses exactly the same resolution as Prepare. Capture is an adapter
+// invocation witness; it does not imply network acceptance or a successful result.
+func (r *Registry) Complete(ctx context.Context, ref ModelRef, req Request) (Response, error) {
+	effective, conditions, err := r.resolveRequest(ctx, ref, req)
+	if err != nil {
+		return Response{}, err
+	}
+	prepared, captureErr := PreparedRequestInspection(effective)
+	if captureErr == nil && prepared.Status != InspectionUnavailable {
+		prepared.Conditions = &conditions
+	}
+	callCtx, cancel := context.WithTimeout(ctx, r.opts.Timeout)
 	defer cancel()
-	return r.provider.Complete(ctx, req)
+	if err := callCtx.Err(); err != nil {
+		return Response{}, err
+	}
+	invokedAt := time.Now().UTC()
+	response, callErr := r.provider.Complete(callCtx, effective)
+	callErr = stripProviderInspectionError(callErr)
+	// Provider-returned metadata cannot supply registry evidence.
+	response.Inspection = nil
+	if captureErr == nil && prepared.Status != InspectionUnavailable {
+		captured, err := CapturedRequestInspection(prepared, invokedAt, response.Usage)
+		if err == nil {
+			response.Inspection = &captured
+			callErr = WithRequestInspectionError(callErr, captured)
+		}
+	}
+	return response, callErr
 }

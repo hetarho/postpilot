@@ -4,6 +4,7 @@ import (
 	"context"
 	_ "embed"
 	"github.com/postpilot/backend/internal/clip"
+	"github.com/postpilot/backend/internal/clip/composition"
 	"github.com/postpilot/backend/internal/llm"
 	"slices"
 )
@@ -15,7 +16,7 @@ func (s *Service) reviseSpoken(ctx context.Context, model llm.ModelRef, in clip.
 	next := in.Current
 	usage := llm.Usage{}
 	if in.Target != clip.RevisionNarration {
-		flow, spent, e := s.write(ctx, model, in.PlanningInput, "flow", s.cfg.FlowCompletionTokens, RevisionFlowSchema(), func() (string, string) {
+		flow, spent, e := s.write(ctx, model, in.PlanningInput, "flow", "flow-revision", s.cfg.FlowCompletionTokens, RevisionFlowSchema(), func() (string, string) {
 			return buildFlowRevisionPrompt(in, s.cfg.Render.FadeMS, compositionLimits(s.cfg, in.PlanningInput))
 		}, func(raw string) (clip.EditPlan, error) { return parseFlowPlan(s.cfg, in.PlanningInput, raw, false) })
 		usage = addUsage(usage, spent)
@@ -43,16 +44,8 @@ func (s *Service) reviseSpoken(ctx context.Context, model llm.ModelRef, in clip.
 			t.Resolved.Element.EndMS = &b
 		}
 	}
-	lines := []map[string]any{}
-	for _, seg := range in.Current.Narration.Segments {
-		lines = append(lines, map[string]any{"id": seg.ID, "text": seg.Text, "start_ms": seg.StartMS, "end_ms": seg.EndMS})
-	}
-	result, spent, e := s.write(ctx, model, in.PlanningInput, "script", s.cfg.NarrationCompletionTokens, spokenRevisionSchema, func() (string, string) {
-		_, user := BuildStorylinePrompt(clip.StorylineInput{PlanningInput: in.PlanningInput}, compositionLimits(s.cfg, in.PlanningInput))
-		system := spokenScriptRule
-		system += "\nFor this revision return ONLY spoken_lines under the supplied closed contract. Rewrite the dedicated spoken script in response to revision_request. Visible captions and all owner-authored words are independent and immutable. Never synthesize or change audio speed.\n" + compactContract(spokenRevisionSchema)
-		user += promptJSON(map[string]any{"current_spoken_script": lines, "revision_request": in.Request, "output_duration_ms": next.DurationMS})
-		return system, user
+	result, spent, e := s.write(ctx, model, in.PlanningInput, "script", "spoken-script-revision", s.cfg.NarrationCompletionTokens, spokenRevisionSchema, func() (string, string) {
+		return buildSpokenRevisionPrompt(in, next, compositionLimits(s.cfg, in.PlanningInput))
 	}, func(raw string) (clip.EditPlan, error) {
 		var wire struct {
 			Lines []string `json:"spoken_lines"`
@@ -96,4 +89,17 @@ func (s *Service) reviseSpoken(ctx context.Context, model llm.ModelRef, in clip.
 	})
 	usage = addUsage(usage, spent)
 	return result, usage, e
+}
+
+// buildSpokenRevisionPrompt is shared by the actual admitted seam and its synthetic inventory.
+func buildSpokenRevisionPrompt(in clip.RevisionInput, next clip.EditPlan, limits composition.Limits) (string, string) {
+	lines := []map[string]any{}
+	for _, seg := range in.Current.Narration.Segments {
+		lines = append(lines, map[string]any{"id": seg.ID, "text": seg.Text, "start_ms": seg.StartMS, "end_ms": seg.EndMS})
+	}
+	_, user := BuildStorylinePrompt(clip.StorylineInput{PlanningInput: in.PlanningInput}, limits)
+	system := spokenScriptRule
+	system += "\nFor this revision return ONLY spoken_lines under the supplied closed contract. Rewrite the dedicated spoken script in response to revision_request. Visible captions and all owner-authored words are independent and immutable. Never synthesize or change audio speed.\n" + compactContract(spokenRevisionSchema)
+	user += promptJSON(map[string]any{"current_spoken_script": lines, "revision_request": in.Request, "output_duration_ms": next.DurationMS})
+	return system, user
 }

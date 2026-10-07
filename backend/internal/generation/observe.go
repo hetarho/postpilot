@@ -83,16 +83,9 @@ func (s *Service) observeCandidate(ctx context.Context, post PostInput, targets 
 			filenames = append(filenames, image.Filename)
 		}
 		parts = append(parts, llm.TextPart("files: "+strings.Join(filenames, ", ")))
-		request := llm.Request{
-			System:    ObservePrompt,
-			Messages:  []llm.Message{{Role: llm.RoleUser, Parts: parts}},
-			Reasoning: s.reasoning.Observe,
-			// The stage this call is FOR, which is what lets the registry resolve the
-			// operator's override for photo analysis rather than for writing — one run
-			// observes at one effort and writes at another (MODEL-7).
-			Stage:     llm.StageNameObserve,
-			MaxTokens: s.budget.Observation(),
-		}
+		request := composePhotoObservationRequest(parts, filenames, s.fullWritingTest)
+		request.Reasoning = s.reasoning.Observe
+		request.MaxTokens = s.budget.Observation()
 		if info, ok := s.models.Resolve(model); ok && info.StructuredOutput {
 			request.JSONSchema = ObservationsSchema()
 		}
@@ -156,18 +149,9 @@ func (s *Service) observeVideo(ctx context.Context, video Image, model llm.Model
 	if contentType == "" {
 		contentType = "video/mp4"
 	}
-	request := llm.Request{
-		System: ObserveVideoPrompt,
-		Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{
-			llm.VideoPart(url, contentType),
-			llm.TextPart("files: " + video.Filename),
-		}}},
-		Reasoning: s.reasoning.Observe,
-		Stage:     llm.StageNameObserve,
-		// One full photo batch's budget: a video answer carries a timeline and is longer
-		// than one photo's (VIDEO-13).
-		MaxTokens: s.budget.Observation(),
-	}
+	request := composeVideoObservationRequest(url, contentType, video.Filename, s.fullWritingTest)
+	request.Reasoning = s.reasoning.Observe
+	request.MaxTokens = s.budget.Observation()
 	if info, ok := s.models.Resolve(model); ok && info.StructuredOutput {
 		request.JSONSchema = VideoObservationsSchema()
 	}

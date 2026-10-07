@@ -72,7 +72,6 @@
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
-| T635 | Expose real prompt composition and effective request snapshots | ARCH MODEL GEN | T632 | todo |
 | T636 | Generate reviewable origins through observation planning and revision | ARCH GEN VOICE MEM MODEL POST | T634 T635 | todo |
 | T637 | Persist current-result origins and preserve them through manual edits | ARCH GEN POST MEM MODEL | T636 | todo |
 | T638 | Scope setting style and memory composers to their consumed outputs | ARCH EDIT VOICE MEM GUIDE TMPL GEN MODEL | T633 T635 T626 T630 | todo |
@@ -86,10 +85,11 @@
 | T646 | Qualify origin-aware writing inspection and clean publication handoff | ARCH GEN POST MODEL THEME EXPORT MKT LANG | T636 T637 T639 T641 T642 T643 T644 T645 T631 | todo |
 
 ## next
-- T635 next for sequential implementation through T646 after the T634 commit.
+- T636 next for sequential implementation through T646 after the T635 commit.
 - Editorial follow-up: doc-review ARCH; preserve independent release/review and blocked qualification.
 
 ## log
+- 261008 T635 done on main: 50 actual-composer synthetic inventory modes, shared effective registry resolution and safe captured response/error/native evidence; full83 Go packages, final boundaries/races/API/build/spec pass
 - 261008 T634 done on main: stage-specific meaning/evidence and block contracts, maximum tags with unchanged revision arrays preserved; full generation/guideline, post/test/API consumers and build/vet/spec pass
 - 261008 T633 done on main: typed template roles and stock applicability frozen through ordinary/test paths, stage-owned source honesty and revision facts; full owning/consumer, API, race, build/vet and task-candidate spec checks pass
 - 261008 T653 final candidate refresh: include committed T631 at935b47e0 plus canonical-path CI repair; rerun invalidated frontend/backend/generated/image checks, preserve uncommitted T633/review work
@@ -109,4 +109,3 @@
 - 261007 T647 done on main: sibling destinations, canonical retained test records and validated named returns; full FE4108/4109 plus corrected owning11, lint/build and Chromium14 contexts/112 geometry checks pass; preserve unrelated T630 edits
 - 261007 T630 resume on main after8da67a15: external T632 is committed; exclusive sequential implementation continues through T646 with per-task verification and commits
 - 261007 T632 done on main: additive semantic origins and safe request projections; shared38 fixtures, FE223 and owning Go suites/build/type/codegen pass; T635 waits for overlapping claimed T630 request assembly
-- 261007 T630 freshness: EDIT4/THEME29/TMPL25/GUIDE17/MODEL35 add origin/prompt/tag work assigned to T632-T645; referenced setting policies remain unchanged, bases refreshed

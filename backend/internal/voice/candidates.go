@@ -184,7 +184,7 @@ func candidateRequest(input candidateInput) llm.Request {
 		Directions []string `json:"directions"`
 		Scene      string   `json:"scene"`
 	}{input.Directions, input.Scene})
-	return llm.Request{System: fmt.Sprintf(candidateSystem, count, count, count, count), Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(string(raw))}}}, Stage: llm.StageNameWrite, Reasoning: llm.ReasoningLow, MaxTokens: input.CompletionTokens}
+	return llm.Request{Composition: candidateComposition(input), System: fmt.Sprintf(candidateSystem, count, count, count, count), Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(string(raw))}}}, Stage: llm.StageNameWrite, Reasoning: llm.ReasoningLow, MaxTokens: input.CompletionTokens}
 }
 
 func requestedCandidateCount(counts []int) (int, error) {

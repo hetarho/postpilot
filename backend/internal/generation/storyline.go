@@ -154,14 +154,14 @@ func (s *Service) WriteStoryline(ctx context.Context, job StorylineJob, progress
 	}
 	photos, videos := AttachmentNames(post.Images)
 	shown := append(append([]string(nil), photos...), videos...)
-	system, user := BuildStorylinePromptForLanguage(StorylinePromptInput{
+	request := ComposeStorylineRequest(StorylinePromptInput{
 		Language: post.TargetLanguage, Title: post.Title, Memo: post.Memo,
 		Photos: photos, Videos: videos, Observations: observations,
 		Template: post.Template, DefaultGuidelines: post.DefaultGuidelines, StockGuidelines: post.StockGuidelines, Guidelines: post.Guidelines,
 		Memories: post.Memories,
 	})
 	progress("storyline", 0, 1)
-	paragraphs, err := s.storylineCall(ctx, job.WriteModel, options.WriteNativeEffort, system, user, shown)
+	paragraphs, err := s.storylineCall(ctx, job.WriteModel, options.WriteNativeEffort, request, shown)
 	if err != nil {
 		return err
 	}
@@ -194,14 +194,14 @@ func (s *Service) ReviseStoryline(ctx context.Context, job StorylineRevisionJob,
 	post.Images = observedImages(post.Images, options.Observations)
 	photos, videos := AttachmentNames(post.Images)
 	shown := append(append([]string(nil), photos...), videos...)
-	system, user := BuildStorylinePromptForLanguage(StorylinePromptInput{
+	request := ComposeStorylineRequest(StorylinePromptInput{
 		Language: options.TargetLanguage, Title: post.Title, Memo: post.Memo,
 		Photos: photos, Videos: videos, Observations: options.Observations,
 		Template: options.Template, DefaultGuidelines: options.DefaultGuidelines, StockGuidelines: options.StockGuidelines, Guidelines: options.Guidelines,
 		Memories: options.Memories, Current: options.Storyline, Request: options.Request,
 	})
 	progress("storyline", 0, 1)
-	paragraphs, err := s.storylineCall(ctx, job.WriteModel, options.WriteNativeEffort, system, user, shown)
+	paragraphs, err := s.storylineCall(ctx, job.WriteModel, options.WriteNativeEffort, request, shown)
 	if err != nil {
 		return err
 	}
@@ -220,18 +220,13 @@ func (s *Service) ReviseStoryline(ctx context.Context, job StorylineRevisionJob,
 // the storyline's budget for the native-effort flag the start froze, answered in the storyline
 // schema and parsed against what was shown. A bad or cut-off answer fails as GEN-20 says
 // (MODEL_OUTPUT_INVALID, MODEL_OUTPUT_TRUNCATED).
-func (s *Service) storylineCall(ctx context.Context, writeModel string, nativeEffort bool, system, user string, shown []string) ([]StorylineParagraph, error) {
+func (s *Service) storylineCall(ctx context.Context, writeModel string, nativeEffort bool, request llm.Request, shown []string) ([]StorylineParagraph, error) {
 	model, ok := parseModelRef(writeModel)
 	if !ok {
 		return nil, ErrWriteModelRequired
 	}
-	request := llm.Request{
-		System:    system,
-		Messages:  []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(user)}}},
-		Reasoning: llm.ReasoningLow,
-		Stage:     llm.StageNameWrite,
-		MaxTokens: s.budget.Storyline(nativeEffort),
-	}
+	request.Reasoning = llm.ReasoningLow
+	request.MaxTokens = s.budget.Storyline(nativeEffort)
 	if info, found := s.models.Resolve(model); found && info.StructuredOutput {
 		request.JSONSchema = StorylineAnswerSchema()
 	}

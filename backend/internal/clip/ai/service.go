@@ -113,7 +113,7 @@ func (s *Service) ObserveChunk(ctx context.Context, model llm.ModelRef, input cl
 		return clip.ChunkAnalysis{}, llm.Usage{}, err
 	}
 	system, user := BuildObservePrompt(input)
-	request := llm.Request{System: system, Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.InlineVideoPart(input.Video), llm.TextPart(user)}}}, Stage: llm.StageNameObserve, Reasoning: input.Policy.Reasoning, DisableReasoning: input.Policy.DisableReasoning, MaxTokens: input.Policy.CompletionTokens, Execution: execution}
+	request := llm.Request{Composition: clipComposition("observe", system, user, clip.VideoGuidelines{}, []string{input.Source.ID}), System: system, Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.InlineVideoPart(input.Video), llm.TextPart(user)}}}, Stage: llm.StageNameObserve, Reasoning: input.Policy.Reasoning, DisableReasoning: input.Policy.DisableReasoning, MaxTokens: input.Policy.CompletionTokens, Execution: execution}
 	// The schema goes when the FROZEN policy says so: a quote priced for the
 	// parser fallback never executes with a schema parameter nobody qualified,
 	// and a model that lost the capability since the quote is refused, not
@@ -157,8 +157,12 @@ func (s *Service) Flow(ctx context.Context, model llm.ModelRef, input clip.Plann
 	if err != nil {
 		return clip.EditPlan{}, llm.Usage{}, err
 	}
+	mode := "flow"
+	if input.FollowStoryline != nil {
+		mode = "flow-follow-storyline"
+	}
 	system, user := BuildFlowPrompt(input, s.cfg.Render.FadeMS, compositionLimits(s.cfg, input))
-	request := llm.Request{System: system, Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(user)}}}, Stage: llm.StageNameWrite, Reasoning: input.Policy.Reasoning, DisableReasoning: input.Policy.DisableReasoning, MaxTokens: input.Policy.CompletionTokens, Execution: execution}
+	request := llm.Request{Composition: clipComposition(mode, system, user, input.Guidelines, planningSourceRefs(input)), System: system, Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(user)}}}, Stage: llm.StageNameWrite, Reasoning: input.Policy.Reasoning, DisableReasoning: input.Policy.DisableReasoning, MaxTokens: input.Policy.CompletionTokens, Execution: execution}
 	if execution.Call.StructuredOutput {
 		if !info.StructuredOutput {
 			return clip.EditPlan{}, llm.Usage{}, clip.ErrPricingUnavailable
@@ -204,7 +208,7 @@ func (s *Service) Revise(ctx context.Context, model llm.ModelRef, input clip.Rev
 	usage := llm.Usage{}
 	flow := input.Current
 	if input.Target != clip.RevisionNarration {
-		written, spent, err := s.write(ctx, model, input.PlanningInput, "flow", s.cfg.FlowCompletionTokens, RevisionFlowSchema(), func() (string, string) {
+		written, spent, err := s.write(ctx, model, input.PlanningInput, "flow", "flow-revision", s.cfg.FlowCompletionTokens, RevisionFlowSchema(), func() (string, string) {
 			return buildFlowRevisionPrompt(input, s.cfg.Render.FadeMS, compositionLimits(s.cfg, input.PlanningInput))
 		}, func(raw string) (clip.EditPlan, error) { return parseFlowPlan(s.cfg, input.PlanningInput, raw, false) })
 		usage = addUsage(usage, spent)
@@ -213,7 +217,7 @@ func (s *Service) Revise(ctx context.Context, model llm.ModelRef, input clip.Rev
 		}
 		flow = written
 	}
-	result, spent, err := s.write(ctx, model, input.PlanningInput, "narrate", s.cfg.NarrationCompletionTokens, NarrationSchema(), func() (string, string) {
+	result, spent, err := s.write(ctx, model, input.PlanningInput, "narrate", "narration-revision", s.cfg.NarrationCompletionTokens, NarrationSchema(), func() (string, string) {
 		return buildNarrationRevisionPrompt(input, flow, compositionLimits(s.cfg, input.PlanningInput))
 	}, func(raw string) (clip.EditPlan, error) {
 		return parseNarration(s.cfg, clip.NarrationInput{PlanningInput: input.PlanningInput, Flow: flow}, raw)
@@ -243,7 +247,7 @@ func addUsage(a, b llm.Usage) llm.Usage {
 // write is the one path every writing call takes: the frozen policy, the model's
 // own structured-output capability, the input allowance, and CLIP-94's bounded
 // correction loop around one parse.
-func (s *Service) write(ctx context.Context, model llm.ModelRef, in clip.PlanningInput, stage string, budget int, schema []byte, prompt func() (string, string), parse func(string) (clip.EditPlan, error)) (clip.EditPlan, llm.Usage, error) {
+func (s *Service) write(ctx context.Context, model llm.ModelRef, in clip.PlanningInput, stage, mode string, budget int, schema []byte, prompt func() (string, string), parse func(string) (clip.EditPlan, error)) (clip.EditPlan, llm.Usage, error) {
 	if err := validateInput(s.cfg, in); err != nil {
 		return clip.EditPlan{}, llm.Usage{}, err
 	}
@@ -256,7 +260,7 @@ func (s *Service) write(ctx context.Context, model llm.ModelRef, in clip.Plannin
 		return clip.EditPlan{}, llm.Usage{}, err
 	}
 	system, user := prompt()
-	request := llm.Request{System: system, Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(user)}}}, Stage: llm.StageNameWrite, Reasoning: in.Policy.Reasoning, DisableReasoning: in.Policy.DisableReasoning, MaxTokens: in.Policy.CompletionTokens, Execution: execution}
+	request := llm.Request{Composition: clipComposition(mode, system, user, in.Guidelines, planningSourceRefs(in)), System: system, Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(user)}}}, Stage: llm.StageNameWrite, Reasoning: in.Policy.Reasoning, DisableReasoning: in.Policy.DisableReasoning, MaxTokens: in.Policy.CompletionTokens, Execution: execution}
 	if execution.Call.StructuredOutput {
 		if !info.StructuredOutput {
 			return clip.EditPlan{}, llm.Usage{}, clip.ErrPricingUnavailable
@@ -292,8 +296,12 @@ func (s *Service) Storyline(ctx context.Context, model llm.ModelRef, input clip.
 	if err != nil {
 		return clip.Storyline{}, llm.Usage{}, err
 	}
+	mode := "storyline"
+	if input.Request != "" {
+		mode = "storyline-revision"
+	}
 	system, user := BuildStorylinePrompt(input, compositionLimits(s.cfg, input.PlanningInput))
-	request := llm.Request{System: system, Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(user)}}}, Stage: llm.StageNameWrite, Reasoning: input.Policy.Reasoning, DisableReasoning: input.Policy.DisableReasoning, MaxTokens: input.Policy.CompletionTokens, Execution: execution}
+	request := llm.Request{Composition: clipComposition(mode, system, user, input.Guidelines, planningSourceRefs(input.PlanningInput)), System: system, Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(user)}}}, Stage: llm.StageNameWrite, Reasoning: input.Policy.Reasoning, DisableReasoning: input.Policy.DisableReasoning, MaxTokens: input.Policy.CompletionTokens, Execution: execution}
 	if execution.Call.StructuredOutput {
 		if !info.StructuredOutput {
 			return clip.Storyline{}, llm.Usage{}, clip.ErrPricingUnavailable
@@ -332,7 +340,7 @@ func (s *Service) Narrate(ctx context.Context, model llm.ModelRef, input clip.Na
 		return clip.EditPlan{}, llm.Usage{}, err
 	}
 	system, user := BuildNarrationPrompt(input, compositionLimits(s.cfg, input.PlanningInput))
-	request := llm.Request{System: system, Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(user)}}}, Stage: llm.StageNameWrite, Reasoning: input.Policy.Reasoning, DisableReasoning: input.Policy.DisableReasoning, MaxTokens: input.Policy.CompletionTokens, Execution: execution}
+	request := llm.Request{Composition: clipComposition("narration", system, user, input.Guidelines, planningSourceRefs(input.PlanningInput)), System: system, Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart(user)}}}, Stage: llm.StageNameWrite, Reasoning: input.Policy.Reasoning, DisableReasoning: input.Policy.DisableReasoning, MaxTokens: input.Policy.CompletionTokens, Execution: execution}
 	if execution.Call.StructuredOutput {
 		if !info.StructuredOutput {
 			return clip.EditPlan{}, llm.Usage{}, clip.ErrPricingUnavailable

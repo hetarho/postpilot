@@ -83,6 +83,42 @@ type RequestFragment struct {
 	MaterialRole string
 	Text         string
 	SourceRefs   []string
+	SourceFiles  []string
+	Activation   string
+}
+
+// RequestNativeField describes native description/text/settings without
+// inventing chat roles for speech or other non-chat operations.
+type RequestNativeField struct {
+	ID                             string
+	Authorship                     FragmentAuthorship
+	MaterialRole, Text, Activation string
+	SourceRefs, SourceFiles        []string
+}
+type RequestOmission struct {
+	ID, Reason, Activation string
+	SourceFiles            []string
+}
+
+// RequestComposition is a small descriptor, not a prompt DSL. Safe Text and
+// SourceRefs come only from the owning assembler; runtime transport parts,
+// credentials, endpoints and supplier prices have no field here.
+type RequestComposition struct {
+	Stage                  string
+	Mode                   string
+	PromptVersion          string
+	SchemaVersion          string
+	Composer               string
+	Parser                 string
+	Consumer               string
+	Activation             string
+	SourceFiles            []string
+	Fragments              []RequestFragment
+	NativeFields           []RequestNativeField
+	SelectedRuleIDs        []string
+	Omissions              []RequestOmission
+	Output                 OutputContractInspection
+	ReferenceTokenEstimate *int64
 }
 
 // OutputContractInspection contains the product-owned schema, not provider/SDK
@@ -102,6 +138,11 @@ type EffectiveRequestConditions struct {
 	MaxCompletionTokens *int64
 	ReasoningEffort     *ReasoningEffort
 	StructuredOutput    *bool
+	DisableReasoning    *bool
+	FreeCall            *bool
+	DefaultBudget       *bool
+	FrozenExecution     *bool
+	ReasoningOmitted    *bool
 }
 
 // InspectionMeasures keeps differently derived measures separate. Characters are
@@ -138,6 +179,13 @@ type RequestInspection struct {
 	Conditions      *EffectiveRequestConditions
 	Measures        InspectionMeasures
 	IssuedAt        *time.Time
+	Composer        string
+	Parser          string
+	Consumer        string
+	Activation      string
+	SourceFiles     []string
+	NativeFields    []RequestNativeField
+	Omissions       []RequestOmission
 }
 
 // UnavailableRequestInspection projects an absent, purged or uncaptured request.
@@ -159,7 +207,7 @@ func (r RequestInspection) Validate() error {
 	}
 	if r.Status == InspectionUnavailable {
 		if r.PromptVersion != "" || r.SchemaVersion != "" || len(r.Fragments) != 0 || len(r.SelectedRuleIDs) != 0 ||
-			r.Output != (OutputContractInspection{}) || r.Conditions != nil || r.Measures != (InspectionMeasures{}) || r.IssuedAt != nil {
+			r.Output != (OutputContractInspection{}) || r.Conditions != nil || r.Measures != (InspectionMeasures{}) || r.IssuedAt != nil || r.Composer != "" || r.Parser != "" || r.Consumer != "" || r.Activation != "" || len(r.SourceFiles) != 0 || len(r.NativeFields) != 0 || len(r.Omissions) != 0 {
 			return invalid("unavailable request carries private payload or runtime evidence")
 		}
 		if !utf8.ValidString(r.Stage) || !utf8.ValidString(r.Mode) {
@@ -187,6 +235,23 @@ func (r RequestInspection) Validate() error {
 		if !inspectionNames(fragment.SourceRefs) {
 			return invalid("fragment source references are invalid or duplicated")
 		}
+		if !inspectionNames(fragment.SourceFiles) || !utf8.ValidString(fragment.Activation) {
+			return invalid("fragment source inventory is invalid")
+		}
+	}
+	for _, field := range r.NativeFields {
+		if !inspectionName(field.ID) || !inspectionName(field.MaterialRole) || !field.Authorship.Valid() || !utf8.ValidString(field.Text) || !utf8.ValidString(field.Activation) || !inspectionNames(field.SourceRefs) || !inspectionNames(field.SourceFiles) || seenFragments[field.ID] {
+			return invalid("native field metadata is invalid")
+		}
+		seenFragments[field.ID] = true
+	}
+	for _, omission := range r.Omissions {
+		if !inspectionName(omission.ID) || !inspectionName(omission.Reason) || !utf8.ValidString(omission.Activation) || !inspectionNames(omission.SourceFiles) {
+			return invalid("omission inventory is invalid")
+		}
+	}
+	if !inspectionNames(r.SourceFiles) || !utf8.ValidString(r.Composer) || !utf8.ValidString(r.Parser) || !utf8.ValidString(r.Consumer) || !utf8.ValidString(r.Activation) {
+		return invalid("composition source inventory is invalid")
 	}
 	if !inspectionNames(r.SelectedRuleIDs) {
 		return invalid("selected rule identifiers are invalid or duplicated")
