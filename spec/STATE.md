@@ -87,6 +87,7 @@
 - Existing blocked qualification and render-capacity work remain separate.
 
 ## log
+- 261007 main integration start: preserve the existing T590 draft separately; merge reviewed browser-media task commits with current origin/main, verify, and push under explicit user authorization
 - 261007 media-release fixture fix done: Max support assignment passes colocated182.53s/remote159.11s CPU releases, BE80, deploy61, Go vet/build/gofmt and spec lint with existing warnings; verified default release image tags refreshed
 - 261007 T621 done: typography b152f586 and final voice-context 4d634b14;3468 FE tests,145 browser measurements and all available unchanged-source/tooling gates pass
 - 261007 create-task THEME r27 done; T621 start: shared type scale, focused role assignment and browser hierarchy verification
