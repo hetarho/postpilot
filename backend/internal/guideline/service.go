@@ -257,14 +257,7 @@ func (s *Service) ForPrompt(ctx context.Context, userID string, kind Kind, templ
 		return PromptGuidelines{}, err
 	}
 	var out PromptGuidelines
-	for _, d := range defaults {
-		if !d.Enabled || (d.Default.MemoriesOnly && !withMemories) {
-			continue
-		}
-		if text, ok := d.Default.Text(target); ok {
-			out.Defaults = append(out.Defaults, text)
-		}
-	}
+	out.Defaults = defaultPromptTexts(defaults, target, withMemories)
 	if kind == KindClip {
 		texts, err := s.store.ClipApplicableTexts(ctx, userID, trimmed(templateID))
 		if err != nil {

@@ -189,7 +189,8 @@ func (s *Store) TestByRequest(ctx context.Context, user, key string) (experiment
 	}
 	return s.GetTest(ctx, user, row.TestID)
 }
-func (s *Store) ListTests(ctx context.Context, user string, limit int, cursor string) ([]experiment.WritingTest, string, error) {
+func (s *Store) ListTests(ctx context.Context, query experiment.TestListQuery) ([]experiment.WritingTest, string, error) {
+	user, limit, cursor := query.UserID, query.PageSize, query.PageToken
 	if user == "" {
 		return nil, "", experiment.ErrTestNotFound
 	}
@@ -200,24 +201,34 @@ func (s *Store) ListTests(ctx context.Context, user string, limit int, cursor st
 		limit = 100
 	}
 	at, id := "", ""
+	scopeRaw, err := json.Marshal(struct{ User, Source, Voice string }{user, query.SourcePostSlug, query.VoiceID})
+	if err != nil {
+		return nil, "", err
+	}
+	scopeHash := sha256.Sum256(scopeRaw)
+	scope := hex.EncodeToString(scopeHash[:])
 	if cursor != "" {
 		raw, err := base64.RawURLEncoding.DecodeString(cursor)
 		if err != nil {
 			return nil, "", experiment.ErrTestOperation
 		}
-		at, id, _ = strings.Cut(string(raw), "\x00")
+		parts := strings.Split(string(raw), "\x00")
+		if len(parts) != 3 || parts[2] != scope {
+			return nil, "", experiment.ErrTestOperation
+		}
+		at, id = parts[0], parts[1]
 		if _, err = time.Parse(time.RFC3339Nano, at); err != nil || id == "" {
 			return nil, "", experiment.ErrTestOperation
 		}
 	}
-	rows, err := s.read.ListWritingTests(ctx, sqlc.ListWritingTestsParams{UserID: user, CursorTime: at, CursorID: id, PageLimit: int64(limit + 1)})
+	rows, err := s.read.ListWritingTests(ctx, sqlc.ListWritingTestsParams{UserID: user, CursorTime: at, CursorID: id, PageLimit: int64(limit + 1), SourcePostSlug: query.SourcePostSlug, VoiceID: query.VoiceID})
 	if err != nil {
 		return nil, "", err
 	}
 	next := ""
 	if len(rows) > limit {
 		last := rows[limit-1]
-		next = base64.RawURLEncoding.EncodeToString([]byte(last.CreatedAt + "\x00" + last.ID))
+		next = base64.RawURLEncoding.EncodeToString([]byte(last.CreatedAt + "\x00" + last.ID + "\x00" + scope))
 		rows = rows[:limit]
 	}
 	result := make([]experiment.WritingTest, 0, len(rows))

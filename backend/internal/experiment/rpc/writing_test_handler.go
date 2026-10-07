@@ -9,7 +9,9 @@ import (
 	"github.com/postpilot/backend/internal/experiment"
 	v1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/gen/postpilot/v1/postpilotv1connect"
+	"github.com/postpilot/backend/internal/llm"
 	"github.com/postpilot/backend/internal/platform/rpcserver"
+	"github.com/postpilot/backend/internal/usage"
 )
 
 // Publication is deliberately separate: champion decisions do not have a target mutation port.
@@ -18,7 +20,7 @@ type writingTestActions interface {
 	EstimateFailed(context.Context, experiment.TestRetryQuoteRequest) (experiment.TestQuote, error)
 	Start(context.Context, experiment.TestStart) (experiment.WritingTest, error)
 	Get(context.Context, string, string) (experiment.WritingTest, error)
-	List(context.Context, string, int, string) ([]experiment.WritingTest, string, error)
+	ListFiltered(context.Context, experiment.TestListQuery) ([]experiment.WritingTest, string, error)
 	Retry(context.Context, experiment.TestRetry) (experiment.WritingTest, error)
 	Decide(context.Context, experiment.MatchDecision) (experiment.WritingTest, error)
 	Cancel(context.Context, experiment.TestMutation) (experiment.WritingTest, error)
@@ -97,7 +99,7 @@ func (h *WritingTestHandler) ListWritingTests(ctx context.Context, req *connect.
 	if err != nil {
 		return nil, err
 	}
-	found, next, err := h.tests.List(ctx, user, int(req.Msg.GetPageSize()), req.Msg.GetPageToken())
+	found, next, err := h.tests.ListFiltered(ctx, experiment.TestListQuery{UserID: user, PageSize: int(req.Msg.GetPageSize()), PageToken: req.Msg.GetPageToken(), SourcePostSlug: req.Msg.GetSourcePostSlug(), VoiceID: req.Msg.GetVoiceId()})
 	if err != nil {
 		return nil, writingError(err)
 	}
@@ -180,6 +182,12 @@ func writingPublicationResponse(publication experiment.TestPublication, found ex
 	return connect.NewResponse(&v1.WritingTestPublicationResponse{Publication: receipt, Test: wire}), nil
 }
 func writingError(err error) error {
+	if errors.Is(err, usage.ErrRateUnavailable) {
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "writing test pricing is unavailable", v1.FailureReason_AI_FX_RATE_UNAVAILABLE, nil)
+	}
+	if errors.Is(err, llm.ErrModelUnavailable) {
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "writing test model is unavailable", v1.FailureReason_MODEL_UNAVAILABLE, nil)
+	}
 	var refusal *experiment.TestRefusal
 	if errors.As(err, &refusal) {
 		code := connect.CodeFailedPrecondition

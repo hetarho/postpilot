@@ -15,17 +15,20 @@ import (
 	"github.com/postpilot/backend/internal/experiment"
 	v1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/guideline"
+	"github.com/postpilot/backend/internal/llm"
 	"github.com/postpilot/backend/internal/post"
 	"github.com/postpilot/backend/internal/provider"
 	"github.com/postpilot/backend/internal/template"
+	"github.com/postpilot/backend/internal/usage"
 )
 
 type testActionsFake struct {
-	calls    int
-	user     string
-	start    experiment.TestStart
-	mutation experiment.TestMutation
-	found    experiment.WritingTest
+	calls     int
+	user      string
+	start     experiment.TestStart
+	mutation  experiment.TestMutation
+	found     experiment.WritingTest
+	listQuery experiment.TestListQuery
 }
 
 func TestWritingPublicationRefusalsRetainDomainLimitsAndSafeReasons(t *testing.T) {
@@ -43,6 +46,8 @@ func TestWritingPublicationRefusalsRetainDomainLimitsAndSafeReasons(t *testing.T
 		{post.ErrPostBusy, connect.CodeFailedPrecondition, "POST_BUSY"},
 		{post.ErrForbidden, connect.CodeNotFound, "POST_NOT_FOUND"},
 		{experiment.ErrTestPublicationConflict, connect.CodeAborted, "WRITING_TEST_PUBLICATION_CONFLICT"},
+		{usage.ErrRateUnavailable, connect.CodeFailedPrecondition, "AI_FX_RATE_UNAVAILABLE"},
+		{llm.ErrModelUnavailable, connect.CodeFailedPrecondition, "MODEL_UNAVAILABLE"},
 	}
 	for _, c := range cases {
 		mapped := writingError(fmt.Errorf("private frozen profile: %w", c.err))
@@ -74,9 +79,22 @@ func (f *testActionsFake) Get(_ context.Context, user, id string) (experiment.Wr
 	}
 	return f.found, nil
 }
-func (f *testActionsFake) List(_ context.Context, user string, _ int, _ string) ([]experiment.WritingTest, string, error) {
-	f.record(user)
+func (f *testActionsFake) ListFiltered(_ context.Context, query experiment.TestListQuery) ([]experiment.WritingTest, string, error) {
+	f.record(query.UserID)
+	f.listQuery = query
 	return []experiment.WritingTest{f.found}, "next", nil
+}
+
+func TestWritingTestHistoryForwardsAuthenticatedContextFilters(t *testing.T) {
+	f := &testActionsFake{found: rpcWritingTest()}
+	h := NewWritingTestHandler(f, f)
+	_, err := h.ListWritingTests(auth.WithUser(context.Background(), "alice"), connect.NewRequest(&v1.ListWritingTestsRequest{PageSize: 3, PageToken: "cursor", SourcePostSlug: "owned-source", VoiceId: "owned-style"}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if f.listQuery != (experiment.TestListQuery{UserID: "alice", PageSize: 3, PageToken: "cursor", SourcePostSlug: "owned-source", VoiceID: "owned-style"}) {
+		t.Fatalf("context filter lost: %#v", f.listQuery)
+	}
 }
 func (f *testActionsFake) Retry(_ context.Context, in experiment.TestRetry) (experiment.WritingTest, error) {
 	f.record(in.UserID)

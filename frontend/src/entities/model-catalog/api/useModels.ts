@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useSyncExternalStore } from 'react'
 import { useQuery, useTransport } from '@connectrpc/connect-query'
-import { useQueryClient } from '@tanstack/react-query'
+import { hashKey, notifyManager, useQueryClient } from '@tanstack/react-query'
 import { myPlanQueryKey } from '@/entities/plan/@x/model-catalog'
 import { ProviderService } from '@/shared/api'
 import { MODEL_CATALOG_STALE_MS } from '../config'
@@ -22,8 +22,19 @@ export function useModels(): {
   const planKey = useMemo(() => myPlanQueryKey(transport), [transport])
   const modelKey = useMemo(() => listModelsQueryKey(transport), [transport])
   const subscribe = useCallback(
-    (notify: () => void) => cache.getQueryCache().subscribe(notify),
-    [cache],
+    (notify: () => void) =>
+      cache.getQueryCache().subscribe(
+        notifyManager.batchCalls((event) => {
+          // Child observers are attached during render. Only changes to the plan
+          // snapshot affect this projection, and their notifications follow query batching.
+          if (
+            event.query.queryHash === hashKey(planKey) &&
+            (event.type === 'updated' || event.type === 'removed')
+          )
+            notify()
+        }),
+      ),
+    [cache, planKey],
   )
   const planSnapshot = useCallback(
     () => cache.getQueryState(planKey)?.dataUpdatedAt ?? 0,

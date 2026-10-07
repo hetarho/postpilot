@@ -134,6 +134,55 @@ func (q *Queries) ActiveForPost(ctx context.Context, postSlug sql.NullString) (G
 	return i, err
 }
 
+const activeForPostKind = `-- name: ActiveForPostKind :one
+SELECT id, post_slug, user_id, voice_id, kind, status, stage, progress_done, progress_total, error, observe_model, write_model, payload, created_at, updated_at, started_at, finished_at, target_language, error_reason, error_params, technical_detail, clip_project_id, dispatch_ready, cancel_requested_at, cancellation_policy_version, experiment_id, wait_expires_at FROM generation_jobs
+WHERE post_slug=?1 AND kind=?2
+AND (?3='' OR user_id=?3)
+AND status IN ('queued','running')
+ORDER BY created_at DESC,id DESC LIMIT 1
+`
+
+type ActiveForPostKindParams struct {
+	PostSlug sql.NullString
+	Kind     string
+	UserID   interface{}
+}
+
+func (q *Queries) ActiveForPostKind(ctx context.Context, arg ActiveForPostKindParams) (GenerationJob, error) {
+	row := q.db.QueryRowContext(ctx, activeForPostKind, arg.PostSlug, arg.Kind, arg.UserID)
+	var i GenerationJob
+	err := row.Scan(
+		&i.ID,
+		&i.PostSlug,
+		&i.UserID,
+		&i.VoiceID,
+		&i.Kind,
+		&i.Status,
+		&i.Stage,
+		&i.ProgressDone,
+		&i.ProgressTotal,
+		&i.Error,
+		&i.ObserveModel,
+		&i.WriteModel,
+		&i.Payload,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.StartedAt,
+		&i.FinishedAt,
+		&i.TargetLanguage,
+		&i.ErrorReason,
+		&i.ErrorParams,
+		&i.TechnicalDetail,
+		&i.ClipProjectID,
+		&i.DispatchReady,
+		&i.CancelRequestedAt,
+		&i.CancellationPolicyVersion,
+		&i.ExperimentID,
+		&i.WaitExpiresAt,
+	)
+	return i, err
+}
+
 const activeForPostUser = `-- name: ActiveForPostUser :one
 SELECT id, post_slug, user_id, voice_id, kind, status, stage, progress_done, progress_total, error, observe_model, write_model, payload, created_at, updated_at, started_at, finished_at, target_language, error_reason, error_params, technical_detail, clip_project_id, dispatch_ready, cancel_requested_at, cancellation_policy_version, experiment_id, wait_expires_at FROM generation_jobs
 WHERE post_slug = ? AND user_id = ? AND status IN ('queued', 'running')

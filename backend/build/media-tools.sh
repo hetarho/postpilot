@@ -6,7 +6,7 @@ FFMPEG_SHA256=cf38e0e28c7e5605942c4a77755349b0145804a397af37eb1fb4c77cb237f635
 X264_REV=b35605ace3ddf7c1a5d67a2eb553f034aef41d55
 X264_SHA256=6eeb82934e69fd51e043bd8c5b0d152839638d1ce7aa4eea65a3fedcf83ff224
 X264_MIRROR_SHA256=cd71a7515b0e9a012e1ac9b1f8415bebcaf6fc97d4db32286642ac4c0fbe24f9
-apk add --no-cache build-base bash nasm pkgconf curl xz bzip2 gnupg zlib-dev=1.3.2-r0 zlib-static=1.3.2-r0
+apk add --no-cache build-base bash nasm pkgconf curl xz bzip2 gnupg zlib=1.3.2-r1 zlib-dev=1.3.2-r1 zlib-static=1.3.2-r1
 mkdir -p /media-build /opt/media/share/licenses /opt/media/share/sources
 cd /media-build
 curl -fL --connect-timeout 10 --max-time 120 --retry 3 -o musl.tar.gz https://distfiles.alpinelinux.org/distfiles/v3.24/musl-1.2.6.tar.gz

@@ -56,7 +56,16 @@ export function createWritingTestClient(transport: Transport): WritingTestClient
     if (!wire.publication) throw new WritingTestValidationError('publication response')
     const receipt = mapWritingTestPublication(wire.publication, input.testId)
     if (
-      receipt.requestKey !== input.requestKey ||
+      (receipt.requestKey !== input.requestKey &&
+        !test.publications.some(
+          (record) =>
+            record.id === receipt.id &&
+            record.requestKey === receipt.requestKey &&
+            record.action === receipt.action &&
+            record.winnerCandidateId === receipt.winnerCandidateId &&
+            record.targetId === receipt.targetId &&
+            record.status === receipt.status,
+        )) ||
       receipt.action !== expectedAction ||
       receipt.winnerCandidateId !== input.winnerCandidateId ||
       test.winnerCandidateId !== input.winnerCandidateId
@@ -89,7 +98,8 @@ export function createWritingTestClient(transport: Transport): WritingTestClient
         result.count !== input.plan.count ||
         result.modelStage !== input.plan.modelStage ||
         result.targetLanguage !== input.plan.context.targetLanguage ||
-        result.sourcePostSlug !== input.plan.context.sourcePostSlug
+        (result.sourcePostSlug !== '' &&
+          result.sourcePostSlug !== input.plan.context.sourcePostSlug)
       )
         throw new WritingTestValidationError('start plan mismatch')
       return result
@@ -103,7 +113,12 @@ export function createWritingTestClient(transport: Transport): WritingTestClient
       if (!Number.isInteger(pageSize) || pageSize < 1 || pageSize > 100)
         throw new WritingTestValidationError('page size')
       const wire = await client.listWritingTests(
-        { pageSize, pageToken: input.pageToken ?? '' },
+        {
+          pageSize,
+          pageToken: input.pageToken ?? '',
+          sourcePostSlug: input.sourcePostSlug ?? '',
+          voiceId: input.voiceId ?? '',
+        },
         { signal },
       )
       const tests = wire.tests.map((test) => mapWritingTest(test))

@@ -649,3 +649,27 @@ func (s *Store) EndTestExecution(ctx context.Context, fence experiment.TestExecu
 
 var _ experiment.WritingTestExecutionTerminalStore = (*Store)(nil)
 var _ experiment.WritingTestSettlementStore = (*Store)(nil)
+
+// These owned execution identities let the application cancel providers after the
+// store has committed its payload fence. They contain no retained private payload.
+func (s *Store) WritingTestExecutionsForPost(ctx context.Context, user, slug string) ([]experiment.TestExecutionFence, error) {
+	attempts, err := s.read.ListWritingTestExecutionsForPost(ctx, sqlc.ListWritingTestExecutionsForPostParams{UserID: user, SourcePostSlug: nullString(slug)})
+	if err != nil {
+		return nil, err
+	}
+	return testExecutionFences(attempts), nil
+}
+func (s *Store) ListCancelledUnsettledTestExecutions(ctx context.Context) ([]experiment.TestExecutionFence, error) {
+	attempts, err := s.read.ListCancelledUnsettledWritingTestExecutions(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return testExecutionFences(attempts), nil
+}
+func testExecutionFences(attempts []sqlc.WritingTestAttempt) []experiment.TestExecutionFence {
+	result := make([]experiment.TestExecutionFence, 0, len(attempts))
+	for _, attempt := range attempts {
+		result = append(result, experiment.TestExecutionFence{UserID: attempt.UserID, TestID: attempt.TestID, JobID: attempt.JobID, RequestKey: attempt.RequestKey, Revision: uint32(attempt.Epoch), PurgeFence: uint64(attempt.PurgeFence), NonMetered: attempt.NonMetered == 1})
+	}
+	return result
+}

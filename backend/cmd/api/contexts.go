@@ -4,14 +4,14 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"github.com/postpilot/backend/internal/authoring"
-	authoringstore "github.com/postpilot/backend/internal/authoring/store"
 	"log/slog"
 	"net/http"
 	"time"
 
 	"github.com/postpilot/backend/internal/auth"
 	authstore "github.com/postpilot/backend/internal/auth/store"
+	"github.com/postpilot/backend/internal/authoring"
+	authoringstore "github.com/postpilot/backend/internal/authoring/store"
 	"github.com/postpilot/backend/internal/billing"
 	billingstore "github.com/postpilot/backend/internal/billing/store"
 	"github.com/postpilot/backend/internal/clip"
@@ -19,6 +19,7 @@ import (
 	clipmedia "github.com/postpilot/backend/internal/clip/media"
 	clipstore "github.com/postpilot/backend/internal/clip/store"
 	"github.com/postpilot/backend/internal/experiment"
+	experimentapp "github.com/postpilot/backend/internal/experiment/app"
 	experimentstore "github.com/postpilot/backend/internal/experiment/store"
 	"github.com/postpilot/backend/internal/fxrate"
 	"github.com/postpilot/backend/internal/generation"
@@ -95,8 +96,13 @@ type contexts struct {
 	spokenGeneration *spokenapp.GenerationService
 	generation       *generation.Service
 
-	experimentStore *experimentstore.Store
-	experiment      *experiment.Service
+	experimentStore         *experimentstore.Store
+	experiment              *experiment.Service
+	writingTests            *experiment.WritingTestService
+	writingTestFactory      *generation.WritingTestFactory
+	writingTestJobs         *experimentapp.WritingTestJobs
+	writingTestPublications *experimentapp.Publications
+	writingTestLifecycle    *experimentapp.WritingTestLifecycle
 }
 
 type unavailableRateSource struct{}
@@ -223,7 +229,7 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 			AnswerLabelMax: cfg.Template.AskLabelMaxChars, AnswerValueMax: cfg.TemplateAskValueMaxChars,
 		},
 		post.Deps{
-			Jobs:          postJobFinder{queue: c.jobs},
+			Jobs:          experimentapp.NewPostJobs(c.jobs, ordinaryPostWriteKinds(), postContentKinds()),
 			Voices:        postVoices{app: c},
 			Experiments:   postExperiments{app: c},
 			ContentPurger: postExperiments{app: c},
@@ -415,6 +421,9 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 	// cannot retry in a deleted voice. No experiment holds a voice's deletion (VOICE-13).
 	c.experiment.SetVoiceDirectory(experimentVoices{service: c.voice})
 	c.experiment.SetVoiceReflection(experimentReflection{service: c.voice})
+	if err := wireWritingTests(ctx, c); err != nil {
+		return nil, fmt.Errorf("writing test composition/recovery: %w", err)
+	}
 	return c, nil
 }
 

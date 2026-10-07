@@ -194,3 +194,59 @@ it('refuses an admission response for a different frozen plan', async () => {
     client.start({ plan: testPlan(4), requestKey: 'same-key', quoteKey: 'quote' }),
   ).rejects.toThrow('start plan mismatch')
 })
+
+it('accepts an admitted owner source hidden by the blind boundary without admitting again', async () => {
+  let starts = 0
+  const plan = testPlan()
+  plan.context.sourcePostSlug = 'owned-source'
+  const client = createWritingTestClient(
+    createRouterTransport(({ rpc }) => {
+      rpc(Service.method.startWritingTest, () => {
+        starts++
+        return create(Service.method.startWritingTest.output, { test: wireTest() })
+      })
+    }),
+  )
+  const admitted = await client.start({ plan, requestKey: 'same-key', quoteKey: 'quote' })
+  expect(admitted.sourcePostSlug).toBe('')
+  expect(starts).toBe(1)
+})
+it('accepts an original keyed publication receipt proven by the same returned champion record', async () => {
+  const input = {
+    testId: 'test',
+    expectedRevision: 4,
+    requestKey: 'fresh-retry-key',
+    winnerCandidateId: 'candidate-0',
+    action: 'adopt-model' as const,
+    makeDefault: false,
+    name: '',
+    scope: '',
+    scopeIds: [],
+  }
+  const receipt = {
+    id: 'receipt',
+    testId: 'test',
+    winnerCandidateId: 'candidate-0',
+    action: WritingTestPublicationAction.ADOPT_MODEL,
+    status: WritingTestPublicationStatus.CONFIRMED,
+    targetId: 'write',
+    requestKey: 'original-key',
+  }
+  let includeReceipt = true
+  const client = createWritingTestClient(
+    createRouterTransport(({ rpc }) => {
+      rpc(Service.method.saveWritingTestWinner, () => {
+        const test = wireTest(2, true)
+        if (includeReceipt)
+          test.publications.push(
+            create(Service.method.saveWritingTestWinner.output, { publication: receipt })
+              .publication!,
+          )
+        return create(Service.method.saveWritingTestWinner.output, { test, publication: receipt })
+      })
+    }),
+  )
+  expect((await client.saveWinner(input)).publication.requestKey).toBe('original-key')
+  includeReceipt = false
+  await expect(client.saveWinner(input)).rejects.toThrow('publication operation mismatch')
+})

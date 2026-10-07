@@ -27,6 +27,12 @@ type TestCost struct {
 	Credits int
 	Free    bool
 }
+
+type TestListQuery struct {
+	UserID, SourcePostSlug, VoiceID string
+	PageSize                        int
+	PageToken                       string
+}
 type WritingTestPricing interface {
 	PriceWritingTest(context.Context, string, []TestCall) (TestCost, error)
 }
@@ -70,7 +76,7 @@ type WritingTestStorage interface {
 	TestByRequest(context.Context, string, string) (WritingTest, error)
 	AdmitTest(context.Context, TestStart, TestPlan) (WritingTest, bool, error)
 	GetTest(context.Context, string, string) (WritingTest, error)
-	ListTests(context.Context, string, int, string) ([]WritingTest, string, error)
+	ListTests(context.Context, TestListQuery) ([]WritingTest, string, error)
 	DecideMatch(context.Context, MatchDecision) (WritingTest, error)
 	CancelTest(context.Context, TestMutation) (WritingTest, error)
 	ReserveTestRetry(context.Context, TestRetry, TestPlan) (WritingTest, bool, error)

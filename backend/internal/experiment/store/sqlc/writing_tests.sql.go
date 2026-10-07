@@ -531,6 +531,51 @@ func (q *Queries) InsertWritingTestQuote(ctx context.Context, arg InsertWritingT
 	return err
 }
 
+const listCancelledUnsettledWritingTestExecutions = `-- name: ListCancelledUnsettledWritingTestExecutions :many
+SELECT id, user_id, test_id, request_key, fingerprint, epoch, purge_fence, quote_id, job_id, status, candidate_ids, confirmed_credits, settled, non_metered, failure_reason, created_at, updated_at FROM writing_test_attempts WHERE status='cancelled' AND settled=0 ORDER BY created_at,id
+`
+
+func (q *Queries) ListCancelledUnsettledWritingTestExecutions(ctx context.Context) ([]WritingTestAttempt, error) {
+	rows, err := q.db.QueryContext(ctx, listCancelledUnsettledWritingTestExecutions)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []WritingTestAttempt
+	for rows.Next() {
+		var i WritingTestAttempt
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.TestID,
+			&i.RequestKey,
+			&i.Fingerprint,
+			&i.Epoch,
+			&i.PurgeFence,
+			&i.QuoteID,
+			&i.JobID,
+			&i.Status,
+			&i.CandidateIds,
+			&i.ConfirmedCredits,
+			&i.Settled,
+			&i.NonMetered,
+			&i.FailureReason,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listInterruptedWritingTestAttempts = `-- name: ListInterruptedWritingTestAttempts :many
 SELECT id, user_id, test_id, request_key, fingerprint, epoch, purge_fence, quote_id, job_id, status, candidate_ids, confirmed_credits, settled, non_metered, failure_reason, created_at, updated_at FROM writing_test_attempts WHERE status IN ('prepared','queued','running')
 `
@@ -759,6 +804,57 @@ func (q *Queries) ListWritingTestCheckpoints(ctx context.Context, arg ListWritin
 	return items, nil
 }
 
+const listWritingTestExecutionsForPost = `-- name: ListWritingTestExecutionsForPost :many
+SELECT a.id, a.user_id, a.test_id, a.request_key, a.fingerprint, a.epoch, a.purge_fence, a.quote_id, a.job_id, a.status, a.candidate_ids, a.confirmed_credits, a.settled, a.non_metered, a.failure_reason, a.created_at, a.updated_at FROM writing_test_attempts a JOIN writing_tests t ON t.user_id=a.user_id AND t.id=a.test_id
+WHERE t.user_id=? AND t.source_post_slug=? AND a.status IN ('prepared','queued','running') ORDER BY a.created_at,a.id
+`
+
+type ListWritingTestExecutionsForPostParams struct {
+	UserID         string
+	SourcePostSlug sql.NullString
+}
+
+func (q *Queries) ListWritingTestExecutionsForPost(ctx context.Context, arg ListWritingTestExecutionsForPostParams) ([]WritingTestAttempt, error) {
+	rows, err := q.db.QueryContext(ctx, listWritingTestExecutionsForPost, arg.UserID, arg.SourcePostSlug)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []WritingTestAttempt
+	for rows.Next() {
+		var i WritingTestAttempt
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.TestID,
+			&i.RequestKey,
+			&i.Fingerprint,
+			&i.Epoch,
+			&i.PurgeFence,
+			&i.QuoteID,
+			&i.JobID,
+			&i.Status,
+			&i.CandidateIds,
+			&i.ConfirmedCredits,
+			&i.Settled,
+			&i.NonMetered,
+			&i.FailureReason,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listWritingTestMatches = `-- name: ListWritingTestMatches :many
 SELECT id, user_id, test_id, round, match_index, left_candidate_id, right_candidate_id, winner_candidate_id, decision_key, decided_at FROM writing_test_matches WHERE user_id=? AND test_id=? ORDER BY round,match_index,id
 `
@@ -848,21 +944,33 @@ func (q *Queries) ListWritingTestPublications(ctx context.Context, arg ListWriti
 }
 
 const listWritingTests = `-- name: ListWritingTests :many
-SELECT id, user_id, operation_key, fingerprint, kind, factor, model_stage, count, status, revision, source_post_slug, context, common_snapshot, common_hash, prompt_version, purge_fence, job_id, winner_candidate_id, confirmed_credits, reserved_credits, failure_reason, created_at, updated_at, content_expires_at FROM writing_tests WHERE user_id=?1
-AND (CAST(?2 AS TEXT)='' OR created_at<?2 OR (created_at=?2 AND id<?3))
-ORDER BY created_at DESC,id DESC LIMIT ?4
+SELECT id, user_id, operation_key, fingerprint, kind, factor, model_stage, count, status, revision, source_post_slug, context, common_snapshot, common_hash, prompt_version, purge_fence, job_id, winner_candidate_id, confirmed_credits, reserved_credits, failure_reason, created_at, updated_at, content_expires_at FROM writing_tests WHERE writing_tests.user_id=?1
+AND (CAST(?2 AS TEXT)='' OR writing_tests.source_post_slug=?2)
+AND (CAST(?3 AS TEXT)=''
+ OR json_extract(writing_tests.context,'$.Input.VoiceID')=?3
+ OR EXISTS(SELECT 1 FROM writing_test_candidates c
+   WHERE c.user_id=writing_tests.user_id AND c.test_id=writing_tests.id
+   AND json_extract(c.source_id,'$.Ref.SourceKind')='setting'
+   AND json_extract(c.source_id,'$.Ref.SettingKind')='voice'
+   AND json_extract(c.source_id,'$.Ref.SettingID')=?3))
+AND (CAST(?4 AS TEXT)='' OR writing_tests.created_at<?4 OR (writing_tests.created_at=?4 AND writing_tests.id<?5))
+ORDER BY writing_tests.created_at DESC,writing_tests.id DESC LIMIT ?6
 `
 
 type ListWritingTestsParams struct {
-	UserID     string
-	CursorTime string
-	CursorID   string
-	PageLimit  int64
+	UserID         string
+	SourcePostSlug string
+	VoiceID        string
+	CursorTime     string
+	CursorID       string
+	PageLimit      int64
 }
 
 func (q *Queries) ListWritingTests(ctx context.Context, arg ListWritingTestsParams) ([]WritingTest, error) {
 	rows, err := q.db.QueryContext(ctx, listWritingTests,
 		arg.UserID,
+		arg.SourcePostSlug,
+		arg.VoiceID,
 		arg.CursorTime,
 		arg.CursorID,
 		arg.PageLimit,

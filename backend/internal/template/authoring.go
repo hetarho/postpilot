@@ -67,6 +67,19 @@ func (a *Authoring) CanStart(ctx context.Context, user, id string) error {
 func (a *Authoring) Validate(draft Draft) (Draft, error)   { return a.service.validDraft(draft) }
 func (a *Authoring) ValidateNumbers(numbers Numbers) error { return a.service.validNumbers(numbers) }
 
+// InputFields keeps title-before-body order and the owning parser's bounds.
+func (a *Authoring) InputFields(draft Draft) ([]Node, error) {
+	draft, err := a.Validate(draft)
+	if err != nil {
+		return nil, err
+	}
+	title, body, err := ParseTemplate(draft.TitleArea, draft.Body, a.service.parseOptions())
+	if err != nil {
+		return nil, err
+	}
+	return append(Asks(title), Asks(body)...), nil
+}
+
 // RenderedForNewWrite validates a private contender through the same grammar and
 // required-answer gate as a saved template, before a test may admit paid writing.
 func (a *Authoring) RenderedForNewWrite(draft Draft, hasPhotos bool, answers []Answer) (Rendered, error) {

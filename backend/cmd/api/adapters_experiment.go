@@ -194,7 +194,7 @@ func (a postExperiments) PendingForPost(ctx context.Context, userID, slug string
 }
 
 func (a postExperiments) PurgePost(ctx context.Context, userID, slug string) error {
-	return a.service().PurgePost(ctx, userID, slug)
+	return a.app.writingTestLifecycle.PurgePost(ctx, userID, slug)
 }
 
 type experimentCatalog struct {

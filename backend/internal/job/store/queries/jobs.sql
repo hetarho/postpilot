@@ -82,6 +82,13 @@ WHERE post_slug = ? AND user_id = ? AND status IN ('queued', 'running')
 ORDER BY created_at DESC, id DESC
 LIMIT 1;
 
+-- name: ActiveForPostKind :one
+SELECT * FROM generation_jobs
+WHERE post_slug=sqlc.narg(post_slug) AND kind=sqlc.arg(kind)
+AND (sqlc.arg(user_id)='' OR user_id=sqlc.arg(user_id))
+AND status IN ('queued','running')
+ORDER BY created_at DESC,id DESC LIMIT 1;
+
 -- name: ActiveForUserKind :one
 SELECT * FROM generation_jobs
 WHERE user_id = ? AND kind = ? AND post_slug IS NULL AND clip_project_id IS NULL

@@ -1,0 +1,278 @@
+{
+  "startingCommit": "b051307a6f8864bf5c9d620c0352fcca2304e6a8",
+  "verifiedDelta": "working T631 frontend changes after b051307a",
+  "node": "24.18.0",
+  "baseCases": 48,
+  "basePassed": 48,
+  "states": 96,
+  "extraCases": 18,
+  "extraPassed": 18,
+  "viewports": [
+    320,
+    360,
+    390,
+    430,
+    1440,
+    1920
+  ],
+  "themes": [
+    "dark",
+    "light"
+  ],
+  "scenarios": [
+    "creation",
+    "template",
+    "tournament",
+    "voice"
+  ],
+  "formatCount": [
+    2,
+    4,
+    8,
+    16
+  ],
+  "axes": [
+    "observe-model",
+    "write-model",
+    "writing-style",
+    "post-template",
+    "post-guideline"
+  ],
+  "pointerModes": [
+    "coarse",
+    "fine"
+  ],
+  "zoom": "200% equivalent CSS viewport and deviceScaleFactor=2 for physical 1440x900 and 1920x1080",
+  "limits": [
+    "Deterministic transport fixtures do not establish live provider semantic quality.",
+    "Geometry and functional qualification do not approve THEME-61 final visual design."
+  ],
+  "commands": [
+    "node /tmp/postpilot-t631-browser/run.mjs",
+    "node /tmp/postpilot-t631-browser/extra.mjs"
+  ],
+  "task": "T631",
+  "taskStartingRevision": "b051307a6f8864bf5c9d620c0352fcca2304e6a8",
+  "integratedRevision": "e47791a0dcccd91c2530ecffe06c9ddfc1b3fba0",
+  "candidate": "working T631 delta before commit",
+  "sourceDigests": {
+    "backend/build/MEDIA.md": "27e0ec19171429e7f978a8a5c4404d80b9ff3fe2816b2e9e0a64dd7f138d371c",
+    "backend/build/media-tools.sh": "690c98d221431431a9470a8830ddf6e92f0cd1f71a50c0a3c2db6992070a4827",
+    "backend/cmd/api/adapters_experiment.go": "8f4b972e2c4163220017e6879aa076f82ab3cefdb26bda17db2483a1f3161f0d",
+    "backend/cmd/api/boundary_test.go": "cc4da66a9218836ffe04ceee8ceb521e3c93c6a14433919ea4e8d6dfab7b83ba",
+    "backend/cmd/api/contexts.go": "4bb68a64a310bff6d4ba30b53d1fbc4d913090256f1e79a8e53a92076b208952",
+    "backend/cmd/api/job_reporting.go": "b04bf6fbbf069f28097c44081387741811727d527444376ce0e8288d8d68368f",
+    "backend/cmd/api/job_subjects.go": "9a89a45219fac5507c0721d1eba7a9c7b6cd7c4938404885cd44f45be2e3b65f",
+    "backend/cmd/api/jobs.go": "8535e262a1c3ae236dd63bb535b3a77ba340d91586a232ac4de46e84d1da53b1",
+    "backend/cmd/api/serve.go": "600b0a97df89e51d691b545ca255d5258aab7066e05ca880a28cd31a85bdfebf",
+    "backend/cmd/api/wiring_test.go": "441fdc6c20e75ac248baad92c35bc170bcfa1cf0843e1ea9e611b8643bfa7e14",
+    "backend/cmd/api/writing_tests.go": "5de8b2abb53d7041a5371aeb8527656d1a39b7bc647d13c9a5c487126e0928c3",
+    "backend/cmd/api/writing_tests_integration_test.go": "23b02787c97aa034a8e986798dee03a301a4be670d9fa6ac6414c5a2b53d14aa",
+    "backend/cmd/api/writing_tests_lifecycle_test.go": "5363a611f6a3e26f3f61601b0df2ccfd8ce1ab79493c03a303009b2ee4d5127d",
+    "backend/cmd/api/writing_tests_observation_integration_test.go": "ca09accc1032cb983413cf43f73e4aafb9731d459196e6f88ecdf2845ab56e24",
+    "backend/cmd/api/writing_tests_post_publication_integration_test.go": "ce145c3f5c5ff28866e2a88d7cda876a96cf56a29451ca781632351a330f3f25",
+    "backend/cmd/api/writing_tests_retry_integration_test.go": "998a8fe4b2f7fe5a55e6a935d33a918c15ee3ad67dae51933fc2ea16e9bea3c3",
+    "backend/cmd/api/writing_tests_settings_integration_test.go": "33d6ecec35e777815ea613df8806c316d3d4fab676ea2fcdf8c1adbebf2a12fe",
+    "backend/internal/authoring/types.go": "911daa26f70674487d8c681c8caf0d247224f7b05231119530b0419d7adff84e",
+    "backend/internal/authoring/working.go": "9cd66559ce780d17119df2d851ae99ab63b9bbb980948a43b45c723d801069dd",
+    "backend/internal/experiment/app/post_jobs.go": "8b414bcebde85b5d452b567ae85f3d4016f0593d99f2220140e237de3a1da6c9",
+    "backend/internal/experiment/app/post_test_guard.go": "e90c2ebbc6e403890684c5ffa99519ca0ac16e74ed1b78f98f45314d3e02dfa1",
+    "backend/internal/experiment/app/writing_test_execution_models.go": "d1555856a9fb9bd635faf15860894ddabd9e6c7907f866f06fd6da57d984546e",
+    "backend/internal/experiment/app/writing_test_execution_models_test.go": "1285149a5308c1313eb49ec6ce15c2149862ce91b6a44735909aeb70ca2bb1a5",
+    "backend/internal/experiment/app/writing_test_generation.go": "24773d7c3ef692e99be3804e02d4fb8ec7393b98098131e5c5a2a52e53d25b10",
+    "backend/internal/experiment/app/writing_test_generation_test.go": "7f6a1e1a72bb3384e11e27e1fd9e874140394ed8cfbbf39e576509bdd9ed14c0",
+    "backend/internal/experiment/app/writing_test_jobs.go": "e766cc01a0ce96913a92e75c044fa23fbf2a16242fec29745361f272cdc3acca",
+    "backend/internal/experiment/app/writing_test_lifecycle.go": "1d2bf8bd57956dfa3dd469022609f94f5c3909f2a77cc158a18891a811e7804f",
+    "backend/internal/experiment/app/writing_test_lifecycle_test.go": "577dc7ba7cec6beeaa94d9327954b6a3518a75e351d1cc5d4bbe68a3c24aaaeb",
+    "backend/internal/experiment/app/writing_test_preparation_errors.go": "7a7c9006f3b0f70a230b0c25e3679168e477b2631f3de8dfcc1ca086e470c292",
+    "backend/internal/experiment/app/writing_test_pricing.go": "caf0222873b2cf7a4f4810279b70c1102c1f61d95069d6c3287e28916079653d",
+    "backend/internal/experiment/app/writing_test_pricing_test.go": "83f89594250803da4307ce777c28de3cd1a83f467fa8d0f39afb1b005abf94dc",
+    "backend/internal/experiment/app/writing_test_resolvers.go": "84e27ca31a55a8ad69660e79d45e8eedb0d1e9ffa5d66c504a0590b8bd67e8ef",
+    "backend/internal/experiment/app/writing_test_resolvers_material.go": "70b42f86d32d7faec2f25e94e66711b8896d779a2355be7d5e82c5b4d92ac29c",
+    "backend/internal/experiment/app/writing_test_resolvers_references.go": "2ec0b91679fed025cc024b5abb0a28ffeeee833f1ff8664cfe738941694ce09c",
+    "backend/internal/experiment/app/writing_test_resolvers_settings.go": "f39ac69aa6dc08ffa94e7ccdb1883407965f97ded321d217336f254abcfe6c32",
+    "backend/internal/experiment/app/writing_test_resolvers_test.go": "4b01d872a0959ff3a7935deb032afebec5e0083a09e7b40bfd419040800f8468",
+    "backend/internal/experiment/ports.go": "38805c0e9a1ef505a02b751a23353f2a3c4c938f96d3b9cf2ce0079077a04b68",
+    "backend/internal/experiment/rpc/writing_test_handler.go": "99b5c856b71b8b59fa8c97985015fb81e8bf83622efaef36e03cc39ba7a77374",
+    "backend/internal/experiment/rpc/writing_test_test.go": "74c93707f84e903eda42955de8334a66201a152fb36dbf99b5fc179398bf4d77",
+    "backend/internal/experiment/store/queries/writing_tests.sql": "b4a79d0c4d52f8d861a801f37c533d1f73c3d9b04d847f09357408b854b0a3b0",
+    "backend/internal/experiment/store/sqlc/writing_tests.sql.go": "c96da0ba827e0c4fc004ea184c1bef27aba44348b03f8a073ee386f495874460",
+    "backend/internal/experiment/store/writing_test_filters_test.go": "db3ecdccdf3f457f906a3213cf3b212714a211479c685ff9e023808a4c1e27ad",
+    "backend/internal/experiment/store/writing_test_runtime.go": "8e9ad5b6dec7f0c773d1d651413ac9db5e88f0aa44c5049dd6a4a2ee12c51aea",
+    "backend/internal/experiment/store/writing_test_service_test.go": "54a63cee5a6ed05955741b2b70ad548ec5e2cddb78eee744d689d19efa929603",
+    "backend/internal/experiment/store/writing_test_store.go": "2e3e15db875fe4e4b08fef40b14ee07bc3d3352587c48f8f87864d5f15fe0ee9",
+    "backend/internal/experiment/store/writing_test_store_test.go": "caebb0ecca5b30b2636da2a70acd87af4760753963e0cff3b5f956911e43eb8e",
+    "backend/internal/experiment/writing_test_contract.go": "d81b0bf06f723264aadffd99a6d48e3779231ac082bd5ad3dbcbecc93c8c2a80",
+    "backend/internal/experiment/writing_test_service.go": "2e4c17dbe9a9b0d4d228d910ca23b1255862106045bb18b69f6a65e9fe512874",
+    "backend/internal/gen/postpilot/v1/writing_test.pb.go": "518c5fd7a20340ceb241c5c2c5f5e19c16488de0f2ca3468770db4e51b6b6853",
+    "backend/internal/generation/writing_test_execution_factory.go": "ccff6229f4d0ee3f1af0dcf29c7186b53bce9520a000872ded55bf0c7ca0347b",
+    "backend/internal/generation/writing_test_execution_factory_test.go": "2d9d15128a47e7a824bad1019f3591a21bce51beda0948a1f4b2802ad79e4093",
+    "backend/internal/guideline/service.go": "0c17eeacce27520b06c4f282207cf95c546e23a12cdbc70f7ded7e2e4f857649",
+    "backend/internal/guideline/writing_test_read.go": "75755df12aacdc4d0109f0cf8c1165d2506aab9ed6ffd9e823a015aae86687d5",
+    "backend/internal/job/store/post_kind_filter_test.go": "839935ddc6a2af6d00a2b88d1744451553fe18571cbceb8c66c11af806af7676",
+    "backend/internal/job/store/queries/jobs.sql": "42ebd5c945f1664e1e82ed24992405533f1bd45f958d58f4b64879a8ec7c6d80",
+    "backend/internal/job/store/sqlc/jobs.sql.go": "641feb174650bb7bbb3c87d6d9e264bf425e6ca3168a9fe2b18d74f4ef49ad3f",
+    "backend/internal/job/store/store.go": "9aa47fa8d3de492d3fce7a009d54a881804a39d89426e4b9be4075c55780e44d",
+    "backend/internal/post/store/queries/writing_test_material.sql": "b16068385979e453903b6f2ed6560d4f935bdd0ab21d3b8e0b605cec8631f11c",
+    "backend/internal/post/store/sqlc/writing_test_material.sql.go": "ab6afe249f1d7dc8d1d68f75f89009feac6bd7c32c35c5e1e15e9951603f557d",
+    "backend/internal/post/store/writing_test_read.go": "c3a309b3ecd4fed09e22b2929c9018c3927d009bf8d5470ae8e446232201f21c",
+    "backend/internal/post/writing_test_read.go": "9d394a6af08500e72f0dac45f744a57e6b0e4e6a1eb8ccb5cbdaade847ff9516",
+    "backend/internal/provider/writing_test_read.go": "8ad297e52b96f8f1a77185d9d4e3cf4e33bce481570c5f9a927f0e3373c85182",
+    "backend/internal/template/authoring.go": "ebb1c87ceee5a82f858e2ef33391e22045c169acccdc851572d0654ca3bc49cf",
+    "backend/internal/usage/token_plan_quote.go": "2c899dd4669d27c4bd4e64d615a39a2a446a426cdeaf0919abde6249b20c912e",
+    "backend/internal/usage/token_plan_quote_test.go": "8275d57905487ebefd14a9dcf32e45c227ed651d99437467e6c1351edeb3216a",
+    "backend/internal/voice/projection.go": "b4315b23ec2e5cbe53bdf6b320e1cdc488b39c92c52fe2814ec363fd46552c55",
+    "backend/internal/voice/writing_test_read.go": "4a3fbca8e8ae001cfdad89a8bad743a7aab1781865fa16c21f3a31e46b78bede",
+    "frontend/src/entities/model-catalog/@x/writing-test.ts": "508f496af00aff47c4578892340778c9a016938a190938136d2d86de31e3e611",
+    "frontend/src/entities/model-catalog/api/useModels.test.tsx": "9f2320ca4030b6a26c6e142c73ba1f7efe92425d266d82a63fc1c11ac66feb28",
+    "frontend/src/entities/model-catalog/api/useModels.ts": "475c2ce3f64210e61938ca0b25021e41aae08b28e1a888e19240d14df9ccf257",
+    "frontend/src/entities/post/@x/writing-test.ts": "2cace3ee6d2c1d093e047d97e139a5b7a6012958fa9dde3bc391f020a111769f",
+    "frontend/src/entities/writing-test/api/client.test.ts": "3b3b9935581189e4ca975ac118df805fb4fb246aeda69bfac348ed4dfc054e47",
+    "frontend/src/entities/writing-test/api/client.ts": "7ec9fa950201d6b4c766c58ea6195bd7053fbc74c5e146ab1b98b84d505d5920",
+    "frontend/src/entities/writing-test/api/hooks.ts": "8a6eca867a33f2ab7c6c5a53812d640c09471caf96dcb6d85ddaa99048cc55fb",
+    "frontend/src/entities/writing-test/api/studio-fixture.ts": "651cca81b4d514545dead92c55146d02098307d40e33035bcd24a8cab2eae898",
+    "frontend/src/entities/writing-test/api/useWritingTestOwners.test.tsx": "9ec70dee2a3ea412de6739453f072e2261bf63918838e4eeba7421e784a5b634",
+    "frontend/src/entities/writing-test/api/useWritingTestOwners.ts": "545f741edeef1e02ae6ed0ed030afdf49d65bcc2f4214e40fb7fa109e3190b17",
+    "frontend/src/entities/writing-test/index.ts": "b8732a8ab03b8cf2b06914f99c46221e32bd2757f6fdbacf6ed943c761b4028e",
+    "frontend/src/entities/writing-test/model/types.ts": "300750df67b60a0f44fa224870de27c7be25aa65c470bbb3228e99ca5e56b8b8",
+    "frontend/src/features/writing-test/config/i18n.ts": "d57848f2b21a6b08dac0d7d34a6b66628140ad51eba1e35e0b01baf679396873",
+    "frontend/src/features/writing-test/model/writing-test-machine.test.ts": "be6466a74dcfb09e0171a91fbab7f192d59db558af196d329e2e711e2a30bfc1",
+    "frontend/src/features/writing-test/model/writing-test-machine.ts": "816cff27cff3abd249c300332c6ba516ac2e83b0acc7e687a83cc5f5a56b31fa",
+    "frontend/src/shared/api/gen/postpilot/v1/writing_test_pb.ts": "bbd95c1ff781a5a363b940769998600cfeb40f5bee3dc82b057127ab794aa1e5",
+    "frontend/src/shared/ui/field/Textarea.test.tsx": "6cf9918e1782dd6e75fe1de945a8f8432140be410a6ee3426b0d3bb80dd8385a",
+    "frontend/src/shared/ui/field/Textarea.tsx": "48fdc0401b8a23713f67523b56cc8f82e582e028bd31e9f10c6c165588ec7573",
+    "frontend/src/widgets/writing-test/ui/WritingTestHistory.test.tsx": "ba6b85c5584b6dd25d01f8c91640bf755fd8828c909b7e96964109e9e56d0a62",
+    "frontend/src/widgets/writing-test/ui/WritingTestHistory.tsx": "974e1cde9619f81e7aad38fd782502b335d3d0d25cda50f6bed127a8dbf1a928",
+    "frontend/src/widgets/writing-test/ui/WritingTestStudio.tsx": "150e1cec672a12c0752bd09c6dc5d5888f0e99e0485a2551f07a1e30d1d96c83",
+    "proto/postpilot/v1/writing_test.proto": "96004020985db44feaeb962faf6dbca318e20028ded88d60016c7ffa06c26b59"
+  },
+  "backendEvidence": {
+    "sixteenEntryModelTest": {
+      "outputs": 16,
+      "humanDecisions": 15,
+      "providerCalls": 16,
+      "admissions": 1,
+      "canonicalPostsCreated": 0
+    },
+    "observation": {
+      "independentObservers": 2,
+      "sharedObserverCalls": 1,
+      "completeWritesPerTest": 2,
+      "sourceMutation": false
+    },
+    "failedOnlyRetry": {
+      "originalOutputs": 4,
+      "failed": 1,
+      "totalCallsAfterRetry": 5,
+      "admissions": 2,
+      "successfulOutputsPreserved": true
+    },
+    "settings": [
+      "saved-template-copy",
+      "explicit-guideline-use",
+      "synthetic-voice-copy",
+      "unpublished-guideline-copy"
+    ],
+    "postPublication": [
+      "compatible-content-storyline-baseline-language",
+      "receipt-replay-preserves-manual-edit",
+      "incompatible-common-options-refused"
+    ]
+  },
+  "artifacts": {
+    "browserBase": "/tmp/postpilot-t631-browser-final-main/results.json",
+    "browserExtras": "/tmp/postpilot-t631-browser-final-main/extra-results.json",
+    "realPipelines": "/tmp/postpilot-t631-real-pipelines-final2.log",
+    "settings": "/tmp/postpilot-t631-settings-transport.log",
+    "fullProduct": "/tmp/postpilot-t631-full-product.log",
+    "latestFrontend": "/tmp/postpilot-t631-final-frontend.log",
+    "settingsReload": "/tmp/postpilot-t631-browser-final-main/reload-settings-results.json"
+  },
+  "browser": {
+    "mainCommit": "e47791a0dcccd91c2530ecffe06c9ddfc1b3fba0",
+    "qualification": "main plus working T631 delta",
+    "sourceHashes": {
+      "frontend/src/app/styles/index.css": "8df3dbf2c60032144f4b3077b1bd05c1af3cd4692167d9efdc9fc9b6bb71ceee",
+      "frontend/src/app/routes/AuthenticatedLayout.tsx": "7a078f8cc31a9ed381d8fbaa3ba1dda651c795861b218d8a16c3acdd4e63e927",
+      "frontend/src/app/routes/VoiceLayout.tsx": "c44317b1538788a2fd35a55bd78b3ac3127831b87ab74d19d191006fa5494f65",
+      "frontend/src/pages/template/ui/TemplatePage.tsx": "2f4869c9e7d5a6e212c6bebc3f8ee385248b465f8991200654d3c39dda46b9e6",
+      "frontend/src/features/ai-authoring/ui/AuthoringEditor.tsx": "a2ddcd50295e58835b8aae095e0ef76e3a7b0778cca5ed797e5ad6deb5ea3fb2",
+      "frontend/src/widgets/writing-test/ui/WritingTestStudio.tsx": "150e1cec672a12c0752bd09c6dc5d5888f0e99e0485a2551f07a1e30d1d96c83",
+      "frontend/src/widgets/writing-test/ui/WritingTestPair.tsx": "cad8f7a3050f4e2fc203f359f3cebe6e5d4d17d80a3e7d65262490324e7a9041",
+      "frontend/src/shared/ui/field/Textarea.tsx": "48fdc0401b8a23713f67523b56cc8f82e582e028bd31e9f10c6c165588ec7573",
+      "frontend/src/entities/model-catalog/api/useModels.ts": "475c2ce3f64210e61938ca0b25021e41aae08b28e1a888e19240d14df9ccf257",
+      "frontend/src/features/writing-test/config/i18n.ts": "d57848f2b21a6b08dac0d7d34a6b66628140ad51eba1e35e0b01baf679396873",
+      "frontend/src/widgets/writing-test/ui/WritingTestHistory.tsx": "974e1cde9619f81e7aad38fd782502b335d3d0d25cda50f6bed127a8dbf1a928"
+    },
+    "commands": [
+      "T631_OUTPUT=/tmp/postpilot-t631-browser-final-main node /tmp/postpilot-t631-browser/run.mjs",
+      "T631_OUTPUT=/tmp/postpilot-t631-browser-final-main node /tmp/postpilot-t631-browser/extra.mjs",
+      "node /tmp/postpilot-t631-browser/reload-settings.mjs"
+    ],
+    "counts": {
+      "base": {
+        "cases": 48,
+        "passed": 48
+      },
+      "extra": {
+        "cases": 18,
+        "passed": 18
+      },
+      "settingsReload": {
+        "cases": 4,
+        "passed": 4
+      }
+    },
+    "baseStates": 96,
+    "viewportWidths": [
+      320,
+      360,
+      390,
+      430,
+      1440,
+      1920
+    ],
+    "themes": [
+      "light",
+      "dark"
+    ],
+    "pointer": [
+      "coarse",
+      "fine"
+    ],
+    "zoom": "200% equivalent CSS viewport with DPR2, physical1440x900/1920x1080",
+    "formats": [
+      2,
+      4,
+      8,
+      16
+    ],
+    "axes": [
+      "observe-model",
+      "write-model",
+      "writing-style",
+      "post-template",
+      "post-guideline"
+    ],
+    "providerSemantics": "Fixture transport qualification; live provider semantic quality and paid smoke remain unqualified.",
+    "visualDesign": "THEME-61 final visual approval remains open."
+  },
+  "verification": {
+    "frontendFull": {
+      "files": 524,
+      "tests": 4141
+    },
+    "finalCopyConsumers": {
+      "files": 3,
+      "tests": 23
+    },
+    "backendFullCommand": "cd backend && go test -timeout 30m ./cmd/... ./internal/...",
+    "frontendFullCommand": "pnpm --filter ./frontend test",
+    "specCandidateCommand": "npx -y haeram-spec-creator lint --target /tmp/postpilot-t631-spec-candidate",
+    "limits": [
+      "Independent uncommitted review/all-261008.md has FORMAT errors and is excluded from the task candidate.",
+      "Live paid provider semantics and THEME-61 visual approval remain unqualified.",
+      "No push or deployment was performed."
+    ]
+  }
+}

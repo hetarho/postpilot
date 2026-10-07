@@ -23,6 +23,7 @@ import { useGuidelines, GuidelineFieldPicker } from '@/entities/guideline'
 import {
   useCandidatePreparationClient,
   useWritingTestClient,
+  useWritingTestOwnerRefresh,
   useWritingTestSource,
   useWritingTestSources,
   type TestCount,
@@ -157,6 +158,7 @@ function OwnedStudio({
   const appliedSource = useRef(initialPlan.context.sourcePostSlug)
   const appliedPreparation = useRef('')
   const refreshedPublication = useRef('')
+  const refreshOwner = useWritingTestOwnerRefresh(ownerId)
   const [attempted, setAttempted] = useState(false)
   const [confirmCancel, setConfirmCancel] = useState<'test' | 'preparation' | null>(null)
   const headingId = useId()
@@ -439,12 +441,22 @@ function OwnedStudio({
     ])
     if (refreshedPublication.current === key) return
     refreshedPublication.current = key
+    void refreshOwner(test, publication)
     if (publication.action === 'apply-output') void source.refetch()
     else if (test.factor === 'model') activeSelections.refetch()
     else if (test.factor === 'voice') void voices.refetch()
     else if (test.factor === 'template') void templates.refetch()
     else void guidelines.refetch()
-  }, [flow.context.publication, test, source, activeSelections, voices, templates, guidelines])
+  }, [
+    flow.context.publication,
+    test,
+    source,
+    activeSelections,
+    voices,
+    templates,
+    guidelines,
+    refreshOwner,
+  ])
 
   const quoteCount = flow.context.retryEstimate?.candidateIds.length ?? test?.count ?? plan.count
   const workTitle = t(
@@ -474,7 +486,7 @@ function OwnedStudio({
             : flow.view === 'compare'
               ? t('compareTitle')
               : flow.view === 'champion'
-                ? t('winnerTitle', { kind: t(`factor.${test?.factor ?? plan.factor}`) })
+                ? t(`winnerTitle.${test?.factor ?? plan.factor}`)
                 : flow.view === 'publication'
                   ? t('publicationTitle', { kind: t(`factor.${test?.factor ?? plan.factor}`) })
                   : flow.view === 'work'

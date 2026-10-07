@@ -159,6 +159,8 @@ export interface TestApplyInput extends TestOperationInput {
   expectedContentRevision: bigint
 }
 export interface TestListInput {
+  sourcePostSlug?: string
+  voiceId?: string
   pageSize?: number
   pageToken?: string
 }

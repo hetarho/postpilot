@@ -1002,3 +1002,49 @@ it.each([false, true])(
     ref.stop()
   },
 )
+
+it('settles a canonical earlier publication key from the same champion action without publishing twice', async () => {
+  const champion = test(2, {
+    status: 'completed',
+    revealed: true,
+    winnerCandidateId: 'candidate-0',
+  })
+  const api = client(champion)
+  const receipt = {
+    id: 'receipt',
+    testId: champion.id,
+    winnerCandidateId: champion.winnerCandidateId,
+    action: 'adopt-model' as const,
+    status: 'confirmed' as const,
+    requestKey: 'original-server-key',
+    targetId: 'write',
+  }
+  api.saveWinner = vi.fn(async () => ({
+    test: { ...champion, revision: 2, publications: [receipt] },
+    publication: receipt,
+  }))
+  const ref = actor(api, { testId: champion.id })
+  await waitFor(ref, (state) => state.matches('champion'))
+  ref.send({
+    scopeKey,
+    type: 'PUBLISH',
+    input: {
+      testId: champion.id,
+      expectedRevision: champion.revision,
+      winnerCandidateId: champion.winnerCandidateId,
+      action: 'adopt-model',
+      makeDefault: false,
+      name: '',
+      scope: '',
+      scopeIds: [],
+    },
+  })
+  await waitFor(
+    ref,
+    (state) => state.matches('published') && state.context.publication?.id === receipt.id,
+  )
+  expect(ref.getSnapshot().context.command).toBeUndefined()
+  expect(ref.getSnapshot().context.publication?.requestKey).toBe('original-server-key')
+  expect(api.saveWinner).toHaveBeenCalledTimes(1)
+  ref.stop()
+})

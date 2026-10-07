@@ -441,7 +441,9 @@ function isConflict(failure?: AppFailure): boolean {
     ].includes(failure.reason)
   )
 }
-function publicationCommand(command?: FrozenTestCommand): boolean {
+function publicationCommand(
+  command?: FrozenTestCommand,
+): command is Extract<FrozenTestCommand, { kind: 'publish' | 'apply' }> {
   return command?.kind === 'publish' || command?.kind === 'apply'
 }
 interface ReadInput {
@@ -501,7 +503,16 @@ function acceptsResult(context: WritingTestOperationContext, event: unknown): bo
     command &&
     (command.kind === 'publish' || command.kind === 'apply') &&
     (result.publication.testId !== command.input.testId ||
-      result.publication.requestKey !== command.input.requestKey ||
+      (result.publication.requestKey !== command.input.requestKey &&
+        !result.test.publications.some(
+          (record) =>
+            record.id === result.publication!.id &&
+            record.requestKey === result.publication!.requestKey &&
+            record.targetId === result.publication!.targetId &&
+            record.winnerCandidateId === command.input.winnerCandidateId &&
+            record.action === (command.kind === 'apply' ? 'apply-output' : command.input.action) &&
+            record.status === result.publication!.status,
+        )) ||
       result.publication.winnerCandidateId !== command.input.winnerCandidateId ||
       result.publication.action !==
         (command.kind === 'apply' ? 'apply-output' : command.input.action))
@@ -517,8 +528,9 @@ function settledCommand(command: FrozenTestCommand | undefined, test: WritingTes
   if (command.kind === 'start') return true
   if (command.input.testId !== test.id) return false
   if (command.kind === 'publish' || command.kind === 'apply')
-    return test.publications.some(
-      (p) => p.requestKey === command.input.requestKey && p.status !== 'pending',
+    return (
+      matchingPublication(command, test)?.status !== undefined &&
+      matchingPublication(command, test)?.status !== 'pending'
     )
   if (command.kind === 'cancel') return test.status === 'cancelled'
   if (command.kind === 'vote')
@@ -530,7 +542,12 @@ function matchingPublication(
   test: WritingTest,
 ): WritingTestPublication | undefined {
   return command && publicationCommand(command)
-    ? test.publications.find((p) => p.requestKey === command.input.requestKey)
+    ? test.publications.find(
+        (p) =>
+          p.testId === command.input.testId &&
+          p.winnerCandidateId === command.input.winnerCandidateId &&
+          p.action === (command.kind === 'apply' ? 'apply-output' : command.input.action),
+      )
     : undefined
 }
 function hydrationConflict(command: FrozenTestCommand | undefined, test: WritingTest): boolean {
