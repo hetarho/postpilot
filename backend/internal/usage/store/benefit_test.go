@@ -110,10 +110,11 @@ func TestConcurrentCurrentWindowGrantsDoNotReplayMissedBenefits(t *testing.T) {
 	_, handle := newServiceWithDB(t)
 	removeLegacyFunding(t, handle, "alice")
 	ctx := context.Background()
-	anchor := time.Now().UTC().AddDate(0, -3, 0)
+	instant := time.Now().UTC()
+	anchor := instant.AddDate(0, -3, 0)
 	coverage := usage.Coverage{ID: "paid:alice:race", Anchor: anchor, End: plan.MonthBoundary(anchor, 12), Tier: plan.Basic, DailyTier: plan.Basic}
 	service := usage.NewService(usagestore.New(handle.Writer, handle.Reader), pricedModels{}, maxCompletion,
-		benefitCoverage{id: coverage.ID, anchor: anchor, end: coverage.End, tier: plan.Basic}, testRates)
+		benefitCoverage{id: coverage.ID, anchor: anchor, end: coverage.End, tier: plan.Basic}, testRates).WithClock(func() time.Time { return instant })
 	const workers = 16
 	var group sync.WaitGroup
 	errors := make(chan error, workers)
@@ -123,7 +124,7 @@ func TestConcurrentCurrentWindowGrantsDoNotReplayMissedBenefits(t *testing.T) {
 			defer group.Done()
 			switch i % 3 {
 			case 0:
-				errors <- service.OpenCoverage(ctx, "alice", coverage, time.Now(), "charge-1")
+				errors <- service.OpenCoverage(ctx, "alice", coverage, instant, "charge-1")
 			case 1:
 				_, err := service.BalanceFor(ctx, "alice", plan.Basic)
 				errors <- err
@@ -153,7 +154,7 @@ func TestConcurrentCurrentWindowGrantsDoNotReplayMissedBenefits(t *testing.T) {
 	}
 
 	// Non-subscription lots survive a current-window materialization unchanged.
-	voucherID, err := service.OpenVoucherLot(ctx, "alice", 9, time.Now().Add(time.Hour))
+	voucherID, err := service.OpenVoucherLot(ctx, "alice", 9, instant.Add(time.Hour))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -161,7 +162,7 @@ func TestConcurrentCurrentWindowGrantsDoNotReplayMissedBenefits(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := service.OpenCoverage(ctx, "alice", coverage, time.Now(), "charge-1"); err != nil {
+	if err := service.OpenCoverage(ctx, "alice", coverage, instant, "charge-1"); err != nil {
 		t.Fatal(err)
 	}
 	for id, want := range map[string]int{voucherID: 9, purchasedID: 12} {
@@ -314,12 +315,13 @@ func TestSettlementAfterDailyResetCannotDrawTheNewGrant(t *testing.T) {
 	_, handle := newServiceWithDB(t)
 	removeLegacyFunding(t, handle, "alice")
 	ctx := context.Background()
-	anchor := time.Now().UTC().Add(-24*time.Hour + 2*time.Second)
+	instant := time.Now().UTC()
+	anchor := instant.Add(-24*time.Hour + 2*time.Second)
 	end := plan.CoverageEnd(anchor, anchor, true)
 	coverage := usage.Coverage{ID: "paid:alice:reset", Anchor: anchor, End: end, Tier: plan.Basic, DailyTier: plan.Basic}
 	service := usage.NewService(usagestore.New(handle.Writer, handle.Reader), pricedModels{}, maxCompletion,
-		benefitCoverage{id: coverage.ID, anchor: anchor, end: end, tier: plan.Basic}, testRates)
-	if err := service.OpenCoverage(ctx, "alice", coverage, time.Now(), "charge-1"); err != nil {
+		benefitCoverage{id: coverage.ID, anchor: anchor, end: end, tier: plan.Basic}, testRates).WithClock(func() time.Time { return instant })
+	if err := service.OpenCoverage(ctx, "alice", coverage, instant, "charge-1"); err != nil {
 		t.Fatal(err)
 	}
 	start := usage.Start{UserID: "alice", Plan: plan.Basic, Kind: "generate", JobID: "cross-reset",
@@ -330,13 +332,11 @@ func TestSettlementAfterDailyResetCannotDrawTheNewGrant(t *testing.T) {
 	if _, err := handle.Writer.ExecContext(ctx, `INSERT INTO usage_events
         (user_id,kind,job_id,stage,model,prompt_tokens,completion_tokens,cost_microusd,cost_source,created_at)
         VALUES ('alice','generate','cross-reset','write','test/model',1,1,64000,'reported',?)`,
-		time.Now().UTC().Format(time.RFC3339Nano)); err != nil {
+		instant.UTC().Format(time.RFC3339Nano)); err != nil {
 		t.Fatal(err)
 	}
-	_, firstEnd := plan.DailyWindow(anchor, time.Now())
-	if wait := time.Until(firstEnd); wait > 0 {
-		time.Sleep(wait + 20*time.Millisecond)
-	}
+	_, firstEnd := plan.DailyWindow(anchor, instant)
+	instant = firstEnd.Add(20 * time.Millisecond)
 	if _, err := service.BalanceFor(ctx, "alice", plan.Basic); err != nil {
 		t.Fatal(err)
 	}
