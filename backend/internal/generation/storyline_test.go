@@ -332,7 +332,7 @@ func TestWriteStorylineObservesThenMakesOneCall(t *testing.T) {
 		}
 	}
 	if last.ref != writeRef || last.request.HasImages() || last.request.MaxTokens != 8192 ||
-		last.request.Reasoning != llm.ReasoningLow || !bytes.Equal(last.request.JSONSchema, StorylineAnswerSchema()) {
+		last.request.Reasoning != llm.ReasoningLow || !bytes.Equal(last.request.JSONSchema, LegacyStorylineAnswerSchema()) {
 		t.Fatalf("storyline call = %+v", last.request)
 	}
 	if !strings.HasPrefix(last.request.System, koreanStorylineTask) || strings.Contains(last.request.System, "말투 프로필") {
@@ -592,7 +592,7 @@ func TestAFromStorylineRunShowsOnlyTheHeldAttachments(t *testing.T) {
 	if !strings.HasSuffix(user, "[스토리라인]\n1. 가게 앞을 보여줍니다. (파일: IMG_1.jpg)\n2. 커피를 이야기합니다. (파일: IMG_2.jpg)") {
 		t.Fatalf("the storyline section:\n%s", user)
 	}
-	if !bytes.Equal(write.JSONSchema, WriteAlongStorylineAnswerSchema()) || !strings.Contains(write.System, koreanWriteAlongStorylineRule) ||
+	if !bytes.Equal(write.JSONSchema, LegacyWriteAlongStorylineAnswerSchema()) || !strings.Contains(write.System, koreanWriteAlongStorylineRule) ||
 		strings.Contains(write.System, koreanStorylineRule) || strings.Contains(write.System, `"storyline":`) {
 		t.Fatalf("the storyline-path write asked:\n%s", write.System)
 	}

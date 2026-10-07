@@ -55,7 +55,13 @@ func clip(name string) Image {
 // when the call carried a video part.
 func observationAnswer(request llm.Request) llm.Response {
 	parts := request.Messages[0].Parts
-	files := strings.Split(strings.TrimPrefix(parts[len(parts)-1].Text, "files: "), ", ")
+	var fileSet string
+	for _, part := range parts {
+		if strings.HasPrefix(part.Text, "files: ") {
+			fileSet = strings.TrimPrefix(part.Text, "files: ")
+		}
+	}
+	files := strings.Split(fileSet, ", ")
 	items := make([]string, 0, len(files))
 	for _, file := range files {
 		if request.HasVideos() {

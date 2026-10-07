@@ -108,13 +108,15 @@ func TestWriteAnswerSchemaIsPostContentPlusNounsAndStoryline(t *testing.T) {
 		required[name.(string)] = true
 	}
 	for name := range properties {
-		if !required[name] {
+		if name != "origins" && !required[name] {
 			t.Errorf("%s is not required", name)
 		}
 	}
 
 	delete(properties, "nouns")
 	delete(properties, "storyline")
+	delete(properties, "origins")
+	delete(content["properties"].(map[string]any), "origins")
 	var contentOnly []any
 	for _, name := range write["required"].([]any) {
 		if name != "nouns" && name != "storyline" {
@@ -150,7 +152,7 @@ func TestWriteSelectsTheNounsSchemaAndReviseKeepsPostContent(t *testing.T) {
 		t.Fatalf("answer = %+v, %v", answer, err)
 	}
 	write := models.calls[0].request
-	if !bytes.Equal(write.JSONSchema, WriteAnswerSchema()) {
+	if !bytes.Equal(write.JSONSchema, LegacyWriteAnswerSchema()) {
 		t.Fatalf("the write request carries schema %s", write.JSONSchema)
 	}
 	if !strings.Contains(write.System, `{"storyline":[{"text":"...","files":[]}],"title":"...","summary":"...","tags":[],"blocks":[],"nouns":[]}`) ||
@@ -164,7 +166,7 @@ func TestWriteSelectsTheNounsSchemaAndReviseKeepsPostContent(t *testing.T) {
 		t.Fatal(err)
 	}
 	revise := models.calls[1].request
-	if !bytes.Equal(revise.JSONSchema, PostContentSchema()) {
+	if !bytes.Equal(revise.JSONSchema, LegacyPostContentSchema()) {
 		t.Fatalf("the revise request carries schema %s", revise.JSONSchema)
 	}
 	if strings.Contains(revise.System, "nouns") || strings.Contains(revise.System, "storyline") ||

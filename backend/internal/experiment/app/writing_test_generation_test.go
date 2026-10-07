@@ -198,7 +198,7 @@ func TestActualFactoryAdapterProducesEveryFrozenEntrantAndCompleteStorylineWitho
 			planned := 0
 			for _, call := range s.work.Plan.Calls {
 				planned += call.Count
-				if call.Stage != experiment.StageWrite || call.PromptTokens != 30000 || call.CompletionTokens != 2048 {
+				if call.Stage != experiment.StageWrite || call.PromptTokens != 30000+generation.OriginPromptTokenOverhead || call.CompletionTokens != 2048 {
 					t.Fatalf("bounded plan=%+v", call)
 				}
 			}

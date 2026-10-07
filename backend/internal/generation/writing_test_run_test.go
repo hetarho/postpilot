@@ -28,7 +28,7 @@ func runTestSnapshot(t *testing.T, factor, stage string, count int, images []Ima
 	}
 	common := writingTestCommon{
 		Version: writingTestSnapshotVersion, Factor: factor, ModelStage: stage,
-		Post:    PostInput{UserID: "alice", Memo: "Explicit frozen material", TargetLanguage: LanguageEnglish, TagCount: 4, Images: images},
+		Post:    PostInput{OriginProtocolVersion: OriginProtocolVersion, UserID: "alice", Memo: "Explicit frozen material", TargetLanguage: LanguageEnglish, TagCount: 4, Images: images},
 		Profile: Profile{NoVoice: true}, ObserveModel: observeRef, BatchSize: 2,
 		ObserveCompletionTokens: 512, ObservePromptTokens: 30000, WritePromptTokens: 30000, ObserveStructuredOutput: true,
 		Reasoning: testReasoningPolicy, PromptVersion: writingTestPromptVersion, SchemaVersion: writingTestSchemaVersion(), AssignmentsHash: "frozen-assignments",

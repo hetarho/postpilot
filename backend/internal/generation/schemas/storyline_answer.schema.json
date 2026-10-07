@@ -10,8 +10,59 @@
         "additionalProperties": false,
         "required": ["text", "files"],
         "properties": {
-          "text": {"type": "string"},
-          "files": {"type": "array", "items": {"type": "string"}}
+          "text": {
+            "type": "string"
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "origins": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["field", "quote", "category", "source_refs"],
+        "properties": {
+          "field": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["kind"],
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": ["storyline_paragraph"]
+              },
+              "paragraph_index": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          },
+          "quote": {
+            "type": "string"
+          },
+          "occurrence": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "category": {
+            "type": "string",
+            "enum": ["owner_input", "photo_interpretation", "ai_added"]
+          },
+          "source_refs": {
+            "type": "array",
+            "maxItems": 128,
+            "items": {
+              "type": "string",
+              "maxLength": 128
+            }
+          }
         }
       }
     }

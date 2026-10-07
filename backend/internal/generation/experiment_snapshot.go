@@ -52,8 +52,11 @@ type experimentSnapshot struct {
 // snapshotPost is PostInput as a snapshot has always carried it. Field, QualityRuleIDs and
 // Published are inputs to resolve and never frozen, so they have no member at all.
 type snapshotPost struct {
-	Slug   string `json:"Slug"`
-	UserID string `json:"UserID"`
+	OriginProtocolVersion  int    `json:"origin_protocol_version,omitempty"`
+	OriginCompletionTokens int    `json:"origin_completion_tokens,omitempty"`
+	OriginFictional        bool   `json:"origin_fictional,omitempty"`
+	Slug                   string `json:"Slug"`
+	UserID                 string `json:"UserID"`
 	// Absent for a post with 말투 없음: the snapshot freezes the absence (MODEL-31).
 	Voice             *snapshotVoice        `json:"Voice,omitempty"`
 	TemplateID        string                `json:"TemplateID"`
@@ -120,15 +123,16 @@ type snapshotImage struct {
 }
 
 type snapshotObservation struct {
-	File          string   `json:"File"`
-	Scene         string   `json:"Scene"`
-	Mood          string   `json:"Mood"`
-	VisibleText   string   `json:"VisibleText"`
-	Objects       []string `json:"Objects"`
-	PeoplePresent bool     `json:"PeoplePresent"`
-	Model         string   `json:"Model"`
-	Events        []string `json:"Events"`
-	Speech        string   `json:"Speech"`
+	Origins       *observationOriginReviewJSON `json:"origins,omitempty"`
+	File          string                       `json:"File"`
+	Scene         string                       `json:"Scene"`
+	Mood          string                       `json:"Mood"`
+	VisibleText   string                       `json:"VisibleText"`
+	Objects       []string                     `json:"Objects"`
+	PeoplePresent bool                         `json:"PeoplePresent"`
+	Model         string                       `json:"Model"`
+	Events        []string                     `json:"Events"`
+	Speech        string                       `json:"Speech"`
 	// omitempty keeps every snapshot frozen before rotations existed byte-identical (GEN-79).
 	Rotation int `json:"Rotation,omitempty"`
 }
@@ -278,6 +282,7 @@ func toSnapshotPost(post PostInput) snapshotPost {
 		contentLanguage = &value
 	}
 	return snapshotPost{
+		OriginProtocolVersion: post.OriginProtocolVersion, OriginCompletionTokens: post.OriginCompletionTokens, OriginFictional: post.OriginFictional,
 		Slug: post.Slug, UserID: post.UserID,
 		Voice:      toSnapshotVoice(post.Voice),
 		TemplateID: post.TemplateID, Template: toSnapshotTemplate(post.Template),
@@ -307,6 +312,7 @@ func fromSnapshotPost(wire snapshotPost) PostInput {
 		contentLanguage = &value
 	}
 	return PostInput{
+		OriginProtocolVersion: wire.OriginProtocolVersion, OriginCompletionTokens: wire.OriginCompletionTokens, OriginFictional: wire.OriginFictional,
 		Slug: wire.Slug, UserID: wire.UserID,
 		Voice:      fromSnapshotVoice(wire.Voice),
 		TemplateID: wire.TemplateID, Template: fromSnapshotTemplate(wire.Template),
@@ -364,14 +370,16 @@ func fromSnapshotImage(wire snapshotImage) Image {
 
 func toSnapshotObservation(o Observation) snapshotObservation {
 	return snapshotObservation{
-		File: o.File, Scene: o.Scene, Mood: o.Mood, VisibleText: o.VisibleText, Objects: copyTexts(o.Objects),
+		Origins: encodeObservationOrigins(o.Origins),
+		File:    o.File, Scene: o.Scene, Mood: o.Mood, VisibleText: o.VisibleText, Objects: copyTexts(o.Objects),
 		PeoplePresent: o.PeoplePresent, Model: o.Model, Events: copyTexts(o.Events), Speech: o.Speech, Rotation: o.Rotation,
 	}
 }
 
 func fromSnapshotObservation(wire snapshotObservation) Observation {
 	return Observation{
-		File: wire.File, Scene: wire.Scene, Mood: wire.Mood, VisibleText: wire.VisibleText, Objects: copyTexts(wire.Objects),
+		Origins: decodeObservationOrigins(wire.Origins),
+		File:    wire.File, Scene: wire.Scene, Mood: wire.Mood, VisibleText: wire.VisibleText, Objects: copyTexts(wire.Objects),
 		PeoplePresent: wire.PeoplePresent, Model: wire.Model, Events: copyTexts(wire.Events), Speech: wire.Speech, Rotation: wire.Rotation,
 	}
 }

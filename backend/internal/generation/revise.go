@@ -57,9 +57,11 @@ Each block uses the type, content, level, file, files, layout, alt, caption, and
 // A payload written while 규칙으로 저장 existed still carries `save_as_rule`; it decodes
 // because encoding/json ignores a key the struct no longer names.
 type revisionPayloadJSON struct {
-	Profile         *profilePayload `json:"voice_profile,omitempty"`
-	Instruction     string          `json:"instruction"`
-	ContentLanguage Language        `json:"content_language,omitempty"`
+	OriginProtocolVersion int             `json:"origin_protocol_version,omitempty"`
+	CompletionTokens      int             `json:"completion_tokens,omitempty"`
+	Profile               *profilePayload `json:"voice_profile,omitempty"`
+	Instruction           string          `json:"instruction"`
+	ContentLanguage       Language        `json:"content_language,omitempty"`
 	// Frozen at enqueue exactly as the generate payload freezes it. A payload written
 	// before templates existed decodes with this absent, which is "no template".
 	Template *templatePayload `json:"template,omitempty"`
@@ -99,6 +101,9 @@ func parseRevisionPayload(payload []byte) (revisionPayloadJSON, error) {
 	var value revisionPayloadJSON
 	if err := json.Unmarshal(payload, &value); err != nil {
 		return revisionPayloadJSON{}, fmt.Errorf("invalid revision payload: %w", err)
+	}
+	if value.OriginProtocolVersion != 0 && (value.OriginProtocolVersion != OriginProtocolVersion || value.CompletionTokens <= 0) {
+		return revisionPayloadJSON{}, fmt.Errorf("invalid revision origin protocol or admitted cap")
 	}
 	value.Instruction = strings.TrimSpace(value.Instruction)
 	if value.Instruction == "" {

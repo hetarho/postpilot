@@ -3,6 +3,7 @@ package generation
 import (
 	"context"
 	"errors"
+	"github.com/postpilot/backend/internal/post"
 	"reflect"
 	"strconv"
 	"testing"
@@ -13,7 +14,8 @@ import (
 func filledGenerationOptions() generationOptions {
 	target := 1500
 	files := []string{"IMG_1.jpg"}
-	return generationOptions{
+	result := generationOptions{
+		OriginProtocolVersion: OriginProtocolVersion, CompletionTokens: 16384, FollowStorylineOrigins: originFixturePlan([]StorylineParagraph{{Text: "골목을 보여줍니다.", Files: []string{"IMG_1.jpg"}}}),
 		Profile:        &Profile{Text: "Accepted habits", Excerpts: []string{"Accepted prose"}, Portable: true, Sources: []ProfileSource{{SampleID: "sample", ContentRevision: 1}}},
 		TargetLanguage: LanguageEnglish,
 		TargetLength:   &target,
@@ -32,6 +34,8 @@ func filledGenerationOptions() generationOptions {
 			BodyParts: []TemplateMaterialPart{{Kind: "literal", Text: "body"}}, TitleParts: []TemplateMaterialPart{{Kind: "write", Text: "title"}},
 		}, Guidelines: []string{"CCTV를 언급하지 않기"}, DefaultGuidelines: []string{"메모의 이름으로 쓰세요"}, StockGuidelines: testStockGuidelines(), Memories: []string{"매운 음식을 못 먹는다"}, QualityRules: []string{"제목에 같은 말을 되풀이하지 않는다"}},
 	}
+	result.Observations[0].Origins = originFixtureObservation(result.Observations[0])
+	return result
 }
 
 // requireNoZero fails on any zero member reachable from v, naming its path: a zero string,
@@ -47,6 +51,18 @@ func requireNoZero(t *testing.T, path string, v reflect.Value) {
 		}
 		requireNoZero(t, path, v.Elem())
 	case reflect.Struct:
+		if v.Type() == reflect.TypeOf(post.OriginResultIdentity{}) {
+			if v.FieldByName("ContentHash").String() == "" {
+				t.Errorf("%s hash missing", path)
+			}
+			return
+		}
+		if v.Type() == reflect.TypeOf(post.OriginSpan{}) || v.Type() == reflect.TypeOf(PlanOriginSpan{}) || v.Type() == reflect.TypeOf(ObservationOriginSpan{}) {
+			if v.FieldByName("Quote").String() == "" || v.FieldByName("End").Int() <= v.FieldByName("Start").Int() {
+				t.Errorf("%s span invalid", path)
+			}
+			return
+		}
 		if v.Type() == reflect.TypeOf(TemplateMaterialPart{}) {
 			if v.FieldByName("Kind").String() == "" {
 				t.Errorf("%s role is missing", path)
@@ -54,6 +70,13 @@ func requireNoZero(t *testing.T, path string, v reflect.Value) {
 			return
 		}
 		for i := 0; i < v.NumField(); i++ {
+			// Quote candidates are ephemeral parser inputs; only validated reviews freeze.
+			if v.Type().Field(i).Name == "OriginCandidates" {
+				continue
+			}
+			if v.Type() == reflect.TypeOf(post.OriginSource{}) && v.Type().Field(i).Name == "AttachmentFilename" && v.Field(i).String() == "" {
+				continue
+			}
 			requireNoZero(t, path+"."+v.Type().Field(i).Name, v.Field(i))
 		}
 	case reflect.Slice:
@@ -113,7 +136,11 @@ func TestEveryFrozenOptionReachesTheRun(t *testing.T) {
 		if field.Anonymous || name == "ObserveFiles" || name == "Observations" || name == "Profile" {
 			continue
 		}
-		member := got.FieldByName(name)
+		memberName := name
+		if name == "CompletionTokens" {
+			memberName = "OriginCompletionTokens"
+		}
+		member := got.FieldByName(memberName)
 		if !member.IsValid() {
 			t.Errorf("PostInput has no %s: add it to PostInput and onto", name)
 			continue
@@ -155,6 +182,10 @@ func TestStartFreezesEveryOption(t *testing.T) {
 	jobs := &fakeJobs{id: "job"}
 	svc := NewService(posts, fakeProfiles{profile: *filledGenerationOptions().Profile}, models, fakeImages{}, jobs, 4, testReasoningPolicy, testBudget, deps)
 
+	posts.input.Observations[0].Origins = originFixtureObservation(posts.input.Observations[0])
+	posts.input.Storyline.Origins = originFixturePlan(posts.input.Storyline.Paragraphs)
+	pub := &originFixturePublisher{}
+	svc = NewOriginService(svc, pub, pub)
 	target := 1500
 	if _, err := svc.Start(context.Background(), StartRequest{
 		UserID: "alice", PostSlug: "post", ObserveModel: observeRef.String(), WriteModel: writeRef.String(),

@@ -3,6 +3,8 @@ package generation
 import (
 	"fmt"
 	"time"
+
+	"github.com/postpilot/backend/internal/post"
 )
 
 type BlockType string
@@ -53,8 +55,10 @@ type PostContent struct {
 // content beside it. Nouns are the distinct nouns the title and the body use, already bounded
 // by the parser (GEN-55); none is a real answer and never a failed write.
 type WriteAnswer struct {
-	Content PostContent
-	Nouns   []string
+	Content          PostContent
+	Nouns            []string
+	OriginCandidates []post.OriginCandidate
+	Origins          *post.OriginReview
 	// Storyline is the plan the write answered before the post (GEN-67), bounded by the parser.
 	// nil only for a comparison candidate recorded before the storyline existed, which then
 	// keeps the post's own (GEN-72).
@@ -64,8 +68,35 @@ type WriteAnswer struct {
 // Storyline is a write's storyline: its paragraphs in order, and the attachment names the
 // writing stage was shown (GEN-12), which is what the post reads an added attachment against.
 type Storyline struct {
-	Paragraphs []StorylineParagraph
-	MadeWith   []string
+	Paragraphs       []StorylineParagraph
+	MadeWith         []string
+	OriginCandidates []PlanOriginCandidate
+	Origins          *PlanOriginReview
+}
+
+// Plans use paragraph locators, independently of canonical PostContent fields.
+// Choosing/editing the plan does not change the original meaning's evidence.
+type PlanOriginCandidate struct {
+	ParagraphIndex int
+	Quote          string
+	Occurrence     *int
+	Category       post.OriginCategory
+	SourceRefs     []string
+}
+
+type PlanOriginSpan struct {
+	ParagraphIndex, Start, End int
+	Quote                      string
+	Category                   post.OriginCategory
+	SourceRefs                 []string
+	ReviewState                post.OriginReviewState
+}
+
+type PlanOriginReview struct {
+	Version int
+	Result  post.OriginResultIdentity
+	Sources []post.OriginSource
+	Spans   []PlanOriginSpan
 }
 
 // StorylineParagraph is one part of the storyline: a short plan of what it shows and says, and
@@ -90,12 +121,14 @@ func (a WriteAnswer) Annotations() *WriteAnnotations {
 }
 
 type Observation struct {
-	File          string
-	Scene         string
-	Mood          string
-	VisibleText   string
-	Objects       []string
-	PeoplePresent bool
+	OriginCandidates []ObservationOriginCandidate
+	Origins          *ObservationOriginReview
+	File             string
+	Scene            string
+	Mood             string
+	VisibleText      string
+	Objects          []string
+	PeoplePresent    bool
 	// Model is the ref that observed this photo, stamped where the batch ran. It is what
 	// lets the picker say whose eyesight it is offering to reuse; empty means unknown.
 	Model string
@@ -106,6 +139,32 @@ type Observation struct {
 	// Rotation is the clockwise turn, in degrees (0, 90, 180, 270), that makes a photo's scene
 	// upright (GEN-79); always 0 for a video.
 	Rotation int
+}
+
+type ObservationOriginCandidate struct {
+	Field      string
+	ItemIndex  *int
+	Quote      string
+	Occurrence *int
+	Category   post.OriginCategory
+	SourceRefs []string
+}
+
+type ObservationOriginSpan struct {
+	ReviewState post.OriginReviewState
+	Field       string
+	ItemIndex   *int
+	Start, End  int
+	Quote       string
+	Category    post.OriginCategory
+	SourceRefs  []string
+}
+
+type ObservationOriginReview struct {
+	Version int
+	Result  post.OriginResultIdentity
+	Sources []post.OriginSource
+	Spans   []ObservationOriginSpan
 }
 
 // AttachmentKind is which kind of attachment an Image entry describes. The generation
@@ -252,11 +311,19 @@ type PostInput struct {
 	// FollowStoryline is the frozen storyline a from-storyline run writes along (GEN-70), empty
 	// for every other run. Only the generate payload carries it: a comparison never reads the
 	// storyline (GEN-72).
-	FollowStoryline []StorylineParagraph
-	Content         *PostContent
-	TargetLanguage  Language
-	ContentLanguage *Language
-	TargetLength    *int
+	FollowStoryline        []StorylineParagraph
+	FollowStorylineOrigins *PlanOriginReview
+	ContentOrigins         *post.OriginReview
+	ContentOriginIdentity  *post.OriginResultIdentity
+	// 0 is the admitted legacy contract; new admissions freeze the known version.
+	OriginProtocolVersion  int
+	OriginCompletionTokens int
+	OriginFictional        bool
+	Content                *PostContent
+	ContentRevision        int64
+	TargetLanguage         Language
+	ContentLanguage        *Language
+	TargetLength           *int
 	// TagCount is how many tags the prompt asks for (POST-63). Read from the post at enqueue
 	// and frozen like TargetLength; a write-experiment snapshot carries it, so a different
 	// count is a different input hash. 0 is only ever a legacy decode and resolves to the
@@ -296,11 +363,13 @@ type ProfileSource struct {
 // StartRequest.VoiceID is filled by the service from the owned post and frozen into the
 // job, so the handler can prove the post still belongs to the voice it was queued for.
 type StartRequest struct {
-	UserID       string
-	PostSlug     string
-	VoiceID      string
-	ObserveModel string
-	WriteModel   string
+	OriginProtocolVersion int
+	CompletionTokens      int
+	UserID                string
+	PostSlug              string
+	VoiceID               string
+	ObserveModel          string
+	WriteModel            string
 	// TargetLanguage, VoiceID and WriteNativeEffort are resolved by Start from the post and the
 	// catalog; the enqueue adapter reads them for the row and the hold.
 	TargetLanguage Language
@@ -333,16 +402,18 @@ type GenerateJob struct {
 }
 
 type StartRevisionRequest struct {
-	UserID            string
-	PostSlug          string
-	VoiceID           string
-	Instruction       string
-	WriteModel        string
-	ContentLanguage   Language
-	Template          *TemplateBrief
-	Guidelines        []string
-	DefaultGuidelines []string
-	StockGuidelines   []StockGuideline
+	OriginProtocolVersion int
+	CompletionTokens      int
+	UserID                string
+	PostSlug              string
+	VoiceID               string
+	Instruction           string
+	WriteModel            string
+	ContentLanguage       Language
+	Template              *TemplateBrief
+	Guidelines            []string
+	DefaultGuidelines     []string
+	StockGuidelines       []StockGuideline
 	// The enqueue adapter uses the same frozen length facts as the revision handler to price
 	// the completion budget. Neither field is sent by the client or persisted independently.
 	TargetLength *int

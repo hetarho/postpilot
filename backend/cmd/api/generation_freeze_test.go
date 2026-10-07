@@ -149,7 +149,8 @@ type recordingModels struct {
 	// nativeEffort is what every model resolves with as ReasoningNativeEffort.
 	nativeEffort bool
 	// answer replaces the post answer every call returns, when set.
-	answer string
+	answer       string
+	finishReason string
 }
 
 func (m *recordingModels) Resolve(ref llm.ModelRef) (llm.ModelInfo, bool) {
@@ -161,7 +162,7 @@ func (m *recordingModels) Complete(_ context.Context, _ llm.ModelRef, request ll
 	defer m.mu.Unlock()
 	m.requests = append(m.requests, request)
 	if m.answer != "" {
-		return llm.Response{Text: m.answer}, nil
+		return llm.Response{Text: m.answer, FinishReason: m.finishReason}, nil
 	}
 	return llm.Response{Text: `{"title":"을지로 노포","summary":"요약","tags":["을지로","노포","맛집","식당"],"blocks":[{"type":"TEXT","content":"을지로 골목의 노포에 다녀왔다."}]}`}, nil
 }
@@ -187,7 +188,7 @@ type drainHarness struct {
 	waitDone func(id string)
 }
 
-func newDrainHarness(t *testing.T, models *recordingModels) *drainHarness {
+func newDrainHarness(t *testing.T, models *recordingModels, configure ...func(*generation.Service, *post.Service) *generation.Service) *drainHarness {
 	t.Helper()
 	handle, err := db.Open(filepath.Join(t.TempDir(), "drain.db"))
 	if err != nil {
@@ -231,6 +232,9 @@ func newDrainHarness(t *testing.T, models *recordingModels) *drainHarness {
 			QualityRules: generationQuality{service: qualitySvc},
 		},
 	)
+	for _, customize := range configure {
+		generationSvc = customize(generationSvc, postSvc)
+	}
 	// The worker's own handlers, not a copy (review F17): a mapping change in registerJobs is what
 	// this harness runs. Only the generate and revise kinds are ever enqueued here, so the other
 	// contexts registerJobs captures can stay nil.
@@ -383,7 +387,7 @@ func TestStorylineJobsDrainIntoThePostsStorylineAlone(t *testing.T) {
 		t.Fatal(err)
 	}
 	h.waitDone(id)
-	if got := models.last(); got.MaxTokens != testCompletionBudget().Short(false) || !bytes.Equal(got.JSONSchema, generation.StorylineAnswerSchema()) {
+	if got := models.last(); got.MaxTokens != testCompletionBudget().Short(false) || !bytes.Equal(got.JSONSchema, generation.LegacyStorylineAnswerSchema()) {
 		t.Fatalf("the storyline call asked for %d tokens with schema %s", got.MaxTokens, got.JSONSchema)
 	}
 	written, err := h.posts.Get(h.ctx, "alice", saved.Slug)

@@ -1,24 +1,103 @@
 {
   "type": "object",
-    "additionalProperties": false,
-    "required": ["observations"],
-    "properties": {
-      "observations": {
-        "type": "array",
-        "items": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": ["file", "scene", "mood", "visible_text", "objects", "people_present", "rotation"],
-          "properties": {
-            "file": {"type": "string"},
-            "scene": {"type": "string"},
-            "mood": {"type": "string"},
-            "visible_text": {"type": "string"},
-            "objects": {"type": "array", "items": {"type": "string"}},
-            "people_present": {"type": "boolean"},
-            "rotation": {"type": "integer"}
+  "additionalProperties": false,
+  "required": ["observations"],
+  "properties": {
+    "observations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "file",
+          "scene",
+          "mood",
+          "visible_text",
+          "objects",
+          "people_present",
+          "rotation"
+        ],
+        "properties": {
+          "file": {
+            "type": "string"
+          },
+          "scene": {
+            "type": "string"
+          },
+          "mood": {
+            "type": "string"
+          },
+          "visible_text": {
+            "type": "string"
+          },
+          "objects": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "people_present": {
+            "type": "boolean"
+          },
+          "rotation": {
+            "type": "integer"
+          }
+        }
+      }
+    },
+    "origins": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["file", "field", "quote", "category", "source_refs"],
+        "properties": {
+          "file": {
+            "type": "string"
+          },
+          "field": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["kind"],
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "observation_scene",
+                  "observation_mood",
+                  "observation_visible_text",
+                  "observation_object",
+                  "observation_event",
+                  "observation_speech"
+                ]
+              },
+              "item_index": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          },
+          "quote": {
+            "type": "string"
+          },
+          "occurrence": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "category": {
+            "type": "string",
+            "enum": ["owner_input", "photo_interpretation", "ai_added"]
+          },
+          "source_refs": {
+            "type": "array",
+            "maxItems": 128,
+            "items": {
+              "type": "string",
+              "maxLength": 128
+            }
           }
         }
       }
     }
+  }
 }

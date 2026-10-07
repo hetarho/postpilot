@@ -12,7 +12,8 @@ import (
 )
 
 const writingTestSnapshotVersion = 1
-const writingTestPromptVersion = "generation-full-writing-test-v1"
+const writingTestPromptVersion = "generation-full-writing-test-v2-origins"
+const legacyWritingTestPromptVersion = "generation-full-writing-test-v1"
 const writingTestRequestMaxBytes = 1 << 20
 
 func EncodeWritingTestMaterialRequest(in WritingTestMaterialRequest) ([]byte, error) {
@@ -154,7 +155,7 @@ func decodeWritingTestSnapshot(snapshot WritingTestSnapshot) (writingTestCommon,
 			return writingTestCommon{}, nil, err
 		}
 		input, err := decodeWriteSnapshot(value.Snapshot)
-		if err != nil || input.TargetLanguage != common.Post.TargetLanguage || input.Post.UserID != common.Post.UserID || !input.SnapshotOnly {
+		if err != nil || input.Post.OriginProtocolVersion != common.Post.OriginProtocolVersion || input.TargetLanguage != common.Post.TargetLanguage || input.Post.UserID != common.Post.UserID || !input.SnapshotOnly {
 			return writingTestCommon{}, nil, ErrWritingTestMaterial
 		}
 		variants[index] = writingTestVariant{
@@ -187,6 +188,11 @@ func writingTestSemanticKey(value any) string {
 }
 func writingTestSchemaVersion() string {
 	sum := sha256.Sum256(append(append(append(WriteAnswerSchema(), ObservationsSchema()...), VideoObservationsSchema()...), StorylineAnswerSchema()...))
+	return hex.EncodeToString(sum[:])
+}
+
+func legacyWritingTestSchemaVersion() string {
+	sum := sha256.Sum256(append(append(append(LegacyWriteAnswerSchema(), LegacyObservationsSchema()...), LegacyVideoObservationsSchema()...), LegacyStorylineAnswerSchema()...))
 	return hex.EncodeToString(sum[:])
 }
 

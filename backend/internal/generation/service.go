@@ -2,6 +2,7 @@ package generation
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -12,6 +13,9 @@ import (
 )
 
 type Service struct {
+	originProtocol int
+	originPosts    OriginPostPublisher
+	originPlans    OriginStorylinePublisher
 	// Private workers label the same real composer without changing its prompt.
 	fullWritingTest bool
 	posts           Posts
@@ -138,6 +142,7 @@ func (s *Service) StartRevision(ctx context.Context, request StartRevisionReques
 		return "", err
 	}
 	post := in.post
+	request.OriginProtocolVersion = s.originProtocol
 	request.ContentLanguage = in.language
 	request.TargetLength = cloneOptionalInt(post.TargetLength)
 	request.TagCount = resolveTagCount(post.TagCount)
@@ -160,9 +165,23 @@ func (s *Service) StartRevision(ctx context.Context, request StartRevisionReques
 	if err != nil {
 		return "", fmt.Errorf("freeze revision voice: %w", err)
 	}
+	if s.originProtocol == OriginProtocolVersion {
+		request.CompletionTokens = s.budget.Revise(request.ContentChars+OriginCompletionExtraChars, request.TargetLength, request.WriteNativeEffort)
+	}
 	payload, err := encodeRevisionPayloadForLanguage(request.Instruction, request.ContentLanguage, brief, guidelines, request.TagCount, request.WriteNativeEffort, profile)
 	if err != nil {
 		return "", fmt.Errorf("encode revision payload: %w", err)
+	}
+	if s.originProtocol == OriginProtocolVersion {
+		var wire revisionPayloadJSON
+		if err := json.Unmarshal(payload, &wire); err != nil {
+			return "", err
+		}
+		wire.OriginProtocolVersion, wire.CompletionTokens = s.originProtocol, request.CompletionTokens
+		payload, err = json.Marshal(wire)
+		if err != nil {
+			return "", err
+		}
 	}
 	id, err := s.jobs.EnqueueRevision(ctx, request, payload)
 	if err != nil {
@@ -196,6 +215,7 @@ func (s *Service) Start(ctx context.Context, request StartRequest) (string, erro
 	if err != nil {
 		return "", err
 	}
+	request.OriginProtocolVersion = s.originProtocol
 	request.TargetLanguage = in.language
 	request.VoiceID = in.voiceID
 	request.WriteNativeEffort = in.write.ReasoningNativeEffort
@@ -205,7 +225,11 @@ func (s *Service) Start(ctx context.Context, request StartRequest) (string, erro
 	if err != nil {
 		return "", fmt.Errorf("freeze writing voice: %w", err)
 	}
+	if s.originProtocol == OriginProtocolVersion {
+		request.CompletionTokens = s.budget.Write(OriginBudgetTarget(request.TargetLength), request.WriteNativeEffort)
+	}
 	options := generationOptions{
+		OriginProtocolVersion: s.originProtocol, CompletionTokens: request.CompletionTokens,
 		Profile:        &profile,
 		TargetLanguage: in.language,
 		TargetLength:   cloneOptionalInt(request.TargetLength),
@@ -216,6 +240,12 @@ func (s *Service) Start(ctx context.Context, request StartRequest) (string, erro
 		ObserveFiles:      in.observe.files,
 		Observations:      in.observe.observations,
 		FollowStoryline:   in.storyline,
+		FollowStorylineOrigins: func() *PlanOriginReview {
+			if post.Storyline != nil {
+				return clonePlanOrigins(post.Storyline.Origins)
+			}
+			return nil
+		}(),
 	}
 	payload, err := encodeGenerationPayload(options)
 	if err != nil {

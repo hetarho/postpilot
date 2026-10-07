@@ -33,6 +33,27 @@ var writeAlongStorylineAnswerSchema []byte
 //go:embed schemas/storyline_answer.schema.json
 var storylineAnswerSchema []byte
 
+// Exact pre-origin contracts remain available only to already frozen legacy
+// protocol calls. Their byte hashes are part of paid checkpoint admission.
+//
+//go:embed schemas/legacy/observations.schema.json
+var legacyObservationsSchema []byte
+
+//go:embed schemas/legacy/video_observations.schema.json
+var legacyVideoObservationsSchema []byte
+
+//go:embed schemas/legacy/post_content.schema.json
+var legacyPostContentSchema []byte
+
+//go:embed schemas/legacy/write_answer.schema.json
+var legacyWriteAnswerSchema []byte
+
+//go:embed schemas/legacy/write_along_storyline_answer.schema.json
+var legacyWriteAlongStorylineAnswerSchema []byte
+
+//go:embed schemas/legacy/storyline_answer.schema.json
+var legacyStorylineAnswerSchema []byte
+
 func ObservationsSchema() []byte      { return append([]byte(nil), observationsSchema...) }
 func VideoObservationsSchema() []byte { return append([]byte(nil), videoObservationsSchema...) }
 func PostContentSchema() []byte       { return append([]byte(nil), postContentSchema...) }
@@ -41,3 +62,14 @@ func StorylineAnswerSchema() []byte   { return append([]byte(nil), storylineAnsw
 func WriteAlongStorylineAnswerSchema() []byte {
 	return append([]byte(nil), writeAlongStorylineAnswerSchema...)
 }
+
+func LegacyObservationsSchema() []byte { return append([]byte(nil), legacyObservationsSchema...) }
+func LegacyVideoObservationsSchema() []byte {
+	return append([]byte(nil), legacyVideoObservationsSchema...)
+}
+func LegacyPostContentSchema() []byte { return append([]byte(nil), legacyPostContentSchema...) }
+func LegacyWriteAnswerSchema() []byte { return append([]byte(nil), legacyWriteAnswerSchema...) }
+func LegacyWriteAlongStorylineAnswerSchema() []byte {
+	return append([]byte(nil), legacyWriteAlongStorylineAnswerSchema...)
+}
+func LegacyStorylineAnswerSchema() []byte { return append([]byte(nil), legacyStorylineAnswerSchema...) }

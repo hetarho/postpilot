@@ -3,6 +3,7 @@ package generation
 import (
 	"context"
 	"fmt"
+	postdomain "github.com/postpilot/backend/internal/post"
 	"unicode/utf8"
 )
 
@@ -51,22 +52,45 @@ func (s *Service) Revise(ctx context.Context, job RevisionJob, progress Progress
 	// The brief, the 지침 and the tag count come from the frozen payload, never from the
 	// live rows, exactly as the generate handler does it.
 	tagCount := resolveTagCount(payload.TagCount)
+	var sources []postdomain.OriginSource
 	photos, _ := AttachmentNames(post.Images)
 	request := composeRevisionRequest(payload.ContentLanguage, profile, *post.Content, filenames, photos, PhotoPortraits(post.Images, post.Observations), payload.Instruction, post.TargetLength, tagCount, decodeTemplate(payload.Template), FrozenGuidelines{Defaults: payload.DefaultGuidelines, Stock: decodeStockGuidelines(payload.StockGuidelines), Owner: payload.Guidelines})
+	if payload.OriginProtocolVersion == OriginProtocolVersion {
+		sources = WritingOriginSources(WritePromptInput{Template: decodeTemplate(payload.Template)}, false)
+		catalog := originCatalog{sources: sources}
+		for _, source := range sources {
+			catalog.chars += utf8.RuneCountInString(source.Text)
+		}
+		catalog.add("current.edit", postdomain.OriginSourceOwnerEdit, payload.Instruction, "", true)
+		sources = catalog.sources
+		_, videos := AttachmentNames(post.Images)
+		sources = catalogWithPriorContent(sources, *post.Content, post.ContentOrigins, post.ContentOriginIdentity, photos, videos)
+		prior := validatedContentOriginContext(*post.Content, post.ContentOrigins, post.ContentOriginIdentity, photos, videos)
+		request = appendOriginRequest(request, sources, priorOriginProjection(prior))
+	}
 	request.Reasoning = s.reasoning.Write
 	request.MaxTokens = s.budget.Revise(contentChars(post.Content), post.TargetLength, payload.WriteNativeEffort)
+	if payload.OriginProtocolVersion == OriginProtocolVersion {
+		request.MaxTokens = payload.CompletionTokens
+	}
+	schema := PostContentSchema()
+	if payload.OriginProtocolVersion == 0 {
+		schema = LegacyPostContentSchema()
+	}
+	setOriginOutput(&request, "PostContent", schema, payload.OriginProtocolVersion)
 	if info, found := s.models.Resolve(model); found && info.StructuredOutput {
-		request.JSONSchema = PostContentSchema()
+		request.JSONSchema = schema
 	}
 	progress("write", 0, 1)
 	response, err := s.models.Complete(ctx, model, request)
 	if err != nil {
 		return providerCallError("글 수정", err)
 	}
-	content, err := ParseRevisionContent(response.Text, tagCount, *post.Content)
+	content, candidates, err := ParseRevisionContentWithOrigins(response.Text, tagCount, *post.Content)
 	if err != nil {
 		return responseParseError(response, err)
 	}
+	rawContent := *content
 	content.Blocks = ValidateBlocks(content.Blocks)
 	// Attachments can change while the provider call is in flight. Filter against a
 	// fresh snapshot so a concurrently deleted photo can never become a dangling IMAGE
@@ -89,7 +113,25 @@ func (s *Service) Revise(ctx context.Context, job RevisionJob, progress Progress
 	filtered := FilterAttachments(*content, currentPhotos, currentVideos, PhotoPortraits(current.Images, current.Observations))
 	// nil keeps the post's nouns: a revision has no nouns answer (GEN-55), so what the last
 	// generation said stands.
-	if err := s.posts.SetGeneratedContent(ctx, current.UserID, current.Slug, filtered, payload.ContentLanguage, nil); err != nil {
+	var publishErr error
+	if payload.OriginProtocolVersion == OriginProtocolVersion {
+		final, mapping := NormalizeContentWithOriginMap(rawContent, currentPhotos, currentVideos, PhotoPortraits(current.Images, current.Observations))
+		mapped, _ := RemapOriginCandidates(rawContent, final, mapping, candidates)
+		var identity []postdomain.OriginResultIdentity
+		if post.ContentOriginIdentity != nil {
+			identity = append(identity, *post.ContentOriginIdentity)
+		}
+		prior := cloneOriginReview(post.ContentOrigins)
+		if prior != nil {
+			prior.Sources = OriginSourcesWithAttachments(prior.Sources, currentPhotos, currentVideos)
+		}
+		sources = OriginSourcesWithAttachments(sources, currentPhotos, currentVideos)
+		origins := PreserveRevisionOrigins(*post.Content, prior, final, sources, mapped, identity...)
+		_, publishErr = s.originPosts.PublishGeneratedResult(ctx, current.UserID, current.Slug, OriginPostCompletion{Content: final, Language: payload.ContentLanguage, Origins: origins, ExpectedContentRevision: post.ContentRevision})
+	} else {
+		publishErr = s.posts.SetGeneratedContent(ctx, current.UserID, current.Slug, filtered, payload.ContentLanguage, nil)
+	}
+	if err := publishErr; err != nil {
 		return fmt.Errorf("persist revised content: %w", err)
 	}
 	s.recordGuidelineCandidate(ctx, current.UserID, current.Slug, payload.Instruction)

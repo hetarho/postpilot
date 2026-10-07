@@ -1,0 +1,19 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["storyline"],
+  "properties": {
+    "storyline": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["text", "files"],
+        "properties": {
+          "text": {"type": "string"},
+          "files": {"type": "array", "items": {"type": "string"}}
+        }
+      }
+    }
+  }
+}

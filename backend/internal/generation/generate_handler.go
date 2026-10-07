@@ -76,7 +76,13 @@ func (s *Service) Generate(ctx context.Context, job GenerateJob, progress Progre
 	}
 	// The answer's annotations replace the post's, a noun-less write's included: its nil nouns
 	// clear the ones the last generation stored (GEN-55).
-	if err := s.posts.SetGeneratedContent(ctx, post.UserID, post.Slug, answer.Content, options.TargetLanguage, answer.Annotations()); err != nil {
+	var publishErr error
+	if options.OriginProtocolVersion == OriginProtocolVersion {
+		_, publishErr = s.originPosts.PublishGeneratedResult(ctx, post.UserID, post.Slug, OriginPostCompletion{Content: answer.Content, Language: options.TargetLanguage, Annotations: answer.Annotations(), Origins: answer.Origins, ExpectedContentRevision: post.ContentRevision})
+	} else {
+		publishErr = s.posts.SetGeneratedContent(ctx, post.UserID, post.Slug, answer.Content, options.TargetLanguage, answer.Annotations())
+	}
+	if err := publishErr; err != nil {
 		return fmt.Errorf("persist generated content: %w", err)
 	}
 	progress("write", 1, 1)

@@ -135,7 +135,7 @@ func TestAFieldLeavesTheWriteRequestByteIdentical(t *testing.T) {
 	if !reflect.DeepEqual(with, without) {
 		t.Fatalf("a 분야 moved the write request:\n%s\n%s\n---\n%s\n%s", with.System, with.Messages[0].Parts[0].Text, without.System, without.Messages[0].Parts[0].Text)
 	}
-	if !bytes.Equal(with.JSONSchema, WriteAnswerSchema()) {
+	if !bytes.Equal(with.JSONSchema, LegacyWriteAnswerSchema()) {
 		t.Fatalf("the write asked for %s, want the plain write answer schema", with.JSONSchema)
 	}
 }

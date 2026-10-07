@@ -17,6 +17,7 @@ import (
 	"github.com/postpilot/backend/internal/quality"
 	"github.com/postpilot/backend/internal/storage"
 	"github.com/postpilot/backend/internal/template"
+	"github.com/postpilot/backend/internal/usage"
 	"github.com/postpilot/backend/internal/voice"
 )
 
@@ -247,8 +248,9 @@ func (a generationPosts) AttachedImages(ctx context.Context, userID, slug string
 	}
 	input := generation.PostInput{
 		Slug: found.Slug, UserID: found.UserID, Title: found.Title, Memo: found.Memo,
-		Voice:          generation.VoiceRef{ID: found.Voice.ID, Name: found.Voice.Name, Deleted: found.Voice.Deleted, Made: found.Voice.Made},
-		TargetLanguage: generation.Language(found.TargetLanguage),
+		ContentRevision: found.ContentRevision,
+		Voice:           generation.VoiceRef{ID: found.Voice.ID, Name: found.Voice.Name, Deleted: found.Voice.Deleted, Made: found.Voice.Made},
+		TargetLanguage:  generation.Language(found.TargetLanguage),
 		// The id, never the brief: only the enqueue resolves it, and only through the template
 		// context's own port. Dropping it here is what would make the whole feature a silent
 		// no-op — every prompt would be built as if no post ever had a 템플릿.
@@ -518,14 +520,24 @@ func observeWriteCalls(observeModel, writeModel string, observeCalls, writeCap i
 // generationCalls is a generation's counts and priced calls: its write at the budget for the
 // frozen target length and native-effort flag.
 func generationCalls(request generation.StartRequest, budget config.LLMCompletionBudget) (map[string]int, []job.PlannedCall) {
-	return observeWriteCalls(request.ObserveModel, request.WriteModel, request.ObserveCalls, budget.Write(request.TargetLength, request.WriteNativeEffort), budget)
+	completion := budget.Write(request.TargetLength, request.WriteNativeEffort)
+	if request.OriginProtocolVersion == generation.OriginProtocolVersion && request.CompletionTokens > 0 {
+		completion = request.CompletionTokens
+	}
+	counts, pricing := observeWriteCalls(request.ObserveModel, request.WriteModel, request.ObserveCalls, completion, budget)
+	return counts, originPricingAllowance(pricing, request.OriginProtocolVersion)
 }
 
 // storylineCalls is a storyline job's counts and priced calls, as a generation's: its one
 // storyline call at the short budget for the native-effort flag the start froze — the cap the
 // call will send.
 func storylineCalls(request generation.StartStorylineRequest, budget config.LLMCompletionBudget) (map[string]int, []job.PlannedCall) {
-	return observeWriteCalls(request.ObserveModel, request.WriteModel, request.ObserveCalls, budget.Short(request.WriteNativeEffort), budget)
+	completion := budget.Short(request.WriteNativeEffort)
+	if request.OriginProtocolVersion == generation.OriginProtocolVersion && request.CompletionTokens > 0 {
+		completion = request.CompletionTokens
+	}
+	counts, pricing := observeWriteCalls(request.ObserveModel, request.WriteModel, request.ObserveCalls, completion, budget)
+	return counts, originPricingAllowance(pricing, request.OriginProtocolVersion)
 }
 
 // storylineRevisionPricingCalls prices the storyline request: one storyline call, sized as
@@ -534,17 +546,44 @@ func storylineRevisionPricingCalls(request generation.StartStorylineRevisionRequ
 	if request.WriteModel == "" {
 		return nil
 	}
-	return []job.PlannedCall{{Ref: request.WriteModel, Stage: "write", Count: 1, CompletionTokens: budget.Short(request.WriteNativeEffort)}}
+	completion := budget.Short(request.WriteNativeEffort)
+	if request.OriginProtocolVersion == generation.OriginProtocolVersion && request.CompletionTokens > 0 {
+		completion = request.CompletionTokens
+	}
+	return originPricingAllowance([]job.PlannedCall{{Ref: request.WriteModel, Stage: "write", Count: 1, CompletionTokens: completion}}, request.OriginProtocolVersion)
 }
 
 func revisionPricingCalls(request generation.StartRevisionRequest, budget config.LLMCompletionBudget) []job.PlannedCall {
 	if request.WriteModel == "" {
 		return nil
 	}
-	return []job.PlannedCall{{
+	completion := budget.Revise(request.ContentChars, request.TargetLength, request.WriteNativeEffort)
+	if request.OriginProtocolVersion == generation.OriginProtocolVersion && request.CompletionTokens > 0 {
+		completion = request.CompletionTokens
+	}
+	return originPricingAllowance([]job.PlannedCall{{
 		Ref: request.WriteModel, Stage: "write", Count: 1,
-		CompletionTokens: budget.Revise(request.ContentChars, request.TargetLength, request.WriteNativeEffort),
-	}}
+		CompletionTokens: completion,
+	}}, request.OriginProtocolVersion)
+}
+
+func originPricingAllowance(pricing []job.PlannedCall, version int) []job.PlannedCall {
+	if version != generation.OriginProtocolVersion {
+		return pricing
+	}
+	for index := range pricing {
+		overhead := 0
+		switch pricing[index].Stage {
+		case llm.StageNameWrite:
+			overhead = generation.OriginPromptTokenOverhead
+		case llm.StageNameObserve:
+			overhead = generation.ObserveOriginPromptTokenOverhead
+		}
+		if overhead > 0 {
+			pricing[index].PromptTokens = int(usage.HoldPromptTokenBound(int64(pricing[index].PromptTokens))) + overhead
+		}
+	}
+	return pricing
 }
 
 func (a generationJobs) GetGeneration(ctx context.Context, id, userID string) (*generation.JobSummary, error) {

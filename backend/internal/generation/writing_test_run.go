@@ -345,9 +345,9 @@ func addWritingTestUsage(out *CandidateUsage, usage llm.Usage) {
 }
 
 func cloneWritingTestAnswer(answer WriteAnswer) WriteAnswer {
-	out := WriteAnswer{Content: fromSnapshotContent(toSnapshotContent(answer.Content)), Nouns: copyTexts(answer.Nouns)}
+	out := WriteAnswer{Content: fromSnapshotContent(toSnapshotContent(answer.Content)), Nouns: copyTexts(answer.Nouns), Origins: cloneOriginReview(answer.Origins), OriginCandidates: cloneContentOriginCandidates(answer.OriginCandidates)}
 	if answer.Storyline != nil {
-		out.Storyline = &Storyline{MadeWith: copyTexts(answer.Storyline.MadeWith), Paragraphs: mapSlice(answer.Storyline.Paragraphs, func(p StorylineParagraph) StorylineParagraph {
+		out.Storyline = &Storyline{Origins: clonePlanOrigins(answer.Storyline.Origins), OriginCandidates: clonePlanOriginCandidates(answer.Storyline.OriginCandidates), MadeWith: copyTexts(answer.Storyline.MadeWith), Paragraphs: mapSlice(answer.Storyline.Paragraphs, func(p StorylineParagraph) StorylineParagraph {
 			return StorylineParagraph{Text: p.Text, Files: copyTexts(p.Files)}
 		})}
 	}
@@ -395,7 +395,7 @@ func (f *WritingTestFactory) writingTestWorker(common writingTestCommon, variant
 	}
 	worker.budget, worker.reasoning, worker.batchSize = budget, common.Reasoning, common.BatchSize
 	worker.profiles = writingTestFrozenProfiles{Profiles: worker.profiles}
-	models := writingTestFrozenModels{LLM: worker.models, observeRef: common.ObserveModel, observeSchema: common.ObserveStructuredOutput}
+	models := writingTestFrozenModels{LLM: worker.models, legacy: common.Post.OriginProtocolVersion == 0, observeRef: common.ObserveModel, observeSchema: common.ObserveStructuredOutput}
 	if variant != nil {
 		models.observeRef, models.writeRef = variant.ObserveModel, variant.WriteModel
 		models.observeSchema, models.writeSchema = variant.ObserveStructuredOutput, variant.WriteStructuredOutput
@@ -405,7 +405,8 @@ func (f *WritingTestFactory) writingTestWorker(common writingTestCommon, variant
 }
 
 func checkWritingTestVersions(common writingTestCommon) error {
-	if common.PromptVersion != writingTestPromptVersion || common.SchemaVersion != writingTestSchemaVersion() || !common.Reasoning.Observe.Valid() || !common.Reasoning.Write.Valid() {
+	known := (common.PromptVersion == writingTestPromptVersion && common.SchemaVersion == writingTestSchemaVersion() && common.Post.OriginProtocolVersion == OriginProtocolVersion) || (common.PromptVersion == legacyWritingTestPromptVersion && common.SchemaVersion == legacyWritingTestSchemaVersion() && common.Post.OriginProtocolVersion == 0)
+	if !known || !common.Reasoning.Observe.Valid() || !common.Reasoning.Write.Valid() {
 		return ErrWritingTestMaterial
 	}
 	if observerWritingTest(common) && len(common.Post.Images) == 0 {
@@ -416,6 +417,7 @@ func checkWritingTestVersions(common writingTestCommon) error {
 
 type writingTestFrozenModels struct {
 	LLM
+	legacy                     bool
 	observeRef, writeRef       llm.ModelRef
 	observeSchema, writeSchema bool
 }
@@ -435,8 +437,14 @@ func (m writingTestFrozenModels) Complete(ctx context.Context, ref llm.ModelRef,
 		if m.observeSchema {
 			if request.HasVideos() {
 				request.JSONSchema = VideoObservationsSchema()
+				if m.legacy {
+					request.JSONSchema = LegacyVideoObservationsSchema()
+				}
 			} else {
 				request.JSONSchema = ObservationsSchema()
+				if m.legacy {
+					request.JSONSchema = LegacyObservationsSchema()
+				}
 			}
 		}
 	}

@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/postpilot/backend/internal/llm"
+	postdomain "github.com/postpilot/backend/internal/post"
 )
 
 func (s *Service) write(ctx context.Context, post PostInput, observations []Observation, model llm.ModelRef) (WriteAnswer, error) {
@@ -27,31 +28,59 @@ func (s *Service) writeCandidate(ctx context.Context, post PostInput, profile Pr
 	// A snapshot frozen before the member existed carries 0 here; the prompt and the parser
 	// must agree on one number, so it is resolved once.
 	tagCount := resolveTagCount(post.TagCount)
-	request := ComposeWriteRequest(WritePromptInput{
+	input := WritePromptInput{
 		Language: post.TargetLanguage, Profile: profile, Observations: observations,
 		Memo: post.Memo, Title: post.Title, Photos: photos, Videos: videos,
 		TargetLength: post.TargetLength, TagCount: tagCount, Template: post.Template,
 		DefaultGuidelines: post.DefaultGuidelines, StockGuidelines: post.StockGuidelines, Guidelines: post.Guidelines, Memories: post.Memories, QualityRules: post.QualityRules,
 		FollowStoryline: post.FollowStoryline, Portraits: PhotoPortraits(post.Images, observations),
-	})
+	}
+	request := ComposeWriteRequest(input)
+	var sources []postdomain.OriginSource
+	if post.OriginProtocolVersion == OriginProtocolVersion {
+		sources = WritingOriginSources(input, post.OriginFictional)
+		prior := ValidateStoredPlanOrigins(post.FollowStoryline, post.FollowStorylineOrigins)
+		sources = catalogWithPriorPlan(sources, post.FollowStoryline, prior, photos, videos)
+		request = appendOriginRequest(request, sources, priorPlanProjection(prior))
+	}
 	request.Reasoning = s.reasoning.Write
 	request.MaxTokens = s.budget.Write(post.TargetLength, post.WriteNativeEffort)
+	if post.OriginProtocolVersion == OriginProtocolVersion {
+		if post.OriginCompletionTokens > 0 {
+			request.MaxTokens = post.OriginCompletionTokens
+		} else {
+			request.MaxTokens = s.budget.Write(OriginBudgetTarget(post.TargetLength), post.WriteNativeEffort)
+		}
+	}
 	if s.fullWritingTest {
 		request.Composition.Mode = "full-test-direct"
 	}
 	following := len(post.FollowStoryline) > 0
-	if info, ok := s.models.Resolve(model); ok && info.StructuredOutput {
-		request.JSONSchema = WriteAnswerSchema()
-		if following {
-			request.JSONSchema = WriteAlongStorylineAnswerSchema()
+	outputName, schema := "WriteAnswer", WriteAnswerSchema()
+	if post.OriginProtocolVersion == 0 {
+		schema = LegacyWriteAnswerSchema()
+	}
+	if following {
+		outputName, schema = "WriteAlongStorylineAnswer", WriteAlongStorylineAnswerSchema()
+		if post.OriginProtocolVersion == 0 {
+			schema = LegacyWriteAlongStorylineAnswerSchema()
 		}
+	}
+	setOriginOutput(&request, outputName, schema, post.OriginProtocolVersion)
+	if info, ok := s.models.Resolve(model); ok && info.StructuredOutput {
+		request.JSONSchema = schema
 	}
 	response, err := s.models.Complete(ctx, model, request)
 	if err != nil {
 		return WriteAnswer{}, response.Usage, providerCallError("글 작성", err)
 	}
 	shown := append(append([]string(nil), photos...), videos...)
-	answer, err := ParseWriteAnswer(response.Text, tagCount, shown)
+	var answer *WriteAnswer
+	if following {
+		answer, err = ParseWriteAlongStorylineAnswer(response.Text, tagCount, shown)
+	} else {
+		answer, err = ParseWriteAnswer(response.Text, tagCount, shown)
+	}
 	if err != nil {
 		return WriteAnswer{}, response.Usage, responseParseError(response, err)
 	}
@@ -62,6 +91,10 @@ func (s *Service) writeCandidate(ctx context.Context, post PostInput, profile Pr
 	} else {
 		// What the writing stage was shown is what the post reads a later attachment against.
 		answer.Storyline.MadeWith = shown
+	}
+	if post.OriginProtocolVersion == OriginProtocolVersion {
+		final := FinalizeWriteOrigins(*answer, photos, videos, PhotoPortraits(post.Images, observations), sources)
+		return final, response.Usage, nil
 	}
 	answer.Content.Blocks = ValidateBlocks(answer.Content.Blocks)
 	answer.Content = FilterAttachments(answer.Content, photos, videos, PhotoPortraits(post.Images, observations))

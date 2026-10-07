@@ -3,28 +3,146 @@
   "additionalProperties": false,
   "required": ["title", "summary", "tags", "blocks", "nouns"],
   "properties": {
-    "title": {"type": "string"},
-    "summary": {"type": "string"},
-    "tags": {"type": "array", "items": {"type": "string"}},
+    "title": {
+      "type": "string"
+    },
+    "summary": {
+      "type": "string"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
     "blocks": {
       "type": "array",
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["type", "content", "level", "file", "files", "layout", "alt", "caption", "items"],
+        "required": [
+          "type",
+          "content",
+          "level",
+          "file",
+          "files",
+          "layout",
+          "alt",
+          "caption",
+          "items"
+        ],
         "properties": {
-          "type": {"type": "string", "enum": ["TEXT", "HEADING", "IMAGE", "GALLERY", "VIDEO", "QUOTE", "LIST"]},
-          "content": {"type": "string"},
-          "level": {"type": "integer"},
-          "file": {"type": "string"},
-          "files": {"type": "array", "items": {"type": "string"}},
-          "layout": {"type": "string"},
-          "alt": {"type": "string"},
-          "caption": {"type": "string"},
-          "items": {"type": "array", "items": {"type": "string"}}
+          "type": {
+            "type": "string",
+            "enum": [
+              "TEXT",
+              "HEADING",
+              "IMAGE",
+              "GALLERY",
+              "VIDEO",
+              "QUOTE",
+              "LIST"
+            ]
+          },
+          "content": {
+            "type": "string"
+          },
+          "level": {
+            "type": "integer"
+          },
+          "file": {
+            "type": "string"
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "layout": {
+            "type": "string"
+          },
+          "alt": {
+            "type": "string"
+          },
+          "caption": {
+            "type": "string"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
         }
       }
     },
-    "nouns": {"type": "array", "maxItems": 40, "items": {"type": "string"}}
+    "nouns": {
+      "type": "array",
+      "maxItems": 40,
+      "items": {
+        "type": "string"
+      }
+    },
+    "origins": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["field", "quote", "category", "source_refs"],
+        "properties": {
+          "field": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["kind"],
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "title",
+                  "summary",
+                  "tag",
+                  "block_content",
+                  "block_item",
+                  "block_alt",
+                  "block_caption"
+                ]
+              },
+              "tag_index": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "block_index": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "item_index": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          },
+          "quote": {
+            "type": "string"
+          },
+          "occurrence": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "category": {
+            "type": "string",
+            "enum": ["owner_input", "photo_interpretation", "ai_added"]
+          },
+          "source_refs": {
+            "type": "array",
+            "maxItems": 128,
+            "items": {
+              "type": "string",
+              "maxLength": 128
+            }
+          }
+        }
+      }
+    }
   }
 }

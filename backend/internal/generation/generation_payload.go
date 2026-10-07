@@ -27,13 +27,14 @@ type templateFactJSON struct {
 }
 
 type observationPayload struct {
-	File          string   `json:"file"`
-	Scene         string   `json:"scene,omitempty"`
-	Mood          string   `json:"mood,omitempty"`
-	VisibleText   string   `json:"visible_text,omitempty"`
-	Objects       []string `json:"objects,omitempty"`
-	PeoplePresent bool     `json:"people_present,omitempty"`
-	Model         string   `json:"model,omitempty"`
+	Origins       *observationOriginReviewJSON `json:"origins,omitempty"`
+	File          string                       `json:"file"`
+	Scene         string                       `json:"scene,omitempty"`
+	Mood          string                       `json:"mood,omitempty"`
+	VisibleText   string                       `json:"visible_text,omitempty"`
+	Objects       []string                     `json:"objects,omitempty"`
+	PeoplePresent bool                         `json:"people_present,omitempty"`
+	Model         string                       `json:"model,omitempty"`
 	// Video-only (VIDEO-9). Omitted when empty, so a payload frozen before videos existed
 	// decodes unchanged — and a resumable job never becomes unresumable.
 	Events []string `json:"events,omitempty"`
@@ -44,9 +45,12 @@ type observationPayload struct {
 }
 
 type generationPayload struct {
-	Profile        *profilePayload `json:"voice_profile,omitempty"`
-	TargetLanguage string          `json:"target_language"`
-	TargetLength   *int            `json:"target_length,omitempty"`
+	OriginProtocolVersion int                   `json:"origin_protocol_version,omitempty"`
+	CompletionTokens      int                   `json:"completion_tokens,omitempty"`
+	PlanOrigins           *planOriginReviewJSON `json:"plan_origins,omitempty"`
+	Profile               *profilePayload       `json:"voice_profile,omitempty"`
+	TargetLanguage        string                `json:"target_language"`
+	TargetLength          *int                  `json:"target_length,omitempty"`
 	// Omitted when zero so a payload frozen before the member existed decodes unchanged;
 	// the decoder resolves 0 to the default (GEN-46).
 	TagCount int              `json:"tag_count,omitempty"`
@@ -88,10 +92,13 @@ type generationPayload struct {
 // bytes, and Generate reads it back. A member retyped by hand anywhere in between is how a
 // frozen option used to go missing on the way to the run.
 type generationOptions struct {
-	Profile        *Profile
-	TargetLanguage Language
-	TargetLength   *int
-	TagCount       int
+	OriginProtocolVersion  int
+	CompletionTokens       int
+	FollowStorylineOrigins *PlanOriginReview
+	Profile                *Profile
+	TargetLanguage         Language
+	TargetLength           *int
+	TagCount               int
 	// writeMaterial is what freezeWriteMaterial resolved: the brief, 지침, 기억 and rules,
 	// the same set a write comparison freezes.
 	writeMaterial
@@ -110,6 +117,7 @@ func encodeGenerationPayload(options generationOptions) ([]byte, error) {
 		return nil, ErrLanguageRequired
 	}
 	return json.Marshal(generationPayload{
+		OriginProtocolVersion: options.OriginProtocolVersion, CompletionTokens: options.CompletionTokens, PlanOrigins: encodePlanOrigins(options.FollowStorylineOrigins),
 		Profile:           encodeProfile(options.Profile),
 		TargetLanguage:    options.TargetLanguage.String(),
 		TargetLength:      cloneOptionalInt(options.TargetLength),
@@ -146,6 +154,9 @@ func decodeGenerationPayload(raw []byte) (generationOptions, error) {
 	if err := json.Unmarshal(raw, &payload); err != nil {
 		return generationOptions{}, fmt.Errorf("decode generation payload: %w", err)
 	}
+	if payload.OriginProtocolVersion != 0 && (payload.OriginProtocolVersion != OriginProtocolVersion || payload.CompletionTokens <= 0) {
+		return generationOptions{}, fmt.Errorf("decode generation payload: unknown origin protocol or missing admitted cap")
+	}
 	if payload.TargetLength != nil && *payload.TargetLength <= 0 {
 		return generationOptions{}, fmt.Errorf("decode generation payload: target length must be positive")
 	}
@@ -160,6 +171,7 @@ func decodeGenerationPayload(raw []byte) (generationOptions, error) {
 		}
 	}
 	return generationOptions{
+		OriginProtocolVersion: payload.OriginProtocolVersion, CompletionTokens: payload.CompletionTokens, FollowStorylineOrigins: decodePlanOrigins(payload.PlanOrigins),
 		Profile:        decodeProfile(payload.Profile),
 		TargetLanguage: language,
 		TargetLength:   cloneOptionalInt(payload.TargetLength),
@@ -195,6 +207,9 @@ func decodeFollowedStoryline(wire []storylineParagraphJSON) []StorylineParagraph
 // members: they decide which photos the run observes (frozenObserveSelection), and
 // post.Observations stays the stored snapshot.
 func (o generationOptions) onto(post PostInput) PostInput {
+	post.OriginProtocolVersion = o.OriginProtocolVersion
+	post.OriginCompletionTokens = o.CompletionTokens
+	post.FollowStorylineOrigins = clonePlanOrigins(o.FollowStorylineOrigins)
 	post.TargetLanguage = o.TargetLanguage
 	post.TargetLength = cloneOptionalInt(o.TargetLength)
 	post.TagCount = resolveTagCount(o.TagCount)
@@ -224,7 +239,8 @@ func encodeObservations(observations []Observation) []observationPayload {
 	wire := make([]observationPayload, 0, len(observations))
 	for _, observation := range observations {
 		wire = append(wire, observationPayload{
-			File: observation.File, Scene: observation.Scene, Mood: observation.Mood,
+			Origins: encodeObservationOrigins(observation.Origins),
+			File:    observation.File, Scene: observation.Scene, Mood: observation.Mood,
 			VisibleText: observation.VisibleText, Objects: cloneTexts(observation.Objects),
 			PeoplePresent: observation.PeoplePresent, Model: observation.Model,
 			Events: cloneTexts(observation.Events), Speech: observation.Speech, Rotation: observation.Rotation,
@@ -240,7 +256,8 @@ func decodeObservations(wire []observationPayload) []Observation {
 	out := make([]Observation, 0, len(wire))
 	for _, observation := range wire {
 		out = append(out, Observation{
-			File: observation.File, Scene: observation.Scene, Mood: observation.Mood,
+			Origins: decodeObservationOrigins(observation.Origins),
+			File:    observation.File, Scene: observation.Scene, Mood: observation.Mood,
 			VisibleText: observation.VisibleText, Objects: cloneTexts(observation.Objects),
 			PeoplePresent: observation.PeoplePresent, Model: observation.Model,
 			Events: cloneTexts(observation.Events), Speech: observation.Speech, Rotation: observation.Rotation,

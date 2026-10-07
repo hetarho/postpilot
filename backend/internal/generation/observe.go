@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/postpilot/backend/internal/llm"
+	postdomain "github.com/postpilot/backend/internal/post"
 )
 
 // observe runs the observation stage over `targets` — the photos this run was frozen to
@@ -84,10 +85,20 @@ func (s *Service) observeCandidate(ctx context.Context, post PostInput, targets 
 		}
 		parts = append(parts, llm.TextPart("files: "+strings.Join(filenames, ", ")))
 		request := composePhotoObservationRequest(parts, filenames, s.fullWritingTest)
+		var sources []postdomain.OriginSource
+		if post.OriginProtocolVersion == OriginProtocolVersion {
+			sources = observationSources(filenames, false)
+			request = appendOriginContract(request, sources, nil, observationOriginContract)
+		}
 		request.Reasoning = s.reasoning.Observe
 		request.MaxTokens = s.budget.Observation()
+		schema := ObservationsSchema()
+		if post.OriginProtocolVersion == 0 {
+			schema = LegacyObservationsSchema()
+		}
+		setOriginOutput(&request, "Observations", schema, post.OriginProtocolVersion)
 		if info, ok := s.models.Resolve(model); ok && info.StructuredOutput {
-			request.JSONSchema = ObservationsSchema()
+			request.JSONSchema = schema
 		}
 		response, err := s.models.Complete(ctx, model, request)
 		usage.PromptTokens += response.Usage.PromptTokens
@@ -103,6 +114,12 @@ func (s *Service) observeCandidate(ctx context.Context, post PostInput, targets 
 		if err != nil {
 			return nil, usage, fmt.Errorf("parse observations: %w", responseParseError(response, err))
 		}
+		if post.OriginProtocolVersion == OriginProtocolVersion {
+			for i := range returned {
+				returned[i].Origins = ValidateObservationOrigins(returned[i], sources, AttachmentPhoto)
+				returned[i].OriginCandidates = nil
+			}
+		}
 		fresh = append(fresh, matchObservations(batch, returned, model.String())...)
 		if err := persistMerged(); err != nil {
 			return nil, usage, fmt.Errorf("persist observations: %w", err)
@@ -114,7 +131,7 @@ func (s *Service) observeCandidate(ctx context.Context, post PostInput, targets 
 	// photo batch's worth of tokens by itself, and it reaches the model as a URL rather than
 	// as bytes this process carries (VIDEO-10).
 	for index, video := range videos {
-		observed, callUsage, err := s.observeVideo(ctx, video, model)
+		observed, callUsage, err := s.observeVideo(ctx, video, model, post.OriginProtocolVersion)
 		usage.PromptTokens += callUsage.PromptTokens
 		usage.CompletionTokens += callUsage.CompletionTokens
 		if callUsage.CostReported {
@@ -136,7 +153,7 @@ func (s *Service) observeCandidate(ctx context.Context, post PostInput, targets 
 // observeVideo runs one clip's own call. The signed URL is minted right before the call so its
 // clock starts there: the call is bounded by the stage timeout and the URL by PRESIGN_GET_TTL,
 // so a stale URL fails the call rather than leaving a standing link behind.
-func (s *Service) observeVideo(ctx context.Context, video Image, model llm.ModelRef) ([]Observation, llm.Usage, error) {
+func (s *Service) observeVideo(ctx context.Context, video Image, model llm.ModelRef, protocols ...int) ([]Observation, llm.Usage, error) {
 	var usage llm.Usage
 	if s.videos == nil {
 		return nil, usage, fmt.Errorf("observe video %s: no video linker is configured", video.Filename)
@@ -149,11 +166,25 @@ func (s *Service) observeVideo(ctx context.Context, video Image, model llm.Model
 	if contentType == "" {
 		contentType = "video/mp4"
 	}
+	protocol := 0
+	if len(protocols) == 1 {
+		protocol = protocols[0]
+	}
 	request := composeVideoObservationRequest(url, contentType, video.Filename, s.fullWritingTest)
+	var sources []postdomain.OriginSource
+	if protocol == OriginProtocolVersion {
+		sources = observationSources([]string{video.Filename}, true)
+		request = appendOriginContract(request, sources, nil, observationOriginContract)
+	}
 	request.Reasoning = s.reasoning.Observe
 	request.MaxTokens = s.budget.Observation()
+	schema := VideoObservationsSchema()
+	if protocol == 0 {
+		schema = LegacyVideoObservationsSchema()
+	}
+	setOriginOutput(&request, "VideoObservations", schema, protocol)
 	if info, ok := s.models.Resolve(model); ok && info.StructuredOutput {
-		request.JSONSchema = VideoObservationsSchema()
+		request.JSONSchema = schema
 	}
 	response, err := s.models.Complete(ctx, model, request)
 	usage = response.Usage
@@ -163,6 +194,12 @@ func (s *Service) observeVideo(ctx context.Context, video Image, model llm.Model
 	returned, err := parseObservations(response.Text)
 	if err != nil {
 		return nil, usage, fmt.Errorf("parse video observations: %w", responseParseError(response, err))
+	}
+	if protocol == OriginProtocolVersion {
+		for i := range returned {
+			returned[i].Origins = ValidateObservationOrigins(returned[i], sources, AttachmentVideo)
+			returned[i].OriginCandidates = nil
+		}
 	}
 	return matchObservations([]Image{video}, returned, model.String()), usage, nil
 }

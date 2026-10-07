@@ -157,16 +157,17 @@ func (f *WritingTestFactory) FreezeWritingTest(ctx context.Context, request Writ
 			if err != nil {
 				return WritingTestSnapshot{}, err
 			}
-			common.ObserveModel, common.ObservePromptTokens, common.ObserveCompletionTokens = material.ObserveModel, sharedObserver.PromptTokens, f.service.budget.Observation()
+			common.ObserveModel, common.ObservePromptTokens, common.ObserveCompletionTokens = material.ObserveModel, sharedObserver.PromptTokens+ObserveOriginPromptTokenOverhead, f.service.budget.Observation()
 			common.ObserveStructuredOutput = sharedObserver.Info.StructuredOutput
 		}
 	}
+	post.OriginProtocolVersion, post.OriginFictional = OriginProtocolVersion, material.Fictional
 	post.Observations = nil
 	common.Post = post
 	variants := make([]writingTestVariant, len(refs))
 	seen := map[string]bool{}
 	for index, ref := range refs {
-		variant := writingTestVariant{Reference: ref, WriteModel: material.WriteModel, ObserveModel: common.ObserveModel, ObservePromptTokens: common.ObservePromptTokens, ObserveCompletionTokens: common.ObserveCompletionTokens, ObserveStructuredOutput: common.ObserveStructuredOutput, WritePromptTokens: fixedWriter.PromptTokens, WriteStructuredOutput: fixedWriter.Info.StructuredOutput}
+		variant := writingTestVariant{Reference: ref, WriteModel: material.WriteModel, ObserveModel: common.ObserveModel, ObservePromptTokens: common.ObservePromptTokens, ObserveCompletionTokens: common.ObserveCompletionTokens, ObserveStructuredOutput: common.ObserveStructuredOutput, WritePromptTokens: fixedWriter.PromptTokens + OriginPromptTokenOverhead, WriteStructuredOutput: fixedWriter.Info.StructuredOutput}
 		variant.Snapshot = writeSnapshot{Prepared: common.Prepared, TargetLanguage: post.TargetLanguage, ObserveModel: testModelString(common.ObserveModel), ObserveFiles: common.ObserveFiles, Post: post, Profile: common.Profile, Observations: common.Observations, SnapshotOnly: true}
 		var prepared *WritingTestPreparedSetting
 		if ref.SourceKind == "authoring_candidate" {
@@ -191,10 +192,10 @@ func (f *WritingTestFactory) FreezeWritingTest(ctx context.Context, request Writ
 				Ref   llm.ModelRef
 			}{request.ModelStage, ref.Model})
 			if request.ModelStage == "write" {
-				variant.WriteModel, variant.WritePromptTokens, variant.WriteStructuredOutput = ref.Model, info.PromptTokens, info.Info.StructuredOutput
+				variant.WriteModel, variant.WritePromptTokens, variant.WriteStructuredOutput = ref.Model, info.PromptTokens+OriginPromptTokenOverhead, info.Info.StructuredOutput
 				variant.Snapshot.Post.WriteNativeEffort = info.Info.ReasoningNativeEffort
 			} else {
-				variant.ObserveModel, variant.ObservePromptTokens, variant.ObserveCompletionTokens = ref.Model, info.PromptTokens, f.service.budget.Observation()
+				variant.ObserveModel, variant.ObservePromptTokens, variant.ObserveCompletionTokens = ref.Model, info.PromptTokens+ObserveOriginPromptTokenOverhead, f.service.budget.Observation()
 				variant.ObserveStructuredOutput = info.Info.StructuredOutput
 				variant.Snapshot.ObserveModel, variant.Snapshot.ObserveFiles, variant.Snapshot.Observations, variant.Snapshot.Prepared = ref.Model.String(), nil, nil, false
 			}
@@ -270,10 +271,11 @@ func (f *WritingTestFactory) FreezeWritingTest(ctx context.Context, request Writ
 			return WritingTestSnapshot{}, ErrWritingTestDuplicate
 		}
 		seen[variant.SemanticKey] = true
-		variant.WriteCompletionTokens = f.service.budget.Write(post.TargetLength, variant.Snapshot.Post.WriteNativeEffort)
+		variant.WriteCompletionTokens = f.service.budget.Write(OriginBudgetTarget(post.TargetLength), variant.Snapshot.Post.WriteNativeEffort)
 		if variant.WriteCompletionTokens <= 0 || variant.WritePromptTokens <= 0 {
 			return WritingTestSnapshot{}, ErrWritingTestMaterial
 		}
+		variant.Snapshot.Post.OriginCompletionTokens = variant.WriteCompletionTokens
 		variants[index] = variant
 	}
 	if err := validateWritingTestFacts(common.RequiredFields, material.TemplateAnswers); err != nil {

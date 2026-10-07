@@ -163,6 +163,14 @@ func TestEveryWriteSnapshotMemberRoundTrips(t *testing.T) {
 	fixture.post.Memories = []string{"매운 음식을 못 먹는다"}
 	fixture.post.Observations = fixture.observations
 	fixture.post.WriteNativeEffort = true
+	fixture.post.OriginProtocolVersion, fixture.post.OriginCompletionTokens, fixture.post.OriginFictional, fixture.post.ContentRevision = OriginProtocolVersion, 16384, true, 2
+	for i := range fixture.observations {
+		fixture.observations[i].Origins = originFixtureObservation(fixture.observations[i])
+	}
+	fixture.post.Observations = fixture.observations
+	fixture.post.ContentOrigins = originFixtureContent(*fixture.post.Content)
+	identity := OriginContentIdentity(*fixture.post.Content)
+	fixture.post.ContentOriginIdentity = &identity
 	fixture.post.Storyline = &Storyline{Paragraphs: []StorylineParagraph{{Text: "가게 앞", Files: []string{"IMG_1.jpg"}}}, MadeWith: []string{"IMG_1.jpg"}}
 	fixture.post.FollowStoryline = []StorylineParagraph{{Text: "가게 앞", Files: []string{"IMG_1.jpg"}}}
 	// One of each, with every member set, so requireNoZero can prove each member is walked.
@@ -173,6 +181,8 @@ func TestEveryWriteSnapshotMemberRoundTrips(t *testing.T) {
 	}}
 	fixture.post.Voice.Made = true
 	fixture.profile.Sources = []ProfileSource{{SampleID: "accepted-sample", ContentRevision: 3}}
+	fixture.post.Storyline.Origins = originFixturePlan(fixture.post.Storyline.Paragraphs)
+	fixture.post.FollowStorylineOrigins = originFixturePlan(fixture.post.FollowStoryline)
 	snapshot := fixture.snapshot()
 	// NoVoice is frozen as the absence of the whole profile, which the 말투 없음 golden pins;
 	// a snapshot with a profile cannot also set it.
@@ -192,6 +202,9 @@ func TestEveryWriteSnapshotMemberRoundTrips(t *testing.T) {
 	// storyline, stored or followed (GEN-72).
 	want.Post.Field, want.Post.QualityRuleIDs, want.Post.Published = "", nil, false
 	want.Post.Storyline, want.Post.FollowStoryline = nil, nil
+	// Current aggregate revision/review and followed-plan context are not inputs to
+	// an admitted legacy comparison. Full-test source revisions live in its common DTO.
+	want.Post.FollowStorylineOrigins, want.Post.ContentOrigins, want.Post.ContentOriginIdentity, want.Post.ContentRevision = nil, nil, nil, 0
 	// Whether the voice is made is read afresh at every run's start, never frozen (GEN-23).
 	want.Post.Voice.Made = false
 	if !reflect.DeepEqual(decoded, want) {
