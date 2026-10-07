@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, expect, it, vi } from 'vitest'
 import type { ExperimentCandidate, ModelExperiment } from '@/entities/model-experiment'
@@ -11,7 +11,7 @@ function written(title: string): ExperimentCandidate['output'] {
   }
 }
 
-const mocks = vi.hoisted(() => ({ useExperiment: vi.fn() }))
+const mocks = vi.hoisted(() => ({ useExperiment: vi.fn(), useSession: vi.fn() }))
 
 // Partial: only the read is faked. `candidateSides` is the entity's own pure ordering, and a
 // test that replaced it would stop checking that A and B mean the same candidate everywhere.
@@ -20,20 +20,13 @@ vi.mock('@/entities/model-experiment', async (importOriginal) => ({
   useExperiment: mocks.useExperiment,
 }))
 
-vi.mock('@/entities/session', () => ({ useSession: () => ({ user: { id: 'alice' } }) }))
+vi.mock('@/entities/session', () => ({ useSession: mocks.useSession }))
 vi.mock('@/entities/voice', () => ({
   useVoices: () => ({
     voices: [{ id: 'voice-default', name: '기본 말투', isDefault: true, deleted: false }],
   }),
   voiceRefLabel: (voice: { name: string; deleted: boolean }) =>
     voice.deleted ? `삭제된 말투 · ${voice.name}` : voice.name,
-}))
-
-vi.mock('@/features/review-model-experiment', () => ({
-  hasExperimentActions: () => true,
-  ExperimentActions: ({ activeCandidateId }: { activeCandidateId: string }) => (
-    <output aria-label="결정 대상">{activeCandidateId}</output>
-  ),
 }))
 
 const experiment: ModelExperiment = {
@@ -86,6 +79,7 @@ const experiment: ModelExperiment = {
 }
 
 beforeEach(() => {
+  mocks.useSession.mockReturnValue({ user: { id: 'alice' } })
   mocks.useExperiment.mockReturnValue({
     experiment,
     isPending: false,
@@ -94,19 +88,73 @@ beforeEach(() => {
   })
 })
 
-it('keeps the choice control visible on desktop and can target candidate B', async () => {
+it('retains full paid outputs and source names while removing ranking and winner controls', async () => {
   const user = userEvent.setup()
-  render(<ExperimentReview id="experiment-1" backLink={() => null} />)
-
-  const selector = screen.getByRole('tablist', { name: '선택할 후보' })
-  expect(selector).not.toHaveClass('md:hidden')
-  expect(screen.getByLabelText('결정 대상')).toHaveTextContent('candidate-a')
-  // A write experiment names the voice it froze.
+  render(
+    <ExperimentReview id="experiment-1" backLink={() => <a href="/tests/history">기록으로</a>} />,
+  )
+  expect(screen.getByRole('heading', { name: '이전 유료 비교 기록' })).toBeInTheDocument()
+  expect(screen.getByRole('link', { name: '기록으로' })).toHaveAttribute('href', '/tests/history')
+  const selector = screen.getByRole('tablist', { name: '읽을 결과' })
+  expect(selector).toBeInTheDocument()
   expect(screen.getByText('말투 · 기본 말투')).toBeInTheDocument()
-
+  expect(screen.getByRole('heading', { name: 'A 결과' })).toBeInTheDocument()
+  expect(screen.getByRole('heading', { name: 'B 결과' })).toBeInTheDocument()
   await user.click(screen.getByRole('tab', { name: 'B' }))
+  expect(screen.getByRole('article', { name: '후보 B' })).toHaveClass('block')
+  expect(screen.getByRole('article', { name: '후보 A' })).toHaveClass('hidden')
+  expect(
+    screen.queryByRole('button', { name: /이 결과로 선택|순위 정하기|결과 적용/ }),
+  ).not.toBeInTheDocument()
+})
 
-  expect(screen.getByLabelText('결정 대상')).toHaveTextContent('candidate-b')
+it('copies retained complete content only after the explicit copy action', async () => {
+  const user = userEvent.setup()
+  const copy = vi.spyOn(navigator.clipboard, 'writeText').mockResolvedValue(undefined)
+  render(<ExperimentReview id="experiment-1" backLink={() => null} />)
+  expect(copy).not.toHaveBeenCalled()
+  await user.click(screen.getByRole('button', { name: '결과 A 복사' }))
+  await waitFor(() => expect(copy).toHaveBeenCalledWith('A 결과'))
+  expect(await screen.findByText('결과 A를 복사했어요.')).toBeInTheDocument()
+})
+
+it('keeps a selectable exact copy fallback when clipboard access is unavailable', async () => {
+  const user = userEvent.setup()
+  vi.spyOn(navigator.clipboard, 'writeText').mockRejectedValue(new Error('denied'))
+  render(<ExperimentReview id="experiment-1" backLink={() => null} />)
+  await user.click(screen.getByRole('button', { name: '결과 A 복사' }))
+  const fallback = await screen.findByRole('textbox', { name: '결과 A 복사' })
+  expect(fallback).toHaveValue('A 결과')
+  expect(fallback).toHaveAttribute('readonly')
+  expect(fallback).toHaveFocus()
+})
+
+it('does not offer copying when a retained payload expired', () => {
+  mocks.useExperiment.mockReturnValue({
+    experiment: {
+      ...experiment,
+      candidates: experiment.candidates.map((candidate) => ({ ...candidate, output: undefined })),
+    },
+    isPending: false,
+    isError: false,
+  })
+  render(<ExperimentReview id="experiment-1" backLink={() => null} />)
+  expect(screen.getByText(/보관 기간이 지나 삭제된 결과/)).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /결과 . 복사/ })).not.toBeInTheDocument()
+})
+
+it('leaves admitted paid work running without replay and keeps the return entry', () => {
+  mocks.useExperiment.mockReturnValue({
+    experiment: { ...experiment, status: 'running' },
+    isPending: false,
+    isError: false,
+  })
+  render(
+    <ExperimentReview id="experiment-1" backLink={() => <a href="/tests/history">기록으로</a>} />,
+  )
+  expect(screen.getByText(/이 화면을 닫아도 취소되지 않아요/)).toBeInTheDocument()
+  expect(screen.getByRole('link', { name: '기록으로' })).toHaveAttribute('href', '/tests/history')
+  expect(screen.queryByRole('button', { name: /재시도|다시 생성/ })).not.toBeInTheDocument()
 })
 
 // MODEL-67: a 말투 반영 비교's review shows the owner's answer and, under each piece, its
@@ -156,4 +204,25 @@ it('reads a 말투 반영 비교 as the answer and each piece with its compariso
   expect(screen.getAllByText(/내 말투 90% · 이 후보/).map((line) => line.textContent)).toEqual(
     expect.arrayContaining(['내 말투 90% · 이 후보 40%', '내 말투 90% · 이 후보 80%']),
   )
+})
+
+it('forwards the current owner namespace and removes previous-owner results while the next read is pending', () => {
+  mocks.useExperiment.mockImplementation((_id: string, owner: string) =>
+    owner === 'alice'
+      ? { experiment, isPending: false, isError: false }
+      : { experiment: undefined, isPending: true, isError: false },
+  )
+  const view = render(
+    <ExperimentReview id="experiment-1" backLink={() => <a href="/tests/history">기록으로</a>} />,
+  )
+  expect(screen.getByText('A 결과')).toBeInTheDocument()
+  expect(mocks.useExperiment).toHaveBeenLastCalledWith('experiment-1', 'alice')
+  mocks.useSession.mockReturnValue({ user: { id: 'bob' } })
+  view.rerender(
+    <ExperimentReview id="experiment-1" backLink={() => <a href="/tests/history">기록으로</a>} />,
+  )
+  expect(mocks.useExperiment).toHaveBeenLastCalledWith('experiment-1', 'bob')
+  expect(screen.queryByText('A 결과')).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /결과 . 복사/ })).not.toBeInTheDocument()
+  expect(screen.getByRole('status')).toHaveTextContent('비교 결과를 불러오는 중')
 })

@@ -4,6 +4,14 @@ import type { I18nFragment } from '@/shared/lib'
 export const i18n = {
   namespace: 'models',
   ko: {
+    legacyReview: {
+      title: '이전 유료 비교 기록',
+      readOnly:
+        '이전 비교 결과는 열람과 복사만 할 수 있어요. 새 비교는 글쓰기 테스트에서 진행하세요.',
+      openTests: '글쓰기 테스트 시작하기',
+      applied: '{{when}}에 요청한 글 적용 기록',
+      adopted: '{{when}}에 요청한 모델 변경 기록',
+    },
     ranking: {
       title: '후보 순위 정하기',
       instructions:
@@ -55,6 +63,14 @@ export const i18n = {
     },
   },
   en: {
+    legacyReview: {
+      title: 'Earlier paid comparison',
+      readOnly:
+        'Earlier comparison results can be read and copied. Start a new comparison in writing tests.',
+      openTests: 'Start a writing test',
+      applied: 'Post application recorded at {{when}}',
+      adopted: 'Model adoption recorded at {{when}}',
+    },
     ranking: {
       title: 'Rank candidates',
       instructions:

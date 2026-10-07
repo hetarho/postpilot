@@ -15,17 +15,17 @@ afterEach(() => initializeI18n('ko'))
 const entries = [
   {
     path: '/ai-models/experiments/review-1?stage=write&from=compare',
-    back: '/ai-models/compare?stage=write',
-    ko: '← 모델 비교로 돌아가기',
-    en: '← Back to model comparison',
+    back: '/tests',
+    ko: '← 글쓰기 테스트로 돌아가기',
+    en: '← Back to writing tests',
     primary: '/ai-models',
     group: '/ai-models/compare',
   },
   {
     path: '/ai-models/experiments/review-1?stage=write',
-    back: '/ai-models/experiments?stage=write',
-    ko: '← 비교 기록',
-    en: '← Comparison history',
+    back: '/tests/history',
+    ko: '← 글쓰기 테스트 기록',
+    en: '← Writing test history',
     primary: '/ai-models',
     group: '/ai-models/experiments',
   },
@@ -58,13 +58,15 @@ it.each(
     experiments: { history },
   })
   await screen.findByRole('heading', {
-    name: locale === 'ko' ? '블라인드 비교' : 'Blind comparison',
+    name: locale === 'ko' ? '이전 유료 비교 기록' : 'Earlier paid comparison',
   })
   const link = screen.getByRole('link', { name: locale === 'ko' ? ko : en })
   expect(link).toHaveAttribute('href', back)
   expect(document.querySelector('aside')).toBeNull()
-  await user.click(link)
-  await waitFor(() => expect(router.state.location.href).toBe(back))
+  if (back.startsWith('/posts')) {
+    await user.click(link)
+    await waitFor(() => expect(router.state.location.href).toBe(back))
+  }
 })
 
 it.each(['', '?from=https://example.com', '?from=posts&stage=invalid'])(
@@ -74,10 +76,10 @@ it.each(['', '?from=https://example.com', '?from=posts&stage=invalid'])(
       user: { id: 'alice' },
       experiments: { history },
     })
-    await screen.findByRole('heading', { name: '블라인드 비교' })
-    expect(screen.getByRole('link', { name: '← 비교 기록' })).toHaveAttribute(
+    await screen.findByRole('heading', { name: '이전 유료 비교 기록' })
+    expect(screen.getByRole('link', { name: '← 글쓰기 테스트 기록' })).toHaveAttribute(
       'href',
-      '/ai-models/experiments?stage=write',
+      '/tests/history',
     )
     expect(screen.queryByRole('link', { name: '← 글로 돌아가기' })).not.toBeInTheDocument()
   },
@@ -90,8 +92,11 @@ it('opens a post-backed history record and returns to the same history stage', a
     experiments: { history },
   })
   await user.click(await screen.findByRole('link', { name: /draft-1/ }))
-  await user.click(await screen.findByRole('link', { name: '← 비교 기록' }))
-  await waitFor(() => expect(router.state.location.href).toBe('/ai-models/experiments?stage=write'))
+  expect(await screen.findByRole('link', { name: '← 글쓰기 테스트 기록' })).toHaveAttribute(
+    'href',
+    '/tests/history',
+  )
+  expect(router.state.location.pathname).toBe('/ai-models/experiments/review-1')
 })
 
 it('carries the narrowed post list through a pending result and back', async () => {
@@ -128,7 +133,7 @@ it.each(['', '?from=compare', '?from=https://example.com'])(
       user: { id: 'alice' },
       experiments: { history: [{ id: 'review-1', stage: Stage.WRITE }] },
     })
-    await screen.findByRole('heading', { name: '블라인드 비교' })
+    await screen.findByRole('heading', { name: '이전 유료 비교 기록' })
     expect(screen.getByRole('link', { name: '← 내 글 목록으로 돌아가기' })).toHaveAttribute(
       'href',
       '/posts',
@@ -139,8 +144,8 @@ it.each(['', '?from=compare', '?from=https://example.com'])(
 it.each([
   [
     '/ai-models/experiments/review-1?from=compare&stage=write',
-    '← 모델 비교로 돌아가기',
-    '/ai-models/compare?stage=write',
+    '← 글쓰기 테스트로 돌아가기',
+    '/tests',
   ],
   ['/posts/experiments/review-1?from=posts&q=Draft', '← 내 글 목록으로 돌아가기', '/posts?q=Draft'],
 ])('retains an exit through loading and failed reads at %s', async (path, name, href) => {

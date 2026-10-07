@@ -1,17 +1,30 @@
-import { useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   candidateSides,
+  legacyOutputText,
+  isExperimentActive,
+  type ExperimentCandidate,
   useExperiment,
   type CandidateSide,
   type ModelExperiment,
 } from '@/entities/model-experiment'
 import { useSession } from '@/entities/session'
 import { useVoices, voiceRefLabel } from '@/entities/voice'
-import { ExperimentActions, hasExperimentActions } from '@/features/review-model-experiment'
+import { ExperimentActions } from '@/features/review-model-experiment'
 import { CandidateComparison } from '@/widgets/candidate-comparison'
 import { FingerprintComparison } from '@/widgets/voice-fingerprint'
-import { ActionBar, Badge, Button, SegmentedControl, Typography, pageStyles } from '@/shared/ui'
+import { copyText } from '@/shared/lib'
+import {
+  ActionBar,
+  Badge,
+  Button,
+  Notice,
+  SegmentedControl,
+  Textarea,
+  Typography,
+  pageStyles,
+} from '@/shared/ui'
 
 export function ExperimentReview({
   id,
@@ -21,7 +34,8 @@ export function ExperimentReview({
   backLink: (experiment?: ModelExperiment) => ReactNode
 }) {
   const { t } = useTranslation(['models', 'common'])
-  const { experiment, isPending, isError, refetch } = useExperiment(id)
+  const { user } = useSession()
+  const { experiment, isPending, isError, refetch } = useExperiment(id, user?.id ?? '')
   const [activeCandidateId, setActiveCandidateId] = useState('')
   const readingPositions = useRef<Record<string, number>>({})
   const previousCandidate = useRef('')
@@ -60,6 +74,14 @@ export function ExperimentReview({
       <Typography variant="display" className="mt-4">
         {t('experiment.title', { ns: 'models' })}
       </Typography>
+      <div className="mt-4">
+        <ExperimentActions experiment={experiment} activeCandidateId={activeId} />
+      </div>
+      {isExperimentActive(experiment.status) && (
+        <Notice tone="info" role="status" className="mt-4">
+          {t('experiment.legacyRunning', { ns: 'models' })}
+        </Notice>
+      )}
       {/* Desktop-only: on a phone this static instruction costs ~90px — four lines of the candidate
           text the screen exists to show — every single visit, and the A/B switch plus the 후보 A/B
           headings already carry what it says (THEME-8). */}
@@ -81,6 +103,18 @@ export function ExperimentReview({
           {t('experiment.template', { ns: 'models', name: experiment.templateName })}
         </Typography>
       )}
+      <div className="mt-4 flex flex-wrap gap-3">
+        {sides.map(({ candidate, label }) => (
+          <LegacyCandidateCopy key={candidate.id} candidate={candidate} label={label} />
+        ))}
+      </div>
+      {experiment.candidates.some(
+        (candidate) => candidate.status === 'succeeded' && !candidate.output,
+      ) && (
+        <Notice tone="warning" className="mt-4">
+          {t('experiment.legacyExpired', { ns: 'models' })}
+        </Notice>
+      )}
       <div ref={comparisonTop} className="mt-6 sm:mt-8">
         <CandidateComparison
           experiment={experiment}
@@ -99,12 +133,10 @@ export function ExperimentReview({
           ariaLabel={t('experiment.actionAria', { ns: 'models' })}
           // With no action left to offer, the dock exists only to carry the phone's A/B switch —
           // which the `md:` two-pane layout does not render, so there it would be an empty slab.
-          className={hasExperimentActions(experiment) ? undefined : 'md:hidden'}
+          className="md:hidden"
         >
           <div className="grid gap-3">
-            {/* This remains visible at every breakpoint. Phones use it to switch the one visible
-                panel; desktop uses it to identify which of the two visible panels the decision
-                button will choose. Hiding it on desktop made candidate B impossible to select. */}
+            {/* Phones switch retained results; desktop reads both panels without a decision dock. */}
             <SegmentedControl
               value={activeId}
               options={sides.map(({ candidate, label }) => ({ value: candidate.id, label }))}
@@ -114,7 +146,6 @@ export function ExperimentReview({
               }}
               ariaLabel={t('experiment.selectAria', { ns: 'models' })}
             />
-            <ExperimentActions experiment={experiment} activeCandidateId={activeId} />
           </div>
         </ActionBar>
       )}
@@ -154,5 +185,53 @@ function Placeholder({ children, backLink }: { children: ReactNode; backLink: Re
         {children}
       </Typography>
     </main>
+  )
+}
+
+function LegacyCandidateCopy({
+  candidate,
+  label,
+}: {
+  candidate: ExperimentCandidate
+  label: string
+}) {
+  const { t } = useTranslation('models')
+  const [result, setResult] = useState<'idle' | 'copied' | 'fallback'>('idle')
+  const selectFallback = useCallback((element: HTMLTextAreaElement | null) => {
+    element?.focus()
+    element?.select()
+  }, [])
+  if (candidate.status !== 'succeeded' || !candidate.output) return null
+  const text = legacyOutputText(candidate.output)
+  return (
+    <div className="min-w-0">
+      <Button
+        variant="ghost"
+        onClick={() => {
+          void copyText(text).then(({ copied }) => setResult(copied ? 'copied' : 'fallback'))
+        }}
+      >
+        {t('experiment.copyResult', { label })}
+      </Button>
+      {result === 'copied' && (
+        <Typography variant="label" as="p" role="status">
+          {t('experiment.copied', { label })}
+        </Typography>
+      )}
+      {result === 'fallback' && (
+        <div className="mt-2">
+          <Typography variant="label" as="p" role="status">
+            {t('experiment.copyFallback')}
+          </Typography>
+          <Textarea
+            readOnly
+            aria-label={t('experiment.copyResult', { label })}
+            value={text}
+            rows={6}
+            ref={selectFallback}
+          />
+        </div>
+      )}
+    </div>
   )
 }
