@@ -1,12 +1,11 @@
 import { useMutation, useQuery, useTransport } from '@connectrpc/connect-query'
-import { createConnectQueryKey } from '@connectrpc/connect-query'
-import { useQueryClient, type QueryClient } from '@tanstack/react-query'
-import type { Transport } from '@connectrpc/connect'
-import { ModelCatalogService, ProviderService, appFailureFromConnect } from '@/shared/api'
+import { useQueryClient } from '@tanstack/react-query'
+import { ModelCatalogService, appFailureFromConnect } from '@/shared/api'
 import type { ModelPurpose } from '../config'
 import type { CatalogBrowse, ReasoningEffortName } from '../model/types'
 import type { LevelName } from '../model/level'
 import { toCatalogBrowse } from './catalog-mappers'
+import { browseQueryKey, invalidateCatalogViews } from './catalog-cache'
 
 const EMPTY: CatalogBrowse = {
   entries: [],
@@ -46,8 +45,9 @@ export function useRefreshCatalog(purpose: ModelPurpose) {
   const queryClient = useQueryClient()
   const transport = useTransport()
   const mutation = useMutation(ModelCatalogService.method.listCatalog, {
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       queryClient.setQueryData(browseQueryKey(transport, purpose), data)
+      await invalidateCatalogViews(queryClient, transport, purpose)
     },
   })
   return {
@@ -64,7 +64,7 @@ export function useSetModelPurpose() {
   const queryClient = useQueryClient()
   const transport = useTransport()
   const mutation = useMutation(ModelCatalogService.method.setModelPurpose, {
-    onSettled: () => invalidateCatalogs(queryClient, transport),
+    onSettled: () => invalidateCatalogViews(queryClient, transport),
   })
   return {
     ...mutation,
@@ -80,7 +80,7 @@ export function useUpdateModel() {
   const queryClient = useQueryClient()
   const transport = useTransport()
   const mutation = useMutation(ModelCatalogService.method.updateModel, {
-    onSettled: () => invalidateCatalogs(queryClient, transport),
+    onSettled: () => invalidateCatalogViews(queryClient, transport),
   })
   return {
     ...mutation,
@@ -101,36 +101,4 @@ export function useUpdateModel() {
         level: patch.level,
       }),
   }
-}
-
-/** A curation write changes what EVERY account may select, so the user-facing catalog is
- *  invalidated beside the operator's own list — otherwise the model picker keeps serving a
- *  five-minute-stale list to the very operator who just changed it. */
-function invalidateCatalogs(queryClient: QueryClient, transport: Transport) {
-  // Every purpose's listing, not just the active tab's: a registration write changes which
-  // tabs show the model, and its effort listing changes with it.
-  void queryClient.invalidateQueries({
-    queryKey: createConnectQueryKey({
-      schema: ModelCatalogService.method.listCatalog,
-      transport,
-      cardinality: 'finite',
-    }),
-  })
-  void queryClient.invalidateQueries({
-    queryKey: createConnectQueryKey({
-      schema: ProviderService.method.listModels,
-      input: {},
-      transport,
-      cardinality: 'finite',
-    }),
-  })
-}
-
-function browseQueryKey(transport: Transport, purpose: ModelPurpose) {
-  return createConnectQueryKey({
-    schema: ModelCatalogService.method.listCatalog,
-    input: { refresh: false, purpose },
-    transport,
-    cardinality: 'finite',
-  })
 }

@@ -1,8 +1,8 @@
 import { useMutation, useQuery, useTransport } from '@connectrpc/connect-query'
-import { createConnectQueryKey } from '@connectrpc/connect-query'
 import { useQueryClient } from '@tanstack/react-query'
-import { ModelCatalogService, ProviderService, appFailureFromConnect } from '@/shared/api'
+import { ModelCatalogService, appFailureFromConnect } from '@/shared/api'
 import { toCatalogDocumentPlan } from './catalog-mappers'
+import { invalidateCatalogViews } from './catalog-cache'
 
 /** The current registrations of all five purposes, rendered as the paste protocol. It is what
  *  the operator edits instead of writing a document from memory, so it is read when the panel
@@ -39,32 +39,7 @@ export function useApplyCatalogDocument() {
   const queryClient = useQueryClient()
   const transport = useTransport()
   const mutation = useMutation(ModelCatalogService.method.applyCatalogDocument, {
-    onSettled: () => {
-      // A sync changes what every account may select, and it can touch every purpose at once,
-      // so both the operator's per-purpose listings and the user-facing catalog are dropped.
-      void queryClient.invalidateQueries({
-        queryKey: createConnectQueryKey({
-          schema: ModelCatalogService.method.listCatalog,
-          transport,
-          cardinality: 'finite',
-        }),
-      })
-      void queryClient.invalidateQueries({
-        queryKey: createConnectQueryKey({
-          schema: ModelCatalogService.method.exportCatalogDocument,
-          transport,
-          cardinality: 'finite',
-        }),
-      })
-      void queryClient.invalidateQueries({
-        queryKey: createConnectQueryKey({
-          schema: ProviderService.method.listModels,
-          input: {},
-          transport,
-          cardinality: 'finite',
-        }),
-      })
-    },
+    onSettled: () => invalidateCatalogViews(queryClient, transport),
   })
   return {
     ...mutation,
