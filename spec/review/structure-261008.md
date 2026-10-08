@@ -23,7 +23,7 @@
   **Cost/validation:** small. Add editor/recovery cases for null/arrays/primitives/malformed JSON, retained valid metadata and unchanged raw source. Run existing `pages/template/ui/TemplatePage.test.tsx`, `TemplateNumbers.test.tsx`, `TemplatePreviewLayout.test.tsx`, then relevant lint/format/type-build checks. EDIT-14/21 and ARCH-24 apply.
 
 
-- F7 [o] P2 `frontend/src/features/edit-template/model/useTemplateDraft.ts:78`, `model/useTemplateSave.ts:20`, `features/edit-guideline/ui/GuidelineEditForm.tsx:29`, `features/configure-model-pair/ui/CandidatePairSelect.tsx:37`: retired production editors remain exported and maintained beside their current replacements.
+- F7 [o] P2 `frontend/src/features/edit-template/model/useTemplateDraft.ts:78`, `model/useTemplateSave.ts:20`, `features/edit-guideline/ui/GuidelineEditForm.tsx:29`, `features/configure-model-pair/ui/CandidatePairSelect.tsx:37`: retired production editors remain exported and maintained beside their current replacements. →T660
 
   **Evidence:** repository-wide symbol searches find production references only in each slice's index, plus `useTemplateSave -> useTemplateDraft`; the old template hooks and CandidatePairSelect are exercised only by their own tests. GuidelineEditForm has no production caller. Current consumers use `pages/template/ui/TemplatePage.tsx:279` TemplateDirectEditor, `widgets/guideline-directory/ui/GuidelineDirectory.tsx:270,417` GuidelineDirectEditor, and model forms use ActiveModelForm/OptionalTestPair. The code retained a second save/leave/number policy that current authoring does not use.
 

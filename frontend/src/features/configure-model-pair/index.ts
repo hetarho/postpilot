@@ -1,4 +1,3 @@
-export { CandidatePairSelect } from './ui/CandidatePairSelect'
 export { ModelPairForm } from './ui/ModelPairForm'
 export type { ShownPair } from './ui/ModelPairForm'
 export { LabExtraCandidates } from './ui/LabExtraCandidates'
