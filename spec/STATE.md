@@ -63,7 +63,7 @@
 | conformance-all-260927 | converted@260927 |
 | perf-cost-261004 | converted@261005 |
 | desktop-ux-policy-261007 | converted@261007 |
-| structure-261008 | ready@261008 |
+| structure-261008 | converted@261008 |
 
 ## tasks
 | id | title | ssot | dep | st |
@@ -74,11 +74,14 @@
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
 
 ## next
-- Continue clear structural refactors after T662's verified main commit; review/structure-261008 retains the remaining decisions.
+- Review the 17 unadopted choices in review/structure-261008; all ten clear refactor tasks T654–T663 are complete.
 - T636–T646 standalone writing/origin tasks are complete on main; unrelated blocked qualifications remain separate.
 - Editorial follow-up: doc-review ARCH; preserve independent review and open SSOT questions.
 
 ## log
+- 261008 review-code structure-261008 complete: 10 clear refactors T654–T663 implemented, verified and committed sequentially; 17 structural choices retained, with semantic duplication kept separate.
+- 261008 T663 done on main: Published pricing/ranking/source-grade comments now describe current entitlement ownership; Go scanner comparison proves executable tokens are unchanged.
+- 261008 T663 start on main atce30ae11: Make model/plan API comments teach the current entitlement and pricing ownership without changing executable policy.
 - 261008 T662 done on main: Nine contexts share an explicitly named 128-bit lowercase-hex entity ID primitive; local test/error seams and distinct bearer-token/fingerprint protocols remain intact.
 - 261008 T662 start on main at220bd5d6: Give identical 128-bit lowercase-hex entity IDs one named platform primitive while keeping domain and credential lifecycles distinct.
 - 261008 T661 done on main: StartRevision builds complete typed frozen options and encodes once; legacy adapters and known-answer wire bytes retain protocol/cap/language/profile semantics.
@@ -96,6 +99,3 @@
 - 261008 T655 done on main: Catalog writes share one dependent-view invalidation helper; refresh retains its returned tab, other views refetch and saved owner choices remain untouched.
 - 261008 T655 start on main at26b87a32: Give every catalog curation action one explicit dependent-query invalidation behavior.
 - 261008 T654 done on main: One body-scroll owner set restores the first baseline after the final overlay releases; nested/non-LIFO/StrictMode regressions and the full frontend suite pass.
-- 261008 T654 start on main at7dd79345: centralize shared overlay scroll-lock ownership; structural review and unrelated local audit edits remain separate.
-- 261008 review-code structure-261008 start: inspect readability, rule ownership, duplication and antipatterns; clear refactors authorized for direct sequential implementation.
-- 261008 T646 done on main: real origin/champion lineage, first-call private purge and clean native publication handoff; integrated/race/browser/lint/build/codegen/spec checks pass

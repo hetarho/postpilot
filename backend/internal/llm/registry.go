@@ -104,10 +104,9 @@ type SourceModel struct {
 	// same posture it takes to labels. An empty set is a model curated for a purpose no
 	// stage consumes yet (image/video generation).
 	Stages []string
-	// Levels is the source's user-facing grade for this model AT A STAGE, keyed by the same
-	// stage strings Stages uses. Display metadata the registry passes through without
-	// interpreting, exactly as it does Label: it gates nothing and resolves nothing. A stage
-	// absent from the map has no level, which is the state every registration starts in.
+	// Levels is the curated classification per stage, used by selector/admission entitlement
+	// checks. Execution with grade enforcement requires a trusted admitted grade; these source
+	// values alone confer no rights. An absent stage is unclassified for a new selection.
 	Levels map[string]string
 	// Delisted marks a model the upstream catalog no longer offered at the last successful
 	// refresh.

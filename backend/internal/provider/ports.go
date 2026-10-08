@@ -57,10 +57,9 @@ type PlannedCall struct {
 
 // Credits prices work for the calling account.
 //
-// The picker asks the SAME estimator the gate will apply when the work actually starts,
-// so what a user is shown and what they are charged can never be computed two different
-// ways. Affordability is the only access rule this context has left: there is no plan
-// floor to compare against any more.
+// The picker uses the admission estimator for affordability. Stage membership,
+// provider/capability availability and account model-grade entitlement are separate
+// access checks; a sufficient balance alone never authorizes a selection.
 type Credits interface {
 	ForCalls(calls []PlannedCall) int
 	// Balance reports what the account may spend, and whether it is exempt from the

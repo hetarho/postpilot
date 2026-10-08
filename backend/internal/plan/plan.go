@@ -25,9 +25,8 @@ const (
 	Master Plan = "master"
 )
 
-// rank orders the ladder. It is unexported: nothing outside compares tiers any more —
-// model access is decided by the balance, not by the rung — so the numbers exist only to
-// keep Parse total and to give the admin surface a stable display order.
+// rank orders the valid plan ladder for display, commercial tier changes and
+// model-grade entitlement comparisons. Grade requirements are owned by ModelGradeRequired.
 var rank = map[Plan]int{Free: 0, Light: 1, Basic: 2, Pro: 3, Max: 4, Master: 5}
 
 // Parse converts a stored value into a Plan. An unknown value is an error rather than a
@@ -46,9 +45,8 @@ func (p Plan) Valid() bool { _, ok := rank[p]; return ok }
 
 func (p Plan) String() string { return string(p) }
 
-// Rank is the ladder position, for ordering a display. It is not an authorization
-// comparison: nothing in the product gates on one tier being above another except the
-// master-only procedure set, which compares against Master directly.
+// Rank is the ladder position used by offer ordering, tier changes and AllowsModelGrade.
+// A caller must still apply the owning rule's validity, free-grade and master exceptions.
 func (p Plan) Rank() int { return rank[p] }
 
 // Ladder is every rung in order, for a surface that lists the tiers.
