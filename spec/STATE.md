@@ -74,11 +74,13 @@
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
 
 ## next
-- Continue clear structural refactors after T658's verified main commit; review/structure-261008 retains the remaining decisions.
+- Continue clear structural refactors after T659's verified main commit; review/structure-261008 retains the remaining decisions.
 - T636–T646 standalone writing/origin tasks are complete on main; unrelated blocked qualifications remain separate.
 - Editorial follow-up: doc-review ARCH; preserve independent review and open SSOT questions.
 
 ## log
+- 261008 T659 done on main: Template builder recovery uses an owning typed metadata reader; null/arrays/primitives/malformed JSON no longer break direct editing or change canonical source on mount.
+- 261008 T659 start on main at4bce3175: Keep template metadata recovery behind a typed owning reader without allowing non-object JSON to break direct editing.
 - 261008 T658 done on main: A dedicated TypeScript-AST build module rewrites only model-owned named imports, retaining aliases/type declarations and lazy UI; build regressions cover the actual route.
 - 261008 T658 start on main atc74ba432: Make the route build boundary explicit and handle inline type/value aliases without eagerly importing page UI.
 - 261008 T657 done on main: Refund reads, refetches and named actions expose explicit plain domain models; money/status/nested-presence behavior and operation-specific invalidation remain intact.
@@ -97,5 +99,3 @@
 - 261008 T645 start on main atc01b5169: reproducible actual-composer evaluation and instruction-only language fixtures; preserve independent review changes
 - 261008 T645 freshness: MODEL36 changes missing-slot setting preparation under MODEL92 only; evaluation/inventory/language contracts retained, base refreshed
 - 261008 T644 done on main: maximum-tag copy preserves option/seed contracts; clean owner-wording exports/fallbacks, product-owned bands and shipped public owner-control claims pass affected checks
-- 261008 T644 start on main ataa5e27b1: maximum-tag presentation, clean canonical exports and shipped owner-control copy; preserve independent review changes
-- 261008 T644 freshness: THEME30–32 change navigation/docks/mobile density only, retaining THEME62 origin/export contracts; base refreshed

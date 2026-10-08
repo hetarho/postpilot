@@ -31,6 +31,7 @@ import {
   Textarea,
   Typography,
 } from '@/shared/ui'
+import { readBuilderMetadata } from '../model/builder-metadata'
 
 export function TemplateDirectEditor({
   source,
@@ -53,12 +54,7 @@ export function TemplateDirectEditor({
   )
   const failureIn = (area: TemplateArea) =>
     !parsed.ok && parsed.failure.area === area ? parsed.failure : null
-  let working: Record<string, unknown> = {}
-  try {
-    working = JSON.parse(source.builderState || '{}') as Record<string, unknown>
-  } catch {
-    /* Raw source remains authoritative. */
-  }
+  const working = readBuilderMetadata(source.builderState)
   const change = (field: 'name' | 'description' | 'body' | 'titleArea', value: string) =>
     onChange({ ...source, [field]: value })
   const numberMemory =

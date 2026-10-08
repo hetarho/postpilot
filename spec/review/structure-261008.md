@@ -12,7 +12,7 @@
 - F4 [o] P2 `frontend/src/entities/subscription/api/useRefunds.ts`, `index.ts`: refund features consume renamed generated messages while the ordinary subscription API exposes mapped domain types ← move the wire seam into explicit refund domain models/mappers, preserving current field/status/money semantics. →T657
 - F5 [o] P2 `frontend/vite.config.ts:60`, `frontend/src/app/routes/models.ts:4`: bug: route schema import rewriting treats inline type specifiers as runtime symbols and silently keeps the UI barrel eager ← make the transformation understand its actual supported named-import shapes and pin them at the build boundary; do not introduce another routing framework. →T658
 
-- F6 [o] P2 `frontend/src/features/edit-template/ui/TemplateDirectEditor.tsx:56` TemplateDirectEditor: bug: successful JSON parsing is treated as object validation, so valid persisted `builderState: "null"` crashes direct editing.
+- F6 [o] P2 `frontend/src/features/edit-template/ui/TemplateDirectEditor.tsx:56` TemplateDirectEditor: bug: successful JSON parsing is treated as object validation, so valid persisted `builderState: "null"` crashes direct editing. →T659
 
   **Evidence:** `working = JSON.parse(...) as Record<string, unknown>` escapes the catch with `null`; line67 then evaluates `working.numberMemory`. `entities/ai-authoring/api/mappers.ts:154` returns private builder metadata verbatim; `backend/internal/authoring/working.go:341` validDirectMetadata checks UTF-8/size, without requiring an object. The canonical title/body may be entirely valid.
 
