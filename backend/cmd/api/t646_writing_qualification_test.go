@@ -547,6 +547,11 @@ func TestT646RegisteredIssuedCallbacksCannotRestorePurgedPrivateEvidence(t *test
 				t.Fatal(err)
 			}
 			var jobID, slug, sessionID, testID string
+			// One issued call per entrant, and never a retry. A writing test admits its
+			// entrants concurrently (experiment.MaxConcurrentTestCandidates) and
+			// experiment.ValidTestCount forbids a single-entrant plan, so every entrant is
+			// already in flight when the owner purges; only a replay would add more.
+			issued := 1
 			if kind == "authoring" {
 				state, err := h.app.authoring.Create(t.Context(), "alice", authoring.PostGuideline, "", "qualification-private")
 				if err != nil {
@@ -572,6 +577,7 @@ func TestT646RegisteredIssuedCallbacksCannotRestorePurgedPrivateEvidence(t *test
 					jobID = run.Msg.JobId
 				} else {
 					plan := h.plan(2)
+					issued = len(plan.Entrants)
 					plan.Context.SourcePostSlug = slug
 					plan.Context.ExpectedInputRevision = source.InputRevision
 					plan.Context.ExpectedContentRevision = source.ContentRevision
@@ -663,8 +669,8 @@ func TestT646RegisteredIssuedCallbacksCannotRestorePurgedPrivateEvidence(t *test
 			witness.mu.Lock()
 			calls := len(witness.requests)
 			witness.mu.Unlock()
-			if calls != 1 {
-				t.Fatal("late-callback purge caused retry or additional entrant call", calls)
+			if calls != issued {
+				t.Fatal("late-callback purge caused retry or additional entrant call", calls, issued)
 			}
 		})
 	}
