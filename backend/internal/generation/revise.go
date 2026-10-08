@@ -83,19 +83,36 @@ func encodeRevisionPayload(instruction string, template *TemplateBrief, guidelin
 }
 
 func encodeRevisionPayloadForLanguage(instruction string, language Language, template *TemplateBrief, guidelines FrozenGuidelines, tagCount int, nativeEffort bool, frozen ...Profile) ([]byte, error) {
-	if !language.Valid() {
+	var profile *Profile
+	if len(frozen) > 0 {
+		profile = &frozen[0]
+	}
+	return encodeRevisionOptions(revisionOptions{Instruction: instruction, Language: language,
+		Template: template, Guidelines: guidelines, TagCount: tagCount, WriteNativeEffort: nativeEffort, Profile: profile})
+}
+
+type revisionOptions struct {
+	OriginProtocolVersion int
+	CompletionTokens      int
+	Profile               *Profile
+	Instruction           string
+	Language              Language
+	Template              *TemplateBrief
+	Guidelines            FrozenGuidelines
+	TagCount              int
+	WriteNativeEffort     bool
+}
+
+func encodeRevisionOptions(options revisionOptions) ([]byte, error) {
+	if !options.Language.Valid() {
 		return nil, ErrContentLanguageRequired
 	}
-	var profile *profilePayload
-	if len(frozen) > 0 {
-		profile = encodeProfile(&frozen[0])
-	}
 	return json.Marshal(revisionPayloadJSON{
-		Profile:     profile,
-		Instruction: instruction, ContentLanguage: language,
-		Template: encodeTemplate(template), Guidelines: cloneTexts(guidelines.Owner),
-		DefaultGuidelines: cloneTexts(guidelines.Defaults), StockGuidelines: encodeStockGuidelines(guidelines.Stock),
-		TagCount: tagCount, WriteNativeEffort: nativeEffort,
+		OriginProtocolVersion: options.OriginProtocolVersion, CompletionTokens: options.CompletionTokens,
+		Profile: encodeProfile(options.Profile), Instruction: options.Instruction, ContentLanguage: options.Language,
+		Template: encodeTemplate(options.Template), Guidelines: cloneTexts(options.Guidelines.Owner),
+		DefaultGuidelines: cloneTexts(options.Guidelines.Defaults), StockGuidelines: encodeStockGuidelines(options.Guidelines.Stock),
+		TagCount: options.TagCount, WriteNativeEffort: options.WriteNativeEffort,
 	})
 }
 

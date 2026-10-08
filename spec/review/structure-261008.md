@@ -34,7 +34,7 @@
   **Cost/validation:** small/medium, safe under current application-only workspace. Confirm all symbol consumers after deletion; run active template page/numbers/grammar tests, guideline-directory tests and AIModelsPage/model-pair tests plus build/lint/FSD checks. No behavior or SSOT change.
 
 
-- F8 [o] P3 `backend/internal/generation/service.go:172-186`, `generation/revise.go:61-102`: `StartRevision` marshals the frozen payload, immediately unmarshals it to append origin protocol/cap, then marshals it again. The complete admitted request has two builders and a variadic profile argument that represents optionality only indirectly. Generate and storyline encode the complete options in one operation; future revision metadata is easy to put in only one path.
+- F8 [o] P3 `backend/internal/generation/service.go:172-186`, `generation/revise.go:61-102`: `StartRevision` marshals the frozen payload, immediately unmarshals it to append origin protocol/cap, then marshals it again. The complete admitted request has two builders and a variadic profile argument that represents optionality only indirectly. Generate and storyline encode the complete options in one operation; future revision metadata is easy to put in only one path. →T661
 
   Fix: construct the complete revision payload/typed options once, then encode once. Preserve the small legacy encoding helper for historical test inputs if still needed, but route the production path through a complete options argument. Do not centralize all generate/storyline/revision payload formats merely because they share some fields.
 

@@ -2,7 +2,6 @@ package generation
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -166,23 +165,16 @@ func (s *Service) StartRevision(ctx context.Context, request StartRevisionReques
 	if err != nil {
 		return "", fmt.Errorf("freeze revision voice: %w", err)
 	}
+	options := revisionOptions{Instruction: request.Instruction, Language: request.ContentLanguage,
+		Template: brief, Guidelines: guidelines, TagCount: request.TagCount,
+		WriteNativeEffort: request.WriteNativeEffort, Profile: &profile}
 	if s.originProtocol == OriginProtocolVersion {
 		request.CompletionTokens = s.budget.Revise(request.ContentChars+OriginCompletionExtraChars, request.TargetLength, request.WriteNativeEffort)
+		options.OriginProtocolVersion, options.CompletionTokens = s.originProtocol, request.CompletionTokens
 	}
-	payload, err := encodeRevisionPayloadForLanguage(request.Instruction, request.ContentLanguage, brief, guidelines, request.TagCount, request.WriteNativeEffort, profile)
+	payload, err := encodeRevisionOptions(options)
 	if err != nil {
 		return "", fmt.Errorf("encode revision payload: %w", err)
-	}
-	if s.originProtocol == OriginProtocolVersion {
-		var wire revisionPayloadJSON
-		if err := json.Unmarshal(payload, &wire); err != nil {
-			return "", err
-		}
-		wire.OriginProtocolVersion, wire.CompletionTokens = s.originProtocol, request.CompletionTokens
-		payload, err = json.Marshal(wire)
-		if err != nil {
-			return "", err
-		}
 	}
 	id, err := s.jobs.EnqueueRevision(ctx, request, payload)
 	if err != nil {

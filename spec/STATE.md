@@ -74,11 +74,13 @@
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
 
 ## next
-- Continue clear structural refactors after T660's verified main commit; review/structure-261008 retains the remaining decisions.
+- Continue clear structural refactors after T661's verified main commit; review/structure-261008 retains the remaining decisions.
 - T636–T646 standalone writing/origin tasks are complete on main; unrelated blocked qualifications remain separate.
 - Editorial follow-up: doc-review ARCH; preserve independent review and open SSOT questions.
 
 ## log
+- 261008 T661 done on main: StartRevision builds complete typed frozen options and encodes once; legacy adapters and known-answer wire bytes retain protocol/cap/language/profile semantics.
+- 261008 T661 start on main at4dd37b2c: Make one typed revision-options builder own the complete admitted payload and serialize it once.
 - 261008 T660 done on main: Removed seven zero-production-consumer editor/selector files and obsolete exports; current direct/shared editing and active/optional/pair/lab model flows remain covered.
 - 261008 T660 start on main ate483c67a: Remove verified zero-production-consumer editor code while retaining the current authoring and model configuration flows.
 - 261008 T659 done on main: Template builder recovery uses an owning typed metadata reader; null/arrays/primitives/malformed JSON no longer break direct editing or change canonical source on mount.
@@ -97,5 +99,3 @@
 - 261008 T646 done on main: real origin/champion lineage, first-call private purge and clean native publication handoff; integrated/race/browser/lint/build/codegen/spec checks pass
 - 261008 T646 start on main ata9b25ea7: integrated origin/request lineage, lifecycle/privacy and both-theme browser/copy qualification; preserve independent review changes
 - 261008 T646 freshness: MODEL36 missing-slot preparation and THEME30–32 navigation/dock/mobile changes retain referenced origin/request/export contracts; bases refreshed
-- 261008 T645 done on main: source-bound current/retained/native inventory, zero-call instruction-only evaluation and 440 structural checks; owning/API-consumer/vet/build/format/spec checks pass
-- 261008 T645 start on main atc01b5169: reproducible actual-composer evaluation and instruction-only language fixtures; preserve independent review changes
