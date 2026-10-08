@@ -74,11 +74,13 @@
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
 
 ## next
-- Continue clear structural refactors after T657's verified main commit; review/structure-261008 retains the remaining decisions.
+- Continue clear structural refactors after T658's verified main commit; review/structure-261008 retains the remaining decisions.
 - T636–T646 standalone writing/origin tasks are complete on main; unrelated blocked qualifications remain separate.
 - Editorial follow-up: doc-review ARCH; preserve independent review and open SSOT questions.
 
 ## log
+- 261008 T658 done on main: A dedicated TypeScript-AST build module rewrites only model-owned named imports, retaining aliases/type declarations and lazy UI; build regressions cover the actual route.
+- 261008 T658 start on main atc74ba432: Make the route build boundary explicit and handle inline type/value aliases without eagerly importing page UI.
 - 261008 T657 done on main: Refund reads, refetches and named actions expose explicit plain domain models; money/status/nested-presence behavior and operation-specific invalidation remain intact.
 - 261008 T657 start on main at2e81e638: Keep refund transport messages behind the subscription adapter and expose plain domain results to its features.
 - 261008 T656 done on main: Raw billing SQL now names its reader and writer explicitly; ordinary reads avoid writer contention and both transaction constructors retain read-your-writes and rollback.
@@ -97,5 +99,3 @@
 - 261008 T644 done on main: maximum-tag copy preserves option/seed contracts; clean owner-wording exports/fallbacks, product-owned bands and shipped public owner-control claims pass affected checks
 - 261008 T644 start on main ataa5e27b1: maximum-tag presentation, clean canonical exports and shipped owner-control copy; preserve independent review changes
 - 261008 T644 freshness: THEME30–32 change navigation/docks/mobile density only, retaining THEME62 origin/export contracts; base refreshed
-- 261008 T643 done on main: named owner-fenced technical post/authoring/test reads, honest current/prepared/captured views and blind denial; full affected FE coverage, server privacy and browser/lint/build/spec checks pass
-- 261008 T643 start on main atf5fcc6c0: owner-scoped optional technical request views; preserve independent review changes
