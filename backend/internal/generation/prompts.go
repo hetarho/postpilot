@@ -62,7 +62,7 @@ const englishStorylineRule = "Before writing, set in storyline how this post wil
 
 // koreanGalleryRule / englishGalleryRule define the photo group's format (GEN-77): which fields it
 // fills, the 2 … post.PhotoGroupMax bound, one orientation and a caption that is never empty. Format only — when photos are better grouped is the
-// 비슷한 사진은 한 묶음으로 기본 지침 (GUIDE-41). A test pins the number to post.PhotoGroupMax.
+// 사진은 한 장씩 기본 지침 (GUIDE-41). A test pins the number to post.PhotoGroupMax.
 const koreanGalleryRule = "GALLERY 블록은 사진 방향이 같은(모두 세로이거나 모두 가로인) 첨부 사진 2~3장을 한 자리에 묶어 설명 하나로 보여 줍니다. files에 파일명을 보여 줄 순서대로 적고, layout은 나란히 보여 주는 COLLAGE나 한 장씩 넘겨 보는 SLIDE 중 하나로 쓰고, alt는 묶음 전체에 하나, caption은 묶음 전체에 하나를 비워 두지 말고 쓰고, file은 비워 두세요. 다른 블록에서는 files를 빈 배열로, layout을 빈 문자열로 두세요."
 
 const englishGalleryRule = "A GALLERY block shows 2 to 3 attached photos of one orientation (all 세로 or all 가로 in 사진 방향) together in one place under one caption: list their filenames in files in the order they stand, set layout to COLLAGE (side by side) or SLIDE (one at a time, swiped), write one alt and a caption that is never empty for the whole group, and leave file empty. On every other block, leave files as an empty array and layout as an empty string."

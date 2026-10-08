@@ -61,6 +61,21 @@ func TestDefaultRegistryIsTheProductsOrder(t *testing.T) {
 		!strings.Contains(memories.Ko.Text, "'취향:'") || !strings.Contains(memories.En.Text, "'취향:'") {
 		t.Errorf("memory_impressions = %+v", memories)
 	}
+	// GUIDE-41: a photo stands alone by default, and a group is the exception one caption fully
+	// describes, in both languages.
+	groups, _ := DefaultFor(KindPost, "photo_groups")
+	if groups.Ko.Name != "사진은 한 장씩" || groups.En.Name != "Photos stand alone" {
+		t.Errorf("photo_groups names = %q, %q", groups.Ko.Name, groups.En.Name)
+	}
+	for _, copy := range []struct{ text, single, condition string }{
+		{groups.Ko.Text, "IMAGE 블록으로 한 장씩", "설명 하나로 사진들을 모두 정확히 말할 수 있을 때만"},
+		{groups.En.Text, "one at a time as IMAGE blocks", "only when a single caption describes all of them exactly"},
+	} {
+		single, gallery := strings.Index(copy.text, copy.single), strings.Index(copy.text, "GALLERY")
+		if single < 0 || gallery < single || !strings.Contains(copy.text, copy.condition) {
+			t.Errorf("photo_groups text does not default to single photos: %q", copy.text)
+		}
+	}
 	if text, ok := Defaults(KindPost)[0].Text(LanguageEnglish); !ok || !strings.HasPrefix(text, "State no concrete fact") {
 		t.Errorf("the English text of facts = %q", text)
 	}

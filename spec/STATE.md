@@ -73,15 +73,15 @@
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
-| T664 | Photos stand alone by default | GUIDE GEN | - | todo |
 
 ## next
-- implement-task T664.
 - Review the 17 unadopted choices in review/structure-261008; all ten clear refactor tasks T654–T663 are complete.
 - T636–T646 standalone writing/origin tasks are complete on main; unrelated blocked qualifications remain separate.
 - Editorial follow-up: doc-review ARCH; preserve independent review and open SSOT questions.
 
 ## log
+- 261008 T664 done on main: photo_groups 기본 지침 → 사진은 한 장씩; single IMAGE photos by default, a GALLERY only where one caption describes every photo.
+- 261008 T664 start on main atf439801d: photo_groups 기본 지침 becomes 사진은 한 장씩 with the one-caption grouping condition.
 - 261008 create-task GUIDE r18: T664 (photo_groups 기본 지침 → single photos by default).
 - 261008 update-ssot GUIDE r18 done: GUIDE-41✎ photo_groups 기본 지침 → 사진은 한 장씩; no doing task in its blast radius; next create-task GUIDE.
 - 261008 update-ssot GUIDE start: photo_groups 기본 지침 flips to single photos by default; a group only where one caption fully describes every photo.
