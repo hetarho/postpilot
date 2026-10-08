@@ -12,7 +12,7 @@ import (
 )
 
 func (s *Store) PutQuote(ctx context.Context, q billing.QuoteRecord) error {
-	_, err := s.db.ExecContext(ctx, `INSERT INTO billing_quotes
+	_, err := s.writeDB.ExecContext(ctx, `INSERT INTO billing_quotes
       (id,user_id,tier,term,krw,applied_now,effective_at,subscription_updated_at,quoted_at,expires_at)
       VALUES (?,?,?,?,?,?,?,?,?,?)`, q.ID, q.UserID, q.Tier, q.Term, q.KRW,
 		boolInt(q.AppliedNow), formatTime(q.EffectiveAt), formatTime(q.SubscriptionUpdatedAt),
@@ -24,7 +24,7 @@ func (s *Store) Quote(ctx context.Context, id string) (billing.QuoteRecord, bool
 	var q billing.QuoteRecord
 	var tier, term, effective, updated, quoted, expires string
 	var applied int
-	err := s.db.QueryRowContext(ctx, `SELECT id,user_id,tier,term,krw,applied_now,
+	err := s.readDB.QueryRowContext(ctx, `SELECT id,user_id,tier,term,krw,applied_now,
       effective_at,subscription_updated_at,quoted_at,expires_at FROM billing_quotes WHERE id=?`, id).
 		Scan(&q.ID, &q.UserID, &tier, &term, &q.KRW, &applied, &effective, &updated, &quoted, &expires)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -54,7 +54,7 @@ func (s *Store) Quote(ctx context.Context, id string) (billing.QuoteRecord, bool
 }
 
 func (s *Store) PurgeExpiredQuotes(ctx context.Context, expiredBefore time.Time) (int, error) {
-	result, err := s.db.ExecContext(ctx, `DELETE FROM billing_quotes WHERE expires_at<?`, formatTime(expiredBefore))
+	result, err := s.writeDB.ExecContext(ctx, `DELETE FROM billing_quotes WHERE expires_at<?`, formatTime(expiredBefore))
 	if err != nil {
 		return 0, fmt.Errorf("purge expired billing quotes: %w", err)
 	}
@@ -63,7 +63,7 @@ func (s *Store) PurgeExpiredQuotes(ctx context.Context, expiredBefore time.Time)
 }
 
 func (s *Store) InsertIntent(ctx context.Context, i billing.Intent) error {
-	_, err := s.db.ExecContext(ctx, `INSERT INTO billing_intents
+	_, err := s.writeDB.ExecContext(ctx, `INSERT INTO billing_intents
       (order_id,user_id,kind,tier,term,pack_id,billing_key,customer_key,krw,quote_id,quoted_at,
        subscription_updated_at,effective_at,status,created_at,updated_at)
       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`, i.OrderID, i.UserID, i.Kind,
@@ -80,11 +80,11 @@ const intentColumns = `order_id,user_id,kind,tier,term,pack_id,billing_key,custo
   subscription_updated_at,effective_at,status,provider_status,provider_payment_key,created_at,updated_at`
 
 func (s *Store) Intent(ctx context.Context, orderID string) (billing.Intent, bool, error) {
-	return scanIntent(s.db.QueryRowContext(ctx, `SELECT `+intentColumns+` FROM billing_intents WHERE order_id=?`, orderID))
+	return scanIntent(s.readDB.QueryRowContext(ctx, `SELECT `+intentColumns+` FROM billing_intents WHERE order_id=?`, orderID))
 }
 
 func (s *Store) PendingIntent(ctx context.Context, userID string) (billing.Intent, bool, error) {
-	return scanIntent(s.db.QueryRowContext(ctx, `SELECT `+intentColumns+` FROM billing_intents
+	return scanIntent(s.readDB.QueryRowContext(ctx, `SELECT `+intentColumns+` FROM billing_intents
       WHERE user_id=? AND status IN ('pending','review') LIMIT 1`, userID))
 }
 
@@ -99,7 +99,7 @@ func (s *Store) ReviewIntents(ctx context.Context, limit int) ([]billing.Intent,
 }
 
 func (s *Store) listIntents(ctx context.Context, query string, args ...any) ([]billing.Intent, error) {
-	rows, err := s.db.QueryContext(ctx, query, args...)
+	rows, err := s.readDB.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -116,7 +116,7 @@ func (s *Store) listIntents(ctx context.Context, query string, args ...any) ([]b
 }
 
 func (s *Store) MarkIntent(ctx context.Context, orderID, status, providerStatus, paymentKey string, at time.Time) (bool, error) {
-	result, err := s.db.ExecContext(ctx, `UPDATE billing_intents SET status=?,provider_status=?,
+	result, err := s.writeDB.ExecContext(ctx, `UPDATE billing_intents SET status=?,provider_status=?,
       provider_payment_key=?,applied_at=?,updated_at=? WHERE order_id=? AND status='pending'`,
 		status, optionalString(providerStatus), optionalString(paymentKey),
 		optionalTime(at), formatTime(at), orderID)
@@ -128,7 +128,7 @@ func (s *Store) MarkIntent(ctx context.Context, orderID, status, providerStatus,
 }
 
 func (s *Store) FailReviewIntent(ctx context.Context, orderID, providerStatus string, at time.Time) (bool, error) {
-	result, err := s.db.ExecContext(ctx, `UPDATE billing_intents SET status='failed',provider_status=?,updated_at=?
+	result, err := s.writeDB.ExecContext(ctx, `UPDATE billing_intents SET status='failed',provider_status=?,updated_at=?
       WHERE order_id=? AND status='review'`, optionalString(providerStatus), formatTime(at), orderID)
 	if err != nil {
 		return false, err

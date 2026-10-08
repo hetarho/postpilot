@@ -15,7 +15,7 @@ import (
 func (s *Store) RefundBenefits() billing.RefundBenefits { return s.refundBenefits }
 
 func (s *Store) SetIntentFunding(ctx context.Context, orderID, coverageID string, end time.Time) error {
-	_, err := s.db.ExecContext(ctx, `UPDATE billing_intents SET coverage_id=?,funding_end_at=?
+	_, err := s.writeDB.ExecContext(ctx, `UPDATE billing_intents SET coverage_id=?,funding_end_at=?
 		WHERE order_id=? AND kind<>'pack' AND status='pending'`, coverageID, formatTime(end), orderID)
 	return err
 }
@@ -23,7 +23,7 @@ func (s *Store) SetIntentFunding(ctx context.Context, orderID, coverageID string
 func (s *Store) RefundPayment(ctx context.Context, userID, orderID string) (billing.RefundPayment, bool, error) {
 	var payment billing.RefundPayment
 	var tier, term, chargedAt, effectiveAt, coverageID, fundingEnd sql.NullString
-	err := s.db.QueryRowContext(ctx, `SELECT i.order_id,i.user_id,i.kind,i.provider_payment_key,i.krw,
+	err := s.readDB.QueryRowContext(ctx, `SELECT i.order_id,i.user_id,i.kind,i.provider_payment_key,i.krw,
 		i.tier,i.term,i.applied_at,i.effective_at,i.coverage_id,i.funding_end_at,
 		COALESCE((SELECT p.lot_id FROM credit_purchases p WHERE p.order_id=i.order_id),'')
 		FROM billing_intents i WHERE i.order_id=? AND i.user_id=? AND i.status='applied'`, orderID, userID).
@@ -66,7 +66,7 @@ func (s *Store) RefundPayment(ctx context.Context, userID, orderID string) (bill
 		}
 		if payment.Kind == "upgrade" {
 			var transitionAt string
-			if err := s.db.QueryRowContext(ctx, `SELECT effective_at FROM entitlement_tier_transitions
+			if err := s.readDB.QueryRowContext(ctx, `SELECT effective_at FROM entitlement_tier_transitions
 				WHERE correlation_id=?`, orderID).Scan(&transitionAt); err != nil {
 				return billing.RefundPayment{}, false, err
 			}
@@ -86,7 +86,7 @@ func (s *Store) RefundPayment(ctx context.Context, userID, orderID string) (bill
 			}
 		}
 		var next string
-		err = s.db.QueryRowContext(ctx, `SELECT effective_at FROM billing_intents
+		err = s.readDB.QueryRowContext(ctx, `SELECT effective_at FROM billing_intents
 			WHERE user_id=? AND kind IN ('renew','subscribe') AND status='applied'
 			AND effective_at>? ORDER BY effective_at LIMIT 1`,
 			userID, formatTime(payment.EffectiveAt)).Scan(&next)
@@ -101,7 +101,7 @@ func (s *Store) RefundPayment(ctx context.Context, userID, orderID string) (bill
 }
 
 func (s *Store) InsertRefundRequest(ctx context.Context, request billing.RefundRequest) error {
-	_, err := s.db.ExecContext(ctx, `INSERT INTO billing_refund_requests
+	_, err := s.writeDB.ExecContext(ctx, `INSERT INTO billing_refund_requests
 		(id,user_id,order_id,reason,status,requested_at) VALUES (?,?,?,?,'requested',?)`,
 		request.ID, request.UserID, request.OrderID, request.Reason, formatTime(request.RequestedAt))
 	return err
@@ -109,7 +109,7 @@ func (s *Store) InsertRefundRequest(ctx context.Context, request billing.RefundR
 
 func (s *Store) OpenRefundForOrder(ctx context.Context, orderID string) (bool, error) {
 	var open int
-	err := s.db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM billing_refund_requests
+	err := s.readDB.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM billing_refund_requests
 		WHERE order_id=? AND status IN ('requested','processing'))`, orderID).Scan(&open)
 	return open != 0, err
 }
@@ -119,7 +119,7 @@ func (s *Store) RefundRequest(ctx context.Context, id string) (billing.RefundReq
 	var requestedAt string
 	var reviewedBy, reviewedAt, amount, disposition, idempotency, providerStatus, transactionKey, confirmedAmount, confirmedAt sql.NullString
 	var balanceBefore sql.NullInt64
-	err := s.db.QueryRowContext(ctx, `SELECT id,user_id,order_id,reason,status,requested_at,
+	err := s.readDB.QueryRowContext(ctx, `SELECT id,user_id,order_id,reason,status,requested_at,
 		reviewed_by,reviewed_at,CAST(reviewed_amount_krw AS TEXT),disposition_json,idempotency_key,provider_balance_before_krw,
 		provider_status,provider_transaction_key,CAST(confirmed_amount_krw AS TEXT),confirmed_at
 		FROM billing_refund_requests WHERE id=?`, id).
@@ -141,7 +141,7 @@ func (s *Store) RefundRequest(ctx context.Context, id string) (billing.RefundReq
 }
 
 func (s *Store) Refunds(ctx context.Context, userID string) ([]billing.RefundRequest, error) {
-	rows, err := s.db.QueryContext(ctx, `SELECT id FROM billing_refund_requests
+	rows, err := s.readDB.QueryContext(ctx, `SELECT id FROM billing_refund_requests
 		WHERE (?='' OR user_id=?) ORDER BY requested_at DESC,id DESC LIMIT 200`, userID, userID)
 	if err != nil {
 		return nil, err
@@ -174,7 +174,7 @@ func (s *Store) Refunds(ctx context.Context, userID string) ([]billing.RefundReq
 }
 
 func (s *Store) ProcessingRefundIDs(ctx context.Context, since time.Time, limit int) ([]string, error) {
-	rows, err := s.db.QueryContext(ctx, `SELECT id FROM billing_refund_requests
+	rows, err := s.readDB.QueryContext(ctx, `SELECT id FROM billing_refund_requests
 		WHERE status='processing' AND (provider_transaction_key IS NOT NULL OR reviewed_at>?)
 		ORDER BY reviewed_at,id LIMIT ?`, formatTime(since), limit)
 	if err != nil {
@@ -194,7 +194,7 @@ func (s *Store) ProcessingRefundIDs(ctx context.Context, since time.Time, limit 
 
 func (s *Store) ReviewedEvidence(ctx context.Context, requestID string) (billing.RefundEvidence, bool, error) {
 	var raw string
-	err := s.db.QueryRowContext(ctx, `SELECT evidence_json FROM billing_refund_decisions
+	err := s.readDB.QueryRowContext(ctx, `SELECT evidence_json FROM billing_refund_decisions
 		WHERE request_id=? ORDER BY created_at DESC,id DESC LIMIT 1`, requestID).Scan(&raw)
 	if errors.Is(err, sql.ErrNoRows) {
 		return billing.RefundEvidence{}, false, nil
@@ -214,7 +214,7 @@ func (s *Store) RecordRefundDecision(ctx context.Context, request billing.Refund
 	if decision.Outcome == "approve" {
 		status = "processing"
 	}
-	result, err := s.db.ExecContext(ctx, `UPDATE billing_refund_requests SET status=?,reviewed_by=?,reviewed_at=?,
+	result, err := s.writeDB.ExecContext(ctx, `UPDATE billing_refund_requests SET status=?,reviewed_by=?,reviewed_at=?,
 		reviewed_amount_krw=?,disposition_json=?,idempotency_key=?,provider_balance_before_krw=?
 		WHERE id=? AND status='requested'`,
 		status, decision.ReviewerID, formatTime(decision.CreatedAt), decision.AmountKRW,
@@ -225,7 +225,7 @@ func (s *Store) RecordRefundDecision(ctx context.Context, request billing.Refund
 	if count, err := result.RowsAffected(); err != nil || count != 1 {
 		return billing.ErrRefundConflict
 	}
-	_, err = s.db.ExecContext(ctx, `INSERT INTO billing_refund_decisions
+	_, err = s.writeDB.ExecContext(ctx, `INSERT INTO billing_refund_decisions
 		(id,request_id,reviewer_id,outcome,reviewed_amount_krw,evidence_json,disposition_json,created_at)
 		VALUES (?,?,?,?,?,?,?,?)`, decision.ID, decision.RequestID, decision.ReviewerID,
 		decision.Outcome, decision.AmountKRW, decision.EvidenceJSON, decision.DispositionJSON,
@@ -234,7 +234,7 @@ func (s *Store) RecordRefundDecision(ctx context.Context, request billing.Refund
 }
 
 func (s *Store) RecordRefundProviderAttempt(ctx context.Context, requestID, transactionKey string) error {
-	result, err := s.db.ExecContext(ctx, `UPDATE billing_refund_requests SET provider_transaction_key=?
+	result, err := s.writeDB.ExecContext(ctx, `UPDATE billing_refund_requests SET provider_transaction_key=?
 		WHERE id=? AND status='processing' AND (provider_transaction_key IS NULL OR provider_transaction_key=?)`,
 		transactionKey, requestID, transactionKey)
 	if err != nil {
@@ -247,7 +247,7 @@ func (s *Store) RecordRefundProviderAttempt(ctx context.Context, requestID, tran
 }
 
 func (s *Store) RecordRefundOutcome(ctx context.Context, request billing.RefundRequest, payment billing.Payment, at time.Time) error {
-	result, err := s.db.ExecContext(ctx, `UPDATE billing_refund_requests SET status='completed',
+	result, err := s.writeDB.ExecContext(ctx, `UPDATE billing_refund_requests SET status='completed',
 		provider_status=?,provider_transaction_key=?,confirmed_amount_krw=?,confirmed_at=?
 		WHERE id=? AND status='processing'`, payment.Status, request.ProviderTransactionKey,
 		request.ConfirmedAmountKRW, formatTime(at), request.ID)
@@ -257,7 +257,7 @@ func (s *Store) RecordRefundOutcome(ctx context.Context, request billing.RefundR
 	if count, err := result.RowsAffected(); err != nil || count != 1 {
 		return billing.ErrRefundConflict
 	}
-	_, err = s.db.ExecContext(ctx, `INSERT INTO billing_refund_provider_outcomes
+	_, err = s.writeDB.ExecContext(ctx, `INSERT INTO billing_refund_provider_outcomes
 		(id,request_id,provider_status,transaction_key,confirmed_amount_krw,observed_at)
 		VALUES (?,?,?,?,?,?)`, request.ID, request.ID, payment.Status,
 		request.ProviderTransactionKey, request.ConfirmedAmountKRW, formatTime(at))
@@ -265,7 +265,7 @@ func (s *Store) RecordRefundOutcome(ctx context.Context, request billing.RefundR
 }
 
 func (s *Store) FailRefund(ctx context.Context, requestID, providerStatus string, at time.Time) error {
-	result, err := s.db.ExecContext(ctx, `UPDATE billing_refund_requests SET status='failed',provider_status=?
+	result, err := s.writeDB.ExecContext(ctx, `UPDATE billing_refund_requests SET status='failed',provider_status=?
 		WHERE id=? AND status='processing'`, providerStatus, requestID)
 	if err != nil {
 		return err
@@ -273,7 +273,7 @@ func (s *Store) FailRefund(ctx context.Context, requestID, providerStatus string
 	if count, err := result.RowsAffected(); err != nil || count != 1 {
 		return billing.ErrRefundConflict
 	}
-	_, err = s.db.ExecContext(ctx, `INSERT INTO billing_refund_provider_outcomes
+	_, err = s.writeDB.ExecContext(ctx, `INSERT INTO billing_refund_provider_outcomes
 		(id,request_id,provider_status,confirmed_amount_krw,observed_at)
 		VALUES (?,?,?,0,?)`, requestID+":failed", requestID, providerStatus, formatTime(at))
 	return err
@@ -281,7 +281,7 @@ func (s *Store) FailRefund(ctx context.Context, requestID, providerStatus string
 
 func (s *Store) ConfirmedRefundTotal(ctx context.Context, orderID string) (int, error) {
 	var amount sql.NullInt64
-	err := s.db.QueryRowContext(ctx, `SELECT SUM(confirmed_amount_krw) FROM billing_refund_requests
+	err := s.readDB.QueryRowContext(ctx, `SELECT SUM(confirmed_amount_krw) FROM billing_refund_requests
 		WHERE order_id=? AND status='completed'`, orderID).Scan(&amount)
 	return int(amount.Int64), err
 }
@@ -292,7 +292,7 @@ func (s *Store) HasUnresolvedDependentUpgrade(ctx context.Context, payment billi
 	}
 	funding := payment.Funding()
 	var unresolved int
-	err := s.db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM billing_intents u
+	err := s.readDB.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM billing_intents u
 		WHERE u.user_id=? AND u.kind='upgrade' AND u.status='applied'
 		AND u.coverage_id=? AND u.effective_at>=? AND u.effective_at<?
 		AND NOT EXISTS(SELECT 1 FROM billing_refund_requests r

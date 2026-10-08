@@ -17,7 +17,8 @@ const writeLayout = "2006-01-02T15:04:05.000000000Z07:00"
 
 type Store struct {
 	writer              *sql.DB
-	db                  sqlc.DBTX
+	writeDB             sqlc.DBTX
+	readDB              sqlc.DBTX
 	write               *sqlc.Queries
 	read                *sqlc.Queries
 	credits             billing.Credits
@@ -31,12 +32,12 @@ type Store struct {
 var _ billing.Store = (*Store)(nil)
 
 func New(writer, reader *sql.DB) *Store {
-	return &Store{writer: writer, db: writer, write: sqlc.New(writer), read: sqlc.New(reader)}
+	return &Store{writer: writer, writeDB: writer, readDB: reader, write: sqlc.New(writer), read: sqlc.New(reader)}
 }
 
 // NewTx exposes billing's coverage reads on a caller-owned writer transaction.
 func NewTx(tx *sql.Tx) *Store {
-	return &Store{db: tx, write: sqlc.New(tx), read: sqlc.New(tx)}
+	return &Store{writeDB: tx, readDB: tx, write: sqlc.New(tx), read: sqlc.New(tx)}
 }
 
 // SetCreditsForTx attaches the usage adapter at the composition root. The factory binds
@@ -80,7 +81,7 @@ func (s *Store) InWriteTx(ctx context.Context, fn func(billing.Store, billing.Cr
 	if credits == nil || plans == nil {
 		return errors.New("billing transaction adapter factory returned nil")
 	}
-	scoped := &Store{db: tx, write: sqlc.New(tx), read: sqlc.New(tx), credits: credits, plans: plans}
+	scoped := &Store{writeDB: tx, readDB: tx, write: sqlc.New(tx), read: sqlc.New(tx), credits: credits, plans: plans}
 	if s.refundBenefitsForTx != nil {
 		scoped.refundBenefits = s.refundBenefitsForTx(tx)
 	}
