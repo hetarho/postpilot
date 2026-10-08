@@ -598,6 +598,19 @@ func TestT646RegisteredIssuedCallbacksCannotRestorePurgedPrivateEvidence(t *test
 			case <-time.After(10 * time.Second):
 				t.Fatal("actual issued provider callback did not enter")
 			}
+			// The gate holds only the first call; a concurrent entrant reaches the
+			// provider on its own schedule, so wait until every one is in flight.
+			for deadline := time.Now().Add(10 * time.Second); ; time.Sleep(10 * time.Millisecond) {
+				witness.mu.Lock()
+				inFlight := len(witness.requests)
+				witness.mu.Unlock()
+				if inFlight >= issued {
+					break
+				}
+				if time.Now().After(deadline) {
+					t.Fatal("issued entrants did not all reach the provider", inFlight, issued)
+				}
+			}
 			switch kind {
 			case "post-account":
 				// The account owner erases its rows while the real issued callback
