@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { clsx } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 import { FOCUSABLE_SELECTOR, focusablesIn } from '../focus/focusable'
+import { lockBodyScroll } from './scroll-lock'
 
 /** Sheets stack: a confirmation opened from inside a sheet sits on top of it. Escape must dismiss
  *  ONE overlay — the topmost — so every open sheet registers here and only the last one acts. */
@@ -92,12 +93,11 @@ export function Sheet({
 
     // Touch scrolling is not a Tab key: without this, dragging anywhere on the scrim scrolls the
     // page underneath the sheet, and the user lands somewhere else when it closes (THEME-29).
-    const previousOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
+    const releaseScroll = lockBodyScroll(document.body)
     return () => {
       const index = openSheets.lastIndexOf(self)
       if (index >= 0) openSheets.splice(index, 1)
-      document.body.style.overflow = previousOverflow
+      releaseScroll()
       returnFocus.current?.focus()
     }
   }, [open])

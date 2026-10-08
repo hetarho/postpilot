@@ -1,6 +1,7 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { StrictMode } from 'react'
 import { Sheet } from './Sheet'
 
 afterEach(cleanup)
@@ -171,6 +172,67 @@ describe('rising and sinking', () => {
 })
 
 describe('stacked sheets', () => {
+  it('restores the original scroll state when a parent disposes both open sheets', () => {
+    document.body.style.overflow = 'auto'
+    function Harness({ innerOpen }: { innerOpen: boolean }) {
+      return (
+        <Sheet open label="Outer" onClose={() => undefined}>
+          <Sheet open={innerOpen} label="Inner" onClose={() => undefined}>
+            Content
+          </Sheet>
+        </Sheet>
+      )
+    }
+    const { rerender, unmount } = render(<Harness innerOpen={false} />)
+    rerender(<Harness innerOpen />)
+    expect(document.body.style.overflow).toBe('hidden')
+    unmount()
+    expect(document.body.style.overflow).toBe('auto')
+    document.body.style.overflow = ''
+  })
+
+  it('retains the lock while a later sibling survives closing the earlier sheet', () => {
+    function Harness({ firstOpen, secondOpen }: { firstOpen: boolean; secondOpen: boolean }) {
+      return (
+        <>
+          <Sheet open={firstOpen} label="First" onClose={() => undefined}>
+            First content
+          </Sheet>
+          <Sheet open={secondOpen} label="Second" onClose={() => undefined}>
+            Second content
+          </Sheet>
+        </>
+      )
+    }
+    const { rerender } = render(<Harness firstOpen secondOpen={false} />)
+    rerender(<Harness firstOpen secondOpen />)
+    rerender(<Harness firstOpen={false} secondOpen />)
+    expect(document.body.style.overflow).toBe('hidden')
+    rerender(<Harness firstOpen={false} secondOpen={false} />)
+    expect(document.body.style.overflow).toBe('')
+  })
+
+  it('releases every StrictMode lifetime and reacquires the current baseline on reopening', () => {
+    document.body.style.overflow = 'scroll'
+    const sheet = (open: boolean) => (
+      <StrictMode>
+        <Sheet open={open} label="Options" onClose={() => undefined}>
+          Content
+        </Sheet>
+      </StrictMode>
+    )
+    const { rerender, unmount } = render(sheet(true))
+    expect(document.body.style.overflow).toBe('hidden')
+    rerender(sheet(false))
+    expect(document.body.style.overflow).toBe('scroll')
+    document.body.style.overflow = 'auto'
+    rerender(sheet(true))
+    expect(document.body.style.overflow).toBe('hidden')
+    unmount()
+    expect(document.body.style.overflow).toBe('auto')
+    document.body.style.overflow = ''
+  })
+
   // The real shape: a confirmation opened from a control INSIDE an already-open sheet. Escape
   // dismisses the confirmation, not the surface it was opened from.
   it('lets one Escape dismiss only the one opened last', async () => {

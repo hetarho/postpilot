@@ -63,6 +63,7 @@
 | conformance-all-260927 | converted@260927 |
 | perf-cost-261004 | converted@261005 |
 | desktop-ux-policy-261007 | converted@261007 |
+| structure-261008 | ready@261008 |
 
 ## tasks
 | id | title | ssot | dep | st |
@@ -73,10 +74,14 @@
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
 
 ## next
+- Continue clear structural refactors after T654's verified main commit; review/structure-261008 retains the remaining decisions.
 - T636–T646 standalone writing/origin tasks are complete on main; unrelated blocked qualifications remain separate.
 - Editorial follow-up: doc-review ARCH; preserve independent review and open SSOT questions.
 
 ## log
+- 261008 T654 done on main: One body-scroll owner set restores the first baseline after the final overlay releases; nested/non-LIFO/StrictMode regressions and the full frontend suite pass.
+- 261008 T654 start on main at7dd79345: centralize shared overlay scroll-lock ownership; structural review and unrelated local audit edits remain separate.
+- 261008 review-code structure-261008 start: inspect readability, rule ownership, duplication and antipatterns; clear refactors authorized for direct sequential implementation.
 - 261008 T646 done on main: real origin/champion lineage, first-call private purge and clean native publication handoff; integrated/race/browser/lint/build/codegen/spec checks pass
 - 261008 T646 start on main ata9b25ea7: integrated origin/request lineage, lifecycle/privacy and both-theme browser/copy qualification; preserve independent review changes
 - 261008 T646 freshness: MODEL36 missing-slot preparation and THEME30–32 navigation/dock/mobile changes retain referenced origin/request/export contracts; bases refreshed
@@ -94,6 +99,3 @@
 - 261008 T642 freshness: THEME30–32 only change navigation/workspace/mobile density, retaining THEME62 origin review contracts; base refreshed
 - 261008 T641 done on main: private test origin/request evidence, atomic purge-fenced champion publication and owner/kind/revision authoring inspections; owning/consumer/RPC/race/generator/build/spec checks pass
 - 261008 T641 start on main at80f7fd8f: origin/request private test evidence and owner-scoped authoring inspection; preserve independent review changes
-- 261008 T641 freshness: MODEL36 and EDIT5 only change missing-slot mapping and exact integer1..16 preparation counts; retain integrated privacy/count contracts, bases refreshed
-- 261008 T640 done on main: private actual post call captures, exact source/result/plan fences and provider-free configured previews; owning/consumer/RPC/race/generator/build/spec checks pass
-- 261008 T640 start on main at3cbcccf0: persist safe actual post request witnesses and owner read-only previews; preserve independent review changes
