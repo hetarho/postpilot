@@ -4,9 +4,10 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/base64"
-	"encoding/hex"
 	"fmt"
 	"time"
+
+	"github.com/postpilot/backend/internal/platform/ids"
 )
 
 // tokenBytes is the gift link's entropy: the same 256 bits a session or an auth link
@@ -215,9 +216,9 @@ func newToken() (string, error) {
 }
 
 func newID() string {
-	buffer := make([]byte, 16)
-	if _, err := rand.Read(buffer); err != nil {
+	id, err := ids.NewHex128()
+	if err != nil {
 		panic("voucher: cannot read random bytes for an id: " + err.Error())
 	}
-	return hex.EncodeToString(buffer)
+	return id
 }

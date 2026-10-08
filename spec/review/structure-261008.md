@@ -40,7 +40,7 @@
 
   Validation: existing revision payload/language/profile/origin admission-cap and request-inspection round trips, generation service and cmd/api hold/work agreement tests. Safe mechanical change under current SSOT; a good small implementation candidate.
 
-- F9 [o] P3 `backend/internal/authoring/service.go:42`, `template/service.go:340`, `memory/service.go:196`, `voice/service.go:590`, `job/job.go:273`, `post/service.go:1640`, `guideline/service.go:504`, `voucher/service.go:217`: eight contexts implement the same cryptographically random 16-byte lowercase-hex entity ID algorithm. This logic has no business meaning and ARCH-6 explicitly names `platform/ids` as its home, but that package does not currently exist. This is true identical-contract reuse, unlike the superficially similar token generation functions.
+- F9 [o] P3 `backend/internal/authoring/service.go:42`, `template/service.go:340`, `memory/service.go:196`, `voice/service.go:590`, `job/job.go:273`, `post/service.go:1640`, `guideline/service.go:504`, `voucher/service.go:217`: eight contexts implement the same cryptographically random 16-byte lowercase-hex entity ID algorithm. This logic has no business meaning and ARCH-6 explicitly names `platform/ids` as its home, but that package does not currently exist. This is true identical-contract reuse, unlike the superficially similar token generation functions. →T662
 
   Fix: a tiny `internal/platform/ids` helper, leaving context-local test seams/wrappers where necessary and preserving existing 32-hex output. Keep auth/session/reset credentials, voucher bearer tokens, file temporary names and externally versioned fingerprints separate: byte size, encoding, entropy/error lifecycle and exposure rules differ.
 

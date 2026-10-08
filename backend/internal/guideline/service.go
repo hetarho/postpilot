@@ -2,13 +2,13 @@ package guideline
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/hex"
 	"fmt"
 	"sort"
 	"strings"
 	"time"
 	"unicode/utf8"
+
+	"github.com/postpilot/backend/internal/platform/ids"
 )
 
 type Service struct {
@@ -502,9 +502,9 @@ func (s *Service) knownFields(fields []string) error {
 }
 
 func newID() string {
-	buf := make([]byte, 16)
-	if _, err := rand.Read(buf); err != nil {
+	id, err := ids.NewHex128()
+	if err != nil {
 		panic("guideline: cannot read random bytes for an id: " + err.Error())
 	}
-	return hex.EncodeToString(buf)
+	return id
 }

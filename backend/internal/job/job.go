@@ -2,11 +2,11 @@
 package job
 
 import (
-	"crypto/rand"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"time"
+
+	"github.com/postpilot/backend/internal/platform/ids"
 )
 
 const (
@@ -271,9 +271,9 @@ func (q *Queue) canCancel(found Job) bool {
 }
 
 func newID() string {
-	buf := make([]byte, 16)
-	if _, err := rand.Read(buf); err != nil {
+	id, err := ids.NewHex128()
+	if err != nil {
 		panic("job: cannot read random bytes for a job id: " + err.Error())
 	}
-	return hex.EncodeToString(buf)
+	return id
 }

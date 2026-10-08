@@ -2,8 +2,6 @@ package post
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -12,6 +10,8 @@ import (
 	"strings"
 	"time"
 	"unicode/utf8"
+
+	"github.com/postpilot/backend/internal/platform/ids"
 )
 
 // Service is the drafting context's behavior. Every method takes the acting user id
@@ -1638,11 +1638,11 @@ func (s *Service) lockedOrGone(ctx context.Context, userID, slug string, otherwi
 // timestamp: the id lands in an object key, so it must not be guessable from another
 // user's id or reveal how many photos exist.
 func newObjectID() string {
-	buf := make([]byte, 16)
-	if _, err := rand.Read(buf); err != nil {
+	id, err := ids.NewHex128()
+	if err != nil {
 		panic("post: cannot read random bytes for an object id: " + err.Error())
 	}
-	return hex.EncodeToString(buf)
+	return id
 }
 
 // contentStoreOf reports the progressive editor capability of the store that was wired in.

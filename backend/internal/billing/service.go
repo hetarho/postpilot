@@ -2,13 +2,12 @@ package billing
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"time"
 
 	"github.com/postpilot/backend/internal/plan"
+	"github.com/postpilot/backend/internal/platform/ids"
 )
 
 var ErrUnavailable = errors.New("billing unavailable")
@@ -56,11 +55,11 @@ func (s *Service) masterAccount(ctx context.Context, userID string) (bool, error
 }
 
 func newID() string {
-	buffer := make([]byte, 16)
-	if _, err := rand.Read(buffer); err != nil {
+	id, err := ids.NewHex128()
+	if err != nil {
 		panic("billing: cannot read random bytes for an id: " + err.Error())
 	}
-	return hex.EncodeToString(buffer)
+	return id
 }
 
 func NewService(store Store, provider Provider, credits Credits, plans Plans, accounts Accounts, mailer Mailer) *Service {

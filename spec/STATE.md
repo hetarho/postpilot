@@ -74,11 +74,13 @@
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
 
 ## next
-- Continue clear structural refactors after T661's verified main commit; review/structure-261008 retains the remaining decisions.
+- Continue clear structural refactors after T662's verified main commit; review/structure-261008 retains the remaining decisions.
 - T636–T646 standalone writing/origin tasks are complete on main; unrelated blocked qualifications remain separate.
 - Editorial follow-up: doc-review ARCH; preserve independent review and open SSOT questions.
 
 ## log
+- 261008 T662 done on main: Nine contexts share an explicitly named 128-bit lowercase-hex entity ID primitive; local test/error seams and distinct bearer-token/fingerprint protocols remain intact.
+- 261008 T662 start on main at220bd5d6: Give identical 128-bit lowercase-hex entity IDs one named platform primitive while keeping domain and credential lifecycles distinct.
 - 261008 T661 done on main: StartRevision builds complete typed frozen options and encodes once; legacy adapters and known-answer wire bytes retain protocol/cap/language/profile semantics.
 - 261008 T661 start on main at4dd37b2c: Make one typed revision-options builder own the complete admitted payload and serialize it once.
 - 261008 T660 done on main: Removed seven zero-production-consumer editor/selector files and obsolete exports; current direct/shared editing and active/optional/pair/lab model flows remain covered.
@@ -97,5 +99,3 @@
 - 261008 T654 start on main at7dd79345: centralize shared overlay scroll-lock ownership; structural review and unrelated local audit edits remain separate.
 - 261008 review-code structure-261008 start: inspect readability, rule ownership, duplication and antipatterns; clear refactors authorized for direct sequential implementation.
 - 261008 T646 done on main: real origin/champion lineage, first-call private purge and clean native publication handoff; integrated/race/browser/lint/build/codegen/spec checks pass
-- 261008 T646 start on main ata9b25ea7: integrated origin/request lineage, lifecycle/privacy and both-theme browser/copy qualification; preserve independent review changes
-- 261008 T646 freshness: MODEL36 missing-slot preparation and THEME30–32 navigation/dock/mobile changes retain referenced origin/request/export contracts; bases refreshed

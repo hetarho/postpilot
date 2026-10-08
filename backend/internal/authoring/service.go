@@ -2,7 +2,6 @@ package authoring
 
 import (
 	"context"
-	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -13,6 +12,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/postpilot/backend/internal/llm"
+	"github.com/postpilot/backend/internal/platform/ids"
 )
 
 type Service struct {
@@ -40,11 +40,11 @@ func (s *Service) lock(owner string) func() {
 	return m.Unlock
 }
 func newID() string {
-	var b [16]byte
-	if _, e := rand.Read(b[:]); e != nil {
-		panic(e)
+	id, err := ids.NewHex128()
+	if err != nil {
+		panic(err)
 	}
-	return hex.EncodeToString(b[:])
+	return id
 }
 func requestKey(k string) bool { return strings.TrimSpace(k) != "" && utf8.RuneCountInString(k) <= 128 }
 func (s *Service) Create(ctx context.Context, owner string, kind Kind, targetID, requestID string) (Session, error) {

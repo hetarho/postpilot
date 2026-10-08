@@ -2,8 +2,6 @@ package voice
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -13,6 +11,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/postpilot/backend/internal/llm"
+	"github.com/postpilot/backend/internal/platform/ids"
 )
 
 type Service struct {
@@ -588,9 +587,9 @@ func firstRunes(value string, limit int) string {
 }
 
 func newID() string {
-	buf := make([]byte, 16)
-	if _, err := rand.Read(buf); err != nil {
+	id, err := ids.NewHex128()
+	if err != nil {
 		panic("voice: cannot read random bytes for an id: " + err.Error())
 	}
-	return hex.EncodeToString(buf)
+	return id
 }
