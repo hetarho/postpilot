@@ -1,0 +1,13 @@
+{
+  "Replace": {
+    "/private/tmp/postpilot-review-all-261008/backend/internal/auth/review_regression_test.go": "/private/tmp/postpilot-review-auth-regression_test.go",
+    "/private/tmp/postpilot-review-all-261008/backend/internal/billing/review_regression_test.go": "/private/tmp/postpilot-review-billing-regression_test.go",
+    "/private/tmp/postpilot-review-all-261008/backend/internal/post/review_regression_test.go": "/private/tmp/postpilot-review-post-regression_test.go",
+    "/private/tmp/postpilot-review-all-261008/backend/internal/usage/store/review_regression_test.go": "/private/tmp/postpilot-review-usage-regression_test.go",
+    "/private/tmp/postpilot-review-all-261008/backend/internal/generation/review_regression_test.go": "/private/tmp/postpilot-review-generation-regression_test.go",
+    "/private/tmp/postpilot-review-all-261008/backend/internal/job/review_regression_test.go": "/private/tmp/postpilot-review-job-log-regression_test.go",
+    "/private/tmp/postpilot-review-all-261008/backend/internal/clip/store/review_storyline_cancel_test.go": "/private/tmp/postpilot-review-storyline-cancel-test.go",
+    "/private/tmp/postpilot-review-all-261008/backend/internal/clip/app/review_storyline_rate_test.go": "/private/tmp/postpilot-review-storyline-rate-test.go",
+    "/private/tmp/postpilot-review-all-261008/backend/cmd/api/review_speech_boot_test.go": "/private/tmp/postpilot-review-speech-boot-test.go"
+  }
+}

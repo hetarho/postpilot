@@ -1,0 +1,10 @@
+package billing
+import("context";"testing";"time";"github.com/postpilot/backend/internal/plan")
+func TestReviewExpiredCancelledSnapshotDoesNotEraseNewPaidTerm(t *testing.T){
+ ctx:=context.Background();anchor:=time.Date(2026,1,15,0,0,0,0,seoul);due:=anchor.AddDate(0,1,0)
+ store:=newSubscriptionStore();provider:=newSubscriptionProvider();svc:=newSubscriptionService(store,provider,due)
+ stale:=activeSubscription("alice",plan.Basic,TermMonthly,anchor,due,due,false);store.subscriptions["alice"]=stale
+ store.afterDue=func(){fresh:=stale;fresh.AutoRenew=true;fresh.UpdatedAt=due.Add(-time.Nanosecond);store.subscriptions["alice"]=fresh; if _,err:=svc.renew(ctx,fresh,due);err!=nil{t.Fatal(err)}}
+ if err:=svc.RunDue(ctx,due);err!=nil{t.Fatal(err)}
+ got:=store.subscriptions["alice"];if got.Status!="active"||!got.TermEnd.After(due)||store.plans.tiers["alice"]!=plan.Basic{t.Fatalf("captured payment erased: charges=%d, status=%s, end=%s, tier=%s",len(provider.requests),got.Status,got.TermEnd,store.plans.tiers["alice"])}
+}

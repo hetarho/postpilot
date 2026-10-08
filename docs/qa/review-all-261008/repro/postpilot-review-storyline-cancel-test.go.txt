@@ -1,0 +1,44 @@
+package store_test
+import (
+ "testing"
+ "time"
+ "github.com/postpilot/backend/internal/clip"
+ "github.com/postpilot/backend/internal/job"
+)
+func TestReviewStorylinePublishesBeforeCancellationWinner(t *testing.T) {
+ h:=generationSetup(t)
+ before:=project(t,h)
+ q,err:=h.service.QuoteStoryline(t.Context(),"alice",h.project.ID,h.batch.ID,"p/o","p/w");if err!=nil{t.Fatal(err)}
+ id,err:=h.service.StartStoryline(t.Context(),"alice",h.project.ID,h.batch.ID,"p/o","p/w",approve(q));if err!=nil{t.Fatal(err)}
+ h.planner.id=id
+ j,err:=h.jobs.PickNextQueued(t.Context(),time.Now());if err!=nil{t.Fatal(err)}
+ accepted:=false
+ err=h.service.RunStoryline(t.Context(),"alice",id,h.project.ID,j.Payload,func(stage string,_,_ int){
+  if stage=="cleanup" {
+   result,e:=h.queue.Cancel(t.Context(),"alice",job.Subject{Dimension:clip.JobSubject,ID:h.project.ID},id);if e!=nil{t.Fatal(e)}
+   accepted=result.CancelRequestedAt!=nil&&!job.Terminal(result.Status)
+  }
+ });if err!=nil{t.Fatal(err)}
+ if !accepted{t.Fatal("owner cancellation not accepted")}
+ if err=h.jobs.Finish(t.Context(),id,job.StatusDone,nil,time.Now());err!=nil{t.Fatal(err)}
+ ended,err:=h.jobs.GetByID(t.Context(),id);if err!=nil{t.Fatal(err)}
+ after:=project(t,h)
+ if ended.Status!=job.StatusCancelled || before.Storyline!=nil || after.Storyline==nil{t.Fatalf("counterexample mismatch: terminal=%s before=%+v after=%+v",ended.Status,before.Storyline,after.Storyline)}
+ t.Logf("durably accepted cancellation; terminal=%s; canonical storyline changed from nil to %d paragraphs",ended.Status,len(after.Storyline.Paragraphs))
+}
+func TestReviewRevisionPublishesBeforeCancellationWinner(t *testing.T) {
+ h:=generationSetup(t);h.start(t);if e:=h.run(t);e!=nil{t.Fatal(e)}
+ before:=project(t,h)
+ q,e:=h.service.QuoteRevision(t.Context(),"alice",h.project.ID,"바뀐 자막",clip.RevisionNarration,"p/o","p/w");if e!=nil{t.Fatal(e)}
+ id,e:=h.service.StartRevision(t.Context(),"alice",h.project.ID,"바뀐 자막",clip.RevisionNarration,"p/o","p/w",approve(q));if e!=nil{t.Fatal(e)}
+ h.planner.id=id
+ j,e:=h.jobs.PickNextQueued(t.Context(),time.Now());if e!=nil{t.Fatal(e)}
+ if e=h.service.RunRevision(t.Context(),"alice",id,h.project.ID,j.Payload,nil);e!=nil{t.Fatal(e)}
+ acknowledged,e:=h.queue.Cancel(t.Context(),"alice",job.Subject{Dimension:clip.JobSubject,ID:h.project.ID},id);if e!=nil{t.Fatal(e)}
+ if acknowledged.CancelRequestedAt==nil{t.Fatal("cancellation not accepted")}
+ if e=h.jobs.Finish(t.Context(),id,job.StatusDone,nil,time.Now());e!=nil{t.Fatal(e)}
+ ended,e:=h.jobs.GetByID(t.Context(),id);if e!=nil{t.Fatal(e)}
+ after:=project(t,h)
+ if ended.Status!=job.StatusCancelled || before.EditPlan==after.EditPlan{t.Fatal("counterexample no longer reproduces",ended.Status)}
+ t.Logf("durably accepted revision cancellation; terminal=%s; canonical revision=%d→%d",ended.Status,before.EditPlanRevision,after.EditPlanRevision)
+}

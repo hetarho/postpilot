@@ -1,0 +1,19 @@
+package ai_test
+import (
+ "strings"
+ "testing"
+ "github.com/postpilot/backend/internal/clip"
+ "github.com/postpilot/backend/internal/clip/design"
+)
+func TestReviewDeclaredCaptionMaximumLost(t *testing.T) {
+ in := flowInput()
+ setNativeBody(&in, strings.Replace(declaredCaptionBody, `<text id="dish_line"`, `<text id="dish_line" chars="3"`, 1))
+ s, _ := newService(t, defaultFlow(), true)
+ flow, _, err := s.Flow(t.Context(), testRef(), in)
+ if err != nil { t.Fatal(err) }
+ plan, _, _ := narrate(t, clip.NarrationInput{PlanningInput:in, Flow:flow}, declaredResponse([]map[string]any{declaredCaption("dish_line", "면을 그릇에 담고 있어요", 4000, 8000)}))
+ caption := narrationText(plan, "면을 그릇에 담고 있어요")
+ if caption == nil { t.Fatal("counterexample no longer reproduces; caption repaired/omitted", plan.Portable.Fallbacks) }
+ if design.Chars(caption.Resolved.Text) <= 3 { t.Fatal("fixture too short") }
+ t.Logf("declared maximum=3, accepted characters=%d, persisted maximum=%d, caption=%q", design.Chars(caption.Resolved.Text), caption.Resolved.Element.Chars, caption.Resolved.Text)
+}

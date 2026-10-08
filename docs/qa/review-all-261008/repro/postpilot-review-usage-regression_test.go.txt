@@ -1,0 +1,70 @@
+package store_test
+
+import (
+	"context"
+	"github.com/postpilot/backend/internal/llm"
+	"github.com/postpilot/backend/internal/plan"
+	"github.com/postpilot/backend/internal/usage"
+	usagestore "github.com/postpilot/backend/internal/usage/store"
+	"io"
+	"log/slog"
+	"testing"
+	"time"
+)
+
+func TestReviewCancelledAuthoringRetainsAlreadyReportedUsage(t *testing.T) {
+	prior := slog.Default()
+	slog.SetDefault(slog.New(slog.NewTextHandler(io.Discard, nil)))
+	t.Cleanup(func() { slog.SetDefault(prior) })
+	for _, kind := range []string{"configuration_authoring", "writing_voice_candidates", "template_request", "generate"} {
+		t.Run(kind, func(t *testing.T) {
+			svc, h := newServiceWithDB(t)
+			ctx, cancel := context.WithCancel(usage.WithWork(context.Background(), usage.Work{UserID: "alice", Kind: kind, JobID: "reported"}))
+			cancel()
+			err := svc.RecordCall(ctx, pricedRef, "write", llm.Usage{CostReported: true, CostMicrousd: 5000}, context.Canceled)
+			var count int
+			if readErr := h.Reader.QueryRow("SELECT count(*) FROM usage_events WHERE job_id='reported'").Scan(&count); readErr != nil {
+				t.Fatal(readErr)
+			}
+			if err != nil || count != 1 {
+				t.Fatalf("reported usage lost after cancellation: recordErr=%v ledgerRows=%d", err, count)
+			}
+		})
+	}
+}
+
+type reviewUnpricedPaidModel struct{}
+
+func (reviewUnpricedPaidModel) Lookup(ref llm.ModelRef) (llm.ModelInfo, bool) {
+	return llm.ModelInfo{Ref: ref, Stages: []string{"write"}, Levels: map[string]string{"write": "value"}}, true
+}
+func TestReviewUnpricedPaidModelCannotCreateZeroHold(t *testing.T) {
+	prior := slog.Default()
+	slog.SetDefault(slog.New(slog.NewTextHandler(io.Discard, nil)))
+	t.Cleanup(func() { slog.SetDefault(prior) })
+	_, h := newServiceWithDB(t)
+	svc := usage.NewService(usagestore.New(h.Writer, h.Reader), reviewUnpricedPaidModel{}, maxCompletion, fixedAnchors{anchor: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)}, testRates).WithModelGrades()
+	ctx := context.Background()
+	start := usage.Start{UserID: "alice", Plan: plan.Light, Kind: "generate", JobID: "unpriced-paid", Calls: []usage.PlannedCall{{Ref: pricedRef, Stage: "write", Count: 1, CompletionTokens: 4000}}}
+	err := svc.Hold(ctx, start)
+	if err != nil {
+		return
+	}
+	a, ok, err := svc.AdmissionForJob(ctx, start.JobID)
+	if err != nil || !ok {
+		t.Fatal(err)
+	}
+	ctx = usage.WithWork(ctx, usage.Work{UserID: "alice", Kind: "generate", JobID: start.JobID})
+	if err := svc.RecordCall(ctx, pricedRef, "write", llm.Usage{CostReported: true, CostMicrousd: 5000}, nil); err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.Settle(ctx, start.JobID, usage.OutcomeSucceeded); err != nil {
+		t.Fatal(err)
+	}
+	var settled int
+	var source string
+	if err := h.Reader.QueryRow("SELECT settled_credits,COALESCE(fx_source,'') FROM usage_admissions WHERE job_id=?", start.JobID).Scan(&settled, &source); err != nil {
+		t.Fatal(err)
+	}
+	t.Fatalf("unpriced paid model admitted: hold=%d rateValid=%v settled=%d fxSource=%q despite reported cost=5000", a.HoldCredits, a.Rate.Valid(), settled, source)
+}

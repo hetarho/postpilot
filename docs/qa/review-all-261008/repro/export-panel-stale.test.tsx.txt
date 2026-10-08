@@ -1,0 +1,23 @@
+import React from 'react'
+import { afterEach, expect, it, vi } from 'vitest'
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
+import { copyImage } from '@/shared/lib'
+import { POST_CONTENT_FIXTURE, POST_IMAGES_FIXTURE } from '@/test/fixtures/postContent'
+import { ExportPanel } from '/private/tmp/postpilot-review-all-261008/frontend/src/widgets/export-panel/ui/ExportPanel'
+vi.mock('@/shared/lib', async(importOriginal)=>({...await importOriginal<typeof import('@/shared/lib')>(),copyImage:vi.fn()}))
+afterEach(()=>{cleanup();vi.mocked(copyImage).mockReset();vi.restoreAllMocks()})
+it.each([1,2])('does not confirm replacement pixels after original copy settles (%i)', async()=>{
+ let resolve!:(r:{kind:'copied'})=>void
+ vi.mocked(copyImage).mockImplementation(()=>new Promise(r=>{resolve=r}))
+ const props={content:POST_CONTENT_FIXTURE,images:POST_IMAGES_FIXTURE,createdAt:'2026-08-29T03:04:05Z',contentLanguage:'ko' as const}
+ const view=render(<ExportPanel {...props}/>)
+ const control=screen.getByRole('button',{name:'1번 사진 복사 · IMG_1.jpg'})
+ const original=within(control).getByRole('img')
+ await act(async()=>{fireEvent.click(control)})
+ expect(vi.mocked(copyImage)).toHaveBeenCalledWith(original,0)
+ const replacement={...POST_IMAGES_FIXTURE[0],id:'replacement-image-1',rotation:90,viewUrl:'https://api.postpilot.test/private/replacement.jpg?signature=fresh'}
+ view.rerender(<ExportPanel {...props} content={{...POST_CONTENT_FIXTURE,title:'new canonical content'}} images={[replacement,POST_IMAGES_FIXTURE[1]]}/>)
+ expect(within(screen.getByRole('button',{name:'1번 사진 복사 · IMG_1.jpg'})).getByRole('img')).toHaveAttribute('src',replacement.viewUrl)
+ await act(async()=>{resolve({kind:'copied'})})
+ expect(screen.queryByText('IMG_1.jpg 사진이 복사됐어요')).not.toBeInTheDocument()
+})

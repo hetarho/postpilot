@@ -1,0 +1,26 @@
+package media
+import (
+ "testing"
+ "github.com/postpilot/backend/internal/clip"
+ "github.com/postpilot/backend/internal/clip/composition"
+ "github.com/postpilot/backend/internal/clip/design"
+)
+func TestReviewRegionPreflightClaimsMissingWantedGlyph(t *testing.T){
+ preset,ok:=design.Region("intro","a");if !ok{t.Fatal("presetmissing")}
+ role:=preset.Slots()[1].Type("vertical")
+ if role.Face!="wantedsans"{t.Fatal(role)}
+ r:=testRenderer(t,newAdapter(t,&fakeRunner{}))
+ for _,text:=range []string{"Ω","Ж","漢"}{
+  if !design.Covers(role.Face,role.Weight,text){t.Fatal("counterexample no longer reproduces",text)}
+  regions:=clip.ProjectRegions{Intro:clip.ProjectRegion{Enabled:true,Slots:[]clip.RegionSlot{{ID:"project-intro-1"},{ID:"project-intro-2",Text:text,OwnerFixed:true}}}}
+  if e:=clip.ValidateAuthoredRegions(regions,composition.DesignSelection{Intro:"a",Outro:"b"},"vertical");e!=nil{t.Fatal("preflight already refuses",text,e)}
+  if r.sets(role,[]rune(text)[0]){t.Fatal("bundledfaceactuallydrawsglyph",text)}
+  canvas,_:=clip.ClipCanvas("vertical")
+  e:=r.media.WithWorkspace(t.Context(),"review-region-glyph",func(ws clip.MediaWorkspace)error{
+   visual:=regionVisual("intro","",text)
+   _,e:=r.layoutDeclaredRegion(t.Context(),ws,canvas,"vertical",visual,"intro","a",regionPlacement(visual,"intro","a"),[]string{"",text});return e
+  })
+  if e==nil{t.Fatal("actual native region layout did not refuse",text)}
+  if e:=r.checkCopy(text,role);e==nil{t.Fatal("native acceptedmissingglyph",text)}else{t.Logf("fixedslot%s preflight=accepted; nativeglyph=false; renderer=%v",text,e)}
+ }
+}

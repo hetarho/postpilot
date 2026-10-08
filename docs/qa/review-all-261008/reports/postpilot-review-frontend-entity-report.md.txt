@@ -1,0 +1,123 @@
+# Supplemental frontend entity audit — complete
+
+- Immutable reviewed snapshot: b051307a at /private/tmp/postpilot-review-all-261008.
+- Exact delegated manifest: /private/tmp/postpilot-review-entity-frontend-handoff.json.
+- Full source ledger: /private/tmp/postpilot-review-frontend-entity-ledger.json.
+- All80/80 handwritten production entity files fully read, 7,605 lines; remaining0. Config/i18n/barrels/@x/grammar/DTO/cache/UI all included. No source edits, STATE edits or skill edits.
+- Current committed main observed as f889473f6b4c704bbdc57863fab93c8ab47ebe17. git diff b051307a..f889473f6b4c704bbdc57863fab93c8ab47ebe17 -- exact80paths is empty: every supplemental source remains byte-identical. The original formal candidate source changes were separately examined below.
+
+| Entity | Full-read files | Lines |
+|---|---:|---:|
+| image | 8 | 305 |
+| model-experiment | 16 | 1002 |
+| post | 28 | 2725 |
+| template | 21 | 3422 |
+| video | 7 | 151 |
+
+## Call-chain audit and disposition
+
+- image/video: full presigned upload handshake, bounded safe number conversions, classified terminal vs retryable upload refusals, cached proto projection, rotation/delete hooks and media tiles. Confirmed upload batching fences asynchronous results after discard. Source missing/expiry/explicit-remint gaps are noted below; no new storage or provider request was issued.
+- model-experiment: full retained-data mapping, blind side ordering, owner-partitioned finite reads, history/list polling, private output text projection, admin-only cost query, and all retired mutation compatibility hooks. Retired starts/retries/votes refuse locally without reaching transport; retain paid-record reads rather than deleting compatibility APIs under the optional dead-presentation cleanup. Silent enum defaults are additional coverage for root's existing ARCH3 mirror inventory, not a new duplicate finding.
+- post: full draft/content/publication/finalization mutators, query keys, bounded field patches, attachment cache, read/paged-history polling, dependency invalidation, navigation context, semantic-origin validation, BlockList and PhotoGroup. Confirms previously runtime-verified URL mutation race, delayed private post cache repopulation, detached IMAGE editor controls, and index-key reorder/cancel mismatch. Semantic-origin API/model were read for bounded locators/scalars/source catalogs/overlap behavior; pending T633/T637/T642 ownership excludes new functionality from formal proposals.
+- template: full lossless parser/serializer and shared grammar vocabulary, metadata-vs-source working state, incomplete/duplicate row handling, stable-id builder reorder/targeting, source-copy/manual fallback, last-valid preview, directory DTO/query/mutation dependencies and optional numbers. Shared parser fixtures pin cross-language blank/entity/serialization cases. TemplateComposition preserves a stable local row identity during builder edits and validates raw-source metadata before using it; no new demonstrated broad correctness failure is promoted.
+
+## Falsified or bounded hypotheses from this pass
+
+- Bare FinalizePost/SavePublishedUrl replies do NOT drop photo/video views like clip region/storyline replies: backend post service Finalize971–1028 and SavePublishedURL1037–1097 return s.Get, which mints full authorized attachment URLs. The corresponding whole-post cache replacement is coherent with that response shape. Do not generalize backend entity E1 to post finalization.
+- applyingSavedDraft does not update cached inputRevision, but a claimed writing-test-start failure from that value was falsified at the caller: WritingTestsPage uses useWritingTestSource's independent owner-bound source RPC and waits for it before constructing the actor. The current source context supplies expected revisions. No actual test rejection from stale post cache is proven.
+- GuidelineEditForm/useTemplateDraft/useTemplateSave/TemplateRequestBox and old comparison UI defects are not automatically live: reverse-consumer searches confirm zero external active callers for those old direct-edit helpers. Existing active authoring uses its own actor and publication protocol.
+- Original retained-source session once-refresh defect is mechanically confirmed by real session guard tests but specifically affects refresh=true callers; normal ensurePlayback(false) can fetch after the cleared URL. Keep this distinction in the final finding.
+- Source-only UX note: BlockList/PhotoGroup default reading photos, PhotoStrip Thumbnail/VideoTile and ContactSheet have no onError owned-remint callback; LifecycleSteps wires useRefreshPostImages only to Finish ExportPanel. An expired lazy view can stay broken on a long-open Generate/Refine surface. Do not claim live R2 reproduction; map BlockList/ContactSheet/editor integration to T642/T631 ownership and preserve explicit refresh as a regression requirement.
+- Voice fingerprint stale-analysis note belongs to media auditor: current voice/live analysis changes without contentRevision movement, but the fingerprint key/invalidation omits that version. Media traced actual BE semantics and root maps this to T631 invalidation acceptance; do not duplicate as a new independent finding.
+- Rare literal-entity fidelity edge: template model blockSource(text) escapes `<` but leaves known `&amp;`/`&lt;`/`&quot;` sequences, while fromBody decodes them. A user-authored literal sequence can be interpreted as source escaping on later parse. Existing tests exercise `<write>` escaping and ordinary builder round-trip. No new behavioral probe was run; preserve as a bounded source note requiring product-intent/edge confirmation, not a promoted finding.
+
+## Committed HEAD survival check for earlier proven findings
+
+At observed main HEAD, all original candidate production paths are unchanged except ClipProjectForm, BlockEditor and CatalogDocumentPanel. Their diffs were read in full: ClipProjectForm moves appearance controls into a responsive Disclosure but leaves draft baseline/adoption/queue sender unchanged; BlockEditor/CatalogDocumentPanel changes are spacing utilities. Therefore source evidence for FE-A/B/C/D/E/F/G/H/I and the T642 block notes still exists. This is source-delta confirmation, not a claim that the original isolated runtime probes were run on the newer HEAD. Root owns consumer/delta verification and final task exclusion.
+
+## Verification evidence retained
+
+The completed prior frontend proof run remains /private/tmp/postpilot-review-fe-overlay/review-final-repro.log: 12 child React/Connect/state-machine probes plus root's delayed-session-cache probe,13/13passed across3files. Supplemental source inspection did not change code or add a new demonstrated behavior, so no duplicate full suite was run. Root's global FE/BE/lint/build/format evidence supplies repository-wide checks. Mocked transport/source ports establish application state behavior, not live provider/device/deployment verification.
+
+## Exact covered paths
+
+- `frontend/src/entities/image/@x/post.ts` (5 lines)
+- `frontend/src/entities/image/api/image-mappers.ts` (28 lines)
+- `frontend/src/entities/image/api/upload-handshake.ts` (114 lines)
+- `frontend/src/entities/image/api/useDeleteImage.ts` (11 lines)
+- `frontend/src/entities/image/api/useRotateImage.ts` (19 lines)
+- `frontend/src/entities/image/index.ts` (13 lines)
+- `frontend/src/entities/image/model/types.ts` (49 lines)
+- `frontend/src/entities/image/ui/Thumbnail.tsx` (66 lines)
+- `frontend/src/entities/model-experiment/@x/post.ts` (4 lines)
+- `frontend/src/entities/model-experiment/api/experiment-mappers.ts` (292 lines)
+- `frontend/src/entities/model-experiment/api/useComparisonCosts.ts` (52 lines)
+- `frontend/src/entities/model-experiment/api/useExperimentActions.ts` (41 lines)
+- `frontend/src/entities/model-experiment/api/useExperimentOwners.ts` (21 lines)
+- `frontend/src/entities/model-experiment/api/useExperiments.ts` (142 lines)
+- `frontend/src/entities/model-experiment/api/useRetiredExperimentMutation.ts` (32 lines)
+- `frontend/src/entities/model-experiment/api/useStartModelExperiment.ts` (16 lines)
+- `frontend/src/entities/model-experiment/api/useStartVoiceReflection.ts` (18 lines)
+- `frontend/src/entities/model-experiment/api/useStartWriteExperiment.ts` (21 lines)
+- `frontend/src/entities/model-experiment/config/i18n.ts` (47 lines)
+- `frontend/src/entities/model-experiment/index.ts` (42 lines)
+- `frontend/src/entities/model-experiment/model/badges.ts` (86 lines)
+- `frontend/src/entities/model-experiment/model/output-text.ts` (36 lines)
+- `frontend/src/entities/model-experiment/model/sides.ts` (21 lines)
+- `frontend/src/entities/model-experiment/model/types.ts` (131 lines)
+- `frontend/src/entities/post/@x/model-experiment.ts` (3 lines)
+- `frontend/src/entities/post/@x/template.ts` (4 lines)
+- `frontend/src/entities/post/@x/voice.ts` (4 lines)
+- `frontend/src/entities/post/api/post-dependencies.ts` (57 lines)
+- `frontend/src/entities/post/api/post-queries.ts` (155 lines)
+- `frontend/src/entities/post/api/semantic-origin.ts` (57 lines)
+- `frontend/src/entities/post/api/useDeletePost.ts` (36 lines)
+- `frontend/src/entities/post/api/useFinalizePost.ts` (30 lines)
+- `frontend/src/entities/post/api/useGenerationOptions.ts` (34 lines)
+- `frontend/src/entities/post/api/usePost.ts` (63 lines)
+- `frontend/src/entities/post/api/usePostImagesCache.ts` (73 lines)
+- `frontend/src/entities/post/api/usePostList.ts` (85 lines)
+- `frontend/src/entities/post/api/usePosts.ts` (36 lines)
+- `frontend/src/entities/post/api/useRefreshPostImages.ts` (26 lines)
+- `frontend/src/entities/post/api/useSavePostContent.ts` (75 lines)
+- `frontend/src/entities/post/api/useSavePostDraft.ts` (159 lines)
+- `frontend/src/entities/post/api/useSavePublishedUrl.ts` (38 lines)
+- `frontend/src/entities/post/config/i18n.ts` (373 lines)
+- `frontend/src/entities/post/config/index.ts` (31 lines)
+- `frontend/src/entities/post/config/semantic-origin.ts` (8 lines)
+- `frontend/src/entities/post/index.ts` (71 lines)
+- `frontend/src/entities/post/lib/navigation-context.ts` (121 lines)
+- `frontend/src/entities/post/model/content.ts` (55 lines)
+- `frontend/src/entities/post/model/published-url.ts` (29 lines)
+- `frontend/src/entities/post/model/semantic-origin.ts` (467 lines)
+- `frontend/src/entities/post/model/types.ts` (184 lines)
+- `frontend/src/entities/post/ui/BlockList.tsx` (247 lines)
+- `frontend/src/entities/post/ui/PhotoGroup.tsx` (204 lines)
+- `frontend/src/entities/template/@x/guideline.ts` (5 lines)
+- `frontend/src/entities/template/@x/post.ts` (4 lines)
+- `frontend/src/entities/template/api/template-cache.ts` (17 lines)
+- `frontend/src/entities/template/api/template-errors.ts` (31 lines)
+- `frontend/src/entities/template/api/template-queries.ts` (33 lines)
+- `frontend/src/entities/template/api/useCreateTemplate.ts` (30 lines)
+- `frontend/src/entities/template/api/useDeleteTemplate.ts` (35 lines)
+- `frontend/src/entities/template/api/useFormatGuide.ts` (31 lines)
+- `frontend/src/entities/template/api/useTemplateRequest.ts` (119 lines)
+- `frontend/src/entities/template/api/useTemplates.ts` (43 lines)
+- `frontend/src/entities/template/api/useUpdateTemplate.ts` (56 lines)
+- `frontend/src/entities/template/config/i18n.ts` (248 lines)
+- `frontend/src/entities/template/config/index.ts` (64 lines)
+- `frontend/src/entities/template/index.ts` (58 lines)
+- `frontend/src/entities/template/lib/grammar.ts` (622 lines)
+- `frontend/src/entities/template/model/blocks.ts` (540 lines)
+- `frontend/src/entities/template/model/types.ts` (111 lines)
+- `frontend/src/entities/template/ui/TemplateComposition.tsx` (825 lines)
+- `frontend/src/entities/template/ui/TemplatePreview.tsx` (275 lines)
+- `frontend/src/entities/template/ui/TemplateRefLabel.tsx` (20 lines)
+- `frontend/src/entities/template/ui/TemplateSource.tsx` (255 lines)
+- `frontend/src/entities/video/@x/image.ts` (4 lines)
+- `frontend/src/entities/video/@x/post.ts` (4 lines)
+- `frontend/src/entities/video/api/useDeleteVideo.ts` (11 lines)
+- `frontend/src/entities/video/api/video-mappers.ts` (30 lines)
+- `frontend/src/entities/video/index.ts` (4 lines)
+- `frontend/src/entities/video/model/types.ts` (23 lines)
+- `frontend/src/entities/video/ui/VideoTile.tsx` (75 lines)

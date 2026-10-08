@@ -1,0 +1,10 @@
+package template
+import("context";"testing";"strings")
+func TestReviewAcceptedSpacedAskLabelCanBeAnswered(t *testing.T){
+ for _,required:=range []bool{false,true}{t.Run(map[bool]string{false:"optional",true:"required"}[required],func(t *testing.T){
+ attr:="";if required{attr=` required="true"`};svc:=NewService(newFakeStore(),testLimits());ctx:=context.Background()
+ saved,err:=svc.Create(ctx,"alice",Authored{Name:"spaces",Body:`<ask label=" 방문 장소 "`+attr+`>방문 장소를 소개하세요</ask>`});if err!=nil{t.Fatalf("template not accepted: %v",err)}
+ rendered,ok,err:=svc.RenderedForNewWrite(ctx,"alice",saved.ID,false,[]Answer{{Label:" 방문 장소 ",Text:"리뷰용 카페",Enabled:true}})
+ if err!=nil||!ok||!strings.Contains(rendered.Body,"리뷰용 카페"){t.Fatalf("valid accepted ask cannot consume answered fact: err=%v ok=%v body=%q",err,ok,rendered.Body)}
+ })}
+}

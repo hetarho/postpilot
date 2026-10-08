@@ -1,0 +1,5 @@
+import base from './postpilot-review-vite.config.mts'
+export default async function(env) {
+ const config = await base(env)
+ return {...config, test: {...config.test, include: ['/private/tmp/postpilot-review-upload-response-loss.test.ts']}}
+}

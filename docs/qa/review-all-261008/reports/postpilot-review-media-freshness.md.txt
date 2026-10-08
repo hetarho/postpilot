@@ -1,0 +1,18 @@
+# Formal media finding freshness — pinned committed HEAD
+
+- Baseline: b051307a.
+- Freshness target: f889473f6b4c704bbdc57863fab93c8ab47ebe17. Main had advanced beyond the requested935b47e0 before the check; start/end HEAD were identical at f889473f.
+- Read-only Git blob/diff comparison covered39 unique formal-finding and trigger/caller paths (45 finding-path references).35 paths are byte-identical;4 have bounded unrelated/supporting edits below. No new probes or suites were run; baseline coverage and repro logs remain authoritative and immutable.
+
+| Finding | Freshness result |
+|---|---|
+| M1 response-loss PUT retry | Present. Conditional same-key write and uploadPhase-after-await predicates are byte-identical. |
+| M2 canonical publication/cancellation | Present. Generation/storyline/revision saves are byte-identical; FinishJob50–58 still writes cancelled after cancel_requested_at and matches only running. New SQL ActiveForPostKind is unrelated. |
+| M3 frozen FX recheck | Present. Storyline refreeze still bypasses withFrozenQuoteRate at quotes.go68–73; ceiling rejection576 is unchanged. |
+| M4 speech recovery/API boot | Present. Speech Recover still calls running-only Finish for queued unactivated job at speech.go450–455. contexts.go recovery249 moved to255 through added imports/writing-test wiring, still before newClipGeneration and its SweepUnactivated119. Job store change is post-kind filtering, not clip dimension. |
+| M5 first-save caption owner fields | Present. mintNarrationCaption370–384 and all correction UI trigger bodies are byte-identical. |
+| M6 unsupported glyph admission | Present. BE covers98–104 and FE clipCovers122–126 retain the unrestricted generic Hangul fallback; layout/admission callers are unchanged. |
+| M7 disabling removed voice | Present. Backend resolveDubbing477–489 and shared ClipVoiceChoice39 are unchanged. ClipProjectForm gains responsive Disclosure for appearance; full dubbing forwarding/autosave remain intact. Citation correction: real picker is features/regenerate-clip-speech/ui/ClipVoiceChoice.tsx, reused by first-step form. |
+| V1 received-state polling | Present. All nine FE/BE predicate, normal transition and caller files are byte-identical. |
+
+Exact blob hashes and per-finding path attribution: `/private/tmp/postpilot-review-media-freshness.json`. None of these findings was fixed or invalidated by this committed delta. Unrelated uncommitted T633 changes were not included or modified.

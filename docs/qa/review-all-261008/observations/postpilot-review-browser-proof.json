@@ -1,0 +1,43 @@
+{
+  "tabs": [
+    {
+      "text": "",
+      "aria": "First",
+      "tag": "INPUT"
+    },
+    {
+      "text": "Last",
+      "aria": null,
+      "tag": "BUTTON"
+    },
+    {
+      "text": "",
+      "aria": "First",
+      "tag": "INPUT"
+    },
+    {
+      "text": "Last",
+      "aria": null,
+      "tag": "BUTTON"
+    },
+    {
+      "text": "",
+      "aria": "First",
+      "tag": "INPUT"
+    }
+  ],
+  "popoverOpen": 1,
+  "empty": [
+    {
+      "text": "read-only text",
+      "aria": "Empty",
+      "tag": "DIV"
+    },
+    {
+      "text": "popover.options",
+      "aria": "Responsive options",
+      "tag": "BUTTON"
+    }
+  ],
+  "errors": []
+}

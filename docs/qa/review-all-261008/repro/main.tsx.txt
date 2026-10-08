@@ -1,0 +1,10 @@
+import {Toggletip} from '/@fs/private/tmp/postpilot-review-all-261008/frontend/src/shared/ui/toggletip/Toggletip.tsx';
+import {useState} from 'react';
+import {createRoot} from 'react-dom/client';
+import {Popover} from '/@fs/private/tmp/postpilot-review-all-261008/frontend/src/shared/ui/popover/Popover.tsx';
+import {Dialog} from '/@fs/private/tmp/postpilot-review-all-261008/frontend/src/shared/ui/dialog/Dialog.tsx';
+import {Sheet} from '/@fs/private/tmp/postpilot-review-all-261008/frontend/src/shared/ui/sheet/Sheet.tsx';
+
+function Draft(){const [value,setValue]=useState('SAVED');return <input aria-label="Responsive draft" value={value} onChange={e=>setValue(e.target.value)}/>};
+function Harness(){const [empty,setEmpty]=useState(false); const [outer,setOuter]=useState(false);const [inner,setInner]=useState(false); const [pending,setPending]=useState(false);return <><Popover label="Responsive options" placement="below" phone="sheet">{()=> <Draft/>}</Popover><Toggletip label="Quality explanation">글마다 쓴 블록 종류의 수를 센 값의 중간값이에요. 발행한 글이 10편 있고, 지금 블록 종류는 2가지예요. 기준은 2가지 초과예요. 체크하면 다음 생성에 이 규칙이 더해져요: “본문을 문단과 사진만으로 구성하지 말고, 소제목(HEADING)·목록(LIST)·인용(QUOTE) 중 내용에 맞는 것을 섞어 서로 다른 블록 종류를 세 가지 이상 쓰세요. 내용에 맞지 않는 블록을 억지로 넣거나, 블록을 채우려고 자료에 없는 내용을 만들지는 마세요.”</Toggletip><button onClick={()=>setEmpty(true)}>Empty sheet</button><button onClick={()=>setOuter(true)}>Nested sheet</button><button onClick={()=>setPending(true)}>Pending dialog</button><Popover label="Review options" placement="below">{()=> <><input aria-label="First"/><button>Last</button></>}</Popover><button>Outside</button><Sheet open={empty} label="Empty" onClose={()=>setEmpty(false)}>read-only text</Sheet>{outer&&<Sheet open label="Outer" onClose={()=>setOuter(false)}><button onClick={()=>setInner(true)}>Open inner</button><Sheet open={inner} label="Inner" onClose={()=>setInner(false)}><button onClick={()=>setOuter(false)}>Close both</button></Sheet></Sheet>}<Dialog open={pending} pending title="Pending" confirmLabel="Confirm" onConfirm={()=>{}} onClose={()=>setPending(false)}>waiting</Dialog></>}
+createRoot(document.getElementById('root')!).render(<Harness/>);

@@ -1,0 +1,31 @@
+import { afterEach, expect, it } from 'vitest'
+import { act, cleanup, renderHook, waitFor } from '@testing-library/react'
+import { createRouterTransport } from '@connectrpc/connect'
+import { ClipGenerationService } from '@/shared/api'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { TransportProvider } from '@connectrpc/connect-query'
+import { createElement, type ReactNode } from 'react'
+const createTestQueryClient=()=>new QueryClient({defaultOptions:{queries:{retry:false},mutations:{retry:false}}})
+const withProviders=(transport: ReturnType<typeof createRouterTransport>,client:QueryClient)=>({children}:{children:ReactNode})=>createElement(TransportProvider,{transport},createElement(QueryClientProvider,{client},children))
+import { useClipProject, useSaveClipStoryline, useSaveClipRegions } from '/private/tmp/postpilot-review-all-261008/frontend/src/entities/clip-project/api/clip-project'
+afterEach(cleanup)
+it.each(['storyline','region','storyline','region'])('retains existing editing projection after ordinary %s autosave',async(kind)=>{
+ let reads=0
+ const fields={id:'clip',ratio:'vertical',title:'owner clip',targetDurationMs:15000,editPlanRevision:1,renderedPlanRevision:0,storyline:{paragraphs:[{text:'old storyline',observationIds:[]}],editedByHand:false},regions:{revision:1,intro:{enabled:false,slots:[{id:'intro-1',instruction:'old instruction',text:''}]},outro:{enabled:false,slots:[]}}}
+ const editing={plan:{durationMs:15000,nativeComposition:true,cuts:[{id:'cut-1',sourceId:'source-1',fingerprint:'fp',startMs:0,endMs:15000,focal:{x:0.5,y:0.5}}]},sources:[{id:'source-1',fingerprint:'fp',filename:'source.mp4',durationMs:15000,width:1920,height:1080}],maxCuts:100,maxCopyRunes:2000,minDurationMs:15000,maxDurationMs:60000,fadeMs:200}
+ const transport=createRouterTransport(({rpc})=>{
+  rpc(ClipGenerationService.method.getClipProject,()=>{reads++;return {project:{...fields,editing,canEdit:true,canFinalize:false}}})
+  // Matches actual backend/internal/clip/rpc/handler.go UpdateClipProject→projectProto answer.
+  rpc(ClipGenerationService.method.updateClipProject,(request)=>({project:{...fields,storyline:request.storyline??fields.storyline,regions:{...fields.regions,revision:2},canEdit:true,canFinalize:false}}))
+ })
+ const client=createTestQueryClient()
+ const view=renderHook(()=>({detail:useClipProject('owner','clip'),storyline:useSaveClipStoryline('owner'),regions:useSaveClipRegions('owner')}),{wrapper:withProviders(transport,client)})
+ await waitFor(()=>expect(view.result.current.detail.data?.editing).toBeDefined())
+ expect(reads).toBe(1)
+ if(kind==='storyline')await act(()=>view.result.current.storyline.mutateAsync({projectId:'clip',paragraphs:[{text:'new owner storyline',observationIds:[]}]}))
+ else await act(()=>view.result.current.regions.mutateAsync({id:'clip',expectedRegionRevision:1,introRegion:{slots:[{id:'intro-1',instruction:'new owner instruction'}]}}))
+ await waitFor(()=>expect(view.result.current.detail.data?.regions?.revision).toBe(2))
+ expect(reads).toBe(1)
+ expect(view.result.current.detail.data?.editPlanRevision).toBe(1)
+ expect(view.result.current.detail.data?.editing).toBeDefined()
+})

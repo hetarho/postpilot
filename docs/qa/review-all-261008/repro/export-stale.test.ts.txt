@@ -1,0 +1,16 @@
+import { afterEach, expect, it, vi } from 'vitest'
+import { act, renderHook } from '@testing-library/react'
+import { copyImage } from '@/shared/lib'
+import { POST_CONTENT_FIXTURE } from '@/test/fixtures/postContent'
+import { useCopyFeedback } from '/private/tmp/postpilot-review-all-261008/frontend/src/widgets/export-panel/model/useCopyFeedback'
+vi.mock('@/shared/lib',async(importOriginal)=>({...await importOriginal<typeof import('@/shared/lib')>(),copyImage:vi.fn()}))
+afterEach(()=>{vi.mocked(copyImage).mockReset();vi.restoreAllMocks()})
+it.each([1, 2])('invalidates photo confirmation when canonical content changes before copy settles',async()=>{
+ let resolve!:(r:{kind:'copied'})=>void
+ vi.mocked(copyImage).mockImplementation(()=>new Promise(r=>{resolve=r}))
+ const {result,rerender}=renderHook(({content})=>useCopyFeedback(content),{initialProps:{content:POST_CONTENT_FIXTURE}})
+ let op!:Promise<void>;await act(async()=>{op=result.current.copyPhoto('photo:0:IMG_1.jpg',document.createElement('img'),0)})
+ rerender({content:{...POST_CONTENT_FIXTURE,title:'New canonical content'}})
+ await act(async()=>{resolve({kind:'copied'});await op})
+ expect(result.current.copied).toBeUndefined()
+})

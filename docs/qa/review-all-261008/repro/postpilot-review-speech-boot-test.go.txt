@@ -1,0 +1,28 @@
+package main
+import (
+ "context"
+ "errors"
+ "strings"
+ "testing"
+ clipapp "github.com/postpilot/backend/internal/clip/app"
+ "github.com/postpilot/backend/internal/job"
+ "github.com/postpilot/backend/internal/usage"
+)
+type reviewCrashSpeechQueue struct{clipapp.Queue;queued string}
+func(q *reviewCrashSpeechQueue)Enqueue(ctx context.Context,in job.NewJob)(string,error){
+ id,e:=q.Queue.Enqueue(ctx,in);if e!=nil{return id,e};q.queued=id;return "",errors.New("simulate stop after enqueue commit before journal bind")
+}
+func TestReviewSpeechUnactivatedRecoveryBlocksBoot(t *testing.T){
+ h:=newClipSpeechFixture(t)
+ p,_:=h.plan(t)
+ q,e:=h.s.Quote(t.Context(),"alice",h.project,p.EditPlanRevision);if e!=nil{t.Fatal(e)}
+ interrupted:=&reviewCrashSpeechQueue{Queue:h.f.queue};h.s.Queue=interrupted
+ _,e=h.s.Start(t.Context(),"alice",h.project,p.EditPlanRevision,"crash-gap",usage.UnitApproval{QuoteID:q.ID,ApprovedMaxCredits:&q.MaximumCredits,CancellationPolicyVersion:1});if e==nil||interrupted.queued==""{t.Fatal("fault gap not created",e)}
+ j,e:=h.f.jobs.GetByID(t.Context(),interrupted.queued);if e!=nil||j.Status!=job.StatusQueued||j.DispatchReady{t.Fatal("unexpected durable gap",j,e)}
+ baseline:=h.f.provider.speech
+ for attempt:=1;attempt<=3;attempt++{
+  e=h.s.Recover(t.Context());if e==nil||!strings.Contains(e.Error(),"no running job changed"){t.Fatal("counterexample no longer reproduces",attempt,e)}
+  t.Logf("boot recovery attempt%d: %v",attempt,e)
+ }
+ if h.f.provider.speech!=baseline{t.Fatal("recovery unexpectedly called supplier")}
+}

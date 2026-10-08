@@ -1,0 +1,9 @@
+import { chromium } from '/Users/ihaelam/project/postpilot/node_modules/playwright/index.mjs';
+import {writeFileSync} from 'node:fs';
+const browser=await chromium.launch({headless:true});const page=await browser.newPage({viewport:{width:1440,height:900}});const errors=[];page.on('pageerror',e=>errors.push(String(e)));
+await page.goto('http://localhost:28961');await page.getByRole('button',{name:'Review options'}).click();await page.waitForTimeout(100);
+const focused=()=>page.evaluate(()=>({text:document.activeElement?.textContent,aria:document.activeElement?.getAttribute('aria-label'),tag:document.activeElement?.tagName}));
+const tabs=[await focused()];for(let i=0;i<4;i++){await page.keyboard.press('Tab');tabs.push(await focused());}
+const popoverOpen=await page.getByRole('dialog',{name:'Review options'}).count();await page.keyboard.press('Escape');
+await page.getByRole('button',{name:'Empty sheet'}).click();await page.waitForTimeout(400);const empty=[await focused()];await page.keyboard.press('Tab');empty.push(await focused());
+const result={tabs,popoverOpen,empty,errors};writeFileSync('/private/tmp/postpilot-review-browser-proof.json',JSON.stringify(result,null,2));console.log(JSON.stringify(result,null,2));await browser.close();

@@ -1,0 +1,26 @@
+import { expect, it } from '/private/tmp/postpilot-review-all-261008/frontend/node_modules/vitest/dist/index.js'
+import { storeVerifiedBrowserResult, type BrowserResultStore, type VerifiedBrowserResult } from '/private/tmp/postpilot-review-all-261008/frontend/src/features/render-clip-browser/api/store-result.ts'
+
+it('reproduces committed conditional PUT whose successful response is lost', async () => {
+  const result = {renderId: 'same-render', file: new Blob(['verified-mp4']), verdict: {passed: true, measurements: {}}, dispose: async () => {}} as VerifiedBrowserResult
+  let objectExists = false
+  let prepares = 0, puts = 0, reports = 0, completions = 0
+  const store = {
+    prepare: async () => { prepares++; return {putUrl: 'same-key', headers: {'If-None-Match': '*'}} },
+    put: async (_url, headers) => {
+      puts++
+      expect(headers['If-None-Match']).toBe('*')
+      if (objectExists) throw new Error('412 Precondition Failed')
+      objectExists = true
+      throw new Error('PUT stored successfully but response lost')
+    },
+    report: async () => { reports++; return {passed: true, notices: []} },
+    complete: async () => { completions++; return {id: 'project'} },
+  } as BrowserResultStore
+  const signal = new AbortController().signal
+  await expect(storeVerifiedBrowserResult(result, store, signal)).rejects.toThrow('response lost')
+  expect(result.uploadPhase).toBeUndefined()
+  for (let retry = 0; retry < 3; retry++) await expect(storeVerifiedBrowserResult(result, store, signal)).rejects.toThrow('412')
+  expect({objectExists, prepares, puts, reports, completions, phase: result.uploadPhase}).toEqual({objectExists: true, prepares: 4, puts: 4, reports: 0, completions: 0, phase: undefined})
+  console.log('Response-loss reproduction: object persisted; retries=3; PUT=4; report=0; complete=0; uploadPhase=undefined')
+})

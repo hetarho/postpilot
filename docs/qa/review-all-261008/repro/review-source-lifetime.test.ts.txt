@@ -1,0 +1,37 @@
+import { afterEach, expect, it, vi } from 'vitest'
+import { ClipSourceSession, discardClipSourceSessions, type SourcePipeline } from '@/features/upload-clip-sources/model/session'
+import type { ClipSourceBatch } from '@/entities/clip-project'
+
+afterEach(()=>{discardClipSourceSessions();vi.useRealTimers()})
+
+it('reproduces a second expired playback capability permanently exhausting this page source refresh guard',async()=>{
+  vi.useFakeTimers()
+  const base=Date.parse('2026-10-08T00:00:00Z')
+  vi.setSystemTime(base)
+  const fingerprint='a'.repeat(64)
+  const retention=new Date(base+86400000).toISOString()
+  const batch:ClipSourceBatch={id:'retained',projectId:'project',current:true,state:'ready',expiresAt:retention,sources:[{id:'source',state:'ready',actualBytes:100,metadata:{filename:'video.mp4',contentType:'video/mp4',fingerprint,bytes:100,durationMs:2000,width:1920,height:1080},availability:'available',retentionExpiresAt:retention,retainOriginalAudio:false}]}
+  let playbackCalls=0
+  const pipeline:SourcePipeline={
+    read:async()=>[],reserve:async()=>({batch,uploads:[]}),put:async()=>{},confirm:async()=>batch,discard:async()=>{},createURL:()=>'',revokeURL:()=>{},retained:async()=>[batch],
+    playback:async()=>({url:`https://private.test/cap-${++playbackCalls}`,expiresAt:new Date(Date.now()+60000).toISOString()}),
+  }
+  const session=new ClipSourceSession('project',pipeline)
+  session.activate()
+  await session.refreshRetained()
+  expect(await session.ensurePlayback(fingerprint)).toContain('cap-1')
+  vi.setSystemTime(base+61000)
+  expect(await session.ensurePlayback(fingerprint,true)).toContain('cap-2')
+  vi.setSystemTime(base+122000)
+  expect(Date.parse(session.getSnapshot().entries[0].retentionExpiresAt!)).toBeGreaterThan(Date.now())
+  await expect(session.ensurePlayback(fingerprint,true)).rejects.toMatchObject({reason:'unavailable'})
+  expect(playbackCalls).toBe(2)
+  expect(session.getSnapshot().entries[0].previewURL).toBe('')
+  await session.refreshRetained()
+  await expect(session.ensurePlayback(fingerprint,true)).rejects.toMatchObject({reason:'unavailable'})
+  expect(playbackCalls).toBe(2)
+  session.dispose()
+  session.activate()
+  await session.refreshRetained()
+  expect(await session.ensurePlayback(fingerprint,true)).toContain('cap-3')
+})

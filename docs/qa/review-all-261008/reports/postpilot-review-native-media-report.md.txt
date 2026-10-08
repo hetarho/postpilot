@@ -1,0 +1,77 @@
+# Native media supplemental review — immutable b051307a
+
+Assigned handoff `/private/tmp/postpilot-review-native-media-handoff.json`: **35/35 handwritten production Go files, 7,205 lines fully read in sections**, no partials. Coverage ledger `/private/tmp/postpilot-review-native-media-coverage.json`. All source/repo changes remain prohibited; scratch overlays/reports only. CLIP r59 (427 lines), CDS r33 (224), DUB r3 (72) fully read with truncated passages explicitly repaired, alongside prior full ARCH/STATE/FORMAT reads. The native media auditor owns the complementary paths, and root merges coverage without double-counting. Root owns full CI/media tests; this pass adds only the bounded new-candidate regression below.
+
+## M1 P2 — bug: 분석 복사본 준비 작업이 음량 측정으로 기록되어 진단/성능 근거를 왜곡함
+
+- Location/symbol: `backend/internal/clip/media/diagnostic.go:64–73` (`commandOperation`), `chunks.go:91–95` (`prepareChunk`), `capacity.go:164–180` (`runBoundedLog`, `runCommand` diagnostic observer).
+- Real execution path: native `PrepareAnalysisChunksExcept` → `prepareChunk` → `chunkArgs` writes `proxy-*` MP4 and emits original decode progress on stderr → `runBoundedLog` sets `Command.CaptureStderr=true` → `commandOperation` returns `loudness` before its proxy output classification at lines96–97 can run. Both timing records and wrapped command failures carry that wrong operation.
+- Trigger/scope: any explicit retained native preparation path; adapter consumer exists in `backend/internal/clip/worker/executor.go:109` and `clip/app/generation.go:943–947`. This is deterministic diagnostic behavior in the native route, not a claim that browser-first default starts native preparation, that every production provider path is activated, or that current hardware has passed qualification.
+- Impact/cost: the cost/timeout/refusal of original decode plus analysis encode is attributed to loudness, even for video-only inputs. Operator cannot compare stage bottlenecks or diagnose preparation failure from operation records faithfully; measured performance evidence and future regressions lead investigation toward audio processing. No raw user filenames/body enter the record, and confidentiality remains protected.
+- Baseline: CLIP-88 records actual stage/substage/media-operation durations and typed failure categories. ARCH-45 identifies explicit qualified native preparation as its own media operation and ARCH-52 makes operator resource budgets explicit; CLIP-88 directly requires faithful operation diagnostics. ARCH-24/31 supply the regression-verification baseline. Existing privacy-safe label discipline is good; the lookup precedence is wrong.
+- Repeated validation: `/private/tmp/postpilot-review-native-diagnostic-regression_test.go` uses the actual `chunkArgs` → `runBoundedLog` → observer path for successful tiny output and ordinary encoder failure, preserving existing `newAdapter`/fakeRunner bounded fixture setup. `-count=2`: success operation reads `loudness`, failure operation and typed failure read `loudness` in both repetitions. Setup/output/cause assertions passed; only expected `prepare` classification assertions failed.
+- Command/log: `cd /private/tmp/postpilot-review-all-261008/backend && go test -overlay=/private/tmp/postpilot-review-native-overlay.json ./internal/clip/media -run '^TestReviewProxyProgress' -count=2 > /private/tmp/postpilot-review-native-diagnostic-regressions.log 2>&1`; exit1 expected, package0.568s. Overlay target is scratch-only synthetic test, no repo mutation and no external media/provider work.
+- Existing test gap: `diagnostic_test.go` tests uncaptured code-owned output filenames, success/failure timing and generic captured loudness assumptions, but no proxy preparation command capturing its progress stream. Fix invariant: classify semantic media operation independently of whether stderr is a result channel; explicit operation or output/argument identification should preserve real loudness measurement and typed causes.
+
+## Second-pass rejected hypotheses / limits
+
+- Stale layout-cache identity: `clip/preview_layout.go:16–34` keys render ID + saved revision + canonical draft digest; `app/preview.go:73–104` verifies owner/project/revision and sampled immutable render grounds before introducing the key, then rechecks current project revision after asset work. A new draft/revision uses another key; same key with arbitrary caller-controlled grounds is not the ordinary consumer contract. Cache clones its returned visuals and current drawing paths do not mutate the protected nested block content; no concrete cross-request output pollution confirmed.
+- Owner caption silently repaired/dropped: scheduler has automatic narrowing/removal, but `clip/portable_plan.go:242–269` rejects overlapping owner narration intervals before saved plan work, `clip/caption_regions.go:23–37` and ResolvePortableIntervals enforce owner region intervals, and later `VerifyCompositionManifest` rejects remaining overlap. Do not infer publicly saveable invalid narration from calling private scheduler alone. Remaining generated captions intentionally follow CLIP-106/CDS-41 repair/notices.
+- Preview response overrun: raster helper counts binary PNG payloads, while RPC `clip/rpc/preview.go:61–62` checks serialized response bound; caption-sheet path explicitly budgets base64 and framing. Actual consumer refuses oversized serialized responses rather than transmitting beyond the bound. No bypass proven.
+- 60-second codec tail: analysis copy validates packet EOF, complete decoded frames/samples, stream count/codec/cadence, finite timestamp/duration and strict presented video/container limits. AAC raw-padding allowance remains distinct from delivered source-time coverage. Final result length checks decoded video frames independently of padded audio/container clocks.
+- Silent source-off output: `renderComposition` determines source audio from exact owner retention and actual audio presence; narrated output separately loads immutable speech and includes narration even when all source audio is off. `loudness.go` treats true digital silence explicitly and avoids amplifying it; no narration omission or silence-as-error finding.
+- MP3 natural-rate handling: speech loader checks immutable AudioHash and bounded exact bytes, PCM channels/sample count and bounded codec priming/tail; narration mix uses absolute output delay and duration, never cut-rate stretching or source hook dip. Requires real DUB voice qualification separately; no fixture-only intelligibility or continuity claim.
+- One-frame animation/raster differences and unusual texture luminance remain real-device/native comparison qualification questions; no unsupported finding based only on integer rounding or synthetic screenshots. T539/T550/T603/T604 blocked qualification and T631/T633–T646 planned functionality remain notes/exclusions.
+- Unknown legacy style names, retained transport DTO tags, per-frame helper comments and large file length alone are not new correctness/maintenance findings without actual current consumer impact.
+
+## Positive code-quality assessment
+
+- Construction pins every required font's bytes/checksum and actual family, tests outline coverage rather than cmap membership, fixes substitutes to the bundled Wanted Sans family, and validates catalog/preset bindings before work. No optional required setter or context-to-foreign SQL access found in these assigned adapters; dependencies point from media adapter toward clip/design contract.
+- Process ownership kills the child group, Linux reaps adopted descendants, cancellation/deadline scopes include finite process admission, stdout/stderr are bounded, and live disk/workspace checks stop growth during subprocess work. Error diagnosis unwraps typed causes but exposes code-owned labels/numeric measurements.
+- Cut time rounds cumulative transformed time, shares transition arithmetic with picture/audio/ground sampler, uses hard-cut concatenation and matched boundary fades rather than consuming unrelated audio duration, and verifies output resolution/cadence/codec/decoded duration after execution.
+- Composition tree bounds full-resolution decoder fan-in and releases dead lossless intermediates. PCM assembles source and narration once before final AAC; corrective loudness passes copy video and return to original PCM to avoid repeated lossy video/audio encoding.
+- Rendering, layout, representative preview and fragments share measured glyph geometry and escaped product-owned SVG templates. Owner text/style/size/position remain independent of AI style admission; automatic generated repairs record notices, authored failures retain exact words and editable cause.
+- Ground sampling uses originals or their lossless bare transformed footage, accounts for fades/crop/rate and refuses missing samples. Plated captions keep their own paint; source contrast adapts backdrop and notice rather than changing authored region slot fills.
+- Byte/time/layout cache limits, concurrency fences, atomic plan revisions and private result publication are reviewed as separate contracts. Automated structure tests do not establish live provider, GPU or identified-browser parity, and this report makes no such claim.
+
+## Full-read production ledger
+
+| File under backend/internal/clip/media | Lines fully read | Coverage |
+|---|---:|---|
+| analysis_runtime.go | 90 | full |
+| analysis_verify.go | 226 | full |
+| capacity.go | 239 | full |
+| caption_fragment.go | 187 | full |
+| caption_frames.go | 279 | full |
+| chunks.go | 190 | full |
+| composition.go | 134 | full |
+| composition_admission.go | 96 | full |
+| composition_batches.go | 142 | full |
+| composition_cues.go | 237 | full |
+| composition_footage.go | 85 | full |
+| composition_header.go | 104 | full |
+| composition_layout.go | 518 | full |
+| composition_plates.go | 281 | full |
+| composition_render.go | 317 | full |
+| composition_roles.go | 214 | full |
+| copy.go | 832 | full |
+| cut_timeline.go | 133 | full |
+| diagnostic.go | 103 | full |
+| font_family.go | 204 | full |
+| ground_sampler.go | 441 | full |
+| loudness.go | 155 | full |
+| luminance.go | 244 | full |
+| narrated_audio.go | 136 | full |
+| overlay.go | 211 | full |
+| preview.go | 196 | full |
+| process_unix.go | 31 | full |
+| reap_darwin.go | 8 | full |
+| reap_linux.go | 31 | full |
+| region_sample.go | 82 | full |
+| regions.go | 465 | full |
+| render.go | 259 | full |
+| runtime.go | 127 | full |
+| sequence.go | 146 | full |
+| tooling.go | 62 | full |
+
+Deeply traced clusters: analysis-runtime/verify/chunks (ownership adapter boundary, packet/frame/sample/time validation); capacity/process/reapers (timeout, cancellation, budget and cleanup); composition/render/cut_timeline/audio/loudness (admission, exact timeline, audio intent, output validation); copy/font/layout/regions/overlay (font identity, exact authored content, geometry and diagnostic contracts); caption frames/fragments/sequence/preview (identity, crop/bleed, pagination, cache, response bounds). Referenced upstream app/domain consumers and targeted tests for falsification, not claimed as new full coverage of complementary media scope.

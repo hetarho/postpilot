@@ -1,0 +1,20 @@
+package app
+
+import (
+ "context"
+ "errors"
+ "testing"
+ "github.com/postpilot/backend/internal/clip"
+)
+type reviewRemovedVoiceResolver struct{ calls int }
+func (r *reviewRemovedVoiceResolver) ResolveClipVoice(context.Context,string,string)(clip.SpokenVoiceBinding,error){r.calls++;return clip.SpokenVoiceBinding{},clip.ErrNotFound}
+func TestReviewDisabledDubbingRequiresRemovedVoice(t *testing.T){
+ resolver:=&reviewRemovedVoiceResolver{}
+ svc:=&Service{generation:&GenerationService{voices:resolver}}
+ _,err:=svc.resolveDubbing(context.Background(),"owner",clip.DubbingOptions{Enabled:false,VoiceID:"removed-voice"})
+ if !errors.Is(err,clip.ErrNotFound){t.Fatalf("want missing removed voice, got %v",err)}
+ if resolver.calls!=1{t.Fatalf("unexpected resolver calls %d",resolver.calls)}
+ got,err:=svc.resolveDubbing(context.Background(),"owner",clip.DubbingOptions{Enabled:false})
+ if err!=nil||got.Enabled||got.VoiceID!=""{t.Fatalf("cleared voice should disable: %+v %v",got,err)}
+ t.Log("UI checkbox sends enabled=false retaining voice ID: rejected; explicit cleared voice ID: succeeds without synthesis")
+}

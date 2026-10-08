@@ -1,0 +1,2 @@
+import { defineConfig } from 'vitest/config'
+export default defineConfig({root:'/private/tmp/postpilot-review-widget-tests',resolve:{alias:{'@':'/private/tmp/postpilot-review-all-261008/frontend/src'}},test:{environment:'jsdom',globals:true,setupFiles:['/private/tmp/postpilot-review-all-261008/frontend/src/test/setup.ts'],include:['*.test.ts','*.test.tsx'],maxWorkers:1,testTimeout:30000}})

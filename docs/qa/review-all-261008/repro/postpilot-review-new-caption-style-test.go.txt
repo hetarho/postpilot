@@ -1,0 +1,18 @@
+package clip_test
+import(
+ "testing"
+ "github.com/postpilot/backend/internal/clip"
+)
+func TestReviewNewCaptionLosesOwnerAppearance(t *testing.T){
+ cfg:=clip.DefaultRenderConfig(clip.Environment{})
+ p,plan:=narrationFixture(t)
+ draft:=creationDraft(plan)
+ added:=ownerCaption("직접 쓴 자막",8000,11000)
+ at:=clip.CaptionPlacement{X:200,Y:900}
+ added.Owner=clip.OwnerCaption{Position:&at,Size:64,Style:"film"}
+ draft.Elements=append(draft.Elements,added)
+ next,e:=clip.ApplyCorrection(cfg,p,draft);if e!=nil{t.Fatal(e)}
+ saved,ok:=narrationOf(next,"narration-2");if !ok{t.Fatal("created caption missing")}
+ if saved.Owner!=(clip.OwnerCaption{}){t.Fatal("counterexample no longer reproduces",saved.Owner)}
+ t.Logf("requested new-caption appearance style=%s,size=%d,position=%+v; accepted appearance=%+v",added.Owner.Style,added.Owner.Size,*added.Owner.Position,saved.Owner)
+}

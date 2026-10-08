@@ -1,0 +1,26 @@
+import {cleanup,renderHook,waitFor,act} from '@testing-library/react'
+import {afterEach,expect,it} from 'vitest'
+import {create} from '@bufbuild/protobuf'
+import {createRouterTransport} from '@connectrpc/connect'
+import {createTestQueryClient,withProviders} from '@/test/session'
+import {useSavePostDraft} from '@/entities/post/api/useSavePostDraft'
+import {getPostQueryKey} from '@/entities/post/api/post-queries'
+import {seedSessionCache} from '@/entities/session/api/session-queries'
+import {useMyPlan,myPlanQueryKey} from '@/entities/plan/api/useMyPlan'
+import {useRequestRefund} from '@/entities/subscription/api/useRefunds'
+import {BillingService,GetMyPlanResponseSchema,PlanService,PostService,PostSchema,SavePostDraftResponseSchema,GetPostResponseSchema,ProtoPlan,contentLanguageToProto,ProtoBlogField} from '@/shared/api'
+import {RequestRefundResponseSchema} from '@/shared/api/gen/postpilot/v1/billing_pb'
+afterEach(cleanup)
+it('reproduces a completed old session draft response repopulating the cache after the session was cleared',async()=>{
+ const cache=createTestQueryClient(); let release!:(x:unknown)=>void;
+ const gate=new Promise(resolve=>{release=resolve});
+ const transport=createRouterTransport(router=>router.rpc(PostService.method.savePostDraft,async()=>{await gate;return create(SavePostDraftResponseSchema,{post:create(PostSchema,{slug:'owner-a-post',title:'OWNER A TITLE',memo:'OWNER A PRIVATE MEMO',targetLanguage:contentLanguageToProto('ko'),status:'draft',field:ProtoBlogField.NONE})})}));
+ const hook=renderHook(()=>useSavePostDraft(),{wrapper:withProviders(transport,cache)});
+ let done!:Promise<string>;
+ act(()=>{done=hook.result.current.save({slug:'owner-a-post',title:'OWNER A TITLE',memo:'OWNER A PRIVATE MEMO',templateAnswers:[]})});
+ await waitFor(()=>expect(cache.getMutationCache().getAll().some(m=>m.state.status==='pending')).toBe(true));
+ hook.unmount(); cache.removeQueries();seedSessionCache(cache,transport,{user:{id:'owner-b'} as never,plan:ProtoPlan.FREE});
+ await act(async()=>{release(undefined);await done});
+ const leaked=cache.getQueryData(getPostQueryKey(transport,'owner-a-post')) as {post?:{memo?:string}} | undefined;
+ expect((leaked as {post?:{memo?:string}})?.post?.memo).toBe('OWNER A PRIVATE MEMO');
+});

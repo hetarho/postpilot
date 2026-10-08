@@ -1,0 +1,28 @@
+package app
+import (
+ "context"
+ "errors"
+ "testing"
+ "github.com/postpilot/backend/internal/clip"
+ "github.com/postpilot/backend/internal/llm"
+)
+func TestReviewAdmittedStorylineRefreezeLosesRateSnapshot(t *testing.T){
+ rates:=&changingRates{rate:testQuoteRate}
+ pricing:=NewPricing(&fakeFreezer{},Budgets{ObserveCompletionTokens:8192,FlowCompletionTokens:32768,NarrationCompletionTokens:32768},rates)
+ observe:=llm.ModelRef{ProviderID:"p",ModelID:"o"};write:=llm.ModelRef{ProviderID:"p",ModelID:"w"}
+ admitted,e:=pricing.FreezeWork(context.Background(),observe,write,2,false,true,3);if e!=nil{t.Fatal(e)}
+ s:=&GenerationService{pricing:pricing}
+ rates.err=errors.New("official rate source unavailable after job admitted")
+ ordinary:=admitted
+ _,e=s.refreeze(context.Background(),ordinary,2);if e!=nil{t.Fatal("ordinary frozen-rate control failed",e)}
+ admitted.SkipNarration=false;admitted.Storyline=true
+ _,e=s.refreeze(context.Background(),admitted,2)
+ if !errors.Is(e,clip.ErrRateUnavailable){t.Fatal("counterexample no longer reproduces",e)}
+ outageErr:=e
+ rates.err=nil
+ rates.rate.ReferenceE4+=1000000;rates.rate.AppliedE4+=1000000
+ changed,e:=s.refreeze(context.Background(),admitted,2);if e!=nil{t.Fatal(e)}
+ if changed.Rate==admitted.Rate || changed.MaxCredits<=admitted.MaxCredits {t.Fatalf("rate-increase reproduction failed: before=%+v after=%+v",admitted,changed)}
+ t.Logf("admitted ceiling=%d; recheck with newly published rate=%d (would be rejected in generationRun.admitPrepared)",admitted.MaxCredits,changed.MaxCredits)
+ t.Logf("ordinary accepted frozen rate; same admitted storyline failed rate outage: %v (rate selector calls=%d)",outageErr,rates.calls)
+}

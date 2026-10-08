@@ -1,0 +1,290 @@
+# Frontend page/feature audit — committed b051307a, completed owned coverage
+
+Scope: pages/widgets/features/entities, excluding media internals delegated to media auditor. App/shared UI and common libraries are independently audited by root. Read-only snapshot /private/tmp/postpilot-review-all-261008; all probe changes are in /private/tmp/postpilot-review-fe-overlay. Per-path full-source reading ledger: /private/tmp/postpilot-review-frontend-read-ledger.json. Owned pages/features coverage is complete; other auditors own app/shared, entities, widgets and media internals. Root must aggregate the path ledgers for an entire-repository coverage claim.
+
+## Confirmed independent candidates
+
+### FE-A (P1) Memory directory refresh destroys active unsaved input
+
+- Location: `frontend/src/pages/memories/ui/MemoriesPage.tsx:49` (`MemoriesPage` renders all MemoryRow/CreateMemorySheet content only under !isError); `MemoryEditForm.tsx:46` owns text/kind/tags exclusively in mounted local state; `entities/memory/api/useMemories.ts:25` uses staleTime0; memory CRUD invalidations are in `memory-mutations.ts:20,48,72` and `memory-cache.ts`.
+- Trigger: open an existing memory's edit form, type changed text/tags, then a background ListMemories read fails (reconnect, sibling create/delete/update invalidation, or explicit client refetch). A previous successful list remains in Query cache, but isError hides its rows and unmounts the active form. Retry and reopen the same item: original persisted values return, with the unsaved edit gone and no discard choice.
+- Concrete proof: actual MemoriesPage, real useMemories + mutation hooks, fake Auth/Memory RPC through createRouterTransport. Start with ORIGINAL MEMORY, type UNSAVED MEMORY, fail/refetch list, assert form disappears, restore list/retry/open, assert field ORIGINAL MEMORY. Probe passes. App globally disables refetch-on-window-focus, so focus alone is NOT the claimed trigger.
+- User impact: transient directory read failure discards unrelated unsaved authored facts. This also unmounts an open CreateMemorySheet, since its host is under the same gate.
+- Policy: ARCH20 shared controls/lifetimes; THEME9 unreliable cellular network, THEME34 input preservation; MEM30 failed saves preserve the form, analogous preservation is needed for a read of other rows. A transient read should retain last-known rows and mounted input while exposing retry; distinguish first-load error from background error.
+- Scope confidence: formal candidate, outside pending T631/T633–T646 origin/prompt functionality. Do not yet claim all directories affected; GuidelineDirectory and VoiceScreen have comparable conditional mounts, but their durable actors need separate falsification.
+
+### FE-B (P1) Resetting URL mutation while it is running permits stale publication writes
+
+- Location: `features/record-published-url/ui/PublishedUrlField.tsx:101,105–108` keeps field editable and calls saving.reset on every input change; `:57,125` rely on saving.pending for admission; `entities/post/api/useSavePublishedUrl.ts:17–23` blindly replaces cached post on every response; `PublishedUrlField.tsx:28` keys/remounts the form by each response URL.
+- Trigger: submit Naver URL /1 on a slow connection. While pending, correct the text to /2. Mutation.reset sets observer pending false even though /1 is still in flight, enabling Save and Clear. Submit /2. If /2 reaches the server before the older /1, /1 later overwrites the user's newer correction; each response also reseeds the form.
+- Concrete proof: actual PublishedUrlField + useSavePublishedUrl + query cache; an isolated PostService delays the first write while accepting the second. Save begins disabled, typing enables it, both calls are accepted, /2 is displayed, release old call, persisted post/cache/form return to /1. Probe passes.
+- Consequence: corrected publication URL can revert, and an older URL can republish a post after a newer clear intended to unlock editing. Even without a second submit, a response-keyed remount loses any correction typed while the save was pending.
+- Policy: POST75 replacing/clearing published URL is explicit owner intent; POST84 refuses invalid address without altering previous saved state; THEME28 pending prevents repeated action and THEME34 input preservation. Keep in-flight admission independent of error-message reset; disable pending edits or serialize/coalesce newest intent and fence response-driven draft replacement.
+- Scope confidence: this is an existing publication form outside T642's BlockEditor changes; root should check T646's qualification overlap before final classification.
+
+### FE-E (P1) Memory text typed during an in-flight manual save is silently discarded
+
+- Location: `features/edit-memory/ui/MemoryEditForm.tsx:91–103` leaves its textarea enabled while pending; kind/tags/Save/Cancel are disabled. `:73–77` awaits the submitted patch and unconditionally calls onDone, destroying any text entered meanwhile.
+- Trigger: edit FIRST SAVE, submit on a slow connection, type SECOND UNSAVED EDIT while Save is disabled. The textarea accepts the new text; earlier acknowledgement closes the form and persists only FIRST SAVE.
+- Proof: actual MemoryEditForm, controlled parent pending/save Promise matching its real caller contract; the form accepts FIRST SAVE SECOND UNSAVED EDIT, then on release disappears; captured only patch{text:'FIRST SAVE'}. Passed. This is a local component reproduction, not a backend durability claim.
+- Policy: MEM30 one explicit save and refused-input preservation; THEME28 pending admission/THEME34 owner draft preservation. Either lock all editable fields for the submitted intent or retain/reconcile newer input before completing. Group with FE-A if root chooses one memory draft-preservation corrective scope.
+
+### FE-F (P1) Background refetch makes a tag-only memory edit revert another tab's text
+
+- Location: `features/edit-memory/ui/MemoryEditForm.tsx:46–48` seeds local fields once but does not retain the opening baseline; `:68` passes the CURRENT refetched memory into `changes`; `:169–180` compares local old values to that new prop. The old GuidelineEditForm has a similar source pattern but reverse-consumer search found no production caller: current GuidelineDirectory uses GuidelineDirectEditor/authoring. Do NOT claim a live guideline defect.
+- Trigger: open memory A, edit only tags. Another tab changes A.text and a background successful ListMemories refetch supplies that newer value. The local text field deliberately retains old text. Save now sees old text differ from current prop, adds it to a patch, and silently reverts the other tab's unrelated text.
+- Proof: actual MemoriesPage + real memory hooks, fake Connect service; initial ORIGINAL MEMORY, local new-tag, independently issue UpdateMemory(text OTHER TAB NEW TEXT), refetch list; Save emits second UpdateMemory{text ORIGINAL MEMORY,tags new-tag}. Passed. No first-load or transient-error condition required.
+- Policy: the form's documented bounded patch semantics, ARCH24 consumer checks, THEME34 preserve owner-authored changes. Track opening baseline or changed-field intent separately from latest remote projection; then merge only fields actually changed. A background refresh must not turn untouched local fields into write intent.
+
+### FE-G (P1) Closing declined memory candidates loses the failed discard intent
+
+- Location: `features/extract-memories/ui/MemoryCandidateSheet.tsx:73–77` starts void approve.discard(jobId) and calls onClose immediately; `entities/memory/api/memory-extraction.ts:100–106` catches every ResolveMemoryExtraction refusal; ExtractMemoriesButton close clears jobId. No pending/error/recovery is retained.
+- Trigger: extraction returns nonempty candidates; owner closes without approving. Offline/refused ResolveMemoryExtraction sends no successful discard, but sheet closes and owner loses the only recoverable job reference.
+- Proof: actual MemoryCandidateSheet + real approve/discard hook + fake Connect Get/Resolve; close sends approved[], Resolve throws Unavailable, sheet disappears with no alert/retry, owned job remains readable with PRIVATE CANDIDATE FACT. Targeted memory rerun4/4 passes, log review-memory-repro.log.
+- Backend corroboration by independent BE auditor: extraction.go146 replaces completed extraction source payload with post_slug/candidates (no successful-extraction frozen body/memo retained); ResolveExtraction198–226 clears candidates only after successful resolution; job/query130–144 only clears finished matching owned job, no expiry/pruning found. Thus declined raw candidates can remain indefinitely until explicit resolution/post/account deletion. This is not a claim that completed extraction retains the original post body.
+- Policy: MEM15/16 resolved unchecked candidates are discarded and raw candidate list is cleared. Retain a bounded idempotent discard delivery/reconciliation intent or expose recoverable refusal until server acknowledgement; this does not add a later candidate approval/history queue. T638 owns backend composer material fence, not this existing frontend discard delivery.
+
+### FE-H (P1) A delayed preview enables applying a different catalog document than the displayed diff
+
+- Location: `features/manage-model-catalog/ui/CatalogDocumentPanel.tsx:68–75` resets preview only when a result already exists; textarea remains enabled at149–160; apply at111 sends current text while canApply(plan) checks mutation's unrelated last result. `entities/model-catalog/api/useCatalogDocument.ts:25–33` has no request-text or sequence fence.
+- Trigger: start the first preview of document A on a slow connection, edit to B while A is pending, let A finish. The panel displays A's diff and enables Apply, but Apply sends B even though B was never previewed.
+- Proof: actual CatalogDocumentPanel/real Connect query hooks; Preview A gate, type B, release => diff provider/model-a, no model-b; Apply enabled, click captures documentB; only documentA was previewed. Passed targeted1/1, review-catalog-repro.log. Existing CatalogDocumentPanel tests cover edit after a completed preview and miss pending-first-preview input changes.
+- Consequence: bulk membership omissions can deregister different models, erase grade/effort and strand user selections relative to the operator's reviewed diff; server whole-document validation cannot restore the intended two-step user review.
+- Policy: MODEL54 preview/apply carry the same document; MODEL52/53 destructive complete-membership/atomic changes. Bind successful preview to exact text/operation and require a new current-text preview after any edit; fence late answers. Pending apply should also preserve its submitted snapshot and prevent conflicting writes/reset races.
+
+## Confirmed clip candidates (root determines task ownership)
+
+### FE-C (P1) Clip source binding is silently overwritten by the next settings autosave
+
+- Location: `features/bind-clip-source-item/model/useClipSourceBinding.ts:67–85` builds `projectDraft(project)` plus changed associations and invokes save.mutateAsync directly; `features/edit-clip-project/ui/ClipProjectForm.tsx:136–140` retains its dirty draft over remote changes; `:167–182` queues/sends its whole snapshot through a separate serialized lane. Binding does not join that queue/lane or merge another pending edit.
+- Trigger: on ① with a grouped composition and retained source, type a new instruction, then choose that source's item before the one-second autosave debounce expires. Binding's write commits association first. The already queued instruction snapshot still contains associations[], and its later save erases the new binding.
+- Concrete proof: actual `/clips/owned` app/router, ClipProjectForm/useClipWorkspace/useClipSourceBinding, real hooks and current fake Connect services. First UpdateClipProject carries selected belly/source association. Second UpdateClipProject carries NEW UNSAVED INSTRUCTION and associations[]. Probe passes; this is a normal owner action sequence, not a provider/device mock claim.
+- Impact: independent source association choices are discarded silently, and subsequent generation uses the unbound material. The binding hook returns pending/failure, but ClipSourcePicker receives only items/value/change and has no refusal presentation; the direct void mutateAsync also has no rejection catch.
+- Policy: CLIP123 owner source-item association, CLIP39 newest-wins autosave, ARCH11 durable/page ownership and ARCH24 consumer tests, THEME9/34 latency/input preservation. Use one authoritative working snapshot for settings and bindings, or send/rebase a bounded association patch in the same project write lane; generation admission must await the chosen binding.
+- Scope: this existing source/settings race predates origin/prompt inspection and does not depend on browser rendering qualification. Root decides final pending-area classification against T631; no duplicate task is created by this audit.
+
+### FE-D (P1) Leaving a clip during an in-flight save loses later edits
+
+- Location: `features/correct-clip/model/useClipCorrection.ts:241` throws when unmounted before adopting the successful response revision/baseline; `:279–292` leave flush waits the lane then checks saving.current, which has already cleared in finally; `:302–310` explicitly promises unmount flush without a discard confirmation. ClipWorkspace's normal return navigates without waiting for correction.flush.
+- Trigger: change a caption to S1 and allow its autosave to start on a slow connection; type S2 while that save is running (controls intentionally remain editable); leave the clip page before S1 returns. S1 succeeds and advances the server revision, but the early unmounted branch drops that acknowledgement. The final leave flush attempts S2 using the old revision, is refused by CAS, and its error is swallowed after navigation. No durable queue retains S2.
+- Concrete proof: actual useClipCorrection actor/hook, current clipTimelineFixture, real clip-plan adapter, fake Connect SaveClipEditPlan with expected-revision enforcement. Block S1, change S2, unmount, resolve S1. Two save calls occur; only S1 is accepted/stored at revision2, and S2 is lost. Probe passes. An initial hypothesis that no second call occurs was falsified; the observed failure is the stale-revision second call.
+- Policy: CLIP39 autosave on exit/newest input, THEME9 cellular latency/THEME34 input preservation; ARCH24 must include plausible leave-during-flight consumer cases. Existing ClipCorrection.test.tsx:363 covers exit before a request is in flight and cannot expose this race.
+- Fix direction: maintain revision/baseline and drain newest queued content independently of mounted React notifications, while preserving session/owner fences; a successful older save must inform any owed newer save even after route exit. Merely allowing stale data to overwrite a newer plan or retrying every CAS failure is unsafe.
+
+### T642 — moving/deleting one of several open block editors corrupts another block on Cancel
+
+- `entities/post/ui/BlockList.tsx:59–61` uses a Fragment keyed by array position. `features/edit-post-content/ui/BlockEditor.tsx:248` snapshots each editor's opened block in useRef. `:103–108` swaps array entries; `:317–319` closes only the source editor, leaving an already-open destination editor mounted over a different block. `:350–354` Cancel restores its original block into its current positional slot.
+- Actual reproduction: blocks [FIRST UNIQUE, SECOND UNIQUE, THIRD UNIQUE]; open editors1+2, move1 down, second editor now displays FIRST while its cancel baseline remains SECOND; Cancel autosaves [SECOND,SECOND,THIRD], losing FIRST. Moving only one open editor (existing test) passes and misses this case. A delete shifts all following editors similarly.
+- T642 owns this exact source and accepts reorder/delete/cancel + caret/Editable continuity. Preserve the assignment and explicitly require the multi-open reorder/delete cancellation regression, using stable block identity or closing/rebinding every shifted edit session without losing independent draft state.
+
+### T642 — deleting a single referenced photo leaves an invisible, irreparable content block
+
+- `entities/post/ui/BlockList.tsx:129–135` returns null for missing IMAGE before invoking renderBlock. BlockEditor supplies no renderMissingImage, so the missing photo's edit/delete/type controls disappear. `BlockEditor.tsx:650–663` rejects every content save while any referenced file is absent.
+- Actual reproduction: one text + IMAGE(deleted-photo.jpg), no matching attachment. Missing-photo warning is shown, second block edit button/caption absent. Edit ordinary text and press Save: visible edited text stays but zero SavePostContent requests occur after debounce. There is no manual way to remove/reassign the invisible block. A missing gallery is still wrapped in its controls and VIDEO renders its filename, so this is specifically the single-image branch.
+- POST18/39 deliberately allow source deletion without erasing canonical media positions; POST13 finalization refuses missing images. T642 owns missing-source/BlockList seams, so add this as a repair-path regression there rather than a new competing task.
+
+### T642/T644 — normal typing cannot add comma-separated tags
+
+- `BlockEditor.tsx:401–409` binds field value to content.tags.join(', ') while every keystroke splits, trims and filters empty tokens. A trailing comma is immediately dropped.
+- Actual reproduction: tags[first]; type ',second' into header tags field; field becomes firstsecond, and autosave stores [firstsecond]. Pasting the complete string first,second works, so do not claim all tag input is impossible.
+- T642 owns the header editor; T644 owns max-tag wording/integration. Require raw edit-string continuity through delimiter/IME input while converting valid tags for canonical saves; retain the existing numeric-cap semantics.
+
+## Proof run
+
+- Node24.18.0: `/Users/ihaelam/.npm/_npx/4aa47c519def57bc/node_modules/node/bin/node`.
+- Command in scratch overlay: `PATH=/Users/ihaelam/.npm/_npx/4aa47c519def57bc/node_modules/node/bin:$PATH node /Users/ihaelam/project/postpilot/frontend/node_modules/vitest/vitest.mjs run review-repro.test.tsx --reporter=verbose --maxWorkers=1`.
+- Test artifact: `/private/tmp/postpilot-review-fe-overlay/review-repro.test.tsx`; latest integrated log `/private/tmp/postpilot-review-fe-overlay/review-final-repro.log` — all12 frontend probes pass; the shared overlay also ran root's late-session-cache probe, total13/13 across3files,45.53s. Memory/capture/catalog/source-lifetime probes were run separately and then repeated in the integrated run. These assert the observed failure, not a proposed fix. Browser/provider/deployed-server behavior is not established by this fixture probe.
+- Scratch Vite fs.allow permits the immutable snapshot and existing installed dependencies; main code/STATE/skills unchanged. Initial harness setup failed due symlink/fs.allow and incorrect enum export; those harness defects were corrected before the5/5 run.
+
+### FE-I (P1 candidate) Explicit draft-preview refresh exhausts a lifetime-wide source retry budget
+
+- Location: `features/upload-clip-sources/model/session.ts:278–280` stores playbackRetried by fingerprint for the whole session, never clears it after successful renewal; refreshRetained/acceptSoundBatch/acceptSourceOrder do not reset it. `features/preview-clip-draft/model/useClipDraftPreview.ts:84` passes refresh || retry > 0 into resolvePlayback; onRetry increments retry each explicit press. ClipBrowserDraftPreview's refresh/retry invokes preview.onRetry.
+- Trigger: first expired/bad retained-source capability refreshes successfully; a later expiry or explicit owner refresh on the same working page calls ensurePlayback(fingerprint,true) again. It is refused locally before any RPC, clears previewURL and marks unavailable although the same source still has24-hour authorized retention. Repeating explicit refresh and refreshRetained cannot recover it.
+- Proof: actual ClipSourceSession with real state/guards, injected metadata/playback port, controlled clock. cap1 expires after1min; first true refresh returnscap2; second capability expires while source deadline remains valid; true refresh refuses before thirdRPC, clears URL. refreshRetained + true still refuses; dispose/reactivate resets and returnscap3. Passed1/1, review-source-lifetime.log. No live R2/device playback is claimed.
+- Falsification/limit: normal ensurePlayback(fingerprint,false) can mint again after URL is cleared. Restrict the finding to callers whose actual explicit preview Retry/refresh forces true. Existing retained-session.test125 deliberately verifies one immediate automatic retry, which is desirable for a failing capability; the missing distinction is one failure/capability vs every subsequent owner retry for the session.
+- Policy: CLIP23 unexpired matching original reuse, CLIP34 page source lifetime, CLIP50 distinct availability, CLIP56 explicit refresh preserves preview. Keep finite automatic retries per failing capability and permit a fresh explicit owner retry/renewed capability; do not add permanent polling or lengthen access TTL. Media auditor independently confirms distinct from expired result download.
+
+## Additional notes and bounded hypotheses
+
+- Clip source reorder (`useClipWorkspace.ts:234`, `ClipSourceStrip.tsx:55–64`) announces moved before the RPC returns and provides no pending/error/serialization; current caller uses void promise.then(acceptSourceOrder) with no catch. Backend widget auditor independently confirmed twice with actual ClipSourceStrip: unresolved reorder Promise received [b,a], visual DOM still original, live result instantly announces A.mp4 moved to 2/2. Consolidate with its W2 evidence; do not create duplicate finding.
+- Video-only generation panel (`EditorGeneratePanel.tsx:74`) omits ContactSheet despite that widget's video support. Check T631 coverage before finding vs pending note.
+- ARCH3 memory/voucher generated-enum mirrors have silent fallbacks and no descriptor-walk test found. Root consolidates the complete enum mirror inventory.
+- Several legacy model-lab page components have no production consumer beyond their own export barrel; app aliases redirect into unified tests. Root consolidates dead presentation with unused rail modules, after checking pending T631.
+- Expired clip downloads: `ClipResult.tsx:86–101`/`ClipsPage.tsx:288` use the cached direct private R2 signed URL in an anchor; no read or expiry check occurs on click. Finished detail/list polling ends, and preview onError refresh does not fire for an idle already-painted result. Media auditor confirms backend `clip/app/service.go:152,156` uses configured ReadTTL, `clip/limits.go:197` maps GetTTL, and `storage/clip_processing.go:56–71` signs explicit expiry; no redirect/middleware extends this capability. A long-open page after10m can therefore download an expired URL while durable output remains retained. Refresh the owner-bound capability on explicit download rather than increasing TTL or adding permanent polling. Static call-chain verified; no live R2 request was made.
+
+## Rejected or bounded hypotheses
+
+- Photo rotate's former per-call callback loss (old perf-cost F34) was fixed: hook-level useRotateImage callback patches every successful response. Not re-proposed.
+- Clip draft/region/storyline module queues now hold senders per project, preserving the previous review F30/F31 corrections; not re-proposed.
+- Memory extraction result recovery after leaving is constrained by existing MEM15's explicit no-later queue and backend extraction comments; no claim of durable candidate-history requirement. Empty extraction retains only {post_slug,candidates:[]} after completion, not the full source; do not claim private body leakage from the zero-candidate close path.
+- Global app query defaults set refetchOnWindowFocus false; no claim of focus-triggered reads/data loss.
+- Subscription invalidation promises use default nonthrowing query-refetch handling; a List read failure is not itself evidence that a successful payment is reported as failed.
+- Root falsified customer-refund-request balance-freeze hypothesis: RequestRefund only inserts/inspects a request; entitlement freezing occurs on master review. Do not claim request submission changes customer credit balance.
+- Authoring fresh chat does not discard unsaved direct edits in a reachable UI path: FRESH is shown only in refining; OPEN_REFINEMENT from a dirty direct stage patches it first. A bare actor FRESH sourceDirty scenario would be an invalid UI reproduction. Explicit route/sheet close before Keep edits still needs separate policy/retention examination.
+
+## Coverage status
+
+- Full policy reads completed: STATE, FORMAT, ARCH through chg, AUTH, POST, EXPORT, VIDEO, THEME (including restored middle section after output clipping), MEM, BILL, EDIT, GUIDE, VOICE, GIFT, LANG, TMPL, DUB, MODEL, CLIP, QUOTA and QUAL through chg; previous desktop-ux-policy-261007 and perf-cost-261004; task ownership T631/T642/T644 checked.
+- Deep traced: post draft/content queues and editors, source upload/rotate/delete, manual export/copy/fallback, memory CRUD/extraction/directory, publication URL, setup availability/learning/authoring entry, model selections/default preparation, billing/payment/refund/voucher surfaces, clip workspace queue/lifecycle/source-order callers.
+- Final owned breadth: all159 handwritten production page .ts/.tsx files and all411 handwritten feature .ts/.tsx files outside media-owned prepare/render-browser slices read fully, including resources/config/barrels/state/UI. Ledger also records18 fully read entity paths; root deduplicates these overlaps. Total57,381 source lines in this ledger; owned pages/features contain no additional non-TS production files. Backend widget auditor completed all79 widget files and now owns all remaining non-media entity sources; root owns app/shared and seven entity API directories; media owns clip-design/clip-plan/clip-preview and preparation/render internals. Tests were selected/reviewed by consumer failure paths and executed, not all read line-by-line; generated code/assets are separate inventory classifications, not handwritten-source depth claims.
+
+## Complete owned slice coverage ledger (all handwritten production sources read)
+
+Coverage depth: every listed source is full-file read; input/lifecycle/mutation/render branches were traced through actual consumers. Repeated runtime falsification focused on the failures above. Config/i18n/barrels are full text read but not claimed to have independent behavior. Pending task-owned behavior was scanned as context and remains excluded from duplicate formal proposals.
+
+### pages
+
+| Slice | Full-read production files | Lines |
+|---|---:|---:|
+| about | 6 | 377 |
+| account | 2 | 85 |
+| admin | 7 | 479 |
+| ai-models | 13 | 1250 |
+| billing | 3 | 571 |
+| billing-checkout | 4 | 332 |
+| billing-method-fail | 3 | 45 |
+| billing-method-success | 3 | 82 |
+| clip | 2 | 97 |
+| clips | 4 | 346 |
+| editor | 23 | 1920 |
+| forgot-password | 3 | 93 |
+| gift | 3 | 124 |
+| google-sign-in-callback | 3 | 115 |
+| guidelines | 3 | 23 |
+| home | 3 | 144 |
+| library | 3 | 70 |
+| login | 3 | 109 |
+| memories | 3 | 197 |
+| model-experiment | 5 | 325 |
+| plans | 6 | 595 |
+| posts | 6 | 610 |
+| reset-password | 3 | 102 |
+| settings | 3 | 146 |
+| setup | 3 | 11 |
+| signup | 3 | 225 |
+| spoken-voices | 5 | 197 |
+| template | 4 | 440 |
+| templates | 3 | 282 |
+| verify-email | 3 | 105 |
+| video-guidelines | 2 | 7 |
+| video-template | 3 | 279 |
+| video-templates | 3 | 313 |
+| voice | 7 | 544 |
+| voices | 3 | 241 |
+| writing-tests | 3 | 238 |
+
+### features
+
+| Slice | Full-read production files | Lines |
+|---|---:|---:|
+| ai-authoring | 9 | 3039 |
+| answer-voice-prompt | 9 | 1123 |
+| apply-model-recommendation | 3 | 127 |
+| assign-estimator-combo | 3 | 245 |
+| bind-clip-source-item | 2 | 85 |
+| cancel-clip | 4 | 226 |
+| change-locale | 4 | 94 |
+| change-password | 2 | 58 |
+| change-theme | 4 | 94 |
+| choose-quality-rules | 3 | 315 |
+| complete-setup | 6 | 429 |
+| configure-model-pair | 9 | 948 |
+| correct-clip | 16 | 4090 |
+| create-guideline | 2 | 170 |
+| create-memory | 3 | 169 |
+| create-spoken-voice | 4 | 358 |
+| create-voice | 3 | 161 |
+| delete-clip-project | 2 | 107 |
+| delete-clip-template | 3 | 88 |
+| delete-guideline | 3 | 84 |
+| delete-memory | 3 | 76 |
+| delete-post | 2 | 94 |
+| delete-template | 3 | 82 |
+| delete-voice | 3 | 120 |
+| edit-clip-project | 6 | 1134 |
+| edit-clip-regions | 7 | 899 |
+| edit-clip-storyline | 8 | 566 |
+| edit-clip-template | 4 | 541 |
+| edit-guideline | 4 | 243 |
+| edit-memory | 3 | 157 |
+| edit-post-content | 6 | 1058 |
+| edit-storyline | 8 | 570 |
+| edit-template | 5 | 670 |
+| edit-voice-material | 6 | 722 |
+| edit-with-ai | 5 | 499 |
+| export-markdown | 2 | 72 |
+| export-naver | 2 | 140 |
+| export-site | 3 | 98 |
+| export-tistory | 2 | 64 |
+| extract-memories | 4 | 270 |
+| fill-template-answers | 3 | 243 |
+| filter-clips | 3 | 67 |
+| filter-posts | 3 | 64 |
+| finalize-clip | 5 | 262 |
+| finalize-post | 3 | 145 |
+| generate-clip | 8 | 1175 |
+| generate-post | 11 | 1705 |
+| generate-writing-voices | 5 | 987 |
+| inspect-clip-observations | 5 | 1304 |
+| issue-voucher | 4 | 310 |
+| log-in | 5 | 174 |
+| make-voice | 4 | 391 |
+| manage-model-catalog | 15 | 2663 |
+| manage-recommendation-set | 4 | 661 |
+| manage-spoken-voice | 3 | 160 |
+| manage-subscription | 3 | 240 |
+| manage-users | 2 | 65 |
+| manage-voice-samples | 3 | 258 |
+| paste-voice-material | 5 | 264 |
+| prepare-writing-voice | 5 | 1522 |
+| preview-clip-draft | 3 | 208 |
+| purchase-credits | 3 | 212 |
+| record-published-url | 3 | 173 |
+| redeem-voucher | 5 | 196 |
+| regenerate-clip-speech | 6 | 861 |
+| register-email | 2 | 51 |
+| register-payment-method | 3 | 120 |
+| remove-payment-method | 2 | 40 |
+| rename-voice | 3 | 149 |
+| request-clip-storyline | 4 | 257 |
+| request-refund | 2 | 115 |
+| request-template | 4 | 466 |
+| restore-voice | 2 | 43 |
+| restore-voice-analysis | 3 | 68 |
+| review-guideline-candidate | 5 | 384 |
+| review-model-experiment | 8 | 263 |
+| review-refunds | 2 | 140 |
+| revise-clip | 5 | 625 |
+| revoke-voucher | 3 | 74 |
+| save-draft | 4 | 1186 |
+| select-model | 4 | 377 |
+| select-post-field | 3 | 110 |
+| select-post-language | 2 | 84 |
+| select-post-template | 4 | 198 |
+| select-post-voice | 4 | 280 |
+| set-default-voice | 3 | 48 |
+| sign-in-with-google | 3 | 152 |
+| toggle-default-guideline | 3 | 169 |
+| upload-clip-sources | 8 | 1320 |
+| upload-photos | 14 | 1556 |
+| use-post-memories | 3 | 55 |
+| writing-test | 9 | 2986 |
+
+
+## Source-grounded strengths and remaining verification limits
+
+- Existing post draft/content and clip settings/region/storyline queues keep work outside transient panels, own latest pending snapshots and bounded retry/refusal semantics, and serialize project writes. Prior per-project sender/rotation bugs were actually corrected; the new evidence is concentrated in operations bypassing or abandoning those lifetimes.
+- Writing-test operation/preparation statecharts freeze explicit commands and request keys, keep uncertain writes distinct from reads, fence owner/operation/revision, require exact entrant counts and source revisions, and never automatically replay paid work on restore. Their complete source read did not yield a new demonstrated correctness defect; this is a useful architectural direction.
+- Model availability and template assignment distinguish unanswered/failed reads from removal, preserve unavailable saved selections, and offer explicit retry/settings help. Model catalog mapping, curation and whole-document validation preserve separate operator authority; FE-H is the missing request-to-preview UI binding, not missing server validation.
+- Runtime-only clip source sessions abort/fence disposed media, preserve compatible local originals, keep signed playback capabilities out of ReadyClipBatch, and show retained expiry. A once-only retry budget exists, but FE-I shows it conflates finite automatic recovery with later explicit refresh.
+- Full FE/BE/type/build/lint conclusions belong to root's global commands. Isolated probes establish exact application/hook state-machine behavior with fake Connect ports; they establish no live provider pronunciation, real-device WebCodecs capacity, deployed authentication behavior or real R2 transfer outcome.
+- Additional live source occurrences of pending editable-field loss: RenameVoiceField's text control (pending Save success exits) and RecommendationSetEditor's label (slots disable but label does not); guideline capture/approval textareas and scope switches likewise remain editable during create. These were fully read and reverse callers checked, but only memory FE-E was runtime-proven; do not imply all manual forms were exhaustively behavior-tested.
+- Legacy direct-edit request helpers useTemplateDraft/useTemplateSave/TemplateRequestBox have zero live external consumers; old model comparison/history/leaderboard pages plus VoiceReflectionStart/ModelStageTabs/LabExtraCandidates have only intra-dead-subtree/barrel references. GuidelineEditForm similarly has zero live consumer. Consolidate optional P3 dead presentation/config tests after preserving retained paid-record APIs and compatibility routes; do not infer their source bugs affect active authoring.
+
+## Final pass disposition
+
+- Pass1: enumerate and full-read all owned handwritten production sources; trace route callers, keys, caches, local draft ownership, account partitions and queue/mutation response order.
+- Pass2: compare against SSOT/current pending tasks and prior accepted findings; search reverse consumers, inspect existing tests, reject dead source-only hypotheses and invalid mocked trigger sequences.
+- Pass3: real React/Connect/state-machine probes in isolated overlay; delay/reorder replies, fail background reads/discards, leave during in-flight save, move among simultaneous editors and advance expiring capabilities. Corrected initial FE-D hypothesis after observing a second rejected CAS call rather than no second call.
+- Pass4: repeat all12 child probes together with root's independent late-session-cache probe (13/13); final inventory confirms159page+411feature sources, no remaining owned production file. No main source, STATE or skill edits were made by this auditor.
+- Source-only notes requiring more proof before a separate formal finding: post upload batches survive post deletion (DraftEditor's onDeleted discards draft/content queues but not upload batch; original/converted objects can remain behind an inaccessible failed item); StorylineActions overwrite-confirmation checks persisted revision before it flushes a local content edit; stale-confirmation callbacks bypass readiness recheck; pending capture/rename/recommendation input lifetime occurrences. Preserve these as notes, not extra validated findings.

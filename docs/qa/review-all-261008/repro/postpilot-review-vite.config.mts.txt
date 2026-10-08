@@ -1,0 +1,5 @@
+import base from './postpilot-review-all-261008/frontend/vite.config.ts'
+export default async function(env) {
+  const config = typeof base === 'function' ? await base(env) : await base
+  return {...config, server: {...config.server, fs: {allow: ['/private/tmp/postpilot-review-all-261008', '/Users/ihaelam/project/postpilot']}}}
+}

@@ -1,0 +1,1042 @@
+[
+  {
+    "theme": "day",
+    "fg": "content-primary",
+    "bg": "surface-base",
+    "ratio": 17.96,
+    "rgba": [
+      [
+        15,
+        13,
+        18,
+        255
+      ],
+      [
+        247,
+        246,
+        250,
+        255
+      ]
+    ]
+  },
+  {
+    "theme": "day",
+    "fg": "content-primary",
+    "bg": "surface-recessed",
+    "ratio": 16.19,
+    "rgba": [
+      [
+        15,
+        13,
+        18,
+        255
+      ],
+      [
+        236,
+        234,
+        240,
+        255
+      ]
+    ]
+  },
+  {
+    "theme": "day",
+    "fg": "content-primary",
+    "bg": "surface-raised",
+    "ratio": 18.75,
+    "rgba": [
+      [
+        15,
+        13,
+        18,
+        255
+      ],
+      [
+        252,
+        251,
+        254,
+        255
+      ]
+    ]
+  },
+  {
+    "theme": "day",
+    "fg": "content-primary",
+    "bg": "surface-highest",
+    "ratio": 19.33,
+    "rgba": [
+      [
+        15,
+        13,
+        18,
+        255
+      ],
+      [
+        255,
+        255,
+        255,
+        255
+      ]
+    ]
+  },
+  {
+    "theme": "day",
+    "fg": "content-primary",
+    "bg": "surface-lowest",
+    "ratio": 13.68,
+    "rgba": [
+      [
+        15,
+        13,
+        18,
+        255
+      ],
+      [
+        218,
+        216,
+        223,
+        255
+      ]
+    ]
+  },
+  {
+    "theme": "day",
+    "fg": "content-primary",
+    "bg": "surface-overlay",
+    "ratio": 16.19,
+    "rgba": [
+      [
+        15,
+        13,
+        18,
+        255
+      ],
+      [
+        236,
+        234,
+        240,
+        255
+      ]
+    ]
+  },
+  {
+    "theme": "day",
+    "fg": "content-secondary",
+    "bg": "surface-base",
+    "ratio": 7.39,
+    "rgba": [
+      [
+        82,
+        80,
+        86,
+        255
+      ],
+      [
+        247,
+        246,
+        250,
+        255
+      ]
+    ]
+  },
+  {
+    "theme": "day",
+    "fg": "content-secondary",
+    "bg": "surface-recessed",
+    "ratio": 6.66,
+    "rgba": [
+      [
+        82,
+        80,
+        86,
+        255
+      ],
+      [
+        236,
+        234,
+        240,
+        255
+      ]
+    ]
+  },
+  {
+    "theme": "day",
+    "fg": "content-secondary",
+    "bg": "surface-raised",
+    "ratio": 7.71,
+    "rgba": [
+      [
+        82,
+        80,
+        86,
+        255
+      ],
+      [
+        252,
+        251,
+        254,
+        255
+      ]
+    ]
+  },
+  {
+    "theme": "day",
+    "fg": "content-secondary",
+    "bg": "surface-highest",
+    "ratio": 7.95,
+    "rgba": [
+      [
+        82,
+        80,
+        86,
+        255
+      ],
+      [
+        255,
+        255,
+        255,
+        255
+      ]
+    ]
+  },
+  {
+    "theme": "day",
+    "fg": "content-secondary",
+    "bg": "surface-lowest",
+    "ratio": 5.63,
+    "rgba": [
+      [
+        82,
+        80,
+        86,
+        255
+      ],
+      [
+        218,
+        216,
+        223,
+        255
+      ]
+    ]
+  },
+  {
+    "theme": "day",
+    "fg": "content-secondary",
+    "bg": "surface-overlay",
+    "ratio": 6.66,
+    "rgba": [
+      [
+        82,
+        80,
+        86,
+        255
+      ],
+      [
+        236,
+        234,
+        240,
+        255
+      ]
+    ]
+  },
+  {
+    "theme": "day",
+    "fg": "content-tertiary",
+    "bg": "surface-base",
+    "ratio": 6.12,
+    "rgba": [
+      [
+        94,
+        92,
+        99,
+        255
+      ],
+      [
+        247,
+        246,
+        250,
+        255
+      ]
+    ]
+  },
+  {
+    "theme": "day",
+    "fg": "content-tertiary",
+    "bg": "surface-recessed",
+    "ratio": 5.52,
+    "rgba": [
+      [
+        94,
+        92,
+        99,
+        255
+      ],
+      [
+        236,
+        234,
+        240,
+        255
+      ]
+    ]
+  },
+  {
+    "theme": "day",
+    "fg": "content-tertiary",
+    "bg": "surface-raised",
+    "ratio": 6.39,
+    "rgba": [
+      [
+        94,
+        92,
+        99,
+        255
+      ],
+      [
+        252,
+        251,
+        254,
+        255
+      ]
+    ]
+  },
+  {
+    "theme": "day",
+    "fg": "content-tertiary",
+    "bg": "surface-highest",
+    "ratio": 6.59,
+    "rgba": [
+      [
+        94,
+        92,
+        99,
+        255
+      ],
+      [
+        255,
+        255,
+        255,
+        255
+      ]
+    ]
+  },
+  {
+    "theme": "day",
+    "fg": "content-tertiary",
+    "bg": "surface-lowest",
+    "ratio": 4.67,
+    "rgba": [
+      [
+        94,
+        92,
+        99,
+        255
+      ],
+      [
+        218,
+        216,
+        223,
+        255
+      ]
+    ]
+  },
+  {
+    "theme": "day",
+    "fg": "content-tertiary",
+    "bg": "surface-overlay",
+    "ratio": 5.52,
+    "rgba": [
+      [
+        94,
+        92,
+        99,
+        255
+      ],
+      [
+        236,
+        234,
+        240,
+        255
+      ]
+    ]
+  },
+  {
+    "theme": "day",
+    "fg": "button-cta-fg",
+    "bg": "button-cta-bg",
+    "ratio": 5.71,
+    "rgba": [
+      [
+        255,
+        255,
+        255,
+        255
+      ],
+      [
+        122,
+        78,
+        192,
+        255
+      ]
+    ]
+  },
+  {
+    "theme": "day",
+    "fg": "button-secondary-fg",
+    "bg": "button-secondary-bg",
+    "ratio": 18.75,
+    "rgba": [
+      [
+        15,
+        13,
+        18,
+        255
+      ],
+      [
+        252,
+        251,
+        254,
+        255
+      ]
+    ]
+  },
+  {
+    "theme": "day",
+    "fg": "field-fg",
+    "bg": "field-bg",
+    "ratio": 16.19,
+    "rgba": [
+      [
+        15,
+        13,
+        18,
+        255
+      ],
+      [
+        236,
+        234,
+        240,
+        255
+      ]
+    ]
+  },
+  {
+    "theme": "day",
+    "fg": "notice-danger-fg",
+    "bg": "notice-danger-bg",
+    "ratio": 5.29,
+    "rgba": [
+      [
+        187,
+        50,
+        59,
+        255
+      ],
+      [
+        255,
+        242,
+        241,
+        255
+      ]
+    ]
+  },
+  {
+    "theme": "day",
+    "fg": "notice-success-fg",
+    "bg": "notice-success-bg",
+    "ratio": 4.65,
+    "rgba": [
+      [
+        71,
+        121,
+        90,
+        255
+      ],
+      [
+        214,
+        255,
+        230,
+        255
+      ]
+    ]
+  },
+  {
+    "theme": "day",
+    "fg": "notice-warning-fg",
+    "bg": "notice-warning-bg",
+    "ratio": 4.58,
+    "rgba": [
+      [
+        116,
+        107,
+        88,
+        255
+      ],
+      [
+        255,
+        241,
+        146,
+        255
+      ]
+    ]
+  },
+  {
+    "theme": "day",
+    "fg": "notice-info-fg",
+    "bg": "notice-info-bg",
+    "ratio": 4.71,
+    "rgba": [
+      [
+        0,
+        115,
+        184,
+        255
+      ],
+      [
+        235,
+        249,
+        255,
+        255
+      ]
+    ]
+  },
+  {
+    "theme": "day",
+    "fg": "badge-accent-fg",
+    "bg": "badge-accent-bg",
+    "ratio": 5.21,
+    "rgba": [
+      [
+        122,
+        78,
+        192,
+        255
+      ],
+      [
+        249,
+        242,
+        255,
+        255
+      ]
+    ]
+  },
+  {
+    "theme": "night",
+    "fg": "content-primary",
+    "bg": "surface-base",
+    "ratio": 15.53,
+    "rgba": [
+      [
+        247,
+        246,
+        250,
+        255
+      ],
+      [
+        31,
+        29,
+        34,
+        255
+      ]
+    ]
+  },
+  {
+    "theme": "night",
+    "fg": "content-primary",
+    "bg": "surface-recessed",
+    "ratio": 16.88,
+    "rgba": [
+      [
+        247,
+        246,
+        250,
+        255
+      ],
+      [
+        22,
+        21,
+        26,
+        255
+      ]
+    ]
+  },
+  {
+    "theme": "night",
+    "fg": "content-primary",
+    "bg": "surface-raised",
+    "ratio": 13.78,
+    "rgba": [
+      [
+        247,
+        246,
+        250,
+        255
+      ],
+      [
+        40,
+        39,
+        44,
+        255
+      ]
+    ]
+  },
+  {
+    "theme": "night",
+    "fg": "content-primary",
+    "bg": "surface-highest",
+    "ratio": 12.29,
+    "rgba": [
+      [
+        247,
+        246,
+        250,
+        255
+      ],
+      [
+        49,
+        47,
+        53,
+        255
+      ]
+    ]
+  },
+  {
+    "theme": "night",
+    "fg": "content-primary",
+    "bg": "surface-lowest",
+    "ratio": 17.96,
+    "rgba": [
+      [
+        247,
+        246,
+        250,
+        255
+      ],
+      [
+        15,
+        13,
+        18,
+        255
+      ]
+    ]
+  },
+  {
+    "theme": "night",
+    "fg": "content-primary",
+    "bg": "surface-overlay",
+    "ratio": 16.88,
+    "rgba": [
+      [
+        247,
+        246,
+        250,
+        255
+      ],
+      [
+        22,
+        21,
+        26,
+        255
+      ]
+    ]
+  },
+  {
+    "theme": "night",
+    "fg": "content-secondary",
+    "bg": "surface-base",
+    "ratio": 8.89,
+    "rgba": [
+      [
+        190,
+        188,
+        195,
+        255
+      ],
+      [
+        31,
+        29,
+        34,
+        255
+      ]
+    ]
+  },
+  {
+    "theme": "night",
+    "fg": "content-secondary",
+    "bg": "surface-recessed",
+    "ratio": 9.66,
+    "rgba": [
+      [
+        190,
+        188,
+        195,
+        255
+      ],
+      [
+        22,
+        21,
+        26,
+        255
+      ]
+    ]
+  },
+  {
+    "theme": "night",
+    "fg": "content-secondary",
+    "bg": "surface-raised",
+    "ratio": 7.88,
+    "rgba": [
+      [
+        190,
+        188,
+        195,
+        255
+      ],
+      [
+        40,
+        39,
+        44,
+        255
+      ]
+    ]
+  },
+  {
+    "theme": "night",
+    "fg": "content-secondary",
+    "bg": "surface-highest",
+    "ratio": 7.03,
+    "rgba": [
+      [
+        190,
+        188,
+        195,
+        255
+      ],
+      [
+        49,
+        47,
+        53,
+        255
+      ]
+    ]
+  },
+  {
+    "theme": "night",
+    "fg": "content-secondary",
+    "bg": "surface-lowest",
+    "ratio": 10.28,
+    "rgba": [
+      [
+        190,
+        188,
+        195,
+        255
+      ],
+      [
+        15,
+        13,
+        18,
+        255
+      ]
+    ]
+  },
+  {
+    "theme": "night",
+    "fg": "content-secondary",
+    "bg": "surface-overlay",
+    "ratio": 9.66,
+    "rgba": [
+      [
+        190,
+        188,
+        195,
+        255
+      ],
+      [
+        22,
+        21,
+        26,
+        255
+      ]
+    ]
+  },
+  {
+    "theme": "night",
+    "fg": "content-tertiary",
+    "bg": "surface-base",
+    "ratio": 6.7,
+    "rgba": [
+      [
+        165,
+        163,
+        170,
+        255
+      ],
+      [
+        31,
+        29,
+        34,
+        255
+      ]
+    ]
+  },
+  {
+    "theme": "night",
+    "fg": "content-tertiary",
+    "bg": "surface-recessed",
+    "ratio": 7.28,
+    "rgba": [
+      [
+        165,
+        163,
+        170,
+        255
+      ],
+      [
+        22,
+        21,
+        26,
+        255
+      ]
+    ]
+  },
+  {
+    "theme": "night",
+    "fg": "content-tertiary",
+    "bg": "surface-raised",
+    "ratio": 5.94,
+    "rgba": [
+      [
+        165,
+        163,
+        170,
+        255
+      ],
+      [
+        40,
+        39,
+        44,
+        255
+      ]
+    ]
+  },
+  {
+    "theme": "night",
+    "fg": "content-tertiary",
+    "bg": "surface-highest",
+    "ratio": 5.3,
+    "rgba": [
+      [
+        165,
+        163,
+        170,
+        255
+      ],
+      [
+        49,
+        47,
+        53,
+        255
+      ]
+    ]
+  },
+  {
+    "theme": "night",
+    "fg": "content-tertiary",
+    "bg": "surface-lowest",
+    "ratio": 7.75,
+    "rgba": [
+      [
+        165,
+        163,
+        170,
+        255
+      ],
+      [
+        15,
+        13,
+        18,
+        255
+      ]
+    ]
+  },
+  {
+    "theme": "night",
+    "fg": "content-tertiary",
+    "bg": "surface-overlay",
+    "ratio": 7.28,
+    "rgba": [
+      [
+        165,
+        163,
+        170,
+        255
+      ],
+      [
+        22,
+        21,
+        26,
+        255
+      ]
+    ]
+  },
+  {
+    "theme": "night",
+    "fg": "button-cta-fg",
+    "bg": "button-cta-bg",
+    "ratio": 7.22,
+    "rgba": [
+      [
+        15,
+        14,
+        17,
+        255
+      ],
+      [
+        179,
+        136,
+        255,
+        255
+      ]
+    ]
+  },
+  {
+    "theme": "night",
+    "fg": "button-secondary-fg",
+    "bg": "button-secondary-bg",
+    "ratio": 13.78,
+    "rgba": [
+      [
+        247,
+        246,
+        250,
+        255
+      ],
+      [
+        40,
+        39,
+        44,
+        255
+      ]
+    ]
+  },
+  {
+    "theme": "night",
+    "fg": "field-fg",
+    "bg": "field-bg",
+    "ratio": 16.88,
+    "rgba": [
+      [
+        247,
+        246,
+        250,
+        255
+      ],
+      [
+        22,
+        21,
+        26,
+        255
+      ]
+    ]
+  },
+  {
+    "theme": "night",
+    "fg": "notice-danger-fg",
+    "bg": "notice-danger-bg",
+    "ratio": 7.35,
+    "rgba": [
+      [
+        237,
+        128,
+        126,
+        255
+      ],
+      [
+        20,
+        12,
+        12,
+        255
+      ]
+    ]
+  },
+  {
+    "theme": "night",
+    "fg": "notice-success-fg",
+    "bg": "notice-success-bg",
+    "ratio": 10.89,
+    "rgba": [
+      [
+        110,
+        215,
+        153,
+        255
+      ],
+      [
+        14,
+        14,
+        14,
+        255
+      ]
+    ]
+  },
+  {
+    "theme": "night",
+    "fg": "notice-warning-fg",
+    "bg": "notice-warning-bg",
+    "ratio": 13.34,
+    "rgba": [
+      [
+        255,
+        209,
+        86,
+        255
+      ],
+      [
+        14,
+        14,
+        14,
+        255
+      ]
+    ]
+  },
+  {
+    "theme": "night",
+    "fg": "notice-info-fg",
+    "bg": "notice-info-bg",
+    "ratio": 7.88,
+    "rgba": [
+      [
+        76,
+        174,
+        237,
+        255
+      ],
+      [
+        10,
+        15,
+        18,
+        255
+      ]
+    ]
+  },
+  {
+    "theme": "night",
+    "fg": "badge-accent-fg",
+    "bg": "badge-accent-bg",
+    "ratio": 6.29,
+    "rgba": [
+      [
+        179,
+        136,
+        255,
+        255
+      ],
+      [
+        31,
+        28,
+        38,
+        255
+      ]
+    ]
+  }
+]

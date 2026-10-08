@@ -1,0 +1,11 @@
+package generation
+import("context";"strings";"testing")
+func TestReviewQueuedReuseDoesNotDescribeAReplacementPhoto(t *testing.T){
+ images,stored:=storedSnapshot(1,"old/observer")
+ posts:=&fakePosts{input:PostInput{Slug:"post",UserID:"alice",Voice:liveVoice,Images:images,Observations:stored}}
+ models:=observingModels(t);jobs:=&fakeJobs{id:"queued"};svc:=NewService(posts,fakeProfiles{},models,fakeImages{},jobs,reobserveBatchSize,testReasoningPolicy,testBudget,testDeps())
+ ctx:=context.Background();if _,err:=svc.Start(ctx,StartRequest{UserID:"alice",PostSlug:"post",ObserveModel:observeRef.String(),WriteModel:writeRef.String(),ObserveFiles:stringPointer()});err!=nil{t.Fatal(err)}
+ posts.input.Images=[]Image{{Filename:images[0].Filename,Key:"different-object-new-id"}};posts.input.Observations=nil
+ if err:=svc.Generate(ctx,jobs.queued(0),func(string,int,int){});err!=nil{return}
+ for _,call:=range models.calls{if call.request.Stage=="write"{for _,m:=range call.request.Messages{for _,part:=range m.Parts{if strings.Contains(part.Text,"stored-1"){t.Fatal("replacement photo inherited old deleted photo observation from queued reuse payload")}}}}}
+}

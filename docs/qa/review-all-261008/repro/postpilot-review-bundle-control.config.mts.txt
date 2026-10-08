@@ -1,0 +1,12 @@
+import base from './postpilot-review-all-261008/frontend/vite.config.ts'
+export default async function(env) {
+ const config=typeof base==='function'?await base(env):await base;
+ const splitTypes={name:'review-control-split-type-imports',enforce:'pre',apply:'build',transform(code,id){
+  if(!id.endsWith('/app/routes/models.ts'))return null;
+  return code.replace(/import \{([^}]+)\} from '@\/pages\/writing-tests'/g,(match,list)=>{
+   const items=list.split(',').map(x=>x.trim()).filter(Boolean); const value=items.filter(x=>!x.startsWith('type '));const types=items.filter(x=>x.startsWith('type ')).map(x=>x.slice(5));
+   return `import { ${value.join(', ')} } from '@/pages/writing-tests'\nimport type { ${types.join(', ')} } from '@/pages/writing-tests'`;
+  });
+ }};
+ return {...config,plugins:[splitTypes,...config.plugins],server:{...config.server,fs:{allow:['/private/tmp/postpilot-review-all-261008','/Users/ihaelam/project/postpilot']}}};
+}

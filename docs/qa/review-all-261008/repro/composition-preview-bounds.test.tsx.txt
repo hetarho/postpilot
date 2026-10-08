@@ -1,0 +1,19 @@
+import React from 'react'
+import { afterEach, expect, it } from 'vitest'
+import { cleanup, render, screen } from '@testing-library/react'
+import { parseClipTemplate } from '/private/tmp/postpilot-review-all-261008/frontend/src/entities/clip-template/lib/composition-parse'
+import { sampleClipComposition } from '/private/tmp/postpilot-review-all-261008/frontend/src/entities/clip-template/lib/composition-sample'
+import { CompositionPreview } from '/private/tmp/postpilot-review-all-261008/frontend/src/entities/clip-template/ui/CompositionPreview'
+afterEach(cleanup)
+const source='<clip version="1"><field id="score" label="평점" chars="1" required="true">한 자리 숫자</field><text id="caption" kind="fixed" role="caption"><value field="score"/></text></clip>'
+it.each([1,2])('samples a valid template within its one-character answer bound (%i)',()=>{
+ const document=parseClipTemplate(source)
+ expect(document.maxima.score).toBe(1)
+ expect(()=>sampleClipComposition(document,15000,(label,n)=>`예시 ${label} ${n}`)).not.toThrow()
+})
+it.each([1,2])('renders the real preview for the same valid bounded field (%i)',()=>{
+ const document=parseClipTemplate(source)
+ const view=render(<CompositionPreview document={document}/>)
+ expect(screen.getByRole('status')).toHaveTextContent('score')
+ expect(view.container.querySelector('svg[role="img"]')).not.toBeNull()
+})

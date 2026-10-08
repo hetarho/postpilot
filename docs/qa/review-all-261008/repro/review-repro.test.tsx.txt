@@ -1,0 +1,259 @@
+import { act, cleanup, fireEvent, render, renderHook, screen, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { afterEach, expect, it } from 'vitest'
+import { create } from '@bufbuild/protobuf'
+import { Code, ConnectError, createClient, createRouterTransport } from '@connectrpc/connect'
+import { useState } from 'react'
+import { MemoryEditForm } from '@/features/edit-memory/ui/MemoryEditForm'
+import type { Memory, MemoryPatch } from '@/entities/memory'
+import { MemoryService } from '@/shared/api'
+import { GetMemoryExtractionResponseSchema } from '@/shared/api'
+import { MemoryCandidateSheet } from '@/features/extract-memories/ui/MemoryCandidateSheet'
+import { CatalogDocumentPanel } from '@/features/manage-model-catalog/ui/CatalogDocumentPanel'
+import { ModelCatalogService, ExportCatalogDocumentResponseSchema, PreviewCatalogDocumentResponseSchema, ApplyCatalogDocumentResponseSchema } from '@/shared/api'
+import { usePost } from '@/entities/post'
+import { AuthService, GetMeResponseSchema, BlockType, PostContentSchema, PostSchema, GetPostResponseSchema, SavePostPublishedUrlResponseSchema, PostService, contentLanguageToProto, type PostContent } from '@/shared/api'
+import { createFakePostsTransport, type FakePostRow } from '@/test/posts'
+import { createTestQueryClient, withProviders } from '@/test/session'
+import { createFakeAuthTransport } from '@/test/session'
+import { registerMemoryService } from '@/test/memories'
+import { MemoriesPage } from '@/pages/memories/ui/MemoriesPage'
+import { PublishedUrlField } from '@/features/record-published-url/ui/PublishedUrlField'
+import { renderAppAt } from '@/test/app'
+import { ClipSourceBatchSchema } from '@/shared/api/gen/postpilot/v1/clip_pb'
+import { discardClipDraftQueues } from '@/features/edit-clip-project'
+import type { ClipProjectDraft } from '@/entities/clip-project'
+import type { ClipProject } from '@/entities/clip-project'
+import { useClipCorrection } from '@/features/correct-clip'
+import { clipTimelineFixture } from '@/test/clip-editing'
+import type { FakeClipsOptions } from '@/test/clips'
+import { BlockEditor } from '@/features/edit-post-content/ui/BlockEditor'
+import { discardContentQueues } from '@/features/edit-post-content/model/content-queue'
+
+afterEach(() => { cleanup(); discardContentQueues(); discardClipDraftQueues() })
+function Editor({ slug }: { slug: string }) {
+  const { post } = usePost(slug)
+  return post?.content ? <BlockEditor key={`${post.slug}:${post.machineBaselineRevision}`} post={post} /> : null
+}
+function mount(content: PostContent, images: FakePostRow['images'] = []) {
+  const contentSaves: Array<{slug: string; expectedRevision: bigint; content: PostContent}> = []
+  const transport = createFakePostsTransport({ posts: [{slug:'audit-post', status:'review', content, images, contentRevision:1n, machineBaselineRevision:1n}], contentSaves })
+  render(<Editor slug="audit-post" />, {wrapper:withProviders(transport,createTestQueryClient())})
+  return contentSaves
+}
+it('reproduces Cancel replacing a reordered block with the neighboring block snapshot', async () => {
+  const user = userEvent.setup()
+  const saves = mount(create(PostContentSchema,{title:'audit',blocks:[{type:BlockType.TEXT,content:'FIRST UNIQUE'},{type:BlockType.TEXT,content:'SECOND UNIQUE'},{type:BlockType.TEXT,content:'THIRD UNIQUE'}]}))
+  await user.click(await screen.findByRole('button',{name:'1번째 블록 수정'}))
+  await user.click(screen.getByRole('button',{name:'2번째 블록 수정'}))
+  await user.click(screen.getByRole('button',{name:'1번째 블록 아래로'}))
+  expect(screen.getByLabelText('2번째 블록 내용')).toHaveValue('FIRST UNIQUE')
+  await user.click(within(screen.getByLabelText('2번째 블록 내용').closest('article')!).getByRole('button',{name:'취소'}))
+  await waitFor(()=>expect(saves.at(-1)?.content.blocks.map(b=>b.content)).toEqual(['SECOND UNIQUE','SECOND UNIQUE','THIRD UNIQUE']), {timeout:4000})
+  expect(screen.queryByText('FIRST UNIQUE')).not.toBeInTheDocument()
+})
+it('reproduces a detached single-photo block having no repair or removal control and blocking unrelated text saves', async () => {
+  const user = userEvent.setup()
+  const saves = mount(create(PostContentSchema,{title:'audit',blocks:[{type:BlockType.TEXT,content:'FIRST UNIQUE'},{type:BlockType.IMAGE,file:'deleted-photo.jpg',caption:'deleted photo caption'}]}))
+  await screen.findByText(/사진이 없는 자리가 1곳/)
+  expect(screen.queryByRole('button',{name:'2번째 블록 수정'})).not.toBeInTheDocument()
+  expect(screen.queryByText('deleted photo caption')).not.toBeInTheDocument()
+  await user.click(screen.getByRole('button',{name:'1번째 블록 수정'}))
+  await user.type(screen.getByLabelText('1번째 블록 내용'),' unsaved edit')
+  await user.click(screen.getByRole('button',{name:'저장'}))
+  expect(screen.getByText('FIRST UNIQUE unsaved edit')).toBeInTheDocument()
+  await new Promise(resolve=>setTimeout(resolve,1300))
+  expect(saves).toHaveLength(0)
+})
+it('reproduces normal comma typing failing to create a second tag', async () => {
+  const user = userEvent.setup()
+  const saves = mount(create(PostContentSchema,{title:'audit',tags:['first'],blocks:[{type:BlockType.TEXT,content:'body'}]}))
+  await user.click(await screen.findByRole('button',{name:'제목과 요약, 태그 수정'}))
+  const field = screen.getByLabelText('태그')
+  await user.type(field, ',second')
+  expect(field).toHaveValue('firstsecond')
+  await user.click(screen.getByRole('button',{name:'저장'}))
+  await waitFor(()=>expect(saves.at(-1)?.content.tags).toEqual(['firstsecond']), {timeout:4000})
+})
+it('reproduces a failed background memory-directory refresh discarding the active unsaved form', async () => {
+  const user = userEvent.setup()
+  const memories = { memories:[{id:'memory-1',text:'ORIGINAL MEMORY'}], listFails:false }
+  const queryClient = createTestQueryClient()
+  const transport = createRouterTransport(router => {
+    registerMemoryService(router,memories)
+    router.rpc(AuthService.method.getMe,()=>create(GetMeResponseSchema,{user:{id:'alice'}}))
+  })
+  render(<MemoriesPage />, { wrapper:withProviders(transport,queryClient) })
+  await user.click(await screen.findByRole('button',{name:'기억 수정'}))
+  const field = screen.getByLabelText('기억')
+  await user.clear(field)
+  await user.type(field,'UNSAVED MEMORY')
+  memories.listFails = true
+  await queryClient.refetchQueries({queryKey:['memories']})
+  await screen.findByRole('alert')
+  expect(screen.queryByLabelText('기억')).not.toBeInTheDocument()
+  memories.listFails = false
+  await user.click(screen.getByRole('button',{name:'다시 시도'}))
+  await user.click(await screen.findByRole('button',{name:'기억 수정'}))
+  expect(screen.getByLabelText('기억')).toHaveValue('ORIGINAL MEMORY')
+})
+it('reproduces typing during URL save admitting a second write and an older delayed write overriding it', async () => {
+  const user = userEvent.setup()
+  let releaseOld!:()=>void
+  const oldGate = new Promise<void>(resolve=>{releaseOld=resolve})
+  const saves: string[] = []
+  const post = create(PostSchema,{slug:'url-post',status:'finalized',targetLanguage:contentLanguageToProto('ko')})
+  const transport = createRouterTransport(({rpc})=>{
+    rpc(PostService.method.getPost,()=>create(GetPostResponseSchema,{post}))
+    rpc(PostService.method.savePostPublishedUrl,async req=>{
+      saves.push(req.url)
+      if(saves.length===1) await oldGate
+      post.publishedUrl=req.url
+      post.status='published'
+      return create(SavePostPublishedUrlResponseSchema,{post})
+    })
+  })
+  function Field(){const {post}=usePost('url-post'); return post ? <PublishedUrlField post={post}/> : null}
+  render(<Field/>,{wrapper:withProviders(transport,createTestQueryClient())})
+  const field = await screen.findByLabelText('네이버 블로그 글 주소')
+  await user.type(field,'https://blog.naver.com/alice/1')
+  await user.click(screen.getByRole('button',{name:'저장'}))
+  expect(screen.getByRole('button',{name:'저장'})).toBeDisabled()
+  await user.clear(field)
+  await user.type(field,'https://blog.naver.com/alice/2')
+  expect(screen.getByRole('button',{name:'저장'})).toBeEnabled()
+  await user.click(screen.getByRole('button',{name:'저장'}))
+  await waitFor(()=>expect(saves).toHaveLength(2))
+  expect(await screen.findByLabelText('네이버 블로그 글 주소')).toHaveValue('https://blog.naver.com/alice/2')
+  releaseOld()
+  await waitFor(()=>expect(screen.getByLabelText('네이버 블로그 글 주소')).toHaveValue('https://blog.naver.com/alice/1'))
+})
+it('reproduces instruction autosave overwriting a source-item binding selected during its debounce', async () => {
+  const user = userEvent.setup()
+  const body = '<clip version="1" intro="b" caption="bold" outro="e"><group id="menu" label="고기"><field id="name" label="부위" required="true"/></group><repeat for="menu"><scene id="cut" scope="item"><text id="copy" kind="ai" role="caption" basis="cut">설명</text></scene></repeat><text id="empty-hook" kind="fixed" role="hook" basis="output-start"/><text id="empty-ending" kind="fixed" role="ending" basis="output-end"/></clip>'
+  const inputs = {values:{},items:{menu:[{id:'belly',values:{name:'삼겹살'}}]},associations:[]}
+  const writes: ClipProjectDraft[] = []
+  renderAppAt('/clips/owned', {user:{id:'alice'},clips:{
+    templates:[{id:'meat',name:'고기',compositionBody:body}],
+    projects:[{id:'owned',title:'고기',videoTemplateId:'meat',ratio:'vertical',targetDurationMs:30000,disclosure:'',composition:{snapshot:{version:1,body,templateId:'meat'},inputs},compositionInputs:inputs}],
+    projectWrites:writes,
+    retainedBatches:[create(ClipSourceBatchSchema,{id:'retained',projectId:'owned',current:true,state:'ready',expiresAt:'2099-01-01T00:00:00Z',sources:[{id:'src-1',state:'ready',availability:'available',retentionExpiresAt:'2099-01-01T00:00:00Z',metadata:{filename:'고기1.mp4',durationMs:20000,fingerprint:'fp-1',contentType:'video/mp4',bytes:5n}}]})]
+  }})
+  const binding = await screen.findByLabelText('고기1.mp4의 항목')
+  fireEvent.change(screen.getByLabelText('클립에 담고 싶은 내용 (선택)'),{target:{value:'NEW UNSAVED INSTRUCTION'}})
+  await user.click(binding)
+  await user.click(await screen.findByRole('option',{name:'고기 · 삼겹살'}))
+  await waitFor(()=>expect(writes[0]?.compositionInputs?.associations).toHaveLength(1))
+  await waitFor(()=>expect(writes).toHaveLength(2),{timeout:4000})
+  expect(writes[1]?.instruction).toBe('NEW UNSAVED INSTRUCTION')
+  expect(writes[1]?.compositionInputs?.associations).toEqual([])
+})
+it('reproduces losing a newer correction when leaving during the previous in-flight save', async () => {
+  let release!:()=>void
+  const gate = new Promise<void>(resolve=>{release=resolve})
+  const calls: string[] = []
+  const writes: NonNullable<FakeClipsOptions['planWrites']> = []
+  const editing = clipTimelineFixture()
+  const project = {id:'clip',title:'clip',videoTemplateId:'',ratio:'vertical',targetDurationMs:19800,disclosure:'ad',editPlanRevision:1,renderedPlanRevision:1,editing,allowedCaptionStyles:['bold']} as ClipProject
+  const transport = createFakeAuthTransport({user:{id:'alice'},clips:{projects:[project],calls,planWrites:writes,planSaveGate:()=>gate}})
+  const view = renderHook(()=>useClipCorrection('alice',project),{wrapper:withProviders(transport,createTestQueryClient())})
+  expect(view.result.current.validation?.saveable).toBe(true)
+  act(()=>view.result.current.change({type:'text',id:'caption-a',patch:{text:'FIRST SAVED WORDS'}}))
+  await waitFor(()=>expect(calls).toContain('SaveClipEditPlan'),{timeout:4000})
+  act(()=>view.result.current.change({type:'text',id:'caption-a',patch:{text:'SECOND UNSAVED WORDS'}}))
+  expect(view.result.current.draft.elements?.[0].text).toBe('SECOND UNSAVED WORDS')
+  view.unmount()
+  release()
+  await waitFor(()=>expect(writes).toHaveLength(1))
+  await new Promise(resolve=>setTimeout(resolve,1300))
+  expect(calls.filter(c=>c==='SaveClipEditPlan')).toHaveLength(2)
+  expect(writes).toHaveLength(1)
+  expect(writes[0].plan.elements?.[0].text).toBe('FIRST SAVED WORDS')
+})
+it('reproduces editing memory text during a save then silently losing the newer text on success', async () => {
+  const user = userEvent.setup()
+  let release!:()=>void
+  const gate = new Promise<void>(resolve=>{release=resolve})
+  const writes: MemoryPatch[] = []
+  const memory = {id:'memory',text:'ORIGINAL',kind:'preference',tags:[],sourcePostSlugs:[],createdAt:'',updatedAt:'',lastSeenAt:''} satisfies Memory
+  function Harness(){
+    const [pending,setPending]=useState(false)
+    const [open,setOpen]=useState(true)
+    return open ? <MemoryEditForm memory={memory} pending={pending} errorMessage="" onDone={()=>setOpen(false)} save={async patch=>{writes.push(patch);setPending(true);await gate;setPending(false)}}/> : <p>FORM CLOSED</p>
+  }
+  render(<Harness/>,{wrapper:withProviders(createFakeAuthTransport(),createTestQueryClient())})
+  const field = screen.getByLabelText('기억')
+  await user.clear(field)
+  await user.type(field,'FIRST SAVE')
+  await user.click(screen.getByRole('button',{name:'저장'}))
+  expect(screen.getByRole('button',{name:'저장'})).toBeDisabled()
+  expect(field).toBeEnabled()
+  await user.type(field,' SECOND UNSAVED EDIT')
+  expect(field).toHaveValue('FIRST SAVE SECOND UNSAVED EDIT')
+  release()
+  await screen.findByText('FORM CLOSED')
+  expect(writes).toEqual([{text:'FIRST SAVE'}])
+})
+it('reproduces a memory tag-only edit reverting text written by another tab during a background refetch', async () => {
+  const user = userEvent.setup()
+  const updates: Array<{id:string;text:string|undefined;kind:any;tags:string[]|undefined}> = []
+  const queryClient = createTestQueryClient()
+  const transport = createRouterTransport(router=>{
+    registerMemoryService(router,{memories:[{id:'memory-1',text:'ORIGINAL MEMORY'}],updates})
+    router.rpc(AuthService.method.getMe,()=>create(GetMeResponseSchema,{user:{id:'alice'}}))
+  })
+  render(<MemoriesPage/>,{wrapper:withProviders(transport,queryClient)})
+  await user.click(await screen.findByRole('button',{name:'기억 수정'}))
+  await user.type(screen.getByLabelText('태그'),'new-tag')
+  await createClient(MemoryService,transport).updateMemory({id:'memory-1',text:'OTHER TAB NEW TEXT'})
+  await queryClient.refetchQueries({queryKey:['memories']})
+  expect(screen.getByLabelText('기억')).toHaveValue('ORIGINAL MEMORY')
+  await user.click(screen.getByRole('button',{name:'저장'}))
+  await waitFor(()=>expect(updates).toHaveLength(2))
+  expect(updates[1].tags).toEqual(['new-tag'])
+  expect(updates[1].text).toBe('ORIGINAL MEMORY')
+})
+it('reproduces closing declined memory candidates before their failed discard can be recovered', async () => {
+  const user = userEvent.setup()
+  let discardCalls = 0
+  const transport = createRouterTransport(({rpc})=>{
+    rpc(MemoryService.method.getMemoryExtraction,()=>create(GetMemoryExtractionResponseSchema,{postSlug:'audit-post',candidates:[{text:'PRIVATE CANDIDATE FACT',tags:[]}]}))
+    rpc(MemoryService.method.resolveMemoryExtraction,()=>{discardCalls++;throw new ConnectError('offline',Code.Unavailable)})
+  })
+  function Harness(){const [open,setOpen]=useState(true);return open?<MemoryCandidateSheet ownerId="alice" jobId="extract-owned" onClose={()=>setOpen(false)}/>:<p>DECLINED SHEET CLOSED</p>}
+  render(<Harness/>,{wrapper:withProviders(transport,createTestQueryClient())})
+  await screen.findByText('PRIVATE CANDIDATE FACT')
+  await user.click(screen.getByRole('button',{name:'닫기'}))
+  await screen.findByText('DECLINED SHEET CLOSED')
+  await waitFor(()=>expect(discardCalls).toBe(1))
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  expect(screen.queryByRole('button',{name:/다시/})).not.toBeInTheDocument()
+  const found = await createClient(MemoryService,transport).getMemoryExtraction({jobId:'extract-owned'})
+  expect(found.candidates[0].text).toBe('PRIVATE CANDIDATE FACT')
+})
+it('reproduces applying a different catalog document than its delayed first preview displayed', async () => {
+  const user = userEvent.setup()
+  let release!:()=>void
+  const gate = new Promise<void>(resolve=>{release=resolve})
+  const previews: string[] = [], applies: string[] = []
+  const documentA='# postpilot models v1\n[writing]\nprovider/model-a premium\n'
+  const documentB='# postpilot models v1\n[writing]\nprovider/model-b value\n'
+  const transport = createRouterTransport(({rpc})=>{
+    rpc(ModelCatalogService.method.exportCatalogDocument,()=>create(ExportCatalogDocumentResponseSchema,{document:'# postpilot models v1\n[writing]\nprovider/original'}))
+    rpc(ModelCatalogService.method.previewCatalogDocument,async req=>{previews.push(req.document);await gate;return create(PreviewCatalogDocumentResponseSchema,{purposes:[{purpose:'writing',register:['provider/model-a'],deregister:['provider/original']}]})})
+    rpc(ModelCatalogService.method.applyCatalogDocument,req=>{applies.push(req.document);return create(ApplyCatalogDocumentResponseSchema,{applied:true,purposes:[{purpose:'writing',register:['provider/model-b'],deregister:['provider/original']}]})})
+  })
+  render(<CatalogDocumentPanel open onClose={()=>{}}/>,{wrapper:withProviders(transport,createTestQueryClient())})
+  fireEvent.change(screen.getByLabelText('붙여넣기'),{target:{value:documentA}})
+  await user.click(screen.getByRole('button',{name:'미리보기'}))
+  await waitFor(()=>expect(previews).toEqual([documentA]))
+  fireEvent.change(screen.getByLabelText('붙여넣기'),{target:{value:documentB}})
+  release()
+  await screen.findByText('적용하면 이렇게 바뀌어요')
+  expect(screen.getByText('provider/model-a')).toBeInTheDocument()
+  expect(screen.queryByText('provider/model-b')).not.toBeInTheDocument()
+  expect(screen.getByRole('button',{name:'확정'})).toBeEnabled()
+  await user.click(screen.getByRole('button',{name:'확정'}))
+  await waitFor(()=>expect(applies).toEqual([documentB]))
+  expect(previews).toEqual([documentA])
+})

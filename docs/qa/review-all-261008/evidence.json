@@ -1,0 +1,883 @@
+{
+  "review": "all-261008",
+  "baseline": "b051307a6f8864bf5c9d620c0352fcca2304e6a8",
+  "freshness_revision": "f889473f6b4c704bbdc57863fab93c8ab47ebe17",
+  "node": "24.18.0",
+  "go": "1.26.4",
+  "pinned_node_dir": "/Users/ihaelam/.npm/_npx/4aa47c519def57bc/node_modules/node/bin",
+  "finding_counts": {
+    "P1": 29,
+    "P2": 12,
+    "P3": 1,
+    "total": 42
+  },
+  "baseline_checks": [
+    {
+      "command": "pnpm lint",
+      "exit_code": 0,
+      "seconds": 143.03,
+      "log": "/private/tmp/postpilot-review-checks/lint.log"
+    },
+    {
+      "command": "pnpm lint:fsd",
+      "exit_code": 0,
+      "seconds": 34.56,
+      "log": "/private/tmp/postpilot-review-checks/lint-fsd.log"
+    },
+    {
+      "command": "pnpm lint:style:probe",
+      "exit_code": 0,
+      "seconds": 1.61,
+      "log": "/private/tmp/postpilot-review-checks/lint-style-probe.log"
+    },
+    {
+      "command": "pnpm lint:style",
+      "exit_code": 0,
+      "seconds": 4.73,
+      "log": "/private/tmp/postpilot-review-checks/lint-style.log"
+    },
+    {
+      "command": "pnpm lint:retirement",
+      "exit_code": 0,
+      "seconds": 5.34,
+      "log": "/private/tmp/postpilot-review-checks/lint-retirement.log"
+    },
+    {
+      "command": "pnpm test:dev",
+      "exit_code": 1,
+      "seconds": 3.24,
+      "log": "/private/tmp/postpilot-review-checks/test-dev.log"
+    },
+    {
+      "command": "pnpm build:web",
+      "exit_code": 0,
+      "seconds": 140.08,
+      "log": "/private/tmp/postpilot-review-checks/build-web.log"
+    },
+    {
+      "command": "pnpm --filter ./frontend exec vitest run --config /private/tmp/postpilot-review-vite.config.mts --maxWorkers=3",
+      "cwd": "snapshot root",
+      "exit_code": 0,
+      "result": "521 files,4116 tests passed",
+      "seconds": 673.46
+    },
+    {
+      "command": "go test -timeout 30m ./...",
+      "cwd": "snapshot backend",
+      "exit_code": 0,
+      "result": "83 tested packages passed;25 packages with no test files"
+    },
+    {
+      "command": "go vet ./...",
+      "cwd": "snapshot backend",
+      "exit_code": 0
+    },
+    {
+      "command": "go build ./...",
+      "cwd": "snapshot backend",
+      "exit_code": 0
+    },
+    {
+      "command": "gofmt -l .",
+      "cwd": "snapshot backend",
+      "exit_code": 0,
+      "result": "empty output"
+    },
+    {
+      "command": "TMPDIR=/private/tmp pnpm test:dev",
+      "cwd": "snapshot root",
+      "exit_code": 0,
+      "result": "11 tests passed; canonical-path rerun"
+    },
+    {
+      "command": "/private/tmp/postpilot-review-deploy-venv/bin/python -m unittest discover -s deploy -p \"*_test.py\"",
+      "cwd": "snapshot root",
+      "exit_code": 0,
+      "result": "62 tests passed; PyYAML6.0.3; mocked operations",
+      "seconds": 171.489
+    },
+    {
+      "command": "pnpm exec haeram-spec-creator check",
+      "cwd": "main",
+      "exit_code": 0,
+      "result": "11 skill copies synchronized"
+    }
+  ],
+  "root_repeated_probes": [
+    {
+      "findings": [
+        "F1",
+        "F2",
+        "F3",
+        "F4",
+        "F5",
+        "F6",
+        "F7",
+        "F8",
+        "F19",
+        "F30",
+        "F31"
+      ],
+      "command": "go test -overlay=/private/tmp/postpilot-review-combined-overlay.json ./cmd/api ./internal/auth ./internal/billing ./internal/post ./internal/usage/store ./internal/clip/store ./internal/clip/app -run \"^TestReview\" -count=3 -v",
+      "cwd": "snapshot backend",
+      "exit_code": 1,
+      "meaning": "deliberate desired-invariant failures plus observed-bug assertions;not a baseline-suite result"
+    },
+    {
+      "findings": [
+        "F8",
+        "F20",
+        "F22"
+      ],
+      "command": "go test -overlay=/private/tmp/postpilot-review-combined-overlay.json ./internal/usage/store ./internal/job -run \"^TestReview(CancelledAuthoringRetainsAlreadyReportedUsage|UnpricedPaidModelCannotCreateZeroHold|.*Output.*|.*Log.*)$\" -count=3 -v",
+      "cwd": "snapshot backend",
+      "exit_code": 1,
+      "meaning": "desired invariants fail three times with live authoring literal and positive reported cost"
+    },
+    {
+      "findings": [
+        "F32"
+      ],
+      "command": "go test -overlay=/private/tmp/postpilot-review-new-caption-style-overlay.json ./internal/clip -run \"^TestReviewNewCaptionLosesOwnerAppearance$\" -count=3 -v",
+      "cwd": "snapshot backend",
+      "exit_code": 0,
+      "meaning": "asserts observed loss"
+    },
+    {
+      "findings": [
+        "F33"
+      ],
+      "command": "go test -overlay=/private/tmp/postpilot-review-region-glyph-overlay.json ./internal/clip/media -run \"^TestReviewRegionPreflightClaimsMissingWantedGlyph$\" -count=3 -v",
+      "cwd": "snapshot backend",
+      "exit_code": 0,
+      "meaning": "asserts preflight accepted and actual font/layout refused each of three runes"
+    },
+    {
+      "findings": [
+        "F34"
+      ],
+      "command": "go test -overlay=/private/tmp/postpilot-review-dubbing-disable-overlay.json ./internal/clip/app -run \"^TestReviewDisabledDubbingRequiresRemovedVoice$\" -count=3 -v",
+      "cwd": "snapshot backend",
+      "exit_code": 0,
+      "meaning": "asserts disabled+removed voice refused"
+    },
+    {
+      "findings": [
+        "F35"
+      ],
+      "command": "go test -overlay=/private/tmp/postpilot-review-native-overlay.json ./internal/clip/media -run \"^TestReviewProxyProgress\" -count=3 -v",
+      "cwd": "snapshot backend",
+      "exit_code": 1,
+      "meaning": "actual diagnostic violates desired prepare classification"
+    },
+    {
+      "findings": [
+        "F10",
+        "F11",
+        "F23",
+        "F24",
+        "F25",
+        "F26",
+        "F27",
+        "F28",
+        "F29",
+        "F39"
+      ],
+      "command": "node /Users/ihaelam/project/postpilot/frontend/node_modules/vitest/vitest.mjs run review-repro.test.tsx root-review-repro.test.tsx review-source-lifetime.test.ts --maxWorkers=1",
+      "cwd": "/private/tmp/postpilot-review-fe-overlay",
+      "result": "independent integrated13/13 and root repeat13/13 passed",
+      "exit_code": 0,
+      "root_seconds": 46.12
+    },
+    {
+      "findings": [
+        "F41"
+      ],
+      "command": "pnpm --filter ./frontend exec vitest run --config /private/tmp/postpilot-review-spoken-received.config.mts",
+      "cwd": "snapshot root",
+      "exit_code": 0,
+      "result": "1/1 actual polling probe;independent root repetition passed"
+    }
+  ],
+  "artifacts": [
+    {
+      "original": "/private/tmp/postpilot-review-rhythm-overlay.json",
+      "archived": "docs/qa/review-all-261008/repro/postpilot-review-rhythm-overlay.json.txt",
+      "original_sha256": "ac832000280217d81caaf80416e70303c8fc64ce69a767ed23a4517671093687",
+      "original_bytes": 152,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-rhythm-test.go",
+      "archived": "docs/qa/review-all-261008/repro/postpilot-review-rhythm-test.go.txt",
+      "original_sha256": "490a8b2b849fb175c46a7664af360266f0aa7adc78dfddb04123588e9276abb2",
+      "original_bytes": 1095,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-region-glyph-overlay.json",
+      "archived": "docs/qa/review-all-261008/repro/postpilot-review-region-glyph-overlay.json.txt",
+      "original_sha256": "c7f4034e9c33375bcc502ba6863479a687773053efe4628275b6e02af74bce02",
+      "original_bytes": 167,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-region-glyph-test.go",
+      "archived": "docs/qa/review-all-261008/repro/postpilot-review-region-glyph-test.go.txt",
+      "original_sha256": "d1cf5e6384c70146b45f95b342aa88b256839c5470fc6383862a88c61d61395a",
+      "original_bytes": 1596,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-speech-boot-overlay.json",
+      "archived": "docs/qa/review-all-261008/repro/postpilot-review-speech-boot-overlay.json.txt",
+      "original_sha256": "a6c51cf7df7808a296d8b31d24ce5f8054d06bd621cdd640001763cf09eb8709",
+      "original_bytes": 153,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-speech-boot-test.go",
+      "archived": "docs/qa/review-all-261008/repro/postpilot-review-speech-boot-test.go.txt",
+      "original_sha256": "4635187f47239ecb3c6452a42bccdc965fcbd8933090b163cee1663e9bd7b013",
+      "original_bytes": 1546,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-combined-overlay.json",
+      "archived": "docs/qa/review-all-261008/repro/postpilot-review-combined-overlay.json.txt",
+      "original_sha256": "6ea75f01c6c0973d3909542bebaf98298409f45af3145b502214875ed1d0fb4f",
+      "original_bytes": 1437,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-auth-regression_test.go",
+      "archived": "docs/qa/review-all-261008/repro/postpilot-review-auth-regression_test.go.txt",
+      "original_sha256": "a3686ff83028d9c724c2aea5ea6103093a2ddd24865d050aab9815aeed6c2b0a",
+      "original_bytes": 1909,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-billing-regression_test.go",
+      "archived": "docs/qa/review-all-261008/repro/postpilot-review-billing-regression_test.go.txt",
+      "original_sha256": "ae74793f0a322edde7e38dfe71ddb5a582afd397cb1e64a56b7d18e5a925c421",
+      "original_bytes": 1023,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-post-regression_test.go",
+      "archived": "docs/qa/review-all-261008/repro/postpilot-review-post-regression_test.go.txt",
+      "original_sha256": "6e66781d660aa1056a39dd33a4d3644231130012f593cd85a8245a4add7bd5db",
+      "original_bytes": 2787,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-usage-regression_test.go",
+      "archived": "docs/qa/review-all-261008/repro/postpilot-review-usage-regression_test.go.txt",
+      "original_sha256": "68982de475b0c759ac7347d3e818c5739565bb4a3927c665cf36e25f2e4b1611",
+      "original_bytes": 3017,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-generation-regression_test.go",
+      "archived": "docs/qa/review-all-261008/repro/postpilot-review-generation-regression_test.go.txt",
+      "original_sha256": "bac0334d33703c816bfb2f8fab9c9edb0f5db6fa9a194f674b968a6c0e2d6592",
+      "original_bytes": 1156,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-job-log-regression_test.go",
+      "archived": "docs/qa/review-all-261008/repro/postpilot-review-job-log-regression_test.go.txt",
+      "original_sha256": "6691e98e4cd6fa02e200b9eb1aedea6876c77d9a73e36bd6db678c99f9ce2acc",
+      "original_bytes": 621,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-storyline-cancel-test.go",
+      "archived": "docs/qa/review-all-261008/repro/postpilot-review-storyline-cancel-test.go.txt",
+      "original_sha256": "7d305068eba1b3d4095c60185eb5727129b9a71e4b2bd7e0287d617b2670d044",
+      "original_bytes": 2882,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-storyline-rate-test.go",
+      "archived": "docs/qa/review-all-261008/repro/postpilot-review-storyline-rate-test.go.txt",
+      "original_sha256": "58792430c7cacb8b93a56b45e57fb66a6555c94c2bdefe89ed33308c997575e8",
+      "original_bytes": 1676,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-storyline-rate-overlay.json",
+      "archived": "docs/qa/review-all-261008/repro/postpilot-review-storyline-rate-overlay.json.txt",
+      "original_sha256": "24239f8fb186997d6b167d494fbd63609c884a848ec2b1ce1137ee92baaeda35",
+      "original_bytes": 169,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-declared-maxima-overlay.json",
+      "archived": "docs/qa/review-all-261008/repro/postpilot-review-declared-maxima-overlay.json.txt",
+      "original_sha256": "8e07610b4c58b4e95ba9728a3e938bd6f8c7c1b8921c595c5a9a99357a9d70d5",
+      "original_bytes": 170,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-declared-maxima-test.go",
+      "archived": "docs/qa/review-all-261008/repro/postpilot-review-declared-maxima-test.go.txt",
+      "original_sha256": "640bcf1f58a5eddfc99710fc63cc052d8c53d6191887ee2c30ea5c0bea033b6b",
+      "original_bytes": 1113,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-dubbing-disable-overlay.json",
+      "archived": "docs/qa/review-all-261008/repro/postpilot-review-dubbing-disable-overlay.json.txt",
+      "original_sha256": "fd83058ffc9f81f7ede47a4afec7316d92335fc877cff9eab3b722bf1f3d6914",
+      "original_bytes": 171,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-dubbing-disable-test.go",
+      "archived": "docs/qa/review-all-261008/repro/postpilot-review-dubbing-disable-test.go.txt",
+      "original_sha256": "b17ffa1e404341ee654bee09f01c5ab7d05574a444c423e7b89b34bbad7e401c",
+      "original_bytes": 1108,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-native-overlay.json",
+      "archived": "docs/qa/review-all-261008/repro/postpilot-review-native-overlay.json.txt",
+      "original_sha256": "32e98f9b9f3af80bf75ed5872781926cc15c6ae887c8bb817e8bfa41d34bd0de",
+      "original_bytes": 181,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-native-diagnostic-regression_test.go",
+      "archived": "docs/qa/review-all-261008/repro/postpilot-review-native-diagnostic-regression_test.go.txt",
+      "original_sha256": "720cbd33b736599608c8f40e825ef1ceb7ddc6540ad693b12b57d090ba64f771",
+      "original_bytes": 1936,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-storyline-cancel-overlay.json",
+      "archived": "docs/qa/review-all-261008/repro/postpilot-review-storyline-cancel-overlay.json.txt",
+      "original_sha256": "94d8749c3ebd5c71ac1d027198dd3ecccd317916466f521c1455c8b60e9acc8a",
+      "original_bytes": 175,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-new-caption-style-overlay.json",
+      "archived": "docs/qa/review-all-261008/repro/postpilot-review-new-caption-style-overlay.json.txt",
+      "original_sha256": "9bc366c65c35d162ad29b10b6e9271f9bcfa6d2223ffa5f371c7f4a18fc78786",
+      "original_bytes": 171,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-new-caption-style-test.go",
+      "archived": "docs/qa/review-all-261008/repro/postpilot-review-new-caption-style-test.go.txt",
+      "original_sha256": "5b0c8527629a86cd5f91ac2fb80acf1bda21f7530a50394bff155c5f962ebd00",
+      "original_bytes": 878,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-backend-overlay.json",
+      "archived": "docs/qa/review-all-261008/repro/postpilot-review-backend-overlay.json.txt",
+      "original_sha256": "4e7584baee2ebc71f90b2a3931bfe0be0a3038963d895e07793207f93e599503",
+      "original_bytes": 1092,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-template-regression_test.go",
+      "archived": "docs/qa/review-all-261008/repro/postpilot-review-template-regression_test.go.txt",
+      "original_sha256": "e749a58c1ba3ba23b03cf2ed2da26eb05e80f40cf96d07463800b31fbf0e4db2",
+      "original_bytes": 890,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-fe-overlay/root-review-repro.test.tsx",
+      "archived": "docs/qa/review-all-261008/repro/root-review-repro.test.tsx.txt",
+      "original_sha256": "de80d7e175c19ed6cf2f0a80179db8d0cf796831eb7d2d171309aab13cafa62c",
+      "original_bytes": 2265,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-fe-overlay/review-repro.test.tsx",
+      "archived": "docs/qa/review-all-261008/repro/review-repro.test.tsx.txt",
+      "original_sha256": "58e9401f5699074077d2878ee2a43e4cf1c192dd3f3db33683bbbb218e3de9de",
+      "original_bytes": 18116,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-fe-overlay/review-source-lifetime.test.ts",
+      "archived": "docs/qa/review-all-261008/repro/review-source-lifetime.test.ts.txt",
+      "original_sha256": "956428362efbfcd39f76f8e4e44828b162e6455a5c8bb344c8f55acdd36bc8a4",
+      "original_bytes": 2290,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-widget-tests/composition-preview-bounds.test.tsx",
+      "archived": "docs/qa/review-all-261008/repro/composition-preview-bounds.test.tsx.txt",
+      "original_sha256": "f76f7be22b4754f63c2bb8cd4fc552346a3d6e9466a41acfbe89ec300f5efcc1",
+      "original_bytes": 1371,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-widget-tests/export-panel-stale.test.tsx",
+      "archived": "docs/qa/review-all-261008/repro/export-panel-stale.test.tsx.txt",
+      "original_sha256": "4b9c295aa970e808d310c28b94bc4b5ac706d4365af917aa30a40a6ee1ed9f3d",
+      "original_bytes": 1860,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-widget-tests/export-stale.test.ts",
+      "archived": "docs/qa/review-all-261008/repro/export-stale.test.ts.txt",
+      "original_sha256": "7949e3a2d4bf7121ff12bd02623a70a3bb2b58649b02bdd14a0290bbd646c3b9",
+      "original_bytes": 1200,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-widget-tests/source-reorder.test.tsx",
+      "archived": "docs/qa/review-all-261008/repro/source-reorder.test.tsx.txt",
+      "original_sha256": "9f28f3f1a0aba7a2f146a296c7eb7082e2836a3c200111d9b46f0cbc90486fee",
+      "original_bytes": 885,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-widget-tests/vitest.config.ts",
+      "archived": "docs/qa/review-all-261008/repro/vitest.config.ts.txt",
+      "original_sha256": "b4dc72b7c76d49fd6aa539b38a2764fa9f97f2600d11b99a47d2f39e5e72f9a9",
+      "original_bytes": 393,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-widget-tests/clip-detail-cache.test.ts",
+      "archived": "docs/qa/review-all-261008/repro/clip-detail-cache.test.ts.txt",
+      "original_sha256": "de3e240d23a166daa13465fa1b320334c0ad606467849c084759e187d3a173f7",
+      "original_bytes": 3192,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-spoken-received.test.tsx",
+      "archived": "docs/qa/review-all-261008/repro/postpilot-review-spoken-received.test.tsx.txt",
+      "original_sha256": "c099104dd1b5f195a98e414ac763f255b335721664cdd7b6b50a5d8e4cc1acfb",
+      "original_bytes": 1731,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-upload-response-loss.test.ts",
+      "archived": "docs/qa/review-all-261008/repro/postpilot-review-upload-response-loss.test.ts.txt",
+      "original_sha256": "ae15bfcc74a4146b486392743130c797c29ad3b44e6a1a762b0cfc512a147dca",
+      "original_bytes": 1853,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-vite.config.mts",
+      "archived": "docs/qa/review-all-261008/repro/postpilot-review-vite.config.mts.txt",
+      "original_sha256": "97f934c7e7972d5c57e90fa6b145b16b84f5ed9923d500f8d8cf3faf52225974",
+      "original_bytes": 331,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-upload-response-loss.config.mts",
+      "archived": "docs/qa/review-all-261008/repro/postpilot-review-upload-response-loss.config.mts.txt",
+      "original_sha256": "7e6b3ad370c253d56ec88e8b682ee3548ab4acc880fc96392ee5675e41134fac",
+      "original_bytes": 242,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-spoken-received.config.mts",
+      "archived": "docs/qa/review-all-261008/repro/postpilot-review-spoken-received.config.mts.txt",
+      "original_sha256": "a62cb1d1774521bba716228743ea3e2d497d7da6822932ae372cb307c08ab96c",
+      "original_bytes": 250,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-bundle-control.config.mts",
+      "archived": "docs/qa/review-all-261008/repro/postpilot-review-bundle-control.config.mts.txt",
+      "original_sha256": "24de11f3066124de4852ddeebef364186989d484e976d7bc7227ac9e2d09f097",
+      "original_bytes": 949,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-browser.mjs",
+      "archived": "docs/qa/review-all-261008/repro/postpilot-review-browser.mjs.txt",
+      "original_sha256": "e2c4565b491a7fdf2187018e86c7f9f3d264e3be7f91c568c22aa17e849b38a0",
+      "original_bytes": 1252,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-browser-proof.json",
+      "archived": "docs/qa/review-all-261008/observations/postpilot-review-browser-proof.json",
+      "original_sha256": "38b6185c1e9408ed19671ecbe029c71006e44c40c47bdacd50963eaa7bfd28b1",
+      "original_bytes": 641,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-overlay-proof.json",
+      "archived": "docs/qa/review-all-261008/observations/postpilot-review-overlay-proof.json",
+      "original_sha256": "629e2faba990e38c9c681a12a8ca105840b36f9e12fca894450e7829fd80a5ba",
+      "original_bytes": 377,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-responsive-proof.json",
+      "archived": "docs/qa/review-all-261008/observations/postpilot-review-responsive-proof.json",
+      "original_sha256": "27fd5d6bd9031a6f05f4cdce91dd138a2229a4fa78cb0e94d01b42883e03bfe2",
+      "original_bytes": 79,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-contrast-proof.json",
+      "archived": "docs/qa/review-all-261008/observations/postpilot-review-contrast-proof.json",
+      "original_sha256": "327c17d973b8ac6daed3510209a6aa81f85719238b5187a01b86e55404cb00ec",
+      "original_bytes": 13502,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-media-freshness.json",
+      "archived": "docs/qa/review-all-261008/observations/postpilot-review-media-freshness.json",
+      "original_sha256": "247d7e7907dc5de66567305a3883a3905a8c9c5c469e3ac91bf7ab7da40ebb36",
+      "original_bytes": 11903,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-frontend-tests-qualified.log",
+      "archived": "docs/qa/review-all-261008/logs/postpilot-review-frontend-tests-qualified.log",
+      "original_sha256": "ffd2619939239ee3785c6cea08424d7f51a3e65778b28d923cd7ee15493b3dd5",
+      "original_bytes": 18871,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-go-tests.log",
+      "archived": "docs/qa/review-all-261008/logs/postpilot-review-go-tests.log",
+      "original_sha256": "8484b5fc05a67a77a31701f6e6f08cc4b4035f0887a9cb422b92a4e481c0b19c",
+      "original_bytes": 7097,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-go-vet.log",
+      "archived": "docs/qa/review-all-261008/logs/postpilot-review-go-vet.log",
+      "original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "original_bytes": 0,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-go-build.log",
+      "archived": "docs/qa/review-all-261008/logs/postpilot-review-go-build.log",
+      "original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "original_bytes": 0,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-gofmt.log",
+      "archived": "docs/qa/review-all-261008/logs/postpilot-review-gofmt.log",
+      "original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "original_bytes": 0,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-dev-canonical-path.log",
+      "archived": "docs/qa/review-all-261008/logs/postpilot-review-dev-canonical-path.log",
+      "original_sha256": "a625c615b5504e3669732405285f31b53243b4fe1554b2a8dca8100ca4f52691",
+      "original_bytes": 1324,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-spec-check.log",
+      "archived": "docs/qa/review-all-261008/logs/postpilot-review-spec-check.log",
+      "original_sha256": "9ecad11f9759114d56531c877c95876c67f57f5fa5db366d1477a4cf550d3162",
+      "original_bytes": 54,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-independent-regressions.log",
+      "archived": "docs/qa/review-all-261008/logs/postpilot-review-independent-regressions.log",
+      "original_sha256": "dc522b050c9e9b25096381b37bc87161b7c73666f8bbb7eae647b0fabed80ba7",
+      "original_bytes": 151748,
+      "tail_only": true
+    },
+    {
+      "original": "/private/tmp/postpilot-review-root-usage-log-repeat.log",
+      "archived": "docs/qa/review-all-261008/logs/postpilot-review-root-usage-log-repeat.log",
+      "original_sha256": "5528d1e908d130c5dbdd99c1bff401788614fa92d97ba8a09687b2115835fc88",
+      "original_bytes": 5763,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-root-native-repeat.log",
+      "archived": "docs/qa/review-all-261008/logs/postpilot-review-root-native-repeat.log",
+      "original_sha256": "30ab9a7dbbf9333ee6d17adf2f3b20ae1c2df9f39bdfa7b468233187c116f5a0",
+      "original_bytes": 1982,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-root-caption-repeat.log",
+      "archived": "docs/qa/review-all-261008/logs/postpilot-review-root-caption-repeat.log",
+      "original_sha256": "e5f32bc5a84d1d895ad5f0ab8a59343fd5202ac6108428d582c9580e20b869f3",
+      "original_bytes": 894,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-root-glyph-repeat.log",
+      "archived": "docs/qa/review-all-261008/logs/postpilot-review-root-glyph-repeat.log",
+      "original_sha256": "8157328f9d958d82bfc397099112b0e95ea479ce4361ae3023646cb33d624b92",
+      "original_bytes": 1488,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-root-dubbing-repeat.log",
+      "archived": "docs/qa/review-all-261008/logs/postpilot-review-root-dubbing-repeat.log",
+      "original_sha256": "94f163fc32010a80ee22a597da7835e8df8d4e6f9906c599427aff5c6efc9381",
+      "original_bytes": 889,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-fe-overlay/review-final-repro.log",
+      "archived": "docs/qa/review-all-261008/logs/review-final-repro.log",
+      "original_sha256": "8d07c308824a7f8fdeddcf471d91393e310f58860e39e05c4f596c68c5d51d51",
+      "original_bytes": 2108,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-entity-cache-regressions.log",
+      "archived": "docs/qa/review-all-261008/logs/postpilot-review-entity-cache-regressions.log",
+      "original_sha256": "8c9f75a21e5de431507bd7811e53bae12058d095f4d94f9f46ef36cd11d6d992",
+      "original_bytes": 1700,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-entity-preview-regressions.log",
+      "archived": "docs/qa/review-all-261008/logs/postpilot-review-entity-preview-regressions.log",
+      "original_sha256": "00eb660912996bc52f1e49d20b6aa5b5c846510352ac6292514bf109efd2dac6",
+      "original_bytes": 2456,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-widget-regressions.log",
+      "archived": "docs/qa/review-all-261008/logs/postpilot-review-widget-regressions.log",
+      "original_sha256": "411d8fe8516540cc70e72aba1a21d890eb5fa9d497650487667503ac3ba968d2",
+      "original_bytes": 4496,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-spoken-received.log",
+      "archived": "docs/qa/review-all-261008/logs/postpilot-review-spoken-received.log",
+      "original_sha256": "c413cff6da0eb4771d7b4d8577ca538a6887574d8d14038b8ac620167a716790",
+      "original_bytes": 338,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-bundle-control.log",
+      "archived": "docs/qa/review-all-261008/logs/postpilot-review-bundle-control.log",
+      "original_sha256": "5d5ef2fdd20abdf89cf3cc592b971a35ec108727db123be927437eb9f22860f7",
+      "original_bytes": 19582,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-docker-gc-proof.log",
+      "archived": "docs/qa/review-all-261008/logs/postpilot-review-docker-gc-proof.log",
+      "original_sha256": "c00e0445cd61c706b920ade89b673b8f0d2b32413878a062d1e8f62d25545a4f",
+      "original_bytes": 308,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-media-deploy-corrected.log",
+      "archived": "docs/qa/review-all-261008/logs/postpilot-media-deploy-corrected.log",
+      "original_sha256": "2e17bd7c2e449ca54c7ad422250b6feab45972d5dc1d6120b498ccbf69c38a54",
+      "original_bytes": 163,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-checks/lint-retirement.log",
+      "archived": "docs/qa/review-all-261008/logs/lint-retirement.log",
+      "original_sha256": "28c189d938e457788968aacd287be90218e20da5c94590a8ecac92cb9667525c",
+      "original_bytes": 633,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-checks/lint-fsd.log",
+      "archived": "docs/qa/review-all-261008/logs/lint-fsd.log",
+      "original_sha256": "faacebdf43537dcef0205dab6ff138cecb633f20bcb1189d922037caada21bfe",
+      "original_bytes": 223,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-checks/lint-style-probe.log",
+      "archived": "docs/qa/review-all-261008/logs/lint-style-probe.log",
+      "original_sha256": "c6b97aeb79afe900c37340908a777a2b8154402eca2366ff66b546d02e0dbef0",
+      "original_bytes": 167,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-checks/build-web.log",
+      "archived": "docs/qa/review-all-261008/logs/build-web.log",
+      "original_sha256": "e56768528d2779948a60cf32d8b9420e93b80f07ce68847ae97e1f03e1ee3543",
+      "original_bytes": 14452,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-checks/lint.log",
+      "archived": "docs/qa/review-all-261008/logs/lint.log",
+      "original_sha256": "1e53cba42651c31d22144a1ed6980bde6cac9a114c72280c23db1b6e199f5663",
+      "original_bytes": 491,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-checks/lint-style.log",
+      "archived": "docs/qa/review-all-261008/logs/lint-style.log",
+      "original_sha256": "806d933fb975e8bfe4d54e553e2106c24964092949b39166d7c87b8760dcf9a3",
+      "original_bytes": 156,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-checks/test-dev.log",
+      "archived": "docs/qa/review-all-261008/logs/test-dev.log",
+      "original_sha256": "ebb64e08bc3d48dfd683984c74e45d8e3b2da93a0a4fe828e62b9ab94ace3e49",
+      "original_bytes": 2721,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-backend-report.md",
+      "archived": "docs/qa/review-all-261008/reports/postpilot-review-backend-report.md.txt",
+      "original_sha256": "954ce54d65cb1061a89796d548221cec89137025a929b726444031f86ddbf872",
+      "original_bytes": 24300,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-widget-report.md",
+      "archived": "docs/qa/review-all-261008/reports/postpilot-review-widget-report.md.txt",
+      "original_sha256": "5515a2d7581ebfd7634ee88a16dd88835fee80159c518dc9c5abc8e9064985a9",
+      "original_bytes": 10160,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-native-media-report.md",
+      "archived": "docs/qa/review-all-261008/reports/postpilot-review-native-media-report.md.txt",
+      "original_sha256": "6e87e360e98400851a3016c6c382e2345ed637d17668542659b161dfb78a3b65",
+      "original_bytes": 11238,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-media-report.md",
+      "archived": "docs/qa/review-all-261008/reports/postpilot-review-media-report.md.txt",
+      "original_sha256": "7f5d221d37fcb94be1d042b1ffcd395c4d0e6d2131650ec6cfadcc0eba87f78a",
+      "original_bytes": 30230,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-frontend-report.md",
+      "archived": "docs/qa/review-all-261008/reports/postpilot-review-frontend-report.md.txt",
+      "original_sha256": "5756c121e2d5c40a06c40b45ebaa50f1ca6e850da69aace26246b6a7a3131435",
+      "original_bytes": 35073,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-entity-report.md",
+      "archived": "docs/qa/review-all-261008/reports/postpilot-review-entity-report.md.txt",
+      "original_sha256": "1ec8d55da168d8118e0452c2a83f4283a1132a9e1ee81e0b1f2f2b0e7f32b6dc",
+      "original_bytes": 13245,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-frontend-entity-report.md",
+      "archived": "docs/qa/review-all-261008/reports/postpilot-review-frontend-entity-report.md.txt",
+      "original_sha256": "92bd1634a860b6ff0fa8f6abfe1bf231bd99a5588954af938fe312756308f60c",
+      "original_bytes": 12247,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-voice-entity-report.md",
+      "archived": "docs/qa/review-all-261008/reports/postpilot-review-voice-entity-report.md.txt",
+      "original_sha256": "c520f20fb20a3b02c18bd493abde752808db4bf22dc52f7983392b263c345a31",
+      "original_bytes": 6835,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-media-freshness.md",
+      "archived": "docs/qa/review-all-261008/reports/postpilot-review-media-freshness.md.txt",
+      "original_sha256": "c2f8cc6266c7e2208a3ea3b0c5426606e8a87ef8f274ea87af8fc15be5513a4d",
+      "original_bytes": 2482,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-root-frontend-repeat.log",
+      "archived": "docs/qa/review-all-261008/logs/postpilot-review-root-frontend-repeat.log",
+      "original_sha256": "d4f9b1168d445cb202dd2fbe96e9b7d873c25f3c1e7a0e3f470031206dd87ea9",
+      "original_bytes": 435,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-root-spoken-repeat.log",
+      "archived": "docs/qa/review-all-261008/logs/postpilot-review-root-spoken-repeat.log",
+      "original_sha256": "44ce2d51cb7c0204e0428c32f5a7f2e8f08076baa97418b65f2d729d9ebe93ef",
+      "original_bytes": 339,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-overlay.mjs",
+      "archived": "docs/qa/review-all-261008/repro/postpilot-review-overlay.mjs.txt",
+      "original_sha256": "bf79d39ce0fc7f944f6c397fedadeebc4ff6cd2600774cd592576ef41c43b3fe",
+      "original_bytes": 1261,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-responsive.mjs",
+      "archived": "docs/qa/review-all-261008/repro/postpilot-review-responsive.mjs.txt",
+      "original_sha256": "c4636f97e62615f7868db00ed4e3ea83afb494f8d2ba8f42afb6fd058ec49913",
+      "original_bytes": 924,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-contrast.mjs",
+      "archived": "docs/qa/review-all-261008/repro/postpilot-review-contrast.mjs.txt",
+      "original_sha256": "372bfdfab1db104f6c2b9b62780bf8c4709cdda2062dd9c69cd0fe1a6eab2ddb",
+      "original_bytes": 1800,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-harness/main.tsx",
+      "archived": "docs/qa/review-all-261008/repro/main.tsx.txt",
+      "original_sha256": "239b9a02dd930b443943af2fa3638defd4505ff5b2a3311c17256d0af6813312",
+      "original_bytes": 2455,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-harness/index.html",
+      "archived": "docs/qa/review-all-261008/repro/index.html.txt",
+      "original_sha256": "0ed267604cd9fbffa9907a4bb5506d36c7114537aea07f0dd756f9c76c6e2a0a",
+      "original_bytes": 222,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-docker-gc/docker-gc.mjs",
+      "archived": "docs/qa/review-all-261008/repro/docker-gc.mjs.txt",
+      "original_sha256": "d864215d0d53075f997934d61e907ea91e8440f11cb355177bb1d74de4bd6205",
+      "original_bytes": 4933,
+      "tail_only": false
+    },
+    {
+      "original": "/private/tmp/postpilot-review-docker-gc/lib.mjs",
+      "archived": "docs/qa/review-all-261008/repro/lib.mjs.txt",
+      "original_sha256": "0da1b4c5d1f0077f27a0097af69b8ccb8e2d6f4e0408b675ad4aaa1ea6a11bfe",
+      "original_bytes": 422,
+      "tail_only": false
+    }
+  ],
+  "limits": [
+    "all production bodies read;not every test/generated/data/binary manually certified",
+    "runtime probes use synthetic ordinary transport/storage/supplier boundaries; no real paid/provider/storage mutations",
+    "no Docker/build/rollout/push/live deployment by review",
+    "full suites run on immutable baseline;newer committed causal paths source-compared",
+    "original scratch paths preserved for traceability;archived .txt fixtures need reconstruction against cited revision before execution",
+    "tail-only logs contain final bounded output;original hashes identify complete scratch logs"
+  ],
+  "status": "review complete;all findings unadopted;no product mutation",
+  "document_validation": {
+    "result": "pass",
+    "finding_ids": "F1-F42 unique,all [?],sorted by priority",
+    "review_status": "converted@261008;no adoption implies no implementation tasks",
+    "reference_checks": "all cited baseline paths/decision IDs and durable links resolve",
+    "coverage_checks": "2035 production files/266302 lines,0 production gaps;2360 full reads/293218 lines;5049 tracked entries",
+    "artifact_integrity": "94 archived files present;each non-clipped archive matches its original SHA256",
+    "state_checks": "review row converted,next3 lines,log20 lines",
+    "diff_check": "git diff --check -- spec/STATE.md spec/review/all-261008.md docs/qa/review-all-261008 passed"
+  },
+  "final_freshness_revision": "77107092910ce6f5cdf1a4c41845b797d7a42da9",
+  "final_freshness_result": "Formal mapped source paths unchanged from prior independently reviewed revision f889473f. Baseline source/read/test counts remain b051307a;new T633 code is not included in those counts."
+}

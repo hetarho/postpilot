@@ -1,0 +1,65 @@
+# Widget supplemental review — immutable b051307a
+
+All assigned handwritten production widget .ts/.tsx files fully read in sections: 79/79, 9,795 lines; no partial files. Ledger: `/private/tmp/postpilot-review-widget-coverage.json`. Test/fixture/generated sources used for targeted references, not claimed as entirely manually reviewed. Baselines fully read: ARCH, STATE, FORMAT, THEME r31, EXPORT r11, EDIT r5, VOICE r16, GEN r26, MODEL r36, TMPL r25, GUIDE r17, LANG r9. Existing T631 and T633–T646 work and blocked media/voice live qualification remain excluded. Backend final report is separate and complete.
+
+## W1 P1 — bug: 사진 복사 결과가 바뀐 미리보기에 남아 실제와 다른 복사 확인을 표시함
+
+- Exact location: `frontend/src/widgets/export-panel/model/useCopyFeedback.ts:72–94` (`copyPhoto.isCurrent`, success/failure writes); `model/useExportPanel.ts:65`, `154–158` (`photoCopied`, `photoFailure` compare only `photo:<marker>:<filename>`); `ui/ExportPanel.tsx:279–291`, `319–330`; real page adapter `frontend/src/pages/editor/ui/EditorFinishPanel.tsx:61–68` passes live canonical content and images without a revision key.
+- Trigger/public ownership: authenticated owner opens ordinary post finish step, starts a photo copy, and canonical content/attachment pixels change via current post refresh or other editing tab before delayed clipboard result settles. Same filename/marker is permitted for a replaced attachment; image ID, view URL and rotation can differ while copy target stays identical. A normal content update alone also fails explicit content identity invalidation.
+- Problem: hook invalidates on unmount, a newer copy and explicit format switch. It has no content/source change invalidation. Photo result stores no value/content/image identity; derivations compare only target. Current displayed replacement can receive original image's “사진이 복사됐어요” confirmation; stale failure likewise has no expiry/source identity. Text fallback has a content identity and text success has value matching, so those safeguards do not fence photo feedback.
+- Verified consequence: real ExportPanel rerendered with fresh canonical content and replacement ID/URL/90° rotation still shows `IMG_1.jpg 사진이 복사됐어요` after resolving the originally captured copy; confirmed old copyImage call carried original `<img>` and rotation0. No claim that actual browser pixels were measured—copyImage is an ordinary deferred boundary mock. The misleading live region and absent stale-result fence are verified.
+- Spec/ARCH baseline: EXPORT-11 content/tab/newer-copy invalidates stale feedback; delayed browser permission results may not label a different preview; EXPORT-15 screen rotation matches copy; THEME-24 feedback beside its subject; ARCH-13 locates this cross-feature UI composition in widgets (placement is satisfied, the feedback contract is not).
+- Existing tests cover tab/newer-copy/unmount and text content changes, no pending photo + content/source replacement case (`useCopyFeedback.test.ts`, `useExportPanel.test.ts`, `ExportPanel.test.tsx`).
+- Fix invariant: every reported photo result belongs to still-current content identity and exact admitted photo/rotation, not marker+filename alone. Invalidate feedback generation and failures on content/source change; do not refetch or change clipboard issuance ordering.
+- Repeated validation: hook repro twice; real ExportPanel UI repro twice. Scratch `/private/tmp/postpilot-review-widget-tests/export-stale.test.ts`, `export-panel-stale.test.tsx`; output `/private/tmp/postpilot-review-widget-regressions.log`. Expected regression assertions fail at stale-state and actual visible copied status, not setup errors.
+
+## W2 P1 — bug: 영상 원본 순서 저장 전에 완료를 알리고 실패를 복구할 길이 없음
+
+- Exact location: `frontend/src/entities/clip-project/ui/ClipSourceStrip.tsx:52–61` (`move`), `192–194` (live result); `frontend/src/widgets/clip-workspace/model/useClipWorkspace.ts:228–238` (`sources.order.change`); `frontend/src/entities/clip-project/api/sources.ts:48–68` plain async reorder and callback.
+- Trigger/public ownership: ordinary owner in clip step①, >=2 ready sources, no active attempt/job/finalization/browser run, presses 이동 button or drag. Network latency or rejected RPC is routine; API ownership/admission remains server-enforced.
+- Problem/impact: source strip `onReorder` type returns void and announces past-tense “옮겼어요” immediately; widget discards `.then(acceptSourceOrder)` promise without catch/pending/error state. UI entries update only on successful batch acceptance. A delayed or refused save therefore announces moved while order stays old; a rejection is unhandled and supplies neither local refusal nor retry state. Owner can start generation assuming intended order, while server still uses previous source order under CLIP-136. No assertion of proven server out-of-order race or double payment.
+- Baseline: CLIP-136 owner-arranged source order drives default footage flow; THEME-24 action feedback beside its control; ARCH-17 failure normalization is available through the entity adapter, but this callback never receives and presents its rejected result.
+- Repeated validation: two real ClipSourceStrip UI tests with intentionally unresolved ordinary reorder callback verify callback gets [b,a] while source DOM order remains original, but live region instantly reports `A.mp4 · 2 / 2 번째로 옮겼어요`. Assertion expected no completed-result before confirmation fails twice. Source call-path proves rejection not caught; no intentional unhandled rejection test noise counted as evidence. Scratch `source-reorder.test.tsx` and same log.
+- Fix invariant: arranging is an awaited save with pending/error state, terminal announcement after accepted server batch; block/order subsequent dependent actions while save is pending and retain retryable user intention on failure. Existing strip/move-order tests verify happy-path movement geometry, not delayed/refused persistence confirmation. Independently identified by frontend auditor; consolidate, not duplicate finding.
+
+## Positive assessment and falsification notes
+
+- Widgets compose sibling features through widgets/slots rather than adding feature-to-feature imports. RefineDock flushes canonical edits before finalize and delegates both actual mutations to features. GenerationBrief separates account settings from per-post decision fields and retains form close/reset handling. Intentional composition and typed handles make these large workflows reviewable without putting application mutations in render bodies.
+- ClipWorkspace keeps upload/correction/job hooks above step panels, persists local editing through navigation, disposes save queues on finalized/deleted records, flushes dependent queues in a named sequence before render, and names unreceived/uncertain attempts rather than claiming successful generation.
+- AccountMenu awaits successful logout, leaves refusal visible, shows missing balance as failed/loading state rather than replacing it with a free balance. PlanComparison distinguishes unavailable pricing/rate/clip from actual zero counts, which respects QUOTA's price provenance.
+- Export text feedback guards current value/field and serialized copies, manually focuses/selects fallback text, explicitly invalidates format switches, and uses CORS-loaded stored images without copy-time refetch. W1 is a specific missing identity fence in otherwise careful design.
+- Voice warnings keep ordinary editing/export available and offer restore/learning route; fingerprint rows use exact revision and do not enqueue paid work. Guideline bulk outcomes remain visible after accepted rows disappear, scoping/failures stay beside their rows.
+- Setup gate load-failure continuation is functional: acknowledge updates local completed progress, `useSetupAvailability` then switches to ready regardless failed prior reads; no stuck gate finding. Owner keys remount creation/setup state. Do not promote initial setup snapshots alone.
+- Post/voice repeated filename display observations and historical comparison helper rendering are intentional exact-name contracts. Cancelled `ContactSheet` observe state is a minor old-helper presentation issue with no current publicly cancellable ordinary post observe path; not formal.
+- WritingTestStudio/Pair/History current missing-material/recovery behavior remains T631's in-flight scope; no duplicate new finding. Ordinary copied-success identity commentary in WritingTestPost is likewise pending scope.
+- No concrete ARCH-6/7/40 production issue in this widget scope; frontend FSD/widget placement is respected. Do not promote large file length or intentionally tagged transport data alone.
+
+## Per-widget full-read ledger
+
+| Widget | Files fully read | Lines fully read |
+|---|---:|---:|
+| export-panel | 13 | 1303 |
+| writing-test | 6 | 2426 |
+| generation-brief | 2 | 249 |
+| model-leaderboard | 3 | 94 |
+| plan-ladder | 5 | 344 |
+| candidate-comparison | 4 | 517 |
+| clip-workspace | 9 | 1578 |
+| voice-warning | 3 | 67 |
+| voice-fingerprint | 4 | 283 |
+| contact-sheet | 3 | 327 |
+| credit-badge | 3 | 74 |
+| creation-setup | 6 | 791 |
+| interface-preferences | 2 | 51 |
+| account-menu | 3 | 343 |
+| refine-dock | 2 | 74 |
+| guideline-directory | 3 | 790 |
+| storyline-space | 3 | 159 |
+| spoken-voice-creation | 3 | 294 |
+| ai-authoring-studio | 2 | 31 |
+
+## Bounded command evidence
+
+`cd /private/tmp/postpilot-review-all-261008/frontend && pnpm exec vitest run --config /private/tmp/postpilot-review-widget-tests/vitest.config.ts > /private/tmp/postpilot-review-widget-regressions.log 2>&1`
+
+Exit1 expected: three scratch regression files, six deliberate assertions fail across repeated two-case runs; zero setup failures/unhandled errors. 34.88s. Existing full suite belongs to root validation and is not duplicated. Initial hook-only repeated log is `/private/tmp/postpilot-review-widget-export-regressions.log`. All code/tests remain scratch outside source checkout; only report/ledger artifacts were written.

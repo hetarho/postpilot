@@ -1,0 +1,35 @@
+package post
+import("context";"testing";"fmt")
+
+func TestReviewDeleteFailureDoesNotLeaveVisiblePostWithMissingPhotos(t *testing.T){
+ ctx:=context.Background();svc,f,blobs:=newTestService(t);p:=mustCreatePost(t,svc,alice,"delete partial")
+ first:=attachPhoto(t,svc,blobs,p.Slug,"first.jpg");attachPhoto(t,svc,blobs,p.Slug,"second.jpg")
+ calls:=0;blobs.beforeDelete=func(string){calls++;if calls==2{blobs.failDelete=true}}
+ if err:=svc.DeletePost(ctx,alice,p.Slug);err==nil{t.Fatal("expected injected second delete error")}
+ if _,err:=f.GetPost(ctx,p.Slug);err==nil&&!blobs.has(first.Key){t.Fatal("failed deletion kept the visible post and attachment rows after permanently deleting its first photo")}
+}
+
+func TestReviewTwoPhotoDeletesDoNotRestoreEachOthersObservation(t *testing.T){
+ ctx:=context.Background();svc,f,blobs:=newTestService(t);p:=mustCreatePost(t,svc,alice,"trace interleave")
+ a:=attachPhoto(t,svc,blobs,p.Slug,"a.jpg");b:=attachPhoto(t,svc,blobs,p.Slug,"b.jpg")
+ if err:=svc.SetObservations(ctx,alice,p.Slug,[]Observation{{File:a.Filename,Scene:"A"},{File:b.Filename,Scene:"B"}});err!=nil{t.Fatal(err)}
+ nested:=false;blobs.beforeDelete=func(key string){if key==a.Key&&!nested{nested=true;if err:=svc.DeleteImage(ctx,alice,b.ID);err!=nil{t.Fatal(err)}}}
+ if err:=svc.DeleteImage(ctx,alice,a.ID);err!=nil{t.Fatal(err)}
+ got,err:=f.GetPost(ctx,p.Slug);if err!=nil{t.Fatal(err)};if len(got.Observations)!=0{t.Fatalf("both photos deleted but stale traces restored: %+v",got.Observations)}
+}
+
+func TestReviewPendingPhotosCannotConfirmOverLimit(t *testing.T){
+ ctx:=context.Background();svc,f,blobs:=newTestService(t);p:=mustCreatePost(t,svc,alice,"pending cap");svc.maxPhotos=2
+ uploads:=[]Upload{}
+ for i:=0;i<3;i++{u,_,_,err:=svc.CreateUpload(ctx,alice,p.Slug,fmt.Sprintf("file-%d.jpg",i),AttachmentPhoto);if err!=nil{break};uploads=append(uploads,u);blobs.put(u.Key,100,testNow)}
+ for _,u:=range uploads{_,_ =svc.ConfirmUpload(ctx,alice,u.ID,10,10,0)}
+ photos,err:=f.ListImages(ctx,p.Slug);if err!=nil{t.Fatal(err)};if len(photos)>svc.maxPhotos{t.Fatalf("confirmed %d photos with configured cap %d",len(photos),svc.maxPhotos)}
+}
+
+func TestReviewReplacedUploadCannotPublishDetachedOldBytes(t *testing.T){
+ ctx:=context.Background();svc,f,blobs:=newTestService(t);p:=mustCreatePost(t,svc,alice,"replace fence")
+ old,_,_,err:=svc.CreateUpload(ctx,alice,p.Slug,"same.jpg",AttachmentPhoto);if err!=nil{t.Fatal(err)};blobs.put(old.Key,100,testNow)
+ f.beforeGuardedWrite=func(string){f.beforeGuardedWrite=nil;_,_,_,err:=svc.CreateUpload(ctx,alice,p.Slug,"same.jpg",AttachmentPhoto);if err!=nil{t.Fatal(err)}}
+ _,err=svc.ConfirmUpload(ctx,alice,old.ID,10,10,0)
+ if err==nil&&!blobs.has(old.Key){t.Fatal("old confirm succeeded after replacement removed its upload row and bytes")}
+}

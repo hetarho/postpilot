@@ -1,0 +1,18 @@
+package ai
+import (
+ "testing"
+ "github.com/postpilot/backend/internal/clip"
+)
+func TestReviewOwnerRhythmIsChanged(t *testing.T) {
+ cfg := DefaultConfig(clip.Environment{})
+ in := clip.PlanningInput{Ratio:"vertical", TargetDurationMS:15000, Instruction:"Keep the first scenery shot for exactly8seconds and the second for exactly7seconds."}
+ plan := clip.EditPlan{Ratio:"vertical"}
+ for index, id := range []string{"a","b"} {
+  in.Analyses=append(in.Analyses,clip.SourceAnalysis{Source:clip.AnalysisSource{RenderSource:clip.RenderSource{ID:id,Fingerprint:id,Info:clip.MediaInfo{DurationMS:10000}}},Segments:[]clip.Segment{{StartMS:0,EndMS:10000,Scene:"scenery"}}})
+  end:=8000;if index==1{end=7000}
+  plan.Cuts=append(plan.Cuts,clip.Cut{ID:id,SourceID:id,Fingerprint:id,EndMS:end,PlaybackRatePermille:1000})
+ }
+ if err:=composeTimeline(cfg,in,&plan);err!=nil{t.Fatal(err)}
+ if plan.Cuts[0].EndMS==8000 && plan.Cuts[1].EndMS==7000 {t.Fatal("counterexample no longer reproduces")}
+ t.Logf("requested valid8s+7s=15s; accepted %dms+%dms=%dms",plan.Cuts[0].EndMS,plan.Cuts[1].EndMS,plan.DurationMS)
+}

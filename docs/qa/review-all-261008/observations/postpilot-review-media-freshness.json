@@ -1,0 +1,323 @@
+{
+  "base": "b051307a",
+  "head": "f889473f6b4c704bbdc57863fab93c8ab47ebe17",
+  "method": "Read-only committed Git blob/diff comparison; no new probes or test suites",
+  "rows": [
+    {
+      "finding": "M1",
+      "file": "frontend/src/features/render-clip-browser/api/store-result.ts",
+      "base_blob": "789ffd3e3ca84635341f710a420485d9e88db4f8",
+      "head_blob": "789ffd3e3ca84635341f710a420485d9e88db4f8",
+      "unchanged": true
+    },
+    {
+      "finding": "M1",
+      "file": "backend/internal/clip/app/browser_upload.go",
+      "base_blob": "e7463fc2faf324a4bb21ff0d097bfb0cede56506",
+      "head_blob": "e7463fc2faf324a4bb21ff0d097bfb0cede56506",
+      "unchanged": true
+    },
+    {
+      "finding": "M1",
+      "file": "backend/internal/clip/store/browser_uploads.go",
+      "base_blob": "17e4b5485246dfb6d08e62008053b5a7f450d5e0",
+      "head_blob": "17e4b5485246dfb6d08e62008053b5a7f450d5e0",
+      "unchanged": true
+    },
+    {
+      "finding": "M1",
+      "file": "backend/internal/clip/browser_render.go",
+      "base_blob": "c536932f55066806401b17770bd2513e4db5cfdc",
+      "head_blob": "c536932f55066806401b17770bd2513e4db5cfdc",
+      "unchanged": true
+    },
+    {
+      "finding": "M1",
+      "file": "backend/internal/storage/clip.go",
+      "base_blob": "726771b48b5ae359b4ca296494bb16ecd379e5db",
+      "head_blob": "726771b48b5ae359b4ca296494bb16ecd379e5db",
+      "unchanged": true
+    },
+    {
+      "finding": "M1",
+      "file": "frontend/src/shared/lib/upload/put.ts",
+      "base_blob": "07efaf4fd9fe0ddd2dee46b9f1b5e20dc77f4978",
+      "head_blob": "07efaf4fd9fe0ddd2dee46b9f1b5e20dc77f4978",
+      "unchanged": true
+    },
+    {
+      "finding": "M2",
+      "file": "backend/internal/clip/app/generation.go",
+      "base_blob": "de846f25feb6dcdd136ef2f08a03e5b6cfa71032",
+      "head_blob": "de846f25feb6dcdd136ef2f08a03e5b6cfa71032",
+      "unchanged": true
+    },
+    {
+      "finding": "M2",
+      "file": "backend/internal/clip/app/storyline_revision.go",
+      "base_blob": "17298547206ca2e0ff94a7004de1643d6cda641a",
+      "head_blob": "17298547206ca2e0ff94a7004de1643d6cda641a",
+      "unchanged": true
+    },
+    {
+      "finding": "M2",
+      "file": "backend/internal/clip/app/revision.go",
+      "base_blob": "033c997002b02f169cb2d84f80079569a37d760b",
+      "head_blob": "033c997002b02f169cb2d84f80079569a37d760b",
+      "unchanged": true
+    },
+    {
+      "finding": "M2",
+      "file": "backend/internal/clip/store/generation.go",
+      "base_blob": "04791c8ae8355974eed8f6b2868a50fac18e2c0d",
+      "head_blob": "04791c8ae8355974eed8f6b2868a50fac18e2c0d",
+      "unchanged": true
+    },
+    {
+      "finding": "M2",
+      "file": "backend/internal/clip/store/correction.go",
+      "base_blob": "cde43d722f7a28234d34cd59c48d48ddeab50798",
+      "head_blob": "cde43d722f7a28234d34cd59c48d48ddeab50798",
+      "unchanged": true
+    },
+    {
+      "finding": "M2",
+      "file": "backend/internal/job/store/queries/jobs.sql",
+      "base_blob": "5926b6f8987d7c5dfc7aa8450225731bcdf4a08b",
+      "head_blob": "e945d0a77e99b6efa5adadbdc1d6fb0d91876ace",
+      "unchanged": false
+    },
+    {
+      "finding": "M3",
+      "file": "backend/internal/clip/app/quotes.go",
+      "base_blob": "6b41f5e4fcf41c871e9803e193794b4b7f93ce69",
+      "head_blob": "6b41f5e4fcf41c871e9803e193794b4b7f93ce69",
+      "unchanged": true
+    },
+    {
+      "finding": "M3",
+      "file": "backend/internal/clip/app/generation.go",
+      "base_blob": "de846f25feb6dcdd136ef2f08a03e5b6cfa71032",
+      "head_blob": "de846f25feb6dcdd136ef2f08a03e5b6cfa71032",
+      "unchanged": true
+    },
+    {
+      "finding": "M3",
+      "file": "backend/internal/clip/app/storyline_revision.go",
+      "base_blob": "17298547206ca2e0ff94a7004de1643d6cda641a",
+      "head_blob": "17298547206ca2e0ff94a7004de1643d6cda641a",
+      "unchanged": true
+    },
+    {
+      "finding": "M3",
+      "file": "backend/internal/clip/app/revision.go",
+      "base_blob": "033c997002b02f169cb2d84f80079569a37d760b",
+      "head_blob": "033c997002b02f169cb2d84f80079569a37d760b",
+      "unchanged": true
+    },
+    {
+      "finding": "M4",
+      "file": "backend/internal/clip/app/speech.go",
+      "base_blob": "2843692b899a0cb2fe4f94ed9560c9a34f543d9d",
+      "head_blob": "2843692b899a0cb2fe4f94ed9560c9a34f543d9d",
+      "unchanged": true
+    },
+    {
+      "finding": "M4",
+      "file": "backend/cmd/api/contexts.go",
+      "base_blob": "3ec634618fdf4786d3cb399f49ec6fbd2ab6f457",
+      "head_blob": "0ed2727beb7aa80b0618c621b3b694ff132dc21e",
+      "unchanged": false
+    },
+    {
+      "finding": "M4",
+      "file": "backend/cmd/api/clip.go",
+      "base_blob": "ce96f0362f41ac1c2616761baa132c341cddf426",
+      "head_blob": "ce96f0362f41ac1c2616761baa132c341cddf426",
+      "unchanged": true
+    },
+    {
+      "finding": "M4",
+      "file": "backend/internal/job/store/queries/jobs.sql",
+      "base_blob": "5926b6f8987d7c5dfc7aa8450225731bcdf4a08b",
+      "head_blob": "e945d0a77e99b6efa5adadbdc1d6fb0d91876ace",
+      "unchanged": false
+    },
+    {
+      "finding": "M4",
+      "file": "backend/internal/job/store/store.go",
+      "base_blob": "cc6c3c605c54a1b009d9194820de63fe8ddcf53f",
+      "head_blob": "f55aba9e3bce3a0473a129f9b5cf5598526195cf",
+      "unchanged": false
+    },
+    {
+      "finding": "M5",
+      "file": "backend/internal/clip/correction_composition.go",
+      "base_blob": "ae7ce777e139b97d2ae513c47d54bf5632b34a08",
+      "head_blob": "ae7ce777e139b97d2ae513c47d54bf5632b34a08",
+      "unchanged": true
+    },
+    {
+      "finding": "M5",
+      "file": "frontend/src/features/correct-clip/ui/ClipCorrectionWorkspace.tsx",
+      "base_blob": "e86e64dbc6302a64367d6d5a48d62435f678eaa0",
+      "head_blob": "e86e64dbc6302a64367d6d5a48d62435f678eaa0",
+      "unchanged": true
+    },
+    {
+      "finding": "M5",
+      "file": "frontend/src/features/correct-clip/ui/ClipTextControls.tsx",
+      "base_blob": "030d9d3fb0631faa319a053e6d769d6b7fb67f33",
+      "head_blob": "030d9d3fb0631faa319a053e6d769d6b7fb67f33",
+      "unchanged": true
+    },
+    {
+      "finding": "M5",
+      "file": "frontend/src/features/correct-clip/ui/ClipCaptionStage.tsx",
+      "base_blob": "3bf89c23632d71c86146b6892b79a1f171dde190",
+      "head_blob": "3bf89c23632d71c86146b6892b79a1f171dde190",
+      "unchanged": true
+    },
+    {
+      "finding": "M6",
+      "file": "backend/internal/clip/design/metrics.go",
+      "base_blob": "d079d47f0d72d18e44f1fb3b96782bf6298e5d8f",
+      "head_blob": "d079d47f0d72d18e44f1fb3b96782bf6298e5d8f",
+      "unchanged": true
+    },
+    {
+      "finding": "M6",
+      "file": "frontend/src/entities/clip-design/model/region-layout.ts",
+      "base_blob": "c6a7d42d06d26249e000a051ee0f97dae8100d02",
+      "head_blob": "c6a7d42d06d26249e000a051ee0f97dae8100d02",
+      "unchanged": true
+    },
+    {
+      "finding": "M6",
+      "file": "backend/internal/clip/media/regions.go",
+      "base_blob": "d8e5bcb53ea2103b51f652c0e3a55a41c9199791",
+      "head_blob": "d8e5bcb53ea2103b51f652c0e3a55a41c9199791",
+      "unchanged": true
+    },
+    {
+      "finding": "M6",
+      "file": "backend/internal/clip/media/composition_admission.go",
+      "base_blob": "4705a37ce140d8ea667641ed2daff07bd92ca354",
+      "head_blob": "4705a37ce140d8ea667641ed2daff07bd92ca354",
+      "unchanged": true
+    },
+    {
+      "finding": "M6",
+      "file": "backend/internal/clip/app/quotes.go",
+      "base_blob": "6b41f5e4fcf41c871e9803e193794b4b7f93ce69",
+      "head_blob": "6b41f5e4fcf41c871e9803e193794b4b7f93ce69",
+      "unchanged": true
+    },
+    {
+      "finding": "M6",
+      "file": "backend/internal/clip/app/generation.go",
+      "base_blob": "de846f25feb6dcdd136ef2f08a03e5b6cfa71032",
+      "head_blob": "de846f25feb6dcdd136ef2f08a03e5b6cfa71032",
+      "unchanged": true
+    },
+    {
+      "finding": "M7",
+      "file": "backend/internal/clip/app/service.go",
+      "base_blob": "a60659d6ed3a3891d59c6a1d9c1de4747f61cb8e",
+      "head_blob": "a60659d6ed3a3891d59c6a1d9c1de4747f61cb8e",
+      "unchanged": true
+    },
+    {
+      "finding": "M7",
+      "file": "frontend/src/features/regenerate-clip-speech/ui/ClipVoiceChoice.tsx",
+      "base_blob": "882a8f642386b9f2d6673d3a9ef56e79d690a4c2",
+      "head_blob": "882a8f642386b9f2d6673d3a9ef56e79d690a4c2",
+      "unchanged": true
+    },
+    {
+      "finding": "M7",
+      "file": "frontend/src/features/edit-clip-project/ui/ClipProjectForm.tsx",
+      "base_blob": "743ddc8ea948179ff7553da7e9064b43fa492989",
+      "head_blob": "2f2e5fb810b96ea829e9c54c39b41068b3d01111",
+      "unchanged": false
+    },
+    {
+      "finding": "M7",
+      "file": "frontend/src/entities/clip-project/model/types.ts",
+      "base_blob": "1349c6ec8ddaf4c9e3cd07b3f6c8f884fdfee743",
+      "head_blob": "1349c6ec8ddaf4c9e3cd07b3f6c8f884fdfee743",
+      "unchanged": true
+    },
+    {
+      "finding": "M7",
+      "file": "frontend/src/entities/clip-project/api/clip-project.ts",
+      "base_blob": "b880ed51f46a8862922c6f4596317fcfdc0ab99c",
+      "head_blob": "b880ed51f46a8862922c6f4596317fcfdc0ab99c",
+      "unchanged": true
+    },
+    {
+      "finding": "V1",
+      "file": "frontend/src/entities/spoken-voice/model/types.ts",
+      "base_blob": "193f5896c923a46e39aa54e6c377283723cb9984",
+      "head_blob": "193f5896c923a46e39aa54e6c377283723cb9984",
+      "unchanged": true
+    },
+    {
+      "finding": "V1",
+      "file": "frontend/src/entities/spoken-voice/api/work.ts",
+      "base_blob": "b9115a5781522242078bedfa73dc9db126e1637f",
+      "head_blob": "b9115a5781522242078bedfa73dc9db126e1637f",
+      "unchanged": true
+    },
+    {
+      "finding": "V1",
+      "file": "frontend/src/features/create-spoken-voice/model/useVoiceCreation.ts",
+      "base_blob": "8d2796a7f8023e2a010bfddb01328bf7448eb91c",
+      "head_blob": "8d2796a7f8023e2a010bfddb01328bf7448eb91c",
+      "unchanged": true
+    },
+    {
+      "finding": "V1",
+      "file": "frontend/src/widgets/spoken-voice-creation/ui/SpokenVoiceCreation.tsx",
+      "base_blob": "eb239ab0cdea386710760d5153e3bc39b8a2392e",
+      "head_blob": "eb239ab0cdea386710760d5153e3bc39b8a2392e",
+      "unchanged": true
+    },
+    {
+      "finding": "V1",
+      "file": "frontend/src/features/create-spoken-voice/config/i18n.ts",
+      "base_blob": "5109c9078aaaf1a95025820bd6915628271c5058",
+      "head_blob": "5109c9078aaaf1a95025820bd6915628271c5058",
+      "unchanged": true
+    },
+    {
+      "finding": "V1",
+      "file": "backend/internal/voice/spoken/app/generation.go",
+      "base_blob": "36f35a936ad726dd0cc0b176eeb405c029e3adc5",
+      "head_blob": "36f35a936ad726dd0cc0b176eeb405c029e3adc5",
+      "unchanged": true
+    },
+    {
+      "finding": "V1",
+      "file": "backend/internal/voice/spoken/operation.go",
+      "base_blob": "d36b27dc93a5a2ee888e0bde68d00380cad39d62",
+      "head_blob": "d36b27dc93a5a2ee888e0bde68d00380cad39d62",
+      "unchanged": true
+    },
+    {
+      "finding": "V1",
+      "file": "backend/internal/voice/spoken/rpc/generation.go",
+      "base_blob": "886ce363a472d1c21eaf7cd303415138edb4358c",
+      "head_blob": "886ce363a472d1c21eaf7cd303415138edb4358c",
+      "unchanged": true
+    },
+    {
+      "finding": "V1",
+      "file": "backend/internal/voice/spoken/store/operations.go",
+      "base_blob": "accc6543f4a805215b5bf0ad972c3d2e3b39e921",
+      "head_blob": "accc6543f4a805215b5bf0ad972c3d2e3b39e921",
+      "unchanged": true
+    }
+  ],
+  "conclusion": "All8 formal findings retain their causal predicates at pinned HEAD. Four supporting files differ: contexts.go adds writing-test wiring/imports and shifts speech recovery249\u2192255; jobs.sql adds ActiveForPostKind while FinishJob50\u201358 stays running-only; job store adds post-kind filtering while clip recovery dimension is unchanged; ClipProjectForm moves appearance into Disclosure while full dubbing value forwarding and autosave serialization remain."
+}

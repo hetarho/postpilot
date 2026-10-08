@@ -1,0 +1,24 @@
+{
+  "afterNested": {
+    "overflow": "hidden",
+    "dialogs": 0
+  },
+  "pending": [
+    {
+      "tag": "DIV",
+      "text": "Pendingwaitingdialog.cancelConfirm",
+      "inside": true
+    },
+    {
+      "tag": "BUTTON",
+      "text": "popover.options",
+      "inside": false
+    },
+    {
+      "tag": "BUTTON",
+      "text": "",
+      "inside": false
+    }
+  ],
+  "errors": []
+}

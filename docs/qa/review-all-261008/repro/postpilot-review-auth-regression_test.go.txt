@@ -1,0 +1,26 @@
+package auth
+
+import("context";"testing";"time")
+
+type reviewEmailRaceStore struct { *fakeStore; afterConsume func() }
+func (f reviewEmailRaceStore) ConsumeLink(c context.Context,h string,p LinkPurpose,n time.Time)(Link,error){l,e:=f.fakeStore.ConsumeLink(c,h,p,n); if e==nil && f.afterConsume!=nil { f.afterConsume() }; return l,e}
+
+func TestReviewOldPasswordLoginSurvivesCompletedReset(t *testing.T){
+ ctx:=context.Background(); now:=time.Now(); svc,f:=newTestService(t,now)
+ raw,h,err:=NewLinkToken(); if err!=nil{t.Fatal(err)}
+ f.links[h]=Link{TokenHash:h,UserID:"alice",Purpose:LinkPurposeResetPassword,Email:"alice@example.com",CreatedAt:now,ExpiresAt:now.Add(time.Hour)}
+ original:=svc.verify
+ svc.verify=func(p,e string)(bool,error){ok,err:=original(p,e); if ok {if er:=svc.ResetPassword(ctx,raw,"new-password");er!=nil{t.Fatal(er)}}; return ok,err}
+ _,token,err:=svc.Login(ctx,"alice","s3cret");if err!=nil{t.Fatal(err)}
+ if _,err:=svc.Authenticate(ctx,token);err==nil {t.Fatal("old-password login created a valid session AFTER password reset completed")}
+}
+
+func TestReviewVerifyOldMailboxDoesNotVerifyReplacement(t *testing.T){
+ ctx:=context.Background();now:=time.Now();svc,f:=newTestService(t,now);svc.webOrigin="https://postpilot.example"
+ if err:=f.SetEmail(ctx,"alice","old@example.com",nil);err!=nil{t.Fatal(err)}
+ raw,h,err:=NewLinkToken();if err!=nil{t.Fatal(err)}
+ f.links[h]=Link{TokenHash:h,UserID:"alice",Purpose:LinkPurposeVerifyEmail,Email:"old@example.com",CreatedAt:now,ExpiresAt:now.Add(time.Hour)}
+ svc.links=reviewEmailRaceStore{fakeStore:f,afterConsume:func(){if err:=svc.RegisterEmail(ctx,"alice","new@example.com");err!=nil{t.Fatal(err)}}}
+ if err:=svc.VerifyEmail(ctx,raw);err!=nil{t.Fatal(err)}
+ user:=f.users["alice"];if user.Email=="new@example.com" && user.EmailVerifiedAt!=nil {t.Fatal("a proof for old@example.com verified new@example.com without opening its link")}
+}

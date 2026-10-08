@@ -1,0 +1,13 @@
+import React from 'react'
+import { afterEach, expect, it, vi } from 'vitest'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { ClipSourceStrip } from '/private/tmp/postpilot-review-all-261008/frontend/src/entities/clip-project/ui/ClipSourceStrip'
+afterEach(cleanup)
+it.each([1,2])('announces only confirmed source reorders (%i)',()=>{
+ const started=vi.fn()
+ const unresolved=new Promise<void>(()=>{})
+ render(<ClipSourceStrip sources={[{fingerprint:'a',filename:'A.mp4',durationMs:1000},{fingerprint:'b',filename:'B.mp4',durationMs:1000}]} selected='a' onSelect={()=>{}} label='Sources' onReorder={(order)=>{started(order);void unresolved}}/>)
+ fireEvent.click(screen.getByRole('button',{name:/A.mp4.*뒤로|A.mp4.*다음|A.mp4.*later/}))
+ expect(started).toHaveBeenCalledWith(['b','a'])
+ expect(screen.getByRole('status')).toBeEmptyDOMElement()
+})

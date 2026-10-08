@@ -1,0 +1,31 @@
+package media
+import (
+ "context"
+ "errors"
+ "os"
+ "path/filepath"
+ "testing"
+ "github.com/postpilot/backend/internal/clip"
+)
+func TestReviewProxyProgressIsNotLoudness(t *testing.T){
+ for _,fail:=range []bool{false,true}{t.Run(map[bool]string{false:"success",true:"failure"}[fail],func(t *testing.T){
+  sentinel:=errors.New("ordinary encoder refusal")
+  runner:=&fakeRunner{run:func(_ context.Context,c Command)([]byte,error){
+   if fail{return nil,sentinel};if err:=os.WriteFile(c.Args[len(c.Args)-1],[]byte("bounded-proxy-fixture"),0600);err!=nil{return nil,err};return []byte("frame=900\nout_time_us=30000000\nprogress=end\n"),nil
+  }}
+  a:=newAdapter(t,runner);var records []clip.MediaRecord
+  ctx:=clip.WithMediaStageObserver(t.Context(),func(r clip.MediaRecord){records=append(records,r)})
+  var commandErr error
+  if err:=a.WithWorkspace(ctx,"diagnostic",func(ws clip.MediaWorkspace)error{
+   source:=clip.MediaSource{SourceID:"ordinary",Fingerprint:"fp",Path:sourceFile(t,ws),Info:clip.MediaInfo{DurationMS:30000,Width:1920,Height:1080}}
+   chunk:=clip.AnalysisChunk{Path:filepath.Join(ws.Path,"proxy-ordinary-0000.mp4"),SourceID:source.SourceID,Fingerprint:source.Fingerprint,DurationMS:30000}
+   args:=a.chunkArgs(source,chunk,a.cfg.VideoMaxRate,a.cfg.VideoBufferSize)
+   _,commandErr=a.runBoundedLog(ctx,ws,a.cfg.FFmpegPath,chunk.Path,a.cfg.AnalysisMaxBytes,clip.ErrAnalysisTooLarge,args...)
+   return nil
+  });err!=nil{t.Fatal(err)}
+  if fail&&!errors.Is(commandErr,sentinel){t.Fatal(commandErr)};if !fail&&commandErr!=nil{t.Fatal(commandErr)}
+  if len(records)!=1{t.Fatalf("records=%+v",records)}
+  if got:=records[0].Operation;got!="prepare"{t.Errorf("actual proxy encoder recorded operation=%q, want prepare",got)}
+  if fail{var d *commandFailure;if !errors.As(commandErr,&d){t.Fatal(commandErr)};if d.MediaOperation()!="prepare"{t.Errorf("actual proxy failure diagnosed as %q, want prepare",d.MediaOperation())}}
+ })}
+}
