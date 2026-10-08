@@ -74,11 +74,13 @@
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
 
 ## next
-- Continue clear structural refactors after T656's verified main commit; review/structure-261008 retains the remaining decisions.
+- Continue clear structural refactors after T657's verified main commit; review/structure-261008 retains the remaining decisions.
 - T636–T646 standalone writing/origin tasks are complete on main; unrelated blocked qualifications remain separate.
 - Editorial follow-up: doc-review ARCH; preserve independent review and open SSOT questions.
 
 ## log
+- 261008 T657 done on main: Refund reads, refetches and named actions expose explicit plain domain models; money/status/nested-presence behavior and operation-specific invalidation remain intact.
+- 261008 T657 start on main at2e81e638: Keep refund transport messages behind the subscription adapter and expose plain domain results to its features.
 - 261008 T656 done on main: Raw billing SQL now names its reader and writer explicitly; ordinary reads avoid writer contention and both transaction constructors retain read-your-writes and rollback.
 - 261008 T656 start on main atf08ff71f: Give generated and hand-written billing SQL the same explicit reader/writer and transaction ownership.
 - 261008 T655 done on main: Catalog writes share one dependent-view invalidation helper; refresh retains its returned tab, other views refetch and saved owner choices remain untouched.
@@ -97,5 +99,3 @@
 - 261008 T644 freshness: THEME30–32 change navigation/docks/mobile density only, retaining THEME62 origin/export contracts; base refreshed
 - 261008 T643 done on main: named owner-fenced technical post/authoring/test reads, honest current/prepared/captured views and blind denial; full affected FE coverage, server privacy and browser/lint/build/spec checks pass
 - 261008 T643 start on main atf5fcc6c0: owner-scoped optional technical request views; preserve independent review changes
-- 261008 T643 freshness: MODEL36/EDIT5 only change missing-slot integer1..16 preparation; THEME30–32 change navigation/docks/mobile density, retaining technical inspection contracts; bases refreshed
-- 261008 T642 done on main: accessible aligned phrase origins, safe source details and editor/copy/caret continuity; full affected FE coverage, browser themes/reflow/contrast and lint/build/spec checks pass

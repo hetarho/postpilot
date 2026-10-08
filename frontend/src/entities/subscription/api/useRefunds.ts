@@ -6,15 +6,16 @@ import {
 } from '@connectrpc/connect-query'
 import { useQueryClient } from '@tanstack/react-query'
 import { appFailureFromConnect, BillingService } from '@/shared/api'
+import { toRefundList, toRefundResult } from './refund-mappers'
 
 export function useMyRefunds() {
-  const query = useQuery(BillingService.method.listMyRefunds, {})
-  return { ...query, refunds: query.data?.refunds ?? [] }
+  const query = useQuery(BillingService.method.listMyRefunds, {}, { select: toRefundList })
+  return { ...query, refunds: query.data ?? [] }
 }
 
 export function useRefundReviews() {
-  const query = useQuery(BillingService.method.listRefundReviews, {})
-  return { ...query, refunds: query.data?.refunds ?? [] }
+  const query = useQuery(BillingService.method.listRefundReviews, {}, { select: toRefundList })
+  return { ...query, refunds: query.data ?? [] }
 }
 
 function useRefundInvalidation() {
@@ -47,8 +48,12 @@ export function useRequestRefund() {
     onSuccess: useRefundInvalidation(),
   })
   return {
-    ...mutation,
-    requestRefund: (orderId: string, reason: string) => mutation.mutateAsync({ orderId, reason }),
+    isPending: mutation.isPending,
+    isError: mutation.isError,
+    isSuccess: mutation.isSuccess,
+    reset: mutation.reset,
+    requestRefund: async (orderId: string, reason: string) =>
+      toRefundResult(await mutation.mutateAsync({ orderId, reason })),
   }
 }
 
@@ -60,10 +65,13 @@ export function useReviewRefund() {
     onSettled: useRefundInvalidation(),
   })
   return {
-    ...mutation,
+    isPending: mutation.isPending,
+    isError: mutation.isError,
+    isSuccess: mutation.isSuccess,
+    reset: mutation.reset,
     failure: mutation.error ? appFailureFromConnect(mutation.error) : undefined,
-    reviewRefund: (requestId: string, outcome: string, reviewedAmountKrw: bigint) =>
-      mutation.mutateAsync({ requestId, outcome, reviewedAmountKrw }),
+    reviewRefund: async (requestId: string, outcome: string, reviewedAmountKrw: bigint) =>
+      toRefundResult(await mutation.mutateAsync({ requestId, outcome, reviewedAmountKrw })),
   }
 }
 
@@ -73,8 +81,12 @@ export function useReconcileRefund() {
     onSettled: useRefundInvalidation(),
   })
   return {
-    ...mutation,
+    isPending: mutation.isPending,
+    isError: mutation.isError,
+    isSuccess: mutation.isSuccess,
+    reset: mutation.reset,
     failure: mutation.error ? appFailureFromConnect(mutation.error) : undefined,
-    reconcileRefund: (requestId: string) => mutation.mutateAsync({ requestId }),
+    reconcileRefund: async (requestId: string) =>
+      toRefundResult(await mutation.mutateAsync({ requestId })),
   }
 }

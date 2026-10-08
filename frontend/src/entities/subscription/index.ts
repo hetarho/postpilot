@@ -39,4 +39,4 @@ export {
   useReviewRefund,
   useReconcileRefund,
 } from './api/useRefunds'
-export type { ProtoBillingRefundRequest as BillingRefundRequest } from '@/shared/api'
+export type { BillingRefundRequest, RefundEvidence, RefundPayment } from './model/refund'
