@@ -33,7 +33,7 @@
 | GEN | 26 | 26 | - | 0 |
 | MODEL | 36 | 36 | - | 0 |
 | TMPL | 25 | 25 | - | 0 |
-| GUIDE | 17 | 17 | - | 0 |
+| GUIDE | 18 | 18 | - | 0 |
 | EXPORT | 11 | 11 | - | 0 |
 | LANG | 9 | 9 | - | 0 |
 | THEME | 32 | 32 | - | 1 |
@@ -73,13 +73,18 @@
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
+| T664 | Photos stand alone by default | GUIDE GEN | - | todo |
 
 ## next
+- implement-task T664.
 - Review the 17 unadopted choices in review/structure-261008; all ten clear refactor tasks T654–T663 are complete.
 - T636–T646 standalone writing/origin tasks are complete on main; unrelated blocked qualifications remain separate.
 - Editorial follow-up: doc-review ARCH; preserve independent review and open SSOT questions.
 
 ## log
+- 261008 create-task GUIDE r18: T664 (photo_groups 기본 지침 → single photos by default).
+- 261008 update-ssot GUIDE r18 done: GUIDE-41✎ photo_groups 기본 지침 → 사진은 한 장씩; no doing task in its blast radius; next create-task GUIDE.
+- 261008 update-ssot GUIDE start: photo_groups 기본 지침 flips to single photos by default; a group only where one caption fully describes every photo.
 - 261008 review-code structure-261008 complete: 10 clear refactors T654–T663 implemented, verified and committed sequentially; 17 structural choices retained, with semantic duplication kept separate.
 - 261008 T663 done on main: Published pricing/ranking/source-grade comments now describe current entitlement ownership; Go scanner comparison proves executable tokens are unchanged.
 - 261008 T663 start on main atce30ae11: Make model/plan API comments teach the current entitlement and pricing ownership without changing executable policy.
