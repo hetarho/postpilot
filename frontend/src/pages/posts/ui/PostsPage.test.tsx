@@ -163,7 +163,8 @@ describe('PostsPage', () => {
     expect(screen.queryByRole('region', { name: '글 작성' })).not.toBeInTheDocument()
   })
 
-  it('uses canonical content for separate continuation and export actions without reading each post', async () => {
+  // POST-64: export lives in the opened post's 글 완성 step, so a row names only its state.
+  it('marks exportable content without a separate export link or reading each post', async () => {
     const calls: string[] = []
     renderList({
       calls,
@@ -187,11 +188,14 @@ describe('PostsPage', () => {
     const history = await screen.findByRole('list', { name: '글 작업 내역' })
     const [review, empty, published] = await within(history).findAllByRole('listitem')
     const resume = within(review).getByRole('link', { name: '이어서 작성' })
-    const exportAction = within(review).getByRole('link', { name: '내보내기' })
     expect(resume).toHaveAttribute('href', '/posts/review-content')
-    expect(exportAction).toHaveAttribute('href', '/posts/review-content')
-    expect(exportAction.closest('a')?.parentElement?.closest('a')).toBeNull()
-    expect(within(empty).queryByRole('link', { name: '내보내기' })).not.toBeInTheDocument()
+    expect(within(review).getByText('내보내기 가능')).toBeInTheDocument()
+    expect(within(empty).queryByText('내보내기 가능')).not.toBeInTheDocument()
+    expect(within(history).queryByRole('link', { name: '내보내기' })).not.toBeInTheDocument()
+    expect(within(published).getByRole('link', { name: '작업 확인' })).toHaveAttribute(
+      'href',
+      '/posts/published-content',
+    )
     expect(within(published).getByRole('link', { name: '발행한 글' })).toHaveAttribute(
       'href',
       'https://blog.naver.com/alice/1',
@@ -223,14 +227,14 @@ describe('PostsPage', () => {
     const work = await within(history).findByRole('link', { name: /다시 쓸 작업/ })
     expect(work).toHaveTextContent('AI 결과 오류')
     expect(work).toHaveAttribute('href', '/posts/failed')
-    expect(within(history).getByRole('link', { name: '내보내기' })).toBeInTheDocument()
+    expect(within(history).getByText('내보내기 가능')).toBeInTheDocument()
     expect(within(history).getByRole('link', { name: '이전 AI 결과 확인' })).toHaveAttribute(
       'href',
       '/tests/records/legacy-result?entry=%2Fposts',
     )
   })
 
-  it('retains the history narrowing and export intent when opening a content-bearing draft', async () => {
+  it('retains the history narrowing when opening a content-bearing draft', async () => {
     const user = userEvent.setup()
     const { router } = renderAppAt('/posts?q=제주&status=review', {
       user: USER,
@@ -240,13 +244,15 @@ describe('PostsPage', () => {
         ],
       },
     })
-    await user.click(await screen.findByRole('link', { name: '내보내기' }))
+    await user.click(await screen.findByRole('link', { name: '이어서 작성' }))
     await waitFor(() => expect(router.state.location.pathname).toBe('/posts/jeju'))
-    expect(readPostReturnContext(USER.id, 'jeju')).toMatchObject({
+    const entry = readPostReturnContext(USER.id, 'jeju')
+    expect(entry).toMatchObject({
       path: '/posts',
       targetId: 'jeju',
-      filters: { q: '제주', status: 'review', intent: 'export' },
+      filters: { q: '제주', status: 'review' },
     })
+    expect(entry?.filters).not.toHaveProperty('intent')
   })
 
   it('says so when there is nothing yet', async () => {

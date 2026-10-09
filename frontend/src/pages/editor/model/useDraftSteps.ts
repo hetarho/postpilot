@@ -40,11 +40,10 @@ function followedKey(status: string, hasStoryline = false): string {
  *  reported the new status, not during it: the step that is on screen is what the reader was
  *  looking at when the server answered, and a panel that has something to say about the change
  *  (the publish refusal a landed edit causes) gets to say it before the step moves on. */
-export function useDraftSteps(status: string, hasStoryline = false, initialStep?: EditorStep) {
-  const [state, dispatch] = useReducer(draftStep, undefined, () => ({
-    ...draftStepStart(status, hasStoryline),
-    ...(initialStep ? { step: initialStep } : {}),
-  }))
+export function useDraftSteps(status: string, hasStoryline = false) {
+  const [state, dispatch] = useReducer(draftStep, undefined, () =>
+    draftStepStart(status, hasStoryline),
+  )
   useEffect(() => {
     dispatch({ type: 'status', status, hasStoryline })
   }, [status, hasStoryline])

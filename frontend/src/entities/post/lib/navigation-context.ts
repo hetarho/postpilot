@@ -10,7 +10,6 @@ export interface PostEntry {
   filters: Readonly<Record<string, string>>
   scrollY: number
   targetId?: string
-  intent?: 'export'
 }
 
 // Only stable owned parents are eligible. A deleted record, foreign owner or stale
@@ -49,7 +48,6 @@ export function rememberPostEntry(
     version: 1,
     ownerKey: ownerId,
     targetId: entry.targetId ?? 'new',
-    filters: { ...entry.filters, ...(entry.intent ? { intent: entry.intent } : {}) },
   }
   // Children read the generic current entry; each post also retains its own copy
   // when another record replaces that current navigation context.

@@ -3,10 +3,8 @@ import { useTranslation } from 'react-i18next'
 import { useNavigate } from '@tanstack/react-router'
 import { ArrowLeft } from 'lucide-react'
 import {
-  hasContent,
   isPublished,
   postReturnDestination,
-  readPostReturnContext,
   rememberPostEntry,
   retainMintedPostEntry,
   markPostHistoryReturn,
@@ -79,7 +77,6 @@ export function DraftEditor({ post, defaultVoice }: DraftEditorProps) {
   const ownerId = user?.id ?? ''
   const copy = editorNavigationCopy[i18n.resolvedLanguage?.startsWith('ko') ? 'ko' : 'en']
   const returnTo = useMemo(() => postReturnDestination(ownerId, post?.slug), [ownerId, post?.slug])
-  const entry = useMemo(() => readPostReturnContext(ownerId, post?.slug), [ownerId, post?.slug])
   useLayoutEffect(() => {
     if (!post)
       rememberPostEntry(ownerId, {
@@ -138,11 +135,7 @@ export function DraftEditor({ post, defaultVoice }: DraftEditorProps) {
 
   // The step lives here, above the fields, because the bar that switches it is the first thing
   // on the screen — the post's lifecycle is what you navigate before you read anything else.
-  const { step, select: setStep } = useDraftSteps(
-    post?.status ?? '',
-    Boolean(post?.storyline),
-    post && hasContent(post) && entry?.filters.intent === 'export' ? 'finish' : undefined,
-  )
+  const { step, select: setStep } = useDraftSteps(post?.status ?? '', Boolean(post?.storyline))
   const previousStep = useRef(step)
   useLayoutEffect(() => {
     if (previousStep.current !== 'finish' && step === 'finish') window.scrollTo(0, 0)

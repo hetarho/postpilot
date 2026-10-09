@@ -112,7 +112,7 @@ export function PostsPage() {
     list.hasNextPage && !list.isFetchingNextPage && !list.isFetchNextPageError,
   )
   const statusLabel = narrowing.status ? t(`list.filter.${narrowing.status}`, { ns: 'posts' }) : ''
-  const remember = (post: PostListItem, intent?: 'export') => {
+  const remember = (post: PostListItem) => {
     if (!user?.id) return
     rememberPostEntry(user.id, {
       path: '/posts',
@@ -123,7 +123,6 @@ export function PostsPage() {
       },
       scrollY: window.scrollY,
       targetId: post.slug,
-      intent,
     })
   }
   const noMatchText = narrowing.q?.trim()
@@ -308,8 +307,9 @@ export function PostsPage() {
                   {content}
                 </Link>
               )}
-              {/* Each recovery/export target is a sibling of the work link. A canonical
-                  draft remains exportable, and a lifecycle label alone proves no content. */}
+              {/* Each recovery target is a sibling of the work link. Export has no link of its
+                  own: it lives in the opened post's 글 완성 step, one step press from wherever the
+                  post opens (POST-64). */}
               <div className="flex shrink-0 flex-wrap items-center gap-x-2 gap-y-1 px-4 pb-2 sm:px-6 lg:px-8 lg:py-2">
                 {(runningJob || failure) && (
                   <Typography
@@ -332,16 +332,6 @@ export function PostsPage() {
                     { ns: 'posts' },
                   )}
                 </Link>
-                {post.exportReady && (
-                  <Link
-                    to="/posts/$slug"
-                    params={{ slug: post.slug }}
-                    onClick={() => remember(post, 'export')}
-                    className={buttonStyles({ variant: 'ghost' })}
-                  >
-                    {t('list.history.export', { ns: 'posts' })}
-                  </Link>
-                )}
                 {post.pendingExperimentId && (runningJob || failedJob) && (
                   <Link
                     to="/tests/records/$id"

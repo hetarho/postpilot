@@ -22,23 +22,24 @@ it('retains creation context across minting and reload, scoped to the owner and 
   expect(postReturnDestination('owner', 'different').href).toBe('/posts')
 })
 
-it('retains history filters and scroll while keeping export intent out of the return URL', () => {
+it('retains history filters and scroll in the return URL', () => {
   rememberPostEntry('owner', {
     path: '/posts',
     section: 'posts',
     filters: { q: '제주 & 여행', status: 'review' },
     scrollY: 820,
     targetId: 'saved',
-    intent: 'export',
   })
   const destination = postReturnDestination('owner', 'saved')
   expect(destination.path).toBe('/posts')
   expect(new URL(destination.href, 'https://test.invalid').searchParams.get('q')).toBe(
     '제주 & 여행',
   )
-  expect(destination.href).not.toContain('intent')
   expect(destination.scrollY).toBe(820)
-  expect(readPostReturnContext('owner', 'saved')?.filters.intent).toBe('export')
+  expect(readPostReturnContext('owner', 'saved')?.filters).toEqual({
+    q: '제주 & 여행',
+    status: 'review',
+  })
 })
 
 it('rejects external, malformed, deleted-record and foreign-owner parents', () => {

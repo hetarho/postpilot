@@ -32,20 +32,21 @@ it('keeps the creation parent after the first mint and after reload, then delete
   await waitFor(() => expect(restored.router.state.location.pathname).toBe('/'), { timeout: 5000 })
 })
 
-it('opens canonical content for export and retains the actual filtered history parent', async () => {
+// A post opened from filtered history lands on the step its status gives (POST-44) and returns to
+// that same filtered history.
+it('opens on its status step and retains the actual filtered history parent', async () => {
   rememberPostEntry(USER.id, {
     path: '/posts',
     section: 'posts',
     filters: { q: '제주', status: 'review' },
     scrollY: 840,
     targetId: 'saved',
-    intent: 'export',
   })
   const { router } = renderAppAt('/posts/saved', {
     user: USER,
     posts: { posts: [{ slug: 'saved', status: 'review', content: POST_CONTENT_FIXTURE }] },
   })
-  expect(await screen.findByRole('tab', { name: '글 완성' })).toHaveAttribute(
+  expect(await screen.findByRole('tab', { name: '글 다듬기' })).toHaveAttribute(
     'aria-selected',
     'true',
   )
