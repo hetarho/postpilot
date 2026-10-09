@@ -28,7 +28,7 @@
 | ARCH | 20 | 20 | - | 0 |
 | AUTH | 15 | 15 | - | 0 |
 | QUOTA | 38 | 38 | - | 0 |
-| POST | 37 | 36 | POST-54✎ POST-64✎ POST-100✎ | 0 |
+| POST | 37 | 37 | - | 0 |
 | VOICE | 16 | 16 | - | 0 |
 | GEN | 26 | 26 | - | 0 |
 | MODEL | 36 | 36 | - | 0 |
@@ -73,14 +73,18 @@
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
+| T665 | Photos first in writing | POST | - | todo |
+| T666 | Strip photos open large | POST | T665 | todo |
+| T667 | History drops the export link | POST | - | todo |
 
 ## next
-- create-task POST (r37: POST-54✎ POST-64✎ POST-100✎).
+- implement-task T665, then T666 and T667 (POST r37).
 - Review the 17 unadopted choices in review/structure-261008; all ten clear refactor tasks T654–T663 are complete.
 - T636–T646 standalone writing/origin tasks are complete on main; unrelated blocked qualifications remain separate.
 - Editorial follow-up: doc-review ARCH; preserve independent review and open SSOT questions.
 
 ## log
+- 261009 create-task POST r37: T665 (① photos first), T666 (strip photos open large, dep T665), T667 (history drops the export link).
 - 261009 update-ssot POST r37 done: POST-54✎ ① photos first; POST-100✎ ① strip tiles open the large view; POST-64✎ history drops the separate 내보내기 action; no doing task in its blast radius; next create-task POST.
 - 261009 update-ssot POST start: ① photos first; ① strip tiles open the large view; history drops the separate 내보내기 action.
 - 261008 T664 done on main: photo_groups 기본 지침 → 사진은 한 장씩; single IMAGE photos by default, a GALLERY only where one caption describes every photo.
@@ -100,11 +104,3 @@
 - 261008 T659 done on main: Template builder recovery uses an owning typed metadata reader; null/arrays/primitives/malformed JSON no longer break direct editing or change canonical source on mount.
 - 261008 T659 start on main at4bce3175: Keep template metadata recovery behind a typed owning reader without allowing non-object JSON to break direct editing.
 - 261008 T658 done on main: A dedicated TypeScript-AST build module rewrites only model-owned named imports, retaining aliases/type declarations and lazy UI; build regressions cover the actual route.
-- 261008 T658 start on main atc74ba432: Make the route build boundary explicit and handle inline type/value aliases without eagerly importing page UI.
-- 261008 T657 done on main: Refund reads, refetches and named actions expose explicit plain domain models; money/status/nested-presence behavior and operation-specific invalidation remain intact.
-- 261008 T657 start on main at2e81e638: Keep refund transport messages behind the subscription adapter and expose plain domain results to its features.
-- 261008 T656 done on main: Raw billing SQL now names its reader and writer explicitly; ordinary reads avoid writer contention and both transaction constructors retain read-your-writes and rollback.
-- 261008 T656 start on main atf08ff71f: Give generated and hand-written billing SQL the same explicit reader/writer and transaction ownership.
-- 261008 T655 done on main: Catalog writes share one dependent-view invalidation helper; refresh retains its returned tab, other views refetch and saved owner choices remain untouched.
-- 261008 T655 start on main at26b87a32: Give every catalog curation action one explicit dependent-query invalidation behavior.
-- 261008 T654 done on main: One body-scroll owner set restores the first baseline after the final overlay releases; nested/non-LIFO/StrictMode regressions and the full frontend suite pass.

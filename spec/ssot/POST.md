@@ -218,4 +218,4 @@
 - ops: the production bucket needs a CORS rule allowing PUT/GET/HEAD from the FE origin (DEPLOY.md); MinIO in `docker-compose.yml` serves local development
 
 ## chg
-- r37 261009 POST-54✎ ① order 가제 · data fields · memo · photos → photos first, then 가제 · data fields · memo; POST-100✎ large view from storyline-space tiles only → also ①'s photo strip in strip order; POST-64✎ history row actions continuation/export/result → continuation/result, no separate export action
+-
