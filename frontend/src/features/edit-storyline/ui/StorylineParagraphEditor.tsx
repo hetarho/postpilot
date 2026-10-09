@@ -3,24 +3,13 @@ import { useTranslation } from 'react-i18next'
 import { clsx } from 'clsx'
 import { ArrowRightLeft } from 'lucide-react'
 import { Thumbnail } from '@/entities/image'
-import type { PostStorylineParagraph } from '@/entities/post'
+import type { PostStorylineParagraph, ViewableAttachment } from '@/entities/post'
 import { VideoTile } from '@/entities/video'
 import { Button, Editable, Menu, Textarea, Typography, typographyStyles } from '@/shared/ui'
 import { withFileIn, withText, withoutFile } from '../model/storyline-edits'
 
 /** What a paragraph shows for one of its files. */
-export interface StorylineAttachment {
-  filename: string
-  kind: 'photo' | 'video'
-  /** A `blob:` URL right after an upload is fine; absent shows the filename. */
-  viewUrl?: string
-  width?: number
-  height?: number
-  /** A photo's clockwise turn (POST-107). */
-  rotation?: number
-  durationMs?: number
-  contentType?: string
-}
+export type StorylineAttachment = ViewableAttachment
 
 /** The drag payload's type: a storyline file, never an arbitrary drop from outside the page. */
 export const STORYLINE_FILE_TYPE = 'application/x-postpilot-storyline-file'
@@ -173,7 +162,7 @@ export function StorylineTile({
   ) : onView ? (
     <button
       type="button"
-      aria-label={t('storylineEdit.view', { file: filename })}
+      aria-label={t('attachmentViewer.view', { file: filename })}
       onClick={onView}
       className="absolute inset-0 cursor-zoom-in rounded-lg focus-visible:-outline-offset-2"
     />

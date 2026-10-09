@@ -73,16 +73,17 @@
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
-| T666 | Strip photos open large | POST | T665 | todo |
 | T667 | History drops the export link | POST | - | todo |
 
 ## next
-- implement-task T666, then T667 (POST r37).
+- implement-task T667 (POST r37).
 - Review the 17 unadopted choices in review/structure-261008; all ten clear refactor tasks T654–T663 are complete.
 - T636–T646 standalone writing/origin tasks are complete on main; unrelated blocked qualifications remain separate.
 - Editorial follow-up: doc-review ARCH; preserve independent review and open SSOT questions.
 
 ## log
+- 261009 T666 done on main: ① strip photos and clips open the shared large view (entities/post AttachmentViewer).
+- 261009 T666 start on main at022ee33d: ① strip tiles open the shared large view.
 - 261009 T665 done on main: ① and /posts/new show the photo slot above the 가제.
 - 261009 out of scope: on a 390px phone the editor top row reads 글쓰기글 생성 — the location label and the step bar touch with no gap.
 - 261009 T665 start on main ate016631d: ① and /posts/new show the photo slot above the 가제.
@@ -101,5 +102,3 @@
 - 261008 T662 start on main at220bd5d6: Give identical 128-bit lowercase-hex entity IDs one named platform primitive while keeping domain and credential lifecycles distinct.
 - 261008 T661 done on main: StartRevision builds complete typed frozen options and encodes once; legacy adapters and known-answer wire bytes retain protocol/cap/language/profile semantics.
 - 261008 T661 start on main at4dd37b2c: Make one typed revision-options builder own the complete admitted payload and serialize it once.
-- 261008 T660 done on main: Removed seven zero-production-consumer editor/selector files and obsolete exports; current direct/shared editing and active/optional/pair/lab model flows remain covered.
-- 261008 T660 start on main ate483c67a: Remove verified zero-production-consumer editor code while retaining the current authoring and model configuration flows.

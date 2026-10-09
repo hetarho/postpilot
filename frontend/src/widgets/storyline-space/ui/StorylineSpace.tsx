@@ -1,12 +1,15 @@
 import { forwardRef, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { GenerationJob } from '@/entities/generation-job'
-import type { PostDraft, PostStorylineParagraph } from '@/entities/post'
 import {
-  StorylineAttachmentViewer,
+  AttachmentViewer,
+  postAttachments,
+  type PostDraft,
+  type PostStorylineParagraph,
+} from '@/entities/post'
+import {
   StorylineParagraphEditor,
   TakenOutFiles,
-  storylineAttachments,
   storylineViewOrder,
   takenOutFiles,
 } from '@/features/edit-storyline'
@@ -74,7 +77,7 @@ export const StorylineSpace = forwardRef<
     closedForContent.current = true
     setOpen(false)
   }, [hasContent])
-  const attachments = useMemo(() => storylineAttachments(post), [post])
+  const attachments = useMemo(() => postAttachments(post), [post])
   // One large view for the whole space, because its previous and next walk every paragraph and
   // the taken-out row (POST-100).
   const [viewing, setViewing] = useState<string | null>(null)
@@ -125,7 +128,7 @@ export const StorylineSpace = forwardRef<
             onView={setViewing}
           />
         </Disclosure>
-        <StorylineAttachmentViewer
+        <AttachmentViewer
           files={viewOrder}
           attachments={attachments}
           viewing={viewing}

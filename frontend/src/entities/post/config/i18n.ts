@@ -22,6 +22,12 @@ export const i18n = {
       position: '{{current}} / {{total}}',
       photoAlt: '{{alt}} ({{current}}/{{total}})',
     },
+    attachmentViewer: {
+      view: '{{file}} 크게 보기',
+      position: '{{n}} / {{total}}',
+      previous: '이전',
+      next: '다음',
+    },
     edit: {
       refine: '글 다듬기',
       conflict: '다른 화면에서 글이 바뀌었어요. 이 화면을 새로고침한 뒤 다시 수정해 주세요.',
@@ -204,6 +210,12 @@ export const i18n = {
       next: 'Next photo',
       position: '{{current}} / {{total}}',
       photoAlt: '{{alt}} ({{current}}/{{total}})',
+    },
+    attachmentViewer: {
+      view: 'View {{file}} larger',
+      position: '{{n}} / {{total}}',
+      previous: 'Previous',
+      next: 'Next',
     },
     edit: {
       refine: 'Refine post',

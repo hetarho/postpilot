@@ -269,3 +269,93 @@ describe('the 회전 control', () => {
     ).not.toBeInTheDocument()
   })
 })
+
+// POST-100: a saved tile is also the press that opens it large, while its corner controls stay
+// presses of their own and a tile still on its way opens nothing.
+describe('the large view press', () => {
+  const photo: PostImage = {
+    id: 'img-1',
+    filename: 'IMG_1.jpg',
+    width: 1024,
+    height: 768,
+    bytes: 1,
+    viewUrl: 'https://storage.test/IMG_1.jpg',
+  }
+  const clip = {
+    id: 'video-1',
+    filename: 'clip.mp4',
+    width: 1920,
+    height: 1080,
+    bytes: 12_000_000,
+    durationMs: 65_400,
+    contentType: 'video/mp4',
+    viewUrl: 'https://storage.test/clip.mp4',
+  }
+  const UPLOADING: UploadItem = {
+    id: 'uploading-1',
+    name: 'IMG_2.jpg',
+    filename: 'IMG_2.jpg',
+    attachment: 'photo',
+    status: 'uploading',
+    previewUrl: 'blob:preview',
+  }
+
+  it('opens a saved photo or clip by its name and keeps 회전 and delete apart', async () => {
+    const user = userEvent.setup()
+    const onView = vi.fn()
+    const onRotate = vi.fn()
+    const { container } = render(
+      <PhotoStrip
+        images={[photo]}
+        videos={[clip]}
+        items={[UPLOADING, FAILED_UPLOAD]}
+        onDelete={vi.fn()}
+        onRotate={onRotate}
+        onRetry={vi.fn()}
+        onDismiss={vi.fn()}
+        onView={onView}
+      />,
+    )
+
+    await user.click(screen.getByRole('button', { name: 'IMG_1.jpg 크게 보기' }))
+    await user.click(screen.getByRole('button', { name: 'clip.mp4 크게 보기' }))
+    expect(onView.mock.calls).toEqual([['IMG_1.jpg'], ['clip.mp4']])
+
+    await user.click(screen.getByRole('button', { name: '사진 돌리기 · IMG_1.jpg' }))
+    expect(onRotate).toHaveBeenCalledWith(photo)
+    expect(onView).toHaveBeenCalledTimes(2)
+
+    // The clip plays in the large view, so its tile carries no native controls of its own.
+    expect(
+      container.querySelector('video[src="https://storage.test/clip.mp4"]'),
+    ).not.toHaveAttribute('controls')
+    expect(screen.queryByRole('button', { name: 'IMG_2.jpg 크게 보기' })).not.toBeInTheDocument()
+    expect(screen.getAllByRole('button', { name: /크게 보기$/ })).toHaveLength(2)
+  })
+
+  it('still opens on a read-only strip, and not at all without a viewer', () => {
+    const { rerender } = render(
+      <PhotoStrip
+        images={[photo]}
+        items={[]}
+        onDelete={vi.fn()}
+        onRetry={vi.fn()}
+        onDismiss={vi.fn()}
+        onView={vi.fn()}
+        readOnly
+      />,
+    )
+    expect(screen.getByRole('button', { name: 'IMG_1.jpg 크게 보기' })).toBeInTheDocument()
+
+    rerender(
+      <PhotoStrip
+        images={[photo]}
+        items={[]}
+        onDelete={vi.fn()}
+        onRetry={vi.fn()}
+        onDismiss={vi.fn()}
+      />,
+    )
+    expect(screen.queryByRole('button', { name: 'IMG_1.jpg 크게 보기' })).not.toBeInTheDocument()
+  })
+})

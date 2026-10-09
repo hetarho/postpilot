@@ -481,6 +481,55 @@ describe('the editor lifecycle steps', () => {
     renderAppAt('/posts/new', { user: USER })
     await expectPhotosFirst()
   })
+
+  // POST-100: ①'s strip opens a saved attachment large and walks it in the strip's order.
+  it('opens a ① photo large and walks the strip, photos then clips', async () => {
+    const user = userEvent.setup()
+    renderAppAt('/posts/20260820-jeju', {
+      user: USER,
+      posts: {
+        posts: [
+          {
+            ...reviewPost,
+            status: 'draft',
+            images: [
+              { id: 'img-1', filename: 'IMG_1.jpg', viewUrl: 'https://storage.test/IMG_1.jpg' },
+              { id: 'img-2', filename: 'IMG_2.jpg', viewUrl: 'https://storage.test/IMG_2.jpg' },
+            ],
+            videos: [
+              {
+                id: 'video-1',
+                filename: 'clip.mp4',
+                viewUrl: 'https://storage.test/clip.mp4',
+                contentType: 'video/mp4',
+                durationMs: 5_000n,
+              },
+            ],
+          },
+        ],
+      },
+    })
+
+    const tile = await screen.findByRole('button', { name: 'IMG_1.jpg 크게 보기' })
+    await user.click(tile)
+    const first = screen.getByRole('dialog', { name: 'IMG_1.jpg' })
+    expect(within(first).getByRole('img', { name: 'IMG_1.jpg' })).toHaveAttribute(
+      'src',
+      'https://storage.test/IMG_1.jpg',
+    )
+    expect(within(first).getByText('1 / 3')).toBeInTheDocument()
+
+    await user.click(within(first).getByRole('button', { name: '다음' }))
+    const second = screen.getByRole('dialog', { name: 'IMG_2.jpg' })
+    await user.click(within(second).getByRole('button', { name: '다음' }))
+    const clip = screen.getByRole('dialog', { name: 'clip.mp4' })
+    expect(clip.querySelector('video')).toHaveAttribute('controls')
+    expect(within(clip).getByText('3 / 3')).toBeInTheDocument()
+
+    await user.keyboard('{Escape}')
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    expect(tile).toHaveFocus()
+  })
 })
 
 // POST-45: everything the editor has to SAY about its own state is one 2px bar plus one line at

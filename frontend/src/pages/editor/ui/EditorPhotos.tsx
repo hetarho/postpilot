@@ -1,4 +1,5 @@
-import { isPublished, type PostDraft } from '@/entities/post'
+import { useMemo, useState } from 'react'
+import { AttachmentViewer, isPublished, postAttachments, type PostDraft } from '@/entities/post'
 import {
   PhotoDropZone,
   PhotoPicker,
@@ -16,8 +17,9 @@ interface EditorPhotosProps {
   ensureSlug: () => Promise<string>
 }
 
-/** The editor's photo slot: pick (or drop), watch them convert and upload, delete. A published
- *  post's photos and clips are shown, and none is added or deleted (POST-86). */
+/** The editor's photo slot: pick (or drop), watch them convert and upload, delete, and press a
+ *  saved one to see it large (POST-100). A published post's photos and clips are shown and open
+ *  large, and none is added or deleted (POST-86). */
 export function EditorPhotos({ post, ensureSlug }: EditorPhotosProps) {
   const slug = post?.slug
   const published = post ? isPublished(post) : false
@@ -38,6 +40,16 @@ export function EditorPhotos({ post, ensureSlug }: EditorPhotosProps) {
     failure: deleteFailure,
   } = useDeletePhoto(slug)
   const { rotatePhoto, rotatingId, failure: rotateFailure } = useRotatePhoto(slug)
+  // The large view walks the strip's order — photos, then clips — over the ones with a picture.
+  const attachments = useMemo(
+    () => postAttachments({ images: post?.images ?? [], videos: post?.videos ?? [] }),
+    [post?.images, post?.videos],
+  )
+  const viewOrder = useMemo(
+    () => [...attachments.values()].filter((item) => item.viewUrl).map((item) => item.filename),
+    [attachments],
+  )
+  const [viewing, setViewing] = useState<string | null>(null)
 
   return (
     <PhotoDropZone
@@ -82,8 +94,16 @@ export function EditorPhotos({ post, ensureSlug }: EditorPhotosProps) {
           onRetry={upload.retry}
           onDismiss={upload.dismiss}
           readOnly={published}
+          onView={setViewing}
         />
         <SkippedList items={upload.items} onDismiss={upload.dismiss} />
+        <AttachmentViewer
+          files={viewOrder}
+          attachments={attachments}
+          viewing={viewing}
+          onView={setViewing}
+          onClose={() => setViewing(null)}
+        />
       </div>
     </PhotoDropZone>
   )

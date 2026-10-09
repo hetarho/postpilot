@@ -39,6 +39,8 @@ export {
   postContentWith,
 } from './model/content'
 export { BlockList, type OriginTextRenderer } from './ui/BlockList'
+export { AttachmentViewer } from './ui/AttachmentViewer'
+export { postAttachments, type ViewableAttachment } from './model/attachments'
 export { PhotoGroup, type PhotoFit } from './ui/PhotoGroup'
 export type { PostLoadFailure } from './api/usePost'
 export { usePost } from './api/usePost'

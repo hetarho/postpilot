@@ -2,15 +2,16 @@ import { useEffect, useId, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ChevronLeft, ChevronRight, X } from 'lucide-react'
 import { Button, RotatedImage, Sheet, Typography } from '@/shared/ui'
-import type { StorylineAttachment } from './StorylineParagraphEditor'
+import type { ViewableAttachment } from '../model/attachments'
 
-/** One storyline attachment, large (POST-100): a photo fitted to the view, a clip playing with its
- *  own controls, and the previous and next attachment of the space one press (or one arrow key)
- *  away. It only shows — moving, taking out and putting back stay on the tiles — so nothing here
- *  saves or changes the storyline.
+/** One attachment, large (POST-100): a photo fitted to the view, a clip playing with its own
+ *  controls, and the previous and next attachment of the surface one press (or one arrow key) away.
+ *  It only shows — rotating, deleting, moving and placing stay on the tiles — so nothing here saves,
+ *  and a read-only post opens it as well.
  *
- *  `files` is the walk (`storylineViewOrder`) and `viewing` the one on screen; `null` closes. */
-export function StorylineAttachmentViewer({
+ *  `files` is the walk (①'s strip order, or `storylineViewOrder` in the storyline space) and
+ *  `viewing` the one on screen; `null` closes. */
+export function AttachmentViewer({
   files,
   attachments,
   viewing,
@@ -18,7 +19,7 @@ export function StorylineAttachmentViewer({
   onClose,
 }: {
   files: readonly string[]
-  attachments: ReadonlyMap<string, StorylineAttachment>
+  attachments: ReadonlyMap<string, ViewableAttachment>
   viewing: string | null
   onView: (file: string) => void
   onClose: () => void
@@ -83,7 +84,7 @@ export function StorylineAttachmentViewer({
           </Typography>
           {open && (
             <Typography variant="meta" as="span" className="shrink-0 tabular-nums">
-              {t('storylineEdit.viewerPosition', {
+              {t('attachmentViewer.position', {
                 ns: 'posts',
                 n: index + 1,
                 total: files.length,
@@ -111,7 +112,7 @@ export function StorylineAttachmentViewer({
             onClick={() => go(-1)}
           >
             <ChevronLeft className="size-4" aria-hidden />
-            {t('storylineEdit.viewerPrevious', { ns: 'posts' })}
+            {t('attachmentViewer.previous', { ns: 'posts' })}
           </Button>
           <Button
             ref={next}
@@ -120,7 +121,7 @@ export function StorylineAttachmentViewer({
             disabled={!open || index >= files.length - 1}
             onClick={() => go(1)}
           >
-            {t('storylineEdit.viewerNext', { ns: 'posts' })}
+            {t('attachmentViewer.next', { ns: 'posts' })}
             <ChevronRight className="size-4" aria-hidden />
           </Button>
         </div>

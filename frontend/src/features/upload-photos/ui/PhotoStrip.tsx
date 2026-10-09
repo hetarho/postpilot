@@ -27,6 +27,8 @@ interface PhotoStripProps {
   onDismiss: (id: string) => void
   /** Shows the attachments without their delete controls, for a post that takes no write. */
   readOnly?: boolean
+  /** Opens a saved attachment large (POST-100). A tile still on its way never offers it. */
+  onView?: (filename: string) => void
 }
 
 /** Saved photos first, then the ones still on their way. */
@@ -44,6 +46,7 @@ export function PhotoStrip({
   onRetry,
   onDismiss,
   readOnly = false,
+  onView,
 }: PhotoStripProps) {
   const { t } = useTranslation(['posts', 'common'])
   // The photo the confirm sheet is asking about, and whether this sheet has already fired its
@@ -115,6 +118,7 @@ export function PhotoStrip({
               rotation={image.rotation}
               dimmed={deletingId === image.id}
             >
+              {onView && image.viewUrl && <ViewTarget filename={image.filename} onView={onView} />}
               {!readOnly && onRotate && (
                 // The opposite corner from the delete, so neither press lands on the other.
                 <Button
@@ -153,7 +157,10 @@ export function PhotoStrip({
               durationMs={video.durationMs}
               contentType={video.contentType}
               dimmed={deletingId === video.id}
+              // The tile is the press that opens the clip, which plays in the large view instead.
+              controls={!(onView && video.viewUrl)}
             >
+              {onView && video.viewUrl && <ViewTarget filename={video.filename} onView={onView} />}
               {!readOnly && (
                 <Button
                   variant="danger"
@@ -249,6 +256,27 @@ export function PhotoStrip({
         </Dialog>
       )}
     </div>
+  )
+}
+
+/** The whole tile as the press that opens it large, laid over the picture and ringed inward because
+ *  the tile clips anything drawn outside its corners. Rendered before the tile's own corner controls,
+ *  so 회전 and delete paint above it and stay presses of their own. */
+function ViewTarget({
+  filename,
+  onView,
+}: {
+  filename: string
+  onView: (filename: string) => void
+}) {
+  const { t } = useTranslation('posts')
+  return (
+    <button
+      type="button"
+      aria-label={t('attachmentViewer.view', { file: filename })}
+      onClick={() => onView(filename)}
+      className="absolute inset-0 cursor-zoom-in rounded-lg focus-visible:-outline-offset-2"
+    />
   )
 }
 

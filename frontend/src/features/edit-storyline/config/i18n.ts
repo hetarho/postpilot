@@ -14,10 +14,6 @@ export const i18n = {
       putBack: '{{file}} 넣기',
       putBackLabel: '넣기',
       dropHere: '여기로 옮기기',
-      view: '{{file}} 크게 보기',
-      viewerPosition: '{{n}} / {{total}}',
-      viewerPrevious: '이전',
-      viewerNext: '다음',
     },
   },
   en: {
@@ -31,10 +27,6 @@ export const i18n = {
       putBack: 'Put back {{file}}',
       putBackLabel: 'Put back',
       dropHere: 'Move here',
-      view: 'View {{file}} larger',
-      viewerPosition: '{{n}} / {{total}}',
-      viewerPrevious: 'Previous',
-      viewerNext: 'Next',
     },
   },
 } as const satisfies I18nFragment
