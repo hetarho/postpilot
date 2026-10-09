@@ -33,7 +33,7 @@
 | GEN | 26 | 26 | - | 0 |
 | MODEL | 36 | 36 | - | 0 |
 | TMPL | 25 | 25 | - | 0 |
-| GUIDE | 18 | 18 | - | 0 |
+| GUIDE | 19 | 19 | - | 0 |
 | EXPORT | 11 | 11 | - | 0 |
 | LANG | 9 | 9 | - | 0 |
 | THEME | 32 | 32 | - | 1 |
@@ -73,13 +73,18 @@
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
+| T668 | Groups only under a one-subject caption | GUIDE GEN | - | todo |
 
 ## next
+- implement-task T668.
 - Review the 17 unadopted choices in review/structure-261008; all ten clear refactor tasks T654–T663 are complete.
 - T636–T646 standalone writing/origin tasks are complete on main; unrelated blocked qualifications remain separate.
 - Editorial follow-up: doc-review ARCH; preserve independent review and open SSOT questions.
 
 ## log
+- 261009 create-task GUIDE r19: T668 (photo_groups 기본 지침 → group only under a one-subject caption).
+- 261009 update-ssot GUIDE r19 done: GUIDE-41✎ 사진은 한 장씩 groups only one composition with changing companions or one subject from several angles, under a one-subject caption; no doing task in its blast radius; next create-task GUIDE.
+- 261009 update-ssot GUIDE start: today's posts still grouped two subjects under one 와/및 caption (입구와 매장, 리플릿과 테이블 세팅) at template 2장 묶음 places; tighten the grouping condition.
 - 261009 T667 done on main: history rows drop the 내보내기 link and the export intent; 내보내기 가능 stays.
 - 261009 T667 start on main ate982a61a: history rows drop the 내보내기 link and the export intent.
 - 261009 T666 done on main: ① strip photos and clips open the shared large view (entities/post AttachmentViewer).

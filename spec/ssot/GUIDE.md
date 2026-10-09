@@ -1,5 +1,5 @@
 # GUIDE writing guidelines (작문 지침)
-> r18 | Switchable writing direction with stage-applicable rules, one authoritative tag guideline and stable evidence contracts.
+> r19 | Switchable writing direction with stage-applicable rules, one authoritative tag guideline and stable evidence contracts.
 
 ## decisions
 - GUIDE-1 [o] guidelines own writing direction beside VOICE expression, TMPL form and the stable request contracts (→GEN-14).
@@ -95,7 +95,7 @@
   | 알려준 사건 순서대로 | follow event order explicitly supplied by the owner inside template places; otherwise propose subject arrangement, never infer chronology from photo order (→GEN-82) |
   | 첫머리에 이유와 기대 | opening with why the owner went or what they expected, when the memo says so |
   | 사진은 이야기의 한 장면 | a photo stands between related sentences, no paragraph opens as a photo description and paragraphs connect without inventing actions or chronology (→GEN-82) |
-  | 사진은 한 장씩 | most photos stand alone, one at a time; consecutive photos stand as one photo group only where one caption fully describes every one of them — one dish shot from several angles at one moment — never merely for sharing a place, a day or a topic, so groups stay rare in a post; a group is 콜라주 to see its photos side by side and 슬라이드 to follow them in order (→GEN-77) ← side-by-side photos shrink on a phone screen |
+  | 사진은 한 장씩 | most photos stand alone, one at a time; consecutive photos stand as one photo group only in two cases — one composition in which only what sits with the subject changes (the same meat once with green onion, once with kimchi), or one subject shot from several angles — and only under a caption naming one subject (다양한 밑반찬과 함께한 고기, 잘 차려진 한 상); a caption that must join different photos' subjects with 와/과 or 및 (가게 입구와 첫 상차림) means each photo stands alone with its own caption, even at a template's suggested group place or inside one storyline paragraph; a group is 콜라주 to see its photos side by side and 슬라이드 to follow them in order (→GEN-77) ← side-by-side photos shrink on a phone screen, and a group has one caption to say what it shows |
   | 끝에서 한 번 정리 | closing by drawing the day together, a verdict or a will to return only as the owner gave one |
   | 관찰을 나열하지 않기 | →GEN-47 |
   | 제목 규칙 | →GEN-49 |
@@ -153,4 +153,4 @@
 - contract: `proto/postpilot/v1/guideline.proto`
 
 ## chg
-- r18 261008 GUIDE-41✎ photo_groups 기본 지침: 비슷한 사진은 한 묶음으로 (photos of one moment or subject grouped) → 사진은 한 장씩 (single photos by default; a group only where one caption fully describes every photo)
+- r19 261009 GUIDE-41✎ 사진은 한 장씩 grouping condition: one caption fully describes every photo (one dish from several angles) → only one composition with changing companions or one subject from several angles, under a caption naming one subject; a 와/및 caption joining different photos' subjects splits them, even at a template's suggested group place or inside one storyline paragraph
