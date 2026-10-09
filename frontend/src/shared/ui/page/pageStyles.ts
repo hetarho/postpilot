@@ -62,7 +62,9 @@ export function pageStyles({
   )
 }
 
-/** A nested text measure adds no new document scroller or outer workspace gutter. */
+/** A nested text measure adds no new document scroller or outer workspace gutter. Centred in the
+ *  frame, on the axis the editor's dock already floats on: flush left, a 768px measure in a 1280px
+ *  workspace left the desk's whole right half empty beside the writing. */
 export function proseStyles(className?: string) {
-  return twMerge('w-full sm:max-w-2xl lg:max-w-3xl', className)
+  return twMerge('mx-auto w-full sm:max-w-2xl lg:max-w-3xl', className)
 }

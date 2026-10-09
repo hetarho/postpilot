@@ -53,5 +53,7 @@ describe('pageStyles', () => {
 it('keeps a broad creation frame independent of its nested prose measure', () => {
   expect(pageStyles({ width: 'workspace' })).toContain('lg:max-w-7xl')
   expect(proseStyles()).toContain('lg:max-w-3xl')
+  // Centred like the dock beneath it, not flush left beside an empty half of the frame.
+  expect(proseStyles().split(' ')).toContain('mx-auto')
   expect(proseStyles()).not.toContain('overflow')
 })
