@@ -73,15 +73,15 @@
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
-| T668 | Groups only under a one-subject caption | GUIDE GEN | - | todo |
 
 ## next
-- implement-task T668.
 - Review the 17 unadopted choices in review/structure-261008; all ten clear refactor tasks T654–T663 are complete.
 - T636–T646 standalone writing/origin tasks are complete on main; unrelated blocked qualifications remain separate.
 - Editorial follow-up: doc-review ARCH; preserve independent review and open SSOT questions.
 
 ## log
+- 261009 T668 done on main: photo_groups 기본 지침 groups only under a caption naming one subject; a 와/및 caption joining different photos splits them.
+- 261009 T668 start on main atca11432e: photo_groups 기본 지침 groups only under a one-subject caption.
 - 261009 create-task GUIDE r19: T668 (photo_groups 기본 지침 → group only under a one-subject caption).
 - 261009 update-ssot GUIDE r19 done: GUIDE-41✎ 사진은 한 장씩 groups only one composition with changing companions or one subject from several angles, under a one-subject caption; no doing task in its blast radius; next create-task GUIDE.
 - 261009 update-ssot GUIDE start: today's posts still grouped two subjects under one 와/및 caption (입구와 매장, 리플릿과 테이블 세팅) at template 2장 묶음 places; tighten the grouping condition.
@@ -100,8 +100,3 @@
 - 261008 create-task GUIDE r18: T664 (photo_groups 기본 지침 → single photos by default).
 - 261008 update-ssot GUIDE r18 done: GUIDE-41✎ photo_groups 기본 지침 → 사진은 한 장씩; no doing task in its blast radius; next create-task GUIDE.
 - 261008 update-ssot GUIDE start: photo_groups 기본 지침 flips to single photos by default; a group only where one caption fully describes every photo.
-- 261008 review-code structure-261008 complete: 10 clear refactors T654–T663 implemented, verified and committed sequentially; 17 structural choices retained, with semantic duplication kept separate.
-- 261008 T663 done on main: Published pricing/ranking/source-grade comments now describe current entitlement ownership; Go scanner comparison proves executable tokens are unchanged.
-- 261008 T663 start on main atce30ae11: Make model/plan API comments teach the current entitlement and pricing ownership without changing executable policy.
-- 261008 T662 done on main: Nine contexts share an explicitly named 128-bit lowercase-hex entity ID primitive; local test/error seams and distinct bearer-token/fingerprint protocols remain intact.
-- 261008 T662 start on main at220bd5d6: Give identical 128-bit lowercase-hex entity IDs one named platform primitive while keeping domain and credential lifecycles distinct.
