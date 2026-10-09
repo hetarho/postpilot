@@ -28,7 +28,7 @@
 | ARCH | 20 | 20 | - | 0 |
 | AUTH | 15 | 15 | - | 0 |
 | QUOTA | 38 | 38 | - | 0 |
-| POST | 36 | 36 | - | 0 |
+| POST | 37 | 36 | POST-54✎ POST-64✎ POST-100✎ | 0 |
 | VOICE | 16 | 16 | - | 0 |
 | GEN | 26 | 26 | - | 0 |
 | MODEL | 36 | 36 | - | 0 |
@@ -75,11 +75,14 @@
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
 
 ## next
+- create-task POST (r37: POST-54✎ POST-64✎ POST-100✎).
 - Review the 17 unadopted choices in review/structure-261008; all ten clear refactor tasks T654–T663 are complete.
 - T636–T646 standalone writing/origin tasks are complete on main; unrelated blocked qualifications remain separate.
 - Editorial follow-up: doc-review ARCH; preserve independent review and open SSOT questions.
 
 ## log
+- 261009 update-ssot POST r37 done: POST-54✎ ① photos first; POST-100✎ ① strip tiles open the large view; POST-64✎ history drops the separate 내보내기 action; no doing task in its blast radius; next create-task POST.
+- 261009 update-ssot POST start: ① photos first; ① strip tiles open the large view; history drops the separate 내보내기 action.
 - 261008 T664 done on main: photo_groups 기본 지침 → 사진은 한 장씩; single IMAGE photos by default, a GALLERY only where one caption describes every photo.
 - 261008 T664 start on main atf439801d: photo_groups 기본 지침 becomes 사진은 한 장씩 with the one-caption grouping condition.
 - 261008 create-task GUIDE r18: T664 (photo_groups 기본 지침 → single photos by default).

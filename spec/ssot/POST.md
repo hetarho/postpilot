@@ -1,5 +1,5 @@
 # POST posts, drafts, photos
-> r36 | Owner-controlled canonical writing with phrase-level semantic-origin review, explicit lifecycle and private effective-request inspection.
+> r37 | Owner-controlled canonical writing with phrase-level semantic-origin review, explicit lifecycle and private effective-request inspection.
 
 ## decisions
 - POST-1 [o] a post is identified by a slug minted once on the first save and never changed ← it is the primary key and part of every photo object key, so renaming would orphan the photos
@@ -82,7 +82,11 @@
 - POST-52 [o] when the only thing between ① and a run is that the models were never chosen, the bar drops ①'s actions and renders the per-action reason plus ONE route — the brief; any other blocker (a job running, a deleted voice, a selection loading) keeps ordinary disabled buttons ← waiting is the answer to those
 - POST-53 [o] the generation step offers Storyline first and Write now as its two ordinary actions; a lower-emphasis named entry opens unified writing tests with the material/context retained, rather than a separate model-comparison menu. Phone actions keep their readable3:7 composition and desktop natural widths.
 - POST-108 [o] ordinary generation actions on a post with no photo or video show one explicit photo-free confirmation after required-input/model checks and before start; cancel starts nothing. Unified tests explain their selected material and cost at their own start under MODEL-31.
-- POST-54 [o] each step renders only its own panel: ① the 가제, the selected template's data fields (→POST-62), the memo under them, photos and the contact sheet (one horizontal snap carousel with a 현재/전체 indicator on a phone); ② the storyline space (→POST-95) above the draft as prose; ③ 기억으로 저장, manual export and the 발행 URL field at its foot (→POST-73); the memo and the data fields belong to ① as the input 글 생성 works from; the memo follows the data fields ← it carries what the fields did not ask, so it is written once they are filled
+- POST-54 [o] each step renders only its own panel:
+  - ① the photos first, then the 가제, the selected template's data fields (→POST-62), the memo under them and the contact sheet (one horizontal snap carousel with a 현재/전체 indicator on a phone); an unminted `/posts/new` keeps the same order ← the photos are the material the post is written from, so they are added before anything is typed
+  - ② the storyline space (→POST-95) above the draft as prose
+  - ③ 기억으로 저장, manual export and the 발행 URL field at its foot (→POST-73)
+  - the memo and the data fields belong to ① as the input 글 생성 works from; the memo follows the data fields ← it carries what the fields did not ask, so it is written once they are filled
 - POST-55 [o] ② opens as prose: `entities/post`'s `BlockList` renders title, summary, tags and every block read-only, each block and the header carrying one edit control on the shared `Editable`; opening a block does not close another; edits write through so autosave keeps running; 취소 restores the value the block held when its editor opened; moving or deleting a block closes it
 - POST-56 [o] ②'s dock is ONE surface (`widgets/refine-dock`): the AI revision instruction with an icon-only send button under a visible heading `수정 요청을 입력하세요` at the `fieldTitle` role that IS the field's `<label>`, and `확정하기` as the CTA filling the rest of that row, finalizing at once whenever the draft can be finalized
   - no popover or modal stands between press and run ← a finalize is reversed by the next content save anyway
@@ -105,7 +109,7 @@
   - generation, requested tag revision and writing tests freeze the post's bound (→GEN-46); saving an option does not rewrite existing tags
   - saving it changes no status, content revision, baseline, learning eligibility or existing tags; input revision follows POST-111 for generation-setting changes ← the option caps output rather than requiring padding
 
-- POST-64 [o] writing history shows readable work name/title fallback and update time with actual running/failed/unfinished/exportable state and the relevant continuation/export/result action. It has no docked primary New post action or article preview; new writing is reached through home/common creation navigation.
+- POST-64 [o] writing history shows readable work name/title fallback and update time with actual running/failed/unfinished/exportable state and the relevant continuation or result action. A row offers no separate export action: export lives in the opened post's 글 완성 step (→POST-54) ← that step is one step press from wherever the post opens, so a second link to the same post would read as a different action. It has no docked primary New post action or article preview; new writing is reached through home/common creation navigation.
 - POST-65 [o] one search field narrows the list by title and tags: a trimmed, case-insensitive, whitespace-collapsed substring match with a leading `#` on the query ignored, and the tags that matched are named on the row, only while they matched ← a row kept by a word its title never contains otherwise looks arbitrary, while tags on every row at all times would double the list's height; the list answer carries each post's current tags (`PostSummary.tags`, the newest content revision's) so a post with no content yet is matched by its title alone
 - POST-66 [o] one status filter beside the search, on the search's own row — 전체 · 초안 · 검토 · 확정 · 발행됨, single choice, a `Listbox` labelled 상태 (→THEME-29) ← a `SegmentedControl` under the search read as a row of buttons rather than as a filter and took a row of its own on a phone
   - keyed on `post.status` alone and composing with the search as AND ← AI 생성 중 and AI 결과 확인 are derived row states, not statuses, so filtering on what the badge happens to say would hide a mid-generation draft from 초안
@@ -146,7 +150,10 @@
 - POST-97 [o] the space's controls take the dock's shape (→POST-56): a heading row carrying 다시 만들기 and the write action — `이 스토리로 글 쓰기` while there is no draft, `이 스토리로 다시 쓰기` once there is — over one AI request field with its send control (→GEN-69); ②'s dock stays the post's revision composer and 확정하기, and neither reaches the other's target ← a storyline request and a revision request change different things
 - POST-98 [o] `이 스토리로 다시 쓰기` over a draft edited by hand since its last machine result (→POST-16) opens one confirmation saying those edits will be lost, while an untouched draft is rewritten at once; 다시 만들기 over a storyline edited by hand confirms the same way; ①'s actions replace the storyline without asking ← ① starts the post over, while ② refines it
 - POST-99 [o] once an attachment is added after the storyline was made, the space says attachments were added since and offers 다시 만들기, and writing from the storyline as it stands leaves them out (→GEN-70); a deleted attachment leaves its paragraph without a word (→POST-18)
-- POST-100 [o] pressing an attachment's tile in the storyline space — in a paragraph or under `빠진 사진` — opens it large over the page: a photo fitted to the screen, a video playing with its own controls, a close, and the previous and next attachment of the space one press away in its order (paragraph by paragraph, then `빠진 사진`) ← a thumbnail small enough to sit inside a paragraph cannot show what the photo holds, and placing it is the decision the space exists for
+- POST-100 [o] pressing an attachment's tile opens it large over the page: a photo fitted to the screen, a video playing with its own controls, a close, and the previous and next attachment one press away in its surface's order ← a thumbnail small enough to sit in a strip or a paragraph cannot show what the photo holds
+  - ①'s photo strip: its photos, then its videos; a tile still uploading or failed opens nothing, and the tile's 회전 and delete stay presses of their own
+  - the storyline space: paragraph by paragraph, then `빠진 사진`
+  - the large view only shows, on a read-only post too; nothing in it saves
   - the large view only shows: moving, taking out and putting back stay on the tile (→POST-96), and opening or closing it changes nothing
 
 - POST-101 [o] ①'s 말투 picker offers 말투 없음, then the account's made voices, then `새 말투 만들기` (→VOICE-53); a voice not yet made is listed disabled with `만드는 중 N%`; a new post starts on the 기본 voice, or on 말투 없음 when there is none ← the owner's own default, and no voice is ever forced
@@ -211,4 +218,4 @@
 - ops: the production bucket needs a CORS rule allowing PUT/GET/HEAD from the FE origin (DEPLOY.md); MinIO in `docker-compose.yml` serves local development
 
 ## chg
--
+- r37 261009 POST-54✎ ① order 가제 · data fields · memo · photos → photos first, then 가제 · data fields · memo; POST-100✎ large view from storyline-space tiles only → also ①'s photo strip in strip order; POST-64✎ history row actions continuation/export/result → continuation/result, no separate export action
