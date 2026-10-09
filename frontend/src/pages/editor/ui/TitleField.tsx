@@ -61,7 +61,7 @@ export function TitleField({
         autoComplete="off"
         // The bare editor's caller owns the field's type (THEME-29): the title wears the display role —
         // the post title is the largest thing on the screen (THEME-8).
-        className={typographyStyles({ variant: 'display', className: 'mt-4' })}
+        className={typographyStyles({ variant: 'display', className: 'mt-6' })}
       />
     </>
   )

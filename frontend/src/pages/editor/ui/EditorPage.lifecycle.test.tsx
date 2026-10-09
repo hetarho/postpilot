@@ -458,6 +458,29 @@ describe('the editor lifecycle steps', () => {
     const title = await screen.findByLabelText('제목')
     expect(tab.compareDocumentPosition(title) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
+
+  // POST-54: the photos are the material the post is written from, so ① starts with them — on a
+  // saved draft and on a /posts/new that has no post yet alike.
+  it('puts the photos above the title, and the memo under it', async () => {
+    const following = (first: Node, second: Node) =>
+      Boolean(first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING)
+    const expectPhotosFirst = async () => {
+      const picker = await screen.findByLabelText('사진·영상 추가')
+      const title = screen.getByLabelText('제목')
+      expect(following(picker, title)).toBe(true)
+      expect(following(title, screen.getByLabelText('메모'))).toBe(true)
+    }
+
+    const saved = renderAppAt('/posts/20260820-jeju', {
+      user: USER,
+      posts: { posts: [{ ...reviewPost, status: 'draft' }] },
+    })
+    await expectPhotosFirst()
+    saved.unmount()
+
+    renderAppAt('/posts/new', { user: USER })
+    await expectPhotosFirst()
+  })
 })
 
 // POST-45: everything the editor has to SAY about its own state is one 2px bar plus one line at

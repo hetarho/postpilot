@@ -73,17 +73,19 @@
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
-| T665 | Photos first in writing | POST | - | todo |
 | T666 | Strip photos open large | POST | T665 | todo |
 | T667 | History drops the export link | POST | - | todo |
 
 ## next
-- implement-task T665, then T666 and T667 (POST r37).
+- implement-task T666, then T667 (POST r37).
 - Review the 17 unadopted choices in review/structure-261008; all ten clear refactor tasks T654–T663 are complete.
 - T636–T646 standalone writing/origin tasks are complete on main; unrelated blocked qualifications remain separate.
 - Editorial follow-up: doc-review ARCH; preserve independent review and open SSOT questions.
 
 ## log
+- 261009 T665 done on main: ① and /posts/new show the photo slot above the 가제.
+- 261009 out of scope: on a 390px phone the editor top row reads 글쓰기글 생성 — the location label and the step bar touch with no gap.
+- 261009 T665 start on main ate016631d: ① and /posts/new show the photo slot above the 가제.
 - 261009 create-task POST r37: T665 (① photos first), T666 (strip photos open large, dep T665), T667 (history drops the export link).
 - 261009 update-ssot POST r37 done: POST-54✎ ① photos first; POST-100✎ ① strip tiles open the large view; POST-64✎ history drops the separate 내보내기 action; no doing task in its blast radius; next create-task POST.
 - 261009 update-ssot POST start: ① photos first; ① strip tiles open the large view; history drops the separate 내보내기 action.
@@ -101,6 +103,3 @@
 - 261008 T661 start on main at4dd37b2c: Make one typed revision-options builder own the complete admitted payload and serialize it once.
 - 261008 T660 done on main: Removed seven zero-production-consumer editor/selector files and obsolete exports; current direct/shared editing and active/optional/pair/lab model flows remain covered.
 - 261008 T660 start on main ate483c67a: Remove verified zero-production-consumer editor code while retaining the current authoring and model configuration flows.
-- 261008 T659 done on main: Template builder recovery uses an owning typed metadata reader; null/arrays/primitives/malformed JSON no longer break direct editing or change canonical source on mount.
-- 261008 T659 start on main at4bce3175: Keep template metadata recovery behind a typed owning reader without allowing non-object JSON to break direct editing.
-- 261008 T658 done on main: A dedicated TypeScript-AST build module rewrites only model-owned named imports, retaining aliases/type declarations and lazy UI; build regressions cover the actual route.

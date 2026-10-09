@@ -44,7 +44,7 @@ export function EditorPhotos({ post, ensureSlug }: EditorPhotosProps) {
       onFiles={(files) => void upload.addFiles(files)}
       disabled={published || upload.creatingPost}
     >
-      <div data-slot="photos" className="mt-5 flex flex-col gap-3">
+      <div data-slot="photos" className="mt-4 flex flex-col gap-3">
         <div className="flex items-center gap-3">
           <PhotoPicker
             onFiles={(files) => void upload.addFiles(files)}

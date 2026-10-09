@@ -6,9 +6,11 @@ import { ContactSheet } from '@/widgets/contact-sheet'
 import { EditorPhotos } from './EditorPhotos'
 import { EditorVoiceWarning } from './EditorVoiceWarning'
 
-/** ①'s panel: the post's own material — 제목 · 템플릿 답변 · 메모 · 사진 · the voice caveat
- *  (POST-54). The memo follows the template's fields because it carries what they did not ask. Everything that DESCRIBES the next AI run, 분야 and 기억 사용 included, lives in the
- *  dock's brief instead (POST-89). */
+/** ①'s panel: the post's own material — 사진 · 제목 · 템플릿 답변 · 메모 · the voice caveat
+ *  (POST-54). The photos come first: they are what the post is written from, so they go in before
+ *  anything is typed. The memo follows the template's fields because it carries what they did not
+ *  ask. Everything that DESCRIBES the next AI run, 분야 and 기억 사용 included, lives in the dock's
+ *  brief instead (POST-89). */
 export function EditorGeneratePanel({
   post,
   ownerId,
@@ -28,10 +30,10 @@ export function EditorGeneratePanel({
 }) {
   return (
     <div className={proseStyles()}>
+      <EditorPhotos post={post} ensureSlug={ensureSlug} />
       {titleField}
       {answerFields}
       {memoField}
-      <EditorPhotos post={post} ensureSlug={ensureSlug} />
       <EditorVoiceWarning ownerId={ownerId} voice={post.voice} />
 
       {post.images.length > 0 && (

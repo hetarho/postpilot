@@ -392,10 +392,10 @@ export function DraftEditor({ post, defaultVoice }: DraftEditorProps) {
         <>
           {/* No lifecycle yet, so no step bar — just the step ① surfaces that work without a post. */}
           <div className={proseStyles()}>
+            <EditorPhotos post={post} ensureSlug={autosave.ensureSlug} />
             {titleField}
             {answerFieldsPanel}
             {memoField}
-            <EditorPhotos post={post} ensureSlug={autosave.ensureSlug} />
           </div>
           {/* No voice warning here: a draft can hold only 말투 없음 or a made, active voice, so
               there is nothing to warn about before the post exists. */}
