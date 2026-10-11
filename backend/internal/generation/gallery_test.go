@@ -150,15 +150,15 @@ func TestThePromptsNameEachPhotosOrientation(t *testing.T) {
 	portraits := map[string]bool{"b.jpg": true}
 	for _, language := range []Language{LanguageKorean, LanguageEnglish} {
 		_, user := BuildWritePromptForLanguage(WritePromptInput{Language: language, Profile: goldenProfile(), Photos: []string{"a.jpg", "b.jpg"}, TagCount: 4, Portraits: portraits})
-		if !strings.Contains(user, "첨부 파일명(정확히 일치해야 함): a.jpg, b.jpg\n사진 방향: a.jpg 가로, b.jpg 세로\n사진 관찰:") {
+		if !strings.Contains(user, "첨부 파일명(글쓴이가 고르거나 정리한 사진 순서, 정확히 일치해야 함): a.jpg, b.jpg\n사진 방향: a.jpg 가로, b.jpg 세로\n사진 관찰:") {
 			t.Errorf("%s write user half lacks the orientation line:\n%s", language, user)
 		}
 		_, withVideo := BuildWritePromptForLanguage(WritePromptInput{Language: language, Profile: goldenProfile(), Photos: []string{"a.jpg", "b.jpg"}, Videos: []string{"c.mp4"}, TagCount: 4, Portraits: portraits})
-		if !strings.Contains(withVideo, "첨부 사진 파일명(정확히 일치해야 함): a.jpg, b.jpg\n사진 방향: a.jpg 가로, b.jpg 세로") {
+		if !strings.Contains(withVideo, "첨부 사진 파일명(글쓴이가 고르거나 정리한 사진 순서, 정확히 일치해야 함): a.jpg, b.jpg\n사진 방향: a.jpg 가로, b.jpg 세로") {
 			t.Errorf("%s write with a video lacks the orientation line:\n%s", language, withVideo)
 		}
 		_, revise := buildRevisePrompt(language, goldenProfile(), goldenContent(), []string{"a.jpg", "b.jpg", "c.mp4"}, []string{"a.jpg", "b.jpg"}, portraits, "묶어줘", nil, 4, nil, FrozenGuidelines{})
-		if !strings.Contains(revise, "[첨부 파일명]\na.jpg, b.jpg, c.mp4\n\n[사진 방향]\na.jpg 가로, b.jpg 세로\n\n[수정 요청]") {
+		if !strings.Contains(revise, "[첨부 파일명(사진은 글쓴이가 고르거나 정리한 사진 순서)]\na.jpg, b.jpg, c.mp4\n\n[사진 방향]\na.jpg 가로, b.jpg 세로\n\n[수정 요청]") {
 			t.Errorf("%s revise user half lacks the orientation section:\n%s", language, revise)
 		}
 	}

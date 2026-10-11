@@ -23,7 +23,7 @@ STYLE 말투
 [현재 PostContent]
 {"title":"CURRENT TITLE","summary":"CURRENT SUMMARY","tags":["태그1","태그2"],"blocks":[{"type":"TEXT","content":"CURRENT BODY","level":0,"file":"","alt":"","caption":"","items":null},{"type":"IMAGE","content":"","level":0,"file":"IMG_1.jpg","alt":"","caption":"캡션","items":null}]}
 
-[첨부 파일명]
+[첨부 파일명(사진은 글쓴이가 고르거나 정리한 사진 순서)]
 IMG_1.jpg
 
 [수정 요청]

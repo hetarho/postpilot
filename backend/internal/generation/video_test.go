@@ -397,7 +397,7 @@ func TestWritePromptSeparatesVideoMaterialAndLeavesAPhotoOnlyPostUntouched(t *te
 	})
 
 	for _, want := range []string{
-		"첨부 사진 파일명(정확히 일치해야 함): IMG_1.jpg",
+		"첨부 사진 파일명(글쓴이가 고르거나 정리한 사진 순서, 정확히 일치해야 함): IMG_1.jpg",
 		"첨부 영상 파일명(정확히 일치해야 함): a.mp4",
 		"사진 관찰: ",
 		"영상 관찰: ",
@@ -430,7 +430,7 @@ func TestWritePromptSeparatesVideoMaterialAndLeavesAPhotoOnlyPostUntouched(t *te
 	if strings.Contains(plainSystem, "VIDEO") || strings.Contains(plainUser, "영상") {
 		t.Errorf("a photo-only post was told about videos:\n%s\n%s", plainSystem, plainUser)
 	}
-	if !strings.HasPrefix(plainUser, "[이번 글]\n가제: TITLE\n메모: MEMO\n첨부 파일명(정확히 일치해야 함): IMG_1.jpg\n사진 관찰: ") {
+	if !strings.HasPrefix(plainUser, "[이번 글]\n가제: TITLE\n메모: MEMO\n첨부 파일명(글쓴이가 고르거나 정리한 사진 순서, 정확히 일치해야 함): IMG_1.jpg\n사진 관찰: ") {
 		t.Errorf("the no-video material moved:\n%s", plainUser)
 	}
 }

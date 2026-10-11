@@ -73,17 +73,19 @@
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
-| T670 | Store the owner's photo order and reorder it | POST GEN | - | todo |
+| T670 | Store the owner's photo order and reorder it | POST GEN | - | doing@261011 |
 | T671 | Keep the pick order and reorder photos in ① | POST | T670 | todo |
-| T672 | The writer reads the list as the owner's photo order | GEN GUIDE | - | todo |
 
 ## next
-- implement-task T670, T672, then T671 (dep T670).
+- implement-task T670, then T671 (dep T670).
 - Review the 17 unadopted choices in review/structure-261008; all ten clear refactor tasks T654–T663 are complete.
 - T636–T646 standalone writing/origin tasks are complete on main; unrelated blocked qualifications remain separate.
 - Editorial follow-up: doc-review ARCH; preserve independent review and open SSOT questions.
 
 ## log
+- 261011 T672 done on main: the prompts read the list as the owner's photo order; order and photo_groups 기본 지침 arrange along it.
+- 261011 T672 start on main at f3000bc6: the prompts read the list as the owner's photo order.
+- 261011 T670 start on main at f3000bc6 (delegated worker in the main tree): images.position and ReorderImages.
 - 261011 create-task POST r38 GEN r27 GUIDE r20: T670 (photo position + ReorderImages), T671 (pick-order confirm + ① strip reorder, dep T670), T672 (prompts read the owner's photo order).
 - 261011 update-ssot POST r38 GEN r27 GUIDE r20 done: POST-116+ owner photo order (pick order, ① reorder) · POST-74✎ · GEN-7✎ GEN-77✎ GEN-82✎ the writer reads the list as the owner's photo order · GUIDE-41✎ arrange along it, a late photo joins its subject; no doing task in the blast radius; next create-task POST GEN GUIDE.
 - 261011 update-ssot POST GEN GUIDE start: the owner's photo order — kept in pick order, reorderable in ①, given to the writer as usually the visit's order; a late photo of an earlier subject joins that subject.
@@ -101,6 +103,3 @@
 - 261009 T667 done on main: history rows drop the 내보내기 link and the export intent; 내보내기 가능 stays.
 - 261009 T667 start on main ate982a61a: history rows drop the 내보내기 link and the export intent.
 - 261009 T666 done on main: ① strip photos and clips open the shared large view (entities/post AttachmentViewer).
-- 261009 T666 start on main at022ee33d: ① strip tiles open the shared large view.
-- 261009 T665 done on main: ① and /posts/new show the photo slot above the 가제.
-- 261009 out of scope: on a 390px phone the editor top row reads 글쓰기글 생성 — the location label and the step bar touch with no gap.

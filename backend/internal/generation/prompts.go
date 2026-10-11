@@ -529,7 +529,7 @@ func attachmentMaterial(photos, videos []string, observations []Observation, por
 		return "첨부 사진이 없습니다. 이미지 없이 메모만으로 작성하세요."
 	}
 	if len(videos) == 0 {
-		return "첨부 파일명(정확히 일치해야 함): " + strings.Join(photos, ", ") + orientationLine(photos, portraits) +
+		return "첨부 파일명(글쓴이가 고르거나 정리한 사진 순서, 정확히 일치해야 함): " + strings.Join(photos, ", ") + orientationLine(photos, portraits) +
 			"\n사진 관찰: " + marshalPromptJSON(observationsForPrompt(observations))
 	}
 
@@ -552,7 +552,7 @@ func attachmentMaterial(photos, videos []string, observations []Observation, por
 
 	var out strings.Builder
 	if len(photos) > 0 {
-		out.WriteString("첨부 사진 파일명(정확히 일치해야 함): " + strings.Join(photos, ", ") + orientationLine(photos, portraits))
+		out.WriteString("첨부 사진 파일명(글쓴이가 고르거나 정리한 사진 순서, 정확히 일치해야 함): " + strings.Join(photos, ", ") + orientationLine(photos, portraits))
 		out.WriteString("\n사진 관찰: " + marshalPromptJSON(observationsForPrompt(photoObservations)))
 		out.WriteString("\n")
 	}

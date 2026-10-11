@@ -123,9 +123,16 @@ func TestUpdatedImpressionAndChronologyRecommendationsDoNotRelabelGeneratedMeani
 	if strings.Contains(memory.Ko.Text, "글쓴이가 직접 준 감상으로 봅니다") || !strings.Contains(memory.Ko.Text, "AI가 더한 의미") || !strings.Contains(memory.En.Text, "not an impression the author directly supplied for this visit") {
 		t.Fatal("preference-derived addition masquerades as owner input")
 	}
-	for _, needle := range []string{"명시적으로", "사진 업로드 순서", "저장된 배열 순서", "파일명", "촬영 순서"} {
+	// The photo order is the arrangement's backbone (GEN-82, GUIDE-41), a late photo joins its
+	// subject, and no ordering of the photos is ever stated as what happened.
+	for _, needle := range []string{"명시적으로", "사진 순서를 따라 구성", "뒤늦게", "그 대상이 나온 자리", "파일명", "촬영 순서", "사실처럼 쓰지는 마세요"} {
 		if !strings.Contains(order.Ko.Text, needle) {
 			t.Errorf("chronology missing %q", needle)
+		}
+	}
+	for _, needle := range []string{"arrange along the photo order", "taken late", "put it with that subject", "as fact from the photo order, filenames or capture order"} {
+		if !strings.Contains(order.En.Text, needle) {
+			t.Errorf("English chronology missing %q", needle)
 		}
 	}
 	if !strings.Contains(photos.Ko.Text, "없던 행동·이동·시간 순서") || !strings.Contains(photos.En.Text, "without inventing actions") {

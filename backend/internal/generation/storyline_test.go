@@ -504,7 +504,7 @@ func TestTheStorylinePromptHasNoVoiceAndItsOwnPrecedence(t *testing.T) {
 	if template < 0 || guidelines < template || !strings.HasSuffix(system, storylineGuidelinePrecedence) {
 		t.Fatalf("section order or closing:\n%s", system)
 	}
-	if !strings.HasPrefix(user, "[이번 글]\n가제: 가제 TITLE\n메모: MEMO 본문\n[기억]") || !strings.Contains(user, "첨부 파일명(정확히 일치해야 함): IMG_1.jpg") {
+	if !strings.HasPrefix(user, "[이번 글]\n가제: 가제 TITLE\n메모: MEMO 본문\n[기억]") || !strings.Contains(user, "첨부 파일명(글쓴이가 고르거나 정리한 사진 순서, 정확히 일치해야 함): IMG_1.jpg") {
 		t.Fatalf("user half:\n%s", user)
 	}
 	english, _ := BuildStorylinePromptForLanguage(StorylinePromptInput{Language: LanguageEnglish})

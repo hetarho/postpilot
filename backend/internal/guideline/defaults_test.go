@@ -68,15 +68,17 @@ func TestDefaultRegistryIsTheProductsOrder(t *testing.T) {
 	if groups.Ko.Name != "사진은 한 장씩" || groups.En.Name != "Photos stand alone" {
 		t.Errorf("photo_groups names = %q, %q", groups.Ko.Name, groups.En.Name)
 	}
-	for _, copy := range []struct{ text, single, condition, joined, override string }{
-		{groups.Ko.Text, "IMAGE 블록으로 한 장씩", "대상 하나를 말할 때만 묶으세요", "'가게 입구와 첫 상차림'처럼", "'n장 묶음' 사진 자리나 스토리라인의 한 문단"},
-		{groups.En.Text, "one at a time as IMAGE blocks", "group only when it names one subject", "\"the entrance and the first dishes served\"", "suggested group place ('n장 묶음') or one storyline paragraph"},
+	// `placed` frees a group from photo-order adjacency: a late photo of one subject can join
+	// its kin wherever it sits in the photo order (GEN-77).
+	for _, copy := range []struct{ text, single, condition, joined, override, placed string }{
+		{groups.Ko.Text, "IMAGE 블록으로 한 장씩", "대상 하나를 말할 때만 묶으세요", "'가게 입구와 첫 상차림'처럼", "'n장 묶음' 사진 자리나 스토리라인의 한 문단", "사진 순서에서 떨어져 있더라도 한자리에 함께 놓을 사진"},
+		{groups.En.Text, "one at a time as IMAGE blocks", "group only when it names one subject", "\"the entrance and the first dishes served\"", "suggested group place ('n장 묶음') or one storyline paragraph", "photos you place together into one GALLERY block, wherever they sit in the photo order"},
 	} {
 		single, gallery := strings.Index(copy.text, copy.single), strings.Index(copy.text, "GALLERY")
 		if single < 0 || gallery < single {
 			t.Errorf("photo_groups text does not default to single photos: %q", copy.text)
 		}
-		for _, clause := range []string{copy.condition, copy.joined, copy.override} {
+		for _, clause := range []string{copy.condition, copy.joined, copy.override, copy.placed} {
 			if !strings.Contains(copy.text, clause) {
 				t.Errorf("photo_groups text lacks %q: %q", clause, copy.text)
 			}

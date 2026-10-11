@@ -199,7 +199,7 @@ func buildRevisePrompt(language Language, profile Profile, content PostContent, 
 		orientation = "\n\n[사진 방향]\n" + strings.TrimPrefix(line, "\n사진 방향: ")
 	}
 	user := fmt.Sprintf(
-		"[현재 PostContent]\n%s\n\n[첨부 파일명]\n%s%s\n\n[수정 요청]\n%s",
+		"[현재 PostContent]\n%s\n\n[첨부 파일명(사진은 글쓴이가 고르거나 정리한 사진 순서)]\n%s%s\n\n[수정 요청]\n%s",
 		marshalPromptJSON(contentForPrompt(content)), files, orientation, instruction,
 	)
 	return stable.String(), user
