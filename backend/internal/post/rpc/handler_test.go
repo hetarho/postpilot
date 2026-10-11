@@ -53,6 +53,8 @@ func TestToConnectErrorMapsEveryDomainError(t *testing.T) {
 		{"field missing", "save draft", post.ErrFieldNotFound, connect.CodeNotFound, "POST_FIELD_NOT_FOUND"},
 		{"quality rule", "save post generation options", post.ErrQualityRuleInvalid, connect.CodeInvalidArgument, "POST_QUALITY_RULE_INVALID"},
 		{"list request", "list posts", post.ErrInvalidListRequest, connect.CodeInvalidArgument, "POST_LIST_REQUEST_INVALID"},
+		{"rotation", "rotate image", post.ErrInvalidRotation, connect.CodeInvalidArgument, "POST_IMAGE_ROTATION_INVALID"},
+		{"photo order", "reorder images", post.ErrPhotoOrderStale, connect.CodeFailedPrecondition, "POST_PHOTO_ORDER_STALE"},
 	}
 
 	for _, test := range cases {

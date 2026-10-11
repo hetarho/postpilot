@@ -75,6 +75,10 @@ var (
 	ErrNotFound = errors.New("not found")
 	// ErrInvalidRotation is a photo turn other than 0, 90, 180 or 270 degrees (POST-107).
 	ErrInvalidRotation = errors.New("rotation must be 0, 90, 180 or 270 degrees")
+	// ErrPhotoOrderStale is a reorder whose list is not exactly the post's photos, each once
+	// (POST-116): a photo added or deleted since the client read the post, a video, or a
+	// repeat. Nothing changes, and the client reads the post again.
+	ErrPhotoOrderStale = errors.New("the photo order does not name exactly the post's photos")
 	// ErrForbidden is a slug or id that exists but belongs to someone else. It is
 	// deliberately distinguishable from ErrNotFound: the PRD (§7) specifies 403 here,
 	// and at two users there is no enumeration concern worth hiding it for.

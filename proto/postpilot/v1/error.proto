@@ -411,6 +411,9 @@ enum FailureReason {
   WRITING_TEST_LEGACY_READ_ONLY = 332;
   VOICE_CHECK_RETIRED = 333;
   VOICE_ACCEPTED_SOURCE_WITHDRAWN = 334;
+  // ReorderImages named other photos than the post holds: one added or deleted since the client
+  // read the post, a video, or a repeat (POST-116). The client reads the post again.
+  POST_PHOTO_ORDER_STALE = 335;
 
 }
 

@@ -188,6 +188,11 @@ type ImageCatalog interface {
 	// SetImageRotation records the owner's turn of a photo (POST-107) and reports false when
 	// nothing changed: the row is gone, or its post is published (POST-74).
 	SetImageRotation(ctx context.Context, id string, rotation int32) (bool, error)
+	// ReorderImages writes the owner's photo order (POST-116) and advances the post's input
+	// revision, in one transaction. ids must be exactly the post's photos, each once, or it is
+	// ErrPhotoOrderStale and nothing changes. It reports false when nothing was written: the
+	// order is already the post's, or the post is published (POST-74).
+	ReorderImages(ctx context.Context, postSlug string, ids []string, updatedAt time.Time) (bool, error)
 	// ImageFilenameTaken reports a CONFIRMED photo with this name. A pending upload
 	// does not count — that case is a retry, which CreateUpload replaces.
 	ImageFilenameTaken(ctx context.Context, postSlug, filename string) (bool, error)

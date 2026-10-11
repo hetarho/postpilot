@@ -1,5 +1,5 @@
 -- name: WritingTestOwnedImages :many
-SELECT i.id,i.post_slug,i.filename,i.r2_key,i.width,i.height,i.bytes,i.created_at,i.rotation,i.rotation_by_owner
+SELECT i.id,i.post_slug,i.filename,i.r2_key,i.width,i.height,i.bytes,i.created_at,i.rotation,i.rotation_by_owner,i.position
 FROM images AS i JOIN posts AS p ON p.slug=i.post_slug
 WHERE p.user_id=? AND i.id IN (SELECT value FROM json_each(?)) ORDER BY i.created_at,i.id;
 -- name: WritingTestOwnedVideos :many

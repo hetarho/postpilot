@@ -1540,6 +1540,30 @@ func (s *Service) RotateImage(ctx context.Context, userID, imageID string, rotat
 	return updated, nil
 }
 
+// ReorderImages saves the owner's photo order (POST-116): imageIDs is every photo of the post,
+// each once, in the new order, and a list that is not is ErrPhotoOrderStale with nothing
+// changed. The save changes no status, content revision or baseline; it advances the input
+// revision, and an unchanged order is a no-op that advances nothing. It is a photo write like
+// RotateImage, so a published post refuses it (POST-74).
+func (s *Service) ReorderImages(ctx context.Context, userID, slug string, imageIDs []string) error {
+	if _, err := s.writablePost(ctx, userID, slug); err != nil {
+		return err
+	}
+	moved, err := s.images.ReorderImages(ctx, slug, imageIDs, s.now())
+	if err != nil {
+		if errors.Is(err, ErrPhotoOrderStale) {
+			return ErrPhotoOrderStale
+		}
+		return fmt.Errorf("reorder images: %w", err)
+	}
+	if !moved {
+		// An unchanged order is the success it reads as; published is the lock, a reorder that
+		// passed the check above and then lost the race to a publish.
+		return s.lockedOrGone(ctx, userID, slug, nil)
+	}
+	return nil
+}
+
 // DeleteVideo removes the video and its object in DeleteImage's order — the guarded row first,
 // then the object, a failed object delete left to the sweep — and drops the observation entry
 // the filename owned (VIDEO-12).

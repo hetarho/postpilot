@@ -17,8 +17,8 @@ import (
 	"github.com/postpilot/backend/internal/post/store/sqlc"
 )
 
-// publishedRow seeds a post with an answer, a confirmed photo and clip, and a pending photo and
-// clip upload, then publishes it through the real statements.
+// publishedRow seeds a post with an answer, two confirmed photos and a clip, and a pending photo
+// and clip upload, then publishes it through the real statements.
 func publishedRow(t *testing.T) *store.Store {
 	t.Helper()
 	ctx := context.Background()
@@ -30,6 +30,7 @@ func publishedRow(t *testing.T) *store.Store {
 	photoKey, clipKey := post.ObjectKey("p", "i1"), post.VideoObjectKey("p", "v1", "mp4")
 	for _, upload := range []post.Upload{
 		{ID: "i1", PostSlug: "p", Filename: "IMG_1.jpg", Key: photoKey, Kind: post.AttachmentPhoto, ContentType: "image/jpeg"},
+		{ID: "i2", PostSlug: "p", Filename: "IMG_4.jpg", Key: post.ObjectKey("p", "i2"), Kind: post.AttachmentPhoto, ContentType: "image/jpeg"},
 		{ID: "v1", PostSlug: "p", Filename: "clip.mp4", Key: clipKey, Kind: post.AttachmentVideo, ContentType: "video/mp4"},
 		{ID: "u-photo", PostSlug: "p", Filename: "IMG_2.jpg", Key: post.ObjectKey("p", "u-photo"), Kind: post.AttachmentPhoto, ContentType: "image/jpeg"},
 		{ID: "u-clip", PostSlug: "p", Filename: "clip2.mp4", Key: post.VideoObjectKey("p", "u-clip", "mp4"), Kind: post.AttachmentVideo, ContentType: "video/mp4"},
@@ -40,6 +41,10 @@ func publishedRow(t *testing.T) *store.Store {
 		}
 	}
 	if err := s.ConfirmUpload(ctx, post.Image{ID: "i1", PostSlug: "p", Filename: "IMG_1.jpg", Key: photoKey, Width: 1, Height: 1, Bytes: 1, CreatedAt: testNow}, "i1"); err != nil {
+		t.Fatal(err)
+	}
+	// A second photo, so a reorder has an order to change (POST-116).
+	if err := s.ConfirmUpload(ctx, post.Image{ID: "i2", PostSlug: "p", Filename: "IMG_4.jpg", Key: post.ObjectKey("p", "i2"), Width: 1, Height: 1, Bytes: 1, CreatedAt: testNow}, "i2"); err != nil {
 		t.Fatal(err)
 	}
 	clip := testVideo("v1", "clip.mp4")
@@ -141,6 +146,10 @@ var predicateGuarded = map[string]func(*store.Store) (bool, error){
 	"DeleteImage": func(s *store.Store) (bool, error) { return s.DeleteImage(context.Background(), "i1") },
 	"SetImageRotation": func(s *store.Store) (bool, error) {
 		return s.SetImageRotation(context.Background(), "i1", 90)
+	},
+	// A changed order, so the statement runs rather than the unchanged order's no-op.
+	"SetImagePosition": func(s *store.Store) (bool, error) {
+		return s.ReorderImages(context.Background(), "p", []string{"i2", "i1"}, lockLater)
 	},
 	"DeleteVideo": func(s *store.Store) (bool, error) { return s.DeleteVideo(context.Background(), "v1") },
 }
@@ -447,6 +456,9 @@ func TestEveryGuardedStatementRefusesAPublishedPost(t *testing.T) {
 		}
 		if changed, err := s.UpdateDraft(context.Background(), "p", "alice", "새 제목", "", nil, lockLater); err != nil || !changed {
 			t.Fatalf("draft after the clear: %v, %v", changed, err)
+		}
+		if moved, err := s.ReorderImages(context.Background(), "p", []string{"i2", "i1"}, lockLater); err != nil || !moved {
+			t.Fatalf("photo reorder after the clear: %v, %v", moved, err)
 		}
 		if deleted, err := s.DeleteImage(context.Background(), "i1"); err != nil || !deleted {
 			t.Fatalf("photo delete after the clear: %v, %v", deleted, err)

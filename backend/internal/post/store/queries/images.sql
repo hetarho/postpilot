@@ -2,16 +2,30 @@
 -- exist in storage.
 
 -- name: CreateImage :exec
-INSERT INTO images (id, post_slug, filename, r2_key, width, height, bytes, created_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+-- A photo joins after the post's last photo (POST-116). The position is read inside the insert
+-- itself, so two confirms in one post never take the same one.
+INSERT INTO images (id, post_slug, filename, r2_key, width, height, bytes, created_at, position)
+VALUES (
+    sqlc.arg(id), sqlc.arg(post_slug), sqlc.arg(filename), sqlc.arg(r2_key), sqlc.arg(width), sqlc.arg(height), sqlc.arg(bytes), sqlc.arg(created_at),
+    (SELECT COALESCE(MAX(position), -1) + 1 FROM images WHERE post_slug = sqlc.arg(post_slug))
+);
 
 -- name: ListImagesByPost :many
-SELECT id, post_slug, filename, r2_key, width, height, bytes, created_at, rotation, rotation_by_owner
-FROM images WHERE post_slug = ? ORDER BY created_at, id;
+-- The owner's order (POST-116), which every photo read and generation follow.
+SELECT id, post_slug, filename, r2_key, width, height, bytes, created_at, rotation, rotation_by_owner, position
+FROM images WHERE post_slug = ? ORDER BY position, id;
 
 -- name: GetImage :one
-SELECT id, post_slug, filename, r2_key, width, height, bytes, created_at, rotation, rotation_by_owner
+SELECT id, post_slug, filename, r2_key, width, height, bytes, created_at, rotation, rotation_by_owner, position
 FROM images WHERE id = ?;
+
+-- name: SetImagePosition :execrows
+-- One photo's place in the owner's order (POST-116); a reorder writes every photo of the post
+-- in one transaction. A published post's photos are locked with it (POST-74), so zero rows is
+-- a published post.
+UPDATE images SET position = sqlc.arg(position)
+WHERE id = sqlc.arg(id) AND post_slug = sqlc.arg(post_slug)
+  AND EXISTS (SELECT 1 FROM posts WHERE posts.slug = images.post_slug AND posts.status <> 'published');
 
 -- name: SetImageRotation :execrows
 -- The owner turns a photo (POST-107). A published post's photos are locked with it (POST-74),

@@ -293,6 +293,19 @@ func (h *Handler) RotateImage(ctx context.Context, req *connect.Request[postpilo
 	return connect.NewResponse(&postpilotv1.RotateImageResponse{Image: toProtoImage(image)}), nil
 }
 
+// ReorderImages saves the owner's photo order (POST-116). The answer is empty: the order the
+// client sent is the one the post now holds, and a refusal tells the client to read it again.
+func (h *Handler) ReorderImages(ctx context.Context, req *connect.Request[postpilotv1.ReorderImagesRequest]) (*connect.Response[postpilotv1.ReorderImagesResponse], error) {
+	userID, err := actingUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if err := h.svc.ReorderImages(ctx, userID, req.Msg.GetPostSlug(), req.Msg.GetImageIds()); err != nil {
+		return nil, toConnectError("reorder images", err)
+	}
+	return connect.NewResponse(&postpilotv1.ReorderImagesResponse{}), nil
+}
+
 func (h *Handler) DeleteVideo(ctx context.Context, req *connect.Request[postpilotv1.DeleteVideoRequest]) (*connect.Response[postpilotv1.DeleteVideoResponse], error) {
 	userID, err := actingUser(ctx)
 	if err != nil {
@@ -357,6 +370,8 @@ func toConnectError(op string, err error) error {
 	switch {
 	case errors.Is(err, post.ErrInvalidRotation):
 		return rpcserver.NewAppError(connect.CodeInvalidArgument, "rotation must be 0, 90, 180 or 270", postpilotv1.FailureReason_POST_IMAGE_ROTATION_INVALID, nil)
+	case errors.Is(err, post.ErrPhotoOrderStale):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "the photo order does not name exactly the post's photos", postpilotv1.FailureReason_POST_PHOTO_ORDER_STALE, nil)
 	case errors.Is(err, post.ErrNotFound):
 		if op == "confirm upload" {
 			return rpcserver.NewAppError(connect.CodeNotFound, "upload not found", postpilotv1.FailureReason_UPLOAD_NOT_FOUND, nil)

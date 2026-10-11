@@ -37,6 +37,8 @@ service PostService {
   rpc DeleteImage(DeleteImageRequest) returns (DeleteImageResponse) {}
   // The owner turns a photo (POST-107); from then on no observation changes its rotation.
   rpc RotateImage(RotateImageRequest) returns (RotateImageResponse) {}
+  // The owner's photo order (POST-116), every read's and generation's order from then on.
+  rpc ReorderImages(ReorderImagesRequest) returns (ReorderImagesResponse) {}
   rpc DeleteVideo(DeleteVideoRequest) returns (DeleteVideoResponse) {}
 }
 
@@ -586,6 +588,17 @@ message RotateImageRequest {
 message RotateImageResponse {
   Image image = 1;
 }
+
+message ReorderImagesRequest {
+  string post_slug = 1;
+  // Every photo of the post, each once, in the new order; videos are not reordered. A list
+  // that is not exactly the post's photos is POST_PHOTO_ORDER_STALE and changes nothing, and
+  // the post's current order is a no-op.
+  repeated string image_ids = 2;
+}
+
+// Empty: the order the client sent is the order the post now holds.
+message ReorderImagesResponse {}
 
 message DeleteVideoRequest {
   string video_id = 1;

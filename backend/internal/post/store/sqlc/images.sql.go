@@ -11,8 +11,11 @@ import (
 
 const createImage = `-- name: CreateImage :exec
 
-INSERT INTO images (id, post_slug, filename, r2_key, width, height, bytes, created_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+INSERT INTO images (id, post_slug, filename, r2_key, width, height, bytes, created_at, position)
+VALUES (
+    ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8,
+    (SELECT COALESCE(MAX(position), -1) + 1 FROM images WHERE post_slug = ?2)
+)
 `
 
 type CreateImageParams struct {
@@ -28,6 +31,8 @@ type CreateImageParams struct {
 
 // Photos attached to a post. The row is created only after the object is known to
 // exist in storage.
+// A photo joins after the post's last photo (POST-116). The position is read inside the insert
+// itself, so two confirms in one post never take the same one.
 func (q *Queries) CreateImage(ctx context.Context, arg CreateImageParams) error {
 	_, err := q.db.ExecContext(ctx, createImage,
 		arg.ID,
@@ -59,7 +64,7 @@ func (q *Queries) DeleteImage(ctx context.Context, id string) (int64, error) {
 }
 
 const getImage = `-- name: GetImage :one
-SELECT id, post_slug, filename, r2_key, width, height, bytes, created_at, rotation, rotation_by_owner
+SELECT id, post_slug, filename, r2_key, width, height, bytes, created_at, rotation, rotation_by_owner, position
 FROM images WHERE id = ?
 `
 
@@ -77,6 +82,7 @@ func (q *Queries) GetImage(ctx context.Context, id string) (Image, error) {
 		&i.CreatedAt,
 		&i.Rotation,
 		&i.RotationByOwner,
+		&i.Position,
 	)
 	return i, err
 }
@@ -136,10 +142,11 @@ func (q *Queries) ListAllImageKeys(ctx context.Context) ([]string, error) {
 }
 
 const listImagesByPost = `-- name: ListImagesByPost :many
-SELECT id, post_slug, filename, r2_key, width, height, bytes, created_at, rotation, rotation_by_owner
-FROM images WHERE post_slug = ? ORDER BY created_at, id
+SELECT id, post_slug, filename, r2_key, width, height, bytes, created_at, rotation, rotation_by_owner, position
+FROM images WHERE post_slug = ? ORDER BY position, id
 `
 
+// The owner's order (POST-116), which every photo read and generation follow.
 func (q *Queries) ListImagesByPost(ctx context.Context, postSlug string) ([]Image, error) {
 	rows, err := q.db.QueryContext(ctx, listImagesByPost, postSlug)
 	if err != nil {
@@ -160,6 +167,7 @@ func (q *Queries) ListImagesByPost(ctx context.Context, postSlug string) ([]Imag
 			&i.CreatedAt,
 			&i.Rotation,
 			&i.RotationByOwner,
+			&i.Position,
 		); err != nil {
 			return nil, err
 		}
@@ -172,6 +180,29 @@ func (q *Queries) ListImagesByPost(ctx context.Context, postSlug string) ([]Imag
 		return nil, err
 	}
 	return items, nil
+}
+
+const setImagePosition = `-- name: SetImagePosition :execrows
+UPDATE images SET position = ?1
+WHERE id = ?2 AND post_slug = ?3
+  AND EXISTS (SELECT 1 FROM posts WHERE posts.slug = images.post_slug AND posts.status <> 'published')
+`
+
+type SetImagePositionParams struct {
+	Position int64
+	ID       string
+	PostSlug string
+}
+
+// One photo's place in the owner's order (POST-116); a reorder writes every photo of the post
+// in one transaction. A published post's photos are locked with it (POST-74), so zero rows is
+// a published post.
+func (q *Queries) SetImagePosition(ctx context.Context, arg SetImagePositionParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, setImagePosition, arg.Position, arg.ID, arg.PostSlug)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const setImageRotation = `-- name: SetImageRotation :execrows

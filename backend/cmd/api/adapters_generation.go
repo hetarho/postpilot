@@ -305,9 +305,9 @@ func (a generationPosts) AttachedImages(ctx context.Context, userID, slug string
 			input.ContentOriginIdentity = &identity
 		}
 	}
-	// Photos first, then videos, each already ordered by created_at: one list, because
-	// every selection, freeze and merge function iterates attachments by filename and a
-	// second slice would mean maintaining that reasoning twice.
+	// Photos first, in the owner's order (POST-116), then videos by created_at: one list,
+	// because every selection, freeze and merge function iterates attachments by filename and
+	// a second slice would mean maintaining that reasoning twice.
 	for _, image := range found.Images {
 		input.Images = append(input.Images, generation.Image{
 			ID:       image.ID,

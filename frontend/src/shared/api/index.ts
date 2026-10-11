@@ -211,6 +211,7 @@ export {
   CreateUploadResponseSchema,
   DeleteImageResponseSchema,
   RotateImageResponseSchema,
+  ReorderImagesResponseSchema,
   DeletePostResponseSchema,
   GetPostResponseSchema,
   GetGenerationResponseSchema,

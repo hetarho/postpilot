@@ -777,6 +777,70 @@ func (s *Store) SetImageRotation(ctx context.Context, id string, rotation int32)
 	})
 }
 
+// ReorderImages writes the owner's photo order (POST-116): ids must be exactly the post's photos,
+// each once, read in the same transaction as the write, or it is ErrPhotoOrderStale and nothing
+// changes. The positions become 0..n-1 and the input revision advances with them. False is an
+// order already the post's, which writes nothing, or a published post (POST-74), which the
+// caller tells apart by re-reading the post.
+func (s *Store) ReorderImages(ctx context.Context, postSlug string, ids []string, updatedAt time.Time) (bool, error) {
+	tx, err := s.writer.BeginTx(ctx, nil)
+	if err != nil {
+		return false, fmt.Errorf("begin reorder: %w", err)
+	}
+	defer tx.Rollback() //nolint:errcheck // no-op once committed
+
+	q := s.write.WithTx(tx)
+	current, err := q.ListImagesByPost(ctx, postSlug)
+	if err != nil {
+		return false, fmt.Errorf("select images: %w", err)
+	}
+	if !samePhotos(current, ids) {
+		return false, post.ErrPhotoOrderStale
+	}
+	unchanged := true
+	for i, image := range current {
+		unchanged = unchanged && image.ID == ids[i]
+	}
+	if unchanged {
+		return false, nil
+	}
+	for i, id := range ids {
+		n, err := q.SetImagePosition(ctx, sqlc.SetImagePositionParams{Position: int64(i), ID: id, PostSlug: postSlug})
+		if err != nil {
+			return false, fmt.Errorf("set image position: %w", err)
+		}
+		if n == 0 {
+			// The published predicate matched nothing; the deferred rollback drops any earlier row.
+			return false, nil
+		}
+	}
+	if _, err := q.AdvancePostInputRevision(ctx, sqlc.AdvancePostInputRevisionParams{Slug: postSlug, UpdatedAt: formatTime(updatedAt)}); err != nil {
+		return false, err
+	}
+	if err := tx.Commit(); err != nil {
+		return false, fmt.Errorf("commit reorder: %w", err)
+	}
+	return true, nil
+}
+
+// samePhotos reports whether ids names every one of the post's photos exactly once.
+func samePhotos(current []sqlc.Image, ids []string) bool {
+	if len(ids) != len(current) {
+		return false
+	}
+	unseen := make(map[string]bool, len(current))
+	for _, image := range current {
+		unseen[image.ID] = true
+	}
+	for _, id := range ids {
+		if !unseen[id] {
+			return false
+		}
+		delete(unseen, id)
+	}
+	return true
+}
+
 func (s *Store) DeleteImage(ctx context.Context, id string) (bool, error) {
 	return s.changeImage(ctx, id, func(q *sqlc.Queries, image sqlc.Image) (bool, bool, error) {
 		n, err := q.DeleteImage(ctx, id)

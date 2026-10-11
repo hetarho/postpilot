@@ -66,6 +66,9 @@ const (
 	PostServiceDeleteImageProcedure = "/postpilot.v1.PostService/DeleteImage"
 	// PostServiceRotateImageProcedure is the fully-qualified name of the PostService's RotateImage RPC.
 	PostServiceRotateImageProcedure = "/postpilot.v1.PostService/RotateImage"
+	// PostServiceReorderImagesProcedure is the fully-qualified name of the PostService's ReorderImages
+	// RPC.
+	PostServiceReorderImagesProcedure = "/postpilot.v1.PostService/ReorderImages"
 	// PostServiceDeleteVideoProcedure is the fully-qualified name of the PostService's DeleteVideo RPC.
 	PostServiceDeleteVideoProcedure = "/postpilot.v1.PostService/DeleteVideo"
 	// GenerationServiceStartGenerationProcedure is the fully-qualified name of the GenerationService's
@@ -106,6 +109,8 @@ type PostServiceClient interface {
 	DeleteImage(context.Context, *connect.Request[v1.DeleteImageRequest]) (*connect.Response[v1.DeleteImageResponse], error)
 	// The owner turns a photo (POST-107); from then on no observation changes its rotation.
 	RotateImage(context.Context, *connect.Request[v1.RotateImageRequest]) (*connect.Response[v1.RotateImageResponse], error)
+	// The owner's photo order (POST-116), every read's and generation's order from then on.
+	ReorderImages(context.Context, *connect.Request[v1.ReorderImagesRequest]) (*connect.Response[v1.ReorderImagesResponse], error)
 	DeleteVideo(context.Context, *connect.Request[v1.DeleteVideoRequest]) (*connect.Response[v1.DeleteVideoResponse], error)
 }
 
@@ -192,6 +197,12 @@ func NewPostServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(postServiceMethods.ByName("RotateImage")),
 			connect.WithClientOptions(opts...),
 		),
+		reorderImages: connect.NewClient[v1.ReorderImagesRequest, v1.ReorderImagesResponse](
+			httpClient,
+			baseURL+PostServiceReorderImagesProcedure,
+			connect.WithSchema(postServiceMethods.ByName("ReorderImages")),
+			connect.WithClientOptions(opts...),
+		),
 		deleteVideo: connect.NewClient[v1.DeleteVideoRequest, v1.DeleteVideoResponse](
 			httpClient,
 			baseURL+PostServiceDeleteVideoProcedure,
@@ -215,6 +226,7 @@ type postServiceClient struct {
 	confirmUpload             *connect.Client[v1.ConfirmUploadRequest, v1.ConfirmUploadResponse]
 	deleteImage               *connect.Client[v1.DeleteImageRequest, v1.DeleteImageResponse]
 	rotateImage               *connect.Client[v1.RotateImageRequest, v1.RotateImageResponse]
+	reorderImages             *connect.Client[v1.ReorderImagesRequest, v1.ReorderImagesResponse]
 	deleteVideo               *connect.Client[v1.DeleteVideoRequest, v1.DeleteVideoResponse]
 }
 
@@ -278,6 +290,11 @@ func (c *postServiceClient) RotateImage(ctx context.Context, req *connect.Reques
 	return c.rotateImage.CallUnary(ctx, req)
 }
 
+// ReorderImages calls postpilot.v1.PostService.ReorderImages.
+func (c *postServiceClient) ReorderImages(ctx context.Context, req *connect.Request[v1.ReorderImagesRequest]) (*connect.Response[v1.ReorderImagesResponse], error) {
+	return c.reorderImages.CallUnary(ctx, req)
+}
+
 // DeleteVideo calls postpilot.v1.PostService.DeleteVideo.
 func (c *postServiceClient) DeleteVideo(ctx context.Context, req *connect.Request[v1.DeleteVideoRequest]) (*connect.Response[v1.DeleteVideoResponse], error) {
 	return c.deleteVideo.CallUnary(ctx, req)
@@ -304,6 +321,8 @@ type PostServiceHandler interface {
 	DeleteImage(context.Context, *connect.Request[v1.DeleteImageRequest]) (*connect.Response[v1.DeleteImageResponse], error)
 	// The owner turns a photo (POST-107); from then on no observation changes its rotation.
 	RotateImage(context.Context, *connect.Request[v1.RotateImageRequest]) (*connect.Response[v1.RotateImageResponse], error)
+	// The owner's photo order (POST-116), every read's and generation's order from then on.
+	ReorderImages(context.Context, *connect.Request[v1.ReorderImagesRequest]) (*connect.Response[v1.ReorderImagesResponse], error)
 	DeleteVideo(context.Context, *connect.Request[v1.DeleteVideoRequest]) (*connect.Response[v1.DeleteVideoResponse], error)
 }
 
@@ -386,6 +405,12 @@ func NewPostServiceHandler(svc PostServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(postServiceMethods.ByName("RotateImage")),
 		connect.WithHandlerOptions(opts...),
 	)
+	postServiceReorderImagesHandler := connect.NewUnaryHandler(
+		PostServiceReorderImagesProcedure,
+		svc.ReorderImages,
+		connect.WithSchema(postServiceMethods.ByName("ReorderImages")),
+		connect.WithHandlerOptions(opts...),
+	)
 	postServiceDeleteVideoHandler := connect.NewUnaryHandler(
 		PostServiceDeleteVideoProcedure,
 		svc.DeleteVideo,
@@ -418,6 +443,8 @@ func NewPostServiceHandler(svc PostServiceHandler, opts ...connect.HandlerOption
 			postServiceDeleteImageHandler.ServeHTTP(w, r)
 		case PostServiceRotateImageProcedure:
 			postServiceRotateImageHandler.ServeHTTP(w, r)
+		case PostServiceReorderImagesProcedure:
+			postServiceReorderImagesHandler.ServeHTTP(w, r)
 		case PostServiceDeleteVideoProcedure:
 			postServiceDeleteVideoHandler.ServeHTTP(w, r)
 		default:
@@ -475,6 +502,10 @@ func (UnimplementedPostServiceHandler) DeleteImage(context.Context, *connect.Req
 
 func (UnimplementedPostServiceHandler) RotateImage(context.Context, *connect.Request[v1.RotateImageRequest]) (*connect.Response[v1.RotateImageResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.PostService.RotateImage is not implemented"))
+}
+
+func (UnimplementedPostServiceHandler) ReorderImages(context.Context, *connect.Request[v1.ReorderImagesRequest]) (*connect.Response[v1.ReorderImagesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.PostService.ReorderImages is not implemented"))
 }
 
 func (UnimplementedPostServiceHandler) DeleteVideo(context.Context, *connect.Request[v1.DeleteVideoRequest]) (*connect.Response[v1.DeleteVideoResponse], error) {

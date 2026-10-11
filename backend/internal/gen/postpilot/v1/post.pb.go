@@ -3750,6 +3750,98 @@ func (x *RotateImageResponse) GetImage() *Image {
 	return nil
 }
 
+type ReorderImagesRequest struct {
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	PostSlug string                 `protobuf:"bytes,1,opt,name=post_slug,json=postSlug,proto3" json:"post_slug,omitempty"`
+	// Every photo of the post, each once, in the new order; videos are not reordered. A list
+	// that is not exactly the post's photos is POST_PHOTO_ORDER_STALE and changes nothing, and
+	// the post's current order is a no-op.
+	ImageIds      []string `protobuf:"bytes,2,rep,name=image_ids,json=imageIds,proto3" json:"image_ids,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReorderImagesRequest) Reset() {
+	*x = ReorderImagesRequest{}
+	mi := &file_postpilot_v1_post_proto_msgTypes[49]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReorderImagesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReorderImagesRequest) ProtoMessage() {}
+
+func (x *ReorderImagesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_post_proto_msgTypes[49]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReorderImagesRequest.ProtoReflect.Descriptor instead.
+func (*ReorderImagesRequest) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{49}
+}
+
+func (x *ReorderImagesRequest) GetPostSlug() string {
+	if x != nil {
+		return x.PostSlug
+	}
+	return ""
+}
+
+func (x *ReorderImagesRequest) GetImageIds() []string {
+	if x != nil {
+		return x.ImageIds
+	}
+	return nil
+}
+
+// Empty: the order the client sent is the order the post now holds.
+type ReorderImagesResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReorderImagesResponse) Reset() {
+	*x = ReorderImagesResponse{}
+	mi := &file_postpilot_v1_post_proto_msgTypes[50]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReorderImagesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReorderImagesResponse) ProtoMessage() {}
+
+func (x *ReorderImagesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_post_proto_msgTypes[50]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReorderImagesResponse.ProtoReflect.Descriptor instead.
+func (*ReorderImagesResponse) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{50}
+}
+
 type DeleteVideoRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	VideoId       string                 `protobuf:"bytes,1,opt,name=video_id,json=videoId,proto3" json:"video_id,omitempty"`
@@ -3759,7 +3851,7 @@ type DeleteVideoRequest struct {
 
 func (x *DeleteVideoRequest) Reset() {
 	*x = DeleteVideoRequest{}
-	mi := &file_postpilot_v1_post_proto_msgTypes[49]
+	mi := &file_postpilot_v1_post_proto_msgTypes[51]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3771,7 +3863,7 @@ func (x *DeleteVideoRequest) String() string {
 func (*DeleteVideoRequest) ProtoMessage() {}
 
 func (x *DeleteVideoRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_post_proto_msgTypes[49]
+	mi := &file_postpilot_v1_post_proto_msgTypes[51]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3784,7 +3876,7 @@ func (x *DeleteVideoRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteVideoRequest.ProtoReflect.Descriptor instead.
 func (*DeleteVideoRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{49}
+	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{51}
 }
 
 func (x *DeleteVideoRequest) GetVideoId() string {
@@ -3802,7 +3894,7 @@ type DeleteVideoResponse struct {
 
 func (x *DeleteVideoResponse) Reset() {
 	*x = DeleteVideoResponse{}
-	mi := &file_postpilot_v1_post_proto_msgTypes[50]
+	mi := &file_postpilot_v1_post_proto_msgTypes[52]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3814,7 +3906,7 @@ func (x *DeleteVideoResponse) String() string {
 func (*DeleteVideoResponse) ProtoMessage() {}
 
 func (x *DeleteVideoResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_post_proto_msgTypes[50]
+	mi := &file_postpilot_v1_post_proto_msgTypes[52]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3827,7 +3919,7 @@ func (x *DeleteVideoResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteVideoResponse.ProtoReflect.Descriptor instead.
 func (*DeleteVideoResponse) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{50}
+	return file_postpilot_v1_post_proto_rawDescGZIP(), []int{52}
 }
 
 var File_postpilot_v1_post_proto protoreflect.FileDescriptor
@@ -4122,7 +4214,11 @@ const file_postpilot_v1_post_proto_rawDesc = "" +
 	"\bimage_id\x18\x01 \x01(\tR\aimageId\x12\x1a\n" +
 	"\brotation\x18\x02 \x01(\x05R\brotation\"@\n" +
 	"\x13RotateImageResponse\x12)\n" +
-	"\x05image\x18\x01 \x01(\v2\x13.postpilot.v1.ImageR\x05image\"/\n" +
+	"\x05image\x18\x01 \x01(\v2\x13.postpilot.v1.ImageR\x05image\"P\n" +
+	"\x14ReorderImagesRequest\x12\x1b\n" +
+	"\tpost_slug\x18\x01 \x01(\tR\bpostSlug\x12\x1b\n" +
+	"\timage_ids\x18\x02 \x03(\tR\bimageIds\"\x17\n" +
+	"\x15ReorderImagesResponse\"/\n" +
 	"\x12DeleteVideoRequest\x12\x19\n" +
 	"\bvideo_id\x18\x01 \x01(\tR\avideoId\"\x15\n" +
 	"\x13DeleteVideoResponse*v\n" +
@@ -4153,7 +4249,8 @@ const file_postpilot_v1_post_proto_rawDesc = "" +
 	"\x1dBLOG_FIELD_PARENTING_MARRIAGE\x10\x06\x12\x13\n" +
 	"\x0fBLOG_FIELD_PETS\x10\a\x12\x1b\n" +
 	"\x17BLOG_FIELD_INTERIOR_DIY\x10\b\x12\x19\n" +
-	"\x15BLOG_FIELD_DAILY_LIFE\x10\t2\xb9\t\n" +
+	"\x15BLOG_FIELD_DAILY_LIFE\x10\t2\x95\n" +
+	"\n" +
 	"\vPostService\x12Z\n" +
 	"\rSavePostDraft\x12\".postpilot.v1.SavePostDraftRequest\x1a#.postpilot.v1.SavePostDraftResponse\"\x00\x12`\n" +
 	"\x0fSavePostContent\x12$.postpilot.v1.SavePostContentRequest\x1a%.postpilot.v1.SavePostContentResponse\"\x00\x12~\n" +
@@ -4167,7 +4264,8 @@ const file_postpilot_v1_post_proto_rawDesc = "" +
 	"\fCreateUpload\x12!.postpilot.v1.CreateUploadRequest\x1a\".postpilot.v1.CreateUploadResponse\"\x00\x12Z\n" +
 	"\rConfirmUpload\x12\".postpilot.v1.ConfirmUploadRequest\x1a#.postpilot.v1.ConfirmUploadResponse\"\x00\x12T\n" +
 	"\vDeleteImage\x12 .postpilot.v1.DeleteImageRequest\x1a!.postpilot.v1.DeleteImageResponse\"\x00\x12T\n" +
-	"\vRotateImage\x12 .postpilot.v1.RotateImageRequest\x1a!.postpilot.v1.RotateImageResponse\"\x00\x12T\n" +
+	"\vRotateImage\x12 .postpilot.v1.RotateImageRequest\x1a!.postpilot.v1.RotateImageResponse\"\x00\x12Z\n" +
+	"\rReorderImages\x12\".postpilot.v1.ReorderImagesRequest\x1a#.postpilot.v1.ReorderImagesResponse\"\x00\x12T\n" +
 	"\vDeleteVideo\x12 .postpilot.v1.DeleteVideoRequest\x1a!.postpilot.v1.DeleteVideoResponse\"\x002\x83\x04\n" +
 	"\x11GenerationService\x12`\n" +
 	"\x0fStartGeneration\x12$.postpilot.v1.StartGenerationRequest\x1a%.postpilot.v1.StartGenerationResponse\"\x00\x12Z\n" +
@@ -4189,7 +4287,7 @@ func file_postpilot_v1_post_proto_rawDescGZIP() []byte {
 }
 
 var file_postpilot_v1_post_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
-var file_postpilot_v1_post_proto_msgTypes = make([]protoimpl.MessageInfo, 51)
+var file_postpilot_v1_post_proto_msgTypes = make([]protoimpl.MessageInfo, 53)
 var file_postpilot_v1_post_proto_goTypes = []any{
 	(BlockType)(0),                            // 0: postpilot.v1.BlockType
 	(GalleryLayout)(0),                        // 1: postpilot.v1.GalleryLayout
@@ -4244,14 +4342,16 @@ var file_postpilot_v1_post_proto_goTypes = []any{
 	(*DeleteImageResponse)(nil),               // 50: postpilot.v1.DeleteImageResponse
 	(*RotateImageRequest)(nil),                // 51: postpilot.v1.RotateImageRequest
 	(*RotateImageResponse)(nil),               // 52: postpilot.v1.RotateImageResponse
-	(*DeleteVideoRequest)(nil),                // 53: postpilot.v1.DeleteVideoRequest
-	(*DeleteVideoResponse)(nil),               // 54: postpilot.v1.DeleteVideoResponse
-	(*TemplateRef)(nil),                       // 55: postpilot.v1.TemplateRef
-	(ContentLanguage)(0),                      // 56: postpilot.v1.ContentLanguage
-	(QualityMetric)(0),                        // 57: postpilot.v1.QualityMetric
-	(*OriginReview)(nil),                      // 58: postpilot.v1.OriginReview
-	(*ModelRef)(nil),                          // 59: postpilot.v1.ModelRef
-	(*Failure)(nil),                           // 60: postpilot.v1.Failure
+	(*ReorderImagesRequest)(nil),              // 53: postpilot.v1.ReorderImagesRequest
+	(*ReorderImagesResponse)(nil),             // 54: postpilot.v1.ReorderImagesResponse
+	(*DeleteVideoRequest)(nil),                // 55: postpilot.v1.DeleteVideoRequest
+	(*DeleteVideoResponse)(nil),               // 56: postpilot.v1.DeleteVideoResponse
+	(*TemplateRef)(nil),                       // 57: postpilot.v1.TemplateRef
+	(ContentLanguage)(0),                      // 58: postpilot.v1.ContentLanguage
+	(QualityMetric)(0),                        // 59: postpilot.v1.QualityMetric
+	(*OriginReview)(nil),                      // 60: postpilot.v1.OriginReview
+	(*ModelRef)(nil),                          // 61: postpilot.v1.ModelRef
+	(*Failure)(nil),                           // 62: postpilot.v1.Failure
 }
 var file_postpilot_v1_post_proto_depIdxs = []int32{
 	0,  // 0: postpilot.v1.Block.type:type_name -> postpilot.v1.BlockType
@@ -4262,37 +4362,37 @@ var file_postpilot_v1_post_proto_depIdxs = []int32{
 	5,  // 5: postpilot.v1.Post.content:type_name -> postpilot.v1.PostContent
 	6,  // 6: postpilot.v1.Post.observations:type_name -> postpilot.v1.Observation
 	7,  // 7: postpilot.v1.Post.voice:type_name -> postpilot.v1.VoiceRef
-	55, // 8: postpilot.v1.Post.template:type_name -> postpilot.v1.TemplateRef
-	56, // 9: postpilot.v1.Post.target_language:type_name -> postpilot.v1.ContentLanguage
-	56, // 10: postpilot.v1.Post.content_language:type_name -> postpilot.v1.ContentLanguage
+	57, // 8: postpilot.v1.Post.template:type_name -> postpilot.v1.TemplateRef
+	58, // 9: postpilot.v1.Post.target_language:type_name -> postpilot.v1.ContentLanguage
+	58, // 10: postpilot.v1.Post.content_language:type_name -> postpilot.v1.ContentLanguage
 	12, // 11: postpilot.v1.Post.videos:type_name -> postpilot.v1.Video
 	27, // 12: postpilot.v1.Post.template_answers:type_name -> postpilot.v1.TemplateAnswer
 	3,  // 13: postpilot.v1.Post.field:type_name -> postpilot.v1.BlogField
-	57, // 14: postpilot.v1.Post.quality_rules:type_name -> postpilot.v1.QualityMetric
+	59, // 14: postpilot.v1.Post.quality_rules:type_name -> postpilot.v1.QualityMetric
 	10, // 15: postpilot.v1.Post.storyline:type_name -> postpilot.v1.Storyline
-	58, // 16: postpilot.v1.Post.content_origins:type_name -> postpilot.v1.OriginReview
+	60, // 16: postpilot.v1.Post.content_origins:type_name -> postpilot.v1.OriginReview
 	9,  // 17: postpilot.v1.Storyline.paragraphs:type_name -> postpilot.v1.StorylineParagraph
 	14, // 18: postpilot.v1.PostSummary.active_job:type_name -> postpilot.v1.GenerationJob
 	7,  // 19: postpilot.v1.PostSummary.voice:type_name -> postpilot.v1.VoiceRef
-	55, // 20: postpilot.v1.PostSummary.template:type_name -> postpilot.v1.TemplateRef
-	56, // 21: postpilot.v1.PostSummary.target_language:type_name -> postpilot.v1.ContentLanguage
-	56, // 22: postpilot.v1.PostSummary.content_language:type_name -> postpilot.v1.ContentLanguage
+	57, // 20: postpilot.v1.PostSummary.template:type_name -> postpilot.v1.TemplateRef
+	58, // 21: postpilot.v1.PostSummary.target_language:type_name -> postpilot.v1.ContentLanguage
+	58, // 22: postpilot.v1.PostSummary.content_language:type_name -> postpilot.v1.ContentLanguage
 	14, // 23: postpilot.v1.PostSummary.latest_ordinary_failure:type_name -> postpilot.v1.GenerationJob
-	59, // 24: postpilot.v1.GenerationJob.observe_model:type_name -> postpilot.v1.ModelRef
-	59, // 25: postpilot.v1.GenerationJob.write_model:type_name -> postpilot.v1.ModelRef
-	56, // 26: postpilot.v1.GenerationJob.target_language:type_name -> postpilot.v1.ContentLanguage
-	60, // 27: postpilot.v1.GenerationJob.failure:type_name -> postpilot.v1.Failure
+	61, // 24: postpilot.v1.GenerationJob.observe_model:type_name -> postpilot.v1.ModelRef
+	61, // 25: postpilot.v1.GenerationJob.write_model:type_name -> postpilot.v1.ModelRef
+	58, // 26: postpilot.v1.GenerationJob.target_language:type_name -> postpilot.v1.ContentLanguage
+	62, // 27: postpilot.v1.GenerationJob.failure:type_name -> postpilot.v1.Failure
 	14, // 28: postpilot.v1.GetGenerationResponse.job:type_name -> postpilot.v1.GenerationJob
-	57, // 29: postpilot.v1.QualityRuleTicks.metrics:type_name -> postpilot.v1.QualityMetric
-	59, // 30: postpilot.v1.StartGenerationRequest.observe_model:type_name -> postpilot.v1.ModelRef
-	59, // 31: postpilot.v1.StartGenerationRequest.write_model:type_name -> postpilot.v1.ModelRef
+	59, // 29: postpilot.v1.QualityRuleTicks.metrics:type_name -> postpilot.v1.QualityMetric
+	61, // 30: postpilot.v1.StartGenerationRequest.observe_model:type_name -> postpilot.v1.ModelRef
+	61, // 31: postpilot.v1.StartGenerationRequest.write_model:type_name -> postpilot.v1.ModelRef
 	17, // 32: postpilot.v1.StartGenerationRequest.reobserve:type_name -> postpilot.v1.ReobserveSelection
-	59, // 33: postpilot.v1.StartRevisionRequest.write_model:type_name -> postpilot.v1.ModelRef
+	61, // 33: postpilot.v1.StartRevisionRequest.write_model:type_name -> postpilot.v1.ModelRef
 	17, // 34: postpilot.v1.StartStorylineRequest.reobserve:type_name -> postpilot.v1.ReobserveSelection
-	59, // 35: postpilot.v1.StartStorylineRequest.observe_model:type_name -> postpilot.v1.ModelRef
-	59, // 36: postpilot.v1.StartStorylineRequest.write_model:type_name -> postpilot.v1.ModelRef
-	59, // 37: postpilot.v1.StartStorylineRevisionRequest.write_model:type_name -> postpilot.v1.ModelRef
-	56, // 38: postpilot.v1.SavePostDraftRequest.target_language:type_name -> postpilot.v1.ContentLanguage
+	61, // 35: postpilot.v1.StartStorylineRequest.observe_model:type_name -> postpilot.v1.ModelRef
+	61, // 36: postpilot.v1.StartStorylineRequest.write_model:type_name -> postpilot.v1.ModelRef
+	61, // 37: postpilot.v1.StartStorylineRevisionRequest.write_model:type_name -> postpilot.v1.ModelRef
+	58, // 38: postpilot.v1.SavePostDraftRequest.target_language:type_name -> postpilot.v1.ContentLanguage
 	27, // 39: postpilot.v1.SavePostDraftRequest.template_answers:type_name -> postpilot.v1.TemplateAnswer
 	3,  // 40: postpilot.v1.SavePostDraftRequest.field:type_name -> postpilot.v1.BlogField
 	29, // 41: postpilot.v1.SavePostDraftRequest.storyline:type_name -> postpilot.v1.StorylineEdit
@@ -4323,32 +4423,34 @@ var file_postpilot_v1_post_proto_depIdxs = []int32{
 	47, // 66: postpilot.v1.PostService.ConfirmUpload:input_type -> postpilot.v1.ConfirmUploadRequest
 	49, // 67: postpilot.v1.PostService.DeleteImage:input_type -> postpilot.v1.DeleteImageRequest
 	51, // 68: postpilot.v1.PostService.RotateImage:input_type -> postpilot.v1.RotateImageRequest
-	53, // 69: postpilot.v1.PostService.DeleteVideo:input_type -> postpilot.v1.DeleteVideoRequest
-	19, // 70: postpilot.v1.GenerationService.StartGeneration:input_type -> postpilot.v1.StartGenerationRequest
-	21, // 71: postpilot.v1.GenerationService.StartRevision:input_type -> postpilot.v1.StartRevisionRequest
-	23, // 72: postpilot.v1.GenerationService.StartStoryline:input_type -> postpilot.v1.StartStorylineRequest
-	25, // 73: postpilot.v1.GenerationService.StartStorylineRevision:input_type -> postpilot.v1.StartStorylineRevisionRequest
-	15, // 74: postpilot.v1.GenerationService.GetGeneration:input_type -> postpilot.v1.GetGenerationRequest
-	30, // 75: postpilot.v1.PostService.SavePostDraft:output_type -> postpilot.v1.SavePostDraftResponse
-	32, // 76: postpilot.v1.PostService.SavePostContent:output_type -> postpilot.v1.SavePostContentResponse
-	34, // 77: postpilot.v1.PostService.SavePostGenerationOptions:output_type -> postpilot.v1.SavePostGenerationOptionsResponse
-	36, // 78: postpilot.v1.PostService.FinalizePost:output_type -> postpilot.v1.FinalizePostResponse
-	38, // 79: postpilot.v1.PostService.SavePostPublishedUrl:output_type -> postpilot.v1.SavePostPublishedUrlResponse
-	40, // 80: postpilot.v1.PostService.GetPost:output_type -> postpilot.v1.GetPostResponse
-	42, // 81: postpilot.v1.PostService.ListPosts:output_type -> postpilot.v1.ListPostsResponse
-	44, // 82: postpilot.v1.PostService.DeletePost:output_type -> postpilot.v1.DeletePostResponse
-	46, // 83: postpilot.v1.PostService.CreateUpload:output_type -> postpilot.v1.CreateUploadResponse
-	48, // 84: postpilot.v1.PostService.ConfirmUpload:output_type -> postpilot.v1.ConfirmUploadResponse
-	50, // 85: postpilot.v1.PostService.DeleteImage:output_type -> postpilot.v1.DeleteImageResponse
-	52, // 86: postpilot.v1.PostService.RotateImage:output_type -> postpilot.v1.RotateImageResponse
-	54, // 87: postpilot.v1.PostService.DeleteVideo:output_type -> postpilot.v1.DeleteVideoResponse
-	20, // 88: postpilot.v1.GenerationService.StartGeneration:output_type -> postpilot.v1.StartGenerationResponse
-	22, // 89: postpilot.v1.GenerationService.StartRevision:output_type -> postpilot.v1.StartRevisionResponse
-	24, // 90: postpilot.v1.GenerationService.StartStoryline:output_type -> postpilot.v1.StartStorylineResponse
-	26, // 91: postpilot.v1.GenerationService.StartStorylineRevision:output_type -> postpilot.v1.StartStorylineRevisionResponse
-	16, // 92: postpilot.v1.GenerationService.GetGeneration:output_type -> postpilot.v1.GetGenerationResponse
-	75, // [75:93] is the sub-list for method output_type
-	57, // [57:75] is the sub-list for method input_type
+	53, // 69: postpilot.v1.PostService.ReorderImages:input_type -> postpilot.v1.ReorderImagesRequest
+	55, // 70: postpilot.v1.PostService.DeleteVideo:input_type -> postpilot.v1.DeleteVideoRequest
+	19, // 71: postpilot.v1.GenerationService.StartGeneration:input_type -> postpilot.v1.StartGenerationRequest
+	21, // 72: postpilot.v1.GenerationService.StartRevision:input_type -> postpilot.v1.StartRevisionRequest
+	23, // 73: postpilot.v1.GenerationService.StartStoryline:input_type -> postpilot.v1.StartStorylineRequest
+	25, // 74: postpilot.v1.GenerationService.StartStorylineRevision:input_type -> postpilot.v1.StartStorylineRevisionRequest
+	15, // 75: postpilot.v1.GenerationService.GetGeneration:input_type -> postpilot.v1.GetGenerationRequest
+	30, // 76: postpilot.v1.PostService.SavePostDraft:output_type -> postpilot.v1.SavePostDraftResponse
+	32, // 77: postpilot.v1.PostService.SavePostContent:output_type -> postpilot.v1.SavePostContentResponse
+	34, // 78: postpilot.v1.PostService.SavePostGenerationOptions:output_type -> postpilot.v1.SavePostGenerationOptionsResponse
+	36, // 79: postpilot.v1.PostService.FinalizePost:output_type -> postpilot.v1.FinalizePostResponse
+	38, // 80: postpilot.v1.PostService.SavePostPublishedUrl:output_type -> postpilot.v1.SavePostPublishedUrlResponse
+	40, // 81: postpilot.v1.PostService.GetPost:output_type -> postpilot.v1.GetPostResponse
+	42, // 82: postpilot.v1.PostService.ListPosts:output_type -> postpilot.v1.ListPostsResponse
+	44, // 83: postpilot.v1.PostService.DeletePost:output_type -> postpilot.v1.DeletePostResponse
+	46, // 84: postpilot.v1.PostService.CreateUpload:output_type -> postpilot.v1.CreateUploadResponse
+	48, // 85: postpilot.v1.PostService.ConfirmUpload:output_type -> postpilot.v1.ConfirmUploadResponse
+	50, // 86: postpilot.v1.PostService.DeleteImage:output_type -> postpilot.v1.DeleteImageResponse
+	52, // 87: postpilot.v1.PostService.RotateImage:output_type -> postpilot.v1.RotateImageResponse
+	54, // 88: postpilot.v1.PostService.ReorderImages:output_type -> postpilot.v1.ReorderImagesResponse
+	56, // 89: postpilot.v1.PostService.DeleteVideo:output_type -> postpilot.v1.DeleteVideoResponse
+	20, // 90: postpilot.v1.GenerationService.StartGeneration:output_type -> postpilot.v1.StartGenerationResponse
+	22, // 91: postpilot.v1.GenerationService.StartRevision:output_type -> postpilot.v1.StartRevisionResponse
+	24, // 92: postpilot.v1.GenerationService.StartStoryline:output_type -> postpilot.v1.StartStorylineResponse
+	26, // 93: postpilot.v1.GenerationService.StartStorylineRevision:output_type -> postpilot.v1.StartStorylineRevisionResponse
+	16, // 94: postpilot.v1.GenerationService.GetGeneration:output_type -> postpilot.v1.GetGenerationResponse
+	76, // [76:95] is the sub-list for method output_type
+	57, // [57:76] is the sub-list for method input_type
 	57, // [57:57] is the sub-list for extension type_name
 	57, // [57:57] is the sub-list for extension extendee
 	0,  // [0:57] is the sub-list for field type_name
@@ -4375,7 +4477,7 @@ func file_postpilot_v1_post_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_postpilot_v1_post_proto_rawDesc), len(file_postpilot_v1_post_proto_rawDesc)),
 			NumEnums:      4,
-			NumMessages:   51,
+			NumMessages:   53,
 			NumExtensions: 0,
 			NumServices:   2,
 		},

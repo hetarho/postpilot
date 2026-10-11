@@ -231,9 +231,11 @@ type lockedState struct {
 	post    Post
 	answers map[string]TemplateAnswer
 	images  map[string]Image
-	videos  map[string]Video
-	uploads map[string]Upload
-	deleted []string
+	// positions is the photo order (POST-116), which a refused reorder must leave as it was.
+	positions map[string]int64
+	videos    map[string]Video
+	uploads   map[string]Upload
+	deleted   []string
 }
 
 func lockedSnapshot(store *fakeStore, blobs *fakeBlobs, slug string) lockedState {
@@ -242,8 +244,11 @@ func lockedSnapshot(store *fakeStore, blobs *fakeBlobs, slug string) lockedState
 	blobs.mu.Lock()
 	defer blobs.mu.Unlock()
 	state := lockedState{
-		post: store.posts[slug], answers: map[string]TemplateAnswer{}, images: map[string]Image{},
+		post: store.posts[slug], answers: map[string]TemplateAnswer{}, images: map[string]Image{}, positions: map[string]int64{},
 		videos: map[string]Video{}, uploads: map[string]Upload{}, deleted: append([]string(nil), blobs.deleted...),
+	}
+	for id, position := range store.positions {
+		state.positions[id] = position
 	}
 	for label, answer := range store.answers[slug] {
 		state.answers[label] = answer
@@ -370,6 +375,11 @@ var publishedLockGuarded = map[string]map[string]func(*Service, publishedFixture
 		"a confirmed photo": func(svc *Service, f publishedFixture) error {
 			_, err := svc.RotateImage(context.Background(), alice, f.image, 90)
 			return err
+		},
+	},
+	"ReorderImages": {
+		"the post's photo order": func(svc *Service, f publishedFixture) error {
+			return svc.ReorderImages(context.Background(), alice, f.slug, []string{f.image})
 		},
 	},
 }

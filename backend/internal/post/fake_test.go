@@ -18,6 +18,8 @@ type fakeStore struct {
 	images  map[string]Image
 	videos  map[string]Video
 	uploads map[string]Upload
+	// positions is each photo's place in its post's owner order (POST-116), as the column holds it.
+	positions map[string]int64
 	// answers is keyed by slug then label, the way the table is keyed.
 	answers map[string]map[string]TemplateAnswer
 
@@ -52,11 +54,12 @@ func (f *fakeStore) publishedLocked(slug string) bool {
 
 func newFakeStore() *fakeStore {
 	return &fakeStore{
-		posts:   map[string]Post{},
-		images:  map[string]Image{},
-		videos:  map[string]Video{},
-		uploads: map[string]Upload{},
-		answers: map[string]map[string]TemplateAnswer{},
+		posts:     map[string]Post{},
+		images:    map[string]Image{},
+		videos:    map[string]Video{},
+		uploads:   map[string]Upload{},
+		positions: map[string]int64{},
+		answers:   map[string]map[string]TemplateAnswer{},
 	}
 }
 
@@ -540,7 +543,15 @@ func (f *fakeStore) createImageLocked(img Image) error {
 			return ErrDuplicateFilename
 		}
 	}
+	// The confirm's own insert appends after the post's last photo (POST-116).
+	next := int64(0)
+	for id, existing := range f.images {
+		if existing.PostSlug == img.PostSlug && f.positions[id] >= next {
+			next = f.positions[id] + 1
+		}
+	}
 	f.images[img.ID] = img
+	f.positions[img.ID] = next
 	return nil
 }
 
@@ -569,7 +580,12 @@ func (f *fakeStore) ListImages(_ context.Context, postSlug string) ([]Image, err
 			out = append(out, img)
 		}
 	}
-	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
+	sort.Slice(out, func(i, j int) bool {
+		if f.positions[out[i].ID] != f.positions[out[j].ID] {
+			return f.positions[out[i].ID] < f.positions[out[j].ID]
+		}
+		return out[i].ID < out[j].ID
+	})
 	return out, nil
 }
 
@@ -593,6 +609,41 @@ func (f *fakeStore) SetImageRotation(_ context.Context, id string, rotation int3
 	}
 	image.Rotation, image.RotationByOwner = rotation, true
 	f.images[id] = image
+	return true, nil
+}
+
+// ReorderImages mirrors the transaction: the list is checked against the post's photos first,
+// an unchanged order writes nothing, and a published post's photos keep their places.
+func (f *fakeStore) ReorderImages(_ context.Context, postSlug string, ids []string, updatedAt time.Time) (bool, error) {
+	f.guarded(postSlug)
+	current, _ := f.ListImages(context.Background(), postSlug)
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if len(ids) != len(current) {
+		return false, ErrPhotoOrderStale
+	}
+	unseen := map[string]bool{}
+	for _, image := range current {
+		unseen[image.ID] = true
+	}
+	unchanged := true
+	for i, id := range ids {
+		if !unseen[id] {
+			return false, ErrPhotoOrderStale
+		}
+		delete(unseen, id)
+		unchanged = unchanged && current[i].ID == id
+	}
+	if unchanged || f.publishedLocked(postSlug) {
+		return false, nil
+	}
+	for i, id := range ids {
+		f.positions[id] = int64(i)
+	}
+	stored := f.posts[postSlug]
+	stored.InputRevision++
+	stored.UpdatedAt = updatedAt
+	f.posts[postSlug] = stored
 	return true, nil
 }
 

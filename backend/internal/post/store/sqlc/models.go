@@ -19,6 +19,7 @@ type Image struct {
 	CreatedAt       string
 	Rotation        int64
 	RotationByOwner int64
+	Position        int64
 }
 
 type Post struct {
