@@ -121,6 +121,21 @@ func TestPostRecommendationsKeepPlanClaimsSeparateAndAttributeTitleAdvice(t *tes
 	if !strings.Contains(title.Ko.Text, "제품의 추천") || !strings.Contains(title.Ko.Text, "노출 보장이 아닙니다") || !strings.Contains(title.En.Text, "product recommendations") || !strings.Contains(title.En.Text, "not a published Naver numeric penalty threshold") {
 		t.Fatal("title recommendation claims unsupported platform authority")
 	}
+	// The title sums up rather than lists, invents no concrete fact, and counts rewording the
+	// owner's own experience as wording (GEN-49); a form's write roles are where it applies.
+	for _, copy := range []struct {
+		text    string
+		needles []string
+	}{
+		{title.Ko.Text, []string{"한 줄로 요약", "함축적인 표현", "재료에 없는 구체적 사실은 제목에서도 만들지", "새 사실이 아니라 표현", "write·answer_write 역할"}},
+		{title.En.Text, []string{"sum up the post's core experience", "implicative wording", "never invent a concrete fact", "wording, not a new fact", "the write and answer_write roles"}},
+	} {
+		for _, needle := range copy.needles {
+			if !strings.Contains(strings.ToLower(copy.text), strings.ToLower(needle)) {
+				t.Errorf("titles text lacks %q: %q", needle, copy.text)
+			}
+		}
+	}
 	tags, _ := DefaultFor(KindPost, "tags")
 	for _, needle := range []string{"재료로 확인되는", "후순위", "태그 수를 채우려고 덧붙이지", "다른 글에 그대로 쓰지는", "요청받았을 때만"} {
 		if !strings.Contains(tags.Ko.Text, needle) {
