@@ -62,8 +62,8 @@ interface AnchoredPanelOptions {
  *  A trigger can sit anywhere in the viewport, and nothing in CSS knows where — a `dvh` ceiling is
  *  the same number for a field at the top of the page and for one in the docked bar. So the room
  *  is MEASURED: the panel opens downward into the gap it actually has, flips above the trigger
- *  when that gap is too small and the one overhead is larger, and scrolls inside whichever it
- *  took. The ratio caps it where there is more room than it needs; the floor keeps it usable
+ *  when that gap cannot hold the panel's content and the one overhead is larger, and scrolls
+ *  inside whichever it took. The ratio caps it where there is more room than it needs; the floor keeps it usable
  *  rather than squeezing it to a sliver for a trigger pinned against an edge.
  *
  *  The measurement is repeated for as long as the panel is open — on a captured `scroll`, since
@@ -87,8 +87,9 @@ export function useAnchoredPanel({
     gone.current = onGone
   })
   const { gapPx, gutterPx, minPx, maxViewportRatio } = placement
-  // A `content` panel's width is only known once it is mounted, which happens after the first
-  // box is set; measuring again at that point is what lets its left edge be clamped.
+  // A panel's content size is only known once it is mounted, which happens after the first box
+  // is set; measuring again at that point is what lets a `content` panel's left edge be clamped
+  // and any panel flip for a height it cannot fit below.
   const mounted = box !== undefined
 
   useLayoutEffect(() => {
@@ -116,8 +117,15 @@ export function useAnchoredPanel({
       const gap = gapPx + gutterPx
       const below = window.innerHeight - anchor.bottom - gap
       const above = anchor.top - gap
-      const flip = below < minPx && above > below
-      const room = Math.min(flip ? above : below, window.innerHeight * maxViewportRatio)
+      const ceiling = window.innerHeight * maxViewportRatio
+      // What the panel would take unbounded — its `scrollHeight`, which no `max-height` shrinks —
+      // capped where the room would be and never under the floor. Before the panel is mounted,
+      // and in an environment with no layout, that is the floor alone. Without the content, a
+      // docked field with just over the floor beneath it opened a long list downward into a
+      // three-row sliver against the bottom edge, with the room overhead standing empty.
+      const wanted = Math.max(Math.min(panelRef.current?.scrollHeight ?? 0, ceiling), minPx)
+      const flip = below < wanted && above > below
+      const room = Math.min(flip ? above : below, ceiling)
       let left = anchor.left
       let spanned: number | undefined
       if (width === 'trigger') {

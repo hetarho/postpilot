@@ -205,6 +205,46 @@ describe('Listbox', () => {
     expect(panel.style.maxHeight).toBe('384px')
   })
 
+  // The writing dock's template field on a 900px desk: just over the floor beneath it, so a long
+  // list dropped into a three-row sliver against the bottom edge while the room overhead stood
+  // empty. The flip reads the list's own height, not only the floor.
+  it('flips above a trigger whose room below cannot hold the list', async () => {
+    const user = userEvent.setup()
+    render(<Harness />)
+    const trigger = screen.getByRole('combobox', { name: '과일 배' })
+    trigger.getBoundingClientRect = () => rectAt(500)
+    // jsdom lays nothing out, so the list's unbounded height is stated: taller than the 204px
+    // under the trigger, shorter than the 480px over it.
+    const height = vi.spyOn(HTMLElement.prototype, 'scrollHeight', 'get').mockReturnValue(300)
+
+    try {
+      await user.click(trigger)
+      const panel = screen.getByRole('listbox')
+      expect(panel).toHaveAttribute('data-drop', 'up')
+      expect(panel.style.bottom).toBe('272px')
+      expect(panel.style.maxHeight).toBe('384px')
+    } finally {
+      height.mockRestore()
+    }
+  })
+
+  it('keeps dropping down when the list fits the room below', async () => {
+    const user = userEvent.setup()
+    render(<Harness />)
+    const trigger = screen.getByRole('combobox', { name: '과일 배' })
+    trigger.getBoundingClientRect = () => rectAt(500)
+    const height = vi.spyOn(HTMLElement.prototype, 'scrollHeight', 'get').mockReturnValue(180)
+
+    try {
+      await user.click(trigger)
+      const panel = screen.getByRole('listbox')
+      expect(panel).toHaveAttribute('data-drop', 'down')
+      expect(panel.style.top).toBe('548px')
+    } finally {
+      height.mockRestore()
+    }
+  })
+
   // The bug the portal replaced: as an `absolute` sibling of its trigger the panel was clipped by
   // every scrolling ancestor, and a sheet's body is one — worst for a field near the bottom, whose
   // panel flips upward and out of that scroller entirely.
