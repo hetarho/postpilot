@@ -359,3 +359,122 @@ describe('the large view press', () => {
     expect(screen.queryByRole('button', { name: 'IMG_1.jpg 크게 보기' })).not.toBeInTheDocument()
   })
 })
+
+// POST-116: pick a photo up, then press the photo it goes before — or 맨 뒤로 — in two presses
+// however far it travels, which is what a phone has instead of drag.
+describe('reordering in the strip', () => {
+  const photo = (id: string): PostImage => ({
+    id,
+    filename: `${id.toUpperCase()}.jpg`,
+    width: 1024,
+    height: 768,
+    bytes: 200_000,
+    viewUrl: `https://storage.test/posts/p/${id}.jpg`,
+  })
+  const three = [photo('img_1'), photo('img_2'), photo('img_3')]
+  const strip = (onMove = vi.fn(), extra: { readOnly?: boolean } = {}) =>
+    render(
+      <PhotoStrip
+        images={three}
+        videos={[
+          {
+            id: 'clip',
+            filename: 'CLIP.mp4',
+            width: 1920,
+            height: 1080,
+            bytes: 1,
+            durationMs: 8_000,
+            contentType: 'video/mp4',
+            viewUrl: 'https://storage.test/clip.mp4',
+          },
+        ]}
+        items={[{ ...FAILED_UPLOAD, status: 'uploading', failure: undefined }]}
+        onDelete={() => {}}
+        onRotate={() => {}}
+        onRetry={() => {}}
+        onDismiss={() => {}}
+        onMove={onMove}
+        {...extra}
+      />,
+    )
+
+  it('moves the last photo to the front in two presses', async () => {
+    const user = userEvent.setup()
+    const onMove = vi.fn()
+    strip(onMove)
+
+    await user.click(screen.getByRole('button', { name: 'IMG_3.jpg 옮기기' }))
+    // Every other photo is a place to put it, and its own controls stand aside meanwhile.
+    expect(screen.getByRole('button', { name: 'IMG_3.jpg 옮기기 취소' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    expect(
+      screen.queryByRole('button', { name: '사진 돌리기 · IMG_1.jpg' }),
+    ).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '맨 뒤로' })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'IMG_1.jpg 앞으로 옮기기' }))
+
+    expect(onMove).toHaveBeenCalledWith(2, 0)
+    expect(
+      screen.queryByRole('button', { name: 'IMG_2.jpg 앞으로 옮기기' }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('puts a photo moving rightwards just before the one pressed, or at the end', async () => {
+    const user = userEvent.setup()
+    const onMove = vi.fn()
+    strip(onMove)
+
+    await user.click(screen.getByRole('button', { name: 'IMG_1.jpg 옮기기' }))
+    await user.click(screen.getByRole('button', { name: 'IMG_3.jpg 앞으로 옮기기' }))
+    expect(onMove).toHaveBeenLastCalledWith(0, 1)
+
+    await user.click(screen.getByRole('button', { name: 'IMG_1.jpg 옮기기' }))
+    await user.click(screen.getByRole('button', { name: '맨 뒤로' }))
+    expect(onMove).toHaveBeenLastCalledWith(0, 2)
+  })
+
+  it('puts the photo down where it was on a second press or Escape', async () => {
+    const user = userEvent.setup()
+    const onMove = vi.fn()
+    strip(onMove)
+
+    await user.click(screen.getByRole('button', { name: 'IMG_2.jpg 옮기기' }))
+    await user.click(screen.getByRole('button', { name: 'IMG_2.jpg 옮기기 취소' }))
+    expect(
+      screen.queryByRole('button', { name: 'IMG_1.jpg 앞으로 옮기기' }),
+    ).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'IMG_2.jpg 옮기기' }))
+    await user.keyboard('{Escape}')
+    expect(
+      screen.queryByRole('button', { name: 'IMG_1.jpg 앞으로 옮기기' }),
+    ).not.toBeInTheDocument()
+    expect(onMove).not.toHaveBeenCalled()
+  })
+
+  it('offers no move on a clip, an upload on its way, a read-only strip or a single photo', () => {
+    const { unmount } = strip()
+    expect(screen.getAllByRole('button', { name: /옮기기$/ })).toHaveLength(3)
+    expect(screen.queryByRole('button', { name: 'CLIP.mp4 옮기기' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'IMG_1.jpg 옮기기' })).toBeInTheDocument()
+    unmount()
+
+    const { unmount: unmountReadOnly } = strip(vi.fn(), { readOnly: true })
+    expect(screen.queryByRole('button', { name: /옮기기$/ })).not.toBeInTheDocument()
+    unmountReadOnly()
+
+    render(
+      <PhotoStrip
+        images={[photo('img_1')]}
+        items={[]}
+        onDelete={() => {}}
+        onRetry={() => {}}
+        onDismiss={() => {}}
+        onMove={vi.fn()}
+      />,
+    )
+    expect(screen.queryByRole('button', { name: /옮기기$/ })).not.toBeInTheDocument()
+  })
+})

@@ -12,6 +12,7 @@ import {
   CreateUploadResponseSchema,
   DeleteImageResponseSchema,
   RotateImageResponseSchema,
+  ReorderImagesResponseSchema,
   FinalizePostResponseSchema,
   GetPostResponseSchema,
   AttachmentKind,
@@ -1006,6 +1007,22 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
       }
     }
     throw connectAppError('POST_NOT_FOUND', Code.NotFound)
+  })
+
+  rpc(PostService.method.reorderImages, (req) => {
+    calls?.push('ReorderImages')
+    const row = rows.get(req.postSlug)
+    if (!row) throw connectAppError('POST_NOT_FOUND', Code.NotFound)
+    refuseIfPublished(row)
+    const held = row.images.map((image) => image.id)
+    if (
+      req.imageIds.length !== held.length ||
+      new Set(req.imageIds).size !== held.length ||
+      !req.imageIds.every((id) => held.includes(id))
+    )
+      throw connectAppError('POST_PHOTO_ORDER_STALE', Code.FailedPrecondition)
+    row.images = req.imageIds.map((id) => row.images.find((image) => image.id === id)!)
+    return create(ReorderImagesResponseSchema, {})
   })
 
   rpc(PostService.method.deleteImage, (req) => {

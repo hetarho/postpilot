@@ -73,15 +73,14 @@
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
-| T671 | Keep the pick order and reorder photos in ① | POST | T670 | doing@261011 |
 
 ## next
-- implement-task T671 (in progress).
 - Review the 17 unadopted choices in review/structure-261008; all ten clear refactor tasks T654–T663 are complete.
 - T636–T646 standalone writing/origin tasks are complete on main; unrelated blocked qualifications remain separate.
 - Editorial follow-up: doc-review ARCH; preserve independent review and open SSOT questions.
 
 ## log
+- 261011 T671 done on main: pick-order confirms; ① strip moves a photo by drag or 옮기기 → 여기로 / 맨 뒤로.
 - 261011 T670 done on main: images.position, confirm append, ReorderImages with POST_PHOTO_ORDER_STALE.
 - 261011 create-task POST r39: folded into todo T671 (base POST@39).
 - 261011 update-ssot POST r39 done: POST-116✎ 옮기기 picks a photo up and 여기로 / 맨 뒤로 put it down at every width; blast radius T671 (todo, updated).
@@ -101,4 +100,3 @@
 - 261011 create-task THEME r33: T669 (measured panel flips only when its content does not fit below).
 - 261011 create-task THEME start.
 - 261011 update-ssot THEME r33 done: THEME-29✎ Listbox flips only when the room below cannot hold the list · THEME-30✎ shared placement rule for measured panels; no doing task in its blast radius; next create-task THEME.
-- 261011 update-ssot THEME start: an anchored panel (Listbox, Toggletip) flips above only when the room below cannot hold its content and the room above is larger; code already landed in c1774853.

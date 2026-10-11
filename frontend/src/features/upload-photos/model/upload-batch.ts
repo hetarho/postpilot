@@ -117,6 +117,8 @@ interface Batch {
   awaitingConfirm: Map<string, string>
   /** Item ids waiting for a conversion slot, in order. */
   convertQueue: string[]
+  /** Photos whose PUT landed, each waiting for its turn to confirm (POST-116). */
+  confirmWaiters: Set<() => void>
   converting: number
   listeners: Set<() => void>
   deps: UploadBatchDeps
@@ -142,6 +144,7 @@ function setItems(
 ): void {
   batch.state = { items, completed }
   publish(batch)
+  for (const check of [...batch.confirmWaiters]) check()
 }
 
 function patch(batch: Batch, id: string, changes: Partial<UploadItem>): void {
@@ -162,6 +165,32 @@ function isActive(item: UploadItem): boolean {
 /** Drops a batch nobody is watching and that has nothing to show or do. */
 function collect(batch: Batch): void {
   if (batch.state.items.length === 0 && batch.listeners.size === 0) batches.delete(batch.slug)
+}
+
+/** Whether every photo picked before `id` has left the batch confirmed or stopped for good
+ *  (skipped or failed). Items sit in pick order, a later pick after an earlier one. */
+function isConfirmTurn(batch: Batch, id: string): boolean {
+  for (const item of batch.state.items) {
+    if (item.id === id) return true
+    if (item.attachment === 'photo' && isActive(item)) return false
+  }
+  return true
+}
+
+/** Resolves when `id` may confirm: the server appends each confirmed photo to the post's order,
+ *  so photos confirm in the order they were picked while conversions and PUTs stay parallel
+ *  (POST-116). Without it the post would hold them in whichever order their uploads finished.
+ *  A failed photo releases the ones after it, and a later retry confirms at the end. */
+function confirmTurn(batch: Batch, id: string): Promise<void> {
+  if (isConfirmTurn(batch, id)) return Promise.resolve()
+  return new Promise((resolve) => {
+    const check = () => {
+      if (!batch.discarded && !isConfirmTurn(batch, id)) return
+      batch.confirmWaiters.delete(check)
+      resolve()
+    }
+    batch.confirmWaiters.add(check)
+  })
 }
 
 function pumpConversions(batch: Batch): void {
@@ -277,6 +306,11 @@ async function upload(batch: Batch, id: string): Promise<void> {
       if (batch.discarded) return
       uploadId = presigned.uploadId
       batch.awaitingConfirm.set(id, uploadId)
+    }
+    // Videos are not reordered, so a clip neither waits nor holds a photo back.
+    if (!isVideo) {
+      await confirmTurn(batch, id)
+      if (batch.discarded) return
     }
     patch(batch, id, { status: 'confirming', failure: undefined, appFailure: undefined })
     const confirmed = await batch.deps.pipeline.confirm(
@@ -456,6 +490,7 @@ function batchFor(slug: string): Batch {
       metadata: new Map(),
       awaitingConfirm: new Map(),
       convertQueue: [],
+      confirmWaiters: new Set(),
       converting: 0,
       listeners: new Set(),
       deps: {
@@ -499,6 +534,7 @@ export function discardUploadBatches(): void {
     batch.converted.clear()
     batch.metadata.clear()
     batch.awaitingConfirm.clear()
+    // Waiters wake on the empty list below, see the discard, and return.
     // An editor still mounted for a render or two must not keep showing the dropped items.
     setItems(batch, [], 0)
   }

@@ -186,6 +186,67 @@ describe('an upload batch', () => {
   })
 
   // A8: a failed PUT is retryable, and the retry starts over at CreateUpload.
+  // POST-116: the server appends each confirmed photo to the post's order, so the confirm is
+  // where the pick order is kept — conversions and PUTs still run side by side.
+  it('confirms photos in the order they were picked, whatever order they finish converting in', async () => {
+    const pipeline = fakePipeline()
+    let releaseFirst!: () => void
+    const firstConverted = new Promise<void>((resolve) => (releaseFirst = resolve))
+    const convert = pipeline.convert
+    pipeline.convert = vi.fn(async (picked: File) => {
+      if (picked.name === 'first.jpg') await firstConverted
+      return convert(picked)
+    })
+    const onConfirmed = vi.fn()
+    const batch = uploadBatch(slug, { pipeline, onConfirmed })
+
+    batch.add([file('first.jpg'), file('second.jpg')], [])
+
+    // The second photo is converted and PUT, and then waits for the first.
+    await vi.waitFor(() => expect(pipeline.put).toHaveBeenCalledTimes(1))
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(pipeline.confirm).not.toHaveBeenCalled()
+
+    releaseFirst()
+
+    await vi.waitFor(() => expect(onConfirmed).toHaveBeenCalledTimes(2))
+    const uploadIdOf = new Map(
+      vi
+        .mocked(pipeline.createUpload)
+        .mock.calls.map(([, filename], at) => [`upload-${at + 1}`, filename]),
+    )
+    expect(
+      vi.mocked(pipeline.confirm).mock.calls.map(([uploadId]) => uploadIdOf.get(uploadId)),
+    ).toEqual(['first.jpg', 'second.jpg'])
+  })
+
+  it('lets a photo that failed for good release the ones picked after it', async () => {
+    const pipeline = fakePipeline()
+    let releaseFirst!: () => void
+    const firstConverted = new Promise<void>((resolve) => (releaseFirst = resolve))
+    const convert = pipeline.convert
+    pipeline.convert = vi.fn(async (picked: File) => {
+      if (picked.name === 'first.jpg') await firstConverted
+      return convert(picked)
+    })
+    // The first photo's PUT is the second one made, since the first converts last.
+    let puts = 0
+    pipeline.put = vi.fn(async () => {
+      puts += 1
+      if (puts === 2) throw new TypeError('network')
+    })
+    const onConfirmed = vi.fn()
+    const batch = uploadBatch(slug, { pipeline, onConfirmed })
+
+    batch.add([file('first.jpg'), file('second.jpg')], [])
+    await vi.waitFor(() => expect(pipeline.put).toHaveBeenCalledTimes(1))
+    releaseFirst()
+
+    await vi.waitFor(() => expect(onConfirmed).toHaveBeenCalledTimes(1))
+    expect(statuses(peekUploadState(slug).items)).toEqual(['failed'])
+    expect(peekUploadState(slug).items[0].name).toBe('first.jpg')
+  })
+
   it('marks a failed PUT as failed, leaves the others alone, and retries from CreateUpload', async () => {
     const pipeline = fakePipeline({ failPuts: 1 })
     const onConfirmed = vi.fn()

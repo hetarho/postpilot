@@ -7,6 +7,7 @@ import {
   SkippedList,
   UploadProgress,
   useDeletePhoto,
+  useReorderPhotos,
   useRotatePhoto,
   useUploadPhotos,
 } from '@/features/upload-photos'
@@ -40,6 +41,7 @@ export function EditorPhotos({ post, ensureSlug }: EditorPhotosProps) {
     failure: deleteFailure,
   } = useDeletePhoto(slug)
   const { rotatePhoto, rotatingId, failure: rotateFailure } = useRotatePhoto(slug)
+  const { movePhoto, failure: moveFailure } = useReorderPhotos(slug, images)
   // The large view walks the strip's order — photos, then clips — over the ones with a picture.
   const attachments = useMemo(
     () => postAttachments({ images: post?.images ?? [], videos: post?.videos ?? [] }),
@@ -80,6 +82,11 @@ export function EditorPhotos({ post, ensureSlug }: EditorPhotosProps) {
             <AppFailureMessage failure={rotateFailure} />
           </Notice>
         )}
+        {moveFailure && (
+          <Notice tone="danger" role="alert">
+            <AppFailureMessage failure={moveFailure} />
+          </Notice>
+        )}
         <PhotoStrip
           images={images}
           videos={videos}
@@ -95,6 +102,7 @@ export function EditorPhotos({ post, ensureSlug }: EditorPhotosProps) {
           onDismiss={upload.dismiss}
           readOnly={published}
           onView={setViewing}
+          onMove={movePhoto}
         />
         <SkippedList items={upload.items} onDismiss={upload.dismiss} />
         <AttachmentViewer

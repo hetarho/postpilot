@@ -1,10 +1,17 @@
-import { useCallback, useState, type ReactNode } from 'react'
+import { useCallback, useState, type DragEvent, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { RotateCw, X } from 'lucide-react'
+import { ArrowLeftRight, RotateCw, X } from 'lucide-react'
 import { type PostImage, Thumbnail } from '@/entities/image'
 import { type PostVideo, VideoTile } from '@/entities/video'
 import type { AppFailure } from '@/shared/api'
-import { AppFailureMessage, Button, Dialog, Notice, Typography } from '@/shared/ui'
+import {
+  AppFailureMessage,
+  Button,
+  Dialog,
+  Notice,
+  Typography,
+  typographyStyles,
+} from '@/shared/ui'
 import type { UploadItem } from '../model/upload-batch'
 
 interface PhotoStripProps {
@@ -29,7 +36,12 @@ interface PhotoStripProps {
   readOnly?: boolean
   /** Opens a saved attachment large (POST-100). A tile still on its way never offers it. */
   onView?: (filename: string) => void
+  /** Puts the photo at `from` at `to` in the post's photo order (POST-116). */
+  onMove?: (from: number, to: number) => void
 }
+
+/** The drag payload's type: a photo of this strip, never an arbitrary drop from outside the page. */
+const STRIP_PHOTO_TYPE = 'application/x-postpilot-photo'
 
 /** Saved photos first, then the ones still on their way. */
 export function PhotoStrip({
@@ -47,6 +59,7 @@ export function PhotoStrip({
   onDismiss,
   readOnly = false,
   onView,
+  onMove,
 }: PhotoStripProps) {
   const { t } = useTranslation(['posts', 'common'])
   // The photo the confirm sheet is asking about, and whether this sheet has already fired its
@@ -58,6 +71,20 @@ export function PhotoStrip({
   // Stable, because `Dialog` re-runs its focus effect whenever this identity changes and the
   // strip re-renders on every tick of a batch that is still uploading behind the sheet.
   const closeConfirm = useCallback(() => setConfirmingId(undefined), [])
+  // The photo picked up to move: every other photo then offers itself as the place to put it,
+  // with 맨 뒤로 after the last. Picking up and putting down is the phone's way — HTML5 drag events
+  // do not fire on touch — and it carries a photo across the whole strip in two presses, which is
+  // what the photo remembered and shot late needs (POST-116).
+  const [movingId, setMovingId] = useState<string>()
+  const movable = !readOnly && onMove !== undefined && images.length > 1
+  const movingIndex = movable ? images.findIndex((image) => image.id === movingId) : -1
+  const moving = movingIndex >= 0
+  const moveTo = (to: number) => {
+    if (moving && to !== movingIndex) onMove?.(movingIndex, to)
+    setMovingId(undefined)
+  }
+  const acceptsDrop = (event: DragEvent) =>
+    movable && event.dataTransfer.types.includes(STRIP_PHOTO_TYPE)
 
   const inFlight = items.filter((item) => item.status !== 'skipped')
   const failed = inFlight.filter((item) => item.status === 'failed')
@@ -107,9 +134,31 @@ export function PhotoStrip({
       <ul
         className="-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-2 overflow-x-auto overscroll-x-contain px-4 pb-2 sm:mx-0 sm:scroll-px-0 sm:px-0"
         aria-label={t('upload.photosAria', { ns: 'posts' })}
+        onKeyDown={(event) => {
+          if (moving && event.key === 'Escape') setMovingId(undefined)
+        }}
       >
-        {images.map((image) => (
-          <li key={image.id} className="snap-start">
+        {images.map((image, index) => (
+          <li
+            key={image.id}
+            className="snap-start"
+            draggable={movable}
+            onDragStart={(event) => {
+              event.dataTransfer.setData(STRIP_PHOTO_TYPE, image.id)
+              event.dataTransfer.effectAllowed = 'move'
+            }}
+            onDragOver={(event) => {
+              if (acceptsDrop(event)) event.preventDefault()
+            }}
+            onDrop={(event) => {
+              if (!acceptsDrop(event)) return
+              event.preventDefault()
+              const from = images.findIndex(
+                (each) => each.id === event.dataTransfer.getData(STRIP_PHOTO_TYPE),
+              )
+              if (from >= 0 && from !== index) onMove?.(from, index)
+            }}
+          >
             <Thumbnail
               src={image.viewUrl}
               alt={image.filename}
@@ -119,7 +168,38 @@ export function PhotoStrip({
               dimmed={deletingId === image.id}
             >
               {onView && image.viewUrl && <ViewTarget filename={image.filename} onView={onView} />}
-              {!readOnly && onRotate && (
+              {moving && index !== movingIndex && (
+                // Before this photo: moving rightwards, the photo lands just left of it.
+                <MoveTarget
+                  label={t('upload.moveHere', { ns: 'posts' })}
+                  ariaLabel={t('upload.moveHereAria', { ns: 'posts', filename: image.filename })}
+                  onPress={() => moveTo(index > movingIndex ? index - 1 : index)}
+                />
+              )}
+              {movable && (!moving || index === movingIndex) && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setMovingId(moving ? undefined : image.id)}
+                  aria-pressed={index === movingIndex}
+                  disabled={deletingId === image.id}
+                  aria-label={t(
+                    index === movingIndex ? 'upload.moveCancelAria' : 'upload.moveAria',
+                    {
+                      ns: 'posts',
+                      filename: image.filename,
+                    },
+                  )}
+                  className="bg-media-scrim-bg text-media-scrim-fg hover:bg-media-scrim-bg active:bg-media-scrim-bg absolute bottom-1 left-1"
+                >
+                  {index === movingIndex ? (
+                    <X aria-hidden="true" className="size-5" />
+                  ) : (
+                    <ArrowLeftRight aria-hidden="true" className="size-5" />
+                  )}
+                </Button>
+              )}
+              {!readOnly && !moving && onRotate && (
                 // The opposite corner from the delete, so neither press lands on the other.
                 <Button
                   variant="ghost"
@@ -132,7 +212,7 @@ export function PhotoStrip({
                   <RotateCw aria-hidden="true" className="size-5" />
                 </Button>
               )}
-              {!readOnly && (
+              {!readOnly && !moving && (
                 <Button
                   variant="danger"
                   size="icon"
@@ -150,6 +230,16 @@ export function PhotoStrip({
             </Thumbnail>
           </li>
         ))}
+        {moving && movingIndex !== images.length - 1 && (
+          <li className="snap-start">
+            <div className="bg-surface-recessed relative size-32 shrink-0 overflow-hidden rounded-lg">
+              <MoveTarget
+                label={t('upload.moveLast', { ns: 'posts' })}
+                onPress={() => moveTo(images.length - 1)}
+              />
+            </div>
+          </li>
+        )}
         {videos.map((video) => (
           <li key={video.id} className="snap-start">
             <VideoTile
@@ -277,6 +367,32 @@ function ViewTarget({
       onClick={() => onView(filename)}
       className="absolute inset-0 cursor-zoom-in rounded-lg focus-visible:-outline-offset-2"
     />
+  )
+}
+
+/** A photo tile's whole face as the place a picked-up photo goes. */
+function MoveTarget({
+  label,
+  ariaLabel,
+  onPress,
+}: {
+  label: string
+  ariaLabel?: string
+  onPress: () => void
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={ariaLabel}
+      onClick={onPress}
+      className={typographyStyles({
+        variant: 'label',
+        className:
+          'bg-media-scrim-bg/70 text-media-scrim-fg absolute inset-0 flex items-center justify-center rounded-lg focus-visible:-outline-offset-2',
+      })}
+    >
+      {label}
+    </button>
   )
 }
 

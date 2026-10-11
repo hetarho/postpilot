@@ -22,6 +22,8 @@ export function usePostImagesCache(): {
   remove: (slug: string, imageId: string) => void
   /** Puts a photo back as the server now answers it — a turn (POST-107) — keeping its place. */
   replace: (slug: string, image: PostImage) => void
+  /** Puts the photos in the given order (POST-116), any photo the list does not name kept after. */
+  reorder: (slug: string, imageIds: readonly string[]) => void
   appendVideo: (slug: string, video: PostVideo) => void
   removeVideo: (slug: string, videoId: string) => void
 } {
@@ -55,6 +57,13 @@ export function usePostImagesCache(): {
         update(slug, (post) => {
           post.images = post.images.map((existing) =>
             existing.id === image.id ? toProtoImage(image) : existing,
+          )
+        }),
+      reorder: (slug: string, imageIds: readonly string[]) =>
+        update(slug, (post) => {
+          const at = new Map(imageIds.map((id, index) => [id, index]))
+          post.images = [...post.images].sort(
+            (a, b) => (at.get(a.id) ?? imageIds.length) - (at.get(b.id) ?? imageIds.length),
           )
         }),
       // The clip half, patched for exactly the same reason: a refetch would re-mint a view
