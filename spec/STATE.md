@@ -36,7 +36,7 @@
 | GUIDE | 19 | 19 | - | 0 |
 | EXPORT | 11 | 11 | - | 0 |
 | LANG | 9 | 9 | - | 0 |
-| THEME | 32 | 32 | - | 1 |
+| THEME | 33 | 32 | THEME-29✎ THEME-30✎ | 1 |
 | MKT | 10 | 10 | - | 0 |
 | VIDEO | 7 | 7 | - | 0 |
 | CLIP | 59 | 59 | - | 2 |
@@ -80,6 +80,8 @@
 - Editorial follow-up: doc-review ARCH; preserve independent review and open SSOT questions.
 
 ## log
+- 261011 update-ssot THEME r33 done: THEME-29✎ Listbox flips only when the room below cannot hold the list · THEME-30✎ shared placement rule for measured panels; no doing task in its blast radius; next create-task THEME.
+- 261011 update-ssot THEME start: an anchored panel (Listbox, Toggletip) flips above only when the room below cannot hold its content and the room above is larger; code already landed in c1774853.
 - 261009 T668 done on main: photo_groups 기본 지침 groups only under a caption naming one subject; a 와/및 caption joining different photos splits them.
 - 261009 T668 start on main atca11432e: photo_groups 기본 지침 groups only under a one-subject caption.
 - 261009 create-task GUIDE r19: T668 (photo_groups 기본 지침 → group only under a one-subject caption).
