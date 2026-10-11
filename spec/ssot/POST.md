@@ -224,4 +224,4 @@
 - ops: the production bucket needs a CORS rule allowing PUT/GET/HEAD from the FE origin (DEPLOY.md); MinIO in `docker-compose.yml` serves local development
 
 ## chg
-- r38 261011 POST-116+ the owner's photo order: pick order kept through parallel uploads, reorder in ①'s strip (drag / one-action move control), read by generation · POST-74✎ locked writes: photo and video upload or deletion→photo and video upload or deletion, photo reorder
+-

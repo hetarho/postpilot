@@ -153,4 +153,4 @@
 - contract: `proto/postpilot/v1/guideline.proto`
 
 ## chg
-- r20 261011 GUIDE-41✎ 알려준 사건 순서대로: otherwise propose subject arrangement→arrange along the owner's photo order, a late photo of an earlier subject joining that subject · 사진은 한 장씩: consecutive photos→photos placed together, wherever they sit in the photo order
+-
