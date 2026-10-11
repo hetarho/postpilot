@@ -1,5 +1,5 @@
 # TMPL post templates (템플릿)
-> r25 | Owner-scoped post forms with explicit literal, instruction and supplied-fact boundaries and maximum tag seeds.
+> r26 | Owner-scoped post forms with explicit literal, instruction and supplied-fact boundaries and maximum tag seeds.
 
 ## decisions
 - TMPL-1 [o] a template decides the form of a post; three authored axes stand beside each other and each owns one question — the voice decides how sentences sound (VOICE), the template what form the post has and what each of its places is about, a guideline what kind of writing is wanted (GUIDE); a post combines at most one voice and at most one template ← prose about shape must be re-derived by the model every run, cannot require a literal line, and cannot bind output to the attachments
@@ -140,7 +140,7 @@
 - TMPL-46 [o] a typed value is authored fact, never an instruction: it is fenced as data inside the rendered body and cannot override the template's own instruction or the target language (→TMPL-13), and it joins the material the writer is allowed to state facts from (→GEN-16); nothing about a value is learned, suggested or model-written and the observe stage never receives one (TMPL-16 stands)
 - TMPL-50 [o] a template carries an optional title area written in the same grammar as the body, admitting literal text, `<write>` and `<ask>` only, parsed and refused by the same rules (→TMPL-7 →TMPL-20) ← a photo position or a repeat has no meaning in a title, and the three that remain already express every title form asked for
 - TMPL-51 [o] the title area freezes at enqueue with the body and travels the revise path the same way, where it binds only a request that asks to change the title and every other revision keeps the title as it stands; it adds no picker, no second entity and no second freeze ← one template is then the complete design of one post, and a title the owner edited away from the form stays theirs until they ask
-- TMPL-52 [o] an empty title area and a post with no template leave the title to the model under the title 기본 지침 while it is on (→GEN-49); an authored form outranks that 기본 지침, which then binds only what the model writes inside its `<write>` ← a title form is opted into, not a field every template must answer
+- TMPL-52 [o] an empty title area and a post with no template leave the title to the model under the title 기본 지침 while it is on (→GEN-49); an authored form outranks that 기본 지침, which then binds only what the model writes in the form's write and answer_write roles (→TMPL-70) ← a title form is opted into, not a field every template must answer
 - TMPL-53 [x] a separate 제목 템플릿 entity chosen beside the post template
 - TMPL-54 [x] an account-level default title form for template-less posts
 - TMPL-55 [o] a title-area `<ask>` shares one label namespace with the body's and its field appears among the same data fields on ①, title labels first (→TMPL-43 →POST-62) ← an author answering questions about one post should meet one list

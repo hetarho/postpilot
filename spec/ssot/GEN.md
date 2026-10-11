@@ -1,5 +1,5 @@
 # GEN generation, revision, job queue
-> r27 | Semantic-origin-aware writing and revision with grounded tags up to an upper bound, explicit evidence contracts and durable bounded jobs.
+> r28 | Semantic-origin-aware writing and revision with grounded tags up to an upper bound, explicit evidence contracts and durable bounded jobs.
 
 ## decisions
 - GEN-1 [o] a generated post is a `PostContent` block array, never HTML (I2); the flat `Block` types `TEXT` `HEADING` `IMAGE` `GALLERY` `VIDEO` `QUOTE` `LIST` are the model-facing protojson contract (`GALLERY` is a photo group carrying its photos' filenames in order, a layout, one `alt` and one `caption` →GEN-77; `VIDEO` carries the IMAGE fields →VIDEO-2)
@@ -109,9 +109,11 @@
   - revision preserves unrequested tags under GEN-40 rather than trimming them for a newer bound
   - legacy queued payloads without the member decode as `POST_TAG_COUNT_DEFAULT` ← a usable paid draft must survive a shorter grounded tag list
 
-- GEN-49 [o] the title 기본 지침 recommends avoiding repeated title forms that vary only one detail and a keyword repeated twice or more within one title.
+- GEN-49 [o] the title 기본 지침 asks for one line that sums up the post's core experience or impression in implicative wording rather than listing facts, carrying only the names, menu items or area the title needs ← a title stringing the place, menu and area together reads as a label, not as a post anyone wants to open
+  - it invents no concrete fact the material lacks — a menu item, a price, an event — while compressing or rewording the owner's supplied experience and impressions is wording, not a new fact
+  - it recommends avoiding repeated title forms that vary only one detail and a keyword repeated twice or more within one title
   - these are product recommendations, not a published Naver numeric penalty threshold or a promise of exposure
-  - an authored title form outranks the recommendation, which binds only newly written `<write>` content (→TMPL-52)
+  - an authored title form outranks the recommendation, which binds only what the model writes in the form's own places — the write and answer_write roles (→TMPL-52 →TMPL-70)
 
 - GEN-50 [o] the tag rule is a 기본 지침 of the 지침 kind (→GUIDE-41): select specific tags matching the post and supported by its material, in descending relevance
   - prioritize identifying business, place, brand and product names, then natural combinations such as area + menu, business category or activity, and entity + core topic; use the area's name from a stated station name when it names the same area

@@ -30,9 +30,9 @@
 | QUOTA | 38 | 38 | - | 0 |
 | POST | 38 | 38 | - | 0 |
 | VOICE | 16 | 16 | - | 0 |
-| GEN | 27 | 27 | - | 0 |
+| GEN | 28 | 28 | - | 0 |
 | MODEL | 36 | 36 | - | 0 |
-| TMPL | 25 | 25 | - | 0 |
+| TMPL | 26 | 26 | - | 0 |
 | GUIDE | 20 | 20 | - | 0 |
 | EXPORT | 11 | 11 | - | 0 |
 | LANG | 9 | 9 | - | 0 |
@@ -75,14 +75,18 @@
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
 | T670 | Store the owner's photo order and reorder it | POST GEN | - | doing@261011 |
 | T671 | Keep the pick order and reorder photos in ① | POST | T670 | todo |
+| T673 | The title sums up the post in implicative wording | GEN TMPL | - | todo |
 
 ## next
-- implement-task T670, then T671 (dep T670).
+- implement-task T670, then T671 (dep T670); T673.
 - Review the 17 unadopted choices in review/structure-261008; all ten clear refactor tasks T654–T663 are complete.
 - T636–T646 standalone writing/origin tasks are complete on main; unrelated blocked qualifications remain separate.
 - Editorial follow-up: doc-review ARCH; preserve independent review and open SSOT questions.
 
 ## log
+- 261011 create-task GEN r28 TMPL r26: T673 (titles 기본 지침 sums up in implicative wording).
+- 261011 update-ssot GEN r28 TMPL r26 done: GEN-49✎ the title 기본 지침 sums up the core experience in implicative wording instead of listing facts, inventing no concrete fact · TMPL-52✎ it binds the form's write/answer_write roles; no doing task in its blast radius (T670 touches post storage only); next create-task GEN TMPL.
+- 261011 update-ssot GEN TMPL start: titles became flat fact lists; the title 기본 지침 only forbade, and its `<write>` scope no longer matches the typed title roles.
 - 261011 T672 done on main: the prompts read the list as the owner's photo order; order and photo_groups 기본 지침 arrange along it.
 - 261011 T672 start on main at f3000bc6: the prompts read the list as the owner's photo order.
 - 261011 T670 start on main at f3000bc6 (delegated worker in the main tree): images.position and ReorderImages.
@@ -100,6 +104,3 @@
 - 261009 create-task GUIDE r19: T668 (photo_groups 기본 지침 → group only under a one-subject caption).
 - 261009 update-ssot GUIDE r19 done: GUIDE-41✎ 사진은 한 장씩 groups only one composition with changing companions or one subject from several angles, under a one-subject caption; no doing task in its blast radius; next create-task GUIDE.
 - 261009 update-ssot GUIDE start: today's posts still grouped two subjects under one 와/및 caption (입구와 매장, 리플릿과 테이블 세팅) at template 2장 묶음 places; tighten the grouping condition.
-- 261009 T667 done on main: history rows drop the 내보내기 link and the export intent; 내보내기 가능 stays.
-- 261009 T667 start on main ate982a61a: history rows drop the 내보내기 link and the export intent.
-- 261009 T666 done on main: ① strip photos and clips open the shared large view (entities/post AttachmentViewer).
