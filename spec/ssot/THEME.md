@@ -299,4 +299,4 @@
 - gates: `pnpm lint:style` and `pnpm lint:style:probe` (→ARCH-25); review at360/390/430px,320px reflow,1440x900/1920x1080 desktop,200% zoom, contextual return, keyboard and screen reader, both themes
 
 ## chg
-- r33 261011 THEME-29✎ Listbox flips above when the room above is larger→only when the room below cannot hold the list and the room above is larger · THEME-30✎ no shared placement rule→a measured panel (Listbox, Toggletip) flips above only when its content does not fit below and the room above is larger
+-

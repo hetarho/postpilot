@@ -36,7 +36,7 @@
 | GUIDE | 19 | 19 | - | 0 |
 | EXPORT | 11 | 11 | - | 0 |
 | LANG | 9 | 9 | - | 0 |
-| THEME | 33 | 32 | THEME-29✎ THEME-30✎ | 1 |
+| THEME | 33 | 33 | - | 1 |
 | MKT | 10 | 10 | - | 0 |
 | VIDEO | 7 | 7 | - | 0 |
 | CLIP | 59 | 59 | - | 2 |
@@ -80,6 +80,10 @@
 - Editorial follow-up: doc-review ARCH; preserve independent review and open SSOT questions.
 
 ## log
+- 261011 T669 done on main: a measured panel (Listbox, Toggletip) flips above only when its content does not fit below; code landed in c1774853, recorded and re-checked at 4dc93108.
+- 261011 T669 start on main at 4dc93108: record the already-landed c1774853 against THEME r33.
+- 261011 create-task THEME r33: T669 (measured panel flips only when its content does not fit below).
+- 261011 create-task THEME start.
 - 261011 update-ssot THEME r33 done: THEME-29✎ Listbox flips only when the room below cannot hold the list · THEME-30✎ shared placement rule for measured panels; no doing task in its blast radius; next create-task THEME.
 - 261011 update-ssot THEME start: an anchored panel (Listbox, Toggletip) flips above only when the room below cannot hold its content and the room above is larger; code already landed in c1774853.
 - 261009 T668 done on main: photo_groups 기본 지침 groups only under a caption naming one subject; a 와/및 caption joining different photos splits them.
