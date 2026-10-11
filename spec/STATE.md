@@ -28,7 +28,7 @@
 | ARCH | 20 | 20 | - | 0 |
 | AUTH | 15 | 15 | - | 0 |
 | QUOTA | 38 | 38 | - | 0 |
-| POST | 38 | 38 | - | 0 |
+| POST | 39 | 39 | - | 0 |
 | VOICE | 16 | 16 | - | 0 |
 | GEN | 28 | 28 | - | 0 |
 | MODEL | 36 | 36 | - | 0 |
@@ -83,6 +83,8 @@
 - Editorial follow-up: doc-review ARCH; preserve independent review and open SSOT questions.
 
 ## log
+- 261011 create-task POST r39: folded into todo T671 (base POST@39).
+- 261011 update-ssot POST r39 done: POST-116✎ 옮기기 picks a photo up and 여기로 / 맨 뒤로 put it down at every width; blast radius T671 (todo, updated).
 - 261011 T673 done on main: the titles 기본 지침 sums up the core experience in implicative wording and binds the form's write roles.
 - 261011 T673 start on main at 6e3bb7c5: titles 기본 지침 rewrite.
 - 261011 create-task GEN r28 TMPL r26: T673 (titles 기본 지침 sums up in implicative wording).
@@ -101,5 +103,3 @@
 - 261011 update-ssot THEME r33 done: THEME-29✎ Listbox flips only when the room below cannot hold the list · THEME-30✎ shared placement rule for measured panels; no doing task in its blast radius; next create-task THEME.
 - 261011 update-ssot THEME start: an anchored panel (Listbox, Toggletip) flips above only when the room below cannot hold its content and the room above is larger; code already landed in c1774853.
 - 261009 T668 done on main: photo_groups 기본 지침 groups only under a caption naming one subject; a 와/및 caption joining different photos splits them.
-- 261009 T668 start on main atca11432e: photo_groups 기본 지침 groups only under a one-subject caption.
-- 261009 create-task GUIDE r19: T668 (photo_groups 기본 지침 → group only under a one-subject caption).

@@ -1,5 +1,5 @@
 # POST posts, drafts, photos
-> r38 | Owner-controlled canonical writing with phrase-level semantic-origin review, explicit lifecycle and private effective-request inspection.
+> r39 | Owner-controlled canonical writing with phrase-level semantic-origin review, explicit lifecycle and private effective-request inspection.
 
 ## decisions
 - POST-1 [o] a post is identified by a slug minted once on the first save and never changed ← it is the primary key and part of every photo object key, so renaming would orphan the photos
@@ -175,7 +175,7 @@
   - the Tistory, site and Markdown exports carry no rotation ← they name the author's own original file
 - POST-116 [o] a post's photos stand in one owner order, the order every surface lists them in — ①'s strip and its large view (→POST-100), the contact sheet, the storyline space's `빠진 사진` — and the order generation receives them in (→GEN-7 →GEN-82) ← the photo order is usually the order of the visit, and it is the one sequence the writer is given
   - newly picked photos join after the post's photos in the order they were picked, whatever order their conversion and upload finish in ← uploads run two at a time and confirm as each finishes, so confirm time scrambles the pick
-  - ①'s strip reorders photos: drag under a fine pointer, and on a phone a move control that places the photo before any other photo, or last, in one action ← HTML5 drag events do not fire on touch, and the photo remembered and shot late usually sits far from where it belongs
+  - ①'s strip reorders photos: drag under a fine pointer, and at every width a photo's 옮기기 picks it up, after which every other photo offers 여기로 (before it) and 맨 뒤로 follows the last, so a photo crosses the whole strip in two presses ← HTML5 drag events do not fire on touch, and the photo remembered and shot late usually sits far from where it belongs
   - videos keep following the photos in the order they were added, and are not reordered
   - a reorder saves at once as a save that changes no status, content revision or baseline, and advances the input revision (→POST-111); the published lock covers it (→POST-74)
   - a reorder never rewrites an existing storyline or post content (→GEN-71); the next storyline or direct write reads the new order
