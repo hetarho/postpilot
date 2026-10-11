@@ -28,12 +28,12 @@
 | ARCH | 20 | 20 | - | 0 |
 | AUTH | 15 | 15 | - | 0 |
 | QUOTA | 38 | 38 | - | 0 |
-| POST | 37 | 37 | - | 0 |
+| POST | 38 | 37 | POST-116+ POST-74✎ | 0 |
 | VOICE | 16 | 16 | - | 0 |
-| GEN | 26 | 26 | - | 0 |
+| GEN | 27 | 26 | GEN-7✎ GEN-77✎ GEN-82✎ | 0 |
 | MODEL | 36 | 36 | - | 0 |
 | TMPL | 25 | 25 | - | 0 |
-| GUIDE | 19 | 19 | - | 0 |
+| GUIDE | 20 | 19 | GUIDE-41✎ | 0 |
 | EXPORT | 11 | 11 | - | 0 |
 | LANG | 9 | 9 | - | 0 |
 | THEME | 33 | 33 | - | 1 |
@@ -80,6 +80,8 @@
 - Editorial follow-up: doc-review ARCH; preserve independent review and open SSOT questions.
 
 ## log
+- 261011 update-ssot POST r38 GEN r27 GUIDE r20 done: POST-116+ owner photo order (pick order, ① reorder) · POST-74✎ · GEN-7✎ GEN-77✎ GEN-82✎ the writer reads the list as the owner's photo order · GUIDE-41✎ arrange along it, a late photo joins its subject; no doing task in the blast radius; next create-task POST GEN GUIDE.
+- 261011 update-ssot POST GEN GUIDE start: the owner's photo order — kept in pick order, reorderable in ①, given to the writer as usually the visit's order; a late photo of an earlier subject joins that subject.
 - 261011 T669 done on main: a measured panel (Listbox, Toggletip) flips above only when its content does not fit below; code landed in c1774853, recorded and re-checked at 4dc93108.
 - 261011 T669 start on main at 4dc93108: record the already-landed c1774853 against THEME r33.
 - 261011 create-task THEME r33: T669 (measured panel flips only when its content does not fit below).
@@ -98,11 +100,3 @@
 - 261009 T665 done on main: ① and /posts/new show the photo slot above the 가제.
 - 261009 out of scope: on a 390px phone the editor top row reads 글쓰기글 생성 — the location label and the step bar touch with no gap.
 - 261009 T665 start on main ate016631d: ① and /posts/new show the photo slot above the 가제.
-- 261009 create-task POST r37: T665 (① photos first), T666 (strip photos open large, dep T665), T667 (history drops the export link).
-- 261009 update-ssot POST r37 done: POST-54✎ ① photos first; POST-100✎ ① strip tiles open the large view; POST-64✎ history drops the separate 내보내기 action; no doing task in its blast radius; next create-task POST.
-- 261009 update-ssot POST start: ① photos first; ① strip tiles open the large view; history drops the separate 내보내기 action.
-- 261008 T664 done on main: photo_groups 기본 지침 → 사진은 한 장씩; single IMAGE photos by default, a GALLERY only where one caption describes every photo.
-- 261008 T664 start on main atf439801d: photo_groups 기본 지침 becomes 사진은 한 장씩 with the one-caption grouping condition.
-- 261008 create-task GUIDE r18: T664 (photo_groups 기본 지침 → single photos by default).
-- 261008 update-ssot GUIDE r18 done: GUIDE-41✎ photo_groups 기본 지침 → 사진은 한 장씩; no doing task in its blast radius; next create-task GUIDE.
-- 261008 update-ssot GUIDE start: photo_groups 기본 지침 flips to single photos by default; a group only where one caption fully describes every photo.

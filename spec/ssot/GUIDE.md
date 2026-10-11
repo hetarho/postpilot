@@ -1,5 +1,5 @@
 # GUIDE writing guidelines (작문 지침)
-> r19 | Switchable writing direction with stage-applicable rules, one authoritative tag guideline and stable evidence contracts.
+> r20 | Switchable writing direction with stage-applicable rules, one authoritative tag guideline and stable evidence contracts.
 
 ## decisions
 - GUIDE-1 [o] guidelines own writing direction beside VOICE expression, TMPL form and the stable request contracts (→GEN-14).
@@ -92,10 +92,10 @@
   | 내 감상을 지키고 AI 제안 구분 | →GEN-16 →GEN-83 |
   | 기억을 통한 감상 추가, only in a prompt carrying `[기억]` | →GEN-73 |
   | 메모의 이름으로 | →GEN-44 |
-  | 알려준 사건 순서대로 | follow event order explicitly supplied by the owner inside template places; otherwise propose subject arrangement, never infer chronology from photo order (→GEN-82) |
+  | 알려준 사건 순서대로 | follow event order explicitly supplied by the owner inside template places; otherwise arrange along the owner's photo order, which usually follows the visit, and let a photo of a subject that already stands earlier — one remembered and shot late — join that subject's place instead of opening a new one; the arrangement is never presented as chronology (→GEN-82) ← ignoring the photo order loses the visit's usual sequence and mixes up look-alike moments, while following it blindly strands the late photo |
   | 첫머리에 이유와 기대 | opening with why the owner went or what they expected, when the memo says so |
   | 사진은 이야기의 한 장면 | a photo stands between related sentences, no paragraph opens as a photo description and paragraphs connect without inventing actions or chronology (→GEN-82) |
-  | 사진은 한 장씩 | most photos stand alone, one at a time; consecutive photos stand as one photo group only in two cases — one composition in which only what sits with the subject changes (the same meat once with green onion, once with kimchi), or one subject shot from several angles — and only under a caption naming one subject (다양한 밑반찬과 함께한 고기, 잘 차려진 한 상); a caption that must join different photos' subjects with 와/과 or 및 (가게 입구와 첫 상차림) means each photo stands alone with its own caption, even at a template's suggested group place or inside one storyline paragraph; a group is 콜라주 to see its photos side by side and 슬라이드 to follow them in order (→GEN-77) ← side-by-side photos shrink on a phone screen, and a group has one caption to say what it shows |
+  | 사진은 한 장씩 | most photos stand alone, one at a time; photos placed together stand as one photo group, wherever they sit in the photo order, only in two cases — one composition in which only what sits with the subject changes (the same meat once with green onion, once with kimchi), or one subject shot from several angles — and only under a caption naming one subject (다양한 밑반찬과 함께한 고기, 잘 차려진 한 상); a caption that must join different photos' subjects with 와/과 or 및 (가게 입구와 첫 상차림) means each photo stands alone with its own caption, even at a template's suggested group place or inside one storyline paragraph; a group is 콜라주 to see its photos side by side and 슬라이드 to follow them in order (→GEN-77) ← side-by-side photos shrink on a phone screen, and a group has one caption to say what it shows |
   | 끝에서 한 번 정리 | closing by drawing the day together, a verdict or a will to return only as the owner gave one |
   | 관찰을 나열하지 않기 | →GEN-47 |
   | 제목 규칙 | →GEN-49 |
@@ -153,4 +153,4 @@
 - contract: `proto/postpilot/v1/guideline.proto`
 
 ## chg
-- r19 261009 GUIDE-41✎ 사진은 한 장씩 grouping condition: one caption fully describes every photo (one dish from several angles) → only one composition with changing companions or one subject from several angles, under a caption naming one subject; a 와/및 caption joining different photos' subjects splits them, even at a template's suggested group place or inside one storyline paragraph
+- r20 261011 GUIDE-41✎ 알려준 사건 순서대로: otherwise propose subject arrangement→arrange along the owner's photo order, a late photo of an earlier subject joining that subject · 사진은 한 장씩: consecutive photos→photos placed together, wherever they sit in the photo order

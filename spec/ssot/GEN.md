@@ -1,5 +1,5 @@
 # GEN generation, revision, job queue
-> r26 | Semantic-origin-aware writing and revision with grounded tags up to an upper bound, explicit evidence contracts and durable bounded jobs.
+> r27 | Semantic-origin-aware writing and revision with grounded tags up to an upper bound, explicit evidence contracts and durable bounded jobs.
 
 ## decisions
 - GEN-1 [o] a generated post is a `PostContent` block array, never HTML (I2); the flat `Block` types `TEXT` `HEADING` `IMAGE` `GALLERY` `VIDEO` `QUOTE` `LIST` are the model-facing protojson contract (`GALLERY` is a photo group carrying its photos' filenames in order, a layout, one `alt` and one `caption` →GEN-77; `VIDEO` carries the IMAGE fields →VIDEO-2)
@@ -10,7 +10,7 @@
   - it freezes the required target language, the optional target length, the tag count, the post's optional template brief, the guideline texts (→GEN-15), the stored storyline when the run writes from it (→GEN-70), the ticked quality-rule texts (→GEN-51), whether the write model takes its effort natively (`write_native_effort` →MODEL-46) and — only when the post opted in — the retrieved memory texts into the payload (→MEM-19)
   - it returns only `job_id` — no provider call, no experiment
 - GEN-6 [o] explicit unified writing tests freeze one MODEL-30 factor and exactly2/4/8/16 validated entrants before a durable test/job is admitted; candidate preparation is separate from actual-writing generation. Ordinary editor writing remains a single-writer operation.
-- GEN-7 [o] with photos, observation always precedes writing: photos ordered by `created_at, id`, read from private storage as the already-normalized JPEGs and capped again at `MaxImageBytes` by response length and by the stream, sent in batches of `OBSERVE_BATCH_SIZE` (4); each attached video follows in its own call, delivered by reference (→VIDEO-8 →VIDEO-10); the server decodes no image and reads no video
+- GEN-7 [o] with photos, observation always precedes writing: photos in the owner's photo order (→POST-116), read from private storage as the already-normalized JPEGs and capped again at `MaxImageBytes` by response length and by the stream, sent in batches of `OBSERVE_BATCH_SIZE` (4); each attached video follows in its own call, delivered by reference (→VIDEO-8 →VIDEO-10); the server decodes no image and reads no video
 - GEN-8 [o] a run observes only the photos it was frozen to observe and reuses the rest: a post with photos and at least one reusable stored observation opens the re-observation picker first, a post with nothing reusable starts directly
   - every checkbox starts CLEAR so confirming untouched reuses everything and skips observation ← the common case is a write stage that failed on photos that did not change
   - a photo with nothing to reuse (no entry, or none of scene, mood, visible text, objects, people) is checked, cannot be cleared, and is forced into the selection server-side ← a run must not write from a photo it has never looked at
@@ -150,7 +150,7 @@
   - the cap is three ← a larger collage wraps into rows above one caption, which reads as rows of photos nobody described
   - one orientation: portrait photos group with portrait photos and landscape with landscape, a photo's orientation read from its dimensions on record turned by its rotation (→POST-107), a square photo counting as landscape; the write and revise prompts tell the writer every attached photo's orientation
   - every group carries a non-empty caption
-  - the writer decides, with or without a template, which consecutive photos stand as a group, in what order and in which layout; a template photo place's `count` is a suggestion, not a requirement (→TMPL-38)
+  - the writer decides, with or without a template, which photos it places together stand as a group, wherever they sit in the photo order, in what order and in which layout; a template photo place's `count` is a suggestion, not a requirement (→TMPL-38)
   - static write/revise rules define group shape and evidence contracts; grouping preference remains a 기본 지침, and group/display order never supplies event chronology (→GUIDE-41 →GEN-82)
   - each attached photo still stands once in the post, alone or inside one group, and a video never joins a group
   - a revision forms, splits or regroups photos only as its request asks, like any other change (→GEN-40)
@@ -178,7 +178,8 @@
   - retained meanings keep their original evidence; unprovable historical origins remain unconfirmed (→POST-114)
 
 - GEN-82 [o] photo upload order, stored-array order, filenames and capture order must never create time passage, venue/seat changes or action sequence.
-  - use event chronology only when the owner explicitly supplied it; without it, arrange by subject/content without pretending that arrangement happened in time
+  - use event chronology only when the owner explicitly supplied it; without it, the arrangement may follow the owner's photo order (→POST-116) and the subject/content, never presented as having happened in time
+  - the storyline, write and revise prompts name the attachment list's order as the owner's photo order — the order of the owner's choice or arrangement, usually the order of the visit, never a record of it
   - apply this contract to observation, storyline, writing and revision even with preference guidelines disabled; an AI-added label cannot authorize invented events
   - an actual observed source-time sequence inside video is distinct visual evidence, not photo upload chronology
 
@@ -221,4 +222,4 @@
 - tests that pin it: prompt-assembly snapshots (order, a 말투 없음 prompt carrying no voice bytes, each 기본 지침 present only while switched on, the naturalness 기본 지침 for a Korean target only, 기억을 통한 감상 추가 only in a prompt carrying `[기억]`) · block validator and attachment filter with crafted payloads · `ceil(N/4)` observation calls with a stubbed provider · frozen re-observation set and non-shrinking snapshot · no write transaction across a provider call (handler harness) · guard collisions carry the active id · boot sweep reasons · the direct write answer schema orders `storyline` first and the post stores it
 
 ## chg
--
+- r27 261011 GEN-7✎ photos ordered by created_at, id→in the owner's photo order · GEN-82✎ without supplied chronology arrange by subject/content→the arrangement may follow the owner's photo order and the subject/content; the prompts name the list order as the owner's photo order · GEN-77✎ the writer groups consecutive photos→photos it places together, wherever they sit in the photo order
