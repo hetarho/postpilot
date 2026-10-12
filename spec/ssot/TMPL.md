@@ -188,4 +188,4 @@
 - contract: `proto/postpilot/v1/template.proto`
 
 ## chg
-- r27 261012 TMPL-47✎ TMPL-49✎ tag_count seeds the maximum shown as 최대 태그 수→the minimum shown as 최소 태그 수
+-

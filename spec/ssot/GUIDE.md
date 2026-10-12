@@ -153,4 +153,4 @@
 - contract: `proto/postpilot/v1/guideline.proto`
 
 ## chg
-- r21 261012 GUIDE-41✎ 내 감상을 지키고 AI 제안 구분→내 감상은 지키고 맛은 재료로 살리기
+-

@@ -224,4 +224,4 @@
 - ops: the production bucket needs a CORS rule allowing PUT/GET/HEAD from the FE origin (DEPLOY.md); MinIO in `docker-compose.yml` serves local development
 
 ## chg
-- r40 261012 POST-63✎ tag_count upper bound shown as 최대 태그 수→minimum shown as 최소 태그 수
+-

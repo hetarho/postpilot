@@ -28,12 +28,12 @@
 | ARCH | 20 | 20 | - | 0 |
 | AUTH | 15 | 15 | - | 0 |
 | QUOTA | 38 | 38 | - | 0 |
-| POST | 40 | 39 | POST-63✎ | 0 |
+| POST | 40 | 40 | - | 0 |
 | VOICE | 16 | 16 | - | 0 |
-| GEN | 29 | 28 | GEN-14✎ GEN-16✎ GEN-40✎ GEN-46✎ GEN-50✎ GEN-83✎ GEN-85✎ GEN-86✎ | 0 |
+| GEN | 29 | 29 | - | 0 |
 | MODEL | 36 | 36 | - | 0 |
-| TMPL | 27 | 26 | TMPL-47✎ TMPL-49✎ | 0 |
-| GUIDE | 21 | 20 | GUIDE-41✎ | 0 |
+| TMPL | 27 | 27 | - | 0 |
+| GUIDE | 21 | 21 | - | 0 |
 | EXPORT | 11 | 11 | - | 0 |
 | LANG | 9 | 9 | - | 0 |
 | THEME | 33 | 33 | - | 1 |
@@ -73,14 +73,18 @@
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
+| T674 | Fill a tag minimum and let the writer infer taste from inputs | GEN GUIDE POST | - | todo |
+| T675 | Show the tag count as 최소 태그 수 | POST TMPL | - | todo |
 
 ## next
-- create-task GEN POST TMPL GUIDE: tag_count becomes a minimum, broad labels fill the count, sensory inference from inputs, rules edited in place.
+- implement-task T674 (tag minimum, broad-label tail, inferred taste, prompt rules edited in place), then T675 (최소 태그 수 copy).
 - Review the 17 unadopted choices in review/structure-261008; all ten clear refactor tasks T654–T663 are complete.
 - T636–T646 standalone writing/origin tasks are complete on main; unrelated blocked qualifications remain separate.
 - Editorial follow-up: doc-review ARCH; preserve independent review and open SSOT questions.
 
 ## log
+- 261012 create-task GEN r29 POST r40 TMPL r27 GUIDE r21: T674 (BE prompts, parser, 기본 지침), T675 (FE 최소 태그 수 copy); no dep between them.
+- 261012 create-task GEN POST TMPL GUIDE start.
 - 261012 update-ssot GEN r29 POST r40 TMPL r27 GUIDE r21 done: GEN-46✎ tag_count upper bound→minimum (≤30 kept) · GEN-50✎ broad labels fill the rest of the count · GEN-83✎ flavor/texture/aroma inferred from inputs written into the experience · GEN-85✎ rule changes edit in place · POST-63✎ TMPL-47✎ TMPL-49✎ 최대→최소 태그 수 · GUIDE-41✎ impressions 기본 지침 renamed; no doing task in the blast radius; next create-task.
 - 261012 update-ssot GEN start: tags fell to 5–7 with no broad label once the count became a maximum; prose shrank under the AI-suggestion separation rules; the owner wants a tag minimum and inferred sensory description from supplied inputs, editing existing 기본 지침 instead of appending.
 - 261011 T671 done on main: pick-order confirms; ① strip moves a photo by drag or 옮기기 → 여기로 / 맨 뒤로.
