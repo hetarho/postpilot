@@ -1,5 +1,5 @@
 # POST posts, drafts, photos
-> r39 | Owner-controlled canonical writing with phrase-level semantic-origin review, explicit lifecycle and private effective-request inspection.
+> r40 | Owner-controlled canonical writing with phrase-level semantic-origin review, explicit lifecycle and private effective-request inspection.
 
 ## decisions
 - POST-1 [o] a post is identified by a slug minted once on the first save and never changed ← it is the primary key and part of every photo object key, so renaming would orphan the photos
@@ -103,11 +103,11 @@
   - an answer is keyed by the label it was typed under, so assigning, changing, clearing or deleting a template touches no answer and one whose label the current template does not carry is kept and never shown ← a rename or a swap back must not destroy typed facts
   - only the current template's labels are offered and each value is ≤ `TEMPLATE_ASK_VALUE_MAX_CHARS` (→TMPL-43 →TMPL-45)
   - a required field is marked 필수, has no off switch and stays editable even when its stored answer was switched off; an optional field retains the switch and its off-state behavior (→TMPL-68)
-- POST-63 [o] a draft's `tag_count` is the upper bound requested for generated tags, an integer from `POST_TAG_COUNT_MIN` (1) through `POST_TAG_COUNT_MAX` (10), default `POST_TAG_COUNT_DEFAULT` (4).
-  - show and seed it as 최대 태그 수; fewer grounded tags, including none, are valid (→GEN-46 →GEN-50)
+- POST-63 [o] a draft's `tag_count` is the minimum number of generated tags, an integer from `POST_TAG_COUNT_MIN` (1) through `POST_TAG_COUNT_MAX` (10), default `POST_TAG_COUNT_DEFAULT` (4).
+  - show and seed it as 최소 태그 수; the writer fills at least that many and may add more (→GEN-46 →GEN-50)
   - use the same options call/form beside `target_length`, as a required number field with no enabling tick; nullable storage resolves to the default without backfilling legacy posts, and an out-of-range value is InvalidArgument
-  - generation, requested tag revision and writing tests freeze the post's bound (→GEN-46); saving an option does not rewrite existing tags
-  - saving it changes no status, content revision, baseline, learning eligibility or existing tags; input revision follows POST-111 for generation-setting changes ← the option caps output rather than requiring padding
+  - generation, requested tag revision and writing tests freeze the post's minimum (→GEN-46); saving an option does not rewrite existing tags
+  - saving it changes no status, content revision, baseline, learning eligibility or existing tags; input revision follows POST-111 for generation-setting changes ← the option directs the next tag selection, not tags already written
 
 - POST-64 [o] writing history shows readable work name/title fallback and update time with actual running/failed/unfinished/exportable state and the relevant continuation or result action. A row offers no separate export action: export lives in the opened post's 글 완성 step (→POST-54) ← that step is one step press from wherever the post opens, so a second link to the same post would read as a different action. It has no docked primary New post action or article preview; new writing is reached through home/common creation navigation.
 - POST-65 [o] one search field narrows the list by title and tags: a trimmed, case-insensitive, whitespace-collapsed substring match with a leading `#` on the query ignored, and the tags that matched are named on the row, only while they matched ← a row kept by a word its title never contains otherwise looks arbitrary, while tags on every row at all times would double the list's height; the list answer carries each post's current tags (`PostSummary.tags`, the newest content revision's) so a post with no content yet is matched by its title alone
@@ -224,4 +224,4 @@
 - ops: the production bucket needs a CORS rule allowing PUT/GET/HEAD from the FE origin (DEPLOY.md); MinIO in `docker-compose.yml` serves local development
 
 ## chg
--
+- r40 261012 POST-63✎ tag_count upper bound shown as 최대 태그 수→minimum shown as 최소 태그 수

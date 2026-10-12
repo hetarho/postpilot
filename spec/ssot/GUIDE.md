@@ -1,5 +1,5 @@
 # GUIDE writing guidelines (작문 지침)
-> r20 | Switchable writing direction with stage-applicable rules, one authoritative tag guideline and stable evidence contracts.
+> r21 | Switchable writing direction with stage-applicable rules, one authoritative tag guideline and stable evidence contracts.
 
 ## decisions
 - GUIDE-1 [o] guidelines own writing direction beside VOICE expression, TMPL form and the stable request contracts (→GEN-14).
@@ -89,7 +89,7 @@
   | 기본 지침 | rule |
   |---|---|
   | 재료에 있는 사실만 | →GEN-16 |
-  | 내 감상을 지키고 AI 제안 구분 | →GEN-16 →GEN-83 |
+  | 내 감상은 지키고 맛은 재료로 살리기 | →GEN-16 →GEN-83 |
   | 기억을 통한 감상 추가, only in a prompt carrying `[기억]` | →GEN-73 |
   | 메모의 이름으로 | →GEN-44 |
   | 알려준 사건 순서대로 | follow event order explicitly supplied by the owner inside template places; otherwise arrange along the owner's photo order, which usually follows the visit, and let a photo of a subject that already stands earlier — one remembered and shot late — join that subject's place instead of opening a new one; the arrangement is never presented as chronology (→GEN-82) ← ignoring the photo order loses the visit's usual sequence and mixes up look-alike moments, while following it blindly strands the late photo |
@@ -153,4 +153,4 @@
 - contract: `proto/postpilot/v1/guideline.proto`
 
 ## chg
--
+- r21 261012 GUIDE-41✎ 내 감상을 지키고 AI 제안 구분→내 감상은 지키고 맛은 재료로 살리기

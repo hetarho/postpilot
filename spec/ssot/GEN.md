@@ -1,5 +1,5 @@
 # GEN generation, revision, job queue
-> r28 | Semantic-origin-aware writing and revision with grounded tags up to an upper bound, explicit evidence contracts and durable bounded jobs.
+> r29 | Semantic-origin-aware writing and revision with grounded tags filling a minimum, input-drawn sensory description, explicit evidence contracts and durable bounded jobs.
 
 ## decisions
 - GEN-1 [o] a generated post is a `PostContent` block array, never HTML (I2); the flat `Block` types `TEXT` `HEADING` `IMAGE` `GALLERY` `VIDEO` `QUOTE` `LIST` are the model-facing protojson contract (`GALLERY` is a photo group carrying its photos' filenames in order, a layout, one `alt` and one `caption` →GEN-77; `VIDEO` carries the IMAGE fields →VIDEO-2)
@@ -21,7 +21,7 @@
 - GEN-12 [o] the writing stage is shown only the photos the run has eyesight for: attachments are read live at dequeue and narrowed to the merged snapshot, so a photo confirmed between enqueue and dequeue is neither observed nor named and belongs to the next run; a deleted photo's observation is deleted with it (→POST-18)
 - GEN-13 [o] with no photos and no videos, observation makes no provider call, reports `observe 0/0`, clears stale observations and tells the writing model to use the memo without images
 - GEN-14 [o] write prompt order:
-  - stable request contracts: the flat GEN-1 answer shape, direct-path storyline first (→GEN-67), one paragraph per TEXT block, exact attached filenames, one placement per attachment and GEN-77 photo-group shape, template photo placement by section meaning (→TMPL-21), direct-path attachment coverage or frozen-story coverage (→GEN-70), one-line summary, at most the frozen `tag_count` tags, and the frozen output language
+  - stable request contracts: the flat GEN-1 answer shape, direct-path storyline first (→GEN-67), one paragraph per TEXT block, exact attached filenames, one placement per attachment and GEN-77 photo-group shape, template photo placement by section meaning (→TMPL-21), direct-path attachment coverage or frozen-story coverage (→GEN-70), one-line summary, at least the frozen `tag_count` tags, and the frozen output language
   - → frozen accepted voice projection or no voice bytes (→VOICE-46 →GEN-74)
   - → optional frozen template brief, preserving literal/instruction/fact boundaries (→TMPL-70)
   - → one stage-applicable `[작문 지침]` section (→GUIDE-15)
@@ -37,7 +37,7 @@
   - the observe stage never receives either
 - GEN-16 [o] grounding is the first 기본 지침 of the 지침 kind (→GUIDE-41): while enabled, concrete facts must come from memo, observations, explicit template answers, opted-in memories or supported storyline material; a data-field value supplies only its own fact (→TMPL-46).
   - invent no interaction, facility, service, conversation, price or objective experience; omit unsupported facts or stay within the observed range
-  - the impression guideline preserves the owner's stated taste/verdict and permits visibly identified AI expression proposals under GEN-83; preference-derived impressions additionally require GEN-73
+  - the impression guideline preserves the owner's stated taste/verdict and lets the writer draw flavor, texture and aroma from the post's inputs under GEN-83; preference-derived impressions additionally require GEN-73
   - disabling either recommendation removes that writing restriction, while honest origins and the photo chronology contract remain under GEN-80–84; observing receives neither preference guideline
 
 - GEN-17 [o] the naturalness baseline is the last 기본 지침 of the 지침 kind (→GUIDE-41), offered and injected for a Korean target alone and absent for an English one, inside the write and revise prompts' `[작문 지침]` section
@@ -82,7 +82,7 @@
 - GEN-38 [o] revision is a durable `revise` job: StartRevision validates the authenticated user's post, existing content, a concrete `content_language`, a trimmed non-empty instruction of at most `RevisionInstructionMaxChars` (500) and an enabled explicit write model, freezes the content language (never substituting the newer target), the exact `voice_id` or its absence, the template brief, the guideline texts, the tag count (→GEN-46) and `write_native_effort`, and returns the job id; it uses the same guard, polling, progress, restart and recovery mechanics as generation
 - GEN-40 [o] revision uses the frozen accepted voice projection for the content language, the optional template brief, one applicable guideline section, current full PostContent, current semantic-origin context, attached filenames/orientations and the owner's request.
   - make the smallest requested change; preserve unrelated sentences and their origins, title/summary/tags unless requested, exact filenames and the frozen content language; return a complete replacement, never translate implicitly
-  - a requested tag change uses the frozen upper bound; unrelated tags remain unchanged
+  - a requested tag change asks for at least the frozen `tag_count`; unrelated tags remain unchanged
   - guidelines bind only requested/newly touched writing; new meaning follows GEN-80–84 and receives matching origin information
   - absent template/guideline sections contribute no bytes; revision receives no memories (→MEM-22) and cannot infer missing original evidence from prose or style examples
 
@@ -104,10 +104,11 @@
 - GEN-44 [o] naming is a 기본 지침 of the 지침 kind (→GUIDE-41): where the memo names a subject the observation recorded only generically, the writer uses the memo's name — in prose and in IMAGE `alt` and `caption` alike, a caption being written text rather than a transcript of the observation (키티 인형, not 고양이 인형) — while nothing the observations do not show is written as being in the frame ← grounding holds the memo and the observations as one material, so nothing else decides which noun wins a disagreement
 - GEN-47 [o] altitude is a 기본 지침 of the 지침 kind (→GUIDE-41): the observations are grounding and placement material rather than a list to describe, no paragraph is required to point at a photo, and visual detail that carries nothing for the post — lighting, walls, ceilings, fixtures, the arrangement of a room — is not written ← covering the observation array entry by entry reads as a caption for every photograph rather than as one post
 - GEN-45 [x] the observe prompt receiving the post's title and memo — observation stays context-free
-- GEN-46 [o] `tag_count` is a frozen upper bound on generation, requested tag revision and writing-test output; its changed value changes the input hash (→POST-63 →MODEL-30).
-  - keep at most the first `tag_count` tags in model order; accept fewer, including none, and never generate padding to meet the bound
-  - revision preserves unrequested tags under GEN-40 rather than trimming them for a newer bound
-  - legacy queued payloads without the member decode as `POST_TAG_COUNT_DEFAULT` ← a usable paid draft must survive a shorter grounded tag list
+- GEN-46 [o] `tag_count` is a frozen minimum on generation, requested tag revision and writing-test output; its changed value changes the input hash (→POST-63 →MODEL-30).
+  - the prompt asks for at least `tag_count` tags; the parser keeps the returned tags in model order up to `POST_TAG_OUTPUT_MAX` (30) ← Naver takes at most 30 tags on one post
+  - a shorter returned list is accepted as written and the server never pads it ← failing a paid write over a miscount is worse than a shorter list
+  - revision preserves unrequested tags under GEN-40 whatever the current minimum
+  - legacy queued payloads without the member decode as `POST_TAG_COUNT_DEFAULT`
 
 - GEN-49 [o] the title 기본 지침 asks for one line that sums up the post's core experience or impression in implicative wording rather than listing facts, carrying only the names, menu items or area the title needs ← a title stringing the place, menu and area together reads as a label, not as a post anyone wants to open
   - it invents no concrete fact the material lacks — a menu item, a price, an event — while compressing or rewording the owner's supplied experience and impressions is wording, not a new fact
@@ -115,10 +116,11 @@
   - these are product recommendations, not a published Naver numeric penalty threshold or a promise of exposure
   - an authored title form outranks the recommendation, which binds only what the model writes in the form's own places — the write and answer_write roles (→TMPL-52 →TMPL-70)
 
-- GEN-50 [o] the tag rule is a 기본 지침 of the 지침 kind (→GUIDE-41): select specific tags matching the post and supported by its material, in descending relevance
-  - prioritize identifying business, place, brand and product names, then natural combinations such as area + menu, business category or activity, and entity + core topic; use the area's name from a stated station name when it names the same area
-  - for a post about eating tteokbokki at 진아분식 near 답십리역, prefer 진아분식, 답십리떡볶이 and 답십리분식; examples are conditional and never supply facts for another post
-  - broad labels such as 내돈내산, 일상, 맛집 and 떡볶이 alone rank after available specific tags and never pad the upper bound; duplicate and spacing-only variants do not add a tag
+- GEN-50 [o] the tag rule is a 기본 지침 of the 지침 kind (→GUIDE-41): select tags matching the post and supported by its material, most specific first
+  - lead with identifying business, place, brand and product names, then natural combinations such as area + menu, business category or activity, and entity + core topic; use the area's name from a stated station name when it names the same area
+  - fill the rest of the count with broad category and topic labels the post supports, such as 맛집, 카페, 디저트 or 떡볶이 alone ← broad labels still match category searches and tag browsing, and leaving them out cuts the list short of the count
+  - for a post about eating tteokbokki at 진아분식 near 답십리역, 진아분식, 답십리떡볶이 and 답십리분식 lead and 떡볶이 or 분식 may fill the tail; examples are conditional and never supply facts for another post
+  - a purchase or sponsorship label such as 내돈내산 or 체험단 is never required and appears only when the material states it; duplicate and spacing-only variants do not add a tag
   - invent no area, entity, offering, payment claim or endorsement; when an area is unknown, use supported entity/topic tags without inventing one, and never alter prose to justify a tag
   - a revision applies tag selection only when its request changes tags (→GEN-40); no search-demand data is read anywhere
 - GEN-51 [o] a ticked quality rule's text (→QUAL-13) renders at the head of the per-post half, never in the stable prefix, closed by a fixed line saying a conflicting 지침 outranks it ← the ticks differ per post, and the prefix is what the provider's cache and every prompt golden rest on (→MEM-20)
@@ -185,10 +187,10 @@
   - apply this contract to observation, storyline, writing and revision even with preference guidelines disabled; an AI-added label cannot authorize invented events
   - an actual observed source-time sequence inside video is distinct visual evidence, not photo upload chronology
 
-- GEN-83 [o] AI may propose useful terminology, transitions and richer sensory expression while preserving owner control.
-  - style-only rewording keeps the supplied meaning's origin; additional flavor, texture, aroma, interpretation or explanation is visibly AI-added and reviewable
-  - 맛있었다 does not itself support sweet flavor or a named aroma; a photo does not establish taste
-  - proposals cannot contradict supplied facts/impressions or invent objective experience, price, identity, interaction or chronology prohibited by the active grounding rule and GEN-82
+- GEN-83 [o] the writer may infer flavor, texture and aroma from the post's inputs and write them into the post's own experience, alongside useful terminology and transitions, while preserving owner control ← ② shows such meaning as AI가 보탠 내용 (→POST-112), so the prose needs no hedge or marker, and a writer barred from it leaves the post thin
+  - an inference follows from an input — the menu or ingredient, the cooking method, the appearance a photo shows, the owner's own words: 크림 파스타 with 맛있었다 may become 꾸덕하고 고소했다, while 맛있었다 alone names no particular flavor and a photo alone does not establish taste
+  - inferred meaning keeps the AI-added origin (→GEN-80); style-only rewording keeps the supplied meaning's origin
+  - an inference never contradicts or replaces a supplied fact or impression, adds no verdict, rating or will to return the owner did not give (GEN-73 aside), and invents no objective experience, price, identity, interaction or chronology prohibited by the active grounding rule and GEN-82
   - owner review does not certify correctness or silently change semantic origin
 
 - GEN-84 [o] canonical content validity and origin-information validity are assessed separately.
@@ -202,9 +204,10 @@
   - writing/revision share the flat GEN-1 field/type vocabulary: TEXT/QUOTE prose in `content`, LIST text in `items`, and attachment-specific IMAGE/GALLERY/VIDEO fields; no field example may contradict the accepted schema
   - storyline-only work omits stock final title/tag selection; setting authoring scopes kind/mode rules (→EDIT-24); frozen-story stages omit newly generated plan instructions when the plan cannot be consumed
   - remove duplicate or irrelevant context only when its meaning and applicable consumer behavior are preserved; long useful instructions and distinct examples need not be shortened
+  - a rule change rewrites the instruction it changes where that instruction lives — the static contract, a 기본 지침 or a stage line — and deletes what it supersedes or now duplicates; it never appends an overriding sentence beside the old one ← stacked overrides contradict one another and lengthen every prompt
 
 - GEN-86 [o] prompt changes are evaluated against preserved writing behavior and owner control, not token reduction alone.
-  - use fixed material to check structure, source boundaries, unsupported chronology/facts, mixed-origin phrases, requested-only revision, grounded tags up to the cap, output language and accepted voice
+  - use fixed material to check structure, source boundaries, unsupported chronology/facts, mixed-origin phrases, requested-only revision, grounded tags filling the minimum, output language and accepted voice
   - record input/output cost, usable-response rate, truncation and origin coverage separately; JSON conformance does not establish correct origins
   - compare instruction-language variants under LANG-29 using human prose/source review; model price grade alone predicts neither compliance nor quality
   - owner-run publication/view observations are a later empirical trial, without automatic publishing, traffic measurement or exposure promises
@@ -224,4 +227,4 @@
 - tests that pin it: prompt-assembly snapshots (order, a 말투 없음 prompt carrying no voice bytes, each 기본 지침 present only while switched on, the naturalness 기본 지침 for a Korean target only, 기억을 통한 감상 추가 only in a prompt carrying `[기억]`) · block validator and attachment filter with crafted payloads · `ceil(N/4)` observation calls with a stubbed provider · frozen re-observation set and non-shrinking snapshot · no write transaction across a provider call (handler harness) · guard collisions carry the active id · boot sweep reasons · the direct write answer schema orders `storyline` first and the post stores it
 
 ## chg
--
+- r29 261012 GEN-46✎ tag_count upper bound, fewer or none, no padding→minimum the prompt asks for, kept up to POST_TAG_OUTPUT_MAX 30, shorter output still accepted · GEN-14✎ GEN-40✎ GEN-86✎ at most→at least · GEN-50✎ broad labels rank last and never pad→fill the rest of the count; purchase/sponsor labels only when stated · GEN-83✎ GEN-16✎ visibly identified sensory proposals, 맛있었다 supports no flavor→flavor/texture/aroma inferred from inputs written into the experience, AI-added origin shown in ② · GEN-85✎ +a rule change edits in place and never appends an override

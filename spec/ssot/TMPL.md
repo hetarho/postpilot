@@ -1,5 +1,5 @@
 # TMPL post templates (템플릿)
-> r26 | Owner-scoped post forms with explicit literal, instruction and supplied-fact boundaries and maximum tag seeds.
+> r27 | Owner-scoped post forms with explicit literal, instruction and supplied-fact boundaries and minimum tag seeds.
 
 ## decisions
 - TMPL-1 [o] a template decides the form of a post; three authored axes stand beside each other and each owns one question — the voice decides how sentences sound (VOICE), the template what form the post has and what each of its places is about, a guideline what kind of writing is wanted (GUIDE); a post combines at most one voice and at most one template ← prose about shape must be re-derived by the model every run, cannot require a literal line, and cannot bind output to the attachments
@@ -129,13 +129,13 @@
   - a field with a value renders the verbatim flavor as literal text and the AI가 쓰는 글 flavor as what the position is about with the value beside it as that position's facts
   - the frozen copy rules apply as to the body, so editing an answer after a start cannot reach the run (→TMPL-11 →TMPL-14)
 - TMPL-47 [o] a template carries two optional generation numbers beside its shape, `target_length` and `tag_count`, each saying what the posts this template shapes usually want and each meaning 의견 없음 when left unset; they are seeds for the post's own options and nothing else — no prompt, payload, freeze, snapshot or experiment hash reads a template's number, and a run freezes the post's values (→GEN-5 →GEN-46) ← the two numbers belong to the shape that decides them, but a second place a prompt could read a length from would give one run two answers to one question
-  - tag_count seeds the maximum from POST-63, not an exact output count; quality selection stays under GEN-50
+  - tag_count seeds the minimum from POST-63; quality selection stays under GEN-50
 
 - TMPL-48 [o] assigning a template to a post copies each number the template has set onto the post's own option in the same save, overwriting whatever stood there; a number the template leaves unset is not copied and the post keeps its own; clearing the template to 없음, renaming, editing or deleting the template copies nothing and the post keeps the values it last received; a value edited afterwards is an ordinary option edit and the template is never consulted again until it is assigned once more ← assigning is an explicit act whose effect must be visible at once, and remembering per post which number the author had touched would be invisible state no screen could explain (→POST-26 →POST-70)
-- TMPL-49 [o] the two numbers are edited on the template screen above the composition beside 이름 and 설명, each behind its own 사용 tick that clears the value when it is off (목표 글자 수 seeding `POST_TARGET_LENGTH_DEFAULT` and 최대 태그 수 `POST_TAG_COUNT_DEFAULT` when ticked with nothing typed this session, →POST-20) ← a template's count has a real 의견 없음 the post's never has
+- TMPL-49 [o] the two numbers are edited on the template screen above the composition beside 이름 and 설명, each behind its own 사용 tick that clears the value when it is off (목표 글자 수 seeding `POST_TARGET_LENGTH_DEFAULT` and 최소 태그 수 `POST_TAG_COUNT_DEFAULT` when ticked with nothing typed this session, →POST-20) ← a template's count has a real 의견 없음 the post's never has
   - they belong to the one draft behind the one 저장 (→TMPL-25) and make it dirty like any other field
   - each accepts only the range the server enforces (100 … 10,000 characters, `POST_TAG_COUNT_MIN` … `POST_TAG_COUNT_MAX` tags →TMPL-6), while the builder, `원문`, the format guide and the parser neither show nor carry them (they are not `body` →TMPL-2 →TMPL-41)
-  - the tag option is labeled as an upper bound; fewer tags do not invalidate a generated post
+  - the tag option is labeled as a minimum; a generated post returning fewer is still valid (→GEN-46)
 
 - TMPL-46 [o] a typed value is authored fact, never an instruction: it is fenced as data inside the rendered body and cannot override the template's own instruction or the target language (→TMPL-13), and it joins the material the writer is allowed to state facts from (→GEN-16); nothing about a value is learned, suggested or model-written and the observe stage never receives one (TMPL-16 stands)
 - TMPL-50 [o] a template carries an optional title area written in the same grammar as the body, admitting literal text, `<write>` and `<ask>` only, parsed and refused by the same rules (→TMPL-7 →TMPL-20) ← a photo position or a repeat has no meaning in a title, and the three that remain already express every title form asked for
@@ -188,4 +188,4 @@
 - contract: `proto/postpilot/v1/template.proto`
 
 ## chg
--
+- r27 261012 TMPL-47✎ TMPL-49✎ tag_count seeds the maximum shown as 최대 태그 수→the minimum shown as 최소 태그 수
