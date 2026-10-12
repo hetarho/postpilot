@@ -43,7 +43,7 @@ export interface RunOptionsForm {
   jobRunning: boolean
 }
 
-/** The writing brief's run options as ONE form saved by its 저장 (POST-89): 목표 분량 and 최대 태그 수
+/** The writing brief's run options as ONE form saved by its 저장 (POST-89): 목표 분량 and 최소 태그 수
  *  here, then whatever the brief renders into `children` (발행 글 점검, 분야, 기억 사용). A tick, a
  *  chip or a typed number sends nothing; 저장 sends the whole set in one request and closes the
  *  brief once it lands, and closing without it discards the change. The form is seeded once, from

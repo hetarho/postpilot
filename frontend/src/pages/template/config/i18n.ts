@@ -18,10 +18,10 @@ export const i18n = {
       targetLength: '목표 글자 수',
       targetLengthHelp:
         '이 템플릿을 고르면 글의 목표 글자 수가 이 값으로 채워져요. 글에서 바꾸면 바꾼 값이 유지됩니다.',
-      tagCountTick: '최대 태그 수 사용',
-      tagCount: '최대 태그 수',
+      tagCountTick: '최소 태그 수 사용',
+      tagCount: '최소 태그 수',
       tagCountHelp:
-        '이 템플릿을 고르면 글의 최대 태그 수가 이 값으로 채워져요. 비워 두면 글의 설정을 그대로 둡니다.',
+        '이 템플릿을 고르면 글의 최소 태그 수가 이 값으로 채워져요. 비워 두면 글의 설정을 그대로 둡니다.',
       range: '{{min}}에서 {{max}} 사이로 적어 주세요.',
     },
     screen: {
@@ -92,10 +92,10 @@ export const i18n = {
       targetLength: 'Target length',
       targetLengthHelp:
         'Picking this template fills the post’s target length with this value. Changing it on the post keeps what you changed.',
-      tagCountTick: 'Set a maximum tag count',
-      tagCount: 'Maximum tag count',
+      tagCountTick: 'Set a minimum tag count',
+      tagCount: 'Minimum tag count',
       tagCountHelp:
-        'Picking this template fills the post’s maximum tag count with this value. Leave it off to keep whatever the post already has.',
+        'Picking this template fills the post’s minimum tag count with this value. Leave it off to keep whatever the post already has.',
       range: 'Enter a number between {{min}} and {{max}}.',
     },
     screen: {

@@ -36,9 +36,9 @@ describe('owner template generation numbers in shared drafts', () => {
     const user = userEvent.setup()
     await mount(user)
     expect(screen.getByLabelText('목표 글자 수 사용')).toBeChecked()
-    expect(screen.getByLabelText('최대 태그 수 사용')).toBeChecked()
+    expect(screen.getByLabelText('최소 태그 수 사용')).toBeChecked()
     expect(screen.getByLabelText('목표 글자 수')).toHaveValue('1800')
-    expect(screen.getByLabelText('최대 태그 수')).toHaveValue('7')
+    expect(screen.getByLabelText('최소 태그 수')).toHaveValue('7')
     await user.click(screen.getByRole('tab', { name: '원문' }))
     expect(screen.getByLabelText('원문')).toHaveValue(template.body)
   })
@@ -53,14 +53,14 @@ describe('owner template generation numbers in shared drafts', () => {
     expect(screen.queryByLabelText('목표 글자 수')).not.toBeInTheDocument()
     await user.click(screen.getByLabelText('목표 글자 수 사용'))
     expect(screen.getByLabelText('목표 글자 수')).toHaveValue('2500')
-    await user.click(screen.getByLabelText('최대 태그 수 사용'))
-    expect(screen.getByLabelText('최대 태그 수')).toHaveValue('4')
+    await user.click(screen.getByLabelText('최소 태그 수 사용'))
+    expect(screen.getByLabelText('최소 태그 수')).toHaveValue('4')
   })
   it('clears only the explicit unticked number in publication and preserves its peer', async () => {
     const user = userEvent.setup()
     const updates: NonNullable<FakeTemplatesOptions['updates']> = []
     await mount(user, true, { updates })
-    await user.click(screen.getByLabelText('최대 태그 수 사용'))
+    await user.click(screen.getByLabelText('최소 태그 수 사용'))
     await publishAuthoringDraft(user)
     await waitFor(() => expect(updates).toHaveLength(1))
     expect(updates[0]).toMatchObject({ targetLength: 1800, tagCount: undefined })
@@ -72,7 +72,7 @@ describe('owner template generation numbers in shared drafts', () => {
       const patches: NonNullable<FakeAuthoringOptions['patches']> = []
       const updates: NonNullable<FakeTemplatesOptions['updates']> = []
       await mount(user, true, { updates }, { patches })
-      fireEvent.change(screen.getByLabelText('최대 태그 수'), { target: { value } })
+      fireEvent.change(screen.getByLabelText('최소 태그 수'), { target: { value } })
       expect(screen.getByText('1에서 10 사이로 적어 주세요.')).toBeInTheDocument()
       await user.click(screen.getByRole('button', { name: '편집 내용 보관하고 확인하기' }))
       await waitFor(() => expect(patches).toHaveLength(1))

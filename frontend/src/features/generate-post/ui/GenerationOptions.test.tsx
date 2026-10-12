@@ -63,17 +63,17 @@ const formState = () => JSON.parse(screen.getByLabelText('form state').textConte
 const formValues = () => JSON.parse(screen.getByLabelText('form values').textContent ?? '')
 
 describe('GenerationOptions', () => {
-  // POST-63: a required upper bound, with no enabling tick or demand to fill it with tags.
-  it('shows the required maximum beside the length and explains fewer grounded tags are valid', () => {
+  // POST-63: a required minimum, with no enabling tick.
+  it('shows the required minimum beside the length and explains how the tags fill it', () => {
     renderOptions()
     expect(screen.getByLabelText('목표 글자 수 사용')).not.toBeChecked()
-    const maximum = screen.getByRole('spinbutton', { name: '최대 태그 수' })
-    expect(maximum).toHaveValue(4)
-    expect(maximum).toBeRequired()
-    expect(maximum).toHaveAttribute('min', '1')
-    expect(maximum).toHaveAttribute('max', '10')
-    expect(maximum).toHaveAccessibleDescription(
-      '글의 내용과 자료로 뒷받침되는 태그만 사용해요. 설정한 수보다 적거나 없어도 괜찮아요.',
+    const minimum = screen.getByRole('spinbutton', { name: '최소 태그 수' })
+    expect(minimum).toHaveValue(4)
+    expect(minimum).toBeRequired()
+    expect(minimum).toHaveAttribute('min', '1')
+    expect(minimum).toHaveAttribute('max', '10')
+    expect(minimum).toHaveAccessibleDescription(
+      "AI에게 이 수 이상의 태그를 요청해요. 상호·지역처럼 구체적인 태그를 앞에 두고, 남은 자리는 '맛집' 같은 넓은 태그로 채워요.",
     )
     expect(screen.queryByRole('checkbox', { name: /태그/ })).not.toBeInTheDocument()
     expect(screen.queryByLabelText('목표 글자 수')).not.toBeInTheDocument()
@@ -89,16 +89,16 @@ describe('GenerationOptions', () => {
     renderOptions()
     // Nothing has changed yet, so there is nothing to save.
     expect(screen.getByRole('button', { name: '저장' })).toBeDisabled()
-    const field = screen.getByLabelText('최대 태그 수')
+    const field = screen.getByLabelText('최소 태그 수')
     await user.clear(field)
     await user.type(field, '11')
-    expect(screen.getByText('최대 태그 수는 1–10 사이의 정수로 입력해 주세요.')).toBeInTheDocument()
+    expect(screen.getByText('최소 태그 수는 1–10 사이의 정수로 입력해 주세요.')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '저장' })).toBeDisabled()
     await user.clear(field)
     expect(screen.getByRole('button', { name: '저장' })).toBeDisabled()
     await user.type(field, '10')
     expect(
-      screen.queryByText('최대 태그 수는 1–10 사이의 정수로 입력해 주세요.'),
+      screen.queryByText('최소 태그 수는 1–10 사이의 정수로 입력해 주세요.'),
     ).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: '저장' })).toBeEnabled()
   })
@@ -108,7 +108,7 @@ describe('GenerationOptions', () => {
   it('sends the whole set in one request on 저장 and reports it back', async () => {
     const user = userEvent.setup()
     const { onSaved, onClose, calls, optionSaves } = renderOptions()
-    const field = screen.getByLabelText('최대 태그 수')
+    const field = screen.getByLabelText('최소 태그 수')
     await user.clear(field)
     await user.type(field, '7')
     await user.click(screen.getByRole('button', { name: '기억 켜기' }))
@@ -121,7 +121,7 @@ describe('GenerationOptions', () => {
     expect(onClose).toHaveBeenCalledOnce()
   })
 
-  it('saves a lower maximum without trimming existing tags or changing the content state', async () => {
+  it('saves a lower minimum without trimming existing tags or changing the content state', async () => {
     const user = userEvent.setup()
     const existingTags = ['첫 태그', '둘째 태그', '셋째 태그']
     const { calls, optionSaves, onClose, transport, queryClient } = renderOptions(
@@ -144,7 +144,7 @@ describe('GenerationOptions', () => {
     })
     await waitFor(() => expect(view.result.current.post?.content?.tags).toEqual(existingTags))
     const content = view.result.current.post?.content
-    const field = screen.getByRole('spinbutton', { name: '최대 태그 수' })
+    const field = screen.getByRole('spinbutton', { name: '최소 태그 수' })
     await user.clear(field)
     await user.type(field, '1')
     expect(optionSaves).toHaveLength(0)
@@ -172,7 +172,7 @@ describe('GenerationOptions', () => {
       release = resolve
     })
     const { onClose, optionSaves } = renderOptions({}, { optionSaveGate })
-    const field = screen.getByLabelText('최대 태그 수')
+    const field = screen.getByLabelText('최소 태그 수')
     await user.clear(field)
     await user.type(field, '7')
 
@@ -180,12 +180,12 @@ describe('GenerationOptions', () => {
     await user.click(save)
     await waitFor(() => expect(optionSaves).toHaveLength(1))
     await waitFor(() => expect(save).toBeDisabled())
-    expect(screen.getByLabelText('최대 태그 수')).toBeDisabled()
+    expect(screen.getByLabelText('최소 태그 수')).toBeDisabled()
     expect(screen.getByLabelText('목표 글자 수 사용')).toBeDisabled()
     expect(formState()).toEqual({ disabled: true, jobRunning: false })
 
     await user.click(save)
-    await user.type(screen.getByLabelText('최대 태그 수'), '{Enter}')
+    await user.type(screen.getByLabelText('최소 태그 수'), '{Enter}')
     expect(optionSaves).toHaveLength(1)
 
     release()
@@ -196,7 +196,7 @@ describe('GenerationOptions', () => {
   it('keeps the form open with the refusal’s reason', async () => {
     const user = userEvent.setup()
     const { onSaved, onClose } = renderOptions({}, { optionSaveFails: true })
-    const field = screen.getByLabelText('최대 태그 수')
+    const field = screen.getByLabelText('최소 태그 수')
     await user.clear(field)
     await user.type(field, '7')
     await user.click(screen.getByRole('button', { name: '기억 켜기' }))
@@ -205,7 +205,7 @@ describe('GenerationOptions', () => {
     expect(await screen.findByRole('alert')).toBeInTheDocument()
     expect(onSaved).not.toHaveBeenCalled()
     expect(onClose).not.toHaveBeenCalled()
-    expect(screen.getByLabelText('최대 태그 수')).toHaveValue(7)
+    expect(screen.getByLabelText('최소 태그 수')).toHaveValue(7)
     expect(formValues()).toMatchObject({ useMemory: true })
     expect(screen.getByRole('button', { name: '저장' })).toBeEnabled()
   })
@@ -260,7 +260,7 @@ describe('GenerationOptions', () => {
 
   it('greys the numbers while a job runs', () => {
     renderOptions({ jobRunning: true })
-    expect(screen.getByLabelText('최대 태그 수')).toBeDisabled()
+    expect(screen.getByLabelText('최소 태그 수')).toBeDisabled()
     expect(screen.getByLabelText('목표 글자 수 사용')).toBeDisabled()
     // 분야 and 기억 사용 stay usable; the ticks read `jobRunning` themselves.
     expect(formState()).toEqual({ disabled: false, jobRunning: true })

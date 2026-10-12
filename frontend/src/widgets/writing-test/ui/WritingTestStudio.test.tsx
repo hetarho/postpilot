@@ -69,12 +69,12 @@ async function decideAll(fixture: Fixture) {
 }
 
 it.each([1, 10])(
-  'names the maximum tag count and freezes the valid boundary %i after refusing invalid input',
-  async (maximum) => {
+  'names the minimum tag count and freezes the valid boundary %i after refusing invalid input',
+  async (boundary) => {
     const fixture = createWritingTestStudioFixture()
     mount(fixture)
     await modelCandidates(fixture)
-    const tags = screen.getByRole('spinbutton', { name: '최대 태그 수' })
+    const tags = screen.getByRole('spinbutton', { name: '최소 태그 수' })
     expect(tags).toHaveValue(4)
     expect(tags).toHaveAttribute('min', '1')
     expect(tags).toHaveAttribute('max', '10')
@@ -82,20 +82,20 @@ it.each([1, 10])(
     for (const value of ['', '0', '11', '2.5']) {
       fireEvent.change(tags, { target: { value } })
       await userEvent.click(screen.getByRole('button', { name: '글 2편 생성 비용 확인' }))
-      expect(screen.getByText('최대 태그 수는 1~10 사이의 정수로 입력해 주세요.')).toBeVisible()
+      expect(screen.getByText('최소 태그 수는 1~10 사이의 정수로 입력해 주세요.')).toBeVisible()
       expect(fixture.estimates).toHaveLength(0)
       expect(fixture.admissions).toHaveLength(0)
     }
-    fireEvent.change(tags, { target: { value: String(maximum) } })
+    fireEvent.change(tags, { target: { value: String(boundary) } })
     await userEvent.click(screen.getByRole('button', { name: '글 2편 생성 비용 확인' }))
     await screen.findByRole('button', { name: '글 2편 만들기' })
     expect(fixture.estimates).toHaveLength(1)
-    expect(fixture.estimates[0].context?.tagCount).toBe(maximum)
+    expect(fixture.estimates[0].context?.tagCount).toBe(boundary)
     expect(fixture.admissions).toHaveLength(0)
     await userEvent.click(screen.getByRole('button', { name: '글 2편 만들기' }))
     await screen.findByRole('button', { name: '후보 A를 승자로 선택' })
     expect(fixture.admissions).toHaveLength(1)
-    expect(fixture.admissions[0].plan?.context?.tagCount).toBe(maximum)
+    expect(fixture.admissions[0].plan?.context?.tagCount).toBe(boundary)
   },
 )
 
