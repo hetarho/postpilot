@@ -69,22 +69,22 @@ func TestPostPromptCanonicalBlockFieldsAndConditionalVideoVocabulary(t *testing.
 	}
 }
 
-func TestPostTagUpperBoundsAllowEmptyAndNeverOverrideUnrelatedRevisionTags(t *testing.T) {
-	for maximum := 1; maximum <= 10; maximum++ {
+func TestPostTagMinimumsReachBothPromptsAndNeverOverrideUnrelatedRevisionTags(t *testing.T) {
+	for minimum := 1; minimum <= 10; minimum++ {
 		for _, language := range []Language{LanguageKorean, LanguageEnglish} {
-			write, _ := BuildWritePromptForLanguage(WritePromptInput{Language: language, Profile: Profile{NoVoice: true}, TagCount: maximum, StockGuidelines: []StockGuideline{}})
-			revise, _ := BuildRevisePromptForLanguage(language, Profile{NoVoice: true}, PostContent{Tags: []string{"old1", "old2", " old3 "}}, nil, "Fix the body only", nil, maximum, nil, FrozenGuidelines{Stock: []StockGuideline{}})
-			writeBound, reviseBound := fmt.Sprintf("최대 %d개의 tags", maximum), fmt.Sprintf("경우에만 최대 %d개", maximum)
-			empty, unchanged := "0개", "내용·순서·공백"
+			write, _ := BuildWritePromptForLanguage(WritePromptInput{Language: language, Profile: Profile{NoVoice: true}, TagCount: minimum, StockGuidelines: []StockGuideline{}})
+			revise, _ := BuildRevisePromptForLanguage(language, Profile{NoVoice: true}, PostContent{Tags: []string{"old1", "old2", " old3 "}}, nil, "Fix the body only", nil, minimum, nil, FrozenGuidelines{Stock: []StockGuideline{}})
+			writeBound, reviseBound := fmt.Sprintf("%d개 이상의 tags", minimum), fmt.Sprintf("tags를 %d개 이상으로 다시 고르고", minimum)
+			unchanged := "순서와 띄어쓰기까지 그대로"
 			if language == LanguageEnglish {
-				writeBound, reviseBound = fmt.Sprintf("at most %d tags", maximum), fmt.Sprintf("at most %d tags", maximum)
-				empty, unchanged = "Zero or fewer", "whitespace byte-for-byte"
+				writeBound, reviseBound = fmt.Sprintf("at least %d tags", minimum), fmt.Sprintf("reselect at least %d;", minimum)
+				unchanged = "order and spacing included"
 			}
-			if !strings.Contains(write, writeBound) || !strings.Contains(write, empty) || !strings.Contains(revise, reviseBound) || !strings.Contains(revise, unchanged) {
-				t.Fatal("upper bound or unchanged tag scope lost", maximum, language)
+			if !strings.Contains(write, writeBound) || !strings.Contains(revise, reviseBound) || !strings.Contains(revise, unchanged) {
+				t.Fatal("tag minimum or unchanged tag scope lost", minimum, language)
 			}
 			if strings.Contains(write, "[작문 지침]") {
-				t.Fatal("static tag cap reenabled tag-quality preference")
+				t.Fatal("static tag minimum reenabled tag-quality preference")
 			}
 		}
 	}

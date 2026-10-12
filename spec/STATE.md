@@ -73,16 +73,17 @@
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
-| T674 | Fill a tag minimum and let the writer infer taste from inputs | GEN GUIDE POST | - | todo |
 | T675 | Show the tag count as 최소 태그 수 | POST TMPL | - | todo |
 
 ## next
-- implement-task T674 (tag minimum, broad-label tail, inferred taste, prompt rules edited in place), then T675 (최소 태그 수 copy).
+- implement-task T675 (최소 태그 수 copy), then the pre-push gate and push.
 - Review the 17 unadopted choices in review/structure-261008; all ten clear refactor tasks T654–T663 are complete.
 - T636–T646 standalone writing/origin tasks are complete on main; unrelated blocked qualifications remain separate.
 - Editorial follow-up: doc-review ARCH; preserve independent review and open SSOT questions.
 
 ## log
+- 261012 T674 done on main: tag_count is a minimum the prompts ask for, tags kept up to 30, broad labels fill the tail, taste inferred from inputs as experience; write/revise no-voice system prompts shrank 148/163 runes.
+- 261012 T674 start on main at 8fe42b0e: tag minimum, broad-label tail, inferred taste, prompt rules edited in place.
 - 261012 create-task GEN r29 POST r40 TMPL r27 GUIDE r21: T674 (BE prompts, parser, 기본 지침), T675 (FE 최소 태그 수 copy); no dep between them.
 - 261012 create-task GEN POST TMPL GUIDE start.
 - 261012 update-ssot GEN r29 POST r40 TMPL r27 GUIDE r21 done: GEN-46✎ tag_count upper bound→minimum (≤30 kept) · GEN-50✎ broad labels fill the rest of the count · GEN-83✎ flavor/texture/aroma inferred from inputs written into the experience · GEN-85✎ rule changes edit in place · POST-63✎ TMPL-47✎ TMPL-49✎ 최대→최소 태그 수 · GUIDE-41✎ impressions 기본 지침 renamed; no doing task in the blast radius; next create-task.

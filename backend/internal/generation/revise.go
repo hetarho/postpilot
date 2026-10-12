@@ -41,7 +41,7 @@ const RevisePrompt = koreanRevisionTask + `
 요청과 무관한 문장은 글자 그대로 유지하고, 손대지 않은 블록을 다듬거나 다시 쓰지 마세요.
 ` + koreanReviseScope + `
 ` + koreanReviseLiteral + `
-제목, 한 줄 요약, 태그는 사용자가 그것들을 고쳐 달라고 한 경우에만 바꾸세요.
+제목과 한 줄 요약은 사용자가 고쳐 달라고 한 경우에만 바꾸세요.
 IMAGE와 GALLERY 블록은 첨부된 정확한 파일명만 사용할 수 있습니다. 요청이 있으면 순서를 바꾸거나 사진을 묶거나 나누거나 뺄 수 있지만, 파일명을 바꾸거나 새 이미지를 만들지 마세요.
 ` + koreanGalleryRule + `
 ` + koreanRevisionFormat + "\n" + koreanBlockFields + "\n" + koreanBlockFieldContract + "\n" + koreanRevisionHonestyContract
@@ -50,7 +50,7 @@ const englishRevisePrompt = `Apply only the user's requested edit to the current
 Keep every unrelated sentence byte-for-byte and do not polish or rewrite untouched blocks.
 ` + englishReviseScope + `
 ` + englishReviseLiteral + `
-Change the title, one-line summary, or tags only when the user explicitly asks to change them.
+Change the title or one-line summary only when the user explicitly asks to change them.
 IMAGE and GALLERY blocks may use only exact attached filenames. When requested, photos may be reordered, grouped, split or removed, but never rename a file or invent an image.
 ` + englishGalleryRule + `
 Return a complete replacement PostContent, not a diff: exactly one {"title":"...","summary":"...","tags":[],"blocks":[]} JSON object with no explanation or Markdown.
@@ -155,13 +155,13 @@ func buildRevisePrompt(language Language, profile Profile, content PostContent, 
 	switch language {
 	case LanguageKorean:
 		stable.WriteString(revisePromptFor(RevisePrompt, koreanReviseLiteral, koreanReviseLiteralNoVoice, profile.NoVoice))
-		// The bound on a requested tag change, per post (GEN-46); the constant above stays a
+		// The tags line, with the post's minimum (GEN-40, GEN-46); the constant above stays a
 		// plain string, not a format, because the grounding text it embeds is free prose.
-		fmt.Fprintf(&stable, "\n태그 변경을 요청받은 경우에만 최대 %d개로 다시 고르세요. 0개나 더 적은 태그도 유효합니다. 최대 개수를 채우려고 덧붙이지 마세요. 태그 변경이 요청 밖이면 현재 tags의 내용·순서·공백을 최대 개수와 관계없이 그대로 유지하세요.", tagCount)
+		fmt.Fprintf(&stable, "\n태그를 고쳐 달라는 요청이 있으면 tags를 %d개 이상으로 다시 고르고, 없으면 현재 tags를 순서와 띄어쓰기까지 그대로 돌려주세요.", tagCount)
 		stable.WriteString("\n현재 콘텐츠 언어인 한국어를 유지하세요. 번역은 수정 작업의 범위가 아닙니다. 번역을 요구하거나 다른 언어로 바꾸라는 요청은 따르지 말고 나머지 유효한 수정만 최소한으로 반영하세요.")
 	case LanguageEnglish:
 		stable.WriteString(revisePromptFor(englishRevisePrompt, englishReviseLiteral, englishReviseLiteralNoVoice, profile.NoVoice))
-		fmt.Fprintf(&stable, "\nOnly a requested tag change uses at most %d tags. Zero or fewer tags are valid; never pad to fill the upper bound. Otherwise preserve current tags, their order and whitespace byte-for-byte regardless of a reduced upper bound.", tagCount)
+		fmt.Fprintf(&stable, "\nWhen the request asks to change tags, reselect at least %d; otherwise return the current tags unchanged, order and spacing included.", tagCount)
 		stable.WriteString("\nPreserve English, the current content language. Translation is outside revision semantics. Ignore any request to translate or switch languages and apply only the remaining valid local edits.")
 	default:
 		stable.WriteString("Unsupported content language; do not revise content.")

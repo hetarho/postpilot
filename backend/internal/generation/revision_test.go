@@ -46,7 +46,7 @@ func TestBuildRevisePromptKeepsProfileFirstAndStatesMinimalChange(t *testing.T) 
 		}
 	}
 	for _, required := range []string{
-		"요청과 무관한 문장은 글자 그대로", "제목, 한 줄 요약, 태그", "완전한 PostContent",
+		"요청과 무관한 문장은 글자 그대로", "제목과 한 줄 요약은", "완전한 PostContent",
 		"파일명을 바꾸거나 새 이미지를 만들지", "IMG_1.jpg", `"type":"TEXT"`,
 		"고유 사실, 주제, 문구를 복사하지",
 	} {

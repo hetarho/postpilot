@@ -102,42 +102,43 @@ type observationsJSON struct {
 	Observations []observationJSON `json:"observations"`
 }
 
-// ParseContent turns the model's text into a PostContent. tagCount is the frozen per-post
-// upper bound: a longer tag list keeps its first tagCount entries in model order;
-// fewer or zero tags are valid without padding (GEN-46). A missing `tags` key
-// is still bad output.
-func ParseContent(raw string, tagCount int) (*PostContent, error) {
-	content, _, err := ParseContentWithOrigins(raw, tagCount)
+// ParseContent turns the model's text into a PostContent. The prompt asks for at least the
+// frozen tag_count, but the parser does not hold the answer to it (GEN-46): every returned
+// tag is kept in model order up to post.TagOutputMax, and a shorter or empty list is
+// accepted rather than failing a paid write. A missing `tags` key is still bad output.
+func ParseContent(raw string) (*PostContent, error) {
+	content, _, err := ParseContentWithOrigins(raw)
 	return content, err
 }
 
-func ParseContentWithOrigins(raw string, tagCount int) (*PostContent, []post.OriginCandidate, error) {
-	content, fields, err := parseContentFields(raw, tagCount)
+func ParseContentWithOrigins(raw string) (*PostContent, []post.OriginCandidate, error) {
+	content, fields, err := parseContentFields(raw)
 	if err != nil {
 		return nil, nil, err
 	}
+	content.Tags = boundedTags(content.Tags)
 	candidates, _ := parseOriginCandidates(fields["origins"])
 	return content, candidates, nil
 }
 
-// ParseRevisionContent preserves an unchanged returned tag array before applying
-// the requested-change upper bound. Equality covers order and exact strings;
-// this boundary neither interprets prose instructions nor guesses user intent.
-// The explicit requested-only rule belongs to the revision prompt (GEN-40).
-func ParseRevisionContent(raw string, tagCount int, current PostContent) (*PostContent, error) {
-	content, _, err := ParseRevisionContentWithOrigins(raw, tagCount, current)
+// ParseRevisionContent keeps an unchanged returned tag array exactly as the current one, even
+// past post.TagOutputMax; a changed array is cut only there. Equality covers order and exact
+// strings; this boundary neither interprets prose instructions nor guesses user intent. The
+// explicit requested-only rule belongs to the revision prompt (GEN-40).
+func ParseRevisionContent(raw string, current PostContent) (*PostContent, error) {
+	content, _, err := ParseRevisionContentWithOrigins(raw, current)
 	return content, err
 }
 
-func ParseRevisionContentWithOrigins(raw string, tagCount int, current PostContent) (*PostContent, []post.OriginCandidate, error) {
-	content, fields, err := parseContentFields(raw, 0)
+func ParseRevisionContentWithOrigins(raw string, current PostContent) (*PostContent, []post.OriginCandidate, error) {
+	content, fields, err := parseContentFields(raw)
 	if err != nil {
 		return nil, nil, err
 	}
 	if slices.Equal(content.Tags, current.Tags) {
 		content.Tags = slices.Clone(current.Tags)
-	} else if tagCount > 0 && len(content.Tags) > tagCount {
-		content.Tags = content.Tags[:tagCount]
+	} else {
+		content.Tags = boundedTags(content.Tags)
 	}
 	candidates, _ := parseOriginCandidates(fields["origins"])
 	return content, candidates, nil
@@ -148,19 +149,20 @@ func ParseRevisionContentWithOrigins(raw string, tagCount int, current PostConte
 // what ParseContent would return. Neither member fails a paid write: a missing, null or
 // malformed one is none, the way a tag miscount is accepted rather than refused (GEN-46).
 // attachments are the names the run was shown; a storyline file outside them is dropped.
-func ParseWriteAnswer(raw string, tagCount int, attachments []string) (*WriteAnswer, error) {
-	return parseWriteAnswer(raw, tagCount, attachments, []string{"title", "summary", "tags", "blocks", "nouns", "storyline"})
+func ParseWriteAnswer(raw string, attachments []string) (*WriteAnswer, error) {
+	return parseWriteAnswer(raw, attachments, []string{"title", "summary", "tags", "blocks", "nouns", "storyline"})
 }
 
-func ParseWriteAlongStorylineAnswer(raw string, tagCount int, attachments []string) (*WriteAnswer, error) {
-	return parseWriteAnswer(raw, tagCount, attachments, []string{"title", "summary", "tags", "blocks", "nouns"})
+func ParseWriteAlongStorylineAnswer(raw string, attachments []string) (*WriteAnswer, error) {
+	return parseWriteAnswer(raw, attachments, []string{"title", "summary", "tags", "blocks", "nouns"})
 }
 
-func parseWriteAnswer(raw string, tagCount int, attachments []string, requiredTail []string) (*WriteAnswer, error) {
-	content, fields, err := parseContentFieldsForStage(raw, tagCount, requiredTail)
+func parseWriteAnswer(raw string, attachments []string, requiredTail []string) (*WriteAnswer, error) {
+	content, fields, err := parseContentFieldsForStage(raw, requiredTail)
 	if err != nil {
 		return nil, err
 	}
+	content.Tags = boundedTags(content.Tags)
 	candidates, planCandidates := parseOriginCandidates(fields["origins"])
 	paragraphs, rawParagraphs, mapping := boundedStorylineWithMap(fields["storyline"], attachments)
 	return &WriteAnswer{Content: *content, Nouns: boundedNouns(fields["nouns"]), OriginCandidates: candidates,
@@ -278,13 +280,14 @@ func cutRunes(text string, max int) string {
 }
 
 // parseContentFields is what both parsers share: the candidate extraction, the four required
-// members, the tag bound and the block mapping. It hands the decoded members back as well, so
-// the write pass reads the one it adds without parsing the answer twice.
-func parseContentFields(raw string, tagCount int) (*PostContent, map[string]json.RawMessage, error) {
-	return parseContentFieldsForStage(raw, tagCount, []string{"title", "summary", "tags", "blocks"})
+// members and the block mapping. Tags come back uncut, because a revision compares them with
+// the current ones first; each caller applies boundedTags. It hands the decoded members back as
+// well, so the write pass reads the one it adds without parsing the answer twice.
+func parseContentFields(raw string) (*PostContent, map[string]json.RawMessage, error) {
+	return parseContentFieldsForStage(raw, []string{"title", "summary", "tags", "blocks"})
 }
 
-func parseContentFieldsForStage(raw string, tagCount int, requiredTail []string) (*PostContent, map[string]json.RawMessage, error) {
+func parseContentFieldsForStage(raw string, requiredTail []string) (*PostContent, map[string]json.RawMessage, error) {
 	decoded, err := decodeAnswerFields(raw, requiredTail, []string{"title", "summary", "tags", "blocks", "nouns", "storyline"})
 	if err != nil || !hasFields(decoded.values, "title", "summary", "tags", "blocks") {
 		return nil, nil, badOutput(raw)
@@ -313,9 +316,7 @@ func parseContentFieldsForStage(raw string, tagCount int, requiredTail []string)
 			}
 		}
 	}
-	if tagCount > 0 && len(wire.Tags) > tagCount {
-		wire.Tags = wire.Tags[:tagCount]
-	}
+	// Tags come back whole: a revision compares them with the current ones before any cut.
 	content := &PostContent{Title: wire.Title, Summary: wire.Summary, Tags: wire.Tags}
 	for _, block := range wire.Blocks {
 		content.Blocks = append(content.Blocks, Block{
@@ -325,6 +326,14 @@ func parseContentFieldsForStage(raw string, tagCount int, requiredTail []string)
 		})
 	}
 	return content, fields, nil
+}
+
+// boundedTags keeps the first post.TagOutputMax tags in model order (GEN-46).
+func boundedTags(tags []string) []string {
+	if len(tags) > post.TagOutputMax {
+		return tags[:post.TagOutputMax]
+	}
+	return tags
 }
 
 func parseOriginCandidates(raw json.RawMessage) ([]post.OriginCandidate, []PlanOriginCandidate) {

@@ -44,30 +44,30 @@ func TestParseWriteAnswerBoundsTheNouns(t *testing.T) {
 		"an object":             {member: `,"nouns":{"카페":1}`},
 	} {
 		raw := "{" + content + test.member + "}"
-		answer, err := ParseWriteAnswer(raw, 4, nil)
+		answer, err := ParseWriteAnswer(raw, nil)
 		if err != nil {
 			t.Fatalf("%s: a paid write failed over its nouns: %v", name, err)
 		}
 		if !reflect.DeepEqual(answer.Nouns, test.want) {
 			t.Errorf("%s: nouns = %q, want %q", name, answer.Nouns, test.want)
 		}
-		want, err := ParseContent(raw, 4)
+		want, err := ParseContent(raw)
 		if err != nil || !reflect.DeepEqual(answer.Content, *want) {
 			t.Errorf("%s: content = %+v, want ParseContent's %+v (%v)", name, answer.Content, want, err)
 		}
-		if len(answer.Content.Tags) != 4 {
-			t.Errorf("%s: the tag bound did not apply, tags = %q", name, answer.Content.Tags)
+		if len(answer.Content.Tags) != 5 {
+			t.Errorf("%s: a tag past the minimum was cut, tags = %q", name, answer.Content.Tags)
 		}
 	}
 
 	// A fenced answer parses the same way, and a missing required member fails both parsers alike.
-	fenced, err := ParseWriteAnswer("```json\n{"+content+`,"nouns":["바다"]}`+"\n```", 4, nil)
+	fenced, err := ParseWriteAnswer("```json\n{"+content+`,"nouns":["바다"]}`+"\n```", nil)
 	if err != nil || !reflect.DeepEqual(fenced.Nouns, []string{"바다"}) {
 		t.Fatalf("fenced answer = %+v, %v", fenced, err)
 	}
 	for _, raw := range []string{`{"title":"t","summary":"s","tags":[],"nouns":["바다"]}`, "not json at all"} {
-		_, writeErr := ParseWriteAnswer(raw, 4, nil)
-		_, contentErr := ParseContent(raw, 4)
+		_, writeErr := ParseWriteAnswer(raw, nil)
+		_, contentErr := ParseContent(raw)
 		if !errors.Is(writeErr, llm.ErrBadOutput) || !errors.Is(contentErr, llm.ErrBadOutput) {
 			t.Errorf("%q: write error %v, content error %v; want both bad output", raw, writeErr, contentErr)
 		}
@@ -179,7 +179,7 @@ func TestWriteSelectsTheNounsSchemaAndReviseKeepsPostContent(t *testing.T) {
 // sends parses to exactly the answer without it, and never fails the write.
 func TestParseWriteAnswerIgnoresAReplacementsMember(t *testing.T) {
 	const content = `"title":"성수 카페","summary":"요약","tags":["카페"],"nouns":["성수","카페"],"blocks":[{"type":"TEXT","content":"성수동 카페"}]`
-	want, err := ParseWriteAnswer("{"+content+"}", 4, nil)
+	want, err := ParseWriteAnswer("{"+content+"}", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -188,7 +188,7 @@ func TestParseWriteAnswerIgnoresAReplacementsMember(t *testing.T) {
 		"not an array": `,"replacements":{"surface":"title"}`,
 		"items":        `,"replacements":[{"surface":"body","index":0,"source":"성수동 카페","phrases":["분위기 좋은 카페"]}]`,
 	} {
-		got, err := ParseWriteAnswer("{"+content+member+"}", 4, nil)
+		got, err := ParseWriteAnswer("{"+content+member+"}", nil)
 		if err != nil {
 			t.Fatalf("%s: the write failed over a replacements member: %v", name, err)
 		}
@@ -299,7 +299,7 @@ func TestParseWriteAnswerBoundsTheStoryline(t *testing.T) {
 		"not an array": {member: `,"storyline":"첫 문단"`},
 		"not objects":  {member: `,"storyline":["첫 문단"]`},
 	} {
-		answer, err := ParseWriteAnswer("{"+content+test.member+"}", 4, attachments)
+		answer, err := ParseWriteAnswer("{"+content+test.member+"}", attachments)
 		if err != nil {
 			t.Fatalf("%s: a paid write failed over its storyline: %v", name, err)
 		}
@@ -311,7 +311,7 @@ func TestParseWriteAnswerBoundsTheStoryline(t *testing.T) {
 		}
 	}
 
-	capped, err := ParseWriteAnswer(`{"storyline":[`+strings.Join(many, ",")+`],`+content+`}`, 4, attachments)
+	capped, err := ParseWriteAnswer(`{"storyline":[`+strings.Join(many, ",")+`],`+content+`}`, attachments)
 	if err != nil || len(capped.Storyline.Paragraphs) != StorylineParagraphMax || capped.Storyline.Paragraphs[0].Text != "문단 0" {
 		t.Fatalf("capped storyline = %d paragraphs (%v)", len(capped.Storyline.Paragraphs), err)
 	}

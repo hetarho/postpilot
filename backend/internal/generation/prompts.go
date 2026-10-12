@@ -418,7 +418,7 @@ func BuildWritePromptForLanguage(input WritePromptInput) (string, string) {
 	switch input.Language {
 	case LanguageKorean:
 		stable.WriteString(writeStaticRules(input.Language, following))
-		fmt.Fprintf(&stable, "\ntitle, 한 줄 summary, 최대 %d개의 tags, blocks를 반환하세요. tags는 0개여도 되고 더 적어도 됩니다. 최대 개수를 채우려고 태그를 덧붙이지 마세요.", input.TagCount)
+		fmt.Fprintf(&stable, "\ntitle, 한 줄 summary, %d개 이상의 tags, blocks를 반환하세요.", input.TagCount)
 		members := "storyline, title"
 		if following {
 			members = "title"
@@ -437,7 +437,7 @@ func BuildWritePromptForLanguage(input WritePromptInput) (string, string) {
 		}
 	case LanguageEnglish:
 		stable.WriteString(writeStaticRules(input.Language, following))
-		fmt.Fprintf(&stable, "\nReturn title, a one-line summary, at most %d tags, and blocks. Zero or fewer tags are valid; never add tags just to fill the upper bound.", input.TagCount)
+		fmt.Fprintf(&stable, "\nReturn title, a one-line summary, at least %d tags, and blocks.", input.TagCount)
 		members := "the storyline, title"
 		if following {
 			members = "the title"

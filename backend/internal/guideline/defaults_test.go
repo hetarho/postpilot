@@ -54,12 +54,37 @@ func TestDefaultRegistryIsTheProductsOrder(t *testing.T) {
 	if endings.Ko.Name != "같은 종결어미 세 번 잇지 않기" || !strings.Contains(endings.Ko.Text, "두 번까지는 괜찮습니다") || EndingMaxConsecutive != 2 {
 		t.Errorf("ending_run = %+v, max %d", endings, EndingMaxConsecutive)
 	}
-	// GEN-73: the memories default names itself the exception to 감상은 내가 쓴 것만 and reads the
-	// 취향: label memory retrieval puts on a taste, in both languages.
+	// GEN-73: the memories default reads the 취향: label memory retrieval puts on a taste and
+	// calls what it adds AI-added meaning, in both languages; it names no other 기본 지침, so a
+	// rename elsewhere cannot leave it pointing at a title that is gone.
 	memories, _ := DefaultFor(KindPost, "memory_impressions")
-	if memories.Ko.Name != "기억을 통한 감상 추가" || !strings.Contains(memories.Ko.Text, "'내 감상을 지키고 AI 제안 구분'과 함께 적용") ||
-		!strings.Contains(memories.Ko.Text, "'취향:'") || !strings.Contains(memories.En.Text, "'취향:'") {
+	if memories.Ko.Name != "기억을 통한 감상 추가" || !strings.Contains(memories.Ko.Text, "AI가 더한 의미") || !strings.Contains(memories.En.Text, "AI-added meaning") ||
+		!strings.Contains(memories.Ko.Text, "'취향:'") || !strings.Contains(memories.En.Text, "'취향:'") || strings.Contains(memories.Ko.Text, "AI 제안 구분") {
 		t.Errorf("memory_impressions = %+v", memories)
+	}
+	// GEN-83: the impressions default keeps the owner's own impressions and infers taste from
+	// the inputs as experience; 맛있었다 alone or a photo alone settles no flavor.
+	impressions, _ := DefaultFor(KindPost, "impressions")
+	if impressions.Ko.Name != "내 감상은 지키고 맛은 재료로 살리기" || impressions.En.Name != "Keep my impressions, draw taste from the material" {
+		t.Errorf("impressions names = %q, %q", impressions.Ko.Name, impressions.En.Name)
+	}
+	for _, copy := range []struct {
+		text             string
+		needles, absents []string
+	}{
+		{impressions.Ko.Text, []string{"그 뜻을 바꾸지", "메뉴·재료·조리법·사진에 보이는 모습", "경험으로 자연스럽게", "'맛있었다'만으로 특정한 맛을 정하거나", "주지 않은 평가는 만들지"}, []string{"AI가 더한 의미로 분명히 구분", "실제로 느끼거나 경험한 일처럼 쓰지"}},
+		{impressions.En.Text, []string{"do not change their meaning", "cooking method", "as what the author experienced", "from 'it was good' alone", "verdict the author did not give"}, []string{"never as something the author actually felt"}},
+	} {
+		for _, needle := range copy.needles {
+			if !strings.Contains(copy.text, needle) {
+				t.Errorf("impressions text lacks %q: %q", needle, copy.text)
+			}
+		}
+		for _, absent := range copy.absents {
+			if strings.Contains(copy.text, absent) {
+				t.Errorf("impressions text still forbids inferred taste with %q", absent)
+			}
+		}
 	}
 	// GUIDE-41: a photo stands alone by default, and a group is the exception whose caption names
 	// one subject; a caption joining different photos' subjects splits them, whatever the template
@@ -136,13 +161,25 @@ func TestPostRecommendationsKeepPlanClaimsSeparateAndAttributeTitleAdvice(t *tes
 			}
 		}
 	}
+	// GEN-50: names lead, broad category labels fill the rest of the count, a purchase or
+	// sponsorship label needs the material; the revise stage line, not this text, owns revision.
 	tags, _ := DefaultFor(KindPost, "tags")
-	for _, needle := range []string{"재료로 확인되는", "후순위", "태그 수를 채우려고 덧붙이지", "다른 글에 그대로 쓰지는", "요청받았을 때만"} {
-		if !strings.Contains(tags.Ko.Text, needle) {
-			t.Fatalf("switchable tag selection lost %q", needle)
+	for _, copy := range []struct {
+		text             string
+		needles, absents []string
+	}{
+		{tags.Ko.Text, []string{"재료로 확인되는", "남은 개수는 '맛집', '카페', '디저트'처럼", "다른 글에 그대로 쓰지는", "구매나 협찬을 나타내는 태그는 재료에 그렇게 적혀 있을 때만"}, []string{"후순위", "채우려고 덧붙이지", "요청받았을 때만"}},
+		{tags.En.Text, []string{"most specific first", "Fill the rest of the count with broad labels", "only when the material says so"}, []string{"upper bound", "rank after", "For a revision"}},
+	} {
+		for _, needle := range copy.needles {
+			if !strings.Contains(copy.text, needle) {
+				t.Errorf("tags text lacks %q", needle)
+			}
 		}
-	}
-	if !strings.Contains(tags.En.Text, "fill the upper bound") {
-		t.Fatal("English tag advice still asks to fill a required count")
+		for _, absent := range copy.absents {
+			if strings.Contains(copy.text, absent) {
+				t.Errorf("tags text still carries %q", absent)
+			}
+		}
 	}
 }

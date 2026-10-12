@@ -111,7 +111,7 @@ func TestOriginQualificationSevenPhotoArrangementWithoutInventedMovement(t *test
 					}
 					expected := current
 					expected.Title = "진아분식 사진 기록"
-					got, _, err := ParseRevisionContentWithOrigins(marshalPromptJSON(evaluationContentWire(expected)), 1, current)
+					got, _, err := ParseRevisionContentWithOrigins(marshalPromptJSON(evaluationContentWire(expected)), current)
 					if err != nil || !reflect.DeepEqual(evaluationContentWire(*got), evaluationContentWire(expected)) {
 						t.Fatal("requested title-only revision changed unrelated canonical tag/prose/attachment bytes", err)
 					}

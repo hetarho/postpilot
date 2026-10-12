@@ -25,7 +25,6 @@ func (s *Service) writeCandidate(ctx context.Context, post PostInput, profile Pr
 		return WriteAnswer{}, llm.Usage{}, err
 	}
 	photos, videos := AttachmentNames(post.Images)
-	tagCount := resolveTagCount(post.TagCount)
 	following := len(post.FollowStoryline) > 0
 	request, sources := s.prepareWriteRequest(post, profile, observations, model)
 	response, err := s.completePostRequest(ctx, model, request, post.Images)
@@ -35,9 +34,9 @@ func (s *Service) writeCandidate(ctx context.Context, post PostInput, profile Pr
 	shown := append(append([]string(nil), photos...), videos...)
 	var answer *WriteAnswer
 	if following {
-		answer, err = ParseWriteAlongStorylineAnswer(response.Text, tagCount, shown)
+		answer, err = ParseWriteAlongStorylineAnswer(response.Text, shown)
 	} else {
-		answer, err = ParseWriteAnswer(response.Text, tagCount, shown)
+		answer, err = ParseWriteAnswer(response.Text, shown)
 	}
 	if err != nil {
 		return WriteAnswer{}, response.Usage, responseParseError(response, err)

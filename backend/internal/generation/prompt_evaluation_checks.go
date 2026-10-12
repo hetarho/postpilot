@@ -209,7 +209,7 @@ func checkPromptEvaluationResponse(item PromptEvaluationCase, add func(string, b
 			add("plan-reference-range", len(review.Spans) == 1 && review.Spans[0].Quote == "맛있었다는 감상", "Exact plan-local quote and catalog reference validate; plan approval supplies no new event facts.")
 		}
 	case "revision":
-		content, candidates, err := ParseRevisionContentWithOrigins(item.SyntheticResponse, material.post.TagCount, *material.post.Content)
+		content, candidates, err := ParseRevisionContentWithOrigins(item.SyntheticResponse, *material.post.Content)
 		add("actual-response-parser", err == nil, "Actual revision parser accepts the complete fixed replacement content.")
 		if err != nil {
 			return
@@ -227,18 +227,21 @@ func checkPromptEvaluationResponse(item PromptEvaluationCase, add func(string, b
 		var answer *WriteAnswer
 		var err error
 		if mode == "frozen-storyline" {
-			answer, err = ParseWriteAlongStorylineAnswer(item.SyntheticResponse, material.post.TagCount, files)
+			answer, err = ParseWriteAlongStorylineAnswer(item.SyntheticResponse, files)
 		} else {
-			answer, err = ParseWriteAnswer(item.SyntheticResponse, material.post.TagCount, files)
+			answer, err = ParseWriteAnswer(item.SyntheticResponse, files)
 		}
 		add("actual-response-parser", err == nil, "Actual writing parser accepts the fixed complete canonical content and mode-specific plan shape.")
 		if err != nil {
 			return
 		}
-		add("sparse-tags-under-cap", reflect.DeepEqual(answer.Content.Tags, material.post.Content.Tags) && len(answer.Content.Tags) < material.post.TagCount, "One fixed fixture tag is accepted below six; no padding to the cap. Grounding remains human review.")
+		add("short-tag-list-accepted", reflect.DeepEqual(answer.Content.Tags, material.post.Content.Tags) && len(answer.Content.Tags) < material.post.TagCount, "One fixed fixture tag below the minimum of six is accepted as written; the server never pads it. Grounding remains human review.")
 		zeroTag := strings.Replace(item.SyntheticResponse, `"tags":[" 초록창가 "]`, `"tags":[]`, 1)
-		zeroAnswer, zeroErr := ParseContent(zeroTag, material.post.TagCount)
-		add("zero-tags-under-cap", zeroErr == nil && len(zeroAnswer.Tags) == 0, "The actual content parser accepts zero tags.")
+		zeroAnswer, zeroErr := ParseContent(zeroTag)
+		add("zero-tags-accepted", zeroErr == nil && len(zeroAnswer.Tags) == 0, "The actual content parser accepts zero tags.")
+		manyTags := strings.Replace(item.SyntheticResponse, `"tags":[" 초록창가 "]`, `"tags":["초록창가","창가카페","식물카페","카페","디저트","데이트","카페투어","주말나들이"]`, 1)
+		manyAnswer, manyErr := ParseContent(manyTags)
+		add("tags-kept-past-minimum", manyErr == nil && len(manyAnswer.Tags) == 8 && material.post.TagCount < 8, "Tags past the minimum of six are kept in model order; only post.TagOutputMax cuts a list.")
 		add("repeated-quote-emoji-bytes", answer.Content.Blocks[1].Content == "좋아요😊 좋아요😊", "Repeated Korean quotation and emoji survive actual parsing byte-for-byte.")
 		if item.OriginProtocolVersion == OriginProtocolVersion {
 			resolved := ResolveWriteOriginCandidates(answer.Content, sources, answer.OriginCandidates)

@@ -48,14 +48,13 @@ func (s *Service) Revise(ctx context.Context, job RevisionJob, progress Progress
 	if !ok {
 		return ErrWriteModelRequired
 	}
-	tagCount := resolveTagCount(payload.TagCount)
 	request, sources := s.prepareRevisionRequest(post, profile, payload, model)
 	progress("write", 0, 1)
 	response, err := s.completePostRequest(ctx, model, request, post.Images)
 	if err != nil {
 		return providerCallError("글 수정", err)
 	}
-	content, candidates, err := ParseRevisionContentWithOrigins(response.Text, tagCount, *post.Content)
+	content, candidates, err := ParseRevisionContentWithOrigins(response.Text, *post.Content)
 	if err != nil {
 		return responseParseError(response, err)
 	}

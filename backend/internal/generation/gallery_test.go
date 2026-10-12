@@ -15,7 +15,7 @@ func TestParseContentReadsAPhotoGroup(t *testing.T) {
 	content, err := ParseContent(`{"title":"t","summary":"s","tags":[],"blocks":[
 		{"type":"GALLERY","content":"","level":0,"file":"","files":["a.jpg","b.jpg"],"layout":"SLIDE","alt":"묶음","caption":"넘겨 보기","items":[]},
 		{"type":"TEXT","content":"문단","level":0,"file":"","files":[],"layout":"","alt":"","caption":"","items":[]}
-	]}`, 0)
+	]}`)
 	if err != nil {
 		t.Fatal(err)
 	}

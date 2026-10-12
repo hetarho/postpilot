@@ -112,15 +112,15 @@ func TestUpdatedImpressionAndChronologyRecommendationsDoNotRelabelGeneratedMeani
 	memory, _ := DefaultFor(KindPost, "memory_impressions")
 	order, _ := DefaultFor(KindPost, "order")
 	photos, _ := DefaultFor(KindPost, "photo_moments")
-	if impressions.Ko.Name != "내 감상을 지키고 AI 제안 구분" || order.Ko.Name != "알려준 사건 순서대로" {
+	if impressions.Ko.Name != "내 감상은 지키고 맛은 재료로 살리기" || order.Ko.Name != "알려준 사건 순서대로" {
 		t.Fatal("displayed recommendation policy is outdated")
 	}
-	for _, needle := range []string{"AI가 더한 의미", "직접 준", "사진만으로 맛"} {
+	for _, needle := range []string{"그 뜻을 바꾸지", "유추해", "사진만으로 맛"} {
 		if !strings.Contains(impressions.Ko.Text, needle) {
 			t.Errorf("impression missing %q", needle)
 		}
 	}
-	if strings.Contains(memory.Ko.Text, "글쓴이가 직접 준 감상으로 봅니다") || !strings.Contains(memory.Ko.Text, "AI가 더한 의미") || !strings.Contains(memory.En.Text, "not an impression the author directly supplied for this visit") {
+	if strings.Contains(memory.Ko.Text, "글쓴이가 직접 준 감상으로 봅니다") || !strings.Contains(memory.Ko.Text, "AI가 더한 의미") || !strings.Contains(memory.En.Text, "AI-added meaning based on that memory") {
 		t.Fatal("preference-derived addition masquerades as owner input")
 	}
 	// The photo order is the arrangement's backbone (GEN-82, GUIDE-41), a late photo joins its

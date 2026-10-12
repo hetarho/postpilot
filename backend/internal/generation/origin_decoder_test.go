@@ -22,10 +22,10 @@ func TestOriginTailSalvageRequiresWholeTypedStageOutput(t *testing.T) {
 		name, core string
 		parse      func(string) error
 	}{
-		{"content", originDecoderCore, func(raw string) error { _, err := ParseContent(raw, 4); return err }},
-		{"revision", originDecoderCore, func(raw string) error { _, err := ParseRevisionContent(raw, 4, PostContent{}); return err }},
-		{"direct write", originDecoderWriteCore, func(raw string) error { _, err := ParseWriteAnswer(raw, 4, nil); return err }},
-		{"along plan", originDecoderCore + `,"nouns":[]`, func(raw string) error { _, err := ParseWriteAlongStorylineAnswer(raw, 4, nil); return err }},
+		{"content", originDecoderCore, func(raw string) error { _, err := ParseContent(raw); return err }},
+		{"revision", originDecoderCore, func(raw string) error { _, err := ParseRevisionContent(raw, PostContent{}); return err }},
+		{"direct write", originDecoderWriteCore, func(raw string) error { _, err := ParseWriteAnswer(raw, nil); return err }},
+		{"along plan", originDecoderCore + `,"nouns":[]`, func(raw string) error { _, err := ParseWriteAlongStorylineAnswer(raw, nil); return err }},
 		{"plan", `"storyline":[{"text":"본문😀","files":[]}]`, func(raw string) error { _, err := ParseStorylineAnswer(raw, nil); return err }},
 		{"observe", `"observations":[{"file":"photo.jpg","scene":"카페😀","mood":"밝다","visible_text":"","objects":[],"people_present":false}]`, func(raw string) error { _, err := parseObservations(raw); return err }},
 	}
@@ -51,13 +51,13 @@ func TestOriginTailSalvageRequiresWholeTypedStageOutput(t *testing.T) {
 		"{" + originDecoderCore + `,"nouns":"wrong","storyline":[],"origins":[`,
 		"{" + originDecoderCore + `,"nouns":[],"storyline":"wrong","origins":[`,
 	} {
-		if _, err := ParseWriteAnswer(raw, 4, nil); err == nil {
+		if _, err := ParseWriteAnswer(raw, nil); err == nil {
 			t.Fatalf("direct-write salvage admitted missing/malformed complete stage member: %s", raw)
 		}
 	}
 	// Full legacy JSON retains the original leniency for these auxiliary members.
 	for _, member := range []string{"", `,"nouns":"wrong"`, `,"storyline":"wrong"`} {
-		if _, err := ParseWriteAnswer("{"+originDecoderCore+member+"}", 4, nil); err != nil {
+		if _, err := ParseWriteAnswer("{"+originDecoderCore+member+"}", nil); err != nil {
 			t.Fatal("origin support tightened a full legacy write", err)
 		}
 	}
@@ -105,56 +105,56 @@ func TestOriginTailNeverRepairsCoreOrSelectsNestedOuterObjects(t *testing.T) {
 		"closing array":         "Here: " + full + "]",
 	} {
 		t.Run(name, func(t *testing.T) {
-			if _, err := ParseContent(raw, 4); !errors.Is(err, llm.ErrBadOutput) {
+			if _, err := ParseContent(raw); !errors.Is(err, llm.ErrBadOutput) {
 				t.Fatalf("ambiguous/incomplete canonical output was salvaged: %v", err)
 			}
 		})
 	}
 	for _, raw := range []string{full, "```json\n" + full + "\n```", "결과입니다.\n" + full + "\n끝"} {
-		if _, err := ParseContent(raw, 4); err != nil {
+		if _, err := ParseContent(raw); err != nil {
 			t.Fatalf("known complete wrapper rejected: %v", err)
 		}
 	}
-	if _, err := ParseContent("{"+originDecoderCore+`,"replacements":{"legacy":"ignored"}}`, 4); err != nil {
+	if _, err := ParseContent("{" + originDecoderCore + `,"replacements":{"legacy":"ignored"}}`); err != nil {
 		t.Fatal("fully decoded legacy auxiliary field changed canonical parsing", err)
 	}
 }
 
 func TestOriginCandidateTransportUsesQuotesAndPreservesCanonicalContent(t *testing.T) {
 	annotation := `[{"field":{"kind":"title"},"quote":"카페😀","category":"owner_input","source_refs":["memo"],"start":999,"end":1000},{"field":{"kind":"storyline_paragraph","paragraph_index":0},"quote":"본문😀","occurrence":0,"category":"ai_added","source_refs":[]}]`
-	answer, err := ParseWriteAnswer("{"+originDecoderWriteCore+`,"origins":`+annotation+"}", 4, nil)
+	answer, err := ParseWriteAnswer("{"+originDecoderWriteCore+`,"origins":`+annotation+"}", nil)
 	if err != nil || len(answer.OriginCandidates) != 1 || answer.OriginCandidates[0].Quote != "카페😀" || answer.OriginCandidates[0].Field.Kind != post.OriginFieldTitle || len(answer.Storyline.OriginCandidates) != 1 || answer.Storyline.OriginCandidates[0].ParagraphIndex != 0 {
 		t.Fatalf("quote transport changed: %+v %v", answer, err)
 	}
-	legacy, err := ParseWriteAnswer("{"+originDecoderWriteCore+"}", 4, nil)
+	legacy, err := ParseWriteAnswer("{"+originDecoderWriteCore+"}", nil)
 	if err != nil || !reflect.DeepEqual(answer.Content, legacy.Content) {
 		t.Fatal("annotations changed usable canonical content", err)
 	}
 	for _, member := range []string{`"origins":null`, `"origins":"wrong"`, `"origins":[{"quote":7}]`, `"origins":[],"origins":[]`} {
-		parsed, err := ParseWriteAnswer("{"+originDecoderWriteCore+","+member+"}", 4, nil)
+		parsed, err := ParseWriteAnswer("{"+originDecoderWriteCore+","+member+"}", nil)
 		if err != nil || !reflect.DeepEqual(parsed.Content, legacy.Content) || len(parsed.OriginCandidates) != 0 {
 			t.Fatalf("annotation failure rejected/changed content: %+v %v", parsed, err)
 		}
 	}
-	if parsed, err := ParseWriteAnswer("{"+originDecoderWriteCore+`,"origins":[],"origins":[`, 4, nil); err != nil || len(parsed.OriginCandidates) != 0 || !reflect.DeepEqual(parsed.Content, legacy.Content) {
+	if parsed, err := ParseWriteAnswer("{"+originDecoderWriteCore+`,"origins":[],"origins":[`, nil); err != nil || len(parsed.OriginCandidates) != 0 || !reflect.DeepEqual(parsed.Content, legacy.Content) {
 		t.Fatal("optional duplicate/malformed origins discarded a complete core", err)
 	}
 	// Metadata may be reordered when the whole answer is valid, never when core
 	// members are unfinished behind that metadata.
-	if _, err := ParseContent(`{"origins":[],`+originDecoderCore+"}", 4); err != nil {
+	if _, err := ParseContent(`{"origins":[],` + originDecoderCore + "}"); err != nil {
 		t.Fatal("fully decoded reordered optional metadata rejected", err)
 	}
 }
 
 func TestTerminalLengthRetainsUsableCanonicalMembersAndExistingFailureUsage(t *testing.T) {
 	usable := "{" + originDecoderWriteCore + `,"origins":[{"quote":"cut`
-	_, err := ParseWriteAnswer(usable, 4, nil)
+	_, err := ParseWriteAnswer(usable, nil)
 	response := llm.Response{Text: usable, FinishReason: "length", Usage: llm.Usage{PromptTokens: 12, CompletionTokens: 30, ReasoningTokens: 7}}
 	if err := responseParseError(response, err); err != nil {
 		t.Fatal("normal terminal length discarded a complete canonical response", err)
 	}
 	response.Text = `{"title":"unfinished`
-	_, err = ParseWriteAnswer(response.Text, 4, nil)
+	_, err = ParseWriteAnswer(response.Text, nil)
 	err = responseParseError(response, err)
 	var truncated *llm.TruncatedError
 	if !errors.Is(err, llm.ErrOutputTruncated) || !errors.As(err, &truncated) || truncated.ReasoningTokens != 7 || truncated.CompletionTokens != 30 || response.Usage.PromptTokens != 12 {
@@ -163,14 +163,14 @@ func TestTerminalLengthRetainsUsableCanonicalMembersAndExistingFailureUsage(t *t
 }
 
 func TestResponseDecoderBoundsAndFrozenLegacySchemaBytes(t *testing.T) {
-	if _, err := ParseContent(strings.Repeat(" ", answerDecodeMaxBytes)+"{}", 4); !errors.Is(err, llm.ErrBadOutput) {
+	if _, err := ParseContent(strings.Repeat(" ", answerDecodeMaxBytes) + "{}"); !errors.Is(err, llm.ErrBadOutput) {
 		t.Fatal("oversized canonical response was decoded")
 	}
 	var keys []string
 	for i := 0; i < answerDecodeMaxMembers; i++ {
 		keys = append(keys, `"unknown`+strings.Repeat("x", i)+`":0`)
 	}
-	if _, err := ParseContent("{"+originDecoderCore+","+strings.Join(keys, ",")+"}", 4); !errors.Is(err, llm.ErrBadOutput) {
+	if _, err := ParseContent("{" + originDecoderCore + "," + strings.Join(keys, ",") + "}"); !errors.Is(err, llm.ErrBadOutput) {
 		t.Fatal("unbounded outer members were accepted")
 	}
 	legacy := append(append(append(LegacyWriteAnswerSchema(), LegacyObservationsSchema()...), LegacyVideoObservationsSchema()...), LegacyStorylineAnswerSchema()...)

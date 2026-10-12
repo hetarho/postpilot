@@ -135,7 +135,7 @@ func TestWritingTestSharedObservationAndSixteenCompleteOutputsNeverWriteTheSourc
 				if err != nil {
 					t.Fatal(err)
 				}
-				if result.ContentLanguage != LanguageEnglish || result.Answer.Storyline == nil || len(result.Answer.Storyline.Paragraphs) != 1 || len(result.Answer.Content.Tags) != 4 || len(result.Answer.Content.Blocks) != 2 || len(result.Answer.Storyline.MadeWith) != 3 {
+				if result.ContentLanguage != LanguageEnglish || result.Answer.Storyline == nil || len(result.Answer.Storyline.Paragraphs) != 1 || len(result.Answer.Content.Tags) != 5 || len(result.Answer.Content.Blocks) != 2 || len(result.Answer.Storyline.MadeWith) != 3 {
 					t.Fatalf("incomplete/unfiltered full output: %+v", result)
 				}
 				call := models.calls[len(models.calls)-1]

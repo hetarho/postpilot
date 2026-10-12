@@ -106,16 +106,16 @@ var postDefaults = []DefaultGuideline{
 		"메모, 사진·영상 관찰, 해당 템플릿 입력란의 명시적인 답변, 선택된 기억, 근거가 있는 스토리라인 재료에 없는 구체적 사실은 쓰지 마세요. AI가 만든 계획이나 그 배치를 승인한 것만으로 그 안의 주장을 글쓴이가 준 사실로 보지 마세요. 사람과의 상호작용, 시설, 서비스, 대화, 가격처럼 확인되지 않은 내용을 지어내지 마세요. 확인할 수 없는 사실은 생략하거나 관찰된 범위 안에서만 쓰세요.",
 		"Facts from the material only",
 		"State no concrete fact the memo, photo or video observations, explicit answers in the relevant template field, selected memories or supported storyline material do not carry. An AI-generated plan or approval of its arrangement never makes its claims author-supplied facts. Do not invent interactions with people, facilities, services, conversations, or prices. Omit what you cannot confirm, or keep it within what was observed.", postMaterial(OutputTitle, OutputTags, OutputProse, OutputCaptions)),
-	post("impressions", "내 감상을 지키고 AI 제안 구분",
-		"글쓴이가 메모, 명시적인 템플릿 답변, 스토리라인에 직접 준 감상·맛·평가는 의미를 바꾸거나 덮어쓰지 마세요. AI가 문장 표현을 다듬어도 같은 의미는 글쓴이가 준 것으로 남습니다. 직접 주지 않은 감각·감상·해석을 제안할 때는 AI가 더한 의미로 분명히 구분하고, 이 방문에서 글쓴이가 실제로 느끼거나 경험한 일처럼 쓰지 마세요. 사진만으로 맛이나 사진 밖의 행동·사건을 증명하지 마세요.",
-		"Preserve my impressions and distinguish AI proposals",
-		"Preserve the meaning of impressions, tastes and verdicts the author explicitly supplied in the memo, template answers or storyline; do not replace them. An AI paraphrase retaining that meaning remains author-supplied. Clearly distinguish a proposed sensation, impression or interpretation not supplied by the author as AI-added meaning, never as something the author actually felt or experienced on this visit. A photo cannot prove taste or actions and events outside its frame.", postMaterial(OutputProse, OutputCaptions)),
-	// The optional preference-memory recommendation supports an identified AI
-	// proposal, never a claim the owner supplied an impression for this visit.
+	post("impressions", "내 감상은 지키고 맛은 재료로 살리기",
+		"글쓴이가 메모·템플릿 답변·스토리라인에 준 감상·맛·평가를 글의 중심에 두고 그 뜻을 바꾸지 마세요. 그 밖의 맛·식감·향은 메뉴·재료·조리법·사진에 보이는 모습과 글쓴이의 말에서 유추해, 글쓴이가 직접 느낀 경험으로 자연스럽게 쓰세요. '크림 파스타'와 '맛있었다'가 있으면 '꾸덕하고 고소했다'처럼 쓸 수 있지만, '맛있었다'만으로 특정한 맛을 정하거나 사진만으로 맛을 단정하지는 마세요. 글쓴이가 주지 않은 평가는 만들지 마세요.",
+		"Keep my impressions, draw taste from the material",
+		"Keep the impressions, tastes and verdicts the author supplied in the memo, template answers or storyline at the center and do not change their meaning. Infer other flavor, texture and aroma from the menu, ingredients, cooking method, what a photo shows and the author's own words, and write them naturally as what the author experienced. With 'cream pasta' and 'it was good' you may write that it was rich and nutty, but do not settle a particular flavor from 'it was good' alone or taste from a photo alone. Do not create a verdict the author did not give.", postMaterial(OutputProse, OutputCaptions)),
+	// The optional preference-memory recommendation adds an impression whose basis is the
+	// memory, never one the owner supplied for this visit (GEN-73).
 	{
 		Key: "memory_impressions", Kind: KindPost, MemoriesOnly: true, Applicability: postMaterial(OutputProse, OutputCaptions),
-		Ko: DefaultCopy{"기억을 통한 감상 추가", "기억에서 '취향:'으로 표시되어 고정된 취향 기억은, 이 글의 재료로 확인되는 사실에 AI가 감상을 제안할 때 근거가 될 수 있어요. 메모에 '매웠다'가 있고 매운 음식을 좋아한다는 취향이 있으면 '매워서 좋았다'를 제안할 수 있지만, '좋았다'는 이 방문에 글쓴이가 직접 준 감상이 아니라 기억을 근거로 AI가 더한 의미로 구분하세요. 그 기억을 확인할 수 있는 근거로 남기고, 취향만으로 객관적 사실을 만들지 마세요. 글쓴이가 이미 준 감상을 바꾸거나 덮어쓰지 마세요. 이 지침은 '내 감상을 지키고 AI 제안 구분'과 함께 적용하며, 다른 종류의 기억을 취향으로 취급하지 마세요."},
-		En: DefaultCopy{"Impressions from memories", "A frozen preference memory marked '취향:' may support a clearly identified AI-proposed impression about a fact already supported by this post's material. If the memo says it was spicy and the author likes spicy food, you may propose that it was spicy and good; 'good' is AI-added meaning based on that memory, not an impression the author directly supplied for this visit. Keep that memory as its inspectable basis. Do not create an objective fact from a preference, replace an impression the author already supplied or treat another memory kind as a preference. Apply this alongside 'Preserve my impressions and distinguish AI proposals'."},
+		Ko: DefaultCopy{"기억을 통한 감상 추가", "기억에서 '취향:'으로 표시된 취향 기억은 이 글의 재료로 확인되는 사실에 감상을 더하는 근거가 될 수 있어요. 메모에 '매웠다'가 있고 매운 음식을 좋아한다는 취향이 있으면 '매워서 좋았다'로 쓸 수 있고, 이 '좋았다'는 그 기억을 근거로 AI가 더한 의미입니다. 취향만으로 객관적 사실을 만들거나 글쓴이가 이미 준 감상을 바꾸지 말고, 다른 종류의 기억을 취향으로 취급하지 마세요."},
+		En: DefaultCopy{"Impressions from memories", "A frozen preference memory marked '취향:' may support an impression added to a fact this post's material already supports. If the memo says it was spicy and the author likes spicy food, you may write that it was spicy and good; that 'good' is AI-added meaning based on that memory. Do not create an objective fact from a preference, replace an impression the author already gave, or treat another memory kind as a preference."},
 	},
 	post("naming", "메모의 이름으로",
 		"사진 관찰은 사진을 한 장씩 따로 본 결과라 그 대상이 무엇인지 모르는 채 적혀 있습니다. 메모나 템플릿 입력란이 그 대상의 정체나 이름을 알려주면 — 관찰의 \"콘크리트 건물\"이 메모의 \"별채\"라면 — 본문과 IMAGE alt 및 caption에서 관찰의 일반적인 표현 대신 그쪽을 쓰세요. 다만 사진 관찰에 없는 것을 사진 안에 있는 것처럼 쓰지는 마세요.",
@@ -150,19 +150,15 @@ var postDefaults = []DefaultGuideline{
 		"Title rules",
 		"Do not list facts in the title: sum up the post's core experience or impression in one line, in implicative wording that makes people want to read it. Include only the names, menu items or area the title needs. Never invent a concrete fact the material lacks — a menu item, a price, an event — in the title either, but compressing or rewording the author's supplied experience and impressions is wording, not a new fact. Do not write the title as long boilerplate in which only a single piece of information changes, and do not use any keyword twice or more within one title. When the template has a title form, follow it and apply this only to what you write in its own places (<write>, the write and answer_write roles). These are product recommendations, not a published Naver numeric penalty threshold or a guarantee of exposure.", postFinal(OutputTitle)),
 	post("tags", "태그 규칙",
-		`tags는 이 글을 찾는 사람이 검색할 법한 구체적인 이름과 자연스러운 조합으로 고르세요.
-글에서 다루고 재료로 확인되는 상호·장소·브랜드·제품명을 우선하고, 지역명+메뉴·업종·활동 또는 대상명+핵심 주제 조합을 이어서 고르세요. 관련성이 높은 순서로 적고, 같은 태그나 띄어쓰기만 바꾼 태그는 반복하지 마세요.
-예를 들어 글이 '답십리역 부근 진아분식에서 떡볶이를 먹었다'는 내용이면 '진아분식', '답십리떡볶이', '답십리분식'을 우선하세요. 이 예시의 이름을 다른 글에 그대로 쓰지는 마세요.
-'내돈내산', '일상', '맛집', '떡볶이'만 쓴 태그처럼 범용적인 태그는 구체적인 태그보다 후순위로 두고, 태그 수를 채우려고 덧붙이지 마세요.
-확인되지 않은 지역·상호·메뉴·구매 여부·평가를 만들어 태그에 넣지 마세요. 역 이름으로 확인되는 같은 지역의 이름은 써도 되지만, 지역을 모르면 상호나 주제만으로 고르세요. 태그에 맞추려고 본문에 어색한 단어를 넣거나 내용을 바꾸지 마세요.
-글 수정에서는 태그 변경을 요청받았을 때만 이 기준으로 태그를 다시 고르세요.`,
+		`tags는 이 글을 찾는 사람이 검색할 법한 이름과 조합으로, 구체적인 것부터 고르세요.
+글에서 다루고 재료로 확인되는 상호·장소·브랜드·제품명을 먼저 쓰고, 지역명+메뉴·업종·활동 또는 대상명+핵심 주제 조합을 이어서 쓰세요. 남은 개수는 '맛집', '카페', '디저트'처럼 글의 업종이나 주제를 나타내는 범용 태그로 채우세요. 같은 태그나 띄어쓰기만 바꾼 태그는 반복하지 마세요.
+예를 들어 글이 '답십리역 부근 진아분식에서 떡볶이를 먹었다'는 내용이면 '진아분식', '답십리떡볶이', '답십리분식'을 앞에 두고 '떡볶이', '분식'으로 뒤를 채울 수 있습니다. 이 예시의 이름을 다른 글에 그대로 쓰지는 마세요.
+'내돈내산'·'협찬'·'체험단'처럼 구매나 협찬을 나타내는 태그는 재료에 그렇게 적혀 있을 때만 쓰세요. 확인되지 않은 지역·상호·메뉴·평가도 태그에 넣지 마세요. 역 이름으로 확인되는 같은 지역의 이름은 써도 되지만, 지역을 모르면 상호나 주제만으로 고르세요. 태그에 맞추려고 본문에 어색한 단어를 넣거나 내용을 바꾸지 마세요.`,
 		"Tag rule",
-		`Choose specific names and natural combinations someone looking for this post might search for as tags.
-Prioritize business, place, brand and product names covered by the post and supported by its material, then area + menu, business category or activity, or entity + core topic. Order tags by relevance; do not repeat a tag or a variant that differs only in spacing.
-For example, if the post describes eating tteokbokki at Jinabunsik near Dapsimni Station, prefer Jinabunsik, DapsimniTteokbokki and DapsimniBunsik. Never copy these example names into an unrelated post.
-Broad labels such as PaidForItMyself, DailyLife, Foodie or Tteokbokki alone rank after specific tags; do not add them just to fill the upper bound.
-Never invent an area, business, menu item, payment claim or endorsement for a tag. You may use the same area's name from a stated station name; when the area is unknown, use the supported entity or topic alone. Do not insert awkward words into the prose or change its content to justify a tag.
-For a revision, reselect tags by this rule only when the request asks to change tags.`, postFinal(OutputTags)),
+		`Choose tags someone looking for this post might search for, most specific first.
+Lead with business, place, brand and product names the post covers and its material supports, then area + menu, business category or activity, or entity + core topic. Fill the rest of the count with broad labels for the post's category or topic, such as Foodie, Cafe or Dessert. Do not repeat a tag or a variant that differs only in spacing.
+For example, if the post describes eating tteokbokki at Jinabunsik near Dapsimni Station, lead with Jinabunsik, DapsimniTteokbokki and DapsimniBunsik and fill the tail with Tteokbokki or Bunsik. Never copy these example names into an unrelated post.
+Use a purchase or sponsorship label such as PaidForItMyself, Sponsored or Reviewer only when the material says so. Never invent an area, business, menu item or endorsement for a tag either. You may use the same area's name from a stated station name; when the area is unknown, use the supported entity or topic alone. Do not insert awkward words into the prose or change its content to justify a tag.`, postFinal(OutputTags)),
 	// The run of identical endings is a writing rule, not voice text (VOICE-47): its count is
 	// EndingMaxConsecutive, which the text states in words.
 	{

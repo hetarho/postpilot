@@ -132,7 +132,7 @@ func TestPromptEvaluationDeterministicChecksUseActualParsersWithoutSemanticClaim
 		}
 		seen[check.ID]++
 	}
-	for _, id := range []string{"actual-response-parser", "zero-tags-under-cap", "sparse-tags-under-cap", "mixed-source-unicode-occurrences", "invalid-reference-ambiguous-quote-rejection", "compatible-label-does-not-certify-truth", "requested-only-revision-fixture", "identified-observation-reference-range", "plan-reference-range"} {
+	for _, id := range []string{"actual-response-parser", "zero-tags-accepted", "short-tag-list-accepted", "tags-kept-past-minimum", "mixed-source-unicode-occurrences", "invalid-reference-ambiguous-quote-rejection", "compatible-label-does-not-certify-truth", "requested-only-revision-fixture", "identified-observation-reference-range", "plan-reference-range"} {
 		if seen[id] == 0 {
 			t.Fatal("missing actual structural contract check", id)
 		}

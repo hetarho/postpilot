@@ -8,7 +8,7 @@ import (
 	"github.com/postpilot/backend/internal/post"
 )
 
-const PromptEvaluationFixtureVersion = "synthetic-writing-material-v1"
+const PromptEvaluationFixtureVersion = "synthetic-writing-material-v2"
 
 // PromptInventoryFixture includes the retained admitted protocol separately from
 // the current protocol. Request is an unissued application request, not provider
@@ -138,7 +138,7 @@ func syntheticPromptEvaluationMaterial() promptEvaluationMaterial {
 			}},
 			StockGuidelines: []StockGuideline{
 				{Key: "synthetic-source-policy", Text: "제공한 감상과 시각 해석의 근거를 구분하고 새 객관적 평가나 이동 순서를 만들지 마세요.", Applicability: []StockRuleApplicability{{Stage: "write", Outputs: []string{"prose"}}, {Stage: "revise", Outputs: []string{"prose"}}, {Stage: "storyline", Outputs: []string{"plan"}}}},
-				{Key: "synthetic-sparse-tags", Text: "근거 있는 태그만 쓰고 최대 개수를 채우지 마세요.", Applicability: []StockRuleApplicability{{Stage: "write", Outputs: []string{"tags"}}, {Stage: "revise", Outputs: []string{"tags"}}}},
+				{Key: "synthetic-tag-minimum", Text: "근거 있는 태그로 6개 이상 채우세요.", Applicability: []StockRuleApplicability{{Stage: "write", Outputs: []string{"tags"}}, {Stage: "revise", Outputs: []string{"tags"}}}},
 				{Key: "synthetic-endings", Text: "해요·했어요 종결어미를 유지하고 인용과 이모지는 뜻에 맞게 쓰세요.", Applicability: []StockRuleApplicability{{Stage: "write", Outputs: []string{"prose"}}, {Stage: "revise", Outputs: []string{"prose"}}}},
 			},
 			Guidelines:   []string{"장소 이름 초록창가 7호점과 금액 12,000원은 그대로 쓰세요."},
@@ -236,7 +236,7 @@ func promptEvaluationExpectations(mode string) []PromptEvaluationExpectation {
 		expect("unsupported-chronology", "먼저 입장하고 창가로 자리를 옮김", "unsupported", "", "An approved AI plan or misleading filename order must not create actual event chronology."),
 		expect("style-example-facts", "99,999원", "style-only", "", "Keep the Korean endings and fictional examples unchanged; examples supply no current price or visit fact."),
 		expect("repeated-quote-emoji", "좋아요😊 / 좋아요😊", "owner-input", "current.memo", "Review repeated meaningful occurrences and emoji without inventing unique reference certainty."),
-		expect("sparse-tags", "최대 6개", "grounded-upper-bound", "", "Zero or fewer grounded tags are valid; do not pad to fill the cap. Storyline-only output has no final tags."),
+		expect("tag-minimum", "6개 이상", "grounded-minimum", "", "The prompt asks for at least the frozen count; a shorter grounded list is still accepted. Storyline-only output has no final tags."),
 	}
 }
 

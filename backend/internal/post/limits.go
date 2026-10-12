@@ -9,6 +9,11 @@ import "fmt"
 // mirrors the three as POST_TAG_COUNT_DEFAULT / _MIN / _MAX.
 var TagCountRange = TagCount{Default: 4, Min: 1, Max: 10}
 
+// TagOutputMax is POST_TAG_OUTPUT_MAX: the most tags the generation parser keeps from one
+// answer (GEN-46). tag_count is a minimum the prompt asks for, so this, not the count, is
+// where a long list stops; Naver takes at most 30 tags on one post.
+const TagOutputMax = 30
+
 // TargetLengthMin and TargetLengthMax bound the 목표 글자 수 an option save accepts: one range on
 // both sides and for a template (POST-20, TMPL-6). The frontend mirrors them as
 // POST_TARGET_LENGTH_MIN / _MAX. Template reads the floor too, for the length a template may

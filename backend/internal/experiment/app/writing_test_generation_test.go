@@ -218,7 +218,7 @@ func TestActualFactoryAdapterProducesEveryFrozenEntrantAndCompleteStorylineWitho
 					t.Fatal(err)
 				}
 				output, err := experiment.DecodeTestOutput(result.Output)
-				if err != nil || output.ContentLanguage != "en" || output.Storyline == nil || len(output.Storyline.Paragraphs) != 1 || output.Storyline.Paragraphs[0].Text != "A complete generated plan" || len(output.Content.Blocks) != 2 || len(output.Content.Tags) != 3 || !slices.Equal(output.Nouns, []string{"material", "post"}) {
+				if err != nil || output.ContentLanguage != "en" || output.Storyline == nil || len(output.Storyline.Paragraphs) != 1 || output.Storyline.Paragraphs[0].Text != "A complete generated plan" || len(output.Content.Blocks) != 2 || !slices.Equal(output.Content.Tags, []string{"one", "two", "three", "extra"}) || !slices.Equal(output.Nouns, []string{"material", "post"}) {
 					t.Fatalf("complete output=%+v err=%v", output, err)
 				}
 				expected := "fixed-writer"
