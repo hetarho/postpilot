@@ -30,7 +30,7 @@
 | QUOTA | 38 | 38 | - | 0 |
 | POST | 40 | 40 | - | 0 |
 | VOICE | 16 | 16 | - | 0 |
-| GEN | 29 | 29 | - | 0 |
+| GEN | 30 | 29 | GEN-49✎ | 0 |
 | MODEL | 36 | 36 | - | 0 |
 | TMPL | 27 | 27 | - | 0 |
 | GUIDE | 21 | 21 | - | 0 |
@@ -75,12 +75,15 @@
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
 
 ## next
+- create-task GEN r30 (title search words first, implicative phrase after).
 - 76b619df is live: CI and Deploy backend passed; Verify media's Media worker job failed at its parity step (logs need GitHub auth). Re-run that failed job and confirm it; its test binary does not depend on the T674–T675 packages.
 - Review the 17 unadopted choices in review/structure-261008; all ten clear refactor tasks T654–T663 are complete.
 - T636–T646 standalone writing/origin tasks are complete on main; unrelated blocked qualifications remain separate.
 - Editorial follow-up: doc-review ARCH; preserve independent review and open SSOT questions.
 
 ## log
+- 261013 update-ssot GEN r30 done: GEN-49✎ the title opens with the search words the material supports (area/station, business or product, category or key menu) and closes with a short implicative phrase; GUIDE-41 and TMPL-52 only reference it; no doing task; next create-task GEN.
+- 261013 update-ssot GEN start: implicative-only titles drop the post's search terms.
 - 261012 76b619df pushed from this tree mid-gate; local gate on it passed (CI list, Compose, 7 images, worker smoke, release in both layouts; usage/store and clip/store load flakes passed on rerun). Remote: CI ok, Deploy backend ok, Verify media Media worker failed at CPU parity like c01b5169.
 - 261012 T675 done on main: 최소 태그 수 / Minimum tag count everywhere; the tag help now explains the minimum and the broad-label tail.
 - 261012 T675 start on main at efc7f59a: 최대 태그 수 copy becomes 최소 태그 수.

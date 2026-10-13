@@ -1,5 +1,5 @@
 # GEN generation, revision, job queue
-> r29 | Semantic-origin-aware writing and revision with grounded tags filling a minimum, input-drawn sensory description, explicit evidence contracts and durable bounded jobs.
+> r30 | Semantic-origin-aware writing and revision with grounded tags filling a minimum, input-drawn sensory description, explicit evidence contracts and durable bounded jobs.
 
 ## decisions
 - GEN-1 [o] a generated post is a `PostContent` block array, never HTML (I2); the flat `Block` types `TEXT` `HEADING` `IMAGE` `GALLERY` `VIDEO` `QUOTE` `LIST` are the model-facing protojson contract (`GALLERY` is a photo group carrying its photos' filenames in order, a layout, one `alt` and one `caption` →GEN-77; `VIDEO` carries the IMAGE fields →VIDEO-2)
@@ -110,7 +110,7 @@
   - revision preserves unrequested tags under GEN-40 whatever the current minimum
   - legacy queued payloads without the member decode as `POST_TAG_COUNT_DEFAULT`
 
-- GEN-49 [o] the title 기본 지침 asks for one line that sums up the post's core experience or impression in implicative wording rather than listing facts, carrying only the names, menu items or area the title needs ← a title stringing the place, menu and area together reads as a label, not as a post anyone wants to open
+- GEN-49 [o] the title 기본 지침 asks for one line that opens with the words the post is searched by — the area or station, the business or product name and its category or key menu, as the material supports them — and closes with a short implicative phrase summing up the core experience or impression ← search matches a title by its words, so a summary alone loses the post's search terms while a bare list of them reads as a label
   - it invents no concrete fact the material lacks — a menu item, a price, an event — while compressing or rewording the owner's supplied experience and impressions is wording, not a new fact
   - it recommends avoiding repeated title forms that vary only one detail and a keyword repeated twice or more within one title
   - these are product recommendations, not a published Naver numeric penalty threshold or a promise of exposure
@@ -227,4 +227,4 @@
 - tests that pin it: prompt-assembly snapshots (order, a 말투 없음 prompt carrying no voice bytes, each 기본 지침 present only while switched on, the naturalness 기본 지침 for a Korean target only, 기억을 통한 감상 추가 only in a prompt carrying `[기억]`) · block validator and attachment filter with crafted payloads · `ceil(N/4)` observation calls with a stubbed provider · frozen re-observation set and non-shrinking snapshot · no write transaction across a provider call (handler harness) · guard collisions carry the active id · boot sweep reasons · the direct write answer schema orders `storyline` first and the post stores it
 
 ## chg
--
+- r30 261013 GEN-49✎ one implicative summary line carrying only the names it needs→search words (area/station, business or product, category or key menu) first, then a short implicative phrase
