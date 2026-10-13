@@ -21,6 +21,7 @@
 | daily-credit-plans | converted@260929 |
 | template-from-request | converted@261001 |
 | familiar-video-editing-and-dubbing | converted@261004 |
+| friendly-model-names | open@261013 |
 
 ## ssot
 | id | rev | tasked | pending | [?] |
@@ -75,12 +76,13 @@
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
 
 ## next
+- ideation friendly-model-names 계속: decide the automatic alias word list (theme, size, contents) and whether speech profiles join; then create-ssot/update-ssot MODEL.
 - 6e5039c8 is live with CI, Deploy backend and all three Verify media jobs green. 76b619df's Media worker parity failure did not reproduce (four local runs, green on 6e5039c8); its log needs GitHub auth if it recurs.
-- Review the 17 unadopted choices in review/structure-261008; all ten clear refactor tasks T654–T663 are complete.
-- T636–T646 standalone writing/origin tasks are complete on main; unrelated blocked qualifications remain separate.
-- Editorial follow-up: doc-review ARCH; preserve independent review and open SSOT questions.
+- Review the 17 unadopted choices in review/structure-261008 (T654–T663 done); editorial follow-up doc-review ARCH.
 
 ## log
+- 261013 ideation friendly-model-names paused (open): grade + model-wide neutral alias (가성비 · 소나무), auto-assigned and operator-editable, never reused; operator-confirmed succession moves the alias to a new version and same-grade eligible selections follow with a notice; per-post credits/badges in options, 자세히 under the field. Open: the alias word list.
+- 261013 ideation friendly-model-names start: users see grade+number names (무료1, 가성비2) instead of full model names/versions; details only on request.
 - 261013 6e5039c8 pushed (T676 + media-release sampling fix): CI ok, Deploy backend ok, Verify media ok (image, release, worker); production runs 6e5039c8.
 - 261013 media-release.py resource sampling: an exec failure is judged by the container's state, not Docker's wording (409 attach upgrade and runc procReady forms seen locally); two full gate runs passed in both layouts.
 - 261013 T676 done on main: the title opens with its search words and closes with a short implicative phrase.
@@ -99,21 +101,3 @@
 - 261012 update-ssot GEN start: tags fell to 5–7 with no broad label once the count became a maximum; prose shrank under the AI-suggestion separation rules; the owner wants a tag minimum and inferred sensory description from supplied inputs, editing existing 기본 지침 instead of appending.
 - 261011 T671 done on main: pick-order confirms; ① strip moves a photo by drag or 옮기기 → 여기로 / 맨 뒤로.
 - 261011 T670 done on main: images.position, confirm append, ReorderImages with POST_PHOTO_ORDER_STALE.
-- 261011 create-task POST r39: folded into todo T671 (base POST@39).
-- 261011 update-ssot POST r39 done: POST-116✎ 옮기기 picks a photo up and 여기로 / 맨 뒤로 put it down at every width; blast radius T671 (todo, updated).
-- 261011 T673 done on main: the titles 기본 지침 sums up the core experience in implicative wording and binds the form's write roles.
-- 261011 T673 start on main at 6e3bb7c5: titles 기본 지침 rewrite.
-- 261011 create-task GEN r28 TMPL r26: T673 (titles 기본 지침 sums up in implicative wording).
-- 261011 update-ssot GEN r28 TMPL r26 done: GEN-49✎ the title 기본 지침 sums up the core experience in implicative wording instead of listing facts, inventing no concrete fact · TMPL-52✎ it binds the form's write/answer_write roles; no doing task in its blast radius (T670 touches post storage only); next create-task GEN TMPL.
-- 261011 update-ssot GEN TMPL start: titles became flat fact lists; the title 기본 지침 only forbade, and its `<write>` scope no longer matches the typed title roles.
-- 261011 T672 done on main: the prompts read the list as the owner's photo order; order and photo_groups 기본 지침 arrange along it.
-- 261011 T672 start on main at f3000bc6: the prompts read the list as the owner's photo order.
-- 261011 T670 start on main at f3000bc6 (delegated worker in the main tree): images.position and ReorderImages.
-- 261011 create-task POST r38 GEN r27 GUIDE r20: T670 (photo position + ReorderImages), T671 (pick-order confirm + ① strip reorder, dep T670), T672 (prompts read the owner's photo order).
-- 261011 update-ssot POST r38 GEN r27 GUIDE r20 done: POST-116+ owner photo order (pick order, ① reorder) · POST-74✎ · GEN-7✎ GEN-77✎ GEN-82✎ the writer reads the list as the owner's photo order · GUIDE-41✎ arrange along it, a late photo joins its subject; no doing task in the blast radius; next create-task POST GEN GUIDE.
-- 261011 update-ssot POST GEN GUIDE start: the owner's photo order — kept in pick order, reorderable in ①, given to the writer as usually the visit's order; a late photo of an earlier subject joins that subject.
-- 261011 T669 done on main: a measured panel (Listbox, Toggletip) flips above only when its content does not fit below; code landed in c1774853, recorded and re-checked at 4dc93108.
-- 261011 T669 start on main at 4dc93108: record the already-landed c1774853 against THEME r33.
-- 261011 create-task THEME r33: T669 (measured panel flips only when its content does not fit below).
-- 261011 create-task THEME start.
-- 261011 update-ssot THEME r33 done: THEME-29✎ Listbox flips only when the room below cannot hold the list · THEME-30✎ shared placement rule for measured panels; no doing task in its blast radius; next create-task THEME.
