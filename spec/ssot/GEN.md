@@ -227,4 +227,4 @@
 - tests that pin it: prompt-assembly snapshots (order, a 말투 없음 prompt carrying no voice bytes, each 기본 지침 present only while switched on, the naturalness 기본 지침 for a Korean target only, 기억을 통한 감상 추가 only in a prompt carrying `[기억]`) · block validator and attachment filter with crafted payloads · `ceil(N/4)` observation calls with a stubbed provider · frozen re-observation set and non-shrinking snapshot · no write transaction across a provider call (handler harness) · guard collisions carry the active id · boot sweep reasons · the direct write answer schema orders `storyline` first and the post stores it
 
 ## chg
-- r30 261013 GEN-49✎ one implicative summary line carrying only the names it needs→search words (area/station, business or product, category or key menu) first, then a short implicative phrase
+-
