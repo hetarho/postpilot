@@ -75,13 +75,13 @@
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
 
 ## next
-- Fix Verify media's Media worker parity failure, then push T676 with the pre-push gate.
-- 76b619df is live: CI and Deploy backend passed; Verify media's Media worker job failed at its parity step (logs need GitHub auth). Re-run that failed job and confirm it; its test binary does not depend on the T674–T675 packages.
+- 6e5039c8 is live with CI, Deploy backend and all three Verify media jobs green. 76b619df's Media worker parity failure did not reproduce (four local runs, green on 6e5039c8); its log needs GitHub auth if it recurs.
 - Review the 17 unadopted choices in review/structure-261008; all ten clear refactor tasks T654–T663 are complete.
 - T636–T646 standalone writing/origin tasks are complete on main; unrelated blocked qualifications remain separate.
 - Editorial follow-up: doc-review ARCH; preserve independent review and open SSOT questions.
 
 ## log
+- 261013 6e5039c8 pushed (T676 + media-release sampling fix): CI ok, Deploy backend ok, Verify media ok (image, release, worker); production runs 6e5039c8.
 - 261013 media-release.py resource sampling: an exec failure is judged by the container's state, not Docker's wording (409 attach upgrade and runc procReady forms seen locally); two full gate runs passed in both layouts.
 - 261013 T676 done on main: the title opens with its search words and closes with a short implicative phrase.
 - 261013 T676 start on main at 6fe0333c: titles 기본 지침 first two sentences.
