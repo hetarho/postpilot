@@ -73,16 +73,17 @@
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
-| T676 | Open the title with its search words, then an implicative phrase | GEN | - | todo |
 
 ## next
-- implement-task T676 (title search words first), then fix Verify media's Media worker parity failure.
+- Fix Verify media's Media worker parity failure, then push T676 with the pre-push gate.
 - 76b619df is live: CI and Deploy backend passed; Verify media's Media worker job failed at its parity step (logs need GitHub auth). Re-run that failed job and confirm it; its test binary does not depend on the T674–T675 packages.
 - Review the 17 unadopted choices in review/structure-261008; all ten clear refactor tasks T654–T663 are complete.
 - T636–T646 standalone writing/origin tasks are complete on main; unrelated blocked qualifications remain separate.
 - Editorial follow-up: doc-review ARCH; preserve independent review and open SSOT questions.
 
 ## log
+- 261013 T676 done on main: the title opens with its search words and closes with a short implicative phrase.
+- 261013 T676 start on main at 6fe0333c: titles 기본 지침 first two sentences.
 - 261013 create-task GEN r30: T676 (titles 기본 지침 opens with search words, then an implicative phrase).
 - 261013 update-ssot GEN r30 done: GEN-49✎ the title opens with the search words the material supports (area/station, business or product, category or key menu) and closes with a short implicative phrase; GUIDE-41 and TMPL-52 only reference it; no doing task; next create-task GEN.
 - 261013 update-ssot GEN start: implicative-only titles drop the post's search terms.
