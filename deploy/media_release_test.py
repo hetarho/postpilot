@@ -35,7 +35,8 @@ class ReleaseBudget(unittest.TestCase):
 
     def test_clean_exit_between_state_check_and_probe_does_not_invent_a_sample(self):
         state = {'Running': False, 'ExitCode': 0, 'OOMKilled': False}
-        for message in ('container is not running', ''):
+        for message in ('container is not running', 'unable to upgrade to tcp, received 409',
+                        'OCI runtime exec failed: exec failed: unable to start container process: procReady not received', ''):
             with self.subTest(message=message), patch.object(fixture, 'run', side_effect=[
                     RuntimeError(message), fixture.json.dumps([{'State': state}])]) as docker:
                 self.assertIsNone(fixture.resource_snapshot('release-api'))
@@ -46,7 +47,7 @@ class ReleaseBudget(unittest.TestCase):
         for state in ({'Running': False, 'ExitCode': 137, 'OOMKilled': True},
                       {'Running': False, 'ExitCode': 1, 'OOMKilled': False},
                       {'Running': True, 'ExitCode': 0, 'OOMKilled': False}):
-            for message in ('container is not running', ''):
+            for message in ('container is not running', 'unable to upgrade to tcp, received 409', 'probe unavailable', ''):
                 with self.subTest(state=state, message=message), patch.object(fixture, 'run', side_effect=[
                         RuntimeError(message), fixture.json.dumps([{'State': state}])]):
                     with self.assertRaises(RuntimeError):

@@ -82,6 +82,7 @@
 - Editorial follow-up: doc-review ARCH; preserve independent review and open SSOT questions.
 
 ## log
+- 261013 media-release.py resource sampling: an exec failure is judged by the container's state, not Docker's wording (409 attach upgrade and runc procReady forms seen locally); two full gate runs passed in both layouts.
 - 261013 T676 done on main: the title opens with its search words and closes with a short implicative phrase.
 - 261013 T676 start on main at 6fe0333c: titles 기본 지침 first two sentences.
 - 261013 create-task GEN r30: T676 (titles 기본 지침 opens with search words, then an implicative phrase).

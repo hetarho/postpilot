@@ -39,13 +39,12 @@ def resource_snapshot(name):
     # container that is already spending its fixed execution budget.
     try:
         output = run('exec', name, '/media-resource')
-    except RuntimeError as error:
+    except RuntimeError:
         # A successful fixture can exit between the driver's Running check and
-        # this exec. Its final report and prior positive samples remain required.
-        # Docker can return empty output when the successful container exit
-        # terminates an exec that already started, rather than rejecting it.
-        if str(error).strip() and 'is not running' not in str(error):
-            raise
+        # this exec, and Docker words that race several ways (empty output, "not
+        # running", a 409 attach upgrade, runc's "procReady not received"). The
+        # container's state decides, not the message: a clean exit adds no sample,
+        # and its final report and prior positive samples remain required.
         state = json.loads(run('inspect', name))[0]['State']
         if not state['Running'] and state['ExitCode'] == 0 and not state['OOMKilled']:
             return None
