@@ -11,7 +11,7 @@
 ## active
 | tag | host | mode | since | at | doing |
 |---|---|---|---|---|---|
-| m7q2 | ihaelam-ui-MacBookPro | autopilot | 2026-10-15T12:20Z | 2026-10-15T18:18Z | - |
+| m7q2 | ihaelam-ui-MacBookPro | autopilot | 2026-10-15T12:20Z | 2026-10-15T18:19Z | T690 |
 
 ## inbox
 - 261016 suggest T696 T686 T687 T688 T689: review-code over the completed template-wizard, heading-job and clip-channel units
@@ -119,7 +119,7 @@
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
-| T690 | Add the 체험단 글 switch and advertiser guide to clips | CLIP GEN GUIDE | T679 T680 T689 | todo |
+| T690 | Add the 체험단 글 switch and advertiser guide to clips | CLIP GEN GUIDE | T679 T680 T689 | doing@261016.m7q2 |
 | T691 | Write each clip channel's upload text on request | CLIP EXPORT | T689 T690 | todo |
 | T692 | Create a clip from a finished post | POST CLIP | T680 T689 T690 | todo |
 | T693 | Learn a voice through a scripted chat and grow AI styles toward it | VOICE THEME | - | todo |
@@ -134,9 +134,10 @@
 ## next
 - After T686–T695 (m7q2): implement-task T698 → T699, T700 → T701 (a linked post as the clip's story); T697's operator CORS prerequisite is complete.
 - implement-task T697 (the owner applied production Content-Range CORS261015; add the ranged-GET probe/deployment gate and preserve HEAD cancellation).
-- Autopilot m7q2: T689 full local CI/deployment/media complete; push, then implement T690–T695 and T698–T701. T697 is ready after the owner CORS change.
+- Autopilot m7q2: T690 active after T689 pushed; continue T691–T695 and T698–T701. T697 is ready after the owner CORS change.
 
 ## log
+- 261016 T690 start on main at8e61d40f (m7q2 autopilot); CLIP r62/r63 colour changes are unrelated; base refreshed63; T689 remote CI/deploy pending.
 - 261016 T689 final FE549/4361 and all push gates pass; sourcefdba16ef, backend/image inputs unchanged from verified1eaea440.
 - 261016 T689 local deployment/media gates pass at1eaea440; final FE-only cache/navigation CI follows on sourcefdba16ef.
 - 261016 T689 pre-push FE cache follow-up: request history and current-revision navigation preserved; selected18 pass, final FE CI pending; backend/image inputs unchanged.
@@ -156,4 +157,3 @@
 - 261015 T687 final full CI passes at2cc2ed05 (FE544 files/4334 tests); unchanged backend/schema/deployment inputs reuse T686 evidence.
 - 261015 T687 done; selected116 tests, lint/FSD and build pass; full pre-push FE checks follow.
 - 261015 T687 start on main atc3de0b08 (m7q2 autopilot); T686 local CI/deployment/media pass, pushed with remote workflows pending.
-- 261015 T686 pre-push deployment/media gates pass at73458eb9; source unchanged after spec-only verification records.
