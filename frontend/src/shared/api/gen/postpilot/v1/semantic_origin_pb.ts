@@ -357,3 +357,4 @@ export enum OriginFieldKind {
  */
 export const OriginFieldKindSchema: GenEnum<OriginFieldKind> = /*@__PURE__*/
   enumDesc(file_postpilot_v1_semantic_origin, 2);
+

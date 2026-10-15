@@ -11,7 +11,7 @@
 ## active
 | tag | host | mode | since | at | doing |
 |---|---|---|---|---|---|
-| m7q2 | ihaelam-ui-MacBookPro | autopilot | 2026-10-15T12:20Z | 2026-10-15T19:58Z | T691 |
+| m7q2 | ihaelam-ui-MacBookPro | autopilot | 2026-10-15T12:20Z | 2026-10-15T20:08Z | T691 |
 
 ## inbox
 - 261016 decided T691: where does a source-free upload-text approval live? → its own project-owned quote table, leaving source-bound generation quotes intact (alt: nullable batch identity in the existing table | require retained originals)
@@ -139,6 +139,7 @@
 - Autopilot m7q2: T691 active after T690 pushed; continue T692–T695 and T698–T701. T697 is ready after the owner CORS change.
 
 ## log
+- 261016 T691 final whole Go formatter/vet/build/tests and FE552/4377 with all static/build gates pass; commit, generated parity and image/media push checks follow.
 - 261016 T691 local core/ownership/cancellation and paid one-call settlement tests pass; FE consumers202, clip pages215 and final inline-job regression13 pass; whole Go and final push checks are running. Claim CI38791917187 succeeds at a0cf1fbd.
 - 261016 T690 remote CI38791843623, Deploy38791843543 and Media38792494197 all succeed for2911a38e; all three media job checkout logs prove that revision despite event heada0cf1fbd.
 - 261016 T691 start on main at2911a38e (m7q2 autopilot); CLIP r62/r63 colour changes are unrelated, base refreshed63; T690 pushed, CI38791843623 and Deploy38791843543 pending.

@@ -618,3 +618,4 @@ export const ClipMediaWorkerService: GenService<{
   },
 }> = /*@__PURE__*/
   serviceDesc(file_postpilot_v1_clip_media_worker, 0);
+
