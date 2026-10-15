@@ -11,7 +11,7 @@
 ## active
 | tag | host | mode | since | at | doing |
 |---|---|---|---|---|---|
-| v7k2 | DESKTOP-VKPLS8P | autopilot | 2026-10-15T03:06Z | 2026-10-15T07:36Z | - |
+| v7k2 | DESKTOP-VKPLS8P | autopilot | 2026-10-15T03:06Z | 2026-10-15T07:36Z | T682 |
 
 ## inbox
 - 261015 decided -: push branch for finished units? → main, and AGENTS.md now defers to haeram-spec-creator with ARCH-31 run before each push and reused on unchanged trees (alt: - commit only | a work branch)
@@ -105,7 +105,7 @@
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
-| T682 | Weave the advertiser guide into generation as the advertiser's material | GEN | T679 T681 | todo |
+| T682 | Weave the advertiser guide into generation as the advertiser's material | GEN | T679 T681 | doing@261015.v7k2 |
 | T683 | Show the pre-submission checklist in ③ | POST | T680 | todo |
 | T684 | Keep the Naver output alone and reserve the disclosure place | EXPORT VIDEO LANG POST MKT | T679 | todo |
 | T685 | Build the guided post-template wizard | TMPL THEME | - | todo |
@@ -126,6 +126,7 @@
 - push: 65c79f2b passed its pre-push gate and waits only for the SSH key (ssh-add) with the spec commits after it; gh login is needed to read CI. 6e5039c8 is the live green revision.
 
 ## log
+- 261015 T682 start on main at 4100f145.
 - 261015 T681 done
 - 261015 T681 start on main at d52654b1.
 - 261015 T680 done
@@ -145,4 +146,3 @@
 - 261015 ideation campaign-reviewer-focus start: product philosophy (체험단 automation, fast monetization, 상생), always-on guidelines, guided template wizard, real-speech voice, per-channel outputs and menus (Naver blog, Naver clip, Instagram clip, Instagram post).
 - 261013 ideation friendly-model-names paused (open): grade + model-wide neutral alias (가성비 · 소나무), auto-assigned and operator-editable, never reused; operator-confirmed succession moves the alias to a new version and same-grade eligible selections follow with a notice; per-post credits/badges in options, 자세히 under the field. Open: the alias word list.
 - 261013 ideation friendly-model-names start: users see grade+number names (무료1, 가성비2) instead of full model names/versions; details only on request.
-- 261013 6e5039c8 pushed (T676 + media-release sampling fix): CI ok, Deploy backend ok, Verify media ok (image, release, worker); production runs 6e5039c8.
