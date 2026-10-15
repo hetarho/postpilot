@@ -11,7 +11,7 @@
 ## active
 | tag | host | mode | since | at | doing |
 |---|---|---|---|---|---|
-| m7q2 | ihaelam-ui-MacBookPro | autopilot | 2026-10-15T12:20Z | 2026-10-15T22:15Z | T706 |
+| m7q2 | ihaelam-ui-MacBookPro | autopilot | 2026-10-15T12:20Z | 2026-10-15T22:21Z | T706 |
 
 ## inbox
 - 261016 decided T705 T692: how can a failed video transfer keep the clips already uploaded? → an owned initial-import completion primitive moves verified leases into a ready batch and cleans only pending uploads under existing retention rules (alt: discard every arrived video | re-upload successful files repeatedly | leave a non-ready batch)
@@ -139,6 +139,7 @@
 - Autopilot m7q2: implement T706, restore/resume T693, then T694–T695 and ready T697–T701.
 
 ## log
+- 261016 T706 selected race20 and whole experiment race pass; full Go and deployment/media checks follow. T692 source CI38813535036 and T693 claim CI38813624693 succeed.
 - 261016 T706 starts; baseline race reproduction is red at reflection_test.go31–32 and T693 stays safely preserved.
 - 261016 T706 planned; T693 is blocked on the confirmed CI fixture race and preserved in stash0fc938f8/checkpointd7438f2c. Current main sourceffbab379 is clean.
 - 261016 T705 CI38811296610 succeeds; Deploy38811296566 and Media38811863965 already succeeded with exact ebe909dd checkout proof. T692 claim CI38811381426 fails in experiment reflection recording, reproduced with the race detector; its candidate assertions remain unchanged.
@@ -158,36 +159,3 @@
 - 261016 T705 frontend-only duplicate-name guarda032ccfa passes import8 tests, lint/format/type. Backend/proto/deploy/workflow/dependency inputs remain identical to ebfe5b5c; final whole FE runs after the active media gate.
 - 261016 T705 sourceebfe5b5c passes final whole Go formatter/vet/build/tests (API219.203s), import receipt8 tests, lint/format/type and existing source consumers. Final whole FE553/4386 tests and web build pass; generated proto/SQL reproduce without a diff. Image/media push gates follow. T705 plan/claim CI38803947107/38804014314 succeed.
 - 261016 T691 remote CI38803124102, Deploy38803124097 and Media38803713489 all succeed for4df50bd8; all three media checkout logs prove that revision. T692 claim CI38803204762 also succeeds.
-- 261016 T691 remote Deploy38803124097 and Media38803713489 succeed at4df50bd8; all three completed media checkout logs prove that revision despite event head0e38987e. CI38803124102 is still in progress.
-- 261016 T705 start on main at ddb6bf73 (m7q2 autopilot); supports T692 partial-transfer acceptance while preserving confirmed source identities and existing retention. T691 Deploy38803124097 succeeds; CI38803124102 and media evidence are pending.
-- 261016 T692 blocked on T705 source-import completion; no T692 implementation changes. create-task support contract specified; original acceptance and completed task contracts remain intact.
-- 261016 create-task T692 support start: the existing upload session discards a whole batch on one transfer failure; preserve T692 acceptance and specify a narrow confirmed-source completion primitive before implementation.
-- 261016 T692 start on main at4df50bd8 (m7q2 autopilot); CLIP source-colour handling is already in the shared upload pipeline, base refreshed63. T691 pushed with exact remote workflows pending.
-- 261016 T691 done at cfa60b9e; whole FE552/4378 and full Go/API215.009s pass, all local image/media gates pass on unchanged backend80c51876; push and exact remote evidence follow.
-- 261016 T691 final whole Go formatter/vet/build/tests and FE552/4377 with all static/build gates pass; commit, generated parity and image/media push checks follow.
-- 261016 T691 local core/ownership/cancellation and paid one-call settlement tests pass; FE consumers202, clip pages215 and final inline-job regression13 pass; whole Go and final push checks are running. Claim CI38791917187 succeeds at a0cf1fbd.
-- 261016 T690 remote CI38791843623, Deploy38791843543 and Media38792494197 all succeed for2911a38e; all three media job checkout logs prove that revision despite event heada0cf1fbd.
-- 261016 T691 start on main at2911a38e (m7q2 autopilot); CLIP r62/r63 colour changes are unrelated, base refreshed63; T690 pushed, CI38791843623 and Deploy38791843543 pending.
-- 261016 T690 done atbbcc3c6c; full Go/FE551/4364 and all local image/media gates pass on sourcef476fda0; push and exact remote evidence follow.
-- 261016 T690 codebbcc3c6c; selected core/RPC/UI40 tests and full store325.681s pass, full FE551/4364 plus static/build checks pass; final Go and pre-push media gates follow.
-- 261016 T689 remote CI38784524255, Deploy38784523903 and Media38785185569 succeed at8e61d40f; all three media job checkout logs prove the deployed revision despite event headbc8292b2.
-- 261016 T690 start on main at8e61d40f (m7q2 autopilot); CLIP r62/r63 colour changes are unrelated; base refreshed63; T689 remote CI/deploy pending.
-- 261016 T689 final FE549/4361 and all push gates pass; sourcefdba16ef, backend/image inputs unchanged from verified1eaea440.
-- 261016 T689 local deployment/media gates pass at1eaea440; final FE-only cache/navigation CI follows on sourcefdba16ef.
-- 261016 T689 pre-push FE cache follow-up: request history and current-revision navigation preserved; selected18 pass, final FE CI pending; backend/image inputs unchanged.
-- 261016 T689 done; full Go and FE549/4359 pass; final channel-only writes preserve completed content and original retention; image/media push gate follows.
-- 261016 T688 remote CI38774298150, Deploy38774298135 and Media38774966073 all succeed for2ce237dd; T689 claimca5c024c CI38774348751 succeeds.
-- 261016 T689 start on main at2ce237dd (m7q2 autopilot); CLIP r62/r63 and CDS r35/r36 source-colour changes are unrelated; bases refreshed to63/36.
-- 261016 T688 pre-push image/media gates pass atb7a51f49; source7462310f unchanged after spec-only records.
-- 261016 T688 done; whole FE549 files/4352 tests and full BE/CI checks pass; deployment/media push gate follows.
-- 261016 T688 freshness: CLIP r62/r63 HDR-source changes do not affect the wizard; base refreshed to63. Concurrent source-color commits remain intact.
-- 261015 HDR scope cut at the owner's word ("에러만 안 나면"): CLIP r63 HLG used as is, PQ refused; CDS r36 reverts the colour tags; T702–T704 removed; HLG accepted in source-color.ts directly, no task
-- 261015 autopilot h7c3 ended: CLIP r62 CDS r35, T702–T704; report spec/reports/261015-h7c3.md
-- 261015 create-task CLIP r62 CDS r35 done: T702 (explore 3h) → T703; T704 independent
-- 261015 update-ssot CLIP r62 CDS r35 done: HDR sources through one versioned SDR conversion; output tagged BT.709; no doing task affected (T686 is TMPL)
-- 261015 autopilot h7c3 start: HDR source support (CLIP_SOURCE_COLOR_UNSUPPORTED on HLG phone footage) → update-ssot CLIP CDS → create-task; no implementation
-- 261015 update-ssot CLIP CDS start (HDR sources)
-- 261015 T688 start on main atc2f3c631 (m7q2 autopilot); T687 final CI passed locally, remote CI38753876172 pending.
-- 261015 T687 final full CI passes at2cc2ed05 (FE544 files/4334 tests); unchanged backend/schema/deployment inputs reuse T686 evidence.
-- 261015 T687 done; selected116 tests, lint/FSD and build pass; full pre-push FE checks follow.
-- 261015 T687 start on main atc3de0b08 (m7q2 autopilot); T686 local CI/deployment/media pass, pushed with remote workflows pending.
