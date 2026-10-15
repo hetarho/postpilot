@@ -74,7 +74,7 @@ type allowance struct {
 // its writer transaction — serialized on the single writer — finds a job's existing hold and
 // refuses a second reservation, including after a crash; a matching retry keeps the first.
 func (a Jobs) Reserve(ctx context.Context, user, id string, calls []job.PlannedCall, approval Reservation) (context.Context, error) {
-	if approval.ApprovedMaxCredits < 0 || len(approval.Calls) != 2 || len(calls) == 0 || a.guard == nil {
+	if approval.ApprovedMaxCredits < 0 || len(calls) == 0 || a.guard == nil {
 		return nil, clip.ErrCreditAllowance
 	}
 	j, err := a.queue.Get(ctx, id, user)
@@ -83,6 +83,13 @@ func (a Jobs) Reserve(ctx context.Context, user, id string, calls []job.PlannedC
 	}
 	if j == nil || j.UserID != user || !clip.ChargedJobKind(j.Kind) || j.Status != job.StatusRunning ||
 		j.Stage != "prepare" || j.CancelRequestedAt != nil || j.CancellationPolicyVersion != approval.CancellationPolicyVersion {
+		return nil, clip.ErrCreditAllowance
+	}
+	if j.Kind == clip.JobKindUploadText {
+		if len(approval.Calls) != 1 || len(calls) != 1 || len(approval.Units) != 0 || j.ObserveModel != "" {
+			return nil, clip.ErrCreditAllowance
+		}
+	} else if len(approval.Calls) != 2 {
 		return nil, clip.ErrCreditAllowance
 	}
 	remaining := map[callKey]int{}
@@ -121,6 +128,20 @@ func (a Jobs) Reserve(ctx context.Context, user, id string, calls []job.PlannedC
 // approvedPolicies checks each approved line against the job's frozen model choices and
 // the assembly contract's budgets, and returns the policies the allowance will hand out.
 func approvedPolicies(approval Reservation, j job.JobSummary, remaining map[callKey]int) (map[callKey]llm.CallPolicy, error) {
+	if j.Kind == clip.JobKindUploadText {
+		if len(approval.Calls) != 1 || len(remaining) != 1 {
+			return nil, clip.ErrCreditAllowance
+		}
+		c := approval.Calls[0]
+		p := c.Policy
+		key := callKey{p.Ref.String(), p.CompletionTokens}
+		if !p.Valid() || !p.Pricing.Valid() || p.Stage != llm.StageNameWrite || p.Ref.String() != j.WriteModel ||
+			p.CompletionTokens != writeCompletionTokens || p.Pricing.Delivery != llm.ExecutionTextOnly ||
+			p.ResponseRetries != 0 || c.Count != 1 || remaining[key] != 1 {
+			return nil, clip.ErrCreditAllowance
+		}
+		return map[callKey]llm.CallPolicy{key: p}, nil
+	}
 	policies := map[callKey]llm.CallPolicy{}
 	for i, c := range approval.Calls {
 		p := c.Policy

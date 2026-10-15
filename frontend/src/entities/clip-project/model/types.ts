@@ -152,7 +152,7 @@ export interface ClipAccounting {
  *  same model, so the label — not the stage — says which line is which; the storyline
  *  call is one writing call of its own (CLIP-177). */
 export interface ClipPricedCall {
-  label: 'observe' | 'flow' | 'narration' | 'storyline' | 'script' | 'speech'
+  label: 'observe' | 'flow' | 'narration' | 'storyline' | 'script' | 'speech' | 'upload_text'
   calls: number
 }
 

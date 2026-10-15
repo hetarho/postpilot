@@ -18,7 +18,7 @@ func videoRuleResponsibility(mode string) (string, []string) {
 		return "clip-write", []string{"placements"}
 	case "flow-revision":
 		return "clip-revise", []string{"placements"}
-	case "narration":
+	case "narration", "upload-text":
 		return "clip-write", []string{"captions"}
 	case "narration-revision":
 		return "clip-revise", []string{"captions"}

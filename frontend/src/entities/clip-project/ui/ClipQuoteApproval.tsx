@@ -150,6 +150,7 @@ export function ClipQuoteApproval({
 // Each writing call's line: the flow and the narration a generation makes, or the one storyline
 // call (CLIP-177).
 const WRITING_CALL_KEYS = {
+  upload_text: 'credits.call.upload_text',
   flow: 'credits.call.flow',
   narration: 'credits.call.narration',
   storyline: 'credits.call.storyline',

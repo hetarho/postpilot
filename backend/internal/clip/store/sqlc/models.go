@@ -298,6 +298,31 @@ type ClipSpeechCleanup struct {
 	CreatedAt string
 }
 
+type ClipUploadText struct {
+	ProjectID string
+	UserID    string
+	Channel   string
+	Body      string
+	Tags      string
+	Edited    int64
+	UpdatedAt string
+	Revision  int64
+	LastJobID string
+}
+
+type ClipUploadTextQuote struct {
+	ID               string
+	UserID           string
+	ProjectID        string
+	Channel          string
+	ExpectedRevision int64
+	InputDigest      string
+	PricingJson      string
+	MaxCredits       int64
+	ExpiresAt        string
+	ConsumedJobID    sql.NullString
+}
+
 type VideoTemplate struct {
 	ID                   string
 	UserID               string

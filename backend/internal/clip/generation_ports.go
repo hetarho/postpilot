@@ -18,6 +18,7 @@ const JobSubject = "clip_project"
 // nothing and spends nothing (CLIP-19, CLIP-20, CLIP-132), the 스토리라인 먼저 call that stops
 // at the storyline, and the storyline request that rewrites it (CLIP-177, CLIP-181).
 const (
+	JobKindUploadText      = "clip_upload_text"
 	JobKindSpeech          = "speech_clip"
 	JobKindGenerate        = "generate_clip"
 	JobKindRender          = "render_clip"
@@ -40,7 +41,7 @@ func SafeJobStage(stage string) string {
 	switch stage {
 	// `plan` and `plan_retry` are the single writing call this build no longer makes; a
 	// job queued before it split keeps a readable stage.
-	case "speech", "script", "script_retry", "queued", "prepare_wait", "prepare_retry", "render_wait", "render_retry", "sample_wait", "sample_retry", "sample", "prepare", "analyze", "analyze_retry", "flow", "flow_retry", "narrate", "narrate_retry", "storyline", "storyline_retry", "plan", "plan_retry", "render", "save", "cleanup":
+	case "upload_text", "speech", "script", "script_retry", "queued", "prepare_wait", "prepare_retry", "render_wait", "render_retry", "sample_wait", "sample_retry", "sample", "prepare", "analyze", "analyze_retry", "flow", "flow_retry", "narrate", "narrate_retry", "storyline", "storyline_retry", "plan", "plan_retry", "render", "save", "cleanup":
 		return stage
 	}
 	return "unknown"
@@ -48,7 +49,7 @@ func SafeJobStage(stage string) string {
 
 // IsJobKind reports whether a job belongs to the clip surface at all.
 func IsJobKind(kind string) bool {
-	return kind == JobKindSpeech || kind == JobKindGenerate || kind == JobKindRender || kind == JobKindRevise || kind == JobKindStoryline || kind == JobKindReviseStoryline || kind == JobKindSampleBrowserRender
+	return kind == JobKindUploadText || kind == JobKindSpeech || kind == JobKindGenerate || kind == JobKindRender || kind == JobKindRevise || kind == JobKindStoryline || kind == JobKindReviseStoryline || kind == JobKindSampleBrowserRender
 }
 
 // ChargedJobKind reports whether a clip job reserves an approved credit ceiling before
@@ -56,7 +57,7 @@ func IsJobKind(kind string) bool {
 // Every admission, metering and settlement gate asks this instead of naming the
 // generation alone — naming it is what left the revision unable to reserve.
 func ChargedJobKind(kind string) bool {
-	return kind == JobKindSpeech || kind == JobKindGenerate || kind == JobKindRevise || kind == JobKindStoryline || kind == JobKindReviseStoryline
+	return kind == JobKindUploadText || kind == JobKindSpeech || kind == JobKindGenerate || kind == JobKindRevise || kind == JobKindStoryline || kind == JobKindReviseStoryline
 }
 
 // PreparesMedia reports whether a clip job observes footage and so takes the prepare stage:

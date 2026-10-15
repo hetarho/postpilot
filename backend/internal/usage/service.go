@@ -352,7 +352,7 @@ func (s *Service) CheckModelAccess(ctx context.Context, acting plan.Plan, kind s
 				QualifyFree(context.Context, string, llm.FreePath) (bool, error)
 			}); ok {
 				path := llm.FreeText
-				if strings.Contains(kind, "clip") && info.VideoInput {
+				if strings.Contains(kind, "clip") && call.Stage == llm.StageNameObserve && info.VideoInput {
 					path = llm.FreeVideoInput
 				} else if call.Stage == llm.StageNameObserve {
 					path = llm.FreeImageInput

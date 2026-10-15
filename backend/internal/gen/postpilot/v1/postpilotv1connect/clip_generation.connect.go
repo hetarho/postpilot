@@ -72,6 +72,18 @@ const (
 	// ClipGenerationServiceCancelClipJobProcedure is the fully-qualified name of the
 	// ClipGenerationService's CancelClipJob RPC.
 	ClipGenerationServiceCancelClipJobProcedure = "/postpilot.v1.ClipGenerationService/CancelClipJob"
+	// ClipGenerationServiceGetClipUploadTextsProcedure is the fully-qualified name of the
+	// ClipGenerationService's GetClipUploadTexts RPC.
+	ClipGenerationServiceGetClipUploadTextsProcedure = "/postpilot.v1.ClipGenerationService/GetClipUploadTexts"
+	// ClipGenerationServiceSaveClipUploadTextProcedure is the fully-qualified name of the
+	// ClipGenerationService's SaveClipUploadText RPC.
+	ClipGenerationServiceSaveClipUploadTextProcedure = "/postpilot.v1.ClipGenerationService/SaveClipUploadText"
+	// ClipGenerationServiceQuoteClipUploadTextProcedure is the fully-qualified name of the
+	// ClipGenerationService's QuoteClipUploadText RPC.
+	ClipGenerationServiceQuoteClipUploadTextProcedure = "/postpilot.v1.ClipGenerationService/QuoteClipUploadText"
+	// ClipGenerationServiceStartClipUploadTextProcedure is the fully-qualified name of the
+	// ClipGenerationService's StartClipUploadText RPC.
+	ClipGenerationServiceStartClipUploadTextProcedure = "/postpilot.v1.ClipGenerationService/StartClipUploadText"
 	// ClipGenerationServiceListClipAnalysisEligibilityProcedure is the fully-qualified name of the
 	// ClipGenerationService's ListClipAnalysisEligibility RPC.
 	ClipGenerationServiceListClipAnalysisEligibilityProcedure = "/postpilot.v1.ClipGenerationService/ListClipAnalysisEligibility"
@@ -96,6 +108,10 @@ type ClipGenerationServiceClient interface {
 	StartClipStorylineRevision(context.Context, *connect.Request[v1.StartClipStorylineRevisionRequest]) (*connect.Response[v1.StartClipGenerationResponse], error)
 	FinalizeClipProject(context.Context, *connect.Request[v1.FinalizeClipProjectRequest]) (*connect.Response[v1.FinalizeClipProjectResponse], error)
 	CancelClipJob(context.Context, *connect.Request[v1.CancelClipJobRequest]) (*connect.Response[v1.CancelClipJobResponse], error)
+	GetClipUploadTexts(context.Context, *connect.Request[v1.GetClipUploadTextsRequest]) (*connect.Response[v1.GetClipUploadTextsResponse], error)
+	SaveClipUploadText(context.Context, *connect.Request[v1.SaveClipUploadTextRequest]) (*connect.Response[v1.SaveClipUploadTextResponse], error)
+	QuoteClipUploadText(context.Context, *connect.Request[v1.QuoteClipUploadTextRequest]) (*connect.Response[v1.QuoteClipGenerationResponse], error)
+	StartClipUploadText(context.Context, *connect.Request[v1.StartClipUploadTextRequest]) (*connect.Response[v1.StartClipGenerationResponse], error)
 	// Read-only: every registered observe model with its current clip-analysis
 	// eligibility (CLIP-30, CLIP-44). No model call, no write, no provider detail.
 	ListClipAnalysisEligibility(context.Context, *connect.Request[v1.ListClipAnalysisEligibilityRequest]) (*connect.Response[v1.ListClipAnalysisEligibilityResponse], error)
@@ -190,6 +206,30 @@ func NewClipGenerationServiceClient(httpClient connect.HTTPClient, baseURL strin
 			connect.WithSchema(clipGenerationServiceMethods.ByName("CancelClipJob")),
 			connect.WithClientOptions(opts...),
 		),
+		getClipUploadTexts: connect.NewClient[v1.GetClipUploadTextsRequest, v1.GetClipUploadTextsResponse](
+			httpClient,
+			baseURL+ClipGenerationServiceGetClipUploadTextsProcedure,
+			connect.WithSchema(clipGenerationServiceMethods.ByName("GetClipUploadTexts")),
+			connect.WithClientOptions(opts...),
+		),
+		saveClipUploadText: connect.NewClient[v1.SaveClipUploadTextRequest, v1.SaveClipUploadTextResponse](
+			httpClient,
+			baseURL+ClipGenerationServiceSaveClipUploadTextProcedure,
+			connect.WithSchema(clipGenerationServiceMethods.ByName("SaveClipUploadText")),
+			connect.WithClientOptions(opts...),
+		),
+		quoteClipUploadText: connect.NewClient[v1.QuoteClipUploadTextRequest, v1.QuoteClipGenerationResponse](
+			httpClient,
+			baseURL+ClipGenerationServiceQuoteClipUploadTextProcedure,
+			connect.WithSchema(clipGenerationServiceMethods.ByName("QuoteClipUploadText")),
+			connect.WithClientOptions(opts...),
+		),
+		startClipUploadText: connect.NewClient[v1.StartClipUploadTextRequest, v1.StartClipGenerationResponse](
+			httpClient,
+			baseURL+ClipGenerationServiceStartClipUploadTextProcedure,
+			connect.WithSchema(clipGenerationServiceMethods.ByName("StartClipUploadText")),
+			connect.WithClientOptions(opts...),
+		),
 		listClipAnalysisEligibility: connect.NewClient[v1.ListClipAnalysisEligibilityRequest, v1.ListClipAnalysisEligibilityResponse](
 			httpClient,
 			baseURL+ClipGenerationServiceListClipAnalysisEligibilityProcedure,
@@ -214,6 +254,10 @@ type clipGenerationServiceClient struct {
 	startClipStorylineRevision  *connect.Client[v1.StartClipStorylineRevisionRequest, v1.StartClipGenerationResponse]
 	finalizeClipProject         *connect.Client[v1.FinalizeClipProjectRequest, v1.FinalizeClipProjectResponse]
 	cancelClipJob               *connect.Client[v1.CancelClipJobRequest, v1.CancelClipJobResponse]
+	getClipUploadTexts          *connect.Client[v1.GetClipUploadTextsRequest, v1.GetClipUploadTextsResponse]
+	saveClipUploadText          *connect.Client[v1.SaveClipUploadTextRequest, v1.SaveClipUploadTextResponse]
+	quoteClipUploadText         *connect.Client[v1.QuoteClipUploadTextRequest, v1.QuoteClipGenerationResponse]
+	startClipUploadText         *connect.Client[v1.StartClipUploadTextRequest, v1.StartClipGenerationResponse]
 	listClipAnalysisEligibility *connect.Client[v1.ListClipAnalysisEligibilityRequest, v1.ListClipAnalysisEligibilityResponse]
 }
 
@@ -282,6 +326,26 @@ func (c *clipGenerationServiceClient) CancelClipJob(ctx context.Context, req *co
 	return c.cancelClipJob.CallUnary(ctx, req)
 }
 
+// GetClipUploadTexts calls postpilot.v1.ClipGenerationService.GetClipUploadTexts.
+func (c *clipGenerationServiceClient) GetClipUploadTexts(ctx context.Context, req *connect.Request[v1.GetClipUploadTextsRequest]) (*connect.Response[v1.GetClipUploadTextsResponse], error) {
+	return c.getClipUploadTexts.CallUnary(ctx, req)
+}
+
+// SaveClipUploadText calls postpilot.v1.ClipGenerationService.SaveClipUploadText.
+func (c *clipGenerationServiceClient) SaveClipUploadText(ctx context.Context, req *connect.Request[v1.SaveClipUploadTextRequest]) (*connect.Response[v1.SaveClipUploadTextResponse], error) {
+	return c.saveClipUploadText.CallUnary(ctx, req)
+}
+
+// QuoteClipUploadText calls postpilot.v1.ClipGenerationService.QuoteClipUploadText.
+func (c *clipGenerationServiceClient) QuoteClipUploadText(ctx context.Context, req *connect.Request[v1.QuoteClipUploadTextRequest]) (*connect.Response[v1.QuoteClipGenerationResponse], error) {
+	return c.quoteClipUploadText.CallUnary(ctx, req)
+}
+
+// StartClipUploadText calls postpilot.v1.ClipGenerationService.StartClipUploadText.
+func (c *clipGenerationServiceClient) StartClipUploadText(ctx context.Context, req *connect.Request[v1.StartClipUploadTextRequest]) (*connect.Response[v1.StartClipGenerationResponse], error) {
+	return c.startClipUploadText.CallUnary(ctx, req)
+}
+
 // ListClipAnalysisEligibility calls postpilot.v1.ClipGenerationService.ListClipAnalysisEligibility.
 func (c *clipGenerationServiceClient) ListClipAnalysisEligibility(ctx context.Context, req *connect.Request[v1.ListClipAnalysisEligibilityRequest]) (*connect.Response[v1.ListClipAnalysisEligibilityResponse], error) {
 	return c.listClipAnalysisEligibility.CallUnary(ctx, req)
@@ -307,6 +371,10 @@ type ClipGenerationServiceHandler interface {
 	StartClipStorylineRevision(context.Context, *connect.Request[v1.StartClipStorylineRevisionRequest]) (*connect.Response[v1.StartClipGenerationResponse], error)
 	FinalizeClipProject(context.Context, *connect.Request[v1.FinalizeClipProjectRequest]) (*connect.Response[v1.FinalizeClipProjectResponse], error)
 	CancelClipJob(context.Context, *connect.Request[v1.CancelClipJobRequest]) (*connect.Response[v1.CancelClipJobResponse], error)
+	GetClipUploadTexts(context.Context, *connect.Request[v1.GetClipUploadTextsRequest]) (*connect.Response[v1.GetClipUploadTextsResponse], error)
+	SaveClipUploadText(context.Context, *connect.Request[v1.SaveClipUploadTextRequest]) (*connect.Response[v1.SaveClipUploadTextResponse], error)
+	QuoteClipUploadText(context.Context, *connect.Request[v1.QuoteClipUploadTextRequest]) (*connect.Response[v1.QuoteClipGenerationResponse], error)
+	StartClipUploadText(context.Context, *connect.Request[v1.StartClipUploadTextRequest]) (*connect.Response[v1.StartClipGenerationResponse], error)
 	// Read-only: every registered observe model with its current clip-analysis
 	// eligibility (CLIP-30, CLIP-44). No model call, no write, no provider detail.
 	ListClipAnalysisEligibility(context.Context, *connect.Request[v1.ListClipAnalysisEligibilityRequest]) (*connect.Response[v1.ListClipAnalysisEligibilityResponse], error)
@@ -397,6 +465,30 @@ func NewClipGenerationServiceHandler(svc ClipGenerationServiceHandler, opts ...c
 		connect.WithSchema(clipGenerationServiceMethods.ByName("CancelClipJob")),
 		connect.WithHandlerOptions(opts...),
 	)
+	clipGenerationServiceGetClipUploadTextsHandler := connect.NewUnaryHandler(
+		ClipGenerationServiceGetClipUploadTextsProcedure,
+		svc.GetClipUploadTexts,
+		connect.WithSchema(clipGenerationServiceMethods.ByName("GetClipUploadTexts")),
+		connect.WithHandlerOptions(opts...),
+	)
+	clipGenerationServiceSaveClipUploadTextHandler := connect.NewUnaryHandler(
+		ClipGenerationServiceSaveClipUploadTextProcedure,
+		svc.SaveClipUploadText,
+		connect.WithSchema(clipGenerationServiceMethods.ByName("SaveClipUploadText")),
+		connect.WithHandlerOptions(opts...),
+	)
+	clipGenerationServiceQuoteClipUploadTextHandler := connect.NewUnaryHandler(
+		ClipGenerationServiceQuoteClipUploadTextProcedure,
+		svc.QuoteClipUploadText,
+		connect.WithSchema(clipGenerationServiceMethods.ByName("QuoteClipUploadText")),
+		connect.WithHandlerOptions(opts...),
+	)
+	clipGenerationServiceStartClipUploadTextHandler := connect.NewUnaryHandler(
+		ClipGenerationServiceStartClipUploadTextProcedure,
+		svc.StartClipUploadText,
+		connect.WithSchema(clipGenerationServiceMethods.ByName("StartClipUploadText")),
+		connect.WithHandlerOptions(opts...),
+	)
 	clipGenerationServiceListClipAnalysisEligibilityHandler := connect.NewUnaryHandler(
 		ClipGenerationServiceListClipAnalysisEligibilityProcedure,
 		svc.ListClipAnalysisEligibility,
@@ -431,6 +523,14 @@ func NewClipGenerationServiceHandler(svc ClipGenerationServiceHandler, opts ...c
 			clipGenerationServiceFinalizeClipProjectHandler.ServeHTTP(w, r)
 		case ClipGenerationServiceCancelClipJobProcedure:
 			clipGenerationServiceCancelClipJobHandler.ServeHTTP(w, r)
+		case ClipGenerationServiceGetClipUploadTextsProcedure:
+			clipGenerationServiceGetClipUploadTextsHandler.ServeHTTP(w, r)
+		case ClipGenerationServiceSaveClipUploadTextProcedure:
+			clipGenerationServiceSaveClipUploadTextHandler.ServeHTTP(w, r)
+		case ClipGenerationServiceQuoteClipUploadTextProcedure:
+			clipGenerationServiceQuoteClipUploadTextHandler.ServeHTTP(w, r)
+		case ClipGenerationServiceStartClipUploadTextProcedure:
+			clipGenerationServiceStartClipUploadTextHandler.ServeHTTP(w, r)
 		case ClipGenerationServiceListClipAnalysisEligibilityProcedure:
 			clipGenerationServiceListClipAnalysisEligibilityHandler.ServeHTTP(w, r)
 		default:
@@ -492,6 +592,22 @@ func (UnimplementedClipGenerationServiceHandler) FinalizeClipProject(context.Con
 
 func (UnimplementedClipGenerationServiceHandler) CancelClipJob(context.Context, *connect.Request[v1.CancelClipJobRequest]) (*connect.Response[v1.CancelClipJobResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ClipGenerationService.CancelClipJob is not implemented"))
+}
+
+func (UnimplementedClipGenerationServiceHandler) GetClipUploadTexts(context.Context, *connect.Request[v1.GetClipUploadTextsRequest]) (*connect.Response[v1.GetClipUploadTextsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ClipGenerationService.GetClipUploadTexts is not implemented"))
+}
+
+func (UnimplementedClipGenerationServiceHandler) SaveClipUploadText(context.Context, *connect.Request[v1.SaveClipUploadTextRequest]) (*connect.Response[v1.SaveClipUploadTextResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ClipGenerationService.SaveClipUploadText is not implemented"))
+}
+
+func (UnimplementedClipGenerationServiceHandler) QuoteClipUploadText(context.Context, *connect.Request[v1.QuoteClipUploadTextRequest]) (*connect.Response[v1.QuoteClipGenerationResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ClipGenerationService.QuoteClipUploadText is not implemented"))
+}
+
+func (UnimplementedClipGenerationServiceHandler) StartClipUploadText(context.Context, *connect.Request[v1.StartClipUploadTextRequest]) (*connect.Response[v1.StartClipGenerationResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ClipGenerationService.StartClipUploadText is not implemented"))
 }
 
 func (UnimplementedClipGenerationServiceHandler) ListClipAnalysisEligibility(context.Context, *connect.Request[v1.ListClipAnalysisEligibilityRequest]) (*connect.Response[v1.ListClipAnalysisEligibilityResponse], error) {

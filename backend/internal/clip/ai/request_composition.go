@@ -18,6 +18,13 @@ func clipDescriptor(mode string) llm.RequestComposition {
 	}
 	var schema []byte
 	switch mode {
+	case "upload-text":
+		c.Activation = "one explicitly approved text-only writing call; no correction, source read or render"
+		c.Composer = "clip/ai.Service.WriteUploadText/BuildUploadTextPrompt"
+		c.Parser = "clip/ai.WriteUploadText/clip.BoundGeneratedUploadText"
+		c.Consumer = "saved channel upload text; no media or edit-plan mutation"
+		c.SourceFiles = append(c.SourceFiles, "internal/clip/ai/upload_text_prompt.go", "internal/clip/upload_text.go")
+		schema = uploadTextSchema
 	case "observe":
 		c.Stage = "video-observation"
 		c.Composer = "clip/ai.Service.ObserveChunk/BuildObservePrompt"
@@ -137,6 +144,9 @@ func RequestCompositions() []llm.RequestComposition {
 	revision.Current.Narration = &clip.NarrationPlan{Enabled: true, Segments: []clip.SpokenSegment{{ID: "synthetic-segment", Text: "Synthetic reviewed spoken text", StartMS: 0, EndMS: 1000}}}
 	system, user = buildSpokenRevisionPrompt(revision, revision.Current, limits)
 	add("spoken-script-revision", system, user)
+	upload := clip.UploadTextInput{Language: in.Language, Channel: clip.ChannelNaver, Campaign: true, Title: "Synthetic clip", Instruction: in.Instruction, Facts: document.Inputs, Storyline: &story, Captions: []string{"Synthetic caption"}, AdvertiserGuide: in.AdvertiserGuide, Voice: "Synthetic default voice style", Guidelines: in.Guidelines}
+	system, user = BuildUploadTextPrompt(upload)
+	out = append(out, *clipComposition("upload-text", system, user, upload.Guidelines, nil))
 	return out
 }
 
@@ -244,6 +254,10 @@ func clipComposition(mode, system, user string, g clip.VideoGuidelines, refs []s
 }
 func clipInputRole(key string) (llm.FragmentAuthorship, string) {
 	switch key {
+	case "base_voice_style":
+		return llm.FragmentAuthorshipAccount, "frozen-default-voice-style-not-experience"
+	case "project_title", "final_captions":
+		return llm.FragmentAuthorshipAccount, "reviewed-document-unconfirmed-text-origin"
 	case "advertiser_guide":
 		return llm.FragmentAuthorshipAccount, "advertiser-material-not-owner-experience"
 	case "project_instruction", "request", "revision_request":

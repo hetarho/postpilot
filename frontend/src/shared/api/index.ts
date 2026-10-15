@@ -33,6 +33,10 @@ export {
   ClipAnalysisEligibility,
 } from './gen/postpilot/v1/clip_pb'
 export {
+  GetClipUploadTextsResponseSchema,
+  SaveClipUploadTextResponseSchema,
+  ClipUploadTextSchema,
+  ClipUploadTextLimitsSchema,
   CreateClipProjectResponseSchema,
   DeleteClipProjectResponseSchema,
   GetClipProjectResponseSchema,
@@ -73,6 +77,8 @@ export {
   UpdateVideoTemplateResponseSchema,
 } from './gen/postpilot/v1/clip_template_pb'
 export type {
+  ClipUploadText as ProtoClipUploadText,
+  ClipUploadTextLimits as ProtoClipUploadTextLimits,
   ListClipAnalysisEligibilityResponse as ProtoClipAnalysisEligibilityList,
   QuoteClipGenerationResponse as ProtoClipQuote,
 } from './gen/postpilot/v1/clip_generation_pb'

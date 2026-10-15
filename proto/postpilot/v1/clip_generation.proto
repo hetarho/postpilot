@@ -26,6 +26,10 @@ service ClipGenerationService {
   rpc StartClipStorylineRevision(StartClipStorylineRevisionRequest) returns (StartClipGenerationResponse) {}
   rpc FinalizeClipProject(FinalizeClipProjectRequest) returns (FinalizeClipProjectResponse) {}
   rpc CancelClipJob(CancelClipJobRequest) returns (CancelClipJobResponse) {}
+  rpc GetClipUploadTexts(GetClipUploadTextsRequest) returns (GetClipUploadTextsResponse) {}
+  rpc SaveClipUploadText(SaveClipUploadTextRequest) returns (SaveClipUploadTextResponse) {}
+  rpc QuoteClipUploadText(QuoteClipUploadTextRequest) returns (QuoteClipGenerationResponse) {}
+  rpc StartClipUploadText(StartClipUploadTextRequest) returns (StartClipGenerationResponse) {}
   // Read-only: every registered observe model with its current clip-analysis
   // eligibility (CLIP-30, CLIP-44). No model call, no write, no provider detail.
   rpc ListClipAnalysisEligibility(ListClipAnalysisEligibilityRequest) returns (ListClipAnalysisEligibilityResponse) {}
@@ -203,3 +207,47 @@ message ListClipAnalysisEligibilityRequest {}
 
 // Registry order; display metadata is the observe model list's (ProviderService).
 message ListClipAnalysisEligibilityResponse { repeated ClipAnalysisModelEligibility models = 1; }
+
+// Upload text is metadata for either channel, independent of rendering and original files.
+message ClipUploadText {
+  string channel = 1;
+  string body = 2;
+  repeated string tags = 3;
+  bool edited = 4;
+  string updated_at = 5;
+  int32 revision = 6;
+}
+message ClipUploadTextLimits {
+  string channel = 1;
+  int32 max_chars = 2;
+  int32 max_tags = 3;
+  bool tags_in_caption = 4;
+}
+message GetClipUploadTextsRequest { string project_id = 1; }
+message GetClipUploadTextsResponse {
+  repeated ClipUploadText texts = 1;
+  repeated ClipUploadTextLimits limits = 2;
+}
+message SaveClipUploadTextRequest {
+  string project_id = 1;
+  string channel = 2;
+  string body = 3;
+  repeated string tags = 4;
+  int32 expected_revision = 5;
+}
+message SaveClipUploadTextResponse { ClipUploadText text = 1; }
+message QuoteClipUploadTextRequest {
+  string project_id = 1;
+  string channel = 2;
+  ModelRef write_model = 3;
+  bool confirm_edited = 4;
+}
+message StartClipUploadTextRequest {
+  string project_id = 1;
+  string channel = 2;
+  ModelRef write_model = 3;
+  bool confirm_edited = 4;
+  string quote_id = 5;
+  optional int32 approved_max_credits = 6;
+  int32 cancellation_policy_version = 7;
+}

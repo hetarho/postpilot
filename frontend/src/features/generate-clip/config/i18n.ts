@@ -14,6 +14,7 @@ export const i18n = {
 
       running: '클립을 만드는 중이에요',
       stage: {
+        upload_text: '업로드 문구 작성 중',
         script: '대본 작성',
         script_retry: '대본 응답 형식 다시 확인 중',
         speech: '더빙 음성 생성',
@@ -84,6 +85,7 @@ export const i18n = {
 
       running: 'Creating your clip',
       stage: {
+        upload_text: 'Writing upload text',
         script: 'Writing the spoken script',
         script_retry: 'Correcting the spoken script response',
         speech: 'Generating dubbed audio',

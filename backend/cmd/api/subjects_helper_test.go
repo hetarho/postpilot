@@ -21,7 +21,7 @@ func attach(in job.NewJob, slug, voiceID string) job.NewJob {
 // clipJob mirrors the clip adapter: charged clip work defers its hold until its owner
 // approves the quote, and a render spends nothing at all.
 func clipJob(in job.NewJob, project string) job.NewJob {
-	in.DeferHold = in.Kind == "generate_clip" || in.Kind == "revise_clip"
+	in.DeferHold = clip.ChargedJobKind(in.Kind)
 	in.NonMetered = in.Kind == "render_clip"
 	subject := job.Subject{Dimension: clip.JobSubject, ID: project}
 	in.Subjects = append(in.Subjects, subject)

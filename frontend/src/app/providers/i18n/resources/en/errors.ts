@@ -323,6 +323,9 @@ export const errors = {
   POST_STORYLINE_INVALID: 'Could not save the storyline. Refresh and edit it again.',
   GENERATION_STORYLINE_REOBSERVE:
     'Writing from the storyline takes no photo re-observation choice.',
+  CLIP_UPLOAD_TEXT_LIMIT:
+    'Upload text allows {{max}} characters and {{tags}} tags, including required advertiser tags.',
+  CLIP_UPLOAD_TEXT_CONFIRMATION_REQUIRED: 'You edited this text. Confirm before writing over it.',
   CLIP_STORYLINE_MISSING: 'This clip has no storyline yet. Make one first.',
   CLIP_STORYLINE_INVALID:
     'The storyline could not be saved. Keep the same paragraphs, and put each scene in one paragraph only.',

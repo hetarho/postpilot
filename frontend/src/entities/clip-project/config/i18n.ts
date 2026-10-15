@@ -31,6 +31,7 @@ export const i18n = {
         speech: '더빙 최대 {{calls}}문장',
         narration: '자막 작성 {{calls}}회',
         storyline: '스토리라인 작성 {{calls}}회',
+        upload_text: '업로드 문구 작성 {{calls}}회',
       },
       renderOnly:
         '완료된 분석과 편집안을 재사용해 렌더링부터 이어가요. AI 요청과 추가 크레딧 차감은 없어요.',
@@ -163,6 +164,7 @@ export const i18n = {
         speech: 'Dubbing up to {{calls}} segments',
         narration: 'Narration ×{{calls}}',
         storyline: 'Storyline ×{{calls}}',
+        upload_text: 'Upload text ×{{calls}}',
       },
       renderOnly:
         'Resume rendering with the completed analysis and edit plan. No AI requests or additional credit charge.',

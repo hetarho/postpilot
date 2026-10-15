@@ -281,3 +281,18 @@ it('offers 영상 지침으로 저장 after a completed revision started here, s
   })
   expect(await panel().findByText('영상 지침으로 저장했어요.')).toBeInTheDocument()
 })
+
+it('keeps an upload-text job beside the plan with its own cancel action', async () => {
+  const latestJob = {
+    id: 'upload',
+    kind: 'clip_upload_text',
+    status: 'running',
+    stage: 'upload_text',
+    clipProjectId: 'clip',
+  }
+  await mount({ projects: [{ ...fixture(), latestJob }] }, { jobs: [latestJob] })
+  expect(await screen.findByRole('button', { name: '문구 작성 취소' })).toBeEnabled()
+  expect(screen.getByRole('tab', { name: '수정' })).toHaveAttribute('aria-selected', 'true')
+  expect(screen.getByLabelText('편집 타임라인')).toBeVisible()
+  expect(screen.queryByRole('button', { name: '업로드 문구 만들기' })).not.toBeInTheDocument()
+})

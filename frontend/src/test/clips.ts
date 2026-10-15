@@ -16,6 +16,8 @@ import {
   UpdateVideoTemplateResponseSchema,
   DeleteVideoTemplateResponseSchema,
   ListVideoTemplatesResponseSchema,
+  GetClipUploadTextsResponseSchema,
+  SaveClipUploadTextResponseSchema,
   ClipProjectSchema,
   ClipSourceBatchSchema,
   ListClipProjectsResponseSchema,
@@ -130,6 +132,21 @@ const ELIGIBILITY_WIRE: Record<FakeClipEligibility, ClipAnalysisEligibility> = {
 }
 
 export interface FakeClipsOptions {
+  uploadTexts?: Array<{
+    projectId: string
+    channel: string
+    body: string
+    tags: string[]
+    edited: boolean
+    revision: number
+    updatedAt: string
+  }>
+  uploadTextQuotes?: unknown[]
+  uploadTextStarts?: unknown[]
+  uploadTextSaves?: unknown[]
+  uploadTextQuoteGate?: Promise<void>
+  uploadTextStartGate?: Promise<void>
+
   finalize?: (
     input: { projectId: string; expectedRevision: number; expectedResultId: string },
     project: FakeClipProject,
@@ -481,6 +498,92 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
     return create(GetClipProjectResponseSchema, {
       project: projectProto(options.readProject?.(p) ?? p),
     })
+  })
+  const uploadTexts = options.uploadTexts ?? []
+  const uploadQuotes = new Map<string, { id: string; confirmEdited: boolean }>()
+  router.rpc(ClipGenerationService.method.getClipUploadTexts, (req) => {
+    options.calls?.push('GetClipUploadTexts')
+    if (!projects.has(req.projectId)) throw connectAppError('CLIP_NOT_FOUND', Code.NotFound)
+    return create(GetClipUploadTextsResponseSchema, {
+      texts: uploadTexts.filter((row) => row.projectId === req.projectId),
+      limits: [
+        { channel: 'naver_clip', maxChars: 300, maxTags: 5, tagsInCaption: false },
+        { channel: 'instagram_clip', maxChars: 2200, maxTags: 5, tagsInCaption: true },
+      ],
+    })
+  })
+  router.rpc(ClipGenerationService.method.saveClipUploadText, (req) => {
+    options.calls?.push('SaveClipUploadText')
+    options.uploadTextSaves?.push(req)
+    if (!projects.has(req.projectId)) throw connectAppError('CLIP_NOT_FOUND', Code.NotFound)
+    const index = uploadTexts.findIndex(
+      (row) => row.projectId === req.projectId && row.channel === req.channel,
+    )
+    if ((uploadTexts[index]?.revision ?? 0) !== req.expectedRevision)
+      throw connectAppError('CLIP_PLAN_CONFLICT', Code.FailedPrecondition)
+    const text = {
+      projectId: req.projectId,
+      channel: req.channel,
+      body: req.body,
+      tags: [...req.tags],
+      edited: true,
+      revision: req.expectedRevision + 1,
+      updatedAt: '2026-10-16T01:00:00Z',
+    }
+    if (index < 0) uploadTexts.push(text)
+    else uploadTexts[index] = text
+    return create(SaveClipUploadTextResponseSchema, { text })
+  })
+  router.rpc(ClipGenerationService.method.quoteClipUploadText, async (req) => {
+    options.calls?.push('QuoteClipUploadText')
+    options.uploadTextQuotes?.push(req)
+    const p = projects.get(req.projectId)
+    if (!p?.editPlanRevision) throw connectAppError('CLIP_PLAN_CONFLICT', Code.FailedPrecondition)
+    const text = uploadTexts.find(
+      (row) => row.projectId === req.projectId && row.channel === req.channel,
+    )
+    if (text?.edited && !req.confirmEdited)
+      throw connectAppError('CLIP_UPLOAD_TEXT_CONFIRMATION_REQUIRED', Code.FailedPrecondition)
+    await options.uploadTextQuoteGate
+    const id = `upload-quote-${++quoteNumber}`
+    uploadQuotes.set(req.projectId + req.channel, { id, confirmEdited: req.confirmEdited })
+    return create(QuoteClipGenerationResponseSchema, {
+      quoteId: id,
+      maxCredits: 4,
+      expiresAt: options.quoteExpiresAt ?? '2099-01-01T00:00:00Z',
+      cancellationPolicy: {
+        version: 1,
+        unusedReservationNumerator: 1,
+        unusedReservationDenominator: 2,
+        rounding: 'ceil',
+      },
+      pricedCalls: [{ label: 'upload_text', stage: 'write', calls: 1 }],
+    })
+  })
+  router.rpc(ClipGenerationService.method.startClipUploadText, async (req) => {
+    options.calls?.push('StartClipUploadText')
+    options.uploadTextStarts?.push(req)
+    const p = projects.get(req.projectId)
+    const quote = uploadQuotes.get(req.projectId + req.channel)
+    if (
+      !p ||
+      !quote ||
+      quote.id !== req.quoteId ||
+      quote.confirmEdited !== req.confirmEdited ||
+      req.approvedMaxCredits !== 4 ||
+      req.cancellationPolicyVersion !== 1
+    )
+      throw connectAppError('CLIP_QUOTE_REQUIRED', Code.FailedPrecondition)
+    await options.uploadTextStartGate
+    const jobId = 'clip-upload-text-job'
+    p.latestJob = {
+      id: jobId,
+      kind: 'clip_upload_text',
+      status: 'queued',
+      stage: 'upload_text',
+      clipProjectId: p.id,
+    }
+    return create(StartClipGenerationResponseSchema, { jobId })
   })
   router.rpc(ClipGenerationService.method.finalizeClipProject, async (req) => {
     options.calls?.push('FinalizeClipProject')

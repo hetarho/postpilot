@@ -81,7 +81,7 @@ func TestClipActualCompositionDescribesFrozenInputsWithoutReadingMedia(t *testin
 	if !ownerSystem || !ownerInput {
 		t.Fatal("System/User role was confused with authorship")
 	}
-	if len(ai.RequestCompositions()) != 26 {
+	if len(ai.RequestCompositions()) != 27 {
 		t.Fatal("clip mode/correction inventory incomplete")
 	}
 }

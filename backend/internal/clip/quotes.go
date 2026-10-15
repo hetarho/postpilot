@@ -42,6 +42,8 @@ type NarratedPricing struct {
 }
 
 type GenerationPricing struct {
+	// UploadText is exactly one writing call, with no observer or media dependency.
+	UploadText                bool             `json:",omitempty"`
 	Dubbing                   *NarratedPricing `json:",omitempty"`
 	CancellationPolicyVersion int
 	Version                   int
@@ -77,6 +79,12 @@ func (p GenerationPricing) Valid() bool {
 	writing := func(c llm.CallPolicy) bool {
 		return c.Valid() && c.Pricing.Valid() && c.Pricing.Delivery == llm.ExecutionTextOnly && c.Stage == llm.StageNameWrite && c.CompletionTokens == 32768
 	}
+	if p.UploadText {
+		return p.Version == PricingPolicyVersion && p.CancellationPolicyVersion == CancellationPolicyVersion &&
+			p.Dubbing == nil && !p.Storyline && !p.SkipFlow && p.SkipNarration && p.ObservationCalls == 0 &&
+			p.ReusedChunks == 0 && p.RecoveryDigest == "" && p.MaxCredits >= 0 && writing(p.Plan) && p.Plan.ResponseRetries == 0 &&
+			p.Observe == (llm.CallPolicy{}) && p.Narration == (llm.CallPolicy{})
+	}
 	return (p.Dubbing == nil || p.Dubbing.Version == 1 && p.Dubbing.Voice.Binding.ID != "" && len(p.Dubbing.Units) <= 1 && !p.Storyline) && p.Version == PricingPolicyVersion && p.CancellationPolicyVersion >= 0 && p.CancellationPolicyVersion <= CancellationPolicyVersion && p.ObservationCalls >= 0 && p.ObservationCalls <= 49 && p.MaxCredits >= 0 && p.ReusedChunks >= 0 && p.ReusedChunks <= 49 && (!p.SkipFlow || p.ObservationCalls == 0) && (!p.SkipNarration || p.SkipFlow) && (!p.Storyline || !p.SkipFlow && !p.SkipNarration) &&
 		p.Observe.Valid() && p.Observe.Pricing.Valid() && p.Observe.Pricing.Delivery == llm.ExecutionInlineStatic && p.Observe.Stage == llm.StageNameObserve && p.Observe.CompletionTokens == 8192 &&
 		writing(p.Plan) && writing(p.Narration) && p.Plan.Ref == p.Narration.Ref
@@ -92,7 +100,7 @@ func (p GenerationPricing) FlowCalls() int {
 	return 1 + p.Plan.ResponseRetries
 }
 func (p GenerationPricing) NarrationCalls() int {
-	if p.SkipNarration || p.Storyline {
+	if p.SkipNarration || p.Storyline || p.UploadText {
 		return 0
 	}
 	return 1 + p.Narration.ResponseRetries

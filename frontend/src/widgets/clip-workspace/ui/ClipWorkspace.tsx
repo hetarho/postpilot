@@ -35,6 +35,7 @@ import {
 } from '@/features/generate-clip'
 import { ClipBrowserRenderStatus } from '@/features/render-clip-browser'
 import { ClipRevisionRequest } from '@/features/revise-clip'
+import { ClipUploadText } from '@/features/clip-upload-text'
 import { StageModelSelect } from '@/features/select-model'
 import { ClipSourcePicker } from '@/features/upload-clip-sources'
 import { ClipObservationViewer, ClipAttemptInspection } from '@/features/inspect-clip-observations'
@@ -383,6 +384,18 @@ export function ClipWorkspace({ ownerId, project }: { ownerId: string; project: 
       />
     ) : null
 
+  const uploadText =
+    project.editPlanRevision > 0 ? (
+      <ClipUploadText
+        ownerId={ownerId}
+        project={project}
+        writeModel={generation.writeRef}
+        modelSelect={<StageModelSelect stage="write" disabled={pending} />}
+        disabled={pending}
+        beforeWrite={() => flushAll(true)}
+      />
+    ) : null
+
   const refinePanel = plan ? (
     <>
       <ClipCorrectionWorkspace
@@ -582,6 +595,7 @@ export function ClipWorkspace({ ownerId, project }: { ownerId: string; project: 
           />
         )}
       </Sheet>
+      {uploadText}
     </>
   ) : (
     <>
@@ -622,6 +636,7 @@ export function ClipWorkspace({ ownerId, project }: { ownerId: string; project: 
         </>
       )}
       {referenceAction}
+      {uploadText}
     </>
   )
 
@@ -629,6 +644,7 @@ export function ClipWorkspace({ ownerId, project }: { ownerId: string; project: 
     project.finalized && project.result ? (
       <>
         <ClipResult key={project.result.createdAt} ownerId={ownerId} project={project} />
+        {uploadText}
         <MoveClipChannel ownerId={ownerId} project={project} disabled={pending} />
       </>
     ) : (

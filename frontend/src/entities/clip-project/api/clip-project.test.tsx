@@ -74,7 +74,7 @@ describe('the detail poll', () => {
     },
   )
 
-  it.each(['generate_clip', 'revise_clip', 'speech_clip'])(
+  it.each(['generate_clip', 'revise_clip', 'speech_clip', 'clip_upload_text'])(
     'keeps reading a finished %s until its settlement arrives',
     (kind) => {
       expect(POLL_INTERVAL_MS).toBe(2_000)
