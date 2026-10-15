@@ -8,11 +8,6 @@
 - docs: en
 - push: main
 
-## active
-| tag | host | mode | since | at | doing |
-|---|---|---|---|---|---|
-| v7k2 | DESKTOP-VKPLS8P | autopilot | 2026-10-15T03:06Z | 2026-10-15T08:41Z | - |
-
 ## inbox
 - 261015 decided -: push branch for finished units? → main, and AGENTS.md now defers to haeram-spec-creator with ARCH-31 run before each push and reused on unchanged trees (alt: - commit only | a work branch)
 - 261015 decided GUIDE-41: an owner's stored off-state for a rule that became a 원칙 or was split? → ignored for 원칙; 맛은 재료로 살리기 keeps the old impression key and 알려준 사건 순서대로 its own (alt: reset every off-state | keep those rules switchable for owners who turned them off)
@@ -120,11 +115,12 @@
 | T695 | Tell the 체험단 story on the public about page | MKT | T682 T683 T684 T687 T688 T691 T692 T693 T694 | todo |
 
 ## next
-- implement-task T686 (then dep order … T695); 23 provisional decisions wait in inbox for the owner (they will read the report first).
-- ideation friendly-model-names 계속: decide the automatic alias word list (theme, size, contents) and whether speech profiles join; then create-ssot/update-ssot MODEL. Also pending: the 17 unadopted choices in review/structure-261008 and doc-review ARCH.
-- push: 65c79f2b passed its pre-push gate and waits only for the SSH key (ssh-add) with the spec commits after it; gh login is needed to read CI. 6e5039c8 is the live green revision.
+- implement-task T686 (then dep order … T695) after the owner reviews spec/reports/261015-v7k2.md; 24 provisional decisions and one review-code suggestion wait in inbox.
+- push: T677–T685 and the spec commits are local only; run the ARCH-31 pre-push gate on the final candidate before pushing (needs ssh-add and gh login). 6e5039c8 is the live green revision.
+- ideation friendly-model-names 계속; also pending: the 17 unadopted choices in review/structure-261008 and doc-review ARCH.
 
 ## log
+- 261015 autopilot v7k2 stopped at the owner's request after T685; report spec/reports/261015-v7k2.md
 - 261015 T685 done
 - 261015 T685 start on main at ce4e027c.
 - 261015 T684 done
@@ -144,4 +140,3 @@
 - 261015 T677 done on main: 원칙 tier in the registry, prompts and wire; local Node default moved to v26.12.0 through fnm at the owner's request (pnpm dev verified).
 - 261015 T677 start on main at d6aa385a (v7k2 autopilot).
 - 261015 create-task done: T677–T695 from GUIDE r22 GEN r31 POST r41 EXPORT r12 TMPL r28 CLIP r60 VOICE r17 THEME r34 MKT r11 CDS r34 EDIT r6 VIDEO r8 LANG r10; migrations reserved 0159 (T679) 0160 (T689) 0161 (T690) 0162 (T691).
-- 261015 create-task GUIDE GEN POST EXPORT TMPL CLIP VOICE THEME MKT CDS EDIT VIDEO LANG start (autopilot v7k2).
