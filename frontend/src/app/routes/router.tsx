@@ -1,4 +1,5 @@
 import { createRouter } from '@tanstack/react-router'
+import type { ClipImportProblem } from '@/features/upload-clip-sources'
 import { transport } from '@/shared/api'
 import { queryClient } from '../providers/query-client'
 import { RoutePending } from './RoutePending'
@@ -74,6 +75,12 @@ declare module '@tanstack/react-router' {
     groupNav?: 'hidden'
   }
   interface HistoryState {
+    clipImport?: {
+      ownerId: string
+      projectId: string
+      problems: ClipImportProblem[]
+      uncertain: boolean
+    }
     notice?: 'password-changed'
     billingRegistration?: { cardLabel: string }
     billingSubscription?: { tier: string; changed?: boolean }

@@ -4,6 +4,18 @@ import type { I18nFragment } from '@/shared/lib'
 export const i18n = {
   namespace: 'clips',
   ko: {
+    sourceImport: {
+      kept: '클립을 만들었고, 확인된 영상은 그대로 보관했어요.',
+      uncertain: '일부 영상의 업로드 상태를 확인하지 못했어요. 아래 원본 영상에서 확인해 주세요.',
+      dismiss: '안내 닫기',
+      reason: {
+        limit: '가져오기 한도를 넘은 영상:',
+        read: '읽거나 내려받지 못한 영상:',
+        duplicate: '중복되어 가져오지 않은 영상:',
+        transfer: '가져오지 못한 영상:',
+        unconfirmed: '업로드 상태를 확인하지 못한 영상:',
+      },
+    },
     source: {
       moveEarlier: '앞으로',
       moveEarlierName: '{{filename}}을 앞으로 옮기기',
@@ -78,6 +90,18 @@ export const i18n = {
     },
   },
   en: {
+    sourceImport: {
+      kept: 'The clip was created and its confirmed videos were kept.',
+      uncertain: 'Some upload results could not be confirmed. Check the source videos below.',
+      dismiss: 'Dismiss notice',
+      reason: {
+        limit: 'Videos over the import limits:',
+        read: 'Videos that could not be read or downloaded:',
+        duplicate: 'Duplicate videos left out:',
+        transfer: 'Videos that could not be imported:',
+        unconfirmed: 'Videos with an unconfirmed upload:',
+      },
+    },
     source: {
       moveEarlier: 'Earlier',
       moveEarlierName: 'Move {{filename}} earlier',

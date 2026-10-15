@@ -383,6 +383,7 @@ export function DraftEditor({ post, defaultVoice }: DraftEditorProps) {
           targetLength={brief.targetLength}
           onTitleFinalized={autosave.setTitle}
           beforeStart={autosave.flush}
+          clipMaterial={{ title: autosave.title, memo: autosave.memo }}
           checkRequiredAnswers={checkRequiredAnswers}
           ensureSlug={autosave.ensureSlug}
           jobView={jobView}

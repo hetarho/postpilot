@@ -1,4 +1,5 @@
 export { ClipSourcePicker } from './ui/ClipSourcePicker'
+export { ClipSourceImportNotice } from './ui/ClipSourceImportNotice'
 export { useClipSourceUpload } from './model/useClipSourceUpload'
 export {
   readSourceManifest,

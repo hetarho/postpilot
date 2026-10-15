@@ -12,6 +12,7 @@ import { ClipProjectForm } from '@/features/edit-clip-project'
 import { ClipTopRow, ClipStatusLine, ClipWorkspace } from '@/widgets/clip-workspace'
 import { appFailureFromConnect } from '@/shared/api'
 import { AppFailureMessage, Button, Typography, pageStyles } from '@/shared/ui'
+import { ClipImportFeedback } from './ClipImportFeedback'
 
 /** `/clips/new` — a project that does not exist yet. It has no lifecycle, so it shows no step
  *  bar and no delete: just the settings and the one committing action that mints it, which stays
@@ -79,11 +80,18 @@ export function ClipPage() {
           returnTo={returnTo}
         />
       ) : query.data ? (
-        <ClipWorkspace
-          key={`${user?.id}-${clipId}`}
-          ownerId={user?.id ?? ''}
-          project={query.data}
-        />
+        <>
+          <ClipImportFeedback
+            key={`import-${ownerId}-${clipId}`}
+            ownerId={ownerId}
+            clipId={clipId}
+          />
+          <ClipWorkspace
+            key={`${user?.id}-${clipId}`}
+            ownerId={user?.id ?? ''}
+            project={query.data}
+          />
+        </>
       ) : query.isPending ? (
         <>
           <ClipTopRow status={null} returnTo={returnTo} />
