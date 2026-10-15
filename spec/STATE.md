@@ -12,9 +12,12 @@
 | tag | host | mode | since | at | doing |
 |---|---|---|---|---|---|
 | m7q2 | ihaelam-ui-MacBookPro | autopilot | 2026-10-15T12:20Z | 2026-10-15T12:41Z | T686 |
-| p4f1 | ihaelam-ui-MacBookPro | autopilot | 2026-10-15T13:02Z | 2026-10-15T13:02Z | - |
 
 ## inbox
+- 261015 decided T698: how is a deleted or reused post slug told apart? → store the post's creation time beside the slug and resolve at read; no foreign key (alt: FK ON DELETE SET NULL, which nulls user_id on SQLite composites | clear links from the post context)
+- 261015 decided T699: which part of the post reaches the writer? → title plus headed sections of TEXT/QUOTE/LIST; photo captions, tags and summary left out; an oversized request is refused, never trimmed (alt: the whole content JSON | a fixed character cap)
+- 261015 decided T700: where does capture time come from? → JPEG EXIF DateTimeOriginal and MP4/MOV mvhd, parsed in the browser without a new dependency (alt: File.lastModified | an EXIF library)
+- 261015 decided T701: how does capture order pick a section? → the sections of the nearest photo before and after, scenes choose between them, file sequence when no capture time (alt: predecessor only | scenes only)
 - 261015 decided ideation/post-faithful-clip: what does a clip take from a finished post? → the canonical content (title, body, section order, ratings, impressions) as owner material for every writing call (alt: the storyline only | title and memo as today)
 - 261015 decided ideation/post-faithful-clip: where is a post linked? → both sides: ③ 이 체험으로 클립 만들기 and the clip ① 글 연결, one post per clip, matching titles first (alt: post side only | clip side only)
 - 261015 decided ideation/post-faithful-clip: how are videos placed into post sections? → capture time first, the analysis confirms the content, content matching without a capture time (alt: AI content matching only | free AI composition)
@@ -70,18 +73,18 @@
 | ARCH | 20 | 20 | - | 0 |
 | AUTH | 15 | 15 | - | 0 |
 | QUOTA | 38 | 38 | - | 0 |
-| POST | 42 | 41 | POST-120✎ | 0 |
+| POST | 42 | 42 | - | 0 |
 | VOICE | 17 | 17 | - | 0 |
 | GEN | 31 | 31 | - | 0 |
 | MODEL | 36 | 36 | - | 0 |
 | TMPL | 28 | 28 | - | 0 |
-| GUIDE | 23 | 22 | GUIDE-42✎ GUIDE-52✎ | 0 |
+| GUIDE | 23 | 23 | - | 0 |
 | EXPORT | 12 | 12 | - | 0 |
 | LANG | 10 | 10 | - | 0 |
 | THEME | 34 | 34 | - | 2 |
 | MKT | 11 | 11 | - | 0 |
 | VIDEO | 8 | 8 | - | 0 |
-| CLIP | 61 | 60 | CLIP-215+ CLIP-216+ CLIP-217+ CLIP-218+ CLIP-1✎ CLIP-69✎ CLIP-141✎ CLIP-178✎ CLIP-211✎ CLIP-214✎ | 2 |
+| CLIP | 61 | 61 | - | 2 |
 | CDS | 34 | 34 | - | 1 |
 | BILL | 9 | 9 | - | 0 |
 | MEM | 7 | 7 | - | 2 |
@@ -126,13 +129,20 @@
 | T694 | Navigate by channel with 내 설정 beside it | THEME POST CLIP GUIDE TMPL VOICE | T689 | todo |
 | T695 | Tell the 체험단 story on the public about page | MKT | T682 T683 T684 T687 T688 T691 T692 T693 T694 | todo |
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | todo |
+| T698 | Link one finished post to a clip from either side | CLIP POST | T689 T690 T692 T694 | todo |
+| T699 | Send the linked post's text to every clip writing call | CLIP GUIDE QUOTA | T698 T691 | todo |
+| T700 | Record when post photos, post videos and clip sources were shot | CLIP | T692 | todo |
+| T701 | Build the storyline in the linked post's order and place videos by capture order | CLIP GUIDE | T699 T700 | todo |
 
 ## next
-- create-task CLIP POST GUIDE (p4f1): the linked-post clip delta; refresh the bases of T689–T692.
+- After T686–T695 (m7q2): implement-task T698 → T699, T700 → T701 (a linked post as the clip's story); T697 needs the owner's Cloudflare CORS change first.
 - implement-task T697 (production clip generation is down: the live R2 CORS hides Content-Range; the owner applies deploy/r2-cors.json first).
 - Autopilot m7q2: implement T686–T695 in dependency order; T696 repaired the existing red CI entry regression. Previous provisional decisions remain in inbox.
 
 ## log
+- 261015 autopilot p4f1 ended: ideation/post-faithful-clip converted to CLIP r61 POST r42 GUIDE r23 and T698–T701; report spec/reports/261015-p4f1.md
+- 261015 create-task CLIP r61 POST r42 GUIDE r23 done: T698–T701; T688 T689 T690 T691 T692 T694 bases refreshed, no scope change; T686 T687 (TMPL) unaffected.
+- 261015 create-task CLIP POST GUIDE start (p4f1; CLIP r61, POST r42, GUIDE r23)
 - 261015 update-ssot CLIP r61 POST r42 GUIDE r23 done: a linked post as the clip's story (ideation/post-faithful-clip); no doing task affected (T686 is TMPL).
 - 261015 update-ssot CLIP POST GUIDE start (ideation/post-faithful-clip)
 - 261015 start-vibe p4f1 start (autopilot): ideation post-faithful-clip → update-ssot → create-task, overlap check with the template tasks; no implementation (m7q2 implements).
@@ -150,9 +160,3 @@
 - 261015 T685 start on main at ce4e027c.
 - 261015 T684 done
 - 261015 T684 start on main at d64bd979.
-- 261015 T683 done
-- 261015 T683 start on main at 46e4c976.
-- 261015 T682 done
-- 261015 T682 start on main at 4100f145.
-- 261015 T681 done
-- 261015 T681 start on main at d52654b1.
