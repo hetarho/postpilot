@@ -11,7 +11,7 @@
 ## active
 | tag | host | mode | since | at | doing |
 |---|---|---|---|---|---|
-| v7k2 | DESKTOP-VKPLS8P | autopilot | 2026-10-15T03:06Z | 2026-10-15T07:58Z | - |
+| v7k2 | DESKTOP-VKPLS8P | autopilot | 2026-10-15T03:06Z | 2026-10-15T07:58Z | T683 |
 
 ## inbox
 - 261015 decided -: push branch for finished units? → main, and AGENTS.md now defers to haeram-spec-creator with ARCH-31 run before each push and reused on unchanged trees (alt: - commit only | a work branch)
@@ -105,7 +105,7 @@
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
-| T683 | Show the pre-submission checklist in ③ | POST | T680 | todo |
+| T683 | Show the pre-submission checklist in ③ | POST | T680 | doing@261015.v7k2 |
 | T684 | Keep the Naver output alone and reserve the disclosure place | EXPORT VIDEO LANG POST MKT | T679 | todo |
 | T685 | Build the guided post-template wizard | TMPL THEME | - | todo |
 | T686 | Suggest section headings in the owner's voice | TMPL EDIT | T685 | todo |
@@ -125,6 +125,7 @@
 - push: 65c79f2b passed its pre-push gate and waits only for the SSH key (ssh-add) with the spec commits after it; gh login is needed to read CI. 6e5039c8 is the live green revision.
 
 ## log
+- 261015 T683 start on main at 46e4c976.
 - 261015 T682 done
 - 261015 T682 start on main at 4100f145.
 - 261015 T681 done
@@ -144,4 +145,3 @@
 - 261015 start-vibe v7k2 autopilot start: update-ssot from ideation/campaign-reviewer-focus first; cfg push main.
 - 261015 ideation campaign-reviewer-focus ready: always-on principle groups (facts, impressions + constructive honesty, no AI tells, titles/tags), advertiser guide with checklist and a 광고주 요청 origin color, 체험단 글 switch with a top disclosure placeholder, branching template wizard with owner headings, chat voice learning, four channel menus + 내 설정, clip upload text, 9:16 only, Tistory/site/Markdown out.
 - 261015 ideation campaign-reviewer-focus start: product philosophy (체험단 automation, fast monetization, 상생), always-on guidelines, guided template wizard, real-speech voice, per-channel outputs and menus (Naver blog, Naver clip, Instagram clip, Instagram post).
-- 261013 ideation friendly-model-names paused (open): grade + model-wide neutral alias (가성비 · 소나무), auto-assigned and operator-editable, never reused; operator-confirmed succession moves the alias to a new version and same-grade eligible selections follow with a notice; per-post credits/badges in options, 자세히 under the field. Open: the alias word list.
