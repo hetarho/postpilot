@@ -11,9 +11,10 @@
 ## active
 | tag | host | mode | since | at | doing |
 |---|---|---|---|---|---|
-| m7q2 | ihaelam-ui-MacBookPro | autopilot | 2026-10-15T12:20Z | 2026-10-15T18:19Z | T690 |
+| m7q2 | ihaelam-ui-MacBookPro | autopilot | 2026-10-15T12:20Z | 2026-10-15T19:11Z | - |
 
 ## inbox
+- 261016 suggest MODEL-9 MODEL-19 GUIDE-41: doc-review MODEL/TMPL/GUIDE over the existing quality candidates reported by spec lint; keep policy changes in update-ssot
 - 261016 suggest T696 T686 T687 T688 T689: review-code over the completed template-wizard, heading-job and clip-channel units
 - 261015 decided T698: how is a deleted or reused post slug told apart? → store the post's creation time beside the slug and resolve at read; no foreign key (alt: FK ON DELETE SET NULL, which nulls user_id on SQLite composites | clear links from the post context)
 - 261015 decided T699: which part of the post reaches the writer? → title plus headed sections of TEXT/QUOTE/LIST; photo captions, tags and summary left out; an oversized request is refused, never trimmed (alt: the whole content JSON | a fixed character cap)
@@ -119,7 +120,6 @@
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
-| T690 | Add the 체험단 글 switch and advertiser guide to clips | CLIP GEN GUIDE | T679 T680 T689 | doing@261016.m7q2 |
 | T691 | Write each clip channel's upload text on request | CLIP EXPORT | T689 T690 | todo |
 | T692 | Create a clip from a finished post | POST CLIP | T680 T689 T690 | todo |
 | T693 | Learn a voice through a scripted chat and grow AI styles toward it | VOICE THEME | - | todo |
@@ -134,9 +134,12 @@
 ## next
 - After T686–T695 (m7q2): implement-task T698 → T699, T700 → T701 (a linked post as the clip's story); T697's operator CORS prerequisite is complete.
 - implement-task T697 (the owner applied production Content-Range CORS261015; add the ranged-GET probe/deployment gate and preserve HEAD cancellation).
-- Autopilot m7q2: T690 active after T689 pushed; continue T691–T695 and T698–T701. T697 is ready after the owner CORS change.
+- Autopilot m7q2: T690 verified locally; implement T691 next, then T692–T695 and T698–T701. T697 is ready after the owner CORS change.
 
 ## log
+- 261016 T690 done atbbcc3c6c; full Go/FE551/4364 and all local image/media gates pass on sourcef476fda0; push and exact remote evidence follow.
+- 261016 T690 codebbcc3c6c; selected core/RPC/UI40 tests and full store325.681s pass, full FE551/4364 plus static/build checks pass; final Go and pre-push media gates follow.
+- 261016 T689 remote CI38784524255, Deploy38784523903 and Media38785185569 succeed at8e61d40f; all three media job checkout logs prove the deployed revision despite event headbc8292b2.
 - 261016 T690 start on main at8e61d40f (m7q2 autopilot); CLIP r62/r63 colour changes are unrelated; base refreshed63; T689 remote CI/deploy pending.
 - 261016 T689 final FE549/4361 and all push gates pass; sourcefdba16ef, backend/image inputs unchanged from verified1eaea440.
 - 261016 T689 local deployment/media gates pass at1eaea440; final FE-only cache/navigation CI follows on sourcefdba16ef.
