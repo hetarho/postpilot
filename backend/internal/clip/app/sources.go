@@ -108,6 +108,9 @@ func (s *SourceService) Create(ctx context.Context, user, project string, manife
 }
 
 func (s *SourceService) Confirm(ctx context.Context, user, batchID, sourceID string) (clip.SourceBatch, error) {
+	return s.confirm(ctx, user, batchID, sourceID, false)
+}
+func (s *SourceService) confirm(ctx context.Context, user, batchID, sourceID string, preserveConfirmed bool) (clip.SourceBatch, error) {
 	b, err := s.store.GetSourceBatch(ctx, user, batchID)
 	if err != nil {
 		return clip.SourceBatch{}, err
@@ -133,8 +136,10 @@ func (s *SourceService) Confirm(ctx context.Context, user, batchID, sourceID str
 			return clip.SourceBatch{}, err
 		}
 		if info.Bytes != source.Bytes || info.ContentType != source.ContentType || info.Bytes > s.config.MaxFileBytes {
-			if err := s.Discard(ctx, user, batchID); err != nil {
-				return clip.SourceBatch{}, err
+			if !preserveConfirmed {
+				if err := s.Discard(ctx, user, batchID); err != nil {
+					return clip.SourceBatch{}, err
+				}
 			}
 			return clip.SourceBatch{}, clip.ErrInvalid
 		}

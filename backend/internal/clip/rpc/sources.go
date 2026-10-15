@@ -91,7 +91,12 @@ func (h *Handler) ConfirmClipSource(ctx context.Context, req *connect.Request[v1
 	if h.sources == nil {
 		return nil, toConnectError(clip.ErrSourceState)
 	}
-	b, err := h.sources.Confirm(ctx, user, req.Msg.BatchId, req.Msg.SourceId)
+	var b clip.SourceBatch
+	if req.Msg.PreserveConfirmedImport {
+		b, err = h.sources.ConfirmImport(ctx, user, req.Msg.BatchId, req.Msg.SourceId)
+	} else {
+		b, err = h.sources.Confirm(ctx, user, req.Msg.BatchId, req.Msg.SourceId)
+	}
 	if err != nil {
 		return nil, toConnectError(err)
 	}
@@ -152,6 +157,27 @@ func (h *Handler) SetClipSourceOriginalSound(ctx context.Context, req *connect.R
 		return nil, toConnectError(err)
 	}
 	response := connect.NewResponse(&v1.SetClipSourceOriginalSoundResponse{Batch: sourceBatchProto(batch), Project: projectProto(project)})
+	response.Header().Set("Cache-Control", "private, no-store")
+	return response, nil
+}
+
+func (h *Handler) CompleteClipSourceImport(ctx context.Context, req *connect.Request[v1.CompleteClipSourceImportRequest]) (*connect.Response[v1.CompleteClipSourceImportResponse], error) {
+	user, err := actingUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if h.sources == nil {
+		return nil, toConnectError(clip.ErrSourceState)
+	}
+	batch, err := h.sources.CompleteImport(ctx, user, req.Msg.ProjectId, req.Msg.BatchId)
+	if err != nil {
+		return nil, toConnectError(err)
+	}
+	out := &v1.CompleteClipSourceImportResponse{Empty: batch == nil}
+	if batch != nil {
+		out.Batch = sourceBatchProto(*batch)
+	}
+	response := connect.NewResponse(out)
 	response.Header().Set("Cache-Control", "private, no-store")
 	return response, nil
 }

@@ -129,7 +129,13 @@ export interface ClipSourceCalls {
     batchId: string,
     sourceId: string,
     signal?: AbortSignal,
+    options?: { preserveConfirmedImport: boolean },
   ): Promise<ReturnType<typeof toClipSourceBatch>>
+  completeImport(
+    projectId: string,
+    batchId: string,
+    signal?: AbortSignal,
+  ): Promise<ReturnType<typeof toClipSourceBatch> | undefined>
   discard(batchId: string): Promise<void>
   sound: (
     input: Parameters<typeof setClipSourceOriginalSound>[1],
@@ -174,10 +180,19 @@ export function clipSourceCalls(transport: Transport): ClipSourceCalls {
         })),
       }
     },
-    async confirm(batchId, sourceId, signal) {
-      const response = await client.confirmClipSource({ batchId, sourceId }, { signal })
+    async confirm(batchId, sourceId, signal, options) {
+      const response = await client.confirmClipSource(
+        { batchId, sourceId, preserveConfirmedImport: options?.preserveConfirmedImport ?? false },
+        { signal },
+      )
       if (!response.batch) throw new Error('Missing confirmed sources')
       return toClipSourceBatch(response.batch)
+    },
+    async completeImport(projectId, batchId, signal) {
+      const response = await client.completeClipSourceImport({ projectId, batchId }, { signal })
+      if (response.empty && !response.batch) return undefined
+      if (!response.empty && response.batch) return toClipSourceBatch(response.batch)
+      throw new Error('Invalid import completion receipt')
     },
     async discard(batchId) {
       await client.discardClipSourceBatch({ batchId })

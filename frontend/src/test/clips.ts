@@ -29,6 +29,7 @@ import {
   UpdateClipProjectResponseSchema,
   DeleteClipProjectResponseSchema,
   CreateClipSourceBatchResponseSchema,
+  CompleteClipSourceImportResponseSchema,
   ConfirmClipSourceResponseSchema,
   DiscardClipSourceBatchResponseSchema,
   StartClipGenerationResponseSchema,
@@ -132,6 +133,10 @@ const ELIGIBILITY_WIRE: Record<FakeClipEligibility, ClipAnalysisEligibility> = {
 }
 
 export interface FakeClipsOptions {
+  importConfirmationFailures?: string[]
+  importConfirmationLostAck?: string[]
+  importCompletionLostAcks?: number
+
   uploadTexts?: Array<{
     projectId: string
     channel: string
@@ -1395,12 +1400,59 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
     const b = batches.get(req.batchId)
     const source = b?.sources.find((s) => s.id === req.sourceId)
     if (!b || !source) throw connectAppError('CLIP_NOT_FOUND', Code.NotFound)
+    if (
+      req.preserveConfirmedImport &&
+      options.importConfirmationFailures?.includes(source.metadata?.filename ?? '')
+    )
+      throw connectAppError('CLIP_SOURCE_UNAVAILABLE', Code.FailedPrecondition)
     source.state = 'ready'
     source.availability = 'available'
     source.retentionExpiresAt = b.expiresAt
     source.actualBytes = source.metadata!.bytes
     if (b.sources.every((s) => s.state === 'ready')) b.state = 'ready'
+    if (
+      req.preserveConfirmedImport &&
+      options.importConfirmationLostAck?.includes(source.metadata?.filename ?? '')
+    )
+      throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
     return create(ConfirmClipSourceResponseSchema, { batch: b })
+  })
+  router.rpc(ClipSourceService.method.completeClipSourceImport, (req) => {
+    options.calls?.push('CompleteClipSourceImport')
+    options.sourceRequests?.push(req)
+    const p = projects.get(req.projectId)
+    const original = batches.get(req.batchId)
+    if (!p || !original || original.projectId !== p.id)
+      throw connectAppError('CLIP_NOT_FOUND', Code.NotFound)
+    const receiptId = `completed-${req.batchId}`
+    let batch = batches.get(receiptId)
+    let empty = false
+    if (!batch) {
+      if (p.finalized || p.editPlanRevision || p.latestJob)
+        throw connectAppError('CLIP_SOURCE_UNAVAILABLE', Code.FailedPrecondition)
+      const ready = original.sources.filter((source) => source.state === 'ready')
+      if (ready.length === original.sources.length) batch = original
+      else {
+        original.current = false
+        original.state = 'cleanup_pending'
+        original.sources = original.sources.filter((source) => source.state !== 'ready')
+        if (ready.length) {
+          batch = create(ClipSourceBatchSchema, {
+            ...original,
+            id: receiptId,
+            state: 'ready',
+            current: true,
+            sources: ready,
+          })
+          batches.set(receiptId, batch)
+        } else empty = true
+      }
+    }
+    if (options.importCompletionLostAcks && options.importCompletionLostAcks > 0) {
+      options.importCompletionLostAcks--
+      throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
+    }
+    return create(CompleteClipSourceImportResponseSchema, { batch, empty })
   })
   router.rpc(ClipSourceService.method.discardClipSourceBatch, (req) => {
     options.calls?.push('DiscardClipSourceBatch')

@@ -65,6 +65,7 @@ export {
   StartClipRenderResponseSchema,
 } from './gen/postpilot/v1/clip_render_pb'
 export {
+  CompleteClipSourceImportResponseSchema,
   ConfirmClipSourceResponseSchema,
   CreateClipSourceBatchResponseSchema,
   DiscardClipSourceBatchResponseSchema,
