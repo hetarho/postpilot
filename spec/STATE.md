@@ -120,13 +120,17 @@
 | T693 | Learn a voice through a scripted chat and grow AI styles toward it | VOICE THEME | - | todo |
 | T694 | Navigate by channel with 내 설정 beside it | THEME POST CLIP GUIDE TMPL VOICE | T689 | todo |
 | T695 | Tell the 체험단 story on the public about page | MKT | T682 T683 T684 T687 T688 T691 T692 T693 T694 | todo |
+| T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | todo |
 
 ## next
+- implement-task T697 (production clip generation is down: the live R2 CORS hides Content-Range; the owner applies deploy/r2-cors.json first).
 - Autopilot m7q2: repair the existing CI entry regression in T696, then implement T686–T695 in dependency order; previous provisional decisions remain in inbox.
 - main matches origin/main at 0c4c997b; the previous local-only push note is stale. Check workflows for the pushed revision before claiming remote success.
 - ideation friendly-model-names 계속; also pending: the 17 unadopted choices in review/structure-261008 and doc-review ARCH.
 
 ## log
+- 261015 create-task T697 done: production clips fail with CLIP_SOURCE_RANGE_INVALID because the live bucket exposes only ETag; probe-backed deploy gate plus HeadSource cause/cancellation.
+- 261015 create-task bug/clip-source-range start
 - 261015 T696 start on main at 0c4c997b; initial push waits for repair of the diagnosed existing CI failure.
 - 261015 create-task T696 done: current wizard entrypoint regression for failed CI 38708735705; autopilot m7q2 selected by the owner.
 - 261015 start-vibe m7q2 start on main at 0c4c997b; awaiting mode and route, no other active session.
