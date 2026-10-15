@@ -31,3 +31,10 @@ describe('semantic origin transport vocabulary', () => {
     },
   )
 })
+
+// GEN-80: the advertiser's claim is a category of its own on the wire.
+it('maps the advertiser request category', () => {
+  expect(semanticOriginCategoryFromProto(SemanticOriginCategory.ADVERTISER_REQUEST)).toBe(
+    'advertiser_request',
+  )
+})

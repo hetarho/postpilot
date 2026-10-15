@@ -980,7 +980,7 @@ try {
             .map((n) => n / 255)
             .map((n) => (n <= 0.04045 ? n / 12.92 : ((n + 0.055) / 1.055) ** 2.4))
             .reduce((sum, n, i) => sum + n * [0.2126, 0.7152, 0.0722][i], 0)
-        const roles = ['owner', 'visual', 'ai', 'unconfirmed'].map((role) => {
+        const roles = ['owner', 'visual', 'advertiser', 'ai', 'unconfirmed'].map((role) => {
           const node = document.querySelector('.text-origin-' + role + '-foreground')
           const style = getComputedStyle(node)
           const fg = luminance(rgb(style.color))

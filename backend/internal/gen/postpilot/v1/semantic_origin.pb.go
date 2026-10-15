@@ -29,6 +29,8 @@ const (
 	SemanticOriginCategory_SEMANTIC_ORIGIN_CATEGORY_OWNER_INPUT          SemanticOriginCategory = 1
 	SemanticOriginCategory_SEMANTIC_ORIGIN_CATEGORY_PHOTO_INTERPRETATION SemanticOriginCategory = 2
 	SemanticOriginCategory_SEMANTIC_ORIGIN_CATEGORY_AI_ADDED             SemanticOriginCategory = 3
+	// Meaning taken from the advertiser guide: the advertiser's claim, not the owner's experience.
+	SemanticOriginCategory_SEMANTIC_ORIGIN_CATEGORY_ADVERTISER_REQUEST SemanticOriginCategory = 4
 )
 
 // Enum value maps for SemanticOriginCategory.
@@ -38,12 +40,14 @@ var (
 		1: "SEMANTIC_ORIGIN_CATEGORY_OWNER_INPUT",
 		2: "SEMANTIC_ORIGIN_CATEGORY_PHOTO_INTERPRETATION",
 		3: "SEMANTIC_ORIGIN_CATEGORY_AI_ADDED",
+		4: "SEMANTIC_ORIGIN_CATEGORY_ADVERTISER_REQUEST",
 	}
 	SemanticOriginCategory_value = map[string]int32{
 		"SEMANTIC_ORIGIN_CATEGORY_UNSPECIFIED":          0,
 		"SEMANTIC_ORIGIN_CATEGORY_OWNER_INPUT":          1,
 		"SEMANTIC_ORIGIN_CATEGORY_PHOTO_INTERPRETATION": 2,
 		"SEMANTIC_ORIGIN_CATEGORY_AI_ADDED":             3,
+		"SEMANTIC_ORIGIN_CATEGORY_ADVERTISER_REQUEST":   4,
 	}
 )
 
@@ -686,12 +690,13 @@ const file_postpilot_v1_semantic_origin_proto_rawDesc = "" +
 	"\aversion\x18\x01 \x01(\rR\aversion\x12:\n" +
 	"\x06result\x18\x02 \x01(\v2\".postpilot.v1.OriginResultIdentityR\x06result\x124\n" +
 	"\asources\x18\x03 \x03(\v2\x1a.postpilot.v1.OriginSourceR\asources\x12.\n" +
-	"\x05spans\x18\x04 \x03(\v2\x18.postpilot.v1.OriginSpanR\x05spans*\xc6\x01\n" +
+	"\x05spans\x18\x04 \x03(\v2\x18.postpilot.v1.OriginSpanR\x05spans*\xf7\x01\n" +
 	"\x16SemanticOriginCategory\x12(\n" +
 	"$SEMANTIC_ORIGIN_CATEGORY_UNSPECIFIED\x10\x00\x12(\n" +
 	"$SEMANTIC_ORIGIN_CATEGORY_OWNER_INPUT\x10\x01\x121\n" +
 	"-SEMANTIC_ORIGIN_CATEGORY_PHOTO_INTERPRETATION\x10\x02\x12%\n" +
-	"!SEMANTIC_ORIGIN_CATEGORY_AI_ADDED\x10\x03*\xa4\x01\n" +
+	"!SEMANTIC_ORIGIN_CATEGORY_AI_ADDED\x10\x03\x12/\n" +
+	"+SEMANTIC_ORIGIN_CATEGORY_ADVERTISER_REQUEST\x10\x04*\xa4\x01\n" +
 	"\x11OriginReviewState\x12#\n" +
 	"\x1fORIGIN_REVIEW_STATE_UNSPECIFIED\x10\x00\x12#\n" +
 	"\x1fORIGIN_REVIEW_STATE_UNCONFIRMED\x10\x01\x12\"\n" +

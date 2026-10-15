@@ -13,6 +13,7 @@ export const i18n = {
       category: {
         owner_input: '직접 입력 기반',
         photo_interpretation: '사진에서 추론',
+        advertiser_request: '광고주 요청',
         ai_added: 'AI가 보탠 내용',
       },
       help: '문구를 선택하면 의미의 출처를 볼 수 있습니다. 출처는 사실 여부나 작성자를 판정하지 않습니다.',
@@ -39,9 +40,10 @@ export const i18n = {
         visual_observation: '이 결과에 사용된 시각 관찰',
         ai_proposal: 'AI 제안 근거',
         literal_text: '제공된 원문',
+        advertiser_guide: '광고주 가이드',
       },
       aiWithoutBasis:
-        '제공된 입력이나 시각 관찰 외에 AI가 보탠 의미입니다. 별도의 제안 근거는 기록되지 않았습니다.',
+        '제공된 입력, 광고주 가이드나 시각 관찰 외에 AI가 보탠 의미입니다. 별도의 제안 근거는 기록되지 않았습니다.',
       missing:
         '이 문구에 연결된 출처가 기록되지 않았거나 현재 글과 맞지 않습니다. 현재 메모에서 과거 출처를 추정하지 않습니다.',
       pending:
@@ -62,6 +64,7 @@ export const i18n = {
       category: {
         owner_input: 'Based on your input',
         photo_interpretation: 'Inferred from photos',
+        advertiser_request: 'Advertiser request',
         ai_added: 'Added by AI',
       },
       help: 'Select a phrase to inspect its origin of meaning. Origins do not verify facts or identify the author.',
@@ -88,9 +91,10 @@ export const i18n = {
         visual_observation: 'Visual observation used for this result',
         ai_proposal: 'AI proposal basis',
         literal_text: 'Supplied original text',
+        advertiser_guide: 'Advertiser guide',
       },
       aiWithoutBasis:
-        'AI added this meaning beyond the supplied input and visual observations. No separate proposal basis was recorded.',
+        'AI added this meaning beyond the supplied input, the advertiser guide and visual observations. No separate proposal basis was recorded.',
       missing:
         'No source was recorded for this phrase, or it does not match the current writing. Past origins are not inferred from the current memo.',
       pending:

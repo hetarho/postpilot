@@ -105,6 +105,12 @@ func originSourceCategoryCompatible(category post.OriginCategory, refs []string,
 			if source.Kind != post.OriginSourceVisualObservation || source.AttachmentFilename == "" {
 				return false
 			}
+		case post.OriginAdvertiserRequest:
+			// Only the guide itself supports an advertiser claim: the owner typing it into
+			// the memo would not make it the advertiser's, nor the guide the owner's.
+			if source.Kind != post.OriginSourceAdvertiserGuide {
+				return false
+			}
 		case post.OriginAIAdded:
 			// A proposal may explain its actual supplied context without promoting
 			// that context into owner facts or visual evidence.

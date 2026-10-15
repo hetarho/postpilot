@@ -36,6 +36,13 @@ const content = postContentWith(POST_CONTENT_FIXTURE, {
   ],
 })
 
+const SOURCE_OF: Record<SemanticOriginCategory, string> = {
+  owner_input: 'owner',
+  photo_interpretation: 'visual',
+  advertiser_request: 'advertiser',
+  ai_added: 'ai',
+}
+
 function span(
   field: OriginFieldLocator,
   quote: string,
@@ -50,9 +57,7 @@ function span(
     ...utf16RangeToScalar(text, { start, end: start + quote.length })!,
     quote,
     category,
-    sourceRefs: [
-      category === 'owner_input' ? 'owner' : category === 'photo_interpretation' ? 'visual' : 'ai',
-    ],
+    sourceRefs: [SOURCE_OF[category]],
     reviewState: 'confirmed',
   }
 }
@@ -78,6 +83,13 @@ function evidence(): OriginReview {
         available: true,
       },
       {
+        id: 'advertiser',
+        kind: 'advertiser_guide',
+        text: '따뜻한 차 메뉴를 꼭 언급해 주세요.',
+        attachmentFilename: '',
+        available: true,
+      },
+      {
         id: 'ai',
         kind: 'ai_proposal',
         text: '문단의 연결을 위해 덧붙인 해석.',
@@ -96,7 +108,7 @@ function evidence(): OriginReview {
       span({ kind: 'block_content', blockIndex: 1 }, '작은 항구', 'photo_interpretation'),
       span({ kind: 'block_content', blockIndex: 2 }, '서두르지 않았다.'),
       span({ kind: 'block_item', blockIndex: 3, itemIndex: 0 }, '우산'),
-      span({ kind: 'block_item', blockIndex: 3, itemIndex: 1 }, '따뜻한 차'),
+      span({ kind: 'block_item', blockIndex: 3, itemIndex: 1 }, '따뜻한 차', 'advertiser_request'),
       span({ kind: 'block_alt', blockIndex: 4 }, '빨간 지붕', 'photo_interpretation'),
       span({ kind: 'block_caption', blockIndex: 4 }, '제주에서'),
     ],
@@ -188,7 +200,7 @@ describe('WritingOriginReview', () => {
     expect(selection.toString()).toBe('주인 말 · 사진 관찰 · AI 제안')
   })
 
-  it('shows the named toggle by default and exactly three categories with a separate unconfirmed explanation', () => {
+  it('shows the named toggle by default and exactly four categories', () => {
     render(<Review />)
     expect(screen.getByRole('checkbox', { name: '출처 보기' })).toBeChecked()
     const legend = screen.getByRole('list', { name: '의미의 출처' })
@@ -196,20 +208,27 @@ describe('WritingOriginReview', () => {
       within(legend)
         .getAllByRole('listitem')
         .map((item) => item.textContent),
-    ).toEqual(['직접 입력 기반', '사진에서 추론', 'AI가 보탠 내용'])
+    ).toEqual(['직접 입력 기반', '사진에서 추론', '광고주 요청', 'AI가 보탠 내용'])
+    // Each category is named, never told by colour alone, and the advertiser's has its own role.
+    expect(within(legend).getByText('광고주 요청')).toHaveClass(
+      'text-origin-advertiser-foreground',
+      'bg-origin-advertiser-highlight',
+    )
     expect(screen.getByText(/^출처 미확인:/)).not.toHaveAttribute('role', 'listitem')
     expect(phrase('주인 말', '직접 입력 기반')).toHaveClass('text-origin-owner-foreground')
     expect(phrase('사진 관찰', '사진에서 추론')).toHaveClass('text-origin-visual-foreground')
     expect(phrase('AI 제안', 'AI가 보탠 내용')).toHaveClass('text-origin-ai-foreground')
+    expect(phrase('따뜻한 차', '광고주 요청')).toHaveClass('text-origin-advertiser-foreground')
   })
 
-  it('opens the frozen owner input, actual visual observation and AI basis without using current memo', async () => {
+  it('opens the frozen owner input, actual visual observation, advertiser guide and AI basis without using current memo', async () => {
     const user = userEvent.setup()
     render(<Review />)
     for (const [text, category, source] of [
       ['주인 말', '직접 입력 기반', '그날 제주에 가서 천천히 걸었다.'],
       ['사진 관찰', '사진에서 추론', '이 결과를 만들 때 관찰한 빨간 지붕과 작은 항구.'],
       ['AI 제안', 'AI가 보탠 내용', '문단의 연결을 위해 덧붙인 해석.'],
+      ['따뜻한 차', '광고주 요청', '따뜻한 차 메뉴를 꼭 언급해 주세요.'],
     ]) {
       await user.click(phrase(text!, category!))
       const dialog = screen.getByRole('dialog', { name: '문구의 출처' })
@@ -217,6 +236,8 @@ describe('WritingOriginReview', () => {
       expect(within(dialog).queryByText('현재 메모는 변경되었다.')).not.toBeInTheDocument()
       expect(dialog.textContent).not.toContain('signature=')
       if (text === '사진 관찰') expect(within(dialog).getByText('IMG_1.jpg')).toBeInTheDocument()
+      if (text === '따뜻한 차')
+        expect(within(dialog).getByText('광고주 가이드')).toBeInTheDocument()
       await user.click(within(dialog).getByRole('button', { name: '닫기' }))
     }
   })
@@ -272,7 +293,7 @@ describe('WritingOriginReview', () => {
       ['작은 항구', '사진에서 추론'],
       ['서두르지 않았다.', '직접 입력 기반'],
       ['우산', '직접 입력 기반'],
-      ['따뜻한 차', '직접 입력 기반'],
+      ['따뜻한 차', '광고주 요청'],
       ['제주에서', '직접 입력 기반'],
     ])
       expect(phrase(text!, category!)).toBeInTheDocument()
@@ -406,7 +427,7 @@ describe('WritingOriginReview', () => {
     review.spans.find((entry) => entry.quote === 'AI 제안')!.sourceRefs = []
     render(<Review value={post({ status: 'published', contentOrigins: review })} />)
     await user.click(phrase('AI 제안', 'AI가 보탠 내용'))
-    expect(screen.getByText(/^제공된 입력이나 시각 관찰 외에/)).toBeInTheDocument()
+    expect(screen.getByText(/^제공된 입력, 광고주 가이드나 시각 관찰 외에/)).toBeInTheDocument()
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
   })
 })

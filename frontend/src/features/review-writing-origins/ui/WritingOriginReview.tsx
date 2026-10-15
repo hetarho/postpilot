@@ -22,6 +22,8 @@ const CATEGORY_STYLES: Record<SemanticOriginCategory, string> = {
   owner_input: 'text-origin-owner-foreground bg-origin-owner-highlight decoration-solid',
   photo_interpretation:
     'text-origin-visual-foreground bg-origin-visual-highlight decoration-dashed',
+  advertiser_request:
+    'text-origin-advertiser-foreground bg-origin-advertiser-highlight decoration-double',
   ai_added: 'text-origin-ai-foreground bg-origin-ai-highlight decoration-dotted',
 }
 const UNCONFIRMED_STYLE =

@@ -260,6 +260,10 @@
   --evidence-visual-highlight: var(--palette-blue-950);
   --evidence-ai-foreground: var(--palette-gold-300);
   --evidence-ai-highlight: var(--palette-gold-950);
+  /* The advertiser's claim takes the one ramp left outside the other evidence roles, the accent
+     and the neutral; its label and double underline keep it from reading as an error. */
+  --evidence-advertiser-foreground: var(--palette-red-300);
+  --evidence-advertiser-highlight: var(--palette-red-950);
   --evidence-unconfirmed-foreground: var(--palette-mauve-300);
   --evidence-unconfirmed-highlight: var(--palette-mauve-800);
 
@@ -328,6 +332,8 @@
   --evidence-visual-highlight: var(--palette-blue-50);
   --evidence-ai-foreground: var(--palette-gold-700);
   --evidence-ai-highlight: var(--palette-gold-50);
+  --evidence-advertiser-foreground: var(--palette-red-700);
+  --evidence-advertiser-highlight: var(--palette-red-50);
   --evidence-unconfirmed-foreground: var(--palette-mauve-700);
   --evidence-unconfirmed-highlight: var(--palette-mauve-100);
 
@@ -416,6 +422,8 @@
   --origin-visual-highlight: var(--evidence-visual-highlight);
   --origin-ai-foreground: var(--evidence-ai-foreground);
   --origin-ai-highlight: var(--evidence-ai-highlight);
+  --origin-advertiser-foreground: var(--evidence-advertiser-foreground);
+  --origin-advertiser-highlight: var(--evidence-advertiser-highlight);
   --origin-unconfirmed-foreground: var(--evidence-unconfirmed-foreground);
   --origin-unconfirmed-highlight: var(--evidence-unconfirmed-highlight);
 
@@ -847,6 +855,8 @@
   --color-origin-visual-highlight: var(--origin-visual-highlight);
   --color-origin-ai-foreground: var(--origin-ai-foreground);
   --color-origin-ai-highlight: var(--origin-ai-highlight);
+  --color-origin-advertiser-foreground: var(--origin-advertiser-foreground);
+  --color-origin-advertiser-highlight: var(--origin-advertiser-highlight);
   --color-origin-unconfirmed-foreground: var(--origin-unconfirmed-foreground);
   --color-origin-unconfirmed-highlight: var(--origin-unconfirmed-highlight);
 

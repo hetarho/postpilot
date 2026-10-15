@@ -10,6 +10,8 @@ enum SemanticOriginCategory {
   SEMANTIC_ORIGIN_CATEGORY_OWNER_INPUT = 1;
   SEMANTIC_ORIGIN_CATEGORY_PHOTO_INTERPRETATION = 2;
   SEMANTIC_ORIGIN_CATEGORY_AI_ADDED = 3;
+  // Meaning taken from the advertiser guide: the advertiser's claim, not the owner's experience.
+  SEMANTIC_ORIGIN_CATEGORY_ADVERTISER_REQUEST = 4;
 }
 
 enum OriginReviewState {

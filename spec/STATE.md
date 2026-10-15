@@ -11,7 +11,7 @@
 ## active
 | tag | host | mode | since | at | doing |
 |---|---|---|---|---|---|
-| v7k2 | DESKTOP-VKPLS8P | autopilot | 2026-10-15T03:06Z | 2026-10-15T07:19Z | T681 |
+| v7k2 | DESKTOP-VKPLS8P | autopilot | 2026-10-15T03:06Z | 2026-10-15T07:36Z | - |
 
 ## inbox
 - 261015 decided -: push branch for finished units? → main, and AGENTS.md now defers to haeram-spec-creator with ARCH-31 run before each push and reused on unchanged trees (alt: - commit only | a work branch)
@@ -34,6 +34,7 @@
 - 261015 decided MKT-17: positioning line? → 체험단 자동화 with 내가 겪은 그대로, 체험단 글을 빠르게 (alt: keep AI는 속도를, 글의 주도권은 나에게)
 - 261015 decided -: keep English output in a Korean 체험단 product? → kept unchanged (alt: Korean only)
 - 261015 decided POST-120 T692: a memo longer than the clip instruction bound (1000)? → carry the first 1000 characters and say so in the dialog; the post keeps the full memo (alt: refuse the carry-over | carry no memo)
+- 261015 decided THEME-62 T681: colour of the 광고주 요청 evidence role? → the red ramp (300 on 950 dark, 700 on 50 light, contrast 9.98 and 7.80) with a double underline and its label, since THEME-15 closes the palette and red is the only ramp outside the other origins, the accent and the neutral (alt: a new palette ramp, needs THEME-15 and THEME-35 changed | violet, the action accent)
 
 ## ideation
 | id | st |
@@ -103,7 +104,6 @@
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
-| T681 | Add the 광고주 요청 semantic origin with its own color | GEN POST THEME | - | doing@261015.v7k2 |
 | T682 | Weave the advertiser guide into generation as the advertiser's material | GEN | T679 T681 | todo |
 | T683 | Show the pre-submission checklist in ③ | POST | T680 | todo |
 | T684 | Keep the Naver output alone and reserve the disclosure place | EXPORT VIDEO LANG POST MKT | T679 | todo |
@@ -120,11 +120,12 @@
 | T695 | Tell the 체험단 story on the public about page | MKT | T682 T683 T684 T687 T688 T691 T692 T693 T694 | todo |
 
 ## next
-- implement-task T681 (then dep order … T695); 19 provisional decisions wait in inbox for the owner (they will read the report first).
+- implement-task T682 (then dep order … T695); 20 provisional decisions wait in inbox for the owner (they will read the report first).
 - ideation friendly-model-names 계속: decide the automatic alias word list (theme, size, contents) and whether speech profiles join; then create-ssot/update-ssot MODEL. Also pending: the 17 unadopted choices in review/structure-261008 and doc-review ARCH.
 - push: 65c79f2b passed its pre-push gate and waits only for the SSH key (ssh-add) with the spec commits after it; gh login is needed to read CI. 6e5039c8 is the live green revision.
 
 ## log
+- 261015 T681 done
 - 261015 T681 start on main at d52654b1.
 - 261015 T680 done
 - 261015 T680 start on main at 8db352ff.
@@ -144,4 +145,3 @@
 - 261013 ideation friendly-model-names paused (open): grade + model-wide neutral alias (가성비 · 소나무), auto-assigned and operator-editable, never reused; operator-confirmed succession moves the alias to a new version and same-grade eligible selections follow with a notice; per-post credits/badges in options, 자세히 under the field. Open: the alias word list.
 - 261013 ideation friendly-model-names start: users see grade+number names (무료1, 가성비2) instead of full model names/versions; details only on request.
 - 261013 6e5039c8 pushed (T676 + media-release sampling fix): CI ok, Deploy backend ok, Verify media ok (image, release, worker); production runs 6e5039c8.
-- 261013 media-release.py resource sampling: an exec failure is judged by the container's state, not Docker's wording (409 attach upgrade and runc procReady forms seen locally); two full gate runs passed in both layouts.

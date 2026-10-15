@@ -68,6 +68,32 @@ describe('semantic origin API boundary', () => {
     expect(alignedOriginReviewFromProto(undefined, current, annotated())).toBeUndefined()
   })
 
+  // GEN-80: an advertiser request backed by the guide survives the boundary as its own category,
+  // and three-category data decodes as before.
+  it('keeps an advertiser request backed by the advertiser guide', () => {
+    const advertiser = annotated()
+    advertiser.sources.push({
+      $typeName: 'postpilot.v1.OriginSource',
+      id: 'guide',
+      kind: 'advertiser_guide',
+      text: '웃는 얼굴 이모지를 넣어 주세요',
+      attachmentFilename: '',
+      attachmentId: '',
+      available: true,
+    })
+    advertiser.spans[0]!.category = ProtoCategory.ADVERTISER_REQUEST
+    advertiser.spans[0]!.sourceRefs = ['guide']
+    const review = alignedOriginReviewFromProto(content, current, advertiser)
+    expect(review?.spans[0]?.category).toBe('advertiser_request')
+    expect(review?.sources.map((source) => source.kind)).toEqual([
+      'visual_observation',
+      'advertiser_guide',
+    ])
+    expect(alignedOriginReviewFromProto(content, current, annotated())?.spans[0]?.category).toBe(
+      'photo_interpretation',
+    )
+  })
+
   it('drops invalid annotations without discarding valid current content evidence', () => {
     const malformed = annotated()
     malformed.spans[0]!.quote = 'another result'

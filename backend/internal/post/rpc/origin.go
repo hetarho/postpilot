@@ -14,6 +14,7 @@ var originCategories = map[postpilotv1.SemanticOriginCategory]post.OriginCategor
 	postpilotv1.SemanticOriginCategory_SEMANTIC_ORIGIN_CATEGORY_OWNER_INPUT:          post.OriginOwnerInput,
 	postpilotv1.SemanticOriginCategory_SEMANTIC_ORIGIN_CATEGORY_PHOTO_INTERPRETATION: post.OriginPhotoInterpretation,
 	postpilotv1.SemanticOriginCategory_SEMANTIC_ORIGIN_CATEGORY_AI_ADDED:             post.OriginAIAdded,
+	postpilotv1.SemanticOriginCategory_SEMANTIC_ORIGIN_CATEGORY_ADVERTISER_REQUEST:   post.OriginAdvertiserRequest,
 }
 
 var originReviewStates = map[postpilotv1.OriginReviewState]post.OriginReviewState{

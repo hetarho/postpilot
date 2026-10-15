@@ -161,6 +161,10 @@ func alignmentSourceCompatible(content PostContent, span OriginSpan, catalog map
 					return false
 				}
 			}
+		case OriginAdvertiserRequest:
+			if source.Kind != OriginSourceAdvertiserGuide {
+				return false
+			}
 		case OriginAIAdded:
 		default:
 			return false

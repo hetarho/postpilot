@@ -9,6 +9,7 @@ export const semanticOriginCategoryNames = {
   [SemanticOriginCategory.OWNER_INPUT]: 'owner_input',
   [SemanticOriginCategory.PHOTO_INTERPRETATION]: 'photo_interpretation',
   [SemanticOriginCategory.AI_ADDED]: 'ai_added',
+  [SemanticOriginCategory.ADVERTISER_REQUEST]: 'advertiser_request',
 } as const
 
 export const originReviewStateNames = {

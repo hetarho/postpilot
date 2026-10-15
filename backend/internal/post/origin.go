@@ -27,10 +27,13 @@ const (
 	OriginOwnerInput          OriginCategory = "owner_input"
 	OriginPhotoInterpretation OriginCategory = "photo_interpretation"
 	OriginAIAdded             OriginCategory = "ai_added"
+	// OriginAdvertiserRequest is meaning taken from the advertiser guide. The owner
+	// typed or pasted it, but it is the advertiser's claim, not the owner's experience.
+	OriginAdvertiserRequest OriginCategory = "advertiser_request"
 )
 
 func (c OriginCategory) Valid() bool {
-	return c == OriginOwnerInput || c == OriginPhotoInterpretation || c == OriginAIAdded
+	return c == OriginOwnerInput || c == OriginPhotoInterpretation || c == OriginAIAdded || c == OriginAdvertiserRequest
 }
 
 // OriginReviewState is independent of semantic origin. Confirmation records a
@@ -83,12 +86,14 @@ const (
 	OriginSourceVisualObservation OriginSourceKind = "visual_observation"
 	OriginSourceAIProposal        OriginSourceKind = "ai_proposal"
 	OriginSourceLiteralText       OriginSourceKind = "literal_text"
+	OriginSourceAdvertiserGuide   OriginSourceKind = "advertiser_guide"
 )
 
 func (k OriginSourceKind) Valid() bool {
 	switch k {
 	case OriginSourceMemo, OriginSourceTemplateAnswer, OriginSourceOwnerEdit,
-		OriginSourceMemory, OriginSourceVisualObservation, OriginSourceAIProposal, OriginSourceLiteralText:
+		OriginSourceMemory, OriginSourceVisualObservation, OriginSourceAIProposal, OriginSourceLiteralText,
+		OriginSourceAdvertiserGuide:
 		return true
 	}
 	return false

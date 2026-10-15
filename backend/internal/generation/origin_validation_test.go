@@ -402,3 +402,42 @@ func TestPlanOriginsDoNotChooseDuplicateParagraphOrDifferentFiles(t *testing.T) 
 		t.Fatal("ambiguous paragraph/dependent files were guessed or recolored")
 	}
 }
+
+// GEN-80: an advertiser request is supported by the guide alone, and the guide never becomes the
+// owner's input or visual evidence; an AI addition may still explain it.
+func TestAdvertiserRequestNeedsTheGuideSource(t *testing.T) {
+	content := PostContent{Title: "대표 메뉴는 크림 라떼"}
+	title := post.OriginFieldLocator{Kind: post.OriginFieldTitle}
+	guide := post.OriginSource{ID: "guide", Kind: post.OriginSourceAdvertiserGuide, Text: "대표 메뉴 크림 라떼 언급", Available: true}
+	categories := []post.OriginCategory{post.OriginOwnerInput, post.OriginPhotoInterpretation, post.OriginAdvertiserRequest, post.OriginAIAdded}
+	for _, source := range append(originSources(), guide) {
+		isGuide := source.Kind == post.OriginSourceAdvertiserGuide
+		for _, category := range categories {
+			if !isGuide && category != post.OriginAdvertiserRequest {
+				continue
+			}
+			t.Run(source.ID+"/"+string(category), func(t *testing.T) {
+				got := ResolveWriteOriginCandidates(content, []post.OriginSource{source}, []post.OriginCandidate{originCandidate(title, "크림 라떼", category, source.ID)})
+				allowed := category == post.OriginAIAdded || (category == post.OriginAdvertiserRequest && isGuide)
+				if (len(got.Review.Spans) == 1) != allowed {
+					t.Fatalf("wrong advertiser fence: %+v", got)
+				}
+				if !allowed && (len(got.Issues) != 1 || got.Issues[0].Code != OriginIssueSourceCategory) {
+					t.Fatalf("refusal issues = %+v", got.Issues)
+				}
+			})
+		}
+	}
+	withdrawn := guide
+	withdrawn.Available = false
+	for _, sources := range [][]post.OriginSource{{withdrawn}, nil} {
+		refs := []string{"guide"}
+		if sources == nil {
+			refs = nil
+		}
+		got := ResolveWriteOriginCandidates(content, sources, []post.OriginCandidate{originCandidate(title, "크림 라떼", post.OriginAdvertiserRequest, refs...)})
+		if len(got.Review.Spans) != 0 {
+			t.Fatalf("advertiser request without an available guide was kept: %+v", got)
+		}
+	}
+}

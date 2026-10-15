@@ -6,9 +6,11 @@ import {
   ORIGIN_SOURCE_TEXT_MAX_SCALARS,
 } from '../config/semantic-origin'
 
+/** In the legend's order: the owner's, the photos', the advertiser's, then the AI's (POST-112). */
 export const SEMANTIC_ORIGIN_CATEGORIES = [
   'owner_input',
   'photo_interpretation',
+  'advertiser_request',
   'ai_added',
 ] as const
 export type SemanticOriginCategory = (typeof SEMANTIC_ORIGIN_CATEGORIES)[number]
@@ -25,6 +27,7 @@ export const ORIGIN_SOURCE_KINDS = [
   'visual_observation',
   'ai_proposal',
   'literal_text',
+  'advertiser_guide',
 ] as const
 export type OriginSourceKind = (typeof ORIGIN_SOURCE_KINDS)[number]
 

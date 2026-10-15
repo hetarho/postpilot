@@ -155,7 +155,7 @@
           },
           "category": {
             "type": "string",
-            "enum": ["owner_input", "photo_interpretation", "ai_added"]
+            "enum": ["owner_input", "photo_interpretation", "advertiser_request", "ai_added"]
           },
           "source_refs": {
             "type": "array",

@@ -205,3 +205,39 @@ func TestOriginChecksCorrespondenceWithoutCertifyingSemanticSupport(t *testing.T
 		t.Fatalf("structural validation implied semantic certification: %+v", got)
 	}
 }
+
+// GEN-80, POST-112: the advertiser's claim is a category of its own, and only the guide supports it.
+func TestOriginAdvertiserRequestIsACategoryOfItsOwn(t *testing.T) {
+	if !OriginAdvertiserRequest.Valid() || !OriginSourceAdvertiserGuide.Valid() {
+		t.Fatal("the advertiser category or the guide source kind is not valid")
+	}
+	content := PostContent{Title: "대표 메뉴는 크림 라떼"}
+	current := OriginResultIdentity{ContentRevision: 3, ContentHash: "current"}
+	guide := OriginSource{ID: "guide", Kind: OriginSourceAdvertiserGuide, Text: "대표 메뉴 크림 라떼 언급", Available: true}
+	memo := OriginSource{ID: "memo", Kind: OriginSourceMemo, Text: "크림 라떼", Available: true}
+	field := OriginFieldLocator{Kind: OriginFieldTitle}
+	got := ResolveOriginCandidates(content, current, []OriginSource{guide, memo}, []OriginCandidate{
+		{Field: field, Quote: "크림 라떼", Category: OriginAdvertiserRequest, SourceRefs: []string{"guide"}},
+	})
+	if len(got.Issues) != 0 || len(got.Review.Spans) != 1 || got.Review.Spans[0].Category != OriginAdvertiserRequest {
+		t.Fatalf("advertiser request resolution = %+v", got)
+	}
+	catalog := map[string]OriginSource{"guide": guide, "memo": memo}
+	span := cloneOriginSpan(got.Review.Spans[0])
+	if !alignmentSourceCompatible(content, span, catalog) {
+		t.Fatal("the guide does not support an advertiser request")
+	}
+	for _, mismatch := range []struct {
+		category OriginCategory
+		ref      string
+	}{{OriginAdvertiserRequest, "memo"}, {OriginOwnerInput, "guide"}, {OriginPhotoInterpretation, "guide"}} {
+		span.Category, span.SourceRefs = mismatch.category, []string{mismatch.ref}
+		if alignmentSourceCompatible(content, span, catalog) {
+			t.Fatalf("%s accepted the %s source", mismatch.category, mismatch.ref)
+		}
+	}
+	span.Category, span.SourceRefs = OriginAdvertiserRequest, nil
+	if alignmentSourceCompatible(content, span, catalog) {
+		t.Fatal("an advertiser request without the guide was accepted")
+	}
+}
