@@ -4,14 +4,26 @@ import userEvent from '@testing-library/user-event'
 import { renderAppAt } from '@/test/app'
 
 describe('configuration authoring entrypoints', () => {
+  it('opens /templates/new as the guided wizard without starting or saving work', async () => {
+    const user = userEvent.setup()
+    const calls: string[] = []
+    renderAppAt('/templates/new', { user: { id: 'alice' }, calls, existingSetup: true })
+    expect(
+      await screen.findByRole('heading', { level: 2, name: '어떤 체험을 글로 남기나요?' }),
+    ).toBeVisible()
+    await user.click(screen.getByRole('button', { name: /^맛집/ }))
+    expect(await screen.findByRole('heading', { level: 2, name: '어떤 식당인가요?' })).toBeVisible()
+    await user.click(screen.getByRole('button', { name: '이전' }))
+    expect(
+      await screen.findByRole('heading', { level: 2, name: '어떤 체험을 글로 남기나요?' }),
+    ).toBeVisible()
+    expect(
+      calls.filter((name) => /^(Start|Generate|Analyze|Adopt|Create|SaveAuthoring)/.test(name)),
+    ).toEqual([])
+    expect(calls).not.toContain('GetLatestWritingVoiceCandidates')
+  })
+
   it.each([
-    {
-      route: '/templates/new',
-      title: '새 템플릿',
-      manual: true,
-      choice: 'AI와 템플릿 만들기',
-      goal: '글을 어떤 순서로 풀어 쓰고 싶으세요?',
-    },
     {
       route: '/video-templates/new',
       title: '새 영상 템플릿',

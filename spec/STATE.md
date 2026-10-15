@@ -11,7 +11,7 @@
 ## active
 | tag | host | mode | since | at | doing |
 |---|---|---|---|---|---|
-| m7q2 | ihaelam-ui-MacBookPro | autopilot | 2026-10-15T12:20Z | 2026-10-15T12:21Z | T696 |
+| m7q2 | ihaelam-ui-MacBookPro | autopilot | 2026-10-15T12:20Z | 2026-10-15T12:39Z | - |
 
 ## inbox
 - 261015 decided T696: repair the existing red CI before T686 or defer it? → repair the stale wizard entrypoint test first (alt: defer until T687)
@@ -57,6 +57,7 @@
 | familiar-video-editing-and-dubbing | converted@261004 |
 | friendly-model-names | open@261013 |
 | campaign-reviewer-focus | converted@261015 |
+| post-faithful-clip | open@261015 |
 
 ## ssot
 | id | rev | tasked | pending | [?] |
@@ -109,7 +110,6 @@
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
-| T696 | Align configuration entry regression with the guided template wizard | ARCH TMPL | T685 | doing@261015.m7q2 |
 | T686 | Suggest section headings in the owner's voice | TMPL EDIT | T685 | todo |
 | T687 | Make the wizard the only way to create a post template | TMPL EDIT | T685 T686 | todo |
 | T688 | Build the video-template wizard and make it the only way to create one | CLIP TMPL EDIT | T685 T686 | todo |
@@ -124,11 +124,13 @@
 
 ## next
 - implement-task T697 (production clip generation is down: the live R2 CORS hides Content-Range; the owner applies deploy/r2-cors.json first).
-- Autopilot m7q2: repair the existing CI entry regression in T696, then implement T686–T695 in dependency order; previous provisional decisions remain in inbox.
-- main matches origin/main at 0c4c997b; the previous local-only push note is stale. Check workflows for the pushed revision before claiming remote success.
+- Autopilot m7q2: implement T686–T695 in dependency order; T696 repaired the existing red CI entry regression. Previous provisional decisions remain in inbox.
+- T696 full local CI passes; push main and inspect every triggered workflow for its exact revision.
 - ideation friendly-model-names 계속; also pending: the 17 unadopted choices in review/structure-261008 and doc-review ARCH.
 
 ## log
+- 261015 T696 done; full local CI passes on the repaired template wizard entry regression.
+- 261015 ideation post-faithful-clip start
 - 261015 create-task T697 done: production clips fail with CLIP_SOURCE_RANGE_INVALID because the live bucket exposes only ETag; probe-backed deploy gate plus HeadSource cause/cancellation.
 - 261015 create-task bug/clip-source-range start
 - 261015 T696 start on main at 0c4c997b; initial push waits for repair of the diagnosed existing CI failure.
@@ -147,7 +149,3 @@
 - 261015 T681 start on main at d52654b1.
 - 261015 T680 done
 - 261015 T680 start on main at 8db352ff.
-- 261015 T679 done on main: posts store the 체험단 글 switch, advertiser guide and checklist ticks (migration 0159, internal/campaign).
-- 261015 T679 start on main at a751f4ae.
-- 261015 T678 done on main: Postpilot 원칙 card above each guideline list, sheet without 원칙.
-- 261015 T678 start on main at 6ff7a0ed.
