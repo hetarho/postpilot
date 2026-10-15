@@ -11,7 +11,7 @@
 ## active
 | tag | host | mode | since | at | doing |
 |---|---|---|---|---|---|
-| m7q2 | ihaelam-ui-MacBookPro | autopilot | 2026-10-15T12:20Z | 2026-10-15T17:48Z | - |
+| m7q2 | ihaelam-ui-MacBookPro | autopilot | 2026-10-15T12:20Z | 2026-10-15T18:07Z | - |
 
 ## inbox
 - 261016 suggest T696 T686 T687 T688 T689: review-code over the completed template-wizard, heading-job and clip-channel units
@@ -134,9 +134,12 @@
 ## next
 - After T686–T695 (m7q2): implement-task T698 → T699, T700 → T701 (a linked post as the clip's story); T697's operator CORS prerequisite is complete.
 - implement-task T697 (the owner applied production Content-Range CORS261015; add the ranged-GET probe/deployment gate and preserve HEAD cancellation).
-- Autopilot m7q2: T689 implementation/full local CI complete; finish image/media gate and push, then T690–T695 and T698–T701. T697 is ready after the owner CORS change.
+- Autopilot m7q2: T689 full local CI/deployment/media complete; push, then implement T690–T695 and T698–T701. T697 is ready after the owner CORS change.
 
 ## log
+- 261016 T689 final FE549/4361 and all push gates pass; sourcefdba16ef, backend/image inputs unchanged from verified1eaea440.
+- 261016 T689 local deployment/media gates pass at1eaea440; final FE-only cache/navigation CI follows on sourcefdba16ef.
+- 261016 T689 pre-push FE cache follow-up: request history and current-revision navigation preserved; selected18 pass, final FE CI pending; backend/image inputs unchanged.
 - 261016 T689 done; full Go and FE549/4359 pass; final channel-only writes preserve completed content and original retention; image/media push gate follows.
 - 261016 T688 remote CI38774298150, Deploy38774298135 and Media38774966073 all succeed for2ce237dd; T689 claimca5c024c CI38774348751 succeeds.
 - 261016 T689 start on main at2ce237dd (m7q2 autopilot); CLIP r62/r63 and CDS r35/r36 source-colour changes are unrelated; bases refreshed to63/36.
@@ -154,6 +157,3 @@
 - 261015 T687 done; selected116 tests, lint/FSD and build pass; full pre-push FE checks follow.
 - 261015 T687 start on main atc3de0b08 (m7q2 autopilot); T686 local CI/deployment/media pass, pushed with remote workflows pending.
 - 261015 T686 pre-push deployment/media gates pass at73458eb9; source unchanged after spec-only verification records.
-- 261015 T686 done; full FE/BE checks pass, deployment/media push gate follows.
-- 261015 autopilot p4f1 ended: ideation/post-faithful-clip converted to CLIP r61 POST r42 GUIDE r23 and T698–T701; report spec/reports/261015-p4f1.md
-- 261015 create-task CLIP r61 POST r42 GUIDE r23 done: T698–T701; T688 T689 T690 T691 T692 T694 bases refreshed, no scope change; T686 T687 (TMPL) unaffected.

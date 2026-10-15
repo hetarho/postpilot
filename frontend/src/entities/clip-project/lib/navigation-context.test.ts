@@ -137,3 +137,29 @@ it('confirmed deletion forgets the record origin while retaining the pending fil
   expect(readClipHistoryReturn('alice')).toMatchObject({ path: '/clips', scrollY: 340 })
   expect(clipReturnDestination('alice', 'deleted').href).toBe('/clips')
 })
+
+it('returns to the current project channel before the saved origin is updated', () => {
+  rememberClipEntry('alice', {
+    path: '/clips',
+    section: 'clips',
+    filters: { channel: 'naver_clip', q: '제주' },
+    scrollY: 10,
+    targetId: 'clip',
+  })
+  expect(clipReturnDestination('alice', 'clip', undefined, 'instagram_clip').href).toBe(
+    '/clips?q=%EC%A0%9C%EC%A3%BC&channel=instagram_clip',
+  )
+  expect(clipReturnDestination('alice', 'clip').href).toBe(
+    '/clips?q=%EC%A0%9C%EC%A3%BC&channel=naver_clip',
+  )
+  rememberClipEntry('alice', {
+    path: '/clips',
+    section: 'clips',
+    filters: { channel: 'instagram_clip' },
+    scrollY: 10,
+    targetId: 'clip',
+  })
+  expect(clipReturnDestination('alice', 'clip', undefined, 'naver_clip').href).toBe(
+    '/clips?channel=naver_clip',
+  )
+})
