@@ -135,9 +135,10 @@
 ## next
 - After T686–T695 (m7q2): implement-task T698 → T699, T700 → T701 (a linked post as the clip's story); T697 needs the owner's Cloudflare CORS change first.
 - implement-task T697 (production clip generation is down: the live R2 CORS hides Content-Range; the owner applies deploy/r2-cors.json first).
-- Autopilot m7q2: T686 remote CI/deployment/media and T687 task checks pass; finish T687 pre-push verification, then T688–T695 and T698–T701 in dependency order.
+- Autopilot m7q2: T686 remote CI/deployment/media and T687 local task/full CI checks pass; push T687, then T688–T695 and T698–T701 in dependency order.
 
 ## log
+- 261015 T687 final full CI passes at2cc2ed05 (FE544 files/4334 tests); unchanged backend/schema/deployment inputs reuse T686 evidence.
 - 261015 T687 done; selected116 tests, lint/FSD and build pass; full pre-push FE checks follow.
 - 261015 T687 start on main atc3de0b08 (m7q2 autopilot); T686 local CI/deployment/media pass, pushed with remote workflows pending.
 - 261015 T686 pre-push deployment/media gates pass at73458eb9; source unchanged after spec-only verification records.
