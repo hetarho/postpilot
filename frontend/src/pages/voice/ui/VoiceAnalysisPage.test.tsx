@@ -3,6 +3,7 @@ import { act, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { initializeI18n } from '@/app/providers/i18n'
 import { renderAppAt } from '@/test/app'
+import { ProtoVoiceOrigin } from '@/shared/api'
 
 /** A made voice's analysis with one unknown item and the owner's own examples (VOICE-63). */
 const ANALYSIS = {
@@ -52,6 +53,25 @@ afterEach(() => {
 })
 
 describe('the 말투 분석 tab', () => {
+  it('offers chat growth on an AI style without creating a voice or starting analysis', async () => {
+    const user = userEvent.setup()
+    const calls: string[] = []
+    const { router } = renderAppAt(DEFAULT, {
+      user: { id: 'alice' },
+      calls,
+      voice: {
+        voices: [{ id: 'voice-default', name: '내 시작 말투', origin: 'synthetic' }],
+        analysis: { ...ANALYSIS, origin: ProtoVoiceOrigin.SYNTHETIC },
+      },
+    })
+    await user.click(await screen.findByRole('link', { name: '대화로 내 말투 키우기' }))
+    expect(await screen.findByRole('log', { name: '말투 학습 대화' })).toBeVisible()
+    expect(router.state.location.pathname).toBe(`${DEFAULT}/materials`)
+    expect(router.state.location.search).toEqual({ learn: 'chat' })
+    expect(screen.getByLabelText('답')).toHaveValue('')
+    expect(calls.filter((call) => /^(Create|Analyze|Answer|Start)/.test(call))).toEqual([])
+  })
+
   // VOICE-63: counted habits in eight rows without a visible title, then
   // AI가 읽은 인상; nothing to edit.
   it("reads the analysis back in two groups with the owner's own sentences", async () => {
@@ -96,7 +116,7 @@ describe('the 말투 분석 tab', () => {
     expect(router.state.location.pathname).toBe(`${DEFAULT}/materials`)
     expect(screen.queryByRole('navigation', { name: '말투 설정' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '말투 만들기' })).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '질문 10개로 내 말투 찾기' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '대화하기' })).toBeInTheDocument()
     expect(screen.queryByRole('region', { name: '분석 항목' })).not.toBeInTheDocument()
   })
 
@@ -510,6 +530,6 @@ describe('the 학습 글 tab', () => {
     expect(screen.getByRole('button', { name: '복원' })).toBeInTheDocument()
     expect(await screen.findByText(/삭제된 말투에는 학습 글을 더할 수 없어요/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '글 붙여넣기' })).toBeDisabled()
-    expect(screen.getByRole('button', { name: '문항 풀기' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '대화하기' })).toBeDisabled()
   })
 })

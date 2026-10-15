@@ -1,5 +1,6 @@
 import { createRoute, lazyRouteComponent, redirect } from '@tanstack/react-router'
 import { defaultVoice, loadVoices } from '@/entities/voice'
+import { voiceMaterialsSearchSchema } from '@/pages/voice'
 import { authenticatedRoute, writingGroupRoute, type RouterContext } from './tree'
 
 // The three voice tabs all name the same specifier, so the bundler emits one chunk for the
@@ -63,6 +64,7 @@ export const voiceRoute = createRoute({
 export const voiceMaterialsRoute = createRoute({
   getParentRoute: () => voiceLayoutRoute,
   path: '/materials',
+  validateSearch: voiceMaterialsSearchSchema,
   component: lazyVoice('VoiceMaterialsPage'),
 })
 

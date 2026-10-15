@@ -106,6 +106,38 @@ describe('the post voice', () => {
     canFinalize: true,
   }
 
+  it('opens the selected AI voice chat after saving the current draft without reassigning it', async () => {
+    const user = userEvent.setup()
+    const calls: string[] = []
+    const draftSaves: FakeDraftSave[] = []
+    const draftMaterials: Array<{ slug: string; title: string; memo: string }> = []
+    const { router } = renderAppAt('/posts/grow-voice', {
+      user: USER,
+      calls,
+      posts: {
+        posts: [{ slug: 'grow-voice', title: '내 초안', voice: POST_VOICES[0]! }],
+        voices: POST_VOICES,
+        draftSaves,
+        draftMaterials,
+      },
+      voice: {
+        voices: [{ id: 'voice-default', name: '기본 말투', origin: 'synthetic' }],
+      },
+    })
+    await user.type(await screen.findByLabelText('제목'), '을 더 써요')
+    const picker = await voiceField(user)
+    await waitFor(() => expect(picker).toBeEnabled())
+    await user.click(picker)
+    await user.click(await screen.findByRole('option', { name: '대화로 내 말투 키우기' }))
+    expect(await screen.findByRole('log', { name: '말투 학습 대화' })).toBeVisible()
+    expect(router.state.location.pathname).toBe('/voices/voice-default/materials')
+    expect(draftMaterials.at(-1)?.title).toBe('내 초안을 더 써요')
+    expect(draftSaves.every((save) => save.voiceId === undefined)).toBe(true)
+    expect(calls.indexOf('SavePostDraft')).toBeLessThan(calls.indexOf('GetVoiceProfile'))
+    expect(calls).not.toContain('AnalyzeVoice')
+    expect(calls).not.toContain('CreateVoice')
+  })
+
   // POST-23: the picker opens on the default and the create names it.
   it('starts a new draft in the default voice and sends its id with the first save', async () => {
     const user = userEvent.setup()

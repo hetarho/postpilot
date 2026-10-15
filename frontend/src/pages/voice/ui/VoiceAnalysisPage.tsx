@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from '@tanstack/react-router'
+import { Link, useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import {
   fingerprintRows,
@@ -10,7 +10,7 @@ import {
 import { MakeVoiceButton } from '@/features/make-voice'
 import { RestorePreviousAnalysisButton } from '@/features/restore-voice-analysis'
 import { AIAuthoringSheet } from '@/widgets/ai-authoring-studio'
-import { Button, Notice, Typography } from '@/shared/ui'
+import { Button, Notice, Typography, buttonStyles } from '@/shared/ui'
 import { PersonalVoiceLearning } from './PersonalVoiceLearning'
 import { VoiceRunStatus } from './VoiceRunStatus'
 import { VoiceScreen, type VoiceScreenContext } from './VoiceScreen'
@@ -70,6 +70,19 @@ function AnalysisPanel({ ownerId, voiceId, voice, profile }: VoiceScreenContext)
       {profile.analysis.origin === 'synthetic' && (
         <Notice tone="info" role="status">
           {t('origin.syntheticHelp')}
+          {!voice.deleted && (
+            <Link
+              to="/voices/$voiceId/materials"
+              params={{ voiceId }}
+              search={{ learn: 'chat' }}
+              className={buttonStyles({
+                variant: 'secondary',
+                className: 'max-w-full text-center',
+              })}
+            >
+              {t('screens.growChat')}
+            </Link>
+          )}
         </Notice>
       )}
       {!voice.deleted && (pendingMaterials || profile.hasPrevious) && (

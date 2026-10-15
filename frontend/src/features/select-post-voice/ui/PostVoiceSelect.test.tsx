@@ -27,6 +27,7 @@ function renderSelect(
 ) {
   const onSelect = vi.fn<(voiceId: string) => Promise<void>>(async () => {})
   const onCreateVoice = vi.fn()
+  const onGrowVoice = vi.fn()
   const transport = createFakeAuthTransport({ user: { id: 'alice' }, voice: { voices } })
   const field = (next: Partial<Parameters<typeof PostVoiceSelect>[0]> = {}) => (
     <PostVoiceSelect
@@ -36,6 +37,7 @@ function renderSelect(
       confirm
       onSelect={onSelect}
       onCreateVoice={onCreateVoice}
+      onGrowVoice={onGrowVoice}
       {...props}
       {...next}
     />
@@ -44,6 +46,7 @@ function renderSelect(
   return {
     onSelect,
     onCreateVoice,
+    onGrowVoice,
     rerender: (next: Partial<Parameters<typeof PostVoiceSelect>[0]>) => view.rerender(field(next)),
   }
 }
@@ -119,6 +122,25 @@ it('asks for the create sheet from 새 말투 만들기 and leaves the selection
   expect(onSelect).not.toHaveBeenCalled()
   expect(screen.queryByRole('dialog', { name: '말투를 바꿀까요?' })).not.toBeInTheDocument()
   expect(await picker()).toHaveTextContent('기본 말투')
+})
+
+it('opens chat growth only for the selected made AI style without changing the post assignment', async () => {
+  const user = userEvent.setup()
+  const { onSelect, onCreateVoice, onGrowVoice, rerender } = renderSelect({}, [
+    { ...TWO_VOICES[0]!, origin: 'synthetic' },
+    TWO_VOICES[1]!,
+  ])
+  await user.click(
+    within(await openList(user)).getByRole('option', { name: '대화로 내 말투 키우기' }),
+  )
+  expect(onGrowVoice).toHaveBeenCalledExactlyOnceWith('voice-default')
+  expect(onSelect).not.toHaveBeenCalled()
+  expect(onCreateVoice).not.toHaveBeenCalled()
+  expect(await picker()).toHaveTextContent('기본 말투')
+  rerender({ value: 'voice-review', current: { ...CURRENT, id: 'voice-review', name: '리뷰' } })
+  expect(
+    within(await openList(user)).queryByRole('option', { name: '대화로 내 말투 키우기' }),
+  ).toBeNull()
 })
 
 // POST-24: clearing is a reassignment like any other, so an existing post is asked first and the

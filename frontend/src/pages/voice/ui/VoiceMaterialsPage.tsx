@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useSearch } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { VoiceReadinessMeter } from '@/entities/voice'
 import { AnswerPromptsSheet } from '@/features/answer-voice-prompt'
@@ -15,14 +16,27 @@ import { VoiceScreen, type VoiceScreenContext } from './VoiceScreen'
  *  분석, the two ways to add 학습 글, and the list. */
 export function VoiceMaterialsPage() {
   const { t } = useTranslation('nav')
+  const search = useSearch({ strict: false })
   return (
     <VoiceScreen title={({ profile }) => t(profile.made ? 'voice.materials' : 'voice.learning')}>
-      {(context) => <MaterialsPanel key={`${context.ownerId}:${context.voiceId}`} {...context} />}
+      {(context) => (
+        <MaterialsPanel
+          key={`${context.ownerId}:${context.voiceId}`}
+          {...context}
+          openChat={search.learn === 'chat'}
+        />
+      )}
     </VoiceScreen>
   )
 }
 
-function MaterialsPanel({ ownerId, voiceId, voice, profile }: VoiceScreenContext) {
+function MaterialsPanel({
+  ownerId,
+  voiceId,
+  voice,
+  profile,
+  openChat,
+}: VoiceScreenContext & { openChat: boolean }) {
   const { t } = useTranslation('voices')
   // The id the just-started analysis returned outruns the profile refetch that will carry it,
   // so this screen holds it until the query catches up.
@@ -64,6 +78,7 @@ function MaterialsPanel({ ownerId, voiceId, voice, profile }: VoiceScreenContext
       <div className="mt-4 flex flex-wrap gap-2 sm:mt-8">
         <PasteMaterialSheet ownerId={ownerId} voiceId={voiceId} disabled={voice.deleted} />
         <AnswerPromptsSheet
+          defaultOpen={openChat}
           ownerId={ownerId}
           voiceId={voiceId}
           samples={profile.samples}

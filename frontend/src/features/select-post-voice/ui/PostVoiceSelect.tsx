@@ -20,6 +20,7 @@ import { reassignmentFailureMessage } from '../model/reassignment'
 /** The option that opens the create sheet instead of choosing anything. A voice id is minted by
  *  the server and never takes this shape, and '' is already 말투 없음. */
 const CREATE_VOICE_VALUE = '__create_voice__'
+const GROW_VOICE_VALUE = '__grow_voice__'
 
 interface PostVoiceSelectProps {
   ownerId: string
@@ -38,6 +39,7 @@ interface PostVoiceSelectProps {
   /** `새 말투 만들기` was picked (VOICE-53). The caller opens the create sheet — a feature may not
    *  render a sibling feature (ARCH-13) — and the assignment stays what it was. */
   onCreateVoice: () => void
+  onGrowVoice: (voiceId: string) => void
   /** Off for a reason the caller states elsewhere, so this field adds none of its own. */
   disabled?: boolean
   className?: string
@@ -60,6 +62,7 @@ export function PostVoiceSelect({
   confirm,
   onSelect,
   onCreateVoice,
+  onGrowVoice,
   disabled: off = false,
   className,
 }: PostVoiceSelectProps) {
@@ -69,6 +72,9 @@ export function PostVoiceSelect({
   const hintId = `${id}-hint`
   const errorId = `${id}-error`
   const { active, isPending } = useVoices(ownerId)
+  const growing = active.find(
+    (voice) => voice.id === value && voice.made && voice.origin === 'synthetic',
+  )
   // The voice a confirmation is open for; undefined while none is, since '' is a real target.
   const [target, setTarget] = useState<string>()
   const [applying, setApplying] = useState(false)
@@ -115,6 +121,10 @@ export function PostVoiceSelect({
       onCreateVoice()
       return
     }
+    if (next === GROW_VOICE_VALUE) {
+      if (growing) onGrowVoice(growing.id)
+      return
+    }
     if (next === value) return
     if (confirm) setTarget(next)
     else void apply(next)
@@ -149,6 +159,7 @@ export function PostVoiceSelect({
         label: makingLabel(voice.name, voice.readinessPercent),
         disabled: true,
       })),
+    ...(growing ? [{ value: GROW_VOICE_VALUE, label: t('picker.growChat') }] : []),
     { value: CREATE_VOICE_VALUE, label: t('picker.create') },
   ]
 
