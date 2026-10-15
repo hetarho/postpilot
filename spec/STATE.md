@@ -14,6 +14,9 @@
 | m7q2 | ihaelam-ui-MacBookPro | autopilot | 2026-10-15T12:20Z | 2026-10-15T14:44Z | T688 |
 
 ## inbox
+- 261015 decided CLIP-219: HDR phone footage refused today — support it? → accept BT.2020 HLG and PQ through one versioned SDR BT.709 conversion shared by every consumer (alt: keep refusing with a clear message | let the browser tone-map on its own, losing preview/export parity)
+- 261015 decided T702: which conversion? → measure HLG signal pass-through against a BT.2408/BT.2390 3D LUT in an explore task before choosing (alt: commit to the LUT now | pass-through now)
+- 261015 decided CDS-52: output colour tags? → SDR BT.709 limited range, tagged and checked under V12 (alt: leave untagged)
 - 261015 decided T698: how is a deleted or reused post slug told apart? → store the post's creation time beside the slug and resolve at read; no foreign key (alt: FK ON DELETE SET NULL, which nulls user_id on SQLite composites | clear links from the post context)
 - 261015 decided T699: which part of the post reaches the writer? → title plus headed sections of TEXT/QUOTE/LIST; photo captions, tags and summary left out; an oversized request is refused, never trimmed (alt: the whole content JSON | a fixed character cap)
 - 261015 decided T700: where does capture time come from? → JPEG EXIF DateTimeOriginal and MP4/MOV mvhd, parsed in the browser without a new dependency (alt: File.lastModified | an EXIF library)
@@ -84,8 +87,8 @@
 | THEME | 34 | 34 | - | 2 |
 | MKT | 11 | 11 | - | 0 |
 | VIDEO | 8 | 8 | - | 0 |
-| CLIP | 61 | 61 | - | 2 |
-| CDS | 34 | 34 | - | 1 |
+| CLIP | 62 | 62 | - | 2 |
+| CDS | 35 | 35 | - | 1 |
 | BILL | 9 | 9 | - | 0 |
 | MEM | 7 | 7 | - | 2 |
 | QUAL | 8 | 8 | - | 0 |
@@ -131,13 +134,22 @@
 | T699 | Send the linked post's text to every clip writing call | CLIP GUIDE QUOTA | T698 T691 | todo |
 | T700 | Record when post photos, post videos and clip sources were shot | CLIP | T692 | todo |
 | T701 | Build the storyline in the linked post's order and place videos by capture order | CLIP GUIDE | T699 T700 | todo |
+| T702 | Choose the HDR-to-SDR conversion by measuring it on real phone footage | CLIP ARCH | - | todo |
+| T703 | Accept HDR sources through the chosen SDR conversion in browser and native | CLIP ARCH | T702 | todo |
+| T704 | Tag every render as SDR BT.709 and name a refused source's colour format | CDS CLIP | - | todo |
 
 ## next
+- HDR sources (h7c3): T702 explore (3h, measure on an HLG phone clip) → T703; T704 independent. Until then HDR phone footage is refused with CLIP_SOURCE_COLOR_UNSUPPORTED.
 - After T686–T695 (m7q2): implement-task T698 → T699, T700 → T701 (a linked post as the clip's story); T697 needs the owner's Cloudflare CORS change first.
 - implement-task T697 (production clip generation is down: the live R2 CORS hides Content-Range; the owner applies deploy/r2-cors.json first).
 - Autopilot m7q2: T687 pushed atc2f3c631 with CI pending; implement T688, then T689–T695 and T698–T701 in dependency order.
 
 ## log
+- 261015 autopilot h7c3 ended: CLIP r62 CDS r35, T702–T704; report spec/reports/261015-h7c3.md
+- 261015 create-task CLIP r62 CDS r35 done: T702 (explore 3h) → T703; T704 independent
+- 261015 update-ssot CLIP r62 CDS r35 done: HDR sources through one versioned SDR conversion; output tagged BT.709; no doing task affected (T686 is TMPL)
+- 261015 autopilot h7c3 start: HDR source support (CLIP_SOURCE_COLOR_UNSUPPORTED on HLG phone footage) → update-ssot CLIP CDS → create-task; no implementation
+- 261015 update-ssot CLIP CDS start (HDR sources)
 - 261015 T688 start on main atc2f3c631 (m7q2 autopilot); T687 final CI passed locally, remote CI38753876172 pending.
 - 261015 T687 final full CI passes at2cc2ed05 (FE544 files/4334 tests); unchanged backend/schema/deployment inputs reuse T686 evidence.
 - 261015 T687 done; selected116 tests, lint/FSD and build pass; full pre-push FE checks follow.
@@ -153,13 +165,3 @@
 - 261015 T686 start on main at 13f778bb (m7q2 autopilot); T696 pushed at 832c357e with CI38736338662 running.
 - 261015 ideation post-faithful-clip ready (autonomous at the owner's request; decisions in inbox)
 - 261015 T696 done; full local CI passes on the repaired template wizard entry regression.
-- 261015 ideation post-faithful-clip start
-- 261015 create-task T697 done: production clips fail with CLIP_SOURCE_RANGE_INVALID because the live bucket exposes only ETag; probe-backed deploy gate plus HeadSource cause/cancellation.
-- 261015 create-task bug/clip-source-range start
-- 261015 T696 start on main at 0c4c997b; initial push waits for repair of the diagnosed existing CI failure.
-- 261015 create-task T696 done: current wizard entrypoint regression for failed CI 38708735705; autopilot m7q2 selected by the owner.
-- 261015 start-vibe m7q2 start on main at 0c4c997b; awaiting mode and route, no other active session.
-- 261015 autopilot v7k2 stopped at the owner's request after T685; report spec/reports/261015-v7k2.md
-- 261015 T685 done
-- 261015 T685 start on main at ce4e027c.
-- 261015 T684 done

@@ -1,5 +1,5 @@
 # CDS clip output design system
-> r34 | Shared browser/server composition, bundled typography and animated-caption quality, with deterministic output-time motion, local original-based contrast and independently qualified analysis-copy quality.
+> r35 | Shared browser/server composition, bundled typography and animated-caption quality, with deterministic output-time motion, local original-based contrast and independently qualified analysis-copy quality.
 
 ## decisions
 - CDS-1 [o] intro/outro are the project's enabled regions filled from its slots, optionally seeded by a template; disclosure remains template-declared; narration follows the storyline or owner instruction under 영상 지침, with no compulsory business, location, price, menu or minimum fact count; visual legibility remains required (→CLIP-60 →CLIP-68 →CLIP-186 →GUIDE-42 →GUIDE-52)
@@ -100,7 +100,7 @@
   | V9 | every caption's motion matches the style it names, rapid phrases hold 0/0 ms and 0 px, and every caption carries its own style's drawing whatever its pace and whichever kind rendered it |
   | V10 | supported vocabulary, source audio only when enabled, one simultaneous source-audio track plus the requested single-voice narration, complete ready speech and no background music |
   | V11 | a collected fact behind every number and exact authored literals |
-  | V12 | output 1080×1920 \| 1920×1080 \| 1080×1080, 30 fps, H.264 High, AAC 48 kHz when audio exists, −16 LUFS ±1 and a decoded video-track duration within one output frame of the edited output timeline (→CDS-62), read from the video track alone because a container or audio-track declaration carries codec padding and always reads longer than the clip plays |
+  | V12 | output 1080×1920 \| 1920×1080 \| 1080×1080, 30 fps, H.264 High, SDR BT.709 limited range tagged as such, AAC 48 kHz when audio exists, −16 LUFS ±1 and a decoded video-track duration within one output frame of the edited output timeline (→CDS-62), read from the video track alone because a container or audio-track declaration carries codec padding and always reads longer than the clip plays |
   | V13 | automatic anchor-step target ≤ 1 except the readable-text rule, not applied to an owner-placed caption |
   | V15 | every cut uses one CLIP-98 rate and its source span, rate and pre-transition output duration agree |
   | V16 | every caption and element interval lies on the transformed output timeline |
@@ -222,3 +222,4 @@
 
 ## chg
 - r34 261015 CDS-49✎ 9:16 default with 16:9/1:1 for horizontal or square placements→9:16 for every new project, 16:9/1:1 kept for projects created with them
+- r35 261015 CDS-52✎ V12 untagged colour→SDR BT.709 limited range, tagged (→CLIP-219)
