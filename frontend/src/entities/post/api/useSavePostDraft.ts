@@ -2,7 +2,9 @@ import { clone, create } from '@bufbuild/protobuf'
 import { useMutation, useTransport } from '@connectrpc/connect-query'
 import { useQueryClient } from '@tanstack/react-query'
 import {
+  AdvertiserGuideSchema,
   appFailureFromConnect,
+  ChecklistTicksSchema,
   contentLanguageToProto,
   type ContentLanguage,
   type GetPostResponse,
@@ -17,6 +19,7 @@ import {
   TemplateRefSchema,
   VoiceRefSchema,
 } from '@/shared/api'
+import { advertiserGuideToProto, type AdvertiserGuide } from '@/entities/advertiser-guide/@x/post'
 import { getPostQueryKey, listPostsQueryKey } from './post-queries'
 
 /** Applies only the fields this mutation owns to the cached post.
@@ -31,7 +34,10 @@ import { getPostQueryKey, listPostsQueryKey } from './post-queries'
 export function applyingSavedDraft(
   saved: Post,
   cached: GetPostResponse | undefined,
-  { carriedStoryline = false }: { carriedStoryline?: boolean } = {},
+  {
+    carriedStoryline = false,
+    carriedCampaign = false,
+  }: { carriedStoryline?: boolean; carriedCampaign?: boolean } = {},
 ): Post {
   if (!cached?.post) return saved
   const post = clone(PostSchema, cached.post)
@@ -65,6 +71,14 @@ export function applyingSavedDraft(
   // one a storyline job wrote while the save was out.
   if (carriedStoryline)
     post.storyline = saved.storyline ? clone(StorylineSchema, saved.storyline) : undefined
+  // The campaign parts only from a save that carried them (POST-117–119), for the same reason.
+  if (carriedCampaign) {
+    post.campaign = saved.campaign
+    post.advertiserGuide = saved.advertiserGuide
+      ? clone(AdvertiserGuideSchema, saved.advertiserGuide)
+      : undefined
+    post.checklistTicks = [...saved.checklistTicks]
+  }
   return post
 }
 
@@ -85,6 +99,10 @@ export interface PostDraftSave {
   targetLanguage?: ContentLanguage
   /** The owner's storyline edit, the whole paragraph list; absent keeps the stored one. */
   storyline?: readonly { text: string; files: readonly string[] }[]
+  /** The campaign parts (POST-117–119); each absent keeps what the post holds. */
+  campaign?: boolean
+  advertiserGuide?: AdvertiserGuide
+  checklistTicks?: readonly string[]
 }
 
 export function useSavePostDraft(): { save: (draft: PostDraftSave) => Promise<string> } {
@@ -107,6 +125,10 @@ export function useSavePostDraft(): { save: (draft: PostDraftSave) => Promise<st
         create(GetPostResponseSchema, {
           post: applyingSavedDraft(post, queryClient.getQueryData<GetPostResponse>(key), {
             carriedStoryline: Boolean(variables.storyline),
+            carriedCampaign:
+              variables.campaign !== undefined ||
+              variables.advertiserGuide !== undefined ||
+              variables.checklistTicks !== undefined,
           }),
         }),
       )
@@ -148,6 +170,13 @@ export function useSavePostDraft(): { save: (draft: PostDraftSave) => Promise<st
                 }),
               ),
             })
+          : undefined,
+        campaign: draft.campaign,
+        advertiserGuide: draft.advertiserGuide
+          ? advertiserGuideToProto(draft.advertiserGuide)
+          : undefined,
+        checklistTicks: draft.checklistTicks
+          ? create(ChecklistTicksSchema, { lines: [...draft.checklistTicks] })
           : undefined,
       })
       // A 200 carrying no post is not a confirmation. Taking it as one would mark the text

@@ -2,6 +2,7 @@
 import { useMemo } from 'react'
 import type { Transport } from '@connectrpc/connect'
 import { createConnectQueryKey, useTransport } from '@connectrpc/connect-query'
+import { advertiserGuideFromProto } from '@/entities/advertiser-guide/@x/post'
 import { requireBlogField } from '@/entities/blog-field/@x/post'
 import { toPostImage } from '@/entities/image/@x/post'
 import { toPostVideo } from '@/entities/video/@x/post'
@@ -86,6 +87,9 @@ export function toPostDraft(post: Post): PostDraft {
           takenOutFiles: [...post.storyline.takenOutFiles],
         }
       : undefined,
+    campaign: post.campaign,
+    advertiserGuide: advertiserGuideFromProto(post.advertiserGuide),
+    checklistTicks: [...post.checklistTicks],
   }
 }
 

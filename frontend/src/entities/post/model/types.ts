@@ -1,4 +1,5 @@
 import i18next from 'i18next'
+import type { AdvertiserGuide } from '@/entities/advertiser-guide/@x/post'
 import type { BlogFieldChoice } from '@/entities/blog-field/@x/post'
 import type { PostImage } from '@/entities/image/@x/post'
 import type { PostVideo } from '@/entities/video/@x/post'
@@ -116,6 +117,11 @@ export interface PostDraft {
   contentLanguage: ContentLanguage | undefined
   /** The post's storyline, absent when it has none (POST-99). */
   storyline?: PostStoryline
+  /** The 체험단 글 switch (POST-117), the advertiser guide kept while it is off (POST-118) and the
+   *  guide's free-text lines the owner ticked (POST-119). */
+  campaign: boolean
+  advertiserGuide: AdvertiserGuide
+  checklistTicks: string[]
 }
 
 /** One part of a storyline: what it shows and says, and the attachment names it uses. */

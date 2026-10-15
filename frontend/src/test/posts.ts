@@ -22,6 +22,8 @@ import {
   type Video,
   VideoSchema,
   ListPostsResponseSchema,
+  AdvertiserGuideSchema,
+  type ProtoAdvertiserGuide,
   PostSchema,
   PostService,
   PostSummarySchema,
@@ -113,6 +115,18 @@ export interface FakeDraftSave {
   templateAnswers: Array<{ label: string; text: string; enabled: boolean }>
   /** The storyline edit this save carried, undefined when absent (POST-96). */
   storyline?: Array<{ text: string; files: string[] }>
+  /** The campaign parts this save carried, each undefined when absent (POST-117–119). */
+  campaign?: boolean
+  advertiserGuide?: FakeAdvertiserGuide
+  checklistTicks?: string[]
+}
+
+export interface FakeAdvertiserGuide {
+  text: string
+  keywords: string[]
+  minChars?: number
+  minPhotos?: number
+  hashtags: string[]
 }
 
 /** One SavePostGenerationOptions as it arrived: every member undefined when absent, which only an
@@ -191,6 +205,10 @@ export interface FakePostRow {
     addedFiles?: string[]
     takenOutFiles?: string[]
   }
+  /** The 체험단 글 switch; omitted reads off, like a post from before the switch (POST-117). */
+  campaign?: boolean
+  advertiserGuide?: Partial<FakeAdvertiserGuide>
+  checklistTicks?: string[]
 }
 
 /** One ListPosts as the fake received it (POST-90, POST-91). */
@@ -225,6 +243,10 @@ export interface FakePostsOptions {
   failSaves?: number
   /** Answer SavePostDraft 200 with no post — a confirmation the client must not trust. */
   saveReturnsNoPost?: boolean
+  /** Refuse every SavePostDraft carrying an advertiser guide, as the server refuses one past its
+   *  bounds (POST-118). */
+  refuseGuide?: 'ADVERTISER_GUIDE_TOO_LONG' | 'ADVERTISER_GUIDE_ITEM_INVALID'
+
   /** Make DeleteImage fail. */
   deleteFails?: boolean
   /** Holds a RotateImage until the returned promise settles, so a turn can be kept in flight. */
@@ -332,6 +354,9 @@ type Row = {
   targetLanguage: ReturnType<typeof contentLanguageToProto>
   contentLanguage: ReturnType<typeof contentLanguageToProto>
   storyline?: ProtoStoryline
+  campaign: boolean
+  advertiserGuide?: ProtoAdvertiserGuide
+  checklistTicks: string[]
 }
 
 /** The server's storyline edit (POST-96): the texts and files replaced, the mark set, and what is
@@ -536,6 +561,17 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
             takenOutFiles: row.storyline.takenOutFiles ?? [],
           })
         : undefined,
+      campaign: row.campaign ?? false,
+      advertiserGuide: row.advertiserGuide
+        ? create(AdvertiserGuideSchema, {
+            text: row.advertiserGuide.text ?? '',
+            keywords: row.advertiserGuide.keywords ?? [],
+            minChars: row.advertiserGuide.minChars,
+            minPhotos: row.advertiserGuide.minPhotos,
+            hashtags: row.advertiserGuide.hashtags ?? [],
+          })
+        : undefined,
+      checklistTicks: row.checklistTicks ?? [],
     }
   }
 
@@ -676,12 +712,27 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
         text: paragraph.text,
         files: [...paragraph.files],
       })),
+      campaign: req.campaign,
+      advertiserGuide: req.advertiserGuide && {
+        text: req.advertiserGuide.text,
+        keywords: [...req.advertiserGuide.keywords],
+        minChars: req.advertiserGuide.minChars,
+        minPhotos: req.advertiserGuide.minPhotos,
+        hashtags: [...req.advertiserGuide.hashtags],
+      },
+      checklistTicks: req.checklistTicks && [...req.checklistTicks.lines],
     })
     if (failuresLeft > 0) {
       failuresLeft -= 1
       throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
     }
     if (options.saveReturnsNoPost) return create(SavePostDraftResponseSchema, {})
+    if (req.advertiserGuide && options.refuseGuide === 'ADVERTISER_GUIDE_TOO_LONG') {
+      throw connectAppError('ADVERTISER_GUIDE_TOO_LONG', Code.InvalidArgument, { max: '3000' })
+    }
+    if (req.advertiserGuide && options.refuseGuide) {
+      throw connectAppError(options.refuseGuide, Code.InvalidArgument)
+    }
     if (req.slug && foreign.includes(req.slug)) {
       throw connectAppError('POST_FORBIDDEN', Code.PermissionDenied)
     }
@@ -783,6 +834,20 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
       ),
       contentLanguage: existing?.contentLanguage ?? 0,
       storyline: editedStoryline(existing?.storyline, req.storyline?.paragraphs),
+      // A new post starts as a 체험단 post; each part absent keeps what the post holds.
+      campaign: req.campaign ?? existing?.campaign ?? !req.slug,
+      advertiserGuide: req.advertiserGuide
+        ? create(AdvertiserGuideSchema, {
+            text: req.advertiserGuide.text,
+            keywords: [...req.advertiserGuide.keywords],
+            minChars: req.advertiserGuide.minChars,
+            minPhotos: req.advertiserGuide.minPhotos,
+            hashtags: [...req.advertiserGuide.hashtags],
+          })
+        : existing?.advertiserGuide,
+      checklistTicks: req.checklistTicks
+        ? [...req.checklistTicks.lines]
+        : (existing?.checklistTicks ?? []),
     }
     rows.set(slug, row)
     return create(SavePostDraftResponseSchema, { post: toProto(row) })

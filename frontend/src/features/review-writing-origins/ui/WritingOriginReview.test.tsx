@@ -135,6 +135,9 @@ function post(patch: Partial<PostDraft> = {}): PostDraft {
     publishedAt: '',
     targetLanguage: 'ko',
     contentLanguage: 'ko',
+    campaign: false,
+    advertiserGuide: { text: '', keywords: [], hashtags: [] },
+    checklistTicks: [],
     ...patch,
   }
 }

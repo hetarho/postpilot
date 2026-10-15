@@ -85,6 +85,7 @@ import { i18n as selectPostFieldI18n } from '@/features/select-post-field/config
 import { i18n as qualityI18n } from '@/entities/quality/config/i18n'
 import { i18n as chooseQualityRulesI18n } from '@/features/choose-quality-rules/config/i18n'
 import { i18n as guidelineI18n } from '@/entities/guideline/config/i18n'
+import { i18n as advertiserGuideI18n } from '@/entities/advertiser-guide/config/i18n'
 import { i18n as guidelinesI18n } from '@/widgets/guideline-directory/config/i18n'
 import { i18n as memoryEntityI18n } from '@/entities/memory/config/i18n'
 import { i18n as extractMemoriesI18n } from '@/features/extract-memories/config/i18n'
@@ -234,6 +235,7 @@ export const FRAGMENTS: readonly I18nFragment[] = [
   editWithAiGuidelinesI18n,
   guidelineI18n,
   guidelinesI18n,
+  advertiserGuideI18n,
   reviewGuidelineCandidateI18n,
   aiModelsI18n,
   applyModelRecommendationI18n,
@@ -313,6 +315,7 @@ export const resources = {
     writingTests: writingTestI18n.ko,
     voiceMaterialEdit: voiceMaterialEditI18n.ko,
     posts: {
+      ...advertiserGuideI18n.ko,
       ...blogFieldI18n.ko,
       ...candidateComparisonI18n.ko,
       ...contactSheetI18n.ko,
@@ -452,6 +455,7 @@ export const resources = {
     writingTests: writingTestI18n.en,
     voiceMaterialEdit: voiceMaterialEditI18n.en,
     posts: {
+      ...advertiserGuideI18n.en,
       ...blogFieldI18n.en,
       ...candidateComparisonI18n.en,
       ...contactSheetI18n.en,

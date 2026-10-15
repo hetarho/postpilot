@@ -16,6 +16,7 @@
 // second, competing chain of saves for the same post. One queue per post gives both, plus
 // the invariant everything else rests on — for a given post there is at most one save in
 // flight, and what it sends is always the newest text queued.
+import { copyGuide, sameGuide, type AdvertiserGuide } from '@/entities/advertiser-guide'
 import {
   AUTOSAVE_DEBOUNCE_MS,
   AUTOSAVE_RETRY_BASE_MS,
@@ -44,6 +45,17 @@ export interface Draft {
    *  the newest queued list wins, and it goes out only while it differs from what the server
    *  holds. */
   storyline?: StorylineParagraphDraft[]
+  /** The campaign parts (POST-117–119): the 체험단 글 switch, the whole advertiser guide and the
+   *  ticked checklist lines. They ride the same queue as the memo because they are the same kind
+   *  of input — what the next run is given — and each part goes out only while it differs from
+   *  the server's. Absent is no campaign data at all. */
+  campaign?: CampaignDraft
+}
+
+export interface CampaignDraft {
+  on: boolean
+  guide: AdvertiserGuide
+  ticks: string[]
 }
 
 export interface StorylineParagraphDraft {
@@ -82,6 +94,11 @@ export interface DraftRequest extends Partial<Assignments> {
   targetLanguage?: ContentLanguage
   /** Present only while the storyline the editor holds differs from the server's. */
   storyline?: StorylineParagraphDraft[]
+  /** Each campaign part is present only while it differs from what the server holds, so a title
+   *  save never carries a stale switch or guide over a newer one from another tab. */
+  campaign?: boolean
+  advertiserGuide?: AdvertiserGuide
+  checklistTicks?: string[]
 }
 
 /** Performs one save and resolves with the post's slug.
@@ -251,7 +268,51 @@ function sameDraft(held: Draft, saved: Draft): boolean {
     held.title === saved.title &&
     held.memo === saved.memo &&
     answersSettled(held.answers, saved.answers) &&
-    storylineSettled(held.storyline, saved.storyline)
+    storylineSettled(held.storyline, saved.storyline) &&
+    campaignSettled(held.campaign, saved.campaign)
+  )
+}
+
+function campaignSettled(
+  held: CampaignDraft | undefined,
+  saved: CampaignDraft | undefined,
+): boolean {
+  return held === undefined || (saved !== undefined && sameCampaign(held, saved))
+}
+
+export function sameCampaign(a: CampaignDraft, b: CampaignDraft): boolean {
+  return (
+    a.on === b.on &&
+    sameGuide(a.guide, b.guide) &&
+    a.ticks.length === b.ticks.length &&
+    a.ticks.every((tick, index) => tick === b.ticks[index])
+  )
+}
+
+/** The campaign parts that differ from what the server holds; none when the editor holds none. */
+function campaignPatch(
+  held: CampaignDraft | undefined,
+  saved: CampaignDraft | undefined,
+): Pick<DraftRequest, 'campaign' | 'advertiserGuide' | 'checklistTicks'> {
+  if (!held) return {}
+  const ticksMoved =
+    !saved ||
+    held.ticks.length !== saved.ticks.length ||
+    held.ticks.some((tick, index) => tick !== saved.ticks[index])
+  return {
+    ...(saved?.on !== held.on ? { campaign: held.on } : {}),
+    ...(!saved || !sameGuide(held.guide, saved.guide)
+      ? { advertiserGuide: copyGuide(held.guide) }
+      : {}),
+    ...(ticksMoved ? { checklistTicks: [...held.ticks] } : {}),
+  }
+}
+
+export function copyCampaign(campaign: CampaignDraft): CampaignDraft
+export function copyCampaign(campaign: CampaignDraft | undefined): CampaignDraft | undefined
+export function copyCampaign(campaign: CampaignDraft | undefined): CampaignDraft | undefined {
+  return (
+    campaign && { on: campaign.on, guide: copyGuide(campaign.guide), ticks: [...campaign.ticks] }
   )
 }
 
@@ -460,6 +521,7 @@ async function run(queue: Queue): Promise<void> {
     queue.slug && sent.storyline && !sameStoryline(sent.storyline, queue.saved.storyline)
       ? copyStoryline(sent.storyline)
       : undefined
+  const sentCampaign = campaignPatch(sent.campaign, queue.saved.campaign)
   queue.inFlight = true
   queue.sending = sent
   publish(queue)
@@ -470,6 +532,7 @@ async function run(queue: Queue): Promise<void> {
       draft: sent,
       ...sentAssignments,
       ...(sentStoryline ? { storyline: sentStoryline } : {}),
+      ...sentCampaign,
     })
     if (queue.discarded) return
     queue.inFlight = false
@@ -480,6 +543,7 @@ async function run(queue: Queue): Promise<void> {
       ...sent,
       answers: mergeAnswers(queue.saved.answers, sent.answers),
       storyline: copyStoryline(sent.storyline ?? queue.saved.storyline),
+      campaign: copyCampaign(sent.campaign ?? queue.saved.campaign),
     }
     each(queue, (channel, assignment) => {
       const value = sentAssignments[channel]
@@ -693,6 +757,7 @@ export function attachDraftQueue(options: DraftQueueOptions): DraftQueueHandle {
         ...draft,
         answers: draft.answers.map((answer) => ({ ...answer })),
         storyline: copyStoryline(draft.storyline),
+        campaign: copyCampaign(draft.campaign),
       }
       publish(attached)
       // Not during a backoff: that timer already covers sending the newest text, and

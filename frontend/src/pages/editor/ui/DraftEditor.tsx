@@ -50,6 +50,7 @@ import { EditorDockHeader } from './EditorDockHeader'
 import { LifecycleSteps } from './LifecycleSteps'
 import { MemoField } from './MemoField'
 import { TitleField } from './TitleField'
+import { CampaignMaterial } from './CampaignMaterial'
 
 const STEP_PANEL_ID = 'editor-step-panel'
 
@@ -189,15 +190,26 @@ export function DraftEditor({ post, defaultVoice }: DraftEditorProps) {
     briefRef.current?.open()
   }
 
+  // ① is 가제 → the 체험단 글 switch with its guide → the template's fields → memo (POST-54), in
+  // both the minted and the unminted order, so the switch rides with the 가제.
   const titleField = (
-    <TitleField
-      value={autosave.title}
-      onChange={autosave.setTitle}
-      fieldRef={titleRef}
-      // The next field on screen: ① is 가제 → the template's fields → memo (POST-54).
-      nextRef={firstEnabledAnswer(fields) ? firstAnswerRef : memoRef}
-      readOnly={published}
-    />
+    <>
+      <TitleField
+        value={autosave.title}
+        onChange={autosave.setTitle}
+        fieldRef={titleRef}
+        // The next text field on screen: the template's first field, or the memo.
+        nextRef={firstEnabledAnswer(fields) ? firstAnswerRef : memoRef}
+        readOnly={published}
+      />
+      <CampaignMaterial
+        on={autosave.campaign.on}
+        guide={autosave.campaign.guide}
+        refusal={autosave.campaignRefusal}
+        readOnly={published}
+        onChange={({ on, guide }) => autosave.setCampaign({ ...autosave.campaign, on, guide })}
+      />
+    </>
   )
   const memoField = (
     <MemoField

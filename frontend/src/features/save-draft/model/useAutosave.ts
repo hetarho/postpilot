@@ -1,10 +1,14 @@
 import { useLayoutEffect, useEffect, useMemo, useRef, useState } from 'react'
 import { isPublished, useSavePostDraft, type PostStatus } from '@/entities/post'
-import { appFailureFromConnect, type ContentLanguage } from '@/shared/api'
+import { EMPTY_GUIDE, type AdvertiserGuide } from '@/entities/advertiser-guide'
+import { appFailureFromConnect, type AppFailure, type ContentLanguage } from '@/shared/api'
 import {
   attachDraftQueue,
+  copyCampaign,
   mergeAnswers,
   peekPendingDraft,
+  sameCampaign,
+  type CampaignDraft,
   type DraftQueueHandle,
   type SaveState,
   type StorylineParagraphDraft,
@@ -20,6 +24,27 @@ const STORYLINE_REFUSALS = new Set([
   'POST_STORYLINE_FILE_UNKNOWN',
   'POST_STORYLINE_MISSING',
 ])
+
+/** An advertiser guide the server refused (POST-118): taken back like a storyline refusal, and
+ *  its reason is kept for ① to say under the guide. */
+const CAMPAIGN_REFUSALS = new Set(['ADVERTISER_GUIDE_TOO_LONG', 'ADVERTISER_GUIDE_ITEM_INVALID'])
+
+/** A draft with no post yet starts as a 체험단 post with an empty guide (POST-117). */
+const NEW_POST_CAMPAIGN: CampaignDraft = { on: true, guide: EMPTY_GUIDE, ticks: [] }
+
+function campaignOf(
+  post:
+    | { campaign?: boolean; advertiserGuide?: AdvertiserGuide; checklistTicks?: string[] }
+    | undefined,
+): CampaignDraft {
+  return post
+    ? {
+        on: post.campaign ?? false,
+        guide: post.advertiserGuide ?? EMPTY_GUIDE,
+        ticks: post.checklistTicks ?? [],
+      }
+    : NEW_POST_CAMPAIGN
+}
 
 export interface UseAutosaveArgs {
   /** The post as the server last reported it, or undefined for a draft with no slug yet.
@@ -38,6 +63,10 @@ export interface UseAutosaveArgs {
         templateAnswers: TemplateAnswerDraft[]
         /** The stored storyline, absent when the post has none. */
         storyline?: { paragraphs: StorylineParagraphDraft[] }
+        /** The campaign parts as the server holds them (POST-117–119). */
+        campaign?: boolean
+        advertiserGuide?: AdvertiserGuide
+        checklistTicks?: string[]
       }
     | undefined
   /** The selected template's fields over these answers, in ①'s order; the draft carries exactly
@@ -70,6 +99,12 @@ export interface Autosave {
   /** Records the owner's storyline edit, the whole paragraph list (POST-96). Does nothing while
    *  the post is published or has no storyline. */
   setStoryline: (paragraphs: StorylineParagraphDraft[]) => void
+  /** The campaign parts as ① shows them: the owner's unsaved edit, or the server's (POST-117–119). */
+  campaign: CampaignDraft
+  /** Records an edit of the campaign parts. Does nothing while the post is published. */
+  setCampaign: (campaign: CampaignDraft) => void
+  /** The server's refusal of the last guide saved, taken back; cleared by the next edit. */
+  campaignRefusal: AppFailure | undefined
   /** Each does nothing while the post is published. `setAnswers` takes ①'s fields as the user
    *  left them, a whole patch by label. */
   setTitle: (title: string) => void
@@ -122,14 +157,28 @@ export function useAutosave({
       edits: NO_ANSWERS as readonly TemplateAnswerDraft[],
       // Only a queued edit seeds it: the server's storyline is read from `post` on every render.
       storyline: post ? peekPendingDraft(post.slug)?.storyline : undefined,
+      // The same for the campaign parts: a queued edit outranks what the server reported.
+      campaign: post ? peekPendingDraft(post.slug)?.campaign : undefined,
     } as {
       title: string
       memo: string
       edits: readonly TemplateAnswerDraft[]
       /** The owner's storyline edit not yet known to be saved; undefined is none. */
       storyline: StorylineParagraphDraft[] | undefined
+      /** The owner's campaign edit not yet known to be saved; undefined is none. */
+      campaign: CampaignDraft | undefined
     }
   })
+  const [campaignRefusal, setCampaignRefusal] = useState<AppFailure>()
+  // Keyed by value, since every GetPost is a new object.
+  const serverCampaignKey = JSON.stringify(post ? campaignOf(post) : null)
+  const serverCampaign = useMemo(
+    () =>
+      serverCampaignKey === 'null'
+        ? NEW_POST_CAMPAIGN
+        : (JSON.parse(serverCampaignKey) as CampaignDraft),
+    [serverCampaignKey],
+  )
   const serverStoryline = post?.storyline?.paragraphs
   const stored = post?.templateAnswers
   // The stored answers with the local edits laid over them; the server's alone while locked.
@@ -140,6 +189,7 @@ export function useAutosave({
   const answers = useMemo(() => answerPatch(source), [answerPatch, source])
   const title = locked && post ? post.title : local.title
   const memo = locked && post ? post.memo : local.memo
+  const campaign = locked ? serverCampaign : (local.campaign ?? serverCampaign)
   const saveDraft = useSavePostDraft()
   const [state, setState] = useState<SaveState>('idle')
   const queueRef = useRef<DraftQueueHandle | undefined>(undefined)
@@ -177,13 +227,24 @@ export function useAutosave({
         memo: opened?.memo ?? '',
         answers: opened?.templateAnswers ?? [],
         storyline: opened?.storyline?.paragraphs,
+        campaign: copyCampaign(campaignOf(opened)),
       },
       // An existing post's own voice, '' when it has none — never the picker's seed, which only
       // a draft with no post yet is created in.
       voiceId: opened ? (opened.voice?.id ?? '') : voiceRef.current,
       templateId: opened?.template.id ?? templateRef.current,
       targetLanguage: opened?.targetLanguage ?? targetLanguageRef.current,
-      send: ({ slug, draft, voiceId, templateId, targetLanguage, storyline }) =>
+      send: ({
+        slug,
+        draft,
+        voiceId,
+        templateId,
+        targetLanguage,
+        storyline,
+        campaign,
+        advertiserGuide,
+        checklistTicks,
+      }) =>
         sendRef.current({
           slug,
           title: draft.title,
@@ -195,13 +256,20 @@ export function useAutosave({
           templateId,
           targetLanguage,
           storyline,
+          campaign,
+          advertiserGuide,
+          checklistTicks,
         }),
       // A post published in another tab refuses every save the same way (POST-86), so the text is
       // taken back rather than retried, and the post's refetch re-renders ① locked.
       // A storyline edit the server refused as invalid is taken back the same way (POST-96).
       retry: (cause) => {
-        const reason = appFailureFromConnect(cause).reason
-        return reason !== 'POST_PUBLISHED_LOCKED' && !STORYLINE_REFUSALS.has(reason)
+        const failure = appFailureFromConnect(cause)
+        if (CAMPAIGN_REFUSALS.has(failure.reason)) {
+          setCampaignRefusal(failure)
+          return false
+        }
+        return failure.reason !== 'POST_PUBLISHED_LOCKED' && !STORYLINE_REFUSALS.has(failure.reason)
       },
       onState: setState,
       onMinted: (slug) => onMintedRef.current?.(slug),
@@ -214,6 +282,7 @@ export function useAutosave({
           memo: current?.memo ?? '',
           edits: NO_ANSWERS,
           storyline: undefined,
+          campaign: undefined,
         })
       },
     })
@@ -235,8 +304,24 @@ export function useAutosave({
   // costs nothing but a comparison. A published post queues nothing at all.
   useLayoutEffect(() => {
     if (locked) return
-    queueRef.current?.queue({ title, memo, answers, storyline: local.storyline })
-  }, [locked, title, memo, answers, local.storyline])
+    queueRef.current?.queue({ title, memo, answers, storyline: local.storyline, campaign })
+  }, [locked, title, memo, answers, local.storyline, campaign])
+
+  // The server's campaign parts moved: this editor's own save landed, or another tab changed
+  // them. A local copy equal to the new value, or to the value it was made over (no edit at all),
+  // is dropped so ① reads the server's again; a real edit still differing from both stays.
+  const followedCampaign = useRef(serverCampaign)
+  useLayoutEffect(() => {
+    const previous = followedCampaign.current
+    if (previous === serverCampaign) return
+    followedCampaign.current = serverCampaign
+    setLocal((current) =>
+      current.campaign &&
+      (sameCampaign(current.campaign, serverCampaign) || sameCampaign(current.campaign, previous))
+        ? { ...current, campaign: undefined }
+        : current,
+    )
+  }, [serverCampaign])
 
   // The server's storyline moved: a storyline job replaced it, or this editor's own save landed.
   // With no edit of it still queued, the local copy is either what just landed or an edit made
@@ -295,6 +380,13 @@ export function useAutosave({
     memo,
     answers,
     storyline: locked ? serverStoryline : (local.storyline ?? serverStoryline),
+    campaign,
+    setCampaign: (next) => {
+      if (locked) return
+      setCampaignRefusal(undefined)
+      setLocal((current) => ({ ...current, campaign: copyCampaign(next) }))
+    },
+    campaignRefusal,
     setStoryline: (next) => {
       if (!locked && serverStoryline) setLocal((current) => ({ ...current, storyline: next }))
     },

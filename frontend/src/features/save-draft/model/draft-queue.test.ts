@@ -3,6 +3,7 @@ import { AUTOSAVE_DEBOUNCE_MS, AUTOSAVE_RETRY_BASE_MS } from '@/shared/config'
 import type { ContentLanguage } from '@/shared/api'
 import {
   type Draft,
+  type DraftRequest,
   type SaveState,
   type SendDraft,
   attachDraftQueue,
@@ -810,5 +811,67 @@ describe('a refusal that is an answer', () => {
     expect(second.handle.state()).toBe('idle')
     await advance(AUTOSAVE_RETRY_BASE_MS * 16)
     expect(api.sent).toHaveLength(2)
+  })
+})
+
+// POST-117–119: each campaign part goes out only while it differs from the server's, so a title
+// save never carries a stale switch or guide over a newer one.
+describe('the campaign parts', () => {
+  const GUIDE = { text: '', keywords: [], hashtags: [] }
+  const OFF = { on: false, guide: GUIDE, ticks: [] }
+  function campaignBackend() {
+    const sent: Array<Pick<DraftRequest, 'campaign' | 'advertiserGuide' | 'checklistTicks'>> = []
+    const send: SendDraft = async ({ slug, campaign, advertiserGuide, checklistTicks }) => {
+      sent.push({ campaign, advertiserGuide, checklistTicks })
+      return slug || '20260828-minted'
+    }
+    return { send, sent }
+  }
+
+  it('sends only the part that moved, and nothing with an ordinary title save', async () => {
+    const api = campaignBackend()
+    const { handle } = attach(api.send, { slug: 'p', saved: { ...draft('제주'), campaign: OFF } })
+
+    handle.queue({ ...draft('제주 3일'), campaign: OFF })
+    await advance(AUTOSAVE_DEBOUNCE_MS)
+    handle.queue({ ...draft('제주 3일'), campaign: { ...OFF, on: true } })
+    await advance(AUTOSAVE_DEBOUNCE_MS)
+    const guide = { text: '대표 메뉴를 꼭 넣어 주세요', keywords: ['성수 카페'], hashtags: [] }
+    handle.queue({ ...draft('제주 3일'), campaign: { on: true, guide, ticks: [] } })
+    await advance(AUTOSAVE_DEBOUNCE_MS)
+
+    expect(api.sent).toEqual([
+      { campaign: undefined, advertiserGuide: undefined, checklistTicks: undefined },
+      { campaign: true, advertiserGuide: undefined, checklistTicks: undefined },
+      { campaign: undefined, advertiserGuide: guide, checklistTicks: undefined },
+    ])
+    expect(handle.state()).toBe('saved')
+  })
+
+  it('treats a guide typed back to the saved one as settled', async () => {
+    const api = campaignBackend()
+    const saved = { on: true, guide: { ...GUIDE, minChars: 1500 }, ticks: [] }
+    const { handle } = attach(api.send, { slug: 'p', saved: { ...EMPTY, campaign: saved } })
+
+    handle.queue({ ...EMPTY, campaign: { ...saved, guide: { ...GUIDE } } })
+    expect(handle.state()).toBe('dirty')
+    handle.queue({ ...EMPTY, campaign: { ...saved, guide: { ...GUIDE, minChars: 1500 } } })
+
+    expect(handle.state()).toBe('idle')
+    await advance(10_000)
+    expect(api.sent).toHaveLength(0)
+  })
+
+  it('creates a new post with the parts that differ from a new post', async () => {
+    const api = campaignBackend()
+    const fresh = { on: true, guide: GUIDE, ticks: [] }
+    const { handle } = attach(api.send, { saved: { ...EMPTY, campaign: fresh } })
+
+    handle.queue({ ...draft('성수'), campaign: { ...fresh, on: false } })
+    await advance(AUTOSAVE_DEBOUNCE_MS)
+
+    expect(api.sent).toEqual([
+      { campaign: false, advertiserGuide: undefined, checklistTicks: undefined },
+    ])
   })
 })

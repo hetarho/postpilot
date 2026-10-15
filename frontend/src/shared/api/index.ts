@@ -241,8 +241,11 @@ export {
   StorylineSchema,
   TemplateAnswerSchema,
   VoiceRefSchema,
+  AdvertiserGuideSchema,
+  ChecklistTicksSchema,
 } from './gen/postpilot/v1/post_pb'
 export type {
+  AdvertiserGuide as ProtoAdvertiserGuide,
   Block,
   TemplateAnswer as ProtoTemplateAnswer,
   VoiceRef as ProtoVoiceRef,

@@ -38,6 +38,8 @@ export const ENV_LIMIT_OVERRIDES = {
   memoryTagsMax: import.meta.env.VITE_MEMORY_TAGS_MAX,
   memoryMaxPerAccount: import.meta.env.VITE_MEMORY_MAX_PER_ACCOUNT,
   memoryInjectMax: import.meta.env.VITE_MEMORY_INJECT_MAX,
+  advertiserGuideMaxChars: import.meta.env.VITE_ADVERTISER_GUIDE_MAX_CHARS,
+  advertiserKeywordMax: import.meta.env.VITE_ADVERTISER_KEYWORD_MAX,
 } as const
 
 /** Reads a `VITE_*` mirror of a backend ceiling. A malformed or non-positive override falls
