@@ -11,7 +11,7 @@
 ## active
 | tag | host | mode | since | at | doing |
 |---|---|---|---|---|---|
-| m7q2 | ihaelam-ui-MacBookPro | autopilot | 2026-10-15T12:20Z | 2026-10-15T22:14Z | - |
+| m7q2 | ihaelam-ui-MacBookPro | autopilot | 2026-10-15T12:20Z | 2026-10-15T22:15Z | T706 |
 
 ## inbox
 - 261016 decided T705 T692: how can a failed video transfer keep the clips already uploaded? → an owned initial-import completion primitive moves verified leases into a ready batch and cleans only pending uploads under existing retention rules (alt: discard every arrived video | re-upload successful files repeatedly | leave a non-ready batch)
@@ -123,7 +123,7 @@
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
-| T706 | Synchronize reflection test-fixture recording | ARCH | - | todo |
+| T706 | Synchronize reflection test-fixture recording | ARCH | - | doing@261016.m7q2 |
 | T693 | Learn a voice through a scripted chat and grow AI styles toward it | VOICE THEME | - | blocked@261016 |
 | T694 | Navigate by channel with 내 설정 beside it | THEME POST CLIP GUIDE TMPL VOICE | T689 | todo |
 | T695 | Tell the 체험단 story on the public about page | MKT | T682 T683 T684 T687 T688 T691 T692 T693 T694 | todo |
@@ -139,6 +139,7 @@
 - Autopilot m7q2: implement T706, restore/resume T693, then T694–T695 and ready T697–T701.
 
 ## log
+- 261016 T706 starts; baseline race reproduction is red at reflection_test.go31–32 and T693 stays safely preserved.
 - 261016 T706 planned; T693 is blocked on the confirmed CI fixture race and preserved in stash0fc938f8/checkpointd7438f2c. Current main sourceffbab379 is clean.
 - 261016 T705 CI38811296610 succeeds; Deploy38811296566 and Media38811863965 already succeeded with exact ebe909dd checkout proof. T692 claim CI38811381426 fails in experiment reflection recording, reproduced with the race detector; its candidate assertions remain unchanged.
 - 261016 create-task T706 start: repair the confirmed reflection test-double race from CI38811381426 before resuming T693.
