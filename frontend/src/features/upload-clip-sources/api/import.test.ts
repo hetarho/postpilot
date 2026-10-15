@@ -140,7 +140,7 @@ describe('confirmed source import', () => {
   it('stops loading beyond the count bound and rejects duplicates before reserving', async () => {
     const f = fixture()
     const sources = Array.from({ length: 22 }, (_, i) => source(`${i}.mp4`))
-    sources.splice(1, 0, source('same.mp4', '0.mp4'))
+    sources.splice(1, 0, source('same.mp4', '0.mp4'), source('0.mp4', 'another video'))
     const result = await transferClipSourceFiles(
       'clip',
       sources,
@@ -150,6 +150,7 @@ describe('confirmed source import', () => {
     expect(result.uploaded).toHaveLength(20)
     expect(result.problems).toEqual([
       { filename: 'same.mp4', reason: 'duplicate' },
+      { filename: '0.mp4', reason: 'duplicate' },
       { filename: '20.mp4', reason: 'limit' },
       { filename: '21.mp4', reason: 'limit' },
     ])
