@@ -136,9 +136,10 @@
 ## next
 - After T686–T695 (m7q2): implement-task T698 → T699, T700 → T701 (a linked post as the clip's story); T697 needs the owner's Cloudflare CORS change first.
 - implement-task T697 (production clip generation is down: the live R2 CORS hides Content-Range; the owner applies deploy/r2-cors.json first).
-- Autopilot m7q2: T686 completed locally; finish its deployment/media push gate, then T687–T695 and T698–T701 in dependency order.
+- Autopilot m7q2: T686 implementation and local CI/deployment/media gates complete; push and inspect remote workflows, then T687–T695 and T698–T701 in dependency order.
 
 ## log
+- 261015 T686 pre-push deployment/media gates pass at73458eb9; source unchanged after spec-only verification records.
 - 261015 T686 done; full FE/BE checks pass, deployment/media push gate follows.
 - 261015 autopilot p4f1 ended: ideation/post-faithful-clip converted to CLIP r61 POST r42 GUIDE r23 and T698–T701; report spec/reports/261015-p4f1.md
 - 261015 create-task CLIP r61 POST r42 GUIDE r23 done: T698–T701; T688 T689 T690 T691 T692 T694 bases refreshed, no scope change; T686 T687 (TMPL) unaffected.
