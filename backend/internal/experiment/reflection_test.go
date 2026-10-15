@@ -3,12 +3,14 @@ package experiment
 import (
 	"context"
 	"errors"
+	"sync"
 	"testing"
 )
 
 // fakeReflection is the voice context's 말투 반영 비교 behaviour: one voice with one answered
 // prompt and one photo prompt, a candidate writing "piece:<model>".
 type fakeReflection struct {
+	mu          sync.Mutex
 	snapshotErr error
 	runs        []ModelRef
 	runContent  [][]byte
@@ -28,9 +30,12 @@ func (f *fakeReflection) Snapshot(_ context.Context, _, _, promptKey string) (Re
 }
 
 func (f *fakeReflection) Run(_ context.Context, content []byte, model ModelRef) (CandidateResult, error) {
+	f.mu.Lock()
 	f.runs = append(f.runs, model)
 	f.runContent = append(f.runContent, content)
-	if err := f.fail[model.ModelID]; err != nil {
+	err := f.fail[model.ModelID]
+	f.mu.Unlock()
+	if err != nil {
 		return CandidateResult{}, err
 	}
 	return CandidateResult{Output: []byte("piece:" + model.ModelID), Usage: UsageReport{PromptTokens: 5, CompletionTokens: 3}}, nil
