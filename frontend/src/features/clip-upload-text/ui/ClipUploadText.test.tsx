@@ -287,4 +287,22 @@ describe('clip upload text', () => {
       expect(screen.getByRole('button', { name: button })).toHaveFocus()
     },
   )
+  it('invalidates a delayed copy even when a new saved revision has identical text', async () => {
+    const rows = [stored()]
+    const view = mount({ uploadTexts: rows })
+    let release!: () => void
+    vi.spyOn(navigator.clipboard, 'writeText').mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          release = resolve
+        }),
+    )
+    await view.user.click(await screen.findByRole('button', { name: '본문 복사' }))
+    rows[0] = { ...rows[0]!, revision: 2 }
+    await act(async () => {
+      await view.client.invalidateQueries()
+    })
+    await act(async () => release())
+    expect(screen.queryByText('복사됨')).not.toBeInTheDocument()
+  })
 })
