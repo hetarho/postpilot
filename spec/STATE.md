@@ -14,6 +14,10 @@
 | m7q2 | ihaelam-ui-MacBookPro | autopilot | 2026-10-15T12:20Z | 2026-10-15T12:39Z | - |
 
 ## inbox
+- 261015 decided ideation post-faithful-clip: what does a clip take from a finished post? → the canonical content (title, body, section order, ratings, impressions) as owner material for every writing call (alt: the storyline only | title and memo as today)
+- 261015 decided ideation post-faithful-clip: where is a post linked? → both sides: ③ 이 체험으로 클립 만들기 and the clip ① 글 연결, one post per clip, matching titles first (alt: post side only | clip side only)
+- 261015 decided ideation post-faithful-clip: how are videos placed into post sections? → capture time first, the analysis confirms the content, content matching without a capture time (alt: AI content matching only | free AI composition)
+- 261015 decided ideation post-faithful-clip: form? → keep the CLIP-213 arc, leave out stages the post gives nothing for, the 상호 in the hook and the owner verdict in the outro (alt: a separate 쇼츠 리뷰 style | leave form to T688)
 - 261015 decided T696: repair the existing red CI before T686 or defer it? → repair the stale wizard entrypoint test first (alt: defer until T687)
 - 261015 decided -: push branch for finished units? → main, and AGENTS.md now defers to haeram-spec-creator with ARCH-31 run before each push and reused on unchanged trees (alt: - commit only | a work branch)
 - 261015 decided GUIDE-41: an owner's stored off-state for a rule that became a 원칙 or was split? → ignored for 원칙; 맛은 재료로 살리기 keeps the old impression key and 알려준 사건 순서대로 its own (alt: reset every off-state | keep those rules switchable for owners who turned them off)
@@ -57,7 +61,7 @@
 | familiar-video-editing-and-dubbing | converted@261004 |
 | friendly-model-names | open@261013 |
 | campaign-reviewer-focus | converted@261015 |
-| post-faithful-clip | open@261015 |
+| post-faithful-clip | ready@261015 |
 
 ## ssot
 | id | rev | tasked | pending | [?] |
@@ -123,12 +127,14 @@
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | todo |
 
 ## next
+- update-ssot CLIP POST GUIDE from ideation post-faithful-clip (ready@261015) before T688/T692 start, otherwise as follow-up tasks.
 - implement-task T697 (production clip generation is down: the live R2 CORS hides Content-Range; the owner applies deploy/r2-cors.json first).
 - Autopilot m7q2: implement T686–T695 in dependency order; T696 repaired the existing red CI entry regression. Previous provisional decisions remain in inbox.
 - T696 full local CI passes; push main and inspect every triggered workflow for its exact revision.
 - ideation friendly-model-names 계속; also pending: the 17 unadopted choices in review/structure-261008 and doc-review ARCH.
 
 ## log
+- 261015 ideation post-faithful-clip ready (autonomous at the owner's request; decisions in inbox)
 - 261015 T696 done; full local CI passes on the repaired template wizard entry regression.
 - 261015 ideation post-faithful-clip start
 - 261015 create-task T697 done: production clips fail with CLIP_SOURCE_RANGE_INVALID because the live bucket exposes only ETag; probe-backed deploy gate plus HeadSource cause/cancellation.
