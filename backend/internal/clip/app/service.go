@@ -297,7 +297,7 @@ func (s *Service) UpdateProject(ctx context.Context, user, id string, p clip.Pro
 		}
 		p.Dubbing = &chosen
 	}
-	if old.Finalized != nil {
+	if old.Finalized != nil && !p.MovesChannelOnly() {
 		return clip.Project{}, clip.ErrFinalized
 	}
 	if p.Channel != nil && !clip.ValidChannel(*p.Channel) {

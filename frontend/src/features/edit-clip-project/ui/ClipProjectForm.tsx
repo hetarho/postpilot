@@ -56,6 +56,14 @@ const INPUT = {
   autoCorrect: 'on',
   enterKeyHint: 'next',
 } as const
+// Channel moves use their own write. They must not make a successfully autosaved
+// setup draft look dirty or prevent a later canonical settings read from landing.
+function draftIdentity(value: ClipProjectDraft): string {
+  const comparable = normalizeClipProject(value)
+  delete comparable.channel
+  return JSON.stringify(comparable)
+}
+
 export function ClipProjectForm({
   ownerId,
   stored,
@@ -103,9 +111,7 @@ export function ClipProjectForm({
   const [seconds, setSeconds] = useState(
     draft.targetDurationMs ? String(draft.targetDurationMs / 1000) : '',
   )
-  const [baseline, setBaseline] = useState(
-    JSON.stringify(normalizeClipProject(stored ? projectDraft(stored) : draft)),
-  )
+  const [baseline, setBaseline] = useState(draftIdentity(stored ? projectDraft(stored) : draft))
   const { save } = useClipProjectMutations(ownerId)
   const submitting = useRef(false)
   const leaving = useRef(false)
@@ -137,8 +143,8 @@ export function ClipProjectForm({
   const creating = !stored
   const valid = creating ? validNewClipProject(draft) : validClipProject(draft, document)
   const savable = savableClipProject(draft)
-  const dirty = JSON.stringify(normalizeClipProject(draft)) !== baseline
-  const storedJSON = stored ? JSON.stringify(normalizeClipProject(stored)) : baseline
+  const dirty = draftIdentity(draft) !== baseline
+  const storedJSON = stored ? draftIdentity(stored) : baseline
   const synced = storedJSON === baseline
   const pending = disabled || save.isPending
   // The FIELDS stay open while an autosave is in flight. Disabling a `fieldset` disables every
@@ -179,7 +185,7 @@ export function ClipProjectForm({
     const value = await serialClipWrite(stored.id, () =>
       save.mutateAsync({ id: stored.id, draft: next }),
     )
-    setBaseline(JSON.stringify(normalizeClipProject(value)))
+    setBaseline(draftIdentity(value))
   }
   const patch = (fields: Partial<ClipProjectDraft>) => {
     const next = { ...draft, ...fields }
@@ -220,7 +226,7 @@ export function ClipProjectForm({
       retainMintedClipEntry(ownerId, value.id, undefined, origin ?? null)
       if (operation !== authority.current) return
       setDraft(projectDraft(value))
-      setBaseline(JSON.stringify(normalizeClipProject(value)))
+      setBaseline(draftIdentity(value))
       leaving.current = true
       await navigate({ to: '/clips/$clipId', params: { clipId: value.id }, replace: true })
     } catch {
@@ -369,7 +375,12 @@ export function ClipProjectForm({
             </div>
           )}
           {stored && (
-            <MoveClipChannel ownerId={ownerId} project={stored} disabled={disabled || readOnly} />
+            <MoveClipChannel
+              ownerId={ownerId}
+              project={stored}
+              disabled={disabled}
+              readOnly={readOnly}
+            />
           )}
           <div>
             <Typography variant="fieldTitle" as="p">

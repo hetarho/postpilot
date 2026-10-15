@@ -261,3 +261,23 @@ func TestUpdateMovesTheChannelAlone(t *testing.T) {
 	}
 }
 func ptrChannel(value string) *string { return &value }
+
+func TestFinalizedChannelMoveKeepsEveryCanonicalFieldLocked(t *testing.T) {
+	original := clip.Project{ID: "owned", UserID: "alice", Title: "confirmed", Ratio: "square", Channel: clip.ChannelNaver, Finalized: &clip.Finalization{At: time.Now(), PlanRevision: 1, ResultID: "result"}}
+	s := &rpcStore{project: &original}
+	h := NewHandler(testProjects(s))
+	ctx := auth.WithUser(t.Context(), "alice")
+	channel, title := clip.ChannelInstagram, "changed"
+	if _, err := h.UpdateClipProject(ctx, connect.NewRequest(&v1.UpdateClipProjectRequest{Id: "owned", Channel: &channel, Title: &title})); connect.CodeOf(err) != connect.CodeFailedPrecondition {
+		t.Fatal("mixed edit accepted", err)
+	}
+	response, err := h.UpdateClipProject(ctx, connect.NewRequest(&v1.UpdateClipProjectRequest{Id: "owned", Channel: &channel}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := original
+	want.Channel = channel
+	if !reflect.DeepEqual(*s.project, want) || response.Msg.Project.FinalizedResultId != "result" {
+		t.Fatal(s.project, response.Msg.Project)
+	}
+}

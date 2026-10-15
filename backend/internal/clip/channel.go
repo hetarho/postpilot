@@ -15,3 +15,13 @@ func DefaultChannel(value string) string {
 	}
 	return value
 }
+
+// MovesChannelOnly admits directory metadata after finalization without opening
+// any canonical setting. A future patch field also has to be absent.
+func (p ProjectPatch) MovesChannelOnly() bool {
+	if p.Channel == nil {
+		return false
+	}
+	p.Channel = nil
+	return p == (ProjectPatch{})
+}

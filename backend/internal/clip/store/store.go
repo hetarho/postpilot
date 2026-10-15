@@ -428,8 +428,15 @@ func (s *Store) UpdateProject(ctx context.Context, user, id string, p clip.Proje
 		if err != nil {
 			return clip.Project{}, err
 		}
-		if before.Finalized != nil {
+		if before.Finalized != nil && !p.MovesChannelOnly() {
 			return clip.Project{}, clip.ErrFinalized
+		}
+		// Directory metadata never rewrites composition or renews original retention.
+		if p.MovesChannelOnly() {
+			if err := affected(q.UpdateClipChannel(ctx, sqlc.UpdateClipChannelParams{Channel: *p.Channel, UpdatedAt: stamp(now), ID: id, UserID: user})); err != nil {
+				return clip.Project{}, err
+			}
+			return getProject(ctx, q, user, id)
 		}
 		if p.Composition != nil || p.Regions != nil || p.Dubbing != nil {
 			active, e := q.HasActiveClipJob(ctx, nullable(id))

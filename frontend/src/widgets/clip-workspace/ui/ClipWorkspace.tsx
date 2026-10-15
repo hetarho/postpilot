@@ -16,7 +16,7 @@ import { ClipStorylineRequest } from '@/features/request-clip-storyline'
 import { ClipDraftPreviewPanel } from '@/features/preview-clip-draft'
 import { FinalizeClipAction } from '@/features/finalize-clip'
 import { CancelClipAction } from '@/features/cancel-clip'
-import { ClipProjectForm } from '@/features/edit-clip-project'
+import { ClipProjectForm, MoveClipChannel } from '@/features/edit-clip-project'
 import {
   ClipVoiceChoice,
   ClipDubbingEditor,
@@ -629,6 +629,7 @@ export function ClipWorkspace({ ownerId, project }: { ownerId: string; project: 
     project.finalized && project.result ? (
       <>
         <ClipResult key={project.result.createdAt} ownerId={ownerId} project={project} />
+        <MoveClipChannel ownerId={ownerId} project={project} disabled={pending} />
       </>
     ) : (
       <>

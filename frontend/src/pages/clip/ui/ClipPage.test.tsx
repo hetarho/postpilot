@@ -6,7 +6,7 @@ import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderAppAt } from '@/test/app'
 import type { FakeClipProject, FakeClipsOptions } from '@/test/clips'
-import type { ClipProjectDraft } from '@/entities/clip-project'
+import { clipProjectsKey, type ClipProjectDraft } from '@/entities/clip-project'
 import { readSourceManifest } from '@/features/upload-clip-sources'
 import { discardClipDraftQueues } from '@/features/edit-clip-project'
 import { putBlobWithProgress } from '@/shared/lib/upload'
@@ -227,6 +227,82 @@ describe('clip directory and setup', () => {
     await waitFor(() => expect(router.state.location.search.channel).toBe('instagram_clip'))
     expect(await screen.findByRole('link', { name: /제주 여행/ })).toBeInTheDocument()
   })
+  it('moves a completed clip without reopening editing or changing its result', async () => {
+    const writes: ClipProjectDraft[] = []
+    const delivered = {
+      id: 'delivered',
+      contentType: 'video/mp4',
+      bytes: 5,
+      durationMs: 30000,
+      createdAt: '2026-10-01T00:00:00Z',
+      viewUrl: 'https://test.local/confirmed.mp4',
+      downloadUrl: 'https://test.local/confirmed-download.mp4',
+    }
+    const final = { at: '2026-10-01T00:00:00Z', planRevision: 1, resultId: 'delivered' }
+    mount('/clips/project', {
+      projectWrites: writes,
+      projects: [
+        {
+          ...project,
+          finalized: final,
+          result: delivered,
+          editPlanRevision: 1,
+          renderedPlanRevision: 1,
+        },
+      ],
+    })
+    const user = userEvent.setup()
+    const download = await screen.findByRole('link', { name: '영상 다운로드' })
+    await user.dblClick(screen.getByRole('button', { name: '인스타 클립으로 옮기기' }))
+    await screen.findByRole('button', { name: '네이버 클립으로 옮기기' })
+    expect(writes).toHaveLength(1)
+    expect(writes[0]).toMatchObject({
+      channel: 'instagram_clip',
+      finalized: final,
+      result: delivered,
+      editPlanRevision: 1,
+      renderedPlanRevision: 1,
+    })
+    expect(download).toHaveAttribute('href', delivered.downloadUrl)
+    await user.click(screen.getByRole('tab', { name: '생성' }))
+    expect(await screen.findByLabelText('클립 제목')).toBeDisabled()
+    expect(screen.queryByRole('button', { name: '네이버 클립으로 옮기기' })).not.toBeInTheDocument()
+  })
+  it('keeps setup clean while typing during a channel move', async () => {
+    let release = () => {}
+    const held = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    let first = true
+    let canonicalTitle = ''
+    const writes: ClipProjectDraft[] = []
+    const view = mount('/clips/project', {
+      projectWrites: writes,
+      projectSaveGate: async () => {
+        if (first) {
+          first = false
+          await held
+        }
+      },
+      readProject: (p) => (canonicalTitle ? { ...p, title: canonicalTitle } : p),
+    })
+    const user = userEvent.setup()
+    const title = await screen.findByLabelText('클립 제목')
+    await user.click(screen.getByRole('button', { name: '인스타 클립으로 옮기기' }))
+    await user.type(title, ' 기록')
+    release()
+    await waitFor(() =>
+      expect(writes).toContainEqual(
+        expect.objectContaining({ channel: 'instagram_clip', title: '제주 여행 기록' }),
+      ),
+    )
+    expect(await screen.findByText('저장됨', undefined, { timeout: 4000 })).toBeInTheDocument()
+    canonicalTitle = '서버에서 다시 읽은 제목'
+    await view.queryClient.invalidateQueries({
+      queryKey: [...clipProjectsKey(view.transport, 'alice'), 'detail', 'project'],
+    })
+    await waitFor(() => expect(title).toHaveValue(canonicalTitle), { timeout: 3000 })
+  })
   it('keeps a legacy square project editable and its rendered download', async () => {
     const writes: ClipProjectDraft[] = []
     mount('/clips/project', {
@@ -246,7 +322,10 @@ describe('clip directory and setup', () => {
       ],
     })
     const user = userEvent.setup()
-    expect(await screen.findByRole('link', { name: /다운로드/ })).toHaveAttribute('href', 'https://test.local/legacy.mp4')
+    expect(await screen.findByRole('link', { name: /다운로드/ })).toHaveAttribute(
+      'href',
+      'https://test.local/legacy.mp4',
+    )
     await user.click(screen.getByRole('tab', { name: '생성' }))
     await user.type(await screen.findByLabelText('클립 제목'), ' 기록')
     expect(screen.getByText('정방형 1:1')).toBeInTheDocument()

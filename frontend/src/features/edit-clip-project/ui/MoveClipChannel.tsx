@@ -16,10 +16,12 @@ export function MoveClipChannel({
   ownerId,
   project,
   disabled,
+  readOnly = false,
 }: {
   ownerId: string
   project: ClipProject
   disabled: boolean
+  readOnly?: boolean
 }) {
   const { t } = useTranslation('clips')
   const mutation = useMoveClipChannel(ownerId)
@@ -60,8 +62,15 @@ export function MoveClipChannel({
       <Typography variant="body" className="mt-2">
         {t(`channel.${current}`)}
       </Typography>
-      {!project.finalized && (
-        <Button variant="ghost" pending={pending} disabled={disabled} onClick={(event) => { if (event.detail <= 1) void move() }}>
+      {!readOnly && (
+        <Button
+          variant="ghost"
+          pending={pending}
+          disabled={disabled}
+          onClick={(event) => {
+            if (event.detail <= 1) void move()
+          }}
+        >
           {t(`project.move.${next}`)}
         </Button>
       )}

@@ -630,6 +630,14 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
     if (options.projectSaveFails) throw connectAppError('CLIP_INVALID_INPUT', Code.InvalidArgument)
     const p = projects.get(req.id)
     if (!p) throw connectAppError('CLIP_NOT_FOUND', Code.NotFound)
+    if (
+      p.finalized &&
+      (!req.channel ||
+        Object.entries(req).some(
+          ([key, value]) => !['$typeName', 'id', 'channel'].includes(key) && value !== undefined,
+        ))
+    )
+      throw connectAppError('CLIP_FINALIZED', Code.FailedPrecondition)
     // The server bounds the instruction in every Unicode character (clip.BoundedText).
     if (
       req.instruction !== undefined &&

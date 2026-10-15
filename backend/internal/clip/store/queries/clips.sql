@@ -47,7 +47,7 @@ UPDATE video_templates SET intro_preset = ?, outro_preset = ?, allowed_caption_s
 -- name: UpdateVideoTemplateName :execrows
 UPDATE video_templates SET name = ?, updated_at = ? WHERE id = ? AND user_id = ?;
 -- name: UpdateClipChannel :execrows
-UPDATE clip_projects SET channel = ?, updated_at = ? WHERE id = ? AND user_id = ? AND finalized_at IS NULL;
+UPDATE clip_projects SET channel = ?, updated_at = ? WHERE id = ? AND user_id = ?;
 -- name: UpdateClipTitle :execrows
 UPDATE clip_projects SET title = ?, updated_at = ? WHERE id = ? AND user_id = ? AND finalized_at IS NULL;
 -- name: UpdateClipVideoTemplateID :execrows

@@ -780,7 +780,7 @@ func (q *Queries) UpdateClipCaptionPace(ctx context.Context, arg UpdateClipCapti
 }
 
 const updateClipChannel = `-- name: UpdateClipChannel :execrows
-UPDATE clip_projects SET channel = ?, updated_at = ? WHERE id = ? AND user_id = ? AND finalized_at IS NULL
+UPDATE clip_projects SET channel = ?, updated_at = ? WHERE id = ? AND user_id = ?
 `
 
 type UpdateClipChannelParams struct {
