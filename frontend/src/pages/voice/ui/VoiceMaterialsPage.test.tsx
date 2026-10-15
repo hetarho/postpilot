@@ -106,7 +106,7 @@ describe('the 학습 데이터 screen', () => {
     expect(sheet.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '0')
     await user.click(sheet.getByLabelText('답'))
     await user.paste(sentences(12))
-    await user.click(sheet.getByRole('button', { name: '답하기' }))
+    await user.click(sheet.getByRole('button', { name: '보내기' }))
 
     await waitFor(() =>
       expect(sheet.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '1'),
@@ -262,14 +262,14 @@ describe('the 학습 데이터 screen', () => {
     const answers: NonNullable<FakeVoiceOptions['answers']> = []
     renderLegacyMaterials({ answers, prompts: LEGACY_PROMPTS.filter((prompt) => !prompt.photo) })
 
-    await user.click(await screen.findByRole('button', { name: '문항 풀기' }))
+    await user.click(await screen.findByRole('button', { name: '대화하기' }))
     const sheet = within(await screen.findByRole('dialog'))
     expect(await sheet.findByText(/블로그 글을 시작할 때 쓰는 첫인사/)).toBeInTheDocument()
     expect(sheet.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '0')
-    expect(sheet.getByRole('button', { name: '다른 질문으로 바꾸기' })).toBeEnabled()
+    expect(sheet.getByRole('button', { name: '다른 얘기 할래요' })).toBeEnabled()
     expect(sheet.queryByRole('button', { name: '문항 목록' })).not.toBeInTheDocument()
     await user.type(sheet.getByLabelText('답'), '안녕하세요!')
-    await user.click(sheet.getByRole('button', { name: '답하기' }))
+    await user.click(sheet.getByRole('button', { name: '보내기' }))
 
     await waitFor(() =>
       expect(answers).toEqual([
@@ -281,7 +281,7 @@ describe('the 학습 데이터 screen', () => {
     expect(sheet.getByLabelText('답')).toHaveValue('')
     expect(sheet.getByLabelText('답')).not.toHaveFocus()
     await user.click(sheet.getByRole('button', { name: '닫기' }))
-    await user.click(await screen.findByRole('button', { name: '문항 풀기' }))
+    await user.click(await screen.findByRole('button', { name: '대화하기' }))
     expect(
       await within(screen.getByRole('dialog')).findByText(/가격이나 양, 가성비/),
     ).toBeInTheDocument()
@@ -307,11 +307,11 @@ describe('the 학습 데이터 screen', () => {
       ],
     })
 
-    await user.click(await screen.findByRole('button', { name: '문항 풀기' }))
+    await user.click(await screen.findByRole('button', { name: '대화하기' }))
     const sheet = within(await screen.findByRole('dialog'))
     expect(await sheet.findByText(/글을 마무리할 때 쓰는 끝인사/)).toBeInTheDocument()
     await user.type(sheet.getByLabelText('답'), '다음에 또 만나요!')
-    await user.click(sheet.getByRole('button', { name: '답하기' }))
+    await user.click(sheet.getByRole('button', { name: '보내기' }))
 
     await waitFor(() =>
       expect(answers).toEqual([
@@ -345,13 +345,13 @@ describe('the 학습 데이터 screen', () => {
       ],
     })
 
-    await user.click(await screen.findByRole('button', { name: '문항 풀기' }))
+    await user.click(await screen.findByRole('button', { name: '대화하기' }))
     const sheet = within(await screen.findByRole('dialog'))
     expect(await sheet.findByText(/글을 마무리할 때 쓰는 끝인사/)).toBeInTheDocument()
-    expect(sheet.getByRole('button', { name: '다른 질문으로 바꾸기' })).toBeEnabled()
+    expect(sheet.getByRole('button', { name: '다른 얘기 할래요' })).toBeEnabled()
     expect(sheet.queryByRole('button', { name: '문항 목록' })).not.toBeInTheDocument()
     await user.type(sheet.getByLabelText('답'), '다음에 만나요.')
-    await user.click(sheet.getByRole('button', { name: '답하기' }))
+    await user.click(sheet.getByRole('button', { name: '보내기' }))
 
     await waitFor(() =>
       expect(answers).toEqual([
@@ -405,7 +405,7 @@ describe('the 학습 데이터 screen', () => {
       ],
     })
 
-    await user.click(await screen.findByRole('button', { name: '문항 풀기' }))
+    await user.click(await screen.findByRole('button', { name: '대화하기' }))
     const sheet = within(await screen.findByRole('dialog'))
     await user.click(await sheet.findByRole('button', { name: '답변을 더 보태거나 고치기' }))
     await user.click(await sheet.findByRole('combobox', { name: /저장한 답변 다시 보기/ }))
@@ -462,18 +462,18 @@ describe('the 학습 데이터 screen', () => {
       calls,
     )
 
-    await user.click(await screen.findByRole('button', { name: '문항 풀기' }))
+    await user.click(await screen.findByRole('button', { name: '대화하기' }))
     const sheet = within(await screen.findByRole('dialog'))
     expect(await sheet.findByText(/음식이나 음료 사진/)).toBeInTheDocument()
     await user.type(sheet.getByLabelText('답'), '짜장면이 맛있었어요.')
     // Without a photo there is nothing to answer on.
-    expect(sheet.getByRole('button', { name: '답하기' })).toBeDisabled()
+    expect(sheet.getByRole('button', { name: '보내기' })).toBeDisabled()
     await user.upload(
       sheet.getByLabelText('사진 고르기'),
       new File(['x'], 'food.heic', { type: 'image/heic' }),
     )
     expect(await sheet.findByRole('img', { name: '고른 사진' })).toBeInTheDocument()
-    await user.click(sheet.getByRole('button', { name: '답하기' }))
+    await user.click(sheet.getByRole('button', { name: '보내기' }))
 
     await waitFor(() =>
       expect(answers).toEqual([
@@ -497,7 +497,7 @@ describe('the 학습 데이터 screen', () => {
       samples: [{ id: 'a0', label: '', kind: 'answer', promptKey: 'opening_greeting' }],
     })
 
-    await user.click(await screen.findByRole('button', { name: '문항 풀기' }))
+    await user.click(await screen.findByRole('button', { name: '대화하기' }))
     const sheet = within(await screen.findByRole('dialog'))
     expect(await sheet.findByText(/음식이나 음료 사진/)).toBeInTheDocument()
     await user.type(sheet.getByLabelText('답'), '짜장면이 맛있었어요.')
@@ -506,7 +506,7 @@ describe('the 학습 데이터 screen', () => {
       new File(['x'], 'food.heic', { type: 'image/heic' }),
     )
     await sheet.findByRole('img', { name: '고른 사진' })
-    await user.click(sheet.getByRole('button', { name: '답하기' }))
+    await user.click(sheet.getByRole('button', { name: '보내기' }))
 
     expect(
       await sheet.findByText('사진을 올리지 못했어요. 다시 시도해 주세요.'),

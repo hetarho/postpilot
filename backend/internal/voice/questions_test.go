@@ -1,7 +1,7 @@
 package voice
 
 import (
-	"strings"
+	"slices"
 	"testing"
 )
 
@@ -9,12 +9,14 @@ func TestStarterQuestionsAreTenCompleteOrdinarySituations(t *testing.T) {
 	count := 0
 	parts := map[PromptPart]bool{}
 	scenes := map[string]bool{}
+	var keys []string
 	for _, prompt := range Prompts() {
 		if !prompt.Starter {
 			continue
 		}
 		count++
-		if prompt.Photo || prompt.Scene == "" || prompt.Hint == "" || !strings.Contains(prompt.Text, "1~3문장") || scenes[prompt.Scene] {
+		keys = append(keys, prompt.Key)
+		if prompt.Photo || prompt.Scene == "" || prompt.Hint == "" || prompt.Text == "" || scenes[prompt.Scene] {
 			t.Fatalf("invalid starter: %+v", prompt)
 		}
 		scenes[prompt.Scene] = true
@@ -22,6 +24,10 @@ func TestStarterQuestionsAreTenCompleteOrdinarySituations(t *testing.T) {
 	}
 	if count != InitialQuestionCount || len(parts) != 3 {
 		t.Fatalf("starter count=%d parts=%v", count, parts)
+	}
+	wantKeys := []string{"starter_day_open", "starter_discovery_open", "starter_snack", "starter_rain", "starter_recommend", "starter_inconvenience", "starter_surprise", "starter_choice", "starter_day_close", "starter_friend_close"}
+	if !slices.Equal(keys, wantKeys) {
+		t.Fatalf("saved starter identities changed: %v", keys)
 	}
 	for _, old := range legacyPrompts {
 		found, ok := PromptByKey(old.Key)

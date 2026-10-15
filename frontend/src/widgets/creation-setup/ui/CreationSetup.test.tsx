@@ -137,9 +137,9 @@ it.each(['pending', 'failed'] as const)(
       ),
     })
     const user = await start()
-    expect(await screen.findByRole('button', { name: '질문 10개로 내 말투 찾기' })).toBeEnabled()
+    expect(await screen.findByRole('button', { name: '대화하기' })).toBeEnabled()
     expect(screen.queryByRole('heading', { name: '함께 만들 AI를 골라볼까요?' })).toBeNull()
-    await user.click(screen.getByRole('button', { name: '질문 10개로 내 말투 찾기' }))
+    await user.click(screen.getByRole('button', { name: '대화하기' }))
     expect(await screen.findByLabelText('답')).toBeEnabled()
     await act(async () => release())
   },
@@ -209,7 +209,7 @@ it('creates a personal voice once with an automatic name and holds the funnel wh
   mountFresh({ voice: { voices: [], calls, creates, createGate: gate } })
   const user = userEvent.setup()
   expect(screen.queryByLabelText('말투 이름')).toBeNull()
-  await user.dblClick(await screen.findByRole('button', { name: '질문 10개로 내 말투 찾기' }))
+  await user.dblClick(await screen.findByRole('button', { name: '대화하기' }))
   expect(calls.filter((call) => call === 'CreateVoice')).toHaveLength(1)
   expect(screen.getByRole('button', { name: '지금은 건너뛰기' })).toBeDisabled()
   await act(async () => release())
@@ -223,14 +223,14 @@ it('retains the failed step and returns to all three methods on explicit Back wi
   const calls: string[] = []
   mountFresh({ voice: { voices: [], createFails: true, calls } })
   const user = userEvent.setup()
-  await user.click(await screen.findByRole('button', { name: '질문 10개로 내 말투 찾기' }))
+  await user.click(await screen.findByRole('button', { name: '대화하기' }))
   await screen.findByText(/연결|네트워크|요청을 마치지/)
   expect(screen.queryByLabelText('말투 이름')).toBeNull()
   expect(screen.getByRole('heading', { name: '글에 나의 말투를 담아볼까요?' })).toBeInTheDocument()
-  expect(screen.queryByRole('button', { name: '질문 10개로 내 말투 찾기' })).toBeNull()
+  expect(screen.queryByRole('button', { name: '대화하기' })).toBeNull()
   expect(screen.getByRole('button', { name: '다시 확인하고 시도하기' })).toBeEnabled()
   await user.click(screen.getByRole('button', { name: '이전' }))
-  expect(screen.getByRole('button', { name: '질문 10개로 내 말투 찾기' })).toBeEnabled()
+  expect(screen.getByRole('button', { name: '대화하기' })).toBeEnabled()
   expect(screen.getByRole('button', { name: '내가 쓴 글로 말투 알려 주기' })).toBeEnabled()
   expect(screen.getByRole('button', { name: 'AI가 추천한 말투에서 고르기' })).toBeEnabled()
   expect(calls.filter((call) => call === 'CreateVoice')).toHaveLength(1)
@@ -425,9 +425,7 @@ it('starts with writing identity while available recommended models are prepared
     },
   })
   await start()
-  expect(
-    await screen.findByRole('button', { name: '질문 10개로 내 말투 찾기' }),
-  ).toBeInTheDocument()
+  expect(await screen.findByRole('button', { name: '대화하기' })).toBeInTheDocument()
   expect(screen.getByRole('button', { name: 'AI가 추천한 말투에서 고르기' })).toBeInTheDocument()
   expect(screen.getByRole('button', { name: '내가 쓴 글로 말투 알려 주기' })).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: '이 자료로 내 말투 만들기' })).toBeNull()
@@ -457,7 +455,7 @@ it('saves ten short answers through setup and waits for an explicit analysis act
   expect(screen.queryByRole('navigation', { name: '현재 위치' })).not.toBeInTheDocument()
   for (let index = 0; index < 10; index++) {
     await user.type(screen.getByLabelText('답'), '친구에게 평소처럼 편하게 이야기했어요.')
-    await user.click(screen.getByRole('button', { name: '답하기' }))
+    await user.click(screen.getByRole('button', { name: '보내기' }))
     if (index < 9)
       await waitFor(() =>
         expect(
@@ -503,7 +501,7 @@ it('guards parent navigation while an inline answer save is pending', async () =
   renderAppAt('/setup', { ...options, transport: gateProcedure(base, 'AnswerVoicePrompt', gate) })
   const user = userEvent.setup()
   await user.type(await screen.findByLabelText('답'), '저장 중에도 입력한 내용은 그대로예요.')
-  await user.click(screen.getByRole('button', { name: '답하기' }))
+  await user.click(screen.getByRole('button', { name: '보내기' }))
   expect(screen.getByRole('button', { name: '지금은 건너뛰기' })).toBeDisabled()
   expect(screen.getByRole('button', { name: '이전' })).toBeDisabled()
   expect(screen.getByLabelText('답')).toHaveValue('저장 중에도 입력한 내용은 그대로예요.')

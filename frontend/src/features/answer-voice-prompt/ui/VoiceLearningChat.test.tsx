@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { initializeI18n } from '@/app/providers/i18n'
 import { emptyVoice, type VoiceProfile, type VoicePrompt, type VoiceSample } from '@/entities/voice'
 import { Button } from '@/shared/ui'
-import { VoiceQuestionnaire } from './VoiceQuestionnaire'
+import { VoiceLearningChat } from './VoiceLearningChat'
 import { AnswerForm } from './AnswerForm'
 
 const fake = vi.hoisted(() => ({
@@ -101,7 +101,7 @@ function mount(current = profile(), ownerId = 'alice', onAnalyze = vi.fn()) {
       </Button>
     ),
   }
-  return { ...render(<VoiceQuestionnaire {...props} />), props, onAnalyze }
+  return { ...render(<VoiceLearningChat {...props} />), props, onAnalyze }
 }
 async function answer(
   user: ReturnType<typeof userEvent.setup>,
@@ -110,16 +110,16 @@ async function answer(
   const field = screen.getByLabelText('답')
   await user.clear(field)
   await user.type(field, text)
-  await user.click(screen.getByRole('button', { name: '답하기' }))
+  await user.click(screen.getByRole('button', { name: '보내기' }))
 }
 
-describe('reusable voice questionnaire', () => {
+describe('scripted voice learning chat', () => {
   it('hands ten confirmed answers to review without exposing or calling analysis in the collection step', async () => {
     const current = profile(Array.from({ length: 10 }, (_, index) => `question-${index}`))
     const review = vi.fn()
     const analyze = vi.fn()
     render(
-      <VoiceQuestionnaire
+      <VoiceLearningChat
         ownerId="alice"
         voiceId="voice"
         samples={current.samples}
@@ -143,8 +143,8 @@ describe('reusable voice questionnaire', () => {
     const { props, rerender } = mount()
     const user = userEvent.setup()
     await user.type(await screen.findByLabelText('답'), '돌아와서 이어 쓸 내 답변이에요.')
-    rerender(<VoiceQuestionnaire {...props} active={false} />)
-    rerender(<VoiceQuestionnaire {...props} active />)
+    rerender(<VoiceLearningChat {...props} active={false} />)
+    rerender(<VoiceLearningChat {...props} active />)
     expect(screen.getByLabelText('답')).toHaveValue('돌아와서 이어 쓸 내 답변이에요.')
     expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '0')
     expect(fake.answer).not.toHaveBeenCalled()
@@ -210,7 +210,7 @@ describe('reusable voice questionnaire', () => {
     await user.click(screen.getByRole('button', { name: '이전 질문' }))
     expect(screen.getByLabelText('답')).toHaveValue('첫 답변이에요.')
     await user.type(screen.getByLabelText('답'), ' 문장을 보탰어요.')
-    await user.click(screen.getByRole('button', { name: '답 고치기' }))
+    await user.click(screen.getByRole('button', { name: '수정해서 보내기' }))
     expect(screen.getByLabelText('답')).toHaveValue('둘째 답변을 쓰는 중이에요.')
     expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '1')
   })
@@ -226,15 +226,15 @@ describe('reusable voice questionnaire', () => {
     mount()
     const user = userEvent.setup()
     await user.type(await screen.findByLabelText('답'), '연결이 끊겨도 남아 있어요.')
-    await user.dblClick(screen.getByRole('button', { name: '답하기' }))
+    await user.dblClick(screen.getByRole('button', { name: '보내기' }))
     expect(fake.answer).toHaveBeenCalledOnce()
-    expect(screen.getByRole('button', { name: '다른 질문으로 바꾸기' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '다른 얘기 할래요' })).toBeDisabled()
     expect(screen.getByRole('button', { name: '이전 질문' })).toBeDisabled()
     reject(new Error('offline'))
-    await waitFor(() => expect(screen.getByRole('button', { name: '답하기' })).toBeEnabled())
+    await waitFor(() => expect(screen.getByRole('button', { name: '보내기' })).toBeEnabled())
     expect(screen.getByLabelText('답')).toHaveValue('연결이 끊겨도 남아 있어요.')
     expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '0')
-    await user.click(screen.getByRole('button', { name: '답하기' }))
+    await user.click(screen.getByRole('button', { name: '보내기' }))
     expect(await screen.findByText('2번째 상황을 친구에게 말해 볼까요?')).toBeInTheDocument()
   })
 
@@ -242,7 +242,7 @@ describe('reusable voice questionnaire', () => {
     mount()
     const user = userEvent.setup()
     await user.type(await screen.findByLabelText('답'), '아직 떠오르지 않아요.')
-    await user.click(screen.getByRole('button', { name: '다른 질문으로 바꾸기' }))
+    await user.click(screen.getByRole('button', { name: '다른 얘기 할래요' }))
     expect(screen.getByText('4번째 상황을 친구에게 말해 볼까요?')).toBeInTheDocument()
     expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '0')
     expect(fake.answer).not.toHaveBeenCalled()
@@ -255,7 +255,7 @@ describe('reusable voice questionnaire', () => {
     mount()
     const user = userEvent.setup()
     await user.type(await screen.findByLabelText('답'), '저장 확인 전에는 남아 있어요.')
-    await user.click(screen.getByRole('button', { name: '답하기' }))
+    await user.click(screen.getByRole('button', { name: '보내기' }))
     expect(await screen.findByText(/답변이 저장됐는지 확인하지 못했어요/)).toBeInTheDocument()
     expect(screen.getByLabelText('답')).toHaveValue('저장 확인 전에는 남아 있어요.')
     expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '0')
@@ -273,8 +273,8 @@ describe('reusable voice questionnaire', () => {
     const { rerender, props } = mount()
     const user = userEvent.setup()
     await user.type(await screen.findByLabelText('답'), '앨리스의 답이에요.')
-    await user.click(screen.getByRole('button', { name: '답하기' }))
-    rerender(<VoiceQuestionnaire {...props} ownerId="bob" />)
+    await user.click(screen.getByRole('button', { name: '보내기' }))
+    rerender(<VoiceLearningChat {...props} ownerId="bob" />)
     await screen.findByLabelText('답')
     resolve()
     await waitFor(() =>

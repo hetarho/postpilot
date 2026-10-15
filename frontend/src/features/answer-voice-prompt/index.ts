@@ -2,3 +2,5 @@ export { AnswerForm as AnswerPromptForm, AnswerPromptsSheet } from './ui/AnswerP
 export { VoiceQuestionnaire } from './ui/VoiceQuestionnaire'
 export type { VoiceQuestionnaireProps } from './ui/VoiceQuestionnaire'
 export { useQuestionnaire } from './model/useQuestionnaire'
+export { VoiceLearningChat } from './ui/VoiceLearningChat'
+export type { VoiceLearningChatProps } from './ui/VoiceLearningChat'

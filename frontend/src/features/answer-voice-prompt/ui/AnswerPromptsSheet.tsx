@@ -13,6 +13,7 @@ export function AnswerPromptsSheet({
   profile,
   renderMakeVoice,
   disabled = false,
+  defaultOpen = false,
 }: {
   ownerId: string
   voiceId: string
@@ -20,9 +21,10 @@ export function AnswerPromptsSheet({
   profile: VoiceProfile
   renderMakeVoice: (onStarted: () => void) => ReactNode
   disabled?: boolean
+  defaultOpen?: boolean
 }) {
   const { t } = useTranslation('voices')
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(defaultOpen && !disabled)
   const titleId = useId()
   const busy = useRef(false)
   const close = () => {
@@ -33,7 +35,7 @@ export function AnswerPromptsSheet({
       <Button variant="secondary" disabled={disabled} onClick={() => setOpen(true)}>
         {t('prompts.open')}
       </Button>
-      {open && (
+      {open && !disabled && (
         <Sheet open labelledBy={titleId} onClose={close}>
           <Typography variant="title" as="h2" id={titleId}>
             {t('prompts.title')}

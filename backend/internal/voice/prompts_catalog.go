@@ -5,16 +5,16 @@ var prompts = makePromptCatalog()
 
 func makePromptCatalog() []Prompt {
 	out := []Prompt{
-		{Key: "starter_day_open", Part: PartOpening, Starter: true, Scene: "여유로운 주말 아침이에요. 친구에게 오늘 계획을 이야기하려고 해요.", Text: "어떤 인사로 이야기를 시작할까요? 평소 말투로 1~3문장이면 충분해요.", Hint: "거창한 계획이 아니어도 좋아요. 집에서 쉬는 이야기도 괜찮아요."},
-		{Key: "starter_discovery_open", Part: PartOpening, Starter: true, Scene: "산책하다가 작고 조용한 가게를 발견했어요.", Text: "친구에게 이 가게를 소개하는 첫마디를 써 보세요. 평소 말투로 1~3문장이면 충분해요.", Hint: "실제 가게가 아니어도 괜찮아요. 처음 눈길이 간 점부터 말해 주세요."},
-		{Key: "starter_snack", Part: PartDescription, Starter: true, Scene: "별 기대 없이 고른 간식이 한입 먹어 보니 생각보다 맛있어요.", Text: "친구에게 그 맛을 어떻게 설명할까요? 평소 말투로 1~3문장이면 충분해요.", Hint: "맛있다는 말에 이유 하나를 더해 보세요."},
-		{Key: "starter_rain", Part: PartDescription, Starter: true, Scene: "나가려는데 갑자기 비가 내려요. 다행히 우산은 챙겼어요.", Text: "그 순간의 마음을 친구에게 이야기해 보세요. 평소 말투로 1~3문장이면 충분해요.", Hint: "반가웠는지, 귀찮았는지 편하게 써 주세요."},
-		{Key: "starter_recommend", Part: PartDescription, Starter: true, Scene: "친구가 주말에 부담 없이 기분 전환을 하고 싶대요.", Text: "어떤 일을 추천하고 싶나요? 평소 말투로 1~3문장이면 충분해요.", Hint: "산책이나 낮잠처럼 작은 일도 좋아요."},
-		{Key: "starter_inconvenience", Part: PartDescription, Starter: true, Scene: "마음에 들어서 산 컵이 막상 써 보니 손잡이가 조금 불편해요.", Text: "아쉬운 점을 어떻게 말할까요? 평소 말투로 1~3문장이면 충분해요.", Hint: "좋았던 점과 불편한 점을 같이 이야기해도 좋아요."},
-		{Key: "starter_surprise", Part: PartDescription, Starter: true, Scene: "평소 붐비던 길이 오늘은 한산해서 걸어가기 편해요.", Text: "뜻밖에 편해진 순간을 써 보세요. 평소 말투로 1~3문장이면 충분해요.", Hint: "놀랐던 마음이나 달라진 기분을 써 주세요."},
-		{Key: "starter_choice", Part: PartDescription, Starter: true, Scene: "오늘은 새로운 메뉴를 먹을지, 늘 먹던 메뉴를 고를지 고민돼요.", Text: "어느 쪽을 고르고 싶은지 이유를 써 보세요. 평소 말투로 1~3문장이면 충분해요.", Hint: "정답은 없어요. 지금 마음이 가는 쪽이면 돼요."},
-		{Key: "starter_day_close", Part: PartClosing, Starter: true, Scene: "작은 산책을 마치고 집으로 돌아왔어요.", Text: "오늘 이야기를 마지막 한마디로 마무리해 보세요. 평소 말투로 1~3문장이면 충분해요.", Hint: "오늘 기분이나 다음에 하고 싶은 일을 말해도 좋아요."},
-		{Key: "starter_friend_close", Part: PartClosing, Starter: true, Scene: "친구에게 즐거웠던 하루를 다 이야기했어요.", Text: "친구에게 건넬 끝인사를 써 보세요. 평소 말투로 1~3문장이면 충분해요.", Hint: "평소 메시지에서 쓰는 편한 인사면 충분해요."},
+		{Key: "starter_day_open", Part: PartOpening, Starter: true, Scene: "여유로운 주말 아침이에요. 이웃에게 오늘 하루를 소개한다고 생각해 볼까요?", Text: "오늘은 어떻게 보내고 싶어요? 평소 글 쓰는 말투로 들려주세요.", Hint: "거창한 계획이 아니어도 좋아요. 집에서 쉬는 이야기도 괜찮아요."},
+		{Key: "starter_discovery_open", Part: PartOpening, Starter: true, Scene: "산책길에 작고 조용한 가게가 눈에 들어왔어요.", Text: "이 가게를 이웃에게 소개한다면 어떤 말로 시작하고 싶어요?", Hint: "처음 눈길이 간 점부터 편하게 이야기해 주세요."},
+		{Key: "starter_snack", Part: PartDescription, Starter: true, Scene: "별 기대 없이 고른 간식을 한입 먹었는데, 생각보다 맛있네요.", Text: "어떤 맛이었는지 이웃에게 들려줄래요?", Hint: "맛있다는 말에 이유 하나를 더해 보세요."},
+		{Key: "starter_rain", Part: PartDescription, Starter: true, Scene: "막 나가려는데 비가 내려요. 다행히 우산은 챙겨뒀어요.", Text: "이 순간을 글로 남긴다면 어떤 기분을 담고 싶어요?", Hint: "반가웠는지, 귀찮았는지 편하게 써 주세요."},
+		{Key: "starter_recommend", Part: PartDescription, Starter: true, Scene: "이웃이 주말에 가볍게 기분 전환할 일을 찾고 있어요.", Text: "뭘 해보면 좋을까요? 추천하고 싶은 이유도 들려주세요.", Hint: "산책이나 낮잠처럼 작은 일도 좋아요."},
+		{Key: "starter_inconvenience", Part: PartDescription, Starter: true, Scene: "마음에 들어 산 컵인데, 써보니 손잡이가 조금 불편하네요.", Text: "써본 느낌을 이웃에게 솔직하게 소개해 줄래요?", Hint: "좋았던 점과 불편한 점을 같이 이야기해도 좋아요."},
+		{Key: "starter_surprise", Part: PartDescription, Starter: true, Scene: "늘 붐비던 길이 오늘은 한산해서 걷기 편해요.", Text: "뜻밖에 편해진 이 순간을 어떻게 이야기하고 싶어요?", Hint: "놀랐던 마음이나 달라진 기분을 써 주세요."},
+		{Key: "starter_choice", Part: PartDescription, Starter: true, Scene: "새로운 메뉴도 궁금하고, 늘 먹던 메뉴도 당기는 날이에요.", Text: "오늘은 어느 쪽으로 마음이 가나요? 이유도 살짝 들려주세요.", Hint: "정답은 없어요. 지금 마음이 가는 쪽이면 돼요."},
+		{Key: "starter_day_close", Part: PartClosing, Starter: true, Scene: "가볍게 산책하고 집으로 돌아왔어요. 오늘 이야기를 마무리해 볼까요?", Text: "마지막에 어떤 한마디를 남기고 싶어요?", Hint: "오늘 기분이나 다음에 하고 싶은 일을 말해도 좋아요."},
+		{Key: "starter_friend_close", Part: PartClosing, Starter: true, Scene: "즐거웠던 하루 이야기를 이웃에게 다 들려줬어요.", Text: "글을 읽은 이웃에게 어떤 끝인사를 건네고 싶어요?", Hint: "평소 글을 마무리할 때 쓰는 편한 인사면 충분해요."},
 	}
 	out = append(out, legacyPrompts...)
 	return append(out, additionalPrompts...)
