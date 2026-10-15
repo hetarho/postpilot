@@ -222,4 +222,26 @@ describe('confirmed source import', () => {
     expect(result.problems).toEqual([{ filename: 'large-4.mp4', reason: 'limit' }])
     expect(putBlobWithProgress).toHaveBeenCalledTimes(4)
   })
+
+  it('never returns another project’s completion receipt or discards verified originals', async () => {
+    const f = fixture()
+    const complete = f.calls.completeImport
+    f.calls.completeImport = async (...args) => {
+      const batch = await complete(...args)
+      return batch ? { ...batch, projectId: 'another-project' } : batch
+    }
+    const result = await transferClipSourceFiles(
+      'clip',
+      [source('one.mp4')],
+      f.calls,
+      new AbortController().signal,
+    )
+    expect(result).toMatchObject({
+      uploaded: ['one.mp4'],
+      problems: [],
+      uncertain: true,
+    })
+    expect(result.batch).toBeUndefined()
+    expect(f.names).not.toContain('DiscardClipSourceBatch')
+  })
 })

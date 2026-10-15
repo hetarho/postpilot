@@ -159,6 +159,7 @@ export async function transferClipSourceFiles(
       settled = true
     } catch {
       /* Keep the server's originals; a missing response is never permission to discard. */
+      result = undefined
     }
   }
   const uploaded = settled
