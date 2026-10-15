@@ -11,7 +11,7 @@
 ## active
 | tag | host | mode | since | at | doing |
 |---|---|---|---|---|---|
-| v7k2 | DESKTOP-VKPLS8P | autopilot | 2026-10-15T03:06Z | 2026-10-15T08:20Z | - |
+| v7k2 | DESKTOP-VKPLS8P | autopilot | 2026-10-15T03:06Z | 2026-10-15T08:20Z | T685 |
 
 ## inbox
 - 261015 decided -: push branch for finished units? → main, and AGENTS.md now defers to haeram-spec-creator with ARCH-31 run before each push and reused on unchanged trees (alt: - commit only | a work branch)
@@ -106,7 +106,7 @@
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
-| T685 | Build the guided post-template wizard | TMPL THEME | - | todo |
+| T685 | Build the guided post-template wizard | TMPL THEME | - | doing@261015.v7k2 |
 | T686 | Suggest section headings in the owner's voice | TMPL EDIT | T685 | todo |
 | T687 | Make the wizard the only way to create a post template | TMPL EDIT | T685 T686 | todo |
 | T688 | Build the video-template wizard and make it the only way to create one | CLIP TMPL EDIT | T685 T686 | todo |
@@ -124,6 +124,7 @@
 - push: 65c79f2b passed its pre-push gate and waits only for the SSH key (ssh-add) with the spec commits after it; gh login is needed to read CI. 6e5039c8 is the live green revision.
 
 ## log
+- 261015 T685 start on main at ce4e027c.
 - 261015 T684 done
 - 261015 T684 start on main at d64bd979.
 - 261015 T683 done
@@ -143,4 +144,3 @@
 - 261015 create-task done: T677–T695 from GUIDE r22 GEN r31 POST r41 EXPORT r12 TMPL r28 CLIP r60 VOICE r17 THEME r34 MKT r11 CDS r34 EDIT r6 VIDEO r8 LANG r10; migrations reserved 0159 (T679) 0160 (T689) 0161 (T690) 0162 (T691).
 - 261015 create-task GUIDE GEN POST EXPORT TMPL CLIP VOICE THEME MKT CDS EDIT VIDEO LANG start (autopilot v7k2).
 - 261015 update-ssot GUIDE r22 GEN r31 POST r41 EXPORT r12 TMPL r28 CLIP r60 VOICE r17 THEME r34 MKT r11 CDS r34 EDIT r6 VIDEO r8 LANG r10 done: ideation/campaign-reviewer-focus converted (원칙 tier, advertiser guide + checklist + 광고주 요청 origin, 체험단 글 + disclosure placeholder, template wizard, learning chat, channel navigation, clip channels + upload text, 9:16 for new clips, Naver-only post output); 18 provisional decisions in inbox; no doing task in the blast radius; next create-task.
-- 261015 update-ssot GUIDE GEN POST EXPORT TMPL CLIP VOICE THEME MKT start: from ideation/campaign-reviewer-focus (autopilot v7k2).
