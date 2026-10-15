@@ -198,13 +198,7 @@ function ChannelText({
           </div>
         ) : (
           <>
-            <TextOutput
-              key={JSON.stringify([channel, row.revision, canonicalBody, row.tags])}
-              body={canonicalBody}
-              tags={row.tags}
-              limits={limits}
-              queue={queue}
-            />
+            <TextOutput body={canonicalBody} tags={row.tags} limits={limits} queue={queue} />
             <Button
               variant="ghost"
               disabled={busy}
@@ -292,7 +286,10 @@ function TextOutput({
   queue: RefObject<Promise<void>>
 }) {
   const { t } = useTranslation('clips')
-  const { copy, copied, manual, fieldRef } = useTextCopy(queue)
+  const { copy, copied, manual, registerField, registerButton } = useTextCopy(
+    queue,
+    JSON.stringify([body, tags]),
+  )
   const fits = uploadTextFits(body, tags, limits)
   return (
     <div className="space-y-2">
@@ -318,11 +315,17 @@ function TextOutput({
         </Typography>
       )}
       <div className="flex flex-wrap gap-2">
-        <Button variant="secondary" disabled={!fits} onClick={() => void copy('body', body)}>
+        <Button
+          ref={(el) => registerButton('body', el)}
+          variant="secondary"
+          disabled={!fits}
+          onClick={() => void copy('body', body)}
+        >
           {t('uploadText.copyBody')}
         </Button>
         <Button
           variant="secondary"
+          ref={(el) => registerButton('tags', el)}
           disabled={!tags.length || !fits}
           onClick={() => void copy('tags', uploadTagText(tags))}
         >
@@ -330,6 +333,7 @@ function TextOutput({
         </Button>
         {limits.tagsInCaption && (
           <Button
+            ref={(el) => registerButton('all', el)}
             variant="secondary"
             disabled={!fits}
             onClick={() =>
@@ -345,7 +349,7 @@ function TextOutput({
       </Typography>
       {manual && (
         <Textarea
-          ref={fieldRef}
+          ref={registerField}
           readOnly
           rows={5}
           aria-label={t('uploadText.manualField')}

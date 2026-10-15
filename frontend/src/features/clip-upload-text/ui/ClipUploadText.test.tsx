@@ -270,4 +270,21 @@ describe('clip upload text', () => {
     await view.user.click(screen.getByRole('button', { name: '본문 복사' }))
     expect(clipboard).toHaveBeenLastCalledWith('My visit')
   })
+  it.each(['본문 복사', '본문과 해시태그 함께 복사'])(
+    'dismisses a focused fallback and returns focus to %s on a content change',
+    async (button) => {
+      const view = mount(
+        { uploadTexts: [stored({ channel: 'instagram_clip' })] },
+        { ...project, channel: 'instagram_clip' },
+      )
+      vi.spyOn(navigator.clipboard, 'writeText').mockRejectedValue(new Error('denied'))
+      await view.user.click(await screen.findByRole('button', { name: button }))
+      expect(await screen.findByRole('textbox', { name: '직접 복사할 문구' })).toHaveFocus()
+      view.rerender(
+        <ClipUploadText {...view.props} project={{ ...view.props.project, campaign: false }} />,
+      )
+      expect(screen.queryByRole('textbox', { name: '직접 복사할 문구' })).not.toBeInTheDocument()
+      expect(screen.getByRole('button', { name: button })).toHaveFocus()
+    },
+  )
 })
