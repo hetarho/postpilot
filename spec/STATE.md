@@ -11,7 +11,7 @@
 ## active
 | tag | host | mode | since | at | doing |
 |---|---|---|---|---|---|
-| v7k2 | DESKTOP-VKPLS8P | autopilot | 2026-10-15T03:06Z | 2026-10-15T06:00Z | - |
+| v7k2 | DESKTOP-VKPLS8P | autopilot | 2026-10-15T03:06Z | 2026-10-15T06:00Z | T679 |
 
 ## inbox
 - 261015 decided -: push branch for finished units? → main, and AGENTS.md now defers to haeram-spec-creator with ARCH-31 run before each push and reused on unchanged trees (alt: - commit only | a work branch)
@@ -103,7 +103,7 @@
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
-| T679 | Store a post's 체험단 글 switch, advertiser guide and checklist ticks | POST | - | todo |
+| T679 | Store a post's 체험단 글 switch, advertiser guide and checklist ticks | POST | - | doing@261015.v7k2 |
 | T680 | Put the 체험단 글 switch and advertiser guide on the editor's ① | POST | T679 | todo |
 | T681 | Add the 광고주 요청 semantic origin with its own color | GEN POST THEME | - | todo |
 | T682 | Weave the advertiser guide into generation as the advertiser's material | GEN | T679 T681 | todo |
@@ -127,6 +127,7 @@
 - push: 65c79f2b passed its pre-push gate and waits only for the SSH key (ssh-add) with the spec commits after it; gh login is needed to read CI. 6e5039c8 is the live green revision.
 
 ## log
+- 261015 T679 start on main at a751f4ae.
 - 261015 T678 done on main: Postpilot 원칙 card above each guideline list, sheet without 원칙.
 - 261015 T678 start on main at 6ff7a0ed.
 - 261015 T677 done on main: 원칙 tier in the registry, prompts and wire; local Node default moved to v26.12.0 through fnm at the owner's request (pnpm dev verified).
@@ -146,4 +147,3 @@
 - 261013 T676 start on main at 6fe0333c: titles 기본 지침 first two sentences.
 - 261013 create-task GEN r30: T676 (titles 기본 지침 opens with search words, then an implicative phrase).
 - 261013 update-ssot GEN r30 done: GEN-49✎ the title opens with the search words the material supports (area/station, business or product, category or key menu) and closes with a short implicative phrase; GUIDE-41 and TMPL-52 only reference it; no doing task; next create-task GEN.
-- 261013 update-ssot GEN start: implicative-only titles drop the post's search terms.
