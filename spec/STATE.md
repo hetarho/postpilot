@@ -11,7 +11,7 @@
 ## active
 | tag | host | mode | since | at | doing |
 |---|---|---|---|---|---|
-| m7q2 | ihaelam-ui-MacBookPro | autopilot | 2026-10-15T12:20Z | 2026-10-15T20:55Z | T705 |
+| m7q2 | ihaelam-ui-MacBookPro | autopilot | 2026-10-15T12:20Z | 2026-10-15T21:04Z | T705 |
 
 ## inbox
 - 261016 decided T705 T692: how can a failed video transfer keep the clips already uploaded? → an owned initial-import completion primitive moves verified leases into a ready batch and cleans only pending uploads under existing retention rules (alt: discard every arrived video | re-upload successful files repeatedly | leave a non-ready batch)
@@ -140,6 +140,8 @@
 - Autopilot m7q2: implement T705 to unblock T692 partial imports, resume T692, then T693–T695 and ready T697–T701.
 
 ## log
+- 261016 T705 whole frontend553/4385 tests and web build pass; full Go passed before adding a real-process partial-import media regression and is being rechecked. Static/type/source consumers pass; image/media push gates follow. T705 plan/claim CI38803947107/38804014314 succeed.
+- 261016 T691 remote CI38803124102, Deploy38803124097 and Media38803713489 all succeed for4df50bd8; all three media checkout logs prove that revision. T692 claim CI38803204762 also succeeds.
 - 261016 T691 remote Deploy38803124097 and Media38803713489 succeed at4df50bd8; all three completed media checkout logs prove that revision despite event head0e38987e. CI38803124102 is still in progress.
 - 261016 T705 start on main at ddb6bf73 (m7q2 autopilot); supports T692 partial-transfer acceptance while preserving confirmed source identities and existing retention. T691 Deploy38803124097 succeeds; CI38803124102 and media evidence are pending.
 - 261016 T692 blocked on T705 source-import completion; no T692 implementation changes. create-task support contract specified; original acceptance and completed task contracts remain intact.
