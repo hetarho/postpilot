@@ -69,7 +69,7 @@ export function clipReturnDestination(
   ownerId: string,
   clipId?: string,
   storage = browserStorage(),
-  channel: ClipChannel = DEFAULT_CLIP_CHANNEL,
+  channel?: ClipChannel,
 ): ClipReturnDestination {
   const entry = readClipReturnContext(ownerId, clipId, storage)
   const path = (entry?.path ?? (clipId ? '/clips' : '/')) as ClipEntry['path']
@@ -78,9 +78,12 @@ export function clipReturnDestination(
   if (entry?.filters.status && ['draft', 'refining', 'finished'].includes(entry.filters.status))
     filters.status = entry.filters.status
   if (path === '/clips') {
-    if (CLIP_CHANNELS.includes(entry?.filters.channel as ClipChannel))
-      filters.channel = entry!.filters.channel
-    else if (channel !== DEFAULT_CLIP_CHANNEL) filters.channel = channel
+    const storedChannel = CLIP_CHANNELS.includes(entry?.filters.channel as ClipChannel)
+      ? entry!.filters.channel
+      : undefined
+    const currentChannel = channel ?? storedChannel
+    if (currentChannel && (currentChannel !== DEFAULT_CLIP_CHANNEL || storedChannel))
+      filters.channel = currentChannel
   }
   const query = new URLSearchParams(path === '/' ? {} : filters).toString()
   return {

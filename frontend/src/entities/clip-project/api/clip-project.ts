@@ -284,7 +284,7 @@ export function clipDetailPollInterval(project: ClipProject | undefined): number
 }
 
 /** What only the detail read composes around the stored project, and an update's answer leaves
- *  out: the plan, the evidence, the storyline read against the current footage, the job with its
+ *  out: the plan, the evidence, the request history, the storyline read against the current footage, the job with its
  *  accounting, and whether the clip can be finalized. A settings save that left the plan where it
  *  was moves none of them, so the cached reading stands beside the saved fields. */
 function withDetailReadings(saved: ClipProject, cached: ClipProject): ClipProject {
@@ -295,6 +295,7 @@ function withDetailReadings(saved: ClipProject, cached: ClipProject): ClipProjec
     storyline: cached.storyline,
     latestJob: cached.latestJob,
     latestAttempt: cached.latestAttempt,
+    requests: cached.requests,
     accounting: cached.accounting,
     attemptInspection: cached.attemptInspection,
     canFinalize: cached.canFinalize,
@@ -444,11 +445,19 @@ export function useMoveClipChannel(ownerId: string) {
       if (!response.project) throw new Error('Missing moved clip')
       return toClipProject(response.project)
     },
-    onSuccess: (project) => {
+    onSuccess: async (project) => {
       const key = [...clipProjectsKey(transport, ownerId), 'detail', project.id]
       const cached = cache.getQueryData<ClipProject>(key)
-      cache.setQueryData(key, cached ? withDetailReadings(project, cached) : project)
+      cache.setQueryData(
+        key,
+        cached && cached.editPlanRevision === project.editPlanRevision
+          ? withDetailReadings(project, cached)
+          : project,
+      )
       void cache.invalidateQueries({ queryKey: [...clipProjectsKey(transport, ownerId), 'list'] })
+      // A move is explicit, so read the current detail before the next queued write.
+      // Another client may have finished a revision since this page last read it.
+      await cache.invalidateQueries({ queryKey: key })
     },
   })
 }
