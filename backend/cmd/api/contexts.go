@@ -310,7 +310,7 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 		templateRequestJobs{queue: c.jobs}, cfg.LLMCompletionBudget, template.RequestLimits(cfg.TemplateRequest),
 	)
 	c.template.ConfigureEstimate(templateEstimates{rates: c.ledger})
-	c.templateHeadings = template.NewHeadingSuggestions(templateModels{registry: c.metered}, templateHeadingVoice{service: c.voice}, templateHeadingJobs{queue: c.jobs}, cfg.LLMCompletionBudget, templateEstimates{rates: c.ledger}, templateLimits(cfg))
+	c.templateHeadings = template.NewHeadingSuggestions(templateModels{registry: c.metered}, templateHeadingVoice{service: c.voice}, templateHeadingJobs{queue: c.jobs}, cfg.LLMCompletionBudget, templateEstimates{rates: c.ledger}, templateLimits(cfg), clip.LabelChars)
 	c.post.SetTemplateDirectory(postTemplates{service: c.template})
 
 	// Template names are a live projection and owned-id validation, never a stored column or

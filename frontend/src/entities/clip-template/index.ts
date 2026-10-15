@@ -33,6 +33,7 @@ export {
   compositionCharacters,
 } from './lib/composition-parse'
 export { serializeCompositionNode } from './lib/composition-xml'
+export { compositionNode } from './lib/composition-author'
 export { resolveClipComposition } from './lib/composition-resolve'
 export { CompositionProblem } from './model/composition'
 export type {

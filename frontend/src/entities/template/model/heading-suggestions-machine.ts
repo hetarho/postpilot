@@ -3,12 +3,13 @@ import {
   HEADING_CHOICES_PER_SECTION,
   HEADING_SUGGESTION_SECTIONS_MAX,
   TEMPLATE_ASK_LABEL_MAX_CHARS,
-  type HeadingSuggestionInput,
-} from '@/entities/template'
+} from '../config'
+import type { HeadingSuggestionInput } from './heading-suggestions'
 import { appFailureFromConnect, normalizeAppFailure, type AppFailure } from '@/shared/api'
 
 interface Input {
   ownerId: string
+  maxChars?: number
   start: (request: HeadingSuggestionInput) => Promise<string>
 }
 interface Context extends Input {
@@ -65,7 +66,8 @@ export const headingSuggestionsMachine = setup({
           group.every(
             (value) =>
               value.trim() !== '' &&
-              Array.from(value.trim()).length <= TEMPLATE_ASK_LABEL_MAX_CHARS &&
+              Array.from(value.trim()).length <=
+                (context.maxChars ?? TEMPLATE_ASK_LABEL_MAX_CHARS) &&
               !/[\r\n]/.test(value),
           ),
       ),

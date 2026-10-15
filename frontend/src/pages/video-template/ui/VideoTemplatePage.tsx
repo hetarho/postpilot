@@ -5,6 +5,7 @@ import { useClipTemplates, type ClipTemplate } from '@/entities/clip-template'
 import { useAuthoringSummaries, type AuthoringSavedRef } from '@/entities/ai-authoring'
 import { useSession } from '@/entities/session'
 import { ClipTemplateDirectEditor, ClipTemplateEditor } from '@/features/edit-clip-template'
+import { ClipTemplateWizard } from '@/features/create-clip-template-wizard'
 import { AuthoringPreview } from '@/features/ai-authoring'
 import { AIAuthoringStudio } from '@/widgets/ai-authoring-studio'
 import { Button, Notice, Typography, pageStyles, typographyStyles } from '@/shared/ui'
@@ -49,7 +50,7 @@ export function VideoTemplatePage() {
     )
   return (
     <VideoTemplateHost
-      key={JSON.stringify([ownerId, stored?.id ?? 'new'])}
+      key={JSON.stringify([ownerId, stored?.id ?? 'new', stored ? '' : session])}
       ownerId={ownerId}
       stored={stored}
       sessionId={session}
@@ -103,7 +104,21 @@ function VideoTemplateHost({
           })}
         </Typography>
       )}
-      {method === null ? (
+      {!stored && !sessionId ? (
+        <div className="mt-4 sm:mt-8">
+          <ClipTemplateWizard
+            ownerId={ownerId}
+            onSaved={(templateId) => {
+              onPublished()
+              void navigate({
+                to: '/video-templates/$templateId',
+                params: { templateId },
+                replace: true,
+              })
+            }}
+          />
+        </div>
+      ) : method === null ? (
         <section className="mt-4 flex flex-col sm:mt-8">
           <Typography variant="stepTitle" as="h2">
             {stored ? (
@@ -272,8 +287,8 @@ function VideoTemplateHost({
           onSaved={(saved) => {
             setPublished(saved)
             onPublished()
-            setMethod(null)
-            if (!stored)
+            if (stored) setMethod(null)
+            else
               void navigate({
                 to: '/video-templates/$templateId',
                 params: { templateId: saved.id },

@@ -2,7 +2,9 @@ package template
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/postpilot/backend/internal/llm"
 	"strings"
 	"testing"
@@ -48,7 +50,7 @@ func headingHarness() (*HeadingSuggestions, *fakeModels, *headingVoiceStub, *hea
 	models := &fakeModels{known: true, info: writerInfo(), responses: []llm.Response{{Text: headingAnswerJSON, FinishReason: "stop"}}}
 	voice := &headingVoiceStub{text: "VOICE_ACCEPTED_STYLE: 짧고 차분하게 씁니다", present: true}
 	jobs := &headingJobsStub{}
-	return NewHeadingSuggestions(models, voice, jobs, fakeBudget{}, &fakeEstimator{}, testLimits()), models, voice, jobs
+	return NewHeadingSuggestions(models, voice, jobs, fakeBudget{}, &fakeEstimator{}, testLimits(), 40), models, voice, jobs
 }
 func runHeadings(t *testing.T, s *HeadingSuggestions, j *headingJobsStub) error {
 	t.Helper()
@@ -171,5 +173,54 @@ func TestHeadingOutputBoundsAndTruncationNeverPublish(t *testing.T) {
 		if err := runHeadings(t, s, jobs); !errors.Is(err, test.want) || len(jobs.saved) != 0 || len(models.requests) != 1 {
 			t.Fatalf("published invalid output: %v", err)
 		}
+	}
+}
+
+func TestClipHeadingsFreezeTheCompositionLabelBound(t *testing.T) {
+	for _, length := range []int{40, 41} {
+		t.Run(fmt.Sprint(length), func(t *testing.T) {
+			s, models, _, jobs := headingHarness()
+			s.limits.AskLabelMaxChars = 80 // a configurable post bound must not widen clip headings
+			start := headingStart()
+			start.TargetKind = "clip"
+			models.responses[0].Text = strings.Replace(headingAnswerJSON, "찾아간 이유", strings.Repeat("가", length), 1)
+			if _, err := s.Start(t.Context(), "alice", start); err != nil {
+				t.Fatal(err)
+			}
+			s.clipHeadingChars = 5 // admission freezes the owner boundary before execution
+			err := runHeadings(t, s, jobs)
+			if length == 40 && err != nil {
+				t.Fatal(err)
+			}
+			if length == 41 && (!errors.Is(err, llm.ErrBadOutput) || len(jobs.saved) != 0) {
+				t.Fatalf("over-bound group published: %v", err)
+			}
+			if len(models.requests) != 1 || !strings.Contains(models.requests[0].System, "40자") || !strings.Contains(string(models.requests[0].JSONSchema), `"maxLength":40`) {
+				t.Fatal("wrong frozen clip schema or an extra call")
+			}
+		})
+	}
+}
+
+func TestHeadingV1JobsKeepTheirAdmittedOutputContract(t *testing.T) {
+	s, models, _, jobs := headingHarness()
+	s.limits.AskLabelMaxChars = 80
+	start := headingStart()
+	start.TargetKind = "clip"
+	if _, err := s.Start(t.Context(), "alice", start); err != nil {
+		t.Fatal(err)
+	}
+	var in headingInput
+	if err := json.Unmarshal(jobs.starts[0].Payload, &in); err != nil {
+		t.Fatal(err)
+	}
+	in.Version, in.MaxHeadingChars = 1, 0
+	jobs.starts[0].Payload, _ = json.Marshal(in)
+	models.responses[0].Text = strings.Replace(headingAnswerJSON, "찾아간 이유", strings.Repeat("가", 41), 1)
+	if err := runHeadings(t, s, jobs); err != nil {
+		t.Fatal(err)
+	}
+	if len(models.requests) != 1 || !strings.Contains(string(models.requests[0].JSONSchema), fmt.Sprintf(`"maxLength":%d`, s.limits.AskLabelMaxChars)) {
+		t.Fatal("historical admitted output was reinterpreted")
 	}
 }

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createActor } from 'xstate'
 import { TEMPLATE_ASK_LABEL_MAX_CHARS, TEMPLATE_PHOTO_ROW_MAX } from '@/entities/template'
-import { ROLES, nodeAt, type RoleKey } from '../config/catalog'
+import { TEMPLATE_ROLE_DEFAULTS, templateTargetAt, type RoleKey } from '@/entities/template'
 import {
   checkedSections,
   initialWizardState,
@@ -17,8 +17,8 @@ import {
 
 /** The leaf's seeds as the screen makes them, with the role key as its name. */
 function seeds(path: string[]): SectionDraft[] {
-  return (nodeAt(path)?.roles ?? []).map((role: RoleKey) => {
-    const defaults = ROLES[role] as {
+  return (templateTargetAt(path)?.roles ?? []).map((role: RoleKey) => {
+    const defaults = TEMPLATE_ROLE_DEFAULTS[role] as {
       content: SectionDraft['content']
       photos: number
       repeat?: boolean
@@ -83,7 +83,7 @@ describe('narrowing the target', () => {
     const leaf = run(...toMeal)
     expect(leaf.step).toBe('sections')
     expect(leaf.sections.map((section) => section.id)).toEqual(
-      nodeAt(['restaurant', 'meal'])!.roles,
+      templateTargetAt(['restaurant', 'meal'])!.roles,
     )
     expect(leaf.sections.every((section) => section.checked)).toBe(true)
   })

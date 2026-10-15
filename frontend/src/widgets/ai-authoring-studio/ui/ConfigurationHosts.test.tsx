@@ -23,14 +23,21 @@ describe('configuration authoring entrypoints', () => {
     expect(calls).not.toContain('GetLatestWritingVoiceCandidates')
   })
 
+  it('opens video-template creation as a wizard without creating an authoring session', async () => {
+    const calls: string[] = []
+    renderAppAt('/video-templates/new', { user: { id: 'alice' }, calls, existingSetup: true })
+    expect(
+      await screen.findByRole('heading', { name: '어떤 체험을 영상으로 남기나요?' }),
+    ).toBeVisible()
+    expect(
+      screen.queryByRole('button', { name: 'AI와 영상 템플릿 만들기' }),
+    ).not.toBeInTheDocument()
+    expect(
+      calls.filter((name) => /^(Start|Generate|Create|Adopt|SaveAuthoring)/.test(name)),
+    ).toEqual([])
+  })
+
   it.each([
-    {
-      route: '/video-templates/new',
-      title: '새 영상 템플릿',
-      manual: true,
-      choice: 'AI와 영상 템플릿 만들기',
-      goal: '영상이 어떤 순서로 이어지면 좋을까요?',
-    },
     {
       route: '/guidelines',
       title: '지침',
@@ -54,21 +61,13 @@ describe('configuration authoring entrypoints', () => {
     const calls: string[] = []
     renderAppAt(entry.route, { user: { id: 'alice' }, calls, existingSetup: true })
     await screen.findByRole('heading', { level: 1, name: entry.title })
-    if (entry.trigger) {
-      const triggers = await screen.findAllByRole('button', { name: entry.trigger })
-      const primary = triggers.find((button) => !button.closest('details'))!
-      expect(primary).toBeInTheDocument()
-      expect(calls).not.toContain('GetLatestAuthoringSession')
-      await user.click(primary)
-      const dialog = await screen.findByRole('dialog')
-      expect(await within(dialog).findByRole('heading', { name: entry.goal })).toBeVisible()
-    } else {
-      if (entry.choice) await user.click(await screen.findByRole('button', { name: entry.choice }))
-      expect(await screen.findByRole('heading', { name: entry.goal })).toBeVisible()
-      expect(screen.queryByLabelText('템플릿 이름')).not.toBeInTheDocument()
-      expect(screen.queryByLabelText('이름')).not.toBeInTheDocument()
-      expect(screen.queryByLabelText('템플릿 이름')).not.toBeInTheDocument()
-    }
+    const triggers = await screen.findAllByRole('button', { name: entry.trigger })
+    const primary = triggers.find((button) => !button.closest('details'))!
+    expect(primary).toBeInTheDocument()
+    expect(calls).not.toContain('GetLatestAuthoringSession')
+    await user.click(primary)
+    const dialog = await screen.findByRole('dialog')
+    expect(await within(dialog).findByRole('heading', { name: entry.goal })).toBeVisible()
     if (entry.route === '/voices')
       await waitFor(() => expect(calls).toContain('GetLatestAuthoringSession'))
     else await waitFor(() => expect(calls).toContain('ListAuthoringSummaries'))

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { i18n } from './i18n'
-import { ROLES, TARGET_TREE, branches, leaves } from './catalog'
+import { templateTargetsI18n as i18n } from './target-i18n'
+import { ROLES, TARGET_TREE, branches, leaves } from './target-catalog'
 
 describe('the target catalog (TMPL-72)', () => {
   it('every leaf carries 아쉬운 점 and no medical target', () => {
@@ -21,7 +21,7 @@ describe('the target catalog (TMPL-72)', () => {
     ])
       expect(keys).not.toContain(medical)
     for (const word of ['병원', '의원', '시술 후기', '성형'])
-      expect(JSON.stringify(i18n.ko.wizard.targets)).not.toContain(word)
+      expect(JSON.stringify(i18n.ko.targets)).not.toContain(word)
   })
 
   it('keeps the six targets and the product kind and review form steps', () => {
@@ -40,7 +40,7 @@ describe('the target catalog (TMPL-72)', () => {
 
   it('names every target, question and role in ko and en alike', () => {
     for (const language of ['ko', 'en'] as const) {
-      const wizard = i18n[language].wizard
+      const wizard = i18n[language]
       for (const node of leaves().flatMap((leaf) => leaf.path))
         expect(
           wizard.targets[node as keyof typeof wizard.targets],
@@ -61,7 +61,7 @@ describe('the target catalog (TMPL-72)', () => {
       Object.entries(value).flatMap(([key, child]) =>
         typeof child === 'object' ? keys(child).map((sub) => `${key}.${sub}`) : [key],
       )
-    expect(keys(i18n.en.wizard).sort()).toEqual(keys(i18n.ko.wizard).sort())
+    expect(keys(i18n.en).sort()).toEqual(keys(i18n.ko).sort())
   })
 
   it('starts every role at a default the grammar takes', () => {

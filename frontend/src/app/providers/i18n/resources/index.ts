@@ -127,10 +127,12 @@ import { i18n as requestTemplateI18n } from '@/features/request-template/config/
 import { i18n as selectPostVoiceI18n } from '@/features/select-post-voice/config/i18n'
 import { i18n as setDefaultVoiceI18n } from '@/features/set-default-voice/config/i18n'
 import { i18n as subscriptionI18n } from '@/entities/subscription/config/i18n'
+import { templateTargetsI18n } from '@/entities/template'
 import { i18n as templateEntityI18n } from '@/entities/template/config/i18n'
 import { headingErrors } from '@/entities/template/config/heading-errors'
 import { i18n as templatePageI18n } from '@/pages/template/config/i18n'
 import { i18n as templatesI18n } from '@/pages/templates/config/i18n'
+import { i18n as createClipTemplateWizardI18n } from '@/features/create-clip-template-wizard/config/i18n'
 import { i18n as createTemplateWizardI18n } from '@/features/create-template-wizard/config/i18n'
 import { i18n as uploadPhotosI18n } from '@/features/upload-photos/config/i18n'
 import { i18n as voiceEntityI18n } from '@/entities/voice/config/i18n'
@@ -159,6 +161,8 @@ export const RESOURCE_NAMESPACES = [
   'voiceMaterialEdit',
   'posts',
   'voices',
+  'clipWizard',
+  'templateTargets',
   'templates',
   'guidelines',
   'memories',
@@ -286,9 +290,11 @@ export const FRAGMENTS: readonly I18nFragment[] = [
   selectPostTemplateI18n,
   requestTemplateI18n,
   templateEntityI18n,
+  templateTargetsI18n,
   templatePageI18n,
   templatesI18n,
   createTemplateWizardI18n,
+  createClipTemplateWizardI18n,
   createVoiceI18n,
   deleteVoiceI18n,
   restoreVoiceAnalysisI18n,
@@ -362,6 +368,8 @@ export const resources = {
       ...voicePageI18n.ko,
       ...voicesI18n.ko,
     },
+    clipWizard: createClipTemplateWizardI18n.ko,
+    templateTargets: templateTargetsI18n.ko,
     templates: {
       ...deleteTemplateI18n.ko,
       ...selectPostTemplateI18n.ko,
@@ -504,6 +512,8 @@ export const resources = {
       ...voicePageI18n.en,
       ...voicesI18n.en,
     },
+    clipWizard: createClipTemplateWizardI18n.en,
+    templateTargets: templateTargetsI18n.en,
     templates: {
       ...deleteTemplateI18n.en,
       ...selectPostTemplateI18n.en,

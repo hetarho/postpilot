@@ -67,3 +67,14 @@ export {
   useHeadingSuggestionsEstimate,
   useHeadingSuggestionsResult,
 } from './api/useHeadingSuggestions'
+
+export { templateTargetsI18n } from './config/target-i18n'
+export {
+  nodeAt as templateTargetAt,
+  ROLES as TEMPLATE_ROLE_DEFAULTS,
+  TARGET_TREE as TEMPLATE_TARGET_TREE,
+  leaves as templateTargetLeaves,
+} from './config/target-catalog'
+export type { RoleKey, TargetNode, SectionContent } from './config/target-catalog'
+export { useWizardHeadingSuggestions } from './api/useWizardHeadingSuggestions'
+export type { WizardHeadingSuggestionsOperation } from './api/useWizardHeadingSuggestions'

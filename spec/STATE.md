@@ -11,7 +11,7 @@
 ## active
 | tag | host | mode | since | at | doing |
 |---|---|---|---|---|---|
-| m7q2 | ihaelam-ui-MacBookPro | autopilot | 2026-10-15T12:20Z | 2026-10-15T14:44Z | T688 |
+| m7q2 | ihaelam-ui-MacBookPro | autopilot | 2026-10-15T12:20Z | 2026-10-15T16:39Z | - |
 
 ## inbox
 - 261015 decided T698: how is a deleted or reused post slug told apart? → store the post's creation time beside the slug and resolve at read; no foreign key (alt: FK ON DELETE SET NULL, which nulls user_id on SQLite composites | clear links from the post context)
@@ -118,7 +118,6 @@
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
-| T688 | Build the video-template wizard and make it the only way to create one | CLIP TMPL EDIT | T685 T686 | doing@261015.m7q2 |
 | T689 | Give clips a channel and create new clips vertical only | CLIP CDS | - | todo |
 | T690 | Add the 체험단 글 switch and advertiser guide to clips | CLIP GEN GUIDE | T679 T680 T689 | todo |
 | T691 | Write each clip channel's upload text on request | CLIP EXPORT | T689 T690 | todo |
@@ -133,11 +132,13 @@
 | T701 | Build the storyline in the linked post's order and place videos by capture order | CLIP GUIDE | T699 T700 | todo |
 
 ## next
-- After T686–T695 (m7q2): implement-task T698 → T699, T700 → T701 (a linked post as the clip's story); T697 needs the owner's Cloudflare CORS change first.
-- implement-task T697 (production clip generation is down: the live R2 CORS hides Content-Range; the owner applies deploy/r2-cors.json first).
-- Autopilot m7q2: T687 pushed atc2f3c631 with CI pending; implement T688, then T689–T695 and T698–T701 in dependency order.
+- After T686–T695 (m7q2): implement-task T698 → T699, T700 → T701 (a linked post as the clip's story); T697's operator CORS prerequisite is complete.
+- implement-task T697 (the owner applied production Content-Range CORS261015; add the ranged-GET probe/deployment gate and preserve HEAD cancellation).
+- Autopilot m7q2: T688 implementation/full local CI complete; finish deployment/media gate and push, then T689–T695 and T698–T701. T697 is ready after the owner CORS change.
 
 ## log
+- 261016 T688 done; whole FE549 files/4352 tests and full BE/CI checks pass; deployment/media push gate follows.
+- 261016 T688 freshness: CLIP r62/r63 HDR-source changes do not affect the wizard; base refreshed to63. Concurrent source-color commits remain intact.
 - 261015 HDR scope cut at the owner's word ("에러만 안 나면"): CLIP r63 HLG used as is, PQ refused; CDS r36 reverts the colour tags; T702–T704 removed; HLG accepted in source-color.ts directly, no task
 - 261015 autopilot h7c3 ended: CLIP r62 CDS r35, T702–T704; report spec/reports/261015-h7c3.md
 - 261015 create-task CLIP r62 CDS r35 done: T702 (explore 3h) → T703; T704 independent
@@ -156,5 +157,3 @@
 - 261015 update-ssot CLIP r61 POST r42 GUIDE r23 done: a linked post as the clip's story (ideation/post-faithful-clip); no doing task affected (T686 is TMPL).
 - 261015 update-ssot CLIP POST GUIDE start (ideation/post-faithful-clip)
 - 261015 start-vibe p4f1 start (autopilot): ideation post-faithful-clip → update-ssot → create-task, overlap check with the template tasks; no implementation (m7q2 implements).
-- 261015 T686 start on main at 13f778bb (m7q2 autopilot); T696 pushed at 832c357e with CI38736338662 running.
-- 261015 ideation post-faithful-clip ready (autonomous at the owner's request; decisions in inbox)

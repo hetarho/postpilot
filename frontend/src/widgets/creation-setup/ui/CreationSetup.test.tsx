@@ -371,14 +371,28 @@ it('creates a valid post template exactly once and advances from its confirmed s
     await screen.findByRole('heading', { name: '이제, 당신의 이야기를 만들어요.' }),
   ).toBeInTheDocument()
 })
+async function finishClipWizard(user: ReturnType<typeof userEvent.setup>, name: string) {
+  await user.click(await screen.findByRole('button', { name: /^카페/ }))
+  await user.click(await screen.findByRole('button', { name: /^디저트/ }))
+  await screen.findByRole('heading', { name: '이런 영상은 보통 이렇게 이어져요' })
+  for (const box of screen.getAllByRole('checkbox')) {
+    if (!box.closest('label')?.textContent?.startsWith('훅')) await user.click(box)
+  }
+  await user.click(screen.getByRole('button', { name: '다음' }))
+  await user.click(screen.getByRole('button', { name: '다음' }))
+  await user.click(screen.getByRole('button', { name: '내 말로 쓰기' }))
+  await user.click(screen.getByRole('button', { name: '다음' }))
+  await screen.findByRole('heading', { name: '영상의 디자인을 골라요' })
+  await user.click(screen.getByRole('button', { name: '다음' }))
+  await user.type(await screen.findByLabelText('영상 템플릿 이름'), name)
+}
 it('saves a clip template once before offering completion', async () => {
   resumeSetup('clip-template')
   const calls: string[] = []
   const { router } = renderAppAt('/', { ...READY, clips: { templates: [], calls } })
   const user = userEvent.setup()
-  await user.click(await screen.findByRole('button', { name: '직접 편집' }))
-  await user.type(await screen.findByLabelText('템플릿 이름'), '내 영상 구성')
-  await user.dblClick(screen.getByRole('button', { name: '저장하고 계속' }))
+  await finishClipWizard(user, '내 영상 구성')
+  await user.dblClick(screen.getByRole('button', { name: '저장' }))
   expect(
     await screen.findByRole('heading', { name: '이제, 당신의 이야기를 만들어요.' }),
   ).toBeInTheDocument()
@@ -392,12 +406,11 @@ it('retains a clip template after a failed save', async () => {
   const calls: string[] = []
   renderAppAt('/', { ...READY, clips: { templates: [], calls, saveFails: true } })
   const user = userEvent.setup()
-  await user.click(await screen.findByRole('button', { name: '직접 편집' }))
-  await user.type(await screen.findByLabelText('템플릿 이름'), '내 영상 구성')
-  await user.click(screen.getByRole('button', { name: '저장하고 계속' }))
+  await finishClipWizard(user, '내 영상 구성')
+  await user.click(screen.getByRole('button', { name: '저장' }))
   await waitFor(() => expect(calls).toContain('CreateVideoTemplate'))
-  await waitFor(() => expect(screen.getByRole('button', { name: '저장하고 계속' })).toBeEnabled())
-  expect(screen.getByLabelText('템플릿 이름')).toHaveValue('내 영상 구성')
+  await waitFor(() => expect(screen.getByRole('button', { name: '저장' })).toBeEnabled())
+  expect(screen.getByLabelText('영상 템플릿 이름')).toHaveValue('내 영상 구성')
   expect(
     screen.getByRole('heading', { name: '영상에도 나만의 흐름을 담아요.' }),
   ).toBeInTheDocument()

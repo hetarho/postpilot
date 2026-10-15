@@ -5,7 +5,7 @@ import { useBlocker } from '@tanstack/react-router'
 import { useCreateTemplate } from '@/entities/template'
 import { formatAppFailure } from '@/shared/lib'
 import { Button, Dialog, Typography, WizardFrame } from '@/shared/ui'
-import { nodeAt } from '../config/catalog'
+import { templateTargetAt } from '@/entities/template'
 import { toWizardBody } from '../lib/to-body'
 import {
   checkedSections,
@@ -22,7 +22,7 @@ import { OrderStep } from './OrderStep'
 import { SectionStep } from './SectionStep'
 import { SectionsStep } from './SectionsStep'
 import { TargetStep } from './TargetStep'
-import { useHeadingSuggestions } from '../model/useHeadingSuggestions'
+import { useWizardHeadingSuggestions as useHeadingSuggestions } from '@/entities/template'
 import { saveTemplateMachine } from '../model/save-template-machine'
 
 interface Props {
@@ -48,7 +48,7 @@ function OwnedTemplateWizard({ ownerId, onSaved, seedHeadings, beforeSave, onSav
   const headings = useHeadingSuggestions(
     ownerId,
     'post',
-    state.path.map((key) => t(`wizard.targets.${key as 'restaurant'}.name`)),
+    state.path.map((key) => t(`targets.${key as 'restaurant'}.name`, { ns: 'templateTargets' })),
     checkedSections(state).map((section) => ({
       id: section.id,
       role: section.name,
@@ -136,9 +136,9 @@ function OwnedTemplateWizard({ ownerId, onSaved, seedHeadings, beforeSave, onSav
   function frame(current: WizardState) {
     switch (current.step) {
       case 'target': {
-        const node = nodeAt(current.path.slice(0, current.depth))
+        const node = templateTargetAt(current.path.slice(0, current.depth))
         return {
-          title: t(`wizard.questions.${(node?.key ?? 'root') as 'root'}`),
+          title: t(`questions.${(node?.key ?? 'root') as 'root'}`, { ns: 'templateTargets' }),
           help: t('wizard.targetHelp'),
           back: current.depth > 0 ? back : undefined,
           children: <TargetStep state={current} send={send} />,

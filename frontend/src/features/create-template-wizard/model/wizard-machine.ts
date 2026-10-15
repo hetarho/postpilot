@@ -6,7 +6,7 @@ import {
   TEMPLATE_NAME_MAX_CHARS,
   TEMPLATE_PHOTO_ROW_MAX,
 } from '@/entities/template'
-import { nodeAt, type RoleKey, type SectionContent } from '../config/catalog'
+import { templateTargetAt, type RoleKey, type SectionContent } from '@/entities/template'
 
 /** One section as the owner shapes it (TMPL-71, TMPL-74). Every answer starts at the catalog
  *  default, so 다음 always works until the owner changes something into an invalid state. */
@@ -145,7 +145,7 @@ function headingsValid(context: WizardContext): boolean {
 /** Where a choice lands: the node it names, and whether that ends the narrowing. */
 function chosen(context: WizardContext, key: string) {
   const path = [...context.path.slice(0, context.depth), key]
-  const node = nodeAt(path)
+  const node = templateTargetAt(path)
   return { path, node, leaf: Boolean(node?.roles) }
 }
 
