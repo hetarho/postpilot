@@ -11,7 +11,7 @@
 ## active
 | tag | host | mode | since | at | doing |
 |---|---|---|---|---|---|
-| m7q2 | ihaelam-ui-MacBookPro | autopilot | 2026-10-15T12:20Z | 2026-10-15T21:23Z | T705 |
+| m7q2 | ihaelam-ui-MacBookPro | autopilot | 2026-10-15T12:20Z | 2026-10-15T21:33Z | T705 |
 
 ## inbox
 - 261016 decided T705 T692: how can a failed video transfer keep the clips already uploaded? → an owned initial-import completion primitive moves verified leases into a ready batch and cleans only pending uploads under existing retention rules (alt: discard every arrived video | re-upload successful files repeatedly | leave a non-ready batch)
@@ -140,6 +140,7 @@
 - Autopilot m7q2: implement T705 to unblock T692 partial imports, resume T692, then T693–T695 and ready T697–T701.
 
 ## log
+- 261016 T705 local Linux/amd64 deployment and all image/media gates pass, including partial imports in both real-process layouts; combined memory upper bounds802553856/793788416 bytes under unchanged limits. Final FE push validation follows the filename guard.
 - 261016 T705 frontend-only duplicate-name guarda032ccfa passes import8 tests, lint/format/type. Backend/proto/deploy/workflow/dependency inputs remain identical to ebfe5b5c; final whole FE runs after the active media gate.
 - 261016 T705 sourceebfe5b5c passes final whole Go formatter/vet/build/tests (API219.203s), import receipt8 tests, lint/format/type and existing source consumers. Final whole FE553/4386 tests and web build pass; generated proto/SQL reproduce without a diff. Image/media push gates follow. T705 plan/claim CI38803947107/38804014314 succeed.
 - 261016 T691 remote CI38803124102, Deploy38803124097 and Media38803713489 all succeed for4df50bd8; all three media checkout logs prove that revision. T692 claim CI38803204762 also succeeds.
