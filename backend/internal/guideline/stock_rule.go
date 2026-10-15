@@ -40,6 +40,8 @@ type StockRule struct {
 	Key, Text     string
 	SourceOrder   int
 	Applicability []RuleApplicability
+	// Principle marks an always-applied 원칙 (GUIDE-16), rendered under its own label.
+	Principle bool
 }
 
 func copyApplicability(source []RuleApplicability) []RuleApplicability {
@@ -88,7 +90,7 @@ func defaultPromptStock(states []DefaultState, target Language, withMemories boo
 			continue
 		}
 		if text, ok := state.Default.Text(target); ok {
-			result = append(result, StockRule{Key: state.Default.Key, Text: text, SourceOrder: order, Applicability: copyApplicability(state.Default.Applicability)})
+			result = append(result, StockRule{Key: state.Default.Key, Text: text, SourceOrder: order, Applicability: copyApplicability(state.Default.Applicability), Principle: state.Default.Principle})
 		}
 	}
 	return result

@@ -18,6 +18,7 @@ type stockGuidelineJSON struct {
 	Text          string                   `json:"text"`
 	SourceOrder   int                      `json:"source_order"`
 	Applicability []stockApplicabilityJSON `json:"applicability"`
+	Principle     bool                     `json:"principle,omitempty"`
 }
 
 func encodeMaterialParts(parts []TemplateMaterialPart) *[]materialPartJSON {
@@ -55,7 +56,7 @@ func encodeStockGuidelines(rules []StockGuideline) *[]stockGuidelineJSON {
 	}
 	result := make([]stockGuidelineJSON, len(rules))
 	for i, r := range rules {
-		result[i] = stockGuidelineJSON{Key: r.Key, Text: r.Text, SourceOrder: r.SourceOrder, Applicability: make([]stockApplicabilityJSON, len(r.Applicability))}
+		result[i] = stockGuidelineJSON{Key: r.Key, Text: r.Text, SourceOrder: r.SourceOrder, Applicability: make([]stockApplicabilityJSON, len(r.Applicability)), Principle: r.Principle}
 		for j, a := range r.Applicability {
 			result[i].Applicability[j] = stockApplicabilityJSON{Stage: a.Stage, Outputs: append([]string{}, a.Outputs...)}
 		}
@@ -68,7 +69,7 @@ func decodeStockGuidelines(wire *[]stockGuidelineJSON) []StockGuideline {
 	}
 	result := make([]StockGuideline, len(*wire))
 	for i, r := range *wire {
-		result[i] = StockGuideline{Key: r.Key, Text: r.Text, SourceOrder: r.SourceOrder, Applicability: make([]StockRuleApplicability, len(r.Applicability))}
+		result[i] = StockGuideline{Key: r.Key, Text: r.Text, SourceOrder: r.SourceOrder, Applicability: make([]StockRuleApplicability, len(r.Applicability)), Principle: r.Principle}
 		for j, a := range r.Applicability {
 			result[i].Applicability[j] = StockRuleApplicability{Stage: a.Stage, Outputs: append([]string{}, a.Outputs...)}
 		}

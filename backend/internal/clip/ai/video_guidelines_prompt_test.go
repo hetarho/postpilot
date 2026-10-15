@@ -47,6 +47,27 @@ func TestEveryClipWritingCallEndsWithTheVideoGuidelines(t *testing.T) {
 	}
 }
 
+// GUIDE-52, GUIDE-54: a frozen 원칙 renders first under its own label, before the 기본 지침 and
+// the owner's lines, and the 원칙 sentence precedes the closing sentence.
+func TestVideoPrinciplesLeadTheSection(t *testing.T) {
+	flowScope := []clip.VideoRuleApplicability{{Stage: "clip-write", Outputs: []string{"plan", "placements", "captions"}}}
+	in := flowInput()
+	in.Guidelines = clip.VideoGuidelines{
+		Stock: []clip.VideoStockRule{
+			{Key: "clip_facts", Text: "입력한 사실만", Applicability: flowScope, Principle: true},
+			{Key: "clip_hook", Text: "첫 자막에 무엇을", SourceOrder: 1, Applicability: flowScope},
+		},
+		Owner: []string{"자막은 두 줄까지"},
+	}
+	_, _, system := flowRequest(t, in, defaultFlow())
+	want := "\n[영상 지침]\n원칙:\n- 입력한 사실만\n기본 지침:\n- 첫 자막에 무엇을\n사용자 지침:\n- 자막은 두 줄까지\n" +
+		"원칙은 끌 수 없으며 기본 지침, 사용자 지침, 템플릿 지시와 광고주 가이드보다 우선합니다.\n" +
+		"영상 지침은 이 영상의 흐름과 자막을 어떻게 만들지 정합니다. 사용자 지침이 기본 지침과 충돌하면 사용자 지침을 따르고, 같은 묶음 안에서 충돌하면 먼저 적힌 지침을 따르세요.\n"
+	if !strings.HasSuffix(system, want) {
+		t.Fatalf("the flow prompt does not end with the tiered block:\n%s", system[max(0, len(system)-500):])
+	}
+}
+
 // One group alone renders alone, and the precedence sentence still closes the block.
 func TestTheVideoGuidelinesRenderOnlyTheGroupsThatExist(t *testing.T) {
 	in := flowInput()

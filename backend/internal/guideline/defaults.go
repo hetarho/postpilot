@@ -28,15 +28,18 @@ type DefaultCopy struct {
 	Text string
 }
 
-// DefaultGuideline is one of the product's own 기본 지침 (GUIDE-16): a code constant with a
-// stable ASCII key, never a row, never edited, learned or model-written. The owner can only
-// switch it off for the whole account (GUIDE-43).
+// DefaultGuideline is one of the product's own code-owned rules (GUIDE-16): a code constant with
+// a stable ASCII key, never a row, never edited, learned or model-written. A 원칙 always applies
+// (GUIDE-51, GUIDE-52); a 기본 지침 is a recommendation the owner can switch off for the whole
+// account (GUIDE-43).
 type DefaultGuideline struct {
 	Applicability []RuleApplicability
 	Key           string
 	Kind          Kind
 	Ko            DefaultCopy
 	En            DefaultCopy
+	// Principle entries are the always-applied 원칙: no switch, no account state (GUIDE-16).
+	Principle bool
 	// KoreanTargetOnly entries reach a Korean-target run alone (GUIDE-41).
 	KoreanTargetOnly bool
 	// MemoriesOnly entries reach a run whose prompt carries a [기억] section alone (GEN-73): a
@@ -60,9 +63,10 @@ func (d DefaultGuideline) Text(target Language) (string, bool) {
 	}
 }
 
-// Defaults is the ordered registry of one kind's 기본 지침 — GUIDE-41 for posts and GUIDE-42
-// for clips, in the product's order, which is also their injection order (GUIDE-14). The
-// slice is a copy, so no caller can reorder the registry.
+// Defaults is the ordered registry of one kind's code-owned rules — the 원칙 (GUIDE-51 for posts,
+// GUIDE-52 for clips) first, then the 기본 지침 (GUIDE-41, GUIDE-42), in the product's order,
+// which is also their injection order (GUIDE-14). The slice is a copy, so no caller can reorder
+// the registry.
 func Defaults(kind Kind) []DefaultGuideline {
 	var source []DefaultGuideline
 	switch kind {
@@ -78,7 +82,7 @@ func Defaults(kind Kind) []DefaultGuideline {
 	return out
 }
 
-// DefaultFor finds one entry of a kind by its key.
+// DefaultFor finds one entry of a kind by its key, 원칙 and 기본 지침 alike.
 func DefaultFor(kind Kind, key string) (DefaultGuideline, bool) {
 	for _, d := range Defaults(kind) {
 		if d.Key == key {
@@ -96,20 +100,72 @@ func clipEntry(key, koName, koText, enName, enText string) DefaultGuideline {
 	return DefaultGuideline{Key: key, Kind: KindClip, Ko: DefaultCopy{koName, koText}, En: DefaultCopy{enName, enText}, Applicability: clipMaterial(OutputCaptions, OutputNarration, OutputPlacements)}
 }
 
+// principle marks a registry entry as an always-applied 원칙 (GUIDE-16).
+func principle(d DefaultGuideline) DefaultGuideline {
+	d.Principle = true
+	return d
+}
+
 // naturalKorean is the Korean naturalness baseline (GEN-17) as a 기본 지침: one text whose
 // lines each carry one rule. Its markers and its 700-rune bound are pinned in the generation
 // tests, which read it through the prompt.
 const naturalKorean = "아래 기준은 새로 쓰거나 수정 요청으로 손대는 TEXT 본문에만 적용하세요. 제목·요약·HEADING·LIST에는 적용하지 말고, 수정에서는 요청 밖의 기존 문장을 그대로 두세요.\n대조 수사는 글 전체에서 “A가 아니라 B”, “~것이 아니라” 꼴을 합쳐 한 번만 쓰세요.\n문단을 “필요한·중요한·핵심은 …이다”, “결국 …로 이어진다”, “~하는 이유다”로 닫지 마세요. “중요한 것은 실행력이다”보다 “오늘 할 일을 바로 적고 실행하세요”처럼 사실과 동작을 직접 쓰세요.\n구체적 시점 없는 “향후·앞으로” 전망이나 내용 없는 “과제도 남아 있다”로 문단을 닫지 마세요. “~해야 한다”로 끝나는 문단은 글 전체에서 하나만 허용합니다.\n연결어미 -고/-며/-지만/-면서/-아서 바로 뒤에는 쉼표를 놓지 말고, 대부분 문장은 쉼표 없이 쓰세요.\n한 문단 안에서 짧은 문장과 긴 복문, 단문과 복문을 섞어 길이와 구조에 변화를 주세요.\n확대·강화·개선·확보·구축 같은 포괄적 동사를 되풀이하지 말고 구체적인 동작을 쓰세요. 잠식·청사진·신호탄 같은 지어낸 비유를 겹치거나 과장 형용사를 쌓지 말고, “~적 명사”가 이어지지 않게 하세요.\n메모가 요구하지 않은 수사·경구를 덧붙이지 마세요.\n위에 말투가 있으면, 말투와 충돌할 때 말투를 따르세요."
 
 var postDefaults = []DefaultGuideline{
-	post("facts", "재료에 있는 사실만",
+	principle(post("facts", "재료에 있는 사실만",
 		"메모, 사진·영상 관찰, 해당 템플릿 입력란의 명시적인 답변, 선택된 기억, 근거가 있는 스토리라인 재료에 없는 구체적 사실은 쓰지 마세요. AI가 만든 계획이나 그 배치를 승인한 것만으로 그 안의 주장을 글쓴이가 준 사실로 보지 마세요. 사람과의 상호작용, 시설, 서비스, 대화, 가격처럼 확인되지 않은 내용을 지어내지 마세요. 확인할 수 없는 사실은 생략하거나 관찰된 범위 안에서만 쓰세요.",
 		"Facts from the material only",
-		"State no concrete fact the memo, photo or video observations, explicit answers in the relevant template field, selected memories or supported storyline material do not carry. An AI-generated plan or approval of its arrangement never makes its claims author-supplied facts. Do not invent interactions with people, facilities, services, conversations, or prices. Omit what you cannot confirm, or keep it within what was observed.", postMaterial(OutputTitle, OutputTags, OutputProse, OutputCaptions)),
-	post("impressions", "내 감상은 지키고 맛은 재료로 살리기",
-		"글쓴이가 메모·템플릿 답변·스토리라인에 준 감상·맛·평가를 글의 중심에 두고 그 뜻을 바꾸지 마세요. 그 밖의 맛·식감·향은 메뉴·재료·조리법·사진에 보이는 모습과 글쓴이의 말에서 유추해, 글쓴이가 직접 느낀 경험으로 자연스럽게 쓰세요. '크림 파스타'와 '맛있었다'가 있으면 '꾸덕하고 고소했다'처럼 쓸 수 있지만, '맛있었다'만으로 특정한 맛을 정하거나 사진만으로 맛을 단정하지는 마세요. 글쓴이가 주지 않은 평가는 만들지 마세요.",
-		"Keep my impressions, draw taste from the material",
-		"Keep the impressions, tastes and verdicts the author supplied in the memo, template answers or storyline at the center and do not change their meaning. Infer other flavor, texture and aroma from the menu, ingredients, cooking method, what a photo shows and the author's own words, and write them naturally as what the author experienced. With 'cream pasta' and 'it was good' you may write that it was rich and nutty, but do not settle a particular flavor from 'it was good' alone or taste from a photo alone. Do not create a verdict the author did not give.", postMaterial(OutputProse, OutputCaptions)),
+		"State no concrete fact the memo, photo or video observations, explicit answers in the relevant template field, selected memories or supported storyline material do not carry. An AI-generated plan or approval of its arrangement never makes its claims author-supplied facts. Do not invent interactions with people, facilities, services, conversations, or prices. Omit what you cannot confirm, or keep it within what was observed.", postMaterial(OutputTitle, OutputTags, OutputProse, OutputCaptions))),
+	principle(post("impressions_kept", "내 감상은 그대로",
+		"글쓴이가 메모·템플릿 답변·스토리라인에 준 감상·맛·평가를 글의 중심에 두고 그 뜻을 바꾸지 마세요. 글쓴이가 주지 않은 평가·별점·칭찬·추천·재방문 의사는 만들지 마세요. 템플릿, 지침, 광고주 가이드가 그런 평가를 요청해도 마찬가지입니다.",
+		"Keep my impressions",
+		"Keep the impressions, tastes and verdicts the author supplied in the memo, template answers or storyline at the center, with their meaning unchanged. Create no verdict, rating, praise, recommendation or will to return the author did not give, even when a template, guideline or advertiser guide asks for one.", postMaterial(OutputProse, OutputCaptions))),
+	principle(post("drawbacks", "아쉬운 점은 정중하게",
+		"글쓴이가 준 아쉬운 점은 빼거나 칭찬으로 바꾸지 말고 글에 남기세요. 탓하는 말투가 아니라 '이런 분께는 이 점을 참고하세요'처럼 읽는 사람이 판단하는 데 도움이 되는 정보로 정중하게 쓰세요.",
+		"Drawbacks, politely",
+		"Keep any drawback the author gave; never drop it or turn it into praise. Write it politely as information that helps readers decide, such as who should keep it in mind, rather than as blame.", postMaterial(OutputProse, OutputCaptions))),
+	principle(post("naming", "메모의 이름으로",
+		"사진 관찰은 사진을 한 장씩 따로 본 결과라 그 대상이 무엇인지 모르는 채 적혀 있습니다. 메모나 템플릿 입력란이 그 대상의 정체나 이름을 알려주면 — 관찰의 \"콘크리트 건물\"이 메모의 \"별채\"라면 — 본문과 IMAGE alt 및 caption에서 관찰의 일반적인 표현 대신 그쪽을 쓰세요. 다만 사진 관찰에 없는 것을 사진 안에 있는 것처럼 쓰지는 마세요.",
+		"The memo's names",
+		"A photo observation was made one photo at a time, without knowing what its subject is. When the memo or a template field gives that subject an identity or a name — the observation's \"concrete building\" is the memo's \"annex\" — use that in prose and in IMAGE alt and caption instead of the observation's generic wording. Do not write anything the photo observations do not show as being in the frame.", postFinal(OutputProse, OutputCaptions))),
+	principle(post("photo_order", "사진 순서는 시간 순서가 아니다",
+		"사진 순서, 파일명, 촬영 순서만으로 시간의 흐름·장소나 좌석 이동·행동 순서를 사실처럼 쓰지는 마세요.",
+		"Photo order is not time",
+		"Never state time passage, venue or seat changes, or action sequence as fact from the photo order, filenames or capture order alone.", postMaterial(OutputProse, OutputPlacements))),
+	principle(post("no_listing", "관찰을 나열하지 않기",
+		"사진 관찰은 글의 근거이자 사진을 놓을 자리를 알려주는 자료이지, 하나씩 묘사해야 할 목록이 아닙니다. 어떤 문단도 사진을 가리키며 설명할 필요가 없습니다. 조명, 벽, 천장, 집기, 공간 배치처럼 글에 아무것도 더하지 않는 시각적 묘사는 쓰지 마세요.",
+		"No listing of observations",
+		"The photo observations are grounding and placement material, not a list to describe one by one. No paragraph has to point at a photo. Do not write visual detail that carries nothing for the post: lighting, walls, ceilings, fixtures, the arrangement of a room.", postFinal(OutputProse))),
+	principle(post("titles", "제목 규칙",
+		"제목은 이 글을 찾는 사람이 검색할 말로 시작하세요. 재료로 확인되는 지역이나 역 이름, 상호나 제품명, 그 업종이나 대표 메뉴를 앞에 두고, 뒤에 이 글의 핵심 경험이나 인상을 함축한 짧은 구절을 붙여 한 줄로 쓰세요. 예를 들어 '답십리역 진아분식, 옛날 떡볶이가 생각날 때 들르는 곳'처럼 쓰되, 이 예시의 이름을 다른 글에 그대로 쓰지는 마세요. 메뉴·가격·사건처럼 재료에 없는 구체적 사실은 제목에서도 만들지 말되, 글쓴이가 준 경험과 감상을 함축하거나 바꿔 말한 표현은 새 사실이 아니라 표현입니다. 제목을 정보 하나만 바꿔 넣은 긴 상투 문구로 쓰지 말고, 한 제목 안에서 같은 키워드를 두 번 이상 쓰지 마세요. 템플릿에 제목 형식이 있으면 그 형식을 따르고, 이 규칙은 형식에서 직접 쓰는 자리(<write>, write·answer_write 역할)에만 적용하세요. 이 기준은 제품의 추천이며 네이버가 공개한 수치적 감점 기준이나 노출 보장이 아닙니다.",
+		"Title rules",
+		"Open the title with the words someone would search to find this post: the area or station, the business or product name and its category or key menu, as the material supports them. Close it with a short implicative phrase summing up the post's core experience or impression, all in one line. For example, 'Jinabunsik near Dapsimni Station, where old-style tteokbokki calls you back' — never copy these example names into an unrelated post. Never invent a concrete fact the material lacks — a menu item, a price, an event — in the title either, but compressing or rewording the author's supplied experience and impressions is wording, not a new fact. Do not write the title as long boilerplate in which only a single piece of information changes, and do not use any keyword twice or more within one title. When the template has a title form, follow it and apply this only to what you write in its own places (<write>, the write and answer_write roles). These are product recommendations, not a published Naver numeric penalty threshold or a guarantee of exposure.", postFinal(OutputTitle))),
+	principle(post("tags", "태그 규칙",
+		`tags는 이 글을 찾는 사람이 검색할 법한 이름과 조합으로, 구체적인 것부터 고르세요.
+글에서 다루고 재료로 확인되는 상호·장소·브랜드·제품명을 먼저 쓰고, 지역명+메뉴·업종·활동 또는 대상명+핵심 주제 조합을 이어서 쓰세요. 남은 개수는 '맛집', '카페', '디저트'처럼 글의 업종이나 주제를 나타내는 범용 태그로 채우세요. 같은 태그나 띄어쓰기만 바꾼 태그는 반복하지 마세요.
+예를 들어 글이 '답십리역 부근 진아분식에서 떡볶이를 먹었다'는 내용이면 '진아분식', '답십리떡볶이', '답십리분식'을 앞에 두고 '떡볶이', '분식'으로 뒤를 채울 수 있습니다. 이 예시의 이름을 다른 글에 그대로 쓰지는 마세요.
+'내돈내산'·'협찬'·'체험단'처럼 구매나 협찬을 나타내는 태그는 재료에 그렇게 적혀 있을 때만 쓰세요. 확인되지 않은 지역·상호·메뉴·평가도 태그에 넣지 마세요. 역 이름으로 확인되는 같은 지역의 이름은 써도 되지만, 지역을 모르면 상호나 주제만으로 고르세요. 태그에 맞추려고 본문에 어색한 단어를 넣거나 내용을 바꾸지 마세요.`,
+		"Tag rule",
+		`Choose tags someone looking for this post might search for, most specific first.
+Lead with business, place, brand and product names the post covers and its material supports, then area + menu, business category or activity, or entity + core topic. Fill the rest of the count with broad labels for the post's category or topic, such as Foodie, Cafe or Dessert. Do not repeat a tag or a variant that differs only in spacing.
+For example, if the post describes eating tteokbokki at Jinabunsik near Dapsimni Station, lead with Jinabunsik, DapsimniTteokbokki and DapsimniBunsik and fill the tail with Tteokbokki or Bunsik. Never copy these example names into an unrelated post.
+Use a purchase or sponsorship label such as PaidForItMyself, Sponsored or Reviewer only when the material says so. Never invent an area, business, menu item or endorsement for a tag either. You may use the same area's name from a stated station name; when the area is unknown, use the supported entity or topic alone. Do not insert awkward words into the prose or change its content to justify a tag.`, postFinal(OutputTags))),
+	// The run of identical endings is a writing rule, not voice text (VOICE-47): its count is
+	// EndingMaxConsecutive, which the text states in words.
+	{
+		Key: "ending_run", Kind: KindPost, Principle: true, KoreanTargetOnly: true, Applicability: postFinal(OutputProse),
+		Ko: DefaultCopy{"같은 종결어미 세 번 잇지 않기", "같은 종결어미로 끝나는 문장을 세 번 연이어 쓰지 마세요. 두 번까지는 괜찮습니다."},
+		En: DefaultCopy{"No three identical endings in a row", "Do not end three consecutive Korean sentences with the same ending; two in a row is fine."},
+	},
+	{
+		Key: "natural_korean", Kind: KindPost, Principle: true, KoreanTargetOnly: true, Applicability: postFinal(OutputProse),
+		Ko: DefaultCopy{"자연스러운 한국어 문체", naturalKorean},
+		En: DefaultCopy{"Natural Korean style", "Caps stock contrasts, formulaic closers, uniform sentences, hype and piled metaphors in Korean prose; where a voice is given above, the voice outranks it."},
+	},
+	post("impressions", "맛은 재료로 살리기",
+		"글쓴이가 주지 않은 맛·식감·향은 메뉴·재료·조리법·사진에 보이는 모습과 글쓴이의 말에서 유추해, 글쓴이가 직접 느낀 경험으로 자연스럽게 쓰세요. '크림 파스타'와 '맛있었다'가 있으면 '꾸덕하고 고소했다'처럼 쓸 수 있지만, '맛있었다'만으로 특정한 맛을 정하거나 사진만으로 맛을 단정하지는 마세요.",
+		"Draw taste from the material",
+		"Infer flavor, texture and aroma the author did not give from the menu, ingredients, cooking method, what a photo shows and the author's own words, and write them naturally as what the author experienced. With 'cream pasta' and 'it was good' you may write that it was rich and nutty, but do not settle a particular flavor from 'it was good' alone or taste from a photo alone.", postMaterial(OutputProse, OutputCaptions)),
 	// The optional preference-memory recommendation adds an impression whose basis is the
 	// memory, never one the owner supplied for this visit (GEN-73).
 	{
@@ -117,14 +173,10 @@ var postDefaults = []DefaultGuideline{
 		Ko: DefaultCopy{"기억을 통한 감상 추가", "기억에서 '취향:'으로 표시된 취향 기억은 이 글의 재료로 확인되는 사실에 감상을 더하는 근거가 될 수 있어요. 메모에 '매웠다'가 있고 매운 음식을 좋아한다는 취향이 있으면 '매워서 좋았다'로 쓸 수 있고, 이 '좋았다'는 그 기억을 근거로 AI가 더한 의미입니다. 취향만으로 객관적 사실을 만들거나 글쓴이가 이미 준 감상을 바꾸지 말고, 다른 종류의 기억을 취향으로 취급하지 마세요."},
 		En: DefaultCopy{"Impressions from memories", "A frozen preference memory marked '취향:' may support an impression added to a fact this post's material already supports. If the memo says it was spicy and the author likes spicy food, you may write that it was spicy and good; that 'good' is AI-added meaning based on that memory. Do not create an objective fact from a preference, replace an impression the author already gave, or treat another memory kind as a preference."},
 	},
-	post("naming", "메모의 이름으로",
-		"사진 관찰은 사진을 한 장씩 따로 본 결과라 그 대상이 무엇인지 모르는 채 적혀 있습니다. 메모나 템플릿 입력란이 그 대상의 정체나 이름을 알려주면 — 관찰의 \"콘크리트 건물\"이 메모의 \"별채\"라면 — 본문과 IMAGE alt 및 caption에서 관찰의 일반적인 표현 대신 그쪽을 쓰세요. 다만 사진 관찰에 없는 것을 사진 안에 있는 것처럼 쓰지는 마세요.",
-		"The memo's names",
-		"A photo observation was made one photo at a time, without knowing what its subject is. When the memo or a template field gives that subject an identity or a name — the observation's \"concrete building\" is the memo's \"annex\" — use that in prose and in IMAGE alt and caption instead of the observation's generic wording. Do not write anything the photo observations do not show as being in the frame.", postFinal(OutputProse, OutputCaptions)),
 	post("order", "알려준 사건 순서대로",
-		"글쓴이가 사건의 순서를 명시적으로 알려줬다면 그 순서를 따르고, 템플릿이 있으면 각 자리 안에서 지키세요. 알려준 사건 순서가 없으면 사진 순서를 따라 구성하세요. 사진 순서는 글쓴이가 고르거나 정리한 순서라 대체로 방문한 순서와 같지만, 뒤늦게 생각나 찍은 사진이 섞여 있을 수 있습니다. 앞에서 이미 나온 대상을 찍은 사진이 뒤에 있으면 새 문단을 열지 말고 그 대상이 나온 자리에 함께 두세요. 사진 순서, 파일명, 촬영 순서만으로 시간의 흐름·장소나 좌석 이동·행동 순서를 사실처럼 쓰지는 마세요.",
+		"글쓴이가 사건의 순서를 명시적으로 알려줬다면 그 순서를 따르고, 템플릿이 있으면 각 자리 안에서 지키세요. 알려준 사건 순서가 없으면 사진 순서를 따라 구성하세요. 사진 순서는 글쓴이가 고르거나 정리한 순서라 대체로 방문한 순서와 같지만, 뒤늦게 생각나 찍은 사진이 섞여 있을 수 있습니다. 앞에서 이미 나온 대상을 찍은 사진이 뒤에 있으면 새 문단을 열지 말고 그 대상이 나온 자리에 함께 두세요.",
 		"In the event order I supplied",
-		"Follow event chronology explicitly supplied by the author, within each template place when present. Without it, arrange along the photo order. The photo order is the order the author chose or arranged the photos in, which usually matches the visit, but a photo remembered and taken late can sit out of place: when a later photo shows a subject that already appears earlier, put it with that subject instead of opening a new paragraph. Never state time passage, venue or seat changes, or action sequence as fact from the photo order, filenames or capture order alone.", postMaterial(OutputProse, OutputPlacements)),
+		"Follow event chronology explicitly supplied by the author, within each template place when present. Without it, arrange along the photo order. The photo order is the order the author chose or arranged the photos in, which usually matches the visit, but a photo remembered and taken late can sit out of place: when a later photo shows a subject that already appears earlier, put it with that subject instead of opening a new paragraph.", postMaterial(OutputProse, OutputPlacements)),
 	post("opening", "첫머리에 이유와 기대",
 		"메모에 간 이유나 기대가 있으면 글 첫머리에서 꺼내세요.",
 		"Open with why",
@@ -138,55 +190,30 @@ var postDefaults = []DefaultGuideline{
 		"Photos stand alone",
 		"Side-by-side photos look small on a phone screen, so place most photos one at a time as IMAGE blocks. Group photos you place together into one GALLERY block, wherever they sit in the photo order, in only two cases: photos taken in one composition where only what sits with the subject changes (the same meat shot once with green onion and once with kimchi), and one subject shot from several angles. Settle the caption before you group, and group only when it names one subject, such as \"meat with an array of side dishes\" or \"a well-laid table\". When the caption has to join different photos' subjects with \"and\", as in \"the entrance and the first dishes served\", do not group: give each photo its own IMAGE block and caption. Photos that a template's suggested group place ('n장 묶음') or one storyline paragraph puts together still stand alone when they fail this test. When you do group, use COLLAGE for photos to compare side by side and SLIDE for photos to follow in order.", postFinal(OutputGroups, OutputPlacements)),
 	post("closing", "끝에서 한 번 정리",
-		"마지막에 그날을 짧게 정리하세요. 총평이나 재방문 의사는 글쓴이가 적은 것이 있을 때만 쓰세요.",
+		"마지막에 그날을 짧게 정리하세요.",
 		"Close by drawing it together",
-		"Close by drawing the day together briefly; write a verdict or a will to return only if the author gave one.", postFinal(OutputProse)),
-	post("no_listing", "관찰을 나열하지 않기",
-		"사진 관찰은 글의 근거이자 사진을 놓을 자리를 알려주는 자료이지, 하나씩 묘사해야 할 목록이 아닙니다. 어떤 문단도 사진을 가리키며 설명할 필요가 없습니다. 조명, 벽, 천장, 집기, 공간 배치처럼 글에 아무것도 더하지 않는 시각적 묘사는 쓰지 마세요.",
-		"No listing of observations",
-		"The photo observations are grounding and placement material, not a list to describe one by one. No paragraph has to point at a photo. Do not write visual detail that carries nothing for the post: lighting, walls, ceilings, fixtures, the arrangement of a room.", postFinal(OutputProse)),
-	post("titles", "제목 규칙",
-		"제목은 이 글을 찾는 사람이 검색할 말로 시작하세요. 재료로 확인되는 지역이나 역 이름, 상호나 제품명, 그 업종이나 대표 메뉴를 앞에 두고, 뒤에 이 글의 핵심 경험이나 인상을 함축한 짧은 구절을 붙여 한 줄로 쓰세요. 예를 들어 '답십리역 진아분식, 옛날 떡볶이가 생각날 때 들르는 곳'처럼 쓰되, 이 예시의 이름을 다른 글에 그대로 쓰지는 마세요. 메뉴·가격·사건처럼 재료에 없는 구체적 사실은 제목에서도 만들지 말되, 글쓴이가 준 경험과 감상을 함축하거나 바꿔 말한 표현은 새 사실이 아니라 표현입니다. 제목을 정보 하나만 바꿔 넣은 긴 상투 문구로 쓰지 말고, 한 제목 안에서 같은 키워드를 두 번 이상 쓰지 마세요. 템플릿에 제목 형식이 있으면 그 형식을 따르고, 이 규칙은 형식에서 직접 쓰는 자리(<write>, write·answer_write 역할)에만 적용하세요. 이 기준은 제품의 추천이며 네이버가 공개한 수치적 감점 기준이나 노출 보장이 아닙니다.",
-		"Title rules",
-		"Open the title with the words someone would search to find this post: the area or station, the business or product name and its category or key menu, as the material supports them. Close it with a short implicative phrase summing up the post's core experience or impression, all in one line. For example, 'Jinabunsik near Dapsimni Station, where old-style tteokbokki calls you back' — never copy these example names into an unrelated post. Never invent a concrete fact the material lacks — a menu item, a price, an event — in the title either, but compressing or rewording the author's supplied experience and impressions is wording, not a new fact. Do not write the title as long boilerplate in which only a single piece of information changes, and do not use any keyword twice or more within one title. When the template has a title form, follow it and apply this only to what you write in its own places (<write>, the write and answer_write roles). These are product recommendations, not a published Naver numeric penalty threshold or a guarantee of exposure.", postFinal(OutputTitle)),
-	post("tags", "태그 규칙",
-		`tags는 이 글을 찾는 사람이 검색할 법한 이름과 조합으로, 구체적인 것부터 고르세요.
-글에서 다루고 재료로 확인되는 상호·장소·브랜드·제품명을 먼저 쓰고, 지역명+메뉴·업종·활동 또는 대상명+핵심 주제 조합을 이어서 쓰세요. 남은 개수는 '맛집', '카페', '디저트'처럼 글의 업종이나 주제를 나타내는 범용 태그로 채우세요. 같은 태그나 띄어쓰기만 바꾼 태그는 반복하지 마세요.
-예를 들어 글이 '답십리역 부근 진아분식에서 떡볶이를 먹었다'는 내용이면 '진아분식', '답십리떡볶이', '답십리분식'을 앞에 두고 '떡볶이', '분식'으로 뒤를 채울 수 있습니다. 이 예시의 이름을 다른 글에 그대로 쓰지는 마세요.
-'내돈내산'·'협찬'·'체험단'처럼 구매나 협찬을 나타내는 태그는 재료에 그렇게 적혀 있을 때만 쓰세요. 확인되지 않은 지역·상호·메뉴·평가도 태그에 넣지 마세요. 역 이름으로 확인되는 같은 지역의 이름은 써도 되지만, 지역을 모르면 상호나 주제만으로 고르세요. 태그에 맞추려고 본문에 어색한 단어를 넣거나 내용을 바꾸지 마세요.`,
-		"Tag rule",
-		`Choose tags someone looking for this post might search for, most specific first.
-Lead with business, place, brand and product names the post covers and its material supports, then area + menu, business category or activity, or entity + core topic. Fill the rest of the count with broad labels for the post's category or topic, such as Foodie, Cafe or Dessert. Do not repeat a tag or a variant that differs only in spacing.
-For example, if the post describes eating tteokbokki at Jinabunsik near Dapsimni Station, lead with Jinabunsik, DapsimniTteokbokki and DapsimniBunsik and fill the tail with Tteokbokki or Bunsik. Never copy these example names into an unrelated post.
-Use a purchase or sponsorship label such as PaidForItMyself, Sponsored or Reviewer only when the material says so. Never invent an area, business, menu item or endorsement for a tag either. You may use the same area's name from a stated station name; when the area is unknown, use the supported entity or topic alone. Do not insert awkward words into the prose or change its content to justify a tag.`, postFinal(OutputTags)),
-	// The run of identical endings is a writing rule, not voice text (VOICE-47): its count is
-	// EndingMaxConsecutive, which the text states in words.
-	{
-		Key: "ending_run", Kind: KindPost, KoreanTargetOnly: true, Applicability: postFinal(OutputProse),
-		Ko: DefaultCopy{"같은 종결어미 세 번 잇지 않기", "같은 종결어미로 끝나는 문장을 세 번 연이어 쓰지 마세요. 두 번까지는 괜찮습니다."},
-		En: DefaultCopy{"No three identical endings in a row", "Do not end three consecutive Korean sentences with the same ending; two in a row is fine."},
-	},
-	{
-		Key: "natural_korean", Kind: KindPost, KoreanTargetOnly: true, Applicability: postFinal(OutputProse),
-		Ko: DefaultCopy{"자연스러운 한국어 문체", naturalKorean},
-		En: DefaultCopy{"Natural Korean style", "Caps stock contrasts, formulaic closers, uniform sentences, hype and piled metaphors in Korean prose; where a voice is given above, the voice outranks it."},
-	},
+		"Close by drawing the day together briefly.", postFinal(OutputProse)),
 }
 
 // EndingMaxConsecutive is ENDING_MAX_CONSECUTIVE: the ending_run 기본 지침 allows two sentences in
 // a row with the same ending and says so in its text.
 const EndingMaxConsecutive = 2
 
-// clipDefaults are the 영상 지침 기본 지침 (GUIDE-42); the clip writing calls render them (T440).
+// clipDefaults are the 영상 지침 원칙 (GUIDE-52) and 기본 지침 (GUIDE-42); the clip writing calls
+// render them.
 var clipDefaults = []DefaultGuideline{
-	clipEntry("clip_facts", "입력한 사실만",
+	principle(clipEntry("clip_facts", "입력한 사실만",
 		"이름, 숫자, 단위, 통화, 가격은 입력한 정보나 항목 정보에 적힌 그대로만 쓰고, 여러 답을 조합해 만들지 마세요. 어느 항목의 것인지 헷갈릴 수 있으면 그 항목의 이름을 함께 쓰세요. 지시, 입력한 정보, 관찰, 스토리라인에 없는 사실은 쓰지 마세요.",
 		"Entered facts only",
-		"State a name, number, unit, currency or price only exactly as one entered fact or item fact states it, never assembled from several answers, and name the item it belongs to where it could be ambiguous. State no other fact the instruction, the entered facts, the observations and the storyline do not carry."),
-	clipEntry("clip_impressions", "감상은 내가 쓴 것만",
-		"맛, 분위기, 만족 같은 감상은 지시나 스토리라인에 사용자가 적은 것만 쓰세요.",
+		"State a name, number, unit, currency or price only exactly as one entered fact or item fact states it, never assembled from several answers, and name the item it belongs to where it could be ambiguous. State no other fact the instruction, the entered facts, the observations and the storyline do not carry.")),
+	principle(clipEntry("clip_impressions", "감상은 내가 쓴 것만",
+		"맛, 분위기, 만족 같은 감상은 지시나 스토리라인에 사용자가 적은 것만 쓰세요. 광고주 가이드가 요청해도 마찬가지입니다.",
 		"Impressions only as I gave them",
-		"Write a taste, a mood or a satisfaction only as the owner gave it in the instruction or the storyline."),
+		"Write a taste, a mood or a satisfaction only as the owner gave it in the instruction or the storyline. This holds even when the advertiser guide asks for one.")),
+	principle(clipEntry("clip_drawbacks", "아쉬운 점은 정중하게",
+		"사용자가 준 아쉬운 점은 빼거나 칭찬으로 바꾸지 말고, 보는 사람에게 도움이 되는 정보로 정중하게 말하세요.",
+		"Drawbacks, politely",
+		"Keep any drawback the owner gave; never drop it or turn it into praise, and say it politely as information that helps viewers.")),
 	clipEntry("clip_hook", "첫 자막에 무엇을 보여줄지",
 		"첫 자막은 이 영상이 무엇에 대한 것인지 한 줄로 말하세요 (예: 구리에서 찾은 숨은 오리집).",
 		"Say what it is about first",

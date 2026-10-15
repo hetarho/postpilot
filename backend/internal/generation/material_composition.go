@@ -36,6 +36,34 @@ func writeTypedTemplateForm(out *strings.Builder, brief *TemplateBrief, titleIns
 	}
 }
 
+// guidelineGroups are a section's three groups in injection order (GUIDE-14): the 원칙, the
+// enabled 기본 지침, then the owner's own lines.
+type guidelineGroups struct {
+	Principles, Defaults, Owner []string
+}
+
+// stockGuidelineGroups selects like selectStockGuidelines and keeps the 원칙 apart from the
+// 기본 지침 so each renders under its own label. Legacy plain defaults have no tier and stay
+// 기본 지침, exactly as they rendered when they were frozen.
+func stockGuidelineGroups(stock []StockGuideline, legacy, owner []string, stage string) guidelineGroups {
+	groups := guidelineGroups{Owner: owner}
+	if stock == nil {
+		groups.Defaults = legacy
+		return groups
+	}
+	for _, rule := range stock {
+		if len(selectStockGuidelines([]StockGuideline{rule}, nil, stage)) == 0 {
+			continue
+		}
+		if rule.Principle {
+			groups.Principles = append(groups.Principles, rule.Text)
+		} else {
+			groups.Defaults = append(groups.Defaults, rule.Text)
+		}
+	}
+	return groups
+}
+
 // Typed stock rules are selected only by declared responsibility. Legacy plain
 // defaults retain unknown applicability and are never classified by their text.
 func selectStockGuidelines(stock []StockGuideline, legacy []string, stage string) []string {

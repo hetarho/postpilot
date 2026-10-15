@@ -191,7 +191,9 @@ type DefaultGuideline struct {
 	// Reaches a Korean-target run alone (GUIDE-41).
 	KoreanTargetOnly bool `protobuf:"varint,5,opt,name=korean_target_only,json=koreanTargetOnly,proto3" json:"korean_target_only,omitempty"`
 	// Reaches a run whose prompt carries memories alone (GEN-73).
-	MemoriesOnly  bool `protobuf:"varint,6,opt,name=memories_only,json=memoriesOnly,proto3" json:"memories_only,omitempty"`
+	MemoriesOnly bool `protobuf:"varint,6,opt,name=memories_only,json=memoriesOnly,proto3" json:"memories_only,omitempty"`
+	// An always-applied 원칙 (GUIDE-16): always enabled, never switched (GUIDE-43).
+	Principle     bool `protobuf:"varint,7,opt,name=principle,proto3" json:"principle,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -264,6 +266,13 @@ func (x *DefaultGuideline) GetKoreanTargetOnly() bool {
 func (x *DefaultGuideline) GetMemoriesOnly() bool {
 	if x != nil {
 		return x.MemoriesOnly
+	}
+	return false
+}
+
+func (x *DefaultGuideline) GetPrinciple() bool {
+	if x != nil {
+		return x.Principle
 	}
 	return false
 }
@@ -1346,14 +1355,15 @@ const file_postpilot_v1_guideline_proto_rawDesc = "" +
 	"\x1cpostpilot/v1/guideline.proto\x12\fpostpilot.v1\x1a\x17postpilot/v1/post.proto\">\n" +
 	"\x14DefaultGuidelineCopy\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x12\n" +
-	"\x04text\x18\x02 \x01(\tR\x04text\"\xf9\x01\n" +
+	"\x04text\x18\x02 \x01(\tR\x04text\"\x97\x02\n" +
 	"\x10DefaultGuideline\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x18\n" +
 	"\aenabled\x18\x02 \x01(\bR\aenabled\x122\n" +
 	"\x02ko\x18\x03 \x01(\v2\".postpilot.v1.DefaultGuidelineCopyR\x02ko\x122\n" +
 	"\x02en\x18\x04 \x01(\v2\".postpilot.v1.DefaultGuidelineCopyR\x02en\x12,\n" +
 	"\x12korean_target_only\x18\x05 \x01(\bR\x10koreanTargetOnly\x12#\n" +
-	"\rmemories_only\x18\x06 \x01(\bR\fmemoriesOnly\":\n" +
+	"\rmemories_only\x18\x06 \x01(\bR\fmemoriesOnly\x12\x1c\n" +
+	"\tprinciple\x18\a \x01(\bR\tprinciple\":\n" +
 	"\x14GuidelineTemplateRef\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\"\xdb\x02\n" +

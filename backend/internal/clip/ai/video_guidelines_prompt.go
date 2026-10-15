@@ -60,7 +60,12 @@ func videoGuidelinesFor(g clip.VideoGuidelines, mode string) clip.VideoGuideline
 		return selected
 	}
 	for _, rule := range g.Stock {
-		if videoStockApplies(rule, mode) {
+		if !videoStockApplies(rule, mode) {
+			continue
+		}
+		if rule.Principle {
+			selected.Principles = append(selected.Principles, rule.Text)
+		} else {
 			selected.Defaults = append(selected.Defaults, rule.Text)
 		}
 	}
@@ -71,14 +76,17 @@ func videoGuidelinesFor(g clip.VideoGuidelines, mode string) clip.VideoGuideline
 // [작문 지침] (GUIDE-15, GUIDE-17). The texts themselves are in the project's language.
 const (
 	videoGuidelinesHeading      = "[영상 지침]"
+	videoPrinciplesLabel        = "원칙:"
 	videoDefaultGuidelinesLabel = "기본 지침:"
 	videoOwnerGuidelinesLabel   = "사용자 지침:"
 	videoGuidelinePrecedence    = "영상 지침은 이 영상의 흐름과 자막을 어떻게 만들지 정합니다. 사용자 지침이 기본 지침과 충돌하면 사용자 지침을 따르고, 같은 묶음 안에서 충돌하면 먼저 적힌 지침을 따르세요."
+	// videoPrinciplePrecedence precedes the closing sentence when the block carries 원칙 (GUIDE-54).
+	videoPrinciplePrecedence = "원칙은 끌 수 없으며 기본 지침, 사용자 지침, 템플릿 지시와 광고주 가이드보다 우선합니다."
 )
 
 // videoGuidelineBlock is the clip's frozen 영상 지침 as the flow, narration and revision system
-// prompts end: the 기본 지침 group, then the owner's, each line `- text`, then the precedence
-// sentence. Both groups empty adds no bytes at all, so a clip with none sends the prefix it sent
+// prompts end: the 원칙, then the 기본 지침 group, then the owner's, each line `- text`, then the
+// 원칙 sentence when there is a 원칙 and the precedence sentence. Both groups empty adds no bytes at all, so a clip with none sends the prefix it sent
 // before 영상 지침 existed. It comes LAST, after every fixed rule and any revision block, so the
 // fixed prefix the provider caches stays the same for every account.
 func videoGuidelineBlock(g clip.VideoGuidelines) string {
@@ -90,7 +98,7 @@ func videoGuidelineBlock(g clip.VideoGuidelines) string {
 	for _, group := range []struct {
 		label string
 		texts []string
-	}{{videoDefaultGuidelinesLabel, g.Defaults}, {videoOwnerGuidelinesLabel, g.Owner}} {
+	}{{videoPrinciplesLabel, g.Principles}, {videoDefaultGuidelinesLabel, g.Defaults}, {videoOwnerGuidelinesLabel, g.Owner}} {
 		if len(group.texts) == 0 {
 			continue
 		}
@@ -98,6 +106,9 @@ func videoGuidelineBlock(g clip.VideoGuidelines) string {
 		for _, text := range group.texts {
 			out.WriteString("\n- " + strings.ReplaceAll(text, "\n", "\n  "))
 		}
+	}
+	if len(g.Principles) > 0 {
+		out.WriteString("\n" + videoPrinciplePrecedence)
 	}
 	out.WriteString("\n" + videoGuidelinePrecedence + "\n")
 	return out.String()

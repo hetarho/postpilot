@@ -166,7 +166,7 @@ func generationStockRules(rules []guideline.StockRule) []generation.StockGuideli
 	}
 	out := make([]generation.StockGuideline, len(rules))
 	for index, rule := range rules {
-		out[index] = generation.StockGuideline{Key: rule.Key, Text: rule.Text, SourceOrder: rule.SourceOrder}
+		out[index] = generation.StockGuideline{Key: rule.Key, Text: rule.Text, SourceOrder: rule.SourceOrder, Principle: rule.Principle}
 		if rule.Applicability != nil {
 			out[index].Applicability = make([]generation.StockRuleApplicability, len(rule.Applicability))
 		}
@@ -650,7 +650,7 @@ func clipStockRules(rules []guideline.StockRule) []clip.VideoStockRule {
 	}
 	result := make([]clip.VideoStockRule, len(rules))
 	for i, r := range rules {
-		result[i] = clip.VideoStockRule{Key: r.Key, Text: r.Text, SourceOrder: r.SourceOrder}
+		result[i] = clip.VideoStockRule{Key: r.Key, Text: r.Text, SourceOrder: r.SourceOrder, Principle: r.Principle}
 		if r.Applicability != nil {
 			result[i].Applicability = make([]clip.VideoRuleApplicability, len(r.Applicability))
 			for j, a := range r.Applicability {

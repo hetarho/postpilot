@@ -255,8 +255,21 @@ const guidelinePrecedenceNoVoice = "지침은 이 글을 어떻게 쓸지 정합
 // request writes or touches, so a revision never re-checks or rewrites the sentences outside it.
 const reviseGuidelineScope = "이 지침은 수정 요청으로 새로 쓰거나 손대는 문장에만 적용하고, 요청 밖의 기존 문장은 사실 확인 없이 그대로 두세요."
 
+// principlePrecedence opens the closing sentences of a section that carries 원칙 (GUIDE-54): a
+// 원칙 cannot be switched off and outranks every other rule, the template and the advertiser
+// guide, except that the voice outranks the naturalness 원칙 and an authored title form outranks
+// the title 원칙. The no-voice variant drops the voice clause; the storyline variant, whose
+// prompt carries neither a voice nor the title 원칙, keeps the ranking alone. Korean for every
+// target, like the heading.
+const (
+	principlePrecedence          = "원칙은 끌 수 없으며 기본 지침, 사용자 지침, 템플릿 지시와 광고주 가이드보다 우선합니다. 다만 말투가 있으면 '자연스러운 한국어 문체'와 충돌할 때 말투를 따르고, 템플릿에 제목 형식이 있으면 '제목 규칙'보다 그 형식을 따릅니다."
+	principlePrecedenceNoVoice   = "원칙은 끌 수 없으며 기본 지침, 사용자 지침, 템플릿 지시와 광고주 가이드보다 우선합니다. 다만 템플릿에 제목 형식이 있으면 '제목 규칙'보다 그 형식을 따릅니다."
+	principlePrecedenceStoryline = "원칙은 끌 수 없으며 기본 지침, 사용자 지침, 템플릿 지시와 광고주 가이드보다 우선합니다."
+)
+
 // The group labels inside [작문 지침], Korean for every target like the heading.
 const (
+	principlesLabel        = "원칙:"
 	defaultGuidelinesLabel = "기본 지침:"
 	ownerGuidelinesLabel   = "사용자 지침:"
 )
@@ -292,33 +305,34 @@ func qualityRulesSection(rules []string) string {
 
 // writeGuidelinesSection appends the frozen 지침 as ONE section at ONE position: after the
 // template section when the post has one, otherwise directly after the complete voice profile,
-// and always before the per-post material (GUIDE-15). The enabled 기본 지침 come first, then the
-// owner's own, each group under its label and left out when it has no line; with neither there
-// is no section, so the fixed no-guideline prompt stays byte for byte.
+// and always before the per-post material (GUIDE-15). The 원칙 come first, then the enabled 기본
+// 지침, then the owner's own, each group under its label and left out when it has no line; with
+// none there is no section, so the fixed no-guideline prompt stays byte for byte.
 //
 // A multi-line text keeps its lines, the continuation ones indented by two spaces, so one text
 // still reads as one bullet. The heading, labels and precedence sentence stay Korean for every
 // target language, exactly as writeTemplateSection does: the section frames the guideline texts,
 // and its framing is not part of the output-language contract.
-func writeGuidelinesSection(out *strings.Builder, defaults, owner []string, noVoice bool) bool {
-	precedence := guidelinePrecedence
+func writeGuidelinesSection(out *strings.Builder, groups guidelineGroups, noVoice bool) bool {
+	precedence, principle := guidelinePrecedence, principlePrecedence
 	if noVoice {
-		precedence = guidelinePrecedenceNoVoice
+		precedence, principle = guidelinePrecedenceNoVoice, principlePrecedenceNoVoice
 	}
-	return writeGuidelinesSectionClosedBy(out, defaults, owner, precedence)
+	return writeGuidelinesSectionClosedBy(out, groups, precedence, principle)
 }
 
-// writeGuidelinesSectionClosedBy is the section with the pass's own closing sentence: the write
-// and the revise close with guidelinePrecedence, the storyline with storylineGuidelinePrecedence.
-func writeGuidelinesSectionClosedBy(out *strings.Builder, defaults, owner []string, precedence string) bool {
-	if len(defaults) == 0 && len(owner) == 0 {
+// writeGuidelinesSectionClosedBy is the section with the pass's own closing sentences: the write
+// and the revise close with guidelinePrecedence, the storyline with storylineGuidelinePrecedence,
+// each preceded by its 원칙 sentence when the section carries a 원칙 (GUIDE-54).
+func writeGuidelinesSectionClosedBy(out *strings.Builder, groups guidelineGroups, precedence, principle string) bool {
+	if len(groups.Principles) == 0 && len(groups.Defaults) == 0 && len(groups.Owner) == 0 {
 		return false
 	}
 	out.WriteString("\n\n[작문 지침]")
 	for _, group := range []struct {
 		label string
 		texts []string
-	}{{defaultGuidelinesLabel, defaults}, {ownerGuidelinesLabel, owner}} {
+	}{{principlesLabel, groups.Principles}, {defaultGuidelinesLabel, groups.Defaults}, {ownerGuidelinesLabel, groups.Owner}} {
 		if len(group.texts) == 0 {
 			continue
 		}
@@ -326,6 +340,9 @@ func writeGuidelinesSectionClosedBy(out *strings.Builder, defaults, owner []stri
 		for _, text := range group.texts {
 			out.WriteString("\n- " + strings.ReplaceAll(text, "\n", "\n  "))
 		}
+	}
+	if len(groups.Principles) > 0 {
+		fmt.Fprintf(out, "\n%s", principle)
 	}
 	fmt.Fprintf(out, "\n%s", precedence)
 	return true
@@ -457,7 +474,7 @@ func BuildWritePromptForLanguage(input WritePromptInput) (string, string) {
 	}
 	writeProfileSection(&stable, input.Language, input.Profile, input.TargetLength)
 	writeTemplateSection(&stable, input.Template, templateTitleInstruction, input.Profile.NoVoice)
-	writeGuidelinesSection(&stable, selectStockGuidelines(input.StockGuidelines, input.DefaultGuidelines, "write"), input.Guidelines, input.Profile.NoVoice)
+	writeGuidelinesSection(&stable, stockGuidelineGroups(input.StockGuidelines, input.DefaultGuidelines, input.Guidelines, "write"), input.Profile.NoVoice)
 
 	photoMaterial := attachmentMaterial(input.Photos, input.Videos, input.Observations, input.Portraits)
 	// The memory section sits between the memo and the attachments and renders to the empty

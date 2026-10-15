@@ -26,6 +26,28 @@ func productDefaults(target Language) []string {
 	return out
 }
 
+// productStock is the registry as a run without memories freezes it: each rule with its tier,
+// declared applicability and registry position, in the target language (GUIDE-16, GUIDE-17).
+func productStock(target Language) []StockGuideline {
+	var out []StockGuideline
+	for order, d := range guideline.Defaults(guideline.KindPost) {
+		text, ok := d.Text(guidelineLanguage(target))
+		if !ok || d.MemoriesOnly {
+			continue
+		}
+		rule := StockGuideline{Key: d.Key, Text: text, SourceOrder: order, Principle: d.Principle}
+		for _, a := range d.Applicability {
+			scope := StockRuleApplicability{Stage: string(a.Stage)}
+			for _, output := range a.Outputs {
+				scope.Outputs = append(scope.Outputs, string(output))
+			}
+			rule.Applicability = append(rule.Applicability, scope)
+		}
+		out = append(out, rule)
+	}
+	return out
+}
+
 // defaultText is one 기본 지침's text in a language, and "" when it does not reach that target.
 func defaultText(key string, target Language) string {
 	d, _ := guideline.DefaultFor(guideline.KindPost, key)

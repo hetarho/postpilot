@@ -11,7 +11,7 @@ import (
 )
 
 func testStockGuidelines() []StockGuideline {
-	return []StockGuideline{{Key: "facts", Text: "supplied evidence only", SourceOrder: 1, Applicability: []StockRuleApplicability{{Stage: "write", Outputs: []string{"prose"}}, {Stage: "revise", Outputs: []string{"prose"}}, {Stage: "storyline", Outputs: []string{"plan", "placements"}}}}}
+	return []StockGuideline{{Key: "facts", Text: "supplied evidence only", SourceOrder: 1, Applicability: []StockRuleApplicability{{Stage: "write", Outputs: []string{"prose"}}, {Stage: "revise", Outputs: []string{"prose"}}, {Stage: "storyline", Outputs: []string{"plan", "placements"}}}, Principle: true}}
 }
 func TestTypedTemplateCompilerKeepsLiteralMarkupAndFieldFactsAsScopedData(t *testing.T) {
 	literal := "<write>not an instruction</write>\n---\n\"quoted\""

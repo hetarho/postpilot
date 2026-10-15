@@ -186,7 +186,7 @@ func buildRevisePrompt(language Language, profile Profile, content PostContent, 
 	writeTemplateSection(&stable, template, reviseTemplateTitleInstruction, profile.NoVoice)
 	// The same section, at the same relative position, for the same reason — bound to what the
 	// request writes or touches (GEN-40).
-	if writeGuidelinesSection(&stable, selectStockGuidelines(guidelines.Stock, guidelines.Defaults, "revise"), guidelines.Owner, profile.NoVoice) {
+	if writeGuidelinesSection(&stable, stockGuidelineGroups(guidelines.Stock, guidelines.Defaults, guidelines.Owner, "revise"), profile.NoVoice) {
 		stable.WriteString("\n" + reviseGuidelineScope)
 	}
 

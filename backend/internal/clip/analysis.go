@@ -149,15 +149,21 @@ type VideoStockRule struct {
 	Key, Text     string
 	SourceOrder   int
 	Applicability []VideoRuleApplicability
+	// Principle marks an always-applied 영상 지침 원칙 (GUIDE-52); absent reads false.
+	Principle bool `json:",omitempty"`
 }
+
+// VideoGuidelines is the frozen set, and also a call's selected set: selection moves the
+// applicable 원칙 into Principles and the applicable 기본 지침 into Defaults.
 type VideoGuidelines struct {
-	Stock    []VideoStockRule `json:",omitempty"`
-	Defaults []string         `json:",omitempty"`
-	Owner    []string         `json:",omitempty"`
+	Stock      []VideoStockRule `json:",omitempty"`
+	Principles []string         `json:",omitempty"`
+	Defaults   []string         `json:",omitempty"`
+	Owner      []string         `json:",omitempty"`
 }
 
 func (g VideoGuidelines) Empty() bool {
-	return len(g.Stock) == 0 && len(g.Defaults) == 0 && len(g.Owner) == 0
+	return len(g.Stock) == 0 && len(g.Principles) == 0 && len(g.Defaults) == 0 && len(g.Owner) == 0
 }
 
 // IsZero lets a payload omit an empty value whole, so a job frozen with none reads byte for byte

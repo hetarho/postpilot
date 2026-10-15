@@ -248,10 +248,11 @@ func templateComposition(out *llm.RequestComposition, brief *TemplateBrief, titl
 func guidelineComposition(out *llm.RequestComposition, stock []StockGuideline, legacy, owner []string, stage string, noVoice bool) string {
 	var section strings.Builder
 	selected := selectStockGuidelines(stock, legacy, stage)
+	groups := stockGuidelineGroups(stock, legacy, owner, stage)
 	if stage == "storyline" {
-		writeGuidelinesSectionClosedBy(&section, selected, owner, storylineGuidelinePrecedence)
+		writeGuidelinesSectionClosedBy(&section, groups, storylineGuidelinePrecedence, principlePrecedenceStoryline)
 	} else {
-		writeGuidelinesSection(&section, selected, owner, noVoice)
+		writeGuidelinesSection(&section, groups, noVoice)
 	}
 	// Selection uses the same declared stage/output policy as the real composer.
 	for _, rule := range stock {

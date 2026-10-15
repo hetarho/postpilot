@@ -96,7 +96,7 @@ func BuildStorylinePromptForLanguage(input StorylinePromptInput) (string, string
 	if input.Template != nil {
 		writeTemplateForm(&stable, input.Template, "")
 	}
-	writeGuidelinesSectionClosedBy(&stable, selectStockGuidelines(input.StockGuidelines, input.DefaultGuidelines, "storyline"), input.Guidelines, storylineGuidelinePrecedence)
+	writeGuidelinesSectionClosedBy(&stable, stockGuidelineGroups(input.StockGuidelines, input.DefaultGuidelines, input.Guidelines, "storyline"), storylineGuidelinePrecedence, principlePrecedenceStoryline)
 
 	user := fmt.Sprintf("[이번 글]\n가제: %s\n메모: %s\n%s%s", input.Title, input.Memo, memorySection(input.Memories), attachmentMaterial(input.Photos, input.Videos, input.Observations, nil))
 	if revising {

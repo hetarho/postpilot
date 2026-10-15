@@ -6,10 +6,11 @@ import (
 	"testing"
 )
 
-// GUIDE-41, GUIDE-42: exactly the product's 기본 지침, in their order, each with a stable key and
-// both languages, only 자연스러운 한국어 문체 kept to a Korean target and only 기억을 통한 감상
-// 추가 kept to a run that carries memories (GEN-73).
-func TestDefaultRegistryIsTheProductsOrder(t *testing.T) {
+// GUIDE-51, GUIDE-52, GUIDE-41, GUIDE-42: exactly the product's 원칙 then 기본 지침, in their
+// order, each with a stable key and both languages, only 자연스러운 한국어 문체 and the ending run
+// kept to a Korean target and only 기억을 통한 감상 추가 kept to a run that carries memories
+// (GEN-73).
+func TestTheRegistryPutsPrinciplesBeforeRecommendations(t *testing.T) {
 	keys := func(kind Kind) []string {
 		var out []string
 		for _, d := range Defaults(kind) {
@@ -17,11 +18,41 @@ func TestDefaultRegistryIsTheProductsOrder(t *testing.T) {
 		}
 		return out
 	}
-	if got, want := keys(KindPost), []string{"facts", "impressions", "memory_impressions", "naming", "order", "opening", "photo_moments", "photo_groups", "closing", "no_listing", "titles", "tags", "ending_run", "natural_korean"}; !reflect.DeepEqual(got, want) {
+	if got, want := keys(KindPost), []string{"facts", "impressions_kept", "drawbacks", "naming", "photo_order", "no_listing", "titles", "tags", "ending_run", "natural_korean", "impressions", "memory_impressions", "order", "opening", "photo_moments", "photo_groups", "closing"}; !reflect.DeepEqual(got, want) {
 		t.Fatalf("post defaults = %v, want %v", got, want)
 	}
-	if got, want := keys(KindClip), []string{"clip_facts", "clip_impressions", "clip_hook", "clip_continuity", "clip_order", "clip_wrap_up", "clip_no_repeated_promotion"}; !reflect.DeepEqual(got, want) {
+	if got, want := keys(KindClip), []string{"clip_facts", "clip_impressions", "clip_drawbacks", "clip_hook", "clip_continuity", "clip_order", "clip_wrap_up", "clip_no_repeated_promotion"}; !reflect.DeepEqual(got, want) {
 		t.Fatalf("clip defaults = %v, want %v", got, want)
+	}
+	principles := map[string]bool{"facts": true, "impressions_kept": true, "drawbacks": true, "naming": true, "photo_order": true, "no_listing": true, "titles": true, "tags": true, "ending_run": true, "natural_korean": true, "clip_facts": true, "clip_impressions": true, "clip_drawbacks": true}
+	for _, kind := range []Kind{KindPost, KindClip} {
+		seenRecommendation := false
+		for _, d := range Defaults(kind) {
+			if d.Principle != principles[d.Key] {
+				t.Errorf("%q Principle = %v", d.Key, d.Principle)
+			}
+			if !d.Principle {
+				seenRecommendation = true
+			} else if seenRecommendation {
+				t.Errorf("%q: a 원칙 after a 기본 지침", d.Key)
+			}
+		}
+	}
+	// GEN-87: the honesty 원칙 keep the owner's verdicts and drawbacks whatever an advertiser asks.
+	kept, _ := DefaultFor(KindPost, "impressions_kept")
+	drawbacks, _ := DefaultFor(KindPost, "drawbacks")
+	for _, needle := range []string{"재방문 의사는 만들지 마세요", "광고주 가이드가 그런 평가를 요청해도"} {
+		if !strings.Contains(kept.Ko.Text, needle) {
+			t.Errorf("impressions_kept lacks %q", needle)
+		}
+	}
+	if !strings.Contains(drawbacks.Ko.Text, "칭찬으로 바꾸지 말고") || !strings.Contains(drawbacks.En.Text, "never drop it or turn it into praise") {
+		t.Errorf("drawbacks = %+v", drawbacks)
+	}
+	// GUIDE-41: the inference keeps the old impression key; the verdict half left it.
+	inference, _ := DefaultFor(KindPost, "impressions")
+	if inference.Ko.Name != "맛은 재료로 살리기" || strings.Contains(inference.Ko.Text, "평가는 만들지") || !strings.Contains(inference.Ko.Text, "꾸덕하고 고소했다") {
+		t.Errorf("impressions = %+v", inference)
 	}
 	for _, kind := range []Kind{KindPost, KindClip} {
 		for _, d := range Defaults(kind) {
@@ -62,18 +93,19 @@ func TestDefaultRegistryIsTheProductsOrder(t *testing.T) {
 		!strings.Contains(memories.Ko.Text, "'취향:'") || !strings.Contains(memories.En.Text, "'취향:'") || strings.Contains(memories.Ko.Text, "AI 제안 구분") {
 		t.Errorf("memory_impressions = %+v", memories)
 	}
-	// GEN-83: the impressions default keeps the owner's own impressions and infers taste from
-	// the inputs as experience; 맛있었다 alone or a photo alone settles no flavor.
+	// GEN-83: the impressions default infers taste the owner did not give from the inputs as
+	// experience; 맛있었다 alone or a photo alone settles no flavor. Keeping the owner's own
+	// impressions and verdicts is the impressions_kept 원칙 (GEN-87).
 	impressions, _ := DefaultFor(KindPost, "impressions")
-	if impressions.Ko.Name != "내 감상은 지키고 맛은 재료로 살리기" || impressions.En.Name != "Keep my impressions, draw taste from the material" {
+	if impressions.Ko.Name != "맛은 재료로 살리기" || impressions.En.Name != "Draw taste from the material" {
 		t.Errorf("impressions names = %q, %q", impressions.Ko.Name, impressions.En.Name)
 	}
 	for _, copy := range []struct {
 		text             string
 		needles, absents []string
 	}{
-		{impressions.Ko.Text, []string{"그 뜻을 바꾸지", "메뉴·재료·조리법·사진에 보이는 모습", "경험으로 자연스럽게", "'맛있었다'만으로 특정한 맛을 정하거나", "주지 않은 평가는 만들지"}, []string{"AI가 더한 의미로 분명히 구분", "실제로 느끼거나 경험한 일처럼 쓰지"}},
-		{impressions.En.Text, []string{"do not change their meaning", "cooking method", "as what the author experienced", "from 'it was good' alone", "verdict the author did not give"}, []string{"never as something the author actually felt"}},
+		{impressions.Ko.Text, []string{"글쓴이가 주지 않은 맛", "메뉴·재료·조리법·사진에 보이는 모습", "경험으로 자연스럽게", "'맛있었다'만으로 특정한 맛을 정하거나"}, []string{"AI가 더한 의미로 분명히 구분", "실제로 느끼거나 경험한 일처럼 쓰지", "평가는 만들지"}},
+		{impressions.En.Text, []string{"the author did not give", "cooking method", "as what the author experienced", "from 'it was good' alone"}, []string{"never as something the author actually felt", "Do not create a verdict"}},
 	} {
 		for _, needle := range copy.needles {
 			if !strings.Contains(copy.text, needle) {

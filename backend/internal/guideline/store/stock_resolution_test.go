@@ -49,14 +49,15 @@ func TestTypedStockAndOwnerResolutionFreezesOwnedOrderAndSurvivesLaterEdits(t *t
 			t.Fatal("test rule lost source id/order")
 		}
 	}
-	if len(frozen.Stock) != 12 || frozen.Stock[0].Key != "facts" || frozen.Stock[2].Key != "memory_impressions" {
+	memoriesAt := slices.IndexFunc(frozen.Stock, func(rule guideline.StockRule) bool { return rule.Key == "memory_impressions" })
+	if len(frozen.Stock) != 15 || frozen.Stock[0].Key != "facts" || memoriesAt < 1 || frozen.Stock[memoriesAt-1].Key != "impressions" {
 		t.Fatalf("English stock order=%+v", frozen.Stock)
 	}
 	changed := "Changed after admission"
 	if _, err = store.Update(ctx, "alice", "template", guideline.Patch{Text: &changed}, testNow.Add(3*time.Minute)); err != nil {
 		t.Fatal(err)
 	}
-	if _, err = service.SetDefaultEnabled(ctx, "alice", guideline.KindPost, "tags", false); err != nil {
+	if _, err = service.SetDefaultEnabled(ctx, "alice", guideline.KindPost, "opening", false); err != nil {
 		t.Fatal(err)
 	}
 	current, err := service.ForPrompt(ctx, "alice", guideline.KindPost, &template, &field, guideline.LanguageEnglish, true)
@@ -73,7 +74,7 @@ func TestTypedStockAndOwnerResolutionFreezesOwnedOrderAndSurvivesLaterEdits(t *t
 	for _, rule := range current.Stock {
 		newKeys = append(newKeys, rule.Key)
 	}
-	if !slices.Contains(oldKeys, "tags") || slices.Contains(newKeys, "tags") {
+	if !slices.Contains(oldKeys, "opening") || slices.Contains(newKeys, "opening") {
 		t.Fatal("toggle changed admitted stock instead of next resolve")
 	}
 	for _, owner := range frozen.Owner {

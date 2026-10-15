@@ -319,33 +319,33 @@ func TestListGuidelinesAnswersTheOwnersGuidelinesAlone(t *testing.T) {
 	// GUIDE-14, GUIDE-43: the post list carries every 기본 지침 with its switch, both copies, and a
 	// switch saves on change and reads back; the clip kind lists its own defaults and no owner row.
 	defaults := listed.Msg.GetDefaults()
-	if len(defaults) != 14 || defaults[0].GetKey() != "facts" || !defaults[0].GetEnabled() || defaults[0].GetKo().GetName() != "재료에 있는 사실만" || defaults[0].GetEn().GetName() != "Facts from the material only" || !defaults[12].GetKoreanTargetOnly() || !defaults[13].GetKoreanTargetOnly() {
+	if len(defaults) != 17 || defaults[0].GetKey() != "facts" || !defaults[0].GetEnabled() || defaults[0].GetKo().GetName() != "재료에 있는 사실만" || defaults[0].GetEn().GetName() != "Facts from the material only" || !defaults[8].GetKoreanTargetOnly() || !defaults[9].GetKoreanTargetOnly() {
 		t.Fatalf("defaults = %v", defaults)
 	}
 	// GEN-73: the memories default says so on the wire, and it alone does.
 	for i, d := range defaults {
-		if d.GetMemoriesOnly() != (i == 2 && d.GetKey() == "memory_impressions") {
+		if d.GetMemoriesOnly() != (i == 11 && d.GetKey() == "memory_impressions") {
 			t.Errorf("%s memories_only = %v at %d", d.GetKey(), d.GetMemoriesOnly(), i)
 		}
 	}
-	switched, err := handler.SetDefaultGuidelineEnabled(alice, connect.NewRequest(&postpilotv1.SetDefaultGuidelineEnabledRequest{Key: "tags", Enabled: false}))
-	if err != nil || switched.Msg.GetDefaultGuideline().GetKey() != "tags" || switched.Msg.GetDefaultGuideline().GetEnabled() {
+	switched, err := handler.SetDefaultGuidelineEnabled(alice, connect.NewRequest(&postpilotv1.SetDefaultGuidelineEnabledRequest{Key: "opening", Enabled: false}))
+	if err != nil || switched.Msg.GetDefaultGuideline().GetKey() != "opening" || switched.Msg.GetDefaultGuideline().GetEnabled() {
 		t.Fatalf("switch = %v, %v", switched, err)
 	}
 	again, _ := handler.ListGuidelines(alice, connect.NewRequest(&postpilotv1.ListGuidelinesRequest{Kind: postpilotv1.GuidelineKind_GUIDELINE_KIND_POST}))
 	for _, d := range again.Msg.GetDefaults() {
-		if d.GetEnabled() != (d.GetKey() != "tags") {
+		if d.GetEnabled() != (d.GetKey() != "opening") {
 			t.Errorf("%s enabled = %v after the switch", d.GetKey(), d.GetEnabled())
 		}
 	}
 	other, _ := handler.ListGuidelines(bob, connect.NewRequest(&postpilotv1.ListGuidelinesRequest{}))
 	for _, d := range other.Msg.GetDefaults() {
-		if d.GetKey() == "tags" && !d.GetEnabled() {
+		if d.GetKey() == "opening" && !d.GetEnabled() {
 			t.Fatal("alice's switch reached bob")
 		}
 	}
 	clip, err := handler.ListGuidelines(alice, connect.NewRequest(&postpilotv1.ListGuidelinesRequest{Kind: postpilotv1.GuidelineKind_GUIDELINE_KIND_CLIP}))
-	if err != nil || len(clip.Msg.GetDefaults()) != 7 || len(clip.Msg.GetGuidelines()) != 0 {
+	if err != nil || len(clip.Msg.GetDefaults()) != 8 || len(clip.Msg.GetGuidelines()) != 0 {
 		t.Fatalf("clip list = %v, %v", clip, err)
 	}
 	// GUIDE-2: a 영상 지침 is created of its kind, listed with it and never in the post list — even
@@ -387,6 +387,24 @@ func TestListGuidelinesAnswersTheOwnersGuidelinesAlone(t *testing.T) {
 
 // ARCH-3: the kind mapping is walked against the generated enum: UNSPECIFIED reads as POST, and
 // each named kind maps to its own.
+// GUIDE-16, GUIDE-53: a 원칙 reaches the wire marked as one and always enabled, and a 기본 지침
+// does not carry the mark.
+func TestListGuidelinesMarksPrinciples(t *testing.T) {
+	for _, kind := range []guideline.Kind{guideline.KindPost, guideline.KindClip} {
+		for _, d := range guideline.Defaults(kind) {
+			wire := toProtoDefault(guideline.DefaultState{Default: d, Enabled: true})
+			if wire.GetPrinciple() != d.Principle || wire.GetKey() != d.Key {
+				t.Errorf("%s/%s principle = %v", kind, d.Key, wire.GetPrinciple())
+			}
+		}
+	}
+	tags, _ := guideline.DefaultFor(guideline.KindPost, "tags")
+	opening, _ := guideline.DefaultFor(guideline.KindPost, "opening")
+	if !toProtoDefault(guideline.DefaultState{Default: tags, Enabled: true}).GetPrinciple() || toProtoDefault(guideline.DefaultState{Default: opening, Enabled: true}).GetPrinciple() {
+		t.Fatal("the tiers did not reach the wire")
+	}
+}
+
 func TestGuidelineKindWalksTheGeneratedEnum(t *testing.T) {
 	want := map[postpilotv1.GuidelineKind]guideline.Kind{
 		postpilotv1.GuidelineKind_GUIDELINE_KIND_UNSPECIFIED: guideline.KindPost,

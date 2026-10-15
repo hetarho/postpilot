@@ -53,14 +53,16 @@ var (
 	ErrDefaultNotFound = errors.New("default guideline not found")
 )
 
-// DefaultState is one 기본 지침 with the account's switch (GUIDE-43).
+// DefaultState is one code-owned rule with the account's switch (GUIDE-43); a 원칙 is always
+// enabled.
 type DefaultState struct {
 	Default DefaultGuideline
 	Enabled bool
 }
 
-// PromptGuidelines are the texts one run is given, in injection order (GUIDE-14): the enabled
-// 기본 지침 of the kind in the product's order and the target language, then the owner's own.
+// PromptGuidelines are the texts one run is given, in injection order (GUIDE-14): the 원칙 and the
+// enabled 기본 지침 of the kind in the product's order and the target language, then the owner's
+// own.
 type PromptGuidelines struct {
 	Stock    []StockRule
 	Defaults []string

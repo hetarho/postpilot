@@ -513,31 +513,32 @@ func TestForPromptPutsTheEnabledDefaultsFirst(t *testing.T) {
 			koreanWithoutMemories = append(koreanWithoutMemories, d.Ko.Text)
 		}
 	}
-	if !reflect.DeepEqual(korean.Defaults, koreanWithoutMemories) || len(korean.Defaults) != 13 {
+	if !reflect.DeepEqual(korean.Defaults, koreanWithoutMemories) || len(korean.Defaults) != 16 {
 		t.Fatalf("Korean defaults = %d, %q", len(korean.Defaults), korean.Defaults)
 	}
 	if !reflect.DeepEqual(korean.Owner, []string{"사용자 지침"}) {
 		t.Fatalf("owner = %q", korean.Owner)
 	}
 	english, _ := svc.ForPrompt(ctx, "alice", KindPost, nil, nil, LanguageEnglish, false)
-	if len(english.Defaults) != 11 || english.Defaults[0] != Defaults(KindPost)[0].En.Text {
+	if len(english.Defaults) != 14 || english.Defaults[0] != Defaults(KindPost)[0].En.Text {
 		t.Fatalf("English defaults = %q", english.Defaults)
 	}
-	if _, err := svc.SetDefaultEnabled(ctx, "alice", KindPost, "facts", false); err != nil {
+	opening, _ := DefaultFor(KindPost, "opening")
+	if _, err := svc.SetDefaultEnabled(ctx, "alice", KindPost, "opening", false); err != nil {
 		t.Fatal(err)
 	}
 	off, _ := svc.ForPrompt(ctx, "alice", KindPost, nil, nil, LanguageKorean, false)
-	if len(off.Defaults) != 12 || off.Defaults[0] != Defaults(KindPost)[1].Ko.Text {
+	if len(off.Defaults) != 15 || slices.Contains(off.Defaults, opening.Ko.Text) {
 		t.Fatalf("a switched-off default still reached the run: %q", off.Defaults)
 	}
 	clip, _ := svc.ForPrompt(ctx, "alice", KindClip, nil, nil, LanguageKorean, false)
-	if len(clip.Defaults) != 7 || clip.Owner != nil {
+	if len(clip.Defaults) != 8 || clip.Owner != nil {
 		t.Fatalf("clip = %+v", clip)
 	}
 }
 
-// GEN-73: 기억을 통한 감상 추가 reaches a run that carries memories alone, directly after 감상은
-// 내가 쓴 것만, in the run's target language — and never while the account has it switched off.
+// GEN-73: 기억을 통한 감상 추가 reaches a run that carries memories alone, directly after 맛은
+// 재료로 살리기, in the run's target language — and never while the account has it switched off.
 func TestForPromptSendsTheMemoriesDefaultWithMemoriesAlone(t *testing.T) {
 	ctx := context.Background()
 	svc, _ := newTestService(t, nil)
@@ -551,11 +552,13 @@ func TestForPromptSendsTheMemoriesDefaultWithMemoriesAlone(t *testing.T) {
 	}
 	with, _ := svc.ForPrompt(ctx, "alice", KindPost, nil, nil, LanguageKorean, true)
 	impressions, _ := DefaultFor(KindPost, "impressions")
-	if len(with.Defaults) != len(without.Defaults)+1 || with.Defaults[1] != impressions.Ko.Text || with.Defaults[2] != memories.Ko.Text {
+	at := slices.Index(with.Defaults, impressions.Ko.Text)
+	if len(with.Defaults) != len(without.Defaults)+1 || at < 0 || at+1 >= len(with.Defaults) || with.Defaults[at+1] != memories.Ko.Text {
 		t.Fatalf("with memories = %q", with.Defaults)
 	}
 	english, _ := svc.ForPrompt(ctx, "alice", KindPost, nil, nil, LanguageEnglish, true)
-	if len(english.Defaults) < 3 || english.Defaults[2] != memories.En.Text {
+	enAt := slices.Index(english.Defaults, impressions.En.Text)
+	if enAt < 0 || enAt+1 >= len(english.Defaults) || english.Defaults[enAt+1] != memories.En.Text {
 		t.Fatalf("English with memories = %q", english.Defaults)
 	}
 	if _, err := svc.SetDefaultEnabled(ctx, "alice", KindPost, "memory_impressions", false); err != nil {
@@ -573,8 +576,8 @@ func TestDefaultSwitchesAreIdempotentAndKnownOnly(t *testing.T) {
 	ctx := context.Background()
 	svc, store := newTestService(t, nil)
 	for range 2 {
-		state, err := svc.SetDefaultEnabled(ctx, "alice", KindPost, "tags", false)
-		if err != nil || state.Enabled || state.Default.Key != "tags" {
+		state, err := svc.SetDefaultEnabled(ctx, "alice", KindPost, "opening", false)
+		if err != nil || state.Enabled || state.Default.Key != "opening" {
 			t.Fatalf("switch off = %+v, %v", state, err)
 		}
 	}
@@ -584,14 +587,14 @@ func TestDefaultSwitchesAreIdempotentAndKnownOnly(t *testing.T) {
 		t.Fatalf("defaults = %d, %v", len(states), err)
 	}
 	for _, s := range states {
-		if s.Enabled != (s.Default.Key != "tags") {
+		if s.Enabled != (s.Default.Key != "opening") {
 			t.Errorf("%s enabled = %v", s.Default.Key, s.Enabled)
 		}
 	}
-	if _, err := svc.SetDefaultEnabled(ctx, "alice", KindPost, "tags", true); err != nil {
+	if _, err := svc.SetDefaultEnabled(ctx, "alice", KindPost, "opening", true); err != nil {
 		t.Fatal(err)
 	}
-	if store.off["post/tags"] {
+	if store.off["post/opening"] {
 		t.Fatal("switching on left the off row")
 	}
 	for _, bad := range []struct {
@@ -601,6 +604,41 @@ func TestDefaultSwitchesAreIdempotentAndKnownOnly(t *testing.T) {
 		if _, err := svc.SetDefaultEnabled(ctx, "alice", bad.kind, bad.key, false); !errors.Is(err, ErrDefaultNotFound) {
 			t.Errorf("%s/%s = %v, want ErrDefaultNotFound", bad.kind, bad.key, err)
 		}
+	}
+}
+
+// GUIDE-16, GUIDE-43: a 원칙 is always enabled — an off row stored for its key, from before it
+// became a 원칙, is ignored — and switching one is refused like an unknown key, writing nothing.
+func TestPrinciplesIgnoreOffRowsAndRefuseTheSwitch(t *testing.T) {
+	ctx := context.Background()
+	svc, store := newTestService(t, nil)
+	store.off = map[string]bool{"post/tags": true, "clip/clip_facts": true}
+	for _, kind := range []Kind{KindPost, KindClip} {
+		states, err := svc.Defaults(ctx, "alice", kind)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, s := range states {
+			if s.Default.Principle && !s.Enabled {
+				t.Errorf("%s/%s: a 원칙 read as off", kind, s.Default.Key)
+			}
+		}
+	}
+	tags, _ := DefaultFor(KindPost, "tags")
+	run, _ := svc.ForPrompt(ctx, "alice", KindPost, nil, nil, LanguageKorean, false)
+	if !slices.Contains(run.Defaults, tags.Ko.Text) {
+		t.Fatal("an off row kept a 원칙 out of the run")
+	}
+	for _, key := range []string{"facts", "drawbacks", "natural_korean"} {
+		if _, err := svc.SetDefaultEnabled(ctx, "alice", KindPost, key, false); !errors.Is(err, ErrDefaultNotFound) {
+			t.Errorf("switching 원칙 %s = %v, want ErrDefaultNotFound", key, err)
+		}
+		if store.off["post/"+key] {
+			t.Errorf("switching 원칙 %s wrote an off row", key)
+		}
+	}
+	if _, err := svc.SetDefaultEnabled(ctx, "alice", KindClip, "clip_drawbacks", false); !errors.Is(err, ErrDefaultNotFound) {
+		t.Errorf("switching a clip 원칙 = %v", err)
 	}
 }
 

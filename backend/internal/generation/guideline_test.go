@@ -103,6 +103,33 @@ func TestTheSectionPutsTheDefaultsFirstUnderTheirOwnLabel(t *testing.T) {
 	}
 }
 
+// GUIDE-14, GUIDE-54: the 원칙 come first under their own label, then the 기본 지침, then the
+// owner's, and the 원칙 sentence precedes the closing sentence; a frozen payload from before the
+// tiers (plain defaults, no stock) renders as it always did, with no 원칙 label or sentence.
+func TestTheSectionPutsPrinciplesFirstUnderTheirOwnLabel(t *testing.T) {
+	baseline, _ := loadGolden(t, "write_prompt_no_template.golden")
+	prose := []StockRuleApplicability{{Stage: "write", Outputs: []string{"prose"}}}
+	build := func(stock []StockGuideline, legacy []string) string {
+		return firstOf(BuildWritePromptForLanguage(WritePromptInput{
+			Language: LanguageKorean, Profile: goldenProfile(), Observations: goldenObservations(),
+			Memo: "MEMO 본문", Title: "가제 TITLE", Photos: []string{"IMG_1.jpg", "IMG_2.jpg"}, TagCount: 4,
+			StockGuidelines: stock, DefaultGuidelines: legacy, Guidelines: []string{"사용자 줄"},
+		}))
+	}
+	tiered := build([]StockGuideline{
+		{Key: "facts", Text: "원칙 줄", Applicability: prose, Principle: true},
+		{Key: "opening", Text: "기본 줄", SourceOrder: 1, Applicability: prose},
+	}, nil)
+	want := "\n\n[작문 지침]\n원칙:\n- 원칙 줄\n기본 지침:\n- 기본 줄\n사용자 지침:\n- 사용자 줄\n" + principlePrecedence + "\n" + guidelinePrecedence
+	if got := strings.TrimPrefix(tiered, baseline); got != want {
+		t.Fatalf("section =\n%q\nwant\n%q", got, want)
+	}
+	legacy := strings.TrimPrefix(build(nil, []string{"옛 기본 줄"}), baseline)
+	if legacy != "\n\n[작문 지침]\n기본 지침:\n- 옛 기본 줄\n사용자 지침:\n- 사용자 줄\n"+guidelinePrecedence || strings.Contains(legacy, principlesLabel) {
+		t.Fatalf("a pre-tier payload = %q", legacy)
+	}
+}
+
 // A4: with a template the one section sits AFTER the template section, still before [이번 글].
 func TestGuidelinesFollowTheTemplateSectionWhenThePostHasOne(t *testing.T) {
 	withTemplate, _ := BuildWritePrompt(goldenProfile(), goldenObservations(), "MEMO 본문", "가제 TITLE", []string{"IMG_1.jpg"}, nil, testBrief(), nil)

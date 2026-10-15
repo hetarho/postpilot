@@ -57,6 +57,8 @@ message DefaultGuideline {
   bool korean_target_only = 5;
   // Reaches a run whose prompt carries memories alone (GEN-73).
   bool memories_only = 6;
+  // An always-applied 원칙 (GUIDE-16): always enabled, never switched (GUIDE-43).
+  bool principle = 7;
 }
 
 enum GuidelineScope {

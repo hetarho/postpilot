@@ -237,7 +237,7 @@ func (s *Service) Delete(ctx context.Context, userID, id string) error {
 }
 
 // ForPrompt is this context's published behavior for prompt builders: the texts one run is
-// given (GUIDE-14). First the enabled 기본 지침 of the kind, in the product's order and in the
+// given (GUIDE-14). First the 원칙 and the enabled 기본 지침 of the kind, in the product's order and in the
 // target language — a Korean-target-only one reaching a Korean target alone, a memories-only
 // one reaching a run that carries memories alone — then the owner's texts that apply to the
 // post, resolved from its CURRENT template and 분야: global, then template, then 분야, each by
@@ -275,8 +275,9 @@ func (s *Service) ForPrompt(ctx context.Context, userID string, kind Kind, templ
 	return out, nil
 }
 
-// Defaults is every 기본 지침 of one kind with the account's switch, in the product's order. A
-// stored key the product no longer carries is ignored (GUIDE-43).
+// Defaults is every code-owned rule of one kind with the account's switch, in the product's
+// order. A 원칙 is always enabled whatever is stored for its key, and a stored key the product no
+// longer carries is ignored (GUIDE-16, GUIDE-43).
 func (s *Service) Defaults(ctx context.Context, userID string, kind Kind) ([]DefaultState, error) {
 	if !kind.Valid() {
 		return nil, ErrDefaultNotFound
@@ -292,16 +293,17 @@ func (s *Service) Defaults(ctx context.Context, userID string, kind Kind) ([]Def
 	registry := Defaults(kind)
 	out := make([]DefaultState, 0, len(registry))
 	for _, d := range registry {
-		out = append(out, DefaultState{Default: d, Enabled: !switchedOff[d.Key]})
+		out = append(out, DefaultState{Default: d, Enabled: d.Principle || !switchedOff[d.Key]})
 	}
 	return out, nil
 }
 
 // SetDefaultEnabled switches one 기본 지침 on or off for the account and kind, idempotently. An
-// unknown key is ErrDefaultNotFound and writes nothing.
+// unknown key and a 원칙's key are ErrDefaultNotFound and write nothing: a 원칙 has no switch
+// (GUIDE-43).
 func (s *Service) SetDefaultEnabled(ctx context.Context, userID string, kind Kind, key string, enabled bool) (DefaultState, error) {
 	d, ok := DefaultFor(kind, key)
-	if !kind.Valid() || !ok {
+	if !kind.Valid() || !ok || d.Principle {
 		return DefaultState{}, ErrDefaultNotFound
 	}
 	if err := s.store.SetDefaultOff(ctx, userID, kind, key, !enabled, s.now()); err != nil {

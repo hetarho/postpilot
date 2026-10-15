@@ -11,7 +11,7 @@
 ## active
 | tag | host | mode | since | at | doing |
 |---|---|---|---|---|---|
-| v7k2 | DESKTOP-VKPLS8P | autopilot | 2026-10-15T03:06Z | 2026-10-15T05:15Z | T677 |
+| v7k2 | DESKTOP-VKPLS8P | autopilot | 2026-10-15T03:06Z | 2026-10-15T05:55Z | - |
 
 ## inbox
 - 261015 decided -: push branch for finished units? → main, and AGENTS.md now defers to haeram-spec-creator with ARCH-31 run before each push and reused on unchanged trees (alt: - commit only | a work branch)
@@ -103,7 +103,6 @@
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
-| T677 | Always-applied 원칙 tier in the stock-rule registry and prompts | GUIDE GEN VOICE TMPL CLIP | - | doing@261015.v7k2 |
 | T678 | Show the Postpilot 원칙 card above each guideline list | GUIDE | T677 | todo |
 | T679 | Store a post's 체험단 글 switch, advertiser guide and checklist ticks | POST | - | todo |
 | T680 | Put the 체험단 글 switch and advertiser guide on the editor's ① | POST | T679 | todo |
@@ -124,11 +123,12 @@
 | T695 | Tell the 체험단 story on the public about page | MKT | T682 T683 T684 T687 T688 T691 T692 T693 T694 | todo |
 
 ## next
-- implement-task T677 (then dep order T678 … T695); 19 provisional decisions wait in inbox for the owner.
+- implement-task T678 (then dep order … T695); 19 provisional decisions wait in inbox for the owner (they will read the report first).
 - ideation friendly-model-names 계속: decide the automatic alias word list (theme, size, contents) and whether speech profiles join; then create-ssot/update-ssot MODEL. Also pending: the 17 unadopted choices in review/structure-261008 and doc-review ARCH.
 - push: 65c79f2b passed its pre-push gate and waits only for the SSH key (ssh-add) with the spec commits after it; gh login is needed to read CI. 6e5039c8 is the live green revision.
 
 ## log
+- 261015 T677 done on main: 원칙 tier in the registry, prompts and wire; local Node default moved to v26.12.0 through fnm at the owner's request (pnpm dev verified).
 - 261015 T677 start on main at d6aa385a (v7k2 autopilot).
 - 261015 create-task done: T677–T695 from GUIDE r22 GEN r31 POST r41 EXPORT r12 TMPL r28 CLIP r60 VOICE r17 THEME r34 MKT r11 CDS r34 EDIT r6 VIDEO r8 LANG r10; migrations reserved 0159 (T679) 0160 (T689) 0161 (T690) 0162 (T691).
 - 261015 create-task GUIDE GEN POST EXPORT TMPL CLIP VOICE THEME MKT CDS EDIT VIDEO LANG start (autopilot v7k2).
@@ -148,4 +148,3 @@
 - 261013 update-ssot GEN start: implicative-only titles drop the post's search terms.
 - 261012 76b619df pushed from this tree mid-gate; local gate on it passed (CI list, Compose, 7 images, worker smoke, release in both layouts; usage/store and clip/store load flakes passed on rerun). Remote: CI ok, Deploy backend ok, Verify media Media worker failed at CPU parity like c01b5169.
 - 261012 T675 done on main: 최소 태그 수 / Minimum tag count everywhere; the tag help now explains the minimum and the broad-label tail.
-- 261012 T675 start on main at efc7f59a: 최대 태그 수 copy becomes 최소 태그 수.

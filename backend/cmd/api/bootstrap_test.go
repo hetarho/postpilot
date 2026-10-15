@@ -667,7 +667,9 @@ func TestGuidelineAdapterCarriesScopeThroughToTheFrozenPromptSection(t *testing.
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(withMemories.Defaults) != len(guideline.Defaults(guideline.KindPost)) || withMemories.Defaults[2] != memoriesDefault.Ko.Text {
+	inference, _ := guideline.DefaultFor(guideline.KindPost, "impressions")
+	inferenceAt := slices.Index(withMemories.Defaults, inference.Ko.Text)
+	if len(withMemories.Defaults) != len(guideline.Defaults(guideline.KindPost)) || inferenceAt < 0 || inferenceAt+1 >= len(withMemories.Defaults) || withMemories.Defaults[inferenceAt+1] != memoriesDefault.Ko.Text {
 		t.Fatalf("a run with memories froze %q", withMemories.Defaults)
 	}
 	system, _ := generation.BuildWritePromptForLanguage(generation.WritePromptInput{
@@ -680,17 +682,17 @@ func TestGuidelineAdapterCarriesScopeThroughToTheFrozenPromptSection(t *testing.
 		t.Fatalf("a guideline scoped to another template reached the prompt:\n%s", system)
 	}
 
-	// A default switched off stays out of the next freeze.
-	tags, _ := guideline.DefaultFor(guideline.KindPost, "tags")
-	tagsText, _ := tags.Text(guideline.LanguageKorean)
-	if _, err := guidelineSvc.SetDefaultEnabled(ctx, "alice", guideline.KindPost, "tags", false); err != nil {
+	// A 기본 지침 switched off stays out of the next freeze.
+	opening, _ := guideline.DefaultFor(guideline.KindPost, "opening")
+	openingText, _ := opening.Text(guideline.LanguageKorean)
+	if _, err := guidelineSvc.SetDefaultEnabled(ctx, "alice", guideline.KindPost, "opening", false); err != nil {
 		t.Fatal(err)
 	}
 	off, err := adapter.ForPrompt(ctx, "alice", &input.TemplateID, nil, generation.LanguageKorean, false)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(off.Defaults) != len(frozen.Defaults)-1 || slices.Contains(off.Defaults, tagsText) {
+	if len(off.Defaults) != len(frozen.Defaults)-1 || slices.Contains(off.Defaults, openingText) {
 		t.Fatalf("the switched-off default still froze: %v", off.Defaults)
 	}
 

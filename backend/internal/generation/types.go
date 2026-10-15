@@ -219,6 +219,8 @@ type StockGuideline struct {
 	Key, Text     string
 	SourceOrder   int
 	Applicability []StockRuleApplicability
+	// Principle marks an always-applied 원칙 (GUIDE-16); a retained payload without it reads false.
+	Principle bool
 }
 
 // RequiredTemplateAnswerError crosses the template port for a new-write start. Label is the

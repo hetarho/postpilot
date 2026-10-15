@@ -13,7 +13,7 @@ func noVoiceWriteInput() WritePromptInput {
 		Language: LanguageKorean, Profile: Profile{NoVoice: true},
 		Observations: goldenObservations(), Memo: "MEMO 본문", Title: "가제 TITLE", Photos: []string{"IMG_1.jpg", "IMG_2.jpg"},
 		TargetLength: &target, TagCount: 4, Template: testBrief(),
-		DefaultGuidelines: productDefaults(LanguageKorean), Guidelines: []string{"가격은 쓰지 않기"},
+		StockGuidelines: productStock(LanguageKorean), DefaultGuidelines: productDefaults(LanguageKorean), Guidelines: []string{"가격은 쓰지 않기"},
 	}
 }
 
@@ -34,7 +34,7 @@ func TestANoVoiceWritePromptCarriesNoVoiceBytes(t *testing.T) {
 			t.Errorf("a 말투 없음 write prompt carries %q", forbidden)
 		}
 	}
-	for _, required := range []string{templatePrecedenceNoVoice, guidelinePrecedenceNoVoice, "\n\n[길이]\n목표 길이: 약 1200자."} {
+	for _, required := range []string{templatePrecedenceNoVoice, principlesLabel, principlePrecedenceNoVoice, guidelinePrecedenceNoVoice, "\n\n[길이]\n목표 길이: 약 1200자."} {
 		if !strings.Contains(system, required) {
 			t.Errorf("a 말투 없음 write prompt lacks %q", required)
 		}
@@ -46,7 +46,7 @@ func TestANoVoiceWritePromptCarriesNoVoiceBytes(t *testing.T) {
 func TestANoVoiceRevisePromptCarriesNoVoiceBytes(t *testing.T) {
 	target := 1200
 	system, user := BuildRevisePromptForLanguage(LanguageKorean, Profile{NoVoice: true}, goldenContent(), []string{"IMG_1.jpg"}, "INSTRUCTION 수정 요청", &target, 4, testBrief(),
-		FrozenGuidelines{Defaults: productDefaults(LanguageKorean), Owner: []string{"가격은 쓰지 않기"}})
+		FrozenGuidelines{Stock: productStock(LanguageKorean), Defaults: productDefaults(LanguageKorean), Owner: []string{"가격은 쓰지 않기"}})
 	wantSystem, wantUser := loadGolden(t, "revise_prompt_no_voice.golden")
 	if system != wantSystem || user != wantUser {
 		t.Fatalf("the 말투 없음 revise prompt drifted:\n--- got ---\n%s\n@@USER@@\n%s", system, user)
