@@ -30,10 +30,14 @@ import {
   type ClipRegionEdit,
 } from '../model/types'
 
+import { CLIP_CHANNELS, clipChannel, type ClipChannel } from '../config/channel'
+
 export const clipProjectsKey = (transport: Transport, ownerId: string) =>
   ['clip-projects', transport, ownerId] as const
 export function toClipProject(value: ProtoClipProject): ClipProject {
   if (!CLIP_RATIOS.includes(value.ratio as ClipRatio)) throw new Error('Invalid clip ratio')
+  if (value.channel && !CLIP_CHANNELS.includes(value.channel as ClipChannel))
+    throw new Error('Invalid clip channel')
   const composition = toProjectComposition(value.composition)
   if (
     (value.finalizedAt || value.finalizedPlanRevision || value.finalizedResultId) &&
@@ -70,6 +74,7 @@ export function toClipProject(value: ProtoClipProject): ClipProject {
     title: value.title,
     videoTemplateId: value.videoTemplateId,
     ratio: value.ratio as ClipRatio,
+    channel: clipChannel(value.channel),
     targetDurationMs: value.targetDurationMs,
     // An empty campaign type is a clip still being set up; generation refuses
     // one (CDS-5).
@@ -331,6 +336,7 @@ export function useClipProjectMutations(ownerId: string) {
     mutationFn: async ({ id, draft }: { id?: string; draft: ClipProjectDraft }) => {
       const {
         ratio,
+        channel,
         compositionInputs,
         introPreset,
         outroPreset,
@@ -353,6 +359,7 @@ export function useClipProjectMutations(ownerId: string) {
         : await client.createClipProject({
             ...fields,
             ratio,
+            channel,
             compositionInputs: inputs,
             language: contentLanguageToProto(activeLocale()),
           })
@@ -421,5 +428,27 @@ export function useSaveClipRegions(ownerId: string) {
     },
     onSuccess: (project) =>
       cache.setQueryData([...clipProjectsKey(transport, ownerId), 'detail', project.id], project),
+  })
+}
+
+/** Moving directories writes only the channel; a stale autosave cannot move it back. */
+export function useMoveClipChannel(ownerId: string) {
+  const transport = useTransport()
+  const cache = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, channel }: { id: string; channel: ClipChannel }) => {
+      const response = await createClient(ClipGenerationService, transport).updateClipProject({
+        id,
+        channel,
+      })
+      if (!response.project) throw new Error('Missing moved clip')
+      return toClipProject(response.project)
+    },
+    onSuccess: (project) => {
+      const key = [...clipProjectsKey(transport, ownerId), 'detail', project.id]
+      const cached = cache.getQueryData<ClipProject>(key)
+      cache.setQueryData(key, cached ? withDetailReadings(project, cached) : project)
+      void cache.invalidateQueries({ queryKey: [...clipProjectsKey(transport, ownerId), 'list'] })
+    },
   })
 }

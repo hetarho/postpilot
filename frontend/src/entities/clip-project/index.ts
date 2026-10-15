@@ -18,6 +18,7 @@ export {
   useClipProject,
   useClipProjectMutations,
   useClipProjects,
+  useMoveClipChannel,
   useSaveClipStoryline,
   useSaveClipRegions,
 } from './api/clip-project'
@@ -114,3 +115,10 @@ export type {
   ClipAnalysisOriginalMeasurement,
   ClipAnalysisPreparationState,
 } from './model/analysis-preparation'
+
+export {
+  CLIP_CHANNELS,
+  DEFAULT_CLIP_CHANNEL,
+  clipChannel,
+  type ClipChannel,
+} from './config/channel'

@@ -96,11 +96,16 @@ func TestMediaReleaseAPIProcess(t *testing.T) {
 		if err == nil {
 			err = e
 		}
-		project, e := c.clip.CreateProject(ctx, "release-user", clip.ProjectInput{Language: "ko", Title: "split release", VideoTemplateID: template.ID, Ratio: "horizontal", TargetDurationMS: 15000, Disclosure: "ad", CompositionInputs: releaseValues()})
+		project, e := c.clip.CreateProject(ctx, "release-user", clip.ProjectInput{Language: "ko", Title: "split release", VideoTemplateID: template.ID, Ratio: "vertical", TargetDurationMS: 15000, Disclosure: "ad", CompositionInputs: releaseValues()})
 		if err == nil {
 			err = e
 		}
 		if err != nil {
+			http.Error(w, err.Error(), 500)
+			return
+		}
+		// This release exercises an earlier horizontal project, not a new horizontal creation.
+		if _, err = p.db.Writer.ExecContext(ctx, "UPDATE clip_projects SET ratio='horizontal' WHERE id=?", project.ID); err != nil {
 			http.Error(w, err.Error(), 500)
 			return
 		}

@@ -50,7 +50,7 @@ import { ClipProgressBar, ClipStatusLine, type CorrectionStatus } from './ClipSt
 export function ClipWorkspace({ ownerId, project }: { ownerId: string; project: ClipProject }) {
   const { t } = useTranslation('clips')
   const navigate = useNavigate()
-  const destination = clipReturnDestination(ownerId, project.id)
+  const destination = clipReturnDestination(ownerId, project.id, undefined, project.channel)
   const returnTo = {
     href: destination.href,
     label: t(destination.path === '/' ? 'navigation.returnCreation' : 'navigation.returnHistory'),

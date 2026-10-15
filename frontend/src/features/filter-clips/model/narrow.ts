@@ -1,7 +1,14 @@
-import { clipState, type ClipProject, type ClipState } from '@/entities/clip-project'
+import {
+  clipState,
+  clipChannel,
+  type ClipChannel,
+  type ClipProject,
+  type ClipState,
+} from '@/entities/clip-project'
 
 /** The narrowing the clip directory holds, straight out of the URL (CLIP-41). */
 export interface ClipNarrowing {
+  channel?: ClipChannel
   q?: string
   status?: ClipState
 }
@@ -21,6 +28,7 @@ function normalize(value: string): string {
 export function narrowClips(projects: ClipProject[], narrowing: ClipNarrowing): ClipProject[] {
   const query = normalize(narrowing.q ?? '')
   return projects.filter((project) => {
+    if (clipChannel(project.channel) !== clipChannel(narrowing.channel)) return false
     if (narrowing.status && clipState(project) !== narrowing.status) return false
     return query === '' || normalize(project.title).includes(query)
   })

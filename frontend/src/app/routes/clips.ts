@@ -1,4 +1,5 @@
 import { createRoute, lazyRouteComponent } from '@tanstack/react-router'
+import { clipCreationSearchSchema } from '@/pages/clip'
 import { clipsSearchSchema } from '@/pages/clips'
 import { videoTemplateSearchSchema } from '@/pages/video-template'
 import { spokenCreationSearchSchema } from '@/pages/spoken-voices'
@@ -14,6 +15,7 @@ export const clipsRoute = createRoute({
 export const newClipRoute = createRoute({
   getParentRoute: () => videoGroupRoute,
   path: '/clips/new',
+  validateSearch: clipCreationSearchSchema,
   staticData: { groupNav: 'hidden' },
   component: lazyRouteComponent(() => import('@/pages/clip'), 'ClipPage'),
 })

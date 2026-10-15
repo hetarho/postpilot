@@ -3,6 +3,7 @@ package rpc
 import (
 	"context"
 	"errors"
+	"reflect"
 	"testing"
 	"time"
 
@@ -19,6 +20,8 @@ type rpcStore struct {
 	user          string
 	patch         clip.ProjectPatch
 	templatePatch clip.TemplatePatch
+	project       *clip.Project
+	inserted      []clip.Project
 }
 
 func (s *rpcStore) GetProject(_ context.Context, user, id string) (clip.Project, error) {
@@ -26,11 +29,22 @@ func (s *rpcStore) GetProject(_ context.Context, user, id string) (clip.Project,
 	if id != "owned" {
 		return clip.Project{}, clip.ErrNotFound
 	}
+	if s.project != nil {
+		return *s.project, nil
+	}
 	return clip.Project{ID: id, UserID: user, Ratio: "vertical", TargetDurationMS: 30000}, nil
 }
 func (s *rpcStore) UpdateProject(_ context.Context, user, id string, p clip.ProjectPatch, _ time.Time) (clip.Project, error) {
 	s.user = user
 	s.patch = p
+	if s.project != nil {
+		value := *s.project
+		if p.Channel != nil {
+			value.Channel = *p.Channel
+		}
+		s.project = &value
+		return value, nil
+	}
 	return clip.Project{ID: id, Ratio: "vertical"}, nil
 }
 func (s *rpcStore) GetTemplate(_ context.Context, user, id string) (clip.VideoTemplate, error) {
@@ -180,3 +194,70 @@ func TestCreateProjectRefusesAbsentAndUnknownWireLanguages(t *testing.T) {
 		}
 	}
 }
+
+func (s *rpcStore) InsertProject(_ context.Context, p clip.Project) error {
+	s.inserted = append(s.inserted, p)
+	return nil
+}
+
+func TestCreateIsVerticalOnlyAndDefaultsTheChannel(t *testing.T) {
+	s := &rpcStore{}
+	h := NewHandler(testProjects(s))
+	ctx := auth.WithUser(t.Context(), "alice")
+	for _, channel := range []string{"", clip.ChannelNaver, clip.ChannelInstagram} {
+		got, err := h.CreateClipProject(ctx, connect.NewRequest(&v1.CreateClipProjectRequest{Title: "new", Ratio: "vertical", Channel: channel, Language: v1.ContentLanguage_CONTENT_LANGUAGE_KOREAN}))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got.Msg.Project.Channel != clip.DefaultChannel(channel) || got.Msg.Project.Ratio != "vertical" || s.inserted[len(s.inserted)-1].UserID != "alice" {
+			t.Fatal(got.Msg.Project)
+		}
+	}
+	accepted := len(s.inserted)
+	for _, ratio := range []string{"", "horizontal", "square", "9:16"} {
+		_, err := h.CreateClipProject(ctx, connect.NewRequest(&v1.CreateClipProjectRequest{Title: "new", Ratio: ratio, Language: v1.ContentLanguage_CONTENT_LANGUAGE_KOREAN}))
+		var ce *connect.Error
+		if !errors.As(err, &ce) || ce.Code() != connect.CodeInvalidArgument || len(ce.Details()) != 1 {
+			t.Fatal(ratio, err)
+		}
+		detail, _ := ce.Details()[0].Value()
+		if detail.(*v1.AppErrorDetail).Reason != "CLIP_RATIO_UNSUPPORTED" {
+			t.Fatal(detail)
+		}
+	}
+	if len(s.inserted) != accepted {
+		t.Fatal("invalid ratio was written")
+	}
+	_, err := h.CreateClipProject(ctx, connect.NewRequest(&v1.CreateClipProjectRequest{Title: "new", Ratio: "vertical", Channel: "unknown", Language: v1.ContentLanguage_CONTENT_LANGUAGE_KOREAN}))
+	if connect.CodeOf(err) != connect.CodeInvalidArgument || len(s.inserted) != accepted {
+		t.Fatal(err)
+	}
+}
+
+func TestUpdateMovesTheChannelAlone(t *testing.T) {
+	original := clip.Project{ID: "owned", UserID: "alice", Title: "keep", Ratio: "horizontal", Channel: clip.ChannelNaver, Language: "ko", Instruction: "keep instruction", TargetDurationMS: 30000, EditPlanRevision: 3, RenderedPlanRevision: 3, Analysis: "saved analysis", Result: &clip.Result{ID: "saved"}}
+	s := &rpcStore{project: &original}
+	h := NewHandler(testProjects(s))
+	ctx := auth.WithUser(t.Context(), "alice")
+	for _, channel := range []string{clip.ChannelInstagram, clip.ChannelNaver} {
+		response, err := h.UpdateClipProject(ctx, connect.NewRequest(&v1.UpdateClipProjectRequest{Id: "owned", Channel: &channel}))
+		if err != nil {
+			t.Fatal(err)
+		}
+		want := original
+		want.Channel = channel
+		if !reflect.DeepEqual(*s.project, want) || response.Msg.Project.Channel != channel || !reflect.DeepEqual(s.patch, clip.ProjectPatch{Channel: &channel}) {
+			t.Fatalf("move changed another field: %+v %+v", s.project, s.patch)
+		}
+	}
+	for _, invalid := range []string{"", "unknown"} {
+		if _, err := h.UpdateClipProject(ctx, connect.NewRequest(&v1.UpdateClipProjectRequest{Id: "owned", Channel: &invalid})); connect.CodeOf(err) != connect.CodeInvalidArgument {
+			t.Fatal(err)
+		}
+	}
+	_, err := h.UpdateClipProject(ctx, connect.NewRequest(&v1.UpdateClipProjectRequest{Id: "foreign", Channel: ptrChannel(clip.ChannelInstagram)}))
+	if connect.CodeOf(err) != connect.CodeNotFound {
+		t.Fatal(err)
+	}
+}
+func ptrChannel(value string) *string { return &value }

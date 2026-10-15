@@ -229,6 +229,7 @@ type ClipProject struct {
 	DubbingVoiceID           string
 	DubbingBindingDigest     string
 	ResultSpeechJson         string
+	Channel                  string
 }
 
 type ClipSourceAttempt struct {

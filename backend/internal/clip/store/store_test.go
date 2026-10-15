@@ -95,7 +95,7 @@ func TestOwnedLifecyclePresenceAndTemplateDetach(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if _, err := s.CreateProject(ctx, "bob", clip.ProjectInput{Language: "ko", Title: "foreign", VideoTemplateID: v.ID, Ratio: "square", TargetDurationMS: 15000}); !errors.Is(err, clip.ErrNotFound) {
+	if _, err := s.CreateProject(ctx, "bob", clip.ProjectInput{Language: "ko", Title: "foreign", VideoTemplateID: v.ID, Ratio: "vertical", TargetDurationMS: 15000}); !errors.Is(err, clip.ErrNotFound) {
 		t.Fatal(err)
 	}
 	if _, err := s.CreateTemplate(ctx, "alice", recipe()); !errors.Is(err, clip.ErrDuplicateName) {
@@ -205,18 +205,18 @@ func TestValidationAndIncompleteAnswers(t *testing.T) {
 		}
 	}
 	v, _ := create(t, s)
-	for _, mutate := range []func(*clip.ProjectInput){func(p *clip.ProjectInput) { p.Title = " " }, func(p *clip.ProjectInput) { p.Title = strings.Repeat("한", 101) }, func(p *clip.ProjectInput) { p.Ratio = "9:16" }, func(p *clip.ProjectInput) { p.TargetDurationMS = 14999 }, func(p *clip.ProjectInput) { p.TargetDurationMS = 60001 }} {
-		p := clip.ProjectInput{Language: "ko", Title: "valid", VideoTemplateID: v.ID, Ratio: "square", TargetDurationMS: 15000}
+	for _, mutate := range []func(*clip.ProjectInput){func(p *clip.ProjectInput) { p.Title = " " }, func(p *clip.ProjectInput) { p.Title = strings.Repeat("한", 101) }, func(p *clip.ProjectInput) { p.TargetDurationMS = 14999 }, func(p *clip.ProjectInput) { p.TargetDurationMS = 60001 }} {
+		p := clip.ProjectInput{Language: "ko", Title: "valid", VideoTemplateID: v.ID, Ratio: "vertical", TargetDurationMS: 15000}
 		mutate(&p)
 		if _, err := s.CreateProject(ctx, "alice", p); !errors.Is(err, clip.ErrInvalid) {
 			t.Fatalf("accepted project %+v: %v", p, err)
 		}
 	}
-	long := clip.ProjectInput{Language: "ko", Title: "valid", VideoTemplateID: v.ID, Ratio: "square", TargetDurationMS: 15000, CompositionInputs: &clip.CompositionInputs{Values: map[string]string{"place": strings.Repeat("한", 501)}, Items: map[string][]composition.Item{}}}
+	long := clip.ProjectInput{Language: "ko", Title: "valid", VideoTemplateID: v.ID, Ratio: "vertical", TargetDurationMS: 15000, CompositionInputs: &clip.CompositionInputs{Values: map[string]string{"place": strings.Repeat("한", 501)}, Items: map[string][]composition.Item{}}}
 	if _, err := s.CreateProject(ctx, "alice", long); !errors.As(err, &problem) || problem.Reason != "answer_limit" {
 		t.Fatalf("accepted a value over its limit: %v", err)
 	}
-	for _, ratio := range []string{"vertical", "horizontal", "square"} {
+	for _, ratio := range []string{"vertical"} {
 		p, err := s.CreateProject(ctx, "alice", clip.ProjectInput{Language: "ko", Title: "incomplete", VideoTemplateID: v.ID, Ratio: ratio, TargetDurationMS: 60000})
 		if err != nil {
 			t.Fatal(err)
@@ -251,13 +251,13 @@ func TestDisclosureRoundTrip(t *testing.T) {
 	}
 	// A project may be created without a campaign type; the gate is what
 	// refuses one at approval.
-	blank, err := s.CreateProject(ctx, "alice", clip.ProjectInput{Language: "ko", Title: "미정", VideoTemplateID: v.ID, Ratio: "square", TargetDurationMS: 15000})
+	blank, err := s.CreateProject(ctx, "alice", clip.ProjectInput{Language: "ko", Title: "미정", VideoTemplateID: v.ID, Ratio: "vertical", TargetDurationMS: 15000})
 	if err != nil || blank.Disclosure != "" {
 		t.Fatalf("%+v %v", blank, err)
 	}
 	// The same is true of the target duration: the creation screen settles the
 	// ratio alone, and the length is chosen in ① beside the sources (CLIP-130).
-	unset, err := s.CreateProject(ctx, "alice", clip.ProjectInput{Language: "ko", Title: "길이 미정", VideoTemplateID: v.ID, Ratio: "square"})
+	unset, err := s.CreateProject(ctx, "alice", clip.ProjectInput{Language: "ko", Title: "길이 미정", VideoTemplateID: v.ID, Ratio: "vertical"})
 	if err != nil || unset.TargetDurationMS != 0 {
 		t.Fatalf("%+v %v", unset, err)
 	}
@@ -268,7 +268,7 @@ func TestDisclosureRoundTrip(t *testing.T) {
 	if _, err := s.UpdateProject(ctx, "alice", unset.ID, clip.ProjectPatch{TargetDurationMS: ptr(14999)}); !errors.Is(err, clip.ErrInvalid) {
 		t.Fatal("a written duration escaped its bounds", err)
 	}
-	if _, err := s.CreateProject(ctx, "alice", clip.ProjectInput{Language: "ko", Title: "잘못된", VideoTemplateID: v.ID, Ratio: "square", TargetDurationMS: 15000, Disclosure: "편집"}); !errors.Is(err, clip.ErrInvalid) {
+	if _, err := s.CreateProject(ctx, "alice", clip.ProjectInput{Language: "ko", Title: "잘못된", VideoTemplateID: v.ID, Ratio: "vertical", TargetDurationMS: 15000, Disclosure: "편집"}); !errors.Is(err, clip.ErrInvalid) {
 		t.Fatal(err)
 	}
 }

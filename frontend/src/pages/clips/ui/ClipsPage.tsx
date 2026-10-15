@@ -4,6 +4,7 @@ import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import {
   clipState,
+  clipChannel,
   clipStateLabel,
   type ClipProject,
   useClipProjects,
@@ -95,6 +96,7 @@ export function ClipsPage() {
       scrollY: window.scrollY,
       targetId,
       filters: {
+        ...(narrowing.channel ? { channel: narrowing.channel } : {}),
         ...(narrowing.q ? { q: narrowing.q } : {}),
         ...(narrowing.status ? { status: narrowing.status } : {}),
       },
@@ -105,10 +107,16 @@ export function ClipsPage() {
   const narrow = (next: ClipNarrowing) =>
     void navigate({
       to: '/clips',
-      search: { q: next.q?.trim() === '' ? undefined : next.q, status: next.status },
+      search: {
+        channel: next.channel ?? narrowing.channel,
+        q: next.q?.trim() === '' ? undefined : next.q,
+        status: next.status,
+      },
       replace: true,
     })
-  const listed = projects.data ?? []
+  const listed = (projects.data ?? []).filter(
+    (project) => clipChannel(project.channel) === clipChannel(narrowing.channel),
+  )
   const narrowed = narrowClips(listed, narrowing)
   const noMatch = !projects.isPending && !projects.isError && listed.length > 0 && !narrowed.length
   const statusLabel = narrowing.status ? clipStateLabel(narrowing.status) : ''

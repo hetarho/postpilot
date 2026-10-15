@@ -40,6 +40,15 @@ const all = [draft, refining, finished]
 const ids = (values: ClipProject[]) => values.map((v) => v.id)
 
 describe('narrowClips', () => {
+  it('narrows by channel and defaults older projects to Naver', () => {
+    const instagram = project({ id: 'i', title: '제주', channel: 'instagram_clip' })
+    expect(ids(narrowClips([...all, instagram], {}))).toEqual(['a', 'b', 'c'])
+    expect(ids(narrowClips([...all, instagram], { channel: 'instagram_clip' }))).toEqual(['i'])
+    expect(ids(narrowClips([...all, instagram], { channel: 'instagram_clip', q: '부산' }))).toEqual(
+      [],
+    )
+  })
+
   it('keeps everything when nothing is narrowing', () => {
     expect(ids(narrowClips(all, {}))).toEqual(['a', 'b', 'c'])
   })

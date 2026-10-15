@@ -587,6 +587,7 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
       title: req.title,
       videoTemplateId: req.videoTemplateId,
       ratio: req.ratio as ClipProjectDraft['ratio'],
+      channel: (req.channel || 'naver_clip') as ClipProjectDraft['channel'],
       targetDurationMs: req.targetDurationMs,
       disclosure: req.disclosure as ClipProjectDraft['disclosure'],
       hideDisclosure: req.hideDisclosure,
@@ -635,6 +636,7 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
       Array.from(req.instruction).length > CLIP_PROJECT_LIMITS.instruction
     )
       throw connectAppError('CLIP_INVALID_INPUT', Code.InvalidArgument)
+    if (req.channel !== undefined) p.channel = req.channel as ClipProjectDraft['channel']
     if (req.title !== undefined) p.title = req.title
     // Choosing a template takes its selection in the same write; 없음 moves nothing (CLIP-168).
     const switchedTo =

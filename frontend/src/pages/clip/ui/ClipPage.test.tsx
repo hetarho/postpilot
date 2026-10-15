@@ -130,10 +130,10 @@ describe('clip directory and setup', () => {
     expect(await screen.findByRole('alert')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '다시 시도' })).toBeInTheDocument()
   })
-  it('validates required setup, creates exactly once, then enables source selection', async () => {
+  it('creates a vertical clip in the requested channel', async () => {
     const calls: string[] = []
     const projectWrites: ClipProjectDraft[] = []
-    const { router } = mount('/clips/new', { calls, projectWrites })
+    const { router } = mount('/clips/new?channel=instagram_clip', { calls, projectWrites })
     expect(await screen.findByRole('button', { name: '클립 만들기' })).toBeDisabled()
     expect(screen.queryByLabelText('원본 영상 선택')).not.toBeInTheDocument()
     const user = await fillSetup()
@@ -142,14 +142,15 @@ describe('clip directory and setup', () => {
     expect(screen.queryByLabelText('목표 길이 (초)')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('장소')).not.toBeInTheDocument()
     expect(screen.queryByLabelText(/클립에 담고 싶은 내용/)).not.toBeInTheDocument()
-    await user.click(screen.getByRole('combobox', { name: /^화면 비율/ }))
-    await user.click(screen.getByRole('option', { name: '정방형 1:1' }))
+    expect(screen.queryByRole('combobox', { name: /^화면 비율/ })).not.toBeInTheDocument()
+    expect(screen.getByText('세로 9:16')).toBeInTheDocument()
     await user.dblClick(screen.getByRole('button', { name: '클립 만들기' }))
     await waitFor(() => expect(router.state.location.pathname).toBe('/clips/clip-1'))
     expect(calls.filter((c) => c === 'CreateClipProject')).toHaveLength(1)
     expect(projectWrites[0]).toMatchObject({
       title: '새 경험',
-      ratio: 'square',
+      ratio: 'vertical',
+      channel: 'instagram_clip',
       targetDurationMs: 0,
       disclosure: '',
     })
@@ -204,6 +205,57 @@ describe('clip directory and setup', () => {
     expect(screen.getByLabelText('클립 제목')).toHaveValue(' 새 경험 ')
     expect(screen.getByRole('combobox', { name: /^영상 템플릿/ })).toHaveTextContent('여행')
     expect(router.state.location.pathname).toBe('/clips/new')
+  })
+  it('moves a clip to the other channel', async () => {
+    const writes: ClipProjectDraft[] = []
+    const { router } = mount('/clips?channel=naver_clip', { projectWrites: writes })
+    const user = userEvent.setup()
+    await user.click(await screen.findByRole('link', { name: /제주 여행/ }))
+    await screen.findByLabelText('클립 제목')
+    await user.dblClick(screen.getByRole('button', { name: '인스타 클립으로 옮기기' }))
+    await screen.findByRole('button', { name: '네이버 클립으로 옮기기' })
+    expect(writes).toHaveLength(1)
+    expect(writes[0]).toMatchObject({
+      channel: 'instagram_clip',
+      title: project.title,
+      ratio: 'vertical',
+      targetDurationMs: 30000,
+    })
+    const back = screen.getByRole('link', { name: '작업 내역으로 돌아가기' })
+    expect(back).toHaveAttribute('href', '/clips?channel=instagram_clip')
+    await user.click(back)
+    await waitFor(() => expect(router.state.location.search.channel).toBe('instagram_clip'))
+    expect(await screen.findByRole('link', { name: /제주 여행/ })).toBeInTheDocument()
+  })
+  it('keeps a legacy square project editable and its rendered download', async () => {
+    const writes: ClipProjectDraft[] = []
+    mount('/clips/project', {
+      projectWrites: writes,
+      projects: [
+        {
+          ...project,
+          ratio: 'square',
+          result: {
+            contentType: 'video/mp4',
+            bytes: 5,
+            durationMs: 30000,
+            createdAt: '2026-10-01T00:00:00Z',
+            downloadUrl: 'https://test.local/legacy.mp4',
+          },
+        },
+      ],
+    })
+    const user = userEvent.setup()
+    expect(await screen.findByRole('link', { name: /다운로드/ })).toHaveAttribute('href', 'https://test.local/legacy.mp4')
+    await user.click(screen.getByRole('tab', { name: '생성' }))
+    await user.type(await screen.findByLabelText('클립 제목'), ' 기록')
+    expect(screen.getByText('정방형 1:1')).toBeInTheDocument()
+    expect(screen.queryByRole('combobox', { name: /^화면 비율/ })).not.toBeInTheDocument()
+    await waitFor(() =>
+      expect(writes).toContainEqual(
+        expect.objectContaining({ ratio: 'square', title: '제주 여행 기록' }),
+      ),
+    )
   })
   it('updates the title without changing the ratio', async () => {
     const projectWrites: ClipProjectDraft[] = []

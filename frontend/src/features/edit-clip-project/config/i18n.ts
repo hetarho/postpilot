@@ -4,12 +4,11 @@ import type { I18nFragment } from '@/shared/lib'
 export const i18n = {
   namespace: 'clips',
   ko: {
-    ratioGuidance: {
-      vertical: '숏폼 피드 기본이에요. 모바일 화면에 그대로 올라가요.',
-      horizontal: 'PC 업로드나 블로그·사이트 임베드용이에요. 모바일 피드에는 어울리지 않아요.',
-      square: '정방형 피드와 블로그 본문에 어울려요.',
-    },
+    channel: { naver_clip: '네이버 클립', instagram_clip: '인스타 클립' },
     project: {
+      channel: '클립 채널',
+      verticalOnly: '두 클립 채널 모두 세로 9:16으로 만들어요.',
+      move: { naver_clip: '네이버 클립으로 옮기기', instagram_clip: '인스타 클립으로 옮기기' },
       designChoices: '디자인과 자막 스타일',
       designSummary:
         '{{pace}} · 강조색 {{accent}} · 인트로 {{intro}} · 아웃트로 {{outro}} · 자막 스타일 {{count}}종',
@@ -51,7 +50,7 @@ export const i18n = {
       ratio: '화면 비율',
       duration: '목표 길이 (초)',
       durationHelp: '15초부터 60초까지 선택할 수 있어요.',
-      fixedRatio: '화면 비율은 바꿀 수 없어요. 다른 비율은 새 클립으로 만들어 주세요.',
+      fixedRatio: '화면 비율은 바꿀 수 없어요. 저장된 비율로 계속 편집하고 내려받을 수 있어요.',
       create: '클립 만들기',
       save: '설정 저장',
       saved: '저장했어요',
@@ -112,12 +111,11 @@ export const i18n = {
     },
   },
   en: {
-    ratioGuidance: {
-      vertical: 'The short-form default. It goes straight into a mobile feed.',
-      horizontal: 'For PC upload or a blog or site embed. It does not suit a mobile feed.',
-      square: 'Suits square feeds and blog bodies.',
-    },
+    channel: { naver_clip: 'Naver Clip', instagram_clip: 'Instagram Clip' },
     project: {
+      channel: 'Clip channel',
+      verticalOnly: 'Both clip channels use vertical 9:16.',
+      move: { naver_clip: 'Move to Naver Clip', instagram_clip: 'Move to Instagram Clip' },
       designChoices: 'Design and caption styles',
       designSummary:
         '{{pace}} · Accent {{accent}} · Intro {{intro}} · Outro {{outro}} · {{count}} caption styles',
@@ -159,7 +157,7 @@ export const i18n = {
       ratio: 'Aspect ratio',
       duration: 'Target duration (seconds)',
       durationHelp: 'Choose between 15 and 60 seconds.',
-      fixedRatio: 'The aspect ratio is fixed. Create a new clip for a different ratio.',
+      fixedRatio: 'The aspect ratio is fixed. Keep editing and downloading in its saved ratio.',
       create: 'Create clip',
       save: 'Save setup',
       saved: 'Saved',

@@ -3,7 +3,8 @@ import { Link, useBlocker, useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import {
   CLIP_PROJECT_LIMITS,
-  CLIP_RATIOS,
+  DEFAULT_CLIP_CHANNEL,
+  type ClipChannel,
   ClipCompositionInputFields,
   boundedFreeText,
   emptyClipProject,
@@ -27,6 +28,7 @@ import { CLIP_ACCENTS, useClipTemplates } from '@/entities/clip-template'
 import { CLIP_DEFAULT_REGION_PRESETS, CLIP_DESIGN } from '@/entities/clip-design'
 import { appFailureFromConnect } from '@/shared/api'
 import { peekPendingClipDraft, queueClipDraft } from '../model/clip-draft-queue'
+import { MoveClipChannel } from './MoveClipChannel'
 import { ClipDesignSelection, type ClipRegionSwitches } from './ClipDesignSelection'
 import {
   ActionBar,
@@ -57,6 +59,7 @@ const INPUT = {
 export function ClipProjectForm({
   ownerId,
   stored,
+  channel = DEFAULT_CLIP_CHANNEL,
   onUploadAllowed,
   children,
   disabled = false,
@@ -72,6 +75,7 @@ export function ClipProjectForm({
     change: (value: NonNullable<ClipProjectDraft['dubbing']>) => void,
   ) => ReactNode
   stored?: ClipProject
+  channel?: ClipChannel
   /** Whether each region is used, and its switch — held by the workspace, which saves region
    *  edits for ① and ② alike (CLIP-111). */
   regions?: ClipRegionSwitches
@@ -94,7 +98,7 @@ export function ClipProjectForm({
   // (CLIP-39). Read, not consumed — a component body may run more than once per mount.
   const queued = stored ? peekPendingClipDraft(stored.id) : undefined
   const [draft, setDraft] = useState<ClipProjectDraft>(
-    () => queued ?? (stored ? projectDraft(stored) : emptyClipProject()),
+    () => queued ?? (stored ? projectDraft(stored) : { ...emptyClipProject(), channel }),
   )
   const [seconds, setSeconds] = useState(
     draft.targetDurationMs ? String(draft.targetDurationMs / 1000) : '',
@@ -364,38 +368,19 @@ export function ClipProjectForm({
               />
             </div>
           )}
+          {stored && (
+            <MoveClipChannel ownerId={ownerId} project={stored} disabled={disabled || readOnly} />
+          )}
           <div>
-            {stored ? (
-              <>
-                <Typography variant="fieldTitle" as="p">
-                  {t('project.ratio')}
-                </Typography>
-                <Typography variant="body" className="mt-2">
-                  {t(`ratio.${stored.ratio}`)}
-                </Typography>
-                <Typography variant="body" className="text-content-secondary mt-2">
-                  {t('project.fixedRatio')}
-                </Typography>
-              </>
-            ) : (
-              <>
-                <FieldLabel id="clip-ratio-label" htmlFor="clip-ratio">
-                  {t('project.ratio')}
-                </FieldLabel>
-                <Listbox
-                  id="clip-ratio"
-                  aria-labelledby="clip-ratio-label"
-                  value={draft.ratio}
-                  onChange={(value) => change('ratio', value)}
-                  options={CLIP_RATIOS.map((value) => ({ value, label: t(`ratio.${value}`) }))}
-                />
-                {/* Naver Clip takes landscape and long-form only from the PC
-                    web, and square support is unconfirmed (CDS-49). */}
-                <Typography variant="body" className="text-content-secondary mt-2">
-                  {t(`ratioGuidance.${draft.ratio}`)}
-                </Typography>
-              </>
-            )}
+            <Typography variant="fieldTitle" as="p">
+              {t('project.ratio')}
+            </Typography>
+            <Typography variant="body" className="mt-2">
+              {t(`ratio.${stored?.ratio ?? 'vertical'}`)}
+            </Typography>
+            <Typography variant="body" className="text-content-secondary mt-2">
+              {t(stored ? 'project.fixedRatio' : 'project.verticalOnly')}
+            </Typography>
           </div>
           {!creating && (
             <div>

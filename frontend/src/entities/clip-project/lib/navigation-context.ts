@@ -4,6 +4,8 @@ import {
   type NavigationStorage,
 } from '@/shared/lib/navigation'
 
+import { CLIP_CHANNELS, DEFAULT_CLIP_CHANNEL, type ClipChannel } from '../config/channel'
+
 export interface ClipEntry {
   path: '/' | '/clips' | '/library'
   section: string
@@ -67,6 +69,7 @@ export function clipReturnDestination(
   ownerId: string,
   clipId?: string,
   storage = browserStorage(),
+  channel: ClipChannel = DEFAULT_CLIP_CHANNEL,
 ): ClipReturnDestination {
   const entry = readClipReturnContext(ownerId, clipId, storage)
   const path = (entry?.path ?? (clipId ? '/clips' : '/')) as ClipEntry['path']
@@ -74,6 +77,11 @@ export function clipReturnDestination(
   if (entry?.filters.q) filters.q = entry.filters.q
   if (entry?.filters.status && ['draft', 'refining', 'finished'].includes(entry.filters.status))
     filters.status = entry.filters.status
+  if (path === '/clips') {
+    if (CLIP_CHANNELS.includes(entry?.filters.channel as ClipChannel))
+      filters.channel = entry!.filters.channel
+    else if (channel !== DEFAULT_CLIP_CHANNEL) filters.channel = channel
+  }
   const query = new URLSearchParams(path === '/' ? {} : filters).toString()
   return {
     path,
