@@ -22,6 +22,7 @@
 | template-from-request | converted@261001 |
 | familiar-video-editing-and-dubbing | converted@261004 |
 | friendly-model-names | open@261013 |
+| campaign-reviewer-focus | ready@261015 |
 
 ## ssot
 | id | rev | tasked | pending | [?] |
@@ -76,11 +77,13 @@
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
 
 ## next
-- ideation friendly-model-names 계속: decide the automatic alias word list (theme, size, contents) and whether speech profiles join; then create-ssot/update-ssot MODEL.
-- 6e5039c8 is live with CI, Deploy backend and all three Verify media jobs green. 76b619df's Media worker parity failure did not reproduce (four local runs, green on 6e5039c8); its log needs GitHub auth if it recurs.
-- Review the 17 unadopted choices in review/structure-261008 (T654–T663 done); editorial follow-up doc-review ARCH.
+- update-ssot from ideation/campaign-reviewer-focus (ready): GUIDE GEN POST EXPORT TMPL CLIP VOICE THEME MKT; its open list (wizard branch tree and role catalogs, placeholder wording, upload text rules, heading suggestions without a voice, English target) is settled in those interviews, Instagram Post stays TBD.
+- ideation friendly-model-names 계속: decide the automatic alias word list (theme, size, contents) and whether speech profiles join; then create-ssot/update-ssot MODEL. Also pending: the 17 unadopted choices in review/structure-261008 and doc-review ARCH.
+- 65c79f2b (haeram-spec-creator 0.5.0 + clip ink identity refresh) awaits its pre-push gate and push; 6e5039c8 is the live green revision.
 
 ## log
+- 261015 ideation campaign-reviewer-focus ready: always-on principle groups (facts, impressions + constructive honesty, no AI tells, titles/tags), advertiser guide with checklist and a 광고주 요청 origin color, 체험단 글 switch with a top disclosure placeholder, branching template wizard with owner headings, chat voice learning, four channel menus + 내 설정, clip upload text, 9:16 only, Tistory/site/Markdown out.
+- 261015 ideation campaign-reviewer-focus start: product philosophy (체험단 automation, fast monetization, 상생), always-on guidelines, guided template wizard, real-speech voice, per-channel outputs and menus (Naver blog, Naver clip, Instagram clip, Instagram post).
 - 261013 ideation friendly-model-names paused (open): grade + model-wide neutral alias (가성비 · 소나무), auto-assigned and operator-editable, never reused; operator-confirmed succession moves the alias to a new version and same-grade eligible selections follow with a notice; per-post credits/badges in options, 자세히 under the field. Open: the alias word list.
 - 261013 ideation friendly-model-names start: users see grade+number names (무료1, 가성비2) instead of full model names/versions; details only on request.
 - 261013 6e5039c8 pushed (T676 + media-release sampling fix): CI ok, Deploy backend ok, Verify media ok (image, release, worker); production runs 6e5039c8.
@@ -99,5 +102,3 @@
 - 261012 create-task GEN POST TMPL GUIDE start.
 - 261012 update-ssot GEN r29 POST r40 TMPL r27 GUIDE r21 done: GEN-46✎ tag_count upper bound→minimum (≤30 kept) · GEN-50✎ broad labels fill the rest of the count · GEN-83✎ flavor/texture/aroma inferred from inputs written into the experience · GEN-85✎ rule changes edit in place · POST-63✎ TMPL-47✎ TMPL-49✎ 최대→최소 태그 수 · GUIDE-41✎ impressions 기본 지침 renamed; no doing task in the blast radius; next create-task.
 - 261012 update-ssot GEN start: tags fell to 5–7 with no broad label once the count became a maximum; prose shrank under the AI-suggestion separation rules; the owner wants a tag minimum and inferred sensory description from supplied inputs, editing existing 기본 지침 instead of appending.
-- 261011 T671 done on main: pick-order confirms; ① strip moves a photo by drag or 옮기기 → 여기로 / 맨 뒤로.
-- 261011 T670 done on main: images.position, confirm append, ReorderImages with POST_PHOTO_ORDER_STALE.
