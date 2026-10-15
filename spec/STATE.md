@@ -32,7 +32,8 @@
 - 261015 decided THEME-38: location of the clip templates and 영상 지침 both clip channels share? → the clip channel they were opened from, direct links under 네이버 클립 (alt: a separate 클립 설정 destination)
 - 261015 decided THEME-65: 인스타 게시물 until decided? → no navigation entry, open [?] (alt: a 준비 중 entry)
 - 261015 decided MKT-17: positioning line? → 체험단 자동화 with 내가 겪은 그대로, 체험단 글을 빠르게 (alt: keep AI는 속도를, 글의 주도권은 나에게)
-- 261015 decided LANG: keep English output in a Korean 체험단 product? → kept unchanged (alt: Korean only)
+- 261015 decided -: keep English output in a Korean 체험단 product? → kept unchanged (alt: Korean only)
+- 261015 decided POST-120 T692: a memo longer than the clip instruction bound (1000)? → carry the first 1000 characters and say so in the dialog; the post keeps the full memo (alt: refuse the carry-over | carry no memo)
 
 ## ideation
 | id | st |
@@ -57,25 +58,25 @@
 | ARCH | 20 | 20 | - | 0 |
 | AUTH | 15 | 15 | - | 0 |
 | QUOTA | 38 | 38 | - | 0 |
-| POST | 41 | 40 | POST-117+ POST-118+ POST-119+ POST-120+ POST-112✎ POST-114✎ POST-43✎ POST-54✎ POST-62✎ POST-64✎ POST-107✎ | 0 |
-| VOICE | 17 | 16 | VOICE-76+ VOICE-65✎ VOICE-60✎ VOICE-66✎ VOICE-71✎ VOICE-4✎ VOICE-32✎ VOICE-47✎ VOICE-52✎ VOICE-67✎ | 0 |
-| GEN | 31 | 30 | GEN-87+ GEN-88+ GEN-80✎ GEN-16✎ GEN-17✎ GEN-44✎ GEN-47✎ GEN-49✎ GEN-50✎ GEN-75✎ GEN-83✎ GEN-15✎ GEN-5✎ GEN-14✎ GEN-30✎ GEN-40✎ | 0 |
+| POST | 41 | 41 | - | 0 |
+| VOICE | 17 | 17 | - | 0 |
+| GEN | 31 | 31 | - | 0 |
 | MODEL | 36 | 36 | - | 0 |
-| TMPL | 28 | 27 | TMPL-71+ TMPL-72+ TMPL-73+ TMPL-74+ TMPL-16✎ TMPL-24✎ TMPL-26✎ TMPL-34✎ TMPL-52✎ TMPL-58✎ TMPL-64✎ | 0 |
-| GUIDE | 22 | 21 | GUIDE-51+ GUIDE-52+ GUIDE-53+ GUIDE-54+ GUIDE-16✎ GUIDE-41✎ GUIDE-42✎ GUIDE-1✎ GUIDE-14✎ GUIDE-15✎ GUIDE-17✎ GUIDE-18✎ GUIDE-19✎ GUIDE-20✎ GUIDE-26✎ GUIDE-37✎ GUIDE-43✎ GUIDE-44✎ GUIDE-48✎ | 0 |
-| EXPORT | 12 | 11 | EXPORT-6- EXPORT-7- EXPORT-8- EXPORT-28+ EXPORT-1✎ EXPORT-2✎ EXPORT-3✎ EXPORT-9✎ EXPORT-10✎ EXPORT-11✎ EXPORT-12✎ EXPORT-20✎ EXPORT-21✎ EXPORT-22✎ EXPORT-23✎ EXPORT-24✎ EXPORT-25✎ EXPORT-26✎ | 0 |
-| LANG | 10 | 9 | LANG-25✎ | 0 |
-| THEME | 34 | 33 | THEME-65+ THEME-66+ THEME-38✎ THEME-47✎ THEME-26✎ THEME-62✎ | 2 |
-| MKT | 11 | 10 | MKT-17✎ MKT-11✎ | 0 |
-| VIDEO | 8 | 7 | VIDEO-14✎ VIDEO-15✎ | 0 |
-| CLIP | 60 | 59 | CLIP-209+ CLIP-210+ CLIP-211+ CLIP-212+ CLIP-213+ CLIP-214+ CLIP-8✎ CLIP-130✎ CLIP-1✎ CLIP-3✎ CLIP-11✎ CLIP-27✎ CLIP-41✎ CLIP-42✎ CLIP-183✎ CLIP-184✎ CLIP-208✎ | 2 |
-| CDS | 34 | 33 | CDS-49✎ | 1 |
+| TMPL | 28 | 28 | - | 0 |
+| GUIDE | 22 | 22 | - | 0 |
+| EXPORT | 12 | 12 | - | 0 |
+| LANG | 10 | 10 | - | 0 |
+| THEME | 34 | 34 | - | 2 |
+| MKT | 11 | 11 | - | 0 |
+| VIDEO | 8 | 8 | - | 0 |
+| CLIP | 60 | 60 | - | 2 |
+| CDS | 34 | 34 | - | 1 |
 | BILL | 9 | 9 | - | 0 |
 | MEM | 7 | 7 | - | 2 |
 | QUAL | 8 | 8 | - | 0 |
 | GIFT | 3 | 3 | - | 0 |
 | DUB | 3 | 3 | - | 0 |
-| EDIT | 6 | 5 | EDIT-2✎ EDIT-3✎ EDIT-17✎ | 0 |
+| EDIT | 6 | 6 | - | 0 |
 | INFRA | 2 | 0 | all | 1 |
 
 ## review
@@ -102,13 +103,34 @@
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
+| T677 | Always-applied 원칙 tier in the stock-rule registry and prompts | GUIDE GEN VOICE TMPL CLIP | - | todo |
+| T678 | Show the Postpilot 원칙 card above each guideline list | GUIDE | T677 | todo |
+| T679 | Store a post's 체험단 글 switch, advertiser guide and checklist ticks | POST | - | todo |
+| T680 | Put the 체험단 글 switch and advertiser guide on the editor's ① | POST | T679 | todo |
+| T681 | Add the 광고주 요청 semantic origin with its own color | GEN POST THEME | - | todo |
+| T682 | Weave the advertiser guide into generation as the advertiser's material | GEN | T679 T681 | todo |
+| T683 | Show the pre-submission checklist in ③ | POST | T680 | todo |
+| T684 | Keep the Naver output alone and reserve the disclosure place | EXPORT VIDEO LANG POST MKT | T679 | todo |
+| T685 | Build the guided post-template wizard | TMPL THEME | - | todo |
+| T686 | Suggest section headings in the owner's voice | TMPL EDIT | T685 | todo |
+| T687 | Make the wizard the only way to create a post template | TMPL EDIT | T685 T686 | todo |
+| T688 | Build the video-template wizard and make it the only way to create one | CLIP TMPL EDIT | T685 T686 | todo |
+| T689 | Give clips a channel and create new clips vertical only | CLIP CDS | - | todo |
+| T690 | Add the 체험단 글 switch and advertiser guide to clips | CLIP GEN GUIDE | T679 T680 T689 | todo |
+| T691 | Write each clip channel's upload text on request | CLIP EXPORT | T689 T690 | todo |
+| T692 | Create a clip from a finished post | POST CLIP | T680 T689 T690 | todo |
+| T693 | Learn a voice through a scripted chat and grow AI styles toward it | VOICE THEME | - | todo |
+| T694 | Navigate by channel with 내 설정 beside it | THEME POST CLIP GUIDE TMPL VOICE | T689 | todo |
+| T695 | Tell the 체험단 story on the public about page | MKT | T682 T683 T684 T687 T688 T691 T692 T693 T694 | todo |
 
 ## next
-- create-task GUIDE GEN POST EXPORT TMPL CLIP VOICE THEME MKT CDS EDIT VIDEO LANG (from campaign-reviewer-focus); 18 provisional decisions wait in inbox for the owner.
+- implement-task T677 (then dep order T678 … T695); 19 provisional decisions wait in inbox for the owner.
 - ideation friendly-model-names 계속: decide the automatic alias word list (theme, size, contents) and whether speech profiles join; then create-ssot/update-ssot MODEL. Also pending: the 17 unadopted choices in review/structure-261008 and doc-review ARCH.
 - push: 65c79f2b passed its pre-push gate and waits only for the SSH key (ssh-add) with the spec commits after it; gh login is needed to read CI. 6e5039c8 is the live green revision.
 
 ## log
+- 261015 create-task done: T677–T695 from GUIDE r22 GEN r31 POST r41 EXPORT r12 TMPL r28 CLIP r60 VOICE r17 THEME r34 MKT r11 CDS r34 EDIT r6 VIDEO r8 LANG r10; migrations reserved 0159 (T679) 0160 (T689) 0161 (T690) 0162 (T691).
+- 261015 create-task GUIDE GEN POST EXPORT TMPL CLIP VOICE THEME MKT CDS EDIT VIDEO LANG start (autopilot v7k2).
 - 261015 update-ssot GUIDE r22 GEN r31 POST r41 EXPORT r12 TMPL r28 CLIP r60 VOICE r17 THEME r34 MKT r11 CDS r34 EDIT r6 VIDEO r8 LANG r10 done: ideation/campaign-reviewer-focus converted (원칙 tier, advertiser guide + checklist + 광고주 요청 origin, 체험단 글 + disclosure placeholder, template wizard, learning chat, channel navigation, clip channels + upload text, 9:16 for new clips, Naver-only post output); 18 provisional decisions in inbox; no doing task in the blast radius; next create-task.
 - 261015 update-ssot GUIDE GEN POST EXPORT TMPL CLIP VOICE THEME MKT start: from ideation/campaign-reviewer-focus (autopilot v7k2).
 - 261015 start-vibe v7k2 autopilot start: update-ssot from ideation/campaign-reviewer-focus first; cfg push main.
@@ -127,5 +149,3 @@
 - 261012 T675 done on main: 최소 태그 수 / Minimum tag count everywhere; the tag help now explains the minimum and the broad-label tail.
 - 261012 T675 start on main at efc7f59a: 최대 태그 수 copy becomes 최소 태그 수.
 - 261012 T674 done on main: tag_count is a minimum the prompts ask for, tags kept up to 30, broad labels fill the tail, taste inferred from inputs as experience; write/revise no-voice system prompts shrank 148/163 runes.
-- 261012 T674 start on main at 8fe42b0e: tag minimum, broad-label tail, inferred taste, prompt rules edited in place.
-- 261012 create-task GEN r29 POST r40 TMPL r27 GUIDE r21: T674 (BE prompts, parser, 기본 지침), T675 (FE 최소 태그 수 copy); no dep between them.
