@@ -11,7 +11,7 @@
 ## active
 | tag | host | mode | since | at | doing |
 |---|---|---|---|---|---|
-| m7q2 | ihaelam-ui-MacBookPro | autopilot | 2026-10-15T12:20Z | 2026-10-15T20:40Z | - |
+| m7q2 | ihaelam-ui-MacBookPro | autopilot | 2026-10-15T12:20Z | 2026-10-15T20:41Z | T705 |
 
 ## inbox
 - 261016 decided T705 T692: how can a failed video transfer keep the clips already uploaded? → an owned initial-import completion primitive moves verified leases into a ready batch and cleans only pending uploads under existing retention rules (alt: discard every arrived video | re-upload successful files repeatedly | leave a non-ready batch)
@@ -124,7 +124,7 @@
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
 | T692 | Create a clip from a finished post | POST CLIP | T680 T689 T690 | blocked@261016 |
-| T705 | Preserve confirmed clip sources after a partial import | CLIP ARCH | - | todo |
+| T705 | Preserve confirmed clip sources after a partial import | CLIP ARCH | - | doing@261016.m7q2 |
 | T693 | Learn a voice through a scripted chat and grow AI styles toward it | VOICE THEME | - | todo |
 | T694 | Navigate by channel with 내 설정 beside it | THEME POST CLIP GUIDE TMPL VOICE | T689 | todo |
 | T695 | Tell the 체험단 story on the public about page | MKT | T682 T683 T684 T687 T688 T691 T692 T693 T694 | todo |
@@ -140,6 +140,7 @@
 - Autopilot m7q2: implement T705 to unblock T692 partial imports, resume T692, then T693–T695 and ready T697–T701.
 
 ## log
+- 261016 T705 start on main at ddb6bf73 (m7q2 autopilot); supports T692 partial-transfer acceptance while preserving confirmed source identities and existing retention. T691 Deploy38803124097 succeeds; CI38803124102 and media evidence are pending.
 - 261016 T692 blocked on T705 source-import completion; no T692 implementation changes. create-task support contract specified; original acceptance and completed task contracts remain intact.
 - 261016 create-task T692 support start: the existing upload session discards a whole batch on one transfer failure; preserve T692 acceptance and specify a narrow confirmed-source completion primitive before implementation.
 - 261016 T692 start on main at4df50bd8 (m7q2 autopilot); CLIP source-colour handling is already in the shared upload pipeline, base refreshed63. T691 pushed with exact remote workflows pending.
