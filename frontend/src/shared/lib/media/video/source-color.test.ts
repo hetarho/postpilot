@@ -18,10 +18,23 @@ describe('native original color conversion', () => {
       }),
     ).toEqual({ matrix: 'bt709', primaries: 'bt709', transfer: 'bt709', fullRange: true })
   })
+  it('uses an HLG phone source as is: its BT.2020 matrix and range, no tone mapping', () => {
+    const hlg = {
+      matrix: 'bt2020-ncl',
+      primaries: 'bt2020',
+      transfer: 'hlg',
+      fullRange: false,
+    } as unknown as VideoColorSpaceInit
+    expect(nativeSourceColorSpace(hlg)).toEqual({
+      matrix: 'bt2020-ncl',
+      primaries: 'bt709',
+      transfer: 'bt709',
+      fullRange: false,
+    })
+  })
   it.each([
-    { matrix: 'bt2020-ncl' },
     { transfer: 'pq' },
-    { transfer: 'hlg' },
+    { matrix: 'bt2020-ncl', primaries: 'bt2020', transfer: 'pq' },
     { primaries: 'smpte432' },
   ] as unknown as VideoColorSpaceInit[])(
     'refuses an unsupported actual color condition %j without relabeling it',
