@@ -11,9 +11,11 @@
 ## active
 | tag | host | mode | since | at | doing |
 |---|---|---|---|---|---|
-| m7q2 | ihaelam-ui-MacBookPro | autopilot | 2026-10-15T12:20Z | 2026-10-15T19:11Z | T691 |
+| m7q2 | ihaelam-ui-MacBookPro | autopilot | 2026-10-15T12:20Z | 2026-10-15T20:34Z | - |
 
 ## inbox
+- 261016 decided T691: where does a source-free upload-text approval live? → its own project-owned quote table, leaving source-bound generation quotes intact (alt: nullable batch identity in the existing table | require retained originals)
+- 261016 decided T691: what if required advertiser hashtags exceed the platform limit? → refuse before quote/provider/credit work and name the limit, preserving every required tag (alt: silently discard required tags | produce text the platform refuses)
 - 261016 suggest MODEL-9 MODEL-19 GUIDE-41: doc-review MODEL/TMPL/GUIDE over the existing quality candidates reported by spec lint; keep policy changes in update-ssot
 - 261016 suggest T696 T686 T687 T688 T689: review-code over the completed template-wizard, heading-job and clip-channel units
 - 261015 decided T698: how is a deleted or reused post slug told apart? → store the post's creation time beside the slug and resolve at read; no foreign key (alt: FK ON DELETE SET NULL, which nulls user_id on SQLite composites | clear links from the post context)
@@ -120,7 +122,6 @@
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
-| T691 | Write each clip channel's upload text on request | CLIP EXPORT | T689 T690 | doing@261016.m7q2 |
 | T692 | Create a clip from a finished post | POST CLIP | T680 T689 T690 | todo |
 | T693 | Learn a voice through a scripted chat and grow AI styles toward it | VOICE THEME | - | todo |
 | T694 | Navigate by channel with 내 설정 beside it | THEME POST CLIP GUIDE TMPL VOICE | T689 | todo |
@@ -134,9 +135,13 @@
 ## next
 - After T686–T695 (m7q2): implement-task T698 → T699, T700 → T701 (a linked post as the clip's story); T697's operator CORS prerequisite is complete.
 - implement-task T697 (the owner applied production Content-Range CORS261015; add the ranged-GET probe/deployment gate and preserve HEAD cancellation).
-- Autopilot m7q2: T691 active after T690 pushed; continue T692–T695 and T698–T701. T697 is ready after the owner CORS change.
+- Autopilot m7q2: T691 done; continue T692–T695, then ready T697 and T698–T701.
 
 ## log
+- 261016 T691 done at cfa60b9e; whole FE552/4378 and full Go/API215.009s pass, all local image/media gates pass on unchanged backend80c51876; push and exact remote evidence follow.
+- 261016 T691 final whole Go formatter/vet/build/tests and FE552/4377 with all static/build gates pass; commit, generated parity and image/media push checks follow.
+- 261016 T691 local core/ownership/cancellation and paid one-call settlement tests pass; FE consumers202, clip pages215 and final inline-job regression13 pass; whole Go and final push checks are running. Claim CI38791917187 succeeds at a0cf1fbd.
+- 261016 T690 remote CI38791843623, Deploy38791843543 and Media38792494197 all succeed for2911a38e; all three media job checkout logs prove that revision despite event heada0cf1fbd.
 - 261016 T691 start on main at2911a38e (m7q2 autopilot); CLIP r62/r63 colour changes are unrelated, base refreshed63; T690 pushed, CI38791843623 and Deploy38791843543 pending.
 - 261016 T690 done atbbcc3c6c; full Go/FE551/4364 and all local image/media gates pass on sourcef476fda0; push and exact remote evidence follow.
 - 261016 T690 codebbcc3c6c; selected core/RPC/UI40 tests and full store325.681s pass, full FE551/4364 plus static/build checks pass; final Go and pre-push media gates follow.
