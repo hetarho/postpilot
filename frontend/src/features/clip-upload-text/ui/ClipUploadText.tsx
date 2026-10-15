@@ -198,7 +198,13 @@ function ChannelText({
           </div>
         ) : (
           <>
-            <TextOutput body={canonicalBody} tags={row.tags} limits={limits} queue={queue} />
+            <TextOutput
+              revision={row.revision}
+              body={canonicalBody}
+              tags={row.tags}
+              limits={limits}
+              queue={queue}
+            />
             <Button
               variant="ghost"
               disabled={busy}
@@ -275,11 +281,13 @@ function ChannelText({
   )
 }
 function TextOutput({
+  revision,
   body,
   tags,
   limits,
   queue,
 }: {
+  revision: number
   body: string
   tags: string[]
   limits: ClipUploadTextLimits
@@ -288,7 +296,7 @@ function TextOutput({
   const { t } = useTranslation('clips')
   const { copy, copied, manual, registerField, registerButton } = useTextCopy(
     queue,
-    JSON.stringify([body, tags]),
+    JSON.stringify([revision, body, tags]),
   )
   const fits = uploadTextFits(body, tags, limits)
   return (

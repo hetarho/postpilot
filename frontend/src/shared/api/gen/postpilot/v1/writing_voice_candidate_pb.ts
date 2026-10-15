@@ -346,4 +346,3 @@ export const WritingVoiceCandidateService: GenService<{
   },
 }> = /*@__PURE__*/
   serviceDesc(file_postpilot_v1_writing_voice_candidate, 0);
-
