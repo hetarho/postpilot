@@ -11,7 +11,7 @@
 ## active
 | tag | host | mode | since | at | doing |
 |---|---|---|---|---|---|
-| m7q2 | ihaelam-ui-MacBookPro | autopilot | 2026-10-15T12:20Z | 2026-10-15T19:11Z | - |
+| m7q2 | ihaelam-ui-MacBookPro | autopilot | 2026-10-15T12:20Z | 2026-10-15T19:11Z | T691 |
 
 ## inbox
 - 261016 suggest MODEL-9 MODEL-19 GUIDE-41: doc-review MODEL/TMPL/GUIDE over the existing quality candidates reported by spec lint; keep policy changes in update-ssot
@@ -120,7 +120,7 @@
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
-| T691 | Write each clip channel's upload text on request | CLIP EXPORT | T689 T690 | todo |
+| T691 | Write each clip channel's upload text on request | CLIP EXPORT | T689 T690 | doing@261016.m7q2 |
 | T692 | Create a clip from a finished post | POST CLIP | T680 T689 T690 | todo |
 | T693 | Learn a voice through a scripted chat and grow AI styles toward it | VOICE THEME | - | todo |
 | T694 | Navigate by channel with 내 설정 beside it | THEME POST CLIP GUIDE TMPL VOICE | T689 | todo |
@@ -134,9 +134,10 @@
 ## next
 - After T686–T695 (m7q2): implement-task T698 → T699, T700 → T701 (a linked post as the clip's story); T697's operator CORS prerequisite is complete.
 - implement-task T697 (the owner applied production Content-Range CORS261015; add the ranged-GET probe/deployment gate and preserve HEAD cancellation).
-- Autopilot m7q2: T690 verified locally; implement T691 next, then T692–T695 and T698–T701. T697 is ready after the owner CORS change.
+- Autopilot m7q2: T691 active after T690 pushed; continue T692–T695 and T698–T701. T697 is ready after the owner CORS change.
 
 ## log
+- 261016 T691 start on main at2911a38e (m7q2 autopilot); CLIP r62/r63 colour changes are unrelated, base refreshed63; T690 pushed, CI38791843623 and Deploy38791843543 pending.
 - 261016 T690 done atbbcc3c6c; full Go/FE551/4364 and all local image/media gates pass on sourcef476fda0; push and exact remote evidence follow.
 - 261016 T690 codebbcc3c6c; selected core/RPC/UI40 tests and full store325.681s pass, full FE551/4364 plus static/build checks pass; final Go and pre-push media gates follow.
 - 261016 T689 remote CI38784524255, Deploy38784523903 and Media38785185569 succeed at8e61d40f; all three media job checkout logs prove the deployed revision despite event headbc8292b2.
