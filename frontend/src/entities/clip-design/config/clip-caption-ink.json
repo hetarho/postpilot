@@ -16,7 +16,7 @@
       "frontend/src/entities/clip-preview/model/ink-caption-pixi.ts": "099765cae9854564ec694adc740e8d7f2d63896086f6bfae4f187269b8559c89",
       "frontend/src/entities/clip-preview/model/ink-caption-scene.ts": "00b6f5684f084fd1affeef52e5500dff404dfc7a7ef73663c0949c1829e0f10c",
       "frontend/src/entities/clip-preview/model/local-components.ts": "61d18c7c52314aa77d33676c447c9f9ae6a5cf7171222d9eb8bbb6d521c3edb1",
-      "pnpm-lock.yaml": "084824a72daf478c9cffa8769f997652dfad3cf1f81e4ff0a30cb5b1acb9a063"
+      "pnpm-lock.yaml": "f992da0334f5ce455f84e5b8c8a6d41c285e0de19a87a3410301e13675af268f"
     },
     "version": "caption-filters-v1-ember-v2-retained"
   },
