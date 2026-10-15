@@ -4,7 +4,8 @@ import { expect, it, vi } from 'vitest'
 import { redirectLegacyVoice } from './voices'
 import type { RouterContext } from './tree'
 
-vi.mock('@/entities/voice', () => ({
+vi.mock('@/entities/voice', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/entities/voice')>()),
   loadVoices: (...args: unknown[]) => loadVoices(...args),
   defaultVoice: (voices: { id: string; isDefault?: boolean }[]) =>
     voices.find((voice) => voice.isDefault) ?? voices[0],
