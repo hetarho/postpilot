@@ -7,7 +7,6 @@ export const i18n = {
     picker: {
       making: '{{name}} · 만드는 중 {{percent}}%',
       create: '새 말투 만들기',
-      growChat: '대화로 내 말투 키우기',
     },
     assignment: {
       jobBlocked: 'AI 작업이 끝나면 말투를 바꿀 수 있어요.',
@@ -27,7 +26,6 @@ export const i18n = {
     picker: {
       making: '{{name}} · Being made {{percent}}%',
       create: 'New voice',
-      growChat: 'Grow my own voice through chat',
     },
     assignment: {
       jobBlocked: 'You can change the voice after the AI job finishes.',

@@ -7,7 +7,6 @@ export const i18n = {
     screens: {
       materialsBlocked: '삭제된 말투에는 학습 글을 더할 수 없어요. 먼저 복원해 주세요.',
       toMaterials: '학습 글 모으기',
-      growChat: '대화로 내 말투 키우기',
       analysisStatus: '문체 분석 상태',
       analysisStatusFailed: '문체 분석 상태를 확인하지 못했어요.',
       profileLoadFailed: '말투를 불러오지 못했어요.',
@@ -41,7 +40,6 @@ export const i18n = {
     screens: {
       materialsBlocked: 'A deleted voice takes no new writing. Restore it first.',
       toMaterials: 'Gather writing',
-      growChat: 'Grow my own voice through chat',
       analysisStatus: 'Voice analysis status',
       analysisStatusFailed: 'Could not check voice analysis status.',
       profileLoadFailed: 'Could not load the voice.',

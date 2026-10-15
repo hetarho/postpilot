@@ -20,7 +20,7 @@ describe('personal learning transport flow', () => {
       voice: { voices: personal },
       providers,
     })
-    expect(await screen.findByRole('button', { name: '대화하기' })).toBeVisible()
+    expect(await screen.findByRole('button', { name: '질문 10개로 내 말투 찾기' })).toBeVisible()
     expect(screen.getByRole('button', { name: '내가 쓴 글로 말투 알려 주기' })).toBeVisible()
     expect(screen.getByRole('button', { name: 'AI가 추천한 말투에서 고르기' })).toBeVisible()
     expect(screen.queryByRole('button', { name: /말투 만들기/ })).toBeNull()
@@ -76,10 +76,10 @@ describe('personal learning transport flow', () => {
       voice: { voices: personal },
       providers,
     })
-    await user.click(await screen.findByRole('button', { name: '대화하기' }))
+    await user.click(await screen.findByRole('button', { name: '질문 10개로 내 말투 찾기' }))
     await user.type(await screen.findByLabelText('답'), '아직 저장하지 않은 내 표현이에요.')
     await user.click(screen.getByRole('button', { name: '다른 방법으로 알려 주기' }))
-    await user.click(screen.getByRole('button', { name: '대화하기' }))
+    await user.click(screen.getByRole('button', { name: '질문 10개로 내 말투 찾기' }))
     expect(await screen.findByLabelText('답')).toHaveValue('아직 저장하지 않은 내 표현이에요.')
     expect(screen.queryByLabelText('내가 쓴 글')).toBeNull()
     expect(

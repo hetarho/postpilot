@@ -731,12 +731,15 @@ func (r *fakeRunner) ApplyWinner(context.Context, Experiment, Candidate) error {
 // fakePosts answers the status gate. An unnamed post is a draft: most tests are about the
 // verdict, not about the post's lifecycle, and a draft is the state they are written in.
 type fakePosts struct {
+	mu       sync.Mutex
 	statuses map[string]string
 	err      error
 	calls    int
 }
 
 func (p *fakePosts) Status(_ context.Context, _, slug string) (string, error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
 	p.calls++
 	if p.err != nil {
 		return "", p.err

@@ -31,7 +31,6 @@ export const EditorDockHeader = forwardRef<
     targetLength?: number
     tagCount: number
     onVoiceSelect: (id: string) => void
-    onGrowVoice: (id: string) => void
     onTemplateSelect: (id: string) => void
     onTargetLanguageSelect: (language: ContentLanguage) => void
     onBriefSaved: (set: GenerationOptionsSet) => void
@@ -51,7 +50,6 @@ export const EditorDockHeader = forwardRef<
     targetLength,
     tagCount,
     onVoiceSelect,
-    onGrowVoice,
     onTemplateSelect,
     onTargetLanguageSelect,
     onBriefSaved,
@@ -130,7 +128,6 @@ export const EditorDockHeader = forwardRef<
       confirm={Boolean(post)}
       onSelect={onVoiceSelect}
       onCreateVoice={() => setCreatingVoice(true)}
-      onGrowVoice={onGrowVoice}
       disabled={published}
       className="min-w-0 flex-1"
     />

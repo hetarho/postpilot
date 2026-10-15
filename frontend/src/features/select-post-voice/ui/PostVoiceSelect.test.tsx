@@ -27,7 +27,6 @@ function renderSelect(
 ) {
   const onSelect = vi.fn<(voiceId: string) => Promise<void>>(async () => {})
   const onCreateVoice = vi.fn()
-  const onGrowVoice = vi.fn()
   const transport = createFakeAuthTransport({ user: { id: 'alice' }, voice: { voices } })
   const field = (next: Partial<Parameters<typeof PostVoiceSelect>[0]> = {}) => (
     <PostVoiceSelect
@@ -37,7 +36,6 @@ function renderSelect(
       confirm
       onSelect={onSelect}
       onCreateVoice={onCreateVoice}
-      onGrowVoice={onGrowVoice}
       {...props}
       {...next}
     />
@@ -46,7 +44,6 @@ function renderSelect(
   return {
     onSelect,
     onCreateVoice,
-    onGrowVoice,
     rerender: (next: Partial<Parameters<typeof PostVoiceSelect>[0]>) => view.rerender(field(next)),
   }
 }
