@@ -126,11 +126,12 @@ func (x *CreateClipSourceBatchResponse) GetUploads() []*ClipSourceUpload {
 }
 
 type ConfirmClipSourceRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	BatchId       string                 `protobuf:"bytes,1,opt,name=batch_id,json=batchId,proto3" json:"batch_id,omitempty"`
-	SourceId      string                 `protobuf:"bytes,2,opt,name=source_id,json=sourceId,proto3" json:"source_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state                   protoimpl.MessageState `protogen:"open.v1"`
+	BatchId                 string                 `protobuf:"bytes,1,opt,name=batch_id,json=batchId,proto3" json:"batch_id,omitempty"`
+	SourceId                string                 `protobuf:"bytes,2,opt,name=source_id,json=sourceId,proto3" json:"source_id,omitempty"`
+	PreserveConfirmedImport bool                   `protobuf:"varint,3,opt,name=preserve_confirmed_import,json=preserveConfirmedImport,proto3" json:"preserve_confirmed_import,omitempty"`
+	unknownFields           protoimpl.UnknownFields
+	sizeCache               protoimpl.SizeCache
 }
 
 func (x *ConfirmClipSourceRequest) Reset() {
@@ -175,6 +176,13 @@ func (x *ConfirmClipSourceRequest) GetSourceId() string {
 		return x.SourceId
 	}
 	return ""
+}
+
+func (x *ConfirmClipSourceRequest) GetPreserveConfirmedImport() bool {
+	if x != nil {
+		return x.PreserveConfirmedImport
+	}
+	return false
 }
 
 type ConfirmClipSourceResponse struct {
@@ -1578,6 +1586,110 @@ func (x *CancelClipAnalysisPreparationRequest) GetPreparationId() string {
 	return ""
 }
 
+type CompleteClipSourceImportRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ProjectId     string                 `protobuf:"bytes,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	BatchId       string                 `protobuf:"bytes,2,opt,name=batch_id,json=batchId,proto3" json:"batch_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CompleteClipSourceImportRequest) Reset() {
+	*x = CompleteClipSourceImportRequest{}
+	mi := &file_postpilot_v1_clip_source_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CompleteClipSourceImportRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CompleteClipSourceImportRequest) ProtoMessage() {}
+
+func (x *CompleteClipSourceImportRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_clip_source_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CompleteClipSourceImportRequest.ProtoReflect.Descriptor instead.
+func (*CompleteClipSourceImportRequest) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_clip_source_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *CompleteClipSourceImportRequest) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
+func (x *CompleteClipSourceImportRequest) GetBatchId() string {
+	if x != nil {
+		return x.BatchId
+	}
+	return ""
+}
+
+type CompleteClipSourceImportResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Batch         *ClipSourceBatch       `protobuf:"bytes,1,opt,name=batch,proto3" json:"batch,omitempty"`
+	Empty         bool                   `protobuf:"varint,2,opt,name=empty,proto3" json:"empty,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CompleteClipSourceImportResponse) Reset() {
+	*x = CompleteClipSourceImportResponse{}
+	mi := &file_postpilot_v1_clip_source_proto_msgTypes[24]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CompleteClipSourceImportResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CompleteClipSourceImportResponse) ProtoMessage() {}
+
+func (x *CompleteClipSourceImportResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_clip_source_proto_msgTypes[24]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CompleteClipSourceImportResponse.ProtoReflect.Descriptor instead.
+func (*CompleteClipSourceImportResponse) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_clip_source_proto_rawDescGZIP(), []int{24}
+}
+
+func (x *CompleteClipSourceImportResponse) GetBatch() *ClipSourceBatch {
+	if x != nil {
+		return x.Batch
+	}
+	return nil
+}
+
+func (x *CompleteClipSourceImportResponse) GetEmpty() bool {
+	if x != nil {
+		return x.Empty
+	}
+	return false
+}
+
 var File_postpilot_v1_clip_source_proto protoreflect.FileDescriptor
 
 const file_postpilot_v1_clip_source_proto_rawDesc = "" +
@@ -1589,10 +1701,11 @@ const file_postpilot_v1_clip_source_proto_rawDesc = "" +
 	"\asources\x18\x02 \x03(\v2 .postpilot.v1.ClipSourceMetadataR\asources\"\x8e\x01\n" +
 	"\x1dCreateClipSourceBatchResponse\x123\n" +
 	"\x05batch\x18\x01 \x01(\v2\x1d.postpilot.v1.ClipSourceBatchR\x05batch\x128\n" +
-	"\auploads\x18\x02 \x03(\v2\x1e.postpilot.v1.ClipSourceUploadR\auploads\"R\n" +
+	"\auploads\x18\x02 \x03(\v2\x1e.postpilot.v1.ClipSourceUploadR\auploads\"\x8e\x01\n" +
 	"\x18ConfirmClipSourceRequest\x12\x19\n" +
 	"\bbatch_id\x18\x01 \x01(\tR\abatchId\x12\x1b\n" +
-	"\tsource_id\x18\x02 \x01(\tR\bsourceId\"P\n" +
+	"\tsource_id\x18\x02 \x01(\tR\bsourceId\x12:\n" +
+	"\x19preserve_confirmed_import\x18\x03 \x01(\bR\x17preserveConfirmedImport\"P\n" +
 	"\x19ConfirmClipSourceResponse\x123\n" +
 	"\x05batch\x18\x01 \x01(\v2\x1d.postpilot.v1.ClipSourceBatchR\x05batch\":\n" +
 	"\x1dDiscardClipSourceBatchRequest\x12\x19\n" +
@@ -1721,14 +1834,21 @@ const file_postpilot_v1_clip_source_proto_rawDesc = "" +
 	"&CompleteClipAnalysisPreparationRequest\x12%\n" +
 	"\x0epreparation_id\x18\x01 \x01(\tR\rpreparationId\"M\n" +
 	"$CancelClipAnalysisPreparationRequest\x12%\n" +
-	"\x0epreparation_id\x18\x01 \x01(\tR\rpreparationId2\xb9\n" +
+	"\x0epreparation_id\x18\x01 \x01(\tR\rpreparationId\"[\n" +
+	"\x1fCompleteClipSourceImportRequest\x12\x1d\n" +
 	"\n" +
+	"project_id\x18\x01 \x01(\tR\tprojectId\x12\x19\n" +
+	"\bbatch_id\x18\x02 \x01(\tR\abatchId\"m\n" +
+	" CompleteClipSourceImportResponse\x123\n" +
+	"\x05batch\x18\x01 \x01(\v2\x1d.postpilot.v1.ClipSourceBatchR\x05batch\x12\x14\n" +
+	"\x05empty\x18\x02 \x01(\bR\x05empty2\xb6\v\n" +
 	"\x11ClipSourceService\x12\x82\x01\n" +
 	"\x1cBeginClipAnalysisPreparation\x121.postpilot.v1.BeginClipAnalysisPreparationRequest\x1a-.postpilot.v1.ClipAnalysisPreparationResponse\"\x00\x12x\n" +
 	"\x17ReserveClipAnalysisCopy\x12,.postpilot.v1.ReserveClipAnalysisCopyRequest\x1a-.postpilot.v1.ReserveClipAnalysisCopyResponse\"\x00\x12\x88\x01\n" +
 	"\x1fCompleteClipAnalysisPreparation\x124.postpilot.v1.CompleteClipAnalysisPreparationRequest\x1a-.postpilot.v1.ClipAnalysisPreparationResponse\"\x00\x12\x84\x01\n" +
 	"\x1dCancelClipAnalysisPreparation\x122.postpilot.v1.CancelClipAnalysisPreparationRequest\x1a-.postpilot.v1.ClipAnalysisPreparationResponse\"\x00\x12r\n" +
-	"\x15CreateClipSourceBatch\x12*.postpilot.v1.CreateClipSourceBatchRequest\x1a+.postpilot.v1.CreateClipSourceBatchResponse\"\x00\x12f\n" +
+	"\x15CreateClipSourceBatch\x12*.postpilot.v1.CreateClipSourceBatchRequest\x1a+.postpilot.v1.CreateClipSourceBatchResponse\"\x00\x12{\n" +
+	"\x18CompleteClipSourceImport\x12-.postpilot.v1.CompleteClipSourceImportRequest\x1a..postpilot.v1.CompleteClipSourceImportResponse\"\x00\x12f\n" +
 	"\x11ConfirmClipSource\x12&.postpilot.v1.ConfirmClipSourceRequest\x1a'.postpilot.v1.ConfirmClipSourceResponse\"\x00\x12u\n" +
 	"\x16DiscardClipSourceBatch\x12+.postpilot.v1.DiscardClipSourceBatchRequest\x1a,.postpilot.v1.DiscardClipSourceBatchResponse\"\x00\x12]\n" +
 	"\x0eGetClipSources\x12#.postpilot.v1.GetClipSourcesRequest\x1a$.postpilot.v1.GetClipSourcesResponse\"\x00\x12r\n" +
@@ -1748,7 +1868,7 @@ func file_postpilot_v1_clip_source_proto_rawDescGZIP() []byte {
 	return file_postpilot_v1_clip_source_proto_rawDescData
 }
 
-var file_postpilot_v1_clip_source_proto_msgTypes = make([]protoimpl.MessageInfo, 24)
+var file_postpilot_v1_clip_source_proto_msgTypes = make([]protoimpl.MessageInfo, 26)
 var file_postpilot_v1_clip_source_proto_goTypes = []any{
 	(*CreateClipSourceBatchRequest)(nil),           // 0: postpilot.v1.CreateClipSourceBatchRequest
 	(*CreateClipSourceBatchResponse)(nil),          // 1: postpilot.v1.CreateClipSourceBatchResponse
@@ -1773,52 +1893,57 @@ var file_postpilot_v1_clip_source_proto_goTypes = []any{
 	(*ReserveClipAnalysisCopyResponse)(nil),        // 20: postpilot.v1.ReserveClipAnalysisCopyResponse
 	(*CompleteClipAnalysisPreparationRequest)(nil), // 21: postpilot.v1.CompleteClipAnalysisPreparationRequest
 	(*CancelClipAnalysisPreparationRequest)(nil),   // 22: postpilot.v1.CancelClipAnalysisPreparationRequest
-	nil,                        // 23: postpilot.v1.ReserveClipAnalysisCopyResponse.HeadersEntry
-	(*ClipSourceMetadata)(nil), // 24: postpilot.v1.ClipSourceMetadata
-	(*ClipSourceBatch)(nil),    // 25: postpilot.v1.ClipSourceBatch
-	(*ClipSourceUpload)(nil),   // 26: postpilot.v1.ClipSourceUpload
-	(*ClipProject)(nil),        // 27: postpilot.v1.ClipProject
+	(*CompleteClipSourceImportRequest)(nil),        // 23: postpilot.v1.CompleteClipSourceImportRequest
+	(*CompleteClipSourceImportResponse)(nil),       // 24: postpilot.v1.CompleteClipSourceImportResponse
+	nil,                                            // 25: postpilot.v1.ReserveClipAnalysisCopyResponse.HeadersEntry
+	(*ClipSourceMetadata)(nil),                     // 26: postpilot.v1.ClipSourceMetadata
+	(*ClipSourceBatch)(nil),                        // 27: postpilot.v1.ClipSourceBatch
+	(*ClipSourceUpload)(nil),                       // 28: postpilot.v1.ClipSourceUpload
+	(*ClipProject)(nil),                            // 29: postpilot.v1.ClipProject
 }
 var file_postpilot_v1_clip_source_proto_depIdxs = []int32{
-	24, // 0: postpilot.v1.CreateClipSourceBatchRequest.sources:type_name -> postpilot.v1.ClipSourceMetadata
-	25, // 1: postpilot.v1.CreateClipSourceBatchResponse.batch:type_name -> postpilot.v1.ClipSourceBatch
-	26, // 2: postpilot.v1.CreateClipSourceBatchResponse.uploads:type_name -> postpilot.v1.ClipSourceUpload
-	25, // 3: postpilot.v1.ConfirmClipSourceResponse.batch:type_name -> postpilot.v1.ClipSourceBatch
-	25, // 4: postpilot.v1.GetClipSourcesResponse.batches:type_name -> postpilot.v1.ClipSourceBatch
-	25, // 5: postpilot.v1.SetClipSourceOriginalSoundResponse.batch:type_name -> postpilot.v1.ClipSourceBatch
-	27, // 6: postpilot.v1.SetClipSourceOriginalSoundResponse.project:type_name -> postpilot.v1.ClipProject
-	25, // 7: postpilot.v1.ReorderClipSourcesResponse.batch:type_name -> postpilot.v1.ClipSourceBatch
+	26, // 0: postpilot.v1.CreateClipSourceBatchRequest.sources:type_name -> postpilot.v1.ClipSourceMetadata
+	27, // 1: postpilot.v1.CreateClipSourceBatchResponse.batch:type_name -> postpilot.v1.ClipSourceBatch
+	28, // 2: postpilot.v1.CreateClipSourceBatchResponse.uploads:type_name -> postpilot.v1.ClipSourceUpload
+	27, // 3: postpilot.v1.ConfirmClipSourceResponse.batch:type_name -> postpilot.v1.ClipSourceBatch
+	27, // 4: postpilot.v1.GetClipSourcesResponse.batches:type_name -> postpilot.v1.ClipSourceBatch
+	27, // 5: postpilot.v1.SetClipSourceOriginalSoundResponse.batch:type_name -> postpilot.v1.ClipSourceBatch
+	29, // 6: postpilot.v1.SetClipSourceOriginalSoundResponse.project:type_name -> postpilot.v1.ClipProject
+	27, // 7: postpilot.v1.ReorderClipSourcesResponse.batch:type_name -> postpilot.v1.ClipSourceBatch
 	14, // 8: postpilot.v1.BeginClipAnalysisPreparationRequest.originals:type_name -> postpilot.v1.ClipAnalysisOriginalMeasurement
 	16, // 9: postpilot.v1.ClipAnalysisPreparationResponse.profile:type_name -> postpilot.v1.ClipAnalysisProfile
 	17, // 10: postpilot.v1.ClipAnalysisPreparationResponse.copies:type_name -> postpilot.v1.ClipAnalysisCopySlot
-	23, // 11: postpilot.v1.ReserveClipAnalysisCopyResponse.headers:type_name -> postpilot.v1.ReserveClipAnalysisCopyResponse.HeadersEntry
-	15, // 12: postpilot.v1.ClipSourceService.BeginClipAnalysisPreparation:input_type -> postpilot.v1.BeginClipAnalysisPreparationRequest
-	19, // 13: postpilot.v1.ClipSourceService.ReserveClipAnalysisCopy:input_type -> postpilot.v1.ReserveClipAnalysisCopyRequest
-	21, // 14: postpilot.v1.ClipSourceService.CompleteClipAnalysisPreparation:input_type -> postpilot.v1.CompleteClipAnalysisPreparationRequest
-	22, // 15: postpilot.v1.ClipSourceService.CancelClipAnalysisPreparation:input_type -> postpilot.v1.CancelClipAnalysisPreparationRequest
-	0,  // 16: postpilot.v1.ClipSourceService.CreateClipSourceBatch:input_type -> postpilot.v1.CreateClipSourceBatchRequest
-	2,  // 17: postpilot.v1.ClipSourceService.ConfirmClipSource:input_type -> postpilot.v1.ConfirmClipSourceRequest
-	4,  // 18: postpilot.v1.ClipSourceService.DiscardClipSourceBatch:input_type -> postpilot.v1.DiscardClipSourceBatchRequest
-	6,  // 19: postpilot.v1.ClipSourceService.GetClipSources:input_type -> postpilot.v1.GetClipSourcesRequest
-	8,  // 20: postpilot.v1.ClipSourceService.GetClipSourcePlayback:input_type -> postpilot.v1.GetClipSourcePlaybackRequest
-	10, // 21: postpilot.v1.ClipSourceService.SetClipSourceOriginalSound:input_type -> postpilot.v1.SetClipSourceOriginalSoundRequest
-	12, // 22: postpilot.v1.ClipSourceService.ReorderClipSources:input_type -> postpilot.v1.ReorderClipSourcesRequest
-	18, // 23: postpilot.v1.ClipSourceService.BeginClipAnalysisPreparation:output_type -> postpilot.v1.ClipAnalysisPreparationResponse
-	20, // 24: postpilot.v1.ClipSourceService.ReserveClipAnalysisCopy:output_type -> postpilot.v1.ReserveClipAnalysisCopyResponse
-	18, // 25: postpilot.v1.ClipSourceService.CompleteClipAnalysisPreparation:output_type -> postpilot.v1.ClipAnalysisPreparationResponse
-	18, // 26: postpilot.v1.ClipSourceService.CancelClipAnalysisPreparation:output_type -> postpilot.v1.ClipAnalysisPreparationResponse
-	1,  // 27: postpilot.v1.ClipSourceService.CreateClipSourceBatch:output_type -> postpilot.v1.CreateClipSourceBatchResponse
-	3,  // 28: postpilot.v1.ClipSourceService.ConfirmClipSource:output_type -> postpilot.v1.ConfirmClipSourceResponse
-	5,  // 29: postpilot.v1.ClipSourceService.DiscardClipSourceBatch:output_type -> postpilot.v1.DiscardClipSourceBatchResponse
-	7,  // 30: postpilot.v1.ClipSourceService.GetClipSources:output_type -> postpilot.v1.GetClipSourcesResponse
-	9,  // 31: postpilot.v1.ClipSourceService.GetClipSourcePlayback:output_type -> postpilot.v1.GetClipSourcePlaybackResponse
-	11, // 32: postpilot.v1.ClipSourceService.SetClipSourceOriginalSound:output_type -> postpilot.v1.SetClipSourceOriginalSoundResponse
-	13, // 33: postpilot.v1.ClipSourceService.ReorderClipSources:output_type -> postpilot.v1.ReorderClipSourcesResponse
-	23, // [23:34] is the sub-list for method output_type
-	12, // [12:23] is the sub-list for method input_type
-	12, // [12:12] is the sub-list for extension type_name
-	12, // [12:12] is the sub-list for extension extendee
-	0,  // [0:12] is the sub-list for field type_name
+	25, // 11: postpilot.v1.ReserveClipAnalysisCopyResponse.headers:type_name -> postpilot.v1.ReserveClipAnalysisCopyResponse.HeadersEntry
+	27, // 12: postpilot.v1.CompleteClipSourceImportResponse.batch:type_name -> postpilot.v1.ClipSourceBatch
+	15, // 13: postpilot.v1.ClipSourceService.BeginClipAnalysisPreparation:input_type -> postpilot.v1.BeginClipAnalysisPreparationRequest
+	19, // 14: postpilot.v1.ClipSourceService.ReserveClipAnalysisCopy:input_type -> postpilot.v1.ReserveClipAnalysisCopyRequest
+	21, // 15: postpilot.v1.ClipSourceService.CompleteClipAnalysisPreparation:input_type -> postpilot.v1.CompleteClipAnalysisPreparationRequest
+	22, // 16: postpilot.v1.ClipSourceService.CancelClipAnalysisPreparation:input_type -> postpilot.v1.CancelClipAnalysisPreparationRequest
+	0,  // 17: postpilot.v1.ClipSourceService.CreateClipSourceBatch:input_type -> postpilot.v1.CreateClipSourceBatchRequest
+	23, // 18: postpilot.v1.ClipSourceService.CompleteClipSourceImport:input_type -> postpilot.v1.CompleteClipSourceImportRequest
+	2,  // 19: postpilot.v1.ClipSourceService.ConfirmClipSource:input_type -> postpilot.v1.ConfirmClipSourceRequest
+	4,  // 20: postpilot.v1.ClipSourceService.DiscardClipSourceBatch:input_type -> postpilot.v1.DiscardClipSourceBatchRequest
+	6,  // 21: postpilot.v1.ClipSourceService.GetClipSources:input_type -> postpilot.v1.GetClipSourcesRequest
+	8,  // 22: postpilot.v1.ClipSourceService.GetClipSourcePlayback:input_type -> postpilot.v1.GetClipSourcePlaybackRequest
+	10, // 23: postpilot.v1.ClipSourceService.SetClipSourceOriginalSound:input_type -> postpilot.v1.SetClipSourceOriginalSoundRequest
+	12, // 24: postpilot.v1.ClipSourceService.ReorderClipSources:input_type -> postpilot.v1.ReorderClipSourcesRequest
+	18, // 25: postpilot.v1.ClipSourceService.BeginClipAnalysisPreparation:output_type -> postpilot.v1.ClipAnalysisPreparationResponse
+	20, // 26: postpilot.v1.ClipSourceService.ReserveClipAnalysisCopy:output_type -> postpilot.v1.ReserveClipAnalysisCopyResponse
+	18, // 27: postpilot.v1.ClipSourceService.CompleteClipAnalysisPreparation:output_type -> postpilot.v1.ClipAnalysisPreparationResponse
+	18, // 28: postpilot.v1.ClipSourceService.CancelClipAnalysisPreparation:output_type -> postpilot.v1.ClipAnalysisPreparationResponse
+	1,  // 29: postpilot.v1.ClipSourceService.CreateClipSourceBatch:output_type -> postpilot.v1.CreateClipSourceBatchResponse
+	24, // 30: postpilot.v1.ClipSourceService.CompleteClipSourceImport:output_type -> postpilot.v1.CompleteClipSourceImportResponse
+	3,  // 31: postpilot.v1.ClipSourceService.ConfirmClipSource:output_type -> postpilot.v1.ConfirmClipSourceResponse
+	5,  // 32: postpilot.v1.ClipSourceService.DiscardClipSourceBatch:output_type -> postpilot.v1.DiscardClipSourceBatchResponse
+	7,  // 33: postpilot.v1.ClipSourceService.GetClipSources:output_type -> postpilot.v1.GetClipSourcesResponse
+	9,  // 34: postpilot.v1.ClipSourceService.GetClipSourcePlayback:output_type -> postpilot.v1.GetClipSourcePlaybackResponse
+	11, // 35: postpilot.v1.ClipSourceService.SetClipSourceOriginalSound:output_type -> postpilot.v1.SetClipSourceOriginalSoundResponse
+	13, // 36: postpilot.v1.ClipSourceService.ReorderClipSources:output_type -> postpilot.v1.ReorderClipSourcesResponse
+	25, // [25:37] is the sub-list for method output_type
+	13, // [13:25] is the sub-list for method input_type
+	13, // [13:13] is the sub-list for extension type_name
+	13, // [13:13] is the sub-list for extension extendee
+	0,  // [0:13] is the sub-list for field type_name
 }
 
 func init() { file_postpilot_v1_clip_source_proto_init() }
@@ -1833,7 +1958,7 @@ func file_postpilot_v1_clip_source_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_postpilot_v1_clip_source_proto_rawDesc), len(file_postpilot_v1_clip_source_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   24,
+			NumMessages:   26,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

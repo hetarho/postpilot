@@ -12,6 +12,7 @@ service ClipSourceService {
   rpc CompleteClipAnalysisPreparation(CompleteClipAnalysisPreparationRequest) returns (ClipAnalysisPreparationResponse) {}
   rpc CancelClipAnalysisPreparation(CancelClipAnalysisPreparationRequest) returns (ClipAnalysisPreparationResponse) {}
   rpc CreateClipSourceBatch(CreateClipSourceBatchRequest) returns (CreateClipSourceBatchResponse) {}
+  rpc CompleteClipSourceImport(CompleteClipSourceImportRequest) returns (CompleteClipSourceImportResponse) {}
   rpc ConfirmClipSource(ConfirmClipSourceRequest) returns (ConfirmClipSourceResponse) {}
   rpc DiscardClipSourceBatch(DiscardClipSourceBatchRequest) returns (DiscardClipSourceBatchResponse) {}
   rpc GetClipSources(GetClipSourcesRequest) returns (GetClipSourcesResponse) {}
@@ -28,7 +29,7 @@ message CreateClipSourceBatchRequest { string project_id = 1; repeated ClipSourc
 
 message CreateClipSourceBatchResponse { ClipSourceBatch batch = 1; repeated ClipSourceUpload uploads = 2; }
 
-message ConfirmClipSourceRequest { string batch_id = 1; string source_id = 2; }
+message ConfirmClipSourceRequest { string batch_id = 1; string source_id = 2; bool preserve_confirmed_import = 3; }
 
 message ConfirmClipSourceResponse { ClipSourceBatch batch = 1; }
 
@@ -145,3 +146,6 @@ message ReserveClipAnalysisCopyResponse {
 }
 message CompleteClipAnalysisPreparationRequest { string preparation_id = 1; }
 message CancelClipAnalysisPreparationRequest { string preparation_id = 1; }
+
+message CompleteClipSourceImportRequest { string project_id = 1; string batch_id = 2; }
+message CompleteClipSourceImportResponse { ClipSourceBatch batch = 1; bool empty = 2; }

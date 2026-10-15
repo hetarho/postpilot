@@ -326,7 +326,10 @@ func TestMediaRelease(t *testing.T) {
 	if e != nil {
 		t.Fatal(e)
 	}
-	uploads, e := h.client.CreateClipSourceBatch(ctx, releaseRequest(h, &pb.CreateClipSourceBatchRequest{ProjectId: h.project, Sources: []*pb.ClipSourceMetadata{{Filename: "split.mp4", ContentType: "video/mp4", Bytes: info.Size(), DurationMs: 16000, Width: 1280, Height: 720, Fingerprint: fingerprint}}}))
+	uploads, e := h.client.CreateClipSourceBatch(ctx, releaseRequest(h, &pb.CreateClipSourceBatchRequest{ProjectId: h.project, Sources: []*pb.ClipSourceMetadata{
+		{Filename: "split.mp4", ContentType: "video/mp4", Bytes: info.Size(), DurationMs: 16000, Width: 1280, Height: 720, Fingerprint: fingerprint},
+		{Filename: "unavailable.mp4", ContentType: "video/mp4", Bytes: 1, DurationMs: 1000, Width: 1280, Height: 720, Fingerprint: strings.Repeat("0", 64)},
+	}}))
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -350,12 +353,22 @@ func TestMediaRelease(t *testing.T) {
 	if response.StatusCode != 200 {
 		t.Fatal("source PUT", response.StatusCode)
 	}
-	if _, e = h.client.ConfirmClipSource(ctx, releaseRequest(h, &pb.ConfirmClipSourceRequest{BatchId: h.batch, SourceId: upload.SourceId})); e != nil {
+	if _, e = h.client.ConfirmClipSource(ctx, releaseRequest(h, &pb.ConfirmClipSourceRequest{BatchId: h.batch, SourceId: upload.SourceId, PreserveConfirmedImport: true})); e != nil {
 		t.Fatal(e)
 	}
 	if _, e = h.client.SetClipSourceOriginalSound(ctx, releaseRequest(h, &pb.SetClipSourceOriginalSoundRequest{ProjectId: h.project, BatchId: h.batch, SourceId: upload.SourceId, ExpectedFingerprint: fingerprint, RetainOriginalAudio: true})); e != nil {
 		t.Fatal(e)
 	}
+	completedImport, e := h.client.CompleteClipSourceImport(ctx, releaseRequest(h, &pb.CompleteClipSourceImportRequest{ProjectId: h.project, BatchId: h.batch}))
+	if e != nil {
+		t.Fatal(e)
+	}
+	imported := completedImport.Msg.GetBatch()
+	if imported == nil || imported.GetId() == h.batch || len(imported.GetSources()) != 1 || imported.GetSources()[0].GetId() != upload.SourceId || !imported.GetSources()[0].GetRetainOriginalAudio() {
+		t.Fatal("partial import did not preserve the confirmed original and audio choice")
+	}
+	h.batch = imported.GetId()
+	t.Log("partial source import: ready lease moved without re-upload; pending source excluded")
 	before := s.state().Balance
 	model := &pb.ModelRef{ProviderId: "fixture", ModelId: releaseModel}
 	quote, e := h.client.QuoteClipGeneration(ctx, releaseRequest(h, &pb.QuoteClipGenerationRequest{ProjectId: h.project, BatchId: h.batch, ObserveModel: model, WriteModel: model}))
