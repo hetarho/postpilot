@@ -58,3 +58,43 @@ func TestUploadTextRowsKeepOwnershipAndOptimisticRevisions(t *testing.T) {
 		t.Fatal("orphan upload text retained", count, e)
 	}
 }
+
+func TestUploadTextLeavesCheckpointAndFinishedVideoGuardsIntact(t *testing.T) {
+	projects, store, database := setup(t)
+	_, p := create(t, projects)
+	stamp := time.Now().UTC().Format(time.RFC3339Nano)
+	raw, e := clip.EncodeEditPlan(clip.EditPlan{Ratio: "vertical", DurationMS: 15000, Cuts: []clip.Cut{{ID: "cut", SourceID: "expired", Fingerprint: strings.Repeat("a", 64), EndMS: 15000}}})
+	if e != nil {
+		t.Fatal(e)
+	}
+	if _, e = database.Writer.Exec(`INSERT INTO generation_jobs(id,user_id,clip_project_id,kind,status,created_at,updated_at) VALUES('old','alice',?,'generate_clip','done',?,?)`, p.ID, stamp, stamp); e != nil {
+		t.Fatal(e)
+	}
+	if _, e = database.Writer.Exec(`INSERT INTO clip_attempt_checkpoints(project_id,user_id,job_id,checkpoint_json) VALUES(?,'alice','old','{"kept":"yes"}')`, p.ID); e != nil {
+		t.Fatal(e)
+	}
+	if _, e = database.Writer.Exec(`UPDATE clip_projects SET edit_plan_json=?,result_id='result',result_key='result',edit_plan_revision=1,rendered_plan_revision=1,finalized_at=?,finalized_plan_revision=1,finalized_result_key='result',source_access_revoked_at=? WHERE id=?`, raw, stamp, stamp, p.ID); e != nil {
+		t.Fatal(e)
+	}
+	if _, e = database.Writer.Exec(`INSERT INTO generation_jobs(id,user_id,clip_project_id,kind,status,dispatch_ready,cancellation_policy_version,created_at,updated_at) VALUES('upload','alice',?,'clip_upload_text','queued',0,1,?,?)`, p.ID, stamp, stamp); e != nil {
+		t.Fatal("upload text was refused on finished video", e)
+	}
+	if _, e = store.SaveUploadText(t.Context(), clip.UploadTextSave{UserID: "alice", ProjectID: p.ID, Channel: clip.ChannelNaver, Body: "edited", Edited: true, Now: time.Now()}); !errors.Is(e, clip.ErrBusy) {
+		t.Fatal("manual edit raced active job", e)
+	}
+	if _, e = database.Writer.Exec(`UPDATE generation_jobs SET dispatch_ready=1,status='running' WHERE id='upload'`); e != nil {
+		t.Fatal("upload activation refused", e)
+	}
+	var checkpoint string
+	if e = database.Reader.QueryRow(`SELECT checkpoint_json FROM clip_attempt_checkpoints WHERE project_id=?`, p.ID).Scan(&checkpoint); e != nil || checkpoint != `{"kept":"yes"}` {
+		t.Fatal("metadata job erased generation evidence", checkpoint, e)
+	}
+	if _, e = database.Writer.Exec(`UPDATE generation_jobs SET status='done' WHERE id='upload'`); e != nil {
+		t.Fatal(e)
+	}
+	for _, kind := range []string{"generate_clip", "render_clip", "revise_clip", "speech_clip", "storyline_clip"} {
+		if _, e = database.Writer.Exec(`INSERT INTO generation_jobs(id,user_id,clip_project_id,kind,status,created_at,updated_at) VALUES(?,'alice',?,?,'queued',?,?)`, kind, p.ID, kind, stamp, stamp); e == nil {
+			t.Fatal("finished video guard admitted", kind)
+		}
+	}
+}

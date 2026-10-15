@@ -11,6 +11,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/postpilot/backend/internal/campaign"
+	"github.com/postpilot/backend/internal/clip/composition"
 	"github.com/postpilot/backend/internal/llm"
 )
 
@@ -136,11 +137,7 @@ func UploadTextMaterial(p Project, channel string) (UploadTextInput, error) {
 		in.Facts.Associations = nil
 	}
 	if plan.Portable != nil {
-		for _, text := range plan.Portable.Elements {
-			if strings.TrimSpace(text.Resolved.Text) != "" {
-				in.Captions = append(in.Captions, text.Resolved.Text)
-			}
-		}
+		in.Captions = uploadPortableCaptions(plan.Portable.Elements, p.DesignSelection().RegionPresets())
 	} else {
 		for _, cut := range plan.Cuts {
 			for _, text := range cut.Placed() {
@@ -270,4 +267,29 @@ func ValidateUploadTextEdit(channel, language string, on bool, body string, rawT
 		return UploadText{}, ErrUploadTextLimit
 	}
 	return UploadText{Channel: channel, Body: body, Tags: tags, Edited: true}, nil
+}
+
+// Match the current caption words, including owner-edited rows and phrase splits.
+// A region's surplus rows never appear in the output video.
+func uploadPortableCaptions(elements []PortableText, presets composition.DesignSelection) []string {
+	out := []string{}
+	placements := RegionPlacements(ResolvedElements(elements), presets)
+	for _, text := range elements {
+		lines := regionRowTexts(text.Resolved)
+		if len(text.Phrases) > 0 {
+			lines = nil
+			for _, phrase := range text.Phrases {
+				lines = append(lines, phrase.Text)
+			}
+		}
+		if RegionRole(text.Resolved.Element.Role) {
+			lines = lines[:min(len(lines), placements[text.Resolved.InstanceID].Drawn)]
+		}
+		for _, line := range lines {
+			if strings.TrimSpace(line) != "" {
+				out = append(out, line)
+			}
+		}
+	}
+	return out
 }

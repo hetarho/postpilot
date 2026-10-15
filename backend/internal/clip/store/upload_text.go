@@ -65,6 +65,9 @@ func (s *Store) SaveUploadText(ctx context.Context, in clip.UploadTextSave) (cli
 		if err != nil {
 			return clip.UploadText{}, err
 		}
+		if _, err := clip.UploadTextMaterial(p, in.Channel); err != nil {
+			return clip.UploadText{}, err
+		}
 		if in.JobID == "" {
 			active, e := q.HasActiveClipJob(ctx, nullable(in.ProjectID))
 			if e != nil {

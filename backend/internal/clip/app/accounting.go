@@ -45,7 +45,7 @@ func (s *GenerationService) AccountingForAttempt(ctx context.Context, user, proj
 // ceiling: the generation and the owner's revision request (CLIP-19, CLIP-132).
 // A render spends none and has nothing to disclose.
 func chargedClipKind(kind string) bool {
-	return kind == clip.JobKindUploadText || kind == "generate_clip" || kind == "revise_clip" || kind == "speech_clip"
+	return kind == "clip_upload_text" || kind == "generate_clip" || kind == "revise_clip" || kind == "speech_clip"
 }
 
 // chargedApproval reads the approval a charged job froze into its own payload.

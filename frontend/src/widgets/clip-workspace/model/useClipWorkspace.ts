@@ -178,7 +178,8 @@ export function useClipWorkspace(ownerId: string, project: ClipProject) {
   const revising =
     (job?.kind === 'revise_clip' ||
       job?.kind === 'revise_storyline_clip' ||
-      job?.kind === 'speech_clip') &&
+      job?.kind === 'speech_clip' ||
+      job?.kind === 'clip_upload_text') &&
     !isTerminal(job)
   const focused = !project.finalized && (generation.busy || analysis.busy) && !revising
   const pending = generation.busy || analysis.busy || uploading || finalization.busy || browser.busy

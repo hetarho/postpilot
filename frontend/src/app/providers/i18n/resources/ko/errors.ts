@@ -312,6 +312,10 @@ export const errors = {
     '{{file}} 파일은 이 스토리라인에 넣을 수 없어요. 스토리라인을 다시 만들어 주세요.',
   POST_STORYLINE_INVALID: '스토리라인을 저장하지 못했어요. 새로고침한 뒤 다시 고쳐 주세요.',
   GENERATION_STORYLINE_REOBSERVE: '스토리라인으로 쓸 때는 다시 볼 사진을 고를 수 없어요.',
+  CLIP_UPLOAD_TEXT_LIMIT:
+    '업로드 문구는 {{max}}자, 태그는 {{tags}}개까지예요. 광고주 필수 태그도 이 안에 들어가야 해요.',
+  CLIP_UPLOAD_TEXT_CONFIRMATION_REQUIRED:
+    '직접 수정한 문구예요. 다시 쓰려면 덮어쓰기를 확인해 주세요.',
   CLIP_STORYLINE_MISSING: '이 영상에는 아직 스토리라인이 없어요. 스토리라인을 먼저 만들어 주세요.',
   CLIP_STORYLINE_INVALID:
     '스토리라인을 저장할 수 없어요. 문단 수를 그대로 두고, 장면은 한 문단에 한 번씩만 넣어 주세요.',

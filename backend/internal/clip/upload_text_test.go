@@ -2,6 +2,8 @@ package clip
 
 import (
 	"errors"
+	"github.com/postpilot/backend/internal/clip/composition"
+	"reflect"
 	"strings"
 	"testing"
 	"unicode/utf8"
@@ -56,5 +58,17 @@ func TestUploadTextKeepsRequiredTagsBeforeOptionalOnes(t *testing.T) {
 	in.AdvertiserGuide.Hashtags = []string{"a", "b", "c", "d", "e", "f"}
 	if _, e = BoundGeneratedUploadText(in, "text", nil); !errors.Is(e, ErrUploadTextLimit) {
 		t.Fatal(e)
+	}
+}
+
+func TestUploadTextUsesEditedRowsAndPhrasesInsteadOfObsoleteParentText(t *testing.T) {
+	elements := []PortableText{
+		{Resolved: composition.ResolvedElement{InstanceID: "intro", Element: composition.Element{Role: "hook"}, Text: "obsolete", Rows: []composition.ResolvedRow{{Text: "current first"}, {Text: "current second"}, {Text: "not drawn"}}}},
+		{Resolved: composition.ResolvedElement{InstanceID: "body", Text: "old words"}, Phrases: []EditablePhrase{{Text: "edited phrase"}, {Text: "next phrase"}}},
+	}
+	got := uploadPortableCaptions(elements, composition.UnchosenDesign())
+	want := []string{"current first", "current second", "edited phrase", "next phrase"}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("captions = %#v, want %#v", got, want)
 	}
 }

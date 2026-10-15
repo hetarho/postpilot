@@ -122,3 +122,6 @@ export {
   clipChannel,
   type ClipChannel,
 } from './config/channel'
+
+export { useClipUploadTexts, useClipUploadTextCalls } from './api/upload-text'
+export type { ClipUploadText, ClipUploadTextLimits } from './api/upload-text'

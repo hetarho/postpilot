@@ -275,6 +275,7 @@ export const CHARGED_CLIP_KINDS: ReadonlySet<string> = new Set([
   'generate_clip',
   'revise_clip',
   'speech_clip',
+  'clip_upload_text',
 ])
 
 /** The detail's poll: while its job runs, then — for charged work only — until the server

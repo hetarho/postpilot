@@ -40,6 +40,7 @@ const RATIO_STAGES = new Set(['observe', 'compare_observe', 'compare_write', 'co
  *  namespace. A revision is one of them — it makes the same writing calls a
  *  generation does, just over a plan that already exists (CLIP-131). */
 const CLIP_KINDS = new Set([
+  'clip_upload_text',
   'generate_clip',
   'speech_clip',
   'render_clip',
@@ -71,6 +72,7 @@ const GENERATION_CLIP_STAGES = [
   'narrate',
   'narrate_retry',
   // The storyline call (CLIP-177).
+  'upload_text',
   'storyline',
   'storyline_retry',
   // The single writing call this build no longer makes: a job queued before it
