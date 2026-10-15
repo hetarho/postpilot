@@ -1,5 +1,5 @@
 # GUIDE writing guidelines (작문 지침)
-> r22 | Always-applied Postpilot principles beside switchable recommendations and owner guidelines, with stage-applicable rules and stable evidence contracts.
+> r23 | Always-applied Postpilot principles beside switchable recommendations and owner guidelines, with stage-applicable rules and stable evidence contracts.
 
 ## decisions
 - GUIDE-1 [o] guidelines own writing direction beside VOICE expression, TMPL form and the stable request contracts (→GEN-14).
@@ -103,8 +103,9 @@
   |---|---|
   | 첫 자막에 무엇을 보여줄지 | the first caption says in one line what the clip is about (구리에서 찾은 숨은 오리집) |
   | 자막은 이어지는 말 | each caption carries on from the one before rather than labelling what is on screen, and may run across cuts |
+  | 글의 표현 살리기 | with a linked post (→CLIP-216), captions reuse its own concrete wording, shortened to fit, rather than describing what is on screen |
   | 일어난 순서대로 | cuts and captions follow the order it happened, inside each template stage when there is a template |
-  | 끝에서 정보 정리 | the last captions draw together what the owner entered (name, place, price) |
+  | 끝에서 정보 정리 | the last captions draw together what the owner entered (name, place, price) and close on the owner's verdict when the material carries one |
   | 같은 홍보 문구 되풀이하지 않기 | no generic promotion said twice |
 - GUIDE-43 [o] whether a 기본 지침 is in use belongs to the account and its kind: `추가` in the 기본 지침 sheet (→GUIDE-48) puts one in use and `적용 안함` on its open row takes it out of use, each saving on press with no confirmation ← putting one back is one press in the sheet
   - out of use it leaves the list and stays offered in the sheet, and it leaves every run started afterwards, while work already enqueued keeps the texts it froze (→GUIDE-17)
@@ -149,8 +150,8 @@
 - GUIDE-52 [o] the 영상 지침 kind's 원칙, always applied, in this order:
   | 원칙 | rule |
   |---|---|
-  | 입력한 사실만 | a name, number, unit, currency or price stated exactly as one entered global or item fact states it, never assembled from several answers, naming the item it belongs to where the narration would leave it ambiguous, and no other fact the material does not carry |
-  | 감상은 내가 쓴 것만 | a taste, a mood or a satisfaction only as the owner gave it in the instruction or the storyline, even when the advertiser guide asks for one |
+  | 입력한 사실만 | a name, number, unit, currency or price stated exactly as one entered global or item fact or the linked post (→CLIP-216) states it, never assembled from several answers, naming the item it belongs to where the narration would leave it ambiguous, and no other fact the material does not carry |
+  | 감상은 내가 쓴 것만 | a taste, a mood or a satisfaction only as the owner gave it in the instruction, the storyline or the linked post, even when the advertiser guide asks for one |
   | 아쉬운 점은 정중하게 | a drawback the owner gave is said politely as information for viewers, never dropped or turned into praise |
 - GUIDE-53 [o] each guideline screen shows its kind's 원칙 read-only above the list as one closed `Postpilot 원칙` card whose summary says they always apply; opening it lists each 원칙's name and text with no control ← the owner sees what every run is told without being offered a switch that does not exist
 - GUIDE-54 [o] a 원칙 outranks every owner guideline, template instruction, advertiser guide item and 기본 지침; the voice still outranks 자연스러운 한국어 문체 where they conflict (→GEN-17), and an authored template title form still outranks 제목 규칙 (→GEN-49 →TMPL-52) ← a rule nobody can switch off would mean nothing if a guideline could countermand it
@@ -172,3 +173,4 @@
 
 ## chg
 - r22 261015 GUIDE-51+ GUIDE-52+ GUIDE-53+ GUIDE-54+ 원칙 tier always applied and read-only; GUIDE-16✎ one switchable 기본 지침 tier→원칙 + 기본 지침; GUIDE-41✎ 14 기본 지침→7 (재료에 있는 사실만, 메모의 이름으로, 관찰을 나열하지 않기, 제목·태그 규칙, 종결어미, 자연스러운 한국어 문체 and the impression and chronology halves moved to GUIDE-51; 내 감상은 지키고 맛은 재료로 살리기→맛은 재료로 살리기); GUIDE-42✎ 입력한 사실만 and 감상은 내가 쓴 것만 moved to GUIDE-52; GUIDE-1✎ GUIDE-14✎ GUIDE-15✎ GUIDE-17✎ GUIDE-19✎ GUIDE-37✎ GUIDE-43✎ GUIDE-48✎ 원칙 first and above owner rules; GUIDE-18✎ enabled stock rules→원칙 + enabled 기본 지침; GUIDE-20✎ GUIDE-26✎ GUIDE-44✎ writing/video settings→Naver Blog channel / shared clip channels
+- r23 261015 GUIDE-42✎ +글의 표현 살리기 (a linked post's wording in captions); 끝에서 정보 정리 entered information→+the owner's verdict when given; GUIDE-52✎ 입력한 사실만 and 감상은 내가 쓴 것만 entered facts, instruction and storyline→+the linked post

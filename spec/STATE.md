@@ -15,10 +15,10 @@
 | p4f1 | ihaelam-ui-MacBookPro | autopilot | 2026-10-15T13:02Z | 2026-10-15T13:02Z | - |
 
 ## inbox
-- 261015 decided ideation post-faithful-clip: what does a clip take from a finished post? → the canonical content (title, body, section order, ratings, impressions) as owner material for every writing call (alt: the storyline only | title and memo as today)
-- 261015 decided ideation post-faithful-clip: where is a post linked? → both sides: ③ 이 체험으로 클립 만들기 and the clip ① 글 연결, one post per clip, matching titles first (alt: post side only | clip side only)
-- 261015 decided ideation post-faithful-clip: how are videos placed into post sections? → capture time first, the analysis confirms the content, content matching without a capture time (alt: AI content matching only | free AI composition)
-- 261015 decided ideation post-faithful-clip: form? → keep the CLIP-213 arc, leave out stages the post gives nothing for, the 상호 in the hook and the owner verdict in the outro (alt: a separate 쇼츠 리뷰 style | leave form to T688)
+- 261015 decided ideation/post-faithful-clip: what does a clip take from a finished post? → the canonical content (title, body, section order, ratings, impressions) as owner material for every writing call (alt: the storyline only | title and memo as today)
+- 261015 decided ideation/post-faithful-clip: where is a post linked? → both sides: ③ 이 체험으로 클립 만들기 and the clip ① 글 연결, one post per clip, matching titles first (alt: post side only | clip side only)
+- 261015 decided ideation/post-faithful-clip: how are videos placed into post sections? → capture time first, the analysis confirms the content, content matching without a capture time (alt: AI content matching only | free AI composition)
+- 261015 decided ideation/post-faithful-clip: form? → keep the CLIP-213 arc, leave out stages the post gives nothing for, the 상호 in the hook and the owner verdict in the outro (alt: a separate 쇼츠 리뷰 style | leave form to T688)
 - 261015 decided T696: repair the existing red CI before T686 or defer it? → repair the stale wizard entrypoint test first (alt: defer until T687)
 - 261015 decided -: push branch for finished units? → main, and AGENTS.md now defers to haeram-spec-creator with ARCH-31 run before each push and reused on unchanged trees (alt: - commit only | a work branch)
 - 261015 decided GUIDE-41: an owner's stored off-state for a rule that became a 원칙 or was split? → ignored for 원칙; 맛은 재료로 살리기 keeps the old impression key and 알려준 사건 순서대로 its own (alt: reset every off-state | keep those rules switchable for owners who turned them off)
@@ -62,7 +62,7 @@
 | familiar-video-editing-and-dubbing | converted@261004 |
 | friendly-model-names | open@261013 |
 | campaign-reviewer-focus | converted@261015 |
-| post-faithful-clip | ready@261015 |
+| post-faithful-clip | converted@261015 |
 
 ## ssot
 | id | rev | tasked | pending | [?] |
@@ -70,18 +70,18 @@
 | ARCH | 20 | 20 | - | 0 |
 | AUTH | 15 | 15 | - | 0 |
 | QUOTA | 38 | 38 | - | 0 |
-| POST | 41 | 41 | - | 0 |
+| POST | 42 | 41 | POST-120✎ | 0 |
 | VOICE | 17 | 17 | - | 0 |
 | GEN | 31 | 31 | - | 0 |
 | MODEL | 36 | 36 | - | 0 |
 | TMPL | 28 | 28 | - | 0 |
-| GUIDE | 22 | 22 | - | 0 |
+| GUIDE | 23 | 22 | GUIDE-42✎ GUIDE-52✎ | 0 |
 | EXPORT | 12 | 12 | - | 0 |
 | LANG | 10 | 10 | - | 0 |
 | THEME | 34 | 34 | - | 2 |
 | MKT | 11 | 11 | - | 0 |
 | VIDEO | 8 | 8 | - | 0 |
-| CLIP | 60 | 60 | - | 2 |
+| CLIP | 61 | 60 | CLIP-215+ CLIP-216+ CLIP-217+ CLIP-218+ CLIP-1✎ CLIP-69✎ CLIP-141✎ CLIP-178✎ CLIP-211✎ CLIP-214✎ | 2 |
 | CDS | 34 | 34 | - | 1 |
 | BILL | 9 | 9 | - | 0 |
 | MEM | 7 | 7 | - | 2 |
@@ -128,11 +128,13 @@
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | todo |
 
 ## next
-- update-ssot CLIP POST GUIDE from ideation post-faithful-clip (ready@261015) before T688/T692 start, otherwise as follow-up tasks.
+- create-task CLIP POST GUIDE (p4f1): the linked-post clip delta; refresh the bases of T689–T692.
 - implement-task T697 (production clip generation is down: the live R2 CORS hides Content-Range; the owner applies deploy/r2-cors.json first).
 - Autopilot m7q2: implement T686–T695 in dependency order; T696 repaired the existing red CI entry regression. Previous provisional decisions remain in inbox.
 
 ## log
+- 261015 update-ssot CLIP r61 POST r42 GUIDE r23 done: a linked post as the clip's story (ideation/post-faithful-clip); no doing task affected (T686 is TMPL).
+- 261015 update-ssot CLIP POST GUIDE start (ideation/post-faithful-clip)
 - 261015 start-vibe p4f1 start (autopilot): ideation post-faithful-clip → update-ssot → create-task, overlap check with the template tasks; no implementation (m7q2 implements).
 - 261015 T686 start on main at 13f778bb (m7q2 autopilot); T696 pushed at 832c357e with CI38736338662 running.
 - 261015 ideation post-faithful-clip ready (autonomous at the owner's request; decisions in inbox)

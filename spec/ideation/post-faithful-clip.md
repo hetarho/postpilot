@@ -1,5 +1,5 @@
 # IDEATION post-faithful-clip
-> st:ready@261015 | a clip that tells the finished post's story, cut the way a person would cut it
+> st:converted@261015 | a clip that tells the finished post's story, cut the way a person would cut it
 
 ## vision
 - Problem: the app's clips come out as dry descriptions of the footage. The clip writer never sees the visit as the owner told it. On 261015 the 참선주면옥 clip was made by hand from the same 11 sources and the finished post, and it read like a person's short-form review. That one clip is the bar.
@@ -44,9 +44,9 @@
   - Capture-time placement.
   - Empty CLIP-213 stages are left out.
   - The 상호 hook and the verdict outro, drawn from the post.
-- POST: POST-120 links the post as well as seeding the clip.
-- GUIDE: 내 감상은 그대로 counts a linked post's stated impressions as the owner's.
-- CDS: the default caption look, only if the existing styles cannot give two lines with one highlighted phrase.
+- POST →POST-120: POST-120 links the post as well as seeding the clip.
+- GUIDE →GUIDE-42 GUIDE-52: 내 감상은 그대로 counts a linked post's stated impressions as the owner's.
+- CDS (not converted; checked in the tasks): the default caption look, only if the existing styles cannot give two lines with one highlighted phrase.
 
 ## open
 - Do the post's photos keep a usable capture time after upload, or is it stripped? This is a feasibility concern for capture-time placement. The fallback is content matching.

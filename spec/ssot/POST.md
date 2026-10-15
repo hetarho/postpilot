@@ -1,5 +1,5 @@
 # POST posts, drafts, photos
-> r41 | Owner-controlled Naver Blog writing for 체험단 posts with an advertiser guide and pre-submission checklist, phrase-level semantic-origin review, explicit lifecycle and private effective-request inspection.
+> r42 | Owner-controlled Naver Blog writing for 체험단 posts with an advertiser guide and pre-submission checklist, phrase-level semantic-origin review, explicit lifecycle and private effective-request inspection.
 
 ## decisions
 - POST-1 [o] a post is identified by a slug minted once on the first save and never changed ← it is the primary key and part of every photo object key, so renaming would orphan the photos
@@ -220,7 +220,7 @@
   - each 필수 해시태그 is marked present when the tags carry it, ignoring a leading `#`
   - every non-empty line of the free text is a box the owner ticks; ticks are saved per post by the line's text, so an edited line starts unticked
   - it is advisory: it gates no copy, finalize or publish ← a requirement the counts cannot judge is still the owner's call
-- POST-120 [o] ③ carries `이 체험으로 클립 만들기` whenever canonical content exists: the owner picks 네이버 클립 or 인스타 클립 and confirms, and a new clip is created in that channel seeded with the post's title, its memo as the clip's instruction, its 체험단 글 switch and advertiser guide, and its attached videos as sources (→CLIP-214)
+- POST-120 [o] ③ carries `이 체험으로 클립 만들기` whenever canonical content exists: the owner picks 네이버 클립 or 인스타 클립 and confirms, and a new clip is created in that channel seeded with the post's title, its memo as the clip's instruction, its 체험단 글 switch and advertiser guide, and its attached videos as sources, and the post is linked to that clip as its story (→CLIP-214 →CLIP-215)
   - photos stay with the post ← a clip takes only video sources (→CLIP-6)
   - it starts no AI work and changes nothing on the post; later edits on either side do not flow to the other
 
@@ -245,3 +245,4 @@
 
 ## chg
 - r41 261015 POST-117+ 체험단 글 switch (new posts on, earlier posts off); POST-118+ advertiser guide (free text + counted items); POST-119+ pre-submission checklist; POST-120+ 이 체험으로 클립 만들기; POST-112✎ three→four origin categories (+ 광고주 요청, own color); POST-114✎ wording; POST-43✎ POST-64✎ home/history→Naver Blog channel; POST-54✎ POST-62✎ ① and ③ order; POST-107✎ Tistory/site/Markdown no-rotation line removed with those exports
+- r42 261015 POST-120✎ seeds a new clip→seeds it and links the post as its story (→CLIP-215)
