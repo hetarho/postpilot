@@ -1,3 +1,4 @@
+import { advertiserGuideFromProto, advertiserGuideToProto } from '@/entities/advertiser-guide'
 import { freezeBrowserComposition, projectBrowserComposition } from '@/entities/clip-preview'
 import { create } from '@bufbuild/protobuf'
 import { Code, type ConnectError, type createRouterTransport } from '@connectrpc/connect'
@@ -351,6 +352,8 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
   const projectProto = (p: FakeClipProject) =>
     create(ClipProjectSchema, {
       ...p,
+      campaign: p.campaign ?? false,
+      advertiserGuide: p.advertiserGuide ? advertiserGuideToProto(p.advertiserGuide) : undefined,
       lastRenderKind: p.result
         ? p.result.renderKind === 'browser'
           ? ClipRenderKind.BROWSER
@@ -592,6 +595,8 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
       disclosure: req.disclosure as ClipProjectDraft['disclosure'],
       hideDisclosure: req.hideDisclosure,
       instruction: req.instruction,
+      campaign: req.campaign ?? true,
+      advertiserGuide: advertiserGuideFromProto(req.advertiserGuide),
       // A request naming no preset takes the template's selection, or the new-project defaults
       // where there is no template, stored as ids (CLIP-111, CLIP-139, CLIP-168).
       introPreset: (req.introPreset ||
@@ -644,6 +649,11 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
       Array.from(req.instruction).length > CLIP_PROJECT_LIMITS.instruction
     )
       throw connectAppError('CLIP_INVALID_INPUT', Code.InvalidArgument)
+    if (req.campaign !== undefined) p.campaign = req.campaign
+    if (req.advertiserGuide !== undefined) {
+      p.advertiserGuide = advertiserGuideFromProto(req.advertiserGuide)
+      p.advertiserGuide.text = p.advertiserGuide.text.trim()
+    }
     if (req.channel !== undefined) p.channel = req.channel as ClipProjectDraft['channel']
     if (req.title !== undefined) p.title = req.title
     // Choosing a template takes its selection in the same write; 없음 moves nothing (CLIP-168).

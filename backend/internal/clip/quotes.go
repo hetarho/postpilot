@@ -187,8 +187,9 @@ func QuoteInputDigest(p Project, t VideoTemplate, b SourceBatch, pricing Generat
 		Sources                                        []source
 		Pricing                                        GenerationPricing
 		Composition                                    *ProjectComposition
-		Regions                                        string `json:",omitempty"`
-	}{p.Dubbing, p.UserID, p.ID, b.ID, p.Title, p.VideoTemplateID, p.Ratio, p.Disclosure, p.Language, p.Instruction, p.HideDisclosure, p.TargetDurationMS, t.Recipe, sources, pricing, p.Composition, EffectiveProjectRegions(p).WritingDigest(p.DesignSelection().RegionPresets())}
+		Regions                                        string           `json:",omitempty"`
+		AdvertiserGuide                                *AdvertiserGuide `json:",omitempty"`
+	}{p.Dubbing, p.UserID, p.ID, b.ID, p.Title, p.VideoTemplateID, p.Ratio, p.Disclosure, p.Language, p.Instruction, p.HideDisclosure, p.TargetDurationMS, t.Recipe, sources, pricing, p.Composition, EffectiveProjectRegions(p).WritingDigest(p.DesignSelection().RegionPresets()), EffectiveAdvertiserGuide(p)}
 	data, _ := json.Marshal(input) // All fields are concrete JSON-safe values.
 	sum := sha256.Sum256(data)
 	return hex.EncodeToString(sum[:])

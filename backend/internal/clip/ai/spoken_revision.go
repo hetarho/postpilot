@@ -113,7 +113,7 @@ func buildSpokenRevisionPrompt(in clip.RevisionInput, next clip.EditPlan, limits
 	} else {
 		system += compactContract(spokenRevisionSchema)
 	}
-	system += videoGuidelineBlock(videoGuidelinesFor(in.Guidelines, "spoken-script-revision"))
+	system += advertiserGuideRule(in.PlanningInput) + videoGuidelineBlock(videoGuidelinesFor(in.Guidelines, "spoken-script-revision"))
 	user += promptJSON(map[string]any{"current_spoken_script": lines, "revision_request": in.Request, "output_duration_ms": next.DurationMS})
 	return system, user
 }

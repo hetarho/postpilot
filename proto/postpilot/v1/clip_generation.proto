@@ -63,6 +63,8 @@ message CreateClipProjectRequest {
   ClipDubbingOptions dubbing = 20;
   // Absent takes the Naver channel, including requests from earlier clients.
   string channel = 19;
+  optional bool campaign = 21;
+  AdvertiserGuide advertiser_guide = 22;
 }
 
 message CreateClipProjectResponse { ClipProject project = 1; }
@@ -99,6 +101,8 @@ message UpdateClipProjectRequest {
   ClipDubbingOptions dubbing = 20;
   optional int32 expected_region_revision = 19;
   optional string channel = 21;
+  optional bool campaign = 22;
+  AdvertiserGuide advertiser_guide = 23;
 }
 
 // The owner's edit of the storyline: the same paragraphs, with their texts and scenes replaced.

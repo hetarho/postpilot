@@ -28,6 +28,7 @@ import { CLIP_ACCENTS, useClipTemplates } from '@/entities/clip-template'
 import { CLIP_DEFAULT_REGION_PRESETS, CLIP_DESIGN } from '@/entities/clip-design'
 import { appFailureFromConnect } from '@/shared/api'
 import { peekPendingClipDraft, queueClipDraft } from '../model/clip-draft-queue'
+import { ClipCampaignMaterial } from './ClipCampaignMaterial'
 import { MoveClipChannel } from './MoveClipChannel'
 import { ClipDesignSelection, type ClipRegionSwitches } from './ClipDesignSelection'
 import {
@@ -373,6 +374,15 @@ export function ClipProjectForm({
                 left={CLIP_PROJECT_LIMITS.instruction - freeTextLength(draft.instruction ?? '')}
               />
             </div>
+          )}
+          {!creating && (
+            <ClipCampaignMaterial
+              campaign={draft.campaign ?? false}
+              guide={draft.advertiserGuide}
+              disabled={disabled || readOnly}
+              onCampaign={(on) => change('campaign', on)}
+              onGuide={(guide) => change('advertiserGuide', guide)}
+            />
           )}
           {stored && (
             <MoveClipChannel

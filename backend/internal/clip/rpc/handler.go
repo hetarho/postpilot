@@ -12,6 +12,7 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/postpilot/backend/internal/auth"
+	"github.com/postpilot/backend/internal/campaign"
 	"github.com/postpilot/backend/internal/clip"
 	clipapp "github.com/postpilot/backend/internal/clip/app"
 	"github.com/postpilot/backend/internal/clip/composition"
@@ -119,6 +120,15 @@ func actingUser(ctx context.Context) (string, error) {
 	return user, nil
 }
 func toConnectError(err error) error {
+	var guideLong *campaign.TooLongError
+	if errors.As(err, &guideLong) {
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "advertiser guide part is too long", postpilotv1.FailureReason_ADVERTISER_GUIDE_TOO_LONG, map[string]string{"field": string(guideLong.Field), "max": strconv.Itoa(guideLong.Max), "actual": strconv.Itoa(guideLong.Chars)})
+	}
+	var guideItem *campaign.ItemInvalidError
+	if errors.As(err, &guideItem) {
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "advertiser guide item is invalid", postpilotv1.FailureReason_ADVERTISER_GUIDE_ITEM_INVALID, map[string]string{"field": string(guideItem.Field)})
+	}
+
 	if access, ok := usage.ModelAccessFailure(err); ok {
 		return rpcserver.AppErrorFrom(connect.CodeFailedPrecondition, access)
 	}
@@ -293,7 +303,7 @@ func projectFields(p clip.Project) *v1.ClipProject {
 	// The presets it renders in, so an empty stored id never reaches ① as
 	// "unchosen" and shows another look than the renderer draws (CLIP-111).
 	presets := p.DesignSelection().RegionPresets()
-	out := &v1.ClipProject{Dubbing: &v1.ClipDubbingOptions{Enabled: p.Dubbing.Enabled, VoiceId: p.Dubbing.VoiceID}, Regions: regionsProto(p), CanEdit: &canEdit, CanFinalize: &canFinalize, Composition: compositionProto(p.Composition), Id: p.ID, Title: p.Title, VideoTemplateId: p.VideoTemplateID, Ratio: p.Ratio, Channel: clip.DefaultChannel(p.Channel), Language: languageToProto(p.Language), Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, Instruction: p.Instruction, CaptionPace: p.CaptionPace, Accent: p.Accent, IntroPreset: presets.Intro, OutroPreset: presets.Outro, AllowedCaptionStyles: p.CaptionStyles, TargetDurationMs: int32(p.TargetDurationMS), EditPlanRevision: int32(p.EditPlanRevision), RenderedPlanRevision: int32(p.RenderedPlanRevision), CreatedAt: p.CreatedAt.UTC().Format(time.RFC3339Nano), UpdatedAt: p.UpdatedAt.UTC().Format(time.RFC3339Nano)}
+	out := &v1.ClipProject{Campaign: p.Campaign, AdvertiserGuide: guideProto(p.AdvertiserGuide), Dubbing: &v1.ClipDubbingOptions{Enabled: p.Dubbing.Enabled, VoiceId: p.Dubbing.VoiceID}, Regions: regionsProto(p), CanEdit: &canEdit, CanFinalize: &canFinalize, Composition: compositionProto(p.Composition), Id: p.ID, Title: p.Title, VideoTemplateId: p.VideoTemplateID, Ratio: p.Ratio, Channel: clip.DefaultChannel(p.Channel), Language: languageToProto(p.Language), Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, Instruction: p.Instruction, CaptionPace: p.CaptionPace, Accent: p.Accent, IntroPreset: presets.Intro, OutroPreset: presets.Outro, AllowedCaptionStyles: p.CaptionStyles, TargetDurationMs: int32(p.TargetDurationMS), EditPlanRevision: int32(p.EditPlanRevision), RenderedPlanRevision: int32(p.RenderedPlanRevision), CreatedAt: p.CreatedAt.UTC().Format(time.RFC3339Nano), UpdatedAt: p.UpdatedAt.UTC().Format(time.RFC3339Nano)}
 	// The plan's notices and the region slots' own, which a project holds
 	// before it has a plan (CLIP-147).
 	for _, n := range clip.ProjectNotices(p) {
@@ -423,7 +433,7 @@ func (h *Handler) CreateClipProject(ctx context.Context, req *connect.Request[v1
 	if err != nil {
 		return nil, toConnectError(err)
 	}
-	value, err := h.service.CreateProject(ctx, user, clip.ProjectInput{Dubbing: dubbingInput(m.Dubbing), IntroRegion: regionEdit(m.IntroRegion), OutroRegion: regionEdit(m.OutroRegion), Language: language, CompositionInputs: compositionInputs(m.CompositionInputs), Title: m.Title, VideoTemplateID: m.VideoTemplateId, Ratio: m.Ratio, Channel: m.Channel, TargetDurationMS: int(m.TargetDurationMs), Disclosure: m.Disclosure, HideDisclosure: m.HideDisclosure, Instruction: m.Instruction, CaptionPace: m.CaptionPace, Accent: m.Accent, IntroPreset: m.IntroPreset, OutroPreset: m.OutroPreset, CaptionStyles: captionStyles(m.AllowedCaptionStyles)})
+	value, err := h.service.CreateProject(ctx, user, clip.ProjectInput{Campaign: m.Campaign, AdvertiserGuide: guideInput(m.AdvertiserGuide), Dubbing: dubbingInput(m.Dubbing), IntroRegion: regionEdit(m.IntroRegion), OutroRegion: regionEdit(m.OutroRegion), Language: language, CompositionInputs: compositionInputs(m.CompositionInputs), Title: m.Title, VideoTemplateID: m.VideoTemplateId, Ratio: m.Ratio, Channel: m.Channel, TargetDurationMS: int(m.TargetDurationMs), Disclosure: m.Disclosure, HideDisclosure: m.HideDisclosure, Instruction: m.Instruction, CaptionPace: m.CaptionPace, Accent: m.Accent, IntroPreset: m.IntroPreset, OutroPreset: m.OutroPreset, CaptionStyles: captionStyles(m.AllowedCaptionStyles)})
 	if err != nil {
 		return nil, toConnectError(err)
 	}
@@ -522,7 +532,7 @@ func (h *Handler) UpdateClipProject(ctx context.Context, req *connect.Request[v1
 		return nil, err
 	}
 	m := req.Msg
-	p := clip.ProjectPatch{Dubbing: dubbingInput(m.Dubbing), IntroRegion: regionEdit(m.IntroRegion), OutroRegion: regionEdit(m.OutroRegion), CompositionInputs: compositionInputs(m.CompositionInputs), Title: m.Title, VideoTemplateID: m.VideoTemplateId, Channel: m.Channel, Disclosure: m.Disclosure, HideDisclosure: m.HideDisclosure, Instruction: m.Instruction, CaptionPace: m.CaptionPace, Accent: m.Accent, IntroPreset: m.IntroPreset, OutroPreset: m.OutroPreset, CaptionStyles: captionStyles(m.AllowedCaptionStyles), Storyline: storylineEdit(m.Storyline)}
+	p := clip.ProjectPatch{Campaign: m.Campaign, AdvertiserGuide: guideInput(m.AdvertiserGuide), Dubbing: dubbingInput(m.Dubbing), IntroRegion: regionEdit(m.IntroRegion), OutroRegion: regionEdit(m.OutroRegion), CompositionInputs: compositionInputs(m.CompositionInputs), Title: m.Title, VideoTemplateID: m.VideoTemplateId, Channel: m.Channel, Disclosure: m.Disclosure, HideDisclosure: m.HideDisclosure, Instruction: m.Instruction, CaptionPace: m.CaptionPace, Accent: m.Accent, IntroPreset: m.IntroPreset, OutroPreset: m.OutroPreset, CaptionStyles: captionStyles(m.AllowedCaptionStyles), Storyline: storylineEdit(m.Storyline)}
 	if m.ExpectedRegionRevision != nil {
 		revision := int(*m.ExpectedRegionRevision)
 		p.ExpectedRegionRevision = &revision

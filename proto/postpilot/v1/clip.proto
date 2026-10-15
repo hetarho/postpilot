@@ -128,6 +128,8 @@ message ClipProject {
   ClipDubbingOptions dubbing = 41;
   // naver_clip or instagram_clip; independent of composition and result.
   string channel = 42;
+  bool campaign = 43;
+  AdvertiserGuide advertiser_guide = 44;
 }
 
 message ClipDubbingOptions { bool enabled = 1; string voice_id = 2; }

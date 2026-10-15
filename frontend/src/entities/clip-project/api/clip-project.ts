@@ -1,3 +1,7 @@
+import {
+  advertiserGuideFromProto,
+  advertiserGuideToProto,
+} from '@/entities/advertiser-guide/@x/clip-project'
 import { createClient, type Transport } from '@connectrpc/connect'
 import { useTransport } from '@connectrpc/connect-query'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -75,6 +79,8 @@ export function toClipProject(value: ProtoClipProject): ClipProject {
     videoTemplateId: value.videoTemplateId,
     ratio: value.ratio as ClipRatio,
     channel: clipChannel(value.channel),
+    campaign: value.campaign,
+    advertiserGuide: advertiserGuideFromProto(value.advertiserGuide),
     targetDurationMs: value.targetDurationMs,
     // An empty campaign type is a clip still being set up; generation refuses
     // one (CDS-5).
@@ -338,6 +344,8 @@ export function useClipProjectMutations(ownerId: string) {
       const {
         ratio,
         channel,
+        campaign,
+        advertiserGuide,
         compositionInputs,
         introPreset,
         outroPreset,
@@ -356,11 +364,24 @@ export function useClipProjectMutations(ownerId: string) {
         ...(allowedCaptionStyles ? { allowedCaptionStyles: { values: allowedCaptionStyles } } : {}),
       }
       const response = id
-        ? await client.updateClipProject({ id, ...fields, ...design, compositionInputs: inputs })
+        ? await client.updateClipProject({
+            id,
+            ...fields,
+            ...design,
+            compositionInputs: inputs,
+            ...(draft.campaign !== undefined ? { campaign } : {}),
+            ...(draft.advertiserGuide !== undefined && advertiserGuide
+              ? { advertiserGuide: advertiserGuideToProto(advertiserGuide) }
+              : {}),
+          })
         : await client.createClipProject({
             ...fields,
             ratio,
             channel,
+            campaign: draft.campaign ?? true,
+            ...(advertiserGuide
+              ? { advertiserGuide: advertiserGuideToProto(advertiserGuide) }
+              : {}),
             compositionInputs: inputs,
             language: contentLanguageToProto(activeLocale()),
           })

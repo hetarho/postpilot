@@ -24,10 +24,12 @@ var ErrBusy = errors.New("clip busy")
 // 영상 지침; an accepted version-3..5 job ran with none and keeps running with none. Version 7
 // freezes the storyline 이 스토리로 만들기 builds along. Version 8 freezes the project's
 // intro/outro slots; an accepted version-3..7 job drafts no slot and saves the slots as they are.
-const GenerationPayloadVersion = 9
-const BrowserAnalysisGenerationPayloadVersion = 10
+// Versions 11/12 freeze advertiser material; accepted earlier jobs carry none.
+const GenerationPayloadVersion = 11
+const BrowserAnalysisGenerationPayloadVersion = 12
 
 type GenerationPayload struct {
+	AdvertiserGuide *AdvertiserGuide `json:",omitempty"`
 	// Only versioned browser preparation uses this reference. Signed access and
 	// client original claims remain in its separately versioned owned session.
 	AnalysisPreparationID            string         `json:",omitempty"`

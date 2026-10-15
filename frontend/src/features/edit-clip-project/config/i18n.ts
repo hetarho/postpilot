@@ -7,6 +7,9 @@ export const i18n = {
     channel: { naver_clip: '네이버 클립', instagram_clip: '인스타 클립' },
     project: {
       channel: '클립 채널',
+      campaign: '체험단 글',
+      campaignHelp:
+        '광고주 가이드를 영상 글쓰기에 반영해요. 끄면 가이드는 보관하고 사용하지 않아요.',
       verticalOnly: '두 클립 채널 모두 세로 9:16으로 만들어요.',
       move: { naver_clip: '네이버 클립으로 옮기기', instagram_clip: '인스타 클립으로 옮기기' },
       designChoices: '디자인과 자막 스타일',
@@ -114,6 +117,9 @@ export const i18n = {
     channel: { naver_clip: 'Naver Clip', instagram_clip: 'Instagram Clip' },
     project: {
       channel: 'Clip channel',
+      campaign: 'Campaign content',
+      campaignHelp:
+        'Use the advertiser guide when writing this clip. Turning this off keeps the guide without using it.',
       verticalOnly: 'Both clip channels use vertical 9:16.',
       move: { naver_clip: 'Move to Naver Clip', instagram_clip: 'Move to Instagram Clip' },
       designChoices: 'Design and caption styles',

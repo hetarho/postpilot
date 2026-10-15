@@ -1,3 +1,8 @@
+import {
+  EMPTY_GUIDE,
+  copyGuide,
+  type AdvertiserGuide,
+} from '@/entities/advertiser-guide/@x/clip-project'
 import { DEFAULT_CLIP_CHANNEL, type ClipChannel } from '../config/channel'
 import type { ClipNotice } from './notices'
 import type { ClipProjectRequest } from '@/entities/clip-plan/@x/clip-project'
@@ -29,6 +34,8 @@ export const CLIP_PROJECT_LIMITS = {
   maxSeconds: 60,
 } as const
 export interface ClipProjectDraft {
+  campaign?: boolean
+  advertiserGuide?: AdvertiserGuide
   /** Older retained browser drafts omit this and take the Naver channel. */
   channel?: ClipChannel
   dubbing?: { enabled: boolean; voiceId: string }
@@ -231,6 +238,8 @@ export interface ClipSourceBatch {
 export type ReadyClipBatch = ClipSourceBatch & { state: 'ready' }
 export function emptyClipProject(): ClipProjectDraft {
   return {
+    campaign: true,
+    advertiserGuide: copyGuide(EMPTY_GUIDE),
     channel: DEFAULT_CLIP_CHANNEL,
     title: '',
     videoTemplateId: '',
@@ -254,6 +263,8 @@ export function projectDraft(value: ClipProjectDraft): ClipProjectDraft {
     ...(value.compositionInputs
       ? { compositionInputs: structuredClone(value.compositionInputs) }
       : {}),
+    campaign: value.campaign ?? false,
+    advertiserGuide: copyGuide(value.advertiserGuide ?? EMPTY_GUIDE),
     channel: value.channel ?? DEFAULT_CLIP_CHANNEL,
     title: value.title,
     videoTemplateId: value.videoTemplateId,
@@ -283,6 +294,7 @@ const byKey = <T>(value: Record<string, T>): Record<string, T> =>
 export function normalizeClipProject(value: ClipProjectDraft): ClipProjectDraft {
   const draft = projectDraft(value)
   const inputs = draft.compositionInputs
+  const guide = draft.advertiserGuide ?? EMPTY_GUIDE
   return {
     ...draft,
     ...(inputs
@@ -299,6 +311,7 @@ export function normalizeClipProject(value: ClipProjectDraft): ClipProjectDraft 
           },
         }
       : {}),
+    advertiserGuide: { ...guide, text: guide.text.trim() },
     title: value.title.trim(),
   }
 }

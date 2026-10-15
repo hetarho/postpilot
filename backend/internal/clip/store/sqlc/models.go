@@ -230,6 +230,10 @@ type ClipProject struct {
 	DubbingBindingDigest     string
 	ResultSpeechJson         string
 	Channel                  string
+	Campaign                 int64
+	AdvertiserGuide          string
+	AdvertiserKeywords       string
+	AdvertiserHashtags       string
 }
 
 type ClipSourceAttempt struct {

@@ -101,6 +101,8 @@ type DubbingOptions struct {
 }
 
 type Project struct {
+	Campaign                                           bool
+	AdvertiserGuide                                    AdvertiserGuide
 	Dubbing                                            DubbingOptions
 	Regions                                            *ProjectRegions
 	Language                                           string
@@ -172,6 +174,8 @@ func ValidRequestKind(kind string) bool {
 }
 
 type ProjectInput struct {
+	Campaign                               *bool
+	AdvertiserGuide                        *AdvertiserGuide
 	Dubbing                                *DubbingOptions
 	IntroRegion, OutroRegion               *RegionPatch
 	Language                               string
@@ -191,6 +195,8 @@ type ProjectInput struct {
 
 // Ratio deliberately has no update representation.
 type ProjectPatch struct {
+	Campaign                    *bool
+	AdvertiserGuide             *AdvertiserGuide
 	Dubbing                     *DubbingOptions
 	IntroRegion, OutroRegion    *RegionPatch
 	Regions                     *ProjectRegions // Service-computed canonical state, never accepted from the wire.

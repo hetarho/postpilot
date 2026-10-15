@@ -111,6 +111,7 @@ func flowPromptParts(in clip.PlanningInput, fadeMS int, limits composition.Limit
 		"ratio": in.Ratio, "target_duration_ms": in.TargetDurationMS, "fade_ms": fadeMS,
 		"analyses": flowObservationPayload(in),
 	}
+	addAdvertiserGuide(payload, in)
 	// No template, or one with no stage, adds no bytes at all: the section is
 	// omitted WHOLE rather than sent empty, so the request a revision appends to
 	// stays byte-identical (CLIP-5, TMPL-12).
@@ -135,7 +136,7 @@ func flowPromptParts(in clip.PlanningInput, fadeMS int, limits composition.Limit
 			payload["intro_outro"] = slots
 		}
 	}
-	return videoWritingContract(in.Language) + prompt + responseContract + contract, promptJSON(payload)
+	return videoWritingContract(in.Language) + prompt + responseContract + contract + advertiserGuideRule(in), promptJSON(payload)
 }
 
 // templateOutline is the template's form as the flow and narration calls read it:
