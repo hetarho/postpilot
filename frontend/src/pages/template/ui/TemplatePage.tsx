@@ -10,6 +10,7 @@ import {
 } from '@/entities/ai-authoring'
 import { TemplatePreview, useTemplates, type Template } from '@/entities/template'
 import { TemplateDirectEditor, postFormReference } from '@/features/edit-template'
+import { TemplateWizard } from '@/features/create-template-wizard'
 import { AIAuthoringStudio } from '@/widgets/ai-authoring-studio'
 import { Button, Notice, Typography, pageStyles, typographyStyles } from '@/shared/ui'
 
@@ -99,6 +100,9 @@ function TemplateAuthoringPage({
     kind: t('kinds.post-template', { ns: 'authoring' }),
     name: stored?.name ?? t('page.new', { ns: 'templates' }),
   }
+  // A new template with nothing to resume and no sample post is made through the guided wizard
+  // (TMPL-71); resuming a session and starting from a post keep their own flows.
+  const guided = !stored && !sessionId && !sampleSlug
   return (
     <main
       className={pageStyles({ width: 'board', className: 'flex flex-1 flex-col py-4 sm:py-8' })}
@@ -116,7 +120,17 @@ function TemplateAuthoringPage({
           })}
         </Typography>
       )}
-      {method === null ? (
+      {guided ? (
+        <div className="mt-4 sm:mt-8">
+          <TemplateWizard
+            ownerId={ownerId}
+            onSaved={(templateId) => {
+              onPublished()
+              void navigate({ to: '/templates/$templateId', params: { templateId }, replace: true })
+            }}
+          />
+        </div>
+      ) : method === null ? (
         <section className="mt-4 flex flex-col sm:mt-8">
           <Typography variant="stepTitle" as="h2">
             {stored ? (

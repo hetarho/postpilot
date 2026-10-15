@@ -11,7 +11,7 @@
 ## active
 | tag | host | mode | since | at | doing |
 |---|---|---|---|---|---|
-| v7k2 | DESKTOP-VKPLS8P | autopilot | 2026-10-15T03:06Z | 2026-10-15T08:20Z | T685 |
+| v7k2 | DESKTOP-VKPLS8P | autopilot | 2026-10-15T03:06Z | 2026-10-15T08:41Z | - |
 
 ## inbox
 - 261015 decided -: push branch for finished units? → main, and AGENTS.md now defers to haeram-spec-creator with ARCH-31 run before each push and reused on unchanged trees (alt: - commit only | a work branch)
@@ -37,6 +37,8 @@
 - 261015 decided THEME-62 T681: colour of the 광고주 요청 evidence role? → the red ramp (300 on 950 dark, 700 on 50 light, contrast 9.98 and 7.80) with a double underline and its label, since THEME-15 closes the palette and red is the only ramp outside the other origins, the accent and the neutral (alt: a new palette ramp, needs THEME-15 and THEME-35 changed | violet, the action accent)
 - 261015 suggest T677 T678 T679 T680 T681: review-code over the five campaign tasks done so far (principle tier, advertiser guide storage and editor fields, advertiser origin)
 - 261015 decided POST-119 T683: which count meets 최소 글자 수? → the count without spaces, the stricter of the two the checklist shows, so a met mark holds whichever way the campaign counts (alt: with spaces | either one)
+- 261015 decided TMPL-72 T685: how does a product kind adapt role wording? → each kind adds its own section after 주요 기능 (가전 설치·소음, 화장품 제형·발림성, 식품 맛·조리법, 육아·반려 안전·반응; 생활·주방 none) (alt: rename the shared roles per kind | no kind-specific wording)
+- 261015 decided TMPL-74 T685: what does 직접 입력 place? → the author's typed answer verbatim (a 데이터 받기 field of the fixed-text flavor), and such a section never repeats because the grammar refuses a field inside a repeat (alt: the AI writes the section from the answer)
 
 ## ideation
 | id | st |
@@ -106,7 +108,6 @@
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
-| T685 | Build the guided post-template wizard | TMPL THEME | - | doing@261015.v7k2 |
 | T686 | Suggest section headings in the owner's voice | TMPL EDIT | T685 | todo |
 | T687 | Make the wizard the only way to create a post template | TMPL EDIT | T685 T686 | todo |
 | T688 | Build the video-template wizard and make it the only way to create one | CLIP TMPL EDIT | T685 T686 | todo |
@@ -119,11 +120,12 @@
 | T695 | Tell the 체험단 story on the public about page | MKT | T682 T683 T684 T687 T688 T691 T692 T693 T694 | todo |
 
 ## next
-- implement-task T685 (then dep order … T695); 21 provisional decisions wait in inbox for the owner (they will read the report first).
+- implement-task T686 (then dep order … T695); 23 provisional decisions wait in inbox for the owner (they will read the report first).
 - ideation friendly-model-names 계속: decide the automatic alias word list (theme, size, contents) and whether speech profiles join; then create-ssot/update-ssot MODEL. Also pending: the 17 unadopted choices in review/structure-261008 and doc-review ARCH.
 - push: 65c79f2b passed its pre-push gate and waits only for the SSH key (ssh-add) with the spec commits after it; gh login is needed to read CI. 6e5039c8 is the live green revision.
 
 ## log
+- 261015 T685 done
 - 261015 T685 start on main at ce4e027c.
 - 261015 T684 done
 - 261015 T684 start on main at d64bd979.
@@ -143,4 +145,3 @@
 - 261015 T677 start on main at d6aa385a (v7k2 autopilot).
 - 261015 create-task done: T677–T695 from GUIDE r22 GEN r31 POST r41 EXPORT r12 TMPL r28 CLIP r60 VOICE r17 THEME r34 MKT r11 CDS r34 EDIT r6 VIDEO r8 LANG r10; migrations reserved 0159 (T679) 0160 (T689) 0161 (T690) 0162 (T691).
 - 261015 create-task GUIDE GEN POST EXPORT TMPL CLIP VOICE THEME MKT CDS EDIT VIDEO LANG start (autopilot v7k2).
-- 261015 update-ssot GUIDE r22 GEN r31 POST r41 EXPORT r12 TMPL r28 CLIP r60 VOICE r17 THEME r34 MKT r11 CDS r34 EDIT r6 VIDEO r8 LANG r10 done: ideation/campaign-reviewer-focus converted (원칙 tier, advertiser guide + checklist + 광고주 요청 origin, 체험단 글 + disclosure placeholder, template wizard, learning chat, channel navigation, clip channels + upload text, 9:16 for new clips, Naver-only post output); 18 provisional decisions in inbox; no doing task in the blast radius; next create-task.

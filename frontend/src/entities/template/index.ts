@@ -52,7 +52,11 @@ export { TemplateComposition } from './ui/TemplateComposition'
 export { TemplateSource } from './ui/TemplateSource'
 export { TemplatePreview } from './ui/TemplatePreview'
 export {
+  newBlock,
   readCompositionWorkingState,
+  toBody,
+  toValidBody,
   toWorkingBody,
+  type BuilderBlock,
   type CompositionWorkingState,
 } from './model/blocks'

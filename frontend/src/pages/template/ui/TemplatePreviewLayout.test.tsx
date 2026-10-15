@@ -3,9 +3,18 @@ import { fireEvent, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderAppAt } from '@/test/app'
 const preview = () => within(screen.getByRole('article', { name: '미리보기' }))
+// A new template is made through the guided wizard (TMPL-71), so the shared editor's preview is
+// exercised on a saved template's direct editing.
+const PLAIN = {
+  id: 'plain',
+  name: '빈 구성',
+  description: '',
+  titleArea: '',
+  body: '<write>인사</write>',
+}
 async function mount(user: ReturnType<typeof userEvent.setup>) {
-  renderAppAt('/templates/new', { user: { id: 'alice' }, templates: { templates: [] } })
-  await user.click(await screen.findByRole('button', { name: '직접 편집' }))
+  renderAppAt('/templates/plain', { user: { id: 'alice' }, templates: { templates: [PLAIN] } })
+  await user.click(await screen.findByRole('button', { name: /빈 구성.*직접 편집하기/ }))
   await screen.findByLabelText('이름')
 }
 describe('live shared template preview', () => {
@@ -31,6 +40,7 @@ describe('live shared template preview', () => {
     const user = userEvent.setup()
     await mount(user)
     const name = screen.getByLabelText('이름')
+    await user.clear(name)
     await user.type(name, '보관할 이름')
     const tabs = screen.getByRole('tablist', { name: '편집과 미리 보기' })
     expect(tabs).toHaveClass('lg:hidden')

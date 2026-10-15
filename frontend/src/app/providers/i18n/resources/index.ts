@@ -129,6 +129,7 @@ import { i18n as subscriptionI18n } from '@/entities/subscription/config/i18n'
 import { i18n as templateEntityI18n } from '@/entities/template/config/i18n'
 import { i18n as templatePageI18n } from '@/pages/template/config/i18n'
 import { i18n as templatesI18n } from '@/pages/templates/config/i18n'
+import { i18n as createTemplateWizardI18n } from '@/features/create-template-wizard/config/i18n'
 import { i18n as uploadPhotosI18n } from '@/features/upload-photos/config/i18n'
 import { i18n as voiceEntityI18n } from '@/entities/voice/config/i18n'
 import { i18n as voicePageI18n } from '@/pages/voice/config/i18n'
@@ -284,6 +285,7 @@ export const FRAGMENTS: readonly I18nFragment[] = [
   templateEntityI18n,
   templatePageI18n,
   templatesI18n,
+  createTemplateWizardI18n,
   createVoiceI18n,
   deleteVoiceI18n,
   restoreVoiceAnalysisI18n,
@@ -364,6 +366,7 @@ export const resources = {
       ...templateEntityI18n.ko,
       ...templatePageI18n.ko,
       ...templatesI18n.ko,
+      ...createTemplateWizardI18n.ko,
     },
     guidelines: {
       ...deleteGuidelineI18n.ko,
@@ -505,6 +508,7 @@ export const resources = {
       ...templateEntityI18n.en,
       ...templatePageI18n.en,
       ...templatesI18n.en,
+      ...createTemplateWizardI18n.en,
     },
     guidelines: {
       ...deleteGuidelineI18n.en,

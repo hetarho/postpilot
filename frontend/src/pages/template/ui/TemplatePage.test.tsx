@@ -165,18 +165,16 @@ describe('named template shared editing', () => {
     expect(calls).toContain('GetAuthoringSession')
     expect(calls).not.toContain('CreateAuthoringSession')
   })
-  it('starts seed-free manual creation and publishes only after explicit named confirmation', async () => {
-    const user = userEvent.setup()
-    const creates: NonNullable<FakeTemplatesOptions['creates']> = []
-    const { router } = await direct(user, '/templates/new', { templates: [], creates })
-    await user.type(screen.getByLabelText('이름'), '내 새 구성')
-    await user.click(add('AI가 쓰는 글'))
-    await user.type(screen.getByLabelText('이 자리에 오는 것'), '오늘의 이야기')
-    expect(creates).toHaveLength(0)
-    await publishAuthoringDraft(user)
-    await waitFor(() => expect(router.state.location.pathname).toMatch(/^\/templates\/template-/))
-    expect(await screen.findByText('“내 새 구성” 글 구성을 새로 저장했어요.')).toBeInTheDocument()
-    expect(creates[0]).toMatchObject({ name: '내 새 구성', body: '<write>오늘의 이야기</write>' })
+  // TMPL-71: a new template with nothing to resume and no sample post opens the guided wizard,
+  // not the method chooser; its creation is pinned by TemplateWizard.test.tsx.
+  it('opens a new template on the guided wizard instead of the method chooser', async () => {
+    const calls: string[] = []
+    mount('/templates/new', { templates: [] }, {}, calls)
+    expect(
+      await screen.findByRole('heading', { level: 2, name: '어떤 체험을 글로 남기나요?' }),
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '직접 편집' })).not.toBeInTheDocument()
+    expect(calls.filter((call) => /Create|StartAuthoring/.test(call))).toEqual([])
   })
   it('retains the draft on target conflict without publishing or starting AI', async () => {
     const user = userEvent.setup()
