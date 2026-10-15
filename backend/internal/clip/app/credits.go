@@ -30,6 +30,9 @@ func QuoteCredits(pricing clip.GenerationPricing, count, retries int) (int, erro
 }
 
 func quotedCalls(pricing clip.GenerationPricing, count, retries int) []usage.PricedCall {
+	if pricing.UploadText {
+		return []usage.PricedCall{{Policy: pricing.Plan, Count: 1}}
+	}
 	return []usage.PricedCall{{Policy: pricing.Observe, Count: count * (1 + retries)}, {Policy: pricing.Plan, Count: pricing.PlanCalls()}}
 }
 
@@ -175,4 +178,34 @@ func (a ModelAdmission) ObserveModels() []clip.AnalysisCandidate {
 func (a ModelAdmission) QualifyObserve(ctx context.Context, ref llm.ModelRef) error {
 	_, err := a.freezer.FreezeExecution(llm.AllowCachedEndpoints(ctx), ref, llm.StageNameObserve, a.budgets.ObserveCompletionTokens, a.budgets.ObserveReasoning, llm.ExecutionInlineStatic)
 	return err
+}
+
+// FreezeUploadText has one write policy and never resolves an observation model.
+func (p Pricing) FreezeUploadText(ctx context.Context, write llm.ModelRef) (clip.GenerationPricing, error) {
+	policy, err := p.freezer.FreezeExecution(ctx, write, llm.StageNameWrite, p.budgets.FlowCompletionTokens, p.budgets.PlanReasoning, llm.ExecutionTextOnly)
+	if err != nil {
+		return clip.GenerationPricing{}, err
+	}
+	policy.ResponseRetries = 0
+	pricing := clip.GenerationPricing{UploadText: true, Version: clip.PricingPolicyVersion, CancellationPolicyVersion: clip.CancellationPolicyVersion, SkipNarration: true, Plan: policy}
+	calls := quotedCalls(pricing, 0, 0)
+	cost, err := usage.ReservationCost(calls)
+	if err != nil {
+		return clip.GenerationPricing{}, clip.ErrPricingUnavailable
+	}
+	if cost > 0 {
+		if prior, ok := ctx.Value(frozenQuoteRateKey{}).(clip.GenerationPricing); ok && prior.Rate.Valid() {
+			pricing.Rate = prior.Rate
+		} else {
+			pricing.Rate, err = p.rates.Select(ctx, time.Now())
+		}
+		if err != nil {
+			return clip.GenerationPricing{}, clip.ErrRateUnavailable
+		}
+	}
+	pricing.MaxCredits, err = QuoteCredits(pricing, 0, 0)
+	if err != nil || !pricing.Valid() {
+		return clip.GenerationPricing{}, clip.ErrPricingUnavailable
+	}
+	return pricing, nil
 }

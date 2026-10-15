@@ -134,6 +134,9 @@ func registerJobs(c *contexts) {
 // registerClipJobs binds the clip kinds and releases each attempt's held sources when its
 // job ends, whatever the outcome.
 func registerClipJobs(q *job.Queue, service *clipapp.GenerationService, sources *clipapp.SourceService) {
+	q.Register(clip.JobKindUploadText, metered(func(ctx context.Context, j job.Job, progress job.Progress) error {
+		return service.RunUploadText(ctx, j.UserID, j.ID, j.Subject(clip.JobSubject), j.Payload, progress)
+	}))
 	q.Register(clip.JobKindGenerate, metered(func(ctx context.Context, j job.Job, progress job.Progress) error {
 		return service.Run(ctx, j.UserID, j.ID, j.Subject(clip.JobSubject), j.Payload, progress)
 	}))

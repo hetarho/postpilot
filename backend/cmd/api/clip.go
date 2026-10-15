@@ -58,7 +58,7 @@ func clipBudgets(cfg clipai.Config) clipapp.Budgets {
 	return clipapp.Budgets{ObserveCompletionTokens: cfg.ObserveCompletionTokens, FlowCompletionTokens: cfg.FlowCompletionTokens, NarrationCompletionTokens: cfg.NarrationCompletionTokens, ObserveReasoning: cfg.ObserveReasoning, PlanReasoning: cfg.PlanReasoning}
 }
 
-func newClipGeneration(ctx context.Context, cfg *config.Config, store *clipstore.Store, projects *clipapp.Service, sources *clipapp.SourceService, bucket *storage.Bucket, media *clipmedia.Adapter, models meteredRegistry, plans *auth.Service, queue *job.Queue, guard clipapp.Reserver, writer *sql.DB, bind clipapp.Binder, candidates clipGuidelineCandidates, voices clip.SpokenVoiceResolver, analysis *clipapp.AnalysisPreparations, speech ...*clipapp.SpeechService) (*clipapp.GenerationService, error) {
+func newClipGeneration(ctx context.Context, cfg *config.Config, store *clipstore.Store, projects *clipapp.Service, sources *clipapp.SourceService, bucket *storage.Bucket, media *clipmedia.Adapter, models meteredRegistry, plans *auth.Service, queue *job.Queue, guard clipapp.Reserver, writer *sql.DB, bind clipapp.Binder, candidates clipGuidelineCandidates, voices clip.SpokenVoiceResolver, uploadVoice clip.UploadTextVoice, analysis *clipapp.AnalysisPreparations, speech ...*clipapp.SpeechService) (*clipapp.GenerationService, error) {
 	renderer, err := clipmedia.NewRenderer(media, clip.DefaultRenderConfig(clipEnvironment(cfg)))
 	if err != nil {
 		return nil, err
@@ -84,6 +84,7 @@ func newClipGeneration(ctx context.Context, cfg *config.Config, store *clipstore
 		narration = speech[0]
 	}
 	service := clipapp.NewGenerationService(store, projects, sources, bucket, media, planner, renderer, clipapp.NewJobs(queue, guard), clip.DefaultGenerationConfig(clipEnvironment(cfg)), clipapp.GenerationDeps{
+		UploadWriter: planner, UploadVoice: uploadVoice,
 		Voices: voices, Speech: narration, AnalysisPreparations: analysis,
 		RemoteMedia:     remote,
 		NativeAdmission: nativeAdmission,

@@ -124,3 +124,31 @@ func TestModelGradesFreezeRightsAndKeepFreeAtZeroBalance(t *testing.T) {
 		t.Fatalf("mixed free/paid job was admitted: %v", err)
 	}
 }
+
+type stageFreePath struct {
+	fakeModels
+	paths *[]llm.FreePath
+}
+
+func (s stageFreePath) QualifyFree(_ context.Context, _ string, path llm.FreePath) (bool, error) {
+	*s.paths = append(*s.paths, path)
+	return true, nil
+}
+func TestClipUploadTextQualifiesOnlyTextEvenWithAVideoCapableWriter(t *testing.T) {
+	ref := llm.ModelRef{ProviderID: "openrouter", ModelID: "multimodal-free"}
+	paths := []llm.FreePath{}
+	models := stageFreePath{fakeModels{ref: {Ref: ref, VideoInput: true, Vision: true, Stages: []string{"write", "observe"}, Levels: map[string]string{"write": "free", "observe": "free"}, InputUSDPerMillion: "0", OutputUSDPerMillion: "0"}}, &paths}
+	service := NewService(newFakeStore(), models, maxCompletion, fakeAnchors{anchor: testAnchor}, testRates()).WithModelGrades()
+	if e := service.CheckModelAccess(t.Context(), plan.Free, "clip_upload_text", []PlannedCall{{Ref: ref, Stage: "write", Count: 1}}); e != nil {
+		t.Fatal(e)
+	}
+	if len(paths) != 1 || paths[0] != llm.FreeText {
+		t.Fatal("a writing-only call required video delivery", paths)
+	}
+	if e := service.CheckModelAccess(t.Context(), plan.Free, "generate_clip", []PlannedCall{{Ref: ref, Stage: "observe", Count: 1}}); e != nil {
+		t.Fatal(e)
+	}
+	if len(paths) != 2 || paths[1] != llm.FreeVideoInput {
+		t.Fatal("a real observation lost its video check", paths)
+	}
+}

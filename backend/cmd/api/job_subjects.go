@@ -23,14 +23,14 @@ import (
 // other kind starts in `observe`. The store is given the lists, so its SQL names no product.
 func jobKinds() jobstore.Kinds {
 	return jobstore.Kinds{
-		Deferred:    []string{experimentapp.WritingTestJobKind, clip.JobKindSpeech, clip.JobKindGenerate, clip.JobKindRender, clip.JobKindSampleBrowserRender, clip.JobKindRevise, clip.JobKindStoryline, clip.JobKindReviseStoryline},
-		Cancellable: []string{experimentapp.WritingTestJobKind, clip.JobKindSpeech, clip.JobKindGenerate, clip.JobKindRender, clip.JobKindSampleBrowserRender, clip.JobKindRevise, clip.JobKindStoryline, clip.JobKindReviseStoryline, job.KindTemplateRequest, template.HeadingSuggestionJobKind, job.KindWritingVoiceCandidates, authoring.JobKind, spoken.JobKindDesign, spoken.JobKindConfirm, spoken.JobKindProbe},
-		Authorized:  []string{experimentapp.WritingTestJobKind, template.HeadingSuggestionJobKind, clip.JobKindSpeech, clip.JobKindGenerate, clip.JobKindRevise, clip.JobKindStoryline, clip.JobKindReviseStoryline, spoken.JobKindDesign, spoken.JobKindConfirm, spoken.JobKindProbe, job.KindWritingVoiceCandidates, authoring.JobKind},
+		Deferred:    []string{experimentapp.WritingTestJobKind, clip.JobKindSpeech, clip.JobKindGenerate, clip.JobKindRender, clip.JobKindSampleBrowserRender, clip.JobKindRevise, clip.JobKindStoryline, clip.JobKindReviseStoryline, clip.JobKindUploadText},
+		Cancellable: []string{experimentapp.WritingTestJobKind, clip.JobKindSpeech, clip.JobKindGenerate, clip.JobKindRender, clip.JobKindSampleBrowserRender, clip.JobKindRevise, clip.JobKindStoryline, clip.JobKindReviseStoryline, clip.JobKindUploadText, job.KindTemplateRequest, template.HeadingSuggestionJobKind, job.KindWritingVoiceCandidates, authoring.JobKind, spoken.JobKindDesign, spoken.JobKindConfirm, spoken.JobKindProbe},
+		Authorized:  []string{experimentapp.WritingTestJobKind, template.HeadingSuggestionJobKind, clip.JobKindSpeech, clip.JobKindGenerate, clip.JobKindRevise, clip.JobKindStoryline, clip.JobKindReviseStoryline, clip.JobKindUploadText, spoken.JobKindDesign, spoken.JobKindConfirm, spoken.JobKindProbe, job.KindWritingVoiceCandidates, authoring.JobKind},
 		FirstStages: map[string]string{
 			experimentapp.WritingTestJobKind: "writing_test",
 			clip.JobKindSpeech:               "speech",
 			spoken.JobKindDesign:             spoken.JobKindDesign, spoken.JobKindConfirm: spoken.JobKindConfirm, spoken.JobKindProbe: spoken.JobKindProbe,
-			clip.JobKindGenerate: "prepare", clip.JobKindRevise: "prepare", clip.JobKindStoryline: "prepare", clip.JobKindReviseStoryline: "prepare",
+			clip.JobKindUploadText: "prepare", clip.JobKindGenerate: "prepare", clip.JobKindRevise: "prepare", clip.JobKindStoryline: "prepare", clip.JobKindReviseStoryline: "prepare",
 			template.HeadingSuggestionJobKind: "write", job.KindAnalyzeVoice: "analyze", job.KindCheckVoice: "write", job.KindRevise: "write", job.KindWritingVoiceCandidates: "write", authoring.JobKind: "write",
 		},
 	}
@@ -40,7 +40,7 @@ func jobKinds() jobstore.Kinds {
 // ceiling: a clip generation and an owner's revision each quote their whole run before
 // the first model call (CLIP-19, CLIP-132). A render spends nothing and never reserves.
 func approvedCeilingKinds() []string {
-	return []string{clip.JobKindGenerate, clip.JobKindRevise, clip.JobKindStoryline, clip.JobKindReviseStoryline}
+	return []string{clip.JobKindGenerate, clip.JobKindRevise, clip.JobKindStoryline, clip.JobKindReviseStoryline, clip.JobKindUploadText}
 }
 
 // ownerCancellableKinds is work admitted without an approved ceiling that its owner may still

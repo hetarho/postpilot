@@ -133,6 +133,9 @@ func PlanReservation(approval clip.GenerationApproval, chunks int) ([]job.Planne
 		calls = append(calls, job.PlannedCall{Ref: p.Plan.Ref.String(), Stage: "write", Count: p.PlanCalls(), CompletionTokens: p.Plan.CompletionTokens})
 	}
 	reservation := Reservation{CancellationPolicyVersion: p.CancellationPolicyVersion, ApprovedMaxCredits: approval.MaxCredits, Rate: p.Rate, Calls: []Call{{Policy: p.Observe, Count: p.ObserveCalls(chunks)}, {Policy: p.Plan, Count: p.PlanCalls()}}}
+	if p.UploadText {
+		reservation.Calls = []Call{{Policy: p.Plan, Count: 1}}
+	}
 	if p.Dubbing != nil && len(p.Dubbing.Units) > 0 {
 		reservation.Units = p.Dubbing.Units
 		reservation.UnitQuoteID = p.Dubbing.QuoteID
@@ -155,6 +158,8 @@ func validClipStart(kind string, s clip.GenerationStart, policy int) error {
 	case (kind == clip.JobKindRender || kind == clip.JobKindSampleBrowserRender) && (s.Observe != "" || s.Write != ""):
 		return clip.ErrNotFound
 	case (kind == clip.JobKindGenerate || kind == clip.JobKindStoryline) && (s.Observe == "" || s.Write == ""):
+		return clip.ErrNotFound
+	case kind == clip.JobKindUploadText && (s.Observe != "" || s.Write == ""):
 		return clip.ErrNotFound
 	case !clip.IsJobKind(kind):
 		return clip.ErrNotFound
