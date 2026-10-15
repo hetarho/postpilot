@@ -96,7 +96,8 @@ type AnalysisLimits struct {
 	ChunkMS, MaxSources, MaxSourceDurationMS, MaxSegments, MaxTextRunes, MaxSubjects int
 }
 type PlanningInput struct {
-	MeasuredNarration *NarrationPlan `json:",omitempty"`
+	AdvertiserGuide   *AdvertiserGuide `json:",omitempty"`
+	MeasuredNarration *NarrationPlan   `json:",omitempty"`
 	Language          string
 	Composition       *ProjectComposition
 	Template          Recipe

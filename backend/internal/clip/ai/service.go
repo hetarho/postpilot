@@ -413,6 +413,11 @@ func within(value string, minimum, maximum int) bool {
 	return utf8.ValidString(value) && utf8.RuneCountInString(value) >= minimum && utf8.RuneCountInString(value) <= maximum
 }
 func validateSettings(cfg Config, in clip.PlanningInput) error {
+	if in.AdvertiserGuide != nil {
+		if _, err := clip.NormalizeAdvertiserGuide(*in.AdvertiserGuide); err != nil {
+			return err
+		}
+	}
 	if _, err := clip.ClipCanvas(in.Ratio); err != nil {
 		return err
 	}

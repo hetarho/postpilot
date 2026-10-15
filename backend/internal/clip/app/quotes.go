@@ -163,7 +163,7 @@ func (s *GenerationService) quoteInputs(ctx context.Context, user, id, batch, ob
 		return p, t, b, pricing, guidelines, err
 	}
 	regions := clip.EffectiveProjectRegions(p)
-	seed := clip.GenerationPayload{Dubbing: p.Dubbing, Language: p.Language, Batch: b, Composition: c, Template: t.Recipe, Ratio: p.Ratio, Write: write, TargetDurationMS: p.TargetDurationMS, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, Instruction: p.Instruction, Guidelines: guidelines, Regions: &regions, IntroPreset: p.IntroPreset, OutroPreset: p.OutroPreset}
+	seed := clip.GenerationPayload{AdvertiserGuide: clip.EffectiveAdvertiserGuide(p), Dubbing: p.Dubbing, Language: p.Language, Batch: b, Composition: c, Template: t.Recipe, Ratio: p.Ratio, Write: write, TargetDurationMS: p.TargetDurationMS, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, Instruction: p.Instruction, Guidelines: guidelines, Regions: &regions, IntroPreset: p.IntroPreset, OutroPreset: p.OutroPreset}
 	if mode == quoteFromStoryline {
 		seed.FollowStoryline = p.Storyline
 	}
@@ -420,7 +420,7 @@ func (s *GenerationService) startMode(ctx context.Context, user, id, batch, obse
 	if a.AnalysisPreparationID != "" {
 		version = clip.BrowserAnalysisGenerationPayloadVersion
 	}
-	payload, err := json.Marshal(clip.GenerationPayload{AnalysisPreparationID: a.AnalysisPreparationID, Dubbing: p.Dubbing, Language: p.Language, Recovery: &recovery, Composition: c, Version: version, ProjectID: id, Ratio: p.Ratio, Observe: observe, Write: write, TargetDurationMS: p.TargetDurationMS, Template: t.Recipe, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, Instruction: p.Instruction, Guidelines: guidelines, FollowStoryline: followed(mode, p), Regions: &regions, CaptionPace: p.CaptionPace, Accent: p.Accent, IntroPreset: p.IntroPreset, OutroPreset: p.OutroPreset, CaptionStyles: p.CaptionStyles, Batch: b, Approval: &clip.GenerationApproval{QuoteID: q.ID, MaxCredits: q.Pricing.MaxCredits, Pricing: q.Pricing}})
+	payload, err := json.Marshal(clip.GenerationPayload{AdvertiserGuide: clip.EffectiveAdvertiserGuide(p), AnalysisPreparationID: a.AnalysisPreparationID, Dubbing: p.Dubbing, Language: p.Language, Recovery: &recovery, Composition: c, Version: version, ProjectID: id, Ratio: p.Ratio, Observe: observe, Write: write, TargetDurationMS: p.TargetDurationMS, Template: t.Recipe, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, Instruction: p.Instruction, Guidelines: guidelines, FollowStoryline: followed(mode, p), Regions: &regions, CaptionPace: p.CaptionPace, Accent: p.Accent, IntroPreset: p.IntroPreset, OutroPreset: p.OutroPreset, CaptionStyles: p.CaptionStyles, Batch: b, Approval: &clip.GenerationApproval{QuoteID: q.ID, MaxCredits: q.Pricing.MaxCredits, Pricing: q.Pricing}})
 	if err != nil {
 		return "", err
 	}

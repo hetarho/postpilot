@@ -17,9 +17,11 @@ import (
 // makes the result read as stale and 다시 렌더 stay credit-free (CLIP-132).
 //
 // Version 2 freezes the clip's 영상 지침; an accepted version-1 job ran with none.
-const revisionPayloadVersion = 2
+// Version 3 freezes advertiser material; earlier accepted jobs retain none.
+const revisionPayloadVersion = 3
 
 type revisionJobPayload struct {
+	AdvertiserGuide          *clip.AdvertiserGuide `json:",omitempty"`
 	Version                  int
 	ProjectID, Write         string
 	Revision                 int
@@ -203,7 +205,7 @@ func (s *GenerationService) StartRevision(ctx context.Context, user, id, request
 	if t, err := s.projects.store.GetTemplate(ctx, user, p.VideoTemplateID); err == nil {
 		recipe = t.Recipe
 	}
-	payload, err := json.Marshal(revisionJobPayload{
+	payload, err := json.Marshal(revisionJobPayload{AdvertiserGuide: clip.EffectiveAdvertiserGuide(p),
 		Version: revisionPayloadVersion, ProjectID: id, Write: write, Revision: p.EditPlanRevision,
 		Request: request, Target: target, PlanJSON: p.EditPlan, Language: p.Language,
 		Composition: p.Composition, Template: recipe,
@@ -275,7 +277,7 @@ func (s *GenerationService) RunRevision(ctx context.Context, user, job, project 
 	// A revision rewrites no intro/outro word (CLIP-131, CLIP-188): the narration is told what
 	// the slots show and the plan draws them as they stand.
 	regions := clip.WrittenRegions(p, nil)
-	in := clip.PlanningInput{Language: frozen.Language, Composition: frozen.Composition, Template: frozen.Template,
+	in := clip.PlanningInput{AdvertiserGuide: frozen.AdvertiserGuide, Language: frozen.Language, Composition: frozen.Composition, Template: frozen.Template,
 		Ratio: p.Ratio, TargetDurationMS: frozen.TargetDurationMS, Analyses: analyses,
 		Policy: pricing.Plan, Disclosure: frozen.Disclosure, HideDisclosure: frozen.HideDisclosure,
 		Instruction: frozen.Instruction, Design: frozen.Design(), SourceAudio: frozen.SourceAudio,

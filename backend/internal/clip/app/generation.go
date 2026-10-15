@@ -401,7 +401,7 @@ func (r *generationRun) set(name string, done, total int) {
 // planningInput is the frozen brief every planner call reads.
 func (r *generationRun) planningInput() clip.PlanningInput {
 	p := r.p
-	return clip.PlanningInput{Language: p.Language, Composition: p.Composition, Template: p.Template, Ratio: p.Ratio, TargetDurationMS: p.TargetDurationMS, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, Instruction: p.Instruction, Design: p.Design(), Policy: r.pricing.Plan, Guidelines: p.Guidelines, FollowStoryline: p.FollowStoryline, Regions: p.Regions}
+	return clip.PlanningInput{AdvertiserGuide: p.AdvertiserGuide, Language: p.Language, Composition: p.Composition, Template: p.Template, Ratio: p.Ratio, TargetDurationMS: p.TargetDurationMS, Disclosure: p.Disclosure, HideDisclosure: p.HideDisclosure, Instruction: p.Instruction, Design: p.Design(), Policy: r.pricing.Plan, Guidelines: p.Guidelines, FollowStoryline: p.FollowStoryline, Regions: p.Regions}
 }
 
 // validatePreparation is the planner's own check of the models, the budgets and the

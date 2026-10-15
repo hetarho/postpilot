@@ -561,9 +561,11 @@ type ClipProject struct {
 	Regions          *ClipProjectRegions `protobuf:"bytes,40,opt,name=regions,proto3" json:"regions,omitempty"`
 	Dubbing          *ClipDubbingOptions `protobuf:"bytes,41,opt,name=dubbing,proto3" json:"dubbing,omitempty"`
 	// naver_clip or instagram_clip; independent of composition and result.
-	Channel       string `protobuf:"bytes,42,opt,name=channel,proto3" json:"channel,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Channel         string           `protobuf:"bytes,42,opt,name=channel,proto3" json:"channel,omitempty"`
+	Campaign        bool             `protobuf:"varint,43,opt,name=campaign,proto3" json:"campaign,omitempty"`
+	AdvertiserGuide *AdvertiserGuide `protobuf:"bytes,44,opt,name=advertiser_guide,json=advertiserGuide,proto3" json:"advertiser_guide,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *ClipProject) Reset() {
@@ -874,6 +876,20 @@ func (x *ClipProject) GetChannel() string {
 		return x.Channel
 	}
 	return ""
+}
+
+func (x *ClipProject) GetCampaign() bool {
+	if x != nil {
+		return x.Campaign
+	}
+	return false
+}
+
+func (x *ClipProject) GetAdvertiserGuide() *AdvertiserGuide {
+	if x != nil {
+		return x.AdvertiserGuide
+	}
+	return nil
 }
 
 type ClipDubbingOptions struct {
@@ -5723,7 +5739,7 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x04 \x01(\tR\tcreatedAt\x12\x19\n" +
 	"\bview_url\x18\x05 \x01(\tR\aviewUrl\x12!\n" +
-	"\fdownload_url\x18\x06 \x01(\tR\vdownloadUrl\"\xb8\x0f\n" +
+	"\fdownload_url\x18\x06 \x01(\tR\vdownloadUrl\"\x9e\x10\n" +
 	"\vClipProject\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12*\n" +
@@ -5772,7 +5788,9 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	"\x13plan_edited_by_hand\x18' \x01(\bR\x10planEditedByHand\x12:\n" +
 	"\aregions\x18( \x01(\v2 .postpilot.v1.ClipProjectRegionsR\aregions\x12:\n" +
 	"\adubbing\x18) \x01(\v2 .postpilot.v1.ClipDubbingOptionsR\adubbing\x12\x18\n" +
-	"\achannel\x18* \x01(\tR\achannelB\v\n" +
+	"\achannel\x18* \x01(\tR\achannel\x12\x1a\n" +
+	"\bcampaign\x18+ \x01(\bR\bcampaign\x12H\n" +
+	"\x10advertiser_guide\x18, \x01(\v2\x1d.postpilot.v1.AdvertiserGuideR\x0fadvertiserGuideB\v\n" +
 	"\t_can_editB\x0f\n" +
 	"\r_can_finalizeB\x13\n" +
 	"\x11_last_render_kindJ\x04\b\x06\x10\aJ\x04\b\x11\x10\x12R\aanswersR\x03cta\"I\n" +
@@ -6355,6 +6373,7 @@ var file_postpilot_v1_clip_proto_goTypes = []any{
 	(*ModelRef)(nil),                     // 69: postpilot.v1.ModelRef
 	(*GenerationJob)(nil),                // 70: postpilot.v1.GenerationJob
 	(ContentLanguage)(0),                 // 71: postpilot.v1.ContentLanguage
+	(*AdvertiserGuide)(nil),              // 72: postpilot.v1.AdvertiserGuide
 }
 var file_postpilot_v1_clip_proto_depIdxs = []int32{
 	69, // 0: postpilot.v1.ClipAnalysisModelEligibility.model:type_name -> postpilot.v1.ModelRef
@@ -6375,62 +6394,63 @@ var file_postpilot_v1_clip_proto_depIdxs = []int32{
 	10, // 15: postpilot.v1.ClipProject.storyline:type_name -> postpilot.v1.ClipStoryline
 	56, // 16: postpilot.v1.ClipProject.regions:type_name -> postpilot.v1.ClipProjectRegions
 	8,  // 17: postpilot.v1.ClipProject.dubbing:type_name -> postpilot.v1.ClipDubbingOptions
-	9,  // 18: postpilot.v1.ClipStoryline.paragraphs:type_name -> postpilot.v1.ClipStorylineParagraph
-	14, // 19: postpilot.v1.ClipObservations.sources:type_name -> postpilot.v1.ClipSourceObservation
-	43, // 20: postpilot.v1.ClipSourceObservation.source:type_name -> postpilot.v1.ClipRetainedSource
-	15, // 21: postpilot.v1.ClipSourceObservation.segments:type_name -> postpilot.v1.ClipObservedSegment
-	31, // 22: postpilot.v1.ClipObservedSegment.focal:type_name -> postpilot.v1.ClipFocal
-	16, // 23: postpilot.v1.ClipObservedSegment.subject:type_name -> postpilot.v1.ClipNormalizedSourceBox
-	16, // 24: postpilot.v1.ClipObservedSegment.caption_safe:type_name -> postpilot.v1.ClipNormalizedSourceBox
-	19, // 25: postpilot.v1.ClipSource.metadata:type_name -> postpilot.v1.ClipSourceMetadata
-	20, // 26: postpilot.v1.ClipSourceBatch.sources:type_name -> postpilot.v1.ClipSource
-	64, // 27: postpilot.v1.ClipSourceUpload.headers:type_name -> postpilot.v1.ClipSourceUpload.HeadersEntry
-	69, // 28: postpilot.v1.ClipPricedCall.model:type_name -> postpilot.v1.ModelRef
-	26, // 29: postpilot.v1.ClipEditCut.copy:type_name -> postpilot.v1.ClipCaption
-	26, // 30: postpilot.v1.ClipEditCut.copies:type_name -> postpilot.v1.ClipCaption
-	31, // 31: postpilot.v1.ClipEditCut.focal:type_name -> postpilot.v1.ClipFocal
-	28, // 32: postpilot.v1.ClipEditCut.creation:type_name -> postpilot.v1.ClipCutCreation
-	29, // 33: postpilot.v1.ClipSourceAudioSettings.values:type_name -> postpilot.v1.ClipSourceAudioSetting
-	32, // 34: postpilot.v1.ClipEditableText.rows:type_name -> postpilot.v1.ClipTextRow
-	33, // 35: postpilot.v1.ClipEditableText.phrases:type_name -> postpilot.v1.ClipEditablePhrase
-	34, // 36: postpilot.v1.ClipEditableText.evidence:type_name -> postpilot.v1.ClipTextEvidence
-	37, // 37: postpilot.v1.ClipEditableText.creation:type_name -> postpilot.v1.ClipTextCreation
-	36, // 38: postpilot.v1.ClipEditableText.owner_position:type_name -> postpilot.v1.ClipCaptionPlacement
-	63, // 39: postpilot.v1.ClipEditableText.derived_caption:type_name -> postpilot.v1.ClipDerivedCaption
-	27, // 40: postpilot.v1.ClipEditPlan.cuts:type_name -> postpilot.v1.ClipEditCut
-	35, // 41: postpilot.v1.ClipEditPlan.elements:type_name -> postpilot.v1.ClipEditableText
-	39, // 42: postpilot.v1.ClipEditPlan.associations:type_name -> postpilot.v1.ClipSourceAssociations
-	30, // 43: postpilot.v1.ClipEditPlan.source_audio:type_name -> postpilot.v1.ClipSourceAudioSettings
-	59, // 44: postpilot.v1.ClipEditPlan.narration:type_name -> postpilot.v1.ClipNarration
-	48, // 45: postpilot.v1.ClipSourceAssociations.values:type_name -> postpilot.v1.ClipSourceAssociation
-	40, // 46: postpilot.v1.ClipCaptionFragment.box:type_name -> postpilot.v1.ClipCanvasBox
-	38, // 47: postpilot.v1.ClipEditingState.plan:type_name -> postpilot.v1.ClipEditPlan
-	43, // 48: postpilot.v1.ClipEditingState.sources:type_name -> postpilot.v1.ClipRetainedSource
-	13, // 49: postpilot.v1.ClipEditingState.layout_observations:type_name -> postpilot.v1.ClipObservations
-	12, // 50: postpilot.v1.ClipRenderMeasurements.background_notices:type_name -> postpilot.v1.ClipNotice
-	65, // 51: postpilot.v1.ClipCompositionItem.values:type_name -> postpilot.v1.ClipCompositionItem.ValuesEntry
-	46, // 52: postpilot.v1.ClipCompositionItems.items:type_name -> postpilot.v1.ClipCompositionItem
-	66, // 53: postpilot.v1.ClipCompositionInputs.values:type_name -> postpilot.v1.ClipCompositionInputs.ValuesEntry
-	67, // 54: postpilot.v1.ClipCompositionInputs.items:type_name -> postpilot.v1.ClipCompositionInputs.ItemsEntry
-	48, // 55: postpilot.v1.ClipCompositionInputs.associations:type_name -> postpilot.v1.ClipSourceAssociation
-	50, // 56: postpilot.v1.ClipProjectComposition.snapshot:type_name -> postpilot.v1.ClipCompositionSnapshot
-	49, // 57: postpilot.v1.ClipProjectComposition.inputs:type_name -> postpilot.v1.ClipCompositionInputs
-	13, // 58: postpilot.v1.ClipAttemptInspection.observations:type_name -> postpilot.v1.ClipObservations
-	53, // 59: postpilot.v1.ClipAttemptInspection.ranges:type_name -> postpilot.v1.ClipAttemptRange
-	68, // 60: postpilot.v1.ClipAttemptInspection.measurements:type_name -> postpilot.v1.ClipAttemptInspection.MeasurementsEntry
-	54, // 61: postpilot.v1.ClipProjectRegion.slots:type_name -> postpilot.v1.ClipRegionSlot
-	55, // 62: postpilot.v1.ClipProjectRegions.intro:type_name -> postpilot.v1.ClipProjectRegion
-	55, // 63: postpilot.v1.ClipProjectRegions.outro:type_name -> postpilot.v1.ClipProjectRegion
-	57, // 64: postpilot.v1.ClipRegionEdit.slots:type_name -> postpilot.v1.ClipRegionSlotEdit
-	60, // 65: postpilot.v1.ClipNarration.segments:type_name -> postpilot.v1.ClipSpokenSegment
-	61, // 66: postpilot.v1.ClipSpokenSegment.speech:type_name -> postpilot.v1.ClipSpeechRef
-	62, // 67: postpilot.v1.ClipSpeechRef.timing:type_name -> postpilot.v1.ClipSpeechTiming
-	47, // 68: postpilot.v1.ClipCompositionInputs.ItemsEntry.value:type_name -> postpilot.v1.ClipCompositionItems
-	69, // [69:69] is the sub-list for method output_type
-	69, // [69:69] is the sub-list for method input_type
-	69, // [69:69] is the sub-list for extension type_name
-	69, // [69:69] is the sub-list for extension extendee
-	0,  // [0:69] is the sub-list for field type_name
+	72, // 18: postpilot.v1.ClipProject.advertiser_guide:type_name -> postpilot.v1.AdvertiserGuide
+	9,  // 19: postpilot.v1.ClipStoryline.paragraphs:type_name -> postpilot.v1.ClipStorylineParagraph
+	14, // 20: postpilot.v1.ClipObservations.sources:type_name -> postpilot.v1.ClipSourceObservation
+	43, // 21: postpilot.v1.ClipSourceObservation.source:type_name -> postpilot.v1.ClipRetainedSource
+	15, // 22: postpilot.v1.ClipSourceObservation.segments:type_name -> postpilot.v1.ClipObservedSegment
+	31, // 23: postpilot.v1.ClipObservedSegment.focal:type_name -> postpilot.v1.ClipFocal
+	16, // 24: postpilot.v1.ClipObservedSegment.subject:type_name -> postpilot.v1.ClipNormalizedSourceBox
+	16, // 25: postpilot.v1.ClipObservedSegment.caption_safe:type_name -> postpilot.v1.ClipNormalizedSourceBox
+	19, // 26: postpilot.v1.ClipSource.metadata:type_name -> postpilot.v1.ClipSourceMetadata
+	20, // 27: postpilot.v1.ClipSourceBatch.sources:type_name -> postpilot.v1.ClipSource
+	64, // 28: postpilot.v1.ClipSourceUpload.headers:type_name -> postpilot.v1.ClipSourceUpload.HeadersEntry
+	69, // 29: postpilot.v1.ClipPricedCall.model:type_name -> postpilot.v1.ModelRef
+	26, // 30: postpilot.v1.ClipEditCut.copy:type_name -> postpilot.v1.ClipCaption
+	26, // 31: postpilot.v1.ClipEditCut.copies:type_name -> postpilot.v1.ClipCaption
+	31, // 32: postpilot.v1.ClipEditCut.focal:type_name -> postpilot.v1.ClipFocal
+	28, // 33: postpilot.v1.ClipEditCut.creation:type_name -> postpilot.v1.ClipCutCreation
+	29, // 34: postpilot.v1.ClipSourceAudioSettings.values:type_name -> postpilot.v1.ClipSourceAudioSetting
+	32, // 35: postpilot.v1.ClipEditableText.rows:type_name -> postpilot.v1.ClipTextRow
+	33, // 36: postpilot.v1.ClipEditableText.phrases:type_name -> postpilot.v1.ClipEditablePhrase
+	34, // 37: postpilot.v1.ClipEditableText.evidence:type_name -> postpilot.v1.ClipTextEvidence
+	37, // 38: postpilot.v1.ClipEditableText.creation:type_name -> postpilot.v1.ClipTextCreation
+	36, // 39: postpilot.v1.ClipEditableText.owner_position:type_name -> postpilot.v1.ClipCaptionPlacement
+	63, // 40: postpilot.v1.ClipEditableText.derived_caption:type_name -> postpilot.v1.ClipDerivedCaption
+	27, // 41: postpilot.v1.ClipEditPlan.cuts:type_name -> postpilot.v1.ClipEditCut
+	35, // 42: postpilot.v1.ClipEditPlan.elements:type_name -> postpilot.v1.ClipEditableText
+	39, // 43: postpilot.v1.ClipEditPlan.associations:type_name -> postpilot.v1.ClipSourceAssociations
+	30, // 44: postpilot.v1.ClipEditPlan.source_audio:type_name -> postpilot.v1.ClipSourceAudioSettings
+	59, // 45: postpilot.v1.ClipEditPlan.narration:type_name -> postpilot.v1.ClipNarration
+	48, // 46: postpilot.v1.ClipSourceAssociations.values:type_name -> postpilot.v1.ClipSourceAssociation
+	40, // 47: postpilot.v1.ClipCaptionFragment.box:type_name -> postpilot.v1.ClipCanvasBox
+	38, // 48: postpilot.v1.ClipEditingState.plan:type_name -> postpilot.v1.ClipEditPlan
+	43, // 49: postpilot.v1.ClipEditingState.sources:type_name -> postpilot.v1.ClipRetainedSource
+	13, // 50: postpilot.v1.ClipEditingState.layout_observations:type_name -> postpilot.v1.ClipObservations
+	12, // 51: postpilot.v1.ClipRenderMeasurements.background_notices:type_name -> postpilot.v1.ClipNotice
+	65, // 52: postpilot.v1.ClipCompositionItem.values:type_name -> postpilot.v1.ClipCompositionItem.ValuesEntry
+	46, // 53: postpilot.v1.ClipCompositionItems.items:type_name -> postpilot.v1.ClipCompositionItem
+	66, // 54: postpilot.v1.ClipCompositionInputs.values:type_name -> postpilot.v1.ClipCompositionInputs.ValuesEntry
+	67, // 55: postpilot.v1.ClipCompositionInputs.items:type_name -> postpilot.v1.ClipCompositionInputs.ItemsEntry
+	48, // 56: postpilot.v1.ClipCompositionInputs.associations:type_name -> postpilot.v1.ClipSourceAssociation
+	50, // 57: postpilot.v1.ClipProjectComposition.snapshot:type_name -> postpilot.v1.ClipCompositionSnapshot
+	49, // 58: postpilot.v1.ClipProjectComposition.inputs:type_name -> postpilot.v1.ClipCompositionInputs
+	13, // 59: postpilot.v1.ClipAttemptInspection.observations:type_name -> postpilot.v1.ClipObservations
+	53, // 60: postpilot.v1.ClipAttemptInspection.ranges:type_name -> postpilot.v1.ClipAttemptRange
+	68, // 61: postpilot.v1.ClipAttemptInspection.measurements:type_name -> postpilot.v1.ClipAttemptInspection.MeasurementsEntry
+	54, // 62: postpilot.v1.ClipProjectRegion.slots:type_name -> postpilot.v1.ClipRegionSlot
+	55, // 63: postpilot.v1.ClipProjectRegions.intro:type_name -> postpilot.v1.ClipProjectRegion
+	55, // 64: postpilot.v1.ClipProjectRegions.outro:type_name -> postpilot.v1.ClipProjectRegion
+	57, // 65: postpilot.v1.ClipRegionEdit.slots:type_name -> postpilot.v1.ClipRegionSlotEdit
+	60, // 66: postpilot.v1.ClipNarration.segments:type_name -> postpilot.v1.ClipSpokenSegment
+	61, // 67: postpilot.v1.ClipSpokenSegment.speech:type_name -> postpilot.v1.ClipSpeechRef
+	62, // 68: postpilot.v1.ClipSpeechRef.timing:type_name -> postpilot.v1.ClipSpeechTiming
+	47, // 69: postpilot.v1.ClipCompositionInputs.ItemsEntry.value:type_name -> postpilot.v1.ClipCompositionItems
+	70, // [70:70] is the sub-list for method output_type
+	70, // [70:70] is the sub-list for method input_type
+	70, // [70:70] is the sub-list for extension type_name
+	70, // [70:70] is the sub-list for extension extendee
+	0,  // [0:70] is the sub-list for field type_name
 }
 
 func init() { file_postpilot_v1_clip_proto_init() }

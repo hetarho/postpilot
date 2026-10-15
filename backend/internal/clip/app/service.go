@@ -199,6 +199,18 @@ func (s *Service) CreateProject(ctx context.Context, user string, input clip.Pro
 	if !clip.BoundedText(input.Instruction, 0, s.limits.InstructionChars) {
 		return clip.Project{}, clip.ErrInvalid
 	}
+	campaign := clip.DefaultCampaign
+	if input.Campaign != nil {
+		campaign = *input.Campaign
+	}
+	guide := clip.AdvertiserGuide{Keywords: []string{}, Hashtags: []string{}}
+	if input.AdvertiserGuide != nil {
+		var err error
+		guide, err = clip.NormalizeAdvertiserGuide(*input.AdvertiserGuide)
+		if err != nil {
+			return clip.Project{}, err
+		}
+	}
 	// The pace and the accent are the PROJECT's alone and start unset, which is
 	// the shared default; a template gives only the presets and the styles (CLIP-139, CLIP-166).
 	pace, accent := "", ""
@@ -236,7 +248,7 @@ func (s *Service) CreateProject(ctx context.Context, user string, input clip.Pro
 		return clip.Project{}, clip.ErrInvalid
 	}
 	now := s.now()
-	p := clip.Project{ID: newID(), UserID: user, Title: title, VideoTemplateID: input.VideoTemplateID, Ratio: input.Ratio, Channel: input.Channel, Language: input.Language, Disclosure: input.Disclosure, HideDisclosure: input.HideDisclosure, Instruction: input.Instruction, CaptionPace: pace, Accent: accent, IntroPreset: intro, OutroPreset: outro, CaptionStyles: styles, TargetDurationMS: input.TargetDurationMS, CreatedAt: now, UpdatedAt: now}
+	p := clip.Project{Campaign: campaign, AdvertiserGuide: guide, ID: newID(), UserID: user, Title: title, VideoTemplateID: input.VideoTemplateID, Ratio: input.Ratio, Channel: input.Channel, Language: input.Language, Disclosure: input.Disclosure, HideDisclosure: input.HideDisclosure, Instruction: input.Instruction, CaptionPace: pace, Accent: accent, IntroPreset: intro, OutroPreset: outro, CaptionStyles: styles, TargetDurationMS: input.TargetDurationMS, CreatedAt: now, UpdatedAt: now}
 	var err error
 	p.Composition, err = s.projectComposition(template, input.CompositionInputs, p)
 	if err != nil {
@@ -302,6 +314,13 @@ func (s *Service) UpdateProject(ctx context.Context, user, id string, p clip.Pro
 	}
 	if p.Channel != nil && !clip.ValidChannel(*p.Channel) {
 		return clip.Project{}, clip.ErrInvalid
+	}
+	if p.AdvertiserGuide != nil {
+		guide, err := clip.NormalizeAdvertiserGuide(*p.AdvertiserGuide)
+		if err != nil {
+			return clip.Project{}, err
+		}
+		p.AdvertiserGuide = &guide
 	}
 	if p.Title != nil {
 		title := strings.TrimSpace(*p.Title)

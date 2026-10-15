@@ -19,9 +19,11 @@ import (
 //
 // Version 2 freezes the intro/outro slots and their presets; an accepted version-1 job drafts no
 // slot.
-const storylineRevisionPayloadVersion = 2
+// Version 3 freezes advertiser material; earlier accepted jobs retain none.
+const storylineRevisionPayloadVersion = 3
 
 type storylineRevisionPayload struct {
+	AdvertiserGuide          *clip.AdvertiserGuide `json:",omitempty"`
 	Version                  int
 	ProjectID, Write         string
 	Request                  string
@@ -110,8 +112,9 @@ func StorylineRevisionInputDigest(p clip.Project, request, write string, pricing
 		Composition                   *clip.ProjectComposition
 		Instruction, Language         string
 		Target                        int
-		Regions                       string `json:",omitempty"`
-	}{p.UserID, p.ID, write, request, p.Storyline, pricing, p.Composition, p.Instruction, p.Language, p.TargetDurationMS, clip.EffectiveProjectRegions(p).WritingDigest(p.DesignSelection().RegionPresets())}
+		Regions                       string                `json:",omitempty"`
+		AdvertiserGuide               *clip.AdvertiserGuide `json:",omitempty"`
+	}{p.UserID, p.ID, write, request, p.Storyline, pricing, p.Composition, p.Instruction, p.Language, p.TargetDurationMS, clip.EffectiveProjectRegions(p).WritingDigest(p.DesignSelection().RegionPresets()), clip.EffectiveAdvertiserGuide(p)}
 	raw, _ := json.Marshal(input)
 	sum := sha256.Sum256(raw)
 	return hex.EncodeToString(sum[:])
@@ -205,7 +208,7 @@ func (s *GenerationService) StartStorylineRevision(ctx context.Context, user, id
 		recipe = t.Recipe
 	}
 	regions := clip.EffectiveProjectRegions(p)
-	payload, err := json.Marshal(storylineRevisionPayload{
+	payload, err := json.Marshal(storylineRevisionPayload{AdvertiserGuide: clip.EffectiveAdvertiserGuide(p),
 		Version: storylineRevisionPayloadVersion, ProjectID: id, Write: write, Request: request, Current: *p.Storyline,
 		Language: p.Language, Composition: p.Composition, Template: recipe, Instruction: p.Instruction, Guidelines: guidelines,
 		Ratio: p.Ratio, TargetDurationMS: p.TargetDurationMS, Regions: &regions, IntroPreset: p.IntroPreset, OutroPreset: p.OutroPreset,
@@ -267,7 +270,7 @@ func (s *GenerationService) RunStorylineRevision(ctx context.Context, user, job,
 	if progress != nil {
 		progress(stage, 0, 1)
 	}
-	in := clip.PlanningInput{Language: frozen.Language, Composition: frozen.Composition, Template: frozen.Template,
+	in := clip.PlanningInput{AdvertiserGuide: frozen.AdvertiserGuide, Language: frozen.Language, Composition: frozen.Composition, Template: frozen.Template,
 		Ratio: frozen.Ratio, TargetDurationMS: frozen.TargetDurationMS, Analyses: analyses, Policy: pricing.Plan,
 		Instruction: frozen.Instruction, Guidelines: frozen.Guidelines, Regions: frozen.Regions,
 		Design: clip.ProjectDesign{IntroPreset: frozen.IntroPreset, OutroPreset: frozen.OutroPreset}}

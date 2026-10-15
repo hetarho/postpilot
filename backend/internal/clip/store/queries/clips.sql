@@ -33,12 +33,12 @@ SELECT * FROM clip_projects WHERE user_id = ? ORDER BY updated_at DESC, id;
 SELECT id, user_id, title, video_template_id, ratio, channel, target_duration_ms, result_key, result_content_type, result_bytes, result_duration_ms, result_created_at,
     edit_plan_revision, rendered_plan_revision, generated_plan_revision, created_at, updated_at, disclosure, hide_disclosure, composition_inputs_json, composition_snapshot_json,
     result_id, finalized_at, finalized_plan_revision, language, instruction, caption_pace, accent, intro_preset, outro_preset, allowed_caption_styles, render_kind,
-    storyline_json, regions_json, dubbing_enabled, dubbing_voice_id, dubbing_binding_digest, result_speech_json
+    storyline_json, regions_json, dubbing_enabled, dubbing_voice_id, dubbing_binding_digest, result_speech_json, campaign, advertiser_guide, advertiser_keywords, advertiser_hashtags
 FROM clip_projects WHERE user_id = ? ORDER BY updated_at DESC, id;
 -- name: GetClipProject :one
 SELECT * FROM clip_projects WHERE id = ? AND user_id = ?;
 -- name: InsertClipProject :exec
-INSERT INTO clip_projects(id, user_id, title, video_template_id, ratio, language, target_duration_ms, disclosure, hide_disclosure, instruction, caption_pace, accent, intro_preset, outro_preset, allowed_caption_styles, created_at, updated_at, channel) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+INSERT INTO clip_projects(id, user_id, title, video_template_id, ratio, language, target_duration_ms, disclosure, hide_disclosure, instruction, caption_pace, accent, intro_preset, outro_preset, allowed_caption_styles, created_at, updated_at, channel, campaign, advertiser_guide, advertiser_keywords, advertiser_hashtags) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 -- name: DeleteClipProject :execrows
 DELETE FROM clip_projects WHERE id = ? AND user_id = ?;
 -- The template's starting design selection (CLIP-166); a project made with it keeps its own.
@@ -48,6 +48,10 @@ UPDATE video_templates SET intro_preset = ?, outro_preset = ?, allowed_caption_s
 UPDATE video_templates SET name = ?, updated_at = ? WHERE id = ? AND user_id = ?;
 -- name: UpdateClipChannel :execrows
 UPDATE clip_projects SET channel = ?, updated_at = ? WHERE id = ? AND user_id = ?;
+-- name: UpdateClipCampaign :execrows
+UPDATE clip_projects SET campaign = ?, updated_at = ? WHERE id = ? AND user_id = ? AND finalized_at IS NULL;
+-- name: UpdateClipAdvertiserGuide :execrows
+UPDATE clip_projects SET advertiser_guide = ?, advertiser_keywords = ?, advertiser_hashtags = ?, updated_at = ? WHERE id = ? AND user_id = ? AND finalized_at IS NULL;
 -- name: UpdateClipTitle :execrows
 UPDATE clip_projects SET title = ?, updated_at = ? WHERE id = ? AND user_id = ? AND finalized_at IS NULL;
 -- name: UpdateClipVideoTemplateID :execrows
