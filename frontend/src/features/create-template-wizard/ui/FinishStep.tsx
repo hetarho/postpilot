@@ -15,10 +15,12 @@ export function FinishStep({
   state,
   send,
   refusal,
+  disabled = false,
 }: {
   state: WizardState
   send: Dispatch<WizardEvent>
   refusal: string
+  disabled?: boolean
 }) {
   const { t } = useTranslation('templates')
   const id = useId()
@@ -38,6 +40,7 @@ export function FinishStep({
         <TextField
           id={`${id}-name`}
           value={state.name}
+          disabled={disabled}
           aria-invalid={nameProblem ? true : undefined}
           onChange={(event) => send({ type: 'name', value: event.target.value })}
           className="mt-1"
@@ -49,6 +52,7 @@ export function FinishStep({
         <Textarea
           id={`${id}-description`}
           value={state.description}
+          disabled={disabled}
           rows={2}
           autoGrow
           aria-invalid={descriptionProblem ? true : undefined}

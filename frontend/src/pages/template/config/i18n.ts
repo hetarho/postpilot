@@ -26,6 +26,7 @@ export const i18n = {
     },
     screen: {
       reviewKind: '글 구성 확인',
+      advanced: '고급',
       editAI: 'AI로 편집',
       editDirect: '직접 편집',
       chooseCreation: '템플릿 만드는 방법을 골라 주세요',
@@ -100,6 +101,7 @@ export const i18n = {
     },
     screen: {
       reviewKind: 'Review post template',
+      advanced: 'Advanced',
       editAI: 'Edit with AI',
       editDirect: 'Edit directly',
       chooseCreation: 'Choose how to create your template',

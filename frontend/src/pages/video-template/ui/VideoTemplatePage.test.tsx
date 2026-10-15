@@ -54,7 +54,8 @@ describe('video template workflow', () => {
     await user.click(await screen.findByRole('button', { name: /직접 편집하기$/ }))
     expect(await screen.findByLabelText('템플릿 이름')).toHaveValue('여행')
     expect(router.state.location.pathname).toBe('/video-templates/owned')
-    expect(screen.getByRole('tab', { name: '구성 편집' })).toBeInTheDocument()
+    expect(screen.queryByRole('tab', { name: '원문' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '고급' })).toHaveAttribute('aria-expanded', 'false')
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 

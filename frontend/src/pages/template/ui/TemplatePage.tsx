@@ -3,14 +3,11 @@ import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useParams, useSearch } from '@tanstack/react-router'
 import { useSession } from '@/entities/session'
 import { usePost } from '@/entities/post'
-import {
-  AUTHORING_REFERENCE_POST_MAX_CHARS,
-  useAuthoringSummaries,
-  type AuthoringSavedRef,
-} from '@/entities/ai-authoring'
+import { useAuthoringSummaries, type AuthoringSavedRef } from '@/entities/ai-authoring'
 import { TemplatePreview, useTemplates, type Template } from '@/entities/template'
-import { TemplateDirectEditor, postFormReference } from '@/features/edit-template'
+import { TemplateDirectEditor } from '@/features/edit-template'
 import { TemplateWizard } from '@/features/create-template-wizard'
+import { BlockType } from '@/shared/api'
 import { AIAuthoringStudio } from '@/widgets/ai-authoring-studio'
 import { Button, Notice, Typography, pageStyles, typographyStyles } from '@/shared/ui'
 
@@ -54,7 +51,12 @@ export function TemplatePage() {
     )
   return (
     <TemplateAuthoringPage
-      key={JSON.stringify([ownerId, stored?.id ?? 'new'])}
+      key={JSON.stringify([
+        ownerId,
+        stored?.id ?? 'new',
+        stored ? '' : session,
+        stored ? '' : from,
+      ])}
       ownerId={ownerId}
       stored={stored}
       sampleSlug={stored ? undefined : from}
@@ -87,12 +89,12 @@ function TemplateAuthoringPage({
   const [activeSession, setActiveSession] = useState(sessionId)
   const [sample, setSample] = useState(sampleSlug ?? '')
   const [published, setPublished] = useState<AuthoringSavedRef>()
-  const samplePost = usePost(sample, { enabled: sample !== '' })
-  const reference = samplePost.post?.content
-    ? postFormReference(samplePost.post.content)
-    : undefined
-  const tooLong =
-    reference !== undefined && Array.from(reference).length > AUTHORING_REFERENCE_POST_MAX_CHARS
+  const guided = !stored && !sessionId
+  const samplePost = usePost(sample, { enabled: guided && sample !== '' })
+  const seedHeadings =
+    samplePost.post?.content?.blocks
+      .filter((block) => block.type === BlockType.HEADING)
+      .map((block) => block.content) ?? []
   const publication =
     published ??
     (stored && summary?.lastPublication?.id === stored.id ? summary.lastPublication : undefined)
@@ -100,9 +102,6 @@ function TemplateAuthoringPage({
     kind: t('kinds.post-template', { ns: 'authoring' }),
     name: stored?.name ?? t('page.new', { ns: 'templates' }),
   }
-  // A new template with nothing to resume and no sample post is made through the guided wizard
-  // (TMPL-71); resuming a session and starting from a post keep their own flows.
-  const guided = !stored && !sessionId && !sampleSlug
   return (
     <main
       className={pageStyles({ width: 'board', className: 'flex flex-1 flex-col py-4 sm:py-8' })}
@@ -122,13 +121,31 @@ function TemplateAuthoringPage({
       )}
       {guided ? (
         <div className="mt-4 sm:mt-8">
-          <TemplateWizard
-            ownerId={ownerId}
-            onSaved={(templateId) => {
-              onPublished()
-              void navigate({ to: '/templates/$templateId', params: { templateId }, replace: true })
-            }}
-          />
+          {samplePost.isPending ? (
+            <Typography variant="body" role="status">
+              {t('state.loading', { ns: 'common' })}
+            </Typography>
+          ) : sample !== '' && (samplePost.failure || !samplePost.post?.content) ? (
+            <Notice tone="danger" role="alert">
+              {t('screen.referenceMissing', { ns: 'templates' })}
+              <Button variant="ghost" onClick={() => setSample('')}>
+                {t('screen.removeReference', { ns: 'templates' })}
+              </Button>
+            </Notice>
+          ) : (
+            <TemplateWizard
+              ownerId={ownerId}
+              seedHeadings={seedHeadings}
+              onSaved={(templateId) => {
+                onPublished()
+                void navigate({
+                  to: '/templates/$templateId',
+                  params: { templateId },
+                  replace: true,
+                })
+              }}
+            />
+          )}
         </div>
       ) : method === null ? (
         <section className="mt-4 flex flex-col sm:mt-8">
@@ -198,35 +215,10 @@ function TemplateAuthoringPage({
               <TemplatePreview titleArea={stored.titleArea} body={stored.body} />
             </div>
           )}
-          {sample !== '' && (
-            <div className="mt-6">
-              <Typography variant="body">
-                {t('screen.reference', {
-                  ns: 'templates',
-                  name: samplePost.post?.content?.title || samplePost.post?.title || sample,
-                })}
-              </Typography>
-              <Typography variant="body" className="text-content-secondary mt-2">
-                {t('screen.referencePrivacy', { ns: 'templates' })}
-              </Typography>
-              {(samplePost.failure || (samplePost.post && !samplePost.post.content) || tooLong) && (
-                <Notice tone="danger" role="alert" className="mt-3">
-                  {t(tooLong ? 'screen.referenceTooLong' : 'screen.referenceMissing', {
-                    ns: 'templates',
-                    max: AUTHORING_REFERENCE_POST_MAX_CHARS,
-                  })}
-                </Notice>
-              )}
-              <Button variant="ghost" onClick={() => setSample('')} className="mt-3">
-                {t('screen.removeReference', { ns: 'templates' })}
-              </Button>
-            </div>
-          )}
           <div className="order-1 mt-4 flex flex-wrap gap-2 sm:order-none sm:mt-8 sm:gap-4">
             <Button
               aria-label={stored ? t('aiNamed', { ns: 'authoring', ...named }) : undefined}
               variant="secondary"
-              disabled={!!sample && (!reference || tooLong)}
               onClick={() => {
                 setActiveSession(undefined)
                 setMethod('ai')
@@ -246,7 +238,6 @@ function TemplateAuthoringPage({
             <Button
               aria-label={stored ? t('directNamed', { ns: 'authoring', ...named }) : undefined}
               variant="secondary"
-              disabled={!!sample && (!reference || tooLong)}
               onClick={() => {
                 setActiveSession(undefined)
                 setMethod('direct')
@@ -289,13 +280,12 @@ function TemplateAuthoringPage({
           sessionId={activeSession}
           initialMethod={method}
           startFromSaved={!activeSession}
-          referencePost={sample && !tooLong ? reference : undefined}
           renderDirectEditor={(props) => <TemplateDirectEditor {...props} />}
           onSaved={(saved) => {
             setPublished(saved)
             onPublished()
-            setMethod(null)
-            if (!stored)
+            if (stored) setMethod(null)
+            else
               void navigate({
                 to: '/templates/$templateId',
                 params: { templateId: saved.id },

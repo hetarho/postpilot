@@ -28,6 +28,7 @@ import {
   Button,
   Checkbox,
   Dialog,
+  Disclosure,
   FieldLabel,
   FieldMessage,
   SegmentedControl,
@@ -63,6 +64,7 @@ export function ClipTemplateEditor({
     JSON.stringify(normalizeRecipe(authoredRecipe(stored))),
   )
   const [mode, setMode] = useState<'builder' | 'source'>('builder')
+  const [advanced, setAdvanced] = useState(false)
   const [saved, setSaved] = useState(false)
   const [closing, setClosing] = useState(false)
   const [copyStatus, setCopyStatus] = useState('')
@@ -191,24 +193,35 @@ export function ClipTemplateEditor({
           <>
             {!designOnly && (
               <>
-                <SegmentedControl
-                  value={mode}
-                  onChange={setMode}
-                  ariaLabel={t('composition.mode')}
-                  controls="clip-composition-panel"
-                  options={[
-                    { value: 'builder', label: t('composition.builder') },
-                    { value: 'source', label: t('composition.source') },
-                  ]}
-                />
-                <div className="flex flex-wrap gap-2">
-                  <Button variant="ghost" onClick={() => void copy(false)}>
-                    {t('composition.copySource')}
-                  </Button>
-                  <Button variant="ghost" onClick={() => void copy(true)}>
-                    {t('composition.copyGuide')}
-                  </Button>
-                </div>
+                <Disclosure
+                  title={t('editor.advanced')}
+                  size="row"
+                  headingLevel={3}
+                  open={advanced}
+                  onOpenChange={(open) => {
+                    setAdvanced(open)
+                    if (!open) setMode('builder')
+                  }}
+                >
+                  <SegmentedControl
+                    value={mode}
+                    onChange={setMode}
+                    ariaLabel={t('composition.mode')}
+                    controls="clip-composition-panel"
+                    options={[
+                      { value: 'builder', label: t('composition.builder') },
+                      { value: 'source', label: t('composition.source') },
+                    ]}
+                  />
+                  <div className="flex flex-wrap gap-2">
+                    <Button variant="ghost" onClick={() => void copy(false)}>
+                      {t('composition.copySource')}
+                    </Button>
+                    <Button variant="ghost" onClick={() => void copy(true)}>
+                      {t('composition.copyGuide')}
+                    </Button>
+                  </div>
+                </Disclosure>
                 {problem && (
                   <div>
                     <FieldMessage>

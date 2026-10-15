@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/job"
 	"github.com/postpilot/backend/internal/llm"
 	"github.com/postpilot/backend/internal/template"
@@ -16,7 +17,7 @@ func (plainHeadingVoice) DefaultVoiceStyle(context.Context, string) (string, boo
 	return "", false, nil
 }
 func realHeadingService(h *requestHarness) *template.HeadingSuggestions {
-	return template.NewHeadingSuggestions(h.models, plainHeadingVoice{}, templateHeadingJobs{queue: h.queue}, testCompletionBudget(), templateEstimates{rates: stubRates{}}, h.service.Limits())
+	return template.NewHeadingSuggestions(h.models, plainHeadingVoice{}, templateHeadingJobs{queue: h.queue}, testCompletionBudget(), templateEstimates{rates: stubRates{}}, h.service.Limits(), clip.LabelChars)
 }
 func realHeadingStart() template.HeadingSuggestionStart {
 	return template.HeadingSuggestionStart{WriteModel: "p/m", TargetKind: "clip", TargetPath: []string{"맛집", "식사"}, Sections: []template.HeadingSection{{Role: "후킹", Description: "상호와 이유"}}}

@@ -3,8 +3,9 @@ import { useActorRef, useSelector } from '@xstate/react'
 import { useTranslation } from 'react-i18next'
 import { useBlocker } from '@tanstack/react-router'
 import { useCreateTemplate } from '@/entities/template'
+import { formatAppFailure } from '@/shared/lib'
 import { Button, Dialog, Typography, WizardFrame } from '@/shared/ui'
-import { nodeAt } from '../config/catalog'
+import { templateTargetAt } from '@/entities/template'
 import { toWizardBody } from '../lib/to-body'
 import {
   checkedSections,
@@ -21,36 +22,33 @@ import { OrderStep } from './OrderStep'
 import { SectionStep } from './SectionStep'
 import { SectionsStep } from './SectionsStep'
 import { TargetStep } from './TargetStep'
-import { useHeadingSuggestions } from '../model/useHeadingSuggestions'
+import { useWizardHeadingSuggestions as useHeadingSuggestions } from '@/entities/template'
+import { saveTemplateMachine } from '../model/save-template-machine'
+
+interface Props {
+  ownerId: string
+  onSaved: (templateId: string) => void
+  seedHeadings?: readonly string[]
+  beforeSave?: () => boolean
+  onSaveFailure?: () => void
+}
 
 /** 새 템플릿 as a guided wizard (TMPL-71): one question per screen, Back that keeps every answer,
  *  one emphasized next action, and nothing written before 저장 — which saves an ordinary template
  *  through the standard create. Leaving with answers asks before discarding them. */
-export function TemplateWizard({
-  ownerId,
-  onSaved,
-}: {
-  ownerId: string
-  onSaved: (templateId: string) => void
-}) {
-  return <OwnedTemplateWizard key={ownerId} ownerId={ownerId} onSaved={onSaved} />
+export function TemplateWizard(props: Props) {
+  return <OwnedTemplateWizard key={props.ownerId} {...props} />
 }
 
-function OwnedTemplateWizard({
-  ownerId,
-  onSaved,
-}: {
-  ownerId: string
-  onSaved: (templateId: string) => void
-}) {
+function OwnedTemplateWizard({ ownerId, onSaved, seedHeadings, beforeSave, onSaveFailure }: Props) {
   const { t } = useTranslation('templates')
-  const actor = useActorRef(wizardMachine)
+  const actor = useActorRef(wizardMachine, { input: { seedHeadings } })
   const state = useSelector(actor, wizardStateOf)
   const send = actor.send
   const headings = useHeadingSuggestions(
     ownerId,
     'post',
-    state.path.map((key) => t(`wizard.targets.${key as 'restaurant'}.name`)),
+    state.path.map((key) => t(`targets.${key as 'restaurant'}.name`, { ns: 'templateTargets' })),
     checkedSections(state).map((section) => ({
       id: section.id,
       role: section.name,
@@ -59,6 +57,21 @@ function OwnedTemplateWizard({
   )
   const create = useCreateTemplate(ownerId)
   const leaving = useRef(false)
+  const saveActor = useActorRef(saveTemplateMachine, {
+    input: {
+      ownerId,
+      beforeSave,
+      onFailure: onSaveFailure,
+      save: async (fields) => (await create.create(fields)).template?.id ?? '',
+      onSaved: (id) => {
+        leaving.current = true
+        onSaved(id)
+      },
+    },
+  })
+  const savingState = useSelector(saveActor, (snapshot) => snapshot)
+  const saving = savingState.matches('saving')
+  const refusal = savingState.context.failure ? formatAppFailure(savingState.context.failure) : ''
   const guard = () => wizardHasAnswers(state) && !leaving.current
   const blocker = useBlocker({
     shouldBlockFn: guard,
@@ -66,24 +79,21 @@ function OwnedTemplateWizard({
     withResolver: true,
   })
 
-  const save = async () => {
-    if (finishProblem(state) || create.isPending) {
+  const save = () => {
+    if (finishProblem(state)) {
       send({ type: 'next' })
       return
     }
-    try {
-      const saved = await create.create({
+    saveActor.send({
+      type: 'save',
+      ownerId,
+      fields: {
         name: state.name.trim(),
         description: state.description.trim(),
         body: toWizardBody(state.sections),
         titleArea: '',
-      })
-      if (!saved.template) return
-      leaving.current = true
-      onSaved(saved.template.id)
-    } catch {
-      /* The refusal is shown on the name step; every answer stays. */
-    }
+      },
+    })
   }
 
   const back = { label: t('wizard.back'), onClick: () => send({ type: 'back' }) }
@@ -126,9 +136,9 @@ function OwnedTemplateWizard({
   function frame(current: WizardState) {
     switch (current.step) {
       case 'target': {
-        const node = nodeAt(current.path.slice(0, current.depth))
+        const node = templateTargetAt(current.path.slice(0, current.depth))
         return {
-          title: t(`wizard.questions.${(node?.key ?? 'root') as 'root'}`),
+          title: t(`questions.${(node?.key ?? 'root') as 'root'}`, { ns: 'templateTargets' }),
           help: t('wizard.targetHelp'),
           back: current.depth > 0 ? back : undefined,
           children: <TargetStep state={current} send={send} />,
@@ -177,13 +187,13 @@ function OwnedTemplateWizard({
       case 'finish':
         return {
           title: t('wizard.finish.title'),
-          back,
+          back: saving ? undefined : back,
           next: (
-            <Button variant="cta" pending={create.isPending} onClick={() => void save()}>
+            <Button variant="cta" pending={saving} onClick={save}>
               {t('wizard.save')}
             </Button>
           ),
-          children: <FinishStep state={current} send={send} refusal={create.errorMessage} />,
+          children: <FinishStep state={current} send={send} refusal={refusal} disabled={saving} />,
         }
     }
   }

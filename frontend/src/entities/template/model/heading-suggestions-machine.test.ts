@@ -78,3 +78,16 @@ describe('heading suggestion actor', () => {
     bob.stop()
   })
 })
+
+it('validates every clip heading against its own label bound before publishing any choices', async () => {
+  const actor = createActor(headingSuggestionsMachine, {
+    input: { ownerId: 'alice', start: async () => 'job', maxChars: 10 },
+  }).start()
+  actor.send({ ...begin, request: { ...request, targetKind: 'clip' } })
+  await waitFor(actor, (snapshot) => snapshot.matches('running'))
+  actor.send({ type: 'terminal', jobId: 'job', status: 'done' })
+  actor.send({ type: 'result', jobId: 'job', groups: [['가'.repeat(11), '둘째', '셋째']] })
+  expect(actor.getSnapshot().matches('failed')).toBe(true)
+  expect(actor.getSnapshot().context.groups).toEqual([])
+  actor.stop()
+})

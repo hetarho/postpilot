@@ -89,6 +89,7 @@ describe('named template shared editing', () => {
     const patches: NonNullable<FakeAuthoringOptions['patches']> = []
     await direct(user, undefined, {}, { patches })
     await user.click(add('고정 문구'))
+    await user.click(screen.getByRole('button', { name: '고급' }))
     await user.click(screen.getByRole('tab', { name: '원문' }))
     expect(screen.getByLabelText('원문')).toHaveValue(
       '<write>메뉴 소개</write>\n지도\n<write></write>',
@@ -114,6 +115,7 @@ describe('named template shared editing', () => {
     const user = userEvent.setup()
     const patches: NonNullable<FakeAuthoringOptions['patches']> = []
     await direct(user, undefined, {}, { patches })
+    await user.click(screen.getByRole('button', { name: '고급' }))
     await user.click(screen.getByRole('tab', { name: '원문' }))
     fireEvent.change(screen.getByLabelText('원문'), { target: { value: '<write>unfinished' } })
     fireEvent.change(screen.getByLabelText('제목 원문'), {
@@ -165,9 +167,7 @@ describe('named template shared editing', () => {
     expect(calls).toContain('GetAuthoringSession')
     expect(calls).not.toContain('CreateAuthoringSession')
   })
-  // TMPL-71: a new template with nothing to resume and no sample post opens the guided wizard,
-  // not the method chooser; its creation is pinned by TemplateWizard.test.tsx.
-  it('opens a new template on the guided wizard instead of the method chooser', async () => {
+  it('opens the wizard for a new template', async () => {
     const calls: string[] = []
     mount('/templates/new', { templates: [] }, {}, calls)
     expect(
@@ -175,6 +175,46 @@ describe('named template shared editing', () => {
     ).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '직접 편집' })).not.toBeInTheDocument()
     expect(calls.filter((call) => /Create|StartAuthoring/.test(call))).toEqual([])
+  })
+  it('resumes an unsaved creation session', async () => {
+    const calls: string[] = []
+    mount(
+      '/templates/new?session=unfinished',
+      { templates: [] },
+      {
+        sessions: [
+          {
+            id: 'unfinished',
+            kind: ProtoConfigurationKind.POST_TEMPLATE,
+            revision: 3,
+            phase: 'editing',
+            hasUnpublishedChanges: true,
+            draftState: ProtoAuthoringDraftState.VALID,
+            workingSource: {
+              id: 'draft',
+              name: '이어 만들기',
+              description: '',
+              titleArea: '',
+              body: '<write>방문</write>',
+            },
+            selected: {
+              id: 'draft',
+              name: '이어 만들기',
+              description: '',
+              titleArea: '',
+              body: '<write>방문</write>',
+            },
+          },
+        ],
+      },
+      calls,
+    )
+    await screen.findByRole('heading', { name: '어떤 점을 바꿔 볼까요?' })
+    expect(calls).toContain('GetAuthoringSession')
+    expect(calls.filter((call) => /Create|Start/.test(call))).toEqual([])
+    expect(
+      screen.queryByRole('heading', { name: '어떤 체험을 글로 남기나요?' }),
+    ).not.toBeInTheDocument()
   })
   it('retains the draft on target conflict without publishing or starting AI', async () => {
     const user = userEvent.setup()

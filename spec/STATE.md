@@ -11,7 +11,7 @@
 ## active
 | tag | host | mode | since | at | doing |
 |---|---|---|---|---|---|
-| m7q2 | ihaelam-ui-MacBookPro | autopilot | 2026-10-15T12:20Z | 2026-10-15T13:29Z | - |
+| m7q2 | ihaelam-ui-MacBookPro | autopilot | 2026-10-15T12:20Z | 2026-10-15T16:39Z | - |
 
 ## inbox
 - 261015 decided T698: how is a deleted or reused post slug told apart? → store the post's creation time beside the slug and resolve at read; no foreign key (alt: FK ON DELETE SET NULL, which nulls user_id on SQLite composites | clear links from the post context)
@@ -84,8 +84,8 @@
 | THEME | 34 | 34 | - | 2 |
 | MKT | 11 | 11 | - | 0 |
 | VIDEO | 8 | 8 | - | 0 |
-| CLIP | 61 | 61 | - | 2 |
-| CDS | 34 | 34 | - | 1 |
+| CLIP | 63 | 63 | - | 2 |
+| CDS | 36 | 36 | - | 1 |
 | BILL | 9 | 9 | - | 0 |
 | MEM | 7 | 7 | - | 2 |
 | QUAL | 8 | 8 | - | 0 |
@@ -118,8 +118,6 @@
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
-| T687 | Make the wizard the only way to create a post template | TMPL EDIT | T685 T686 | todo |
-| T688 | Build the video-template wizard and make it the only way to create one | CLIP TMPL EDIT | T685 T686 | todo |
 | T689 | Give clips a channel and create new clips vertical only | CLIP CDS | - | todo |
 | T690 | Add the 체험단 글 switch and advertiser guide to clips | CLIP GEN GUIDE | T679 T680 T689 | todo |
 | T691 | Write each clip channel's upload text on request | CLIP EXPORT | T689 T690 | todo |
@@ -134,11 +132,24 @@
 | T701 | Build the storyline in the linked post's order and place videos by capture order | CLIP GUIDE | T699 T700 | todo |
 
 ## next
-- After T686–T695 (m7q2): implement-task T698 → T699, T700 → T701 (a linked post as the clip's story); T697 needs the owner's Cloudflare CORS change first.
-- implement-task T697 (production clip generation is down: the live R2 CORS hides Content-Range; the owner applies deploy/r2-cors.json first).
-- Autopilot m7q2: T686 completed locally; finish its deployment/media push gate, then T687–T695 and T698–T701 in dependency order.
+- After T686–T695 (m7q2): implement-task T698 → T699, T700 → T701 (a linked post as the clip's story); T697's operator CORS prerequisite is complete.
+- implement-task T697 (the owner applied production Content-Range CORS261015; add the ranged-GET probe/deployment gate and preserve HEAD cancellation).
+- Autopilot m7q2: T688 implementation/full local CI complete; finish deployment/media gate and push, then T689–T695 and T698–T701. T697 is ready after the owner CORS change.
 
 ## log
+- 261016 T688 done; whole FE549 files/4352 tests and full BE/CI checks pass; deployment/media push gate follows.
+- 261016 T688 freshness: CLIP r62/r63 HDR-source changes do not affect the wizard; base refreshed to63. Concurrent source-color commits remain intact.
+- 261015 HDR scope cut at the owner's word ("에러만 안 나면"): CLIP r63 HLG used as is, PQ refused; CDS r36 reverts the colour tags; T702–T704 removed; HLG accepted in source-color.ts directly, no task
+- 261015 autopilot h7c3 ended: CLIP r62 CDS r35, T702–T704; report spec/reports/261015-h7c3.md
+- 261015 create-task CLIP r62 CDS r35 done: T702 (explore 3h) → T703; T704 independent
+- 261015 update-ssot CLIP r62 CDS r35 done: HDR sources through one versioned SDR conversion; output tagged BT.709; no doing task affected (T686 is TMPL)
+- 261015 autopilot h7c3 start: HDR source support (CLIP_SOURCE_COLOR_UNSUPPORTED on HLG phone footage) → update-ssot CLIP CDS → create-task; no implementation
+- 261015 update-ssot CLIP CDS start (HDR sources)
+- 261015 T688 start on main atc2f3c631 (m7q2 autopilot); T687 final CI passed locally, remote CI38753876172 pending.
+- 261015 T687 final full CI passes at2cc2ed05 (FE544 files/4334 tests); unchanged backend/schema/deployment inputs reuse T686 evidence.
+- 261015 T687 done; selected116 tests, lint/FSD and build pass; full pre-push FE checks follow.
+- 261015 T687 start on main atc3de0b08 (m7q2 autopilot); T686 local CI/deployment/media pass, pushed with remote workflows pending.
+- 261015 T686 pre-push deployment/media gates pass at73458eb9; source unchanged after spec-only verification records.
 - 261015 T686 done; full FE/BE checks pass, deployment/media push gate follows.
 - 261015 autopilot p4f1 ended: ideation/post-faithful-clip converted to CLIP r61 POST r42 GUIDE r23 and T698–T701; report spec/reports/261015-p4f1.md
 - 261015 create-task CLIP r61 POST r42 GUIDE r23 done: T698–T701; T688 T689 T690 T691 T692 T694 bases refreshed, no scope change; T686 T687 (TMPL) unaffected.
@@ -146,16 +157,3 @@
 - 261015 update-ssot CLIP r61 POST r42 GUIDE r23 done: a linked post as the clip's story (ideation/post-faithful-clip); no doing task affected (T686 is TMPL).
 - 261015 update-ssot CLIP POST GUIDE start (ideation/post-faithful-clip)
 - 261015 start-vibe p4f1 start (autopilot): ideation post-faithful-clip → update-ssot → create-task, overlap check with the template tasks; no implementation (m7q2 implements).
-- 261015 T686 start on main at 13f778bb (m7q2 autopilot); T696 pushed at 832c357e with CI38736338662 running.
-- 261015 ideation post-faithful-clip ready (autonomous at the owner's request; decisions in inbox)
-- 261015 T696 done; full local CI passes on the repaired template wizard entry regression.
-- 261015 ideation post-faithful-clip start
-- 261015 create-task T697 done: production clips fail with CLIP_SOURCE_RANGE_INVALID because the live bucket exposes only ETag; probe-backed deploy gate plus HeadSource cause/cancellation.
-- 261015 create-task bug/clip-source-range start
-- 261015 T696 start on main at 0c4c997b; initial push waits for repair of the diagnosed existing CI failure.
-- 261015 create-task T696 done: current wizard entrypoint regression for failed CI 38708735705; autopilot m7q2 selected by the owner.
-- 261015 start-vibe m7q2 start on main at 0c4c997b; awaiting mode and route, no other active session.
-- 261015 autopilot v7k2 stopped at the owner's request after T685; report spec/reports/261015-v7k2.md
-- 261015 T685 done
-- 261015 T685 start on main at ce4e027c.
-- 261015 T684 done

@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { TEMPLATE_ASK_LABEL_MAX_CHARS } from '@/entities/template'
 import { FieldLabel, FieldMessage, TextField } from '@/shared/ui'
 import { checkedSections, type WizardEvent, type WizardState } from '../model/wizard-machine'
-import type { HeadingSuggestionsOperation } from '../model/useHeadingSuggestions'
+import type { WizardHeadingSuggestionsOperation as HeadingSuggestionsOperation } from '@/entities/template'
 import { HeadingChoices, HeadingSuggestions } from './HeadingSuggestions'
 
 /** A heading per section in the owner's own words; each starts at the section's name, so 다음

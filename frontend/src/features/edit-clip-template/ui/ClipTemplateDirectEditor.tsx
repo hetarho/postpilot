@@ -3,12 +3,14 @@ import { useTranslation } from 'react-i18next'
 import type { AuthoringArtifact } from '@/entities/ai-authoring'
 import {
   CLIP_TEMPLATE_LIMITS,
+  clipCompositionGuide,
   CompositionBuilder,
   CompositionProblem,
   parseClipTemplate,
 } from '@/entities/clip-template'
 import {
   Button,
+  Disclosure,
   FieldCount,
   FieldLabel,
   FieldMessage,
@@ -30,6 +32,7 @@ export function ClipTemplateDirectEditor({
   const { t } = useTranslation('clips')
   const id = useId()
   const [mode, setMode] = useState<'builder' | 'source'>('builder')
+  const [advanced, setAdvanced] = useState(false)
   let problem: CompositionProblem | undefined
   try {
     parseClipTemplate(source.body)
@@ -50,16 +53,27 @@ export function ClipTemplateDirectEditor({
         />
         <FieldCount left={CLIP_TEMPLATE_LIMITS.name - Array.from(source.name.trim()).length} />
       </div>
-      <SegmentedControl
-        value={mode}
-        onChange={setMode}
-        disabled={disabled}
-        ariaLabel={t('composition.mode')}
-        options={[
-          { value: 'builder', label: t('composition.builder') },
-          { value: 'source', label: t('composition.source') },
-        ]}
-      />
+      <Disclosure
+        title={t('editor.advanced')}
+        size="row"
+        headingLevel={3}
+        open={advanced}
+        onOpenChange={(open) => {
+          setAdvanced(open)
+          if (!open) setMode('builder')
+        }}
+      >
+        <SegmentedControl
+          value={mode}
+          onChange={setMode}
+          disabled={disabled}
+          ariaLabel={t('composition.mode')}
+          options={[
+            { value: 'builder', label: t('composition.builder') },
+            { value: 'source', label: t('composition.source') },
+          ]}
+        />
+      </Disclosure>
       {problem && (
         <FieldMessage role="alert">
           {t('composition.invalid', { line: problem.line, element: problem.elementId || 'clip' })}{' '}
@@ -82,6 +96,14 @@ export function ClipTemplateDirectEditor({
             onChange={(e) => onChange({ ...source, body: e.target.value })}
             className="mt-1"
           />
+          <Disclosure title={t('editor.sourceGuide')} size="row" headingLevel={3} className="mt-3">
+            <Textarea
+              aria-label={t('editor.sourceGuide')}
+              readOnly
+              rows={8}
+              value={clipCompositionGuide()}
+            />
+          </Disclosure>
         </div>
       ) : (
         <CompositionBuilder
@@ -90,7 +112,13 @@ export function ClipTemplateDirectEditor({
         />
       )}
       {mode === 'builder' && problem && (
-        <Button variant="secondary" onClick={() => setMode('source')}>
+        <Button
+          variant="secondary"
+          onClick={() => {
+            setAdvanced(true)
+            setMode('source')
+          }}
+        >
           {t('composition.repairSource')}
         </Button>
       )}

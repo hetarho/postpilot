@@ -6,7 +6,7 @@ import {
   TEMPLATE_NAME_MAX_CHARS,
   TEMPLATE_PHOTO_ROW_MAX,
 } from '@/entities/template'
-import { nodeAt, type RoleKey, type SectionContent } from '../config/catalog'
+import { templateTargetAt, type RoleKey, type SectionContent } from '@/entities/template'
 
 /** One section as the owner shapes it (TMPL-71, TMPL-74). Every answer starts at the catalog
  *  default, so 다음 always works until the owner changes something into an invalid state. */
@@ -48,6 +48,8 @@ export interface WizardState {
   /** Set by a refused 다음, so the screen explains what is missing beside its input (THEME-54). */
   attempted: boolean
   customCount: number
+  /** Only the selected post's headings, frozen before the owner starts answering. */
+  seedHeadings: readonly string[]
 }
 
 export type WizardEvent =
@@ -64,6 +66,23 @@ export type WizardEvent =
   | { type: 'description'; value: string }
 
 type WizardContext = Omit<WizardState, 'step'>
+
+function customSection(count: number, name: string, help: string): SectionDraft {
+  return {
+    id: `custom-${count}`,
+    name,
+    help,
+    checked: true,
+    heading: name,
+    content: 'write',
+    question: name,
+    required: false,
+    literal: '',
+    photos: 0,
+    repeatable: false,
+    repeat: false,
+  }
+}
 
 const chars = (value: string) => Array.from(value).length
 
@@ -126,7 +145,7 @@ function headingsValid(context: WizardContext): boolean {
 /** Where a choice lands: the node it names, and whether that ends the narrowing. */
 function chosen(context: WizardContext, key: string) {
   const path = [...context.path.slice(0, context.depth), key]
-  const node = nodeAt(path)
+  const node = templateTargetAt(path)
   return { path, node, leaf: Boolean(node?.roles) }
 }
 
@@ -139,7 +158,11 @@ function clampPatch(section: SectionDraft, patch: Partial<SectionDraft>): Sectio
 }
 
 export const wizardMachine = setup({
-  types: { context: {} as WizardContext, events: {} as WizardEvent },
+  types: {
+    context: {} as WizardContext,
+    events: {} as WizardEvent,
+    input: {} as { seedHeadings?: readonly string[] } | undefined,
+  },
   guards: {
     choiceIsLeaf: ({ context, event }) =>
       event.type === 'choose' && chosen(context, event.key).leaf && (event.seeds?.length ?? 0) > 0,
@@ -181,7 +204,11 @@ export const wizardMachine = setup({
         path,
         depth: path.length - 1,
         leaf,
-        sections: (event.seeds ?? []).map((seed) => ({ ...seed })),
+        sections: [
+          ...(event.seeds ?? []).map((seed) => ({ ...seed })),
+          ...context.seedHeadings.map((heading, index) => customSection(index + 1, heading, '')),
+        ],
+        customCount: context.seedHeadings.length,
         cursor: 0,
         attempted: false,
       }
@@ -203,23 +230,7 @@ export const wizardMachine = setup({
       const count = context.customCount + 1
       return {
         customCount: count,
-        sections: [
-          ...context.sections,
-          {
-            id: `custom-${count}`,
-            name,
-            help: event.help.trim(),
-            checked: true,
-            heading: name,
-            content: 'write' as const,
-            question: name,
-            required: false,
-            literal: '',
-            photos: 0,
-            repeatable: false,
-            repeat: false,
-          },
-        ],
+        sections: [...context.sections, customSection(count, name, event.help.trim())],
       }
     }),
     remove: assign(({ context, event }) =>
@@ -263,7 +274,7 @@ export const wizardMachine = setup({
 }).createMachine({
   id: 'templateWizard',
   initial: 'target',
-  context: {
+  context: ({ input }) => ({
     path: [],
     depth: 0,
     leaf: '',
@@ -273,7 +284,8 @@ export const wizardMachine = setup({
     description: '',
     attempted: false,
     customCount: 0,
-  },
+    seedHeadings: [...(input?.seedHeadings ?? [])],
+  }),
   states: {
     target: {
       on: {
@@ -350,7 +362,7 @@ export function wizardStateOf(snapshot: SnapshotFrom<typeof wizardMachine>): Wiz
 }
 
 export function initialWizardState(): WizardState {
-  return wizardStateOf(getInitialSnapshot(wizardMachine))
+  return wizardStateOf(getInitialSnapshot(wizardMachine, {}))
 }
 
 /** One guarded step: an event the current step does not take changes nothing. */

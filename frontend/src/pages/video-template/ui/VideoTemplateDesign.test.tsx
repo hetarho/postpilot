@@ -60,6 +60,8 @@ describe('separate retained video template design', () => {
     mount(writes)
     await user.click(await screen.findByRole('button', { name: /직접 편집하기$/ }))
     await screen.findByLabelText('템플릿 이름')
+    if (screen.getByRole('button', { name: '고급' }).getAttribute('aria-expanded') !== 'true')
+      await user.click(screen.getByRole('button', { name: '고급' }))
     await user.click(screen.getByRole('tab', { name: '원문' }))
     const source = screen.getByRole('textbox', { name: '원문' })
     expect(source).toHaveValue(body)

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
+import { createActor } from 'xstate'
 import { TEMPLATE_ASK_LABEL_MAX_CHARS, TEMPLATE_PHOTO_ROW_MAX } from '@/entities/template'
-import { ROLES, nodeAt, type RoleKey } from '../config/catalog'
+import { TEMPLATE_ROLE_DEFAULTS, templateTargetAt, type RoleKey } from '@/entities/template'
 import {
   checkedSections,
   initialWizardState,
@@ -8,6 +9,7 @@ import {
   wizardHasAnswers,
   wizardProgress,
   wizardTransition,
+  wizardMachine,
   type SectionDraft,
   type WizardEvent,
   type WizardState,
@@ -15,8 +17,8 @@ import {
 
 /** The leaf's seeds as the screen makes them, with the role key as its name. */
 function seeds(path: string[]): SectionDraft[] {
-  return (nodeAt(path)?.roles ?? []).map((role: RoleKey) => {
-    const defaults = ROLES[role] as {
+  return (templateTargetAt(path)?.roles ?? []).map((role: RoleKey) => {
+    const defaults = TEMPLATE_ROLE_DEFAULTS[role] as {
       content: SectionDraft['content']
       photos: number
       repeat?: boolean
@@ -49,6 +51,31 @@ const toMeal: WizardEvent[] = [
 ]
 
 describe('narrowing the target', () => {
+  it('freezes post headings and appends checked custom sections only after a leaf', () => {
+    const headings = ['첫인상', '다시 가고 싶은 이유']
+    const actor = createActor(wizardMachine, { input: { seedHeadings: headings } }).start()
+    headings[0] = 'late source edit'
+    expect(actor.getSnapshot().context.sections).toEqual([])
+    actor.send(toMeal[0]!)
+    expect(actor.getSnapshot().context.sections).toEqual([])
+    actor.send(toMeal[1]!)
+    expect(actor.getSnapshot().context.sections.slice(-2)).toMatchObject([
+      { id: 'custom-1', name: '첫인상', heading: '첫인상', checked: true, help: '' },
+      { id: 'custom-2', name: '다시 가고 싶은 이유', checked: true },
+    ])
+    actor.send({ type: 'add', name: '내 추가 부분', help: '추가 설명' })
+    expect(actor.getSnapshot().context.sections.at(-1)?.id).toBe('custom-3')
+    actor.send({ type: 'toggle', id: 'custom-1', checked: false })
+    actor.send({ type: 'back' })
+    actor.send(toMeal[1]!)
+    expect(
+      actor.getSnapshot().context.sections.filter((section) => section.id === 'custom-1'),
+    ).toHaveLength(1)
+    expect(
+      actor.getSnapshot().context.sections.find((section) => section.id === 'custom-1')?.checked,
+    ).toBe(false)
+    actor.stop()
+  })
   it('asks one question at a time until a leaf, then offers its sections', () => {
     const branch = run({ type: 'choose', key: 'restaurant' })
     expect(branch).toMatchObject({ step: 'target', path: ['restaurant'], depth: 1 })
@@ -56,7 +83,7 @@ describe('narrowing the target', () => {
     const leaf = run(...toMeal)
     expect(leaf.step).toBe('sections')
     expect(leaf.sections.map((section) => section.id)).toEqual(
-      nodeAt(['restaurant', 'meal'])!.roles,
+      templateTargetAt(['restaurant', 'meal'])!.roles,
     )
     expect(leaf.sections.every((section) => section.checked)).toBe(true)
   })

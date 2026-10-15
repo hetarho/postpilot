@@ -16,7 +16,7 @@ import {
   Typography,
   typographyStyles,
 } from '@/shared/ui'
-import type { SectionContent } from '../config/catalog'
+import type { SectionContent } from '@/entities/template'
 import { HeadingChoices } from './HeadingSuggestions'
 import {
   sectionProblem,

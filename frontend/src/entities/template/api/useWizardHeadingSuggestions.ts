@@ -1,27 +1,27 @@
+import type { HeadingSuggestionInput } from '../model/heading-suggestions'
 import { useEffect } from 'react'
 import { useActorRef, useSelector } from '@xstate/react'
-import { isTerminal, useJob } from '@/entities/generation-job'
-import {
-  useHeadingSuggestionsResult,
-  useStartHeadingSuggestions,
-  type HeadingSuggestionInput,
-} from '@/entities/template'
+import { isTerminal, useJob } from '@/entities/generation-job/@x/template'
+import { useHeadingSuggestionsResult, useStartHeadingSuggestions } from './useHeadingSuggestions'
 import { appFailureFromConnect } from '@/shared/api'
-import { headingSuggestionsMachine } from './heading-suggestions-machine'
+import { headingSuggestionsMachine } from '../model/heading-suggestions-machine'
 
 export interface HeadingSectionInput {
   id: string
   role: string
   description: string
 }
-export function useHeadingSuggestions(
+export function useWizardHeadingSuggestions(
   ownerId: string,
   targetKind: HeadingSuggestionInput['targetKind'],
   targetPath: readonly string[],
   sections: readonly HeadingSectionInput[],
+  maxChars?: number,
 ) {
   const startRequest = useStartHeadingSuggestions()
-  const actor = useActorRef(headingSuggestionsMachine, { input: { ownerId, start: startRequest } })
+  const actor = useActorRef(headingSuggestionsMachine, {
+    input: { ownerId, start: startRequest, maxChars },
+  })
   const snapshot = useSelector(actor, (value) => value)
   const signature = JSON.stringify({ targetKind, targetPath, sections })
   const { jobId } = snapshot.context
@@ -65,4 +65,4 @@ export function useHeadingSuggestions(
       }),
   }
 }
-export type HeadingSuggestionsOperation = ReturnType<typeof useHeadingSuggestions>
+export type WizardHeadingSuggestionsOperation = ReturnType<typeof useWizardHeadingSuggestions>

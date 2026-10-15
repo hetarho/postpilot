@@ -1,5 +1,5 @@
 # CDS clip output design system
-> r34 | Shared browser/server composition, bundled typography and animated-caption quality, with deterministic output-time motion, local original-based contrast and independently qualified analysis-copy quality.
+> r36 | Shared browser/server composition, bundled typography and animated-caption quality, with deterministic output-time motion, local original-based contrast and independently qualified analysis-copy quality.
 
 ## decisions
 - CDS-1 [o] intro/outro are the project's enabled regions filled from its slots, optionally seeded by a template; disclosure remains template-declared; narration follows the storyline or owner instruction under 영상 지침, with no compulsory business, location, price, menu or minimum fact count; visual legibility remains required (→CLIP-60 →CLIP-68 →CLIP-186 →GUIDE-42 →GUIDE-52)
@@ -222,3 +222,5 @@
 
 ## chg
 - r34 261015 CDS-49✎ 9:16 default with 16:9/1:1 for horizontal or square placements→9:16 for every new project, 16:9/1:1 kept for projects created with them
+- r35 261015 CDS-52✎ V12 untagged colour→SDR BT.709 limited range, tagged (→CLIP-219)
+- r36 261015 CDS-52✎ V12 SDR BT.709 limited range, tagged→no colour-tag requirement

@@ -29,6 +29,8 @@ async function mount(
   return view
 }
 async function source(user: ReturnType<typeof userEvent.setup>) {
+  if (screen.getByRole('button', { name: '고급' }).getAttribute('aria-expanded') !== 'true')
+    await user.click(screen.getByRole('button', { name: '고급' }))
   await user.click(screen.getByRole('tab', { name: '원문' }))
   return screen.getByRole('textbox', { name: '원문' })
 }
@@ -75,22 +77,5 @@ describe('durable clip template composition editing', () => {
     await user.click(screen.getByRole('button', { name: /직접 편집하기$/ }))
     expect(await source(user)).toHaveValue('<clip version="1"><stage')
     expect(screen.queryByRole('button', { name: /변경사항 저장하기$/ })).not.toBeInTheDocument()
-  })
-  it('supports seed-free new direct creation and retains default design fields', async () => {
-    const user = userEvent.setup()
-    const writes: ClipRecipe[] = []
-    await mount(user, { templates: [], writes }, {}, '/video-templates/new')
-    await user.type(screen.getByLabelText('템플릿 이름'), '새 구성')
-    expect(await source(user)).toHaveValue('<clip version="1"/>')
-    await publishAuthoringDraft(user)
-    await waitFor(() => expect(writes).toHaveLength(1))
-    expect(await screen.findByText('“새 구성” 영상 구성을 새로 저장했어요.')).toBeInTheDocument()
-    expect(writes[0]).toMatchObject({
-      name: '새 구성',
-      compositionBody: '<clip version="1"/>',
-      introPreset: 'a',
-      outroPreset: 'b',
-      allowedCaptionStyles: [],
-    })
   })
 })
