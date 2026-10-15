@@ -1,11 +1,11 @@
 # VOICE voices
-> r16 | Private accepted personal/synthetic expression profiles with source-preserving style-only projections.
+> r17 | Private accepted personal/synthetic expression profiles learned from the owner's writing or a casual learning chat, with source-preserving style-only projections.
 
 ## decisions
 - VOICE-1 [o] account-owned writing voices are isolated and labelled personal or synthetic; each owns its materials and current/previous analysis. Personal voices learn only owner prose; generated styles and test winners follow VOICE-68/69 and are never personal-habit evidence.
 - VOICE-2 [o] active display names are unique within the account (`voices_active_name`) and a tombstone's name reserves nothing; at most one active, made voice is the account's 기본 (partial unique index `voices_one_default`), and an account may have none
 - VOICE-3 [o] every voice/material/analysis query and mutation is authenticated-owner and voice scoped; unknown/foreign IDs are indistinguishable. Tests freeze owned profiles under MODEL-30/88, never treating another voice's material as interchangeable.
-- VOICE-4 [o] signup, provisioning, reads and page entry create no voice or analysis; a personal voice is created only on an explicit questionnaire/paste action and a generated style only on explicit adoption (→VOICE-68).
+- VOICE-4 [o] signup, provisioning, reads and page entry create no voice or analysis; a personal voice is created only on an explicit chat/paste action and a generated style only on explicit adoption (→VOICE-68).
 - VOICE-5 [o] a voice belongs to no 분야 and no template: it is the owner's own voice on a post of any 분야 and any template, and neither a template's text nor a guideline enters its analysis or changes it; no revision path writes voice state ← a fingerprint is surface habit, which holds across topics and forms, while the template decides the post's form (→TMPL-1)
 - VOICE-6 [o] a personal analysis is the counted fingerprint of its owner materials plus the AI impression and cited examples; a synthetic analysis separately stores its origin and bounded illustrative sample under VOICE-69. Neither kind holds a user-authored rule override, and only one previous analysis is retained.
 - VOICE-8 [o] a 학습 글 is private to its owner: its full text — and an answered photo prompt's photo — opens for the owner on the voice's 학습 데이터 screen (→VOICE-64) and reaches no other account, voice or log
@@ -42,7 +42,7 @@
 - VOICE-27 [o] the product computes every counted item itself and never asks the model to estimate one; the call names every AI field it expects and attaches the embedded schema `internal/voice/schemas/voice_analysis.schema.json` when the resolved model declares `structured_output`, falling back to the prompt alone otherwise
 - VOICE-30 [o] after a 다시 분석 the voice offers one `이전 분석으로 되돌리기`, which makes the previous analysis current again and discards the one it replaced; there is no redo and no older history, and a deleted voice offers none ← it exists for a re-analysis the owner dislikes
 - VOICE-31 [o] GetVoiceProfile exposes active analysis job identity for durable polling/resume; unified tests use their own MODEL records and cannot masquerade as completed analysis.
-- VOICE-32 [o] a personal voice becomes ready for its first explicit analysis after ten distinct valid question answers covering opening, description and closing, or the existing sixty owner-prose sentences covering those parts.
+- VOICE-32 [o] a personal voice becomes ready for its first explicit analysis after ten distinct valid question answers — replies in the learning chat (→VOICE-65) — covering opening, description and closing, or the existing sixty owner-prose sentences covering those parts.
   - each question answer must contain owner-authored Korean prose; hashtags/info-only/emoji-only text does not advance readiness
   - the first ten-question set covers every part without a photo requirement; server readiness reports answered/required questions and sentence fallback separately
   - the percent is the larger valid answer-count/sentence share, held below 100 while a part is missing; short material preserves unknown fingerprint facets instead of inventing measured values
@@ -52,10 +52,10 @@
   - Korean gets the counted explanations, AI description and up to VOICE_FEW_SHOT_MAX(3) unique topic-prioritized accepted excerpts, target500/max800 characters; English gets only LANG-15 portable items
   - current additions/edits do not enter excerpts before reanalysis; filter any source material that is no longer present/owned before retrieval
   - synthetic examples remain under VOICE-69, and no-voice posts carry no projection; never translate or fall back to another voice
-- VOICE-47 [o] the projection tells the model to write in these habits without copying an excerpt's phrases or facts, and to follow the measured ending mix; zero excerpts is valid; no run of identical endings is voice text — it is a 기본 지침 (→GEN-75)
+- VOICE-47 [o] the projection tells the model to write in these habits without copying an excerpt's phrases or facts, and to follow the measured ending mix; zero excerpts is valid; no run of identical endings is voice text — it is a 원칙 (→GEN-75)
 - VOICE-50 [o] provider work freezes the explicit owned voice/accepted profile before enqueue; analysis freezes owned material revisions, writing/revision freeze the assigned voice or absence, and tests freeze every selected entrant profile under MODEL-30. Retries use the admitted snapshot and never follow a later post assignment. Existing queue ownership guards still apply.
 - VOICE-51 [o] no third-party sentence, Korean morphology, vector, embedding, SDK, Python, CGO, sidecar or model dependency: segmentation, counting, ending buckets, the readiness meter and excerpt retrieval use the Go standard library ← keeps the static SPA + distroless Go deployment and makes unit tests deterministic
-- VOICE-52 [o] writing settings /voices list named owned styles with personal/synthetic provenance, default marker, learning/usable state, last analysis and pending-material/EDIT state.
+- VOICE-52 [o] /voices in 내 설정 (→THEME-38) lists named owned styles with personal/synthetic provenance, default marker, learning/usable state, last analysis and pending-material/EDIT state.
   - use the shared settings-row language rather than inheriting operational post-history behavior
   - personal learning, explicit AI creation and unified actual-writing test entry are named distinct actions; tombstones remain in a closed restore disclosure
 - VOICE-53 [o] `새 말투 만들기` — on the list and in a post's voice picker (→POST-101) — opens the shared `Sheet` (a bottom sheet below `md:`) with the name field and its `n / 50자` count
@@ -74,12 +74,13 @@
 - VOICE-57 [x] a topic, project, category or folder hierarchy; a cross-voice 학습 글 picker or copy; moving 학습 글, analyses or 검증 results on reassignment; automatic voice selection from content; hard-deleting a voice; a voice-count cap; scheduled or automatic analysis, embeddings or a background judge; English voices, which would arrive with their own items and prompts — out of scope
 - VOICE-58 [o] materials, accepted source revisions, analyses and test/history references are private owner data; account deletion cascades all of them. Soft deletion preserves history but refuses changes. No prose/photo is logged and no cross-owner or cross-voice retrieval or test source exists.
 - VOICE-59 [o] personal learning contains only owner-authored pasted writing and prompt answers, never generated posts, revisions, edit diffs or AI candidates. Synthetic generation/adoption is a separate explicitly labelled origin under VOICE-68/69, with no synthetic example inserted into personal materials or readiness.
-- VOICE-60 [o] writing questions form an extensible code-owned catalog of at least 200 stable keys with natural Korean situational wording, a concrete scene, optional writing hint, part and starter designation.
+- VOICE-60 [o] the learning chat's situations form an extensible code-owned catalog of at least 200 stable keys with natural, casual Korean wording, a concrete scene, optional writing hint, part and starter designation.
   - preserve all existing prompt keys and saved-answer/photo semantics; improve their wording without invalidating answers
+  - each situation frames a scene the owner would write up for others (이웃에게 소개하듯 말해 주세요) so a reply comes out in the owner's posting voice rather than raw chat shorthand ← one voice serves the blog, and 'ㅋㅋ 맛있었음' would make posts too light
   - the starter set has ten different ordinary-life situations covering opening/description/closing, requires no photo upload and asks for one to three natural sentences in the owner's usual style
-  - further questions cover varied everyday feelings, recommendations, surprises, frustrations, decisions, places and objects; no prompt requires an invented personal history or specialist knowledge
-  - optional photo questions still use only owner-picked private photos; answers are nonempty Korean prose, saving again replaces only that key
-  - reads and question browsing create no provider work; text and catalog keys are code, not generated at runtime
+  - further situations cover varied everyday feelings, recommendations, surprises, frustrations, decisions, places and objects; no situation requires an invented personal history or specialist knowledge
+  - optional photo situations still use only owner-picked private photos; replies are nonempty Korean prose, and replying again to a situation replaces only that key
+  - reads and browsing create no provider work; text and catalog keys are code, not generated at runtime
 - VOICE-61 [o] a line that is not the owner's prose counts toward no sentence and feeds no item: a hashtag-only line, a `[출처]` line, an info line (one that opens with 주소 · 영업시간 · 운영시간 · 전화 · 휴무 · 주차 · 가격 · 위치 followed by `:` or a space, or with 📍 ⏰ ☎️), a Korean address line, and a line holding no Hangul ← a voice is learned only from prose the owner wrote, and a pasted Naver post carries its place card and hashtags
 - VOICE-62 [o] pure local fingerprint comparison remains an optional diagnostic beside actual test writings or POST-102 editing: show measurable profile/text values in their units and unknown when unavailable. It makes no AI call and is not a separate verification product or an automatic judge.
 - VOICE-63 [o] the 말투 분석 tab shows the current analysis read-only: each counted item as one plain sentence with its number (e.g. `문장의 32%를 느낌표로 끝내요`) without a `숫자로 본 습관` group title, followed by `AI가 읽은 인상`; each item has its example sentence, with no provenance badge or per-item edit
@@ -88,17 +89,19 @@
   - pasted material editing keeps VOICE-20 rules; saved prompt-answer editing retains its stable question identity and applicable body/photo rules
   - use expected content revision; a conflict preserves unsaved input with a recovery action
   - materials, analysis and directory expose VOICE-21 pending-change state and the prior-profile explanation; analysis stays an explicit estimated action
-- VOICE-65 [o] questionnaire sessions present ten questions at a time, one concrete scene and answer per view, with saved-count progress, Back and an explicit skip that replaces a skipped question rather than counting it as answered.
-  - saved answers and stable keys are the resume authority; failed saves retain text/photo and the same question, and duplicate/stale submit responses cannot advance another owner or question
-  - the first session uses the starter questions and stops after ten valid saved answers with an explicit analysis action once ready; it never requires exhausting the catalog or padding every answer to many sentences
-  - further sessions choose ten unanswered questions, preserving all previous answers; the catalog can keep growing into hundreds without changing the saved format
-  - editing a saved answer is explicit; question exhaustion offers review/completion instead of silently rewriting earlier answers
-  - questionnaire UI is reusable inline during setup and in settings; pasted material and explicit saved-answer editing retain their source validation/photo contracts
-- VOICE-66 [o] writing-voice setup starts with three understandable peer methods: use owner-written text, answer ten everyday situations, or choose from eight explicitly AI-generated styles.
+- VOICE-65 [o] personal learning by conversation is a chat: the chat partner says one situation per turn in casual wording, the owner replies in the composer, and each valid reply is saved as that situation's answer, with saved-count progress shown above the chat ← chatting is easier than pasting posts or filling a questionnaire
+  - the partner's lines — situations and a short reaction to the previous reply — come from the code-owned catalog and call no model; nothing in the chat is ever post material
+  - `다른 얘기 할래요` replaces the current situation without counting it, and Back reopens the previous situation's saved reply for editing
+  - saved answers and stable keys are the resume authority; a failed save retains the reply and the same situation, and duplicate/stale submits cannot advance another owner or situation
+  - the first chat uses the starter situations and, after ten valid saved replies covering every part, offers the explicit analysis action; it never requires exhausting the catalog or padding a reply to many sentences
+  - later chats choose unanswered situations, preserving every earlier answer; the catalog can keep growing into hundreds without changing the saved format
+  - editing a saved reply is explicit; catalog exhaustion offers review/completion instead of silently rewriting earlier replies
+  - the chat is reusable inline during setup and in settings; pasted material and explicit saved-reply editing retain their source validation/photo contracts
+- VOICE-66 [o] writing-voice setup starts with three understandable peer methods: 대화하기 (the learning chat →VOICE-65), 내 글 붙여넣기, or choosing from eight explicitly AI-generated styles (AI 말투).
   - opening or inspecting methods creates no voice, analysis or provider work; an explicit personal-learning action may create/resume a named personal voice
-  - each method opens its own input/review flow; questionnaire wording does not ask for an existing written post, and pasting does not expose unanswered questions
+  - each method opens its own input/review flow; the chat does not ask for an existing written post, and pasting does not expose unanswered situations
   - existing work offers an explicit continuation into its actual current stage; synthetic examples remain separate from personal writing
-- VOICE-67 [o] personal questionnaire readiness is not a promise that every fingerprint facet is known; the first profile may be used with measured/unknown facets, and additional personal answers improve the next explicitly requested analysis.
+- VOICE-67 [o] personal chat readiness is not a promise that every fingerprint facet is known; the first profile may be used with measured/unknown facets, and additional personal answers improve the next explicitly requested analysis.
 - VOICE-68 [o] explicit writing-style preparation creates a durable owner batch with requested2/4/8/16 distinct candidates; ordinary recommendation defaults to eight; unified test preparation follows EDIT-2 and fills only unassigned style slots, independently of the tournament format.
   - explain synthetic provenance, show an estimate and admit one bounded prepared write call with count-specific budgets/schema
   - each validated candidate has a name, readable character and labelled fictional example/projection; incomplete/duplicate/invalid batches fail, never silently shrink or retry
@@ -112,10 +115,10 @@
   - personal material can accumulate on an adopted style; successful explicit personal reanalysis changes the current origin to personal and retains the prior synthetic snapshot under the existing restore contract
   - snapshots without an origin decode as personal, preserving existing analyses and posts
 - VOICE-70 [o] generated writing styles may be selected and refined conversationally under EDIT before explicit publication. Synthetic provenance and personal-material isolation remain mandatory; personal voice refinement publishes a new synthetic style, and existing synthetic refinement also publishes a new labelled style without replacing the source analysis.
-- VOICE-71 [o] an unmade personal voice uses a guided learning sequence: choose paste or ten questions, save private material, review confirmed readiness, explicitly analyze, then inspect/use the made voice.
+- VOICE-71 [o] an unmade personal voice uses a guided learning sequence: choose the chat or paste, save private material, review confirmed readiness, explicitly analyze, then inspect/use the made voice.
   - analysis is absent until actual readiness allows it; opening, saving a sample, question navigation and review never start analysis automatically
   - collected material is reviewable through a secondary action, not a permanently expanded sample list under the initial form
-  - additional paste, another question batch and answer edits are optional explicit paths after the focused first batch; domain readiness and existing analysis remain authoritative
+  - additional paste, another chat and reply edits are optional explicit paths after the first chat; domain readiness and existing analysis remain authoritative
   - closing and returning recover confirmed samples and active analysis without replaying create/analyze/default actions
 
 - VOICE-72 [o] content revision and accepted material version identify analysis freshness; metadata-only edits do not affect it. Current/previous profile restoration and jobs compare full source versions, not just the set of material IDs.
@@ -126,11 +129,14 @@
   - keep each source's style-only role visible in composition/inspection and avoid duplicated projections (→MODEL-93)
   - using a voice example cannot classify an invented visit, flavor, price or action as owner-input meaning (→GEN-80); accepted-profile privacy and deletion filters remain authoritative
 
+- VOICE-76 [o] an adopted AI 말투 is a starting point the product grows toward the owner's own voice: its detail and the voice picker offer `대화로 내 말투 키우기`, which opens the learning chat on that style, and successful explicit reanalysis then makes its origin personal (→VOICE-69) ← a new 체험단 creator needs a start, while posts in the owner's own voice are the product's point
+  - the offer starts no analysis or AI work, and an owner may keep the AI 말투 as it is
+
 ## flow
-- personal start: choose ten questions | paste own writing → explicitly create/resume one personal voice → save owner answers in a ten-question session → ten valid answers with every part or sixty owner sentences → explicit analysis → made personal voice → optional default → creation
-- further learning: choose another ten unanswered situations | paste → save private materials → keep existing analysis → explicit reanalysis → current personal snapshot with previous retained
+- personal start: choose 대화하기 | paste own writing → explicitly create/resume one personal voice → reply in the learning chat → ten valid answers with every part or sixty owner sentences → explicit analysis → made personal voice → optional default → creation
+- further learning: another chat over unanswered situations | paste → save private materials → keep existing analysis → explicit reanalysis → current personal snapshot with previous retained
 - generated styles: explicit generation with visible estimate → bounded durable one-call batch → requested2/4/8/16 labelled styles (eight by default) → explicit selection/adoption → atomic made synthetic voice/default choice → creation
-- questionnaire: starter/unanswered batch → scene + natural answer → guarded save → next question | failure retains answer → ten answers → explicit analysis or completion; saved-key resume after navigation/reload
+- chat: starter/unanswered situations → partner's line → owner's reply → guarded save → partner's reaction + next situation | failure retains reply → ten replies → explicit analysis or completion; saved-key resume after navigation/reload
 - test: select one variable and2/4/8/16 entrants → common real-writing material → explicit generation → human knockout decisions → optional champion adoption
 - delete: guarded soft delete → retained historical refs → explicit restore/reassignment
 
@@ -142,4 +148,4 @@
 - contracts: `voice.proto`, plus `VoiceRef` in `post.proto` and `voice_id` in `model_experiment.proto`
 
 ## chg
--
+- r17 261015 VOICE-76+ AI 말투 grown toward the owner's voice through the chat; VOICE-65✎ ten-question questionnaire sessions→scripted learning chat (no model call); VOICE-60✎ question wording→casual chat situations framing a scene for others; VOICE-66✎ VOICE-71✎ VOICE-4✎ VOICE-32✎ setup methods ten questions→대화하기; VOICE-52✎ writing settings→내 설정; VOICE-47✎ ending run 기본 지침→원칙

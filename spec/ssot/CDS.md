@@ -1,8 +1,8 @@
 # CDS clip output design system
-> r33 | Shared browser/server composition, bundled typography and animated-caption quality, with deterministic output-time motion, local original-based contrast and independently qualified analysis-copy quality.
+> r34 | Shared browser/server composition, bundled typography and animated-caption quality, with deterministic output-time motion, local original-based contrast and independently qualified analysis-copy quality.
 
 ## decisions
-- CDS-1 [o] intro/outro are the project's enabled regions filled from its slots, optionally seeded by a template; disclosure remains template-declared; narration follows the storyline or owner instruction under 영상 지침, with no compulsory business, location, price, menu or minimum fact count; visual legibility remains required (→CLIP-60 →CLIP-68 →CLIP-186 →GUIDE-42)
+- CDS-1 [o] intro/outro are the project's enabled regions filled from its slots, optionally seeded by a template; disclosure remains template-declared; narration follows the storyline or owner instruction under 영상 지침, with no compulsory business, location, price, menu or minimum fact count; visual legibility remains required (→CLIP-60 →CLIP-68 →CLIP-186 →GUIDE-42 →GUIDE-52)
 - CDS-2 [o] every text element stays inside its ratio's safe area, except an explicitly header-placed badge which uses the separate symmetric header bounds (→CDS-57)
 - CDS-3 [o] every on-screen text reads muted and small: body ≥ 48 px, caption ≥ 40 px, label ≥ 34 px, badge fixed at 36 px, contrast ≥ 4.5:1 against its effective background, exposure scaled to its length (→CDS-41)
 - CDS-4 [o] a caption's motion is the one its style declares and no motion exists outside an approved style (→CDS-80); the default style keeps a 180 ms fade-in settling 12 px upward and a 120 ms fade-out, and rapid phrases replace one another immediately with no fade or movement whatever style they carry; the pace governs the motion alone and never which drawing a style gets, so a rapid phrase keeps its style's own plate, outline, colour and face (→CDS-85)
@@ -84,7 +84,7 @@
 - CDS-46 [o] 16:9 and 1:1 keep every font size (the short side is 1080 in all three), except `t.hook` 84 → 72 on 16:9 and → 76 on 1:1, and restate only positions and widths
 - CDS-47 [o] 16:9: copy width ≤ 960 centred (16 characters at 56 px), TOP plate top y 112, BOTTOM plate bottom y 968, UPPER_MID / LOWER_MID 420 / 660, the intro and outro blocks placed by CDS-79, badge right edge x 1824 top y 112, scrims 260 bottom / 200 top ← a wider line slows reading
 - CDS-48 [o] 1:1: copy width ≤ 952 (15 characters), TOP 112, BOTTOM 968, UPPER_MID / LOWER_MID 420 / 660, the intro and outro blocks placed by CDS-79, badge right edge x 1016 top y 112, scrims 260 / 200
-- CDS-49 [o] 9:16 is the product default because every short-form feed takes it; 16:9 suits horizontal upload and blog or site embedding, and 1:1 suits square feed placements (→CLIP-8)
+- CDS-49 [o] 9:16 is the ratio every new project takes, because both clip channels are vertical short-form feeds (→CLIP-8); the 16:9 and 1:1 layouts remain for projects created with them
 - CDS-51 [o] templates reuse the product's visual components, readability rules and audio normalisation without inheriting content, campaign type or exposure from a preset
 - CDS-52 [o] the renderer emits a resolved-element manifest and checks:
   | check | rule |
@@ -125,7 +125,7 @@
 - CDS-60 [o] step ② exposes each phrase's text, absolute transformed-output start and end time, add/remove, and split-to-rapid or merge-to-sentence actions; manual windows persist exactly in output milliseconds and are revalidated after any edit that changes the output length, adjacent windows may touch but may not overlap, and invalid limits are reported before rendering without proportional retiming
 
 - CDS-61 [o] the design system owns typography, contrast, safe areas, approved styles and output quality; a template owns its outline, declared disclosure and starting project values
-  - the project owns region enablement, presets, slot instructions and final text; the storyline and owner instruction direct flow and narration under 영상 지침 (→CLIP-168 →CLIP-178 →CLIP-186 →GUIDE-42)
+  - the project owns region enablement, presets, slot instructions and final text; the storyline and owner instruction direct flow and narration under 영상 지침 (→CLIP-168 →CLIP-178 →CLIP-186 →GUIDE-42 →GUIDE-52)
   - AI caption choices use the project's AI style set; manual choices use the full approved set (→CLIP-142)
 - CDS-62 [o] a cut using source interval [start, end] and fixed rate r has pre-transition output duration (end − start) / r; cut order and transition overlap form the edited output timeline on which every template and caption interval resolves before layout and verification, while source evidence keeps its original timestamps, full-output and end-relative elements keep their declared scope across cuts, and captions keep their absolute output intervals through cut edits (→CLIP-67)
 - CDS-64 [o] invalid authored text, fixed placement or timing identifies the affected element and preserves the owner's draft for correction; neither AI nor layout repair silently shortens, rewrites, moves or drops that authored element
@@ -221,4 +221,4 @@
 - worked SVG for each region and component, the measurement method and the research sources behind the ← reasons: `docs/design/clip-output-design-spec-v1.md`
 
 ## chg
--
+- r34 261015 CDS-49✎ 9:16 default with 16:9/1:1 for horizontal or square placements→9:16 for every new project, 16:9/1:1 kept for projects created with them

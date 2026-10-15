@@ -1,5 +1,5 @@
 # VIDEO video attachments (영상)
-> r7 | A post may carry a few short video clips beside its photos: uploaded as-is from the browser to private storage, observed by a video-capable model as material for the writer, placed in the post as a VIDEO block, rendered and exported as a marker the author attaches by hand on the platform; these post attachments are never transcoded, and generated-video projects follow CLIP instead.
+> r8 | A post may carry a few short video clips beside its photos: uploaded as-is from the browser to private storage, observed by a video-capable model as material for the writer, placed in the post as a VIDEO block, rendered and exported as a marker the author attaches by hand on the platform; these post attachments are never transcoded, and generated-video projects follow CLIP instead.
 
 ## decisions
 - VIDEO-1 [o] a video is a second attachment kind of the post aggregate, beside photos: owned by the post, addressed by filename like a photo, deleted with the post, and material for observation and writing ← the model can then read what a photo cannot show (motion, sequence, sound) and the clip can stand in the post where it belongs
@@ -21,20 +21,14 @@
 - VIDEO-13 [o] one observe call per video is a planned call the enqueuing service states exactly (→GEN-29), priced by the hold at the observation completion budget of one full photo batch ← a video answer carries a timeline and is longer than one photo's; a reuse-everything run plans zero video calls
 - VIDEO-14 [o] the reading view and the block editor render a VIDEO block as a native `<video controls preload="metadata">` from the presigned view URL, no autoplay, no poster generation, caption below it like an IMAGE
   - the block editor edits `alt` and `caption` and moves or deletes the block
-  - the four exports carry a video as a marker or an empty-source element and never a URL or bytes (→EXPORT-3):
-  | export | video |
-  |---|---|
-  | Naver | `[동영상 <file> — <caption>]` / `[동영상 <file>]` (en `[Video …]`) on its own line in marker order |
-  | Tistory | `<video controls data-file="<file>"></video>` with the same replacement-instruction comment as an image |
-  | site | `<video controls src="<relative file>">` with a caption `<figcaption>` |
-  | Markdown | a link line `[동영상: <file>](<file>)` with the optional italic caption ← Markdown has no video syntax and a link is what every renderer keeps |
-- VIDEO-15 [o] the Naver export tab plays the video inline in marker order and offers NO copy control on it, saying instead to attach the original from the device in the platform's editor ← the clipboard cannot carry a video file from a page (EXPORT-13), and the file the author filmed is on the phone they are pasting from; the photo copy controls are unchanged
+  - the Naver output carries a video as the marker `[동영상 <file> — <caption>]` / `[동영상 <file>]` (en `[Video …]`) on its own line in marker order, never a URL or bytes (→EXPORT-3)
+- VIDEO-15 [o] the Naver output preview plays the video inline in marker order and offers NO copy control on it, saying instead to attach the original from the device in the platform's editor ← the clipboard cannot carry a video file from a page (EXPORT-13), and the file the author filmed is on the phone they are pasting from; the photo copy controls are unchanged
 - VIDEO-18 [o] a post is generated from "photos and videos" wherever the UI said photos: the zero-material case is no photos AND no videos (→GEN-13), the observe model requirement is "photos or videos attached" (→GEN-5 →GEN-23), the stage label stays 사진 관찰 중 while photos are observed and reads 영상 관찰 중 while a video is (→POST-46), and the reobservation picker lists videos after photos with a duration badge
 - VIDEO-19 [o] post-attachment transcoding/trimming/thumbnails, frame extraction, generated-video rendering, template video positions, video clipboard copy, audio-only files, more than three or longer than one minute, and server-side duration decoding remain outside post attachments. Unified observer-model tests may use compatible photo/video attachments under MODEL-31 and the same bounded signed-reference contract.
 ## flow
 - attach: pick(gate: extension · size · duration · count) → read metadata → CreateUpload(content type from the container) → PUT with progress → ConfirmUpload(duration, w, h) → cache patch → next GetPost supplies the presigned view URL
 - generate: 생성(observe model has `video_input` and compatible signed-video-URL delivery | refused MODEL_VIDEO_UNSUPPORTED) → StartGeneration(freeze photo and video filenames + reusable snapshot → hold: photo batches + one call per video) → worker(photo batches → one call per video → merged snapshot) → write(사진 관찰 + 영상 관찰 + filenames) → validate(IMAGE and VIDEO files against attachments) → content with VIDEO blocks
-- export: any tab → video as marker | empty-source element; Naver tab plays it inline, no copy
+- export: the Naver output → video as marker; the preview plays it inline, no copy
 
 ## constraints
 - scope: VIDEO-4's unmodified upload and VIDEO-19's transcoding exclusions concern post attachments only; CLIP owns generated-video preparation, inline analysis copies, rendering and source-preview lifetimes
@@ -48,4 +42,4 @@
 - tests that pin it: gate refusals per ceiling · confirm refusals (size, duration, content type, cross-kind filename) · one observe call per video after `ceil(photos/4)` batches with a stubbed provider · validator drops a VIDEO file not attached · the four converters' video mapping goldens · `video_input` mapping from the catalog fixture
 
 ## chg
--
+- r8 261015 VIDEO-14✎ four export mappings→Naver marker only (Tistory, site and Markdown video forms removed with those exports); VIDEO-15✎ export tab→output preview

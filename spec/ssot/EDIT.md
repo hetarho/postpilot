@@ -1,10 +1,10 @@
 # EDIT conversational configuration authoring
-> r5 | Private bounded reusable-setting authoring with kind/mode-specific composition, one draft and explicit publication.
+> r6 | Private bounded reusable-setting authoring with kind/mode-specific composition, one draft and explicit publication; new templates come from the guided wizard.
 
 ## decisions
 - EDIT-1 [o] the authoring kinds are post templates, video templates, post guidelines, video guidelines and writing styles; each session fixes one kind and belongs to one authenticated account.
-- EDIT-2 [o] an explicit recommendation request produces the requested integer count1..16 of different valid suggestions from one bounded write-model call; ordinary setting creation defaults to eight and unified tests request exactly their unassigned setting slots. Freeze the eligible write ref and count/budgets at admission; never silently reduce or round up a batch.
-- EDIT-3 [o] post-template suggestions cover familiar blog structures such as a visit review, travel journal, product review, everyday diary, practical guide, curated list, comparison and information summary; suggestions may adapt these structures to the owner's plain-language request without copying a real blog or inventing owner facts.
+- EDIT-2 [o] an explicit recommendation request produces the requested integer count1..16 of different valid suggestions from one bounded write-model call; ordinary guideline and writing-style creation defaults to eight, and unified tests request exactly their unassigned setting slots; a new post or video template comes from the wizard (→TMPL-71 →CLIP-213), so template recommendations serve unified tests alone. Freeze the eligible write ref and count/budgets at admission; never silently reduce or round up a batch.
+- EDIT-3 [o] unified-test post-template suggestions cover familiar blog structures such as a visit review, travel journal, product review, everyday diary, practical guide, curated list, comparison and information summary; suggestions may adapt these structures to the owner's plain-language request without copying a real blog or inventing owner facts.
 - EDIT-4 [o] choosing a suggestion changes the session's draft only; reading, selecting, previewing, opening and closing create no model work or saved setting.
 - EDIT-5 [o] a sent chat message is one explicit bounded model job using the selected current draft, the session purpose and a bounded recent conversation; its validated response updates the draft and adds a plain-language reply, while the canonical saved setting changes only on explicit Save.
   - each user message is nonblank and at most 2000 Unicode characters; retain at most twenty completed exchanges and explain when a fresh conversation is needed
@@ -29,7 +29,7 @@
   - personal voice fingerprints stay read-only; editing a voice description follows EDIT-11 synthetic-new-copy semantics, while personal source editing follows VOICE-64
 - EDIT-15 [o] setup/settings hosts share the same authoring behavior and recover owner/kind/target-scoped unpublished work. Confirmed publication identifies the setting kind/name and whether it created a new item or updated the named target, then shows the confirmed saved item.
 - EDIT-16 [o] authoring stores only its requested setting, necessary scope/version metadata, conversation and any explicitly owner-supplied bounded form reference. It automatically reads no account prose, photos, other settings or unrelated materials into the model request; account deletion removes all private authoring data.
-- EDIT-17 [o] new setting creation separates purpose, candidate choice, selected review, optional refinement, explicit named publication and completion; an existing-setting edit starts from saved-item review and an explicit method, without an irrelevant recommendation/purpose prerequisite.
+- EDIT-17 [o] new guideline and writing-style creation separates purpose, candidate choice, selected review, optional refinement, explicit named publication and completion, while a new template follows the wizard (→TMPL-71 →CLIP-213); an existing-setting edit starts from saved-item review and an explicit method, without an irrelevant recommendation/purpose prerequisite.
   - selected valid drafts may save without chat; refinement keeps the related preview available
   - voice publication states synthetic new-copy/default semantics; template/guideline publication names the retained scope
   - server session/job/receipts determine valid mutations and uncertain-save recovery; presentation movement starts neither AI nor publication
@@ -54,7 +54,7 @@
   - optional technical inspection uses MODEL-94/95, separately from setting publication provenance and ordinary natural-language replies; it creates no call or saved setting
 
 ## flow
-- create: choose setting kind → explicit candidate suggestions with estimate → durable generation → select one → readable draft + chat → optional explicit refinement → Save → confirmed setting
+- create (guideline, writing style): choose setting kind → explicit candidate suggestions with estimate → durable generation → select one → readable draft + chat → optional explicit refinement → Save → confirmed setting
 - refine: named saved item → AI editing | direct editing → one retained private draft → explicit named Save → version-matched template/guideline update | new synthetic voice copy
 - recover: reopen → owner/kind/target session read → pending job progress | prior valid suggestions/draft → continue without automatic model work
 
@@ -64,4 +64,4 @@
 - publication must tolerate an interruption between a target-domain commit and its authoring receipt without duplicate settings or later-state reversal
 
 ## chg
--
+- r6 261015 EDIT-2✎ EDIT-17✎ ordinary creation for every kind→guidelines and writing styles only, templates from the wizard; EDIT-3✎ post-template suggestions serve unified tests

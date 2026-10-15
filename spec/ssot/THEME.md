@@ -1,5 +1,5 @@
 # THEME theme preference and design language
-> r33 | Shared accessible visual contracts for creation, authoring, comparisons and semantic-origin review.
+> r34 | Shared accessible visual contracts for channel-centered creation, guided authoring, comparisons and semantic-origin review.
 
 ## decisions
 - THEME-1 [o] three browser-owned preferences: `system` (the default, follows `prefers-color-scheme`), `light` → the `day` semantic map, `dark` → the `night` map; the effective theme is always exactly `day|night`; components consume semantic or functional tokens and never branch on a preference, an effective theme or a palette step
@@ -118,7 +118,7 @@
 - THEME-25 [o] one scroller per screen: the document is the only vertical scroll container — no `max-h-* overflow-y-auto` content panel and no fixed-`rows` textarea holding more than it shows (a textarea grows with `autoGrow`); four deliberate exceptions: a horizontal strip (a photo strip, a tab row, the contact-sheet carousel whose cards are narrower than the strip so a sliver of the next one shows, with a 현재/전체 indicator), a sheet's own body, a form field capped at `max-h-field` and a copy-only document (→THEME-43) ← an uncapped generated value would put the committing control thousands of pixels from the caret, and reach wins; the editor's title and memo are not capped; all four set `overscroll-behavior: contain`
 - THEME-26 [o] desktop creation and settings expose visible primary destinations and current location; the desktop shell has no hamburger-only navigation or centered modal for primary navigation.
   - creation workspaces use the wide shared frame aligned with shell content; bound readable prose inside the workspace rather than shrinking the whole workspace
-  - compact chronological work history is secondary operational information; home retains its two content choices under THEME-47
+  - each channel's compact chronological history is secondary operational information; home offers the channels under THEME-47
   - phones retain visible current section and parent/return access; overflow destinations may open an edge-attached panel, never becoming the only location signal
 - THEME-27 [o] elevation and shape:
   - three shadow steps mixed from `shadow-color` — `shadow-sm` resting, `shadow-md` a floating panel, `shadow-lg` a modal — encoding distance from the page, never importance, and most surfaces cast none
@@ -199,11 +199,11 @@
   - keep the heading and supporting copy short; place the billing-period selector immediately before the cards, and make tier, large price, action and four distinct benefit lines the visual reading order (→QUOTA-28)
   - use strong primary/secondary text contrast and spacing to separate price, action, benefits and the lower production comparison; supporting copy recedes without losing AA contrast, and the recommended state has a text label as well as a visual mark
   - post and clip estimates live below the cards with inline condition controls (→QUOTA-41); both themes, reduced motion, readable surface pairs, keyboard access and 320 px reflow remain supported
-- THEME-38 [o] the shell visibly distinguishes creation, unified writing tests and settings, with work history as a secondary operational destination.
-  - creation/home, writing tests, settings and work history are sibling destinations; their breadcrumbs start at the current destination, without another destination as an ancestor
-  - test history and retained comparison records belong to writing tests; settings do not expose comparison or leaderboard destinations
-  - the brand returns home; home keeps exactly two content actions under THEME-47
-  - settings show their writing/video/AI-account hierarchy and the current named item; child destinations provide visible parent/breadcrumb access
+- THEME-38 [o] the shell's primary destinations are the channels — 네이버 블로그 · 네이버 클립 · 인스타 클립 — and 내 설정 ← the owner works per channel from the start, and each channel's output differs
+  - each channel holds 만들기 · 기록 · 템플릿 · 지침: 네이버 블로그 its posts, post templates and 지침; each clip channel its own clips plus the video templates and 영상 지침 the two clip channels share
+  - a shared clip destination shows the clip channel it was opened from as its location and returns there; a direct link with no valid origin uses 네이버 클립 (→THEME-58)
+  - 내 설정 holds 말투 · 기억 · 내레이션 목소리 · AI 모델 · 계정 · 결제 and a 고급 group holding 작성 테스트 with its test history and retained comparison records; no comparison or leaderboard destination stands outside 고급
+  - channels and 내 설정 are sibling destinations whose breadcrumbs start at themselves; the brand returns home (→THEME-47)
   - creating a post/clip and later minting its address preserve its creation context instead of implying arrival from history
   - one measured shared top-chrome clearance accounts for the actual sticky shell rows, independently of final navigation arrangement
   - primary navigation has a distinct desktop presentation under THEME-26; phone overflow panels are edge-attached with explicit dismissal/focus return
@@ -226,9 +226,9 @@
 - THEME-46 [o] spoken-voice surfaces visibly distinguish 목소리 from writing 말투; candidate playback, selection and confirmation are separate labelled actions, with names and playable samples for reuse
   - show generation estimate/approval only on a generating action, explicit readiness or failure by text and no automatic generation during navigation, metadata edits or replay
 
-- THEME-47 [o] signed-in home has exactly two equally weighted content actions, 새 글 작성하기 and 새 클립 만들기, with a strong short message.
+- THEME-47 [o] signed-in home has one equally weighted entry per channel — 네이버 블로그 · 네이버 클립 · 인스타 클립 — each opening that channel's creation, with a strong short message that the product writes only from the owner's own experience.
   - phones stack message and choices with touch-sized targets; desktop uses the shared board frame with a message/identity region beside generously sized creation choices, without an inner phone-width clamp
-  - no history, metrics, selectors, feeds or extra creation actions populate the canvas; menu/account access stays available
+  - no history, metrics, selectors, feeds or creation actions beyond the channel entries populate the canvas; menu/account access stays available
   - large typography, shared choice primitives and semantic planes supply emphasis; both themes, keyboard, reduced motion, 200% zoom and 320 px reflow remain supported
   - opening home or a choice creates no record or AI work
 - THEME-48 [o] setup is a focused sequence of purposeful screens: choose an acquisition method, supply only that method's input, review when eligible, explicitly create or confirm, then continue.
@@ -272,8 +272,8 @@
 - THEME-60 [o] saved reusable settings visibly distinguish usability, unpublished editing, active AI work, uncertain publication and conflicts using EDIT-18 summaries. Current actions and named completion feedback remain in the current reading/working flow rather than appearing without an identified trigger.
 - THEME-61 [?] the final desktop navigation arrangement, operational-history presentation/name and exact visual dimensions remain open; functional location/return/workspace contracts and route-specific acceptance apply independently of a final visual design.
 
-- THEME-62 [o] origin review is visible by default in post refinement, with a named 출처 보기 toggle, three-category legend and selectable phrase/source explanation (→POST-112).
-  - register dedicated semantic foreground/highlight roles for the three origins and unconfirmed state in both themes; color never supplies meaning alone
+- THEME-62 [o] origin review is visible by default in post refinement, with a named 출처 보기 toggle, four-category legend and selectable phrase/source explanation (→POST-112).
+  - register dedicated semantic foreground/highlight roles for the four origins — 광고주 요청 with a role of its own — and the unconfirmed state in both themes; color never supplies meaning alone
   - touch and keyboard can reach source details without hover; use labels, visible focus and body-sized explanations
   - preserve prose readability, selection/copy, caret/autosave, one document scroller,320px reflow and200% zoom; a highlight is not a separate committing action
   - origin colors are functional evidence roles, distinct from action accent and promotional roles (→THEME-15/18)
@@ -289,6 +289,9 @@
   - input text retains the16px floor, controls retain THEME-23 targets, and required errors, current operation state and contextual return remain reachable
   - every route and its distinct working states is included in a mobile audit; actual320/360/390/430px browser checks cover both themes, input position and document height as well as overflow, with desktop and keyboard-height continuity checks for changed workflows
 
+- THEME-65 [?] whether and when 인스타 게시물 (a photo set with a caption and hashtags) joins the channels; until it is decided the navigation shows no entry for it ← an entry that leads nowhere reads as a broken product
+- THEME-66 [o] a guided flow — the template wizard (→TMPL-71 →CLIP-213) and the learning chat (→VOICE-65) — speaks to the owner in plain words: each screen asks one question, explains its choices in the owner's terms (보통 이렇게 구성돼요) and shows where the owner is, under THEME-48–57 ← a first-time 체험단 creator should be guided, not handed a builder
+
 ## flow
 - bootstrap: read `postpilot.theme` → resolve(`system` → matchMedia | `light` → `day` | `dark` → `night`) → set `data-theme`, `color-scheme`, `theme-color` before React → provider from the snapshot → menu selection → apply + persist | remove key
 - shipping a screen: author unprefixed for 360 → tokens and `shared/ui` primitives only → `pnpm lint:style` → the THEME-34 checklist → both themes
@@ -299,4 +302,4 @@
 - gates: `pnpm lint:style` and `pnpm lint:style:probe` (→ARCH-25); review at360/390/430px,320px reflow,1440x900/1920x1080 desktop,200% zoom, contextual return, keyboard and screen reader, both themes
 
 ## chg
--
+- r34 261015 THEME-65+ [?] 인스타 게시물 entry undecided; THEME-66+ plain-word guided flows; THEME-38✎ creation · tests · settings · history→three channels + 내 설정 (tests under 고급, history per channel); THEME-47✎ two content actions→one entry per channel; THEME-26✎ history per channel; THEME-62✎ three→four origin roles (+ 광고주 요청)

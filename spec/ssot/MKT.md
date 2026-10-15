@@ -1,5 +1,5 @@
 # MKT the public /about page
-> r10 | Shipped-feature marketing centered on AI-assisted speed and owner control, without accuracy or exposure guarantees.
+> r11 | Shipped-feature marketing for 체험단 creators — fast monetization and 상생 through posts written only from the owner's own experience — without accuracy, income or exposure guarantees.
 
 ## decisions
 - MKT-1 [o] `/about` is a direct child of the root route beside `/login` and deliberately not a child of the authenticated pathless layout ← being public is structural, not a check someone has to remember; it has no `beforeLoad`, loader, session branch or query, and mounting it issues no Connect call at all — not even GetMe — because the page exists for a visitor with no account; it is refreshable and deep-linkable through the Cloudflare `single-page-application` fallback with no SSR, prerender, marketing deployment or metadata worker
@@ -25,10 +25,10 @@
 - MKT-10 [o] `index.html` keeps a product-level static title and description for clients that do not run JavaScript — neither route-specific nor localized, carrying no Open Graph promise ← it is the only metadata a crawler that refuses JavaScript will ever see, on every deep link, because this is a CSR SPA; emptying it would break every link preview, and the product does not claim localized social previews for such crawlers (→LANG-8)
 - MKT-11 [o] the information architecture:
   - a header in ONE row at every width — the wordmark at the page gutter, then viewport-side the one filled `시작하기 / Get started` CTA and the preferences pair, vertically centred in the bar with the top safe-area inset added, never stacked under or centred beneath the wordmark
-  - a hero with one H1 saying photos and rough notes become a ready-to-copy blog draft in the user's chosen voice, the access sentence MKT-16 governs, and the quiet `로그인 / Log in` link under it (→MKT-6)
-  - how it works as a real ordered list — choose a voice, template and target content language → add browser-converted photos and rough notes → Postpilot observes the photos first, then writes with explicit model choices and the selected voice → revise and finalize, then copy a platform format and publish manually on the destination service
-  - why it is different (mutually isolated voice profiles, observation separated from writing, structured canonical blocks, user-selected models and explicit A/B and revision actions)
-  - where the result goes (Naver, Tistory, standalone-site HTML and Markdown derived from the same canonical post; manual posting by the owner on each destination service)
+  - a hero with one H1 saying a 체험단 visit's photos and notes become a ready-to-post Naver Blog post or clip in the owner's own voice, written only from what the owner experienced, the access sentence MKT-16 governs, and the quiet `로그인 / Log in` link under it (→MKT-6)
+  - how it works as a real ordered list — choose the channel, a template and a voice → add photos or videos, notes and the advertiser guide → Postpilot observes the material first, then writes under its always-applied principles → review where each sentence came from, revise and check the guide → copy and post it yourself
+  - why it is different (written only from the owner's own material under principles that cannot be switched off, every sentence's origin visible — 직접 입력 기반, 사진에서 추론, 광고주 요청, AI가 보탠 내용 —, drawbacks kept politely so readers and the store both gain, the owner's own voice and headings so posts do not read alike)
+  - where the result goes (Naver Blog posts, Naver Clip and Instagram Clip videos with their upload text; manual posting by the owner on each service)
   - the plans section (MKT-5)
   - control and privacy facts (images are converted in the browser before upload, account and voice evidence is isolated, opening pages triggers no background AI work, no destination-platform credentials are required for copy/export)
   - a footer of concise product identity only
@@ -44,9 +44,10 @@
 - MKT-16 [o] every sentence about how a person gets an account states the path that exists — self-signup with email verification (→AUTH-1, →AUTH-34) — and the hero's access sentence, the header CTA and the plans assignment sentence (→MKT-15) all move in the change that alters that path ← a sentence denying the path the Get started button offers is a claim violation, not a stale string
 - MKT-14 [x] signup or contact flows, price tags beyond the shipped figures, purchase, upgrade or checkout actions, testimonials, screenshots or generated hero art, analytics or tracking, SSR, SSG or prerendering, a blog, docs portal, changelog, legal or privacy-policy authoring, a sitemap or SEO tooling, backend, proto or database changes, a public marketing API, locale-prefixed URLs or redirects — out of scope
 - MKT-15 [o] copy identifies subscriber checkout as the way to choose a paid plan (→BILL-1), keeps /about and /plans names/prices/benefits synchronized, and describes the 60-second output limit plus separate supported browser exports. Never imply that a credit pack unlocks model grades or server counts; product claims remain subject to MKT-4.
-- MKT-17 [o] the product positioning is AI는 속도를, 글의 주도권은 나에게.
-  - describe AI assistance in phrasing/arrangement with visible owner-input, visual-inference and AI-added meaning, followed by owner editing and manual publication
-  - advertise origin-review behavior only when shipped (→MKT-4); claim no quantified speed gain, guaranteed truth, AI-free writing, search-rank gain or automatic Naver publication
+- MKT-17 [o] the product positioning is 체험단 자동화 with the line 내가 겪은 그대로, 체험단 글을 빠르게 ← a 체험단 post earns on delivery, so speed is income, and a post a store's customers trust is what keeps the store and the creator working together
+  - describe AI as helping write a high-quality post from the owner's own material, not as a content generator; the opposite of AI slop is shown through shipped behavior — principles that forbid invented experience and visible origins (→MKT-4)
+  - 상생 means a post that helps readers decide, which is what helps the store: honest impressions and politely kept drawbacks, never paid praise the owner did not give
+  - claim no selection, income, exposure, search-rank gain or advertiser approval, no quantified speed gain, guaranteed truth, AI-free writing or automatic publication
 
 ## flow
 - visit `/about` in any session state → static SPA fallback → the page renders from the `marketing` and `plans` namespaces with no request → Get started → `/signup` | the hero's Login link (with `redirect` handed through) → `/login`
@@ -56,4 +57,4 @@
 - no environment value, tuning value, Connect contract, server package, migration or job; the canonical origin is derived from the current document origin
 
 ## chg
--
+- r11 261015 MKT-17✎ AI는 속도를, 글의 주도권은 나에게→체험단 자동화, 내가 겪은 그대로, 체험단 글을 빠르게 (빠른 수익화와 상생, no income or selection claims); MKT-11✎ hero, flow, difference and destinations (Naver/Tistory/site/Markdown→Naver Blog, Naver Clip, Instagram Clip)

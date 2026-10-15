@@ -1,5 +1,5 @@
 # LANG languages, locale, stable failures
-> r9 | Independent UI/output languages with a Korean instruction baseline and controlled instruction-language evaluation.
+> r10 | Independent UI/output languages with a Korean instruction baseline and controlled instruction-language evaluation.
 
 ## decisions
 - LANG-1 [o] the product supports exactly `ko` and `en`; the proto enum is `UNSPECIFIED = 0`, `KOREAN = 1`, `ENGLISH = 2`; owning contexts persist only checked `ko|en` tags; `UNSPECIFIED` represents absence at a wire boundary and is never a business fallback — valid only for `content_language` and stage projections where language is inapplicable, invalid for post creation, generation and write snapshots; proto ↔ domain ↔ SQL mappers are the only conversion sites
@@ -46,7 +46,7 @@
   - stores encode params as a JSON object at the edge, reject malformed or non-object rows, project a raw error carrying no reason as `UNKNOWN_FAILURE` plus technical detail, and clear every failure field together on a retry or success
   - the language-boundary reasons are `POST_TARGET_LANGUAGE_REQUIRED` `POST_TARGET_LANGUAGE_UNSUPPORTED` `CONTENT_LANGUAGE_REQUIRED`
 - LANG-24 [o] every registered backend reason maps to both catalogs (asserted by test); a reason without a catalog entry renders as the generic failure
-- LANG-25 [o] exports derive language metadata from content provenance, never from a newer target (→EXPORT-2): the Naver and Tistory markers switch label language by provenance, the site HTML sets `<html lang>`, and Markdown adds `language: ko|en`; content bytes are never translated
+- LANG-25 [o] the Naver output derives its language from content provenance, never from a newer target (→EXPORT-2): its photo, group, video and disclosure markers switch label language by provenance; content bytes are never translated
 - LANG-26 [o] post targets and test targets are concrete checked ko/en values; generated canonical/test content records its frozen provenance, while contentless ordinary drafts carry no content language. Retained experiment metadata preserves its original checked nullable language.
 - LANG-27 [o] the supported set, the fallback, the storage key `postpilot.locale`, translation keys, prompt text, the proto and DB schema and the portable field set are code and product contracts — no environment value, network service, language-only job kind, detector or translation provider exists
 - LANG-28 [x] more languages or regional translations, locale-prefixed routes or query parameters or redirects, account-synced locale, machine translation of any authored or generated text, language detection, translating model names or provider diagnostics, revision as a translation operation, target-dependent observation, SSR or backend-rendered copy — out of scope
@@ -67,4 +67,4 @@
 - tests that pin it: locale precedence including malformed and denied storage · primary-subtag matching and URL/session stability · pre-paint `lang` and metadata · catalog key and placeholder parity · enum ↔ tag ↔ SQL round trips rejecting unknown values · target changes preserving content byte-for-byte · observation request equality across targets · exact Korean and portable projection snapshots · every reason mapping to both catalogs · unknown or reason-less failures never rendering raw detail as the sole message · UI locale choosing defaults only for a new post
 
 ## chg
--
+- r10 261015 LANG-25✎ Naver/Tistory markers, site `<html lang>` and Markdown `language`→Naver output markers only (other exports removed)
