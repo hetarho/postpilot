@@ -1,13 +1,6 @@
 import { useRef, useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
-import {
-  canSaveTemplate,
-  parseTemplate,
-  TEMPLATE_PARSE_OPTIONS,
-  TemplateComposition,
-  TemplatePreview,
-  useCreateTemplate,
-} from '@/entities/template'
+import { TemplateWizard } from '@/features/create-template-wizard'
 import {
   CompositionBuilder,
   CompositionPreview,
@@ -31,11 +24,51 @@ export function TemplateSetup({
   kind: 'post-template' | 'clip-template'
   controller: SetupController
 }) {
+  if (kind === 'post-template')
+    return <PostTemplateSetup ownerId={ownerId} controller={controller} />
+  return <ClipTemplateSetup ownerId={ownerId} controller={controller} />
+}
+
+function PostTemplateSetup({
+  ownerId,
+  controller,
+}: {
+  ownerId: string
+  controller: SetupController
+}) {
+  const operation = useRef<number | null>(null)
+  return (
+    <TemplateWizard
+      ownerId={ownerId}
+      beforeSave={() => {
+        operation.current = controller.begin('post-template')
+        return operation.current !== null
+      }}
+      onSaved={() => {
+        if (operation.current !== null) controller.success('post-template', operation.current, true)
+        operation.current = null
+      }}
+      onSaveFailure={() => {
+        if (operation.current !== null) controller.failure('post-template', operation.current)
+        operation.current = null
+      }}
+    />
+  )
+}
+
+function ClipTemplateSetup({
+  ownerId,
+  controller,
+}: {
+  ownerId: string
+  controller: SetupController
+}) {
+  const kind = 'clip-template'
   const { t } = useTranslation('authoring')
   const [manual, setManual] = useState(false)
   const [studioBusy, setStudioBusy] = useState(false)
   const operation = useRef<number | null>(null)
-  const studioKind = kind === 'post-template' ? 'post-template' : 'video-template'
+  const studioKind = 'video-template'
   const onBusy = (busy: boolean) => {
     setStudioBusy(busy)
     if (busy && operation.current === null) {
@@ -49,7 +82,7 @@ export function TemplateSetup({
       operation.current = null
     }
   }
-  if (manual) return <ManualTemplateSetup ownerId={ownerId} kind={kind} controller={controller} />
+  if (manual) return <ManualClipTemplateSetup ownerId={ownerId} controller={controller} />
   return (
     <div className="space-y-6">
       <AuthoringEditor
@@ -78,29 +111,25 @@ export function TemplateSetup({
   )
 }
 
-function ManualTemplateSetup({
+function ManualClipTemplateSetup({
   ownerId,
-  kind,
   controller,
 }: {
   ownerId: string
-  kind: 'post-template' | 'clip-template'
   controller: SetupController
 }) {
+  const kind = 'clip-template'
   const { t } = useTranslation('creation')
   const [name, setName] = useState('')
-  const [body, setBody] = useState(kind === 'clip-template' ? EMPTY_CLIP_BODY : '')
+  const [body, setBody] = useState(EMPTY_CLIP_BODY)
   const [error, setError] = useState('')
-  const post = useCreateTemplate(ownerId)
   const clip = useClipTemplateMutations(ownerId)
-  const fields = { name, description: '', titleArea: '', body }
   const recipe = { ...emptyClipRecipe(), name, compositionBody: body }
   const busy = controller.state.phase === 'saving'
-  let valid = kind === 'post-template' ? canSaveTemplate(fields) : validateClipRecipe(recipe).valid
+  let valid = validateClipRecipe(recipe).valid
   let document: ReturnType<typeof parseClipTemplate> | undefined
   try {
-    if (kind === 'post-template') parseTemplate('', body, TEMPLATE_PARSE_OPTIONS)
-    else document = parseClipTemplate(body)
+    document = parseClipTemplate(body)
   } catch {
     valid = false
   }
@@ -111,10 +140,7 @@ function ManualTemplateSetup({
     if (operation === null) return
     setError('')
     try {
-      const result =
-        kind === 'post-template'
-          ? (await post.create(fields)).template
-          : await clip.save.mutateAsync({ recipe })
+      const result = await clip.save.mutateAsync({ recipe })
       if (!result?.id) throw new Error('Missing confirmed template')
       controller.success(kind, operation, true)
     } catch (failure) {
@@ -135,11 +161,7 @@ function ManualTemplateSetup({
         />
         <div className="mt-6 grid gap-8 md:grid-cols-2">
           <div className="min-w-0">
-            {kind === 'post-template' ? (
-              <TemplateComposition value={body} onChange={setBody} />
-            ) : (
-              <CompositionBuilder source={body} onChange={setBody} />
-            )}
+            <CompositionBuilder source={body} onChange={setBody} />
           </div>
           <details open className="min-w-0">
             <summary className="text-link-fg hover:text-link-fg-hover min-h-11 py-3">
@@ -147,16 +169,12 @@ function ManualTemplateSetup({
                 {t('setup.preview')}
               </Typography>
             </summary>
-            {kind === 'post-template' ? (
-              <TemplatePreview titleArea="" body={body} />
-            ) : (
-              document && (
-                <CompositionPreview
-                  document={document}
-                  presets={{ intro: recipe.introPreset, outro: recipe.outroPreset }}
-                  captionStyles={recipe.allowedCaptionStyles}
-                />
-              )
+            {document && (
+              <CompositionPreview
+                document={document}
+                presets={{ intro: recipe.introPreset, outro: recipe.outroPreset }}
+                captionStyles={recipe.allowedCaptionStyles}
+              />
             )}
           </details>
         </div>

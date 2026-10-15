@@ -28,6 +28,7 @@ describe('live shared template preview', () => {
     )
     await user.type(screen.getByLabelText('이 자리에 오는 것'), '메뉴 소개')
     expect(preview().getByText('메뉴 소개')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '고급' }))
     await user.click(screen.getByRole('tab', { name: '원문' }))
     fireEvent.change(screen.getByLabelText('원문'), {
       target: { value: '<write>메뉴 소개</write>\n안녕하세요' },

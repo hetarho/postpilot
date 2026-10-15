@@ -11,7 +11,7 @@
 ## active
 | tag | host | mode | since | at | doing |
 |---|---|---|---|---|---|
-| m7q2 | ihaelam-ui-MacBookPro | autopilot | 2026-10-15T12:20Z | 2026-10-15T14:17Z | T687 |
+| m7q2 | ihaelam-ui-MacBookPro | autopilot | 2026-10-15T12:20Z | 2026-10-15T14:38Z | - |
 
 ## inbox
 - 261015 decided T698: how is a deleted or reused post slug told apart? → store the post's creation time beside the slug and resolve at read; no foreign key (alt: FK ON DELETE SET NULL, which nulls user_id on SQLite composites | clear links from the post context)
@@ -118,7 +118,6 @@
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
-| T687 | Make the wizard the only way to create a post template | TMPL EDIT | T685 T686 | doing@261015.m7q2 |
 | T688 | Build the video-template wizard and make it the only way to create one | CLIP TMPL EDIT | T685 T686 | todo |
 | T689 | Give clips a channel and create new clips vertical only | CLIP CDS | - | todo |
 | T690 | Add the 체험단 글 switch and advertiser guide to clips | CLIP GEN GUIDE | T679 T680 T689 | todo |
@@ -136,9 +135,10 @@
 ## next
 - After T686–T695 (m7q2): implement-task T698 → T699, T700 → T701 (a linked post as the clip's story); T697 needs the owner's Cloudflare CORS change first.
 - implement-task T697 (production clip generation is down: the live R2 CORS hides Content-Range; the owner applies deploy/r2-cors.json first).
-- Autopilot m7q2: T686 pushed atc3de0b08, remote workflows pending; implement T687, then T688–T695 and T698–T701 in dependency order.
+- Autopilot m7q2: T686 remote CI/deployment/media and T687 task checks pass; finish T687 pre-push verification, then T688–T695 and T698–T701 in dependency order.
 
 ## log
+- 261015 T687 done; selected116 tests, lint/FSD and build pass; full pre-push FE checks follow.
 - 261015 T687 start on main atc3de0b08 (m7q2 autopilot); T686 local CI/deployment/media pass, pushed with remote workflows pending.
 - 261015 T686 pre-push deployment/media gates pass at73458eb9; source unchanged after spec-only verification records.
 - 261015 T686 done; full FE/BE checks pass, deployment/media push gate follows.

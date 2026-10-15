@@ -23,6 +23,7 @@ import {
 } from '@/entities/post'
 import {
   Checkbox,
+  Disclosure,
   FieldCount,
   FieldLabel,
   FieldMessage,
@@ -45,6 +46,7 @@ export function TemplateDirectEditor({
   const { t } = useTranslation(['templates', 'common'])
   const id = useId()
   const [mode, setMode] = useState<'builder' | 'source'>('builder')
+  const [advanced, setAdvanced] = useState(false)
   const [focusSource, setFocusSource] = useState<TemplateArea | null>(null)
   const parsed = parseTemplate(source.titleArea, source.body, TEMPLATE_PARSE_OPTIONS)
   const titleAskLabels = new Set(
@@ -78,6 +80,7 @@ export function TemplateDirectEditor({
     })
   }
   const fix = (area: TemplateArea) => {
+    setAdvanced(true)
     setFocusSource(area)
     setMode('source')
   }
@@ -138,19 +141,33 @@ export function TemplateDirectEditor({
         fallback={POST_TAG_COUNT_DEFAULT}
         onChange={(value, last) => numberChange('tagCount', value, last)}
       />
-      <SegmentedControl
-        value={mode}
-        options={[
-          { value: 'builder', label: t('screen.mode.builder', { ns: 'templates' }) },
-          { value: 'source', label: t('screen.mode.source', { ns: 'templates' }) },
-        ]}
-        onChange={(next) => {
-          setMode(next)
-          setFocusSource(null)
+      <Disclosure
+        title={t('screen.advanced', { ns: 'templates' })}
+        size="row"
+        headingLevel={3}
+        open={advanced}
+        onOpenChange={(open) => {
+          setAdvanced(open)
+          if (!open) {
+            setMode('builder')
+            setFocusSource(null)
+          }
         }}
-        disabled={disabled}
-        ariaLabel={t('screen.mode.aria', { ns: 'templates' })}
-      />
+      >
+        <SegmentedControl
+          value={mode}
+          options={[
+            { value: 'builder', label: t('screen.mode.builder', { ns: 'templates' }) },
+            { value: 'source', label: t('screen.mode.source', { ns: 'templates' }) },
+          ]}
+          onChange={(next) => {
+            setMode(next)
+            setFocusSource(null)
+          }}
+          disabled={disabled}
+          ariaLabel={t('screen.mode.aria', { ns: 'templates' })}
+        />
+      </Disclosure>
       <section aria-labelledby={id + '-title-area'}>
         <Typography variant="fieldTitle" as="h3" id={id + '-title-area'}>
           {t('screen.titleArea.heading', { ns: 'templates' })}{' '}

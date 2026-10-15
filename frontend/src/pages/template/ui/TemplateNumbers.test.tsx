@@ -39,6 +39,7 @@ describe('owner template generation numbers in shared drafts', () => {
     expect(screen.getByLabelText('최소 태그 수 사용')).toBeChecked()
     expect(screen.getByLabelText('목표 글자 수')).toHaveValue('1800')
     expect(screen.getByLabelText('최소 태그 수')).toHaveValue('7')
+    await user.click(screen.getByRole('button', { name: '고급' }))
     await user.click(screen.getByRole('tab', { name: '원문' }))
     expect(screen.getByLabelText('원문')).toHaveValue(template.body)
   })

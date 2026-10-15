@@ -129,9 +129,8 @@ describe('the template grammar is visible in 원문 and nowhere else', () => {
     expectNoGrammar()
   })
 
-  // The r3 rule, both halves: the switch exists, and choosing 원문 is the one thing that makes the
-  // body visible as text.
-  it('offers the mode switch and shows the body only inside 원문', async () => {
+  // Source and its format guide are reachable only through the advanced entry.
+  it('keeps the mode switch behind 고급 and shows the body only inside 원문', async () => {
     const user = userEvent.setup()
     renderAppAt('/templates/template-all', {
       user: USER,
@@ -140,6 +139,9 @@ describe('the template grammar is visible in 원문 and nowhere else', () => {
     await userEvent.setup().click(await screen.findByRole('button', { name: /직접 편집하기$/ }))
     await screen.findByLabelText('이름')
 
+    expect(screen.queryByRole('tablist', { name: '구성 편집 방식' })).not.toBeInTheDocument()
+    expectNoGrammar()
+    await user.click(screen.getByRole('button', { name: '고급' }))
     expect(screen.getByRole('tablist', { name: '구성 편집 방식' })).toBeInTheDocument()
     expect(screen.getByRole('tab', { name: '블록' })).toBeInTheDocument()
 
