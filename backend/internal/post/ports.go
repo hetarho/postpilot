@@ -3,6 +3,7 @@ package post
 import (
 	"context"
 	"errors"
+	"github.com/postpilot/backend/internal/campaign"
 	"time"
 )
 
@@ -164,6 +165,12 @@ type DraftWriter interface {
 	// column and updated_at and nothing else (POST-82); it reports false when the post already
 	// carried that field, is published, or is gone.
 	AssignField(ctx context.Context, slug, userID string, field *string, updatedAt time.Time) (bool, error)
+	// SetCampaign, SetAdvertiserGuide and SetChecklistTicks are option saves (POST-117–119): each
+	// writes its own columns and updated_at — the first two also the input revision, being run
+	// material — and reports false when the value is unchanged, the post is published or gone.
+	SetCampaign(ctx context.Context, slug, userID string, on bool, updatedAt time.Time) (bool, error)
+	SetAdvertiserGuide(ctx context.Context, slug, userID string, guide campaign.Guide, updatedAt time.Time) (bool, error)
+	SetChecklistTicks(ctx context.Context, slug, userID string, ticks []string, updatedAt time.Time) (bool, error)
 }
 
 // TemplateAnswers is the post's answers to its template's data fields (TMPL-43).

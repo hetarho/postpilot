@@ -6,6 +6,7 @@ package post
 import (
 	"errors"
 	"fmt"
+	"github.com/postpilot/backend/internal/campaign"
 	"slices"
 	"strings"
 	"time"
@@ -287,6 +288,12 @@ type Post struct {
 	Observations []Observation
 	// Storyline is the post's storyline, nil when it has none (POST-99).
 	Storyline *Storyline
+	// Campaign is the post's 체험단 글 switch (POST-117); AdvertiserGuide is what the campaign
+	// asks of the post (POST-118), kept while the switch is off; ChecklistTicks are the guide's
+	// free-text lines the owner ticked, by their text (POST-119).
+	Campaign        bool
+	AdvertiserGuide campaign.Guide
+	ChecklistTicks  []string
 
 	// TemplateAnswers is what this post answers to its template's data fields, by label,
 	// ordered by label. Populated by Get like Images and Videos are.

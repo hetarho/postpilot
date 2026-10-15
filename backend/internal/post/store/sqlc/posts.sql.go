@@ -121,8 +121,8 @@ func (q *Queries) CountPostsByVoice(ctx context.Context, arg CountPostsByVoicePa
 const createPost = `-- name: CreatePost :exec
 
 INSERT INTO posts (slug, user_id, voice_id, template_id, field, title, memo, target_language,
-    target_length, tag_count, status, created_at, updated_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?)
+    target_length, tag_count, status, campaign, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', 1, ?, ?)
 `
 
 type CreatePostParams struct {
@@ -151,7 +151,8 @@ type CreatePostParams struct {
 // (lifecycle_test.go).
 // target_length and tag_count are the template's seeds when the create names one, and NULL
 // otherwise: a post nobody gave a number to reads as natural length and the default count.
-// field is the blog field the create named, NULL for none.
+// field is the blog field the create named, NULL for none. A new post starts as a campaign
+// (sponsored review) post (POST-117).
 func (q *Queries) CreatePost(ctx context.Context, arg CreatePostParams) error {
 	_, err := q.db.ExecContext(ctx, createPost,
 		arg.Slug,
@@ -227,7 +228,8 @@ const getPost = `-- name: GetPost :one
 SELECT slug, user_id, voice_id, title, memo, observations, content, status, created_at, updated_at,
        content_revision, machine_baseline, machine_baseline_revision,
        target_length, finalized_revision, finalized_at, template_id, target_language, content_language,
-       tag_count, use_memory, published_url, published_at, field, content_nouns, quality_rules, storyline, input_revision, content_origins, storyline_origins
+       tag_count, use_memory, published_url, published_at, field, content_nouns, quality_rules, storyline, input_revision, content_origins, storyline_origins,
+       campaign, advertiser_guide, advertiser_keywords, advertiser_min_chars, advertiser_min_photos, advertiser_hashtags, checklist_ticks
 FROM posts WHERE slug = ?
 `
 
@@ -265,6 +267,13 @@ func (q *Queries) GetPost(ctx context.Context, slug string) (Post, error) {
 		&i.InputRevision,
 		&i.ContentOrigins,
 		&i.StorylineOrigins,
+		&i.Campaign,
+		&i.AdvertiserGuide,
+		&i.AdvertiserKeywords,
+		&i.AdvertiserMinChars,
+		&i.AdvertiserMinPhotos,
+		&i.AdvertiserHashtags,
+		&i.ChecklistTicks,
 	)
 	return i, err
 }
@@ -557,6 +566,104 @@ func (q *Queries) SavePostGenerationOptions(ctx context.Context, arg SavePostGen
 		arg.UseMemory,
 		arg.QualityRules,
 		arg.Field,
+		arg.UpdatedAt,
+		arg.Slug,
+		arg.UserID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const setPostAdvertiserGuide = `-- name: SetPostAdvertiserGuide :execrows
+UPDATE posts SET input_revision = input_revision + 1,
+    advertiser_guide = ?1, advertiser_keywords = ?2,
+    advertiser_min_chars = ?3, advertiser_min_photos = ?4,
+    advertiser_hashtags = ?5, updated_at = ?6
+WHERE slug = ?7 AND user_id = ?8 AND status <> 'published'
+  AND (advertiser_guide IS NOT ?1 OR advertiser_keywords IS NOT ?2
+    OR advertiser_min_chars IS NOT ?3 OR advertiser_min_photos IS NOT ?4
+    OR advertiser_hashtags IS NOT ?5)
+`
+
+type SetPostAdvertiserGuideParams struct {
+	AdvertiserGuide     string
+	AdvertiserKeywords  string
+	AdvertiserMinChars  sql.NullInt64
+	AdvertiserMinPhotos sql.NullInt64
+	AdvertiserHashtags  string
+	UpdatedAt           string
+	Slug                string
+	UserID              string
+}
+
+// The whole advertiser guide at once (POST-118), the material a run freezes, so the input
+// revision moves with it. An identical guide matches no row.
+func (q *Queries) SetPostAdvertiserGuide(ctx context.Context, arg SetPostAdvertiserGuideParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, setPostAdvertiserGuide,
+		arg.AdvertiserGuide,
+		arg.AdvertiserKeywords,
+		arg.AdvertiserMinChars,
+		arg.AdvertiserMinPhotos,
+		arg.AdvertiserHashtags,
+		arg.UpdatedAt,
+		arg.Slug,
+		arg.UserID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const setPostCampaign = `-- name: SetPostCampaign :execrows
+UPDATE posts SET input_revision = input_revision + 1, campaign = ?1, updated_at = ?2
+WHERE slug = ?3 AND user_id = ?4 AND status <> 'published'
+  AND campaign <> ?1
+`
+
+type SetPostCampaignParams struct {
+	Campaign  int64
+	UpdatedAt string
+	Slug      string
+	UserID    string
+}
+
+// The campaign-post switch (POST-117). An option save: no status, revision or baseline column moves;
+// the input revision does, because the switch decides whether the guide reaches a run. An equal
+// value matches no row.
+func (q *Queries) SetPostCampaign(ctx context.Context, arg SetPostCampaignParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, setPostCampaign,
+		arg.Campaign,
+		arg.UpdatedAt,
+		arg.Slug,
+		arg.UserID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const setPostChecklistTicks = `-- name: SetPostChecklistTicks :execrows
+UPDATE posts SET checklist_ticks = ?1, updated_at = ?2
+WHERE slug = ?3 AND user_id = ?4 AND status <> 'published'
+  AND checklist_ticks IS NOT ?1
+`
+
+type SetPostChecklistTicksParams struct {
+	ChecklistTicks string
+	UpdatedAt      string
+	Slug           string
+	UserID         string
+}
+
+// The owner's checklist ticks (POST-119): the owner's own record, not generation input, so the
+// input revision stays.
+func (q *Queries) SetPostChecklistTicks(ctx context.Context, arg SetPostChecklistTicksParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, setPostChecklistTicks,
+		arg.ChecklistTicks,
 		arg.UpdatedAt,
 		arg.Slug,
 		arg.UserID,

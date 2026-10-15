@@ -53,6 +53,13 @@ type Post struct {
 	InputRevision           int64
 	ContentOrigins          sql.NullString
 	StorylineOrigins        sql.NullString
+	Campaign                int64
+	AdvertiserGuide         string
+	AdvertiserKeywords      string
+	AdvertiserMinChars      sql.NullInt64
+	AdvertiserMinPhotos     sql.NullInt64
+	AdvertiserHashtags      string
+	ChecklistTicks          string
 }
 
 type PostRequestCapture struct {

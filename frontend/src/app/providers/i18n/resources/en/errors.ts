@@ -314,6 +314,9 @@ export const errors = {
   POST_IMAGE_ROTATION_INVALID: 'A photo turns only in steps of 90 degrees. Try again.',
   POST_PHOTO_ORDER_STALE:
     'The photos changed in another screen, so the latest ones were loaded. Move the photo again.',
+  ADVERTISER_GUIDE_TOO_LONG:
+    'The advertiser guide is too long. You can use up to {{max}} characters.',
+  ADVERTISER_GUIDE_ITEM_INVALID: 'Check the advertiser guide items: one is empty or out of range.',
   POST_STORYLINE_FILE_UNKNOWN: '{{file}} cannot go in this storyline. Make the storyline again.',
   POST_STORYLINE_INVALID: 'Could not save the storyline. Refresh and edit it again.',
   GENERATION_STORYLINE_REOBSERVE:

@@ -3,6 +3,8 @@ package post
 import (
 	"context"
 	"fmt"
+	"github.com/postpilot/backend/internal/campaign"
+	"reflect"
 	"sort"
 	"strings"
 	"sync"
@@ -74,6 +76,8 @@ func (f *fakeStore) CreatePost(_ context.Context, p Post) error {
 	if p.TagCount == 0 {
 		p.TagCount = TagCountRange.Default
 	}
+	// The real insert starts every post as a 체험단 post (POST-117).
+	p.Campaign = true
 	f.posts[p.Slug] = p
 	return nil
 }
@@ -305,6 +309,47 @@ func (f *fakeStore) AssignField(_ context.Context, slug, userID string, field *s
 	}
 	existing.Field = value
 	existing.UpdatedAt = updatedAt
+	f.posts[slug] = existing
+	return true, nil
+}
+
+func (f *fakeStore) SetCampaign(_ context.Context, slug, userID string, on bool, updatedAt time.Time) (bool, error) {
+	f.guarded(slug)
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	existing, ok := f.posts[slug]
+	if !ok || existing.UserID != userID || f.publishedLocked(slug) || existing.Campaign == on {
+		return false, nil
+	}
+	existing.Campaign, existing.UpdatedAt = on, updatedAt
+	existing.InputRevision++
+	f.posts[slug] = existing
+	return true, nil
+}
+
+func (f *fakeStore) SetAdvertiserGuide(_ context.Context, slug, userID string, guide campaign.Guide, updatedAt time.Time) (bool, error) {
+	f.guarded(slug)
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	existing, ok := f.posts[slug]
+	if !ok || existing.UserID != userID || f.publishedLocked(slug) || reflect.DeepEqual(existing.AdvertiserGuide, guide) {
+		return false, nil
+	}
+	existing.AdvertiserGuide, existing.UpdatedAt = guide, updatedAt
+	existing.InputRevision++
+	f.posts[slug] = existing
+	return true, nil
+}
+
+func (f *fakeStore) SetChecklistTicks(_ context.Context, slug, userID string, ticks []string, updatedAt time.Time) (bool, error) {
+	f.guarded(slug)
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	existing, ok := f.posts[slug]
+	if !ok || existing.UserID != userID || f.publishedLocked(slug) || reflect.DeepEqual(existing.ChecklistTicks, ticks) {
+		return false, nil
+	}
+	existing.ChecklistTicks, existing.UpdatedAt = ticks, updatedAt
 	f.posts[slug] = existing
 	return true, nil
 }

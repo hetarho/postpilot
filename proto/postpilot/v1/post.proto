@@ -231,6 +231,27 @@ message Post {
   OriginReview content_origins = 34;
   // The server's identity for current canonical content, separate from the baseline.
   string content_hash = 35;
+  // The 체험단 글 switch (POST-117): a new post starts on, a post from before the switch reads off.
+  bool campaign = 36;
+  // What the campaign asks of the post (POST-118), kept while the switch is off.
+  AdvertiserGuide advertiser_guide = 37;
+  // The guide's free-text lines the owner ticked, by their text (POST-119).
+  repeated string checklist_ticks = 38;
+}
+
+// An advertiser guide (POST-118): the pasted text plus the items the product can count. An
+// absent minimum is "not asked".
+message AdvertiserGuide {
+  string text = 1;
+  repeated string keywords = 2;
+  optional int32 min_chars = 3;
+  optional int32 min_photos = 4;
+  repeated string hashtags = 5;
+}
+
+// The ticked checklist lines as one value, so a draft save can say "unchanged" by leaving it out.
+message ChecklistTicks {
+  repeated string lines = 1;
 }
 
 // One part of a storyline: what it shows and says, and the attachment names it uses.
@@ -453,6 +474,11 @@ message SavePostDraftRequest {
   // value. Absent preserves the stored storyline; present replaces its texts and files and
   // marks it edited by hand.
   StorylineEdit storyline = 9;
+  // Option saves (POST-117–119), each absent to keep what the post holds: the 체험단 글 switch,
+  // the whole advertiser guide (present replaces it), and the ticked checklist lines.
+  optional bool campaign = 10;
+  AdvertiserGuide advertiser_guide = 11;
+  ChecklistTicks checklist_ticks = 12;
 }
 
 // The paragraphs as the owner edited them: the count is the stored one, the files are the

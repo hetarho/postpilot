@@ -414,6 +414,11 @@ enum FailureReason {
   // ReorderImages named other photos than the post holds: one added or deleted since the client
   // read the post, a video, or a repeat (POST-116). The client reads the post again.
   POST_PHOTO_ORDER_STALE = 335;
+  // An advertiser guide part over its bound (POST-118): params field, max, actual.
+  ADVERTISER_GUIDE_TOO_LONG = 336;
+  // An advertiser guide item outside its range, or one the kind does not take (POST-118,
+  // CLIP-210): params field.
+  ADVERTISER_GUIDE_ITEM_INVALID = 337;
 
 }
 

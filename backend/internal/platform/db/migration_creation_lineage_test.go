@@ -65,7 +65,7 @@ func creationRows(t *testing.T, h *DB, table string) [][]string {
 	if table == "posts" || table == "configuration_authoring_operations" {
 		// Compare every historical field even when an additive migration appends
 		// result sidecars. Their required NULL upgrade state is asserted separately.
-		columns, err := h.Reader.Query("SELECT name FROM pragma_table_info(?) WHERE name NOT IN ('content_origins','storyline_origins','request_capture','capture_revision','capture_purged') ORDER BY cid", table)
+		columns, err := h.Reader.Query("SELECT name FROM pragma_table_info(?) WHERE name NOT IN ('content_origins','storyline_origins','request_capture','capture_revision','capture_purged','campaign','advertiser_guide','advertiser_keywords','advertiser_min_chars','advertiser_min_photos','advertiser_hashtags','checklist_ticks') ORDER BY cid", table)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -199,6 +199,12 @@ func TestCreationLineageUpgradesBothPublishedAndDivergentDatabases(t *testing.T)
 				if got := creationRows(t, h, table); !reflect.DeepEqual(rows, got) {
 					t.Fatal("migration changed private data or receipt", table)
 				}
+			}
+			// POST-117: every post from before the campaign columns reads as a 내돈내산 post with an
+			// empty guide and no ticks.
+			var campaignPosts int
+			if err := h.Reader.QueryRow("SELECT count(*) FROM posts WHERE campaign <> 0 OR advertiser_guide <> '' OR advertiser_keywords <> '[]' OR advertiser_min_chars IS NOT NULL OR advertiser_min_photos IS NOT NULL OR advertiser_hashtags <> '[]' OR checklist_ticks <> '[]'").Scan(&campaignPosts); err != nil || campaignPosts != 0 {
+				t.Fatal("migration gave historical posts a campaign state", campaignPosts, err)
 			}
 			var inferredOrigins int
 			if err := h.Reader.QueryRow("SELECT count(*) FROM posts WHERE content_origins IS NOT NULL OR storyline_origins IS NOT NULL").Scan(&inferredOrigins); err != nil || inferredOrigins != 0 {

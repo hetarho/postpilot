@@ -11,10 +11,11 @@
 -- name: CreatePost :exec
 -- target_length and tag_count are the template's seeds when the create names one, and NULL
 -- otherwise: a post nobody gave a number to reads as natural length and the default count.
--- field is the blog field the create named, NULL for none.
+-- field is the blog field the create named, NULL for none. A new post starts as a campaign
+-- (sponsored review) post (POST-117).
 INSERT INTO posts (slug, user_id, voice_id, template_id, field, title, memo, target_language,
-    target_length, tag_count, status, created_at, updated_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?);
+    target_length, tag_count, status, campaign, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', 1, ?, ?);
 
 -- name: UpdatePostDraft :execrows
 UPDATE posts SET input_revision = input_revision + CASE WHEN title IS NOT sqlc.arg(title)
@@ -95,7 +96,8 @@ WHERE slug = sqlc.arg(slug) AND user_id = sqlc.arg(user_id) AND content_revision
 SELECT slug, user_id, voice_id, title, memo, observations, content, status, created_at, updated_at,
        content_revision, machine_baseline, machine_baseline_revision,
        target_length, finalized_revision, finalized_at, template_id, target_language, content_language,
-       tag_count, use_memory, published_url, published_at, field, content_nouns, quality_rules, storyline, input_revision, content_origins, storyline_origins
+       tag_count, use_memory, published_url, published_at, field, content_nouns, quality_rules, storyline, input_revision, content_origins, storyline_origins,
+       campaign, advertiser_guide, advertiser_keywords, advertiser_min_chars, advertiser_min_photos, advertiser_hashtags, checklist_ticks
 FROM posts WHERE slug = ?;
 
 -- name: PublishPost :execrows
@@ -181,6 +183,33 @@ WHERE slug = sqlc.arg(slug) AND user_id = sqlc.arg(user_id) AND status <> 'publi
 UPDATE posts SET input_revision = input_revision + 1, field = sqlc.narg(field), updated_at = sqlc.arg(updated_at)
 WHERE slug = sqlc.arg(slug) AND user_id = sqlc.arg(user_id) AND status <> 'published'
   AND field IS NOT sqlc.narg(field);
+
+-- name: SetPostCampaign :execrows
+-- The campaign-post switch (POST-117). An option save: no status, revision or baseline column moves;
+-- the input revision does, because the switch decides whether the guide reaches a run. An equal
+-- value matches no row.
+UPDATE posts SET input_revision = input_revision + 1, campaign = sqlc.arg(campaign), updated_at = sqlc.arg(updated_at)
+WHERE slug = sqlc.arg(slug) AND user_id = sqlc.arg(user_id) AND status <> 'published'
+  AND campaign <> sqlc.arg(campaign);
+
+-- name: SetPostAdvertiserGuide :execrows
+-- The whole advertiser guide at once (POST-118), the material a run freezes, so the input
+-- revision moves with it. An identical guide matches no row.
+UPDATE posts SET input_revision = input_revision + 1,
+    advertiser_guide = sqlc.arg(advertiser_guide), advertiser_keywords = sqlc.arg(advertiser_keywords),
+    advertiser_min_chars = sqlc.narg(advertiser_min_chars), advertiser_min_photos = sqlc.narg(advertiser_min_photos),
+    advertiser_hashtags = sqlc.arg(advertiser_hashtags), updated_at = sqlc.arg(updated_at)
+WHERE slug = sqlc.arg(slug) AND user_id = sqlc.arg(user_id) AND status <> 'published'
+  AND (advertiser_guide IS NOT sqlc.arg(advertiser_guide) OR advertiser_keywords IS NOT sqlc.arg(advertiser_keywords)
+    OR advertiser_min_chars IS NOT sqlc.narg(advertiser_min_chars) OR advertiser_min_photos IS NOT sqlc.narg(advertiser_min_photos)
+    OR advertiser_hashtags IS NOT sqlc.arg(advertiser_hashtags));
+
+-- name: SetPostChecklistTicks :execrows
+-- The owner's checklist ticks (POST-119): the owner's own record, not generation input, so the
+-- input revision stays.
+UPDATE posts SET checklist_ticks = sqlc.arg(checklist_ticks), updated_at = sqlc.arg(updated_at)
+WHERE slug = sqlc.arg(slug) AND user_id = sqlc.arg(user_id) AND status <> 'published'
+  AND checklist_ticks IS NOT sqlc.arg(checklist_ticks);
 
 -- name: CountPostsByVoice :one
 SELECT count(*) FROM posts WHERE voice_id = ? AND user_id = ?;

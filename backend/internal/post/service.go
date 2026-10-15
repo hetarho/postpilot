@@ -11,6 +11,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/postpilot/backend/internal/campaign"
 	"github.com/postpilot/backend/internal/platform/ids"
 )
 
@@ -167,6 +168,24 @@ func (s *Service) SaveDraft(ctx context.Context, userID string, save DraftSave) 
 	if err != nil {
 		return Post{}, err
 	}
+	// The guide and the ticks are checked ahead of every write as well, so a refused one mints
+	// nothing and changes nothing (POST-118).
+	var guide *campaign.Guide
+	if save.AdvertiserGuide != nil {
+		normalized, err := campaign.Normalize(*save.AdvertiserGuide, campaign.PostOptions)
+		if err != nil {
+			return Post{}, err
+		}
+		guide = &normalized
+	}
+	var ticks *[]string
+	if save.ChecklistTicks != nil {
+		normalized, err := campaign.NormalizeTicks(*save.ChecklistTicks)
+		if err != nil {
+			return Post{}, err
+		}
+		ticks = &normalized
+	}
 	// A storyline edit's shape is checked ahead of every write too.
 	if save.Storyline != nil {
 		if err := save.Storyline.validShape(); err != nil {
@@ -206,6 +225,11 @@ func (s *Service) SaveDraft(ctx context.Context, userID string, save DraftSave) 
 		// After the insert, because the answers reference the slug it just minted.
 		if err := s.answers.UpsertTemplateAnswers(ctx, created.Slug, answers, s.now()); err != nil {
 			return Post{}, fmt.Errorf("save template answers: %w", err)
+		}
+		// The insert starts the post as a 체험단 post (POST-117); a create that says otherwise, or
+		// carries a guide or ticks, applies them to the post it just minted.
+		if err := s.saveCampaign(ctx, userID, created.Slug, save.Campaign, guide, ticks); err != nil {
+			return Post{}, err
 		}
 		return s.Get(ctx, userID, created.Slug)
 	}
@@ -254,6 +278,10 @@ func (s *Service) SaveDraft(ctx context.Context, userID string, save DraftSave) 
 		}
 	}
 
+	if err := s.saveCampaign(ctx, userID, slug, save.Campaign, guide, ticks); err != nil {
+		return Post{}, err
+	}
+
 	now := s.now()
 	// Written after ownedPost, which is what scopes the answer rows to this account: the
 	// table is keyed by slug alone, like the post's images and videos.
@@ -298,6 +326,45 @@ type DraftSave struct {
 	Answers                    []TemplateAnswer
 	// Storyline is the owner's storyline edit, nil to keep the stored one (POST-96).
 	Storyline *StorylineEdit
+	// Campaign, AdvertiserGuide and ChecklistTicks are presence-aware option saves (POST-117–
+	// 119): nil keeps what the post holds, a present guide replaces the whole guide.
+	Campaign        *bool
+	AdvertiserGuide *campaign.Guide
+	ChecklistTicks  *[]string
+}
+
+// saveCampaign applies the present parts of a draft save's campaign (POST-117–119). A write
+// matching no row is an unchanged value, a published post or a vanished one, and only the last
+// two are errors.
+func (s *Service) saveCampaign(ctx context.Context, userID, slug string, on *bool, guide *campaign.Guide, ticks *[]string) error {
+	settle := func(written bool, err error, what string) error {
+		if err != nil {
+			return fmt.Errorf("save %s: %w", what, err)
+		}
+		if !written {
+			return s.lockedOrGone(ctx, userID, slug, nil)
+		}
+		return nil
+	}
+	if on != nil {
+		written, err := s.drafts.SetCampaign(ctx, slug, userID, *on, s.now())
+		if err := settle(written, err, "campaign switch"); err != nil {
+			return err
+		}
+	}
+	if guide != nil {
+		written, err := s.drafts.SetAdvertiserGuide(ctx, slug, userID, *guide, s.now())
+		if err := settle(written, err, "advertiser guide"); err != nil {
+			return err
+		}
+	}
+	if ticks != nil {
+		written, err := s.drafts.SetChecklistTicks(ctx, slug, userID, *ticks, s.now())
+		if err := settle(written, err, "checklist ticks"); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // validTemplateAnswers trims what a label may not carry and bounds both halves. It is a pure

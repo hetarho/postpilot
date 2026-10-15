@@ -13,6 +13,7 @@ import (
 	"connectrpc.com/connect"
 
 	"github.com/postpilot/backend/internal/auth"
+	"github.com/postpilot/backend/internal/campaign"
 	postpilotv1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/gen/postpilot/v1/postpilotv1connect"
 	"github.com/postpilot/backend/internal/platform/rpcserver"
@@ -62,6 +63,8 @@ func (h *Handler) SavePostDraft(ctx context.Context, req *connect.Request[postpi
 		VoiceID: req.Msg.VoiceId, TemplateID: req.Msg.TemplateId, Field: field,
 		TargetLanguage: targetLanguage, Answers: fromProtoTemplateAnswers(req.Msg.GetTemplateAnswers()),
 		Storyline: fromProtoStorylineEdit(req.Msg.GetStoryline()),
+		Campaign:  req.Msg.Campaign, AdvertiserGuide: fromProtoAdvertiserGuide(req.Msg.GetAdvertiserGuide()),
+		ChecklistTicks: fromProtoChecklistTicks(req.Msg.GetChecklistTicks()),
 	})
 	if err != nil {
 		return nil, toConnectError("save draft", err)
@@ -359,6 +362,20 @@ func toConnectError(op string, err error) error {
 			"file": storylineFile.File,
 		})
 	}
+	var guideTooLong *campaign.TooLongError
+	if errors.As(err, &guideTooLong) {
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "advertiser guide part is too long", postpilotv1.FailureReason_ADVERTISER_GUIDE_TOO_LONG, map[string]string{
+			"field":  string(guideTooLong.Field),
+			"max":    strconv.Itoa(guideTooLong.Max),
+			"actual": strconv.Itoa(guideTooLong.Chars),
+		})
+	}
+	var guideItem *campaign.ItemInvalidError
+	if errors.As(err, &guideItem) {
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "advertiser guide item is invalid", postpilotv1.FailureReason_ADVERTISER_GUIDE_ITEM_INVALID, map[string]string{
+			"field": string(guideItem.Field),
+		})
+	}
 	var answerTooLong *post.TemplateAnswerTooLongError
 	if errors.As(err, &answerTooLong) {
 		return rpcserver.NewAppError(connect.CodeInvalidArgument, "template answer is too long", postpilotv1.FailureReason_POST_TEMPLATE_ANSWER_TOO_LONG, map[string]string{
@@ -518,6 +535,9 @@ func toProtoPost(p post.Post) *postpilotv1.Post {
 		InputRevision:           p.InputRevision,
 		ContentRevision:         p.ContentRevision,
 		ContentHash:             contentHash,
+		Campaign:                p.Campaign,
+		AdvertiserGuide:         toProtoAdvertiserGuide(p.AdvertiserGuide),
+		ChecklistTicks:          p.ChecklistTicks,
 		ContentOrigins:          origins,
 		MachineBaselineRevision: p.MachineBaselineRevision,
 		// A published post is already past finalization: its way back is clearing the address.
@@ -833,6 +853,45 @@ func protoQualityRules(ids []string) []postpilotv1.QualityMetric {
 		if metric, ok := qualityRuleToProto(id); ok {
 			out = append(out, metric)
 		}
+	}
+	return out
+}
+
+// fromProtoAdvertiserGuide is the draft save's guide, nil when the request leaves it out.
+func fromProtoAdvertiserGuide(value *postpilotv1.AdvertiserGuide) *campaign.Guide {
+	if value == nil {
+		return nil
+	}
+	guide := campaign.Guide{Text: value.GetText(), Keywords: value.GetKeywords(), Hashtags: value.GetHashtags()}
+	if value.MinChars != nil {
+		n := int(value.GetMinChars())
+		guide.MinChars = &n
+	}
+	if value.MinPhotos != nil {
+		n := int(value.GetMinPhotos())
+		guide.MinPhotos = &n
+	}
+	return &guide
+}
+
+// fromProtoChecklistTicks is the draft save's ticked lines, nil when the request leaves them out.
+func fromProtoChecklistTicks(value *postpilotv1.ChecklistTicks) *[]string {
+	if value == nil {
+		return nil
+	}
+	lines := append([]string{}, value.GetLines()...)
+	return &lines
+}
+
+func toProtoAdvertiserGuide(guide campaign.Guide) *postpilotv1.AdvertiserGuide {
+	out := &postpilotv1.AdvertiserGuide{Text: guide.Text, Keywords: guide.Keywords, Hashtags: guide.Hashtags}
+	if guide.MinChars != nil {
+		n := int32(*guide.MinChars)
+		out.MinChars = &n
+	}
+	if guide.MinPhotos != nil {
+		n := int32(*guide.MinPhotos)
+		out.MinPhotos = &n
 	}
 	return out
 }

@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/postpilot/backend/internal/campaign"
 	"github.com/postpilot/backend/internal/post"
 	"github.com/postpilot/backend/internal/post/store/sqlc"
 )
@@ -145,6 +146,81 @@ func (s *Store) AssignField(ctx context.Context, slug, userID string, field *str
 		return false, fmt.Errorf("assign post field: %w", err)
 	}
 	return n == 1, nil
+}
+
+// SetCampaign writes the 체험단 글 switch (POST-117).
+func (s *Store) SetCampaign(ctx context.Context, slug, userID string, on bool, updatedAt time.Time) (bool, error) {
+	value := int64(0)
+	if on {
+		value = 1
+	}
+	n, err := s.write.SetPostCampaign(ctx, sqlc.SetPostCampaignParams{Campaign: value, UpdatedAt: formatTime(updatedAt), Slug: slug, UserID: userID})
+	if err != nil {
+		return false, fmt.Errorf("set post campaign: %w", err)
+	}
+	return n == 1, nil
+}
+
+// SetAdvertiserGuide writes the whole advertiser guide (POST-118); its lists are JSON arrays and
+// an absent minimum is NULL.
+func (s *Store) SetAdvertiserGuide(ctx context.Context, slug, userID string, guide campaign.Guide, updatedAt time.Time) (bool, error) {
+	keywords, err := marshalStrings(guide.Keywords)
+	if err != nil {
+		return false, err
+	}
+	hashtags, err := marshalStrings(guide.Hashtags)
+	if err != nil {
+		return false, err
+	}
+	n, err := s.write.SetPostAdvertiserGuide(ctx, sqlc.SetPostAdvertiserGuideParams{
+		AdvertiserGuide: guide.Text, AdvertiserKeywords: keywords,
+		AdvertiserMinChars: optionalInt64(guide.MinChars), AdvertiserMinPhotos: optionalInt64(guide.MinPhotos),
+		AdvertiserHashtags: hashtags, UpdatedAt: formatTime(updatedAt), Slug: slug, UserID: userID,
+	})
+	if err != nil {
+		return false, fmt.Errorf("set post advertiser guide: %w", err)
+	}
+	return n == 1, nil
+}
+
+// SetChecklistTicks writes the owner's ticked guide lines (POST-119).
+func (s *Store) SetChecklistTicks(ctx context.Context, slug, userID string, ticks []string, updatedAt time.Time) (bool, error) {
+	encoded, err := marshalStrings(ticks)
+	if err != nil {
+		return false, err
+	}
+	n, err := s.write.SetPostChecklistTicks(ctx, sqlc.SetPostChecklistTicksParams{ChecklistTicks: encoded, UpdatedAt: formatTime(updatedAt), Slug: slug, UserID: userID})
+	if err != nil {
+		return false, fmt.Errorf("set post checklist ticks: %w", err)
+	}
+	return n == 1, nil
+}
+
+// marshalStrings encodes a list as a JSON array, nil as the empty array the columns default to.
+func marshalStrings(values []string) (string, error) {
+	if values == nil {
+		values = []string{}
+	}
+	encoded, err := json.Marshal(values)
+	if err != nil {
+		return "", fmt.Errorf("encode string list: %w", err)
+	}
+	return string(encoded), nil
+}
+
+// unmarshalStrings decodes a JSON array column; an empty array reads as nil.
+func unmarshalStrings(raw string) ([]string, error) {
+	var values []string
+	if raw == "" {
+		return nil, nil
+	}
+	if err := json.Unmarshal([]byte(raw), &values); err != nil {
+		return nil, fmt.Errorf("decode string list: %w", err)
+	}
+	if len(values) == 0 {
+		return nil, nil
+	}
+	return values, nil
 }
 
 // UpsertTemplateAnswers writes the request's answers in ONE transaction, one upsert per
@@ -1300,6 +1376,17 @@ func toPost(row sqlc.Post) (post.Post, error) {
 	if err != nil {
 		return post.Post{}, fmt.Errorf("post %s target language: %w", row.Slug, err)
 	}
+	guide := campaign.Guide{Text: row.AdvertiserGuide, MinChars: optionalInt(row.AdvertiserMinChars), MinPhotos: optionalInt(row.AdvertiserMinPhotos)}
+	if guide.Keywords, err = unmarshalStrings(row.AdvertiserKeywords); err != nil {
+		return post.Post{}, fmt.Errorf("post %s advertiser keywords: %w", row.Slug, err)
+	}
+	if guide.Hashtags, err = unmarshalStrings(row.AdvertiserHashtags); err != nil {
+		return post.Post{}, fmt.Errorf("post %s advertiser hashtags: %w", row.Slug, err)
+	}
+	ticks, err := unmarshalStrings(row.ChecklistTicks)
+	if err != nil {
+		return post.Post{}, fmt.Errorf("post %s checklist ticks: %w", row.Slug, err)
+	}
 	contentLanguage, err := parseNullableLanguage(row.ContentLanguage)
 	if err != nil {
 		return post.Post{}, fmt.Errorf("post %s content language: %w", row.Slug, err)
@@ -1335,6 +1422,9 @@ func toPost(row sqlc.Post) (post.Post, error) {
 		QualityRules:            qualityRules,
 		Observations:            observations,
 		Storyline:               storyline,
+		Campaign:                row.Campaign != 0,
+		AdvertiserGuide:         guide,
+		ChecklistTicks:          ticks,
 	}, nil
 }
 

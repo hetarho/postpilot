@@ -303,6 +303,9 @@ export const errors = {
   POST_IMAGE_ROTATION_INVALID: '사진은 90도씩만 돌릴 수 있어요. 다시 시도해 주세요.',
   POST_PHOTO_ORDER_STALE:
     '다른 화면에서 사진이 바뀌어 최신 사진을 다시 불러왔어요. 다시 옮겨 주세요.',
+  ADVERTISER_GUIDE_TOO_LONG: '광고주 가이드의 내용이 너무 길어요. {{max}}자까지 쓸 수 있어요.',
+  ADVERTISER_GUIDE_ITEM_INVALID:
+    '광고주 가이드 항목을 확인해 주세요. 범위를 벗어났거나 빈 항목이 있어요.',
   POST_STORYLINE_FILE_UNKNOWN:
     '{{file}} 파일은 이 스토리라인에 넣을 수 없어요. 스토리라인을 다시 만들어 주세요.',
   POST_STORYLINE_INVALID: '스토리라인을 저장하지 못했어요. 새로고침한 뒤 다시 고쳐 주세요.',

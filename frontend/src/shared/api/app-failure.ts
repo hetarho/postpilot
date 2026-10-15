@@ -318,6 +318,8 @@ export const appFailureSpecs = {
   POST_PHOTO_MISSING: { required: ['count'] },
   POST_IMAGE_ROTATION_INVALID: {},
   POST_PHOTO_ORDER_STALE: {},
+  ADVERTISER_GUIDE_TOO_LONG: { required: ['max'], optional: ['field', 'actual'] },
+  ADVERTISER_GUIDE_ITEM_INVALID: { optional: ['field'] },
   GENERATION_ALREADY_RUNNING: { optional: ['active_job_id'] },
   GENERATION_VOICE_MISMATCH: {},
   REVISION_INSTRUCTION_REQUIRED: {},

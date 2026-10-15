@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/postpilot/backend/internal/campaign"
 	"github.com/postpilot/backend/internal/post"
 	"github.com/postpilot/backend/internal/post/store"
 	"github.com/postpilot/backend/internal/post/store/sqlc"
@@ -142,6 +143,16 @@ var predicateGuarded = map[string]func(*store.Store) (bool, error){
 	"AssignPostField": func(s *store.Store) (bool, error) {
 		field := "cafe"
 		return s.AssignField(context.Background(), "p", "alice", &field, lockLater)
+	},
+	// The campaign parts (POST-117–119), each with a value the published post does not hold.
+	"SetPostCampaign": func(s *store.Store) (bool, error) {
+		return s.SetCampaign(context.Background(), "p", "alice", true, lockLater)
+	},
+	"SetPostAdvertiserGuide": func(s *store.Store) (bool, error) {
+		return s.SetAdvertiserGuide(context.Background(), "p", "alice", campaign.Guide{Text: "가이드"}, lockLater)
+	},
+	"SetPostChecklistTicks": func(s *store.Store) (bool, error) {
+		return s.SetChecklistTicks(context.Background(), "p", "alice", []string{"주차 정보 넣기"}, lockLater)
 	},
 	"DeleteImage": func(s *store.Store) (bool, error) { return s.DeleteImage(context.Background(), "i1") },
 	"SetImageRotation": func(s *store.Store) (bool, error) {
