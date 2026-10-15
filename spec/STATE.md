@@ -11,7 +11,7 @@
 ## active
 | tag | host | mode | since | at | doing |
 |---|---|---|---|---|---|
-| m7q2 | ihaelam-ui-MacBookPro | autopilot | 2026-10-15T12:20Z | 2026-10-15T20:41Z | T705 |
+| m7q2 | ihaelam-ui-MacBookPro | autopilot | 2026-10-15T12:20Z | 2026-10-15T21:37Z | - |
 
 ## inbox
 - 261016 decided T705 T692: how can a failed video transfer keep the clips already uploaded? → an owned initial-import completion primitive moves verified leases into a ready batch and cleans only pending uploads under existing retention rules (alt: discard every arrived video | re-upload successful files repeatedly | leave a non-ready batch)
@@ -124,7 +124,6 @@
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
 | T692 | Create a clip from a finished post | POST CLIP | T680 T689 T690 | blocked@261016 |
-| T705 | Preserve confirmed clip sources after a partial import | CLIP ARCH | - | doing@261016.m7q2 |
 | T693 | Learn a voice through a scripted chat and grow AI styles toward it | VOICE THEME | - | todo |
 | T694 | Navigate by channel with 내 설정 beside it | THEME POST CLIP GUIDE TMPL VOICE | T689 | todo |
 | T695 | Tell the 체험단 story on the public about page | MKT | T682 T683 T684 T687 T688 T691 T692 T693 T694 | todo |
@@ -137,9 +136,16 @@
 ## next
 - After T686–T695 (m7q2): implement-task T698 → T699, T700 → T701 (a linked post as the clip's story); T697's operator CORS prerequisite is complete.
 - implement-task T697 (the owner applied production Content-Range CORS261015; add the ranged-GET probe/deployment gate and preserve HEAD cancellation).
-- Autopilot m7q2: implement T705 to unblock T692 partial imports, resume T692, then T693–T695 and ready T697–T701.
+- Autopilot m7q2: resume T692 using completed T705, then T693–T695 and ready T697–T701.
 
 ## log
+- 261016 T705 done
+- 261016 T705 final source30aeac72/codea032ccfa passes FE553/4386 and web build; all CI and local image/media gates pass with unchanged backend inputs. Remote results follow the unit push.
+- 261016 T705 local Linux/amd64 deployment and all image/media gates pass, including partial imports in both real-process layouts; combined memory upper bounds802553856/793788416 bytes under unchanged limits. Final FE push validation follows the filename guard.
+- 261016 T705 frontend-only duplicate-name guarda032ccfa passes import8 tests, lint/format/type. Backend/proto/deploy/workflow/dependency inputs remain identical to ebfe5b5c; final whole FE runs after the active media gate.
+- 261016 T705 sourceebfe5b5c passes final whole Go formatter/vet/build/tests (API219.203s), import receipt8 tests, lint/format/type and existing source consumers. Final whole FE553/4386 tests and web build pass; generated proto/SQL reproduce without a diff. Image/media push gates follow. T705 plan/claim CI38803947107/38804014314 succeed.
+- 261016 T691 remote CI38803124102, Deploy38803124097 and Media38803713489 all succeed for4df50bd8; all three media checkout logs prove that revision. T692 claim CI38803204762 also succeeds.
+- 261016 T691 remote Deploy38803124097 and Media38803713489 succeed at4df50bd8; all three completed media checkout logs prove that revision despite event head0e38987e. CI38803124102 is still in progress.
 - 261016 T705 start on main at ddb6bf73 (m7q2 autopilot); supports T692 partial-transfer acceptance while preserving confirmed source identities and existing retention. T691 Deploy38803124097 succeeds; CI38803124102 and media evidence are pending.
 - 261016 T692 blocked on T705 source-import completion; no T692 implementation changes. create-task support contract specified; original acceptance and completed task contracts remain intact.
 - 261016 create-task T692 support start: the existing upload session discards a whole batch on one transfer failure; preserve T692 acceptance and specify a narrow confirmed-source completion primitive before implementation.
