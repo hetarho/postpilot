@@ -19,6 +19,7 @@ func clipDescriptor(mode string) llm.RequestComposition {
 	var schema []byte
 	switch mode {
 	case "upload-text":
+		c.Activation = "one explicitly approved text-only writing call; no correction, source read or render"
 		c.Composer = "clip/ai.Service.WriteUploadText/BuildUploadTextPrompt"
 		c.Parser = "clip/ai.WriteUploadText/clip.BoundGeneratedUploadText"
 		c.Consumer = "saved channel upload text; no media or edit-plan mutation"

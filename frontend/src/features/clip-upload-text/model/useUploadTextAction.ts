@@ -8,6 +8,7 @@ import {
 import { useJob, isTerminal, type ModelRef } from '@/entities/generation-job'
 import { appFailureFromConnect, type AppFailure } from '@/shared/api'
 import { POLL_INTERVAL_MS } from '@/shared/config'
+import { useMyPlanQueryKey } from '@/entities/plan'
 
 export function useUploadTextAction({
   ownerId,
@@ -25,6 +26,7 @@ export function useUploadTextAction({
   beforeWrite?: () => Promise<unknown>
 }) {
   const calls = useClipUploadTextCalls(ownerId)
+  const planKey = useMyPlanQueryKey()
   const binding = JSON.stringify([
     ownerId,
     project.id,
@@ -76,7 +78,7 @@ export function useUploadTextAction({
   const latest = project.latestJob?.kind === 'clip_upload_text' ? project.latestJob : undefined
   const tracked = useJob(
     latest?.id && latest.id !== jobId ? latest.id : jobId || latest?.id || '',
-    calls.keys,
+    [...calls.keys, planKey],
   )
   const job = tracked.job ?? latest
   const running = !!job && !isTerminal(job)
