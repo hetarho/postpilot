@@ -340,7 +340,7 @@ export const wizardMachine = setup({
 
 const projections = new WeakMap<object, WizardState>()
 
-function stateOf(snapshot: SnapshotFrom<typeof wizardMachine>): WizardState {
+export function wizardStateOf(snapshot: SnapshotFrom<typeof wizardMachine>): WizardState {
   let state = projections.get(snapshot)
   if (!state) {
     state = { ...snapshot.context, step: snapshot.value as WizardStep }
@@ -350,7 +350,7 @@ function stateOf(snapshot: SnapshotFrom<typeof wizardMachine>): WizardState {
 }
 
 export function initialWizardState(): WizardState {
-  return stateOf(getInitialSnapshot(wizardMachine))
+  return wizardStateOf(getInitialSnapshot(wizardMachine))
 }
 
 /** One guarded step: an event the current step does not take changes nothing. */
@@ -358,7 +358,9 @@ export function wizardTransition(state: WizardState, event: WizardEvent): Wizard
   const { step, ...context } = state
   const snapshot = wizardMachine.resolveState({ value: step, context })
   const next = getNextSnapshot(wizardMachine, snapshot, event)
-  return next.context === snapshot.context && next.value === snapshot.value ? state : stateOf(next)
+  return next.context === snapshot.context && next.value === snapshot.value
+    ? state
+    : wizardStateOf(next)
 }
 
 /** Whether the owner has answered anything, which is what leaving asks about (TMPL-71). */

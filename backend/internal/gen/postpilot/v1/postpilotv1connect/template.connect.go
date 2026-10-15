@@ -60,6 +60,15 @@ const (
 	// TemplateServiceEstimateTemplateRequestProcedure is the fully-qualified name of the
 	// TemplateService's EstimateTemplateRequest RPC.
 	TemplateServiceEstimateTemplateRequestProcedure = "/postpilot.v1.TemplateService/EstimateTemplateRequest"
+	// TemplateServiceEstimateTemplateHeadingSuggestionsProcedure is the fully-qualified name of the
+	// TemplateService's EstimateTemplateHeadingSuggestions RPC.
+	TemplateServiceEstimateTemplateHeadingSuggestionsProcedure = "/postpilot.v1.TemplateService/EstimateTemplateHeadingSuggestions"
+	// TemplateServiceStartTemplateHeadingSuggestionsProcedure is the fully-qualified name of the
+	// TemplateService's StartTemplateHeadingSuggestions RPC.
+	TemplateServiceStartTemplateHeadingSuggestionsProcedure = "/postpilot.v1.TemplateService/StartTemplateHeadingSuggestions"
+	// TemplateServiceGetTemplateHeadingSuggestionsProcedure is the fully-qualified name of the
+	// TemplateService's GetTemplateHeadingSuggestions RPC.
+	TemplateServiceGetTemplateHeadingSuggestionsProcedure = "/postpilot.v1.TemplateService/GetTemplateHeadingSuggestions"
 )
 
 // TemplateServiceClient is a client for the postpilot.v1.TemplateService service.
@@ -80,6 +89,10 @@ type TemplateServiceClient interface {
 	CancelTemplateRequest(context.Context, *connect.Request[v1.CancelTemplateRequestRequest]) (*connect.Response[v1.CancelTemplateRequestResponse], error)
 	// What one request on a write model is expected to cost, shown before it is pressed (QUOTA-67).
 	EstimateTemplateRequest(context.Context, *connect.Request[v1.EstimateTemplateRequestRequest]) (*connect.Response[v1.EstimateTemplateRequestResponse], error)
+	// TMPL-73: explicit wizard-only suggestions; reads and navigation never start work.
+	EstimateTemplateHeadingSuggestions(context.Context, *connect.Request[v1.EstimateTemplateHeadingSuggestionsRequest]) (*connect.Response[v1.EstimateTemplateHeadingSuggestionsResponse], error)
+	StartTemplateHeadingSuggestions(context.Context, *connect.Request[v1.StartTemplateHeadingSuggestionsRequest]) (*connect.Response[v1.StartTemplateHeadingSuggestionsResponse], error)
+	GetTemplateHeadingSuggestions(context.Context, *connect.Request[v1.GetTemplateHeadingSuggestionsRequest]) (*connect.Response[v1.GetTemplateHeadingSuggestionsResponse], error)
 }
 
 // NewTemplateServiceClient constructs a client for the postpilot.v1.TemplateService service. By
@@ -147,20 +160,41 @@ func NewTemplateServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(templateServiceMethods.ByName("EstimateTemplateRequest")),
 			connect.WithClientOptions(opts...),
 		),
+		estimateTemplateHeadingSuggestions: connect.NewClient[v1.EstimateTemplateHeadingSuggestionsRequest, v1.EstimateTemplateHeadingSuggestionsResponse](
+			httpClient,
+			baseURL+TemplateServiceEstimateTemplateHeadingSuggestionsProcedure,
+			connect.WithSchema(templateServiceMethods.ByName("EstimateTemplateHeadingSuggestions")),
+			connect.WithClientOptions(opts...),
+		),
+		startTemplateHeadingSuggestions: connect.NewClient[v1.StartTemplateHeadingSuggestionsRequest, v1.StartTemplateHeadingSuggestionsResponse](
+			httpClient,
+			baseURL+TemplateServiceStartTemplateHeadingSuggestionsProcedure,
+			connect.WithSchema(templateServiceMethods.ByName("StartTemplateHeadingSuggestions")),
+			connect.WithClientOptions(opts...),
+		),
+		getTemplateHeadingSuggestions: connect.NewClient[v1.GetTemplateHeadingSuggestionsRequest, v1.GetTemplateHeadingSuggestionsResponse](
+			httpClient,
+			baseURL+TemplateServiceGetTemplateHeadingSuggestionsProcedure,
+			connect.WithSchema(templateServiceMethods.ByName("GetTemplateHeadingSuggestions")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // templateServiceClient implements TemplateServiceClient.
 type templateServiceClient struct {
-	listTemplates            *connect.Client[v1.ListTemplatesRequest, v1.ListTemplatesResponse]
-	createTemplate           *connect.Client[v1.CreateTemplateRequest, v1.CreateTemplateResponse]
-	updateTemplate           *connect.Client[v1.UpdateTemplateRequest, v1.UpdateTemplateResponse]
-	deleteTemplate           *connect.Client[v1.DeleteTemplateRequest, v1.DeleteTemplateResponse]
-	getFormatGuide           *connect.Client[v1.GetFormatGuideRequest, v1.GetFormatGuideResponse]
-	startTemplateRequest     *connect.Client[v1.StartTemplateRequestRequest, v1.StartTemplateRequestResponse]
-	getTemplateRequestResult *connect.Client[v1.GetTemplateRequestResultRequest, v1.GetTemplateRequestResultResponse]
-	cancelTemplateRequest    *connect.Client[v1.CancelTemplateRequestRequest, v1.CancelTemplateRequestResponse]
-	estimateTemplateRequest  *connect.Client[v1.EstimateTemplateRequestRequest, v1.EstimateTemplateRequestResponse]
+	listTemplates                      *connect.Client[v1.ListTemplatesRequest, v1.ListTemplatesResponse]
+	createTemplate                     *connect.Client[v1.CreateTemplateRequest, v1.CreateTemplateResponse]
+	updateTemplate                     *connect.Client[v1.UpdateTemplateRequest, v1.UpdateTemplateResponse]
+	deleteTemplate                     *connect.Client[v1.DeleteTemplateRequest, v1.DeleteTemplateResponse]
+	getFormatGuide                     *connect.Client[v1.GetFormatGuideRequest, v1.GetFormatGuideResponse]
+	startTemplateRequest               *connect.Client[v1.StartTemplateRequestRequest, v1.StartTemplateRequestResponse]
+	getTemplateRequestResult           *connect.Client[v1.GetTemplateRequestResultRequest, v1.GetTemplateRequestResultResponse]
+	cancelTemplateRequest              *connect.Client[v1.CancelTemplateRequestRequest, v1.CancelTemplateRequestResponse]
+	estimateTemplateRequest            *connect.Client[v1.EstimateTemplateRequestRequest, v1.EstimateTemplateRequestResponse]
+	estimateTemplateHeadingSuggestions *connect.Client[v1.EstimateTemplateHeadingSuggestionsRequest, v1.EstimateTemplateHeadingSuggestionsResponse]
+	startTemplateHeadingSuggestions    *connect.Client[v1.StartTemplateHeadingSuggestionsRequest, v1.StartTemplateHeadingSuggestionsResponse]
+	getTemplateHeadingSuggestions      *connect.Client[v1.GetTemplateHeadingSuggestionsRequest, v1.GetTemplateHeadingSuggestionsResponse]
 }
 
 // ListTemplates calls postpilot.v1.TemplateService.ListTemplates.
@@ -208,6 +242,23 @@ func (c *templateServiceClient) EstimateTemplateRequest(ctx context.Context, req
 	return c.estimateTemplateRequest.CallUnary(ctx, req)
 }
 
+// EstimateTemplateHeadingSuggestions calls
+// postpilot.v1.TemplateService.EstimateTemplateHeadingSuggestions.
+func (c *templateServiceClient) EstimateTemplateHeadingSuggestions(ctx context.Context, req *connect.Request[v1.EstimateTemplateHeadingSuggestionsRequest]) (*connect.Response[v1.EstimateTemplateHeadingSuggestionsResponse], error) {
+	return c.estimateTemplateHeadingSuggestions.CallUnary(ctx, req)
+}
+
+// StartTemplateHeadingSuggestions calls
+// postpilot.v1.TemplateService.StartTemplateHeadingSuggestions.
+func (c *templateServiceClient) StartTemplateHeadingSuggestions(ctx context.Context, req *connect.Request[v1.StartTemplateHeadingSuggestionsRequest]) (*connect.Response[v1.StartTemplateHeadingSuggestionsResponse], error) {
+	return c.startTemplateHeadingSuggestions.CallUnary(ctx, req)
+}
+
+// GetTemplateHeadingSuggestions calls postpilot.v1.TemplateService.GetTemplateHeadingSuggestions.
+func (c *templateServiceClient) GetTemplateHeadingSuggestions(ctx context.Context, req *connect.Request[v1.GetTemplateHeadingSuggestionsRequest]) (*connect.Response[v1.GetTemplateHeadingSuggestionsResponse], error) {
+	return c.getTemplateHeadingSuggestions.CallUnary(ctx, req)
+}
+
 // TemplateServiceHandler is an implementation of the postpilot.v1.TemplateService service.
 type TemplateServiceHandler interface {
 	ListTemplates(context.Context, *connect.Request[v1.ListTemplatesRequest]) (*connect.Response[v1.ListTemplatesResponse], error)
@@ -226,6 +277,10 @@ type TemplateServiceHandler interface {
 	CancelTemplateRequest(context.Context, *connect.Request[v1.CancelTemplateRequestRequest]) (*connect.Response[v1.CancelTemplateRequestResponse], error)
 	// What one request on a write model is expected to cost, shown before it is pressed (QUOTA-67).
 	EstimateTemplateRequest(context.Context, *connect.Request[v1.EstimateTemplateRequestRequest]) (*connect.Response[v1.EstimateTemplateRequestResponse], error)
+	// TMPL-73: explicit wizard-only suggestions; reads and navigation never start work.
+	EstimateTemplateHeadingSuggestions(context.Context, *connect.Request[v1.EstimateTemplateHeadingSuggestionsRequest]) (*connect.Response[v1.EstimateTemplateHeadingSuggestionsResponse], error)
+	StartTemplateHeadingSuggestions(context.Context, *connect.Request[v1.StartTemplateHeadingSuggestionsRequest]) (*connect.Response[v1.StartTemplateHeadingSuggestionsResponse], error)
+	GetTemplateHeadingSuggestions(context.Context, *connect.Request[v1.GetTemplateHeadingSuggestionsRequest]) (*connect.Response[v1.GetTemplateHeadingSuggestionsResponse], error)
 }
 
 // NewTemplateServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -289,6 +344,24 @@ func NewTemplateServiceHandler(svc TemplateServiceHandler, opts ...connect.Handl
 		connect.WithSchema(templateServiceMethods.ByName("EstimateTemplateRequest")),
 		connect.WithHandlerOptions(opts...),
 	)
+	templateServiceEstimateTemplateHeadingSuggestionsHandler := connect.NewUnaryHandler(
+		TemplateServiceEstimateTemplateHeadingSuggestionsProcedure,
+		svc.EstimateTemplateHeadingSuggestions,
+		connect.WithSchema(templateServiceMethods.ByName("EstimateTemplateHeadingSuggestions")),
+		connect.WithHandlerOptions(opts...),
+	)
+	templateServiceStartTemplateHeadingSuggestionsHandler := connect.NewUnaryHandler(
+		TemplateServiceStartTemplateHeadingSuggestionsProcedure,
+		svc.StartTemplateHeadingSuggestions,
+		connect.WithSchema(templateServiceMethods.ByName("StartTemplateHeadingSuggestions")),
+		connect.WithHandlerOptions(opts...),
+	)
+	templateServiceGetTemplateHeadingSuggestionsHandler := connect.NewUnaryHandler(
+		TemplateServiceGetTemplateHeadingSuggestionsProcedure,
+		svc.GetTemplateHeadingSuggestions,
+		connect.WithSchema(templateServiceMethods.ByName("GetTemplateHeadingSuggestions")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/postpilot.v1.TemplateService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case TemplateServiceListTemplatesProcedure:
@@ -309,6 +382,12 @@ func NewTemplateServiceHandler(svc TemplateServiceHandler, opts ...connect.Handl
 			templateServiceCancelTemplateRequestHandler.ServeHTTP(w, r)
 		case TemplateServiceEstimateTemplateRequestProcedure:
 			templateServiceEstimateTemplateRequestHandler.ServeHTTP(w, r)
+		case TemplateServiceEstimateTemplateHeadingSuggestionsProcedure:
+			templateServiceEstimateTemplateHeadingSuggestionsHandler.ServeHTTP(w, r)
+		case TemplateServiceStartTemplateHeadingSuggestionsProcedure:
+			templateServiceStartTemplateHeadingSuggestionsHandler.ServeHTTP(w, r)
+		case TemplateServiceGetTemplateHeadingSuggestionsProcedure:
+			templateServiceGetTemplateHeadingSuggestionsHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -352,4 +431,16 @@ func (UnimplementedTemplateServiceHandler) CancelTemplateRequest(context.Context
 
 func (UnimplementedTemplateServiceHandler) EstimateTemplateRequest(context.Context, *connect.Request[v1.EstimateTemplateRequestRequest]) (*connect.Response[v1.EstimateTemplateRequestResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.TemplateService.EstimateTemplateRequest is not implemented"))
+}
+
+func (UnimplementedTemplateServiceHandler) EstimateTemplateHeadingSuggestions(context.Context, *connect.Request[v1.EstimateTemplateHeadingSuggestionsRequest]) (*connect.Response[v1.EstimateTemplateHeadingSuggestionsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.TemplateService.EstimateTemplateHeadingSuggestions is not implemented"))
+}
+
+func (UnimplementedTemplateServiceHandler) StartTemplateHeadingSuggestions(context.Context, *connect.Request[v1.StartTemplateHeadingSuggestionsRequest]) (*connect.Response[v1.StartTemplateHeadingSuggestionsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.TemplateService.StartTemplateHeadingSuggestions is not implemented"))
+}
+
+func (UnimplementedTemplateServiceHandler) GetTemplateHeadingSuggestions(context.Context, *connect.Request[v1.GetTemplateHeadingSuggestionsRequest]) (*connect.Response[v1.GetTemplateHeadingSuggestionsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.TemplateService.GetTemplateHeadingSuggestions is not implemented"))
 }

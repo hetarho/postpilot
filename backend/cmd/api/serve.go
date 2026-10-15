@@ -193,7 +193,7 @@ func handlers(c *contexts) []rpcserver.Registrar {
 			return postpilotv1connect.NewSpokenVoiceGenerationServiceHandler(spokenrpc.NewGenerationHandler(c.spokenGeneration), opts...)
 		},
 		func(opts ...connect.HandlerOption) (string, http.Handler) {
-			return postpilotv1connect.NewTemplateServiceHandler(templaterpc.NewHandler(c.template), opts...)
+			return postpilotv1connect.NewTemplateServiceHandler(templaterpc.NewHandler(c.template, c.templateHeadings), opts...)
 		},
 		// One clip handler, five services (ARCH-41): the rpcs are grouped by family so a task
 		// stream editing one family edits one proto file, while the context behind them is

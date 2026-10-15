@@ -42,6 +42,18 @@ export const FAKE_FORMAT_GUIDE = {
 } as const
 
 export interface FakeTemplatesOptions {
+  headingStarts?: Array<{
+    writeModel?: { providerId: string; modelId: string }
+    targetKind: string
+    targetPath: string[]
+    sections: Array<{ role: string; description: string }>
+  }>
+  headingJobId?: string
+  headingEstimate?: { free?: boolean; credits?: number }
+  headingRefusal?: AppFailureReason
+  headingStartGate?: Promise<void>
+  headingGroups?: string[][]
+  headingReadFailures?: number
   createFails?: boolean
   createGate?: Promise<void>
 
@@ -118,6 +130,8 @@ export function registerTemplateService(router: ConnectRouter, options: FakeTemp
   const { rpc } = router
   const { calls } = options
   let sequence = 0
+  let headingSections: Array<{ role: string; description: string }> = []
+  let headingReadFailures = options.headingReadFailures ?? 0
   const rows = new Map<string, Row>(
     (options.templates ?? []).map((row) => [
       row.id,
@@ -151,6 +165,42 @@ export function registerTemplateService(router: ConnectRouter, options: FakeTemp
     calls?.push('ListTemplates')
     if (options.listFails) throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
     return create(ListTemplatesResponseSchema, { templates: listed().map(toProto) })
+  })
+
+  rpc(TemplateService.method.estimateTemplateHeadingSuggestions, () => {
+    calls?.push('EstimateTemplateHeadingSuggestions')
+    return create(
+      TemplateService.method.estimateTemplateHeadingSuggestions.output,
+      options.headingEstimate ?? {},
+    )
+  })
+  rpc(TemplateService.method.startTemplateHeadingSuggestions, async (req) => {
+    calls?.push('StartTemplateHeadingSuggestions')
+    headingSections = req.sections.map(({ role, description }) => ({ role, description }))
+    options.headingStarts?.push({
+      writeModel: req.writeModel
+        ? { providerId: req.writeModel.providerId, modelId: req.writeModel.modelId }
+        : undefined,
+      targetKind: req.targetKind,
+      targetPath: [...req.targetPath],
+      sections: headingSections,
+    })
+    if (options.headingRefusal)
+      throw connectAppError(options.headingRefusal, Code.FailedPrecondition)
+    if (options.headingStartGate) await options.headingStartGate
+    return create(TemplateService.method.startTemplateHeadingSuggestions.output, {
+      jobId: options.headingJobId ?? 'heading-job',
+    })
+  })
+  rpc(TemplateService.method.getTemplateHeadingSuggestions, () => {
+    calls?.push('GetTemplateHeadingSuggestions')
+    if (headingReadFailures-- > 0) throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
+    const groups =
+      options.headingGroups ??
+      headingSections.map(({ role }) => [`${role} 후보 하나`, `${role} 후보 둘`, `${role} 후보 셋`])
+    return create(TemplateService.method.getTemplateHeadingSuggestions.output, {
+      sections: groups.map((headings) => ({ headings })),
+    })
   })
 
   rpc(TemplateService.method.getFormatGuide, (req) => {

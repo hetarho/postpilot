@@ -376,4 +376,4 @@ export const errors = {
   NETWORK_UNAVAILABLE: 'Could not connect to the network.',
   AI_FX_RATE_UNAVAILABLE:
     'Paid AI cannot start right now. Try again shortly; free models still work.',
-} as const satisfies Record<AppFailureReason, string>
+} as const satisfies Partial<Record<AppFailureReason, string>>

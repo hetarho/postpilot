@@ -147,6 +147,8 @@ func promptConsumerSources(c llm.RequestComposition) []string {
 		return []string{"internal/memory/extraction.go"}
 	case "template-request":
 		return []string{"internal/template/request.go"}
+	case "template-heading-suggestion":
+		return []string{"internal/template/heading_suggestion.go", "internal/template/rpc/heading_suggestion.go"}
 	case "video-composition", "video-observation":
 		return []string{"internal/clip/ai/service.go"}
 	case "spoken-voice":

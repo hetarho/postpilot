@@ -87,6 +87,7 @@ type contexts struct {
 	clipMediaRecovery *clipapp.MediaReconciler
 
 	template         *template.Service
+	templateHeadings *template.HeadingSuggestions
 	guideline        *guideline.Service
 	memory           *memory.Service
 	provider         *provider.Service
@@ -302,14 +303,14 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 	}
 
 	c.template = template.NewService(templatestore.New(handle.Writer, handle.Reader), templateLimits(cfg))
-	// The template request (TMPL-58) is the one template surface that calls a model: the
-	// metered registry, the post it may read as a sample, the job it runs as, and the same
-	// budget policy generation asks its caps of.
+	// Historical template requests retain their frozen executor. The wizard's heading
+	// suggestions are constructed separately with only roles and the accepted default style.
 	c.template.ConfigureRequests(
 		templateModels{registry: c.metered}, templateSamples{service: c.post, photoRowMax: cfg.Template.PhotoRowMax},
 		templateRequestJobs{queue: c.jobs}, cfg.LLMCompletionBudget, template.RequestLimits(cfg.TemplateRequest),
 	)
 	c.template.ConfigureEstimate(templateEstimates{rates: c.ledger})
+	c.templateHeadings = template.NewHeadingSuggestions(templateModels{registry: c.metered}, templateHeadingVoice{service: c.voice}, templateHeadingJobs{queue: c.jobs}, cfg.LLMCompletionBudget, templateEstimates{rates: c.ledger}, templateLimits(cfg))
 	c.post.SetTemplateDirectory(postTemplates{service: c.template})
 
 	// Template names are a live projection and owned-id validation, never a stored column or

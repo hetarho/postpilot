@@ -16,6 +16,7 @@ import { spokenCreationResources } from '@/widgets/spoken-voice-creation/config/
 import { spokenVoicesResources } from '@/pages/spoken-voices/config/i18n'
 import { i18n as logInI18n } from '@/features/log-in/config/i18n'
 import type { I18nFragment } from '@/shared/lib'
+import type { AppFailureReason } from '@/shared/api'
 import { common as enCommon } from './en/common'
 import { auth as enAuth } from './en/auth'
 import { nav as enNav } from './en/nav'
@@ -127,6 +128,7 @@ import { i18n as selectPostVoiceI18n } from '@/features/select-post-voice/config
 import { i18n as setDefaultVoiceI18n } from '@/features/set-default-voice/config/i18n'
 import { i18n as subscriptionI18n } from '@/entities/subscription/config/i18n'
 import { i18n as templateEntityI18n } from '@/entities/template/config/i18n'
+import { headingErrors } from '@/entities/template/config/heading-errors'
 import { i18n as templatePageI18n } from '@/pages/template/config/i18n'
 import { i18n as templatesI18n } from '@/pages/templates/config/i18n'
 import { i18n as createTemplateWizardI18n } from '@/features/create-template-wizard/config/i18n'
@@ -178,6 +180,7 @@ export const RESOURCE_NAMESPACES = [
 import { i18n as clipDubbingI18n } from '@/features/regenerate-clip-speech/config/i18n'
 
 export const FRAGMENTS: readonly I18nFragment[] = [
+  headingErrors,
   requestInspectionI18n,
   navigationI18n,
   writingTestI18n,
@@ -398,7 +401,7 @@ export const resources = {
       ...reviewModelExperimentI18n.ko,
       ...selectModelModelsI18n.ko,
     },
-    errors: koErrors,
+    errors: { ...koErrors, ...headingErrors.ko } satisfies Record<AppFailureReason, string>,
     marketing: koMarketing,
     plans: {
       ...creditBadgeI18n.ko,
@@ -540,7 +543,7 @@ export const resources = {
       ...reviewModelExperimentI18n.en,
       ...selectModelModelsI18n.en,
     },
-    errors: enErrors,
+    errors: { ...enErrors, ...headingErrors.en } satisfies Record<AppFailureReason, string>,
     marketing: enMarketing,
     plans: {
       ...creditBadgeI18n.en,

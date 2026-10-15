@@ -17,6 +17,7 @@ import {
   typographyStyles,
 } from '@/shared/ui'
 import type { SectionContent } from '../config/catalog'
+import { HeadingChoices } from './HeadingSuggestions'
 import {
   sectionProblem,
   type SectionDraft,
@@ -31,10 +32,12 @@ export function SectionStep({
   state,
   section,
   send,
+  suggestions,
 }: {
   state: WizardState
   section: SectionDraft
   send: Dispatch<WizardEvent>
+  suggestions: readonly string[]
 }) {
   const { t } = useTranslation('templates')
   const id = useId()
@@ -80,6 +83,11 @@ export function SectionStep({
           className="mt-1"
         />
         {headingProblem && <FieldMessage className="mt-1">{headingProblem}</FieldMessage>}
+        <HeadingChoices
+          name={section.name}
+          suggestions={suggestions}
+          onChoose={(heading) => edit({ heading })}
+        />
       </div>
 
       <div>

@@ -60,3 +60,10 @@ export {
   type BuilderBlock,
   type CompositionWorkingState,
 } from './model/blocks'
+export type { HeadingSuggestionInput } from './model/heading-suggestions'
+export { HEADING_SUGGESTION_SECTIONS_MAX, HEADING_CHOICES_PER_SECTION } from './config'
+export {
+  useStartHeadingSuggestions,
+  useHeadingSuggestionsEstimate,
+  useHeadingSuggestionsResult,
+} from './api/useHeadingSuggestions'

@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file postpilot/v1/template.proto.
  */
 export const file_postpilot_v1_template: GenFile = /*@__PURE__*/
-  fileDesc("Chtwb3N0cGlsb3QvdjEvdGVtcGxhdGUucHJvdG8SDHBvc3RwaWxvdC52MSLrAQoIVGVtcGxhdGUSCgoCaWQYASABKAkSDAoEbmFtZRgCIAEoCRITCgtkZXNjcmlwdGlvbhgDIAEoCRIMCgRib2R5GAQgASgJEhIKCnBvc3RfY291bnQYBSABKAUSEgoKY3JlYXRlZF9hdBgGIAEoCRISCgp1cGRhdGVkX2F0GAcgASgJEhoKDXRhcmdldF9sZW5ndGgYCCABKAVIAIgBARIWCgl0YWdfY291bnQYCSABKAVIAYgBARISCgp0aXRsZV9hcmVhGAogASgJQhAKDl90YXJnZXRfbGVuZ3RoQgwKCl90YWdfY291bnQiJwoLVGVtcGxhdGVSZWYSCgoCaWQYASABKAkSDAoEbmFtZRgCIAEoCSIWChRMaXN0VGVtcGxhdGVzUmVxdWVzdCJCChVMaXN0VGVtcGxhdGVzUmVzcG9uc2USKQoJdGVtcGxhdGVzGAEgAygLMhYucG9zdHBpbG90LnYxLlRlbXBsYXRlIrABChVDcmVhdGVUZW1wbGF0ZVJlcXVlc3QSDAoEbmFtZRgBIAEoCRITCgtkZXNjcmlwdGlvbhgCIAEoCRIMCgRib2R5GAMgASgJEhoKDXRhcmdldF9sZW5ndGgYBCABKAVIAIgBARIWCgl0YWdfY291bnQYBSABKAVIAYgBARISCgp0aXRsZV9hcmVhGAYgASgJQhAKDl90YXJnZXRfbGVuZ3RoQgwKCl90YWdfY291bnQiQgoWQ3JlYXRlVGVtcGxhdGVSZXNwb25zZRIoCgh0ZW1wbGF0ZRgBIAEoCzIWLnBvc3RwaWxvdC52MS5UZW1wbGF0ZSKBAgoVVXBkYXRlVGVtcGxhdGVSZXF1ZXN0EgoKAmlkGAEgASgJEhEKBG5hbWUYAiABKAlIAIgBARIYCgtkZXNjcmlwdGlvbhgDIAEoCUgBiAEBEhEKBGJvZHkYBCABKAlIAogBARIaCg10YXJnZXRfbGVuZ3RoGAUgASgFSAOIAQESFgoJdGFnX2NvdW50GAYgASgFSASIAQESFwoKdGl0bGVfYXJlYRgHIAEoCUgFiAEBQgcKBV9uYW1lQg4KDF9kZXNjcmlwdGlvbkIHCgVfYm9keUIQCg5fdGFyZ2V0X2xlbmd0aEIMCgpfdGFnX2NvdW50Qg0KC190aXRsZV9hcmVhIkIKFlVwZGF0ZVRlbXBsYXRlUmVzcG9uc2USKAoIdGVtcGxhdGUYASABKAsyFi5wb3N0cGlsb3QudjEuVGVtcGxhdGUiIwoVRGVsZXRlVGVtcGxhdGVSZXF1ZXN0EgoKAmlkGAEgASgJIjAKFkRlbGV0ZVRlbXBsYXRlUmVzcG9uc2USFgoOZGV0YWNoZWRfcG9zdHMYASABKAUiSAoVR2V0Rm9ybWF0R3VpZGVSZXF1ZXN0Ei8KCGxhbmd1YWdlGAEgASgOMh0ucG9zdHBpbG90LnYxLkNvbnRlbnRMYW5ndWFnZSImChZHZXRGb3JtYXRHdWlkZVJlc3BvbnNlEgwKBHRleHQYASABKAkiVAoNVGVtcGxhdGVEcmFmdBIMCgRuYW1lGAEgASgJEhMKC2Rlc2NyaXB0aW9uGAIgASgJEhIKCnRpdGxlX2FyZWEYAyABKAkSDAoEYm9keRgEIAEoCSKTAgobU3RhcnRUZW1wbGF0ZVJlcXVlc3RSZXF1ZXN0EisKC3dyaXRlX21vZGVsGAEgASgLMhYucG9zdHBpbG90LnYxLk1vZGVsUmVmEi8KCGxhbmd1YWdlGAIgASgOMh0ucG9zdHBpbG90LnYxLkNvbnRlbnRMYW5ndWFnZRIMCgR0ZXh0GAMgASgJEioKBWRyYWZ0GAQgASgLMhsucG9zdHBpbG90LnYxLlRlbXBsYXRlRHJhZnQSGAoLdGVtcGxhdGVfaWQYBSABKAlIAIgBARIdChBzYW1wbGVfcG9zdF9zbHVnGAYgASgJSAGIAQFCDgoMX3RlbXBsYXRlX2lkQhMKEV9zYW1wbGVfcG9zdF9zbHVnIi4KHFN0YXJ0VGVtcGxhdGVSZXF1ZXN0UmVzcG9uc2USDgoGam9iX2lkGAEgASgJIjEKH0dldFRlbXBsYXRlUmVxdWVzdFJlc3VsdFJlcXVlc3QSDgoGam9iX2lkGAEgASgJIl4KIEdldFRlbXBsYXRlUmVxdWVzdFJlc3VsdFJlc3BvbnNlEioKBWRyYWZ0GAEgASgLMhsucG9zdHBpbG90LnYxLlRlbXBsYXRlRHJhZnQSDgoGd2lzaGVzGAIgAygJIk0KHkVzdGltYXRlVGVtcGxhdGVSZXF1ZXN0UmVxdWVzdBIrCgt3cml0ZV9tb2RlbBgBIAEoCzIWLnBvc3RwaWxvdC52MS5Nb2RlbFJlZiJRCh9Fc3RpbWF0ZVRlbXBsYXRlUmVxdWVzdFJlc3BvbnNlEgwKBGZyZWUYASABKAgSFAoHY3JlZGl0cxgCIAEoBUgAiAEBQgoKCF9jcmVkaXRzIi4KHENhbmNlbFRlbXBsYXRlUmVxdWVzdFJlcXVlc3QSDgoGam9iX2lkGAEgASgJIh8KHUNhbmNlbFRlbXBsYXRlUmVxdWVzdFJlc3BvbnNlMsUHCg9UZW1wbGF0ZVNlcnZpY2USWgoNTGlzdFRlbXBsYXRlcxIiLnBvc3RwaWxvdC52MS5MaXN0VGVtcGxhdGVzUmVxdWVzdBojLnBvc3RwaWxvdC52MS5MaXN0VGVtcGxhdGVzUmVzcG9uc2UiABJdCg5DcmVhdGVUZW1wbGF0ZRIjLnBvc3RwaWxvdC52MS5DcmVhdGVUZW1wbGF0ZVJlcXVlc3QaJC5wb3N0cGlsb3QudjEuQ3JlYXRlVGVtcGxhdGVSZXNwb25zZSIAEl0KDlVwZGF0ZVRlbXBsYXRlEiMucG9zdHBpbG90LnYxLlVwZGF0ZVRlbXBsYXRlUmVxdWVzdBokLnBvc3RwaWxvdC52MS5VcGRhdGVUZW1wbGF0ZVJlc3BvbnNlIgASXQoORGVsZXRlVGVtcGxhdGUSIy5wb3N0cGlsb3QudjEuRGVsZXRlVGVtcGxhdGVSZXF1ZXN0GiQucG9zdHBpbG90LnYxLkRlbGV0ZVRlbXBsYXRlUmVzcG9uc2UiABJdCg5HZXRGb3JtYXRHdWlkZRIjLnBvc3RwaWxvdC52MS5HZXRGb3JtYXRHdWlkZVJlcXVlc3QaJC5wb3N0cGlsb3QudjEuR2V0Rm9ybWF0R3VpZGVSZXNwb25zZSIAEm8KFFN0YXJ0VGVtcGxhdGVSZXF1ZXN0EikucG9zdHBpbG90LnYxLlN0YXJ0VGVtcGxhdGVSZXF1ZXN0UmVxdWVzdBoqLnBvc3RwaWxvdC52MS5TdGFydFRlbXBsYXRlUmVxdWVzdFJlc3BvbnNlIgASewoYR2V0VGVtcGxhdGVSZXF1ZXN0UmVzdWx0Ei0ucG9zdHBpbG90LnYxLkdldFRlbXBsYXRlUmVxdWVzdFJlc3VsdFJlcXVlc3QaLi5wb3N0cGlsb3QudjEuR2V0VGVtcGxhdGVSZXF1ZXN0UmVzdWx0UmVzcG9uc2UiABJyChVDYW5jZWxUZW1wbGF0ZVJlcXVlc3QSKi5wb3N0cGlsb3QudjEuQ2FuY2VsVGVtcGxhdGVSZXF1ZXN0UmVxdWVzdBorLnBvc3RwaWxvdC52MS5DYW5jZWxUZW1wbGF0ZVJlcXVlc3RSZXNwb25zZSIAEngKF0VzdGltYXRlVGVtcGxhdGVSZXF1ZXN0EiwucG9zdHBpbG90LnYxLkVzdGltYXRlVGVtcGxhdGVSZXF1ZXN0UmVxdWVzdBotLnBvc3RwaWxvdC52MS5Fc3RpbWF0ZVRlbXBsYXRlUmVxdWVzdFJlc3BvbnNlIgBCRFpCZ2l0aHViLmNvbS9wb3N0cGlsb3QvYmFja2VuZC9pbnRlcm5hbC9nZW4vcG9zdHBpbG90L3YxO3Bvc3RwaWxvdHYxYgZwcm90bzM", [file_postpilot_v1_language, file_postpilot_v1_provider]);
+  fileDesc("Chtwb3N0cGlsb3QvdjEvdGVtcGxhdGUucHJvdG8SDHBvc3RwaWxvdC52MSLrAQoIVGVtcGxhdGUSCgoCaWQYASABKAkSDAoEbmFtZRgCIAEoCRITCgtkZXNjcmlwdGlvbhgDIAEoCRIMCgRib2R5GAQgASgJEhIKCnBvc3RfY291bnQYBSABKAUSEgoKY3JlYXRlZF9hdBgGIAEoCRISCgp1cGRhdGVkX2F0GAcgASgJEhoKDXRhcmdldF9sZW5ndGgYCCABKAVIAIgBARIWCgl0YWdfY291bnQYCSABKAVIAYgBARISCgp0aXRsZV9hcmVhGAogASgJQhAKDl90YXJnZXRfbGVuZ3RoQgwKCl90YWdfY291bnQiJwoLVGVtcGxhdGVSZWYSCgoCaWQYASABKAkSDAoEbmFtZRgCIAEoCSIWChRMaXN0VGVtcGxhdGVzUmVxdWVzdCJCChVMaXN0VGVtcGxhdGVzUmVzcG9uc2USKQoJdGVtcGxhdGVzGAEgAygLMhYucG9zdHBpbG90LnYxLlRlbXBsYXRlIrABChVDcmVhdGVUZW1wbGF0ZVJlcXVlc3QSDAoEbmFtZRgBIAEoCRITCgtkZXNjcmlwdGlvbhgCIAEoCRIMCgRib2R5GAMgASgJEhoKDXRhcmdldF9sZW5ndGgYBCABKAVIAIgBARIWCgl0YWdfY291bnQYBSABKAVIAYgBARISCgp0aXRsZV9hcmVhGAYgASgJQhAKDl90YXJnZXRfbGVuZ3RoQgwKCl90YWdfY291bnQiQgoWQ3JlYXRlVGVtcGxhdGVSZXNwb25zZRIoCgh0ZW1wbGF0ZRgBIAEoCzIWLnBvc3RwaWxvdC52MS5UZW1wbGF0ZSKBAgoVVXBkYXRlVGVtcGxhdGVSZXF1ZXN0EgoKAmlkGAEgASgJEhEKBG5hbWUYAiABKAlIAIgBARIYCgtkZXNjcmlwdGlvbhgDIAEoCUgBiAEBEhEKBGJvZHkYBCABKAlIAogBARIaCg10YXJnZXRfbGVuZ3RoGAUgASgFSAOIAQESFgoJdGFnX2NvdW50GAYgASgFSASIAQESFwoKdGl0bGVfYXJlYRgHIAEoCUgFiAEBQgcKBV9uYW1lQg4KDF9kZXNjcmlwdGlvbkIHCgVfYm9keUIQCg5fdGFyZ2V0X2xlbmd0aEIMCgpfdGFnX2NvdW50Qg0KC190aXRsZV9hcmVhIkIKFlVwZGF0ZVRlbXBsYXRlUmVzcG9uc2USKAoIdGVtcGxhdGUYASABKAsyFi5wb3N0cGlsb3QudjEuVGVtcGxhdGUiIwoVRGVsZXRlVGVtcGxhdGVSZXF1ZXN0EgoKAmlkGAEgASgJIjAKFkRlbGV0ZVRlbXBsYXRlUmVzcG9uc2USFgoOZGV0YWNoZWRfcG9zdHMYASABKAUiSAoVR2V0Rm9ybWF0R3VpZGVSZXF1ZXN0Ei8KCGxhbmd1YWdlGAEgASgOMh0ucG9zdHBpbG90LnYxLkNvbnRlbnRMYW5ndWFnZSImChZHZXRGb3JtYXRHdWlkZVJlc3BvbnNlEgwKBHRleHQYASABKAkiVAoNVGVtcGxhdGVEcmFmdBIMCgRuYW1lGAEgASgJEhMKC2Rlc2NyaXB0aW9uGAIgASgJEhIKCnRpdGxlX2FyZWEYAyABKAkSDAoEYm9keRgEIAEoCSKTAgobU3RhcnRUZW1wbGF0ZVJlcXVlc3RSZXF1ZXN0EisKC3dyaXRlX21vZGVsGAEgASgLMhYucG9zdHBpbG90LnYxLk1vZGVsUmVmEi8KCGxhbmd1YWdlGAIgASgOMh0ucG9zdHBpbG90LnYxLkNvbnRlbnRMYW5ndWFnZRIMCgR0ZXh0GAMgASgJEioKBWRyYWZ0GAQgASgLMhsucG9zdHBpbG90LnYxLlRlbXBsYXRlRHJhZnQSGAoLdGVtcGxhdGVfaWQYBSABKAlIAIgBARIdChBzYW1wbGVfcG9zdF9zbHVnGAYgASgJSAGIAQFCDgoMX3RlbXBsYXRlX2lkQhMKEV9zYW1wbGVfcG9zdF9zbHVnIi4KHFN0YXJ0VGVtcGxhdGVSZXF1ZXN0UmVzcG9uc2USDgoGam9iX2lkGAEgASgJIjEKH0dldFRlbXBsYXRlUmVxdWVzdFJlc3VsdFJlcXVlc3QSDgoGam9iX2lkGAEgASgJIl4KIEdldFRlbXBsYXRlUmVxdWVzdFJlc3VsdFJlc3BvbnNlEioKBWRyYWZ0GAEgASgLMhsucG9zdHBpbG90LnYxLlRlbXBsYXRlRHJhZnQSDgoGd2lzaGVzGAIgAygJIk0KHkVzdGltYXRlVGVtcGxhdGVSZXF1ZXN0UmVxdWVzdBIrCgt3cml0ZV9tb2RlbBgBIAEoCzIWLnBvc3RwaWxvdC52MS5Nb2RlbFJlZiJRCh9Fc3RpbWF0ZVRlbXBsYXRlUmVxdWVzdFJlc3BvbnNlEgwKBGZyZWUYASABKAgSFAoHY3JlZGl0cxgCIAEoBUgAiAEBQgoKCF9jcmVkaXRzIi4KHENhbmNlbFRlbXBsYXRlUmVxdWVzdFJlcXVlc3QSDgoGam9iX2lkGAEgASgJIh8KHUNhbmNlbFRlbXBsYXRlUmVxdWVzdFJlc3BvbnNlIjsKFlRlbXBsYXRlSGVhZGluZ1NlY3Rpb24SDAoEcm9sZRgBIAEoCRITCgtkZXNjcmlwdGlvbhgCIAEoCSJYCilFc3RpbWF0ZVRlbXBsYXRlSGVhZGluZ1N1Z2dlc3Rpb25zUmVxdWVzdBIrCgt3cml0ZV9tb2RlbBgBIAEoCzIWLnBvc3RwaWxvdC52MS5Nb2RlbFJlZiJcCipFc3RpbWF0ZVRlbXBsYXRlSGVhZGluZ1N1Z2dlc3Rpb25zUmVzcG9uc2USDAoEZnJlZRgBIAEoCBIUCgdjcmVkaXRzGAIgASgFSACIAQFCCgoIX2NyZWRpdHMitwEKJlN0YXJ0VGVtcGxhdGVIZWFkaW5nU3VnZ2VzdGlvbnNSZXF1ZXN0EisKC3dyaXRlX21vZGVsGAEgASgLMhYucG9zdHBpbG90LnYxLk1vZGVsUmVmEhMKC3RhcmdldF9raW5kGAIgASgJEhMKC3RhcmdldF9wYXRoGAMgAygJEjYKCHNlY3Rpb25zGAQgAygLMiQucG9zdHBpbG90LnYxLlRlbXBsYXRlSGVhZGluZ1NlY3Rpb24iOQonU3RhcnRUZW1wbGF0ZUhlYWRpbmdTdWdnZXN0aW9uc1Jlc3BvbnNlEg4KBmpvYl9pZBgBIAEoCSI2CiRHZXRUZW1wbGF0ZUhlYWRpbmdTdWdnZXN0aW9uc1JlcXVlc3QSDgoGam9iX2lkGAEgASgJIioKFlRlbXBsYXRlSGVhZGluZ0Nob2ljZXMSEAoIaGVhZGluZ3MYASADKAkiXwolR2V0VGVtcGxhdGVIZWFkaW5nU3VnZ2VzdGlvbnNSZXNwb25zZRI2CghzZWN0aW9ucxgBIAMoCzIkLnBvc3RwaWxvdC52MS5UZW1wbGF0ZUhlYWRpbmdDaG9pY2VzMoELCg9UZW1wbGF0ZVNlcnZpY2USWgoNTGlzdFRlbXBsYXRlcxIiLnBvc3RwaWxvdC52MS5MaXN0VGVtcGxhdGVzUmVxdWVzdBojLnBvc3RwaWxvdC52MS5MaXN0VGVtcGxhdGVzUmVzcG9uc2UiABJdCg5DcmVhdGVUZW1wbGF0ZRIjLnBvc3RwaWxvdC52MS5DcmVhdGVUZW1wbGF0ZVJlcXVlc3QaJC5wb3N0cGlsb3QudjEuQ3JlYXRlVGVtcGxhdGVSZXNwb25zZSIAEl0KDlVwZGF0ZVRlbXBsYXRlEiMucG9zdHBpbG90LnYxLlVwZGF0ZVRlbXBsYXRlUmVxdWVzdBokLnBvc3RwaWxvdC52MS5VcGRhdGVUZW1wbGF0ZVJlc3BvbnNlIgASXQoORGVsZXRlVGVtcGxhdGUSIy5wb3N0cGlsb3QudjEuRGVsZXRlVGVtcGxhdGVSZXF1ZXN0GiQucG9zdHBpbG90LnYxLkRlbGV0ZVRlbXBsYXRlUmVzcG9uc2UiABJdCg5HZXRGb3JtYXRHdWlkZRIjLnBvc3RwaWxvdC52MS5HZXRGb3JtYXRHdWlkZVJlcXVlc3QaJC5wb3N0cGlsb3QudjEuR2V0Rm9ybWF0R3VpZGVSZXNwb25zZSIAEm8KFFN0YXJ0VGVtcGxhdGVSZXF1ZXN0EikucG9zdHBpbG90LnYxLlN0YXJ0VGVtcGxhdGVSZXF1ZXN0UmVxdWVzdBoqLnBvc3RwaWxvdC52MS5TdGFydFRlbXBsYXRlUmVxdWVzdFJlc3BvbnNlIgASewoYR2V0VGVtcGxhdGVSZXF1ZXN0UmVzdWx0Ei0ucG9zdHBpbG90LnYxLkdldFRlbXBsYXRlUmVxdWVzdFJlc3VsdFJlcXVlc3QaLi5wb3N0cGlsb3QudjEuR2V0VGVtcGxhdGVSZXF1ZXN0UmVzdWx0UmVzcG9uc2UiABJyChVDYW5jZWxUZW1wbGF0ZVJlcXVlc3QSKi5wb3N0cGlsb3QudjEuQ2FuY2VsVGVtcGxhdGVSZXF1ZXN0UmVxdWVzdBorLnBvc3RwaWxvdC52MS5DYW5jZWxUZW1wbGF0ZVJlcXVlc3RSZXNwb25zZSIAEngKF0VzdGltYXRlVGVtcGxhdGVSZXF1ZXN0EiwucG9zdHBpbG90LnYxLkVzdGltYXRlVGVtcGxhdGVSZXF1ZXN0UmVxdWVzdBotLnBvc3RwaWxvdC52MS5Fc3RpbWF0ZVRlbXBsYXRlUmVxdWVzdFJlc3BvbnNlIgASmQEKIkVzdGltYXRlVGVtcGxhdGVIZWFkaW5nU3VnZ2VzdGlvbnMSNy5wb3N0cGlsb3QudjEuRXN0aW1hdGVUZW1wbGF0ZUhlYWRpbmdTdWdnZXN0aW9uc1JlcXVlc3QaOC5wb3N0cGlsb3QudjEuRXN0aW1hdGVUZW1wbGF0ZUhlYWRpbmdTdWdnZXN0aW9uc1Jlc3BvbnNlIgASkAEKH1N0YXJ0VGVtcGxhdGVIZWFkaW5nU3VnZ2VzdGlvbnMSNC5wb3N0cGlsb3QudjEuU3RhcnRUZW1wbGF0ZUhlYWRpbmdTdWdnZXN0aW9uc1JlcXVlc3QaNS5wb3N0cGlsb3QudjEuU3RhcnRUZW1wbGF0ZUhlYWRpbmdTdWdnZXN0aW9uc1Jlc3BvbnNlIgASigEKHUdldFRlbXBsYXRlSGVhZGluZ1N1Z2dlc3Rpb25zEjIucG9zdHBpbG90LnYxLkdldFRlbXBsYXRlSGVhZGluZ1N1Z2dlc3Rpb25zUmVxdWVzdBozLnBvc3RwaWxvdC52MS5HZXRUZW1wbGF0ZUhlYWRpbmdTdWdnZXN0aW9uc1Jlc3BvbnNlIgBCRFpCZ2l0aHViLmNvbS9wb3N0cGlsb3QvYmFja2VuZC9pbnRlcm5hbC9nZW4vcG9zdHBpbG90L3YxO3Bvc3RwaWxvdHYxYgZwcm90bzM", [file_postpilot_v1_language, file_postpilot_v1_provider]);
 
 /**
  * @generated from message postpilot.v1.Template
@@ -593,14 +593,179 @@ export const CancelTemplateRequestResponseSchema: GenMessage<CancelTemplateReque
   messageDesc(file_postpilot_v1_template, 20);
 
 /**
+ * @generated from message postpilot.v1.TemplateHeadingSection
+ */
+export type TemplateHeadingSection = Message<"postpilot.v1.TemplateHeadingSection"> & {
+  /**
+   * @generated from field: string role = 1;
+   */
+  role: string;
+
+  /**
+   * @generated from field: string description = 2;
+   */
+  description: string;
+};
+
+/**
+ * Describes the message postpilot.v1.TemplateHeadingSection.
+ * Use `create(TemplateHeadingSectionSchema)` to create a new message.
+ */
+export const TemplateHeadingSectionSchema: GenMessage<TemplateHeadingSection> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_template, 21);
+
+/**
+ * @generated from message postpilot.v1.EstimateTemplateHeadingSuggestionsRequest
+ */
+export type EstimateTemplateHeadingSuggestionsRequest = Message<"postpilot.v1.EstimateTemplateHeadingSuggestionsRequest"> & {
+  /**
+   * @generated from field: postpilot.v1.ModelRef write_model = 1;
+   */
+  writeModel?: ModelRef | undefined;
+};
+
+/**
+ * Describes the message postpilot.v1.EstimateTemplateHeadingSuggestionsRequest.
+ * Use `create(EstimateTemplateHeadingSuggestionsRequestSchema)` to create a new message.
+ */
+export const EstimateTemplateHeadingSuggestionsRequestSchema: GenMessage<EstimateTemplateHeadingSuggestionsRequest> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_template, 22);
+
+/**
+ * @generated from message postpilot.v1.EstimateTemplateHeadingSuggestionsResponse
+ */
+export type EstimateTemplateHeadingSuggestionsResponse = Message<"postpilot.v1.EstimateTemplateHeadingSuggestionsResponse"> & {
+  /**
+   * @generated from field: bool free = 1;
+   */
+  free: boolean;
+
+  /**
+   * @generated from field: optional int32 credits = 2;
+   */
+  credits?: number | undefined;
+};
+
+/**
+ * Describes the message postpilot.v1.EstimateTemplateHeadingSuggestionsResponse.
+ * Use `create(EstimateTemplateHeadingSuggestionsResponseSchema)` to create a new message.
+ */
+export const EstimateTemplateHeadingSuggestionsResponseSchema: GenMessage<EstimateTemplateHeadingSuggestionsResponse> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_template, 23);
+
+/**
+ * @generated from message postpilot.v1.StartTemplateHeadingSuggestionsRequest
+ */
+export type StartTemplateHeadingSuggestionsRequest = Message<"postpilot.v1.StartTemplateHeadingSuggestionsRequest"> & {
+  /**
+   * @generated from field: postpilot.v1.ModelRef write_model = 1;
+   */
+  writeModel?: ModelRef | undefined;
+
+  /**
+   * Exactly post or clip. No post identity, content, attachments or sample is accepted.
+   *
+   * @generated from field: string target_kind = 2;
+   */
+  targetKind: string;
+
+  /**
+   * @generated from field: repeated string target_path = 3;
+   */
+  targetPath: string[];
+
+  /**
+   * @generated from field: repeated postpilot.v1.TemplateHeadingSection sections = 4;
+   */
+  sections: TemplateHeadingSection[];
+};
+
+/**
+ * Describes the message postpilot.v1.StartTemplateHeadingSuggestionsRequest.
+ * Use `create(StartTemplateHeadingSuggestionsRequestSchema)` to create a new message.
+ */
+export const StartTemplateHeadingSuggestionsRequestSchema: GenMessage<StartTemplateHeadingSuggestionsRequest> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_template, 24);
+
+/**
+ * @generated from message postpilot.v1.StartTemplateHeadingSuggestionsResponse
+ */
+export type StartTemplateHeadingSuggestionsResponse = Message<"postpilot.v1.StartTemplateHeadingSuggestionsResponse"> & {
+  /**
+   * @generated from field: string job_id = 1;
+   */
+  jobId: string;
+};
+
+/**
+ * Describes the message postpilot.v1.StartTemplateHeadingSuggestionsResponse.
+ * Use `create(StartTemplateHeadingSuggestionsResponseSchema)` to create a new message.
+ */
+export const StartTemplateHeadingSuggestionsResponseSchema: GenMessage<StartTemplateHeadingSuggestionsResponse> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_template, 25);
+
+/**
+ * @generated from message postpilot.v1.GetTemplateHeadingSuggestionsRequest
+ */
+export type GetTemplateHeadingSuggestionsRequest = Message<"postpilot.v1.GetTemplateHeadingSuggestionsRequest"> & {
+  /**
+   * @generated from field: string job_id = 1;
+   */
+  jobId: string;
+};
+
+/**
+ * Describes the message postpilot.v1.GetTemplateHeadingSuggestionsRequest.
+ * Use `create(GetTemplateHeadingSuggestionsRequestSchema)` to create a new message.
+ */
+export const GetTemplateHeadingSuggestionsRequestSchema: GenMessage<GetTemplateHeadingSuggestionsRequest> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_template, 26);
+
+/**
+ * @generated from message postpilot.v1.TemplateHeadingChoices
+ */
+export type TemplateHeadingChoices = Message<"postpilot.v1.TemplateHeadingChoices"> & {
+  /**
+   * @generated from field: repeated string headings = 1;
+   */
+  headings: string[];
+};
+
+/**
+ * Describes the message postpilot.v1.TemplateHeadingChoices.
+ * Use `create(TemplateHeadingChoicesSchema)` to create a new message.
+ */
+export const TemplateHeadingChoicesSchema: GenMessage<TemplateHeadingChoices> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_template, 27);
+
+/**
+ * @generated from message postpilot.v1.GetTemplateHeadingSuggestionsResponse
+ */
+export type GetTemplateHeadingSuggestionsResponse = Message<"postpilot.v1.GetTemplateHeadingSuggestionsResponse"> & {
+  /**
+   * Exactly one group per requested section, in the frozen request's order.
+   *
+   * @generated from field: repeated postpilot.v1.TemplateHeadingChoices sections = 1;
+   */
+  sections: TemplateHeadingChoices[];
+};
+
+/**
+ * Describes the message postpilot.v1.GetTemplateHeadingSuggestionsResponse.
+ * Use `create(GetTemplateHeadingSuggestionsResponseSchema)` to create a new message.
+ */
+export const GetTemplateHeadingSuggestionsResponseSchema: GenMessage<GetTemplateHeadingSuggestionsResponse> = /*@__PURE__*/
+  messageDesc(file_postpilot_v1_template, 28);
+
+/**
  * template.proto is the 템플릿 slice: reusable account-owned documents that decide the SHAPE
  * of a post — its sections, its literal text, the positions it reserves, and what repeats per
  * photo. The voice decides how sentences sound and a guideline decides what to avoid; a
  * template decides the skeleton.
  *
- * A template is authored text. Nothing here is learned or inferred, and a model writes one only
- * when its owner asks: StartTemplateRequest is the one procedure that enqueues work or calls a
- * provider (TMPL-16, TMPL-58).
+ * A template is authored text. The wizard's explicit heading-suggestion action alone starts
+ * new model work here (TMPL-73); saved-template refinement uses configuration authoring.
+ * Historical template-request execution, cancellation and results remain readable.
  *
  * Every procedure is scoped to the acting user from the session — no request carries a
  * user id, because a user id in a message is a claim by the caller, not a fact.
@@ -690,6 +855,32 @@ export const TemplateService: GenService<{
     methodKind: "unary";
     input: typeof EstimateTemplateRequestRequestSchema;
     output: typeof EstimateTemplateRequestResponseSchema;
+  },
+  /**
+   * TMPL-73: explicit wizard-only suggestions; reads and navigation never start work.
+   *
+   * @generated from rpc postpilot.v1.TemplateService.EstimateTemplateHeadingSuggestions
+   */
+  estimateTemplateHeadingSuggestions: {
+    methodKind: "unary";
+    input: typeof EstimateTemplateHeadingSuggestionsRequestSchema;
+    output: typeof EstimateTemplateHeadingSuggestionsResponseSchema;
+  },
+  /**
+   * @generated from rpc postpilot.v1.TemplateService.StartTemplateHeadingSuggestions
+   */
+  startTemplateHeadingSuggestions: {
+    methodKind: "unary";
+    input: typeof StartTemplateHeadingSuggestionsRequestSchema;
+    output: typeof StartTemplateHeadingSuggestionsResponseSchema;
+  },
+  /**
+   * @generated from rpc postpilot.v1.TemplateService.GetTemplateHeadingSuggestions
+   */
+  getTemplateHeadingSuggestions: {
+    methodKind: "unary";
+    input: typeof GetTemplateHeadingSuggestionsRequestSchema;
+    output: typeof GetTemplateHeadingSuggestionsResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_postpilot_v1_template, 0);

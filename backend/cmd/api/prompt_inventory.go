@@ -25,7 +25,7 @@ func productRequestCompositions() []llm.RequestComposition {
 	for _, compositions := range [][]llm.RequestComposition{
 		generationInventoryCompositions(), authoring.RequestCompositions(authoringInventoryGuides()),
 		voice.RequestCompositions(), memory.RequestCompositions(),
-		template.RequestCompositions(), clipai.RequestCompositions(),
+		template.RequestCompositions(), template.HeadingRequestCompositions(), clipai.RequestCompositions(),
 		spokenapp.RequestCompositions(), clipapp.RequestCompositions(),
 	} {
 		result = append(result, compositions...)

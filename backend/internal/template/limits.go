@@ -1,5 +1,13 @@
 package template
 
+const (
+	HeadingSectionsMax              = 20
+	HeadingChoicesPerSection        = 3
+	HeadingTargetPathMax            = 8
+	headingEstimatePromptTokens     = 6000
+	headingEstimateCompletionTokens = 3000
+)
+
 // Ceilings are the operator-set half of Limits (TEMPLATE_*). The struct is field-for-field
 // identical to config.TemplateCeilings, so the composition root converts one into the other.
 type Ceilings struct {

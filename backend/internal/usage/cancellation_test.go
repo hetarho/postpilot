@@ -52,3 +52,18 @@ func TestOwnerCancellableWorkSettlesToConfirmedUsageWithoutAFee(t *testing.T) {
 		t.Fatalf("cancellation fee = %d, want none", *cancelled.CancellationFee)
 	}
 }
+
+func TestOwnerCancellableReportedUsageSurvivesCancelledCallContext(t *testing.T) {
+	svc, backing := newTestService(t, seoulNoon)
+	svc.WithOwnerCancellation("owner-work")
+	store := &clipRecordStore{Storage: backing}
+	svc.tx, svc.lots, svc.purchases, svc.charges, svc.holds = store, store, store, store, store
+	ctx, cancel := context.WithCancel(WithWork(t.Context(), Work{UserID: "alice", Kind: "owner-work", JobID: "job"}))
+	cancel()
+	if err := svc.RecordCall(ctx, cheapRef, llm.StageNameWrite, llm.Usage{PromptTokens: 10, CostMicrousd: 100, CostReported: true}, ctx.Err()); err != nil {
+		t.Fatal(err)
+	}
+	if store.event.JobID != "job" || store.event.CostMicrousd != 100 || store.event.Stage != llm.StageNameWrite {
+		t.Fatalf("reported usage lost: %+v", store.event)
+	}
+}

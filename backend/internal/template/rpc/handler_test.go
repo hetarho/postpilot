@@ -61,7 +61,64 @@ func handler(store *fakeStore) *Handler {
 		NameMaxChars: 40, DescriptionMaxChars: 200, BodyMaxChars: 4000, TitleAreaMaxChars: 200,
 		MaxPerAccount: 3, PhotoRowMax: 4,
 		AskLabelMaxChars: 40, AskMaxPerBody: 8,
-	}, template.NumberBounds{TargetLengthMin: 100, TargetLengthMax: 10_000, TagCountMin: 1, TagCountMax: 10})))
+	}, template.NumberBounds{TargetLengthMin: 100, TargetLengthMax: 10_000, TagCountMin: 1, TagCountMax: 10})), &fakeHeadings{})
+}
+
+type fakeHeadings struct {
+	calls int
+	user  string
+	input template.HeadingSuggestionStart
+	err   error
+}
+
+func (f *fakeHeadings) Start(_ context.Context, user string, input template.HeadingSuggestionStart) (string, error) {
+	f.calls++
+	f.user = user
+	f.input = input
+	return "headings-1", f.err
+}
+func (f *fakeHeadings) Estimate(context.Context, string) (template.RequestEstimate, error) {
+	f.calls++
+	return template.RequestEstimate{Free: true, Available: true}, nil
+}
+func (f *fakeHeadings) Result(context.Context, string, string) ([][]string, error) {
+	f.calls++
+	return [][]string{{"첫째", "둘째", "셋째"}}, nil
+}
+
+func TestHeadingRPCsRequireAuthenticationAndMapOwnedInput(t *testing.T) {
+	h := handler(&fakeStore{})
+	for _, call := range []func() error{
+		func() error {
+			_, err := h.EstimateTemplateHeadingSuggestions(t.Context(), connect.NewRequest(&postpilotv1.EstimateTemplateHeadingSuggestionsRequest{}))
+			return err
+		},
+		func() error {
+			_, err := h.StartTemplateHeadingSuggestions(t.Context(), connect.NewRequest(&postpilotv1.StartTemplateHeadingSuggestionsRequest{}))
+			return err
+		},
+		func() error {
+			_, err := h.GetTemplateHeadingSuggestions(t.Context(), connect.NewRequest(&postpilotv1.GetTemplateHeadingSuggestionsRequest{}))
+			return err
+		},
+	} {
+		if err := call(); connect.CodeOf(err) != connect.CodeUnauthenticated {
+			t.Fatalf("unauthenticated heading read/write admitted: %v", err)
+		}
+	}
+	port := h.headings.(*fakeHeadings)
+	if port.calls != 0 {
+		t.Fatal("unauthenticated request reached the service")
+	}
+	response, err := h.StartTemplateHeadingSuggestions(signedIn(t), connect.NewRequest(&postpilotv1.StartTemplateHeadingSuggestionsRequest{WriteModel: &postpilotv1.ModelRef{ProviderId: "p", ModelId: "w"}, TargetKind: "post", TargetPath: []string{"맛집"}, Sections: []*postpilotv1.TemplateHeadingSection{{Role: "방문 계기", Description: "방문한 이유"}}}))
+	if err != nil || response.Msg.GetJobId() != "headings-1" || port.user != "alice" || port.input.WriteModel != "p/w" || len(port.input.Sections) != 1 || port.input.Sections[0].Description != "방문한 이유" {
+		t.Fatalf("wrong owned input: %+v %v", port, err)
+	}
+	port.err = template.ErrHeadingInputInvalid
+	_, err = h.StartTemplateHeadingSuggestions(signedIn(t), connect.NewRequest(&postpilotv1.StartTemplateHeadingSuggestionsRequest{}))
+	if connect.CodeOf(err) != connect.CodeInvalidArgument || detail(t, err).Reason != "TEMPLATE_HEADING_INPUT_INVALID" {
+		t.Fatalf("wrong invalid-input refusal: %v", err)
+	}
 }
 
 func signedIn(t *testing.T) context.Context {

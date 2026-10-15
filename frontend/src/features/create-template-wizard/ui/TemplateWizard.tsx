@@ -1,17 +1,18 @@
-import { useReducer, useRef } from 'react'
+import { useRef } from 'react'
+import { useActorRef, useSelector } from '@xstate/react'
 import { useTranslation } from 'react-i18next'
 import { useBlocker } from '@tanstack/react-router'
 import { useCreateTemplate } from '@/entities/template'
-import { Button, Dialog, WizardFrame } from '@/shared/ui'
+import { Button, Dialog, Typography, WizardFrame } from '@/shared/ui'
 import { nodeAt } from '../config/catalog'
 import { toWizardBody } from '../lib/to-body'
 import {
   checkedSections,
   finishProblem,
-  initialWizardState,
   wizardHasAnswers,
   wizardProgress,
-  wizardTransition,
+  wizardMachine,
+  wizardStateOf,
   type WizardState,
 } from '../model/wizard-machine'
 import { FinishStep } from './FinishStep'
@@ -20,6 +21,7 @@ import { OrderStep } from './OrderStep'
 import { SectionStep } from './SectionStep'
 import { SectionsStep } from './SectionsStep'
 import { TargetStep } from './TargetStep'
+import { useHeadingSuggestions } from '../model/useHeadingSuggestions'
 
 /** 새 템플릿 as a guided wizard (TMPL-71): one question per screen, Back that keeps every answer,
  *  one emphasized next action, and nothing written before 저장 — which saves an ordinary template
@@ -31,8 +33,30 @@ export function TemplateWizard({
   ownerId: string
   onSaved: (templateId: string) => void
 }) {
+  return <OwnedTemplateWizard key={ownerId} ownerId={ownerId} onSaved={onSaved} />
+}
+
+function OwnedTemplateWizard({
+  ownerId,
+  onSaved,
+}: {
+  ownerId: string
+  onSaved: (templateId: string) => void
+}) {
   const { t } = useTranslation('templates')
-  const [state, send] = useReducer(wizardTransition, undefined, initialWizardState)
+  const actor = useActorRef(wizardMachine)
+  const state = useSelector(actor, wizardStateOf)
+  const send = actor.send
+  const headings = useHeadingSuggestions(
+    ownerId,
+    'post',
+    state.path.map((key) => t(`wizard.targets.${key as 'restaurant'}.name`)),
+    checkedSections(state).map((section) => ({
+      id: section.id,
+      role: section.name,
+      description: section.help,
+    })),
+  )
   const create = useCreateTemplate(ownerId)
   const leaving = useRef(false)
   const guard = () => wizardHasAnswers(state) && !leaving.current
@@ -80,6 +104,11 @@ export function TemplateWizard({
 
   return (
     <>
+      {state.step !== 'headings' && headings.pending && (
+        <Typography variant="body" role="status">
+          {t('wizard.headings.running')}
+        </Typography>
+      )}
       <WizardFrame screen={screenOf(state)} progress={progress} {...frame(state)} />
       <Dialog
         open={blocker.status === 'blocked'}
@@ -126,8 +155,7 @@ export function TemplateWizard({
           title: t('wizard.headings.title'),
           help: t('wizard.headings.help'),
           back,
-          next,
-          children: <HeadingsStep state={current} send={send} />,
+          children: <HeadingsStep state={current} send={send} operation={headings} />,
         }
       case 'section': {
         const section = checkedSections(current)[current.cursor]!
@@ -135,7 +163,15 @@ export function TemplateWizard({
           title: t('wizard.section.title', { heading: section.heading.trim() || section.name }),
           back,
           next,
-          children: <SectionStep key={section.id} state={current} section={section} send={send} />,
+          children: (
+            <SectionStep
+              key={section.id}
+              state={current}
+              section={section}
+              send={send}
+              suggestions={headings.suggestions(section.id)}
+            />
+          ),
         }
       }
       case 'finish':

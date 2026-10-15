@@ -138,9 +138,8 @@ type requests struct {
 	limits  RequestLimits
 }
 
-// ConfigureRequests wires the template request (TMPL-58). It is the one template surface that
-// calls a provider or enqueues a job (TMPL-16), so everything else in this context runs
-// without it.
+// ConfigureRequests wires historical template-request execution. New wizard heading work has
+// its own required constructor; ordinary template CRUD remains valid without this executor.
 func (s *Service) ConfigureRequests(models RequestModels, samples RequestSamples, jobs RequestJobs, budget RequestBudget, limits RequestLimits) {
 	if !limits.valid() {
 		panic("template: request limits must be positive")

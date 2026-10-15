@@ -12,9 +12,9 @@ import "postpilot/v1/provider.proto";
 // photo. The voice decides how sentences sound and a guideline decides what to avoid; a
 // template decides the skeleton.
 //
-// A template is authored text. Nothing here is learned or inferred, and a model writes one only
-// when its owner asks: StartTemplateRequest is the one procedure that enqueues work or calls a
-// provider (TMPL-16, TMPL-58).
+// A template is authored text. The wizard's explicit heading-suggestion action alone starts
+// new model work here (TMPL-73); saved-template refinement uses configuration authoring.
+// Historical template-request execution, cancellation and results remain readable.
 //
 // Every procedure is scoped to the acting user from the session — no request carries a
 // user id, because a user id in a message is a claim by the caller, not a fact.
@@ -35,6 +35,10 @@ service TemplateService {
   rpc CancelTemplateRequest(CancelTemplateRequestRequest) returns (CancelTemplateRequestResponse) {}
   // What one request on a write model is expected to cost, shown before it is pressed (QUOTA-67).
   rpc EstimateTemplateRequest(EstimateTemplateRequestRequest) returns (EstimateTemplateRequestResponse) {}
+  // TMPL-73: explicit wizard-only suggestions; reads and navigation never start work.
+  rpc EstimateTemplateHeadingSuggestions(EstimateTemplateHeadingSuggestionsRequest) returns (EstimateTemplateHeadingSuggestionsResponse) {}
+  rpc StartTemplateHeadingSuggestions(StartTemplateHeadingSuggestionsRequest) returns (StartTemplateHeadingSuggestionsResponse) {}
+  rpc GetTemplateHeadingSuggestions(GetTemplateHeadingSuggestionsRequest) returns (GetTemplateHeadingSuggestionsResponse) {}
 }
 
 message Template {
@@ -183,3 +187,27 @@ message CancelTemplateRequestRequest {
 }
 
 message CancelTemplateRequestResponse {}
+
+message TemplateHeadingSection {
+  string role = 1;
+  string description = 2;
+}
+message EstimateTemplateHeadingSuggestionsRequest { ModelRef write_model = 1; }
+message EstimateTemplateHeadingSuggestionsResponse {
+  bool free = 1;
+  optional int32 credits = 2;
+}
+message StartTemplateHeadingSuggestionsRequest {
+  ModelRef write_model = 1;
+  // Exactly post or clip. No post identity, content, attachments or sample is accepted.
+  string target_kind = 2;
+  repeated string target_path = 3;
+  repeated TemplateHeadingSection sections = 4;
+}
+message StartTemplateHeadingSuggestionsResponse { string job_id = 1; }
+message GetTemplateHeadingSuggestionsRequest { string job_id = 1; }
+message TemplateHeadingChoices { repeated string headings = 1; }
+message GetTemplateHeadingSuggestionsResponse {
+  // Exactly one group per requested section, in the frozen request's order.
+  repeated TemplateHeadingChoices sections = 1;
+}

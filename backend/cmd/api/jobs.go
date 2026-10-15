@@ -114,6 +114,9 @@ func registerJobs(c *contexts) {
 	q.Register(job.KindWritingVoiceCandidates, metered(func(ctx context.Context, found job.Job, progress job.Progress) error {
 		return c.voiceCandidates.Run(ctx, voice.CandidateRun{ID: found.ID, UserID: found.UserID, WriteModel: found.WriteModel, Payload: found.Payload}, voice.Progress(progress))
 	}))
+	q.Register(template.HeadingSuggestionJobKind, metered(func(ctx context.Context, found job.Job, progress job.Progress) error {
+		return c.templateHeadings.Run(ctx, template.RequestRun{ID: found.ID, UserID: found.UserID, WriteModel: found.WriteModel, Payload: found.Payload}, progress)
+	}))
 	q.Register(authoring.JobKind, metered(func(ctx context.Context, found job.Job, progress job.Progress) error {
 		return c.authoring.Run(ctx, authoring.Run{ID: found.ID, UserID: found.UserID, WriteModel: found.WriteModel, Payload: found.Payload}, func(stage string, done, total int) { progress(stage, done, total) })
 	}))

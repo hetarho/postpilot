@@ -13,6 +13,8 @@
  *  refuse a new template's request before it spends credits on a draft whose save
  *  the server would refuse (TMPL-62). The server still enforces it on every insert. */
 import { ENV_LIMIT_OVERRIDES, positiveIntEnv } from '@/shared/config'
+export const HEADING_SUGGESTION_SECTIONS_MAX = 20
+export const HEADING_CHOICES_PER_SECTION = 3
 export const TEMPLATE_NAME_MAX_CHARS = positiveIntEnv(ENV_LIMIT_OVERRIDES.templateNameMaxChars, 40)
 export const TEMPLATE_DESCRIPTION_MAX_CHARS = positiveIntEnv(
   ENV_LIMIT_OVERRIDES.templateDescriptionMaxChars,

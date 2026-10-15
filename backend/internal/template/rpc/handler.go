@@ -19,9 +19,23 @@ import (
 
 const timeLayout = "2006-01-02T15:04:05.000000000Z07:00"
 
-type Handler struct{ service *template.Service }
+type HeadingSuggestions interface {
+	Start(context.Context, string, template.HeadingSuggestionStart) (string, error)
+	Estimate(context.Context, string) (template.RequestEstimate, error)
+	Result(context.Context, string, string) ([][]string, error)
+}
 
-func NewHandler(service *template.Service) *Handler { return &Handler{service: service} }
+type Handler struct {
+	service  *template.Service
+	headings HeadingSuggestions
+}
+
+func NewHandler(service *template.Service, headings HeadingSuggestions) *Handler {
+	if service == nil || headings == nil {
+		panic("template rpc: service and heading suggestions are required")
+	}
+	return &Handler{service: service, headings: headings}
+}
 
 func (h *Handler) ListTemplates(ctx context.Context, _ *connect.Request[postpilotv1.ListTemplatesRequest]) (*connect.Response[postpilotv1.ListTemplatesResponse], error) {
 	userID, err := actingUser(ctx)
@@ -213,6 +227,8 @@ func toConnectError(op string, err error) error {
 	var outOfRange *template.NumberOutOfRangeError
 	var parseErr *template.ParseError
 	switch {
+	case errors.Is(err, template.ErrHeadingInputInvalid):
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "heading input is invalid", postpilotv1.FailureReason_TEMPLATE_HEADING_INPUT_INVALID, nil)
 	case errors.As(err, &outOfRange):
 		// `max` is omitted for a number with no ceiling: a params key claiming one would be a
 		// rule nobody set.

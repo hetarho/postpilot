@@ -473,6 +473,9 @@ export {
   GetTemplateRequestResultResponseSchema,
   CancelTemplateRequestResponseSchema,
   EstimateTemplateRequestResponseSchema,
+  EstimateTemplateHeadingSuggestionsResponseSchema,
+  StartTemplateHeadingSuggestionsResponseSchema,
+  GetTemplateHeadingSuggestionsResponseSchema,
 } from './gen/postpilot/v1/template_pb'
 export type {
   Template as ProtoTemplate,

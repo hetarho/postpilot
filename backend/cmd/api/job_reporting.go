@@ -8,6 +8,7 @@ import (
 	experimentapp "github.com/postpilot/backend/internal/experiment/app"
 	"github.com/postpilot/backend/internal/job"
 	"github.com/postpilot/backend/internal/llm"
+	"github.com/postpilot/backend/internal/template"
 	"github.com/postpilot/backend/internal/voice/spoken"
 )
 
@@ -47,6 +48,12 @@ func (jobReporting) LogAttrs(err error) []any {
 }
 
 func (jobReporting) SafeStage(kind, stage string) (string, bool) {
+	if kind == template.HeadingSuggestionJobKind {
+		if stage == "queued" || stage == "write" || stage == "complete" {
+			return stage, true
+		}
+		return "working", true
+	}
 	if kind == experimentapp.WritingTestJobKind {
 		switch stage {
 		case "queued", "observe", "write", "writing_test", "complete":
@@ -67,5 +74,5 @@ func (jobReporting) SafeStage(kind, stage string) (string, bool) {
 
 // Clip failures may wrap subprocess stderr, media paths or provider bodies.
 func (jobReporting) Redacted(kind string) bool {
-	return kind == experimentapp.WritingTestJobKind || clip.IsJobKind(kind) || spoken.IsJobKind(kind) || kind == job.KindWritingVoiceCandidates || kind == authoring.JobKind
+	return kind == experimentapp.WritingTestJobKind || clip.IsJobKind(kind) || spoken.IsJobKind(kind) || kind == job.KindWritingVoiceCandidates || kind == authoring.JobKind || kind == template.HeadingSuggestionJobKind
 }

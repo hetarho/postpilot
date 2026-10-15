@@ -43,7 +43,7 @@ describe('the template wizard', () => {
     const heading = screen.getByLabelText('방문 계기 소제목')
     await user.clear(heading)
     await user.type(heading, '찾아간 이유')
-    await user.click(next())
+    await user.click(screen.getByRole('button', { name: '내 말로 쓰기' }))
 
     // One screen per section, each already answerable; 매장 정보 asks the author and must be answered.
     await title('“찾아간 이유” 부분')
@@ -56,9 +56,7 @@ describe('the template wizard', () => {
     }
 
     // Nothing was written and no AI work started before 저장: the screens only read.
-    expect(calls.filter((call) => /Create|Update|Save|Delete|Start|Estimate/.test(call))).toEqual(
-      [],
-    )
+    expect(calls.filter((call) => /Create|Update|Save|Delete|Start/.test(call))).toEqual([])
     expect(screen.getByRole('article', { name: '미리보기' })).toHaveTextContent('찾아간 이유')
     await user.click(screen.getByRole('button', { name: '저장' }))
     expect(await screen.findByText('템플릿 이름을 적어 주세요.')).toBeInTheDocument()

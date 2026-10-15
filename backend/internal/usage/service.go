@@ -1056,7 +1056,7 @@ func (s *Service) RecordCall(ctx context.Context, ref llm.ModelRef, stage string
 	if callErr != nil && u.PromptTokens == 0 && u.CompletionTokens == 0 && !u.CostReported {
 		return nil
 	}
-	if s.requiresApproval(work.Kind) {
+	if s.requiresApproval(work.Kind) || s.ownerCancellableKinds[work.Kind] {
 		// A provider can report paid usage while worker shutdown cancels its call.
 		// Preserve that evidence for boot settlement without permitting another call.
 		recordCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)

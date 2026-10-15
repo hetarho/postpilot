@@ -200,6 +200,7 @@ export const appFailureSpecs = {
   TEMPLATE_PARSE_FAILED: { required: ['line', 'reason'], optional: ['area'] },
   TEMPLATE_REQUIRED_ANSWER_MISSING: { required: ['label'] },
   TEMPLATE_REQUEST_EMPTY: {},
+  TEMPLATE_HEADING_INPUT_INVALID: {},
   TEMPLATE_REQUEST_RUNNING: {},
   TEMPLATE_SAMPLE_UNAVAILABLE: {},
   TEMPLATE_REQUEST_ANSWER_INVALID: {},

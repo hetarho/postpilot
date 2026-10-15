@@ -1223,6 +1223,400 @@ func (*CancelTemplateRequestResponse) Descriptor() ([]byte, []int) {
 	return file_postpilot_v1_template_proto_rawDescGZIP(), []int{20}
 }
 
+type TemplateHeadingSection struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Role          string                 `protobuf:"bytes,1,opt,name=role,proto3" json:"role,omitempty"`
+	Description   string                 `protobuf:"bytes,2,opt,name=description,proto3" json:"description,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TemplateHeadingSection) Reset() {
+	*x = TemplateHeadingSection{}
+	mi := &file_postpilot_v1_template_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TemplateHeadingSection) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TemplateHeadingSection) ProtoMessage() {}
+
+func (x *TemplateHeadingSection) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_template_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TemplateHeadingSection.ProtoReflect.Descriptor instead.
+func (*TemplateHeadingSection) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_template_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *TemplateHeadingSection) GetRole() string {
+	if x != nil {
+		return x.Role
+	}
+	return ""
+}
+
+func (x *TemplateHeadingSection) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+type EstimateTemplateHeadingSuggestionsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	WriteModel    *ModelRef              `protobuf:"bytes,1,opt,name=write_model,json=writeModel,proto3" json:"write_model,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *EstimateTemplateHeadingSuggestionsRequest) Reset() {
+	*x = EstimateTemplateHeadingSuggestionsRequest{}
+	mi := &file_postpilot_v1_template_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EstimateTemplateHeadingSuggestionsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EstimateTemplateHeadingSuggestionsRequest) ProtoMessage() {}
+
+func (x *EstimateTemplateHeadingSuggestionsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_template_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EstimateTemplateHeadingSuggestionsRequest.ProtoReflect.Descriptor instead.
+func (*EstimateTemplateHeadingSuggestionsRequest) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_template_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *EstimateTemplateHeadingSuggestionsRequest) GetWriteModel() *ModelRef {
+	if x != nil {
+		return x.WriteModel
+	}
+	return nil
+}
+
+type EstimateTemplateHeadingSuggestionsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Free          bool                   `protobuf:"varint,1,opt,name=free,proto3" json:"free,omitempty"`
+	Credits       *int32                 `protobuf:"varint,2,opt,name=credits,proto3,oneof" json:"credits,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *EstimateTemplateHeadingSuggestionsResponse) Reset() {
+	*x = EstimateTemplateHeadingSuggestionsResponse{}
+	mi := &file_postpilot_v1_template_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EstimateTemplateHeadingSuggestionsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EstimateTemplateHeadingSuggestionsResponse) ProtoMessage() {}
+
+func (x *EstimateTemplateHeadingSuggestionsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_template_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EstimateTemplateHeadingSuggestionsResponse.ProtoReflect.Descriptor instead.
+func (*EstimateTemplateHeadingSuggestionsResponse) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_template_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *EstimateTemplateHeadingSuggestionsResponse) GetFree() bool {
+	if x != nil {
+		return x.Free
+	}
+	return false
+}
+
+func (x *EstimateTemplateHeadingSuggestionsResponse) GetCredits() int32 {
+	if x != nil && x.Credits != nil {
+		return *x.Credits
+	}
+	return 0
+}
+
+type StartTemplateHeadingSuggestionsRequest struct {
+	state      protoimpl.MessageState `protogen:"open.v1"`
+	WriteModel *ModelRef              `protobuf:"bytes,1,opt,name=write_model,json=writeModel,proto3" json:"write_model,omitempty"`
+	// Exactly post or clip. No post identity, content, attachments or sample is accepted.
+	TargetKind    string                    `protobuf:"bytes,2,opt,name=target_kind,json=targetKind,proto3" json:"target_kind,omitempty"`
+	TargetPath    []string                  `protobuf:"bytes,3,rep,name=target_path,json=targetPath,proto3" json:"target_path,omitempty"`
+	Sections      []*TemplateHeadingSection `protobuf:"bytes,4,rep,name=sections,proto3" json:"sections,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StartTemplateHeadingSuggestionsRequest) Reset() {
+	*x = StartTemplateHeadingSuggestionsRequest{}
+	mi := &file_postpilot_v1_template_proto_msgTypes[24]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StartTemplateHeadingSuggestionsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StartTemplateHeadingSuggestionsRequest) ProtoMessage() {}
+
+func (x *StartTemplateHeadingSuggestionsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_template_proto_msgTypes[24]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StartTemplateHeadingSuggestionsRequest.ProtoReflect.Descriptor instead.
+func (*StartTemplateHeadingSuggestionsRequest) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_template_proto_rawDescGZIP(), []int{24}
+}
+
+func (x *StartTemplateHeadingSuggestionsRequest) GetWriteModel() *ModelRef {
+	if x != nil {
+		return x.WriteModel
+	}
+	return nil
+}
+
+func (x *StartTemplateHeadingSuggestionsRequest) GetTargetKind() string {
+	if x != nil {
+		return x.TargetKind
+	}
+	return ""
+}
+
+func (x *StartTemplateHeadingSuggestionsRequest) GetTargetPath() []string {
+	if x != nil {
+		return x.TargetPath
+	}
+	return nil
+}
+
+func (x *StartTemplateHeadingSuggestionsRequest) GetSections() []*TemplateHeadingSection {
+	if x != nil {
+		return x.Sections
+	}
+	return nil
+}
+
+type StartTemplateHeadingSuggestionsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	JobId         string                 `protobuf:"bytes,1,opt,name=job_id,json=jobId,proto3" json:"job_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StartTemplateHeadingSuggestionsResponse) Reset() {
+	*x = StartTemplateHeadingSuggestionsResponse{}
+	mi := &file_postpilot_v1_template_proto_msgTypes[25]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StartTemplateHeadingSuggestionsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StartTemplateHeadingSuggestionsResponse) ProtoMessage() {}
+
+func (x *StartTemplateHeadingSuggestionsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_template_proto_msgTypes[25]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StartTemplateHeadingSuggestionsResponse.ProtoReflect.Descriptor instead.
+func (*StartTemplateHeadingSuggestionsResponse) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_template_proto_rawDescGZIP(), []int{25}
+}
+
+func (x *StartTemplateHeadingSuggestionsResponse) GetJobId() string {
+	if x != nil {
+		return x.JobId
+	}
+	return ""
+}
+
+type GetTemplateHeadingSuggestionsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	JobId         string                 `protobuf:"bytes,1,opt,name=job_id,json=jobId,proto3" json:"job_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetTemplateHeadingSuggestionsRequest) Reset() {
+	*x = GetTemplateHeadingSuggestionsRequest{}
+	mi := &file_postpilot_v1_template_proto_msgTypes[26]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetTemplateHeadingSuggestionsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetTemplateHeadingSuggestionsRequest) ProtoMessage() {}
+
+func (x *GetTemplateHeadingSuggestionsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_template_proto_msgTypes[26]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetTemplateHeadingSuggestionsRequest.ProtoReflect.Descriptor instead.
+func (*GetTemplateHeadingSuggestionsRequest) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_template_proto_rawDescGZIP(), []int{26}
+}
+
+func (x *GetTemplateHeadingSuggestionsRequest) GetJobId() string {
+	if x != nil {
+		return x.JobId
+	}
+	return ""
+}
+
+type TemplateHeadingChoices struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Headings      []string               `protobuf:"bytes,1,rep,name=headings,proto3" json:"headings,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TemplateHeadingChoices) Reset() {
+	*x = TemplateHeadingChoices{}
+	mi := &file_postpilot_v1_template_proto_msgTypes[27]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TemplateHeadingChoices) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TemplateHeadingChoices) ProtoMessage() {}
+
+func (x *TemplateHeadingChoices) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_template_proto_msgTypes[27]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TemplateHeadingChoices.ProtoReflect.Descriptor instead.
+func (*TemplateHeadingChoices) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_template_proto_rawDescGZIP(), []int{27}
+}
+
+func (x *TemplateHeadingChoices) GetHeadings() []string {
+	if x != nil {
+		return x.Headings
+	}
+	return nil
+}
+
+type GetTemplateHeadingSuggestionsResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Exactly one group per requested section, in the frozen request's order.
+	Sections      []*TemplateHeadingChoices `protobuf:"bytes,1,rep,name=sections,proto3" json:"sections,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetTemplateHeadingSuggestionsResponse) Reset() {
+	*x = GetTemplateHeadingSuggestionsResponse{}
+	mi := &file_postpilot_v1_template_proto_msgTypes[28]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetTemplateHeadingSuggestionsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetTemplateHeadingSuggestionsResponse) ProtoMessage() {}
+
+func (x *GetTemplateHeadingSuggestionsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_template_proto_msgTypes[28]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetTemplateHeadingSuggestionsResponse.ProtoReflect.Descriptor instead.
+func (*GetTemplateHeadingSuggestionsResponse) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_template_proto_rawDescGZIP(), []int{28}
+}
+
+func (x *GetTemplateHeadingSuggestionsResponse) GetSections() []*TemplateHeadingChoices {
+	if x != nil {
+		return x.Sections
+	}
+	return nil
+}
+
 var File_postpilot_v1_template_proto protoreflect.FileDescriptor
 
 const file_postpilot_v1_template_proto_rawDesc = "" +
@@ -1326,7 +1720,34 @@ const file_postpilot_v1_template_proto_rawDesc = "" +
 	"\b_credits\"5\n" +
 	"\x1cCancelTemplateRequestRequest\x12\x15\n" +
 	"\x06job_id\x18\x01 \x01(\tR\x05jobId\"\x1f\n" +
-	"\x1dCancelTemplateRequestResponse2\xc5\a\n" +
+	"\x1dCancelTemplateRequestResponse\"N\n" +
+	"\x16TemplateHeadingSection\x12\x12\n" +
+	"\x04role\x18\x01 \x01(\tR\x04role\x12 \n" +
+	"\vdescription\x18\x02 \x01(\tR\vdescription\"d\n" +
+	")EstimateTemplateHeadingSuggestionsRequest\x127\n" +
+	"\vwrite_model\x18\x01 \x01(\v2\x16.postpilot.v1.ModelRefR\n" +
+	"writeModel\"k\n" +
+	"*EstimateTemplateHeadingSuggestionsResponse\x12\x12\n" +
+	"\x04free\x18\x01 \x01(\bR\x04free\x12\x1d\n" +
+	"\acredits\x18\x02 \x01(\x05H\x00R\acredits\x88\x01\x01B\n" +
+	"\n" +
+	"\b_credits\"\xe5\x01\n" +
+	"&StartTemplateHeadingSuggestionsRequest\x127\n" +
+	"\vwrite_model\x18\x01 \x01(\v2\x16.postpilot.v1.ModelRefR\n" +
+	"writeModel\x12\x1f\n" +
+	"\vtarget_kind\x18\x02 \x01(\tR\n" +
+	"targetKind\x12\x1f\n" +
+	"\vtarget_path\x18\x03 \x03(\tR\n" +
+	"targetPath\x12@\n" +
+	"\bsections\x18\x04 \x03(\v2$.postpilot.v1.TemplateHeadingSectionR\bsections\"@\n" +
+	"'StartTemplateHeadingSuggestionsResponse\x12\x15\n" +
+	"\x06job_id\x18\x01 \x01(\tR\x05jobId\"=\n" +
+	"$GetTemplateHeadingSuggestionsRequest\x12\x15\n" +
+	"\x06job_id\x18\x01 \x01(\tR\x05jobId\"4\n" +
+	"\x16TemplateHeadingChoices\x12\x1a\n" +
+	"\bheadings\x18\x01 \x03(\tR\bheadings\"i\n" +
+	"%GetTemplateHeadingSuggestionsResponse\x12@\n" +
+	"\bsections\x18\x01 \x03(\v2$.postpilot.v1.TemplateHeadingChoicesR\bsections2\x81\v\n" +
 	"\x0fTemplateService\x12Z\n" +
 	"\rListTemplates\x12\".postpilot.v1.ListTemplatesRequest\x1a#.postpilot.v1.ListTemplatesResponse\"\x00\x12]\n" +
 	"\x0eCreateTemplate\x12#.postpilot.v1.CreateTemplateRequest\x1a$.postpilot.v1.CreateTemplateResponse\"\x00\x12]\n" +
@@ -1336,7 +1757,10 @@ const file_postpilot_v1_template_proto_rawDesc = "" +
 	"\x14StartTemplateRequest\x12).postpilot.v1.StartTemplateRequestRequest\x1a*.postpilot.v1.StartTemplateRequestResponse\"\x00\x12{\n" +
 	"\x18GetTemplateRequestResult\x12-.postpilot.v1.GetTemplateRequestResultRequest\x1a..postpilot.v1.GetTemplateRequestResultResponse\"\x00\x12r\n" +
 	"\x15CancelTemplateRequest\x12*.postpilot.v1.CancelTemplateRequestRequest\x1a+.postpilot.v1.CancelTemplateRequestResponse\"\x00\x12x\n" +
-	"\x17EstimateTemplateRequest\x12,.postpilot.v1.EstimateTemplateRequestRequest\x1a-.postpilot.v1.EstimateTemplateRequestResponse\"\x00BDZBgithub.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1b\x06proto3"
+	"\x17EstimateTemplateRequest\x12,.postpilot.v1.EstimateTemplateRequestRequest\x1a-.postpilot.v1.EstimateTemplateRequestResponse\"\x00\x12\x99\x01\n" +
+	"\"EstimateTemplateHeadingSuggestions\x127.postpilot.v1.EstimateTemplateHeadingSuggestionsRequest\x1a8.postpilot.v1.EstimateTemplateHeadingSuggestionsResponse\"\x00\x12\x90\x01\n" +
+	"\x1fStartTemplateHeadingSuggestions\x124.postpilot.v1.StartTemplateHeadingSuggestionsRequest\x1a5.postpilot.v1.StartTemplateHeadingSuggestionsResponse\"\x00\x12\x8a\x01\n" +
+	"\x1dGetTemplateHeadingSuggestions\x122.postpilot.v1.GetTemplateHeadingSuggestionsRequest\x1a3.postpilot.v1.GetTemplateHeadingSuggestionsResponse\"\x00BDZBgithub.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1b\x06proto3"
 
 var (
 	file_postpilot_v1_template_proto_rawDescOnce sync.Once
@@ -1350,65 +1774,83 @@ func file_postpilot_v1_template_proto_rawDescGZIP() []byte {
 	return file_postpilot_v1_template_proto_rawDescData
 }
 
-var file_postpilot_v1_template_proto_msgTypes = make([]protoimpl.MessageInfo, 21)
+var file_postpilot_v1_template_proto_msgTypes = make([]protoimpl.MessageInfo, 29)
 var file_postpilot_v1_template_proto_goTypes = []any{
-	(*Template)(nil),                         // 0: postpilot.v1.Template
-	(*TemplateRef)(nil),                      // 1: postpilot.v1.TemplateRef
-	(*ListTemplatesRequest)(nil),             // 2: postpilot.v1.ListTemplatesRequest
-	(*ListTemplatesResponse)(nil),            // 3: postpilot.v1.ListTemplatesResponse
-	(*CreateTemplateRequest)(nil),            // 4: postpilot.v1.CreateTemplateRequest
-	(*CreateTemplateResponse)(nil),           // 5: postpilot.v1.CreateTemplateResponse
-	(*UpdateTemplateRequest)(nil),            // 6: postpilot.v1.UpdateTemplateRequest
-	(*UpdateTemplateResponse)(nil),           // 7: postpilot.v1.UpdateTemplateResponse
-	(*DeleteTemplateRequest)(nil),            // 8: postpilot.v1.DeleteTemplateRequest
-	(*DeleteTemplateResponse)(nil),           // 9: postpilot.v1.DeleteTemplateResponse
-	(*GetFormatGuideRequest)(nil),            // 10: postpilot.v1.GetFormatGuideRequest
-	(*GetFormatGuideResponse)(nil),           // 11: postpilot.v1.GetFormatGuideResponse
-	(*TemplateDraft)(nil),                    // 12: postpilot.v1.TemplateDraft
-	(*StartTemplateRequestRequest)(nil),      // 13: postpilot.v1.StartTemplateRequestRequest
-	(*StartTemplateRequestResponse)(nil),     // 14: postpilot.v1.StartTemplateRequestResponse
-	(*GetTemplateRequestResultRequest)(nil),  // 15: postpilot.v1.GetTemplateRequestResultRequest
-	(*GetTemplateRequestResultResponse)(nil), // 16: postpilot.v1.GetTemplateRequestResultResponse
-	(*EstimateTemplateRequestRequest)(nil),   // 17: postpilot.v1.EstimateTemplateRequestRequest
-	(*EstimateTemplateRequestResponse)(nil),  // 18: postpilot.v1.EstimateTemplateRequestResponse
-	(*CancelTemplateRequestRequest)(nil),     // 19: postpilot.v1.CancelTemplateRequestRequest
-	(*CancelTemplateRequestResponse)(nil),    // 20: postpilot.v1.CancelTemplateRequestResponse
-	(ContentLanguage)(0),                     // 21: postpilot.v1.ContentLanguage
-	(*ModelRef)(nil),                         // 22: postpilot.v1.ModelRef
+	(*Template)(nil),                                   // 0: postpilot.v1.Template
+	(*TemplateRef)(nil),                                // 1: postpilot.v1.TemplateRef
+	(*ListTemplatesRequest)(nil),                       // 2: postpilot.v1.ListTemplatesRequest
+	(*ListTemplatesResponse)(nil),                      // 3: postpilot.v1.ListTemplatesResponse
+	(*CreateTemplateRequest)(nil),                      // 4: postpilot.v1.CreateTemplateRequest
+	(*CreateTemplateResponse)(nil),                     // 5: postpilot.v1.CreateTemplateResponse
+	(*UpdateTemplateRequest)(nil),                      // 6: postpilot.v1.UpdateTemplateRequest
+	(*UpdateTemplateResponse)(nil),                     // 7: postpilot.v1.UpdateTemplateResponse
+	(*DeleteTemplateRequest)(nil),                      // 8: postpilot.v1.DeleteTemplateRequest
+	(*DeleteTemplateResponse)(nil),                     // 9: postpilot.v1.DeleteTemplateResponse
+	(*GetFormatGuideRequest)(nil),                      // 10: postpilot.v1.GetFormatGuideRequest
+	(*GetFormatGuideResponse)(nil),                     // 11: postpilot.v1.GetFormatGuideResponse
+	(*TemplateDraft)(nil),                              // 12: postpilot.v1.TemplateDraft
+	(*StartTemplateRequestRequest)(nil),                // 13: postpilot.v1.StartTemplateRequestRequest
+	(*StartTemplateRequestResponse)(nil),               // 14: postpilot.v1.StartTemplateRequestResponse
+	(*GetTemplateRequestResultRequest)(nil),            // 15: postpilot.v1.GetTemplateRequestResultRequest
+	(*GetTemplateRequestResultResponse)(nil),           // 16: postpilot.v1.GetTemplateRequestResultResponse
+	(*EstimateTemplateRequestRequest)(nil),             // 17: postpilot.v1.EstimateTemplateRequestRequest
+	(*EstimateTemplateRequestResponse)(nil),            // 18: postpilot.v1.EstimateTemplateRequestResponse
+	(*CancelTemplateRequestRequest)(nil),               // 19: postpilot.v1.CancelTemplateRequestRequest
+	(*CancelTemplateRequestResponse)(nil),              // 20: postpilot.v1.CancelTemplateRequestResponse
+	(*TemplateHeadingSection)(nil),                     // 21: postpilot.v1.TemplateHeadingSection
+	(*EstimateTemplateHeadingSuggestionsRequest)(nil),  // 22: postpilot.v1.EstimateTemplateHeadingSuggestionsRequest
+	(*EstimateTemplateHeadingSuggestionsResponse)(nil), // 23: postpilot.v1.EstimateTemplateHeadingSuggestionsResponse
+	(*StartTemplateHeadingSuggestionsRequest)(nil),     // 24: postpilot.v1.StartTemplateHeadingSuggestionsRequest
+	(*StartTemplateHeadingSuggestionsResponse)(nil),    // 25: postpilot.v1.StartTemplateHeadingSuggestionsResponse
+	(*GetTemplateHeadingSuggestionsRequest)(nil),       // 26: postpilot.v1.GetTemplateHeadingSuggestionsRequest
+	(*TemplateHeadingChoices)(nil),                     // 27: postpilot.v1.TemplateHeadingChoices
+	(*GetTemplateHeadingSuggestionsResponse)(nil),      // 28: postpilot.v1.GetTemplateHeadingSuggestionsResponse
+	(ContentLanguage)(0),                               // 29: postpilot.v1.ContentLanguage
+	(*ModelRef)(nil),                                   // 30: postpilot.v1.ModelRef
 }
 var file_postpilot_v1_template_proto_depIdxs = []int32{
 	0,  // 0: postpilot.v1.ListTemplatesResponse.templates:type_name -> postpilot.v1.Template
 	0,  // 1: postpilot.v1.CreateTemplateResponse.template:type_name -> postpilot.v1.Template
 	0,  // 2: postpilot.v1.UpdateTemplateResponse.template:type_name -> postpilot.v1.Template
-	21, // 3: postpilot.v1.GetFormatGuideRequest.language:type_name -> postpilot.v1.ContentLanguage
-	22, // 4: postpilot.v1.StartTemplateRequestRequest.write_model:type_name -> postpilot.v1.ModelRef
-	21, // 5: postpilot.v1.StartTemplateRequestRequest.language:type_name -> postpilot.v1.ContentLanguage
+	29, // 3: postpilot.v1.GetFormatGuideRequest.language:type_name -> postpilot.v1.ContentLanguage
+	30, // 4: postpilot.v1.StartTemplateRequestRequest.write_model:type_name -> postpilot.v1.ModelRef
+	29, // 5: postpilot.v1.StartTemplateRequestRequest.language:type_name -> postpilot.v1.ContentLanguage
 	12, // 6: postpilot.v1.StartTemplateRequestRequest.draft:type_name -> postpilot.v1.TemplateDraft
 	12, // 7: postpilot.v1.GetTemplateRequestResultResponse.draft:type_name -> postpilot.v1.TemplateDraft
-	22, // 8: postpilot.v1.EstimateTemplateRequestRequest.write_model:type_name -> postpilot.v1.ModelRef
-	2,  // 9: postpilot.v1.TemplateService.ListTemplates:input_type -> postpilot.v1.ListTemplatesRequest
-	4,  // 10: postpilot.v1.TemplateService.CreateTemplate:input_type -> postpilot.v1.CreateTemplateRequest
-	6,  // 11: postpilot.v1.TemplateService.UpdateTemplate:input_type -> postpilot.v1.UpdateTemplateRequest
-	8,  // 12: postpilot.v1.TemplateService.DeleteTemplate:input_type -> postpilot.v1.DeleteTemplateRequest
-	10, // 13: postpilot.v1.TemplateService.GetFormatGuide:input_type -> postpilot.v1.GetFormatGuideRequest
-	13, // 14: postpilot.v1.TemplateService.StartTemplateRequest:input_type -> postpilot.v1.StartTemplateRequestRequest
-	15, // 15: postpilot.v1.TemplateService.GetTemplateRequestResult:input_type -> postpilot.v1.GetTemplateRequestResultRequest
-	19, // 16: postpilot.v1.TemplateService.CancelTemplateRequest:input_type -> postpilot.v1.CancelTemplateRequestRequest
-	17, // 17: postpilot.v1.TemplateService.EstimateTemplateRequest:input_type -> postpilot.v1.EstimateTemplateRequestRequest
-	3,  // 18: postpilot.v1.TemplateService.ListTemplates:output_type -> postpilot.v1.ListTemplatesResponse
-	5,  // 19: postpilot.v1.TemplateService.CreateTemplate:output_type -> postpilot.v1.CreateTemplateResponse
-	7,  // 20: postpilot.v1.TemplateService.UpdateTemplate:output_type -> postpilot.v1.UpdateTemplateResponse
-	9,  // 21: postpilot.v1.TemplateService.DeleteTemplate:output_type -> postpilot.v1.DeleteTemplateResponse
-	11, // 22: postpilot.v1.TemplateService.GetFormatGuide:output_type -> postpilot.v1.GetFormatGuideResponse
-	14, // 23: postpilot.v1.TemplateService.StartTemplateRequest:output_type -> postpilot.v1.StartTemplateRequestResponse
-	16, // 24: postpilot.v1.TemplateService.GetTemplateRequestResult:output_type -> postpilot.v1.GetTemplateRequestResultResponse
-	20, // 25: postpilot.v1.TemplateService.CancelTemplateRequest:output_type -> postpilot.v1.CancelTemplateRequestResponse
-	18, // 26: postpilot.v1.TemplateService.EstimateTemplateRequest:output_type -> postpilot.v1.EstimateTemplateRequestResponse
-	18, // [18:27] is the sub-list for method output_type
-	9,  // [9:18] is the sub-list for method input_type
-	9,  // [9:9] is the sub-list for extension type_name
-	9,  // [9:9] is the sub-list for extension extendee
-	0,  // [0:9] is the sub-list for field type_name
+	30, // 8: postpilot.v1.EstimateTemplateRequestRequest.write_model:type_name -> postpilot.v1.ModelRef
+	30, // 9: postpilot.v1.EstimateTemplateHeadingSuggestionsRequest.write_model:type_name -> postpilot.v1.ModelRef
+	30, // 10: postpilot.v1.StartTemplateHeadingSuggestionsRequest.write_model:type_name -> postpilot.v1.ModelRef
+	21, // 11: postpilot.v1.StartTemplateHeadingSuggestionsRequest.sections:type_name -> postpilot.v1.TemplateHeadingSection
+	27, // 12: postpilot.v1.GetTemplateHeadingSuggestionsResponse.sections:type_name -> postpilot.v1.TemplateHeadingChoices
+	2,  // 13: postpilot.v1.TemplateService.ListTemplates:input_type -> postpilot.v1.ListTemplatesRequest
+	4,  // 14: postpilot.v1.TemplateService.CreateTemplate:input_type -> postpilot.v1.CreateTemplateRequest
+	6,  // 15: postpilot.v1.TemplateService.UpdateTemplate:input_type -> postpilot.v1.UpdateTemplateRequest
+	8,  // 16: postpilot.v1.TemplateService.DeleteTemplate:input_type -> postpilot.v1.DeleteTemplateRequest
+	10, // 17: postpilot.v1.TemplateService.GetFormatGuide:input_type -> postpilot.v1.GetFormatGuideRequest
+	13, // 18: postpilot.v1.TemplateService.StartTemplateRequest:input_type -> postpilot.v1.StartTemplateRequestRequest
+	15, // 19: postpilot.v1.TemplateService.GetTemplateRequestResult:input_type -> postpilot.v1.GetTemplateRequestResultRequest
+	19, // 20: postpilot.v1.TemplateService.CancelTemplateRequest:input_type -> postpilot.v1.CancelTemplateRequestRequest
+	17, // 21: postpilot.v1.TemplateService.EstimateTemplateRequest:input_type -> postpilot.v1.EstimateTemplateRequestRequest
+	22, // 22: postpilot.v1.TemplateService.EstimateTemplateHeadingSuggestions:input_type -> postpilot.v1.EstimateTemplateHeadingSuggestionsRequest
+	24, // 23: postpilot.v1.TemplateService.StartTemplateHeadingSuggestions:input_type -> postpilot.v1.StartTemplateHeadingSuggestionsRequest
+	26, // 24: postpilot.v1.TemplateService.GetTemplateHeadingSuggestions:input_type -> postpilot.v1.GetTemplateHeadingSuggestionsRequest
+	3,  // 25: postpilot.v1.TemplateService.ListTemplates:output_type -> postpilot.v1.ListTemplatesResponse
+	5,  // 26: postpilot.v1.TemplateService.CreateTemplate:output_type -> postpilot.v1.CreateTemplateResponse
+	7,  // 27: postpilot.v1.TemplateService.UpdateTemplate:output_type -> postpilot.v1.UpdateTemplateResponse
+	9,  // 28: postpilot.v1.TemplateService.DeleteTemplate:output_type -> postpilot.v1.DeleteTemplateResponse
+	11, // 29: postpilot.v1.TemplateService.GetFormatGuide:output_type -> postpilot.v1.GetFormatGuideResponse
+	14, // 30: postpilot.v1.TemplateService.StartTemplateRequest:output_type -> postpilot.v1.StartTemplateRequestResponse
+	16, // 31: postpilot.v1.TemplateService.GetTemplateRequestResult:output_type -> postpilot.v1.GetTemplateRequestResultResponse
+	20, // 32: postpilot.v1.TemplateService.CancelTemplateRequest:output_type -> postpilot.v1.CancelTemplateRequestResponse
+	18, // 33: postpilot.v1.TemplateService.EstimateTemplateRequest:output_type -> postpilot.v1.EstimateTemplateRequestResponse
+	23, // 34: postpilot.v1.TemplateService.EstimateTemplateHeadingSuggestions:output_type -> postpilot.v1.EstimateTemplateHeadingSuggestionsResponse
+	25, // 35: postpilot.v1.TemplateService.StartTemplateHeadingSuggestions:output_type -> postpilot.v1.StartTemplateHeadingSuggestionsResponse
+	28, // 36: postpilot.v1.TemplateService.GetTemplateHeadingSuggestions:output_type -> postpilot.v1.GetTemplateHeadingSuggestionsResponse
+	25, // [25:37] is the sub-list for method output_type
+	13, // [13:25] is the sub-list for method input_type
+	13, // [13:13] is the sub-list for extension type_name
+	13, // [13:13] is the sub-list for extension extendee
+	0,  // [0:13] is the sub-list for field type_name
 }
 
 func init() { file_postpilot_v1_template_proto_init() }
@@ -1423,13 +1865,14 @@ func file_postpilot_v1_template_proto_init() {
 	file_postpilot_v1_template_proto_msgTypes[6].OneofWrappers = []any{}
 	file_postpilot_v1_template_proto_msgTypes[13].OneofWrappers = []any{}
 	file_postpilot_v1_template_proto_msgTypes[18].OneofWrappers = []any{}
+	file_postpilot_v1_template_proto_msgTypes[23].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_postpilot_v1_template_proto_rawDesc), len(file_postpilot_v1_template_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   21,
+			NumMessages:   29,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
