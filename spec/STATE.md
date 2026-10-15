@@ -11,7 +11,7 @@
 ## active
 | tag | host | mode | since | at | doing |
 |---|---|---|---|---|---|
-| m7q2 | ihaelam-ui-MacBookPro | autopilot | 2026-10-15T12:20Z | 2026-10-15T20:34Z | - |
+| m7q2 | ihaelam-ui-MacBookPro | autopilot | 2026-10-15T12:20Z | 2026-10-15T20:35Z | T692 |
 
 ## inbox
 - 261016 decided T691: where does a source-free upload-text approval live? → its own project-owned quote table, leaving source-bound generation quotes intact (alt: nullable batch identity in the existing table | require retained originals)
@@ -122,7 +122,7 @@
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
-| T692 | Create a clip from a finished post | POST CLIP | T680 T689 T690 | todo |
+| T692 | Create a clip from a finished post | POST CLIP | T680 T689 T690 | doing@261016.m7q2 |
 | T693 | Learn a voice through a scripted chat and grow AI styles toward it | VOICE THEME | - | todo |
 | T694 | Navigate by channel with 내 설정 beside it | THEME POST CLIP GUIDE TMPL VOICE | T689 | todo |
 | T695 | Tell the 체험단 story on the public about page | MKT | T682 T683 T684 T687 T688 T691 T692 T693 T694 | todo |
@@ -135,9 +135,10 @@
 ## next
 - After T686–T695 (m7q2): implement-task T698 → T699, T700 → T701 (a linked post as the clip's story); T697's operator CORS prerequisite is complete.
 - implement-task T697 (the owner applied production Content-Range CORS261015; add the ranged-GET probe/deployment gate and preserve HEAD cancellation).
-- Autopilot m7q2: T691 done; continue T692–T695, then ready T697 and T698–T701.
+- Autopilot m7q2: T692 active after T691 pushed; continue T693–T695, then ready T697 and T698–T701.
 
 ## log
+- 261016 T692 start on main at4df50bd8 (m7q2 autopilot); CLIP source-colour handling is already in the shared upload pipeline, base refreshed63. T691 pushed with exact remote workflows pending.
 - 261016 T691 done at cfa60b9e; whole FE552/4378 and full Go/API215.009s pass, all local image/media gates pass on unchanged backend80c51876; push and exact remote evidence follow.
 - 261016 T691 final whole Go formatter/vet/build/tests and FE552/4377 with all static/build gates pass; commit, generated parity and image/media push checks follow.
 - 261016 T691 local core/ownership/cancellation and paid one-call settlement tests pass; FE consumers202, clip pages215 and final inline-job regression13 pass; whole Go and final push checks are running. Claim CI38791917187 succeeds at a0cf1fbd.
