@@ -11,7 +11,7 @@
 ## active
 | tag | host | mode | since | at | doing |
 |---|---|---|---|---|---|
-| v7k2 | DESKTOP-VKPLS8P | autopilot | 2026-10-15T03:06Z | 2026-10-15T07:58Z | T683 |
+| v7k2 | DESKTOP-VKPLS8P | autopilot | 2026-10-15T03:06Z | 2026-10-15T08:07Z | - |
 
 ## inbox
 - 261015 decided -: push branch for finished units? → main, and AGENTS.md now defers to haeram-spec-creator with ARCH-31 run before each push and reused on unchanged trees (alt: - commit only | a work branch)
@@ -36,6 +36,7 @@
 - 261015 decided POST-120 T692: a memo longer than the clip instruction bound (1000)? → carry the first 1000 characters and say so in the dialog; the post keeps the full memo (alt: refuse the carry-over | carry no memo)
 - 261015 decided THEME-62 T681: colour of the 광고주 요청 evidence role? → the red ramp (300 on 950 dark, 700 on 50 light, contrast 9.98 and 7.80) with a double underline and its label, since THEME-15 closes the palette and red is the only ramp outside the other origins, the accent and the neutral (alt: a new palette ramp, needs THEME-15 and THEME-35 changed | violet, the action accent)
 - 261015 suggest T677 T678 T679 T680 T681: review-code over the five campaign tasks done so far (principle tier, advertiser guide storage and editor fields, advertiser origin)
+- 261015 decided POST-119 T683: which count meets 최소 글자 수? → the count without spaces, the stricter of the two the checklist shows, so a met mark holds whichever way the campaign counts (alt: with spaces | either one)
 
 ## ideation
 | id | st |
@@ -105,7 +106,6 @@
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
-| T683 | Show the pre-submission checklist in ③ | POST | T680 | doing@261015.v7k2 |
 | T684 | Keep the Naver output alone and reserve the disclosure place | EXPORT VIDEO LANG POST MKT | T679 | todo |
 | T685 | Build the guided post-template wizard | TMPL THEME | - | todo |
 | T686 | Suggest section headings in the owner's voice | TMPL EDIT | T685 | todo |
@@ -120,11 +120,12 @@
 | T695 | Tell the 체험단 story on the public about page | MKT | T682 T683 T684 T687 T688 T691 T692 T693 T694 | todo |
 
 ## next
-- implement-task T683 (then dep order … T695); 20 provisional decisions wait in inbox for the owner (they will read the report first).
+- implement-task T684 (then dep order … T695); 21 provisional decisions wait in inbox for the owner (they will read the report first).
 - ideation friendly-model-names 계속: decide the automatic alias word list (theme, size, contents) and whether speech profiles join; then create-ssot/update-ssot MODEL. Also pending: the 17 unadopted choices in review/structure-261008 and doc-review ARCH.
 - push: 65c79f2b passed its pre-push gate and waits only for the SSH key (ssh-add) with the spec commits after it; gh login is needed to read CI. 6e5039c8 is the live green revision.
 
 ## log
+- 261015 T683 done
 - 261015 T683 start on main at 46e4c976.
 - 261015 T682 done
 - 261015 T682 start on main at 4100f145.
@@ -144,4 +145,3 @@
 - 261015 update-ssot GUIDE GEN POST EXPORT TMPL CLIP VOICE THEME MKT start: from ideation/campaign-reviewer-focus (autopilot v7k2).
 - 261015 start-vibe v7k2 autopilot start: update-ssot from ideation/campaign-reviewer-focus first; cfg push main.
 - 261015 ideation campaign-reviewer-focus ready: always-on principle groups (facts, impressions + constructive honesty, no AI tells, titles/tags), advertiser guide with checklist and a 광고주 요청 origin color, 체험단 글 switch with a top disclosure placeholder, branching template wizard with owner headings, chat voice learning, four channel menus + 내 설정, clip upload text, 9:16 only, Tistory/site/Markdown out.
-- 261015 ideation campaign-reviewer-focus start: product philosophy (체험단 automation, fast monetization, 상생), always-on guidelines, guided template wizard, real-speech voice, per-channel outputs and menus (Naver blog, Naver clip, Instagram clip, Instagram post).

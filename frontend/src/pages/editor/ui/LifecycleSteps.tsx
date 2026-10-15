@@ -25,7 +25,7 @@ import { editorStepLabel, type EditorStep } from '../model/steps'
 import type { EditorJobView } from '../model/useEditorJob'
 import { EditorJobNotice } from './EditorJobNotice'
 import { EditorStepDock } from './EditorStepDock'
-import { EditorFinishPanel } from './EditorFinishPanel'
+import { EditorFinishPanel, type FinishCampaign } from './EditorFinishPanel'
 import { EditorGeneratePanel } from './EditorGeneratePanel'
 import { EditorRefinePanel } from './EditorRefinePanel'
 
@@ -51,6 +51,7 @@ export function LifecycleSteps({
   ensureSlug,
   jobView,
   storyline,
+  campaign,
   inspection,
 }: {
   post: PostDraft
@@ -80,6 +81,8 @@ export function LifecycleSteps({
     onChange: (paragraphs: PostStorylineParagraph[]) => void
     saveState: SaveState
   }
+  /** The 체험단 parts as the draft autosave holds them; ③'s checklist ticks save through it. */
+  campaign?: FinishCampaign
   inspection?: { contextKey: string; sourcePending: boolean }
 }) {
   const { t } = useTranslation('posts')
@@ -164,6 +167,7 @@ export function LifecycleSteps({
       ownerId={ownerId}
       result={result}
       liveContent={liveContent}
+      campaign={campaign}
       onPhotoUrlsStale={refreshPhotoUrls}
       onGoGenerate={() => onStepChange('generate')}
     />

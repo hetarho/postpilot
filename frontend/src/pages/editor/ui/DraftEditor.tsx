@@ -391,6 +391,13 @@ export function DraftEditor({ post, defaultVoice }: DraftEditorProps) {
             onChange: autosave.setStoryline,
             saveState: autosave.state,
           }}
+          campaign={{
+            on: autosave.campaign.on,
+            guide: autosave.campaign.guide,
+            ticks: autosave.campaign.ticks,
+            readOnly: published,
+            onTicksChange: (ticks) => autosave.setCampaign({ ...autosave.campaign, ticks }),
+          }}
           inspection={{ contextKey: inspectionContext, sourcePending: inspectionSourcePending }}
         />
       ) : (
