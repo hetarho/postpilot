@@ -587,6 +587,7 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
       title: req.title,
       videoTemplateId: req.videoTemplateId,
       ratio: req.ratio as ClipProjectDraft['ratio'],
+      channel: (req.channel || 'naver_clip') as ClipProjectDraft['channel'],
       targetDurationMs: req.targetDurationMs,
       disclosure: req.disclosure as ClipProjectDraft['disclosure'],
       hideDisclosure: req.hideDisclosure,
@@ -629,12 +630,21 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
     if (options.projectSaveFails) throw connectAppError('CLIP_INVALID_INPUT', Code.InvalidArgument)
     const p = projects.get(req.id)
     if (!p) throw connectAppError('CLIP_NOT_FOUND', Code.NotFound)
+    if (
+      p.finalized &&
+      (!req.channel ||
+        Object.entries(req).some(
+          ([key, value]) => !['$typeName', 'id', 'channel'].includes(key) && value !== undefined,
+        ))
+    )
+      throw connectAppError('CLIP_FINALIZED', Code.FailedPrecondition)
     // The server bounds the instruction in every Unicode character (clip.BoundedText).
     if (
       req.instruction !== undefined &&
       Array.from(req.instruction).length > CLIP_PROJECT_LIMITS.instruction
     )
       throw connectAppError('CLIP_INVALID_INPUT', Code.InvalidArgument)
+    if (req.channel !== undefined) p.channel = req.channel as ClipProjectDraft['channel']
     if (req.title !== undefined) p.title = req.title
     // Choosing a template takes its selection in the same write; 없음 moves nothing (CLIP-168).
     const switchedTo =

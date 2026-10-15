@@ -315,7 +315,7 @@ func projectRow(r sqlc.ClipProject) (clip.Project, error) {
 	if err != nil {
 		return clip.Project{}, err
 	}
-	p := clip.Project{Dubbing: clip.DubbingOptions{Enabled: r.DubbingEnabled != 0, VoiceID: r.DubbingVoiceID, BindingDigest: r.DubbingBindingDigest}, ID: r.ID, UserID: r.UserID, Title: r.Title, VideoTemplateID: r.VideoTemplateID.String, Ratio: r.Ratio, Language: r.Language, Disclosure: r.Disclosure, HideDisclosure: r.HideDisclosure != 0, Instruction: r.Instruction, CaptionPace: r.CaptionPace, Accent: r.Accent, IntroPreset: r.IntroPreset, OutroPreset: r.OutroPreset, CaptionStyles: styles, TargetDurationMS: int(r.TargetDurationMs), Analysis: r.AnalysisJson.String, EditPlan: r.EditPlanJson.String, EditPlanRevision: int(r.EditPlanRevision), RenderedPlanRevision: int(r.RenderedPlanRevision), GeneratedPlanRevision: int(r.GeneratedPlanRevision), CreatedAt: created, UpdatedAt: updated}
+	p := clip.Project{Dubbing: clip.DubbingOptions{Enabled: r.DubbingEnabled != 0, VoiceID: r.DubbingVoiceID, BindingDigest: r.DubbingBindingDigest}, ID: r.ID, UserID: r.UserID, Title: r.Title, VideoTemplateID: r.VideoTemplateID.String, Ratio: r.Ratio, Channel: r.Channel, Language: r.Language, Disclosure: r.Disclosure, HideDisclosure: r.HideDisclosure != 0, Instruction: r.Instruction, CaptionPace: r.CaptionPace, Accent: r.Accent, IntroPreset: r.IntroPreset, OutroPreset: r.OutroPreset, CaptionStyles: styles, TargetDurationMS: int(r.TargetDurationMs), Analysis: r.AnalysisJson.String, EditPlan: r.EditPlanJson.String, EditPlanRevision: int(r.EditPlanRevision), RenderedPlanRevision: int(r.RenderedPlanRevision), GeneratedPlanRevision: int(r.GeneratedPlanRevision), CreatedAt: created, UpdatedAt: updated}
 	if r.ResultKey.Valid {
 		at, err := time.Parse(time.RFC3339Nano, r.ResultCreatedAt.String)
 		if err != nil {
@@ -392,7 +392,7 @@ func (s *Store) ListProjectSummaries(ctx context.Context, user string) ([]clip.P
 	}
 	out := make([]clip.Project, 0, len(rows))
 	for _, r := range rows {
-		p, err := projectRow(sqlc.ClipProject{ID: r.ID, UserID: r.UserID, Title: r.Title, VideoTemplateID: r.VideoTemplateID, Ratio: r.Ratio, TargetDurationMs: r.TargetDurationMs,
+		p, err := projectRow(sqlc.ClipProject{ID: r.ID, UserID: r.UserID, Title: r.Title, VideoTemplateID: r.VideoTemplateID, Ratio: r.Ratio, Channel: r.Channel, TargetDurationMs: r.TargetDurationMs,
 			ResultSpeechJson: r.ResultSpeechJson, ResultKey: r.ResultKey, ResultContentType: r.ResultContentType, ResultBytes: r.ResultBytes, ResultDurationMs: r.ResultDurationMs, ResultCreatedAt: r.ResultCreatedAt,
 			EditPlanRevision: r.EditPlanRevision, RenderedPlanRevision: r.RenderedPlanRevision, GeneratedPlanRevision: r.GeneratedPlanRevision, CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt,
 			Disclosure: r.Disclosure, HideDisclosure: r.HideDisclosure, CompositionInputsJson: r.CompositionInputsJson, CompositionSnapshotJson: r.CompositionSnapshotJson,
@@ -408,7 +408,7 @@ func (s *Store) ListProjectSummaries(ctx context.Context, user string) ([]clip.P
 }
 func (s *Store) InsertProject(ctx context.Context, p clip.Project) error {
 	_, err := transact(ctx, s, func(q *sqlc.Queries) (struct{}, error) {
-		err := q.InsertClipProject(ctx, sqlc.InsertClipProjectParams{ID: p.ID, UserID: p.UserID, Title: p.Title, VideoTemplateID: nullable(p.VideoTemplateID), Ratio: p.Ratio, Language: p.Language, TargetDurationMs: int64(p.TargetDurationMS), Disclosure: p.Disclosure, HideDisclosure: disclosureFlag(p.HideDisclosure), Instruction: p.Instruction, CaptionPace: p.CaptionPace, Accent: p.Accent, IntroPreset: p.IntroPreset, OutroPreset: p.OutroPreset, AllowedCaptionStyles: encodeCaptionStyles(p.CaptionStyles), CreatedAt: stamp(p.CreatedAt), UpdatedAt: stamp(p.UpdatedAt)})
+		err := q.InsertClipProject(ctx, sqlc.InsertClipProjectParams{ID: p.ID, UserID: p.UserID, Title: p.Title, VideoTemplateID: nullable(p.VideoTemplateID), Ratio: p.Ratio, Channel: clip.DefaultChannel(p.Channel), Language: p.Language, TargetDurationMs: int64(p.TargetDurationMS), Disclosure: p.Disclosure, HideDisclosure: disclosureFlag(p.HideDisclosure), Instruction: p.Instruction, CaptionPace: p.CaptionPace, Accent: p.Accent, IntroPreset: p.IntroPreset, OutroPreset: p.OutroPreset, AllowedCaptionStyles: encodeCaptionStyles(p.CaptionStyles), CreatedAt: stamp(p.CreatedAt), UpdatedAt: stamp(p.UpdatedAt)})
 		if err == nil {
 			err = saveComposition(ctx, q, p)
 		}
@@ -428,8 +428,15 @@ func (s *Store) UpdateProject(ctx context.Context, user, id string, p clip.Proje
 		if err != nil {
 			return clip.Project{}, err
 		}
-		if before.Finalized != nil {
+		if before.Finalized != nil && !p.MovesChannelOnly() {
 			return clip.Project{}, clip.ErrFinalized
+		}
+		// Directory metadata never rewrites composition or renews original retention.
+		if p.MovesChannelOnly() {
+			if err := affected(q.UpdateClipChannel(ctx, sqlc.UpdateClipChannelParams{Channel: *p.Channel, UpdatedAt: stamp(now), ID: id, UserID: user})); err != nil {
+				return clip.Project{}, err
+			}
+			return getProject(ctx, q, user, id)
 		}
 		if p.Composition != nil || p.Regions != nil || p.Dubbing != nil {
 			active, e := q.HasActiveClipJob(ctx, nullable(id))
@@ -482,6 +489,11 @@ func (s *Store) UpdateProject(ctx context.Context, user, id string, p clip.Proje
 		}
 		if p.Dubbing != nil {
 			if err := affected(q.UpdateClipDubbing(ctx, sqlc.UpdateClipDubbingParams{ID: id, UserID: user, DubbingEnabled: disclosureFlag(p.Dubbing.Enabled), DubbingVoiceID: p.Dubbing.VoiceID, DubbingBindingDigest: p.Dubbing.BindingDigest, UpdatedAt: stamp(now)})); err != nil {
+				return clip.Project{}, err
+			}
+		}
+		if p.Channel != nil {
+			if err := affected(q.UpdateClipChannel(ctx, sqlc.UpdateClipChannelParams{Channel: *p.Channel, UpdatedAt: stamp(now), ID: id, UserID: user})); err != nil {
 				return clip.Project{}, err
 			}
 		}

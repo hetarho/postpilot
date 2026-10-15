@@ -61,7 +61,7 @@ func (q *Queries) DeleteVideoTemplate(ctx context.Context, arg DeleteVideoTempla
 }
 
 const getClipProject = `-- name: GetClipProject :one
-SELECT id, user_id, title, video_template_id, ratio, target_duration_ms, analysis_json, edit_plan_json, result_key, result_content_type, result_bytes, result_duration_ms, result_created_at, edit_plan_revision, rendered_plan_revision, created_at, updated_at, deleting, disclosure, hide_disclosure, composition_inputs_json, composition_snapshot_json, source_retention_expires_at, source_access_revoked_at, source_batch_id, result_id, finalized_at, finalized_plan_revision, finalized_result_key, language, instruction, caption_pace, accent, intro_preset, outro_preset, allowed_caption_styles, render_kind, storyline_json, generated_plan_revision, regions_json, dubbing_enabled, dubbing_voice_id, dubbing_binding_digest, result_speech_json FROM clip_projects WHERE id = ? AND user_id = ?
+SELECT id, user_id, title, video_template_id, ratio, target_duration_ms, analysis_json, edit_plan_json, result_key, result_content_type, result_bytes, result_duration_ms, result_created_at, edit_plan_revision, rendered_plan_revision, created_at, updated_at, deleting, disclosure, hide_disclosure, composition_inputs_json, composition_snapshot_json, source_retention_expires_at, source_access_revoked_at, source_batch_id, result_id, finalized_at, finalized_plan_revision, finalized_result_key, language, instruction, caption_pace, accent, intro_preset, outro_preset, allowed_caption_styles, render_kind, storyline_json, generated_plan_revision, regions_json, dubbing_enabled, dubbing_voice_id, dubbing_binding_digest, result_speech_json, channel FROM clip_projects WHERE id = ? AND user_id = ?
 `
 
 type GetClipProjectParams struct {
@@ -117,6 +117,7 @@ func (q *Queries) GetClipProject(ctx context.Context, arg GetClipProjectParams) 
 		&i.DubbingVoiceID,
 		&i.DubbingBindingDigest,
 		&i.ResultSpeechJson,
+		&i.Channel,
 	)
 	return i, err
 }
@@ -148,7 +149,7 @@ func (q *Queries) GetVideoTemplate(ctx context.Context, arg GetVideoTemplatePara
 }
 
 const insertClipProject = `-- name: InsertClipProject :exec
-INSERT INTO clip_projects(id, user_id, title, video_template_id, ratio, language, target_duration_ms, disclosure, hide_disclosure, instruction, caption_pace, accent, intro_preset, outro_preset, allowed_caption_styles, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+INSERT INTO clip_projects(id, user_id, title, video_template_id, ratio, language, target_duration_ms, disclosure, hide_disclosure, instruction, caption_pace, accent, intro_preset, outro_preset, allowed_caption_styles, created_at, updated_at, channel) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `
 
 type InsertClipProjectParams struct {
@@ -169,6 +170,7 @@ type InsertClipProjectParams struct {
 	AllowedCaptionStyles string
 	CreatedAt            string
 	UpdatedAt            string
+	Channel              string
 }
 
 func (q *Queries) InsertClipProject(ctx context.Context, arg InsertClipProjectParams) error {
@@ -190,6 +192,7 @@ func (q *Queries) InsertClipProject(ctx context.Context, arg InsertClipProjectPa
 		arg.AllowedCaptionStyles,
 		arg.CreatedAt,
 		arg.UpdatedAt,
+		arg.Channel,
 	)
 	return err
 }
@@ -264,7 +267,7 @@ func (q *Queries) ListClipProjectRequests(ctx context.Context, arg ListClipProje
 }
 
 const listClipProjectSummaries = `-- name: ListClipProjectSummaries :many
-SELECT id, user_id, title, video_template_id, ratio, target_duration_ms, result_key, result_content_type, result_bytes, result_duration_ms, result_created_at,
+SELECT id, user_id, title, video_template_id, ratio, channel, target_duration_ms, result_key, result_content_type, result_bytes, result_duration_ms, result_created_at,
     edit_plan_revision, rendered_plan_revision, generated_plan_revision, created_at, updated_at, disclosure, hide_disclosure, composition_inputs_json, composition_snapshot_json,
     result_id, finalized_at, finalized_plan_revision, language, instruction, caption_pace, accent, intro_preset, outro_preset, allowed_caption_styles, render_kind,
     storyline_json, regions_json, dubbing_enabled, dubbing_voice_id, dubbing_binding_digest, result_speech_json
@@ -277,6 +280,7 @@ type ListClipProjectSummariesRow struct {
 	Title                   string
 	VideoTemplateID         sql.NullString
 	Ratio                   string
+	Channel                 string
 	TargetDurationMs        int64
 	ResultKey               sql.NullString
 	ResultContentType       sql.NullString
@@ -328,6 +332,7 @@ func (q *Queries) ListClipProjectSummaries(ctx context.Context, userID string) (
 			&i.Title,
 			&i.VideoTemplateID,
 			&i.Ratio,
+			&i.Channel,
 			&i.TargetDurationMs,
 			&i.ResultKey,
 			&i.ResultContentType,
@@ -375,7 +380,7 @@ func (q *Queries) ListClipProjectSummaries(ctx context.Context, userID string) (
 }
 
 const listClipProjects = `-- name: ListClipProjects :many
-SELECT id, user_id, title, video_template_id, ratio, target_duration_ms, analysis_json, edit_plan_json, result_key, result_content_type, result_bytes, result_duration_ms, result_created_at, edit_plan_revision, rendered_plan_revision, created_at, updated_at, deleting, disclosure, hide_disclosure, composition_inputs_json, composition_snapshot_json, source_retention_expires_at, source_access_revoked_at, source_batch_id, result_id, finalized_at, finalized_plan_revision, finalized_result_key, language, instruction, caption_pace, accent, intro_preset, outro_preset, allowed_caption_styles, render_kind, storyline_json, generated_plan_revision, regions_json, dubbing_enabled, dubbing_voice_id, dubbing_binding_digest, result_speech_json FROM clip_projects WHERE user_id = ? ORDER BY updated_at DESC, id
+SELECT id, user_id, title, video_template_id, ratio, target_duration_ms, analysis_json, edit_plan_json, result_key, result_content_type, result_bytes, result_duration_ms, result_created_at, edit_plan_revision, rendered_plan_revision, created_at, updated_at, deleting, disclosure, hide_disclosure, composition_inputs_json, composition_snapshot_json, source_retention_expires_at, source_access_revoked_at, source_batch_id, result_id, finalized_at, finalized_plan_revision, finalized_result_key, language, instruction, caption_pace, accent, intro_preset, outro_preset, allowed_caption_styles, render_kind, storyline_json, generated_plan_revision, regions_json, dubbing_enabled, dubbing_voice_id, dubbing_binding_digest, result_speech_json, channel FROM clip_projects WHERE user_id = ? ORDER BY updated_at DESC, id
 `
 
 func (q *Queries) ListClipProjects(ctx context.Context, userID string) ([]ClipProject, error) {
@@ -432,6 +437,7 @@ func (q *Queries) ListClipProjects(ctx context.Context, userID string) ([]ClipPr
 			&i.DubbingVoiceID,
 			&i.DubbingBindingDigest,
 			&i.ResultSpeechJson,
+			&i.Channel,
 		); err != nil {
 			return nil, err
 		}
@@ -484,7 +490,7 @@ func (q *Queries) ListVideoTemplates(ctx context.Context, userID string) ([]Vide
 }
 
 const projectsForTemplate = `-- name: ProjectsForTemplate :many
-SELECT id, user_id, title, video_template_id, ratio, target_duration_ms, analysis_json, edit_plan_json, result_key, result_content_type, result_bytes, result_duration_ms, result_created_at, edit_plan_revision, rendered_plan_revision, created_at, updated_at, deleting, disclosure, hide_disclosure, composition_inputs_json, composition_snapshot_json, source_retention_expires_at, source_access_revoked_at, source_batch_id, result_id, finalized_at, finalized_plan_revision, finalized_result_key, language, instruction, caption_pace, accent, intro_preset, outro_preset, allowed_caption_styles, render_kind, storyline_json, generated_plan_revision, regions_json, dubbing_enabled, dubbing_voice_id, dubbing_binding_digest, result_speech_json FROM clip_projects WHERE video_template_id = ? AND user_id = ? ORDER BY id
+SELECT id, user_id, title, video_template_id, ratio, target_duration_ms, analysis_json, edit_plan_json, result_key, result_content_type, result_bytes, result_duration_ms, result_created_at, edit_plan_revision, rendered_plan_revision, created_at, updated_at, deleting, disclosure, hide_disclosure, composition_inputs_json, composition_snapshot_json, source_retention_expires_at, source_access_revoked_at, source_batch_id, result_id, finalized_at, finalized_plan_revision, finalized_result_key, language, instruction, caption_pace, accent, intro_preset, outro_preset, allowed_caption_styles, render_kind, storyline_json, generated_plan_revision, regions_json, dubbing_enabled, dubbing_voice_id, dubbing_binding_digest, result_speech_json, channel FROM clip_projects WHERE video_template_id = ? AND user_id = ? ORDER BY id
 `
 
 type ProjectsForTemplateParams struct {
@@ -546,6 +552,7 @@ func (q *Queries) ProjectsForTemplate(ctx context.Context, arg ProjectsForTempla
 			&i.DubbingVoiceID,
 			&i.DubbingBindingDigest,
 			&i.ResultSpeechJson,
+			&i.Channel,
 		); err != nil {
 			return nil, err
 		}
@@ -762,6 +769,30 @@ type UpdateClipCaptionPaceParams struct {
 func (q *Queries) UpdateClipCaptionPace(ctx context.Context, arg UpdateClipCaptionPaceParams) (int64, error) {
 	result, err := q.db.ExecContext(ctx, updateClipCaptionPace,
 		arg.CaptionPace,
+		arg.UpdatedAt,
+		arg.ID,
+		arg.UserID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const updateClipChannel = `-- name: UpdateClipChannel :execrows
+UPDATE clip_projects SET channel = ?, updated_at = ? WHERE id = ? AND user_id = ?
+`
+
+type UpdateClipChannelParams struct {
+	Channel   string
+	UpdatedAt string
+	ID        string
+	UserID    string
+}
+
+func (q *Queries) UpdateClipChannel(ctx context.Context, arg UpdateClipChannelParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, updateClipChannel,
+		arg.Channel,
 		arg.UpdatedAt,
 		arg.ID,
 		arg.UserID,

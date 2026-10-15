@@ -1,6 +1,8 @@
 import type { AppFailureReason } from '@/shared/api'
 
 export const errors = {
+  CLIP_RATIO_UNSUPPORTED:
+    'Create new clips in vertical 9:16. Existing clips keep their aspect ratio.',
   AUTHORING_CANDIDATE_COUNT_INVALID: 'Choose a whole number of candidates from 1 to 16.',
   AUTHORING_DRAFT_INVALID:
     'Your current changes need review before saving. Your input is preserved.',

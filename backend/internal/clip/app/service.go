@@ -5,7 +5,6 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"log/slog"
-	"slices"
 	"strings"
 	"time"
 
@@ -178,11 +177,18 @@ func (s *Service) CreateProject(ctx context.Context, user string, input clip.Pro
 			return clip.Project{}, err
 		}
 	}
+	if input.Ratio != "vertical" {
+		return clip.Project{}, clip.ErrRatioUnsupported
+	}
+	input.Channel = clip.DefaultChannel(input.Channel)
+	if !clip.ValidChannel(input.Channel) {
+		return clip.Project{}, clip.ErrInvalid
+	}
 	title := strings.TrimSpace(input.Title)
 	// An unset duration is allowed at creation — the owner chooses it in ①
 	// beside the sources it measures, and the generation gate is what refuses a
 	// clip without one (CLIP-130, CLIP-7).
-	if !clip.BoundedText(title, 1, s.limits.TitleChars) || !s.durationOrUnset(input.TargetDurationMS) || !slices.Contains([]string{"vertical", "horizontal", "square"}, input.Ratio) {
+	if !clip.BoundedText(title, 1, s.limits.TitleChars) || !s.durationOrUnset(input.TargetDurationMS) {
 		return clip.Project{}, clip.ErrInvalid
 	}
 	// Empty disclosure is allowed at creation — the owner chooses it before
@@ -230,7 +236,7 @@ func (s *Service) CreateProject(ctx context.Context, user string, input clip.Pro
 		return clip.Project{}, clip.ErrInvalid
 	}
 	now := s.now()
-	p := clip.Project{ID: newID(), UserID: user, Title: title, VideoTemplateID: input.VideoTemplateID, Ratio: input.Ratio, Language: input.Language, Disclosure: input.Disclosure, HideDisclosure: input.HideDisclosure, Instruction: input.Instruction, CaptionPace: pace, Accent: accent, IntroPreset: intro, OutroPreset: outro, CaptionStyles: styles, TargetDurationMS: input.TargetDurationMS, CreatedAt: now, UpdatedAt: now}
+	p := clip.Project{ID: newID(), UserID: user, Title: title, VideoTemplateID: input.VideoTemplateID, Ratio: input.Ratio, Channel: input.Channel, Language: input.Language, Disclosure: input.Disclosure, HideDisclosure: input.HideDisclosure, Instruction: input.Instruction, CaptionPace: pace, Accent: accent, IntroPreset: intro, OutroPreset: outro, CaptionStyles: styles, TargetDurationMS: input.TargetDurationMS, CreatedAt: now, UpdatedAt: now}
 	var err error
 	p.Composition, err = s.projectComposition(template, input.CompositionInputs, p)
 	if err != nil {
@@ -291,8 +297,11 @@ func (s *Service) UpdateProject(ctx context.Context, user, id string, p clip.Pro
 		}
 		p.Dubbing = &chosen
 	}
-	if old.Finalized != nil {
+	if old.Finalized != nil && !p.MovesChannelOnly() {
 		return clip.Project{}, clip.ErrFinalized
+	}
+	if p.Channel != nil && !clip.ValidChannel(*p.Channel) {
+		return clip.Project{}, clip.ErrInvalid
 	}
 	if p.Title != nil {
 		title := strings.TrimSpace(*p.Title)

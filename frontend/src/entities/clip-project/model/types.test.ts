@@ -46,6 +46,8 @@ describe('clip setup validation', () => {
     expect(validNewClipProject(minting)).toBe(true)
     expect(validClipProject(minting, composition)).toBe(false)
     expect(validNewClipProject({ ...minting, title: ' ' })).toBe(false)
+    expect(validNewClipProject({ ...minting, ratio: 'square' })).toBe(false)
+    expect(validNewClipProject({ ...minting, ratio: 'horizontal' })).toBe(false)
     expect(validNewClipProject({ ...minting, videoTemplateId: '' })).toBe(true)
     expect(validClipProject({ ...draft(), videoTemplateId: '' }, composition)).toBe(true)
     expect(validNewClipProject({ ...minting, ratio: 'wide' as ClipProjectDraft['ratio'] })).toBe(

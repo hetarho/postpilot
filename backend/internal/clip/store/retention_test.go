@@ -119,6 +119,11 @@ func TestOriginalRetentionMutationsAndAttemptReleaseAreNotReadLeases(t *testing.
 		t.Fatal(err)
 	}
 	assertExpiry(expires)
+	channel := clip.ChannelInstagram
+	if _, err = store.UpdateProject(ctx, "alice", p.ID, clip.ProjectPatch{Channel: &channel}, now); err != nil {
+		t.Fatal(err)
+	}
+	assertExpiry(expires)
 	changed := "Changed title"
 	if _, err = store.UpdateProject(ctx, "alice", p.ID, clip.ProjectPatch{Title: &changed}, now); err != nil {
 		t.Fatal(err)

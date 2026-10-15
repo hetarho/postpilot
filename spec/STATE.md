@@ -11,9 +11,10 @@
 ## active
 | tag | host | mode | since | at | doing |
 |---|---|---|---|---|---|
-| m7q2 | ihaelam-ui-MacBookPro | autopilot | 2026-10-15T12:20Z | 2026-10-15T17:04Z | T689 |
+| m7q2 | ihaelam-ui-MacBookPro | autopilot | 2026-10-15T12:20Z | 2026-10-15T17:48Z | - |
 
 ## inbox
+- 261016 suggest T696 T686 T687 T688 T689: review-code over the completed template-wizard, heading-job and clip-channel units
 - 261015 decided T698: how is a deleted or reused post slug told apart? → store the post's creation time beside the slug and resolve at read; no foreign key (alt: FK ON DELETE SET NULL, which nulls user_id on SQLite composites | clear links from the post context)
 - 261015 decided T699: which part of the post reaches the writer? → title plus headed sections of TEXT/QUOTE/LIST; photo captions, tags and summary left out; an oversized request is refused, never trimmed (alt: the whole content JSON | a fixed character cap)
 - 261015 decided T700: where does capture time come from? → JPEG EXIF DateTimeOriginal and MP4/MOV mvhd, parsed in the browser without a new dependency (alt: File.lastModified | an EXIF library)
@@ -118,7 +119,6 @@
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
-| T689 | Give clips a channel and create new clips vertical only | CLIP CDS | - | doing@261016.m7q2 |
 | T690 | Add the 체험단 글 switch and advertiser guide to clips | CLIP GEN GUIDE | T679 T680 T689 | todo |
 | T691 | Write each clip channel's upload text on request | CLIP EXPORT | T689 T690 | todo |
 | T692 | Create a clip from a finished post | POST CLIP | T680 T689 T690 | todo |
@@ -134,9 +134,11 @@
 ## next
 - After T686–T695 (m7q2): implement-task T698 → T699, T700 → T701 (a linked post as the clip's story); T697's operator CORS prerequisite is complete.
 - implement-task T697 (the owner applied production Content-Range CORS261015; add the ranged-GET probe/deployment gate and preserve HEAD cancellation).
-- Autopilot m7q2: T689 active after T688 complete and pushed; continue T690–T695 and T698–T701. T697 is ready after the owner CORS change.
+- Autopilot m7q2: T689 implementation/full local CI complete; finish image/media gate and push, then T690–T695 and T698–T701. T697 is ready after the owner CORS change.
 
 ## log
+- 261016 T689 done; full Go and FE549/4359 pass; final channel-only writes preserve completed content and original retention; image/media push gate follows.
+- 261016 T688 remote CI38774298150, Deploy38774298135 and Media38774966073 all succeed for2ce237dd; T689 claimca5c024c CI38774348751 succeeds.
 - 261016 T689 start on main at2ce237dd (m7q2 autopilot); CLIP r62/r63 and CDS r35/r36 source-colour changes are unrelated; bases refreshed to63/36.
 - 261016 T688 pre-push image/media gates pass atb7a51f49; source7462310f unchanged after spec-only records.
 - 261016 T688 done; whole FE549 files/4352 tests and full BE/CI checks pass; deployment/media push gate follows.
@@ -155,5 +157,3 @@
 - 261015 T686 done; full FE/BE checks pass, deployment/media push gate follows.
 - 261015 autopilot p4f1 ended: ideation/post-faithful-clip converted to CLIP r61 POST r42 GUIDE r23 and T698–T701; report spec/reports/261015-p4f1.md
 - 261015 create-task CLIP r61 POST r42 GUIDE r23 done: T698–T701; T688 T689 T690 T691 T692 T694 bases refreshed, no scope change; T686 T687 (TMPL) unaffected.
-- 261015 create-task CLIP POST GUIDE start (p4f1; CLIP r61, POST r42, GUIDE r23)
-- 261015 update-ssot CLIP r61 POST r42 GUIDE r23 done: a linked post as the clip's story (ideation/post-faithful-clip); no doing task affected (T686 is TMPL).

@@ -235,3 +235,24 @@ describe('clip directory', () => {
     expect(screen.queryByRole('link', { name: '새 클립' })).not.toBeInTheDocument()
   })
 })
+
+it("lists one channel's clips", async () => {
+  const user = userEvent.setup()
+  const view = renderAppAt('/clips?channel=instagram_clip', {
+    user: { id: 'alice' },
+    clips: {
+      projects: [
+        { ...base, id: 'n', title: 'Naver only' },
+        { ...base, id: 'i', title: 'Instagram only', channel: 'instagram_clip' },
+      ],
+    },
+  })
+  expect(await screen.findByRole('link', { name: /Instagram only/ })).toBeInTheDocument()
+  expect(screen.queryByRole('link', { name: /Naver only/ })).not.toBeInTheDocument()
+  await user.type(screen.getByRole('searchbox'), 'missing')
+  await screen.findByRole('button', { name: '전체 보기' })
+  await user.click(screen.getByRole('button', { name: '전체 보기' }))
+  expect(view.router.state.location.search.channel).toBe('instagram_clip')
+  expect(await screen.findByRole('link', { name: /Instagram only/ })).toBeInTheDocument()
+  expect(screen.queryByRole('link', { name: /Naver only/ })).not.toBeInTheDocument()
+})

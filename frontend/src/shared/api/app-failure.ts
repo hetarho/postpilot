@@ -125,6 +125,7 @@ export const appFailureSpecs = {
   VOICE_SAMPLE_NOT_FOUND: {},
   VOICE_ANALYZE_MODEL_REQUIRED: {},
   VOICE_INVALID_LIFECYCLE: {},
+  CLIP_RATIO_UNSUPPORTED: {},
   CLIP_INVALID_INPUT: { optional: ['cut_id', 'check'] },
   CLIP_COPY_TOO_LONG: {},
   CLIP_INSUFFICIENT_FOOTAGE: {},

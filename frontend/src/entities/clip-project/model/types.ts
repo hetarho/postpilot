@@ -1,3 +1,4 @@
+import { DEFAULT_CLIP_CHANNEL, type ClipChannel } from '../config/channel'
 import type { ClipNotice } from './notices'
 import type { ClipProjectRequest } from '@/entities/clip-plan/@x/clip-project'
 import type { GenerationJob } from '@/entities/generation-job/@x/clip-project'
@@ -28,6 +29,8 @@ export const CLIP_PROJECT_LIMITS = {
   maxSeconds: 60,
 } as const
 export interface ClipProjectDraft {
+  /** Older retained browser drafts omit this and take the Naver channel. */
+  channel?: ClipChannel
   dubbing?: { enabled: boolean; voiceId: string }
   compositionInputs?: ClipCompositionInputs
   title: string
@@ -228,6 +231,7 @@ export interface ClipSourceBatch {
 export type ReadyClipBatch = ClipSourceBatch & { state: 'ready' }
 export function emptyClipProject(): ClipProjectDraft {
   return {
+    channel: DEFAULT_CLIP_CHANNEL,
     title: '',
     videoTemplateId: '',
     ratio: 'vertical',
@@ -250,6 +254,7 @@ export function projectDraft(value: ClipProjectDraft): ClipProjectDraft {
     ...(value.compositionInputs
       ? { compositionInputs: structuredClone(value.compositionInputs) }
       : {}),
+    channel: value.channel ?? DEFAULT_CLIP_CHANNEL,
     title: value.title,
     videoTemplateId: value.videoTemplateId,
     ratio: value.ratio,
@@ -307,7 +312,7 @@ export function validNewClipProject(value: ClipProjectDraft): boolean {
     (!value.dubbing?.enabled || !!value.dubbing.voiceId) &&
     !!title &&
     Array.from(title).length <= CLIP_PROJECT_LIMITS.title &&
-    CLIP_RATIOS.includes(value.ratio)
+    value.ratio === 'vertical'
   )
 }
 /** What the server will accept for an EXISTING project: every bound it enforces on a patch, and

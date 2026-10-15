@@ -10,9 +10,10 @@ import (
 )
 
 var (
-	ErrNotFound      = errors.New("clip or video template not found")
-	ErrDuplicateName = errors.New("video template name already exists")
-	ErrInvalid       = errors.New("invalid clip input")
+	ErrNotFound         = errors.New("clip or video template not found")
+	ErrDuplicateName    = errors.New("video template name already exists")
+	ErrInvalid          = errors.New("invalid clip input")
+	ErrRatioUnsupported = errors.New("new clips require the vertical ratio")
 	// The owner has not chosen a campaign type, so the clip has no disclosure
 	// phrase to show when disclosure visibility is enabled (CDS-5).
 	ErrDisclosureRequired = errors.New("clip disclosure required")
@@ -100,13 +101,13 @@ type DubbingOptions struct {
 }
 
 type Project struct {
-	Dubbing                                   DubbingOptions
-	Regions                                   *ProjectRegions
-	Language                                  string
-	Finalized                                 *Finalization
-	Composition                               *ProjectComposition
-	HideDisclosure                            bool
-	ID, UserID, Title, VideoTemplateID, Ratio string
+	Dubbing                                            DubbingOptions
+	Regions                                            *ProjectRegions
+	Language                                           string
+	Finalized                                          *Finalization
+	Composition                                        *ProjectComposition
+	HideDisclosure                                     bool
+	ID, UserID, Title, VideoTemplateID, Ratio, Channel string
 	// The owner's campaign type, as a fixed id: the phrase is code-owned so the
 	// renderer can never be handed an edited disclosure. Empty is what the
 	// generation gate refuses.
@@ -171,14 +172,14 @@ func ValidRequestKind(kind string) bool {
 }
 
 type ProjectInput struct {
-	Dubbing                       *DubbingOptions
-	IntroRegion, OutroRegion      *RegionPatch
-	Language                      string
-	CompositionInputs             *CompositionInputs
-	HideDisclosure                bool
-	Title, VideoTemplateID, Ratio string
-	Disclosure                    string
-	Instruction                   string
+	Dubbing                                *DubbingOptions
+	IntroRegion, OutroRegion               *RegionPatch
+	Language                               string
+	CompositionInputs                      *CompositionInputs
+	HideDisclosure                         bool
+	Title, VideoTemplateID, Ratio, Channel string
+	Disclosure                             string
+	Instruction                            string
 	// Absent or empty is the shared default: the steady pace and no accent.
 	CaptionPace, Accent *string
 	// Absent seeds all three from the selected template, or from the shared
@@ -197,11 +198,11 @@ type ProjectPatch struct {
 	ExpectedCompositionRevision *int
 	CompositionInputs           *CompositionInputs
 	// The service creates the snapshot; the caller cannot replace frozen content.
-	Composition                        *ProjectComposition
-	HideDisclosure                     *bool
-	Title, VideoTemplateID, Disclosure *string
-	Instruction                        *string
-	CaptionPace, Accent                *string
+	Composition                                 *ProjectComposition
+	HideDisclosure                              *bool
+	Title, VideoTemplateID, Disclosure, Channel *string
+	Instruction                                 *string
+	CaptionPace, Accent                         *string
 	// Presence-aware like the pace and the accent: changing any of the three
 	// marks the result stale and invalidates no observation (CLIP-139). A
 	// preset is also what its region's slots are written for, so choosing one

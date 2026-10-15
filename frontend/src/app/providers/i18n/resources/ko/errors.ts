@@ -1,6 +1,8 @@
 import type { AppFailureReason } from '@/shared/api'
 
 export const errors = {
+  CLIP_RATIO_UNSUPPORTED:
+    '새 클립은 세로 9:16으로 만들어 주세요. 기존 클립의 화면 비율은 유지돼요.',
   AUTHORING_CANDIDATE_COUNT_INVALID: '후보 수는 1개부터 16개까지 정수로 선택해 주세요.',
   AUTHORING_DRAFT_INVALID: '현재 수정한 내용을 확인한 뒤 저장해 주세요. 입력한 내용은 보존됐어요.',
   AUTHORING_FEATURE_UNAVAILABLE: '이 편집 기능은 아직 준비 중이에요.',

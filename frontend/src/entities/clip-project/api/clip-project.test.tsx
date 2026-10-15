@@ -15,6 +15,7 @@ import {
   useClipProject,
   useClipProjectMutations,
   useClipProjects,
+  useMoveClipChannel,
 } from './clip-project'
 
 function project(kind: string, status: string, accounting?: Partial<ClipAccounting>): ClipProject {
@@ -142,8 +143,12 @@ describe('a settings save', () => {
           draft: { ...draft, dubbing: { enabled, voiceId: 'voice' } },
         }),
       )
+      expect(stored.dubbing).toEqual({ enabled, voiceId: 'voice' })
       await act(() => view.result.current.detail.refetch())
-      expect(view.result.current.detail.data?.dubbing).toEqual({ enabled, voiceId: 'voice' })
+      // Refetch completion and the observer's published React value are separate.
+      await waitFor(() =>
+        expect(view.result.current.detail.data?.dubbing).toEqual({ enabled, voiceId: 'voice' }),
+      )
     }
     expect(received).toHaveLength(3)
   })
@@ -263,4 +268,66 @@ describe('a settings save', () => {
     expect(detail.latestJob?.id).toBe('job')
     server.releaseList()
   })
+})
+
+it('moves only the channel and a retained settings draft cannot move it back', async () => {
+  const cached = project('generate_clip', 'done')
+  cached.editing = {
+    plan: { durationMs: 15000, cuts: [] },
+    sources: [],
+    fadeMs: 120,
+    maxCuts: 30,
+    maxCopyRunes: 20,
+    minDurationMs: 15000,
+    maxDurationMs: 60000,
+  }
+  cached.editPlanRevision = 3
+  const stored = {
+    id: 'clip',
+    title: '제주',
+    ratio: 'horizontal',
+    channel: 'naver_clip',
+    editPlanRevision: 3,
+  }
+  const channels: (string | undefined)[] = []
+  const transport = createRouterTransport(({ rpc }) => {
+    rpc(ClipGenerationService.method.updateClipProject, (request) => {
+      channels.push(request.channel)
+      if (request.channel) {
+        expect(request.id).toBe('clip')
+        for (const field of [
+          'title',
+          'videoTemplateId',
+          'targetDurationMs',
+          'compositionInputs',
+          'introRegion',
+          'outroRegion',
+          'storyline',
+          'dubbing',
+        ] as const)
+          expect(request[field]).toBeUndefined()
+        stored.channel = request.channel
+      }
+      return { project: stored }
+    })
+  })
+  const client = createTestQueryClient()
+  const key = [...clipProjectsKey(transport, 'alice'), 'detail', 'clip']
+  client.setQueryData(key, cached)
+  const view = renderHook(
+    () => ({ move: useMoveClipChannel('alice'), mutations: useClipProjectMutations('alice') }),
+    { wrapper: withProviders(transport, client) },
+  )
+  await act(() => view.result.current.move.mutateAsync({ id: 'clip', channel: 'instagram_clip' }))
+  expect(client.getQueryData<ClipProject>(key)?.editing).toEqual(cached.editing)
+  expect(client.getQueryData<ClipProject>(key)?.latestJob).toEqual(cached.latestJob)
+  await act(() =>
+    view.result.current.mutations.save.mutateAsync({
+      id: 'clip',
+      draft: { ...cached, channel: 'naver_clip' },
+    }),
+  )
+  expect(channels).toEqual(['instagram_clip', undefined])
+  expect(client.getQueryData<ClipProject>(key)?.channel).toBe('instagram_clip')
+  view.unmount()
 })

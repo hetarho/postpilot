@@ -1,7 +1,9 @@
-import { useNavigate, useParams } from '@tanstack/react-router'
+import { useNavigate, useParams, useSearch } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import {
   clipReturnDestination,
+  clipChannel,
+  type ClipChannel,
   markClipHistoryReturn,
   useClipProject,
 } from '@/entities/clip-project'
@@ -16,9 +18,11 @@ import { AppFailureMessage, Button, Typography, pageStyles } from '@/shared/ui'
  *  explicit because the ratio it carries can never be changed again (CLIP-9, CLIP-39). */
 function NewClip({
   ownerId,
+  channel,
   returnTo,
 }: {
   ownerId: string
+  channel: ClipChannel
   returnTo: { href: string; label: string; onReturn: () => Promise<void> }
 }) {
   return (
@@ -38,7 +42,7 @@ function NewClip({
           />
         }
       />
-      <ClipProjectForm ownerId={ownerId} />
+      <ClipProjectForm ownerId={ownerId} channel={channel} />
     </>
   )
 }
@@ -48,6 +52,8 @@ export function ClipPage() {
   const { user } = useSession()
   const { clipId } = useParams({ strict: false })
   const navigate = useNavigate()
+  const search = useSearch({ strict: false })
+  const channel = clipChannel(search.channel)
   const ownerId = user?.id ?? ''
   const destination = clipReturnDestination(ownerId, clipId)
   const returnTo = {
@@ -66,7 +72,12 @@ export function ClipPage() {
     // one down.
     <main className={pageStyles({ width: 'workspace', className: 'flex flex-1 flex-col pb-8' })}>
       {!clipId ? (
-        <NewClip key={ownerId} ownerId={ownerId} returnTo={returnTo} />
+        <NewClip
+          key={`${ownerId}-${channel}`}
+          ownerId={ownerId}
+          channel={channel}
+          returnTo={returnTo}
+        />
       ) : query.data ? (
         <ClipWorkspace
           key={`${user?.id}-${clipId}`}

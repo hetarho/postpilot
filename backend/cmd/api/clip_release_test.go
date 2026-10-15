@@ -576,13 +576,22 @@ func newReleaseHarness(t *testing.T, mode string, stress bool, clocks ...func() 
 	if err != nil {
 		t.Fatal(err)
 	}
-	projectInput := clip.ProjectInput{Language: "ko", Title: "synthetic release", VideoTemplateID: template.ID, Ratio: ratio, TargetDurationMS: 15000, Disclosure: "ad", Accent: accent, CompositionInputs: releaseValues()}
+	projectInput := clip.ProjectInput{Language: "ko", Title: "synthetic release", VideoTemplateID: template.ID, Ratio: "vertical", TargetDurationMS: 15000, Disclosure: "ad", Accent: accent, CompositionInputs: releaseValues()}
 	if mode == "detailed-input" {
 		projectInput.CompositionInputs = nil
 	}
 	p, err := projects.CreateProject(ctx, "release-user", projectInput)
 	if err != nil {
 		t.Fatal(err)
+	}
+	// Seed a stored pre-vertical-only project; creation itself must obey CLIP-8.
+	if ratio != "vertical" {
+		if _, err = h.d.Writer.ExecContext(ctx, "UPDATE clip_projects SET ratio=? WHERE id=?", ratio, p.ID); err != nil {
+			t.Fatal(err)
+		}
+		if p, err = projects.GetProject(ctx, "release-user", p.ID); err != nil || p.Ratio != ratio {
+			t.Fatal(p, err)
+		}
 	}
 	h.project = p.ID
 	if _, err = h.client.GetClipProject(ctx, connect.NewRequest(&v1.GetClipProjectRequest{Id: p.ID})); connect.CodeOf(err) != connect.CodeUnauthenticated {
