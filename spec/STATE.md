@@ -11,7 +11,7 @@
 ## active
 | tag | host | mode | since | at | doing |
 |---|---|---|---|---|---|
-| m7q2 | ihaelam-ui-MacBookPro | autopilot | 2026-10-15T12:20Z | 2026-10-15T12:39Z | - |
+| m7q2 | ihaelam-ui-MacBookPro | autopilot | 2026-10-15T12:20Z | 2026-10-15T12:41Z | T686 |
 
 ## inbox
 - 261015 decided ideation post-faithful-clip: what does a clip take from a finished post? → the canonical content (title, body, section order, ratings, impressions) as owner material for every writing call (alt: the storyline only | title and memo as today)
@@ -114,7 +114,7 @@
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
-| T686 | Suggest section headings in the owner's voice | TMPL EDIT | T685 | todo |
+| T686 | Suggest section headings in the owner's voice | TMPL EDIT | T685 | doing@261015.m7q2 |
 | T687 | Make the wizard the only way to create a post template | TMPL EDIT | T685 T686 | todo |
 | T688 | Build the video-template wizard and make it the only way to create one | CLIP TMPL EDIT | T685 T686 | todo |
 | T689 | Give clips a channel and create new clips vertical only | CLIP CDS | - | todo |
@@ -130,10 +130,9 @@
 - update-ssot CLIP POST GUIDE from ideation post-faithful-clip (ready@261015) before T688/T692 start, otherwise as follow-up tasks.
 - implement-task T697 (production clip generation is down: the live R2 CORS hides Content-Range; the owner applies deploy/r2-cors.json first).
 - Autopilot m7q2: implement T686–T695 in dependency order; T696 repaired the existing red CI entry regression. Previous provisional decisions remain in inbox.
-- T696 full local CI passes; push main and inspect every triggered workflow for its exact revision.
-- ideation friendly-model-names 계속; also pending: the 17 unadopted choices in review/structure-261008 and doc-review ARCH.
 
 ## log
+- 261015 T686 start on main at 13f778bb (m7q2 autopilot); T696 pushed at 832c357e with CI38736338662 running.
 - 261015 ideation post-faithful-clip ready (autonomous at the owner's request; decisions in inbox)
 - 261015 T696 done; full local CI passes on the repaired template wizard entry regression.
 - 261015 ideation post-faithful-clip start
@@ -153,5 +152,3 @@
 - 261015 T682 start on main at 4100f145.
 - 261015 T681 done
 - 261015 T681 start on main at d52654b1.
-- 261015 T680 done
-- 261015 T680 start on main at 8db352ff.
