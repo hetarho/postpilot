@@ -61,7 +61,13 @@ export async function transferClipSourceFiles(
       const metadata = (await pipeline.read([file], signal))[0]
       if (!metadata || metadata.filename !== source.filename)
         throw new Error('Unexpected imported file')
-      if (accepted.some((item) => item.metadata.fingerprint === metadata.fingerprint)) {
+      if (
+        accepted.some(
+          (item) =>
+            item.metadata.fingerprint === metadata.fingerprint ||
+            item.metadata.filename === metadata.filename,
+        )
+      ) {
         problems.push({ filename: source.filename, reason: 'duplicate' })
         continue
       }
