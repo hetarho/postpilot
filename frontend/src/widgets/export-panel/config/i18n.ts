@@ -7,7 +7,6 @@ export const i18n = {
     export: {
       videoHint: '기기의 원본 영상을 편집기에서 직접 첨부해 주세요',
       title: '내보내기',
-      format: '내보내기 형식',
       result: '내보내기 결과',
       naverTitle: '네이버 제목',
       copyTitle: '제목 복사',
@@ -32,19 +31,11 @@ export const i18n = {
       photoUnreadable: '사진을 읽지 못했어요. 글을 다시 불러오면 사진 주소가 새로 발급돼요.',
       photoMissing: '이 표시에 해당하는 사진을 찾지 못했어요.',
       languageMissing: '글의 내용 언어 정보가 없어 내보낼 수 없어요. 글을 다시 불러와 주세요.',
-      formatLabel: {
-        naver: '네이버 블로그',
-        tistory: '티스토리',
-        site: '자체 사이트',
-        markdown: '마크다운',
-      },
+      disclosurePlaceholder: '대가 표시 자리 — 플랫폼이 준 배너나 문구를 여기에 넣으세요',
       guidance: {
         naver: '본문을 그대로 붙여넣으세요',
         naverPhotos:
           '본문을 붙여넣은 뒤, 사진_1_설명_사진 같은 자리마다 미리보기의 사진을 복사해 넣으세요. 마커는 더블클릭하면 한 번에 잡히고, 사진으로 대체되니 캡션은 따로 복사해 편집기의 캡션 칸에 넣어 주세요. 콜라주_…_콜라주·슬라이드_…_슬라이드 자리는 그 번호의 사진을 한 번에 올린 뒤 같은 배치를 고르세요',
-        tistory: 'HTML 모드에 붙여넣고 사진 업로드 후 src를 교체하세요',
-        site: '그대로 .html로 저장하고 사진 파일을 옆에 두세요',
-        markdown: 'Hugo · Jekyll · Obsidian에 맞는 형식이에요. 사진 파일을 같은 폴더에 두세요',
       },
     },
   },
@@ -52,7 +43,6 @@ export const i18n = {
     export: {
       videoHint: 'Attach the original video from your device in the editor',
       title: 'Export',
-      format: 'Export format',
       result: 'Export result',
       naverTitle: 'Naver title',
       copyTitle: 'Copy title',
@@ -79,19 +69,12 @@ export const i18n = {
       photoMissing: 'No photo matches this marker.',
       languageMissing:
         'This post has no content-language provenance, so it cannot be exported. Reload the post and try again.',
-      formatLabel: {
-        naver: 'Naver Blog',
-        tistory: 'Tistory',
-        site: 'Own site',
-        markdown: 'Markdown',
-      },
+      disclosurePlaceholder:
+        'Disclosure place — put the banner or wording the platform gave you here',
       guidance: {
         naver: 'Paste the text as it is',
         naverPhotos:
           "Paste the text, then replace each photo_1_caption_photo marker with the matching photo from the preview — a double-click selects the whole marker. The marker goes with the photo, so copy each caption separately into the editor's caption box. For a collage_…_collage or slide_…_slide marker, upload those numbered photos together and pick the same layout",
-        tistory: 'Paste in HTML mode, upload the photos, then replace each src',
-        site: 'Save it as an .html file and place the photo files beside it',
-        markdown: 'For Hugo · Jekyll · Obsidian. Place the photo files in the same folder',
       },
     },
   },

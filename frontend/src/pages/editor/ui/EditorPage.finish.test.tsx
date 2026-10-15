@@ -58,7 +58,7 @@ describe('opening a post', () => {
     scrollTo.mockRestore()
   })
 
-  it('switches export formats without making another client request', async () => {
+  it('opens the export and copies without making another client request', async () => {
     const calls: string[] = []
     const user = userEvent.setup()
     renderAppAt('/posts/20260820-jeju', {
@@ -84,9 +84,9 @@ describe('opening a post', () => {
     expect(calls).not.toContain('GetVoiceProfile')
     calls.length = 0
 
-    await user.click(screen.getByRole('tab', { name: '티스토리' }))
-    await user.click(screen.getByRole('tab', { name: '자체 사이트' }))
-    await user.click(screen.getByRole('tab', { name: '마크다운' }))
+    // The panel is the Naver output alone (POST-107): no format control, and a copy is browser-only.
+    expect(screen.queryByRole('tab', { name: /티스토리|자체 사이트|마크다운/ })).toBeNull()
+    await user.click(screen.getByRole('button', { name: '제목 복사' }))
 
     expect(calls).toEqual([])
   })
@@ -165,15 +165,15 @@ describe('the post language', () => {
       },
     })
 
+    const writeText = vi.fn(async () => undefined)
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } })
     await openStep(user, '글 완성')
-    await user.click(screen.getByRole('tab', { name: '자체 사이트' }))
-    expect(screen.getByLabelText<HTMLTextAreaElement>('내보내기 결과').value).toContain(
-      '<html lang="en">',
-    )
-    await user.click(screen.getByRole('tab', { name: '마크다운' }))
-    expect(screen.getByLabelText<HTMLTextAreaElement>('내보내기 결과').value).toContain(
-      '\nlanguage: en\n',
-    )
+    await user.click(await screen.findByRole('button', { name: '복사' }))
+    // English content provenance names its photo markers in English, whatever the target now is.
+    await waitFor(() => expect(writeText).toHaveBeenCalled())
+    const copied = (writeText.mock.calls[0] as unknown as [string])[0]
+    expect(copied).toContain('photo_1_')
+    expect(copied).not.toContain('사진_1_')
   })
 
   it('fails closed instead of guessing when finalized content provenance is missing', async () => {

@@ -6,7 +6,6 @@ import { useState } from 'react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import type { WritingTest } from '@/entities/writing-test'
 import { toNaver } from '@/features/export-naver'
-import { toMarkdown } from '@/features/export-markdown'
 import { writingTestI18n } from '@/features/writing-test'
 import { BlockSchema, BlockType, PostContentSchema } from '@/shared/api'
 import { WritingTestPair } from './WritingTestPair'
@@ -138,7 +137,7 @@ it.each(['partial', 'missing', 'expired', 'stale', 'invalid-pair', 'pending'] as
   },
 )
 
-it('copies the full canonical Naver and Markdown outputs in the frozen language after an explicit action', async () => {
+it('copies the full canonical Naver output in the frozen language after an explicit action, and nothing else', async () => {
   const user = userEvent.setup()
   const clipboard = vi.spyOn(navigator.clipboard, 'writeText').mockResolvedValue(undefined)
   const test = fixture()
@@ -151,13 +150,9 @@ it('copies the full canonical Naver and Markdown outputs in the frozen language 
   expect(clipboard.mock.calls[0]![0]).toContain('Last paragraph 0')
   expect(clipboard.mock.calls[0]![0]).toContain('photo_1_Photo_caption_photo')
   expect(clipboard.mock.calls[0]![0]).not.toContain('사진_')
-  await user.click(candidate.getByRole('button', { name: 'Markdown 글 복사' }))
-  await waitFor(() =>
-    expect(clipboard).toHaveBeenCalledWith(toMarkdown(content, [], test.createdAt, 'en')),
-  )
-  expect(clipboard.mock.calls[1]![0]).toContain('language: en')
-  expect(clipboard.mock.calls[1]![0]).toContain('Last paragraph 0')
-  expect(clipboard.mock.calls[1]![0]).not.toContain('https://evil.test')
+  expect(clipboard.mock.calls[0]![0]).not.toContain('https://evil.test')
+  // POST-107: the Naver copy is the only output; there is no Markdown copy.
+  expect(candidate.queryByRole('button', { name: /Markdown/ })).not.toBeInTheDocument()
 })
 
 it('selects the complete copy fallback without trapping post reading in a nested scroll panel', async () => {
@@ -167,13 +162,13 @@ it('selects the complete copy fallback without trapping post reading in a nested
   render(<WritingTestPair test={test} match={test.matches[0]!} {...callbacks()} />)
   await user.click(
     within(screen.getByRole('region', { name: '후보 A' })).getByRole('button', {
-      name: 'Markdown 글 복사',
+      name: '네이버용 글 복사',
     }),
   )
   const fallback = (await screen.findByRole('textbox', {
     name: '글 복사 · A',
   })) as HTMLTextAreaElement
-  expect(fallback).toHaveValue(toMarkdown(test.candidates[0]!.output!, [], test.createdAt, 'en'))
+  expect(fallback).toHaveValue(toNaver(test.candidates[0]!.output!, [], 'en'))
   expect(fallback).toHaveFocus()
   expect(fallback.selectionStart).toBe(0)
   expect(fallback.selectionEnd).toBe(fallback.value.length)

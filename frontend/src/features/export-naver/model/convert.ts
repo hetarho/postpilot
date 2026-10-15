@@ -79,8 +79,31 @@ function foldCaption(caption: string): string {
     .replace(/^_+|_+$/g, '')
 }
 
-/** Plain text for SmartEditor ONE. The post title is copied separately by the panel. */
+/** The disclosure's place at the top of a 체험단 post's body (EXPORT-28): one token the owner
+ *  double-clicks and replaces with the banner or the line the campaign platform gives. It is not
+ *  a photo marker and spends no photo number; the product writes no disclosure of its own. */
+export function disclosurePlaceholder(contentLanguage: ContentLanguage): string {
+  return contentLanguage === 'en'
+    ? 'disclosure_banner_or_text_disclosure'
+    : '대가표시_배너_또는_문구_대가표시'
+}
+
+/** Plain text for SmartEditor ONE. The post title is copied separately by the panel. A 체험단 post
+ *  opens with the disclosure placeholder and one blank line; without it the output is exactly
+ *  what it was before the placeholder existed. */
 export function toNaver(
+  content: PostContent,
+  images: readonly PostImage[],
+  contentLanguage: ContentLanguage,
+  options: { disclosurePlaceholder?: boolean } = {},
+): string {
+  const body = naverBody(content, images, contentLanguage)
+  return options.disclosurePlaceholder
+    ? [disclosurePlaceholder(contentLanguage), body].filter(Boolean).join('\n\n')
+    : body
+}
+
+function naverBody(
   content: PostContent,
   images: readonly PostImage[],
   contentLanguage: ContentLanguage,

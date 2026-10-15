@@ -1,47 +1,37 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import type { PostImage } from '@/entities/image'
 import { imageByFile } from '@/entities/post'
-import { toMarkdown } from '@/features/export-markdown'
 import { toNaver } from '@/features/export-naver'
-import { toSite } from '@/features/export-site'
-import { toTistory } from '@/features/export-tistory'
 import type { ContentLanguage, PostContent } from '@/shared/api'
 import { blockPhotos, type CopyFallbackElement } from '@/shared/lib'
-import type { ExportFormat } from '../config/guidance'
 import { toHashtags } from '../lib/hashtags'
 import { captionCopyStatus, captionFellBack, exportCopyStatus } from './copy-status'
 import type { CopyTarget, TextCopyTarget } from './copy-target'
 import { useCopyFeedback } from './useCopyFeedback'
 
-/** The export panel's state (EXPORT-9, EXPORT-12, EXPORT-20, EXPORT-24): the format on screen,
- *  four synchronous browser-only derivations of the canonical block array, and every copy the
- *  panel offers with the status line each one reports. The panel renders what this hands it. */
+/** The export panel's state (EXPORT-9, EXPORT-12, EXPORT-20, EXPORT-24): the Naver output, one
+ *  synchronous browser-only derivation of the canonical block array, and every copy the panel
+ *  offers with the status line each one reports. The panel renders what this hands it. A 체험단
+ *  post's body opens with the disclosure placeholder (EXPORT-28). */
 export function useExportPanel({
   content,
   images,
-  createdAt,
   contentLanguage,
+  disclosure = false,
 }: {
   content: PostContent
   images: readonly PostImage[]
-  createdAt: string
   contentLanguage: ContentLanguage
+  disclosure?: boolean
 }) {
-  const [format, setFormat] = useState<ExportFormat>('naver')
-  const outputs = useMemo(
-    () => ({
-      naver: toNaver(content, images, contentLanguage),
-      tistory: toTistory(content, images, contentLanguage),
-      site: toSite(content, images, createdAt, contentLanguage),
-      markdown: toMarkdown(content, images, createdAt, contentLanguage),
-    }),
-    [content, contentLanguage, createdAt, images],
+  const output = useMemo(
+    () => toNaver(content, images, contentLanguage, { disclosurePlaceholder: disclosure }),
+    [content, contentLanguage, disclosure, images],
   )
-  const output = outputs[format]
   // Empty for a post with no usable tags, which is what keeps the field off the screen entirely
   // rather than mounting an empty control (THEME-29).
   const hashtags = toHashtags(content.tags)
-  const outputWithTags = hashtags ? `${outputs.naver}\n\n${hashtags}` : ''
+  const outputWithTags = hashtags ? `${output}\n\n${hashtags}` : ''
   // Photo numbers per block index, from the SAME canonical block array `toNaver` walks, so a photo
   // in the preview and its number in the copied text cannot drift apart: they match by position.
   // A single photo holds one number and a group one per photo (EXPORT-5, EXPORT-26). The number —
@@ -66,7 +56,6 @@ export function useExportPanel({
   const { copied, manualCopy, photoFailure, outputRef, titleRef, tagsRef } = feedback
   const status = exportCopyStatus(feedback, {
     content,
-    format,
     output,
     outputWithTags,
     hashtags,
@@ -75,15 +64,15 @@ export function useExportPanel({
   const copyButtonRef = useRef<HTMLButtonElement>(null)
   const copyWithTagsButtonRef = useRef<HTMLButtonElement>(null)
 
-  // The manual fallback must be SEEN to be used: on the Naver tab the raw field mounts only after
-  // the copy has fallen back, so `copyText` was handed no element and the selection happens here,
-  // once the field exists. The dismissal side is the same effect's business: a content change
-  // dissolves the fallback by derivation and UNMOUNTS the focused field, which would drop the
-  // keyboard onto <body> — the focus is handed back to the copy button instead. A dismissal by
-  // tab switch or by pressing another control leaves focus where the user put it.
+  // The manual fallback must be SEEN to be used: the raw field mounts only after the copy has
+  // fallen back, so `copyText` was handed no element and the selection happens here, once the
+  // field exists. The dismissal side is the same effect's business: a content change dissolves
+  // the fallback by derivation and UNMOUNTS the focused field, which would drop the keyboard onto
+  // <body> — the focus is handed back to the copy button instead. A dismissal by pressing another
+  // control leaves focus where the user put it.
   const fallbackWasRevealed = useRef<TextCopyTarget | undefined>(undefined)
   useEffect(() => {
-    if (format === 'naver' && outputFellBack) {
+    if (outputFellBack) {
       fallbackWasRevealed.current = manualCopy?.target
       outputRef.current?.focus()
       outputRef.current?.select()
@@ -97,20 +86,14 @@ export function useExportPanel({
         else copyButtonRef.current?.focus()
       }
     }
-  }, [format, manualCopy?.target, manualCopy?.value, outputFellBack, outputRef])
+  }, [manualCopy?.target, manualCopy?.value, outputFellBack, outputRef])
 
   return {
-    format,
-    /** A format switch drops every copy's feedback, and any copy still in flight with it. */
-    selectFormat: (next: ExportFormat) => {
-      feedback.invalidate()
-      setFormat(next)
-    },
     output,
     hashtags,
     outputWithTags,
     fallbackOutput: status.fallbackOutput,
-    rawFieldVisible: status.rawFieldVisible,
+    outputFellBack,
     /** One status per text copy line; `undefined` says nothing. */
     status: {
       title: status.title,
@@ -128,8 +111,8 @@ export function useExportPanel({
     copyWithTagsButtonRef,
     copyTitle: () => feedback.copy('title', content.title, titleRef.current),
     copyTags: () => feedback.copy('tags', hashtags, tagsRef.current),
-    // `outputRef.current` is naturally null while the Naver tab shows the preview and the live
-    // field on every other state — including a Naver retry from the revealed field.
+    // `outputRef.current` is naturally null while the panel shows the preview, and the revealed
+    // field on a retry from it.
     copyOutput: () =>
       feedback.copy(
         'output',

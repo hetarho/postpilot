@@ -133,6 +133,13 @@ describe.each(['ko', 'en'] as const)('About page in %s', (locale) => {
         ? '출처 표시와 기술 정보는 복사한 글에 섞이지 않습니다'
         : 'Origin labels and technical details stay out of the copied writing',
     )
+    // MKT-4: only the shipped output is named — the Naver Blog one, no retired format.
+    expect(
+      within(outputs)
+        .getAllByRole('listitem')
+        .map((item) => item.textContent),
+    ).toEqual([locale === 'ko' ? '네이버 블로그용' : 'Naver Blog'])
+    expect(outputs).not.toHaveTextContent(/티스토리|Tistory|마크다운|Markdown|HTML/)
     expect(screen.getByRole('main')).not.toHaveTextContent(
       /\d+\s*(?:배 더 빠르|times faster|x faster)|사실 보장|정확도 보장|AI 없는 글|검색 순위 향상|자동 (?:발행|게시)|guaranteed truth|AI-free writing|search-rank gain|automatically publish/i,
     )

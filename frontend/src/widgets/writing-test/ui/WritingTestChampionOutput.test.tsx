@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import i18next from 'i18next'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import type { WritingTest } from '@/entities/writing-test'
-import { toMarkdown } from '@/features/export-markdown'
+import { toNaver } from '@/features/export-naver'
 import { writingTestI18n } from '@/features/writing-test'
 import { BlockSchema, BlockType, PostContentSchema } from '@/shared/api'
 import { WritingTestChampionOutput } from './WritingTestChampionOutput'
@@ -77,11 +77,9 @@ it('reads and copies the declared champion’s complete output without winner or
     screen.queryByRole('button', { name: /승자로 선택|저장|활성 모델/ }),
   ).not.toBeInTheDocument()
   expect(copy).not.toHaveBeenCalled()
-  await user.click(screen.getByRole('button', { name: 'Markdown 글 복사' }))
+  await user.click(screen.getByRole('button', { name: '네이버용 글 복사' }))
   await waitFor(() =>
-    expect(copy).toHaveBeenCalledExactlyOnceWith(
-      toMarkdown(test.candidates[1]!.output!, [], test.createdAt, 'en'),
-    ),
+    expect(copy).toHaveBeenCalledExactlyOnceWith(toNaver(test.candidates[1]!.output!, [], 'en')),
   )
 })
 
@@ -116,11 +114,11 @@ it('retains an exact selectable champion copy fallback when clipboard permission
   vi.spyOn(navigator.clipboard, 'writeText').mockRejectedValue(new Error('denied'))
   const test = fixture()
   render(<WritingTestChampionOutput test={test} />)
-  await user.click(screen.getByRole('button', { name: 'Markdown 글 복사' }))
+  await user.click(screen.getByRole('button', { name: '네이버용 글 복사' }))
   const fallback = (await screen.findByRole('textbox', {
     name: '글 복사 · B',
   })) as HTMLTextAreaElement
-  expect(fallback).toHaveValue(toMarkdown(test.candidates[1]!.output!, [], test.createdAt, 'en'))
+  expect(fallback).toHaveValue(toNaver(test.candidates[1]!.output!, [], 'en'))
   expect(fallback.selectionEnd).toBe(fallback.value.length)
   expect(fallback).toHaveFocus()
 })

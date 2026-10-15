@@ -62,11 +62,8 @@ export const marketing = {
   },
   outputs: {
     title: 'Where the result goes',
-    body: 'One finalized post produces every format below. Origin labels and technical details stay out of the copied writing. You manually publish the copied result on the destination service.',
+    body: 'One finalized post produces the output below. Origin labels and technical details stay out of the copied writing. You manually publish the copied result on the destination service.',
     naver: 'Naver Blog',
-    tistory: 'Tistory',
-    html: 'HTML for your own site',
-    markdown: 'Markdown',
   },
   plans: {
     title: 'Plans',

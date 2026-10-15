@@ -123,7 +123,8 @@ export function AboutPage() {
             {t('outputs.body')}
           </Typography>
           <ul className="text-content-primary mt-4 flex flex-wrap gap-2">
-            {(['naver', 'tistory', 'html', 'markdown'] as const).map((format) => (
+            {/* Only what ships (MKT-4): the Naver Blog output today. */}
+            {(['naver'] as const).map((format) => (
               <Typography
                 variant="label"
                 as="li"

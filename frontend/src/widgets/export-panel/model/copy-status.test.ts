@@ -12,11 +12,10 @@ import {
 const CONTENT = POST_CONTENT_FIXTURE
 const NONE: CopyFeedbackState = { copied: undefined, manualCopy: undefined }
 
-/** The texts on screen for `CONTENT`, on the Naver tab unless a test says otherwise. */
+/** The texts on screen for `CONTENT`. */
 function texts(overrides: Partial<ExportTexts> = {}): ExportTexts {
   return {
     content: CONTENT,
-    format: 'naver',
     output: 'body',
     outputWithTags: 'body\n\n#제주 #산책 #여행',
     hashtags: '#제주 #산책 #여행',
@@ -56,31 +55,28 @@ describe('a confirmation', () => {
     })
   })
 
-  it('confirms the combined body only on the Naver tab', () => {
+  it('confirms the combined body only while it still holds the value it copied', () => {
     const copied: CopyFeedbackState = {
       copied: { target: 'outputWithTags', value: 'body\n\n#제주 #산책 #여행' },
       manualCopy: undefined,
     }
     expect(exportCopyStatus(copied, texts()).outputWithTags).toBe('copied')
-    expect(exportCopyStatus(copied, texts({ format: 'tistory' })).outputWithTags).toBeUndefined()
+    expect(
+      exportCopyStatus(copied, texts({ outputWithTags: 'edited\n\n#제주' })).outputWithTags,
+    ).toBeUndefined()
   })
 })
 
 describe('a manual fallback', () => {
-  it('keeps the Naver raw field hidden until the body copy falls back', () => {
-    expect(exportCopyStatus(NONE, texts())).toMatchObject({
-      rawFieldVisible: false,
-      outputFellBack: false,
-    })
-    // The other formats are markup read as source: their field is always there.
-    expect(exportCopyStatus(NONE, texts({ format: 'markdown' })).rawFieldVisible).toBe(true)
+  it('keeps the raw field hidden until the body copy falls back', () => {
+    expect(exportCopyStatus(NONE, texts())).toMatchObject({ outputFellBack: false })
 
     const fellBack = exportCopyStatus(
       { copied: undefined, manualCopy: { target: 'output', value: 'body', source: CONTENT } },
       texts(),
     )
     expect(fellBack).toMatchObject({
-      rawFieldVisible: true,
+      outputFellBack: true,
       fallbackOutput: 'body',
       output: 'manual',
     })
@@ -99,7 +95,7 @@ describe('a manual fallback', () => {
       texts(),
     )
     expect(status).toMatchObject({
-      rawFieldVisible: true,
+      outputFellBack: true,
       fallbackOutput: 'body\n\n#제주 #산책 #여행',
       outputWithTags: 'manual',
       output: undefined,
@@ -111,10 +107,10 @@ describe('a manual fallback', () => {
       copied: undefined,
       manualCopy: { target: 'output', value: 'body', source: CONTENT },
     }
-    expect(exportCopyStatus(manual, texts({ output: 'edited' })).rawFieldVisible).toBe(false)
+    expect(exportCopyStatus(manual, texts({ output: 'edited' })).outputFellBack).toBe(false)
     // The same string again, from a different content: the dismissed fallback must not return.
     const undone: PostContent = { ...CONTENT }
-    expect(exportCopyStatus(manual, texts({ content: undone })).rawFieldVisible).toBe(false)
+    expect(exportCopyStatus(manual, texts({ content: undone })).outputFellBack).toBe(false)
 
     const tags: CopyFeedbackState = {
       copied: undefined,
@@ -124,7 +120,7 @@ describe('a manual fallback', () => {
     expect(exportCopyStatus(tags, texts({ content: undone })).tags).toBeUndefined()
   })
 
-  // On the Naver tab only the BODY reveals the raw field; a tags fallback selects its own field.
+  // Only the BODY reveals the raw field; a tags fallback selects its own field.
   it('reveals nothing for a tags fallback', () => {
     const status = exportCopyStatus(
       {
@@ -133,7 +129,7 @@ describe('a manual fallback', () => {
       },
       texts(),
     )
-    expect(status.rawFieldVisible).toBe(false)
+    expect(status.outputFellBack).toBe(false)
     expect(status.tags).toBe('manual')
   })
 })

@@ -2,9 +2,6 @@ import { afterEach, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { naverPhotoOrder, toNaver } from '@/features/export-naver'
-import { toMarkdown } from '@/features/export-markdown'
-import { toTistory } from '@/features/export-tistory'
-import { toSite } from '@/features/export-site'
 import { BlockType } from '@/shared/api'
 import {
   POST_CONTENT_FIXTURE,
@@ -22,71 +19,48 @@ import {
   PRIVATE_REQUEST_SENTINEL,
 } from '@/test/fixtures/ownerControlContent'
 
-const OWNER_CREATED_AT = '2026-10-08T00:00:00Z'
-const OWNER_FORMATS = [
-  { format: 'naver', label: '네이버 블로그' },
-  { format: 'tistory', label: '티스토리' },
-  { format: 'site', label: '자체 사이트' },
-  { format: 'markdown', label: '마크다운' },
-] as const
-const ownerOutputs = (content: typeof OWNER_CONTROL_CONTENT, language: 'ko' | 'en') => ({
-  naver: toNaver(content, POST_IMAGES_FIXTURE, language),
-  tistory: toTistory(content, POST_IMAGES_FIXTURE, language),
-  site: toSite(content, POST_IMAGES_FIXTURE, OWNER_CREATED_AT, language),
-  markdown: toMarkdown(content, POST_IMAGES_FIXTURE, OWNER_CREATED_AT, language),
+it('manual fallback preserves latest marker-like owner wording and excludes visible review chrome', async () => {
+  const user = userEvent.setup()
+  setClipboard(undefined)
+  const select = vi.spyOn(HTMLTextAreaElement.prototype, 'select')
+  const fetch = vi.spyOn(globalThis, 'fetch')
+  const panel = (content: typeof OWNER_CONTROL_CONTENT, language: 'ko' | 'en') => (
+    <>
+      <aside>
+        {PRIVATE_REVIEW_SENTINEL} {PRIVATE_REQUEST_SENTINEL} text-origin-owner-foreground
+      </aside>
+      <ExportPanel content={content} images={POST_IMAGES_FIXTURE} contentLanguage={language} />
+    </>
+  )
+  const view = render(panel(OWNER_CONTROL_CONTENT, 'ko'))
+  for (const language of ['ko', 'en'] as const) {
+    const latest = {
+      ...OWNER_CONTROL_CONTENT,
+      blocks: OWNER_CONTROL_CONTENT.blocks.map((block, index) =>
+        index === 0
+          ? {
+              ...block,
+              content: `${OWNER_CONTROL_TEXT}\n소유자가 마지막으로 고친 문장 ${language}`,
+            }
+          : block,
+      ),
+    }
+    view.rerender(panel(latest, language))
+    await user.click(screen.getByRole('button', { name: '복사' }))
+    await waitFor(() => expect(select).toHaveBeenCalled())
+    const fallback = screen.getByLabelText<HTMLTextAreaElement>('내보내기 결과')
+    expect(fallback.value).toBe(toNaver(latest, POST_IMAGES_FIXTURE, language))
+    expect(fallback.value).toContain(`소유자가 마지막으로 고친 문장 ${language}`)
+    expect(fallback.value).not.toContain(PRIVATE_REVIEW_SENTINEL)
+    expect(fallback.value).not.toContain(PRIVATE_REQUEST_SENTINEL)
+    expect(fallback.value.match(/text-origin-owner-foreground/g)).toHaveLength(1)
+    expect(fallback.selectionStart).toBe(0)
+    expect(fallback.selectionEnd).toBe(fallback.value.length)
+  }
+  expect(fetch).not.toHaveBeenCalled()
 })
 
-it.each(OWNER_FORMATS)(
-  'manual $format fallback preserves latest marker-like owner wording and excludes visible review chrome',
-  async ({ format, label }) => {
-    const user = userEvent.setup()
-    setClipboard(undefined)
-    const select = vi.spyOn(HTMLTextAreaElement.prototype, 'select')
-    const fetch = vi.spyOn(globalThis, 'fetch')
-    const panel = (content: typeof OWNER_CONTROL_CONTENT, language: 'ko' | 'en') => (
-      <>
-        <aside>
-          {PRIVATE_REVIEW_SENTINEL} {PRIVATE_REQUEST_SENTINEL} text-origin-owner-foreground
-        </aside>
-        <ExportPanel
-          content={content}
-          images={POST_IMAGES_FIXTURE}
-          createdAt={OWNER_CREATED_AT}
-          contentLanguage={language}
-        />
-      </>
-    )
-    const view = render(panel(OWNER_CONTROL_CONTENT, 'ko'))
-    await user.click(screen.getByRole('tab', { name: label }))
-    for (const language of ['ko', 'en'] as const) {
-      const latest = {
-        ...OWNER_CONTROL_CONTENT,
-        blocks: OWNER_CONTROL_CONTENT.blocks.map((block, index) =>
-          index === 0
-            ? {
-                ...block,
-                content: `${OWNER_CONTROL_TEXT}\n소유자가 마지막으로 고친 문장 ${language}`,
-              }
-            : block,
-        ),
-      }
-      view.rerender(panel(latest, language))
-      await user.click(screen.getByRole('button', { name: '복사' }))
-      await waitFor(() => expect(select).toHaveBeenCalled())
-      const fallback = screen.getByLabelText<HTMLTextAreaElement>('내보내기 결과')
-      expect(fallback.value).toBe(ownerOutputs(latest, language)[format])
-      expect(fallback.value).toContain(`소유자가 마지막으로 고친 문장 ${language}`)
-      expect(fallback.value).not.toContain(PRIVATE_REVIEW_SENTINEL)
-      expect(fallback.value).not.toContain(PRIVATE_REQUEST_SENTINEL)
-      expect(fallback.value.match(/text-origin-owner-foreground/g)).toHaveLength(1)
-      expect(fallback.selectionStart).toBe(0)
-      expect(fallback.selectionEnd).toBe(fallback.value.length)
-    }
-    expect(fetch).not.toHaveBeenCalled()
-  },
-)
-
-it('copies only canonical title, tags, caption and four body formats while preserving genuine origin-label wording', async () => {
+it('copies only canonical title, tags, caption and body while preserving genuine origin-label wording', async () => {
   const user = userEvent.setup()
   const writeText = vi.fn<Clipboard['writeText']>().mockResolvedValue(undefined)
   setClipboard({ writeText })
@@ -98,7 +72,6 @@ it('copies only canonical title, tags, caption and four body formats while prese
       <ExportPanel
         content={OWNER_CONTROL_CONTENT}
         images={POST_IMAGES_FIXTURE}
-        createdAt={OWNER_CREATED_AT}
         contentLanguage="ko"
       />
     </>,
@@ -109,13 +82,12 @@ it('copies only canonical title, tags, caption and four body formats while prese
   await waitFor(() => expect(writeText).toHaveBeenLastCalledWith('#owner_input #출처 미확인'))
   await user.click(screen.getByRole('button', { name: '1번 사진 캡션 복사' }))
   await waitFor(() => expect(writeText).toHaveBeenLastCalledWith(OWNER_CONTROL_CAPTION))
-  for (const { format, label } of OWNER_FORMATS) {
-    await user.click(screen.getByRole('tab', { name: label }))
-    await user.click(screen.getByRole('button', { name: '복사' }))
-    await waitFor(() =>
-      expect(writeText).toHaveBeenLastCalledWith(ownerOutputs(OWNER_CONTROL_CONTENT, 'ko')[format]),
-    )
-  }
+  await user.click(screen.getByRole('button', { name: '복사' }))
+  await waitFor(() =>
+    expect(writeText).toHaveBeenLastCalledWith(
+      toNaver(OWNER_CONTROL_CONTENT, POST_IMAGES_FIXTURE, 'ko'),
+    ),
+  )
   for (const [text] of writeText.mock.calls) {
     expect(text).not.toContain(PRIVATE_REVIEW_SENTINEL)
     expect(text).not.toContain(PRIVATE_REQUEST_SENTINEL)
@@ -129,7 +101,6 @@ it('manual title, tag and caption fallbacks preserve owner words that look like 
     <ExportPanel
       content={OWNER_CONTROL_CONTENT}
       images={POST_IMAGES_FIXTURE}
-      createdAt={OWNER_CREATED_AT}
       contentLanguage="ko"
     />,
   )
@@ -163,7 +134,6 @@ function renderPanel({ onPhotoUrlsStale }: { onPhotoUrlsStale?: () => void } = {
     <ExportPanel
       content={POST_CONTENT_FIXTURE}
       images={POST_IMAGES_FIXTURE}
-      createdAt="2026-08-29T03:04:05Z"
       contentLanguage="ko"
       onPhotoUrlsStale={onPhotoUrlsStale}
     />,
@@ -190,8 +160,8 @@ function expiredUrl() {
   )
 }
 
-it('switches four synchronous outputs with their guidance and keeps the Naver title separate', async () => {
-  const user = userEvent.setup()
+// POST-107, EXPORT-9: the panel is the Naver output alone — no format control.
+it('shows the Naver output with its guidance and the title kept separate, and no format control', () => {
   const fetchSpy = vi.spyOn(globalThis, 'fetch')
   renderPanel()
 
@@ -202,39 +172,25 @@ it('switches four synchronous outputs with their guidance and keeps the Naver ti
     ),
   ).toBeInTheDocument()
 
-  await user.click(screen.getByRole('tab', { name: '티스토리' }))
-  expect(
-    screen.getByText('HTML 모드에 붙여넣고 사진 업로드 후 src를 교체하세요'),
-  ).toBeInTheDocument()
-  expect(screen.getByLabelText<HTMLTextAreaElement>('내보내기 결과').value).toContain(
-    '<p class="summary">',
-  )
-
-  await user.click(screen.getByRole('tab', { name: '자체 사이트' }))
-  expect(screen.getByText('그대로 .html로 저장하고 사진 파일을 옆에 두세요')).toBeInTheDocument()
-  await user.click(screen.getByRole('tab', { name: '마크다운' }))
-  expect(
-    screen.getByText('Hugo · Jekyll · Obsidian에 맞는 형식이에요. 사진 파일을 같은 폴더에 두세요'),
-  ).toBeInTheDocument()
+  expect(screen.queryByRole('tablist')).not.toBeInTheDocument()
+  expect(screen.queryByRole('tab')).not.toBeInTheDocument()
+  for (const gone of ['티스토리', '자체 사이트', '마크다운']) {
+    expect(screen.queryByText(gone)).not.toBeInTheDocument()
+  }
   expect(fetchSpy).not.toHaveBeenCalled()
 })
 
 // ── The tag copy field (EXPORT-20) ────────────────────────────────────────────────────────────
 //
-// The Naver and Tistory bodies omit tags because those platforms have their own tag box, so
-// without this field the panel showed them nowhere at all. The field is the surface, not a format
-// change: all four outputs stay byte-identical, which the converter assertions above and below
-// still hold.
+// The Naver body omits tags because Naver has its own tag box, so without this field the panel
+// showed them nowhere at all. The field is the surface, not an output change: the body stays
+// byte-identical, which the converter assertions above and below still hold.
 
-it('offers the tags as a ready-to-paste string on every format tab', async () => {
-  const user = userEvent.setup()
+it('offers the tags as a ready-to-paste string', () => {
   renderPanel()
 
-  for (const tab of ['네이버 블로그', '티스토리', '자체 사이트', '마크다운']) {
-    await user.click(screen.getByRole('tab', { name: tab }))
-    expect(screen.getByLabelText('태그')).toHaveValue('#제주 #산책 #여행')
-    expect(screen.getByRole('button', { name: '태그 복사' })).toBeInTheDocument()
-  }
+  expect(screen.getByLabelText('태그')).toHaveValue('#제주 #산책 #여행')
+  expect(screen.getByRole('button', { name: '태그 복사' })).toBeInTheDocument()
 })
 
 it('puts the hashtag string on the clipboard and confirms it', async () => {
@@ -256,7 +212,6 @@ it('copies an already-#-prefixed tag with exactly one #', async () => {
     <ExportPanel
       content={{ ...POST_CONTENT_FIXTURE, tags: ['#제주', '산책'] }}
       images={POST_IMAGES_FIXTURE}
-      createdAt="2026-08-29T03:04:05Z"
       contentLanguage="ko"
     />,
   )
@@ -270,7 +225,6 @@ it('renders neither field nor label for a post with no tags', () => {
     <ExportPanel
       content={{ ...POST_CONTENT_FIXTURE, tags: [] }}
       images={POST_IMAGES_FIXTURE}
-      createdAt="2026-08-29T03:04:05Z"
       contentLanguage="ko"
     />,
   )
@@ -296,7 +250,7 @@ it('falls back to manual selection beside the tag field when the clipboard refus
   expect(
     screen.getByText('자동 복사가 막혀 있어요. 선택된 텍스트를 길게 눌러 복사하세요'),
   ).toBeInTheDocument()
-  // On the Naver tab the BODY fallback is what reveals the raw field; a tags fallback must not.
+  // The BODY fallback is what reveals the raw field; a tags fallback must not.
   expect(screen.queryByLabelText('내보내기 결과')).not.toBeInTheDocument()
   expect(screen.getByRole('article', { name: '네이버 미리보기' })).toBeInTheDocument()
 })
@@ -309,7 +263,6 @@ it('drops a tag confirmation when the content changes to a different tag list', 
     <ExportPanel
       content={POST_CONTENT_FIXTURE}
       images={POST_IMAGES_FIXTURE}
-      createdAt="2026-08-29T03:04:05Z"
       contentLanguage="ko"
     />,
   )
@@ -321,7 +274,6 @@ it('drops a tag confirmation when the content changes to a different tag list', 
     <ExportPanel
       content={{ ...POST_CONTENT_FIXTURE, tags: ['제주', '산책'] }}
       images={POST_IMAGES_FIXTURE}
-      createdAt="2026-08-29T03:04:05Z"
       contentLanguage="ko"
     />,
   )
@@ -340,7 +292,6 @@ it('drops a tag copy whose field unmounted before the result settled', async () 
     <ExportPanel
       content={POST_CONTENT_FIXTURE}
       images={POST_IMAGES_FIXTURE}
-      createdAt="2026-08-29T03:04:05Z"
       contentLanguage="ko"
     />,
   )
@@ -351,7 +302,6 @@ it('drops a tag copy whose field unmounted before the result settled', async () 
     <ExportPanel
       content={{ ...POST_CONTENT_FIXTURE, tags: [] }}
       images={POST_IMAGES_FIXTURE}
-      createdAt="2026-08-29T03:04:05Z"
       contentLanguage="ko"
     />,
   )
@@ -377,12 +327,11 @@ it('does not confirm a tag copy against the title field', async () => {
 
 // ── The rendered Naver preview (EXPORT-9) ─────────────────────────────────────────────────────
 //
-// The Naver tab shows the POST, not the wire text: the `사진_<n>_…_사진` markers exist only in
+// The panel shows the POST, not the wire text: the `사진_<n>_…_사진` markers exist only in
 // what the copy button puts on the clipboard, and each photo renders inline at its marker
 // position with its own copy control — and its caption with a second one under it (EXPORT-24).
 
-it('renders the Naver tab as the post — no marker text, no raw field, photos inline in marker order', async () => {
-  const user = userEvent.setup()
+it('renders the post — no marker text, no raw field, photos inline in marker order', () => {
   renderPanel()
 
   const preview = screen.getByRole('article', { name: '네이버 미리보기' })
@@ -407,13 +356,42 @@ it('renders the Naver tab as the post — no marker text, no raw field, photos i
       .map((button) => button.getAttribute('aria-label')),
   ).toEqual(['1번 사진 복사 · IMG_1.jpg', '1번 사진 캡션 복사', '2번 사진 복사 · IMG_2.jpg'])
   expect(within(preview).getAllByRole('img')).toHaveLength(files.length)
+  // Not a 체험단 post: no disclosure place.
+  expect(screen.queryByText(/^대가 표시 자리/)).not.toBeInTheDocument()
+})
 
-  // The other three formats are source to be read, not a post to be seen.
-  for (const format of ['티스토리', '자체 사이트', '마크다운']) {
-    await user.click(screen.getByRole('tab', { name: format }))
-    expect(screen.queryByRole('article', { name: '네이버 미리보기' })).not.toBeInTheDocument()
-    expect(screen.getByLabelText('내보내기 결과')).toBeInTheDocument()
-  }
+// EXPORT-28: a 체험단 post's preview shows the disclosure's labelled place first, and every body
+// copy carries the placeholder; the photo numbers do not move.
+it('reserves the disclosure place on a 체험단 post', async () => {
+  const user = userEvent.setup()
+  const writeText = vi.fn<Clipboard['writeText']>().mockResolvedValue(undefined)
+  setClipboard({ writeText })
+  render(
+    <ExportPanel
+      content={POST_CONTENT_FIXTURE}
+      images={POST_IMAGES_FIXTURE}
+      contentLanguage="ko"
+      disclosure
+    />,
+  )
+  const place = screen.getByText('대가 표시 자리 — 플랫폼이 준 배너나 문구를 여기에 넣으세요')
+  const preview = screen.getByRole('article', { name: '네이버 미리보기' })
+  expect(place.compareDocumentPosition(preview) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  expect(within(preview).getAllByRole('button', { name: PHOTO_COPY })[0]).toHaveAccessibleName(
+    '1번 사진 복사 · IMG_1.jpg',
+  )
+  const body = toNaver(POST_CONTENT_FIXTURE, POST_IMAGES_FIXTURE, 'ko')
+
+  await user.click(screen.getByRole('button', { name: '복사' }))
+  await waitFor(() =>
+    expect(writeText).toHaveBeenLastCalledWith(`대가표시_배너_또는_문구_대가표시\n\n${body}`),
+  )
+  await user.click(screen.getByRole('button', { name: '글+태그 복사' }))
+  await waitFor(() =>
+    expect(writeText).toHaveBeenLastCalledWith(
+      `대가표시_배너_또는_문구_대가표시\n\n${body}\n\n#제주 #산책 #여행`,
+    ),
+  )
 })
 
 // ── The caption copies (EXPORT-24) ───────────────────────────────────────────────────────────
@@ -471,7 +449,6 @@ it('renders no photo controls, and no photo guidance, for a post with no photos'
         blocks: POST_CONTENT_FIXTURE.blocks.filter((block) => block.type !== BlockType.IMAGE),
       }}
       images={[]}
-      createdAt="2026-08-29T03:04:05Z"
       contentLanguage="ko"
     />,
   )
@@ -509,11 +486,6 @@ it('copies the Naver body with normalized tags at its end without changing ordin
   expect(await screen.findByText('글과 태그가 복사됐어요')).toBeInTheDocument()
   expect(screen.queryByLabelText('내보내기 결과')).not.toBeInTheDocument()
 
-  await user.click(screen.getByRole('tab', { name: '티스토리' }))
-  expect(screen.queryByText('글과 태그가 복사됐어요')).not.toBeInTheDocument()
-  expect(screen.queryByRole('button', { name: '글+태그 복사' })).not.toBeInTheDocument()
-  await user.click(screen.getByRole('tab', { name: '네이버 블로그' }))
-
   await user.click(screen.getByRole('button', { name: '복사' }))
   await waitFor(() => expect(writeText).toHaveBeenLastCalledWith(body))
   expect(screen.queryByText('글과 태그가 복사됐어요')).not.toBeInTheDocument()
@@ -527,7 +499,6 @@ it('selects the exact combined body on clipboard refusal and clears stale feedba
     <ExportPanel
       content={POST_CONTENT_FIXTURE}
       images={POST_IMAGES_FIXTURE}
-      createdAt="2026-08-29T03:04:05Z"
       contentLanguage="ko"
     />,
   )
@@ -541,7 +512,6 @@ it('selects the exact combined body on clipboard refusal and clears stale feedba
     <ExportPanel
       content={{ ...POST_CONTENT_FIXTURE, tags: ['다른태그'] }}
       images={POST_IMAGES_FIXTURE}
-      createdAt="2026-08-29T03:04:05Z"
       contentLanguage="ko"
     />,
   )
@@ -569,16 +539,8 @@ it('reveals, selects and explains the raw text when the Clipboard API is unavail
   ).toBeInTheDocument()
   expect(screen.queryByRole('article', { name: '네이버 미리보기' })).not.toBeInTheDocument()
 
-  // Leaving and returning dismisses the fallback back to the preview.
-  await user.click(screen.getByRole('tab', { name: '티스토리' }))
-  await user.click(screen.getByRole('tab', { name: '네이버 블로그' }))
-  expect(screen.getByRole('article', { name: '네이버 미리보기' })).toBeInTheDocument()
-  expect(screen.queryByLabelText('내보내기 결과')).not.toBeInTheDocument()
-
-  // A copy that succeeds afterwards also returns to the preview.
+  // A copy that succeeds afterwards returns to the preview.
   const writeText = vi.fn<Clipboard['writeText']>().mockResolvedValue(undefined)
-  await user.click(screen.getByRole('button', { name: '복사' }))
-  await waitFor(() => screen.getByLabelText('내보내기 결과'))
   setClipboard({ writeText })
   await user.click(screen.getByRole('button', { name: '복사' }))
   await waitFor(() => expect(writeText).toHaveBeenCalledOnce())
@@ -592,7 +554,6 @@ it('dismisses the revealed fallback when the content changes under it', async ()
     <ExportPanel
       content={POST_CONTENT_FIXTURE}
       images={POST_IMAGES_FIXTURE}
-      createdAt="2026-08-29T03:04:05Z"
       contentLanguage="ko"
     />,
   )
@@ -608,7 +569,6 @@ it('dismisses the revealed fallback when the content changes under it', async ()
         blocks: POST_CONTENT_FIXTURE.blocks.filter((block) => block.type !== BlockType.QUOTE),
       }}
       images={POST_IMAGES_FIXTURE}
-      createdAt="2026-08-29T03:04:05Z"
       contentLanguage="ko"
     />,
   )
@@ -616,7 +576,7 @@ it('dismisses the revealed fallback when the content changes under it', async ()
   expect(screen.getByRole('article', { name: '네이버 미리보기' })).toBeInTheDocument()
 })
 
-it('ignores a stale clipboard rejection after the format changes', async () => {
+it('ignores a stale clipboard rejection after the content changes', async () => {
   const user = userEvent.setup()
   let rejectWrite: (reason?: unknown) => void = () => undefined
   const writeText = vi.fn(
@@ -629,17 +589,27 @@ it('ignores a stale clipboard rejection after the format changes', async () => {
     writeText,
   })
   const select = vi.spyOn(HTMLTextAreaElement.prototype, 'select')
-  renderPanel()
+  const view = render(
+    <ExportPanel
+      content={POST_CONTENT_FIXTURE}
+      images={POST_IMAGES_FIXTURE}
+      contentLanguage="ko"
+    />,
+  )
 
   await user.click(screen.getByRole('button', { name: '복사' }))
   await waitFor(() => expect(writeText).toHaveBeenCalledOnce())
-  await user.click(screen.getByRole('tab', { name: '티스토리' }))
+  view.rerender(
+    <ExportPanel
+      content={{ ...POST_CONTENT_FIXTURE, blocks: POST_CONTENT_FIXTURE.blocks.slice(1) }}
+      images={POST_IMAGES_FIXTURE}
+      contentLanguage="ko"
+    />,
+  )
   rejectWrite(new DOMException('blocked', 'NotAllowedError'))
   await new Promise((resolve) => window.setTimeout(resolve, 0))
 
-  await waitFor(() =>
-    expect(screen.getByRole('tab', { name: '티스토리' })).toHaveAttribute('aria-selected', 'true'),
-  )
+  expect(screen.getByRole('article', { name: '네이버 미리보기' })).toBeInTheDocument()
   expect(select).not.toHaveBeenCalled()
   expect(
     screen.queryByText('자동 복사가 막혀 있어요. 선택된 텍스트를 길게 눌러 복사하세요'),
@@ -833,7 +803,6 @@ it('tells an expired photo URL apart from one this origin may not read', () => {
     <ExportPanel
       content={POST_CONTENT_FIXTURE}
       images={POST_IMAGES_FIXTURE.map((image) => ({ ...image, viewUrl: expiredUrl() }))}
-      createdAt="2026-08-29T03:04:05Z"
       contentLanguage="ko"
     />,
   )
@@ -879,7 +848,6 @@ it('refuses to copy a photo that is still a local upload preview, but keeps its 
     <ExportPanel
       content={POST_CONTENT_FIXTURE}
       images={POST_IMAGES_FIXTURE.map((image) => ({ ...image, viewUrl: 'blob:local' }))}
-      createdAt="2026-08-29T03:04:05Z"
       contentLanguage="ko"
     />,
   )
@@ -898,14 +866,7 @@ it('refuses to copy a photo that is still a local upload preview, but keeps its 
 })
 
 it('holds the marker position of a photo missing from the post', () => {
-  render(
-    <ExportPanel
-      content={POST_CONTENT_FIXTURE}
-      images={[]}
-      createdAt="2026-08-29T03:04:05Z"
-      contentLanguage="ko"
-    />,
-  )
+  render(<ExportPanel content={POST_CONTENT_FIXTURE} images={[]} contentLanguage="ko" />)
   // The filename says which file belongs at the marker the copied text still carries; a dropped
   // entry would shift every later photo against its marker.
   const preview = screen.getByRole('article', { name: '네이버 미리보기' })
@@ -921,7 +882,6 @@ it('plays a clip in the Naver preview with no copy control, and says why', () =>
       content={POST_CONTENT_WITH_VIDEO_FIXTURE}
       images={POST_IMAGES_FIXTURE}
       videos={POST_VIDEOS_FIXTURE}
-      createdAt="2026-08-28T12:00:00Z"
       contentLanguage="ko"
     />,
   )
@@ -938,7 +898,7 @@ it('plays a clip in the Naver preview with no copy control, and says why', () =>
   }
 })
 
-// EXPORT-26: on the Naver tab a photo group is one place — every photo its own copy control named
+// EXPORT-26: in the preview a photo group is one place — every photo its own copy control named
 // by its own number, in the same running count the copied text uses, one caption control under
 // the group, and a photo the post no longer has keeping its cell with the filename.
 it('renders a photo group with a copy control per photo and one caption control', async () => {
@@ -952,12 +912,7 @@ it('renders a photo group with a copy control per photo and one caption control'
     viewUrl: `https://storage.test/${filename}?X-Amz-Date=20990101T000000Z&X-Amz-Expires=600`,
   }))
   render(
-    <ExportPanel
-      content={POST_CONTENT_WITH_GROUPS_FIXTURE}
-      images={images}
-      createdAt="2026-08-29T03:04:05Z"
-      contentLanguage="ko"
-    />,
+    <ExportPanel content={POST_CONTENT_WITH_GROUPS_FIXTURE} images={images} contentLanguage="ko" />,
   )
 
   expect(

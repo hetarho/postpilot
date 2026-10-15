@@ -1,9 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { act, renderHook } from '@testing-library/react'
-import { toMarkdown } from '@/features/export-markdown'
 import { toNaver } from '@/features/export-naver'
-import { toSite } from '@/features/export-site'
-import { toTistory } from '@/features/export-tistory'
 import type { PostContent } from '@/shared/api'
 import {
   POST_CONTENT_FIXTURE,
@@ -12,7 +9,6 @@ import {
 } from '@/test/fixtures/postContent'
 import { useExportPanel } from './useExportPanel'
 
-const CREATED_AT = '2026-08-29T03:04:05Z'
 const NAVER = toNaver(POST_CONTENT_FIXTURE, POST_IMAGES_FIXTURE, 'ko')
 const TAGS = '#제주 #산책 #여행'
 const originalClipboard = navigator.clipboard
@@ -21,22 +17,17 @@ function setClipboard(value: Pick<Clipboard, 'writeText'> | undefined) {
   Object.defineProperty(navigator, 'clipboard', { configurable: true, value })
 }
 
-function setup(content: PostContent = POST_CONTENT_FIXTURE) {
+function setup(content: PostContent = POST_CONTENT_FIXTURE, disclosure = false) {
   return renderHook(
     ({ content }: { content: PostContent }) =>
-      useExportPanel({
-        content,
-        images: POST_IMAGES_FIXTURE,
-        createdAt: CREATED_AT,
-        contentLanguage: 'ko',
-      }),
+      useExportPanel({ content, images: POST_IMAGES_FIXTURE, contentLanguage: 'ko', disclosure }),
     { initialProps: { content } },
   )
 }
 
-/** The Naver tab's raw field and its two copy buttons, mounted and attached as the panel attaches
- *  them. The field holds other text than the body, so a body copy is handed no fallback element —
- *  exactly as on the Naver tab, where the field is not mounted until the copy falls back. */
+/** The raw field and its two copy buttons, mounted and attached as the panel attaches them. The
+ *  field holds other text than the body, so a body copy is handed no fallback element — exactly as
+ *  in the panel, where the field is not mounted until the copy falls back. */
 function attachNaverControls(panel: ReturnType<typeof setup>['result']) {
   const field = document.createElement('textarea')
   field.readOnly = true
@@ -55,25 +46,20 @@ afterEach(() => {
   document.body.replaceChildren()
 })
 
-describe('the four outputs', () => {
-  it('opens on the Naver tab and switches between four synchronous derivations', () => {
+describe('the Naver output', () => {
+  it('is one synchronous derivation, with the raw field hidden', () => {
     const { result } = setup()
-    expect(result.current.format).toBe('naver')
     expect(result.current.output).toBe(NAVER)
-    expect(result.current.rawFieldVisible).toBe(false)
+    expect(result.current.outputFellBack).toBe(false)
+  })
 
-    const expected = {
-      tistory: toTistory(POST_CONTENT_FIXTURE, POST_IMAGES_FIXTURE, 'ko'),
-      site: toSite(POST_CONTENT_FIXTURE, POST_IMAGES_FIXTURE, CREATED_AT, 'ko'),
-      markdown: toMarkdown(POST_CONTENT_FIXTURE, POST_IMAGES_FIXTURE, CREATED_AT, 'ko'),
-    }
-    for (const format of ['tistory', 'site', 'markdown'] as const) {
-      act(() => result.current.selectFormat(format))
-      expect(result.current.output).toBe(expected[format])
-      // Markup is read as source, so these tabs keep the raw field always.
-      expect(result.current.rawFieldVisible).toBe(true)
-      expect(result.current.fallbackOutput).toBe(expected[format])
-    }
+  // EXPORT-28: a 체험단 post's body, alone or with its tags, opens with the disclosure's place.
+  it('opens a 체험단 post with the disclosure placeholder', () => {
+    const { result } = setup(POST_CONTENT_FIXTURE, true)
+    expect(result.current.output).toBe(`대가표시_배너_또는_문구_대가표시\n\n${NAVER}`)
+    expect(result.current.outputWithTags).toBe(
+      `대가표시_배너_또는_문구_대가표시\n\n${NAVER}\n\n${TAGS}`,
+    )
   })
 
   // EXPORT-20: the tags as one paste-ready string, and the Naver body with them at its end.
@@ -140,34 +126,27 @@ describe('the copies', () => {
     expect(result.current.photoCopied('photo:0:IMG_1.jpg')).toBe(false)
   })
 
-  it('drops every confirmation, and a copy still in flight, when the format changes', async () => {
-    const writeText = vi.fn<Clipboard['writeText']>().mockResolvedValue(undefined)
+  // EXPORT-11: a refusal that settles after the content changed lands nowhere.
+  it('drops a copy still in flight when the content changes', async () => {
+    const writeText = vi.fn<Clipboard['writeText']>()
     setClipboard({ writeText })
-    const { result } = setup()
-    await act(() => result.current.copyTags())
-    expect(result.current.status.tags).toBe('copied')
-
-    act(() => result.current.selectFormat('tistory'))
-    expect(result.current.status.tags).toBeUndefined()
-
-    // A refusal that settles after a switch lands nowhere — not even once the user is back on the
-    // tab whose text it was copying.
+    const { result, rerender } = setup()
     let reject: (reason: unknown) => void = () => undefined
     writeText.mockImplementationOnce(() => new Promise<void>((_resolve, no) => (reject = no)))
     let copy: Promise<void> = Promise.resolve()
     await act(async () => {
       copy = result.current.copyOutput()
     })
-    act(() => result.current.selectFormat('naver'))
-    act(() => result.current.selectFormat('tistory'))
+    rerender({ content: { ...POST_CONTENT_FIXTURE, blocks: POST_CONTENT_FIXTURE.blocks.slice(1) } })
     reject(new DOMException('blocked', 'NotAllowedError'))
     await act(() => copy)
 
     expect(result.current.status.output).toBeUndefined()
+    expect(result.current.outputFellBack).toBe(false)
   })
 })
 
-// EXPORT-9: the Naver tab shows the post, so a refused body copy has to REVEAL a field to select.
+// EXPORT-9: the panel shows the post, so a refused body copy has to REVEAL a field to select.
 describe("the Naver body's fallback", () => {
   it('reveals the body field, focused and selected, once the copy is refused', async () => {
     setClipboard(undefined)
@@ -177,7 +156,7 @@ describe("the Naver body's fallback", () => {
 
     await act(() => result.current.copyOutput())
 
-    expect(result.current.rawFieldVisible).toBe(true)
+    expect(result.current.outputFellBack).toBe(true)
     expect(result.current.fallbackOutput).toBe(NAVER)
     expect(result.current.status.output).toBe('manual')
     expect(field).toHaveFocus()
@@ -206,7 +185,7 @@ describe("the Naver body's fallback", () => {
     field.remove()
     rerender({ content: { ...POST_CONTENT_FIXTURE, tags: ['다른태그'] } })
 
-    expect(result.current.rawFieldVisible).toBe(false)
+    expect(result.current.outputFellBack).toBe(false)
     expect(copyWithTagsButton).toHaveFocus()
   })
 
@@ -222,18 +201,21 @@ describe("the Naver body's fallback", () => {
     expect(copyButton).toHaveFocus()
   })
 
-  it('leaves the focus where the user put it when a tab switch dismisses it', async () => {
+  it('leaves the focus where the user put it when a later copy dismisses it', async () => {
     setClipboard(undefined)
     const { result } = setup()
     const { copyButton } = attachNaverControls(result)
     await act(() => result.current.copyOutput())
-    const tab = document.createElement('button')
-    document.body.append(tab)
-    tab.focus()
+    expect(result.current.outputFellBack).toBe(true)
+    setClipboard({ writeText: vi.fn<Clipboard['writeText']>().mockResolvedValue(undefined) })
+    const titleButton = document.createElement('button')
+    document.body.append(titleButton)
+    titleButton.focus()
 
-    act(() => result.current.selectFormat('tistory'))
+    await act(() => result.current.copyTitle())
 
-    expect(tab).toHaveFocus()
+    expect(result.current.outputFellBack).toBe(false)
+    expect(titleButton).toHaveFocus()
     expect(copyButton).not.toHaveFocus()
   })
 })

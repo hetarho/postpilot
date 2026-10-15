@@ -1,5 +1,4 @@
 import type { PostContent } from '@/shared/api'
-import type { ExportFormat } from '../config/guidance'
 import type { CopiedFeedback, ManualCopy } from './copy-target'
 
 /** What one copy control's status line reports: its copy landed, it fell back to a manual
@@ -15,34 +14,29 @@ export interface CopyFeedbackState {
 /** The texts on screen right now, which every status is compared against. */
 export interface ExportTexts {
   content: PostContent
-  format: ExportFormat
   output: string
   outputWithTags: string
   hashtags: string
 }
 
-/** Every text copy's status line, and whether the Naver tab's raw field is revealed.
+/** Every text copy's status line, and whether the raw field is revealed.
  *
  *  Derived, never stored: a confirmation cannot outlive the value it confirmed, and a dismissed
  *  fallback cannot resurrect when an edit is undone — so no effect has to reset state over a
  *  prop. */
 export function exportCopyStatus(
   { copied, manualCopy }: CopyFeedbackState,
-  { content, format, output, outputWithTags, hashtags }: ExportTexts,
+  { content, output, outputWithTags, hashtags }: ExportTexts,
 ) {
-  // The Naver tab shows the rendered post; the raw marker text exists only on the clipboard —
-  // except while a refused copy needs a visible selection to fall back to. The other three
-  // formats are markup meant to be read as source, so they keep the raw field always. The value
-  // comparison is what dismisses the fallback when the content changes under it.
+  // The panel shows the rendered post; the raw marker text exists only on the clipboard — except
+  // while a refused copy needs a visible selection to fall back to. The value comparison is what
+  // dismisses the fallback when the content changes under it.
   const outputFellBack =
     manualCopy?.source === content &&
     ((manualCopy.target === 'output' && manualCopy.value === output) ||
-      (format === 'naver' &&
-        manualCopy.target === 'outputWithTags' &&
-        manualCopy.value === outputWithTags))
+      (manualCopy.target === 'outputWithTags' && manualCopy.value === outputWithTags))
   const fallbackOutput =
     outputFellBack && manualCopy?.target === 'outputWithTags' ? outputWithTags : output
-  const rawFieldVisible = format !== 'naver' || outputFellBack
 
   const title: CopyStatus =
     copied?.target === 'title' && copied.value === content.title
@@ -59,9 +53,9 @@ export function exportCopyStatus(
         ? 'manual'
         : undefined
   const outputWithTagsStatus: CopyStatus =
-    format === 'naver' && copied?.target === 'outputWithTags' && copied.value === outputWithTags
+    copied?.target === 'outputWithTags' && copied.value === outputWithTags
       ? 'copied'
-      : format === 'naver' && outputFellBack && manualCopy?.target === 'outputWithTags'
+      : outputFellBack && manualCopy?.target === 'outputWithTags'
         ? 'manual'
         : undefined
   // Both comparisons are what make the staleness rule hold by DERIVATION: a confirmation shown
@@ -77,10 +71,10 @@ export function exportCopyStatus(
         : undefined
 
   return {
+    /** Whether the raw field is revealed: only while a body copy has fallen back to it. */
     outputFellBack,
     /** What the raw field holds: the combined body while that copy is the one that fell back. */
     fallbackOutput,
-    rawFieldVisible,
     title,
     output: outputStatus,
     outputWithTags: outputWithTagsStatus,

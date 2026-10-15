@@ -86,8 +86,9 @@ export function EditorFinishPanel({
           videos={post.videos}
           content={liveContent ?? result}
           images={post.images}
-          createdAt={post.createdAt}
           contentLanguage={post.contentLanguage}
+          // The copied body reserves the disclosure's place while 체험단 글 is on (EXPORT-28).
+          disclosure={Boolean(campaign?.on)}
           onPhotoUrlsStale={onPhotoUrlsStale}
         />
       ) : (

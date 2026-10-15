@@ -7,7 +7,7 @@ import {
 } from '@/test/fixtures/postContent'
 import { create } from '@bufbuild/protobuf'
 import { BlockSchema, BlockType, PostContentSchema } from '@/shared/api'
-import { naverPhotoOrder, naverVideoOrder, toNaver } from './convert'
+import { disclosurePlaceholder, naverPhotoOrder, naverVideoOrder, toNaver } from './convert'
 import {
   OWNER_CONTROL_CONTENT,
   OWNER_CONTROL_TEXT,
@@ -162,4 +162,28 @@ it('writes one marker per photo group, numbering each of its photos', () => {
     blocks: [create(BlockSchema, { type: BlockType.GALLERY, files: ['a.jpg', 'b.jpg'] })],
   })
   expect(toNaver(unset, [], 'ko')).toBe('콜라주_1_2_콜라주')
+})
+
+// EXPORT-28: a 체험단 post reserves the top of its body for the platform's disclosure; the photo
+// numbers do not move and a post that is not one keeps its bytes.
+it('opens a campaign post with the disclosure placeholder', () => {
+  for (const [language, placeholder, firstPhoto] of [
+    ['ko', '대가표시_배너_또는_문구_대가표시', '사진_1_비_뒤의_바다_사진'],
+    ['en', 'disclosure_banner_or_text_disclosure', 'photo_1_비_뒤의_바다_photo'],
+  ] as const) {
+    const plain = toNaver(POST_CONTENT_FIXTURE, POST_IMAGES_FIXTURE, language)
+    const campaign = toNaver(POST_CONTENT_FIXTURE, POST_IMAGES_FIXTURE, language, {
+      disclosurePlaceholder: true,
+    })
+    expect(campaign).toBe(`${placeholder}\n\n${plain}`)
+    expect(disclosurePlaceholder(language)).toBe(placeholder)
+    expect(campaign).toContain(firstPhoto)
+    expect(toNaver(POST_CONTENT_FIXTURE, POST_IMAGES_FIXTURE, language, {})).toBe(plain)
+  }
+  // One double-click token: no space or punctuation a selection would stop at.
+  expect(disclosurePlaceholder('ko')).toMatch(/^[\p{L}_]+$/u)
+  const empty = create(PostContentSchema, { title: '', blocks: [] })
+  expect(toNaver(empty, [], 'ko', { disclosurePlaceholder: true })).toBe(
+    '대가표시_배너_또는_문구_대가표시',
+  )
 })

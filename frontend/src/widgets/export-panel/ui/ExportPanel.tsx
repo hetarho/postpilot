@@ -4,8 +4,7 @@ import { type PostVideo } from '@/entities/video'
 import { BlockList, PhotoGroup, type PhotoFit } from '@/entities/post'
 import { BlockType, type ContentLanguage, type PostContent } from '@/shared/api'
 import { type CopyFallbackElement } from '@/shared/lib'
-import { Button, FieldLabel, SegmentedControl, Textarea, TextField, Typography } from '@/shared/ui'
-import { EXPORT_FORMATS } from '../config/guidance'
+import { Button, FieldLabel, Textarea, TextField, Typography } from '@/shared/ui'
 import { type CopyStatus } from '../model/copy-status'
 import { type CopyTarget } from '../model/copy-target'
 import { useExportPanel } from '../model/useExportPanel'
@@ -18,8 +17,10 @@ interface ExportPanelProps {
   images: readonly PostImage[]
   /** The post's clips, so the Naver preview can play one in marker order (VIDEO-15). */
   videos?: readonly PostVideo[]
-  createdAt: string
   contentLanguage: ContentLanguage
+  /** A 체험단 post: the body opens with the disclosure placeholder and the preview shows its
+   *  labelled place on top (EXPORT-28). */
+  disclosure?: boolean
   /** Asks the owner of the post query for fresh photo URLs. Called when a preview photo fails to
    *  load, which — the panel outliving a presigned URL being the ordinary way that happens — is
    *  usually one refetch away from fixed. Optional so the panel stays renderable from a test or a
@@ -27,22 +28,20 @@ interface ExportPanelProps {
   onPhotoUrlsStale?: () => void
 }
 
-/** Four synchronous browser-only derivations of the canonical block array. */
+/** The Naver output, a synchronous browser-only derivation of the canonical block array. */
 export function ExportPanel({
   content,
   images,
   videos = [],
-  createdAt,
   contentLanguage,
+  disclosure = false,
   onPhotoUrlsStale,
 }: ExportPanelProps) {
   const { t } = useTranslation('posts')
   const {
-    format,
-    selectFormat,
     hashtags,
     fallbackOutput,
-    rawFieldVisible,
+    outputFellBack,
     status,
     hasPhotos,
     photoNumbersByBlock,
@@ -62,11 +61,7 @@ export function ExportPanel({
     photoCopied,
     photoFailure,
     copyPhoto,
-  } = useExportPanel({ content, images, createdAt, contentLanguage })
-  const formatOptions = EXPORT_FORMATS.map((value) => ({
-    value,
-    label: t(`export.formatLabel.${value}`),
-  }))
+  } = useExportPanel({ content, images, contentLanguage, disclosure })
 
   /** One status line's words: the copy's own confirmation, or the manual-selection hint. */
   const statusText = (kind: CopyStatus, copiedText: string) =>
@@ -102,59 +97,41 @@ export function ExportPanel({
       <Typography variant="title" id="export-heading">
         {t('export.title')}
       </Typography>
-      {/* The four Korean format names measure ~380px in one row against 328px of content at 360px,
-          which cut 마크다운 in half with no scrollbar to say so. Two columns at the base
-          breakpoint fit all four; the strip comes back where the width exists. */}
-      <SegmentedControl
-        value={format}
-        options={formatOptions}
-        ariaLabel={t('export.format')}
-        controls="export-output-panel"
-        onChange={selectFormat}
-        className="mt-4 grid grid-cols-2 sm:flex"
-      />
-
-      <div id="export-output-panel" role="tabpanel" className="mt-4">
-        {/* The Naver guidance describes the photo flow only when there ARE photos: a post with
-            none would otherwise be told to copy photos from a preview that renders none. */}
+      <div className="mt-4">
+        {/* The guidance describes the photo flow only when there ARE photos: a post with none
+            would otherwise be told to copy photos from a preview that renders none. */}
         <Typography variant="label" as="p">
-          {format === 'naver' && hasPhotos
-            ? t('export.guidance.naverPhotos')
-            : t(`export.guidance.${format}`)}
+          {hasPhotos ? t('export.guidance.naverPhotos') : t('export.guidance.naver')}
         </Typography>
 
-        {format === 'naver' && (
-          <div className="mt-4">
-            <FieldLabel htmlFor="export-title">{t('export.naverTitle')}</FieldLabel>
-            <div className="mt-2 flex items-center gap-2">
-              {/* `min-w-0` on the field, `shrink-0` on the button: the title is a server string
+        <div className="mt-4">
+          <FieldLabel htmlFor="export-title">{t('export.naverTitle')}</FieldLabel>
+          <div className="mt-2 flex items-center gap-2">
+            {/* `min-w-0` on the field, `shrink-0` on the button: the title is a server string
                   and must be the thing that gives way, never the control beside it (THEME-32). */}
-              <TextField
-                id="export-title"
-                ref={titleRef}
-                value={content.title}
-                readOnly
-                className="min-w-0 flex-1"
-              />
-              <Button variant="secondary" className="shrink-0" onClick={() => void copyTitle()}>
-                {t('export.copyTitle')}
-              </Button>
-            </div>
-            <Typography
-              variant="body"
-              as="p"
-              role="status"
-              className="text-content-tertiary mt-1 min-h-5"
-            >
-              {titleStatus}
-            </Typography>
+            <TextField
+              id="export-title"
+              ref={titleRef}
+              value={content.title}
+              readOnly
+              className="min-w-0 flex-1"
+            />
+            <Button variant="secondary" className="shrink-0" onClick={() => void copyTitle()}>
+              {t('export.copyTitle')}
+            </Button>
           </div>
-        )}
+          <Typography
+            variant="body"
+            as="p"
+            role="status"
+            className="text-content-tertiary mt-1 min-h-5"
+          >
+            {titleStatus}
+          </Typography>
+        </div>
 
-        {/* Outside the `naver` branch on purpose: the site HTML and the Markdown front matter
-            embed their tags as markup, and a ready-to-paste string is a different artifact worth
-            having on every tab. Mounted only when there is something to paste — an empty tag list
-            gets no field and no label (THEME-29). Field order reads title → tags → output. */}
+        {/* Mounted only when there is something to paste: an empty tag list gets no field and no
+            label (THEME-29). Field order reads title → tags → output. */}
         {hashtags && (
           <div className="mt-4">
             <FieldLabel htmlFor="export-tags">{t('export.tags')}</FieldLabel>
@@ -192,8 +169,8 @@ export function ExportPanel({
         {/* The copy action sits ABOVE the output, not after it. This panel renders inside the
             editor, which already docks its own bar, and two docked bars in one scroller stick to
             the same offset and paint over each other — so THEME-24's other option applies: put the
-            action where the user already is. Above the field it shares a screen with the format
-            tabs and the first lines of the result, which is what the user checks before copying;
+            action where the user already is. Above the field it shares a screen with the fields
+            and the first lines of the result, which is what the user checks before copying;
             after an autoGrow field it would be a whole post's length away. */}
         <div className="mt-4 flex flex-col gap-2 sm:flex-row-reverse sm:items-center sm:justify-end sm:gap-3">
           {/* The label stays 복사: a swap to 복사됨 resizes the target under the thumb that just
@@ -207,7 +184,7 @@ export function ExportPanel({
             >
               {t('action.copy', { ns: 'common' })}
             </Button>
-            {format === 'naver' && hashtags && (
+            {hashtags && (
               <Button
                 ref={copyWithTagsButtonRef}
                 variant="secondary"
@@ -225,7 +202,7 @@ export function ExportPanel({
           </Typography>
         </div>
 
-        {rawFieldVisible ? (
+        {outputFellBack ? (
           <>
             <FieldLabel htmlFor="export-output" className="sr-only">
               {t('export.result')}
@@ -251,106 +228,118 @@ export function ExportPanel({
              `사진_<n>_…_사진` markers, but what the human reads here is the rendering they are about to
              publish — photos inline at their marker positions, each carrying its own copy. The
              header is suppressed because the body copy does not paste it; the title has its own
-             field above. */
-          <BlockList
-            content={content}
-            images={images}
-            videos={videos}
-            label={t('export.preview')}
-            className="mt-3 pb-0"
-            renderHeader={() => null}
-            // A clip plays inline and offers NO copy control: the clipboard cannot carry a video
-            // file from a page, and the file the author filmed is on the device they are pasting
-            // from — so the hint says to attach the original there (VIDEO-15).
-            renderVideo={(_block, rendered) => (
-              <div>
-                {rendered}
-                <Typography variant="meta" as="p" className="text-content-secondary mt-1">
-                  {t('export.videoHint')}
-                </Typography>
-              </div>
+             field above. A 체험단 post shows the disclosure's place first, where the copied body
+             holds its placeholder (EXPORT-28). */
+          <>
+            {disclosure && (
+              <Typography
+                variant="label"
+                as="p"
+                className="border-divider text-content-secondary mt-3 rounded-md border border-dashed p-4"
+              >
+                {t('export.disclosurePlaceholder')}
+              </Typography>
             )}
-            renderBlock={(block, index, rendered) => {
-              if (block.type === BlockType.GALLERY) {
-                // One place with one caption (EXPORT-26): every photo its own copy control named
-                // by its own number, and the group's caption one control under it.
-                const numbers = photoNumbersByBlock.get(index) ?? []
-                const copyProps = captionCopyProps(block, index)
-                const photoCell = (file: string, position: number, fit: PhotoFit) => {
-                  const number = numbers[position] ?? 0
-                  const target: CopyTarget = `photo:${number}:${file}`
-                  const image = imagesByFilename.get(file)
+            <BlockList
+              content={content}
+              images={images}
+              videos={videos}
+              label={t('export.preview')}
+              className="mt-3 pb-0"
+              renderHeader={() => null}
+              // A clip plays inline and offers NO copy control: the clipboard cannot carry a video
+              // file from a page, and the file the author filmed is on the device they are pasting
+              // from — so the hint says to attach the original there (VIDEO-15).
+              renderVideo={(_block, rendered) => (
+                <div>
+                  {rendered}
+                  <Typography variant="meta" as="p" className="text-content-secondary mt-1">
+                    {t('export.videoHint')}
+                  </Typography>
+                </div>
+              )}
+              renderBlock={(block, index, rendered) => {
+                if (block.type === BlockType.GALLERY) {
+                  // One place with one caption (EXPORT-26): every photo its own copy control named
+                  // by its own number, and the group's caption one control under it.
+                  const numbers = photoNumbersByBlock.get(index) ?? []
+                  const copyProps = captionCopyProps(block, index)
+                  const photoCell = (file: string, position: number, fit: PhotoFit) => {
+                    const number = numbers[position] ?? 0
+                    const target: CopyTarget = `photo:${number}:${file}`
+                    const image = imagesByFilename.get(file)
+                    return (
+                      <PhotoCopy
+                        file={file}
+                        alt={block.alt}
+                        image={image}
+                        marker={number}
+                        copied={image ? photoCopied(target) : false}
+                        failure={image ? photoFailure(target) : undefined}
+                        onCopy={(element, rotation) => void copyPhoto(target, element, rotation)}
+                        onStale={onPhotoUrlsStale}
+                        fit={fit}
+                      />
+                    )
+                  }
                   return (
-                    <PhotoCopy
-                      file={file}
-                      alt={block.alt}
-                      image={image}
-                      marker={number}
-                      copied={image ? photoCopied(target) : false}
-                      failure={image ? photoFailure(target) : undefined}
-                      onCopy={(element, rotation) => void copyPhoto(target, element, rotation)}
-                      onStale={onPhotoUrlsStale}
-                      fit={fit}
+                    <PhotoGroup
+                      block={block}
+                      images={imagesByFilename}
+                      renderPhoto={(file, position, _image, fit) => photoCell(file, position, fit)}
+                      renderMissingPhoto={photoCell}
+                      renderCaption={() => (
+                        <CaptionCopy
+                          caption={block.caption}
+                          ariaLabel={t('export.groupCaptionCopyAria', {
+                            numbers: numbers.map((number) => number + 1).join(', '),
+                          })}
+                          captionStatus={copyProps.captionStatus}
+                          captionFellBack={copyProps.captionFellBack}
+                          onCopyCaption={copyProps.onCopyCaption}
+                          registerCaptionField={copyProps.registerCaptionField}
+                        />
+                      )}
                     />
                   )
                 }
+                if (block.type !== BlockType.IMAGE) return rendered
+                const copyProps = captionCopyProps(block, index)
+                const target: CopyTarget = `photo:${copyProps.marker}:${block.file}`
                 return (
-                  <PhotoGroup
-                    block={block}
-                    images={imagesByFilename}
-                    renderPhoto={(file, position, _image, fit) => photoCell(file, position, fit)}
-                    renderMissingPhoto={photoCell}
-                    renderCaption={() => (
-                      <CaptionCopy
-                        caption={block.caption}
-                        ariaLabel={t('export.groupCaptionCopyAria', {
-                          numbers: numbers.map((number) => number + 1).join(', '),
-                        })}
-                        captionStatus={copyProps.captionStatus}
-                        captionFellBack={copyProps.captionFellBack}
-                        onCopyCaption={copyProps.onCopyCaption}
-                        registerCaptionField={copyProps.registerCaptionField}
-                      />
-                    )}
+                  <PreviewPhoto
+                    file={block.file}
+                    alt={block.alt}
+                    caption={block.caption}
+                    image={imagesByFilename.get(block.file)}
+                    copied={photoCopied(target)}
+                    failure={photoFailure(target)}
+                    onCopy={(element, rotation) => void copyPhoto(target, element, rotation)}
+                    onStale={onPhotoUrlsStale}
+                    {...copyProps}
                   />
                 )
-              }
-              if (block.type !== BlockType.IMAGE) return rendered
-              const copyProps = captionCopyProps(block, index)
-              const target: CopyTarget = `photo:${copyProps.marker}:${block.file}`
-              return (
-                <PreviewPhoto
-                  file={block.file}
-                  alt={block.alt}
-                  caption={block.caption}
-                  image={imagesByFilename.get(block.file)}
-                  copied={photoCopied(target)}
-                  failure={photoFailure(target)}
-                  onCopy={(element, rotation) => void copyPhoto(target, element, rotation)}
-                  onStale={onPhotoUrlsStale}
-                  {...copyProps}
-                />
-              )
-            }}
-            // A marker whose photo is missing keeps its POSITION: dropping it would shift every
-            // later photo against its marker — the one thing marker order exists to prevent.
-            renderMissingImage={(block, index) => {
-              const copyProps = captionCopyProps(block, index)
-              return (
-                <PreviewPhoto
-                  file={block.file}
-                  alt=""
-                  caption={block.caption}
-                  image={undefined}
-                  copied={false}
-                  failure={undefined}
-                  onCopy={() => undefined}
-                  onStale={onPhotoUrlsStale}
-                  {...copyProps}
-                />
-              )
-            }}
-          />
+              }}
+              // A marker whose photo is missing keeps its POSITION: dropping it would shift every
+              // later photo against its marker — the one thing marker order exists to prevent.
+              renderMissingImage={(block, index) => {
+                const copyProps = captionCopyProps(block, index)
+                return (
+                  <PreviewPhoto
+                    file={block.file}
+                    alt=""
+                    caption={block.caption}
+                    image={undefined}
+                    copied={false}
+                    failure={undefined}
+                    onCopy={() => undefined}
+                    onStale={onPhotoUrlsStale}
+                    {...copyProps}
+                  />
+                )
+              }}
+            />
+          </>
         )}
       </div>
     </section>

@@ -9,7 +9,6 @@ import {
 } from '@/entities/writing-test'
 import { currentWritingTestMatch } from '@/features/writing-test'
 import { InspectWritingRequestAction } from '@/features/inspect-writing-request'
-import { toMarkdown } from '@/features/export-markdown'
 import { toNaver } from '@/features/export-naver'
 import { copyText } from '@/shared/lib'
 import { ActionBar, Button, Notice, SegmentedControl, Textarea, Typography } from '@/shared/ui'
@@ -228,39 +227,28 @@ export function WritingTestPost({
   label: string
 }) {
   const { t } = useWritingTestTranslation()
-  const [feedback, setFeedback] = useState<{
-    value: string
-    format: 'naver' | 'markdown'
-    copied: boolean
-  }>()
+  const [feedback, setFeedback] = useState<{ value: string; copied: boolean }>()
   const selectFallback = useCallback((element: HTMLTextAreaElement | null) => {
     element?.focus()
     element?.select()
   }, [])
   const content = candidate.output
   if (!content) return null
-  const outputs = {
-    naver: toNaver(content, [], test.targetLanguage),
-    markdown: toMarkdown(content, [], test.createdAt, test.targetLanguage),
-  }
-  const currentFeedback =
-    feedback && feedback.value === outputs[feedback.format] ? feedback : undefined
+  // The Naver copy is the one output the product ships (POST-107).
+  const output = toNaver(content, [], test.targetLanguage)
+  const currentFeedback = feedback && feedback.value === output ? feedback : undefined
   return (
     <>
       <div className="mt-3 flex flex-wrap gap-2">
-        {(['naver', 'markdown'] as const).map((format) => (
-          <Button
-            key={format}
-            variant="ghost"
-            onClick={() => {
-              if (!writingTestPayloadAvailable(test)) return
-              const value = outputs[format]
-              void copyText(value).then(({ copied }) => setFeedback({ value, format, copied }))
-            }}
-          >
-            {t(format === 'naver' ? 'copyNaver' : 'copyMarkdown')}
-          </Button>
-        ))}
+        <Button
+          variant="ghost"
+          onClick={() => {
+            if (!writingTestPayloadAvailable(test)) return
+            void copyText(output).then(({ copied }) => setFeedback({ value: output, copied }))
+          }}
+        >
+          {t('copyNaver')}
+        </Button>
       </div>
       {ownerId && (
         <InspectWritingRequestAction
