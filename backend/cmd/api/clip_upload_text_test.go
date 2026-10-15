@@ -8,10 +8,12 @@ import (
 	"time"
 
 	"github.com/postpilot/backend/internal/clip"
+	clipapp "github.com/postpilot/backend/internal/clip/app"
 	"github.com/postpilot/backend/internal/job"
 	"github.com/postpilot/backend/internal/llm"
 	"github.com/postpilot/backend/internal/platform/config"
 	"github.com/postpilot/backend/internal/template"
+	"github.com/postpilot/backend/internal/usage"
 )
 
 type uploadFixtureProvider struct {
@@ -240,5 +242,47 @@ func TestCancelledUploadTextNeverPublishesItsCandidate(t *testing.T) {
 	read, e := app.clipStore.GetProject(t.Context(), "alice", project.ID)
 	if e != nil || read.EditPlan != plan || read.EditPlanRevision != 1 {
 		t.Fatal("cancellation changed the video", read, e)
+	}
+}
+
+func TestUploadTextPaidAllowanceHoldsOneCallAndSettlesItsRemainder(t *testing.T) {
+	h := newCancellationHarness(t, nil)
+	reserve := cancellationReservation()
+	reserve.Calls = reserve.Calls[1:]
+	pricing := clip.GenerationPricing{UploadText: true, Plan: reserve.Calls[0].Policy, Rate: reserve.Rate}
+	var e error
+	reserve.ApprovedMaxCredits, e = clipapp.QuoteCredits(pricing, 0, 0)
+	if e != nil || reserve.ApprovedMaxCredits <= 1 {
+		t.Fatal(reserve, e)
+	}
+	id, e := h.queue.Enqueue(t.Context(), clipJob(job.NewJob{UserID: "alice", Kind: clip.JobKindUploadText, WriteModel: "p/w", CancellationPolicyVersion: 1}, "clip"))
+	if e != nil {
+		t.Fatal(e)
+	}
+	terminal := h.run(t, clip.JobKindUploadText, func(ctx context.Context, j job.Job, _ job.Progress) error {
+		admitted, e := clipapp.NewJobs(h.queue, h.guard).Reserve(ctx, "alice", j.ID, []job.PlannedCall{{Ref: "p/w", Stage: "write", CompletionTokens: 32768, Count: 1}}, reserve)
+		if e != nil {
+			return e
+		}
+		if _, e = clipapp.ConsumePolicy(admitted, "alice", j.ID, "p/w", 32768, "write"); e != nil {
+			return e
+		}
+		if _, e = clipapp.ConsumePolicy(admitted, "alice", j.ID, "p/w", 32768, "write"); !errors.Is(e, clip.ErrCreditAllowance) {
+			return errors.New("second upload text call admitted")
+		}
+		work := usage.WithWork(ctx, usage.Work{UserID: "alice", Kind: clip.JobKindUploadText, JobID: j.ID})
+		return h.ledger.RecordCall(work, llm.ModelRef{ProviderID: "p", ModelID: "w"}, "write", llm.Usage{CostReported: true, CostMicrousd: 100}, nil)
+	})
+	if e = h.queue.Activate(t.Context(), "alice", id); e != nil {
+		t.Fatal(e)
+	}
+	awaitCancellationSignal(t, terminal)
+	j, e := h.jobs.GetByID(t.Context(), id)
+	if e != nil || j.Status != job.StatusDone {
+		t.Fatal(j, e)
+	}
+	accounting, e := h.ledger.ReservationAccounting(t.Context(), "alice", id)
+	if e != nil || accounting == nil || !accounting.Settled || accounting.NominalReservation == nil || *accounting.NominalReservation != reserve.ApprovedMaxCredits || accounting.FinalCharge == nil || *accounting.FinalCharge != 1 || accounting.Refund == nil || *accounting.Refund != reserve.ApprovedMaxCredits-1 {
+		t.Fatal(accounting, e)
 	}
 }

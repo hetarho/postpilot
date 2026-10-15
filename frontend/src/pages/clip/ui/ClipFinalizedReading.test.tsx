@@ -1,6 +1,7 @@
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, expect, it } from 'vitest'
+import { Stage } from '@/shared/api'
 import { initializeI18n } from '@/app/providers/i18n'
 import { renderAppAt } from '@/test/app'
 import { clipTimelineFixture } from '@/test/clip-editing'
@@ -128,4 +129,32 @@ it('opens phone appearance details on a finalized clip while retaining disabled 
   expect(calls.filter((name) => /^(Update|Save|Start|Finalize|Confirm|Cancel)/.test(name))).toEqual(
     [],
   )
+})
+
+it('offers upload text in both finished and refining readings without reopening the video', async () => {
+  const calls: string[] = [],
+    starts: unknown[] = []
+  renderAppAt('/clips/clip', {
+    user: { id: 'alice' },
+    clips: { projects: [finalized()], calls, uploadTextStarts: starts },
+    providers: {
+      models: [{ providerId: 'p', modelId: 'w', label: '글 모델', stages: [Stage.WRITE] }],
+      selections: [{ stage: Stage.WRITE, providerId: 'p', modelId: 'w' }],
+    },
+  })
+  const make = await screen.findByRole('button', { name: '업로드 문구 만들기' })
+  expect(make).toBeEnabled()
+  expect(starts).toEqual([])
+  await userEvent.click(screen.getByRole('tab', { name: '수정' }))
+  expect(await screen.findByRole('button', { name: '업로드 문구 만들기' })).toBeEnabled()
+  await userEvent.click(screen.getByRole('button', { name: '인스타 클립' }))
+  await userEvent.click(screen.getByRole('button', { name: '인스타 클립 문구도 만들기' }))
+  expect(await screen.findByRole('button', { name: '최대 4 크레딧 · 문구 작성' })).toBeEnabled()
+  expect(calls).toContain('QuoteClipUploadText')
+  expect(
+    calls.some((call) =>
+      /StartClipRender|PrepareClipPreview|StartClipGeneration|CreateClipSourceBatch/u.test(call),
+    ),
+  ).toBe(false)
+  expect(starts).toEqual([])
 })

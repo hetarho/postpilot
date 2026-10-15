@@ -276,7 +276,7 @@ func uploadPortableCaptions(elements []PortableText, presets composition.DesignS
 	placements := RegionPlacements(ResolvedElements(elements), presets)
 	for _, text := range elements {
 		lines := regionRowTexts(text.Resolved)
-		if len(text.Phrases) > 0 {
+		if text.Pace == "rapid" && len(text.Phrases) > 0 {
 			lines = nil
 			for _, phrase := range text.Phrases {
 				lines = append(lines, phrase.Text)

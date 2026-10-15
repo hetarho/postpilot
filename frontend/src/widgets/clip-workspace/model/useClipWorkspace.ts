@@ -178,10 +178,11 @@ export function useClipWorkspace(ownerId: string, project: ClipProject) {
   const revising =
     (job?.kind === 'revise_clip' ||
       job?.kind === 'revise_storyline_clip' ||
-      job?.kind === 'speech_clip' ||
-      job?.kind === 'clip_upload_text') &&
+      job?.kind === 'speech_clip') &&
     !isTerminal(job)
-  const focused = !project.finalized && (generation.busy || analysis.busy) && !revising
+  const writingUploadText = job?.kind === 'clip_upload_text' && !isTerminal(job)
+  const focused =
+    !project.finalized && (generation.busy || analysis.busy) && !revising && !writingUploadText
   const pending = generation.busy || analysis.busy || uploading || finalization.busy || browser.busy
   useDiscardQueueWhenFinalized(project.id, project.finalized, discardClipDraftQueue)
   useDiscardQueueWhenFinalized(project.id, project.finalized, discardClipRegionQueue)

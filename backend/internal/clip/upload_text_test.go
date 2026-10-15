@@ -64,7 +64,7 @@ func TestUploadTextKeepsRequiredTagsBeforeOptionalOnes(t *testing.T) {
 func TestUploadTextUsesEditedRowsAndPhrasesInsteadOfObsoleteParentText(t *testing.T) {
 	elements := []PortableText{
 		{Resolved: composition.ResolvedElement{InstanceID: "intro", Element: composition.Element{Role: "hook"}, Text: "obsolete", Rows: []composition.ResolvedRow{{Text: "current first"}, {Text: "current second"}, {Text: "not drawn"}}}},
-		{Resolved: composition.ResolvedElement{InstanceID: "body", Text: "old words"}, Phrases: []EditablePhrase{{Text: "edited phrase"}, {Text: "next phrase"}}},
+		{Pace: "rapid", Resolved: composition.ResolvedElement{InstanceID: "body", Text: "old words"}, Phrases: []EditablePhrase{{Text: "edited phrase"}, {Text: "next phrase"}}},
 	}
 	got := uploadPortableCaptions(elements, composition.UnchosenDesign())
 	want := []string{"current first", "current second", "edited phrase", "next phrase"}

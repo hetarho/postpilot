@@ -73,7 +73,7 @@ func TestUploadTextLeavesCheckpointAndFinishedVideoGuardsIntact(t *testing.T) {
 	if _, e = database.Writer.Exec(`INSERT INTO clip_attempt_checkpoints(project_id,user_id,job_id,checkpoint_json) VALUES(?,'alice','old','{"kept":"yes"}')`, p.ID); e != nil {
 		t.Fatal(e)
 	}
-	if _, e = database.Writer.Exec(`UPDATE clip_projects SET edit_plan_json=?,result_id='result',result_key='result',edit_plan_revision=1,rendered_plan_revision=1,finalized_at=?,finalized_plan_revision=1,finalized_result_key='result',source_access_revoked_at=? WHERE id=?`, raw, stamp, stamp, p.ID); e != nil {
+	if _, e = database.Writer.Exec(`UPDATE clip_projects SET edit_plan_json=?,result_id='result',result_key='result',result_content_type='video/mp4',result_bytes=1,result_duration_ms=15000,result_created_at=?,edit_plan_revision=1,rendered_plan_revision=1,finalized_at=?,finalized_plan_revision=1,finalized_result_key='result',source_access_revoked_at=? WHERE id=?`, raw, stamp, stamp, stamp, p.ID); e != nil {
 		t.Fatal(e)
 	}
 	if _, e = database.Writer.Exec(`INSERT INTO generation_jobs(id,user_id,clip_project_id,kind,status,dispatch_ready,cancellation_policy_version,created_at,updated_at) VALUES('upload','alice',?,'clip_upload_text','queued',0,1,?,?)`, p.ID, stamp, stamp); e != nil {

@@ -122,7 +122,7 @@ function ChannelText({
   const canonicalBody = row ? uploadCopyText(project, row.body) : ''
   const tags = draft ? uploadTags(draft.tags) : (row?.tags ?? [])
   const body = draft ? uploadCopyText(project, draft.body.trim()) : canonicalBody
-  const fits = uploadTextFits(body, tags, limits)
+  const fits = !!(draft ? draft.body : row?.body)?.trim() && uploadTextFits(body, tags, limits)
   const used = Array.from(
     body + (limits.tagsInCaption && tags.length ? `\n\n${uploadTagText(tags)}` : ''),
   ).length
