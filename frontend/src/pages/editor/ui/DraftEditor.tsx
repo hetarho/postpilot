@@ -241,6 +241,21 @@ export function DraftEditor({ post, defaultVoice }: DraftEditorProps) {
       targetLength={brief.targetLength}
       tagCount={brief.tagCount}
       onVoiceSelect={post ? autosave.reassign : assignments.setVoiceId}
+      onGrowVoice={(voiceId) => {
+        void autosave
+          .flush()
+          .then(async () => {
+            if (post) await flushContentQueue(post.slug)
+            await navigate({
+              to: '/voices/$voiceId/materials',
+              params: { voiceId },
+              search: { learn: 'chat' },
+            })
+          })
+          .catch(() => {
+            /* The draft/content save status retains and explains a refusal. */
+          })
+      }}
       onTemplateSelect={post ? autosave.assignTemplate : assignments.setTemplateId}
       onTargetLanguageSelect={post ? autosave.assignTargetLanguage : assignments.setTargetLanguage}
       onBriefSaved={(set) => {

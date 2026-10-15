@@ -3,3 +3,5 @@
  *  which also drops the metadata a phone writes. */
 export const VOICE_PHOTO_MAX_LONG_EDGE_PX = 1024
 export const VOICE_PHOTO_JPEG_QUALITY = 0.85
+
+export const CHAT_REACTION_KEYS = ['thanks', 'noted', 'next'] as const

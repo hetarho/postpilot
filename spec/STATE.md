@@ -11,9 +11,10 @@
 ## active
 | tag | host | mode | since | at | doing |
 |---|---|---|---|---|---|
-| m7q2 | ihaelam-ui-MacBookPro | autopilot | 2026-10-15T12:20Z | 2026-10-15T22:21Z | T706 |
+| m7q2 | ihaelam-ui-MacBookPro | autopilot | 2026-10-15T12:20Z | 2026-10-15T22:32Z | T693 |
 
 ## inbox
+- 261016 suggest T690 T691 T705 T692 T706: review-code over campaign guidance, upload text, partial imports, post-to-clip creation and fixture synchronization
 - 261016 decided T705 T692: how can a failed video transfer keep the clips already uploaded? → an owned initial-import completion primitive moves verified leases into a ready batch and cleans only pending uploads under existing retention rules (alt: discard every arrived video | re-upload successful files repeatedly | leave a non-ready batch)
 - 261016 decided T691: where does a source-free upload-text approval live? → its own project-owned quote table, leaving source-bound generation quotes intact (alt: nullable batch identity in the existing table | require retained originals)
 - 261016 decided T691: what if required advertiser hashtags exceed the platform limit? → refuse before quote/provider/credit work and name the limit, preserving every required tag (alt: silently discard required tags | produce text the platform refuses)
@@ -123,8 +124,7 @@
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
-| T706 | Synchronize reflection test-fixture recording | ARCH | - | doing@261016.m7q2 |
-| T693 | Learn a voice through a scripted chat and grow AI styles toward it | VOICE THEME | - | blocked@261016 |
+| T693 | Learn a voice through a scripted chat and grow AI styles toward it | VOICE THEME | - | doing@261016.m7q2 |
 | T694 | Navigate by channel with 내 설정 beside it | THEME POST CLIP GUIDE TMPL VOICE | T689 | todo |
 | T695 | Tell the 체험단 story on the public about page | MKT | T682 T683 T684 T687 T688 T691 T692 T693 T694 | todo |
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | todo |
@@ -136,9 +136,13 @@
 ## next
 - After T686–T695 (m7q2): implement-task T698 → T699, T700 → T701 (a linked post as the clip's story); T697's operator CORS prerequisite is complete.
 - implement-task T697 (the owner applied production Content-Range CORS261015; add the ranged-GET probe/deployment gate and preserve HEAD cancellation).
-- Autopilot m7q2: implement T706, restore/resume T693, then T694–T695 and ready T697–T701.
+- Autopilot m7q2: implement T693, then T694–T695 and ready T697–T701.
 
 ## log
+- 261016 T693 resumes after T706; original VOICE17/THEME34 bases and acceptance remain unchanged. Restore the exact preserved31-path delta after this claim push.
+- 261016 T706 pushedec9130ef; CI38817240542 and Deploy38817240700 are queued for that revision.
+- 261016 T706 done
+- 261016 T706 codeae14f675 passes full Go and evaluated deployment/media gates; all five media runtime filesystems/configs match T705, retaining its CPU worker and both release proofs.
 - 261016 T706 selected race20 and whole experiment race pass; full Go and deployment/media checks follow. T692 source CI38813535036 and T693 claim CI38813624693 succeed.
 - 261016 T706 starts; baseline race reproduction is red at reflection_test.go31–32 and T693 stays safely preserved.
 - 261016 T706 planned; T693 is blocked on the confirmed CI fixture race and preserved in stash0fc938f8/checkpointd7438f2c. Current main sourceffbab379 is clean.
@@ -155,7 +159,3 @@
 - 261016 T705 pushed ebe909dd; exact-revision CI38811296610 and Deploy38811296566 are in progress. Claim-only records reuse verified source30aeac72.
 - 261016 T705 done
 - 261016 T705 final source30aeac72/codea032ccfa passes FE553/4386 and web build; all CI and local image/media gates pass with unchanged backend inputs. Remote results follow the unit push.
-- 261016 T705 local Linux/amd64 deployment and all image/media gates pass, including partial imports in both real-process layouts; combined memory upper bounds802553856/793788416 bytes under unchanged limits. Final FE push validation follows the filename guard.
-- 261016 T705 frontend-only duplicate-name guarda032ccfa passes import8 tests, lint/format/type. Backend/proto/deploy/workflow/dependency inputs remain identical to ebfe5b5c; final whole FE runs after the active media gate.
-- 261016 T705 sourceebfe5b5c passes final whole Go formatter/vet/build/tests (API219.203s), import receipt8 tests, lint/format/type and existing source consumers. Final whole FE553/4386 tests and web build pass; generated proto/SQL reproduce without a diff. Image/media push gates follow. T705 plan/claim CI38803947107/38804014314 succeed.
-- 261016 T691 remote CI38803124102, Deploy38803124097 and Media38803713489 all succeed for4df50bd8; all three media checkout logs prove that revision. T692 claim CI38803204762 also succeeds.
