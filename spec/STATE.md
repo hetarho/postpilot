@@ -11,9 +11,10 @@
 ## active
 | tag | host | mode | since | at | doing |
 |---|---|---|---|---|---|
-| m7q2 | ihaelam-ui-MacBookPro | autopilot | 2026-10-15T12:20Z | 2026-10-15T18:37Z | T690 |
+| m7q2 | ihaelam-ui-MacBookPro | autopilot | 2026-10-15T12:20Z | 2026-10-15T18:47Z | T690 |
 
 ## inbox
+- 261016 suggest MODEL TMPL GUIDE: doc-review over the existing quality candidates reported by spec lint; keep policy changes in update-ssot
 - 261016 suggest T696 T686 T687 T688 T689: review-code over the completed template-wizard, heading-job and clip-channel units
 - 261015 decided T698: how is a deleted or reused post slug told apart? → store the post's creation time beside the slug and resolve at read; no foreign key (alt: FK ON DELETE SET NULL, which nulls user_id on SQLite composites | clear links from the post context)
 - 261015 decided T699: which part of the post reaches the writer? → title plus headed sections of TEXT/QUOTE/LIST; photo captions, tags and summary left out; an oversized request is refused, never trimmed (alt: the whole content JSON | a fixed character cap)
@@ -137,6 +138,7 @@
 - Autopilot m7q2: T690 active after T689 pushed; continue T691–T695 and T698–T701. T697 is ready after the owner CORS change.
 
 ## log
+- 261016 T690 codebbcc3c6c; selected core/RPC/UI40 tests and full store325.681s pass, full FE551/4364 plus static/build checks pass; final Go and pre-push media gates follow.
 - 261016 T689 remote CI38784524255, Deploy38784523903 and Media38785185569 succeed at8e61d40f; all three media job checkout logs prove the deployed revision despite event headbc8292b2.
 - 261016 T690 start on main at8e61d40f (m7q2 autopilot); CLIP r62/r63 colour changes are unrelated; base refreshed63; T689 remote CI/deploy pending.
 - 261016 T689 final FE549/4361 and all push gates pass; sourcefdba16ef, backend/image inputs unchanged from verified1eaea440.
