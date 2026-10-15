@@ -73,7 +73,10 @@ export function GuidelineDirectory({
     kind,
   )
   const page = kind === 'clip' ? 'clipPage' : 'page'
-  const inUse = defaults.filter((guideline) => guideline.enabled)
+  // 원칙 always apply and are shown read-only in their own card (GUIDE-53); the list holds the
+  // 기본 지침 in use and the owner's own.
+  const principles = defaults.filter((guideline) => guideline.principle)
+  const inUse = defaults.filter((guideline) => !guideline.principle && guideline.enabled)
   // A refused 적용 안함 is said here, not on its row: the write is optimistic, so the row it was
   // pressed on has already left the list when the refusal arrives (GUIDE-43).
   const [stopRefusal, setStopRefusal] = useState('')
@@ -145,6 +148,7 @@ export function GuidelineDirectory({
               </Typography>
             )}
           </div>
+          {principles.length > 0 && <PrincipleCard principles={principles} />}
           {inUse.length === 0 && guidelines.length === 0 ? (
             <EmptyState kind={kind} />
           ) : (
@@ -291,6 +295,42 @@ function RowTitle({ label, badge }: { label: string; badge: ReactNode }) {
       <span className="min-w-0 truncate">{label}</span>
       <span className="shrink-0">{badge}</span>
     </span>
+  )
+}
+
+/** The kind's 원칙 (GUIDE-53): one closed card above the list whose summary says they always
+ *  apply; open, each 원칙's name and text, with no control — a 원칙 has no switch. */
+function PrincipleCard({ principles }: { principles: DefaultGuideline[] }) {
+  const { t } = useTranslation('guidelines')
+  return (
+    <section className="mt-6">
+      <Disclosure
+        size="row"
+        headingLevel={2}
+        title={
+          <RowTitle
+            label={t('principles.title')}
+            badge={<Badge>{t('principles.summary')}</Badge>}
+          />
+        }
+      >
+        <div className="pb-3 pl-6">
+          <Typography variant="body" className="text-content-secondary">
+            {t('principles.help')}
+          </Typography>
+          <ul aria-label={t('principles.listAria')} className="mt-3 space-y-3">
+            {principles.map((principle) => (
+              <li key={principle.key}>
+                <Typography variant="body" as="p" className="text-content-primary">
+                  {principle.name}
+                </Typography>
+                <DefaultGuidelineDetail guideline={principle} />
+              </li>
+            ))}
+          </ul>
+        </div>
+      </Disclosure>
+    </section>
   )
 }
 

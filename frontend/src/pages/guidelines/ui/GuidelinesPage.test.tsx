@@ -331,6 +331,56 @@ describe('the 기본 지침', () => {
     expect(within(items[1]).getByText('메모의 이름으로')).toBeInTheDocument()
   })
 
+  // GUIDE-53, GUIDE-48: the 원칙 sit read-only in their own closed card above the list, never as
+  // a row with 적용 안함, and the 기본 지침 sheet offers only 기본 지침.
+  it('shows the principles read-only above the list and keeps them out of the sheet', async () => {
+    const user = userEvent.setup()
+    renderGuidelines({
+      defaults: [
+        {
+          key: 'facts',
+          name: '재료에 있는 사실만',
+          text: '없는 사실은 쓰지 마세요.',
+          principle: true,
+        },
+        {
+          key: 'drawbacks',
+          name: '아쉬운 점은 정중하게',
+          text: '아쉬운 점은 남기세요.',
+          principle: true,
+        },
+        {
+          key: 'opening',
+          name: '첫머리에 이유와 기대',
+          text: '간 이유로 시작하세요.',
+          enabled: false,
+        },
+      ],
+    })
+
+    const card = await screen.findByRole('button', { name: /Postpilot 원칙/ })
+    expect(card).toHaveAttribute('aria-expanded', 'false')
+    expect(card).toHaveTextContent('항상 적용돼요')
+    const list = await section('지침 목록')
+    expect(list.queryByText('재료에 있는 사실만')).not.toBeInTheDocument()
+    expect(list.queryByText('아쉬운 점은 정중하게')).not.toBeInTheDocument()
+
+    await user.click(card)
+    const principles = within(screen.getByRole('list', { name: 'Postpilot 원칙 목록' }))
+    expect(principles.getByText('재료에 있는 사실만')).toBeInTheDocument()
+    expect(principles.getByText('아쉬운 점은 남기세요.')).toBeInTheDocument()
+    expect(principles.queryByRole('button')).toBeNull()
+    expect(screen.queryByRole('button', { name: /재료에 있는 사실만 적용 안함/ })).toBeNull()
+
+    await user.click(screen.getByRole('button', { name: '기본 지침' }))
+    const sheet = within(await screen.findByRole('dialog', { name: '기본 지침' }))
+    expect(
+      sheet
+        .getAllByRole('listitem')
+        .map((option) => within(option).getByRole('heading').textContent),
+    ).toEqual(['첫머리에 이유와 기대'])
+  })
+
   it('says why a refused 추가 failed under its row in the sheet', async () => {
     const user = userEvent.setup()
     renderGuidelines({ defaults: DEFAULTS, refuseDefaultSwitch: true })

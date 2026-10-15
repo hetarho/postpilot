@@ -5,6 +5,12 @@ import type { I18nFragment } from '@/shared/lib'
 export const i18n = {
   namespace: 'guidelines',
   ko: {
+    principles: {
+      title: 'Postpilot 원칙',
+      summary: '항상 적용돼요',
+      help: '원칙은 끌 수 없고, 모든 글과 영상에 다른 지침보다 먼저 적용돼요. 겪은 것만, 솔직하게 쓰기 위한 약속이에요.',
+      listAria: 'Postpilot 원칙 목록',
+    },
     authoringState: {
       checking: '저장하지 않은 지침 작업을 확인하고 있어요.',
       failed: '지침 편집 상태를 확인하지 못했어요. 저장된 지침은 계속 적용됩니다.',
@@ -27,7 +33,7 @@ export const i18n = {
       emptyHelp:
         '글을 받아 보고 매번 지우던 문장을 여기에 한 번만 저장해 두세요. 예를 들어 이런 식이에요.',
       example: '무인 매장 글에서 직원·주인과의 상호작용이나 CCTV를 언급하지 않기',
-      order: '지침은 기본 지침, 전역 지침, 템플릿 지침, 분야 지침 순서로 적용돼요.',
+      order: '지침은 원칙, 기본 지침, 전역 지침, 템플릿 지침, 분야 지침 순서로 적용돼요.',
       loadFailed: '지침 목록을 불러오지 못했어요.',
     },
     clipPage: {
@@ -39,11 +45,17 @@ export const i18n = {
       emptyHelp:
         '영상을 받아 보고 매번 고치던 부분을 여기에 한 번만 저장해 두세요. 예를 들어 이런 식이에요.',
       example: '자막에 가격을 적지 않기',
-      order: '영상 지침은 기본 지침, 전역 지침, 영상 템플릿 지침 순서로 적용돼요.',
+      order: '영상 지침은 원칙, 기본 지침, 전역 지침, 영상 템플릿 지침 순서로 적용돼요.',
       loadFailed: '영상 지침 목록을 불러오지 못했어요.',
     },
   },
   en: {
+    principles: {
+      title: 'Postpilot principles',
+      summary: 'Always applied',
+      help: 'Principles cannot be switched off and apply to every post and clip before any other guideline. They are the promise to write only what you experienced, honestly.',
+      listAria: 'Postpilot principles',
+    },
     authoringState: {
       checking: 'Checking unpublished guideline work.',
       failed: 'Could not check guideline editing status. Saved guidelines still apply.',
@@ -68,7 +80,7 @@ export const i18n = {
       example:
         'In posts about an unmanned store, do not mention staff or owner interactions, or CCTV',
       order:
-        'Guidelines apply the defaults first, then global ones, then those scoped to the post’s template, then those scoped to its category.',
+        'Guidelines apply the principles first, then the defaults, then global ones, then those scoped to the post’s template, then those scoped to its category.',
       loadFailed: 'Could not load your guidelines.',
     },
     clipPage: {
@@ -81,7 +93,7 @@ export const i18n = {
         'Save the change you keep making to every clip, once, here. For example, like this.',
       example: 'Do not put prices in the captions',
       order:
-        'Video guidelines apply the defaults first, then global ones, then those scoped to the clip’s video template.',
+        'Video guidelines apply the principles first, then the defaults, then global ones, then those scoped to the clip’s video template.',
       loadFailed: 'Could not load your video guidelines.',
     },
   },

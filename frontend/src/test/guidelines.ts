@@ -53,6 +53,8 @@ export interface FakeDefaultGuidelineRow {
   enabled?: boolean
   koreanTargetOnly?: boolean
   memoriesOnly?: boolean
+  /** An always-applied 원칙: always on, and switching it is refused like an unknown key. */
+  principle?: boolean
 }
 
 export interface FakeGuidelineCandidateRow {
@@ -265,6 +267,7 @@ export function registerGuidelineService(
       ),
       koreanTargetOnly: row.koreanTargetOnly ?? false,
       memoriesOnly: row.memoriesOnly ?? false,
+      principle: row.principle ?? false,
     })
 
   rpc(GuidelineService.method.listGuidelines, (req) => {
@@ -281,7 +284,7 @@ export function registerGuidelineService(
     calls?.push('SetDefaultGuidelineEnabled')
     options.defaultSwitches?.push({ kind: req.kind, key: req.key, enabled: req.enabled })
     const row = defaultsOf[kindOf(req.kind)].find((candidate) => candidate.key === req.key)
-    if (!row || options.refuseDefaultSwitch) {
+    if (!row || row.principle || options.refuseDefaultSwitch) {
       throw connectAppError('GUIDELINE_DEFAULT_NOT_FOUND', Code.NotFound)
     }
     row.enabled = req.enabled

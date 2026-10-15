@@ -44,6 +44,8 @@ export interface DefaultGuidelineEntry {
   en: { name: string; text: string }
   koreanTargetOnly: boolean
   memoriesOnly: boolean
+  /** An always-applied 원칙 (GUIDE-16): always enabled, shown read-only, never switched. */
+  principle: boolean
 }
 
 /** A 기본 지침 in the UI language: its name, its text, whether this account runs it, whether it
@@ -56,6 +58,7 @@ export interface DefaultGuideline {
   text: string
   koreanTargetOnly: boolean
   memoriesOnly: boolean
+  principle: boolean
 }
 
 /** A recorded revision instruction awaiting review (GUIDE-7). It is a receipt for something the

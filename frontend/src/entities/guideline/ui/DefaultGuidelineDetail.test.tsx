@@ -12,6 +12,7 @@ const NAMING: DefaultGuideline = {
   text: '가게와 메뉴는 메모에 적힌 이름으로 쓰세요.',
   koreanTargetOnly: false,
   memoriesOnly: false,
+  principle: false,
 }
 
 // GUIDE-47: the text is the server's word for word, and a default with no target says nothing more.

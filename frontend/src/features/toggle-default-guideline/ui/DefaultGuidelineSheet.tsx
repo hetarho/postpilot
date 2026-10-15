@@ -66,14 +66,16 @@ function DefaultGuidelinePanel({
       }
     >
       <ul className="divide-divider mt-2 divide-y">
-        {defaults.map((guideline) => (
-          <DefaultGuidelineOption
-            key={guideline.key}
-            ownerId={ownerId}
-            kind={kind}
-            guideline={guideline}
-          />
-        ))}
+        {defaults
+          .filter((guideline) => !guideline.principle)
+          .map((guideline) => (
+            <DefaultGuidelineOption
+              key={guideline.key}
+              ownerId={ownerId}
+              kind={kind}
+              guideline={guideline}
+            />
+          ))}
       </ul>
     </Sheet>
   )

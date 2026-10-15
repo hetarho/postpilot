@@ -85,6 +85,30 @@ describe('/video-guidelines', () => {
     expect(calls.filter((call) => !allowed.includes(call))).toEqual([])
   })
 
+  // GUIDE-52, GUIDE-53: the clip 원칙 sit read-only in their own card, never as list rows.
+  it('shows the video principles read-only', async () => {
+    const user = userEvent.setup()
+    renderVideoGuidelines({
+      clipDefaults: [
+        {
+          key: 'clip_facts',
+          name: '입력한 사실만',
+          text: '입력한 사실만 쓰세요.',
+          principle: true,
+        },
+        { key: 'clip-default', name: '과장 금지', text: '자막을 과장하지 않기' },
+      ],
+    })
+
+    const list = await section('영상 지침 목록')
+    expect(list.queryByText('입력한 사실만')).not.toBeInTheDocument()
+    expect(within(list.getAllByRole('listitem')[0]).getByText('과장 금지')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /Postpilot 원칙/ }))
+    const principles = within(screen.getByRole('list', { name: 'Postpilot 원칙 목록' }))
+    expect(principles.getByText('입력한 사실만 쓰세요.')).toBeInTheDocument()
+    expect(principles.queryByRole('button')).toBeNull()
+  })
+
   it('takes a clip 기본 지침 out of use for the clip kind', async () => {
     const user = userEvent.setup()
     const defaultSwitches: NonNullable<FakeGuidelinesOptions['defaultSwitches']> = []
