@@ -8,7 +8,13 @@
 - docs: en
 - push: main
 
+## active
+| tag | host | mode | since | at | doing |
+|---|---|---|---|---|---|
+| m7q2 | ihaelam-ui-MacBookPro | autopilot | 2026-10-15T12:20Z | 2026-10-15T12:21Z | T696 |
+
 ## inbox
+- 261015 decided T696: repair the existing red CI before T686 or defer it? → repair the stale wizard entrypoint test first (alt: defer until T687)
 - 261015 decided -: push branch for finished units? → main, and AGENTS.md now defers to haeram-spec-creator with ARCH-31 run before each push and reused on unchanged trees (alt: - commit only | a work branch)
 - 261015 decided GUIDE-41: an owner's stored off-state for a rule that became a 원칙 or was split? → ignored for 원칙; 맛은 재료로 살리기 keeps the old impression key and 알려준 사건 순서대로 its own (alt: reset every off-state | keep those rules switchable for owners who turned them off)
 - 261015 decided POST-117 CLIP-210: 체험단 글 default? → new posts and clips on, earlier ones off; off hides but keeps the guide (alt: everything on | everything off)
@@ -103,6 +109,7 @@
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
+| T696 | Align configuration entry regression with the guided template wizard | ARCH TMPL | T685 | doing@261015.m7q2 |
 | T686 | Suggest section headings in the owner's voice | TMPL EDIT | T685 | todo |
 | T687 | Make the wizard the only way to create a post template | TMPL EDIT | T685 T686 | todo |
 | T688 | Build the video-template wizard and make it the only way to create one | CLIP TMPL EDIT | T685 T686 | todo |
@@ -115,11 +122,14 @@
 | T695 | Tell the 체험단 story on the public about page | MKT | T682 T683 T684 T687 T688 T691 T692 T693 T694 | todo |
 
 ## next
-- implement-task T686 (then dep order … T695) after the owner reviews spec/reports/261015-v7k2.md; 24 provisional decisions and one review-code suggestion wait in inbox.
-- push: T677–T685 and the spec commits are local only; run the ARCH-31 pre-push gate on the final candidate before pushing (needs ssh-add and gh login). 6e5039c8 is the live green revision.
+- Autopilot m7q2: repair the existing CI entry regression in T696, then implement T686–T695 in dependency order; previous provisional decisions remain in inbox.
+- main matches origin/main at 0c4c997b; the previous local-only push note is stale. Check workflows for the pushed revision before claiming remote success.
 - ideation friendly-model-names 계속; also pending: the 17 unadopted choices in review/structure-261008 and doc-review ARCH.
 
 ## log
+- 261015 T696 start on main at 0c4c997b; initial push waits for repair of the diagnosed existing CI failure.
+- 261015 create-task T696 done: current wizard entrypoint regression for failed CI 38708735705; autopilot m7q2 selected by the owner.
+- 261015 start-vibe m7q2 start on main at 0c4c997b; awaiting mode and route, no other active session.
 - 261015 autopilot v7k2 stopped at the owner's request after T685; report spec/reports/261015-v7k2.md
 - 261015 T685 done
 - 261015 T685 start on main at ce4e027c.
@@ -137,6 +147,3 @@
 - 261015 T679 start on main at a751f4ae.
 - 261015 T678 done on main: Postpilot 원칙 card above each guideline list, sheet without 원칙.
 - 261015 T678 start on main at 6ff7a0ed.
-- 261015 T677 done on main: 원칙 tier in the registry, prompts and wire; local Node default moved to v26.12.0 through fnm at the owner's request (pnpm dev verified).
-- 261015 T677 start on main at d6aa385a (v7k2 autopilot).
-- 261015 create-task done: T677–T695 from GUIDE r22 GEN r31 POST r41 EXPORT r12 TMPL r28 CLIP r60 VOICE r17 THEME r34 MKT r11 CDS r34 EDIT r6 VIDEO r8 LANG r10; migrations reserved 0159 (T679) 0160 (T689) 0161 (T690) 0162 (T691).
