@@ -11,7 +11,7 @@
 ## active
 | tag | host | mode | since | at | doing |
 |---|---|---|---|---|---|
-| m7q2 | ihaelam-ui-MacBookPro | autopilot | 2026-10-15T12:20Z | 2026-10-15T21:37Z | - |
+| m7q2 | ihaelam-ui-MacBookPro | autopilot | 2026-10-15T12:20Z | 2026-10-15T21:38Z | T692 |
 
 ## inbox
 - 261016 decided T705 T692: how can a failed video transfer keep the clips already uploaded? → an owned initial-import completion primitive moves verified leases into a ready batch and cleans only pending uploads under existing retention rules (alt: discard every arrived video | re-upload successful files repeatedly | leave a non-ready batch)
@@ -123,7 +123,7 @@
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
-| T692 | Create a clip from a finished post | POST CLIP | T680 T689 T690 | blocked@261016 |
+| T692 | Create a clip from a finished post | POST CLIP | T680 T689 T690 | doing@261016.m7q2 |
 | T693 | Learn a voice through a scripted chat and grow AI styles toward it | VOICE THEME | - | todo |
 | T694 | Navigate by channel with 내 설정 beside it | THEME POST CLIP GUIDE TMPL VOICE | T689 | todo |
 | T695 | Tell the 체험단 story on the public about page | MKT | T682 T683 T684 T687 T688 T691 T692 T693 T694 | todo |
@@ -139,6 +139,8 @@
 - Autopilot m7q2: resume T692 using completed T705, then T693–T695 and ready T697–T701.
 
 ## log
+- 261016 T692 resumes with completed T705; original acceptance/base are unchanged and dependencies are done.
+- 261016 T705 pushed ebe909dd; exact-revision CI38811296610 and Deploy38811296566 are in progress. Claim-only records reuse verified source30aeac72.
 - 261016 T705 done
 - 261016 T705 final source30aeac72/codea032ccfa passes FE553/4386 and web build; all CI and local image/media gates pass with unchanged backend inputs. Remote results follow the unit push.
 - 261016 T705 local Linux/amd64 deployment and all image/media gates pass, including partial imports in both real-process layouts; combined memory upper bounds802553856/793788416 bytes under unchanged limits. Final FE push validation follows the filename guard.
