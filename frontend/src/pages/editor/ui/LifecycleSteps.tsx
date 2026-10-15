@@ -52,6 +52,7 @@ export function LifecycleSteps({
   jobView,
   storyline,
   campaign,
+  clipMaterial,
   inspection,
 }: {
   post: PostDraft
@@ -83,6 +84,7 @@ export function LifecycleSteps({
   }
   /** The 체험단 parts as the draft autosave holds them; ③'s checklist ticks save through it. */
   campaign?: FinishCampaign
+  clipMaterial?: Pick<PostDraft, 'title' | 'memo'>
   inspection?: { contextKey: string; sourcePending: boolean }
 }) {
   const { t } = useTranslation('posts')
@@ -168,6 +170,8 @@ export function LifecycleSteps({
       result={result}
       liveContent={liveContent}
       campaign={campaign}
+      clipMaterial={clipMaterial}
+      beforeCreateClip={beforeStart}
       onPhotoUrlsStale={refreshPhotoUrls}
       onGoGenerate={() => onStepChange('generate')}
     />

@@ -9,6 +9,7 @@ import { PublishedUrlField } from '@/features/record-published-url'
 import { Notice, buttonStyles } from '@/shared/ui'
 import { ExportPanel } from '@/widgets/export-panel'
 import { EmptyStep } from './EmptyStep'
+import { CreateClipFromPostButton } from './CreateClipFromPostButton'
 
 /** The 체험단 parts ③ reads: the switch, the guide and the owner's ticks, with how a tick saves. */
 export interface FinishCampaign {
@@ -27,6 +28,8 @@ export function EditorFinishPanel({
   result,
   liveContent,
   campaign,
+  clipMaterial,
+  beforeCreateClip,
   onPhotoUrlsStale,
   onGoGenerate,
 }: {
@@ -34,6 +37,8 @@ export function EditorFinishPanel({
   ownerId: string
   /** Absent or off, or with an empty guide, shows no checklist. */
   campaign?: FinishCampaign
+  clipMaterial?: Pick<PostDraft, 'title' | 'memo'>
+  beforeCreateClip?: () => Promise<void>
   /** The finalized content this step is about; absent until a run has produced one. */
   result?: PostContent
   liveContent?: PostContent
@@ -69,6 +74,19 @@ export function EditorFinishPanel({
           >
             {t('editor.templateFromPost')}
           </Link>
+        )}
+        {post.content && ownerId && (
+          <CreateClipFromPostButton
+            key={`${ownerId}-${post.slug}`}
+            ownerId={ownerId}
+            post={{
+              ...post,
+              ...clipMaterial,
+              campaign: campaign?.on ?? post.campaign,
+              advertiserGuide: campaign?.guide ?? post.advertiserGuide,
+            }}
+            beforeCreate={beforeCreateClip}
+          />
         )}
       </div>
       {/* Above the export: what to check before the copy goes to the campaign (POST-119). */}
