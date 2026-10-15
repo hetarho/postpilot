@@ -156,7 +156,7 @@ func (s *Service) preparePostInspection(ctx context.Context, post PostInput, sta
 			return llm.Request{}, nil, "", err
 		}
 		photos, videos := AttachmentNames(post.Images)
-		input := StorylinePromptInput{Language: language, Title: post.Title, Memo: post.Memo, Photos: photos, Videos: videos, Observations: post.Observations, Template: material.Template, DefaultGuidelines: material.DefaultGuidelines, StockGuidelines: material.StockGuidelines, Guidelines: material.Guidelines, Memories: material.Memories}
+		input := StorylinePromptInput{Language: language, Title: post.Title, Memo: post.Memo, Photos: photos, Videos: videos, Observations: post.Observations, Template: material.Template, DefaultGuidelines: material.DefaultGuidelines, StockGuidelines: material.StockGuidelines, Guidelines: material.Guidelines, Memories: material.Memories, AdvertiserGuide: material.AdvertiserGuide}
 		request, _ := preparePlanRequest(input, s.originProtocol, s.budget.Storyline(post.WriteNativeEffort), originAttachmentIDs(post.Images), nil)
 		request = s.prepareStorylineCall(request, model, post.WriteNativeEffort, s.originProtocol)
 		addUnobservedInspectionOmission(&request, post)
@@ -194,7 +194,7 @@ func (s *Service) preparePostInspection(ctx context.Context, post PostInput, sta
 		post.Observations = heldObservations(post.Images, post.Observations)
 	}
 	if s.originProtocol == OriginProtocolVersion {
-		post.OriginCompletionTokens = s.budget.Write(OriginBudgetTarget(post.TargetLength), post.WriteNativeEffort)
+		post.OriginCompletionTokens = s.budget.Write(OriginBudgetTarget(guideBudgetLength(post.TargetLength, post.AdvertiserGuide)), post.WriteNativeEffort)
 	}
 	request, _ := s.prepareWriteRequest(post, profile, post.Observations, model)
 	addUnobservedInspectionOmission(&request, post)

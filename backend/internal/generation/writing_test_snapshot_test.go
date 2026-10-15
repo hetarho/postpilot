@@ -11,6 +11,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/postpilot/backend/internal/campaign"
 	"github.com/postpilot/backend/internal/llm"
 	"github.com/postpilot/backend/internal/template"
 )
@@ -630,5 +631,37 @@ func TestWritingTestUnusedFactAnswersDoNotAuthorizeMaterialFreeGeneration(t *tes
 	}
 	if len(models.calls) != 0 {
 		t.Fatal("missing material refusal spent credits")
+	}
+}
+
+// GEN-88: a writing test freezes the source post's guide into its common material and every
+// variant, only while the source's 체험단 글 is on.
+func TestWritingTestsFreezeTheAdvertiserGuide(t *testing.T) {
+	for _, on := range []bool{true, false} {
+		t.Run(fmt.Sprintf("campaign=%v", on), func(t *testing.T) {
+			factory, ports, _, _, _, _ := plannerFixture(t)
+			ports.source.Post.Campaign, ports.source.Post.StoredGuide = on, *testAdvertiserGuide()
+			request, _ := plannerRequest(t, ports, "model", "write", 2)
+			snapshot, err := factory.FreezeWritingTest(context.Background(), request)
+			if err != nil {
+				t.Fatal(err)
+			}
+			common, variants, err := decodeWritingTestSnapshot(snapshot)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var want *campaign.Guide
+			if on {
+				want = testAdvertiserGuide()
+			}
+			if !reflect.DeepEqual(common.Post.AdvertiserGuide, want) {
+				t.Fatalf("common guide = %+v, want %+v", common.Post.AdvertiserGuide, want)
+			}
+			for index, variant := range variants {
+				if !reflect.DeepEqual(variant.Snapshot.Post.AdvertiserGuide, want) {
+					t.Errorf("variant %d guide = %+v, want %+v", index, variant.Snapshot.Post.AdvertiserGuide, want)
+				}
+			}
+		})
 	}
 }

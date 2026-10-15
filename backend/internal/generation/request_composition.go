@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/postpilot/backend/internal/campaign"
 	"github.com/postpilot/backend/internal/llm"
 )
 
@@ -285,8 +286,16 @@ func guidelineComposition(out *llm.RequestComposition, stock []StockGuideline, l
 	return section.String()
 }
 
-func postUserComposition(out *llm.RequestComposition, title, memo string, memories, photos, videos []string, observations []Observation, portraits map[string]bool) {
+func postUserComposition(out *llm.RequestComposition, title, memo string, guide *campaign.Guide, memories, photos, videos []string, observations []Observation, portraits map[string]bool) {
 	compositionSection(out, "post-brief", llm.InspectionRoleUser, fmt.Sprintf("[이번 글]\n가제: %s\n메모: %s\n", title, memo), "internal/generation/prompts.go", materialAt("title", "owner-title-hint", title, len("[이번 글]\n가제: ")), materialAt("memo", "owner-supplied-post-material", memo, len("[이번 글]\n가제: ")+len(title)+len("\n메모: ")))
+	// The guide's values follow the code-owned heading and framing line (GEN-88).
+	guideSection := advertiserGuideSection(guide)
+	guideFrame := len(advertiserGuideHeading + "\n" + advertiserGuideFraming)
+	guideData := ""
+	if guideSection != "" {
+		guideData = guideSection[guideFrame : len(guideSection)-1]
+	}
+	compositionSection(out, "advertiser-guide", llm.InspectionRoleUser, guideSection, "internal/generation/advertiser_guide.go", materialAt("guide", "advertiser-requested-material-not-owner-experience", guideData, guideFrame))
 	compositionSection(out, "memories", llm.InspectionRoleUser, memorySection(memories), "internal/generation/prompts.go", textMaterials("fact", "selected-memory-fact", memories, false)...)
 	if len(memories) == 0 {
 		out.Omissions = append(out.Omissions, llm.RequestOmission{ID: "memories", Reason: "no opted-in matching frozen memory material", Activation: "memory selection", SourceFiles: []string{"internal/generation/prompts.go"}})
@@ -320,7 +329,7 @@ func ComposeWriteRequest(input WritePromptInput) llm.Request {
 	compositionSection(&out, "write-contract", llm.InspectionRoleSystem, system[:len(system)-len(profile)-len(template)-len(guidelines)], "internal/generation/prompts.go")
 	out.Fragments, out.Omissions, out.SelectedRuleIDs = append(out.Fragments, suffix.Fragments...), suffix.Omissions, suffix.SelectedRuleIDs
 	compositionSection(&out, "quality", llm.InspectionRoleUser, qualityRulesSection(input.QualityRules), "internal/generation/prompts.go", textMaterials("rule", "selected-published-quality-rule", input.QualityRules, false)...)
-	postUserComposition(&out, input.Title, input.Memo, input.Memories, input.Photos, input.Videos, input.Observations, input.Portraits)
+	postUserComposition(&out, input.Title, input.Memo, input.AdvertiserGuide, input.Memories, input.Photos, input.Videos, input.Observations, input.Portraits)
 	planMaterials := make([]promptMaterial, 0, len(input.FollowStoryline))
 	planOffset := len("\n\n[스토리라인]")
 	for i, paragraph := range input.FollowStoryline {
@@ -349,7 +358,7 @@ func ComposeStorylineRequest(input StorylinePromptInput) llm.Request {
 	guidelines := guidelineComposition(&suffix, input.StockGuidelines, input.DefaultGuidelines, input.Guidelines, "storyline", true)
 	compositionSection(&out, "plan-contract", llm.InspectionRoleSystem, system[:len(system)-len(template)-len(guidelines)], "internal/generation/storyline_prompts.go")
 	out.Fragments, out.Omissions, out.SelectedRuleIDs = append(out.Fragments, suffix.Fragments...), suffix.Omissions, suffix.SelectedRuleIDs
-	postUserComposition(&out, input.Title, input.Memo, input.Memories, input.Photos, input.Videos, input.Observations, nil)
+	postUserComposition(&out, input.Title, input.Memo, input.AdvertiserGuide, input.Memories, input.Photos, input.Videos, input.Observations, nil)
 	if input.Request != "" {
 		compositionSection(&out, "plan-edit", llm.InspectionRoleUser, fmt.Sprintf("\n\n[현재 스토리라인]\n%s\n\n[수정 요청]\n%s", marshalPromptJSON(storylineForPrompt(input.Current)), input.Request), "internal/generation/storyline_prompts.go", materialAt("current", "current-ai-plan-not-event-evidence", marshalPromptJSON(storylineForPrompt(input.Current)), len("\n\n[현재 스토리라인]\n")), materialAt("request", "owner-plan-edit-and-explicit-new-facts", input.Request, len("\n\n[현재 스토리라인]\n")+len(marshalPromptJSON(storylineForPrompt(input.Current)))+len("\n\n[수정 요청]\n")))
 	}

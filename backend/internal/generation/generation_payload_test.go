@@ -1,8 +1,10 @@
 package generation
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"github.com/postpilot/backend/internal/campaign"
 	"github.com/postpilot/backend/internal/post"
 	"reflect"
 	"strconv"
@@ -34,7 +36,7 @@ func filledGenerationOptions() generationOptions {
 			Facts:     []TemplateFact{{Label: "가게 이름", Value: "을지로 노포"}},
 			TitleArea: "<ask>가게 이름</ask> 다녀온 날",
 			BodyParts: []TemplateMaterialPart{{Kind: "literal", Text: "body"}}, TitleParts: []TemplateMaterialPart{{Kind: "write", Text: "title"}},
-		}, Guidelines: []string{"CCTV를 언급하지 않기"}, DefaultGuidelines: []string{"메모의 이름으로 쓰세요"}, StockGuidelines: testStockGuidelines(), Memories: []string{"매운 음식을 못 먹는다"}, QualityRules: []string{"제목에 같은 말을 되풀이하지 않는다"}},
+		}, Guidelines: []string{"CCTV를 언급하지 않기"}, DefaultGuidelines: []string{"메모의 이름으로 쓰세요"}, StockGuidelines: testStockGuidelines(), Memories: []string{"매운 음식을 못 먹는다"}, QualityRules: []string{"제목에 같은 말을 되풀이하지 않는다"}, AdvertiserGuide: testAdvertiserGuide()},
 	}
 	result.Observations[0].Origins = originFixtureObservation(result.Observations[0])
 	return result
@@ -168,6 +170,7 @@ func TestStartFreezesEveryOption(t *testing.T) {
 	posts := &fakePosts{input: PostInput{
 		Slug: "post", UserID: "alice", Voice: liveVoice, TargetLanguage: LanguageKorean, TagCount: 7,
 		TemplateID: "tmpl", UseMemory: true, QualityRuleIDs: []string{"composition"}, Field: "cafe",
+		Campaign: true, StoredGuide: *testAdvertiserGuide(),
 		Images:       []Image{{Filename: "IMG_1.jpg", Key: "key-1"}, {Filename: "IMG_2.jpg", Key: "key-2"}},
 		Observations: []Observation{observation},
 		// Along a storyline holding both: IMG_1 is reused, IMG_2 is observed (GEN-70).
@@ -237,5 +240,70 @@ func TestALegacyPayloadWithFieldPhrasesDecodesAsWithout(t *testing.T) {
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("legacy payload decoded as\n %+v\nwant %+v", got, want)
+	}
+}
+
+// GEN-88: generation, the storyline start and the storyline request freeze the guide only while
+// the post's 체험단 글 is on and the guide asks for something; otherwise their payloads carry no
+// member at all, so they keep the bytes they had before guides existed.
+func TestStartFreezesTheAdvertiserGuideOnlyForCampaignPosts(t *testing.T) {
+	guide := testAdvertiserGuide()
+	for _, tc := range []struct {
+		name   string
+		on     bool
+		stored campaign.Guide
+		want   *campaign.Guide
+	}{
+		{"a 체험단 post", true, *guide, guide},
+		{"the switch off", false, *guide, nil},
+		{"an empty guide", true, campaign.Guide{}, nil},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			input := storylinePost()
+			input.TargetLanguage, input.Images = LanguageKorean, nil
+			input.Storyline = &Storyline{Paragraphs: []StorylineParagraph{{Text: "가게 앞을 보여줍니다."}}}
+			input.Campaign, input.StoredGuide = tc.on, tc.stored
+			jobs := &fakeJobs{id: "job"}
+			svc := storylineService(&fakePosts{input: input}, jobs, storylineModels(storylineAnswer), testDeps())
+			ctx := context.Background()
+			if _, err := svc.Start(ctx, StartRequest{UserID: "alice", PostSlug: "post", WriteModel: writeRef.String()}); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := svc.StartStoryline(ctx, StartStorylineRequest{UserID: "alice", PostSlug: "post", WriteModel: writeRef.String()}); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := svc.StartStorylineRevision(ctx, StartStorylineRevisionRequest{UserID: "alice", PostSlug: "post", Request: "더 짧게", WriteModel: writeRef.String()}); err != nil {
+				t.Fatal(err)
+			}
+			storyline, err := decodeStorylinePayload(jobs.storylinePayloads[0])
+			if err != nil {
+				t.Fatal(err)
+			}
+			request, err := decodeStorylineRevisionPayload(jobs.storylineRequestPayloads[0])
+			if err != nil {
+				t.Fatal(err)
+			}
+			for name, got := range map[string]*campaign.Guide{
+				"generation": jobs.frozen(t, 0).AdvertiserGuide, "storyline": storyline.AdvertiserGuide, "storyline request": request.AdvertiserGuide,
+			} {
+				if !reflect.DeepEqual(got, tc.want) {
+					t.Errorf("%s froze %+v, want %+v", name, got, tc.want)
+				}
+			}
+			for name, raw := range map[string][]byte{
+				"generation": jobs.generatePayloads[0], "storyline": jobs.storylinePayloads[0], "storyline request": jobs.storylineRequestPayloads[0],
+			} {
+				if bytes.Contains(raw, []byte(`"advertiser_guide"`)) != (tc.want != nil) {
+					t.Errorf("%s payload member presence is wrong: %s", name, raw)
+				}
+			}
+			// The frozen guide is the post's at the start: a later edit cannot reach queued work.
+			if tc.want != nil {
+				input.StoredGuide.Text = "바뀐 가이드"
+				if jobs.frozen(t, 0).AdvertiserGuide.Text != guide.Text {
+					t.Fatal("the frozen guide followed a later edit")
+				}
+			}
+		})
 	}
 }

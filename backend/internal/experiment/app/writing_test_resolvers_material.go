@@ -57,6 +57,8 @@ func (r *WritingTestResolvers) ResolveWritingTestSource(ctx context.Context, use
 			return value, experiment.ErrTestRevisionConflict
 		}
 		value.Post.Title, value.Post.Field = source.Title, source.Field
+		// The source post's 체험단 글 switch and guide; the freeze decides whether it goes in (GEN-88).
+		value.Post.Campaign, value.Post.StoredGuide = source.Campaign, source.AdvertiserGuide
 		value.InputRevision, value.ContentRevision = input, content
 		value.Revision = fmt.Sprintf("post:%s:%d:%d", slug, input, content)
 		// The target's input revision fences source material. This fingerprint binds

@@ -8,6 +8,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/postpilot/backend/internal/campaign"
 	"github.com/postpilot/backend/internal/llm"
 )
 
@@ -219,7 +220,7 @@ func (s *Service) Start(ctx context.Context, request StartRequest) (string, erro
 		return "", fmt.Errorf("freeze writing voice: %w", err)
 	}
 	if s.originProtocol == OriginProtocolVersion {
-		request.CompletionTokens = s.budget.Write(OriginBudgetTarget(request.TargetLength), request.WriteNativeEffort)
+		request.CompletionTokens = s.budget.Write(OriginBudgetTarget(guideBudgetLength(request.TargetLength, material.AdvertiserGuide)), request.WriteNativeEffort)
 	}
 	options := generationOptions{
 		ExpectedPlanFingerprint: func() *string {
@@ -416,6 +417,8 @@ type writeMaterial struct {
 	StockGuidelines   []StockGuideline
 	Memories          []string
 	QualityRules      []string
+	// AdvertiserGuide is the guide frozen for a 체험단 post, nil for none (GEN-88).
+	AdvertiserGuide *campaign.Guide
 }
 
 // onto lays the material over the post as-is: the values are freshly resolved or decoded, and
@@ -427,6 +430,7 @@ func (m writeMaterial) onto(post PostInput) PostInput {
 	post.StockGuidelines = m.StockGuidelines
 	post.Memories = m.Memories
 	post.QualityRules = m.QualityRules
+	post.AdvertiserGuide = m.AdvertiserGuide
 	return post
 }
 
@@ -453,7 +457,7 @@ func (s *Service) freezeWriteMaterial(ctx context.Context, post PostInput) (writ
 	if err != nil {
 		return writeMaterial{}, err
 	}
-	return writeMaterial{Template: brief, Guidelines: guidelines.Owner, DefaultGuidelines: guidelines.Defaults, StockGuidelines: cloneStockGuidelines(guidelines.Stock), Memories: memories, QualityRules: rules}, nil
+	return writeMaterial{Template: brief, Guidelines: guidelines.Owner, DefaultGuidelines: guidelines.Defaults, StockGuidelines: cloneStockGuidelines(guidelines.Stock), Memories: memories, QualityRules: rules, AdvertiserGuide: freezeAdvertiserGuide(post)}, nil
 }
 
 // freezeQualityRules renders the ticked rules once, at enqueue, in the run's target language.

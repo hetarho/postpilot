@@ -69,6 +69,8 @@ type snapshotPost struct {
 	UseMemory         bool                  `json:"UseMemory"`
 	Memories          []string              `json:"Memories"`
 	QualityRules      []string              `json:"quality_rules,omitempty"`
+	// Absent for a run with no frozen guide, so every snapshot without one keeps its bytes.
+	AdvertiserGuide   *advertiserGuideJSON  `json:"advertiser_guide,omitempty"`
 	TemplateAnswers   []snapshotAnswer      `json:"TemplateAnswers"`
 	Title             string                `json:"Title"`
 	Memo              string                `json:"Memo"`
@@ -293,7 +295,7 @@ func toSnapshotPost(post PostInput) snapshotPost {
 		TemplateID: post.TemplateID, Template: toSnapshotTemplate(post.Template),
 		Guidelines: copyTexts(post.Guidelines), DefaultGuidelines: copyTexts(post.DefaultGuidelines), StockGuidelines: encodeStockGuidelines(post.StockGuidelines),
 		UseMemory: post.UseMemory, Memories: copyTexts(post.Memories),
-		QualityRules: copyTexts(post.QualityRules),
+		QualityRules: copyTexts(post.QualityRules), AdvertiserGuide: encodeAdvertiserGuide(post.AdvertiserGuide),
 		TemplateAnswers: mapSlice(post.TemplateAnswers, func(a TemplateAnswer) snapshotAnswer {
 			return snapshotAnswer{Label: a.Label, Text: a.Text, Enabled: a.Enabled}
 		}),
@@ -325,7 +327,7 @@ func fromSnapshotPost(wire snapshotPost) PostInput {
 		TemplateID: wire.TemplateID, Template: fromSnapshotTemplate(wire.Template),
 		Guidelines: copyTexts(wire.Guidelines), DefaultGuidelines: copyTexts(wire.DefaultGuidelines), StockGuidelines: decodeStockGuidelines(wire.StockGuidelines),
 		UseMemory: wire.UseMemory, Memories: copyTexts(wire.Memories),
-		QualityRules: copyTexts(wire.QualityRules),
+		QualityRules: copyTexts(wire.QualityRules), AdvertiserGuide: decodeAdvertiserGuide(wire.AdvertiserGuide),
 		TemplateAnswers: mapSlice(wire.TemplateAnswers, func(a snapshotAnswer) TemplateAnswer {
 			return TemplateAnswer{Label: a.Label, Text: a.Text, Enabled: a.Enabled}
 		}),

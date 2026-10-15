@@ -4,8 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
+	"github.com/postpilot/backend/internal/campaign"
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/generation"
 	"github.com/postpilot/backend/internal/guideline"
@@ -269,7 +271,11 @@ func (a generationPosts) AttachedImages(ctx context.Context, userID, slug string
 		// The opt-in, never the memories: like TemplateID, only the enqueue resolves it, and
 		// only through the memory context's own port (MEM-18, MEM-19).
 		UseMemory: found.UseMemory,
-		Images:    make([]generation.Image, 0, len(found.Images)+len(found.Videos)),
+		// The switch and the stored guide, never the frozen guide: only the enqueue decides
+		// whether a 체험단 post's guide goes into the run (GEN-88).
+		Campaign:    found.Campaign,
+		StoredGuide: cloneCampaignGuide(found.AdvertiserGuide),
+		Images:      make([]generation.Image, 0, len(found.Images)+len(found.Videos)),
 		// The stored contact sheet, read here so the ENQUEUE can decide what to reuse. It
 		// was write-only from this context's point of view before observations could be reused
 		// (GEN-8), which is why every retry re-paid for eyesight the post already had.
@@ -663,4 +669,18 @@ func clipStockRules(rules []guideline.StockRule) []clip.VideoStockRule {
 		}
 	}
 	return result
+}
+
+// cloneCampaignGuide copies a stored guide so the generation input shares no slice with the post.
+func cloneCampaignGuide(guide campaign.Guide) campaign.Guide {
+	out := campaign.Guide{Text: guide.Text, Keywords: slices.Clone(guide.Keywords), Hashtags: slices.Clone(guide.Hashtags)}
+	if guide.MinChars != nil {
+		value := *guide.MinChars
+		out.MinChars = &value
+	}
+	if guide.MinPhotos != nil {
+		value := *guide.MinPhotos
+		out.MinPhotos = &value
+	}
+	return out
 }

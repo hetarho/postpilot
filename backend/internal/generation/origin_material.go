@@ -83,6 +83,8 @@ func WritingOriginSources(input WritePromptInput, fictional bool, attachmentIDs 
 	for i, memory := range input.Memories {
 		catalog.add(fmt.Sprintf("current.memory.%d", i), post.OriginSourceMemory, memory, "", true)
 	}
+	// The advertiser's material is a source of its own, never the owner's (GEN-80, GEN-88).
+	catalog.add(advertiserGuideSourceID, post.OriginSourceAdvertiserGuide, advertiserGuideSourceText(input.AdvertiserGuide), "", true)
 	shown := make(map[string]bool, len(input.Photos)+len(input.Videos))
 	for _, file := range append(append([]string(nil), input.Photos...), input.Videos...) {
 		shown[file] = true
@@ -142,7 +144,14 @@ func scopedOriginContract(request llm.Request) string {
 }
 
 func appendOriginRequest(request llm.Request, sources []post.OriginSource, prior any) llm.Request {
-	return appendOriginContract(request, sources, prior, scopedOriginContract(request))
+	contract := scopedOriginContract(request)
+	for _, source := range sources {
+		if source.Kind == post.OriginSourceAdvertiserGuide {
+			contract += advertiserOriginClause
+			break
+		}
+	}
+	return appendOriginContract(request, sources, prior, contract)
 }
 
 func appendOriginContract(request llm.Request, sources []post.OriginSource, prior any, contract string) llm.Request {

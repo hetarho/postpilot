@@ -7,6 +7,8 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/postpilot/backend/internal/campaign"
 )
 
 // snapshotFixture is a write snapshot's pieces, shared by the pinned encodings and the round
@@ -177,6 +179,7 @@ func TestEveryWriteSnapshotMemberRoundTrips(t *testing.T) {
 	fixture.post.ContentOriginIdentity = &identity
 	fixture.post.Storyline = &Storyline{Paragraphs: []StorylineParagraph{{Text: "가게 앞", Files: []string{"IMG_1.jpg"}}}, MadeWith: []string{"IMG_1.jpg"}}
 	fixture.post.FollowStoryline = []StorylineParagraph{{Text: "가게 앞", Files: []string{"IMG_1.jpg"}}}
+	fixture.post.Campaign, fixture.post.StoredGuide, fixture.post.AdvertiserGuide = true, *testAdvertiserGuide(), testAdvertiserGuide()
 	// One of each, with every member set, so requireNoZero can prove each member is walked.
 	fixture.post.Images = []Image{{ID: "fixture-video", Filename: "clip.mp4", Key: "key-2", Kind: AttachmentVideo, ContentType: "video/mp4", DurationMs: 4200, Width: 1080, Height: 1920, Rotation: 180, RotationByOwner: true}}
 	fixture.post.Content.Blocks = []Block{{
@@ -205,6 +208,8 @@ func TestEveryWriteSnapshotMemberRoundTrips(t *testing.T) {
 	// unfrozen: inputs to resolve, never part of the frozen input. A comparison never reads the
 	// storyline, stored or followed (GEN-72).
 	want.Post.Field, want.Post.QualityRuleIDs, want.Post.Published = "", nil, false
+	// The switch and the stored guide are resolved into the frozen guide, which is what freezes.
+	want.Post.Campaign, want.Post.StoredGuide = false, campaign.Guide{}
 	want.Post.Storyline, want.Post.FollowStoryline = nil, nil
 	// Post inspection source fences do not enter legacy private comparison snapshots.
 	want.Post.SourceFingerprint, want.Post.StorylineEditedByHand = "", false

@@ -88,6 +88,7 @@ func (s *Service) prepareWriteRequest(post PostInput, profile Profile, observati
 		TargetLength: post.TargetLength, TagCount: tagCount, Template: post.Template,
 		DefaultGuidelines: post.DefaultGuidelines, StockGuidelines: post.StockGuidelines, Guidelines: post.Guidelines, Memories: post.Memories, QualityRules: post.QualityRules,
 		FollowStoryline: post.FollowStoryline, Portraits: PhotoPortraits(post.Images, observations),
+		AdvertiserGuide: post.AdvertiserGuide,
 	}
 	request := ComposeWriteRequest(input)
 	var sources []postdomain.OriginSource
@@ -103,7 +104,7 @@ func (s *Service) prepareWriteRequest(post PostInput, profile Profile, observati
 		if post.OriginCompletionTokens > 0 {
 			request.MaxTokens = post.OriginCompletionTokens
 		} else {
-			request.MaxTokens = s.budget.Write(OriginBudgetTarget(post.TargetLength), post.WriteNativeEffort)
+			request.MaxTokens = s.budget.Write(OriginBudgetTarget(guideBudgetLength(post.TargetLength, post.AdvertiserGuide)), post.WriteNativeEffort)
 		}
 	}
 	if s.fullWritingTest {

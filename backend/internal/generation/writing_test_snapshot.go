@@ -76,6 +76,8 @@ func (f *WritingTestFactory) FreezeWritingTest(ctx context.Context, request Writ
 	post.Content, post.ContentLanguage, post.Storyline, post.FollowStoryline = nil, nil, nil, nil
 	post.Template, post.Guidelines, post.DefaultGuidelines, post.Memories, post.QualityRules = nil, nil, nil, nil, nil
 	post.StockGuidelines = nil
+	// The guide is the source post's own, frozen like the rest of its material (GEN-88).
+	post.AdvertiserGuide = freezeAdvertiserGuide(source.Post)
 	post.WriteNativeEffort, post.Voice = false, VoiceRef{}
 	if material.Fictional {
 		post.Memo = "가상 시나리오(사용자의 실제 경험이 아님)\n" + post.Memo
@@ -271,7 +273,7 @@ func (f *WritingTestFactory) FreezeWritingTest(ctx context.Context, request Writ
 			return WritingTestSnapshot{}, ErrWritingTestDuplicate
 		}
 		seen[variant.SemanticKey] = true
-		variant.WriteCompletionTokens = f.service.budget.Write(OriginBudgetTarget(post.TargetLength), variant.Snapshot.Post.WriteNativeEffort)
+		variant.WriteCompletionTokens = f.service.budget.Write(OriginBudgetTarget(guideBudgetLength(post.TargetLength, post.AdvertiserGuide)), variant.Snapshot.Post.WriteNativeEffort)
 		if variant.WriteCompletionTokens <= 0 || variant.WritePromptTokens <= 0 {
 			return WritingTestSnapshot{}, ErrWritingTestMaterial
 		}

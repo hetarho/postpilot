@@ -468,6 +468,7 @@ func TestAComparisonFreezesTheWriteMaterialStartFreezes(t *testing.T) {
 	posts := &fakePosts{input: PostInput{
 		Slug: "post", UserID: "alice", Voice: liveVoice, TemplateID: "tmpl", UseMemory: true,
 		QualityRuleIDs: []string{"composition"}, Field: "cafe", Memo: "메모",
+		Campaign: true, StoredGuide: *testAdvertiserGuide(),
 	}}
 	deps := testDeps()
 	// Every brief member set: the payload's decoder turns an absent slice into an empty one, so
@@ -493,7 +494,7 @@ func TestAComparisonFreezesTheWriteMaterialStartFreezes(t *testing.T) {
 	compared := writeMaterial{
 		Template: snapshot.Post.Template, Guidelines: snapshot.Post.Guidelines,
 		DefaultGuidelines: snapshot.Post.DefaultGuidelines, StockGuidelines: snapshot.Post.StockGuidelines, Memories: snapshot.Post.Memories,
-		QualityRules: snapshot.Post.QualityRules,
+		QualityRules: snapshot.Post.QualityRules, AdvertiserGuide: snapshot.Post.AdvertiserGuide,
 	}
 	requireNoZero(t, "frozen", reflect.ValueOf(frozen))
 	if !reflect.DeepEqual(frozen, compared) {

@@ -3,6 +3,8 @@ package generation
 import (
 	"fmt"
 	"strings"
+
+	"github.com/postpilot/backend/internal/campaign"
 )
 
 // The storyline prompt's static rules (GEN-68): the task, the paragraph rule, the answer shape
@@ -57,6 +59,8 @@ type StorylinePromptInput struct {
 	StockGuidelines   []StockGuideline
 	Guidelines        []string
 	Memories          []string
+	// AdvertiserGuide is the frozen guide of a 체험단 post (GEN-88), rendered after the memo.
+	AdvertiserGuide *campaign.Guide
 	// Current is the stored storyline the request rewrites; Request is the owner's request.
 	Current []StorylineParagraph
 	Request string
@@ -98,7 +102,7 @@ func BuildStorylinePromptForLanguage(input StorylinePromptInput) (string, string
 	}
 	writeGuidelinesSectionClosedBy(&stable, stockGuidelineGroups(input.StockGuidelines, input.DefaultGuidelines, input.Guidelines, "storyline"), storylineGuidelinePrecedence, principlePrecedenceStoryline)
 
-	user := fmt.Sprintf("[이번 글]\n가제: %s\n메모: %s\n%s%s", input.Title, input.Memo, memorySection(input.Memories), attachmentMaterial(input.Photos, input.Videos, input.Observations, nil))
+	user := fmt.Sprintf("[이번 글]\n가제: %s\n메모: %s\n%s%s%s", input.Title, input.Memo, advertiserGuideSection(input.AdvertiserGuide), memorySection(input.Memories), attachmentMaterial(input.Photos, input.Videos, input.Observations, nil))
 	if revising {
 		user += fmt.Sprintf("\n\n[현재 스토리라인]\n%s\n\n[수정 요청]\n%s", marshalPromptJSON(storylineForPrompt(input.Current)), input.Request)
 	}

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/postpilot/backend/internal/campaign"
 	"github.com/postpilot/backend/internal/post"
 )
 
@@ -274,6 +275,12 @@ type PostInput struct {
 	// QualityRules is the frozen text of each quality rule the owner ticked, already rendered
 	// in the target language, in the order the write prompt lists them (GEN-51).
 	QualityRules []string
+	// Campaign and StoredGuide are the post's 체험단 글 switch and its stored advertiser guide,
+	// read at enqueue like TemplateID; only the freeze decides whether the guide goes in
+	// (GEN-88). AdvertiserGuide is the frozen guide every prompt reads, nil for none.
+	Campaign        bool
+	StoredGuide     campaign.Guide
+	AdvertiserGuide *campaign.Guide
 	// TemplateAnswers is what the post answers to its template's data fields, read at
 	// enqueue like TemplateID. The freeze resolves them into the rendered brief, so no
 	// handler ever reads one: the payload already carries the result (POST-62, TMPL-45).

@@ -8,6 +8,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/postpilot/backend/internal/campaign"
 	"github.com/postpilot/backend/internal/llm"
 )
 
@@ -195,7 +196,7 @@ func (s *Service) WriteStoryline(ctx context.Context, job StorylineJob, progress
 		Language: post.TargetLanguage, Title: post.Title, Memo: post.Memo,
 		Photos: photos, Videos: videos, Observations: observations,
 		Template: post.Template, DefaultGuidelines: post.DefaultGuidelines, StockGuidelines: post.StockGuidelines, Guidelines: post.Guidelines,
-		Memories: post.Memories,
+		Memories: post.Memories, AdvertiserGuide: post.AdvertiserGuide,
 	}
 	request, sources := preparePlanRequest(input, options.OriginProtocolVersion, options.CompletionTokens, originAttachmentIDs(post.Images), nil)
 	progress("storyline", 0, 1)
@@ -246,7 +247,7 @@ func (s *Service) ReviseStoryline(ctx context.Context, job StorylineRevisionJob,
 		Language: options.TargetLanguage, Title: post.Title, Memo: post.Memo,
 		Photos: photos, Videos: videos, Observations: options.Observations,
 		Template: options.Template, DefaultGuidelines: options.DefaultGuidelines, StockGuidelines: options.StockGuidelines, Guidelines: options.Guidelines,
-		Memories: options.Memories, Current: options.Storyline, Request: options.Request,
+		Memories: options.Memories, AdvertiserGuide: options.AdvertiserGuide, Current: options.Storyline, Request: options.Request,
 	}
 	request, sources := preparePlanRequest(input, options.OriginProtocolVersion, options.CompletionTokens, originAttachmentIDs(post.Images), options.PlanOrigins)
 	progress("storyline", 0, 1)
@@ -308,6 +309,8 @@ type storylineMaterial struct {
 	DefaultGuidelines []string
 	StockGuidelines   []StockGuideline
 	Memories          []string
+	// AdvertiserGuide is the guide frozen for a 체험단 post, nil for none (GEN-88).
+	AdvertiserGuide *campaign.Guide
 }
 
 // freezeStorylineMaterial resolves the material once, at enqueue, through the same freezes a
@@ -327,7 +330,7 @@ func (s *Service) freezeStorylineMaterial(ctx context.Context, post PostInput) (
 	if err != nil {
 		return storylineMaterial{}, err
 	}
-	return storylineMaterial{Template: brief, Guidelines: guidelines.Owner, DefaultGuidelines: guidelines.Defaults, StockGuidelines: cloneStockGuidelines(guidelines.Stock), Memories: memories}, nil
+	return storylineMaterial{Template: brief, Guidelines: guidelines.Owner, DefaultGuidelines: guidelines.Defaults, StockGuidelines: cloneStockGuidelines(guidelines.Stock), Memories: memories, AdvertiserGuide: freezeAdvertiserGuide(post)}, nil
 }
 
 // storylineOptions is what a storyline job froze at enqueue.
@@ -355,6 +358,7 @@ func (o storylineOptions) onto(post PostInput) PostInput {
 	post.DefaultGuidelines = o.DefaultGuidelines
 	post.StockGuidelines = cloneStockGuidelines(o.StockGuidelines)
 	post.Memories = o.Memories
+	post.AdvertiserGuide = cloneAdvertiserGuide(o.AdvertiserGuide)
 	return post
 }
 
@@ -384,6 +388,7 @@ type storylinePayload struct {
 	StockGuidelines         *[]stockGuidelineJSON `json:"stock_guidelines,omitempty"`
 	DefaultGuidelines       []string              `json:"default_guidelines,omitempty"`
 	Memories                []string              `json:"memories,omitempty"`
+	AdvertiserGuide         *advertiserGuideJSON  `json:"advertiser_guide,omitempty"`
 	ObserveFiles            *[]string             `json:"observe_files"`
 	Observations            []observationPayload  `json:"observations,omitempty"`
 	WriteNativeEffort       bool                  `json:"write_native_effort,omitempty"`
@@ -403,6 +408,7 @@ type storylineRevisionPayload struct {
 	StockGuidelines         *[]stockGuidelineJSON    `json:"stock_guidelines,omitempty"`
 	DefaultGuidelines       []string                 `json:"default_guidelines,omitempty"`
 	Memories                []string                 `json:"memories,omitempty"`
+	AdvertiserGuide         *advertiserGuideJSON     `json:"advertiser_guide,omitempty"`
 	Observations            []observationPayload     `json:"observations,omitempty"`
 	WriteNativeEffort       bool                     `json:"write_native_effort,omitempty"`
 }
@@ -420,6 +426,7 @@ func encodeStorylinePayload(options storylineOptions) ([]byte, error) {
 		Guidelines:        cloneTexts(options.Guidelines),
 		DefaultGuidelines: cloneTexts(options.DefaultGuidelines), StockGuidelines: encodeStockGuidelines(options.StockGuidelines),
 		Memories:          cloneTexts(options.Memories),
+		AdvertiserGuide:   encodeAdvertiserGuide(options.AdvertiserGuide),
 		ObserveFiles:      cloneOptionalTexts(options.ObserveFiles),
 		Observations:      encodeObservations(options.Observations),
 		WriteNativeEffort: options.WriteNativeEffort,
@@ -447,7 +454,8 @@ func decodeStorylinePayload(raw []byte) (storylineOptions, error) {
 			Template:          decodeTemplate(payload.Template),
 			Guidelines:        cloneTexts(payload.Guidelines),
 			DefaultGuidelines: cloneTexts(payload.DefaultGuidelines), StockGuidelines: decodeStockGuidelines(payload.StockGuidelines),
-			Memories: cloneTexts(payload.Memories),
+			Memories:        cloneTexts(payload.Memories),
+			AdvertiserGuide: decodeAdvertiserGuide(payload.AdvertiserGuide),
 		},
 		ObserveFiles:      cloneOptionalTexts(payload.ObserveFiles),
 		Observations:      decodeObservations(payload.Observations),
@@ -470,6 +478,7 @@ func encodeStorylineRevisionPayload(options storylineRevisionOptions) ([]byte, e
 		Guidelines:        cloneTexts(options.Guidelines),
 		DefaultGuidelines: cloneTexts(options.DefaultGuidelines), StockGuidelines: encodeStockGuidelines(options.StockGuidelines),
 		Memories:          cloneTexts(options.Memories),
+		AdvertiserGuide:   encodeAdvertiserGuide(options.AdvertiserGuide),
 		Observations:      encodeObservations(options.Observations),
 		WriteNativeEffort: options.WriteNativeEffort,
 	})
@@ -502,7 +511,8 @@ func decodeStorylineRevisionPayload(raw []byte) (storylineRevisionOptions, error
 			Template:          decodeTemplate(payload.Template),
 			Guidelines:        cloneTexts(payload.Guidelines),
 			DefaultGuidelines: cloneTexts(payload.DefaultGuidelines), StockGuidelines: decodeStockGuidelines(payload.StockGuidelines),
-			Memories: cloneTexts(payload.Memories),
+			Memories:        cloneTexts(payload.Memories),
+			AdvertiserGuide: decodeAdvertiserGuide(payload.AdvertiserGuide),
 		},
 		Observations:      decodeObservations(payload.Observations),
 		WriteNativeEffort: payload.WriteNativeEffort,
@@ -552,7 +562,7 @@ func preparePlanRequest(input StorylinePromptInput, protocol, completionTokens i
 	request := ComposeStorylineRequest(input)
 	var sources []postdomain.OriginSource
 	if protocol == OriginProtocolVersion {
-		sources = WritingOriginSources(WritePromptInput{Title: input.Title, Memo: input.Memo, Template: input.Template, Memories: input.Memories, Photos: input.Photos, Videos: input.Videos, Observations: input.Observations}, false, attachmentIDs)
+		sources = WritingOriginSources(WritePromptInput{Title: input.Title, Memo: input.Memo, Template: input.Template, Memories: input.Memories, Photos: input.Photos, Videos: input.Videos, Observations: input.Observations, AdvertiserGuide: input.AdvertiserGuide}, false, attachmentIDs)
 		var projection any
 		if input.Request != "" {
 			prior := ValidateStoredPlanOrigins(input.Current, origins)

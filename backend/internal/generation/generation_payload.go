@@ -83,6 +83,9 @@ type generationPayload struct {
 	// The storyline a from-storyline run writes along (GEN-70). Absent is an ordinary run, which
 	// is what every payload queued before it decodes as.
 	Storyline []storylineParagraphJSON `json:"storyline,omitempty"`
+	// The guide a 체험단 post froze (GEN-88). Absent is none, which is what every payload queued
+	// before it decodes as and what a post with the switch off or an empty guide freezes.
+	AdvertiserGuide *advertiserGuideJSON `json:"advertiser_guide,omitempty"`
 }
 
 // generationOptions is what a durable generate job froze at enqueue. Every field is an
@@ -135,6 +138,7 @@ func encodeGenerationPayload(options generationOptions) ([]byte, error) {
 		Observations:      encodeObservations(options.Observations),
 		WriteNativeEffort: options.WriteNativeEffort,
 		Storyline:         encodeFollowedStoryline(options.FollowStoryline),
+		AdvertiserGuide:   encodeAdvertiserGuide(options.AdvertiserGuide),
 	})
 }
 
@@ -187,6 +191,7 @@ func decodeGenerationPayload(raw []byte) (generationOptions, error) {
 			StockGuidelines:   decodeStockGuidelines(payload.StockGuidelines),
 			Memories:          cloneTexts(payload.Memories),
 			QualityRules:      cloneTexts(payload.QualityRules),
+			AdvertiserGuide:   decodeAdvertiserGuide(payload.AdvertiserGuide),
 		},
 		ObserveFiles:      cloneOptionalTexts(payload.ObserveFiles),
 		Observations:      decodeObservations(payload.Observations),

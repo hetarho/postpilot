@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/postpilot/backend/internal/campaign"
 	"github.com/postpilot/backend/internal/post"
 )
 
@@ -426,6 +427,9 @@ type WritePromptInput struct {
 	// Portraits names the attached photos that stand portrait (PhotoPortraits); nil writes no
 	// 사진 방향 line, which keeps a caller that has no dimensions at its old bytes (GEN-77).
 	Portraits map[string]bool
+	// AdvertiserGuide is the frozen guide of a 체험단 post (GEN-88), rendered after the memo; nil
+	// writes nothing.
+	AdvertiserGuide *campaign.Guide
 }
 
 // BuildWritePromptForLanguage builds the write pass's system and user prompts from one input.
@@ -477,9 +481,10 @@ func BuildWritePromptForLanguage(input WritePromptInput) (string, string) {
 	writeGuidelinesSection(&stable, stockGuidelineGroups(input.StockGuidelines, input.DefaultGuidelines, input.Guidelines, "write"), input.Profile.NoVoice)
 
 	photoMaterial := attachmentMaterial(input.Photos, input.Videos, input.Observations, input.Portraits)
-	// The memory section sits between the memo and the attachments and renders to the empty
-	// string when it has nothing — which is what keeps a post without it byte-identical.
-	perPost := qualityRulesSection(input.QualityRules) + fmt.Sprintf("[이번 글]\n가제: %s\n메모: %s\n%s%s", input.Title, input.Memo, memorySection(input.Memories), photoMaterial) +
+	// The guide and the memory sections sit between the memo and the attachments and render to
+	// the empty string when they have nothing — which is what keeps a post without them
+	// byte-identical.
+	perPost := qualityRulesSection(input.QualityRules) + fmt.Sprintf("[이번 글]\n가제: %s\n메모: %s\n%s%s%s", input.Title, input.Memo, advertiserGuideSection(input.AdvertiserGuide), memorySection(input.Memories), photoMaterial) +
 		storylineSection(input.FollowStoryline)
 	return stable.String(), perPost
 }
