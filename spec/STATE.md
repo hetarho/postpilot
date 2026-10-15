@@ -11,7 +11,7 @@
 ## active
 | tag | host | mode | since | at | doing |
 |---|---|---|---|---|---|
-| v7k2 | DESKTOP-VKPLS8P | autopilot | 2026-10-15T03:06Z | 2026-10-15T06:31Z | - |
+| v7k2 | DESKTOP-VKPLS8P | autopilot | 2026-10-15T03:06Z | 2026-10-15T06:31Z | T680 |
 
 ## inbox
 - 261015 decided -: push branch for finished units? → main, and AGENTS.md now defers to haeram-spec-creator with ARCH-31 run before each push and reused on unchanged trees (alt: - commit only | a work branch)
@@ -103,7 +103,7 @@
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
-| T680 | Put the 체험단 글 switch and advertiser guide on the editor's ① | POST | T679 | todo |
+| T680 | Put the 체험단 글 switch and advertiser guide on the editor's ① | POST | T679 | doing@261015.v7k2 |
 | T681 | Add the 광고주 요청 semantic origin with its own color | GEN POST THEME | - | todo |
 | T682 | Weave the advertiser guide into generation as the advertiser's material | GEN | T679 T681 | todo |
 | T683 | Show the pre-submission checklist in ③ | POST | T680 | todo |
@@ -126,6 +126,7 @@
 - push: 65c79f2b passed its pre-push gate and waits only for the SSH key (ssh-add) with the spec commits after it; gh login is needed to read CI. 6e5039c8 is the live green revision.
 
 ## log
+- 261015 T680 start on main at 8db352ff.
 - 261015 T679 done on main: posts store the 체험단 글 switch, advertiser guide and checklist ticks (migration 0159, internal/campaign).
 - 261015 T679 start on main at a751f4ae.
 - 261015 T678 done on main: Postpilot 원칙 card above each guideline list, sheet without 원칙.
@@ -145,4 +146,3 @@
 - 261013 media-release.py resource sampling: an exec failure is judged by the container's state, not Docker's wording (409 attach upgrade and runc procReady forms seen locally); two full gate runs passed in both layouts.
 - 261013 T676 done on main: the title opens with its search words and closes with a short implicative phrase.
 - 261013 T676 start on main at 6fe0333c: titles 기본 지침 first two sentences.
-- 261013 create-task GEN r30: T676 (titles 기본 지침 opens with search words, then an implicative phrase).
