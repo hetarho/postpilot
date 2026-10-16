@@ -8,11 +8,6 @@
 - docs: en
 - push: main
 
-## active
-| tag | host | mode | since | at | doing |
-|---|---|---|---|---|---|
-| q8s4 | DESKTOP-VKPLS8P | autopilot | 2026-10-16T03:18Z | 2026-10-16T06:51Z | - |
-
 ## inbox
 - 261016 suggest T694 T695 T698 T699 T700: review-code over channel navigation, campaign positioning, owned post links, frozen writing material and original capture metadata.
 - 261016 decided T700: how is EXIF without a UTC offset normalized? → omit the unknown instant and retain filename-based order as fallback (alt: invent the browser’s current time zone | label the local wall clock as UTC); use bounded mvhd parsing because the installed Mediabunny skips that creation field.
@@ -136,6 +131,7 @@
 - T697 local implementation is committed; pre-push/media gates and production range/clip qualification remain blocked by this session’s no-push scope. Existing qualification blocks are unchanged.
 
 ## log
+- 261016 q8s4 ends after T701: T694/T695/T698–T701 done and T697 locally implemented/parked; all changes committed locally, no push; weekly usage20%, stop threshold80%.
 - 261016 T701 done locally at0a1319d2: frozen photo/time/sequence placement hints and unused-source names;457 backend/21 store/248 frontend tests and8 browser cases pass.
 - 261016 T701 starts at737c8bc4 (q8s4): canonical photo metadata, frozen nearest-section candidates, linked section priority and unused-source names;19% weekly usage is below80%.
 - 261016 T700 done locally atbf118b47: bounded EXIF/mvhd, optional stored capture times, stable originals;297 frontend and150 store integration tests, related backend/build checks pass.
@@ -155,4 +151,3 @@
 - 261016 m7q2 ends after T693 as requested; push main and leave T694–T695/T697–T701 for the next session.
 - 261016 T693 done
 - 261016 T693 final sourcec171c69b/codec5946df7 passes whole FE555/4403, full Go and all Linux/amd64 deployment/media gates; combined memory bounds794701824/795013120 bytes under unchanged limits.
-- 261016 Owner requests finishing T693, pushing main and ending this session; T694–T695 and T697–T701 remain for the next session.
