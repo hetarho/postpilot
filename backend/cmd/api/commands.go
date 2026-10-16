@@ -130,6 +130,10 @@ func runCommand(args []string) bool {
 	}
 	settings := provision.Settings{DBPath: cfg.DBPath, SessionTTL: cfg.SessionTTL}
 	switch args[0] {
+	case "check-storage-cors":
+		if err := runStorageCORSCheck(ctx, cfg, args[1:], os.Stdout); err != nil {
+			fatal("check-storage-cors", err)
+		}
 	case "reset-test-entitlements":
 		if err := runTestEntitlementReset(ctx, cfg.DBPath, args[1:], os.Stdout); err != nil {
 			fatal("reset-test-entitlements", err)

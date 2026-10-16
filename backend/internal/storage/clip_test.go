@@ -2,14 +2,51 @@ package storage
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/postpilot/backend/internal/clip"
 	"net/url"
 	"strings"
 	"testing"
 	"time"
 )
+
+func TestHeadSourceKeepsCause(t *testing.T) {
+	for _, cause := range []error{errors.New("SDK transport failure"), &types.NotFound{}} {
+		b := &Bucket{ops: &fakeS3{headErr: fmt.Errorf("SDK request: %w", cause)}}
+		_, err := b.HeadSource(t.Context(), "clip-inputs/alice/source")
+		if !errors.Is(err, cause) {
+			t.Fatalf("SDK cause was discarded: %v", err)
+		}
+		var missing *types.NotFound
+		if errors.As(cause, &missing) && !errors.Is(err, clip.ErrNotFound) {
+			t.Fatalf("not-found classification was lost: %v", err)
+		}
+	}
+}
+
+func TestHeadSourceReturnsCallerCancellation(t *testing.T) {
+	for _, deadline := range []bool{false, true} {
+		for _, sdkErr := range []error{nil, errors.New("SDK HEAD interrupted")} {
+			ctx, cancel := context.WithCancel(t.Context())
+			if deadline {
+				cancel()
+				ctx, cancel = context.WithDeadline(t.Context(), time.Now().Add(-time.Second))
+			} else {
+				cancel()
+			}
+			b := &Bucket{ops: &fakeS3{headErr: sdkErr}}
+			_, err := b.HeadSource(ctx, "clip-inputs/alice/source")
+			if err != ctx.Err() {
+				t.Errorf("expected caller cancellation %v, got %v", ctx.Err(), err)
+			}
+			cancel()
+		}
+	}
+}
 
 func TestClipPresignProtectsTypeAndPreventsOverwrite(t *testing.T) {
 	b, err := New(context.Background(), Config{Endpoint: "http://storage.internal", PublicEndpoint: "http://storage.browser", AccessKeyID: "test", SecretAccessKey: "test", Bucket: "private", MaxReadBytes: 1024})

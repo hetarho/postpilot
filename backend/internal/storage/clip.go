@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/postpilot/backend/internal/clip"
@@ -40,11 +41,14 @@ func (b *Bucket) PresignSource(ctx context.Context, key, contentType string, ttl
 }
 func (b *Bucket) HeadSource(ctx context.Context, key string) (clip.SourceObjectInfo, error) {
 	response, err := b.ops.HeadObject(ctx, &s3.HeadObjectInput{Bucket: aws.String(b.name), Key: aws.String(key)})
+	if err := ctx.Err(); err != nil {
+		return clip.SourceObjectInfo{}, err
+	}
 	if err != nil {
 		if isNotFound(err) {
-			return clip.SourceObjectInfo{}, clip.ErrNotFound
+			return clip.SourceObjectInfo{}, fmt.Errorf("head clip source: %w: %w", clip.ErrNotFound, err)
 		}
-		return clip.SourceObjectInfo{}, errors.New("head clip source failed")
+		return clip.SourceObjectInfo{}, fmt.Errorf("head clip source failed: %w", err)
 	}
 	return clip.SourceObjectInfo{Bytes: aws.ToInt64(response.ContentLength), ContentType: aws.ToString(response.ContentType)}, nil
 }

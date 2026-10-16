@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/postpilot/backend/internal/clip"
@@ -26,7 +27,7 @@ func (s *SourceService) GetSources(ctx context.Context, user, project string) ([
 					continue
 				}
 				if e != nil {
-					return nil, errors.New("clip source availability check failed")
+					return nil, fmt.Errorf("clip source availability check failed: %w", e)
 				}
 				if info.Bytes != v.Bytes || info.ContentType != v.ContentType {
 					v.Availability = "missing"
@@ -69,7 +70,7 @@ func (s *SourceService) Playback(ctx context.Context, user, project, id, fingerp
 		return clip.SourcePlayback{}, clip.ErrSourceMissing
 	}
 	if err != nil {
-		return clip.SourcePlayback{}, errors.New("clip source availability check failed")
+		return clip.SourcePlayback{}, fmt.Errorf("clip source availability check failed: %w", err)
 	}
 	if info.Bytes != v.Bytes || info.ContentType != v.ContentType {
 		return clip.SourcePlayback{}, clip.ErrSourceMissing
@@ -123,7 +124,7 @@ func (s *SourceService) AvailableBatch(ctx context.Context, user, id string, pla
 			return b, clip.ErrSourceMissing
 		}
 		if e != nil {
-			return b, errors.New("clip source availability check failed")
+			return b, fmt.Errorf("clip source availability check failed: %w", e)
 		}
 		if info.Bytes != v.Bytes || info.ContentType != v.ContentType {
 			return b, clip.ErrSourceMissing

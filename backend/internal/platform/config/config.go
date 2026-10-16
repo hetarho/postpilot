@@ -275,7 +275,7 @@ type Config struct {
 	EximAPIKey     string
 	BillingEnabled bool
 
-	// R2Endpoint is the S3-compatible endpoint the API itself calls (HEAD, DELETE, LIST).
+	// R2Endpoint is the S3-compatible endpoint for operations made by the API process.
 	R2Endpoint string
 	// R2PublicEndpoint is the endpoint presigned URLs are minted against — the one the
 	// BROWSER will call. It is separate because a signature covers the Host header, so a
@@ -688,9 +688,9 @@ func positiveInt(name, fallback string) (int, error) {
 //
 // It is a separate step rather than part of Load because not every entry point needs
 // object storage: `api adduser` creates an account, and on a fresh VPS that happens
-// before the operator has set up a bucket. Only the server calls this — and it does so
-// before the listener starts, so a missing value still stops the deploy at the health
-// gate rather than surfacing as a failed upload the first time a user picks a photo.
+// before the operator has set up a bucket. The server checks before its listener
+// starts; the storage CORS command checks before its probe. Missing values therefore
+// fail deployment instead of surfacing on the first user upload.
 func (c *Config) RequireObjectStorage() error {
 	for name, value := range map[string]string{
 		"R2_ENDPOINT":          c.R2Endpoint,

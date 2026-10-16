@@ -179,6 +179,25 @@ jobs:
             cd "/srv/postpilot-${ENV_NAME}"
             sh deploy/backend-rollout.sh --init-worker
 
+      - name: Verify browser storage ranged GET
+        if: steps.current.outputs.deploy == 'true'
+        uses: appleboy/ssh-action@v1.2.0
+        env:
+          WEB_ORIGIN: ${{ vars.WEB_ORIGIN }}
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          envs: WEB_ORIGIN,ENV_NAME
+          script: |
+            set -eu
+            cd "/srv/postpilot-${ENV_NAME}"
+            if [ -z "${WEB_ORIGIN:-}" ]; then
+              echo "repo variable WEB_ORIGIN is required" >&2
+              exit 1
+            fi
+            docker compose -f docker-compose.prod.yml exec -T api /api check-storage-cors "$WEB_ORIGIN"
+
       # Separate from the rollout on purpose: a CORS mismatch is a stack .env problem, not
       # a bad image, so rolling the image back would not fix it — it must fail loudly
       # instead. This is the check that catches "login silently stops working": the session

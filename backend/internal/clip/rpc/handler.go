@@ -120,6 +120,12 @@ func actingUser(ctx context.Context) (string, error) {
 	return user, nil
 }
 func toConnectError(err error) error {
+	if errors.Is(err, context.Canceled) {
+		return connect.NewError(connect.CodeCanceled, context.Canceled)
+	}
+	if errors.Is(err, context.DeadlineExceeded) {
+		return connect.NewError(connect.CodeDeadlineExceeded, context.DeadlineExceeded)
+	}
 	var guideLong *campaign.TooLongError
 	if errors.As(err, &guideLong) {
 		return rpcserver.NewAppError(connect.CodeInvalidArgument, "advertiser guide part is too long", postpilotv1.FailureReason_ADVERTISER_GUIDE_TOO_LONG, map[string]string{"field": string(guideLong.Field), "max": strconv.Itoa(guideLong.Max), "actual": strconv.Itoa(guideLong.Chars)})

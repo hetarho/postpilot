@@ -1,5 +1,9 @@
 """Fast deployment must remain independent of full, separately reported media gates."""
 import unittest
+import json
+import os
+import subprocess
+import tempfile
 from pathlib import Path
 
 import yaml
@@ -54,7 +58,7 @@ class WorkflowBoundaries(unittest.TestCase):
         self.assertEqual(steps[guard]['run'], 'sh deploy/latest-rollout.sh')
         self.assertEqual(self.jobs['rollout']['permissions']['actions'], 'read')
         remote = [(i,s) for i,s in enumerate(steps) if s.get('uses','').startswith('appleboy/')]
-        self.assertEqual(len(remote), 4)
+        self.assertEqual(len(remote), 5)
         for index, step in remote:
             self.assertGreater(index, guard)
             self.assertEqual(step['if'], "steps.current.outputs.deploy == 'true'")
@@ -65,6 +69,46 @@ class WorkflowBoundaries(unittest.TestCase):
         self.assertTrue(any('sh deploy/backend-rollout.sh --init-worker' in script for script in scripts))
         self.assertFalse(any('sh deploy/backend-rollout.sh --bootstrap' in script for script in scripts))
         self.assertTrue(any('deploy/media/worker.env.example' in step.get('with', {}).get('source', '') for step in steps))
+
+    def test_storage_range_probe_runs_after_health_and_fails_the_deploy(self):
+        steps = self.jobs['rollout']['steps']
+        health = next(i for i, step in enumerate(steps)
+                      if 'health gate' in step.get('name', ''))
+        probe = next(i for i, step in enumerate(steps)
+                     if 'check-storage-cors' in step.get('with', {}).get('script', ''))
+        self.assertGreater(probe, health)
+        step = steps[probe]
+        self.assertEqual(step['if'], steps[health]['if'])
+        self.assertFalse(step.get('continue-on-error'))
+        self.assertEqual(step['env']['WEB_ORIGIN'], '${{ vars.WEB_ORIGIN }}')
+        self.assertIn('WEB_ORIGIN', step['with']['envs'].split(','))
+        script = step['with']['script']
+        with tempfile.TemporaryDirectory(prefix='postpilot-storage-cors-workflow-') as directory:
+            root = Path(directory)
+            docker = root / 'docker'
+            docker.write_text('#!/usr/bin/env python3\n'
+                              'import json, os, sys\n'
+                              'open(os.environ["PROBE_ARGS"], "w").write(json.dumps(sys.argv[1:]))\n'
+                              'sys.exit(int(os.environ["PROBE_EXIT"]))\n')
+            docker.chmod(0o755)
+            # Only replace the SSH host's working directory; execute the actual gate body.
+            script = script.replace('cd "/srv/postpilot-${ENV_NAME}"', 'cd "$PROBE_DIR"')
+            for exit_code in (0, 42):
+                args_file = root / 'args.json'
+                env = {**os.environ, 'PATH': f'{root}:{os.environ["PATH"]}',
+                       'ENV_NAME': 'prod', 'WEB_ORIGIN': 'https://web.example',
+                       'PROBE_DIR': directory, 'PROBE_ARGS': str(args_file),
+                       'PROBE_EXIT': str(exit_code)}
+                result = subprocess.run(['sh', '-c', script], env=env, capture_output=True, text=True)
+                self.assertEqual(result.returncode, exit_code, result.stderr)
+                self.assertEqual(json.loads(args_file.read_text()),
+                                 ['compose', '-f', 'docker-compose.prod.yml', 'exec', '-T',
+                                  'api', '/api', 'check-storage-cors', 'https://web.example'])
+            args_file.unlink()
+            env['WEB_ORIGIN'] = ''
+            result = subprocess.run(['sh', '-c', script], env=env, capture_output=True, text=True)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertFalse(args_file.exists())
 
     def test_media_follows_a_successful_trusted_build_and_checks_its_exact_revision(self):
         trigger = self.verify.get('on', self.verify.get(True))

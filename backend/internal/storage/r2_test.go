@@ -17,8 +17,13 @@ import (
 
 type fakeS3 struct {
 	headOutput *s3.HeadObjectOutput
+	headErr    error
 	listPages  []*s3.ListObjectsV2Output
 	listTokens []string
+}
+
+func (f *fakeS3) PutObject(context.Context, *s3.PutObjectInput, ...func(*s3.Options)) (*s3.PutObjectOutput, error) {
+	return &s3.PutObjectOutput{}, nil
 }
 
 func (f *fakeS3) DeleteObject(context.Context, *s3.DeleteObjectInput, ...func(*s3.Options)) (*s3.DeleteObjectOutput, error) {
@@ -28,6 +33,9 @@ func (f *fakeS3) GetObject(context.Context, *s3.GetObjectInput, ...func(*s3.Opti
 	return &s3.GetObjectOutput{Body: io.NopCloser(strings.NewReader(""))}, nil
 }
 func (f *fakeS3) HeadObject(context.Context, *s3.HeadObjectInput, ...func(*s3.Options)) (*s3.HeadObjectOutput, error) {
+	if f.headErr != nil {
+		return nil, f.headErr
+	}
 	if f.headOutput == nil {
 		return &s3.HeadObjectOutput{}, nil
 	}

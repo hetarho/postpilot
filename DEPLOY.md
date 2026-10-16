@@ -43,7 +43,7 @@ rollout  sync Compose/controller files to the API VPS (no SSH to a worker PC)
          → API /health + private compatible-worker status smoke
          → start/check the colocated worker when selected
          → failure: restore the supported image/env/config snapshot and health-check it
-verify   browser-origin API CORS and R2 GET preflight checks
+verify   browser-origin API/R2 preflights and a presigned R2 ranged GET
 ```
 
 **일반적인 캐시 재사용 배포는 push부터 위 상태 검사 완료까지 5분 이내를 목표로 한다.**
@@ -79,11 +79,12 @@ GitHub 실행기 대기, 비어 있는 캐시에서의 최초 도구 컴파일, 
   `.env` 문제라 되돌려도 안 고쳐진다. 시끄럽게 실패해야 한다. 세션 쿠키가 정확한
   origin + credentials 허용에 의존하므로(PRD F-1), 이게 "로그인이 조용히 안 되는" 사고를
   잡는 검사다.
-- **CORS 검증이 두 개인 것도 의도다.** API 쪽은 스택 `.env`의 `CORS_ORIGIN`, 버킷 쪽은
+- **API와 버킷의 CORS를 따로 검증한다.** API 쪽은 스택 `.env`의 `CORS_ORIGIN`, 버킷 쪽은
   R2 버킷의 CORS 규칙 — 서로 다른 곳에 있고 각각 다른 기능을 조용히 죽인다. 버킷에 `GET`
   허용이 없으면 업로드도 되고 사진도 화면에 보이는데 **사진 복사만** 실패한다(§5). 버킷
   검사는 presigned URL이 실제로 서명되는 호스트(`R2_PUBLIC_ENDPOINT`가 있으면 그것,
-  없으면 `R2_ENDPOINT`)를 때린다 — 브라우저가 가는 곳이 거기라서다.
+  없으면 `R2_ENDPOINT`)를 때린다 — 브라우저가 가는 곳이 거기라서다. 버킷 preflight는
+  GET/PUT과 요청 헤더 허용을 확인하고, 별도의 실제 ranged GET은 `Content-Range` 노출까지 확인한다.
 - 수동 재배포: Actions 탭 → Deploy backend → **Run workflow**.
 
 `DEPLOY_ENABLED` variable이 없으면 **Compose 검증 + 이미지 빌드까지만** 하고 push·rollout을
@@ -261,6 +262,17 @@ GitHub 실행기 대기, 비어 있는 캐시에서의 최초 도구 컴파일, 
    빠진 버킷은 배포가 실패한다(§2).
    클립 원본 업로드는 `Content-Type`과 `If-None-Match: *`를 서명해 확인된 원본의
    덮어쓰기를 막는다. `allowed.headers`의 `if-none-match`도 함께 적용해야 한다.
+   브라우저의 클립 원본 읽기에는 `range` 요청 헤더 허용과 `content-range` 응답 헤더 노출이
+   모두 필요하다. `expose.headers`에 `content-range`가 없으면 GET이 206이어도 브라우저는
+   범위를 확인할 수 없다. OPTIONS preflight만으로는 응답 헤더 노출을 검증할 수 없다.
+   배포는 health gate 뒤 실행 중인 API 컨테이너에서 다음 명령을 실행한다:
+   ```bash
+   docker compose -f docker-compose.prod.yml exec -T api /api check-storage-cors 'https://postpilot.<domain>'
+   ```
+   명령은 `cors-probe/` 아래 2바이트 객체를 쓰고, 브라우저용 endpoint에 서명한
+   `Range: bytes=0-0` GET의 206·origin 허용·`Content-Range` 노출·정확한 범위와 길이를 확인한 뒤
+   객체를 삭제한다. 실패하면 `deploy/r2-cors.json`을 지목하며 배포를 실패시키고,
+   정리 중 삭제 실패는 경고로 남긴다. 이 검사는 버킷 정책을 변경하지 않는다.
    저장소 정책은 자동 변경하지 않으므로 클립 기능을 배포하기 전에 갱신된 파일을 적용한다.
    > `wrangler r2 bucket cors set --file`이 받는 JSON은 대시보드가 쓰는
    > `[{"AllowedOrigins": …}]` 배열이 아니라 `{"rules":[{"allowed":{…}}]}` 형태다.
