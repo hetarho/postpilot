@@ -68,10 +68,10 @@ export function AboutPage() {
         </section>
 
         <Section id="about-flow" title={t('flow.title')}>
-          {/* A real ordered list: the four steps happen in this order, and that is semantic
+          {/* A real ordered list: the steps happen in this order, and that is semantic
               information a screen reader has to get from the markup, not from the numerals. */}
           <ol className="mt-4 space-y-5">
-            {(['step1', 'step2', 'step3', 'step4'] as const).map((step, index) => (
+            {(['step1', 'step2', 'step3', 'step4', 'step5'] as const).map((step, index) => (
               <li key={step} className="flex gap-3">
                 {/* Decorative: the ordinal is already in the list semantics, so it is hidden
                     rather than read out twice. */}
@@ -123,8 +123,8 @@ export function AboutPage() {
             {t('outputs.body')}
           </Typography>
           <ul className="text-content-primary mt-4 flex flex-wrap gap-2">
-            {/* Only what ships (MKT-4): the Naver Blog output today. */}
-            {(['naver'] as const).map((format) => (
+            {/* Only shipped channel outputs (MKT-4). */}
+            {(['naver', 'naverClip', 'instaClip'] as const).map((format) => (
               <Typography
                 variant="label"
                 as="li"

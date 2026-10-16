@@ -29,8 +29,8 @@ describe('/about document metadata', () => {
     await screen.findByRole('heading', { level: 1 })
 
     const url = `${window.location.origin}/about`
-    expect(document.title).toBe('Postpilot이란? | 사진과 메모로 블로그 글 초안 만들기')
-    expect(content('meta[name="description"]')).toMatch(/사진과 거친 메모를/)
+    expect(document.title).toBe('Postpilot이란? | 내가 겪은 그대로 쓰는 체험단 글')
+    expect(content('meta[name="description"]')).toMatch(/체험단 방문의 사진·영상·메모를/)
     expect(content('meta[property="og:type"]')).toBe('website')
     expect(content('meta[property="og:title"]')).toBe(document.title)
     expect(content('meta[property="og:description"]')).toBe(content('meta[name="description"]'))
@@ -53,7 +53,9 @@ describe('/about document metadata', () => {
     await waitFor(() => expect(document.title).toMatch(/^What is Postpilot\?/))
     expect(content('meta[property="og:title"]')).toBe(document.title)
     expect(content('meta[property="og:locale"]')).toBe('en_US')
-    expect(content('meta[name="description"]')).toMatch(/Turn photos and rough notes/)
+    expect(content('meta[name="description"]')).toMatch(
+      /Turn photos, videos and notes from a sponsored visit/,
+    )
     expect(href('link[rel="canonical"]')).toBe(`${window.location.origin}/about`)
     expect(router.state.location.pathname).toBe('/about')
   })
@@ -86,7 +88,7 @@ describe('/about document metadata', () => {
     document.head.innerHTML = '<meta name="description" content="Existing app description">'
     const { router } = renderAppAt('/about')
     await screen.findByRole('heading', { level: 1 })
-    expect(content('meta[name="description"]')).toMatch(/사진과 거친 메모를/)
+    expect(content('meta[name="description"]')).toMatch(/체험단 방문의 사진·영상·메모를/)
 
     await router.navigate({ to: '/login' })
     await waitFor(() => expect(router.state.location.pathname).toBe('/login'))
@@ -104,7 +106,7 @@ describe('/about document metadata', () => {
 
     await router.navigate({ to: '/about' })
     await screen.findByRole('heading', { level: 1 })
-    expect(document.title).toBe('Postpilot이란? | 사진과 메모로 블로그 글 초안 만들기')
+    expect(document.title).toBe('Postpilot이란? | 내가 겪은 그대로 쓰는 체험단 글')
 
     await router.navigate({ to: '/login' })
     await waitFor(() => expect(router.state.location.pathname).toBe('/login'))

@@ -2,9 +2,9 @@
  *  topology, same interpolation, same meaning as `ko/marketing.ts`, which carries the claim rules. */
 export const marketing = {
   metadata: {
-    title: 'What is Postpilot? | Blog drafts from photos and rough notes',
+    title: 'What is Postpilot? | Sponsored reviews from your own experience',
     description:
-      'Turn photos and rough notes into a blog draft in your chosen voice. AI helps with phrasing and structure; you review meaning based on your input, inferred from photos or added by AI, edit it, and publish manually.',
+      'Turn photos, videos and notes from a sponsored visit into a Naver Blog post or clip in your voice. Principles guide writing from your own material; review origins and the advertiser guide, edit, and publish yourself.',
   },
   about: {
     link: 'What is Postpilot?',
@@ -15,9 +15,10 @@ export const marketing = {
     login: 'Log in',
   },
   hero: {
-    positioning: 'AI helps you move faster. You stay in control of your writing.',
-    title: 'Photos and rough notes into a blog draft in your own voice',
-    body: 'Turn your photos and a few lines of notes into a blog draft in your own voice. AI helps with phrasing and structure; you inspect where a phrase’s meaning came from, make your own edits, and publish it yourself.',
+    positioning: 'Your own experience. Sponsored review posts, written faster.',
+    title:
+      'Photos and notes from your sponsored visit, ready for Naver Blog or a clip in your voice',
+    body: 'Prepare a post or clip for publication from your visit’s photos, videos and notes. AI helps with phrasing and structure under principles that always apply and call for writing only from your own material. Review sentence origins and the advertiser guide, make your edits, and publish yourself.',
     access:
       'An email address and password open an account, and you verify the address by mail before your first login. Google sign-in is also available.',
     haveAccount: 'Already have an account?',
@@ -25,45 +26,51 @@ export const marketing = {
   flow: {
     title: 'How it works',
     step1: {
-      title: 'Pick a voice, a template, and the output language',
-      body: 'For each post you choose which voice writes it, which template shapes it (or none), and whether it comes out in Korean or English.',
+      title: 'Choose a channel, a template and a voice',
+      body: 'Choose Naver Blog, Naver Clip or Instagram Clip, then use a template and voice to shape your account of the visit.',
     },
     step2: {
-      title: 'Add photos and rough notes',
-      body: 'Photos are converted in your browser before they are uploaded. The notes do not have to be sentences.',
+      title: 'Add photos, videos, notes and the advertiser guide',
+      body: 'Add the photos or videos you took and notes on what happened and how it felt. Include the advertiser guide for a sponsored review.',
     },
     step3: {
-      title: 'Observe the photos first, then write',
-      body: 'AI helps with phrasing and structure using the photo observations. You pick the model for observation and for writing separately.',
+      title: 'Observe the material first, then write under principles',
+      body: 'Photos and videos are observed before writing. Principles that always apply guide the writer against inventing experiences absent from your material.',
     },
     step4: {
-      title: 'Review origins, edit, and publish yourself',
-      body: 'Review whether a phrase’s meaning is based on your input, inferred from photos or added by AI. Edit the sentences yourself or request an AI revision, then copy the finalized post in your platform’s format and publish manually on the destination service.',
+      title: 'Review origins, revise and check the guide',
+      body: 'Review whether meaning is based on your input, inferred from photos, requested by the advertiser or added by AI. Edit the sentences yourself or request an AI revision, then review the advertiser guide checklist.',
+    },
+    step5: {
+      title: 'Copy or export, then publish yourself',
+      body: 'Copy the finalized post in Naver Blog format. For a clip, prepare the video and upload text, then publish manually on each service.',
     },
   },
   different: {
     title: 'What is different',
     voices: {
-      title: 'Voices never bleed into each other',
-      body: 'Each voice profile is learned on its own. Material collected for one voice does not turn up in another voice’s sentences.',
+      title: 'Your own voice and headings',
+      body: 'Your chosen voice and headings shape the account from your own material. Learning material is also kept separate for each voice.',
     },
     observation: {
-      title: 'Observation is separate from writing',
-      body: 'Photo observation and writing are separate steps. In the draft, you can inspect each phrase’s links to your input or photo observations and the meaning added by AI.',
+      title: 'Principles always apply',
+      body: 'The principles to write from your material without inventing experiences cannot be switched off. Observation and writing are separate steps.',
     },
     blocks: {
-      title: 'The post is stored as structured blocks',
-      body: 'Prose, headings, images, quotes and lists are stored as one canonical structure, and every platform format is derived from it.',
+      title: 'Help readers decide and support the store',
+      body: 'Keep the drawbacks you noted in polite words. We aim for an honest account that helps readers decide and supports the store, without adding praise you never gave.',
     },
     control: {
-      title: 'You choose the models and the runs',
-      body: 'You pick which model runs each step and decide when to compare drafts or request an AI revision.',
+      title: 'Review the origin of each sentence',
+      body: 'Distinguish meaning based on your input, inferred from photos, requested by the advertiser or added by AI. You decide which wording to keep or revise.',
     },
   },
   outputs: {
     title: 'Where the result goes',
-    body: 'One finalized post produces the output below. Origin labels and technical details stay out of the copied writing. You manually publish the copied result on the destination service.',
-    naver: 'Naver Blog',
+    body: 'Prepare a Naver Blog post, or Naver Clip and Instagram Clip videos with upload text. Origin labels and technical details stay out of the copied writing. Copy the post or export the video, then publish manually on each service.',
+    naver: 'Naver Blog post',
+    naverClip: 'Naver Clip video and upload text',
+    instaClip: 'Instagram Clip video and upload text',
   },
   plans: {
     title: 'Plans',
@@ -81,6 +88,6 @@ export const marketing = {
     credentials: 'Copying and exporting require no credentials for a destination service.',
   },
   footer: {
-    tagline: 'From photos and notes to a blog draft',
+    tagline: 'From your own experience to sponsored review posts and clips',
   },
 } as const

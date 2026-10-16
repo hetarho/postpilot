@@ -265,7 +265,7 @@ describe('the public About route', () => {
     expect(
       await screen.findByRole('heading', {
         level: 1,
-        name: '사진과 메모를 내 말투의 블로그 초안으로',
+        name: '체험단 사진과 메모를 내 말투의 네이버 블로그 글이나 클립으로',
       }),
     ).toBeInTheDocument()
     expect(router.state.location.pathname).toBe('/about')
@@ -351,7 +351,7 @@ describe('About consumes the shared locale and theme runtimes', () => {
     const { router } = renderAppAt('/about', { calls })
     await screen.findByRole('heading', {
       level: 1,
-      name: '사진과 메모를 내 말투의 블로그 초안으로',
+      name: '체험단 사진과 메모를 내 말투의 네이버 블로그 글이나 클립으로',
     })
 
     await user.click(screen.getByRole('button', { name: '언어' }))
@@ -360,7 +360,7 @@ describe('About consumes the shared locale and theme runtimes', () => {
     expect(
       await screen.findByRole('heading', {
         level: 1,
-        name: 'Photos and rough notes into a blog draft in your own voice',
+        name: 'Photos and notes from your sponsored visit, ready for Naver Blog or a clip in your voice',
       }),
     ).toBeInTheDocument()
     expect(screen.getByRole('heading', { level: 2, name: 'Plans' })).toBeInTheDocument()
@@ -405,7 +405,7 @@ describe('lazily loaded routes', () => {
     ['/voices', '말투'],
     ['/templates', '템플릿'],
     ['/guidelines', '지침'],
-    ['/about', '사진과 메모를 내 말투의 블로그 초안으로'],
+    ['/about', '체험단 사진과 메모를 내 말투의 네이버 블로그 글이나 클립으로'],
     ['/ai-models', '모델 변경'],
   ])('renders %s on a direct load', async (path, heading) => {
     const { router } = renderAppAt(path, { user: { id: 'alice' } })
@@ -699,7 +699,7 @@ describe('localized registered-route smoke', () => {
       voices: '말투',
       templates: '템플릿',
       guidelines: '지침',
-      about: '사진과 메모를 내 말투의 블로그 초안으로',
+      about: '체험단 사진과 메모를 내 말투의 네이버 블로그 글이나 클립으로',
       analysis: '말투 분석',
       materials: '학습 데이터',
       models: '모델 변경',
@@ -712,7 +712,8 @@ describe('localized registered-route smoke', () => {
       voices: 'Voices',
       templates: 'Templates',
       guidelines: 'Guidelines',
-      about: 'Photos and rough notes into a blog draft in your own voice',
+      about:
+        'Photos and notes from your sponsored visit, ready for Naver Blog or a clip in your voice',
       analysis: 'Voice analysis',
       materials: 'Training data',
       models: 'Change models',

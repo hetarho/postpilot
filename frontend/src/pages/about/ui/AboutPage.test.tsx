@@ -84,47 +84,65 @@ describe('public offer mirror', () => {
 })
 
 describe.each(['ko', 'en'] as const)('About page in %s', (locale) => {
-  it('presents AI assistance, phrase-origin review, owner edits and manual publication', async () => {
+  it('tells the 체험단 story with only shipped outputs', async () => {
     initializeI18n(locale)
     renderAppAt('/about')
     await screen.findByRole('heading', { level: 1 })
-
     expect(
       screen.getByText(
         locale === 'ko'
-          ? 'AI는 속도를, 글의 주도권은 나에게'
-          : 'AI helps you move faster. You stay in control of your writing.',
+          ? '내가 겪은 그대로, 체험단 글을 빠르게'
+          : 'Your own experience. Sponsored review posts, written faster.',
       ),
     ).toBeVisible()
     const hero = screen.getByRole('region', {
       name:
         locale === 'ko'
-          ? '사진과 메모를 내 말투의 블로그 초안으로'
-          : 'Photos and rough notes into a blog draft in your own voice',
+          ? '체험단 사진과 메모를 내 말투의 네이버 블로그 글이나 클립으로'
+          : 'Photos and notes from your sponsored visit, ready for Naver Blog or a clip in your voice',
     })
     expect(hero).toHaveTextContent(
-      locale === 'ko' ? 'AI는 표현과 구성을 돕고' : 'AI helps with phrasing and structure',
+      locale === 'ko' ? '내가 겪은 재료로만' : 'only from your own material',
     )
-
-    const flow = within(
-      screen.getByRole('region', { name: locale === 'ko' ? '어떻게 쓰나요' : 'How it works' }),
+    expect(hero).toHaveTextContent(locale === 'ko' ? '주소를 인증' : 'verify the address')
+    const steps = within(
+      screen.getByRole('region', {
+        name: locale === 'ko' ? '어떻게 쓰나요' : 'How it works',
+      }),
+    ).getAllByRole('listitem')
+    expect(steps).toHaveLength(5)
+    expect(steps[0]).toHaveTextContent(
+      locale === 'ko' ? '채널·템플릿·말투' : 'channel, a template and a voice',
     )
-    const reviewAndPublish = flow.getAllByRole('listitem')[3]!
+    expect(steps[1]).toHaveTextContent(locale === 'ko' ? '광고주 지침' : 'advertiser guide')
+    expect(steps[2]).toHaveTextContent(
+      locale === 'ko' ? '항상 적용되는 원칙' : 'Principles that always apply',
+    )
     for (const origin of locale === 'ko'
-      ? ['직접 입력 기반', '사진에서 추론', 'AI가 보탠 내용']
-      : ['based on your input', 'inferred from photos', 'added by AI']) {
-      expect(reviewAndPublish).toHaveTextContent(origin)
+      ? ['직접 입력 기반', '사진에서 추론', '광고주 요청', 'AI가 보탠 내용']
+      : [
+          'based on your input',
+          'inferred from photos',
+          'requested by the advertiser',
+          'added by AI',
+        ]) {
+      expect(steps[3]).toHaveTextContent(origin)
     }
-    expect(reviewAndPublish).toHaveTextContent(
-      locale === 'ko'
-        ? '필요한 문장을 직접 고치거나 AI 수정을 요청하고'
-        : 'Edit the sentences yourself',
+    expect(steps[3]).toHaveTextContent(
+      locale === 'ko' ? 'AI 수정을 요청' : 'request an AI revision',
     )
-    expect(reviewAndPublish).toHaveTextContent(
-      locale === 'ko'
-        ? '플랫폼 형식으로 복사해 목적지 서비스에 직접 게시합니다'
-        : 'copy the finalized post in your platform’s format and publish manually',
+    expect(steps[3]).toHaveTextContent(locale === 'ko' ? '체크리스트' : 'checklist')
+    expect(steps[4]).toHaveTextContent(locale === 'ko' ? '직접 게시' : 'publish manually')
+    const difference = screen.getByRole('region', {
+      name: locale === 'ko' ? '다른 점' : 'What is different',
+    })
+    expect(difference).toHaveTextContent(
+      locale === 'ko' ? '끌 수 없습니다' : 'cannot be switched off',
     )
+    expect(difference).toHaveTextContent(
+      locale === 'ko' ? '내가 적은 아쉬운 점' : 'drawbacks you noted',
+    )
+    expect(difference).toHaveTextContent(locale === 'ko' ? '상생' : 'supports the store')
     const outputs = screen.getByRole('region', {
       name: locale === 'ko' ? '결과물은 어디로 가나요' : 'Where the result goes',
     })
@@ -133,15 +151,28 @@ describe.each(['ko', 'en'] as const)('About page in %s', (locale) => {
         ? '출처 표시와 기술 정보는 복사한 글에 섞이지 않습니다'
         : 'Origin labels and technical details stay out of the copied writing',
     )
-    // MKT-4: only the shipped output is named — the Naver Blog one, no retired format.
     expect(
       within(outputs)
         .getAllByRole('listitem')
         .map((item) => item.textContent),
-    ).toEqual([locale === 'ko' ? '네이버 블로그용' : 'Naver Blog'])
+    ).toEqual(
+      locale === 'ko'
+        ? ['네이버 블로그 글', '네이버 클립 영상·업로드 문구', '인스타 클립 영상·업로드 문구']
+        : [
+            'Naver Blog post',
+            'Naver Clip video and upload text',
+            'Instagram Clip video and upload text',
+          ],
+    )
     expect(outputs).not.toHaveTextContent(/티스토리|Tistory|마크다운|Markdown|HTML/)
+  })
+
+  it('makes no income or exposure claim', async () => {
+    initializeI18n(locale)
+    renderAppAt('/about')
+    await screen.findByRole('heading', { level: 1 })
     expect(screen.getByRole('main')).not.toHaveTextContent(
-      /\d+\s*(?:배 더 빠르|times faster|x faster)|사실 보장|정확도 보장|AI 없는 글|검색 순위 향상|자동 (?:발행|게시)|guaranteed truth|AI-free writing|search-rank gain|automatically publish/i,
+      /수익|수입|선정|노출|검색 순위|광고주 승인|income|earnings|selection|exposure|search.rank|advertiser approval|\d+\s*(?:배 더 빠르|times faster|x faster)|사실 보장|정확도 보장|AI 없는 글|자동 (?:발행|게시)|guaranteed truth|AI-free writing|automatically publish/i,
     )
   })
 
@@ -177,7 +208,7 @@ describe.each(['ko', 'en'] as const)('About page in %s', (locale) => {
     const flow = within(
       screen.getByRole('region', { name: locale === 'ko' ? '어떻게 쓰나요' : 'How it works' }),
     )
-    expect(flow.getAllByRole('listitem')).toHaveLength(4)
+    expect(flow.getAllByRole('listitem')).toHaveLength(5)
     expect(flow.getAllByRole('listitem')[0].closest('ol')).not.toBeNull()
     expect(
       screen.getByRole('link', { name: locale === 'ko' ? '시작하기' : 'Get started' }),
