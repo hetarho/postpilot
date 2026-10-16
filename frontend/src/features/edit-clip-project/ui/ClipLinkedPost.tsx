@@ -76,7 +76,7 @@ export function ClipLinkedPost({
               setOpen(true)
             }}
           >
-            <span className="min-w-0 break-words">{label}</span>
+            <span className="line-clamp-2 min-w-0 break-words">{label}</span>
             <ChevronRight aria-hidden="true" className="size-4 shrink-0" />
           </Button>
           <Sheet

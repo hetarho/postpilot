@@ -46,11 +46,11 @@ export function ClipTopRow({
         className={typographyStyles({
           variant: 'label',
           className:
-            'text-link-fg hover:text-link-fg-hover inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center gap-1 sm:justify-start',
+            'text-link-fg hover:text-link-fg-hover inline-flex min-h-11 max-w-full min-w-11 shrink items-center justify-center gap-1 sm:justify-start',
         })}
       >
-        <ArrowLeft aria-hidden="true" className="size-5" />
-        <span className="underline">{returnTo.label}</span>
+        <ArrowLeft aria-hidden="true" className="size-5 shrink-0" />
+        <span className="min-w-0 break-words underline">{returnTo.label}</span>
       </a>
       {steps}
       {actions && <div className="ml-auto flex shrink-0 items-center gap-2">{actions}</div>}

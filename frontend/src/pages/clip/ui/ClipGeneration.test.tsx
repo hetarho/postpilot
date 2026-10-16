@@ -1030,7 +1030,9 @@ it('opens a separate approval for 스토리라인 먼저 and starts the storylin
   mount({ storylineStarts, generationStarts })
   await goToStep('생성')
   await selectSource()
-  const dock = (await screen.findByRole('button', { name: '바로 만들기' })).closest('div.grid')!
+  const dock = (await screen.findByRole('button', { name: '바로 만들기' })).closest(
+    '[data-action-bar]',
+  )!
   expect(
     within(dock as HTMLElement)
       .getAllByRole('button')

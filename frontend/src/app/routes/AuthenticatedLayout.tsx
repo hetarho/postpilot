@@ -303,25 +303,26 @@ export function AuthenticatedLayout() {
         >
           <div
             className={clsx(
-              'h-header mx-auto w-full max-w-7xl items-center gap-2 px-4 sm:px-6 lg:px-8',
-              setup ? 'flex' : 'grid grid-cols-3 lg:flex',
+              'min-h-header lg:h-header mx-auto flex w-full max-w-7xl flex-wrap items-center gap-2 px-4 sm:px-6 lg:flex-nowrap lg:px-8',
             )}
           >
             <Link
               to="/"
               aria-label={t('home')}
-              className="inline-flex min-h-11 min-w-0 shrink items-center"
+              className="inline-flex min-h-11 min-w-11 shrink-0 items-center"
             >
               <Logo className="h-6 max-w-full" />
             </Link>
             {!wide && !setup && (
-              <Breadcrumb
-                key={`${ownerId}:${location.href}`}
-                ariaLabel={t('locationLabel')}
-                compact
-              />
+              <div className="min-w-0 flex-1">
+                <Breadcrumb
+                  key={`${ownerId}:${location.href}`}
+                  ariaLabel={t('locationLabel')}
+                  compact
+                />
+              </div>
             )}
-            <div className="ml-auto flex min-w-0 items-center gap-0 lg:gap-2">
+            <div className="ml-auto flex shrink-0 items-center gap-0 lg:gap-2">
               {!quiet && wide && <CreditBadge />}
               {!wide && (
                 <Popover

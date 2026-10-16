@@ -29,23 +29,25 @@ export interface ClipGenerationContext {
   onApprove(mode: ClipQuoteMode, quote: ClipQuote): void
 }
 
-/** ①'s two actions (CLIP-177, CLIP-40): 스토리라인 먼저 and 바로 만들기, one row split 3 : 7 on a
- *  phone as the post dock is — the careful path left, the committing one right. Each opens its own
+/** ①'s two actions (CLIP-177, CLIP-40): 스토리라인 먼저 and 바로 만들기, a wrapping row with the careful
+ *  path left and the committing one right; enlarged text can give each a full row. Each opens its own
  *  quote and approval from itself (a popover, a sheet on a phone), so the ceiling the owner
  *  approves is the one for the work that button starts. The quote is read only while it is open. */
 export function ClipGenerationActions(context: ClipGenerationContext) {
   const { t } = useTranslation('clips')
   return (
-    <div className="grid w-full grid-cols-[3fr_7fr] gap-3 sm:flex sm:w-auto sm:flex-wrap sm:items-center sm:justify-end">
+    <div className="flex w-full flex-wrap gap-3 sm:w-auto sm:items-center sm:justify-end">
       <ClipQuotedPopover
         {...context}
         mode="storyline"
+        className="min-w-0 grow-[3] basis-28 sm:grow-0 sm:basis-auto"
         label={t('generation.storylineFirst')}
         variant="secondary"
       />
       <ClipQuotedPopover
         {...context}
         mode="generate"
+        className="min-w-0 grow-[7] basis-28 sm:grow-0 sm:basis-auto"
         label={t('generation.makeNow')}
         variant="cta"
       />
@@ -113,6 +115,7 @@ export function ClipStorylineBuildActions(
 
 /** One generation action: its trigger, and the quote and approval it opens from itself. */
 function ClipQuotedPopover({
+  className,
   mode,
   label,
   variant,
@@ -121,12 +124,14 @@ function ClipQuotedPopover({
   mode: ClipQuoteMode
   label: string
   variant: 'secondary' | 'cta'
+  className?: string
 }) {
   const { ownerId, project, batch, observe, write, observeStatus, ready, pending, onApprove } =
     context
   const live = ready && !!batch && !!observe && !!write
   return (
     <Popover
+      className={className}
       label={label}
       triggerLabel={label}
       triggerVariant={variant}

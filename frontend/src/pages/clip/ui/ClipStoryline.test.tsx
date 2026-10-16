@@ -799,9 +799,17 @@ async function renderOnServer() {
 // the edits that were not saved stay where the owner left them.
 it('launches no render past a slot save that fails, keeping both edits', async () => {
   const calls: string[] = []
+  let release!: () => void
+  const held = new Promise<void>((resolve) => {
+    release = resolve
+  })
   await mount(
     rendered(),
-    { calls, projectSaveError: connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable) },
+    {
+      calls,
+      regionSaveGate: () => held,
+      projectSaveError: connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable),
+    },
     {},
     'tab',
   )
@@ -811,6 +819,8 @@ it('launches no render past a slot save that fails, keeping both edits', async (
   await userEvent.click(block('아웃트로').getByRole('switch', { name: '아웃트로 사용' }))
   await editCaption('렌더 직전 수정')
   await renderOnServer()
+  // Fail the held save only after the render has tried to flush it, independent of debounce timing.
+  await act(async () => release())
   await waitFor(() => expect(calls).toContain('UpdateClipProject'), AUTOSAVE)
   await new Promise((resolve) => setTimeout(resolve, 300))
   expect(calls).not.toContain('StartClipRender')
