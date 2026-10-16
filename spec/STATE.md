@@ -128,9 +128,10 @@
 
 ## next
 - No unblocked implementation todo remains. Owner may check the linked-post clip workflow and adopt the review-code suggestions; local commits remain unpushed.
-- T697 local implementation is committed; pre-push/media gates and production range/clip qualification remain blocked by this session’s no-push scope. Existing qualification blocks are unchanged.
+- T697 manual bucket CORS setup is owner-confirmed complete; only pre-push/media gates and the new production gate/clip source-read verification remain under the no-push restriction. Existing qualification blocks are unchanged.
 
 ## log
+- 261016 T697 owner reconfirms the manual bucket CORS change is complete; reconcile remaining delivery verification without changing code or pushing.
 - 261016 q8s4 ends after T701: T694/T695/T698–T701 done and T697 locally implemented/parked; all changes committed locally, no push; weekly usage20%, stop threshold80%.
 - 261016 T701 done locally at0a1319d2: frozen photo/time/sequence placement hints and unused-source names;457 backend/21 store/248 frontend tests and8 browser cases pass.
 - 261016 T701 starts at737c8bc4 (q8s4): canonical photo metadata, frozen nearest-section candidates, linked section priority and unused-source names;19% weekly usage is below80%.
@@ -150,4 +151,3 @@
 - 261016 q8s4 autopilot starts T694 onward; local commits only, no push/checkpoint; stop at 85% weekly Codex usage (currently 9%).
 - 261016 m7q2 ends after T693 as requested; push main and leave T694–T695/T697–T701 for the next session.
 - 261016 T693 done
-- 261016 T693 final sourcec171c69b/codec5946df7 passes whole FE555/4403, full Go and all Linux/amd64 deployment/media gates; combined memory bounds794701824/795013120 bytes under unchanged limits.
