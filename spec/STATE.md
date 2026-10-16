@@ -11,7 +11,7 @@
 ## active
 | tag | host | mode | since | at | doing |
 |---|---|---|---|---|---|
-| q8s4 | DESKTOP-VKPLS8P | autopilot | 2026-10-16T03:18Z | 2026-10-16T05:35Z | T698 |
+| q8s4 | DESKTOP-VKPLS8P | autopilot | 2026-10-16T03:18Z | 2026-10-16T05:41Z | - |
 
 ## inbox
 - 261016 decided T698: how is T692’s existing creation seed linked atomically? → optional linked_post_slug on CreateClipProject as well as Update; the owned canonical post is validated before insertion (alt: create, then a second seed/link update that can leave a partial project). Picker actions save only the link through the write lane.
@@ -127,16 +127,16 @@
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
-| T698 | Link one finished post to a clip from either side | CLIP POST | T689 T690 T692 T694 | doing@261016.q8s4 |
 | T699 | Send the linked post's text to every clip writing call | CLIP GUIDE QUOTA | T698 T691 | todo |
 | T700 | Record when post photos, post videos and clip sources were shot | CLIP | T692 | todo |
 | T701 | Build the storyline in the linked post's order and place videos by capture order | CLIP GUIDE | T699 T700 | todo |
 
 ## next
-- Continue T698 → T699 → T700 → T701 with local commits only.
+- Continue T699 → T700 → T701 with local commits only.
 - T697 local implementation is committed; pre-push/media gates and production range/clip qualification remain blocked by this session’s no-push scope. Existing qualification blocks are unchanged.
 
 ## log
+- 261016 T698 done locally at442e4c2f: owned post link,495 selected frontend tests, backend integration and12 picker/60 shell browser cases pass.
 - 261016 q8s4 weekly stop threshold85%→80% by owner instruction; continue local commits only.
 - 261016 T698 starts at42b2789a (q8s4): owned canonical-post link, identity fence and picker; CLIP r62–r63 source-colour delta is unrelated.
 - 261016 T697 locally implemented atbecb358f and parked for production qualification; SDK/app/RPC,50 store integration tests, CLI and workflow gates pass.
@@ -156,4 +156,3 @@
 - 261016 T706 Deploy38817240700 succeeds; Media38817743339 is running for ec9130ef.
 - 261016 T693 resumes after T706; original VOICE17/THEME34 bases and acceptance remain unchanged. Restore the exact preserved31-path delta after this claim push.
 - 261016 T706 pushedec9130ef; CI38817240542 and Deploy38817240700 are queued for that revision.
-- 261016 T706 done
