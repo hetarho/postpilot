@@ -27,8 +27,9 @@ var ErrBusy = errors.New("clip busy")
 // Versions 11/12 freeze advertiser material; accepted earlier jobs carry none.
 // Versions 13/14 also freeze linked canonical post text; earlier accepted jobs retain none.
 // Versions 15/16 also retain original capture metadata on source leases.
-const GenerationPayloadVersion = 15
-const BrowserAnalysisGenerationPayloadVersion = 16
+// Versions 17/18 freeze linked photo metadata and per-source section candidates.
+const GenerationPayloadVersion = 17
+const BrowserAnalysisGenerationPayloadVersion = 18
 
 type GenerationPayload struct {
 	LinkedPost      *LinkedPostText  `json:",omitempty"`

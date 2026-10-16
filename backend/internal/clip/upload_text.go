@@ -98,7 +98,8 @@ type UploadTextQuote struct {
 }
 
 // Version 2 freezes linked post text; an accepted version-1 call keeps none.
-const UploadTextSnapshotVersion = 2
+// Version 3 retains the linked canonical photo metadata beside its text.
+const UploadTextSnapshotVersion = 3
 
 func SupportedUploadTextSnapshot(version int) bool {
 	return version >= 1 && version <= UploadTextSnapshotVersion

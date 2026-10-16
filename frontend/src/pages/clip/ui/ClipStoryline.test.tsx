@@ -5,7 +5,8 @@ import userEvent from '@testing-library/user-event'
 import { hashKey } from '@tanstack/react-query'
 import { initializeI18n } from '@/app/providers/i18n'
 import { Code } from '@connectrpc/connect'
-import { Stage } from '@/shared/api'
+import { Stage, ClipSourceBatchSchema } from '@/shared/api'
+import { create } from '@bufbuild/protobuf'
 import { clipRegionRows } from '@/entities/clip-plan'
 import { myPlanQueryKey } from '@/entities/plan'
 import { discardClipDraftQueues } from '@/features/edit-clip-project'
@@ -878,3 +879,45 @@ it('never confirms an earlier render for a plan a slot edit moved', async () => 
 })
 
 vi.mock('@/entities/clip-preview/ui/useLocalSamples', () => localSamplesForControls)
+
+it('lists unused sources by file name and hides the list when every source is used', async () => {
+  const project = storylined()
+  const unusedFile = project.observations!.sources[1].source.filename
+  await mount(project)
+  const list = await screen.findByRole('region', { name: '사용하지 않은 영상' })
+  expect(within(list).getByText(unusedFile)).toBeInTheDocument()
+  expect(
+    within(list).queryByText(project.observations!.sources[0].source.filename),
+  ).not.toBeInTheDocument()
+})
+
+it('shows no unused source list when the storyline uses every source', async () => {
+  const project = storylined()
+  project.observations!.sources[1].segments = [{ ...project.observations!.sources[0].segments[0] }]
+  project.storyline!.paragraphs[1].observationIds = ['b/0']
+  await mount(project)
+  expect(screen.queryByRole('region', { name: '사용하지 않은 영상' })).not.toBeInTheDocument()
+})
+
+it('lists a current source with no observations as unused', async () => {
+  const project = storylined()
+  const all = project.observations!.sources.map((s) => s.source)
+  project.observations!.sources = project.observations!.sources.slice(0, 1)
+  const batch = create(ClipSourceBatchSchema, {
+    id: 'retained',
+    projectId: 'clip',
+    state: 'ready',
+    current: true,
+    expiresAt: '2099-01-01T00:00:00Z',
+    sources: all.map((source) => ({
+      id: source.id,
+      state: 'ready',
+      availability: 'available',
+      retentionExpiresAt: '2099-01-01T00:00:00Z',
+      metadata: { ...source, bytes: 5n, contentType: 'video/mp4' },
+    })),
+  })
+  await mount(project, { retainedBatches: [batch] })
+  const list = await screen.findByRole('region', { name: '사용하지 않은 영상' })
+  expect(within(list).getByText(all[1].filename)).toBeInTheDocument()
+})

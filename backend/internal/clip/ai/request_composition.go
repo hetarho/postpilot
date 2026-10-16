@@ -13,7 +13,7 @@ import (
 func clipDescriptor(mode string) llm.RequestComposition {
 	c := llm.RequestComposition{Stage: "video-composition", Mode: mode, PromptVersion: "clip-" + mode + "-v2", Consumer: "private video attempt result; validated edit plan or reviewed storyline", Activation: "current admitted frozen video call policy; bounded validation correction only", SourceFiles: []string{"internal/clip/ai/service.go", "internal/clip/ai/response_correction.go", "internal/clip/ai/material_contract.go", "internal/clip/ai/video_guidelines_prompt.go", "internal/clip/ai/schemas.go"}}
 	if mode != "observe" {
-		c.PromptVersion = "clip-" + mode + "-v4"
+		c.PromptVersion = "clip-" + mode + "-v5"
 		c.SourceFiles = append(c.SourceFiles, "internal/clip/ai/advertiser_guide_prompt.go", "internal/clip/ai/linked_post_prompt.go")
 	}
 	var schema []byte
@@ -97,7 +97,7 @@ func RequestCompositions() []llm.RequestComposition {
 	cfg := DefaultConfig(clip.Environment{})
 	document := clip.NoTemplateComposition()
 	source := clip.AnalysisSource{RenderSource: clip.RenderSource{ID: "synthetic-source", Info: clip.MediaInfo{DurationMS: 15000, Width: 1080, Height: 1920}}, Filename: "synthetic.mp4"}
-	in := clip.PlanningInput{LinkedPost: &clip.LinkedPostText{Slug: "synthetic-post", Title: "Synthetic owner account", Sections: []clip.LinkedPostSection{{Heading: "Synthetic section", Text: "Synthetic owner verdict"}}}, Language: "en", Composition: &document, Ratio: "vertical", TargetDurationMS: 15000, Instruction: "Synthetic owner direction", AdvertiserGuide: &clip.AdvertiserGuide{Text: "Synthetic advertiser material", Keywords: []string{"synthetic keyword"}, Hashtags: []string{"synthetic-tag"}}, Guidelines: clip.VideoGuidelines{Stock: []clip.VideoStockRule{
+	in := clip.PlanningInput{LinkedPost: &clip.LinkedPostText{Slug: "synthetic-post", Title: "Synthetic owner account", CaptureNeighbors: map[string][]int{"synthetic-source": {0}}, Sections: []clip.LinkedPostSection{{Heading: "Synthetic section", Text: "Synthetic owner verdict", Photos: []clip.LinkedPhoto{{File: "synthetic001.jpg"}}}}}, Language: "en", Composition: &document, Ratio: "vertical", TargetDurationMS: 15000, Instruction: "Synthetic owner direction", AdvertiserGuide: &clip.AdvertiserGuide{Text: "Synthetic advertiser material", Keywords: []string{"synthetic keyword"}, Hashtags: []string{"synthetic-tag"}}, Guidelines: clip.VideoGuidelines{Stock: []clip.VideoStockRule{
 		{Key: "synthetic-video-material", Text: "Synthetic stock video rule", Applicability: []clip.VideoRuleApplicability{{Stage: "clip-write", Outputs: []string{"plan", "placements", "captions", "narration"}}, {Stage: "clip-revise", Outputs: []string{"placements", "captions", "narration"}}, {Stage: "clip-storyline", Outputs: []string{"plan", "placements"}}}},
 		{Key: "synthetic-caption-only", Text: "Synthetic caption rule", Applicability: []clip.VideoRuleApplicability{{Stage: "clip-write", Outputs: []string{"captions"}}, {Stage: "clip-revise", Outputs: []string{"captions"}}}},
 	}, Owner: []string{"Synthetic owner video rule"}}, Analyses: []clip.SourceAnalysis{{Source: source, Segments: []clip.Segment{{StartMS: 0, EndMS: 15000, Event: "Synthetic observed scene", Certainty: clip.CertaintyCertain, Usability: clip.UsabilityUsable}}}}}

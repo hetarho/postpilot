@@ -19,7 +19,8 @@ import (
 // Version 2 freezes the clip's 영상 지침; an accepted version-1 job ran with none.
 // Version 3 freezes advertiser material; earlier accepted jobs retain none.
 // Version 4 freezes the linked post text; earlier accepted jobs retain none.
-const revisionPayloadVersion = 4
+// Version 5 freezes linked photo metadata and capture-neighbor hints.
+const revisionPayloadVersion = 5
 
 type revisionJobPayload struct {
 	LinkedPost               *clip.LinkedPostText  `json:",omitempty"`
@@ -116,7 +117,7 @@ func (s *GenerationService) revisionInputs(ctx context.Context, user, id, reques
 		if err != nil {
 			return clip.Project{}, clip.SourceBatch{}, err
 		}
-		return p, b, nil
+		return withCaptureNeighbors(p, b), b, nil
 	}
 	return clip.Project{}, clip.SourceBatch{}, clip.ErrSourceState
 }

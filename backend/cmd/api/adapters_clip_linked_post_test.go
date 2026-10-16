@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/post"
@@ -41,12 +42,29 @@ func TestLinkedPostTextKeepsCanonicalSectionsAndExcludesMediaAndMetadata(t *test
 		{Type: post.BlockList, Items: []string{"one", "two"}},
 		{Type: post.BlockHeading, Content: "결론"}, {Type: post.BlockQuote, Content: "owner verdict"},
 	}}
-	got := linkedPostCanonicalText("owned", content)
+	got := linkedPostCanonicalText("owned", content, nil)
 	want := &clip.LinkedPostText{Slug: "owned", Title: "Canonical title", Sections: []clip.LinkedPostSection{{Text: "preface\nquoted preface"}, {Heading: "첫 경험", Text: "honest detail\none\ntwo"}, {Heading: "결론", Text: "owner verdict"}}}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("canonical text changed: %+v", got)
 	}
-	if linkedPostCanonicalText("owned", nil) != nil || linkedPostCanonicalText("owned", &post.PostContent{}) != nil {
+	if linkedPostCanonicalText("owned", nil, nil) != nil || linkedPostCanonicalText("owned", &post.PostContent{}, nil) != nil {
 		t.Fatal("a post without canonical content supplied material")
+	}
+}
+
+func TestLinkedPostPhotosFollowCanonicalBlockOrder(t *testing.T) {
+	at := time.Date(2026, 10, 15, 3, 34, 56, 0, time.UTC)
+	content := &post.PostContent{Title: "Visit", Blocks: []post.Block{
+		{Type: post.BlockImage, File: "before.jpg"},
+		{Type: post.BlockHeading, Content: "첫 절"},
+		{Type: post.BlockGallery, Files: []string{"31151.jpg", "31147.jpg"}, Caption: "not material"},
+		{Type: post.BlockVideo, File: "movie.mp4"},
+		{Type: post.BlockHeading, Content: "둘째 절"},
+		{Type: post.BlockImage, File: "31163.jpg"},
+	}}
+	got := linkedPostCanonicalText("owned", content, []post.Image{{Filename: "31147.jpg", CapturedAt: &at}, {Filename: "31151.jpg"}})
+	want := []clip.LinkedPostSection{{Photos: []clip.LinkedPhoto{{File: "before.jpg"}}}, {Heading: "첫 절", Photos: []clip.LinkedPhoto{{File: "31151.jpg"}, {File: "31147.jpg", CapturedAt: &at}}}, {Heading: "둘째 절", Photos: []clip.LinkedPhoto{{File: "31163.jpg"}}}}
+	if !reflect.DeepEqual(got.Sections, want) {
+		t.Fatalf("photos=%+v", got.Sections)
 	}
 }

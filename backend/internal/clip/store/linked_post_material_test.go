@@ -33,6 +33,18 @@ func attachWritingPost(t *testing.T, h *generationHarness) *linkedTextFixture {
 func TestLinkedPostGenerationApprovalAndWorkerUseTheSameFrozenText(t *testing.T) {
 	h := generationSetup(t)
 	reader := attachWritingPost(t, h)
+
+	photoClock := time.Date(2026, 10, 15, 3, 0, 0, 0, time.UTC)
+	reader.text.Sections[0].Photos = []clip.LinkedPhoto{{File: "31134.jpg", CapturedAt: &photoClock}}
+	if _, err := h.db.Writer.Exec("UPDATE clip_source_leases SET captured_at=? WHERE batch_id=?", photoClock.Add(time.Minute).Format(time.RFC3339), h.batch.ID); err != nil {
+		t.Fatal(err)
+	}
+	photoQuote := quote(t, h)
+	photoClock = photoClock.Add(time.Second)
+	if _, err := accept(h, photoQuote); !errors.Is(err, clip.ErrQuoteChanged) {
+		t.Fatal("photo edit reused approval", err)
+	}
+	assertNoQuoteWork(t, h)
 	q := quote(t, h)
 	if q.Pricing.LinkedPostDigest == "" || q.Pricing.MaxCredits != 107 {
 		t.Fatal("missing material digest or changed fixed writing price", q.Pricing)
@@ -49,11 +61,18 @@ func TestLinkedPostGenerationApprovalAndWorkerUseTheSameFrozenText(t *testing.T)
 	}
 	h.planner.id = id
 	reader.text.Sections[0].Text = "작업 시작 뒤 수정"
+	reader.text.Sections[0].Photos[0].File = "after-start.jpg"
 	if err = h.run(t); err != nil {
 		t.Fatal(err)
 	}
 	if h.planner.input.LinkedPost == nil || h.planner.input.LinkedPost.Sections[0].Text != "고친 후기" || h.planner.flows != 1 || h.planner.narrations != 1 {
 		t.Fatal("worker failed to keep approved text", h.planner.input.LinkedPost)
+	}
+
+	frozen := h.planner.input.LinkedPost
+	hints := frozen.CaptureNeighbors[h.batch.Sources[0].ID]
+	if frozen.Sections[0].Photos[0].File != "31134.jpg" || len(hints) != 1 || hints[0] != 0 {
+		t.Fatal("worker lost frozen photos/candidates", frozen)
 	}
 }
 func TestLinkedPostGenerationOversizeRefusesBeforeHold(t *testing.T) {

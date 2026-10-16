@@ -126,3 +126,32 @@ func TestUploadTextSnapshotCompatibilityKeepsApprovedAccounting(t *testing.T) {
 		}
 	}
 }
+
+func TestCaptureNeighborsFrozenWithLinkedPhotos(t *testing.T) {
+	s, store, _, _, reader := linkedUploadFixture(t)
+	at := time.Date(2026, 10, 15, 3, 0, 0, 0, time.UTC)
+	reader.texts["alice:post"].Sections[0].Photos = []clip.LinkedPhoto{{File: "31134.jpg", CapturedAt: &at}}
+	frozen, err := s.projects.freezeLinkedPost(t.Context(), "alice", store.project)
+	if err != nil {
+		t.Fatal(err)
+	}
+	frozen = withCaptureNeighbors(frozen, clip.SourceBatch{Sources: []clip.SourceLease{{ID: "video", SourceMetadata: clip.SourceMetadata{Filename: "31136.mp4"}}}})
+	before := frozen.LinkedPostText.Digest()
+	reader.texts["alice:post"].Sections[0].Photos[0].File = "edited.jpg"
+	*reader.texts["alice:post"].Sections[0].Photos[0].CapturedAt = at.Add(time.Hour)
+	if frozen.LinkedPostText.Sections[0].Photos[0].File != "31134.jpg" || !frozen.LinkedPostText.Sections[0].Photos[0].CapturedAt.Equal(time.Date(2026, 10, 15, 3, 0, 0, 0, time.UTC)) || len(frozen.LinkedPostText.CaptureNeighbors["video"]) != 1 {
+		t.Fatal("frozen photo metadata changed", frozen.LinkedPostText)
+	}
+	if frozen.LinkedPostText.Digest() != before {
+		t.Fatal("snapshot was aliased")
+	}
+	current, err := s.projects.freezeLinkedPost(t.Context(), "alice", store.project)
+	if err != nil || current.LinkedPostText.Digest() == before {
+		t.Fatal("photo edit failed to change quote material")
+	}
+	raw, _ := json.Marshal(clip.GenerationPayload{Version: clip.GenerationPayloadVersion, Language: "ko", LinkedPost: frozen.LinkedPostText})
+	var restored clip.GenerationPayload
+	if err = json.Unmarshal(raw, &restored); err != nil || restored.LinkedPost.CaptureNeighbors["video"][0] != 0 {
+		t.Fatal("accepted snapshot lost hints", err)
+	}
+}

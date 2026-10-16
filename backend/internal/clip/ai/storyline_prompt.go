@@ -69,5 +69,5 @@ func BuildStorylinePrompt(in clip.StorylineInput, limits composition.Limits) (st
 	if in.Request != "" {
 		mode = "storyline-revision"
 	}
-	return videoWritingContract(in.PlanningInput) + prompt + responseContract + contract + advertiserGuideRule(in.PlanningInput) + videoGuidelineBlock(videoGuidelinesFor(in.Guidelines, mode)), promptJSON(payload)
+	return videoWritingContract(in.PlanningInput) + prompt + emptyStageRule + linkedOrderRule(in.PlanningInput) + responseContract + contract + advertiserGuideRule(in.PlanningInput) + videoGuidelineBlock(videoGuidelinesFor(in.Guidelines, mode)), promptJSON(payload)
 }

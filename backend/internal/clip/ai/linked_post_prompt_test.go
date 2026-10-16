@@ -37,7 +37,7 @@ func TestLinkedPostReachesEveryWritingPrompt(t *testing.T) {
 		})
 	}
 }
-func TestNoLinkedPostLeavesPromptBytesUnchanged(t *testing.T) {
+func TestNoLinkedPostKeepsCurrentPromptBaseline(t *testing.T) {
 	for _, c := range linkedPromptCases(nil) {
 		t.Run(c.name, func(t *testing.T) {
 			want := legacyVideoPromptDigests[c.name]

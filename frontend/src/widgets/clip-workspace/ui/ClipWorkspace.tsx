@@ -334,6 +334,10 @@ export function ClipWorkspace({ ownerId, project }: { ownerId: string; project: 
         project={project}
         hasPlan={!!plan && editorPanel !== 'storyline'}
         readOnly={reading || generation.busy}
+        sourceFiles={upload.readyBatch?.sources.map((s) => ({
+          id: s.id,
+          filename: s.metadata.filename,
+        }))}
         localSources={reading ? [] : sources.localSources}
         resolvePlayback={reading ? undefined : sources.resolvePlayback}
         intro={regionBlock('intro')}

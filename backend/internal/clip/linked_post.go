@@ -33,13 +33,19 @@ type LinkedPostDocument struct {
 }
 
 type LinkedPostText struct {
-	Slug     string              `json:"slug"`
-	Title    string              `json:"title"`
-	Sections []LinkedPostSection `json:"sections"`
+	CaptureNeighbors map[string][]int    `json:"capture_neighbors,omitempty"`
+	Slug             string              `json:"slug"`
+	Title            string              `json:"title"`
+	Sections         []LinkedPostSection `json:"sections"`
+}
+type LinkedPhoto struct {
+	File       string     `json:"file"`
+	CapturedAt *time.Time `json:"captured_at,omitempty"`
 }
 type LinkedPostSection struct {
-	Heading string `json:"heading"`
-	Text    string `json:"text"`
+	Photos  []LinkedPhoto `json:"photos,omitempty"`
+	Heading string        `json:"heading"`
+	Text    string        `json:"text"`
 }
 
 func (p *LinkedPostText) Digest() string {

@@ -35,19 +35,41 @@ func (a clipLinkedPosts) Text(ctx context.Context, user, slug string) (clip.Link
 	if err != nil {
 		return clip.LinkedPostDocument{}, err
 	}
-	return clip.LinkedPostDocument{CreatedAt: p.CreatedAt, Text: linkedPostCanonicalText(p.Slug, p.Content)}, nil
+	return clip.LinkedPostDocument{CreatedAt: p.CreatedAt, Text: linkedPostCanonicalText(p.Slug, p.Content, p.Images)}, nil
 }
 
-func linkedPostCanonicalText(slug string, content *post.PostContent) *clip.LinkedPostText {
+func linkedPostCanonicalText(slug string, content *post.PostContent, images []post.Image) *clip.LinkedPostText {
 	if content == nil || len(content.Blocks) == 0 {
 		return nil
 	}
 	text := &clip.LinkedPostText{Slug: slug, Title: content.Title, Sections: []clip.LinkedPostSection{}}
+	byFile := map[string]post.Image{}
+	for _, image := range images {
+		byFile[image.Filename] = image
+	}
 	var current *clip.LinkedPostSection
 	for _, block := range content.Blocks {
 		if block.Type == post.BlockHeading {
 			text.Sections = append(text.Sections, clip.LinkedPostSection{Heading: block.Content})
 			current = &text.Sections[len(text.Sections)-1]
+			continue
+		}
+
+		files := []string{}
+		if block.Type == post.BlockImage && block.File != "" {
+			files = append(files, block.File)
+		}
+		if block.Type == post.BlockGallery {
+			files = append(files, block.Files...)
+		}
+		if len(files) > 0 {
+			if current == nil {
+				text.Sections = append(text.Sections, clip.LinkedPostSection{})
+				current = &text.Sections[len(text.Sections)-1]
+			}
+			for _, file := range files {
+				current.Photos = append(current.Photos, clip.LinkedPhoto{File: file, CapturedAt: byFile[file].CapturedAt})
+			}
 			continue
 		}
 		var value string

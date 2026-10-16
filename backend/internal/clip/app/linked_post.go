@@ -115,6 +115,26 @@ func (s *Service) freezeLinkedPost(ctx context.Context, user string, p clip.Proj
 	}
 	text := *doc.Text
 	text.Sections = append([]clip.LinkedPostSection{}, doc.Text.Sections...)
+
+	text.CaptureNeighbors = nil
+	for i := range text.Sections {
+		text.Sections[i].Photos = append([]clip.LinkedPhoto(nil), doc.Text.Sections[i].Photos...)
+		for j := range text.Sections[i].Photos {
+			photo := &text.Sections[i].Photos[j]
+			if photo.CapturedAt != nil {
+				at := *photo.CapturedAt
+				photo.CapturedAt = &at
+			}
+		}
+	}
 	p.LinkedPostText = &text
 	return p, nil
+}
+
+// The accepted snapshot carries candidates computed from that same batch, never a worker reread.
+func withCaptureNeighbors(p clip.Project, b clip.SourceBatch) clip.Project {
+	if p.LinkedPostText != nil {
+		p.LinkedPostText.CaptureNeighbors = clip.CaptureNeighbors(p.LinkedPostText.Sections, b.Sources)
+	}
+	return p
 }

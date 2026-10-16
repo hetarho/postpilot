@@ -58,18 +58,19 @@ func advertiserPromptCases(guide *clip.AdvertiserGuide, linked ...*clip.LinkedPo
 	return cases
 }
 
+// T701 deliberately adds the empty-stage rule to the storyline, flow and initial spoken-script modes, even without a link.
 var legacyVideoPromptDigests = map[string]string{
-	"flow":                    "179eea99e9396569101576e64d7417e187df2df01d4a6b5fcd9272581b510716",
-	"flow-following":          "0368ddaa7ad8c95042392fb70750cabd617c43544d0be6c16c078b5d6978338b",
-	"flow-measured":           "4de8a19feab557063127fc03c51dc1d09c3bc608966eef2b9010999ba8dea98c",
-	"flow-following-measured": "e73b3062572cc811d9c7b834df7dd098407d360163f213ad8e15e65f9a1ec1d6",
-	"storyline":               "43877b8ab033fbbf1e02017eefe944fa4117a244d10ae1ab724a19480b9e9407",
-	"storyline-revision":      "794c9b328003bd5d7503cf02f098b834c5c19c865599bbb4db733932fa27eb81",
+	"flow":                    "e94a255b3253d3a742818f41ffdd57644d436cf58995d08ddb3314719fb11669",
+	"flow-following":          "7f9ce2f28f518795efe170644555d5b858eeab87ac37a1010a4740899d7d9aea",
+	"flow-measured":           "16c7f9e46c1ba7f2a52315c93e9569d8d2d02011989485e511884ac4ef2a74e4",
+	"flow-following-measured": "21a46122979857cc5d96acaaf15a1ae7ece233bbe39c11375960aed1e2fe417e",
+	"storyline":               "e2297c86bd6c91b163984909a0d7c7bc6718429abdb12c8ff293aa3cd74d3034",
+	"storyline-revision":      "9a1ec9c90a8a98695535793e86c1b0450c54ce9e6e8039412d9cf7001363f07e",
 	"narration":               "3cab31acd8c80ff2ddc1fb2a2f79a37bd89ba4b653d0cac4faf175531fd996d2",
-	"flow-revision":           "942385ce148afd19879577a38073ac9d174d94c1cc485610e29107629eeb6df8",
+	"flow-revision":           "e59c0e3dc2eb2b99caef619a5f5b0e60d2962c68ad3996b382835da76b0500c3",
 	"narration-revision":      "d105c50d8443d428123c1391cf9a1e2be9454ddb8fe23e6475c7e6924fc753c5",
-	"spoken":                  "5cd80514d9cdce9a604b951c73ee858c87f78652ee26b49c205705e2871a18c1",
-	"spoken-following":        "6fbf980b8f4d5eccee8feb629e69b77e5dd63ad5c3250f5ca0536c66d5cc8f79",
+	"spoken":                  "f635304a1318c019c7cf1f4d4fdebd258c926844505ad46cda5a4b84427c117f",
+	"spoken-following":        "882d85b6c93f175f50a7f31c761ad9ecc34511c6c43980d63af31e276ff49122",
 	"spoken-revision":         "296a400239351130f85a0256270d983b016ea93517f51f0957ec858f230c618a",
 }
 

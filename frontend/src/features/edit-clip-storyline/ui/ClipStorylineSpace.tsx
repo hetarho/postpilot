@@ -25,6 +25,7 @@ export function ClipStorylineSpace({
   hasPlan,
   readOnly,
   localSources,
+  sourceFiles,
   resolvePlayback,
   aside,
   lead,
@@ -35,6 +36,7 @@ export function ClipStorylineSpace({
   project: ClipProject
   hasPlan: boolean
   readOnly: boolean
+  sourceFiles?: ReadonlyArray<{ id: string; filename: string }>
   localSources: ReadonlyArray<{ fingerprint: string; url: string }>
   resolvePlayback?: (fingerprint: string, refresh?: boolean) => Promise<string>
   aside?: ReactNode
@@ -77,6 +79,11 @@ export function ClipStorylineSpace({
   }
 
   const scenes = useMemo(() => clipScenes(project.observations), [project.observations])
+  const used = new Set(
+    draft.flatMap((p) => p.observationIds).map((id) => id.slice(0, id.lastIndexOf('/'))),
+  )
+  const files = sourceFiles ?? project.observations?.sources.map((s) => s.source) ?? []
+  const unused = storyline ? files.filter((file) => !used.has(file.id)) : []
   const takenOut = storyline ? takenOutScenes(storyline, draft) : []
   return (
     <Disclosure
@@ -140,6 +147,20 @@ export function ClipStorylineSpace({
                 </li>
               )
             })}
+          </ul>
+        </section>
+      )}
+      {unused.length > 0 && (
+        <section aria-labelledby="clip-storyline-unused" className="mt-4">
+          <Typography variant="label" as="h3" id="clip-storyline-unused">
+            {t('storylineSpace.unusedSources')}
+          </Typography>
+          <ul className="mt-2 space-y-1">
+            {unused.map((file) => (
+              <li key={file.id} className="min-w-0 wrap-anywhere">
+                <Typography variant="meta">{file.filename}</Typography>
+              </li>
+            ))}
           </ul>
         </section>
       )}

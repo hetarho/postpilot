@@ -21,7 +21,8 @@ import (
 // slot.
 // Version 3 freezes advertiser material; earlier accepted jobs retain none.
 // Version 4 freezes the linked post text; earlier accepted jobs retain none.
-const storylineRevisionPayloadVersion = 4
+// Version 5 freezes linked photo metadata and capture-neighbor hints.
+const storylineRevisionPayloadVersion = 5
 
 type storylineRevisionPayload struct {
 	LinkedPost               *clip.LinkedPostText  `json:",omitempty"`
@@ -80,7 +81,7 @@ func (s *GenerationService) storylineRevisionInputs(ctx context.Context, user, i
 	}
 	for _, b := range batches {
 		if b.State == "ready" && b.ProjectID == id && b.Current {
-			return p, b, nil
+			return withCaptureNeighbors(p, b), b, nil
 		}
 	}
 	return clip.Project{}, clip.SourceBatch{}, clip.ErrSourceState

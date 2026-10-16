@@ -137,7 +137,7 @@ func flowPromptParts(in clip.PlanningInput, fadeMS int, limits composition.Limit
 			payload["intro_outro"] = slots
 		}
 	}
-	return videoWritingContract(in) + prompt + responseContract + contract + advertiserGuideRule(in), promptJSON(payload)
+	return videoWritingContract(in) + prompt + emptyStageRule + linkedOrderRule(in) + responseContract + contract + advertiserGuideRule(in), promptJSON(payload)
 }
 
 // templateOutline is the template's form as the flow and narration calls read it:

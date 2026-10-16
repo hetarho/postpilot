@@ -49,7 +49,7 @@ func BuildSpokenScriptPrompt(in clip.PlanningInput, limits composition.Limits) (
 			contract += " Additional bounds: region_slots at most 30, each text and short_text at most 500 characters."
 		}
 	}
-	return videoWritingContract(in) + prompt + spokenScriptRule + responseContract + contract + advertiserGuideRule(in) + videoGuidelineBlock(videoGuidelinesFor(in.Guidelines, mode)), user
+	return videoWritingContract(in) + prompt + emptyStageRule + linkedOrderRule(in) + spokenScriptRule + responseContract + contract + advertiserGuideRule(in) + videoGuidelineBlock(videoGuidelinesFor(in.Guidelines, mode)), user
 }
 func parseSpokenScript(cfg Config, in clip.StorylineInput, raw string) (clip.SpokenDraft, error) {
 	var wire struct {

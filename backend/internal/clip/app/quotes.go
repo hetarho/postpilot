@@ -144,6 +144,7 @@ func (s *GenerationService) quoteInputs(ctx context.Context, user, id, batch, ob
 	if err := clip.MatchCompositionSources(c, b); err != nil {
 		return p, t, b, pricing, guidelines, err
 	}
+	p = withCaptureNeighbors(p, b)
 	count, err := clip.ConservativeObservationCount(s.cfg.Media, b)
 	if err != nil {
 		return p, t, b, pricing, guidelines, err
