@@ -234,6 +234,8 @@ type ClipProject struct {
 	AdvertiserGuide          string
 	AdvertiserKeywords       string
 	AdvertiserHashtags       string
+	LinkedPostSlug           sql.NullString
+	LinkedPostCreatedAt      sql.NullString
 }
 
 type ClipSourceAttempt struct {

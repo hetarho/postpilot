@@ -252,6 +252,7 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 	c.clipSources = clipapp.NewSourceService(c.clipStore, p.bucket, clip.DefaultSourceLimits(clipEnvironment(cfg)))
 	c.clipAnalysis = clipapp.NewAnalysisPreparations(handle.Writer, c.clipPorts, c.clipStore, p.bucket, clipapp.NewAnalysisJobs(c.jobs), clip.DefaultMediaConfig(clipEnvironment(cfg)), clip.DefaultAnalysisPreparationLimits(clipEnvironment(cfg)), nil)
 	c.clip = clipapp.NewService(c.clipStore, clip.DefaultLimits(), c.clipSources, clipapp.NewFinalizer(handle.Writer, c.clipPorts, c.clipStore, clip.DefaultRenderConfig(clipEnvironment(cfg)), nil))
+	c.clip.WithLinkedPosts(clipLinkedPosts{service: c.post})
 	c.clipMediaRecovery = clipapp.NewMediaReconciler(handle.Writer, c.clipPorts, c.clipStore, jobstore.New(handle.Writer, handle.Reader, jobKinds()), c.jobs, p.bucket, cfg.OrphanMinAge, nil)
 	c.clipSpeech = newClipSpeech(c)
 	if err := c.clipSpeech.Recover(ctx); err != nil {

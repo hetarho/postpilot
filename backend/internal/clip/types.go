@@ -101,6 +101,8 @@ type DubbingOptions struct {
 }
 
 type Project struct {
+	LinkedPostRef                                      *LinkedPostIdentity
+	LinkedPost                                         *LinkedPost
 	Campaign                                           bool
 	AdvertiserGuide                                    AdvertiserGuide
 	Dubbing                                            DubbingOptions
@@ -174,6 +176,7 @@ func ValidRequestKind(kind string) bool {
 }
 
 type ProjectInput struct {
+	LinkedPostSlug                         *string
 	Campaign                               *bool
 	AdvertiserGuide                        *AdvertiserGuide
 	Dubbing                                *DubbingOptions
@@ -195,6 +198,10 @@ type ProjectInput struct {
 
 // Ratio deliberately has no update representation.
 type ProjectPatch struct {
+	LinkedPostSlug *string
+	// Computed by the application service, never accepted from the wire.
+	LinkedPostIdentity          *LinkedPostIdentity
+	StaleLinkedPostIdentity     *LinkedPostIdentity
 	Campaign                    *bool
 	AdvertiserGuide             *AdvertiserGuide
 	Dubbing                     *DubbingOptions

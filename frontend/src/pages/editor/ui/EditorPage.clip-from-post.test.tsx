@@ -101,7 +101,7 @@ const arrived = (view: ReturnType<typeof mount>) =>
   })
 
 describe('making a clip from a finished post', () => {
-  it('creates a clip in the chosen channel from the post', async () => {
+  it('createClipFromPost links the post', async () => {
     const user = userEvent.setup()
     const view = mount({
       campaign: false,
@@ -119,6 +119,7 @@ describe('making a clip from a finished post', () => {
     await user.click(within(panel).getByRole('button', { name: '클립 만들기' }))
     await arrived(view)
     expect(view.writes[0]).toMatchObject({
+      linkedPostSlug: SLUG,
       title: '성수 카페',
       instruction: '친구와 나눈 이야기',
       channel: 'instagram_clip',
@@ -133,6 +134,7 @@ describe('making a clip from a finished post', () => {
     expect(view.writes[0].advertiserGuide?.minChars).toBeUndefined()
     expect(view.writes[0].advertiserGuide?.minPhotos).toBeUndefined()
     expect(view.calls.filter((name) => name === 'CreateClipProject')).toHaveLength(1)
+    expect(view.calls.filter((name) => name === 'UpdateClipProject')).toHaveLength(0)
     expect(view.calls.some((name) => name.startsWith('Start'))).toBe(false)
     expect(view.draftSaves).toEqual([])
     expect(readClipReturnContext(USER.id, 'clip-1')).toMatchObject({

@@ -69,6 +69,8 @@ message CreateClipProjectRequest {
   string channel = 19;
   optional bool campaign = 21;
   AdvertiserGuide advertiser_guide = 22;
+  // Atomic seed for a clip created from an owned canonical post.
+  optional string linked_post_slug = 23;
 }
 
 message CreateClipProjectResponse { ClipProject project = 1; }
@@ -107,6 +109,8 @@ message UpdateClipProjectRequest {
   optional string channel = 21;
   optional bool campaign = 22;
   AdvertiserGuide advertiser_guide = 23;
+  // Absent preserves the link; present and empty unlinks.
+  optional string linked_post_slug = 24;
 }
 
 // The owner's edit of the storyline: the same paragraphs, with their texts and scenes replaced.

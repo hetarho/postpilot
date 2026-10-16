@@ -8,7 +8,7 @@ import { toPostListItem } from './post-queries'
 /** Every one of the acting user's posts at once, newest first — the server decides the order (PRD
  *  F-8). This is the unpaged read (`{}` is page size 0) for a picker that needs them all; `/posts`
  *  reads them a page at a time through `usePostList` (POST-90). */
-export function usePosts(): {
+export function usePosts(query?: string): {
   posts: PostListItem[]
   isPending: boolean
   isError: boolean
@@ -20,7 +20,7 @@ export function usePosts(): {
 } {
   const { data, isPending, isFetching, isError, refetch } = useQuery(
     PostService.method.listPosts,
-    {},
+    query === undefined ? {} : { query },
     {
       refetchInterval: (state) =>
         state.state.data?.posts.some(

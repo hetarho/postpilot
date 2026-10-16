@@ -319,7 +319,11 @@ func projectRow(r sqlc.ClipProject) (clip.Project, error) {
 	if err != nil {
 		return clip.Project{}, err
 	}
-	p := clip.Project{Campaign: r.Campaign != 0, AdvertiserGuide: guide, Dubbing: clip.DubbingOptions{Enabled: r.DubbingEnabled != 0, VoiceID: r.DubbingVoiceID, BindingDigest: r.DubbingBindingDigest}, ID: r.ID, UserID: r.UserID, Title: r.Title, VideoTemplateID: r.VideoTemplateID.String, Ratio: r.Ratio, Channel: r.Channel, Language: r.Language, Disclosure: r.Disclosure, HideDisclosure: r.HideDisclosure != 0, Instruction: r.Instruction, CaptionPace: r.CaptionPace, Accent: r.Accent, IntroPreset: r.IntroPreset, OutroPreset: r.OutroPreset, CaptionStyles: styles, TargetDurationMS: int(r.TargetDurationMs), Analysis: r.AnalysisJson.String, EditPlan: r.EditPlanJson.String, EditPlanRevision: int(r.EditPlanRevision), RenderedPlanRevision: int(r.RenderedPlanRevision), GeneratedPlanRevision: int(r.GeneratedPlanRevision), CreatedAt: created, UpdatedAt: updated}
+	linkedPost, err := decodeLinkedPostIdentity(r.LinkedPostSlug, r.LinkedPostCreatedAt)
+	if err != nil {
+		return clip.Project{}, err
+	}
+	p := clip.Project{LinkedPostRef: linkedPost, Campaign: r.Campaign != 0, AdvertiserGuide: guide, Dubbing: clip.DubbingOptions{Enabled: r.DubbingEnabled != 0, VoiceID: r.DubbingVoiceID, BindingDigest: r.DubbingBindingDigest}, ID: r.ID, UserID: r.UserID, Title: r.Title, VideoTemplateID: r.VideoTemplateID.String, Ratio: r.Ratio, Channel: r.Channel, Language: r.Language, Disclosure: r.Disclosure, HideDisclosure: r.HideDisclosure != 0, Instruction: r.Instruction, CaptionPace: r.CaptionPace, Accent: r.Accent, IntroPreset: r.IntroPreset, OutroPreset: r.OutroPreset, CaptionStyles: styles, TargetDurationMS: int(r.TargetDurationMs), Analysis: r.AnalysisJson.String, EditPlan: r.EditPlanJson.String, EditPlanRevision: int(r.EditPlanRevision), RenderedPlanRevision: int(r.RenderedPlanRevision), GeneratedPlanRevision: int(r.GeneratedPlanRevision), CreatedAt: created, UpdatedAt: updated}
 	if r.ResultKey.Valid {
 		at, err := time.Parse(time.RFC3339Nano, r.ResultCreatedAt.String)
 		if err != nil {
@@ -396,7 +400,7 @@ func (s *Store) ListProjectSummaries(ctx context.Context, user string) ([]clip.P
 	}
 	out := make([]clip.Project, 0, len(rows))
 	for _, r := range rows {
-		p, err := projectRow(sqlc.ClipProject{Campaign: r.Campaign, AdvertiserGuide: r.AdvertiserGuide, AdvertiserKeywords: r.AdvertiserKeywords, AdvertiserHashtags: r.AdvertiserHashtags, ID: r.ID, UserID: r.UserID, Title: r.Title, VideoTemplateID: r.VideoTemplateID, Ratio: r.Ratio, Channel: r.Channel, TargetDurationMs: r.TargetDurationMs,
+		p, err := projectRow(sqlc.ClipProject{LinkedPostSlug: r.LinkedPostSlug, LinkedPostCreatedAt: r.LinkedPostCreatedAt, Campaign: r.Campaign, AdvertiserGuide: r.AdvertiserGuide, AdvertiserKeywords: r.AdvertiserKeywords, AdvertiserHashtags: r.AdvertiserHashtags, ID: r.ID, UserID: r.UserID, Title: r.Title, VideoTemplateID: r.VideoTemplateID, Ratio: r.Ratio, Channel: r.Channel, TargetDurationMs: r.TargetDurationMs,
 			ResultSpeechJson: r.ResultSpeechJson, ResultKey: r.ResultKey, ResultContentType: r.ResultContentType, ResultBytes: r.ResultBytes, ResultDurationMs: r.ResultDurationMs, ResultCreatedAt: r.ResultCreatedAt,
 			EditPlanRevision: r.EditPlanRevision, RenderedPlanRevision: r.RenderedPlanRevision, GeneratedPlanRevision: r.GeneratedPlanRevision, CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt,
 			Disclosure: r.Disclosure, HideDisclosure: r.HideDisclosure, CompositionInputsJson: r.CompositionInputsJson, CompositionSnapshotJson: r.CompositionSnapshotJson,
@@ -411,8 +415,9 @@ func (s *Store) ListProjectSummaries(ctx context.Context, user string) ([]clip.P
 	return out, nil
 }
 func (s *Store) InsertProject(ctx context.Context, p clip.Project) error {
+	linkedSlug, linkedCreatedAt := linkedPostColumns(p.LinkedPostRef)
 	_, err := transact(ctx, s, func(q *sqlc.Queries) (struct{}, error) {
-		err := q.InsertClipProject(ctx, sqlc.InsertClipProjectParams{Campaign: disclosureFlag(p.Campaign), AdvertiserGuide: p.AdvertiserGuide.Text, AdvertiserKeywords: encodeGuideItems(p.AdvertiserGuide.Keywords), AdvertiserHashtags: encodeGuideItems(p.AdvertiserGuide.Hashtags), ID: p.ID, UserID: p.UserID, Title: p.Title, VideoTemplateID: nullable(p.VideoTemplateID), Ratio: p.Ratio, Channel: clip.DefaultChannel(p.Channel), Language: p.Language, TargetDurationMs: int64(p.TargetDurationMS), Disclosure: p.Disclosure, HideDisclosure: disclosureFlag(p.HideDisclosure), Instruction: p.Instruction, CaptionPace: p.CaptionPace, Accent: p.Accent, IntroPreset: p.IntroPreset, OutroPreset: p.OutroPreset, AllowedCaptionStyles: encodeCaptionStyles(p.CaptionStyles), CreatedAt: stamp(p.CreatedAt), UpdatedAt: stamp(p.UpdatedAt)})
+		err := q.InsertClipProject(ctx, sqlc.InsertClipProjectParams{LinkedPostSlug: linkedSlug, LinkedPostCreatedAt: linkedCreatedAt, Campaign: disclosureFlag(p.Campaign), AdvertiserGuide: p.AdvertiserGuide.Text, AdvertiserKeywords: encodeGuideItems(p.AdvertiserGuide.Keywords), AdvertiserHashtags: encodeGuideItems(p.AdvertiserGuide.Hashtags), ID: p.ID, UserID: p.UserID, Title: p.Title, VideoTemplateID: nullable(p.VideoTemplateID), Ratio: p.Ratio, Channel: clip.DefaultChannel(p.Channel), Language: p.Language, TargetDurationMs: int64(p.TargetDurationMS), Disclosure: p.Disclosure, HideDisclosure: disclosureFlag(p.HideDisclosure), Instruction: p.Instruction, CaptionPace: p.CaptionPace, Accent: p.Accent, IntroPreset: p.IntroPreset, OutroPreset: p.OutroPreset, AllowedCaptionStyles: encodeCaptionStyles(p.CaptionStyles), CreatedAt: stamp(p.CreatedAt), UpdatedAt: stamp(p.UpdatedAt)})
 		if err == nil {
 			err = saveComposition(ctx, q, p)
 		}
@@ -435,6 +440,11 @@ func (s *Store) UpdateProject(ctx context.Context, user, id string, p clip.Proje
 		if before.Finalized != nil && !p.MovesChannelOnly() {
 			return clip.Project{}, clip.ErrFinalized
 		}
+		if stale := p.StaleLinkedPostIdentity; stale != nil {
+			if err := q.ClearStaleClipLinkedPost(ctx, sqlc.ClearStaleClipLinkedPostParams{ID: id, UserID: user, LinkedPostSlug: nullable(stale.Slug), LinkedPostCreatedAt: nullable(stamp(stale.CreatedAt))}); err != nil {
+				return clip.Project{}, err
+			}
+		}
 		// Directory metadata never rewrites composition or renews original retention.
 		if p.MovesChannelOnly() {
 			if err := affected(q.UpdateClipChannel(ctx, sqlc.UpdateClipChannelParams{Channel: *p.Channel, UpdatedAt: stamp(now), ID: id, UserID: user})); err != nil {
@@ -442,7 +452,7 @@ func (s *Store) UpdateProject(ctx context.Context, user, id string, p clip.Proje
 			}
 			return getProject(ctx, q, user, id)
 		}
-		if p.Composition != nil || p.Regions != nil || p.Dubbing != nil {
+		if p.Composition != nil || p.Regions != nil || p.Dubbing != nil || p.LinkedPostIdentity != nil {
 			active, e := q.HasActiveClipJob(ctx, nullable(id))
 			if e != nil {
 				return clip.Project{}, e
@@ -498,6 +508,12 @@ func (s *Store) UpdateProject(ctx context.Context, user, id string, p clip.Proje
 		}
 		if p.Channel != nil {
 			if err := affected(q.UpdateClipChannel(ctx, sqlc.UpdateClipChannelParams{Channel: *p.Channel, UpdatedAt: stamp(now), ID: id, UserID: user})); err != nil {
+				return clip.Project{}, err
+			}
+		}
+		if p.LinkedPostIdentity != nil {
+			slug, createdAt := linkedPostColumns(p.LinkedPostIdentity)
+			if err := affected(q.UpdateClipLinkedPost(ctx, sqlc.UpdateClipLinkedPostParams{ID: id, UserID: user, LinkedPostSlug: slug, LinkedPostCreatedAt: createdAt, UpdatedAt: stamp(now)})); err != nil {
 				return clip.Project{}, err
 			}
 		}

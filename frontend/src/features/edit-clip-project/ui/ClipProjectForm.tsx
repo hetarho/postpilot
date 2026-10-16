@@ -31,6 +31,7 @@ import { appFailureFromConnect } from '@/shared/api'
 import { peekPendingClipDraft, queueClipDraft } from '../model/clip-draft-queue'
 import { ClipCampaignMaterial } from './ClipCampaignMaterial'
 import { MoveClipChannel } from './MoveClipChannel'
+import { ClipLinkedPost } from './ClipLinkedPost'
 import { ClipDesignSelection, type ClipRegionSwitches } from './ClipDesignSelection'
 import {
   ActionBar,
@@ -391,6 +392,15 @@ export function ClipProjectForm({
               disabled={disabled || readOnly}
               onCampaign={(on) => change('campaign', on)}
               onGuide={(guide) => change('advertiserGuide', guide)}
+            />
+          )}
+          {stored && (
+            <ClipLinkedPost
+              key={`${ownerId}:${stored.id}`}
+              ownerId={ownerId}
+              project={stored}
+              disabled={disabled}
+              readOnly={readOnly}
             />
           )}
           {stored && (

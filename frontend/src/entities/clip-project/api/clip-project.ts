@@ -75,6 +75,15 @@ export function toClipProject(value: ProtoClipProject): ClipProject {
     })),
     language: contentLanguageFromProto(value.language),
     id: value.id,
+    ...(value.linkedPost
+      ? {
+          linkedPost: {
+            slug: value.linkedPost.slug,
+            title: value.linkedPost.title,
+            updatedAt: value.linkedPost.updatedAt,
+          },
+        }
+      : {}),
     title: value.title,
     videoTemplateId: value.videoTemplateId,
     ratio: value.ratio as ClipRatio,
@@ -479,6 +488,34 @@ export function useMoveClipChannel(ownerId: string) {
       void cache.invalidateQueries({ queryKey: [...clipProjectsKey(transport, ownerId), 'list'] })
       // A move is explicit, so read the current detail before the next queued write.
       // Another client may have finished a revision since this page last read it.
+      await cache.invalidateQueries({ queryKey: key })
+    },
+  })
+}
+
+/** An explicit link action writes no other setting, including an unchanged template. */
+export function useLinkClipPost(ownerId: string) {
+  const transport = useTransport()
+  const cache = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, slug }: { id: string; slug: string }) => {
+      const response = await createClient(ClipGenerationService, transport).updateClipProject({
+        id,
+        linkedPostSlug: slug,
+      })
+      if (!response.project) throw new Error('Missing linked clip')
+      return toClipProject(response.project)
+    },
+    onSuccess: async (project) => {
+      const key = [...clipProjectsKey(transport, ownerId), 'detail', project.id]
+      const cached = cache.getQueryData<ClipProject>(key)
+      cache.setQueryData(
+        key,
+        cached && cached.editPlanRevision === project.editPlanRevision
+          ? withDetailReadings(project, cached)
+          : project,
+      )
+      void cache.invalidateQueries({ queryKey: [...clipProjectsKey(transport, ownerId), 'list'] })
       await cache.invalidateQueries({ queryKey: key })
     },
   })

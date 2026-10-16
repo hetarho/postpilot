@@ -13,11 +13,12 @@ import (
 )
 
 type Service struct {
-	finalizer  clip.ProjectFinalizer
-	store      clip.Store
-	limits     clip.Limits
-	sources    *SourceService
-	generation *GenerationService
+	linkedPosts clip.LinkedPosts
+	finalizer   clip.ProjectFinalizer
+	store       clip.Store
+	limits      clip.Limits
+	sources     *SourceService
+	generation  *GenerationService
 	// candidates drops a deleted project's link from its 영상 지침 candidates; bound with the
 	// generation side, nil records nothing.
 	candidates clip.GuidelineCandidates
@@ -125,19 +126,24 @@ func (s *Service) DeleteTemplate(ctx context.Context, user, id string) (int, err
 }
 
 func (s *Service) ListProjects(ctx context.Context, user string) ([]clip.Project, error) {
-	return s.store.ListProjects(ctx, user)
+	projects, err := s.store.ListProjects(ctx, user)
+	return s.resolveLinkedPosts(ctx, user, projects, err)
 }
 
 // ListProjectSummaries is the directory's read: every project without its plan
 // or analysis.
 func (s *Service) ListProjectSummaries(ctx context.Context, user string) ([]clip.Project, error) {
-	return s.store.ListProjectSummaries(ctx, user)
+	projects, err := s.store.ListProjectSummaries(ctx, user)
+	return s.resolveLinkedPosts(ctx, user, projects, err)
 }
 
 func (s *Service) GetProject(ctx context.Context, user, id string) (clip.Project, error) {
 	p, err := s.store.GetProject(ctx, user, id)
 	if err != nil {
 		return p, err
+	}
+	if p, err = s.resolveLinkedPost(ctx, user, p); err != nil {
+		return clip.Project{}, err
 	}
 	// What the owner asked the AI for, read where the OWNER reads the project
 	// (CLIP-133). The run paths take the project from the store directly, so no
@@ -282,6 +288,12 @@ func (s *Service) CreateProject(ctx context.Context, user string, input clip.Pro
 		}
 		p.Dubbing = chosen
 	}
+	if input.LinkedPostSlug != nil && *input.LinkedPostSlug != "" {
+		p.LinkedPostRef, p.LinkedPost, err = s.chooseLinkedPost(ctx, user, *input.LinkedPostSlug)
+		if err != nil {
+			return clip.Project{}, err
+		}
+	}
 	if err := s.store.InsertProject(ctx, p); err != nil {
 		return clip.Project{}, err
 	}
@@ -289,6 +301,7 @@ func (s *Service) CreateProject(ctx context.Context, user string, input clip.Pro
 }
 
 func (s *Service) UpdateProject(ctx context.Context, user, id string, p clip.ProjectPatch) (clip.Project, error) {
+	p.LinkedPostIdentity, p.StaleLinkedPostIdentity = nil, nil
 	if s.generation != nil {
 		active, err := s.generation.jobs.Active(ctx, user, id)
 		if err != nil {
@@ -311,6 +324,9 @@ func (s *Service) UpdateProject(ctx context.Context, user, id string, p clip.Pro
 	}
 	if old.Finalized != nil && !p.MovesChannelOnly() {
 		return clip.Project{}, clip.ErrFinalized
+	}
+	if err := s.prepareLinkedPostPatch(ctx, user, old, &p); err != nil {
+		return clip.Project{}, err
 	}
 	if p.Channel != nil && !clip.ValidChannel(*p.Channel) {
 		return clip.Project{}, clip.ErrInvalid
@@ -480,7 +496,11 @@ func (s *Service) UpdateProject(ctx context.Context, user, id string, p clip.Pro
 		}
 		p.Regions = &regions
 	}
-	return s.store.UpdateProject(ctx, user, id, p, s.now())
+	saved, err := s.store.UpdateProject(ctx, user, id, p, s.now())
+	if err != nil {
+		return clip.Project{}, err
+	}
+	return s.resolveLinkedPost(ctx, user, saved)
 }
 
 func (s *Service) DeleteProject(ctx context.Context, user, id string) error {

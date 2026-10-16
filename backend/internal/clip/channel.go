@@ -23,5 +23,7 @@ func (p ProjectPatch) MovesChannelOnly() bool {
 		return false
 	}
 	p.Channel = nil
+	// Clearing an already absent link is internal storage maintenance.
+	p.StaleLinkedPostIdentity = nil
 	return p == (ProjectPatch{})
 }

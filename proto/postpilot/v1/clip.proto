@@ -130,6 +130,13 @@ message ClipProject {
   string channel = 42;
   bool campaign = 43;
   AdvertiserGuide advertiser_guide = 44;
+  ClipLinkedPost linked_post = 45;
+}
+
+message ClipLinkedPost {
+  string slug = 1;
+  string title = 2;
+  string updated_at = 3;
 }
 
 message ClipDubbingOptions { bool enabled = 1; string voice_id = 2; }

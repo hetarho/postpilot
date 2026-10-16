@@ -1103,6 +1103,20 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
     }
     throw connectAppError('UPLOAD_NOT_FOUND', Code.NotFound)
   })
+  // The fake composition root adapts the same owned record for clip links.
+  return {
+    linkedPost: (slug: string) => {
+      const row = rows.get(slug)
+      if (!row || foreign.includes(slug)) return undefined
+      return {
+        slug: row.slug,
+        title: row.title.trim() ? row.title : (row.content?.title ?? ''),
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt,
+        contentReady: Boolean(row.content?.blocks.length),
+      }
+    },
+  }
 }
 
 /** A transport serving only PostService — for tests of the post hooks themselves. */

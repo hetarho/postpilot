@@ -286,7 +286,7 @@ export function createFakeAuthBackend(options: FakeAuthOptions = {}): FakeAuthBa
       session = undefined
       return create(ChangePasswordResponseSchema, {})
     })
-    registerPostService(router, { calls, ...options.posts })
+    const postReads = registerPostService(router, { calls, ...options.posts })
     registerProviderService(router, { calls, ...options.providers })
     registerGenerationService(router, { calls, ...options.jobs })
     registerVoiceService(router, { calls, ...options.voice })
@@ -294,6 +294,7 @@ export function createFakeAuthBackend(options: FakeAuthOptions = {}): FakeAuthBa
     registerTemplateService(router, { calls, ...options.templates })
     registerAuthoringService(router, { calls, ...options.authoring }, () => transport)
     registerClipService(router, {
+      linkedPost: postReads.linkedPost,
       calls,
       ownerId: options.user?.id,
       sourceJobStatus: (id) => options.jobs?.jobs?.find((j) => j.id === id)?.status,

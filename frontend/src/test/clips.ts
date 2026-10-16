@@ -85,6 +85,8 @@ function designed(row: FakeClipTemplate): FakeClipTemplate & ClipTemplateDesign 
   }
 }
 export interface FakeClipProject extends ClipProjectDraft {
+  linkedPost?: ClipProject['linkedPost']
+  linkedPostCreatedAt?: string
   id: string
   composition?: ClipProject['composition']
   ownerId?: string
@@ -133,6 +135,13 @@ const ELIGIBILITY_WIRE: Record<FakeClipEligibility, ClipAnalysisEligibility> = {
 }
 
 export interface FakeClipsOptions {
+  linkedPost?: (
+    slug: string,
+  ) =>
+    | { slug: string; title: string; createdAt: string; updatedAt: string; contentReady: boolean }
+    | undefined
+  projectRequests?: Array<{ id: string; linkedPostSlug?: string; fields: string[] }>
+
   importConfirmationFailures?: string[]
   importConfirmationLostAck?: string[]
   importCompletionLostAcks?: number
@@ -369,11 +378,33 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
       .filter((p) => !p.ownerId || p.ownerId === options.ownerId)
       .map((p) => [p.id, { ...p }]),
   )
+  const assignLinkedPost = (p: FakeClipProject, slug: string) => {
+    if (!slug) {
+      p.linkedPostSlug = undefined
+      p.linkedPostCreatedAt = undefined
+      p.linkedPost = undefined
+      return
+    }
+    const linked = options.linkedPost?.(slug)
+    if (!linked) throw connectAppError('CLIP_NOT_FOUND', Code.NotFound)
+    if (!linked.contentReady) throw connectAppError('CLIP_INVALID_INPUT', Code.InvalidArgument)
+    p.linkedPostSlug = linked.slug
+    p.linkedPostCreatedAt = linked.createdAt
+    p.linkedPost = { slug: linked.slug, title: linked.title, updatedAt: linked.updatedAt }
+  }
+  const currentLinkedPost = (p: FakeClipProject) => {
+    if (!p.linkedPostSlug) return p.linkedPost
+    const current = options.linkedPost?.(p.linkedPostSlug)
+    return current && current.createdAt === p.linkedPostCreatedAt
+      ? { slug: current.slug, title: current.title, updatedAt: current.updatedAt }
+      : undefined
+  }
   // `editing` is the domain shape, whose caption carries an anchor; the wire
   // still calls that field `position` (CDS-12), so it goes through the mapper.
   const projectProto = (p: FakeClipProject) =>
     create(ClipProjectSchema, {
       ...p,
+      linkedPost: currentLinkedPost(p),
       campaign: p.campaign ?? false,
       advertiserGuide: p.advertiserGuide ? advertiserGuideToProto(p.advertiserGuide) : undefined,
       lastRenderKind: p.result
@@ -730,12 +761,20 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
       p.composition = toProjectComposition(wire.composition)
       p.compositionInputs = p.composition?.inputs
     }
+    if (req.linkedPostSlug !== undefined) assignLinkedPost(p, req.linkedPostSlug)
     projects.set(p.id, p)
     options.projectWrites?.push(p)
     return create(CreateClipProjectResponseSchema, { project: projectProto(p) })
   })
   router.rpc(ClipGenerationService.method.updateClipProject, async (req) => {
     options.calls?.push('UpdateClipProject')
+    options.projectRequests?.push({
+      id: req.id,
+      linkedPostSlug: req.linkedPostSlug,
+      fields: Object.entries(req)
+        .filter(([key, value]) => key !== '$typeName' && value !== undefined)
+        .map(([key]) => key),
+    })
     if ((req.introRegion || req.outroRegion) && options.regionSaveGate)
       await options.regionSaveGate()
     if (options.projectSaveGate) await options.projectSaveGate()
@@ -757,6 +796,8 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
       Array.from(req.instruction).length > CLIP_PROJECT_LIMITS.instruction
     )
       throw connectAppError('CLIP_INVALID_INPUT', Code.InvalidArgument)
+    if (req.linkedPostSlug !== undefined) assignLinkedPost(p, req.linkedPostSlug)
+    else if (p.linkedPostSlug && !currentLinkedPost(p)) assignLinkedPost(p, '')
     if (req.campaign !== undefined) p.campaign = req.campaign
     if (req.advertiserGuide !== undefined) {
       p.advertiserGuide = advertiserGuideFromProto(req.advertiserGuide)

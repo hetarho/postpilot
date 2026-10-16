@@ -130,8 +130,10 @@ type CreateClipProjectRequest struct {
 	Channel         string           `protobuf:"bytes,19,opt,name=channel,proto3" json:"channel,omitempty"`
 	Campaign        *bool            `protobuf:"varint,21,opt,name=campaign,proto3,oneof" json:"campaign,omitempty"`
 	AdvertiserGuide *AdvertiserGuide `protobuf:"bytes,22,opt,name=advertiser_guide,json=advertiserGuide,proto3" json:"advertiser_guide,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// Atomic seed for a clip created from an owned canonical post.
+	LinkedPostSlug *string `protobuf:"bytes,23,opt,name=linked_post_slug,json=linkedPostSlug,proto3,oneof" json:"linked_post_slug,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *CreateClipProjectRequest) Reset() {
@@ -304,6 +306,13 @@ func (x *CreateClipProjectRequest) GetAdvertiserGuide() *AdvertiserGuide {
 	return nil
 }
 
+func (x *CreateClipProjectRequest) GetLinkedPostSlug() string {
+	if x != nil && x.LinkedPostSlug != nil {
+		return *x.LinkedPostSlug
+	}
+	return ""
+}
+
 type CreateClipProjectResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Project       *ClipProject           `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
@@ -465,8 +474,10 @@ type UpdateClipProjectRequest struct {
 	Channel                *string             `protobuf:"bytes,21,opt,name=channel,proto3,oneof" json:"channel,omitempty"`
 	Campaign               *bool               `protobuf:"varint,22,opt,name=campaign,proto3,oneof" json:"campaign,omitempty"`
 	AdvertiserGuide        *AdvertiserGuide    `protobuf:"bytes,23,opt,name=advertiser_guide,json=advertiserGuide,proto3" json:"advertiser_guide,omitempty"`
-	unknownFields          protoimpl.UnknownFields
-	sizeCache              protoimpl.SizeCache
+	// Absent preserves the link; present and empty unlinks.
+	LinkedPostSlug *string `protobuf:"bytes,24,opt,name=linked_post_slug,json=linkedPostSlug,proto3,oneof" json:"linked_post_slug,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *UpdateClipProjectRequest) Reset() {
@@ -644,6 +655,13 @@ func (x *UpdateClipProjectRequest) GetAdvertiserGuide() *AdvertiserGuide {
 		return x.AdvertiserGuide
 	}
 	return nil
+}
+
+func (x *UpdateClipProjectRequest) GetLinkedPostSlug() string {
+	if x != nil && x.LinkedPostSlug != nil {
+		return *x.LinkedPostSlug
+	}
+	return ""
 }
 
 // The owner's edit of the storyline: the same paragraphs, with their texts and scenes replaced.
@@ -2322,7 +2340,7 @@ const file_postpilot_v1_clip_generation_proto_rawDesc = "" +
 	"\"postpilot/v1/clip_generation.proto\x12\fpostpilot.v1\x1a\x17postpilot/v1/clip.proto\x1a\x17postpilot/v1/post.proto\x1a\x1bpostpilot/v1/provider.proto\x1a\x1bpostpilot/v1/language.proto\"\x19\n" +
 	"\x17ListClipProjectsRequest\"Q\n" +
 	"\x18ListClipProjectsResponse\x125\n" +
-	"\bprojects\x18\x01 \x03(\v2\x19.postpilot.v1.ClipProjectR\bprojects\"\xae\b\n" +
+	"\bprojects\x18\x01 \x03(\v2\x19.postpilot.v1.ClipProjectR\bprojects\"\xf2\b\n" +
 	"\x18CreateClipProjectRequest\x12\x14\n" +
 	"\x05title\x18\x01 \x01(\tR\x05title\x12*\n" +
 	"\x11video_template_id\x18\x02 \x01(\tR\x0fvideoTemplateId\x12\x14\n" +
@@ -2346,18 +2364,20 @@ const file_postpilot_v1_clip_generation_proto_rawDesc = "" +
 	"\adubbing\x18\x14 \x01(\v2 .postpilot.v1.ClipDubbingOptionsR\adubbing\x12\x18\n" +
 	"\achannel\x18\x13 \x01(\tR\achannel\x12\x1f\n" +
 	"\bcampaign\x18\x15 \x01(\bH\x04R\bcampaign\x88\x01\x01\x12H\n" +
-	"\x10advertiser_guide\x18\x16 \x01(\v2\x1d.postpilot.v1.AdvertiserGuideR\x0fadvertiserGuideB\x0f\n" +
+	"\x10advertiser_guide\x18\x16 \x01(\v2\x1d.postpilot.v1.AdvertiserGuideR\x0fadvertiserGuide\x12-\n" +
+	"\x10linked_post_slug\x18\x17 \x01(\tH\x05R\x0elinkedPostSlug\x88\x01\x01B\x0f\n" +
 	"\r_caption_paceB\t\n" +
 	"\a_accentB\x0f\n" +
 	"\r_intro_presetB\x0f\n" +
 	"\r_outro_presetB\v\n" +
-	"\t_campaignJ\x04\b\x05\x10\x06J\x04\b\a\x10\bR\aanswersR\x03cta\"P\n" +
+	"\t_campaignB\x13\n" +
+	"\x11_linked_post_slugJ\x04\b\x05\x10\x06J\x04\b\a\x10\bR\aanswersR\x03cta\"P\n" +
 	"\x19CreateClipProjectResponse\x123\n" +
 	"\aproject\x18\x01 \x01(\v2\x19.postpilot.v1.ClipProjectR\aproject\"'\n" +
 	"\x15GetClipProjectRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"M\n" +
 	"\x16GetClipProjectResponse\x123\n" +
-	"\aproject\x18\x01 \x01(\v2\x19.postpilot.v1.ClipProjectR\aproject\"\xa1\n" +
+	"\aproject\x18\x01 \x01(\v2\x19.postpilot.v1.ClipProjectR\aproject\"\xe5\n" +
 	"\n" +
 	"\x18UpdateClipProjectRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
@@ -2384,7 +2404,8 @@ const file_postpilot_v1_clip_generation_proto_rawDesc = "" +
 	"R\x16expectedRegionRevision\x88\x01\x01\x12\x1d\n" +
 	"\achannel\x18\x15 \x01(\tH\vR\achannel\x88\x01\x01\x12\x1f\n" +
 	"\bcampaign\x18\x16 \x01(\bH\fR\bcampaign\x88\x01\x01\x12H\n" +
-	"\x10advertiser_guide\x18\x17 \x01(\v2\x1d.postpilot.v1.AdvertiserGuideR\x0fadvertiserGuideB\b\n" +
+	"\x10advertiser_guide\x18\x17 \x01(\v2\x1d.postpilot.v1.AdvertiserGuideR\x0fadvertiserGuide\x12-\n" +
+	"\x10linked_post_slug\x18\x18 \x01(\tH\rR\x0elinkedPostSlug\x88\x01\x01B\b\n" +
 	"\x06_titleB\x14\n" +
 	"\x12_video_template_idB\x15\n" +
 	"\x13_target_duration_msB\r\n" +
@@ -2398,7 +2419,8 @@ const file_postpilot_v1_clip_generation_proto_rawDesc = "" +
 	"\x19_expected_region_revisionB\n" +
 	"\n" +
 	"\b_channelB\v\n" +
-	"\t_campaignJ\x04\b\x05\x10\x06J\x04\b\a\x10\bR\aanswersR\x03cta\"Y\n" +
+	"\t_campaignB\x13\n" +
+	"\x11_linked_post_slugJ\x04\b\x05\x10\x06J\x04\b\a\x10\bR\aanswersR\x03cta\"Y\n" +
 	"\x11ClipStorylineEdit\x12D\n" +
 	"\n" +
 	"paragraphs\x18\x01 \x03(\v2$.postpilot.v1.ClipStorylineParagraphR\n" +

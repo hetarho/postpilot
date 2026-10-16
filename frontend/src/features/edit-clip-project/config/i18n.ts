@@ -4,6 +4,16 @@ import type { I18nFragment } from '@/shared/lib'
 export const i18n = {
   namespace: 'clips',
   ko: {
+    linkedPost: {
+      title: '글 연결',
+      none: '없음',
+      search: '글 검색',
+      unlink: '연결 해제',
+      close: '닫기',
+      loadFailed: '글 목록을 불러오지 못했어요.',
+      retry: '다시 시도',
+      loading: '불러오는 중…',
+    },
     channel: { naver_clip: '네이버 클립', instagram_clip: '인스타 클립' },
     project: {
       channel: '클립 채널',
@@ -114,6 +124,16 @@ export const i18n = {
     },
   },
   en: {
+    linkedPost: {
+      title: 'Linked post',
+      none: 'None',
+      search: 'Search posts',
+      unlink: 'Unlink',
+      close: 'Close',
+      loadFailed: 'Could not load posts.',
+      retry: 'Retry',
+      loading: 'Loading…',
+    },
     channel: { naver_clip: 'Naver Clip', instagram_clip: 'Instagram Clip' },
     project: {
       channel: 'Clip channel',

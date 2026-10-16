@@ -34,6 +34,8 @@ export const CLIP_PROJECT_LIMITS = {
   maxSeconds: 60,
 } as const
 export interface ClipProjectDraft {
+  /** Optional atomic seed when creating a clip from a post. Form autosaves omit it. */
+  linkedPostSlug?: string
   campaign?: boolean
   advertiserGuide?: AdvertiserGuide
   /** Older retained browser drafts omit this and take the Naver channel. */
@@ -88,6 +90,7 @@ export interface ClipRegionEdit {
   slots?: { id: string; instruction?: string; text?: string }[]
 }
 export interface ClipProject extends ClipProjectDraft {
+  linkedPost?: { slug: string; title: string; updatedAt: string }
   regions?: ClipProjectRegions
   notices?: ClipNotice[]
   /** What the owner asked the AI for, newest first (CLIP-133). */
@@ -257,6 +260,7 @@ export function emptyClipProject(): ClipProjectDraft {
 }
 export function projectDraft(value: ClipProjectDraft): ClipProjectDraft {
   return {
+    ...(value.linkedPostSlug !== undefined ? { linkedPostSlug: value.linkedPostSlug } : {}),
     ...(value.dubbing
       ? { dubbing: { enabled: value.dubbing.enabled, voiceId: value.dubbing.voiceId } }
       : {}),

@@ -20,6 +20,7 @@ export {
   useClipProjectMutations,
   useClipProjects,
   useMoveClipChannel,
+  useLinkClipPost,
   useSaveClipStoryline,
   useSaveClipRegions,
 } from './api/clip-project'

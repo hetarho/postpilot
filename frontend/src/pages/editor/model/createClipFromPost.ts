@@ -38,6 +38,7 @@ export async function createClipFromPost({
   const guide = post.advertiserGuide
   const project = await create({
     ...emptyClipProject(),
+    linkedPostSlug: post.slug,
     channel,
     title: post.title.trim() ? post.title : post.content.title,
     instruction: boundedFreeText(post.memo, CLIP_PROJECT_LIMITS.instruction),
