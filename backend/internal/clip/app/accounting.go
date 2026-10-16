@@ -56,7 +56,7 @@ func chargedApproval(kind string, payload []byte, user, id string) (clip.Generat
 	switch kind {
 	case clip.JobKindUploadText:
 		var p clip.UploadTextSnapshot
-		if json.Unmarshal(payload, &p) != nil || p.Version != 1 || p.UserID != user || p.ProjectID != id || p.Approval == nil || !p.Approval.Pricing.UploadText || !p.Approval.Pricing.Valid() {
+		if json.Unmarshal(payload, &p) != nil || !clip.SupportedUploadTextSnapshot(p.Version) || p.UserID != user || p.ProjectID != id || p.Approval == nil || !p.Approval.Pricing.UploadText || !p.Approval.Pricing.Valid() {
 			return clip.GenerationApproval{}, false
 		}
 		return *p.Approval, true

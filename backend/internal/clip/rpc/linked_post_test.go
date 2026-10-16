@@ -17,6 +17,10 @@ func (rpcLinkedPosts) Get(context.Context, string, string) (clip.LinkedPost, err
 	return clip.LinkedPost{Slug: "story", Title: "post", CreatedAt: time.Unix(100, 0), UpdatedAt: time.Unix(200, 0), ContentReady: true}, nil
 }
 
+func (rpcLinkedPosts) Text(context.Context, string, string) (clip.LinkedPostDocument, error) {
+	return clip.LinkedPostDocument{CreatedAt: time.Unix(100, 0)}, nil
+}
+
 func TestClipLinkedPostProjectionAndPresence(t *testing.T) {
 	p := clip.Project{Ratio: "vertical", Language: "ko", LinkedPost: &clip.LinkedPost{Slug: "story", Title: "post", UpdatedAt: time.Unix(200, 0)}}
 	wire := projectProto(p)

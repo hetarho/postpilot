@@ -62,6 +62,7 @@ func narrationPromptParts(in clip.NarrationInput, limits composition.Limits) (st
 		"analyses":               planObservationPayload(in.Analyses, true),
 	}
 	addAdvertiserGuide(payload, in.PlanningInput)
+	addLinkedPost(payload, in.PlanningInput)
 	payload["caption_body_start_ms"], payload["caption_body_end_ms"] = clip.CaptionBodyWindow(in.Flow)
 	// The intro and outro words are the project's slots, reviewed or written already
 	// (CLIP-135, CLIP-188): the narration writes around them and never over them, and a clip
@@ -83,7 +84,7 @@ func narrationPromptParts(in clip.NarrationInput, limits composition.Limits) (st
 		payload["storyline"] = storylinePayload(*s)
 		prompt = strings.Replace(narrationPrompt, "Return only one JSON object", narrationStorylineRule+"Return only one JSON object", 1)
 	}
-	return videoWritingContract(in.Language) + prompt + responseContract + contract + advertiserGuideRule(in.PlanningInput), promptJSON(payload)
+	return videoWritingContract(in.PlanningInput) + prompt + responseContract + contract + advertiserGuideRule(in.PlanningInput), promptJSON(payload)
 }
 
 // declaredCaptionPayload is the outline's own caption entries in the order they

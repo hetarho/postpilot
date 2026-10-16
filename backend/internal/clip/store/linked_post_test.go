@@ -19,6 +19,11 @@ func (p linkedPostsFixture) Get(_ context.Context, user, slug string) (clip.Link
 	return post, nil
 }
 
+func (p linkedPostsFixture) Text(ctx context.Context, user, slug string) (clip.LinkedPostDocument, error) {
+	meta, err := p.Get(ctx, user, slug)
+	return clip.LinkedPostDocument{CreatedAt: meta.CreatedAt}, err
+}
+
 func TestLinkedPostIdentityRoundTripsAndClearsOnNextWrite(t *testing.T) {
 	service, store, _ := setup(t)
 	at := time.Date(2026, 10, 15, 1, 2, 3, 456, time.UTC)

@@ -101,7 +101,9 @@ type DubbingOptions struct {
 }
 
 type Project struct {
-	LinkedPostRef                                      *LinkedPostIdentity
+	LinkedPostRef *LinkedPostIdentity
+	// LinkedPostText is approval/start material only; stores and public projections never persist it here.
+	LinkedPostText                                     *LinkedPostText
 	LinkedPost                                         *LinkedPost
 	Campaign                                           bool
 	AdvertiserGuide                                    AdvertiserGuide

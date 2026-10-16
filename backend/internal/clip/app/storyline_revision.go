@@ -20,9 +20,11 @@ import (
 // Version 2 freezes the intro/outro slots and their presets; an accepted version-1 job drafts no
 // slot.
 // Version 3 freezes advertiser material; earlier accepted jobs retain none.
-const storylineRevisionPayloadVersion = 3
+// Version 4 freezes the linked post text; earlier accepted jobs retain none.
+const storylineRevisionPayloadVersion = 4
 
 type storylineRevisionPayload struct {
+	LinkedPost               *clip.LinkedPostText  `json:",omitempty"`
 	AdvertiserGuide          *clip.AdvertiserGuide `json:",omitempty"`
 	Version                  int
 	ProjectID, Write         string
@@ -52,6 +54,9 @@ func (s *GenerationService) storylineRevisionInputs(ctx context.Context, user, i
 	}
 	if p.Finalized != nil {
 		return clip.Project{}, clip.SourceBatch{}, clip.ErrFinalized
+	}
+	if p, err = s.projects.freezeLinkedPost(ctx, user, p); err != nil {
+		return clip.Project{}, clip.SourceBatch{}, err
 	}
 	if p.Storyline == nil {
 		return clip.Project{}, clip.SourceBatch{}, clip.ErrStorylineMissing
@@ -94,6 +99,7 @@ func (s *GenerationService) storylineRevisionPricing(ctx context.Context, observ
 	pricing.SkipNarration, pricing.Storyline = false, true
 	pricing.CancellationPolicyVersion = clip.CancellationPolicyVersion
 	pricing.GuidelinesDigest = guidelines.Digest()
+	pricing.LinkedPostDigest = p.LinkedPostText.Digest()
 	pricing.StorylineDigest = p.Storyline.Digest()
 	if !pricing.Valid() || pricing.ObservationCalls != 0 || pricing.PlanCalls() != 1+pricing.Plan.ResponseRetries {
 		return clip.GenerationPricing{}, clip.ErrPricingUnavailable
@@ -112,9 +118,10 @@ func StorylineRevisionInputDigest(p clip.Project, request, write string, pricing
 		Composition                   *clip.ProjectComposition
 		Instruction, Language         string
 		Target                        int
-		Regions                       string                `json:",omitempty"`
-		AdvertiserGuide               *clip.AdvertiserGuide `json:",omitempty"`
-	}{p.UserID, p.ID, write, request, p.Storyline, pricing, p.Composition, p.Instruction, p.Language, p.TargetDurationMS, clip.EffectiveProjectRegions(p).WritingDigest(p.DesignSelection().RegionPresets()), clip.EffectiveAdvertiserGuide(p)}
+		Regions                       string                   `json:",omitempty"`
+		AdvertiserGuide               *clip.AdvertiserGuide    `json:",omitempty"`
+		LinkedPostRef                 *clip.LinkedPostIdentity `json:",omitempty"`
+	}{p.UserID, p.ID, write, request, p.Storyline, pricing, p.Composition, p.Instruction, p.Language, p.TargetDurationMS, clip.EffectiveProjectRegions(p).WritingDigest(p.DesignSelection().RegionPresets()), clip.EffectiveAdvertiserGuide(p), p.LinkedPostRef}
 	raw, _ := json.Marshal(input)
 	sum := sha256.Sum256(raw)
 	return hex.EncodeToString(sum[:])
@@ -208,7 +215,7 @@ func (s *GenerationService) StartStorylineRevision(ctx context.Context, user, id
 		recipe = t.Recipe
 	}
 	regions := clip.EffectiveProjectRegions(p)
-	payload, err := json.Marshal(storylineRevisionPayload{AdvertiserGuide: clip.EffectiveAdvertiserGuide(p),
+	payload, err := json.Marshal(storylineRevisionPayload{LinkedPost: p.LinkedPostText, AdvertiserGuide: clip.EffectiveAdvertiserGuide(p),
 		Version: storylineRevisionPayloadVersion, ProjectID: id, Write: write, Request: request, Current: *p.Storyline,
 		Language: p.Language, Composition: p.Composition, Template: recipe, Instruction: p.Instruction, Guidelines: guidelines,
 		Ratio: p.Ratio, TargetDurationMS: p.TargetDurationMS, Regions: &regions, IntroPreset: p.IntroPreset, OutroPreset: p.OutroPreset,
@@ -261,6 +268,14 @@ func (s *GenerationService) RunStorylineRevision(ctx context.Context, user, job,
 	if len(analyses) == 0 {
 		return clip.ErrInsufficientFootage
 	}
+	in := clip.PlanningInput{LinkedPost: frozen.LinkedPost, AdvertiserGuide: frozen.AdvertiserGuide, Language: frozen.Language, Composition: frozen.Composition, Template: frozen.Template,
+		Ratio: frozen.Ratio, TargetDurationMS: frozen.TargetDurationMS, Analyses: analyses, Policy: pricing.Plan,
+		Instruction: frozen.Instruction, Guidelines: frozen.Guidelines, Regions: frozen.Regions,
+		Design: clip.ProjectDesign{IntroPreset: frozen.IntroPreset, OutroPreset: frozen.OutroPreset}}
+	current := frozen.Current
+	if err := s.validateStorylineAllowance(clip.StorylineInput{PlanningInput: in, Current: &current, Request: frozen.Request}); err != nil {
+		return err
+	}
 	// CLIP-19: nothing is asked of a model before the reservation succeeds.
 	ctx, err = s.jobs.ReserveApproved(ctx, user, job, *frozen.Approval, 0)
 	if err != nil {
@@ -270,11 +285,6 @@ func (s *GenerationService) RunStorylineRevision(ctx context.Context, user, job,
 	if progress != nil {
 		progress(stage, 0, 1)
 	}
-	in := clip.PlanningInput{AdvertiserGuide: frozen.AdvertiserGuide, Language: frozen.Language, Composition: frozen.Composition, Template: frozen.Template,
-		Ratio: frozen.Ratio, TargetDurationMS: frozen.TargetDurationMS, Analyses: analyses, Policy: pricing.Plan,
-		Instruction: frozen.Instruction, Guidelines: frozen.Guidelines, Regions: frozen.Regions,
-		Design: clip.ProjectDesign{IntroPreset: frozen.IntroPreset, OutroPreset: frozen.OutroPreset}}
-	current := frozen.Current
 	written, _, err := s.planner.Storyline(ctx, pricing.Plan.Ref, clip.StorylineInput{PlanningInput: in, Current: &current, Request: frozen.Request})
 	if err != nil {
 		return err

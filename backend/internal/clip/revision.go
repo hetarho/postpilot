@@ -37,9 +37,10 @@ func RevisionInputDigest(p Project, request, target, write string, pricing Gener
 		Disclosure, Ratio    string
 		HideDisclosure       bool
 		Target_              int
-		AdvertiserGuide      *AdvertiserGuide `json:",omitempty"`
+		AdvertiserGuide      *AdvertiserGuide    `json:",omitempty"`
+		LinkedPostRef        *LinkedPostIdentity `json:",omitempty"`
 	}{p.UserID, p.ID, write, p.EditPlanRevision, request, target, p.EditPlan, pricing, p.Composition,
-		p.Instruction, p.CaptionPace, p.Accent, p.Disclosure, p.Ratio, p.HideDisclosure, p.TargetDurationMS, EffectiveAdvertiserGuide(p)}
+		p.Instruction, p.CaptionPace, p.Accent, p.Disclosure, p.Ratio, p.HideDisclosure, p.TargetDurationMS, EffectiveAdvertiserGuide(p), p.LinkedPostRef}
 	raw, _ := json.Marshal(input)
 	sum := sha256.Sum256(raw)
 	return hex.EncodeToString(sum[:])

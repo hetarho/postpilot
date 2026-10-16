@@ -14,9 +14,12 @@ import (
 
 type advertiserPromptCase struct{ name, system, user string }
 
-func advertiserPromptCases(guide *clip.AdvertiserGuide) []advertiserPromptCase {
+func advertiserPromptCases(guide *clip.AdvertiserGuide, linked ...*clip.LinkedPostText) []advertiserPromptCase {
 	document := clip.NoTemplateComposition()
 	in := clip.PlanningInput{Language: "ko", Composition: &document, Ratio: "vertical", TargetDurationMS: 15000, Instruction: "내 경험", AdvertiserGuide: guide, Guidelines: clip.VideoGuidelines{Defaults: []string{"입력한 사실만 쓰기"}}}
+	if len(linked) > 0 {
+		in.LinkedPost = linked[0]
+	}
 	limits := clip.DefaultCompositionLimits()
 	story := clip.Storyline{Paragraphs: []clip.StorylineParagraph{{Text: "내가 겪은 순서"}}}
 	plan := clip.EditPlan{Ratio: "vertical", DurationMS: 15000, Portable: &clip.PortablePlan{}, Narration: &clip.NarrationPlan{Enabled: true, Segments: []clip.SpokenSegment{{ID: "one", Text: "내 경험", StartMS: 0, EndMS: 1000}}}}
@@ -54,21 +57,24 @@ func advertiserPromptCases(guide *clip.AdvertiserGuide) []advertiserPromptCase {
 	add("spoken-revision", system, user)
 	return cases
 }
+
+var legacyVideoPromptDigests = map[string]string{
+	"flow":                    "179eea99e9396569101576e64d7417e187df2df01d4a6b5fcd9272581b510716",
+	"flow-following":          "0368ddaa7ad8c95042392fb70750cabd617c43544d0be6c16c078b5d6978338b",
+	"flow-measured":           "4de8a19feab557063127fc03c51dc1d09c3bc608966eef2b9010999ba8dea98c",
+	"flow-following-measured": "e73b3062572cc811d9c7b834df7dd098407d360163f213ad8e15e65f9a1ec1d6",
+	"storyline":               "43877b8ab033fbbf1e02017eefe944fa4117a244d10ae1ab724a19480b9e9407",
+	"storyline-revision":      "794c9b328003bd5d7503cf02f098b834c5c19c865599bbb4db733932fa27eb81",
+	"narration":               "3cab31acd8c80ff2ddc1fb2a2f79a37bd89ba4b653d0cac4faf175531fd996d2",
+	"flow-revision":           "942385ce148afd19879577a38073ac9d174d94c1cc485610e29107629eeb6df8",
+	"narration-revision":      "d105c50d8443d428123c1391cf9a1e2be9454ddb8fe23e6475c7e6924fc753c5",
+	"spoken":                  "5cd80514d9cdce9a604b951c73ee858c87f78652ee26b49c205705e2871a18c1",
+	"spoken-following":        "6fbf980b8f4d5eccee8feb629e69b77e5dd63ad5c3250f5ca0536c66d5cc8f79",
+	"spoken-revision":         "296a400239351130f85a0256270d983b016ea93517f51f0957ec858f230c618a",
+}
+
 func TestNoGuideBytesWhileOff(t *testing.T) {
-	legacy := map[string]string{
-		"flow":                    "179eea99e9396569101576e64d7417e187df2df01d4a6b5fcd9272581b510716",
-		"flow-following":          "0368ddaa7ad8c95042392fb70750cabd617c43544d0be6c16c078b5d6978338b",
-		"flow-measured":           "4de8a19feab557063127fc03c51dc1d09c3bc608966eef2b9010999ba8dea98c",
-		"flow-following-measured": "e73b3062572cc811d9c7b834df7dd098407d360163f213ad8e15e65f9a1ec1d6",
-		"storyline":               "43877b8ab033fbbf1e02017eefe944fa4117a244d10ae1ab724a19480b9e9407",
-		"storyline-revision":      "794c9b328003bd5d7503cf02f098b834c5c19c865599bbb4db733932fa27eb81",
-		"narration":               "3cab31acd8c80ff2ddc1fb2a2f79a37bd89ba4b653d0cac4faf175531fd996d2",
-		"flow-revision":           "942385ce148afd19879577a38073ac9d174d94c1cc485610e29107629eeb6df8",
-		"narration-revision":      "d105c50d8443d428123c1391cf9a1e2be9454ddb8fe23e6475c7e6924fc753c5",
-		"spoken":                  "5cd80514d9cdce9a604b951c73ee858c87f78652ee26b49c205705e2871a18c1",
-		"spoken-following":        "6fbf980b8f4d5eccee8feb629e69b77e5dd63ad5c3250f5ca0536c66d5cc8f79",
-		"spoken-revision":         "296a400239351130f85a0256270d983b016ea93517f51f0957ec858f230c618a",
-	}
+	legacy := legacyVideoPromptDigests
 	full := clip.AdvertiserGuide{Text: "광고주 요청", Keywords: []string{"메뉴"}, Hashtags: []string{"체험"}}
 	for name, guide := range map[string]*clip.AdvertiserGuide{
 		"absent":        nil,

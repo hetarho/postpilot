@@ -92,3 +92,29 @@ func (s *Service) prepareLinkedPostPatch(ctx context.Context, user string, old c
 	}
 	return nil
 }
+
+// Freeze only canonical text from the originally linked identity. No metadata/text
+// double read can substitute a newly created post that reuses a deleted slug.
+func (s *Service) freezeLinkedPost(ctx context.Context, user string, p clip.Project) (clip.Project, error) {
+	p.LinkedPostText = nil
+	if p.LinkedPostRef == nil {
+		return p, nil
+	}
+	if s.linkedPosts == nil {
+		return p, errors.New("linked post reader is unavailable")
+	}
+	doc, err := s.linkedPosts.Text(ctx, user, p.LinkedPostRef.Slug)
+	if errors.Is(err, clip.ErrNotFound) {
+		return p, nil
+	}
+	if err != nil {
+		return p, err
+	}
+	if doc.Text == nil || doc.Text.Slug != p.LinkedPostRef.Slug || !doc.CreatedAt.Equal(p.LinkedPostRef.CreatedAt) {
+		return p, nil
+	}
+	text := *doc.Text
+	text.Sections = append([]clip.LinkedPostSection{}, doc.Text.Sections...)
+	p.LinkedPostText = &text
+	return p, nil
+}

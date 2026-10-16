@@ -10,6 +10,7 @@ import (
 )
 
 type linkedPostReader struct {
+	texts map[string]*clip.LinkedPostText
 	posts map[string]clip.LinkedPost
 	calls int
 }
@@ -21,6 +22,14 @@ func (r *linkedPostReader) Get(_ context.Context, user, slug string) (clip.Linke
 		return clip.LinkedPost{}, clip.ErrNotFound
 	}
 	return p, nil
+}
+
+func (r *linkedPostReader) Text(ctx context.Context, user, slug string) (clip.LinkedPostDocument, error) {
+	p, err := r.Get(ctx, user, slug)
+	if err != nil {
+		return clip.LinkedPostDocument{}, err
+	}
+	return clip.LinkedPostDocument{CreatedAt: p.CreatedAt, Text: r.texts[user+":"+slug]}, nil
 }
 
 type linkedProjectStore struct {

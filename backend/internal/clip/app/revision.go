@@ -18,9 +18,11 @@ import (
 //
 // Version 2 freezes the clip's 영상 지침; an accepted version-1 job ran with none.
 // Version 3 freezes advertiser material; earlier accepted jobs retain none.
-const revisionPayloadVersion = 3
+// Version 4 freezes the linked post text; earlier accepted jobs retain none.
+const revisionPayloadVersion = 4
 
 type revisionJobPayload struct {
+	LinkedPost               *clip.LinkedPostText  `json:",omitempty"`
 	AdvertiserGuide          *clip.AdvertiserGuide `json:",omitempty"`
 	Version                  int
 	ProjectID, Write         string
@@ -51,7 +53,7 @@ func (p revisionJobPayload) Design() clip.ProjectDesign {
 // narration request, two where the footage is rewritten and the narration
 // follows it. No observation is repaid — the recorded ones are the evidence
 // this rewrite is bound to (CLIP-93, CLIP-131).
-func (s *GenerationService) revisionPricing(ctx context.Context, write, observe string, target string, guidelines clip.VideoGuidelines) (clip.GenerationPricing, error) {
+func (s *GenerationService) revisionPricing(ctx context.Context, write, observe string, target string, guidelines clip.VideoGuidelines, linked *clip.LinkedPostText) (clip.GenerationPricing, error) {
 	if s.pricing == nil {
 		return clip.GenerationPricing{}, clip.ErrPricingUnavailable
 	}
@@ -62,6 +64,7 @@ func (s *GenerationService) revisionPricing(ctx context.Context, write, observe 
 	pricing.CancellationPolicyVersion = clip.CancellationPolicyVersion
 	// The revision's digest binds the 영상 지침 through its pricing, as a generation's does.
 	pricing.GuidelinesDigest = guidelines.Digest()
+	pricing.LinkedPostDigest = linked.Digest()
 	if !pricing.Valid() || pricing.ObservationCalls != 0 {
 		return clip.GenerationPricing{}, clip.ErrPricingUnavailable
 	}
@@ -78,6 +81,9 @@ func (s *GenerationService) revisionInputs(ctx context.Context, user, id, reques
 	}
 	if p.Finalized != nil {
 		return clip.Project{}, clip.SourceBatch{}, clip.ErrFinalized
+	}
+	if p, err = s.projects.freezeLinkedPost(ctx, user, p); err != nil {
+		return clip.Project{}, clip.SourceBatch{}, err
 	}
 	// A revision rewrites a plan that exists, on a composition this build can
 	// execute, against the observations already stored. A frozen legacy snapshot
@@ -140,7 +146,7 @@ func (s *GenerationService) QuoteRevision(ctx context.Context, user, id, request
 	if err != nil {
 		return clip.GenerationQuote{}, err
 	}
-	pricing, err := s.revisionPricing(ctx, write, observe, target, guidelines)
+	pricing, err := s.revisionPricing(ctx, write, observe, target, guidelines, p.LinkedPostText)
 	if err != nil {
 		return clip.GenerationQuote{}, err
 	}
@@ -191,7 +197,7 @@ func (s *GenerationService) StartRevision(ctx context.Context, user, id, request
 	if err != nil {
 		return "", err
 	}
-	pricing, err := s.revisionPricing(withFrozenQuoteRate(ctx, q.Pricing), write, observe, target, guidelines)
+	pricing, err := s.revisionPricing(withFrozenQuoteRate(ctx, q.Pricing), write, observe, target, guidelines, p.LinkedPostText)
 	if err != nil {
 		return "", err
 	}
@@ -205,7 +211,7 @@ func (s *GenerationService) StartRevision(ctx context.Context, user, id, request
 	if t, err := s.projects.store.GetTemplate(ctx, user, p.VideoTemplateID); err == nil {
 		recipe = t.Recipe
 	}
-	payload, err := json.Marshal(revisionJobPayload{AdvertiserGuide: clip.EffectiveAdvertiserGuide(p),
+	payload, err := json.Marshal(revisionJobPayload{LinkedPost: p.LinkedPostText, AdvertiserGuide: clip.EffectiveAdvertiserGuide(p),
 		Version: revisionPayloadVersion, ProjectID: id, Write: write, Revision: p.EditPlanRevision,
 		Request: request, Target: target, PlanJSON: p.EditPlan, Language: p.Language,
 		Composition: p.Composition, Template: recipe,
@@ -269,19 +275,22 @@ func (s *GenerationService) RunRevision(ctx context.Context, user, job, project 
 	if len(analyses) == 0 {
 		return clip.ErrInsufficientFootage
 	}
+	// A revision rewrites no intro/outro word (CLIP-131, CLIP-188): the narration is told what
+	// the slots show and the plan draws them as they stand.
+	regions := clip.WrittenRegions(p, nil)
+	in := clip.PlanningInput{LinkedPost: frozen.LinkedPost, AdvertiserGuide: frozen.AdvertiserGuide, Language: frozen.Language, Composition: frozen.Composition, Template: frozen.Template,
+		Ratio: p.Ratio, TargetDurationMS: frozen.TargetDurationMS, Analyses: analyses,
+		Policy: pricing.Plan, Disclosure: frozen.Disclosure, HideDisclosure: frozen.HideDisclosure,
+		Instruction: frozen.Instruction, Design: frozen.Design(), SourceAudio: frozen.SourceAudio,
+		Guidelines: frozen.Guidelines, Regions: &regions}
+	if err := s.validateRevisionAllowance(clip.RevisionInput{PlanningInput: in, Current: current, Request: frozen.Request, Target: frozen.Target}); err != nil {
+		return err
+	}
 	// CLIP-19: nothing is asked of a model before the reservation succeeds.
 	ctx, err = s.jobs.ReserveApproved(ctx, user, job, *frozen.Approval, 0)
 	if err != nil {
 		return err
 	}
-	// A revision rewrites no intro/outro word (CLIP-131, CLIP-188): the narration is told what
-	// the slots show and the plan draws them as they stand.
-	regions := clip.WrittenRegions(p, nil)
-	in := clip.PlanningInput{AdvertiserGuide: frozen.AdvertiserGuide, Language: frozen.Language, Composition: frozen.Composition, Template: frozen.Template,
-		Ratio: p.Ratio, TargetDurationMS: frozen.TargetDurationMS, Analyses: analyses,
-		Policy: pricing.Plan, Disclosure: frozen.Disclosure, HideDisclosure: frozen.HideDisclosure,
-		Instruction: frozen.Instruction, Design: frozen.Design(), SourceAudio: frozen.SourceAudio,
-		Guidelines: frozen.Guidelines, Regions: &regions}
 	stage = "flow"
 	if frozen.Target == clip.RevisionNarration {
 		stage = "narrate"

@@ -50,6 +50,7 @@ func BuildStorylinePrompt(in clip.StorylineInput, limits composition.Limits) (st
 		"analyses": planObservationPayload(in.Analyses, true),
 	}
 	addAdvertiserGuide(payload, in.PlanningInput)
+	addLinkedPost(payload, in.PlanningInput)
 	if outline := templateOutline(in.PlanningInput, limits); outline != "" {
 		payload["template_outline"] = outline
 	}
@@ -68,5 +69,5 @@ func BuildStorylinePrompt(in clip.StorylineInput, limits composition.Limits) (st
 	if in.Request != "" {
 		mode = "storyline-revision"
 	}
-	return videoWritingContract(in.Language) + prompt + responseContract + contract + advertiserGuideRule(in.PlanningInput) + videoGuidelineBlock(videoGuidelinesFor(in.Guidelines, mode)), promptJSON(payload)
+	return videoWritingContract(in.PlanningInput) + prompt + responseContract + contract + advertiserGuideRule(in.PlanningInput) + videoGuidelineBlock(videoGuidelinesFor(in.Guidelines, mode)), promptJSON(payload)
 }

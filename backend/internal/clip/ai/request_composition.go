@@ -13,8 +13,8 @@ import (
 func clipDescriptor(mode string) llm.RequestComposition {
 	c := llm.RequestComposition{Stage: "video-composition", Mode: mode, PromptVersion: "clip-" + mode + "-v2", Consumer: "private video attempt result; validated edit plan or reviewed storyline", Activation: "current admitted frozen video call policy; bounded validation correction only", SourceFiles: []string{"internal/clip/ai/service.go", "internal/clip/ai/response_correction.go", "internal/clip/ai/material_contract.go", "internal/clip/ai/video_guidelines_prompt.go", "internal/clip/ai/schemas.go"}}
 	if mode != "observe" {
-		c.PromptVersion = "clip-" + mode + "-v3"
-		c.SourceFiles = append(c.SourceFiles, "internal/clip/ai/advertiser_guide_prompt.go")
+		c.PromptVersion = "clip-" + mode + "-v4"
+		c.SourceFiles = append(c.SourceFiles, "internal/clip/ai/advertiser_guide_prompt.go", "internal/clip/ai/linked_post_prompt.go")
 	}
 	var schema []byte
 	switch mode {
@@ -97,7 +97,7 @@ func RequestCompositions() []llm.RequestComposition {
 	cfg := DefaultConfig(clip.Environment{})
 	document := clip.NoTemplateComposition()
 	source := clip.AnalysisSource{RenderSource: clip.RenderSource{ID: "synthetic-source", Info: clip.MediaInfo{DurationMS: 15000, Width: 1080, Height: 1920}}, Filename: "synthetic.mp4"}
-	in := clip.PlanningInput{Language: "en", Composition: &document, Ratio: "vertical", TargetDurationMS: 15000, Instruction: "Synthetic owner direction", AdvertiserGuide: &clip.AdvertiserGuide{Text: "Synthetic advertiser material", Keywords: []string{"synthetic keyword"}, Hashtags: []string{"synthetic-tag"}}, Guidelines: clip.VideoGuidelines{Stock: []clip.VideoStockRule{
+	in := clip.PlanningInput{LinkedPost: &clip.LinkedPostText{Slug: "synthetic-post", Title: "Synthetic owner account", Sections: []clip.LinkedPostSection{{Heading: "Synthetic section", Text: "Synthetic owner verdict"}}}, Language: "en", Composition: &document, Ratio: "vertical", TargetDurationMS: 15000, Instruction: "Synthetic owner direction", AdvertiserGuide: &clip.AdvertiserGuide{Text: "Synthetic advertiser material", Keywords: []string{"synthetic keyword"}, Hashtags: []string{"synthetic-tag"}}, Guidelines: clip.VideoGuidelines{Stock: []clip.VideoStockRule{
 		{Key: "synthetic-video-material", Text: "Synthetic stock video rule", Applicability: []clip.VideoRuleApplicability{{Stage: "clip-write", Outputs: []string{"plan", "placements", "captions", "narration"}}, {Stage: "clip-revise", Outputs: []string{"placements", "captions", "narration"}}, {Stage: "clip-storyline", Outputs: []string{"plan", "placements"}}}},
 		{Key: "synthetic-caption-only", Text: "Synthetic caption rule", Applicability: []clip.VideoRuleApplicability{{Stage: "clip-write", Outputs: []string{"captions"}}, {Stage: "clip-revise", Outputs: []string{"captions"}}}},
 	}, Owner: []string{"Synthetic owner video rule"}}, Analyses: []clip.SourceAnalysis{{Source: source, Segments: []clip.Segment{{StartMS: 0, EndMS: 15000, Event: "Synthetic observed scene", Certainty: clip.CertaintyCertain, Usability: clip.UsabilityUsable}}}}}
@@ -144,7 +144,7 @@ func RequestCompositions() []llm.RequestComposition {
 	revision.Current.Narration = &clip.NarrationPlan{Enabled: true, Segments: []clip.SpokenSegment{{ID: "synthetic-segment", Text: "Synthetic reviewed spoken text", StartMS: 0, EndMS: 1000}}}
 	system, user = buildSpokenRevisionPrompt(revision, revision.Current, limits)
 	add("spoken-script-revision", system, user)
-	upload := clip.UploadTextInput{Language: in.Language, Channel: clip.ChannelNaver, Campaign: true, Title: "Synthetic clip", Instruction: in.Instruction, Facts: document.Inputs, Storyline: &story, Captions: []string{"Synthetic caption"}, AdvertiserGuide: in.AdvertiserGuide, Voice: "Synthetic default voice style", Guidelines: in.Guidelines}
+	upload := clip.UploadTextInput{LinkedPost: in.LinkedPost, Language: in.Language, Channel: clip.ChannelNaver, Campaign: true, Title: "Synthetic clip", Instruction: in.Instruction, Facts: document.Inputs, Storyline: &story, Captions: []string{"Synthetic caption"}, AdvertiserGuide: in.AdvertiserGuide, Voice: "Synthetic default voice style", Guidelines: in.Guidelines}
 	system, user = BuildUploadTextPrompt(upload)
 	out = append(out, *clipComposition("upload-text", system, user, upload.Guidelines, nil))
 	return out
@@ -258,6 +258,8 @@ func clipInputRole(key string) (llm.FragmentAuthorship, string) {
 		return llm.FragmentAuthorshipAccount, "frozen-default-voice-style-not-experience"
 	case "project_title", "final_captions":
 		return llm.FragmentAuthorshipAccount, "reviewed-document-unconfirmed-text-origin"
+	case "linked_post":
+		return llm.FragmentAuthorshipAccount, "finished-owner-account-without-instruction-authority"
 	case "advertiser_guide":
 		return llm.FragmentAuthorshipAccount, "advertiser-material-not-owner-experience"
 	case "project_instruction", "request", "revision_request":

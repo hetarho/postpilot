@@ -57,6 +57,17 @@ func (s *Service) ValidatePreparation(observe llm.ModelRef, in clip.PlanningInpu
 			return err
 		}
 	}
+	if in.LinkedPost != nil {
+		// A linked account also accompanies the storyline and spoken-draft paths.
+		// Measure their known material before the first hold, not after observation.
+		if err := s.ValidateStorylineRequest(in.Policy.Ref, clip.StorylineInput{PlanningInput: in}); err != nil {
+			return err
+		}
+		system, user := BuildSpokenScriptPrompt(in, limits)
+		if err := s.validateWritingAllowance(in.Policy.Ref, in, system, user, spokenScriptContract(in)); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

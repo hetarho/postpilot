@@ -25,10 +25,12 @@ var ErrBusy = errors.New("clip busy")
 // freezes the storyline 이 스토리로 만들기 builds along. Version 8 freezes the project's
 // intro/outro slots; an accepted version-3..7 job drafts no slot and saves the slots as they are.
 // Versions 11/12 freeze advertiser material; accepted earlier jobs carry none.
-const GenerationPayloadVersion = 11
-const BrowserAnalysisGenerationPayloadVersion = 12
+// Versions 13/14 also freeze linked canonical post text; earlier accepted jobs retain none.
+const GenerationPayloadVersion = 13
+const BrowserAnalysisGenerationPayloadVersion = 14
 
 type GenerationPayload struct {
+	LinkedPost      *LinkedPostText  `json:",omitempty"`
 	AdvertiserGuide *AdvertiserGuide `json:",omitempty"`
 	// Only versioned browser preparation uses this reference. Signed access and
 	// client original claims remain in its separately versioned owned session.

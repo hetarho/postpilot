@@ -112,6 +112,7 @@ type PlanningInput struct {
 	// On content it outranks the template's authored guidance; every declared
 	// structure stays the template's.
 	Instruction string
+	LinkedPost  *LinkedPostText
 	// The project's design selection (CLIP-139): the presets the intro and the
 	// outro will render in and the styles a caption may take. The admission
 	// layout checks the SAME presets the render will use, so a region that

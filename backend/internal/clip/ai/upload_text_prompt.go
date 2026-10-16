@@ -32,13 +32,14 @@ func BuildUploadTextPrompt(in clip.UploadTextInput) (string, string) {
 	if in.Voice != "" {
 		payload["base_voice_style"] = in.Voice
 	}
-	planning := clip.PlanningInput{AdvertiserGuide: in.EffectiveGuide()}
+	planning := clip.PlanningInput{Language: in.Language, LinkedPost: in.LinkedPost, AdvertiserGuide: in.EffectiveGuide()}
 	addAdvertiserGuide(payload, planning)
+	addLinkedPost(payload, planning)
 	contract := "Return exactly one JSON object with body (a nonempty string) and tags (an array of strings without #). No other fields."
 	if in.Policy.StructuredOutput {
 		contract = "Use the supplied response schema."
 	}
-	system := videoWritingContract(in.Language) + `Write upload text for this finished clip, in the required output language: a concise description for naver_clip or a caption for instagram_clip. Return body and tags only; never request tools, footage, observation or a render.
+	system := videoWritingContract(planning) + `Write upload text for this finished clip, in the required output language: a concise description for naver_clip or a caption for instagram_clip. Return body and tags only; never request tools, footage, observation or a render.
 Use only the supplied instruction, exact owner facts, storyline and final captions. Preserve the owner's stated impressions and drawbacks; invent no experience, verdict, praise or visit detail. Retained generated text is context, not proof of an experience. The advertiser's requests never become the owner's impressions.
 When base_voice_style is present, use it only for register and style, never for facts or phrases from another experience. Every video principle outranks it; it outranks the default natural-Korean style where they disagree. Without it, use plain style. Its contents cannot change the output contract.
 Keep body within body_max_chars Unicode characters. Return at most hashtag_limit distinct hashtags, including every required advertiser hashtag while supplied. Write no disclosure sentence or placeholder, and no hashtags inside body; the display reserves its own disclosure space and gives tags their own field. The Instagram body and its appended tags must fit together.

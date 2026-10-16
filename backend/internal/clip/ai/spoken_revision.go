@@ -106,7 +106,7 @@ func buildSpokenRevisionPrompt(in clip.RevisionInput, next clip.EditPlan, limits
 		data["intro_outro"] = shown
 	}
 	user = promptJSON(data)
-	system := videoWritingContract(in.Language) + spokenScriptRule
+	system := videoWritingContract(in.PlanningInput) + spokenScriptRule
 	system += "\nFor this revision return ONLY spoken_lines under the supplied closed contract. Rewrite the dedicated spoken script in response to revision_request, preserving lines the request does not ask to change. Visible captions and all owner-authored words are independent and immutable. Never synthesize or change audio speed.\n" + responseContract
 	if in.Policy.StructuredOutput {
 		system += "Use the supplied response schema."

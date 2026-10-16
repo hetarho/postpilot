@@ -2,12 +2,16 @@ package clip
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"time"
 )
 
 // LinkedPosts is an owner-scoped read port; the clip context never reads post tables.
 type LinkedPosts interface {
 	Get(ctx context.Context, user, slug string) (LinkedPost, error)
+	Text(ctx context.Context, user, slug string) (LinkedPostDocument, error)
 }
 
 type LinkedPost struct {
@@ -20,4 +24,29 @@ type LinkedPost struct {
 type LinkedPostIdentity struct {
 	Slug      string
 	CreatedAt time.Time
+}
+
+// LinkedPostDocument fences canonical text with the identity from that same read.
+type LinkedPostDocument struct {
+	CreatedAt time.Time
+	Text      *LinkedPostText
+}
+
+type LinkedPostText struct {
+	Slug     string              `json:"slug"`
+	Title    string              `json:"title"`
+	Sections []LinkedPostSection `json:"sections"`
+}
+type LinkedPostSection struct {
+	Heading string `json:"heading"`
+	Text    string `json:"text"`
+}
+
+func (p *LinkedPostText) Digest() string {
+	if p == nil {
+		return ""
+	}
+	raw, _ := json.Marshal(p)
+	sum := sha256.Sum256(raw)
+	return hex.EncodeToString(sum[:])
 }

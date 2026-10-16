@@ -70,6 +70,9 @@ func (s *GenerationService) uploadInputs(ctx context.Context, user, id, channel 
 	if err != nil {
 		return p, empty, row, err
 	}
+	if p, err = s.projects.freezeLinkedPost(ctx, user, p); err != nil {
+		return p, empty, row, err
+	}
 	in, err := clip.UploadTextMaterial(p, channel)
 	if err != nil {
 		return p, in, row, err
@@ -189,7 +192,7 @@ func (s *GenerationService) StartUploadText(ctx context.Context, user, id, chann
 	if err = s.uploadWriter.ValidateUploadText(ctx, modelRef(write), in); err != nil {
 		return "", err
 	}
-	frozen := clip.UploadTextSnapshot{Version: 1, UserID: user, ProjectID: id, PlanRevision: p.EditPlanRevision, TextRevision: row.Revision, MaterialDigest: clip.UploadMaterialDigest(in), ConfirmEdited: confirmed, Input: in, Approval: &clip.GenerationApproval{QuoteID: quote.ID, MaxCredits: pricing.MaxCredits, Pricing: pricing}}
+	frozen := clip.UploadTextSnapshot{Version: clip.UploadTextSnapshotVersion, UserID: user, ProjectID: id, PlanRevision: p.EditPlanRevision, TextRevision: row.Revision, MaterialDigest: clip.UploadMaterialDigest(in), ConfirmEdited: confirmed, Input: in, Approval: &clip.GenerationApproval{QuoteID: quote.ID, MaxCredits: pricing.MaxCredits, Pricing: pricing}}
 	payload, err := json.Marshal(frozen)
 	if err != nil {
 		return "", err
@@ -226,7 +229,7 @@ func (s *GenerationService) RunUploadText(ctx context.Context, user, job, projec
 		}
 	}()
 	var frozen clip.UploadTextSnapshot
-	if clip.StrictJSON(string(payload), &frozen) != nil || frozen.Version != 1 || frozen.UserID != user || frozen.ProjectID != project || frozen.Approval == nil {
+	if clip.StrictJSON(string(payload), &frozen) != nil || !clip.SupportedUploadTextSnapshot(frozen.Version) || frozen.UserID != user || frozen.ProjectID != project || frozen.Approval == nil {
 		return clip.ErrInvalid
 	}
 	pricing := frozen.Approval.Pricing
@@ -251,6 +254,8 @@ func (s *GenerationService) RunUploadText(ctx context.Context, user, job, projec
 	if err != nil {
 		return err
 	}
+	// The worker keeps the text approved at start, even if the owner edits the post later.
+	p.LinkedPostText = frozen.Input.LinkedPost
 	material, err := clip.UploadTextMaterial(p, frozen.Input.Channel)
 	if err != nil {
 		return err

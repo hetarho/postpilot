@@ -532,7 +532,7 @@ func TestForPromptPutsTheEnabledDefaultsFirst(t *testing.T) {
 		t.Fatalf("a switched-off default still reached the run: %q", off.Defaults)
 	}
 	clip, _ := svc.ForPrompt(ctx, "alice", KindClip, nil, nil, LanguageKorean, false)
-	if len(clip.Defaults) != 8 || clip.Owner != nil {
+	if len(clip.Defaults) != 9 || clip.Owner != nil {
 		t.Fatalf("clip = %+v", clip)
 	}
 }

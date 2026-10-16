@@ -21,7 +21,7 @@ func TestTheRegistryPutsPrinciplesBeforeRecommendations(t *testing.T) {
 	if got, want := keys(KindPost), []string{"facts", "impressions_kept", "drawbacks", "naming", "photo_order", "no_listing", "titles", "tags", "ending_run", "natural_korean", "impressions", "memory_impressions", "order", "opening", "photo_moments", "photo_groups", "closing"}; !reflect.DeepEqual(got, want) {
 		t.Fatalf("post defaults = %v, want %v", got, want)
 	}
-	if got, want := keys(KindClip), []string{"clip_facts", "clip_impressions", "clip_drawbacks", "clip_hook", "clip_continuity", "clip_order", "clip_wrap_up", "clip_no_repeated_promotion"}; !reflect.DeepEqual(got, want) {
+	if got, want := keys(KindClip), []string{"clip_facts", "clip_impressions", "clip_drawbacks", "clip_hook", "clip_continuity", "clip_post_wording", "clip_order", "clip_wrap_up", "clip_no_repeated_promotion"}; !reflect.DeepEqual(got, want) {
 		t.Fatalf("clip defaults = %v, want %v", got, want)
 	}
 	principles := map[string]bool{"facts": true, "impressions_kept": true, "drawbacks": true, "naming": true, "photo_order": true, "no_listing": true, "titles": true, "tags": true, "ending_run": true, "natural_korean": true, "clip_facts": true, "clip_impressions": true, "clip_drawbacks": true}
@@ -218,6 +218,39 @@ func TestPostRecommendationsKeepPlanClaimsSeparateAndAttributeTitleAdvice(t *tes
 			if strings.Contains(copy.text, absent) {
 				t.Errorf("tags text still carries %q", absent)
 			}
+		}
+	}
+}
+
+func TestClipDefaultsOrderAndText(t *testing.T) {
+	ds := Defaults(KindClip)
+	if len(ds) != 9 || ds[4].Key != "clip_continuity" || ds[5].Key != "clip_post_wording" || ds[5].Principle {
+		t.Fatal(ds)
+	}
+	for _, key := range []string{"clip_facts", "clip_impressions"} {
+		d, _ := DefaultFor(KindClip, key)
+		if !strings.Contains(d.Ko.Text, "연결한 글") || !strings.Contains(d.En.Text, "the linked post") {
+			t.Fatal(key, d)
+		}
+	}
+	d, _ := DefaultFor(KindClip, "clip_post_wording")
+	if d.Ko.Text != "연결한 글이 있으면 그 글의 구체적인 표현을 짧게 줄여 자막에 살리고, 화면에 보이는 것을 설명하지 마세요." || !strings.Contains(d.En.Text, "concrete wording") {
+		t.Fatal(d)
+	}
+	wrap, _ := DefaultFor(KindClip, "clip_wrap_up")
+	if !strings.Contains(wrap.Ko.Text, "사용자의 결론") || !strings.Contains(wrap.En.Text, "owner’s verdict") {
+		t.Fatal(wrap)
+	}
+	svc, store := newTestService(t, nil)
+	store.off = map[string]bool{"clip/clip_continuity": true, "clip/clip_order": true}
+	states, err := svc.Defaults(t.Context(), "alice", KindClip)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, state := range states {
+		want := state.Default.Key != "clip_continuity" && state.Default.Key != "clip_order"
+		if state.Enabled != want {
+			t.Fatal("stored off-state lost or new default not enabled", state)
 		}
 	}
 }

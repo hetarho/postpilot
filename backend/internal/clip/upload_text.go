@@ -57,6 +57,7 @@ type UploadText struct {
 }
 
 type UploadTextInput struct {
+	LinkedPost                            *LinkedPostText `json:",omitempty"`
 	Language, Channel, Title, Instruction string
 	Campaign                              bool
 	Facts                                 CompositionInputs
@@ -96,6 +97,13 @@ type UploadTextQuote struct {
 	ExpectedRevision int
 }
 
+// Version 2 freezes linked post text; an accepted version-1 call keeps none.
+const UploadTextSnapshotVersion = 2
+
+func SupportedUploadTextSnapshot(version int) bool {
+	return version >= 1 && version <= UploadTextSnapshotVersion
+}
+
 type UploadTextSnapshot struct {
 	Version, PlanRevision, TextRevision int
 	UserID, ProjectID, MaterialDigest   string
@@ -129,7 +137,7 @@ func UploadTextMaterial(p Project, channel string) (UploadTextInput, error) {
 	if err != nil {
 		return UploadTextInput{}, err
 	}
-	in := UploadTextInput{Language: p.Language, Channel: channel, Title: p.Title,
+	in := UploadTextInput{LinkedPost: p.LinkedPostText, Language: p.Language, Channel: channel, Title: p.Title,
 		Instruction: p.Instruction, Campaign: p.Campaign, Storyline: p.Storyline,
 		AdvertiserGuide: EffectiveAdvertiserGuide(p), Captions: []string{}}
 	if p.Composition != nil {

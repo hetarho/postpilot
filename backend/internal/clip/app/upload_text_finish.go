@@ -49,7 +49,7 @@ func (f Finisher) CompleteUploadText(ctx context.Context, in clip.UploadTextSave
 			return clip.ErrBusy
 		}
 		var frozen clip.UploadTextSnapshot
-		if clip.StrictJSON(string(j.Payload), &frozen) != nil || frozen.Version != 1 || frozen.UserID != in.UserID || frozen.ProjectID != in.ProjectID || frozen.Input.Channel != in.Channel || frozen.TextRevision != in.ExpectedRevision || frozen.PlanRevision != in.ExpectedPlanRevision || frozen.Approval == nil || !frozen.Approval.Pricing.UploadText {
+		if clip.StrictJSON(string(j.Payload), &frozen) != nil || !clip.SupportedUploadTextSnapshot(frozen.Version) || frozen.UserID != in.UserID || frozen.ProjectID != in.ProjectID || frozen.Input.Channel != in.Channel || frozen.TextRevision != in.ExpectedRevision || frozen.PlanRevision != in.ExpectedPlanRevision || frozen.Approval == nil || !frozen.Approval.Pricing.UploadText {
 			return clip.ErrInvalid
 		}
 		store, ok := p.Clips.(clip.UploadTextStore)

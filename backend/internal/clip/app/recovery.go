@@ -47,7 +47,8 @@ func planRecoveryDigest(p clip.GenerationPayload) string {
 		Analysis                           string
 		Sources                            [][2]string
 		AdvertiserGuide                    *clip.AdvertiserGuide `json:",omitempty"`
-	}{p.Dubbing, p.Composition, p.Template, p.Ratio, p.Write, p.Disclosure, p.Language, p.Instruction, p.Guidelines.Digest(), p.FollowStoryline.Digest(), regions, p.TargetDurationMS, p.HideDisclosure, clip.CompositionPlanVersion, clip.AnalysisContractVersion, sources, p.AdvertiserGuide})
+		LinkedPost                         *clip.LinkedPostText  `json:",omitempty"`
+	}{p.Dubbing, p.Composition, p.Template, p.Ratio, p.Write, p.Disclosure, p.Language, p.Instruction, p.Guidelines.Digest(), p.FollowStoryline.Digest(), regions, p.TargetDurationMS, p.HideDisclosure, clip.CompositionPlanVersion, clip.AnalysisContractVersion, sources, p.AdvertiserGuide, p.LinkedPost})
 	sum := sha256.Sum256(raw)
 	return hex.EncodeToString(sum[:])
 }
