@@ -4,19 +4,19 @@
 -- name: CreateImage :exec
 -- A photo joins after the post's last photo (POST-116). The position is read inside the insert
 -- itself, so two confirms in one post never take the same one.
-INSERT INTO images (id, post_slug, filename, r2_key, width, height, bytes, created_at, position)
+INSERT INTO images (id, post_slug, filename, r2_key, width, height, bytes, created_at, captured_at, position)
 VALUES (
-    sqlc.arg(id), sqlc.arg(post_slug), sqlc.arg(filename), sqlc.arg(r2_key), sqlc.arg(width), sqlc.arg(height), sqlc.arg(bytes), sqlc.arg(created_at),
+    sqlc.arg(id), sqlc.arg(post_slug), sqlc.arg(filename), sqlc.arg(r2_key), sqlc.arg(width), sqlc.arg(height), sqlc.arg(bytes), sqlc.arg(created_at), sqlc.narg(captured_at),
     (SELECT COALESCE(MAX(position), -1) + 1 FROM images WHERE post_slug = sqlc.arg(post_slug))
 );
 
 -- name: ListImagesByPost :many
 -- The owner's order (POST-116), which every photo read and generation follow.
-SELECT id, post_slug, filename, r2_key, width, height, bytes, created_at, rotation, rotation_by_owner, position
+SELECT id, post_slug, filename, r2_key, width, height, bytes, created_at, rotation, rotation_by_owner, position, captured_at
 FROM images WHERE post_slug = ? ORDER BY position, id;
 
 -- name: GetImage :one
-SELECT id, post_slug, filename, r2_key, width, height, bytes, created_at, rotation, rotation_by_owner, position
+SELECT id, post_slug, filename, r2_key, width, height, bytes, created_at, rotation, rotation_by_owner, position, captured_at
 FROM images WHERE id = ?;
 
 -- name: SetImagePosition :execrows

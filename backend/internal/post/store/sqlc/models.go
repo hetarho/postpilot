@@ -20,6 +20,7 @@ type Image struct {
 	Rotation        int64
 	RotationByOwner int64
 	Position        int64
+	CapturedAt      sql.NullString
 }
 
 type Post struct {
@@ -102,4 +103,5 @@ type Video struct {
 	Width       int64
 	Height      int64
 	CreatedAt   string
+	CapturedAt  sql.NullString
 }

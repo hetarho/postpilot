@@ -12,6 +12,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/postpilot/backend/internal/campaign"
+	"github.com/postpilot/backend/internal/platform/capturetime"
 	"github.com/postpilot/backend/internal/platform/ids"
 )
 
@@ -1368,11 +1369,22 @@ func (s *Service) replacePendingUpload(ctx context.Context, postSlug, filename s
 //
 // It is idempotent. A client that never saw the response retries, and a retry has to
 // return the attachment rather than a primary-key failure.
-func (s *Service) ConfirmUpload(ctx context.Context, userID, uploadID string, width, height int32, durationMs int64) (Attachment, error) {
+func (s *Service) ConfirmUpload(ctx context.Context, userID, uploadID string, width, height int32, durationMs int64, capturedAt ...*time.Time) (Attachment, error) {
 	if width <= 0 || height <= 0 || width > maxImageDimension || height > maxImageDimension {
 		return Attachment{}, fmt.Errorf("%w: dimensions %dx%d", ErrInvalidImage, width, height)
 	}
 
+	var captured *time.Time
+	if len(capturedAt) > 1 {
+		return Attachment{}, ErrInvalidImage
+	}
+	if len(capturedAt) == 1 {
+		var err error
+		captured, err = capturetime.Normalize(capturedAt[0])
+		if err != nil {
+			return Attachment{}, fmt.Errorf("%w: invalid capture time", ErrInvalidImage)
+		}
+	}
 	upload, err := s.uploads.GetUpload(ctx, uploadID)
 	if err != nil {
 		if errors.Is(err, ErrNotFound) {
@@ -1390,7 +1402,7 @@ func (s *Service) ConfirmUpload(ctx context.Context, userID, uploadID string, wi
 	// The KIND comes from the reservation, never from this request: a client cannot turn a
 	// photo's slot into a video's by asking, and the object it PUT was signed for one of them.
 	if upload.Kind == AttachmentVideo {
-		return s.confirmVideo(ctx, userID, upload, width, height, durationMs)
+		return s.confirmVideo(ctx, userID, upload, width, height, durationMs, captured)
 	}
 
 	head, err := s.blobs.Head(ctx, upload.Key)
@@ -1413,14 +1425,15 @@ func (s *Service) ConfirmUpload(ctx context.Context, userID, uploadID string, wi
 	}
 
 	image := Image{
-		ID:        upload.ID,
-		PostSlug:  upload.PostSlug,
-		Filename:  upload.Filename,
-		Key:       upload.Key,
-		Width:     width,
-		Height:    height,
-		Bytes:     head.Size,
-		CreatedAt: s.now(),
+		CapturedAt: captured,
+		ID:         upload.ID,
+		PostSlug:   upload.PostSlug,
+		Filename:   upload.Filename,
+		Key:        upload.Key,
+		Width:      width,
+		Height:     height,
+		Bytes:      head.Size,
+		CreatedAt:  s.now(),
 	}
 	// One transaction: see the note on Store.ConfirmUpload for why the two writes must
 	// not be separable.
@@ -1440,7 +1453,7 @@ func (s *Service) ConfirmUpload(ctx context.Context, userID, uploadID string, wi
 // confirmVideo is the video half of the confirm. Its extra checks are the duration the
 // browser read and the Content-Type the object reports: the PUT was signed for the
 // container's type, so an object claiming another one is not what was reserved.
-func (s *Service) confirmVideo(ctx context.Context, userID string, upload Upload, width, height int32, durationMs int64) (Attachment, error) {
+func (s *Service) confirmVideo(ctx context.Context, userID string, upload Upload, width, height int32, durationMs int64, capturedAt *time.Time) (Attachment, error) {
 	if durationMs <= 0 || durationMs > s.maxVideoMillis {
 		return Attachment{}, fmt.Errorf("%w: duration %d ms", ErrInvalidVideo, durationMs)
 	}
@@ -1462,6 +1475,7 @@ func (s *Service) confirmVideo(ctx context.Context, userID string, upload Upload
 	}
 
 	video := Video{
+		CapturedAt:  capturetime.Video(capturedAt),
 		ID:          upload.ID,
 		PostSlug:    upload.PostSlug,
 		Filename:    upload.Filename,

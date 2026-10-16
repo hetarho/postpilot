@@ -1,6 +1,7 @@
 import { createUploadHandshake } from '@/entities/image'
 import { IMAGE_JPEG_QUALITY, IMAGE_MAX_LONG_EDGE_PX } from '../config'
 import { decodeImage, resizeToJpeg } from '@/shared/lib'
+import { readJpegCaptureTime } from '@/shared/lib/media'
 import { putBlobWithProgress } from '@/shared/lib/upload'
 import type { UploadPipeline } from '../model/upload-batch'
 
@@ -11,9 +12,11 @@ export function createUploadPipeline(
 ): UploadPipeline {
   return {
     async convert(file) {
+      const capturedAt = await readJpegCaptureTime(file)
       const bitmap = await decodeImage(file)
       try {
-        return await resizeToJpeg(bitmap, IMAGE_MAX_LONG_EDGE_PX, IMAGE_JPEG_QUALITY)
+        const resized = await resizeToJpeg(bitmap, IMAGE_MAX_LONG_EDGE_PX, IMAGE_JPEG_QUALITY)
+        return { ...resized, ...(capturedAt ? { capturedAt } : {}) }
       } finally {
         bitmap.close()
       }

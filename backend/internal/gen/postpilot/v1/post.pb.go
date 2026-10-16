@@ -3633,7 +3633,8 @@ type ConfirmUploadRequest struct {
 	Height   int32                  `protobuf:"varint,3,opt,name=height,proto3" json:"height,omitempty"`
 	// Video uploads only, and required for one: the container's duration as the browser
 	// read it. A photo upload leaves it zero.
-	DurationMs    int64 `protobuf:"varint,4,opt,name=duration_ms,json=durationMs,proto3" json:"duration_ms,omitempty"`
+	DurationMs    int64   `protobuf:"varint,4,opt,name=duration_ms,json=durationMs,proto3" json:"duration_ms,omitempty"`
+	CapturedAt    *string `protobuf:"bytes,5,opt,name=captured_at,json=capturedAt,proto3,oneof" json:"captured_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -3694,6 +3695,13 @@ func (x *ConfirmUploadRequest) GetDurationMs() int64 {
 		return x.DurationMs
 	}
 	return 0
+}
+
+func (x *ConfirmUploadRequest) GetCapturedAt() string {
+	if x != nil && x.CapturedAt != nil {
+		return *x.CapturedAt
+	}
+	return ""
 }
 
 type ConfirmUploadResponse struct {
@@ -4393,13 +4401,16 @@ const file_postpilot_v1_post_proto_rawDesc = "" +
 	"\aput_url\x18\x02 \x01(\tR\x06putUrl\x12!\n" +
 	"\fcontent_type\x18\x03 \x01(\tR\vcontentType\x12\x1d\n" +
 	"\n" +
-	"expires_at\x18\x04 \x01(\tR\texpiresAt\"\x82\x01\n" +
+	"expires_at\x18\x04 \x01(\tR\texpiresAt\"\xb8\x01\n" +
 	"\x14ConfirmUploadRequest\x12\x1b\n" +
 	"\tupload_id\x18\x01 \x01(\tR\buploadId\x12\x14\n" +
 	"\x05width\x18\x02 \x01(\x05R\x05width\x12\x16\n" +
 	"\x06height\x18\x03 \x01(\x05R\x06height\x12\x1f\n" +
 	"\vduration_ms\x18\x04 \x01(\x03R\n" +
-	"durationMs\"m\n" +
+	"durationMs\x12$\n" +
+	"\vcaptured_at\x18\x05 \x01(\tH\x00R\n" +
+	"capturedAt\x88\x01\x01B\x0e\n" +
+	"\f_captured_at\"m\n" +
 	"\x15ConfirmUploadResponse\x12)\n" +
 	"\x05image\x18\x01 \x01(\v2\x13.postpilot.v1.ImageR\x05image\x12)\n" +
 	"\x05video\x18\x02 \x01(\v2\x13.postpilot.v1.VideoR\x05video\"/\n" +
@@ -4673,6 +4684,7 @@ func file_postpilot_v1_post_proto_init() {
 	file_postpilot_v1_post_proto_msgTypes[17].OneofWrappers = []any{}
 	file_postpilot_v1_post_proto_msgTypes[26].OneofWrappers = []any{}
 	file_postpilot_v1_post_proto_msgTypes[31].OneofWrappers = []any{}
+	file_postpilot_v1_post_proto_msgTypes[45].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

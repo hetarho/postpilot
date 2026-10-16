@@ -14,7 +14,7 @@ func ResolveMediaSource(op MediaOperation, frozen MediaTaskSource, batch SourceB
 		if !matches {
 			continue
 		}
-		if source.SourceMetadata != frozen.SourceMetadata || source.ActualBytes != source.Bytes || source.State != "ready" || source.CleanupPending || !source.ExpiresAt.After(now) {
+		if !source.SourceMetadata.SameOriginal(frozen.SourceMetadata) || source.ActualBytes != source.Bytes || source.State != "ready" || source.CleanupPending || !source.ExpiresAt.After(now) {
 			return SourceLease{}, ErrSourceState
 		}
 		return source, nil

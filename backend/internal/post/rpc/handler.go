@@ -16,6 +16,7 @@ import (
 	"github.com/postpilot/backend/internal/campaign"
 	postpilotv1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/gen/postpilot/v1/postpilotv1connect"
+	"github.com/postpilot/backend/internal/platform/capturetime"
 	"github.com/postpilot/backend/internal/platform/rpcserver"
 	"github.com/postpilot/backend/internal/post"
 )
@@ -243,7 +244,11 @@ func (h *Handler) ConfirmUpload(ctx context.Context, req *connect.Request[postpi
 		return nil, err
 	}
 
-	attachment, err := h.svc.ConfirmUpload(ctx, userID, req.Msg.GetUploadId(), req.Msg.GetWidth(), req.Msg.GetHeight(), req.Msg.GetDurationMs())
+	captured, err := capturetime.Parse(req.Msg.CapturedAt)
+	if err != nil {
+		return nil, toConnectError("confirm upload", post.ErrInvalidImage)
+	}
+	attachment, err := h.svc.ConfirmUpload(ctx, userID, req.Msg.GetUploadId(), req.Msg.GetWidth(), req.Msg.GetHeight(), req.Msg.GetDurationMs(), captured)
 	if err != nil {
 		return nil, toConnectError("confirm upload", err)
 	}

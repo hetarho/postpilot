@@ -2,15 +2,15 @@
 -- known to exist in storage.
 
 -- name: CreateVideo :exec
-INSERT INTO videos (id, post_slug, filename, r2_key, content_type, bytes, duration_ms, width, height, created_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+INSERT INTO videos (id, post_slug, filename, r2_key, content_type, bytes, duration_ms, width, height, created_at, captured_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 -- name: ListVideosByPost :many
-SELECT id, post_slug, filename, r2_key, content_type, bytes, duration_ms, width, height, created_at
+SELECT id, post_slug, filename, r2_key, content_type, bytes, duration_ms, width, height, created_at, captured_at
 FROM videos WHERE post_slug = ? ORDER BY created_at, id;
 
 -- name: GetVideo :one
-SELECT id, post_slug, filename, r2_key, content_type, bytes, duration_ms, width, height, created_at
+SELECT id, post_slug, filename, r2_key, content_type, bytes, duration_ms, width, height, created_at, captured_at
 FROM videos WHERE id = ?;
 
 -- name: DeleteVideo :execrows

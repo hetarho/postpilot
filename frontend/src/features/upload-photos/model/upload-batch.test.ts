@@ -119,6 +119,27 @@ afterEach(() => {
 })
 
 describe('an upload batch', () => {
+  it('retains original photo capture time through a failed PUT and retry', async () => {
+    const pipeline = fakePipeline({ failPuts: 1 })
+    vi.mocked(pipeline.convert).mockResolvedValue({
+      blob: new Blob(['jpeg']),
+      width: 10,
+      height: 20,
+      capturedAt: '2026-10-15T03:34:56.000Z',
+    })
+    const onConfirmed = vi.fn()
+    const batch = uploadBatch(slug, { pipeline, onConfirmed })
+    batch.add([file('camera.jpg')], [])
+    await vi.waitFor(() => expect(peekUploadState(slug).items[0]?.status).toBe('failed'))
+    batch.retry(peekUploadState(slug).items[0].id)
+    await vi.waitFor(() => expect(onConfirmed).toHaveBeenCalledTimes(1))
+    expect(pipeline.confirm).toHaveBeenLastCalledWith('upload-2', {
+      width: 10,
+      height: 20,
+      capturedAt: '2026-10-15T03:34:56.000Z',
+    })
+  })
+
   // A2 / A4 in miniature: convert → CreateUpload → PUT → ConfirmUpload, then the photo
   // belongs to the post and leaves the batch.
   it('walks every accepted file through the pipeline and hands each confirmed photo over', async () => {
@@ -429,6 +450,26 @@ describe('an upload batch', () => {
 })
 
 describe('a video in the batch', () => {
+  it('carries the original movie capture time to confirmation', async () => {
+    readMetadata.mockResolvedValueOnce({
+      durationMs: 8_000,
+      width: 1920,
+      height: 1080,
+      capturedAt: '2026-10-15T03:34:56.000Z',
+    })
+    const pipeline = fakePipeline()
+    const done = vi.fn()
+    const batch = uploadBatch(slug, { pipeline, onConfirmed: vi.fn(), onVideoConfirmed: done })
+    batch.add([file('camera.mov')], [])
+    await vi.waitFor(() => expect(done).toHaveBeenCalledTimes(1))
+    expect(pipeline.confirm).toHaveBeenLastCalledWith('upload-1', {
+      durationMs: 8_000,
+      width: 1920,
+      height: 1080,
+      capturedAt: '2026-10-15T03:34:56.000Z',
+    })
+  })
+
   // VIDEO-4: nothing converts a clip. The file that goes up is the file the user picked, and
   // its metadata is read only to bound it and to report it at confirm.
   it('uploads the original file with progress and confirms it with its duration', async () => {

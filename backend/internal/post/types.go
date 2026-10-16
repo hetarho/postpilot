@@ -595,14 +595,15 @@ type Failure struct {
 // Image is a photo attached to a post. The bytes live in object storage; this is the
 // record that names them.
 type Image struct {
-	ID        string
-	PostSlug  string
-	Filename  string
-	Key       string
-	Width     int32
-	Height    int32
-	Bytes     int64
-	CreatedAt time.Time
+	CapturedAt *time.Time `json:",omitempty"`
+	ID         string
+	PostSlug   string
+	Filename   string
+	Key        string
+	Width      int32
+	Height     int32
+	Bytes      int64
+	CreatedAt  time.Time
 	// Rotation is the photo's clockwise turn in degrees (0, 90, 180, 270), applied wherever the
 	// photo is shown or copied; RotationByOwner says the owner set it, after which no
 	// observation changes it (POST-107, GEN-79).
@@ -622,10 +623,11 @@ func ValidRotation(degrees int32) bool {
 // living in object storage — but the bytes are exactly what the user picked, because
 // nothing transcodes, downscales or thumbnails a video anywhere (VIDEO-4).
 type Video struct {
-	ID       string
-	PostSlug string
-	Filename string
-	Key      string
+	CapturedAt *time.Time `json:",omitempty"`
+	ID         string
+	PostSlug   string
+	Filename   string
+	Key        string
 	// ContentType is the container's type. It is part of the PUT signature, so it is also
 	// what the stored object must report back at confirm.
 	ContentType string

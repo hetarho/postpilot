@@ -249,6 +249,7 @@ message ClipSourceMetadata {
   int32 width = 5;
   int32 height = 6;
   string fingerprint = 7;
+  optional string captured_at = 8;
 }
 message ClipSource {
   string id = 1;

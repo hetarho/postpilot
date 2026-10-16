@@ -591,6 +591,7 @@ message ConfirmUploadRequest {
   // Video uploads only, and required for one: the container's duration as the browser
   // read it. A photo upload leaves it zero.
   int64 duration_ms = 4;
+  optional string captured_at = 5;
 }
 
 message ConfirmUploadResponse {

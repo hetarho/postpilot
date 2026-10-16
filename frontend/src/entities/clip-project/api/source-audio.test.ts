@@ -18,6 +18,25 @@ describe('owner source sound on the source projection', () => {
       fingerprint: 'a'.repeat(64),
     },
   }
+  it('preserves optional capture time and leaves older source metadata unchanged', () => {
+    const batch = toClipSourceBatch(
+      create(ClipSourceBatchSchema, {
+        id: 'batch',
+        projectId: 'project',
+        state: 'ready',
+        sources: [
+          source,
+          {
+            ...source,
+            id: 'captured',
+            metadata: { ...source.metadata, capturedAt: '2026-10-15T03:34:56Z' },
+          },
+        ],
+      }),
+    )
+    expect(batch.sources[0].metadata).not.toHaveProperty('capturedAt')
+    expect(batch.sources[1].metadata.capturedAt).toBe('2026-10-15T03:34:56Z')
+  })
   it('carries the choice and defaults a source that predates it to off', () => {
     const on = toClipSourceBatch(
       create(ClipSourceBatchSchema, {

@@ -1,9 +1,32 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { createFakeAuthTransport } from '@/test/session'
 import { UploadRejected } from '../model/types'
 import { createUploadHandshake } from './upload-handshake'
 
 describe('createUploadHandshake', () => {
+  it('sends capture time only when the original file supplied it', async () => {
+    const transport = createFakeAuthTransport({
+      user: { id: 'alice' },
+      posts: { posts: [{ slug: 'post-1', images: [] }] },
+    })
+    const unary = vi.spyOn(transport, 'unary')
+    const handshake = createUploadHandshake(transport)
+    for (const capturedAt of ['2026-10-15T03:34:56Z', undefined]) {
+      const reserved = await handshake.createUpload(
+        'post-1',
+        capturedAt ? 'captured.jpg' : 'legacy.jpg',
+      )
+      await handshake.confirmUpload(reserved.uploadId, {
+        width: 10,
+        height: 10,
+        ...(capturedAt ? { capturedAt } : {}),
+      })
+      const sent = unary.mock.calls.at(-1)![4]
+      if (capturedAt) expect(sent).toMatchObject({ capturedAt })
+      else expect((sent as { capturedAt?: string }).capturedAt).toBeUndefined()
+    }
+  })
+
   it('preserves the stable reason and allowlisted filename parameter from CreateUpload', async () => {
     const handshake = createUploadHandshake(
       createFakeAuthTransport({

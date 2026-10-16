@@ -7,7 +7,7 @@ SELECT * FROM clip_source_batches WHERE project_id=? AND user_id=? ORDER BY crea
 -- name: InsertSourceBatch :exec
 INSERT INTO clip_source_batches(id,user_id,project_id,state,created_at,expires_at,put_expires_at) VALUES (?,?,?,?,?,?,?);
 -- name: InsertSourceLease :exec
-INSERT INTO clip_source_leases(id,canonical_id,batch_id,user_id,object_key,filename,content_type,fingerprint,declared_bytes,duration_ms,width,height,state,ordinal,retain_original_audio) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);
+INSERT INTO clip_source_leases(id,canonical_id,batch_id,user_id,object_key,filename,content_type,fingerprint,declared_bytes,duration_ms,width,height,state,ordinal,retain_original_audio,captured_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);
 -- ProjectSourceAudioChoices is what the owner already decided about this
 -- project's footage, newest batch last, so reselecting a canonical source by
 -- fingerprint inherits its resolved choice instead of starting over.

@@ -232,6 +232,7 @@ export function toClipSourceBatch(value: ProtoClipSourceBatch): ClipSourceBatch 
           width: m.width,
           height: m.height,
           fingerprint: m.fingerprint,
+          ...(m.capturedAt ? { capturedAt: m.capturedAt } : {}),
         },
       }
     }),

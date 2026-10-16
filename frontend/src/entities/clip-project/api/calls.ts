@@ -112,6 +112,7 @@ export interface ClipSourceCalls {
   reserve(
     projectId: string,
     sources: readonly {
+      capturedAt?: string
       filename: string
       contentType: string
       bytes: number
@@ -166,6 +167,7 @@ export function clipSourceCalls(transport: Transport): ClipSourceCalls {
             width: m.width,
             height: m.height,
             fingerprint: m.fingerprint,
+            ...(m.capturedAt ? { capturedAt: m.capturedAt } : {}),
           })),
         },
         { signal },

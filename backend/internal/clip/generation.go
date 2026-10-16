@@ -26,8 +26,9 @@ var ErrBusy = errors.New("clip busy")
 // intro/outro slots; an accepted version-3..7 job drafts no slot and saves the slots as they are.
 // Versions 11/12 freeze advertiser material; accepted earlier jobs carry none.
 // Versions 13/14 also freeze linked canonical post text; earlier accepted jobs retain none.
-const GenerationPayloadVersion = 13
-const BrowserAnalysisGenerationPayloadVersion = 14
+// Versions 15/16 also retain original capture metadata on source leases.
+const GenerationPayloadVersion = 15
+const BrowserAnalysisGenerationPayloadVersion = 16
 
 type GenerationPayload struct {
 	LinkedPost      *LinkedPostText  `json:",omitempty"`

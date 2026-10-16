@@ -55,6 +55,7 @@ export interface UploadBatchState {
 }
 
 export interface ConvertedPhoto {
+  capturedAt?: string
   blob: Blob
   width: number
   height: number
@@ -80,7 +81,7 @@ export interface UploadPipeline {
   ): Promise<void>
   confirm(
     uploadId: string,
-    measurements: { width: number; height: number; durationMs?: number },
+    measurements: { width: number; height: number; durationMs?: number; capturedAt?: string },
   ): Promise<ConfirmedAttachment>
 }
 
@@ -316,8 +317,17 @@ async function upload(batch: Batch, id: string): Promise<void> {
     const confirmed = await batch.deps.pipeline.confirm(
       uploadId,
       isVideo
-        ? { width: metadata!.width, height: metadata!.height, durationMs: metadata!.durationMs }
-        : { width: converted!.width, height: converted!.height },
+        ? {
+            width: metadata!.width,
+            height: metadata!.height,
+            durationMs: metadata!.durationMs,
+            ...(metadata!.capturedAt ? { capturedAt: metadata!.capturedAt } : {}),
+          }
+        : {
+            width: converted!.width,
+            height: converted!.height,
+            ...(converted!.capturedAt ? { capturedAt: converted!.capturedAt } : {}),
+          },
     )
     if (batch.discarded) return
     batch.awaitingConfirm.delete(id)

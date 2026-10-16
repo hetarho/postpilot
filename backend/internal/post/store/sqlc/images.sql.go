@@ -7,26 +7,28 @@ package sqlc
 
 import (
 	"context"
+	"database/sql"
 )
 
 const createImage = `-- name: CreateImage :exec
 
-INSERT INTO images (id, post_slug, filename, r2_key, width, height, bytes, created_at, position)
+INSERT INTO images (id, post_slug, filename, r2_key, width, height, bytes, created_at, captured_at, position)
 VALUES (
-    ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8,
+    ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9,
     (SELECT COALESCE(MAX(position), -1) + 1 FROM images WHERE post_slug = ?2)
 )
 `
 
 type CreateImageParams struct {
-	ID        string
-	PostSlug  string
-	Filename  string
-	R2Key     string
-	Width     int64
-	Height    int64
-	Bytes     int64
-	CreatedAt string
+	ID         string
+	PostSlug   string
+	Filename   string
+	R2Key      string
+	Width      int64
+	Height     int64
+	Bytes      int64
+	CreatedAt  string
+	CapturedAt sql.NullString
 }
 
 // Photos attached to a post. The row is created only after the object is known to
@@ -43,6 +45,7 @@ func (q *Queries) CreateImage(ctx context.Context, arg CreateImageParams) error 
 		arg.Height,
 		arg.Bytes,
 		arg.CreatedAt,
+		arg.CapturedAt,
 	)
 	return err
 }
@@ -64,7 +67,7 @@ func (q *Queries) DeleteImage(ctx context.Context, id string) (int64, error) {
 }
 
 const getImage = `-- name: GetImage :one
-SELECT id, post_slug, filename, r2_key, width, height, bytes, created_at, rotation, rotation_by_owner, position
+SELECT id, post_slug, filename, r2_key, width, height, bytes, created_at, rotation, rotation_by_owner, position, captured_at
 FROM images WHERE id = ?
 `
 
@@ -83,6 +86,7 @@ func (q *Queries) GetImage(ctx context.Context, id string) (Image, error) {
 		&i.Rotation,
 		&i.RotationByOwner,
 		&i.Position,
+		&i.CapturedAt,
 	)
 	return i, err
 }
@@ -142,7 +146,7 @@ func (q *Queries) ListAllImageKeys(ctx context.Context) ([]string, error) {
 }
 
 const listImagesByPost = `-- name: ListImagesByPost :many
-SELECT id, post_slug, filename, r2_key, width, height, bytes, created_at, rotation, rotation_by_owner, position
+SELECT id, post_slug, filename, r2_key, width, height, bytes, created_at, rotation, rotation_by_owner, position, captured_at
 FROM images WHERE post_slug = ? ORDER BY position, id
 `
 
@@ -168,6 +172,7 @@ func (q *Queries) ListImagesByPost(ctx context.Context, postSlug string) ([]Imag
 			&i.Rotation,
 			&i.RotationByOwner,
 			&i.Position,
+			&i.CapturedAt,
 		); err != nil {
 			return nil, err
 		}

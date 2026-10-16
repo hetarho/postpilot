@@ -55,3 +55,5 @@ export type {
 } from './video/range-video'
 
 export { measureOriginalMedia, transcodeMediaInterval } from './analysis-copy'
+
+export { readJpegCaptureTime } from './jpeg-capture-time'

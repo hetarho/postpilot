@@ -7,6 +7,7 @@ package sqlc
 
 import (
 	"context"
+	"database/sql"
 )
 
 const countVideosByPost = `-- name: CountVideosByPost :one
@@ -22,8 +23,8 @@ func (q *Queries) CountVideosByPost(ctx context.Context, postSlug string) (int64
 
 const createVideo = `-- name: CreateVideo :exec
 
-INSERT INTO videos (id, post_slug, filename, r2_key, content_type, bytes, duration_ms, width, height, created_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+INSERT INTO videos (id, post_slug, filename, r2_key, content_type, bytes, duration_ms, width, height, created_at, captured_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `
 
 type CreateVideoParams struct {
@@ -37,6 +38,7 @@ type CreateVideoParams struct {
 	Width       int64
 	Height      int64
 	CreatedAt   string
+	CapturedAt  sql.NullString
 }
 
 // Videos attached to a post. Like an image row, it is written only after the object is
@@ -53,6 +55,7 @@ func (q *Queries) CreateVideo(ctx context.Context, arg CreateVideoParams) error 
 		arg.Width,
 		arg.Height,
 		arg.CreatedAt,
+		arg.CapturedAt,
 	)
 	return err
 }
@@ -71,7 +74,7 @@ func (q *Queries) DeleteVideo(ctx context.Context, id string) (int64, error) {
 }
 
 const getVideo = `-- name: GetVideo :one
-SELECT id, post_slug, filename, r2_key, content_type, bytes, duration_ms, width, height, created_at
+SELECT id, post_slug, filename, r2_key, content_type, bytes, duration_ms, width, height, created_at, captured_at
 FROM videos WHERE id = ?
 `
 
@@ -89,6 +92,7 @@ func (q *Queries) GetVideo(ctx context.Context, id string) (Video, error) {
 		&i.Width,
 		&i.Height,
 		&i.CreatedAt,
+		&i.CapturedAt,
 	)
 	return i, err
 }
@@ -121,7 +125,7 @@ func (q *Queries) ListAllVideoKeys(ctx context.Context) ([]string, error) {
 }
 
 const listVideosByPost = `-- name: ListVideosByPost :many
-SELECT id, post_slug, filename, r2_key, content_type, bytes, duration_ms, width, height, created_at
+SELECT id, post_slug, filename, r2_key, content_type, bytes, duration_ms, width, height, created_at, captured_at
 FROM videos WHERE post_slug = ? ORDER BY created_at, id
 `
 
@@ -145,6 +149,7 @@ func (q *Queries) ListVideosByPost(ctx context.Context, postSlug string) ([]Vide
 			&i.Width,
 			&i.Height,
 			&i.CreatedAt,
+			&i.CapturedAt,
 		); err != nil {
 			return nil, err
 		}

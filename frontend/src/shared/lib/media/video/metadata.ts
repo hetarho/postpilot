@@ -1,9 +1,12 @@
+import { readMp4CaptureTime } from './mp4-capture-time'
+
 /** What a container says about itself, read WITHOUT decoding a single frame.
  *
  *  A clip is uploaded exactly as the user picked it (VIDEO-4) — nothing here transcodes,
- *  downscales or extracts a poster — so this is the only thing the browser ever asks of the
- *  file, and it asks the platform's own demuxer through a `<video preload="metadata">`. */
+ *  downscales or extracts a poster. Duration and size use the platform's demuxer through a
+ *  `<video preload="metadata">`; the optional capture clock uses bounded container headers. */
 export interface VideoMetadata {
+  capturedAt?: string
   durationMs: number
   width: number
   height: number
@@ -33,6 +36,8 @@ export function readVideoMetadata(file: Blob, signal?: AbortSignal): Promise<Vid
       reject(new DOMException('Metadata read aborted', 'AbortError'))
       return
     }
+    const captureController = new AbortController()
+    const capture = readMp4CaptureTime(file, captureController.signal).catch(() => undefined)
     const url = URL.createObjectURL(file)
     const element = document.createElement('video')
     element.preload = 'metadata'
@@ -42,6 +47,7 @@ export function readVideoMetadata(file: Blob, signal?: AbortSignal): Promise<Vid
     const done = (finish: () => void) => {
       if (settled) return
       settled = true
+      captureController.abort()
       clearTimeout(timer)
       signal?.removeEventListener('abort', abort)
       element.removeAttribute('src')
@@ -70,7 +76,16 @@ export function readVideoMetadata(file: Blob, signal?: AbortSignal): Promise<Vid
         done(() => reject(new VideoUnreadableError()))
         return
       }
-      done(() => resolve({ durationMs: Math.round(seconds * 1000), width, height }))
+      void capture.then((capturedAt) =>
+        done(() =>
+          resolve({
+            durationMs: Math.round(seconds * 1000),
+            width,
+            height,
+            ...(capturedAt ? { capturedAt } : {}),
+          }),
+        ),
+      )
     })
     element.addEventListener('error', () => done(() => reject(new VideoUnreadableError())))
 

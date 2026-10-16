@@ -154,3 +154,30 @@ func TestRetainedSourcesRPCSeparatesMetadataFromOwnedPlaybackCapabilities(t *tes
 		t.Fatal("expired playback", err)
 	}
 }
+
+func TestSourceRPCCaptureTime(t *testing.T) {
+	store := &rpcSourceStore{}
+	h := NewHandler(nil).WithSources(clipapp.NewSourceService(store, rpcSourceObjects{}, clip.DefaultSourceLimits(clip.Environment{SourceBatchTTL: 6 * time.Hour, PutTTL: 10 * time.Minute})))
+	ctx := auth.WithUser(context.Background(), "alice")
+	raw := "2026-10-15T12:34:56+09:00"
+	request := &v1.CreateClipSourceBatchRequest{ProjectId: "owned", Sources: []*v1.ClipSourceMetadata{{Filename: "camera.mp4", ContentType: "video/mp4", Bytes: 123, DurationMs: 1000, Width: 1920, Height: 1080, Fingerprint: strings.Repeat("a", 64), CapturedAt: &raw}}}
+	out, err := h.CreateClipSourceBatch(ctx, connect.NewRequest(request))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := out.Msg.Batch.Sources[0].Metadata.GetCapturedAt(); got != "2026-10-15T03:34:56Z" {
+		t.Fatal(got)
+	}
+	originalID := store.batch.ID
+	raw = "not-a-date"
+	if _, err := h.CreateClipSourceBatch(ctx, connect.NewRequest(request)); connect.CodeOf(err) != connect.CodeInvalidArgument {
+		t.Fatal(err)
+	}
+	if store.batch.ID != originalID {
+		t.Fatal("invalid clock wrote a batch")
+	}
+	request.Sources = []*v1.ClipSourceMetadata{nil}
+	if _, err := h.CreateClipSourceBatch(ctx, connect.NewRequest(request)); connect.CodeOf(err) != connect.CodeInvalidArgument {
+		t.Fatal(err)
+	}
+}

@@ -21,6 +21,7 @@ type SourceConfig struct {
 
 // SourceMetadata is a browser declaration until the independent media probe verifies it.
 type SourceMetadata struct {
+	CapturedAt                         *time.Time `json:",omitempty"`
 	Filename, ContentType, Fingerprint string
 	Bytes                              int64
 	DurationMS, Width, Height          int
@@ -98,4 +99,12 @@ type ObjectStore interface {
 	// A PUT already in flight can finish after discard deleted its lease. Prefix listing
 	// closes that leak without retaining a source attachment or trusting client cancellation.
 	ListSourceKeys(context.Context) ([]string, error)
+}
+
+// SameOriginal compares the byte/probe identity. Capture clocks are owner metadata,
+// not part of a source fingerprint or independent original-media proof.
+func (m SourceMetadata) SameOriginal(other SourceMetadata) bool {
+	m.CapturedAt = nil
+	other.CapturedAt = nil
+	return m == other
 }

@@ -279,6 +279,7 @@ type ClipSourceLease struct {
 	CleanupPending      int64
 	RetainOriginalAudio int64
 	Position            int64
+	CapturedAt          sql.NullString
 }
 
 type ClipSpeechAsset struct {

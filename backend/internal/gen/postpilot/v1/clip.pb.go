@@ -1863,6 +1863,7 @@ type ClipSourceMetadata struct {
 	Width         int32                  `protobuf:"varint,5,opt,name=width,proto3" json:"width,omitempty"`
 	Height        int32                  `protobuf:"varint,6,opt,name=height,proto3" json:"height,omitempty"`
 	Fingerprint   string                 `protobuf:"bytes,7,opt,name=fingerprint,proto3" json:"fingerprint,omitempty"`
+	CapturedAt    *string                `protobuf:"bytes,8,opt,name=captured_at,json=capturedAt,proto3,oneof" json:"captured_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1942,6 +1943,13 @@ func (x *ClipSourceMetadata) GetHeight() int32 {
 func (x *ClipSourceMetadata) GetFingerprint() string {
 	if x != nil {
 		return x.Fingerprint
+	}
+	return ""
+}
+
+func (x *ClipSourceMetadata) GetCapturedAt() string {
+	if x != nil && x.CapturedAt != nil {
+		return *x.CapturedAt
 	}
 	return ""
 }
@@ -5961,7 +5969,7 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	" _shadow_confirmed_charge_creditsB\"\n" +
 	" _shadow_cancellation_fee_creditsB\x17\n" +
 	"\x15_compensation_creditsB\x14\n" +
-	"\x12_net_debit_creditsJ\x04\b\x14\x10\x15R\x04rate\"\xda\x01\n" +
+	"\x12_net_debit_creditsJ\x04\b\x14\x10\x15R\x04rate\"\x90\x02\n" +
 	"\x12ClipSourceMetadata\x12\x1a\n" +
 	"\bfilename\x18\x01 \x01(\tR\bfilename\x12!\n" +
 	"\fcontent_type\x18\x02 \x01(\tR\vcontentType\x12\x14\n" +
@@ -5970,7 +5978,10 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	"durationMs\x12\x14\n" +
 	"\x05width\x18\x05 \x01(\x05R\x05width\x12\x16\n" +
 	"\x06height\x18\x06 \x01(\x05R\x06height\x12 \n" +
-	"\vfingerprint\x18\a \x01(\tR\vfingerprint\"\x9d\x02\n" +
+	"\vfingerprint\x18\a \x01(\tR\vfingerprint\x12$\n" +
+	"\vcaptured_at\x18\b \x01(\tH\x00R\n" +
+	"capturedAt\x88\x01\x01B\x0e\n" +
+	"\f_captured_at\"\x9d\x02\n" +
 	"\n" +
 	"ClipSource\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12<\n" +
@@ -6540,6 +6551,7 @@ func file_postpilot_v1_clip_proto_init() {
 	file_postpilot_v1_language_proto_init()
 	file_postpilot_v1_clip_proto_msgTypes[4].OneofWrappers = []any{}
 	file_postpilot_v1_clip_proto_msgTypes[16].OneofWrappers = []any{}
+	file_postpilot_v1_clip_proto_msgTypes[17].OneofWrappers = []any{}
 	file_postpilot_v1_clip_proto_msgTypes[25].OneofWrappers = []any{}
 	file_postpilot_v1_clip_proto_msgTypes[33].OneofWrappers = []any{}
 	file_postpilot_v1_clip_proto_msgTypes[36].OneofWrappers = []any{}

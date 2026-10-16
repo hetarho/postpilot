@@ -2,6 +2,7 @@ package clip_test
 
 import (
 	"testing"
+	"time"
 
 	"github.com/postpilot/backend/internal/clip"
 )
@@ -34,5 +35,22 @@ func TestMediaOriginalRebindChecksRecordedAudioAndCadence(t *testing.T) {
 	legacy.FrameRateDenominator = 0
 	if !clip.SameMediaOriginal(legacy, actual) {
 		t.Fatal("missing legacy measurements block compatible original")
+	}
+}
+
+func TestFingerprintIgnoresCaptureTime(t *testing.T) {
+	now := time.Date(2026, 10, 16, 0, 0, 0, 0, time.UTC)
+	first, second := now.Add(-time.Hour), now.Add(-2*time.Hour)
+	metadata := clip.SourceMetadata{Filename: "camera.mp4", ContentType: "video/mp4", Bytes: 100, DurationMS: 1000, Width: 1920, Height: 1080, Fingerprint: "same-original", CapturedAt: &first}
+	frozen := clip.MediaTaskSource{ID: "retained", SourceMetadata: metadata}
+	lease := clip.SourceLease{ID: "reselected", SourceMetadata: metadata, ActualBytes: 100, State: "ready", ExpiresAt: now.Add(time.Hour)}
+	lease.CapturedAt = &second
+	batch := clip.SourceBatch{Sources: []clip.SourceLease{lease}}
+	if _, err := clip.ResolveMediaSource(clip.MediaRender, frozen, batch, now); err != nil {
+		t.Fatal("capture changed fingerprint rebind", err)
+	}
+	batch.Sources[0].DurationMS++
+	if _, err := clip.ResolveMediaSource(clip.MediaRender, frozen, batch, now); err == nil {
+		t.Fatal("changed original metadata accepted")
 	}
 }

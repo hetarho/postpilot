@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/postpilot/backend/internal/clip"
+	"github.com/postpilot/backend/internal/platform/capturetime"
 )
 
 type SourceService struct {
@@ -67,6 +68,11 @@ func (s *SourceService) Create(ctx context.Context, user, project string, manife
 	now := s.now().UTC()
 	b := clip.SourceBatch{ID: newID(), UserID: user, ProjectID: project, State: "uploading", CreatedAt: now, ExpiresAt: now.Add(s.config.BatchTTL), UploadExpiresAt: now.Add(s.config.BatchTTL), PutExpiresAt: now.Add(s.config.PutTTL)}
 	for _, m := range manifest {
+		captured, err := capturetime.Normalize(m.CapturedAt)
+		if err != nil {
+			return clip.SourceBatchUpload{}, clip.ErrInvalid
+		}
+		m.CapturedAt = capturetime.Video(captured)
 		id := newID()
 		ext := strings.ToLower(path.Ext(m.Filename))
 		b.Sources = append(b.Sources, clip.SourceLease{ID: id, Key: clip.SourcePrefix + url.PathEscape(user) + "/" + b.ID + "/" + id + ext, State: "pending", SourceMetadata: m})

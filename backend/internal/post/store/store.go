@@ -798,14 +798,15 @@ func (s *Store) DeletePost(ctx context.Context, slug, userID string) (bool, erro
 // transaction.
 func (s *Store) CreateImage(ctx context.Context, img post.Image) error {
 	err := s.write.CreateImage(ctx, sqlc.CreateImageParams{
-		ID:        img.ID,
-		PostSlug:  img.PostSlug,
-		Filename:  img.Filename,
-		R2Key:     img.Key,
-		Width:     int64(img.Width),
-		Height:    int64(img.Height),
-		Bytes:     img.Bytes,
-		CreatedAt: formatTime(img.CreatedAt),
+		CapturedAt: capturedAtColumn(img.CapturedAt),
+		ID:         img.ID,
+		PostSlug:   img.PostSlug,
+		Filename:   img.Filename,
+		R2Key:      img.Key,
+		Width:      int64(img.Width),
+		Height:     int64(img.Height),
+		Bytes:      img.Bytes,
+		CreatedAt:  formatTime(img.CreatedAt),
 	})
 	if err != nil {
 		if isUniqueViolation(err) {
@@ -1191,14 +1192,15 @@ func (s *Store) ConfirmUpload(ctx context.Context, img post.Image, uploadID stri
 		return err
 	}
 	err = q.CreateImage(ctx, sqlc.CreateImageParams{
-		ID:        img.ID,
-		PostSlug:  img.PostSlug,
-		Filename:  img.Filename,
-		R2Key:     img.Key,
-		Width:     int64(img.Width),
-		Height:    int64(img.Height),
-		Bytes:     img.Bytes,
-		CreatedAt: formatTime(img.CreatedAt),
+		CapturedAt: capturedAtColumn(img.CapturedAt),
+		ID:         img.ID,
+		PostSlug:   img.PostSlug,
+		Filename:   img.Filename,
+		R2Key:      img.Key,
+		Width:      int64(img.Width),
+		Height:     int64(img.Height),
+		Bytes:      img.Bytes,
+		CreatedAt:  formatTime(img.CreatedAt),
 	})
 	if err != nil {
 		if isUniqueViolation(err) {
@@ -1509,15 +1511,21 @@ func toImage(row sqlc.Image) (post.Image, error) {
 	if err != nil {
 		return post.Image{}, fmt.Errorf("image %s: %w", row.ID, err)
 	}
+	captured, err := readCapturedAt(row.CapturedAt)
+	if err != nil {
+		return post.Image{}, err
+	}
+
 	return post.Image{
-		ID:        row.ID,
-		PostSlug:  row.PostSlug,
-		Filename:  row.Filename,
-		Key:       row.R2Key,
-		Width:     int32(row.Width),
-		Height:    int32(row.Height),
-		Bytes:     row.Bytes,
-		CreatedAt: createdAt,
+		CapturedAt: captured,
+		ID:         row.ID,
+		PostSlug:   row.PostSlug,
+		Filename:   row.Filename,
+		Key:        row.R2Key,
+		Width:      int32(row.Width),
+		Height:     int32(row.Height),
+		Bytes:      row.Bytes,
+		CreatedAt:  createdAt,
 		// The CHECK keeps the column to the four quarter turns (POST-107).
 		Rotation:        int32(row.Rotation),
 		RotationByOwner: row.RotationByOwner != 0,
@@ -1526,6 +1534,7 @@ func toImage(row sqlc.Image) (post.Image, error) {
 
 func createVideoParams(video post.Video) sqlc.CreateVideoParams {
 	return sqlc.CreateVideoParams{
+		CapturedAt:  capturedAtColumn(video.CapturedAt),
 		ID:          video.ID,
 		PostSlug:    video.PostSlug,
 		Filename:    video.Filename,
@@ -1544,7 +1553,13 @@ func toVideo(row sqlc.Video) (post.Video, error) {
 	if err != nil {
 		return post.Video{}, fmt.Errorf("video %s: %w", row.ID, err)
 	}
+	captured, err := readCapturedAt(row.CapturedAt)
+	if err != nil {
+		return post.Video{}, err
+	}
+
 	return post.Video{
+		CapturedAt:  captured,
 		ID:          row.ID,
 		PostSlug:    row.PostSlug,
 		Filename:    row.Filename,

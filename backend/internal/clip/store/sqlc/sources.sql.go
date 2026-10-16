@@ -95,7 +95,7 @@ func (q *Queries) InsertSourceBatch(ctx context.Context, arg InsertSourceBatchPa
 }
 
 const insertSourceLease = `-- name: InsertSourceLease :exec
-INSERT INTO clip_source_leases(id,canonical_id,batch_id,user_id,object_key,filename,content_type,fingerprint,declared_bytes,duration_ms,width,height,state,ordinal,retain_original_audio) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+INSERT INTO clip_source_leases(id,canonical_id,batch_id,user_id,object_key,filename,content_type,fingerprint,declared_bytes,duration_ms,width,height,state,ordinal,retain_original_audio,captured_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
 `
 
 type InsertSourceLeaseParams struct {
@@ -114,6 +114,7 @@ type InsertSourceLeaseParams struct {
 	State               string
 	Ordinal             int64
 	RetainOriginalAudio int64
+	CapturedAt          sql.NullString
 }
 
 func (q *Queries) InsertSourceLease(ctx context.Context, arg InsertSourceLeaseParams) error {
@@ -133,6 +134,7 @@ func (q *Queries) InsertSourceLease(ctx context.Context, arg InsertSourceLeasePa
 		arg.State,
 		arg.Ordinal,
 		arg.RetainOriginalAudio,
+		arg.CapturedAt,
 	)
 	return err
 }
@@ -242,7 +244,7 @@ func (q *Queries) ListSourceCleanup(ctx context.Context) ([]ClipSourceBatch, err
 }
 
 const listSourceLeases = `-- name: ListSourceLeases :many
-SELECT id, batch_id, user_id, object_key, filename, content_type, fingerprint, declared_bytes, actual_bytes, duration_ms, width, height, state, ordinal, canonical_id, retention_expires_at, cleanup_pending, retain_original_audio, position FROM clip_source_leases WHERE batch_id=? AND user_id=? ORDER BY position, ordinal
+SELECT id, batch_id, user_id, object_key, filename, content_type, fingerprint, declared_bytes, actual_bytes, duration_ms, width, height, state, ordinal, canonical_id, retention_expires_at, cleanup_pending, retain_original_audio, position, captured_at FROM clip_source_leases WHERE batch_id=? AND user_id=? ORDER BY position, ordinal
 `
 
 type ListSourceLeasesParams struct {
@@ -282,6 +284,7 @@ func (q *Queries) ListSourceLeases(ctx context.Context, arg ListSourceLeasesPara
 			&i.CleanupPending,
 			&i.RetainOriginalAudio,
 			&i.Position,
+			&i.CapturedAt,
 		); err != nil {
 			return nil, err
 		}

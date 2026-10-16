@@ -7,6 +7,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/postpilot/backend/internal/clip"
 	v1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
+	"github.com/postpilot/backend/internal/platform/capturetime"
 )
 
 func sourceBatchProto(b clip.SourceBatch) *v1.ClipSourceBatch {
@@ -20,7 +21,7 @@ func sourceBatchProto(b clip.SourceBatch) *v1.ClipSourceBatch {
 		if availability == "" {
 			availability = clip.SourceAvailability(b, v, time.Now())
 		}
-		out.Sources = append(out.Sources, &v1.ClipSource{Id: v.ID, State: v.State, ActualBytes: v.ActualBytes, RetentionExpiresAt: expires, Availability: availability, RetainOriginalAudio: v.RetainOriginalAudio, Metadata: &v1.ClipSourceMetadata{Filename: v.Filename, ContentType: v.ContentType, Bytes: v.Bytes, DurationMs: int32(v.DurationMS), Width: int32(v.Width), Height: int32(v.Height), Fingerprint: v.Fingerprint}})
+		out.Sources = append(out.Sources, &v1.ClipSource{Id: v.ID, State: v.State, ActualBytes: v.ActualBytes, RetentionExpiresAt: expires, Availability: availability, RetainOriginalAudio: v.RetainOriginalAudio, Metadata: &v1.ClipSourceMetadata{CapturedAt: capturetime.Format(v.CapturedAt), Filename: v.Filename, ContentType: v.ContentType, Bytes: v.Bytes, DurationMs: int32(v.DurationMS), Width: int32(v.Width), Height: int32(v.Height), Fingerprint: v.Fingerprint}})
 	}
 	return out
 }
@@ -71,7 +72,14 @@ func (h *Handler) CreateClipSourceBatch(ctx context.Context, req *connect.Reques
 	}
 	manifest := make([]clip.SourceMetadata, 0, len(req.Msg.Sources))
 	for _, v := range req.Msg.Sources {
-		manifest = append(manifest, clip.SourceMetadata{Filename: v.GetFilename(), ContentType: v.GetContentType(), Bytes: v.GetBytes(), DurationMS: int(v.GetDurationMs()), Width: int(v.GetWidth()), Height: int(v.GetHeight()), Fingerprint: v.GetFingerprint()})
+		if v == nil {
+			return nil, toConnectError(clip.ErrInvalid)
+		}
+		captured, err := capturetime.Parse(v.CapturedAt)
+		if err != nil {
+			return nil, toConnectError(clip.ErrInvalid)
+		}
+		manifest = append(manifest, clip.SourceMetadata{CapturedAt: captured, Filename: v.GetFilename(), ContentType: v.GetContentType(), Bytes: v.GetBytes(), DurationMS: int(v.GetDurationMs()), Width: int(v.GetWidth()), Height: int(v.GetHeight()), Fingerprint: v.GetFingerprint()})
 	}
 	upload, err := h.sources.Create(ctx, user, req.Msg.ProjectId, manifest)
 	if err != nil {

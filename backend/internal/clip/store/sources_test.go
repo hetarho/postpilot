@@ -420,3 +420,41 @@ func TestSourceSchemaStoresMetadataOnlyAndNoSignedURLs(t *testing.T) {
 		t.Fatal("signed URL persisted")
 	}
 }
+
+func TestSourceCaptureTimeRoundTrip(t *testing.T) {
+	s, store, _ := setup(t)
+	_, p := create(t, s)
+	objects := fakeSources()
+	src := clipapp.NewSourceService(store, objects, clip.DefaultSourceLimits(clip.Environment{SourceBatchTTL: 6 * time.Hour, PutTTL: 10 * time.Minute}))
+	ctx := context.Background()
+	inputs := manifest(3)
+	at := time.Date(2026, 10, 15, 12, 34, 56, 0, time.FixedZone("camera", 9*3600))
+	old := time.Date(1904, 1, 1, 0, 0, 0, 0, time.UTC)
+	inputs[0].CapturedAt, inputs[1].CapturedAt = &at, &old
+	uploaded, err := src.Create(ctx, "alice", p.ID, inputs)
+	if err != nil {
+		t.Fatal(err)
+	}
+	objects.upload(uploaded.Batch)
+	for _, lease := range uploaded.Batch.Sources {
+		if _, err := src.Confirm(ctx, "alice", uploaded.Batch.ID, lease.ID); err != nil {
+			t.Fatal(err)
+		}
+	}
+	got, err := store.GetSourceBatch(ctx, "alice", uploaded.Batch.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i, lease := range got.Sources {
+		if lease.Fingerprint != inputs[i].Fingerprint || lease.ID != uploaded.Batch.Sources[i].ID {
+			t.Fatal("capture changed original identity")
+		}
+		if i == 0 {
+			if lease.CapturedAt == nil || !lease.CapturedAt.Equal(at) || lease.CapturedAt.Location() != time.UTC {
+				t.Fatalf("capture=%v", lease.CapturedAt)
+			}
+		} else if lease.CapturedAt != nil {
+			t.Fatal("invented placeholder/legacy capture time")
+		}
+	}
+}

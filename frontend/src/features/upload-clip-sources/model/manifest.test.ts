@@ -27,6 +27,18 @@ afterEach(() => {
 })
 
 describe('clip manifest and bounded fingerprint', () => {
+  it('retains capture time in the manifest without changing the fingerprint', async () => {
+    vi.stubGlobal('crypto', webcrypto)
+    const captured = { ...metadata, capturedAt: '2026-10-15T03:34:56.000Z' }
+    expect(await sourceFingerprint(file(), captured)).toBe(
+      await sourceFingerprint(file(), metadata),
+    )
+    vi.mocked(readVideoMetadata).mockResolvedValue(captured)
+    const manifest = await readSourceManifest([file()], new AbortController().signal)
+    expect(manifest[0].capturedAt).toBe(captured.capturedAt)
+    expect(manifest[0].fingerprint).toBe(await sourceFingerprint(file(), metadata))
+  })
+
   it('pins the versioned binary digest and ignores filename and modification date', async () => {
     vi.stubGlobal('crypto', webcrypto)
     const prefix = Buffer.alloc(30)

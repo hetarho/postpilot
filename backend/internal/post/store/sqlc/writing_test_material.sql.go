@@ -20,15 +20,29 @@ type WritingTestOwnedImagesParams struct {
 	JsonEach interface{}
 }
 
-func (q *Queries) WritingTestOwnedImages(ctx context.Context, arg WritingTestOwnedImagesParams) ([]Image, error) {
+type WritingTestOwnedImagesRow struct {
+	ID              string
+	PostSlug        string
+	Filename        string
+	R2Key           string
+	Width           int64
+	Height          int64
+	Bytes           int64
+	CreatedAt       string
+	Rotation        int64
+	RotationByOwner int64
+	Position        int64
+}
+
+func (q *Queries) WritingTestOwnedImages(ctx context.Context, arg WritingTestOwnedImagesParams) ([]WritingTestOwnedImagesRow, error) {
 	rows, err := q.db.QueryContext(ctx, writingTestOwnedImages, arg.UserID, arg.JsonEach)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Image
+	var items []WritingTestOwnedImagesRow
 	for rows.Next() {
-		var i Image
+		var i WritingTestOwnedImagesRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.PostSlug,
@@ -66,15 +80,28 @@ type WritingTestOwnedVideosParams struct {
 	JsonEach interface{}
 }
 
-func (q *Queries) WritingTestOwnedVideos(ctx context.Context, arg WritingTestOwnedVideosParams) ([]Video, error) {
+type WritingTestOwnedVideosRow struct {
+	ID          string
+	PostSlug    string
+	Filename    string
+	R2Key       string
+	ContentType string
+	Bytes       int64
+	DurationMs  int64
+	Width       int64
+	Height      int64
+	CreatedAt   string
+}
+
+func (q *Queries) WritingTestOwnedVideos(ctx context.Context, arg WritingTestOwnedVideosParams) ([]WritingTestOwnedVideosRow, error) {
 	rows, err := q.db.QueryContext(ctx, writingTestOwnedVideos, arg.UserID, arg.JsonEach)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Video
+	var items []WritingTestOwnedVideosRow
 	for rows.Next() {
-		var i Video
+		var i WritingTestOwnedVideosRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.PostSlug,

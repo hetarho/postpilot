@@ -35,7 +35,11 @@ func sourceBatchRow(ctx context.Context, q *sqlc.Queries, r sqlc.ClipSourceBatch
 		return out, err
 	}
 	for _, v := range rows {
-		out.Sources = append(out.Sources, clip.SourceLease{ID: v.CanonicalID, Key: v.ObjectKey, State: v.State, CleanupPending: v.CleanupPending != 0, ActualBytes: v.ActualBytes, RetainOriginalAudio: v.RetainOriginalAudio != 0, SourceMetadata: clip.SourceMetadata{Filename: v.Filename, ContentType: v.ContentType, Fingerprint: v.Fingerprint, Bytes: v.DeclaredBytes, DurationMS: int(v.DurationMs), Width: int(v.Width), Height: int(v.Height)}})
+		captured, err := readCapturedAt(v.CapturedAt)
+		if err != nil {
+			return out, err
+		}
+		out.Sources = append(out.Sources, clip.SourceLease{ID: v.CanonicalID, Key: v.ObjectKey, State: v.State, CleanupPending: v.CleanupPending != 0, ActualBytes: v.ActualBytes, RetainOriginalAudio: v.RetainOriginalAudio != 0, SourceMetadata: clip.SourceMetadata{CapturedAt: captured, Filename: v.Filename, ContentType: v.ContentType, Fingerprint: v.Fingerprint, Bytes: v.DeclaredBytes, DurationMS: int(v.DurationMs), Width: int(v.Width), Height: int(v.Height)}})
 
 		if v.RetentionExpiresAt.Valid {
 			at, e := time.Parse(time.RFC3339Nano, v.RetentionExpiresAt.String)
@@ -129,7 +133,7 @@ func (s *Store) ReplaceSourceBatch(ctx context.Context, b clip.SourceBatch) ([]c
 			if prior := canonical[v.Fingerprint]; prior != "" {
 				id = prior
 			}
-			if err := q.InsertSourceLease(ctx, sqlc.InsertSourceLeaseParams{ID: v.ID, CanonicalID: id, BatchID: b.ID, UserID: b.UserID, ObjectKey: v.Key, Filename: v.Filename, ContentType: v.ContentType, Fingerprint: v.Fingerprint, DeclaredBytes: v.Bytes, DurationMs: int64(v.DurationMS), Width: int64(v.Width), Height: int64(v.Height), State: v.State, Ordinal: int64(i), RetainOriginalAudio: flag(retained[id+"\x00"+v.Fingerprint])}); err != nil {
+			if err := q.InsertSourceLease(ctx, sqlc.InsertSourceLeaseParams{CapturedAt: capturedAtColumn(v.CapturedAt), ID: v.ID, CanonicalID: id, BatchID: b.ID, UserID: b.UserID, ObjectKey: v.Key, Filename: v.Filename, ContentType: v.ContentType, Fingerprint: v.Fingerprint, DeclaredBytes: v.Bytes, DurationMs: int64(v.DurationMS), Width: int64(v.Width), Height: int64(v.Height), State: v.State, Ordinal: int64(i), RetainOriginalAudio: flag(retained[id+"\x00"+v.Fingerprint])}); err != nil {
 				return nil, err
 			}
 			kept[id] = true

@@ -210,6 +210,7 @@ export interface ClipQuote {
   binding: string
 }
 export interface ClipSourceMetadata {
+  capturedAt?: string
   filename: string
   contentType: string
   bytes: number

@@ -32,6 +32,7 @@ describe('clip source Connect boundary', () => {
         width: 1920,
         height: 1080,
         fingerprint: 'a'.repeat(64),
+        capturedAt: '2026-10-15T03:34:56Z',
         file: new File(['clip'], 'clip.mp4'),
         previewURL: 'blob:local',
       },
@@ -50,5 +51,8 @@ describe('clip source Connect boundary', () => {
     )
     expect(json).not.toMatch(/blob:|previewURL|https:|"file"/)
     expect(sourceRequests).toHaveLength(3)
+    expect(sourceRequests[0]).toMatchObject({
+      sources: [expect.objectContaining({ capturedAt: '2026-10-15T03:34:56Z' })],
+    })
   })
 })

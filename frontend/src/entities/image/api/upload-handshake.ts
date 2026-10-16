@@ -24,6 +24,7 @@ export type ConfirmedAttachment =
 /** What the browser measured about the file. A photo reports the converted copy's dimensions;
  *  a clip adds the duration its container declared, which the server bounds. */
 export interface ConfirmMeasurements {
+  capturedAt?: string
   width: number
   height: number
   durationMs?: number
@@ -72,13 +73,14 @@ export function createUploadHandshake(transport: Transport): {
       }
     },
 
-    async confirmUpload(uploadId, { width, height, durationMs }) {
+    async confirmUpload(uploadId, { width, height, durationMs, capturedAt }) {
       try {
         const response = await client.confirmUpload({
           uploadId,
           width,
           height,
           durationMs: BigInt(durationMs ?? 0),
+          ...(capturedAt ? { capturedAt } : {}),
         })
         // Which half came back is the server's answer, not ours to assume.
         if (response.video) return { kind: 'video', video: toPostVideo(response.video) }
