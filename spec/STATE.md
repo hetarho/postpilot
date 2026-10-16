@@ -11,9 +11,10 @@
 ## active
 | tag | host | mode | since | at | doing |
 |---|---|---|---|---|---|
-| q8s4 | DESKTOP-VKPLS8P | autopilot | 2026-10-16T03:18Z | 2026-10-16T04:36Z | T697 |
+| q8s4 | DESKTOP-VKPLS8P | autopilot | 2026-10-16T03:18Z | 2026-10-16T04:51Z | - |
 
 ## inbox
+- 261016 parked T697: local probe/gate/cancellation implementation verified and committed; ARCH-31 pre-push/media gates and production workflow/clip qualification wait for an authorized push and live check. This session is commit-only by owner request.
 - 261016 suggest T690 T691 T705 T692 T706: review-code over campaign guidance, upload text, partial imports, post-to-clip creation and fixture synchronization
 - 261016 decided T705 T692: how can a failed video transfer keep the clips already uploaded? → an owned initial-import completion primitive moves verified leases into a ready batch and cleans only pending uploads under existing retention rules (alt: discard every arrived video | re-upload successful files repeatedly | leave a non-ready batch)
 - 261016 decided T691: where does a source-free upload-text approval live? → its own project-owned quote table, leaving source-bound generation quotes intact (alt: nullable batch identity in the existing table | require retained originals)
@@ -124,17 +125,18 @@
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
-| T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | doing@261016.q8s4 |
+| T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
 | T698 | Link one finished post to a clip from either side | CLIP POST | T689 T690 T692 T694 | todo |
 | T699 | Send the linked post's text to every clip writing call | CLIP GUIDE QUOTA | T698 T691 | todo |
 | T700 | Record when post photos, post videos and clip sources were shot | CLIP | T692 | todo |
 | T701 | Build the storyline in the linked post's order and place videos by capture order | CLIP GUIDE | T699 T700 | todo |
 
 ## next
-- Continue dependency-ready T697–T701; this session commits locally without push.
-- T697's operator Content-Range prerequisite is complete; existing qualification blocks remain unchanged.
+- Continue T698 → T699 → T700 → T701 with local commits only.
+- T697 local implementation is committed; pre-push/media gates and production range/clip qualification remain blocked by this session’s no-push scope. Existing qualification blocks are unchanged.
 
 ## log
+- 261016 T697 locally implemented atbecb358f and parked for production qualification; SDK/app/RPC,50 store integration tests, CLI and workflow gates pass.
 - 261016 T697 starts at536ff251 (q8s4): local CORS probe/deploy gate and cancellation diagnostics; remote qualification remains excluded by commit-only scope.
 - 261016 T695 done (q8s4): shipped campaign story,76 targeted tests and build/lint pass; local commitff0ab72d.
 - 261016 T695 starts at9aa24722 (q8s4, commit-only): shipped campaign story and public copy; MKT r11 current.
@@ -154,4 +156,3 @@
 - 261016 T706 done
 - 261016 T706 codeae14f675 passes full Go and evaluated deployment/media gates; all five media runtime filesystems/configs match T705, retaining its CPU worker and both release proofs.
 - 261016 T706 selected race20 and whole experiment race pass; full Go and deployment/media checks follow. T692 source CI38813535036 and T693 claim CI38813624693 succeed.
-- 261016 T706 starts; baseline race reproduction is red at reflection_test.go31–32 and T693 stays safely preserved.
