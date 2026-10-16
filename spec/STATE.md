@@ -11,7 +11,7 @@
 ## active
 | tag | host | mode | since | at | doing |
 |---|---|---|---|---|---|
-| q8s4 | DESKTOP-VKPLS8P | autopilot | 2026-10-16T03:18Z | 2026-10-16T04:36Z | - |
+| q8s4 | DESKTOP-VKPLS8P | autopilot | 2026-10-16T03:18Z | 2026-10-16T04:36Z | T697 |
 
 ## inbox
 - 261016 suggest T690 T691 T705 T692 T706: review-code over campaign guidance, upload text, partial imports, post-to-clip creation and fixture synchronization
@@ -124,7 +124,7 @@
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
-| T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | todo |
+| T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | doing@261016.q8s4 |
 | T698 | Link one finished post to a clip from either side | CLIP POST | T689 T690 T692 T694 | todo |
 | T699 | Send the linked post's text to every clip writing call | CLIP GUIDE QUOTA | T698 T691 | todo |
 | T700 | Record when post photos, post videos and clip sources were shot | CLIP | T692 | todo |
@@ -135,6 +135,7 @@
 - T697's operator Content-Range prerequisite is complete; existing qualification blocks remain unchanged.
 
 ## log
+- 261016 T697 starts at536ff251 (q8s4): local CORS probe/deploy gate and cancellation diagnostics; remote qualification remains excluded by commit-only scope.
 - 261016 T695 done (q8s4): shipped campaign story,76 targeted tests and build/lint pass; local commitff0ab72d.
 - 261016 T695 starts at9aa24722 (q8s4, commit-only): shipped campaign story and public copy; MKT r11 current.
 - 261016 T694 done (q8s4): channel navigation,4418 frontend tests and604 mobile cases pass; local commit12aa7c75.
@@ -154,4 +155,3 @@
 - 261016 T706 codeae14f675 passes full Go and evaluated deployment/media gates; all five media runtime filesystems/configs match T705, retaining its CPU worker and both release proofs.
 - 261016 T706 selected race20 and whole experiment race pass; full Go and deployment/media checks follow. T692 source CI38813535036 and T693 claim CI38813624693 succeed.
 - 261016 T706 starts; baseline race reproduction is red at reflection_test.go31–32 and T693 stays safely preserved.
-- 261016 T706 planned; T693 is blocked on the confirmed CI fixture race and preserved in stash0fc938f8/checkpointd7438f2c. Current main sourceffbab379 is clean.
