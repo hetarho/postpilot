@@ -8,6 +8,11 @@
 - docs: en
 - push: main
 
+## active
+| tag | host | mode | since | at | doing |
+|---|---|---|---|---|---|
+| q8s4 | DESKTOP-VKPLS8P | autopilot | 2026-10-16T03:18Z | 2026-10-16T03:18Z | - |
+
 ## inbox
 - 261016 suggest T690 T691 T705 T692 T706: review-code over campaign guidance, upload text, partial imports, post-to-clip creation and fixture synchronization
 - 261016 decided T705 T692: how can a failed video transfer keep the clips already uploaded? → an owned initial-import completion primitive moves verified leases into a ready batch and cleans only pending uploads under existing retention rules (alt: discard every arrived video | re-upload successful files repeatedly | leave a non-ready batch)
@@ -132,6 +137,7 @@
 - T697's operator Content-Range prerequisite is complete; existing qualification blocks remain unchanged.
 
 ## log
+- 261016 q8s4 autopilot starts T694 onward; local commits only, no push/checkpoint; stop at 85% weekly Codex usage (currently 9%).
 - 261016 m7q2 ends after T693 as requested; push main and leave T694–T695/T697–T701 for the next session.
 - 261016 T693 done
 - 261016 T693 final sourcec171c69b/codec5946df7 passes whole FE555/4403, full Go and all Linux/amd64 deployment/media gates; combined memory bounds794701824/795013120 bytes under unchanged limits.
@@ -151,4 +157,3 @@
 - 261016 create-task T706 start: repair the confirmed reflection test-double race from CI38811381426 before resuming T693.
 - 261016 T693 starts in the main checkout; VOICE17/THEME34 bases are current and dependencies are empty.
 - 261016 T692 pushed61088c90; remote CI discovery follows. T693 claim changes spec only and reuses verified sourceffbab379.
-- 261016 T692 done
