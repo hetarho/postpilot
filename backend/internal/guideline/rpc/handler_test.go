@@ -345,8 +345,12 @@ func TestListGuidelinesAnswersTheOwnersGuidelinesAlone(t *testing.T) {
 		}
 	}
 	clip, err := handler.ListGuidelines(alice, connect.NewRequest(&postpilotv1.ListGuidelinesRequest{Kind: postpilotv1.GuidelineKind_GUIDELINE_KIND_CLIP}))
-	if err != nil || len(clip.Msg.GetDefaults()) != 8 || len(clip.Msg.GetGuidelines()) != 0 {
+	if err != nil || len(clip.Msg.GetDefaults()) != 9 || len(clip.Msg.GetGuidelines()) != 0 {
 		t.Fatalf("clip list = %v, %v", clip, err)
+	}
+	// GUIDE-42: the linked-post wording default reaches the owner API, enabled by default.
+	if d := clip.Msg.GetDefaults()[5]; d.GetKey() != "clip_post_wording" || !d.GetEnabled() {
+		t.Fatalf("linked-post wording default = %v", d)
 	}
 	// GUIDE-2: a 영상 지침 is created of its kind, listed with it and never in the post list — even
 	// with a post guideline's text.

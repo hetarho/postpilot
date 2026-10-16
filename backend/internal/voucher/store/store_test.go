@@ -275,6 +275,8 @@ func TestStoreRoundTripsSoldAndGivenVouchers(t *testing.T) {
 // Revoking a redeemed voucher expires its lot in the ledger, so the credits stop counting.
 func TestRevokingARedeemedVoucherExpiresItsLot(t *testing.T) {
 	svc, _, handle := newService(t)
+	at := time.Now().UTC()
+	svc = svc.WithClock(func() time.Time { return at })
 	ctx := context.Background()
 	issued, err := svc.Issue(ctx, "root", voucher.Issue{Credits: 1150, ValidityDays: 30})
 	if err != nil {
@@ -298,7 +300,7 @@ func TestRevokingARedeemedVoucherExpiresItsLot(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if stored.After(time.Now()) {
-		t.Fatalf("lot still expires at %v, want no later than now", stored)
+	if !stored.Equal(at) {
+		t.Fatalf("lot expires at %v, want revocation time %v", stored, at)
 	}
 }

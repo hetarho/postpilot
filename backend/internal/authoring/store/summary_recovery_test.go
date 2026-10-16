@@ -159,9 +159,22 @@ func TestSavedHistoricalRecommendationBatchDoesNotHideAFreshBaseline(t *testing.
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	// The regression concerns historical candidates' priority, independently of
+	// wall-clock scheduling: pin the directory's ordering inputs explicitly.
+	result, err := h.db.Writer.ExecContext(ctx, `UPDATE configuration_authoring_sessions
+      SET updated_at=CASE id WHEN ? THEN '2026-10-15T00:00:01.000000000Z' ELSE '2026-10-15T00:00:00.000000000Z' END
+      WHERE id IN (?,?)`, fresh.ID, fresh.ID, state.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n, err := result.RowsAffected(); err != nil || n != 2 {
+		t.Fatalf("ordered fixture rows=%d: %v", n, err)
+	}
 	if row := summaryForTarget(t, h, "owned"); row.SessionID != fresh.ID {
 		t.Fatalf("saved historical batch hid fresh baseline: %+v", row)
 	}
+
 	// The stored historical candidates remain readable; selecting the visible row
 	// did not delete history or silently discard another session's private payload.
 	stored, err := h.store.Get(ctx, "alice", state.ID)
