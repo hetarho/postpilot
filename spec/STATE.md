@@ -11,7 +11,7 @@
 ## active
 | tag | host | mode | since | at | doing |
 |---|---|---|---|---|---|
-| q8s4 | DESKTOP-VKPLS8P | autopilot | 2026-10-16T03:18Z | 2026-10-16T05:42Z | T699 |
+| q8s4 | DESKTOP-VKPLS8P | autopilot | 2026-10-16T03:18Z | 2026-10-16T06:03Z | - |
 
 ## inbox
 - 261016 decided T699: how does a clip-store transaction fence external post text? → freeze a same-read creation identity and carry its text digest in pricing beside GuidelinesDigest, with the raw link identity in the project digest (alt: read post tables from the clip context | persist live post text on every project edit).
@@ -128,15 +128,15 @@
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
-| T699 | Send the linked post's text to every clip writing call | CLIP GUIDE QUOTA | T698 T691 | doing@261016.q8s4 |
 | T700 | Record when post photos, post videos and clip sources were shot | CLIP | T692 | todo |
 | T701 | Build the storyline in the linked post's order and place videos by capture order | CLIP GUIDE | T699 T700 | todo |
 
 ## next
-- Continue T699 → T700 → T701 with local commits only.
+- Continue T700 → T701 with local commits only.
 - T697 local implementation is committed; pre-push/media gates and production range/clip qualification remain blocked by this session’s no-push scope. Existing qualification blocks are unchanged.
 
 ## log
+- 261016 T699 done locally at0a1b6154: per-call linked canonical text, quote/recovery fences, pre-hold allowances and GUIDE r23;447 unit/78 integration tests and API selections pass.
 - 261016 T699 starts atd980d7e2 (q8s4): freeze owned canonical text per call, bind quotes and measure every writing request before holds; CLIP source-colour deltas are unrelated.
 - 261016 T698 done locally at442e4c2f: owned post link,495 selected frontend tests, backend integration and12 picker/60 shell browser cases pass.
 - 261016 q8s4 weekly stop threshold85%→80% by owner instruction; continue local commits only.
@@ -156,4 +156,3 @@
 - 261016 T706 Deploy38817240700 and Media38817743339 succeed; all three checkout logs prove ec9130ef. Its CI38817240542 remains in progress.
 - 261016 T693 chat/setup138 and editor24 tests pass; Chrome48 width/theme/text/placement layouts pass. Whole FE is running; original questionnaire actor is unchanged.
 - 261016 T706 Deploy38817240700 succeeds; Media38817743339 is running for ec9130ef.
-- 261016 T693 resumes after T706; original VOICE17/THEME34 bases and acceptance remain unchanged. Restore the exact preserved31-path delta after this claim push.
