@@ -11,7 +11,7 @@
 ## active
 | tag | host | mode | since | at | doing |
 |---|---|---|---|---|---|
-| q8s4 | DESKTOP-VKPLS8P | autopilot | 2026-10-16T03:18Z | 2026-10-16T06:34Z | T701 |
+| q8s4 | DESKTOP-VKPLS8P | autopilot | 2026-10-16T03:18Z | 2026-10-16T06:51Z | - |
 
 ## inbox
 - 261016 suggest T694 T695 T698 T699 T700: review-code over channel navigation, campaign positioning, owned post links, frozen writing material and original capture metadata.
@@ -130,13 +130,13 @@
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
-| T701 | Build the storyline in the linked post's order and place videos by capture order | CLIP GUIDE | T699 T700 | doing@261016.q8s4 |
 
 ## next
-- Continue T701 with local commits only.
+- No unblocked implementation todo remains. Owner may check the linked-post clip workflow and adopt the review-code suggestions; local commits remain unpushed.
 - T697 local implementation is committed; pre-push/media gates and production range/clip qualification remain blocked by this session’s no-push scope. Existing qualification blocks are unchanged.
 
 ## log
+- 261016 T701 done locally at0a1319d2: frozen photo/time/sequence placement hints and unused-source names;457 backend/21 store/248 frontend tests and8 browser cases pass.
 - 261016 T701 starts at737c8bc4 (q8s4): canonical photo metadata, frozen nearest-section candidates, linked section priority and unused-source names;19% weekly usage is below80%.
 - 261016 T700 done locally atbf118b47: bounded EXIF/mvhd, optional stored capture times, stable originals;297 frontend and150 store integration tests, related backend/build checks pass.
 - 261016 T700 starts at2e77609c (q8s4): bounded original EXIF/mvhd capture times, optional upload/source metadata and unchanged fingerprints;17% weekly usage is below80%.
@@ -156,4 +156,3 @@
 - 261016 T693 done
 - 261016 T693 final sourcec171c69b/codec5946df7 passes whole FE555/4403, full Go and all Linux/amd64 deployment/media gates; combined memory bounds794701824/795013120 bytes under unchanged limits.
 - 261016 Owner requests finishing T693, pushing main and ending this session; T694–T695 and T697–T701 remain for the next session.
-- 261016 T706 CI38817240542, Deploy38817240700 and Media38817743339 all succeed for ec9130ef, with exact-revision checkout proof.
