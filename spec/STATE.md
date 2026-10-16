@@ -8,6 +8,11 @@
 - docs: en
 - push: main
 
+## active
+| tag | host | mode | since | at | doing |
+|---|---|---|---|---|---|
+| p8s4 | DESKTOP-VKPLS8P | autopilot | 2026-10-16T06:59Z | 2026-10-16T06:59Z | - |
+
 ## inbox
 - 261016 suggest T694 T695 T698 T699 T700: review-code over channel navigation, campaign positioning, owned post links, frozen writing material and original capture metadata.
 - 261016 decided T700: how is EXIF without a UTC offset normalized? → omit the unknown instant and retain filename-based order as fallback (alt: invent the browser’s current time zone | label the local wall clock as UTC); use bounded mvhd parsing because the installed Mediabunny skips that creation field.
@@ -131,6 +136,7 @@
 - T697 manual bucket CORS setup is owner-confirmed complete; only pre-push/media gates and the new production gate/clip source-read verification remain under the no-push restriction. Existing qualification blocks are unchanged.
 
 ## log
+- 261016 p8s4 starts delivery of27 local commits from62b22708 to main: owner explicitly authorizes push; run full ARCH-31 CI/deploy/media gates and inspect exact-revision workflows; weekly stop remains80% (currently20%).
 - 261016 T697 owner reconfirms the manual bucket CORS change is complete; reconcile remaining delivery verification without changing code or pushing.
 - 261016 q8s4 ends after T701: T694/T695/T698–T701 done and T697 locally implemented/parked; all changes committed locally, no push; weekly usage20%, stop threshold80%.
 - 261016 T701 done locally at0a1319d2: frozen photo/time/sequence placement hints and unused-source names;457 backend/21 store/248 frontend tests and8 browser cases pass.
@@ -150,4 +156,3 @@
 - 261016 T694 starts at 5af7c779 (q8s4, commit-only); CLIP r62–r63 freshness checked, navigation contract unchanged.
 - 261016 q8s4 autopilot starts T694 onward; local commits only, no push/checkpoint; stop at 85% weekly Codex usage (currently 9%).
 - 261016 m7q2 ends after T693 as requested; push main and leave T694–T695/T697–T701 for the next session.
-- 261016 T693 done
