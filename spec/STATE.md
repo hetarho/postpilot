@@ -11,9 +11,10 @@
 ## active
 | tag | host | mode | since | at | doing |
 |---|---|---|---|---|---|
-| q8s4 | DESKTOP-VKPLS8P | autopilot | 2026-10-16T03:18Z | 2026-10-16T04:52Z | T698 |
+| q8s4 | DESKTOP-VKPLS8P | autopilot | 2026-10-16T03:18Z | 2026-10-16T05:35Z | T698 |
 
 ## inbox
+- 261016 decided T698: how is T692’s existing creation seed linked atomically? → optional linked_post_slug on CreateClipProject as well as Update; the owned canonical post is validated before insertion (alt: create, then a second seed/link update that can leave a partial project). Picker actions save only the link through the write lane.
 - 261016 parked T697: local probe/gate/cancellation implementation verified and committed; ARCH-31 pre-push/media gates and production workflow/clip qualification wait for an authorized push and live check. This session is commit-only by owner request.
 - 261016 suggest T690 T691 T705 T692 T706: review-code over campaign guidance, upload text, partial imports, post-to-clip creation and fixture synchronization
 - 261016 decided T705 T692: how can a failed video transfer keep the clips already uploaded? → an owned initial-import completion primitive moves verified leases into a ready batch and cleans only pending uploads under existing retention rules (alt: discard every arrived video | re-upload successful files repeatedly | leave a non-ready batch)
@@ -136,6 +137,7 @@
 - T697 local implementation is committed; pre-push/media gates and production range/clip qualification remain blocked by this session’s no-push scope. Existing qualification blocks are unchanged.
 
 ## log
+- 261016 q8s4 weekly stop threshold85%→80% by owner instruction; continue local commits only.
 - 261016 T698 starts at42b2789a (q8s4): owned canonical-post link, identity fence and picker; CLIP r62–r63 source-colour delta is unrelated.
 - 261016 T697 locally implemented atbecb358f and parked for production qualification; SDK/app/RPC,50 store integration tests, CLI and workflow gates pass.
 - 261016 T697 starts at536ff251 (q8s4): local CORS probe/deploy gate and cancellation diagnostics; remote qualification remains excluded by commit-only scope.
@@ -155,4 +157,3 @@
 - 261016 T693 resumes after T706; original VOICE17/THEME34 bases and acceptance remain unchanged. Restore the exact preserved31-path delta after this claim push.
 - 261016 T706 pushedec9130ef; CI38817240542 and Deploy38817240700 are queued for that revision.
 - 261016 T706 done
-- 261016 T706 codeae14f675 passes full Go and evaluated deployment/media gates; all five media runtime filesystems/configs match T705, retaining its CPU worker and both release proofs.
