@@ -8,6 +8,7 @@ import {
   DEFAULT_CLIP_CHANNEL,
   freeTextLength,
   rememberClipEntry,
+  clipChannelPath,
   useClipProjectMutations,
   useClipSourceCalls,
   type ClipChannel,
@@ -70,8 +71,8 @@ export function CreateClipFromPostButton({
       setCreated(result)
       const actualChannel = result.project.channel ?? channel
       rememberClipEntry(ownerId, {
-        path: '/clips',
-        section: 'clips',
+        path: clipChannelPath(actualChannel),
+        section: actualChannel,
         filters: { channel: actualChannel },
         scrollY: 0,
         targetId: result.project.id,

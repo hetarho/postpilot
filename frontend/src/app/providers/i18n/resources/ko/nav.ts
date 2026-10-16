@@ -4,7 +4,7 @@ export const nav = {
 
   launch: '새로 만들기',
   library: '보관함',
-  settings: '설정',
+  settings: '내 설정',
   menu: '메뉴',
 
   spokenVoices: '목소리',
@@ -14,14 +14,6 @@ export const nav = {
   modelHistory: '최근 관찰 비교',
   modelLeaderboard: '리더보드',
   primary: '주요',
-  groupSidebar: {
-    open: '{{group}} 열기',
-    close: '{{group}} 닫기',
-  },
-  sidebar: {
-    open: '주요 메뉴 열기',
-    close: '주요 메뉴 닫기',
-  },
   home: 'Postpilot 홈',
   posts: '글',
   videos: '영상',
@@ -29,8 +21,6 @@ export const nav = {
   myVideos: '내 영상',
   videoTemplates: '영상 템플릿',
   videoGuidelines: '영상 지침',
-  writingGroup: '글 메뉴',
-  videoGroup: '영상 메뉴',
   voices: '말투',
   templates: '글 템플릿',
   guidelines: '지침',

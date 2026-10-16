@@ -6,6 +6,7 @@ import { i18n as voicePreparationI18n } from '@/features/prepare-writing-voice/c
 import { i18n as writingCandidatesI18n } from '@/entities/voice-candidate/config/i18n'
 import { i18n as candidateFlowI18n } from '@/features/generate-writing-voices/config/i18n'
 import { i18n as setupI18n } from '@/widgets/creation-setup/config/i18n'
+import { i18n as channelI18n } from '@/pages/channel/config/i18n'
 import { i18n as homeI18n } from '@/pages/home/config/i18n'
 import { i18n as libraryI18n } from '@/pages/library/config/i18n'
 import { i18n as settingsI18n } from '@/pages/settings/config/i18n'
@@ -149,6 +150,7 @@ export const RESOURCE_NAMESPACES = [
   'requestInspection',
   'authoring',
   'voicePreparation',
+  'channel',
   'creation',
   'spokenVoice',
   'createSpokenVoice',
@@ -196,6 +198,7 @@ export const FRAGMENTS: readonly I18nFragment[] = [
   candidateFlowI18n,
   setupI18n,
   homeI18n,
+  channelI18n,
   libraryI18n,
   settingsI18n,
   { namespace: 'spokenVoice', ...spokenVoiceResources },
@@ -318,6 +321,7 @@ export const resources = {
     requestInspection: requestInspectionI18n.ko,
     authoring: { ...authoringI18n.ko },
     voicePreparation: { ...voicePreparationI18n.ko },
+    channel: channelI18n.ko,
     creation: { ...homeI18n.ko, ...libraryI18n.ko, ...settingsI18n.ko, ...setupI18n.ko },
     spokenVoice: spokenVoiceResources.ko,
     createSpokenVoice: createSpokenVoiceResources.ko,
@@ -463,6 +467,7 @@ export const resources = {
     requestInspection: requestInspectionI18n.en,
     authoring: { ...authoringI18n.en },
     voicePreparation: { ...voicePreparationI18n.en },
+    channel: channelI18n.en,
     creation: { ...homeI18n.en, ...libraryI18n.en, ...settingsI18n.en, ...setupI18n.en },
     spokenVoice: spokenVoiceResources.en,
     createSpokenVoice: createSpokenVoiceResources.en,

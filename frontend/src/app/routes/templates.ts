@@ -1,10 +1,10 @@
 import { createRoute, lazyRouteComponent } from '@tanstack/react-router'
 import { guidelinesSearchSchema } from '@/pages/guidelines'
 import { newTemplateSearchSchema } from '@/pages/template'
-import { writingGroupRoute } from './tree'
+import { authenticatedRoute } from './tree'
 
 export const templatesRoute = createRoute({
-  getParentRoute: () => writingGroupRoute,
+  getParentRoute: () => authenticatedRoute,
   path: '/templates',
   component: lazyRouteComponent(() => import('@/pages/templates'), 'TemplatesPage'),
 })
@@ -12,27 +12,27 @@ export const templatesRoute = createRoute({
 // `new` is declared before `$templateId` so the static path cannot be swallowed by the param,
 // exactly as `/posts/new` sits before `/posts/$slug` below.
 export const newTemplateRoute = createRoute({
-  getParentRoute: () => writingGroupRoute,
+  getParentRoute: () => authenticatedRoute,
   path: '/templates/new',
   validateSearch: newTemplateSearchSchema,
   component: lazyRouteComponent(() => import('@/pages/template'), 'TemplatePage'),
 })
 
 export const templateRoute = createRoute({
-  getParentRoute: () => writingGroupRoute,
+  getParentRoute: () => authenticatedRoute,
   path: '/templates/$templateId',
   component: lazyRouteComponent(() => import('@/pages/template'), 'TemplatePage'),
 })
 
 export const guidelinesRoute = createRoute({
-  getParentRoute: () => writingGroupRoute,
+  getParentRoute: () => authenticatedRoute,
   path: '/guidelines',
   validateSearch: guidelinesSearchSchema,
   component: lazyRouteComponent(() => import('@/pages/guidelines'), 'GuidelinesPage'),
 })
 
 export const memoriesRoute = createRoute({
-  getParentRoute: () => writingGroupRoute,
+  getParentRoute: () => authenticatedRoute,
   path: '/memories',
   component: lazyRouteComponent(() => import('@/pages/memories'), 'MemoriesPage'),
 })

@@ -173,7 +173,7 @@ describe('clip directory and setup', () => {
     expect(screen.queryByRole('navigation', { name: '영상 메뉴' })).toBeNull()
     expect(document.querySelector('aside')).toBeNull()
     // One row (CLIP-37): the way back, the step bar and 삭제, in that order.
-    const back = screen.getByRole('link', { name: '작업 내역으로 돌아가기' })
+    const back = screen.getByRole('link', { name: '네이버 클립 기록으로 돌아가기' })
     expect(back).toHaveAttribute('href', '/clips')
     const steps = screen.getByRole('tablist', { name: '클립 단계' })
     const remove = screen.getByRole('button', { name: '삭제' })
@@ -184,9 +184,9 @@ describe('clip directory and setup', () => {
   })
   it('gives /clips/new the workspace top row and no lifecycle', async () => {
     mount('/clips/new')
-    expect(await screen.findByRole('link', { name: '만들기로 돌아가기' })).toHaveAttribute(
+    expect(await screen.findByRole('link', { name: '네이버 클립으로 돌아가기' })).toHaveAttribute(
       'href',
-      '/',
+      '/naver-clip',
     )
     // The page's ONE status region is mounted before there is a project to have a status
     // (CLIP-37), and a draft with no lifecycle shows no step bar and nothing to delete.
@@ -221,7 +221,7 @@ describe('clip directory and setup', () => {
       ratio: 'vertical',
       targetDurationMs: 30000,
     })
-    const back = screen.getByRole('link', { name: '작업 내역으로 돌아가기' })
+    const back = screen.getByRole('link', { name: '인스타 클립 기록으로 돌아가기' })
     expect(back).toHaveAttribute('href', '/clips?channel=instagram_clip')
     await user.click(back)
     await waitFor(() => expect(router.state.location.search.channel).toBe('instagram_clip'))
@@ -385,14 +385,14 @@ describe('clip directory and setup', () => {
     const { router, unmount } = mount('/clips/project')
     await user.type(await screen.findByLabelText('클립 제목'), ' 기록')
     // No dialog: there is nothing to lose by leaving a project that saves itself (CLIP-39).
-    await user.click(screen.getByRole('link', { name: '작업 내역으로 돌아가기' }))
+    await user.click(screen.getByRole('link', { name: '네이버 클립 기록으로 돌아가기' }))
     await waitFor(() => expect(router.state.location.pathname).toBe('/clips'))
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     unmount()
 
     const created = mount('/clips/new')
     await user.type(await screen.findByLabelText('클립 제목'), '새 클립')
-    await user.click(screen.getByRole('link', { name: '만들기로 돌아가기' }))
+    await user.click(screen.getByRole('link', { name: '네이버 클립으로 돌아가기' }))
     // `/clips/new` is the one screen whose input is not queued anywhere yet.
     expect(await screen.findByRole('dialog')).toBeInTheDocument()
     expect(created.router.state.location.pathname).toBe('/clips/new')

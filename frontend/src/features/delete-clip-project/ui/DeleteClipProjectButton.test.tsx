@@ -85,7 +85,7 @@ it('is refused outright while the workspace is busy', () => {
 it('returns a creation-origin clip to home only after server-confirmed deletion', async () => {
   navigate.mockClear()
   rememberClipEntry('alice', {
-    path: '/',
+    path: '/naver-clip',
     section: 'creation',
     filters: {},
     scrollY: 0,
@@ -96,7 +96,7 @@ it('returns a creation-origin clip to home only after server-confirmed deletion'
   expect(navigate).not.toHaveBeenCalled()
   await user.click(screen.getAllByRole('button', { name: '삭제', hidden: true })[1]!)
   expect(calls).toEqual(['clip'])
-  expect(navigate).toHaveBeenCalledWith({ href: '/', replace: true })
+  expect(navigate).toHaveBeenCalledWith({ href: '/naver-clip', replace: true })
 })
 it('uses the injected return only after confirmed deletion and queue cleanup', async () => {
   navigate.mockClear()

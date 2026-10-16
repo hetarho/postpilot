@@ -7,13 +7,17 @@ import {
 import { CLIP_CHANNELS, DEFAULT_CLIP_CHANNEL, type ClipChannel } from '../config/channel'
 
 export interface ClipEntry {
-  path: '/' | '/clips' | '/library'
+  path: '/naver-clip' | '/insta-clip' | '/clips'
   section: string
   filters: Readonly<Record<string, string>>
   scrollY: number
   targetId?: string
 }
+export function clipChannelPath(channel: ClipChannel): '/naver-clip' | '/insta-clip' {
+  return channel === 'instagram_clip' ? '/insta-clip' : '/naver-clip'
+}
 export interface ClipReturnDestination {
+  channel: ClipChannel
   path: ClipEntry['path']
   href: string
   section: string
@@ -36,7 +40,10 @@ function store(ownerId: string, storage: NavigationStorage, targetId?: string) {
       setItem: (key, value) => storage.setItem(`${key}${suffix}`, value),
       removeItem: (key) => storage.removeItem(`${key}${suffix}`),
     },
-    { isAccessible: (path) => ['/', '/clips', '/library'].includes(path) },
+    {
+      isAccessible: (path) =>
+        ['/naver-clip', '/insta-clip', '/clips', '/', '/library'].includes(path),
+    },
   )
 }
 export function rememberClipEntry(
@@ -63,7 +70,15 @@ export function readClipReturnContext(
 ): ReturnContext | undefined {
   if (!storage) return undefined
   const entry = store(ownerId, storage, clipId ?? 'new').read() ?? store(ownerId, storage).read()
-  return entry?.targetId === (clipId ?? 'new') ? entry : undefined
+  if (entry?.targetId !== (clipId ?? 'new')) return undefined
+  return entry.path === '/' || entry.path === '/library'
+    ? {
+        ...entry,
+        path: clipChannelPath(
+          entry.filters.channel === 'instagram_clip' ? 'instagram_clip' : DEFAULT_CLIP_CHANNEL,
+        ),
+      }
+    : entry
 }
 export function clipReturnDestination(
   ownerId: string,
@@ -72,24 +87,30 @@ export function clipReturnDestination(
   channel?: ClipChannel,
 ): ClipReturnDestination {
   const entry = readClipReturnContext(ownerId, clipId, storage)
-  const path = (entry?.path ?? (clipId ? '/clips' : '/')) as ClipEntry['path']
+  const storedChannel = CLIP_CHANNELS.includes(entry?.filters.channel as ClipChannel)
+    ? (entry!.filters.channel as ClipChannel)
+    : entry?.path === '/insta-clip'
+      ? 'instagram_clip'
+      : DEFAULT_CLIP_CHANNEL
+  const currentChannel = channel ?? storedChannel
+  const path: ClipEntry['path'] =
+    (entry?.path ?? (clipId ? '/clips' : undefined)) === '/clips'
+      ? '/clips'
+      : clipChannelPath(currentChannel)
   const filters: Record<string, string> = {}
-  if (entry?.filters.q) filters.q = entry.filters.q
-  if (entry?.filters.status && ['draft', 'refining', 'finished'].includes(entry.filters.status))
-    filters.status = entry.filters.status
   if (path === '/clips') {
-    const storedChannel = CLIP_CHANNELS.includes(entry?.filters.channel as ClipChannel)
-      ? entry!.filters.channel
-      : undefined
-    const currentChannel = channel ?? storedChannel
-    if (currentChannel && (currentChannel !== DEFAULT_CLIP_CHANNEL || storedChannel))
+    if (entry?.filters.q) filters.q = entry.filters.q
+    if (entry?.filters.status && ['draft', 'refining', 'finished'].includes(entry.filters.status))
+      filters.status = entry.filters.status
+    if (currentChannel !== DEFAULT_CLIP_CHANNEL || entry?.filters.channel)
       filters.channel = currentChannel
   }
-  const query = new URLSearchParams(path === '/' ? {} : filters).toString()
+  const query = new URLSearchParams(filters).toString()
   return {
+    channel: currentChannel,
     path,
     href: query ? `${path}?${query}` : path,
-    section: entry?.section ?? (clipId ? 'clips' : 'creation'),
+    section: entry?.section ?? (path === '/clips' ? 'clips' : currentChannel),
     scrollY: entry?.scrollY ?? 0,
   }
 }
@@ -104,8 +125,14 @@ export function retainMintedClipEntry(
   return rememberClipEntry(
     ownerId,
     {
-      path: (entry?.path ?? '/') as ClipEntry['path'],
-      section: entry?.section ?? 'creation',
+      path: (entry?.path === '/clips'
+        ? '/clips'
+        : clipChannelPath(
+            entry?.filters.channel === 'instagram_clip' || entry?.path === '/insta-clip'
+              ? 'instagram_clip'
+              : DEFAULT_CLIP_CHANNEL,
+          )) as ClipEntry['path'],
+      section: entry?.section ?? 'naver_clip',
       filters: entry?.filters ?? {},
       scrollY: entry?.scrollY ?? 0,
       targetId: clipId,

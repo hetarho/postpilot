@@ -27,28 +27,33 @@ afterEach(() => {
   initializeI18n('ko')
 })
 it.each([
-  ['/', '/'],
-  ['/posts/new', '/'],
-  ['/clips/new', '/'],
-  ['/posts/example', '/library'],
-  ['/clips/example', '/library'],
+  ['/', undefined],
+  ['/posts/new', '/naver-blog'],
+  ['/clips/new', '/naver-clip'],
+  ['/clips/new?channel=instagram_clip', '/insta-clip'],
+  ['/posts/example', '/naver-blog'],
+  ['/clips/example', '/naver-clip'],
   ['/voices/example/materials', '/settings'],
-  ['/tests', '/tests'],
-  ['/tests/history', '/tests'],
-  ['/tests/test', '/tests'],
-  ['/ai-models/compare', '/tests'],
+  ['/tests', '/settings'],
+  ['/tests/history', '/settings'],
+  ['/tests/test', '/settings'],
+  ['/ai-models/compare', '/settings'],
   ['/billing', '/settings'],
 ] as const)('resolves %s to %s', (path, section) => expect(currentDestination(path)).toBe(section))
 it('keeps minted creation distinct from a direct history record and exposes deterministic hierarchy', () => {
-  expect(currentDestination('/posts/minted', true)).toBe('/')
-  expect(currentDestination('/clips/minted', true)).toBe('/')
+  expect(currentDestination('/posts/minted', true)).toBe('/naver-blog')
+  expect(currentDestination('/clips/minted', true)).toBe('/naver-clip')
   expect(routeLocation('/voices/voice/materials').ancestors.map((x) => x.href)).toEqual([
     '/settings',
-    '/settings#settings-writing',
+    '/settings#settings-personal',
     '/voices',
     '/voices/voice',
   ])
-  expect(routeLocation('/tests/id').ancestors.map((x) => x.href)).toEqual(['/tests'])
+  expect(routeLocation('/tests/id').ancestors.map((x) => x.href)).toEqual([
+    '/settings',
+    '/settings#settings-advanced',
+    '/tests',
+  ])
 })
 it('shows primary destinations and current section on desktop without a hamburger or modal', async () => {
   viewport(true)
@@ -60,8 +65,8 @@ it('shows primary destinations and current section on desktop without a hamburge
     within(nav)
       .getAllByRole('link')
       .map((x) => x.getAttribute('href')),
-  ).toEqual(['/', '/tests', '/settings', '/library'])
-  expect(within(nav).getByRole('link', { name: '작업 내역' })).toHaveAttribute(
+  ).toEqual(['/naver-blog', '/naver-clip', '/insta-clip', '/settings'])
+  expect(within(nav).getByRole('link', { name: '네이버 블로그' })).toHaveAttribute(
     'aria-current',
     'page',
   )
@@ -84,7 +89,7 @@ it('uses a nonmodal edge-attached phone menu with visible dismissal, Escape and 
     within(menu)
       .getAllByRole('link')
       .map((x) => x.getAttribute('href')),
-  ).toEqual(['/', '/tests', '/settings', '/library'])
+  ).toEqual(['/naver-blog', '/naver-clip', '/insta-clip', '/settings'])
   expect(within(menu).getByRole('button', { name: '이동 메뉴 닫기' })).toBeInTheDocument()
   expect(menu.contains(document.activeElement)).toBe(true)
   await user.keyboard('{Escape}')
@@ -94,17 +99,17 @@ it('uses a nonmodal edge-attached phone menu with visible dismissal, Escape and 
 it('retains settings parent access and filters across child navigation and history', async () => {
   viewport(true)
   const { router } = renderAppAt('/settings', { user: { id: 'alice', plan: ProtoPlan.FREE } })
-  await screen.findByRole('heading', { name: '설정' })
-  await act(() => router.navigate({ to: '/templates' }))
-  await waitFor(() => expect(router.state.location.pathname).toBe('/templates'))
+  await screen.findByRole('heading', { name: '내 설정' })
+  await act(() => router.navigate({ to: '/voices' }))
+  await waitFor(() => expect(router.state.location.pathname).toBe('/voices'))
   const breadcrumb = screen.getByRole('navigation', { name: '현재 위치' })
-  expect(within(breadcrumb).getByRole('link', { name: '설정' })).toHaveAttribute(
+  expect(within(breadcrumb).getByRole('link', { name: '내 설정' })).toHaveAttribute(
     'href',
     '/settings',
   )
-  expect(within(breadcrumb).getByRole('link', { name: '글 설정' })).toHaveAttribute(
+  expect(within(breadcrumb).getByRole('link', { name: '말투·기억' })).toHaveAttribute(
     'href',
-    '/settings#settings-writing',
+    '/settings#settings-personal',
   )
   await act(() => router.navigate({ to: '/settings' }))
   await waitFor(() => expect(router.state.location.pathname).toBe('/settings'))
@@ -122,18 +127,18 @@ it('retains a settings origin through reload and restores its document position 
   vi.spyOn(window, 'scrollY', 'get').mockReturnValue(480)
   vi.spyOn(document.documentElement, 'scrollHeight', 'get').mockReturnValue(2400)
   const view = renderAppAt('/settings', { user: { id: 'alice' }, calls })
-  await screen.findByRole('heading', { name: '설정' })
-  await act(() => view.router.navigate({ to: '/templates' }))
-  await waitFor(() => expect(view.router.state.location.pathname).toBe('/templates'))
-  expect(readNavigationEntry('alice', '/templates')).toMatchObject({
+  await screen.findByRole('heading', { name: '내 설정' })
+  await act(() => view.router.navigate({ to: '/voices' }))
+  await waitFor(() => expect(view.router.state.location.pathname).toBe('/voices'))
+  expect(readNavigationEntry('alice', '/voices')).toMatchObject({
     path: '/settings',
     scrollY: 480,
   })
   view.unmount()
-  const reopened = renderAppAt('/templates', { transport: view.transport })
+  const reopened = renderAppAt('/voices', { transport: view.transport })
   await userEvent.click(
     within(await screen.findByRole('navigation', { name: '현재 위치' })).getByRole('link', {
-      name: '설정',
+      name: '내 설정',
     }),
   )
   await waitFor(() => expect(reopened.router.state.location.pathname).toBe('/settings'))
@@ -141,35 +146,41 @@ it('retains a settings origin through reload and restores its document position 
   expect(calls.some((x) => /^(Start|Save|Cancel|Create)/.test(x))).toBe(false)
 })
 it.each([
-  ['ko', '새 글 작성하기', '새 클립 만들기'],
-  ['en', 'Write a new post', 'Create a new clip'],
+  ['ko', '네이버 블로그', '네이버 클립', '인스타 클립'],
+  ['en', 'Naver Blog', 'Naver Clip', 'Instagram Clip'],
 ] as const)(
-  'keeps exactly two home content actions in %s without object writes',
-  async (locale, post, clip) => {
+  'keeps exactly three home channel entries in %s without object writes',
+  async (locale, post, naver, insta) => {
     viewport(true)
     initializeI18n(locale)
     const calls: string[] = []
     renderAppAt('/', { user: { id: 'alice' }, calls })
     const main = await screen.findByRole('main')
-    expect(within(main).getAllByRole('link')).toHaveLength(2)
-    expect(within(main).getByRole('link', { name: new RegExp(post) })).toHaveAttribute(
+    expect(within(main).getAllByRole('link')).toHaveLength(3)
+    expect(within(main).getByRole('link', { name: post })).toHaveAttribute('href', '/posts/new')
+    expect(within(main).getByRole('link', { name: naver })).toHaveAttribute(
       'href',
-      '/posts/new',
+      '/clips/new?channel=naver_clip',
     )
-    expect(within(main).getByRole('link', { name: new RegExp(clip) })).toHaveAttribute(
+    expect(within(main).getByRole('link', { name: insta })).toHaveAttribute(
       'href',
-      '/clips/new',
+      '/clips/new?channel=instagram_clip',
     )
     expect(calls.some((x) => /^(Start|Save|Cancel|Create)/.test(x))).toBe(false)
   },
 )
 
 it('derives named child locations and unknown-route behavior from the same hierarchy', () => {
-  for (const path of ['/', '/tests', '/settings', '/library']) {
+  for (const path of ['/naver-blog', '/naver-clip', '/insta-clip', '/settings']) {
     expect(routeLocation(path).ancestors).toEqual([])
     expect(routeLocation(path).destination).toBe(path)
   }
-  expect(currentDestination('/setup')).toBe('/')
+  expect(currentDestination('/setup')).toBeUndefined()
+  expect(routeLocation('/posts/minted', true).ancestors.map((x) => x.href)).toEqual(['/naver-blog'])
+  expect(routeLocation('/posts/minted').ancestors.map((x) => x.href)).toEqual([
+    '/naver-blog',
+    '/posts',
+  ])
   expect(routeLocation('/admin/models')).toMatchObject({
     current: 'adminModels',
     destination: '/settings',

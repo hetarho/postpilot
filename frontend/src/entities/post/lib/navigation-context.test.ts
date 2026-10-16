@@ -10,14 +10,14 @@ beforeEach(() => sessionStorage.clear())
 
 it('retains creation context across minting and reload, scoped to the owner and post', () => {
   rememberPostEntry('owner', {
-    path: '/',
+    path: '/naver-blog',
     section: 'creation',
     filters: {},
     scrollY: 0,
     targetId: 'new',
   })
   expect(retainMintedPostEntry('owner', 'minted')).toBe(true)
-  expect(postReturnDestination('owner', 'minted').href).toBe('/')
+  expect(postReturnDestination('owner', 'minted').href).toBe('/naver-blog')
   expect(postReturnDestination('other', 'minted').href).toBe('/posts')
   expect(postReturnDestination('owner', 'different').href).toBe('/posts')
 })
@@ -88,11 +88,11 @@ it('falls back safely when storage is unavailable', () => {
     },
     removeItem: () => {},
   }
-  expect(postReturnDestination('owner', undefined, storage).href).toBe('/')
+  expect(postReturnDestination('owner', undefined, storage).href).toBe('/naver-blog')
   expect(
     rememberPostEntry(
       'owner',
-      { path: '/', section: 'creation', filters: {}, scrollY: 0 },
+      { path: '/naver-blog', section: 'creation', filters: {}, scrollY: 0 },
       storage,
     ),
   ).toBe(false)
@@ -100,7 +100,7 @@ it('falls back safely when storage is unavailable', () => {
 
 it('keeps each post parent when other posts and child contexts replace the generic entry', () => {
   rememberPostEntry('owner', {
-    path: '/',
+    path: '/naver-blog',
     section: 'creation',
     filters: {},
     scrollY: 0,
@@ -125,7 +125,26 @@ it('keeps each post parent when other posts and child contexts replace the gener
       targetId: 'child',
     }),
   )
-  expect(postReturnDestination('owner', 'first').href).toBe('/')
+  expect(postReturnDestination('owner', 'first').href).toBe('/naver-blog')
   expect(postReturnDestination('owner', 'second').scrollY).toBe(840)
   expect(postReturnDestination('owner', 'second').href).toContain('q=')
 })
+
+it.each(['/', '/library'])(
+  'maps the stored obsolete %s parent to the Naver Blog channel',
+  (path) => {
+    sessionStorage.setItem(
+      'postpilot.return.owner.post.saved',
+      JSON.stringify({
+        version: 1,
+        ownerKey: 'owner',
+        targetId: 'saved',
+        path,
+        section: 'creation',
+        filters: {},
+        scrollY: 0,
+      }),
+    )
+    expect(postReturnDestination('owner', 'saved').href).toBe('/naver-blog')
+  },
+)

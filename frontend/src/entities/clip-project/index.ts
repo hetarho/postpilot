@@ -3,6 +3,7 @@ export {
   rememberClipEntry,
   readClipReturnContext,
   clipReturnDestination,
+  clipChannelPath,
   retainMintedClipEntry,
   markClipHistoryReturn,
   readClipHistoryReturn,

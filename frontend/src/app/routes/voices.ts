@@ -1,7 +1,7 @@
 import { createRoute, lazyRouteComponent, redirect } from '@tanstack/react-router'
 import { defaultVoice, loadVoices } from '@/entities/voice'
 import { voiceMaterialsSearchSchema } from '@/pages/voice'
-import { authenticatedRoute, writingGroupRoute, type RouterContext } from './tree'
+import { authenticatedRoute, type RouterContext } from './tree'
 
 // The three voice tabs all name the same specifier, so the bundler emits one chunk for the
 // whole tab area rather than three: the tabs are one screen and are always reached
@@ -42,7 +42,7 @@ export async function redirectLegacyVoice(
 }
 
 export const voicesRoute = createRoute({
-  getParentRoute: () => writingGroupRoute,
+  getParentRoute: () => authenticatedRoute,
   path: '/voices',
   component: lazyRouteComponent(() => import('@/pages/voices'), 'VoicesPage'),
 })
@@ -50,7 +50,7 @@ export const voicesRoute = createRoute({
 // The layout of one voice: the three tabs keep their own addresses under `/voices/$voiceId` and
 // share the tab row.
 export const voiceLayoutRoute = createRoute({
-  getParentRoute: () => writingGroupRoute,
+  getParentRoute: () => authenticatedRoute,
   path: '/voices/$voiceId',
   component: lazyRouteComponent(() => import('./VoiceLayout'), 'VoiceLayout'),
 })

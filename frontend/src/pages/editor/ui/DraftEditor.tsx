@@ -6,6 +6,7 @@ import {
   isPublished,
   postReturnDestination,
   rememberPostEntry,
+  readPostReturnContext,
   retainMintedPostEntry,
   markPostHistoryReturn,
   type PostDraft,
@@ -79,10 +80,10 @@ export function DraftEditor({ post, defaultVoice }: DraftEditorProps) {
   const copy = editorNavigationCopy[i18n.resolvedLanguage?.startsWith('ko') ? 'ko' : 'en']
   const returnTo = useMemo(() => postReturnDestination(ownerId, post?.slug), [ownerId, post?.slug])
   useLayoutEffect(() => {
-    if (!post)
+    if (!post && !readPostReturnContext(ownerId))
       rememberPostEntry(ownerId, {
-        path: '/',
-        section: 'creation',
+        path: '/naver-blog',
+        section: 'naverBlog',
         filters: {},
         scrollY: 0,
         targetId: 'new',
@@ -296,7 +297,7 @@ export function DraftEditor({ post, defaultVoice }: DraftEditorProps) {
             neighbour and keeps the word. */}
         <a
           href={returnTo.href}
-          aria-label={returnTo.path === '/' ? copy.home : copy.history}
+          aria-label={returnTo.path !== '/posts' ? copy.home : copy.history}
           onClick={(event) => {
             if (
               event.button !== 0 ||
@@ -326,7 +327,7 @@ export function DraftEditor({ post, defaultVoice }: DraftEditorProps) {
         >
           <ArrowLeft aria-hidden="true" className="size-5" />
           <span className={post ? 'sr-only underline sm:not-sr-only' : 'underline'}>
-            {returnTo.path === '/' ? copy.home : copy.history}
+            {returnTo.path !== '/posts' ? copy.home : copy.history}
           </span>
         </a>
         <Typography variant="label" as="span">

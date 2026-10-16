@@ -67,10 +67,9 @@ it('offers setup after missing settings were read without creating content or pa
 })
 it('shows the two-choice launch for configured users and acknowledges that browser', async () => {
   renderAppAt('/', READY)
-  expect(await screen.findByRole('link', { name: /새 글 작성하기/ })).toHaveAttribute(
-    'href',
-    '/posts/new',
-  )
+  expect(
+    await within(await screen.findByRole('main')).findByRole('link', { name: '네이버 블로그' }),
+  ).toHaveAttribute('href', '/posts/new')
   expect(screen.queryByRole('heading', { name: /처음 한 번/ })).toBeNull()
   expect(readSetupProgress(OWNER).completed).toBe(true)
 })
@@ -90,7 +89,9 @@ it('distinguishes failed directory reads from missing settings and offers explic
   expect(await screen.findByRole('alert')).toHaveTextContent('설정을 확인하지 못했어요')
   expect(screen.queryByRole('button', { name: '내 작업 공간 준비하기' })).toBeNull()
   await user.click(screen.getByRole('button', { name: '먼저 시작하기' }))
-  expect(await screen.findByRole('link', { name: /새 글 작성하기/ })).toBeInTheDocument()
+  expect(
+    await within(await screen.findByRole('main')).findByRole('link', { name: '네이버 블로그' }),
+  ).toBeInTheDocument()
   expect(readSetupProgress(OWNER).completed).toBe(true)
 })
 function gateProcedure(
@@ -161,10 +162,10 @@ it('defers once, survives reload and does not share the acknowledgement with ano
   const user = userEvent.setup()
   const first = mountFresh()
   await user.click(await screen.findByRole('button', { name: '나중에 설정할게요' }))
-  await screen.findByRole('link', { name: /새 글 작성하기/ })
+  await within(await screen.findByRole('main')).findByRole('link', { name: '네이버 블로그' })
   first.unmount()
   const second = mountFresh()
-  await screen.findByRole('link', { name: /새 글 작성하기/ })
+  await within(await screen.findByRole('main')).findByRole('link', { name: '네이버 블로그' })
   expect(second.router.state.location.pathname).toBe('/')
   second.unmount()
   renderAppAt('/', { user: { id: 'setup-bob' }, firstUseSetup: true, voice: { voices: [] } })
@@ -398,7 +399,9 @@ it('saves a clip template once before offering completion', async () => {
   ).toBeInTheDocument()
   expect(calls.filter((call) => call === 'CreateVideoTemplate')).toHaveLength(1)
   await user.click(screen.getByRole('button', { name: '만들러 가기' }))
-  expect(await screen.findByRole('link', { name: /새 클립 만들기/ })).toBeInTheDocument()
+  expect(
+    await within(screen.getByRole('main')).findByRole('link', { name: '네이버 클립' }),
+  ).toBeInTheDocument()
   expect(router.state.location.pathname).toBe('/')
 })
 it('retains a clip template after a failed save', async () => {

@@ -3,10 +3,10 @@ import { postReviewSearchSchema, testRecordSearchSchema } from '@/pages/model-ex
 import { postsSearchSchema } from '@/pages/posts'
 import { NewDraftPage, PostEditorPage } from '@/pages/editor'
 import { PostsPage } from '@/pages/posts'
-import { writingGroupRoute } from './tree'
+import { authenticatedRoute } from './tree'
 
 export const postsRoute = createRoute({
-  getParentRoute: () => writingGroupRoute,
+  getParentRoute: () => authenticatedRoute,
   path: '/posts',
   validateSearch: postsSearchSchema,
   component: PostsPage,
@@ -15,19 +15,19 @@ export const postsRoute = createRoute({
 // A static segment outranks '$slug', so this route — not the editor below — is what
 // '/posts/new' matches.
 export const newDraftRoute = createRoute({
-  getParentRoute: () => writingGroupRoute,
+  getParentRoute: () => authenticatedRoute,
   path: '/posts/new',
   component: NewDraftPage,
 })
 
 export const postEditorRoute = createRoute({
-  getParentRoute: () => writingGroupRoute,
+  getParentRoute: () => authenticatedRoute,
   path: '/posts/$slug',
   component: PostEditorPage,
 })
 
 export const postExperimentRoute = createRoute({
-  getParentRoute: () => writingGroupRoute,
+  getParentRoute: () => authenticatedRoute,
   path: '/posts/experiments/$id',
   validateSearch: (search) => ({
     ...postReviewSearchSchema(search),

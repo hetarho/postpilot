@@ -95,7 +95,7 @@ describe('the admin screen', () => {
       plans: { plan: ProtoPlan.MAX },
     })
 
-    expect(await screen.findByRole('heading', { name: /당신의 이야기를/ })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: /내가 겪은 것만으로/ })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: '운영 관리' })).not.toBeInTheDocument()
   })
 

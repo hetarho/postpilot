@@ -77,7 +77,7 @@ it.each(
     within(within(location).getByRole('list'))
       .getAllByRole('link')
       .map((item) => item.getAttribute('href')),
-  ).toEqual(['/tests', '/tests/history'])
+  ).toEqual(['/settings', '/settings#settings-advanced', '/tests', '/tests/history'])
   await user.keyboard('{Escape}')
   expect(location).not.toBeInTheDocument()
   if (back.startsWith('/posts')) {

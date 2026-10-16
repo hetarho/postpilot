@@ -1,10 +1,12 @@
-import { createRoute, lazyRouteComponent } from '@tanstack/react-router'
+import { createRoute, lazyRouteComponent, redirect } from '@tanstack/react-router'
 import { setupSearchSchema } from '@/pages/setup'
 import { authenticatedRoute } from './tree'
 export const libraryRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   path: '/library',
-  component: lazyRouteComponent(() => import('@/pages/library'), 'LibraryPage'),
+  beforeLoad: () => {
+    throw redirect({ to: '/', replace: true })
+  },
 })
 export const settingsRoute = createRoute({
   getParentRoute: () => authenticatedRoute,

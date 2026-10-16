@@ -27,22 +27,25 @@ it('keeps home creation through explicit minting and reload, then confirmed dele
   const calls: string[] = []
   const user = userEvent.setup()
   const view = renderAppAt('/clips/new', { user: { id: 'alice' }, clips: { calls } })
-  expect(await screen.findByRole('link', { name: '만들기로 돌아가기' })).toHaveAttribute(
+  expect(await screen.findByRole('link', { name: '네이버 클립으로 돌아가기' })).toHaveAttribute(
     'href',
-    '/',
+    '/naver-clip',
   )
   await user.type(await screen.findByLabelText('클립 제목'), '바다 여행')
   await user.click(screen.getByRole('button', { name: '클립 만들기' }))
   await waitFor(() => expect(view.router.state.location.pathname).toBe('/clips/clip-1'))
-  expect(readClipReturnContext('alice', 'clip-1')?.path).toBe('/')
-  expect(screen.getByRole('link', { name: '만들기로 돌아가기' })).toHaveAttribute('href', '/')
+  expect(readClipReturnContext('alice', 'clip-1')?.path).toBe('/naver-clip')
+  expect(screen.getByRole('link', { name: '네이버 클립으로 돌아가기' })).toHaveAttribute(
+    'href',
+    '/naver-clip',
+  )
   view.unmount()
   const reopened = renderAppAt('/clips/clip-1', { transport: view.transport })
   await screen.findByLabelText('클립 제목')
   expect(screen.getByText('바다 여행')).toBeVisible()
   await user.click(screen.getByRole('button', { name: '삭제' }))
   await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: '삭제' }))
-  await waitFor(() => expect(reopened.router.state.location.pathname).toBe('/'))
+  await waitFor(() => expect(reopened.router.state.location.pathname).toBe('/naver-clip'))
   expect(readClipReturnContext('alice', 'clip-1')).toBeUndefined()
   expect(calls.filter((call) => call === 'CreateClipProject')).toHaveLength(1)
   expect(calls.filter((call) => call === 'DeleteClipProject')).toHaveLength(1)
@@ -67,7 +70,7 @@ it('opens from filtered history and returns to the same filters and scroll after
   view.unmount()
   const reopened = renderAppAt('/clips/saved', { transport: view.transport })
   await screen.findByLabelText('클립 제목')
-  const back = await screen.findByRole('link', { name: '작업 내역으로 돌아가기' })
+  const back = await screen.findByRole('link', { name: '네이버 클립 기록으로 돌아가기' })
   expect(back).toHaveAttribute('href', '/clips?q=%EC%A0%9C%EC%A3%BC&status=draft')
   await user.click(back)
   await waitFor(() => expect(reopened.router.state.location.pathname).toBe('/clips'))
@@ -80,7 +83,7 @@ it.each(['ko', 'en'] as const)(
   async (language) => {
     initializeI18n(language)
     rememberClipEntry('alice', {
-      path: '/',
+      path: '/naver-clip',
       section: 'creation',
       filters: {},
       scrollY: 0,
@@ -100,7 +103,7 @@ it.each(['ko', 'en'] as const)(
       clips: { projects: [{ ...project, latestJob: job }], calls },
       jobs: { jobs: [job], calls },
     })
-    const label = language === 'ko' ? '만들기로 돌아가기' : 'Back to creation'
+    const label = language === 'ko' ? '네이버 클립으로 돌아가기' : 'Back to Naver Clip'
     await screen.findByRole('link', { name: label })
     expect(await screen.findByText(project.title)).toBeVisible()
     const status = await screen.findByRole('progressbar')
@@ -109,13 +112,13 @@ it.each(['ko', 'en'] as const)(
     })
     expect(status).toBeInTheDocument()
     await userEvent.click(screen.getByRole('link', { name: label }))
-    await waitFor(() => expect(view.router.state.location.pathname).toBe('/'))
+    await waitFor(() => expect(view.router.state.location.pathname).toBe('/naver-clip'))
     expect(calls.filter((call) => /Create|Start|Cancel|Update/.test(call))).toEqual([])
   },
 )
 it('a direct or foreign-owner record uses named history without adopting another owner creation context', async () => {
   rememberClipEntry('alice', {
-    path: '/',
+    path: '/naver-clip',
     section: 'creation',
     filters: {},
     scrollY: 0,
@@ -125,9 +128,9 @@ it('a direct or foreign-owner record uses named history without adopting another
     user: { id: 'bob' },
     clips: { projects: [{ ...project, ownerId: 'bob' }] },
   })
-  const back = await screen.findByRole('link', { name: '작업 내역으로 돌아가기' })
+  const back = await screen.findByRole('link', { name: '네이버 클립 기록으로 돌아가기' })
   expect(back).toHaveAttribute('href', '/clips')
-  expect(screen.queryByRole('link', { name: '만들기로 돌아가기' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('link', { name: '네이버 클립으로 돌아가기' })).not.toBeInTheDocument()
 })
 it('freezes the creation origin and ignores late mint navigation after the owner workspace closes', async () => {
   rememberClipEntry('alice', {
@@ -165,7 +168,7 @@ it('freezes the creation origin and ignores late mint navigation after the owner
   await waitFor(() => expect(calls).toContain('CreateClipProject'))
   await waitFor(() => expect(held).toBe(true))
   view.unmount()
-  rememberClipEntry('alice', { path: '/', section: 'creation', filters: {}, scrollY: 0 })
+  rememberClipEntry('alice', { path: '/naver-clip', section: 'creation', filters: {}, scrollY: 0 })
   await act(async () => {
     release()
     await gate
@@ -177,5 +180,29 @@ it('freezes the creation origin and ignores late mint navigation after the owner
     }),
   )
   expect(view.router.state.location.pathname).toBe('/clips/new')
-  expect(readClipReturnContext('alice')?.path).toBe('/')
+  expect(readClipReturnContext('alice')?.path).toBe('/naver-clip')
+})
+
+it('keeps Instagram creation through minting and direct reload without creating another project', async () => {
+  const user = userEvent.setup()
+  const calls: string[] = []
+  const view = renderAppAt('/clips/new?channel=instagram_clip', {
+    user: { id: 'alice' },
+    clips: { calls },
+  })
+  await user.type(await screen.findByLabelText('클립 제목'), '카페 체험')
+  await user.click(screen.getByRole('button', { name: '클립 만들기' }))
+  await waitFor(() => expect(view.router.state.location.pathname).toBe('/clips/clip-1'))
+  expect(readClipReturnContext('alice', 'clip-1')).toMatchObject({
+    path: '/insta-clip',
+    filters: { channel: 'instagram_clip' },
+  })
+  view.unmount()
+  renderAppAt('/clips/clip-1', { transport: view.transport })
+  expect(await screen.findByRole('link', { name: '인스타 클립으로 돌아가기' })).toHaveAttribute(
+    'href',
+    '/insta-clip',
+  )
+  expect(calls.filter((call) => call === 'CreateClipProject')).toHaveLength(1)
+  expect(calls.filter((call) => /Start|Cancel/.test(call))).toEqual([])
 })

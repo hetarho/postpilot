@@ -64,13 +64,13 @@ describe('session guard', () => {
 describe('the app home', () => {
   it('renders creation choices at the root', async () => {
     const { router } = renderAppAt('/', { user: { id: 'alice' } })
-    expect(await screen.findByRole('link', { name: /새 글 작성하기/ })).toHaveAttribute(
+    expect(await screen.findByRole('link', { name: '네이버 블로그' })).toHaveAttribute(
       'href',
       '/posts/new',
     )
-    expect(screen.getByRole('link', { name: /새 클립 만들기/ })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: '네이버 클립' })).toHaveAttribute(
       'href',
-      '/clips/new',
+      '/clips/new?channel=naver_clip',
     )
     expect(router.state.location.pathname).toBe('/')
   })
@@ -241,19 +241,16 @@ describe('logout', () => {
   })
 })
 
-// TMPL-24: 용도 is a top-level destination beside 말투, reachable from the nav.
+// TMPL-24: templates are reached from the Naver Blog channel hub.
 describe('the template management route', () => {
-  it('mounts /templates and offers it in the navigation after 말투', async () => {
-    renderAppAt('/settings', { user: { id: 'alice' } })
-
-    expect(await screen.findByRole('heading', { level: 1, name: '설정' })).toBeInTheDocument()
-    // One list, so the phone tab bar and the desktop header cannot disagree; the entry sits
-    // after 말투 in it.
-    const labels = screen
-      .getAllByRole('link')
-      .map((link) => link.getAttribute('href'))
-      .filter((href): href is string => href !== null)
-    expect(labels.indexOf('/templates')).toBeGreaterThan(labels.indexOf('/voices'))
+  it('opens templates after history in the Naver Blog hub', async () => {
+    const { router } = renderAppAt('/naver-blog', { user: { id: 'alice' } })
+    await screen.findByRole('heading', { level: 1, name: '네이버 블로그' })
+    const labels = hrefs()
+    expect(labels.indexOf('/templates')).toBeGreaterThan(labels.indexOf('/posts'))
+    await userEvent.click(within(screen.getByRole('main')).getByRole('link', { name: '템플릿' }))
+    await screen.findByRole('heading', { level: 1, name: '템플릿' })
+    expect(router.state.location.pathname).toBe('/templates')
   })
 })
 
@@ -386,14 +383,16 @@ describe('About consumes the shared locale and theme runtimes', () => {
   })
 })
 
-// GUIDE-20: 지침 is a top-level destination after 용도, reachable from the nav.
+// GUIDE-20: guidelines follow templates in the Naver Blog hub.
 describe('the guideline management route', () => {
-  it('mounts /guidelines and offers it in the navigation after 용도', async () => {
-    renderAppAt('/settings', { user: { id: 'alice' } })
-
-    expect(await screen.findByRole('heading', { level: 1, name: '설정' })).toBeInTheDocument()
+  it('opens guidelines after templates in the Naver Blog hub', async () => {
+    const { router } = renderAppAt('/naver-blog', { user: { id: 'alice' } })
+    await screen.findByRole('heading', { level: 1, name: '네이버 블로그' })
     const labels = hrefs()
     expect(labels.indexOf('/guidelines')).toBeGreaterThan(labels.indexOf('/templates'))
+    await userEvent.click(within(screen.getByRole('main')).getByRole('link', { name: '지침' }))
+    await screen.findByRole('heading', { level: 1, name: '지침' })
+    expect(router.state.location.pathname).toBe('/guidelines')
   })
 })
 
@@ -638,22 +637,22 @@ describe('theme preferences in the real route tree', () => {
     expect(within(cluster).getAllByRole('button')).toHaveLength(2)
     await user.click(disclosure)
     const hierarchy = screen.getByRole('dialog', { name: '현재 위치: 글 작업 내역' })
-    expect(within(hierarchy).getByRole('link', { name: '작업 내역' })).toHaveAttribute(
+    expect(within(hierarchy).getByRole('link', { name: '네이버 블로그' })).toHaveAttribute(
       'href',
-      '/library',
+      '/naver-blog',
     )
     await user.keyboard('{Escape}')
     expect(disclosure).toHaveFocus()
     await user.click(disclosure)
     await user.click(
       within(screen.getByRole('dialog', { name: '현재 위치: 글 작업 내역' })).getByRole('link', {
-        name: '작업 내역',
+        name: '네이버 블로그',
       }),
     )
-    await screen.findByRole('heading', { name: '작업 내역', level: 1 })
+    await screen.findByRole('heading', { name: '네이버 블로그', level: 1 })
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(within(header).getByRole('navigation', { name: '현재 위치' })).toHaveTextContent(
-      '작업 내역',
+      '네이버 블로그',
     )
     await user.click(account)
     const menu = screen.getByRole('dialog', { name: '내 계정' })
@@ -747,7 +746,7 @@ describe('localized registered-route smoke', () => {
         {
           path: '/',
           role: 'heading',
-          name: locale === 'ko' ? /당신의 이야기를/ : /Your story/,
+          name: locale === 'ko' ? /내가 겪은 것만으로/ : /Your own experience/,
           signedIn: true,
         },
         { path: '/posts', role: 'heading', name: text.posts, signedIn: true },
@@ -898,10 +897,10 @@ describe('retired publishing route', () => {
     expect(calls.filter((call) => /publish/i.test(call))).toEqual([])
   })
 
-  it('keeps the writing and model destinations for every tier', async () => {
+  it('keeps voice and model settings for the free tier', async () => {
     renderAppAt('/settings', { user: { id: 'alice', plan: ProtoPlan.FREE } })
-    await screen.findByRole('heading', { level: 1, name: '설정' })
-    for (const destination of ['/voices', '/templates', '/guidelines', '/ai-models']) {
+    await screen.findByRole('heading', { level: 1, name: '내 설정' })
+    for (const destination of ['/voices', '/memories', '/spoken-voices', '/ai-models']) {
       expect(hrefs()).toContain(destination)
     }
   })

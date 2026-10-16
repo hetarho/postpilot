@@ -1,7 +1,7 @@
 import { useInitializeDefaultSelections } from '@/entities/model-catalog'
 import { useSession } from '@/entities/session'
 import { postReturnDestination } from '@/entities/post'
-import { clipReturnDestination } from '@/entities/clip-project'
+import { clipReturnDestination, clipChannelPath, useClipProject } from '@/entities/clip-project'
 import { useWritingTestSource } from '@/entities/writing-test'
 import { useEffect, useLayoutEffect, useRef } from 'react'
 import { Link, Outlet, useNavigate, useRouter, useRouterState } from '@tanstack/react-router'
@@ -38,6 +38,7 @@ import {
   isStructuralNavigationEntry,
   isTopLevelDestination,
   navigationPathname,
+  navigationChannelFromHref,
   routeLocation,
 } from './navigation'
 import { NAV_DESKTOP_MEDIA_QUERY, NAV_SCROLL_RESTORE_TIMEOUT_MS } from './navigation-config'
@@ -83,12 +84,19 @@ export function AuthenticatedLayout() {
   const postReturn = postSlug
     ? postReturnDestination(ownerId, postSlug === 'new' ? undefined : postSlug)
     : undefined
+  const clipQuery = useClipProject(ownerId, clipId && clipId !== 'new' ? clipId : undefined)
   const clipReturn = clipId
-    ? clipReturnDestination(ownerId, clipId === 'new' ? undefined : clipId)
+    ? clipReturnDestination(
+        ownerId,
+        clipId === 'new' ? undefined : clipId,
+        undefined,
+        clipQuery.data?.channel ?? navigationChannelFromHref(location.href),
+      )
     : undefined
-  const creationOrigin = postReturn?.path === '/' || clipReturn?.path === '/'
-  const current = currentDestination(pathname, creationOrigin)
-  const metadata = routeLocation(pathname, creationOrigin)
+  const creationOrigin =
+    postReturn?.path === '/naver-blog' ||
+    clipReturn?.path === '/naver-clip' ||
+    clipReturn?.path === '/insta-clip'
   const stored = readNavigationEntry(ownerId, location.href)
   const accessibleParent = (href: string) => {
     const candidate = navigationParent(href)
@@ -104,6 +112,21 @@ export function AuthenticatedLayout() {
       : undefined
   const origin =
     explicit ?? (stored && accessibleParent(entryHref(stored)) ? entryHref(stored) : undefined)
+  const storedChannel = stored?.filters.channel
+  const channel =
+    clipQuery.data?.channel ??
+    navigationChannelFromHref(location.href) ??
+    (storedChannel === 'instagram_clip' || storedChannel === 'naver_clip'
+      ? storedChannel
+      : undefined) ??
+    (origin ? navigationChannelFromHref(origin) : undefined) ??
+    clipReturn?.channel
+  const channelRef = useRef(channel)
+  useLayoutEffect(() => {
+    channelRef.current = channel
+  }, [channel])
+  const current = currentDestination(pathname, creationOrigin, channel)
+  const metadata = routeLocation(pathname, creationOrigin, channel)
   const sourceSlug =
     pathname === '/tests' || pathname.startsWith('/tests/records/')
       ? typeof search.source === 'string'
@@ -125,7 +148,7 @@ export function AuthenticatedLayout() {
     : parent && returnHref === parent.href
       ? t(`location.${parent.key}`)
       : returnHref
-        ? t(`location.${routeLocation(returnHref.split(/[?#]/u, 1)[0]).current}`)
+        ? t(`location.${routeLocation(returnHref, false, channel).current}`)
         : undefined
   const immersive = pathname === '/plans'
   const quiet = pathname === '/' || pathname === '/setup'
@@ -186,19 +209,37 @@ export function AuthenticatedLayout() {
       const fromParent = navigationParent(from)
       const explicitFrom =
         targetParent && fromParent && entryHref(targetParent) === entryHref(fromParent)
-      const structural = isStructuralNavigationEntry(to, from)
+      const fromChannel =
+        navigationChannelFromHref(from) ??
+        (inherited ? navigationChannelFromHref(entryHref(inherited)) : undefined) ??
+        channelRef.current
+      const structural = isStructuralNavigationEntry(to, from, fromChannel)
       const entry =
         explicitFrom || (structural && navigationParent(from))
           ? from
-          : structural && inherited && isStructuralNavigationEntry(to, entryHref(inherited))
+          : structural &&
+              inherited &&
+              isStructuralNavigationEntry(to, entryHref(inherited), fromChannel)
             ? entryHref(inherited)
-            : undefined
-      if (entry)
+            : fromChannel &&
+                currentDestination(from, false, fromChannel) === clipChannelPath(fromChannel) &&
+                /^\/video-(templates|guidelines)(?:\/|$)/.test(navigationPathname(to))
+              ? clipChannelPath(fromChannel)
+              : undefined
+      const parentEntry = entry ? navigationParent(entry) : undefined
+      const scopedEntry =
+        entry &&
+        parentEntry &&
+        fromChannel &&
+        /^\/video-(templates|guidelines)(?:\/|$)/.test(parentEntry.path)
+          ? entryHref({ ...parentEntry, filters: { ...parentEntry.filters, channel: fromChannel } })
+          : entry
+      if (scopedEntry)
         rememberNavigationEntry(
           ownerId,
           to,
-          entry,
-          currentDestination(event.fromLocation?.pathname ?? '/') ?? '/',
+          scopedEntry,
+          currentDestination(event.fromLocation?.pathname ?? '/', false, fromChannel) ?? '/',
           navigationParent(from) ? window.scrollY : (inherited?.scrollY ?? 0),
           undefined,
           !!explicitFrom,
@@ -280,27 +321,6 @@ export function AuthenticatedLayout() {
                 compact
               />
             )}
-            {wide && (
-              <nav aria-label={t('primary')} className="ml-4 flex min-w-0 items-center gap-1">
-                {DESTINATIONS.map(({ to, labelKey }) => (
-                  <Link
-                    key={to}
-                    to={to}
-                    aria-current={current === to ? 'page' : undefined}
-                    className={typographyStyles({
-                      variant: 'body',
-                      className: clsx(
-                        'hover:bg-row-bg-hover inline-flex min-h-11 shrink-0 items-center rounded-md px-3',
-                        current === to ? 'text-link-fg-current' : 'text-content-secondary',
-                        to === '/library' && 'ml-3',
-                      ),
-                    })}
-                  >
-                    {t(labelKey)}
-                  </Link>
-                ))}
-              </nav>
-            )}
             <div className="ml-auto flex min-w-0 items-center gap-0 lg:gap-2">
               {!quiet && wide && <CreditBadge />}
               {!wide && (
@@ -365,6 +385,30 @@ export function AuthenticatedLayout() {
               />
             </div>
           </div>
+          {wide && (
+            <nav
+              aria-label={t('primary')}
+              className="mx-auto flex w-full max-w-7xl flex-wrap items-center gap-1 px-4 pb-3 sm:px-6 lg:px-8"
+            >
+              {DESTINATIONS.map(({ to, labelKey }) => (
+                <Link
+                  key={to}
+                  to={to}
+                  aria-current={current === to ? 'page' : undefined}
+                  className={typographyStyles({
+                    variant: 'body',
+                    className: clsx(
+                      'hover:bg-row-bg-hover inline-flex min-h-11 shrink-0 items-center rounded-md px-3',
+                      current === to ? 'text-link-fg-current' : 'text-content-secondary',
+                      to === '/settings' && 'ml-3',
+                    ),
+                  })}
+                >
+                  {t(labelKey)}
+                </Link>
+              ))}
+            </nav>
+          )}
           {wide && pathname !== '/' && !setup && (
             <div className="mx-auto w-full max-w-7xl px-4 pb-3 sm:px-6 lg:px-8">
               <Breadcrumb ariaLabel={t('locationLabel')} />

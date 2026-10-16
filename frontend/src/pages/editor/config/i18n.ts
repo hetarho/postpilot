@@ -1,6 +1,10 @@
 export const editorNavigationCopy = {
-  ko: { home: '만들기로 돌아가기', history: '작업 내역으로 돌아가기', location: '글쓰기' },
-  en: { home: 'Back to creation', history: 'Back to work history', location: 'Writing' },
+  ko: {
+    home: '네이버 블로그로 돌아가기',
+    history: '네이버 블로그 기록으로 돌아가기',
+    location: '글쓰기',
+  },
+  en: { home: 'Back to Naver Blog', history: 'Back to Naver Blog history', location: 'Writing' },
 }
 
 export const clipFromPostCopy = {

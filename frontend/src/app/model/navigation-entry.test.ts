@@ -44,8 +44,8 @@ it('refuses external/malformed/unproven record parents and clears unsafe filters
     expect(navigationParent(value)).toBeUndefined()
     expect(rememberNavigationEntry('alice', '/tests', value, 'tests', 0, storage)).toBe(false)
   }
-  expect(navigationParent('/settings#settings-writing')).toEqual({
-    path: '/settings#settings-writing',
+  expect(navigationParent('/settings#settings-personal')).toEqual({
+    path: '/settings#settings-personal',
     filters: {},
   })
   expect(navigationParent('/tests/history?stage=write&source=owned')).toEqual({
@@ -56,7 +56,7 @@ it('refuses external/malformed/unproven record parents and clears unsafe filters
 
 it('separates root switches from structural and explicit workflow entry', () => {
   const storage = memory()
-  for (const target of ['/', '/tests', '/settings', '/library'])
+  for (const target of ['/', '/naver-blog', '/naver-clip', '/insta-clip', '/settings'])
     expect(rememberNavigationEntry('alice', target, '/posts', 'history', 100, storage, true)).toBe(
       false,
     )

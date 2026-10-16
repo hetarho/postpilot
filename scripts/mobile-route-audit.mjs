@@ -17,6 +17,8 @@ const html =
   '<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><script type="module">import {injectIntoGlobalHook} from "/@react-refresh";injectIntoGlobalHook(window);window.$RefreshReg$=()=>{};window.$RefreshSig$=()=>(t)=>t;</script></head><body><div id="root"></div><script type="module" src="/src/test/mobile-route-fixture.tsx"></script></body></html>';
 await mkdir(output, { recursive: true });
 const browser = await chromium.launch({ headless: true });
+// Serial mode keeps the same viewport/state matrix on a shared development host.
+const workers = process.argv.includes("--serial") ? 1 : 2;
 const receipts = [];
 const inventory = [];
 const findings = [];
@@ -217,7 +219,7 @@ try {
     for (const width of widths) jobs.push({ width, theme });
   let next = 0;
   await Promise.all(
-    Array.from({ length: 2 }, async () => {
+    Array.from({ length: workers }, async () => {
       while (next < jobs.length) {
         const { width, theme } = jobs[next++];
         const ctx = await contextFor(width, theme);

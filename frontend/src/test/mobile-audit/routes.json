@@ -88,35 +88,35 @@
     }
   },
   "/": {
-    "heading": "당신의 이야기를,새로운 작품으로.",
+    "heading": "내가 겪은 것만으로,채널에 맞게 써 드려요.",
     "expectedPath": "/",
     "expectedLeaf": "/authenticated/",
     "sourceReview": {
       "source": "frontend/src/pages/home/ui/HomePage.tsx",
       "status": "changed",
-      "finding": "Phone choices are shorter rows with horizontal icons; retain both post and clip destinations.",
+      "finding": "Three peer channel entries open creation without record or AI work.",
       "inspectedStates": ["populated", "loading", "failure"]
     }
   },
   "/library": {
-    "heading": "작업 내역",
-    "expectedPath": "/library",
-    "expectedLeaf": "/authenticated/library",
+    "heading": "내가 겪은 것만으로,채널에 맞게 써 드려요.",
+    "expectedPath": "/",
+    "expectedLeaf": "/authenticated/",
     "sourceReview": {
-      "source": "frontend/src/pages/library/ui/LibraryPage.tsx",
-      "status": "checked",
-      "finding": "Two existing horizontal destination rows are already compact.",
+      "source": "frontend/src/app/routes/creation.ts",
+      "status": "changed",
+      "finding": "Authenticated legacy library address redirects to home.",
       "inspectedStates": ["populated", "loading", "failure"]
     }
   },
   "/settings": {
-    "heading": "설정",
+    "heading": "내 설정",
     "expectedPath": "/settings",
     "expectedLeaf": "/authenticated/settings",
     "sourceReview": {
       "source": "frontend/src/pages/settings/ui/SettingsPage.tsx",
       "status": "changed",
-      "finding": "Group links use two columns on phones, single-column groups on desktop; every destination retained.",
+      "finding": "Voice/memories, speaking voices, AI/account and advanced tests; templates and guidelines live in channels.",
       "inspectedStates": ["populated", "loading", "failure"]
     }
   },
@@ -186,7 +186,7 @@
   "/posts": {
     "heading": "글 작업 내역",
     "expectedPath": "/posts",
-    "expectedLeaf": "/authenticated/writing/posts",
+    "expectedLeaf": "/authenticated/posts",
     "sourceReview": {
       "source": "frontend/src/pages/posts/ui/PostsPage.tsx",
       "status": "checked",
@@ -205,7 +205,7 @@
   "/posts/new": {
     "heading": "제목",
     "expectedPath": "/posts/new",
-    "expectedLeaf": "/authenticated/writing/posts/new",
+    "expectedLeaf": "/authenticated/posts/new",
     "sourceReview": {
       "source": "frontend/src/pages/editor/ui/EditorPage.tsx",
       "status": "changed",
@@ -228,7 +228,7 @@
   "/posts/review": {
     "heading": "글 다듬기",
     "expectedPath": "/posts/review",
-    "expectedLeaf": "/authenticated/writing/posts/$slug",
+    "expectedLeaf": "/authenticated/posts/$slug",
     "sourceReview": {
       "source": "frontend/src/pages/editor/ui/EditorPage.tsx",
       "status": "changed",
@@ -239,7 +239,7 @@
   "/voices": {
     "heading": "말투",
     "expectedPath": "/voices",
-    "expectedLeaf": "/authenticated/writing/voices",
+    "expectedLeaf": "/authenticated/voices",
     "sourceReview": {
       "source": "frontend/src/pages/voices/ui/VoicesPage.tsx",
       "status": "checked",
@@ -258,7 +258,7 @@
   "/templates": {
     "heading": "템플릿",
     "expectedPath": "/templates",
-    "expectedLeaf": "/authenticated/writing/templates",
+    "expectedLeaf": "/authenticated/templates",
     "sourceReview": {
       "source": "frontend/src/pages/templates/ui/TemplatesPage.tsx",
       "status": "checked",
@@ -277,7 +277,7 @@
   "/templates/new": {
     "heading": "새 템플릿",
     "expectedPath": "/templates/new",
-    "expectedLeaf": "/authenticated/writing/templates/new",
+    "expectedLeaf": "/authenticated/templates/new",
     "sourceReview": {
       "source": "frontend/src/pages/template/ui/TemplatePage.tsx",
       "status": "changed",
@@ -299,7 +299,7 @@
   "/templates/template": {
     "heading": "산책과 일상 경험을 차분하게 정리하는 아주 긴 한국어 구성 이름",
     "expectedPath": "/templates/template",
-    "expectedLeaf": "/authenticated/writing/templates/$templateId",
+    "expectedLeaf": "/authenticated/templates/$templateId",
     "sourceReview": {
       "source": "frontend/src/pages/template/ui/TemplatePage.tsx",
       "status": "changed",
@@ -321,7 +321,7 @@
   "/guidelines": {
     "heading": "지침",
     "expectedPath": "/guidelines",
-    "expectedLeaf": "/authenticated/writing/guidelines",
+    "expectedLeaf": "/authenticated/guidelines",
     "sourceReview": {
       "source": "frontend/src/pages/guidelines/ui/GuidelinesPage.tsx",
       "status": "checked",
@@ -340,7 +340,7 @@
   "/memories": {
     "heading": "기억",
     "expectedPath": "/memories",
-    "expectedLeaf": "/authenticated/writing/memories",
+    "expectedLeaf": "/authenticated/memories",
     "sourceReview": {
       "source": "frontend/src/pages/memories/ui/MemoriesPage.tsx",
       "status": "checked",
@@ -359,7 +359,7 @@
   "/voices/voice-default": {
     "heading": "나의 말투",
     "expectedPath": "/voices/voice-default",
-    "expectedLeaf": "/authenticated/writing/voices/$voiceId/",
+    "expectedLeaf": "/authenticated/voices/$voiceId/",
     "sourceReview": {
       "source": "frontend/src/pages/voice/ui/VoiceAnalysisPage.tsx",
       "status": "checked",
@@ -370,7 +370,7 @@
   "/voices/voice-default/materials": {
     "heading": "나의 말투",
     "expectedPath": "/voices/voice-default/materials",
-    "expectedLeaf": "/authenticated/writing/voices/$voiceId/materials",
+    "expectedLeaf": "/authenticated/voices/$voiceId/materials",
     "sourceReview": {
       "source": "frontend/src/pages/voice/ui/VoiceMaterialsPage.tsx",
       "status": "checked",
@@ -381,7 +381,7 @@
   "/clips": {
     "heading": "클립 작업 내역",
     "expectedPath": "/clips",
-    "expectedLeaf": "/authenticated/video/clips",
+    "expectedLeaf": "/authenticated/clips",
     "sourceReview": {
       "source": "frontend/src/pages/clips/ui/ClipsPage.tsx",
       "status": "checked",
@@ -420,7 +420,7 @@
   "/spoken-voices": {
     "heading": "내 목소리",
     "expectedPath": "/spoken-voices",
-    "expectedLeaf": "/authenticated/video/spoken-voices",
+    "expectedLeaf": "/authenticated/spoken-voices",
     "sourceReview": {
       "source": "frontend/src/pages/spoken-voices/ui/SpokenVoicesPage.tsx",
       "status": "checked",
@@ -439,7 +439,7 @@
   "/spoken-voices/new": {
     "heading": "목소리 만들기",
     "expectedPath": "/spoken-voices/new",
-    "expectedLeaf": "/authenticated/video/spoken-voices/new",
+    "expectedLeaf": "/authenticated/spoken-voices/new",
     "sourceReview": {
       "source": "frontend/src/pages/spoken-voices/ui/NewSpokenVoicePage.tsx",
       "status": "checked",
@@ -449,7 +449,7 @@
   },
   "/clips/review": {
     "expectedPath": "/clips/review",
-    "expectedLeaf": "/authenticated/video/clips/$clipId",
+    "expectedLeaf": "/authenticated/clips/$clipId",
     "sourceReview": {
       "source": "frontend/src/pages/clip/ui/ClipPage.tsx",
       "status": "checked",
@@ -465,7 +465,7 @@
   "/video-templates/new": {
     "heading": "새 영상 템플릿",
     "expectedPath": "/video-templates/new",
-    "expectedLeaf": "/authenticated/video/video-templates/new",
+    "expectedLeaf": "/authenticated/video-templates/new",
     "sourceReview": {
       "source": "frontend/src/pages/video-template/ui/VideoTemplatePage.tsx",
       "status": "changed",
@@ -487,7 +487,7 @@
   "/video-templates": {
     "heading": "영상 템플릿",
     "expectedPath": "/video-templates",
-    "expectedLeaf": "/authenticated/video/video-templates",
+    "expectedLeaf": "/authenticated/video-templates",
     "sourceReview": {
       "source": "frontend/src/pages/video-templates/ui/VideoTemplatesPage.tsx",
       "status": "checked",
@@ -506,7 +506,7 @@
   "/video-templates/video-template": {
     "heading": "영상 구성",
     "expectedPath": "/video-templates/video-template",
-    "expectedLeaf": "/authenticated/video/video-templates/$templateId",
+    "expectedLeaf": "/authenticated/video-templates/$templateId",
     "sourceReview": {
       "source": "frontend/src/pages/video-template/ui/VideoTemplatePage.tsx",
       "status": "changed",
@@ -528,7 +528,7 @@
   "/video-guidelines": {
     "heading": "영상 지침",
     "expectedPath": "/video-guidelines",
-    "expectedLeaf": "/authenticated/video/video-guidelines",
+    "expectedLeaf": "/authenticated/video-guidelines",
     "sourceReview": {
       "source": "frontend/src/pages/video-guidelines/ui/VideoGuidelinesPage.tsx",
       "status": "checked",
@@ -547,7 +547,7 @@
   "/publishing-agents": {
     "heading": "글 작업 내역",
     "expectedPath": "/posts",
-    "expectedLeaf": "/authenticated/writing/posts",
+    "expectedLeaf": "/authenticated/posts",
     "sourceReview": {
       "source": "frontend/src/pages/posts/ui/PostsPage.tsx",
       "status": "checked",
@@ -688,7 +688,7 @@
   "/voice": {
     "heading": "나의 말투",
     "expectedPath": "/voices/voice-default",
-    "expectedLeaf": "/authenticated/writing/voices/$voiceId/",
+    "expectedLeaf": "/authenticated/voices/$voiceId/",
     "sourceReview": {
       "source": "frontend/src/pages/voice/ui/VoiceAnalysisPage.tsx",
       "status": "checked",
@@ -700,7 +700,7 @@
   "/voice/materials": {
     "heading": "나의 말투",
     "expectedPath": "/voices/voice-default/materials",
-    "expectedLeaf": "/authenticated/writing/voices/$voiceId/materials",
+    "expectedLeaf": "/authenticated/voices/$voiceId/materials",
     "sourceReview": {
       "source": "frontend/src/pages/voice/ui/VoiceMaterialsPage.tsx",
       "status": "checked",
@@ -787,12 +787,45 @@
   "/clips/new": {
     "body": "클립 제목",
     "expectedPath": "/clips/new",
-    "expectedLeaf": "/authenticated/video/clips/new",
+    "expectedLeaf": "/authenticated/clips/new",
     "sourceReview": {
       "source": "frontend/src/pages/clip/ui/ClipPage.tsx",
       "status": "checked",
       "finding": "Title is first named form field; ratio choice and creation dock remain explicit.",
       "inspectedStates": ["input", "loading", "failure"]
+    }
+  },
+  "/naver-blog": {
+    "heading": "네이버 블로그",
+    "expectedPath": "/naver-blog",
+    "expectedLeaf": "/authenticated/naver-blog",
+    "sourceReview": {
+      "source": "frontend/src/pages/channel/ui/ChannelPage.tsx",
+      "status": "changed",
+      "finding": "Creation comes first, followed by channel history, templates and guidelines.",
+      "inspectedStates": ["populated"]
+    }
+  },
+  "/naver-clip": {
+    "heading": "네이버 클립",
+    "expectedPath": "/naver-clip",
+    "expectedLeaf": "/authenticated/naver-clip",
+    "sourceReview": {
+      "source": "frontend/src/pages/channel/ui/ChannelPage.tsx",
+      "status": "changed",
+      "finding": "Creation comes first, followed by channel history, templates and guidelines.",
+      "inspectedStates": ["populated"]
+    }
+  },
+  "/insta-clip": {
+    "heading": "인스타 클립",
+    "expectedPath": "/insta-clip",
+    "expectedLeaf": "/authenticated/insta-clip",
+    "sourceReview": {
+      "source": "frontend/src/pages/channel/ui/ChannelPage.tsx",
+      "status": "changed",
+      "finding": "Creation comes first, followed by channel history, templates and guidelines.",
+      "inspectedStates": ["populated"]
     }
   }
 }

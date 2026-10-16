@@ -4,7 +4,7 @@ export const nav = {
 
   launch: 'Create',
   library: 'Saved work',
-  settings: 'Settings',
+  settings: 'My settings',
   menu: 'Menu',
 
   spokenVoices: 'Spoken voices',
@@ -14,14 +14,6 @@ export const nav = {
   modelHistory: 'Recent observation comparisons',
   modelLeaderboard: 'Leaderboard',
   primary: 'Primary',
-  groupSidebar: {
-    open: 'Open {{group}}',
-    close: 'Close {{group}}',
-  },
-  sidebar: {
-    open: 'Open primary navigation',
-    close: 'Close primary navigation',
-  },
   home: 'Postpilot home',
   posts: 'Posts',
   videos: 'Videos',
@@ -29,8 +21,6 @@ export const nav = {
   myVideos: 'My videos',
   videoTemplates: 'Video templates',
   videoGuidelines: 'Video guidelines',
-  writingGroup: 'Writing navigation',
-  videoGroup: 'Video navigation',
   voices: 'Voices',
   templates: 'Post templates',
   guidelines: 'Guidelines',

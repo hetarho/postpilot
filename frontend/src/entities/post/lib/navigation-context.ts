@@ -5,7 +5,7 @@ import {
 } from '@/shared/lib/navigation'
 
 export interface PostEntry {
-  path: '/' | '/posts' | '/library'
+  path: '/naver-blog' | '/posts'
   section: string
   filters: Readonly<Record<string, string>>
   scrollY: number
@@ -25,7 +25,7 @@ function store(ownerId: string, storage: NavigationStorage, targetId?: string) {
       }
     : storage
   return createReturnContextStore(ownerId, scoped, {
-    isAccessible: (path) => ['/', '/posts', '/library'].includes(path),
+    isAccessible: (path) => ['/naver-blog', '/posts', '/', '/library'].includes(path),
   })
 }
 
@@ -62,12 +62,15 @@ export function readPostReturnContext(
 ): ReturnContext | undefined {
   if (!storage) return undefined
   const entry = store(ownerId, storage, slug ?? 'new').read() ?? store(ownerId, storage).read()
-  return entry && entry.targetId === (slug ?? 'new') ? entry : undefined
+  if (!entry || entry.targetId !== (slug ?? 'new')) return undefined
+  return entry.path === '/' || entry.path === '/library'
+    ? { ...entry, path: '/naver-blog', section: 'naverBlog', filters: {} }
+    : entry
 }
 
 export function postReturnDestination(ownerId: string, slug?: string, storage = browserStorage()) {
   const entry = readPostReturnContext(ownerId, slug, storage)
-  const path = (entry?.path ?? (slug ? '/posts' : '/')) as PostEntry['path']
+  const path = (entry?.path ?? (slug ? '/posts' : '/naver-blog')) as PostEntry['path']
   const search = Object.fromEntries(
     Object.entries(entry?.filters ?? {}).filter(([key]) => key === 'q' || key === 'status'),
   )
@@ -75,7 +78,7 @@ export function postReturnDestination(ownerId: string, slug?: string, storage = 
   return {
     path,
     href: query ? `${path}?${query}` : path,
-    section: entry?.section ?? (slug ? 'posts' : 'creation'),
+    section: entry?.section ?? (slug ? 'posts' : 'naverBlog'),
     scrollY: entry?.scrollY ?? 0,
   }
 }
@@ -83,8 +86,8 @@ export function postReturnDestination(ownerId: string, slug?: string, storage = 
 export function retainMintedPostEntry(ownerId: string, slug: string) {
   const entry = readPostReturnContext(ownerId)
   return rememberPostEntry(ownerId, {
-    path: (entry?.path ?? '/') as PostEntry['path'],
-    section: entry?.section ?? 'creation',
+    path: (entry?.path ?? '/naver-blog') as PostEntry['path'],
+    section: entry?.section ?? 'naverBlog',
     filters: entry?.filters ?? {},
     scrollY: entry?.scrollY ?? 0,
     targetId: slug,

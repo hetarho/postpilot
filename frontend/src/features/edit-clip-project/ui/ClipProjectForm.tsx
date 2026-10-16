@@ -20,6 +20,7 @@ import {
   type ClipProjectDraft,
   useClipProjectMutations,
   retainMintedClipEntry,
+  clipChannelPath,
   readClipReturnContext,
   validClipProject,
   validNewClipProject,
@@ -221,7 +222,15 @@ export function ClipProjectForm({
     if (pending || !valid || stored || submitting.current) return
     submitting.current = true
     const operation = authority.current
-    const origin = readClipReturnContext(ownerId)
+    const origin = readClipReturnContext(ownerId) ?? {
+      version: 1 as const,
+      ownerKey: ownerId,
+      path: clipChannelPath(channel),
+      section: channel,
+      filters: { channel },
+      scrollY: 0,
+      targetId: 'new',
+    }
     try {
       const value = await save.mutateAsync({ draft })
       retainMintedClipEntry(ownerId, value.id, undefined, origin ?? null)

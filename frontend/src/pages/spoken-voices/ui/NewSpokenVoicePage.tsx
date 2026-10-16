@@ -8,7 +8,7 @@ export function NewSpokenVoicePage() {
   const { t } = useTranslation('spokenVoices'),
     { user } = useSession(),
     ownerId = user?.id ?? '',
-    search = useSearch({ from: '/authenticated/video/spoken-voices/new' }),
+    search = useSearch({ from: '/authenticated/spoken-voices/new' }),
     navigate = useNavigate(),
     library = useSpokenLibrary(ownerId)
   const qualification = user?.plan === 'master' ? search.qualification : undefined

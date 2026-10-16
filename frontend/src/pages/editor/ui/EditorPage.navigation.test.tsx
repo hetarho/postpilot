@@ -22,14 +22,19 @@ it('keeps the creation parent after the first mint and after reload, then delete
     () => expect(first.router.state.location.pathname).toBe('/posts/20260828-새-여행'),
     { timeout: 4000 },
   )
-  expect(screen.getByRole('link', { name: '만들기로 돌아가기' })).toHaveAttribute('href', '/')
-  expect(readPostReturnContext(USER.id, '20260828-새-여행')?.path).toBe('/')
+  expect(screen.getByRole('link', { name: '네이버 블로그로 돌아가기' })).toHaveAttribute(
+    'href',
+    '/naver-blog',
+  )
+  expect(readPostReturnContext(USER.id, '20260828-새-여행')?.path).toBe('/naver-blog')
   first.unmount()
   const restored = renderAppAt('/posts/20260828-새-여행', { transport: first.transport })
   await user.click(await screen.findByRole('button', { name: '글 삭제하기' }))
   await user.click(screen.getByRole('button', { name: '삭제', hidden: true }))
   await waitFor(() => expect(calls).toContain('DeletePost'))
-  await waitFor(() => expect(restored.router.state.location.pathname).toBe('/'), { timeout: 5000 })
+  await waitFor(() => expect(restored.router.state.location.pathname).toBe('/naver-blog'), {
+    timeout: 5000,
+  })
 })
 
 // A post opened from filtered history lands on the step its status gives (POST-44) and returns to
@@ -50,7 +55,7 @@ it('opens on its status step and retains the actual filtered history parent', as
     'aria-selected',
     'true',
   )
-  const back = screen.getByRole('link', { name: '작업 내역으로 돌아가기' })
+  const back = screen.getByRole('link', { name: '네이버 블로그 기록으로 돌아가기' })
   expect(back).toHaveAttribute('href', '/posts?q=%EC%A0%9C%EC%A3%BC&status=review')
   await userEvent.click(back)
   await waitFor(() => expect(router.state.location.pathname).toBe('/posts'))
@@ -67,7 +72,7 @@ it('flushes the newest memo before contextual return without starting AI', async
     posts: { posts: [{ slug: 'saved' }], draftMaterials },
   })
   await user.type(await screen.findByLabelText('메모'), '떠나기 직전 입력')
-  await user.click(screen.getByRole('link', { name: '작업 내역으로 돌아가기' }))
+  await user.click(screen.getByRole('link', { name: '네이버 블로그 기록으로 돌아가기' }))
   await waitFor(() => expect(router.state.location.pathname).toBe('/posts'))
   expect(draftMaterials.at(-1)?.memo).toBe('떠나기 직전 입력')
   expect(calls).not.toContain('StartGeneration')
@@ -85,5 +90,21 @@ it('mints an unsaved draft once and opens tests with its newest material and ret
   await waitFor(() => expect(router.state.location.pathname).toBe('/tests'), { timeout: 5000 })
   expect(router.state.location.search).toMatchObject({ sourcePost: '20260828-테스트-초안' })
   expect(draftMaterials).toEqual([{ slug: '', title: '테스트 초안', memo: '방금 쓴 초안 재료' }])
-  expect(readPostReturnContext(USER.id, '20260828-테스트-초안')?.path).toBe('/')
+  expect(readPostReturnContext(USER.id, '20260828-테스트-초안')?.path).toBe('/naver-blog')
+})
+
+it('preserves channel scroll through first draft mount and address minting', async () => {
+  rememberPostEntry(USER.id, {
+    path: '/naver-blog',
+    section: 'naverBlog',
+    filters: {},
+    scrollY: 480,
+  })
+  const view = renderAppAt('/posts/new', { user: USER })
+  await userEvent.type(await screen.findByLabelText('제목'), 'Channel draft')
+  await waitFor(() => expect(view.router.state.location.pathname).not.toBe('/posts/new'), {
+    timeout: 5000,
+  })
+  const slug = view.router.state.location.pathname.split('/').at(-1)!
+  expect(readPostReturnContext(USER.id, slug)).toMatchObject({ path: '/naver-blog', scrollY: 480 })
 })

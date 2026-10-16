@@ -11,19 +11,14 @@ import { authRoutes } from './auth'
 import { billingRoutes } from './billing'
 import { clipRoutes } from './clips'
 import { creationRoutes } from './creation'
+import { channelRoutes } from './channels'
 import { giftRoutes } from './gift'
 import { marketingRoutes } from './marketing'
 import { modelGroupRoute, modelRoutes } from './models'
 import { postRoutes } from './posts'
 import { legacyPublishingRoutes } from './publishing'
 import { templateRoutes } from './templates'
-import {
-  authenticatedRoute,
-  indexRoute,
-  rootRoute,
-  videoGroupRoute,
-  writingGroupRoute,
-} from './tree'
+import { authenticatedRoute, indexRoute, rootRoute } from './tree'
 import { legacyVoiceRoutes, voiceLayoutRoute, voiceRoutes, voiceTabRoutes } from './voices'
 
 export type { RouterContext } from './tree'
@@ -40,13 +35,12 @@ export const routeTree = rootRoute.addChildren([
     indexRoute,
     ...creationRoutes,
     ...writingTestRoutes,
-    writingGroupRoute.addChildren([
-      ...postRoutes,
-      ...voiceRoutes,
-      ...templateRoutes,
-      voiceLayoutRoute.addChildren(voiceTabRoutes),
-    ]),
-    videoGroupRoute.addChildren(clipRoutes),
+    ...channelRoutes,
+    ...postRoutes,
+    ...voiceRoutes,
+    ...templateRoutes,
+    voiceLayoutRoute.addChildren(voiceTabRoutes),
+    ...clipRoutes,
     ...legacyPublishingRoutes,
     adminRoute.addChildren(adminRoutes),
     ...billingRoutes,

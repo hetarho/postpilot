@@ -11,7 +11,6 @@ import { SIGNED_IN_HOME } from '@/shared/lib'
 import { AuthenticatedLayout } from './AuthenticatedLayout'
 import { RootLayout } from './RootLayout'
 import { RouteError } from './RouteError'
-import { ContentGroupLayout } from './ContentGroupLayout'
 
 /** What every route's `beforeLoad` can reach. The transport travels with the query
  *  client because the session cache key is built from it — a guard using a different
@@ -47,18 +46,6 @@ export const authenticatedRoute = createRoute({
     return { user: session.user }
   },
   component: AuthenticatedLayout,
-})
-
-export const writingGroupRoute = createRoute({
-  getParentRoute: () => authenticatedRoute,
-  id: 'writing',
-  component: ContentGroupLayout,
-})
-
-export const videoGroupRoute = createRoute({
-  getParentRoute: () => authenticatedRoute,
-  id: 'video',
-  component: ContentGroupLayout,
 })
 
 export const indexRoute = createRoute({

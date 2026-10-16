@@ -137,7 +137,7 @@ describe('making a clip from a finished post', () => {
     expect(view.draftSaves).toEqual([])
     expect(readClipReturnContext(USER.id, 'clip-1')).toMatchObject({
       targetId: 'clip-1',
-      path: '/clips',
+      path: '/insta-clip',
       filters: { channel: 'instagram_clip' },
     })
     await waitFor(() => expect(view.router.state.location.state.clipImport).toBeUndefined())

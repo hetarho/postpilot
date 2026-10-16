@@ -13,7 +13,9 @@ import {
 const STABLE_PARENTS = new Set([
   '/',
   '/settings',
-  '/library',
+  '/naver-blog',
+  '/naver-clip',
+  '/insta-clip',
   '/posts',
   '/clips',
   '/tests',
@@ -31,7 +33,17 @@ const STABLE_PARENTS = new Set([
   '/billing',
   '/admin',
 ])
-const FILTER_KEYS = new Set(['q', 'status', 'stage', 'source', 'voiceId', 'factor', 'count', 'tab'])
+const FILTER_KEYS = new Set([
+  'q',
+  'status',
+  'stage',
+  'source',
+  'voiceId',
+  'factor',
+  'count',
+  'tab',
+  'channel',
+])
 function browserStorage(): NavigationStorage | undefined {
   try {
     return globalThis.sessionStorage
@@ -51,7 +63,9 @@ export function navigationParent(
     if (FILTER_KEYS.has(key) && item.length <= 512) filters[key] = item
   const hash =
     pathname === '/settings' &&
-    ['#settings-writing', '#settings-video', '#settings-ai'].includes(url.hash)
+    ['#settings-personal', '#settings-spoken', '#settings-ai', '#settings-advanced'].includes(
+      url.hash,
+    )
       ? url.hash
       : ''
   return { path: pathname + hash, filters }

@@ -3,17 +3,17 @@ import { clipCreationSearchSchema } from '@/pages/clip'
 import { clipsSearchSchema } from '@/pages/clips'
 import { videoTemplateSearchSchema } from '@/pages/video-template'
 import { spokenCreationSearchSchema } from '@/pages/spoken-voices'
-import { videoGroupRoute } from './tree'
+import { authenticatedRoute } from './tree'
 
 export const clipsRoute = createRoute({
-  getParentRoute: () => videoGroupRoute,
+  getParentRoute: () => authenticatedRoute,
   path: '/clips',
   validateSearch: clipsSearchSchema,
   component: lazyRouteComponent(() => import('@/pages/clips'), 'ClipsPage'),
 })
 
 export const newClipRoute = createRoute({
-  getParentRoute: () => videoGroupRoute,
+  getParentRoute: () => authenticatedRoute,
   path: '/clips/new',
   validateSearch: clipCreationSearchSchema,
   staticData: { groupNav: 'hidden' },
@@ -21,44 +21,44 @@ export const newClipRoute = createRoute({
 })
 
 export const clipRoute = createRoute({
-  getParentRoute: () => videoGroupRoute,
+  getParentRoute: () => authenticatedRoute,
   path: '/clips/$clipId',
   staticData: { groupNav: 'hidden' },
   component: lazyRouteComponent(() => import('@/pages/clip'), 'ClipPage'),
 })
 
 export const videoTemplatesRoute = createRoute({
-  getParentRoute: () => videoGroupRoute,
+  getParentRoute: () => authenticatedRoute,
   path: '/video-templates',
   component: lazyRouteComponent(() => import('@/pages/video-templates'), 'VideoTemplatesPage'),
 })
 
 export const newVideoTemplateRoute = createRoute({
-  getParentRoute: () => videoGroupRoute,
+  getParentRoute: () => authenticatedRoute,
   path: '/video-templates/new',
   validateSearch: videoTemplateSearchSchema,
   component: lazyRouteComponent(() => import('@/pages/video-template'), 'VideoTemplatePage'),
 })
 
 export const videoTemplateRoute = createRoute({
-  getParentRoute: () => videoGroupRoute,
+  getParentRoute: () => authenticatedRoute,
   path: '/video-templates/$templateId',
   component: lazyRouteComponent(() => import('@/pages/video-template'), 'VideoTemplatePage'),
 })
 
 export const videoGuidelinesRoute = createRoute({
-  getParentRoute: () => videoGroupRoute,
+  getParentRoute: () => authenticatedRoute,
   path: '/video-guidelines',
   component: lazyRouteComponent(() => import('@/pages/video-guidelines'), 'VideoGuidelinesPage'),
 })
 
 export const spokenVoicesRoute = createRoute({
-  getParentRoute: () => videoGroupRoute,
+  getParentRoute: () => authenticatedRoute,
   path: '/spoken-voices',
   component: lazyRouteComponent(() => import('@/pages/spoken-voices'), 'SpokenVoicesPage'),
 })
 export const newSpokenVoiceRoute = createRoute({
-  getParentRoute: () => videoGroupRoute,
+  getParentRoute: () => authenticatedRoute,
   path: '/spoken-voices/new',
   validateSearch: spokenCreationSearchSchema,
   staticData: { groupNav: 'hidden' },

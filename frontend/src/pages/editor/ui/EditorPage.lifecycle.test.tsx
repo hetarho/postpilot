@@ -84,7 +84,9 @@ describe('opening a post', () => {
     })
 
     expect(await screen.findByRole('alert')).toHaveTextContent('다른 사람의 글이에요')
-    expect(screen.getByRole('link', { name: '작업 내역으로 돌아가기' })).toBeInTheDocument()
+    expect(
+      screen.getByRole('link', { name: '네이버 블로그 기록으로 돌아가기' }),
+    ).toBeInTheDocument()
   })
 
   it('reports an unknown slug as missing', async () => {

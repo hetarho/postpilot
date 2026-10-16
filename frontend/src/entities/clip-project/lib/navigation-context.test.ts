@@ -12,16 +12,16 @@ import {
 
 beforeEach(() => sessionStorage.clear())
 it('retains creation through minting and reload without adopting another owner or record origin', () => {
-  rememberClipEntry('alice', { path: '/', section: 'creation', filters: {}, scrollY: 40 })
+  rememberClipEntry('alice', { path: '/naver-clip', section: 'creation', filters: {}, scrollY: 40 })
   expect(retainMintedClipEntry('alice', 'minted')).toBe(true)
-  expect(readClipReturnContext('alice', 'minted')?.path).toBe('/')
-  expect(clipReturnDestination('alice', 'minted').href).toBe('/')
+  expect(readClipReturnContext('alice', 'minted')?.path).toBe('/naver-clip')
+  expect(clipReturnDestination('alice', 'minted').href).toBe('/naver-clip')
   expect(clipReturnDestination('bob', 'minted').href).toBe('/clips')
   expect(clipReturnDestination('alice', 'other').href).toBe('/clips')
 })
 it('keeps each clip origin when another clip or post context is entered and restores filtered history once', () => {
   rememberClipEntry('alice', {
-    path: '/',
+    path: '/naver-clip',
     section: 'creation',
     filters: {},
     scrollY: 0,
@@ -46,7 +46,7 @@ it('keeps each clip origin when another clip or post context is entered and rest
       targetId: 'post',
     }),
   )
-  expect(clipReturnDestination('alice', 'first').href).toBe('/')
+  expect(clipReturnDestination('alice', 'first').href).toBe('/naver-clip')
   const destination = clipReturnDestination('alice', 'second')
   const query = new URL(destination.href, 'https://test.invalid').searchParams
   expect(query.get('q')).toBe('여행 & 50%')
@@ -86,7 +86,7 @@ it('refuses external, malformed and deleted-record parents rather than routing t
     JSON.stringify({
       version: 1,
       ownerKey: 'bob',
-      path: '/',
+      path: '/naver-clip',
       section: 'creation',
       filters: {},
       scrollY: 0,
@@ -105,12 +105,12 @@ it('uses named safe parents when storage is unavailable and does not leak unsafe
     },
     removeItem: () => {},
   }
-  expect(clipReturnDestination('alice', undefined, storage).href).toBe('/')
+  expect(clipReturnDestination('alice', undefined, storage).href).toBe('/naver-clip')
   expect(clipReturnDestination('alice', 'saved', storage).href).toBe('/clips')
   expect(
     rememberClipEntry(
       'alice',
-      { path: '/', section: 'creation', filters: {}, scrollY: 0 },
+      { path: '/naver-clip', section: 'creation', filters: {}, scrollY: 0 },
       storage,
     ),
   ).toBe(false)
@@ -163,3 +163,25 @@ it('returns to the current project channel before the saved origin is updated', 
     '/clips?channel=naver_clip',
   )
 })
+
+it.each(['/', '/library'])(
+  'maps the stored obsolete %s parent to the recorded clip channel',
+  (path) => {
+    sessionStorage.setItem(
+      'postpilot.return.alice.clip.saved',
+      JSON.stringify({
+        version: 1,
+        ownerKey: 'alice',
+        targetId: 'saved',
+        path,
+        section: 'creation',
+        filters: { channel: 'instagram_clip' },
+        scrollY: 0,
+      }),
+    )
+    expect(clipReturnDestination('alice', 'saved').href).toBe('/insta-clip')
+    expect(clipReturnDestination('alice', 'saved', undefined, 'naver_clip').href).toBe(
+      '/naver-clip',
+    )
+  },
+)

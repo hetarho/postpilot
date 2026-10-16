@@ -56,17 +56,25 @@ export function ClipPage() {
   const search = useSearch({ strict: false })
   const channel = clipChannel(search.channel)
   const ownerId = user?.id ?? ''
-  const destination = clipReturnDestination(ownerId, clipId)
+  const query = useClipProject(ownerId, clipId)
+  const destination = clipReturnDestination(
+    ownerId,
+    clipId,
+    undefined,
+    query.data?.channel ?? channel,
+  )
   const returnTo = {
     href: destination.href,
-    label: t(destination.path === '/' ? 'navigation.returnCreation' : 'navigation.returnHistory'),
+    label: t(
+      destination.path === '/clips' ? 'navigation.returnHistory' : 'navigation.returnCreation',
+      { channel: t(`channel.${destination.channel}`) },
+    ),
     onReturn: async () => {
       if (clipId) markClipHistoryReturn(ownerId, clipId)
       await navigate({ href: destination.href })
     },
   }
   // No leave dialog: ② autosaves and sends a waiting edit as it is left (CLIP-39).
-  const query = useClipProject(user?.id ?? '', clipId)
   return (
     // `flex-1 flex-col` here plus `mt-auto` on a dock is what puts the bar at the BOTTOM of a
     // short panel: `sticky` can only pull an element up toward the scrollport edge, never push

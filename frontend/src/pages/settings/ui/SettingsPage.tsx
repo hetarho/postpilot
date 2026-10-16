@@ -5,22 +5,13 @@ import { useSession } from '@/entities/session'
 import { Typography, typographyStyles, pageStyles } from '@/shared/ui'
 const GROUPS = [
   {
-    key: 'writing',
+    key: 'personal',
     links: [
       ['/voices', 'voices'],
-      ['/templates', 'templates'],
-      ['/guidelines', 'guidelines'],
       ['/memories', 'memories'],
     ],
   },
-  {
-    key: 'video',
-    links: [
-      ['/video-templates', 'videoTemplates'],
-      ['/video-guidelines', 'videoGuidelines'],
-      ['/spoken-voices', 'spokenVoices'],
-    ],
-  },
+  { key: 'spoken', links: [['/spoken-voices', 'spokenVoices']] },
   {
     key: 'ai',
     links: [
@@ -28,6 +19,13 @@ const GROUPS = [
       ['/account', 'account'],
       ['/plans', 'plans'],
       ['/billing', 'billing'],
+    ],
+  },
+  {
+    key: 'advanced',
+    links: [
+      ['/tests', 'tests'],
+      ['/tests/history', 'testHistory'],
     ],
   },
 ] as const
@@ -40,7 +38,7 @@ export function SettingsPage() {
       <Typography variant="body" className="text-content-secondary mt-3">
         {t('settings.description')}
       </Typography>
-      <div className="mt-6 grid gap-6 md:mt-10 md:grid-cols-3 md:gap-10">
+      <div className="mt-6 grid gap-6 md:mt-10 md:grid-cols-2 md:gap-10 xl:grid-cols-4">
         {GROUPS.map((group) => (
           <section key={group.key} aria-labelledby={`settings-${group.key}`} className="min-w-0">
             <Typography variant="title" id={`settings-${group.key}`} className="mb-2 md:mb-4">

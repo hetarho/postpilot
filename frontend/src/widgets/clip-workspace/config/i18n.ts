@@ -5,8 +5,8 @@ export const i18n = {
   namespace: 'clips',
   ko: {
     navigation: {
-      returnCreation: '만들기로 돌아가기',
-      returnHistory: '작업 내역으로 돌아가기',
+      returnCreation: '{{channel}}으로 돌아가기',
+      returnHistory: '{{channel}} 기록으로 돌아가기',
       untitled: '제목 없는 클립',
     },
     editorEntries: {
@@ -36,8 +36,8 @@ export const i18n = {
   },
   en: {
     navigation: {
-      returnCreation: 'Back to creation',
-      returnHistory: 'Back to work history',
+      returnCreation: 'Back to {{channel}}',
+      returnHistory: 'Back to {{channel}} history',
       untitled: 'Untitled clip',
     },
     editorEntries: {
