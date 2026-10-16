@@ -11,9 +11,10 @@
 ## active
 | tag | host | mode | since | at | doing |
 |---|---|---|---|---|---|
-| q8s4 | DESKTOP-VKPLS8P | autopilot | 2026-10-16T03:18Z | 2026-10-16T05:41Z | - |
+| q8s4 | DESKTOP-VKPLS8P | autopilot | 2026-10-16T03:18Z | 2026-10-16T05:42Z | T699 |
 
 ## inbox
+- 261016 decided T699: how does a clip-store transaction fence external post text? → freeze a same-read creation identity and carry its text digest in pricing beside GuidelinesDigest, with the raw link identity in the project digest (alt: read post tables from the clip context | persist live post text on every project edit).
 - 261016 decided T698: how is T692’s existing creation seed linked atomically? → optional linked_post_slug on CreateClipProject as well as Update; the owned canonical post is validated before insertion (alt: create, then a second seed/link update that can leave a partial project). Picker actions save only the link through the write lane.
 - 261016 parked T697: local probe/gate/cancellation implementation verified and committed; ARCH-31 pre-push/media gates and production workflow/clip qualification wait for an authorized push and live check. This session is commit-only by owner request.
 - 261016 suggest T690 T691 T705 T692 T706: review-code over campaign guidance, upload text, partial imports, post-to-clip creation and fixture synchronization
@@ -127,7 +128,7 @@
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
-| T699 | Send the linked post's text to every clip writing call | CLIP GUIDE QUOTA | T698 T691 | todo |
+| T699 | Send the linked post's text to every clip writing call | CLIP GUIDE QUOTA | T698 T691 | doing@261016.q8s4 |
 | T700 | Record when post photos, post videos and clip sources were shot | CLIP | T692 | todo |
 | T701 | Build the storyline in the linked post's order and place videos by capture order | CLIP GUIDE | T699 T700 | todo |
 
@@ -136,6 +137,7 @@
 - T697 local implementation is committed; pre-push/media gates and production range/clip qualification remain blocked by this session’s no-push scope. Existing qualification blocks are unchanged.
 
 ## log
+- 261016 T699 starts atd980d7e2 (q8s4): freeze owned canonical text per call, bind quotes and measure every writing request before holds; CLIP source-colour deltas are unrelated.
 - 261016 T698 done locally at442e4c2f: owned post link,495 selected frontend tests, backend integration and12 picker/60 shell browser cases pass.
 - 261016 q8s4 weekly stop threshold85%→80% by owner instruction; continue local commits only.
 - 261016 T698 starts at42b2789a (q8s4): owned canonical-post link, identity fence and picker; CLIP r62–r63 source-colour delta is unrelated.
@@ -155,4 +157,3 @@
 - 261016 T693 chat/setup138 and editor24 tests pass; Chrome48 width/theme/text/placement layouts pass. Whole FE is running; original questionnaire actor is unchanged.
 - 261016 T706 Deploy38817240700 succeeds; Media38817743339 is running for ec9130ef.
 - 261016 T693 resumes after T706; original VOICE17/THEME34 bases and acceptance remain unchanged. Restore the exact preserved31-path delta after this claim push.
-- 261016 T706 pushedec9130ef; CI38817240542 and Deploy38817240700 are queued for that revision.
