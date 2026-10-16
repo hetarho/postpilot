@@ -11,7 +11,7 @@
 ## active
 | tag | host | mode | since | at | doing |
 |---|---|---|---|---|---|
-| q8s4 | DESKTOP-VKPLS8P | autopilot | 2026-10-16T03:18Z | 2026-10-16T04:15Z | T694 |
+| q8s4 | DESKTOP-VKPLS8P | autopilot | 2026-10-16T03:18Z | 2026-10-16T04:30Z | T695 |
 
 ## inbox
 - 261016 suggest T690 T691 T705 T692 T706: review-code over campaign guidance, upload text, partial imports, post-to-clip creation and fixture synchronization
@@ -124,7 +124,7 @@
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
-| T695 | Tell the 체험단 story on the public about page | MKT | T682 T683 T684 T687 T688 T691 T692 T693 T694 | todo |
+| T695 | Tell the 체험단 story on the public about page | MKT | T682 T683 T684 T687 T688 T691 T692 T693 T694 | doing@261016.q8s4 |
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | todo |
 | T698 | Link one finished post to a clip from either side | CLIP POST | T689 T690 T692 T694 | todo |
 | T699 | Send the linked post's text to every clip writing call | CLIP GUIDE QUOTA | T698 T691 | todo |
@@ -136,6 +136,7 @@
 - T697's operator Content-Range prerequisite is complete; existing qualification blocks remain unchanged.
 
 ## log
+- 261016 T695 starts at9aa24722 (q8s4, commit-only): shipped campaign story and public copy; MKT r11 current.
 - 261016 T694 done (q8s4): channel navigation,4418 frontend tests and604 mobile cases pass; local commit12aa7c75.
 - 261016 T694 starts at 5af7c779 (q8s4, commit-only); CLIP r62–r63 freshness checked, navigation contract unchanged.
 - 261016 q8s4 autopilot starts T694 onward; local commits only, no push/checkpoint; stop at 85% weekly Codex usage (currently 9%).
@@ -155,4 +156,3 @@
 - 261016 T706 starts; baseline race reproduction is red at reflection_test.go31–32 and T693 stays safely preserved.
 - 261016 T706 planned; T693 is blocked on the confirmed CI fixture race and preserved in stash0fc938f8/checkpointd7438f2c. Current main sourceffbab379 is clean.
 - 261016 T705 CI38811296610 succeeds; Deploy38811296566 and Media38811863965 already succeeded with exact ebe909dd checkout proof. T692 claim CI38811381426 fails in experiment reflection recording, reproduced with the race detector; its candidate assertions remain unchanged.
-- 261016 create-task T706 start: repair the confirmed reflection test-double race from CI38811381426 before resuming T693.
