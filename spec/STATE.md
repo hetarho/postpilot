@@ -8,17 +8,12 @@
 - docs: en
 - push: main
 
-## active
-| tag | host | mode | since | at | doing |
-|---|---|---|---|---|---|
-| p8s4 | DESKTOP-VKPLS8P | autopilot | 2026-10-16T06:59Z | 2026-10-16T07:24Z | - |
-
 ## inbox
 - 261016 suggest T694 T695 T698 T699 T700: review-code over channel navigation, campaign positioning, owned post links, frozen writing material and original capture metadata.
 - 261016 decided T700: how is EXIF without a UTC offset normalized? → omit the unknown instant and retain filename-based order as fallback (alt: invent the browser’s current time zone | label the local wall clock as UTC); use bounded mvhd parsing because the installed Mediabunny skips that creation field.
 - 261016 decided T699: how does a clip-store transaction fence external post text? → freeze a same-read creation identity and carry its text digest in pricing beside GuidelinesDigest, with the raw link identity in the project digest (alt: read post tables from the clip context | persist live post text on every project edit).
 - 261016 decided T698: how is T692’s existing creation seed linked atomically? → optional linked_post_slug on CreateClipProject as well as Update; the owned canonical post is validated before insertion (alt: create, then a second seed/link update that can leave a partial project). Picker actions save only the link through the write lane.
-- 261016 parked T697: local probe/gate/cancellation implementation verified and committed; ARCH-31 pre-push/media gates and production workflow/clip qualification wait for an authorized push and live check. Delivery is now authorized in p8s4; full pre-push verification is in progress.
+- 261016 parked T697: local probe/gate/cancellation implementation verified and committed; owner will push and inspect remote verification. Full Go verification was interrupted at owner request; media gates and production workflow/clip qualification remain incomplete.
 - 261016 suggest T690 T691 T705 T692 T706: review-code over campaign guidance, upload text, partial imports, post-to-clip creation and fixture synchronization
 - 261016 decided T705 T692: how can a failed video transfer keep the clips already uploaded? → an owned initial-import completion primitive moves verified leases into a ready batch and cleans only pending uploads under existing retention rules (alt: discard every arrived video | re-upload successful files repeatedly | leave a non-ready batch)
 - 261016 decided T691: where does a source-free upload-text approval live? → its own project-owned quote table, leaving source-bound generation quotes intact (alt: nullable batch identity in the existing table | require retained originals)
@@ -132,10 +127,11 @@
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
 
 ## next
-- p8s4 is verifying and delivering the local work to main as explicitly requested; no new feature implementation is pending.
-- T697 manual bucket CORS setup is owner-confirmed complete; pre-push/media gates and the new production gate/clip source-read verification remain in progress under the newly authorized delivery. Existing qualification blocks are unchanged.
+- Owner will push the local commits and inspect remote workflows; p8s4 ended without pushing and stopped its local verification processes.
+- T697 manual bucket CORS setup is owner-confirmed complete; full Go/media gates and production gate/clip source-read qualification remain incomplete. Existing qualification blocks are unchanged.
 
 ## log
+- 261016 p8s4 ends at owner request: owner takes push/remote checks; terminate its5 verification processes, confirm0 OS zombies, clear its stale heavy lock and active row; final Go/media gates remain incomplete.
 - 261016 p8s4 voucher expiry assertion compares stored revocation time with a later live clock read; use the existing service clock seam and assert exact revocation timestamp, preserving ledger behavior.
 - 261016 p8s4 authoring ordering diagnostics pass11 isolated runs; pin persisted fixture timestamps to specify the intended newer baseline, retaining the historical-candidate assertion without changing production code.
 - 261016 p8s4 full Go gate also finds authoring summary selecting a saved historical batch over a fresh baseline; capture persisted ranking inputs before deciding the repair.
@@ -155,4 +151,3 @@
 - 261016 T697 locally implemented atbecb358f and parked for production qualification; SDK/app/RPC,50 store integration tests, CLI and workflow gates pass.
 - 261016 T697 starts at536ff251 (q8s4): local CORS probe/deploy gate and cancellation diagnostics; remote qualification remains excluded by commit-only scope.
 - 261016 T695 done (q8s4): shipped campaign story,76 targeted tests and build/lint pass; local commitff0ab72d.
-- 261016 T695 starts at9aa24722 (q8s4, commit-only): shipped campaign story and public copy; MKT r11 current.
