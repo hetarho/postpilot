@@ -7,7 +7,7 @@ export const CLIP_BROWSER_COMPOSITION = {
   components: 'native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1',
   fonts: 'bundled-clip-fonts-v1',
   assets:
-    'clip-design-assets-v1-ink-17fd67b0a623b6d462dce7d4082e465197ab5150ff0d889ca126be3bdaf2524a',
+    'clip-design-assets-v1-ink-9cb39df64984d5a1d4b2633702983627a3cec2a632ecc13f1bc40badd8c2f521',
   qualified:
     readiness.schemaVersion === 1 &&
     readiness.finalRender.renderer === 'clip-browser-composition-v1' &&
@@ -15,7 +15,7 @@ export const CLIP_BROWSER_COMPOSITION = {
       'native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1' &&
     readiness.finalRender.fonts === 'bundled-clip-fonts-v1' &&
     readiness.finalRender.assets ===
-      'clip-design-assets-v1-ink-17fd67b0a623b6d462dce7d4082e465197ab5150ff0d889ca126be3bdaf2524a' &&
+      'clip-design-assets-v1-ink-9cb39df64984d5a1d4b2633702983627a3cec2a632ecc13f1bc40badd8c2f521' &&
     readiness.finalRender.wasmVersion === '2.6.2' &&
     readiness.finalRender.wasmSHA256 ===
       '22bf6e9f9a100d972da0411a69c5ba504367fc1fa87b3b64e3f35e53926d2d70' &&

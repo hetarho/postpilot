@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "packageName": "haeram-spec-creator",
-  "packageVersion": "0.7.0",
-  "installedAt": "2026-10-19T08:53:18.214Z",
+  "packageVersion": "0.7.1",
+  "installedAt": "2026-10-19T11:09:42.468Z",
   "agents": [
     "claude",
     "codex"
@@ -33,7 +33,7 @@
       "sha256": "3a4bca2cb2023db00e2e49413a30d0b86dfc856a6df6e127badbb1292f7e31cc"
     },
     ".claude/skills/create-task/SKILL.md": {
-      "sha256": "304f4a1a928e7e3743e3266eb83c32054a1b6909aa0ec8b66696bb42b6189760"
+      "sha256": "d8424e1ac36a6d72d95415f6eef4dcf37bbab94bd226fbd629e5fa72400b2080"
     },
     ".claude/skills/doc-review/SKILL.md": {
       "sha256": "8aadde938ad479a7cbb8c019a62958a0ad43c5f64df68f473333a0ecfb993930"
@@ -48,7 +48,7 @@
       "sha256": "edc56eab0bf14af4bf364d57d8db263cb5bb39fbd1d76bbe11ccd109837f6178"
     },
     ".claude/skills/implement-task/SKILL.md": {
-      "sha256": "6fbeac3b3bf533c12973d08bd49a512a7dead47408e1a7b6307522eb1dcae82c"
+      "sha256": "8780e1354351867f8cb196b985aa5c8106e91583537a5025354a9b73b71d9ced"
     },
     ".claude/skills/manage-work/references/runner.md": {
       "sha256": "06f4da607dda7eb95efafed58b883354c68123480e6b6aac9274f9c4ecd9b79e"
@@ -66,7 +66,7 @@
       "sha256": "5e4bdf990e78c9bf4cc2d5a9b7914725cf75695a24733db33834a2b1be44bf34"
     },
     ".claude/skills/review-task/SKILL.md": {
-      "sha256": "d67283e91dfe98f5d961ee5030fb0d64026f805bcf64116a5cfb9a7829e6d058"
+      "sha256": "b299ddbf5a6aea25446353c9a67ff7dad9cc39adfef54334815bb886f7b815fb"
     },
     ".claude/skills/start-vibe/assets/report.md": {
       "sha256": "f1f933dc44cfc7a9e4b225412a9e201637b29a4b9a812fdbaa06d72d0389097a"
@@ -120,7 +120,7 @@
       "sha256": "3a4bca2cb2023db00e2e49413a30d0b86dfc856a6df6e127badbb1292f7e31cc"
     },
     ".codex/skills/create-task/SKILL.md": {
-      "sha256": "304f4a1a928e7e3743e3266eb83c32054a1b6909aa0ec8b66696bb42b6189760"
+      "sha256": "d8424e1ac36a6d72d95415f6eef4dcf37bbab94bd226fbd629e5fa72400b2080"
     },
     ".codex/skills/doc-review/agents/openai.yaml": {
       "sha256": "bda2a8c4695ad756c2173153dbef7d176787ab0eee5968cc4ce495d56a677afb"
@@ -144,7 +144,7 @@
       "sha256": "edc56eab0bf14af4bf364d57d8db263cb5bb39fbd1d76bbe11ccd109837f6178"
     },
     ".codex/skills/implement-task/SKILL.md": {
-      "sha256": "6fbeac3b3bf533c12973d08bd49a512a7dead47408e1a7b6307522eb1dcae82c"
+      "sha256": "8780e1354351867f8cb196b985aa5c8106e91583537a5025354a9b73b71d9ced"
     },
     ".codex/skills/manage-work/agents/openai.yaml": {
       "sha256": "931a5f88d53978761b087dce965ada8acde1c3042fa5e46bdc925244dc046890"
@@ -171,7 +171,7 @@
       "sha256": "98e69556002a1e9aaa8ab31fd446a70e58bbf700927d6a0bc0077fef3c3a19db"
     },
     ".codex/skills/review-task/SKILL.md": {
-      "sha256": "d67283e91dfe98f5d961ee5030fb0d64026f805bcf64116a5cfb9a7829e6d058"
+      "sha256": "b299ddbf5a6aea25446353c9a67ff7dad9cc39adfef54334815bb886f7b815fb"
     },
     ".codex/skills/start-vibe/agents/openai.yaml": {
       "sha256": "9c05bd78e44c0776b35410ff35da143e1b60533c603d13e911c4a5ff44504d43"
