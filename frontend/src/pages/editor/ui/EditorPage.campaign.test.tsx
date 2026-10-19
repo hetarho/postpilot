@@ -1,5 +1,5 @@
 // POST-117, POST-118: ①'s 체험단 글 switch and the advertiser guide under it.
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderAppAt } from '@/test/app'
@@ -138,6 +138,30 @@ describe('the 체험단 글 switch', () => {
     // A new post is a 체험단 post on the server too, so the create need not say so.
     expect(draftSaves[0]?.campaign).toBeUndefined()
     expect(await campaignSwitch()).toBeChecked()
+  })
+
+  // Switching it off is a new draft's first edit, so it mints the post — and the page must stay
+  // where the owner was rather than jump to its top under the switch.
+  it('mints a new post from switching it off without moving the page', async () => {
+    const draftSaves: FakeDraftSave[] = []
+    const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined)
+    const user = userEvent.setup()
+    const { router } = renderAppAt('/posts/new', { user: USER, posts: { draftSaves } })
+
+    const toggle = await campaignSwitch()
+    // The saved post's inspection entry already stands, so the mint inserts nothing above ①.
+    expect(screen.getByRole('button', { name: '요청 기술 보기' })).toBeInTheDocument()
+    scrollTo.mockClear()
+    await user.click(toggle)
+
+    await waitFor(
+      () => expect(router.state.location.pathname).toBe('/posts/20260828-untitled'),
+      AUTOSAVED,
+    )
+    expect(draftSaves[0]?.campaign).toBe(false)
+    expect(await campaignSwitch()).not.toBeChecked()
+    expect(scrollTo).not.toHaveBeenCalled()
+    scrollTo.mockRestore()
   })
 
   it('shows a post saved as not a 체험단 post with the switch off', async () => {

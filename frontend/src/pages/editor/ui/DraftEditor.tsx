@@ -21,6 +21,7 @@ import {
   useCaretHandoff,
 } from '@/features/edit-post-content'
 import { DeletePostButton } from '@/features/delete-post'
+import { InspectWritingRequestAction } from '@/features/inspect-writing-request'
 import { discardDraftQueue, useAutosave } from '@/features/save-draft'
 import { useBriefMirror, type GenerationMode } from '@/features/generate-post'
 import {
@@ -120,8 +121,10 @@ export function DraftEditor({ post, defaultVoice }: DraftEditorProps) {
     onMinted: (slug) => {
       caret.stash(slug)
       retainMintedPostEntry(ownerId, slug)
-      // Replace the unminted address without changing its creation/history context.
-      void navigate({ to: '/posts/$slug', params: { slug }, replace: true })
+      // Replace the unminted address without changing its creation/history context. The scroll
+      // stays: the mint is the first edit's side effect — a toggle of the 체험단 switch halfway
+      // down ① is one — and the router's reset would yank the page to its top under the owner.
+      void navigate({ to: '/posts/$slug', params: { slug }, replace: true, resetScroll: false })
     },
   })
   // The patch carries every field the template declares, so reading it back gives the same fields.
@@ -419,6 +422,15 @@ export function DraftEditor({ post, defaultVoice }: DraftEditorProps) {
         />
       ) : (
         <>
+          {/* The saved post's entry stands here from the start, so the mint does not push ① down
+              by a button's height. There is no request to read until the draft is saved. */}
+          {ownerId && (
+            <InspectWritingRequestAction
+              target={null}
+              blockedReason={t('unsavedSource', { ns: 'requestInspection' })}
+              className="my-4"
+            />
+          )}
           {/* No lifecycle yet, so no step bar — just the step ① surfaces that work without a post. */}
           <div className={proseStyles()}>
             <EditorPhotos post={post} ensureSlug={autosave.ensureSlug} />

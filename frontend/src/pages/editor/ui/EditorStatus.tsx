@@ -87,7 +87,9 @@ export function EditorStatusLine({
       role="status"
       aria-live="polite"
       aria-label={t('editor.statusAria')}
-      className={clsx('min-w-0 truncate', failing && 'text-notice-danger-fg', className)}
+      // One line tall while it has nothing to say — an unsaved `/posts/new` — so the first save's
+      // word does not push ① down.
+      className={clsx('min-h-lh min-w-0 truncate', failing && 'text-notice-danger-fg', className)}
     >
       {failing ? save.label : running || save.label || postStatusLabel(status)}
     </Typography>

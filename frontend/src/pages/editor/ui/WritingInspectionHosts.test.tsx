@@ -163,6 +163,17 @@ it('unsaved owner source edits invalidate the opened technical view and prevent 
   expect(procedures.filter((name) => name === 'GetPostRequestInspection')).toHaveLength(before)
 })
 
+it('an unsaved new draft offers the entry but reads nothing until the draft is saved', async () => {
+  const user = userEvent.setup()
+  const procedures: string[] = []
+  const base = createFakeAuthTransport({ user: { id: 'alice' }, existingSetup: true })
+  renderAppAt('/posts/new', { transport: inspectedTransport(base, procedures) })
+  await user.click(await screen.findByRole('button', { name: '요청 기술 보기' }))
+  expect(await screen.findByText(/현재 수정한 자료가 아직 저장되지 않아/)).toBeVisible()
+  expect(procedures).not.toContain('GetPostRequestInspection')
+  expect(procedures).not.toContain('SavePostDraft')
+})
+
 it('setting-authoring composes the current session technical action without exposing grammar in prose or starting another operation', async () => {
   const user = userEvent.setup()
   const procedures: string[] = []
