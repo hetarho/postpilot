@@ -8,6 +8,11 @@
 - docs: en
 - push: main
 
+## active
+| tag | host | mode | since | at | doing |
+|---|---|---|---|---|---|
+| p7m4 | DESKTOP-VKPLS8P | pair | 2026-10-19T06:33Z | 2026-10-19T06:33Z | - |
+
 ## inbox
 - 261016 suggest T694 T695 T698 T699 T700: review-code over channel navigation, campaign positioning, owned post links, frozen writing material and original capture metadata.
 - 261016 decided T700: how is EXIF without a UTC offset normalized? → omit the unknown instant and retain filename-based order as fallback (alt: invent the browser’s current time zone | label the local wall clock as UTC); use bounded mvhd parsing because the installed Mediabunny skips that creation field.
@@ -131,6 +136,7 @@
 - T697 manual bucket CORS setup is owner-confirmed complete; full Go/media gates and production gate/clip source-read qualification remain incomplete. Existing qualification blocks are unchanged.
 
 ## log
+- 261019 p7m4 starts owner-authorized delivery of the remaining documentation commit and reads Yozm3994 against shipped post/guideline/template behavior; prior177b377a CI, backend deployment and media workflows all succeeded. Documentation-only push reuses unchanged verification inputs; prior local Go interruption is historical and not relabeled as a pass.
 - 261016 p8s4 ends at owner request: owner takes push/remote checks; terminate its5 verification processes, confirm0 OS zombies, clear its stale heavy lock and active row; final Go/media gates remain incomplete.
 - 261016 p8s4 voucher expiry assertion compares stored revocation time with a later live clock read; use the existing service clock seam and assert exact revocation timestamp, preserving ledger behavior.
 - 261016 p8s4 authoring ordering diagnostics pass11 isolated runs; pin persisted fixture timestamps to specify the intended newer baseline, retaining the historical-candidate assertion without changing production code.
