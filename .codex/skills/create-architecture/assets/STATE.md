@@ -8,7 +8,9 @@
 - level: ?  # expert|mid|novice — filled by create-architecture calibration
 - lang: ?   # user's language — interviews, confirmations, reports
 - docs: en  # doc language
-- push: ?   # branch every finished unit is pushed to, - = commit only — chosen at the first start-vibe
+- push: ?   # branch finished batches are pushed to, - = commit only — chosen at the first start-vibe
+- brief: domain  # task brief scope: domain = whole cited domains, cited = cited decisions only
+- always: ARCH  # global rules every task brief includes: decision IDs or domains, - = none
 
 ## ssot
 | id | rev | tasked | pending | [?] |

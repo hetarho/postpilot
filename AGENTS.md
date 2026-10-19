@@ -2,6 +2,8 @@
 
 The installed haeram-spec-creator skills govern the workflow. Start a session with `/start-vibe` and follow its mode, routing and per-unit commit and push to the STATE `cfg push` branch. Work in the existing `main` checkout; preserve unrelated local changes and keep them outside each unit's commit. Package-managed skill files remain unchanged.
 
+`vibe format` prints the package FORMAT, which `spec/FORMAT.md` modifies (chg keeps only unconsumed revs, a removed feature's decisions are deleted rather than marked [x]). Read notation from the needed sections of `spec/FORMAT.md`; it wins wherever the two differ.
+
 # Verification
 
 Verification commands come from `spec/ssot/ARCH.md`: ARCH-24 for task completion and ARCH-31 for what a push requires. Runnable commands are in `docs/verification.md`.

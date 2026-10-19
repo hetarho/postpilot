@@ -27,7 +27,9 @@
        `  - over limit ⇒ 429 + retry-after, never a silent drop`
 - [o] decided / [?] open / [x] rejected·deferred — a standing decision not to do something the product does not have; a decision whose feature was removed is deleted, not marked [x]
 - change kind: + added / ✎ modified / - removed (e.g. `AUTH-2✎`)
-- reference: →AUTH-3
+- reference to a decision: `→!AUTH-3` requires (this rule cannot be applied without it) · `→=AUTH-3` canonical (the target owns the rule this line points to) · `→~AUTH-3` related (background, looked up on demand) · `→AUTH-3` unclassified. One marker covers a `/` list or a `–` range (`→!AUTH-3/5`, `→AUTH-3–6`); `→AUTH` is a whole domain; a bare `AUTH-3` counts as unclassified.
+  - write the kind when you write or revise the decision; never reclassify old references in bulk by guessing
+  - a brief pulls requires and canonical targets transitively, follows unclassified ones one hop from a cited or required decision and lists the rest, and lists related ones without their text
 - finding line: `- Fn [?|o|x] P1|P2|P3 <where>: <what>` + ` ← <why it matters>`; append ` →T###` once a task exists. P1 = correctness/security risk or blocks every change · P2 = slows every change · P3 = nice to have. A functional bug is a finding whose <what> starts with `bug:`
 - acceptance check: `- [ ]` open → `- [v]` done (never mark done with x — [x] means rejected in SSOT)
 - rev: rN. +1 per policy change, one chg line (`- rN YYMMDD <ID>-n✎ summary`). First write: `- r1 YYMMDD initial`. A ✎ summary MUST keep the old value as `old→new` (e.g. `BM-11✎ limit 100→50`); a `-` summary states what was removed. Wording-only editing (doc-review) is not a policy change: no rev, no chg line. chg holds only changes not yet consumed into tasks (revs tasked+1..rev): create-task deletes the lines it consumes, and an empty chg is `-`
@@ -45,7 +47,17 @@
 - review: `# REVIEW <slug>` / `> st:.. | scope:<paths or all> | at:<git sha7 or -> | base:ARCH@rev` / `## summary` / `## findings` / `## notes` — file review/<slug>.md, slug=kebab-case (recommended `<scope>-<YYMMDD>`)
 - STATE: `## cfg` / `## ideation`(opt) / `## ssot` / `## review`(opt) / `## tasks` / `## next` / `## log`
 
+## Reading
+- Read by purpose: the rule in force → that SSOT's decisions·flow·constraints · what changed → that SSOT's chg, only the rev range you need · how something was built and verified → the one tasks/done/ file you are investigating.
+- Task context comes from `vibe brief <T###>` (a work-group worker gets the same brief from its runner): the task; the current rules of each cited domain (cfg brief `domain`) or only the cited decisions (`cited`); every decision they require or delegate to; decisions that reference a cited one; the global rules (cfg always); the flow·constraints of each domain it draws from; the chg lines after a stale base — all from one source, the working tree or one commit (`--ref`). Planning asks for `<ID>-n` (with who references it), `<ID>` or `<ID>@rev` (the chg lines after rev and the decisions they changed). Open an original only for what the brief reports missing, unfollowed or related that the work needs.
+- Completeness is per block: a decision block runs to the next top-level bullet or heading, and a doc without its last section (ssot `## chg`, task `## result`) has an unbounded last block. A brief is whole only when its last line `end … chars:N` is visible and it says complete:yes. A cut-off read or brief is re-read before anything is judged.
+- Read one doc per call; read a large doc section by section. Editing a doc (planning, doc-review) means reading that doc whole.
+- tasks/done/ is an archive of history: never read it in bulk, and never as a source of current rules (its st·base·ssot are as of completion). Open it to investigate a named task, the change behind a regression, or what was verified before. Listing filenames (numbering, dep satisfaction) is not reading them.
+- reports/ is history too: open only the reports whose inbox lines are still unresolved, newest first.
+
 ## State rules
+- STATE cfg `brief`: the scope of a task brief. `domain` (absent ⇒ domain): every current decision of each cited domain, whole. `cited`: only the cited decisions and what they reference — switch to it only when tasks cite every decision their implementation must obey.
+- STATE cfg `always`: the global rules every task brief carries — decision IDs or whole domains, space-separated (`ARCH-1 ARCH-4 SEC`); `-` = none; absent ⇒ every ARCH decision. Keep it to rules every task must follow (conventions, test policy, verify tiers) and decide membership when an ARCH decision is added.
 - STATE ssot row `id|rev|tasked|pending|[?]`: rev=current, tasked=rev consumed into tasks, pending=unconsumed delta summary (`AUTH-5+ AUTH-2✎`), [?]=open decision count. tasked < rev ⇒ create-task target.
 - tasked=0 (new domain) ⇒ pending is always `all`, meaning everything up to the current rev. Later changes are absorbed into `all`.
 - STATE tasks row's ssot cell holds domains only (`ARCH BM`) — decision IDs live in the task file's quote line.

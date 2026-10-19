@@ -36,7 +36,7 @@
   },
   "devDependencies": {
     "concurrently": "^9.2.1",
-    "haeram-spec-creator": "^0.5.0",
+    "haeram-spec-creator": "^0.7.0",
     "playwright": "^1.63.0"
   },
   "packageManager": "pnpm@10.30.3",

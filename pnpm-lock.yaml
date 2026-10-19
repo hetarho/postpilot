@@ -12,8 +12,8 @@ importers:
         specifier: ^9.2.1
         version: 9.2.4
       haeram-spec-creator:
-        specifier: ^0.5.0
-        version: 0.5.0
+        specifier: ^0.7.0
+        version: 0.7.0
       playwright:
         specifier: ^1.63.0
         version: 1.63.0
@@ -1305,8 +1305,8 @@ packages:
   graceful-fs@4.2.11:
     resolution: {integrity: sha512-RbJ5/jmFcNNCcDV5o9eTnBLJ/HszWV0P73bc+Ff4nS/rJj+YaS6IGyiOL0VoBYX+l1Wrl3k63h/KrH+nhJ0XvQ==}
 
-  haeram-spec-creator@0.5.0:
-    resolution: {integrity: sha512-yNZdecBM5vx3/NmBfgsGsACnVuJuLk5HkoMpgmDdeff7YxWEFVrsPHb6lBXDtN682MKHZgkRv6TiWTiPQ4scXw==}
+  haeram-spec-creator@0.7.0:
+    resolution: {integrity: sha512-Me0wXPKljbYEX3fgKvfiGz0lpKS282paAa1tEX4SoiU3h3hOmOJLFBI3PIYndAipKY6PiSM0aZgHRUEERgfYlw==}
     engines: {node: '>=20'}
     hasBin: true
 
@@ -3430,7 +3430,7 @@ snapshots:
 
   graceful-fs@4.2.11: {}
 
-  haeram-spec-creator@0.5.0: {}
+  haeram-spec-creator@0.7.0: {}
 
   handlebars@4.7.9:
     dependencies:
