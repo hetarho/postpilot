@@ -8,17 +8,12 @@
 - docs: en
 - push: main
 
-## active
-| tag | host | mode | since | at | doing |
-|---|---|---|---|---|---|
-| p7m4 | DESKTOP-VKPLS8P | pair | 2026-10-19T06:33Z | 2026-10-19T06:33Z | - |
-
 ## inbox
 - 261016 suggest T694 T695 T698 T699 T700: review-code over channel navigation, campaign positioning, owned post links, frozen writing material and original capture metadata.
 - 261016 decided T700: how is EXIF without a UTC offset normalized? → omit the unknown instant and retain filename-based order as fallback (alt: invent the browser’s current time zone | label the local wall clock as UTC); use bounded mvhd parsing because the installed Mediabunny skips that creation field.
 - 261016 decided T699: how does a clip-store transaction fence external post text? → freeze a same-read creation identity and carry its text digest in pricing beside GuidelinesDigest, with the raw link identity in the project digest (alt: read post tables from the clip context | persist live post text on every project edit).
 - 261016 decided T698: how is T692’s existing creation seed linked atomically? → optional linked_post_slug on CreateClipProject as well as Update; the owned canonical post is validated before insertion (alt: create, then a second seed/link update that can leave a partial project). Picker actions save only the link through the write lane.
-- 261016 parked T697: local probe/gate/cancellation implementation verified and committed; owner will push and inspect remote verification. Full Go verification was interrupted at owner request; media gates and production workflow/clip qualification remain incomplete.
+- 261019 parked T697: implementation is on main;177b377a CI, backend rollout (including ranged-GET/CORS gates) and all3 media jobs succeeded. Real production browser clip source-read qualification remains unverified; the earlier interrupted local Go sweep is not a passing gate.
 - 261016 suggest T690 T691 T705 T692 T706: review-code over campaign guidance, upload text, partial imports, post-to-clip creation and fixture synchronization
 - 261016 decided T705 T692: how can a failed video transfer keep the clips already uploaded? → an owned initial-import completion primitive moves verified leases into a ready batch and cleans only pending uploads under existing retention rules (alt: discard every arrived video | re-upload successful files repeatedly | leave a non-ready batch)
 - 261016 decided T691: where does a source-free upload-text approval live? → its own project-owned quote table, leaving source-bound generation quotes intact (alt: nullable batch identity in the existing table | require retained originals)
@@ -132,10 +127,11 @@
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
 
 ## next
-- Owner will push the local commits and inspect remote workflows; p8s4 ended without pushing and stopped its local verification processes.
-- T697 manual bucket CORS setup is owner-confirmed complete; full Go/media gates and production gate/clip source-read qualification remain incomplete. Existing qualification blocks are unchanged.
+- T697 production ranged-GET/CORS deployment gates and media verification succeeded for177b377a; a real production browser clip source-read check remains. Existing qualification blocks are unchanged.
+- Article assessment: docs/research/naver-yozm-3994-2026-10-19.md proposes grounded answer-first openings and material collection; no product policy or implementation adopted.
 
 ## log
+- 261019 p7m4 delivers the remaining handoff documentation and records Yozm3994 application candidates; compare current GUIDE/GEN/TMPL/POST/QUAL/VOICE and official Naver help. Documentation-only verification reuses unchanged source/configuration/dependencies; package-managed skills and git diff checks pass. The unnecessary Go rerun was stopped and its processes/lock cleaned, without claiming a pass.
 - 261019 p7m4 starts owner-authorized delivery of the remaining documentation commit and reads Yozm3994 against shipped post/guideline/template behavior; prior177b377a CI, backend deployment and media workflows all succeeded. Documentation-only push reuses unchanged verification inputs; prior local Go interruption is historical and not relabeled as a pass.
 - 261016 p8s4 ends at owner request: owner takes push/remote checks; terminate its5 verification processes, confirm0 OS zombies, clear its stale heavy lock and active row; final Go/media gates remain incomplete.
 - 261016 p8s4 voucher expiry assertion compares stored revocation time with a later live clock read; use the existing service clock seam and assert exact revocation timestamp, preserving ledger behavior.
@@ -155,5 +151,3 @@
 - 261016 q8s4 weekly stop threshold85%→80% by owner instruction; continue local commits only.
 - 261016 T698 starts at42b2789a (q8s4): owned canonical-post link, identity fence and picker; CLIP r62–r63 source-colour delta is unrelated.
 - 261016 T697 locally implemented atbecb358f and parked for production qualification; SDK/app/RPC,50 store integration tests, CLI and workflow gates pass.
-- 261016 T697 starts at536ff251 (q8s4): local CORS probe/deploy gate and cancellation diagnostics; remote qualification remains excluded by commit-only scope.
-- 261016 T695 done (q8s4): shipped campaign story,76 targeted tests and build/lint pass; local commitff0ab72d.
