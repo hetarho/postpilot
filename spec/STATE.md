@@ -128,9 +128,12 @@
 
 ## next
 - T697 production ranged-GET/CORS deployment gates and media verification succeeded for177b377a; a real production browser clip source-read check remains. Existing qualification blocks are unchanged.
-- Article assessment: docs/research/naver-yozm-3994-2026-10-19.md proposes grounded answer-first openings and material collection; no product policy or implementation adopted.
+- Verify the affected original video on the refreshed production clip creation screen after the source measurement fix.
 
 ## log
+- 261027 fix clip measurement verification: all local CI commands in docs/verification.md passed on Node24.18.0/Go1.26.4 (560 FE files/4459 tests,89 BE packages,68 deploy Python tests); generated code is unchanged. Chromium153 also completed measurement, preparation validation and150-frame analysis-copy encoding/inspection for the real VFR fixture. Frontend-only push does not trigger backend deployment/media image gates; check the pushed revision CI and Workers Builds result before claiming delivery.
+- 261027 fix clip measurement: bound oversized reduced frame-rate metadata without changing decoded source timing/counts; preserve exact cadence and mark approximations unverified. Node24 impact checks passed: vitest related --run src/shared/lib/media/analysis-copy.ts src/shared/lib/media/analysis-original.test.ts (344 files/2801 tests), targeted ESLint/Prettier and build:web; shared-media barrel consumers require broad regression coverage. A real 300-frame VFR MP4 (27000000/900751) measured and passed preparation validation in Chromium153.
+- 261027 fix clip measurement start (cmf, pair): reproduce CLIP_SOURCE_MEASUREMENT_INVALID before browser analysis preparation; preserve unrelated ideation changes.
 - 261019 p7m4 owner selects autopilot for remaining verification and closure; report spec/reports/261019-p7m4.md records delivery, article proposals and qualification limits. Public Actions pages replace unavailable gh authentication/rate-limited REST; no new product decision or implementation adopted.
 - 261019 p7m4 delivers the remaining handoff documentation and records Yozm3994 application candidates; compare current GUIDE/GEN/TMPL/POST/QUAL/VOICE and official Naver help. Documentation-only verification reuses unchanged source/configuration/dependencies; package-managed skills and git diff checks pass. The unnecessary Go rerun was stopped and its processes/lock cleaned, without claiming a pass.
 - 261019 p7m4 starts owner-authorized delivery of the remaining documentation commit and reads Yozm3994 against shipped post/guideline/template behavior; prior177b377a CI, backend deployment and media workflows all succeeded. Documentation-only push reuses unchanged verification inputs; prior local Go interruption is historical and not relabeled as a pass.
@@ -148,6 +151,3 @@
 - 261016 T700 starts at2e77609c (q8s4): bounded original EXIF/mvhd capture times, optional upload/source metadata and unchanged fingerprints;17% weekly usage is below80%.
 - 261016 T699 done locally at0a1b6154: per-call linked canonical text, quote/recovery fences, pre-hold allowances and GUIDE r23;447 unit/78 integration tests and API selections pass.
 - 261016 T699 starts atd980d7e2 (q8s4): freeze owned canonical text per call, bind quotes and measure every writing request before holds; CLIP source-colour deltas are unrelated.
-- 261016 T698 done locally at442e4c2f: owned post link,495 selected frontend tests, backend integration and12 picker/60 shell browser cases pass.
-- 261016 q8s4 weekly stop threshold85%→80% by owner instruction; continue local commits only.
-- 261016 T698 starts at42b2789a (q8s4): owned canonical-post link, identity fence and picker; CLIP r62–r63 source-colour delta is unrelated.

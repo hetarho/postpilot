@@ -7,6 +7,7 @@ const state = vi.hoisted(() => {
     times: [0, 62],
     durations: [1, 1],
     declared: 1 as number | null,
+    timeResolution: 1000,
     seen: [] as number[],
     closed: [] as number[],
     returned: 0,
@@ -22,7 +23,7 @@ vi.mock('./video/range-video', async (original) => ({
       codedHeight: 16,
       displayWidth: 16,
       displayHeight: 16,
-      timeResolution: 1000,
+      timeResolution: state.timeResolution,
       durationFromMetadata: state.declared,
     },
     async *samples(start = 0, end = Infinity) {
@@ -75,6 +76,7 @@ afterEach(() => {
   state.times = [0, 62]
   state.durations = [1, 1]
   state.declared = 1
+  state.timeResolution = 1000
   state.seen = []
   state.closed = []
   state.returned = 0
@@ -82,6 +84,53 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 describe('original EOF measurement source-time admission', () => {
+  it.each([90000, 1000000])(
+    'keeps measured VFR admissible at time resolution %s',
+    async (resolution) => {
+      state.timeResolution = resolution
+      state.declared = null
+      state.times = Array.from({ length: 300 }, (_, i) => (i * 3003 - Math.floor(i / 2)) / 90000)
+      state.durations = state.times.map(() => 3003 / 90000)
+      const measured = await measureOriginalMedia(access, limits, new AbortController().signal)
+      const end = state.times.at(-1)! + state.durations.at(-1)!
+      const rate = measured.frameRateNumerator / measured.frameRateDenominator
+      expect(measured.frameRateNumerator).toBeGreaterThan(0)
+      expect(measured.frameRateNumerator).toBeLessThanOrEqual(1000000)
+      expect(measured.frameRateDenominator).toBeGreaterThan(0)
+      expect(measured.frameRateDenominator).toBeLessThanOrEqual(1000000)
+      expect(rate).toBeCloseTo(300 / end, 4)
+      expect(measured).toMatchObject({
+        decodedFrames: 300,
+        durationMs: Math.round(end * 1000),
+        cadenceVerified: false,
+      })
+      expect(state.closed).toEqual(state.times)
+      expect(state.dispose).toHaveBeenCalledOnce()
+    },
+  )
+  it('preserves exact NTSC source cadence independently of the analysis frame rate', async () => {
+    state.timeResolution = 90000
+    state.declared = null
+    state.times = [0, 1001 / 30000, 2002 / 30000]
+    state.durations = state.times.map(() => 1001 / 30000)
+    expect(await measureOriginalMedia(access, limits, new AbortController().signal)).toMatchObject({
+      frameRateNumerator: 30000,
+      frameRateDenominator: 1001,
+      cadenceVerified: true,
+      decodedFrames: 3,
+    })
+  })
+  it('does not claim exact cadence for an approximated high-resolution constant rate', async () => {
+    state.timeResolution = 1000000000
+    state.declared = null
+    state.times = [0, 0.033333333, 0.066666666]
+    state.durations = state.times.map(() => 0.033333333)
+    const measured = await measureOriginalMedia(access, limits, new AbortController().signal)
+    expect(measured.cadenceVerified).toBe(false)
+    expect(measured.frameRateNumerator).toBeLessThanOrEqual(1000000)
+    expect(measured.frameRateDenominator).toBeLessThanOrEqual(1000000)
+    expect(measured.frameRateNumerator / measured.frameRateDenominator).toBeCloseTo(30, 4)
+  })
   it.each([1, null])(
     'refuses sparse out-of-budget PTS with declared duration %s and releases every observed frame',
     async (declared) => {

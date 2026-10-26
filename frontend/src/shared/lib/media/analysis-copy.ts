@@ -27,6 +27,8 @@ import { explicitSquarePixelsMp4 } from './square-pixel-mp4'
 import type { EncodedAudioTrack } from './audio/processing-types'
 import { openOriginalVideo } from './video/range-video'
 
+const MAX_FRAME_RATE_COMPONENT = 1_000_000
+
 export interface FiniteMediaCopyProfile extends MediaRangeLimits {
   durationMs: number
   decoderReserveFrames: number
@@ -182,10 +184,18 @@ export async function measureOriginalMedia(
     )
       throw new Error('CLIP_SOURCE_AUDIO_FORMAT_UNSUPPORTED')
     const gcd = (a: number, b: number): number => (b ? gcd(b, a % b) : a)
-    const numerator =
-      constant && cadence ? metadata.timeResolution : frames * metadata.timeResolution
-    const denominator = constant && cadence ? cadence : Math.round(end * metadata.timeResolution)
-    const divisor = gcd(numerator, denominator)
+    let numerator = constant && cadence ? metadata.timeResolution : frames * metadata.timeResolution
+    let denominator = constant && cadence ? cadence : Math.round(end * metadata.timeResolution)
+    let divisor = gcd(numerator, denominator)
+    const exactRate = Math.max(numerator, denominator) / divisor <= MAX_FRAME_RATE_COMPONENT
+    if (!exactRate) {
+      // Fine source clocks can exceed the wire bounds even after reduction.
+      // Approximate only the rate metadata, never source times or verified cadence.
+      const rate = numerator / denominator
+      denominator = Math.max(1, Math.floor(MAX_FRAME_RATE_COMPONENT / Math.max(1, rate)))
+      numerator = Math.round(rate * denominator)
+      divisor = gcd(numerator, denominator)
+    }
     return {
       provenance: metadata.provenance,
       durationMs,
@@ -193,7 +203,7 @@ export async function measureOriginalMedia(
       height: metadata.displayHeight,
       frameRateNumerator: numerator / divisor,
       frameRateDenominator: denominator / divisor,
-      cadenceVerified: frames > 1 && constant,
+      cadenceVerified: frames > 1 && constant && exactRate,
       decodedFrames: frames,
       hasAudio: !!audio,
       audioRate,
