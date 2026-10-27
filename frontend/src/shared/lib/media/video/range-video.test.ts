@@ -12,6 +12,7 @@ function original(
   times = Array.from({ length: 48 }, (_, n) => n / 60),
   rotation = 0,
   flip = false,
+  frameOptions: Pick<Partial<VideoFrame>, 'format' | 'allocationSize' | 'copyTo'> = {},
 ) {
   const samples: { index: number; close: ReturnType<typeof vi.fn> }[] = [],
     frames: { index: number; close: ReturnType<typeof vi.fn> }[] = []
@@ -50,6 +51,7 @@ function original(
                   timestamp: Math.round(timestamp * 1_000_000),
                   close: vi.fn(),
                   allocationSize: () => 6,
+                  ...frameOptions,
                 }
                 frames.push(frame)
                 return frame as unknown as VideoFrame
@@ -65,6 +67,29 @@ function original(
   return { input, samples, frames, returned: () => returned }
 }
 describe('native original timestamp selection', () => {
+  it('presents opaque hardware frames using a bounded RGBA size query without copying pixels', async () => {
+    const allocationSize = vi.fn((options?: VideoFrameCopyToOptions) => {
+      if (options?.format !== 'RGBA') throw new DOMException('Opaque frame', 'NotSupportedError')
+      return 16
+    })
+    const copyTo = vi.fn()
+    const fake = original(undefined, 0, false, { format: null, allocationSize, copyTo })
+    const budget = new VideoFrameBudget(1, 16)
+    const cursor = new OriginalVideoCursor(
+      fake.input,
+      { startUs: 0, endUs: 800000, ratePermille: 1000, fps: 30 },
+      budget,
+      new AbortController().signal,
+    )
+    const frame = await cursor.frame(0)
+    expect(allocationSize).toHaveBeenCalledWith({ format: 'RGBA' })
+    expect(copyTo).not.toHaveBeenCalled()
+    expect(budget.snapshot()).toMatchObject({ liveFrames: 1, liveBytes: 16 })
+    frame.close()
+    await cursor.close()
+    expect(fake.frames[0]!.close).toHaveBeenCalledOnce()
+    expect(budget.snapshot()).toMatchObject({ liveFrames: 0, liveBytes: 0 })
+  })
   it('keeps first stream order regardless of player defaults and permits ordinary all-intra movies', async () => {
     const first = {
       hasOnlyKeyPackets: vi.fn(async () => false),
