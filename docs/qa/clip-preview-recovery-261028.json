@@ -219,5 +219,82 @@
     "Identified macOS Chrome evidence does not qualify other devices or open T603/T604/voice release gates.",
     "Source changes are local; final batch CI/deployment remain pending until the authorized push."
   ],
-  "verifiedSourceCommit": "c4f3254ccc65552cb9a3156291afe53bde93d434"
+  "verifiedSourceCommit": "c4f3254ccc65552cb9a3156291afe53bde93d434",
+  "productionVerification": {
+    "revision": "d3d512090df88992e8ee396590c126a6f81cf09e",
+    "workersBuildConclusion": "success",
+    "workersBuildURL": "https://dash.cloudflare.com/fbba17e7a8521b0603a31b761662db08/workers/services/view/postpilot/production/builds/7ccde8a4-0841-4923-8673-f6bee40e4986",
+    "entry": "/assets/index-CjwdsLmG.js",
+    "clip": "assets/clip-QZDR_tWB.js",
+    "worker": "preview.worker-RAK7mlCE.js",
+    "workerSha256": "a2fc4fd73816d909418eefec6609a8831f50fd434ff0d839775f480dadacd4cf",
+    "publicConfigurationMatched": true,
+    "browser": "156.0.8078.48",
+    "originalHTMLVideoPlayback": [
+      {
+        "duration": 4.173244,
+        "width": 1440,
+        "height": 1920,
+        "currentTime": 0.810198,
+        "readyState": 4
+      },
+      {
+        "duration": 6.570289,
+        "width": 1440,
+        "height": 1920,
+        "currentTime": 0.811902,
+        "readyState": 4
+      }
+    ],
+    "actualRetainedR2Preview": {
+      "preparationMs": 45034,
+      "completedSceneSamples": 24,
+      "frames": [
+        {
+          "frame": 0,
+          "displayed": 1,
+          "width": 540,
+          "height": 960,
+          "elapsedMs": 964
+        },
+        {
+          "frame": 300,
+          "displayed": 1,
+          "width": 540,
+          "height": 960,
+          "elapsedMs": 4825
+        },
+        {
+          "frame": 600,
+          "displayed": 1,
+          "width": 540,
+          "height": 960,
+          "elapsedMs": 6491
+        },
+        {
+          "frame": 899,
+          "displayed": 1,
+          "width": 540,
+          "height": 960,
+          "elapsedMs": 10962
+        }
+      ],
+      "errors": []
+    },
+    "ci": {
+      "revision": "d3d512090df88992e8ee396590c126a6f81cf09e",
+      "conclusion": "success",
+      "url": "https://github.com/hetarho/postpilot/actions/runs/40546530178",
+      "jobs": [
+        {
+          "name": "frontend",
+          "conclusion": "success"
+        },
+        {
+          "name": "backend",
+          "conclusion": "success"
+        }
+      ]
+    }
+  }
 }

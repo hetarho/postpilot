@@ -137,7 +137,11 @@
     "usageReported": false,
     "subsequentPaidCalls": 0,
     "activityReadOnlyStatus": 403,
-    "cause": "No response usage or generation ID was captured. The exact provider error was not retained by the temporary harness and is unknown. The durable reservation remains unresolved; no ledger reset, reroute or paid retry occurred."
+    "cause": "No response usage or generation ID was captured. The exact provider error was not retained by the temporary harness and is unknown. The durable reservation remains unresolved; no ledger reset, reroute or paid retry occurred.",
+    "mode": "flow-follow-storyline",
+    "promptVersion": "clip-flow-follow-storyline-v5",
+    "schemaVersion": "sha256:6e051db8a6b406f0704b95af8d0e945290b7a2f27d4b3d79e6d00a29e327c7ca",
+    "providerErrorRetained": false
   },
   "outputs": [
     {
@@ -219,7 +223,8 @@
     "Reference/native semantic model repetitions, Korean small text/number/speech/fast-action/focus corpus, independent human source-time truth and human output review remain missing.",
     "No Windows or resource-constrained hardware proof; browser analysis/export and voice activation remain closed.",
     "Serif contrast shortfalls remain observable notices; bold captions were visually easier to read in an agent review, which does not count as human review.",
-    "Playback used local retained original bytes in a private Chrome context; T708 separately proves actual production R2 range reads."
+    "Playback used local retained original bytes in a private Chrome context; T708 separately proves actual production R2 range reads.",
+    "Preflight call policies are retained separately from actual invocation inspection/budget receipts. The temporary harness did not persist the full live-call execution policy snapshot, so exact endpoint snapshot equivalence is not independently established."
   ],
   "verification": {
     "frontendFull": {
@@ -248,8 +253,117 @@
       "First task-check command used Go without -C backend, so root-module lookup failed before any test; corrected command passed.",
       "First shell-combined style invocation lost command grouping in CLI forwarding and ran pnpm help; each actual style/skill command then passed independently."
     ],
-    "pending": [
-      "Exact final-revision CI and Cloudflare deployment after push."
-    ]
+    "pending": [],
+    "productionPreview": {
+      "revision": "d3d512090df88992e8ee396590c126a6f81cf09e",
+      "workersBuildConclusion": "success",
+      "actualR2PreparationMs": 45034,
+      "completedSceneSamples": 24,
+      "nativeOriginalPlayersPassed": 2,
+      "previewFrames": [
+        0,
+        300,
+        600,
+        899
+      ],
+      "errors": []
+    },
+    "sourceRevisionCI": {
+      "revision": "d3d512090df88992e8ee396590c126a6f81cf09e",
+      "conclusion": "success",
+      "url": "https://github.com/hetarho/postpilot/actions/runs/40546530178",
+      "frontendFiles": 562,
+      "frontendTests": 4480,
+      "backendFullSuite": "passed",
+      "jobs": [
+        {
+          "name": "frontend",
+          "conclusion": "success"
+        },
+        {
+          "name": "backend",
+          "conclusion": "success"
+        }
+      ]
+    }
+  },
+  "providerEndpoint": "https://openrouter.ai/api/v1",
+  "reviewArtifact": {
+    "privateLocalComparison": "8 original/native/browser/reference rows plus both completed MP4s and actual browser observations",
+    "humanReviewDefault": "unknown; never prefilled",
+    "networkRequests": 0,
+    "humanReviewReceived": false
+  },
+  "readOnlyPreflightPolicies": [
+    {
+      "Ref": {
+        "ProviderID": "openrouter",
+        "ModelID": "google/gemini-3.8-flash"
+      },
+      "Stage": "observe",
+      "CompletionTokens": 8192,
+      "InputTokens": 30000,
+      "ResponseRetries": 3,
+      "Reasoning": "low",
+      "DisableReasoning": false,
+      "StructuredOutput": true,
+      "InputUSDPerMillion": "0.375",
+      "OutputUSDPerMillion": "1.875",
+      "Pricing": {
+        "Version": 2,
+        "Fingerprint": "74a60746539a880d1df6bbbd3130bce60a61d8e112b3c51b3f0f6d24d6ec8277",
+        "Delivery": "inline_static_video",
+        "Endpoint": "google-ai-studio/flex",
+        "RequiredParameters": "max_tokens,response_format,structured_outputs,reasoning",
+        "PromptUSDPerMillion": "0.375",
+        "CompletionUSDPerMillion": "1.875",
+        "RequestUSD": "0",
+        "ImageUSD": "0.000000375",
+        "AudioUSDPerToken": "0.000000375",
+        "AggregateUsageSufficient": false
+      }
+    },
+    {
+      "Ref": {
+        "ProviderID": "openrouter",
+        "ModelID": "qwen/qwen3.8-flash"
+      },
+      "Stage": "write",
+      "CompletionTokens": 32768,
+      "InputTokens": 64000,
+      "ResponseRetries": 3,
+      "Reasoning": "low",
+      "DisableReasoning": false,
+      "StructuredOutput": true,
+      "InputUSDPerMillion": "0.15",
+      "OutputUSDPerMillion": "0.47",
+      "Pricing": {
+        "Version": 2,
+        "Fingerprint": "22f033a348a9b845d60a5dfe7eccf2836bfbf96548cb6da29ae6121edd1efbb6",
+        "Delivery": "text_only",
+        "Endpoint": "alibaba/us-east-1",
+        "RequiredParameters": "max_tokens,response_format,structured_outputs,reasoning",
+        "PromptUSDPerMillion": "0.15",
+        "CompletionUSDPerMillion": "0.47",
+        "RequestUSD": "0",
+        "ImageUSD": "0",
+        "AudioUSDPerToken": "0",
+        "AggregateUsageSufficient": false
+      }
+    }
+  ],
+  "actualInvocationConditions": {
+    "Model": {
+      "ProviderID": "openrouter",
+      "ModelID": "google/gemini-3.8-flash"
+    },
+    "MaxCompletionTokens": 8192,
+    "ReasoningEffort": "low",
+    "StructuredOutput": true,
+    "DisableReasoning": false,
+    "FreeCall": false,
+    "DefaultBudget": false,
+    "FrozenExecution": true,
+    "ReasoningOmitted": false
   }
 }
