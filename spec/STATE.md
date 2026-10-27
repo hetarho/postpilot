@@ -11,7 +11,6 @@
 ## active
 | tag | host | mode | since | at | doing |
 |---|---|---|---|---|---|
-| avf | ihaelam-ui-MacBookPro | pair | 2026-10-27T14:53Z | 2026-10-27T15:25Z | T707 |
 
 ## inbox
 - 261016 suggest T694 T695 T698 T699 T700: review-code over channel navigation, campaign positioning, owned post links, frozen writing material and original capture metadata.
@@ -130,13 +129,14 @@
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
-| T707 | Restore explicitly approved server analysis preparation | ARCH CLIP QUOTA | - | doing@261028.avf |
 
 ## next
 - T697 production ranged-GET/CORS deployment gates and media verification succeeded for177b377a; a real production browser clip source-read check remains. Existing qualification blocks are unchanged.
-- Confirm T707 exact-revision CI/Workers and deployed server-labelled approvals; then request a fresh owner approval for actual original/provider execution. Browser analysis quality and final-render qualification remain independently closed.
+- Continue from the generated storyline through a fresh owner-approved creation when desired; T707 native analysis is verified. Browser analysis, final-render and voice qualification work remains independently blocked.
 
 ## log
+- 261028 T707 done at310959b7: owner selects existing-server recovery; CI40530990767 frontend/backend and Workers fc8d3803 pass. Production assets and explicit native approval are verified. Read-only PEM inspection confirms the owner-approved native job58641d7d completed all8 source analyses and persisted4 storyline paragraphs at15:47:48 UTC; final video rendering was not observed. Browser/voice qualification gates remain closed.
+- 261028 T707 deployed at310959b7: Workers fc8d3803 succeeded, live entry/clip/public-config bytes match the tested build, and production-origin Chromium confirms both server-labelled approvals with one native start each and no browser preparation request against an isolated mocked API. Full remote CI remains running; actual affected-original/provider completion needs a fresh owner approval and is not claimed.
 - 261028 T707 local verification:560 FE files/4464 tests and affected native app/store/worker/RPC checks pass; final disclosure copy passes its source-picker/page/workspace regressions and lint/build. Built-app Chromium confirms visible server approval and exactly one native start with no analysis preparation ID for storyline/direct actions against a mocked API; actual owner-approved provider completion remains unverified. Unchanged full backend/deploy/generated evidence is reused; frontend-only diff triggers no backend/media deployment.
 - 261028 T707 starts at7ffe6fa6 (avf): select native preparation before approval when browser readiness is closed; enforce server-returned qualification before browser activation and retain independent export/quality gates.
 - 261028 create-task CLIP r64: T707 restores explicitly approved native preparation and early browser readiness checks; consumes CLIP-220. Production native runtime is ready, while browser copies have no verifier and the quality gate remains closed.
@@ -152,5 +152,3 @@
 - 261019 p7m4 owner selects autopilot for remaining verification and closure; report spec/reports/261019-p7m4.md records delivery, article proposals and qualification limits. Public Actions pages replace unavailable gh authentication/rate-limited REST; no new product decision or implementation adopted.
 - 261019 p7m4 delivers the remaining handoff documentation and records Yozm3994 application candidates; compare current GUIDE/GEN/TMPL/POST/QUAL/VOICE and official Naver help. Documentation-only verification reuses unchanged source/configuration/dependencies; package-managed skills and git diff checks pass. The unnecessary Go rerun was stopped and its processes/lock cleaned, without claiming a pass.
 - 261019 p7m4 starts owner-authorized delivery of the remaining documentation commit and reads Yozm3994 against shipped post/guideline/template behavior; prior177b377a CI, backend deployment and media workflows all succeeded. Documentation-only push reuses unchanged verification inputs; prior local Go interruption is historical and not relabeled as a pass.
-- 261016 p8s4 ends at owner request: owner takes push/remote checks; terminate its5 verification processes, confirm0 OS zombies, clear its stale heavy lock and active row; final Go/media gates remain incomplete.
-- 261016 p8s4 voucher expiry assertion compares stored revocation time with a later live clock read; use the existing service clock seam and assert exact revocation timestamp, preserving ledger behavior.
