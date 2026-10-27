@@ -104,6 +104,7 @@ export async function prepareBrowserAnalysis(
       Date.parse(preparation.expiresAt) <= now()
     )
       throw new Error('CLIP_ANALYSIS_COPY_OWNERSHIP')
+    if (!preparation.profile.qualified) throw new Error('CLIP_ANALYSIS_PROFILE_UNQUALIFIED')
     validateMissingSlots(preparation, originals)
     update({ stage: 'starting', done: 0, total: preparation.copies.length })
     parent = await startParent(preparation.id)

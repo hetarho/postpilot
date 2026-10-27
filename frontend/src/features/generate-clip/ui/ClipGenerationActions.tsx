@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   ClipQuoteApproval,
+  type ClipAnalysisPreparationRoute,
   type ClipEligibilityStatus,
   type ClipProject,
   type ClipQuote,
@@ -26,6 +27,7 @@ export interface ClipGenerationContext {
   observeStatus: ClipEligibilityStatus | undefined
   ready: boolean
   pending: boolean
+  preparationRoute?: ClipAnalysisPreparationRoute
   onApprove(mode: ClipQuoteMode, quote: ClipQuote): void
 }
 
@@ -126,8 +128,18 @@ function ClipQuotedPopover({
   variant: 'secondary' | 'cta'
   className?: string
 }) {
-  const { ownerId, project, batch, observe, write, observeStatus, ready, pending, onApprove } =
-    context
+  const {
+    ownerId,
+    project,
+    batch,
+    observe,
+    write,
+    observeStatus,
+    ready,
+    pending,
+    onApprove,
+    preparationRoute,
+  } = context
   const live = ready && !!batch && !!observe && !!write
   return (
     <Popover
@@ -152,6 +164,7 @@ function ClipQuotedPopover({
             write={write}
             observeStatus={observeStatus}
             mode={mode}
+            preparationRoute={preparationRoute}
             label={label}
             onApprove={(quote) => {
               close()
@@ -174,6 +187,7 @@ function QuotedAction({
   mode,
   label,
   onApprove,
+  preparationRoute = 'browser',
 }: {
   ownerId: string
   project: ClipProject
@@ -184,11 +198,19 @@ function QuotedAction({
   mode: ClipQuoteMode
   label: string
   onApprove(quote: ClipQuote): void
+  preparationRoute?: ClipAnalysisPreparationRoute
 }) {
   const { t } = useTranslation('clips')
   const query = useClipQuote(ownerId, project, batch, observe, write, observeStatus, mode)
   const { myPlan } = useMyPlan()
   const quote = query.quote
+  const approval = quote?.recovery?.renderOnly
+    ? t('credits.resumeRender')
+    : quote
+      ? t(mode === 'storyline' ? 'credits.approveStoryline' : 'credits.approve', {
+          amount: quote.maxCredits,
+        })
+      : label
   return (
     <ClipQuoteApproval
       quote={quote}
@@ -198,17 +220,16 @@ function QuotedAction({
       error={query.error ? appFailureFromConnect(query.error) : undefined}
       approveDisabled={!quote?.recovery?.renderOnly && !myPlan}
       approveLabel={
-        quote?.recovery?.renderOnly
-          ? t('credits.resumeRender')
-          : quote
-            ? t(mode === 'storyline' ? 'credits.approveStoryline' : 'credits.approve', {
-                amount: quote.maxCredits,
-              })
-            : label
+        preparationRoute === 'server' && !quote?.recovery?.renderOnly
+          ? t('generation.serverPreparationApproval', { approval })
+          : approval
       }
       onRefresh={() => void query.refetch()}
       onApprove={onApprove}
     >
+      {preparationRoute === 'server' && !quote?.recovery?.renderOnly && (
+        <Typography variant="body">{t('generation.serverPreparation')}</Typography>
+      )}
       {quote?.recovery ? (
         <Typography variant="body" role="status">
           {quote.recovery.renderOnly

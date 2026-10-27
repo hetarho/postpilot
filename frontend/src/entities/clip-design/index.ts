@@ -1,6 +1,7 @@
 /** The clip design system and the composition grammar's bounds: the vocabulary every clip
  *  noun reads and none of them owns (CDS, ARCH-21). It is the leaf of the clip `@x` graph. */
 export { CLIP_BROWSER_RENDER } from './config/clip-browser-render'
+export { CLIP_BROWSER_ANALYSIS_PREPARATION } from './config/browser-analysis'
 export {
   CLIP_CAPTION_PLACEMENT,
   CLIP_COMPOSITION_LIMITS,

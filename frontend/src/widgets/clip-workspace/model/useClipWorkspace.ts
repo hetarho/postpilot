@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { CLIP_BROWSER_ANALYSIS_PREPARATION } from '@/entities/clip-design'
 import {
   clipRenderNeedsAudio,
   useClipBrowserRenderCapability,
   type ClipBrowserRenderCapability,
 } from '@/entities/clip-preview'
 import {
+  CLIP_BROWSER_ANALYSIS_PROFILE,
   useReorderClipSources,
   useClipSourceCalls,
   type ClipProject,
@@ -96,7 +98,18 @@ export function useClipWorkspace(ownerId: string, project: ClipProject) {
       return { kind: 'url', url: capability.url }
     },
   })
-  const generation = useGenerateClip(ownerId, project, upload.attempt?.jobId, analysis.preparation)
+  const preparationRoute =
+    CLIP_BROWSER_ANALYSIS_PREPARATION.qualified &&
+    CLIP_BROWSER_ANALYSIS_PREPARATION.profile === CLIP_BROWSER_ANALYSIS_PROFILE
+      ? 'browser'
+      : 'server'
+  const generation = useGenerateClip(
+    ownerId,
+    project,
+    upload.attempt?.jobId,
+    analysis.preparation,
+    preparationRoute,
+  )
   const ownership = {
     begin: upload.beginAttempt,
     owned: upload.markOwned,

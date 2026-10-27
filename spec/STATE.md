@@ -8,6 +8,11 @@
 - docs: en
 - push: main
 
+## active
+| tag | host | mode | since | at | doing |
+|---|---|---|---|---|---|
+| avf | ihaelam-ui-MacBookPro | pair | 2026-10-27T14:53Z | 2026-10-27T15:25Z | T707 |
+
 ## inbox
 - 261016 suggest T694 T695 T698 T699 T700: review-code over channel navigation, campaign positioning, owned post links, frozen writing material and original capture metadata.
 - 261016 decided T700: how is EXIF without a UTC offset normalized? → omit the unknown instant and retain filename-based order as fallback (alt: invent the browser’s current time zone | label the local wall clock as UTC); use bounded mvhd parsing because the installed Mediabunny skips that creation field.
@@ -90,7 +95,7 @@
 | THEME | 34 | 34 | - | 2 |
 | MKT | 11 | 11 | - | 0 |
 | VIDEO | 8 | 8 | - | 0 |
-| CLIP | 63 | 63 | - | 2 |
+| CLIP | 64 | 64 | - | 2 |
 | CDS | 36 | 36 | - | 1 |
 | BILL | 9 | 9 | - | 0 |
 | MEM | 7 | 7 | - | 2 |
@@ -125,12 +130,18 @@
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
+| T707 | Restore explicitly approved server analysis preparation | ARCH CLIP QUOTA | - | doing@261028.avf |
 
 ## next
 - T697 production ranged-GET/CORS deployment gates and media verification succeeded for177b377a; a real production browser clip source-read check remains. Existing qualification blocks are unchanged.
-- Verify the affected original video after refreshing the deployed production clip screen; the reproduced VFR measurement and analysis-copy regression pass on the production worker.
+- Confirm T707 exact-revision CI/Workers and deployed server-labelled approvals; then request a fresh owner approval for actual original/provider execution. Browser analysis quality and final-render qualification remain independently closed.
 
 ## log
+- 261028 T707 local verification:560 FE files/4464 tests and affected native app/store/worker/RPC checks pass; final disclosure copy passes its source-picker/page/workspace regressions and lint/build. Built-app Chromium confirms visible server approval and exactly one native start with no analysis preparation ID for storyline/direct actions against a mocked API; actual owner-approved provider completion remains unverified. Unchanged full backend/deploy/generated evidence is reused; frontend-only diff triggers no backend/media deployment.
+- 261028 T707 starts at7ffe6fa6 (avf): select native preparation before approval when browser readiness is closed; enforce server-returned qualification before browser activation and retain independent export/quality gates.
+- 261028 create-task CLIP r64: T707 restores explicitly approved native preparation and early browser readiness checks; consumes CLIP-220. Production native runtime is ready, while browser copies have no verifier and the quality gate remains closed.
+- 261028 update-ssot CLIP start (avf): browser-analysis readiness is disabled while the workspace always starts it; restore an explicit qualified server-preparation approval, preserving browser quality and export gates. Optional route-preference question remains unanswered; proceeding with the recommended existing-server recovery under the authorized fix/deploy scope.
+- 261027 analysis verification stall start (avf, pair): owner reports the deployed clip flow remains at browser analysis verification after the source measurement repair; trace the preparation workflow and inspect the PEM production host, preserving unrelated ideation changes.
 - 261027 clip production verification:42c57c1b native build b42c8c7f-85d0-47b1-97bf-8110456e852c succeeded (version31a96f6e-b945-4471-bde2-5337af6ff832) without new OAuth or toolchain changes; GitHub CI40504156313 passed for the exact deployed revision. The live screen now loads analysis.worker-CI2qrO_c.js, byte-identical to the verified artifact (SHA256 f566c4cf5ac708ebec90ffa611a3439e813dd94d792b401456d2c92a4ed41689); Chromium measured300 VFR frames and encoded/inspected150 analysis frames on the production origin. Public configuration is unchanged. Evidence: /tmp/postpilot-cf-recovery-261027/production-worker-verification.json.
 - 261027 clip delivery retry: owner requires PEM inspection and rejects additional Cloudflare OAuth; no further login attempts. GitHub check-run rerequest returns404 with existing repository credentials. Publish this operational record once through the existing main integration after the matching queue incident resolved; inspect all exact-revision checks and production worker bytes before claiming deployment.
 - 261027 build diagnosis: owner-provided b586b831 log stops at Installing nodejs24.18.0 / error occurred while installing tools or dependencies, before project build/deploy. Its00:34-00:53 KST initialization overlaps the resolved00:12-01:03 Cloudflare queue incident https://www.cloudflarestatus.com/incidents/dv2vbq9kbgxn; correlation does not establish the Node installer root cause. Node24.18.0 official Linux archives exist and the same version passed local/remote CI; preserve the toolchain.
@@ -143,11 +154,3 @@
 - 261019 p7m4 starts owner-authorized delivery of the remaining documentation commit and reads Yozm3994 against shipped post/guideline/template behavior; prior177b377a CI, backend deployment and media workflows all succeeded. Documentation-only push reuses unchanged verification inputs; prior local Go interruption is historical and not relabeled as a pass.
 - 261016 p8s4 ends at owner request: owner takes push/remote checks; terminate its5 verification processes, confirm0 OS zombies, clear its stale heavy lock and active row; final Go/media gates remain incomplete.
 - 261016 p8s4 voucher expiry assertion compares stored revocation time with a later live clock read; use the existing service clock seam and assert exact revocation timestamp, preserving ledger behavior.
-- 261016 p8s4 authoring ordering diagnostics pass11 isolated runs; pin persisted fixture timestamps to specify the intended newer baseline, retaining the historical-candidate assertion without changing production code.
-- 261016 p8s4 full Go gate also finds authoring summary selecting a saved historical batch over a fresh baseline; capture persisted ranking inputs before deciding the repair.
-- 261016 p8s4 full Go gate finds stale8-default guideline RPC expectation after GUIDE r23 added clip_post_wording; correct the test contract and verify its full package before delivery.
-- 261016 p8s4 starts delivery of27 local commits from62b22708 to main: owner explicitly authorizes push; run full ARCH-31 CI/deploy/media gates and inspect exact-revision workflows; weekly stop remains80% (currently20%).
-- 261016 T697 owner reconfirms the manual bucket CORS change is complete; reconcile remaining delivery verification without changing code or pushing.
-- 261016 q8s4 ends after T701: T694/T695/T698–T701 done and T697 locally implemented/parked; all changes committed locally, no push; weekly usage20%, stop threshold80%.
-- 261016 T701 done locally at0a1319d2: frozen photo/time/sequence placement hints and unused-source names;457 backend/21 store/248 frontend tests and8 browser cases pass.
-- 261016 T701 starts at737c8bc4 (q8s4): canonical photo metadata, frozen nearest-section candidates, linked section priority and unused-source names;19% weekly usage is below80%.

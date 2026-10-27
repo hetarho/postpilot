@@ -1,4 +1,5 @@
 export const CLIP_BROWSER_ANALYSIS_PROFILE = 'clip-browser-analysis-v1'
+export type ClipAnalysisPreparationRoute = 'browser' | 'server'
 
 export interface ClipAnalysisOriginalMeasurement {
   provenance: 'browser_client'

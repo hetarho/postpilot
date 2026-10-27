@@ -154,6 +154,7 @@ export function ClipWorkspace({ ownerId, project }: { ownerId: string; project: 
           ? undefined
           : (ready) => (
               <ClipGenerationActions
+                preparationRoute={generation.preparationRoute}
                 ownerId={ownerId}
                 project={project}
                 batch={upload.readyBatch}
@@ -347,6 +348,7 @@ export function ClipWorkspace({ ownerId, project }: { ownerId: string; project: 
         aside={
           reading || !project.storyline ? undefined : (
             <ClipStorylineBuildActions
+              preparationRoute={generation.preparationRoute}
               ownerId={ownerId}
               project={project}
               batch={upload.readyBatch}

@@ -55,7 +55,7 @@ const preparation: ClipAnalysisPreparation = {
     audioRate: 48000,
     audioChannels: 1,
     audioBitrate: 64000,
-    qualified: false,
+    qualified: true,
   },
   copies: [slot, { ...slot, slot: 's-1', ordinal: 1, offsetMs: 60000, durationMs: 1000 }],
   progress: 0,
@@ -165,6 +165,23 @@ function harness(overrides: Partial<AnalysisPreparationPorts> = {}) {
   return { ports, encoder, events, parent, peak: () => peak }
 }
 describe('page-owned browser analysis preparation', () => {
+  it('refuses an unqualified server profile before activating or uploading a browser attempt', async () => {
+    const h = harness({
+      begin: vi.fn(async () => ({
+        ...structuredClone(preparation),
+        profile: { ...preparation.profile, qualified: false },
+      })),
+    })
+    await expect(
+      prepareBrowserAnalysis(request, h.ports, new AbortController().signal, h.parent),
+    ).rejects.toThrow('CLIP_ANALYSIS_PROFILE_UNQUALIFIED')
+    expect(h.parent).not.toHaveBeenCalled()
+    expect(h.encoder.encode).not.toHaveBeenCalled()
+    expect(h.ports.reserve).not.toHaveBeenCalled()
+    expect(h.ports.upload).not.toHaveBeenCalled()
+    expect(h.ports.cancelParent).not.toHaveBeenCalled()
+    expect(h.ports.cancel).toHaveBeenCalledWith('prep', expect.any(AbortSignal))
+  })
   it('measures original VFR/44.1k independently and activates its parent before each sequential private copy', async () => {
     const h = harness()
     expect(

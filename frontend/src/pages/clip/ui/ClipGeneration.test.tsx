@@ -30,7 +30,26 @@ async function openApproval(amount: number) {
   return screen.findByRole('button', { name: `최대 ${amount} 크레딧 · 승인하고 생성` })
 }
 
-const preparationFixture = vi.hoisted(() => ({ unsupported: false, refused: false }))
+const preparationFixture = vi.hoisted(() => ({
+  unsupported: false,
+  refused: false,
+  runs: 0,
+  qualified: true,
+  profile: 'clip-browser-analysis-v1',
+}))
+
+// Qualified test readiness exercises the browser port without qualifying production.
+vi.mock('@/entities/clip-design', async (original) => ({
+  ...(await original<object>()),
+  CLIP_BROWSER_ANALYSIS_PREPARATION: {
+    get qualified() {
+      return preparationFixture.qualified
+    },
+    get profile() {
+      return preparationFixture.profile
+    },
+  },
+}))
 
 // The codec path has separate real-browser fixtures. These page tests exercise
 // quote and durable ownership transitions through the preparation port.
@@ -39,6 +58,7 @@ vi.mock('@/features/prepare-clip-browser', async (original) => ({
   usePrepareClipBrowser: () => ({
     preparation: {
       run: async (_input: unknown, startParent: (id: string) => Promise<{ jobId: string }>) => {
+        preparationFixture.runs++
         if (preparationFixture.unsupported) {
           preparationFixture.refused = true
           throw new Error('CLIP_ANALYSIS_ENCODER_UNSUPPORTED')
@@ -66,6 +86,9 @@ afterEach(() => {
   vi.restoreAllMocks()
   preparationFixture.unsupported = false
   preparationFixture.refused = false
+  preparationFixture.runs = 0
+  preparationFixture.qualified = true
+  preparationFixture.profile = 'clip-browser-analysis-v1'
   discardClipStorylineQueues()
   initializeI18n('ko')
 })
@@ -1259,4 +1282,50 @@ it('names a refused browser codec and never starts a parent or native preparatio
   expect(await screen.findByText(/필요한 영상·오디오 코덱을 지원하지 않아요/)).toBeVisible()
   expect(starts).toHaveLength(0)
   expect(calls).not.toContain('StartClipGeneration')
+})
+
+it.each(['storyline', 'generate', 'fromStoryline'] as const)(
+  'requires explicit server approval for %s when browser analysis is unqualified',
+  async (mode) => {
+    preparationFixture.qualified = false
+    // Even an unusable browser must not be touched by an explicitly approved native attempt.
+    preparationFixture.unsupported = true
+    const generationStarts: Array<{ analysisPreparationId?: string }> = []
+    const storylineStarts: Array<{ analysisPreparationId?: string }> = []
+    const clips = { generationStarts, storylineStarts }
+    let user: ReturnType<typeof userEvent.setup>
+    if (mode === 'fromStoryline') user = await storylineSpace({}, clips)
+    else {
+      mount(clips)
+      user = (await selectSource()).user
+    }
+    const action =
+      mode === 'storyline'
+        ? '스토리라인 먼저'
+        : mode === 'generate'
+          ? '바로 만들기'
+          : '이 스토리로 만들기'
+    const trigger = await screen.findByRole('button', { name: action })
+    await waitFor(() => expect(trigger).toBeEnabled())
+    await user.click(trigger)
+    const panel = within(await screen.findByRole('dialog', { name: action }))
+    expect(panel.getByText('서버에서 원본 영상을 준비하고 분석해요.')).toBeVisible()
+    expect(generationStarts).toHaveLength(0)
+    expect(storylineStarts).toHaveLength(0)
+    await user.dblClick(await panel.findByRole('button', { name: /^서버 분석 · 최대/ }))
+    const started = mode === 'storyline' ? storylineStarts : generationStarts
+    await waitFor(() => expect(started).toHaveLength(1))
+    expect(started[0]?.analysisPreparationId).toBe('')
+    expect(preparationFixture.runs).toBe(0)
+    expect(preparationFixture.refused).toBe(false)
+  },
+)
+
+it('does not activate a qualified readiness record for a different analysis profile', async () => {
+  preparationFixture.profile = 'unrecognized-profile'
+  mount()
+  const { user } = await selectSource()
+  await user.click(await screen.findByRole('button', { name: '바로 만들기' }))
+  expect(await screen.findByText('서버에서 원본 영상을 준비하고 분석해요.')).toBeVisible()
+  expect(preparationFixture.runs).toBe(0)
 })

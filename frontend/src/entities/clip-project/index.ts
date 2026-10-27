@@ -112,6 +112,7 @@ export {
 } from './api/analysis-preparation'
 export { CLIP_BROWSER_ANALYSIS_PROFILE } from './model/analysis-preparation'
 export type {
+  ClipAnalysisPreparationRoute,
   ClipAnalysisPreparation,
   ClipAnalysisPreparationInput,
   ClipAnalysisOriginalMeasurement,

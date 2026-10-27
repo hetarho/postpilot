@@ -5,6 +5,7 @@ import {
   useClipAnalysisEligibility,
   useClipProjectCalls,
   useClipProjectsKey,
+  type ClipAnalysisPreparationRoute,
   type ClipProject,
   type ClipQuote,
   type ClipQuoteMode,
@@ -86,6 +87,7 @@ export function useGenerateClip(
   project: ClipProject,
   ownedJobId?: string,
   browserPreparation?: BrowserPreparation,
+  preparationRoute: ClipAnalysisPreparationRoute = 'browser',
 ) {
   const planKey = useMyPlanQueryKey()
   const calls = useClipProjectCalls()
@@ -279,7 +281,7 @@ export function useGenerateClip(
     }
     try {
       const response =
-        input.kind === 'generate' && batch && browserPreparation
+        input.kind === 'generate' && batch && preparationRoute === 'browser' && browserPreparation
           ? await browserPreparation.run(
               {
                 projectId: project.id,
@@ -320,7 +322,10 @@ export function useGenerateClip(
         // cancels/fences it on failure without replaying a paid start.
       } else if (
         DEFINITE_REFUSALS.has(failure.reason) ||
-        (input.kind === 'generate' && !!browserPreparation && !parentAttempted)
+        (input.kind === 'generate' &&
+          preparationRoute === 'browser' &&
+          !!browserPreparation &&
+          !parentAttempted)
       ) {
         consumed.current.delete(input.batchId)
         ownership.rejected(input.batchId)
@@ -350,7 +355,7 @@ export function useGenerateClip(
       starting.current ||
       busy ||
       !settingsReady ||
-      !browserPreparation ||
+      (preparationRoute === 'browser' && !browserPreparation) ||
       !!project.finalized ||
       (!modelsReady && !quote.recovery?.renderOnly) ||
       !batch ||
@@ -419,6 +424,7 @@ export function useGenerateClip(
     await submit({ kind: 'render', batchId: batch.id, revision, reuseExisting }, ownership)
   }
   return {
+    preparationRoute,
     job,
     busy,
     modelsReady,

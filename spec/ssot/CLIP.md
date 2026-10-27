@@ -1,5 +1,5 @@
 # CLIP generated video projects and templates
-> r63 | Browser-first source-based vertical short-form creation for the Naver Clip and Instagram Clip channels, told from a linked post when there is one, with channel upload text, 체험단 advertiser guides, local animated components, qualified 15–60 second output and explicitly bounded Max server exports.
+> r64 | Browser-first source-based vertical short-form creation for the Naver Clip and Instagram Clip channels, told from a linked post when there is one, with channel upload text, 체험단 advertiser guides, local animated components, qualified 15–60 second output and explicitly bounded Max server exports.
 
 ## decisions
 - CLIP-1 [o] a clip project is independent of a post except for one optional linked post (→CLIP-215) and owns its clip channel (→CLIP-209), 체험단 글 switch and advertiser guide (→CLIP-210), upload text (→CLIP-211), title, chosen video template, template answers, owner instruction, intro/outro enablement, presets and slot instructions/text, target duration, aspect ratio, caption pace, accent, analysis, edit plan, the record of what it was asked for and latest successful result
@@ -413,6 +413,11 @@
 - CLIP-219 [o] an HLG source — BT.2020 primaries with the HLG transfer — is used as is: every consumer decodes it with its BT.2020 matrix and no tone mapping, as it decodes an SDR source, and the result stays SDR ← phones record HLG by default, and HLG is made to play on SDR screens
   - a PQ source (HDR10, HDR10+) or any other colour format outside these is refused before any work under CLIP-155
 
+- CLIP-220 [o] creation offers qualified server analysis preparation with an explicit server-labelled approval while browser analysis preparation is disabled or unqualified (→CLIP-32 →CLIP-203).
+  - the choice applies to storyline, direct creation and building from a storyline; it is disclosed before the existing quote approval and starts a new authorized attempt
+  - a browser attempt never switches route after refusal or failure; browser work starts only with a matching enabled, qualified readiness record and a qualified server preparation profile
+  - original retention, source/quote ownership, cancellation, credit ceilings and independent final-render entitlements stay under their existing rules; server analysis preparation is not a server-export entitlement
+
 ## flow
 - create: 네이버 클립 | 인스타 클립 → choose title and optional template (9:16) → arrange sources and explicitly retain any original sound → optionally link a post (글 연결) → choose regions, caption styles/pace, facts, target duration and instruction → optionally enable dubbing and choose a confirmed voice → choose 스토리라인 먼저 or 바로 만들기 → approve its remaining work
 - template: 형식 안내 복사 → outside AI writes the outline, or 원문 복사 hands it the template already saved → paste 원문, or build the same entries in the block builder → choose the design selection in the preview → validate with entry/line errors → save → offer for a project
@@ -424,7 +429,7 @@
 - revise: explicitly open AI editing and name target/selection → approve writing calls → rewrite current flow/narration on stored observations → validate and preserve owner-edited visible text → updated draft, with changed spoken segments stale → separately approve required speech regeneration → review timing conflicts → render
 - execute: the contract both kinds follow — validated assembly document + originals + owner source-audio choices + ready requested speech → apply declared cut/rate/crop/transition/audio operations → split and typeset exact caption text by fixed rules → encode result → measure the encoded output against CDS-52's output rules
 - steps: ① settings → 스토리라인 먼저 (→ ② storyline → 이 스토리로 만들기) | 바로 만들기 → ② review the plan, edit, render in either kind and download → flush saves and confirm a matching result in the finalization dialog → ③ result preview/download, with ① and ② readable
-- generate: approve ceiling and cancellation rule → browser measures matching originals and uploads only missing bounded analysis copies → server verifies authorized copy coverage/decodability → durable AI job reserves remaining work within approval → reuse compatible observations or observe missing chunks → compose ordinary or approved narrated assembly → validate and save plan → ② draft preview and settlement → recoverable copy cleanup and original-retention renewal
+- generate: approve the disclosed qualified preparation route, ceiling and cancellation rule → browser measures matching originals and uploads only missing bounded analysis copies for server verification, or the explicitly chosen server worker independently measures originals and prepares bounded copies → durable AI job reserves remaining work within approval → reuse compatible observations or observe missing chunks → compose ordinary or approved narrated assembly → validate and save plan → ② draft preview and settlement → recoverable copy cleanup and original-retention renewal
 - render: server plan/ownership checks → ② explicitly chooses its eligible kind
   - browser: freeze plan/components → locally decode originals and measure backgrounds → draw/mix/encode → verify output → local preview/download while uploading → commit private result → allow finalization
   - server: current entitlement and finite queue admission → reserve monthly slot → durable native media work over verified originals → verify/store output → commit its count once
@@ -460,7 +465,4 @@
 - displayed item identity and scene-to-fact meaning require representative video review; schema validity and a project-wide text match alone do not establish semantic correctness
 
 ## chg
-- r60 261015 CLIP-209+ clip channel per project (earlier projects 네이버 클립); CLIP-210+ 체험단 글 and advertiser guide on clips; CLIP-211+ CLIP-212+ channel upload text with platform limits; CLIP-213+ video template wizard; CLIP-214+ clip created from a post; CLIP-8✎ CLIP-130✎ ratio choice 9:16 · 16:9 · 1:1→new projects 9:16 only, earlier ratios kept; CLIP-1✎ CLIP-11✎ CLIP-41✎ channel, guide and legacy ratio; CLIP-3✎ home action and settings→clip channel entries and shared clip destinations; CLIP-42✎ 원문 behind 고급; CLIP-183✎ enabled 기본 지침→원칙 + enabled 기본 지침; CLIP-184✎ reason: an unswitchable check→meaning not mechanically checkable (no content check unchanged); CLIP-208✎ eight structures→wizard
-- r61 261015 CLIP-215+ CLIP-216+ CLIP-217+ CLIP-218+ a linked post as the clip's story: linked from either side, its text to every writing call, the storyline in its section order, videos placed by capture order; CLIP-1✎ independent of a post→independent except one optional link; CLIP-214✎ seeds the clip→seeds and links it; CLIP-69✎ CLIP-178✎ CLIP-211✎ inputs +the linked post's text, paragraphs follow template stages→the linked post's sections first; CLIP-141✎ +a stage without material is left out
-- r62 261015 CLIP-219+ HDR sources (BT.2020 HLG or PQ) accepted through one versioned SDR BT.709 conversion shared by preview, analysis, sampling and both render kinds; uncovered colour formats refused by name
-- r63 261015 CLIP-219✎ one versioned SDR conversion for HLG and PQ→HLG used as is with its BT.2020 matrix, PQ refused
+-

@@ -11,6 +11,8 @@ export const i18n = {
       retry: '다시 생성',
       storylineFirst: '스토리라인 먼저',
       makeNow: '바로 만들기',
+      serverPreparation: '서버에서 원본 영상을 준비하고 분석해요.',
+      serverPreparationApproval: '서버 분석 · {{approval}}',
 
       running: '클립을 만드는 중이에요',
       stage: {
@@ -82,6 +84,8 @@ export const i18n = {
       retry: 'Generate again',
       storylineFirst: 'Storyline first',
       makeNow: 'Make now',
+      serverPreparation: 'The server prepares and analyzes your original footage.',
+      serverPreparationApproval: 'Server analysis · {{approval}}',
 
       running: 'Creating your clip',
       stage: {
