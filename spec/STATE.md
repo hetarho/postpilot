@@ -11,7 +11,7 @@
 ## active
 | tag | host | mode | since | at | doing |
 |---|---|---|---|---|---|
-| prv | ihaelam-ui-MacBookPro | pair | 2026-10-27T15:57Z | 2026-10-27T15:57Z | T708 |
+| prv | ihaelam-ui-MacBookPro | pair | 2026-10-27T15:57Z | 2026-10-27T15:57Z | SSOT clip proof |
 
 ## inbox
 - 261016 suggest T694 T695 T698 T699 T700: review-code over channel navigation, campaign positioning, owned post links, frozen writing material and original capture metadata.
@@ -125,7 +125,6 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T708 | Bound and coalesce retained preview network reads | ARCH CLIP CDS | - | doing@261028.prv |
 | T539 | Qualify the complete Korean voice-creation milestone | ARCH DUB MODEL CDS THEME | T538 | blocked@261005 |
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
@@ -133,10 +132,11 @@
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
 
 ## next
-- Implement T708 retained-preview read coalescing, then run the SSOT-bound live/video proof within the shared USD0.20 cap; push earliest16:33:30 UTC.
+- Run the SSOT-bound live/video proof within the shared USD0.20 cap after T708 preview recovery; keep unmet release gates closed and record actual outcomes before the final push.
 - T697 production ranged-GET/CORS deployment gates and media verification succeeded for177b377a; a real production browser clip source-read check remains. Existing qualification blocks are unchanged.
 
 ## log
+- 261028 T708 done atc4f3254c: finite retained-preview reading, source-end rounding and distinct scene preparation/frame phases pass full4480 FE tests and actual R2/Chrome visual checks. Source and sanitized QA are committed locally; final batch push/CI and authorized cumulative USD0.20 real AI/video proof remain.
 - 261028 T708 verified locally: full562-file/4480-test FE suite, production type/build and changed-file lint/format pass. Real R2/Chrome preparation reports24 scene checks in42.238s and frames0/300/600/899 display correctly; owned local bytes take3.472s to first frame. Source checkpoint precedes the authorized budgeted AI/video proof; no push yet.
 - 261028 T708 starts (prv): actual Chrome decodes the retained HEVC originals but per-packet R2 reads consume the preview deadline during whole-plan contrast sampling. Restore bounded adjacent reads without changing the composition/output contract or qualification gates.
 - 261028 fix opaque GPU video frames: query an explicit RGBA copy-layout size without copying or replacing decoded frames; retain presentation reservations and cleanup. Actual Mac Chrome HEVC Main10 decoding exposed format=null; production preview previously threw allocationSize. Focused21 and affected345-file/2820-test checks plus production type/build pass. A separate remote-read latency issue remains under investigation; no preview completion claim or push yet.
@@ -153,4 +153,3 @@
 - 261027 clip delivery retry: owner requires PEM inspection and rejects additional Cloudflare OAuth; no further login attempts. GitHub check-run rerequest returns404 with existing repository credentials. Publish this operational record once through the existing main integration after the matching queue incident resolved; inspect all exact-revision checks and production worker bytes before claiming deployment.
 - 261027 build diagnosis: owner-provided b586b831 log stops at Installing nodejs24.18.0 / error occurred while installing tools or dependencies, before project build/deploy. Its00:34-00:53 KST initialization overlaps the resolved00:12-01:03 Cloudflare queue incident https://www.cloudflarestatus.com/incidents/dv2vbq9kbgxn; correlation does not establish the Node installer root cause. Node24.18.0 official Linux archives exist and the same version passed local/remote CI; preserve the toolchain.
 - 261027 PEM recovery evidence (cfd, pair): api.postpilot.haeram.me health and the CPU worker are healthy; frontend remains on Cloudflare with old analysis.worker-6tVvb6fF.js. Production-config-matched build, compiled VFR measurement/encoding and Wrangler dry-run pass for analysis.worker-CI2qrO_c.js (artifacts: /tmp/postpilot-cf-recovery-261027). Documentation-only retry reuses unchanged3432e285 full-CI evidence (4459 FE tests/89 BE packages/68 deploy tests); no backend/media deployment paths changed.
-- 261027 fix clip measurement verification: all local CI commands in docs/verification.md passed on Node24.18.0/Go1.26.4 (560 FE files/4459 tests,89 BE packages,68 deploy Python tests); generated code is unchanged. Chromium153 also completed measurement, preparation validation and150-frame analysis-copy encoding/inspection for the real VFR fixture. Frontend-only push does not trigger backend deployment/media image gates; check the pushed revision CI and Workers Builds result before claiming delivery.

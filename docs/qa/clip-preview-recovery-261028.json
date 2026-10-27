@@ -218,5 +218,6 @@
     "Private user media and signed capabilities are excluded. Visual evidence is retained privately.",
     "Identified macOS Chrome evidence does not qualify other devices or open T603/T604/voice release gates.",
     "Source changes are local; final batch CI/deployment remain pending until the authorized push."
-  ]
+  ],
+  "verifiedSourceCommit": "c4f3254ccc65552cb9a3156291afe53bde93d434"
 }
