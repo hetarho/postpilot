@@ -16,7 +16,102 @@ const response = (start: number, end: number, size = 80, bytes = new Uint8Array(
     },
   })
 
+function windowed(total = 32, size = 80) {
+  const fetcher = vi.fn(async (_url: unknown, init?: RequestInit) => {
+    const range = (init!.headers as Record<string, string>).Range.match(/bytes=(\d+)-(\d+)/u)!
+    const start = Number(range[1]),
+      end = Number(range[2]) + 1
+    return response(
+      start,
+      end,
+      size,
+      Uint8Array.from({ length: end - start }, (_, n) => start + n),
+    )
+  })
+  const controller = new AbortController()
+  const reader = createFiniteMediaSource(
+    { kind: 'url', url: 'private-url' },
+    { ...limits, maxReadTotalBytes: total, readAheadBytes: 8 },
+    controller.signal,
+    { fetch: fetcher },
+  )
+  return { reader, fetcher, controller }
+}
+
 describe('finite original access', () => {
+  it('coalesces adjacent URL reads on demand, returns detached exact slices and accounts actual wire bytes', async () => {
+    const { reader, fetcher } = windowed()
+    expect(fetcher).not.toHaveBeenCalled()
+    const first = await reader.read(9, 11)
+    first[0] = 99
+    expect([...(await reader.read(9, 11))]).toEqual([9, 10])
+    expect([...(await reader.read(13, 16))]).toEqual([13, 14, 15])
+    expect(fetcher).toHaveBeenCalledTimes(2) // one-byte bootstrap and one8-byte window
+    expect(reader.measurements()).toMatchObject({ reads: 1, bytesRead: 8, largestReadBytes: 8 })
+    reader.dispose()
+  })
+  it('shares an in-flight window and serializes a different concurrent window', async () => {
+    const { reader, fetcher } = windowed()
+    const values = await Promise.all([
+      reader.read(17, 19),
+      reader.read(22, 24),
+      reader.read(33, 35),
+    ])
+    expect(values.map((v) => [...v])).toEqual([
+      [17, 18],
+      [22, 23],
+      [33, 34],
+    ])
+    expect(fetcher).toHaveBeenCalledTimes(3)
+    expect(reader.measurements()).toMatchObject({ reads: 2, bytesRead: 16 })
+    reader.dispose()
+  })
+  it('clamps a final window to EOF and preserves direct reads spanning windows', async () => {
+    const { reader } = windowed(32, 19)
+    expect([...(await reader.read(18, 19))]).toEqual([18])
+    expect(reader.measurements()).toMatchObject({ reads: 1, bytesRead: 3 })
+    expect([...(await reader.read(6, 10))]).toEqual([6, 7, 8, 9])
+    expect(reader.measurements()).toMatchObject({ reads: 2, bytesRead: 7 })
+    reader.dispose()
+  })
+  it('refuses another window before fetching when actual wire bytes exhaust the total limit', async () => {
+    const { reader, fetcher } = windowed(8)
+    await reader.read(9, 10)
+    await expect(reader.read(17, 18)).rejects.toThrow('CLIP_SOURCE_MEMORY_LIMIT')
+    expect(fetcher).toHaveBeenCalledTimes(2)
+    expect(reader.measurements().bytesRead).toBe(8)
+    reader.dispose()
+  })
+  it('invalidates cached windows on cancellation and never fetches again', async () => {
+    const { reader, fetcher, controller } = windowed()
+    await reader.read(9, 10)
+    controller.abort()
+    await expect(reader.read(10, 11)).rejects.toThrow()
+    expect(fetcher).toHaveBeenCalledTimes(2)
+    reader.dispose()
+  })
+  it('retains exact206 validation for read-ahead and refuses a window outside the cache allowance', async () => {
+    const fetcher = vi.fn(async (_url: unknown, init?: RequestInit) => {
+      return (init!.headers as Record<string, string>).Range === 'bytes=0-0'
+        ? response(0, 1)
+        : response(8, 15)
+    })
+    const reader = createFiniteMediaSource(
+      { kind: 'url', url: 'private-url' },
+      { ...limits, readAheadBytes: 8 },
+      new AbortController().signal,
+      { fetch: fetcher },
+    )
+    await expect(reader.read(9, 10)).rejects.toThrow('CLIP_SOURCE_RANGE_INVALID')
+    reader.dispose()
+    expect(() =>
+      createFiniteMediaSource(
+        { kind: 'url', url: 'private-url' },
+        { ...limits, readAheadBytes: 16 },
+        new AbortController().signal,
+      ),
+    ).toThrow('CLIP_SOURCE_MEMORY_LIMIT')
+  })
   it('bootstraps signed GET with one byte and performs only requested finite ranges', async () => {
     const fetcher = vi.fn(async (_url: unknown, init?: RequestInit) => {
       const range = (init!.headers as Record<string, string>).Range.match(/bytes=(\d+)-(\d+)/u)!

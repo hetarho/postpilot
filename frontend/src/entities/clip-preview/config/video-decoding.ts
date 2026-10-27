@@ -13,6 +13,7 @@ export const CLIP_VIDEO_DECODING = {
   maxReadBytes: 4 * 1024 * 1024,
   maxReadTotalBytes: 512 * 1024 * 1024,
   maxCacheBytes: 1024 * 1024,
+  readAheadBytes: 512 * 1024,
   timeoutMs: 30_000,
   workerCleanupMs: 1000,
 } as const

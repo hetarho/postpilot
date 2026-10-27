@@ -137,7 +137,9 @@ export class BrowserFootageResources {
       const metadata = input.metadata
       if (
         metadata.durationFromMetadata !== null &&
-        layer.sourceEndUs > Math.round(metadata.durationFromMetadata * 1_000_000)
+        // Retained plans carry nearest-millisecond native source bounds. Compare
+        // on that same lattice, including a fractional final millisecond.
+        layer.sourceEndUs > Math.round(metadata.durationFromMetadata * 1000) * 1000
       )
         throw new MediaRangeError('CLIP_SOURCE_RANGE_UNSUPPORTED')
       if (

@@ -171,3 +171,32 @@ it('rejects unavailable video ranges and metadata without opening sample iterato
   expect(samples).not.toHaveBeenCalled()
   expect(candidate.dispose).toHaveBeenCalledOnce()
 })
+it.each([
+  [9.9996, true],
+  [9.9994, false],
+])(
+  'compares native millisecond cut bounds against %s-second metadata',
+  async (duration, allowed) => {
+    const saved = await snapshot(),
+      fake = open(),
+      candidate = await fake.factory()
+    candidate.metadata.durationFromMetadata = duration
+    const resources = new BrowserFootageResources(
+      saved,
+      async () => ({ kind: 'blob', blob: new Blob(['original']) }),
+      new AbortController().signal,
+      { open: async () => candidate },
+    )
+    if (allowed) {
+      const prepared = await resources.prepare(evaluateBrowserFrame(saved, 0))
+      expect(prepared).toHaveLength(1)
+      prepared.forEach(({ resource }) => resource.close())
+    } else {
+      await expect(resources.prepare(evaluateBrowserFrame(saved, 0))).rejects.toThrow(
+        'CLIP_SOURCE_RANGE_UNSUPPORTED',
+      )
+    }
+    await resources.dispose()
+    expect(candidate.dispose).toHaveBeenCalledOnce()
+  },
+)

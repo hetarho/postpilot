@@ -74,6 +74,11 @@ export function ClipBrowserDraftPreview(props: ClipBrowserDraftPreviewProps) {
     [refresh, setRefresh] = useState(0)
   const fingerprint = local?.snapshot.snapshotFingerprint
   const runtimeKey = `${fingerprint ?? ''}/${refresh}`
+  const [scenePreparation, setScenePreparation] = useState<{
+    key: string
+    done: number
+    total: number
+  }>()
   const [playKey, setPlayKey] = useState(''),
     [prepareKey, setPrepareKey] = useState('')
   const playing = playingState && playKey === runtimeKey && !flow && !suspended
@@ -114,7 +119,9 @@ export function ClipBrowserDraftPreview(props: ClipBrowserDraftPreviewProps) {
     frameOwner.current = new AbortController()
     pending.current = undefined
     lastRequested.current = ''
-    session.current?.cancel()
+    // Playhead/audio pauses fence frame requests. Whole-plan preparation belongs
+    // to the snapshot and survives a seek; initialize/dispose cancel that owner.
+    if (readyRef.current) session.current?.cancel()
   }, [])
   const draw = useRef<(time: number) => void>(() => {})
   const dispatch = useRef<(request: BrowserPreviewFrameRequest) => void>(() => {})
@@ -260,19 +267,23 @@ export function ClipBrowserDraftPreview(props: ClipBrowserDraftPreviewProps) {
       audioIdentity.current = signature
     }
     transport.current.setMuted(mutedRef.current)
-    void worker.initialize(runtime.snapshot, controller.signal).then(
-      () => {
+    void worker
+      .initialize(runtime.snapshot, controller.signal)
+      .then(async () => {
+        if (controller.signal.aborted) return
+        await worker.prepare(controller.signal, (done, total) => {
+          if (!controller.signal.aborted) setScenePreparation({ key: runtimeKey, done, total })
+        })
         if (!controller.signal.aborted) {
           readyRef.current = true
           setReadyKey(runtimeKey)
           draw.current(latest.current.timeMs ?? localClock.current)
         }
-      },
-      (failure: unknown) => {
+      })
+      .catch((failure: unknown) => {
         if (!controller.signal.aborted)
           setError(failure instanceof Error ? failure.message : 'CLIP_PREVIEW_FAILED')
-      },
-    )
+      })
     return () => {
       controller.abort()
       invalidate()
@@ -537,7 +548,13 @@ export function ClipBrowserDraftPreview(props: ClipBrowserDraftPreviewProps) {
               ? 'preview.expired'
               : error.includes('MISSING')
                 ? 'preview.missing'
-                : 'preview.mediaFailed',
+                : error.includes('CODEC_UNSUPPORTED')
+                  ? 'preview.codec'
+                  : error.includes('MEMORY_LIMIT')
+                    ? 'preview.memory'
+                    : error.includes('TIMEOUT')
+                      ? 'preview.timeout'
+                      : 'preview.mediaFailed',
           )}
         </Typography>
       )}
@@ -549,7 +566,9 @@ export function ClipBrowserDraftPreview(props: ClipBrowserDraftPreviewProps) {
         {error || preview.failure
           ? t('preview.preparationFailed')
           : !ready || preview.updating
-            ? t('preview.updating')
+            ? scenePreparation?.key === runtimeKey && scenePreparation.total > 0
+              ? t('preview.preparingScenes', scenePreparation)
+              : t('preview.updating')
             : t('preview.currentDraft')}
       </Typography>
       {(error || preview.failure) && (

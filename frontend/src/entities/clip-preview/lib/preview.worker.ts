@@ -114,6 +114,54 @@ async function initialize(id: number, value: unknown) {
   if (own !== generation) return
   send({ type: 'initialized', id })
 }
+async function prepareBackground(
+  signal: AbortSignal,
+  progress?: (done: number, total: number) => void,
+) {
+  if (!snapshot || !components) throw new Error('CLIP_PREVIEW_NOT_READY')
+  if (background) return background
+  const current = snapshot
+  if (!backgroundPending) {
+    const operation: Promise<BrowserBackgroundEvidence> = measureBrowserBackground(
+      current,
+      components,
+      access,
+      signal,
+      undefined,
+      progress,
+    ).catch((error) => {
+      if (current === snapshot && backgroundPending === operation) backgroundPending = undefined
+      throw error
+    })
+    backgroundPending = operation
+  }
+  const measured = await backgroundPending
+  signal.throwIfAborted()
+  if (snapshot !== current) throw new Error('CLIP_SNAPSHOT_SUPERSEDED')
+  background = measured
+  return measured
+}
+async function prepare(id: number, requestedEpoch: number) {
+  if (background) {
+    send({ type: 'prepared', id, epoch: requestedEpoch })
+    return
+  }
+  const ownGeneration = generation
+  await footage?.dispose()
+  footage = undefined
+  if (ownGeneration !== generation || requestedEpoch !== epoch)
+    throw new Error('CLIP_SNAPSHOT_SUPERSEDED')
+  frameOwner?.abort()
+  frameOwner = new AbortController()
+  const signal = frameOwner.signal
+  await prepareBackground(signal, (done, total) => {
+    if (!signal.aborted && requestedEpoch === epoch)
+      send({ type: 'preparing', id, epoch: requestedEpoch, done, total })
+  })
+  signal.throwIfAborted()
+  if (requestedEpoch !== epoch) throw new Error('CLIP_SNAPSHOT_SUPERSEDED')
+  send({ type: 'prepared', id, epoch: requestedEpoch })
+}
 async function render(request: { id: number; epoch: number } & BrowserPreviewFrameRequest) {
   if (!snapshot || !components || !context || !canvas) throw new Error('CLIP_PREVIEW_NOT_READY')
   const current = snapshot,
@@ -136,21 +184,8 @@ async function render(request: { id: number; epoch: number } & BrowserPreviewFra
   check()
   let measured = background
   if (!request.flow && !measured) {
-    if (!backgroundPending) {
-      const operation: Promise<BrowserBackgroundEvidence> = measureBrowserBackground(
-        current,
-        local,
-        access,
-        frameOwner!.signal,
-      ).catch((error) => {
-        if (current === snapshot && backgroundPending === operation) backgroundPending = undefined
-        throw error
-      })
-      backgroundPending = operation
-    }
-    measured = await backgroundPending
+    measured = await prepareBackground(frameOwner!.signal)
     check()
-    background = measured
   }
   let displayed: { cutId: string; sourceMs: number; outputMs: number }[] = []
   const frameFootage = footage
@@ -304,6 +339,17 @@ self.onmessage = (event: MessageEvent<BrowserPreviewWorkerInput>) => {
     footage = undefined
     pending = undefined
     backgroundPending = undefined
+    return
+  }
+  if (message.type === 'prepare') {
+    epoch = message.epoch
+    void prepare(message.id, message.epoch).catch((error) =>
+      send({
+        type: 'failed',
+        id: message.id,
+        error: error instanceof Error ? error.message : 'CLIP_PREVIEW_FAILED',
+      }),
+    )
     return
   }
   if (message.type === 'frame') {

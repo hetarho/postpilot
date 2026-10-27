@@ -1,0 +1,222 @@
+{
+  "schemaVersion": 1,
+  "scope": "Private retained-original preview recovery; real Chrome Workers, real source bytes and real R2 ranged reads. No provider work or qualification activation.",
+  "baseline": "8b1df02495077b4fde9eda0cc5fe282666dcfcd6",
+  "sourceFence": {
+    "frontend/src/entities/clip-preview/config/i18n.ts": "853491211f7941d8784df3f5f58f531b42d6151b88f83ca9dfde413ae721464a",
+    "frontend/src/entities/clip-preview/config/local-preview.ts": "cdf043b173749a706d3bff4310452b54adc75c90f7d1a06911200a47e6ab8027",
+    "frontend/src/entities/clip-preview/config/video-decoding.ts": "b3bdda233c5395041628d1c9b3f25270f96f8c12d2c0fdeeb953ad2789292c12",
+    "frontend/src/entities/clip-preview/lib/create-preview-worker.test.ts": "499f6ebdcf14f35aa46e99f73710a5a462266c09118d4d0d9b5ac92b56922360",
+    "frontend/src/entities/clip-preview/lib/create-preview-worker.ts": "6d1de7614a6d6da7099e6603bbd31e127f5d93b3171e6cb62d111916b669db91",
+    "frontend/src/entities/clip-preview/lib/preview.worker.ts": "360f5f68ecf8bcc1fbe7496576d37e9519d8c1957769b6df78929f32acddc8b4",
+    "frontend/src/entities/clip-preview/model/background-sampling.ts": "3c0f5317ea4eaff401c3af89f44c86c6165cd732c1f5881cc0ef896263e0b7e6",
+    "frontend/src/entities/clip-preview/model/browser-footage.test.ts": "95342c39fb5b4569eecb1eac47815aa9e3b4925173252680b3b2d68a38ff99a0",
+    "frontend/src/entities/clip-preview/model/browser-footage.ts": "8ad121257ab4d3518c6010e08cb31cb5cdf56b975f90bdd4d2518bb09c663d32",
+    "frontend/src/entities/clip-preview/model/preview-worker-protocol.ts": "b119ffcfe02bcf0c9167354c6316124889a0791151ee942055f934a3f747fc24",
+    "frontend/src/entities/clip-preview/ui/ClipBrowserDraftPreview.test.tsx": "5d230c9090f3bf31efd5836884ee632e9e73ab643fce95e8c68278b080d2c1c0",
+    "frontend/src/entities/clip-preview/ui/ClipBrowserDraftPreview.tsx": "0657d9be7a113b10c695e458bd5b8043926be8e32aa13ebdb12dd39a2f85d2b1",
+    "frontend/src/entities/clip-preview/ui/ClipDraftPreview.test.tsx": "3e388f92cdb58e2d2fc3ed2c657dd8defcc470ebcb4d392a62de29fe5541fbe8",
+    "frontend/src/shared/lib/media/video/range-source.test.ts": "0b383993bba67aefa66db1e1ac106a4b0f4232e1e42cb25d365639c501ed2468",
+    "frontend/src/shared/lib/media/video/range-source.ts": "1d562d32508f308dae013b17616e1b9ce87123695c7607ca94028b2ca424531c",
+    "frontend/src/shared/lib/media/video/range-video.ts": "1b5c4aa1a29a071c993e41f4fb131881b696516baca3f5c274c86d937a9a82eb",
+    "frontend/src/shared/lib/media/video/range-video.test.ts": "2924bce0f4df5b6c454cd8e8d5b59090278d4bac4ad23a5f3b7052883b2b95d4"
+  },
+  "device": {
+    "os": "26.5.2",
+    "architecture": "arm64",
+    "browser": "Installed Google Chrome, new isolated headless context",
+    "browserVersion": "156.0.8078.48"
+  },
+  "originals": {
+    "count": 8,
+    "codec": "HEVC Main10",
+    "displayWidth": 1440,
+    "displayHeight": 1920
+  },
+  "fixedFailures": [
+    "GPU-backed VideoFrame.format=null rejected by no-format allocationSize",
+    "one HTTP round trip per small packet",
+    "native nearest-ms end bound compared against browser microseconds",
+    "whole-plan preparation incorrectly timed as a single frame"
+  ],
+  "preparation": {
+    "elapsedMs": 42238,
+    "progress": [
+      {
+        "done": 0,
+        "total": 24,
+        "elapsedMs": 4
+      },
+      {
+        "done": 1,
+        "total": 24,
+        "elapsedMs": 1046
+      },
+      {
+        "done": 2,
+        "total": 24,
+        "elapsedMs": 2633
+      },
+      {
+        "done": 3,
+        "total": 24,
+        "elapsedMs": 4286
+      },
+      {
+        "done": 4,
+        "total": 24,
+        "elapsedMs": 5216
+      },
+      {
+        "done": 5,
+        "total": 24,
+        "elapsedMs": 7533
+      },
+      {
+        "done": 6,
+        "total": 24,
+        "elapsedMs": 9912
+      },
+      {
+        "done": 7,
+        "total": 24,
+        "elapsedMs": 10931
+      },
+      {
+        "done": 8,
+        "total": 24,
+        "elapsedMs": 13114
+      },
+      {
+        "done": 9,
+        "total": 24,
+        "elapsedMs": 14374
+      },
+      {
+        "done": 10,
+        "total": 24,
+        "elapsedMs": 14823
+      },
+      {
+        "done": 11,
+        "total": 24,
+        "elapsedMs": 16761
+      },
+      {
+        "done": 12,
+        "total": 24,
+        "elapsedMs": 18776
+      },
+      {
+        "done": 13,
+        "total": 24,
+        "elapsedMs": 20041
+      },
+      {
+        "done": 14,
+        "total": 24,
+        "elapsedMs": 22482
+      },
+      {
+        "done": 15,
+        "total": 24,
+        "elapsedMs": 24493
+      },
+      {
+        "done": 16,
+        "total": 24,
+        "elapsedMs": 25531
+      },
+      {
+        "done": 17,
+        "total": 24,
+        "elapsedMs": 28231
+      },
+      {
+        "done": 18,
+        "total": 24,
+        "elapsedMs": 31561
+      },
+      {
+        "done": 19,
+        "total": 24,
+        "elapsedMs": 32308
+      },
+      {
+        "done": 20,
+        "total": 24,
+        "elapsedMs": 34636
+      },
+      {
+        "done": 22,
+        "total": 24,
+        "elapsedMs": 37629
+      },
+      {
+        "done": 23,
+        "total": 24,
+        "elapsedMs": 39821
+      },
+      {
+        "done": 24,
+        "total": 24,
+        "elapsedMs": 42237
+      }
+    ]
+  },
+  "frames": [
+    {
+      "frame": 0,
+      "displayed": 1,
+      "width": 540,
+      "height": 960,
+      "elapsedMs": 908
+    },
+    {
+      "frame": 300,
+      "displayed": 1,
+      "width": 540,
+      "height": 960,
+      "elapsedMs": 4728
+    },
+    {
+      "frame": 600,
+      "displayed": 1,
+      "width": 540,
+      "height": 960,
+      "elapsedMs": 6484
+    },
+    {
+      "frame": 899,
+      "displayed": 1,
+      "width": 540,
+      "height": 960,
+      "elapsedMs": 10693
+    }
+  ],
+  "errors": [],
+  "localFilePath": {
+    "preparationAndFirstFrameMs": 3472,
+    "fourFrameElapsedMs": 4770
+  },
+  "productionServerResult": {
+    "width": 1080,
+    "height": 1920,
+    "fps": 30,
+    "frames": 900,
+    "durationMs": 30000,
+    "bytes": 31773696,
+    "requestedAudio": false
+  },
+  "tests": {
+    "frontendFiles": 562,
+    "frontendTests": 4480,
+    "targetedWorkerAndUIAndMediaFiles": 6,
+    "targetedTests": 55
+  },
+  "limits": [
+    "Private user media and signed capabilities are excluded. Visual evidence is retained privately.",
+    "Identified macOS Chrome evidence does not qualify other devices or open T603/T604/voice release gates.",
+    "Source changes are local; final batch CI/deployment remain pending until the authorized push."
+  ]
+}

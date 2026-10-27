@@ -61,6 +61,7 @@ export async function measureBrowserBackground(
   access: BrowserSourceAccess,
   signal: AbortSignal,
   observed?: (diagnostics: BrowserBackgroundDiagnostics) => void,
+  progress?: (done: number, total: number) => void,
 ): Promise<BrowserBackgroundEvidence> {
   signal.throwIfAborted()
   if (typeof OffscreenCanvas === 'undefined') throw new ClipInkError('CLIP_BACKGROUND_UNSUPPORTED')
@@ -111,6 +112,7 @@ export async function measureBrowserBackground(
         throw new ClipInkError('CLIP_BACKGROUND_MEMORY_LIMIT')
     }
     reads.sort((a, b) => a.frame - b.frame || a.visual - b.visual || a.ordinal - b.ordinal)
+    progress?.(0, reads.length)
     for (let start = 0; start < reads.length;) {
       const frame = reads[start]!.frame
       let end = start + 1
@@ -199,6 +201,7 @@ export async function measureBrowserBackground(
         prepared.forEach((p) => p.resource.close())
       }
       start = end
+      progress?.(end, reads.length)
     }
     check()
     for (let i = 0; i < visuals.length; i++) {

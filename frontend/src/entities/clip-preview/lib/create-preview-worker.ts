@@ -18,7 +18,8 @@ export class BrowserPreviewWorker {
   private pending = new Map<
     number,
     {
-      kind: 'initialize' | 'frame'
+      kind: 'initialize' | 'prepare' | 'frame'
+      progress?: (done: number, total: number) => void
       resolve: (value: BrowserPreviewFrameResult | undefined) => void
       reject: (error: unknown) => void
       cleanup: () => void
@@ -67,6 +68,11 @@ export class BrowserPreviewWorker {
         if (message.type === 'rendered') message.result.bitmap.close()
         return
       }
+      if (message.type === 'preparing') {
+        if (message.epoch === this.epoch && waiter.kind === 'prepare' && !this.disposed)
+          waiter.progress?.(message.done, message.total)
+        return
+      }
       waiter.cleanup()
       this.pending.delete(message.id)
       if (message.type === 'failed') waiter.reject(new Error(message.error))
@@ -79,7 +85,9 @@ export class BrowserPreviewWorker {
           message.result.bitmap.close()
           waiter.reject(new Error('CLIP_SNAPSHOT_SUPERSEDED'))
         } else waiter.resolve(message.result)
-      } else waiter.resolve(undefined)
+      } else if (message.type === 'prepared' && (message.epoch !== this.epoch || this.disposed))
+        waiter.reject(new Error('CLIP_SNAPSHOT_SUPERSEDED'))
+      else waiter.resolve(undefined)
     }
     this.worker.onerror = (event) =>
       this.fail(new Error(event.message || 'CLIP_PREVIEW_WORKER_FAILED'))
@@ -89,8 +97,9 @@ export class BrowserPreviewWorker {
     if (!this.disposed) this.worker.postMessage(message)
   }
   private call(
-    message: Extract<BrowserPreviewWorkerInput, { type: 'initialize' | 'frame' }>,
+    message: Extract<BrowserPreviewWorkerInput, { type: 'initialize' | 'prepare' | 'frame' }>,
     signal: AbortSignal,
+    progress?: (done: number, total: number) => void,
   ) {
     return new Promise<BrowserPreviewFrameResult | undefined>((resolve, reject) => {
       signal.throwIfAborted()
@@ -99,18 +108,23 @@ export class BrowserPreviewWorker {
         this.pending.delete(message.id)
         reject(signal.reason)
       }
-      const timer = setTimeout(() => {
-        this.pending.get(message.id)?.cleanup()
-        this.pending.delete(message.id)
-        reject(new Error('CLIP_PREVIEW_TIMEOUT'))
-        this.cancel()
-      }, CLIP_LOCAL_PREVIEW.operationTimeoutMs)
+      const timer = setTimeout(
+        () => {
+          this.pending.get(message.id)?.cleanup()
+          this.pending.delete(message.id)
+          reject(new Error('CLIP_PREVIEW_TIMEOUT'))
+          this.cancel()
+        },
+        message.type === 'prepare'
+          ? CLIP_LOCAL_PREVIEW.preparationTimeoutMs
+          : CLIP_LOCAL_PREVIEW.operationTimeoutMs,
+      )
       const cleanup = () => {
         clearTimeout(timer)
         signal.removeEventListener('abort', cancelled)
       }
       signal.addEventListener('abort', cancelled, { once: true })
-      this.pending.set(message.id, { kind: message.type, resolve, reject, cleanup })
+      this.pending.set(message.id, { kind: message.type, resolve, reject, cleanup, progress })
       this.send(message)
     })
   }
@@ -127,6 +141,9 @@ export class BrowserPreviewWorker {
       signal,
     ))!
   }
+  async prepare(signal: AbortSignal, progress?: (done: number, total: number) => void) {
+    await this.call({ type: 'prepare', id: ++this.nextId, epoch: this.epoch }, signal, progress)
+  }
   cancel() {
     this.epoch++
     for (const [id, controller] of this.accesses) {
@@ -136,7 +153,7 @@ export class BrowserPreviewWorker {
     this.accesses.clear()
     this.send({ type: 'cancel', epoch: this.epoch })
     for (const [id, waiter] of this.pending)
-      if (waiter.kind === 'frame') {
+      if (waiter.kind === 'frame' || waiter.kind === 'prepare') {
         waiter.cleanup()
         waiter.reject(new Error('CLIP_SNAPSHOT_SUPERSEDED'))
         this.pending.delete(id)

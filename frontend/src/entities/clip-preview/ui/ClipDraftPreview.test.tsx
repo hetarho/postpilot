@@ -331,7 +331,7 @@ it('refreshes a failed signed URL once and keeps codec failure explicit', async 
   fireEvent.error(codec)
   expect(
     await screen.findByText(
-      '이 브라우저에서는 원본 형식을 재생할 수 없어요. 글과 시간은 계속 수정할 수 있어요.',
+      '이 브라우저에서는 원본 형식을 재생할 수 없어요. 원본 형식을 지원하는 브라우저나 기기에서 열어 주세요. 글과 시간은 계속 수정할 수 있어요.',
     ),
   ).toBeVisible()
 })

@@ -8,6 +8,8 @@ export interface MediaRangeLimits {
   maxReadTotalBytes: number
   maxCacheBytes: number
   timeoutMs: number
+  /** Optional adjacent URL bytes, sharing maxCacheBytes with the parser cache. */
+  readAheadBytes?: number
 }
 export interface MediaRangeMeasurements {
   reads: number
@@ -25,7 +27,7 @@ export interface MediaRangePorts {
   read?: (bytes: number, elapsedMs: number) => void
 }
 
-/** A finite range reader with no network prefetch or eager full-original fetch.
+/** A finite range reader with an optional bounded on-demand network window.
  * https://mediabunny.dev/guide/reading-media-files#customsource
  */
 export function createFiniteMediaSource(
@@ -36,8 +38,17 @@ export function createFiniteMediaSource(
 ) {
   for (const n of Object.values(limits))
     if (!Number.isSafeInteger(n) || n <= 0) throw new MediaRangeError('CLIP_SOURCE_MEMORY_LIMIT')
+  const readAhead = access.kind === 'url' ? (limits.readAheadBytes ?? 0) : 0
+  if (readAhead >= limits.maxCacheBytes || readAhead > limits.maxReadBytes)
+    throw new MediaRangeError('CLIP_SOURCE_MEMORY_LIMIT')
+  let cached: { start: number; end: number; bytes: Uint8Array } | undefined
+  let pending: { start: number; end: number; bytes: Promise<Uint8Array> } | undefined
   const controller = new AbortController()
-  const abort = () => controller.abort(signal.reason)
+  const abort = () => {
+    cached = undefined
+    pending = undefined
+    controller.abort(signal.reason)
+  }
   signal.addEventListener('abort', abort, { once: true })
   if (signal.aborted) abort()
   const state: MediaRangeMeasurements = {
@@ -128,22 +139,11 @@ export function createFiniteMediaSource(
       // proves that this server honors ranges before reading media.
       return (await request(0, 1)).size
     })())
-  const read = async (start: number, end: number) => {
-    check()
-    const size = await getSize()
+  const load = async (start: number, end: number, size: number) => {
     const count = end - start
-    if (
-      !Number.isSafeInteger(start) ||
-      !Number.isSafeInteger(end) ||
-      start < 0 ||
-      end > size ||
-      count <= 0 ||
-      count > limits.maxReadBytes ||
-      state.bytesRead + count > limits.maxReadTotalBytes
-    )
-      fail('CLIP_SOURCE_MEMORY_LIMIT')
+    if (state.bytesRead + count > limits.maxReadTotalBytes) fail('CLIP_SOURCE_MEMORY_LIMIT')
     const began = performance.now()
-    // Reserve accounting before await so concurrent parser requests share the cap.
+    // Actual wire/slice bytes are reserved before await, including read-ahead.
     state.bytesRead += count
     state.reads++
     state.largestReadBytes = Math.max(state.largestReadBytes, count)
@@ -155,17 +155,61 @@ export function createFiniteMediaSource(
     ports.read?.(count, performance.now() - began)
     return bytes
   }
+  const read = async (start: number, end: number): Promise<Uint8Array> => {
+    check()
+    const size = await getSize()
+    const count = end - start
+    if (
+      !Number.isSafeInteger(start) ||
+      !Number.isSafeInteger(end) ||
+      start < 0 ||
+      end > size ||
+      count <= 0 ||
+      count > limits.maxReadBytes
+    )
+      fail('CLIP_SOURCE_MEMORY_LIMIT')
+    if (!readAhead || count > readAhead) return load(start, end, size)
+    if (cached && cached.start <= start && end <= cached.end)
+      return cached.bytes.slice(start - cached.start, end - cached.start)
+    if (pending) {
+      const own = pending
+      const bytes = await own.bytes
+      check()
+      if (own.start <= start && end <= own.end)
+        return bytes.slice(start - own.start, end - own.start)
+      // Serialize different windows, so parallel parser requests cannot retain
+      // an unbounded set of adjacent-read buffers.
+      return read(start, end)
+    }
+    const first = Math.floor(start / readAhead) * readAhead
+    const last = Math.min(size, first + readAhead)
+    if (end > last) return load(start, end, size)
+    cached = undefined
+    const own = { start: first, end: last, bytes: load(first, last, size) }
+    pending = own
+    try {
+      const bytes = await own.bytes
+      check()
+      cached = { start: first, end: last, bytes }
+      // The parser must not retain an entire window behind a tiny subarray.
+      return bytes.slice(start - first, end - first)
+    } finally {
+      if (pending === own) pending = undefined
+    }
+  }
   const source = new CustomSource({
     getSize,
     read,
     dispose() {
       signal.removeEventListener('abort', abort)
-      controller.abort()
+      abort()
     },
-    maxCacheSize: limits.maxCacheBytes,
+    maxCacheSize: limits.maxCacheBytes - readAhead,
     prefetchProfile: 'none',
     handleUnhandledError(error) {
       failure = error
+      cached = undefined
+      pending = undefined
       controller.abort(error)
     },
   })
@@ -176,7 +220,7 @@ export function createFiniteMediaSource(
     measurements: () => ({ ...state }),
     dispose: () => {
       signal.removeEventListener('abort', abort)
-      controller.abort()
+      abort()
     },
   }
 }

@@ -18,12 +18,15 @@ export interface BrowserPreviewFrameResult {
 }
 export type BrowserPreviewWorkerInput =
   | { type: 'initialize'; id: number; snapshot: BrowserCompositionSnapshot }
+  | { type: 'prepare'; id: number; epoch: number }
   | ({ type: 'frame'; id: number; epoch: number } & BrowserPreviewFrameRequest)
   | { type: 'cancel'; epoch: number }
   | { type: 'source'; id: number; access?: BrowserMediaSourceAccess; error?: string }
   | { type: 'dispose' }
 export type BrowserPreviewWorkerOutput =
   | { type: 'initialized'; id: number }
+  | { type: 'prepared'; id: number; epoch: number }
+  | { type: 'preparing'; id: number; epoch: number; done: number; total: number }
   | { type: 'rendered'; id: number; epoch: number; result: BrowserPreviewFrameResult }
   | { type: 'failed'; id: number; error: string }
   | {
