@@ -1,0 +1,255 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-28",
+  "sourceCommit": "c4f3254ccc65552cb9a3156291afe53bde93d434",
+  "qualification": false,
+  "ownerApproval": {
+    "cumulativeOpenRouterCapMicrousd": 200000,
+    "providerOnly": "OpenRouter",
+    "paidSpeechCalls": 0
+  },
+  "analysisArtifacts": {
+    "originalCount": 8,
+    "verifiedCount": 24,
+    "arms": {
+      "browser": 8,
+      "native": 8,
+      "reference": 8
+    },
+    "fullVerifierPassed": true,
+    "browserEncoder": "actual production createAnalysisEncoder and AAC worker in Chrome",
+    "nativeEncoder": "actual production media.Adapter",
+    "referenceEncoder": "bounded diagnostic CRF12/maxrate3Mbps; otherwise matched production dimensions/FPS/audio"
+  },
+  "actualObservation": {
+    "model": "openrouter/google/gemini-3.8-flash",
+    "successfulSources": 8,
+    "arm": "browser",
+    "repetitions": 1,
+    "completionTokenCeiling": 8192,
+    "reasoning": "low",
+    "promptVersion": "clip-observe-v2",
+    "providerSampling": "inline static video; no unsupported provider FPS/detail override sent; actual internal sampling unknown",
+    "schemaVersion": "sha256:963647aed16d49e2e21f9230ea9e4091f053077518e4c6f856ed4467e6a40f58"
+  },
+  "cost": {
+    "confirmedMicrousd": 10868,
+    "unresolvedWorstCaseMicrousd": 25001,
+    "conservativeTotalExposureMicrousd": 35869,
+    "halted": true,
+    "calls": [
+      {
+        "sequence": 0,
+        "stage": "observe",
+        "model": "openrouter/google/gemini-3.8-flash",
+        "status": "completed",
+        "upperMicrousd": 26633,
+        "actualMicrousd": 1284,
+        "promptTokens": 1603,
+        "completionTokens": 364
+      },
+      {
+        "sequence": 1,
+        "stage": "observe",
+        "model": "openrouter/google/gemini-3.8-flash",
+        "status": "completed",
+        "upperMicrousd": 26633,
+        "actualMicrousd": 1004,
+        "promptTokens": 1427,
+        "completionTokens": 250
+      },
+      {
+        "sequence": 2,
+        "stage": "observe",
+        "model": "openrouter/google/gemini-3.8-flash",
+        "status": "completed",
+        "upperMicrousd": 26633,
+        "actualMicrousd": 1629,
+        "promptTokens": 1858,
+        "completionTokens": 497
+      },
+      {
+        "sequence": 3,
+        "stage": "observe",
+        "model": "openrouter/google/gemini-3.8-flash",
+        "status": "completed",
+        "upperMicrousd": 26633,
+        "actualMicrousd": 1151,
+        "promptTokens": 1689,
+        "completionTokens": 276
+      },
+      {
+        "sequence": 4,
+        "stage": "observe",
+        "model": "openrouter/google/gemini-3.8-flash",
+        "status": "completed",
+        "upperMicrousd": 26633,
+        "actualMicrousd": 2004,
+        "promptTokens": 1603,
+        "completionTokens": 748
+      },
+      {
+        "sequence": 5,
+        "stage": "observe",
+        "model": "openrouter/google/gemini-3.8-flash",
+        "status": "completed",
+        "upperMicrousd": 26633,
+        "actualMicrousd": 1191,
+        "promptTokens": 1515,
+        "completionTokens": 332
+      },
+      {
+        "sequence": 6,
+        "stage": "observe",
+        "model": "openrouter/google/gemini-3.8-flash",
+        "status": "completed",
+        "upperMicrousd": 26633,
+        "actualMicrousd": 1292,
+        "promptTokens": 1604,
+        "completionTokens": 368
+      },
+      {
+        "sequence": 7,
+        "stage": "observe",
+        "model": "openrouter/google/gemini-3.8-flash",
+        "status": "completed",
+        "upperMicrousd": 26633,
+        "actualMicrousd": 1313,
+        "promptTokens": 1516,
+        "completionTokens": 397
+      },
+      {
+        "sequence": 8,
+        "stage": "write",
+        "model": "openrouter/qwen/qwen3.8-flash",
+        "status": "halted",
+        "upperMicrousd": 25001,
+        "actualMicrousd": null,
+        "promptTokens": 0,
+        "completionTokens": 0
+      }
+    ]
+  },
+  "planningFailure": {
+    "model": "openrouter/qwen/qwen3.8-flash",
+    "completionTokenCeiling": 32768,
+    "attempts": 1,
+    "usageReported": false,
+    "subsequentPaidCalls": 0,
+    "activityReadOnlyStatus": 403,
+    "cause": "No response usage or generation ID was captured. The exact provider error was not retained by the temporary harness and is unknown. The durable reservation remains unresolved; no ledger reset, reroute or paid retry occurred."
+  },
+  "outputs": [
+    {
+      "index": 0,
+      "sha256": "8f545f7a1e5cd6ab6606927655c443c942f7bae83e0750ba76e23080a197c8ad",
+      "bytes": 31267740,
+      "width": 1080,
+      "height": 1920,
+      "codec": "h264",
+      "profile": "High",
+      "fps": "30/1",
+      "frames": 900,
+      "duration": 30.0,
+      "audio": false,
+      "fullDecodeExit": 0,
+      "contactExit": 0,
+      "style": "serif",
+      "elapsedMs": 8405,
+      "browser": "156.0.8078.48",
+      "playback": {
+        "duration": 30,
+        "width": 1080,
+        "height": 1920,
+        "seeks": [
+          0.1,
+          15,
+          29.9
+        ],
+        "advanced": 30
+      },
+      "publicationVerdict": false,
+      "privateOutputAdmission": false,
+      "transportFixtureFailures": [
+        "attempt1: dynamic JS chunk route missing",
+        "attempt2: static font/ink asset route missing"
+      ],
+      "finalPlaybackErrors": []
+    },
+    {
+      "index": 1,
+      "sha256": "3eec60fbbea7ef5dc168a4991d1105b9c1302f071bab2fbcc80b3d3239f679b7",
+      "bytes": 30915944,
+      "width": 1080,
+      "height": 1920,
+      "codec": "h264",
+      "profile": "High",
+      "fps": "30/1",
+      "frames": 900,
+      "duration": 30.0,
+      "audio": false,
+      "fullDecodeExit": 0,
+      "contactExit": 0,
+      "style": "bold",
+      "elapsedMs": 9546,
+      "browser": "156.0.8078.48",
+      "playback": {
+        "duration": 30,
+        "width": 1080,
+        "height": 1920,
+        "seeks": [
+          0.1,
+          15,
+          29.9
+        ],
+        "advanced": 30
+      },
+      "publicationVerdict": false,
+      "privateOutputAdmission": false,
+      "transportFixtureFailures": [
+        "attempt1: dynamic JS chunk route missing",
+        "attempt2: static font/ink asset route missing"
+      ],
+      "finalPlaybackErrors": []
+    }
+  ],
+  "limitations": [
+    "The two new browser MP4s render the same prior actual production AI plan, using separate private serif/bold design variants; they are not two newly successful full AI planning pipelines.",
+    "Product publication verdict is false because these private local encodes carry no server-authored admission binding; no production result is promoted or qualification flag fabricated.",
+    "Reference/native semantic model repetitions, Korean small text/number/speech/fast-action/focus corpus, independent human source-time truth and human output review remain missing.",
+    "No Windows or resource-constrained hardware proof; browser analysis/export and voice activation remain closed.",
+    "Serif contrast shortfalls remain observable notices; bold captions were visually easier to read in an agent review, which does not count as human review.",
+    "Playback used local retained original bytes in a private Chrome context; T708 separately proves actual production R2 range reads."
+  ],
+  "verification": {
+    "frontendFull": {
+      "files": 562,
+      "tests": 4480,
+      "sourceCommit": "c4f3254ccc65552cb9a3156291afe53bde93d434",
+      "log": "check-4e90491e-59d3-4c3a-aa6c-2601b6976d6e.log"
+    },
+    "currentPasses": [
+      "pnpm test:dev",
+      "pnpm gen:proto; generated diff empty",
+      "pnpm gen:sql; backend diff empty",
+      "pnpm lint",
+      "pnpm lint:fsd",
+      "pnpm lint:retirement",
+      "pnpm lint:style:probe",
+      "pnpm lint:style",
+      "pnpm exec haeram-spec-creator check",
+      "go -C backend test ./internal/clip/diagnostic/analysisquality ./internal/clip/ai ./internal/llm/..."
+    ],
+    "reusedUnchangedInputs": [
+      "Production-config pnpm build:web including tsc passed for c4f3254c; no later runtime changes.",
+      "Full backend/vet/build/deploy/generated evidence from3432e285/42c57c1b, repeated backend consumers and exact310959b7 CI40530990767; backend/proto/dependency/workflow/deploy inputs remain identical."
+    ],
+    "temporaryHarnessFailures": [
+      "First task-check command used Go without -C backend, so root-module lookup failed before any test; corrected command passed.",
+      "First shell-combined style invocation lost command grouping in CLI forwarding and ran pnpm help; each actual style/skill command then passed independently."
+    ],
+    "pending": [
+      "Exact final-revision CI and Cloudflare deployment after push."
+    ]
+  }
+}

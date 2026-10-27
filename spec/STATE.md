@@ -8,11 +8,6 @@
 - docs: en
 - push: main
 
-## active
-| tag | host | mode | since | at | doing |
-|---|---|---|---|---|---|
-| prv | ihaelam-ui-MacBookPro | pair | 2026-10-27T15:57Z | 2026-10-27T15:57Z | SSOT clip proof |
-
 ## inbox
 - 261016 suggest T694 T695 T698 T699 T700: review-code over channel navigation, campaign positioning, owned post links, frozen writing material and original capture metadata.
 - 261016 decided T700: how is EXIF without a UTC offset normalized? → omit the unknown instant and retain filename-based order as fallback (alt: invent the browser’s current time zone | label the local wall clock as UTC); use bounded mvhd parsing because the installed Mediabunny skips that creation field.
@@ -125,6 +120,7 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
+| T709 | Prove the real clip pipeline within the approved live budget | ARCH CLIP QUOTA | T708 | blocked@261028 |
 | T539 | Qualify the complete Korean voice-creation milestone | ARCH DUB MODEL CDS THEME | T538 | blocked@261005 |
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
@@ -132,10 +128,12 @@
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
 
 ## next
-- Run the SSOT-bound live/video proof within the shared USD0.20 cap after T708 preview recovery; keep unmet release gates closed and record actual outcomes before the final push.
+- T708 preview repair is verified; publish the final batch and inspect exact-revision CI/Workers deployment. T709 retains24 verified copies,8 real AI analyses and2 playable browser outputs; fresh planning is blocked by unresolved provider usage, with T603/T604/voice gates closed.
 - T697 production ranged-GET/CORS deployment gates and media verification succeeded for177b377a; a real production browser clip source-read check remains. Existing qualification blocks are unchanged.
 
 ## log
+- 261028 T709 blocked:8 real browser observations confirm USD0.010868; the next write request has missing usage, so its USD0.025001 reservation remains unresolved and further paid work stops.24 full-verified analysis artifacts and2 independently decoded/Chrome-played1080x1920/30fps/30s exports of the prior real AI plan are retained privately. No fresh full-pipeline or qualification claim; source credentials removed, human review requested.
+- 261028 T709 starts (prv, explore2h): pursue real browser/native copy comparison and repeated metered OpenRouter-to-playable-video proof under the owner cumulative USD0.20 cap. Source checkpoint c4f3254c passes preview4480 FE tests; no live diagnostic call has yet been sent. Preserve real qualification/human-review gates and the existing user result.
 - 261028 T708 done atc4f3254c: finite retained-preview reading, source-end rounding and distinct scene preparation/frame phases pass full4480 FE tests and actual R2/Chrome visual checks. Source and sanitized QA are committed locally; final batch push/CI and authorized cumulative USD0.20 real AI/video proof remain.
 - 261028 T708 verified locally: full562-file/4480-test FE suite, production type/build and changed-file lint/format pass. Real R2/Chrome preparation reports24 scene checks in42.238s and frames0/300/600/899 display correctly; owned local bytes take3.472s to first frame. Source checkpoint precedes the authorized budgeted AI/video proof; no push yet.
 - 261028 T708 starts (prv): actual Chrome decodes the retained HEVC originals but per-packet R2 reads consume the preview deadline during whole-plan contrast sampling. Restore bounded adjacent reads without changing the composition/output contract or qualification gates.
@@ -151,5 +149,3 @@
 - 261027 analysis verification stall start (avf, pair): owner reports the deployed clip flow remains at browser analysis verification after the source measurement repair; trace the preparation workflow and inspect the PEM production host, preserving unrelated ideation changes.
 - 261027 clip production verification:42c57c1b native build b42c8c7f-85d0-47b1-97bf-8110456e852c succeeded (version31a96f6e-b945-4471-bde2-5337af6ff832) without new OAuth or toolchain changes; GitHub CI40504156313 passed for the exact deployed revision. The live screen now loads analysis.worker-CI2qrO_c.js, byte-identical to the verified artifact (SHA256 f566c4cf5ac708ebec90ffa611a3439e813dd94d792b401456d2c92a4ed41689); Chromium measured300 VFR frames and encoded/inspected150 analysis frames on the production origin. Public configuration is unchanged. Evidence: /tmp/postpilot-cf-recovery-261027/production-worker-verification.json.
 - 261027 clip delivery retry: owner requires PEM inspection and rejects additional Cloudflare OAuth; no further login attempts. GitHub check-run rerequest returns404 with existing repository credentials. Publish this operational record once through the existing main integration after the matching queue incident resolved; inspect all exact-revision checks and production worker bytes before claiming deployment.
-- 261027 build diagnosis: owner-provided b586b831 log stops at Installing nodejs24.18.0 / error occurred while installing tools or dependencies, before project build/deploy. Its00:34-00:53 KST initialization overlaps the resolved00:12-01:03 Cloudflare queue incident https://www.cloudflarestatus.com/incidents/dv2vbq9kbgxn; correlation does not establish the Node installer root cause. Node24.18.0 official Linux archives exist and the same version passed local/remote CI; preserve the toolchain.
-- 261027 PEM recovery evidence (cfd, pair): api.postpilot.haeram.me health and the CPU worker are healthy; frontend remains on Cloudflare with old analysis.worker-6tVvb6fF.js. Production-config-matched build, compiled VFR measurement/encoding and Wrangler dry-run pass for analysis.worker-CI2qrO_c.js (artifacts: /tmp/postpilot-cf-recovery-261027). Documentation-only retry reuses unchanged3432e285 full-CI evidence (4459 FE tests/89 BE packages/68 deploy tests); no backend/media deployment paths changed.
