@@ -1,4 +1,4 @@
-import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from '@tanstack/react-router'
 import { ArrowLeft } from 'lucide-react'
@@ -65,6 +65,9 @@ interface DraftEditorProps {
    *  none, which starts the draft on 말투 없음 (POST-101). Ignored for an existing post, whose
    *  voice is its own. */
   defaultVoice?: Pick<Voice, 'id' | 'made'>
+  /** A template the wizard opened from ①'s 템플릿 picker just saved (TMPL-32): assigned once
+   *  through the ordinary assignment, then dropped from the address. */
+  handedTemplate?: string
 }
 
 /** Title + memo, autosaved, plus the post's lifecycle presented as three steps. The screen the
@@ -73,7 +76,7 @@ interface DraftEditorProps {
  *  The steps are PANELS, not routes: one mounted editor per slug, so a step change cannot remount
  *  the component and strand a queued save (tech/draft-autosave). Title, memo, photos and the mint
  *  plumbing therefore stay outside the panels — they are the post's identity, not one step's work. */
-export function DraftEditor({ post, defaultVoice }: DraftEditorProps) {
+export function DraftEditor({ post, defaultVoice, handedTemplate }: DraftEditorProps) {
   const { t, i18n } = useTranslation('posts')
   const navigate = useNavigate()
   const { user } = useSession()
@@ -100,7 +103,7 @@ export function DraftEditor({ post, defaultVoice }: DraftEditorProps) {
   const caretFields = useMemo(() => ({ title: titleRef, memo: memoRef }), [])
   const caret = useCaretHandoff(post?.slug, caretFields)
 
-  const assignments = useDraftAssignments(post, defaultVoice)
+  const assignments = useDraftAssignments(post, defaultVoice, post ? '' : handedTemplate)
   const { voiceId, templateId, targetLanguage } = assignments
 
   // ①'s text and its lock are the autosave's (POST-86); the page only lays the SELECTED template's
@@ -127,6 +130,28 @@ export function DraftEditor({ post, defaultVoice }: DraftEditorProps) {
       void navigate({ to: '/posts/$slug', params: { slug }, replace: true, resetScroll: false })
     },
   })
+  // A template the wizard handed back is assigned once, through the same assignment the picker
+  // uses, and then dropped from the address so a reload or Back cannot assign it again (TMPL-32).
+  // An unsaved draft already started on it (useDraftAssignments).
+  const handled = useRef(false)
+  const { assignTemplate } = autosave
+  const postSlug = post?.slug
+  const postTemplateId = post?.template.id
+  useEffect(() => {
+    if (!handedTemplate || handled.current) return
+    handled.current = true
+    if (postSlug) {
+      if (postTemplateId !== handedTemplate)
+        void assignTemplate(handedTemplate).catch(() => undefined)
+      void navigate({
+        to: '/posts/$slug',
+        params: { slug: postSlug },
+        search: {},
+        replace: true,
+        resetScroll: false,
+      })
+    } else void navigate({ to: '/posts/new', search: {}, replace: true, resetScroll: false })
+  }, [handedTemplate, postSlug, postTemplateId, assignTemplate, navigate])
   // The patch carries every field the template declares, so reading it back gives the same fields.
   const fields = useMemo(
     () => answerFields(selectedTemplate, autosave.answers),

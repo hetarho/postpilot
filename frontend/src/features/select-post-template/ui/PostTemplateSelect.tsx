@@ -16,6 +16,10 @@ import {
 } from '@/shared/ui'
 import { runningJobNote, assignmentFailureMessage } from '../model/assignment'
 
+/** The option that opens the wizard instead of choosing anything (TMPL-32), as the 말투 picker
+ *  offers 새 말투 만들기. A template id is minted by the server and can never take this value. */
+const CREATE_TEMPLATE_VALUE = '__create_template__'
+
 interface PostTemplateSelectProps {
   ownerId: string
   /** The assignment as the editor shows it; '' is 없음. */
@@ -28,6 +32,8 @@ interface PostTemplateSelectProps {
    *  only decides whether the note about the frozen brief is shown. */
   jobRunning?: boolean
   onSelect: (templateId: string) => Promise<void> | void
+  /** `새 템플릿 만들기` was picked. The caller opens the wizard — a feature may not route. */
+  onCreateTemplate: () => void
   /** Off for a reason the caller states elsewhere, so this field adds none of its own. */
   disabled?: boolean
   className?: string
@@ -47,6 +53,7 @@ export function PostTemplateSelect({
   current,
   jobRunning = false,
   onSelect,
+  onCreateTemplate,
   disabled = false,
   className,
 }: PostTemplateSelectProps) {
@@ -73,6 +80,7 @@ export function PostTemplateSelect({
     { value: NO_TEMPLATE_VALUE, label: noTemplateLabel() },
     ...(unlisted ? [{ value: unlisted.id, label: unlisted.name || unlisted.id }] : []),
     ...templates.map((template) => ({ value: template.id, label: template.name })),
+    { value: CREATE_TEMPLATE_VALUE, label: t('picker.create', { ns: 'templates' }) },
   ]
 
   const apply = async (templateId: string) => {
@@ -88,6 +96,10 @@ export function PostTemplateSelect({
   }
 
   const onChange = (next: string) => {
+    if (next === CREATE_TEMPLATE_VALUE) {
+      onCreateTemplate()
+      return
+    }
     if (next === value) return
     // No confirmation sheet, unlike the voice: changing a template moves no content, drops no
     // baseline and costs no learning, so there is nothing to warn about.

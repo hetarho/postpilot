@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useNavigate, useParams } from '@tanstack/react-router'
+import { useNavigate, useParams, useSearch } from '@tanstack/react-router'
 import { usePost, postReturnDestination } from '@/entities/post'
 import { useSession } from '@/entities/session'
 import { useVoices } from '@/entities/voice'
@@ -18,12 +18,13 @@ export function NewDraftPage() {
   const { t } = useTranslation(['posts', 'common'])
   const { user } = useSession()
   const { defaultVoice, isPending, isError, refetch } = useVoices(user?.id ?? '')
+  const { template } = useSearch({ strict: false }) as { template?: string }
 
   if (isError)
     return <LoadFailure message={t('editor.voiceListFailed', { ns: 'posts' })} onRetry={refetch} />
   if (isPending)
     return <EditorPlaceholder>{t('state.loading', { ns: 'common' })}</EditorPlaceholder>
-  return <DraftEditor defaultVoice={defaultVoice} />
+  return <DraftEditor defaultVoice={defaultVoice} handedTemplate={template} />
 }
 
 /** `/posts/$slug` — an existing post. */
@@ -32,6 +33,7 @@ export function PostEditorPage() {
   // The page owns its public parameter, not the shell's pathless layout ids.
   const { slug = '' } = useParams({ strict: false })
   const { post, isPending, failure, refetch } = usePost(slug)
+  const { template } = useSearch({ strict: false }) as { template?: string }
 
   if (failure) {
     const retryable = failure.reason !== 'POST_NOT_FOUND' && failure.reason !== 'POST_FORBIDDEN'
@@ -62,7 +64,7 @@ export function PostEditorPage() {
   // post from the list has to start a new editor rather than keep the previous text.
   // The voice warning is the editor's own — it belongs below the memo, inside the page's one
   // `<main>`, rather than above it as a sibling (see EditorGeneratePanel).
-  return <DraftEditor key={slug} post={post} />
+  return <DraftEditor key={slug} post={post} handedTemplate={template} />
 }
 
 function LoadFailure({ message, onRetry }: { message: ReactNode; onRetry?: () => void }) {

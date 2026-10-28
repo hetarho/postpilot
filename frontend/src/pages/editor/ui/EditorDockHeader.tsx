@@ -1,4 +1,5 @@
 import { forwardRef, useState } from 'react'
+import { useNavigate } from '@tanstack/react-router'
 import { isTerminal } from '@/entities/generation-job'
 import { isPublished, type GenerationOptionsSet, type PostDraft } from '@/entities/post'
 import { usePrefetchAccountQuality } from '@/entities/quality'
@@ -68,6 +69,7 @@ export const EditorDockHeader = forwardRef<
   // The picker's `새 말투 만들기` opens the directory's own create sheet (VOICE-53). Its open state
   // lives here because the picker, a feature, cannot render another feature (ARCH-13).
   const [creatingVoice, setCreatingVoice] = useState(false)
+  const navigate = useNavigate()
   // Read as soon as the dock renders, so the rows are there when the brief opens; the language is
   // part of the read, since every rule text is rendered in it.
   usePrefetchAccountQuality(ownerId, post?.slug ?? '', targetLanguage)
@@ -143,6 +145,11 @@ export const EditorDockHeader = forwardRef<
       current={post?.template}
       jobRunning={!published && Boolean(post?.activeJob && !isTerminal(post.activeJob))}
       onSelect={onTemplateSelect}
+      // The wizard returns here on 저장 with the new template assigned (TMPL-32); an unsaved
+      // draft has nothing typed to lose, since the first edit mints the post.
+      onCreateTemplate={() =>
+        void navigate({ to: '/templates/new', search: { post: post?.slug ?? 'new' } })
+      }
       disabled={published}
       className="min-w-0 flex-1"
     />

@@ -1,5 +1,6 @@
 import { createRoute, redirect } from '@tanstack/react-router'
 import { postReviewSearchSchema, testRecordSearchSchema } from '@/pages/model-experiment'
+import { editorSearchSchema } from '@/pages/editor'
 import { postsSearchSchema } from '@/pages/posts'
 import { NewDraftPage, PostEditorPage } from '@/pages/editor'
 import { PostsPage } from '@/pages/posts'
@@ -17,12 +18,14 @@ export const postsRoute = createRoute({
 export const newDraftRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   path: '/posts/new',
+  validateSearch: editorSearchSchema,
   component: NewDraftPage,
 })
 
 export const postEditorRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   path: '/posts/$slug',
+  validateSearch: editorSearchSchema,
   component: PostEditorPage,
 })
 

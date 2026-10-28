@@ -26,6 +26,7 @@ function renderSelect(
         ownerId="alice"
         {...props}
         value={value}
+        onCreateTemplate={props.onCreateTemplate ?? (() => {})}
         onSelect={(id) => {
           onSelect(id)
           setValue(id)
@@ -39,6 +40,21 @@ function renderSelect(
 }
 
 const picker = () => screen.findByRole('combobox', { name: /템플릿/ })
+
+// TMPL-32: an owner with no template meets 새 템플릿 만들기 where the choice is made.
+it('ends with 새 템플릿 만들기, which opens creation and assigns nothing', async () => {
+  const user = userEvent.setup()
+  const onCreateTemplate = vi.fn()
+  const { onSelect } = renderSelect({ onCreateTemplate }, { templates: [] })
+  const field = await picker()
+  await waitFor(() => expect(field).toBeEnabled())
+  await user.click(field)
+  const options = await screen.findAllByRole('option')
+  expect(options.map((option) => option.textContent)).toEqual(['없음', '새 템플릿 만들기'])
+  await user.click(screen.getByRole('option', { name: '새 템플릿 만들기' }))
+  expect(onCreateTemplate).toHaveBeenCalledTimes(1)
+  expect(onSelect).not.toHaveBeenCalled()
+})
 
 // A failed directory read must not be indistinguishable from "you have no 템플릿" — the select
 // would be enabled with 없음 alone, and clearing would be the only thing left to do.

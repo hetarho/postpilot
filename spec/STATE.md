@@ -130,14 +130,14 @@
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
-| T713 | 새 템플릿 만들기 in ①'s template picker | TMPL POST | - | todo |
 
 ## next
-- implement-task T710 → T711 → T712 → T713 (TMPL r29 template-wizard friendliness), then one pre-push gate including backend deploy/media parity.
+- TMPL r29 tasks T710–T713 are done; run the pre-push gate (full CI + backend deploy/media parity) and push.
 - T708 is deployed and d3d51209 CI/Workers plus actual retained-original playback/preview pass. T709 fresh planning remains blocked by unresolved provider usage; preserve its ledger and keep T603/T604/voice gates closed.
 - T697 deployment/CORS/media gates passed at177b377a; deployed browser preview now reads8 real retained R2 originals without a range failure. Full public browser-generation qualification remains gated by T603/T604.
 
 ## log
+- 261029 T713 done: ①'s 템플릿 picker offers 새 템플릿 만들기; the wizard returns to the post (or a new draft) and the editor assigns the new template once.
 - 261029 T712 done: 제목 제안 받기 style-request sheet with examples, ordinary 다음 on the headings step, content-kind cards drawing 글 쓸 때/완성된 글; checked in real Chrome at desktop and phone widths.
 - 261029 T711 done: compact preview stand-ins shared by TemplatePreview and the new WizardPreview; wizard preview beside every step from sections on (lg sticky right, 미리보기 sheet below lg).
 - 261029 T710 done: heading suggestions carry an optional owner style request (proto field 5, ≤200, outranks the 기본 voice); template/cmd/api Go tests and affected FE tests pass.
@@ -157,4 +157,3 @@
 - 261028 owner expands preview recovery to SSOT-compliant browser analysis and end-to-end video evidence, authorizes cumulative OpenRouter spend at most USD0.20 including retries, and requests commit/push only after current playback finishes. Owner subsequently allows push after30 minutes; earliest push2026-10-27T16:33:30Z (01:33:30 KST). Continue local implementation and verification.
 - 261028 clip preview recovery start (prv, pair): owner reports original playback and edited composition preview both fail after native analysis recovery; inspect the affected production project and retained source access through PEM, then reproduce the browser playback failure. Existing fix/deploy authorization applies; preserve unrelated ideation changes.
 - 261028 T707 done at310959b7: owner selects existing-server recovery; CI40530990767 frontend/backend and Workers fc8d3803 pass. Production assets and explicit native approval are verified. Read-only PEM inspection confirms the owner-approved native job58641d7d completed all8 source analyses and persisted4 storyline paragraphs at15:47:48 UTC; final video rendering was not observed. Browser/voice qualification gates remain closed.
-- 261028 T707 deployed at310959b7: Workers fc8d3803 succeeded, live entry/clip/public-config bytes match the tested build, and production-origin Chromium confirms both server-labelled approvals with one native start each and no browser preparation request against an isolated mocked API. Full remote CI remains running; actual affected-original/provider completion needs a fresh owner approval and is not claimed.

@@ -13,7 +13,11 @@ import { Button, Notice, Typography, pageStyles, typographyStyles } from '@/shar
 
 export function TemplatePage() {
   const { templateId } = useParams({ strict: false }) as { templateId?: string }
-  const { from, session } = useSearch({ strict: false }) as { from?: string; session?: string }
+  const { from, session, post } = useSearch({ strict: false }) as {
+    from?: string
+    session?: string
+    post?: string
+  }
   const { t } = useTranslation(['templates', 'common'])
   const { user } = useSession()
   const ownerId = user?.id ?? ''
@@ -61,6 +65,7 @@ export function TemplatePage() {
       stored={stored}
       sampleSlug={stored ? undefined : from}
       sessionId={stored ? undefined : session}
+      returnPost={stored ? undefined : post}
       onPublished={refetch}
     />
   )
@@ -71,12 +76,15 @@ function TemplateAuthoringPage({
   stored,
   sampleSlug,
   sessionId,
+  returnPost,
   onPublished,
 }: {
   ownerId: string
   stored?: Template
   sampleSlug?: string
   sessionId?: string
+  /** The post whose 템플릿 picker opened the wizard, or `new` for an unsaved draft (TMPL-32). */
+  returnPost?: string
   onPublished: () => void
 }) {
   const { t } = useTranslation(['templates', 'authoring', 'common'])
@@ -138,11 +146,26 @@ function TemplateAuthoringPage({
               seedHeadings={seedHeadings}
               onSaved={(templateId) => {
                 onPublished()
-                void navigate({
-                  to: '/templates/$templateId',
-                  params: { templateId },
-                  replace: true,
-                })
+                // Opened from a post's picker: back to that post with the template assigned.
+                if (returnPost === 'new')
+                  void navigate({
+                    to: '/posts/new',
+                    search: { template: templateId },
+                    replace: true,
+                  })
+                else if (returnPost)
+                  void navigate({
+                    to: '/posts/$slug',
+                    params: { slug: returnPost },
+                    search: { template: templateId },
+                    replace: true,
+                  })
+                else
+                  void navigate({
+                    to: '/templates/$templateId',
+                    params: { templateId },
+                    replace: true,
+                  })
               }}
             />
           )}

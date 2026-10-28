@@ -81,6 +81,27 @@ describe('the template wizard', () => {
     expect(parseTemplate('', saved.body, TEMPLATE_PARSE_OPTIONS).ok).toBe(true)
   })
 
+  // TMPL-32: opened from a post's 템플릿 picker, 저장 goes back to that post with the template.
+  it('returns to the post that opened it, handing the saved template back', async () => {
+    const user = userEvent.setup()
+    const creates: NonNullable<FakeTemplatesOptions['creates']> = []
+    const { router } = renderAppAt('/templates/new?post=20260820-memo', {
+      user: { id: 'alice' },
+      posts: { posts: [{ slug: '20260820-memo' }] },
+      templates: { templates: [], creates },
+    })
+    await user.click(await screen.findByRole('button', { name: /^맛집/ }))
+    await user.click(await screen.findByRole('button', { name: /^식사/ }))
+    await title('이런 글은 보통 이렇게 구성돼요')
+    for (const box of screen.getAllByRole('checkbox'))
+      if (!box.closest('label')?.textContent?.startsWith('방문 계기')) await user.click(box)
+    for (let step = 0; step < 4; step++) await user.click(next())
+    await user.type(await screen.findByLabelText('템플릿 이름'), '돌아가는 템플릿')
+    await user.click(screen.getByRole('button', { name: '저장' }))
+    await waitFor(() => expect(router.state.location.pathname).toBe('/posts/20260820-memo'))
+    expect(creates).toHaveLength(1)
+  })
+
   it('asks before discarding the answers when the owner leaves', async () => {
     const user = userEvent.setup()
     const { router } = renderAppAt('/templates/new', {

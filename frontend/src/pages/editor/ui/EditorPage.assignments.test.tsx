@@ -570,6 +570,41 @@ describe('the post template', () => {
     expect(calls).not.toContain('SavePostGenerationOptions')
   })
 
+  // TMPL-32: the wizard opened from the picker returns with the template it saved.
+  it('assigns a template the wizard handed back once and drops it from the address', async () => {
+    const draftSaves: FakeDraftSave[] = []
+    const { router } = renderAppAt('/posts/20260820-memo?template=template-diary', {
+      user: USER,
+      posts: { posts: [{ slug: '20260820-memo' }], draftSaves, templates: POST_PURPOSES },
+      templates: { templates: PURPOSES },
+    })
+    await waitFor(
+      () =>
+        expect(draftSaves).toEqual([
+          expect.objectContaining({ slug: '20260820-memo', templateId: 'template-diary' }),
+        ]),
+      AUTOSAVED,
+    )
+    await waitFor(() => expect(router.state.location.search).toEqual({}))
+    expect(draftSaves).toHaveLength(1)
+  })
+
+  it('starts a new draft on the template the wizard handed back', async () => {
+    const draftSaves: FakeDraftSave[] = []
+    const { router } = renderAppAt('/posts/new?template=template-review', {
+      user: USER,
+      posts: { draftSaves, templates: POST_PURPOSES },
+      templates: { templates: PURPOSES },
+    })
+    await waitFor(() => expect(router.state.location.search).toEqual({}))
+    const user = userEvent.setup()
+    await user.type(await screen.findByLabelText('제목'), '제주')
+    await waitFor(
+      () => expect(draftSaves[0]).toMatchObject({ slug: '', templateId: 'template-review' }),
+      AUTOSAVED,
+    )
+  })
+
   it('carries a chosen template into the create', async () => {
     const user = userEvent.setup()
     const draftSaves: FakeDraftSave[] = []

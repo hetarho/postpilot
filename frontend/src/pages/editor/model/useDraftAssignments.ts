@@ -18,9 +18,11 @@ import type { ContentLanguage } from '@/shared/api'
 export function useDraftAssignments(
   post: PostDraft | undefined,
   defaultVoice: Pick<Voice, 'id' | 'made'> | undefined,
+  /** A template the wizard just made for this unsaved draft (TMPL-32). */
+  initialTemplateId = '',
 ) {
   const [voice, setVoice] = useState(() => (defaultVoice?.made ? defaultVoice.id : NO_VOICE_VALUE))
-  const [template, setTemplate] = useState('')
+  const [template, setTemplate] = useState(initialTemplateId)
   const [language, setLanguage] = useState<ContentLanguage>(() => activeLocale())
   return {
     voiceId: post ? (post.voice?.id ?? NO_VOICE_VALUE) : voice,
