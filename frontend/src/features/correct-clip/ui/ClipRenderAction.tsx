@@ -22,7 +22,7 @@ export function ClipRenderAction({
 }: {
   lastKind?: ClipRenderKind
   browserAvailable?: boolean
-  browserRefusal?: 'capability' | 'memory'
+  browserRefusal?: 'capability' | 'memory' | 'unqualified'
   serverWindow?: MyPlan['serverExportWindow']
   serverPlan?: MyPlan['plan']
   serverEntitled?: boolean

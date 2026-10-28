@@ -4,8 +4,10 @@ import type { ClipRatio } from '@/entities/clip-project/@x/clip-preview'
 import type { ClipEditPlan } from '@/entities/clip-plan/@x/clip-preview'
 import { clipSourceSound } from '@/entities/clip-plan/@x/clip-preview'
 
+/** `unqualified`: the device could encode, but browser final rendering is not yet released
+ *  (ARCH-68), so the server refuses its start. */
 export type ClipBrowserRenderCapability =
-  { available: true } | { available: false; reason: 'capability' | 'memory' }
+  { available: true } | { available: false; reason: 'capability' | 'memory' | 'unqualified' }
 
 export function clipBrowserRenderCapability(
   support: EncoderSupport,

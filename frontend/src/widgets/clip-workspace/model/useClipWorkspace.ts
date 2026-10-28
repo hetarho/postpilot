@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { CLIP_BROWSER_ANALYSIS_PREPARATION } from '@/entities/clip-design'
+import { CLIP_BROWSER_ANALYSIS_PREPARATION, CLIP_BROWSER_COMPOSITION } from '@/entities/clip-design'
 import {
   clipRenderNeedsAudio,
   useClipBrowserRenderCapability,
@@ -134,10 +134,17 @@ export function useClipWorkspace(ownerId: string, project: ClipProject) {
     if (job.status === 'done' && (job.kind === 'storyline_clip' || job.kind === 'generate_clip'))
       setStep('refine')
   }
-  const browserCapability = useClipBrowserRenderCapability(
+  const encoderCapability = useClipBrowserRenderCapability(
     project.ratio,
     clipRenderNeedsAudio(correction.draft),
   )
+  // Browser final rendering is released separately from the device's encoders (ARCH-68): until
+  // its readiness record qualifies, the server refuses the start, so the option is refused by
+  // name here and the server leads, as T707 did for analysis preparation (CLIP-155).
+  const browserCapability: ClipBrowserRenderCapability | undefined =
+    CLIP_BROWSER_COMPOSITION.qualified
+      ? encoderCapability.data
+      : { available: false, reason: 'unqualified' }
   useUploadAttemptLifecycle(job, upload)
   const uploading = ['reading', 'uploading', 'cancelling'].includes(upload.phase)
   // While the plan draws a region, its rows are the active slots' words, and a slot typed in ②'s
@@ -254,7 +261,7 @@ export function useClipWorkspace(ownerId: string, project: ClipProject) {
   }
   const render = {
     browser,
-    capability: browserCapability.data as ClipBrowserRenderCapability | undefined,
+    capability: browserCapability,
     // A slot whose words its preset cannot draw holds every committing action (CLIP-188).
     ready:
       !!upload.readyBatch && correction.revision === project.editPlanRevision && !regions.invalid,
@@ -274,7 +281,7 @@ export function useClipWorkspace(ownerId: string, project: ClipProject) {
     start: (kind: ClipRenderKind) => {
       if (correction.pending || browser.busy) return
       if (kind === 'browser') {
-        if (!browserCapability.data?.available || !upload.readyBatch) return
+        if (!browserCapability?.available || !upload.readyBatch) return
         void browser.start({
           batchId: upload.readyBatch.id,
           localSources,

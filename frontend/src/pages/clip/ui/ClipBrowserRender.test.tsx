@@ -12,6 +12,14 @@ import { renderAppAt } from '@/test/app'
 import { discardClipDraftQueues } from '@/features/edit-clip-project'
 
 const media = vi.hoisted(() => ({ video: vi.fn(), dispose: vi.fn(), captionFrames: vi.fn() }))
+// Qualified test readiness exercises the browser kind without qualifying production.
+vi.mock('@/entities/clip-design', async (original) => {
+  const actual = await original<typeof import('@/entities/clip-design')>()
+  return {
+    ...actual,
+    CLIP_BROWSER_COMPOSITION: { ...actual.CLIP_BROWSER_COMPOSITION, qualified: true },
+  }
+})
 // UI orchestration only. Real Worker/codec/storage qualification is exercised by
 // scripts/browser-export-check.mjs with actual media and finalized-file measurements.
 vi.mock('@/features/render-clip-browser/api/run-render', async (original) => {

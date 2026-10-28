@@ -137,6 +137,7 @@
 - T697 deployment/CORS/media gates passed at177b377a; deployed browser preview now reads8 real retained R2 originals without a range failure. Full public browser-generation qualification remains gated by T603/T604.
 
 ## log
+- 261029 fix clip render choice: ② offered the unreleased browser render first (encoder probe only), so its start met the server's 501 and a misleading re-select message; the browser kind now follows finalRender readiness (ARCH-68) and is refused by name while the server leads. Measured on 8 HLG HEVC originals in real Chrome.
 - 261029 pushed 2441146f (T710–T714, content-free merge of another session's e15cd280) and 9921568a (T715): CI frontend/backend success both; Deploy backend build + swap + health gate success, post-deploy verification failed before running (GitHub download curl 56), Verify media skipped. Local emulated amd64 media gate timed out only TestRenderSmokePreview; the native build's in-image smokes passed.
 - 261029 T715 done: one content-kind card with horizontal radios named by outcome; its drawings and inputs switch inside it.
 - 261029 update-ssot TMPL r31 (owner) + create-task T715: wizard content kinds renamed by outcome; each card holds its own inputs.

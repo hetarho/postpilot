@@ -23,6 +23,7 @@ export const i18n = {
           '이 브라우저에서 더빙 음성을 읽거나 해독하지 못했어요. 지원하는 브라우저·기기를 이용해 주세요.',
         capability: '이 브라우저는 필요한 영상·음성 인코딩을 지원하지 않아요.',
         memory: '이 기기의 메모리가 브라우저 렌더에 부족해요.',
+        unqualified: '브라우저 렌더는 아직 준비 중이에요.',
         output:
           '이 기기의 출력 메모리·저장 공간 한도에 도달했어요. 공간을 확보하거나 지원하는 다른 기기를 이용해 주세요.',
         sampling:
@@ -69,6 +70,7 @@ export const i18n = {
           'This browser could not read or decode the narration. Try a supported browser/device.',
         capability: 'This browser does not support the required video or audio encoding.',
         memory: 'This device reports too little memory for browser rendering.',
+        unqualified: 'Browser rendering is not available yet.',
         output:
           'This device reached its output memory or storage limit. Free space or use another supported device.',
         sampling:
