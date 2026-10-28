@@ -159,7 +159,7 @@ func (r *Rendering) deliveredOverlayArgs(input string, window overlayWindow, vis
 	}
 	frames := window.EndFrame - window.StartFrame
 	graph := strings.TrimSuffix(declaredOverlayGraph(r.cfg, window, visuals, layers, true), "[v]")
-	graph += fmt.Sprintf(",settb=AVTB,setpts=PTS-STARTPTS,trim=end_frame=%d,setpts=PTS-STARTPTS,format=yuv420p[v]", frames)
+	graph += fmt.Sprintf(",settb=AVTB,setpts=PTS-STARTPTS,trim=end_frame=%d,setpts=PTS-STARTPTS,%sformat=yuv420p[v]", frames, deliveredSignal("yuv420p"))
 	if audio != "" {
 		args = r.inputArgs(args, audio)
 		graph += fmt.Sprintf(";[%d:a:0]%s,aresample=%d,aformat=sample_fmts=fltp:channel_layouts=stereo[a]", 1+len(window.Layers), loudnormFilter(measured), r.cfg.AudioRate)

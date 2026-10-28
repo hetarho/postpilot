@@ -410,7 +410,7 @@
 - CLIP-218 [o] with a linked post, each source video is placed in the post section whose photos surround it in capture order, read from capture times or, when the post's photos and the videos share one, the camera's file sequence; its observed scenes confirm the fit ← capture order is exact where similar shots confuse scene matching
   - a video with no capture order, or whose scenes do not fit that section, goes to the section its scenes match; a video matching no section stays unused and is listed
   - capture order only places footage and is never written as time passing (→GUIDE-51)
-- CLIP-219 [o] an HLG source — BT.2020 primaries with the HLG transfer — is used as is: every consumer decodes it with its BT.2020 matrix and no tone mapping, as it decodes an SDR source, and the result stays SDR ← phones record HLG by default, and HLG is made to play on SDR screens
+- CLIP-219 [o] an HLG source — BT.2020 primaries with the HLG transfer — is used as is: every consumer decodes it with its BT.2020 matrix and no tone mapping, as it decodes an SDR source, and the result stays SDR ← phones record HLG by default, HLG is made to play on SDR screens, and an export whose colour differs from its preview cannot be reviewed
   - a PQ source (HDR10, HDR10+) or any other colour format outside these is refused before any work under CLIP-155
 
 - CLIP-220 [o] creation offers qualified server analysis preparation with an explicit server-labelled approval while browser analysis preparation is disabled or unqualified (→CLIP-32 →CLIP-203).

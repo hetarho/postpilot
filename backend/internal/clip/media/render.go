@@ -66,8 +66,24 @@ func compositionGraph(t cutTimeline, pixelFormat string) string {
 		}
 		v = fmt.Sprintf("vx%d", i)
 	}
-	fmt.Fprintf(&graph, "[%s]trim=end_frame=%d,setpts=PTS-STARTPTS,format=%s[v]", v, t.total, pixelFormat)
+	fmt.Fprintf(&graph, "[%s]trim=end_frame=%d,setpts=PTS-STARTPTS,%sformat=%s[v]", v, t.total, deliveredSignal(pixelFormat), pixelFormat)
 	return graph.String()
+}
+
+// sdrSignal declares the delivered frames SDR without touching a pixel. An HLG source is used
+// as is (CLIP-219): its signal keeps the BT.2020 matrix it was coded with, and its primaries
+// and transfer read as BT.709, which is how every preview draws it. Left alone, FFmpeg hands
+// the source's HLG tags to the encode, and players tone-map the export into colours the owner
+// never reviewed in the preview.
+const sdrSignal = "scale=in_primaries=bt709:out_primaries=bt709:in_transfer=bt709:out_transfer=bt709"
+
+// deliveredSignal relabels only the delivered 4:2:0 encode; lossless tree nodes keep their
+// inputs' tags so a later merge still converts mixed matrices from what each source declared.
+func deliveredSignal(pixelFormat string) string {
+	if pixelFormat != "yuv420p" {
+		return ""
+	}
+	return sdrSignal + ","
 }
 func (r *Rendering) encodeArgs(audio bool) []string {
 	return r.encodeProfile(audio, r.cfg.CRF, "yuv420p")
