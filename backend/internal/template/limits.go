@@ -4,6 +4,7 @@ const (
 	HeadingSectionsMax              = 20
 	HeadingChoicesPerSection        = 3
 	HeadingTargetPathMax            = 8
+	HeadingStyleRequestMaxChars     = 200
 	headingEstimatePromptTokens     = 6000
 	headingEstimateCompletionTokens = 3000
 )

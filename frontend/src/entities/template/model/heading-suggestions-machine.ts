@@ -1,6 +1,7 @@
 import { assign, fromPromise, setup } from 'xstate'
 import {
   HEADING_CHOICES_PER_SECTION,
+  HEADING_STYLE_REQUEST_MAX_CHARS,
   HEADING_SUGGESTION_SECTIONS_MAX,
   TEMPLATE_ASK_LABEL_MAX_CHARS,
 } from '../config'
@@ -50,7 +51,8 @@ export const headingSuggestionsMachine = setup({
       event.type === 'start' &&
       event.ownerId === context.ownerId &&
       event.request.sections.length > 0 &&
-      event.request.sections.length <= HEADING_SUGGESTION_SECTIONS_MAX,
+      event.request.sections.length <= HEADING_SUGGESTION_SECTIONS_MAX &&
+      Array.from(event.request.styleRequest ?? '').length <= HEADING_STYLE_REQUEST_MAX_CHARS,
     done: ({ context, event }) =>
       event.type === 'terminal' && event.jobId === context.jobId && event.status === 'done',
     terminalMatches: ({ context, event }) =>

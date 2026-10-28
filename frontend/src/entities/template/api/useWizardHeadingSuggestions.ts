@@ -51,7 +51,8 @@ export function useWizardHeadingSuggestions(
       current
         ? (snapshot.context.groups[sections.findIndex((section) => section.id === id)] ?? [])
         : [],
-    start: (writeModel: HeadingSuggestionInput['writeModel']) =>
+    /** The owner's wording request travels with this one job only (TMPL-73). */
+    start: (writeModel: HeadingSuggestionInput['writeModel'], styleRequest = '') =>
       actor.send({
         type: 'start',
         ownerId,
@@ -61,6 +62,7 @@ export function useWizardHeadingSuggestions(
           targetKind,
           targetPath,
           sections: sections.map(({ role, description }) => ({ role, description })),
+          styleRequest: styleRequest.trim(),
         },
       }),
   }

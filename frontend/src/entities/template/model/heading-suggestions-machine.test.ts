@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { createActor, waitFor } from 'xstate'
+import { HEADING_STYLE_REQUEST_MAX_CHARS } from '../config'
 import { headingSuggestionsMachine } from './heading-suggestions-machine'
 
 const request = {
@@ -38,6 +39,24 @@ describe('heading suggestion actor', () => {
     actor.send({ type: 'result', jobId: 'job-1', groups: [[' 첫째 ', '둘째', '셋째']] })
     expect(actor.getSnapshot().context.groups).toEqual([['첫째', '둘째', '셋째']])
     expect(start).toHaveBeenCalledTimes(1)
+    actor.stop()
+  })
+
+  it('freezes the owner style request into the start and refuses one over the limit', async () => {
+    const start = vi.fn(async () => 'job-styled')
+    const actor = createActor(headingSuggestionsMachine, {
+      input: { ownerId: 'alice', start },
+    }).start()
+    actor.send({
+      ...begin,
+      request: { ...request, styleRequest: '가'.repeat(HEADING_STYLE_REQUEST_MAX_CHARS + 1) },
+    })
+    expect(start).not.toHaveBeenCalled()
+    actor.send({ ...begin, request: { ...request, styleRequest: '이모지를 넣어 줘' } })
+    await waitFor(actor, (snapshot) => snapshot.matches('running'))
+    expect(start).toHaveBeenCalledWith(
+      expect.objectContaining({ styleRequest: '이모지를 넣어 줘' }),
+    )
     actor.stop()
   })
 

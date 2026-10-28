@@ -32,7 +32,7 @@ func (h *Handler) StartTemplateHeadingSuggestions(ctx context.Context, req *conn
 	for i, section := range req.Msg.GetSections() {
 		sections[i] = template.HeadingSection{Role: section.GetRole(), Description: section.GetDescription()}
 	}
-	id, err := h.headings.Start(ctx, user, template.HeadingSuggestionStart{WriteModel: modelRefValue(req.Msg.GetWriteModel()), TargetKind: req.Msg.GetTargetKind(), TargetPath: req.Msg.GetTargetPath(), Sections: sections})
+	id, err := h.headings.Start(ctx, user, template.HeadingSuggestionStart{WriteModel: modelRefValue(req.Msg.GetWriteModel()), TargetKind: req.Msg.GetTargetKind(), TargetPath: req.Msg.GetTargetPath(), Sections: sections, StyleRequest: req.Msg.GetStyleRequest()})
 	if err != nil {
 		return nil, toConnectError("start heading suggestions", err)
 	}

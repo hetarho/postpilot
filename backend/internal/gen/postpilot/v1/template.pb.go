@@ -1375,9 +1375,11 @@ type StartTemplateHeadingSuggestionsRequest struct {
 	state      protoimpl.MessageState `protogen:"open.v1"`
 	WriteModel *ModelRef              `protobuf:"bytes,1,opt,name=write_model,json=writeModel,proto3" json:"write_model,omitempty"`
 	// Exactly post or clip. No post identity, content, attachments or sample is accepted.
-	TargetKind    string                    `protobuf:"bytes,2,opt,name=target_kind,json=targetKind,proto3" json:"target_kind,omitempty"`
-	TargetPath    []string                  `protobuf:"bytes,3,rep,name=target_path,json=targetPath,proto3" json:"target_path,omitempty"`
-	Sections      []*TemplateHeadingSection `protobuf:"bytes,4,rep,name=sections,proto3" json:"sections,omitempty"`
+	TargetKind string                    `protobuf:"bytes,2,opt,name=target_kind,json=targetKind,proto3" json:"target_kind,omitempty"`
+	TargetPath []string                  `protobuf:"bytes,3,rep,name=target_path,json=targetPath,proto3" json:"target_path,omitempty"`
+	Sections   []*TemplateHeadingSection `protobuf:"bytes,4,rep,name=sections,proto3" json:"sections,omitempty"`
+	// The owner's optional wording request (TMPL-73): quoted style direction, never visit facts.
+	StyleRequest  string `protobuf:"bytes,5,opt,name=style_request,json=styleRequest,proto3" json:"style_request,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1438,6 +1440,13 @@ func (x *StartTemplateHeadingSuggestionsRequest) GetSections() []*TemplateHeadin
 		return x.Sections
 	}
 	return nil
+}
+
+func (x *StartTemplateHeadingSuggestionsRequest) GetStyleRequest() string {
+	if x != nil {
+		return x.StyleRequest
+	}
+	return ""
 }
 
 type StartTemplateHeadingSuggestionsResponse struct {
@@ -1731,7 +1740,7 @@ const file_postpilot_v1_template_proto_rawDesc = "" +
 	"\x04free\x18\x01 \x01(\bR\x04free\x12\x1d\n" +
 	"\acredits\x18\x02 \x01(\x05H\x00R\acredits\x88\x01\x01B\n" +
 	"\n" +
-	"\b_credits\"\xe5\x01\n" +
+	"\b_credits\"\x8a\x02\n" +
 	"&StartTemplateHeadingSuggestionsRequest\x127\n" +
 	"\vwrite_model\x18\x01 \x01(\v2\x16.postpilot.v1.ModelRefR\n" +
 	"writeModel\x12\x1f\n" +
@@ -1739,7 +1748,8 @@ const file_postpilot_v1_template_proto_rawDesc = "" +
 	"targetKind\x12\x1f\n" +
 	"\vtarget_path\x18\x03 \x03(\tR\n" +
 	"targetPath\x12@\n" +
-	"\bsections\x18\x04 \x03(\v2$.postpilot.v1.TemplateHeadingSectionR\bsections\"@\n" +
+	"\bsections\x18\x04 \x03(\v2$.postpilot.v1.TemplateHeadingSectionR\bsections\x12#\n" +
+	"\rstyle_request\x18\x05 \x01(\tR\fstyleRequest\"@\n" +
 	"'StartTemplateHeadingSuggestionsResponse\x12\x15\n" +
 	"\x06job_id\x18\x01 \x01(\tR\x05jobId\"=\n" +
 	"$GetTemplateHeadingSuggestionsRequest\x12\x15\n" +

@@ -110,6 +110,76 @@ func TestAMissingVoiceSendsNoVoiceBytes(t *testing.T) {
 	}
 }
 
+func headingRequestText(request llm.Request) string {
+	var text strings.Builder
+	for _, message := range request.Messages {
+		for _, part := range message.Parts {
+			text.WriteString(part.Text)
+		}
+	}
+	return text.String()
+}
+
+func TestAStyleRequestIsTrimmedFrozenAndOutranksTheVoice(t *testing.T) {
+	s, models, _, jobs := headingHarness()
+	start := headingStart()
+	start.StyleRequest = "  OWNER_STYLE_REQUEST 이모지를 넣어 20대 여성에게  "
+	if _, err := s.Start(t.Context(), "alice", start); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(jobs.starts[0].Payload), `"style_request":"OWNER_STYLE_REQUEST 이모지를 넣어 20대 여성에게"`) {
+		t.Fatalf("request not trimmed into the frozen payload: %s", jobs.starts[0].Payload)
+	}
+	if err := runHeadings(t, s, jobs); err != nil {
+		t.Fatal(err)
+	}
+	request := models.requests[0]
+	text := headingRequestText(request)
+	if len(request.Messages[0].Parts) != 3 || !strings.Contains(text, `{"style_request":"OWNER_STYLE_REQUEST 이모지를 넣어 20대 여성에게"}`) || !strings.Contains(text, "VOICE_ACCEPTED_STYLE") {
+		t.Fatalf("request and voice must travel as separate quoted parts: %s", text)
+	}
+	if request.Composition.Mode != "requested-default-voice" || !strings.Contains(request.System, "style_request가 있으면") || !strings.Contains(request.System, "voice_style보다 우선") {
+		t.Fatalf("request precedence missing: mode=%s", request.Composition.Mode)
+	}
+	if _, err := llm.PreparedRequestInspection(request); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestABlankStyleRequestSendsNoRequestPart(t *testing.T) {
+	s, models, _, jobs := headingHarness()
+	start := headingStart()
+	start.StyleRequest = " \n "
+	if _, err := s.Start(t.Context(), "alice", start); err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(jobs.starts[0].Payload), "style_request") {
+		t.Fatal("a blank request was frozen")
+	}
+	if err := runHeadings(t, s, jobs); err != nil {
+		t.Fatal(err)
+	}
+	if request := models.requests[0]; len(request.Messages[0].Parts) != 2 || request.Composition.Mode != "default-voice" {
+		t.Fatalf("blank request changed the request: mode=%s", request.Composition.Mode)
+	}
+}
+
+func TestAnOverlongStyleRequestIsRefusedBeforeAdmission(t *testing.T) {
+	s, models, voice, jobs := headingHarness()
+	start := headingStart()
+	start.StyleRequest = strings.Repeat("가", HeadingStyleRequestMaxChars+1)
+	if _, err := s.Start(t.Context(), "alice", start); !errors.Is(err, ErrHeadingInputInvalid) {
+		t.Fatalf("err=%v", err)
+	}
+	start.StyleRequest = strings.Repeat("가", HeadingStyleRequestMaxChars)
+	if _, err := s.Start(t.Context(), "alice", start); err != nil {
+		t.Fatalf("a request at the limit must pass: %v", err)
+	}
+	if len(jobs.starts) != 1 || voice.calls != 1 || len(models.requests) != 0 {
+		t.Fatal("an overlong request must be refused before any read or admission")
+	}
+}
+
 func TestAShortAnswerFailsWhole(t *testing.T) {
 	for _, answer := range []string{`{"sections":[{"headings":["하나","둘","셋"]}]}`, `{"sections":[{"headings":["하나","둘","셋"]},{"headings":["하나","둘"]}]}`, `{"sections":[{"headings":["하나","둘","셋"]},{"headings":[" ","둘","셋"]}]}`, `{"sections":[{"headings":["하나","둘","셋"]},{"headings":["같은 말","같은 말","셋"]}]}`, `not JSON`} {
 		t.Run(answer, func(t *testing.T) {

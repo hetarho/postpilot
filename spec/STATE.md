@@ -130,7 +130,6 @@
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
-| T710 | Carry an owner style request through heading suggestions | TMPL ARCH | - | todo |
 | T711 | Draw compact preview stand-ins and the wizard's side preview | TMPL THEME | - | todo |
 | T712 | Heading style sheet, ordinary 다음 and content-kind cards | TMPL THEME | T710 T711 | todo |
 | T713 | 새 템플릿 만들기 in ①'s template picker | TMPL POST | - | todo |
@@ -141,6 +140,7 @@
 - T697 deployment/CORS/media gates passed at177b377a; deployed browser preview now reads8 real retained R2 originals without a range failure. Full public browser-generation qualification remains gated by T603/T604.
 
 ## log
+- 261029 T710 done: heading suggestions carry an optional owner style request (proto field 5, ≤200, outranks the 기본 voice); template/cmd/api Go tests and affected FE tests pass.
 - 261029 create-task TMPL r29: T710 heading style request (proto/BE/hook), T711 compact preview + wizard side preview, T712 style sheet + 다음 + content-kind cards, T713 picker 새 템플릿 만들기.
 - 261028 update-ssot TMPL r29: wizard heading style-request sheet, preview beside every step (lg right / 미리보기 sheet), content-kind cards with 글 쓸 때·완성된 글 panels, compact preview stand-ins, 새 템플릿 만들기 in ①'s picker. Audit: first-use /setup and the voice picker's 새 말투 만들기 exist; the template picker had no creation path.
 - 261028 update-ssot TMPL start: template-creation UX friendliness (owner request).
@@ -160,4 +160,3 @@
 - 261028 T707 deployed at310959b7: Workers fc8d3803 succeeded, live entry/clip/public-config bytes match the tested build, and production-origin Chromium confirms both server-labelled approvals with one native start each and no browser preparation request against an isolated mocked API. Full remote CI remains running; actual affected-original/provider completion needs a fresh owner approval and is not claimed.
 - 261028 T707 local verification:560 FE files/4464 tests and affected native app/store/worker/RPC checks pass; final disclosure copy passes its source-picker/page/workspace regressions and lint/build. Built-app Chromium confirms visible server approval and exactly one native start with no analysis preparation ID for storyline/direct actions against a mocked API; actual owner-approved provider completion remains unverified. Unchanged full backend/deploy/generated evidence is reused; frontend-only diff triggers no backend/media deployment.
 - 261028 T707 starts at7ffe6fa6 (avf): select native preparation before approval when browser readiness is closed; enforce server-returned qualification before browser activation and retain independent export/quality gates.
-- 261028 create-task CLIP r64: T707 restores explicitly approved native preparation and early browser readiness checks; consumes CLIP-220. Production native runtime is ready, while browser copies have no verifier and the quality gate remains closed.

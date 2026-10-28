@@ -26,7 +26,7 @@ func TestPromptEvaluationOfflineReportPreservesUnitsAndUnknownOutcomes(t *testin
 	if err := json.Unmarshal(output.Bytes(), &report); err != nil {
 		t.Fatal(err)
 	}
-	if report.Kind != "controlled-writing-evaluation" || report.Material != "synthetic" || report.Execution != (promptOfflineExecution{Mode: "offline"}) || report.Provenance.SourceStatus != "available" || len(report.Inventory) != 74 || len(report.Cases) != 48 || len(report.Checks) == 0 {
+	if report.Kind != "controlled-writing-evaluation" || report.Material != "synthetic" || report.Execution != (promptOfflineExecution{Mode: "offline"}) || report.Provenance.SourceStatus != "available" || len(report.Inventory) != 75 || len(report.Cases) != 48 || len(report.Checks) == 0 {
 		t.Fatalf("wrong controlled offline selection: inventory=%d cases=%d checks=%d execution=%+v", len(report.Inventory), len(report.Cases), len(report.Checks), report.Execution)
 	}
 	unknown := promptEvaluationOutcomes{Status: "unverified", Note: report.Outcomes.Note}
@@ -117,7 +117,7 @@ func TestPromptInventoryPinsCurrentRetainedModesAndSyntheticBranches(t *testing.
 		want["writing-style/"+mode] = true
 	}
 	want["memory-extraction/propose"] = true
-	want["template-heading-suggestion/plain"], want["template-heading-suggestion/default-voice"] = true, true
+	want["template-heading-suggestion/plain"], want["template-heading-suggestion/default-voice"], want["template-heading-suggestion/requested-default-voice"] = true, true, true
 	for _, mode := range []string{"request", "correction"} {
 		want["template-request/"+mode] = true
 	}
@@ -133,7 +133,7 @@ func TestPromptInventoryPinsCurrentRetainedModesAndSyntheticBranches(t *testing.
 		want["spoken-voice/"+mode] = true
 	}
 	want["video-speech/segment-synthesis"], want["video-speech/initial-segment-synthesis"] = true, true
-	if len(want) != 74 || len(report.Entries) != len(want) {
+	if len(want) != 75 || len(report.Entries) != len(want) {
 		t.Fatalf("actual admitted mode/scenario coverage changed: want=%d actual=%d", len(want), len(report.Entries))
 	}
 	fixtures := map[string]generation.PromptInventoryFixture{}
@@ -159,7 +159,7 @@ func TestPromptInventoryPinsCurrentRetainedModesAndSyntheticBranches(t *testing.
 	if len(want) != 0 {
 		t.Fatal("retained/current/native mode coverage omitted", want)
 	}
-	if len(contracts) != 70 {
-		t.Fatalf("mode/protocol contracts should distinguish 70 contracts from 74 fixture scenarios: %d", len(contracts))
+	if len(contracts) != 71 {
+		t.Fatalf("mode/protocol contracts should distinguish 71 contracts from 75 fixture scenarios: %d", len(contracts))
 	}
 }

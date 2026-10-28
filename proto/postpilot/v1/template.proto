@@ -203,6 +203,8 @@ message StartTemplateHeadingSuggestionsRequest {
   string target_kind = 2;
   repeated string target_path = 3;
   repeated TemplateHeadingSection sections = 4;
+  // The owner's optional wording request (TMPL-73): quoted style direction, never visit facts.
+  string style_request = 5;
 }
 message StartTemplateHeadingSuggestionsResponse { string job_id = 1; }
 message GetTemplateHeadingSuggestionsRequest { string job_id = 1; }

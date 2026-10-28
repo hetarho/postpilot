@@ -61,7 +61,11 @@ export {
   type CompositionWorkingState,
 } from './model/blocks'
 export type { HeadingSuggestionInput } from './model/heading-suggestions'
-export { HEADING_SUGGESTION_SECTIONS_MAX, HEADING_CHOICES_PER_SECTION } from './config'
+export {
+  HEADING_SUGGESTION_SECTIONS_MAX,
+  HEADING_CHOICES_PER_SECTION,
+  HEADING_STYLE_REQUEST_MAX_CHARS,
+} from './config'
 export {
   useStartHeadingSuggestions,
   useHeadingSuggestionsEstimate,
