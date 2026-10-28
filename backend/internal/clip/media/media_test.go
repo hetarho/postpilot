@@ -2,6 +2,7 @@ package media
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -143,7 +144,7 @@ func TestProbeHoldsDurationToTheVideoTrack(t *testing.T) {
 	}
 }
 func TestProbeRefusesInvalidInputs(t *testing.T) {
-	for name, doc := range map[string]string{"corrupt": "not json", "empty": "{}", "audio only": `{"streams":[{"codec_type":"audio"}],"format":{"format_name":"mov"}}`, "container": strings.Replace(probeJSON, "mov,mp4,m4a,3gp,3g2,mj2", "avi", 1), "dimensions": strings.Replace(probeJSON, `"width":1920`, `"width":0`, 1), "rotation": strings.Replace(probeJSON, `-90`, `45`, 1)} {
+	for name, doc := range map[string]string{"corrupt": "not json", "empty": "{}", "audio only": `{"streams":[{"codec_type":"audio"}],"format":{"format_name":"mov"}}`, "container": strings.Replace(probeJSON, "mov,mp4,m4a,3gp,3g2,mj2", "avi", 1), "dimensions": strings.Replace(probeJSON, `"width":1920`, `"width":0`, 1), "rotation": strings.Replace(probeJSON, `-90`, `45`, 1), "pq": strings.Replace(probeJSON, `"avg_frame_rate":`, `"color_transfer":"smpte2084","color_primaries":"bt2020","color_space":"bt2020nc","avg_frame_rate":`, 1), "other colour": strings.Replace(probeJSON, `"avg_frame_rate":`, `"color_primaries":"smpte432","avg_frame_rate":`, 1)} {
 		t.Run(name, func(t *testing.T) {
 			r := &fakeRunner{run: func(context.Context, Command) ([]byte, error) { return []byte(doc), nil }}
 			a := newAdapter(t, r)
@@ -503,5 +504,27 @@ func assertThreadRoles(t *testing.T, a *Adapter, args []string) {
 	}
 	if strings.Count(before, " -filter_threads ") != 1 || !strings.Contains(before, fmt.Sprintf(" -filter_threads %d ", a.cfg.EncodeThreads)) {
 		t.Fatalf("filters are not pinned to %d thread before decoding: %v", a.cfg.EncodeThreads, args)
+	}
+}
+
+func TestProbeAdmitsSDRAndHLGPhoneFootage(t *testing.T) {
+	for name, tags := range map[string]string{
+		"untagged": ``,
+		"sdr":      `"color_transfer":"bt709","color_primaries":"bt709","color_space":"bt709",`,
+		"hlg":      `"color_transfer":"arib-std-b67","color_primaries":"bt2020","color_space":"bt2020nc",`,
+	} {
+		t.Run(name, func(t *testing.T) {
+			if !sourceColourCovered("", "", "") {
+				t.Fatal("untagged footage is SDR")
+			}
+			var doc probeDocument
+			if err := json.Unmarshal([]byte(strings.Replace(probeJSON, `"avg_frame_rate":`, tags+`"avg_frame_rate":`, 1)), &doc); err != nil {
+				t.Fatal(err)
+			}
+			v := doc.Streams[0]
+			if !sourceColourCovered(v.ColorTransfer, v.ColorPrimaries, v.ColorSpace) {
+				t.Fatalf("%s footage refused: %+v", name, v)
+			}
+		})
 	}
 }

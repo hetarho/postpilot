@@ -25,6 +25,9 @@ type probeDocument struct {
 		FrameRate         string `json:"avg_frame_rate"`
 		SampleAspectRatio string `json:"sample_aspect_ratio"`
 		PixelFormat       string `json:"pix_fmt"`
+		ColorTransfer     string `json:"color_transfer"`
+		ColorPrimaries    string `json:"color_primaries"`
+		ColorSpace        string `json:"color_space"`
 		Duration          string `json:"duration"`
 		Channels          int    `json:"channels"`
 		SampleRate        string `json:"sample_rate"`
@@ -124,6 +127,9 @@ func (a *Adapter) probeContainerWithOptions(ctx context.Context, ws clip.MediaWo
 		if s.Width <= 0 || s.Height <= 0 || s.Width > a.cfg.MaxDimension || s.Height > a.cfg.MaxDimension {
 			return clip.MediaInfo{}, clip.ErrInvalidMedia
 		}
+		if !sourceColourCovered(s.ColorTransfer, s.ColorPrimaries, s.ColorSpace) {
+			return clip.MediaInfo{}, clip.ErrInvalidMedia
+		}
 		info.Width, info.Height = s.Width, s.Height
 		info.PixelFormat, info.SampleAspectRatio = s.PixelFormat, s.SampleAspectRatio
 		if n, d := ratio(s.SampleAspectRatio, ":"); n > 0 {
@@ -151,6 +157,20 @@ func (a *Adapter) probeContainerWithOptions(ctx context.Context, ws clip.MediaWo
 		return clip.MediaInfo{}, clip.ErrInvalidMedia
 	}
 	return info, nil
+}
+
+// The colour formats every consumer decodes the same way (CLIP-219): SDR and HLG are used as
+// is with their own matrix. PQ (HDR10, HDR10+) and anything else are refused before any work,
+// on the server route too: the browser's preparation refused them, and server preparation
+// must not admit what the preview and the browser renderer cannot draw. Untagged is SDR.
+var (
+	coveredTransfers = []string{"", "unknown", "bt709", "smpte170m", "iec61966-2-1", "arib-std-b67"}
+	coveredPrimaries = []string{"", "unknown", "bt709", "smpte170m", "bt470bg", "bt2020"}
+	coveredMatrices  = []string{"", "unknown", "bt709", "smpte170m", "bt470bg", "bt2020nc"}
+)
+
+func sourceColourCovered(transfer, primaries, matrix string) bool {
+	return slices.Contains(coveredTransfers, transfer) && slices.Contains(coveredPrimaries, primaries) && slices.Contains(coveredMatrices, matrix)
 }
 
 // A container's duration is only a claim. Decode every selected stream with
