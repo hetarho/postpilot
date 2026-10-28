@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "lockfileSHA256": "beddd80c59d8d6373c251ced726105cdbc07d85e922ef53492b8701b7ffa1500",
-  "assetVersion": "clip-design-assets-v1-ink-9cb39df64984d5a1d4b2633702983627a3cec2a632ecc13f1bc40badd8c2f521",
+  "lockfileSHA256": "94a980b07aef292a1d96bd52a3187a8a516ca8a02305990e496c3e28797214c5",
+  "assetVersion": "clip-design-assets-v1-ink-81334bffba7c956826d594440c077e902cdbea6c515778aab41f89ad838d065b",
   "dependencyGraphScope": "Installed browser media dependency graph, including type-only dependencies; emitted bundle inclusion is separately unverified.",
   "packages": [
     {

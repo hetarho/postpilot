@@ -2,7 +2,7 @@
 name: review-code
 description: >-
   시니어 엔지니어(리뷰어) 역할로 코드베이스를 ARCH 컨벤션과 개발 관점에서 점검해 리팩토링 제안 문서
-  (spec/review/<slug>.md)를 만든다. "코드 리뷰해줘 / 리팩토링할 데 찾아줘 / 기술 부채 정리하자 /
+  (spec/review/)를 만든다. "코드 리뷰해줘 / 리팩토링할 데 찾아줘 / 기술 부채 정리하자 /
   코드 품질 점검 / 구조 개선할 곳 있어?" 일 때, 그리고 태스크를 몇 개 구현한 뒤 정리 시점에 사용.
   finding은 위치·문제·영향을 갖춰 우선순위(P1~P3)로 제안하고 채택은 사용자가 정한다. 코드는 고치지
   않는다 — 채택된 finding은 create-task가 태스크로 쪼개고 implement-task가 구현한다.
@@ -19,10 +19,10 @@ SSOT가 비어 있으면 finding이 아니라 notes다. 코드를 직접 고치�
 1. 먼저 `vibe status --json` 또는 실행기 brief로 필요한 STATE 요약만 본다. 없으면 create-architecture 실행을 안내한다.
 2. **문서 먼저**: 쓰기 전 실행기 배정 또는 `work status --json`으로 확인한다(CLI가 없으면 checkout·사용자 배정 확인). 단독/기획은 STATE에 시작·상태 변화를 기록한다. 워커는 STATE·SSOT 대신 runtime과 자기 acceptance 체크·result만 쓴다. 리뷰는 읽기 전용이며 리뷰 runtime만 쓴다. 브랜치명은 소유권이 아니다.
 3. 산출 문서는 spec/FORMAT.md 표기를 따른다. `vibe format --section task|state|ssot|report` 중 필요한 발췌만 보고 FORMAT 전체를 읽지 않는다. 규칙에 없는 표기는 만들지 않는다.
-4. 질문·확인·보고는 cfg.lang 언어로, 상세도는 cfg.level대로. 산출 문서는 영어로 쓴다(FORMAT 언어 규칙). 선택지형 질문 도구(AskUserQuestion 등)가 있으면 사용. 맡김 모드(start-vibe)에서는 묻지 않는다 — 추천안으로 진행하고 STATE inbox와 보고서에 남긴다(되돌리기 어렵거나 프로젝트 밖에 영향을 주는 일은 주차). 모드가 정해지지 않았으면 함께 모드다.
+4. 질문·확인·보고는 cfg.lang 언어로, 상세도는 cfg.level대로. 산출 문서는 영어로 쓴다(FORMAT 언어 규칙). 선택지형 질문 도구(AskUserQuestion 등)가 있으면 사용. 맡김 모드(start-vibe)에서는 묻지 않는다 — 추천안으로 진행하고 STATE inbox와 보고서에 남긴다(되돌리기 어렵거나 프로젝트 밖에 영향을 주는 일은 주차). 권한 확인 창도 질문이다 — 창이 뜰 만한 명령은 실행하지 않고 주차한다(start-vibe 3절). 모드가 정해지지 않았으면 함께 모드다.
 5. **읽기**: brief·status 요약을 먼저 쓰고 부족한 ID·섹션만 읽는다. 결정은 `vibe brief <T###|ID-n|ID@rev>`로 원문 블록째 받는다 — 끝의 `end` 줄이 없거나 complete:no면 빠진 부분부터 다시 읽고, unfollowed·related는 필요한 것만 연다. 직접 읽은 결정은 다음 결정 줄·제목까지 본 블록만 근거로 쓴다. STATE·FORMAT·ARCH·큰 코드 전체를 반복 읽지 않는다. tasks/done/은 특정 회귀·검증 근거만 선택 조회한다. 출력은 요약·tail, 전체 로그는 파일로 남긴다.
 
-작업 묶음의 워커에서 호출됐다면 이 스킬의 문서 쓰기 절차는 기획 공간으로 인계한다. `manage-work`가 반환한 group.path가 기획·채번·문서 정리 위치이며, 워커 checkout의 STATE·SSOT를 변경하지 않는다.
+작업 묶음의 워커에서 호출됐다면 이 스킬의 문서 쓰기 절차는 기획 공간으로 인계한다. `manage-work`가 반환한 group.path가 기획·채번·문서 정리 위치이며, 워커 checkout의 STATE·SSOT를 변경하지 않는다. 기획 문서의 정본은 cfg plan 브랜치(기본 `main`)다 — 어느 checkout·worktree에서 기획하든 쓰기·채번 전에 `vibe plan-sync`로 그 브랜치의 최신을 합치고, spec/만 담은 기획 커밋 직후 `vibe plan-push`로 그 브랜치에 올린다(태스크 ID 충돌로 거절되면 미발행 태스크를 다시 채번해 커밋을 고친 뒤 다시 올린다).
 
 ## 1. 시작
 - STATE 읽기 → 스코프 확정: 사용자가 준 경로·도메인·태스크(T###이면 그 태스크의 변경 파일), 없으면 저장소 전체. slug=`<scope>-<YYMMDD>`(영문 kebab, 예: `auth-260906`, `all-260906`).
@@ -30,7 +30,7 @@ SSOT가 비어 있으면 finding이 아니라 notes다. 코드를 직접 고치�
 - 이어하기: spec/review/에 st:open 문서가 있고 같은 스코프면 그 문서로 계속. 아니면 이 스킬 폴더의 assets/review.md를 `spec/review/<slug>.md`로 복사 — at=`git rev-parse --short HEAD`(git 없으면 `-`), base=STATE의 현재 ARCH rev. STATE review 행 `<slug> | open@YYMMDD`.
 
 ## 2. 기준 세우기 (읽는 순서)
-① ARCH 전체 — 컨벤션·폴더 구조·에러 처리·테스트 정책·verify 명령이 채점 기준이다. ② 스코프에 걸친 SSOT 결정 — 코드가 무엇을 해야 하는지. ③ STATE tasks — doing·todo가 건드릴 영역은 finding에서 제외한다(충돌·중복 방지, notes에 1줄). ④ ARCH의 verify 명령(test·lint)을 실행해 실패·경고를 근거로 확보한다. ⑤ 스코프의 코드를 읽는다 — 큰 저장소면 진입점 → 가장 자주 바뀌는 파일(git log) → 가장 큰 파일 순.
+① ARCH 전체 — 컨벤션·폴더 구조·에러 처리·테스트 정책·verify 명령이 채점 기준이다. ② 스코프에 걸친 SSOT 결정 — 코드가 무엇을 해야 하는지. ③ STATE tasks — doing·todo가 건드릴 영역은 finding에서 제외한다(충돌·중복 방지, notes에 1줄). ④ ARCH의 빠른 검사(영향 단위 테스트·lint)로 실패·경고 근거를 확보한다. 통합/e2e·전체 스위트는 조정자 최종 관문에 넘기고 리뷰 세션에서 중복 실행하지 않는다(사용자가 별도 재현을 명시한 범위만 예외). ⑤ 스코프의 코드를 읽는다 — 큰 저장소면 진입점 → 가장 자주 바뀌는 파일(git log) → 가장 큰 파일 순.
 
 ## 3. 점검 관점
 컨벤션 위반(ARCH-n 대비) · 중복(같은 로직 N곳) · 복잡도(긴 함수, 깊은 분기, 하나가 너무 많이 아는 모듈) · 의존 방향(레이어·모듈 경계 침범, 순환) · 죽은 코드·미사용 의존성 · 테스트 공백(ARCH 테스트 정책 대비 빠진 곳, 깨지기 쉬운 테스트) · 에러 처리 일관성 · 명백한 성능 낭비(N+1, 반복 I/O) · 보안 위생(하드코딩 비밀값, 입력 검증 누락) · 의존성 노후·중복.

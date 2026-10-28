@@ -15,7 +15,7 @@ description: >-
 1. 먼저 `vibe status --json` 또는 실행기 brief로 필요한 STATE 요약만 본다. 없으면 0단계 부트스트랩.
 2. **문서 먼저**: 쓰기 전 실행기 배정 또는 `work status --json`으로 확인한다(CLI가 없으면 checkout·사용자 배정 확인). 단독/기획은 STATE에 시작·상태 변화를 기록한다. 워커는 STATE·SSOT 대신 runtime과 자기 acceptance 체크·result만 쓴다. 리뷰는 읽기 전용이며 리뷰 runtime만 쓴다. 브랜치명은 소유권이 아니다.
 3. 산출 문서는 spec/FORMAT.md 표기를 따른다. `vibe format --section task|state|ssot|report` 중 필요한 발췌만 보고 FORMAT 전체를 읽지 않는다. 규칙에 없는 표기는 만들지 않는다.
-4. 질문·확인·보고는 cfg.lang 언어로, 상세도는 cfg.level대로. 산출 문서는 영어로 쓴다(FORMAT 언어 규칙). 선택지형 질문 도구(AskUserQuestion 등)가 있으면 사용. 맡김 모드(start-vibe)에서는 묻지 않는다 — 추천안으로 진행하고 STATE inbox와 보고서에 남긴다(되돌리기 어렵거나 프로젝트 밖에 영향을 주는 일은 주차). 모드가 정해지지 않았으면 함께 모드다.
+4. 질문·확인·보고는 cfg.lang 언어로, 상세도는 cfg.level대로. 산출 문서는 영어로 쓴다(FORMAT 언어 규칙). 선택지형 질문 도구(AskUserQuestion 등)가 있으면 사용. 맡김 모드(start-vibe)에서는 묻지 않는다 — 추천안으로 진행하고 STATE inbox와 보고서에 남긴다(되돌리기 어렵거나 프로젝트 밖에 영향을 주는 일은 주차). 권한 확인 창도 질문이다 — 창이 뜰 만한 명령은 실행하지 않고 주차한다(start-vibe 3절). 모드가 정해지지 않았으면 함께 모드다.
 5. **읽기**: brief·status 요약을 먼저 쓰고 부족한 ID·섹션만 읽는다. 결정은 `vibe brief <T###|ID-n|ID@rev>`로 원문 블록째 받는다 — 끝의 `end` 줄이 없거나 complete:no면 빠진 부분부터 다시 읽고, unfollowed·related는 필요한 것만 연다. 직접 읽은 결정은 다음 결정 줄·제목까지 본 블록만 근거로 쓴다. STATE·FORMAT·ARCH·큰 코드 전체를 반복 읽지 않는다. tasks/done/은 특정 회귀·검증 근거만 선택 조회한다. 출력은 요약·tail, 전체 로그는 파일로 남긴다.
 
 ## 0. 부트스트랩 (spec/ 없을 때만)
@@ -28,7 +28,7 @@ description: >-
 
 spec/이 이미 있으면 0단계 생략, ARCH 개정 모드 — 진행과 마감 모두 update-ssot와 동일 규칙(rev+1·chg·STATE pending·[?] 갱신).
 
-작업 묶음의 워커에서 호출됐다면 이 스킬의 문서 쓰기 절차는 기획 공간으로 인계한다. `manage-work`가 반환한 group.path가 기획·채번·문서 정리 위치이며, 워커 checkout의 STATE·SSOT를 변경하지 않는다.
+작업 묶음의 워커에서 호출됐다면 이 스킬의 문서 쓰기 절차는 기획 공간으로 인계한다. `manage-work`가 반환한 group.path가 기획·채번·문서 정리 위치이며, 워커 checkout의 STATE·SSOT를 변경하지 않는다. 기획 문서의 정본은 cfg plan 브랜치(기본 `main`)다 — 어느 checkout·worktree에서 기획하든 쓰기·채번 전에 `vibe plan-sync`로 그 브랜치의 최신을 합치고, spec/만 담은 기획 커밋 직후 `vibe plan-push`로 그 브랜치에 올린다(태스크 ID 충돌로 거절되면 미발행 태스크를 다시 채번해 커밋을 고친 뒤 다시 올린다).
 
 작업 묶음의 ARCH 개정은 공유 보드의 활성 attempt에도 영향을 줄 수 있다. 영향을 보고하고, 변경 후 워커의 동기화·재검증을 요구한다.
 
@@ -46,7 +46,11 @@ spec/이 이미 있으면 0단계 생략, ARCH 개정 모드 — 진행과 마�
 맡김 모드: 같은 질문에 추천안으로 답해 ARCH를 쓰고 inbox `decided`에 남긴다. 스택은 되돌리기 비싸므로 사용자가 inbox를 확인하기 전에는 스캐폴딩 태스크를 구현하지 않는다(inbox `parked`).
 
 ## 3. ssot/ARCH.md 작성
-create-ssot 스킬 폴더의 assets/ssot.md 템플릿을 `spec/ssot/ARCH.md`로 복사해 시작한다(r1). ARCH-n 결정으로: 스택 / 폴더 구조(트리 압축) / 데이터 저장·스키마 원칙 / 코드 컨벤션(네이밍·상태관리·에러 처리) / 테스트 정책 / verify 명령(test·lint·format) / CI/CD / 배포. 근거(←)는 트레이드오프가 있던 결정에만 붙인다. 폴더 구조·컨벤션처럼 항목이 여러 개인 결정은 한 줄로 늘이지 말고 결정 블록(2칸 들여쓴 하위 항목·표)으로 편다. verify 명령은 백틱 코드로, 설명을 섞지 않은 실행 가능한 형태 그대로 적는다. 검증 단계는 모든 프로젝트에서 항상 결정한다: task(변경·영향 테스트+typecheck·lint·format) / batch(코드 push 전 전체 스위트 한 번) / CI(push 뒤 원격 검사). ARCH 개정 시 단계가 없으면 추가를 제안한다(맡김은 추천안+inbox). 결정 블록 하위 줄은 `  - task, before each done commit: ` 뒤 실행 명령 백틱 목록, `  - batch, before code push: ` 뒤 전체 명령 목록, `  - CI, after code push: ` 뒤 원격 관문 설명으로 쓴다. 조건부 UI·저장소·브라우저 검사는 별도 하위 줄에 조건과 spec 경로 선택법을 보존한다. `$HAERAM_DIFF_BASE`는 태스크 시작 SHA이며 단독·work 모두 CLI가 전달한다. 작업 묶음은 task→`--task-verify`, batch→`--verify`, CI가 최종 관문이면 `--group-verify`를 생략한다. 추가 로컬 최종 관문이 필요한 프로젝트만 group-verify를 정한다. 단계가 없어도 태스크에 전체 verify를 붙이지 않는다. **테스트는 기본 의무** — 빼려면 ARCH에 명시적 [o] 결정으로만 가능하고, 그 결정이 없으면 모든 태스크의 acceptance에 테스트가 요구된다.
+create-ssot 스킬 폴더의 assets/ssot.md 템플릿을 `spec/ssot/ARCH.md`로 복사해 시작한다(r1). ARCH-n 결정으로: 스택 / 폴더 구조(트리 압축) / 데이터 저장·스키마 원칙 / 코드 컨벤션(네이밍·상태관리·에러 처리) / 테스트 정책 / verify 명령(test·lint·format) / CI/CD / 배포. 근거(←)는 트레이드오프가 있던 결정에만 붙인다. 폴더 구조·컨벤션처럼 항목이 여러 개인 결정은 한 줄로 늘이지 말고 결정 블록(2칸 들여쓴 하위 항목·표)으로 편다. verify 명령은 백틱 코드로, 설명을 섞지 않은 실행 가능한 형태 그대로 적는다.
+- 검증 단계는 항상 결정한다: task(추가·변경·영향 단위 테스트+typecheck·lint·format) / batch(조정자/호스트가 최종 통합 후보에서 push 직전 통합·e2e·전체 스위트 한 번; 커밋만 남기면 조정자의 전체 완료 관문) / CI(실제 코드 push가 있을 때만 원격 검사 한 번). 태스크 커밋·WIP 저장·단위 종료는 batch 경계가 아니다. 테스트 분류는 이름이 아닌 격리 범위·의존성에 따른다.
+- ARCH 개정 시 단계가 없거나 통합/e2e가 task에 있으면 위 단계로 정리한다(맡김은 추천안+inbox). 하위 줄은 `  - task, before each done commit: ` 뒤 실행 명령 목록, `  - batch, before code push or final completion: ` 뒤 전체 명령 목록, `  - CI, after code push: ` 뒤 원격 관문 설명으로 쓴다. 조건부 검사의 적용 조건·경로 선택법은 별도 하위 줄로 보존하되 통합/e2e는 batch에 둔다.
+- `$HAERAM_DIFF_BASE`는 태스크 시작 SHA이며 단독·work 모두 CLI가 전달한다. task→`--task-verify`. 별도 명시가 없으면 최종 검증 소유자는 조정자/호스트 하나이며 워커·리뷰어는 브라우저·전체 검사를 실행하지 않는다. 기본(push 없이 묶음 브랜치에 모음)은 `--verify`에 빠른 검사만, 통합·e2e는 `--group-verify`에 둔다. 사용자가 통합마다 push(`--push`)를 요청한 묶음만 batch→`--verify`, CI가 최종 관문이면 `--group-verify` 생략. 같은 트리에서 통과한 전체 검사는 반복하지 않는다.
+- 단계가 없어도 태스크에 전체 verify를 붙이지 않는다. **테스트는 기본 의무** — 빼려면 ARCH에 명시적 [o] 결정으로만 가능하고, 그 결정이 없으면 모든 태스크의 acceptance에 테스트가 요구된다. 통합/e2e 실행을 batch로 넘긴 것은 검증 면제가 아니다.
 
 ## 4. 마감
 - STATE: ssot 행 `ARCH | 1 | 0 | all | <[?] 수>` (스캐폴딩도 태스크로 만들 것이므로 tasked=0), next = 기획 SSOT 없으면 `create-ssot`, 있으면 `create-task ARCH`, log 1줄. cfg `always`(모든 태스크 brief에 실리는 전역 규칙)는 `ARCH` 전체로 둔다 — ARCH가 커져 일부 태스크만 쓰는 결정이 많아지면 모든 태스크가 지킬 결정(컨벤션·테스트 정책·검증 단계)만 남긴다. ARCH 개정으로 결정을 추가할 때도 always 포함 여부를 정한다.

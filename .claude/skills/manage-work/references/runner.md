@@ -9,16 +9,16 @@
 ```bash
 npx haeram-spec-creator work start feature --workers 4 --reviewers 1 --max-pending 8 --json
 npx haeram-spec-creator work doctor --json
-npx haeram-spec-creator work run --work feature --provider codex --reviewer-provider claude --task-verify 'npm run lint' --verify 'npm ci && npm test' --group-verify 'npm ci && npm run ci' --dry-run --json
-npx haeram-spec-creator work run --work feature --provider codex --reviewer-provider claude --task-verify 'npm run lint' --verify 'npm ci && npm test' --group-verify 'npm ci && npm run ci' --json
+npx haeram-spec-creator work run --work feature --provider codex --reviewer-provider claude --task-verify 'npm run lint' --verify 'npm ci && npm run lint' --group-verify 'npm ci && npm run ci' --dry-run --json
+npx haeram-spec-creator work run --work feature --provider codex --reviewer-provider claude --task-verify 'npm run lint' --verify 'npm ci && npm run lint' --group-verify 'npm ci && npm run ci' --json
 ```
 
 기존 그룹은 기록된 한도를 사용하고, 한도 기록이 없는 그룹은 4/1/8을 사용한다.
 
 ### 검증 단계
 - `--task-verify`(선택): 태스크마다 호스트가 제출 커밋에 실행하는 빠른 검사(lint·타입 검사 등). 워커는 별도로 자기 태스크가 추가·수정·영향을 준 테스트만 실행한다. 전체 스위트를 여기에 넣으면 태스크마다 전체 테스트가 돌아 단계 구분의 의미가 없다.
-- `--verify`(필수): 단위(lane 또는 lane 없는 태스크)를 통합할 때마다 merge 후보에서 한 번 실행한다. 보통 전체 test.
-- `--group-verify`(선택): 모든 단위가 통합되면 묶음 브랜치에서 한 번 실행하고 검증 커밋을 기록한다(`work board`의 `verified`). 생략하면 나중에 `work finish`로 실행한다.
+- `--verify`(필수): 단위(lane 또는 lane 없는 태스크)를 통합할 때마다 merge 후보에서 한 번 실행한다. 기본은 빠른 통합 검사이며 통합/e2e·전체 스위트는 넣지 않는다.
+- `--group-verify`: 기본 통합/e2e·전체 스위트 관문이다. 모든 단위가 통합되면 조정자 소유 CLI 하나가 묶음 브랜치에서 한 번 실행하고 검증 커밋을 기록한다(`work board`의 `verified`). 생략하면 나중에 `work finish`로 실행한다.
 - 각 옵션은 반복할 수 있고 명령당 상한은 1시간이다(`--verify-timeout-ms`). 명령은 ARCH의 단계별 verify 결정에서 가져온다. 생략하면 `work start`/`work configure`로 묶음에 저장한 명령을 쓴다.
 - 같은 트리에서 이미 통과한 명령은 다시 돌리지 않는다(`HAERAM_*`를 읽는 명령은 그 값까지 같아야 한다). 기록에는 `cached`로 남는다. 단위·묶음 검증은 clone 단위 heavy 락을 잡고 하나씩 실행된다 — `vibe check --heavy`로 돌리는 실험과도 겹치지 않는다.
 - 명령에는 `HAERAM_TIER`(task|unit|group), `HAERAM_DIFF_BASE`(태스크=이전 단계 커밋, 재제출=고친 대상 커밋, 단위=통합 전 상위 커밋, 묶음=묶음 시작 커밋), `HAERAM_TASK`·`HAERAM_TASKS`가 전달된다. 예: `pnpm vitest related --run $(git diff --name-only "$HAERAM_DIFF_BASE" HEAD)`로 호스트가 영향받는 테스트를 직접 실행한다. 빈 선택이 통과로 끝나지 않게 명령을 구성한다.
@@ -33,7 +33,7 @@ lane 단위는 한 worker 슬롯과 한 작업 공간을 끝까지 사용한다.
 ```sh
 npx haeram-spec-creator work start feature --workers 6 --reviewers 1 --max-pending 12 --json
 # Codex만: --provider codex, Claude만: --provider claude
-npx haeram-spec-creator work run --work feature --providers codex,claude --verify 'npm test' --json
+npx haeram-spec-creator work run --work feature --providers codex,claude --verify 'npm run lint' --json
 ```
 
 providers 목록은 슬롯에 순환 배정한다. 6개 슬롯과 `codex,claude`는 각각 3개, `codex,claude,claude`는 Codex 2개·Claude 4개다. 워커 6개에 리뷰어는 별도다. 각 슬롯은 단위 완료 뒤 다음 의존성 충족 단위를 가져간다. 태스크 30개를 꼭 5개씩 고정 분배하지 않으며, dep·touches·리뷰 적체가 있으면 실제 동시 실행 수는 줄어든다.
@@ -95,14 +95,16 @@ stdout은 최종 JSON 객체 하나만 출력하고 진행 로그는 stderr로 �
 
 runner는 빈 슬롯을 채우고 수정 요청을 우선 배정하며 리뷰 대기열을 처리한다. 대기 중 모델 호출은 하지 않는다. 살아 있는 자식 프로세스의 heartbeat는 10초마다 기록하지만 에이전트의 의미 있는 진행을 보장하지는 않는다. 장시간 작업자는 board를 다시 읽고 정책 변경을 판단해야 한다.
 
-완료 시 `outcome:completed`(`--group-verify`를 지정했다면 그 검증까지 통과해야 한다, 결과는 `finish`). 더 진행할 수 없으면 `needs-attention`과 남은 작업을 반환한다. 횟수 한도는 `dispatch-limit`, 종료 신호/heartbeat 실패는 `interrupted`. maxTaskRuns는 한 번의 run 안에서 태스크별·역할별 최대 실행 횟수이며 재실행 전에 반복 실패 원인을 확인한다. 자동 통합 실패는 같은 run에서 무한 재시도하지 않는다.
+완료 시 `outcome:completed`(`--group-verify`를 지정했다면 그 검증까지 통과해야 한다, 결과는 `finish`). 더 진행할 수 없으면 `needs-attention`과 남은 작업을 반환한다(`remaining`에 태스크와 attempt ID 포함). 횟수 한도는 `dispatch-limit`, 종료 신호/heartbeat 실패는 `interrupted`. maxTaskRuns는 한 번의 run 안에서 태스크별·역할별 최대 실행 횟수이며 재실행 전에 반복 실패 원인을 확인한다. 자동 통합 실패와 재시도 횟수는 attempt가 아니라 제출물(`submissionId`, 없으면 제출 commit)별로 기억한다. 같은 제출물의 비일시적 실패는 같은 run에서 다시 시도하지 않지만, 고쳐서 재제출·재승인하면 같은 attempt도 다시 통합한다. Claude·Codex와 command 어댑터 모두에 적용된다.
 
 ### 맡김(autopilot)
 
 `work run --autopilot`은 사람이 없다는 전제로 돈다.
-- 결정 요청만 남아도 끝나지 않고 조정자의 답을 기다린다(모델 호출 없음, 기본 2시간 `--decision-wait-ms`, 지나면 `decision-wait`로 끝남). 조정자 세션은 `work next --coordinator --autopilot` 루프에서 `decide`를 받아 잠정 update-ssot(그 태스크의 base 갱신 포함)를 커밋하고 `work update --attempt <id> --status doing --note '<결정과 rev>'`로 재개한다. 실행기는 기획 브랜치를 그 워커 공간에 합치고 같은 세션을 이어 실행한다. 조정자는 단위·리뷰를 맡지 않는다.
+- 결정 요청만 남으면 조정자의 답을 기다린다(모델 호출 없음, 기본 15분=900000ms, 명시적인 `--decision-wait-ms` 우선, 지나면 `decision-wait`로 끝남). 대기를 시작하거나 대상이 바뀌면 attempt ID·태스크·질문·요청 시각·대기 시작·기한을 stderr와 runtime 이력에 남긴다. 함께 모드는 사용자가 결정하도록 대기 없이 반환한다.
+- 승인됐지만 통합하지 못한 제출물이 남으면 결정 대기로 숨기지 않는다. 새 제출물은 다시 통합하고, 같은 제출물이 이미 실패해 더 진행할 수 없으면 즉시 `needs-attention`으로 끝내고 `remaining`에 그 attempt를 남긴다.
+- 조정자 세션은 `work next --coordinator --autopilot` 루프에서 `decide`를 받아 잠정 update-ssot(그 태스크의 base 갱신 포함)를 커밋한 직후 바로 `work update --attempt <id> --status doing --note '<결정·rev·순서 조건>'`으로 재개한다. 선행 통합을 기다리며 재개를 미루지 않는다. 순서 의존은 태스크 deps(`dep:`)에 반영하고 메모로 넘기며 실행기와 runtime이 순서를 맞춘다. 실행기는 기획 브랜치를 그 워커 공간에 합치고 같은 세션을 이어 실행한다. 조정자는 단위·리뷰를 맡지 않는다.
 - timeout이면 끊기 전에 작업 공간을 `refs/haeram/checkpoints/<attempt>`로 스냅샷하고(30분마다도, `--checkpoint-ms`) 진행분을 `WIP` 커밋으로 남긴 뒤, 같은 세션으로 한 번 더 이어 간다(태스크 실행 횟수 한도 안에서). `--push`가 있는 묶음은 스냅샷을 `wip/<attempt 8자>`로도 push한다.
-- 계획 커밋이나 다른 통합이 검증 도중 상위 브랜치를 옮긴 통합은 같은 실행 안에서 몇 번 다시 시도한다.
+- 계획 커밋이나 다른 통합이 검증 도중 상위 브랜치를 옮긴 통합은 제출물마다 최대 3회 시도한다. 재제출하면 이 횟수도 새로 센다.
 - macOS에서는 실행기 수명 동안 `caffeinate -w`로 절전을 막는다(`HAERAM_NO_AWAKE=1`이면 끔).
 
 ### 진행 저장

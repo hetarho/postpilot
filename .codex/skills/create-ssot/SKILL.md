@@ -1,7 +1,7 @@
 ---
 name: create-ssot
 description: >-
-  기획자 역할로 사용자를 인터뷰해 새 도메인 SSOT(spec/ssot/<ID>.md)를 작성한다. "기능 기획하자 /
+  기획자 역할로 사용자를 인터뷰해 새 도메인 SSOT(spec/ssot/)를 작성한다. "기능 기획하자 /
   스펙 만들어줘 / SSOT 작성 / ~기능 추가하고 싶어(아직 스펙 없음)" 일 때 사용. 기획 관점 질문만 한다
   (목적·타겟·범위·플로우·정책) — 기술 결정은 하지 않는다. 기존 SSOT 수정은 update-ssot,
   구현 분해는 create-task.
@@ -17,15 +17,15 @@ description: >-
 1. 먼저 `vibe status --json` 또는 실행기 brief로 필요한 STATE 요약만 본다. 없으면 create-architecture 실행을 안내한다.
 2. **문서 먼저**: 쓰기 전 실행기 배정 또는 `work status --json`으로 확인한다(CLI가 없으면 checkout·사용자 배정 확인). 단독/기획은 STATE에 시작·상태 변화를 기록한다. 워커는 STATE·SSOT 대신 runtime과 자기 acceptance 체크·result만 쓴다. 리뷰는 읽기 전용이며 리뷰 runtime만 쓴다. 브랜치명은 소유권이 아니다.
 3. 산출 문서는 spec/FORMAT.md 표기를 따른다. `vibe format --section task|state|ssot|report` 중 필요한 발췌만 보고 FORMAT 전체를 읽지 않는다. 규칙에 없는 표기는 만들지 않는다.
-4. 질문·확인·보고는 cfg.lang 언어로, 상세도는 cfg.level대로. 산출 문서는 영어로 쓴다(FORMAT 언어 규칙). 선택지형 질문 도구(AskUserQuestion 등)가 있으면 사용. 맡김 모드(start-vibe)에서는 묻지 않는다 — 추천안으로 진행하고 STATE inbox와 보고서에 남긴다(되돌리기 어렵거나 프로젝트 밖에 영향을 주는 일은 주차). 모드가 정해지지 않았으면 함께 모드다.
+4. 질문·확인·보고는 cfg.lang 언어로, 상세도는 cfg.level대로. 산출 문서는 영어로 쓴다(FORMAT 언어 규칙). 선택지형 질문 도구(AskUserQuestion 등)가 있으면 사용. 맡김 모드(start-vibe)에서는 묻지 않는다 — 추천안으로 진행하고 STATE inbox와 보고서에 남긴다(되돌리기 어렵거나 프로젝트 밖에 영향을 주는 일은 주차). 권한 확인 창도 질문이다 — 창이 뜰 만한 명령은 실행하지 않고 주차한다(start-vibe 3절). 모드가 정해지지 않았으면 함께 모드다.
 5. **읽기**: brief·status 요약을 먼저 쓰고 부족한 ID·섹션만 읽는다. 결정은 `vibe brief <T###|ID-n|ID@rev>`로 원문 블록째 받는다 — 끝의 `end` 줄이 없거나 complete:no면 빠진 부분부터 다시 읽고, unfollowed·related는 필요한 것만 연다. 직접 읽은 결정은 다음 결정 줄·제목까지 본 블록만 근거로 쓴다. STATE·FORMAT·ARCH·큰 코드 전체를 반복 읽지 않는다. tasks/done/은 특정 회귀·검증 근거만 선택 조회한다. 출력은 요약·tail, 전체 로그는 파일로 남긴다.
 
-작업 묶음의 워커에서 호출됐다면 이 스킬의 문서 쓰기 절차는 기획 공간으로 인계한다. `manage-work`가 반환한 group.path가 기획·채번·문서 정리 위치이며, 워커 checkout의 STATE·SSOT를 변경하지 않는다.
+작업 묶음의 워커에서 호출됐다면 이 스킬의 문서 쓰기 절차는 기획 공간으로 인계한다. `manage-work`가 반환한 group.path가 기획·채번·문서 정리 위치이며, 워커 checkout의 STATE·SSOT를 변경하지 않는다. 기획 문서의 정본은 cfg plan 브랜치(기본 `main`)다 — 어느 checkout·worktree에서 기획하든 쓰기·채번 전에 `vibe plan-sync`로 그 브랜치의 최신을 합치고, spec/만 담은 기획 커밋 직후 `vibe plan-push`로 그 브랜치에 올린다(태스크 ID 충돌로 거절되면 미발행 태스크를 다시 채번해 커밋을 고친 뒤 다시 올린다).
 
 ## 1. 시작
 STATE 읽기 → log에 `- YYMMDD create-ssot <topic> start` → 기존 ssot/를 훑어 중복·연관 확인.
 같은 도메인이 이미 있으면 update-ssot로 전환을 제안한다.
-spec/ideation/에 st:ready 문서가 있으면 그것이 재료다(start-vibe가 기획 경로로 고른 open 문서도 — 이때 st를 ready로 바꾼다) — domains의 해당 줄과 vision·shape·explored를 읽고, 2단계 인터뷰는 문서의 공백과 [?]만 채운다. 전환을 마친 domains 줄에 →<ID>를 달고, 모든 [o] 도메인이 전환되면 문서 st→converted@YYMMDD + STATE ideation 행 갱신.
+spec/ideation/ 바로 아래 st:ready 문서가 재료다(start-vibe가 기획 경로로 고른 open 문서도 — 이때 문서·STATE st를 ready로 바꾼다). domains의 다음 미반영 채택 줄과 vision·shape·explored를 읽고, 2단계 인터뷰는 문서의 공백과 [?]만 채운다. ideation/done/은 기본 입력이 아니다. 같은 도메인이 이미 있으면 원본 ideation 경로·반영할 범위를 update-ssot로 함께 넘긴다.
 
 ## 2. 기획 인터뷰
 아래를 전부 결정으로 만들 수 있을 때까지 묻는다. 한 번에 2~4개씩. 이미 문서·대화에 답이 있으면 묻지 않는다.
@@ -62,3 +62,4 @@ level별 질문법:
 
 ## 4. 마감
 STATE: ssot 행 추가 `<ID> | 1 | 0 | all | <[?] 수>` / next에 `create-task <ID>` / log 1줄.
+ideation에서 시작했다면 [전환 마감 절차](references/ideation.md)를 수행한다 — 전체 범위를 SSOT와 대조하고, 일부 반영은 ready 유지, 전체 반영은 converted로 바꾸고 ideation/done/으로 이동·STATE 행 제거. SSOT·ideation·STATE 변경은 같은 기획 커밋에 담는다.
