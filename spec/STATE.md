@@ -137,6 +137,7 @@
 - T697 deployment/CORS/media gates passed at177b377a; deployed browser preview now reads8 real retained R2 originals without a range failure. Full public browser-generation qualification remains gated by T603/T604.
 
 ## log
+- 261029 fix clip caption edit: retyping a caption so its AI accent keyword no longer appears held the whole ② edit unsaved behind 이 문구의 내용·위치·시간을 확인해 주세요; the text field now drops a keyword the new text does not carry, as the composer does.
 - 261029 fix clip HLG export colour: server renders of HLG sources inherited the source's BT.2020/HLG tags (FFmpeg 9 lets frame tags override encoder options), so players tone-mapped the export unlike its SDR preview; the delivered encode is relabelled BT.709 primaries/transfer with the coded matrix kept, pixels unchanged (lossless framemd5 equal; PSNR 54.8 dB vs the prior render). CLIP-219 regains r62's preview/export parity reason (wording, no rev).
 - 261029 fix clip cancellation: the GetGeneration poll dropped the queue's canCancel, policy version, cancel request and wait expiry, so a running clip job showed 이 작업은 취소 기능을 지원하지 않아요 and no cancel control; the generation projection now carries them (CLIP-78).
 - 261029 fix clip render choice: ② offered the unreleased browser render first (encoder probe only), so its start met the server's 501 and a misleading re-select message; the browser kind now follows finalRender readiness (ARCH-68) and is refused by name while the server leads. Measured on 8 HLG HEVC originals in real Chrome.

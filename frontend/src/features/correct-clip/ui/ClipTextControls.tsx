@@ -148,7 +148,18 @@ export function ClipTextControls({
             id="clip-selected-text"
             autoGrow
             value={text.text}
-            onChange={(e) => patch({ text: e.target.value }, 'text')}
+            onChange={(e) => {
+              const value = e.target.value
+              // A keyword the text no longer carries is not a keyword (the composer's own
+              // rule): kept, it would hold the whole edit unsaved behind a refusal that names
+              // neither the word nor the field.
+              patch(
+                text.keyword && !value.includes(text.keyword)
+                  ? { text: value, keyword: '' }
+                  : { text: value },
+                'text',
+              )
+            }}
           />
         </div>
       )}

@@ -99,3 +99,20 @@ it('edits an intro by its slot rows alone', () => {
     expect.any(String),
   )
 })
+
+it('drops a keyword the edited text no longer carries, so the edit stays saveable', () => {
+  const state = clipTimelineFixture()
+  const caption = { ...state.plan.elements![0], text: '기본 상차림', keyword: '상차림' }
+  const change = vi.fn()
+  render(<ClipTextControls plan={state.plan} text={caption} change={change} invalid={false} />)
+  fireEvent.change(screen.getByLabelText('자막 원문'), { target: { value: '기본 한상' } })
+  expect(change).toHaveBeenLastCalledWith(
+    expect.objectContaining({ patch: { text: '기본 한상', keyword: '' } }),
+    expect.any(String),
+  )
+  fireEvent.change(screen.getByLabelText('자막 원문'), { target: { value: '푸짐한 상차림' } })
+  expect(change).toHaveBeenLastCalledWith(
+    expect.objectContaining({ patch: { text: '푸짐한 상차림' } }),
+    expect.any(String),
+  )
+})
