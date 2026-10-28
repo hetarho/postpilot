@@ -9,6 +9,10 @@
 - push: main
 
 ## inbox
+- 261028 decided TMPL-73: how does an owner style request meet the 기본 voice? → the request decides wording and outranks the voice, which still decides without one; examples are code-owned chips that fill the field (alt: the request replaces the voice entirely | free text only, no examples)
+- 261028 decided TMPL-71: what replaces the top 내 말로 쓰기 button on the headings step? → the frame's ordinary 다음 in the next-action place, the heading fields being the own-words input (alt: keep the 내 말로 쓰기 label in the next slot)
+- 261028 decided TMPL-32: how does a writer with no template get one? → `새 템플릿 만들기` in ①'s template picker opens the wizard and returns to the post with it assigned (alt: link out with no return | a hint line under the picker)
+- 261028 suggest TMPL-73 CLIP-213: the clip template wizard still offers the direct suggestion button; give it the same style-request sheet if wanted
 - 261016 suggest T694 T695 T698 T699 T700: review-code over channel navigation, campaign positioning, owned post links, frozen writing material and original capture metadata.
 - 261016 decided T700: how is EXIF without a UTC offset normalized? → omit the unknown instant and retain filename-based order as fallback (alt: invent the browser’s current time zone | label the local wall clock as UTC); use bounded mvhd parsing because the installed Mediabunny skips that creation field.
 - 261016 decided T699: how does a clip-store transaction fence external post text? → freeze a same-read creation identity and carry its text digest in pricing beside GuidelinesDigest, with the raw link identity in the project digest (alt: read post tables from the clip context | persist live post text on every project edit).
@@ -83,7 +87,7 @@
 | VOICE | 17 | 17 | - | 0 |
 | GEN | 31 | 31 | - | 0 |
 | MODEL | 36 | 36 | - | 0 |
-| TMPL | 28 | 28 | - | 0 |
+| TMPL | 29 | 29 | - | 0 |
 | GUIDE | 23 | 23 | - | 0 |
 | EXPORT | 12 | 12 | - | 0 |
 | LANG | 10 | 10 | - | 0 |
@@ -126,12 +130,20 @@
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
+| T710 | Carry an owner style request through heading suggestions | TMPL ARCH | - | todo |
+| T711 | Draw compact preview stand-ins and the wizard's side preview | TMPL THEME | - | todo |
+| T712 | Heading style sheet, ordinary 다음 and content-kind cards | TMPL THEME | T710 T711 | todo |
+| T713 | 새 템플릿 만들기 in ①'s template picker | TMPL POST | - | todo |
 
 ## next
+- implement-task T710 → T711 → T712 → T713 (TMPL r29 template-wizard friendliness), then one pre-push gate including backend deploy/media parity.
 - T708 is deployed and d3d51209 CI/Workers plus actual retained-original playback/preview pass. T709 fresh planning remains blocked by unresolved provider usage; preserve its ledger and keep T603/T604/voice gates closed.
 - T697 deployment/CORS/media gates passed at177b377a; deployed browser preview now reads8 real retained R2 originals without a range failure. Full public browser-generation qualification remains gated by T603/T604.
 
 ## log
+- 261029 create-task TMPL r29: T710 heading style request (proto/BE/hook), T711 compact preview + wizard side preview, T712 style sheet + 다음 + content-kind cards, T713 picker 새 템플릿 만들기.
+- 261028 update-ssot TMPL r29: wizard heading style-request sheet, preview beside every step (lg right / 미리보기 sheet), content-kind cards with 글 쓸 때·완성된 글 panels, compact preview stand-ins, 새 템플릿 만들기 in ①'s picker. Audit: first-use /setup and the voice picker's 새 말투 만들기 exist; the template picker had no creation path.
+- 261028 update-ssot TMPL start: template-creation UX friendliness (owner request).
 - 261028 fix clip delivery: rerendered the latest completed clip from the identical retained production plan/originals with exactly one intro headline changed; private1080x1920 H264 High/30fps/900-frame/30s output passes production validation, independent full decode and Chrome seek/playback. Owner download and private server copy retained; completed project/result unchanged.
 - 261028 start introfix: inspect the latest server video and rerender with the owner-supplied intro business name only.
 - 261028 delivery verified atd3d51209: CI40546530178 frontend562/4480 and full backend pass; Workers7ccde8a4/versionf3298eab and live-byte/native-playback/deployed-R2-preview checks pass. Final documents reuse unchanged source verification; private videos and offline review page are retained, with T709 usage/corpus/human-review gates still open.
@@ -149,5 +161,3 @@
 - 261028 T707 local verification:560 FE files/4464 tests and affected native app/store/worker/RPC checks pass; final disclosure copy passes its source-picker/page/workspace regressions and lint/build. Built-app Chromium confirms visible server approval and exactly one native start with no analysis preparation ID for storyline/direct actions against a mocked API; actual owner-approved provider completion remains unverified. Unchanged full backend/deploy/generated evidence is reused; frontend-only diff triggers no backend/media deployment.
 - 261028 T707 starts at7ffe6fa6 (avf): select native preparation before approval when browser readiness is closed; enforce server-returned qualification before browser activation and retain independent export/quality gates.
 - 261028 create-task CLIP r64: T707 restores explicitly approved native preparation and early browser readiness checks; consumes CLIP-220. Production native runtime is ready, while browser copies have no verifier and the quality gate remains closed.
-- 261028 update-ssot CLIP start (avf): browser-analysis readiness is disabled while the workspace always starts it; restore an explicit qualified server-preparation approval, preserving browser quality and export gates. Optional route-preference question remains unanswered; proceeding with the recommended existing-server recovery under the authorized fix/deploy scope.
-- 261027 analysis verification stall start (avf, pair): owner reports the deployed clip flow remains at browser analysis verification after the source measurement repair; trace the preparation workflow and inspect the PEM production host, preserving unrelated ideation changes.
