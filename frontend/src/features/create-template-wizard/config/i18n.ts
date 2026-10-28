@@ -82,6 +82,13 @@ export const i18n = {
         name_too_long: '이름은 {{max}}자까지 쓸 수 있어요.',
         description_too_long: '설명은 {{max}}자까지 쓸 수 있어요.',
       },
+      preview: {
+        open: '미리보기',
+        close: '닫기',
+        title: '제목은 AI가 지어요',
+        empty: '넣을 부분을 고르면 여기에 글 모양이 보여요.',
+        literalEmpty: '적어 둔 문구가 그대로 들어가요',
+      },
       finish: {
         title: '이름을 붙이고 저장해요',
         name: '템플릿 이름',
@@ -167,6 +174,13 @@ export const i18n = {
         name_missing: 'Name the template.',
         name_too_long: 'A name takes up to {{max}} characters.',
         description_too_long: 'A description takes up to {{max}} characters.',
+      },
+      preview: {
+        open: 'Preview',
+        close: 'Close',
+        title: 'The AI writes the title',
+        empty: 'Check the parts to include and the post takes shape here.',
+        literalEmpty: 'The text you write goes in as it is',
       },
       finish: {
         title: 'Name it and save',

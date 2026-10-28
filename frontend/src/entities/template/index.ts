@@ -52,6 +52,17 @@ export { TemplateComposition } from './ui/TemplateComposition'
 export { TemplateSource } from './ui/TemplateSource'
 export { TemplatePreview } from './ui/TemplatePreview'
 export {
+  AnswerChip,
+  AnswerStandIn,
+  FixedTextStandIn,
+  PhotoStandIn,
+  PREVIEW_REPEAT_PASSES,
+  PreviewLines,
+  PreviewPostCard,
+  RepeatStandIn,
+  WriteStandIn,
+} from './ui/PreviewStandIns'
+export {
   newBlock,
   readCompositionWorkingState,
   toBody,

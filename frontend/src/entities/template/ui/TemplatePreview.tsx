@@ -2,6 +2,15 @@ import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { twMerge } from 'tailwind-merge'
 import { Typography } from '@/shared/ui'
+import {
+  AnswerStandIn,
+  FixedTextStandIn,
+  PhotoStandIn,
+  PREVIEW_REPEAT_PASSES,
+  PreviewPostCard,
+  RepeatStandIn,
+  WriteStandIn,
+} from './PreviewStandIns'
 import { TEMPLATE_ASK_MAX_PER_BODY, TEMPLATE_PHOTO_ROW_MAX } from '../config'
 import {
   decode,
@@ -12,10 +21,6 @@ import {
   type TemplateNode,
 } from '../lib/grammar'
 import { TEMPLATE_PARSE_OPTIONS } from '../model/types'
-
-/** How many passes a 사진마다 반복 is drawn with: two show that it repeats, and nothing on a
- *  hardcoded preview asks to be operated (TMPL-66). */
-const REPEAT_PASSES = 2
 
 interface TemplatePreviewProps {
   titleArea: string
@@ -60,18 +65,18 @@ export function TemplatePreview({
           {t('preview.empty')}
         </Typography>
       ) : (
-        <>
+        <PreviewPostCard className="mt-4">
           {title && title.length > 0 && (
-            <Typography variant="title" as="h3" className="mt-8 break-words">
+            <Typography variant="fieldTitle" as="h3" className="mb-5 break-words">
               <InlineNodes nodes={title} />
             </Typography>
           )}
           {nodes && (
-            <div className="mt-8 space-y-5">
+            <div className="space-y-4">
               <BlockNodes nodes={nodes} />
             </div>
           )}
-        </>
+        </PreviewPostCard>
       )}
     </article>
   )
@@ -124,21 +129,27 @@ function BlockNodes({ nodes }: { nodes: readonly TemplateNode[] }) {
     switch (node.kind) {
       case 'literal': {
         const text = decode(node.text ?? '').trim()
-        if (text !== '') blocks.push(<FixedText key={key} text={text} />)
+        if (text !== '') blocks.push(<FixedTextStandIn key={key} text={text} />)
         break
       }
       case 'write':
-        blocks.push(<WriteBox key={key} topic={decode(node.text ?? '')} />)
+        blocks.push(<WriteStandIn key={key} topic={decode(node.text ?? '')} />)
         break
       case 'ask':
-        blocks.push(<AskStandIn key={key} node={node} />)
+        blocks.push(
+          <AnswerStandIn
+            key={key}
+            label={decode(node.label ?? '')}
+            topic={decode(node.text ?? '')}
+          />,
+        )
         break
       case 'slot':
         blocks.push(
           node.slotKind === 'photo' ? (
-            <PhotoRow key={key} count={node.count ?? 1} />
+            <PhotoStandIn key={key} count={node.count ?? 1} />
           ) : (
-            <FixedText
+            <FixedTextStandIn
               key={key}
               text={legacyLabel(node, {
                 place: t('builder.legacy.place'),
@@ -150,20 +161,13 @@ function BlockNodes({ nodes }: { nodes: readonly TemplateNode[] }) {
         break
       case 'repeat':
         blocks.push(
-          <section
-            key={key}
-            aria-label={t('preview.repeat')}
-            className="border-divider space-y-5 border-l-2 pl-3"
-          >
-            <Typography variant="meta" as="p" className="text-content-tertiary">
-              {t('preview.repeat')}
-            </Typography>
-            {Array.from({ length: REPEAT_PASSES }, (_, pass) => (
-              <div key={pass} className="space-y-5">
+          <RepeatStandIn key={key}>
+            {Array.from({ length: PREVIEW_REPEAT_PASSES }, (_, pass) => (
+              <div key={pass} className="space-y-4">
                 <BlockNodes nodes={node.children ?? []} />
               </div>
             ))}
-          </section>,
+          </RepeatStandIn>,
         )
         break
     }
@@ -208,62 +212,6 @@ function InlineNodes({ nodes }: { nodes: readonly TemplateNode[] }) {
         }
       })}
     </>
-  )
-}
-
-function FixedText({ text }: { text: string }) {
-  return (
-    <Typography variant="body" as="p" className="break-words whitespace-pre-wrap">
-      {text}
-    </Typography>
-  )
-}
-
-/** What the AI writes: a grey paragraph naming what its place is about, never sample prose. */
-function WriteBox({ topic, children }: { topic: string; children?: ReactNode }) {
-  const { t } = useTranslation('templates')
-  return (
-    <div className="bg-surface-recessed rounded-lg px-4 py-3">
-      <Typography variant="meta" as="p" className="text-content-tertiary">
-        {t('preview.aiWrites')}
-      </Typography>
-      <Typography variant="body" as="p" className="text-content-secondary mt-1 break-words">
-        {topic}
-      </Typography>
-      {children}
-    </div>
-  )
-}
-
-/** A data field: its 제목 over an 입력한 내용 placeholder, plain for the verbatim flavor and inside
- *  the grey box for the one the AI writes from (TMPL-43). */
-function AskStandIn({ node }: { node: TemplateNode }) {
-  const { t } = useTranslation('templates')
-  const label = decode(node.label ?? '')
-  const topic = decode(node.text ?? '')
-  const answer = (
-    <Typography variant="label" as="p" className="mt-1 break-words">
-      {label}
-      <span className="text-content-tertiary"> · {t('preview.answer')}</span>
-    </Typography>
-  )
-  if (topic === '') return <div>{answer}</div>
-  return <WriteBox topic={topic}>{answer}</WriteBox>
-}
-
-function PhotoRow({ count }: { count: number }) {
-  const { t } = useTranslation('templates')
-  return (
-    <div
-      role="img"
-      aria-label={t('preview.photos', { count })}
-      className="grid gap-2"
-      style={{ gridTemplateColumns: `repeat(${count}, minmax(0, 1fr))` }}
-    >
-      {Array.from({ length: count }, (_, cell) => (
-        <div key={cell} className="bg-surface-recessed aspect-square rounded-lg" />
-      ))}
-    </div>
   )
 }
 

@@ -16,12 +16,12 @@ describe('the template preview', () => {
         }
       />,
     )
-    // An AI가 쓰는 글 is a grey box naming its topic, never sample prose.
+    // An AI가 쓰는 글 is line bars under a mark naming its topic, never sample prose.
     expect(preview().getByText('메뉴 소개')).toBeInTheDocument()
     expect(preview().getAllByText('AI가 쓰는 글')).toHaveLength(2)
     // A 고정 문구 is its own text.
     expect(preview().getByText('안녕하세요 고정 인사')).toBeInTheDocument()
-    // A 사진 is one row of `count` cells.
+    // A 사진 is one short strip of `count` small tiles.
     const row = preview().getByRole('img', { name: '사진 3장' })
     expect(row.children).toHaveLength(3)
     // A data field shows its 제목 over an 입력한 내용 placeholder, in its flavor's stand-in.

@@ -1,16 +1,12 @@
 import { useId, type Dispatch } from 'react'
 import { useTranslation } from 'react-i18next'
-import {
-  TEMPLATE_DESCRIPTION_MAX_CHARS,
-  TEMPLATE_NAME_MAX_CHARS,
-  TemplatePreview,
-} from '@/entities/template'
+import { TEMPLATE_DESCRIPTION_MAX_CHARS, TEMPLATE_NAME_MAX_CHARS } from '@/entities/template'
 import { FieldLabel, FieldMessage, Textarea, TextField } from '@/shared/ui'
-import { toWizardBody } from '../lib/to-body'
 import { finishProblem, type WizardEvent, type WizardState } from '../model/wizard-machine'
 
-/** The name, an optional description and the template as it will be built (TMPL-65), before
- *  저장. A refusal from the save — a name already taken — is said under the name. */
+/** The name and an optional description before 저장; the template as it will be built stands
+ *  beside the step like on every step since sections (TMPL-75). A refusal from the save — a name
+ *  already taken — is said under the name. */
 export function FinishStep({
   state,
   send,
@@ -61,7 +57,6 @@ export function FinishStep({
         />
         {descriptionProblem && <FieldMessage className="mt-1">{descriptionProblem}</FieldMessage>}
       </div>
-      <TemplatePreview titleArea="" body={toWizardBody(state.sections)} />
     </div>
   )
 }

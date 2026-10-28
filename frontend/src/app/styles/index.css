@@ -652,6 +652,10 @@
      `both` holds it still through that wait. It moves on `transform` alone, and the global
      reduced-motion rule leaves it still. */
   --animate-shake: shake var(--duration-slow) var(--ease-standard) var(--duration-slow) both;
+  /* The template wizard's 미리보기 button saying the preview just changed (TMPL-75): the promo
+     stroke's halo swells and fades ONCE, on opacity and transform alone. It ends invisible, so
+     the reduced-motion rule, which jumps to the last frame, leaves no glow at all. */
+  --animate-preview-glow: preview-glow 1.2s var(--ease-standard) both;
 
   @keyframes scrim-in {
     from {
@@ -723,6 +727,19 @@
     from {
       opacity: 0;
       transform: translateY(0.75rem);
+    }
+  }
+  @keyframes preview-glow {
+    0% {
+      opacity: 0;
+      transform: scale(0.9);
+    }
+    35% {
+      opacity: 0.9;
+    }
+    100% {
+      opacity: 0;
+      transform: scale(1.15);
     }
   }
   @keyframes shake {

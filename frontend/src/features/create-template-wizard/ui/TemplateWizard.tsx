@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 import { useActorRef, useSelector } from '@xstate/react'
 import { useTranslation } from 'react-i18next'
 import { useBlocker } from '@tanstack/react-router'
@@ -19,9 +19,11 @@ import {
 import { FinishStep } from './FinishStep'
 import { HeadingsStep } from './HeadingsStep'
 import { OrderStep } from './OrderStep'
+import { PreviewDock } from './PreviewDock'
 import { SectionStep } from './SectionStep'
 import { SectionsStep } from './SectionsStep'
 import { TargetStep } from './TargetStep'
+import { WizardPreview } from './WizardPreview'
 import { useWizardHeadingSuggestions as useHeadingSuggestions } from '@/entities/template'
 import { saveTemplateMachine } from '../model/save-template-machine'
 
@@ -102,6 +104,20 @@ function OwnedTemplateWizard({ ownerId, onSaved, seedHeadings, beforeSave, onSav
       {t('wizard.next')}
     </Button>
   )
+  // The preview stands beside every step from sections on (TMPL-75). Counting the body's changes
+  // during render — React's pattern for a value derived from the previous one — tells the
+  // phone's 미리보기 button when to glow without an effect.
+  const body = toWizardBody(state.sections)
+  const [seen, setSeen] = useState({ body, changes: 0 })
+  if (seen.body !== body) setSeen({ body, changes: seen.changes + 1 })
+  const previewing = state.step !== 'target'
+  const preview = (
+    <WizardPreview
+      sections={state.sections}
+      currentId={state.step === 'section' ? checkedSections(state)[state.cursor]?.id : undefined}
+    />
+  )
+
   const known = wizardProgress(state)
   const progress = known
     ? {
@@ -119,7 +135,23 @@ function OwnedTemplateWizard({ ownerId, onSaved, seedHeadings, beforeSave, onSav
           {t('wizard.headings.running')}
         </Typography>
       )}
-      <WizardFrame screen={screenOf(state)} progress={progress} {...frame(state)} />
+      {previewing ? (
+        <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)] lg:items-start lg:gap-12">
+          <div className="min-w-0 lg:max-w-2xl">
+            <WizardFrame
+              screen={screenOf(state)}
+              progress={progress}
+              {...frame(state)}
+              beforeActions={<PreviewDock changes={seen.changes}>{preview}</PreviewDock>}
+            />
+          </div>
+          <aside className="sticky top-6 hidden max-h-[calc(100dvh-3rem)] min-w-0 overflow-y-auto lg:block">
+            {preview}
+          </aside>
+        </div>
+      ) : (
+        <WizardFrame screen={screenOf(state)} progress={progress} {...frame(state)} />
+      )}
       <Dialog
         open={blocker.status === 'blocked'}
         title={t('wizard.leaveTitle')}

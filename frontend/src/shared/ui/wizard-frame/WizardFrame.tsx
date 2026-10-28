@@ -15,6 +15,7 @@ export function WizardFrame({
   progress,
   back,
   next,
+  beforeActions,
   children,
 }: {
   /** Identity of the screen on show; a change is a navigation and moves focus to the heading. */
@@ -25,6 +26,9 @@ export function WizardFrame({
   progress: { text: string; label: string; current?: number; total?: number }
   back?: { label: string; onClick: () => void }
   next?: ReactNode
+  /** Rendered between the body and the actions, so a `sticky bottom-*` child floats at the
+   *  viewport's foot while the body scrolls and settles just above Back and next. */
+  beforeActions?: ReactNode
   children?: ReactNode
 }) {
   const titleId = useId()
@@ -64,6 +68,7 @@ export function WizardFrame({
         </Typography>
       )}
       <div className="mt-6">{children}</div>
+      {beforeActions}
       {(back || next) && (
         <div className="mt-8 flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
           {back ? (
