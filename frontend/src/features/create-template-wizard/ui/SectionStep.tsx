@@ -16,7 +16,7 @@ import {
   Typography,
   typographyStyles,
 } from '@/shared/ui'
-import { ContentKindCards } from './ContentKindCards'
+import { ContentKindCard } from './ContentKindCard'
 import { HeadingChoices } from './HeadingSuggestions'
 import {
   sectionProblem,
@@ -85,49 +85,53 @@ export function SectionStep({
         />
       </div>
 
-      <div>
-        <ContentKindCards section={section} onChange={(content) => edit({ content })} />
-        {section.content === 'ask' && (
-          <div className="mt-3">
-            <FieldLabel htmlFor={`${id}-question`}>{t('wizard.section.question')}</FieldLabel>
-            <TextField
-              id={`${id}-question`}
-              value={section.question}
-              aria-invalid={questionProblem ? true : undefined}
-              onChange={(event) => edit({ question: event.target.value })}
-              className="mt-1"
-            />
-            {questionProblem && <FieldMessage className="mt-1">{questionProblem}</FieldMessage>}
-            <label
-              className={typographyStyles({
-                variant: 'body',
-                className: 'mt-2 flex min-h-11 items-center gap-3',
-              })}
-            >
-              <Checkbox
-                checked={section.required}
-                onChange={(event) => edit({ required: event.target.checked })}
+      <ContentKindCard
+        section={section}
+        onChange={(content) => edit({ content })}
+        // Each choice's own inputs sit inside its card, where the choice was made (TMPL-74).
+        inputs={{
+          ask: (
+            <div>
+              <FieldLabel htmlFor={`${id}-question`}>{t('wizard.section.question')}</FieldLabel>
+              <TextField
+                id={`${id}-question`}
+                value={section.question}
+                aria-invalid={questionProblem ? true : undefined}
+                onChange={(event) => edit({ question: event.target.value })}
+                className="mt-1"
               />
-              {t('wizard.section.required')}
-            </label>
-          </div>
-        )}
-        {section.content === 'literal' && (
-          <div className="mt-3">
-            <FieldLabel htmlFor={`${id}-literal`}>{t('wizard.section.literal')}</FieldLabel>
-            <Textarea
-              id={`${id}-literal`}
-              value={section.literal}
-              rows={3}
-              autoGrow
-              aria-invalid={literalProblem ? true : undefined}
-              onChange={(event) => edit({ literal: event.target.value })}
-              className="mt-1"
-            />
-            {literalProblem && <FieldMessage className="mt-1">{literalProblem}</FieldMessage>}
-          </div>
-        )}
-      </div>
+              {questionProblem && <FieldMessage className="mt-1">{questionProblem}</FieldMessage>}
+              <label
+                className={typographyStyles({
+                  variant: 'body',
+                  className: 'mt-2 flex min-h-11 items-center gap-3',
+                })}
+              >
+                <Checkbox
+                  checked={section.required}
+                  onChange={(event) => edit({ required: event.target.checked })}
+                />
+                {t('wizard.section.required')}
+              </label>
+            </div>
+          ),
+          literal: (
+            <div>
+              <FieldLabel htmlFor={`${id}-literal`}>{t('wizard.section.literal')}</FieldLabel>
+              <Textarea
+                id={`${id}-literal`}
+                value={section.literal}
+                rows={3}
+                autoGrow
+                aria-invalid={literalProblem ? true : undefined}
+                onChange={(event) => edit({ literal: event.target.value })}
+                className="mt-1"
+              />
+              {literalProblem && <FieldMessage className="mt-1">{literalProblem}</FieldMessage>}
+            </div>
+          ),
+        }}
+      />
 
       <div>
         <Typography variant="label" as="p">

@@ -7,69 +7,6 @@ import type { SectionDraft } from '../model/wizard-machine'
 
 const KINDS = ['write', 'ask', 'literal'] as const satisfies readonly SectionContent[]
 
-/** What stands in a section (TMPL-74), offered as three cards that each draw this section at the
- *  two moments an owner who does not know the workflow cannot picture: 글 쓸 때, what the post's
- *  author meets on ①, and 완성된 글, what the post shows. The drawings use the section's own
- *  heading, question and text; the plain sentence each card stands for is its accessible
- *  description. Native radios inside the cards give the arrow keys for free. */
-export function ContentKindCards({
-  section,
-  onChange,
-}: {
-  section: SectionDraft
-  onChange: (content: SectionContent) => void
-}) {
-  const { t } = useTranslation('templates')
-  const id = useId()
-  return (
-    <fieldset className="min-w-0">
-      <legend>
-        <Typography variant="label" as="span">
-          {t('wizard.section.content')}
-        </Typography>
-      </legend>
-      <div className="mt-2 grid gap-3">
-        {KINDS.map((kind) => (
-          <label
-            key={kind}
-            className="bg-surface-raised border-divider has-[:checked]:border-stroke-accent has-[:checked]:ring-stroke-accent has-[:focus-visible]:outline-focus-ring duration-base ease-standard flex min-w-0 cursor-pointer flex-col gap-3 rounded-xl border p-4 transition-colors has-[:checked]:ring-1 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2"
-          >
-            <span className="flex items-center gap-3">
-              <input
-                type="radio"
-                name={`${id}-content`}
-                value={kind}
-                checked={section.content === kind}
-                aria-labelledby={`${id}-${kind}-name`}
-                aria-describedby={`${id}-${kind}-help`}
-                onChange={() => onChange(kind)}
-                className="accent-button-cta-bg size-4 shrink-0 focus-visible:outline-none"
-              />
-              <Typography variant="fieldTitle" as="span" id={`${id}-${kind}-name`}>
-                {t(`wizard.section.${KIND_LABEL[kind]}`)}
-              </Typography>
-            </span>
-            <span id={`${id}-${kind}-help`} className="sr-only">
-              {t(`wizard.section.${KIND_HELP[kind]}`)}
-            </span>
-            <span aria-hidden className="grid grid-cols-2 gap-2">
-              <Moment caption={t('wizard.section.kinds.writing')}>
-                <Writing kind={kind} section={section} />
-              </Moment>
-              <Moment caption={t('wizard.section.kinds.result')}>
-                <Typography variant="label" as="span" className="text-content-primary truncate">
-                  {section.heading.trim() || section.name}
-                </Typography>
-                <Result kind={kind} section={section} />
-              </Moment>
-            </span>
-          </label>
-        ))}
-      </div>
-    </fieldset>
-  )
-}
-
 const KIND_LABEL = {
   write: 'contentWrite',
   ask: 'contentAsk',
@@ -80,6 +17,77 @@ const KIND_HELP = {
   ask: 'contentAskHelp',
   literal: 'contentLiteralHelp',
 } as const
+
+/** What stands in a section (TMPL-74), as one card: three radios across its top choose the kind,
+ *  and the card below them changes with the choice. It draws this section at the two moments an
+ *  owner who does not know the workflow cannot picture — 글 쓸 때, what the post's author meets on
+ *  ①, and 완성된 글, what the post shows — from the section's own heading, question and text, and
+ *  then holds what the chosen kind asks the owner for. Native radios sharing one name give the
+ *  arrow keys for free; the chosen kind's plain sentence describes the group. */
+export function ContentKindCard({
+  section,
+  onChange,
+  inputs = {},
+}: {
+  section: SectionDraft
+  onChange: (content: SectionContent) => void
+  /** What a kind asks the owner for, shown inside the card while that kind is chosen. */
+  inputs?: Partial<Record<SectionContent, ReactNode>>
+}) {
+  const { t } = useTranslation('templates')
+  const id = useId()
+  const kind = section.content
+  return (
+    <fieldset className="min-w-0" aria-describedby={`${id}-help`}>
+      <legend>
+        <Typography variant="label" as="span">
+          {t('wizard.section.content')}
+        </Typography>
+      </legend>
+      <div className="bg-surface-raised border-divider mt-2 min-w-0 rounded-xl border p-3 sm:p-4">
+        <div className="grid grid-cols-3 gap-2">
+          {KINDS.map((option) => (
+            <label
+              key={option}
+              className="group border-divider has-[:checked]:border-stroke-accent has-[:checked]:bg-badge-accent-bg has-[:checked]:text-badge-accent-fg has-[:focus-visible]:outline-focus-ring duration-base ease-standard flex min-h-11 min-w-0 cursor-pointer items-center gap-2 rounded-lg border px-2.5 py-2 transition-colors has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2"
+            >
+              <input
+                type="radio"
+                name={`${id}-content`}
+                value={option}
+                checked={kind === option}
+                onChange={() => onChange(option)}
+                className="accent-button-cta-bg size-4 shrink-0 focus-visible:outline-none"
+              />
+              <Typography
+                variant="label"
+                as="span"
+                className="group-has-[:checked]:text-badge-accent-fg min-w-0"
+              >
+                {t(`wizard.section.${KIND_LABEL[option]}`)}
+              </Typography>
+            </label>
+          ))}
+        </div>
+        <span id={`${id}-help`} className="sr-only">
+          {t(`wizard.section.${KIND_HELP[kind]}`)}
+        </span>
+        <div aria-hidden className="mt-4 grid grid-cols-2 gap-2">
+          <Moment caption={t('wizard.section.kinds.writing')}>
+            <Writing kind={kind} section={section} />
+          </Moment>
+          <Moment caption={t('wizard.section.kinds.result')}>
+            <Typography variant="label" as="span" className="text-content-primary truncate">
+              {section.heading.trim() || section.name}
+            </Typography>
+            <Result kind={kind} section={section} />
+          </Moment>
+        </div>
+        {inputs[kind] && <div className="mt-4">{inputs[kind]}</div>}
+      </div>
+    </fieldset>
+  )
+}
 
 function Moment({ caption, children }: { caption: string; children: ReactNode }) {
   return (

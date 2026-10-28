@@ -86,7 +86,7 @@
 | VOICE | 17 | 17 | - | 0 |
 | GEN | 31 | 31 | - | 0 |
 | MODEL | 36 | 36 | - | 0 |
-| TMPL | 30 | 30 | - | 0 |
+| TMPL | 31 | 31 | - | 0 |
 | GUIDE | 23 | 23 | - | 0 |
 | EXPORT | 12 | 12 | - | 0 |
 | LANG | 10 | 10 | - | 0 |
@@ -131,11 +131,13 @@
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
 
 ## next
-- TMPL r29/r30 tasks T710–T714 are done; run the pre-push gate (full CI + backend deploy/media parity) and push.
+- TMPL r29–r31 tasks T710–T715 are done and pushed; watch the pushed CI/deploy/media runs.
 - T708 is deployed and d3d51209 CI/Workers plus actual retained-original playback/preview pass. T709 fresh planning remains blocked by unresolved provider usage; preserve its ledger and keep T603/T604/voice gates closed.
 - T697 deployment/CORS/media gates passed at177b377a; deployed browser preview now reads8 real retained R2 originals without a range failure. Full public browser-generation qualification remains gated by T603/T604.
 
 ## log
+- 261029 T715 done: one content-kind card with horizontal radios named by outcome; its drawings and inputs switch inside it.
+- 261029 update-ssot TMPL r31 (owner) + create-task T715: wizard content kinds renamed by outcome; each card holds its own inputs.
 - 261029 T714 done: the wizard's 직접 입력 is a question the AI writes the part from; card, preview and copy follow.
 - 261029 update-ssot TMPL r30 (owner): 직접 입력 becomes a question whose answer the AI writes the section from, replacing the verbatim answer (resolves the 261015 inbox decision).
 - 261029 T713 done: ①'s 템플릿 picker offers 새 템플릿 만들기; the wizard returns to the post (or a new draft) and the editor assigns the new template once.
@@ -154,5 +156,3 @@
 - 261028 T708 done atc4f3254c: finite retained-preview reading, source-end rounding and distinct scene preparation/frame phases pass full4480 FE tests and actual R2/Chrome visual checks. Source and sanitized QA are committed locally; final batch push/CI and authorized cumulative USD0.20 real AI/video proof remain.
 - 261028 T708 verified locally: full562-file/4480-test FE suite, production type/build and changed-file lint/format pass. Real R2/Chrome preparation reports24 scene checks in42.238s and frames0/300/600/899 display correctly; owned local bytes take3.472s to first frame. Source checkpoint precedes the authorized budgeted AI/video proof; no push yet.
 - 261028 T708 starts (prv): actual Chrome decodes the retained HEVC originals but per-packet R2 reads consume the preview deadline during whole-plan contrast sampling. Restore bounded adjacent reads without changing the composition/output contract or qualification gates.
-- 261028 fix opaque GPU video frames: query an explicit RGBA copy-layout size without copying or replacing decoded frames; retain presentation reservations and cleanup. Actual Mac Chrome HEVC Main10 decoding exposed format=null; production preview previously threw allocationSize. Focused21 and affected345-file/2820-test checks plus production type/build pass. A separate remote-read latency issue remains under investigation; no preview completion claim or push yet.
-- 261028 owner expands preview recovery to SSOT-compliant browser analysis and end-to-end video evidence, authorizes cumulative OpenRouter spend at most USD0.20 including retries, and requests commit/push only after current playback finishes. Owner subsequently allows push after30 minutes; earliest push2026-10-27T16:33:30Z (01:33:30 KST). Continue local implementation and verification.
