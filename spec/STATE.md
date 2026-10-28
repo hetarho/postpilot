@@ -9,6 +9,8 @@
 - push: main
 
 ## inbox
+- 261029 decided CLIP-219: how does a server render of HLG footage stay SDR? → relabel the delivered encode BT.709 primaries/transfer and keep the coded matrix, pixels unchanged, matching the browser preview's reading (alt: convert the matrix to BT.709 in the graph, changing pixels | re-add the r62 HDR→SDR conversion the owner cut)
+- 261029 decided ARCH-68 CLIP-155: what does ② offer while browser final rendering is unqualified? → the browser kind stays listed, refused by name, and the server leads (alt: hide the browser kind | keep offering it and let the server refuse)
 - 261029 parked T710: Deploy backend 40725995548 for 2441146f swapped and passed its health gate, but the post-deploy storage/CORS/R2 checks and Verify media never ran (drone-ssh download curl 56); needs an admin "Re-run failed jobs" (this gh account lacks rights) or a later backend push
 - 261028 decided TMPL-73: how does an owner style request meet the 기본 voice? → the request decides wording and outranks the voice, which still decides without one; examples are code-owned chips that fill the field (alt: the request replaces the voice entirely | free text only, no examples)
 - 261028 decided TMPL-71: what replaces the top 내 말로 쓰기 button on the headings step? → the frame's ordinary 다음 in the next-action place, the heading fields being the own-words input (alt: keep the 내 말로 쓰기 label in the next slot)
@@ -132,6 +134,7 @@
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
 
 ## next
+- Clip fixes 357c0d55..306a169a (render-kind gate, polled cancellation, SDR-labelled HLG export, caption keyword edit, server-route colour refusal) were measured on 8 real HLG HEVC phone originals locally; confirm Deploy backend + Verify media for the pushed SHA. Open: while browser final rendering is unqualified (T604) a non-Max account has no render path at all (Max-only server exports, CLIP-193) — owner decision; the on-purpose identity-smoke baseline's container digest moves with the SDR label (sampled frames unchanged) and needs re-recording on its CI host; a PQ source is refused with the generic CLIP_INVALID_MEDIA message, not a colour-named one.
 - TMPL r29–r31 (T710–T715) shipped: CI green at 2441146f and 9921568a; backend live at 2441146f; post-deploy storage checks and Verify media await an admin re-run (inbox parked).
 - T708 is deployed and d3d51209 CI/Workers plus actual retained-original playback/preview pass. T709 fresh planning remains blocked by unresolved provider usage; preserve its ledger and keep T603/T604/voice gates closed.
 - T697 deployment/CORS/media gates passed at177b377a; deployed browser preview now reads8 real retained R2 originals without a range failure. Full public browser-generation qualification remains gated by T603/T604.
