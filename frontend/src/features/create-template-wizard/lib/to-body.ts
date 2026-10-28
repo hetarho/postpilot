@@ -3,7 +3,8 @@ import type { SectionDraft } from '../model/wizard-machine'
 
 /** The template body the wizard's answers make (TMPL-71): each checked section, in order, becomes
  *  its heading as one 고정 문구 line, then what stands there, then its photo place when it has
- *  photos. A repeating section wraps its words and its photos in `사진마다 반복`; a 데이터 받기
+ *  photos. 직접 입력 is a 데이터 받기 field of the AI가 쓰는 글 flavor: the author answers its
+ *  question and the AI writes the section from that answer (TMPL-74). A repeating section wraps its words and its photos in `사진마다 반복`; a 데이터 받기
  *  field never repeats, because the grammar refuses one inside a repeat. The title area stays
  *  empty (TMPL-52), so this builds the body alone. */
 export function toWizardBlocks(sections: readonly SectionDraft[]): BuilderBlock[] {
@@ -35,16 +36,19 @@ function literal(text: string): BuilderBlock {
 }
 
 function contentBlock(section: SectionDraft): BuilderBlock {
+  // The AI writes about the role; the topic is what the section covers, in the words the owner
+  // saw on the checklist.
+  const topic = section.help.trim() || section.name
   switch (section.content) {
     case 'write':
-      // The AI writes about the role in the owner's voice; the instruction is what the section
-      // covers, in the words the owner saw on the checklist.
-      return { ...newBlock('write'), kind: 'write', text: section.help.trim() || section.name }
+      return { ...newBlock('write'), kind: 'write', text: topic }
     case 'ask':
+      // The same topic, with the author's answer as its facts (TMPL-45): the answer is what the
+      // part is written from, never a line pasted into the post.
       return {
-        ...newBlock('text'),
-        kind: 'text',
-        text: '',
+        ...newBlock('write'),
+        kind: 'write',
+        text: topic,
         ask: section.question.trim(),
         ...(section.required ? { required: true } : {}),
       }

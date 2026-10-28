@@ -29,8 +29,9 @@ describe('the wizard body', () => {
     expect(toWizardBody([section()])).toBe(
       '먹어 본 메뉴\n<write>주문한 메뉴의 모습과 맛을 씁니다</write>',
     )
+    // 직접 입력 asks the author and the AI writes the part from the answer (TMPL-74).
     expect(toWizardBody([section({ content: 'ask', required: true, photos: 2 })])).toBe(
-      '먹어 본 메뉴\n<ask label="주문한 메뉴" required="true"/>\n<slot kind="photo" count="2"/>',
+      '먹어 본 메뉴\n<ask label="주문한 메뉴" required="true">주문한 메뉴의 모습과 맛을 씁니다</ask>\n<slot kind="photo" count="2"/>',
     )
     expect(toWizardBody([section({ content: 'literal', literal: '오늘의 메뉴', photos: 1 })])).toBe(
       '먹어 본 메뉴\n오늘의 메뉴\n<slot kind="photo"/>',
@@ -44,6 +45,9 @@ describe('the wizard body', () => {
     const asking = toWizardBody([section({ content: 'ask', photos: 1, repeat: true })])
     expect(asking).not.toContain('<repeat')
     expect(parses(asking)).toBe(true)
+    const parsed = parseTemplate('', asking, TEMPLATE_PARSE_OPTIONS)
+    const field = parsed.ok ? parsed.nodes.find((node) => node.kind === 'ask') : undefined
+    expect(field).toMatchObject({ label: '주문한 메뉴', text: '주문한 메뉴의 모습과 맛을 씁니다' })
   })
 
   it('builds bodies that parse for every content kind, repeat and photo count', () => {

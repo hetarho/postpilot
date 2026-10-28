@@ -76,7 +76,8 @@ describe('the template wizard', () => {
       '주문한 메뉴\n<repeat each="photo">\n<write>주문한 메뉴의 모습과 맛을 씁니다</write>\n<slot kind="photo"/>\n</repeat>',
     )
     expect(saved.body).toContain('아쉬운 점\n<write>')
-    expect(saved.body.endsWith('매장 정보\n<ask label="매장 정보" required="true"/>')).toBe(true)
+    // 직접 입력 asks the author, and the AI writes the part from the answer (TMPL-74).
+    expect(saved.body).toMatch(/매장 정보\n<ask label="매장 정보" required="true">[^<]+<\/ask>$/)
     expect(saved.body).not.toContain('서비스·응대')
     expect(parseTemplate('', saved.body, TEMPLATE_PARSE_OPTIONS).ok).toBe(true)
   })

@@ -38,10 +38,13 @@ describe('the content-kind cards', () => {
     expect(screen.getAllByText('글 쓸 때')).toHaveLength(3)
     expect(screen.getAllByText('완성된 글')).toHaveLength(3)
     expect(screen.getAllByText('📍 매장 정보')).toHaveLength(3)
-    // 직접 입력: the question's field while writing, the typed answer in the post.
+    // 직접 입력: the question's field while writing, the AI's part from the answer in the post.
     expect(screen.getByText('주소와 영업시간')).toBeInTheDocument()
     expect(screen.getByText('여기에 직접 적어요')).toBeInTheDocument()
-    expect(screen.getByText('적은 내용 그대로')).toBeInTheDocument()
+    expect(screen.getByText('내 답을 바탕으로')).toBeInTheDocument()
+    expect(screen.getByRole('radio', { name: '직접 입력' })).toHaveAccessibleDescription(
+      '글을 쓸 때 이 질문에 답하면, 그 답을 바탕으로 AI가 이 부분을 써요.',
+    )
     // 고정 문구: the owner's own text, as it is.
     expect(screen.getByText('지도는 아래에')).toBeInTheDocument()
   })

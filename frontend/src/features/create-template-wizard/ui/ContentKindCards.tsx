@@ -136,7 +136,16 @@ function Result({ kind, section }: { kind: SectionContent; section: SectionDraft
         </span>
       )
     case 'ask':
-      return <AnswerChip>{t('wizard.section.kinds.askAnswer')}</AnswerChip>
+      // The AI writes the part, from what the author typed (TMPL-74).
+      return (
+        <span className="flex min-w-0 flex-col gap-1.5">
+          <span className="flex min-w-0 items-center gap-1.5">
+            <Sparkles className="text-content-tertiary size-3.5 shrink-0" />
+            <AnswerChip>{t('wizard.section.kinds.askAnswer')}</AnswerChip>
+          </span>
+          <PreviewLines lines={2} />
+        </span>
+      )
     case 'literal':
       return section.literal.trim() !== '' ? (
         <Typography variant="meta" as="span" className="text-content-primary line-clamp-2">

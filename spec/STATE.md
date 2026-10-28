@@ -57,7 +57,6 @@
 - 261015 suggest T677 T678 T679 T680 T681: review-code over the five campaign tasks done so far (principle tier, advertiser guide storage and editor fields, advertiser origin)
 - 261015 decided POST-119 T683: which count meets 최소 글자 수? → the count without spaces, the stricter of the two the checklist shows, so a met mark holds whichever way the campaign counts (alt: with spaces | either one)
 - 261015 decided TMPL-72 T685: how does a product kind adapt role wording? → each kind adds its own section after 주요 기능 (가전 설치·소음, 화장품 제형·발림성, 식품 맛·조리법, 육아·반려 안전·반응; 생활·주방 none) (alt: rename the shared roles per kind | no kind-specific wording)
-- 261015 decided TMPL-74 T685: what does 직접 입력 place? → the author's typed answer verbatim (a 데이터 받기 field of the fixed-text flavor), and such a section never repeats because the grammar refuses a field inside a repeat (alt: the AI writes the section from the answer)
 
 ## ideation
 | id | st |
@@ -87,7 +86,7 @@
 | VOICE | 17 | 17 | - | 0 |
 | GEN | 31 | 31 | - | 0 |
 | MODEL | 36 | 36 | - | 0 |
-| TMPL | 29 | 29 | - | 0 |
+| TMPL | 30 | 30 | - | 0 |
 | GUIDE | 23 | 23 | - | 0 |
 | EXPORT | 12 | 12 | - | 0 |
 | LANG | 10 | 10 | - | 0 |
@@ -132,11 +131,13 @@
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
 
 ## next
-- TMPL r29 tasks T710–T713 are done; run the pre-push gate (full CI + backend deploy/media parity) and push.
+- TMPL r29/r30 tasks T710–T714 are done; run the pre-push gate (full CI + backend deploy/media parity) and push.
 - T708 is deployed and d3d51209 CI/Workers plus actual retained-original playback/preview pass. T709 fresh planning remains blocked by unresolved provider usage; preserve its ledger and keep T603/T604/voice gates closed.
 - T697 deployment/CORS/media gates passed at177b377a; deployed browser preview now reads8 real retained R2 originals without a range failure. Full public browser-generation qualification remains gated by T603/T604.
 
 ## log
+- 261029 T714 done: the wizard's 직접 입력 is a question the AI writes the part from; card, preview and copy follow.
+- 261029 update-ssot TMPL r30 (owner): 직접 입력 becomes a question whose answer the AI writes the section from, replacing the verbatim answer (resolves the 261015 inbox decision).
 - 261029 T713 done: ①'s 템플릿 picker offers 새 템플릿 만들기; the wizard returns to the post (or a new draft) and the editor assigns the new template once.
 - 261029 T712 done: 제목 제안 받기 style-request sheet with examples, ordinary 다음 on the headings step, content-kind cards drawing 글 쓸 때/완성된 글; checked in real Chrome at desktop and phone widths.
 - 261029 T711 done: compact preview stand-ins shared by TemplatePreview and the new WizardPreview; wizard preview beside every step from sections on (lg sticky right, 미리보기 sheet below lg).
@@ -155,5 +156,3 @@
 - 261028 T708 starts (prv): actual Chrome decodes the retained HEVC originals but per-packet R2 reads consume the preview deadline during whole-plan contrast sampling. Restore bounded adjacent reads without changing the composition/output contract or qualification gates.
 - 261028 fix opaque GPU video frames: query an explicit RGBA copy-layout size without copying or replacing decoded frames; retain presentation reservations and cleanup. Actual Mac Chrome HEVC Main10 decoding exposed format=null; production preview previously threw allocationSize. Focused21 and affected345-file/2820-test checks plus production type/build pass. A separate remote-read latency issue remains under investigation; no preview completion claim or push yet.
 - 261028 owner expands preview recovery to SSOT-compliant browser analysis and end-to-end video evidence, authorizes cumulative OpenRouter spend at most USD0.20 including retries, and requests commit/push only after current playback finishes. Owner subsequently allows push after30 minutes; earliest push2026-10-27T16:33:30Z (01:33:30 KST). Continue local implementation and verification.
-- 261028 clip preview recovery start (prv, pair): owner reports original playback and edited composition preview both fail after native analysis recovery; inspect the affected production project and retained source access through PEM, then reproduce the browser playback failure. Existing fix/deploy authorization applies; preserve unrelated ideation changes.
-- 261028 T707 done at310959b7: owner selects existing-server recovery; CI40530990767 frontend/backend and Workers fc8d3803 pass. Production assets and explicit native approval are verified. Read-only PEM inspection confirms the owner-approved native job58641d7d completed all8 source analyses and persisted4 storyline paragraphs at15:47:48 UTC; final video rendering was not observed. Browser/voice qualification gates remain closed.

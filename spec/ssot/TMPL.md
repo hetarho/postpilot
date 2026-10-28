@@ -1,5 +1,5 @@
 # TMPL post templates (템플릿)
-> r29 | Owner-scoped post forms made through a guided, visually previewed target wizard with owner-named sections, explicit literal, instruction and supplied-fact boundaries and minimum tag seeds.
+> r30 | Owner-scoped post forms made through a guided, visually previewed target wizard with owner-named sections, explicit literal, instruction and supplied-fact boundaries and minimum tag seeds.
 
 ## decisions
 - TMPL-1 [o] a template decides the form of a post; three authored axes stand beside each other and each owns one question — the voice decides how sentences sound (VOICE), the template what form the post has and what each of its places is about, a guideline what kind of writing is wanted (GUIDE); a post combines at most one voice and at most one template ← prose about shape must be re-derived by the model every run, cannot require a literal line, and cannot bind output to the attachments
@@ -205,8 +205,8 @@
   - a suggestion becomes the heading only when the owner picks or edits it; a failure or a skip leaves own-words input ready
 - TMPL-74 [o] each section's step asks, each answer starting at the catalog default so 다음 always works:
   - its heading: a picked suggestion or the owner's own words, required, ≤ `TEMPLATE_ASK_LABEL_MAX_CHARS`
-  - what stands there: AI가 쓰는 글 about the role (default), 직접 입력 — a 데이터 받기 field asking the role's question with an optional 필수 (→TMPL-43 →TMPL-44) — or 고정 문구 typed by the owner
-  - the three kinds are offered as cards, each drawing this section in two small panels instead of a help paragraph: 글 쓸 때, what the post's author meets on ① (nothing to fill, the question's field, nothing to fill), and 완성된 글, what the post shows (AI-written line bars, the typed answer as it is, the fixed text) ← an owner who does not know the workflow learns a kind faster from both moments drawn than from prose
+  - what stands there: AI가 쓰는 글 about the role (default), 직접 입력 — a 데이터 받기 field of the AI가 쓰는 글 flavor: the post's author answers the section's question on ① and the writer writes the section about the role from that answer as its facts, with an optional 필수 (→TMPL-43 →TMPL-44 →TMPL-45) — or 고정 문구 typed by the owner ← a typed answer is material the section is written from, not a line pasted into the post
+  - the three kinds are offered as cards, each drawing this section in two small panels instead of a help paragraph: 글 쓸 때, what the post's author meets on ① (nothing to fill, the question's field, nothing to fill), and 완성된 글, what the post shows (AI-written line bars, AI-written line bars from the typed answer, the fixed text) ← an owner who does not know the workflow learns a kind faster from both moments drawn than from prose
   - photos: 없음 or 1 … `TEMPLATE_PHOTO_ROW_MAX` together (→TMPL-38), and for a role marked 반복 whether it repeats per photo group (→TMPL-18)
 - TMPL-75 [o] from the sections step to 저장 the wizard shows the live preview of the template its answers make (→!TMPL-65 →!TMPL-66), redrawn on every answer; the target questions show none ← nothing is built before a leaf is chosen
   - at `lg` and wider it stands to the right of the step and stays in view while the step scrolls, and the step keeps a readable measure instead of the full width
@@ -233,5 +233,6 @@
 - contract: `proto/postpilot/v1/template.proto`
 
 ## chg
+- r30 261029 TMPL-74✎ 직접 입력 typed answer placed verbatim→a field the AI writes the section from as its facts
 - r29 261028 TMPL-73✎ direct call in the 기본 voice→sheet with optional style request (≤200) + examples, outranking the voice; TMPL-71✎ own-words button→fields + ordinary 다음, finish-step preview→preview beside every step; TMPL-74✎ help lines→글 쓸 때/완성된 글 cards; TMPL-75+ wizard preview (lg right, else 미리보기 sheet); TMPL-66✎ grey box/photo cells→compact card, line bars, small photo strip; TMPL-32✎ no 템플릿 관리 link→새 템플릿 만들기 returning assigned
 - r28 261015 TMPL-71+ guided wizard is the only 새 템플릿; TMPL-72+ target tree and section-role catalog (medical excluded, 아쉬운 점 everywhere); TMPL-73+ explicit heading suggestions in the owner's 기본 voice; TMPL-74+ one step per section; TMPL-16✎ TMPL-34✎ no shipped library→role catalog only, no finished templates or headings; TMPL-24✎ writing settings→Naver Blog channel, creation→wizard; TMPL-26✎ 원문 and 형식 안내 behind 고급; TMPL-58✎ AI creation/refinement→refinement of saved templates; TMPL-64✎ EDIT creation with reference→wizard seeded with the post's headings; TMPL-52✎ title 기본 지침 while on→title 원칙

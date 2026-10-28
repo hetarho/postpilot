@@ -84,8 +84,10 @@ describe('the wizard preview', () => {
         ]}
       />,
     )
+    // 직접 입력 is the AI flavor: what the part is about, with the author's answer (TMPL-74).
     expect(preview().getByText('주소와 영업시간')).toBeInTheDocument()
     expect(preview().getByText('입력한 내용')).toBeInTheDocument()
+    expect(preview().getAllByText('AI가 쓰는 글').length).toBeGreaterThan(0)
     expect(preview().getByText('지도는 아래에')).toBeInTheDocument()
     expect(preview().getByText('적어 둔 문구가 그대로 들어가요')).toBeInTheDocument()
   })
