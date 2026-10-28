@@ -16,7 +16,7 @@ import {
   Typography,
   typographyStyles,
 } from '@/shared/ui'
-import type { SectionContent } from '@/entities/template'
+import { ContentKindCards } from './ContentKindCards'
 import { HeadingChoices } from './HeadingSuggestions'
 import {
   sectionProblem,
@@ -59,11 +59,6 @@ export function SectionStep({
     says('question_repeated') ||
     says('too_many_questions')
   const literalProblem = says('literal_missing')
-  const contentHelp: Record<SectionContent, string> = {
-    write: t('wizard.section.contentWriteHelp'),
-    ask: t('wizard.section.contentAskHelp'),
-    literal: t('wizard.section.contentLiteralHelp'),
-  }
   const photoOptions = [
     { value: '0', label: t('wizard.section.photosNone') },
     ...Array.from({ length: TEMPLATE_PHOTO_ROW_MAX }, (_, index) => ({
@@ -91,23 +86,7 @@ export function SectionStep({
       </div>
 
       <div>
-        <Typography variant="label" as="p" id={`${id}-content`}>
-          {t('wizard.section.content')}
-        </Typography>
-        <SegmentedControl
-          value={section.content}
-          ariaLabel={t('wizard.section.content')}
-          options={[
-            { value: 'write', label: t('wizard.section.contentWrite') },
-            { value: 'ask', label: t('wizard.section.contentAsk') },
-            { value: 'literal', label: t('wizard.section.contentLiteral') },
-          ]}
-          onChange={(content) => edit({ content })}
-          className="mt-2"
-        />
-        <Typography variant="meta" as="p" className="mt-2">
-          {contentHelp[section.content]}
-        </Typography>
+        <ContentKindCards section={section} onChange={(content) => edit({ content })} />
         {section.content === 'ask' && (
           <div className="mt-3">
             <FieldLabel htmlFor={`${id}-question`}>{t('wizard.section.question')}</FieldLabel>

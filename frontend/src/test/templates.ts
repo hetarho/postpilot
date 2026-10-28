@@ -47,6 +47,8 @@ export interface FakeTemplatesOptions {
     targetKind: string
     targetPath: string[]
     sections: Array<{ role: string; description: string }>
+    /** Recorded only when the owner sent one (TMPL-73). */
+    styleRequest?: string
   }>
   headingJobId?: string
   headingEstimate?: { free?: boolean; credits?: number }
@@ -184,6 +186,7 @@ export function registerTemplateService(router: ConnectRouter, options: FakeTemp
       targetKind: req.targetKind,
       targetPath: [...req.targetPath],
       sections: headingSections,
+      ...(req.styleRequest ? { styleRequest: req.styleRequest } : {}),
     })
     if (options.headingRefusal)
       throw connectAppError(options.headingRefusal, Code.FailedPrecondition)

@@ -246,7 +246,7 @@ async function finishPostWizard(user: ReturnType<typeof userEvent.setup>, name: 
   }
   await user.click(screen.getByRole('button', { name: '다음' }))
   await user.click(screen.getByRole('button', { name: '다음' }))
-  await user.click(screen.getByRole('button', { name: '내 말로 쓰기' }))
+  await user.click(screen.getByRole('button', { name: '다음' }))
   await user.click(screen.getByRole('button', { name: '다음' }))
   await user.type(await screen.findByLabelText('템플릿 이름'), name)
 }

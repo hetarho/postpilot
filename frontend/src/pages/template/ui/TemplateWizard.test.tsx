@@ -43,7 +43,9 @@ describe('the template wizard', () => {
     const heading = screen.getByLabelText('방문 계기 소제목')
     await user.clear(heading)
     await user.type(heading, '찾아간 이유')
-    await user.click(screen.getByRole('button', { name: '내 말로 쓰기' }))
+    // The headings step continues with the ordinary 다음; own words are the fields (TMPL-71).
+    expect(screen.queryByRole('button', { name: '내 말로 쓰기' })).not.toBeInTheDocument()
+    await user.click(next())
 
     // One screen per section, each already answerable; 매장 정보 asks the author and must be answered.
     await title('“찾아간 이유” 부분')

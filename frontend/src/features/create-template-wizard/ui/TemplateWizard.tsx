@@ -111,12 +111,7 @@ function OwnedTemplateWizard({ ownerId, onSaved, seedHeadings, beforeSave, onSav
   const [seen, setSeen] = useState({ body, changes: 0 })
   if (seen.body !== body) setSeen({ body, changes: seen.changes + 1 })
   const previewing = state.step !== 'target'
-  const preview = (
-    <WizardPreview
-      sections={state.sections}
-      currentId={state.step === 'section' ? checkedSections(state)[state.cursor]?.id : undefined}
-    />
-  )
+  const currentId = state.step === 'section' ? checkedSections(state)[state.cursor]?.id : undefined
 
   const known = wizardProgress(state)
   const progress = known
@@ -142,11 +137,17 @@ function OwnedTemplateWizard({ ownerId, onSaved, seedHeadings, beforeSave, onSav
               screen={screenOf(state)}
               progress={progress}
               {...frame(state)}
-              beforeActions={<PreviewDock changes={seen.changes}>{preview}</PreviewDock>}
+              beforeActions={
+                <PreviewDock changes={seen.changes}>
+                  <WizardPreview sections={state.sections} currentId={currentId} titled={false} />
+                </PreviewDock>
+              }
             />
           </div>
-          <aside className="sticky top-6 hidden max-h-[calc(100dvh-3rem)] min-w-0 overflow-y-auto lg:block">
-            {preview}
+          {/* Below the app's sticky chrome, like the authoring editor's preview, with its own
+              scroll so a long post never pushes the step's actions away. */}
+          <aside className="sticky top-[calc(var(--spacing-chrome)+1.5rem)] hidden max-h-[calc(100dvh-var(--spacing-chrome)-3rem)] min-w-0 overflow-y-auto lg:block">
+            <WizardPreview sections={state.sections} currentId={currentId} />
           </aside>
         </div>
       ) : (
@@ -197,6 +198,7 @@ function OwnedTemplateWizard({ ownerId, onSaved, seedHeadings, beforeSave, onSav
           title: t('wizard.headings.title'),
           help: t('wizard.headings.help'),
           back,
+          next,
           children: <HeadingsStep state={current} send={send} operation={headings} />,
         }
       case 'section': {

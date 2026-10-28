@@ -23,25 +23,29 @@ import { checkedSections, type SectionDraft } from '../model/wizard-machine'
 export function WizardPreview({
   sections,
   currentId,
+  titled = true,
   className,
 }: {
   sections: readonly SectionDraft[]
   currentId?: string
+  /** Off where a surrounding sheet already says 미리보기; the article keeps its name either way. */
+  titled?: boolean
   className?: string
 }) {
   const { t } = useTranslation('templates')
   const shown = checkedSections({ sections })
   const current = useRef<HTMLElement>(null)
   useEffect(() => {
-    // `nearest` keeps the page itself still; only the preview's own scroller moves.
-    current.current?.scrollIntoView?.({ block: 'nearest' })
+    if (current.current) revealInOwnScroller(current.current)
   }, [currentId])
   return (
     <article aria-label={t('preview.heading')} className={twMerge('min-w-0', className)}>
-      <Typography variant="eyebrow" as="p">
-        {t('preview.heading')}
-      </Typography>
-      <Typography variant="meta" as="p" className="mt-1">
+      {titled && (
+        <Typography variant="eyebrow" as="p" className="mb-1">
+          {t('preview.heading')}
+        </Typography>
+      )}
+      <Typography variant="meta" as="p">
         {t('preview.note')}
       </Typography>
       <PreviewPostCard className="mt-4">
@@ -124,4 +128,26 @@ function SectionStandIns({ section }: { section: SectionDraft }) {
       {photos}
     </>
   )
+}
+
+/** Scrolls the nearest scrolling ancestor — the side column or the sheet's body — just enough to
+ *  show `element`. Not `scrollIntoView`: that also scrolls the window, which would move the step
+ *  the owner is answering out from under them. */
+function revealInOwnScroller(element: HTMLElement) {
+  let scroller = element.parentElement
+  while (scroller && scroller !== document.body) {
+    const overflow = getComputedStyle(scroller).overflowY
+    if (
+      (overflow === 'auto' || overflow === 'scroll') &&
+      scroller.scrollHeight > scroller.clientHeight
+    )
+      break
+    scroller = scroller.parentElement
+  }
+  if (!scroller || scroller === document.body) return
+  const box = scroller.getBoundingClientRect()
+  const target = element.getBoundingClientRect()
+  if (target.top < box.top) scroller.scrollTop -= box.top - target.top
+  else if (target.bottom > box.bottom)
+    scroller.scrollTop += Math.min(target.bottom - box.bottom, target.top - box.top)
 }

@@ -1,6 +1,7 @@
 import type { HeadingSuggestionInput } from '../model/heading-suggestions'
 import { useEffect } from 'react'
 import { useActorRef, useSelector } from '@xstate/react'
+import { waitFor } from 'xstate'
 import { isTerminal, useJob } from '@/entities/generation-job/@x/template'
 import { useHeadingSuggestionsResult, useStartHeadingSuggestions } from './useHeadingSuggestions'
 import { appFailureFromConnect } from '@/shared/api'
@@ -51,8 +52,10 @@ export function useWizardHeadingSuggestions(
       current
         ? (snapshot.context.groups[sections.findIndex((section) => section.id === id)] ?? [])
         : [],
-    /** The owner's wording request travels with this one job only (TMPL-73). */
-    start: (writeModel: HeadingSuggestionInput['writeModel'], styleRequest = '') =>
+    /** The owner's wording request travels with this one job only (TMPL-73). Resolves once the
+     *  request has left admission: true when it was admitted (or not started at all), false when
+     *  the admission was refused, so a caller can keep its own surface open over a refusal. */
+    start: async (writeModel: HeadingSuggestionInput['writeModel'], styleRequest = '') => {
       actor.send({
         type: 'start',
         ownerId,
@@ -64,7 +67,10 @@ export function useWizardHeadingSuggestions(
           sections: sections.map(({ role, description }) => ({ role, description })),
           styleRequest: styleRequest.trim(),
         },
-      }),
+      })
+      const settled = await waitFor(actor, (value) => !value.matches('starting'))
+      return !settled.matches('failed')
+    },
   }
 }
 export type WizardHeadingSuggestionsOperation = ReturnType<typeof useWizardHeadingSuggestions>

@@ -6,8 +6,8 @@ import { checkedSections, type WizardEvent, type WizardState } from '../model/wi
 import type { WizardHeadingSuggestionsOperation as HeadingSuggestionsOperation } from '@/entities/template'
 import { HeadingChoices, HeadingSuggestions } from './HeadingSuggestions'
 
-/** A heading per section in the owner's own words; each starts at the section's name, so 다음
- *  works at once (TMPL-71). */
+/** A heading per section in the owner's own words; each starts at the section's name, so the
+ *  screen's ordinary 다음 works at once, and 제목 제안 받기 sits above the fields (TMPL-71). */
 export function HeadingsStep({
   state,
   send,
@@ -21,11 +21,7 @@ export function HeadingsStep({
   const id = useId()
   return (
     <div className="space-y-6">
-      <HeadingSuggestions
-        operation={operation}
-        count={checkedSections(state).length}
-        onOwnWords={() => send({ type: 'next' })}
-      />
+      <HeadingSuggestions operation={operation} count={checkedSections(state).length} />
       <ul className="space-y-4">
         {checkedSections(state).map((section) => {
           const heading = section.heading.trim()
