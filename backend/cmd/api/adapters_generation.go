@@ -647,6 +647,8 @@ func (a generationJobs) GetGeneration(ctx context.Context, id, userID string) (*
 		PostSlug: postSlug, ObserveModel: found.ObserveModel, WriteModel: found.WriteModel,
 		TargetLanguage: generation.Language(found.TargetLanguage),
 		CreatedAt:      found.CreatedAt, UpdatedAt: found.UpdatedAt,
+		CanCancel: found.CanCancel, CancelRequestedAt: found.CancelRequestedAt,
+		CancellationPolicyVersion: found.CancellationPolicyVersion, WaitExpiresAt: found.WaitExpiresAt,
 	}, nil
 }
 

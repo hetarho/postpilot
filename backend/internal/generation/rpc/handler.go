@@ -248,7 +248,17 @@ func toProtoJob(found *generation.JobSummary) *postpilotv1.GenerationJob {
 		PostSlug: found.PostSlug, ObserveModel: splitModelRef(found.ObserveModel),
 		WriteModel: splitModelRef(found.WriteModel), TargetLanguage: languageToProto(found.TargetLanguage), CreatedAt: found.CreatedAt.UTC().Format(time.RFC3339),
 		UpdatedAt: found.UpdatedAt.UTC().Format(time.RFC3339), Failure: failureToProto(found.Failure),
+		CanCancel: found.CanCancel, CancellationPolicyVersion: int32(found.CancellationPolicyVersion),
+		CancelRequestedAt: optionalTime(found.CancelRequestedAt), WaitExpiresAt: optionalTime(found.WaitExpiresAt),
 	}
+}
+
+// optionalTime keeps the job RPC's encoding of an absent instant: the empty string.
+func optionalTime(at *time.Time) string {
+	if at == nil {
+		return ""
+	}
+	return at.UTC().Format(time.RFC3339Nano)
 }
 
 func failureToProto(found *generation.Failure) *postpilotv1.Failure {

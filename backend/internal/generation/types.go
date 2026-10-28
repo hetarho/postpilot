@@ -436,6 +436,12 @@ type JobSummary struct {
 	TargetLanguage Language
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
+	// The queue's cancellation answer travels with every poll: a clip run's cancel control
+	// reads the polled job, so a summary without it offers no cancellation at all.
+	CanCancel                 bool
+	CancelRequestedAt         *time.Time
+	CancellationPolicyVersion int
+	WaitExpiresAt             *time.Time
 }
 
 // Failure is generation's consumer-owned projection of a durable job failure. It keeps

@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"connectrpc.com/connect"
 
@@ -104,6 +105,25 @@ func TestGenerationJobMapsFrozenTargetLanguage(t *testing.T) {
 				t.Fatalf("target = %v, want %v", got, test.want)
 			}
 		})
+	}
+}
+
+func TestGenerationJobCarriesTheQueueCancellationAnswer(t *testing.T) {
+	// A clip run polls this projection; without these fields its cancel control reads the
+	// job as legacy and offers no cancellation (CLIP-78).
+	requested := time.Date(2026, 10, 29, 8, 0, 0, 5, time.UTC)
+	expires := requested.Add(30 * time.Minute)
+	mapped := toProtoJob(&generation.JobSummary{
+		Kind: "generate_clip", CanCancel: true, CancellationPolicyVersion: 1,
+		CancelRequestedAt: &requested, WaitExpiresAt: &expires,
+	})
+	if !mapped.GetCanCancel() || mapped.GetCancellationPolicyVersion() != 1 ||
+		mapped.GetCancelRequestedAt() != "2026-10-29T08:00:00.000000005Z" ||
+		mapped.GetWaitExpiresAt() != "2026-10-29T08:30:00.000000005Z" {
+		t.Fatalf("mapped cancellation = %+v", mapped)
+	}
+	if idle := toProtoJob(&generation.JobSummary{}); idle.GetCancelRequestedAt() != "" || idle.GetWaitExpiresAt() != "" || idle.GetCanCancel() {
+		t.Fatalf("absent cancellation = %+v", idle)
 	}
 }
 
