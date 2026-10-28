@@ -9,6 +9,7 @@
 - push: main
 
 ## inbox
+- 261029 parked T710: Deploy backend 40725995548 for 2441146f swapped and passed its health gate, but the post-deploy storage/CORS/R2 checks and Verify media never ran (drone-ssh download curl 56); needs an admin "Re-run failed jobs" (this gh account lacks rights) or a later backend push
 - 261028 decided TMPL-73: how does an owner style request meet the 기본 voice? → the request decides wording and outranks the voice, which still decides without one; examples are code-owned chips that fill the field (alt: the request replaces the voice entirely | free text only, no examples)
 - 261028 decided TMPL-71: what replaces the top 내 말로 쓰기 button on the headings step? → the frame's ordinary 다음 in the next-action place, the heading fields being the own-words input (alt: keep the 내 말로 쓰기 label in the next slot)
 - 261028 decided TMPL-32: how does a writer with no template get one? → `새 템플릿 만들기` in ①'s template picker opens the wizard and returns to the post with it assigned (alt: link out with no return | a hint line under the picker)
@@ -131,11 +132,12 @@
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
 
 ## next
-- TMPL r29–r31 tasks T710–T715 are done and pushed; watch the pushed CI/deploy/media runs.
+- TMPL r29–r31 (T710–T715) shipped: CI green at 2441146f and 9921568a; backend live at 2441146f; post-deploy storage checks and Verify media await an admin re-run (inbox parked).
 - T708 is deployed and d3d51209 CI/Workers plus actual retained-original playback/preview pass. T709 fresh planning remains blocked by unresolved provider usage; preserve its ledger and keep T603/T604/voice gates closed.
 - T697 deployment/CORS/media gates passed at177b377a; deployed browser preview now reads8 real retained R2 originals without a range failure. Full public browser-generation qualification remains gated by T603/T604.
 
 ## log
+- 261029 pushed 2441146f (T710–T714, content-free merge of another session's e15cd280) and 9921568a (T715): CI frontend/backend success both; Deploy backend build + swap + health gate success, post-deploy verification failed before running (GitHub download curl 56), Verify media skipped. Local emulated amd64 media gate timed out only TestRenderSmokePreview; the native build's in-image smokes passed.
 - 261029 T715 done: one content-kind card with horizontal radios named by outcome; its drawings and inputs switch inside it.
 - 261029 update-ssot TMPL r31 (owner) + create-task T715: wizard content kinds renamed by outcome; each card holds its own inputs.
 - 261029 T714 done: the wizard's 직접 입력 is a question the AI writes the part from; card, preview and copy follow.
@@ -155,4 +157,3 @@
 - 261028 T709 starts (prv, explore2h): pursue real browser/native copy comparison and repeated metered OpenRouter-to-playable-video proof under the owner cumulative USD0.20 cap. Source checkpoint c4f3254c passes preview4480 FE tests; no live diagnostic call has yet been sent. Preserve real qualification/human-review gates and the existing user result.
 - 261028 T708 done atc4f3254c: finite retained-preview reading, source-end rounding and distinct scene preparation/frame phases pass full4480 FE tests and actual R2/Chrome visual checks. Source and sanitized QA are committed locally; final batch push/CI and authorized cumulative USD0.20 real AI/video proof remain.
 - 261028 T708 verified locally: full562-file/4480-test FE suite, production type/build and changed-file lint/format pass. Real R2/Chrome preparation reports24 scene checks in42.238s and frames0/300/600/899 display correctly; owned local bytes take3.472s to first frame. Source checkpoint precedes the authorized budgeted AI/video proof; no push yet.
-- 261028 T708 starts (prv): actual Chrome decodes the retained HEVC originals but per-packet R2 reads consume the preview deadline during whole-plan contrast sampling. Restore bounded adjacent reads without changing the composition/output contract or qualification gates.
