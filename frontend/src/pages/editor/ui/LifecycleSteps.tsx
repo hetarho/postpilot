@@ -210,7 +210,7 @@ export function LifecycleSteps({
               ? t('unsavedSource', { ns: 'requestInspection' })
               : undefined
           }
-          className="my-4"
+          className="my-2 self-end"
         />
       )}
       <div

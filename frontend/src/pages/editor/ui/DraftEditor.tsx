@@ -453,7 +453,7 @@ export function DraftEditor({ post, defaultVoice, handedTemplate }: DraftEditorP
             <InspectWritingRequestAction
               target={null}
               blockedReason={t('unsavedSource', { ns: 'requestInspection' })}
-              className="my-4"
+              className="my-2 self-end"
             />
           )}
           {/* No lifecycle yet, so no step bar — just the step ① surfaces that work without a post. */}

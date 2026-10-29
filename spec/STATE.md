@@ -148,6 +148,7 @@
 - Windows Chrome browser media fixes shipped at a4fe7473 (CI, Deploy backend and Verify media success; live preview/video workers carry profile v2): T716 analysis AAC 96 kbps, opaque D3D11 frame rendering, T717 loudness limiter. Owner: listen to the limited-audio render; browser analysis/final-render readiness, T603 corpus/semantic review, T604 hardware/human review and the T709 provider reservation stay open.
 
 ## log
+- 261030 fix editor inspection: compact secondary technical action on new/saved posts; 3 affected test files/18 tests, file lint/format, type/build and 8 browser compositions pass.
 - 261030 T720 done: persistent Blog/Clip/Instagram navigation, account settings entry and shared video URLs; affected tests, lint/format/type/build and 60 browser combinations plus draft/caret continuity pass.
 - 261030 T720 starts (nux) at a15e7bb0; persistent channel navigation and portable shared-video context.
 - 261030 create-task THEME r35 → T720: persistent channels and URL-carried shared video context; preserve creation, settings and return contracts.
@@ -167,4 +168,3 @@
 - 261029 T717 done: normalizeLoudness48k limits peak-bound mixes (1.5 ms lookahead, 100 ms release, re-measured); normalizeMix48k owns the 11 LU range refusal; audio/render/video FE tests pass and the owner-cut Windows render with sound passes the verdict.
 - 261029 T717 starts (w11c): linear gain first, offline lookahead limiter only where the ceiling binds.
 - 261029 update-ssot CDS r37 + create-task T717: CDS-35✎ a peak-bound mix is dynamically limited to the target in either render kind. Windows Chrome render of 4 owner HLG cuts with source sound normalized to −20.93 LUFS at the −1.54 dBTP ceiling and was refused (CLIP_BROWSER_AUDIO_AUDIO); the server loudnorm pass would have switched to dynamic mode.
-- 261029 fix media opaque frames: Windows Chrome refuses VideoFrame.allocationSize for null-format (D3D11 HEVC) frames even with an RGBA layout, so every browser final render of phone HEVC failed; range-video bounds such a frame by its coded RGBA reservation without a size query. 4 owner HLG cuts then render 1080x1920/30 fps/480 frames and pass browserRenderVerdict.
