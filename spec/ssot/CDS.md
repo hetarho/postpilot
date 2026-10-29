@@ -1,5 +1,5 @@
 # CDS clip output design system
-> r36 | Shared browser/server composition, bundled typography and animated-caption quality, with deterministic output-time motion, local original-based contrast and independently qualified analysis-copy quality.
+> r37 | Shared browser/server composition, bundled typography and animated-caption quality, with deterministic output-time motion, local original-based contrast and independently qualified analysis-copy quality.
 
 ## decisions
 - CDS-1 [o] intro/outro are the project's enabled regions filled from its slots, optionally seeded by a template; disclosure remains template-declared; narration follows the storyline or owner instruction under 영상 지침, with no compulsory business, location, price, menu or minimum fact count; visual legibility remains required (→CLIP-60 →CLIP-68 →CLIP-186 →GUIDE-42 →GUIDE-52)
@@ -72,6 +72,7 @@
 - CDS-35 [o] retained source audio follows each cut's fixed rate with pitch preserved, per-cut volume and 60 ms audible-boundary fades; the source's disabled retention contributes nothing
   - source-track and narration volume are independent; the −6 dB intro hook dip applies to source audio only, never to the confirmed narration
   - mix ready requested speech at its declared output times without cut-rate stretching, then normalize the final mix to −16 LUFS, true peak −1.5 dBTP and range 11 LU
+  - when one linear gain cannot reach that loudness under the true-peak ceiling, either render kind applies dynamic peak limiting until the measured mix meets it; both kinds meet the same measured target, not identical samples ← the server loudnorm pass already falls back to dynamic mode there, and transient-heavy phone audio stopped about 5 LU short under one gain (measured 261029)
   - narration alone produces audio with every source off; omit the audio stream only when neither requested narration nor enabled source sound contributes
 - CDS-36 [o] transitions: a hard cut is the default; a 200 ms fade only where the place or scene type changes and on at most 40 % of the boundaries, keeping the earliest; a 300 ms fade-through-black is optional and off by default around the intro and outro blocks; every other transition is refused (→CLIP-16)
 - CDS-37 [o] cut rhythm follows the storyline the clip is built from, otherwise the owner instruction, on the transformed output timeline, using the 1.2–6.0 s and food-close-up 4.0 s output-duration targets only when neither specifies one; observed footage, readable copy and the approved total output duration outrank rhythm targets, and no category preset imposes a range (→CLIP-136)
@@ -224,3 +225,4 @@
 - r34 261015 CDS-49✎ 9:16 default with 16:9/1:1 for horizontal or square placements→9:16 for every new project, 16:9/1:1 kept for projects created with them
 - r35 261015 CDS-52✎ V12 untagged colour→SDR BT.709 limited range, tagged (→CLIP-219)
 - r36 261015 CDS-52✎ V12 SDR BT.709 limited range, tagged→no colour-tag requirement
+- r37 261029 CDS-35✎ peak-bound mix: browser one-gain shortfall refused→dynamic peak limiting in either kind to the same measured target
