@@ -1,5 +1,5 @@
 # THEME theme preference and design language
-> r34 | Shared accessible visual contracts for channel-centered creation, guided authoring, comparisons and semantic-origin review.
+> r35 | Shared accessible visual contracts for channel-centered creation, guided authoring, comparisons and semantic-origin review.
 
 ## decisions
 - THEME-1 [o] three browser-owned preferences: `system` (the default, follows `prefers-color-scheme`), `light` → the `day` semantic map, `dark` → the `night` map; the effective theme is always exactly `day|night`; components consume semantic or functional tokens and never branch on a preference, an effective theme or a palette step
@@ -116,10 +116,10 @@
   - feedback renders where the user is looking, in a live region mounted before its text changes
   - a dock holds controls and refusals while what is merely TRUE goes to ONE page-top status region outside the focused-job exception in THEME-40 — a `ProgressBar` pinned to the top edge (`sticky`, in normal flow, no layout height, pinned below every sticky chrome row through the one `top-chrome` token, →THEME-38) plus one `meta` line carrying at most one thing in a stated precedence where a state the user must act on outranks one they only need to know, numbers belong to the bar and not the prose, and a standing state never gets an event's presentation (the editor is the reference, →POST-45)
 - THEME-25 [o] one scroller per screen: the document is the only vertical scroll container — no `max-h-* overflow-y-auto` content panel and no fixed-`rows` textarea holding more than it shows (a textarea grows with `autoGrow`); four deliberate exceptions: a horizontal strip (a photo strip, a tab row, the contact-sheet carousel whose cards are narrower than the strip so a sliver of the next one shows, with a 현재/전체 indicator), a sheet's own body, a form field capped at `max-h-field` and a copy-only document (→THEME-43) ← an uncapped generated value would put the committing control thousands of pixels from the caret, and reach wins; the editor's title and memo are not capped; all four set `overscroll-behavior: contain`
-- THEME-26 [o] desktop creation and settings expose visible primary destinations and current location; the desktop shell has no hamburger-only navigation or centered modal for primary navigation.
+- THEME-26 [o] creation and settings expose visible primary destinations and current location at every width; the shell has no hamburger-only navigation or centered modal for primary navigation.
   - creation workspaces use the wide shared frame aligned with shell content; bound readable prose inside the workspace rather than shrinking the whole workspace
   - each channel's compact chronological history is secondary operational information; home offers the channels under THEME-47
-  - phones retain visible current section and parent/return access; overflow destinations may open an edge-attached panel, never becoming the only location signal
+  - phones retain visible current section and parent/return access alongside the channel navigation
 - THEME-27 [o] elevation and shape:
   - three shadow steps mixed from `shadow-color` — `shadow-sm` resting, `shadow-md` a floating panel, `shadow-lg` a modal — encoding distance from the page, never importance, and most surfaces cast none
   - radii `rounded-sm` (6 px) chips · `rounded-md` (10) controls · `rounded-lg` (14) panels and cards · `rounded-xl` (20) sheets, dialogs and a docked bar · `rounded-full` avatars and pills
@@ -199,14 +199,15 @@
   - keep the heading and supporting copy short; place the billing-period selector immediately before the cards, and make tier, large price, action and four distinct benefit lines the visual reading order (→QUOTA-28)
   - use strong primary/secondary text contrast and spacing to separate price, action, benefits and the lower production comparison; supporting copy recedes without losing AA contrast, and the recommended state has a text label as well as a visual mark
   - post and clip estimates live below the cards with inline condition controls (→QUOTA-41); both themes, reduced motion, readable surface pairs, keyboard access and 320 px reflow remain supported
-- THEME-38 [o] the shell's primary destinations are the channels — 네이버 블로그 · 네이버 클립 · 인스타 클립 — and 내 설정 ← the owner works per channel from the start, and each channel's output differs
+- THEME-38 [o] the shell's primary navigation has exactly three channel links, visibly labelled 블로그 · 클립 · 인스타, opening 네이버 블로그 · 네이버 클립 · 인스타 클립 respectively; 내 설정 is reached through the named account menu ← the owner works per channel from the start, and each channel's output differs
   - each channel holds 만들기 · 기록 · 템플릿 · 지침: 네이버 블로그 its posts, post templates and 지침; each clip channel its own clips plus the video templates and 영상 지침 the two clip channels share
-  - a shared clip destination shows the clip channel it was opened from as its location and returns there; a direct link with no valid origin uses 네이버 클립 (→THEME-58)
+  - links to shared clip destinations carry their channel in the URL so new tabs, copied links and reload preserve location and return; a direct link with no valid origin uses 네이버 클립 (→!THEME-58)
   - 내 설정 holds 말투 · 기억 · 내레이션 목소리 · AI 모델 · 계정 · 결제 and a 고급 group holding 작성 테스트 with its test history and retained comparison records; no comparison or leaderboard destination stands outside 고급
   - channels and 내 설정 are sibling destinations whose breadcrumbs start at themselves; the brand returns home (→THEME-47)
   - creating a post/clip and later minting its address preserve its creation context instead of implying arrival from history
   - one measured shared top-chrome clearance accounts for the actual sticky shell rows, independently of final navigation arrangement
-  - primary navigation has a distinct desktop presentation under THEME-26; phone overflow panels are edge-attached with explicit dismissal/focus return
+  - all three links remain visible without opening a menu at every width, including home, setup and creation; desktop places them beside the brand and phones use one compact row below the main header
+  - the current channel remains marked through its child routes with aria-current and a visible shape as well as colour; home and settings do not imply a selected channel
 - THEME-39 [o] one shape for every surface that drives an object through a lifecycle, whatever the object produces ← two shapes for one job make one product read as two apps
   - the lifecycle is a `SegmentedControl` step bar derived from persisted domain lifecycle state, including explicit domain finalization where defined, with no presentation-only step state, standing first under the page's top row — or riding the top row itself in the control's `steps` shape, the station names as text with the current one told by colour alone and no plane under them, where the row has the room (→CLIP-36; a pill row between two controls reads as three more buttons) —, with every step selectable unless the domain defines irreversible finalization, no step change starting anything or altering state, and an unreached step saying what it waits for and offering the way to the step that produces it
   - the steps are panels of ONE mounted page, so a step change cannot remount a save queue, a job poll or an upload session
@@ -270,7 +271,7 @@
   - the outer workspace and the readable text measure are separate roles; inputs grow naturally beyond their initial workspace allocation in one document scroller
   - keep necessary material and actions reachable, preserve caret/autosave across widths, and retain the phone software-keyboard behavior
 - THEME-60 [o] saved reusable settings visibly distinguish usability, unpublished editing, active AI work, uncertain publication and conflicts using EDIT-18 summaries. Current actions and named completion feedback remain in the current reading/working flow rather than appearing without an identified trigger.
-- THEME-61 [?] the final desktop navigation arrangement, operational-history presentation/name and exact visual dimensions remain open; functional location/return/workspace contracts and route-specific acceptance apply independently of a final visual design.
+- THEME-61 [?] operational-history presentation/name and exact visual dimensions remain open; functional location/return/workspace contracts and route-specific acceptance apply independently of a final visual design.
 
 - THEME-62 [o] origin review is visible by default in post refinement, with a named 출처 보기 toggle, four-category legend and selectable phrase/source explanation (→POST-112).
   - register dedicated semantic foreground/highlight roles for the four origins — 광고주 요청 with a role of its own — and the unconfirmed state in both themes; color never supplies meaning alone
@@ -302,4 +303,4 @@
 - gates: `pnpm lint:style` and `pnpm lint:style:probe` (→ARCH-25); review at360/390/430px,320px reflow,1440x900/1920x1080 desktop,200% zoom, contextual return, keyboard and screen reader, both themes
 
 ## chg
-- r34 261015 THEME-65+ [?] 인스타 게시물 entry undecided; THEME-66+ plain-word guided flows; THEME-38✎ creation · tests · settings · history→three channels + 내 설정 (tests under 고급, history per channel); THEME-47✎ two content actions→one entry per channel; THEME-26✎ history per channel; THEME-62✎ three→four origin roles (+ 광고주 요청)
+-

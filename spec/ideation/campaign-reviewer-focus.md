@@ -90,11 +90,11 @@
 - not: campaign schedule/status, campaign discovery/application, product-written disclosure, Tistory/site/Markdown exports, 16:9 and 1:1 clips, 작성 테스트 in the top navigation, changes to the post generation pipeline itself
 
 ## domains
-- GUIDE →GUIDE: always-on principle groups (read-only, no switch) with their clip counterparts; the constructive-honesty rule; inferred flavor and memory impressions as switchable defaults; guidelines owned per channel (blog vs the shared clip set)
-- GEN →GEN: prompt wording for constructive honesty, weaving the advertiser guide in naturally, the fourth semantic origin 광고주 요청 (GEN-80), the disclosure placeholder block when 체험단 글 is on, clip upload text generation per channel
-- POST →POST: 체험단 글 switch, advertiser guide field, 광고주 요청 as its own colored origin in ② (POST-112), pre-submission checklist (counted marks + owner ticks), "make a clip from this experience" carry-over
-- EXPORT →EXPORT: Naver Blog output only, disclosure placeholder at the top; Tistory, site and Markdown converters leave
-- TMPL →TMPL: the wizard (branching target tree, curated section-role catalogs per target, one step per section, owner headings with AI suggestions in the owner's voice), wizard-only creation, advanced 원문/형식 안내; reverses "no shipped library" for roles only
+- [o] GUIDE: always-on principle groups (read-only, no switch) with their clip counterparts; the constructive-honesty rule; inferred flavor and memory impressions as switchable defaults; guidelines owned per channel (blog vs the shared clip set)
+- [o] GEN: prompt wording for constructive honesty, weaving the advertiser guide in naturally, the fourth semantic origin 광고주 요청 (GEN-80), the disclosure placeholder block when 체험단 글 is on, clip upload text generation per channel
+- [o] POST: 체험단 글 switch, advertiser guide field, 광고주 요청 as its own colored origin in ② (POST-112), pre-submission checklist (counted marks + owner ticks), "make a clip from this experience" carry-over
+- [o] EXPORT: Naver Blog output only, disclosure placeholder at the top; Tistory, site and Markdown converters leave
+- [o] TMPL: the wizard (branching target tree, curated section-role catalogs per target, one step per section, owner headings with AI suggestions in the owner's voice), wizard-only creation, advanced 원문/형식 안내; reverses "no shipped library" for roles only
 - CLIP →CLIP: clip template wizard (shared Naver/Instagram composition), channel per clip, 9:16 only, upload text with copy, carry-over from a post
 - VOICE →VOICE: chat learning replacing the ten-question questionnaire, blog-scene steering, AI styles as a nudged starting point
 - THEME →THEME: navigation of four channels + 내 설정, per-channel history replacing 기록, 작성 테스트 under 내 설정 고급, home with channel entries, the always-on principle card, Toss-like wizard steps
