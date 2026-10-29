@@ -63,18 +63,30 @@ it('traverses channel hubs and settings as sibling destinations without paid wor
   const view = renderLegacyModelRoute('/naver-blog', { user: { id: 'alice' } })
   await screen.findByRole('heading', { name: '네이버 블로그', level: 1 })
   expectRoot('네이버 블로그')
-  for (const [label, pathname] of [
-    ['네이버 클립', '/naver-clip'],
-    ['인스타 클립', '/insta-clip'],
-    ['내 설정', '/settings'],
-    ['네이버 블로그', '/naver-blog'],
+  for (const [label, pathname, navLabel] of [
+    ['네이버 클립', '/naver-clip', '클립'],
+    ['인스타 클립', '/insta-clip', '인스타'],
+    ['내 설정', '/settings', '내 설정'],
+    ['네이버 블로그', '/naver-blog', '블로그'],
   ] as const) {
     const primary = within(screen.getByRole('navigation', { name: '주요' }))
-    await user.click(primary.getByRole('link', { name: label }))
+    if (pathname === '/settings') {
+      await user.click(screen.getByRole('button', { name: '내 계정' }))
+      await user.click(
+        within(screen.getByRole('dialog', { name: '내 계정' })).getByRole('link', {
+          name: navLabel,
+        }),
+      )
+    } else await user.click(primary.getByRole('link', { name: navLabel }))
     await waitFor(() => expect(view.router.state.location.pathname).toBe(pathname))
     await screen.findByRole('heading', { name: label, level: 1 })
     expectRoot(label)
-    expect(primary.getByRole('link', { name: label })).toHaveAttribute('aria-current', 'page')
+    if (pathname === '/settings')
+      expect(
+        primary.queryAllByRole('link').every((link) => !link.hasAttribute('aria-current')),
+      ).toBe(true)
+    else
+      expect(primary.getByRole('link', { name: navLabel })).toHaveAttribute('aria-current', 'page')
   }
   expect(paidActions(view.procedures)).toEqual([])
 })
@@ -229,7 +241,9 @@ it.each(['/ai-models/experiments/retained', '/posts/experiments/retained'])(
       '/tests/history',
     ])
     const primary = within(screen.getByRole('navigation', { name: '주요' }))
-    expect(primary.getByRole('link', { name: '내 설정' })).toHaveAttribute('aria-current', 'page')
+    expect(primary.queryAllByRole('link').every((link) => !link.hasAttribute('aria-current'))).toBe(
+      true,
+    )
     expect(
       within(screen.getByRole('main')).getByRole('link', { name: '테스트 기록' }),
     ).toHaveAttribute('href', '/tests/history')
@@ -274,7 +288,9 @@ it('retains the Instagram location through shared templates, child navigation, r
   await screen.findByRole('heading', { name: '새 영상 템플릿', level: 1 })
   expect(breadcrumbHrefs()).toEqual(['/insta-clip', '/video-templates?channel=instagram_clip'])
   const address = view.router.state.location.href
+  expect(address).toContain('channel=instagram_clip')
   view.unmount()
+  sessionStorage.clear()
   const reopened = renderAppAt(address, { transport: view.transport })
   await screen.findByRole('heading', { name: '새 영상 템플릿', level: 1 })
   expect(breadcrumbHrefs()).toEqual(['/insta-clip', '/video-templates?channel=instagram_clip'])
@@ -309,5 +325,29 @@ it('keeps a directly opened Instagram project channel when visiting shared video
   await act(() => view.router.navigate({ to: '/video-guidelines' }))
   await screen.findByRole('heading', { name: '영상 지침', level: 1 })
   expect(breadcrumbHrefs()).toEqual(['/insta-clip'])
+  expect(paidActions(calls)).toEqual([])
+})
+
+it.each([
+  ['템플릿', '영상 템플릿'],
+  ['지침', '영상 지침'],
+])('keeps Instagram when its %s link opens in a fresh tab', async (linkName, heading) => {
+  const calls: string[] = []
+  const view = renderAppAt('/insta-clip', { user: { id: 'alice' }, calls })
+  const main = await screen.findByRole('main')
+  const href = within(main).getByRole('link', { name: linkName }).getAttribute('href')!
+  expect(href).toContain('channel=instagram_clip')
+  view.unmount()
+  sessionStorage.clear()
+  renderAppAt(href, { transport: view.transport })
+  await screen.findByRole('heading', { name: heading, level: 1 })
+  expect(breadcrumbHrefs()).toEqual(['/insta-clip'])
+  const nav = screen.getByRole('navigation', { name: '주요' })
+  expect(within(nav).getByRole('link', { name: '인스타' })).toHaveAttribute('aria-current', 'page')
+  if (linkName === '템플릿') {
+    expect(
+      await within(screen.getByRole('main')).findByRole('link', { name: '새 영상 템플릿' }),
+    ).toHaveAttribute('href', '/video-templates/new?channel=instagram_clip')
+  }
   expect(paidActions(calls)).toEqual([])
 })

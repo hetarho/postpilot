@@ -130,7 +130,11 @@ export function VideoTemplatesPage() {
             ariaLabel={t('directory.newDockAria', { ns: 'clips' })}
             className="mt-auto"
           >
-            <Link to="/video-templates/new" className={buttonStyles({ variant: 'cta' })}>
+            <Link
+              to="/video-templates/new"
+              search={({ channel }) => ({ channel })}
+              className={buttonStyles({ variant: 'cta' })}
+            >
               {t('directory.create', { ns: 'clips' })}
             </Link>
           </ActionBar>
@@ -176,6 +180,7 @@ function TemplateRow({
       <Link
         to="/video-templates/$templateId"
         params={{ templateId: template.id }}
+        search={({ channel }) => ({ channel })}
         className={typographyStyles({
           variant: 'label',
           className: 'min-w-0 truncate after:absolute after:inset-0',

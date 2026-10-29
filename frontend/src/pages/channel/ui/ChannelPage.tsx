@@ -47,8 +47,16 @@ function ChannelPage({ channel }: { channel?: ClipChannel }) {
                 key: 'history',
                 search: channel ? { channel } : {},
               },
-              { to: channel ? '/video-templates' : '/templates', key: 'templates', search: {} },
-              { to: channel ? '/video-guidelines' : '/guidelines', key: 'guidelines', search: {} },
+              {
+                to: channel ? '/video-templates' : '/templates',
+                key: 'templates',
+                search: channel ? { channel } : {},
+              },
+              {
+                to: channel ? '/video-guidelines' : '/guidelines',
+                key: 'guidelines',
+                search: channel ? { channel } : {},
+              },
             ] as const
           ).map(({ to, key, search }) => (
             <li key={key}>

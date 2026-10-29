@@ -60,7 +60,12 @@ describe('AccountMenu', () => {
     const panel = await openAccountPopover(user)
     const menu = within(panel).getByRole('navigation', { name: '계정 메뉴' })
     const rows = within(menu).getAllByRole('link')
-    expect(rows.map((row) => row.textContent)).toEqual(['계정 설정', '플랜 보기', '결제 관리'])
+    expect(rows.map((row) => row.textContent)).toEqual([
+      '내 설정',
+      '계정 설정',
+      '플랜 보기',
+      '결제 관리',
+    ])
     for (const row of rows) {
       // Menu rows rest at 36px under a mouse and keep the 44px touch floor (THEME-23).
       expect(row).toHaveClass('min-h-9', 'pointer-coarse:min-h-11', 'flex', 'rounded-md', '-mx-3')
@@ -213,13 +218,13 @@ describe('AccountMenu', () => {
     expect(within(panel).getByRole('link', { name: '운영 관리' })).toHaveClass(
       'pointer-coarse:min-h-11',
     )
-    // Administration is the last destination row, after the three every account gets.
+    // Administration is the last destination row, after the four every account gets.
     const menu = within(panel).getByRole('navigation', { name: '계정 메뉴' })
     expect(
       within(menu)
         .getAllByRole('link')
         .map((row) => row.textContent),
-    ).toEqual(['계정 설정', '플랜 보기', '결제 관리', '운영 관리'])
+    ).toEqual(['내 설정', '계정 설정', '플랜 보기', '결제 관리', '운영 관리'])
     // The ladder is reachable from every tier: this link used to live inside the "has a
     // meter" branch, which left the operator account with no way to `/plans` (QUOTA-27).
     expect(within(panel).getByRole('link', { name: '플랜 보기' })).toBeInTheDocument()

@@ -1,13 +1,12 @@
-import { NotebookPen, Clapperboard, Film, Settings2 } from 'lucide-react'
 import { clipChannelPath, type ClipChannel } from '@/entities/clip-project'
 import type { navigationI18n } from './navigation-i18n'
 
-export const DESTINATIONS = [
-  { to: '/naver-blog', labelKey: 'naverBlog', icon: NotebookPen },
-  { to: '/naver-clip', labelKey: 'naverClip', icon: Clapperboard },
-  { to: '/insta-clip', labelKey: 'instaClip', icon: Film },
-  { to: '/settings', labelKey: 'settings', icon: Settings2 },
+export const CHANNEL_DESTINATIONS = [
+  { to: '/naver-blog', labelKey: 'blog' },
+  { to: '/naver-clip', labelKey: 'clip' },
+  { to: '/insta-clip', labelKey: 'instagram' },
 ] as const
+const DESTINATIONS = [...CHANNEL_DESTINATIONS, { to: '/settings' }] as const
 export type PrimaryDestination = (typeof DESTINATIONS)[number]['to']
 export type LocationKey = keyof typeof navigationI18n.ko.location
 export interface LocationAncestor {

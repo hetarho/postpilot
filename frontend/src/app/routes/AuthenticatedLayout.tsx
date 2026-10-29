@@ -6,7 +6,6 @@ import { useWritingTestSource } from '@/entities/writing-test'
 import { useEffect, useLayoutEffect, useRef } from 'react'
 import { Link, Outlet, useNavigate, useRouter, useRouterState } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
-import { Menu as MenuIcon, X } from 'lucide-react'
 import { clsx } from 'clsx'
 import { takePendingGift } from '@/features/redeem-voucher'
 import {
@@ -15,10 +14,9 @@ import {
   ContextualReturn,
   Logo,
   NavigationProvider,
-  Popover,
   PromoStage,
   Typography,
-  typographyStyles,
+  buttonStyles,
   useMediaQuery,
   type NavigationLinkProps,
 } from '@/shared/ui'
@@ -34,7 +32,7 @@ import {
 } from '../model/navigation-entry'
 import {
   currentDestination,
-  DESTINATIONS,
+  CHANNEL_DESTINATIONS,
   isStructuralNavigationEntry,
   isTopLevelDestination,
   navigationPathname,
@@ -313,6 +311,28 @@ export function AuthenticatedLayout() {
             >
               <Logo className="h-6 max-w-full" />
             </Link>
+            <nav
+              aria-label={t('primary')}
+              className="order-last flex w-full gap-2 pb-2 lg:order-none lg:ml-6 lg:w-auto lg:pb-0"
+            >
+              {CHANNEL_DESTINATIONS.map(({ to, labelKey }) => (
+                <Link
+                  key={to}
+                  to={to}
+                  aria-current={current === to ? 'page' : undefined}
+                  className={buttonStyles({
+                    variant: 'ghost',
+                    className: clsx(
+                      'flex-1 lg:flex-none',
+                      current === to &&
+                        'bg-row-bg-active text-link-fg-current underline decoration-2 underline-offset-8',
+                    ),
+                  })}
+                >
+                  {t(labelKey)}
+                </Link>
+              ))}
+            </nav>
             {!wide && !setup && (
               <div className="min-w-0 flex-1">
                 <Breadcrumb
@@ -324,54 +344,6 @@ export function AuthenticatedLayout() {
             )}
             <div className="ml-auto flex shrink-0 items-center gap-0 lg:gap-2">
               {!quiet && wide && <CreditBadge />}
-              {!wide && (
-                <Popover
-                  key={ownerId + pathname}
-                  label={t('overflow')}
-                  triggerLabel={<MenuIcon aria-hidden="true" className="size-5" />}
-                  triggerSize="icon"
-                  triggerVariant="ghost"
-                  placement="below"
-                  align="end"
-                  phone="popover"
-                >
-                  {(close) => (
-                    <>
-                      <div className="mb-2 flex items-center justify-between gap-2">
-                        <Typography variant="fieldTitle">{t('menu')}</Typography>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          aria-label={t('closeOverflow')}
-                          onClick={close}
-                        >
-                          <X aria-hidden="true" className="size-5" />
-                        </Button>
-                      </div>
-                      <nav aria-label={t('primary')} className="flex flex-col gap-1">
-                        {DESTINATIONS.map(({ to, labelKey, icon: Icon }) => (
-                          <Link
-                            key={to}
-                            to={to}
-                            aria-current={current === to ? 'page' : undefined}
-                            onClick={close}
-                            className={typographyStyles({
-                              variant: 'body',
-                              className: clsx(
-                                'hover:bg-row-bg-hover inline-flex min-h-11 items-center gap-3 rounded-md px-3 py-2',
-                                current === to && 'text-link-fg-current',
-                              ),
-                            })}
-                          >
-                            <Icon aria-hidden="true" className="size-5 shrink-0" />
-                            {t(labelKey)}
-                          </Link>
-                        ))}
-                      </nav>
-                    </>
-                  )}
-                </Popover>
-              )}
               {wide && (
                 <div className="flex">
                   <InterfacePreferences />
@@ -386,30 +358,6 @@ export function AuthenticatedLayout() {
               />
             </div>
           </div>
-          {wide && (
-            <nav
-              aria-label={t('primary')}
-              className="mx-auto flex w-full max-w-7xl flex-wrap items-center gap-1 px-4 pb-3 sm:px-6 lg:px-8"
-            >
-              {DESTINATIONS.map(({ to, labelKey }) => (
-                <Link
-                  key={to}
-                  to={to}
-                  aria-current={current === to ? 'page' : undefined}
-                  className={typographyStyles({
-                    variant: 'body',
-                    className: clsx(
-                      'hover:bg-row-bg-hover inline-flex min-h-11 shrink-0 items-center rounded-md px-3',
-                      current === to ? 'text-link-fg-current' : 'text-content-secondary',
-                      to === '/settings' && 'ml-3',
-                    ),
-                  })}
-                >
-                  {t(labelKey)}
-                </Link>
-              ))}
-            </nav>
-          )}
           {wide && pathname !== '/' && !setup && (
             <div className="mx-auto w-full max-w-7xl px-4 pb-3 sm:px-6 lg:px-8">
               <Breadcrumb ariaLabel={t('locationLabel')} />

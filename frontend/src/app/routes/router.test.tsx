@@ -623,18 +623,15 @@ describe('theme preferences in the real route tree', () => {
     const location = within(header).getByRole('navigation', { name: '현재 위치' })
     const disclosure = within(location).getByRole('button', { name: '현재 위치: 글 작업 내역' })
     const account = screen.getByRole('button', { name: '내 계정' })
-    const navigation = screen.getByRole('button', { name: '이동 메뉴' })
+    const navigation = within(header).getByRole('navigation', { name: '주요' })
     expect(
-      location.compareDocumentPosition(navigation) & Node.DOCUMENT_POSITION_FOLLOWING,
-    ).not.toBe(0)
-    expect(navigation.compareDocumentPosition(account) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(
-      0,
-    )
+      within(navigation)
+        .getAllByRole('link')
+        .map((link) => link.textContent),
+    ).toEqual(['블로그', '클립', '인스타'])
+    expect(location.compareDocumentPosition(account) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0)
     expect(within(header).queryByRole('link', { name: /플랜/ })).toBeNull()
-    expect(within(header).queryByRole('navigation', { name: '주요' })).toBeNull()
-    const cluster = navigation.parentElement?.parentElement as HTMLElement
-    expect(within(cluster).queryAllByRole('link')).toHaveLength(0)
-    expect(within(cluster).getAllByRole('button')).toHaveLength(2)
+    expect(screen.queryByRole('button', { name: '이동 메뉴' })).toBeNull()
     await user.click(disclosure)
     const hierarchy = screen.getByRole('dialog', { name: '현재 위치: 글 작업 내역' })
     expect(within(hierarchy).getByRole('link', { name: '네이버 블로그' })).toHaveAttribute(
@@ -862,12 +859,11 @@ describe('localized registered-route smoke', () => {
       const shell = main.parentElement
       expect(shell).toHaveClass('flex', 'flex-1', 'flex-col')
       expect(shell?.querySelectorAll('[class~="overflow-y-auto"]')).toHaveLength(0)
-      expect(screen.queryByRole('navigation', { name: '주요' })).toBeNull()
+      expect(
+        within(screen.getByRole('navigation', { name: '주요' })).getAllByRole('link'),
+      ).toHaveLength(3)
       expect(document.querySelector('aside')).toBeNull()
-      expect(screen.getByRole('button', { name: '이동 메뉴' })).toHaveAttribute(
-        'aria-expanded',
-        'false',
-      )
+      expect(screen.queryByRole('button', { name: '이동 메뉴' })).toBeNull()
     },
   )
 })

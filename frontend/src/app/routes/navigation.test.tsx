@@ -65,37 +65,46 @@ it('shows primary destinations and current section on desktop without a hamburge
     within(nav)
       .getAllByRole('link')
       .map((x) => x.getAttribute('href')),
-  ).toEqual(['/naver-blog', '/naver-clip', '/insta-clip', '/settings'])
-  expect(within(nav).getByRole('link', { name: '네이버 블로그' })).toHaveAttribute(
-    'aria-current',
-    'page',
-  )
+  ).toEqual(['/naver-blog', '/naver-clip', '/insta-clip'])
+  expect(within(nav).getByRole('link', { name: '블로그' })).toHaveAttribute('aria-current', 'page')
   expect(screen.queryByRole('button', { name: '이동 메뉴' })).toBeNull()
   expect(screen.queryByRole('dialog', { name: '메뉴' })).toBeNull()
   expect(screen.getByRole('navigation', { name: '현재 위치' })).toHaveTextContent('글 작업 내역')
   expect(calls.some((x) => /^(Start|Save|Cancel|Create)/.test(x))).toBe(false)
 })
-it('uses a nonmodal edge-attached phone menu with visible dismissal, Escape and focus return', async () => {
-  viewport(false)
-  const user = userEvent.setup()
-  renderAppAt('/posts', { user: { id: 'alice', plan: ProtoPlan.FREE } })
-  await screen.findByRole('heading', { name: '글 작업 내역' })
-  const trigger = screen.getByRole('button', { name: '이동 메뉴' })
-  await user.click(trigger)
-  const menu = screen.getByRole('dialog', { name: '이동 메뉴' })
-  expect(menu).not.toHaveAttribute('aria-modal', 'true')
-  expect(menu).toHaveClass('right-0', 'top-full')
-  expect(
-    within(menu)
-      .getAllByRole('link')
-      .map((x) => x.getAttribute('href')),
-  ).toEqual(['/naver-blog', '/naver-clip', '/insta-clip', '/settings'])
-  expect(within(menu).getByRole('button', { name: '이동 메뉴 닫기' })).toBeInTheDocument()
-  expect(menu.contains(document.activeElement)).toBe(true)
-  await user.keyboard('{Escape}')
-  expect(screen.queryByRole('dialog', { name: '이동 메뉴' })).toBeNull()
-  expect(trigger).toHaveFocus()
-})
+it.each([false, true])(
+  'keeps exactly three channel links directly reachable, desktop=%s',
+  async (desktop) => {
+    viewport(desktop)
+    const user = userEvent.setup()
+    const calls: string[] = []
+    const view = renderAppAt('/posts/new', { user: { id: 'alice', plan: ProtoPlan.FREE }, calls })
+    const nav = await screen.findByRole('navigation', { name: '주요' })
+    expect(
+      within(nav)
+        .getAllByRole('link')
+        .map((link) => link.textContent),
+    ).toEqual(['블로그', '클립', '인스타'])
+    expect(within(nav).getByRole('link', { name: '블로그' })).toHaveClass('underline')
+    expect(screen.queryByRole('button', { name: '이동 메뉴' })).toBeNull()
+    await user.click(within(nav).getByRole('link', { name: '인스타' }))
+    await screen.findByRole('heading', { name: '인스타 클립', level: 1 })
+    expect(view.router.state.location.pathname).toBe('/insta-clip')
+    expect(within(nav).getByRole('link', { name: '인스타' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    )
+    await user.click(screen.getByRole('button', { name: '내 계정' }))
+    await user.click(
+      within(screen.getByRole('dialog', { name: '내 계정' })).getByRole('link', {
+        name: '내 설정',
+      }),
+    )
+    await screen.findByRole('heading', { name: '내 설정', level: 1 })
+    expect(nav.querySelector('[aria-current]')).toBeNull()
+    expect(calls.filter((call) => /^(Start|Create|Generate|Cancel)/.test(call))).toEqual([])
+  },
+)
 it('retains settings parent access and filters across child navigation and history', async () => {
   viewport(true)
   const { router } = renderAppAt('/settings', { user: { id: 'alice', plan: ProtoPlan.FREE } })
@@ -113,7 +122,9 @@ it('retains settings parent access and filters across child navigation and histo
   )
   await act(() => router.navigate({ to: '/settings' }))
   await waitFor(() => expect(router.state.location.pathname).toBe('/settings'))
-  expect(screen.getByRole('navigation', { name: '주요' })).toHaveTextContent('설정')
+  expect(
+    screen.getByRole('navigation', { name: '주요' }).querySelector('[aria-current]'),
+  ).toBeNull()
 })
 it('keeps administration protected and discoverable only to its owner role', async () => {
   viewport(true)
@@ -171,7 +182,7 @@ it.each([
 )
 
 it('derives named child locations and unknown-route behavior from the same hierarchy', () => {
-  for (const path of ['/naver-blog', '/naver-clip', '/insta-clip', '/settings']) {
+  for (const path of ['/naver-blog', '/naver-clip', '/insta-clip']) {
     expect(routeLocation(path).ancestors).toEqual([])
     expect(routeLocation(path).destination).toBe(path)
   }

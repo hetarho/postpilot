@@ -1,7 +1,15 @@
 import type { ComponentType, ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from '@tanstack/react-router'
-import { CreditCard, LogOut, Settings, ShieldCheck, Sparkles, UserRound } from 'lucide-react'
+import {
+  CreditCard,
+  LogOut,
+  Settings,
+  ShieldCheck,
+  SlidersHorizontal,
+  Sparkles,
+  UserRound,
+} from 'lucide-react'
 import { useMyPlan, planLabel, hasServerExportAccess, type MyPlan } from '@/entities/plan'
 import { formatDateTime } from '@/shared/lib'
 import { useLogout, useSession } from '@/entities/session'
@@ -142,6 +150,9 @@ function AccountPanel({
       </section>
 
       <nav aria-label={t('links.more', { ns: 'auth' })} className="grid gap-0.5 py-2">
+        <MenuRow to="/settings" icon={SlidersHorizontal} close={close}>
+          {t('settings', { ns: 'nav' })}
+        </MenuRow>
         <MenuRow to="/account" icon={Settings} close={close}>
           {t('accountSettings.heading', { ns: 'auth' })}
         </MenuRow>

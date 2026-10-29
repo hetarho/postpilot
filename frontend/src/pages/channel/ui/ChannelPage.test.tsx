@@ -19,8 +19,8 @@ it.each([
     [
       '/clips/new?channel=naver_clip',
       '/clips?channel=naver_clip',
-      '/video-templates',
-      '/video-guidelines',
+      '/video-templates?channel=naver_clip',
+      '/video-guidelines?channel=naver_clip',
     ],
   ],
   [
@@ -29,8 +29,8 @@ it.each([
     [
       '/clips/new?channel=instagram_clip',
       '/clips?channel=instagram_clip',
-      '/video-templates',
-      '/video-guidelines',
+      '/video-templates?channel=instagram_clip',
+      '/video-guidelines?channel=instagram_clip',
     ],
   ],
 ] as const)(

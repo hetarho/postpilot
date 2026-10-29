@@ -3,6 +3,9 @@ import type { I18nFragment } from '@/shared/lib'
 export const navigationI18n = {
   namespace: 'nav',
   ko: {
+    blog: '블로그',
+    clip: '클립',
+    instagram: '인스타',
     naverBlog: '네이버 블로그',
     naverClip: '네이버 클립',
     instaClip: '인스타 클립',
@@ -64,6 +67,9 @@ export const navigationI18n = {
     },
   },
   en: {
+    blog: 'Blog',
+    clip: 'Clip',
+    instagram: 'Instagram',
     naverBlog: 'Naver Blog',
     naverClip: 'Naver Clip',
     instaClip: 'Instagram Clip',

@@ -135,7 +135,6 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T720 | Keep the three channels visible and preserve shared video context | THEME ARCH | - | todo |
 | T709 | Prove the real clip pipeline within the approved live budget | ARCH CLIP QUOTA | T708 | blocked@261028 |
 | T539 | Qualify the complete Korean voice-creation milestone | ARCH DUB MODEL CDS THEME | T538 | blocked@261005 |
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
@@ -144,11 +143,13 @@
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
 
 ## next
-- implement-task T720: persistent three-channel navigation and shared video links, then final pre-push checks and remote CI.
+- T720 complete: persistent three-channel navigation and URL-carried video context; session nux owns final pre-push checks and remote CI.
 - T718 (CLIP r66) pushed: the video-template wizard shows the live template preview beside every step from stages on, stages listed with the on-screen one marked, design offered only on the design step. CI run 40836194942 confirmed success; look at it at lg and on a phone; report reports/261029-vtp1.md.
 - Windows Chrome browser media fixes shipped at a4fe7473 (CI, Deploy backend and Verify media success; live preview/video workers carry profile v2): T716 analysis AAC 96 kbps, opaque D3D11 frame rendering, T717 loudness limiter. Owner: listen to the limited-audio render; browser analysis/final-render readiness, T603 corpus/semantic review, T604 hardware/human review and the T709 provider reservation stay open.
 
 ## log
+- 261030 T720 done: persistent Blog/Clip/Instagram navigation, account settings entry and shared video URLs; affected tests, lint/format/type/build and 60 browser combinations plus draft/caret continuity pass.
+- 261030 T720 starts (nux) at a15e7bb0; persistent channel navigation and portable shared-video context.
 - 261030 create-task THEME r35 → T720: persistent channels and URL-carried shared video context; preserve creation, settings and return contracts.
 - 261030 update-ssot THEME start: persistent three-channel navigation and channel-context usability (nux, autopilot).
 - 261030 T719 setup regression correction: the shared helper now uses Next; all 23 setup tests and file ESLint/Prettier pass. The full pre-push suite is rerun on the amended candidate.
@@ -167,7 +168,3 @@
 - 261029 T717 starts (w11c): linear gain first, offline lookahead limiter only where the ceiling binds.
 - 261029 update-ssot CDS r37 + create-task T717: CDS-35✎ a peak-bound mix is dynamically limited to the target in either render kind. Windows Chrome render of 4 owner HLG cuts with source sound normalized to −20.93 LUFS at the −1.54 dBTP ceiling and was refused (CLIP_BROWSER_AUDIO_AUDIO); the server loudnorm pass would have switched to dynamic mode.
 - 261029 fix media opaque frames: Windows Chrome refuses VideoFrame.allocationSize for null-format (D3D11 HEVC) frames even with an RGBA layout, so every browser final render of phone HEVC failed; range-video bounds such a frame by its coded RGBA reservation without a size query. 4 owner HLG cuts then render 1080x1920/30 fps/480 frames and pass browserRenderVerdict.
-- 261029 T716 done: server/client analysis profile v2 with 96 kbps browser AAC; 11/11 Windows Chrome copies of owner HLG originals with sound pass the Go verifier; affected FE (45 files/427 tests across two runs) and BE clip packages pass.
-- 261029 T716 starts at 6916bfcb (w11c): browser analysis AAC 96 kbps under profile v2; native copies stay 64 kbps.
-- 261029 create-task CLIP r65: T716 browser analysis audio 96 kbps, profile v2, server native copies unchanged at 64 kbps.
-- 261029 update-ssot CLIP r65: CLIP-204✎ browser copy AAC bitrate accepted by every supported platform encoder and never below the server copy's. Windows Chrome 155 (owner profile too) and Edge 156 refuse 64 kbps AAC, so every source with sound failed browser analysis with CLIP_ANALYSIS_ENCODER_UNSUPPORTED; 96 kbps copies of 11 owner HLG HEVC originals encode there and pass the production Go verifier.

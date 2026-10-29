@@ -113,6 +113,7 @@ function VideoTemplateHost({
               void navigate({
                 to: '/video-templates/$templateId',
                 params: { templateId },
+                search: ({ channel }) => ({ channel }),
                 replace: true,
               })
             }}
@@ -292,6 +293,7 @@ function VideoTemplateHost({
               void navigate({
                 to: '/video-templates/$templateId',
                 params: { templateId: saved.id },
+                search: ({ channel }) => ({ channel }),
                 replace: true,
               })
           }}
@@ -306,6 +308,7 @@ function BackLink() {
   return (
     <Link
       to="/video-templates"
+      search={({ channel }) => ({ channel })}
       className={typographyStyles({
         variant: 'label',
         className:
