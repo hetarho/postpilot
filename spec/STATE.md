@@ -8,6 +8,11 @@
 - docs: en
 - push: main
 
+## active
+| tag | host | mode | since | at | doing |
+|---|---|---|---|---|---|
+| vhn1 | ihaelam-ui-MacBookPro | pair | 2026-10-29T15:41Z | 2026-10-29T15:41Z | - |
+
 ## inbox
 - 261029 decided CLIP-221: how does the video-template wizard's live preview show a stage name or order the clip frame never draws? → an ordered stage list above the frame marks the stage whose step is on screen, as the post wizard marks its section (alt: the frame alone, so renaming or reordering stages changes nothing visible | draw stage names into the sample clip as captions)
 - 261029 decided CLIP-221: does the live preview offer the design selection on every step? → before the design step it draws the draft's presets and caption styles without offering them, and the design step's content is the same preview with them offered (alt: offer presets and styles on every step, breaking one question per screen | hide the design until the design step, so the preview draws defaults the owner never chose)
@@ -18,7 +23,6 @@
 - 261028 decided TMPL-73: how does an owner style request meet the 기본 voice? → the request decides wording and outranks the voice, which still decides without one; examples are code-owned chips that fill the field (alt: the request replaces the voice entirely | free text only, no examples)
 - 261028 decided TMPL-71: what replaces the top 내 말로 쓰기 button on the headings step? → the frame's ordinary 다음 in the next-action place, the heading fields being the own-words input (alt: keep the 내 말로 쓰기 label in the next slot)
 - 261028 decided TMPL-32: how does a writer with no template get one? → `새 템플릿 만들기` in ①'s template picker opens the wizard and returns to the post with it assigned (alt: link out with no return | a hint line under the picker)
-- 261028 suggest TMPL-73 CLIP-213: the clip template wizard still offers the direct suggestion button; give it the same style-request sheet if wanted
 - 261016 suggest T694 T695 T698 T699 T700: review-code over channel navigation, campaign positioning, owned post links, frozen writing material and original capture metadata.
 - 261016 decided T700: how is EXIF without a UTC offset normalized? → omit the unknown instant and retain filename-based order as fallback (alt: invent the browser’s current time zone | label the local wall clock as UTC); use bounded mvhd parsing because the installed Mediabunny skips that creation field.
 - 261016 decided T699: how does a clip-store transaction fence external post text? → freeze a same-read creation identity and carry its text digest in pricing beside GuidelinesDigest, with the raw link identity in the project digest (alt: read post tables from the clip context | persist live post text on every project edit).
@@ -129,7 +133,7 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T718 | Show the live template preview beside every video-wizard step from stages on | CLIP TMPL | - | doing@261029.vtp1 |
+| T719 | Align video stage-name suggestions with the blog heading UI | CLIP TMPL ARCH | - | todo |
 | T709 | Prove the real clip pipeline within the approved live budget | ARCH CLIP QUOTA | T708 | blocked@261028 |
 | T539 | Qualify the complete Korean voice-creation milestone | ARCH DUB MODEL CDS THEME | T538 | blocked@261005 |
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
@@ -138,14 +142,12 @@
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
 
 ## next
+- Implement T719: align the video-template stage-name UI with the blog wizard, then verify, commit and push main.
 - T718 (CLIP r66) pushed: the video-template wizard shows the live template preview beside every step from stages on, stages listed with the on-screen one marked, design offered only on the design step. Owner: confirm CI run 40836194942 and look at it at lg and on a phone; report reports/261029-vtp1.md.
 - Windows Chrome browser media fixes shipped at a4fe7473 (CI, Deploy backend and Verify media success; live preview/video workers carry profile v2): T716 analysis AAC 96 kbps, opaque D3D11 frame rendering, T717 loudness limiter. Owner: listen to the limited-audio render; browser analysis/final-render readiness, T603 corpus/semantic review, T604 hardware/human review and the T709 provider reservation stay open.
-- Clip fixes 357c0d55..306a169a (render-kind gate, polled cancellation, SDR-labelled HLG export, caption keyword edit, server-route colour refusal) were measured on 8 real HLG HEVC phone originals locally and shipped at e6ca39dc (CI, Deploy backend incl. post-deploy checks and Verify media green). Open: while browser final rendering is unqualified (T604) a non-Max account has no render path at all (Max-only server exports, CLIP-193) — owner decision; the on-purpose identity-smoke baseline's container digest moves with the SDR label (sampled frames unchanged) and needs re-recording on its CI host; a PQ source is refused with the generic CLIP_INVALID_MEDIA message, not a colour-named one.
-- TMPL r29–r31 (T710–T715) shipped: CI green at 2441146f and 9921568a; the later backend push e6ca39dc ran the post-deploy storage/CORS/R2 checks and Verify media green, closing the T710 parked deploy gap.
-- T708 is deployed and d3d51209 CI/Workers plus actual retained-original playback/preview pass. T709 fresh planning remains blocked by unresolved provider usage; preserve its ledger and keep T603/T604/voice gates closed.
-- T697 deployment/CORS/media gates passed at177b377a; deployed browser preview now reads8 real retained R2 originals without a range failure. Full public browser-generation qualification remains gated by T603/T604.
 
 ## log
+- 261030 create-task CLIP-213 TMPL-71/73 → T719: use one heading-suggestion sheet for post and video wizards; accepted the matching inbox suggestion. T718 is already archived done; removed its stale doing row.
 - 261029 pushed f8e4ad6e (CLIP r66, T718, report vtp1): pre-push FE gate on e5111a90 passed (568/4506, build, lints); CI run 40836194942 jobs completed with no failed step, conclusion unreadable over public HTML (gh not logged in); Deploy backend/Verify media not triggered.
 - 261029 T718 done: ClipWizardPreview beside the video wizard's steps (lg aside, phone WizardPreviewDock moved to shared/ui); CompositionPreview draws handed-in presets read-only without a change handler; related vitest 323 files/2662 tests, lint, lint:fsd, tsc -b pass.
 - 261029 T718 starts (vtp1)
@@ -165,26 +167,3 @@
 - 261029 pushed e6ca39dc (clip fixes 357c0d55..306a169a): CI 40790451412, Deploy backend 40790451348 (build, rollout, health, ranged GET, CORS, R2) and Verify media 40790884224 success; live postpilot bundle carries the browser-render refusal copy. Local gates: FE 566/4497, backend 89 packages + vet/build/gofmt, lint/FSD/style/spec/dev/build, native media-smoke 41 PASS; amd64 deploy/media-release images were left to the remote runs. Paid live work: 8 Gemini 3.8 Flash observations + 2 writing calls under the owner's USD0.30 cap (≈USD0.02, estimated from the T709 per-observation cost).
 - 261029 fix clip source colour on the server route: CLIP-219's PQ refusal lived only in browser decoding, so T707's server preparation admitted PQ/uncovered colour; the native probe now refuses what the browser refuses (SDR and HLG admitted) before any work.
 - 261029 fix clip caption edit: retyping a caption so its AI accent keyword no longer appears held the whole ② edit unsaved behind 이 문구의 내용·위치·시간을 확인해 주세요; the text field now drops a keyword the new text does not carry, as the composer does.
-- 261029 fix clip HLG export colour: server renders of HLG sources inherited the source's BT.2020/HLG tags (FFmpeg 9 lets frame tags override encoder options), so players tone-mapped the export unlike its SDR preview; the delivered encode is relabelled BT.709 primaries/transfer with the coded matrix kept, pixels unchanged (lossless framemd5 equal; PSNR 54.8 dB vs the prior render). CLIP-219 regains r62's preview/export parity reason (wording, no rev).
-- 261029 fix clip cancellation: the GetGeneration poll dropped the queue's canCancel, policy version, cancel request and wait expiry, so a running clip job showed 이 작업은 취소 기능을 지원하지 않아요 and no cancel control; the generation projection now carries them (CLIP-78).
-- 261029 fix clip render choice: ② offered the unreleased browser render first (encoder probe only), so its start met the server's 501 and a misleading re-select message; the browser kind now follows finalRender readiness (ARCH-68) and is refused by name while the server leads. Measured on 8 HLG HEVC originals in real Chrome.
-- 261029 pushed 2441146f (T710–T714, content-free merge of another session's e15cd280) and 9921568a (T715): CI frontend/backend success both; Deploy backend build + swap + health gate success, post-deploy verification failed before running (GitHub download curl 56), Verify media skipped. Local emulated amd64 media gate timed out only TestRenderSmokePreview; the native build's in-image smokes passed.
-- 261029 T715 done: one content-kind card with horizontal radios named by outcome; its drawings and inputs switch inside it.
-- 261029 update-ssot TMPL r31 (owner) + create-task T715: wizard content kinds renamed by outcome; each card holds its own inputs.
-- 261029 T714 done: the wizard's 직접 입력 is a question the AI writes the part from; card, preview and copy follow.
-- 261029 update-ssot TMPL r30 (owner): 직접 입력 becomes a question whose answer the AI writes the section from, replacing the verbatim answer (resolves the 261015 inbox decision).
-- 261029 T713 done: ①'s 템플릿 picker offers 새 템플릿 만들기; the wizard returns to the post (or a new draft) and the editor assigns the new template once.
-- 261029 T712 done: 제목 제안 받기 style-request sheet with examples, ordinary 다음 on the headings step, content-kind cards drawing 글 쓸 때/완성된 글; checked in real Chrome at desktop and phone widths.
-- 261029 T711 done: compact preview stand-ins shared by TemplatePreview and the new WizardPreview; wizard preview beside every step from sections on (lg sticky right, 미리보기 sheet below lg).
-- 261029 T710 done: heading suggestions carry an optional owner style request (proto field 5, ≤200, outranks the 기본 voice); template/cmd/api Go tests and affected FE tests pass.
-- 261029 create-task TMPL r29: T710 heading style request (proto/BE/hook), T711 compact preview + wizard side preview, T712 style sheet + 다음 + content-kind cards, T713 picker 새 템플릿 만들기.
-- 261028 update-ssot TMPL r29: wizard heading style-request sheet, preview beside every step (lg right / 미리보기 sheet), content-kind cards with 글 쓸 때·완성된 글 panels, compact preview stand-ins, 새 템플릿 만들기 in ①'s picker. Audit: first-use /setup and the voice picker's 새 말투 만들기 exist; the template picker had no creation path.
-- 261028 update-ssot TMPL start: template-creation UX friendliness (owner request).
-- 261028 fix clip delivery: rerendered the latest completed clip from the identical retained production plan/originals with exactly one intro headline changed; private1080x1920 H264 High/30fps/900-frame/30s output passes production validation, independent full decode and Chrome seek/playback. Owner download and private server copy retained; completed project/result unchanged.
-- 261028 start introfix: inspect the latest server video and rerender with the owner-supplied intro business name only.
-- 261028 delivery verified atd3d51209: CI40546530178 frontend562/4480 and full backend pass; Workers7ccde8a4/versionf3298eab and live-byte/native-playback/deployed-R2-preview checks pass. Final documents reuse unchanged source verification; private videos and offline review page are retained, with T709 usage/corpus/human-review gates still open.
-- 261028 d3d51209 pushed after the authorized playback allowance; Workers7ccde8a4 succeeds with versionf3298eab. Live entry/clip/preview-worker/config bytes match. Actual HEVC originals play and deployed R2 preview completes24 samples in45.034s plus frames0/300/600/899; full CI is still running.
-- 261028 T709 blocked:8 real browser observations confirm USD0.010868; the next write request has missing usage, so its USD0.025001 reservation remains unresolved and further paid work stops.24 full-verified analysis artifacts and2 independently decoded/Chrome-played1080x1920/30fps/30s exports of the prior real AI plan are retained privately. No fresh full-pipeline or qualification claim; source credentials removed, human review requested.
-- 261028 T709 starts (prv, explore2h): pursue real browser/native copy comparison and repeated metered OpenRouter-to-playable-video proof under the owner cumulative USD0.20 cap. Source checkpoint c4f3254c passes preview4480 FE tests; no live diagnostic call has yet been sent. Preserve real qualification/human-review gates and the existing user result.
-- 261028 T708 done atc4f3254c: finite retained-preview reading, source-end rounding and distinct scene preparation/frame phases pass full4480 FE tests and actual R2/Chrome visual checks. Source and sanitized QA are committed locally; final batch push/CI and authorized cumulative USD0.20 real AI/video proof remain.
-- 261028 T708 verified locally: full562-file/4480-test FE suite, production type/build and changed-file lint/format pass. Real R2/Chrome preparation reports24 scene checks in42.238s and frames0/300/600/899 display correctly; owned local bytes take3.472s to first frame. Source checkpoint precedes the authorized budgeted AI/video proof; no push yet.
