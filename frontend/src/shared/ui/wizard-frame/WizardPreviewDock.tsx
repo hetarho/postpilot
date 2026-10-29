@@ -1,14 +1,25 @@
 import { useId, useState, type ReactNode } from 'react'
-import { useTranslation } from 'react-i18next'
 import { Sparkles } from 'lucide-react'
-import { Button, Sheet, Typography } from '@/shared/ui'
+import { Button } from '../button/Button'
+import { Sheet } from '../sheet/Sheet'
+import { Typography } from '../typography/Typography'
 
-/** The wizard's preview below `lg` (TMPL-75): a `미리보기` button that floats at the viewport's
- *  foot while the step scrolls and settles above Back and next, opening the preview in a bottom
- *  sheet. It glows once each time an answer changes the preview — `changes` counts them — and the
- *  global reduced-motion rule ends that glow before it is seen. */
-export function PreviewDock({ changes, children }: { changes: number; children: ReactNode }) {
-  const { t } = useTranslation('templates')
+/** A wizard's preview below `lg` (TMPL-75, CLIP-221): a button named `label` that floats at the
+ *  viewport's foot while the step scrolls and settles above Back and next, opening the preview in
+ *  a bottom sheet. It glows once each time an answer changes the preview — `changes` counts them —
+ *  and the global reduced-motion rule ends that glow before it is seen. Pass it as the
+ *  `WizardFrame`'s `beforeActions`. */
+export function WizardPreviewDock({
+  changes,
+  label,
+  closeLabel,
+  children,
+}: {
+  changes: number
+  label: string
+  closeLabel: string
+  children: ReactNode
+}) {
   const id = useId()
   const [open, setOpen] = useState(false)
   const close = () => setOpen(false)
@@ -30,7 +41,7 @@ export function PreviewDock({ changes, children }: { changes: number; children: 
             className="relative rounded-full"
           >
             <Sparkles aria-hidden className="size-4" />
-            {t('wizard.preview.open')}
+            {label}
           </Button>
         </span>
       </div>
@@ -40,12 +51,12 @@ export function PreviewDock({ changes, children }: { changes: number; children: 
         size="wide"
         header={
           <Typography variant="title" id={`${id}-title`}>
-            {t('wizard.preview.open')}
+            {label}
           </Typography>
         }
         footer={
           <Button variant="secondary" onClick={close}>
-            {t('wizard.preview.close')}
+            {closeLabel}
           </Button>
         }
         onClose={close}

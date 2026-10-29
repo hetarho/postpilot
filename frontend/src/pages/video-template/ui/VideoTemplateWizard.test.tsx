@@ -140,3 +140,50 @@ it('requests one clip heading batch and keeps manual stage names until an explic
   await user.click(screen.getByRole('button', { name: '훅 (첫 장면) 후보 둘' }))
   expect(field).toHaveValue('훅 (첫 장면) 후보 둘')
 })
+
+// CLIP-221: the clip the answers make stands beside every step from stages on, the stages
+// listed with the on-screen one marked; the target questions show none and the design step
+// shows the one preview that offers the design.
+it('shows the live preview from the stages step on, none on the target questions and one on the design step', async () => {
+  const user = userEvent.setup()
+  renderAppAt('/video-templates/new', {
+    user: { id: 'alice' },
+    clips: { templates: [], writes: [], calls: [] },
+  })
+  await user.click(await screen.findByRole('button', { name: /^카페/ }))
+  expect(screen.queryByRole('region', { name: '구성 미리보기' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: '미리보기' })).not.toBeInTheDocument()
+  await user.click(await screen.findByRole('button', { name: /^디저트/ }))
+  await screen.findByRole('heading', { name: '이런 영상은 보통 이렇게 이어져요' })
+  const stages = () => within(screen.getByRole('region', { name: '구성 단계' }))
+  expect(stages().getAllByRole('listitem')).toHaveLength(7)
+  expect(screen.getByRole('region', { name: '구성 미리보기' })).toBeInTheDocument()
+  // Drawn, not offered: the design selection is the design step's question.
+  expect(screen.queryByRole('combobox', { name: /^인트로 디자인/ })).not.toBeInTheDocument()
+  await user.click(screen.getByRole('checkbox', { name: /^아쉬운 점/ }))
+  expect(stages().getAllByRole('listitem')).toHaveLength(6)
+  await user.click(screen.getByRole('button', { name: '다음' }))
+  await user.click(screen.getByRole('button', { name: '다음' }))
+  await user.click(screen.getByRole('button', { name: '내 말로 쓰기' }))
+  await screen.findByRole('heading', { level: 2, name: /단계$/ })
+  const hook = screen.getByLabelText('단계 이름')
+  await user.clear(hook)
+  await user.type(hook, '처음 만난 카페')
+  expect(stages().getByText('처음 만난 카페').closest('li')).toHaveAttribute('aria-current', 'step')
+  // Below lg the same preview opens from the floating button.
+  await user.click(screen.getByRole('button', { name: '미리보기' }))
+  const sheet = within(screen.getByRole('dialog', { name: '미리보기' }))
+  expect(sheet.getByText('처음 만난 카페')).toBeInTheDocument()
+  await user.click(sheet.getByRole('button', { name: '닫기' }))
+  for (;;) {
+    const heading = await screen.findByRole('heading', {
+      level: 2,
+      name: /단계$|영상의 디자인을 골라요/,
+    })
+    if (heading.textContent === '영상의 디자인을 골라요') break
+    await user.click(screen.getByRole('button', { name: '다음' }))
+  }
+  expect(screen.getAllByRole('region', { name: '구성 미리보기' })).toHaveLength(1)
+  expect(screen.queryByRole('button', { name: '미리보기' })).not.toBeInTheDocument()
+  expect(screen.getByRole('combobox', { name: /^인트로 디자인/ })).toBeInTheDocument()
+})

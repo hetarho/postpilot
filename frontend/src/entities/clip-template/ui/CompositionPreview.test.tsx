@@ -31,6 +31,24 @@ it('draws the outline in whichever intro and outro preset the preview chooses', 
   expect(region('outro')?.querySelectorAll('circle[data-shape="ring"]')).toHaveLength(2)
 })
 
+// CLIP-221: the wizard's steps before its design step draw the draft's selection without
+// asking it, so presets handed in with no change handler offer no selector.
+it('draws handed-in presets without offering them when no change handler is given', () => {
+  const document = parseClipComposition(
+    '<clip version="1"><text id="opening" kind="fixed" role="hook" basis="output-start"><row>연남동</row></text></clip>',
+  )
+  const view = render(
+    <CompositionPreview document={document} presets={{ intro: 'outline', outro: 'stamp' }} />,
+  )
+  expect(view.container.querySelector('[data-region="intro"]')).toHaveAttribute(
+    'data-preset',
+    'outline',
+  )
+  expect(screen.queryByRole('combobox', { name: /^인트로 디자인/ })).not.toBeInTheDocument()
+  expect(screen.queryByRole('combobox', { name: /^아웃트로 디자인/ })).not.toBeInTheDocument()
+  expect(screen.getByRole('slider', { name: /확인할 시점/ })).toBeInTheDocument()
+})
+
 // CLIP-171: the scrubber's end is the clip's last frame — the outro and the badge as they stand
 // at the final instant — never an empty frame.
 it('shows the outro and the badge at the scrubber’s end', () => {

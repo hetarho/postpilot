@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { useBlocker } from '@tanstack/react-router'
 import { useCreateTemplate } from '@/entities/template'
 import { formatAppFailure } from '@/shared/lib'
-import { Button, Dialog, Typography, WizardFrame } from '@/shared/ui'
+import { Button, Dialog, Typography, WizardFrame, WizardPreviewDock } from '@/shared/ui'
 import { templateTargetAt } from '@/entities/template'
 import { toWizardBody } from '../lib/to-body'
 import {
@@ -19,7 +19,6 @@ import {
 import { FinishStep } from './FinishStep'
 import { HeadingsStep } from './HeadingsStep'
 import { OrderStep } from './OrderStep'
-import { PreviewDock } from './PreviewDock'
 import { SectionStep } from './SectionStep'
 import { SectionsStep } from './SectionsStep'
 import { TargetStep } from './TargetStep'
@@ -138,9 +137,13 @@ function OwnedTemplateWizard({ ownerId, onSaved, seedHeadings, beforeSave, onSav
               progress={progress}
               {...frame(state)}
               beforeActions={
-                <PreviewDock changes={seen.changes}>
+                <WizardPreviewDock
+                  changes={seen.changes}
+                  label={t('wizard.preview.open')}
+                  closeLabel={t('wizard.preview.close')}
+                >
                   <WizardPreview sections={state.sections} currentId={currentId} titled={false} />
-                </PreviewDock>
+                </WizardPreviewDock>
               }
             />
           </div>

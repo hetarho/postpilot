@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import type { SectionDraft } from '../model/wizard-machine'
-import { PreviewDock } from './PreviewDock'
 import { WizardPreview } from './WizardPreview'
 
 const section = (patch: Partial<SectionDraft>): SectionDraft => ({
@@ -90,25 +89,5 @@ describe('the wizard preview', () => {
     expect(preview().getAllByText('AI가 쓰는 글').length).toBeGreaterThan(0)
     expect(preview().getByText('지도는 아래에')).toBeInTheDocument()
     expect(preview().getByText('적어 둔 문구가 그대로 들어가요')).toBeInTheDocument()
-  })
-})
-
-describe('the phone preview button', () => {
-  it('opens the preview in a sheet and glows only after a change', () => {
-    const { rerender } = render(
-      <PreviewDock changes={0}>
-        <p>미리 본 글</p>
-      </PreviewDock>,
-    )
-    expect(screen.queryByTestId('preview-glow')).not.toBeInTheDocument()
-    expect(screen.queryByText('미리 본 글')).not.toBeInTheDocument()
-    rerender(
-      <PreviewDock changes={1}>
-        <p>미리 본 글</p>
-      </PreviewDock>,
-    )
-    expect(screen.getByTestId('preview-glow')).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: '미리보기' }))
-    expect(screen.getByRole('dialog', { name: '미리보기' })).toHaveTextContent('미리 본 글')
   })
 })

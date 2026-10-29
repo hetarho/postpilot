@@ -24,7 +24,9 @@ const OUTRO_IDS = Object.keys(CLIP_REGIONS.outro) as ClipRegionPresets['outro'][
 /** The template's preview (CLIP-42). Its intro and outro selectors are the template's own
  *  starting design (CLIP-166) where the editor hands them in — the preview draws the draft's
  *  selection and each choice edits the draft — and `children` is the rest of that selection,
- *  standing beside them. Without them the selectors only choose what this preview draws in. */
+ *  standing beside them. Presets handed in without `onPresetsChange` are drawn, not offered: the
+ *  wizard's steps before its design step show the selection without asking it (CLIP-221).
+ *  Without presets the selectors only choose what this preview draws in. */
 export function CompositionPreview({
   document,
   presets: chosen,
@@ -46,6 +48,7 @@ export function CompositionPreview({
   const [local, setLocal] = useState<ClipRegionPresets>(CLIP_DEFAULT_REGION_PRESETS)
   const presets = chosen ?? local
   const setPresets = onPresetsChange ?? setLocal
+  const offered = !chosen || onPresetsChange !== undefined
   let timeline: CompositionTimeline | undefined, error: CompositionProblem | undefined
   try {
     timeline = sampleClipComposition(
@@ -82,24 +85,32 @@ export function CompositionPreview({
         }))}
         onChange={(value) => setRatio(value as ClipRatioId)}
       />
-      <CompositionSelect
-        label={t('composition.design.intro')}
-        value={presets.intro}
-        options={INTRO_IDS.map((value) => ({
-          value,
-          label: t(`composition.design.intro_${value}`),
-        }))}
-        onChange={(value) => setPresets({ ...presets, intro: value as ClipRegionPresets['intro'] })}
-      />
-      <CompositionSelect
-        label={t('composition.design.outro')}
-        value={presets.outro}
-        options={OUTRO_IDS.map((value) => ({
-          value,
-          label: t(`composition.design.outro_${value}`),
-        }))}
-        onChange={(value) => setPresets({ ...presets, outro: value as ClipRegionPresets['outro'] })}
-      />
+      {offered && (
+        <>
+          <CompositionSelect
+            label={t('composition.design.intro')}
+            value={presets.intro}
+            options={INTRO_IDS.map((value) => ({
+              value,
+              label: t(`composition.design.intro_${value}`),
+            }))}
+            onChange={(value) =>
+              setPresets({ ...presets, intro: value as ClipRegionPresets['intro'] })
+            }
+          />
+          <CompositionSelect
+            label={t('composition.design.outro')}
+            value={presets.outro}
+            options={OUTRO_IDS.map((value) => ({
+              value,
+              label: t(`composition.design.outro_${value}`),
+            }))}
+            onChange={(value) =>
+              setPresets({ ...presets, outro: value as ClipRegionPresets['outro'] })
+            }
+          />
+        </>
+      )}
       {children}
       <Slider
         label={t('composition.sampleDuration')}

@@ -2,12 +2,12 @@ import { useId, useRef, useState } from 'react'
 import { useActorRef, useSelector } from '@xstate/react'
 import { useTranslation } from 'react-i18next'
 import { useBlocker } from '@tanstack/react-router'
-import { CLIP_CAPTION_STYLES, CLIP_COMPOSITION_LIMITS } from '@/entities/clip-design'
+import { CLIP_COMPOSITION_LIMITS } from '@/entities/clip-design'
 import {
-  CompositionPreview,
   parseClipTemplate,
   validateClipRecipe,
   useClipTemplateMutations,
+  type ClipComposition,
   type ClipRecipe,
 } from '@/entities/clip-template'
 import { templateTargetAt, useWizardHeadingSuggestions } from '@/entities/template'
@@ -24,6 +24,7 @@ import {
   TextField,
   Typography,
   WizardFrame,
+  WizardPreviewDock,
 } from '@/shared/ui'
 import { clipStageSeeds, subjectOf } from '../config/catalog'
 import { toClipWizardBody } from '../lib/to-composition'
@@ -37,6 +38,7 @@ import {
   STAGE_ROLES,
   type ClipWizardEvent,
 } from '../model/wizard-machine'
+import { ClipWizardPreview } from './ClipWizardPreview'
 import { HeadingChoices, HeadingSuggestions } from './HeadingSuggestions'
 
 interface Props {
@@ -49,7 +51,7 @@ export function ClipTemplateWizard(props: Props) {
   return <OwnedClipTemplateWizard key={props.ownerId} {...props} />
 }
 function OwnedClipTemplateWizard({ ownerId, onSaved, beforeSave, onSaveFailure }: Props) {
-  const { t } = useTranslation(['clipWizard', 'templateTargets', 'clips'])
+  const { t } = useTranslation(['clipWizard', 'templateTargets'])
   const id = useId()
   const actor = useActorRef(clipWizardMachine)
   const state = useSelector(actor, clipWizardStateOf)
@@ -91,12 +93,20 @@ function OwnedClipTemplateWizard({ ownerId, onSaved, beforeSave, onSaveFailure }
     outroPreset: state.outroPreset,
     allowedCaptionStyles: [...state.allowedCaptionStyles],
   }
-  let document: ReturnType<typeof parseClipTemplate> | undefined
-  try {
-    document = parseClipTemplate(body)
-  } catch {
-    /* Named field errors keep the draft editable. */
-  }
+  // The preview redraws on every answer (CLIP-221). Deriving from the previous render — React's
+  // pattern for a value that depends on the last one — counts the body's changes for the phone's
+  // 미리보기 glow and keeps the last body that parsed on show while a stage is mid-edit (a blank
+  // name does not parse; named field errors keep the draft editable).
+  const [seen, setSeen] = useState<{
+    body: string
+    changes: number
+    document: ClipComposition | undefined
+  }>(() => ({ body, changes: 0, document: parsed(body) }))
+  if (seen.body !== body)
+    setSeen({ body, changes: seen.changes + 1, document: parsed(body) ?? seen.document })
+  const document = seen.document
+  const previewing = state.step !== 'target' && state.step !== 'design'
+  const currentId = state.step === 'stage' ? selected[state.cursor]?.id : undefined
   const save = () => {
     if (nameProblem(state.name) || !validateClipRecipe(recipe).valid) {
       send({ type: 'next' })
@@ -110,6 +120,12 @@ function OwnedClipTemplateWizard({ ownerId, onSaved, beforeSave, onSaveFailure }
       {t('next', { ns: 'clipWizard' })}
     </Button>
   )
+  const screen =
+    state.step === 'target'
+      ? `target:${state.depth}`
+      : state.step === 'stage'
+        ? `stage:${state.cursor}`
+        : state.step
   const total = 3 + selected.length + 2
   const current =
     state.step === 'stages'
@@ -155,17 +171,35 @@ function OwnedClipTemplateWizard({ ownerId, onSaved, beforeSave, onSaveFailure }
           {t('headings.running', { ns: 'templateTargets' })}
         </Typography>
       )}
-      <WizardFrame
-        screen={
-          state.step === 'target'
-            ? `target:${state.depth}`
-            : state.step === 'stage'
-              ? `stage:${state.cursor}`
-              : state.step
-        }
-        progress={progress}
-        {...frame()}
-      />
+      {previewing ? (
+        <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)] lg:items-start lg:gap-12">
+          <div className="min-w-0 lg:max-w-2xl">
+            <WizardFrame
+              screen={screen}
+              progress={progress}
+              {...frame()}
+              beforeActions={
+                document && (
+                  <WizardPreviewDock
+                    changes={seen.changes}
+                    label={t('preview.open', { ns: 'clipWizard' })}
+                    closeLabel={t('preview.close', { ns: 'clipWizard' })}
+                  >
+                    {preview(document, currentId)}
+                  </WizardPreviewDock>
+                )
+              }
+            />
+          </div>
+          {/* Below the app's sticky chrome, like the post wizard's preview, with its own scroll
+              so a long outline never pushes the step's actions away. */}
+          <aside className="sticky top-[calc(var(--spacing-chrome)+1.5rem)] hidden max-h-[calc(100dvh-var(--spacing-chrome)-3rem)] min-w-0 overflow-y-auto lg:block">
+            {document && preview(document, currentId)}
+          </aside>
+        </div>
+      ) : (
+        <WizardFrame screen={screen} progress={progress} {...frame()} />
+      )}
       <Dialog
         open={blocker.status === 'blocked'}
         title={t('leaveTitle', { ns: 'clipWizard' })}
@@ -178,48 +212,16 @@ function OwnedClipTemplateWizard({ ownerId, onSaved, beforeSave, onSaveFailure }
     </>
   )
 
-  function preview() {
+  /** The live preview; the design step alone offers the design selection on it (CLIP-221). */
+  function preview(shown: ClipComposition, current?: string, offerDesign = false) {
     return (
-      document && (
-        <CompositionPreview
-          document={document}
-          presets={{ intro: state.introPreset, outro: state.outroPreset }}
-          captionStyles={state.allowedCaptionStyles}
-          onPresetsChange={({ intro, outro }) =>
-            send({ type: 'design', patch: { introPreset: intro, outroPreset: outro } })
-          }
-        >
-          <div
-            role="group"
-            aria-label={t('project.captionStyles', { ns: 'clips' })}
-            className="grid gap-2 sm:grid-cols-2"
-          >
-            {CLIP_CAPTION_STYLES.map((style) => (
-              <label key={style} className="flex min-h-11 items-center gap-3">
-                <Checkbox
-                  checked={state.allowedCaptionStyles.includes(style)}
-                  onChange={(event) =>
-                    send({
-                      type: 'design',
-                      patch: {
-                        allowedCaptionStyles: event.target.checked
-                          ? CLIP_CAPTION_STYLES.filter(
-                              (entry) =>
-                                entry === style || state.allowedCaptionStyles.includes(entry),
-                            )
-                          : state.allowedCaptionStyles.filter((entry) => entry !== style),
-                      },
-                    })
-                  }
-                />
-                <Typography variant="body" as="span">
-                  {t(`captionStyles.${style}`, { ns: 'clips' })}
-                </Typography>
-              </label>
-            ))}
-          </div>
-        </CompositionPreview>
-      )
+      <ClipWizardPreview
+        stages={state.stages}
+        currentId={current}
+        document={shown}
+        design={state}
+        onDesignChange={offerDesign ? (patch) => send({ type: 'design', patch }) : undefined}
+      />
     )
   }
   function frame() {
@@ -518,7 +520,7 @@ function OwnedClipTemplateWizard({ ownerId, onSaved, beforeSave, onSaveFailure }
           help: t('designHelp', { ns: 'clipWizard' }),
           back,
           next,
-          children: preview(),
+          children: document && preview(document, undefined, true),
         }
       case 'finish':
         return {
@@ -609,4 +611,13 @@ function CustomStage({
       </div>
     </Disclosure>
   )
+}
+
+/** The composition `body` makes, or nothing while it does not parse. */
+function parsed(body: string): ClipComposition | undefined {
+  try {
+    return parseClipTemplate(body)
+  } catch {
+    return undefined
+  }
 }
