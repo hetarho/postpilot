@@ -1,5 +1,5 @@
 # CLIP generated video projects and templates
-> r64 | Browser-first source-based vertical short-form creation for the Naver Clip and Instagram Clip channels, told from a linked post when there is one, with channel upload text, 체험단 advertiser guides, local animated components, qualified 15–60 second output and explicitly bounded Max server exports.
+> r65 | Browser-first source-based vertical short-form creation for the Naver Clip and Instagram Clip channels, told from a linked post when there is one, with channel upload text, 체험단 advertiser guides, local animated components, qualified 15–60 second output and explicitly bounded Max server exports.
 
 ## decisions
 - CLIP-1 [o] a clip project is independent of a post except for one optional linked post (→CLIP-215) and owns its clip channel (→CLIP-209), 체험단 글 switch and advertiser guide (→CLIP-210), upload text (→CLIP-211), title, chosen video template, template answers, owner instruction, intro/outro enablement, presets and slot instructions/text, target duration, aspect ratio, caption pace, accent, analysis, edit plan, the record of what it was asked for and latest successful result
@@ -366,6 +366,7 @@
 - CLIP-204 [o] browser analysis preparation retains the code-owned analysis profile and CLIP-29 limits; moving computation alone never lowers its target resolution, frame rate, audio quality or coverage.
   - final rendering always uses originals and exact approved speech, not analysis copies; source cadence and time offsets are measured separately from the proxy's cadence
   - an encoder or analysis-profile change requires CLIP-205 qualification; equal dimensions or byte counts do not prove equal information preservation
+  - browser copies carry AAC audio at a bitrate every supported platform encoder accepts and never below the server copy's; a refused copy configuration is a profile change, not a per-device downgrade ← Windows Chrome/Edge encode AAC only at 96, 128, 160 or 192 kbps while the server copy uses 64 kbps (measured 261029)
 - CLIP-205 [o] analysis-quality qualification compares authorized original/high-quality references, existing server copies and equivalent browser copies using fixed model, endpoint and prompt versions.
   - evaluate scene/event coverage, small Korean text and numbers, fast cuts/actions, speech, source-time boundaries and focus/shake decisions separately; structural JSON validity is not semantic accuracy
   - provider sampling and internal media resolution are separate from file resolution/FPS and may not be assumed identical across endpoints
@@ -465,4 +466,4 @@
 - displayed item identity and scene-to-fact meaning require representative video review; schema validity and a project-wide text match alone do not establish semantic correctness
 
 ## chg
--
+- r65 261029 CLIP-204✎ browser copy audio bitrate unstated (64 kbps, refused on Windows)→accepted by every supported platform encoder and never below the server copy's (96 kbps)

@@ -9,6 +9,7 @@
 - push: main
 
 ## inbox
+- 261029 decided CLIP-204: how do browser analysis copies keep audio on Windows, whose Chrome/Edge AAC encoder takes only 96/128/160/192 kbps? → browser copies use AAC mono 96 kbps on every platform, above the server copy's 64 kbps, under a new profile identity clip-browser-analysis-v2 (alt: bundle the @mediabunny/aac-encoder libavcodec WASM to keep 64 kbps, adding ~1 MB and an LGPL component | let Windows fall back to the server route)
 - 261029 decided CLIP-219: how does a server render of HLG footage stay SDR? → relabel the delivered encode BT.709 primaries/transfer and keep the coded matrix, pixels unchanged, matching the browser preview's reading (alt: convert the matrix to BT.709 in the graph, changing pixels | re-add the r62 HDR→SDR conversion the owner cut)
 - 261029 decided ARCH-68 CLIP-155: what does ② offer while browser final rendering is unqualified? → the browser kind stays listed, refused by name, and the server leads (alt: hide the browser kind | keep offering it and let the server refuse)
 - 261028 decided TMPL-73: how does an owner style request meet the 기본 voice? → the request decides wording and outranks the voice, which still decides without one; examples are code-owned chips that fill the field (alt: the request replaces the voice entirely | free text only, no examples)
@@ -95,7 +96,7 @@
 | THEME | 34 | 34 | - | 2 |
 | MKT | 11 | 11 | - | 0 |
 | VIDEO | 8 | 8 | - | 0 |
-| CLIP | 64 | 64 | - | 2 |
+| CLIP | 65 | 65 | - | 2 |
 | CDS | 36 | 36 | - | 1 |
 | BILL | 9 | 9 | - | 0 |
 | MEM | 7 | 7 | - | 2 |
@@ -125,6 +126,7 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
+| T716 | Encode browser analysis audio at a bitrate Windows accepts | CLIP ARCH | - | todo |
 | T709 | Prove the real clip pipeline within the approved live budget | ARCH CLIP QUOTA | T708 | blocked@261028 |
 | T539 | Qualify the complete Korean voice-creation milestone | ARCH DUB MODEL CDS THEME | T538 | blocked@261005 |
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
@@ -133,12 +135,16 @@
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
 
 ## next
+- implement-task T716: browser analysis copies at AAC 96 kbps under clip-browser-analysis-v2 so sources with sound prepare on Windows Chrome/Edge; T603 semantic gates stay closed.
 - Clip fixes 357c0d55..306a169a (render-kind gate, polled cancellation, SDR-labelled HLG export, caption keyword edit, server-route colour refusal) were measured on 8 real HLG HEVC phone originals locally and shipped at e6ca39dc (CI, Deploy backend incl. post-deploy checks and Verify media green). Open: while browser final rendering is unqualified (T604) a non-Max account has no render path at all (Max-only server exports, CLIP-193) — owner decision; the on-purpose identity-smoke baseline's container digest moves with the SDR label (sampled frames unchanged) and needs re-recording on its CI host; a PQ source is refused with the generic CLIP_INVALID_MEDIA message, not a colour-named one.
 - TMPL r29–r31 (T710–T715) shipped: CI green at 2441146f and 9921568a; the later backend push e6ca39dc ran the post-deploy storage/CORS/R2 checks and Verify media green, closing the T710 parked deploy gap.
 - T708 is deployed and d3d51209 CI/Workers plus actual retained-original playback/preview pass. T709 fresh planning remains blocked by unresolved provider usage; preserve its ledger and keep T603/T604/voice gates closed.
 - T697 deployment/CORS/media gates passed at177b377a; deployed browser preview now reads8 real retained R2 originals without a range failure. Full public browser-generation qualification remains gated by T603/T604.
 
 ## log
+- 261029 create-task CLIP r65: T716 browser analysis audio 96 kbps, profile v2, server native copies unchanged at 64 kbps.
+- 261029 update-ssot CLIP r65: CLIP-204✎ browser copy AAC bitrate accepted by every supported platform encoder and never below the server copy's. Windows Chrome 155 (owner profile too) and Edge 156 refuse 64 kbps AAC, so every source with sound failed browser analysis with CLIP_ANALYSIS_ENCODER_UNSUPPORTED; 96 kbps copies of 11 owner HLG HEVC originals encode there and pass the production Go verifier.
+- 261029 browser media re-verification start (delegated): owner asks whether the failed browser analysis delegation was redone and whether the agent can check the browser analysis and render steps itself. Run the existing analysis-copy and render diagnostics in this Windows PC's installed Chrome 156 (RTX 2080 Ti) on 11 owner HLG HEVC originals and verify the copies with the production Go verifier; no provider call, gate change or deploy.
 - 261029 pushed e6ca39dc (clip fixes 357c0d55..306a169a): CI 40790451412, Deploy backend 40790451348 (build, rollout, health, ranged GET, CORS, R2) and Verify media 40790884224 success; live postpilot bundle carries the browser-render refusal copy. Local gates: FE 566/4497, backend 89 packages + vet/build/gofmt, lint/FSD/style/spec/dev/build, native media-smoke 41 PASS; amd64 deploy/media-release images were left to the remote runs. Paid live work: 8 Gemini 3.8 Flash observations + 2 writing calls under the owner's USD0.30 cap (≈USD0.02, estimated from the T709 per-observation cost).
 - 261029 fix clip source colour on the server route: CLIP-219's PQ refusal lived only in browser decoding, so T707's server preparation admitted PQ/uncovered colour; the native probe now refuses what the browser refuses (SDR and HLG admitted) before any work.
 - 261029 fix clip caption edit: retyping a caption so its AI accent keyword no longer appears held the whole ② edit unsaved behind 이 문구의 내용·위치·시간을 확인해 주세요; the text field now drops a keyword the new text does not carry, as the composer does.
