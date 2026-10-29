@@ -8,7 +8,14 @@
 - docs: en
 - push: main
 
+## active
+| tag | host | mode | since | at | doing |
+|---|---|---|---|---|---|
+| vtp1 | DESKTOP-VKPLS8P | autopilot | 2026-10-29T07:01Z | 2026-10-29T07:01Z | - |
+
 ## inbox
+- 261029 decided CLIP-221: how does the video-template wizard's live preview show a stage name or order the clip frame never draws? → an ordered stage list above the frame marks the stage whose step is on screen, as the post wizard marks its section (alt: the frame alone, so renaming or reordering stages changes nothing visible | draw stage names into the sample clip as captions)
+- 261029 decided CLIP-221: does the live preview offer the design selection on every step? → before the design step it draws the draft's presets and caption styles without offering them, and the design step's content is the same preview with them offered (alt: offer presets and styles on every step, breaking one question per screen | hide the design until the design step, so the preview draws defaults the owner never chose)
 - 261029 decided CDS-35 T717: what does a browser render do when one gain cannot reach −16 LUFS under the −1.5 dBTP ceiling? → apply dynamic peak limiting to the same measured target, as the server loudnorm pass already does by falling back to dynamic mode (alt: keep refusing, leaving source-sound browser renders unusable on real phone audio | lower the loudness target for browser renders)
 - 261029 decided CLIP-204: how do browser analysis copies keep audio on Windows, whose Chrome/Edge AAC encoder takes only 96/128/160/192 kbps? → browser copies use AAC mono 96 kbps on every platform, above the server copy's 64 kbps, under a new profile identity clip-browser-analysis-v2 (alt: bundle the @mediabunny/aac-encoder libavcodec WASM to keep 64 kbps, adding ~1 MB and an LGPL component | let Windows fall back to the server route)
 - 261029 decided CLIP-219: how does a server render of HLG footage stay SDR? → relabel the delivered encode BT.709 primaries/transfer and keep the coded matrix, pixels unchanged, matching the browser preview's reading (alt: convert the matrix to BT.709 in the graph, changing pixels | re-add the r62 HDR→SDR conversion the owner cut)
@@ -97,7 +104,7 @@
 | THEME | 34 | 34 | - | 2 |
 | MKT | 11 | 11 | - | 0 |
 | VIDEO | 8 | 8 | - | 0 |
-| CLIP | 65 | 65 | - | 2 |
+| CLIP | 66 | 66 | - | 2 |
 | CDS | 37 | 37 | - | 1 |
 | BILL | 9 | 9 | - | 0 |
 | MEM | 7 | 7 | - | 2 |
@@ -127,6 +134,7 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
+| T718 | Show the live template preview beside every video-wizard step from stages on | CLIP TMPL | - | todo |
 | T709 | Prove the real clip pipeline within the approved live budget | ARCH CLIP QUOTA | T708 | blocked@261028 |
 | T539 | Qualify the complete Korean voice-creation milestone | ARCH DUB MODEL CDS THEME | T538 | blocked@261005 |
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
@@ -135,6 +143,7 @@
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
 
 ## next
+- implement-task T718 (vtp1): video-template wizard live preview beside every step from stages on (CLIP r66).
 - Windows Chrome browser media fixes shipped at a4fe7473 (CI, Deploy backend and Verify media success; live preview/video workers carry profile v2): T716 analysis AAC 96 kbps, opaque D3D11 frame rendering, T717 loudness limiter. Owner: listen to the limited-audio render; browser analysis/final-render readiness, T603 corpus/semantic review, T604 hardware/human review and the T709 provider reservation stay open.
 - Clip fixes 357c0d55..306a169a (render-kind gate, polled cancellation, SDR-labelled HLG export, caption keyword edit, server-route colour refusal) were measured on 8 real HLG HEVC phone originals locally and shipped at e6ca39dc (CI, Deploy backend incl. post-deploy checks and Verify media green). Open: while browser final rendering is unqualified (T604) a non-Max account has no render path at all (Max-only server exports, CLIP-193) — owner decision; the on-purpose identity-smoke baseline's container digest moves with the SDR label (sampled frames unchanged) and needs re-recording on its CI host; a PQ source is refused with the generic CLIP_INVALID_MEDIA message, not a colour-named one.
 - TMPL r29–r31 (T710–T715) shipped: CI green at 2441146f and 9921568a; the later backend push e6ca39dc ran the post-deploy storage/CORS/R2 checks and Verify media green, closing the T710 parked deploy gap.
@@ -142,6 +151,9 @@
 - T697 deployment/CORS/media gates passed at177b377a; deployed browser preview now reads8 real retained R2 originals without a range failure. Full public browser-generation qualification remains gated by T603/T604.
 
 ## log
+- 261029 create-task CLIP r66 → T718: WizardPreviewDock moves to shared UI, ClipWizardPreview (stage list + CompositionPreview, design read-only before the design step), wizard layout mirrors TMPL-75.
+- 261029 update-ssot CLIP r66: CLIP-213✎ CLIP-221+ the video-template wizard shows the live template preview beside every step from stages on, as the post wizard does (TMPL-75); before it showed only at the design step.
+- 261029 update-ssot CLIP start (vtp1): video-template wizard preview
 - 261029 pushed a4fe7473 (T716, opaque-frame fix, CDS r37/T717, report): CI 40820598127, Deploy backend 40820598139 and Verify media 40821077720 success; live preview.worker/video.worker bytes match the verified build and carry clip-browser-analysis-v2. Local gate: FE CI equivalent (566/4501), backend 87 packages plus attributed quality/store reruns, Compose, native amd64 images, worker smoke and media-release both layouts.
 - 261029 T717 done: normalizeLoudness48k limits peak-bound mixes (1.5 ms lookahead, 100 ms release, re-measured); normalizeMix48k owns the 11 LU range refusal; audio/render/video FE tests pass and the owner-cut Windows render with sound passes the verdict.
 - 261029 T717 starts (w11c): linear gain first, offline lookahead limiter only where the ceiling binds.

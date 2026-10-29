@@ -1,5 +1,5 @@
 # CLIP generated video projects and templates
-> r65 | Browser-first source-based vertical short-form creation for the Naver Clip and Instagram Clip channels, told from a linked post when there is one, with channel upload text, 체험단 advertiser guides, local animated components, qualified 15–60 second output and explicitly bounded Max server exports.
+> r66 | Browser-first source-based vertical short-form creation for the Naver Clip and Instagram Clip channels, told from a linked post when there is one, with channel upload text, 체험단 advertiser guides, local animated components, qualified 15–60 second output and explicitly bounded Max server exports.
 
 ## decisions
 - CLIP-1 [o] a clip project is independent of a post except for one optional linked post (→CLIP-215) and owns its clip channel (→CLIP-209), 체험단 글 switch and advertiser guide (→CLIP-210), upload text (→CLIP-211), title, chosen video template, template answers, owner instruction, intro/outro enablement, presets and slot instructions/text, target duration, aspect ratio, caption pace, accent, analysis, edit plan, the record of what it was asked for and latest successful result
@@ -394,7 +394,7 @@
 - CLIP-212 [o] each clip channel's upload-text length and tag-count limits are configuration set from that platform's current published upload rules, confirmed when implemented; the writer is told them and the parser keeps what fits
 - CLIP-213 [o] 새 영상 템플릿, from either clip channel, is TMPL-71's wizard over the same target tree (→TMPL-72) with a clip stage catalog per leaf
   - each stage's step asks its name (TMPL-73 suggestions or own words), the one line saying what it shows (→CLIP-141) and whether it asks an information field such as 가격 or 위치
-  - a last step chooses the design selection — intro and outro presets and caption styles — beside the template preview (→CLIP-166 →CLIP-169), then the standard save
+  - a last step chooses the design selection — intro and outro presets and caption styles — on the wizard's live preview (→CLIP-166 →!CLIP-221), then the standard save
   - first-use setup hosts the same wizard (→EDIT-15)
   - v1 stage roles, worded per target: 훅 (첫 장면) · 소개 · 하이라이트 (메뉴·시술·객실·기능마다) · 디테일·분위기 · 아쉬운 점 · 정보 (가격·위치, 직접 입력) · 마무리 한 줄 ← a short-form clip keeps one arc whatever its subject
 - CLIP-214 [o] a clip created from a post (→POST-120) starts in the chosen clip channel with the post's title, its memo as the instruction, its 체험단 글 switch and advertiser guide, and the post's attached videos as sources within CLIP-6's limits, and links the post (→CLIP-215); the post's photos are not sources, and it is otherwise an ordinary project
@@ -418,10 +418,15 @@
   - the choice applies to storyline, direct creation and building from a storyline; it is disclosed before the existing quote approval and starts a new authorized attempt
   - a browser attempt never switches route after refusal or failure; browser work starts only with a matching enabled, qualified readiness record and a qualified server preparation profile
   - original retention, source/quote ownership, cancellation, credit ceilings and independent final-render entitlements stay under their existing rules; server analysis preparation is not a server-export entitlement
+- CLIP-221 [o] from the stages step to 저장 the video-template wizard shows the live template preview of the outline its answers make (→!CLIP-169 →!CLIP-170 →CLIP-171), redrawn on every answer and placed as the post wizard's is (→!TMPL-75): at `lg` and wider to the right of the step, in view while the step scrolls; below `lg` behind a floating `미리보기` button that opens a bottom `Sheet` and glows once when an answer changes the preview; the target questions show none ← a stage choice is understood by seeing the clip it shapes, and a preview reached only at the design step is never seen with the choices that shaped it
+  - it lists the checked stages in order by their names above the frame and marks the stage whose step is on screen ← stages are not drawn on the clip (→CLIP-141), so a renamed or reordered stage would otherwise change nothing visible
+  - before the design step it draws the draft's design selection without offering it ← the presets and caption styles are the design step's one question (→TMPL-71)
+  - the design step's content is that preview with the design selection offered on it, and the step shows no second preview
 
 ## flow
 - create: 네이버 클립 | 인스타 클립 → choose title and optional template (9:16) → arrange sources and explicitly retain any original sound → optionally link a post (글 연결) → choose regions, caption styles/pace, facts, target duration and instruction → optionally enable dubbing and choose a confirmed voice → choose 스토리라인 먼저 or 바로 만들기 → approve its remaining work
 - template: 형식 안내 복사 → outside AI writes the outline, or 원문 복사 hands it the template already saved → paste 원문, or build the same entries in the block builder → choose the design selection in the preview → validate with entry/line errors → save → offer for a project
+- wizard: 네이버 클립 | 인스타 클립 → 템플릿 → 새 영상 템플릿 → target(one question per screen → leaf) → stages(check roles · 직접 추가) → order → headings(fields · 제목 제안 받기) → one step per stage(name · what it shows · information field) → design(presets · caption styles on the preview) → name → 저장(standard create); live preview beside every step from stages on(lg right | below lg 미리보기 → sheet)
 - observe: prepared bounded source intervals → observation model records ordered scenes across every interval → retain source-time evidence and explicit uncertainty → validate bounded coverage without editorial choices
 - compose flow: ordered scene observations + the stored storyline or the owner instruction + the linked post's text + project region slots + optional template outline + 영상 지침 + grouped answers + item hints → (바로 만들기: write the storyline and generated slot text first) → choose, split and order non-overlapping source ranges and read each cut's fixed rate from its own observation within the transformed share → resolve transformed output times, transitions and CLIP-7's reconciliation → validate, repair or remove what validation refuses and record each notice → freeze the footage flow
 - ordinary narration: frozen flow + storyline/region text + bounded writing inputs → copy region text and write visible captions → validate bounds, styles and non-overlap → freeze assembly
@@ -466,4 +471,4 @@
 - displayed item identity and scene-to-fact meaning require representative video review; schema validity and a project-wide text match alone do not establish semantic correctness
 
 ## chg
-- r65 261029 CLIP-204✎ browser copy audio bitrate unstated (64 kbps, refused on Windows)→accepted by every supported platform encoder and never below the server copy's (96 kbps)
+- r66 261029 CLIP-213✎ template preview at the last (design) step only→the wizard's live preview beside every step from stages on; CLIP-221+ wizard live preview (stage list marking the on-screen stage, design shown read-only before the design step; lg right, else 미리보기 sheet)
