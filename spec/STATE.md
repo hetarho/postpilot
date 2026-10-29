@@ -141,6 +141,7 @@
 - T697 deployment/CORS/media gates passed at177b377a; deployed browser preview now reads8 real retained R2 originals without a range failure. Full public browser-generation qualification remains gated by T603/T604.
 
 ## log
+- 261029 fix media opaque frames: Windows Chrome refuses VideoFrame.allocationSize for null-format (D3D11 HEVC) frames even with an RGBA layout, so every browser final render of phone HEVC failed; range-video bounds such a frame by its coded RGBA reservation without a size query. 4 owner HLG cuts then render 1080x1920/30 fps/480 frames and pass browserRenderVerdict.
 - 261029 T716 done: server/client analysis profile v2 with 96 kbps browser AAC; 11/11 Windows Chrome copies of owner HLG originals with sound pass the Go verifier; affected FE (45 files/427 tests across two runs) and BE clip packages pass.
 - 261029 T716 starts at 6916bfcb (w11c): browser analysis AAC 96 kbps under profile v2; native copies stay 64 kbps.
 - 261029 create-task CLIP r65: T716 browser analysis audio 96 kbps, profile v2, server native copies unchanged at 64 kbps.

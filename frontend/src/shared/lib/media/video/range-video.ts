@@ -279,11 +279,10 @@ export class OriginalVideoCursor {
         throw new MediaRangeError('CLIP_SOURCE_SUPERSEDED')
       frame = sample.toVideoFrame()
       this.frameExports++
-      // Hardware-backed frames may have no exposed pixel format. Ask for the RGBA
-      // copy layout's size without reading pixels or replacing the decoded frame.
-      const allocation = frame.allocationSize(
-        frame.format === null ? { format: 'RGBA' } : undefined,
-      )
+      // Hardware-backed frames may have no exposed pixel format, and Windows Chrome
+      // refuses every size query for them (D3D11 HEVC). Their RGBA layout is the
+      // coded RGBA reservation, so no query, pixel read or replacement frame is needed.
+      const allocation = frame.format === null ? reserved : frame.allocationSize()
       if (allocation > reserved) throw new MediaRangeError('CLIP_SOURCE_MEMORY_LIMIT')
       let released = false
       const resource: DecodedVideoResource = {

@@ -67,10 +67,10 @@ function original(
   return { input, samples, frames, returned: () => returned }
 }
 describe('native original timestamp selection', () => {
-  it('presents opaque hardware frames using a bounded RGBA size query without copying pixels', async () => {
-    const allocationSize = vi.fn((options?: VideoFrameCopyToOptions) => {
-      if (options?.format !== 'RGBA') throw new DOMException('Opaque frame', 'NotSupportedError')
-      return 16
+  it('presents opaque hardware frames within the coded RGBA reservation without any size query', async () => {
+    // Windows Chrome refuses allocationSize on a null-format frame, even for RGBA.
+    const allocationSize = vi.fn(() => {
+      throw new DOMException('Operation is not supported when format is null.', 'NotSupportedError')
     })
     const copyTo = vi.fn()
     const fake = original(undefined, 0, false, { format: null, allocationSize, copyTo })
@@ -82,7 +82,7 @@ describe('native original timestamp selection', () => {
       new AbortController().signal,
     )
     const frame = await cursor.frame(0)
-    expect(allocationSize).toHaveBeenCalledWith({ format: 'RGBA' })
+    expect(allocationSize).not.toHaveBeenCalled()
     expect(copyTo).not.toHaveBeenCalled()
     expect(budget.snapshot()).toMatchObject({ liveFrames: 1, liveBytes: 16 })
     frame.close()
