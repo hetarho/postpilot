@@ -8,10 +8,6 @@
 - docs: en
 - push: main
 
-## active
-| tag | host | mode | since | at | doing |
-|---|---|---|---|---|---|
-| vtp1 | DESKTOP-VKPLS8P | autopilot | 2026-10-29T07:01Z | 2026-10-29T07:05Z 
 ## inbox
 - 261029 decided CLIP-221: how does the video-template wizard's live preview show a stage name or order the clip frame never draws? → an ordered stage list above the frame marks the stage whose step is on screen, as the post wizard marks its section (alt: the frame alone, so renaming or reordering stages changes nothing visible | draw stage names into the sample clip as captions)
 - 261029 decided CLIP-221: does the live preview offer the design selection on every step? → before the design step it draws the draft's presets and caption styles without offering them, and the design step's content is the same preview with them offered (alt: offer presets and styles on every step, breaking one question per screen | hide the design until the design step, so the preview draws defaults the owner never chose)
@@ -142,7 +138,7 @@
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
 
 ## next
-- T718 done (CLIP r66): the video-template wizard shows the live template preview beside every step from stages on, stages listed with the on-screen one marked; design offered only on the design step. Not yet pushed.
+- T718 (CLIP r66) pushed: the video-template wizard shows the live template preview beside every step from stages on, stages listed with the on-screen one marked, design offered only on the design step. Owner: look at it at lg and on a phone; report reports/261029-vtp1.md.
 - Windows Chrome browser media fixes shipped at a4fe7473 (CI, Deploy backend and Verify media success; live preview/video workers carry profile v2): T716 analysis AAC 96 kbps, opaque D3D11 frame rendering, T717 loudness limiter. Owner: listen to the limited-audio render; browser analysis/final-render readiness, T603 corpus/semantic review, T604 hardware/human review and the T709 provider reservation stay open.
 - Clip fixes 357c0d55..306a169a (render-kind gate, polled cancellation, SDR-labelled HLG export, caption keyword edit, server-route colour refusal) were measured on 8 real HLG HEVC phone originals locally and shipped at e6ca39dc (CI, Deploy backend incl. post-deploy checks and Verify media green). Open: while browser final rendering is unqualified (T604) a non-Max account has no render path at all (Max-only server exports, CLIP-193) — owner decision; the on-purpose identity-smoke baseline's container digest moves with the SDR label (sampled frames unchanged) and needs re-recording on its CI host; a PQ source is refused with the generic CLIP_INVALID_MEDIA message, not a colour-named one.
 - TMPL r29–r31 (T710–T715) shipped: CI green at 2441146f and 9921568a; the later backend push e6ca39dc ran the post-deploy storage/CORS/R2 checks and Verify media green, closing the T710 parked deploy gap.
